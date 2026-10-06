@@ -1,0 +1,11 @@
+[package]
+name = "melee-sim"
+description = "Melee's game simulation: deterministic, bit-exact with the console, independent of rendering and I/O"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+gekko-fp.workspace = true

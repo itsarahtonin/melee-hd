@@ -1,0 +1,11 @@
+[package]
+name = "melee-oracle"
+description = "Checks melee-hd's simulation against ssbm-rs and Slippi replays"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+ssbm-slippi.workspace = true

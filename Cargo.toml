@@ -1,0 +1,16 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "tools/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+rust-version = "1.98"
+publish = false
+
+[workspace.dependencies]
+melee-sim = { path = "crates/melee-sim" }
+# Stage 1, the reference: its ports at this tag are what the simulation is checked against.
+gekko-fp = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
+ssbm-slippi = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
