@@ -35,4 +35,5 @@ Run appropriate checks and state what was tested. Disc-backed checks need `SSBM_
 ## Commands
 
 - Build: `cargo build --locked --release`.
+- Check leaf functions against ssbm-rs: `SSBM_DISC=... cargo test --locked --release -p leaf-check`.
 - Compare a recording with a replay: `target/release/melee-oracle compare ORIGINAL.slp OURS.slp` (`.exe` on Windows).
