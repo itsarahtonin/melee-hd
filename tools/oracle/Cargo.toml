@@ -9,3 +9,4 @@ publish.workspace = true
 
 [dependencies]
 ssbm-slippi.workspace = true
+zstd = "0.13"
