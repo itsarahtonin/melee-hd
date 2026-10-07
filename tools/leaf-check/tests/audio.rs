@@ -23,6 +23,7 @@
 //! (default `.../calls/audio/api`), captured the same way with those functions named instead.
 
 use leaf_check::calls::{Ret, check_calls};
+use melee_sim::audio::dsp::DspModel;
 use melee_sim::game::ft::sound::Track;
 use melee_sim::game::handles::FighterId;
 
@@ -206,7 +207,7 @@ fn timeline() {
         num("AUDIO_TIMELINE_START", 1500),
         num("AUDIO_TIMELINE_END", 11847),
     );
-    run_timeline(&dir, start, end);
+    run_timeline(&dir, start, end, DspModel::Silent);
 }
 
 /// [`timeline`] in a four-player teams match on Battlefield (`Game_20260531T174251.slp`,
@@ -214,12 +215,22 @@ fn timeline() {
 #[test]
 fn timeline_four_players() {
     let dir = std::env::var("AUDIO_TIMELINE_4P").unwrap_or_else(|_| TIMELINE_4P.to_owned());
-    run_timeline(&dir, 1500, 11576);
+    run_timeline(&dir, 1500, 11576, DspModel::Silent);
 }
+
+/// [`timeline`] with ssbm-rs's sample-accurate DSP (`AX=1` when recording, into
+/// `AUDIO_TIMELINE_AX`): voices also end with their samples, and the music streams.
+#[test]
+fn timeline_samples() {
+    let dir = std::env::var("AUDIO_TIMELINE_AX").unwrap_or_else(|_| TIMELINE_AX.to_owned());
+    run_timeline(&dir, 1500, 11847, DspModel::Samples);
+}
+
+const TIMELINE_AX: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-fd1-ax";
 
 const TIMELINE_4P: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-bf4";
 
-fn run_timeline(dir: &str, start: u32, end: u32) {
+fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
     use melee_capture::{Capture, audio};
     let dir = std::path::Path::new(dir);
     let Ok(log) = std::fs::read_to_string(dir.join("log.txt")) else {
@@ -231,6 +242,10 @@ fn run_timeline(dir: &str, start: u32, end: u32) {
     let bank = audio::find_bank(&cap.call.mem1, &mut data);
     let mut a = audio::import(&cap.call.mem1, bank);
     a.clock = Some(audio::import_clock(&cap.call.mem1, cap.call.regs.tb));
+    a.dsp = dsp;
+    let disc_path = std::env::var("SSBM_DISC").expect("SSBM_DISC");
+    let disc = melee_data::disc::Disc::open(&disc_path).expect("the disc");
+    audio::load_stream(&mut a, &disc, &mut data);
     let mut diffs = Vec::new();
     audio::compare(&cap.call.mem1, &a, &mut diffs);
     assert!(diffs.is_empty(), "the import doesn't round-trip: {diffs:?}");
@@ -240,26 +255,40 @@ fn run_timeline(dir: &str, start: u32, end: u32) {
         (0x8040_7F00, 0x8040_8100),
         (0x8043_3700, 0x8043_3A80),
         (0x804A_8D00, 0x804C_6400),
-        (0x804D_6000, 0x804D_7800),
+        (0x804D_6000, 0x804D_7900),
     ];
     let dump = zstd::decode_all(&std::fs::read(dir.join("dump.zst")).unwrap()[..]).unwrap();
-    let record: usize = 4 + RANGES
-        .iter()
-        .map(|(lo, hi)| (hi - lo) as usize)
-        .sum::<usize>();
+    // Each record: the tick, the ranges, and the device command queue's nodes in the heap.
+    let fixed: usize = RANGES.iter().map(|(lo, hi)| (hi - lo) as usize).sum();
+    let mut records = std::collections::HashMap::new();
+    let mut o = 0;
+    while o < dump.len() {
+        let tick = u32::from_le_bytes(dump[o..o + 4].try_into().unwrap());
+        let n = u32::from_le_bytes(dump[o + 4 + fixed..o + 8 + fixed].try_into().unwrap()) as usize;
+        let len = 8 + fixed + n * 0x28;
+        records.insert(tick, (o, len));
+        o += len;
+    }
     let mut mem = cap.call.mem1.clone();
     let at_tick = |mem: &mut Vec<u8>, tick: u32| {
-        let i = dump
-            .chunks(record)
-            .position(|r| u32::from_le_bytes(r[..4].try_into().unwrap()) == tick)
+        let &(at, len) = records
+            .get(&tick)
             .unwrap_or_else(|| panic!("tick {tick} isn't in the dump"));
-        let r = &dump[i * record..(i + 1) * record];
+        let r = &dump[at..at + len];
         let mut o = 4;
         for (lo, hi) in RANGES {
             let n = (hi - lo) as usize;
             let m = (lo - 0x8000_0000) as usize;
             mem[m..m + n].copy_from_slice(&r[o..o + n]);
             o += n;
+        }
+        let n = u32::from_le_bytes(r[o..o + 4].try_into().unwrap()) as usize;
+        o += 4;
+        for _ in 0..n {
+            let a = u32::from_le_bytes(r[o..o + 4].try_into().unwrap());
+            let m = (a - 0x8000_0000) as usize;
+            mem[m..m + 0x24].copy_from_slice(&r[o + 4..o + 0x28]);
+            o += 0x28;
         }
     };
 
@@ -364,7 +393,7 @@ fn random_ops() {
         (0x8040_7F00, 0x8040_8100),
         (0x8043_3700, 0x8043_3A80),
         (0x804A_8D00, 0x804C_6400),
-        (0x804D_6000, 0x804D_7800),
+        (0x804D_6000, 0x804D_7900),
     ];
     let mut steps = 0;
     for mode in leaf_check::MODES {
@@ -626,4 +655,101 @@ fn fighter_smash_voice() {
             Ret::Nothing
         },
     );
+}
+
+const STREAM_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/stream";
+
+/// The music stream's start and its reads' callbacks, on every saved call: from the call's
+/// state on both sides, the whole audio state compared byte for byte after. The calls are in
+/// `AUDIO_STREAM_CALLS` (default above), captured as the driver's are with these functions
+/// named, `CAPTURE_FROM=0` (the stream starts as the match does) and `AX=1` (the refills
+/// read only when the voices play through their samples), `--fields 1500`.
+fn check_stream(
+    func: &str,
+    ours: &dyn Fn(&mut melee_sim::audio::Audio, &ssbm_rt::capture::Call) -> Option<u32>,
+) {
+    use melee_capture::{Capture, audio};
+    let dir = std::env::var("AUDIO_STREAM_CALLS").unwrap_or_else(|_| STREAM_CALLS.to_owned());
+    let paths = leaf_check::calls::saved_calls(&dir, func);
+    let Some(ctx) = leaf_check::reference() else {
+        return;
+    };
+    if paths.is_empty() {
+        eprintln!("no saved {func} calls in {dir}: skipping");
+        return;
+    }
+    // The disc drive is outside memory: a read the queue starts goes out and nothing more
+    // (its end is the timeline's, `timeline_samples`).
+    ctx.register(leaf_check::sym("DVDReadAsyncPrio"), |ctx| {
+        ctx.regs.set_r(3, 1)
+    });
+    for mode in leaf_check::MODES {
+        gekko_fp::set_fp_mode(mode);
+        for path in &paths {
+            let cap = Capture::read(path);
+            let mut data = melee_data::archive::Archives::default();
+            let bank = audio::find_bank(&cap.call.mem1, &mut data);
+            let mut a = audio::import(&cap.call.mem1, bank);
+            let mut diffs = Vec::new();
+            audio::compare(&cap.call.mem1, &a, &mut diffs);
+            assert!(
+                diffs.is_empty(),
+                "{}: the import doesn't round-trip: {diffs:?}",
+                path.display()
+            );
+            let after = leaf_check::run_capture(&ctx, &cap.call);
+            let ret = ours(&mut a, &cap.call);
+            audio::compare(&after, &a, &mut diffs);
+            if let Some(r) = ret {
+                assert_eq!(r, ctx.regs.r(3), "{}: returned", path.display());
+            }
+            assert!(
+                diffs.is_empty(),
+                "{} ({mode:?}): {}",
+                path.display(),
+                diffs[..diffs.len().min(12)].join("\n    ")
+            );
+        }
+        eprintln!("{func} ({mode:?}): {} calls clean", paths.len());
+    }
+}
+
+#[test]
+fn stream_start() {
+    check_stream("HSD_SynthPStreamStart", &|a, c| {
+        let data = melee_data::archive::Archives::default();
+        Some(a.stream_start(
+            &data,
+            r(c, 3) as i32,
+            r(c, 4) as u8,
+            r(c, 5) as u8,
+            r(c, 6) as i32,
+        ) as u32)
+    });
+}
+
+#[test]
+fn stream_callbacks() {
+    let data = melee_data::archive::Archives::default();
+    check_stream("HSD_SynthPStreamHeaderCallback", &|a, c| {
+        let at = (r(c, 5) - 0x8000_0000) as usize;
+        a.stream_header(&data, &c.mem1[at..at + 0x80]);
+        None
+    });
+    check_stream("HSD_SynthPStreamFirstHakoHeaderCallback", &|a, _| {
+        a.stream_first_hako_header(&data);
+        None
+    });
+    check_stream("HSD_SynthPStreamFirstHakoDataCallback", &|a, _| {
+        a.stream_first_hako_data();
+        None
+    });
+    check_stream("HSD_SynthPStreamHakoHeaderCallback", &|a, c| {
+        a.stream_hako_header(&data, r(c, 4));
+        None
+    });
+    check_stream("HSD_SynthResetStreamCounters", &|a, _| {
+        a.stream_reset_counters();
+        None
+    });
 }

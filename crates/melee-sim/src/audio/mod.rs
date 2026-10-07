@@ -8,10 +8,15 @@
 
 pub mod ax;
 pub mod clock;
+pub mod devcom;
 pub mod driver;
+pub mod dsp;
+pub mod stream;
 pub mod synth;
 
 use melee_data::archive::Archives;
+
+pub use clock::HwLog;
 
 use crate::game::handles::CodeRef;
 
@@ -24,6 +29,13 @@ pub struct Audio {
     pub ax: ax::Ax,
     pub synth: synth::Synth,
     pub driver: driver::Driver,
+    /// The device command queue the music stream and sound bank loads read through.
+    pub devcom: devcom::DevCom,
+    /// Time the audio code's hardware accesses take, for the timeline (empty between its
+    /// steps).
+    pub hw: HwLog,
+    /// Which of ssbm-rs's DSP models the voices follow.
+    pub dsp: dsp::DspModel,
     /// The game's audio library's state (`melee/lb/lbaudio_ax.c`).
     pub lb: crate::lb::audio::LbAudio,
     /// When audio frames run; none where the state came without a timeline (a single
@@ -41,6 +53,10 @@ impl Audio {
         self.ax.sync_pbs(0);
         // `__AXGetCommandListAddress`: the list the DSP is handed, and the next one.
         self.ax.list_position ^= 1;
+        // The DSP runs the command list as the mail hands it over.
+        if self.dsp == dsp::DspModel::Samples {
+            self.ax.dsp_frame();
+        }
         self.service_callback_stack();
         match self.ax.user_callback {
             None => {}
@@ -102,7 +118,25 @@ struct Running<'a> {
 }
 
 impl clock::Frames for Running<'_> {
-    fn audio_frame(&mut self) {
+    fn audio_frame(&mut self, base: u64) -> HwLog {
+        self.audio.hw = HwLog::at(base);
         self.audio.ax_frame(self.data);
+        std::mem::take(&mut self.audio.hw)
+    }
+
+    fn disc_done(&mut self, base: u64) -> HwLog {
+        self.audio.hw = HwLog::at(base);
+        self.audio.devcom_dvd_done(self.data);
+        std::mem::take(&mut self.audio.hw)
+    }
+
+    fn aram_done(&mut self, base: u64) -> HwLog {
+        self.audio.hw = HwLog::at(base);
+        self.audio.devcom_aram_done(self.data);
+        std::mem::take(&mut self.audio.hw)
+    }
+
+    fn take_log(&mut self) -> HwLog {
+        std::mem::take(&mut self.audio.hw)
     }
 }

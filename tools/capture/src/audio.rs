@@ -13,6 +13,7 @@ use melee_data::archive::{Archive, ArchiveId, Archives};
 use melee_sim::audio::Audio;
 use melee_sim::audio::ax::{self, PB_WORDS, Pb, VOICES as AX_VOICES};
 use melee_sim::audio::clock::{AUDIO_FRAME, Clock};
+use melee_sim::audio::devcom::{ArqRequest, Command, DevCom};
 use melee_sim::audio::driver::VOICES as SM_VOICES;
 use melee_sim::audio::synth::{self, NODES, Sfx, SfxVoice};
 use melee_sim::game::handles::CodeRef;
@@ -247,7 +248,15 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
         pos: m.u32(sym("HSD_Synth_804D7774")),
         busy: m.u8(sym("HSD_Synth_804D7778")),
         base: m.u32(sym("HSD_Synth_804D7780")),
+        entrynum: m.i32(sym("HSD_Synth_804D7764")),
+        silence: m.u32(sym("HSD_Synth_804D7784")),
+        hako: std::array::from_fn(|i| {
+            m.bytes(sym("pstHakoHeader") + 0x20 * i as u32, 0x20)
+                .try_into()
+                .unwrap()
+        }),
     };
+    a.devcom = import_devcom(&m);
     // The driver.
     let sms = sym("AXDriver_804C45A0");
     let sm = |p: u32| index(sms, SM_SIZE, SM_VOICES, p);
@@ -318,6 +327,216 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
     a
 }
 
+const DEVCOM_SIZE: u32 = 0x24;
+
+fn devcom_node(m: &Mem, a: u32) -> Command {
+    Command {
+        next: None,
+        id: m.i32(a + 4),
+        file: m.i32(a + 8),
+        src: m.u32(a + 0xC),
+        dest: m.u32(a + 0x10),
+        size: m.u32(a + 0x14),
+        kind: m.u16(a + 0x18),
+        cancel: m.u16(a + 0x1A),
+        callback: code(m.u32(a + 0x1C)),
+        args: m.u32(a + 0x20),
+    }
+}
+
+/// The device command queue's roots: the free list, the queues' heads and tails, the
+/// commands in flight and those whose last chunk is going to ARAM.
+fn devcom_roots(m: &Mem) -> Vec<(&'static str, u32)> {
+    let mut r = vec![("free list", m.u32(sym("HSD_DevCom_804D77F0")))];
+    for q in 0..4 {
+        r.push(("queue head", m.u32(sym("devComStatus") + 4 * q)));
+        r.push(("queue tail", m.u32(sym("HSD_DevCom_804C6330") + 4 * q)));
+    }
+    r.push(("dvdDC", m.u32(sym("dvdDC"))));
+    r.push(("aramDC", m.u32(sym("aramDC"))));
+    for i in 0..2 {
+        r.push(("ending", m.u32(sym("HSD_DevCom_804D77FC") + 4 * i)));
+    }
+    r
+}
+
+fn arq_request(m: &Mem, a: u32) -> ArqRequest {
+    ArqRequest {
+        next: m.u32(a),
+        owner: m.u32(a + 4),
+        kind: m.u32(a + 8),
+        priority: m.u32(a + 0xC),
+        source: m.u32(a + 0x10),
+        dest: m.u32(a + 0x14),
+        length: m.u32(a + 0x18),
+        callback: m.u32(a + 0x1C),
+    }
+}
+
+/// The device command queue. Its nodes come from the audio heap, sixteen at a time; each one
+/// reached from a root becomes a slot, in address order.
+fn import_devcom(m: &Mem) -> DevCom {
+    let mut addrs = std::collections::BTreeSet::new();
+    for (_, mut a) in devcom_roots(m) {
+        while a != 0 && addrs.insert(a) {
+            a = m.u32(a);
+        }
+    }
+    let addrs: Vec<u32> = addrs.into_iter().collect();
+    for w in addrs.windows(2) {
+        assert!(
+            (w[1] - w[0]) % DEVCOM_SIZE == 0,
+            "device commands at {:#x} and {:#x} aren't in one block",
+            w[0],
+            w[1]
+        );
+    }
+    let slot = |a: u32| (a != 0).then(|| addrs.iter().position(|&x| x == a).unwrap() as u16);
+    let mut d = DevCom {
+        nodes: addrs
+            .iter()
+            .map(|&a| Command {
+                next: slot(m.u32(a)),
+                ..devcom_node(m, a)
+            })
+            .collect(),
+        free: slot(m.u32(sym("HSD_DevCom_804D77F0"))),
+        next_id: m.i32(sym("HSD_DevCom_804D6050")),
+        aram_busy: m.u8(sym("aramstate")),
+        dvd_busy: m.u8(sym("HSD_DevCom_804D77F5")),
+        dvd_buf: m.u8(sym("HSD_DevCom_804D77F6")),
+        arq_buf: m.u8(sym("HSD_DevCom_804D77F7")),
+        dvd: slot(m.u32(sym("dvdDC"))),
+        aram: slot(m.u32(sym("aramDC"))),
+        error: m.i32(sym("HSD_DevCom_804D7804")),
+        relay_busy: [
+            m.u8(sym("devComRelayBufFlag")),
+            m.u8(sym("devComRelayBufFlag") + 1),
+        ],
+        ..DevCom::default()
+    };
+    for q in 0..4 {
+        d.heads[q] = slot(m.u32(sym("devComStatus") + 4 * q as u32));
+        d.tails[q] = slot(m.u32(sym("HSD_DevCom_804C6330") + 4 * q as u32));
+    }
+    for i in 0..2 {
+        d.ending[i] = slot(m.u32(sym("HSD_DevCom_804D77FC") + 4 * i as u32));
+        for j in 0..2 {
+            d.arq[i][j] = arq_request(m, sym("devComARQR") + 0x40 * i as u32 + 0x20 * j as u32);
+        }
+    }
+    d
+}
+
+/// The device command queue against memory: its globals, and its nodes walked from each root
+/// on both sides, pairing slots with addresses as they're met.
+fn compare_devcom(m: &Mem, d: &DevCom, diffs: &mut Vec<String>) {
+    let byte = |n: &str| u32::from(m.u8(sym(n)));
+    for (name, ours, theirs) in [
+        (
+            "HSD_DevCom_804D6050",
+            d.next_id as u32,
+            m.u32(sym("HSD_DevCom_804D6050")),
+        ),
+        ("aramstate", u32::from(d.aram_busy), byte("aramstate")),
+        (
+            "HSD_DevCom_804D77F5",
+            u32::from(d.dvd_busy),
+            byte("HSD_DevCom_804D77F5"),
+        ),
+        (
+            "HSD_DevCom_804D77F6",
+            u32::from(d.dvd_buf),
+            byte("HSD_DevCom_804D77F6"),
+        ),
+        (
+            "HSD_DevCom_804D77F7",
+            u32::from(d.arq_buf),
+            byte("HSD_DevCom_804D77F7"),
+        ),
+        (
+            "HSD_DevCom_804D7804",
+            d.error as u32,
+            m.u32(sym("HSD_DevCom_804D7804")),
+        ),
+        (
+            "devComRelayBufFlag[0]",
+            u32::from(d.relay_busy[0]),
+            byte("devComRelayBufFlag"),
+        ),
+        (
+            "devComRelayBufFlag[1]",
+            u32::from(d.relay_busy[1]),
+            u32::from(m.u8(sym("devComRelayBufFlag") + 1)),
+        ),
+    ] {
+        if ours != theirs {
+            diffs.push(format!("audio: {name}: ours {ours:#x}, theirs {theirs:#x}"));
+        }
+    }
+    for i in 0..2 {
+        for j in 0..2 {
+            let theirs = arq_request(m, sym("devComARQR") + 0x40 * i as u32 + 0x20 * j as u32);
+            if d.arq[i][j] != theirs {
+                diffs.push(format!(
+                    "audio: devComARQR[{i}][{j}]: ours {:x?}, theirs {theirs:x?}",
+                    d.arq[i][j]
+                ));
+            }
+        }
+    }
+    if !d.arq_done.is_empty() {
+        diffs.push(format!(
+            "audio: ARAM transfers waiting for their interrupt: {:?}",
+            d.arq_done
+        ));
+    }
+    let mut ours_roots = vec![d.free];
+    for q in 0..4 {
+        ours_roots.push(d.heads[q]);
+        ours_roots.push(d.tails[q]);
+    }
+    ours_roots.extend([d.dvd, d.aram, d.ending[0], d.ending[1]]);
+    let mut pair: HashMap<u16, u32> = HashMap::new();
+    for ((name, theirs), ours) in devcom_roots(m).into_iter().zip(ours_roots) {
+        // A tail, a command in flight and an ending one name a node; the others start lists.
+        let list = name == "free list" || name == "queue head";
+        let (mut o, mut t) = (ours, theirs);
+        for _ in 0..=d.nodes.len() {
+            match (o, t) {
+                (None, 0) => break,
+                (Some(i), ta) if ta != 0 => {
+                    if *pair.entry(i).or_insert(ta) != ta {
+                        diffs.push(format!(
+                            "audio: device command ({name}): slot {i} pairs with {:#x} and {ta:#x}",
+                            pair[&i]
+                        ));
+                        break;
+                    }
+                    let c = d.nodes[usize::from(i)];
+                    let tc = devcom_node(m, ta);
+                    if (Command { next: None, ..c }) != tc {
+                        diffs.push(format!(
+                            "audio: device command at {ta:#x} ({name}): ours {c:x?}, theirs {tc:x?}"
+                        ));
+                    }
+                    if !list {
+                        break;
+                    }
+                    o = c.next;
+                    t = m.u32(ta);
+                }
+                (o, t) => {
+                    diffs.push(format!(
+                        "audio: device commands ({name}): ours {o:?}, theirs {t:#x}"
+                    ));
+                    break;
+                }
+            }
+        }
+    }
+}
+
 /// The timeline at a captured call inside a tick: the time base from the registers, the
 /// next audio frame from the last one's start (`__AXLocalProfile.axFrameStart`), the pad
 /// alarm and the pad queue from memory.
@@ -337,6 +556,15 @@ pub fn import_clock(mem1: &[u8], tb: u64) -> Clock {
         );
     }
     c.pads = u32::from(m.u8(sym("HSD_PadLibData") + 3));
+    // A disc read in flight finishes its latency after its command, which went out just after
+    // the driver noted the time.
+    if m.u8(sym("HSD_DevCom_804D77F5")) != 0 {
+        let issued = m.u64(sym("LastReadIssued")).wrapping_sub(offset);
+        c.schedule(
+            issued + 16 + melee_sim::audio::clock::DISC_LATENCY,
+            melee_sim::audio::clock::EventKind::DiscDone,
+        );
+    }
     c
 }
 
@@ -344,6 +572,16 @@ pub fn import_clock(mem1: &[u8], tb: u64) -> Clock {
 pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
     let m = Mem(mem1);
     let mut img = Image::new(&m);
+    // In the sample-accurate model the DSP's blocks also hold what the samples' values make:
+    // the buses' last samples, the ADPCM predictor and history, and the resampler's last
+    // samples, which the mix decides (`melee_sim::audio::dsp`).
+    const SAMPLE_WORDS: [usize; 16] = [
+        41, 42, 43, 44, 45, 46, 47, 48, 49, 80, 81, 82, 86, 87, 88, 89,
+    ];
+    let dsp_skip: &[usize] = match a.dsp {
+        melee_sim::audio::dsp::DspModel::Silent => &[],
+        melee_sim::audio::dsp::DspModel::Samples => &SAMPLE_WORDS,
+    };
     let vpbs = sym("__AXVPB");
     let vpb = |v: Option<u8>| v.map_or(0, |i| vpbs + VPB_SIZE * u32::from(i));
     let code = |c: Option<CodeRef>| c.map_or(0, |c| c.0);
@@ -363,11 +601,12 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
         img.u32(r, at + 0x28, v.update_counter);
         img.u32(r, at + 0x2C, v.update_total);
         img.u32(r, at + 0x30, at + 0x34 + 2 * v.update_counter);
-        img.pb(r, at + VPB_PB, &v.pb);
+        img.pb(r, at + VPB_PB, &v.pb, &[]);
         img.pb(
             R("AX DSP block", Some(i)),
             sym("__AXPB") + 0xC0 * i as u32,
             &a.ax.dsp[i],
+            dsp_skip,
         );
     }
     for i in 0..ax::PRIORITY_STACKS {
@@ -538,6 +777,16 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
     img.u32("HSD_Synth_804D7774", sym("HSD_Synth_804D7774"), st.pos);
     img.u8("HSD_Synth_804D7778", sym("HSD_Synth_804D7778"), st.busy);
     img.u32("HSD_Synth_804D7780", sym("HSD_Synth_804D7780"), st.base);
+    img.u32(
+        "HSD_Synth_804D7764",
+        sym("HSD_Synth_804D7764"),
+        st.entrynum as u32,
+    );
+    img.u32("HSD_Synth_804D7784", sym("HSD_Synth_804D7784"), st.silence);
+    for (i, h) in st.hako.iter().enumerate() {
+        img.put("pstHakoHeader", sym("pstHakoHeader") + 0x20 * i as u32, h);
+    }
+    compare_devcom(&m, &a.devcom, diffs);
     let theirs = sfx_table(&m);
     if theirs != s.sfx {
         diffs.push("audio: the synth's loaded effects differ".to_owned());
@@ -698,13 +947,21 @@ impl<'a> Image<'a> {
     fn f32(&mut self, r: impl Into<R>, at: u32, v: f32) {
         self.u32(r, at, v.to_bits());
     }
-    fn pb(&mut self, r: R, at: u32, pb: &Pb) {
-        // The block's padding (its last three halfwords) is left out.
-        let mut b = Vec::with_capacity(2 * (PB_WORDS - 3));
-        for w in pb.words().iter().take(PB_WORDS - 3) {
-            b.extend(w.to_be_bytes());
+    /// A parameter block, but for the halfwords `skip` leaves out. The block's padding (its
+    /// last three halfwords) is always left out.
+    fn pb(&mut self, r: R, at: u32, pb: &Pb, skip: &[usize]) {
+        let w = pb.words();
+        let mut k = 0;
+        while k < PB_WORDS - 3 {
+            let run = (k..PB_WORDS - 3).take_while(|i| !skip.contains(i)).count();
+            if run == 0 {
+                k += 1;
+                continue;
+            }
+            let b: Vec<u8> = w[k..k + run].iter().flat_map(|x| x.to_be_bytes()).collect();
+            self.put(r, at + 2 * k as u32, &b);
+            k += run;
         }
-        self.put(r, at, &b);
     }
     /// Reports each region that differs.
     fn check(self, diffs: &mut Vec<String>) {
@@ -714,4 +971,20 @@ impl<'a> Image<'a> {
             }
         }
     }
+}
+
+/// Adds the music stream's file (by the stream's entry number) to `archives` and to the
+/// device command queue's files, for its reads.
+pub fn load_stream(a: &mut Audio, disc: &melee_data::disc::Disc, archives: &mut Archives) {
+    let e = a.synth.stream.entrynum;
+    if e <= 0 || a.devcom.files.iter().any(|f| f.0 == e) {
+        return;
+    }
+    let path = disc
+        .path_of(e)
+        .unwrap_or_else(|err| panic!("the stream's file {e}: {err}"));
+    let bytes = disc
+        .read_file(&path)
+        .unwrap_or_else(|err| panic!("{path}: {err}"));
+    a.devcom.files.push((e, archives.add(Archive::raw(&bytes))));
 }

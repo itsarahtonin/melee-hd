@@ -98,11 +98,13 @@ pub struct Channel {
     pub frames: i32,
 }
 
-/// The stream player's globals the frame reads (`HSD_Synth_804D7760` and on).
+/// The stream player's globals (`HSD_Synth_804D7760` and on, `pstHakoHeader`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Stream {
     /// `HSD_Synth_804D7760`: the stream's node id.
     pub node: i32,
+    /// `HSD_Synth_804D7764`: the stream file's entry number.
+    pub entrynum: i32,
     /// `HSD_Synth_804D7768`, `776C`, `7770`, `7774`: the box being read, the box playing,
     /// the box whose loop is set and the playing position.
     pub reading: u32,
@@ -113,6 +115,10 @@ pub struct Stream {
     pub busy: u8,
     /// `HSD_Synth_804D7780`: the stream buffer's ARAM address.
     pub base: u32,
+    /// `HSD_Synth_804D7784`: the silence the last box loops to (an ARAM sample address).
+    pub silence: u32,
+    /// `pstHakoHeader`: the three boxes' headers as read from the file.
+    pub hako: [[u8; 0x20]; 3],
 }
 
 /// The synth's state.
@@ -881,32 +887,7 @@ impl Audio {
             Some(super::driver::MASTER_CLOCK) => self.driver_frame(data),
             Some(o) => panic!("synth master clock callback {:#010x} isn't ported", o.0),
         }
-        self.stream_frame();
+        self.stream_frame(data);
         self.synth.frame = self.synth.frame.wrapping_add(1);
-    }
-
-    /// `HSD_SynthPStreamMasterClockCallback`: follows the playing stream through its buffer.
-    /// Without the DSP's mix its voice never moves, so after it starts this changes nothing;
-    /// anything else (a box ended, a read due) needs the stream player's port.
-    #[doc(alias = "HSD_SynthPStreamMasterClockCallback")]
-    pub fn stream_frame(&mut self) {
-        let Some(n) = self.get_node(self.synth.stream.node) else {
-            return;
-        };
-        let node = self.synth.nodes[n];
-        if node.flags & 8 != 0 {
-            return;
-        }
-        let v0 = node.voices[0].unwrap();
-        let s = self.synth.stream;
-        let at = self.ax.voices[usize::from(v0)].pb.addr.current_address;
-        let pos = at.wrapping_sub(s.base.wrapping_mul(2)) >> 17;
-        let moved = pos != s.pos;
-        let looping = pos == s.looped && pos != s.playing;
-        let reading =
-            (s.playing.wrapping_add(1) % 3) != pos && s.busy == 0 && s.reading == s.playing;
-        if moved || looping || reading {
-            crate::game::code::unported_call("HSD_SynthPStreamMasterClockCallback's stream refill");
-        }
     }
 }

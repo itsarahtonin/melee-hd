@@ -46,6 +46,14 @@ const AFTER_WAKE: u64 = 24;
 const TICK_READ: u64 = 16;
 /// Time an ARAM load takes per 4 KB chunk (eight register reads).
 pub const ARAM_CHUNK: u64 = 64;
+/// A disc read's time from its command to its interrupt, ssbm-rs's `DVD_LATENCY` (Slippi's
+/// fast disc speed; a drive's transfer time isn't modeled).
+pub const DISC_LATENCY: u64 = 20_250;
+/// Where the audio interrupt's handler runs the user callback, where the disc interrupt's
+/// handler runs the disc driver's callback, and the ARAM interrupt's handler its own.
+const AI_CALLBACK: u64 = 64;
+const DI_CALLBACK: u64 = 32;
+const ARAM_CALLBACK: u64 = 8;
 
 /// What happens at a time on the timeline.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -58,6 +66,8 @@ pub enum EventKind {
     AudioDma,
     /// The DSP finishes a frame.
     DspResume,
+    /// A disc read finishes (the disc interface interrupt).
+    DiscDone,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -78,6 +88,8 @@ pub struct Clock {
     /// Raised interrupts not yet taken.
     pub vi_pending: bool,
     pub ai_pending: bool,
+    pub di_pending: bool,
+    pub aram_pending: u32,
     /// Pad samples queued and not yet ticked.
     pub pads: u32,
     /// The pad alarm's period.
@@ -91,10 +103,52 @@ pub struct Clock {
     pub dsp_ready: bool,
 }
 
-/// What the timeline asks of its owner.
+/// What the timeline asks of its owner. Each handler starts its time log at `base`, the time
+/// into the handler where it runs, and returns the log.
 pub trait Frames {
     /// The audio interrupt: an AX frame.
-    fn audio_frame(&mut self);
+    fn audio_frame(&mut self, base: u64) -> HwLog;
+    /// The disc interrupt: the read in flight is done.
+    fn disc_done(&mut self, base: u64) -> HwLog;
+    /// The ARAM interrupt: the next ARAM transfer is done.
+    fn aram_done(&mut self, base: u64) -> HwLog;
+    /// What the game's code between handlers did to the hardware.
+    fn take_log(&mut self) -> HwLog;
+}
+
+/// Time a stretch of the audio code took at the hardware, and what it started: the disc reads
+/// (each by the time into the stretch its command went out) and ARAM transfers, which finish
+/// at once and interrupt.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct HwLog {
+    pub spent: u64,
+    pub reads: Vec<u64>,
+    pub aram: u32,
+}
+
+/// A disc read's command, and an ARAM transfer's request.
+const DISC_ISSUE: u64 = 24;
+const ARQ_POST: u64 = 56;
+
+impl HwLog {
+    pub fn at(base: u64) -> HwLog {
+        HwLog {
+            spent: base,
+            ..HwLog::default()
+        }
+    }
+
+    /// A disc read's command goes out.
+    pub fn disc_read(&mut self) {
+        self.spent += DISC_ISSUE;
+        self.reads.push(self.spent);
+    }
+
+    /// An ARAM transfer is posted (and done).
+    pub fn arq_post(&mut self) {
+        self.spent += ARQ_POST;
+        self.aram += 1;
+    }
 }
 
 impl Clock {
@@ -151,6 +205,7 @@ impl Clock {
                         self.schedule(self.now + AUDIO_FRAME, EventKind::AudioDma);
                     }
                     EventKind::DspResume => self.dsp_ready = true,
+                    EventKind::DiscDone => self.di_pending = true,
                 }
             } else if self.ai_pending {
                 self.ai_pending = false;
@@ -161,8 +216,22 @@ impl Clock {
                 let start = self.now;
                 self.dsp_ready = false;
                 self.schedule(start + AI_MAIL + DSP_FRAME, EventKind::DspResume);
-                f.audio_frame();
-                self.now = start + AI_HANDLER;
+                let log = f.audio_frame(AI_CALLBACK);
+                let end = start + AI_HANDLER + (log.spent - AI_CALLBACK);
+                self.apply(start, &log);
+                self.now = end;
+            } else if self.aram_pending != 0 {
+                self.aram_pending -= 1;
+                let start = self.now;
+                let log = f.aram_done(ARAM_CALLBACK);
+                self.apply(start, &log);
+                self.now = start + log.spent;
+            } else if self.di_pending {
+                self.di_pending = false;
+                let start = self.now;
+                let log = f.disc_done(DI_CALLBACK);
+                self.apply(start, &log);
+                self.now = start + log.spent;
             } else if self.vi_pending {
                 self.vi_pending = false;
                 self.now += VI_HANDLER;
@@ -170,6 +239,26 @@ impl Clock {
             } else {
                 break;
             }
+        }
+    }
+
+    /// Schedules a handler's disc reads and raises its ARAM transfers' interrupts.
+    fn apply(&mut self, start: u64, log: &HwLog) {
+        for &r in &log.reads {
+            self.schedule(start + r + DISC_LATENCY, EventKind::DiscDone);
+        }
+        self.aram_pending += log.aram;
+    }
+
+    /// The game's code since the last handler: its hardware time passes, with interrupts
+    /// enabled.
+    fn game_code(&mut self, f: &mut dyn Frames) {
+        let log = f.take_log();
+        if log.spent != 0 || !log.reads.is_empty() || log.aram != 0 {
+            let start = self.now;
+            self.apply(start, &log);
+            self.now = start + log.spent;
+            self.service(f);
         }
     }
 
@@ -189,6 +278,7 @@ impl Clock {
     /// Runs the timeline from the end of the last tick to the start of the next one's game
     /// code, running the audio frames that fall in between.
     pub fn tick_start(&mut self, f: &mut dyn Frames) {
+        self.game_code(f);
         if self.ticks_left == 0 {
             // The render's wait, then the sleep until a retrace frees a frame buffer.
             self.wait(WAIT_STEP, f);
@@ -214,11 +304,13 @@ impl Clock {
 
     /// Time a tick's ARAM loads take (`ARAM_CHUNK` per 4 KB).
     pub fn aram_load(&mut self, len: u32, f: &mut dyn Frames) {
+        self.game_code(f);
         self.read(ARAM_CHUNK * u64::from(len.div_ceil(0x1000)), f);
     }
 
     /// The perf timer's read at the end of a tick.
     pub fn tick_end(&mut self, f: &mut dyn Frames) {
+        self.game_code(f);
         self.read(TICK_READ, f);
     }
 }
