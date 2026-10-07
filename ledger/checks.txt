@@ -159,7 +159,7 @@ grLast_8021A9C4	leaf-check stage: last_init_main runs the captured call and comp
 Ground_InitMapColl	leaf-check stage: last_init_main (the main object's collision bound)
 Ground_801C3214	leaf-check stage: last_init_main (Ground_InitMapColl switches collision on)
 Ground_801C10B8	leaf-check stage: last_init_main (the start hook queued)
-grLast_8021B920	leaf-check stage: last_set_phase runs every captured call; last_stage_ticks enters phases 2 to 8
+grLast_8021B920	leaf-check stage: last_set_phase runs every captured call; last_stage_ticks enters every phase, three cycles over
 grLast_8021C640	leaf-check stage: last_init_main (phase 1's colors); ground_colors
 Ground_801C052C	leaf-check stage: last_init_main and ground_colors (the scene colors)
 Ground_801C0544	leaf-check stage: last_init_main and ground_colors (the scene colors)
@@ -196,7 +196,7 @@ grLast_8021AAB0	leaf-check stage: last_proc_main runs every captured call; last_
 grLast_8021ADD0	leaf-check stage: last_proc_sway runs every captured call; last_stage_ticks
 grLast_8021B2E8	leaf-check stage: last_proc_main and last_stage_ticks (the scene's timer)
 grLast_8021B5C4	leaf-check stage: last_stage_ticks (phases 1 to 8 advance through it)
-grLast_8021C500	leaf-check stage: last_stage_ticks (the blend with nothing to blend)
+grLast_8021C500	leaf-check stage: last_stage_ticks runs every fog blend of three cycles (the stale alpha left out, docs/engine.md)
 grLast_8021C40C	leaf-check stage: ground_colors (a blend started on a real stage)
 grLast_8021C6AC	leaf-check stage: ground_colors (the bright scene's colors)
 grLast_8021A914	leaf-check stage: last_empty_proc and last_stage_ticks
@@ -317,7 +317,7 @@ Camera_80030CD8	leaf-check camera to_screen: every capture of it; the pixel land
 Camera_80030CFC	leaf-check camera box_on_screen: every capture of it, plus perturbed boxes and tolerances
 Camera_80030DE4	leaf-check camera quake_offset_and_translation: every capture of it
 Camera_80030DF8	leaf-check camera quake_offset_and_translation: every capture of it
-Camera_RequestQuake	leaf-check camera quakes: every capture of it, on stages without a quake model, plus perturbed kinds and epicenters
+Camera_RequestQuake	leaf-check camera quakes: every capture of it, on stages without a quake model, plus perturbed kinds and epicenters; stage request_quake: every capture on five tournament stages, with their quake models
 Camera_80031060	leaf-check camera flags: every capture of it
 Camera_80031074	leaf-check camera flags: every capture of it
 Camera_8003108C	leaf-check camera flags: every capture of it
@@ -987,3 +987,6 @@ lbAudioAx_80024E50	leaf-check audio: lb_audio_entries pauses and resumes from th
 lbAudioAx_80024030	leaf-check audio: lb_audio_entries plays each of its sounds (and one past them) from the tick's states
 lbAudioAx_80024C84	leaf-check audio: lb_audio_entries runs the saved call at the match's end and the tick's states
 lbAudioAx_80024D50	leaf-check audio: lb_audio_entries runs the saved call at the match's end
+grLib_801C9CEC	leaf-check stage quake_model: every capture on Final Destination, Pokémon Stadium, Yoshi's Story, Fountain of Dreams and Dream Land; last_stage_ticks (phases 10 and 11)
+grLib_801C9BC8	leaf-check stage quake_loop_proc: every capture; last_stage_ticks (phases 10 and 11)
+grLib_801C9C40	leaf-check stage quake_proc: every capture (the fighters' landing quakes)

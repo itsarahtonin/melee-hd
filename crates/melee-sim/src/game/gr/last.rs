@@ -43,6 +43,22 @@ const BLEND_PHASE_10: _GXColor = _GXColor {
     a: 0,
 };
 
+/// The fog color phase 13 blends to (`grNLa_804DBBD8`).
+const BLEND_PHASE_13: _GXColor = _GXColor {
+    r: 0xC8,
+    g: 0xC8,
+    b: 0xC8,
+    a: 0xFF,
+};
+
+/// The fog color phases 14 and 16 blend to (`grNLa_804DBBDC`, `grNLa_804DBBE0`).
+const BLACK: _GXColor = _GXColor {
+    r: 0,
+    g: 0,
+    b: 0,
+    a: 0,
+};
+
 /// The swaying piece's limits, as `grLast_804DBB7C` and friends: angular speeds and angles in
 /// radians, single precision as compiled.
 struct Sway {
@@ -238,10 +254,10 @@ pub fn advance(r: &mut Running, gobj: GObjId) {
                 if reg(l.xDC) < 0.0 {
                     l.xDC = 0.0;
                 }
-                camera::request_quake(r.game, camera::QUAKE_LOOP, None);
+                camera::request_quake(r, camera::QUAKE_LOOP, None);
             }
         }
-        11 => camera::request_quake(r.game, camera::QUAKE_LOOP, None),
+        11 => camera::request_quake(r, camera::QUAKE_LOOP, None),
         15 if b27 => {
             let current =
                 ground::fog_color(r.game).expect("Ground_801C2090 leaves its color unset");
@@ -326,6 +342,15 @@ fn piece_anim(r: &mut Running, piece: GObjId, i: usize, n: i32) {
     }
 }
 
+/// Starts the color script at `offset` in the stage's `yakumono_param` on a piece and runs its
+/// first tick (`grMaterial_801C9604`, then `grMaterial_801C9698` again).
+fn piece_script(r: &mut Running, piece: GObjId, offset: u32) {
+    let yaku = r.game.gr.last_yakumono.expect("grLast yakumono_param");
+    let script = r.data.ptr(yaku.at(offset));
+    material::start_script(r.game, r.data, piece, script, 0);
+    material::run_ground_overlay(r.game, r.data, piece);
+}
+
 /// Starts scene `n` on the first five pieces.
 fn pieces_anim(r: &mut Running, gobj: GObjId, n: i32) {
     for i in 0..5 {
@@ -407,8 +432,48 @@ pub fn set_phase(r: &mut Running, gobj: GObjId, phase: i32) {
             bright_colors(r.game);
             return;
         }
-        13 | 14 | 16 | 17 => unimplemented!("phase {phase}'s material scripts aren't ported"),
+        13 => {
+            blend_to(r.game, gobj, BLEND_PHASE_13, 120.0);
+            for i in 0..5 {
+                let piece = r.game.grounds[g.0].u.map().lv_gobj[i].expect("a piece");
+                piece_script(r, piece, 0);
+            }
+            true
+        }
+        14 => {
+            blend_to(r.game, gobj, BLACK, 60.0);
+            for i in 0..5 {
+                let piece = r.game.grounds[g.0].u.map().lv_gobj[i].take();
+                setup::destroy(r, piece);
+            }
+            let piece = create_piece(r, gobj, 5);
+            r.game.grounds[g.0].u.map().lv_gobj[5] = Some(piece);
+            piece_anim(r, piece, 5, 0);
+            piece_script(r, piece, 4);
+            ground::set_fog_enabled(r.game, false);
+            r.game.grounds[g.0].u.map().b26 = true;
+            dark_colors(r.game);
+            return;
+        }
         15 => false,
+        16 => {
+            blend_to(r.game, gobj, BLACK, 60.0);
+            let piece = r.game.grounds[g.0].u.map().lv_gobj[5].expect("piece 5");
+            piece_script(r, piece, 8);
+            true
+        }
+        17 => {
+            for i in 0..5 {
+                let piece = create_piece(r, gobj, i);
+                r.game.grounds[g.0].u.map().lv_gobj[i] = Some(piece);
+                piece_anim(r, piece, i, 0);
+                piece_script(r, piece, 0xC);
+            }
+            let piece = r.game.grounds[g.0].u.map().lv_gobj[5].take();
+            setup::destroy(r, piece);
+            ground::set_fog_enabled(r.game, true);
+            true
+        }
         _ => return,
     };
     r.game.grounds[g.0].u.map().b26 = b26;
@@ -471,11 +536,10 @@ pub fn blend_step(game: &mut Game, gobj: GObjId) {
         v.b27 = true;
         (byte(v.xE4), byte(v.xE8), byte(v.xEC))
     };
-    // The color's alpha is whatever the original's stack held, and the whole color goes into
-    // the fog (`Ground_801C205C`): only the fog's alpha would differ, and nothing reads it,
-    // but it needs a probe of what the original leaves there before it's modeled.
-    let _ = c;
-    unimplemented!("grLast_8021C500 gives the fog a color whose alpha it never sets");
+    // The color's alpha is whatever the stack held: the low byte of a stack or heap address
+    // another function saved there, or 0 (`docs/engine.md`). Only the fog takes it.
+    ground::set_fog_rgb(game, c.0, c.1, c.2);
+    camera::set_background_color(&mut game.camera.cam, c.0, c.1, c.2);
 }
 
 /// The scene colors for the dark scenes, `grLast_8021C640`.

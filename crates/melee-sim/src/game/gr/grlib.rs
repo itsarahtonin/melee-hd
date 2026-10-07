@@ -3,12 +3,15 @@
 use gekko_fp as fp;
 use melee_data::archive::Archives;
 
-use super::super::state::Game;
+use super::super::camera;
+use super::super::handles::CodeRef;
+use super::super::state::{Game, OBJ_JOBJ, Obj, Running};
 use super::ground::ground_of;
 use crate::fpu::{mem, reg};
+use crate::hsd::aobj;
 use crate::hsd::generator::{self, GeneratorId};
 use crate::hsd::gobj::GObjId;
-use crate::hsd::jobj::JObjId;
+use crate::hsd::jobj::{self, JObjId};
 
 /// Measures the players' start points (points of interest 0 to 3), `grLib_801C9A10`: a point
 /// the stage lacks keeps its last measure.
@@ -162,5 +165,67 @@ pub fn joint_particles(
         generator::spawn_on_jobj(objs, data, hooks, 0, bank, idx, Some(j));
     } else {
         generator::spawn_oriented_on_jobj(objs, data, hooks, 0, bank, idx, Some(j));
+    }
+}
+
+/// The looping quake model's process, `grLib_801C9BC8`.
+pub const QUAKE_LOOP_PROC: u32 = 0x801C_9BC8;
+/// The other quake models' process, `grLib_801C9C40`.
+pub const QUAKE_PROC: u32 = 0x801C_9C40;
+
+/// Starts the stage's quake model for a quake (`CmQuakeKind` 1 to 4), whose animation shakes
+/// the camera: none for another kind or a stage without one, `grLib_801C9CEC`.
+#[doc(alias = "grLib_801C9CEC")]
+pub fn quake_model(r: &mut Running, kind: i32) -> Option<GObjId> {
+    if !(1..=4).contains(&kind) {
+        return None;
+    }
+    let idx = (kind - 1) as u32;
+    let set = r.game.stage_info.quake_model_set?;
+    let gobj = r.game.world.create(3, 18, kind as u8);
+    let j = jobj::load_joint(&mut r.game.objs, r.data, r.data.ptr(set))
+        .expect("grLib_801C9CEC: the quake model's joint");
+    r.game.world.set_obj(gobj, OBJ_JOBJ, Obj::JObj(j));
+    let proc = if kind == camera::QUAKE_LOOP {
+        QUAKE_LOOP_PROC
+    } else {
+        QUAKE_PROC
+    };
+    r.game.world.setup_proc(gobj, CodeRef(proc), 1);
+    let anim = r
+        .data
+        .ptr(set.at(4))
+        .and_then(|l| r.data.ptr(l.at(4 * idx)));
+    jobj::add_anim_all(&mut r.game.objs, r.data, Some(j), anim, None, None);
+    jobj::req_anim_all(&mut r.game.objs, Some(j), 0.0);
+    if kind == camera::QUAKE_LOOP {
+        jobj::foreach_anim(
+            &mut r.game.objs,
+            j,
+            jobj::type_mask::JOBJ,
+            &mut |objs, a| aobj::set_flags(&mut objs.aobjs, Some(a), aobj::LOOP),
+        );
+    }
+    Some(gobj)
+}
+
+/// A quake model's process: animates the model and shakes the camera by its root's x and y,
+/// then frees a model whose animation has ended unless it loops, `grLib_801C9BC8` and
+/// `grLib_801C9C40`.
+#[doc(alias = "grLib_801C9BC8")]
+#[doc(alias = "grLib_801C9C40")]
+pub fn quake_proc(r: &mut Running, gobj: GObjId, looping: bool) {
+    let j = super::ground::jobj_of(r.game, gobj).expect("a quake model's joint");
+    let a = r.game.objs.jobjs[j].aobj;
+    jobj::anim_all(
+        &mut r.game.objs,
+        r.data,
+        &mut crate::game::code::ParticleHooks,
+        Some(j),
+    );
+    let t = r.game.objs.jobjs[j].translate;
+    camera::set_quake_offset(&mut r.game.camera.cam, f64::from(t.x), f64::from(t.y));
+    if !looping && a.is_none_or(|a| r.game.objs.aobjs[a].flags & aobj::NO_ANIM != 0) {
+        crate::hsd::gobj::free(r, gobj);
     }
 }

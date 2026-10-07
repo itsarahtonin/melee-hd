@@ -246,6 +246,9 @@ const STAGE_PROCS: &[u32] = &[
     0x8021_A2D4,
     0x8021_A33C,
     0x8021_A3BC,
+    // The stage's quake models (grLib_801C9BC8, grLib_801C9C40).
+    0x801C_9BC8,
+    0x801C_9C40,
     // efLib's particle processes, which run the generators the stages' animations spawn.
     0x8005_C9A4,
     0x8005_C9D0,
@@ -254,6 +257,15 @@ const STAGE_PROCS: &[u32] = &[
 /// Runs the stage's processes alone, in the scheduler's order, for `ticks` ticks on both sides
 /// from a captured state, comparing every `every` ticks: the stage's logic over a long stretch
 /// of play (Final Destination's scenes change every 30 seconds or so), from one capture.
+/// The pairs a comparison of a later tick starts from: none. The original's heap hands a
+/// freed object's block to the next allocation that fits, where our pools reuse the slot freed
+/// last, so an address can change hands between two comparisons (Final Destination's phase 14
+/// frees five pieces and makes a sixth); each comparison pairs what it reaches afresh, and
+/// within it every object still pairs with one address.
+fn fresh(_: Maps) -> Maps {
+    Maps::default()
+}
+
 fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
     let Some(env) = env() else { return };
     let cap = Capture::read(path);
@@ -270,6 +282,9 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
         mut game, mut maps, ..
     } = imp;
     cap.call.load(&env.ctx);
+    // A replay's Slippi codes patch functions the processes run (Final Destination's cycle
+    // keeps the random seed to itself): ssbm-rs runs those as the run did.
+    leaf_check::register_patched(&env.ctx);
     let ctx = &env.ctx;
     let mut mem = vec![0u8; cap.call.mem1.len()];
     // STAGE_DEBUG=TICK compares after every process from that tick on.
@@ -302,7 +317,7 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
             if !addr_of.contains_key(&gobj) {
                 // A GObj made since the last comparison: compare again, which pairs it.
                 let _ = ctx.mem.read_bytes(0x8000_0000, &mut mem);
-                let mut cmp = Comparer::new(&mem, &data, &game, maps);
+                let mut cmp = Comparer::new(&mem, &data, &game, fresh(maps));
                 cmp.world();
                 cmp.stage();
                 cmp.ids();
@@ -369,7 +384,7 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
         }
         if tick % every == 0 || tick == ticks {
             let _ = ctx.mem.read_bytes(0x8000_0000, &mut mem);
-            let mut cmp = Comparer::new(&mem, &data, &game, maps);
+            let mut cmp = Comparer::new(&mem, &data, &game, fresh(maps));
             cmp.world();
             cmp.stage();
             cmp.ids();
@@ -394,10 +409,11 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
     eprintln!("{ticks} ticks agree; map 3 ends at {main:?}");
 }
 
-/// Final Destination's stage processes over two and a half minutes of play from the first
-/// capture with the cycle running, with the particle system's processes: phases 1 through 9
-/// of its background cycle (phase 9's generator follows the swaying piece) and phase 10's
-/// start, up to its camera quake (the stage's quake model isn't ported).
+/// Final Destination's stage processes over eleven minutes of play from the first capture with
+/// the cycle running, with the particle system's processes and the quake model's: the whole
+/// background cycle three times over (phase 9's generator following the swaying piece, the
+/// quake through phases 10 and 11, the fog blends, the closing scenes' material scripts and
+/// pieces, and the cycle's return to phase 1).
 #[test]
 fn last_stage_ticks() {
     // The first capture once the match has started the cycle (the start hook clears `b0`).
@@ -413,7 +429,8 @@ fn last_stage_ticks() {
         return;
     };
     let every = std::env::var("STAGE_EVERY").map_or(600, |v| v.parse().unwrap());
-    stage_ticks(&first, 12000, every);
+    let ticks = std::env::var("STAGE_TICKS").map_or(40000, |v| v.parse().unwrap());
+    stage_ticks(&first, ticks, every);
 }
 
 /// The call's `i`th integer argument (r3 on).
@@ -427,6 +444,102 @@ fn pair_grkind(cap: &Capture) -> i32 {
 }
 
 use melee_sim::game::gr::{last, setup};
+
+/// Captures from the other tournament stages (Pokémon Stadium, Yoshi's Story, Fountain of Dreams,
+/// Dream Land) and Final Destination's quake, one directory each: see
+/// `local/calls/stage-more/capture.sh` in ssbm-rs's tree for how they were made.
+const MORE_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/stage-more";
+
+/// Every capture of [`MORE_CALLS`] imports and compares with its own memory with no difference:
+/// the stages' objects, their archives (Pokémon Stadium's transformation files among them) and
+/// the effects and particles they hold.
+#[test]
+fn tournament_stage_imports_round_trip() {
+    let Some(env) = env() else { return };
+    let dir = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| MORE_CALLS.to_owned());
+    let Ok(dirs) = std::fs::read_dir(&dir) else {
+        eprintln!("no captures in {dir}: skipping");
+        return;
+    };
+    let (mut n, mut failed) = (0, Vec::new());
+    for d in dirs.flatten().filter(|d| d.path().is_dir()) {
+        let mut files: Vec<_> = std::fs::read_dir(d.path())
+            .unwrap()
+            .flatten()
+            .map(|f| f.path())
+            .filter(|p| p.extension().is_some_and(|e| e == "call"))
+            .collect();
+        files.sort();
+        for path in files {
+            let cap = Capture::read(&path);
+            let mut archives = Archives::default();
+            let data = DataMap {
+                loaded: find_archives_in(&env.index, &cap.call.mem1, &mut archives),
+            };
+            let mut imp = Importer::new(&cap, &data);
+            imp.world();
+            imp.stage();
+            imp.ids();
+            let Importer { game, maps, .. } = imp;
+            let mut cmp = Comparer::new(&cap.call.mem1, &data, &game, maps);
+            cmp.world();
+            cmp.stage();
+            cmp.ids();
+            if cmp.diffs.is_empty() {
+                n += 1;
+            } else {
+                failed.push(format!("{}: {}", path.display(), cmp.diffs[0]));
+            }
+        }
+    }
+    eprintln!("{n} captures round-trip");
+    for f in &failed {
+        eprintln!("  {f}");
+    }
+    assert!(
+        failed.is_empty(),
+        "{} captures don't round-trip",
+        failed.len()
+    );
+}
+
+// The quake model, from the quake captures of every tournament stage but Battlefield (the
+// `quake` directory: Final Destination's looping quake, and the fighters' landings' small
+// ones elsewhere).
+
+#[test]
+fn quake_model() {
+    check("grLib_801C9CEC", &|r, cap, _| {
+        let _ = melee_sim::game::gr::grlib::quake_model(r, int_arg(cap, 0) as i32);
+    });
+}
+
+#[test]
+fn quake_proc() {
+    check_proc("grLib_801C9C40", |r, g| {
+        melee_sim::game::gr::grlib::quake_proc(r, g, false)
+    });
+}
+
+#[test]
+fn quake_loop_proc() {
+    check_proc("grLib_801C9BC8", |r, g| {
+        melee_sim::game::gr::grlib::quake_proc(r, g, true)
+    });
+}
+
+#[test]
+fn request_quake() {
+    check("Camera_RequestQuake", &|r, cap, _| {
+        let kind = int_arg(cap, 0) as i32;
+        let pos = int_arg(cap, 1);
+        let pos = (pos != 0).then(|| {
+            let f = |o: u32| f32::from_bits(cap.u32(pos + o));
+            melee_sim::vec::Vec3::new(f(0), f(4), f(8))
+        });
+        melee_sim::game::camera::request_quake(r, kind, pos);
+    });
+}
 
 #[test]
 fn ground_reset() {

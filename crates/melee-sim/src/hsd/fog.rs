@@ -35,6 +35,10 @@ pub struct Fog {
     pub end: f32,
     /// RGBA.
     pub color: [u8; 4],
+    /// Whether the alpha is a stack byte the last color's setter never wrote (Final
+    /// Destination's fog blend, `grLast_8021C500`). Nothing reads a fog's alpha (`GXSetFog`
+    /// takes only the color's RGB), so the alpha is left as it was and not compared.
+    pub stale_alpha: bool,
     pub aobj: Option<AObjId>,
 }
 
@@ -89,6 +93,7 @@ pub fn init(fogs: &mut Fogs, data: &Archives, f: Option<FogId>, desc: DataRef) {
     o.start = copy(data.f32(desc.at(8)));
     o.end = copy(data.f32(desc.at(0xC)));
     o.color = [0, 1, 2, 3].map(|i| data.u8(desc.at(0x10 + i)));
+    o.stale_alpha = false;
 }
 
 /// A range adjustment loaded from an `HSD_FogAdjDesc`, `HSD_FogAdjLoadDesc`.
@@ -164,7 +169,10 @@ fn update(objs: &mut Objects, f: FogId, ty: u8, value: Value) {
                 objs.stale_reads += 1;
             }
         }
-        5..=8 => fog.color[usize::from(ty - 5)] = channel(val),
+        5..=8 => {
+            fog.color[usize::from(ty - 5)] = channel(val);
+            fog.stale_alpha &= ty != 8;
+        }
         20 => {
             if let Some(a) = fog.fog_adj {
                 adjs[a.0].center = fp::fctiwz(reg(val)) as i16;
