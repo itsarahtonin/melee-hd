@@ -17,10 +17,9 @@
 //! poll per frame): see `Env::calibrate`.
 //!
 //! Each run is timed and checked while it plays. The harness reads Dolphin's emulated memory
-//! (its MEM1 mapping) as each frame ends: the frames' times, and every fighter's (followers such as
-//! Nana too) action state,
-//! position, facing, percent and stocks and the random seed, against the replay. A stretch of
-//! frames that differ means the run left the replay. Past the match's last frame ("GAME!"), the
+//! (its MEM1 mapping) as each frame ends: the frames' times, and every fighter's (Nana's too)
+//! action state, position, facing, percent and stocks and the random seed, against the replay. A
+//! stretch of frames that differ means the run left the replay. Past the match's last frame ("GAME!"), the
 //! fighters' stocks and percents must be the replay's last.
 
 use std::collections::BTreeMap;
