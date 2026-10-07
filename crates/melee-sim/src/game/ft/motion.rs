@@ -8,7 +8,7 @@ use melee_data::archive::DataRef;
 
 use super::super::code::{run_fighter_cb, unported_call};
 use super::super::handles::{FighterId, RawPtr};
-use super::super::state::{Event, Running};
+use super::super::state::Running;
 use super::super::structs::Fighter;
 use super::anim::x594_bit;
 use super::common::GA_GROUND;

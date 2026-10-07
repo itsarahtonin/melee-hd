@@ -6,9 +6,9 @@
 //! rebuilds is compared with melee-sim's `Game` through `melee-capture`'s comparer, as a
 //! captured state is: the scheduler and everything its GObjs hold (joint trees with their
 //! animations, references, display objects and shapes, the fighters, the stage objects), the
-//! stage, the camera, HSD's ID table, the player blocks, the pad library, the button maps, the
-//! scene loop and the clocks, the VS match's controller, playback's state, the ruleset and
-//! UCF's pad buffer.
+//! stage, the camera, HSD's ID table, the audio driver's voices, the player blocks, the pad
+//! library, the button maps, the scene loop and the clocks, the VS match's controller,
+//! playback's state, the ruleset and UCF's pad buffer.
 //!
 //! Without `--from`, melee-hd starts the match from the replay's settings, as Slippi's playback
 //! codes do; with `--from TICK`, it takes up the trace's state at the end of that tick
@@ -102,6 +102,7 @@ fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> Vec<String> {
     cmp.world();
     cmp.stage();
     cmp.ids();
+    cmp.audio();
     cmp.match_state();
     cmp.diffs
 }
@@ -194,6 +195,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
             }
             let mut data = Archives::default();
             let loaded = find_archives_in(&index, &image.mem1, &mut data);
+            let bank = melee_capture::audio::find_bank(&image.mem1, &mut data);
             let map = DataMap {
                 loaded: loaded.clone(),
             };
@@ -212,6 +214,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 imp.world();
                 imp.stage();
                 imp.ids();
+                imp.audio(bank);
                 imp.match_state();
                 (imp.game, imp.maps, imp.unhandled)
             }));
