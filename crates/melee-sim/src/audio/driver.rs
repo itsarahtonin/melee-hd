@@ -750,6 +750,77 @@ impl Audio {
         true
     }
 
+    /// `HSD_AudioPStreamPauseCh`: pauses every sound on `channel`, and the channel takes no
+    /// new sounds until it resumes (the pause menu does this to the match's channels).
+    #[doc(alias = "HSD_AudioPStreamPauseCh")]
+    pub fn sfx_pause_channel(&mut self, channel: i32) -> bool {
+        if !self.for_channel(channel, Self::pstream_pause) {
+            return false;
+        }
+        self.driver.muted_channels |= 1 << channel;
+        true
+    }
+
+    /// `HSD_AudioPStreamResumeCh`: resumes every sound on `channel`, which takes new sounds
+    /// again.
+    #[doc(alias = "HSD_AudioPStreamResumeCh")]
+    pub fn sfx_resume_channel(&mut self, channel: i32) -> bool {
+        if !self.for_channel(channel, Self::pstream_resume) {
+            return false;
+        }
+        self.driver.muted_channels &= !(1 << channel);
+        true
+    }
+
+    /// Runs `f` on the handle of each sound on `channel`, in list order; false for a channel
+    /// out of range.
+    fn for_channel(&mut self, channel: i32, f: fn(&mut Self, i32) -> bool) -> bool {
+        if !(0..0x10).contains(&channel) {
+            return false;
+        }
+        let mut at = self.driver.active;
+        while let Some(v) = at {
+            let voice = self.driver.voices[usize::from(v)];
+            if voice.flags & STATE_MASK != 0 && i32::from(voice.channel) == channel {
+                f(self, voice.handle);
+            }
+            at = self.driver.voices[usize::from(v)].next;
+        }
+        true
+    }
+
+    /// `PStreamPauseCh`: pauses a sound's effect, or its stream before the effect starts.
+    #[doc(alias = "PStreamPauseCh")]
+    fn pstream_pause(&mut self, handle: i32) -> bool {
+        let Some(v) = self.by_handle(handle) else {
+            return false;
+        };
+        let voice = self.driver.voices[usize::from(v)];
+        if voice.synth_id != -1 {
+            self.synth_pause(voice.synth_id);
+        } else {
+            assert_eq!(voice.flags & STATE_MASK, STATE_ACTIVE, "PStreamPauseCh");
+            self.dv(v).flags |= PAUSED;
+        }
+        true
+    }
+
+    /// `PStreamResumeCh`.
+    #[doc(alias = "PStreamResumeCh")]
+    fn pstream_resume(&mut self, handle: i32) -> bool {
+        let Some(v) = self.by_handle(handle) else {
+            return false;
+        };
+        let voice = self.driver.voices[usize::from(v)];
+        if voice.synth_id != -1 {
+            self.synth_resume(voice.synth_id);
+        } else {
+            assert_eq!(voice.flags & STATE_MASK, STATE_ACTIVE, "PStreamResumeCh");
+        }
+        self.dv(v).flags &= !PAUSED;
+        true
+    }
+
     /// `AXDriverStop`: keys off the driver's stream (the music).
     #[doc(alias = "AXDriverStop")]
     pub fn driver_stop(&mut self) -> bool {

@@ -371,6 +371,8 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
                     }
                     "HSD_AudioSFXCheck" => u32::from(a.sfx_check(r(3) as i32)),
                     "HSD_AudioSFXKeyOff" => u32::from(a.sfx_key_off(r(3) as i32)),
+                    "HSD_AudioPStreamPauseCh" => u32::from(a.sfx_pause_channel(r(3) as i32)),
+                    "HSD_AudioPStreamResumeCh" => u32::from(a.sfx_resume_channel(r(3) as i32)),
                     // Game code's own file loads, which wait for the disc.
                     "HSD_DevComRequest" => {
                         assert_eq!(
@@ -563,7 +565,7 @@ fn random_ops() {
                         }
                         (0, 0)
                     }
-                    14 => match rng.below(3) {
+                    14 => match rng.below(5) {
                         0 => (
                             i32::from(r.game.audio.driver_pause_stream()),
                             fns::AXDriverPause(&ctx),
@@ -572,6 +574,21 @@ fn random_ops() {
                             i32::from(r.game.audio.driver_resume_stream()),
                             fns::AXDriverResume(&ctx),
                         ),
+                        // A channel's sounds paused or resumed, as the pause menu does.
+                        3 => {
+                            let ch = rng.below(17) as i32;
+                            (
+                                i32::from(r.game.audio.sfx_pause_channel(ch)),
+                                fns::HSD_AudioPStreamPauseCh(&ctx, ch),
+                            )
+                        }
+                        4 => {
+                            let ch = rng.below(17) as i32;
+                            (
+                                i32::from(r.game.audio.sfx_resume_channel(ch)),
+                                fns::HSD_AudioPStreamResumeCh(&ctx, ch),
+                            )
+                        }
                         _ if rng.below(8) == 0 => (
                             i32::from(r.game.audio.driver_stop()),
                             fns::AXDriverStop(&ctx),

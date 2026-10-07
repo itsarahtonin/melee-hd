@@ -898,3 +898,5 @@ HSD_AudioSFXSetPitchFid	leaf-check audio: set_pitch runs every saved call of it;
 HSD_AudioSFXCheck	leaf-check audio: check runs every saved call of it; random_ops checks through lbAudioAx_80023710
 pl_800401F0	leaf-check replay: ucf_sdi runs smash DI from replay captures and compares the player blocks, whose SDI distances it adds to
 lb_80014574	leaf-check fighter: change_motion_state and the procInput checks start rumbles through it on replay captures, and the pad library's rumble is compared after every call
+PStreamPauseCh	leaf-check audio: random_ops pauses channels through HSD_AudioPStreamPauseCh, before and after sounds' effects start
+PStreamResumeCh	leaf-check audio: random_ops resumes channels through HSD_AudioPStreamResumeCh, before and after sounds' effects start
