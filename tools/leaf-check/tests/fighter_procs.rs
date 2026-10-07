@@ -35,7 +35,7 @@ use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps};
 use melee_capture::{Capture, DataMap, find_archives_after, find_archives_in};
 use melee_data::archive::Archives;
-use melee_sim::game::code::{Val, stubs};
+use melee_sim::game::code::{EF_PAUSE_ALL, Val, stubs};
 use melee_sim::game::ft::attack::{EFSYNC_SPAWN, PL_80038144, proc_attack_coll};
 use melee_sim::game::ft::camera::proc_camera;
 use melee_sim::game::ft::create_model::light_proc;
@@ -77,6 +77,9 @@ fn stand_ins(ctx: &Ctx) {
     ctx.register(PL_80038144, |ctx| {
         let args = (3..10).map(|r| ctx.regs.r(r)).collect();
         THEIRS.with(|t| t.borrow_mut().push((PL_80038144, args)));
+    });
+    ctx.register(EF_PAUSE_ALL, |ctx| {
+        THEIRS.with(|t| t.borrow_mut().push((EF_PAUSE_ALL, vec![ctx.regs.r(3)])));
     });
     ctx.register(LB_80014574, |ctx| {
         let args = (3..7).map(|r| ctx.regs.r(r)).collect();
@@ -231,6 +234,7 @@ fn run_one(
     stubs::set(EFSYNC_SPAWN, Val::None);
     stubs::set(PL_80038144, Val::None);
     stubs::set(LB_80014574, Val::None);
+    stubs::set(EF_PAUSE_ALL, Val::None);
     let run = catch_unwind(AssertUnwindSafe(|| {
         let mut r = Running {
             game: &mut game,
@@ -587,4 +591,63 @@ fn to_light(call: &mut Call, _: usize) {
 #[test]
 fn light_proc_calls() {
     check("Fighter_procCamera", light_proc, to_light, 100);
+}
+
+/// Gives the fighter one of the attack collision's results, by the call's index: a tip, a
+/// shield hit, a clank, a hit it dealt (sometimes the kind that rumbles apart), a shield-hit
+/// push, or a held hitlag; with its shield sometimes up and damaged, and varied hitlag
+/// multipliers and floors.
+fn give_result(call: &mut Call, i: usize) {
+    let fp = fighter_of(call, call.regs.gpr[3]);
+    let mut pick = Pick(i as u32 * 13 + 5);
+    let strength = 1 + pick.next(30);
+    match i % 6 {
+        0 => {
+            poke_f32(call, fp + 0x18A0, [0.5, 12.0, 40.0][pick.next(3) as usize]);
+            poke_u32(call, fp + 0x1840, strength);
+        }
+        1 => poke_u32(call, fp + 0x19A4, strength),
+        2 => poke_u32(call, fp + 0x1918, strength),
+        3 => {
+            poke_u32(call, fp + 0x1914, strength);
+            if pick.next(3) == 0 {
+                let w = peek_u32(call, fp + 0x2070);
+                poke_u32(call, fp + 0x2070, (w & !0xFF) | 0x46);
+            }
+        }
+        4 => {
+            poke_u32(call, fp + 0x1924, strength);
+            poke_f32(call, fp + 0x1928, [0.0, 3.0, 9.5][pick.next(3) as usize]);
+            poke_f32(call, fp + 0x192C, [-1.0, 1.0][pick.next(2) as usize]);
+        }
+        _ => {
+            if pick.next(2) == 0 {
+                poke_bit(call, fp + 0x221A, 0, true);
+            } else {
+                poke_f32(call, fp + 0x1958, [2.0, 9.0][pick.next(2) as usize]);
+                poke_f32(call, fp + 0x1954, [0.0, 5.0][pick.next(2) as usize]);
+            }
+        }
+    }
+    if pick.next(3) == 0 {
+        poke_bit(call, fp + 0x221A, 7, true);
+        poke_u32(call, fp + 0x19A0, pick.next(40));
+    }
+    poke_f32(
+        call,
+        fp + 0x1964,
+        [0.0, 0.0, 4.0, 25.0][pick.next(4) as usize],
+    );
+    poke_f32(call, fp + 0x1960, [1.0, 1.0, 1.5][pick.next(3) as usize]);
+}
+
+/// The collision results' reactions and hitlag, from real states.
+#[test]
+fn proc_coll_resolve_results() {
+    check(
+        "Fighter_procCollResolve",
+        proc_coll_resolve,
+        give_result,
+        80,
+    );
 }
