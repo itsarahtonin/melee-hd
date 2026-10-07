@@ -333,6 +333,25 @@ fn callbacks() {
 #[test]
 fn guard() {
     run(vec![
+        case(
+            "ftCo_80091BC4",
+            IN,
+            |call, i, fp| {
+                call.regs.gpr[3] = fp;
+                // The stick at angles either side of the shield's wrap, against shields
+                // tilted either way.
+                let deg = [175.0f32, 350.0, 90.0, 185.0, 0.0, 271.0, 178.0][i % 7];
+                let rad = deg.to_radians();
+                poke_f32(call, fp + 0x2C, 1.0);
+                poke_f32(call, fp + 0x620, rad.cos() * [1.0, 0.5][i % 2]);
+                poke_f32(call, fp + 0x624, rad.sin() * [1.0, 0.5][i % 2]);
+                poke_f32(call, fp + 0x2348, [10.0, 190.0, 365.0, 12.0][i % 4]);
+            },
+            |g, o, _, _| {
+                g.shield_tilt(o);
+                Ret::Nothing
+            },
+        ),
         gobj("ftCo_800921DC", IN, |g, o| {
             g.shield_start(o);
             Ret::Nothing
@@ -1015,7 +1034,7 @@ fn box_case(
         move |call, i, _| {
             let at = call.regs.gpr[1] + 0x40;
             let s = [1.0f32, 0.6, 1.4][i % 3];
-            for (k, v) in [12.0f32, 1.5, -3.0, 6.0, 3.0, 6.0].iter().enumerate() {
+            for (k, v) in [12.0f32, 1.5, -3.0, 6.0, 4.0, 5.0].iter().enumerate() {
                 poke_f32(call, at + 4 * k as u32, v * s);
             }
             // The call's index for our side.
