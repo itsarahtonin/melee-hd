@@ -345,6 +345,7 @@ name = "leaf-check"
 version = "0.1.0"
 dependencies = [
  "gekko-fp",
+ "melee-data",
  "melee-sim",
  "ssbm-disc",
  "ssbm-game",
@@ -423,6 +424,14 @@ checksum = "69b6441f590336821bb897fb28fc622898ccceb1d6cea3fde5ea86b090c4de98"
 dependencies = [
  "cfg-if",
  "digest 0.11.3",
+]
+
+[[package]]
+name = "melee-data"
+version = "0.1.0"
+dependencies = [
+ "nod",
+ "thiserror",
 ]
 
 [[package]]

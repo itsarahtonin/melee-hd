@@ -10,6 +10,7 @@ rust-version = "1.98"
 publish = false
 
 [workspace.dependencies]
+melee-data = { path = "crates/melee-data" }
 melee-sim = { path = "crates/melee-sim" }
 # Stage 1, the reference: its ports at this tag are what the simulation is checked against.
 gekko-fp = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }

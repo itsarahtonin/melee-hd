@@ -1,0 +1,12 @@
+[package]
+name = "melee-data"
+description = "Melee's game data from the player's own disc: the file system and HAL's DAT archives"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+nod = "=2.0.0-alpha.9"
+thiserror = "2"

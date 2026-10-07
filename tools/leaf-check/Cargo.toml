@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 gekko-fp.workspace = true
+melee-data.workspace = true
 melee-sim.workspace = true
 ssbm-disc.workspace = true
 ssbm-game.workspace = true
