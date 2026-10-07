@@ -44,7 +44,15 @@ A few original functions read memory or registers they never set, and plain data
 - Final Destination's fog blend (`grLast_8021C500`) hands the fog a color whose alpha it never set. Nothing reads the fog's alpha, but the comparison would; the blend panics until a probe shows what the original leaves there (it runs from phase 10 on, past the particle system the cycle needs at phase 9).
 - `mpColl_8004A45C_Floor`, `mpColl_8004A678_Floor` and `mpColl_8004C328_Ceiling` take the floor (or ceiling) at the edge an object stops at, probed at that edge. A few floors in the data run right to left (on Great Bay, Pokémon Stadium and Big Blue), and such a floor can fail to reach its own end; the original then takes line -1 with the flags and normal its stack held. The port leaves those two fields as they were and counts a stale read (`mp::coll::CollStatics::stale_reads`).
 - `mpColl_80043754` returns a register its caller left when a move is so long its substep count overflows (over about 10¹⁰ units, or infinite) and no substep runs. The game never moves that far; the port returns false.
+- `ftMapping_list` (a character's fighter kinds) has 33 entries, and the player blocks index it by a slot's character kind, which an empty slot can hold past the table (33 and up). The original then reads the executable's bytes after the table: a padding byte and `player.c`'s message strings, constant data the port carries along with the table (`pl::player::FT_MAPPING`). A kind past those bytes stops the simulation.
+- `Player_80031AD0` hands `Fighter_Create` a `plAllocInfo` on its stack and sets two of its third byte's bits, the second fighter's and the transformation's; the other six are whatever the stack held. The seam passes only the bits it sets; the fighter port must show `Fighter_Create` reads no others, or probe them.
+- `fn_8016DEEC` (facing players toward their opponents) takes a player's first opponent without measuring its distance, keeping the last distance it measured, or before any, what its caller left in a register (`f26`). The VS scene's entry leaves 0 there in every capture, debug matches' and a replay's alike, so `place_players` passes 0; with three or more players that decides who the first player faces.
+- `Stage_80224E64` and `fn_80167638` read the spawn point `Ground_801C2D24` writes, which it leaves alone when the stage lacks the point. Every VS stage has the points; the ports stop there rather than read a stale vector.
 
+
+## Seams
+
+Where game code calls a subsystem no port covers yet (fighter creation, items, effects, the HUD), it goes through `game::code::call`, by the original function's address with its arguments as register values (`code::Val`), and stops there until that subsystem's port adds its arms. With the feature `stubs` (leaf-check enables it) a check can stand a function in on both sides and compare the calls each side made and their arguments, so the code around a seam is checked before what it calls is ported. The simulation itself never registers a stand-in.
 
 ## Rulesets in the state
 
