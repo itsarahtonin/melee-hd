@@ -896,6 +896,80 @@ HSD_AudioSFXSetPan	leaf-check audio: random_ops pans sounds through lbAudioAx_80
 HSD_AudioSFXSetVolumeEx	leaf-check audio: random_ops sets volumes through lbAudioAx_80024B58 before and after effects start
 HSD_AudioSFXSetPitchFid	leaf-check audio: set_pitch runs every saved call of it; random_ops bends through lbAudioAx_80024B94
 HSD_AudioSFXCheck	leaf-check audio: check runs every saved call of it; random_ops checks through lbAudioAx_80023710
+efLib_Init	leaf-check effects init_calls: efLib_Init's capture at a match's start, whole state compared
+efAsync_QueueInit	leaf-check effects init_calls: efLib_Init empties the deferred spawns' pool through it; the pool's count compared
+HSD_JObjSetDPtclCallback	leaf-check effects init_calls: efLib_Init sets the joints' particle callbacks through it; the callbacks compared
+efLib_SetFlags	leaf-check effects set_flags_resume_and_pause: from every spawn capture, for its spawner
+efLib_ResumeAll	leaf-check effects set_flags_resume_and_pause: from every spawn capture, for its spawner
+efLib_PauseAll	leaf-check effects pause_and_flag_calls and set_flags_resume_and_pause: every capture, and an effect's parent from every update capture
+efLib_Destroy	leaf-check effects destroy_calls: each effect of the update captures' states
+efLib_DestroyAll	leaf-check effects destroy_all_calls and destroy_calls: every capture, and every spawn capture's spawner
+efLib_remove_user_data	leaf-check effects destroy_calls, destroy_all_calls and update_calls: freeing an effect's GObj frees the effect through it; pool and count compared
+efLib_RemoveLast	leaf-check effects remove_last_calls: from every update capture as if 64 counted effects were alive
+efLib_Update	leaf-check effects update_calls (every capture) and every_effect (each effect's first frames)
+efLib_Create	leaf-check effects spawn_calls and every_effect: every effect's spawn makes its effects through it
+efLib_Create_Attach	leaf-check effects every_effect: the cases that make attached effects
+efLib_Create_AttachChild	leaf-check effects every_effect: the cases that make attached effects
+efLib_Create_Attach_Scale	leaf-check effects every_effect: the cases that make attached effects
+efLib_Create_AttachChild_Scale	leaf-check effects every_effect: the cases that make attached effects
+efLib_Create_Attach_Scale_FacingDir	leaf-check effects every_effect: the cases that make attached effects
+efLib_Create_Attach_Pos	leaf-check effects every_effect: the cases that make effects at a point
+lb_8000C1C0	leaf-check effects every_effect: efLib_Create_Attach constrains through it; joint references compared
+lb_8000C290	leaf-check effects every_effect: efLib_Create_AttachChild constrains through it; joint references compared
+efLib_render_callback	leaf-check effects render_calls: each pass from the particle processes' captures (the drawing passes' GX writes stop the reference)
+efLib_particles_proc_main	leaf-check effects particle_proc_calls (every capture) and stage battle_stage_ticks and last_stage_ticks
+efLib_particles_proc_aux	leaf-check effects particle_proc_calls (every capture) and stage battle_stage_ticks and last_stage_ticks
+efLib_CreateGenerator	leaf-check effects every_effect: plain generator ids and the cases that make them
+efLib_CreateGenerator_AddAppSRT	leaf-check effects every_effect: the cases that make generators with app-SRTs
+efLib_CreateGenerator_Translate_FacingDir	leaf-check effects every_effect: the cases that make facing generators
+efLib_CreateGenerator_Attach	leaf-check effects every_effect: the cases that make attached generators
+efLib_CreateGenerator_Attach_AddAppSRT	leaf-check effects every_effect and joint_particle_calls: the cases that make attached generators
+efLib_CreateGenerator_Attach_Scale	leaf-check effects every_effect: the cases that make attached generators
+efLib_CreateGenerator_AppSRT_SetScale	leaf-check effects every_effect: the cases that make attached generators
+efLib_CreateGenerator_AppSRT_SetFacingDir	leaf-check effects every_effect: the cases that make attached generators
+efLib_CreateGenerator_AppSRT_SetFacingDirScale	leaf-check effects every_effect: the cases that make attached generators
+efLib_CreateGenerator_AppSRT_SetPos	leaf-check effects every_effect: ids 0x446 and 0x448, with their effects' first frames
+efLib_SpawnParticleEffect	leaf-check effects joint_particle_calls: every id it treats apart, plain and oriented, from every spawn capture
+efLib_Cb_SPtcl	leaf-check effects joint_particle_calls: every id efLib treats apart and the stage's bank
+efLib_Cb_DPtcl	leaf-check effects joint_particle_calls, and stage battle_init_background and battle_stage_ticks (Battlefield's animations' events)
+efLib_Cb_ParticleRender	leaf-check particle: the test's particles of the four command lists run it against efLib's
+efLib_Cb_PtclAppSRTHook	leaf-check particle: every generator the test spawns runs it against efLib's
+efLib_Cb_SetOffsetY_FromParamY	leaf-check effects every_effect: id 0x4E1's first frames
+efLib_Cb_SetScale_FromParamX	leaf-check effects every_effect: id 0x438's first frames
+efLib_Cb_SetRotYAndTransition	leaf-check effects every_effect: id 0x494's first frames
+efLib_Cb_SetJObjOffsetZ	leaf-check effects every_effect: id 0x49D's first frames
+efLib_Cb_SetRotY_FromFighterDir	leaf-check effects every_effect: the facing effects' first frames
+efLib_Cb_SetRotYZ_FromFighter	leaf-check effects every_effect: id 0x48C's first frames
+efLib_Cb_Fall_FromParamY	leaf-check effects every_effect: id 0x427's first frames
+efLib_Cb_SetOffset_FromParams	leaf-check effects every_effect: ids 0x4CF and 0x4D0's first frames
+efLib_Cb_LifetimeEndSpawn	leaf-check effects every_effect: id 0x501's first frames
+efLib_Cb_SetScaleRotY_FromFighter	leaf-check effects every_effect: id 0x482's first frames
+efLib_Cb_SetRotYZ_FromParamZ_FighterDir	leaf-check effects every_effect: ids 0x490 and 0x50C's first frames
+efLib_Cb_ftMr_SpecialLw	leaf-check effects every_effect: id 0x47C's first frames
+efLib_Cb_ftLg_SpecialLw	leaf-check effects every_effect: id 0x509's first frames
+efLib_Cb_ftKp_SpecialHi	leaf-check effects every_effect: id 0x4DA's first frames
+efLib_Cb_ftCo_Bury	leaf-check effects every_effect: id 0x447's first frames, its ftCo_800C0FCC call stood in on both sides and compared
+efLib_SetTevKonstColor	leaf-check effects every_effect: ids 0x417 to 0x41A and 0x42B
+efLib_SetParamAlpha	leaf-check effects param_calls: from every spawn capture
+efLib_SetParamGfxId	leaf-check effects param_calls and every_effect (ids 0x417 to 0x41A)
+efLib_Cb_ApplyStoredAlpha	leaf-check effects every_effect: ids 0x417 to 0x41A's first frames
+efLib_Cb_AccumOffset_FromParams	leaf-check effects every_effect: ids 0x446 and 0x448's first frames
+efSync_Spawn	leaf-check effects spawn_calls (every capture) and every_effect (every id, from a fighter in each capture)
+efAlt_Spawn	leaf-check effects every_effect: ids 0x479 to 0x4B9
+efAsync_Dispatch	leaf-check effects every_effect: ids 0x3E8 to 0x477
+efAsync_LoadSync	leaf-check effects load_sync_from_loaded_states: each loaded effect file loaded again against the loaded state
+efAsync_QueueProcessDeferred	leaf-check effects flush_calls and queue_calls: every deferred and immediate spawn runs through it
+efAsync_QueueFlush	leaf-check effects flush_calls: every capture
+efAsync_QueueClear	leaf-check effects queue_clear_calls: from every flush capture
+efAsync_Spawn	leaf-check effects queue_calls: every capture
+grLib_801C96F8	leaf-check effects stage_particle_helpers (Battlefield's states, other stage scales) and stage last_stage_ticks (phase 9)
+grLib_801C97DC	leaf-check effects stage_particle_helpers: Battlefield's states
+grLib_801C9808	leaf-check effects stage_particle_helpers: Battlefield's states
+grLib_801C9834	leaf-check effects stage_particle_helpers: Battlefield's states, and stage last_stage_ticks (phase 10)
+grLib_801C9874	leaf-check effects stage_particle_helpers: Battlefield's states
+grLib_801C98A0	leaf-check effects stage_particle_helpers: Battlefield's states
+grLib_801C9908	leaf-check effects stage_particle_helpers: Battlefield's states
+grLib_801C99C0	leaf-check effects joint_particle_calls and stage battle_stage_ticks: the stage bank's joint particles
 pl_800401F0	leaf-check replay: ucf_sdi runs smash DI from replay captures and compares the player blocks, whose SDI distances it adds to
 lb_80014574	leaf-check fighter: change_motion_state and the procInput checks start rumbles through it on replay captures, and the pad library's rumble is compared after every call
 PStreamPauseCh	leaf-check audio: random_ops pauses channels through HSD_AudioPStreamPauseCh, before and after sounds' effects start

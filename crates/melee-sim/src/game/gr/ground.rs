@@ -284,7 +284,12 @@ pub fn update_map_coll(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
 #[doc(alias = "Ground_801C1CD0")]
 pub fn proc_anim(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
-    jobj::anim_all(&mut r.game.objs, r.data, j);
+    jobj::anim_all(
+        &mut r.game.objs,
+        r.data,
+        &mut crate::game::code::ParticleHooks,
+        j,
+    );
     super::material::run_ground_overlay(r.game, r.data, gobj);
     bump_generation(r.game);
     let gp = ground_of(r.game, gobj);

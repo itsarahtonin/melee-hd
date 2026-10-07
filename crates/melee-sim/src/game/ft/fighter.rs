@@ -629,8 +629,10 @@ pub fn proc_coll_pos(g: &mut Running, gobj: GObjId) {
         return;
     }
     // `efAsync_QueueFlush`: effects queued while the fighter was busy.
-    if g.game.fighters[f.0].x60C.0 != 0 {
-        unported_call("efAsync_QueueProcessDeferred");
+    if g.game.fighters[f.0].x60C.is_some() {
+        let mut head = g.game.fighters[f.0].x60C;
+        crate::game::ef::flush(g, Some(gobj), &mut head);
+        g.game.fighters[f.0].x60C = head;
     }
     g.depth_scale_matrix(gobj);
     let fp = &g.game.fighters[f.0];
@@ -643,7 +645,12 @@ pub fn proc_coll_pos(g: &mut Running, gobj: GObjId) {
     g.thrown_hitbox_follow(gobj);
     g.x1614_follow(gobj);
     if let Some(acc) = g.game.fighters[f.0].x20A0_accessory {
-        jobj::anim_all(&mut g.game.objs, g.data, Some(acc));
+        jobj::anim_all(
+            &mut g.game.objs,
+            g.data,
+            &mut crate::game::code::ParticleHooks,
+            Some(acc),
+        );
     }
     let ci = &g.game.stage_info.cam_info;
     let (x_off, y_off) = (ci.cam_x_offset, ci.cam_y_offset);

@@ -153,7 +153,7 @@ pub struct Game {
     pub items: Pool<Item>,
     /// The item code's other globals.
     pub it: super::it::Globals,
-    /// The effects library's globals.
+    /// The effects: efLib's and efAsync's globals and pools.
     pub ef: super::ef::Globals,
     /// The stage objects (`Ground`, the stage GObjs' user data).
     pub grounds: Pool<Ground>,
@@ -235,7 +235,7 @@ impl Host<GameKinds> for Running<'_> {
             // `mem_free`: the block goes back to the heap.
             UserData::Ground(g) => self.game.grounds.free(g.0),
             UserData::Item(i) => super::it::item::free_user_data(self.game, i),
-            UserData::Effect(e) => super::ef::free_user_data(self.game, e),
+            UserData::Effect(e) => super::ef::remove_user_data(self.game, e),
             other => panic!("removing {other:?} isn't ported"),
         }
     }

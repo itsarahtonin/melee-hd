@@ -148,6 +148,7 @@ impl<'a> Comparer<'a> {
             }
         }
         self.statics();
+        self.effects();
     }
 
     /// The camera, its boxes, its second CObj, its default field of view and the debug
@@ -279,7 +280,9 @@ impl<'a> Comparer<'a> {
             Some(UserData::Ground(g)) => self.ground(path, g, self.u32(t + 0x2C)),
             Some(UserData::Item(i)) => self.item(path, i, self.u32(t + 0x2C)),
             Some(UserData::Raw(a)) => self.check(path, "user data", a.0, self.u32(t + 0x2C)),
-            Some(UserData::Effect(e)) => self.effect(path, e, self.u32(t + 0x2C)),
+            Some(UserData::Effect(e)) => {
+                self.effect(&format!("{path} effect"), e, self.u32(t + 0x2C))
+            }
             None => {}
         }
     }
@@ -902,6 +905,36 @@ impl<'a> Comparer<'a> {
             let mtx: Vec<u32> = x.mtx.m.iter().flatten().map(|v| v.to_bits()).collect();
             let theirs: Vec<u32> = (0..12).map(|k| w(self, 0x74 + 4 * k)).collect();
             self.check(&tp, "matrix", mtx, theirs);
+            // The TEV block's settings and colors (`HSD_TObjTev`), which effects recolor.
+            let tev = w(self, 0xA8);
+            let ours = x.tev.as_ref().map(|v| {
+                let c = |c: &melee_sim::hsd::tobj::Color| u32::from_be_bytes([c.r, c.g, c.b, c.a]);
+                let mut b = vec![
+                    v.color_op,
+                    v.alpha_op,
+                    v.color_bias,
+                    v.alpha_bias,
+                    v.color_scale,
+                    v.alpha_scale,
+                    v.color_clamp,
+                    v.alpha_clamp,
+                ];
+                b.extend(v.color_in);
+                b.extend(v.alpha_in);
+                (b, [c(&v.konst), c(&v.tev0), c(&v.tev1), v.active])
+            });
+            let theirs = (tev != 0).then(|| {
+                (
+                    (0..16).map(|o| self.u8(tev + o)).collect::<Vec<u8>>(),
+                    [
+                        self.u32(tev + 0x10),
+                        self.u32(tev + 0x14),
+                        self.u32(tev + 0x18),
+                        self.u32(tev + 0x1C),
+                    ],
+                )
+            });
+            self.check(&tp, "TEV", ours, theirs);
             self.aobj(&format!("{tp} aobj"), x.aobj, w(self, 0x64));
             to = x.next;
             tt = w(self, 8);
@@ -1005,6 +1038,9 @@ impl Cx for Comparer<'_> {
             // A stale item's pointer may be into nothing: it pairs with nothing.
             "CameraBoxId" if theirs != 0 => try_box_index(self.u32(sym("cm_804D645C")), theirs),
             "TObjId" => self.maps.tobjs.get(&theirs).map(|t| t.0),
+            "QueuedId" => self.maps.queued.get(&theirs).map(|q| q.0),
+            "GeneratorId" => self.maps.generators.get(&theirs).map(|g| g.0),
+            "EffectId" => self.maps.effects.get(&theirs).map(|e| e.0),
             _ => None,
         };
         let known = known.or_else(|| self.handles.get(&(kind, theirs)).copied());

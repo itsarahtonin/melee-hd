@@ -103,7 +103,7 @@ pub struct LastVars {
     pub xD8: f32,
     pub xDC: f32,
     /// The particle generator it steers (`HSD_Generator*`), which the particle system owns.
-    pub xE0: RawPtr,
+    pub xE0: Option<crate::hsd::generator::GeneratorId>,
 }
 
 /// The bytes of the union as big-endian memory.
@@ -187,7 +187,8 @@ impl GroundVars {
                 xD4: b.f32(0x10),
                 xD8: b.f32(0x14),
                 xDC: b.f32(0x18),
-                xE0: RawPtr(b.u32(0x1C)),
+                // Leftover heap bytes, which the setup overwrites before anything reads them.
+                xE0: None,
             });
         }
         match self {
@@ -242,7 +243,9 @@ impl GroundVars {
                 xD4: f(at + 0x10),
                 xD8: f(at + 0x14),
                 xDC: f(at + 0x18),
-                xE0: RawPtr(m.u32(at + 0x1C)),
+                xE0: cx
+                    .import_handle("GeneratorId", m.u32(at + 0x1C))
+                    .map(crate::hsd::generator::GeneratorId),
             }),
             VarsKind::BattleBg => GroundVars::BattleBg(BattleBgVars {
                 state: m.u32(at) as i32,
@@ -387,13 +390,12 @@ impl Mirror for GroundVars {
                         ("xDC", at + 0x18, v.xDC),
                     ],
                 );
-                if v.xE0.0 != m.u32(at + 0x1C) {
-                    cx.mismatch(
-                        &format!("{path}.xE0"),
-                        format!("{:#x}", v.xE0.0),
-                        format!("{:#x}", m.u32(at + 0x1C)),
-                    );
-                }
+                cx.compare_handle(
+                    &format!("{path}.xE0"),
+                    "GeneratorId",
+                    v.xE0.map(|g| g.0),
+                    m.u32(at + 0x1C),
+                );
             }
             GroundVars::BattleBg(v) => {
                 let ours = [v.state, v.curr, v.prev, v.timer];

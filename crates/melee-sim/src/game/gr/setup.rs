@@ -462,35 +462,10 @@ fn next_in_walk(jobjs: &crate::hsd::jobj::JObjs, j: JObjId) -> Option<JObjId> {
 }
 
 /// Marks a joint's descendants' and its own display objects' materials `1 << 26`,
-/// `lb_8000F9F8` (through `lb_80011C18` and `lb_80011B74`).
+/// `lb_8000F9F8` (through `lb_80011C18`).
 #[doc(alias = "lb_8000F9F8")]
-#[doc(alias = "lb_80011C18")]
-#[doc(alias = "lb_80011B74")]
 pub fn set_apart(game: &mut Game, j: JObjId) {
-    const FLAG: u32 = 1 << 26;
-    fn dobjs(game: &mut Game, d: Option<crate::hsd::dobj::DObjId>) {
-        let mut cur = d;
-        while let Some(dobj) = cur {
-            let m = game.objs.dobjs[dobj].mobj.expect("lb_80011B74: dobj->mobj");
-            game.objs.mobjs[m].rendermode |= FLAG;
-            cur = game.objs.dobjs[dobj].next;
-        }
-    }
-    fn tree(game: &mut Game, j: JObjId) {
-        if let Some(c) = game.objs.jobjs[j].child {
-            tree(game, c);
-        }
-        if let Some(n) = game.objs.jobjs[j].next {
-            tree(game, n);
-        }
-        let d = jobj::get_dobj(&game.objs.jobjs, Some(j));
-        dobjs(game, d);
-    }
-    if let Some(c) = game.objs.jobjs[j].child {
-        tree(game, c);
-    }
-    let d = jobj::get_dobj(&game.objs.jobjs, Some(j));
-    dobjs(game, d);
+    crate::lb::joint::set_mobj_flags(&mut game.objs, j, 1 << 26);
 }
 
 /// The joint a stage object's model hangs under, scaling it by the stage's scale (the inline
@@ -891,8 +866,9 @@ pub fn setup(r: &mut Running, grkind: i32) {
             i += 1;
         }
     }
-    // psInitDataBankLoad registers the stage's particle bank with the particle system, which
-    // isn't part of the state yet.
+    if let (Some(ptcl), Some(texg)) = (game.stage_info.map_ptcl, game.stage_info.map_texg) {
+        crate::hsd::particle::load_data_bank(&mut game.objs, data, 0x1E, ptcl, texg, None, None);
+    }
     load_collision(game, data);
     create_collision_gobj(game);
     create_fog(game, data);

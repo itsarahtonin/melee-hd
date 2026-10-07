@@ -170,7 +170,12 @@ impl Running<'_> {
         if lean != 0.0 {
             let f = self.game.fighter_id(gobj);
             let skel = self.game.fighters[f.0].x8AC_animSkeleton;
-            jobj::anim_all(&mut self.game.objs, self.data, skel);
+            jobj::anim_all(
+                &mut self.game.objs,
+                self.data,
+                &mut crate::game::code::ParticleHooks,
+                skel,
+            );
             if lean != 1.0 {
                 self.blend_parts(f, TRANS_N, reg(lean), fp::fsubs(1.0, reg(lean)));
             } else {

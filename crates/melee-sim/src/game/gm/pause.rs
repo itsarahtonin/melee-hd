@@ -128,7 +128,7 @@ pub fn show(objs: &mut Objects, data: &Archives, p: &mut PauseScreen, slot: i32,
     } else {
         jobj::set_flags_all(j, bg, HIDDEN);
     }
-    jobj::anim_all(objs, data, bg);
+    jobj::anim_all(objs, data, &mut crate::game::code::ParticleHooks, bg);
 }
 
 impl Game {
@@ -183,7 +183,12 @@ pub fn create(r: &mut Running, archive: ArchiveId) {
         .setup_gx_link(gobj, super::super::handles::CodeRef(JOBJ_RENDER), 0xB, 0);
     super::vs::add_model_anim(&mut game.objs, data, root, model, 0);
     jobj::req_anim_all(&mut game.objs, root, 1.0);
-    jobj::anim_all(&mut game.objs, data, root);
+    jobj::anim_all(
+        &mut game.objs,
+        data,
+        &mut crate::game::code::ParticleHooks,
+        root,
+    );
     jobj::set_flags_all(&mut game.objs.jobjs, root, HIDDEN);
     game.world
         .setup_proc(gobj, super::super::handles::CodeRef(PROC), 0);

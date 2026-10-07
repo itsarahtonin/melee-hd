@@ -23,7 +23,6 @@ ROOTS = [
     "HSD_ObjAllocUnk",
     "Item_FtTrack",
     "SpawnItem",
-    "EF_Effect",
     "itFoxBlaster_ItemVars",
     "itFoxLaser_ItemVars",
 ]
@@ -43,6 +42,9 @@ POINTERS = {
     "ItemLogicTable": "Option<ItemLogicRef>",
     "ItemStateTable": "Option<ItemStatesRef>",
     "DynamicBoneTable": "Option<BoneTableId>",
+    "EF_Effect": "Option<EffectId>",
+    "EF_QueuedEffect": "Option<QueuedId>",
+    "HSD_Generator": "Option<GeneratorId>",
 }
 
 # Handles for single pointer fields whose pointee type doesn't say what they are, by

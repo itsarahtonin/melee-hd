@@ -47,8 +47,8 @@ const FILES: u32 = 0x8080_0000;
 const FILES_END: u32 = 0x80F0_0000;
 
 /// Our tokens for the same.
-const EF_HOOK: GeneratorHook = GeneratorHook(0);
-const UF_EF: UserFunc = UserFunc(0);
+const EF_HOOK: GeneratorHook = melee_sim::game::ef::PTCL_APPSRT_HOOK;
+const UF_EF: UserFunc = melee_sim::game::ef::PARTICLE_RENDER_FUNCS;
 const UF_A_T: UserFunc = UserFunc(1);
 const UF_B_T: UserFunc = UserFunc(2);
 const USERDATA_T: UserData = UserData(0);
@@ -129,16 +129,8 @@ struct TestHooks {
 impl Hooks for TestHooks {
     fn hook_create(&mut self, objs: &mut Objects, _: &Archives, f: UserFunc, p: ParticleId) {
         if f == UF_EF {
-            // efLib_Cb_ParticleRender: a particle's own copy of its app-SRT, played once.
-            if let Some(s) = objs.particles[p].appsrt {
-                let o = objs.app_srts[s].clone();
-                appsrt::remove_from_particle(objs, p);
-                let n = appsrt::add_to_particle(objs, p, 1);
-                let srt = &mut objs.app_srts[n];
-                srt.translate = o.translate;
-                srt.rot = o.rot;
-                srt.scale = o.scale;
-            }
+            // efLib_Cb_ParticleRender, the game's port.
+            melee_sim::game::ef::cb_particle_render(objs, p);
             return;
         }
         let o = &objs.particles[p];
@@ -201,14 +193,20 @@ impl Hooks for TestHooks {
         g: GeneratorId,
     ) {
         assert_eq!(h, EF_HOOK);
-        // efLib_Cb_PtclAppSRTHook.
-        let b = objs.particles.banks[0].expect("the common bank");
-        for idx in [0x96, 0x97, 0x98, 0x21B] {
-            let cl = b.cmd_list(data, idx).expect("efLib's command lists");
-            if objs.generators[g].cmd_list == Some(cl.list()) {
-                generator::set_user_func(objs, g, Some(UF_EF));
-            }
-        }
+        // efLib_Cb_PtclAppSRTHook, the game's port.
+        melee_sim::game::ef::cb_ptcl_appsrt_hook(objs, data, g);
+    }
+
+    fn joint_particles(
+        &mut self,
+        _: &mut Objects,
+        _: &Archives,
+        _: bool,
+        _: i32,
+        _: i32,
+        _: JObjId,
+    ) {
+        unreachable!("the test's joints have no particle events")
     }
 }
 

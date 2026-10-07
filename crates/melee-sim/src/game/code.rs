@@ -52,6 +52,9 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         0x8006_CA5C => fighter::proc_grab_coll(game, gobj),
         addr if super::it::item::run_proc(game, gobj, addr) => {}
         addr if super::it::kinds::run_event(game, gobj, addr) => {}
+        super::ef::UPDATE_PROC => super::ef::update(game, gobj),
+        super::ef::PARTICLES_PROC_MAIN => super::ef::particles_proc_main(game),
+        super::ef::PARTICLES_PROC_AUX => super::ef::particles_proc_aux(game),
         other => unported("process", other),
     }
 }
@@ -142,6 +145,9 @@ pub enum Val {
     Float(f64),
     GObj(Option<GObjId>),
     Vec(crate::vec::Vec3),
+    JObj(Option<crate::hsd::jobj::JObjId>),
+    /// What an effect spawn returns: an effect, a generator, or null.
+    Spawned(super::ef::Spawned),
 }
 
 impl Val {
@@ -179,10 +185,12 @@ impl Val {
 /// order, an output vector's pointer standing for the vector it returns; until a subsystem's
 /// port adds its arms here, reaching one stops the simulation.
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
-    let _ = (&r, args);
     #[cfg(feature = "stubs")]
     if let Some(v) = stubs::get(f) {
         stubs::log(f, args);
+        return v;
+    }
+    if let Some(v) = super::ef::call(r, f, args) {
         return v;
     }
     unported("function", f)
@@ -229,16 +237,20 @@ pub mod stubs {
     }
 }
 
-/// The game's particle callbacks (efLib's and the stages'), by token. None is ported yet, so a
-/// particle that reaches one stops the simulation.
+/// The game's particle callbacks, by token: efLib's hooks into the particle system (the
+/// user functions `lbl_803BF810` and the new-generator hook) and its joint particle callbacks.
+/// No game code sets particle user data or callbacks, so reaching one stops the simulation.
 pub struct ParticleHooks;
 
 impl crate::hsd::particle::Hooks for ParticleHooks {
-    fn hook_create(&mut self, _: &mut Objects, _: &Archives, f: UserFunc, _: ParticleId) {
-        unported("particle hookCreate", f.0)
+    fn hook_create(&mut self, objs: &mut Objects, _: &Archives, f: UserFunc, p: ParticleId) {
+        super::ef::eflib::hook_create(objs, f, p);
     }
     fn hook_delete(&mut self, _: &mut Objects, _: &Archives, f: UserFunc, _: ParticleId) {
-        unported("particle hookDelete", f.0)
+        // `lbl_803BF810` has no delete hook.
+        if f != super::ef::PARTICLE_RENDER_FUNCS {
+            unported("particle hookDelete", f.0)
+        }
     }
     fn set_user_data(
         &mut self,
@@ -249,7 +261,11 @@ impl crate::hsd::particle::Hooks for ParticleHooks {
         _: u8,
         _: f32,
     ) -> bool {
-        unported("particle setUserData", f.0)
+        // Nor a `setUserData`.
+        if f != super::ef::PARTICLE_RENDER_FUNCS {
+            unported("particle setUserData", f.0)
+        }
+        false
     }
     fn write_user_data(&mut self, _: &mut Objects, d: UserData, _: u8, _: f32) {
         unported("particle user data", d.0)
@@ -259,12 +275,27 @@ impl crate::hsd::particle::Hooks for ParticleHooks {
     }
     fn generator_created(
         &mut self,
-        _: &mut Objects,
-        _: &Archives,
+        objs: &mut Objects,
+        data: &Archives,
         h: GeneratorHook,
-        _: GeneratorId,
+        g: GeneratorId,
     ) {
-        unported("generator hook", h.0)
+        super::ef::eflib::generator_created(objs, data, h, g);
+    }
+    fn joint_particles(
+        &mut self,
+        objs: &mut Objects,
+        data: &Archives,
+        dynamic: bool,
+        bank: i32,
+        idx: i32,
+        jobj: crate::hsd::jobj::JObjId,
+    ) {
+        if dynamic {
+            super::ef::cb_dptcl(objs, data, self, bank, idx, jobj);
+        } else {
+            super::ef::cb_sptcl(objs, data, self, bank, idx, jobj);
+        }
     }
 }
 

@@ -751,7 +751,14 @@ fn check_archive(
                 let carried_on = both(
                     &format!("{what}: frame {frame} anim"),
                     || fns::HSD_JObjAnimAll(ctx, handle(ctx, t_root)),
-                    || jobj::anim_all(&mut s.objs, &s.archives, o_root),
+                    || {
+                        jobj::anim_all(
+                            &mut s.objs,
+                            &s.archives,
+                            &mut melee_sim::game::code::ParticleHooks,
+                            o_root,
+                        )
+                    },
                 );
                 if !carried_on {
                     halted = true;
@@ -1549,7 +1556,12 @@ fn check_synthetic() {
         let mut halted = false;
         for step in 0..150 {
             fns::HSD_JObjAnimAll(ctx, handle(ctx, t_root));
-            jobj::anim_all(&mut s.objs, &s.archives, o_root);
+            jobj::anim_all(
+                &mut s.objs,
+                &s.archives,
+                &mut melee_sim::game::code::ParticleHooks,
+                o_root,
+            );
             s.compare(t_root, o_root, &format!("{what}: step {step} anim"));
             if !s.setup_all(t_root, o_root) {
                 halted = true;
@@ -1716,7 +1728,12 @@ fn check_shapes() {
             let op = match rand.below(12) {
                 0..=6 => {
                     fns::HSD_JObjAnimAll(ctx, handle(ctx, t_root));
-                    jobj::anim_all(&mut s.objs, &s.archives, o_root);
+                    jobj::anim_all(
+                        &mut s.objs,
+                        &s.archives,
+                        &mut melee_sim::game::code::ParticleHooks,
+                        o_root,
+                    );
                     "anim"
                 }
                 7 => {

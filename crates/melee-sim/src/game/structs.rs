@@ -2267,7 +2267,7 @@ pub struct Fighter {
     /// +0x5f4
     pub x5F4_arr: [Fighter_x5F4_arr; 12],
     /// +0x60c
-    pub x60C: RawPtr,
+    pub x60C: Option<QueuedId>,
     /// +0x610
     pub x610_color_rgba: [_GXColor; 2],
     /// +0x618
@@ -3050,7 +3050,7 @@ impl Default for Fighter {
             parts: None,
             dobj_list: Default::default(),
             x5F4_arr: core::array::from_fn(|_| Default::default()),
-            x60C: Default::default(),
+            x60C: None,
             x610_color_rgba: core::array::from_fn(|_| Default::default()),
             pad_port: 0,
             costume_id: 0,
@@ -3857,7 +3857,7 @@ pub struct Item {
     /// +0xbbc
     pub xBBC_dynamicBoneTable: Option<BoneTableId>,
     /// +0xbc0
-    pub xBC0: RawPtr,
+    pub xBC0: Option<QueuedId>,
     /// +0xbc4
     pub xBC4: _GXColor,
     /// +0xbc8
@@ -4159,7 +4159,7 @@ impl Default for Item {
             xB6B: 0,
             xB6C_vars: core::array::from_fn(|_| Default::default()),
             xBBC_dynamicBoneTable: None,
-            xBC0: Default::default(),
+            xBC0: None,
             xBC4: Default::default(),
             xBC8: Default::default(),
             xBCC_unk: Default::default(),
@@ -7367,60 +7367,6 @@ impl Default for SpawnItem {
             x46_flag: [0; 1],
             x47_flag: [0; 1],
             x48_ground_or_air: 0,
-        }
-    }
-}
-
-/// `EF_Effect`, 0x2c bytes.
-#[derive(Clone, Debug, PartialEq)]
-pub struct EF_Effect {
-    /// +0x0
-    pub next: RawPtr,
-    /// +0x4
-    pub gobj: Option<GObjId>,
-    /// +0x8
-    pub parent_gobj: Option<GObjId>,
-    /// +0xc
-    pub attach_jobj: Option<JObjId>,
-    /// +0x10
-    pub update: Option<CodeRef>,
-    /// +0x14
-    pub user_data: RawPtr,
-    /// +0x18
-    pub params: Vec3,
-    /// +0x24
-    pub lifetime: u16,
-    /// +0x26
-    pub expire_flags: i8,
-    /// +0x27
-    pub scale_flags: u8,
-    /// +0x28
-    pub state_flags: u8,
-    /// +0x29
-    pub is_async: u8,
-    /// +0x2a
-    pub x2A: i8,
-    /// +0x2b
-    pub x2B: i8,
-}
-
-impl Default for EF_Effect {
-    fn default() -> Self {
-        EF_Effect {
-            next: Default::default(),
-            gobj: None,
-            parent_gobj: None,
-            attach_jobj: None,
-            update: None,
-            user_data: Default::default(),
-            params: Default::default(),
-            lifetime: 0,
-            expire_flags: 0,
-            scale_flags: 0,
-            state_flags: 0,
-            is_async: 0,
-            x2A: 0,
-            x2B: 0,
         }
     }
 }
