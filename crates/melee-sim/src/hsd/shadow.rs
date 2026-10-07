@@ -47,8 +47,7 @@ pub struct ShadowImage {
 /// The shadow pool.
 pub type Shadows = Pool<Shadow>;
 
-/// A shadow's texture, `makeShadowTObj`.
-#[doc(alias = "makeShadowTObj")]
+/// A shadow's texture (the inline `makeShadowTObj`).
 fn make_texture(objs: &mut Objects) -> TObjId {
     let t = tobj::alloc(&mut objs.tobjs);
     let o = &mut objs.tobjs[t];
