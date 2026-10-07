@@ -1450,6 +1450,72 @@ fn ko_marks() {
     .run_n(6);
 }
 
+/// A KO mark played out: each frame, each slot's marks run their processes.
+#[test]
+fn ko_mark_run() {
+    use melee_sim::game::hud::announce::{MARK_FADE, MARK_FADE_2, MARK_SPAWN_2};
+    const SLOTS: u32 = 0x804A_1340 + 4;
+    Check {
+        perturb_all: true,
+        variants: 6,
+        perturb: &|f| {
+            f.regs.gpr[20] = f.below(4);
+            f.regs.gpr[21] = f.below(6);
+        },
+        ..Check::new("fn_8016C7D0", &|r, a| {
+            let f = [0x802F_7AF8, 0x802F_7BB4, 0x802F_7C30, 0x802F_7D08][a.r(20) as usize];
+            r.ko_mark(f, a.i(21));
+            for _ in 0..50 {
+                for slot in 0..6 {
+                    for second in [false, true] {
+                        let s = &r.game.hud.ko_marks.slots[slot];
+                        let Some(g) = (if second { s.gobj2 } else { s.gobj }) else {
+                            continue;
+                        };
+                        let p = r.game.world.gobj(g).proc.expect("a mark's process");
+                        match r.game.world.proc(p).on_invoke.0 {
+                            MARK_FADE => r.ko_mark_proc(g),
+                            MARK_FADE_2 => r.ko_mark_proc_2(g),
+                            MARK_SPAWN_2 => r.ko_mark_proc_spawning(g),
+                            other => panic!("a mark with process {other:#x}"),
+                        }
+                    }
+                }
+            }
+            vec![]
+        })
+    }
+    .with_theirs(&|ctx, c| {
+        let slot = c.regs.gpr[21] as i32;
+        match c.regs.gpr[20] {
+            0 => fns::if_802F7AF8(ctx, slot),
+            1 => fns::if_802F7BB4(ctx, slot),
+            2 => fns::if_802F7C30(ctx, slot),
+            _ => fns::if_802F7D08(ctx, slot),
+        }
+        for _ in 0..50 {
+            for slot in 0..6u32 {
+                for second in [false, true] {
+                    let g = ctx.read_u32(SLOTS + 8 * slot + 4 * u32::from(second));
+                    if g == 0 {
+                        continue;
+                    }
+                    let proc = ctx.read_u32(g + 0x18);
+                    let gh = handle(ctx, g);
+                    match ctx.read_u32(proc + 0x14) {
+                        MARK_FADE => fns::fn_802F75D4(ctx, gh),
+                        MARK_FADE_2 => fns::fn_802F7670(ctx, gh),
+                        MARK_SPAWN_2 => fns::fn_802F7994(ctx, gh),
+                        other => panic!("a mark with process {other:#x}"),
+                    }
+                }
+            }
+        }
+        (0, 0)
+    })
+    .run_n(6);
+}
+
 #[test]
 fn load_ko_marks() {
     Check::new("if_802F7E24", &|r, _| {
@@ -1875,11 +1941,16 @@ fn announcement_run() {
 fn perturb_stocks(f: &mut calls::Fuzz) {
     let players = sym("player_slots");
     for i in 0..6u32 {
-        if f.below(3) == 0 {
-            let v = [0u8, 1, 2, 4, 5, 6, 9, 10, 12, 99, 0xFF][f.below(11) as usize];
-            f.put8(players + 0xE90 * i + 0x8E, v);
-        }
+        let v = [0u8, 1, 2, 4, 5, 6, 9, 10, 12, 99, 100, 127, 0xFF][f.below(13) as usize];
+        f.put8(players + 0xE90 * i + 0x8E, v);
         let u = 0x804A_157C + 0x54 * i;
+        // The flying icons' paths: start, middle and end of each.
+        if f.below(2) == 0 {
+            for k in 0..18u32 {
+                let v = [-30.5f32, 0.0, 12.25, 47.0][f.below(4) as usize];
+                f.put(u + 0xC + 4 * k, v.to_bits());
+            }
+        }
         if f.below(4) == 0 {
             let v = f.below(2) as u8;
             f.put8(u + 2, v);
@@ -1890,10 +1961,9 @@ fn perturb_stocks(f: &mut calls::Fuzz) {
                 f.put8(u + 5 + k, v);
             }
         }
-        if f.below(5) == 0 {
-            let v = f.below(3) as u8;
-            f.put8(u + 1, v);
-        }
+        // Mostly a stock match's row (the captures are a time match's).
+        let v = [0u8, 0, 1, 2][f.below(4) as usize];
+        f.put8(u + 1, v);
     }
 }
 
@@ -1901,7 +1971,7 @@ fn perturb_stocks(f: &mut calls::Fuzz) {
 fn stock_proc() {
     let stubs = hud_stubs();
     Check {
-        variants: 12,
+        variants: 26,
         perturb: &perturb_stocks,
         stubs: &stubs,
         ..Check::new("fn_802F9410", &|r, a| {
@@ -2299,16 +2369,16 @@ fn hazard() {
 #[test]
 fn coin_proc() {
     Check {
-        variants: 8,
+        variants: 16,
         perturb: &|f| {
             let s = 0x803F_9E08;
             let b = f.u8(s) & 0x80
-                | (f.below(2) as u8) << 6
+                | u8::from(f.below(4) != 0) << 6
                 | (f.below(8) as u8) << 3
-                | f.below(8) as u8;
+                | [0u8, 1, 1, 5][f.below(4) as usize];
             f.put8(s, b);
             {
-                let v = [0u8, 9, 10, 50][f.below(4) as usize];
+                let v = [0u8, 9, 10, 19, 50][f.below(5) as usize];
                 f.put8(s + 1, v);
             }
             {
@@ -2324,9 +2394,11 @@ fn coin_proc() {
                 f.put(s + 8, v);
             }
         },
+        natives: &[(sym("lbAudioAx_800237A8"), log_sfx as fn(&Ctx))],
         ..Check::new("fn_802FED14", &|r, a| {
+            r.game.events.clear();
             r.coin_proc(gobj_arg(a, 3));
-            vec![]
+            vec![Out::Logged(sfx_logged(&r.game.events))]
         })
     }
     .run();
