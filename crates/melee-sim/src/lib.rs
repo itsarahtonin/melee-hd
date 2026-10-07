@@ -6,4 +6,7 @@
 //! snapshot for rollback is a clone.
 
 pub mod math;
+pub mod mtx;
+mod pairs;
 pub mod rng;
+pub mod vec;

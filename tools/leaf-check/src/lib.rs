@@ -88,3 +88,22 @@ pub fn inputs(range: f32, count: usize) -> Vec<f32> {
     }
     v
 }
+
+/// Scratch memory for arguments passed by pointer, clear of the DOL and the stack.
+pub const SCRATCH: u32 = 0x8160_0000;
+
+/// A handle to `addr` for passing to a port.
+pub fn handle<'a, H: ssbm_rt::Handle<'a>>(ctx: &'a Ctx, addr: u32) -> H {
+    H::from_at(ssbm_rt::At::new(ctx, addr))
+}
+
+/// Writes floats to memory, as the game stores them.
+pub fn write_f32s(ctx: &Ctx, addr: u32, values: &[f32]) {
+    for (i, v) in values.iter().enumerate() {
+        ctx.write_u32(addr + 4 * i as u32, v.to_bits());
+    }
+}
+
+pub fn read_f32s(ctx: &Ctx, addr: u32, n: usize) -> Vec<u32> {
+    (0..n).map(|i| ctx.read_u32(addr + 4 * i as u32)).collect()
+}
