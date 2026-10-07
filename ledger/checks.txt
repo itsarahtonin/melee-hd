@@ -25,3 +25,6 @@ FObjLaunchKeyData	leaf-check fobj: keyed channels launch through it; updates and
 FObjUpdateAnim	leaf-check fobj: every value handed to the update function comes from it; compared every frame
 HSD_IDSetup	leaf-check id: the test starts from it
 _HSD_IDForgetMemory	leaf-check id: empties the table as HSD_IDSetup does (melee-sim has one clear for both)
+HSD_SListAlloc	leaf-check list: both alloc-and-link functions allocate through it; node reuse compared
+HSD_SListAppendList	leaf-check list: HSD_SListAllocAndAppend links through it; contents compared every step
+HSD_SListPrependList	leaf-check list: HSD_SListAllocAndPrepend links through it; contents compared every step
