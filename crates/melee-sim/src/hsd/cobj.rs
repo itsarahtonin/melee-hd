@@ -160,6 +160,56 @@ pub fn init(objs: &mut Objects, data: &Archives, c: Option<CObjId>, desc: Option
     }
 }
 
+/// A camera descriptor in the executable's data (an `HSD_CObjDesc` whose WObj descriptors
+/// hold a position and no references), as `HSD_CObjInit` reads one.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct StaticDesc {
+    pub flags: u16,
+    pub projection_type: u16,
+    pub viewport: [i16; 4],
+    pub scissor: [u16; 4],
+    pub eye: Vec3,
+    pub interest: Vec3,
+    pub roll: f32,
+    pub near: f32,
+    pub far: f32,
+    /// The projection's parameters: field of view and aspect, or top, bottom, left, right.
+    pub projection: [f32; 4],
+}
+
+/// A CObj loaded from a descriptor in the executable's data, `HSD_CObjLoadDesc` on it: the
+/// steps of [`init`] with the descriptor's values.
+pub fn load_static_desc(objs: &mut Objects, data: &Archives, d: &StaticDesc) -> CObjId {
+    assert!(
+        u32::from(d.flags) & UP_VECTOR == 0,
+        "a static CObjDesc with an up vector"
+    );
+    let c = alloc(objs);
+    let flags = u32::from(d.flags);
+    let o = &mut objs.cobjs[c];
+    o.flags = flags;
+    o.flags = (o.flags & 0xC000_0000) | flags;
+    let s16 = |v: i16| mem(fp::frsp(f64::from(v)));
+    o.viewport = d.viewport.map(s16);
+    o.scissor = d.scissor;
+    let (eye, interest) = (o.eyepos, o.interest);
+    wobj::set_position(&mut objs.wobjs, eye, d.eye);
+    wobj::set_position(&mut objs.wobjs, interest, d.interest);
+    let cobjs = &mut objs.cobjs;
+    set_near(cobjs, Some(c), d.near);
+    set_far(cobjs, Some(c), d.far);
+    set_roll(objs, data, Some(c), d.roll);
+    let cobjs = &mut objs.cobjs;
+    let p = d.projection;
+    match d.projection_type {
+        1 => set_perspective(cobjs, Some(c), p[0], p[1]),
+        3 => set_ortho(cobjs, Some(c), p[0], p[1], p[2], p[3]),
+        2 => set_frustum(cobjs, Some(c), p[0], p[1], p[2], p[3]),
+        t => panic!("a static CObjDesc with projection type {t}"),
+    }
+    c
+}
+
 /// A CObj loaded from a descriptor, `HSD_CObjLoadDesc`. A descriptor naming a class panics:
 /// melee-sim has no class registry, and nothing in the game names one.
 #[doc(alias = "HSD_CObjLoadDesc")]

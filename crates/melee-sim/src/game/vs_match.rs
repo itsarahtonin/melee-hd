@@ -8,7 +8,6 @@
 
 use melee_data::archive::{Archive, Archives};
 
-use super::code;
 use super::gm::{self, scene, vs};
 use super::handles::CodeRef;
 use super::mirror::{Cx, Mem, Mirror};
@@ -207,12 +206,6 @@ pub struct Match {
     pub data: Archives,
 }
 
-/// The functions the scene's setup calls that no port covers yet, by address.
-mod addr {
-    /// `un_802FF78C`: the debug text's GObj.
-    pub const UN_802FF78C: u32 = 0x802F_F78C;
-}
-
 impl Match {
     /// Starts a match: the boot's pad and frame-clock setup, the VS scene's setup
     /// (`gm_801A4BD4`) and entry (`gm_Scene_Vs_OnEnter`), loading the files the match's own
@@ -314,8 +307,8 @@ pub fn init_scene(r: &mut Running) {
             gekko_fp::frsp(60.0),
         )));
     g.world = crate::hsd::gobj::World::new();
-    code::call(r, addr::UN_802FF78C, &[]);
     let g = &mut *r.game;
+    g.setup_scene_text(r.data);
     let gobj = g.world.create(14, 0, 0);
     g.world.setup_proc(gobj, CodeRef(vs::SCENE_PROC), 0);
     g.gm.scene_gobj = Some(gobj);

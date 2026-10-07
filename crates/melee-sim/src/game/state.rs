@@ -205,6 +205,8 @@ pub struct Game {
     pub vs: VsSceneController,
     /// The game-mode layer's other globals.
     pub gm: gm::Globals,
+    /// The HUD and the debug text (`melee/if`).
+    pub hud: super::hud::Hud,
     /// What the tick asked of the audio and pad drivers since the frontend last took them.
     pub events: Vec<Event>,
     /// Slippi replay playback's state, in a match a replay drives (`playback`).

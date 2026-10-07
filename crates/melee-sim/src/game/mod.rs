@@ -11,6 +11,7 @@ pub mod ft;
 pub mod gm;
 pub mod gr;
 pub mod handles;
+pub mod hud;
 pub mod it;
 pub mod mirror;
 mod mirror_gen;

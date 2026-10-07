@@ -125,6 +125,17 @@ impl<'a> Comparer<'a> {
     pub fn world(&mut self) {
         let heads = self.u32(sym("HSD_GObjPLinkHead"));
         let w = &self.game.world;
+        // Our GObjs on the process links. A GObj the importer made for a pointer that
+        // outlived its GObj is on none; if the reference's heap has since given that address
+        // to a new GObj, the new one pairs by its place in the lists instead.
+        let mut linked = HashSet::new();
+        for link in 0..P_LINKS {
+            let mut o = w.plink_head[link];
+            while let Some(g) = o {
+                linked.insert(g);
+                o = w.gobjs[g.0].next;
+            }
+        }
         for link in 0..P_LINKS {
             let mut t = self.u32(heads + 4 * link as u32);
             let mut o = w.plink_head[link];
@@ -134,7 +145,10 @@ impl<'a> Comparer<'a> {
                 match (o, t) {
                     (None, 0) => break,
                     (Some(og), tg) if tg != 0 => {
-                        self.maps.gobjs.entry(tg).or_insert(og);
+                        let known = *self.maps.gobjs.entry(tg).or_insert(og);
+                        if known != og && !linked.contains(&known) {
+                            self.maps.gobjs.insert(tg, og);
+                        }
                         self.gobj(&path, og, tg);
                         o = w.gobjs[og.0].next;
                         t = self.u32(tg + 8);
@@ -669,7 +683,7 @@ impl<'a> Comparer<'a> {
         self.robjs(path, w.robj, self.u32(t + 0x1C));
     }
 
-    fn cobj(&mut self, path: &str, o: melee_sim::hsd::cobj::CObjId, t: u32) {
+    pub(crate) fn cobj(&mut self, path: &str, o: melee_sim::hsd::cobj::CObjId, t: u32) {
         if !Self::pair(
             &mut self.maps.cobjs,
             &mut self.seen,

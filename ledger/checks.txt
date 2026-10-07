@@ -991,3 +991,5 @@ lbFile_8001668C	leaf-check audio: timeline_stadium replays Pokémon Stadium's tr
 grLib_801C9CEC	leaf-check stage quake_model: every capture on Final Destination, Pokémon Stadium, Yoshi's Story, Fountain of Dreams and Dream Land; last_stage_ticks (phases 10 and 11)
 grLib_801C9BC8	leaf-check stage quake_loop_proc: every capture; last_stage_ticks (phases 10 and 11)
 grLib_801C9C40	leaf-check stage quake_proc: every capture (the fighters' landing quakes)
+DevText_AddToList	leaf-check hud devtext_ops: DevText_Show inserts through it; the pool and draw list compared after every run
+DevText_SetupCObj	leaf-check hud devtext_draw_all: DevText_DrawAll makes its camera through it; the camera and draw calls compared

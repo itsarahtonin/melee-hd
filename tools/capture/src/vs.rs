@@ -351,6 +351,7 @@ impl<'a> Importer<'a> {
         // The scheduler reads the scene loop's pause mask through `HSD_GObjLibInitData`.
         let mask_at = r.u32(sym("HSD_GObjLibInitData") + 8);
         self.game.world.skip_links = if mask_at != 0 { r.u64(mask_at) } else { 0 };
+        self.hud();
     }
 }
 
@@ -490,6 +491,7 @@ impl<'a> Comparer<'a> {
                 r.u64(mask_at),
             );
         }
+        self.hud();
     }
 }
 
