@@ -96,6 +96,19 @@ pub fn check_calls_with(
 pub struct Setup<'a> {
     pub stubs: &'a [(u32, Option<u32>)],
     pub replay: Option<&'a ssbm_slippi::Replay>,
+    /// The reference's hardware registers take writes and read 0, for code that draws: the
+    /// GX commands it writes to the write-gather pipe are the presentation's.
+    pub gx: bool,
+}
+
+/// Hardware registers that take writes and read 0.
+struct NullHardware;
+
+impl ssbm_rt::Mmio for NullHardware {
+    fn read(&self, _: &ssbm_rt::Ctx, _: u32, _: u32) -> u32 {
+        0
+    }
+    fn write(&self, _: &ssbm_rt::Ctx, _: u32, _: u32, _: u32) {}
 }
 
 /// [`check_calls_with`] with `setup`'s stand-ins and device.
@@ -180,6 +193,9 @@ pub fn run_calls(
                 .spawn_scoped(s, || {
                     set_fp_mode(mode);
                     let ctx = reference().expect("SSBM_DISC");
+                    if setup.gx {
+                        ctx.set_mmio(Box::new(NullHardware));
+                    }
                     if let Some(r) = setup.replay {
                         let _ = ssbm_slippi::install(&ctx, r.clone());
                     }
@@ -253,6 +269,7 @@ fn run_one(
     // The player blocks, pads, scene and match state, and in a replay run Slippi's playback
     // with the ruleset's state: playback's codes patch functions the reference runs patched.
     imp.match_state();
+    imp.display();
     let Importer { mut game, maps, .. } = imp;
     // The imported state must be memory before anything runs, or differences afterwards
     // wouldn't be the call's.
@@ -262,6 +279,7 @@ fn run_one(
     before.ids();
     before.audio();
     before.match_state();
+    before.display();
     if !before.diffs.is_empty() {
         return Outcome::Failed(format!(
             "the import doesn't round-trip: {}",
@@ -320,6 +338,7 @@ fn run_one(
     cmp.ids();
     cmp.audio();
     cmp.match_state();
+    cmp.display();
     match ret {
         Ret::Nothing => {}
         Ret::Int(v) if v != r3 => cmp

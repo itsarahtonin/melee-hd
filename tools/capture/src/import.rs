@@ -947,6 +947,16 @@ impl Importer<'_> {
         let contents = if flags & jobj::SPLINE != 0 {
             Contents::Spline(self.data(u))
         } else if flags & jobj::PTCL != 0 {
+            // Entries still to spawn have their word's top bit set (`JObjLoad`).
+            let mut p = u;
+            while p != 0 {
+                if self.u32(p + 4) & 0x8000_0000 != 0
+                    && let Some(e) = self.data(p)
+                {
+                    self.game.objs.jobj.pending_ptcl.insert(e);
+                }
+                p = self.u32(p);
+            }
             Contents::Particles(self.data(u))
         } else {
             Contents::DObjs((u != 0).then(|| self.dobj(u)))

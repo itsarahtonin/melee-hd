@@ -2,10 +2,11 @@
 //! queue, runs the scene's frame function and the button maps when the game clock comes due,
 //! sets the pause mask, and runs every GObj process.
 //!
-//! The original renders a frame after each batch of ticks (`HSD_GObj_80390FC0` and the video
-//! copy) and mixes audio; the display pass and the mix are left out here (the audio driver's
-//! frames run on their own timeline, `crate::audio::clock`). It also takes as many
-//! ticks per frame as polls queued; melee-sim takes one poll per tick ([`step`]).
+//! After each batch of ticks the original renders a frame: the display pass
+//! (`HSD_GObj_80390FC0`, which changes game state as it draws; [`crate::game::render`]) and the
+//! video copy. melee-sim runs the display pass there; the audio mix is left out (the audio
+//! driver's frames run on their own timeline, `crate::audio::clock`). The original also takes
+//! as many ticks per frame as polls queued; melee-sim takes one poll per tick ([`step`]).
 
 use super::super::state::{Game, Running};
 use crate::input::controller::{Flush, PadData, Requests};
@@ -241,8 +242,8 @@ pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
 
 /// Runs a frame of the scene loop with one controller poll: the pad library queues the poll
 /// (`HSD_PadRenewRawStatus`, which the original's polling alarm runs), the clocks take up a
-/// new game speed (`lb_80019894`), one engine tick runs, and the frame counts as rendered
-/// unless the scene ended at once.
+/// new game speed (`lb_80019894`), one engine tick runs, and unless the scene ended at once
+/// the display pass runs and the frame counts as rendered.
 pub fn step(r: &mut Running, poll: PadData, reset_pressed: bool) -> Tick {
     let pads = r.game.pads.renew_raw(r.data, poll, false, reset_pressed);
     r.game.pacing.update();
@@ -250,9 +251,12 @@ pub fn step(r: &mut Running, poll: PadData, reset_pressed: bool) -> Tick {
         return Tick { pads, ended: true };
     }
     let ended = tick(r);
-    let sc = &mut r.game.scene;
-    if sc.unk_C != 2 && sc.unk_4 != u32::MAX - 1 {
-        sc.unk_4 = sc.unk_4.wrapping_add(1);
+    if r.game.scene.unk_C != 2 {
+        r.render_frame();
+        let sc = &mut r.game.scene;
+        if sc.unk_4 != u32::MAX - 1 {
+            sc.unk_4 = sc.unk_4.wrapping_add(1);
+        }
     }
     Tick { pads, ended }
 }

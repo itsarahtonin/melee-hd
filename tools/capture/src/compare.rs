@@ -772,8 +772,19 @@ impl<'a> Comparer<'a> {
             self.check(&path, "id", j.id, self.data_ref(self.u32(t + 0x84)));
             let u = self.u32(t + 0x18);
             match j.u {
-                Contents::Spline(s) | Contents::Particles(s) => {
-                    self.check(&path, "contents", s, self.data_ref(u))
+                Contents::Spline(s) => self.check(&path, "contents", s, self.data_ref(u)),
+                Contents::Particles(s) => {
+                    self.check(&path, "contents", s, self.data_ref(u));
+                    // Which entries are still to spawn: the top bit of each entry's word.
+                    let mut p = u;
+                    let (mut ours, mut theirs) = (Vec::new(), Vec::new());
+                    while p != 0 {
+                        let e = self.data_ref(p);
+                        ours.push(e.is_some_and(|e| self.game.objs.jobj.pending_ptcl.contains(&e)));
+                        theirs.push(self.u32(p + 4) & 0x8000_0000 != 0);
+                        p = self.u32(p);
+                    }
+                    self.check(&path, "particles to spawn", ours, theirs);
                 }
                 Contents::DObjs(d) => self.dobjs(&path, d, u),
             }
@@ -1044,7 +1055,7 @@ impl<'a> Comparer<'a> {
         self.aobj(&format!("{path} aobj"), aobj, self.u32(t + 0x84));
     }
 
-    fn lobjs(&mut self, path: &str, o: Option<melee_sim::hsd::lobj::LObjId>, t: u32) {
+    pub(crate) fn lobjs(&mut self, path: &str, o: Option<melee_sim::hsd::lobj::LObjId>, t: u32) {
         let (mut o, mut t) = (o, t);
         let mut i = 0;
         while o.is_some() || t != 0 {

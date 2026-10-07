@@ -162,6 +162,7 @@ fn recorded_inputs() {
                 &Setup {
                     stubs: &[UPDATE_CAMERA_BOX],
                     replay: Some(&replay),
+                    gx: false,
                 },
                 &|g, maps, call| {
                     run_proc(g, gobj_arg(maps, call), CodeRef(0x8006_AD10));
@@ -231,6 +232,7 @@ fn ucf_sdi() {
                 &Setup {
                     stubs: &[],
                     replay: Some(&replay),
+                    gx: false,
                 },
                 &|g, maps, call| {
                     run_fighter_cb(g, gobj_arg(maps, call), CodeRef(0x8008_E4F0));
@@ -276,6 +278,7 @@ fn offscreen_limits() {
             &Setup {
                 stubs: &[],
                 replay: Some(&replay),
+                gx: false,
             },
             &|g, maps, call| {
                 run_proc(g, gobj_arg(maps, call), CodeRef(0x8006_A360));
@@ -332,6 +335,7 @@ fn costumes() {
                 &Setup {
                     stubs: &[],
                     replay: Some(&replay),
+                    gx: false,
                 },
                 &|g, _, call| {
                     let mem = Mem {
@@ -369,6 +373,7 @@ fn check_frames(index: impl Fn(&Replay) -> Option<i32>) {
             &Setup {
                 stubs: &FRAME_STUBS,
                 replay: Some(&replay),
+                gx: false,
             },
             &|g, _, _| {
                 let answers = Playback::answers(g.game, &mut Device(&replay));
@@ -428,6 +433,7 @@ fn stock_steals() {
                 &Setup {
                     stubs: &[],
                     replay: Some(&replay),
+                    gx: false,
                 },
                 &|g, _, _| {
                     let answers = Playback::answers(g.game, &mut Device(&replay));
@@ -460,6 +466,7 @@ fn seed_restore() {
             &Setup {
                 stubs: &[],
                 replay: Some(&replay),
+                gx: false,
             },
             &|g, _, _| {
                 g.game.playback_restore_seed();

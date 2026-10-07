@@ -104,6 +104,7 @@ fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> Vec<String> {
     cmp.ids();
     cmp.audio();
     cmp.match_state();
+    cmp.display();
     cmp.diffs
 }
 
@@ -272,6 +273,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 imp.ids();
                 imp.audio(bank);
                 imp.match_state();
+                imp.display();
                 if let Some(tb) = image.tb {
                     imp.game.audio.clock =
                         Some(melee_capture::audio::import_clock(&image.mem1, tb));

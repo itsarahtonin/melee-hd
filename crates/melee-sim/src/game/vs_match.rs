@@ -204,6 +204,8 @@ pub struct Frame {
     pub pads: Requests,
     /// The scene asked to end: the match is over and its results would follow.
     pub ended: bool,
+    /// The display pass's draw commands, for the presentation layer.
+    pub draws: Vec<crate::hsd::display::Draw>,
 }
 
 /// A disc file as the frontend reads it: its entry number in the disc's file table and its
@@ -329,6 +331,7 @@ impl Match {
             events: std::mem::take(&mut self.game.events),
             pads: t.pads,
             ended: t.ended,
+            draws: std::mem::take(&mut self.game.objs.display.draws),
         }
     }
 }

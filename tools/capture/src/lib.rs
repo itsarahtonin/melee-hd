@@ -4,6 +4,7 @@
 
 pub mod audio;
 pub mod compare;
+pub mod display;
 pub mod effects;
 pub mod hud;
 pub mod import;
