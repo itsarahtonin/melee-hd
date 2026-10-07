@@ -347,10 +347,12 @@ dependencies = [
  "gekko-fp",
  "melee-capture",
  "melee-data",
+ "melee-replay",
  "melee-sim",
  "ssbm-disc",
  "ssbm-game",
  "ssbm-rt",
+ "ssbm-slippi",
  "ssbm-types",
  "zstd",
 ]
@@ -460,10 +462,22 @@ dependencies = [
 name = "melee-oracle"
 version = "0.1.0"
 dependencies = [
+ "melee-capture",
  "melee-data",
+ "melee-replay",
+ "melee-sim",
+ "ssbm-rt",
+ "ssbm-slippi",
+ "ssbm-types",
+ "zstd",
+]
+
+[[package]]
+name = "melee-replay"
+version = "0.1.0"
+dependencies = [
  "melee-sim",
  "ssbm-slippi",
- "zstd",
 ]
 
 [[package]]
@@ -480,6 +494,7 @@ version = "0.1.0"
 dependencies = [
  "melee-capture",
  "melee-data",
+ "melee-replay",
  "melee-sim",
  "ssbm-slippi",
 ]

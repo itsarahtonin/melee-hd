@@ -410,8 +410,89 @@ pub fn stage_anim_roots(a: &melee_data::archive::Archive) -> (Vec<u32>, Vec<u32>
 /// memory afterwards.
 pub fn run_capture(ctx: &Ctx, call: &ssbm_rt::capture::Call) -> Vec<u8> {
     call.load(ctx);
+    register_patched(ctx);
     ctx.invoke(call.addr);
     let mut out = vec![0; call.mem1.len()];
     let _ = ctx.mem.read_bytes(0x8000_0000, &mut out);
     out
+}
+
+thread_local! {
+    /// ssbm-rs's own ports by address, to tell them from a check's stand-ins.
+    static PORTS: std::collections::HashMap<u32, ssbm_rt::Native> = {
+        let ctx = Ctx::new();
+        ssbm_game::register(&ctx, |_| true);
+        ctx.registered()
+            .into_iter()
+            .filter_map(|a| ctx.entry(a).map(|e| (a, e.native)))
+            .collect()
+    };
+    /// The ports [`register_patched`] replaced, to put back for a state without the codes.
+    static REPLACED: std::cell::RefCell<std::collections::HashMap<u32, ssbm_rt::Entry>> =
+        std::cell::RefCell::default();
+}
+
+/// Registers ssbm-rs's ports made with Slippi's playback codes (`ssbm_game::playback`) for
+/// the functions those codes patch in the memory `ctx` holds, as ssbm-rs's runner does for a
+/// replay run: a captured replay run's patched functions run as the run ran them. Each
+/// function takes the port made for the most of its codes that memory has; a function whose
+/// codes aren't there gets its own port back. A function a check stands something else in for
+/// keeps its stand-in.
+pub fn register_patched(ctx: &Ctx) {
+    use ssbm_game::patched::{Code, PATCHED};
+    // `Code::Inject`'s words are offsets into the injected instructions and what they hold.
+    let read = |a: u32| ctx.mem.read_u32(a).unwrap_or(0);
+    let applied = |site: u32, code: &Code| match *code {
+        Code::Word(w) => read(site) == w,
+        Code::Inject { len, words } => melee_sim::game::slippi::placed(site, read(site))
+            .is_some_and(|body| {
+                let _ = len;
+                words.iter().all(|&(off, w)| read(body + off) == w)
+            }),
+    };
+    let mut best: std::collections::HashMap<u32, &'static ssbm_game::patched::Patched> =
+        std::collections::HashMap::new();
+    for p in PATCHED {
+        if p.sites.iter().all(|s| applied(s.addr, &s.code))
+            && best
+                .get(&p.function)
+                .is_none_or(|b| b.sites.len() < p.sites.len())
+        {
+            best.insert(p.function, p);
+        }
+    }
+    // The places in injected code that other code calls (a playback GObj's process), where
+    // the codes sit in this memory.
+    for e in ssbm_game::patched::ENTRIES {
+        if applied(e.site, &e.code)
+            && let Some(body) = melee_sim::game::slippi::placed(e.site, read(e.site))
+        {
+            ctx.register_port(body + e.offset, e.port, ssbm_rt::Returns::Unknown);
+        }
+    }
+    REPLACED.with(|r| {
+        let mut r = r.borrow_mut();
+        let back: Vec<u32> = r
+            .keys()
+            .copied()
+            .filter(|f| !best.contains_key(f))
+            .collect();
+        for f in back {
+            let e = r.remove(&f).unwrap();
+            ctx.register_port(f, e.native, e.returns);
+        }
+        for (&f, p) in &best {
+            let original = ctx.entry(f);
+            let stood_in = !r.contains_key(&f)
+                && original.is_some_and(|e| PORTS.with(|p| p.get(&f) != Some(&e.native)));
+            if stood_in {
+                continue;
+            }
+            if let Some(e) = original {
+                r.entry(f).or_insert(e);
+            }
+            let returns = original.map_or(ssbm_rt::Returns::Unknown, |e| e.returns);
+            ctx.register_port(f, p.port, returns);
+        }
+    });
 }

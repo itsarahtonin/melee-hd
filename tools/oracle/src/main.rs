@@ -8,6 +8,7 @@
 //! a tick apart. The comparison with melee-hd's own state builds on these traces; see
 //! `docs/oracle.md`.
 
+mod diff;
 mod trace;
 
 use std::collections::HashMap;
@@ -18,13 +19,31 @@ use trace::Kind;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    // The simulation recurses as the original does (joint trees): a deep stack.
+    std::thread::Builder::new()
+        .stack_size(512 << 20)
+        .spawn(move || run(args))
+        .unwrap()
+        .join()
+        .unwrap()
+}
+
+fn run(args: Vec<String>) -> ExitCode {
     match args.iter().map(String::as_str).collect::<Vec<_>>()[..] {
         ["compare", original, ours] => compare_files(original, ours),
         ["trace-check", trace, replay] => trace_check(trace, replay),
         ["mirror-check", trace] => mirror_check(trace),
+        ["diff", ref rest @ ..] => diff::diff(rest),
+        ["trace-info", trace] => trace_info(trace),
+        ["trace-dump", trace, tick, addr, len] => trace_dump(trace, tick, addr, len),
+        ["trace-world", trace, tick] => trace_world(trace, tick),
         _ => {
             eprintln!("usage: melee-oracle compare ORIGINAL.slp OURS.slp");
             eprintln!("       melee-oracle trace-check TRACE REPLAY.slp");
+            eprintln!("       melee-oracle mirror-check TRACE");
+            eprintln!("       melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N]");
+            eprintln!("       melee-oracle trace-info TRACE");
+            eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");
             ExitCode::from(2)
         }
     }
@@ -288,4 +307,97 @@ fn mirror_check(trace_path: &str) -> ExitCode {
     } else {
         ExitCode::FAILURE
     }
+}
+
+/// What a trace holds: ticks, regions, and with memory, how often each 64 KiB of main memory
+/// changed and how many bytes of pages the ticks carry.
+fn trace_info(trace_path: &str) -> ExitCode {
+    let mut r = trace::Reader::open(trace_path);
+    let (mut ticks, mut regions, mut page_bytes) = (0u64, 0u64, 0u64);
+    let mut by_block = std::collections::BTreeMap::<u32, u64>::new();
+    let mut first_fighter = None;
+    while let Some(t) = r.tick() {
+        ticks += 1;
+        regions += t.regions.len() as u64;
+        if first_fighter.is_none() && t.of(Kind::Fighter).next().is_some() {
+            first_fighter = Some(t.number);
+        }
+        for p in t.of(Kind::Page) {
+            page_bytes += p.bytes.len() as u64;
+            *by_block.entry(p.address & !0xFFFF).or_default() += 1;
+        }
+    }
+    println!(
+        "{ticks} ticks, {regions} regions, {page_bytes} bytes of pages; first fighter at tick {first_fighter:?}"
+    );
+    let mut blocks: Vec<_> = by_block.into_iter().collect();
+    blocks.sort_by_key(|b| std::cmp::Reverse(b.1));
+    for (at, n) in blocks.iter().take(40) {
+        println!("  {at:#010x}: {n} pages");
+    }
+    ExitCode::SUCCESS
+}
+
+/// Main memory at the end of a tick, from a trace with memory: `len` bytes at `addr`.
+fn trace_dump(trace_path: &str, tick: &str, addr: &str, len: &str) -> ExitCode {
+    let num = |s: &str| u32::from_str_radix(s.trim_start_matches("0x"), 16).expect("a hex number");
+    let (tick, addr, len) = (tick.parse::<u32>().expect("a tick"), num(addr), num(len));
+    let mut r = trace::Reader::open(trace_path);
+    let mut image = trace::Image::default();
+    while let Some(t) = r.tick() {
+        image.apply(&t);
+        if t.number == tick {
+            for row in (addr..addr + len).step_by(16) {
+                let words: Vec<String> = (0..4)
+                    .map(|i| format!("{:08x}", image.u32(row + 4 * i)))
+                    .collect();
+                println!("{row:08x}: {}", words.join(" "));
+            }
+            return ExitCode::SUCCESS;
+        }
+    }
+    eprintln!("{trace_path}: no tick {tick}");
+    ExitCode::FAILURE
+}
+
+/// The scheduler at the end of a tick, from a trace with memory: each process link's GObjs
+/// with their classifier, object and user data kinds, and processes.
+fn trace_world(trace_path: &str, tick: &str) -> ExitCode {
+    let tick = tick.parse::<u32>().expect("a tick");
+    let mut r = trace::Reader::open(trace_path);
+    let mut image = trace::Image::default();
+    while let Some(t) = r.tick() {
+        image.apply(&t);
+        if t.number != tick {
+            continue;
+        }
+        let heads = image.u32(melee_capture::import::sym("HSD_GObjPLinkHead"));
+        for link in 0..64 {
+            let mut g = image.u32(heads + 4 * link);
+            while g != 0 {
+                let kinds = image.u32(g);
+                let mut procs = Vec::new();
+                let mut p = image.u32(g + 0x18);
+                while p != 0 {
+                    let f = image.u32(p + 0x14);
+                    let name = ssbm_types::symbol_at(f).map_or("?", |s| s.1);
+                    procs.push(format!(
+                        "{f:#010x} {name} (s_link {})",
+                        image.u32(p + 0xC) >> 24
+                    ));
+                    p = image.u32(p);
+                }
+                println!(
+                    "p_link {link}: {g:#010x} classifier {} obj kind {} user data kind {} procs {procs:?}",
+                    kinds >> 16,
+                    image.u32(g + 0xC) >> 24,
+                    (image.u32(g + 0xC) >> 16) & 0xFF,
+                );
+                g = image.u32(g + 8);
+            }
+        }
+        return ExitCode::SUCCESS;
+    }
+    eprintln!("{trace_path}: no tick {tick}");
+    ExitCode::FAILURE
 }

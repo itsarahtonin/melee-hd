@@ -8,7 +8,7 @@ use melee_data::archive::DataRef;
 
 use super::super::code::{run_fighter_cb, unported_call};
 use super::super::handles::FighterId;
-use super::super::state::{Event, Running};
+use super::super::state::Running;
 use super::super::structs::Fighter;
 use super::anim::x594_bit;
 use super::common::GA_GROUND;
@@ -171,10 +171,10 @@ impl Running<'_> {
             .game
             .rumble_enabled(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter))
         {
+            // `HSD_PadRumbleRemoveId`: the pad library's rumble is simulation state, and its
+            // motors reach the frontend through the poll's requests.
             let port = fp.pad_port;
-            self.game
-                .events
-                .push(Event::RumbleRemove { port, id: id + 2 });
+            self.game.pads.rumble.remove_id(port, (id + 2) as u32);
         }
     }
 

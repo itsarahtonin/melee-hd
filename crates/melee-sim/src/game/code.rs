@@ -32,6 +32,9 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
             dynamic_attr::update(game.game);
         }
         0x801C_ADBC => super::gr::zako::proc(game, gobj),
+        super::playback::SEED_PROC => game.game.playback_restore_seed(),
+        // The recording codes' processes send the frame over EXI and change nothing.
+        super::playback::RECORD_FRAME_START_PROC | super::playback::RECORD_ITEMS_PROC => {}
         super::gm::vs::PROC => game.vs_proc(),
         // fn_801A4BD0: the scene GObj's first process, empty.
         super::gm::vs::SCENE_PROC => {}

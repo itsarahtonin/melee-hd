@@ -15,6 +15,8 @@ pub const GM_VS: u8 = 2;
 pub const GM_CLASSIC: u8 = 3;
 pub const GM_ADVENTURE: u8 = 4;
 pub const GM_ALLSTAR: u8 = 5;
+/// The debug VS mode, which Slippi's playback codes run a replay's match in.
+pub const GM_DEBUG_VS: u8 = 14;
 pub const GM_TARGET_TEST: u8 = 15;
 pub const GM_SUPER_SUDDEN_DEATH_VS: u8 = 16;
 pub const GM_CHALLENGER_APPROACH: u8 = 20;

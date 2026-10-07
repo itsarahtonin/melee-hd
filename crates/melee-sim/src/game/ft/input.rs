@@ -174,6 +174,10 @@ impl Running<'_> {
                 i.triggers[0] = z_press;
             }
         }
+        if self.game.playback.is_some() {
+            self.playback_inject(gobj);
+        }
+        let fp = &mut self.game.fighters[f.0];
         Self::press_edges(fp);
         // The left stick's axes, then the trigger: how long each has been past its smash
         // threshold, held or released.
@@ -231,6 +235,10 @@ impl Running<'_> {
             fp.activity_timer.lstick.y = 0;
             fp.activity_timer.lstick.x = 0;
         }
+        if self.game.rules.ucf {
+            self.ucf_pad_buffer(gobj);
+        }
+        let fp = &mut self.game.fighters[f.0];
         tick(&mut fp.active_duration.trigger);
         if reg(fp.input.triggers[0]) >= shield {
             if reg(fp.input.triggers[1]) >= shield {

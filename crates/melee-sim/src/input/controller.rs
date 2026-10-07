@@ -461,6 +461,10 @@ pub struct Requests {
 /// `HSD_PadGameStatus`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Controllers {
+    /// Slippi's playback codes patch the library (`HSD_PadRenewRawStatus+0x8C`,
+    /// `HSD_PadRenewMasterStatus+0x38`): a poll goes to the queue's read position, and the
+    /// master statuses renew from it every tick, whether or not one was queued.
+    pub playback: bool,
     pub lib: PadLib,
     pub rumble: Rumble,
     pub master: [Status; 4],
@@ -482,6 +486,7 @@ impl Controllers {
     #[doc(alias = "HSD_PadInit")]
     pub fn new(qnum: u8, nb_list: u16) -> Controllers {
         Controllers {
+            playback: false,
             lib: PadLib::new(qnum),
             rumble: Rumble::new(nb_list),
             master: [Status::DEFAULT; 4],
@@ -539,7 +544,7 @@ impl Controllers {
             return Requests { reset: 0, motors };
         }
         let p = &mut self.lib;
-        let qwrite = usize::from(p.qwrite);
+        let qwrite = usize::from(if self.playback { p.qread } else { p.qwrite });
         let mut skip = false;
         if p.qcount == p.qnum {
             match p.qtype {
@@ -620,7 +625,10 @@ impl Controllers {
     pub fn renew_master(&mut self) {
         let p = &mut self.lib;
         if p.qcount == 0 {
-            return;
+            if !self.playback {
+                return;
+            }
+            p.qcount = 1;
         }
         let poll = p.queue[usize::from(p.qread)];
         p.qread = p.shift(p.qread);

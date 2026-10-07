@@ -284,6 +284,8 @@ impl<'a> Importer<'a> {
             Ok(rumble) => p.rumble = rumble,
             Err(e) => self.unhandled.push(e),
         }
+        let table = r.u32(sym("lb_804D63C0"));
+        self.game.rumble_data = (table != 0).then(|| self.data.get(table)).flatten();
     }
 
     /// The match's state: the player blocks, pads and button maps (as [`Importer::globals`]
@@ -292,6 +294,7 @@ impl<'a> Importer<'a> {
     pub fn match_state(&mut self) {
         self.globals();
         self.pads();
+        self.playback();
         let cap = self.cap;
         let mem = Mem {
             bytes: &cap.call.mem1,
@@ -412,11 +415,15 @@ impl<'a> Comparer<'a> {
             Ok(t) => self.check("rumble", "state", game.pads.rumble.clone(), t),
             Err(e) => self.diffs.push(format!("rumble: {e}")),
         }
+        let table = self.r().u32(sym("lb_804D63C0"));
+        let ours = game.rumble_data.map_or(0, |r| self.data.addr(r));
+        self.check("lb_804D63C0", "rumble patterns", ours, table);
     }
 
     /// The match's state, as [`Importer::match_state`] imports it, after [`Comparer::globals`].
     pub fn match_state(&mut self) {
         self.globals();
+        self.playback();
         let mem = Mem {
             bytes: self.mem,
             base: MEM1,

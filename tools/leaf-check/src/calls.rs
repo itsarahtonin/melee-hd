@@ -86,6 +86,27 @@ pub fn check_calls_with(
     prepare: &Prepare,
     ours: &Ours,
 ) {
+    check_calls_in(dir, func, min_compared, prepare, &Setup::default(), ours);
+}
+
+/// What a check's reference needs besides ssbm-rs's ports: functions both sides stand
+/// something in for (each address with what it returns in r3), and a Slippi replay whose
+/// device answers what the calls ask (`ssbm_slippi::install`).
+#[derive(Default)]
+pub struct Setup<'a> {
+    pub stubs: &'a [(u32, Option<u32>)],
+    pub replay: Option<&'a ssbm_slippi::Replay>,
+}
+
+/// [`check_calls_with`] with `setup`'s stand-ins and device.
+pub fn check_calls_in(
+    dir: &str,
+    func: &str,
+    min_compared: usize,
+    prepare: &Prepare,
+    setup: &Setup,
+    ours: &Ours,
+) {
     quiet_unported_panics();
     let paths = saved_calls(dir, func);
     let Some(index) = disc_index() else {
@@ -97,7 +118,7 @@ pub fn check_calls_with(
         return;
     }
     for mode in MODES {
-        let report = run_calls(&paths, index, mode, prepare, ours);
+        let report = run_calls(&paths, index, mode, prepare, setup, ours);
         let mut skipped: std::collections::BTreeMap<&str, usize> = Default::default();
         for (_, why) in &report.skipped {
             *skipped.entry(why.as_str()).or_default() += 1;
@@ -143,6 +164,7 @@ pub fn run_calls(
     index: &DiscIndex,
     mode: FpMode,
     prepare: &Prepare,
+    setup: &Setup,
     ours: &Ours,
 ) -> Report {
     let next = AtomicUsize::new(0);
@@ -158,6 +180,18 @@ pub fn run_calls(
                 .spawn_scoped(s, || {
                     set_fp_mode(mode);
                     let ctx = reference().expect("SSBM_DISC");
+                    if let Some(r) = setup.replay {
+                        let _ = ssbm_slippi::install(&ctx, r.clone());
+                    }
+                    STUBS.with(|s| *s.borrow_mut() = setup.stubs.to_vec());
+                    melee_sim::game::code::stubs::clear();
+                    for &(addr, ret) in setup.stubs {
+                        ctx.register(addr, their_stub);
+                        let v = ret.map_or(melee_sim::game::code::Val::None, |v| {
+                            melee_sim::game::code::Val::Int(v as i32)
+                        });
+                        melee_sim::game::code::stubs::set(addr, v);
+                    }
                     loop {
                         let i = next.fetch_add(1, Ordering::Relaxed);
                         let Some(path) = paths.get(i) else { break };
@@ -216,6 +250,9 @@ fn run_one(
     imp.stage();
     imp.ids();
     imp.audio(bank);
+    // The player blocks, pads, scene and match state, and in a replay run Slippi's playback
+    // with the ruleset's state: playback's codes patch functions the reference runs patched.
+    imp.match_state();
     let Importer { mut game, maps, .. } = imp;
     // The imported state must be memory before anything runs, or differences afterwards
     // wouldn't be the call's.
@@ -224,12 +261,15 @@ fn run_one(
     before.stage();
     before.ids();
     before.audio();
+    before.match_state();
     if !before.diffs.is_empty() {
         return Outcome::Failed(format!(
             "the import doesn't round-trip: {}",
             before.diffs[..before.diffs.len().min(10)].join("; ")
         ));
     }
+    CALLED.with(|c| c.borrow_mut().clear());
+    let _ = melee_sim::game::code::stubs::take();
     let after = match catch_unwind(AssertUnwindSafe(|| run_capture(ctx, &cap.call))) {
         Ok(after) => after,
         Err(p) => {
@@ -264,10 +304,22 @@ fn run_one(
         loaded: find_archives_after(index, &after, &mut archives, &data.loaded),
     };
     let mut cmp = Comparer::new(&after, &data, &game, maps);
+    // The stand-ins each side called, in order.
+    let ours_called: Vec<u32> = melee_sim::game::code::stubs::take()
+        .iter()
+        .map(|c| c.0)
+        .collect();
+    let theirs_called = CALLED.with(|c| std::mem::take(&mut *c.borrow_mut()));
+    if ours_called != theirs_called {
+        cmp.diffs.push(format!(
+            "stand-ins called: ours {ours_called:x?}, theirs {theirs_called:x?}"
+        ));
+    }
     cmp.world();
     cmp.stage();
     cmp.ids();
     cmp.audio();
+    cmp.match_state();
     match ret {
         Ret::Nothing => {}
         Ret::Int(v) if v != r3 => cmp
@@ -291,6 +343,22 @@ fn run_one(
             cmp.diffs.len(),
             cmp.diffs[..cmp.diffs.len().min(20)].join("\n    ")
         ))
+    }
+}
+
+thread_local! {
+    /// The reference's stand-ins on this thread: address and what it returns in r3.
+    static STUBS: std::cell::RefCell<Vec<(u32, Option<u32>)>> = const { std::cell::RefCell::new(Vec::new()) };
+    /// The stand-ins the reference called, in order.
+    static CALLED: std::cell::RefCell<Vec<u32>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// The reference's stand-in at every stubbed address: returns what [`STUBS`] says.
+fn their_stub(ctx: &ssbm_rt::Ctx) {
+    let addr = *ctx.native_stack().last().expect("a stub runs as a native");
+    CALLED.with(|c| c.borrow_mut().push(addr));
+    if let Some(Some(v)) = STUBS.with(|s| s.borrow().iter().find(|s| s.0 == addr).map(|s| s.1)) {
+        ctx.regs.set_r(3, v);
     }
 }
 

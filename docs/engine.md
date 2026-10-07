@@ -70,7 +70,9 @@ The display pass isn't driven yet: efLib's render callback (`ef::render`, the pa
 
 ## Rulesets in the state
 
-`Game::rules` holds the gameplay toggles. `slippi` turns on Slippi's online determinism fixes that the ported code reaches: Final Destination's background cycle keeps the random seed to itself (`grLast_8021AAB0`), and stage objects' user data is zeroed when allocated. The capture importer reads it from whether Slippi's playback codes are patched into the captured code.
+`Game::rules` holds the gameplay toggles, one per rule of the Slippi ruleset (`game::slippi`): `slippi` for the online determinism fixes, `ucf`, `neutral_spawn`, `prevent_wobbling`, `offscreen_limits` and `freeze_glitch_fix`. Among the determinism fixes the ported code reaches, Final Destination's background cycle keeps the random seed to itself (`grLast_8021AAB0`) and stage objects' user data is zeroed when allocated. UCF's pad buffer, which the code keeps in its own words, is `Game::ucf`. A replay's code list decides the rules (`Rules::from_codes`); the capture importer reads them from the codes applied in the captured game (`Rules::from_memory`).
+
+`Game::playback` is Slippi replay playback's state in a match a replay drives (`game::playback`): the replay frame it counted, the frame it read last, and while a tick runs, the Slippi device's answers the frontend supplied for it. The pad library's `playback` flag is the playback codes' patch to it.
 
 ## Loaded data the game writes into
 

@@ -42,6 +42,14 @@ pub fn bump_generation(game: &mut Game) {
     }
 }
 
+/// The collision geometry's update counter, `mpColl_804D64AC`.
+pub fn generation(game: &Game) -> i32 {
+    match &game.geometry {
+        Some(g) => g.generation,
+        None => game.gr.coll_generation,
+    }
+}
+
 /// The stage's scale, `Ground_801C0498`: its parameters' `y`, or 1 without them.
 #[doc(alias = "Ground_801C0498")]
 pub fn scale(game: &Game) -> f32 {

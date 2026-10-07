@@ -861,6 +861,46 @@ fn random_settings(rng: &mut Rng, lib: &mut PadLib) {
     lib.cross_dir = rng.u8_of(&[0, 1, 2, 3]);
 }
 
+/// Slippi's playback codes' patches to the pad library (`HSD_PadRenewRawStatus+0x8C`, the
+/// word, and `HSD_PadRenewMasterStatus+0x38`, an injection), from playback's code set.
+fn playback_codes() -> Vec<ssbm_slippi::gecko::Code> {
+    let set = ssbm_slippi::gecko::parse_ini(ssbm_slippi::PLAYBACK_INI);
+    let lines: Vec<(u32, u32)> = set.iter().flat_map(|c| c.lines.clone()).collect();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        let (a, d) = lines[i];
+        let n = if a >> 24 & 0xFE == 0xC2 {
+            d as usize
+        } else {
+            0
+        };
+        let site = 0x8000_0000 | (a & 0x01FF_FFFF);
+        if site == 0x8037_6A88 || site == 0x8037_7544 {
+            out.push(ssbm_slippi::gecko::Code {
+                name: format!("{site:#x}"),
+                lines: lines[i..=i + n].to_vec(),
+            });
+        }
+        i += 1 + n;
+    }
+    assert_eq!(out.len(), 2, "playback's pad library patches");
+    out
+}
+
+/// Puts playback's pad library patches in the reference's code, or the game's own words back,
+/// and has the reference run the ports that go with them.
+fn set_playback(ctx: &Ctx, on: bool) {
+    if on {
+        ssbm_slippi::gecko::apply(ctx, &playback_codes(), 0x8000_2000);
+    } else {
+        // `lbz r0, 0x2(r31)` and `beq .L_80377998`.
+        ctx.write_u32(0x8037_6A88, 0x881F_0002);
+        ctx.write_u32(0x8037_7544, 0x4182_0454);
+    }
+    leaf_check::register_patched(ctx);
+}
+
 #[test]
 fn pad_library_sequences_match() {
     let Some(ctx) = stubbed(true) else { return };
@@ -890,12 +930,17 @@ fn pad_library_sequences_match() {
             archives: Vec::new(),
         };
         rumble::clear_nodes(ctx, nodes.nodes, 12);
+        // Every fourth sequence on the game's queue runs with playback's patches.
+        let playback = game && seq % 4 == 1;
+        set_playback(ctx, playback);
         let mut ours = if game {
             for a in (0..0xF0).step_by(4) {
                 ctx.write_u32(game_queue + a, 0);
             }
             fns::gmMain_8015FD24(ctx);
-            Controllers::melee()
+            let mut c = Controllers::melee();
+            c.playback = playback;
+            c
         } else {
             let qnum = 1 + rng.below(5) as u8;
             for a in (0..0x100).step_by(4) {

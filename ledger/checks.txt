@@ -955,3 +955,5 @@ grLib_801C9874	leaf-check effects stage_particle_helpers: Battlefield's states
 grLib_801C98A0	leaf-check effects stage_particle_helpers: Battlefield's states
 grLib_801C9908	leaf-check effects stage_particle_helpers: Battlefield's states
 grLib_801C99C0	leaf-check effects joint_particle_calls and stage battle_stage_ticks: the stage bank's joint particles
+pl_800401F0	leaf-check replay: ucf_sdi runs smash DI from replay captures and compares the player blocks, whose SDI distances it adds to
+lb_80014574	leaf-check fighter: change_motion_state and the procInput checks start rumbles through it on replay captures, and the pad library's rumble is compared after every call
