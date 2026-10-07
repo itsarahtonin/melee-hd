@@ -5,6 +5,7 @@ pub mod capsule;
 pub mod foxblaster;
 pub mod foxlaser;
 pub mod heart;
+pub mod sword;
 pub mod tomato;
 
 use crate::game::state::Running;
@@ -17,6 +18,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || capsule::run_event(r, gobj, addr)
         || heart::run_event(r, gobj, addr)
         || tomato::run_event(r, gobj, addr)
+        || sword::run_event(r, gobj, addr)
         || bat::run_event(r, gobj, addr)
 }
 
@@ -27,6 +29,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| capsule::run_pred(r, gobj, addr))
         .or_else(|| heart::run_pred(r, gobj, addr))
         .or_else(|| tomato::run_pred(r, gobj, addr))
+        .or_else(|| sword::run_pred(r, gobj, addr))
         .or_else(|| bat::run_pred(r, gobj, addr))
 }
 

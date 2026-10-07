@@ -3,9 +3,8 @@
 //!
 //! Items come from `HSD_ObjAlloc`, which doesn't clear its blocks, and item creation doesn't
 //! clear the variables either: a new item's variables hold a freed item's bytes until its
-//! kind's code writes them. The kinds' code never reads a variable before writing it, so only
-//! the comparison could tell: a typed member compares its own fields, and the bytes past a
-//! member shorter than the union aren't compared.
+//! kind's code writes them, so a new item's member starts as those bytes read as the member,
+//! and the bytes past a member shorter than the union aren't compared.
 
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::structs::*;
@@ -54,11 +53,13 @@ macro_rules! members {
             }
 
             $(
-                /// The member. A new item's untyped bytes become it; the kind's code writes
-                /// each field before reading it (see the module's docs).
+                /// The member. A new item's untyped bytes become it, read as the member
+                /// (pointers in them, stale, become null); the kind's code writes each field it
+                /// reads (see the module's docs).
                 pub fn $accessor(&mut self) -> &mut $ty {
-                    if let ItemVars::Bytes(_) = self {
-                        *self = ItemVars::$variant(Default::default());
+                    if let ItemVars::Bytes(b) = self {
+                        let m = Mem { bytes: &b[..], base: 0 };
+                        *self = ItemVars::$variant($ty::import(&m, 0, &mut Stale));
                     }
                     match self {
                         ItemVars::$variant(v) => v,
@@ -113,5 +114,26 @@ members! {
 impl Default for ItemVars {
     fn default() -> Self {
         ItemVars::Bytes([0; SIZE])
+    }
+}
+
+/// Reads a member out of stale bytes: their pointers aren't followed.
+struct Stale;
+
+impl Cx for Stale {
+    fn import_handle(&mut self, _: &'static str, _: u32) -> Option<u32> {
+        None
+    }
+    fn import_data(&mut self, _: u32) -> Option<melee_data::archive::DataRef> {
+        None
+    }
+    fn compare_handle(&mut self, _: &str, _: &'static str, _: Option<u32>, _: u32) {
+        unreachable!()
+    }
+    fn compare_data(&mut self, _: &str, _: Option<melee_data::archive::DataRef>, _: u32) {
+        unreachable!()
+    }
+    fn mismatch(&mut self, _: &str, _: String, _: String) {
+        unreachable!()
     }
 }

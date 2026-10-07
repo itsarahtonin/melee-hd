@@ -2070,8 +2070,16 @@ fn spawn_seeded() {
 
 #[test]
 fn spawn_bisect_edges() {
-    // Every weight's edge, and past the last.
-    for k in 0..40u32 {
+    // Every weight's edge, and past the last, up to the longest table captured.
+    let longest = captures("bisectValue")
+        .iter()
+        .map(|s| {
+            let c = s.read().call;
+            w32(&c, c.regs.gpr[4]) >> 24
+        })
+        .max()
+        .unwrap_or(0);
+    for k in 0..3 * (longest + 1) {
         let prep = move |c: &mut Call| {
             let t = c.regs.gpr[4];
             let n = w32(c, t) >> 24;
@@ -2951,5 +2959,65 @@ fn bat() {
         "itBat_Logic11_DmgDealt",
         &thrown,
         &|r, a| Ret::Bool(melee_sim::game::it::kinds::bat::dmg_dealt(r, a.gobj(0))),
+    );
+}
+
+#[test]
+fn sword() {
+    use melee_sim::game::it::kinds::sword as s;
+    kind_direct(&[
+        ("itSword_Logic12_Spawned", Cb::Event(s::spawned)),
+        ("it_80285424", Cb::Event(s::landed)),
+        ("itSword_UnkMotion0_Anim", Cb::Pred(s::ease)),
+        ("itSword_UnkMotion0_Phys", Cb::Event(s::idle)),
+        ("itSword_UnkMotion0_Coll", Cb::Pred(s::coll0)),
+        ("it_802855F8", Cb::Event(s::fell)),
+        ("itSword_UnkMotion3_Anim", Cb::Pred(s::ease)),
+        ("itSword_UnkMotion3_Phys", Cb::Event(s::phys3)),
+        ("itSword_UnkMotion3_Coll", Cb::Pred(s::coll3)),
+        ("itSword_Logic12_PickedUp", Cb::Event(s::picked_up)),
+        ("itSword_UnkMotion2_Anim", Cb::Pred(s::anim2)),
+        ("itSword_UnkMotion2_Phys", Cb::Event(s::idle)),
+        ("itSword_UnkMotion2_Coll", Cb::Pred(s::still)),
+        ("itSword_Logic12_Dropped", Cb::Event(s::dropped)),
+        ("itSword_Logic12_Thrown", Cb::Event(s::dropped)),
+        ("itSword_Logic12_DmgDealt", Cb::Pred(s::dmg_dealt)),
+        ("it_80284E30", Cb::Event(s::scale_blade)),
+        ("it_80285084", Cb::Event(|r, g| s::ease_length(r.game, g))),
+        ("it_80285140", Cb::Event(|r, g| s::ease_width(r.game, g))),
+        ("it_802851FC", Cb::Event(|r, g| s::ease_swing(r.game, g))),
+    ]);
+    check("it_80284FC4", &|r, a| {
+        s::grow(r.game, a.gobj(0), a.int(1) as i32, a.float(0));
+        Ret::None
+    });
+    check("it_80285024", &|r, a| {
+        s::shrink(r.game, a.gobj(0), a.int(1) as i32);
+        Ret::None
+    });
+    kind_perturbed(
+        "itSword_UnkMotion0_Anim",
+        12,
+        &[
+            ("itSword_Logic12_EnteredAir", Cb::Event(s::entered_air)),
+            ("itSword_UnkMotion4_Anim", Cb::Pred(s::ease)),
+            ("itSword_UnkMotion4_Phys", Cb::Event(s::idle)),
+            ("itSword_UnkMotion4_Coll", Cb::Pred(s::coll4)),
+            ("itSword_Logic12_Reflected", Cb::Pred(s::reflected)),
+            ("itSword_Logic12_Clanked", Cb::Pred(s::bounce)),
+            ("itSword_Logic12_HitShield", Cb::Pred(s::bounce)),
+            ("itSword_Logic12_ShieldBounced", Cb::Pred(s::shield_bounced)),
+        ],
+    );
+    check_on(
+        "itSword_UnkMotion2_Anim",
+        "ftLib_IsSwordSwing",
+        &|c| {
+            let ip = item_ptr(c);
+            let owner = w32(c, ip + 0x518);
+            c.regs.gpr[3] = owner;
+            owner != 0
+        },
+        &|r, a| Ret::Bool(s::is_sword_swing(r.game, a.gobj(0))),
     );
 }

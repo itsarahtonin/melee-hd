@@ -2143,3 +2143,34 @@ itBat_Logic11_HitShield	leaf-check items: bat runs it from captured item states
 itBat_Logic11_ShieldBounced	leaf-check items: bat runs it from captured item states
 itColl_BounceOffVictim	leaf-check items: bat's itBat_Logic11_Clanked bounces through it on every captured call
 it_80273030	leaf-check items: bat's itBat_Logic11_Reflected runs it from captured item states
+ftLib_IsSwordSwing	leaf-check items: sword runs it from captured item states
+it_80284E30	leaf-check items: sword runs every captured call
+it_80284FC4	leaf-check items: sword runs every captured call
+it_80285024	leaf-check items: sword runs every captured call
+it_80285084	leaf-check items: sword runs every captured call
+it_80285140	leaf-check items: sword runs every captured call
+it_802851FC	leaf-check items: sword runs every captured call
+itSword_Logic12_Spawned	leaf-check items: sword runs every captured call
+it_80285424	leaf-check items: sword runs every captured call
+itSword_UnkMotion0_Anim	leaf-check items: sword runs every captured call
+itSword_UnkMotion0_Phys	leaf-check items: sword runs every captured call
+itSword_UnkMotion0_Coll	leaf-check items: sword runs every captured call
+it_802855F8	leaf-check items: sword runs every captured call
+itSword_UnkMotion3_Anim	leaf-check items: sword runs every captured call
+itSword_UnkMotion3_Phys	leaf-check items: sword runs every captured call
+itSword_UnkMotion3_Coll	leaf-check items: sword runs every captured call
+itSword_Logic12_PickedUp	leaf-check items: sword runs every captured call
+itSword_UnkMotion2_Anim	leaf-check items: sword runs it from captured item states
+itSword_UnkMotion2_Phys	leaf-check items: sword runs every captured call
+itSword_UnkMotion2_Coll	leaf-check items: sword runs every captured call
+itSword_Logic12_Dropped	leaf-check items: sword runs every captured call
+itSword_Logic12_Thrown	leaf-check items: sword runs every captured call
+itSword_Logic12_EnteredAir	leaf-check items: sword runs it from captured item states
+itSword_UnkMotion4_Anim	leaf-check items: sword runs it from captured item states
+itSword_UnkMotion4_Phys	leaf-check items: sword runs it from captured item states
+itSword_UnkMotion4_Coll	leaf-check items: sword runs it from captured item states
+itSword_Logic12_DmgDealt	leaf-check items: sword runs every captured call
+itSword_Logic12_Reflected	leaf-check items: sword runs it from captured item states
+itSword_Logic12_Clanked	leaf-check items: sword runs it from captured item states
+itSword_Logic12_HitShield	leaf-check items: sword runs it from captured item states
+itSword_Logic12_ShieldBounced	leaf-check items: sword runs it from captured item states
