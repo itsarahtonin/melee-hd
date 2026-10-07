@@ -238,6 +238,15 @@ impl Audio {
         id
     }
 
+    /// `lbFile_8001668C`: all of disc file `entrynum` (`len` bytes, as the disc's file table
+    /// gives it) to `dest`, main memory at 0x80000000 and up, ARAM below, through
+    /// [`file_load`](Self::file_load).
+    #[doc(alias = "lbFile_8001668C")]
+    pub fn load_file(&mut self, data: &Archives, entrynum: i32, dest: u32, len: u32) -> i32 {
+        let kind = if dest >= 0x8000_0000 { 0x21 } else { 0x23 };
+        self.file_load(data, entrynum, 0, dest, len.next_multiple_of(32), kind, 1)
+    }
+
     /// `lbFile_800161C4`: a synchronous load of `size` bytes of disc file `file` from `src`
     /// to `dest` (memory, or ARAM with kind 0x23): the game waits for it, taking interrupts
     /// as it waits, the audio frames among them. Returns the request's id. The file's bytes

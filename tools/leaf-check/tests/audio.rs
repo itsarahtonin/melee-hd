@@ -384,15 +384,21 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
                             devcom::cb::FILE_LOADED,
                             "tick {tick}: an asynchronous load isn't replayed: {line}"
                         );
-                        a.file_load(
-                            &data,
-                            r(3) as i32,
-                            r(4),
-                            r(5),
-                            r(6),
-                            r(7) as u16,
-                            r(8) as i32,
-                        ) as u32
+                        let whole = if r(5) >= 0x8000_0000 { 0x21 } else { 0x23 };
+                        if r(4) == 0 && r(7) == whole && r(8) == 1 {
+                            // A whole file, as `lbFile_8001668C` loads one.
+                            a.load_file(&data, r(3) as i32, r(5), r(6)) as u32
+                        } else {
+                            a.file_load(
+                                &data,
+                                r(3) as i32,
+                                r(4),
+                                r(5),
+                                r(6),
+                                r(7) as u16,
+                                r(8) as i32,
+                            ) as u32
+                        }
                     }
                     other => panic!("tick {tick}: the replay doesn't take {other}"),
                 };

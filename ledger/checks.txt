@@ -987,3 +987,4 @@ lbAudioAx_80024E50	leaf-check audio: lb_audio_entries pauses and resumes from th
 lbAudioAx_80024030	leaf-check audio: lb_audio_entries plays each of its sounds (and one past them) from the tick's states
 lbAudioAx_80024C84	leaf-check audio: lb_audio_entries runs the saved call at the match's end and the tick's states
 lbAudioAx_80024D50	leaf-check audio: lb_audio_entries runs the saved call at the match's end
+lbFile_8001668C	leaf-check audio: timeline_stadium replays Pokémon Stadium's transformation loads through it, inside their ticks; tick ends, audio frames and the queue compared every tick
