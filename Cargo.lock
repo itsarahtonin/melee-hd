@@ -437,6 +437,7 @@ dependencies = [
  "melee-capture",
  "melee-data",
  "melee-sim",
+ "ssbm-slippi",
 ]
 
 [[package]]

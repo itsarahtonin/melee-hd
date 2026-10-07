@@ -15,6 +15,13 @@ use melee_data::archive::Archives;
 use melee_data::disc::Disc;
 use melee_sim::game::state::Game;
 
+#[cfg(windows)]
+mod dolphin;
+mod gecko_words;
+mod matches;
+#[cfg(windows)]
+mod win;
+
 /// Counts allocations and allocated bytes, so a clone's heap size and a tick's allocations can
 /// be measured.
 struct Counting;
@@ -102,10 +109,25 @@ fn snapshot(paths: &[String]) {
     }
 }
 
+/// Writes each benchmark match's Gecko codes as `DIR/NAME.ini`.
+fn codes(dir: &str) {
+    std::fs::create_dir_all(dir).unwrap_or_else(|e| panic!("{dir}: {e}"));
+    for m in matches::MATCHES {
+        let path = std::path::Path::new(dir).join(format!("{}.ini", m.name));
+        std::fs::write(&path, m.ini()).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+        println!("{}", path.display());
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("snapshot") => snapshot(&args[1..]),
-        _ => eprintln!("melee-bench snapshot CALL..."),
+        Some("codes") if args.len() == 2 => codes(&args[1]),
+        #[cfg(windows)]
+        Some("dolphin") => dolphin::main(&args[1..]),
+        _ => eprintln!(
+            "melee-bench snapshot CALL... | codes DIR | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]"
+        ),
     }
 }

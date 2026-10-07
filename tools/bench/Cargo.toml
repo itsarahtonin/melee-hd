@@ -11,3 +11,4 @@ publish.workspace = true
 melee-capture = { path = "../capture" }
 melee-data.workspace = true
 melee-sim.workspace = true
+ssbm-slippi.workspace = true
