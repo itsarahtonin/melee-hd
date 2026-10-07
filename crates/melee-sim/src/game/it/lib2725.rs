@@ -482,3 +482,46 @@ pub fn reflected_back(game: &mut Game, gobj: GObjId) -> bool {
     ip.xD44_lifeTimer = ip.xD48_halfLifeTimer;
     false
 }
+
+/// Sets the half lifetime from `lifetime`, `it_80275174`.
+#[doc(alias = "it_80275174")]
+pub fn set_half_life(game: &mut Game, data: &Archives, gobj: GObjId, lifetime: f32) {
+    let x4c = common_data(game).f32(data, common::X4C);
+    item_mut(game, gobj).xD48_halfLifeTimer = mem(fp::fmuls(reg(lifetime), reg(x4c)));
+}
+
+/// Faces the way it moves, unless it has all but stopped (and faces some way),
+/// `it_80272980`.
+// NaN takes the original's branch, which the negated comparison spells out.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+#[doc(alias = "it_80272980")]
+pub fn face_motion(game: &mut Game, gobj: GObjId) {
+    let ip = item_mut(game, gobj);
+    let vx = reg(ip.x40_vel.x).abs();
+    if !(vx < fp::frsp(0.00001)) || reg(ip.facing_dir) == 0.0 {
+        ip.facing_dir = if reg(ip.x40_vel.x) >= 0.0 { 1.0 } else { -1.0 };
+    }
+    let dir = if reg(ip.facing_dir) == -1.0 { -1 } else { 1 };
+    ip.x378_itemColl.set_facing_dir(dir);
+}
+
+/// Lets fighters jump on it, `it_80274CAC` (showing the range with the debug menu's
+/// `ShowEnemyStompRange`).
+#[doc(alias = "it_80274CAC")]
+pub fn make_stompable(game: &mut Game, gobj: GObjId) {
+    let show = game.it.db_menu.ShowEnemyStompRange;
+    let ip = item_mut(game, gobj);
+    set_flag(&mut ip.xDD0_flag, 0, true);
+    if show {
+        set_flag(&mut ip.xDAA, 3, true);
+    }
+}
+
+/// Turns hitbox `idx` on where its joint is now, `it_80272674`.
+#[doc(alias = "it_80272674")]
+pub fn start_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize) {
+    let ip = item_mut(game, gobj);
+    hitcapsule::enable(&mut ip.x5D4_hitboxes[idx].hit);
+    ip.xDC8_word.flags.x16 = true;
+    super::coll::update_hitbox(game, data, gobj, idx);
+}

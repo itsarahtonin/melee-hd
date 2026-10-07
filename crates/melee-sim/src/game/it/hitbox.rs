@@ -82,6 +82,28 @@ pub fn scale_damage(game: &mut Game, data: &Archives, gobj: GObjId, mult: f64) {
     }
 }
 
+/// Sets or clears one hitbox's `x40_b0`, `it_8027572C` and `it_8027570C`.
+#[doc(alias = "it_8027572C")]
+#[doc(alias = "it_8027570C")]
+pub fn set_hit_flag0(game: &mut Game, gobj: GObjId, idx: usize, on: bool) {
+    item_mut(game, gobj).x5D4_hitboxes[idx].hit.x40_b0 = on;
+}
+
+/// Lets ownerless and the same player's items hit it, `it_80275414`.
+#[doc(alias = "it_80275414")]
+pub fn let_own_items_hit(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDCD_flag.x0.b7 = true;
+}
+
+/// Sets `xDCE`'s hit flags, `it_802754D4`.
+#[doc(alias = "it_802754D4")]
+pub fn set_hit_ids2(game: &mut Game, gobj: GObjId) {
+    let ip = item_mut(game, gobj);
+    set_flag(&mut ip.xDCE_flag, 0, true);
+    set_flag(&mut ip.xDCE_flag, 2, true);
+    set_flag(&mut ip.xDCE_flag, 1, true);
+}
+
 /// Sets `xDCD`'s hit flags, `it_80275444`.
 #[doc(alias = "it_80275444")]
 pub fn set_hit_ids(game: &mut Game, gobj: GObjId) {

@@ -227,6 +227,54 @@ pub fn opponents_dir(game: &mut Game, data: &Archives, pos: Vec3, gobj: Option<G
     if result < 0 { -1.0 } else { 1.0 }
 }
 
+/// The opponent of `gobj` (anyone, for None) whose camera bone is nearest `pos`,
+/// `ftLib_FindNearestOpponent`: none when every fighter is out.
+#[doc(alias = "ftLib_FindNearestOpponent")]
+pub fn nearest_opponent(
+    game: &mut Game,
+    data: &Archives,
+    pos: Vec3,
+    gobj: Option<GObjId>,
+) -> Option<GObjId> {
+    let me = gobj.map(|g| (g, fighter(game, g).player_idx, fighter(game, g).team));
+    let mut best = f64::from(f32::MAX);
+    let mut result = None;
+    let mut cur = game.world.first_in(P_LINK_FIGHTER);
+    while let Some(g) = cur {
+        cur = game.world.gobjs[g.0].next;
+        if me.is_some_and(|(m, slot, _)| m == g || fighter(game, g).player_idx == slot) {
+            continue;
+        }
+        let other = fighter(game, g);
+        if other.is_sleeping
+            || (game.vs_is_teams() && me.is_some_and(|(_, _, team)| other.team == team))
+        {
+            continue;
+        }
+        let v = camera_bone_pos(game, data, g);
+        let dx = fp::fsubs(reg(pos.x), reg(v.x));
+        let dy = fp::fsubs(reg(pos.y), reg(v.y));
+        let dist = fp::fmadds(dx, dx, fp::fmuls(dy, dy));
+        if dist < best {
+            best = dist;
+            result = Some(g);
+        }
+    }
+    result
+}
+
+/// The nearest fighter to `pos` and its camera bone's position, `it_8026B5E4`.
+#[doc(alias = "it_8026B5E4")]
+pub fn nearest_fighter(
+    game: &mut Game,
+    data: &Archives,
+    pos: Vec3,
+    gobj: Option<GObjId>,
+) -> Option<(GObjId, Vec3)> {
+    let g = nearest_opponent(game, data, pos, gobj)?;
+    Some((g, camera_bone_pos(game, data, g)))
+}
+
 /// Which way most fighters are from `pos`, `it_8026B684`.
 #[doc(alias = "it_8026B684")]
 pub fn facing_for(game: &mut Game, data: &Archives, pos: Vec3) -> f32 {

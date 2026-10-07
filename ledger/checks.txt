@@ -2174,3 +2174,156 @@ itSword_Logic12_Reflected	leaf-check items: sword runs it from captured item sta
 itSword_Logic12_Clanked	leaf-check items: sword runs it from captured item states
 itSword_Logic12_HitShield	leaf-check items: sword runs it from captured item states
 itSword_Logic12_ShieldBounced	leaf-check items: sword runs it from captured item states
+it_8028B8D8	leaf-check items: shell_paths runs it from captured item states
+it_8028B988	leaf-check items: green_shell runs every captured call
+it_8028BA2C	leaf-check items: green_shell runs every captured call
+it_8028BAD8	leaf-check items: green_shell runs every captured call
+it_8028BC2C	leaf-check items: green_shell runs every captured call
+itGShell_Logic14_Spawned	leaf-check items: green_shell runs every captured call
+it_8028BE54	leaf-check items: green_shell runs every captured call
+itGshell_UnkMotion0_Anim	leaf-check items: green_shell runs it from captured item states
+itGshell_UnkMotion0_Phys	leaf-check items: green_shell runs every captured call
+itGshell_UnkMotion0_Coll	leaf-check items: green_shell runs every captured call
+it_8028C018	leaf-check items: green_shell runs every captured call
+itGshell_UnkMotion1_Anim	leaf-check items: green_shell runs it from captured item states
+itGshell_UnkMotion1_Phys	leaf-check items: green_shell runs every captured call
+itGshell_UnkMotion1_Coll	leaf-check items: green_shell runs every captured call
+itGShell_Logic14_PickedUp	leaf-check items: green_shell runs every captured call
+itGshell_UnkMotion2_Anim	leaf-check items: green_shell runs every captured call
+itGshell_UnkMotion2_Phys	leaf-check items: green_shell runs every captured call
+itGShell_Logic14_Thrown	leaf-check items: green_shell runs it from captured item states
+itGshell_UnkMotion3_Anim	leaf-check items: green_shell runs it from captured item states
+itGshell_UnkMotion3_Phys	leaf-check items: green_shell runs every captured call
+itGshell_UnkMotion3_Coll	leaf-check items: green_shell runs every captured call
+itGShell_Logic14_Dropped	leaf-check items: green_shell runs it from captured item states
+itGshell_UnkMotion4_Anim	leaf-check items: green_shell runs it from captured item states
+itGshell_UnkMotion4_Phys	leaf-check items: green_shell runs it from captured item states
+itGshell_UnkMotion4_Coll	leaf-check items: green_shell runs it from captured item states
+it_8028C3A8	leaf-check items: green_shell runs every captured call
+itGshell_UnkMotion6_Anim	leaf-check items: green_shell runs it from captured item states
+itGshell_UnkMotion6_Phys	leaf-check items: green_shell runs every captured call
+itGshell_UnkMotion6_Coll	leaf-check items: green_shell runs every captured call
+it_8028C898	leaf-check items: green_shell runs every captured call
+itGshell_UnkMotion8_Anim	leaf-check items: green_shell runs it from captured item states
+itGshell_UnkMotion8_Phys	leaf-check items: green_shell runs every captured call
+itGshell_UnkMotion8_Coll	leaf-check items: green_shell runs every captured call
+itGShell_Logic14_EnteredAir	leaf-check items: green_shell runs it from captured item states
+itGshell_UnkMotion9_Anim	leaf-check items: green_shell runs it from captured item states
+itGshell_UnkMotion9_Phys	leaf-check items: green_shell runs it from captured item states
+itGshell_UnkMotion9_Coll	leaf-check items: green_shell runs it from captured item states
+itGShell_Logic14_DmgDealt	leaf-check items: green_shell runs every captured call
+itGShell_Logic14_DmgReceived	leaf-check items: green_shell runs every captured call
+itGShell_Logic14_Reflected	leaf-check items: green_shell runs every captured call
+itGShell_Logic14_Clanked	leaf-check items: green_shell runs every captured call
+itGShell_Logic14_HitShield	leaf-check items: green_shell runs every captured call
+itGShell_Logic14_ShieldBounced	leaf-check items: green_shell runs it from captured item states
+it_8028CF68	leaf-check items: green_shell runs it from captured item states
+itGShell_Logic14_EvtUnk	leaf-check items: green_shell runs it from captured item states
+it_8028CFE0	leaf-check items: shell_paths runs it from captured item states
+it_8028D090	leaf-check items: shell_paths runs it from captured item states
+it_8028D100	leaf-check items: red_shell runs every captured call
+it_8028D26C	leaf-check items: red_shell runs every captured call
+it_8028D390	leaf-check items: red_shell runs every captured call
+it_8028D3B8	leaf-check items: red_shell runs every captured call
+fn_8028D4A8	leaf-check items: red_shell runs every captured call
+it_8028D4E4	leaf-check items: red_shell runs every captured call
+it_8028D56C	leaf-check items: red_shell runs every captured call
+it_3F14_Logic15_Spawned	leaf-check items: red_shell runs every captured call
+it_8028D62C	leaf-check items: red_shell runs every captured call
+itRshell_UnkMotion0_Anim	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion0_Phys	leaf-check items: red_shell runs every captured call
+itRshell_UnkMotion0_Coll	leaf-check items: red_shell runs every captured call
+it_8028D7F0	leaf-check items: red_shell runs every captured call
+itRshell_UnkMotion1_Anim	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion1_Phys	leaf-check items: red_shell runs every captured call
+itRshell_UnkMotion1_Coll	leaf-check items: red_shell runs every captured call
+itRShell_Logic15_PickedUp	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion2_Anim	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion2_Phys	leaf-check items: red_shell runs it from captured item states
+it_3F14_Logic15_Thrown	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion3_Anim	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion3_Phys	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion3_Coll	leaf-check items: red_shell runs it from captured item states
+it_3F14_Logic15_Dropped	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion4_Anim	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion4_Phys	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion4_Coll	leaf-check items: red_shell runs it from captured item states
+it_8028DAE4	leaf-check items: red_shell runs every captured call
+itRshell_UnkMotion5_Anim	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion5_Phys	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion5_Coll	leaf-check items: red_shell runs every captured call
+it_8028E170	leaf-check items: shell_paths runs it from captured item states
+itRshell_UnkMotion6_Anim	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion6_Phys	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion6_Coll	leaf-check items: red_shell runs it from captured item states
+it_3F14_Logic15_EnteredAir	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion7_Anim	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion7_Phys	leaf-check items: red_shell runs it from captured item states
+itRshell_UnkMotion7_Coll	leaf-check items: red_shell runs it from captured item states
+it_3F14_Logic15_DmgDealt	leaf-check items: red_shell runs every captured call
+it_3F14_Logic15_DmgReceived	leaf-check items: red_shell runs every captured call
+itRShell_Logic15_Reflected	leaf-check items: red_shell runs it from captured item states
+itRShell_Logic15_Clanked	leaf-check items: red_shell runs it from captured item states
+it_3F14_Logic15_HitShield	leaf-check items: red_shell runs every captured call
+itRShell_Logic15_ShieldBounced	leaf-check items: red_shell runs it from captured item states
+it_8028E6C0	leaf-check items: red_shell runs it from captured item states
+itRShell_Logic15_EvtUnk	leaf-check items: red_shell runs it from captured item states
+it_80293D94	leaf-check items: hammer runs every captured call
+it_80293DCC	leaf-check items: hammer runs every captured call
+it_80293E34	leaf-check items: hammer runs it from captured item states
+itHammer_Logic28_Spawned	leaf-check items: hammer runs every captured call
+it_80293F84	leaf-check items: hammer runs every captured call
+itHammer_UnkMotion0_Anim	leaf-check items: hammer runs it from captured item states
+itHammer_UnkMotion0_Phys	leaf-check items: hammer runs every captured call
+itHammer_UnkMotion0_Coll	leaf-check items: hammer runs every captured call
+it_8029402C	leaf-check items: hammer runs every captured call
+itHammer_UnkMotion4_Anim	leaf-check items: hammer runs every captured call
+itHammer_UnkMotion1_Phys	leaf-check items: hammer runs every captured call
+itHammer_UnkMotion1_Coll	leaf-check items: hammer runs every captured call
+itHammer_Logic28_PickedUp	leaf-check items: hammer runs every captured call
+itHammer_UnkMotion3_Anim	leaf-check items: hammer runs it from captured item states
+it_802941A4	leaf-check items: hammer runs it from captured item states
+itHammer_Logic28_Dropped	leaf-check items: hammer runs every captured call
+itHammer_UnkMotion4_Phys	leaf-check items: hammer runs it from captured item states
+itHammer_UnkMotion4_Coll	leaf-check items: hammer runs it from captured item states
+itHammer_Logic28_EnteredAir	leaf-check items: hammer runs it from captured item states
+itHammer_UnkMotion5_Anim	leaf-check items: hammer runs it from captured item states
+itHammer_UnkMotion5_Phys	leaf-check items: hammer runs it from captured item states
+itHammer_UnkMotion5_Coll	leaf-check items: hammer runs it from captured item states
+itHammer_Logic28_EvtUnk	leaf-check items: hammer runs it from captured item states
+itHammerHead_Logic40_Spawned	leaf-check items: hammer_head runs it from captured item states
+it_80299D7C	leaf-check items: hammer_head runs it from captured item states
+itHammerHead_Logic40_PickedUp	leaf-check items: hammer_head runs it from captured item states
+itHammerhead_UnkMotion1_Anim	leaf-check items: hammer_head runs it from captured item states
+itHammerhead_UnkMotion1_Phys	leaf-check items: hammer_head runs it from captured item states
+itHammerHead_Logic40_Dropped	leaf-check items: hammer_head runs it from captured item states
+itHammerHead_Logic40_Thrown	leaf-check items: hammer_head runs it from captured item states
+itHammerhead_UnkMotion2_Anim	leaf-check items: hammer_head runs it from captured item states
+itHammerhead_UnkMotion2_Phys	leaf-check items: hammer_head runs it from captured item states
+itHammerhead_UnkMotion2_Coll	leaf-check items: hammer_head runs it from captured item states
+it_80299F94	leaf-check items: hammer_head runs it from captured item states
+it_80299FB4	leaf-check items: hammer_head runs it from captured item states
+itHammerhead_UnkMotion3_Anim	leaf-check items: hammer_head runs it from captured item states
+itHammerhead_UnkMotion3_Phys	leaf-check items: hammer_head runs it from captured item states
+itHammerhead_UnkMotion3_Coll	leaf-check items: hammer_head runs it from captured item states
+itHammerHead_Logic40_DmgDealt	leaf-check items: hammer_head runs it from captured item states
+itHammerHead_Logic40_Clanked	leaf-check items: hammer_head runs it from captured item states
+itHammerHead_Logic40_HitShield	leaf-check items: hammer_head runs it from captured item states
+itHammerHead_Logic40_Reflected	leaf-check items: hammer_head runs it from captured item states
+itHammerHead_Logic40_DmgReceived	leaf-check items: hammer_head runs it from captured item states
+itHammerHead_Logic40_EvtUnk	leaf-check items: hammer_head runs it from captured item states
+ftLib_FindNearestOpponent	leaf-check items: red_shell's itRshell_UnkMotion5_Phys runs it on every captured call
+it_8026B5E4	leaf-check items: red_shell's itRshell_UnkMotion5_Phys runs it on every captured call
+it_80272674	leaf-check items: red_shell's itRshell_UnkMotion5_Phys runs it on every captured call
+it_8026BC14	leaf-check items: hammer's it_80293D94 runs it on every captured call
+it_8027236C	leaf-check items: green_shell's itGShell_Logic14_DmgReceived runs it on every captured call
+it_8027B1F4	leaf-check items: green_shell's itGShell_Logic14_DmgReceived runs it on every captured call
+it_802723FC	leaf-check items: green_shell's it_8028CF68 runs it from captured item states
+it_80275174	leaf-check items: green_shell's itGShell_Logic14_Spawned runs it on every captured call
+it_80272980	leaf-check items: green_shell's it_8028C3A8 runs it on every captured call
+it_80274CAC	leaf-check items: green_shell's it_8028BE54 runs it on every captured call
+it_8027572C	leaf-check items: green_shell's it_8028B988 runs it on every captured call
+it_8027570C	leaf-check items: green_shell's it_8028BAD8 runs it on every captured call
+it_80275414	leaf-check items: green_shell's it_8028C3A8 runs it on every captured call
+it_802754D4	leaf-check items: green_shell's it_8028BE54 runs it on every captured call
+it_80299C48	leaf-check items: hammer's it_80293E34 runs it from captured item states

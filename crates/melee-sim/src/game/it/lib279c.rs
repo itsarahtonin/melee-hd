@@ -79,3 +79,25 @@ pub fn track_spawn(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         ip.xDA8_short = 0;
     }
 }
+
+/// Starts a new attack for an item that changed hands, `it_8027B1F4`: attack 1 with no
+/// instance, and the record of its fighter owner's attack (`ft_800898A8`), else a cleared one.
+#[doc(alias = "it_8027B1F4")]
+pub fn restart_attack(game: &mut Game, gobj: GObjId) {
+    let ip = item_mut(game, gobj);
+    ip.xD88_attackID = 1;
+    ip.xD8C_attack_instance = 0;
+    ip.xD90 = [0; 4];
+    ip.xDA8_short = 0;
+    let owner = ip.owner;
+    if is_fighter(game, owner) {
+        let f = super::owner::fighter_of(game, owner.unwrap());
+        let rec = game.fighters[f.0].x2074.clone();
+        let ip = item_mut(game, gobj);
+        ip.xD94 = rec.x2074_vec;
+        ip.xD9C = rec.x207C;
+        ip.xDA4_word = u32::from_be_bytes(rec.x10);
+        return;
+    }
+    clear_attack_record(item_mut(game, gobj));
+}

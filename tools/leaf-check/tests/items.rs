@@ -3021,3 +3021,364 @@ fn sword() {
         &|r, a| Ret::Bool(s::is_sword_swing(r.game, a.gobj(0))),
     );
 }
+
+#[test]
+fn hammer() {
+    use melee_sim::game::it::kinds::hammer as h;
+    kind_direct(&[
+        ("itHammer_Logic28_Spawned", Cb::Event(h::spawned)),
+        ("it_80293F84", Cb::Event(h::landed)),
+        ("itHammer_UnkMotion0_Anim", Cb::Pred(h::still)),
+        ("itHammer_UnkMotion0_Phys", Cb::Event(h::idle)),
+        ("itHammer_UnkMotion0_Coll", Cb::Pred(h::coll0)),
+        ("it_8029402C", Cb::Event(h::fell)),
+        ("itHammer_UnkMotion4_Anim", Cb::Pred(h::still)),
+        ("itHammer_UnkMotion1_Phys", Cb::Event(h::phys_fall)),
+        ("itHammer_UnkMotion1_Coll", Cb::Pred(h::coll1)),
+        ("itHammer_Logic28_PickedUp", Cb::Event(h::picked_up)),
+        ("itHammer_UnkMotion3_Anim", Cb::Pred(h::anim3)),
+        ("itHammer_Logic28_Dropped", Cb::Event(h::dropped)),
+        ("it_80293D94", Cb::Event(h::hitlag)),
+    ]);
+    check("it_80293DCC", &|r, a| {
+        Ret::Int(h::swings_to_lose_head(r, a.gobj(0)) as u32)
+    });
+    kind_perturbed(
+        "itHammer_UnkMotion0_Anim",
+        28,
+        &[
+            ("itHammer_Logic28_EnteredAir", Cb::Event(h::entered_air)),
+            ("itHammer_UnkMotion5_Anim", Cb::Pred(h::still)),
+            ("itHammer_UnkMotion5_Phys", Cb::Event(h::idle)),
+            ("itHammer_UnkMotion5_Coll", Cb::Pred(h::coll5)),
+            ("itHammer_UnkMotion4_Phys", Cb::Event(h::phys_fall)),
+            ("itHammer_UnkMotion4_Coll", Cb::Pred(h::coll4)),
+            ("it_802941A4", Cb::Event(h::headless)),
+        ],
+    );
+    // The headless hammer: in the air it's gone on touching anything, and held it turns
+    // headless.
+    for source in ["itHammer_UnkMotion1_Coll", "itHammer_UnkMotion3_Anim"] {
+        let prep = |c: &mut Call| {
+            no_queued_effects(c);
+            set32(c, item_ptr(c) + 0xD4C, 0);
+            true
+        };
+        let ours: &Ours = if source.ends_with("Coll") {
+            &|r, a| Ret::Bool(h::coll1(r, a.gobj(0)))
+        } else {
+            &|r, a| Ret::Bool(h::anim3(r, a.gobj(0)))
+        };
+        check_calls(source, source, &prep, ours);
+    }
+    // The head flies off (with heads left) or the joint just hides (with none), from the held
+    // hammers the head's chance was drawn for.
+    for left in [1u32, 0, 2] {
+        let prep = move |c: &mut Call| {
+            no_queued_effects(c);
+            set32(c, item_ptr(c) + 0xD4C, left);
+            true
+        };
+        check_on("it_80293DCC", "it_80293E34", &prep, &|r, a| {
+            h::lose_head(r, a.gobj(0));
+            Ret::None
+        });
+    }
+    check_on(
+        "itHammer_UnkMotion3_Anim",
+        "itHammer_Logic28_EvtUnk",
+        &pass_owner,
+        &|r, a| {
+            h::forget(r, a.gobj(0), a.opt_gobj(1));
+            Ret::None
+        },
+    );
+}
+
+#[test]
+fn hammer_head() {
+    use melee_sim::game::it::kinds::hammerhead as h;
+    // No game made a head fly off, so its callbacks run on the hammers' states (the attributes
+    // they read are the hammer's).
+    kind_perturbed(
+        "itHammer_UnkMotion0_Anim",
+        28,
+        &[
+            ("itHammerHead_Logic40_Spawned", Cb::Event(h::spawned)),
+            ("it_80299D7C", Cb::Event(h::fly)),
+            ("itHammerHead_Logic40_PickedUp", Cb::Event(h::picked_up)),
+            ("itHammerhead_UnkMotion1_Anim", Cb::Pred(h::no)),
+            ("itHammerhead_UnkMotion1_Phys", Cb::Event(h::idle)),
+            ("itHammerHead_Logic40_Dropped", Cb::Event(h::thrown)),
+            ("itHammerHead_Logic40_Thrown", Cb::Event(h::thrown)),
+            ("itHammerhead_UnkMotion2_Anim", Cb::Pred(h::tick)),
+            ("itHammerhead_UnkMotion2_Phys", Cb::Event(h::phys2)),
+            ("itHammerhead_UnkMotion2_Coll", Cb::Pred(h::coll2)),
+            ("it_80299F94", Cb::Event(h::landed)),
+            ("it_80299FB4", Cb::Event(h::landed)),
+            ("itHammerhead_UnkMotion3_Anim", Cb::Pred(h::tick)),
+            ("itHammerhead_UnkMotion3_Phys", Cb::Event(h::idle)),
+            ("itHammerhead_UnkMotion3_Coll", Cb::Pred(h::coll3)),
+            ("itHammerHead_Logic40_DmgDealt", Cb::Pred(h::no)),
+            ("itHammerHead_Logic40_Clanked", Cb::Pred(h::no)),
+            ("itHammerHead_Logic40_HitShield", Cb::Pred(h::no)),
+            ("itHammerHead_Logic40_Reflected", Cb::Pred(h::reflected)),
+            ("itHammerHead_Logic40_DmgReceived", Cb::Pred(h::no)),
+        ],
+    );
+    // Near the end of its life, it blinks (hidden every `x44` ticks); at the end, it's gone.
+    for life in [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0] {
+        let prep = move |c: &mut Call| {
+            no_queued_effects(c);
+            set32(c, item_ptr(c) + 0xD44, life.to_bits());
+            item_kind(c) == 28
+        };
+        check_on(
+            "itHammer_UnkMotion0_Anim",
+            "itHammerhead_UnkMotion2_Anim",
+            &prep,
+            &|r, a| Ret::Bool(h::tick(r, a.gobj(0))),
+        );
+    }
+    check_on(
+        "itHammer_UnkMotion3_Anim",
+        "itHammerHead_Logic40_EvtUnk",
+        &pass_owner,
+        &|r, a| {
+            h::forget(r, a.gobj(0), a.opt_gobj(1));
+            Ret::None
+        },
+    );
+}
+
+#[test]
+fn green_shell() {
+    use melee_sim::game::it::kinds::gshell as s;
+    kind_direct(&[
+        ("itGShell_Logic14_Spawned", Cb::Event(s::spawned)),
+        ("itGshell_UnkMotion0_Anim", Cb::Pred(s::still)),
+        ("itGshell_UnkMotion0_Phys", Cb::Event(s::idle)),
+        ("itGshell_UnkMotion0_Coll", Cb::Pred(s::coll0)),
+        ("itGshell_UnkMotion1_Anim", Cb::Pred(s::anim1)),
+        ("itGshell_UnkMotion1_Phys", Cb::Event(s::phys_fall)),
+        ("itGshell_UnkMotion1_Coll", Cb::Pred(s::coll1)),
+        ("itGShell_Logic14_PickedUp", Cb::Event(s::picked_up)),
+        ("itGshell_UnkMotion2_Anim", Cb::Pred(s::still)),
+        ("itGshell_UnkMotion2_Phys", Cb::Event(s::idle)),
+        ("itGshell_UnkMotion3_Anim", Cb::Pred(s::anim3)),
+        ("itGshell_UnkMotion3_Phys", Cb::Event(s::phys_fall)),
+        ("itGshell_UnkMotion3_Coll", Cb::Pred(s::coll3)),
+        ("itGshell_UnkMotion6_Anim", Cb::Pred(s::anim6)),
+        ("itGshell_UnkMotion6_Phys", Cb::Event(s::phys6)),
+        ("itGshell_UnkMotion6_Coll", Cb::Pred(s::coll6)),
+        ("itGshell_UnkMotion8_Anim", Cb::Pred(s::anim8)),
+        ("itGshell_UnkMotion8_Phys", Cb::Event(s::phys_fall)),
+        ("itGshell_UnkMotion8_Coll", Cb::Pred(s::coll3)),
+        ("itGShell_Logic14_DmgDealt", Cb::Pred(s::dmg_dealt)),
+        ("itGShell_Logic14_DmgReceived", Cb::Pred(s::dmg_received)),
+        ("itGShell_Logic14_Reflected", Cb::Pred(s::reflected)),
+        ("itGShell_Logic14_Clanked", Cb::Pred(s::clanked)),
+        ("itGShell_Logic14_HitShield", Cb::Pred(s::hit_shield)),
+        ("it_8028B8D8", Cb::Event(s::trail)),
+        ("it_8028B988", Cb::Event(s::count_owner_grace)),
+        ("it_8028BA2C", Cb::Event(s::landed)),
+        ("it_8028BAD8", Cb::Event(s::knocked)),
+        ("it_8028BC2C", Cb::Event(s::stomped)),
+        ("it_8028BE54", Cb::Event(s::stopped)),
+        ("it_8028C018", Cb::Event(s::fell)),
+        ("it_8028C3A8", Cb::Event(s::slide)),
+        ("it_8028C898", Cb::Event(s::slide_air)),
+        ("it_8028CF68", Cb::Pred(s::jumped_on)),
+    ]);
+    // Each state's callbacks from the shells' other states.
+    for source in [
+        "itGshell_UnkMotion0_Anim",
+        "itGshell_UnkMotion1_Anim",
+        "itGshell_UnkMotion3_Anim",
+        "itGshell_UnkMotion6_Anim",
+        "itGshell_UnkMotion8_Anim",
+    ] {
+        kind_perturbed(
+            source,
+            14,
+            &[
+                ("itGShell_Logic14_Thrown", Cb::Event(s::thrown)),
+                ("itGShell_Logic14_Dropped", Cb::Event(s::dropped)),
+                ("itGshell_UnkMotion4_Anim", Cb::Pred(s::anim3)),
+                ("itGshell_UnkMotion4_Phys", Cb::Event(s::phys_fall)),
+                ("itGshell_UnkMotion4_Coll", Cb::Pred(s::coll3)),
+                ("itGShell_Logic14_EnteredAir", Cb::Event(s::entered_air)),
+                ("itGshell_UnkMotion9_Anim", Cb::Pred(s::still)),
+                ("itGshell_UnkMotion9_Phys", Cb::Event(s::idle)),
+                ("itGshell_UnkMotion9_Coll", Cb::Pred(s::coll9)),
+                ("itGShell_Logic14_DmgReceived", Cb::Pred(s::dmg_received)),
+                ("itGShell_Logic14_Clanked", Cb::Pred(s::clanked)),
+                ("itGShell_Logic14_HitShield", Cb::Pred(s::hit_shield)),
+                (
+                    "itGShell_Logic14_ShieldBounced",
+                    Cb::Pred(s::shield_bounced),
+                ),
+                ("it_8028CF68", Cb::Pred(s::jumped_on)),
+                ("it_8028BC2C", Cb::Event(s::stomped)),
+                ("it_8028B988", Cb::Event(s::count_owner_grace)),
+            ],
+        );
+    }
+    check_on(
+        "itGshell_UnkMotion0_Anim",
+        "itGShell_Logic14_EvtUnk",
+        &pass_owner,
+        &|r, a| {
+            s::forget(r, a.gobj(0), a.opt_gobj(1));
+            Ret::None
+        },
+    );
+}
+
+#[test]
+fn red_shell() {
+    use melee_sim::game::it::kinds::rshell as s;
+    kind_direct(&[
+        ("it_3F14_Logic15_Spawned", Cb::Event(s::spawned)),
+        ("itRshell_UnkMotion0_Anim", Cb::Pred(s::still)),
+        ("itRshell_UnkMotion0_Phys", Cb::Event(s::idle)),
+        ("itRshell_UnkMotion0_Coll", Cb::Pred(s::coll0)),
+        ("itRshell_UnkMotion1_Anim", Cb::Pred(s::still)),
+        ("itRshell_UnkMotion1_Phys", Cb::Event(s::phys_fall)),
+        ("itRshell_UnkMotion1_Coll", Cb::Pred(s::coll1)),
+        ("itRshell_UnkMotion5_Anim", Cb::Pred(s::anim5)),
+        ("itRshell_UnkMotion5_Phys", Cb::Event(s::phys5)),
+        ("itRshell_UnkMotion5_Coll", Cb::Pred(s::coll5)),
+        ("it_3F14_Logic15_DmgDealt", Cb::Pred(s::dmg_dealt)),
+        ("it_3F14_Logic15_DmgReceived", Cb::Pred(s::dmg_received)),
+        ("it_3F14_Logic15_HitShield", Cb::Pred(s::hit_shield)),
+        ("it_8028CFE0", Cb::Event(s::trail)),
+        ("it_8028D090", Cb::Event(s::landed)),
+        ("it_8028D100", Cb::Event(s::knocked)),
+        ("it_8028D26C", Cb::Event(s::stomped)),
+        ("it_8028D390", Cb::Event(s::count_hit)),
+        ("it_8028D3B8", Cb::Event(s::bounced)),
+        ("fn_8028D4A8", Cb::Event(s::turn_back)),
+        ("it_8028D4E4", Cb::Event(s::cap_speed)),
+        ("it_8028D62C", Cb::Event(s::stopped)),
+        ("it_8028D7F0", Cb::Event(s::fell)),
+        ("it_8028DAE4", Cb::Event(s::chase)),
+        ("it_8028E170", Cb::Event(s::chase_air)),
+        ("it_8028E6C0", Cb::Pred(s::jumped_on)),
+    ]);
+    check("it_8028D56C", &|r, a| {
+        Ret::Float(f64::from(s::launch_speed(
+            r,
+            a.gobj(0),
+            a.float(0),
+            a.float(1),
+        )))
+    });
+    for source in [
+        "itRshell_UnkMotion0_Anim",
+        "itRshell_UnkMotion1_Anim",
+        "itRshell_UnkMotion5_Anim",
+    ] {
+        kind_perturbed(
+            source,
+            15,
+            &[
+                ("itRShell_Logic15_PickedUp", Cb::Event(s::picked_up)),
+                ("itRshell_UnkMotion2_Anim", Cb::Pred(s::still)),
+                ("itRshell_UnkMotion2_Phys", Cb::Event(s::idle)),
+                ("it_3F14_Logic15_Thrown", Cb::Event(s::thrown)),
+                ("itRshell_UnkMotion3_Anim", Cb::Pred(s::anim3)),
+                ("itRshell_UnkMotion3_Phys", Cb::Event(s::phys_fall)),
+                ("itRshell_UnkMotion3_Coll", Cb::Pred(s::coll3)),
+                ("it_3F14_Logic15_Dropped", Cb::Event(s::dropped)),
+                ("itRshell_UnkMotion4_Anim", Cb::Pred(s::anim3)),
+                ("itRshell_UnkMotion4_Phys", Cb::Event(s::phys_fall)),
+                ("itRshell_UnkMotion4_Coll", Cb::Pred(s::coll3)),
+                ("itRshell_UnkMotion6_Anim", Cb::Pred(s::anim6)),
+                ("itRshell_UnkMotion6_Phys", Cb::Event(s::phys_fall)),
+                ("itRshell_UnkMotion6_Coll", Cb::Pred(s::coll3)),
+                ("it_3F14_Logic15_EnteredAir", Cb::Event(s::entered_air)),
+                ("itRshell_UnkMotion7_Anim", Cb::Pred(s::still)),
+                ("itRshell_UnkMotion7_Phys", Cb::Event(s::idle)),
+                ("itRshell_UnkMotion7_Coll", Cb::Pred(s::coll7)),
+                ("it_3F14_Logic15_DmgDealt", Cb::Pred(s::dmg_dealt)),
+                ("it_3F14_Logic15_DmgReceived", Cb::Pred(s::dmg_received)),
+                ("itRShell_Logic15_Reflected", Cb::Pred(s::reflected)),
+                ("itRShell_Logic15_Clanked", Cb::Pred(s::clanked)),
+                ("it_3F14_Logic15_HitShield", Cb::Pred(s::hit_shield)),
+                (
+                    "itRShell_Logic15_ShieldBounced",
+                    Cb::Pred(s::shield_bounced),
+                ),
+                ("it_8028E6C0", Cb::Pred(s::jumped_on)),
+                ("it_8028D3B8", Cb::Event(s::bounced)),
+            ],
+        );
+    }
+    // The chase's turn towards the nearest fighter, every frame instead of every `x40` (from
+    // chasing shells only: a resting shell's hitboxes still hold a freed item's joints).
+    let prep = |c: &mut Call| {
+        no_queued_effects(c);
+        set32(c, item_ptr(c) + 0xDD4 + 0x10, 0);
+        item_kind(c) == 15
+    };
+    check_on(
+        "itRshell_UnkMotion5_Anim",
+        "itRshell_UnkMotion5_Phys",
+        &prep,
+        &|r, a| {
+            s::phys5(r, a.gobj(0));
+            Ret::None
+        },
+    );
+    check_on(
+        "itRshell_UnkMotion0_Anim",
+        "itRShell_Logic15_EvtUnk",
+        &pass_owner,
+        &|r, a| {
+            s::forget(r, a.gobj(0), a.opt_gobj(1));
+            Ret::None
+        },
+    );
+}
+
+#[test]
+fn shell_paths() {
+    use melee_sim::game::it::kinds::{gshell as g, rshell as s};
+    // The trail's countdown between puffs.
+    for (source, target, kind, off) in [
+        ("itGshell_UnkMotion6_Anim", "it_8028B8D8", 14, 0x8),
+        ("itRshell_UnkMotion5_Anim", "it_8028CFE0", 15, 0x8),
+    ] {
+        let prep = move |c: &mut Call| {
+            no_queued_effects(c);
+            set32(c, item_ptr(c) + 0xDD4 + off, 5.0f32.to_bits());
+            item_kind(c) == kind
+        };
+        let ours: &Ours = if kind == 14 {
+            &|r, a| {
+                g::trail(r, a.gobj(0));
+                Ret::None
+            }
+        } else {
+            &|r, a| {
+                s::trail(r, a.gobj(0));
+                Ret::None
+            }
+        };
+        check_on(source, target, &prep, ours);
+    }
+    // A red shell landing from a throw, and taking to the air chasing.
+    let prep = |c: &mut Call| {
+        no_queued_effects(c);
+        item_kind(c) == 15
+    };
+    check_on("itRshell_UnkMotion5_Coll", "it_8028D090", &prep, &|r, a| {
+        s::landed(r, a.gobj(0));
+        Ret::None
+    });
+    check_on("itRshell_UnkMotion5_Coll", "it_8028E170", &prep, &|r, a| {
+        s::chase_air(r, a.gobj(0));
+        Ret::None
+    });
+}

@@ -490,3 +490,41 @@ pub fn set_hit_damage(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize
     hit.unk_count = dmg;
     hit.damage = mem(fp::frsp(f64::from(dmg)));
 }
+
+/// The team byte of an owner: a fighter's team (`ftLib_GetTeam`), which the original also
+/// reads from an item through the fighter's layout.
+fn owner_team(game: &Game, owner: GObjId) -> u8 {
+    if !is_fighter(game, Some(owner)) {
+        code::unported_call("ftLib_GetTeam on an item");
+    }
+    super::owner::team(game, Some(owner)) as u8
+}
+
+/// Takes whoever last hit it as its owner (the fighter, else the item), `it_8027236C`, and
+/// starts a new attack for it.
+#[doc(alias = "it_8027236C")]
+pub fn take_attacker(game: &mut Game, gobj: GObjId) -> Option<GObjId> {
+    let ip = item(game, gobj);
+    let by = ip.xCEC_fighterGObj.or(ip.xCF0_itemGObj);
+    let team = by.map_or(255, |o| owner_team(game, o));
+    let ip = item_mut(game, gobj);
+    ip.owner = by;
+    ip.x20_team_id = team;
+    super::lib279c::restart_attack(game, gobj);
+    item(game, gobj).owner
+}
+
+/// Takes the fighter that jumped on it as its owner, `it_802723FC`.
+#[doc(alias = "it_802723FC")]
+pub fn take_stomper(game: &mut Game, gobj: GObjId) -> Option<GObjId> {
+    let by = item(game, gobj).xCFC;
+    let (owner, team) = if is_fighter(game, by) {
+        (by, owner_team(game, by.unwrap()))
+    } else {
+        (None, 255)
+    };
+    let ip = item_mut(game, gobj);
+    ip.owner = owner;
+    ip.x20_team_id = team;
+    owner
+}

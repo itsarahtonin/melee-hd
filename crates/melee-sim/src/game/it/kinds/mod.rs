@@ -4,7 +4,11 @@ pub mod bat;
 pub mod capsule;
 pub mod foxblaster;
 pub mod foxlaser;
+pub mod gshell;
+pub mod hammer;
+pub mod hammerhead;
 pub mod heart;
+pub mod rshell;
 pub mod sword;
 pub mod tomato;
 
@@ -18,6 +22,10 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || capsule::run_event(r, gobj, addr)
         || heart::run_event(r, gobj, addr)
         || tomato::run_event(r, gobj, addr)
+        || rshell::run_event(r, gobj, addr)
+        || gshell::run_event(r, gobj, addr)
+        || hammerhead::run_event(r, gobj, addr)
+        || hammer::run_event(r, gobj, addr)
         || sword::run_event(r, gobj, addr)
         || bat::run_event(r, gobj, addr)
 }
@@ -29,6 +37,10 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| capsule::run_pred(r, gobj, addr))
         .or_else(|| heart::run_pred(r, gobj, addr))
         .or_else(|| tomato::run_pred(r, gobj, addr))
+        .or_else(|| rshell::run_pred(r, gobj, addr))
+        .or_else(|| gshell::run_pred(r, gobj, addr))
+        .or_else(|| hammerhead::run_pred(r, gobj, addr))
+        .or_else(|| hammer::run_pred(r, gobj, addr))
         .or_else(|| sword::run_pred(r, gobj, addr))
         .or_else(|| bat::run_pred(r, gobj, addr))
 }
