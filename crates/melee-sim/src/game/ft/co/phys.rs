@@ -54,6 +54,7 @@ impl Running<'_> {
 
     /// Gravity and drift: `ftCo_Fall_Phys`, `ftCo_AttackAir_Phys`, `ftCo_JumpAerial_Phys`.
     #[doc(alias = "ftCo_Fall_Phys")]
+    #[doc(alias = "ftCo_ItemScrewAir_Phys")]
     #[doc(alias = "ftCo_DamageFall_Phys")]
     #[doc(alias = "ftCo_AttackAir_Phys")]
     #[doc(alias = "ftCo_JumpAerial_Phys")]

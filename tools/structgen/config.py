@@ -74,6 +74,8 @@ FIELD_POINTERS = {
     # The character's attributes, copied from its data (`PUSH_ATTRS`).
     "Fighter.dat_attrs": "Option<AttrsId>",
     "Fighter.dat_attrs_backup": "Option<AttrsId>",
+    # Kirby's and Jigglypuff's multi-jump attributes: their own attributes' copy.
+    "Fighter.x2D0": "Option<AttrsId>",
     # A freed item's link to the next free item (`HSD_ObjFree` writes it over the first word),
     # which a reused item keeps.
     "Item.x0": "Option<ItemId>",

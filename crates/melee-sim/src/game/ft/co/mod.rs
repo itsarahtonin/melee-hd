@@ -23,6 +23,7 @@ pub mod ids;
 pub mod jump;
 pub mod kind_callbacks;
 pub mod ledge;
+pub mod multijump;
 pub mod phys;
 pub mod squat;
 

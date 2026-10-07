@@ -108,9 +108,9 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8008_D08C | 0x8008_D194 | 0x8008_D29C | 0x8008_D3A4 | 0x8008_D4AC => {
             g.co_attack_air_iasa(gobj);
         }
-        // ftCo_AttackAir_Phys, ftCo_DamageFall_Phys, ftCo_Pass_Phys, ftCo_MissFoot_Phys, ftCo_JumpAerial_Phys, ftCo_Fall_Phys, ftCo_FallAerial_Phys
+        // ftCo_AttackAir_Phys, ftCo_DamageFall_Phys, ftCo_Pass_Phys, ftCo_MissFoot_Phys, ftCo_JumpAerial_Phys, ftCo_Fall_Phys, ftCo_FallAerial_Phys, ftCo_ItemScrewAir_Phys
         0x8008_D5B4 | 0x8009_093C | 0x8009_A388 | 0x8009_F440 | 0x800C_C634 | 0x800C_CD58
-        | 0x800C_CE74 => {
+        | 0x800C_CE74 | 0x800D_2F54 => {
             g.co_air_phys(gobj);
         }
         // ftCo_AttackAir_Coll
@@ -494,8 +494,8 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800C_C388 => {
             g.co_jump_aerial_anim(gobj);
         }
-        // ftCo_JumpAerial_IASA
-        0x800C_C4F8 => {
+        // ftCo_JumpAerial_IASA, ftCo_ItemScrewAir_IASA, ftCo_JumpAerialF1_IASA
+        0x800C_C4F8 | 0x800D_2F34 | 0x800D_7614 => {
             g.co_jump_aerial_iasa(gobj);
         }
         // ftCo_Fall_Anim
@@ -506,13 +506,17 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800C_CD34 | 0x800C_CE50 => {
             g.co_fall_iasa(gobj);
         }
-        // ftCo_Fall_Coll, ftCo_FallAerial_Coll
-        0x800C_CD78 | 0x800C_CE94 => {
+        // ftCo_Fall_Coll, ftCo_FallAerial_Coll, ftCo_ItemScrewAir_Coll
+        0x800C_CD78 | 0x800C_CE94 | 0x800D_2F74 => {
             g.co_fall_coll(gobj);
         }
         // ftCo_FallAerial_Anim
         0x800C_CDFC => {
             g.co_fall_aerial_anim(gobj);
+        }
+        // ftCo_ItemScrewAir_Anim
+        0x800D_2EF8 => {
+            g.co_item_screw_air_anim(gobj);
         }
         // ftCo_DeadDown_Anim
         0x800D_3E00 => {
@@ -541,6 +545,18 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         // ftCo_SquatRv_IASA
         0x800D_6694 => {
             g.co_squat_rv_iasa(gobj);
+        }
+        // ftCo_JumpAerialF1_Anim
+        0x800D_7590 => {
+            g.co_jump_aerial_f1_anim(gobj);
+        }
+        // ftCo_JumpAerialF1_Phys
+        0x800D_7634 => {
+            g.co_jump_aerial_f1_phys(gobj);
+        }
+        // ftCo_JumpAerialF1_Coll
+        0x800D_767C => {
+            g.co_jump_aerial_f1_coll(gobj);
         }
         // ftCo_CatchWait_Phys
         0x800D_A3D0 => {

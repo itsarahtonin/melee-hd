@@ -268,7 +268,7 @@ impl Running<'_> {
             return false;
         }
         if self.game.fighter(gobj).can_multijump {
-            unported_call("ftCo_800D730C");
+            return self.multi_jump_check(gobj, false);
         }
         self.jump_aerial_check_input(gobj, false)
     }
@@ -280,7 +280,7 @@ impl Running<'_> {
             return false;
         }
         if self.game.fighter(gobj).can_multijump {
-            unported_call("ftCo_800D730C");
+            return self.multi_jump_check(gobj, true);
         }
         self.jump_aerial_check_input(gobj, true)
     }
@@ -306,7 +306,21 @@ impl Running<'_> {
             return false;
         }
         if self.holding_screw(gobj) {
-            unported_call("ft_800D2E7C");
+            let fp = self.game.fighter(gobj);
+            let a = &fp.co_attrs;
+            let vel = [
+                mem(fp::fmuls(
+                    reg(fp.input.lstick[0].x),
+                    reg(a.air_jump_h_multiplier),
+                )),
+                mem(fp::fmuls(
+                    reg(a.jump_v_initial_velocity),
+                    reg(a.air_jump_v_multiplier),
+                )),
+                0.0,
+            ];
+            self.screw_jump(gobj, vel);
+            return true;
         }
         match self.game.fighter(gobj).kind {
             KIND_NESS => unported_call("ftNs_JumpAerial_Enter"),
@@ -371,6 +385,8 @@ impl Running<'_> {
 
     /// `ftCo_JumpAerial_IASA`.
     #[doc(alias = "ftCo_JumpAerial_IASA")]
+    #[doc(alias = "ftCo_JumpAerialF1_IASA")]
+    #[doc(alias = "ftCo_ItemScrewAir_IASA")]
     pub fn co_jump_aerial_iasa(&mut self, gobj: GObjId) {
         if self.special_air_check(gobj)
             || self.item_throw_air_check(gobj)
