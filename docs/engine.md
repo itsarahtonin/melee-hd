@@ -51,6 +51,8 @@ A few original functions read memory or registers they never set, and plain data
 - `fn_8016DEEC` (facing players toward their opponents) takes a player's first opponent without measuring its distance, keeping the last distance it measured, or before any, what its caller left in a register (`f26`). The VS scene's entry leaves 0 there in every capture, debug matches' and a replay's alike, so `place_players` passes 0; with three or more players that decides who the first player faces.
 - `Stage_80224E64` and `fn_80167638` read the spawn point `Ground_801C2D24` writes, which it leaves alone when the stage lacks the point. Every VS stage has the points; the ports stop there rather than read a stale vector.
 
+Some of these reads hand gameplay a heap address. Nana's CPU DI (`ftCo_800AC5A0`, which the decomp marks `@bug`) passes `ftCo_800B46B8` a register it never set when her knockback is near zero, and that register holds her `Fighter*`, so the pointer's low byte becomes her stick's Y. Ice Climbers matches go different ways when the heap is laid out differently: ssbm-rs's recording setup and a Dolphin run without Slippi's codes place the fighters 0x1DC0 bytes apart. So an object whose address reaches gameplay carries, as plain data, the address the original's allocator gives it: a pool slot's address follows from the pool's base, and the heap's from a model of its allocations, laid out per ruleset (Slippi's codes take heap of their own). Until that model is checked, the oracle seeds the addresses from ssbm-rs's trace, which records them, and the comparer checks them like any other field.
+
 
 ## Seams
 
