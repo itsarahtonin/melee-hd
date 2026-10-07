@@ -17,6 +17,7 @@ use super::slippi::{self, CodeError};
 use super::state::{Event, Game, Rules, Running};
 use super::structs::StartMeleeData;
 use super::ucf;
+use crate::audio::dsp::DspModel;
 use crate::input::controller::{PadData, Requests};
 use crate::input::pad::PadStatus;
 
@@ -31,6 +32,10 @@ pub struct Settings {
     /// The game mode the match runs in (`GameModeKind`): VS for an ordinary match.
     pub game_mode: u8,
     pub rules: Rules,
+    /// Which DSP model the voices follow, which decides when sounds end and so the handles
+    /// later sounds get: a recording keeps the one it was played with, as ssbm-rs's keep
+    /// their sound flag.
+    pub dsp: DspModel,
     /// UCF's pad buffer as the match starts (with `rules.ucf`).
     pub ucf: ucf::Pads,
     /// A Slippi replay drives the match through Slippi's playback codes
@@ -111,6 +116,8 @@ impl Settings {
             seed: 0,
             game_mode: gm::GM_VS,
             rules: Rules::default(),
+            // A player hears the match: the voices play through their samples.
+            dsp: DspModel::Samples,
             ucf: ucf::Pads::default(),
             playback: false,
         }
@@ -141,7 +148,9 @@ impl Settings {
     }
 
     /// The settings a Slippi replay's game start records: its game info block (the match's
-    /// `StartMeleeData` as the game held it, 0x138 bytes) and random seed.
+    /// `StartMeleeData` as the game held it, 0x138 bytes) and random seed. A replay doesn't
+    /// say how its sound played; this takes the silent model, as ssbm-rs plays replays
+    /// unless told `AX=1`, so the two compare.
     pub fn from_game_info(info: &[u8], seed: u32) -> Settings {
         assert_eq!(
             info.len(),
@@ -160,6 +169,7 @@ impl Settings {
             rules: Rules::default(),
             ucf: ucf::Pads::default(),
             playback: false,
+            dsp: DspModel::Silent,
         }
     }
 }
@@ -224,6 +234,7 @@ impl Match {
             });
             game.pads.playback = true;
         }
+        game.audio.dsp = settings.dsp;
         let mut data = Archives::default();
         // `lb_80014534`: the rumble scripts, then the match's own files in the order its
         // setup loads them.
