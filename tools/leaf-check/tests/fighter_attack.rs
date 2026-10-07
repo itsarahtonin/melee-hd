@@ -437,8 +437,10 @@ fn arm_hitbox(call: &mut Call, i: usize) {
                 &[0, 0, 0, 1, 2, 3, 5, 11, 13],
             );
             poke_bit(call, fp + 0x914 + 0x43, 2, phantom);
-            if pick.next(2) == 0 {
-                graze(call, me, fp + 0x914, &mut pick);
+            match pick.next(3) {
+                0 => graze(call, me, fp + 0x914, &mut pick),
+                1 => weak(call, fp + 0x914, &mut pick),
+                _ => {}
             }
         }
         1 => {
@@ -477,23 +479,37 @@ fn arm_hitbox(call: &mut Call, i: usize) {
     }
 }
 
-/// Moves a box of a fixed radius to just reach the fighter's first hurtbox, where it was last
-/// frame, so it lands a tip (a hit by less than `ftCommonData` x7A8).
+/// Moves a box of a fixed radius to just reach the fighter's first hurtbox, so it lands a tip
+/// (a hit by less than `ftCommonData` x7A8, 0.01): the hurtbox is pinned as a point where it
+/// was last frame (its ends brought up to date, `skip_update_pos`), and the box set beside it
+/// by its reach less a little, at most as far as a tip's.
 fn graze(call: &mut Call, me: u32, hit: u32, pick: &mut Pick) {
     let hurt = me + 0x11A0;
     let a = |o: u32| f32::from_bits(peek_u32(call, hurt + 0x28 + o));
     let (x, y, z) = (a(0), a(4), a(8));
+    for o in [0, 4, 8] {
+        poke_u32(call, hurt + 0x34 + o, peek_u32(call, hurt + 0x28 + o));
+    }
+    poke_bit(call, hurt + 0x24, 0, true);
     let r_hurt = f32::from_bits(peek_u32(call, hurt + 0x1C));
     let r_hit = 3.0;
     poke_f32(call, hit + 0x1C, r_hit);
     poke_bit(call, hit + 0x43, 1, true);
     poke_bit(call, hit + 0x43, 2, false);
-    let d = [0.02, 0.1, 0.3, 0.7, 1.5, 3.0][pick.next(6) as usize];
+    let d = [0.001, 0.004, 0.008, 0.02, 0.5][pick.next(5) as usize];
     for base in [0x4C, 0x58] {
         poke_f32(call, hit + base, x + r_hurt + r_hit - d);
         poke_f32(call, hit + base + 4, y);
         poke_f32(call, hit + base + 8, z);
     }
+}
+
+/// Makes a box knock back weakly (no growth, a small base), for the small spark.
+fn weak(call: &mut Call, hit: u32, pick: &mut Pick) {
+    poke_u32(call, hit + 0x24, 0);
+    poke_u32(call, hit + 0x28, 0);
+    poke_u32(call, hit + 0x2C, pick.next(60));
+    poke_u32(call, hit + 0x30, 0);
 }
 
 /// Varies the attacker's attack kind (`x2073`, which the statistics count apart) and where
