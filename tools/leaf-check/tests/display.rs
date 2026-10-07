@@ -212,7 +212,8 @@ fn disp() {
     );
 }
 
-/// `HSD_GObj_JObjCallback` in each of its passes.
+/// `HSD_GObj_JObjCallback` in each of its passes, on its own GObj or, on some calls, on an
+/// effect's (render link 7), whose joints can hold particle lists.
 #[test]
 fn jobj_callback() {
     each(
@@ -220,6 +221,12 @@ fn jobj_callback() {
         20,
         &|call, i| {
             call.regs.gpr[4] = (i % 3) as u32;
+            if i / 3 % 2 == 1 {
+                let effects = rendered_all(call, 7, "HSD_GObj_JObjCallback");
+                if let Some(&g) = effects.get(i / 6 % effects.len().max(1)) {
+                    call.regs.gpr[3] = g;
+                }
+            }
             dirty(call, i / 3);
         },
         &|r, maps, call| {
