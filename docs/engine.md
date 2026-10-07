@@ -38,6 +38,18 @@ A few original functions read memory or registers they never set, and plain data
 - An FObj channel whose data ends right after its first key hands its update function a stack word instead of a value (`hsd::fobj::Value::Stale`). Over every VS stage and a Final Destination replay, that word was always a RAM address, a tiny negative float; every channel was a joint's branch visibility, which an address hides. Update functions resolve what any address gives where the result doesn't depend on which address, and count the rest as stale reads, which the oracle reports, so a case that matters can't pass unnoticed.
 - `resolveIKJoint1` reads two registers and two stack vectors it never set when the effector sits on the chain's root. No joint on the disc has an IK role and no game code gives one, so it can't happen in play; the port counts a stale read if it does.
 - `mpLib_80056C54` adds to a register its caller left when a walk starts on a wall (a line the walker stood on turned into one). The port takes that value as an explicit parameter, which ftDonkey's and itleadead's ports must supply.
+- A stage object's user data (`Ground`, from `alloc_user_data_ground`) is uncleared heap. At stage creation the heap is fresh, zero memory (the captures show it), and Slippi's playback codes zero the block anyway, so a new `Ground` starts as zero; a block reused mid-match (Final Destination's phases 14 and 17) would hold a freed object's bytes, which nothing reads before writing. A typed member of the stage variables compares only its own fields (`game::gr::vars`).
+- Final Destination's fog blend (`grLast_8021C500`) hands the fog a color whose alpha it never set. Nothing reads the fog's alpha, but the comparison would; the blend panics until a probe shows what the original leaves there (it runs from phase 10 on, past the particle system the cycle needs at phase 9).
+
+## Rulesets in the state
+
+`Game::rules` holds the gameplay toggles. `slippi` turns on Slippi's online determinism fixes that the ported code reaches: Final Destination's background cycle keeps the random seed to itself (`grLast_8021AAB0`), and stage objects' user data is zeroed when allocated. The capture importer reads it from whether Slippi's playback codes are patched into the captured code.
+
+## Loaded data the game writes into
+
+- The stage's parameters (`grGroundParam`): the game sets colors and the scale in them, so `game::gr::Globals::param` holds the struct and `stage_info.param` keeps pointing at the archive.
+- `grDatFiles_801C6228` sets `rendermode` bit 26 in the materials a stage's `map_head` lists: `Objects::rendermode_patches` records the bits and `HSD_MObjLoadDesc` applies them.
+- `Ground_801C0800` writes the stage's `ALDYakuAll` scripts into the random stage item's states in the items' data: `game::gr::Globals::yaku_scripts` records them for the items' port.
 
 ## Checking against ssbm-rs
 

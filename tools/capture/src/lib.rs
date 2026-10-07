@@ -4,6 +4,7 @@
 
 pub mod compare;
 pub mod import;
+pub mod stage;
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -47,10 +48,19 @@ pub struct Loaded {
     pub id: ArchiveId,
 }
 
+/// The disc's archives by their headers' first three words, for [`find_archives_in`].
+pub struct DiscIndex {
+    by_header: HashMap<[u32; 3], Vec<(String, Vec<u8>)>>,
+}
+
 /// The disc's archives loaded in `mem1`, added to `archives` in address order, found by their
 /// headers and confirmed by their contents (every word relocation leaves alone).
 pub fn find_archives(mem1: &[u8], disc: &Disc, archives: &mut Archives) -> Vec<Loaded> {
-    let word = |i: usize| u32::from_be_bytes(mem1[i..i + 4].try_into().unwrap());
+    find_archives_in(&disc_index(disc), mem1, archives)
+}
+
+/// Indexes the disc's archives, once for many captures.
+pub fn disc_index(disc: &Disc) -> DiscIndex {
     let mut by_header: HashMap<[u32; 3], Vec<(String, Vec<u8>)>> = HashMap::new();
     for name in disc.files().unwrap().iter().filter(|f| f.ends_with(".dat")) {
         let bytes = disc.read_file(name).unwrap();
@@ -80,6 +90,13 @@ pub fn find_archives(mem1: &[u8], disc: &Disc, archives: &mut Archives) -> Vec<L
             .or_default()
             .push((name.clone(), bytes));
     }
+    DiscIndex { by_header }
+}
+
+/// [`find_archives`] with an index made beforehand.
+pub fn find_archives_in(index: &DiscIndex, mem1: &[u8], archives: &mut Archives) -> Vec<Loaded> {
+    let word = |i: usize| u32::from_be_bytes(mem1[i..i + 4].try_into().unwrap());
+    let by_header = &index.by_header;
     let mut found = Vec::new();
     let mut at = 0;
     while at + 0x20 <= mem1.len() {

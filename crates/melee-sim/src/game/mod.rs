@@ -5,6 +5,7 @@
 //! `mirror` is that comparison.
 
 pub mod code;
+pub mod gr;
 pub mod handles;
 pub mod mirror;
 mod mirror_gen;

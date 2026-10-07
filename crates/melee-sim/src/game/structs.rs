@@ -5,7 +5,8 @@
 
 use melee_data::archive::DataRef;
 
-use crate::game::handles::{CodeRef, FighterId, ItemId, RawPtr};
+use crate::game::gr::GroundVars;
+use crate::game::handles::*;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -434,7 +435,7 @@ pub struct ColorOverlay {
     /// +0x4
     pub x4_pri: i32,
     /// +0x8
-    pub x8_ptr1: RawPtr,
+    pub x8_ptr1: Option<DataRef>,
     /// +0xc
     pub xC_loop: i32,
     /// +0x10
@@ -514,7 +515,7 @@ impl Default for ColorOverlay {
         ColorOverlay {
             x0_timer: 0,
             x4_pri: 0,
-            x8_ptr1: Default::default(),
+            x8_ptr1: None,
             xC_loop: 0,
             x10_ptr2: Default::default(),
             x14: 0,
@@ -4438,7 +4439,7 @@ pub struct Ground {
     /// +0xc0
     pub xC0: f32,
     /// +0xc4
-    pub u: [u8; 320],
+    pub u: GroundVars,
 }
 
 impl Default for Ground {
@@ -4456,7 +4457,7 @@ impl Default for Ground {
             x20: [0; 8],
             color_overlay: Default::default(),
             xC0: 0.0,
-            u: [0; 320],
+            u: Default::default(),
         }
     }
 }
@@ -4655,27 +4656,27 @@ pub struct StageInfo {
     /// +0x694
     pub x694: [RawPtr; 4],
     /// +0x6a4
-    pub x6A4: RawPtr,
+    pub x6A4: Option<StartHookId>,
     /// +0x6a8
-    pub itemdata: RawPtr,
+    pub itemdata: Option<DataRef>,
     /// +0x6ac
-    pub coll_data: RawPtr,
+    pub coll_data: Option<DataRef>,
     /// +0x6b0
-    pub param: RawPtr,
+    pub param: Option<DataRef>,
     /// +0x6b4
-    pub ald_yaku_all: RawPtr,
+    pub ald_yaku_all: Option<DataRef>,
     /// +0x6b8
-    pub map_ptcl: RawPtr,
+    pub map_ptcl: Option<DataRef>,
     /// +0x6bc
-    pub map_texg: RawPtr,
+    pub map_texg: Option<DataRef>,
     /// +0x6c0
-    pub yakumono_param: RawPtr,
+    pub yakumono_param: Option<DataRef>,
     /// +0x6c4
-    pub map_plit: RawPtr,
+    pub map_plit: Option<DataRef>,
     /// +0x6c8
-    pub x6C8: RawPtr,
+    pub x6C8: Option<DataRef>,
     /// +0x6cc
-    pub quake_model_set: RawPtr,
+    pub quake_model_set: Option<DataRef>,
     /// +0x6d0
     pub x6D0: i16,
     /// +0x6d2
@@ -4752,17 +4753,17 @@ impl Default for StageInfo {
             map_gobjs: [None; 64],
             x280: [None; 261],
             x694: core::array::from_fn(|_| Default::default()),
-            x6A4: Default::default(),
-            itemdata: Default::default(),
-            coll_data: Default::default(),
-            param: Default::default(),
-            ald_yaku_all: Default::default(),
-            map_ptcl: Default::default(),
-            map_texg: Default::default(),
-            yakumono_param: Default::default(),
-            map_plit: Default::default(),
-            x6C8: Default::default(),
-            quake_model_set: Default::default(),
+            x6A4: None,
+            itemdata: None,
+            coll_data: None,
+            param: None,
+            ald_yaku_all: None,
+            map_ptcl: None,
+            map_texg: None,
+            yakumono_param: None,
+            map_plit: None,
+            x6C8: None,
+            quake_model_set: None,
             x6D0: 0,
             x6D2: 0,
             x6D4: 0,
@@ -4787,6 +4788,144 @@ impl Default for StageInfo {
             x73C: 0.0,
             x740: 0,
             x744_pad: [0; 4],
+        }
+    }
+}
+
+/// `GroundParam`, 0xdc bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct GroundParam {
+    /// +0x0
+    pub y: f32,
+    /// +0x4
+    pub x4: i16,
+    /// +0x6
+    pub x6_pad: [u8; 2],
+    /// +0x8
+    pub x8: i16,
+    /// +0xa
+    pub xA: i16,
+    /// +0xc
+    pub xC: i32,
+    /// +0x10
+    pub x10: i32,
+    /// +0x14
+    pub x14: i32,
+    /// +0x18
+    pub x18: f32,
+    /// +0x1c
+    pub x1C: f32,
+    /// +0x20
+    pub x20: f32,
+    /// +0x24
+    pub x24: f32,
+    /// +0x28
+    pub x28: f32,
+    /// +0x2c
+    pub x2C_pad: [u8; 2],
+    /// +0x2e
+    pub x2E: i16,
+    /// +0x30
+    pub x30: i32,
+    /// +0x34
+    pub x34: i32,
+    /// +0x38
+    pub x38: i32,
+    /// +0x3c
+    pub x3C: f32,
+    /// +0x40
+    pub x40: f32,
+    /// +0x44
+    pub x44: f32,
+    /// +0x48
+    pub x48: f32,
+    /// +0x4c
+    pub x4C_fixed_cam: i32,
+    /// +0x50
+    pub x50: f32,
+    /// +0x54
+    pub x54: f32,
+    /// +0x58
+    pub x58: f32,
+    /// +0x5c
+    pub x5C: f32,
+    /// +0x60
+    pub x60: f32,
+    /// +0x64
+    pub x64: f32,
+    /// +0x68
+    pub x68: i16,
+    /// +0x6a
+    pub x6A: [i16; 35],
+    /// +0xb0
+    pub stage_params: Option<DataRef>,
+    /// +0xb4
+    pub stage_param_count: i32,
+    /// +0xb8
+    pub xB8: _GXColor,
+    /// +0xbc
+    pub xBC: _GXColor,
+    /// +0xc0
+    pub xC0: _GXColor,
+    /// +0xc4
+    pub xC4: _GXColor,
+    /// +0xc8
+    pub xC8: _GXColor,
+    /// +0xcc
+    pub xCC: _GXColor,
+    /// +0xd0
+    pub xD0: _GXColor,
+    /// +0xd4
+    pub xD4: _GXColor,
+    /// +0xd8
+    pub xD8: _GXColor,
+}
+
+impl Default for GroundParam {
+    fn default() -> Self {
+        GroundParam {
+            y: 0.0,
+            x4: 0,
+            x6_pad: [0; 2],
+            x8: 0,
+            xA: 0,
+            xC: 0,
+            x10: 0,
+            x14: 0,
+            x18: 0.0,
+            x1C: 0.0,
+            x20: 0.0,
+            x24: 0.0,
+            x28: 0.0,
+            x2C_pad: [0; 2],
+            x2E: 0,
+            x30: 0,
+            x34: 0,
+            x38: 0,
+            x3C: 0.0,
+            x40: 0.0,
+            x44: 0.0,
+            x48: 0.0,
+            x4C_fixed_cam: 0,
+            x50: 0.0,
+            x54: 0.0,
+            x58: 0.0,
+            x5C: 0.0,
+            x60: 0.0,
+            x64: 0.0,
+            x68: 0,
+            x6A: [0; 35],
+            stage_params: None,
+            stage_param_count: 0,
+            xB8: Default::default(),
+            xBC: Default::default(),
+            xC0: Default::default(),
+            xC4: Default::default(),
+            xC8: Default::default(),
+            xCC: Default::default(),
+            xD0: Default::default(),
+            xD4: Default::default(),
+            xD8: Default::default(),
         }
     }
 }

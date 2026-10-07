@@ -14,12 +14,15 @@ fn main() {
     let data = DataMap { loaded };
     let mut imp = Importer::new(&cap, &data);
     imp.world();
+    imp.stage();
+    imp.ids();
     let g = &imp.game;
     println!(
-        "{} GObjs, {} procs, {} fighters, {} joints, {} AObjs, {} FObjs, {} DObjs, {} PObjs, {} RObjs",
+        "{} GObjs, {} procs, {} fighters, {} stage objects, {} joints, {} AObjs, {} FObjs, {} DObjs, {} PObjs, {} RObjs",
         g.world.gobjs.used(),
         g.world.procs.used(),
         g.fighters.used(),
+        g.grounds.used(),
         g.objs.jobjs.pool.used(),
         g.objs.aobjs.pool.used(),
         g.objs.fobjs.used(),
@@ -46,6 +49,8 @@ fn main() {
     }
     let mut cmp = Comparer::new(&cap.call.mem1, &data, &game, maps);
     cmp.world();
+    cmp.stage();
+    cmp.ids();
     println!("round trip: {} differences", cmp.diffs.len());
     for d in cmp.diffs.iter().take(20) {
         println!("  {d}");

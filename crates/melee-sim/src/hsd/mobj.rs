@@ -48,12 +48,14 @@ const A_PE_REF1: u8 = 12;
 const A_PE_DSTALPHA: u8 = 13;
 
 /// Which class an MObj belongs to: `hsdMObj` or one the game derives from it, whose methods
-/// replace HAL's (fighters' `ftMObj`, stages' `gr_mobj`, items' `it_mobj`). Only HAL's is
-/// ported yet.
+/// replace HAL's (fighters' `ftMObj`, stages' `gr_mobj`, items' `it_mobj`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum MObjClass {
     #[default]
     Hsd,
+    /// Stages' `gr_mobj` (`grMaterial_803E0A20`): HAL's but for its display setup, which adds
+    /// the stage object's color overlay and alpha.
+    Ground,
 }
 
 /// `HSD_Material`.
@@ -309,12 +311,13 @@ pub fn load_desc(objs: &mut Objects, data: &Archives, desc: Option<DataRef>) -> 
         data.ptr(d).is_none(),
         "MObjDesc {d:?} names a class, which melee-sim doesn't look up"
     );
+    let patched = objs.rendermode_patches.get(&d).copied().unwrap_or(0);
     let m = alloc(&mut objs.mobjs);
     let tobj = tobj::load_desc(&mut objs.tobjs, data, data.ptr(d.at(8)));
     // A descriptor without a material would make the original copy from null.
     let mat = Material::read(data, data.ptr(d.at(0xC)).expect("an MObjDesc's material"));
     let o = &mut objs.mobjs[m];
-    o.rendermode = data.u32(d.at(4)) | RENDER_TOON;
+    o.rendermode = data.u32(d.at(4)) | patched | RENDER_TOON;
     o.tobj = tobj;
     o.mat = Some(mat);
     if let Some(pe) = data.ptr(d.at(0x14)) {

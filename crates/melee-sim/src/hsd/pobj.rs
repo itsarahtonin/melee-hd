@@ -299,7 +299,7 @@ pub fn resolve_refs_all(
 }
 
 /// A morphing shape's blend state, if the shape morphs.
-fn shape_set(pobjs: &mut PObjs, p: PObjId) -> Option<&mut ShapeSet> {
+pub fn shape_set(pobjs: &mut PObjs, p: PObjId) -> Option<&mut ShapeSet> {
     let ty = pobjs[p].ty();
     match &mut pobjs[p].u {
         Binding::ShapeSet(set) if ty == SHAPEANIM => Some(set),

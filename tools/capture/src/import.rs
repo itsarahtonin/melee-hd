@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 
 use melee_data::archive::DataRef;
-use melee_sim::game::handles::FighterId;
+use melee_sim::game::handles::{FighterId, GroundId, StartHookId};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
 use melee_sim::game::structs::Fighter;
@@ -14,6 +14,7 @@ use melee_sim::hsd::aobj::{AObj, AObjId};
 use melee_sim::hsd::cobj::{CObj, CObjId};
 use melee_sim::hsd::dobj::{DObj, DObjId};
 use melee_sim::hsd::fobj::{FObj, FObjId};
+use melee_sim::hsd::fog::FogId;
 use melee_sim::hsd::gobj::{GObj, GObjId, P_LINKS, PROC_PRIORITIES, Proc, ProcId};
 use melee_sim::hsd::jobj::{self, Contents, JObj, JObjId};
 use melee_sim::hsd::lobj::{LObj, LObjId};
@@ -23,6 +24,7 @@ use melee_sim::hsd::pobj::{self, Binding, Envelope, PObj, PObjId, ShapeSet};
 use melee_sim::hsd::robj::{self, Exp, RObj, RObjId, Ref, Rvalue, RvalueId};
 use melee_sim::hsd::tobj::{Color, ImageRef, TObj, TObjId, TObjTev};
 use melee_sim::hsd::wobj::{WObj, WObjId};
+use melee_sim::mp::IslandId;
 use melee_sim::mtx::Mtx34;
 use melee_sim::quat::Quat;
 use melee_sim::vec::Vec3;
@@ -39,7 +41,7 @@ pub fn sym(name: &str) -> u32 {
 }
 
 /// What maps ssbm-rs's objects to the slots made for them.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Maps {
     pub gobjs: HashMap<u32, GObjId>,
     pub procs: HashMap<u32, ProcId>,
@@ -56,6 +58,10 @@ pub struct Maps {
     pub lobjs: HashMap<u32, LObjId>,
     pub tobjs: HashMap<u32, TObjId>,
     pub fighters: HashMap<u32, FighterId>,
+    pub grounds: HashMap<u32, GroundId>,
+    pub fogs: HashMap<u32, FogId>,
+    pub start_hooks: HashMap<u32, StartHookId>,
+    pub islands: HashMap<u32, IslandId>,
 }
 
 pub struct Importer<'a> {
@@ -179,6 +185,7 @@ impl<'a> Importer<'a> {
         }
         let jobj_kind = self.u8(sym("HSD_GObj_JObjKind"));
         let light_kind = self.u8(sym("HSD_GObj_LightKind"));
+        let fog_kind = self.u8(sym("HSD_GObj_FogKind"));
         // The kinds' release functions are registered together, the camera's first.
         let camera_kind = jobj_kind.wrapping_sub(2);
         for &g in &order {
@@ -193,6 +200,8 @@ impl<'a> Importer<'a> {
                 Some(Obj::CObj(self.cobj(hsd_obj)))
             } else if obj_kind == light_kind {
                 Some(Obj::LObj(self.lobj(hsd_obj)))
+            } else if obj_kind == fog_kind {
+                Some(Obj::Fog(self.fog(hsd_obj)))
             } else {
                 self.unhandled
                     .push(format!("GObj {g:#x}: object kind {obj_kind}"));
@@ -202,6 +211,7 @@ impl<'a> Importer<'a> {
             let ud = self.u32(g + 0x2C);
             let user_data = match user_data_kind {
                 4 if ud != 0 => Some(UserData::Fighter(self.fighter(ud))),
+                3 if ud != 0 => Some(UserData::Ground(self.ground(ud))),
                 0xFF => None,
                 _ if ud == 0 => None,
                 kind => {
@@ -639,14 +649,19 @@ impl<'a> Importer<'a> {
                 })
             }
         };
-        if self.u32(a) != sym("hsdMObj") {
-            self.unhandled
-                .push(format!("MObj {a:#x}: a class of its own"));
-        }
+        let class = match self.u32(a) {
+            c if c == sym("hsdMObj") => MObjClass::Hsd,
+            c if c == sym("grMaterial_803E0A20") => MObjClass::Ground,
+            _ => {
+                self.unhandled
+                    .push(format!("MObj {a:#x}: a class of its own"));
+                MObjClass::Hsd
+            }
+        };
         let ao = self.u32(a + 0x14);
         let aobj = (ao != 0).then(|| self.aobj(ao));
         self.game.objs.mobjs[id] = MObj {
-            class: MObjClass::Hsd,
+            class,
             rendermode: self.u32(a + 4),
             tobj,
             mat,
@@ -857,12 +872,18 @@ impl Cx for Importer<'_> {
             "JObjId" => self.jobj(addr).0,
             "DObjId" => self.dobj(addr).0,
             "FighterId" => self.fighter(addr).0,
+            "GroundId" => self.ground(addr).0,
+            "StartHookId" => self.start_hook(addr).0,
             "GObjId" => match self.maps.gobjs.get(&addr) {
                 Some(g) => g.0,
                 None => {
+                    // A pointer to a GObj no list holds (one freed since, which the original
+                    // still points to): a slot of its own keeps the pointer's identity.
                     self.unhandled
                         .push(format!("GObj {addr:#x} outside the process links"));
-                    return None;
+                    let id = GObjId(self.game.world.gobjs.alloc(blank_gobj()));
+                    self.maps.gobjs.insert(addr, id);
+                    id.0
                 }
             },
             other => {

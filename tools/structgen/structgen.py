@@ -133,7 +133,7 @@ class Gen:
         for f in r["fields"]:
             off = f["offset_bits"] // 8
             bits = f" (bits {f['offset_bits'] % 8}..+{f['bits']})" if "bits" in f else ""
-            t = bit_type(f["bits"]) if "bits" in f else self.ty(f["type"])
+            t = bit_type(f["bits"]) if "bits" in f else self.field_override(rid, f) or self.ty(f["type"])
             out.append(f"    /// +{off:#x}{bits}")
             out.append(f"    pub {field_name(f['name'])}: {t},")
         out.append("}")
@@ -142,11 +142,19 @@ class Gen:
         out.append("    fn default() -> Self {")
         out.append(f"        {name} {{")
         for f in r["fields"]:
-            out.append(f"            {field_name(f['name'])}: {self.default(f)},")
+            d = "None" if self.field_override(rid, f) else self.default(f)
+            out.append(f"            {field_name(f['name'])}: {d},")
         out.append("        }")
         out.append("    }")
         out.append("}")
         return "\n".join(out)
+
+    def field_override(self, rid, f):
+        """The type config.FIELD_POINTERS or config.FIELD_DATA gives this pointer field, if any."""
+        key = f"{rec_name(rid)}.{f['name']}"
+        if key in config.FIELD_DATA:
+            return "Option<DataRef>"
+        return config.FIELD_POINTERS.get(key)
 
     def default(self, f):
         if "bits" in f:
@@ -254,6 +262,17 @@ class Gen:
                 ours = f"(self.{fname} as u32)"
                 cmp.append(f"        if {ours} != {read} {{ cx.mismatch(&{path}, format!(\"{{:?}}\", self.{fname}), format!(\"{{:?}}\", {read})); }}")
                 continue
+            over = self.field_override(rid, f)
+            if over:
+                assert f["type"]["k"] == "ptr", f"{rec_name(rid)}.{f['name']} isn't a pointer"
+                if over == "Option<DataRef>":
+                    imp.append(f"            {fname}: cx.import_data(m.u32({at})),")
+                    cmp.append(f"        cx.compare_data(&{path}, self.{fname}, m.u32({at}));")
+                    continue
+                handle = over[len("Option<"):-1]
+                imp.append(f'            {fname}: cx.import_handle("{handle}", m.u32({at})).map({handle}),')
+                cmp.append(f'        cx.compare_handle(&{path}, "{handle}", self.{fname}.map(|h| h.0), m.u32({at}));')
+                continue
             imp.append(f"            {fname}: {self.import_expr(f['type'], at)},")
             for s in self.compare_stmts(f["type"], f"self.{fname}", at, path):
                 cmp.append("        " + s)
@@ -294,9 +313,10 @@ def main():
     mirror = HEADER + [
         "#![allow(non_snake_case, unused_comparisons, unused_imports, clippy::all)]",
         "",
-        "use super::handles::{CodeRef, FighterId, ItemId, RawPtr};",
+        "use super::handles::*;",
         "use super::mirror::{Cx, Mem, Mirror, code};",
         "use super::structs::*;",
+        "use super::gr::GroundVars;",
         "use crate::hsd::dobj::DObjId;",
         "use crate::hsd::gobj::GObjId;",
         "use crate::hsd::jobj::JObjId;",
