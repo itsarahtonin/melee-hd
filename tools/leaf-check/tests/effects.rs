@@ -211,6 +211,18 @@ fn plain_ids() -> Vec<i32> {
     ]
 }
 
+/// `ftCo_800C0FCC`, the bury effect's update.
+const BURY: u32 = 0x800C_0FCC;
+
+thread_local! {
+    static THEIR_BURY: std::cell::RefCell<Vec<(u32, u32)>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+fn their_bury(ctx: &ssbm_rt::Ctx) {
+    let call = (ctx.regs.r(3), ctx.regs.r(4));
+    THEIR_BURY.with(|b| b.borrow_mut().push(call));
+}
+
 /// Values for a spawn's arguments as it reads them, recorded for the reference.
 struct Synth<'a> {
     rand: Rand,
@@ -262,12 +274,27 @@ fn every_effect() {
         eprintln!("no effect calls: skipping");
         return;
     }
-    let ids: Vec<i32> = plain_ids().into_iter().chain(table_ids()).collect();
+    // EFFECT_IDS=ID,... (hex) and EFFECT_DIRS=NAME,... narrow the run, for mutation checks.
+    let ids: Vec<i32> = match std::env::var("EFFECT_IDS") {
+        Ok(v) => v
+            .split(',')
+            .map(|x| i32::from_str_radix(x.trim().trim_start_matches("0x"), 16).unwrap())
+            .collect(),
+        Err(_) => plain_ids().into_iter().chain(table_ids()).collect(),
+    };
+    let only_dirs: Option<Vec<String>> = std::env::var("EFFECT_DIRS")
+        .ok()
+        .map(|v| v.split(',').map(str::to_owned).collect());
     let spawn_addr = leaf_check::sym("efSync_Spawn");
     let mut failed = Vec::new();
     let mut compared = 0;
     let mut skipped = std::collections::BTreeMap::<String, Vec<i32>>::new();
     for d in &dirs {
+        if let Some(only) = &only_dirs
+            && !only.iter().any(|o| d.ends_with(o.as_str()))
+        {
+            continue;
+        }
         // The first spawn by a fighter (user data kind 4).
         let Some((path, cap)) = leaf_check::calls::saved_calls(d, "efSync_Spawn")
             .into_iter()
@@ -286,11 +313,18 @@ fn every_effect() {
         let data = DataMap {
             loaded: find_archives_in(index, &cap.call.mem1, &mut archives),
         };
-        let mut imp = Importer::new(&cap, &data).with_archives(&archives);
-        imp.world();
-        imp.stage();
-        imp.ids();
-        let Importer { game, maps, .. } = imp;
+        let imported = catch_unwind(AssertUnwindSafe(|| {
+            let mut imp = Importer::new(&cap, &data).with_archives(&archives);
+            imp.world();
+            imp.stage();
+            imp.ids();
+            let Importer { game, maps, .. } = imp;
+            (game, maps)
+        }));
+        let Ok((game, maps)) = imported else {
+            failed.push(format!("{}: the import panicked", path.display()));
+            continue;
+        };
         let gobj_addr = cap.call.regs.gpr[4];
         let gobj = maps.gobjs[&gobj_addr];
         // The spawner's joints: its fighter's parts.
@@ -305,9 +339,15 @@ fn every_effect() {
             .collect();
         let at = fp.cur_pos;
         let ctx = reference().expect("SSBM_DISC");
+        // The bury effect's update calls the fighter code's `ftCo_800C0FCC`, unported: both
+        // sides stand it in and log its arguments.
+        ctx.register(BURY, their_bury);
+        melee_sim::game::code::stubs::set(BURY, melee_sim::game::code::Val::None);
         for mode in MODES {
             set_fp_mode(mode);
             for &gfx in &ids {
+                let _ = melee_sim::game::code::stubs::take();
+                THEIR_BURY.with(|b| b.borrow_mut().clear());
                 let mut game = game.clone();
                 let maps = maps.clone();
                 let mut archives = archives.clone();
@@ -432,6 +472,25 @@ fn every_effect() {
                         ctx.regs.set_r(3, word_ctx(&ctx, r3 + 4));
                         ctx.invoke(update);
                         frames += 1;
+                    }
+                    // The stood-in calls the updates made, with the same GObjs.
+                    let gobj_addr: std::collections::HashMap<_, _> =
+                        maps.gobjs.iter().map(|(&a, &g)| (g, a)).collect();
+                    let ours: Vec<(u32, u32)> = melee_sim::game::code::stubs::take()
+                        .into_iter()
+                        .map(|(_, args)| {
+                            let a = |v: &melee_sim::game::code::Val| {
+                                v.gobj()
+                                    .map_or(0, |g| gobj_addr.get(&g).copied().unwrap_or(1))
+                            };
+                            (a(&args[0]), a(&args[1]))
+                        })
+                        .collect();
+                    let theirs = THEIR_BURY.with(|b| std::mem::take(&mut *b.borrow_mut()));
+                    if ours != theirs {
+                        diffs.push(format!(
+                            "ftCo_800C0FCC calls: ours {ours:x?}, theirs {theirs:x?}"
+                        ));
                     }
                     if frames > 0 {
                         let _ = ctx.mem.read_bytes(0x8000_0000, &mut after);
@@ -746,4 +805,189 @@ fn load_sync_from_loaded_states() {
         }
     }
     eprintln!("{checked} effect files loaded again");
+}
+
+/// A fighter's deferred spawns freed unrun (`efAsync_QueueClear`), from the states its queue
+/// was flushed in.
+#[test]
+fn queue_clear_calls() {
+    each_dir_with(
+        "efAsync_QueueFlush",
+        "efAsync_QueueClear",
+        &|call, _| call.regs.gpr[3] = call.regs.gpr[4],
+        &|r, maps, call| {
+            let f = queue_owner(maps, call.regs.gpr[3]);
+            let mut head = r.game.fighters[f.0].x60C;
+            ef::queue_clear(r, &mut head);
+            r.game.fighters[f.0].x60C = head;
+            Ret::Nothing
+        },
+    );
+}
+
+/// Battlefield's captured states, whose backgrounds have generators from the stage's bank.
+fn stage_dir() -> String {
+    std::env::var("STAGE_CALLS")
+        .unwrap_or_else(|_| "C:/Projects/ssbm-rs-publication/local/calls/stage".into())
+        + "/bf1"
+}
+
+/// The first generator in a call's state, and the joint it follows.
+fn first_generator(call: &Call) -> (u32, u32) {
+    let g = word(call, leaf_check::sym("hsd_804D78FC"));
+    (g, if g == 0 { 0 } else { word(call, g + 0x10) })
+}
+
+/// grLib's particle helpers on Battlefield's states: generators of the stage's bank on a
+/// background's joint, plain, oriented and at a point, and generators removed, alone, with
+/// their particles, and by joint and tree.
+#[test]
+fn stage_particle_helpers() {
+    use melee_sim::game::gr::grlib;
+    let dir = stage_dir();
+    let from = "grBattle_BG_Callback2";
+    let target = |name: &str| leaf_check::sym(name);
+    // A generator of the stage's bank on the object's joint.
+    let on_joint = |name: &'static str| {
+        let t = target(name);
+        move |call: &mut Call, i: usize| {
+            let j = word(call, call.regs.gpr[3] + 0x28);
+            call.addr = t;
+            call.regs.gpr[3] = 30000 + (i % 4) as u32;
+            call.regs.gpr[4] = 0x1E;
+            call.regs.gpr[5] = j;
+        }
+    };
+    leaf_check::calls::check_calls_with(
+        &dir,
+        from,
+        1,
+        &on_joint("grLib_801C9808"),
+        &|r, maps, call| {
+            let g = &call.regs.gpr;
+            let j = (g[5] != 0).then(|| maps.jobjs[&g[5]]);
+            Ret::Spawned(Spawned::from_generator(grlib::generator_on(
+                r.game,
+                r.data,
+                g[3] as i32,
+                g[4] as i32,
+                j,
+            )))
+        },
+    );
+    leaf_check::calls::check_calls_with(
+        &dir,
+        from,
+        1,
+        &on_joint("grLib_801C97DC"),
+        &|r, maps, call| {
+            let g = &call.regs.gpr;
+            let j = (g[5] != 0).then(|| maps.jobjs[&g[5]]);
+            grlib::generator_oriented_on(r.game, r.data, g[3] as i32, g[4] as i32, j);
+            Ret::Nothing
+        },
+    );
+    let at = target("grLib_801C96F8");
+    leaf_check::calls::check_calls_with(
+        &dir,
+        from,
+        1,
+        &|call, i| {
+            let p = call.regs.gpr[1] - 0x4000;
+            for (k, v) in [i as f32 * 3.0 - 10.0, 25.0, -1.5].iter().enumerate() {
+                let o = (p + 4 * k as u32 - MEM1) as usize;
+                call.mem1[o..o + 4].copy_from_slice(&v.to_bits().to_be_bytes());
+            }
+            // A stage scale other than 1 (the stage's parameters' first word).
+            let param = word(call, leaf_check::sym("stage_info") + 0x6B0);
+            let o = (param - MEM1) as usize;
+            call.mem1[o..o + 4].copy_from_slice(&(1.0f32 + i as f32 / 8.0).to_bits().to_be_bytes());
+            call.addr = at;
+            call.regs.gpr[3] = 30000 + (i % 4) as u32;
+            call.regs.gpr[4] = 0x1E;
+            call.regs.gpr[5] = p;
+        },
+        &|r, _, call| {
+            let g = &call.regs.gpr;
+            let p = Vec3::new(
+                float_at(call, g[5]),
+                float_at(call, g[5] + 4),
+                float_at(call, g[5] + 8),
+            );
+            Ret::Spawned(Spawned::from_generator(grlib::generator_at(
+                r.game,
+                r.data,
+                g[3] as i32,
+                g[4] as i32,
+                p,
+            )))
+        },
+    );
+    for (name, which) in [
+        ("grLib_801C9834", 0),
+        ("grLib_801C9874", 1),
+        ("grLib_801C98A0", 2),
+        ("grLib_801C9908", 3),
+    ] {
+        let t = target(name);
+        leaf_check::calls::check_calls_with(
+            &dir,
+            from,
+            0,
+            &|call, _| {
+                let (g, j) = first_generator(call);
+                call.addr = t;
+                call.regs.gpr[3] = if which < 2 { g } else { j };
+            },
+            &|r, maps, call| {
+                let a = call.regs.gpr[3];
+                match which {
+                    0 | 1 if a == 0 => panic!("removing a null generator isn't ported"),
+                    0 => grlib::kill_generator(r.game, r.data, maps.generators[&a]),
+                    1 => grlib::kill_generator_and_particles(r.game, r.data, maps.generators[&a]),
+                    2 => grlib::kill_joint_generators_and_particles(
+                        r.game,
+                        r.data,
+                        (a != 0).then(|| maps.jobjs[&a]),
+                    ),
+                    _ => grlib::kill_tree_generators_and_particles(
+                        r.game,
+                        r.data,
+                        (a != 0).then(|| maps.jobjs[&a]),
+                    ),
+                }
+                Ret::Nothing
+            },
+        );
+    }
+}
+
+/// A GObj's stored alpha and effect id (`efLib_SetParamAlpha`, `efLib_SetParamGfxId`), for
+/// the spawner and for no GObj, over the table's own entries.
+#[test]
+fn param_calls() {
+    for func in ["efLib_SetParamAlpha", "efLib_SetParamGfxId"] {
+        each_dir_rounds(
+            "efSync_Spawn",
+            func,
+            2,
+            &|call, i| {
+                if i % 3 == 0 {
+                    call.regs.gpr[4] = 0;
+                }
+                call.regs.gpr[3] = call.regs.gpr[4];
+                call.regs.gpr[4] = 0x400 + 0x17 * i as u32;
+            },
+            &move |r, maps, call| {
+                let g = maps.gobjs.get(&call.regs.gpr[3]).copied();
+                let v = call.regs.gpr[4];
+                if func == "efLib_SetParamAlpha" {
+                    ef::set_param_alpha(r.game, g, v as u8);
+                } else {
+                    ef::set_param_gfx_id(r.game, g, v as i32);
+                }
+                Ret::Nothing
+            },
+        );
+    }
 }

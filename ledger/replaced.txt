@@ -193,3 +193,5 @@ CObjAmnesia	Class reset run when HSD_CreateMainHeap forgets the class library wi
 WObjAmnesia	Class reset run when HSD_CreateMainHeap forgets the class library with the heap at a scene change; melee-sim resets the WObj pool with the heap.
 LObjAmnesia	Class reset run when HSD_CreateMainHeap forgets the class library with the heap at a scene change; melee-sim resets the LObj pool and the current lights with the heap.
 psInitDataBankLocate	Relocates an effect bank's offsets in loaded data and fixes each command list's draw-order bits; melee-sim resolves bank offsets as it reads them and applies the fix to every kind it reads (hsd::particle::Bank, CmdList::kind).
+efAsync_LoadAsync	Asks the disc to preload an effect file; its completion (efAsync_OnLoad) only locates the banks, which melee-sim resolves as it reads them, and the sync load that registers the file takes it from the frontend's archives (game::ef::load_sync), so the request leaves no state.
+efAsync_OnLoad	The preload's completion callback: locates the file's banks (psInitDataBankLocate, replaced likewise), which register only at the sync load.

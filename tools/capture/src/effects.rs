@@ -60,6 +60,9 @@ impl Importer<'_> {
                 alpha: self.h16(at + 6),
             };
         }
+        // The joints' particle callbacks are efLib's once it has set them.
+        self.game.objs.jobj.dptcl = self.u32_at(sym("dptcl_callback")) != 0;
+        self.game.objs.jobj.sptcl = self.u32_at(sym("sptcl_callback")) != 0;
         self.particles();
     }
 
@@ -673,6 +676,19 @@ impl Comparer<'_> {
             "queued pool",
             game.ef.queued.used(),
             self.u32(sym("efAsync_AllocData") + 8),
+        );
+        let o = &game.objs.jobj;
+        self.check(
+            "ef",
+            "joints' particle callbacks (efLib's)",
+            (
+                if o.dptcl { sym("efLib_Cb_DPtcl") } else { 0 },
+                if o.sptcl { sym("efLib_Cb_SPtcl") } else { 0 },
+            ),
+            (
+                self.u32(sym("dptcl_callback")),
+                self.u32(sym("sptcl_callback")),
+            ),
         );
         let fighters: Vec<(u32, melee_sim::game::handles::FighterId)> =
             self.maps.fighters.iter().map(|(&a, &f)| (a, f)).collect();
