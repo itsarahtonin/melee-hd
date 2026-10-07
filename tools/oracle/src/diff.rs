@@ -1,0 +1,331 @@
+//! `melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N]`: plays a replay in melee-hd
+//! and compares the whole state with ssbm-rs's trace of the same replay after every engine
+//! tick, reporting the first tick that differs and how.
+//!
+//! The trace needs main memory (`STATE_TRACE_MEMORY`). Each tick, the image of memory it
+//! rebuilds is compared with melee-sim's `Game` through `melee-capture`'s comparer, as a
+//! captured state is: the scheduler and everything its GObjs hold (joint trees with their
+//! animations, references, display objects and shapes, the fighters, the stage objects), the
+//! stage, the camera, HSD's ID table, the player blocks, the pad library, the button maps, the
+//! scene loop and the clocks, the VS match's controller, playback's state, the ruleset and
+//! UCF's pad buffer.
+//!
+//! Without `--from`, melee-hd starts the match from the replay's settings, as Slippi's playback
+//! codes do; with `--from TICK`, it takes up the trace's state at the end of that tick
+//! (imported through `melee-capture`) and plays on from there. Either way it stops at the
+//! first difference, or where the match reaches code no port covers yet (`code::unported`),
+//! naming the function and the tick.
+//!
+//! With `--from`, the imported state is first compared back with the memory it came from,
+//! which shows what the comparison covers; `--against TICK` compares it with a later tick's
+//! memory instead, which shows the comparison telling states apart.
+
+use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::process::ExitCode;
+
+use melee_capture::compare::Comparer;
+use melee_capture::import::{Importer, Maps, sym};
+use melee_capture::{Capture, DataMap, DiscIndex, Loaded, find_archives_after, find_archives_in};
+use melee_data::archive::{Archive, Archives};
+use melee_data::disc::Disc;
+use melee_replay::Device;
+use melee_sim::game::playback::FIRST_FRAME;
+use melee_sim::game::vs_match::{Match, Settings};
+use ssbm_slippi::replay::Replay;
+
+use crate::trace::{Image, Reader};
+
+/// What a run stopped on.
+enum Stop {
+    /// The match reached a function no port covers, or another check of the simulation's.
+    Seam(String),
+    /// The states differ.
+    Differ(Vec<String>),
+}
+
+fn panic_text(p: &Box<dyn std::any::Any + Send>) -> String {
+    let text = p
+        .downcast_ref::<String>()
+        .cloned()
+        .or_else(|| p.downcast_ref::<&str>().map(|s| (*s).to_owned()))
+        .unwrap_or_else(|| "a panic".into());
+    name_addresses(&text)
+}
+
+/// The game's addresses in a message, followed by their symbols' names.
+fn name_addresses(text: &str) -> String {
+    let mut out = String::new();
+    let mut rest = text;
+    while let Some(at) = rest.find("0x8") {
+        let (head, tail) = rest.split_at(at);
+        out.push_str(head);
+        let hex: String = tail[2..]
+            .chars()
+            .take_while(char::is_ascii_hexdigit)
+            .collect();
+        let len = 2 + hex.len();
+        out.push_str(&tail[..len]);
+        if let Ok(a) = u32::from_str_radix(&hex, 16)
+            && hex.len() == 8
+            && let Some((start, name)) = ssbm_types::symbol_at(a)
+        {
+            if start == a {
+                out.push_str(&format!(" ({name})"));
+            } else {
+                out.push_str(&format!(" ({name}+{:#x})", a - start));
+            }
+        }
+        rest = &tail[len..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// The archives loaded in the trace's memory, kept up to date as the match loads more.
+struct Files<'a> {
+    index: &'a DiscIndex,
+    loaded: Vec<Loaded>,
+}
+
+impl Files<'_> {
+    fn refresh(&mut self, mem: &[u8], archives: &mut Archives) -> DataMap {
+        self.loaded = find_archives_after(self.index, mem, archives, &self.loaded);
+        DataMap {
+            loaded: self.loaded.clone(),
+        }
+    }
+}
+
+/// The whole state compared with memory, as the capture checks compare it.
+fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> Vec<String> {
+    let mut cmp = Comparer::new(mem, data, &m.game, maps);
+    cmp.world();
+    cmp.stage();
+    cmp.ids();
+    cmp.match_state();
+    cmp.diffs
+}
+
+/// The trace tick that ran the VS scene's first tick: the first whose scene loop has counted
+/// one tick with the playback's frame count at the replay's first frame.
+fn is_first_tick(image: &Image) -> bool {
+    image.u32(sym("gm_80479D58")) == 1 && image.u32(0x804D_6CF4) as i32 == FIRST_FRAME
+}
+
+pub fn diff(args: &[&str]) -> ExitCode {
+    let (mut from, mut limit, mut against, mut pos) = (None, u32::MAX, None, Vec::new());
+    let mut it = args.iter();
+    while let Some(&a) = it.next() {
+        match a {
+            "--from" => from = it.next().and_then(|t| t.parse::<u32>().ok()),
+            "--ticks" => limit = it.next().and_then(|t| t.parse().ok()).expect("--ticks N"),
+            "--against" => against = it.next().and_then(|t| t.parse::<u32>().ok()),
+            _ => pos.push(a),
+        }
+    }
+    let [trace_path, replay_path] = pos[..] else {
+        eprintln!("usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N]");
+        return ExitCode::from(2);
+    };
+    let disc_path = std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc");
+    let disc = Disc::open(&disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
+    let bytes = std::fs::read(replay_path).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
+    let replay = Replay::parse(&bytes).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
+    let settings = Settings::from_replay(&melee_replay::start(&replay))
+        .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
+    let index = melee_capture::disc_index(&disc);
+    let mut reader = Reader::open(trace_path);
+    let mut image = Image::default();
+    // Reads the trace up to tick `n` (or the match's first tick), keeping memory's image.
+    let mut first = None;
+    let mut advance = |image: &mut Image, until: &dyn Fn(u32, &Image) -> bool| -> Option<u32> {
+        while let Some(t) = reader.tick() {
+            image.apply(&t);
+            if first.is_none() && image.seen && is_first_tick(image) {
+                first = Some(t.number);
+            }
+            if until(t.number, image) {
+                return Some(t.number);
+            }
+        }
+        None
+    };
+    let (mut m, mut files, mut tick) = match from {
+        None => {
+            let Some(t) = advance(&mut image, &|_, im| im.seen && is_first_tick(im)) else {
+                eprintln!(
+                    "{trace_path}: no tick runs the match's first, or no memory in the trace"
+                );
+                return ExitCode::FAILURE;
+            };
+            let started = catch_unwind(AssertUnwindSafe(|| {
+                let mut load = |name: &str| {
+                    let file = disc
+                        .read_file(name)
+                        .unwrap_or_else(|e| panic!("{name}: {e}"));
+                    Archive::parse(&file).unwrap_or_else(|e| panic!("{name}: {e:?}"))
+                };
+                Match::start(&settings, &mut load)
+            }));
+            let m = match started {
+                Ok(m) => m,
+                Err(p) => {
+                    println!(
+                        "trace tick {t} runs the match's first engine tick (replay frame {FIRST_FRAME})"
+                    );
+                    println!(
+                        "stopped before the match's first tick, starting the match: {}",
+                        panic_text(&p)
+                    );
+                    return ExitCode::FAILURE;
+                }
+            };
+            // The match's first tick runs below, compared with trace tick `t`.
+            let files = Files {
+                index: &index,
+                loaded: Vec::new(),
+            };
+            (m, files, t - 1)
+        }
+        Some(n) => {
+            if advance(&mut image, &|t, _| t == n).is_none() || !image.seen {
+                eprintln!("{trace_path}: no tick {n} with memory");
+                return ExitCode::FAILURE;
+            }
+            let mut data = Archives::default();
+            let loaded = find_archives_in(&index, &image.mem1, &mut data);
+            let map = DataMap {
+                loaded: loaded.clone(),
+            };
+            let cap = Capture {
+                call: ssbm_rt::capture::Call {
+                    addr: 0,
+                    mutated: false,
+                    stub: None,
+                    regs: ssbm_rt::Regs::default().snapshot(),
+                    mem1: image.mem1.clone(),
+                    locked: Vec::new(),
+                },
+            };
+            let imported = catch_unwind(AssertUnwindSafe(|| {
+                let mut imp = Importer::new(&cap, &map).with_archives(&data);
+                imp.world();
+                imp.stage();
+                imp.ids();
+                imp.match_state();
+                (imp.game, imp.maps, imp.unhandled)
+            }));
+            let (game, _maps, unhandled) = match imported {
+                Ok(v) => v,
+                Err(p) => {
+                    println!("importing trace tick {n}: {}", panic_text(&p));
+                    return ExitCode::FAILURE;
+                }
+            };
+            if game.playback.is_none() {
+                eprintln!("{trace_path}: tick {n} isn't in a replay's match");
+                return ExitCode::FAILURE;
+            }
+            println!(
+                "took up trace tick {n}: {} GObjs, {} pointers the importer doesn't model",
+                game.world.gobjs.used(),
+                unhandled.len()
+            );
+            let m = Match::resume(game, data);
+            // The import compared back with the memory it came from: what the comparison can
+            // tell apart before anything runs.
+            let back = compare(&image.mem1, &map, &m, Maps::default());
+            println!(
+                "trace tick {n} imported and compared back: {} differences",
+                back.len()
+            );
+            for line in back.iter().take(10) {
+                println!("  {line}");
+            }
+            // `--against TICK`: the import compared with a later tick's memory instead of run, a
+            // check that the comparison tells states apart.
+            if let Some(t) = against {
+                if advance(&mut image, &|tick, _| tick == t).is_none() {
+                    eprintln!("{trace_path}: no tick {t}");
+                    return ExitCode::FAILURE;
+                }
+                let mut archives = m.data.clone();
+                let data = DataMap {
+                    loaded: find_archives_after(&index, &image.mem1, &mut archives, &loaded),
+                };
+                let d = compare(&image.mem1, &data, &m, Maps::default());
+                println!(
+                    "trace tick {n} imported, compared with tick {t}: {} differences",
+                    d.len()
+                );
+                for line in d.iter().take(10) {
+                    println!("  {line}");
+                }
+                return ExitCode::SUCCESS;
+            }
+            let files = Files {
+                index: &index,
+                loaded,
+            };
+            (m, files, n)
+        }
+    };
+    let frame_of = |t: u32, first: Option<u32>| {
+        first.map_or(String::new(), |f| {
+            format!(
+                " (replay frame {})",
+                i64::from(FIRST_FRAME) + i64::from(t) - i64::from(f)
+            )
+        })
+    };
+    let mut device = Device(&replay);
+    let mut compared = 0;
+    let stop = loop {
+        if compared >= limit {
+            break None;
+        }
+        let Some(t) = advance(&mut image, &|t, _| t == tick + 1) else {
+            println!("the trace ends after tick {tick}");
+            break None;
+        };
+        tick = t;
+        let stepped = catch_unwind(AssertUnwindSafe(|| m.step_replay(&mut device)));
+        let ended = match stepped {
+            Ok(f) => f.ended,
+            Err(p) => break Some(Stop::Seam(panic_text(&p))),
+        };
+        let data = files.refresh(&image.mem1, &mut m.data);
+        // Objects pair afresh each tick, by where they're reached from: the heap reuses blocks.
+        let diffs = compare(&image.mem1, &data, &m, Maps::default());
+        compared += 1;
+        if !diffs.is_empty() {
+            break Some(Stop::Differ(diffs));
+        }
+        if ended {
+            println!("the match ended at tick {tick}");
+            break None;
+        }
+    };
+    let at = format!("tick {tick}{}", frame_of(tick, first));
+    match stop {
+        None => {
+            println!("{compared} ticks compared, no difference");
+            ExitCode::SUCCESS
+        }
+        Some(Stop::Seam(s)) => {
+            println!("{compared} ticks compared, no difference; stopped in {at}: {s}");
+            ExitCode::FAILURE
+        }
+        Some(Stop::Differ(d)) => {
+            println!(
+                "{compared} ticks compared; {at} differs in {} places, first: {}",
+                d.len(),
+                d[0]
+            );
+            for line in d.iter().skip(1).take(30) {
+                println!("  {line}");
+            }
+            ExitCode::FAILURE
+        }
+    }
+}

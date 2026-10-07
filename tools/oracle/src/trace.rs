@@ -1,10 +1,16 @@
 //! Reads ssbm-rs's `STATE_TRACE` files: the game's raw state at the end of every engine tick
-//! (ssbm-rs `tools/run/src/trace.rs` documents the format).
+//! (ssbm-rs `tools/run/src/trace.rs` documents the format). Version 3 adds main memory
+//! (`STATE_TRACE_MEMORY=1`): each tick's changed pages, XORed with what they held the tick
+//! before, which [`Image`] keeps whole.
 
 use std::io::Read;
 
 const MAGIC: &[u8; 8] = b"SSBMTRC\0";
-const VERSION: u32 = 2;
+const VERSIONS: std::ops::RangeInclusive<u32> = 2..=3;
+
+/// Main memory's address and size.
+pub const MEM1: u32 = 0x8000_0000;
+pub const MEM1_SIZE: usize = 24 << 20;
 
 /// What a region holds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -17,6 +23,8 @@ pub enum Kind {
     Item,
     /// A fighter's model joint, in its tree's pre-order.
     JObj,
+    /// A page of main memory XORed with what it held at the previous tick.
+    Page,
 }
 
 impl Kind {
@@ -29,6 +37,7 @@ impl Kind {
             4 => Kind::Fighter,
             5 => Kind::Item,
             6 => Kind::JObj,
+            7 => Kind::Page,
             _ => return None,
         })
     }
@@ -39,7 +48,6 @@ pub struct Region {
     pub kind: Kind,
     /// Where it was, and the GObj owning a fighter or item (0 for globals): what ties a
     /// fighter or item to itself from tick to tick.
-    #[allow(dead_code)]
     pub address: u32,
     #[allow(dead_code)]
     pub gobj: u32,
@@ -72,28 +80,56 @@ fn u32(r: &mut impl Read) -> std::io::Result<u32> {
     Ok(u32::from_le_bytes(b))
 }
 
-/// Every tick in the file. A run cut short ends at its last complete tick.
-pub fn read(path: &str) -> Vec<Tick> {
-    let file = std::fs::File::open(path).unwrap_or_else(|e| panic!("{path}: {e}"));
-    let mut r = std::io::BufReader::new(file);
-    let mut magic = [0; 8];
-    r.read_exact(&mut magic)
-        .unwrap_or_else(|e| panic!("{path}: {e}"));
-    assert!(&magic == MAGIC, "{path}: not a state trace");
-    let version = u32(&mut r).unwrap();
-    assert!(
-        version == VERSION,
-        "{path}: trace version {version}, expected {VERSION}"
-    );
-    let mut z = zstd::Decoder::with_buffer(r).unwrap();
-    let mut ticks = Vec::new();
-    while let Some(tick) = read_tick(&mut z) {
+type Decoder = zstd::Decoder<'static, std::io::BufReader<std::io::BufReader<std::fs::File>>>;
+
+/// A trace read a tick at a time.
+pub struct Reader {
+    path: String,
+    z: Decoder,
+    next: u32,
+}
+
+impl Reader {
+    pub fn open(path: &str) -> Reader {
+        let file = std::fs::File::open(path).unwrap_or_else(|e| panic!("{path}: {e}"));
+        let mut r = std::io::BufReader::new(file);
+        let mut magic = [0; 8];
+        r.read_exact(&mut magic)
+            .unwrap_or_else(|e| panic!("{path}: {e}"));
+        assert!(&magic == MAGIC, "{path}: not a state trace");
+        let version = u32(&mut r).unwrap();
         assert!(
-            tick.number as usize == ticks.len(),
-            "{path}: tick {} where {} was due",
-            tick.number,
-            ticks.len()
+            VERSIONS.contains(&version),
+            "{path}: trace version {version}, expected {VERSIONS:?}"
         );
+        Reader {
+            path: path.to_owned(),
+            z: zstd::Decoder::new(r).unwrap(),
+            next: 0,
+        }
+    }
+
+    /// The next tick, or none at the end. A run cut short ends at its last complete tick.
+    pub fn tick(&mut self) -> Option<Tick> {
+        let tick = read_tick(&mut self.z)?;
+        assert!(
+            tick.number == self.next,
+            "{}: tick {} where {} was due",
+            self.path,
+            tick.number,
+            self.next
+        );
+        self.next += 1;
+        Some(tick)
+    }
+}
+
+/// Every tick in the file, without main memory's pages.
+pub fn read(path: &str) -> Vec<Tick> {
+    let mut r = Reader::open(path);
+    let mut ticks = Vec::new();
+    while let Some(mut tick) = r.tick() {
+        tick.regions.retain(|r| r.kind != Kind::Page);
         ticks.push(tick);
     }
     ticks
@@ -119,4 +155,38 @@ fn read_tick(r: &mut impl Read) -> Option<Tick> {
         });
     }
     Some(Tick { number, regions })
+}
+
+/// Main memory as a trace with pages last held it.
+pub struct Image {
+    pub mem1: Vec<u8>,
+    /// Whether any tick so far held pages.
+    pub seen: bool,
+}
+
+impl Default for Image {
+    fn default() -> Self {
+        Image {
+            mem1: vec![0; MEM1_SIZE],
+            seen: false,
+        }
+    }
+}
+
+impl Image {
+    /// Applies a tick's pages: memory as it stood at the end of that tick.
+    pub fn apply(&mut self, tick: &Tick) {
+        for p in tick.of(Kind::Page) {
+            let at = (p.address - MEM1) as usize;
+            for (m, x) in self.mem1[at..at + p.bytes.len()].iter_mut().zip(&p.bytes) {
+                *m ^= x;
+            }
+            self.seen = true;
+        }
+    }
+
+    pub fn u32(&self, addr: u32) -> u32 {
+        let i = (addr - MEM1) as usize;
+        u32::from_be_bytes(self.mem1[i..i + 4].try_into().unwrap())
+    }
 }
