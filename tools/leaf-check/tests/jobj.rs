@@ -1,10 +1,13 @@
-//! Joints (JObj), their references (RObj) and display-object lists against ssbm-rs: every
-//! joint tree the disc's archives name, with the animation the archive pairs it with, loaded,
-//! animated frame by frame, its matrices set up, and edited at random (flags, SRT values and
-//! every update channel, requests, tree surgery, removal), comparing every joint, reference,
-//! animation and display-object list after each step.
+//! Joints (JObj), their references (RObj) and display objects (DObj, with their materials,
+//! textures and shapes) against ssbm-rs: every joint tree the disc's archives name, with the
+//! joint, material and shape animations the archive pairs it with, loaded, animated frame by
+//! frame, its matrices set up, and edited at random (flags, SRT values and every update
+//! channel, requests, tree surgery, removal, display-object edits), comparing every joint,
+//! reference, animation, display object, material, texture and shape after each step.
 
 use std::collections::HashMap;
+
+use materials::{Ids, View};
 
 use gekko_fp::{FpMode, set_fp_mode};
 use leaf_check::{FILE_MAX, Rand, handle, hsd_reference, load_archive, stage_anim_roots};
@@ -12,6 +15,7 @@ use melee_data::archive::{Archive, ArchiveId, Archives, DataRef};
 use melee_data::disc::Disc;
 use melee_sim::hsd::Objects;
 use melee_sim::hsd::aobj::{self, AObjId};
+use melee_sim::hsd::dobj::{self, DObjId};
 use melee_sim::hsd::fobj::{FObjId, Value};
 use melee_sim::hsd::jobj::{self, Contents, JObjId};
 use melee_sim::hsd::pobj::{self, PObjId};
@@ -19,7 +23,10 @@ use melee_sim::hsd::robj::{self, RObjId};
 use melee_sim::vec::Vec3;
 use ssbm_rt::{Addr, Ctx, Handle};
 use ssbm_types::fns;
-use ssbm_types::records::{HSD_JObj, HSD_ObjData};
+use ssbm_types::records::{HSD_DObj, HSD_JObj, HSD_ObjData};
+
+#[path = "support/materials.rs"]
+mod materials;
 
 const MODES: [FpMode; 2] = [FpMode::Hardware, FpMode::Slippi];
 /// The tree walk's callback, registered at a free address.
@@ -37,8 +44,14 @@ fn native_walk(ctx: &Ctx) {
 /// Where the update value handed to `JObjUpdateFunc` goes.
 const VALUE: u32 = 0x817E_0000;
 
-/// The trees an archive names: each joint, and the AnimJoint the archive pairs with it.
-fn trees(a: &Archive) -> Vec<(u32, Option<u32>)> {
+/// A joint tree and the AnimJoint, MatAnimJoint and ShapeAnimJoint trees the archive pairs
+/// with it.
+type Tree = (u32, [Option<u32>; 3]);
+
+/// The trees an archive names: a stage's `map_head` model groups (a joint, then lists of
+/// AnimJoints, MatAnimJoints and ShapeAnimJoints, of which the first of each goes with it), and
+/// each `*_joint` public with its `*_animjoint`, `*_matanim_joint` and `*_shapeanim_joint`.
+fn trees(a: &Archive) -> Vec<Tree> {
     let mut out = Vec::new();
     if let Some(head) = a.public("map_head")
         && let Some(groups) = a.ptr(head + 8)
@@ -46,8 +59,8 @@ fn trees(a: &Archive) -> Vec<(u32, Option<u32>)> {
         for g in 0..a.u32(head + 0xC) {
             let group = groups + g * 0x34;
             if let Some(joint) = a.ptr(group) {
-                let anim = a.ptr(group + 4).and_then(|list| a.ptr(list));
-                out.push((joint, anim));
+                let first = |at: u32| a.ptr(group + at).and_then(|list| a.ptr(list));
+                out.push((joint, [first(4), first(8), first(0xC)]));
             }
         }
     }
@@ -57,17 +70,18 @@ fn trees(a: &Archive) -> Vec<(u32, Option<u32>)> {
         if !lower.ends_with("_joint") || lower.contains("anim") {
             continue;
         }
-        let anim = a.public(&format!(
-            "{}_animjoint",
-            &name[..name.len() - "_joint".len()]
-        ));
-        out.push((joint, anim));
+        let stem = &name[..name.len() - "_joint".len()];
+        let anims = ["_animjoint", "_matanim_joint", "_shapeanim_joint"]
+            .map(|suffix| a.public(&format!("{stem}{suffix}")));
+        out.push((joint, anims));
     }
     // Some AnimJoints hold -1 where a link would be (Mute City's), which the original
     // follows and faults on: the game never pairs those with these trees.
-    for (_, anim) in &mut out {
-        if anim.is_some_and(|aj| !links_valid(a, aj)) {
-            *anim = None;
+    for (_, anims) in &mut out {
+        for anim in anims {
+            if anim.is_some_and(|aj| !links_valid(a, aj)) {
+                *anim = None;
+            }
         }
     }
     out.sort_unstable();
@@ -371,6 +385,13 @@ impl Sides<'_> {
                         (set.flags, set.nb_shape, set.nb_vertex_index),
                         "{what}: shape set"
                     );
+                    let blend = if set.flags & pobj::SHAPESET_ADDITIVE != 0 {
+                        self.floats(ctx.read_u32(u + 0x1C), u32::from(set.nb_shape))
+                    } else {
+                        vec![ctx.read_u32(u + 0x1C)]
+                    };
+                    let ours: Vec<u32> = set.blend.iter().map(|b| b.to_bits()).collect();
+                    assert_eq!(blend, ours, "{what}: shape blend");
                     self.compare_aobj(
                         ctx.read_u32(u + 0x20),
                         set.aobj,
@@ -384,9 +405,49 @@ impl Sides<'_> {
         assert_eq!(t, 0, "{what}: PObj lists' lengths");
     }
 
+    fn materials(&self) -> View<'_> {
+        View {
+            ctx: self.ctx,
+            data_addr: self.base,
+            data_len: self.archives.get(self.id).data().len() as u32,
+            objs: &self.objs,
+        }
+    }
+
+    /// Compares two DObj lists with their materials, shapes and animations.
+    fn compare_dobjs(&self, ids: &mut Ids, t: u32, o: Option<DObjId>, what: &str) {
+        let ctx = self.ctx;
+        let (mut td, mut od) = (t, o);
+        while let Some(d) = od {
+            assert_ne!(td, 0, "{what}: DObj lists' lengths");
+            let dobj = &self.objs.dobjs[d];
+            assert_eq!(
+                fns::HSD_DObjGetFlags(ctx, handle(ctx, td)),
+                dobj::get_flags(&self.objs.dobjs, Some(d)),
+                "{what}: DObj flags"
+            );
+            self.materials().cmp_mobj(
+                ids,
+                ctx.read_u32(td + 8),
+                dobj.mobj,
+                &format!("{what}: DObj"),
+            );
+            self.compare_pobjs(ctx.read_u32(td + 0xC), dobj.pobj, what);
+            self.compare_aobj(
+                ctx.read_u32(td + 0x10),
+                dobj.aobj,
+                &format!("{what}: DObj aobj"),
+            );
+            td = ctx.read_u32(td + 4);
+            od = dobj.next;
+        }
+        assert_eq!(td, 0, "{what}: DObj lists' lengths");
+    }
+
     /// Compares two trees joint by joint.
     fn compare(&self, t_root: u32, o_root: Option<JObjId>, what: &str) {
         let ctx = self.ctx;
+        let mut ids = Ids::default();
         let tt = self.theirs_tree(t_root);
         let ot = self.ours_tree(o_root);
         assert_eq!(tt.len(), ot.len(), "{what}: tree sizes");
@@ -463,21 +524,7 @@ impl Sides<'_> {
                     s.map(|s| s.offset),
                     "{what}: spline or particles"
                 ),
-                Contents::DObjs(first) => {
-                    let (mut td, mut od) = (u, first);
-                    while let Some(d) = od {
-                        assert_ne!(td, 0, "{what}: DObj lists' lengths");
-                        assert_eq!(
-                            ctx.read_u32(td + 0x14),
-                            self.objs.dobjs[d].flags,
-                            "{what}: DObj flags"
-                        );
-                        self.compare_pobjs(ctx.read_u32(td + 0xC), self.objs.dobjs[d].pobj, &what);
-                        td = ctx.read_u32(td + 4);
-                        od = self.objs.dobjs[d].next;
-                    }
-                    assert_eq!(td, 0, "{what}: DObj lists' lengths");
-                }
+                Contents::DObjs(first) => self.compare_dobjs(&mut ids, u, first, &what),
             }
             self.compare_aobj(ctx.read_u32(t + 0x7C), j.aobj, &format!("{what}: aobj"));
             self.compare_robjs(ctx.read_u32(t + 0x80), j.robj, &what);
@@ -513,26 +560,30 @@ impl Sides<'_> {
     }
 }
 
-/// Live joints, DObjs and PObjs (their classes' `nb_exist`) and RObjs, AObjs and FObjs (their
-/// allocators' `used`).
-fn live_theirs(ctx: &Ctx) -> [u32; 6] {
+/// Live joints, DObjs, PObjs, MObjs and TObjs (their classes' `nb_exist`) and RObjs, AObjs and
+/// FObjs (their allocators' `used`).
+fn live_theirs(ctx: &Ctx) -> [u32; 8] {
     let exist = |class: &str| ctx.read_u32(leaf_check::sym(class) + 0x20);
     let used = |data: &str| ctx.read_u32(leaf_check::sym(data) + 8);
     [
         exist("hsdJObj"),
         exist("hsdDObj"),
         exist("hsdPObj"),
+        exist("hsdMObj"),
+        exist("hsdTObj"),
         used("robj_alloc_data"),
         used("aobj_alloc_data"),
         used("fobj_alloc_data"),
     ]
 }
 
-fn live_ours(o: &Objects) -> [u32; 6] {
+fn live_ours(o: &Objects) -> [u32; 8] {
     [
         o.jobjs.pool.used(),
         o.dobjs.pool.used(),
         o.pobjs.pool.used(),
+        o.mobjs.pool.used(),
+        o.tobjs.pool.used(),
         o.robjs.pool.used(),
         o.aobjs.pool.used(),
         o.fobjs.used(),
@@ -560,6 +611,8 @@ struct Counts {
     halted: u64,
     trees: u64,
     animated: u64,
+    mat_animated: u64,
+    shape_animated: u64,
     joints: u64,
     frames: u64,
     steps: u64,
@@ -611,7 +664,7 @@ fn check_all() {
 fn check_archive(
     name: &str,
     bytes: &[u8],
-    trees: &[(u32, Option<u32>)],
+    trees: &[Tree],
     from: usize,
     counts: &mut Counts,
     rand: &mut Rand,
@@ -632,7 +685,8 @@ fn check_archive(
             archives,
             objs: Objects::default(),
         };
-        for (ti, &(joint, anim)) in trees.iter().enumerate().skip(from) {
+        for (ti, &(joint, anims)) in trees.iter().enumerate().skip(from) {
+            let animated = anims.iter().any(Option::is_some);
             let mode = MODES[ti % 2];
             set_fp_mode(mode);
             let what = format!("{name} joint {joint:#x} in {mode:?}");
@@ -645,7 +699,7 @@ fn check_archive(
                 rand.0 = u64::from_str_radix(&seed, 16).unwrap();
             }
             if std::env::var_os("JOBJ_TRACE").is_some() {
-                eprintln!("{what} anim {anim:x?} seed {:x}", rand.0);
+                eprintln!("{what} anims {anims:x?} seed {:x}", rand.0);
             }
             let t_root = fns::HSD_JObjLoadJoint(ctx, handle(ctx, base + joint)).addr();
             let jd = s.at(joint);
@@ -663,32 +717,35 @@ fn check_archive(
                     counts.constraints += 1;
                 }
             }
-            if let Some(aj) = anim {
-                let ad = s.at(aj);
+            if animated {
+                let addr = |a: Option<u32>| a.map_or(0, |a| base + a);
+                let [ad, md, sd] = anims.map(|a| a.map(|a| s.at(a)));
                 let carried_on = both(
                     &format!("{what}: add anim"),
                     || {
                         fns::HSD_JObjAddAnimAll(
                             ctx,
                             handle(ctx, t_root),
-                            handle(ctx, base + aj),
-                            handle(ctx, 0),
-                            handle(ctx, 0),
+                            handle(ctx, addr(anims[0])),
+                            handle(ctx, addr(anims[1])),
+                            handle(ctx, addr(anims[2])),
                         )
                     },
-                    || jobj::add_anim_all(&mut s.objs, &s.archives, o_root, Some(ad), None, None),
+                    || jobj::add_anim_all(&mut s.objs, &s.archives, o_root, ad, md, sd),
                 );
                 if !carried_on {
                     return Some(ti);
                 }
                 s.compare(t_root, o_root, &format!("{what}: add anim"));
                 counts.animated += 1;
+                counts.mat_animated += u64::from(anims[1].is_some());
+                counts.shape_animated += u64::from(anims[2].is_some());
             }
             let start = [0.0f32, 0.0, 1.0, 10.0][(rand.bits() % 4) as usize];
             fns::HSD_JObjReqAnimAll(ctx, handle(ctx, t_root), start as f64);
             jobj::req_anim_all(&mut s.objs, o_root, start);
             s.compare(t_root, o_root, &format!("{what}: request at {start}"));
-            let frames = if anim.is_some() { 90 } else { 8 };
+            let frames = if animated { 90 } else { 8 };
             let mut halted = false;
             for frame in 0..frames {
                 let carried_on = both(
@@ -734,7 +791,7 @@ fn check_archive(
                     .map(|(a, b)| a - b)
                     .collect::<Vec<_>>(),
                 live_ours(&s.objs).to_vec(),
-                "{what}: live joints, DObjs, PObjs, RObjs, AObjs and FObjs after removal"
+                "{what}: live joints, DObjs, PObjs, MObjs, TObjs, RObjs, AObjs and FObjs after removal"
             );
         }
     }
@@ -746,10 +803,12 @@ fn report(counts: &Counts) {
     let mut ops: Vec<_> = counts.ops.iter().collect();
     ops.sort();
     eprintln!(
-        "{} halted where the original does; {} trees ({} animated), {} joints ({} IK, {} with references), {} frames, {} edits: {ops:?}",
+        "{} halted where the original does; {} trees ({} animated, {} with materials', {} with shapes'), {} joints ({} IK, {} with references), {} frames, {} edits: {ops:?}",
         counts.halted,
         counts.trees,
         counts.animated,
+        counts.mat_animated,
+        counts.shape_animated,
         counts.joints,
         counts.ik,
         counts.constraints,
@@ -757,6 +816,12 @@ fn report(counts: &Counts) {
         counts.steps
     );
     assert!(counts.trees >= 1000, "only {} trees", counts.trees);
+    assert!(
+        counts.mat_animated >= 100 && counts.shape_animated >= 1,
+        "only {} trees with material and {} with shape animations",
+        counts.mat_animated,
+        counts.shape_animated
+    );
 }
 
 /// One random edit on both sides; returns its name.
@@ -784,7 +849,7 @@ fn random_op(
         jobj::USER_DEF_MTX,
         jobj::MTX_DIRTY,
     ][(rand.bits() % 6) as usize];
-    match rand.bits() % 24 {
+    match rand.bits() % 26 {
         0 => {
             fns::HSD_JObjSetFlags(ctx, h(t), flag);
             jobj::set_flags(&mut s.objs.jobjs, o, flag);
@@ -1072,6 +1137,82 @@ fn random_op(
             );
             "anim by flags"
         }
+        24 | 25 => {
+            // A display object of the joint, and one of its edits.
+            let (Contents::DObjs(Some(first)), td0) = (
+                s.objs.jobjs[o.unwrap()].u,
+                fns::HSD_JObjGetDObj(ctx, h(t)).addr(),
+            ) else {
+                return "skipped dobj";
+            };
+            let ods: Vec<DObjId> = s.objs.dobjs.list(Some(first)).collect();
+            let i = rand.below(ods.len() as u64) as usize;
+            let mut td = td0;
+            for _ in 0..i {
+                td = ctx.read_u32(td + 4);
+            }
+            let (od, d) = (Some(ods[i]), |a: u32| handle::<HSD_DObj>(ctx, a));
+            let flags = rand.below(0x800) as u32;
+            let f = [0.0f32, 2.0, 7.0][rand.below(3) as usize];
+            let (tp, op) = (ctx.read_u32(td + 0xC), s.objs.dobjs[ods[i]].pobj);
+            match rand.below(11) {
+                0 => {
+                    fns::HSD_DObjSetFlags(ctx, d(td), flags);
+                    dobj::set_flags(&mut s.objs.dobjs, od, flags);
+                }
+                1 => {
+                    fns::HSD_DObjClearFlags(ctx, d(td), flags);
+                    dobj::clear_flags(&mut s.objs.dobjs, od, flags);
+                }
+                2 => {
+                    let mask = rand.bits() as u32;
+                    fns::HSD_DObjModifyFlags(ctx, d(td), flags, mask);
+                    dobj::modify_flags(&mut s.objs.dobjs, od, flags, mask);
+                }
+                3 => {
+                    let null = rand.below(3) == 0;
+                    fns::HSD_DObjSetCurrent(ctx, d(if null { 0 } else { td }));
+                    dobj::set_current(&mut s.objs.dobjs, if null { None } else { od });
+                    let current = ssbm_types::tu::sysdolphin__baselib__dobj::current_dobj(ctx)
+                        .get()
+                        .addr();
+                    assert_eq!(current != 0, s.objs.dobjs.current.is_some(), "current dobj");
+                }
+                4 => {
+                    fns::HSD_DObjReqAnimAllByFlags(ctx, d(td), f as f64, flags);
+                    dobj::req_anim_all_by_flags(&mut s.objs, od, f, flags);
+                }
+                5 => {
+                    fns::HSD_DObjReqAnimAll(ctx, d(td), f as f64);
+                    dobj::req_anim_all(&mut s.objs, od, f);
+                }
+                6 => {
+                    fns::HSD_DObjRemoveAnimAllByFlags(ctx, d(td), flags);
+                    dobj::remove_anim_all_by_flags(&mut s.objs, od, flags);
+                }
+                7 => {
+                    fns::HSD_DObjAnimAll(ctx, d(td));
+                    dobj::anim_all(&mut s.objs, &s.archives, od);
+                }
+                8 => {
+                    fns::HSD_PObjReqAnimAllByFlags(ctx, handle(ctx, tp), f as f64, flags);
+                    pobj::req_anim_all_by_flags(&mut s.objs, op, f, flags);
+                }
+                9 => {
+                    fns::HSD_PObjRemoveAnimAllByFlags(ctx, handle(ctx, tp), flags);
+                    pobj::remove_anim_all_by_flags(&mut s.objs, op, flags);
+                }
+                _ => {
+                    fns::HSD_PObjAnimAll(ctx, handle(ctx, tp));
+                    pobj::anim_all(&mut s.objs, &s.archives, op);
+                }
+            }
+            assert_eq!(
+                fns::HSD_DObjGetFlags(ctx, d(0)),
+                dobj::get_flags(&s.objs.dobjs, None)
+            );
+            "dobj"
+        }
         _ => unreachable!(),
     }
 }
@@ -1175,6 +1316,11 @@ impl Builder {
     /// An AObjDesc, looping over `end` frames, with a constant-interpolated channel per
     /// `(type, keys)`: u8 values, each held 10 frames.
     fn aobj(&mut self, end: f32, channels: &[(u8, &[u8])]) -> u32 {
+        self.aobj_frac(end, channels, 0x80)
+    }
+
+    /// `aobj` with the keys' format byte `frac` (0x80 and a shift: u8 values scaled down).
+    fn aobj_frac(&mut self, end: f32, channels: &[(u8, &[u8])], frac: u8) -> u32 {
         let mut next = None;
         for &(ty, keys) in channels.iter().rev() {
             let mut bytes = vec![0x01 | ((keys.len() as u8 - 1) << 4)];
@@ -1189,7 +1335,7 @@ impl Builder {
             }
             self.u32(f + 4, bytes.len() as u32);
             self.data[f as usize + 0xC] = ty;
-            self.data[f as usize + 0xD] = 0x80;
+            self.data[f as usize + 0xD] = frac;
             self.ptr(f + 0x10, d);
             next = Some(f);
         }
@@ -1432,4 +1578,191 @@ fn check_synthetic() {
     let mut ops: Vec<_> = counts.ops.iter().collect();
     ops.sort();
     eprintln!("synthetic: {ops:?}");
+}
+
+/// Morphing shapes, which the disc's trees have only one per display object and never
+/// additive: a joint with two display objects, the first with an additive three-shape set and
+/// a two-shape morph, the second with another additive set, each with material and shape
+/// animations, animated, requested and removed by flags at random.
+#[test]
+fn synthetic_shapes_match() {
+    std::thread::Builder::new()
+        .stack_size(1 << 30)
+        .spawn(check_shapes)
+        .unwrap()
+        .join()
+        .unwrap();
+}
+
+fn check_shapes() {
+    if hsd_reference().is_none() {
+        return;
+    }
+    let mut b = Builder::default();
+    let shape = |b: &mut Builder, additive: bool, nb_shape: u16, next: Option<u32>| {
+        let set = b.alloc(0x1C);
+        let flags: u16 = if additive { pobj::SHAPESET_ADDITIVE } else { 0 };
+        b.u32(set, u32::from(flags) << 16 | u32::from(nb_shape));
+        let p = b.alloc(0x18);
+        if let Some(n) = next {
+            b.ptr(p + 4, n);
+        }
+        b.u32(p + 0xC, u32::from(pobj::SHAPEANIM) << 16);
+        b.ptr(p + 0x14, set);
+        p
+    };
+    let material = |b: &mut Builder, diffuse: u32| {
+        let mat = b.alloc(0x14);
+        b.u32(mat, 0x8080_80FF);
+        b.u32(mat + 4, diffuse);
+        b.u32(mat + 8, 0xFFFF_FFFF);
+        b.f32(mat + 0xC, 1.0);
+        let m = b.alloc(0x18);
+        b.u32(m + 4, 0x4);
+        b.ptr(m + 0xC, mat);
+        m
+    };
+    let morph = shape(&mut b, false, 2, None);
+    let first = shape(&mut b, true, 3, Some(morph));
+    let second = shape(&mut b, true, 2, None);
+    let (m1, m2) = (material(&mut b, 0xFFCC_19FF), material(&mut b, 0x3333_33FF));
+    let d2 = b.alloc(0x10);
+    b.ptr(d2 + 8, m2);
+    b.ptr(d2 + 0xC, second);
+    let d1 = b.alloc(0x10);
+    b.ptr(d1 + 4, d2);
+    b.ptr(d1 + 8, m1);
+    b.ptr(d1 + 0xC, first);
+    let root = b.joint(0, [0.0; 3], [0.0; 3], None);
+    b.ptr(root + 0x10, d1);
+    // Shape animations: weights in 128ths for the additive sets, a position for the morph.
+    let anim = |b: &mut Builder, channels: &[(u8, &[u8])]| {
+        let a = b.aobj_frac(37.0, channels, 0x87);
+        let sa = b.alloc(8);
+        b.ptr(sa + 4, a);
+        sa
+    };
+    let w1 = anim(
+        &mut b,
+        &[(2, &[0, 64, 128]), (3, &[128, 32]), (4, &[16, 200, 0, 90])],
+    );
+    let w2 = anim(&mut b, &[(1, &[0, 128, 64])]);
+    b.ptr(w1, w2);
+    // Every channel has two keys or more: one ending after its first key hands the update
+    // function a stale value (`Value::Stale`).
+    let w3 = anim(&mut b, &[(3, &[40, 0, 120]), (2, &[7, 99])]);
+    let sd2 = b.alloc(8);
+    b.ptr(sd2 + 4, w3);
+    let sd1 = b.alloc(8);
+    b.ptr(sd1, sd2);
+    b.ptr(sd1 + 4, w1);
+    let shape_joint = b.alloc(0xC);
+    b.ptr(shape_joint + 8, sd1);
+    // Material animations: diffuse and alpha.
+    let ma2 = b.alloc(0x10);
+    let a2 = b.aobj_frac(25.0, &[(4, &[255, 0, 128]), (10, &[0, 100])], 0x88);
+    b.ptr(ma2 + 4, a2);
+    let ma1 = b.alloc(0x10);
+    let a1 = b.aobj_frac(31.0, &[(5, &[10, 250]), (6, &[255, 3, 77])], 0x88);
+    b.ptr(ma1, ma2);
+    b.ptr(ma1 + 4, a1);
+    let mat_joint = b.alloc(0xC);
+    b.ptr(mat_joint + 8, ma1);
+    let file = leaf_check::dat(&b.data, &b.relocs);
+    let mut rand = Rand(0x3C6E_F372_FE94_F82B);
+    let mut ops: HashMap<&'static str, u64> = HashMap::new();
+    for round in 0..40 {
+        let ctx = hsd_reference().unwrap();
+        let ctx = &ctx;
+        let base = load_archive(ctx, &file);
+        let mut archives = Archives::default();
+        let id = archives.add(Archive::parse(&file).unwrap());
+        let mut s = Sides {
+            ctx,
+            base,
+            id,
+            archives,
+            objs: Objects::default(),
+        };
+        let mode = MODES[round % 2];
+        set_fp_mode(mode);
+        let what = format!("shapes round {round} in {mode:?}");
+        let t_root = fns::HSD_JObjLoadJoint(ctx, handle(ctx, base + root)).addr();
+        let jd = s.at(root);
+        let o_root = jobj::load_joint(&mut s.objs, &s.archives, Some(jd));
+        s.compare(t_root, o_root, &format!("{what}: load"));
+        let add = |s: &mut Sides| {
+            fns::HSD_JObjAddAnimAll(
+                ctx,
+                handle(ctx, t_root),
+                handle(ctx, 0),
+                handle(ctx, base + mat_joint),
+                handle(ctx, base + shape_joint),
+            );
+            let (md, sd) = (Some(s.at(mat_joint)), Some(s.at(shape_joint)));
+            jobj::add_anim_all(&mut s.objs, &s.archives, o_root, None, md, sd);
+        };
+        add(&mut s);
+        let frame = rand.below(40) as f32;
+        fns::HSD_JObjReqAnimAll(ctx, handle(ctx, t_root), frame as f64);
+        jobj::req_anim_all(&mut s.objs, o_root, frame);
+        s.compare(t_root, o_root, &format!("{what}: request"));
+        let td = fns::HSD_JObjGetDObj(ctx, handle(ctx, t_root)).addr();
+        let od = jobj::get_dobj(&s.objs.jobjs, o_root);
+        for step in 0..120 {
+            let flags =
+                [0x8, 0x4, 0x10, 0x2, 0x7FF, rand.below(0x800) as u32][rand.below(6) as usize];
+            let f = rand.below(40) as f32;
+            let op = match rand.below(12) {
+                0..=6 => {
+                    fns::HSD_JObjAnimAll(ctx, handle(ctx, t_root));
+                    jobj::anim_all(&mut s.objs, &s.archives, o_root);
+                    "anim"
+                }
+                7 => {
+                    fns::HSD_JObjReqAnimByFlags(ctx, handle(ctx, t_root), flags, f as f64);
+                    jobj::req_anim_by_flags(&mut s.objs, o_root, flags, f);
+                    "request by flags"
+                }
+                8 => {
+                    fns::HSD_DObjReqAnimAllByFlags(
+                        ctx,
+                        handle::<HSD_DObj>(ctx, td),
+                        f as f64,
+                        flags,
+                    );
+                    dobj::req_anim_all_by_flags(&mut s.objs, od, f, flags);
+                    "dobj request by flags"
+                }
+                9 => {
+                    fns::HSD_JObjRemoveAnimByFlags(ctx, handle(ctx, t_root), flags);
+                    jobj::remove_anim_by_flags(&mut s.objs, o_root, flags);
+                    "remove by flags"
+                }
+                10 => {
+                    add(&mut s);
+                    "add anim"
+                }
+                _ => {
+                    fns::HSD_DObjAnimAll(ctx, handle::<HSD_DObj>(ctx, td));
+                    dobj::anim_all(&mut s.objs, &s.archives, od);
+                    "dobj anim"
+                }
+            };
+            *ops.entry(op).or_default() += 1;
+            s.compare(t_root, o_root, &format!("{what}: step {step} ({op})"));
+        }
+        assert_eq!(s.objs.stale_reads, 0, "{what}: stale reads");
+        fns::HSD_JObjUnref(ctx, handle(ctx, t_root));
+        jobj::unref(&mut s.objs, o_root);
+        assert_eq!(
+            live_ours(&s.objs),
+            [0; 8],
+            "{what}: live objects after removal"
+        );
+    }
+    set_fp_mode(FpMode::Hardware);
+    let mut ops: Vec<_> = ops.into_iter().collect();
+    ops.sort();
+    eprintln!("shapes: {ops:?}");
 }

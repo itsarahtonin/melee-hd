@@ -336,7 +336,7 @@ pub fn remove_anim_by_flags(objs: &mut Objects, j: Option<JObjId>, flags: u32) {
         remove_aobj(objs, objs.jobjs[j].aobj);
         objs.jobjs[j].aobj = None;
     }
-    // HSD_DObjRemoveAnimAllByFlags: materials and shapes have no animation yet.
+    dobj::remove_anim_all_by_flags(objs, objs.jobjs[j].dobj(), flags);
     robj::remove_anim_all_by_flags(objs, objs.jobjs[j].robj, flags);
 }
 
@@ -370,7 +370,7 @@ pub fn req_anim_by_flags(objs: &mut Objects, j: Option<JObjId>, flags: u32, fram
         let a = objs.jobjs[j].aobj;
         aobj::req_anim(&mut objs.aobjs, &mut objs.fobjs, a, frame);
     }
-    // HSD_DObjReqAnimAllByFlags: materials and shapes have no animation yet.
+    dobj::req_anim_all_by_flags(objs, objs.jobjs[j].dobj(), frame, flags);
     robj::req_anim_all_by_flags(objs, objs.jobjs[j].robj, frame, flags);
 }
 
@@ -423,10 +423,8 @@ pub fn sort_anim(objs: &mut Objects, a: Option<AObjId>) {
     }
 }
 
-/// Gives the joint the animation of its AnimJoint, `HSD_JObjAddAnim`.
-///
-/// Material and shape animations wait for the MObj and PObj ports: a MatAnimJoint or
-/// ShapeAnimJoint with an animation for the joint's display objects panics.
+/// Gives the joint the animation of its AnimJoint, and its display objects theirs from its
+/// MatAnimJoint and ShapeAnimJoint, `HSD_JObjAddAnim`.
 #[doc(alias = "HSD_JObjAddAnim")]
 pub fn add_anim(
     objs: &mut Objects,
@@ -451,13 +449,10 @@ pub fn add_anim(
             clear_flags(&mut objs.jobjs, Some(j), CLASSICAL_SCALE);
         }
     }
-    if objs.jobjs[j].dobj().is_some() {
+    if let Some(d) = objs.jobjs[j].dobj() {
         let matanim = mat_joint.and_then(|m| data.ptr(m.at(8)));
         let shapeanim = shape_joint.and_then(|s| data.ptr(s.at(8)));
-        assert!(
-            matanim.is_none() && shapeanim.is_none(),
-            "material and shape animations need MObj and PObj"
-        );
+        dobj::add_anim_all(objs, data, Some(d), matanim, shapeanim);
     }
 }
 
@@ -647,7 +642,7 @@ pub fn anim(objs: &mut Objects, data: &Archives, j: Option<JObjId>) {
     let mut up = |objs: &mut Objects, ty: u8, v: Value| update(objs, data, j, ty, v);
     aobj::interpret(objs, data, a, Some(&mut up));
     robj::anim_all(objs, data, objs.jobjs[j].robj);
-    // HSD_DObjAnimAll: materials and shapes have no animation yet.
+    dobj::anim_all(objs, data, objs.jobjs[j].dobj());
 }
 
 /// `JObjAnimAll`.
