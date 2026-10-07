@@ -1,3 +1,20 @@
 # Functions melee-hd replaces with a native subsystem instead of porting.
 # One per line: NAME<TAB>reason
 __sinit_trigf_c	Static initializer; melee-sim's math tables are constants with its values.
+PADRead	Polls the serial interface and tracks each port's connection; the input layer reports each port's result, which `input::pad::read` decodes as PADRead does.
+PADSetSpec	Points PADRead at a decoder; Melee picks spec 5 and `input::pad::read` always decodes as SPEC2_MakeStatus.
+PADInit	Initializes the serial interface and starts polling; the input layer's job.
+PADReset	Resets ports over the serial interface; `Controllers::renew_raw` returns the ports it would reset.
+PADRecalibrate	Recalibrates ports over the serial interface; the input layer's job.
+PADOriginCallback	Serial-interface completion handler for an origin read; the input layer reads origins and centres them with `input::pad::update_origin`.
+PADOriginUpdateCallback	Serial-interface completion handler for an origin re-read; the input layer reads origins and centres them with `input::pad::update_origin`.
+PADProbeCallback	Serial-interface completion handler for probing a port; the input layer's job.
+PADTypeAndStatusCallback	Serial-interface handler identifying a newly connected controller; the input layer's job.
+PADReceiveCheckCallback	Serial-interface handler checking a controller's type before polling it; the input layer's job.
+PADSetSamplingRate	Programs the serial interface's polling rate from the video mode; the input layer's job.
+SIRefreshSamplingRate	Reprograms the serial interface's polling rate; the input layer's job.
+PADControlMotor	Sends a rumble command over the serial interface; rumble leaves the simulation as events.
+OnReset	Console reset handler that stops the PAD library's serial traffic; the input layer's job.
+SamplingHandler	Serial-interface interrupt handler that runs the sampling callback; the input layer's job.
+PADSetSamplingCallback	Installs the serial-interface sampling interrupt callback; the input layer's job.
+__PADDisableRecalibration	Sets the flag that stops PADInit recalibrating at boot; the input layer's job.
