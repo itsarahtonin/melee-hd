@@ -105,6 +105,8 @@ impl Running<'_> {
         // `HSD_ObjAlloc` hands the block back uncleared; a fresh heap's is zero (see
         // `docs/engine.md`).
         let f = FighterId(self.game.fighters.alloc(Fighter::default()));
+        let address = self.game.ft.address_seed.pop_front().unwrap_or(0);
+        self.game.ft.addresses.insert(f.0, address);
         let attrs = AttrsId(self.game.fighter_attrs.alloc(vec![0; FIGHTER_ATTRS_SIZE]));
         self.game.fighters[f.0].dat_attrs_backup = Some(attrs);
         self.game

@@ -41,6 +41,10 @@ pub struct Settings {
     /// A Slippi replay drives the match through Slippi's playback codes
     /// ([`Match::step_replay`]).
     pub playback: bool,
+    /// The addresses the original gives the match's fighters as it creates them, in creation
+    /// order (`ft::Globals::address_seed`), where the frontend knows them: the oracle takes
+    /// them from ssbm-rs's trace. Empty, the fighters' addresses are 0.
+    pub fighter_addresses: Vec<u32>,
 }
 
 /// What Slippi's playback hands the game at a replay's start (the Slippi EXI device's answer
@@ -120,6 +124,7 @@ impl Settings {
             dsp: DspModel::Samples,
             ucf: ucf::Pads::default(),
             playback: false,
+            fighter_addresses: Vec::new(),
         }
     }
 
@@ -170,6 +175,7 @@ impl Settings {
             ucf: ucf::Pads::default(),
             playback: false,
             dsp: DspModel::Silent,
+            fighter_addresses: Vec::new(),
         }
     }
 }
@@ -242,6 +248,7 @@ impl Match {
             game.pads.playback = true;
         }
         game.audio.dsp = settings.dsp;
+        game.ft.address_seed = settings.fighter_addresses.iter().copied().collect();
         let mut data = Archives::default();
         // `lb_80014534`: the rumble scripts, then the match's own files in the order its
         // setup loads them.

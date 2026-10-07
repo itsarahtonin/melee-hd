@@ -109,6 +109,22 @@ fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> Vec<String> {
 
 /// The trace tick that ran the VS scene's first tick: the first whose scene loop has counted
 /// one tick with the playback's frame count at the replay's first frame.
+/// The fighters' addresses in the trace, in the order the match created them: each player
+/// slot's fighters, the first and then the second.
+fn fighter_addresses(image: &Image) -> Vec<u32> {
+    let mut out = Vec::new();
+    for slot in 0..6 {
+        let player = sym("player_slots") + 0xE90 * slot;
+        for which in 0..2 {
+            let gobj = image.u32(player + 0xB0 + 4 * which);
+            if gobj != 0 {
+                out.push(image.u32(gobj + 0x2C));
+            }
+        }
+    }
+    out
+}
+
 fn is_first_tick(image: &Image) -> bool {
     image.u32(sym("gm_80479D58")) == 1 && image.u32(0x804D_6CF4) as i32 == FIRST_FRAME
 }
@@ -132,7 +148,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     let disc = Disc::open(&disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
     let bytes = std::fs::read(replay_path).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let replay = Replay::parse(&bytes).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
-    let settings = Settings::from_replay(&melee_replay::start(&replay))
+    let mut settings = Settings::from_replay(&melee_replay::start(&replay))
         .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let index = melee_capture::disc_index(&disc);
     let mut reader = Reader::open(trace_path);
@@ -159,6 +175,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 );
                 return ExitCode::FAILURE;
             };
+            settings.fighter_addresses = fighter_addresses(&image);
             let started = catch_unwind(AssertUnwindSafe(|| {
                 let mut load = |name: &str| melee_sim::game::vs_match::DiscFile {
                     entrynum: disc

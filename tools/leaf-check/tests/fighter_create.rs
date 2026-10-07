@@ -186,6 +186,11 @@ fn compare(mem: &[u8], data: &DataMap, game: &Game, maps: Maps) -> Vec<String> {
     cmp.diffs
 }
 
+/// Whether the import (or an earlier slot) already knows GObj `g`.
+fn maps_has_gobj(maps: &Maps, g: u32) -> bool {
+    maps.gobjs.contains_key(&g)
+}
+
 fn panic_text(p: &(dyn std::any::Any + Send)) -> String {
     p.downcast_ref::<String>()
         .cloned()
@@ -305,6 +310,17 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode, first_init: bool
                         anims: subs.clone(),
                     },
                 ));
+            }
+        }
+        // The new fighters' addresses where ssbm-rs's side allocated them, as the frontend
+        // seeds them: the slot's fighters, the first and then the second.
+        if s >= 0 {
+            let player = sym("player_slots") + 0xE90 * s as u32;
+            for which in 0..2 {
+                let g = word(player + 0xB0 + 4 * which);
+                if g != 0 && !maps_has_gobj(&maps, g) {
+                    game.ft.address_seed.push_back(word(g + 0x2C));
+                }
             }
         }
         // Ours.

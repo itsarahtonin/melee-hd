@@ -274,6 +274,12 @@ impl<'a> Comparer<'a> {
                     };
                     let fighter = &self.game.fighters[f.0];
                     fighter.compare(&mem, ud, &format!("{path} fighter"), self);
+                    let address = self.game.ft.addresses.get(&f.0).copied();
+                    if address != Some(ud) {
+                        self.diffs.push(format!(
+                            "{path} fighter: address ours {address:x?}, theirs {ud:#x}"
+                        ));
+                    }
                     self.fighter_blocks(&format!("{path} fighter"), f, ud);
                 }
             }

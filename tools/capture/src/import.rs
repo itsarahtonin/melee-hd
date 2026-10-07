@@ -735,6 +735,7 @@ impl Importer<'_> {
         self.parts_len = self.u32(table + 8);
         let id = FighterId(self.game.fighters.alloc(Fighter::default()));
         self.maps.fighters.insert(a, id);
+        self.game.ft.addresses.insert(id.0, a);
         let cap = self.cap;
         let mem = Mem {
             bytes: &cap.call.mem1,

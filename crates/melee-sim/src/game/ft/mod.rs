@@ -71,6 +71,14 @@ pub struct Globals {
     pub kirby: KirbyCostumes,
     /// Jigglypuff's hats (`ft_8045A1E0`).
     pub purin_hats: [Option<DataRef>; 5],
+    /// Each fighter's address in the original (`Fighter*`, its user data), by slot: a few
+    /// places read it as a number (Nana's computer DI takes its low byte), so it is state,
+    /// recorded when `Fighter_Create` allocates the fighter (`docs/engine.md`).
+    pub addresses: std::collections::BTreeMap<u32, u32>,
+    /// The addresses the original's allocator gives the next fighters, in creation order,
+    /// as the frontend seeds them (from ssbm-rs's trace); a fighter created without one
+    /// records 0. An input until an allocator model computes them.
+    pub address_seed: std::collections::VecDeque<u32>,
     /// The attack collision's scratch (`ftcoll.c`'s damage logs and clank flags), which each
     /// fighter's attack collision starts over.
     pub hit_logs: attack::HitLogs,
