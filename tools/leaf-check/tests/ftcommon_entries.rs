@@ -28,12 +28,8 @@ fn dirs() -> Vec<String> {
 
 fn stubs() -> Vec<Stub> {
     let mut v: Vec<Stub> = [
-        "efAsync_Spawn",
         // A knockdown's impact effect.
         "ftCo_8009F834",
-        "efSync_Spawn",
-        "efLib_SetParamAlpha",
-        "efLib_DestroyAll",
         "ftColl_8007B1B8",
         "ftColl_CreateReflectHit",
         "un_80322598",
@@ -216,15 +212,22 @@ fn run(cases: Vec<Case>) {
                         if c.fighter_arg {
                             call.regs.gpr[3] = fp;
                         }
-                        call.addr = target;
+                        // A dormant fighter (the other of Zelda and Sheik) runs nothing.
+                        call.addr = if peek_u32(call, fp + 0x10) == SLEEP {
+                            leaf_check::sym("ftCo_Sleep_IASA")
+                        } else {
+                            target
+                        };
                     },
                     &|g, maps, call| {
                         let gobj = *maps
                             .gobjs
                             .get(&call.regs.gpr[31])
                             .expect("r31 isn't a GObj");
-                        let r = (c.run)(g, gobj, maps, call);
-                        r
+                        if g.game.fighter(gobj).motion_id == SLEEP as i32 {
+                            return Ret::Nothing;
+                        }
+                        (c.run)(g, gobj, maps, call)
                     },
                 )
             }));
@@ -251,6 +254,9 @@ fn run(cases: Vec<Case>) {
         );
     }
 }
+
+/// `ftCo_MS_Sleep`: a fighter out of play.
+const SLEEP: u32 = 11;
 
 const IN: &str = "Fighter_procInput";
 const MAP: &str = "Fighter_procMap";
@@ -649,11 +655,16 @@ fn ground() {
             },
         ),
         gobj("ftCo_80099894", IN, |g, o| {
+            let fp = g.game.fighter(o);
+            eprintln!(
+                "DBG kind {} motion {} x5A4 {:#x} x594 {:?} gr {}",
+                fp.kind, fp.motion_id, fp.x5A4, fp.x594, fp.ground_or_air
+            );
             g.enter_escape_n(o);
             Ret::Nothing
         }),
         gobj("ftCo_800998EC", IN, |g, o| {
-            g.enter_escape_n(o);
+            g.enter_escape_n_common(o);
             Ret::Nothing
         }),
     ]);
@@ -1097,6 +1108,20 @@ fn down() {
             Running::grounded_knockback_if_landed(&mut g.game.fighters[f.0], max);
             Ret::Nothing
         }),
+        fighter("ftCo_Damage_SetMv8FromKbThreshold", UPD, |g, o| {
+            g.set_smoke_timer(o);
+            Ret::Nothing
+        }),
+        case(
+            "ftCo_DamageFly_Anim",
+            ANIM,
+            // The knockback smoke's timer about to run out.
+            |call, _, fp| poke_u32(call, fp + 0x2348, 1),
+            |g, o, _, _| {
+                run_fighter_cb(g, o, CodeRef(leaf_check::sym("ftCo_DamageFly_Anim")));
+                Ret::Nothing
+            },
+        ),
         gobj("ftCo_80097570", IN, |g, o| b(g.hips_up(o))),
         gobj("ftCo_800976A4", MAP, |g, o| {
             g.knockdown_impact(o);

@@ -4,6 +4,7 @@
 use gekko_fp as fp;
 
 use super::super::super::code::{self, Val, unported_call};
+use super::super::super::ef::{self, Arg};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
@@ -34,10 +35,6 @@ const GUARD_X20: usize = 0x20;
 const GUARD_X24: usize = 0x24;
 const GUARD_X2C: usize = 0x2C;
 
-/// `efSync_Spawn`, `efLib_SetParamAlpha`, `efLib_DestroyAll` (the effects' port).
-const EF_SYNC_SPAWN: u32 = 0x8005_FDDC;
-const EF_LIB_SET_PARAM_ALPHA: u32 = 0x8005_F864;
-const EF_LIB_DESTROY_ALL: u32 = 0x8005_B880;
 /// `ftColl_8007B1B8`, `ftColl_CreateReflectHit`: the shield's and powershield's hit shapes
 /// (the fighter collision's port).
 const FT_COLL_8007B1B8: u32 = 0x8007_B1B8;
@@ -98,13 +95,7 @@ impl Running<'_> {
         let c = |i: u32| u32::from(self.data.u8(colors.at(off + i)));
         let rgb = (c(0) << 16) | (c(1) << 8) | c(2);
         let joint = self.shield_joint(gobj);
-        let args = [
-            Val::Int(id),
-            Val::GObj(Some(gobj)),
-            Val::JObj(joint),
-            Val::Int(rgb as i32),
-        ];
-        code::call(self, EF_SYNC_SPAWN, &args);
+        ef::spawn(self, id, Some(gobj), &[Arg::JObj(joint), Arg::Int(rgb)]);
     }
 
     /// The shield's absorb shape on its joint, `ftCo_80092450`, whose hits call
@@ -252,8 +243,7 @@ impl Running<'_> {
                 fp::fsubs(255.0, alpha),
             ));
             let a = fp::fctiwz(fp::fadds(alpha, fp::frsp(f64::from(more))));
-            let args = [Val::GObj(Some(gobj)), Val::Int(i32::from(a as u8))];
-            code::call(self, EF_LIB_SET_PARAM_ALPHA, &args);
+            ef::set_param_alpha(self.game, Some(gobj), a as u8);
         }
     }
 
@@ -702,7 +692,7 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007DB24")]
     pub fn destroy_effects(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).x2219_b0 = false;
-        code::call(self, EF_LIB_DESTROY_ALL, &[Val::GObj(Some(gobj))]);
+        ef::destroy_all(self, gobj);
     }
 
     /// A powershield's reflection, `ftCo_80093790` (the collision's callback): its effect and

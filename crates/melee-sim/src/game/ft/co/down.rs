@@ -6,13 +6,13 @@ use gekko_fp as fp;
 
 use super::super::super::camera;
 use super::super::super::code::{self, Val, unported_call};
+use super::super::super::ef;
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::parts::TOP_N;
 use super::checks::abs;
 use super::ids::ms;
 use super::jump::FT_800881D8;
-use super::ledge::EF_ASYNC_SPAWN;
 use super::{PAD_A, PAD_B, PAD_LR};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -153,15 +153,13 @@ impl Running<'_> {
         let n = fp.coll_data.floor.normal;
         let angle = math::atan2(mem(fp::fneg(reg(n.x))), n.y);
         let joint = self.bones(f)[TOP_N as usize].joint;
-        let args = [
-            Val::GObj(Some(gobj)),
-            Val::None,
-            Val::Int(4),
-            Val::Int(0x406),
-            Val::JObj(joint),
-            Val::F32Ref(angle),
-        ];
-        code::call(self, EF_ASYNC_SPAWN, &args);
+        self.fighter_effect(
+            gobj,
+            ef::SpawnKind::PosParam,
+            0x406,
+            joint,
+            &[ef::Arg::Float(angle)],
+        );
         self.knockdown_impact(gobj);
     }
 
@@ -598,13 +596,6 @@ impl Running<'_> {
     fn tech_effect(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let joint = self.bones(f)[TOP_N as usize].joint;
-        let args = [
-            Val::GObj(Some(gobj)),
-            Val::None,
-            Val::Int(1),
-            Val::Int(1053),
-            Val::JObj(joint),
-        ];
-        code::call(self, EF_ASYNC_SPAWN, &args);
+        self.fighter_effect(gobj, ef::SpawnKind::Pos, 1053, joint, &[]);
     }
 }

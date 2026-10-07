@@ -130,18 +130,23 @@ impl Running<'_> {
         false
     }
 
-    /// A spot dodge, `ftCo_80099894` (Yoshi's drops his egg's shield first).
+    /// A spot dodge, `ftCo_80099894` (Yoshi's drops his egg's shield first), with a rumble.
     #[doc(alias = "ftCo_80099894")]
-    #[doc(alias = "ftCo_800998EC")]
     pub fn enter_escape_n(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_YOSHI {
             unported_call("ftCo_80099954");
         }
+        self.enter_escape_n_common(gobj);
+        let f = self.game.fighter_id(gobj);
+        self.start_rumble(f, 23, 0);
+    }
+
+    /// `ftCo_800998EC`: the spot dodge's state.
+    #[doc(alias = "ftCo_800998EC")]
+    pub fn enter_escape_n_common(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, ms::ESCAPE_N, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         self.game.fighter_mut(gobj).x221D_b5 = true;
-        let f = self.game.fighter_id(gobj);
-        self.start_rumble(f, 23, 0);
     }
 
     /// `ftCo_Escape_Coll`, `ftCo_EscapeN_Coll`: `ft_80084104`.

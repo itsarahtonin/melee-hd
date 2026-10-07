@@ -215,7 +215,7 @@ impl Running<'_> {
         if !self.anim_frames_remaining(gobj) && !fp.x221C_b6 {
             if fp.ground_or_air == GA_AIR {
                 if fp.stamina_dead {
-                    unported_call("ftCo_80090780");
+                    self.enter_damage_fall(gobj);
                 } else if !self.damage_tech(gobj) {
                     self.enter_fall(gobj);
                 }
@@ -228,14 +228,7 @@ impl Running<'_> {
     /// `ftCo_DamageFly_Anim`: the tumble trail's timer, hitstun, then tumbling.
     #[doc(alias = "ftCo_DamageFly_Anim")]
     pub fn co_damage_fly_anim(&mut self, gobj: GObjId) {
-        // `inlineD0`: the knockback smoke's timer.
-        let fp = self.game.fighter_mut(gobj);
-        if fp.mv_i32(8) != 0 {
-            fp.set_mv_i32(8, fp.mv_i32(8).wrapping_sub(1));
-            if fp.mv_i32(8) == 0 {
-                unported_call("efAsync_Spawn");
-            }
-        }
+        self.knockback_smoke(gobj);
         self.damage_tick(gobj);
         let fp = self.game.fighter(gobj);
         if !self.anim_frames_remaining(gobj) && !fp.x221C_b6 && !self.damage_tech(gobj) {

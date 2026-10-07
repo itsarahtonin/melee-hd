@@ -3,13 +3,15 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::{self, Val, unported_call};
+use super::super::super::code::unported_call;
+use super::super::super::ef;
 use super::super::super::state::Running;
 use super::checks::KIND_KIRBY;
 use super::ids::ms;
 use super::jump::{FT_800881D8, FT_800887CC, FT_80088328, FT_80088770};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
+use crate::hsd::jobj::JObjId;
 use crate::mp::coll::LEFT_LEDGE_GRAB;
 use crate::vec::Vec3;
 
@@ -18,24 +20,31 @@ pub(super) const CLIFF_LEDGE_ID: usize = 0x0;
 const CLIFF_X4: usize = 0x4;
 pub(super) const CLIFF_X8: usize = 0x8;
 
-/// `efAsync_Spawn`: an effect (the effects' port).
-pub(super) const EF_ASYNC_SPAWN: u32 = 0x8006_76F0;
-
 impl Running<'_> {
-    /// Spawns an effect on the fighter, `efAsync_Spawn(gobj, &fp->x60C, 2, id, joint, pos)`
-    /// with no joint.
+    /// Spawns an effect for the fighter on its effect queue (`x60C`), `efAsync_Spawn`.
+    pub(super) fn fighter_effect(
+        &mut self,
+        gobj: GObjId,
+        kind: ef::SpawnKind,
+        id: i32,
+        joint: Option<JObjId>,
+        args: &[ef::Arg],
+    ) {
+        let f = self.game.fighter_id(gobj);
+        let mut head = self.game.fighters[f.0].x60C;
+        ef::queue(self, Some(gobj), &mut head, kind, id, joint, args);
+        self.game.fighters[f.0].x60C = head;
+    }
+
+    /// Spawns an effect at a place, with no joint: `efAsync_Spawn(gobj, &fp->x60C, 2, id,
+    /// NULL, &pos)`.
     pub(super) fn spawn_effect_at(&mut self, gobj: GObjId, id: i32, pos: Vec3) {
-        code::call(
-            self,
-            EF_ASYNC_SPAWN,
-            &[
-                Val::GObj(Some(gobj)),
-                Val::None,
-                Val::Int(2),
-                Val::Int(id),
-                Val::Int(0),
-                Val::Vec(pos),
-            ],
+        self.fighter_effect(
+            gobj,
+            ef::SpawnKind::PosOffset,
+            id,
+            None,
+            &[ef::Arg::Vec(pos)],
         );
     }
 

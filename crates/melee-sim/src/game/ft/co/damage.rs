@@ -3,6 +3,7 @@
 use gekko_fp as fp;
 
 use super::super::super::code::unported_call;
+use super::super::super::ef;
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
 use super::PAD_XY;
@@ -173,17 +174,67 @@ impl Running<'_> {
         self.enter_down_bound(gobj);
     }
 
+    /// The knockback smoke's timer, `inlineD0`: when it runs out, a puff along the knockback
+    /// (effect 1032 at the top) and the timer again by the speed.
+    pub(super) fn knockback_smoke(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        if fp.mv_i32(8) == 0 {
+            return;
+        }
+        fp.set_mv_i32(8, fp.mv_i32(8).wrapping_sub(1));
+        if fp.mv_i32(8) != 0 {
+            return;
+        }
+        let (x, y) = if fp.ground_or_air == GA_AIR {
+            (reg(fp.x8c_kb_vel.y), reg(fp.x8c_kb_vel.x))
+        } else {
+            let kb = reg(fp.xF0_ground_kb_vel);
+            let n = &fp.coll_data.floor.normal;
+            (fp::fmuls(fp::fneg(reg(n.x)), kb), fp::fmuls(reg(n.y), kb))
+        };
+        let trajectory = crate::math::atan2(mem(fp::fneg(y)), mem(x));
+        let f = self.game.fighter_id(gobj);
+        let joint = self.bones(f)[super::super::parts::TOP_N as usize].joint;
+        let args = [ef::Arg::Float(trajectory)];
+        self.fighter_effect(gobj, ef::SpawnKind::PosParam, 1032, joint, &args);
+        self.set_smoke_timer(gobj);
+    }
+
+    /// The knockback smoke's timer by the knockback's speed,
+    /// `ftCo_Damage_SetMv8FromKbThreshold` (`ftCommonData` x568 to x588).
+    #[doc(alias = "ftCo_Damage_SetMv8FromKbThreshold")]
+    pub fn set_smoke_timer(&mut self, gobj: GObjId) {
+        let c = self.common();
+        let t = |off: u32| reg(c.f32(off));
+        let fp = self.game.fighter(gobj);
+        let kb = if fp.ground_or_air == GA_AIR {
+            let k = &fp.x8c_kb_vel;
+            let sq = |v: f32| fp::fmuls(reg(v), reg(v));
+            reg(crate::math::sqrt(mem(fp::fadds(
+                sq(k.z),
+                fp::fadds(sq(k.x), sq(k.y)),
+            ))))
+        } else {
+            abs(reg(fp.xF0_ground_kb_vel))
+        };
+        let value = if kb < t(0x568) {
+            0
+        } else if kb < t(0x56C) || kb < t(0x570) {
+            c.i32(0x57C)
+        } else if kb < t(0x574) {
+            c.i32(0x580)
+        } else if kb < t(0x578) {
+            c.i32(0x584)
+        } else {
+            c.i32(0x588)
+        };
+        self.game.fighter_mut(gobj).set_mv_i32(8, value);
+    }
+
     /// `ftCo_DamageFlyRoll_Anim`: the knockback smoke, hitstun, then tumbling.
     #[doc(alias = "ftCo_DamageFlyRoll_Anim")]
     pub fn co_damage_fly_roll_anim(&mut self, gobj: GObjId) {
-        // `inlineD0`: the knockback smoke's timer.
-        let fp = self.game.fighter_mut(gobj);
-        if fp.mv_i32(8) != 0 {
-            fp.set_mv_i32(8, fp.mv_i32(8).wrapping_sub(1));
-            if fp.mv_i32(8) == 0 {
-                unported_call("efAsync_Spawn");
-            }
-        }
+        self.knockback_smoke(gobj);
         self.damage_tick(gobj);
         if !self.game.fighter(gobj).x221C_b6 {
             self.enter_damage_fall(gobj);

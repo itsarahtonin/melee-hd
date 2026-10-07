@@ -4,7 +4,7 @@
 //! run on both sides from the same state, and the whole state compared afterwards. The states'
 //! entries run directly from the same states.
 //!
-//! What the states reach in other parts of the port (a character's specials, sounds, effects,
+//! What the states reach in other parts of the port (a character's specials, a knockdown's effect,
 //! the crowd, the player library's statistics) stands in on both sides (`STUBS`), and the calls
 //! each side made to it are compared with their arguments.
 //!
@@ -51,13 +51,8 @@ fn dirs() -> Vec<String> {
 /// The code other parts of the port own, standing in on both sides.
 fn stubs() -> Vec<Stub> {
     let mut v: Vec<Stub> = [
-        // Effects.
-        "efAsync_Spawn",
         // A knockdown's impact effect.
         "ftCo_8009F834",
-        "efSync_Spawn",
-        "efLib_SetParamAlpha",
-        "efLib_DestroyAll",
         // The shield's and powershield's hit shapes.
         "ftColl_8007B1B8",
         "ftColl_CreateReflectHit",
