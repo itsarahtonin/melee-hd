@@ -738,7 +738,7 @@ pub fn queue_with(
     }
     let id = QueuedId(r.game.ef.queued.alloc(q));
     let w = &r.game.world;
-    if w.current_proc().is_some() && w.current_s_link < 9 {
+    if w.current_proc().is_some_and(|p| w.proc(p).s_link < 9) {
         r.game.ef.queued[id.0].next = *head;
         *head = Some(id);
         return;

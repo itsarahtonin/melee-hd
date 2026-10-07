@@ -15,8 +15,13 @@
 //!   --known local/replays/known/Game_20260531T183349.txt
 //! ```
 //!
-//! (`bf4` from `Game_20260531T175747.slp`.) `EFFECT_CALLS` names the directory, by default
-//! below; the tests skip without it.
+//! (`bf4` from `Game_20260531T175747.slp`), `fd4-start` with `CAPTURE_FUNCS=efLib_Init,...
+//! --fields 400`, and one directory per replay with other characters' effect files loaded
+//! (`luigi-mario`, `mewtwo`, `peach`, `pikachu`, `yl`, `CAPTURE_FUNCS=efSync_Spawn,
+//! efAsync_Spawn,efLib_Update --fields 4000`). `screen_captures` lists captures whose state
+//! the importer can't represent (fighters it doesn't model yet, a spawn inside a queue flush),
+//! which are kept elsewhere. `EFFECT_CALLS` names the directory, by default below; the tests
+//! skip without it.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::PathBuf;
@@ -151,6 +156,42 @@ fn queue_calls() {
     });
 }
 
+/// Deferred spawns made during processes of every priority around the 9 that decides whether
+/// a spawn waits (the running process's `s_link` changed).
+#[test]
+fn queue_priority_calls() {
+    each_dir_with(
+        "efAsync_Spawn",
+        "efAsync_Spawn",
+        &|call, i| {
+            let p = word(call, leaf_check::sym("HSD_GObj_CurrentInvokedProc"));
+            if p != 0 {
+                call.mem1[(p + 0xC - MEM1) as usize] = (6 + i % 6) as u8;
+            }
+        },
+        &|r, maps, call| {
+            let g = &call.regs.gpr;
+            let gobj = maps.gobjs.get(&g[3]).copied();
+            let f = queue_owner(maps, g[4]);
+            let kind = SpawnKind::from_u8(g[5] as u8).expect("a spawn kind");
+            let jobj = (g[7] != 0).then(|| maps.jobjs[&g[7]]);
+            let mut get = |i, k| decode(maps, call, 8, i, k);
+            let mut head = r.game.fighters[f.0].x60C;
+            ef::queue_with(
+                r,
+                gobj,
+                &mut head,
+                kind,
+                g[6] as i32,
+                jobj,
+                &mut Args::lazy(&mut get),
+            );
+            r.game.fighters[f.0].x60C = head;
+            Ret::Nothing
+        },
+    );
+}
+
 #[test]
 fn flush_calls() {
     each_dir("efAsync_QueueFlush", 1, &|r, maps, call| {
@@ -211,6 +252,18 @@ fn plain_ids() -> Vec<i32> {
     ]
 }
 
+/// The motion, command variable and action-state word (`mv` offset) the fighter-specific effect
+/// updates read, for the ids that set them: Mario's and Luigi's down special and Koopa's up
+/// special.
+fn special_state(gfx: i32) -> Option<(i32, usize, usize)> {
+    match gfx {
+        0x47C => Some((349, 3, 0xC)),
+        0x509 => Some((357, 3, 0xC)),
+        0x4DA => Some((359, 2, 0x10)),
+        _ => None,
+    }
+}
+
 /// `ftCo_800C0FCC`, the bury effect's update.
 const BURY: u32 = 0x800C_0FCC;
 
@@ -229,6 +282,8 @@ struct Synth<'a> {
     joints: &'a [(u32, JObjId)],
     at: Vec3,
     made: Vec<Arg>,
+    /// The float every float argument takes, for a sweep.
+    float: Option<f32>,
 }
 
 impl Synth<'_> {
@@ -244,9 +299,12 @@ impl Synth<'_> {
                 self.at.y + r.range(-5.0, 30.0),
                 self.at.z + r.range(-1.0, 1.0),
             )),
-            ArgKind::Float => Arg::Float(match r.below(4) {
+            ArgKind::Float if self.float.is_some() => Arg::Float(self.float.unwrap()),
+            ArgKind::Float => Arg::Float(match r.below(5) {
                 0 => -1.0,
                 1 => 1.0,
+                // Damage-like amounts, which some cases scale by.
+                2 => r.range(0.0, 150.0),
                 _ => r.range(-3.0, 3.0),
             }),
             ArgKind::Int => Arg::Int(if r.below(2) == 0 {
@@ -345,7 +403,14 @@ fn every_effect() {
         melee_sim::game::code::stubs::set(BURY, melee_sim::game::code::Val::None);
         for mode in MODES {
             set_fp_mode(mode);
-            for &gfx in &ids {
+            // Effect 0x3E8 scales by a fused multiply-add of its float (a damage amount):
+            // swept over the range it isn't clamped in.
+            let runs = ids.iter().flat_map(|&gfx| {
+                let sweep = (gfx == 0x3E8).then(|| (0..24).map(|k| Some(k as f32 * 1.37 + 0.11)));
+                std::iter::once((gfx, None))
+                    .chain(sweep.into_iter().flatten().map(move |f| (gfx, f)))
+            });
+            for (gfx, float) in runs {
                 let _ = melee_sim::game::code::stubs::take();
                 THEIR_BURY.with(|b| b.borrow_mut().clear());
                 let mut game = game.clone();
@@ -356,7 +421,18 @@ fn every_effect() {
                     joints: &joints,
                     at,
                     made: Vec::new(),
+                    float,
                 };
+                // The fighter-specific updates' cases run with their fighter in the state
+                // their updates look for: the special's motion, its command variable and its
+                // action-state word set, on both sides.
+                let special = special_state(gfx);
+                if let Some((motion, var, word_at)) = special {
+                    let f = game.fighter_mut(gobj);
+                    f.motion_id = motion;
+                    f.cmd_vars[var] = 1;
+                    f.mv[word_at..word_at + 4].copy_from_slice(&1u32.to_be_bytes());
+                }
                 let ours = catch_unwind(AssertUnwindSafe(|| {
                     let mut get = |_, kind| synth.arg(kind);
                     ef::spawn_with(
@@ -394,6 +470,12 @@ fn every_effect() {
                 };
                 // Their side: the same call, the arguments where the spawn reads them.
                 cap.call.load(&ctx);
+                if let Some((motion, var, word_at)) = special {
+                    let fp = ctx.read_u32(gobj_addr + 0x2C);
+                    ctx.write_u32(fp + 0x10, motion as u32);
+                    ctx.write_u32(fp + 0x2200 + 4 * var as u32, 1);
+                    ctx.write_u32(fp + 0x2340 + word_at as u32, 1);
+                }
                 let sp = cap.call.regs.gpr[1];
                 let mut scratch = sp - 0x4000;
                 ctx.regs.set_r(3, gfx as u32);
