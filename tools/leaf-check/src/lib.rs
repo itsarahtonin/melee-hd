@@ -356,3 +356,13 @@ pub fn stage_anim_roots(a: &melee_data::archive::Archive) -> (Vec<u32>, Vec<u32>
     }
     (anim, matanim)
 }
+
+/// Runs a captured call in the reference from the state it was saved in, and returns main
+/// memory afterwards.
+pub fn run_capture(ctx: &Ctx, call: &ssbm_rt::capture::Call) -> Vec<u8> {
+    call.load(ctx);
+    ctx.invoke(call.addr);
+    let mut out = vec![0; call.mem1.len()];
+    let _ = ctx.mem.read_bytes(0x8000_0000, &mut out);
+    out
+}

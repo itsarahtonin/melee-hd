@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 gekko-fp.workspace = true
+melee-capture = { path = "../capture" }
 melee-data.workspace = true
 melee-sim.workspace = true
 ssbm-disc.workspace = true

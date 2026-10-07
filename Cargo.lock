@@ -345,6 +345,7 @@ name = "leaf-check"
 version = "0.1.0"
 dependencies = [
  "gekko-fp",
+ "melee-capture",
  "melee-data",
  "melee-sim",
  "ssbm-disc",
