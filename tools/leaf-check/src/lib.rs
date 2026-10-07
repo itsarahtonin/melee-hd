@@ -4,6 +4,10 @@
 //! The ports run in ssbm-rs's runtime with the disc's `main.dol` loaded, so they find the
 //! constants and tables the original code reads. Tests need `SSBM_DISC` and skip without it.
 
+use gekko_fp::{FpMode, set_fp_mode};
+use melee_sim::mtx::Mtx34;
+use melee_sim::quat::Quat;
+use melee_sim::vec::Vec3;
 use ssbm_rt::Ctx;
 
 /// Where the reference's stack starts: MEM1 above everything the DOL loads.
@@ -144,4 +148,84 @@ pub fn write_f32s(ctx: &Ctx, addr: u32, values: &[f32]) {
 
 pub fn read_f32s(ctx: &Ctx, addr: u32, n: usize) -> Vec<u32> {
     (0..n).map(|i| ctx.read_u32(addr + 4 * i as u32)).collect()
+}
+
+/// A stream of floats for vectors, matrices and quaternions: mostly values in a game-like
+/// range, with special values and random bit patterns mixed in.
+pub struct Floats {
+    values: Vec<f32>,
+    at: usize,
+}
+
+impl Floats {
+    pub fn new(range: f32) -> Self {
+        Floats {
+            values: inputs(range, 200_000),
+            at: 0,
+        }
+    }
+
+    #[allow(clippy::should_implement_trait)]
+    pub fn next(&mut self) -> f32 {
+        self.at = (self.at + 7) % self.values.len();
+        self.values[self.at]
+    }
+
+    pub fn vec(&mut self) -> Vec3 {
+        Vec3::new(self.next(), self.next(), self.next())
+    }
+
+    pub fn mtx(&mut self) -> Mtx34 {
+        let mut m = Mtx34::default();
+        for row in &mut m.m {
+            for v in row {
+                *v = self.next();
+            }
+        }
+        m
+    }
+
+    pub fn quat(&mut self) -> Quat {
+        Quat::new(self.next(), self.next(), self.next(), self.next())
+    }
+}
+
+pub fn put_vec(ctx: &Ctx, addr: u32, v: Vec3) {
+    write_f32s(ctx, addr, &[v.x, v.y, v.z]);
+}
+
+pub fn put_mtx(ctx: &Ctx, addr: u32, m: &Mtx34) {
+    write_f32s(ctx, addr, m.m.as_flattened());
+}
+
+pub fn put_quat(ctx: &Ctx, addr: u32, q: Quat) {
+    write_f32s(ctx, addr, &[q.x, q.y, q.z, q.w]);
+}
+
+pub fn vec_bits(v: Vec3) -> Vec<u32> {
+    vec![v.x.to_bits(), v.y.to_bits(), v.z.to_bits()]
+}
+
+pub fn mtx_bits(m: &Mtx34) -> Vec<u32> {
+    m.m.as_flattened().iter().map(|v| v.to_bits()).collect()
+}
+
+pub fn quat_bits(q: Quat) -> Vec<u32> {
+    vec![q.x.to_bits(), q.y.to_bits(), q.z.to_bits(), q.w.to_bits()]
+}
+
+/// Both float modes the comparisons run in.
+pub const MODES: [FpMode; 2] = [FpMode::Hardware, FpMode::Slippi];
+
+/// Runs `check` over `n` cases in each float mode, with a fresh stream of floats in `range`.
+pub fn each_mode(n: usize, range: f32, mut check: impl FnMut(&Ctx, &mut Floats, FpMode)) {
+    let Some(ctx) = reference() else { return };
+    for mode in MODES {
+        set_fp_mode(mode);
+        let mut floats = Floats::new(range);
+        for _ in 0..n {
+            check(&ctx, &mut floats, mode);
+        }
+    }
+    set_fp_mode(FpMode::Hardware);
 }

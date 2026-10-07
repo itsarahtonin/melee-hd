@@ -2,7 +2,10 @@
 //! ssbm-rs's ports, bit for bit, in both float modes.
 
 use gekko_fp::{FpMode, set_fp_mode};
-use leaf_check::{SCRATCH, arg, bits, handle, inputs, read_f32s, reference, write_f32s};
+use leaf_check::{
+    SCRATCH, arg, bits, each_mode, handle, inputs, mtx_bits, read_f32s, reference, write_f32s,
+};
+use melee_sim::mtx::{Axis, Mtx34};
 use melee_sim::{math, vec::Vec3};
 use ssbm_rt::Ctx;
 use ssbm_types::fns;
@@ -125,4 +128,84 @@ fn lbvector_helpers_match() {
         }
     }
     set_fp_mode(FpMode::Hardware);
+}
+
+#[test]
+fn rotations_match() {
+    // lbVector_Rotate's axis numbers; every caller passes one of these.
+    let axes = [(1, Axis::X), (2, Axis::Y), (4, Axis::Z)];
+    each_mode(40_000, 20.0, |ctx, f, mode| {
+        let (a, axis, angles) = (f.vec(), f.vec(), f.vec());
+        let angle = f.next();
+        let case = (a, axis, angles, angle, mode);
+        for (number, ax) in axes {
+            put(ctx, A, a);
+            fns::lbVector_Rotate(ctx, v(ctx, A), number, arg(angle));
+            let mut ours = a;
+            ours.rotate(ax, angle);
+            assert_eq!(b3(ours), got(ctx, A), "Rotate {number} {case:?}");
+        }
+        put(ctx, A, a);
+        put(ctx, B, axis);
+        fns::lbVector_RotateAboutUnitAxis(ctx, v(ctx, A), v(ctx, B), arg(angle));
+        let mut ours = a;
+        ours.rotate_about(axis, angle);
+        assert_eq!(b3(ours), got(ctx, A), "RotateAboutUnitAxis {case:?}");
+        // The same about a unit axis, as callers pass.
+        let unit = axis.sdk_normalize();
+        put(ctx, A, a);
+        put(ctx, B, unit);
+        fns::lbVector_RotateAboutUnitAxis(ctx, v(ctx, A), v(ctx, B), arg(angle));
+        let mut ours = a;
+        ours.rotate_about(unit, angle);
+        assert_eq!(b3(ours), got(ctx, A), "RotateAboutUnitAxis unit {case:?}");
+        put(ctx, A, a);
+        put(ctx, C, angles);
+        fns::lbVector_ApplyEulerRotation(ctx, v(ctx, A), v(ctx, C));
+        let mut ours = a;
+        ours.rotate_euler(angles);
+        assert_eq!(b3(ours), got(ctx, A), "ApplyEulerRotation {case:?}");
+        write_f32s(ctx, C, &[angles.x, angles.y, angles.z, f.next()]);
+        write_f32s(ctx, OUT, &[f32::from_bits(0xDEAD_BEEF); 12]);
+        fns::lbVector_CreateEulerMatrix(ctx, handle(ctx, OUT), handle(ctx, C));
+        assert_eq!(
+            mtx_bits(&Mtx34::from_euler_approx(angles)),
+            read_f32s(ctx, OUT, 12),
+            "CreateEulerMatrix {case:?}"
+        );
+    });
+}
+
+#[test]
+fn curves_and_bases_match() {
+    each_mode(40_000, 2.0, |ctx, f, mode| {
+        let p = [f.vec(), f.vec(), f.vec()];
+        let t = f.next();
+        let case = (p, t, mode);
+        for (i, point) in p.iter().enumerate() {
+            put(ctx, A + 12 * i as u32, *point);
+        }
+        fns::lbVector_8000DE38(ctx, v(ctx, A), v(ctx, OUT), arg(t));
+        assert_eq!(
+            b3(Vec3::quadratic(p, t)),
+            got(ctx, OUT),
+            "8000DE38 {case:?}"
+        );
+        let [a, b, c] = p;
+        put(ctx, A, a);
+        put(ctx, B, b);
+        put(ctx, C, c);
+        fns::lbVector_EulerAnglesFromONB(ctx, v(ctx, OUT), v(ctx, A), v(ctx, B), v(ctx, C));
+        assert_eq!(
+            b3(Vec3::euler_angles_from_basis(a, b, c)),
+            got(ctx, OUT),
+            "EulerAnglesFromONB {case:?}"
+        );
+        fns::lbVector_EulerAnglesFromPartialONB(ctx, v(ctx, OUT), v(ctx, A), v(ctx, C));
+        assert_eq!(
+            b3(Vec3::euler_angles_from_partial_basis(a, c)),
+            got(ctx, OUT),
+            "EulerAnglesFromPartialONB {case:?}"
+        );
+    });
 }

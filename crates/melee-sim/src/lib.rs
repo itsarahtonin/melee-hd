@@ -13,5 +13,6 @@ pub mod math;
 pub mod mtx;
 mod pairs;
 pub mod ppc;
+pub mod quat;
 pub mod rng;
 pub mod vec;
