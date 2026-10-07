@@ -196,14 +196,14 @@ pub fn sound(r: &mut Running, gobj: GObjId) {
                 super::item::play_sfx1,
                 super::item::play_sfx2,
             ];
-            f[op as usize](r.game, gobj, id, pan, volume);
+            f[op as usize](r, gobj, id, pan, volume);
         }
         10 | 11 => {
             skip(r, gobj, 1);
             if op == 10 {
-                super::item::stop_sfx1(r.game, gobj);
+                super::item::stop_sfx1(r, gobj);
             } else {
-                super::item::stop_sfx2(r.game, gobj);
+                super::item::stop_sfx2(r, gobj);
             }
         }
         _ => {}

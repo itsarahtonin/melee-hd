@@ -116,11 +116,11 @@ pub fn tick_lifetime(game: &mut Game, gobj: GObjId) -> bool {
 
 /// Plays the pickup sound, `it_80273168`.
 #[doc(alias = "it_80273168")]
-pub fn pickup_sfx(game: &mut Game, gobj: GObjId) {
-    let ip = item(game, gobj);
+pub fn pickup_sfx(r: &mut Running, gobj: GObjId) {
+    let ip = item(r.game, gobj);
     if !ip.xDCD_flag.x0.b2 {
         let sfx = ip.xD70;
-        super::item::play_sfx(game, gobj, sfx, 0x7F, 0x40);
+        super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
     }
 }
 
@@ -131,7 +131,7 @@ pub fn destroy_effect(r: &mut Running, gobj: GObjId, gfx: i32, sfx: i32) {
         super::effect::spawn_simple(r, gobj, gfx);
     }
     if !item(r.game, gobj).xDCD_flag.x0.b2 {
-        play_sfx(r.game, gobj, sfx);
+        play_sfx(r, gobj, sfx);
         if sfx == 0x12F {
             code::unported_call("lbAudioAx_80024DC4");
         }
@@ -140,9 +140,9 @@ pub fn destroy_effect(r: &mut Running, gobj: GObjId, gfx: i32, sfx: i32) {
 
 /// Plays a sound unless the item is quiet, `it_802732E4`.
 #[doc(alias = "it_802732E4")]
-pub fn play_sfx(game: &mut Game, gobj: GObjId, sfx: i32) {
-    if !item(game, gobj).xDCD_flag.x0.b2 {
-        super::item::play_sfx(game, gobj, sfx, 0x7F, 0x40);
+pub fn play_sfx(r: &mut Running, gobj: GObjId, sfx: i32) {
+    if !item(r.game, gobj).xDCD_flag.x0.b2 {
+        super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
     }
 }
 

@@ -111,10 +111,10 @@ pub fn clear_from_owner(game: &mut Game, owner: GObjId) {
 }
 
 /// Plays the Fox or Falco version of a sound (`itFoxBlaster_PlaySFX`).
-pub fn play_kind_sfx(game: &mut Game, gobj: GObjId, fox: i32, falco: i32) {
-    match item(game, gobj).kind {
-        FOX_BLASTER | 0x8C => play_sfx(game, gobj, fox, 0x7F, 0x40),
-        FALCO_BLASTER | 0x8D => play_sfx(game, gobj, falco, 0x7F, 0x40),
+pub fn play_kind_sfx(r: &mut Running, gobj: GObjId, fox: i32, falco: i32) {
+    match item(r.game, gobj).kind {
+        FOX_BLASTER | 0x8C => play_sfx(r, gobj, fox, 0x7F, 0x40),
+        FALCO_BLASTER | 0x8D => play_sfx(r, gobj, falco, 0x7F, 0x40),
         _ => {}
     }
 }
@@ -122,16 +122,18 @@ pub fn play_kind_sfx(game: &mut Game, gobj: GObjId, fox: i32, falco: i32) {
 /// Shows or hides the blaster's model with the owner's script, `it_802ADDD0`, with a sound
 /// when it's put away.
 #[doc(alias = "it_802ADDD0")]
-pub fn set_visible(game: &mut Game, gobj: GObjId, visibility: i32) {
+pub fn set_visible(r: &mut Running, gobj: GObjId, visibility: i32) {
+    let game = &mut *r.game;
     let root = jobj_of(game, gobj);
     let child = root.and_then(|j| game.objs.jobjs[j].child);
     let v = item_mut(game, gobj).xDD4_itemVar.fox_blaster();
     if v.set_sfx_var2 != visibility {
         v.set_sfx_var2 = visibility;
         if visibility == 2 {
-            play_kind_sfx(game, gobj, 0x1AE14, 0x18700);
+            play_kind_sfx(r, gobj, 0x1AE14, 0x18700);
         }
     }
+    let game = &mut *r.game;
     match item_mut(game, gobj).xDD4_itemVar.fox_blaster().set_sfx_var2 {
         0 | 2 => jobj::set_flags_all(&mut game.objs.jobjs, child, jobj::HIDDEN),
         1 => jobj::clear_flags_all(&mut game.objs.jobjs, child, jobj::HIDDEN),
@@ -209,14 +211,15 @@ pub fn recoil(game: &mut Game, gobj: GObjId) {
 
 /// Starts the barrel's pulse with the first shot, `it_802AE538`.
 #[doc(alias = "it_802AE538")]
-pub fn start_pulse(game: &mut Game, gobj: GObjId) {
+pub fn start_pulse(r: &mut Running, gobj: GObjId) {
+    let game = &mut *r.game;
     let v = item_mut(game, gobj).xDD4_itemVar.fox_blaster();
     if v.xDD8 != 4 {
         v.xDD8 = 1;
         v.xDDC = 1;
         if v.xDE0 == 0 {
-            play_kind_sfx(game, gobj, 0x1AE05, 0x186F1);
-            item_mut(game, gobj).xDD4_itemVar.fox_blaster().xDE0 = 1;
+            play_kind_sfx(r, gobj, 0x1AE05, 0x186F1);
+            item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().xDE0 = 1;
         }
     }
 }

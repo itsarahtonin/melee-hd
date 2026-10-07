@@ -253,11 +253,13 @@ fn check_calls(source: &str, func: &str, prep: &Prep<'_>, ours: &Ours) {
             let data = DataMap {
                 loaded: find_archives_in(&env.index, &cap.call.mem1, &mut archives),
             };
+            let bank = melee_capture::audio::find_bank(&cap.call.mem1, &mut archives);
             let mut imp = Importer::new(&cap, &data);
             imp.world();
             imp.stage();
             imp.ids();
             imp.items();
+            imp.audio(bank);
             let Importer { mut game, maps, .. } = imp;
             let args = Args {
                 cap: &cap,
@@ -294,6 +296,7 @@ fn check_calls(source: &str, func: &str, prep: &Prep<'_>, ours: &Ours) {
             cmp.stage();
             cmp.ids();
             cmp.items();
+            cmp.audio();
             match ret {
                 Ret::None => {}
                 Ret::Bool(b) => cmp.diffs_check("r3", u32::from(b), r3),
@@ -613,7 +616,7 @@ fn on_spawned() {
 fn play_sfx() {
     check("Item_8026AE84", &|r, a| {
         let g = a.item_gobj(0);
-        item::play_sfx(r.game, g, a.int(1) as i32, a.int(2) as u8, a.int(3) as u8);
+        item::play_sfx(r, g, a.int(1) as i32, a.int(2) as u8, a.int(3) as u8);
         Ret::None
     });
 }
@@ -622,7 +625,7 @@ fn play_sfx() {
 fn stop_sfx2() {
     check("Item_8026B074", &|r, a| {
         let g = a.item_gobj(0);
-        item::stop_sfx2(r.game, g);
+        item::stop_sfx2(r, g);
         Ret::None
     });
 }
@@ -902,7 +905,7 @@ fn tick_lifetime() {
 
 #[test]
 fn pickup_sfx() {
-    check_game("it_80273168", lib2725::pickup_sfx);
+    check_proc("it_80273168", lib2725::pickup_sfx);
 }
 
 #[test]
@@ -923,7 +926,7 @@ fn destroy_effect() {
 fn play_sfx_unless_quiet() {
     check("it_802732E4", &|r, a| {
         let g = a.item_gobj(0);
-        lib2725::play_sfx(r.game, g, a.int(1) as i32);
+        lib2725::play_sfx(r, g, a.int(1) as i32);
         Ret::None
     });
 }
@@ -1225,7 +1228,7 @@ fn blaster_reset() {
 fn blaster_set_visible() {
     check("it_802ADDD0", &|r, a| {
         if a.int(0) != 0 {
-            foxblaster::set_visible(r.game, a.gobj(0), a.int(1) as i32);
+            foxblaster::set_visible(r, a.gobj(0), a.int(1) as i32);
         }
         Ret::None
     });
@@ -1248,7 +1251,7 @@ fn blaster_on_shot_inner() {
 
 #[test]
 fn blaster_start_pulse() {
-    check_game("it_802AE538", foxblaster::start_pulse);
+    check_proc("it_802AE538", foxblaster::start_pulse);
 }
 
 #[test]
@@ -1364,24 +1367,46 @@ fn sfx_args(sfx: u32) -> impl Fn(&mut Call) -> bool {
     }
 }
 
-/// The silent sound and the slot-stopping one: the item sound functions' paths that play
-/// nothing (playing waits for the audio driver's port).
+/// The silent sound and the slot-stopping one, the item sound functions' paths that play
+/// nothing.
 const SFX_SILENT: u32 = 0x83D60;
 const SFX_STOP: u32 = 0x83D61;
 
 #[test]
 fn play_sfx_silent() {
     check_on(TICKS, "Item_8026AE84", &sfx_args(SFX_SILENT), &|r, a| {
-        item::play_sfx(r.game, a.item_gobj(0), a.int(1) as i32, 0x7F, 0x40);
+        item::play_sfx(r, a.item_gobj(0), a.int(1) as i32, 0x7F, 0x40);
+        Ret::None
+    });
+}
+
+/// A sound of the shared bank, through the audio driver.
+#[test]
+fn play_sfx_sound() {
+    check_on(TICKS, "Item_8026AE84", &sfx_args(0x96), &|r, a| {
+        item::play_sfx(
+            r,
+            a.item_gobj(0),
+            a.int(1) as i32,
+            a.int(2) as u8,
+            a.int(3) as u8,
+        );
         Ret::None
     });
 }
 
 #[test]
 fn play_sfx1() {
-    for sfx in [SFX_SILENT, SFX_STOP] {
+    // The silent and stop ids, and a sound of the shared bank.
+    for sfx in [SFX_SILENT, SFX_STOP, 0x96] {
         check_on(TICKS, "Item_8026AF0C", &sfx_args(sfx), &|r, a| {
-            item::play_sfx1(r.game, a.item_gobj(0), a.int(1) as i32, 0x7F, 0x40);
+            item::play_sfx1(
+                r,
+                a.item_gobj(0),
+                a.int(1) as i32,
+                a.int(2) as u8,
+                a.int(3) as u8,
+            );
             Ret::None
         });
     }
@@ -1389,9 +1414,15 @@ fn play_sfx1() {
 
 #[test]
 fn play_sfx2() {
-    for sfx in [SFX_SILENT, SFX_STOP] {
+    for sfx in [SFX_SILENT, SFX_STOP, 0x96] {
         check_on(TICKS, "Item_8026AFA0", &sfx_args(sfx), &|r, a| {
-            item::play_sfx2(r.game, a.item_gobj(0), a.int(1) as i32, 0x7F, 0x40);
+            item::play_sfx2(
+                r,
+                a.item_gobj(0),
+                a.int(1) as i32,
+                a.int(2) as u8,
+                a.int(3) as u8,
+            );
             Ret::None
         });
     }
@@ -1400,7 +1431,7 @@ fn play_sfx2() {
 #[test]
 fn stop_sfx1() {
     check_on(TICKS, "Item_8026B034", &pass_item, &|r, a| {
-        item::stop_sfx1(r.game, a.item_gobj(0));
+        item::stop_sfx1(r, a.item_gobj(0));
         Ret::None
     });
 }

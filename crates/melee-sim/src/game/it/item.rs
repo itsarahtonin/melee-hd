@@ -870,7 +870,7 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
         }
     }
     if flags & SFX_PRESERVE == 0 {
-        stop_sfx2(r.game, gobj);
+        stop_sfx2(r, gobj);
     }
     apply_facing(r.game, gobj, model);
     {
@@ -1574,86 +1574,96 @@ const SFX_STOP: i32 = 0x83D61;
 /// A sound slot without a sound (the audio driver's handles are never -1).
 pub const NO_SFX: i32 = -1;
 
-/// The audio driver's voice bookkeeping is simulation state that feat/audio ports: until it
-/// lands, playing or stopping a sound stops the simulation.
-fn audio(name: &str) -> ! {
-    code::unported_call(name)
-}
-
-/// Plays a sound the item keeps only in `xD6C`, `Item_8026AE84`.
+/// Plays a sound the item keeps only in `xD6C`, `Item_8026AE84`. (The original passes its
+/// pan and volume to `lbAudioAx_800237A8` as volume and pan.)
 #[doc(alias = "Item_8026AE84")]
-pub fn play_sfx(_game: &mut Game, _gobj: GObjId, sfx: i32, _pan: u8, _volume: u8) {
-    if sfx != SFX_SILENT {
-        audio("lbAudioAx_800237A8");
+pub fn play_sfx(r: &mut Running, gobj: GObjId, sfx: i32, pan: u8, volume: u8) {
+    if sfx == SFX_SILENT {
+        return;
     }
+    let id = if sfx != SFX_STOP {
+        r.game.audio.lb.kirby_voice(sfx)
+    } else {
+        SFX_SILENT
+    };
+    let h = r.sfx_play(id, pan.into(), volume.into());
+    item_mut(r.game, gobj).xD6C = h;
 }
 
 /// Plays a sound in the item's first slot, `Item_8026AF0C`, stopping the one there.
 #[doc(alias = "Item_8026AF0C")]
-pub fn play_sfx1(game: &mut Game, gobj: GObjId, sfx: i32, _pan: u8, _volume: u8) {
+pub fn play_sfx1(r: &mut Running, gobj: GObjId, sfx: i32, pan: u8, volume: u8) {
     if sfx == SFX_SILENT {
         return;
     }
     if sfx == SFX_STOP {
-        stop_sfx1(game, gobj);
+        stop_sfx1(r, gobj);
         return;
     }
-    if super::item(game, gobj).sfx_unk1 != NO_SFX {
-        audio("lbAudioAx_800236B8");
+    let old = super::item(r.game, gobj).sfx_unk1;
+    if old != NO_SFX {
+        r.sfx_stop(old);
     }
-    audio("lbAudioAx_800237A8");
+    let id = r.game.audio.lb.kirby_voice(sfx);
+    let h = r.sfx_play(id, pan.into(), volume.into());
+    item_mut(r.game, gobj).sfx_unk1 = h;
 }
 
 /// Plays a sound in the item's second slot, `Item_8026AFA0`, stopping the one there.
 #[doc(alias = "Item_8026AFA0")]
-pub fn play_sfx2(game: &mut Game, gobj: GObjId, sfx: i32, _pan: u8, _volume: u8) {
+pub fn play_sfx2(r: &mut Running, gobj: GObjId, sfx: i32, pan: u8, volume: u8) {
     if sfx == SFX_SILENT {
         return;
     }
     if sfx == SFX_STOP {
-        stop_sfx2(game, gobj);
+        stop_sfx2(r, gobj);
         return;
     }
-    if super::item(game, gobj).sfx_unk2 != NO_SFX {
-        audio("lbAudioAx_800236B8");
+    let old = super::item(r.game, gobj).sfx_unk2;
+    if old != NO_SFX {
+        r.sfx_stop(old);
     }
-    audio("lbAudioAx_800237A8");
+    let id = r.game.audio.lb.kirby_voice(sfx);
+    let h = r.sfx_play(id, pan.into(), volume.into());
+    item_mut(r.game, gobj).sfx_unk2 = h;
 }
 
 /// Stops the sound in the item's first slot, `Item_8026B034`.
 #[doc(alias = "Item_8026B034")]
-pub fn stop_sfx1(game: &mut Game, gobj: GObjId) {
-    if super::item(game, gobj).sfx_unk1 != NO_SFX {
-        audio("lbAudioAx_800236B8");
+pub fn stop_sfx1(r: &mut Running, gobj: GObjId) {
+    let old = super::item(r.game, gobj).sfx_unk1;
+    if old != NO_SFX {
+        r.sfx_stop(old);
     }
-    item_mut(game, gobj).sfx_unk1 = NO_SFX;
+    item_mut(r.game, gobj).sfx_unk1 = NO_SFX;
 }
 
 /// Stops the sound in the item's second slot, `Item_8026B074`.
 #[doc(alias = "Item_8026B074")]
-pub fn stop_sfx2(game: &mut Game, gobj: GObjId) {
-    if super::item(game, gobj).sfx_unk2 != NO_SFX {
-        audio("lbAudioAx_800236B8");
+pub fn stop_sfx2(r: &mut Running, gobj: GObjId) {
+    let old = super::item(r.game, gobj).sfx_unk2;
+    if old != NO_SFX {
+        r.sfx_stop(old);
     }
-    item_mut(game, gobj).sfx_unk2 = NO_SFX;
+    item_mut(r.game, gobj).sfx_unk2 = NO_SFX;
 }
 
 /// Stops every sound the item made (`Item_8026B0B4`): it starts by asking the audio driver to
 /// stop the GObj's sounds (`lbAudioAx_80026510`).
 pub fn stop_all_sfx(_game: &mut Game, _gobj: GObjId) {
-    audio("lbAudioAx_80026510");
+    code::unported_call("lbAudioAx_80026510");
 }
 
 /// A fighter takes the item in hand at its part `part`, `Item_8026AB54`: the pickup sound, the
 /// item held, and the kind's `picked_up` callback.
 #[doc(alias = "Item_8026AB54")]
 pub fn pick_up(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
-    lib2725::pickup_sfx(r.game, gobj);
+    lib2725::pickup_sfx(r, gobj);
     hold(r, gobj, holder, part);
     if let Some(cb) = logic(r.game, gobj).picked_up {
         call(r, gobj, cb);
     }
-    stop_sfx2(r.game, gobj);
+    stop_sfx2(r, gobj);
 }
 
 /// Puts the item in a fighter's hand, `it_802742F4`: its model reset, its holder and team

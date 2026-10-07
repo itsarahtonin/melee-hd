@@ -500,12 +500,17 @@ fn check_calls_stubbed(
 }
 
 /// Imports a capture's whole state.
-fn import(cap: &Capture, data: &DataMap) -> (melee_sim::game::state::Game, Maps, Vec<String>) {
+fn import(
+    cap: &Capture,
+    data: &DataMap,
+    bank: Option<melee_data::archive::ArchiveId>,
+) -> (melee_sim::game::state::Game, Maps, Vec<String>) {
     let mut imp = Importer::new(cap, data);
     imp.world();
     imp.stage();
     imp.ids();
     imp.match_state();
+    imp.audio(bank);
     let Importer {
         game,
         maps,
@@ -527,6 +532,7 @@ fn compare(
     cmp.stage();
     cmp.ids();
     cmp.match_state();
+    cmp.audio();
     cmp.diffs
 }
 
@@ -566,6 +572,7 @@ fn check_runs(
         let data = DataMap {
             loaded: find_archives_in(disc, &original.call.mem1, &mut archives),
         };
+        let bank = melee_capture::audio::find_bank(&original.call.mem1, &mut archives);
         let copies = if n < FUZZED_CAPTURES { variants } else { 0 };
         for variant in 0..=copies {
             let perturbed;
@@ -585,7 +592,7 @@ fn check_runs(
                 set_fp_mode(mode);
                 // A state the importer can't take (a menu's animations copied into the heap,
                 // a boot state's stale pointers) is skipped and counted.
-                let imported = catch_unwind(AssertUnwindSafe(|| import(cap, &data)));
+                let imported = catch_unwind(AssertUnwindSafe(|| import(cap, &data, bank)));
                 let Ok((mut game, maps, _)) = imported else {
                     if variant == 0 && mode == FpMode::Hardware {
                         skipped.push(path.file_name().unwrap().to_string_lossy().into_owned());
@@ -691,10 +698,18 @@ fn check_runs(
                         _ => {}
                     }
                 }
+                // An audio call melee-sim hands the frontend unported (`Event::Audio`: the
+                // music's pauses and stops, the crowd) changes the original's audio state as
+                // an unported callee would; the audio state is compared where none ran.
+                let unported_audio = game
+                    .events
+                    .iter()
+                    .any(|e| matches!(e, melee_sim::game::state::Event::Audio { .. }));
                 diffs.extend(
                     compare(&after, &data, &game, maps)
                         .into_iter()
-                        .filter(|d| !before.contains(d)),
+                        .filter(|d| !before.contains(d))
+                        .filter(|d| !(unported_audio && d.starts_with("audio: "))),
                 );
                 for d in diffs.iter().take(20) {
                     eprintln!("  {d}");
