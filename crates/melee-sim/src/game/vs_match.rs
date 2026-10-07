@@ -227,12 +227,17 @@ impl Match {
         let mut data = Archives::default();
         // `lb_80014534`: the rumble scripts, then the match's own files in the order its
         // setup loads them.
-        let _rumble = data.add(load("LbRb.dat"));
+        let rumble = data.add(load("LbRb.dat"));
+        let table = data.get(rumble).public("lbRumbleData");
         let files = vs::MatchArchives {
             pdpm: data.add(load("PdPm.dat")),
             gm_pause: data.add(load("GmPause.usd")),
         };
         let mut m = Match { game, data };
+        m.game.rumble_data = table.map(|offset| melee_data::archive::DataRef {
+            archive: rumble,
+            offset,
+        });
         let mut r = m.running();
         init_scene(&mut r);
         r.game.gm.on_frame = Some(CodeRef(vs::ON_FRAME));

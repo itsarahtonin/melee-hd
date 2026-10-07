@@ -6,7 +6,7 @@ use gekko_fp as fp;
 
 use super::super::code::unported_call;
 use super::super::handles::FighterId;
-use super::super::state::{Event, Running};
+use super::super::state::Running;
 use super::colanim::Overlay;
 use super::common::{FIGHTER_P_LINK, GA_AIR};
 use super::sound::Track;
@@ -649,13 +649,26 @@ impl Running<'_> {
             && !fp.is_sleeping
             && !fp.stamina_dead
         {
-            self.game.events.push(Event::RumbleAdd {
-                port: fp.pad_port,
-                id: kind as i32 + 2,
-                kind: kind as i32,
-                frames: if frames != 0 { frames as i32 } else { -2 },
-            });
+            let port = fp.pad_port;
+            self.rumble_start(port, kind as i32 + 2, kind as i32, frames as i32);
         }
+    }
+
+    /// Starts rumble pattern `kind` on `port` with `id`, for `frames` (0: the pattern's own),
+    /// with the priority `LbRb.dat`'s table gives it, `lb_80014574`. The pad library's rumble
+    /// is simulation state; its motors reach the frontend through the poll's requests.
+    #[doc(alias = "lb_80014574")]
+    pub fn rumble_start(&mut self, port: u8, id: i32, kind: i32, frames: i32) {
+        use crate::input::rumble::Script;
+        let table = self.game.rumble_data.expect("LbRb.dat's lbRumbleData");
+        let entry = table.at(8 * kind as u32);
+        let script = self.data.ptr(entry).expect("a rumble pattern's script");
+        let pri = self.data.u8(entry.at(4));
+        let frame = if frames != 0 { frames } else { -2 };
+        self.game
+            .pads
+            .rumble
+            .add(port, id as u32, frame, pri, Script::Data(script));
     }
 
     /// Takes the fighter into the air as falling off something, `ftCommon_8007D5D4`.

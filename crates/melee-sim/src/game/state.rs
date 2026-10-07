@@ -211,6 +211,8 @@ pub struct Game {
     pub playback: Option<super::playback::Playback>,
     /// UCF's pad buffer (with [`Rules::ucf`]).
     pub ucf: super::ucf::Pads,
+    /// The rumble patterns by kind (`lb_804D63C0`, `LbRb.dat`'s `lbRumbleData`).
+    pub rumble_data: Option<melee_data::archive::DataRef>,
 }
 
 /// The game as the scheduler's host for one call: the state and the game data it reads.
