@@ -15,7 +15,7 @@ The original runs everything in one address space: joints, display objects, mate
 
 ## The object state
 
-`hsd::Objects` holds every HSD pool (FObjs, AObjs, joints, references, display objects, materials, textures, shapes) and the HSD globals that point into them (the ID table, the current joint, the random seed). The original's objects reach each other freely: an animation can bind a joint, a joint owns display objects and references, a shape references the joints it is skinned to, and an update function can do anything mid-animation (a joint's particle event spawns an effect that loads joints and animations). So functions that cross object types take `&mut Objects`, and animation passes it to update functions with no borrow held across the call.
+`hsd::Objects` holds every HSD pool (FObjs, AObjs, joints, references, display objects, materials, textures, shapes, world positions, cameras, lights, fog) and the HSD globals that point into them (the ID table, the current joint, the current lights, the random seed). The original's objects reach each other freely: an animation can bind a joint, a joint owns display objects and references, a shape references the joints it is skinned to, and an update function can do anything mid-animation (a joint's particle event spawns an effect that loads joints and animations). So functions that cross object types take `&mut Objects`, and animation passes it to update functions with no borrow held across the call.
 
 Reference counts follow the original's: a joint stays alive while shapes, constraints or bindings refer to it, so a removal can leave joints for their last reference to free, exactly where the original does.
 
