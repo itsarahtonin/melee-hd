@@ -179,3 +179,4 @@ mpLib_8004D164	Returns mplib's collision data global; melee-sim's mp::Geometry h
 mpGetGroundCollVtx	Returns mplib's vertex array global; melee-sim's mp::Geometry holds it as a field.
 mpGetGroundCollLine	Returns mplib's line array global; melee-sim's mp::Geometry holds it as a field.
 mpGetGroundCollJoint	Returns mplib's joint array global; melee-sim's mp::Geometry holds it as a field.
+psInitDataBankLocate	Relocates an effect bank's offsets in loaded data and fixes each command list's draw-order bits; melee-sim resolves bank offsets as it reads them and applies the fix to every kind it reads (hsd::particle::Bank, CmdList::kind).

@@ -1,17 +1,21 @@
 //! HAL's system library (sysdolphin): object pools, the GObj scheduler, animation, joints,
-//! display objects, matrices, splines and expression bytecode.
+//! display objects, matrices, splines, expression bytecode and particles.
 
 pub mod aobj;
+pub mod appsrt;
 pub mod bytecode;
 pub mod dobj;
 pub mod fobj;
+pub mod generator;
 pub mod gobj;
 pub mod id;
 pub mod jobj;
 pub mod list;
 pub mod mtx;
+pub mod particle;
 pub mod pobj;
 pub mod pool;
+pub mod psdisp;
 pub mod robj;
 pub mod spline;
 
@@ -33,6 +37,12 @@ pub struct Objects {
     /// they were loaded from.
     pub ids: id::IdTable<DataRef, jobj::JObjId>,
     pub jobj: jobj::Globals,
+    /// The particle system: particles and effect banks, generators, their app-SRTs, and the
+    /// display pass's sorting state.
+    pub particles: particle::Particles,
+    pub generators: generator::Generators,
+    pub app_srts: appsrt::AppSrts,
+    pub psdisp: psdisp::Globals,
     /// The random number generator's state (`HSD_Rand`'s seed).
     pub rng: crate::rng::Rng,
     /// Reads of values the original never set that the port couldn't resolve exactly (see

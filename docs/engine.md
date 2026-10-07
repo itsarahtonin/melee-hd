@@ -15,7 +15,7 @@ The original runs everything in one address space: joints, display objects, mate
 
 ## The object state
 
-`hsd::Objects` holds every HSD pool (FObjs, AObjs, joints, references, display objects, shapes) and the HSD globals that point into them (the ID table, the current joint, the random seed). The original's objects reach each other freely: an animation can bind a joint, a joint owns display objects and references, a shape references the joints it is skinned to, and an update function can do anything mid-animation (a joint's particle event spawns an effect that loads joints and animations). So functions that cross object types take `&mut Objects`, and animation passes it to update functions with no borrow held across the call.
+`hsd::Objects` holds every HSD pool (FObjs, AObjs, joints, references, display objects, shapes, particles, generators and their app-SRTs) and the HSD globals that point into them (the ID table, the current joint, the effect banks, the random seed). The original's objects reach each other freely: an animation can bind a joint, a joint owns display objects and references, a shape references the joints it is skinned to, and an update function can do anything mid-animation (a joint's particle event spawns an effect that loads joints and animations). So functions that cross object types take `&mut Objects`, and animation passes it to update functions with no borrow held across the call.
 
 Reference counts follow the original's: a joint stays alive while shapes, constraints or bindings refer to it, so a removal can leave joints for their last reference to free, exactly where the original does.
 
@@ -24,12 +24,12 @@ Recursion follows the original's too (joint trees load along sibling chains), so
 ## Game data
 
 - Archives load from the disc into `melee_data::archive::Archives`, numbered in load order. A pointer into loaded data is a `DataRef` (archive and offset). Archives are shared and immutable, not part of the state.
-- The original occasionally writes into loaded data: `JObjLoad` sets the top bit of each particle-list entry it loads, and `HSD_ArchiveLocateExtern` patches extern slots. Such writes become state or derived facts on the reader's side, decided per case.
+- The original occasionally writes into loaded data: `JObjLoad` sets the top bit of each particle-list entry it loads, `HSD_ArchiveLocateExtern` patches extern slots, and `psInitDataBankLocate` relocates an effect bank's offsets and sets each command list's draw order. Such writes become state or derived facts on the reader's side, decided per case: a bank is resolved and its kinds fixed as they are read.
 - `HSD_IDInsertToTable`'s table, keyed by descriptor addresses, is a map keyed by `DataRef`.
 
 ## Callbacks
 
-Function pointers in the original (process functions, render callbacks, user-data and object release functions, animation update functions) become `Copy` tokens the game dispatches on, or, where a callback is only passed down a call (an animation update function), a closure parameter that is never stored.
+Function pointers in the original (process functions, render callbacks, user-data and object release functions, animation update functions) become `Copy` tokens the game dispatches on, or, where a callback is only passed down a call (an animation update function), a closure parameter that is never stored. The game's functions the scheduler and the particle system call (processes, particle user functions, the new-generator hook) are dispatched through a trait the caller passes down (`gobj::Host`, `particle::Hooks`).
 
 ## Uninitialized values
 
