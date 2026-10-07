@@ -85,15 +85,15 @@ pub struct Proc<K: Kinds> {
 /// `HSD_GObj_DelayedProcInfo`: changes requested for the running process's GObj, applied when
 /// the process returns.
 #[derive(Clone, Copy, Debug, Default)]
-struct Delayed {
-    in_delayed_proc: bool,
-    remove_gobj: bool,
-    remove_proc: bool,
-    change_priority: bool,
-    how: u32,
-    p_link: u8,
-    priority: u8,
-    position: Option<GObjId>,
+pub struct Delayed {
+    pub in_delayed_proc: bool,
+    pub remove_gobj: bool,
+    pub remove_proc: bool,
+    pub change_priority: bool,
+    pub how: u32,
+    pub p_link: u8,
+    pub priority: u8,
+    pub position: Option<GObjId>,
 }
 
 impl Delayed {
@@ -135,26 +135,27 @@ impl Place {
     }
 }
 
-/// The scheduler's state.
+/// The scheduler's state. Its fields are public so a captured game's state can be rebuilt
+/// (`tools/capture`); game code goes through the methods.
 #[derive(Clone, Debug)]
 pub struct World<K: Kinds> {
-    gobjs: Pool<GObj<K>>,
-    procs: Pool<Proc<K>>,
-    plink_head: [Option<GObjId>; P_LINKS],
-    plink_tail: [Option<GObjId>; P_LINKS],
-    gx_head: [Option<GObjId>; GX_LINKS + 1],
-    gx_tail: [Option<GObjId>; GX_LINKS + 1],
-    proc_head: [Option<ProcId>; PROC_PRIORITIES],
+    pub gobjs: Pool<GObj<K>>,
+    pub procs: Pool<Proc<K>>,
+    pub plink_head: [Option<GObjId>; P_LINKS],
+    pub plink_tail: [Option<GObjId>; P_LINKS],
+    pub gx_head: [Option<GObjId>; GX_LINKS + 1],
+    pub gx_tail: [Option<GObjId>; GX_LINKS + 1],
+    pub proc_head: [Option<ProcId>; PROC_PRIORITIES],
     /// Per priority and process link, the last queued process of that link
     /// (`HSD_GObj_ProcList`).
-    proc_last: [Option<ProcId>; PROC_PRIORITIES * P_LINKS],
+    pub proc_last: [Option<ProcId>; PROC_PRIORITIES * P_LINKS],
     /// `HSD_GObj_804D783C`: 0, 1, 2, advancing every `run_procs`.
-    phase: u8,
-    current_proc: Option<ProcId>,
-    current_s_link: usize,
-    next_proc: Option<ProcId>,
-    current_gobj: Option<GObjId>,
-    delayed: Delayed,
+    pub phase: u8,
+    pub current_proc: Option<ProcId>,
+    pub current_s_link: usize,
+    pub next_proc: Option<ProcId>,
+    pub current_gobj: Option<GObjId>,
+    pub delayed: Delayed,
     /// Process links whose processes don't run, by bit (the scene loop's pause mask that
     /// Melee points `HSD_GObjLibInitData.unk_2` at).
     pub skip_links: u64,

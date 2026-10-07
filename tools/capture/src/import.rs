@@ -1,0 +1,625 @@
+//! Rebuilds melee-sim's state from a captured game: the GObj scheduler, every joint tree
+//! GObjs hold with its animation, references, display lists and shapes, and the fighters.
+//! Each object ssbm-rs had becomes a slot here; the maps from addresses to slots let the
+//! comparison afterwards pair them again.
+
+use std::collections::HashMap;
+
+use melee_data::archive::DataRef;
+use melee_sim::game::handles::FighterId;
+use melee_sim::game::mirror::{Cx, Mem, Mirror};
+use melee_sim::game::state::{Game, Obj, UserData};
+use melee_sim::game::structs::Fighter;
+use melee_sim::hsd::aobj::{AObj, AObjId};
+use melee_sim::hsd::dobj::{DObj, DObjId};
+use melee_sim::hsd::fobj::{FObj, FObjId};
+use melee_sim::hsd::gobj::{GObj, GObjId, P_LINKS, PROC_PRIORITIES, Proc, ProcId};
+use melee_sim::hsd::jobj::{self, Contents, JObj, JObjId};
+use melee_sim::hsd::pobj::{self, Binding, Envelope, PObj, PObjId, ShapeSet};
+use melee_sim::hsd::robj::{self, Exp, RObj, RObjId, Ref, Rvalue, RvalueId};
+use melee_sim::mtx::Mtx34;
+use melee_sim::quat::Quat;
+use melee_sim::vec::Vec3;
+
+use crate::{Capture, DataMap, MEM1};
+
+/// A symbol's address in the game.
+pub fn sym(name: &str) -> u32 {
+    ssbm_types::symbols::SYMBOLS
+        .iter()
+        .find(|s| s.2 == name)
+        .unwrap_or_else(|| panic!("no symbol {name}"))
+        .0
+}
+
+/// What maps ssbm-rs's objects to the slots made for them.
+#[derive(Default)]
+pub struct Maps {
+    pub gobjs: HashMap<u32, GObjId>,
+    pub procs: HashMap<u32, ProcId>,
+    pub jobjs: HashMap<u32, JObjId>,
+    pub aobjs: HashMap<u32, AObjId>,
+    pub fobjs: HashMap<u32, FObjId>,
+    pub robjs: HashMap<u32, RObjId>,
+    pub rvalues: HashMap<u32, RvalueId>,
+    pub dobjs: HashMap<u32, DObjId>,
+    pub pobjs: HashMap<u32, PObjId>,
+    pub fighters: HashMap<u32, FighterId>,
+}
+
+pub struct Importer<'a> {
+    pub cap: &'a Capture,
+    pub data: &'a DataMap,
+    pub game: Game,
+    pub maps: Maps,
+    /// Pointers the mirror met that no import handles yet, by handle kind.
+    pub unhandled: Vec<String>,
+}
+
+impl<'a> Importer<'a> {
+    pub fn new(cap: &'a Capture, data: &'a DataMap) -> Self {
+        Importer {
+            cap,
+            data,
+            game: Game::default(),
+            maps: Maps::default(),
+            unhandled: Vec::new(),
+        }
+    }
+
+    fn u8(&self, a: u32) -> u8 {
+        self.cap.call.mem1[(a - MEM1) as usize]
+    }
+
+    fn u16(&self, a: u32) -> u16 {
+        let i = (a - MEM1) as usize;
+        u16::from_be_bytes(self.cap.call.mem1[i..i + 2].try_into().unwrap())
+    }
+
+    fn u32(&self, a: u32) -> u32 {
+        self.cap.u32(a)
+    }
+
+    fn f32(&self, a: u32) -> f32 {
+        f32::from_bits(self.u32(a))
+    }
+
+    fn vec3(&self, a: u32) -> Vec3 {
+        Vec3::new(self.f32(a), self.f32(a + 4), self.f32(a + 8))
+    }
+
+    fn mtx(&self, a: u32) -> Mtx34 {
+        let mut m = Mtx34::default();
+        for (i, v) in m.m.iter_mut().flatten().enumerate() {
+            *v = self.f32(a + 4 * i as u32);
+        }
+        m
+    }
+
+    fn data(&mut self, a: u32) -> Option<DataRef> {
+        if a == 0 {
+            return None;
+        }
+        let d = self.data.get(a);
+        if d.is_none() {
+            let place = if (0x8040_0000..0x804F_0000).contains(&a) {
+                "static data or stack"
+            } else {
+                "the heap"
+            };
+            self.unhandled.push(format!("data pointer into {place}"));
+        }
+        d
+    }
+
+    /// The scheduler: every GObj on the process links with its processes, render link, HSD
+    /// object and user data.
+    pub fn world(&mut self) {
+        let heads = self.u32(sym("HSD_GObjPLinkHead"));
+        let mut order = Vec::new();
+        for link in 0..P_LINKS as u32 {
+            let mut g = self.u32(heads + 4 * link);
+            while g != 0 {
+                let id = GObjId(self.game.world.gobjs.alloc(blank_gobj()));
+                self.maps.gobjs.insert(g, id);
+                order.push(g);
+                g = self.u32(g + 8);
+            }
+        }
+        // Processes, by priority, in run order.
+        let proc_heads = self.u32(sym("HSD_GObj_GObjProcHead"));
+        let mut procs = Vec::new();
+        for s in 0..PROC_PRIORITIES as u32 {
+            let mut p = self.u32(proc_heads + 4 * s);
+            while p != 0 {
+                let id = ProcId(self.game.world.procs.alloc(Proc {
+                    child: None,
+                    next: None,
+                    prev: None,
+                    s_link: 0,
+                    flags_1: false,
+                    flags_2: false,
+                    flags_3: 0,
+                    gobj: GObjId(0),
+                    on_invoke: melee_sim::game::handles::CodeRef(0),
+                }));
+                self.maps.procs.insert(p, id);
+                procs.push(p);
+                p = self.u32(p + 4);
+            }
+        }
+        let gp = |m: &Maps, a: u32| (a != 0).then(|| m.gobjs[&a]);
+        let pp = |m: &Maps, a: u32| (a != 0).then(|| m.procs[&a]);
+        for &p in &procs {
+            let id = self.maps.procs[&p];
+            let flags = self.u8(p + 0xD);
+            let proc = Proc {
+                child: pp(&self.maps, self.u32(p)),
+                next: pp(&self.maps, self.u32(p + 4)),
+                prev: pp(&self.maps, self.u32(p + 8)),
+                s_link: self.u8(p + 0xC),
+                flags_1: flags & 0x80 != 0,
+                flags_2: flags & 0x40 != 0,
+                flags_3: flags >> 4 & 3,
+                gobj: self.maps.gobjs[&self.u32(p + 0x10)],
+                on_invoke: melee_sim::game::handles::CodeRef(self.u32(p + 0x14)),
+            };
+            self.game.world.procs[id.0] = proc;
+        }
+        let jobj_kind = self.u8(sym("HSD_GObj_JObjKind"));
+        for &g in &order {
+            let id = self.maps.gobjs[&g];
+            let obj_kind = self.u8(g + 6);
+            let hsd_obj = self.u32(g + 0x28);
+            let obj = if obj_kind == 0xFF || hsd_obj == 0 {
+                None
+            } else if obj_kind == jobj_kind {
+                Some(Obj::JObj(self.jobj(hsd_obj)))
+            } else {
+                self.unhandled
+                    .push(format!("GObj {g:#x}: object kind {obj_kind}"));
+                None
+            };
+            let user_data_kind = self.u8(g + 7);
+            let ud = self.u32(g + 0x2C);
+            let user_data = match user_data_kind {
+                4 if ud != 0 => Some(UserData::Fighter(self.fighter(ud))),
+                0xFF => None,
+                _ if ud == 0 => None,
+                kind => {
+                    self.unhandled
+                        .push(format!("GObj {g:#x}: user data kind {kind}"));
+                    None
+                }
+            };
+            let render = self.u32(g + 0x1C);
+            let gobj = GObj {
+                classifier: self.u16(g),
+                p_link: self.u8(g + 2),
+                gx_link: self.u8(g + 3),
+                p_priority: self.u8(g + 4),
+                render_priority: self.u8(g + 5),
+                obj_kind,
+                user_data_kind,
+                next: gp(&self.maps, self.u32(g + 8)),
+                prev: gp(&self.maps, self.u32(g + 0xC)),
+                next_gx: gp(&self.maps, self.u32(g + 0x10)),
+                prev_gx: gp(&self.maps, self.u32(g + 0x14)),
+                proc: pp(&self.maps, self.u32(g + 0x18)),
+                render: (render != 0).then_some(melee_sim::game::handles::CodeRef(render)),
+                gxlink_prios: u64::from(self.u32(g + 0x20)) << 32 | u64::from(self.u32(g + 0x24)),
+                obj,
+                user_data,
+            };
+            self.game.world.gobjs[id.0] = gobj;
+        }
+        let w = &mut self.game.world;
+        let read_links =
+            |cap: &Capture, table: u32, n: usize, maps: &Maps| -> Vec<Option<GObjId>> {
+                (0..n as u32)
+                    .map(|i| {
+                        let a = cap.u32(table + 4 * i);
+                        (a != 0).then(|| maps.gobjs[&a])
+                    })
+                    .collect()
+            };
+        let cap = self.cap;
+        let plink_low = cap.u32(sym("plinklow_gobjs"));
+        let gx_head = cap.u32(sym("HSD_GObjGXLinkHead"));
+        let gx_tail = cap.u32(sym("HSD_GObj_804D7820"));
+        w.plink_head
+            .copy_from_slice(&read_links(cap, heads, P_LINKS, &self.maps));
+        w.plink_tail
+            .copy_from_slice(&read_links(cap, plink_low, P_LINKS, &self.maps));
+        let n = w.gx_head.len();
+        w.gx_head
+            .copy_from_slice(&read_links(cap, gx_head, n, &self.maps));
+        w.gx_tail
+            .copy_from_slice(&read_links(cap, gx_tail, n, &self.maps));
+        for s in 0..PROC_PRIORITIES {
+            let a = cap.u32(proc_heads + 4 * s as u32);
+            w.proc_head[s] = (a != 0).then(|| self.maps.procs[&a]);
+        }
+        let last = cap.u32(sym("HSD_GObj_ProcList"));
+        for i in 0..w.proc_last.len() {
+            let a = cap.u32(last + 4 * i as u32);
+            w.proc_last[i] = (a != 0).then(|| self.maps.procs[&a]);
+        }
+        w.phase = cap.u32(sym("HSD_GObj_804D783C")) as u8;
+        let cur = cap.u32(sym("HSD_GObj_CurrentInvokedProc"));
+        w.current_proc = (cur != 0).then(|| self.maps.procs[&cur]);
+        w.current_s_link = cap.u32(sym("HSD_GObj_CurrentInvokedSLink")) as usize;
+        let next = cap.u32(sym("HSD_GObj_NextInvokedProc"));
+        w.next_proc = (next != 0).then(|| self.maps.procs[&next]);
+        let cg = cap.u32(sym("HSD_GObj_CurrentInvokedProcGObj"));
+        w.current_gobj = (cg != 0).then(|| self.maps.gobjs[&cg]);
+    }
+
+    /// A fighter, through its generated mirror.
+    pub fn fighter(&mut self, a: u32) -> FighterId {
+        if let Some(&f) = self.maps.fighters.get(&a) {
+            return f;
+        }
+        let id = FighterId(self.game.fighters.alloc(Fighter::default()));
+        self.maps.fighters.insert(a, id);
+        let cap = self.cap;
+        let mem = Mem {
+            bytes: &cap.call.mem1,
+            base: MEM1,
+        };
+        let f = Fighter::import(&mem, a, self);
+        self.game.fighters[id.0] = f;
+        id
+    }
+
+    /// A joint and everything it reaches.
+    pub fn jobj(&mut self, a: u32) -> JObjId {
+        if let Some(&j) = self.maps.jobjs.get(&a) {
+            return j;
+        }
+        let id = jobj::alloc(&mut self.game.objs.jobjs);
+        self.maps.jobjs.insert(a, id);
+        let flags = self.u32(a + 0x14);
+        let link = |s: &mut Self, at: u32| {
+            let p = s.u32(at);
+            (p != 0).then(|| s.jobj(p))
+        };
+        let next = link(self, a + 8);
+        let parent = link(self, a + 0xC);
+        let child = link(self, a + 0x10);
+        let u = self.u32(a + 0x18);
+        let contents = if flags & jobj::SPLINE != 0 {
+            Contents::Spline(self.data(u))
+        } else if flags & jobj::PTCL != 0 {
+            Contents::Particles(self.data(u))
+        } else {
+            Contents::DObjs((u != 0).then(|| self.dobj(u)))
+        };
+        let aobj = self.u32(a + 0x7C);
+        let aobj = (aobj != 0).then(|| self.aobj(aobj));
+        let robj = self.u32(a + 0x80);
+        let robj = (robj != 0).then(|| self.robj(robj));
+        let scl = self.u32(a + 0x74);
+        let env = self.u32(a + 0x78);
+        let j = JObj {
+            ref_count: self.u16(a + 4),
+            ref_count_individual: self.u16(a + 6),
+            next,
+            parent,
+            child,
+            flags,
+            u: contents,
+            rotate: Quat {
+                x: self.f32(a + 0x1C),
+                y: self.f32(a + 0x20),
+                z: self.f32(a + 0x24),
+                w: self.f32(a + 0x28),
+            },
+            scale: self.vec3(a + 0x2C),
+            translate: self.vec3(a + 0x38),
+            mtx: self.mtx(a + 0x44),
+            scl: (scl != 0).then(|| self.vec3(scl)),
+            envelopemtx: (env != 0).then(|| self.mtx(env)),
+            aobj,
+            robj,
+            id: self.data(self.u32(a + 0x84)),
+        };
+        self.game.objs.jobjs[id] = j;
+        id
+    }
+
+    pub fn aobj(&mut self, a: u32) -> AObjId {
+        if let Some(&x) = self.maps.aobjs.get(&a) {
+            return x;
+        }
+        let id = AObjId(self.game.objs.aobjs.pool.alloc(AObj::default()));
+        self.maps.aobjs.insert(a, id);
+        let f = self.u32(a + 0x14);
+        let fobj = (f != 0).then(|| self.fobj(f));
+        let h = self.u32(a + 0x18);
+        let hsd_obj = (h != 0).then(|| self.jobj(h));
+        self.game.objs.aobjs[id] = AObj {
+            flags: self.u32(a),
+            curr_frame: self.f32(a + 4),
+            rewind_frame: self.f32(a + 8),
+            end_frame: self.f32(a + 0xC),
+            framerate: self.f32(a + 0x10),
+            fobj,
+            hsd_obj,
+        };
+        id
+    }
+
+    pub fn fobj(&mut self, a: u32) -> FObjId {
+        if let Some(&x) = self.maps.fobjs.get(&a) {
+            return x;
+        }
+        let id = FObjId(self.game.objs.fobjs.alloc(FObj::default()));
+        self.maps.fobjs.insert(a, id);
+        let n = self.u32(a);
+        let next = (n != 0).then(|| self.fobj(n));
+        let head = self.data(self.u32(a + 8)).expect("FObj without data");
+        let ad = self.u32(a + 4);
+        // A loaded FObj's cursor is null until its first request sets it; ours holds offset 0.
+        let ad = if ad == 0 {
+            0
+        } else {
+            self.data(ad).expect("cursor").offset
+        };
+        let o = FObj {
+            next,
+            archive: head.archive,
+            ad,
+            ad_head: head.offset,
+            length: self.u32(a + 0xC),
+            flags: self.u8(a + 0x10),
+            op: self.u8(a + 0x11),
+            op_intrp: self.u8(a + 0x12),
+            obj_type: self.u8(a + 0x13),
+            frac_value: self.u8(a + 0x14),
+            frac_slope: self.u8(a + 0x15),
+            nb_pack: self.u16(a + 0x16),
+            startframe: self.u16(a + 0x18) as i16,
+            fterm: self.u16(a + 0x1A),
+            time: self.f32(a + 0x1C),
+            p0: self.f32(a + 0x20),
+            p1: self.f32(a + 0x24),
+            d0: self.f32(a + 0x28),
+            d1: self.f32(a + 0x2C),
+        };
+        self.game.objs.fobjs[id.0] = o;
+        id
+    }
+
+    pub fn robj(&mut self, a: u32) -> RObjId {
+        if let Some(&x) = self.maps.robjs.get(&a) {
+            return x;
+        }
+        let id = robj::alloc(&mut self.game.objs.robjs);
+        self.maps.robjs.insert(a, id);
+        let n = self.u32(a);
+        let next = (n != 0).then(|| self.robj(n));
+        let flags = self.u32(a + 4);
+        let u = match flags & robj::TYPE_MASK {
+            robj::JOBJ => match self.u32(a + 8) {
+                0 => Ref::None,
+                t => Ref::JObj(self.jobj(t)),
+            },
+            robj::LIMIT => Ref::Limit(self.f32(a + 8)),
+            robj::IK_HINT => Ref::IkHint {
+                bone_length: self.f32(a + 8),
+                rotate_x: self.f32(a + 0xC),
+            },
+            _ => {
+                let rv = self.u32(a + 0xC);
+                let is_bytecode = self.u8(a + 0x14) != 0;
+                Ref::Exp(Exp {
+                    bytecode: if is_bytecode {
+                        self.data(self.u32(a + 8))
+                    } else {
+                        None
+                    },
+                    rvalue: (rv != 0).then(|| self.rvalue(rv)),
+                    nb_args: self.u32(a + 0x10),
+                    is_bytecode,
+                })
+            }
+        };
+        let ao = self.u32(a + 0x18);
+        let aobj = (ao != 0).then(|| self.aobj(ao));
+        self.game.objs.robjs[id] = RObj {
+            next,
+            flags,
+            u,
+            aobj,
+        };
+        id
+    }
+
+    fn rvalue(&mut self, a: u32) -> RvalueId {
+        if let Some(&x) = self.maps.rvalues.get(&a) {
+            return x;
+        }
+        let id = RvalueId(self.game.objs.rvalues.pool.alloc(Rvalue::default()));
+        self.maps.rvalues.insert(a, id);
+        let n = self.u32(a);
+        let next = (n != 0).then(|| self.rvalue(n));
+        let j = self.u32(a + 8);
+        let jobj = (j != 0).then(|| self.jobj(j));
+        self.game.objs.rvalues[id] = Rvalue {
+            next,
+            flags: self.u32(a + 4),
+            jobj,
+        };
+        id
+    }
+
+    pub fn dobj(&mut self, a: u32) -> DObjId {
+        if let Some(&x) = self.maps.dobjs.get(&a) {
+            return x;
+        }
+        let id = DObjId(self.game.objs.dobjs.pool.alloc(DObj::default()));
+        self.maps.dobjs.insert(a, id);
+        let n = self.u32(a + 4);
+        let next = (n != 0).then(|| self.dobj(n));
+        let p = self.u32(a + 0xC);
+        let pobj = (p != 0).then(|| self.pobj(p));
+        if self.u32(a + 0x10) != 0 {
+            self.unhandled.push(format!("DObj {a:#x}: AObj"));
+        }
+        self.game.objs.dobjs[id] = DObj {
+            next,
+            // Materials aren't ported yet.
+            mobj_desc: None,
+            pobj,
+            flags: self.u32(a + 0x14),
+        };
+        id
+    }
+
+    pub fn pobj(&mut self, a: u32) -> PObjId {
+        if let Some(&x) = self.maps.pobjs.get(&a) {
+            return x;
+        }
+        let id = PObjId(self.game.objs.pobjs.pool.alloc(PObj {
+            next: None,
+            verts: None,
+            flags: 0,
+            n_display: 0,
+            display: None,
+            u: Binding::Skin(None),
+        }));
+        self.maps.pobjs.insert(a, id);
+        let n = self.u32(a + 4);
+        let next = (n != 0).then(|| self.pobj(n));
+        let flags = self.u16(a + 0xC);
+        let u = self.u32(a + 0x14);
+        let binding = match flags & pobj::TYPE_MASK {
+            pobj::ENVELOPE => {
+                let mut envs = Vec::new();
+                let mut list = u;
+                while list != 0 {
+                    let mut env = Vec::new();
+                    let mut e = self.u32(list + 4);
+                    while e != 0 {
+                        let j = self.u32(e + 4);
+                        let jobj = (j != 0).then(|| self.jobj(j));
+                        env.push(Envelope {
+                            jobj,
+                            weight: self.f32(e + 8),
+                        });
+                        e = self.u32(e);
+                    }
+                    envs.push(env);
+                    list = self.u32(list);
+                }
+                Binding::Envelopes(envs)
+            }
+            pobj::SHAPEANIM => {
+                let set_flags = self.u16(u);
+                let nb_shape = self.u16(u + 2);
+                let blend = if set_flags & pobj::SHAPESET_ADDITIVE != 0 {
+                    let bp = self.u32(u + 0x1C);
+                    (0..u32::from(nb_shape))
+                        .map(|i| self.f32(bp + 4 * i))
+                        .collect()
+                } else {
+                    vec![self.f32(u + 0x1C)]
+                };
+                let ao = self.u32(u + 0x20);
+                Binding::ShapeSet(ShapeSet {
+                    flags: set_flags,
+                    nb_shape,
+                    nb_vertex_index: self.u32(u + 4) as i32,
+                    vertex_desc: self.data(self.u32(u + 8)),
+                    vertex_idx_list: self.data(self.u32(u + 0xC)),
+                    nb_normal_index: self.u32(u + 0x10) as i32,
+                    normal_desc: self.data(self.u32(u + 0x14)),
+                    normal_idx_list: self.data(self.u32(u + 0x18)),
+                    blend,
+                    aobj: (ao != 0).then(|| self.aobj(ao)),
+                })
+            }
+            _ => Binding::Skin((u != 0).then(|| self.jobj(u))),
+        };
+        self.game.objs.pobjs[id] = PObj {
+            next,
+            verts: self.data(self.u32(a + 8)),
+            flags,
+            n_display: self.u16(a + 0xE),
+            display: self.data(self.u32(a + 0x10)),
+            u: binding,
+        };
+        id
+    }
+}
+
+fn blank_gobj() -> GObj<melee_sim::game::state::GameKinds> {
+    GObj {
+        classifier: 0,
+        p_link: 0,
+        gx_link: 0,
+        p_priority: 0,
+        render_priority: 0,
+        obj_kind: 0,
+        user_data_kind: 0,
+        next: None,
+        prev: None,
+        next_gx: None,
+        prev_gx: None,
+        proc: None,
+        render: None,
+        gxlink_prios: 0,
+        obj: None,
+        user_data: None,
+    }
+}
+
+impl Cx for Importer<'_> {
+    fn import_handle(&mut self, kind: &'static str, addr: u32) -> Option<u32> {
+        if addr == 0 {
+            return None;
+        }
+        Some(match kind {
+            "JObjId" => self.jobj(addr).0,
+            "DObjId" => self.dobj(addr).0,
+            "FighterId" => self.fighter(addr).0,
+            "GObjId" => match self.maps.gobjs.get(&addr) {
+                Some(g) => g.0,
+                None => {
+                    self.unhandled
+                        .push(format!("GObj {addr:#x} outside the process links"));
+                    return None;
+                }
+            },
+            other => {
+                self.unhandled.push(format!("{other} {addr:#x}"));
+                return None;
+            }
+        })
+    }
+
+    fn import_data(&mut self, addr: u32) -> Option<DataRef> {
+        if addr == 0 {
+            return None;
+        }
+        let d = self.data.get(addr);
+        if d.is_none() {
+            self.unhandled
+                .push(format!("data pointer {addr:#x} outside loaded archives"));
+        }
+        d
+    }
+
+    fn compare_handle(&mut self, _: &str, _: &'static str, _: Option<u32>, _: u32) {
+        unreachable!("the importer only imports")
+    }
+
+    fn compare_data(&mut self, _: &str, _: Option<DataRef>, _: u32) {
+        unreachable!("the importer only imports")
+    }
+
+    fn mismatch(&mut self, _: &str, _: String, _: String) {
+        unreachable!("the importer only imports")
+    }
+}

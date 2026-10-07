@@ -1,0 +1,15 @@
+[package]
+name = "melee-capture"
+description = "Imports game states ssbm-rs captured into melee-sim and compares them back"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+melee-data.workspace = true
+melee-sim.workspace = true
+ssbm-rt.workspace = true
+ssbm-types.workspace = true
+zstd = "0.13"

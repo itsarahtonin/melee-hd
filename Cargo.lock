@@ -427,6 +427,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-capture"
+version = "0.1.0"
+dependencies = [
+ "melee-data",
+ "melee-sim",
+ "ssbm-rt",
+ "ssbm-types",
+ "zstd",
+]
+
+[[package]]
 name = "melee-data"
 version = "0.1.0"
 dependencies = [
