@@ -1644,10 +1644,10 @@ fn slot_args(f: &mut Fuzz) {
 
 #[test]
 fn player_disable_input() {
-    check_calls_stubbed(
+    // With `ftLib_DisableInput` (and `Fighter_ResetInputData_80068854`) on the fighters.
+    check_calls(
         "fn_8016CFE0",
         6,
-        &[nothing(0x8008_67E8)],
         slot_args,
         |r, a| {
             r.player_disable_input(a.i(3));

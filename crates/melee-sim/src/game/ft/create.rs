@@ -99,21 +99,6 @@ impl Running<'_> {
     /// model, parts, animations and collision, its processes, its spawn, and its first state.
     #[doc(alias = "Fighter_Create")]
     pub fn fighter_create(&mut self, info: AllocInfo) -> GObjId {
-        #[cfg(feature = "stubs")]
-        if let Some(v) = code::stubbed(
-            addr::FIGHTER_CREATE,
-            &[
-                code::Val::Int(info.kind),
-                code::Val::Int(i32::from(info.slot)),
-                code::Val::Int(i32::from(info.x5)),
-                code::Val::Int(i32::from(info.sub)),
-                code::Val::Int(i32::from(info.transformation)),
-            ],
-        ) {
-            return v
-                .gobj()
-                .unwrap_or_else(|| panic!("a stood-in Fighter_Create returned no fighter"));
-        }
         let gobj = self
             .game
             .world

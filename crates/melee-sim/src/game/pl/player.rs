@@ -982,13 +982,27 @@ impl Running<'_> {
         // and a transformation. The original's stack holds the info's other bits, which
         // `Fighter_Create` never reads.
         let create = |r: &mut Self, kind: i8, sub: bool, transformation: u8| {
-            Some(r.fighter_create(AllocInfo {
+            let info = AllocInfo {
                 kind: i32::from(kind),
                 slot: slot as u8,
                 x5: -1,
                 sub,
                 transformation: transformation & 1 != 0,
-            }))
+            };
+            #[cfg(feature = "stubs")]
+            if let Some(v) = code::stubbed(
+                super::super::ft::create::addr::FIGHTER_CREATE,
+                &[
+                    Val::Int(info.kind),
+                    Val::Int(slot),
+                    Val::Int(i32::from(info.x5)),
+                    Val::Int(i32::from(info.sub)),
+                    Val::Int(i32::from(info.transformation)),
+                ],
+            ) {
+                return v.gobj();
+            }
+            Some(r.fighter_create(info))
         };
         let g = create(self, m.internal_id, false, 0);
         let p = self.game.player_mut(slot);

@@ -206,8 +206,8 @@ pub fn find_archives_after(
 }
 
 /// [`find_archives_after`], with archives added beforehand by name (files loaded for the
-/// port's side, which the original loaded where it chose): any copy of one found in memory is
-/// that archive.
+/// port's side, which the original loaded where it chose): a copy of one found in memory where
+/// no archive was before is that archive.
 pub fn find_archives_named(
     index: &DiscIndex,
     mem1: &[u8],
@@ -216,16 +216,11 @@ pub fn find_archives_named(
     named: &[(String, ArchiveId)],
 ) -> Vec<Loaded> {
     let mut found = scan(index, mem1, archives, &|name, file| {
-        named
+        before
             .iter()
-            .find(|(n, _)| n == name)
-            .map(|&(_, id)| id)
-            .or_else(|| {
-                before
-                    .iter()
-                    .find(|l| l.name == name && (l.file == file || l.file == 0))
-                    .map(|l| l.id)
-            })
+            .find(|l| l.name == name && (l.file == file || l.file == 0))
+            .map(|l| l.id)
+            .or_else(|| named.iter().find(|(n, _)| n == name).map(|&(_, id)| id))
     });
     found.extend(before.iter().filter(|l| l.file == 0).cloned());
     found

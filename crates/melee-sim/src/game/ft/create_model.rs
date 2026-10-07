@@ -245,8 +245,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009F4A4")]
     pub fn create_fighter_light(&mut self) {
         let gobj = self.game.world.create(12, 3, 0);
-        let first = match super::super::gr::setup::fighter_light_list(self.game, self.data) {
-            Some(list) => super::super::gr::setup::load_light_list(self.game, self.data, list),
+        let first = match super::super::gr::setup::load_fighter_lights(self.game, self.data) {
+            Some(first) => first,
             None => {
                 let mut prev: Option<LObjId> = None;
                 let mut first = None;

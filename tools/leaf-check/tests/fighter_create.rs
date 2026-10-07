@@ -203,7 +203,7 @@ enum Outcome {
 
 /// Creates every playing slot's fighters from a capture on both sides in `mode`, comparing
 /// after each slot.
-fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode) -> Outcome {
+fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode, first_init: bool) -> Outcome {
     set_fp_mode(mode);
     let index = disc_index().expect("SSBM_DISC");
     let cap = Capture::read(path);
@@ -261,13 +261,30 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode) -> Outcome {
             game.ft.data.files.archives.push((n.clone(), *id));
         }
     }
+    // The fighters' first setup loads `PlCo.dat` again (the debug VS mode reads it from the
+    // disc): a copy of its own on our side too.
+    if first_init {
+        let id = archives.add(Archive::parse(&disc_bytes("PlCo.dat")).unwrap());
+        named.push(("PlCo.dat".into(), id));
+        let files = &mut game.ft.data.files.archives;
+        files.retain(|(n, _)| n != "PlCo.dat");
+        files.push(("PlCo.dat".into(), id));
+    }
     cap.call.load(ctx);
     let mut done = 0;
-    for &s in &slots {
-        // ssbm-rs's side.
+    let steps: Vec<i32> = if first_init { vec![-1] } else { Vec::new() }
+        .into_iter()
+        .chain(slots.iter().copied())
+        .collect();
+    for s in steps {
+        // ssbm-rs's side: the fighters' first setup (-1), or a slot's fighters.
         THEIR_CALLS.with(|c| c.borrow_mut().clear());
-        ctx.regs.set_r(3, s as u32);
-        ctx.invoke(sym("Player_80031AD0"));
+        if s < 0 {
+            ctx.invoke(sym("Player_80036DA4"));
+        } else {
+            ctx.regs.set_r(3, s as u32);
+            ctx.invoke(sym("Player_80031AD0"));
+        }
         let mut after = vec![0; cap.call.mem1.len()];
         let _ = ctx.mem.read_bytes(MEM1, &mut after);
         let word = |a: u32| {
@@ -296,7 +313,11 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode) -> Outcome {
                 game: &mut game,
                 data: &archives,
             };
-            r.player_create_fighters(s);
+            if s < 0 {
+                r.player_80036da4();
+            } else {
+                r.player_create_fighters(s);
+            }
         }));
         if let Err(p) = ours {
             let why = panic_text(&*p);
@@ -355,6 +376,16 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode) -> Outcome {
 
 #[test]
 fn fighter_create() {
+    check(false);
+}
+
+/// The fighters' first setup again from the same states, then their creation.
+#[test]
+fn fighter_first_init() {
+    check(true);
+}
+
+fn check(first_init: bool) {
     let paths = captures();
     if paths.is_empty() || disc_index().is_none() {
         return;
@@ -367,7 +398,7 @@ fn fighter_create() {
             let (mut created, mut skipped, mut blocked) = (0, 0, Vec::new());
             for mode in MODES {
                 for p in &paths {
-                    match run_capture(&ctx, p, mode) {
+                    match run_capture(&ctx, p, mode, first_init) {
                         Outcome::Clean(n) => created += n,
                         Outcome::Skipped => skipped += 1,
                         Outcome::Unported(why) => blocked.push(format!("{}: {why}", p.display())),
@@ -376,7 +407,7 @@ fn fighter_create() {
             }
             set_fp_mode(FpMode::Hardware);
             eprintln!(
-                "fighter_create: {created} slots compared clean, {skipped} captures the importer                  can't take, {} blocked",
+                "{created} steps compared clean, {skipped} captures the importer can't take, {} blocked",
                 blocked.len()
             );
             for b in &blocked {

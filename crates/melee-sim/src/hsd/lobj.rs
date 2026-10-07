@@ -593,9 +593,18 @@ pub fn set_interest_wobj(objs: &mut Objects, l: Option<LObjId>, w: Option<WObjId
 /// the position and interest WObjs and the attenuation.
 #[doc(alias = "LObjLoad")]
 pub fn load(objs: &mut Objects, data: &Archives, l: LObjId, desc: DataRef) {
+    load_flags(objs, data, l, desc, data.u16(desc.at(8)));
+}
+
+/// A new, empty light (`HSD_LObjLoadDesc`'s allocation).
+pub fn alloc(lobjs: &mut LObjs) -> LObjId {
+    LObjId(lobjs.pool.alloc(LObj::default()))
+}
+
+/// [`load`], with the descriptor's flags as the game has edited them in the loaded data.
+pub fn load_flags(objs: &mut Objects, data: &Archives, l: LObjId, desc: DataRef, flags: u16) {
     let c = |i: u32| data.u8(desc.at(0xC + i));
     set_color(&mut objs.lobjs, l, [c(0), c(1), c(2), c(3)]);
-    let flags = data.u16(desc.at(8));
     let attnflags = data.u16(desc.at(0xA));
     let u = data.ptr(desc.at(0x18));
     let f = |i: u32| data.f32(u.expect("light parameters").at(4 * i));
