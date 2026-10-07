@@ -28,9 +28,6 @@ fn dirs() -> Vec<String> {
 
 fn stubs() -> Vec<Stub> {
     let mut v: Vec<Stub> = [
-        "ft_PlaySFX",
-        "ft_800881D8",
-        "ft_80088328",
         "efAsync_Spawn",
         // A knockdown's impact effect.
         "ftCo_8009F834",
@@ -955,6 +952,18 @@ fn ledges_and_coll() {
             Ret::Nothing
         }),
         gobj("ft_80084A18", MAP, |g, o| b(g.on_live_floor(o))),
+        box_case("ft_8008239C", |g, o, b, i| {
+            b_ret(g.air_coll_box_ledges(o, if i % 2 == 0 { 1 } else { -1 }, b))
+        }),
+        box_case("ft_800824A0", |g, o, b, _| b_ret(g.air_coll_box(o, b))),
+        box_case("ft_800846B0", |g, o, b, _| {
+            g.ground_coll_box_then(o, b, |g, o| g.enter_fall(o));
+            Ret::Nothing
+        }),
+        box_case("ft_800847D0", |g, o, b, _| {
+            g.ground_coll_box_fall(o, b);
+            Ret::Nothing
+        }),
         with_cb("ft_80083318", |g, o| {
             g.air_coll_filtered_full_low(o, melee_sim::game::ft::coll::PLATFORM_FILTER, |g, o| {
                 g.land_normally(o)
@@ -986,6 +995,55 @@ fn ledges_and_coll() {
             g.ground_coll_then(o, |g, o| g.land_normally(o))
         }),
     ]);
+}
+
+fn b_ret(v: bool) -> Ret {
+    Ret::Int(u32::from(v))
+}
+
+/// A collision helper taking an ECB-like box (a pointer above the stack, in r4, or r5 after
+/// a direction for `ft_8008239C`) and, for `ft_800846B0`, falling as its callback.
+fn box_case(
+    name: &'static str,
+    run: impl Fn(&mut Running, GObjId, &melee_sim::game::structs::ftCollisionBox, usize) -> Ret
+    + Sync
+    + 'static,
+) -> Case {
+    case(
+        name,
+        MAP,
+        move |call, i, _| {
+            let at = call.regs.gpr[1] + 0x40;
+            let s = [1.0f32, 0.6, 1.4][i % 3];
+            for (k, v) in [12.0f32, 1.5, -3.0, 6.0, 3.0, 6.0].iter().enumerate() {
+                poke_f32(call, at + 4 * k as u32, v * s);
+            }
+            // The call's index for our side.
+            call.regs.gpr[30] = i as u32;
+            match name {
+                "ft_8008239C" => {
+                    call.regs.gpr[4] = if i % 2 == 0 { 1 } else { u32::MAX };
+                    call.regs.gpr[5] = at;
+                }
+                "ft_800846B0" => {
+                    call.regs.gpr[4] = at;
+                    call.regs.gpr[5] = leaf_check::sym("ftCo_Fall_Enter");
+                }
+                _ => call.regs.gpr[4] = at,
+            }
+        },
+        move |g, o, _, call| {
+            let at = call.regs.gpr[1] + 0x40;
+            let v = |k: u32| f32::from_bits(peek_u32(call, at + 4 * k));
+            let b = melee_sim::game::structs::ftCollisionBox {
+                top: v(0),
+                bottom: v(1),
+                left: melee_sim::game::structs::Vec2 { x: v(2), y: v(3) },
+                right: melee_sim::game::structs::Vec2 { x: v(4), y: v(5) },
+            };
+            run(g, o, &b, call.regs.gpr[30] as usize)
+        },
+    )
 }
 
 /// A collision helper taking a callback (r4, or r5 after a filter in r4): landing normally
