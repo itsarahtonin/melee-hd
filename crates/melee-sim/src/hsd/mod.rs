@@ -57,6 +57,9 @@ pub struct Objects {
     pub generators: generator::Generators,
     pub app_srts: appsrt::AppSrts,
     pub psdisp: psdisp::Globals,
+    /// Bits the game has ORed into loaded MObjDescs' `rendermode` (a stage marks some of its
+    /// materials, `grDatFiles_801C6228`): the loader reads the descriptor as the game left it.
+    pub rendermode_patches: std::collections::HashMap<DataRef, u32>,
     /// The random number generator's state (`HSD_Rand`'s seed).
     pub rng: crate::rng::Rng,
     /// Reads of values the original never set that the port couldn't resolve exactly (see

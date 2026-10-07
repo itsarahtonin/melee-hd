@@ -342,7 +342,7 @@ pub fn remove_anim_all(objs: &mut Objects, t: Option<TObjId>) {
 }
 
 /// The first texture animation for map `id` in a chain of them, `lookupTextureAnim`.
-fn lookup_texanim(data: &Archives, id: u32, texanim: Option<DataRef>) -> Option<DataRef> {
+pub fn lookup_texanim(data: &Archives, id: u32, texanim: Option<DataRef>) -> Option<DataRef> {
     let mut ta = texanim;
     while let Some(a) = ta {
         if data.u32(a.at(4)) == id {

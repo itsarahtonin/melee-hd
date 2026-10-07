@@ -47,6 +47,19 @@ impl<K: std::hash::Hash + Eq + Copy, V: Copy> IdTable<K, V> {
         self.map.clear();
     }
 
+    /// Every key and its value, in no particular order.
+    pub fn iter(&self) -> impl Iterator<Item = (K, V)> + '_ {
+        self.map.iter().map(|(&k, &v)| (k, v))
+    }
+
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+
     /// Copies `other` into `self` reusing `self`'s storage.
     pub fn restore_from(&mut self, other: &IdTable<K, V>) {
         self.map.clone_from(&other.map);

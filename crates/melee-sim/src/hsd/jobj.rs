@@ -486,7 +486,7 @@ pub fn add_anim_all(
 
 /// Sets a component of the joint's SRT, marking its matrix dirty unless the SRT is
 /// independent (the inline `HSD_JObjSetTranslateX` and friends).
-fn set_srt(jobjs: &mut JObjs, j: JObjId, set: impl FnOnce(&mut JObj)) {
+pub fn set_srt(jobjs: &mut JObjs, j: JObjId, set: impl FnOnce(&mut JObj)) {
     let o = &mut jobjs[j];
     set(o);
     if o.flags & MTX_INDEP_SRT == 0 {
@@ -495,7 +495,7 @@ fn set_srt(jobjs: &mut JObjs, j: JObjId, set: impl FnOnce(&mut JObj)) {
 }
 
 /// Sets a rotation angle; the original asserts the joint has no quaternion.
-fn set_angle(jobjs: &mut JObjs, j: JObjId, set: impl FnOnce(&mut Quat)) {
+pub fn set_angle(jobjs: &mut JObjs, j: JObjId, set: impl FnOnce(&mut Quat)) {
     assert!(
         jobjs[j].flags & USE_QUATERNION == 0,
         "!(jobj->flags & JOBJ_USE_QUATERNION)"

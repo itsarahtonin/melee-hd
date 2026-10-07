@@ -115,3 +115,175 @@ FogRelease	leaf-check fog: HSD_GObj_803911C0 and HSD_GObj_80391120 release fogs 
 HSD_FogAdjLoadDesc	leaf-check fog: HSD_FogLoadDesc loads synthetic fogs' range adjustments through it; compared after
 HSD_RObjRemoveAnimAll	leaf-check cobj: HSD_WObjRemoveAnim removes synthetic WObjs' RObj animations through it; RObj AObjs and live counts compared
 HSD_RObjReqAnimAll	leaf-check cobj: HSD_WObjReqAnim requests synthetic WObjs' RObj animations through it; RObj AObjs compared
+Ground_801BFFB0	leaf-check stage: ground_reset runs the captured call and compares the whole state
+grDatFiles_801C6288	leaf-check stage: ground_reset (Ground_801BFFB0 clears the archive table)
+Ground_801C0378	leaf-check stage: ground_prepare runs the captured call and compares the whole state
+ftCo_800C06C0	leaf-check stage: ground_prepare (Ground_801C0378 resets the fighters' stage devices)
+Ground_801C0800	leaf-check stage: ground_setup runs Final Destination's captured stage setup and compares the whole state
+Ground_801C38D0	leaf-check stage: ground_setup (the camera from the stage's parameters)
+Ground_801C38EC	leaf-check stage: ground_setup (the camera from the stage's parameters)
+Ground_801C3900	leaf-check stage: ground_setup (the camera from the stage's parameters)
+Ground_801C392C	leaf-check stage: ground_setup (the camera from the stage's parameters)
+Ground_801C3950	leaf-check stage: ground_setup (the camera from the stage's parameters)
+Ground_801C3960	leaf-check stage: ground_setup (the camera from the stage's parameters)
+Ground_801C3970	leaf-check stage: ground_setup (the camera from the stage's parameters)
+Ground_OnLoad	leaf-check stage: ground_on_load runs the captured call and compares the whole state
+grLast_OnLoad	leaf-check stage: ground_on_load (Ground_OnLoad runs it)
+Ground_801C0FB8	leaf-check stage: ground_start runs the captured match start and compares the whole state
+grLast_8021A9AC	leaf-check stage: ground_start (the queued start hook)
+Ground_801C1E94	leaf-check stage: ground_fog runs the captured call and compares the whole state
+Camera_SetBackgroundColor	leaf-check stage: ground_fog (the clear color from the stage's fog)
+Ground_801C466C	leaf-check stage: ground_lights runs the captured call and compares the whole state
+Ground_801C20E0	leaf-check stage: ground_lights (the stage's light list through its overrides)
+Ground_801C43C4	leaf-check stage: ground_lights (which light animations loop)
+lb_80011AC4	leaf-check stage: ground_lights (the light list loaded)
+Ground_801C0498	leaf-check stage: ground_lights and ground_stage_gobj (positions and models in the stage's scale)
+Ground_GetStageGObj	leaf-check stage: ground_stage_gobj runs the captured call and compares the whole state
+Ground_801C34AC	leaf-check stage: ground_stage_gobj (the points of interest a model holds)
+grMaterial_801C95C4	leaf-check stage: ground_stage_gobj (a new object's color overlay)
+lb_80014498	leaf-check stage: ground_stage_gobj (a new object's color overlay)
+grDatFiles_GetArchive	leaf-check stage: ground_stage_gobj (the stage's own archive)
+Ground_801C3FA4	leaf-check stage: last_stage_ticks (every scene animation finds its part through it)
+mpLib_80058820	leaf-check stage: collision_gobj runs the captured call and compares the whole state
+grLast_OnInit	leaf-check stage: last_on_init runs Final Destination's captured setup and compares the whole state
+grLast_8021A7F4	leaf-check stage: last_create runs the captured call; ground_destroy_and_create creates map 9 with it
+Camera_800311DC	leaf-check stage: last_on_init (the camera's near plane)
+Camera_800311CC	leaf-check stage: last_on_init (the camera's far plane)
+Ground_801C39C0	leaf-check stage: last_on_init (the camera limits from the stage's points)
+Ground_801C3BB4	leaf-check stage: last_on_init (the blast zones from the stage's points)
+Ground_801C2D24	leaf-check stage: last_on_init (the points Ground_801C39C0 and Ground_801C3BB4 read); ground_set_apart_and_points (entry points)
+lb_8000B1CC	leaf-check stage: last_on_init (the points of interest's world positions)
+stageGObj0_OnInit@8021A8E0	leaf-check stage: last_on_init (map 0's setup)
+stageGObj2_OnInit@8021A970	leaf-check stage: last_on_init (map 2's setup)
+grLast_8021A91C	leaf-check stage: last_on_init (map 1's setup)
+grAnime_801C8138	leaf-check stage: last_on_init (the maps' animations started)
+lb_8000B804	leaf-check stage: last_on_init (the maps' models reset to their descriptors)
+grLast_8021A9C4	leaf-check stage: last_init_main runs the captured call and compares the whole state
+Ground_InitMapColl	leaf-check stage: last_init_main (the main object's collision bound)
+Ground_801C3214	leaf-check stage: last_init_main (Ground_InitMapColl switches collision on)
+Ground_801C10B8	leaf-check stage: last_init_main (the start hook queued)
+grLast_8021B920	leaf-check stage: last_set_phase runs every captured call; last_stage_ticks enters phases 2 to 8
+grLast_8021C640	leaf-check stage: last_init_main (phase 1's colors); ground_colors
+Ground_801C052C	leaf-check stage: last_init_main and ground_colors (the scene colors)
+Ground_801C0544	leaf-check stage: last_init_main and ground_colors (the scene colors)
+Ground_801C055C	leaf-check stage: last_init_main and ground_colors (the scene colors)
+Ground_801C0574	leaf-check stage: last_init_main and ground_colors (the scene colors)
+Ground_801C058C	leaf-check stage: last_init_main and ground_colors (the scene colors)
+Ground_801C05A4	leaf-check stage: last_init_main and ground_colors (the scene colors)
+Ground_801C05BC	leaf-check stage: last_init_main and ground_colors (the scene colors)
+Ground_801C05D4	leaf-check stage: last_init_main and ground_colors (the scene colors)
+Ground_801C05EC	leaf-check stage: last_init_main and ground_colors (the scene colors)
+grLast_8021AC30	leaf-check stage: last_init_main (the swaying piece created in phase 1)
+grLast_8021AB34	leaf-check stage: last_init_main (piece 0 created in phase 1)
+grLast_8021AB88	leaf-check stage: last_init_main (piece 1 created in phase 1)
+grLast_8021ABDC	leaf-check stage: last_init_main (piece 2 created in phase 1)
+grLast_8021B240	leaf-check stage: last_init_main (piece 4 created in phase 1)
+grLast_8021B294	leaf-check stage: ground_destroy_and_create (map 9 created)
+grMaterial_801C94D8	leaf-check stage: last_init_main (the pieces' materials)
+grMaterial_801C92C0	leaf-check stage: last_init_main (the pieces' materials)
+grAnime_801C7FF8	leaf-check stage: last_init_main (the pieces' opening animations)
+grAnime_801C6C0C	leaf-check stage: last_init_main (the pieces' opening animations)
+grLast_OnStart	leaf-check stage: last_on_start runs the captured call and compares the whole state
+grZakoGenerator_801CAE04	leaf-check stage: last_on_start (the spawner started)
+grZakoGenerator_801CA67C	leaf-check stage: last_on_start (the spawner's slots)
+fn_801CADBC	leaf-check stage: last_stage_ticks (the spawner's process every tick)
+grZakoGenerator_801CA8B4	leaf-check stage: last_stage_ticks (the spawner's scan every tick)
+Ground_801C1CD0	leaf-check stage: ground_proc_anim runs every captured call; last_stage_ticks
+Ground_801C1D38	leaf-check stage: ground_proc_callback runs every captured call; last_stage_ticks
+Ground_801C0C2C	leaf-check stage: ground_proc_watch runs every captured call; last_stage_ticks
+Ground_801C461C	leaf-check stage: ground_proc_lights runs every captured call; last_stage_ticks
+Ground_801C445C	leaf-check stage: ground_proc_lights (the lights animated)
+Ground_UpdateMapColl	leaf-check stage: last_proc_main and last_stage_ticks (the collision following the model)
+Ground_GetMapGObj	leaf-check stage: last_stage_ticks (phase 2 reaches map 4 through it)
+grLast_8021AAB0	leaf-check stage: last_proc_main runs every captured call; last_stage_ticks
+grLast_8021ADD0	leaf-check stage: last_proc_sway runs every captured call; last_stage_ticks
+grLast_8021B2E8	leaf-check stage: last_proc_main and last_stage_ticks (the scene's timer)
+grLast_8021B5C4	leaf-check stage: last_stage_ticks (phases 1 to 8 advance through it)
+grLast_8021C500	leaf-check stage: last_stage_ticks (the blend with nothing to blend)
+grLast_8021C40C	leaf-check stage: ground_colors (a blend started on a real stage)
+grLast_8021C6AC	leaf-check stage: ground_colors (the bright scene's colors)
+grLast_8021A914	leaf-check stage: last_empty_proc and last_stage_ticks
+grLast_8021A968	leaf-check stage: last_stage_ticks (map 1's process)
+grLast_8021A9A4	leaf-check stage: last_stage_ticks (map 2's process)
+grLast_8021AB80	leaf-check stage: last_stage_ticks (piece 0's process)
+grLast_8021ABD4	leaf-check stage: last_stage_ticks (piece 1's process)
+grLast_8021AC28	leaf-check stage: last_stage_ticks (piece 2's process)
+grLast_8021B28C	leaf-check stage: last_stage_ticks (piece 4's process)
+grLast_8021B2E0	leaf-check stage: ground_destroy_and_create runs map 9's setup; its process does nothing
+grLast_8021A918	leaf-check stage: ground_destroy_and_create (map 0's destroy callback)
+grLast_8021A96C	leaf-check stage: ground_destroy_and_create (map 1's destroy callback)
+grLast_8021A9A8	leaf-check stage: ground_destroy_and_create (map 2's destroy callback)
+grLast_8021AB30	leaf-check stage: ground_destroy_and_create (map 3's destroy callback)
+grLast_8021AB84	leaf-check stage: ground_destroy_and_create (map 4's destroy callback)
+grLast_8021ABD8	leaf-check stage: ground_destroy_and_create (map 5's destroy callback)
+grLast_8021AC2C	leaf-check stage: ground_destroy_and_create (map 6's destroy callback)
+grLast_8021B23C	leaf-check stage: ground_destroy_and_create (map 7's destroy callback)
+grLast_8021B290	leaf-check stage: ground_destroy_and_create (map 8's destroy callback)
+grLast_8021B2E4	leaf-check stage: ground_destroy_and_create (map 9's destroy callback)
+Ground_801C3128	leaf-check stage: ground_destroy_and_create (collision switched off map by map)
+Ground_801C3260	leaf-check stage: ground_destroy_and_create (collision switched off map by map)
+Ground_801C36F4	leaf-check stage: ground_destroy_and_create (the points a destroyed model held)
+grLib_801C9854	leaf-check stage: last_stage_ticks (phase 2; no generator exists in the state)
+grAnime_801C83D0	leaf-check stage: last_stage_ticks (the scenes wait on it)
+grAnime_801C8318	leaf-check stage: last_stage_ticks (the scenes wait on it)
+HSD_ForeachAnim	leaf-check stage: last_stage_ticks (grAnime_801C8318 finds a part's first animation through it)
+grAnime_801C7980	leaf-check stage: last_stage_ticks (each scene's animations)
+grAnime_801C7A94	leaf-check stage: last_stage_ticks (phase 2 stops map 4's animation)
+grAnime_801C8098	leaf-check stage: last_stage_ticks (each scene's animations)
+grAnime_801C7C1C	leaf-check stage: last_stage_ticks (each scene's animations)
+grAnime_801C752C	leaf-check stage: last_stage_ticks (rates and loops on each scene's animations)
+grAnime_801C7228	leaf-check stage: last_stage_ticks (grAnime_801C752C's walk)
+grAnime_801C70E0	leaf-check stage: last_stage_ticks (grAnime_801C752C's walk)
+grAnime_801C706C	leaf-check stage: last_stage_ticks (grAnime_801C752C's walk)
+grAnime_801C6A54	leaf-check stage: last_stage_ticks (each scene's animations attached)
+grAnime_801C683C	leaf-check stage: last_stage_ticks (each scene's animations attached)
+grAnime_801C67A8	leaf-check stage: last_stage_ticks (each scene's animations attached)
+grAnime_801C6710	leaf-check stage: last_stage_ticks (each scene's animations attached)
+grAnime_801C6620	leaf-check stage: last_stage_ticks (each scene's animations attached)
+grAnime_801C6960	leaf-check stage: last_stage_ticks (each scene's animations attached)
+grAnime_801C68F4	leaf-check stage: last_stage_ticks (each scene's animations attached)
+grAnime_801C69FC	leaf-check stage: last_stage_ticks (each scene's animations attached)
+grMaterial_801C8B28	leaf-check stage: last_stage_ticks (each scene's animations)
+grMaterial_801C8B68	leaf-check stage: last_stage_ticks (each scene's animations)
+grDatFiles_801C6330	leaf-check stage: last_stage_ticks (each scene's animations find their archive)
+lb_800115F4	leaf-check stage: last_proc_main and last_stage_ticks (the wind level each tick)
+lb_80014258	leaf-check stage: ground_proc_anim and last_stage_ticks (the color overlays each tick)
+grMaterial_801C9698	leaf-check stage: ground_proc_anim and last_stage_ticks (the color overlays each tick)
+grDynamicAttr_801CA224	leaf-check stage: stage_collision_proc runs every captured call; last_stage_ticks
+lb_80011C18	leaf-check stage: ground_set_apart_and_points (lb_8000F9F8 on real models)
+lb_80011B74	leaf-check stage: ground_set_apart_and_points (lb_8000F9F8 on real models)
+Command_Execute	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+Command_00	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+Command_07	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+lb_80013BB0	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+lb_80013BB8	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+lb_80013BE4	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+lb_80013C18	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+lb_80013D68	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+lb_80013E3C	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+lb_80013F78	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+lb_80013FF0	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+lb_80014014	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+lb_800140F8	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+lb_80014234	leaf-check stage: color_overlay_scripts runs random scripts of every overlay command, the jump and the end through lb_80014258 and compares the overlay each tick
+grBattle_80219D84	leaf-check stage: battle_create runs the captured call and compares the whole state
+grBattle_BG_Callback0	leaf-check stage: battle_init_sky runs the captured call and compares the whole state
+grBattle_BG_Callback2	leaf-check stage: battle_proc_sky runs every captured call; battle_stage_ticks runs it over 9000 ticks
+grBattle_GObj0_Callback0	leaf-check stage: battle_init_main runs the captured call; battle_empty_callbacks_and_demo runs it in a demo fight
+grBattle_GObj6_Callback0	leaf-check stage: battle_init_floor runs the captured call and compares the whole state
+grBattle_GObj6_Callback2	leaf-check stage: battle_proc_floor runs every captured call; battle_stage_ticks
+grBattle_OnDemoInit	leaf-check stage: battle_empty_callbacks_and_demo
+grBattle_OnLoad	leaf-check stage: battle_on_load runs the captured call and compares the whole state
+grBattle_OnStart	leaf-check stage: battle_on_start runs the captured call and compares the whole state
+grBattle_GObj0_Callback2	leaf-check stage: battle_empty_procs runs every captured call; battle_stage_ticks
+grBattle_GObj1_Callback2	leaf-check stage: battle_empty_procs runs every captured call; battle_stage_ticks
+grBattle_GObj2_Callback2	leaf-check stage: battle_empty_procs runs every captured call; battle_stage_ticks
+grBattle_GObj0_Callback3	leaf-check stage: battle_empty_callbacks_and_demo calls it on a real stage and compares the whole state
+grBattle_GObj1_Callback3	leaf-check stage: battle_empty_callbacks_and_demo calls it on a real stage and compares the whole state
+grBattle_GObj2_Callback3	leaf-check stage: battle_empty_callbacks_and_demo calls it on a real stage and compares the whole state
+grBattle_GObj4_Callback2	leaf-check stage: battle_empty_callbacks_and_demo calls it on a real stage and compares the whole state
+grBattle_GObj4_Callback3	leaf-check stage: battle_empty_callbacks_and_demo calls it on a real stage and compares the whole state
+grBattle_GObj5_Callback2	leaf-check stage: battle_empty_callbacks_and_demo calls it on a real stage and compares the whole state
+grBattle_GObj5_Callback3	leaf-check stage: battle_empty_callbacks_and_demo calls it on a real stage and compares the whole state
+grBattle_GObj6_Callback3	leaf-check stage: battle_empty_callbacks_and_demo calls it on a real stage and compares the whole state
+grBattle_BG_Callback3	leaf-check stage: battle_empty_callbacks_and_demo calls it on a real stage and compares the whole state

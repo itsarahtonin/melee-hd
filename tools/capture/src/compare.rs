@@ -26,7 +26,7 @@ pub struct Comparer<'a> {
     /// Pairs by kind and ssbm-rs address for the mirror's handles.
     handles: HashMap<(&'static str, u32), u32>,
     /// What this comparison has compared already, by kind and ssbm-rs address.
-    seen: HashSet<(&'static str, u32)>,
+    pub(crate) seen: HashSet<(&'static str, u32)>,
     pub diffs: Vec<String>,
 }
 
@@ -43,21 +43,21 @@ impl<'a> Comparer<'a> {
         }
     }
 
-    fn u8(&self, a: u32) -> u8 {
+    pub(crate) fn u8(&self, a: u32) -> u8 {
         self.mem[(a - MEM1) as usize]
     }
 
-    fn u16(&self, a: u32) -> u16 {
+    pub(crate) fn u16(&self, a: u32) -> u16 {
         let i = (a - MEM1) as usize;
         u16::from_be_bytes(self.mem[i..i + 2].try_into().unwrap())
     }
 
-    fn u32(&self, a: u32) -> u32 {
+    pub(crate) fn u32(&self, a: u32) -> u32 {
         let i = (a - MEM1) as usize;
         u32::from_be_bytes(self.mem[i..i + 4].try_into().unwrap())
     }
 
-    fn diff(
+    pub(crate) fn diff(
         &mut self,
         path: &str,
         what: &str,
@@ -68,7 +68,7 @@ impl<'a> Comparer<'a> {
             .push(format!("{path}: {what}: ours {ours:?}, theirs {theirs:?}"));
     }
 
-    fn check<T: PartialEq + std::fmt::Debug>(
+    pub(crate) fn check<T: PartialEq + std::fmt::Debug>(
         &mut self,
         path: &str,
         what: &str,
@@ -86,7 +86,7 @@ impl<'a> Comparer<'a> {
 
     /// Pairs `ours` with ssbm-rs's object at `theirs`, or reports they don't pair; whether to
     /// compare them (the first time this comparison meets them).
-    fn pair<T: Copy + PartialEq + std::fmt::Debug>(
+    pub(crate) fn pair<T: Copy + PartialEq + std::fmt::Debug>(
         map: &mut HashMap<u32, T>,
         seen: &mut HashSet<(&'static str, u32)>,
         diffs: &mut Vec<String>,
@@ -207,6 +207,7 @@ impl<'a> Comparer<'a> {
             Some(Obj::JObj(j)) => self.jobj_tree(&format!("{path} jobj"), Some(j), obj),
             Some(Obj::CObj(c)) => self.cobj(&format!("{path} cobj"), c, obj),
             Some(Obj::LObj(l)) => self.lobjs(&format!("{path} lobj"), Some(l), obj),
+            Some(Obj::Fog(f)) => self.fog(&format!("{path} fog"), f, obj),
             None => {}
         }
         match g.user_data {
@@ -229,6 +230,7 @@ impl<'a> Comparer<'a> {
                     fighter.compare(&mem, ud, &format!("{path} fighter"), self);
                 }
             }
+            Some(UserData::Ground(g)) => self.ground(path, g, self.u32(t + 0x2C)),
             Some(UserData::Item(_)) | None => {}
         }
     }
@@ -302,7 +304,7 @@ impl<'a> Comparer<'a> {
         }
     }
 
-    fn aobj(&mut self, path: &str, o: Option<AObjId>, t: u32) {
+    pub(crate) fn aobj(&mut self, path: &str, o: Option<AObjId>, t: u32) {
         if !Self::pair(
             &mut self.maps.aobjs,
             &mut self.seen,
@@ -634,6 +636,15 @@ impl<'a> Comparer<'a> {
             return;
         }
         let m = &self.game.objs.mobjs[o.unwrap()];
+        let class = match m.class {
+            melee_sim::hsd::mobj::MObjClass::Hsd => sym("hsdMObj"),
+            melee_sim::hsd::mobj::MObjClass::Ground => sym("grMaterial_803E0A20"),
+        };
+        // Classes no port models (fighters' `ftMObj`) were reported when imported.
+        let theirs = self.u32(t);
+        if [sym("hsdMObj"), sym("grMaterial_803E0A20")].contains(&theirs) {
+            self.check(path, "class", class, theirs);
+        }
         self.check(path, "rendermode", m.rendermode, self.u32(t + 4));
         let mat = self.u32(t + 0xC);
         let theirs = (mat != 0).then(|| {
@@ -782,6 +793,8 @@ impl Cx for Comparer<'_> {
             "GObjId" => self.maps.gobjs.get(&theirs).map(|g| g.0),
             "FighterId" => self.maps.fighters.get(&theirs).map(|f| f.0),
             "DObjId" => self.maps.dobjs.get(&theirs).map(|d| d.0),
+            "GroundId" => self.maps.grounds.get(&theirs).map(|g| g.0),
+            "StartHookId" => self.maps.start_hooks.get(&theirs).map(|h| h.0),
             _ => None,
         };
         let known = known.or_else(|| self.handles.get(&(kind, theirs)).copied());

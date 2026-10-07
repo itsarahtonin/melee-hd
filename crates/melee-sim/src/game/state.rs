@@ -6,10 +6,12 @@
 
 use melee_data::archive::Archives;
 
-use super::handles::{CodeRef, FighterId, ItemId};
-use super::structs::Fighter;
+use super::gr;
+use super::handles::{CodeRef, FighterId, GroundId, ItemId};
+use super::structs::{Camera, Fighter, Ground, StageInfo};
 use crate::hsd::Objects;
 use crate::hsd::cobj::CObjId;
+use crate::hsd::fog::FogId;
 use crate::hsd::gobj::{GObjId, Host, Kinds, World};
 use crate::hsd::jobj::JObjId;
 use crate::hsd::lobj::LObjId;
@@ -20,6 +22,28 @@ use crate::hsd::pool::Pool;
 pub enum UserData {
     Fighter(FighterId),
     Item(ItemId),
+    /// A stage object (user data kind 3).
+    Ground(GroundId),
+}
+
+/// The GObj object kinds as Melee's `HSD_GObj_80391260` numbers them, after the game's own
+/// kind 0 (`HSD_GObj_CameraKind` and friends).
+pub const OBJ_CAMERA: u8 = 1;
+pub const OBJ_LIGHT: u8 = 2;
+pub const OBJ_JOBJ: u8 = 3;
+pub const OBJ_FOG: u8 = 4;
+
+/// The user data kind of stage objects.
+pub const USER_DATA_GROUND: u8 = 3;
+
+/// Gameplay toggles (`docs/architecture.md`, rulesets).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Rules {
+    /// The Slippi ruleset's online determinism fixes from Slippi's playback codes: the stage
+    /// objects' user data is zeroed when allocated (`Ground_GetStageGObj`), and Final
+    /// Destination's background cycle keeps the random seed it draws from to itself
+    /// (`grLast_8021AAB0`).
+    pub slippi: bool,
 }
 
 /// What a GObj's HSD object is (`hsd_obj`, by its `obj_kind`).
@@ -29,6 +53,7 @@ pub enum Obj {
     CObj(CObjId),
     /// A light list's first light.
     LObj(LObjId),
+    Fog(FogId),
 }
 
 /// The game's types for the scheduler.
@@ -48,6 +73,16 @@ pub struct Game {
     pub world: World<GameKinds>,
     pub objs: Objects,
     pub fighters: Pool<Fighter>,
+    /// The stage objects (`Ground`, the stage GObjs' user data).
+    pub grounds: Pool<Ground>,
+    pub stage_info: StageInfo,
+    /// The stage's collision geometry, once `mpLibLoad` has loaded it.
+    pub geometry: Option<gr::Geometry>,
+    /// The stage code's other globals.
+    pub gr: gr::Globals,
+    /// The game camera (`game_camera`).
+    pub camera: Camera,
+    pub rules: Rules,
 }
 
 /// The game as the scheduler's host for one call: the state and the game data it reads.
@@ -66,12 +101,17 @@ impl Host<GameKinds> for Running<'_> {
     }
 
     fn remove_user_data(&mut self, _gobj: GObjId, _kind: u8, data: UserData) {
-        panic!("removing {data:?} needs its port");
+        match data {
+            // `mem_free`: the block goes back to the heap.
+            UserData::Ground(g) => self.game.grounds.free(g.0),
+            other => panic!("removing {other:?} needs its port"),
+        }
     }
 
     fn remove_obj(&mut self, _kind: u8, obj: Obj) {
         match obj {
             Obj::JObj(j) => crate::hsd::jobj::remove_all(&mut self.game.objs, Some(j)),
+            Obj::Fog(f) => crate::hsd::fog::unref(&mut self.game.objs, Some(f)),
             other => panic!("releasing a GObj's {other:?} needs its port"),
         }
     }

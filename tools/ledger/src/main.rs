@@ -6,6 +6,9 @@
 //! - **replaced** (`ledger/replaced.txt`) or **dead** (`ledger/dead.txt`), with a reason.
 //! - **unaccounted** otherwise.
 //!
+//! A name several functions share (each stage's `stageGObj0_OnInit`) is qualified with the
+//! function's address, `NAME@8021A8E0`, in aliases and lists alike.
+//!
 //! Run from the repository root: `cargo run --release -p ledger`. `--check` fails when a ported
 //! function has no check or a list names a function that doesn't exist.
 
@@ -147,20 +150,22 @@ fn main() {
         .filter(|s| s.3 && s.1 > 0)
         .map(|s| (s.0, s.2))
         .collect();
-    let names: std::collections::HashSet<&str> = functions.iter().map(|f| f.1).collect();
+    let mut names: std::collections::HashSet<String> =
+        functions.iter().map(|f| f.1.to_owned()).collect();
+    names.extend(functions.iter().map(|f| format!("{}@{:08X}", f.1, f.0)));
     let mut problems = Vec::new();
     for (list_name, l) in [
         ("replaced", &replaced),
         ("dead", &dead),
         ("checks", &checks),
     ] {
-        for n in l.keys().filter(|n| !names.contains(n.as_str())) {
+        for n in l.keys().filter(|n| !names.contains(*n)) {
             problems.push(format!(
                 "ledger/{list_name}.txt names {n}, which ssbm-rs doesn't have"
             ));
         }
     }
-    for n in ported.keys().filter(|n| !names.contains(n.as_str())) {
+    for n in ported.keys().filter(|n| !names.contains(*n)) {
         problems.push(format!(
             "{} aliases {n}, which ssbm-rs doesn't have",
             ported[n]
@@ -175,8 +180,13 @@ fn main() {
             .get(&addr)
             .copied()
             .unwrap_or("(no port in ssbm-rs)");
-        let check = leaf.get(name).or_else(|| checks.get(name));
-        let (status, place) = if let Some(at) = ported.get(name) {
+        let qualified = format!("{name}@{addr:08X}");
+        let check = leaf
+            .get(name)
+            .or_else(|| checks.get(&qualified))
+            .or_else(|| checks.get(name));
+        let (status, place) = if let Some(at) = ported.get(&qualified).or_else(|| ported.get(name))
+        {
             let s = if check.is_some() {
                 Status::Checked
             } else {
