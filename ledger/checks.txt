@@ -23,3 +23,4 @@ parseFloat	leaf-check fobj: every keyframe value is parsed through it; values co
 parsePackInfo	leaf-check fobj: every opcode's pack count is parsed through it; nb_pack compared every frame
 FObjLaunchKeyData	leaf-check fobj: keyed channels launch through it; updates and flags compared every frame
 FObjUpdateAnim	leaf-check fobj: every value handed to the update function comes from it; compared every frame
+fmodf	leaf-check aobj: fmodf_matches calls it at its address on random pairs in both float modes; looping AObjs wrap their frame through it, compared every step

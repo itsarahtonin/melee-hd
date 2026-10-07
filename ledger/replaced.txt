@@ -1,3 +1,4 @@
 # Functions melee-hd replaces with a native subsystem instead of porting.
 # One per line: NAME<TAB>reason
 __sinit_trigf_c	Static initializer; melee-sim's math tables are constants with its values.
+_HSD_AObjForgetMemory	It only clears endcallback_list, which nothing in the game ever adds to; melee-sim keeps no such list (see hsd::aobj::invoke_end_callbacks).

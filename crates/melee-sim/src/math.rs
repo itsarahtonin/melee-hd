@@ -1,11 +1,14 @@
 //! The game's own math routines, bit for bit: MSL's `sinf`, `cosf`, `tanf` and the inline
-//! `sqrtf`, and `lbtrigf`'s `atanf`, `atan2f`, `acosf` and `asinf`.
+//! `sqrtf`, `lbtrigf`'s `atanf`, `atan2f`, `acosf` and `asinf`, and the `fmodf` HSD's AObj
+//! carries.
 //!
 //! Each follows the instructions MWCC emitted, not just the C: which multiply-adds fused,
 //! which operations rounded to single precision, and the `frsqrte` estimate. `gekko-fp` does
 //! the arithmetic, so the console's (or Slippi's) rounding follows its mode.
 
 use gekko_fp as fp;
+
+use crate::runtime;
 
 /// `__sincos_on_quadrant` (MSL/math_data.c).
 const QUADRANT: [u32; 8] = [
@@ -287,4 +290,17 @@ pub fn acos(x: f32) -> f32 {
 pub fn asin(x: f32) -> f32 {
     let xr = reg(x);
     atan(mem(fp::fmuls(xr, rsqrt(fp::fnmsubs(xr, xr, 1.0)))))
+}
+
+/// `fmodf` on register values, the copy compiled into `sysdolphin/baselib/aobj.c`: `x` when
+/// `|y| > |x|`, else `x - y * trunc(x / y)` with the quotient through a 64-bit integer
+/// (saturating, so huge or NaN quotients give the runtime's results) and one fused
+/// multiply-subtract.
+#[doc(alias = "fmodf")]
+pub fn fmod(x: f64, y: f64) -> f64 {
+    if fp::fabs(y) > fp::fabs(x) {
+        return x;
+    }
+    let q = runtime::f64_to_u64(fp::fdivs(x, y)) as i64;
+    fp::fnmsubs(y, runtime::i64_to_f32(q), x)
 }
