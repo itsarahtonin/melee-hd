@@ -6,7 +6,6 @@ use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 
 /// Spawns effect `ef_id` at the item, `it_802787B4` (`it_80278800` with no offsets).
-#[doc(alias = "it_802787B4")]
 pub fn spawn_simple(_r: &mut Running, _gobj: GObjId, ef_id: i32) {
     code::unported_call(&format!("it_80278800 (item effect {ef_id:#x})"));
 }

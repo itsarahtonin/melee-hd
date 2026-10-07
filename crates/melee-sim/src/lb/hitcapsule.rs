@@ -19,7 +19,6 @@ pub fn disable(hit: &mut HitCapsule) {
 }
 
 /// Turns a hitbox on, `lbColl_80008434`.
-#[doc(alias = "lbColl_80008434")]
 pub fn enable(hit: &mut HitCapsule) {
     hit.state = ENABLED;
 }
@@ -39,7 +38,6 @@ pub fn clear_victims(hit: &mut HitCapsule) {
 
 /// Copies another hitbox's victims (an item's boxes of one group share them),
 /// `lbColl_CopyHitCapsule`.
-#[doc(alias = "lbColl_CopyHitCapsule")]
 pub fn copy_victims(src: &HitCapsule, dst: &mut HitCapsule) {
     dst.victims_1.clone_from(&src.victims_1);
     dst.victims_2.clone_from(&src.victims_2);

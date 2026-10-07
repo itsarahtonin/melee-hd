@@ -31,7 +31,6 @@ pub struct Globals {
 }
 
 /// Frees an effect, `efLib_remove_user_data`: an effect that isn't async counts out.
-#[doc(alias = "efLib_remove_user_data")]
 pub fn free_user_data(game: &mut Game, e: EffectId) {
     let fx = &game.ef.effects[e.0];
     assert!(fx.gobj.is_some(), "Duplicate Free");
@@ -70,7 +69,6 @@ pub fn detach_tree(r: &mut Running, gobj: GObjId) {
 /// Destroys the effects an object owns, `efLib_DestroyAll`: forgets it in the parameter table,
 /// frees the effects whose parent it is, and removes the particle generators following its
 /// joints (`hsd_8039D688`).
-#[doc(alias = "efLib_DestroyAll")]
 pub fn destroy_all(r: &mut Running, gobj: GObjId) {
     for p in &mut r.game.ef.params {
         if p.gobj == Some(gobj) {

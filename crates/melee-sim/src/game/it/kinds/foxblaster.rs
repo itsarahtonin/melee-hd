@@ -321,7 +321,6 @@ pub fn spawn(
 }
 
 /// Destroys a blaster its owner lets go of, `it_802AEAB4`.
-#[doc(alias = "it_802AEAB4")]
 pub fn remove(r: &mut Running, gobj: Option<GObjId>) {
     let Some(gobj) = gobj else { return };
     let ip = item_mut(r.game, gobj);
@@ -435,7 +434,6 @@ pub fn clear(r: &mut Running, gobj: GObjId) {
 }
 
 /// Matches the owner's scale when the owner's been resized, `itFoxblaster_UnkMotion10_Anim`.
-#[doc(alias = "itFoxblaster_UnkMotion10_Anim")]
 pub fn scale_with_owner(r: &mut Running, gobj: GObjId) -> bool {
     if item_mut(r.game, gobj)
         .xDD4_itemVar

@@ -3,23 +3,25 @@
 //! modes, and compares the whole state afterwards (the scheduler, every joint tree, fighters,
 //! items, the stage and the camera) and what the call returned.
 //!
-//! The captures are game memory, kept out of the repository. Regenerate them with ssbm-rs's
-//! runner (branch `feat/state-trace`), from `C:/Projects/ssbm-rs-state-trace`, with
-//! `items-funcs.txt` listing the item units' functions by address (item.c through it_279C.c,
-//! itfoxlaser.c and itfoxblaster.c: `ADDR NAME` per line, from the decomp's symbols.txt) and
+//! The captures are game memory, kept out of the repository in `ITEM_CALLS` (default below,
+//! beside the function lists the commands use); tests skip when it has no capture of their
+//! function. Both sets come from ssbm-rs's runner (branch `feat/state-trace`, built in
+//! `C:/Projects/ssbm-rs-state-trace` with `cargo build --release -p ssbm-run`) on a Fox against
+//! Sheik replay on Final Destination, with `items-funcs.txt` listing the item units' functions
+//! (item.c through it_279C.c, itfoxlaser.c and itfoxblaster.c: `ADDR NAME` per line, from the
+//! decomp's symbols.txt), `procs-funcs.txt` the item processes and creation functions, and
 //! `done-nonitems.txt` every other function's address:
 //!
 //! ```text
-//! cargo build --release -p ssbm-run
-//! CAPTURE=$ITEM_CALLS/fox-fd CAPTURE_NESTED=1 CAPTURE_FUNCS=@items-funcs.txt \
-//!   LOCKSTEP_DONE=done-nonitems.txt target/release/ssbm-run "$SSBM_DISC" \
-//!   --replay Game_20260129T133652.slp --fields 1500 --port all --lockstep \
-//!   --known local/replays/known/Game_20260129T133652.txt
+//! R="target/release/ssbm-run $SSBM_DISC --replay Game_20260129T133652.slp --port all \
+//!   --lockstep --known local/replays/known/Game_20260129T133652.txt"
+//! CAPTURE=$ITEM_CALLS/trial CAPTURE_FROM=300 CAPTURE_NESTED=1 CAPTURE_FUNCS=@items-funcs.txt \
+//!   LOCKSTEP_DONE=done-nonitems.txt $R --fields 1500
+//! CAPTURE=$ITEM_CALLS/fox-fd CAPTURE_FROM=300 CAPTURE_EVERY=300 CAPTURE_NESTED=1 \
+//!   CAPTURE_FUNCS=@procs-funcs.txt LOCKSTEP_DONE=done-nonitems.txt $R --fields 5000
 //! ```
 //!
-//! (Fox against Sheik on Final Destination; the mutated and mismatching saves aren't used and
-//! can be deleted.) `ITEM_CALLS` names the directory (default below); tests skip when it has no
-//! capture of their function.
+//! The runner's mutated and mismatching saves aren't used and can be deleted.
 
 use std::path::PathBuf;
 use std::sync::{Condvar, Mutex};
@@ -40,7 +42,7 @@ use melee_sim::hsd::jobj::JObjId;
 use melee_sim::vec::Vec3;
 use ssbm_rt::Ctx;
 
-const DEFAULT_CALLS: &str = "C:/Projects/scratch/items/calls";
+const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/items";
 
 fn calls_dir() -> PathBuf {
     std::env::var("ITEM_CALLS")
@@ -431,6 +433,7 @@ fn vec_words(v: Vec3) -> Vec<u32> {
 }
 
 use melee_sim::game::it::kinds::{foxblaster, foxlaser};
+use melee_sim::game::it::owner as it_owner;
 use melee_sim::game::it::{anim, coll, ground, hitbox, item, lib26b1, lib279c, lib2725, maplib};
 
 // item.c
@@ -840,6 +843,24 @@ fn set_hit_damage() {
         coll::set_hit_damage(r.game, r.data, g, a.hitbox(0, item), a.int(1));
         Ret::None
     });
+    // A fighter owner of another height scales the damage first (`ftCo_CalcYScaledKnockback`).
+    for scale in [0.75f32, 1.25] {
+        let prep = move |c: &mut Call| {
+            let item = w32(c, c.regs.gpr[5] + 0x2C);
+            let owner = w32(c, item + 0x518);
+            if owner == 0 {
+                return false;
+            }
+            set32(c, w32(c, owner + 0x2C) + 0x38, scale.to_bits());
+            true
+        };
+        check_calls("it_80272460", "it_80272460", &prep, &|r, a| {
+            let g = a.gobj(2);
+            let item = a.cap.u32(a.int(2) + 0x2C);
+            coll::set_hit_damage(r.game, r.data, g, a.hitbox(0, item), a.int(1));
+            Ret::None
+        });
+    }
 }
 
 // it_2725.c
@@ -1448,15 +1469,20 @@ fn end_hitlags() {
 fn react_shield() {
     // Bouncing off a shield in the air (hitting one destroys a shot, which waits for the
     // audio driver's port).
-    let bounce = |c: &mut Call| {
-        let ip = item_ptr(c);
-        set32(c, ip + 0xC0, 1);
-        or8(c, ip + 0xDCE, 0x0C);
-        lasers(c)
-    };
-    check_on(TICKS, "Item_80269DC8", &bounce, &|r, a| {
-        Ret::Bool(item::react_shield(r, a.gobj(0)))
-    });
+    // Bit 4 bounces at any angle; without it, only below the limit, after turning (above it
+    // the shot hits the shield and is destroyed, which waits for the audio port).
+    for (bits, angle) in [(0x0C, 2.0f32), (0x04, 0.5)] {
+        let bounce = move |c: &mut Call| {
+            let ip = item_ptr(c);
+            set32(c, ip + 0xC0, 1);
+            set32(c, ip + 0xC54, angle.to_bits());
+            or8(c, ip + 0xDCE, bits);
+            lasers(c)
+        };
+        check_on(TICKS, "Item_80269DC8", &bounce, &|r, a| {
+            Ret::Bool(item::react_shield(r, a.gobj(0)))
+        });
+    }
 }
 
 #[test]
@@ -1554,13 +1580,12 @@ fn enter_ground() {
 }
 
 #[test]
-fn clear_overlay2() {
-    for target in ["it_80279BBC"] {
-        check_on(TICKS, target, &pass_item, &|r, a| {
-            anim::clear_overlay(&mut r.game.items[a.item(0).0]);
-            Ret::None
-        });
-    }
+fn clear_overlay_copy() {
+    // `it_80279BBC` is a second copy of `it_80279B64`.
+    check_on(TICKS, "it_80279BBC", &pass_item, &|r, a| {
+        anim::clear_overlay(&mut r.game.items[a.item(0).0]);
+        Ret::None
+    });
 }
 
 #[test]
@@ -1664,4 +1689,76 @@ fn blaster_spawn() {
         );
         Ret::GObj(g)
     });
+}
+
+#[test]
+fn team_rules() {
+    check_on(TICKS, "gm_8016B168", &|_| true, &|r, _| {
+        Ret::Bool(it_owner::is_team_battle(r.game))
+    });
+    check_on(TICKS, "gm_8016B0D4", &|_| true, &|r, _| {
+        Ret::Bool(it_owner::friendly_fire(r.game))
+    });
+}
+
+/// Passes the item's owner, a fighter, first, and the item second.
+fn owner_first(c: &mut Call) -> bool {
+    let item = c.regs.gpr[3];
+    c.regs.gpr[3] = w32(c, item_ptr(c) + 0x518);
+    c.regs.gpr[4] = item;
+    c.regs.gpr[3] != 0
+}
+
+#[test]
+fn held_items() {
+    check_on(TICKS, "ftLib_GetHeldSpecialItem", &owner_first, &|r, a| {
+        Ret::GObj(it_owner::held_special_item(r.game, a.gobj(0)))
+    });
+    check_on(TICKS, "ftLib_IsHoldingItem", &owner_first, &|r, a| {
+        Ret::Bool(it_owner::is_holding(r.game, a.gobj(0), a.gobj(1)))
+    });
+}
+
+#[test]
+fn clear_blaster() {
+    let prep = |c: &mut Call| blasters(c) && owner_first(c);
+    check_on(TICKS, "ftFx_SpecialN_ClearBlaster", &prep, &|r, a| {
+        foxblaster::clear_from_owner(r.game, a.gobj(0));
+        Ret::None
+    });
+}
+
+#[test]
+fn remove_camera_box() {
+    check_on(TICKS, "Item_80267454", &|_| true, &|r, a| {
+        item::remove_camera_box(r.game, a.gobj(0));
+        Ret::None
+    });
+}
+
+#[test]
+fn y_scaled_knockback() {
+    use ssbm_types::fns;
+    let Some(ctx) = reference() else { return };
+    let xs = leaf_check::inputs(3.0, 400);
+    for mode in MODES {
+        set_fp_mode(mode);
+        for (k, &x) in xs.iter().enumerate() {
+            let scales = [0.5, 0.8, 1.0, 1.3, 2.0, xs[(k * 7) % xs.len()]];
+            let ys = [0.0, 0.5, 1.0, 1.5, -0.5, -1.5, xs[(k * 13) % xs.len()]];
+            for s in scales.into_iter().filter(|&s| s != 0.0) {
+                for y in ys {
+                    let (x, s, y) = (leaf_check::arg(x), leaf_check::arg(s), leaf_check::arg(y));
+                    let theirs = fns::ftCo_CalcYScaledKnockback(&ctx, x, s, y);
+                    let ours = it_owner::y_scaled(x, s, y);
+                    assert_eq!(
+                        ours.to_bits(),
+                        theirs.to_bits(),
+                        "ftCo_CalcYScaledKnockback({x}, {s}, {y}) in {mode:?}"
+                    );
+                }
+            }
+        }
+    }
+    set_fp_mode(FpMode::Hardware);
 }

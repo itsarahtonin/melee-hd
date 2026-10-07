@@ -149,7 +149,6 @@ pub fn place_ground(game: &mut Game, data: &Archives, gobj: GObjId, pos: Vec3) {
 }
 
 /// Slides a grounded item that's skidding, `it_8027737C`.
-#[doc(alias = "it_8027737C")]
 pub fn slide(r: &mut Running, gobj: GObjId, _v: &mut Vec3) {
     let ip = item(r.game, gobj);
     if !ip.xDC8_word.flags.x1F || ip.xD5C == 0 {

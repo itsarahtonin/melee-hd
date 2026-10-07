@@ -167,7 +167,6 @@ pub fn set_hitbox_damage(r: &mut Running, gobj: GObjId) {
 }
 
 /// Sets a hitbox's size from the script, `it_802795EC`.
-#[doc(alias = "it_802795EC")]
 pub fn set_hitbox_scale(r: &mut Running, gobj: GObjId) {
     let w = word(r, gobj, 0);
     let idx = field(w, 6, 3) as usize;
@@ -182,7 +181,6 @@ pub fn set_hitbox_scale(r: &mut Running, gobj: GObjId) {
 }
 
 /// A sound command, `it_8027978C`: plays in one of the item's slots, or stops one.
-#[doc(alias = "it_8027978C")]
 pub fn sound(r: &mut Running, gobj: GObjId) {
     let w = word(r, gobj, 0);
     let op = w >> 18 & 0xFF;

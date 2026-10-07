@@ -629,3 +629,186 @@ pl_8003891C	leaf-check vs reset_player_records: every capture
 pl_80040DDC	leaf-check vs reset_frame_counters: every capture
 pl_80041524	leaf-check vs reset_x8c0: every capture
 pl_800418F4	leaf-check vs reset_x8d8: every capture
+
+# Items (melee/it) and what they reach: tools/leaf-check/tests/items.rs runs captured calls (or other functions from captured item states) on both sides and compares the whole state.
+ftLib_IsHoldingItem	leaf-check items: held_items runs it from captured item states
+ftLib_GetHeldSpecialItem	leaf-check items: held_items runs it from captured item states
+ftFx_SpecialN_ClearBlaster	leaf-check items: clear_blaster runs it from captured item states
+gm_8016B0D4	leaf-check items: team_rules runs it from captured item states
+gm_8016B168	leaf-check items: team_rules runs it from captured item states
+Item_80267130	leaf-check items: init_position runs every captured call
+Item_80267454	leaf-check items: remove_camera_box runs it from captured item states
+Item_802674AC	leaf-check items: hold_kind runs every captured call
+Item_802675A8	leaf-check items: uncount runs every captured call
+Item_802676F4	leaf-check items: count runs every captured call
+Item_8026784C	leaf-check items: at_limit runs every captured call
+Item_80267978	leaf-check items: set_kind_data runs every captured call
+Item_80267AA8	leaf-check items: init_vars runs every captured call
+Item_8026814C	leaf-check items: set_material_class runs every captured call
+Item_802682F0	leaf-check items: make_bone_table runs every captured call
+Item_8026849C	leaf-check items: apply_scale runs every captured call
+Item_80268560	leaf-check items: init_dynamics runs every captured call
+Item_8026862C	leaf-check items: create runs every captured call
+Item_80268B18	leaf-check items: spawn_air runs every captured call
+Item_80268B5C	leaf-check items: spawn_ground runs it from captured item states
+Item_80268B9C	leaf-check items: spawn_ground runs it from captured item states
+Item_80268BE0	leaf-check items: add_anims runs every captured call
+Item_80268DD4	leaf-check items: seek_anim runs it from captured item states
+Item_80268E5C	leaf-check items: change_state runs every captured call
+Item_802693E4	leaf-check items: hitlag_proc runs every captured call
+Item_802694CC	leaf-check items: animate runs every captured call
+Item_80269528	leaf-check items: anim_proc runs every captured call
+Item_802696CC	leaf-check items: check_blast_zones runs every captured call
+Item_802697D4	leaf-check items: phys_proc runs every captured call
+Item_80269978	leaf-check items: coll_proc runs every captured call
+Item_80269A9C	leaf-check items: accessory_proc runs every captured call
+Item_80269B60	leaf-check items: jumped_on_proc runs every captured call
+Item_80269BE4	leaf-check items: grab_proc runs every captured call
+Item_80269C5C	leaf-check items: hit_proc runs every captured call
+Item_80269CA0	leaf-check items: add_damage runs it from captured item states
+Item_80269CC4	leaf-check items: clear_hit_record runs every captured call
+Item_80269DC8	leaf-check items: react_shield runs it from captured item states
+Item_80269F14	leaf-check items: react_reflect runs it from captured item states
+Item_8026A0A0	leaf-check items: end_hitlags runs it from captured item states
+Item_8026A0FC	leaf-check items: end_hitlags runs it from captured item states
+Item_8026A158	leaf-check items: enter_hitlag runs it from captured item states
+Item_8026A1E8	leaf-check items: exit_hitlag runs it from captured item states
+Item_8026A294	leaf-check items: react_proc runs every captured call
+Item_8026A788	leaf-check items: dynamics_proc runs every captured call
+Item_8026A810	leaf-check items: on_spawned runs every captured call
+Item_8026AE60	leaf-check items: next_attack_id runs it from captured item states
+Item_8026AE84	leaf-check items: play_sfx runs every captured call
+Item_8026AF0C	leaf-check items: play_sfx1 runs it from captured item states
+Item_8026AFA0	leaf-check items: play_sfx2 runs it from captured item states
+Item_8026B034	leaf-check items: stop_sfx1 runs it from captured item states
+Item_8026B074	leaf-check items: stop_sfx2 runs every captured call
+Item_IsGrabbable	leaf-check items: is_grabbable runs it from captured item states
+itIsHeavy	leaf-check items: is_heavy runs it from captured item states
+it_8026B390	leaf-check items: enable_pickup runs every captured call
+it_8026B3A8	leaf-check items: disable_pickup runs every captured call
+it_8026B424	leaf-check items: hitlag_frames runs it from captured item states
+it_8026B894	leaf-check items: forget runs it from captured item states
+it_8026BB88	leaf-check items: ecb_center runs every captured call
+it_8026BBCC	leaf-check items: last_ecb_center runs every captured call
+it_8026BC68	leaf-check items: is_stomp runs every captured call
+itGetOwner	leaf-check items: owner runs every captured call
+itGetAttackId	leaf-check items: attack_id runs every captured call
+it_8026BD6C	leaf-check items: set_xdcd_b3 runs every captured call
+it_8026C368	leaf-check items: check_burst runs every captured call
+it_8026D604	leaf-check items: on_line runs it from captured item states
+it_8026E9A4	leaf-check items: stage_crossing runs every captured call
+it_8026F9A0	leaf-check items: clear_damage_log runs every captured call
+it_8026FCF8	leaf-check items: share_group_victims runs every captured call
+it_802706D0	leaf-check items: hit_by_items runs every captured call
+it_80270E30	leaf-check items: take_hits runs every captured call
+it_8027129C	leaf-check items: update_hitbox runs every captured call
+it_8027137C	leaf-check items: update_hitboxes runs every captured call
+it_8027146C	leaf-check items: age_hit_victims runs every captured call
+it_802714C0	leaf-check items: refresh_hurtboxes runs every captured call
+it_80271508	leaf-check items: set_hurtbox_state runs every captured call
+it_8027163C	leaf-check items: init_hurtboxes runs every captured call
+it_80271830	leaf-check items: rotate_ecb runs every captured call
+it_80271A58	leaf-check items: update_ecb runs every captured call
+it_80271B60	leaf-check items: pushes runs it from captured item states
+it_80271D2C	leaf-check items: pushes runs it from captured item states
+it_80271F78	leaf-check items: pushes runs it from captured item states
+it_802721B8	leaf-check items: keep_clear runs every captured call
+it_80272280	leaf-check items: clear_x1b runs every captured call
+it_80272298	leaf-check items: set_x1b runs every captured call
+it_802722B0	leaf-check items: track_fighters runs every captured call
+it_80272304	leaf-check items: update_dynamics_points runs every captured call
+it_80272460	leaf-check items: set_hit_damage runs every captured call
+it_80272560	leaf-check items: clear_hitbox runs it from captured item states
+it_802725D4	leaf-check items: clear_hitboxes runs every captured call
+it_802728C8	leaf-check items: flicker runs it from captured item states
+it_80272940	leaf-check items: show runs every captured call
+it_80272CC0	leaf-check items: bone runs every captured call
+it_80272F7C	leaf-check items: set_uniform_scale runs every captured call
+it_80273130	leaf-check items: tick_lifetime runs every captured call
+it_80273168	leaf-check items: pickup_sfx runs every captured call
+it_8027327C	leaf-check items: destroy_effect runs every captured call
+it_802732E4	leaf-check items: play_sfx_unless_quiet runs every captured call
+it_8027346C	leaf-check items: clear_x64 runs every captured call
+it_80273484	leaf-check items: clear_x58 runs every captured call
+it_80273500	leaf-check items: set_velocity runs every captured call
+it_802742F4	leaf-check items: hold runs every captured call
+it_80274658	leaf-check items: clamp_fall runs every captured call
+it_802746F8	leaf-check items: spin_joint runs every captured call
+it_80274A64	leaf-check items: spin runs it from captured item states
+it_80274C60	leaf-check items: uncount_hits runs it from captured item states
+it_80274C78	leaf-check items: is_hit_counted runs every captured call
+it_80274C88	leaf-check items: clear_stomp runs every captured call
+it_80274D04	leaf-check items: ecb_motion runs every captured call
+it_80274D6C	leaf-check items: ecb_extent runs every captured call
+it_80274DAC	leaf-check items: init_spin runs every captured call
+it_80274EF8	leaf-check items: clear_attack_id runs every captured call
+it_80275158	leaf-check items: set_lifetime runs every captured call
+it_80275390	leaf-check items: drop_owner runs it from captured item states
+it_802753BC	leaf-check items: set_damage_taken runs every captured call
+it_802753DC	leaf-check items: clear_dealt runs every captured call
+it_80275474	leaf-check items: clear_hit_ids runs every captured call
+it_80275504	leaf-check items: clear_hit_ids2 runs every captured call
+it_80275594	leaf-check items: scale_hitbox runs every captured call
+it_802756D0	leaf-check items: start_blink runs every captured call
+it_802756E0	leaf-check items: end_blink runs it from captured item states
+it_8027574C	leaf-check items: update_boxes runs every captured call
+it_80275E98	leaf-check items: init_coll runs every captured call
+it_80276100	leaf-check items: place_air runs every captured call
+it_802762B0	leaf-check items: enter_ground runs it from captured item states
+it_802762BC	leaf-check items: enter_air runs every captured call
+it_802790C0	leaf-check items: create_hitbox runs every captured call
+it_802799E4	leaf-check items: run_script runs every captured call
+it_80279B64	leaf-check items: clear_overlay runs every captured call
+it_80279BBC	leaf-check items: clear_overlay_copy runs it from captured item states
+it_80279BE0	leaf-check items: run_overlay runs every captured call
+it_8027B0C4	leaf-check items: track_spawn runs every captured call
+it_8029C504	leaf-check items: laser_spawn runs every captured call
+it_8029C6A4	leaf-check items: laser_spawn_0 runs every captured call
+it_8029C6CC	leaf-check items: laser_spawn_1 runs every captured call
+itFoxlaser_UnkMotion1_Anim	leaf-check items: laser_anim runs every captured call
+itFoxlaser_UnkMotion1_Phys	leaf-check items: laser_phys runs every captured call
+itFoxlaser_UnkMotion1_Coll	leaf-check items: laser_coll runs every captured call
+itFoxLaser_Logic94_Reflected	leaf-check items: laser_reflected runs every captured call
+itFoxLaser_Logic94_ShieldBounced	leaf-check items: laser_shield_bounced runs every captured call
+itFoxLaser_Logic94_EvtUnk	leaf-check items: laser_forget runs it from captured item states
+it_802ADDD0	leaf-check items: blaster_set_visible runs every captured call
+it_802ADEF0	leaf-check items: blaster_on_shot runs every captured call
+it_802ADF10	leaf-check items: blaster_on_shot_inner runs every captured call
+it_802AE1D0	leaf-check items: blaster_shot runs every captured call
+it_802AE200	leaf-check items: blaster_recoil runs every captured call
+it_802AE538	leaf-check items: blaster_start_pulse runs every captured call
+it_802AE608	leaf-check items: blaster_end_pulse runs every captured call
+it_802AE63C	leaf-check items: blaster_pulse runs every captured call
+it_802AE7B8	leaf-check items: blaster_reset runs every captured call
+it_802AE8A8	leaf-check items: blaster_spawn runs every captured call
+itFoxBlaster_Logic96_PickedUp	leaf-check items: blaster_picked_up runs every captured call
+itFoxblaster_UnkMotion8_Anim	leaf-check items: blaster_follow runs every captured call
+itFoxBlaster_Logic96_EvtUnk	leaf-check items: blaster_forget runs it from captured item states
+lbColl_80008440	leaf-check items: change_state, create_hitbox, the laser spawns and share_group_victims run it on their captured calls
+lbColl_80008A5C	leaf-check items: age_hit_victims and jumped_on_proc run it on their captured calls
+lb_8000B9D8	leaf-check items: lb_8000BA0C walks the tree through it (seek_anim, change_state, the laser and blaster spawns)
+lb_8000BA0C	leaf-check items: seek_anim, change_state and the laser and blaster spawns run it on their captured calls
+lb_8000C2F8	leaf-check items: hold and blaster_spawn attach the item through it on every captured call
+ftLib_GetECBCenter	leaf-check items: the laser spawns run it on every captured call
+ftLib_GetTeam	leaf-check items: react_reflect runs it from captured item states
+ftLib_IncFighterRefCount	leaf-check items: create, spawn_air, spawn_ground and the laser and blaster spawns run it on every captured call
+ft_80089118	leaf-check items: create_hitbox, set_hit_damage, change_state and the laser spawns run it on their captured calls
+ft_80089228	leaf-check items: create_hitbox, set_hit_damage, change_state and the laser spawns run it on their captured calls
+ftCo_80098634	leaf-check items: track_fighters runs it on every captured call
+ftFx_SpecialN_CheckRemoveBlaster	leaf-check items: blaster_follow runs it on every captured call
+ftFx_SpecialN_GetBlasterAction	leaf-check items: blaster_follow, blaster_picked_up and blaster_spawn run it on their captured calls
+ftFx_SpecialN_CheckBlasterAction	leaf-check items: blaster_follow runs it on every captured call
+gm_8018841C	leaf-check items: create, count, uncount and the spawns run it on their captured calls
+db_80225D64	leaf-check items: create, init_position, hold and the spawns run it on their captured calls (db_80225DD8 inlines it)
+db_80225DD8	leaf-check items: create, init_position, hold and the spawns run it on their captured calls
+Item_802680CC	leaf-check items: create and the spawns run it on every captured call
+Item_80268D34	leaf-check items: change_state and the laser and blaster spawns run it on their captured calls
+Item_80268E40	leaf-check items: change_state and the laser and blaster spawns run it on their captured calls
+Item_8026AB54	leaf-check items: blaster_spawn picks the new blaster up through it on every captured call
+it_8027349C	leaf-check items: set_velocity, init_position and the spawns run it on their captured calls
+it_802734B4	leaf-check items: set_velocity, init_position and the spawns run it on their captured calls
+it_80274F48	leaf-check items: hold and blaster_spawn run it on every captured call
+it_80276174	leaf-check items: spawn_ground runs it on every captured call
+it_80279544	leaf-check items: anim_proc runs it on its captured calls that agree
+it_8027B070	leaf-check items: track_spawn, create and the spawns run it on their captured calls
+it_8029C4D4	leaf-check items: laser_coll runs it on every captured call

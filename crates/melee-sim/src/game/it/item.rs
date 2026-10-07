@@ -1484,7 +1484,6 @@ pub fn is_special_held(ip: &Item) -> bool {
 }
 
 /// Lets go of the item from a fighter's hand, `Item_8026A848`.
-#[doc(alias = "Item_8026A848")]
 pub fn release_from(r: &mut Running, gobj: GObjId, fighter: GObjId) {
     super::owner::release(r, gobj, fighter, is_special_held(super::item(r.game, gobj)));
 }
@@ -1646,8 +1645,8 @@ pub fn stop_all_sfx(_game: &mut Game, _gobj: GObjId) {
 }
 
 /// A fighter takes the item in hand at its part `part`, `Item_8026AB54`: the pickup sound, the
-/// item held, and the kind's `picked_up` callback. (No alias: the one capture reaches a kind
-/// not ported yet.)
+/// item held, and the kind's `picked_up` callback.
+#[doc(alias = "Item_8026AB54")]
 pub fn pick_up(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
     lib2725::pickup_sfx(r.game, gobj);
     hold(r, gobj, holder, part);

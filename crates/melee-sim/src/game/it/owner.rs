@@ -72,8 +72,6 @@ pub fn inc_fighter_refs(game: &mut Game, kind: i32) {
 
 /// Counts such an object out, `ftLib_DecFighterRefCount`; the original asserts the count stays
 /// at or above zero (`ftData_80085560`).
-#[doc(alias = "ftLib_DecFighterRefCount")]
-#[doc(alias = "ftData_80085560")]
 pub fn dec_fighter_refs(game: &mut Game, kind: i32) {
     let r = &mut game.it.fighter_refs.0[kind as usize];
     *r = r.wrapping_sub(1);
@@ -100,7 +98,7 @@ pub fn y_scaled(arg0: f64, scale: f64, arg2: f64) -> f64 {
 /// `Fighter_804D6548` for each of its recent uses.
 #[doc(alias = "ft_80089118")]
 pub fn stale_mul(game: &Game, data: &Archives, slot: u8, move_id: i32) -> f64 {
-    let table = &game.players[slot as usize].stale_moves;
+    let table = &game.player(i32::from(slot)).stale_moves;
     let mut mul = 1.0;
     let mut k = if table.current_index != 0 {
         table.current_index.wrapping_sub(1)
