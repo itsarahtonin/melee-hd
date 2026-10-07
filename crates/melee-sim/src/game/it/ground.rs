@@ -404,10 +404,8 @@ pub fn fall_unstick(r: &mut Running, gobj: GObjId, landed: Event) {
     if t & 0xC != 0 {
         unstick(r.game, gobj, t);
     }
-    if t & 1 != 0 {
-        if land_settled(r, gobj) {
-            landed(r, gobj);
-        }
+    if t & 1 != 0 && land_settled(r, gobj) {
+        landed(r, gobj);
     }
 }
 

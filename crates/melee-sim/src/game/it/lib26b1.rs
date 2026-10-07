@@ -158,3 +158,15 @@ pub fn check_burst(r: &mut Running, gobj: GObjId) {
         }
     }
 }
+
+/// `xDD0_flag.b3`, `it_8026BD24`.
+#[doc(alias = "it_8026BD24")]
+pub fn set_xdd0_b3(game: &mut Game, gobj: GObjId) {
+    super::set_flag(&mut item_mut(game, gobj).xDD0_flag, 3, true);
+}
+
+/// Stops the item keeping clear of others (`xDC8_word.x1A`), `it_8026BDB4`.
+#[doc(alias = "it_8026BDB4")]
+pub fn stop_keeping_clear(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDC8_word.flags.x1A = false;
+}

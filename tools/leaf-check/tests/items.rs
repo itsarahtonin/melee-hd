@@ -504,6 +504,7 @@ fn vec_words(v: Vec3) -> Vec<u32> {
     vec![v.x.to_bits(), v.y.to_bits(), v.z.to_bits()]
 }
 
+use melee_sim::game::it::kinds::{self, capsule};
 use melee_sim::game::it::kinds::{foxblaster, foxlaser};
 use melee_sim::game::it::owner as it_owner;
 use melee_sim::game::it::spawn;
@@ -2245,4 +2246,545 @@ fn groundcoll() {
         ground::fall_to_floor(r, a.gobj(0), cb);
         Ret::None
     });
+}
+
+// itcapsule.c, from the items-on corpus.
+
+#[test]
+fn capsule_spawned() {
+    check_proc("itCapsule_Logic0_Spawned", capsule::spawned);
+}
+
+/// Zeroes the item's queued effects (`xBC0`), as an item that queued none.
+fn no_queued_effects(c: &mut Call) {
+    let ip = item_ptr(c);
+    set32(c, ip + 0xBC0, 0);
+}
+
+/// Makes the table without containers drop only capsules, from a seed.
+fn only_capsules(c: &mut Call, seed: u32) {
+    let t = leaf_check::sym("it_804A0E50");
+    let n = w32(c, t) >> 24;
+    let kinds = w32(c, t + 4);
+    for i in 0..n {
+        let at = kinds + i;
+        let w = w32(c, at & !3);
+        let shift = 8 * (3 - (at & 3));
+        set32(c, at & !3, w & !(0xFF << shift));
+    }
+    set_seed(c, seed);
+}
+
+#[test]
+fn capsule_landed() {
+    // From the capsules' standing states, with no queued effects (which wait for the
+    // effects' port).
+    let prep = |c: &mut Call| {
+        no_queued_effects(c);
+        item_kind(c) == 0
+    };
+    check_on(
+        "itCapsule_UnkMotion0_Anim",
+        "it_8027D0B8",
+        &prep,
+        &|r, a| {
+            capsule::landed(r, a.gobj(0));
+            Ret::None
+        },
+    );
+    check_on(
+        "itCapsule_UnkMotion0_Anim",
+        "it_8027D148",
+        &prep,
+        &|r, a| {
+            capsule::fell(r, a.gobj(0));
+            Ret::None
+        },
+    );
+}
+
+#[test]
+fn capsule_opens() {
+    // Opened where it stands, dropping capsules (the only kind ported that can come out).
+    // The sixth seed's capsule explodes, which waits for the effects' port.
+    for seed in seeds().take(5) {
+        let prep = move |c: &mut Call| {
+            no_queued_effects(c);
+            only_capsules(c, seed);
+            item_kind(c) == 0
+        };
+        check_on(
+            "itCapsule_UnkMotion0_Anim",
+            "it_8027CF30",
+            &prep,
+            &|r, a| {
+                capsule::land_check(r, a.gobj(0));
+                Ret::None
+            },
+        );
+        check_on(
+            "itCapsule_UnkMotion0_Anim",
+            "itCapsule_Logic0_DmgReceived",
+            &prep,
+            &|r, a| Ret::Bool(capsule::hit(r, a.gobj(0))),
+        );
+    }
+}
+
+#[test]
+fn capsule_states() {
+    check_pred("itCapsule_UnkMotion0_Anim", |r, g| {
+        kinds::run_pred(r, g, capsule::ANIM0).unwrap()
+    });
+    check_proc("itCapsule_UnkMotion0_Phys", |r, g| {
+        assert!(kinds::run_event(r, g, capsule::PHYS0));
+    });
+    check_pred("itCapsule_UnkMotion0_Coll", capsule::coll0);
+    check_pred("itCapsule_UnkMotion4_Anim", |r, g| {
+        kinds::run_pred(r, g, capsule::ANIM4).unwrap()
+    });
+    check_proc("itCapsule_UnkMotion4_Phys", capsule::phys4);
+    check_pred("itCapsule_UnkMotion4_Coll", capsule::coll4);
+}
+
+/// The capsules' standing captures, without queued effects (which wait for the effects' port).
+fn standing_capsule(c: &mut Call) -> bool {
+    no_queued_effects(c);
+    item_kind(c) == 0
+}
+
+/// A capsule's callback run on the capsules' standing (`air` false) or falling captures.
+fn on_capsules(target: &str, air: bool, ours: &Ours) {
+    let source = if air {
+        "itCapsule_UnkMotion4_Anim"
+    } else {
+        "itCapsule_UnkMotion0_Anim"
+    };
+    check_on(source, target, &standing_capsule, ours);
+}
+
+#[test]
+fn capsule_callbacks() {
+    for (target, f) in [
+        (
+            "itCapsule_Logic0_PickedUp",
+            capsule::picked_up as fn(&mut Running, GObjId),
+        ),
+        ("itCapsule_Logic0_Dropped", capsule::dropped),
+        ("itCapsule_Logic0_Thrown", capsule::thrown),
+        ("itCapsule_Logic0_EnteredAir", capsule::entered_air),
+        ("itCapsule_UnkMotion3_Phys", capsule::phys3),
+        ("itCapsule_UnkMotion2_Phys", capsule::idle_phys),
+        ("itCapsule_UnkMotion5_Phys", capsule::idle_phys),
+        ("itCapsule_UnkMotion6_Phys", capsule::idle_phys),
+    ] {
+        on_capsules(target, false, &move |r, a| {
+            f(r, a.gobj(0));
+            Ret::None
+        });
+    }
+    for (target, f, air) in [
+        (
+            "itCapsule_UnkMotion2_Anim",
+            capsule::idle_anim as fn(&mut Running, GObjId) -> bool,
+            false,
+        ),
+        ("itCapsule_UnkMotion6_Anim", capsule::idle_anim, false),
+        ("itCapsule_UnkMotion5_Coll", capsule::idle_anim, false),
+        ("itCapsule_UnkMotion5_Anim", capsule::vanishing, false),
+        ("itCapsule_UnkMotion6_Coll", capsule::coll6, false),
+        ("itCapsule_UnkMotion3_Coll", capsule::coll3, true),
+        ("itCapsule_UnkMotion6_Coll", capsule::coll6, true),
+    ] {
+        on_capsules(target, air, &move |r, a| Ret::Bool(f(r, a.gobj(0))));
+    }
+}
+
+#[test]
+fn capsule_hits() {
+    // Hit, clanked or reflected while standing (it opens: drops capsules), or while
+    // exploding (state 5, nothing).
+    for msid in [None, Some(5)] {
+        for target in [
+            "itCapsule_Logic0_DmgDealt",
+            "itCapsule_Logic0_Clanked",
+            "itCapsule_Logic0_Reflected",
+        ] {
+            let prep = move |c: &mut Call| {
+                only_capsules(c, 0x5EED);
+                if let Some(m) = msid {
+                    set32(c, item_ptr(c) + 0x24, m);
+                }
+                standing_capsule(c)
+            };
+            check_on("itCapsule_UnkMotion0_Anim", target, &prep, &|r, a| {
+                Ret::Bool(capsule::hit(r, a.gobj(0)))
+            });
+        }
+    }
+    // A shield, thrown (state 3) or dropped (4), or not.
+    for msid in [0u32, 3, 4] {
+        let prep = move |c: &mut Call| {
+            only_capsules(c, 0x5EED);
+            set32(c, item_ptr(c) + 0x24, msid);
+            set32(c, item_ptr(c) + 0xC58, 0.6f32.to_bits());
+            set32(c, item_ptr(c) + 0xC5C, 0.8f32.to_bits());
+            standing_capsule(c)
+        };
+        check_on(
+            "itCapsule_UnkMotion0_Anim",
+            "itCapsule_Logic0_HitShield",
+            &prep,
+            &|r, a| Ret::Bool(capsule::hit_shield(r, a.gobj(0))),
+        );
+        check_on(
+            "itCapsule_UnkMotion0_Anim",
+            "itCapsule_Logic0_ShieldBounced",
+            &prep,
+            &|r, a| Ret::Bool(capsule::shield_bounced(r, a.gobj(0))),
+        );
+    }
+    // Already exploding: breaking again does nothing.
+    let prep = |c: &mut Call| {
+        set32(c, item_ptr(c) + 0xDD4 + 4, 1);
+        standing_capsule(c)
+    };
+    check_on(
+        "itCapsule_UnkMotion0_Anim",
+        "it_8027D2DC",
+        &prep,
+        &|r, a| {
+            capsule::break_open(r, a.gobj(0));
+            Ret::None
+        },
+    );
+}
+
+/// Makes the monsters' table drop only capsules.
+fn monsters_capsules(c: &mut Call) {
+    let t = leaf_check::sym("it_804A0E60");
+    let n = w32(c, t) >> 24;
+    let kinds = w32(c, t + 4);
+    for i in 0..n {
+        let at = kinds + i;
+        let w = w32(c, at & !3);
+        let shift = 8 * (3 - (at & 3));
+        set32(c, at & !3, w & !(0xFF << shift));
+    }
+}
+
+/// Points r`reg` at a vector below the stack pointer, set to `v`.
+fn vec_arg(c: &mut Call, reg: usize, off: u32, v: [f32; 3]) {
+    let at = c.regs.gpr[1] - off;
+    for (k, x) in v.iter().enumerate() {
+        set32(c, at + 4 * k as u32, x.to_bits());
+    }
+    c.regs.gpr[reg] = at;
+}
+
+#[test]
+fn drops() {
+    use melee_sim::game::it::drop;
+    let base = |c: &mut Call| {
+        only_capsules(c, 0x5EED);
+        monsters_capsules(c);
+        standing_capsule(c)
+    };
+    check_on(
+        "itCapsule_UnkMotion0_Anim",
+        "it_8026F3AC",
+        &base,
+        &|r, _| Ret::Int(drop::pick(r.game) as u32),
+    );
+    for (n, same) in [(1u32, 0u32), (3, 0), (2, 1)] {
+        let prep = move |c: &mut Call| {
+            c.regs.gpr[4] = 0;
+            c.regs.gpr[5] = n;
+            c.regs.gpr[6] = same;
+            base(c)
+        };
+        check_on(
+            "itCapsule_UnkMotion0_Anim",
+            "it_8026F3D4",
+            &prep,
+            &|r, a| {
+                Ret::Bool(
+                    drop::drop_contents(r, a.gobj(0), a.int(2) as i32, a.int(3) & 1 != 0).stopped,
+                )
+            },
+        );
+    }
+    for chk in [0u32, 1] {
+        let prep = move |c: &mut Call| {
+            vec_arg(c, 4, 0x3000, [3.0, 7.0, 0.0]);
+            c.regs.gpr[5] = chk;
+            base(c)
+        };
+        check_on(
+            "itCapsule_UnkMotion0_Anim",
+            "it_8026F53C",
+            &prep,
+            &|r, a| {
+                let vel = (a.int(2) != 0).then(|| a.vec(1));
+                drop::pop_up(r.game, r.data, a.gobj(0), vel);
+                let v = r.game.items[a.maps.items[&a.cap.u32(a.int(0) + 0x2C)].0].x40_vel;
+                Ret::Words(a.int(1), vec_words(v))
+            },
+        );
+    }
+    let prep = |c: &mut Call| {
+        c.regs.gpr[4] = 0;
+        vec_arg(c, 5, 0x3000, [10.0, 20.0, 5.0]);
+        base(c)
+    };
+    check_on(
+        "itCapsule_UnkMotion0_Anim",
+        "it_8026F5C8",
+        &prep,
+        &|r, a| Ret::GObj(drop::spawn_at(r, Some(a.gobj(0)), 0, a.vec(2))),
+    );
+    for chk in [0u32, 1] {
+        let prep = move |c: &mut Call| {
+            vec_arg(c, 4, 0x3000, [10.0, 20.0, 5.0]);
+            vec_arg(c, 5, 0x3020, [1.0, 2.0, 0.0]);
+            c.regs.gpr[6] = chk;
+            base(c)
+        };
+        check_on(
+            "itCapsule_UnkMotion0_Anim",
+            "it_8026F6BC",
+            &prep,
+            &|r, a| {
+                let vel = (a.int(3) != 0).then(|| a.vec(2));
+                Ret::GObj(drop::drop_monster(r, Some(a.gobj(0)), a.vec(1), vel))
+            },
+        );
+        let prep = move |c: &mut Call| {
+            let ok = base(c);
+            vec_arg(c, 3, 0x3000, [10.0, 20.0, 5.0]);
+            vec_arg(c, 4, 0x3020, [1.0, 2.0, 0.0]);
+            c.regs.gpr[5] = chk;
+            ok
+        };
+        check_on(
+            "itCapsule_UnkMotion0_Anim",
+            "it_8026F7C8",
+            &prep,
+            &|r, a| {
+                let vel = (a.int(2) != 0).then(|| a.vec(1));
+                Ret::GObj(drop::drop_random(r, a.vec(0), vel))
+            },
+        );
+    }
+    let prep = |c: &mut Call| {
+        vec_arg(c, 4, 0x3000, [10.0, 20.0, 5.0]);
+        vec_arg(c, 5, 0x3020, [1.0, 2.0, 0.0]);
+        c.regs.gpr[6] = 0;
+        base(c)
+    };
+    check_on(
+        "itCapsule_UnkMotion0_Anim",
+        "it_8026F8B4",
+        &prep,
+        &|r, a| Ret::Bool(drop::drop_coins(r, a.gobj(0), a.vec(1), None)),
+    );
+}
+
+#[test]
+fn groundcoll_variants() {
+    // Every variant from the capsules' falling and standing states, with the capsule's own
+    // callbacks passed (landing, falling).
+    let air = "itCapsule_UnkMotion4_Coll";
+    let ground = "itCapsule_UnkMotion0_Coll";
+    let with_cbs = |c: &mut Call| {
+        c.regs.gpr[4] = capsule::LANDED;
+        c.regs.gpr[5] = capsule::FELL;
+        standing_capsule(c)
+    };
+    let events: [(&str, fn(&mut Running, GObjId, ground::Event)); 8] = [
+        ("it_8026E248", ground::fall_keep_hits),
+        ("it_8026E4D0", ground::fall_to_floor_rescaled),
+        ("it_8026E5A0", ground::fall_until_touch),
+        ("it_8026E664", ground::fall_until_touch_no_ceiling),
+        ("it_8026E71C", ground::fall_until_touch_unstick),
+        ("it_8026E7E0", ground::fall_unstick),
+        ("it_8026D6F4", ground::ground_or),
+        ("it_8026D78C", ground::ground_or_then_air),
+    ];
+    for source in [air, ground] {
+        for (target, f) in events {
+            check_on(source, target, &with_cbs, &move |r, a| {
+                let cb = cb_arg(a, 1);
+                f(r, a.gobj(0), cb);
+                Ret::None
+            });
+        }
+        check_on(source, "it_8026D938", &with_cbs, &|r, a| {
+            let cb = cb_arg(a, 1);
+            ground::line_or(r, a.gobj(0), cb);
+            Ret::None
+        });
+        // Only on the ground: from the air, a grounded pass can land without a floor, and
+        // the slope check then reads a normal the original never set.
+        if source == ground {
+            check_on(source, "it_8026E8C4", &with_cbs, &|r, a| {
+                let (stopped, fell) = (cb_arg(a, 1), passed_fell(a));
+                ground::ground_skid(r, a.gobj(0), stopped, fell);
+                Ret::None
+            });
+        }
+        let bools: [(&str, fn(&mut Running, GObjId) -> bool); 7] = [
+            ("it_8026D5CC", ground::ground_probe),
+            ("it_8026D9A0", ground::air_stay),
+            ("it_8026DA70", ground::air_probe),
+            ("it_8026DBC8", ground::try_land),
+            ("it_8026DE98", ground::count_landing),
+            ("it_8026DFB0", ground::air_touched_any),
+            ("it_8026E058", ground::air_touched_floor_or_wall),
+        ];
+        for (target, f) in bools {
+            // Landing without having touched a floor isn't something the game does.
+            if target == "it_8026DBC8" && source == air {
+                continue;
+            }
+            check_on(source, target, &standing_capsule, &move |r, a| {
+                Ret::Bool(f(r, a.gobj(0)))
+            });
+        }
+        let ints: [(&str, fn(&mut Running, GObjId) -> i32); 2] = [
+            ("it_8026DAA8", ground::air_touches),
+            ("it_8026DB40", ground::air_touches_walls),
+        ];
+        for (target, f) in ints {
+            check_on(source, target, &standing_capsule, &move |r, a| {
+                Ret::Int(f(r, a.gobj(0)) as u32)
+            });
+        }
+        check_on(source, "it_8026D82C", &standing_capsule, &|r, a| {
+            ground::ground_or_air(r, a.gobj(0));
+            Ret::None
+        });
+        check_on(source, "it_8026E0F4", &standing_capsule, &|r, a| {
+            ground::air_stay(r, a.gobj(0));
+            Ret::None
+        });
+    }
+}
+
+thread_local! {
+    /// The second callback a captured call passed.
+    static PASSED2: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+/// Runs the second callback the captured call passed.
+fn passed_cb2(r: &mut Running, g: GObjId) {
+    let a = PASSED2.with(|p| p.get());
+    if !kinds::run_event(r, g, a) {
+        melee_sim::game::code::unported_call(&format!("item callback {a:#010x}"));
+    }
+}
+
+/// [`passed_cb2`] for the callback in r5.
+fn passed_fell(a: &Args) -> ground::Event {
+    let addr = a.int(2);
+    PASSED2.with(|p| p.set(addr));
+    passed_cb2
+}
+
+#[test]
+fn item_lib_small() {
+    // Small setters and helpers, on the capsules' standing states.
+    let on = |target: &str, f: fn(&mut Running, GObjId)| {
+        check_on(
+            "itCapsule_UnkMotion0_Anim",
+            target,
+            &standing_capsule,
+            &move |r, a| {
+                f(r, a.gobj(0));
+                Ret::None
+            },
+        );
+    };
+    on("it_8026BD24", |r, g| lib26b1::set_xdd0_b3(r.game, g));
+    on("it_8026BDB4", |r, g| lib26b1::stop_keeping_clear(r.game, g));
+    on("it_8027518C", |r, g| {
+        lib2725::start_vanishing(r.game, r.data, g)
+    });
+    on("it_80275444", |r, g| hitbox::set_hit_ids(r.game, g));
+    on("it_80273454", |r, g| lib2725::clear_velocity(r.game, g));
+    on("it_80274740", |r, g| lib2725::stop_spin(r.game, r.data, g));
+    on("Item_8026ADC0", item::enter_air_state);
+    check_on(
+        "itCapsule_UnkMotion0_Anim",
+        "it_802763B8",
+        &standing_capsule,
+        &|r, a| Ret::Bool(maplib::touched_floor(r.game, a.gobj(0))),
+    );
+    check_on(
+        "itCapsule_UnkMotion0_Anim",
+        "it_80274990",
+        &standing_capsule,
+        &|r, a| Ret::Float(f64::from(lib2725::spin_angle(r.game, r.data, a.gobj(0)))),
+    );
+    for bone in [0u32, 1] {
+        let prep = move |c: &mut Call| {
+            c.regs.gpr[4] = bone;
+            standing_capsule(c)
+        };
+        check_on(
+            "itCapsule_UnkMotion0_Anim",
+            "it_80276934",
+            &prep,
+            &|r, a| {
+                maplib::tilt_to_line(r.game, r.data, a.gobj(0), a.int(1) as i32);
+                Ret::None
+            },
+        );
+    }
+    // A spinning item's spin from a skid in either direction.
+    for x in [3.0f32, -3.0] {
+        let prep = move |c: &mut Call| {
+            set32(c, item_ptr(c) + 0x34, 0.5f32.to_bits());
+            vec_arg(c, 4, 0x3000, [x, 1.0, 0.0]);
+            standing_capsule(c)
+        };
+        check_on(
+            "itCapsule_UnkMotion0_Anim",
+            "it_802775F0",
+            &prep,
+            &|r, a| {
+                maplib::spin_from_speed(r.game, a.gobj(0), a.vec(1));
+                Ret::None
+            },
+        );
+    }
+    // Hitboxes scaled, with the bounce sound off (`xDCD.b2`), and the wall bounce's sound.
+    let quiet = |c: &mut Call| {
+        or8(c, item_ptr(c) + 0xDCD, 0x20);
+        standing_capsule(c)
+    };
+    check_on(
+        "itCapsule_UnkMotion0_Anim",
+        "it_8027321C",
+        &quiet,
+        &|r, a| {
+            lib2725::bounce_sfx(r.game, a.gobj(0));
+            Ret::None
+        },
+    );
+    for mult in [0.5f32, 2.0] {
+        let prep = move |c: &mut Call| {
+            set_f(c, 1, mult);
+            standing_capsule(c)
+        };
+        check_on(
+            "itCapsule_UnkMotion0_Anim",
+            "it_80275640",
+            &prep,
+            &|r, a| {
+                hitbox::scale_damage(r.game, r.data, a.gobj(0), f64::from(a.float(0)));
+                Ret::None
+            },
+        );
+    }
 }

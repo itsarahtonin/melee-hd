@@ -8,7 +8,7 @@ use melee_data::archive::{Archives, DataRef};
 use super::{item, item_mut, jobj_of, set_flag};
 use crate::fpu::{mem, reg};
 use crate::game::code;
-use crate::game::state::Running;
+use crate::game::state::{Game, Running};
 use crate::game::structs::{ColorOverlay, Item};
 use crate::hsd::gobj::GObjId;
 use crate::lb::command::{self, WAIT_FOR_FRAME};
@@ -330,4 +330,13 @@ pub fn run_overlay(r: &mut Running, gobj: GObjId) {
 /// A script's start in an item state description (`ItemStateDesc::xC_script`).
 pub fn state_script(data: &Archives, desc: DataRef) -> Option<DataRef> {
     data.ptr(desc.at(0xC))
+}
+
+/// Starts the item color animation `id` (`it_804D6D04`'s) on the item's overlay, unless one
+/// of higher priority plays, `it_80279B88`.
+#[doc(alias = "it_80279B88")]
+pub fn start_colanim(game: &mut Game, data: &Archives, gobj: GObjId, id: i32, frames: i32) -> bool {
+    let table = game.it.colanims.expect("no item color animations");
+    let co = &mut item_mut(game, gobj).x548_colorOverlay;
+    crate::lb::colanim::start(co, data, table, id, frames)
 }

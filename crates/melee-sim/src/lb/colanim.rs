@@ -4,7 +4,7 @@
 //! the owner's.
 
 use gekko_fp as fp;
-use melee_data::archive::Archives;
+use melee_data::archive::{Archives, DataRef};
 
 use crate::fpu::{mem, reg};
 use crate::game::structs::{_GXColor, ColorOverlay};
@@ -271,4 +271,24 @@ pub fn step(
         }
     }
     blend(co)
+}
+
+/// Starts color animation `id` from `table` (each entry its script and priority) unless the
+/// one playing has a higher priority, `lb_800144C8`; `frames` limits it (0 for the script's
+/// length). Whether it started.
+#[doc(alias = "lb_800144C8")]
+pub fn start(co: &mut ColorOverlay, data: &Archives, table: DataRef, id: i32, frames: i32) -> bool {
+    let entry = |i: i32| table.at(8 * i as u32);
+    let cur = i32::from_be_bytes(co.x28_colanim);
+    if data.u8(entry(cur).at(4)) > data.u8(entry(id).at(4)) {
+        return false;
+    }
+    co.x28_colanim = id.to_be_bytes();
+    co.script.frame_count = frames as u32;
+    co.script.cursor = data.ptr(entry(id));
+    co.script.timer = 0;
+    co.script.loop_count = 0;
+    co.x7C_color_enable = false;
+    co.x7C_flag2 = false;
+    true
 }

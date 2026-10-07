@@ -81,3 +81,12 @@ pub fn scale_damage(game: &mut Game, data: &Archives, gobj: GObjId, mult: f64) {
         }
     }
 }
+
+/// Sets `xDCD`'s hit flags, `it_80275444`.
+#[doc(alias = "it_80275444")]
+pub fn set_hit_ids(game: &mut Game, gobj: GObjId) {
+    let f = &mut item_mut(game, gobj).xDCD_flag.x0;
+    f.b5 = true;
+    f.b7 = true;
+    f.b6 = true;
+}

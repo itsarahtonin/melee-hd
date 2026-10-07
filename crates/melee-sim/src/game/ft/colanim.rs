@@ -106,10 +106,8 @@ impl Running<'_> {
     }
 
     /// Starts color animation `id` unless one of higher priority plays, `ftCo_800BFFD0`;
-    /// `frames` limits it (0 for its script's length). The overlay starts as
-    /// `lb_800144C8` starts it.
+    /// `frames` limits it (0 for its script's length).
     #[doc(alias = "ftCo_800BFFD0")]
-    #[doc(alias = "lb_800144C8")]
     pub fn start_color_anim(&mut self, gobj: GObjId, id: i32, frames: i32) -> bool {
         let (which, spycloak, i) = if id >= SPYCLOAK_START {
             (Overlay::X508, true, id - SPYCLOAK_START)
@@ -118,22 +116,9 @@ impl Running<'_> {
         } else {
             (Overlay::X408, false, id)
         };
-        // `lb_800144C8`.
-        let cur = i32::from_be_bytes(self.overlay(gobj, which).x28_colanim);
-        let (_, cur_pri, _) = self.color_anim_entry(spycloak, cur);
-        let (script, pri, _) = self.color_anim_entry(spycloak, i);
-        if cur_pri > pri {
-            return false;
-        }
-        let co = self.overlay(gobj, which);
-        co.x28_colanim = i.to_be_bytes();
-        co.script.frame_count = frames as u32;
-        co.script.cursor = script;
-        co.script.timer = 0;
-        co.script.loop_count = 0;
-        co.x7C_color_enable = false;
-        co.x7C_flag2 = false;
-        true
+        let table = self.load_common(if spycloak { 0x1C } else { 0x18 });
+        let data = self.data;
+        colanim::start(self.overlay(gobj, which), data, table, i, frames)
     }
 
     /// The color animation playing: `x408`'s, or `x488`'s when `x408` plays none,

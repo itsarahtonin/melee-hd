@@ -1968,3 +1968,110 @@ Ground_801C2AD8	leaf-check items: spawn_setup (it_8026D018) reads the stage's co
 Ground_801C2AE8	leaf-check items: spawn_setup (it_8026D018) scales the first countdown by it
 Stage_80224FDC	leaf-check items: spawn_point (it_8026CB3C) runs it on every captured call
 it_8026C65C	leaf-check items: spawn_pick's it_8026C75C draws through it on every captured call
+Item_8026ADC0	leaf-check items: item_lib_small runs it from captured item states
+it_8026BD24	leaf-check items: item_lib_small runs it from captured item states
+it_8026BDB4	leaf-check items: item_lib_small runs it from captured item states
+it_8026D564	leaf-check items: groundcoll runs every captured call
+it_8026D5CC	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026D62C	leaf-check items: groundcoll runs every captured call
+it_8026D6F4	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026D78C	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026D82C	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026D8A4	leaf-check items: groundcoll runs every captured call
+it_8026D938	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026D9A0	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026DA08	leaf-check items: groundcoll runs every captured call
+it_8026DA70	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026DAA8	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026DB40	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026DBC8	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026DC24	leaf-check items: groundcoll runs every captured call
+it_8026DD5C	leaf-check items: groundcoll runs every captured call
+it_8026DDFC	leaf-check items: groundcoll runs every captured call
+it_8026DE98	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026DF34	leaf-check items: groundcoll runs every captured call
+it_8026DFB0	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026E058	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026E0F4	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026E15C	leaf-check items: groundcoll runs every captured call
+it_8026E248	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026E32C	leaf-check items: groundcoll runs every captured call
+it_8026E414	leaf-check items: groundcoll runs every captured call
+it_8026E4D0	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026E5A0	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026E664	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026E71C	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026E7E0	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026E8C4	leaf-check items: groundcoll_variants runs it from captured item states
+it_8026F3AC	leaf-check items: drops runs it from captured item states
+it_8026F3D4	leaf-check items: drops runs it from captured item states
+it_8026F53C	leaf-check items: drops runs it from captured item states
+it_8026F5C8	leaf-check items: drops runs it from captured item states
+it_8026F6BC	leaf-check items: drops runs it from captured item states
+it_8026F7C8	leaf-check items: drops runs it from captured item states
+it_8026F8B4	leaf-check items: drops runs it from captured item states
+it_8027321C	leaf-check items: item_lib_small runs it from captured item states
+it_80273454	leaf-check items: item_lib_small runs it from captured item states
+it_80274740	leaf-check items: item_lib_small runs it from captured item states
+it_80274990	leaf-check items: item_lib_small runs it from captured item states
+it_8027518C	leaf-check items: item_lib_small runs it from captured item states
+it_80275444	leaf-check items: item_lib_small runs it from captured item states
+it_80275640	leaf-check items: item_lib_small runs it from captured item states
+it_80275D5C	leaf-check items: maplib_bounces runs every captured call
+it_80275DFC	leaf-check items: maplib_bounces runs every captured call
+it_80276214	leaf-check items: maplib_queries runs every captured call
+it_80276278	leaf-check items: maplib_queries runs every captured call
+it_802762D8	leaf-check items: maplib_queries runs every captured call
+it_80276308	leaf-check items: maplib_queries runs every captured call
+it_80276348	leaf-check items: maplib_queries runs every captured call
+it_802763B8	leaf-check items: item_lib_small runs it from captured item states
+it_802763E0	leaf-check items: maplib_queries runs every captured call
+it_80276408	leaf-check items: maplib_queries runs every captured call
+it_8027649C	leaf-check items: maplib_queries runs every captured call
+it_802765BC	leaf-check items: maplib_queries runs every captured call
+it_80276934	leaf-check items: item_lib_small runs it from captured item states
+it_80276CB8	leaf-check items: maplib_queries runs every captured call
+it_80276CEC	leaf-check items: maplib_queries runs every captured call
+it_80276D9C	leaf-check items: maplib_bounces runs every captured call
+it_80276FC4	leaf-check items: maplib_bounces runs every captured call
+it_80277040	leaf-check items: maplib_skids runs every captured call
+it_8027737C	leaf-check items: maplib_skids runs every captured call
+it_80277544	leaf-check items: maplib_skids runs every captured call
+it_802775F0	leaf-check items: item_lib_small runs it from captured item states
+it_8027770C	leaf-check items: maplib_bounces runs every captured call
+it_8027781C	leaf-check items: maplib_bounces runs every captured call
+itCapsule_Logic0_Spawned	leaf-check items: capsule_spawned runs every captured call
+it_8027CF30	leaf-check items: capsule_opens runs it from captured item states
+it_8027D0B8	leaf-check items: capsule_landed runs it from captured item states
+itCapsule_UnkMotion0_Anim	leaf-check items: capsule_landed runs it from captured item states
+itCapsule_UnkMotion0_Phys	leaf-check items: capsule_states runs every captured call
+itCapsule_UnkMotion0_Coll	leaf-check items: capsule_states runs every captured call
+it_8027D148	leaf-check items: capsule_landed runs it from captured item states
+itCapsule_UnkMotion4_Anim	leaf-check items: capsule_states runs every captured call
+itCapsule_UnkMotion4_Phys	leaf-check items: capsule_states runs every captured call
+itCapsule_UnkMotion4_Coll	leaf-check items: capsule_states runs every captured call
+itCapsule_Logic0_PickedUp	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_UnkMotion2_Anim	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_UnkMotion2_Phys	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_Logic0_Dropped	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_Logic0_Thrown	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_UnkMotion3_Phys	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_UnkMotion3_Coll	leaf-check items: capsule_callbacks runs it from captured item states
+it_8027D2DC	leaf-check items: capsule_hits runs it from captured item states
+itCapsule_UnkMotion5_Anim	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_UnkMotion5_Phys	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_UnkMotion5_Coll	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_Logic0_DmgDealt	leaf-check items: capsule_hits runs it from captured item states
+itCapsule_Logic0_DmgReceived	leaf-check items: capsule_opens runs it from captured item states
+itCapsule_Logic0_EnteredAir	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_UnkMotion6_Anim	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_UnkMotion6_Phys	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_UnkMotion6_Coll	leaf-check items: capsule_callbacks runs it from captured item states
+itCapsule_Logic0_Clanked	leaf-check items: capsule_hits runs it from captured item states
+itCapsule_Logic0_Reflected	leaf-check items: capsule_hits runs it from captured item states
+itCapsule_Logic0_HitShield	leaf-check items: capsule_hits runs it from captured item states
+itCapsule_Logic0_ShieldBounced	leaf-check items: capsule_hits runs it from captured item states
+it_80272860	leaf-check items: capsule_states' itCapsule_UnkMotion4_Phys falls through it on every captured call
+itColl_BounceOffShield	leaf-check items: capsule_hits' itCapsule_Logic0_ShieldBounced bounces through it from captured item states
+it_802751D8	leaf-check items: capsule_callbacks' itCapsule_UnkMotion5_Anim counts down through it from captured item states
+it_80279B88	leaf-check items: capsule_opens' new capsules start their appearing blink through it

@@ -140,6 +140,8 @@ pub mod attr {
     /// `x58`: how much speed it keeps bouncing off walls; `x5C`: the speed it stops below.
     pub const X58: u32 = 0x58;
     pub const X5C: u32 = 0x5C;
+    /// `x18`: the upward speed something knocked out of a container gets.
+    pub const X18: u32 = 0x18;
     pub const SCALE: u32 = 0x60;
     pub const DESTROY_GFX: u32 = 0x64;
     pub const X68: u32 = 0x68;
@@ -177,6 +179,8 @@ pub mod common {
     pub const X38: u32 = 0x38;
     pub const X44: u32 = 0x44;
     pub const X48: u32 = 0x48;
+    pub const X54: u32 = 0x54;
+    pub const X70: u32 = 0x70;
     pub const X4C: u32 = 0x4C;
     pub const X68: u32 = 0x68;
     pub const X6C: u32 = 0x6C;
@@ -197,7 +201,9 @@ pub mod common {
     pub const XE8: u32 = 0xE8;
     pub const XF0: u32 = 0xF0;
     pub const XF4: u32 = 0xF4;
+    pub const XF8: u32 = 0xF8;
     pub const XFC: u32 = 0xFC;
+    pub const X124: u32 = 0x124;
     pub const X128: u32 = 0x128;
     pub const X14C: u32 = 0x14C;
     pub const X150: u32 = 0x150;

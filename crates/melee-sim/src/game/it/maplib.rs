@@ -465,6 +465,8 @@ pub fn set_box(game: &mut Game, gobj: GObjId, b: _itECB) {
 /// Whether the item slides down the slope it lands on, `it_80277040`, setting its slide
 /// (`x88`) along the slope: steep enough to slide, and not stopped by a slide uphill that
 /// lasted too long.
+// NaN takes the original's branches, which the negated comparisons spell out.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
 #[doc(alias = "it_80277040")]
 pub fn slides(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
     let c = common_data(game);

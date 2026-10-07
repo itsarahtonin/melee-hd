@@ -9,6 +9,7 @@
 pub mod anim;
 pub mod coll;
 pub mod data;
+pub mod drop;
 pub mod effect;
 pub mod ground;
 pub mod hitbox;

@@ -1,5 +1,6 @@
 //! Item kinds (`ItemKind`) and the kinds' own code.
 
+pub mod capsule;
 pub mod foxblaster;
 pub mod foxlaser;
 
@@ -8,12 +9,16 @@ use crate::hsd::gobj::GObjId;
 
 /// Runs a kind's callback of the event kind (`HSD_GObjEvent`), if `addr` is one.
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
-    foxlaser::run_event(r, gobj, addr) || foxblaster::run_event(r, gobj, addr)
+    foxlaser::run_event(r, gobj, addr)
+        || foxblaster::run_event(r, gobj, addr)
+        || capsule::run_event(r, gobj, addr)
 }
 
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
-    foxlaser::run_pred(r, gobj, addr).or_else(|| foxblaster::run_pred(r, gobj, addr))
+    foxlaser::run_pred(r, gobj, addr)
+        .or_else(|| foxblaster::run_pred(r, gobj, addr))
+        .or_else(|| capsule::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).

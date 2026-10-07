@@ -393,3 +393,64 @@ pub fn stop_spin(game: &mut Game, data: &Archives, gobj: GObjId) {
 pub fn clear_velocity(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
 }
+
+/// Starts the item's vanishing countdown (the common data's `xF8`), `it_8027518C`.
+#[doc(alias = "it_8027518C")]
+pub fn start_vanishing(game: &mut Game, data: &Archives, gobj: GObjId) {
+    let t = common_data(game).f32(data, common::XF8);
+    let ip = item_mut(game, gobj);
+    ip.xD44_lifeTimer = t;
+    set_flag(&mut ip.xDCF_flag, 2, true);
+    set_flag(&mut ip.xDD1_flag, 0, true);
+    super::lib26b1::stop_keeping_clear(game, gobj);
+}
+
+/// Counts a tick off the item's life; whether it ran out, `it_802751D8`.
+#[doc(alias = "it_802751D8")]
+pub fn tick_life(game: &mut Game, gobj: GObjId) -> bool {
+    let ip = item_mut(game, gobj);
+    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+    reg(ip.xD44_lifeTimer) <= 0.0
+}
+
+/// Gravity: the fall speed grows by `accel` until it reaches `max`, `it_80272860`.
+// NaN takes the original's branches, which the negated comparisons spell out.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+#[doc(alias = "it_80272860")]
+pub fn fall(game: &mut Game, gobj: GObjId, accel: f32, max: f32) {
+    let ip = item_mut(game, gobj);
+    let sign = |v: f64| if v < 0.0 { -1 } else { 1 };
+    let mut vy = reg(ip.x40_vel.y);
+    if sign(vy) != sign(reg(accel)) {
+        if vy < 0.0 {
+            vy = fp::fneg(vy);
+        }
+        if !(vy < reg(max)) {
+            return;
+        }
+    }
+    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), reg(accel)));
+}
+
+/// Bounces the item off a shield (`xC58`'s normal), turning it the way it now moves,
+/// `itColl_BounceOffShield`.
+// NaN takes the original's branches, which the negated comparisons spell out.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+#[doc(alias = "itColl_BounceOffShield")]
+pub fn bounce_off_shield(game: &mut Game, gobj: GObjId) -> bool {
+    let ip = item_mut(game, gobj);
+    let n = ip.xC58;
+    ip.x40_vel.mirror_xy(n);
+    let vx = reg(ip.x40_vel.x);
+    let abs = if vx < 0.0 { fp::fneg(vx) } else { vx };
+    if !(abs < f64::from(1.0e-5_f32)) || !(reg(ip.facing_dir) != 0.0) {
+        ip.facing_dir = if vx >= 0.0 { 1.0 } else { -1.0 };
+    }
+    let dir = if fp::fneg(1.0) == reg(ip.facing_dir) {
+        -1
+    } else {
+        1
+    };
+    ip.x378_itemColl.set_facing_dir(dir);
+    false
+}

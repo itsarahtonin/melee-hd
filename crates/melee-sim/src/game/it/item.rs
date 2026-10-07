@@ -577,7 +577,18 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     on_spawned(r, gobj);
     // `foobar`: common items and enemies blink as they appear.
     match super::item(r.game, gobj).hold_kind {
-        0 | 6 => code::unported_call("Item_8026862C's appearing blink (it_802756D0)"),
+        0 | 6 => {
+            let data = r.data;
+            let t = common_data(r.game).i32(data, common::X2C);
+            let ip = item_mut(r.game, gobj);
+            if ip.xD0C == 2 {
+                set_flag(&mut ip.xDD0_flag, 7, true);
+            }
+            ip.xD40 = mem(fp::frsp(f64::from(t)));
+            set_flag(&mut ip.xDD0_flag, 6, true);
+            super::hitbox::start_blink(r.game, gobj);
+            super::anim::start_colanim(r.game, data, gobj, 3, 0);
+        }
         _ => {
             let ip = item_mut(r.game, gobj);
             ip.xD40 = 0.0;
