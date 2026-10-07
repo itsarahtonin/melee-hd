@@ -82,7 +82,10 @@ pub fn blaster_action(game: &Game, owner: Option<GObjId>) -> i32 {
 /// (`Fighter::u.fx.x222C_blasterGObj` is null).
 #[doc(alias = "ftFx_SpecialN_CheckRemoveBlaster")]
 pub fn blaster_removed(game: &Game, owner: GObjId) -> bool {
-    super::super::owner::fighter(game, owner).u[..4] == [0; 4]
+    super::super::owner::fighter(game, owner)
+        .u
+        .gobj_at(crate::game::ft::vars::FOX_BLASTER)
+        .is_none()
 }
 
 /// Whether the owner's action no longer needs the blaster, `ftFx_SpecialN_CheckBlasterAction`:
@@ -105,7 +108,7 @@ pub fn blaster_not_needed(game: &Game, owner: Option<GObjId>) -> bool {
 pub fn clear_from_owner(game: &mut Game, owner: GObjId) {
     let f = super::super::owner::fighter_of(game, owner);
     let fp = &mut game.fighters[f.0];
-    fp.u[..4].copy_from_slice(&[0; 4]);
+    fp.u.set_gobj_at(crate::game::ft::vars::FOX_BLASTER, None);
     fp.take_dmg_cb = None;
     fp.death2_cb = None;
 }
@@ -281,7 +284,7 @@ pub fn reset(game: &mut Game, gobj: GObjId) {
     v.gfx_spawn_var = 0;
     v.set_sfx_var2 = 1;
     for i in 0..6 {
-        v.xDE4[i] = 0;
+        v.xDE4[i] = None;
         v.xDFC[i] = 0;
         v.xE14[i] = Vec3::new(0.0, 0.0, 0.0);
         v.angle[i] = 0.0;

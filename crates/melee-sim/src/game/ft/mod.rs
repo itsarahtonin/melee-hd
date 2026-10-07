@@ -33,6 +33,7 @@ pub mod phys;
 pub mod resolve;
 pub mod sound;
 pub mod spawn;
+pub mod vars;
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 

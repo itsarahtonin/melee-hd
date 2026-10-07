@@ -86,6 +86,13 @@ FIELD_POINTERS = {
     "LbShadow.shadow": "Option<ShadowId>",
 }
 
+# Arrays of words that hold pointers the C types as integers, by `Struct.field`: each word
+# becomes the handle given.
+FIELD_HANDLE_ARRAYS = {
+    # The blaster's muzzle flashes, the effects `it_802ADF10` spawns (see docs/engine.md).
+    "itFoxBlaster_ItemVars.xDE4": "EffectId",
+}
+
 # Pointer fields into loaded game data whose pointee type doesn't say so (`void*`, pointers to
 # pointer tables), by `Struct.field`: they become DataRef.
 FIELD_DATA = {
@@ -133,12 +140,19 @@ SPLICE = {
         ("x448", 0x448, 0x44C, "CpuInputRef448"),
         ("write_pos", 0x554, 0x558, "CpuWritePos"),
     ],
+    # The character's and the action state's variables: bytes whose GObj pointers (Fox's
+    # blaster, his Illusion's ghost) hold handles.
+    "Fighter": [
+        ("u", 0x222C, 0x2324, "FighterVars"),
+        ("mv", 0x2340, 0x23EC, "MotionVars"),
+    ],
 }
 
 # Lines the generated mirrors use besides the handles.
 EXTRA_USES = [
     "use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};",
     "use crate::game::ft::dynamics::BoneSlot;",
+    "use crate::game::ft::vars::{FighterVars, MotionVars};",
     "use crate::game::it::ItemVars;",
     "use crate::hsd::lobj::LObjId;",
     "use crate::hsd::shadow::ShadowId;",
@@ -190,6 +204,7 @@ PRELUDE = """use melee_data::archive::DataRef;
 
 use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
+use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
 use crate::game::it::ItemVars;

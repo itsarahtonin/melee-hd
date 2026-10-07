@@ -7,6 +7,7 @@ use melee_data::archive::DataRef;
 
 use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
+use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
 use crate::game::it::ItemVars;
@@ -2966,7 +2967,7 @@ pub struct Fighter {
     /// +0x222a (bits 7..+1)
     pub x222A_b7: bool,
     /// +0x222c
-    pub u: [u8; 248],
+    pub u: FighterVars,
     /// +0x2324
     pub bury_grkind: i32,
     /// +0x2328
@@ -2978,7 +2979,7 @@ pub struct Fighter {
     /// +0x2338
     pub x2338: IntVec2,
     /// +0x2340
-    pub mv: [u8; 172],
+    pub mv: MotionVars,
 }
 
 impl Default for Fighter {
@@ -3402,13 +3403,13 @@ impl Default for Fighter {
             x222A_b5: false,
             x222A_b6: false,
             x222A_b7: false,
-            u: [0; 248],
+            u: Default::default(),
             bury_grkind: 0,
             bury_timer_1: 0,
             bury_timer_2: 0,
             x2330: Default::default(),
             x2338: Default::default(),
-            mv: [0; 172],
+            mv: Default::default(),
         }
     }
 }
@@ -7388,7 +7389,7 @@ pub struct itFoxBlaster_ItemVars {
     /// +0xc
     pub xDE0: i32,
     /// +0x10
-    pub xDE4: [i32; 6],
+    pub xDE4: [Option<EffectId>; 6],
     /// +0x28
     pub xDFC: [i32; 6],
     /// +0x40
@@ -7410,7 +7411,7 @@ impl Default for itFoxBlaster_ItemVars {
             xDD8: 0,
             xDDC: 0,
             xDE0: 0,
-            xDE4: [0; 6],
+            xDE4: [None; 6],
             xDFC: [0; 6],
             xE14: core::array::from_fn(|_| Default::default()),
             angle: [0.0; 6],

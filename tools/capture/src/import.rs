@@ -745,7 +745,7 @@ impl Importer<'_> {
             bytes: &cap.call.mem1,
             base: MEM1,
         };
-        let f = Fighter::import(&mem, a, self);
+        let mut f = Fighter::import(&mem, a, self);
         // Its DObj lists: the main model's and the second model's first `count` DObjs.
         for (list, at) in [(f.dobj_list.data, a + 0x5EC), (f.x203C.data, a + 0x203C)] {
             if let Some(l) = list {
@@ -758,6 +758,11 @@ impl Importer<'_> {
                     .collect();
                 self.game.fighter_dobj_lists[l.0] = dobjs;
             }
+        }
+        // Fox's and Falco's blaster (`ftFox_FighterVars::x222C_blasterGObj`).
+        if melee_sim::game::ft::vars::holds_blaster(f.kind) {
+            let at = a + 0x222C;
+            f.u.import_gobj(melee_sim::game::ft::vars::FOX_BLASTER, &mem, at, self);
         }
         self.game.fighters[id.0] = f;
         id

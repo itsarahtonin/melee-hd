@@ -156,7 +156,7 @@ class Gen:
             if "splice" in f:
                 t = f["splice"]
             else:
-                t = bit_type(f["bits"]) if "bits" in f else self.field_override(rid, f) or self.ty(f["type"])
+                t = bit_type(f["bits"]) if "bits" in f else self.handle_array(rid, f) or self.field_override(rid, f) or self.ty(f["type"])
             out.append(f"    /// +{off:#x}{bits}")
             out.append(f"    pub {field_name(f['name'])}: {t},")
         out.append("}")
@@ -168,12 +168,22 @@ class Gen:
             if "splice" in f:
                 d = "Default::default()"
             else:
-                d = "None" if self.field_override(rid, f) else self.default(f)
+                ha = self.handle_array(rid, f)
+                d = f"[None; {f['type']['n']}]" if ha else "None" if self.field_override(rid, f) else self.default(f)
             out.append(f"            {field_name(f['name'])}: {d},")
         out.append("        }")
         out.append("    }")
         out.append("}")
         return "\n".join(out)
+
+    def handle_array(self, rid, f):
+        """The type config.FIELD_HANDLE_ARRAYS gives this array of words, if any."""
+        h = config.FIELD_HANDLE_ARRAYS.get(f"{rec_name(rid)}.{f['name']}")
+        if h is None:
+            return None
+        t = f["type"]
+        assert t["k"] == "arr" and t["of"]["k"] == "int" and t["of"]["size"] == 4, f"{rec_name(rid)}.{f['name']} isn't an array of words"
+        return f"[Option<{h}>; {t['n']}]"
 
     def field_override(self, rid, f):
         """The type config.FIELD_POINTERS or config.FIELD_DATA gives this pointer field, if any."""
@@ -291,6 +301,14 @@ class Gen:
                 imp.append(f"            {fname}: {read} != 0," if bt == "bool" else f"            {fname}: {read} as {bt},")
                 ours = f"(self.{fname} as u32)"
                 cmp.append(f"        if {ours} != {read} {{ cx.mismatch(&{path}, format!(\"{{:?}}\", self.{fname}), format!(\"{{:?}}\", {read})); }}")
+                continue
+            if self.handle_array(rid, f):
+                h = config.FIELD_HANDLE_ARRAYS[f"{rec_name(rid)}.{f['name']}"]
+                n = f["type"]["n"]
+                imp.append(f'            {fname}: core::array::from_fn(|i| cx.import_handle("{h}", m.u32({at} + 4 * i as u32)).map({h})),')
+                cmp.append(f"        for i in 0..{n} {{")
+                cmp.append(f'            cx.compare_handle(&format!("{{path}}.{f["name"]}[{{i}}]"), "{h}", self.{fname}[i].map(|h| h.0), m.u32({at} + 4 * i as u32));')
+                cmp.append("        }")
                 continue
             over = self.field_override(rid, f)
             if over:
