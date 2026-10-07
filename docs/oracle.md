@@ -29,10 +29,7 @@ On the Fox vs Sheik Final Destination replay, the match's start stops before the
 
 **Boot state.** A match that starts from the replay's settings can't hold what the boot and the menus left in the original's memory. Until they are ported, `diff` seeds it from the trace tick before the match's scene (the boot state; it needs a version 4 trace for the time base), field by field from this list and never as a bulk copy (`tools/oracle/src/boot.rs`, `SEEDED`):
 
-- the pad library: the queue's read and write positions, queued count and queued polls, the reset button, and the master, copy and game statuses;
-- the pad library's rumble: its nodes, free list and ports, which the seeding refuses if a script the menus started is still running;
-- the collision geometry's update counter (`mpColl_804D64AC`);
-- the player library's attack counters (`staleAttackInstance`, `unk_804D6480`);
+- the pad library: the queue's read and write positions, queued count and queued polls, the reset button, and the master, copy and game statuses (the seeding refuses a boot state where a rumble script the menus started still runs);
 - the audio library: the AX library, the synth, the driver and the game's audio library as the boot initializes them and the menus leave them, with the sound bank they loaded and the audio timeline at the boot state's time base. Load timing isn't modeled: the bank is there from the start.
 
 The seeding runs on the new state before anything of the match's scene (`Match::start_from`), and goes away once the boot and the menus are ported. It isn't platform state. `diff --boot-diff` prints what still differs between the seeded state and the boot state among the globals and statics the comparer covers: on the Fox vs Sheik replay only the button maps and the rumble data pointer (`lb_804D63C0`), which the scene's setup sets itself. HSD's ID table is empty at the boot tick, so there is nothing of it to seed, and which slots the GObj and heap pools reuse doesn't show, as objects pair by structure.

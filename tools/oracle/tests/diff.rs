@@ -85,7 +85,9 @@ fn boot_state_seeds() {
     };
     // What the seeding leaves different from the boot state is only what the scene's own
     // setup sets: the button maps and the rumble data pointer.
-    let mut lines = out.lines().skip_while(|l| !l.contains("against the boot state"));
+    let mut lines = out
+        .lines()
+        .skip_while(|l| !l.contains("against the boot state"));
     assert!(lines.next().is_some(), "{out}");
     let diffs: Vec<&str> = lines.take_while(|l| l.starts_with("  ")).collect();
     assert!(!diffs.is_empty(), "{out}");

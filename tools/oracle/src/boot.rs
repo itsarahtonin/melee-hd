@@ -8,7 +8,7 @@
 //! Everything else the match's setup sets itself; `diff --boot-diff` shows what still differs
 //! between a new match's state and the boot state, which is how the list is kept honest.
 
-use melee_capture::import::{Importer, sym};
+use melee_capture::import::Importer;
 use melee_capture::{Capture, DataMap};
 use melee_data::archive::Archives;
 use melee_sim::game::state::Game;
@@ -18,9 +18,6 @@ use melee_sim::input::rumble::Script;
 pub const SEEDED: &[&str] = &[
     "pad library: queue read and write positions, queued count, queued polls, reset button",
     "pad library: master, copy and game statuses",
-    "pad library: rumble nodes, free list and ports (no script may be running)",
-    "collision geometry update counter (mpColl_804D64AC)",
-    "player library attack counters (staleAttackInstance, unk_804D6480)",
     concat!(
         "the audio library: AX, synth, driver and lb audio as the boot and menus leave them, ",
         "with their sound bank and the audio timeline at the boot state's time base"
@@ -39,16 +36,6 @@ fn capture(mem: &[u8]) -> Capture {
             locked: Vec::new(),
         },
     }
-}
-
-fn word(mem: &[u8], a: u32) -> u32 {
-    let i = (a - 0x8000_0000) as usize;
-    u32::from_be_bytes(mem[i..i + 4].try_into().unwrap())
-}
-
-fn half(mem: &[u8], a: u32) -> u16 {
-    let i = (a - 0x8000_0000) as usize;
-    u16::from_be_bytes(mem[i..i + 2].try_into().unwrap())
 }
 
 /// What still differs between `game` (a new match's state, seeded) and the boot state in
@@ -104,13 +91,6 @@ pub fn seed(game: &mut Game, archives: &mut Archives, mem: &[u8], tb: u64) {
         }),
         "a rumble script the menus started is still running: seeding it isn't modeled"
     );
-    p.rumble.free = boot.rumble.free;
-    p.rumble.nodes = boot.rumble.nodes.clone();
-    p.rumble.ports = boot.rumble.ports.clone();
-    p.rumble.suspended = boot.rumble.suspended;
-    game.gr.coll_generation = word(mem, sym("mpColl_804D64AC")) as i32;
-    game.pl.stale_attack_instance = half(mem, sym("staleAttackInstance"));
-    game.pl.attack_instance = half(mem, sym("unk_804D6480"));
     let bank = melee_capture::audio::find_bank(mem, archives);
     game.audio = melee_capture::audio::import(mem, bank);
     game.audio.clock = Some(melee_capture::audio::import_clock(mem, tb));
