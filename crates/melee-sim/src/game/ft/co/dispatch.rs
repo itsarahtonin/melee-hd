@@ -11,11 +11,11 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8008_1504 => {
             g.co_cliff_catch_anim(gobj);
         }
-        // ftCo_CliffCatch_IASA, ftCo_LandingAir_IASA, ftCo_DownBound_IASA, ftCo_DownStand_IASA, ftCo_Down_IASA, ftCo_DownAttack_IASA, ftCo_Passive_IASA, ftCo_PassiveStand_IASA, ftCo_EscapeN_IASA, ftCo_OttottoWait_Anim, ftCo_CliffClimb_IASA, ftCo_CliffAttack_IASA, ftCo_CliffEscape_IASA, ftCo_CliffJump1_IASA, ftCo_CliffJump2_IASA, ftCo_StopWall_IASA, ftCo_StopCeil_IASA, ftCo_DownDamage_IASA, ftCo_MissFoot_IASA, ftCo_Sleep_IASA, ftCo_DownSpot_IASA
-        0x8008_1540 | 0x8008_D7AC | 0x8009_7E1C | 0x8009_81D0 | 0x8009_83BC | 0x8009_85F0
-        | 0x8009_88E4 | 0x8009_8ADC | 0x8009_9A14 | 0x8009_A728 | 0x8009_ACA4 | 0x8009_AF90
-        | 0x8009_B12C | 0x8009_B2B4 | 0x8009_B460 | 0x8009_EF40 | 0x8009_F0B8 | 0x8009_F2B0
-        | 0x8009_F43C | 0x800B_FE70 | 0x800C_8C40 => {
+        // ftCo_CliffCatch_IASA, ftCo_LandingAir_IASA, ftCo_GuardSetOff_IASA, ftCo_DownBound_IASA, ftCo_DownStand_IASA, ftCo_Down_IASA, ftCo_DownAttack_IASA, ftCo_Passive_IASA, ftCo_PassiveStand_IASA, ftCo_EscapeN_IASA, ftCo_OttottoWait_Anim, ftCo_CliffClimb_IASA, ftCo_CliffAttack_IASA, ftCo_CliffEscape_IASA, ftCo_CliffJump1_IASA, ftCo_CliffJump2_IASA, ftCo_StopWall_IASA, ftCo_StopCeil_IASA, ftCo_DownDamage_IASA, ftCo_MissFoot_IASA, ftCo_Sleep_IASA, ftCo_DownSpot_IASA
+        0x8008_1540 | 0x8008_D7AC | 0x8009_3624 | 0x8009_7E1C | 0x8009_81D0 | 0x8009_83BC
+        | 0x8009_85F0 | 0x8009_88E4 | 0x8009_8ADC | 0x8009_9A14 | 0x8009_A728 | 0x8009_ACA4
+        | 0x8009_AF90 | 0x8009_B12C | 0x8009_B2B4 | 0x8009_B460 | 0x8009_EF40 | 0x8009_F0B8
+        | 0x8009_F2B0 | 0x8009_F43C | 0x800B_FE70 | 0x800C_8C40 => {
             g.co_no_iasa(gobj);
         }
         // ftCo_CliffCatch_Phys, ftCo_CliffWait_Phys, ftCo_CliffJump1_Phys
@@ -34,8 +34,8 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8008_A4D4 => {
             g.co_wait_iasa(gobj);
         }
-        // ftCo_Wait_Phys, ftCo_SquatWait_Phys
-        0x8008_A644 | 0x800D_6584 => {
+        // ftCo_Wait_Phys, ftCo_GuardSetOff_Phys, ftCo_SquatWait_Phys
+        0x8008_A644 | 0x8009_3628 | 0x800D_6584 => {
             g.co_wait_phys(gobj);
         }
         // ftCo_Wait_Coll, ftCo_LandingAir_Coll, ftCo_Walk_Coll, ftCo_RunBrake_Coll, ftCo_Landing_Coll
@@ -81,11 +81,11 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8008_B910 | 0x8008_BAD4 | 0x8008_CAD4 | 0x8008_CCF8 | 0x800C_EE00 => {
             g.co_attack_iasa(gobj);
         }
-        // ftCo_AttackS3_Phys, ftCo_AttackHi3_Phys, ftCo_AttackLw3_Phys, ftCo_AttackHi4_Phys, ftCo_AttackLw4_Phys, ftCo_LandingAir_Phys, ftCo_DownBound_Phys, ftCo_DownWait_Phys, ftCo_DownStand_Phys, ftCo_DownAttack_Phys, ftCo_Passive_Phys, ftCo_EscapeN_Phys, ftCo_DownSpot_Phys, ftCo_Turn_Phys, ftCo_KneeBend_Phys, ftCo_Landing_Phys, ftCo_Squat_Phys, ftCo_SquatRv_Phys, ftFx_SpecialLwStart_Phys
+        // ftCo_AttackS3_Phys, ftCo_AttackHi3_Phys, ftCo_AttackLw3_Phys, ftCo_AttackHi4_Phys, ftCo_AttackLw4_Phys, ftCo_LandingAir_Phys, ftCo_GuardOff_Phys, ftCo_DownBound_Phys, ftCo_DownWait_Phys, ftCo_DownStand_Phys, ftCo_DownAttack_Phys, ftCo_Passive_Phys, ftCo_EscapeN_Phys, ftCo_DownSpot_Phys, ftCo_Turn_Phys, ftCo_KneeBend_Phys, ftCo_Landing_Phys, ftCo_Squat_Phys, ftCo_SquatRv_Phys, ftFx_SpecialLwStart_Phys
         0x8008_B940 | 0x8008_BB04 | 0x8008_BF84 | 0x8008_CB04 | 0x8008_CD28 | 0x8008_D7B0
-        | 0x8009_7E20 | 0x8009_807C | 0x8009_81D4 | 0x8009_85F4 | 0x8009_88E8 | 0x8009_9A18
-        | 0x800C_8C44 | 0x800C_9BEC | 0x800C_B6AC | 0x800D_5F18 | 0x800D_623C | 0x800D_6784
-        | 0x800E_8864 => {
+        | 0x8009_2E10 | 0x8009_7E20 | 0x8009_807C | 0x8009_81D4 | 0x8009_85F4 | 0x8009_88E8
+        | 0x8009_9A18 | 0x800C_8C44 | 0x800C_9BEC | 0x800C_B6AC | 0x800D_5F18 | 0x800D_623C
+        | 0x800D_6784 | 0x800E_8864 => {
             g.co_ground_phys(gobj);
         }
         // ftCo_AttackLw3_Anim
@@ -173,9 +173,69 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8009_095C => {
             g.co_damage_fall_coll(gobj);
         }
-        // ftCo_GuardOn_Phys, ftCo_Guard_Phys
-        0x8009_2870 | 0x8009_2B70 => {
+        // ftCo_GuardOn_Anim
+        0x8009_26DC => {
+            g.co_guard_on_anim(gobj);
+        }
+        // ftCo_GuardOn_IASA
+        0x8009_2758 => {
+            g.co_guard_on_iasa(gobj);
+        }
+        // ftCo_GuardOn_Phys, ftCo_Guard_Phys, ftCo_GuardReflect_Phys
+        0x8009_2870 | 0x8009_2B70 | 0x8009_403C => {
             g.co_guard_phys(gobj);
+        }
+        // ftCo_GuardOn_Coll, ftCo_Guard_Coll, ftCo_GuardOff_Coll, ftCo_GuardReflect_Coll
+        0x8009_28AC | 0x8009_2BAC | 0x8009_2E30 | 0x8009_4078 => {
+            g.co_guard_coll(gobj);
+        }
+        // ftCo_Guard_Anim
+        0x8009_2A24 => {
+            g.co_guard_anim(gobj);
+        }
+        // ftCo_Guard_IASA
+        0x8009_2A78 => {
+            g.co_guard_iasa(gobj);
+        }
+        // ftCo_GuardOff_Anim
+        0x8009_2CAC => {
+            g.co_guard_off_anim(gobj);
+        }
+        // ftCo_GuardOff_IASA
+        0x8009_2CFC => {
+            g.co_guard_off_iasa(gobj);
+        }
+        // ftCo_80092E50
+        0x8009_2E50 => {
+            g.on_shield_hit(gobj);
+        }
+        // ftCo_80093240
+        0x8009_3240 => {
+            g.guard_set_off_hitlag(gobj);
+        }
+        // ftCo_800932DC
+        0x8009_32DC => {
+            g.guard_set_off_post_hitlag(gobj);
+        }
+        // ftCo_GuardSetOff_Anim
+        0x8009_3354 => {
+            g.co_guard_set_off_anim(gobj);
+        }
+        // ftCo_GuardSetOff_Coll
+        0x8009_365C => {
+            g.co_guard_set_off_coll(gobj);
+        }
+        // ftCo_80093790
+        0x8009_3790 => {
+            g.on_powershield_reflect(gobj);
+        }
+        // ftCo_GuardReflect_Anim
+        0x8009_3CD0 => {
+            g.co_guard_reflect_anim(gobj);
+        }
+        // ftCo_GuardReflect_IASA
+        0x8009_3EC0 => {
+            g.co_guard_reflect_iasa(gobj);
         }
         // ftCo_FallSpecial_Anim
         0x8009_6AA0 => {

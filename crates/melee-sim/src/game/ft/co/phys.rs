@@ -37,12 +37,14 @@ impl Running<'_> {
     #[doc(alias = "ftCo_DownAttack_Phys")]
     #[doc(alias = "ftCo_DownSpot_Phys")]
     #[doc(alias = "ftCo_Passive_Phys")]
+    #[doc(alias = "ftCo_GuardOff_Phys")]
     pub fn co_ground_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
     }
 
     /// `ftCo_Wait_Phys`: friction, and the shield's hit position follows again.
     #[doc(alias = "ftCo_Wait_Phys")]
+    #[doc(alias = "ftCo_GuardSetOff_Phys")]
     #[doc(alias = "ftCo_SquatWait_Phys")]
     pub fn co_wait_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
@@ -165,10 +167,11 @@ impl Running<'_> {
         self.ground_anim_motion(gobj, friction, facing);
     }
 
-    /// `ftCo_Guard_Phys`, `ftCo_GuardOn_Phys`: friction, and the shield's and reflector's hit
-    /// positions follow again.
+    /// `ftCo_Guard_Phys`, `ftCo_GuardOn_Phys`, `ftCo_GuardReflect_Phys`: friction, and the
+    /// shield's and reflector's hit positions follow again.
     #[doc(alias = "ftCo_Guard_Phys")]
     #[doc(alias = "ftCo_GuardOn_Phys")]
+    #[doc(alias = "ftCo_GuardReflect_Phys")]
     pub fn co_guard_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
         let fp = self.game.fighter_mut(gobj);

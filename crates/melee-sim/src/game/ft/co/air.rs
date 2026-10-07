@@ -458,6 +458,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_DownSpot_IASA")]
     #[doc(alias = "ftCo_Passive_IASA")]
     #[doc(alias = "ftCo_PassiveStand_IASA")]
+    #[doc(alias = "ftCo_GuardSetOff_IASA")]
     pub fn co_no_iasa(&mut self, _gobj: GObjId) {}
 
     /// Falling helpless, `ftCo_80096900` (and `ftCo_800969D8`, which blends over `blend`

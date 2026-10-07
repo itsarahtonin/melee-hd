@@ -421,16 +421,6 @@ impl Running<'_> {
         self.game.fighter_mut(gobj).set_mv_i32(0x24, v as i32);
     }
 
-    /// Shielding from a powershield press (`ftCo_800939B4`), not ported yet.
-    pub(super) fn enter_guard_reflect(&mut self, _gobj: GObjId) {
-        unported_call("ftCo_800939B4")
-    }
-
-    /// Raising the shield (`ftCo_800923B4`), not ported yet.
-    pub(super) fn enter_guard_on(&mut self, _gobj: GObjId) {
-        unported_call("ftCo_800923B4")
-    }
-
     /// A spot dodge, `ftCo_80099794`: a shoulder held with the stick down (`inlineB0`).
     #[doc(alias = "ftCo_80099794")]
     pub fn escape_n_check(&mut self, gobj: GObjId) -> bool {

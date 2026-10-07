@@ -187,7 +187,23 @@ impl Running<'_> {
         let x4 = reg(fp.mv_f32(4));
         fp.set_mv_f32(4, fp::fmadds(ease, fp::fsubs(target, x4), x4));
         if fp.mv_f32(4) != 0.0 && smid != fp.mv_i32(0) {
-            unported_call("ftAnim_8006EDD0");
+            let frame = fp.cur_anim_frame;
+            let f = self.game.fighter_id(gobj);
+            self.play_second_anim(f, smid, frame, 1.0);
+            let skel = self.game.fighters[f.0].x8AC_animSkeleton;
+            jobj::anim_all(
+                &mut self.game.objs,
+                self.data,
+                &mut crate::game::code::ParticleHooks,
+                skel,
+            );
+            let lean = self.game.fighters[f.0].mv_f32(4);
+            if lean != 1.0 {
+                self.blend_parts(f, TRANS_N, reg(lean), fp::fsubs(1.0, reg(lean)));
+            } else {
+                self.copy_parts(f, TRANS_N);
+            }
+            self.game.fighters[f.0].set_mv_i32(0, smid);
         }
     }
 

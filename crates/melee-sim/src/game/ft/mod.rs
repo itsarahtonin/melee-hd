@@ -32,6 +32,7 @@ mod motion_tables;
 pub mod parts;
 pub mod phys;
 pub mod resolve;
+pub mod second;
 pub mod sound;
 pub mod spawn;
 

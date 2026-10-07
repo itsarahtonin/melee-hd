@@ -59,12 +59,20 @@ fn stubs() -> Vec<Stub> {
         "ft_800887CC",
         // Effects.
         "efAsync_Spawn",
+        "efSync_Spawn",
+        "efLib_SetParamAlpha",
+        "efLib_DestroyAll",
+        // The shield's and powershield's hit shapes.
+        "ftColl_8007B1B8",
+        "ftColl_CreateReflectHit",
         // The crowd.
         "un_80322598",
         // The player library's statistics.
         "pl_8003FC44",
         "pl_80040048",
         "pl_8003FFDC",
+        "pl_8003E0E8",
+        "pl_8003E114",
     ]
     .iter()
     .map(|n| (leaf_check::sym(n), StubRet::Nothing))

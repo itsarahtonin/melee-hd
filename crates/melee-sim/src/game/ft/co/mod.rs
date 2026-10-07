@@ -18,6 +18,7 @@ pub mod down;
 pub mod enter;
 pub mod escape;
 pub mod ground;
+pub mod guard;
 pub mod ids;
 pub mod jump;
 pub mod kind_callbacks;

@@ -110,7 +110,13 @@ impl Running<'_> {
     /// angles and scale; the fighter's root keeps its rotation and scale.
     #[doc(alias = "ftAnim_8006FA58")]
     #[doc(alias = "ftAnim_8006FB88")]
-    fn reset_parts(&mut self, f: FighterId, part: i32, joint: Option<DataRef>, blend: bool) {
+    pub(super) fn reset_parts(
+        &mut self,
+        f: FighterId,
+        part: i32,
+        joint: Option<DataRef>,
+        blend: bool,
+    ) {
         let kind = self.game.fighters[f.0].kind;
         let root_part = i32::from(
             self.data
@@ -262,7 +268,7 @@ impl Running<'_> {
 
     /// Requests a joint tree's own animations from `frame`, `ftAnim_80070710`.
     #[doc(alias = "ftAnim_80070710")]
-    fn request_anim(&mut self, j: Option<JObjId>, frame: f32) {
+    pub(super) fn request_anim(&mut self, j: Option<JObjId>, frame: f32) {
         jobj::req_anim_all_by_flags(&mut self.game.objs, j, 1, frame);
     }
 
