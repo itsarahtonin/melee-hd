@@ -216,9 +216,9 @@ mod addr {
 impl Match {
     /// Starts a match: the boot's pad and frame-clock setup, the VS scene's setup
     /// (`gm_801A4BD4`) and entry (`gm_Scene_Vs_OnEnter`), loading the files the match's own
-    /// code loads with `load` (by disc file name). The scene loop is then ready for
-    /// [`Match::step`].
-    pub fn start(settings: &Settings, load: &mut dyn FnMut(&str) -> Archive) -> Match {
+    /// code loads and its fighters need with `load` (a disc file's bytes, by name). The scene
+    /// loop is then ready for [`Match::step`].
+    pub fn start(settings: &Settings, load: &mut dyn FnMut(&str) -> Vec<u8>) -> Match {
         let mut game = Game {
             game_mode: settings.game_mode,
             rules: settings.rules.clone(),
@@ -238,12 +238,15 @@ impl Match {
         let mut data = Archives::default();
         // `lb_80014534`: the rumble scripts, then the match's own files in the order its
         // setup loads them.
-        let rumble = data.add(load("LbRb.dat"));
+        let mut archive =
+            |name: &str| Archive::parse(&load(name)).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+        let rumble = data.add(archive("LbRb.dat"));
         let table = data.get(rumble).public("lbRumbleData");
         let files = vs::MatchArchives {
-            pdpm: data.add(load("PdPm.dat")),
-            gm_pause: data.add(load("GmPause.usd")),
+            pdpm: data.add(archive("PdPm.dat")),
+            gm_pause: data.add(archive("GmPause.usd")),
         };
+        load_fighter_files(&mut game, &mut data, &settings.start, load);
         let mut m = Match { game, data };
         m.game.rumble_data = table.map(|offset| melee_data::archive::DataRef {
             archive: rumble,
@@ -322,4 +325,87 @@ pub fn init_scene(r: &mut Running) {
     g.reset_controller_map();
     // `lbAudioAx_8002835C`: the audio driver's scene change.
     g.audio(0x8002_835C, [0; 4]);
+}
+
+/// Where the fighters' animation files start in ARAM (the ARAM heap's start, where the debug
+/// VS mode's loads put the first one).
+const ARAM_ANIM_BASE: u32 = 0x0062_9EA0;
+
+/// Loads the files the match's fighters need, as the character select's preloading does
+/// before the match: `PlCo.dat`, and for each playing slot's characters their data file, the
+/// costume's file and the animation file (to ARAM, one archive per animation). The ARAM
+/// addresses are laid out one after another from [`ARAM_ANIM_BASE`] in slot order, as the
+/// debug VS mode's loads lay them out; a preloaded match's could differ (see
+/// `docs/engine.md`), and only their identity matters to the simulation.
+pub fn load_fighter_files(
+    game: &mut Game,
+    data: &mut Archives,
+    start: &StartMeleeData,
+    load: &mut dyn FnMut(&str) -> Vec<u8>,
+) {
+    use super::ft::data::{LoadedFiles, kind_tables};
+    let mut add = |files: &mut LoadedFiles, data: &mut Archives, name: &str| {
+        if !files.archives.iter().any(|(n, _)| n == name) {
+            let a = Archive::parse(&load(name)).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+            files.archives.push((name.to_owned(), data.add(a)));
+        }
+    };
+    let files = &mut game.ft.data.files;
+    add(files, data, "PlCo.dat");
+    let mut anims: Vec<&'static str> = Vec::new();
+    for p in &start.players {
+        if i32::from(p.slot_type) == super::pl::player::PKIND_NONE {
+            continue;
+        }
+        let m = super::pl::player::mapping(i32::from(p.ckind));
+        for kind in [m.internal_id, m.extra_internal_id] {
+            if kind < 0 {
+                continue;
+            }
+            let t = kind_tables(i32::from(kind));
+            add(
+                files,
+                data,
+                t.dat_file.expect("a fighter kind without a data file"),
+            );
+            let c = usize::from(p.color);
+            let c = if c >= usize::from(t.costume_count) {
+                0
+            } else {
+                c
+            };
+            add(
+                files,
+                data,
+                t.costumes[c].file.expect("a costume without a file"),
+            );
+            let name = t.anim_file.expect("a fighter kind without animations");
+            if !anims.contains(&name) {
+                anims.push(name);
+            }
+        }
+    }
+    let mut aram = ARAM_ANIM_BASE;
+    for name in anims {
+        let bytes = load(name);
+        let mut file = super::ft::AnimFile {
+            aram,
+            anims: Vec::new(),
+        };
+        // One archive per animation, each starting at a 32-byte boundary.
+        let mut off = 0usize;
+        let word = |i: usize| u32::from_be_bytes(bytes[i..i + 4].try_into().unwrap()) as usize;
+        while off + 0x20 <= bytes.len() {
+            let size = word(off);
+            if size < 0x20 || off + size > bytes.len() {
+                break;
+            }
+            let a = Archive::parse(&bytes[off..off + size])
+                .unwrap_or_else(|e| panic!("{name}@{off:#x}: {e:?}"));
+            file.anims.push((off as u32, data.add(a)));
+            off = (off + size).next_multiple_of(32);
+        }
+        aram += (bytes.len() as u32).next_multiple_of(32);
+        files.anim_files.push((name.to_owned(), file));
+    }
 }
