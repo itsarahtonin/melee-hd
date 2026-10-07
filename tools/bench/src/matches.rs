@@ -64,6 +64,9 @@ pub const MATCHES: &[Match] = &[
         players: [p(FOX, 0), p(MARTH, 0)],
         seed: 0x1F0F_0004,
     },
+    // Nana runs CPU code, and the CPU's DI reads a byte of her heap address when her knockback
+    // is zero: in Dolphin, melee-bench pins it to the recording's (its DI patch; see
+    // docs/performance.md).
     Match {
         name: "ics-peach-ps",
         stage: POKEMON_STADIUM,
