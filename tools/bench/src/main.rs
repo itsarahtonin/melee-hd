@@ -4,6 +4,11 @@
 //! calls and measures a rollback snapshot of it: its size (the `Game` value plus everything
 //! it owns on the heap), how long a snapshot (`clone`) and a restore (`clone_from`) take
 //! (median of 5 runs of 200 each), and how many allocations each makes.
+//!
+//! `melee-bench codes DIR`: writes the Gecko codes that boot into each benchmark match
+//! (`matches.rs`).
+//!
+//! `melee-bench dolphin ...`: Dolphin's speed on the benchmark matches (`dolphin.rs`).
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
