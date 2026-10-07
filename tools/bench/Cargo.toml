@@ -1,0 +1,13 @@
+[package]
+name = "melee-bench"
+description = "melee-hd's performance measurements (docs/performance.md)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+melee-capture = { path = "../capture" }
+melee-data.workspace = true
+melee-sim.workspace = true

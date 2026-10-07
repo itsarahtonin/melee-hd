@@ -428,6 +428,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-bench"
+version = "0.1.0"
+dependencies = [
+ "melee-capture",
+ "melee-data",
+ "melee-sim",
+]
+
+[[package]]
 name = "melee-capture"
 version = "0.1.0"
 dependencies = [
