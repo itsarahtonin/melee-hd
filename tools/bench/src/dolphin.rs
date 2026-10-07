@@ -391,7 +391,12 @@ impl Env {
         let mut guess: BTreeMap<i32, i64> = BTreeMap::new();
         let mut cal: Option<Calibration> = None;
         let mut converged = false;
-        for round in 1..=MAX_CALIBRATION_ROUNDS {
+        // MELEE_BENCH_ROUNDS=N caps the runs (default MAX_CALIBRATION_ROUNDS).
+        let rounds = std::env::var("MELEE_BENCH_ROUNDS")
+            .ok()
+            .and_then(|n| n.parse().ok())
+            .unwrap_or(MAX_CALIBRATION_ROUNDS);
+        for round in 1..=rounds {
             let mut entries = match &cal {
                 None => vec![[Pad::NEUTRAL; 4]; count],
                 Some(c) => dtm_entries(&pads, c, last + 60),
@@ -426,9 +431,20 @@ impl Env {
                 )
                 .unwrap();
             }
-            let observed: BTreeMap<i32, i64> = known
+            let raw: BTreeMap<i32, i64> = known
                 .iter()
                 .map(|&(f, p)| (f, p - 2 * i64::from(f)))
+                .collect();
+            // Now and then a read is garbage (a status the game wrote while the harness read
+            // it): a frame's poll is never more than one off its neighbours' pace.
+            let observed: BTreeMap<i32, i64> = raw
+                .iter()
+                .filter(|&(&f, &v)| {
+                    let mut near: Vec<i64> = raw.range(f - 5..=f + 5).map(|(_, &x)| x).collect();
+                    near.sort_unstable();
+                    (v - near[near.len() / 2]).abs() <= 1
+                })
+                .map(|(&f, &v)| (f, v))
                 .collect();
             let good_until = match (&cal, r.desync_frame) {
                 (None, _) => -1,
@@ -460,7 +476,7 @@ impl Env {
         let cal = cal.unwrap();
         if !converged {
             eprintln!(
-                "{name}: warning: no calibration run played the whole match in {MAX_CALIBRATION_ROUNDS} rounds; runs will likely leave the replay"
+                "{name}: warning: no calibration run played the whole match in {rounds} rounds; runs will likely leave the replay"
             );
         }
         let text: String = cal.polls.iter().map(|p| format!("{p}\n")).collect();
