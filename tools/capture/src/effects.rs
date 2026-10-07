@@ -221,15 +221,9 @@ impl Importer<'_> {
         let ps = &mut self.game.objs.particles;
         ps.live = live;
         ps.peak = peak;
-        let gens = sym("hsd_804D78FC");
-        let mut order = Vec::new();
-        let mut g = self.u32_at(gens);
-        while g != 0 {
-            order.push(g);
-            let id = GeneratorId(self.game.objs.generators.pool.alloc(Generator::default()));
-            self.maps.generators.insert(g, id);
-            g = self.u32_at(g);
-        }
+        let order = self.generator_list();
+        let freed_gens = self.free_chain(sym("hsd_804D0F90") + 4);
+        let freed_srts = self.free_chain(sym("HSD_PSAppSrt_804D10B0") + 4);
         for i in 0..particle::LINKS as u32 {
             let mut p = self.u32_at(sym("hsd_804D0908") + 4 * i);
             let mut prev: Option<ParticleId> = None;
@@ -278,6 +272,22 @@ impl Importer<'_> {
             let j = self.u32_at(sym("hsd_804D08E8") + 4 * slot);
             self.game.objs.particles.point_jobjs[slot as usize] = (j != 0).then(|| self.jobj(j));
         }
+        // A freed generator keeps what `HSD_ObjFree` didn't overwrite (its first word becomes
+        // the free list's link); of that, the original reads only its app-SRT.
+        for &a in &freed_gens {
+            let srt = self.u32_at(a + 0x54);
+            let srt = self.app_srt(srt);
+            let id = self.maps.generators[&a];
+            self.game.objs.generators[id].appsrt = srt;
+        }
+        for a in freed_srts.iter().rev() {
+            let id = self.maps.app_srts[a];
+            self.game.objs.app_srts.pool.free(id.0);
+        }
+        for a in freed_gens.iter().rev() {
+            let id = self.maps.generators[a];
+            self.game.objs.generators.pool.free(id.0);
+        }
         self.game.objs.psdisp.frame = self.h8(sym("psFrameNum"));
         for i in 0..particle::LINKS as u32 {
             self.game.objs.psdisp.sorted[i as usize] = self.h8(sym("HSD_PSDisp_8040C360") + i);
@@ -286,6 +296,50 @@ impl Importer<'_> {
                 .then(|| self.maps.particles.get(&p).copied())
                 .flatten();
         }
+    }
+
+    /// The particle system's generator list, in order.
+    fn generator_list(&self) -> Vec<u32> {
+        let mut order = Vec::new();
+        let mut g = self.u32_at(sym("hsd_804D78FC"));
+        while g != 0 {
+            order.push(g);
+            g = self.u32_at(g);
+        }
+        order
+    }
+
+    /// Slots for the particle system's generators, live and freed, and its freed app-SRTs, so
+    /// pointers to them resolve wherever they're met (a stage object's variables come with its
+    /// GObj, before [`Importer::particles`]). Freed blocks (the allocators' free lists, head
+    /// first) are what pointers outlived (Final Destination's swaying piece keeps its generator
+    /// after the generator's life ends, and reads its app-SRT): each gets a slot that
+    /// [`Importer::particles`] frees again, the list's head last, so our pools reuse them in the
+    /// original's order.
+    pub(crate) fn map_generators(&mut self) {
+        for g in self.generator_list() {
+            let id = GeneratorId(self.game.objs.generators.pool.alloc(Generator::default()));
+            self.maps.generators.insert(g, id);
+        }
+        for a in self.free_chain(sym("HSD_PSAppSrt_804D10B0") + 4) {
+            let id = AppSrtId(self.game.objs.app_srts.pool.alloc(AppSrt::default()));
+            self.maps.app_srts.insert(a, id);
+        }
+        for a in self.free_chain(sym("hsd_804D0F90") + 4) {
+            let id = GeneratorId(self.game.objs.generators.pool.alloc(Generator::default()));
+            self.maps.generators.insert(a, id);
+        }
+    }
+
+    /// The blocks on an `HSD_ObjAllocData`'s free list, from its head (`freehead`, at `at`).
+    fn free_chain(&self, at: u32) -> Vec<u32> {
+        let mut out = Vec::new();
+        let mut b = self.u32_at(at);
+        while b != 0 && !out.contains(&b) {
+            out.push(b);
+            b = self.u32_at(b);
+        }
+        out
     }
 
     /// A generator a pointer names, if it is in the list (the cursor can be one just freed).

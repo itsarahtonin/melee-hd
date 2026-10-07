@@ -32,6 +32,8 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
             dynamic_attr::update(game.game);
         }
         0x801C_ADBC => super::gr::zako::proc(game, gobj),
+        super::gr::grlib::QUAKE_LOOP_PROC => super::gr::grlib::quake_proc(game, gobj, true),
+        super::gr::grlib::QUAKE_PROC => super::gr::grlib::quake_proc(game, gobj, false),
         super::playback::SEED_PROC => game.game.playback_restore_seed(),
         // The recording codes' processes send the frame over EXI and change nothing.
         super::playback::RECORD_FRAME_START_PROC | super::playback::RECORD_ITEMS_PROC => {}

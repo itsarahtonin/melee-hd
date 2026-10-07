@@ -177,6 +177,8 @@ pub fn find_archives_in(index: &DiscIndex, mem1: &[u8], archives: &mut Archives)
         }
     }
     let mut found = scan(index, mem1, archives, &|name, _| anims.get(name).copied());
+    let headerless = headerless_stage_files(index, mem1, archives, &found, &|_, _| None);
+    found.extend(headerless);
     found.extend(aram);
     found
 }
@@ -190,12 +192,15 @@ pub fn find_archives_after(
     archives: &mut Archives,
     before: &[Loaded],
 ) -> Vec<Loaded> {
-    let mut found = scan(index, mem1, archives, &|name, file| {
+    let known = |name: &str, file: u32| {
         before
             .iter()
             .find(|l| l.name == name && (l.file == file || l.file == 0))
             .map(|l| l.id)
-    });
+    };
+    let mut found = scan(index, mem1, archives, &known);
+    let headerless = headerless_stage_files(index, mem1, archives, &found, &known);
+    found.extend(headerless);
     found.extend(before.iter().filter(|l| l.file == 0).cloned());
     found
 }
@@ -221,14 +226,7 @@ fn scan(
         // The best-agreeing candidate (costume files share sizes), if it agrees on most words:
         // the game writes into some loaded data (a fighter's action table caches where each
         // animation was loaded).
-        let matched = candidates
-            .iter()
-            .filter(|(_, bytes)| at + bytes.len() <= mem1.len())
-            .map(|c| (agreement(&mem1[at..at + c.1.len()], &c.1), c))
-            .filter(|((same, total), _)| same * 10 >= total * 7)
-            .max_by_key(|((same, _), _)| *same)
-            .map(|(_, c)| c);
-        match matched {
+        match best_match(candidates, mem1, at) {
             Some((name, bytes)) => {
                 let file = MEM1 + at as u32;
                 let id = known(name, file)
@@ -250,6 +248,78 @@ fn scan(
         }
     }
     found
+}
+
+/// The best-agreeing candidate for a file at `at` (costume files share sizes), if it agrees on
+/// most words: the game writes into some loaded data (a fighter's action table caches where
+/// each animation was loaded).
+fn best_match<'c>(
+    candidates: &'c [(String, Vec<u8>)],
+    mem1: &[u8],
+    at: usize,
+) -> Option<&'c (String, Vec<u8>)> {
+    candidates
+        .iter()
+        .filter(|(_, bytes)| at + bytes.len() <= mem1.len())
+        .map(|c| (agreement(&mem1[at..at + c.1.len()], &c.1), c))
+        .filter(|((same, total), _)| same * 10 >= total * 7)
+        .max_by_key(|((same, _), _)| *same)
+        .map(|(_, c)| c)
+}
+
+/// The stage archives whose files [`scan`] can't find by their headers: Pokémon Stadium's
+/// return to its default stage hands `grAnime_801C65B0` its transformation file's buffer
+/// instead of the file's archive, which zeroes the header's first three words and leaves the
+/// file registered. The stage's `HSD_Archive` keeps a copy of the header and where the data
+/// is, which finds the file.
+fn headerless_stage_files(
+    index: &DiscIndex,
+    mem1: &[u8],
+    archives: &mut Archives,
+    found: &[Loaded],
+    known: &dyn Fn(&str, u32) -> Option<ArchiveId>,
+) -> Vec<Loaded> {
+    let word = |a: u32| {
+        let i = a.wrapping_sub(MEM1) as usize;
+        mem1.get(i..i + 4)
+            .map_or(0, |b| u32::from_be_bytes(b.try_into().unwrap()))
+    };
+    let table = import::sym("grDatFiles_8049EE10");
+    let mut out = Vec::new();
+    for i in 0..4 {
+        let arc = word(table + 0xC * i);
+        let data = word(arc + 0x20);
+        let in_mem = |a: u32| (MEM1 + 0x20..MEM1 + mem1.len() as u32).contains(&a);
+        if !in_mem(arc)
+            || !in_mem(data)
+            || found
+                .iter()
+                .chain(&out)
+                .any(|l: &Loaded| (l.data..l.data + l.data_len).contains(&data))
+            || word(data - 0x20) != 0
+        {
+            continue;
+        }
+        let header = [word(arc), word(arc + 4), word(arc + 8)];
+        let Some(candidates) = index.by_header.get(&header) else {
+            continue;
+        };
+        let at = (data - 0x20 - MEM1) as usize;
+        if let Some((name, bytes)) = best_match(candidates, mem1, at) {
+            let id = known(name, data - 0x20)
+                .unwrap_or_else(|| archives.add(Archive::parse(bytes).unwrap()));
+            let archive = archives.get(id);
+            out.push(Loaded {
+                name: name.clone(),
+                file: data - 0x20,
+                data,
+                data_len: archive.data().len() as u32,
+                id,
+                publics: archive.publics().map(|(n, o)| (n.to_owned(), o)).collect(),
+            });
+        }
+    }
+    out
 }
 
 /// How many of the file's words memory agrees with, relocated words counting as agreeing.

@@ -1117,7 +1117,7 @@ fn quakes() {
         |r, a| {
             let pos = (a.r(4) != 0).then(|| a.vec(a.r(4)));
             let (kind, stale) = (a.r(3) as i32, r.game.objs.stale_reads);
-            camera::request_quake(r.game, kind, pos);
+            camera::request_quake(r, kind, pos);
             if !(1..=4).contains(&kind) && pos.is_some() {
                 // The original's length is then the epicenter's address, which our state
                 // can't hold: the port counts a stale read, and the address is put back here.

@@ -816,9 +816,7 @@ const LB_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/lb";
 /// The audio library's tick and mix (`lbAudioAx_80027DF8` and the functions that set what it
 /// reads), on the saved calls in `AUDIO_LB_CALLS` (default above), captured as the driver's
 /// are with these functions named over the whole Final Destination match
-/// (`CAPTURE_EVERY=500`, `--fields 13000`). The six calls from late in the match whose stage
-/// doesn't import yet (Final Destination's background keeps a freed generator in
-/// `ground.u.last.xE0`, which the import can't name) wait in `import-gap/` beside them.
+/// (`CAPTURE_EVERY=500`, `--fields 13000`).
 fn lb_dir() -> String {
     std::env::var("AUDIO_LB_CALLS").unwrap_or_else(|_| LB_CALLS.to_owned())
 }

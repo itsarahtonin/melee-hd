@@ -1373,15 +1373,6 @@ pub fn set_quake_scale(c: &mut Camera, scale: f32) {
     c.quake_scale = copy(scale);
 }
 
-/// The stage's quake model for a quake, `grLib_801C9CEC` as far as the camera needs it: none
-/// for other kinds or a stage without one. Loading the model is the stage's to port.
-fn quake_model(s: &StageInfo, kind: i32) -> Option<GObjId> {
-    if !(1..=4).contains(&kind) || s.quake_model_set.is_none() {
-        return None;
-    }
-    unported("the stage's quake model (grLib_801C9CEC)")
-}
-
 /// Starts a quake of `kind` (with its model) and logs the request with its epicenter,
 /// `Camera_RequestQuake`. The log fills every free slot, as the original's missing `break`
 /// does.
@@ -1391,26 +1382,27 @@ fn quake_model(s: &StageInfo, kind: i32) -> Option<GObjId> {
 /// which plain data can't give. That is counted as a stale read (`docs/engine.md`) and stored
 /// as 0. No caller passes such a kind.
 #[doc(alias = "Camera_RequestQuake")]
-pub fn request_quake(game: &mut Game, kind: i32, pos: Option<Vec3>) {
+pub fn request_quake(r: &mut Running, kind: i32, pos: Option<Vec3>) {
+    use super::gr::grlib::quake_model;
     let length = match kind {
         QUAKE_LOOP => {
-            if game.camera.cam.quake_gobj.is_none() {
-                game.camera.cam.quake_gobj = quake_model(&game.stage_info, kind);
+            if r.game.camera.cam.quake_gobj.is_none() {
+                r.game.camera.cam.quake_gobj = quake_model(r, kind);
             }
             10
         }
         2..=4 => {
-            let _ = quake_model(&game.stage_info, kind);
+            let _ = quake_model(r, kind);
             22
         }
         _ => {
             if pos.is_some() {
-                game.objs.stale_reads += 1;
+                r.game.objs.stale_reads += 1;
             }
             0
         }
     };
-    let c = &mut game.camera.cam;
+    let c = &mut r.game.camera.cam;
     assert!(
         (0..QUAKE_KINDS as i32).contains(&kind),
         "quake kind {kind} writes past the quake counters"

@@ -139,6 +139,7 @@ impl Importer<'_> {
                 self.u8_at(a + 0x1A),
                 self.u8_at(a + 0x1B),
             ],
+            stale_alpha: false,
             aobj,
         };
         id
@@ -175,7 +176,9 @@ impl Importer<'_> {
                 }
             };
         }
-        // The stage's marked materials (`grDatFiles_801C6228`, as each archive was registered).
+        // The stage's marked materials (`grDatFiles_801C6228`, as each archive was registered),
+        // as memory has them: Pokémon Stadium's transformation file has none while it's
+        // registered in every capture (its buffer is lbDvd's preload of entry 0x7D5).
         for i in 0..4 {
             let at = table + 0xC * i;
             let head = cap.u32(at + 4);
@@ -186,6 +189,7 @@ impl Importer<'_> {
             for k in 0..if list != 0 { n } else { 0 } {
                 let desc = cap.u32(list + 4 * k);
                 if desc != 0
+                    && cap.u32(desc + 4) & 1 << 26 != 0
                     && let Some(d) = self.data_or_unhandled(desc)
                 {
                     *self.game.objs.rendermode_patches.entry(d).or_default() |= 1 << 26;
@@ -578,6 +582,8 @@ impl Comparer<'_> {
             return;
         }
         let f = self.game.objs.fogs[o].clone();
+        // A stale alpha (`Fog::stale_alpha`) is a stack byte nothing reads: it isn't compared.
+        let alpha = |a: u8| if f.stale_alpha { 0 } else { a };
         self.check(
             path,
             "refs, type and range",
@@ -586,7 +592,7 @@ impl Comparer<'_> {
                 f.ty,
                 f.start.to_bits(),
                 f.end.to_bits(),
-                f.color,
+                [f.color[0], f.color[1], f.color[2], alpha(f.color[3])],
             ),
             (
                 self.u16(t + 4),
@@ -597,7 +603,7 @@ impl Comparer<'_> {
                     self.u8(t + 0x18),
                     self.u8(t + 0x19),
                     self.u8(t + 0x1A),
-                    self.u8(t + 0x1B),
+                    alpha(self.u8(t + 0x1B)),
                 ],
             ),
         );

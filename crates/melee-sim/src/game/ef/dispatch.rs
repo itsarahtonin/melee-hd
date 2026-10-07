@@ -659,7 +659,7 @@ pub fn process_deferred(r: &mut Running, gobj: Option<GObjId>, q: QueuedId) {
         }
         Some(SpawnKind::CameraShake) => {
             let p = at(r, Some(params));
-            super::super::camera::request_quake(r.game, gfx_id, Some(p));
+            super::super::camera::request_quake(r, gfx_id, Some(p));
         }
         None => panic!("[EfASync] unknown type {kind}"),
     }

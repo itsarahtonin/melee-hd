@@ -311,6 +311,7 @@ impl<'a> Importer<'a> {
             self.game.world.procs[id.0] = proc;
         }
         self.item_free_lists();
+        self.map_generators();
         let jobj_kind = self.u8(sym("HSD_GObj_JObjKind"));
         let light_kind = self.u8(sym("HSD_GObj_LightKind"));
         let fog_kind = self.u8(sym("HSD_GObj_FogKind"));

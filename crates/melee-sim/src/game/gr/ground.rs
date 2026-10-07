@@ -129,6 +129,21 @@ pub fn set_fog_color(game: &mut Game, c: _GXColor) {
     };
     if let Some(Obj::Fog(f)) = game.world.gobjs[g.0].obj {
         game.objs.fogs[f].color = [c.r, c.g, c.b, c.a];
+        game.objs.fogs[f].stale_alpha = false;
+    }
+}
+
+/// [`set_fog_color`] with a color whose alpha its caller never wrote: the alpha is whatever
+/// that stack byte held (`docs/engine.md`, "Uninitialized values"), so the fog keeps its old
+/// alpha, marked stale.
+pub fn set_fog_rgb(game: &mut Game, r: u8, g: u8, b: u8) {
+    let Some(gobj) = game.stage_info.x12C else {
+        return;
+    };
+    if let Some(Obj::Fog(f)) = game.world.gobjs[gobj.0].obj {
+        let fog = &mut game.objs.fogs[f];
+        fog.color[..3].copy_from_slice(&[r, g, b]);
+        fog.stale_alpha = true;
     }
 }
 
