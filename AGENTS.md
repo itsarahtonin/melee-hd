@@ -1,6 +1,6 @@
 # Working on melee-hd
 
-Read [README.md](README.md), [architecture](docs/architecture.md), [the oracle](docs/oracle.md) and the [porting guide](docs/porting.md) before editing.
+Read [README.md](README.md), [architecture](docs/architecture.md), [the oracle](docs/oracle.md), the [porting guide](docs/porting.md) and the [engine notes](docs/engine.md) before editing.
 
 ## Scope and rules
 
