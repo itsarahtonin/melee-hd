@@ -32,3 +32,9 @@ lbColl_80006E58	leaf-check lbcollision: static to its unit, so ssbm-types lists 
 fmodf	leaf-check aobj: fmodf_matches calls it at its address on random pairs in both float modes; looping AObjs wrap their frame through it, compared every step
 HSD_PadRumbleFree	leaf-check rumble: every remove, remove by id and finished script frees through it; free list and node links compared each step
 HSD_PadRumbleInterpret1	leaf-check rumble: HSD_PadRumbleInterpret runs every node through it; nodes and motor commands compared every frame
+mpPruneEmptyLines	leaf-check mplib: mpLibLoad prunes every stage's lines through it; every line record compared after each load
+mpIsland_8005A6F8	leaf-check mplib: mpIsland_8005A728 clears the island lists through it at every load
+mpIsland_8005A728	leaf-check mplib: mpLibLoad builds every stage's islands through it; every island list compared after each load
+mpIsland_8005AE1C	leaf-check mplib: every joint and line change updates the static islands through mpIsland_8005B334; island lists compared after each step
+mpIsland_8005B004	leaf-check mplib: every joint and line change rebuilds the dynamic islands through mpIsland_8005B334; island lists compared after each step
+mpIsland_8005B334	leaf-check mplib: joint hides, moves, enables and line toggles update the islands through it; island lists compared after each step

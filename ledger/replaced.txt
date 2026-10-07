@@ -175,3 +175,7 @@ SamplingHandler	Serial-interface interrupt handler that runs the sampling callba
 PADSetSamplingCallback	Installs the serial-interface sampling interrupt callback; the input layer's job.
 __PADDisableRecalibration	Sets the flag that stops PADInit recalibrating at boot; the input layer's job.
 _HSD_AObjForgetMemory	It only clears endcallback_list, which nothing in the game ever adds to; melee-sim keeps no such list (see hsd::aobj::invoke_end_callbacks).
+mpLib_8004D164	Returns mplib's collision data global; melee-sim's mp::Geometry holds the data as fields.
+mpGetGroundCollVtx	Returns mplib's vertex array global; melee-sim's mp::Geometry holds it as a field.
+mpGetGroundCollLine	Returns mplib's line array global; melee-sim's mp::Geometry holds it as a field.
+mpGetGroundCollJoint	Returns mplib's joint array global; melee-sim's mp::Geometry holds it as a field.

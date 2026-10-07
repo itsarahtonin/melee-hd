@@ -10,6 +10,7 @@ pub mod hsd;
 pub mod input;
 pub mod lb;
 pub mod math;
+pub mod mp;
 pub mod mtx;
 mod pairs;
 pub mod ppc;
