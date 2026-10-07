@@ -226,15 +226,16 @@ fn timeline_samples() {
     run_timeline(&dir, 1500, 11847, DspModel::Samples);
 }
 
-/// [`timeline`] on Pokémon Stadium (`Game_20260129T131206.slp`, recorded the same way into
-/// `AUDIO_TIMELINE_PS`), whose transformations load from the disc during the match.
+/// [`timeline`] on Pokémon Stadium (`Game_20260129T171258.slp`, recorded the same way into
+/// `AUDIO_TIMELINE_PS`), whose transformations load from the disc during the match: the game
+/// waits inside the tick, and the second load's wait takes an audio frame.
 #[test]
 fn timeline_stadium() {
     let dir = std::env::var("AUDIO_TIMELINE_PS").unwrap_or_else(|_| TIMELINE_PS.to_owned());
-    run_timeline(&dir, 1500, 13671, DspModel::Silent);
+    run_timeline(&dir, 1500, 12450, DspModel::Silent);
 }
 
-const TIMELINE_PS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-ps1";
+const TIMELINE_PS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-ps3";
 
 const TIMELINE_AX: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-fd1-ax";
 
