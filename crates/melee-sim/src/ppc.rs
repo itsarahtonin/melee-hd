@@ -214,6 +214,11 @@ pub fn cvt_sll_flt(x: i64) -> f64 {
 }
 
 /// `(long long) d` and `(unsigned long long) d`: truncated, and saturated past 2^63.
+/// `__cvt_dbl_usll`'s result as the signed value callers truncating to `s64` read.
+pub fn cvt_dbl_usll_i64(d: f64) -> i64 {
+    cvt_dbl_usll(d) as i64
+}
+
 #[doc(alias = "__cvt_dbl_usll")]
 pub fn cvt_dbl_usll(d: f64) -> u64 {
     let bits = d.to_bits();
@@ -270,5 +275,15 @@ pub fn cvt_fp2unsigned(d: f64) -> u32 {
         fp::fctiwz(d) as u32
     } else {
         (fp::fctiwz(fp::fsub(d, TWO_31)) as u32).wrapping_add(0x8000_0000)
+    }
+}
+
+/// `divw`. Where the quotient overflows (a divisor of 0, or `i32::MIN` by -1) the result is
+/// all ones for a negative dividend and 0 otherwise, as ssbm-rs's processor gives it.
+pub fn divw(a: i32, b: i32) -> i32 {
+    if b == 0 || (a == i32::MIN && b == -1) {
+        if a < 0 { -1 } else { 0 }
+    } else {
+        a / b
     }
 }
