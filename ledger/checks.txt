@@ -90,3 +90,11 @@ TObjSetupMtx	leaf-check tobj: static to its unit (ssbm-types lists it under tu::
 HSD_TexMapID2PTTexMtx	leaf-check tobj: static to its unit (ssbm-types lists it under tu::); index_conversions_match calls it on every texture map
 TObjAmnesia	leaf-check tobj: static to its unit (ssbm-types lists it under tu::); current_by_type_and_amnesia_match calls it with TObj's class and another
 MObjAmnesia	leaf-check tobj: static to its unit (ssbm-types lists it under tu::); current_by_type_and_amnesia_match calls it with MObj's class and another
+HSD_DObjAddAnimAll	leaf-check jobj: HSD_JObjAddAnimAll gives every joint's DObjs their MatAnimJoint and ShapeAnimJoint animations through it; materials, textures and shape sets compared
+DObjLoad	leaf-check jobj: HSD_JObjLoadJoint loads every DObj on the disc through it; DObjs and their materials compared
+HSD_DObjLoadDesc	leaf-check jobj: HSD_JObjLoadJoint loads every DObj list on the disc through it; DObjs and their materials compared
+HSD_DObjRemoveAll	leaf-check jobj: joint removal frees DObj lists through it; live DObjs, MObjs, TObjs and PObjs compared
+HSD_DObjAlloc	leaf-check jobj: HSD_DObjLoadDesc allocates every DObj through it; live DObjs compared
+DObjRelease	leaf-check jobj: HSD_DObjRemoveAll releases every DObj through it (material, shapes, animation); live objects compared
+HSD_PObjAddAnimAll	leaf-check jobj: HSD_DObjAddAnimAll gives morphing shapes their ShapeAnims through it; shape sets' AObjs compared
+PObjUpdateFunc	leaf-check jobj: static to its unit (ssbm-types lists it under tu::); every shape-animation frame blends through it; shape blends compared each step

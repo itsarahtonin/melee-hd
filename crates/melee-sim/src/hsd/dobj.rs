@@ -1,14 +1,14 @@
 //! Display objects, HAL's DObj (`sysdolphin/baselib/dobj.c`): a joint's list of drawable
-//! parts, each a material (MObj) and its shapes (PObj).
-//!
-//! Materials aren't ported yet: loading reads the material descriptor's render mode for the
-//! blending flags, as `DObjLoad` does after loading the material, and keeps the descriptor.
+//! parts, each a material (MObj) and its shapes (PObj), and their animation.
 
 use std::ops::{Index, IndexMut};
 
 use melee_data::archive::{Archives, DataRef};
 
 use super::Objects;
+use super::aobj::AObjId;
+use super::jobj;
+use super::mobj::{self, MObjId};
 use super::pobj::{self, PObjId};
 use super::pool::Pool;
 
@@ -16,20 +16,28 @@ use super::pool::Pool;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct DObjId(pub u32);
 
-/// `HSD_DObj`, without its material yet.
+/// The display-object animation flag of `HSD_*ByFlags` (`DOBJ_ANIM`).
+pub const DOBJ_ANIM: u32 = 0x2;
+/// Every animation flag (`ALL_ANIM`).
+pub const ALL_ANIM: u32 = 0x7FF;
+
+/// `HSD_DObj`.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DObj {
     pub next: Option<DObjId>,
-    /// The material's descriptor, until MObj loads it.
-    pub mobj_desc: Option<DataRef>,
+    pub mobj: Option<MObjId>,
     pub pobj: Option<PObjId>,
+    /// Nothing in the game gives a DObj an animation of its own; removal frees one.
+    pub aobj: Option<AObjId>,
     pub flags: u32,
 }
 
-/// The DObj pool.
+/// The DObj pool and `current_dobj`.
 #[derive(Clone, Debug, Default)]
 pub struct DObjs {
     pub pool: Pool<DObj>,
+    /// Set by `HSD_DObjSetCurrent`; nothing reads it.
+    pub current: Option<DObjId>,
 }
 
 impl Index<DObjId> for DObjs {
@@ -45,43 +53,172 @@ impl IndexMut<DObjId> for DObjs {
     }
 }
 
-/// Sets `flags` under `mask`, `HSD_DObjModifyFlags`.
-fn modify_flags(d: &mut DObj, flags: u32, mask: u32) {
-    d.flags = (d.flags & !mask) | (flags & mask);
+impl DObjs {
+    /// A list's DObjs, first to last.
+    pub fn list(&self, first: Option<DObjId>) -> impl Iterator<Item = DObjId> + '_ {
+        std::iter::successors(first, |&d| self[d].next)
+    }
 }
 
-/// Builds a DObj list from its descriptors, `HSD_DObjLoadDesc` (pending materials).
+/// `HSD_DObjSetCurrent`.
+#[doc(alias = "HSD_DObjSetCurrent")]
+pub fn set_current(dobjs: &mut DObjs, d: Option<DObjId>) {
+    dobjs.current = d;
+}
+
+/// `HSD_DObjGetFlags`.
+#[doc(alias = "HSD_DObjGetFlags")]
+pub fn get_flags(dobjs: &DObjs, d: Option<DObjId>) -> u32 {
+    d.map_or(0, |d| dobjs[d].flags)
+}
+
+/// `HSD_DObjSetFlags`.
+#[doc(alias = "HSD_DObjSetFlags")]
+pub fn set_flags(dobjs: &mut DObjs, d: Option<DObjId>, flags: u32) {
+    if let Some(d) = d {
+        dobjs[d].flags |= flags;
+    }
+}
+
+/// `HSD_DObjClearFlags`.
+#[doc(alias = "HSD_DObjClearFlags")]
+pub fn clear_flags(dobjs: &mut DObjs, d: Option<DObjId>, flags: u32) {
+    if let Some(d) = d {
+        dobjs[d].flags &= !flags;
+    }
+}
+
+/// Sets `flags` under `mask`, `HSD_DObjModifyFlags`.
+#[doc(alias = "HSD_DObjModifyFlags")]
+pub fn modify_flags(dobjs: &mut DObjs, d: Option<DObjId>, flags: u32, mask: u32) {
+    if let Some(d) = d {
+        let o = &mut dobjs[d];
+        o.flags = (o.flags & !mask) | (flags & mask);
+    }
+}
+
+/// Removes the animations `flags` names from each DObj of a list: its own if it has
+/// [`DOBJ_ANIM`], then its shapes' and its material's by their flags,
+/// `HSD_DObjRemoveAnimAllByFlags` (each through the inline `HSD_DObjRemoveAnimByFlags`).
+#[doc(alias = "HSD_DObjRemoveAnimAllByFlags")]
+pub fn remove_anim_all_by_flags(objs: &mut Objects, d: Option<DObjId>, flags: u32) {
+    let mut cur = d;
+    while let Some(d) = cur {
+        if flags & DOBJ_ANIM != 0 {
+            jobj::remove_aobj(objs, objs.dobjs[d].aobj);
+            objs.dobjs[d].aobj = None;
+        }
+        pobj::remove_anim_all_by_flags(objs, objs.dobjs[d].pobj, flags);
+        mobj::remove_anim_by_flags(objs, objs.dobjs[d].mobj, flags);
+        cur = objs.dobjs[d].next;
+    }
+}
+
+/// Gives each DObj of a list its shapes' animations from a chain of `HSD_ShapeAnimDObj`s and
+/// its material's from a chain of `HSD_MatAnim`s, in step, `HSD_DObjAddAnimAll` (each through
+/// the inline `HSD_DObjAddAnim`).
+#[doc(alias = "HSD_DObjAddAnimAll")]
+pub fn add_anim_all(
+    objs: &mut Objects,
+    data: &Archives,
+    d: Option<DObjId>,
+    matanim: Option<DataRef>,
+    shapeanim_dobj: Option<DataRef>,
+) {
+    let (mut cur, mut ma, mut sd) = (d, matanim, shapeanim_dobj);
+    while let Some(d) = cur {
+        let shapeanim = sd.and_then(|sd| data.ptr(sd.at(4)));
+        pobj::add_anim_all(objs, data, objs.dobjs[d].pobj, shapeanim);
+        mobj::add_anim(objs, data, objs.dobjs[d].mobj, ma);
+        cur = objs.dobjs[d].next;
+        ma = ma.and_then(|m| data.ptr(m));
+        sd = sd.and_then(|s| data.ptr(s));
+    }
+}
+
+/// Restarts each DObj's shape and material animations by `flags` at `frame`,
+/// `HSD_DObjReqAnimAllByFlags` (each through the inline `HSD_DObjReqAnimByFlags`).
+#[doc(alias = "HSD_DObjReqAnimAllByFlags")]
+pub fn req_anim_all_by_flags(objs: &mut Objects, d: Option<DObjId>, frame: f32, flags: u32) {
+    let mut cur = d;
+    while let Some(d) = cur {
+        pobj::req_anim_all_by_flags(objs, objs.dobjs[d].pobj, frame, flags);
+        mobj::req_anim_by_flags(objs, objs.dobjs[d].mobj, frame, flags);
+        cur = objs.dobjs[d].next;
+    }
+}
+
+/// Restarts every animation of each DObj of a list at `frame`, `HSD_DObjReqAnimAll`.
+#[doc(alias = "HSD_DObjReqAnimAll")]
+pub fn req_anim_all(objs: &mut Objects, d: Option<DObjId>, frame: f32) {
+    req_anim_all_by_flags(objs, d, frame, ALL_ANIM);
+}
+
+/// Advances each DObj's shape animations, then its material's, one frame, `HSD_DObjAnimAll`
+/// (each through the inline `HSD_DObjAnim`).
+#[doc(alias = "HSD_DObjAnimAll")]
+pub fn anim_all(objs: &mut Objects, data: &Archives, d: Option<DObjId>) {
+    let mut cur = d;
+    while let Some(d) = cur {
+        pobj::anim_all(objs, data, objs.dobjs[d].pobj);
+        mobj::anim(objs, data, objs.dobjs[d].mobj);
+        cur = objs.dobjs[d].next;
+    }
+}
+
+/// `HSD_DObjAlloc`.
+#[doc(alias = "HSD_DObjAlloc")]
+pub fn alloc(dobjs: &mut DObjs) -> DObjId {
+    DObjId(dobjs.pool.alloc(DObj::default()))
+}
+
+/// Builds a DObj list, its materials and its shapes from their descriptors, each DObj before
+/// those after it, `HSD_DObjLoadDesc` (and `DObjLoad`). The material's render mode sets the
+/// blending flags.
+#[doc(alias = "HSD_DObjLoadDesc")]
+#[doc(alias = "DObjLoad")]
 pub fn load_desc(objs: &mut Objects, data: &Archives, desc: Option<DataRef>) -> Option<DObjId> {
     let desc = desc?;
     assert!(
         data.ptr(desc).is_none(),
         "DObjDesc {desc:?} names a class, which isn't supported"
     );
-    let d = DObjId(objs.dobjs.pool.alloc(DObj::default()));
+    let d = alloc(&mut objs.dobjs);
     let next = load_desc(objs, data, data.ptr(desc.at(4)));
-    let mobj_desc = data.ptr(desc.at(8));
+    objs.dobjs[d].next = next;
+    let m = mobj::load_desc(objs, data, data.ptr(desc.at(8)));
+    objs.dobjs[d].mobj = m;
     let p = pobj::load_desc(&mut objs.pobjs, data, data.ptr(desc.at(0xC)));
-    let o = &mut objs.dobjs[d];
-    o.next = next;
-    o.mobj_desc = mobj_desc;
-    o.pobj = p;
-    if let Some(m) = mobj_desc {
-        match data.u32(m.at(4)) & 0x6000_0000 {
-            0 => modify_flags(o, 2, 0xE),
-            0x4000_0000 => modify_flags(o, 8, 0xE),
-            0x6000_0000 => modify_flags(o, 4, 0xE),
-            mode => panic!("mobj has unexpected blending flags ({mode:#x})"),
-        }
+    objs.dobjs[d].pobj = p;
+    if let Some(m) = m {
+        let mode = objs.mobjs[m].rendermode;
+        let flags = match mode & 0x6000_0000 {
+            0 => 2,
+            0x4000_0000 => 8,
+            0x6000_0000 => 4,
+            _ => panic!("mobj has unexpected blending flags ({mode:#x})"),
+        };
+        modify_flags(&mut objs.dobjs, Some(d), flags, 0xE);
     }
     Some(d)
 }
 
-/// Frees a DObj list and its shapes, `HSD_DObjRemoveAll` (pending materials).
+/// Frees a DObj's material, shapes and animation, `DObjRelease`.
+#[doc(alias = "DObjRelease")]
+fn release(objs: &mut Objects, d: DObjId) {
+    mobj::remove(objs, objs.dobjs[d].mobj);
+    pobj::remove_all(objs, objs.dobjs[d].pobj);
+    jobj::remove_aobj(objs, objs.dobjs[d].aobj);
+}
+
+/// Frees a DObj list, first first, `HSD_DObjRemoveAll` (each through the inline
+/// `HSD_DObjRemove`).
+#[doc(alias = "HSD_DObjRemoveAll")]
 pub fn remove_all(objs: &mut Objects, d: Option<DObjId>) {
     let mut cur = d;
     while let Some(d) = cur {
         cur = objs.dobjs[d].next;
-        pobj::remove_all(objs, objs.dobjs[d].pobj);
+        release(objs, d);
         objs.dobjs.pool.free(d.0);
     }
 }

@@ -7,6 +7,8 @@ use std::ops::{Index, IndexMut};
 use melee_data::archive::{Archives, DataRef};
 
 use super::Objects;
+use super::aobj;
+use super::fobj::Value;
 use super::jobj::{self, JObjId};
 use super::pool::Pool;
 use crate::fpu::copy;
@@ -95,6 +97,11 @@ impl IndexMut<PObjId> for PObjs {
         &mut self.pool[p.0]
     }
 }
+
+/// The shape-animation flag of `HSD_*ByFlags` (`POBJ_ANIM`).
+pub const POBJ_ANIM: u32 = 1 << 3;
+/// The first blend-weight channel (`HSD_A_S_W0`).
+const A_W0: u8 = 2;
 
 /// `HSD_PObjGetFlags`.
 #[doc(alias = "HSD_PObjGetFlags")]
@@ -288,5 +295,118 @@ pub fn resolve_refs_all(
         resolve_refs(objs, data, Some(po), Some(de));
         p = objs.pobjs[po].next;
         d = data.ptr(de.at(4));
+    }
+}
+
+/// A morphing shape's blend state, if the shape morphs.
+fn shape_set(pobjs: &mut PObjs, p: PObjId) -> Option<&mut ShapeSet> {
+    let ty = pobjs[p].ty();
+    match &mut pobjs[p].u {
+        Binding::ShapeSet(set) if ty == SHAPEANIM => Some(set),
+        _ => None,
+    }
+}
+
+/// Frees each morphing shape's animation of a list if `flags` has [`POBJ_ANIM`],
+/// `HSD_PObjRemoveAnimAllByFlags` (each through the inline `HSD_PObjRemoveAnimByFlags`).
+#[doc(alias = "HSD_PObjRemoveAnimAllByFlags")]
+pub fn remove_anim_all_by_flags(objs: &mut Objects, p: Option<PObjId>, flags: u32) {
+    let mut cur = p;
+    while let Some(p) = cur {
+        if flags & POBJ_ANIM != 0
+            && let Some(set) = shape_set(&mut objs.pobjs, p)
+        {
+            let a = set.aobj.take();
+            jobj::remove_aobj(objs, a);
+        }
+        cur = objs.pobjs[p].next;
+    }
+}
+
+/// Gives each shape of a list its morph animation from a chain of `HSD_ShapeAnim`s, in step,
+/// `HSD_PObjAddAnimAll` (each through the inline `HSD_PObjAddAnim`). Every shape of the list
+/// must morph (the original asserts), even past the chain's end.
+#[doc(alias = "HSD_PObjAddAnimAll")]
+pub fn add_anim_all(
+    objs: &mut Objects,
+    data: &Archives,
+    p: Option<PObjId>,
+    shapeanim: Option<DataRef>,
+) {
+    if shapeanim.is_none() {
+        return;
+    }
+    let (mut cur, mut sa) = (p, shapeanim);
+    while let Some(p) = cur {
+        assert!(
+            shape_set(&mut objs.pobjs, p).is_some(),
+            "pobj_type(pobj) == POBJ_SHAPEANIM && pobj->u.shape_set"
+        );
+        if let Some(anim) = sa {
+            if let Some(old) = shape_set(&mut objs.pobjs, p).and_then(|s| s.aobj) {
+                jobj::remove_aobj(objs, Some(old));
+            }
+            let a = jobj::load_aobj(objs, data, data.ptr(anim.at(4)));
+            if let Some(set) = shape_set(&mut objs.pobjs, p) {
+                set.aobj = a;
+            }
+        }
+        cur = objs.pobjs[p].next;
+        sa = sa.and_then(|s| data.ptr(s));
+    }
+}
+
+/// Restarts each morphing shape's animation of a list at `frame` if `flags` has
+/// [`POBJ_ANIM`], `HSD_PObjReqAnimAllByFlags` (each through the inline
+/// `HSD_PObjReqAnimByFlags`).
+#[doc(alias = "HSD_PObjReqAnimAllByFlags")]
+pub fn req_anim_all_by_flags(objs: &mut Objects, p: Option<PObjId>, frame: f32, flags: u32) {
+    let mut cur = p;
+    while let Some(p) = cur {
+        if flags & POBJ_ANIM != 0
+            && let Some(a) = shape_set(&mut objs.pobjs, p).map(|s| s.aobj)
+        {
+            aobj::req_anim(&mut objs.aobjs, &mut objs.fobjs, a, frame);
+        }
+        cur = objs.pobjs[p].next;
+    }
+}
+
+/// Hands an animated blend value to a morphing shape, `PObjUpdateFunc` (through the inline
+/// `ShapeSetSetAnimResult`): an additive set's weight for the channel's shape, or the morph's
+/// position. A stale value (`Value::Stale`) is stored as [`Value::or_address`] and counted in
+/// [`Objects::stale_reads`].
+#[doc(alias = "PObjUpdateFunc")]
+pub fn update(objs: &mut Objects, p: PObjId, ty: u8, value: Value) {
+    let Some(set) = shape_set(&mut objs.pobjs, p) else {
+        return;
+    };
+    let v = copy(value.or_address());
+    if set.flags & SHAPESET_ADDITIVE != 0 {
+        // The original writes past the weights for a channel out of their range.
+        let i = usize::from(ty.wrapping_sub(A_W0));
+        assert!(
+            i < set.blend.len(),
+            "shape weight {i} of {}",
+            set.blend.len()
+        );
+        set.blend[i] = v;
+    } else {
+        set.blend[0] = v;
+    }
+    objs.stale_reads += u32::from(value == Value::Stale);
+}
+
+/// Advances each morphing shape's animation of a list one frame, `HSD_PObjAnimAll` (each
+/// through the inline `HSD_PObjAnim`).
+#[doc(alias = "HSD_PObjAnimAll")]
+pub fn anim_all(objs: &mut Objects, data: &Archives, p: Option<PObjId>) {
+    let mut cur = p;
+    while let Some(p) = cur {
+        if let Some(a) = shape_set(&mut objs.pobjs, p).map(|s| s.aobj) {
+            let mut up = |objs: &mut Objects, ty: u8, v: Value| update(objs, p, ty, v);
+            aobj::interpret(objs, data, a, Some(&mut up));
+        }
+        cur = objs.pobjs[p].next;
     }
 }
