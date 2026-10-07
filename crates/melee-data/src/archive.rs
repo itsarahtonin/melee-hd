@@ -178,6 +178,11 @@ impl Archive {
         self.relocs.iter().copied().filter(|r| r % 4 != 0)
     }
 
+    /// Where its pointers are, ascending.
+    pub fn relocs(&self) -> &[u32] {
+        &self.relocs
+    }
+
     /// Whether the word at `offset` is a pointer.
     pub fn is_pointer(&self, offset: u32) -> bool {
         self.relocs.binary_search(&offset).is_ok()

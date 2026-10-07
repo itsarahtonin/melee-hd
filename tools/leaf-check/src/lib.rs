@@ -4,6 +4,8 @@
 //! The ports run in ssbm-rs's runtime with the disc's `main.dol` loaded, so they find the
 //! constants and tables the original code reads. Tests need `SSBM_DISC` and skip without it.
 
+pub mod calls;
+
 use gekko_fp::{FpMode, set_fp_mode};
 use melee_sim::mtx::Mtx34;
 use melee_sim::quat::Quat;
@@ -25,6 +27,7 @@ pub fn reference() -> Option<Ctx> {
     let ctx = Ctx::new();
     dol.load_into(&ctx.mem).expect("main.dol fits in memory");
     ssbm_game::register(&ctx, |_| true);
+    ctx.register(sym("lbArq_80014BD0"), aram_read);
     ctx.regs.set_r(1, STACK_TOP);
     // r2 and r13 as `__init_registers` sets them: its lis/ori pairs give the small-data bases.
     let init = sym("__init_registers");
@@ -33,6 +36,52 @@ pub fn reference() -> Option<Ctx> {
     ctx.regs.set_r(13, pair(init + 16));
     ssbm_types::fns::__sinit_trigf_c(&ctx);
     Some(ctx)
+}
+
+/// The disc's index of archives, built once, or `None` when `SSBM_DISC` is unset.
+pub fn disc_index() -> Option<&'static melee_capture::DiscIndex> {
+    static INDEX: std::sync::OnceLock<Option<melee_capture::DiscIndex>> =
+        std::sync::OnceLock::new();
+    INDEX
+        .get_or_init(|| {
+            let path = std::env::var("SSBM_DISC").ok()?;
+            let disc =
+                melee_data::disc::Disc::open(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+            Some(melee_capture::disc_index(&disc))
+        })
+        .as_ref()
+}
+
+/// `lbArq_80014BD0`, reading ARAM, which the reference doesn't have: a fighter's animation
+/// file is all the game keeps there, so the copy comes from the disc's file at the offset
+/// the game put it (`ftData_Table_Unk0`). The request queue's bookkeeping isn't kept, nor
+/// the completion callback run.
+fn aram_read(ctx: &Ctx) {
+    use melee_capture::{FT_ANIM_FILE_NAMES, FT_ANIM_FILES, FT_KINDS};
+    let (src, dest, len, callback) = (ctx.regs.r(3), ctx.regs.r(4), ctx.regs.r(5), ctx.regs.r(6));
+    assert_eq!(callback, 0, "lbArq_80014BD0 with a callback isn't modeled");
+    let index = disc_index().expect("SSBM_DISC");
+    let file = (0..FT_KINDS)
+        .filter_map(|kind| {
+            let base = ctx.read_u32(FT_ANIM_FILES + 8 * kind);
+            if base == 0 || base > src {
+                return None;
+            }
+            let mut name = Vec::new();
+            let mut a = ctx.read_u32(FT_ANIM_FILE_NAMES + 4 * kind);
+            while ctx.read_u8(a) != 0 {
+                name.push(ctx.read_u8(a));
+                a += 1;
+            }
+            let bytes = index.anim_file(&String::from_utf8_lossy(&name))?;
+            ((src - base) < bytes.len() as u32).then_some((base, bytes))
+        })
+        .max_by_key(|(base, _)| *base);
+    let (base, bytes) = file.unwrap_or_else(|| panic!("ARAM {src:#x} isn't an animation file"));
+    for i in 0..len {
+        let b = bytes.get((src - base + i) as usize).copied().unwrap_or(0);
+        ctx.write_u8(dest + i, b);
+    }
 }
 
 /// The reference with HAL's heap and object allocators set up as `HSD_InitComponent` does

@@ -121,3 +121,8 @@ impl Mirror for Quat {
         compare_floats(&[self.x, self.y, self.z, self.w], m, at, path, cx);
     }
 }
+
+/// A vector in loaded game data.
+pub fn read_vec3(data: &melee_data::archive::Archives, at: DataRef) -> Vec3 {
+    Vec3::new(data.f32(at), data.f32(at.at(4)), data.f32(at.at(8)))
+}

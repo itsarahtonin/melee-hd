@@ -6,16 +6,18 @@
 use std::collections::{HashMap, HashSet};
 
 use melee_data::archive::DataRef;
+use melee_sim::game::handles::FighterId;
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
+use melee_sim::game::structs::FighterBone;
 use melee_sim::hsd::aobj::AObjId;
 use melee_sim::hsd::gobj::{GObjId, P_LINKS};
 use melee_sim::hsd::jobj::{Contents, JObjId};
 use melee_sim::hsd::pobj::Binding;
 use melee_sim::hsd::robj::{self, RObjId, Ref};
 
-use crate::import::{Maps, box_index, sym};
-use crate::{DataMap, MEM1};
+use crate::import::{FIGHTER_ATTRS_SIZE, Maps, VS_CONTROLLER, box_index, sym};
+use crate::{DataMap, FT_ANIM_FILES, FT_KINDS, MEM1};
 
 pub struct Comparer<'a> {
     pub mem: &'a [u8],
@@ -140,6 +142,7 @@ impl<'a> Comparer<'a> {
                 i += 1;
             }
         }
+        self.statics();
     }
 
     /// The camera, its boxes, its second CObj, its default field of view and the debug
@@ -262,10 +265,144 @@ impl<'a> Comparer<'a> {
                     };
                     let fighter = &self.game.fighters[f.0];
                     fighter.compare(&mem, ud, &format!("{path} fighter"), self);
+                    self.fighter_blocks(&format!("{path} fighter"), f, ud);
                 }
             }
             Some(UserData::Ground(g)) => self.ground(path, g, self.u32(t + 0x2C)),
             Some(UserData::Item(_)) | None => {}
+        }
+    }
+
+    /// The static structs the importer brings in (`Importer::statics`).
+    pub fn statics(&mut self) {
+        let mem = Mem {
+            bytes: self.mem,
+            base: MEM1,
+        };
+        let game = self.game;
+        game.magnify
+            .compare(&mem, sym("ifMagnify_804A1DE0"), "magnify", self);
+        let (theirs, filter_gobj) = crate::read_coll_statics(self.mem);
+        let key = |s: &melee_sim::mp::coll::CollStatics| {
+            let v = |v: melee_sim::vec::Vec3| [v.x.to_bits(), v.y.to_bits(), v.z.to_bits()];
+            format!(
+                "{:?}/{} {:?}/{} {:#x} {} {:#x} {:x?} {} {:?} {:?}",
+                s.right_walls,
+                s.right_count,
+                s.left_walls,
+                s.left_count,
+                s.max_x.to_bits(),
+                s.line_id,
+                s.flags,
+                v(s.normal),
+                s.ecb_tiny,
+                s.floor_filter,
+                s.x64a8
+            )
+        };
+        self.check("mp", "collision statics", key(&game.coll), key(&theirs));
+        self.compare_handle(
+            "mp collision floor filter fighter",
+            "GObjId",
+            game.coll.floor_filter_gobj.map(|g| g.0),
+            filter_gobj,
+        );
+        let wind = self.u32(sym("ft_804D6578"));
+        self.check("ft", "wind sources", game.ft.wind_sources, wind);
+        let bury = self.u32(sym("ftDevice_BuryThingCount"));
+        self.check("ft", "bury things", game.ft.bury_things, bury);
+        let n = self.u16(sym("staleAttackInstance"));
+        self.check("pl", "attack instance", game.pl.stale_attack_instance, n);
+        let n = self.u16(sym("unk_804D6480"));
+        self.check("pl", "attack record", game.pl.attack_instance, n);
+        for kind in 0..FT_KINDS {
+            let aram = self.u32(FT_ANIM_FILES + 8 * kind);
+            let ours = game
+                .ft
+                .anim_files
+                .get(kind as usize)
+                .and_then(|f| f.as_ref());
+            self.check(
+                "ft",
+                &format!("anim file {kind}"),
+                ours.map_or(0, |f| f.aram),
+                aram,
+            );
+        }
+        game.vs.compare(&mem, VS_CONTROLLER, "vs", self);
+        let g = &game.gm;
+        self.check(
+            "gm",
+            "pause flags, debug level",
+            (g.db_pause, g.db_level),
+            (
+                self.u8(sym("gm_80479D58") + 0x10),
+                self.u32(sym("DbLevel")) as i32,
+            ),
+        );
+        let pads = sym("HSD_PadGameStatus");
+        for (i, p) in game.pads.iter().enumerate() {
+            let at = pads + 0x44 * i as u32;
+            let theirs = crate::import::read_pad(self.mem, at);
+            self.check(&format!("pads[{i}]"), "status", p, &theirs);
+        }
+    }
+
+    /// The blocks a fighter owns: its parts table, its attribute copy and its dynamic bone
+    /// chains.
+    fn fighter_blocks(&mut self, path: &str, f: FighterId, t: u32) {
+        let fighter = &self.game.fighters[f.0];
+        let mem = Mem {
+            bytes: self.mem,
+            base: MEM1,
+        };
+        let tp = self.u32(t + 0x5E8);
+        if let Some(p) = fighter.parts
+            && tp != 0
+        {
+            for (i, bone) in self.game.fighter_parts[p.0].iter().enumerate() {
+                let at = tp + i as u32 * FighterBone::SIZE;
+                bone.compare(&mem, at, &format!("{path}.parts[{i}]"), self);
+            }
+        }
+        for (off, field, ours) in [
+            (0x2D4, "dat_attrs", fighter.dat_attrs),
+            (0x2D8, "dat_attrs_backup", fighter.dat_attrs_backup),
+        ] {
+            let ta = self.u32(t + off);
+            if let Some(a) = ours
+                && ta != 0
+            {
+                let theirs = &self.mem[(ta - MEM1) as usize..][..FIGHTER_ATTRS_SIZE as usize];
+                let o = &self.game.fighter_attrs[a.0];
+                if let Some(i) = (0..o.len()).find(|&i| o[i] != theirs[i]) {
+                    self.diffs.push(format!(
+                        "{path}.{field}: byte {i:#x}: ours {:#04x}, theirs {:#04x}",
+                        o[i], theirs[i]
+                    ));
+                }
+            }
+        }
+        // Each chain link, where both sides have one (the handles compare as the fighter
+        // does).
+        for i in 0..fighter.dynamic_bone_sets.len() {
+            let mut ours = fighter.dynamic_bone_sets[i].dyn_desc.data;
+            let mut theirs = self.u32(t + 0x2F0 + 0x18 * i as u32 + 4);
+            let mut k = 0;
+            while let Some(d) = ours
+                && theirs != 0
+            {
+                let link = self.game.fighter_dynamics[d.0].clone();
+                link.compare(
+                    &mem,
+                    theirs,
+                    &format!("{path}.dynamic_bone_sets[{i}]@{k}"),
+                    self,
+                );
+                ours = link.next;
+                theirs = self.u32(theirs + 0x90);
+                k += 1;
+            }
         }
     }
 
@@ -826,10 +963,14 @@ impl Cx for Comparer<'_> {
             "JObjId" => self.maps.jobjs.get(&theirs).map(|j| j.0),
             "GObjId" => self.maps.gobjs.get(&theirs).map(|g| g.0),
             "FighterId" => self.maps.fighters.get(&theirs).map(|f| f.0),
+            "PartsId" => self.maps.fighter_parts.get(&theirs).map(|p| p.0),
+            "AttrsId" => self.maps.fighter_attrs.get(&theirs).map(|a| a.0),
+            "DynamicsId" => self.maps.fighter_dynamics.get(&theirs).map(|d| d.0),
             "DObjId" => self.maps.dobjs.get(&theirs).map(|d| d.0),
             "GroundId" => self.maps.grounds.get(&theirs).map(|g| g.0),
             "StartHookId" => self.maps.start_hooks.get(&theirs).map(|h| h.0),
             "CameraBoxId" if theirs != 0 => Some(box_index(self.u32(sym("cm_804D645C")), theirs)),
+            "TObjId" => self.maps.tobjs.get(&theirs).map(|t| t.0),
             _ => None,
         };
         let known = known.or_else(|| self.handles.get(&(kind, theirs)).copied());

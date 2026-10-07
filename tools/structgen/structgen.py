@@ -119,10 +119,25 @@ class Gen:
         if rid in self.done:
             return
         self.done.add(rid)
-        r = self.recs[rid]
-        for f in r["fields"]:
-            self.ty(f["type"])
+        for f in self.fields(rid):
+            if "splice" not in f:
+                self.ty(f["type"])
         self.order.append(rid)
+
+    def fields(self, rid):
+        """A record's fields, with any run config.SPLICE names replaced by one field of the
+        hand-written type it gives."""
+        r = self.recs[rid]
+        splice = config.SPLICE.get(rec_name(rid))
+        out = []
+        for f in r["fields"]:
+            off = f["offset_bits"] // 8
+            if splice and splice[1] <= off < splice[2]:
+                if off == splice[1] and f["offset_bits"] % 8 == 0 and not any("splice" in g for g in out):
+                    out.append({"name": splice[0], "offset_bits": off * 8, "splice": splice[3]})
+                continue
+            out.append(f)
+        return out
 
     def struct(self, rid):
         r = self.recs[rid]
@@ -130,10 +145,13 @@ class Gen:
         out = [f"/// `{rec_name(rid)}`, {r['size']:#x} bytes."]
         out.append("#[derive(Clone, Debug, PartialEq)]")
         out.append(f"pub struct {name} {{")
-        for f in r["fields"]:
+        for f in self.fields(rid):
             off = f["offset_bits"] // 8
             bits = f" (bits {f['offset_bits'] % 8}..+{f['bits']})" if "bits" in f else ""
-            t = bit_type(f["bits"]) if "bits" in f else self.field_override(rid, f) or self.ty(f["type"])
+            if "splice" in f:
+                t = f["splice"]
+            else:
+                t = bit_type(f["bits"]) if "bits" in f else self.field_override(rid, f) or self.ty(f["type"])
             out.append(f"    /// +{off:#x}{bits}")
             out.append(f"    pub {field_name(f['name'])}: {t},")
         out.append("}")
@@ -141,8 +159,11 @@ class Gen:
         out.append(f"impl Default for {name} {{")
         out.append("    fn default() -> Self {")
         out.append(f"        {name} {{")
-        for f in r["fields"]:
-            d = "None" if self.field_override(rid, f) else self.default(f)
+        for f in self.fields(rid):
+            if "splice" in f:
+                d = "Default::default()"
+            else:
+                d = "None" if self.field_override(rid, f) else self.default(f)
             out.append(f"            {field_name(f['name'])}: {d},")
         out.append("        }")
         out.append("    }")
@@ -250,11 +271,15 @@ class Gen:
         name = rust_type_name(rid)
         imp = []
         cmp = []
-        for f in r["fields"]:
+        for f in self.fields(rid):
             fname = field_name(f["name"])
             off = f["offset_bits"] // 8
             at = f"at + {off:#x}"
             path = f"format!(\"{{path}}.{f['name']}\")"
+            if "splice" in f:
+                imp.append(f"            {fname}: {f['splice']}::import(m, {at}, cx),")
+                cmp.append(f"        self.{fname}.compare(m, {at}, &{path}, cx);")
+                continue
             if "bits" in f:
                 bt = bit_type(f["bits"])
                 read = f"m.bits(at, {f['offset_bits']}, {f['bits']})"
@@ -320,7 +345,9 @@ def main():
         "use crate::hsd::dobj::DObjId;",
         "use crate::hsd::gobj::GObjId;",
         "use crate::hsd::jobj::JObjId;",
+        "use crate::hsd::tobj::TObjId;",
         "use crate::mp::coll::EcbSource;",
+        *config.EXTRA_USES,
         "use crate::quat::Quat;",
         "use crate::vec::Vec3;",
         "",

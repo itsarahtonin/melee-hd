@@ -25,7 +25,7 @@ fn captured_call_changes_are_seen() {
     let data = DataMap {
         loaded: find_archives(&cap.call.mem1, &disc, &mut archives),
     };
-    let mut imp = Importer::new(&cap, &data);
+    let mut imp = Importer::new(&cap, &data).with_archives(&archives);
     imp.world();
     let Importer { game, maps, .. } = imp;
     let after = run_capture(&ctx, &cap.call);

@@ -18,8 +18,8 @@ const NOT_DOBJS: u32 = jobj::SPLINE | jobj::PTCL;
 /// Clears a color overlay's script and effects, `lb_80014498`.
 #[doc(alias = "lb_80014498")]
 pub fn clear_overlay(co: &mut ColorOverlay) {
-    co.x8_ptr1 = None;
-    co.x4_pri = 0;
+    co.script.cursor = None;
+    co.script.frame_count = 0;
     co.x28_colanim = [0; 4];
     co.x7C_flag2 = false;
     co.x7C_color_enable = false;
@@ -53,15 +53,15 @@ fn byte_reg(b: u8) -> f64 {
     fp::frsp(f64::from(b))
 }
 
-/// The command word a color script is at, then the script past it (`++x8_ptr1`).
+/// The command word a color script is at, then the script past it (`++x8_ptr1, `Script::cursor``).
 fn next_word(data: &Archives, co: &mut ColorOverlay) -> Word {
-    let at = co.x8_ptr1.expect("a color script");
-    co.x8_ptr1 = Some(at.at(4));
+    let at = co.script.cursor.expect("a color script");
+    co.script.cursor = Some(at.at(4));
     Word(data.u32(at))
 }
 
 fn current(data: &Archives, co: &ColorOverlay) -> Word {
-    Word(data.u32(co.x8_ptr1.expect("a color script")))
+    Word(data.u32(co.script.cursor.expect("a color script")))
 }
 
 /// A blend's step toward a color over `frames`: `((0.5 + to) - from) / frames`.
@@ -105,7 +105,7 @@ fn overlay_command(data: &Archives, co: &mut ColorOverlay, opcode: u32) -> bool 
         // lb_80013BB8: wait.
         11 => {
             let w = next_word(data, co);
-            co.x0_timer = co.x0_timer.wrapping_add(w.timer() as i32);
+            co.script.timer = (co.script.timer as i32).wrapping_add(w.timer() as i32) as u32;
         }
         // lb_80013BE4: color and light off.
         12 => {
@@ -198,11 +198,11 @@ fn overlay_command(data: &Archives, co: &mut ColorOverlay, opcode: u32) -> bool 
 #[doc(alias = "Command_07")]
 fn generic_command(data: &Archives, co: &mut ColorOverlay, opcode: u32) {
     match opcode {
-        0 => co.x8_ptr1 = None,
+        0 => co.script.cursor = None,
         7 => {
             next_word(data, co);
-            let at = co.x8_ptr1.expect("a color script");
-            co.x8_ptr1 = data.ptr(at);
+            let at = co.script.cursor.expect("a color script");
+            co.script.cursor = data.ptr(at);
         }
         _ => unimplemented!("color script command {opcode}"),
     }
@@ -212,10 +212,10 @@ fn generic_command(data: &Archives, co: &mut ColorOverlay, opcode: u32) {
 /// whether it ended (its script said so, or its duration ran out).
 #[doc(alias = "lb_80014258")]
 pub fn run_overlay(data: &Archives, co: &mut ColorOverlay) -> bool {
-    if co.x8_ptr1.is_some() && co.x0_timer != 0 {
-        co.x0_timer = co.x0_timer.wrapping_sub(1);
+    if co.script.cursor.is_some() && co.script.timer != 0 {
+        co.script.timer = (co.script.timer as i32).wrapping_sub(1) as u32;
     }
-    while co.x8_ptr1.is_some() && co.x0_timer == 0 {
+    while co.script.cursor.is_some() && co.script.timer == 0 {
         let opcode = current(data, co).opcode();
         if opcode < 10 {
             generic_command(data, co, opcode);
@@ -249,10 +249,10 @@ pub fn run_overlay(data: &Archives, co: &mut ColorOverlay) -> bool {
         co.x50_light_color.b = byte(co.x5C_light_blue);
         co.x50_light_color.a = byte(co.x60_light_alpha);
     }
-    let fc = co.x4_pri;
+    let fc = co.script.frame_count as i32;
     if fc != 0 {
-        co.x4_pri = fc.wrapping_sub(1);
-        if co.x4_pri == 0 {
+        co.script.frame_count = fc.wrapping_sub(1) as u32;
+        if co.script.frame_count == 0 {
             return true;
         }
     }
@@ -272,10 +272,10 @@ pub fn start_script(
     let g = ground_of(game, gobj);
     let gp = &mut game.grounds[g.0];
     let co = &mut gp.color_overlay;
-    co.x4_pri = pri;
-    co.x8_ptr1 = script;
-    co.x0_timer = 0;
-    co.xC_loop = 0;
+    co.script.frame_count = pri as u32;
+    co.script.cursor = script;
+    co.script.timer = 0;
+    co.script.loop_count = 0;
     co.x7C_flag2 = false;
     co.x7C_color_enable = false;
     gp.x10_flags.b4 = false;

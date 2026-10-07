@@ -9,7 +9,11 @@ use melee_data::archive::Archives;
 use super::camera::CameraState;
 use super::gr;
 use super::handles::{CodeRef, FighterId, GroundId, ItemId};
-use super::structs::{_StaticPlayer, ControllerMap, Fighter, Ground, StageInfo};
+use super::structs::{
+    _StaticPlayer, ControllerMap, DynamicsData, Fighter, FighterBone, Ground, StageInfo,
+    VsSceneController, ifMagnify,
+};
+use super::{ft, gm, pl};
 use crate::hsd::Objects;
 use crate::hsd::cobj::CObjId;
 use crate::hsd::fog::FogId;
@@ -68,6 +72,24 @@ impl Kinds for GameKinds {
     type Obj = Obj;
 }
 
+/// What the simulation hands the presentation: sounds and controller rumble, which the
+/// original passes to the audio and pad drivers mid-tick.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Event {
+    /// `HSD_AudioSFXKeyOffTrack`: the sound on a track stops.
+    SfxKeyOffTrack(i32),
+    /// `HSD_PadRumbleRemoveId`: a controller's rumble of one kind stops.
+    RumbleRemove { port: u8, id: i32 },
+    /// `HSD_PadRumbleAdd` (through `lb_80014574`): a controller rumbles with pattern `kind`
+    /// for `frames` (-2: the pattern's length).
+    RumbleAdd {
+        port: u8,
+        id: i32,
+        kind: i32,
+        frames: i32,
+    },
+}
+
 /// Everything a tick reads and writes.
 #[derive(Clone, Debug, Default)]
 pub struct Game {
@@ -92,6 +114,33 @@ pub struct Game {
     /// The scenes' button maps (`controller_map`; its fifth entry merges every port).
     pub controller_map: ControllerMap,
     pub rules: Rules,
+    /// Fighters' parts tables (`Fighter::parts`), one entry per bone of the character.
+    pub fighter_parts: Pool<Vec<FighterBone>>,
+    /// Fighters' copies of their character's attributes (`Fighter::dat_attrs`): the
+    /// `fighter_dat_attrs_alloc_data` block's big-endian bytes, whose layout each character
+    /// defines.
+    pub fighter_attrs: Pool<Vec<u8>>,
+    /// The links of fighters' dynamic bone chains (`BoneDynamicsDesc::dyn_desc`), each a
+    /// joint's physics state.
+    pub fighter_dynamics: Pool<DynamicsData>,
+    /// The fighter code's globals.
+    pub ft: ft::Globals,
+    /// The player library's globals.
+    pub pl: pl::Globals,
+    /// The off-screen magnifier (`ifMagnify_804A1DE0`): which players are off screen, which
+    /// deals them damage over time.
+    pub magnify: ifMagnify,
+    /// The game-mode layer's debug settings fighters read.
+    pub gm: gm::Globals,
+    /// mpcoll's statics: the last pass's walls and correction, and the floor filter.
+    pub coll: crate::mp::coll::CollStatics,
+    /// What the tick asked of the audio and pad drivers so far.
+    pub events: Vec<Event>,
+    /// The controllers as fighters read them each frame (`HSD_PadGameStatus`).
+    pub pads: [crate::input::controller::Status; 4],
+    /// The VS match's controller (`gmvs.c`'s `controller`): its frame count, pause state and
+    /// rules.
+    pub vs: VsSceneController,
 }
 
 /// The game as the scheduler's host for one call: the state and the game data it reads.

@@ -147,7 +147,7 @@ impl Default for JObj {
 
 impl JObj {
     /// The display objects, if it holds them (`union_type_dobj`).
-    fn dobj(&self) -> Option<DObjId> {
+    pub fn dobj(&self) -> Option<DObjId> {
         match self.u {
             Contents::DObjs(d) if self.flags & (PTCL | SPLINE) == 0 => d,
             _ => None,
@@ -396,6 +396,80 @@ pub fn req_anim(objs: &mut Objects, j: Option<JObjId>, frame: f32) {
     req_anim_by_flags(objs, j, 0x7FF, frame);
 }
 
+/// Object types for [`foreach_anim`]'s mask (`HSD_TypeMask`).
+pub mod type_mask {
+    pub const DOBJ: u32 = 1 << 2;
+    pub const JOBJ: u32 = 1 << 5;
+    pub const MOBJ: u32 = 1 << 7;
+    pub const POBJ: u32 = 1 << 8;
+    pub const ROBJ: u32 = 1 << 9;
+    pub const TOBJ: u32 = 1 << 10;
+}
+
+/// Hands `f` every AObj of a joint tree whose object type `mask` names: each joint's, its
+/// display objects', their materials' and textures', their first shape's, and its references',
+/// `HSD_ForeachAnim` on a joint (`JObjForeachAnim`).
+#[doc(alias = "HSD_ForeachAnim")]
+#[doc(alias = "JObjForeachAnim")]
+pub fn foreach_anim(
+    objs: &mut Objects,
+    j: JObjId,
+    mask: u32,
+    f: &mut dyn FnMut(&mut Objects, AObjId),
+) {
+    use type_mask::*;
+    if mask & JOBJ != 0
+        && let Some(a) = objs.jobjs[j].aobj
+    {
+        f(objs, a);
+    }
+    let mut d = objs.jobjs[j].dobj();
+    while let Some(id) = d {
+        if mask & DOBJ != 0
+            && let Some(a) = objs.dobjs[id].aobj
+        {
+            f(objs, a);
+        }
+        if let Some(m) = objs.dobjs[id].mobj {
+            if mask & MOBJ != 0
+                && let Some(a) = objs.mobjs[m].aobj
+            {
+                f(objs, a);
+            }
+            let mut t = objs.mobjs[m].tobj;
+            while let Some(tid) = t {
+                if mask & TOBJ != 0
+                    && let Some(a) = objs.tobjs[tid].aobj
+                {
+                    f(objs, a);
+                }
+                t = objs.tobjs[tid].next;
+            }
+        }
+        if mask & POBJ != 0
+            && let Some(p) = objs.dobjs[id].pobj
+            && objs.pobjs[p].ty() == super::pobj::SHAPEANIM
+            && let super::pobj::Binding::ShapeSet(set) = &objs.pobjs[p].u
+            && let Some(a) = set.aobj
+        {
+            f(objs, a);
+        }
+        d = objs.dobjs[id].next;
+    }
+    let mut r = objs.jobjs[j].robj;
+    while let Some(id) = r {
+        if mask & ROBJ != 0
+            && let Some(a) = objs.robjs[id].aobj
+        {
+            f(objs, a);
+        }
+        r = objs.robjs[id].next;
+    }
+    for c in own_children(&objs.jobjs, j) {
+        foreach_anim(objs, c, mask, f);
+    }
+}
+
 /// Moves the AObj's first branch-visibility channel to the front, so it runs first,
 /// `JObjSortAnim`.
 #[doc(alias = "JObjSortAnim")]
@@ -501,6 +575,36 @@ pub fn set_angle(jobjs: &mut JObjs, j: JObjId, set: impl FnOnce(&mut Quat)) {
         "!(jobj->flags & JOBJ_USE_QUATERNION)"
     );
     set_srt(jobjs, j, |o| set(&mut o.rotate));
+}
+
+/// `HSD_JObjSetTranslate` (inline): a bit copy, then dirty unless the SRT is independent.
+pub fn set_translate(jobjs: &mut JObjs, j: JObjId, t: Vec3) {
+    set_srt(jobjs, j, |o| o.translate = t);
+}
+
+/// `HSD_JObjSetScale` (inline).
+pub fn set_scale(jobjs: &mut JObjs, j: JObjId, s: Vec3) {
+    set_srt(jobjs, j, |o| o.scale = s);
+}
+
+/// `HSD_JObjSetRotation` (inline): the whole quaternion, any flags.
+pub fn set_rotation(jobjs: &mut JObjs, j: JObjId, q: Quat) {
+    set_srt(jobjs, j, |o| o.rotate = q);
+}
+
+/// `HSD_JObjSetRotationX` (inline).
+pub fn set_rotation_x(jobjs: &mut JObjs, j: JObjId, v: f32) {
+    set_angle(jobjs, j, |q| q.x = v);
+}
+
+/// `HSD_JObjSetRotationY` (inline).
+pub fn set_rotation_y(jobjs: &mut JObjs, j: JObjId, v: f32) {
+    set_angle(jobjs, j, |q| q.y = v);
+}
+
+/// `HSD_JObjSetRotationZ` (inline).
+pub fn set_rotation_z(jobjs: &mut JObjs, j: JObjId, v: f32) {
+    set_angle(jobjs, j, |q| q.z = v);
 }
 
 /// Hands a joint one animated or constrained value, `JObjUpdateFunc`: its SRT, visibility,
