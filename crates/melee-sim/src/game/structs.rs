@@ -3470,3 +3470,2301 @@ impl Default for Fighter {
         }
     }
 }
+
+/// `Item_DynamicBones`, 0x1c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Item_DynamicBones {
+    /// +0x0
+    pub flags: i32,
+    /// +0x4
+    pub skeleton: Option<JObjId>,
+    /// +0x8
+    pub dyn_desc: DynamicsDesc,
+}
+
+impl Default for Item_DynamicBones {
+    fn default() -> Self {
+        Item_DynamicBones {
+            flags: 0,
+            skeleton: None,
+            dyn_desc: Default::default(),
+        }
+    }
+}
+
+/// `ItemHitbox`, 0x13c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ItemHitbox {
+    /// +0x0
+    pub hit: HitCapsule,
+    /// +0x138 (bits 0..+1)
+    pub x138: bool,
+    /// +0x138 (bits 1..+7)
+    pub x138_b1_7: u8,
+    /// +0x139
+    pub x139: [u8; 3],
+}
+
+impl Default for ItemHitbox {
+    fn default() -> Self {
+        ItemHitbox {
+            hit: Default::default(),
+            x138: false,
+            x138_b1_7: 0,
+            x139: [0; 3],
+        }
+    }
+}
+
+/// `lb_80014638_arg1_t`, 0x14 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct lb_80014638_arg1_t {
+    /// +0x0
+    pub unk_x: f32,
+    /// +0x4
+    pub unk_y: f32,
+    /// +0x8
+    pub x8: Vec3,
+}
+
+impl Default for lb_80014638_arg1_t {
+    fn default() -> Self {
+        lb_80014638_arg1_t {
+            unk_x: 0.0,
+            unk_y: 0.0,
+            x8: Default::default(),
+        }
+    }
+}
+
+/// `xB6C_t`, 0x28 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct xB6C_t {
+    /// +0x0
+    pub xB6C: Vec3,
+    /// +0xc
+    pub xB78: f32,
+    /// +0x10
+    pub xB7C: Option<JObjId>,
+    /// +0x14
+    pub xB80: u32,
+    /// +0x18
+    pub xB84: Vec3,
+    /// +0x24
+    pub xB90: u32,
+}
+
+impl Default for xB6C_t {
+    fn default() -> Self {
+        xB6C_t {
+            xB6C: Default::default(),
+            xB78: 0.0,
+            xB7C: None,
+            xB80: 0,
+            xB84: Default::default(),
+            xB90: 0,
+        }
+    }
+}
+
+/// `ItemModStruct`, 0x4 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ItemModStruct {
+    /// +0x0
+    pub x0_unk: _GXColor,
+}
+
+impl Default for ItemModStruct {
+    fn default() -> Self {
+        ItemModStruct {
+            x0_unk: Default::default(),
+        }
+    }
+}
+
+/// `_itECB`, 0x10 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct _itECB {
+    /// +0x0
+    pub top: f32,
+    /// +0x4
+    pub bottom: f32,
+    /// +0x8
+    pub right: f32,
+    /// +0xc
+    pub left: f32,
+}
+
+impl Default for _itECB {
+    fn default() -> Self {
+        _itECB {
+            top: 0.0,
+            bottom: 0.0,
+            right: 0.0,
+            left: 0.0,
+        }
+    }
+}
+
+/// `flag32_flags`, 0x4 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct flag32_flags {
+    /// +0x0 (bits 0..+1)
+    pub x0: bool,
+    /// +0x0 (bits 1..+1)
+    pub x1: bool,
+    /// +0x0 (bits 2..+1)
+    pub x2: bool,
+    /// +0x0 (bits 3..+1)
+    pub x3: bool,
+    /// +0x0 (bits 4..+1)
+    pub x4: bool,
+    /// +0x0 (bits 5..+1)
+    pub x5: bool,
+    /// +0x0 (bits 6..+1)
+    pub x6: bool,
+    /// +0x0 (bits 7..+1)
+    pub x7: bool,
+    /// +0x1 (bits 0..+1)
+    pub x8: bool,
+    /// +0x1 (bits 1..+1)
+    pub x9: bool,
+    /// +0x1 (bits 2..+1)
+    pub xA: bool,
+    /// +0x1 (bits 3..+1)
+    pub xB: bool,
+    /// +0x1 (bits 4..+1)
+    pub xC: bool,
+    /// +0x1 (bits 5..+1)
+    pub xD: bool,
+    /// +0x1 (bits 6..+1)
+    pub xE: bool,
+    /// +0x1 (bits 7..+4)
+    pub xF: u8,
+    /// +0x2 (bits 3..+1)
+    pub x13: bool,
+    /// +0x2 (bits 4..+1)
+    pub x14: bool,
+    /// +0x2 (bits 5..+1)
+    pub x15: bool,
+    /// +0x2 (bits 6..+1)
+    pub x16: bool,
+    /// +0x2 (bits 7..+2)
+    pub x17: u8,
+    /// +0x3 (bits 1..+1)
+    pub x19: bool,
+    /// +0x3 (bits 2..+1)
+    pub x1A: bool,
+    /// +0x3 (bits 3..+1)
+    pub x1B: bool,
+    /// +0x3 (bits 4..+1)
+    pub x1C: bool,
+    /// +0x3 (bits 5..+1)
+    pub x1D: bool,
+    /// +0x3 (bits 6..+1)
+    pub x1E: bool,
+    /// +0x3 (bits 7..+1)
+    pub x1F: bool,
+}
+
+impl Default for flag32_flags {
+    fn default() -> Self {
+        flag32_flags {
+            x0: false,
+            x1: false,
+            x2: false,
+            x3: false,
+            x4: false,
+            x5: false,
+            x6: false,
+            x7: false,
+            x8: false,
+            x9: false,
+            xA: false,
+            xB: false,
+            xC: false,
+            xD: false,
+            xE: false,
+            xF: 0,
+            x13: false,
+            x14: false,
+            x15: false,
+            x16: false,
+            x17: 0,
+            x19: false,
+            x1A: false,
+            x1B: false,
+            x1C: false,
+            x1D: false,
+            x1E: false,
+            x1F: false,
+        }
+    }
+}
+
+/// `flag32`, 0x4 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct flag32 {
+    /// +0x0
+    pub flags: flag32_flags,
+}
+
+impl Default for flag32 {
+    fn default() -> Self {
+        flag32 {
+            flags: Default::default(),
+        }
+    }
+}
+
+/// `Item_xDCC_flag`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Item_xDCC_flag {
+    /// +0x0 (bits 0..+1)
+    pub b0: bool,
+    /// +0x0 (bits 1..+1)
+    pub b1: bool,
+    /// +0x0 (bits 2..+1)
+    pub b2: bool,
+    /// +0x0 (bits 3..+1)
+    pub b3: bool,
+    /// +0x0 (bits 4..+4)
+    pub b4567: u8,
+}
+
+impl Default for Item_xDCC_flag {
+    fn default() -> Self {
+        Item_xDCC_flag {
+            b0: false,
+            b1: false,
+            b2: false,
+            b3: false,
+            b4567: 0,
+        }
+    }
+}
+
+/// `CameraBoxFlags_x0`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CameraBoxFlags_x0 {
+    /// +0x0 (bits 0..+2)
+    pub b01: u8,
+    /// +0x0 (bits 2..+1)
+    pub b2: bool,
+    /// +0x0 (bits 3..+1)
+    pub b3: bool,
+    /// +0x0 (bits 4..+1)
+    pub b4: bool,
+    /// +0x0 (bits 5..+1)
+    pub b5: bool,
+    /// +0x0 (bits 6..+1)
+    pub b6: bool,
+    /// +0x0 (bits 7..+1)
+    pub b7: bool,
+}
+
+impl Default for CameraBoxFlags_x0 {
+    fn default() -> Self {
+        CameraBoxFlags_x0 {
+            b01: 0,
+            b2: false,
+            b3: false,
+            b4: false,
+            b5: false,
+            b6: false,
+            b7: false,
+        }
+    }
+}
+
+/// `CameraBoxFlags`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CameraBoxFlags {
+    /// +0x0
+    pub x0: CameraBoxFlags_x0,
+}
+
+impl Default for CameraBoxFlags {
+    fn default() -> Self {
+        CameraBoxFlags {
+            x0: Default::default(),
+        }
+    }
+}
+
+/// `Item`, 0xfcc bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Item {
+    /// +0x0
+    pub x0: RawPtr,
+    /// +0x4
+    pub entity: Option<GObjId>,
+    /// +0x8
+    pub x8: i32,
+    /// +0xc
+    pub spawn_kind: i32,
+    /// +0x10
+    pub kind: i32,
+    /// +0x14
+    pub hold_kind: i32,
+    /// +0x18
+    pub x18: i32,
+    /// +0x1c
+    pub x1C: i32,
+    /// +0x20
+    pub x20_team_id: u8,
+    /// +0x21
+    pub x21: u8,
+    /// +0x22
+    pub x22: u8,
+    /// +0x23
+    pub x23: u8,
+    /// +0x24
+    pub msid: i32,
+    /// +0x28
+    pub anim_id: i32,
+    /// +0x2c
+    pub facing_dir: f32,
+    /// +0x30
+    pub init_facing_dir: f32,
+    /// +0x34
+    pub spin_spd: f32,
+    /// +0x38
+    pub scl: f32,
+    /// +0x3c
+    pub x3C: f32,
+    /// +0x40
+    pub x40_vel: Vec3,
+    /// +0x4c
+    pub pos: Vec3,
+    /// +0x58
+    pub x58_vec_unk: Vec3,
+    /// +0x64
+    pub x64_vec_unk2: Vec3,
+    /// +0x70
+    pub x70_nudge: Vec3,
+    /// +0x7c
+    pub x7C: Vec3,
+    /// +0x88
+    pub x88: Vec3,
+    /// +0x94
+    pub x94: Vec3,
+    /// +0xa0
+    pub xA0: Vec3,
+    /// +0xac
+    pub xAC_unk: Vec3,
+    /// +0xb8
+    pub xB8_itemLogicTable: RawPtr,
+    /// +0xbc
+    pub xBC_itemStateContainer: RawPtr,
+    /// +0xc0
+    pub ground_or_air: i32,
+    /// +0xc4
+    pub xC4_article_data: RawPtr,
+    /// +0xc8
+    pub xC8_joint: Option<DataRef>,
+    /// +0xcc
+    pub xCC_item_attr: RawPtr,
+    /// +0xd0
+    pub xD0_itemStateDesc: RawPtr,
+    /// +0xd4
+    pub xD4_dynamicBones: [Item_DynamicBones; 24],
+    /// +0x374
+    pub x374_dynamicBonesNum: i32,
+    /// +0x378
+    pub x378_itemColl: CollData,
+    /// +0x514
+    pub ecb_lock: i32,
+    /// +0x518
+    pub owner: Option<GObjId>,
+    /// +0x51c
+    pub x51C: Option<GObjId>,
+    /// +0x520
+    pub x520_cameraBox: RawPtr,
+    /// +0x524
+    pub x524_cmd: CommandInfo,
+    /// +0x548
+    pub x548_colorOverlay: ColorOverlay,
+    /// +0x5c8
+    pub x5C8: u8,
+    /// +0x5c9
+    pub x5C9: u8,
+    /// +0x5ca
+    pub x5CA: u8,
+    /// +0x5cb
+    pub x5CB: u8,
+    /// +0x5cc
+    pub x5CC_currentAnimFrame: f32,
+    /// +0x5d0
+    pub x5D0_animFrameSpeed: f32,
+    /// +0x5d4
+    pub x5D4_hitboxes: [ItemHitbox; 4],
+    /// +0xac4
+    pub xAC4_ignoreItemID: u32,
+    /// +0xac8
+    pub xAC8_hurtboxNum: u8,
+    /// +0xacc
+    pub xACC_itemHurtbox: [HurtCapsule; 2],
+    /// +0xb54
+    pub xB54: lb_80014638_arg1_t,
+    /// +0xb68
+    pub xB68: u8,
+    /// +0xb69
+    pub xB69: u8,
+    /// +0xb6a
+    pub xB6A: u8,
+    /// +0xb6b
+    pub xB6B: u8,
+    /// +0xb6c
+    pub xB6C_vars: [xB6C_t; 2],
+    /// +0xbbc
+    pub xBBC_dynamicBoneTable: RawPtr,
+    /// +0xbc0
+    pub xBC0: RawPtr,
+    /// +0xbc4
+    pub xBC4: _GXColor,
+    /// +0xbc8
+    pub xBC8: ItemModStruct,
+    /// +0xbcc
+    pub xBCC_unk: Vec2,
+    /// +0xbd4
+    pub xBD4_grabRange: Vec2,
+    /// +0xbdc
+    pub xBDC: _itECB,
+    /// +0xbec
+    pub xBEC: _itECB,
+    /// +0xbfc
+    pub xBFC: _itECB,
+    /// +0xc0c
+    pub xC0C: _itECB,
+    /// +0xc1c
+    pub xC1C: _itECB,
+    /// +0xc2c
+    pub xC2C: i32,
+    /// +0xc30
+    pub xC30: i32,
+    /// +0xc34
+    pub xC34_damageDealt: i32,
+    /// +0xc38
+    pub xC38: i32,
+    /// +0xc3c
+    pub xC3C: f32,
+    /// +0xc40
+    pub xC40: f32,
+    /// +0xc44
+    pub xC44: f32,
+    /// +0xc48
+    pub xC48: i32,
+    /// +0xc4c
+    pub xC4C: i32,
+    /// +0xc50
+    pub xC50: i32,
+    /// +0xc54
+    pub xC54: f32,
+    /// +0xc58
+    pub xC58: Vec3,
+    /// +0xc64
+    pub xC64_reflectGObj: Option<GObjId>,
+    /// +0xc68
+    pub xC68: f32,
+    /// +0xc6c
+    pub xC6C: f32,
+    /// +0xc70
+    pub xC70: f32,
+    /// +0xc74
+    pub xC74: i32,
+    /// +0xc78
+    pub xC78: S32Vec2,
+    /// +0xc80
+    pub xC80: Struct207C,
+    /// +0xc88
+    pub xC88: i32,
+    /// +0xc8c
+    pub xC8C: u16,
+    /// +0xc90
+    pub xC90_absorbGObj: Option<GObjId>,
+    /// +0xc94
+    pub xC94: i32,
+    /// +0xc98
+    pub xC98: f32,
+    /// +0xc9c
+    pub xC9C: i32,
+    /// +0xca0
+    pub xCA0: i32,
+    /// +0xca4
+    pub xCA4: i32,
+    /// +0xca8
+    pub xCA8: i32,
+    /// +0xcac
+    pub xCAC_angle: i32,
+    /// +0xcb0
+    pub xCB0_source_ply: i32,
+    /// +0xcb4
+    pub xCB4: i32,
+    /// +0xcb8
+    pub xCB8_outDamageDirection: f32,
+    /// +0xcbc
+    pub xCBC_hitlagFrames: f32,
+    /// +0xcc0
+    pub xCC0: f32,
+    /// +0xcc4
+    pub xCC4: i32,
+    /// +0xcc8
+    pub xCC8_knockback: f32,
+    /// +0xccc
+    pub xCCC_incDamageDirection: f32,
+    /// +0xcd0
+    pub xCD0: f32,
+    /// +0xcd4
+    pub xCD4: Vec3,
+    /// +0xce0
+    pub xCE0: Vec3,
+    /// +0xcec
+    pub xCEC_fighterGObj: Option<GObjId>,
+    /// +0xcf0
+    pub xCF0_itemGObj: Option<GObjId>,
+    /// +0xcf4
+    pub xCF4_fighterGObjUnk: Option<GObjId>,
+    /// +0xcf8
+    pub toucher: Option<GObjId>,
+    /// +0xcfc
+    pub xCFC: Option<GObjId>,
+    /// +0xd00
+    pub grab_victim: Option<GObjId>,
+    /// +0xd04
+    pub atk_victim: Option<GObjId>,
+    /// +0xd08
+    pub xD08: u8,
+    /// +0xd09
+    pub xD09: u8,
+    /// +0xd0a
+    pub xD0A: u8,
+    /// +0xd0b
+    pub xD0B: u8,
+    /// +0xd0c
+    pub xD0C: i32,
+    /// +0xd10
+    pub xD10: f32,
+    /// +0xd14
+    pub animated: Option<CodeRef>,
+    /// +0xd18
+    pub physics_updated: Option<CodeRef>,
+    /// +0xd1c
+    pub collided: Option<CodeRef>,
+    /// +0xd20
+    pub on_accessory: Option<CodeRef>,
+    /// +0xd24
+    pub touched: Option<CodeRef>,
+    /// +0xd28
+    pub entered_hitlag: Option<CodeRef>,
+    /// +0xd2c
+    pub exited_hitlag: Option<CodeRef>,
+    /// +0xd30
+    pub jumped_on: Option<CodeRef>,
+    /// +0xd34
+    pub grab_dealt: Option<CodeRef>,
+    /// +0xd38
+    pub grabbed_for_victim: Option<CodeRef>,
+    /// +0xd3c
+    pub xD3C_spinSpeed: f32,
+    /// +0xd40
+    pub xD40: f32,
+    /// +0xd44
+    pub xD44_lifeTimer: f32,
+    /// +0xd48
+    pub xD48_halfLifeTimer: f32,
+    /// +0xd4c
+    pub xD4C: i32,
+    /// +0xd50
+    pub xD50_landNum: u32,
+    /// +0xd54
+    pub xD54_throwNum: u32,
+    /// +0xd58
+    pub xD58: u32,
+    /// +0xd5c
+    pub xD5C: u32,
+    /// +0xd60
+    pub destroy_type: i32,
+    /// +0xd64
+    pub sfx_unk1: i32,
+    /// +0xd68
+    pub sfx_unk2: i32,
+    /// +0xd6c
+    pub xD6C: i32,
+    /// +0xd70
+    pub xD70: i32,
+    /// +0xd74
+    pub xD74: i32,
+    /// +0xd78
+    pub xD78: i32,
+    /// +0xd7c
+    pub destroy_sfx: i32,
+    /// +0xd80
+    pub xD80: i32,
+    /// +0xd84
+    pub xD84: i32,
+    /// +0xd88
+    pub xD88_attackID: i32,
+    /// +0xd8c
+    pub xD8C_attack_instance: u16,
+    /// +0xd8e
+    pub xD8E: i16,
+    /// +0xd90
+    pub xD90: [u8; 4],
+    /// +0xd94
+    pub xD94: S32Vec2,
+    /// +0xd9c
+    pub xD9C: Struct207C,
+    /// +0xda4
+    pub xDA4_word: u32,
+    /// +0xda8
+    pub xDA8_short: u16,
+    /// +0xdaa
+    pub xDAA: [u8; 1],
+    /// +0xdac
+    pub xDAC_itcmd_var0: u32,
+    /// +0xdb0
+    pub xDB0_itcmd_var1: u32,
+    /// +0xdb4
+    pub xDB4_itcmd_var2: u32,
+    /// +0xdb8
+    pub xDB8_itcmd_var3: u32,
+    /// +0xdbc
+    pub xDBC: [u8; 4],
+    /// +0xdc0
+    pub xDC0: u32,
+    /// +0xdc4
+    pub xDC4: u32,
+    /// +0xdc8
+    pub xDC8_word: flag32,
+    /// +0xdcc
+    pub xDCC_flag: Item_xDCC_flag,
+    /// +0xdcd
+    pub xDCD_flag: CameraBoxFlags,
+    /// +0xdce
+    pub xDCE_flag: [u8; 1],
+    /// +0xdcf
+    pub xDCF_flag: [u8; 1],
+    /// +0xdd0
+    pub xDD0_flag: [u8; 1],
+    /// +0xdd1
+    pub xDD1_flag: [u8; 1],
+    /// +0xdd2
+    pub xDD2_flag: [u8; 1],
+    /// +0xdd3
+    pub xDD3_flag: [u8; 1],
+    /// +0xdd4
+    pub xDD4_itemVar: [u8; 504],
+}
+
+impl Default for Item {
+    fn default() -> Self {
+        Item {
+            x0: Default::default(),
+            entity: None,
+            x8: 0,
+            spawn_kind: 0,
+            kind: 0,
+            hold_kind: 0,
+            x18: 0,
+            x1C: 0,
+            x20_team_id: 0,
+            x21: 0,
+            x22: 0,
+            x23: 0,
+            msid: 0,
+            anim_id: 0,
+            facing_dir: 0.0,
+            init_facing_dir: 0.0,
+            spin_spd: 0.0,
+            scl: 0.0,
+            x3C: 0.0,
+            x40_vel: Default::default(),
+            pos: Default::default(),
+            x58_vec_unk: Default::default(),
+            x64_vec_unk2: Default::default(),
+            x70_nudge: Default::default(),
+            x7C: Default::default(),
+            x88: Default::default(),
+            x94: Default::default(),
+            xA0: Default::default(),
+            xAC_unk: Default::default(),
+            xB8_itemLogicTable: Default::default(),
+            xBC_itemStateContainer: Default::default(),
+            ground_or_air: 0,
+            xC4_article_data: Default::default(),
+            xC8_joint: None,
+            xCC_item_attr: Default::default(),
+            xD0_itemStateDesc: Default::default(),
+            xD4_dynamicBones: core::array::from_fn(|_| Default::default()),
+            x374_dynamicBonesNum: 0,
+            x378_itemColl: Default::default(),
+            ecb_lock: 0,
+            owner: None,
+            x51C: None,
+            x520_cameraBox: Default::default(),
+            x524_cmd: Default::default(),
+            x548_colorOverlay: Default::default(),
+            x5C8: 0,
+            x5C9: 0,
+            x5CA: 0,
+            x5CB: 0,
+            x5CC_currentAnimFrame: 0.0,
+            x5D0_animFrameSpeed: 0.0,
+            x5D4_hitboxes: core::array::from_fn(|_| Default::default()),
+            xAC4_ignoreItemID: 0,
+            xAC8_hurtboxNum: 0,
+            xACC_itemHurtbox: core::array::from_fn(|_| Default::default()),
+            xB54: Default::default(),
+            xB68: 0,
+            xB69: 0,
+            xB6A: 0,
+            xB6B: 0,
+            xB6C_vars: core::array::from_fn(|_| Default::default()),
+            xBBC_dynamicBoneTable: Default::default(),
+            xBC0: Default::default(),
+            xBC4: Default::default(),
+            xBC8: Default::default(),
+            xBCC_unk: Default::default(),
+            xBD4_grabRange: Default::default(),
+            xBDC: Default::default(),
+            xBEC: Default::default(),
+            xBFC: Default::default(),
+            xC0C: Default::default(),
+            xC1C: Default::default(),
+            xC2C: 0,
+            xC30: 0,
+            xC34_damageDealt: 0,
+            xC38: 0,
+            xC3C: 0.0,
+            xC40: 0.0,
+            xC44: 0.0,
+            xC48: 0,
+            xC4C: 0,
+            xC50: 0,
+            xC54: 0.0,
+            xC58: Default::default(),
+            xC64_reflectGObj: None,
+            xC68: 0.0,
+            xC6C: 0.0,
+            xC70: 0.0,
+            xC74: 0,
+            xC78: Default::default(),
+            xC80: Default::default(),
+            xC88: 0,
+            xC8C: 0,
+            xC90_absorbGObj: None,
+            xC94: 0,
+            xC98: 0.0,
+            xC9C: 0,
+            xCA0: 0,
+            xCA4: 0,
+            xCA8: 0,
+            xCAC_angle: 0,
+            xCB0_source_ply: 0,
+            xCB4: 0,
+            xCB8_outDamageDirection: 0.0,
+            xCBC_hitlagFrames: 0.0,
+            xCC0: 0.0,
+            xCC4: 0,
+            xCC8_knockback: 0.0,
+            xCCC_incDamageDirection: 0.0,
+            xCD0: 0.0,
+            xCD4: Default::default(),
+            xCE0: Default::default(),
+            xCEC_fighterGObj: None,
+            xCF0_itemGObj: None,
+            xCF4_fighterGObjUnk: None,
+            toucher: None,
+            xCFC: None,
+            grab_victim: None,
+            atk_victim: None,
+            xD08: 0,
+            xD09: 0,
+            xD0A: 0,
+            xD0B: 0,
+            xD0C: 0,
+            xD10: 0.0,
+            animated: None,
+            physics_updated: None,
+            collided: None,
+            on_accessory: None,
+            touched: None,
+            entered_hitlag: None,
+            exited_hitlag: None,
+            jumped_on: None,
+            grab_dealt: None,
+            grabbed_for_victim: None,
+            xD3C_spinSpeed: 0.0,
+            xD40: 0.0,
+            xD44_lifeTimer: 0.0,
+            xD48_halfLifeTimer: 0.0,
+            xD4C: 0,
+            xD50_landNum: 0,
+            xD54_throwNum: 0,
+            xD58: 0,
+            xD5C: 0,
+            destroy_type: 0,
+            sfx_unk1: 0,
+            sfx_unk2: 0,
+            xD6C: 0,
+            xD70: 0,
+            xD74: 0,
+            xD78: 0,
+            destroy_sfx: 0,
+            xD80: 0,
+            xD84: 0,
+            xD88_attackID: 0,
+            xD8C_attack_instance: 0,
+            xD8E: 0,
+            xD90: [0; 4],
+            xD94: Default::default(),
+            xD9C: Default::default(),
+            xDA4_word: 0,
+            xDA8_short: 0,
+            xDAA: [0; 1],
+            xDAC_itcmd_var0: 0,
+            xDB0_itcmd_var1: 0,
+            xDB4_itcmd_var2: 0,
+            xDB8_itcmd_var3: 0,
+            xDBC: [0; 4],
+            xDC0: 0,
+            xDC4: 0,
+            xDC8_word: Default::default(),
+            xDCC_flag: Default::default(),
+            xDCD_flag: Default::default(),
+            xDCE_flag: [0; 1],
+            xDCF_flag: [0; 1],
+            xDD0_flag: [0; 1],
+            xDD1_flag: [0; 1],
+            xDD2_flag: [0; 1],
+            xDD3_flag: [0; 1],
+            xDD4_itemVar: [0; 504],
+        }
+    }
+}
+
+/// `Ground_x10_flags`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Ground_x10_flags {
+    /// +0x0 (bits 0..+1)
+    pub b0: bool,
+    /// +0x0 (bits 1..+1)
+    pub b1: bool,
+    /// +0x0 (bits 2..+1)
+    pub b2: bool,
+    /// +0x0 (bits 3..+1)
+    pub b3: bool,
+    /// +0x0 (bits 4..+1)
+    pub b4: bool,
+    /// +0x0 (bits 5..+1)
+    pub b5: bool,
+    /// +0x0 (bits 6..+1)
+    pub b6: bool,
+    /// +0x0 (bits 7..+1)
+    pub b7: bool,
+}
+
+impl Default for Ground_x10_flags {
+    fn default() -> Self {
+        Ground_x10_flags {
+            b0: false,
+            b1: false,
+            b2: false,
+            b3: false,
+            b4: false,
+            b5: false,
+            b6: false,
+            b7: false,
+        }
+    }
+}
+
+/// `Ground_x11_flags`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Ground_x11_flags {
+    /// +0x0 (bits 0..+3)
+    pub b012: u8,
+    /// +0x0 (bits 3..+1)
+    pub b3: bool,
+    /// +0x0 (bits 4..+1)
+    pub b4: bool,
+    /// +0x0 (bits 5..+1)
+    pub b5: bool,
+    /// +0x0 (bits 6..+1)
+    pub b6: bool,
+    /// +0x0 (bits 7..+1)
+    pub b7: bool,
+}
+
+impl Default for Ground_x11_flags {
+    fn default() -> Self {
+        Ground_x11_flags {
+            b012: 0,
+            b3: false,
+            b4: false,
+            b5: false,
+            b6: false,
+            b7: false,
+        }
+    }
+}
+
+/// `Ground`, 0x204 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Ground {
+    /// +0x0
+    pub x0: i32,
+    /// +0x4
+    pub gobj: Option<GObjId>,
+    /// +0x8
+    pub x8_callback: Option<CodeRef>,
+    /// +0xc
+    pub xC_callback: Option<CodeRef>,
+    /// +0x10
+    pub x10_flags: Ground_x10_flags,
+    /// +0x11
+    pub x11_flags: Ground_x11_flags,
+    /// +0x14
+    pub map_id: i32,
+    /// +0x18
+    pub x18: Option<GObjId>,
+    /// +0x1c
+    pub x1C_callback: Option<CodeRef>,
+    /// +0x20
+    pub x20: [i32; 8],
+    /// +0x40
+    pub color_overlay: ColorOverlay,
+    /// +0xc0
+    pub xC0: f32,
+    /// +0xc4
+    pub u: [u8; 320],
+}
+
+impl Default for Ground {
+    fn default() -> Self {
+        Ground {
+            x0: 0,
+            gobj: None,
+            x8_callback: None,
+            xC_callback: None,
+            x10_flags: Default::default(),
+            x11_flags: Default::default(),
+            map_id: 0,
+            x18: None,
+            x1C_callback: None,
+            x20: [0; 8],
+            color_overlay: Default::default(),
+            xC0: 0.0,
+            u: [0; 320],
+        }
+    }
+}
+
+/// `StageBlastZone`, 0x10 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct StageBlastZone {
+    /// +0x0
+    pub left: f32,
+    /// +0x4
+    pub right: f32,
+    /// +0x8
+    pub top: f32,
+    /// +0xc
+    pub bottom: f32,
+}
+
+impl Default for StageBlastZone {
+    fn default() -> Self {
+        StageBlastZone {
+            left: 0.0,
+            right: 0.0,
+            top: 0.0,
+            bottom: 0.0,
+        }
+    }
+}
+
+/// `StageCameraInfo`, 0x74 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct StageCameraInfo {
+    /// +0x0
+    pub cam_bounds: StageBlastZone,
+    /// +0x10
+    pub cam_x_offset: f32,
+    /// +0x14
+    pub cam_y_offset: f32,
+    /// +0x18
+    pub cam_vertical_tilt: f32,
+    /// +0x1c
+    pub cam_pan_degrees: f32,
+    /// +0x20
+    pub x20: f32,
+    /// +0x24
+    pub x24: f32,
+    /// +0x28
+    pub cam_track_ratio: f32,
+    /// +0x2c
+    pub cam_fixed_zoom: f32,
+    /// +0x30
+    pub cam_track_smooth: f32,
+    /// +0x34
+    pub cam_zoom_rate: f32,
+    /// +0x38
+    pub cam_max_depth: f32,
+    /// +0x3c
+    pub x3C: f32,
+    /// +0x40
+    pub pausecam_zpos_min: f32,
+    /// +0x44
+    pub pausecam_zpos_init: f32,
+    /// +0x48
+    pub pausecam_zpos_max: f32,
+    /// +0x4c
+    pub cam_angle_up: f32,
+    /// +0x50
+    pub cam_angle_down: f32,
+    /// +0x54
+    pub cam_angle_left: f32,
+    /// +0x58
+    pub cam_angle_right: f32,
+    /// +0x5c
+    pub fixed_cam_pos: Vec3,
+    /// +0x68
+    pub fixed_cam_fov: f32,
+    /// +0x6c
+    pub fixed_cam_vert_angle: f32,
+    /// +0x70
+    pub fixed_cam_horz_angle: f32,
+}
+
+impl Default for StageCameraInfo {
+    fn default() -> Self {
+        StageCameraInfo {
+            cam_bounds: Default::default(),
+            cam_x_offset: 0.0,
+            cam_y_offset: 0.0,
+            cam_vertical_tilt: 0.0,
+            cam_pan_degrees: 0.0,
+            x20: 0.0,
+            x24: 0.0,
+            cam_track_ratio: 0.0,
+            cam_fixed_zoom: 0.0,
+            cam_track_smooth: 0.0,
+            cam_zoom_rate: 0.0,
+            cam_max_depth: 0.0,
+            x3C: 0.0,
+            pausecam_zpos_min: 0.0,
+            pausecam_zpos_init: 0.0,
+            pausecam_zpos_max: 0.0,
+            cam_angle_up: 0.0,
+            cam_angle_down: 0.0,
+            cam_angle_left: 0.0,
+            cam_angle_right: 0.0,
+            fixed_cam_pos: Default::default(),
+            fixed_cam_fov: 0.0,
+            fixed_cam_vert_angle: 0.0,
+            fixed_cam_horz_angle: 0.0,
+        }
+    }
+}
+
+/// `StageInfo_unk8C`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct StageInfo_unk8C {
+    /// +0x0 (bits 0..+1)
+    pub b0: bool,
+    /// +0x0 (bits 1..+1)
+    pub b1: bool,
+    /// +0x0 (bits 2..+1)
+    pub b2: bool,
+    /// +0x0 (bits 3..+1)
+    pub b3: bool,
+    /// +0x0 (bits 4..+1)
+    pub b4: bool,
+    /// +0x0 (bits 5..+1)
+    pub b5: bool,
+    /// +0x0 (bits 6..+1)
+    pub b6: bool,
+    /// +0x0 (bits 7..+1)
+    pub b7: bool,
+}
+
+impl Default for StageInfo_unk8C {
+    fn default() -> Self {
+        StageInfo_unk8C {
+            b0: false,
+            b1: false,
+            b2: false,
+            b3: false,
+            b4: false,
+            b5: false,
+            b6: false,
+            b7: false,
+        }
+    }
+}
+
+/// `StageInfo`, 0x748 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct StageInfo {
+    /// +0x0
+    pub cam_info: StageCameraInfo,
+    /// +0x74
+    pub blast_zone: StageBlastZone,
+    /// +0x84
+    pub flags: u32,
+    /// +0x88
+    pub grkind: i32,
+    /// +0x8c
+    pub unk8C: StageInfo_unk8C,
+    /// +0x90
+    pub x90: Option<CodeRef>,
+    /// +0x94
+    pub x94: Option<CodeRef>,
+    /// +0x98
+    pub x98: i32,
+    /// +0x9c
+    pub x9C: u32,
+    /// +0xa0
+    pub xA0: i32,
+    /// +0xa4
+    pub xA4_pad: [u8; 136],
+    /// +0x12c
+    pub x12C: Option<GObjId>,
+    /// +0x130
+    pub x130: Vec3,
+    /// +0x13c
+    pub x13C: Vec3,
+    /// +0x148
+    pub x148: Vec3,
+    /// +0x154
+    pub x154: Vec3,
+    /// +0x160
+    pub x160: Vec3,
+    /// +0x16c
+    pub x16C: Vec3,
+    /// +0x178
+    pub on_touch_line: Option<CodeRef>,
+    /// +0x17c
+    pub on_check_shadow_render: Option<CodeRef>,
+    /// +0x180
+    pub map_gobjs: [Option<GObjId>; 64],
+    /// +0x280
+    pub x280: [Option<JObjId>; 261],
+    /// +0x694
+    pub x694: [RawPtr; 4],
+    /// +0x6a4
+    pub x6A4: RawPtr,
+    /// +0x6a8
+    pub itemdata: RawPtr,
+    /// +0x6ac
+    pub coll_data: RawPtr,
+    /// +0x6b0
+    pub param: RawPtr,
+    /// +0x6b4
+    pub ald_yaku_all: RawPtr,
+    /// +0x6b8
+    pub map_ptcl: RawPtr,
+    /// +0x6bc
+    pub map_texg: RawPtr,
+    /// +0x6c0
+    pub yakumono_param: RawPtr,
+    /// +0x6c4
+    pub map_plit: RawPtr,
+    /// +0x6c8
+    pub x6C8: RawPtr,
+    /// +0x6cc
+    pub quake_model_set: RawPtr,
+    /// +0x6d0
+    pub x6D0: i16,
+    /// +0x6d2
+    pub x6D2: i16,
+    /// +0x6d4
+    pub x6D4: i16,
+    /// +0x6d6
+    pub x6D6: i16,
+    /// +0x6d8
+    pub x6D8: i32,
+    /// +0x6dc
+    pub x6DC: i16,
+    /// +0x6de
+    pub x6DE: i16,
+    /// +0x6e0
+    pub x6E0: f32,
+    /// +0x6e4
+    pub x6E4: [i32; 2],
+    /// +0x6ec
+    pub x6EC_pad: [u8; 28],
+    /// +0x708
+    pub x708: i16,
+    /// +0x70c
+    pub x70C: f32,
+    /// +0x710
+    pub x710: f32,
+    /// +0x714
+    pub x714: i32,
+    /// +0x718
+    pub x718: f32,
+    /// +0x71c
+    pub x71C: f32,
+    /// +0x720
+    pub x720: i32,
+    /// +0x724
+    pub x724: f32,
+    /// +0x728
+    pub x728: f32,
+    /// +0x72c
+    pub x72C: Option<GObjId>,
+    /// +0x730
+    pub x730: Vec3,
+    /// +0x73c
+    pub x73C: f32,
+    /// +0x740
+    pub x740: i32,
+    /// +0x744
+    pub x744_pad: [u8; 4],
+}
+
+impl Default for StageInfo {
+    fn default() -> Self {
+        StageInfo {
+            cam_info: Default::default(),
+            blast_zone: Default::default(),
+            flags: 0,
+            grkind: 0,
+            unk8C: Default::default(),
+            x90: None,
+            x94: None,
+            x98: 0,
+            x9C: 0,
+            xA0: 0,
+            xA4_pad: [0; 136],
+            x12C: None,
+            x130: Default::default(),
+            x13C: Default::default(),
+            x148: Default::default(),
+            x154: Default::default(),
+            x160: Default::default(),
+            x16C: Default::default(),
+            on_touch_line: None,
+            on_check_shadow_render: None,
+            map_gobjs: [None; 64],
+            x280: [None; 261],
+            x694: core::array::from_fn(|_| Default::default()),
+            x6A4: Default::default(),
+            itemdata: Default::default(),
+            coll_data: Default::default(),
+            param: Default::default(),
+            ald_yaku_all: Default::default(),
+            map_ptcl: Default::default(),
+            map_texg: Default::default(),
+            yakumono_param: Default::default(),
+            map_plit: Default::default(),
+            x6C8: Default::default(),
+            quake_model_set: Default::default(),
+            x6D0: 0,
+            x6D2: 0,
+            x6D4: 0,
+            x6D6: 0,
+            x6D8: 0,
+            x6DC: 0,
+            x6DE: 0,
+            x6E0: 0.0,
+            x6E4: [0; 2],
+            x6EC_pad: [0; 28],
+            x708: 0,
+            x70C: 0.0,
+            x710: 0.0,
+            x714: 0,
+            x718: 0.0,
+            x71C: 0.0,
+            x720: 0,
+            x724: 0.0,
+            x728: 0.0,
+            x72C: None,
+            x730: Default::default(),
+            x73C: 0.0,
+            x740: 0,
+            x744_pad: [0; 4],
+        }
+    }
+}
+
+/// `CameraTransformState`, 0x38 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CameraTransformState {
+    /// +0x0
+    pub interest: Vec3,
+    /// +0xc
+    pub target_interest: Vec3,
+    /// +0x18
+    pub position: Vec3,
+    /// +0x24
+    pub target_position: Vec3,
+    /// +0x30
+    pub fov: f32,
+    /// +0x34
+    pub target_fov: f32,
+}
+
+impl Default for CameraTransformState {
+    fn default() -> Self {
+        CameraTransformState {
+            interest: Default::default(),
+            target_interest: Default::default(),
+            position: Default::default(),
+            target_position: Default::default(),
+            fov: 0.0,
+            target_fov: 0.0,
+        }
+    }
+}
+
+/// `CameraQuake`, 0x10 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CameraQuake {
+    /// +0x0
+    pub epicenter: Vec3,
+    /// +0xc
+    pub kind: i32,
+}
+
+impl Default for CameraQuake {
+    fn default() -> Self {
+        CameraQuake {
+            epicenter: Default::default(),
+            kind: 0,
+        }
+    }
+}
+
+/// `Camera_x2D0`, 0x34 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Camera_x2D0 {
+    /// +0x0
+    pub y_max: f32,
+    /// +0x4
+    pub y_min: f32,
+    /// +0x8
+    pub x_min: f32,
+    /// +0xc
+    pub x_max: f32,
+    /// +0x10
+    pub z_max: f32,
+    /// +0x14
+    pub z_min: f32,
+    /// +0x18
+    pub angle_up: f32,
+    /// +0x1c
+    pub angle_down: f32,
+    /// +0x20
+    pub angle_right: f32,
+    /// +0x24
+    pub angle_left: f32,
+    /// +0x28
+    pub unk28: f32,
+    /// +0x2c
+    pub unk2C: f32,
+    /// +0x30
+    pub callback: Option<CodeRef>,
+}
+
+impl Default for Camera_x2D0 {
+    fn default() -> Self {
+        Camera_x2D0 {
+            y_max: 0.0,
+            y_min: 0.0,
+            x_min: 0.0,
+            x_max: 0.0,
+            z_max: 0.0,
+            z_min: 0.0,
+            angle_up: 0.0,
+            angle_down: 0.0,
+            angle_right: 0.0,
+            angle_left: 0.0,
+            unk28: 0.0,
+            unk2C: 0.0,
+            callback: None,
+        }
+    }
+}
+
+/// `Camera`, 0x39c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Camera {
+    /// +0x0
+    pub gobj: Option<GObjId>,
+    /// +0x4
+    pub mode: i32,
+    /// +0x8
+    pub background_color: _GXColor,
+    /// +0xc
+    pub nearz: f32,
+    /// +0x10
+    pub farz: f32,
+    /// +0x14
+    pub transform: CameraTransformState,
+    /// +0x4c
+    pub transform_copy: CameraTransformState,
+    /// +0x84
+    pub translation: Vec2,
+    /// +0x8c
+    pub quake_frames_left: [i32; 5],
+    /// +0xa0
+    pub quake_gobj: Option<GObjId>,
+    /// +0xa4
+    pub quake_offset: Vec2,
+    /// +0xac
+    pub quake_scale: f32,
+    /// +0xb0
+    pub quakes: [[CameraQuake; 16]; 2],
+    /// +0x2b0
+    pub x2B0: f32,
+    /// +0x2b4
+    pub x2B4: f32,
+    /// +0x2b8
+    pub x2B8: i16,
+    /// +0x2ba
+    pub x2BA: i16,
+    /// +0x2bc
+    pub x2BC: f32,
+    /// +0x2c0
+    pub x2C0: f32,
+    /// +0x2c4
+    pub x2C4: i8,
+    /// +0x2c5
+    pub x2C5: i8,
+    /// +0x2c6
+    pub pad_2C6: [i8; 2],
+    /// +0x2c8
+    pub pitch_offset: f32,
+    /// +0x2cc
+    pub yaw_offset: f32,
+    /// +0x2d0
+    pub x2D0: Camera_x2D0,
+    /// +0x304
+    pub x304: i8,
+    /// +0x305
+    pub x305: i8,
+    /// +0x306
+    pub x306: i8,
+    /// +0x307
+    pub x307: i8,
+    /// +0x308
+    pub x308: Vec3,
+    /// +0x314
+    pub x314: Vec3,
+    /// +0x320
+    pub pause_eye_offset: Vec3,
+    /// +0x32c
+    pub x32C: f32,
+    /// +0x330
+    pub pause_eye_distance: f32,
+    /// +0x334
+    pub pause_up: Vec3,
+    /// +0x340
+    pub x340: u8,
+    /// +0x341 (bits 0..+1)
+    pub x341_b0: bool,
+    /// +0x341 (bits 1..+2)
+    pub x341_b1_b2: u8,
+    /// +0x341 (bits 3..+2)
+    pub x341_b3_b4: u8,
+    /// +0x341 (bits 5..+2)
+    pub x341_b5_b6: u8,
+    /// +0x341 (bits 7..+1)
+    pub x341_b7: bool,
+    /// +0x342
+    pub x342_pad: [i8; 2],
+    /// +0x344
+    pub x344: [u8; 12],
+    /// +0x350
+    pub x350: Vec3,
+    /// +0x35c
+    pub x35C: [u8; 12],
+    /// +0x368
+    pub x368: [u8; 12],
+    /// +0x374
+    pub x374: f32,
+    /// +0x378
+    pub x378: [u8; 4],
+    /// +0x37c
+    pub x37C: [u8; 4],
+    /// +0x380
+    pub x380: [u8; 24],
+    /// +0x398 (bits 0..+1)
+    pub x398_b0: bool,
+    /// +0x398 (bits 1..+1)
+    pub x398_b1: bool,
+    /// +0x398 (bits 2..+1)
+    pub x398_b2: bool,
+    /// +0x398 (bits 3..+1)
+    pub x398_b3: bool,
+    /// +0x398 (bits 4..+1)
+    pub x398_b4: bool,
+    /// +0x398 (bits 5..+1)
+    pub x398_b5: bool,
+    /// +0x398 (bits 6..+2)
+    pub x398_b6_b7: u8,
+    /// +0x399 (bits 0..+2)
+    pub x399_b0_b1: u8,
+    /// +0x399 (bits 2..+1)
+    pub x399_b2: bool,
+    /// +0x399 (bits 3..+1)
+    pub x399_b3: bool,
+    /// +0x399 (bits 4..+1)
+    pub x399_b4: bool,
+    /// +0x399 (bits 5..+1)
+    pub x399_b5: bool,
+    /// +0x399 (bits 6..+1)
+    pub x399_b6: bool,
+    /// +0x399 (bits 7..+1)
+    pub x399_b7: bool,
+    /// +0x39a (bits 0..+1)
+    pub x39A_b0: bool,
+    /// +0x39a (bits 1..+1)
+    pub x39A_b1: bool,
+    /// +0x39a (bits 2..+1)
+    pub x39A_b2: bool,
+    /// +0x39a (bits 3..+1)
+    pub x39A_b3: bool,
+    /// +0x39a (bits 4..+1)
+    pub x39A_b4: bool,
+    /// +0x39a (bits 5..+1)
+    pub x39A_b5: bool,
+    /// +0x39a (bits 6..+1)
+    pub x39A_b6: bool,
+    /// +0x39a (bits 7..+1)
+    pub x39A_b7: bool,
+    /// +0x39b
+    pub pad_39B: i8,
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        Camera {
+            gobj: None,
+            mode: 0,
+            background_color: Default::default(),
+            nearz: 0.0,
+            farz: 0.0,
+            transform: Default::default(),
+            transform_copy: Default::default(),
+            translation: Default::default(),
+            quake_frames_left: [0; 5],
+            quake_gobj: None,
+            quake_offset: Default::default(),
+            quake_scale: 0.0,
+            quakes: core::array::from_fn(|_| core::array::from_fn(|_| Default::default())),
+            x2B0: 0.0,
+            x2B4: 0.0,
+            x2B8: 0,
+            x2BA: 0,
+            x2BC: 0.0,
+            x2C0: 0.0,
+            x2C4: 0,
+            x2C5: 0,
+            pad_2C6: [0; 2],
+            pitch_offset: 0.0,
+            yaw_offset: 0.0,
+            x2D0: Default::default(),
+            x304: 0,
+            x305: 0,
+            x306: 0,
+            x307: 0,
+            x308: Default::default(),
+            x314: Default::default(),
+            pause_eye_offset: Default::default(),
+            x32C: 0.0,
+            pause_eye_distance: 0.0,
+            pause_up: Default::default(),
+            x340: 0,
+            x341_b0: false,
+            x341_b1_b2: 0,
+            x341_b3_b4: 0,
+            x341_b5_b6: 0,
+            x341_b7: false,
+            x342_pad: [0; 2],
+            x344: [0; 12],
+            x350: Default::default(),
+            x35C: [0; 12],
+            x368: [0; 12],
+            x374: 0.0,
+            x378: [0; 4],
+            x37C: [0; 4],
+            x380: [0; 24],
+            x398_b0: false,
+            x398_b1: false,
+            x398_b2: false,
+            x398_b3: false,
+            x398_b4: false,
+            x398_b5: false,
+            x398_b6_b7: 0,
+            x399_b0_b1: 0,
+            x399_b2: false,
+            x399_b3: false,
+            x399_b4: false,
+            x399_b5: false,
+            x399_b6: false,
+            x399_b7: false,
+            x39A_b0: false,
+            x39A_b1: false,
+            x39A_b2: false,
+            x39A_b3: false,
+            x39A_b4: false,
+            x39A_b5: false,
+            x39A_b6: false,
+            x39A_b7: false,
+            pad_39B: 0,
+        }
+    }
+}
+
+/// `_StaticPlayer_flags`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct _StaticPlayer_flags {
+    /// +0x0 (bits 0..+1)
+    pub b0: bool,
+    /// +0x0 (bits 1..+1)
+    pub b1: bool,
+    /// +0x0 (bits 2..+1)
+    pub b2: bool,
+    /// +0x0 (bits 3..+1)
+    pub b3: bool,
+    /// +0x0 (bits 4..+1)
+    pub b4: bool,
+    /// +0x0 (bits 5..+1)
+    pub is_metal: bool,
+    /// +0x0 (bits 6..+1)
+    pub b6: bool,
+    /// +0x0 (bits 7..+1)
+    pub b7: bool,
+}
+
+impl Default for _StaticPlayer_flags {
+    fn default() -> Self {
+        _StaticPlayer_flags {
+            b0: false,
+            b1: false,
+            b2: false,
+            b3: false,
+            b4: false,
+            is_metal: false,
+            b6: false,
+            b7: false,
+        }
+    }
+}
+
+/// `_StaticPlayer_more_flags`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct _StaticPlayer_more_flags {
+    /// +0x0 (bits 0..+1)
+    pub b0: bool,
+    /// +0x0 (bits 1..+1)
+    pub b1: bool,
+    /// +0x0 (bits 2..+1)
+    pub b2: bool,
+    /// +0x0 (bits 3..+1)
+    pub b3: bool,
+    /// +0x0 (bits 4..+1)
+    pub b4: bool,
+    /// +0x0 (bits 5..+1)
+    pub b5: bool,
+    /// +0x0 (bits 6..+2)
+    pub b6: u8,
+}
+
+impl Default for _StaticPlayer_more_flags {
+    fn default() -> Self {
+        _StaticPlayer_more_flags {
+            b0: false,
+            b1: false,
+            b2: false,
+            b3: false,
+            b4: false,
+            b5: false,
+            b6: 0,
+        }
+    }
+}
+
+/// `_StaticPlayer_flagsAE`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct _StaticPlayer_flagsAE {
+    /// +0x0 (bits 0..+1)
+    pub b0: bool,
+    /// +0x0 (bits 1..+1)
+    pub b1: bool,
+    /// +0x0 (bits 2..+1)
+    pub b2: bool,
+    /// +0x0 (bits 3..+1)
+    pub b3: bool,
+    /// +0x0 (bits 4..+1)
+    pub b4: bool,
+    /// +0x0 (bits 5..+1)
+    pub b5: bool,
+    /// +0x0 (bits 6..+1)
+    pub b6: bool,
+    /// +0x0 (bits 7..+1)
+    pub b7: bool,
+}
+
+impl Default for _StaticPlayer_flagsAE {
+    fn default() -> Self {
+        _StaticPlayer_flagsAE {
+            b0: false,
+            b1: false,
+            b2: false,
+            b3: false,
+            b4: false,
+            b5: false,
+            b6: false,
+            b7: false,
+        }
+    }
+}
+
+/// `StaleMoveTable_StaleMoves`, 0x4 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct StaleMoveTable_StaleMoves {
+    /// +0x0
+    pub move_id: u16,
+    /// +0x2
+    pub attack_instance: u16,
+}
+
+impl Default for StaleMoveTable_StaleMoves {
+    fn default() -> Self {
+        StaleMoveTable_StaleMoves {
+            move_id: 0,
+            attack_instance: 0,
+        }
+    }
+}
+
+/// `plAttackStats`, 0x1ac bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct plAttackStats {
+    /// +0x0
+    pub total: u32,
+    /// +0x4
+    pub by_attack_counts: [u32; 100],
+    /// +0x194
+    pub thrown_item_count: u32,
+    /// +0x198
+    pub aerials_count: u32,
+    /// +0x19c
+    pub specials_count: u32,
+    /// +0x1a0
+    pub x1A0_count: u32,
+    /// +0x1a4
+    pub x1A4_count: u32,
+    /// +0x1a8
+    pub x1A8: u32,
+}
+
+impl Default for plAttackStats {
+    fn default() -> Self {
+        plAttackStats {
+            total: 0,
+            by_attack_counts: [0; 100],
+            thrown_item_count: 0,
+            aerials_count: 0,
+            specials_count: 0,
+            x1A0_count: 0,
+            x1A4_count: 0,
+            x1A8: 0,
+        }
+    }
+}
+
+/// `plActionStats`, 0x5c0 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct plActionStats {
+    /// +0x0
+    pub attacks: plAttackStats,
+    /// +0x1ac
+    pub hits: plAttackStats,
+    /// +0x358
+    pub x358: [u8; 428],
+    /// +0x504
+    pub x504: [u8; 100],
+    /// +0x568
+    pub x568: u32,
+    /// +0x56c
+    pub x56C: u32,
+    /// +0x570
+    pub x570: u32,
+    /// +0x574
+    pub x574: u32,
+    /// +0x578
+    pub x578: u32,
+    /// +0x57c
+    pub x57C: u32,
+    /// +0x580
+    pub x580: u32,
+    /// +0x584
+    pub x584: u32,
+    /// +0x588
+    pub x588: u32,
+    /// +0x58c
+    pub x58C: u32,
+    /// +0x590
+    pub x590: u32,
+    /// +0x594
+    pub x594: u32,
+    /// +0x598
+    pub x598: [u32; 8],
+    /// +0x5b8
+    pub x5B8: [u8; 4],
+    /// +0x5bc (bits 0..+1)
+    pub x5BC_b0: bool,
+    /// +0x5bc (bits 1..+1)
+    pub x5BC_b1: bool,
+    /// +0x5bc (bits 2..+1)
+    pub x5BC_b2: bool,
+    /// +0x5bc (bits 3..+1)
+    pub x5BC_b3: bool,
+}
+
+impl Default for plActionStats {
+    fn default() -> Self {
+        plActionStats {
+            attacks: Default::default(),
+            hits: Default::default(),
+            x358: [0; 428],
+            x504: [0; 100],
+            x568: 0,
+            x56C: 0,
+            x570: 0,
+            x574: 0,
+            x578: 0,
+            x57C: 0,
+            x580: 0,
+            x584: 0,
+            x588: 0,
+            x58C: 0,
+            x590: 0,
+            x594: 0,
+            x598: [0; 8],
+            x5B8: [0; 4],
+            x5BC_b0: false,
+            x5BC_b1: false,
+            x5BC_b2: false,
+            x5BC_b3: false,
+        }
+    }
+}
+
+/// `pl_x5EC_t_x10`, 0x14 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct pl_x5EC_t_x10 {
+    /// +0x0
+    pub x0: f32,
+    /// +0x4
+    pub x4: i16,
+    /// +0x6
+    pub x6: u16,
+    /// +0x8
+    pub x8: i16,
+    /// +0xc
+    pub xC: i32,
+    /// +0x10
+    pub x10: i16,
+    /// +0x12 (bits 0..+1)
+    pub x12_b0: bool,
+}
+
+impl Default for pl_x5EC_t_x10 {
+    fn default() -> Self {
+        pl_x5EC_t_x10 {
+            x0: 0.0,
+            x4: 0,
+            x6: 0,
+            x8: 0,
+            xC: 0,
+            x10: 0,
+            x12_b0: false,
+        }
+    }
+}
+
+/// `pl_x5EC_t`, 0x88 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct pl_x5EC_t {
+    /// +0x0
+    pub x0: u8,
+    /// +0x4
+    pub x4: f32,
+    /// +0x8
+    pub x8: u32,
+    /// +0xc
+    pub xC: u32,
+    /// +0x10
+    pub x10: [pl_x5EC_t_x10; 6],
+}
+
+impl Default for pl_x5EC_t {
+    fn default() -> Self {
+        pl_x5EC_t {
+            x0: 0,
+            x4: 0.0,
+            x8: 0,
+            xC: 0,
+            x10: core::array::from_fn(|_| Default::default()),
+        }
+    }
+}
+
+/// `pl_x8C0_t_x4`, 0x4 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct pl_x8C0_t_x4 {
+    /// +0x0
+    pub x0: u16,
+    /// +0x2
+    pub x2: u8,
+    /// +0x3 (bits 0..+1)
+    pub x3_b0: bool,
+}
+
+impl Default for pl_x8C0_t_x4 {
+    fn default() -> Self {
+        pl_x8C0_t_x4 {
+            x0: 0,
+            x2: 0,
+            x3_b0: false,
+        }
+    }
+}
+
+/// `pl_x8C0_t`, 0x18 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct pl_x8C0_t {
+    /// +0x0
+    pub x0: i32,
+    /// +0x4
+    pub x4: [pl_x8C0_t_x4; 5],
+}
+
+impl Default for pl_x8C0_t {
+    fn default() -> Self {
+        pl_x8C0_t {
+            x0: 0,
+            x4: core::array::from_fn(|_| Default::default()),
+        }
+    }
+}
+
+/// `pl_x8D8_t_x4`, 0x8 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct pl_x8D8_t_x4 {
+    /// +0x0
+    pub x0: u32,
+    /// +0x4 (bits 0..+1)
+    pub x4_b0: bool,
+    /// +0x4 (bits 1..+1)
+    pub x4_b1: bool,
+}
+
+impl Default for pl_x8D8_t_x4 {
+    fn default() -> Self {
+        pl_x8D8_t_x4 {
+            x0: 0,
+            x4_b0: false,
+            x4_b1: false,
+        }
+    }
+}
+
+/// `pl_x8D8_t`, 0x2c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct pl_x8D8_t {
+    /// +0x0
+    pub x0: i32,
+    /// +0x4
+    pub x4: [pl_x8D8_t_x4; 5],
+}
+
+impl Default for pl_x8D8_t {
+    fn default() -> Self {
+        pl_x8D8_t {
+            x0: 0,
+            x4: core::array::from_fn(|_| Default::default()),
+        }
+    }
+}
+
+/// `StaleMoveTable`, 0xcf4 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct StaleMoveTable {
+    /// +0x0
+    pub current_index: i32,
+    /// +0x4
+    pub StaleMoves: [StaleMoveTable_StaleMoves; 10],
+    /// +0x2c
+    pub total_attack_count_struct: plActionStats,
+    /// +0x5ec
+    pub x5EC: pl_x5EC_t,
+    /// +0x674
+    pub x674: [u32; 39],
+    /// +0x710
+    pub x710: [i32; 39],
+    /// +0x7ac
+    pub x7AC: [i32; 39],
+    /// +0x848
+    pub x848: [i32; 30],
+    /// +0x8c0
+    pub x8C0: pl_x8C0_t,
+    /// +0x8d8
+    pub x8D8: pl_x8D8_t,
+    /// +0x904
+    pub x904: [u32; 215],
+    /// +0xc60
+    pub xC60: f32,
+    /// +0xc64
+    pub xC64: f32,
+    /// +0xc68
+    pub xC68: i32,
+    /// +0xc6c
+    pub xC6C: f32,
+    /// +0xc70
+    pub xC70: f32,
+    /// +0xc74
+    pub xC74: f32,
+    /// +0xc78
+    pub xC78: [f32; 6],
+    /// +0xc90
+    pub xC90: u32,
+    /// +0xc94
+    pub xC94: i32,
+    /// +0xc98
+    pub xC98: f32,
+    /// +0xc9c
+    pub xC9C: f32,
+    /// +0xca0
+    pub xCA0: f32,
+    /// +0xca4
+    pub xCA4: i32,
+    /// +0xca8
+    pub xCA8: u32,
+    /// +0xcac
+    pub xCAC: u32,
+    /// +0xcb0
+    pub xCB0: i32,
+    /// +0xcb4
+    pub xCB4: i32,
+    /// +0xcb8
+    pub xCB8: i32,
+    /// +0xcbc
+    pub xCBC: [u8; 4],
+    /// +0xcc0
+    pub xCC0: ft_800898B4_t,
+    /// +0xcd4
+    pub xCD4: u16,
+    /// +0xcd8
+    pub xCD8: i32,
+    /// +0xcdc
+    pub xCDC: f32,
+    /// +0xce0
+    pub xCE0: f32,
+    /// +0xce4
+    pub xCE4: u32,
+    /// +0xce8
+    pub xCE8: u32,
+    /// +0xcec
+    pub xCEC: i32,
+    /// +0xcf0
+    pub xCF0: i32,
+}
+
+impl Default for StaleMoveTable {
+    fn default() -> Self {
+        StaleMoveTable {
+            current_index: 0,
+            StaleMoves: core::array::from_fn(|_| Default::default()),
+            total_attack_count_struct: Default::default(),
+            x5EC: Default::default(),
+            x674: [0; 39],
+            x710: [0; 39],
+            x7AC: [0; 39],
+            x848: [0; 30],
+            x8C0: Default::default(),
+            x8D8: Default::default(),
+            x904: [0; 215],
+            xC60: 0.0,
+            xC64: 0.0,
+            xC68: 0,
+            xC6C: 0.0,
+            xC70: 0.0,
+            xC74: 0.0,
+            xC78: [0.0; 6],
+            xC90: 0,
+            xC94: 0,
+            xC98: 0.0,
+            xC9C: 0.0,
+            xCA0: 0.0,
+            xCA4: 0,
+            xCA8: 0,
+            xCAC: 0,
+            xCB0: 0,
+            xCB4: 0,
+            xCB8: 0,
+            xCBC: [0; 4],
+            xCC0: Default::default(),
+            xCD4: 0,
+            xCD8: 0,
+            xCDC: 0.0,
+            xCE0: 0.0,
+            xCE4: 0,
+            xCE8: 0,
+            xCEC: 0,
+            xCF0: 0,
+        }
+    }
+}
+
+/// `_StaticPlayer`, 0xe90 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct _StaticPlayer {
+    /// +0x0
+    pub player_state: i32,
+    /// +0x4
+    pub ckind: i32,
+    /// +0x8
+    pub pkind: i32,
+    /// +0xc
+    pub transformed: [u8; 2],
+    /// +0xe
+    pub unk0E: i16,
+    /// +0x10
+    pub player_poses: [u8; 48],
+    /// +0x40
+    pub facing_direction: f32,
+    /// +0x44
+    pub costume_id: u8,
+    /// +0x45
+    pub unk45: u8,
+    /// +0x46
+    pub sub_color: i8,
+    /// +0x47
+    pub team: u8,
+    /// +0x48
+    pub pad_port: u8,
+    /// +0x49
+    pub cpu_level: u8,
+    /// +0x4a
+    pub cpu_type: u8,
+    /// +0x4b
+    pub handicap: u8,
+    /// +0x4c
+    pub unk4C: i8,
+    /// +0x4d
+    pub unk4D: i8,
+    /// +0x4e
+    pub unk4E: i8,
+    /// +0x4f
+    pub unk4F: i8,
+    /// +0x50
+    pub unk50: f32,
+    /// +0x54
+    pub attack_ratio: f32,
+    /// +0x58
+    pub defense_ratio: f32,
+    /// +0x5c
+    pub model_scale: f32,
+    /// +0x60
+    pub staminas: [u8; 8],
+    /// +0x68
+    pub falls: [i32; 2],
+    /// +0x70
+    pub kos_by_player: [u32; 6],
+    /// +0x88
+    pub match_frame_count: u32,
+    /// +0x8c
+    pub self_destructs: u16,
+    /// +0x8e
+    pub stocks: i8,
+    /// +0x8f
+    pub unk8F: i8,
+    /// +0x90
+    pub current_coins: i32,
+    /// +0x94
+    pub total_coins: i32,
+    /// +0x98
+    pub unk98: i32,
+    /// +0x9c
+    pub unk9C: i32,
+    /// +0xa0
+    pub joystick_direction_input_count: [i32; 2],
+    /// +0xa8
+    pub nametag_slot_id: i32,
+    /// +0xac
+    pub flags: _StaticPlayer_flags,
+    /// +0xad
+    pub more_flags: _StaticPlayer_more_flags,
+    /// +0xae
+    pub flagsAE: _StaticPlayer_flagsAE,
+    /// +0xaf
+    pub unkAF: i8,
+    /// +0xb0
+    pub player_entity: [Option<GObjId>; 2],
+    /// +0xb8
+    pub struct_func: Option<CodeRef>,
+    /// +0xbc
+    pub stale_moves: StaleMoveTable,
+    /// +0xdb0
+    pub xDB0: [u8; 224],
+}
+
+impl Default for _StaticPlayer {
+    fn default() -> Self {
+        _StaticPlayer {
+            player_state: 0,
+            ckind: 0,
+            pkind: 0,
+            transformed: [0; 2],
+            unk0E: 0,
+            player_poses: [0; 48],
+            facing_direction: 0.0,
+            costume_id: 0,
+            unk45: 0,
+            sub_color: 0,
+            team: 0,
+            pad_port: 0,
+            cpu_level: 0,
+            cpu_type: 0,
+            handicap: 0,
+            unk4C: 0,
+            unk4D: 0,
+            unk4E: 0,
+            unk4F: 0,
+            unk50: 0.0,
+            attack_ratio: 0.0,
+            defense_ratio: 0.0,
+            model_scale: 0.0,
+            staminas: [0; 8],
+            falls: [0; 2],
+            kos_by_player: [0; 6],
+            match_frame_count: 0,
+            self_destructs: 0,
+            stocks: 0,
+            unk8F: 0,
+            current_coins: 0,
+            total_coins: 0,
+            unk98: 0,
+            unk9C: 0,
+            joystick_direction_input_count: [0; 2],
+            nametag_slot_id: 0,
+            flags: Default::default(),
+            more_flags: Default::default(),
+            flagsAE: Default::default(),
+            unkAF: 0,
+            player_entity: [None; 2],
+            struct_func: None,
+            stale_moves: Default::default(),
+            xDB0: [0; 224],
+        }
+    }
+}

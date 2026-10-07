@@ -1,7 +1,7 @@
 """What structgen generates and how it maps C pointers to melee-sim handles."""
 
 # Structs to generate; everything they contain comes along.
-ROOTS = ["Fighter"]
+ROOTS = ["Fighter", "Item", "Ground", "StageInfo", "Camera", "_StaticPlayer"]
 
 # Handles for pointers to runtime objects, by the pointee's C name.
 POINTERS = {

@@ -226,10 +226,39 @@ fn mirror_check(trace_path: &str) -> ExitCode {
         }
     }
 
+    fn round_trip<T: Mirror>(r: &trace::Region, what: &str, ids: &mut Ids) {
+        assert_eq!(r.bytes.len() as u32 % T::SIZE, 0, "trace's {what} size");
+        let m = Mem {
+            bytes: &r.bytes,
+            base: r.address,
+        };
+        for i in 0..r.bytes.len() as u32 / T::SIZE {
+            let at = r.address + i * T::SIZE;
+            T::import(&m, at, ids).compare(&m, at, &format!("{what}[{i}]"), ids);
+        }
+    }
+
     let ticks = trace::read(trace_path);
     let mut ids = Ids::default();
     let mut fighters = 0;
+    let mut others = 0;
     for t in &ticks {
+        for r in &t.regions {
+            match r.kind {
+                Kind::Item => round_trip::<melee_sim::game::structs::Item>(r, "item", &mut ids),
+                Kind::Stage => {
+                    round_trip::<melee_sim::game::structs::StageInfo>(r, "stage", &mut ids)
+                }
+                Kind::Camera => {
+                    round_trip::<melee_sim::game::structs::Camera>(r, "camera", &mut ids)
+                }
+                Kind::Players => {
+                    round_trip::<melee_sim::game::structs::_StaticPlayer>(r, "player", &mut ids)
+                }
+                _ => continue,
+            }
+            others += 1;
+        }
         for r in t.of(Kind::Fighter) {
             let m = Mem {
                 bytes: &r.bytes,
@@ -248,7 +277,7 @@ fn mirror_check(trace_path: &str) -> ExitCode {
         }
     }
     println!(
-        "{fighters} fighters round-tripped, {} mismatches",
+        "{fighters} fighters and {others} other regions round-tripped, {} mismatches",
         ids.mismatches.len()
     );
     for m in ids.mismatches.iter().take(20) {
