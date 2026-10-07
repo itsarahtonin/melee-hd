@@ -23,3 +23,5 @@ parseFloat	leaf-check fobj: every keyframe value is parsed through it; values co
 parsePackInfo	leaf-check fobj: every opcode's pack count is parsed through it; nb_pack compared every frame
 FObjLaunchKeyData	leaf-check fobj: keyed channels launch through it; updates and flags compared every frame
 FObjUpdateAnim	leaf-check fobj: every value handed to the update function comes from it; compared every frame
+HSD_IDSetup	leaf-check id: the test starts from it
+_HSD_IDForgetMemory	leaf-check id: empties the table as HSD_IDSetup does (melee-sim has one clear for both)

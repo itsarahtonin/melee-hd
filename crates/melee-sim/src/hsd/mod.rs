@@ -2,5 +2,6 @@
 
 pub mod fobj;
 pub mod gobj;
+pub mod id;
 pub mod pool;
 pub mod spline;
