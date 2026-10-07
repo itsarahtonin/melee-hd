@@ -29,3 +29,5 @@ HSD_SListAlloc	leaf-check list: both alloc-and-link functions allocate through i
 HSD_SListAppendList	leaf-check list: HSD_SListAllocAndAppend links through it; contents compared every step
 HSD_SListPrependList	leaf-check list: HSD_SListAllocAndPrepend links through it; contents compared every step
 lbColl_80006E58	leaf-check lbcollision: static to its unit, so ssbm-types lists it under tu:: rather than fns::; the test compares every output directly
+HSD_PadRumbleFree	leaf-check rumble: every remove, remove by id and finished script frees through it; free list and node links compared each step
+HSD_PadRumbleInterpret1	leaf-check rumble: HSD_PadRumbleInterpret runs every node through it; nodes and motor commands compared every frame
