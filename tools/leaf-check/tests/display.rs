@@ -71,13 +71,48 @@ fn mtx_arg(call: &Call, a: u32) -> Option<Mtx34> {
 /// `JOBJ_MTX_DIRTY` in a joint's flags.
 const MTX_DIRTY: u32 = 1 << 6;
 
-/// Marks the joint in r3 dirty on some calls, so setup recomputes its matrix.
+/// `JOBJ_PTCL`: the joint holds a particle list.
+const PTCL: u32 = 1 << 5;
+
+/// Changes every joint tree the GObjs hold on some calls, so the drawing's setup has work:
+/// every joint dirty (skinned and enveloped shapes' joints included, which setup brings up
+/// to date as the shapes draw), or every particle list's entries still to spawn.
 fn dirty(call: &mut Call, i: usize) {
-    if i % 3 == 1 {
-        let j = call.regs.gpr[3];
-        if j != 0 {
-            let f = peek_u32(call, j + 0x14);
-            poke_u32(call, j + 0x14, f | MTX_DIRTY);
+    let (all_dirty, spawn) = (i % 3 == 1, i % 5 == 2);
+    if !all_dirty && !spawn {
+        return;
+    }
+    let kind = call.mem1[(leaf_check::sym("HSD_GObj_JObjKind") - 0x8000_0000) as usize];
+    let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+    let mut seen = std::collections::HashSet::new();
+    for link in 0..64 {
+        let mut g = peek_u32(call, heads + 4 * link);
+        while g != 0 {
+            let obj_kind = call.mem1[(g + 6 - 0x8000_0000) as usize];
+            let mut stack = vec![];
+            if obj_kind == kind {
+                stack.push(peek_u32(call, g + 0x28));
+            }
+            while let Some(j) = stack.pop() {
+                if j == 0 || !seen.insert(j) {
+                    continue;
+                }
+                let f = peek_u32(call, j + 0x14);
+                if all_dirty {
+                    poke_u32(call, j + 0x14, f | MTX_DIRTY);
+                }
+                if spawn && f & PTCL != 0 {
+                    let mut e = peek_u32(call, j + 0x18);
+                    while e != 0 {
+                        let w = peek_u32(call, e + 4);
+                        poke_u32(call, e + 4, w | 0x8000_0000);
+                        e = peek_u32(call, e);
+                    }
+                }
+                stack.push(peek_u32(call, j + 8));
+                stack.push(peek_u32(call, j + 0x10));
+            }
+            g = peek_u32(call, g + 8);
         }
     }
 }
@@ -149,7 +184,10 @@ fn jobj_callback() {
     each(
         "HSD_GObj_JObjCallback",
         20,
-        &|call, i| call.regs.gpr[4] = (i % 3) as u32,
+        &|call, i| {
+            call.regs.gpr[4] = (i % 3) as u32;
+            dirty(call, i / 3);
+        },
         &|r, maps, call| {
             r.render_jobj(gobj_arg(maps, call), call.regs.gpr[4] as i32);
             Ret::Nothing
@@ -157,17 +195,68 @@ fn jobj_callback() {
     );
 }
 
-/// The light GObjs' callback: their lights become current and take GX slots. The stage's
-/// (`Ground_801C4640`) and the fighters' (`ftCo_8009F54C`) are the same code, run from the
-/// same states.
+/// The first GObj on render link `link` whose callback is `cb`.
+fn rendered(call: &Call, link: u32, cb: &str) -> Option<u32> {
+    let head = peek_u32(call, leaf_check::sym("HSD_GObjGXLinkHead"));
+    let cb = leaf_check::sym(cb);
+    let mut g = peek_u32(call, head + 4 * link);
+    while g != 0 {
+        if peek_u32(call, g + 0x1C) == cb {
+            return Some(g);
+        }
+        g = peek_u32(call, g + 0x10);
+    }
+    None
+}
+
+/// Changes the lights of the light GObj `g` on some calls so every kind of light setup runs:
+/// specular parts added, a light made specular only, point and spot lights.
+fn vary_lights(call: &mut Call, g: u32, i: usize) {
+    let mut l = peek_u32(call, g + 0x28);
+    let mut k = 0;
+    while l != 0 {
+        let w = peek_u32(call, l + 8);
+        let flags = (w >> 16) as u16;
+        let flags = match (i % 5, flags & 3) {
+            // Ambient lights stay ambient.
+            (_, 0) | (0, _) => flags,
+            (1, _) => flags | 8,
+            (2, _) if k == 1 => flags & !4 | 8,
+            (3, _) => flags & !3 | 2 | 8,
+            (4, _) => flags & !3 | 3,
+            _ => flags,
+        };
+        poke_u32(call, l + 8, u32::from(flags) << 16 | w & 0xFFFF);
+        l = peek_u32(call, l + 0xC);
+        k += 1;
+    }
+}
+
+/// The light GObjs' callback: their lights become current and take GX slots. Run from the
+/// HUD's light callbacks' states on the HUD's lights (`HSD_GObj_LObjCallback`), the stage's
+/// (`Ground_801C4640`, render link 0) and the fighters' (`ftCo_8009F54C`, link 4), the same
+/// code, with the lights varied.
 #[test]
 fn lobj_callback() {
-    for func in ["HSD_GObj_LObjCallback", "Ground_801C4640", "ftCo_8009F54C"] {
+    for (func, link) in [
+        ("HSD_GObj_LObjCallback", None),
+        ("Ground_801C4640", Some(0)),
+        ("ftCo_8009F54C", Some(4)),
+    ] {
         let addr = leaf_check::sym(func);
         each(
             "HSD_GObj_LObjCallback",
             1,
-            &|call, _| call.addr = addr,
+            &|call, i| {
+                call.addr = addr;
+                if let Some(link) = link
+                    && let Some(g) = rendered(call, link, func)
+                {
+                    call.regs.gpr[3] = g;
+                }
+                let g = call.regs.gpr[3];
+                vary_lights(call, g, i);
+            },
             &|r, maps, call| {
                 r.render_lights(gobj_arg(maps, call));
                 Ret::Nothing
@@ -176,7 +265,8 @@ fn lobj_callback() {
     }
 }
 
-/// `HSD_LObjSetupInit` for the current lights.
+/// `HSD_LObjSetupInit` for the current lights: its saved calls (the HUD's ambient light), and
+/// the stage's lights made current by their callback, varied.
 #[test]
 fn lobj_setup_init() {
     each("HSD_LObjSetupInit", 1, &|_, _| {}, &|r, maps, call| {
@@ -209,6 +299,33 @@ fn generic_cameras(call: &Call) -> Vec<u32> {
     out
 }
 
+/// `CObj` flags: the view matrix needs rebuilding.
+const VIEW_DIRTY: u32 = 1 << 30;
+
+/// Changes a camera GObj `g` on most calls: the render links its passes run (the stage's
+/// lights and fog with the fighters' lights, the particles, the light GObjs, the joint tree
+/// on link 15) and, on some, its view matrix left to rebuild.
+fn vary_camera(call: &mut Call, g: u32, i: usize) {
+    if i % 5 != 0 {
+        let links: u64 = [
+            1 << 0 | 1 << 4,
+            1 << 7 | 1 << 8,
+            1 << 10 | 1 << 0,
+            1 << 15,
+            1 << 15 | 1 << 10,
+        ][i % 5];
+        poke_u32(call, g + 0x20, (links >> 32) as u32);
+        poke_u32(call, g + 0x24, links as u32);
+    }
+    if i % 2 == 1 {
+        let c = peek_u32(call, g + 0x28);
+        if c != 0 {
+            let f = peek_u32(call, c + 8);
+            poke_u32(call, c + 8, f | VIEW_DIRTY);
+        }
+    }
+}
+
 /// A camera GObj's callback, `HSD_GObj_803910D8`, run from the light callbacks' states (mid
 /// pass) on each camera that has it, over the render links its passes run: its own (the
 /// HUD's, which no port covers yet) and, on most calls, the stage's lights and fog, the
@@ -225,11 +342,7 @@ fn camera_callback() {
             };
             call.addr = leaf_check::sym("HSD_GObj_803910D8");
             call.regs.gpr[3] = g;
-            if i % 4 != 0 {
-                let links: u64 = [1 << 0 | 1 << 4, 1 << 7 | 1 << 8, 1 << 10 | 1 << 0][i % 3];
-                poke_u32(call, g + 0x20, (links >> 32) as u32);
-                poke_u32(call, g + 0x24, links as u32);
-            }
+            vary_camera(call, g, i);
         },
         &|r, maps, call| {
             if call.addr == leaf_check::sym("HSD_GObj_803910D8") {
@@ -258,11 +371,7 @@ fn frame() {
             let mut g = peek_u32(call, head + 4 * 64);
             while g != 0 {
                 if generic.contains(&g) {
-                    if i % 4 != 0 {
-                        let links: u64 = [1 << 0 | 1 << 4, 1 << 10, 1 << 0 | 1 << 10][i % 3];
-                        poke_u32(call, g + 0x20, (links >> 32) as u32);
-                        poke_u32(call, g + 0x24, links as u32);
-                    }
+                    vary_camera(call, g, i);
                 } else {
                     poke_u32(call, g + 0x1C, 0);
                 }
