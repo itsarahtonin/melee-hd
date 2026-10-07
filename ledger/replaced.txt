@@ -179,3 +179,8 @@ mpLib_8004D164	Returns mplib's collision data global; melee-sim's mp::Geometry h
 mpGetGroundCollVtx	Returns mplib's vertex array global; melee-sim's mp::Geometry holds it as a field.
 mpGetGroundCollLine	Returns mplib's line array global; melee-sim's mp::Geometry holds it as a field.
 mpGetGroundCollJoint	Returns mplib's joint array global; melee-sim's mp::Geometry holds it as a field.
+HSD_TlutLoadDesc	TObjs refer to their palette descriptors (hsd::tobj::TlutTable) instead of copying them: a copy differs only in tlut_name, which HSD_TObjSetup writes before every read.
+HSD_TlutAlloc	TObjs refer to their palette descriptors instead of copying them (see HSD_TlutLoadDesc).
+HSD_TlutRemove	TObjs refer to their palette descriptors instead of copying them (see HSD_TlutLoadDesc).
+TObjInfoInit	HAL's class system: melee-sim's TObj pool replaces the class info and its method table (docs/engine.md).
+MObjInfoInit	HAL's class system: melee-sim's MObj pool and MObjClass replace the class info and its method table (docs/engine.md).

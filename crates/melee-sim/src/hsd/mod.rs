@@ -1,5 +1,5 @@
 //! HAL's system library (sysdolphin): object pools, the GObj scheduler, animation, joints,
-//! display objects, matrices, splines and expression bytecode.
+//! display objects, materials and textures, matrices, splines and expression bytecode.
 
 pub mod aobj;
 pub mod bytecode;
@@ -9,11 +9,13 @@ pub mod gobj;
 pub mod id;
 pub mod jobj;
 pub mod list;
+pub mod mobj;
 pub mod mtx;
 pub mod pobj;
 pub mod pool;
 pub mod robj;
 pub mod spline;
+pub mod tobj;
 
 use melee_data::archive::DataRef;
 
@@ -28,6 +30,8 @@ pub struct Objects {
     pub robjs: robj::RObjs,
     pub rvalues: robj::Rvalues,
     pub dobjs: dobj::DObjs,
+    pub mobjs: mobj::MObjs,
+    pub tobjs: tobj::TObjs,
     pub pobjs: pobj::PObjs,
     /// HSD's ID table (`HSD_IDInsertToTable` with a null table): joints by the descriptor
     /// they were loaded from.

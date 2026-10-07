@@ -78,3 +78,15 @@ HSD_RObjRemoveAll	leaf-check jobj: releasing constrained joints; live RObjs comp
 HSD_RObjFree	leaf-check jobj: constraint removal edits free through it; live RObjs compared
 HSD_RvalueRemoveAll	leaf-check jobj synthetic: releasing the expression joint; rvalue joints' ref counts compared
 HSD_RvalueResolveRefsAll	leaf-check jobj synthetic: loading resolves both expressions' rvalues; compared
+TObjLoad	leaf-check mobj: HSD_TObjLoadDesc loads every TObj through it; the disc's materials' TObjs compared field by field after every load
+MObjLoad	leaf-check mobj: HSD_MObjLoadDesc loads every MObj through it; the disc's materials compared after every load
+TObjRelease	leaf-check mobj: HSD_TObjRemoveAll and HSD_MObjRemove release every TObj through it; live counts and reuse compared after each removal
+MObjRelease	leaf-check mobj: HSD_MObjRemove releases through it; live counts and reuse compared after each removal
+HSD_TObjTevAlloc	leaf-check mobj: HSD_TObjTevLoadDesc allocates through it; TEV stages compared after every load
+TObjUpdateFunc	leaf-check mobj: static to its unit (ssbm-types lists it under tu::); called directly on random values and through every texture animation frame, TObjs compared each step
+MObjUpdateFunc	leaf-check mobj: static to its unit (ssbm-types lists it under tu::); called directly on random values and through every material animation frame, MObjs compared each step
+MakeTextureMtx	leaf-check tobj: static to its unit (ssbm-types lists it under tu::); texture_matrices_match calls it on random transforms in both float modes
+TObjSetupMtx	leaf-check tobj: static to its unit (ssbm-types lists it under tu::); texture_matrices_match calls it on random transforms, and mobj's display setups reach it
+HSD_TexMapID2PTTexMtx	leaf-check tobj: static to its unit (ssbm-types lists it under tu::); index_conversions_match calls it on every texture map
+TObjAmnesia	leaf-check tobj: static to its unit (ssbm-types lists it under tu::); current_by_type_and_amnesia_match calls it with TObj's class and another
+MObjAmnesia	leaf-check tobj: static to its unit (ssbm-types lists it under tu::); current_by_type_and_amnesia_match calls it with MObj's class and another
