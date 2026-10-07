@@ -26,6 +26,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_AttackLw3_Phys")]
     #[doc(alias = "ftCo_AttackLw4_Phys")]
     #[doc(alias = "ftCo_Turn_Phys")]
+    #[doc(alias = "ftCo_Squat_Phys")]
+    #[doc(alias = "ftCo_SquatRv_Phys")]
+    #[doc(alias = "ftCo_AttackHi4_Phys")]
     #[doc(alias = "ftFx_SpecialLwStart_Phys")]
     pub fn co_ground_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
@@ -33,6 +36,7 @@ impl Running<'_> {
 
     /// `ftCo_Wait_Phys`: friction, and the shield's hit position follows again.
     #[doc(alias = "ftCo_Wait_Phys")]
+    #[doc(alias = "ftCo_SquatWait_Phys")]
     pub fn co_wait_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
         // `ftColl_8007AEE0`.
@@ -44,6 +48,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_DamageFall_Phys")]
     #[doc(alias = "ftCo_AttackAir_Phys")]
     #[doc(alias = "ftCo_JumpAerial_Phys")]
+    #[doc(alias = "ftCo_FallAerial_Phys")]
+    #[doc(alias = "ftCo_Pass_Phys")]
+    #[doc(alias = "ftCo_MissFoot_Phys")]
     pub fn co_air_phys(&mut self, gobj: GObjId) {
         self.air_physics(gobj);
     }
@@ -204,5 +211,9 @@ impl Running<'_> {
 
     /// `ftCo_ThrownLw_Phys`: nothing.
     #[doc(alias = "ftCo_ThrownLw_Phys")]
+    #[doc(alias = "ftCo_Ottotto_Phys")]
+    #[doc(alias = "ftCo_OttottoWait_Phys")]
+    #[doc(alias = "ftCo_StopWall_Phys")]
+    #[doc(alias = "ftCo_StopCeil_Phys")]
     pub fn co_no_phys(&mut self, _gobj: GObjId) {}
 }

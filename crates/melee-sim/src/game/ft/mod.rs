@@ -165,6 +165,13 @@ impl Running<'_> {
             .expect("a null common data pointer")
     }
 
+    /// The pointer at `offset` in `ftLoadCommonData`, which `Fighter_LoadCommonData` copies
+    /// into a global (x30 is `Fighter_804D6524`, x34 `Fighter_804D6520`, x38
+    /// `Fighter_804D651C`).
+    pub fn common_ptr(&self, offset: u32) -> DataRef {
+        self.load_common(offset)
+    }
+
     /// `p_ftCommonData`.
     pub fn common(&self) -> Common<'_> {
         Common {

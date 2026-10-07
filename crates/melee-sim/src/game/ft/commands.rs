@@ -641,6 +641,7 @@ impl Running<'_> {
 
     /// Starts the fighter's rumble of kind `kind` for `frames` (0: the pattern's own) if its
     /// controller rumbles and the fighter is awake and alive, `ftCommon_8007EBAC`.
+    #[doc(alias = "ftCommon_8007EBAC")]
     pub(super) fn start_rumble(&mut self, f: FighterId, kind: u32, frames: u32) {
         let fp = &self.game.fighters[f.0];
         if self
@@ -686,7 +687,8 @@ impl Running<'_> {
     }
 
     /// Takes the fighter into the air with its jumps used, `ftCommon_8007D60C`.
-    fn go_airborne_jumped(&mut self, f: FighterId) {
+    #[doc(alias = "ftCommon_8007D60C")]
+    pub(super) fn go_airborne_jumped(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
         if fp.x2227_b0 && fp.x1968_jumpsUsed <= 1 {
             unported_call("pl_8003FC44");

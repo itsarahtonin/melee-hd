@@ -100,6 +100,7 @@ pub const EF_PAUSE_ALL: u32 = 0x8005_BA40;
 /// hooks and the character's own.
 pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
     match cb.0 {
+        addr if super::ft::co::dispatch::run(g, gobj, addr) => {}
         // Animation.
         0x8008_A494 => g.co_wait_anim(gobj),
         0x8008_B8D4 | 0x8008_BA98 | 0x8008_C520 | 0x8009_99D8 => g.co_ground_move_anim(gobj),
@@ -162,13 +163,15 @@ fn unported(what: &str, addr: u32) -> ! {
 }
 
 /// What an original function takes or returns in its registers, for [`call`]: an integer, a
-/// float as a register holds it, a GObj, or a vector passed or returned by pointer.
+/// float as a register holds it, a GObj, a fighter (a `Fighter*`), or a vector passed or
+/// returned by pointer.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Val {
     None,
     Int(i32),
     Float(f64),
     GObj(Option<GObjId>),
+    Fighter(super::handles::FighterId),
     Vec(crate::vec::Vec3),
     JObj(Option<crate::hsd::jobj::JObjId>),
     /// What an effect spawn returns: an effect, a generator, or null.

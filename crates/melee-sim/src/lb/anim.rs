@@ -38,6 +38,15 @@ pub fn framerate(objs: &Objects, j: Option<JObjId>) -> f32 {
     }
 }
 
+/// The tree's animation's last frame, `lbGetJObjEndFrame`.
+#[doc(alias = "lbGetJObjEndFrame")]
+pub fn end_frame(objs: &Objects, j: Option<JObjId>) -> f32 {
+    match with_aobj(&objs.jobjs, j) {
+        Some(j) => objs.aobjs[objs.jobjs[j].aobj.unwrap()].end_frame,
+        None => 0.0,
+    }
+}
+
 /// The tree's animation frame, `lbGetJObjCurrFrame`.
 #[doc(alias = "lbGetJObjCurrFrame")]
 pub fn current_frame(objs: &Objects, j: Option<JObjId>) -> f32 {

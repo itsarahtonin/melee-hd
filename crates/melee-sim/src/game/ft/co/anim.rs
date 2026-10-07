@@ -30,15 +30,7 @@ impl Running<'_> {
         if self.game.fighter(gobj).stamina_dead {
             self.enter_down_spot(gobj);
         } else {
-            self.wait_anim_tick(gobj);
-        }
-    }
-
-    /// `ftCo_8008A7A8`: when the idle animation ends, the next is picked (not ported yet:
-    /// only the check that it hasn't ended).
-    fn wait_anim_tick(&mut self, gobj: GObjId) {
-        if !self.anim_frames_remaining(gobj) {
-            unported_call("ftCo_8008A7A8");
+            self.wait_anim_tick(gobj, 0x24);
         }
     }
 
@@ -74,6 +66,7 @@ impl Running<'_> {
 
     /// `ftCo_Jump_Anim`.
     #[doc(alias = "ftCo_Jump_Anim")]
+    #[doc(alias = "ftCo_Pass_Anim")]
     pub fn co_jump_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_fall(gobj);
@@ -85,23 +78,6 @@ impl Running<'_> {
     pub fn co_jump_aerial_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_fall_aerial(gobj);
-        }
-    }
-
-    /// `ftCo_KneeBend_Anim`: the jump leaves the ground after the character's jump squat.
-    #[doc(alias = "ftCo_KneeBend_Anim")]
-    pub fn co_knee_bend_anim(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter(gobj);
-        if fp.cur_anim_frame >= fp.co_attrs.jump_startup_time || !self.anim_frames_remaining(gobj) {
-            unported_call("ftCo_Jump_Enter");
-        }
-    }
-
-    /// `ftCo_EscapeAir_Anim`.
-    #[doc(alias = "ftCo_EscapeAir_Anim")]
-    pub fn co_escape_air_anim(&mut self, gobj: GObjId) {
-        if !self.anim_frames_remaining(gobj) {
-            unported_call("ftCo_80096900");
         }
     }
 

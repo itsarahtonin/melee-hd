@@ -1,16 +1,37 @@
-//! The common action states (`ft/kinds/ftCommon`): each state's animation, input, physics,
-//! collision and camera callbacks. A state's variables live in the fighter's `mv` union
-//! (`ftCommon_MotionVars`), read here at the decomp's offsets.
+//! The common action states (`ft/kinds/ftCommon`): each state's entry and its animation,
+//! input (interrupt), physics, collision and camera callbacks. A state's variables live in the
+//! fighter's `mv` union (`ftCommon_MotionVars`), read here at the decomp's offsets; each
+//! character's own variables in `u`, likewise.
 //!
-//! Transitions into other states go through `Fighter_ChangeMotionState`, which isn't ported:
-//! a callback ported here runs whole up to such a transition, which stops as unported.
+//! Where a state reaches code another part of the port owns (a character's special moves,
+//! items, sounds, effects), it calls it through `code::call`, which stops until that part
+//! adds its arms.
 
+pub mod air;
 pub mod anim;
+pub mod attack;
+pub mod checks;
+pub mod dispatch;
 pub mod enter;
+pub mod ground;
+pub mod ids;
+pub mod jump;
+pub mod kind_callbacks;
+pub mod ledge;
 pub mod phys;
+pub mod squat;
 
 use super::super::structs::Fighter;
 use crate::fpu::mem;
+
+/// `HSD_PAD_*`, as the fighter's input holds them.
+pub(super) const PAD_DPAD_DOWN: u32 = 1 << 2;
+pub(super) const PAD_DPAD_UP: u32 = 1 << 3;
+pub(super) const PAD_L_R: u32 = (1 << 6) | (1 << 5);
+pub(super) const PAD_A: u32 = 1 << 8;
+pub(super) const PAD_B: u32 = 1 << 9;
+pub(super) const PAD_XY: u32 = (1 << 10) | (1 << 11);
+pub(super) const PAD_LR: u32 = 1 << 31;
 
 impl Fighter {
     fn mv_word(&self, off: usize) -> u32 {
@@ -37,6 +58,19 @@ impl Fighter {
 
     pub fn set_mv_i32(&mut self, off: usize, v: i32) {
         self.set_mv_word(off, v as u32);
+    }
+
+    fn u_word(&self, off: usize) -> u32 {
+        u32::from_be_bytes(self.u[off..off + 4].try_into().unwrap())
+    }
+
+    /// A word of the character's own variables (`Fighter::u`), `off` bytes into them.
+    pub fn u_i32(&self, off: usize) -> i32 {
+        self.u_word(off) as i32
+    }
+
+    pub fn set_u_i32(&mut self, off: usize, v: i32) {
+        self.u[off..off + 4].copy_from_slice(&(v as u32).to_be_bytes());
     }
 
     /// `x2210.throw_flags_b(bit)`.

@@ -122,7 +122,7 @@ impl Running<'_> {
 
     /// Keeps the fighter's horizontal speed within its air drift, `ftCommon_ClampAirDrift`.
     #[doc(alias = "ftCommon_ClampAirDrift")]
-    fn clamp_air_drift(&mut self, f: FighterId) {
+    pub(super) fn clamp_air_drift(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
         let max = reg(fp.co_attrs.air_drift_max);
         let v = reg(fp.self_vel.x);
