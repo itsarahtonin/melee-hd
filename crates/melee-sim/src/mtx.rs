@@ -13,6 +13,7 @@ pub struct Mtx34 {
 }
 
 impl Mtx34 {
+    #[doc(alias = "PSMTXIdentity")]
     pub const IDENTITY: Mtx34 = Mtx34 {
         m: [
             [1.0, 0.0, 0.0, 0.0],
@@ -22,6 +23,7 @@ impl Mtx34 {
     };
 
     /// A translation, `PSMTXTrans`.
+    #[doc(alias = "PSMTXTrans")]
     pub fn translation(x: f32, y: f32, z: f32) -> Mtx34 {
         let mut t = Mtx34::IDENTITY;
         t.m[0][3] = moved(x);
@@ -31,6 +33,7 @@ impl Mtx34 {
     }
 
     /// A scale, `PSMTXScale`.
+    #[doc(alias = "PSMTXScale")]
     pub fn scale(x: f32, y: f32, z: f32) -> Mtx34 {
         let mut s = Mtx34::default();
         s.m[0][0] = moved(x);
@@ -58,6 +61,7 @@ impl Mtx34 {
     }
 
     /// A copy as `PSMTXCopy` makes it, through registers.
+    #[doc(alias = "PSMTXCopy")]
     pub fn copied(&self) -> Mtx34 {
         let mut out = Mtx34::default();
         for i in (0..12).step_by(2) {
@@ -67,6 +71,7 @@ impl Mtx34 {
     }
 
     /// `self · b`, `PSMTXConcat`.
+    #[doc(alias = "PSMTXConcat")]
     pub fn concat(&self, b: &Mtx34) -> Mtx34 {
         use fp::{ps_madds0 as madds0, ps_madds1 as madds1, ps_muls0 as muls0};
         let a = self;
@@ -101,6 +106,7 @@ impl Mtx34 {
     }
 
     /// The transpose of the rotation part, translation zero, `PSMTXTranspose`.
+    #[doc(alias = "PSMTXTranspose")]
     pub fn transpose(&self) -> Mtx34 {
         let m = &self.m;
         let mut out = Mtx34::default();
@@ -115,6 +121,7 @@ impl Mtx34 {
     }
 
     /// The inverse, or `None` when the rotation part's determinant is zero, `PSMTXInverse`.
+    #[doc(alias = "PSMTXInverse")]
     pub fn inverse(&self) -> Option<Mtx34> {
         use fp::{
             ps_add, ps_madd, ps_merge00, ps_merge10, ps_merge11, ps_msub, ps_mul, ps_muls0,
@@ -177,6 +184,7 @@ impl Mtx34 {
     }
 
     /// `self · v` with translation, `PSMTXMultVec`.
+    #[doc(alias = "PSMTXMultVec")]
     pub fn transform(&self, v: Vec3) -> Vec3 {
         let (vxy, vz1) = (load2(v.x, v.y), load1(v.z));
         let row = |r: usize| {
@@ -187,6 +195,7 @@ impl Mtx34 {
     }
 
     /// `self · v` without translation, `PSMTXMultVecSR`.
+    #[doc(alias = "PSMTXMultVecSR")]
     pub fn rotate(&self, v: Vec3) -> Vec3 {
         let (vxy, vz1) = (load2(v.x, v.y), load1(v.z));
         let row = |r: usize| {

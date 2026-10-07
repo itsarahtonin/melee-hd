@@ -353,6 +353,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ledger"
+version = "0.1.0"
+dependencies = [
+ "ssbm-game",
+ "ssbm-rt",
+ "ssbm-types",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.190"
 source = "registry+https://github.com/rust-lang/crates.io-index"

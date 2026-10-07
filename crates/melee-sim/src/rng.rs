@@ -19,12 +19,14 @@ impl Rng {
     }
 
     /// Advances the seed and returns its top 16 bits, `HSD_Rand`.
+    #[doc(alias = "HSD_Rand")]
     pub fn draw(&mut self) -> i32 {
         self.seed = self.seed.wrapping_mul(214013).wrapping_add(2531011);
         (self.seed >> 16) as i32
     }
 
     /// A float in [0, 1), `HSD_Randf`.
+    #[doc(alias = "HSD_Randf")]
     pub fn draw_f32(&mut self) -> f32 {
         // A 16-bit integer converts exactly, and dividing by 2^16 is exact.
         self.draw() as f32 / 65536.0
@@ -32,6 +34,7 @@ impl Rng {
 
     /// An integer in [0, max) for positive `max`, `HSD_Randi`: the product wraps and the
     /// division truncates toward zero, as the original's 32-bit C arithmetic does.
+    #[doc(alias = "HSD_Randi")]
     pub fn below(&mut self, max: i32) -> i32 {
         max.wrapping_mul(self.draw()) / 65536
     }

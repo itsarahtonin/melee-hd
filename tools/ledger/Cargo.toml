@@ -1,0 +1,13 @@
+[package]
+name = "ledger"
+description = "Regenerates docs/port-ledger: every ssbm-rs function and what melee-hd did with it"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+ssbm-game.workspace = true
+ssbm-rt.workspace = true
+ssbm-types.workspace = true

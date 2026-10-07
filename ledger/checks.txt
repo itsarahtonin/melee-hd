@@ -1,0 +1,5 @@
+# Ported functions verified by a system-level check rather than leaf-check.
+# One per line: NAME<TAB>check (a test or replay set that compares their effects with ssbm-rs)
+lb_sqrtf	leaf-check math: asinf and acosf call it on every input
+sin__Ff	leaf-check math: tanf calls it on every input
+cos__Ff	leaf-check math: tanf calls it on every input

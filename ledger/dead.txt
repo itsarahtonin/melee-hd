@@ -1,0 +1,2 @@
+# Functions that provably never run in NTSC 1.02, with the evidence.
+# One per line: NAME<TAB>evidence

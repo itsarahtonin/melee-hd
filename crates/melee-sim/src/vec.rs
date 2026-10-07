@@ -27,6 +27,7 @@ fn each(a: Vec3, b: Vec3, op: fn(f64, f64) -> f64, put: fn(f64) -> f32) -> Vec3 
 /// C's component-by-component addition (`lbVector_Add` and inline code).
 impl Add for Vec3 {
     type Output = Vec3;
+    #[doc(alias = "lbVector_Add")]
     fn add(self, b: Vec3) -> Vec3 {
         each(self, b, fp::fadds, store)
     }
@@ -35,6 +36,8 @@ impl Add for Vec3 {
 /// C's component-by-component subtraction.
 impl Sub for Vec3 {
     type Output = Vec3;
+    #[doc(alias = "lbVector_Sub")]
+    #[doc(alias = "lbVector_Diff")]
     fn sub(self, b: Vec3) -> Vec3 {
         each(self, b, fp::fsubs, store)
     }
@@ -72,22 +75,26 @@ impl Vec3 {
     }
 
     /// `PSVECAdd`: the sum, stored through `psq_st`.
+    #[doc(alias = "PSVECAdd")]
     pub fn sdk_add(self, b: Vec3) -> Vec3 {
         each(self, b, fp::fadds, store_paired)
     }
 
     /// `PSVECSubtract`: the difference, stored through `psq_st`.
+    #[doc(alias = "PSVECSubtract")]
     pub fn sdk_sub(self, b: Vec3) -> Vec3 {
         each(self, b, fp::fsubs, store_paired)
     }
 
     /// Every component times `s`, `PSVECScale`.
+    #[doc(alias = "PSVECScale")]
     pub fn sdk_scale(self, s: f32) -> Vec3 {
         let s = splat(s);
         Vec3::from_lanes(fp::ps_muls0(self.xy(), s), fp::ps_muls0(self.z1(), s))
     }
 
     /// The dot product, `PSVECDotProduct`: (x·x' + y·y') + z·z'.
+    #[doc(alias = "PSVECDotProduct")]
     pub fn sdk_dot(self, b: Vec3) -> f32 {
         let yz = fp::ps_mul(load2(self.y, self.z), load2(b.y, b.z));
         let sum = fp::ps_madd(self.xy(), b.xy(), yz);
@@ -95,6 +102,7 @@ impl Vec3 {
     }
 
     /// The cross product, `PSVECCrossProduct`.
+    #[doc(alias = "PSVECCrossProduct")]
     pub fn sdk_cross(self, b: Vec3) -> Vec3 {
         let (bxy, az, axy, bz) = (b.xy(), splat(self.z), self.xy(), splat(b.z));
         let byx = fp::ps_merge10(bxy, bxy);
@@ -122,6 +130,7 @@ impl Vec3 {
     }
 
     /// The unit vector, `PSVECNormalize`.
+    #[doc(alias = "PSVECNormalize")]
     pub fn sdk_normalize(self) -> Vec3 {
         let (xy, z) = (self.xy(), self.z1());
         let sq = fp::ps_mul(xy, xy);
@@ -132,6 +141,7 @@ impl Vec3 {
     }
 
     /// The length, `PSVECMag`: zero for a zero vector.
+    #[doc(alias = "PSVECMag")]
     pub fn sdk_length(self) -> f32 {
         let sq = fp::ps_mul(self.xy(), self.xy());
         let z = splat(self.z);
@@ -166,6 +176,7 @@ impl Vec3 {
 
     /// Scales to unit length and returns the old length, `lbVector_Normalize`; a zero vector
     /// stays as it is and returns 0.
+    #[doc(alias = "lbVector_Normalize")]
     pub fn normalize(&mut self) -> f32 {
         let len = r(self.length());
         if len == 0.0 {
@@ -179,6 +190,7 @@ impl Vec3 {
     }
 
     /// The same in the XY plane, `lbVector_NormalizeXY`; z is left alone.
+    #[doc(alias = "lbVector_NormalizeXY")]
     pub fn normalize_xy(&mut self) -> f32 {
         let len = r(self.length_xy_accurate());
         if len == 0.0 {
@@ -197,6 +209,7 @@ impl Vec3 {
     }
 
     /// x and y summed, z kept, `lbVector_Add_xy`.
+    #[doc(alias = "lbVector_Add_xy")]
     pub fn add_xy(self, b: Vec3) -> Vec3 {
         Vec3::new(
             store(fp::fadds(r(self.x), r(b.x))),
@@ -206,6 +219,7 @@ impl Vec3 {
     }
 
     /// The normalized cross product, `lbVector_CrossprodNormalized`.
+    #[doc(alias = "lbVector_CrossprodNormalized")]
     pub fn cross_normalized(self, b: Vec3) -> Vec3 {
         let mut c = self.sdk_cross(b);
         c.normalize();
@@ -226,6 +240,7 @@ impl Vec3 {
     /// The angle between two vectors, `lbVector_Angle`: 0 when either is about zero.
     // A NaN length returns 0, as the original's branch does.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    #[doc(alias = "lbVector_Angle")]
     pub fn angle(self, b: Vec3) -> f32 {
         let lb = r(b.length());
         let lengths = fp::fmuls(r(self.length()), lb);
@@ -242,6 +257,7 @@ impl Vec3 {
     }
 
     /// The angle between two vectors in the XY plane, `lbVector_AngleXY`.
+    #[doc(alias = "lbVector_AngleXY")]
     pub fn angle_xy(self, b: Vec3) -> f32 {
         let lb = r(b.length_xy_accurate());
         let lengths = fp::fmuls(r(self.length_xy_accurate()), lb);
@@ -253,6 +269,7 @@ impl Vec3 {
     }
 
     /// The cosine of the angle in the XY plane, unclamped, `lbVector_CosAngle`.
+    #[doc(alias = "lbVector_CosAngle")]
     pub fn cos_angle_xy(self, b: Vec3) -> f32 {
         let len_xy = |v: Vec3| {
             let (x, y) = (r(v.x), r(v.y));
@@ -269,6 +286,7 @@ impl Vec3 {
 
     /// Reflects x and y across the line through the origin normal to `unit_axis`,
     /// `lbVector_Mirror`.
+    #[doc(alias = "lbVector_Mirror")]
     pub fn mirror_xy(&mut self, unit_axis: Vec3) {
         let (ux, uy) = (r(unit_axis.x), r(unit_axis.y));
         let dot = fp::fmadds(ux, r(self.x), fp::fmuls(uy, r(self.y)));
@@ -278,6 +296,7 @@ impl Vec3 {
     }
 
     /// `self + (b - self)·t`, `lbVector_Lerp`.
+    #[doc(alias = "lbVector_Lerp")]
     pub fn lerp(self, b: Vec3, t: f32) -> Vec3 {
         let d = b - self;
         let t = r(t);
@@ -291,6 +310,7 @@ impl Vec3 {
 
     /// The point on the line through `a` and `b` closest to `c`, and its distance from `c`,
     /// `lbVector_8000E838`. When `a` and `b` nearly coincide, the point is `a`.
+    #[doc(alias = "lbVector_8000E838")]
     pub fn closest_on_line(a: Vec3, b: Vec3, c: Vec3) -> (Vec3, f32) {
         let ba = b - a;
         let (bx, by, bz) = (r(ba.x), r(ba.y), r(ba.z));

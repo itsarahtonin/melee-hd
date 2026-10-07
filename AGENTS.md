@@ -36,4 +36,5 @@ Run appropriate checks and state what was tested. Disc-backed checks need `SSBM_
 
 - Build: `cargo build --locked --release`.
 - Check leaf functions against ssbm-rs: `SSBM_DISC=... cargo test --locked --release -p leaf-check`.
+- Regenerate the port ledger (`docs/port-ledger.md`): `cargo run --release -p ledger -- --check`. Mark a port with `#[doc(alias = "NAME")]` on its Rust item; list replaced and dead functions, and system-level checks, in `ledger/`.
 - Compare a recording with a replay: `target/release/melee-oracle compare ORIGINAL.slp OURS.slp` (`.exe` on Windows).

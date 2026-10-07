@@ -107,6 +107,8 @@ fn sin_poly(ysq: f64, last: fn(f64, f64, f64) -> f64) -> f64 {
 }
 
 /// `sinf`.
+#[doc(alias = "sinf")]
+#[doc(alias = "sin__Ff")]
 pub fn sin(x: f32) -> f32 {
     let (n, y) = reduce(x);
     let n = n << 1;
@@ -122,6 +124,8 @@ pub fn sin(x: f32) -> f32 {
 }
 
 /// `cosf`.
+#[doc(alias = "cosf")]
+#[doc(alias = "cos__Ff")]
 pub fn cos(x: f32) -> f32 {
     let (n, y) = reduce(x);
     let n = n << 1;
@@ -137,6 +141,7 @@ pub fn cos(x: f32) -> f32 {
 }
 
 /// `tanf`.
+#[doc(alias = "tanf")]
 pub fn tan(x: f32) -> f32 {
     mem(fp::fdivs(reg(sin(x)), reg(cos(x))))
 }
@@ -145,6 +150,7 @@ pub fn tan(x: f32) -> f32 {
 /// precision. Zero, negatives and NaN come back as they are.
 // NaN takes the original's branches, which the negated comparisons below spell out.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
+#[doc(alias = "sqrtf__Ff")]
 pub fn sqrt(x: f32) -> f32 {
     let xr = reg(x);
     if !(xr > 0.0) {
@@ -161,6 +167,7 @@ pub fn sqrt(x: f32) -> f32 {
 
 /// `lbVector_sqrtf_accurate`: the inline `sqrtf` with a fourth Newton step.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
+#[doc(alias = "lbVector_sqrtf_accurate")]
 pub fn sqrt_accurate(x: f32) -> f32 {
     let xr = reg(x);
     if !(xr > 0.0) {
@@ -177,6 +184,7 @@ pub fn sqrt_accurate(x: f32) -> f32 {
 
 /// `1 / sqrt(x)` in single precision, lbtrigf's static `lb_sqrtf`; a NaN for negatives and
 /// NaN, infinity for zero.
+#[doc(alias = "lb_sqrtf")]
 fn rsqrt(x: f64) -> f64 {
     if x > 0.0 {
         let mut g = fp::frsp(fp::frsqrte(x));
@@ -193,6 +201,7 @@ fn rsqrt(x: f64) -> f64 {
 
 /// `atanf`.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
+#[doc(alias = "atanf")]
 pub fn atan(x: f32) -> f32 {
     let negative = sign(x);
     let bits = x.to_bits() & 0x7FFF_FFFF;
@@ -239,6 +248,7 @@ pub fn atan(x: f32) -> f32 {
 }
 
 /// `atan2f`.
+#[doc(alias = "atan2f")]
 pub fn atan2(y: f32, x: f32) -> f32 {
     let (yr, xr) = (reg(y), reg(x));
     if sign(x) == sign(y) {
@@ -265,6 +275,7 @@ pub fn atan2(y: f32, x: f32) -> f32 {
 }
 
 /// `acosf`.
+#[doc(alias = "acosf")]
 pub fn acos(x: f32) -> f32 {
     let xr = reg(x);
     let r = rsqrt(fp::fnmsubs(xr, xr, 1.0));
@@ -272,6 +283,7 @@ pub fn acos(x: f32) -> f32 {
 }
 
 /// `asinf`.
+#[doc(alias = "asinf")]
 pub fn asin(x: f32) -> f32 {
     let xr = reg(x);
     atan(mem(fp::fmuls(xr, rsqrt(fp::fnmsubs(xr, xr, 1.0)))))

@@ -1,0 +1,3 @@
+# Functions melee-hd replaces with a native subsystem instead of porting.
+# One per line: NAME<TAB>reason
+__sinit_trigf_c	Static initializer; melee-sim's math tables are constants with its values.
