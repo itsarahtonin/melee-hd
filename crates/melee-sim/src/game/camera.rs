@@ -16,7 +16,7 @@ use gekko_fp as fp;
 use melee_data::archive::Archives;
 
 use super::gr::stage;
-use super::handles::{CameraBoxId, FighterId};
+use super::handles::{CameraBoxId, CodeRef, FighterId};
 use super::state::{Game, Obj, Running, UserData};
 use super::structs::{Camera, CameraDebugMode, CameraTransformState, CmSubject, StageInfo};
 use crate::fpu::{copy, mem, reg};
@@ -332,6 +332,61 @@ pub fn init(state: &mut CameraState, n: i32) {
     b.free = (n > 0).then_some(CameraBoxId(0));
     b.first = None;
     b.last = None;
+}
+
+/// The camera's render callback (`fn_800301D0`), which the display pass runs.
+pub const RENDER: u32 = 0x8003_01D0;
+
+/// A CObj from the camera descriptor (`cm_803BCB64`, static data in the executable), as
+/// `lb_80013B14` loads one: `HSD_CObjLoadDesc`'s steps, then its aspect and scissor fixes,
+/// which this descriptor doesn't need.
+fn desc_cobj(objs: &mut crate::hsd::Objects) -> CObjId {
+    let c = cobj::alloc(objs);
+    let o = &mut objs.cobjs[c];
+    // The descriptor's flags (0), which also clear the dirty bits `CObjInit` set.
+    o.flags = 0;
+    let px = |v: i32| mem(fp::frsp(f64::from(v)));
+    o.viewport = [
+        px(0),
+        px(DESC_VIEWPORT_WIDTH),
+        px(0),
+        px(DESC_VIEWPORT_HEIGHT),
+    ];
+    o.scissor = [
+        0,
+        DESC_VIEWPORT_WIDTH as u16,
+        0,
+        DESC_VIEWPORT_HEIGHT as u16,
+    ];
+    let (eye, interest) = (o.eyepos, o.interest);
+    crate::hsd::wobj::set_position(&mut objs.wobjs, eye, DESC_EYE);
+    crate::hsd::wobj::set_position(&mut objs.wobjs, interest, DESC_INTEREST);
+    cobj::set_near(&mut objs.cobjs, Some(c), 0.1);
+    cobj::set_far(&mut objs.cobjs, Some(c), 16384.0);
+    // The descriptor keeps a roll of 0, not an up vector.
+    let o = &mut objs.cobjs[c];
+    if reg(o.up.x) != 0.0 {
+        o.flags |= cobj::VIEW_DIRTY | cobj::INV_VIEW_DIRTY;
+    }
+    o.up.x = 0.0;
+    cobj::set_perspective(&mut objs.cobjs, Some(c), DESC_FOV, DESC_ASPECT);
+    let s = cobj::scissor(&objs.cobjs, Some(c)).expect("a CObj");
+    cobj::set_scissor(&mut objs.cobjs, Some(c), s);
+    c
+}
+
+/// Creates the camera's GObj with its CObj, the second CObj, its render callback and its
+/// process, `Camera_Create`.
+#[doc(alias = "Camera_Create")]
+pub fn create(game: &mut Game) {
+    let g = game.world.create(0x10, 0x12, 0);
+    game.camera.cam.gobj = Some(g);
+    let c = desc_cobj(&mut game.objs);
+    game.camera.cobj_copy = Some(desc_cobj(&mut game.objs));
+    game.world
+        .set_obj(g, super::state::OBJ_CAMERA, Obj::CObj(c));
+    game.world.setup_gx_link_max(g, CodeRef(RENDER), 2, false);
+    game.world.setup_proc(g, CodeRef(PROC), 0x12);
 }
 
 /// Puts a camera box back to its starting state with `state`, `Camera_80028F5C`.
@@ -1178,12 +1233,12 @@ pub fn proc(r: &mut Running, _gobj: GObjId) {
 pub fn update(r: &mut Running) {
     match r.game.camera.cam.mode {
         STANDARD => update_standard(r),
-        PAUSE => unported("the pause camera (Camera_8002CDDC)"),
-        TRAINING_MENU => unported("the training menu camera (Camera_8002D318)"),
-        CLEAR => unported("the stage clear camera (Camera_8002D85C)"),
-        FIXED => unported("the fixed camera (Camera_8002DDC4)"),
-        FREE => unported("the free camera (Camera_8002C908)"),
-        BOSS_INTRO => unported("the cutscene camera (Camera_8002E490)"),
+        PAUSE => update_pause(r),
+        TRAINING_MENU => update_training(r),
+        CLEAR => update_clear(r),
+        FIXED => update_fixed(r),
+        FREE => update_free(r),
+        BOSS_INTRO => update_script(r),
         DEBUG_FOLLOW | DEBUG_FREE => {}
         m => panic!("camera mode {m} reads past the mode table"),
     }
@@ -1775,4 +1830,1333 @@ pub fn debug_free(game: &mut Game, data: &Archives) {
 #[doc(alias = "Camera_8003019C")]
 pub fn debug_followed(game: &Game) -> CameraBoxId {
     player_box(game, game.camera.debug.ply_slot).expect("the followed player's camera box")
+}
+
+// The pause and free cameras: an eye orbiting a player (or the stage's camera offset, slot
+// 10) that a controller turns, moves and zooms.
+
+/// A controller as the pause and free cameras read it (`CameraInputs`).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Inputs {
+    pub stick_x: f32,
+    pub stick_y: f32,
+    pub substick_x: f32,
+    pub substick_y: f32,
+    pub pressed: u64,
+    pub triggered: u64,
+}
+
+/// `PAD_TRIGGER_R`, `PAD_TRIGGER_L` and the buttons the cameras read.
+const PAD_LEFT: u64 = 1 << 0;
+const PAD_RIGHT: u64 = 1 << 1;
+const PAD_DOWN: u64 = 1 << 2;
+const PAD_UP: u64 = 1 << 3;
+const PAD_R: u64 = 1 << 5;
+const PAD_L: u64 = 1 << 6;
+const PAD_A: u64 = 1 << 8;
+const PAD_X: u64 = 1 << 10;
+const PAD_Y: u64 = 1 << 11;
+
+/// The slot meaning "the stage" rather than a player, and the one meaning "nothing".
+const SLOT_STAGE: i32 = 10;
+const SLOT_NONE: i32 = 11;
+
+/// A controller's sticks and buttons: port `slot` (0 to 3), every port merged (4, each stick
+/// from the first port pushing it past 0.85), or none (5), `Camera_8002B694`.
+#[doc(alias = "Camera_8002B694")]
+pub fn read_inputs(game: &Game, slot: i32) -> Inputs {
+    if slot == 5 {
+        return Inputs::default();
+    }
+    let map = &game.controller_map.x0;
+    if slot == 4 {
+        let pushed = |x: f32| {
+            let mut x = reg(x);
+            if x < 0.0 {
+                x = fp::fneg(x);
+            }
+            x > f64::from(0.85_f32)
+        };
+        let first = |pick: fn(&crate::input::controller::Status) -> (f32, f32)| {
+            let mut v = (0.0, 0.0);
+            for p in &game.pad_copy {
+                v = pick(p);
+                if pushed(v.0) || pushed(v.1) {
+                    return v;
+                }
+            }
+            let _ = v;
+            (0.0, 0.0)
+        };
+        let (stick_x, stick_y) = first(|p| (p.nml_stick_x, p.nml_stick_y));
+        let (substick_x, substick_y) = first(|p| (p.nml_sub_stick_x, p.nml_sub_stick_y));
+        return Inputs {
+            stick_x,
+            stick_y,
+            substick_x,
+            substick_y,
+            pressed: map[4].button,
+            triggered: map[4].trigger,
+        };
+    }
+    let i = slot as u8 as usize;
+    let p = &game.pad_copy[i];
+    Inputs {
+        stick_x: p.nml_stick_x,
+        stick_y: p.nml_stick_y,
+        substick_x: p.nml_sub_stick_x,
+        substick_y: p.nml_sub_stick_y,
+        pressed: map[i].button,
+        triggered: map[i].trigger,
+    }
+}
+
+/// The next slot with a player from `slot` in direction `dir`, through slot 10 (the stage)
+/// between the last and the first, `Camera_8002BA00`.
+#[doc(alias = "Camera_8002BA00")]
+pub fn next_slot(game: &Game, mut slot: i32, dir: i32) -> i32 {
+    loop {
+        if slot == SLOT_STAGE {
+            if dir > 0 {
+                slot = 0;
+            } else if dir < 0 {
+                slot = 5;
+            }
+        } else {
+            slot = slot.wrapping_add(dir);
+            if !(0..=5).contains(&slot) {
+                slot = SLOT_STAGE;
+            }
+        }
+        if slot == SLOT_STAGE || player_entity(game, slot).is_some() {
+            return slot;
+        }
+    }
+}
+
+/// Where the pause or free camera looks for a slot: the player's camera bone or the stage's
+/// camera offset; `None` for nothing to look at (`get_subject_pos`).
+fn slot_target(game: &Game, slot: i32) -> Option<Vec3> {
+    match slot {
+        SLOT_NONE => None,
+        SLOT_STAGE => Some(cam_offset(&game.stage_info)),
+        _ => player_box(game, slot).map(|b| game.camera.boxes[b].bone_pos),
+    }
+}
+
+/// Whether a slot's fighter is asleep (`ftLib_IsSleeping`).
+fn slot_asleep(game: &Game, slot: i32) -> bool {
+    match player_entity(game, slot) {
+        Some(g) => game.fighters[fighter_of(game, g).0].is_sleeping,
+        None => true,
+    }
+}
+
+/// `sqrtf(z² + (x² + y²))` with the inline square root, nothing fused (`vec_len`).
+fn inline_length(v: Vec3) -> f64 {
+    let (x, y, z) = (reg(v.x), reg(v.y), reg(v.z));
+    let sq = fp::fadds(fp::fmuls(z, z), fp::fadds(fp::fmuls(x, x), fp::fmuls(y, y)));
+    math::sqrt_reg(sq)
+}
+
+/// Every component times -1.
+fn negated(v: Vec3) -> Vec3 {
+    let m = fp::fneg(1.0);
+    Vec3::new(
+        mem(fp::fmuls(reg(v.x), m)),
+        mem(fp::fmuls(reg(v.y), m)),
+        mem(fp::fmuls(reg(v.z), m)),
+    )
+}
+
+/// Every component times `s`.
+fn scaled(v: Vec3, s: f64) -> Vec3 {
+    Vec3::new(
+        mem(fp::fmuls(reg(v.x), s)),
+        mem(fp::fmuls(reg(v.y), s)),
+        mem(fp::fmuls(reg(v.z), s)),
+    )
+}
+
+/// Zooms the orbiting eye by `amount` steps, faster further out, within the camera's zoom
+/// limits, `Camera_8002BAA8`.
+#[doc(alias = "Camera_8002BAA8")]
+pub fn orbit_zoom(c: &mut Camera, amount: f64) {
+    let mut offset = negated(c.pause_eye_offset);
+    let len = inline_length(offset);
+    if len < 1.0 {
+        offset = Vec3::new(0.0, 0.0, 1.0);
+        c.pause_eye_distance = 10.0;
+    }
+    c.pause_eye_distance = mem(fp::fmadds(
+        amount,
+        fp::fmadds(len, param(0x9C), param(0xA0)),
+        reg(c.pause_eye_distance),
+    ));
+    if reg(c.pause_eye_distance) < reg(c.x2D0.unk28) {
+        c.pause_eye_distance = c.x2D0.unk28;
+    } else if reg(c.pause_eye_distance) > reg(c.x2D0.unk2C) {
+        c.pause_eye_distance = c.x2D0.unk2C;
+    }
+    let dist = reg(c.pause_eye_distance);
+    offset.normalize();
+    c.pause_eye_offset = negated(scaled(offset, dist));
+}
+
+/// `up × forward` and `forward × right`, normalized (`OrthonormalizeBasis`).
+fn orthonormalize(forward: Vec3, up: &mut Vec3, right: &mut Vec3) {
+    *right = up.sdk_cross(forward);
+    right.normalize();
+    *up = forward.sdk_cross(*right);
+    up.normalize();
+}
+
+/// Snaps a nearly vertical forward vector to vertical, taking the last up vector, and builds
+/// the basis around it, `Camera_8002BC78`: 1 looking up, -1 down, 0 otherwise.
+#[doc(alias = "Camera_8002BC78")]
+pub fn orbit_basis(c: &Camera, forward: &mut Vec3, up: &mut Vec3, right: &mut Vec3) -> i32 {
+    let mut clamp = 0;
+    let lim = f64::from(0.999_f32);
+    if reg(forward.y) > lim {
+        clamp = 1;
+        *forward = Vec3::new(0.0, 1.0, 0.0);
+        *up = c.pause_up;
+    } else if reg(forward.y) < fp::fneg(lim) {
+        clamp = -1;
+        *forward = Vec3::new(0.0, -1.0, 0.0);
+        *up = c.pause_up;
+    }
+    orthonormalize(*forward, up, right);
+    clamp
+}
+
+/// Turns the orbiting eye around its target by the stick, `Camera_8002BD88`.
+#[doc(alias = "Camera_8002BD88")]
+pub fn orbit_rotate(c: &mut Camera, mut x: f64, mut y: f64) {
+    let mut up = Vec3::new(0.0, 1.0, 0.0);
+    let mut pos = c.pause_eye_offset;
+    let mut forward = negated(pos);
+    let view = reg(forward.normalize());
+    if view < 1.0 {
+        forward = Vec3::new(0.0, 0.0, 1.0);
+        c.pause_eye_distance = 10.0;
+    }
+    let mut right = Vec3::ZERO;
+    let clamp = orbit_basis(c, &mut forward, &mut up, &mut right);
+    if clamp == 1 {
+        if y < 0.0 {
+            y = 0.0;
+        }
+        x = 0.0;
+    } else if clamp == -1 {
+        if y > 0.0 {
+            y = 0.0;
+        }
+        x = 0.0;
+    }
+    orthonormalize(forward, &mut up, &mut right);
+    c.pause_up = up;
+    if y != 0.0 {
+        let s = fp::fmuls(y, fp::fmadds(view, param(0xBC), param(0xC0)));
+        pos = pos + scaled(up, s);
+    }
+    if x != 0.0 {
+        let s = fp::fmuls(x, fp::fmadds(view, param(0xBC), param(0xC0)));
+        pos = pos + scaled(right, fp::fneg(s));
+    }
+    let dist = reg(c.pause_eye_distance);
+    pos.normalize();
+    c.pause_eye_offset = scaled(pos, dist);
+}
+
+/// Moves the orbit's target in the view plane by the stick (`x314`), `Camera_8002C010`.
+#[doc(alias = "Camera_8002C010")]
+pub fn orbit_pan(c: &mut Camera, x: f64, y: f64) {
+    let mut up = Vec3::new(0.0, 1.0, 0.0);
+    let mut forward = negated(c.pause_eye_offset);
+    let mut dist = reg(forward.normalize());
+    if dist < 1.0 {
+        dist = 1.0;
+        forward = Vec3::new(0.0, 0.0, 1.0);
+        c.pause_eye_distance = 1.0;
+    }
+    let mut right = Vec3::ZERO;
+    orbit_basis(c, &mut forward, &mut up, &mut right);
+    if y != 0.0 {
+        let s = fp::fmuls(y, fp::fmadds(dist, param(0xB4), param(0xB8)));
+        c.x314 = c.x314 + scaled(up, s);
+    }
+    if x != 0.0 {
+        let s = fp::fmuls(x, fp::fmadds(dist, param(0xB4), param(0xB8)));
+        c.x314 = c.x314 + scaled(right, fp::fneg(s));
+    }
+}
+
+/// The free camera's bounds callback (`fn_8002F908` and its twin `fn_8002FBA0`): the stage's
+/// camera bounds scaled about their center, into `x2D0`'s y_max, y_min, x_min and x_max.
+#[doc(alias = "fn_8002F908")]
+#[doc(alias = "fn_8002FBA0")]
+pub fn free_bounds(s: &StageInfo) -> [f32; 4] {
+    let center_h = fp::fmuls(0.5, fp::fadds(cam_right(s), cam_left(s)));
+    let half_w = fp::fmuls(
+        param(0xAC),
+        fp::fmuls(0.5, fp::fsubs(cam_right(s), cam_left(s))),
+    );
+    let center_v = fp::fmuls(0.5, fp::fadds(cam_top(s), cam_bottom(s)));
+    let half_h = fp::fmuls(
+        param(0xB0),
+        fp::fmuls(0.5, fp::fsubs(cam_top(s), cam_bottom(s))),
+    );
+    [
+        mem(fp::fadds(center_v, half_h)),
+        mem(fp::fsubs(center_v, half_h)),
+        mem(fp::fsubs(center_h, half_w)),
+        mem(fp::fadds(center_h, half_w)),
+    ]
+}
+
+/// Clamps a value to [min, max] as the orbit's limits do: above the maximum first.
+fn clamp_to(v: &mut f32, max: f32, min: f32) {
+    if reg(*v) > reg(max) {
+        *v = max;
+    } else if reg(*v) < reg(min) {
+        *v = min;
+    }
+}
+
+/// Keeps the orbit within its limits (`x2D0`): its bounds callback refreshes them, the target
+/// and the target plus its offset stay within the box, and the eye within the stage's camera
+/// angles, `Camera_8002C5B4`.
+#[doc(alias = "Camera_8002C5B4")]
+pub fn orbit_limit(game: &mut Game) {
+    let s = &game.stage_info;
+    let c = &mut game.camera.cam;
+    if let Some(cb) = c.x2D0.callback {
+        // The callback gets x2D0 itself, so what it writes lands on y_max, y_min, x_min, x_max.
+        let [y_max, y_min, x_min, x_max] = match cb.0 {
+            SET_BOUNDS => stage_bounds(s),
+            FREE_BOUNDS | FREE_BOUNDS_2 => free_bounds(s),
+            other => unported(&format!("camera bounds callback {other:#010x}")),
+        };
+        (c.x2D0.y_max, c.x2D0.y_min, c.x2D0.x_min, c.x2D0.x_max) = (y_max, y_min, x_min, x_max);
+    }
+    let l = c.x2D0.clone();
+    clamp_to(&mut c.x308.x, l.x_max, l.x_min);
+    clamp_to(&mut c.x308.y, l.y_max, l.y_min);
+    clamp_to(&mut c.x308.z, l.z_max, l.z_min);
+    let mut t = c.x314 + c.x308;
+    clamp_to(&mut t.x, l.x_max, l.x_min);
+    clamp_to(&mut t.y, l.y_max, l.y_min);
+    clamp_to(&mut t.z, l.z_max, l.z_min);
+    c.x314 = t - c.x308;
+    let e = c.pause_eye_offset;
+    let xz = reg(mem(math::sqrt_reg(fp::fadds(
+        fp::fmuls(reg(e.x), reg(e.x)),
+        fp::fmuls(reg(e.z), reg(e.z)),
+    ))));
+    let mut side = e.sdk_cross(c.pause_up);
+    side.normalize();
+    let mut up = side.sdk_cross(e);
+    up.normalize();
+    let pitch = reg(math::atan2(e.y, mem(xz)));
+    if pitch > reg(l.angle_down) {
+        c.pause_eye_offset
+            .rotate_about(side, mem(fp::fsubs(reg(l.angle_down), pitch)));
+    } else if pitch < fp::fneg(reg(l.angle_up)) {
+        let a = fp::fsubs(fp::fneg(reg(l.angle_up)), pitch);
+        c.pause_eye_offset.rotate_about(side, mem(a));
+    }
+    let e = c.pause_eye_offset;
+    let yaw = reg(math::atan2(e.x, e.z));
+    if yaw > reg(l.angle_right) {
+        c.pause_eye_offset
+            .rotate_about(up, mem(fp::fsubs(reg(l.angle_right), yaw)));
+    } else if yaw < fp::fneg(reg(l.angle_left)) {
+        let a = fp::fsubs(fp::fneg(reg(l.angle_left)), yaw);
+        c.pause_eye_offset.rotate_about(up, mem(a));
+    }
+}
+
+/// Aims the orbit (its target `x308` plus `x314`, the eye at `pause_eye_offset` from it) and
+/// eases the transform toward it (`track_subject`).
+fn track_orbit(c: &mut Camera) {
+    let t = &mut c.transform;
+    t.target_interest = c.x308;
+    t.target_interest = t.target_interest + c.x314;
+    t.target_position = t.target_interest;
+    t.target_position = t.target_position + c.pause_eye_offset;
+    let k = param(0x84);
+    let eye = scaled(t.target_position - t.position, k);
+    t.position = t.position + eye;
+    let interest = scaled(t.target_interest - t.interest, k);
+    t.interest = t.interest + interest;
+}
+
+/// Points the orbit's eye back at its default offset, at `distance` (three times that for the
+/// stage), and zooms it into its limits.
+fn reset_orbit(c: &mut Camera, slot: i32, distance: f64) {
+    c.x314 = Vec3::ZERO;
+    c.pause_eye_offset = Vec3::new(0.0, 5.0, 20.0);
+    c.pause_up = Vec3::new(0.0, 1.0, 0.0);
+    c.pause_eye_distance = if slot == SLOT_STAGE {
+        mem(fp::fmuls(3.0, distance))
+    } else {
+        mem(distance)
+    };
+}
+
+/// The targets straight at the orbit's target and eye.
+fn aim_orbit(c: &mut Camera) {
+    let t = &mut c.transform;
+    t.target_interest = c.x308;
+    t.target_interest = t.target_interest + c.x314;
+    t.target_position = t.target_interest;
+    t.target_position = t.target_position + c.pause_eye_offset;
+}
+
+/// Steps the pause camera's slot (`x2C4`) in direction `dir` until it holds an awake player
+/// to look at, the target into `x308`.
+fn seek_pause_target(game: &mut Game, dir: i32) {
+    loop {
+        let s = i32::from(game.camera.cam.x2C4);
+        if s != SLOT_STAGE
+            && let Some(p) = slot_target(game, s)
+        {
+            game.camera.cam.x308 = p;
+            if player_entity(game, s).is_some() && !slot_asleep(game, s) {
+                return;
+            }
+        }
+        game.camera.cam.x2C4 = next_slot(game, s, dir) as i8;
+    }
+}
+
+/// The pausing player's controller drives the pause camera: L and R switch players, X and Y
+/// zoom, the stick turns, `Camera_8002CB0C`.
+#[doc(alias = "Camera_8002CB0C")]
+pub fn pause_input(game: &mut Game) {
+    let pauser = i32::from(game.camera.cam.x2C5);
+    if pauser == 5 {
+        return;
+    }
+    let inputs = read_inputs(game, pauser);
+    let (mut zoom, mut x, mut y) = (0.0, 0.0, 0.0);
+    let mut dir = 0;
+    if inputs.triggered & PAD_R != 0 {
+        dir = 1;
+    } else if inputs.triggered & PAD_L != 0 {
+        dir = -1;
+    }
+    if inputs.pressed & PAD_X != 0 {
+        zoom = 1.0;
+    } else if inputs.pressed & PAD_Y != 0 {
+        zoom = fp::fneg(1.0);
+    }
+    let (sx, sy) = (reg(inputs.stick_x), reg(inputs.stick_y));
+    if abs(sx) > 0.125 {
+        x = sx;
+    }
+    if abs(sy) > 0.125 {
+        y = sy;
+    }
+    if dir != 0 {
+        game.camera.cam.x2C4 = next_slot(game, i32::from(game.camera.cam.x2C4), dir) as i8;
+        seek_pause_target(game, dir);
+        let slot = game.camera.cam.x2C4;
+        let init = reg(game.stage_info.cam_info.pausecam_zpos_init);
+        let c = &mut game.camera.cam;
+        reset_orbit(c, i32::from(slot), init);
+        orbit_zoom(c, 0.0);
+    }
+    let c = &mut game.camera.cam;
+    if zoom != 0.0 {
+        orbit_zoom(c, zoom);
+    }
+    if !(x == 0.0 && y == 0.0) {
+        orbit_rotate(c, x, y);
+    }
+}
+
+/// |x| as the camera's inline takes it: negated when below zero.
+fn abs(x: f64) -> f64 {
+    if x < 0.0 { fp::fneg(x) } else { x }
+}
+
+/// The pause camera's frame, `Camera_8002CDDC`: orbit the paused player while they stand
+/// framed inside the camera bounds near the stage plane, or frame as the standard camera.
+#[doc(alias = "Camera_8002CDDC")]
+pub fn update_pause(r: &mut Running) {
+    let game = &mut *r.game;
+    clear_translation(&mut game.camera.cam);
+    ease_extents(&mut game.camera.boxes, &game.stage_info);
+    let t = game.camera.cam.transform.clone();
+    track_bounds(&mut game.camera.boxes, &game.stage_info, &t);
+    if i32::from(game.camera.cam.x2C4) != SLOT_NONE {
+        seek_pause_target(game, 1);
+    }
+    pause_input(game);
+    let s = i32::from(game.camera.cam.x2C4);
+    let followed = (s != SLOT_STAGE && s != SLOT_NONE)
+        .then(|| player_box(game, s))
+        .flatten()
+        .filter(|&b| {
+            is_framed(&game.stage_info, &mut game.camera.boxes[b])
+                && game.camera.boxes[b].state == ACTIVE
+                && outside_bounds(&game.stage_info, game.camera.boxes[b].bone_pos, 0) == 0
+                && abs(reg(game.camera.boxes[b].bone_pos.z)) < reg(30.0)
+        });
+    if followed.is_some() {
+        orbit_limit(game);
+        let c = &mut game.camera.cam;
+        track_orbit(c);
+        ease_fov(&mut c.transform, param(0x6C), param(0x70));
+        return;
+    }
+    update_standard(r);
+}
+
+/// Eases the field of view toward `target`, which becomes the target.
+fn ease_fov(t: &mut CameraTransformState, target: f64, rate: f64) {
+    t.target_fov = mem(target);
+    let (target, cur) = (reg(t.target_fov), reg(t.fov));
+    t.fov = mem(fp::fmadds(fp::fsubs(target, cur), rate, cur));
+}
+
+/// Switches to the pause camera orbiting `slot` (or the stage, 10, or nothing, 11) for the
+/// controller of `pauser` (0 to 3, 4 for all, 5 for none), starting at the stage's pause
+/// distance (`zoom_preset` 0) or its nearest (1), `Camera_SetUpPauseCamera`.
+#[doc(alias = "Camera_SetUpPauseCamera")]
+pub fn set_up_pause(game: &mut Game, mut slot: i8, mut pauser: i8, zoom_preset: i32) {
+    if !(0..6).contains(&slot) && (slot.wrapping_sub(10) as u8) > 1 {
+        slot = 0;
+    }
+    if !(0..4).contains(&pauser) && (pauser.wrapping_sub(4) as u8) > 1 {
+        pauser = 4;
+    }
+    let s = &game.stage_info;
+    let c = &mut game.camera.cam;
+    c.mode = PAUSE;
+    c.x2C4 = slot;
+    c.x2C5 = pauser;
+    c.x2D0.x_min = mem(cam_left(s));
+    c.x2D0.x_max = mem(cam_right(s));
+    c.x2D0.y_max = mem(cam_top(s));
+    c.x2D0.y_min = mem(cam_bottom(s));
+    c.x2D0.z_max = 2000.0;
+    c.x2D0.z_min = -2000.0;
+    let angles = stage::cam_angles_of(s).map(reg);
+    let ci = &s.cam_info;
+    c.x2D0.angle_up = mem(angles[0]);
+    c.x2D0.angle_down = mem(angles[1]);
+    c.x2D0.angle_right = mem(angles[3]);
+    c.x2D0.angle_left = mem(angles[2]);
+    c.x2D0.unk28 = copy(ci.pausecam_zpos_min);
+    c.x2D0.unk2C = copy(ci.pausecam_zpos_max);
+    c.x2D0.callback = Some(CodeRef(SET_BOUNDS));
+    let distance = match zoom_preset {
+        0 => reg(ci.pausecam_zpos_init),
+        1 => reg(c.x2D0.unk28),
+        _ => panic!("camera.c:3807: a pause zoom preset of {zoom_preset}"),
+    };
+    reset_orbit(c, i32::from(c.x2C4), distance);
+    orbit_zoom(c, 0.0);
+    orbit_rotate(c, 0.0, 0.0);
+    orbit_pan(c, 0.0, 0.0);
+    aim_orbit(c);
+}
+
+/// `Camera_SetUpPauseCameraWithDefaultZoom` and `Camera_8002F760` (the nearest zoom).
+#[doc(alias = "Camera_SetUpPauseCameraWithDefaultZoom")]
+#[doc(alias = "Camera_8002F760")]
+pub fn set_up_pause_zoomed(game: &mut Game, slot: i8, pauser: i8, nearest: bool) {
+    set_up_pause(game, slot, pauser, i32::from(nearest));
+}
+
+/// The free camera's controller: L and R switch players, the D-pad or A with the stick moves,
+/// X, Y and the stick zoom, the C-stick turns, `Camera_8002C1A8`.
+#[doc(alias = "Camera_8002C1A8")]
+pub fn free_input(game: &mut Game) {
+    let port = i32::from(game.camera.cam.x305);
+    if port == 5 {
+        return;
+    }
+    let inputs = read_inputs(game, port);
+    let (mut zoom, mut x, mut y, mut cx, mut cy) = (0.0, 0.0, 0.0, 0.0, 0.0);
+    let (sx, mut sy) = (reg(inputs.stick_x), reg(inputs.stick_y));
+    let (csx, csy) = (reg(inputs.substick_x), reg(inputs.substick_y));
+    let mut dir = 0;
+    let (t, p) = (inputs.triggered, inputs.pressed);
+    if t & PAD_R != 0 {
+        dir = 1;
+    } else if t & PAD_L != 0 {
+        dir = -1;
+    }
+    if p & PAD_UP != 0 {
+        y = 1.0;
+    } else if p & PAD_DOWN != 0 {
+        y = fp::fneg(1.0);
+    }
+    if p & PAD_LEFT != 0 {
+        x = fp::fneg(1.0);
+    } else if p & PAD_RIGHT != 0 {
+        x = 1.0;
+    }
+    if p & PAD_X != 0 {
+        zoom = 1.0;
+    } else if p & PAD_Y != 0 {
+        zoom = fp::fneg(1.0);
+    }
+    if p & PAD_A != 0 {
+        if abs(sx) > 0.125 {
+            x = sx;
+        }
+        if abs(sy) > 0.125 {
+            y = sy;
+        }
+        sy = 0.0;
+    }
+    if abs(sy) > 0.125 {
+        zoom = fp::fneg(sy);
+    }
+    if abs(csx) > 0.125 {
+        cx = csx;
+    }
+    if abs(csy) > 0.125 {
+        cy = csy;
+    }
+    if dir != 0 {
+        let c = &game.camera.cam;
+        let scale = fp::fmadds(reg(c.x32C), param(0x8C), param(0x90));
+        let slot = next_slot(game, i32::from(c.x304), dir) as i8;
+        let c = &mut game.camera.cam;
+        c.x304 = slot;
+        reset_orbit(c, i32::from(slot), scale);
+        orbit_zoom(c, 0.0);
+    }
+    let c = &mut game.camera.cam;
+    if zoom != 0.0 {
+        orbit_zoom(c, zoom);
+    }
+    if x != 0.0 || y != 0.0 {
+        if i32::from(c.x304) == SLOT_STAGE {
+            if reg(c.pause_eye_offset.length()) < 1.0 {
+                c.pause_eye_distance = 1.0;
+            }
+            if y != 0.0 {
+                c.x314.y = mem(fp::fadds(reg(c.x314.y), y));
+            }
+            if x != 0.0 {
+                c.x314.x = mem(fp::fadds(reg(c.x314.x), x));
+            }
+        } else {
+            orbit_pan(c, x, y);
+        }
+    }
+    if cx != 0.0 || cy != 0.0 {
+        orbit_rotate(c, cx, cy);
+    }
+}
+
+/// The free camera's frame, `Camera_8002C908`.
+#[doc(alias = "Camera_8002C908")]
+pub fn update_free(r: &mut Running) {
+    let game = &mut *r.game;
+    clear_translation(&mut game.camera.cam);
+    ease_extents(&mut game.camera.boxes, &game.stage_info);
+    let t = game.camera.cam.transform.clone();
+    let b = track_bounds(&mut game.camera.boxes, &game.stage_info, &t);
+    free_input(game);
+    loop {
+        let s = i32::from(game.camera.cam.x304);
+        if let Some(p) = slot_target(game, s) {
+            game.camera.cam.x308 = p;
+            break;
+        }
+        game.camera.cam.x304 = next_slot(game, s, 1) as i8;
+    }
+    orbit_limit(game);
+    let c = &mut game.camera.cam;
+    track_orbit(c);
+    ease_fov(&mut c.transform, reg(c.x32C), param(0x88));
+    update_quakes(r);
+    apply_quake(r.game, &b, Which::Main);
+}
+
+/// Switches to the free camera on the first player from `slot` for controller `port`,
+/// `Camera_8002F9E4`.
+#[doc(alias = "Camera_8002F9E4")]
+pub fn set_up_free(game: &mut Game, slot: i8, port: i8) {
+    set_up_free_with(game, slot, port, FREE_BOUNDS);
+}
+
+/// The same with the bounds callback's twin, `Camera_8002FC7C`.
+#[doc(alias = "Camera_8002FC7C")]
+pub fn set_up_free_2(game: &mut Game, slot: i8, port: i8) {
+    set_up_free_with(game, slot, port, FREE_BOUNDS_2);
+}
+
+fn set_up_free_with(game: &mut Game, slot: i8, port: i8, bounds: u32) {
+    game.camera.cam.mode = FREE;
+    let first = next_slot(game, i32::from(slot) - 1, 1) as i8;
+    let fov = game.camera.fov;
+    let s = &game.stage_info;
+    let c = &mut game.camera.cam;
+    c.x304 = first;
+    c.x305 = port;
+    c.x32C = copy(fov);
+    c.x2D0.x_min = mem(cam_left(s));
+    c.x2D0.x_max = mem(cam_right(s));
+    c.x2D0.y_max = mem(cam_top(s));
+    c.x2D0.y_min = mem(cam_bottom(s));
+    c.x2D0.z_max = mem(param(0xA8));
+    c.x2D0.z_min = mem(param(0xA4));
+    let angles = stage::cam_angles_of(s).map(reg);
+    c.x2D0.angle_up = mem(angles[0]);
+    c.x2D0.angle_down = mem(angles[1]);
+    c.x2D0.angle_right = mem(angles[3]);
+    c.x2D0.angle_left = mem(angles[2]);
+    let scale = fp::fmadds(reg(c.x32C), param(0x8C), param(0x90));
+    c.x2D0.unk28 = mem(fp::fmuls(scale, param(0x94)));
+    c.x2D0.unk2C = mem(fp::fmuls(scale, param(0x98)));
+    c.x2D0.callback = Some(CodeRef(bounds));
+    reset_orbit(c, i32::from(c.x304), scale);
+    orbit_zoom(c, 0.0);
+    orbit_rotate(c, 0.0, 0.0);
+    orbit_pan(c, 0.0, 0.0);
+    aim_orbit(c);
+}
+
+// The training menu and stage clear cameras: an eye at a set pitch and yaw around a player.
+
+/// Eases a vector toward its target by `rate`, each component `v + (target - v)·rate`.
+fn ease_toward(v: &mut Vec3, target: Vec3, rate: f64) {
+    let d = [
+        fp::fsubs(reg(target.x), reg(v.x)),
+        fp::fsubs(reg(target.y), reg(v.y)),
+        fp::fsubs(reg(target.z), reg(v.z)),
+    ];
+    v.x = mem(fp::fmadds(d[0], rate, reg(v.x)));
+    v.y = mem(fp::fmadds(d[1], rate, reg(v.y)));
+    v.z = mem(fp::fmadds(d[2], rate, reg(v.z)));
+}
+
+/// How far back the eye sits to fit a player's box at the target field of view, or 1000 for
+/// the stage or no one (`compute_orbit_distance`).
+fn orbit_distance(game: &Game, slot: i32) -> f64 {
+    let b = (slot != SLOT_STAGE && slot != SLOT_NONE && (0..6).contains(&slot))
+        .then(|| player_box(game, slot))
+        .flatten();
+    match b {
+        Some(b) => {
+            let fov = game.camera.cam.transform.target_fov;
+            let tan = reg(math::tan(mem(fp::fmuls(reg(DEG_TO_RAD), reg(fov)))));
+            fp::fdivs(fp::fmuls(2.0, reg(game.camera.boxes[b].ext.v.z)), tan)
+        }
+        None => reg(1000.0),
+    }
+}
+
+/// The eye at the camera's pitch and yaw from the target interest, at `distance`, eased.
+fn orbit_eye(c: &mut Camera, distance: f64) {
+    let horizontal = fp::fmuls(distance, reg(math::cos(c.pitch_offset)));
+    let t = &mut c.transform;
+    t.target_position.x = mem(fp::fmadds(
+        horizontal,
+        reg(math::sin(c.yaw_offset)),
+        reg(t.target_interest.x),
+    ));
+    t.target_position.y = mem(fp::fmadds(
+        distance,
+        reg(math::sin(c.pitch_offset)),
+        reg(t.target_interest.y),
+    ));
+    t.target_position.z = mem(fp::fmadds(
+        horizontal,
+        reg(math::cos(c.yaw_offset)),
+        reg(t.target_interest.z),
+    ));
+    let target = t.target_position;
+    ease_toward(&mut t.position, target, param(0x68));
+}
+
+/// The training menu camera's frame, `Camera_8002D318`: an eye at the camera's pitch and yaw
+/// around the player, looking a little to the side of them, while they stand framed in the
+/// camera bounds near the stage plane; else the standard camera.
+#[doc(alias = "Camera_8002D318")]
+pub fn update_training(r: &mut Running) {
+    let game = &mut *r.game;
+    let slot = i32::from(game.camera.cam.x2C4);
+    let ok = player_entity(game, slot)
+        .filter(|_| !slot_asleep(game, slot))
+        .and_then(|_| player_box(game, slot))
+        .is_some_and(|b| {
+            is_framed(&game.stage_info, &mut game.camera.boxes[b])
+                && outside_bounds(&game.stage_info, game.camera.boxes[b].bone_pos, 0) == 0
+                && abs(reg(game.camera.boxes[b].bone_pos.z)) < reg(10.0)
+        });
+    if !ok {
+        update_standard(r);
+        return;
+    }
+    clear_translation(&mut game.camera.cam);
+    if let Some(b) = player_box(game, slot) {
+        let x = &game.camera.boxes[b];
+        let (bone, reach) = (x.bone_pos, x.ext.v.z);
+        let c = &mut game.camera.cam;
+        let half = fp::fmuls(0.5, reg(reach));
+        let t = &mut c.transform;
+        t.target_interest.x = mem(fp::fnmsubs(half, reg(math::cos(c.yaw_offset)), reg(bone.x)));
+        t.target_interest.y = copy(bone.y);
+        t.target_interest.z = mem(fp::fmadds(half, reg(math::sin(c.yaw_offset)), reg(bone.z)));
+        let target = t.target_interest;
+        ease_toward(&mut t.interest, target, param(0x64));
+    }
+    ease_fov(&mut game.camera.cam.transform, param(0x6C), param(0x70));
+    let d = orbit_distance(game, i32::from(game.camera.cam.x2C4));
+    orbit_eye(&mut game.camera.cam, d);
+}
+
+/// The stage clear camera's frame, `Camera_8002D85C`: as the training camera, looking at the
+/// player, the pitch and yaw kept within the stage's camera angles.
+#[doc(alias = "Camera_8002D85C")]
+pub fn update_clear(r: &mut Running) {
+    let game = &mut *r.game;
+    let slot = i32::from(game.camera.cam.x2C4);
+    let ok = player_box(game, slot).is_some_and(|b| {
+        outside_bounds(&game.stage_info, game.camera.boxes[b].bone_pos, 0) == 0
+            && abs(reg(game.camera.boxes[b].bone_pos.z)) < reg(30.0)
+    });
+    if !ok {
+        update_standard(r);
+        return;
+    }
+    clear_translation(&mut game.camera.cam);
+    if let Some(b) = player_box(game, slot) {
+        let bone = game.camera.boxes[b].bone_pos;
+        let t = &mut game.camera.cam.transform;
+        t.target_interest = Vec3::new(copy(bone.x), copy(bone.y), copy(bone.z));
+        let target = t.target_interest;
+        ease_toward(&mut t.interest, target, param(0x64));
+    }
+    ease_fov(&mut game.camera.cam.transform, param(0x6C), param(0x70));
+    let d = orbit_distance(game, i32::from(game.camera.cam.x2C4));
+    let angles = stage::cam_angles_of(&game.stage_info).map(reg);
+    let c = &mut game.camera.cam;
+    if reg(c.pitch_offset) > angles[0] {
+        c.pitch_offset = mem(angles[0]);
+    } else if reg(c.pitch_offset) < fp::fneg(angles[1]) {
+        c.pitch_offset = mem(fp::fneg(angles[1]));
+    }
+    if reg(c.yaw_offset) > angles[2] {
+        c.yaw_offset = mem(angles[2]);
+    } else if reg(c.yaw_offset) < fp::fneg(angles[3]) {
+        c.yaw_offset = mem(fp::fneg(angles[3]));
+    }
+    orbit_eye(c, d);
+}
+
+/// Switches to the training menu camera on `slot` for controller `port`, `Camera_8002F784`.
+#[doc(alias = "Camera_8002F784")]
+pub fn set_up_training(c: &mut Camera, slot: i8, port: i8) {
+    c.mode = TRAINING_MENU;
+    c.x2C4 = slot;
+    c.x2C5 = port;
+    c.pitch_offset = 0.0;
+    c.yaw_offset = 0.0;
+}
+
+/// Switches to the stage clear camera on `slot`, swinging to a random side of the player
+/// (mostly the one they face away from) at a random pitch, `Camera_8002F7AC`.
+#[doc(alias = "Camera_8002F7AC")]
+pub fn set_up_clear(game: &mut Game, slot: i8) {
+    game.camera.cam.mode = CLEAR;
+    game.camera.cam.x2C4 = slot;
+    let angles = stage::cam_angles_of(&game.stage_info).map(reg);
+    let facing = player_box(game, i32::from(slot)).map(|b| game.camera.boxes[b].facing_dir);
+    let rng = &mut game.objs.rng;
+    let pitch = |rng: &mut crate::rng::Rng| {
+        let r = reg(rng.draw_f32());
+        mem(fp::frsp(fp::fmsub(
+            fp::fdiv(std::f64::consts::PI, 8.0),
+            r,
+            fp::fdiv(std::f64::consts::PI, 16.0),
+        )))
+    };
+    let c = &mut game.camera.cam;
+    if let Some(facing) = facing {
+        let facing = reg(facing);
+        let mut dir = if facing > 0.0 {
+            1.0
+        } else if facing < 0.0 {
+            fp::fneg(1.0)
+        } else if rng.below(2) != 0 {
+            1.0
+        } else {
+            fp::fneg(1.0)
+        };
+        if fp::fmuls(4.0, reg(rng.draw_f32())) < 1.0 {
+            dir = fp::fneg(dir);
+        }
+        let r = reg(rng.draw_f32());
+        c.yaw_offset = if dir > 0.0 {
+            mem(fp::fmuls(r, angles[2]))
+        } else {
+            mem(fp::fmuls(r, fp::fneg(angles[3])))
+        };
+        c.pitch_offset = pitch(rng);
+        return;
+    }
+    c.pitch_offset = pitch(rng);
+    let r = reg(rng.draw_f32());
+    c.yaw_offset = mem(fp::frsp(fp::fmsub(
+        std::f64::consts::TAU,
+        r,
+        std::f64::consts::PI,
+    )));
+}
+
+// The fixed camera.
+
+/// Where the fixed camera's view meets the stage plane (`Stage_80224CAC`, the stage's; until
+/// its port lands, read here): its eye turned by its angles toward z = 0.
+fn fixed_interest(s: &StageInfo) -> Vec3 {
+    let ci = &s.cam_info;
+    let eye = ci.fixed_cam_pos;
+    let mut dir = Vec3::new(0.0, 0.0, -100.0);
+    let angles = Vec3::new(
+        mem(fp::fmuls(reg(DEG_TO_RAD), reg(ci.fixed_cam_vert_angle))),
+        mem(fp::fmuls(reg(DEG_TO_RAD), reg(ci.fixed_cam_horz_angle))),
+        0.0,
+    );
+    dir.rotate_euler(angles);
+    let t = fp::fdivs(reg(eye.z), fp::fneg(reg(dir.z)));
+    Vec3::new(
+        mem(fp::fmadds(reg(dir.x), t, reg(eye.x))),
+        mem(fp::fmadds(reg(dir.y), t, reg(eye.y))),
+        0.0,
+    )
+}
+
+/// The fixed camera's frame (`Camera_8002DDC4`): both transforms ease toward the stage's fixed
+/// eye, interest and field of view.
+#[doc(alias = "Camera_8002DDC4")]
+pub fn update_fixed(r: &mut Running) {
+    let game = &mut *r.game;
+    clear_translation(&mut game.camera.cam);
+    let s = &game.stage_info;
+    let c = &mut game.camera.cam;
+    for t in [&mut c.transform, &mut c.transform_copy] {
+        t.target_interest = fixed_interest(s);
+        let target = t.target_interest;
+        ease_toward(&mut t.interest, target, param(0x74));
+    }
+    let fov = s.cam_info.fixed_cam_fov;
+    for t in [&mut c.transform, &mut c.transform_copy] {
+        ease_fov(t, reg(fov), param(0x7C));
+    }
+    for t in [&mut c.transform, &mut c.transform_copy] {
+        t.target_position = s.cam_info.fixed_cam_pos;
+        let target = t.target_position;
+        ease_toward(&mut t.position, target, param(0x78));
+    }
+    let t = &c.transform;
+    let d = t.target_interest - t.target_position;
+    let (x, y, z) = (reg(d.x), reg(d.y), reg(d.z));
+    let sq = fp::fadds(fp::fmuls(z, z), fp::fadds(fp::fmuls(x, x), fp::fmuls(y, y)));
+    // Only the depth is set; the rest of the original's stack local goes unread.
+    let b = Bounds {
+        z_pos: math::sqrt(mem(sq)),
+        ..Bounds::default()
+    };
+    update_quakes(r);
+    apply_quake(r.game, &b, Which::Main);
+}
+
+// The cutscene camera (`CAMERA_BOSS_INTRO`): an interest and an eye a script sets, each to a
+// point, a player's bone, a callback's point or (the eye) an orbit, eased over a number of
+// frames or by a rate.
+
+fn union_vec(b: &[u8; 12]) -> Vec3 {
+    let f = |i: usize| f32::from_be_bytes(b[i..i + 4].try_into().unwrap());
+    Vec3::new(f(0), f(4), f(8))
+}
+
+fn set_union_vec(b: &mut [u8; 12], v: Vec3) {
+    b[0..4].copy_from_slice(&v.x.to_be_bytes());
+    b[4..8].copy_from_slice(&v.y.to_be_bytes());
+    b[8..12].copy_from_slice(&v.z.to_be_bytes());
+}
+
+fn union_word(b: &[u8]) -> u32 {
+    u32::from_be_bytes(b[0..4].try_into().unwrap())
+}
+
+fn union_f32(b: &[u8], at: usize) -> f32 {
+    f32::from_be_bytes(b[at..at + 4].try_into().unwrap())
+}
+
+fn union_s16(b: &[u8], at: usize) -> i16 {
+    i16::from_be_bytes(b[at..at + 2].try_into().unwrap())
+}
+
+/// A callback's point (`x344.cb`, `x35C.cb`): none of the game's is ported.
+fn script_point(cb: u32) -> Option<Vec3> {
+    if cb == 0 {
+        return None;
+    }
+    unported(&format!("the cutscene camera's callback {cb:#010x}"))
+}
+
+/// The cutscene interest's target, by its kind (`x341_b1_b2`).
+fn script_interest(game: &mut Game) {
+    let c = &game.camera.cam;
+    match c.x341_b1_b2 {
+        1 => {
+            let slot = union_word(&c.x344) as i32;
+            if let Some(b) = player_box(game, slot) {
+                game.camera.cam.transform.target_interest = game.camera.boxes[b].bone_pos;
+            }
+        }
+        2 => game.camera.cam.transform.target_interest = union_vec(&c.x344),
+        3 => {
+            if let Some(p) = script_point(union_word(&c.x344)) {
+                game.camera.cam.transform.target_interest = p;
+            }
+        }
+        _ => {}
+    }
+}
+
+/// The cutscene eye's target, by its kind (`x341_b3_b4`): a point or a callback's.
+fn script_eye(c: &mut Camera) {
+    match c.x341_b3_b4 {
+        1 => c.transform.target_position = union_vec(&c.x35C),
+        3 => {
+            if let Some(p) = script_point(union_word(&c.x35C)) {
+                c.transform.target_position = p;
+            }
+        }
+        _ => {}
+    }
+}
+
+/// How far along the transition is (`x341_b5_b6`: at once, frame counts in `x378`/`x37C`, or
+/// a ratio in `x378`), or `None` when it is done.
+///
+/// The original leaves the ratio unset for the fourth kind (a register its caller left), which
+/// no code sets; the port panics there.
+fn script_progress(c: &Camera) -> Option<f64> {
+    match c.x341_b5_b6 {
+        0 => None,
+        1 => {
+            let (n, of) = (union_word(&c.x378) as i32, union_word(&c.x37C) as i32);
+            (n != of).then(|| fp::fdivs(fp::frsp(f64::from(n)), fp::frsp(f64::from(of))))
+        }
+        2 => {
+            let r = reg(union_f32(&c.x378, 0));
+            (!(r >= 1.0)).then_some(r)
+        }
+        _ => panic!("the cutscene camera's fourth transition kind reads a register it never set"),
+    }
+}
+
+/// A point along the transition from `start` to `end` into `out`, `Camera_8002DFE4`; whether
+/// it is there.
+#[doc(alias = "Camera_8002DFE4")]
+pub fn script_lerp(c: &Camera, start: Vec3, end: Vec3, out: &mut Vec3) -> bool {
+    match script_progress(c) {
+        None => {
+            *out = end;
+            true
+        }
+        Some(t) => {
+            let d = end - start;
+            *out = scaled(d, t) + start;
+            false
+        }
+    }
+}
+
+/// The same for one value, `Camera_8002E158`.
+#[doc(alias = "Camera_8002E158")]
+pub fn script_lerp_value(c: &Camera, start: f64, end: f64) -> (f32, bool) {
+    match script_progress(c) {
+        None => (mem(end), true),
+        Some(t) => (mem(fp::fmadds(t, fp::fsubs(end, start), start)), false),
+    }
+}
+
+/// An orbit's point: `(0, 0, 1)` pitched and yawed, at `distance`, from the interest.
+fn orbit_point(interest: Vec3, pitch: f32, yaw: f32, distance: f64) -> Vec3 {
+    let mut v = Vec3::new(0.0, 0.0, 1.0);
+    v.rotate(Axis::X, mem(fp::fneg(reg(pitch))));
+    v.rotate(Axis::Y, yaw);
+    v.normalize();
+    scaled(v, distance) + interest
+}
+
+/// The cutscene eye's step: toward its point, or (an orbit) its pitch, yaw and distance each
+/// toward theirs, `Camera_8002E234`; whether it is there.
+///
+/// An orbit eases only the parts its script set (`x35C`'s bits); the original reads the others
+/// from stack slots it never wrote, which plain data can't give, so the port panics there.
+/// Master Hand's and Crazy Hand's entrances set orbits that way; they await a probe of what
+/// those slots hold in play (`docs/engine.md`).
+#[doc(alias = "Camera_8002E234")]
+pub fn script_eye_step(c: &mut Camera) -> bool {
+    match c.x341_b3_b4 {
+        0 | 1 | 3 => {
+            let (start, end) = (union_vec(&c.x368), c.transform.target_position);
+            let mut out = c.transform.position;
+            let done = script_lerp(c, start, end, &mut out);
+            c.transform.position = out;
+            done
+        }
+        2 => {
+            let flags = c.x35C[0];
+            let (b0, b1, b2) = (flags & 0x80 != 0, flags & 0x40 != 0, flags & 0x20 != 0);
+            if !(b0 && b1 && b2) {
+                panic!("the cutscene camera's partial orbit reads stack it never wrote");
+            }
+            let mut done = true;
+            let (pitch, d1) =
+                script_lerp_value(c, reg(union_f32(&c.x368, 4)), reg(union_f32(&c.x35C, 4)));
+            done &= d1;
+            let (yaw, d2) =
+                script_lerp_value(c, reg(union_f32(&c.x368, 8)), reg(union_f32(&c.x35C, 8)));
+            done &= d2;
+            let (dist, d3) = script_lerp_value(
+                c,
+                fp::frsp(f64::from(union_s16(&c.x368, 0))),
+                fp::frsp(f64::from(union_s16(&c.x35C, 2))),
+            );
+            done &= d3;
+            let interest = c.transform.interest;
+            let full = fp::frsp(f64::from(union_s16(&c.x35C, 2)));
+            c.transform.target_position =
+                orbit_point(interest, union_f32(&c.x35C, 4), union_f32(&c.x35C, 8), full);
+            c.transform.position = orbit_point(interest, pitch, yaw, reg(dist));
+            done
+        }
+        _ => false,
+    }
+}
+
+/// The cutscene camera's frame, `Camera_8002E490`.
+#[doc(alias = "Camera_8002E490")]
+pub fn update_script(r: &mut Running) {
+    let game = &mut *r.game;
+    clear_translation(&mut game.camera.cam);
+    script_interest(game);
+    let c = &mut game.camera.cam;
+    script_eye(c);
+    let mut done = false;
+    if c.x341_b1_b2 <= 3 {
+        let (start, end) = (c.x350, c.transform.target_interest);
+        let mut out = c.transform.interest;
+        done = script_lerp(c, start, end, &mut out);
+        c.transform.interest = out;
+    }
+    done &= script_eye_step(c);
+    let (fov, d) = script_lerp_value(c, reg(c.x374), reg(c.transform.target_fov));
+    c.transform.fov = fov;
+    done &= d;
+    match c.x341_b5_b6 {
+        1 => {
+            let (n, of) = (union_word(&c.x378) as i32, union_word(&c.x37C) as i32);
+            if n < of {
+                c.x378 = (n + 1).to_be_bytes();
+            }
+        }
+        2 => {
+            let x = reg(union_f32(&c.x378, 0));
+            let rate = reg(union_f32(&c.x37C, 0));
+            let mut v = mem(fp::fmadds(fp::fsubs(1.0, x), rate, x));
+            if reg(v) > f64::from(0.999_f32) {
+                v = 1.0;
+            }
+            c.x378 = v.to_be_bytes();
+        }
+        _ => {}
+    }
+    c.x341_b7 = done;
+}
+
+/// Switches to the cutscene camera holding where the camera looks now, `Camera_8002FE38`.
+#[doc(alias = "Camera_8002FE38")]
+pub fn set_up_script(c: &mut Camera) {
+    c.mode = BOSS_INTRO;
+    c.x341_b1_b2 = 0;
+    c.x341_b3_b4 = 0;
+    c.x341_b5_b6 = 0;
+    c.x341_b7 = false;
+    c.x350 = c.transform.interest;
+    c.transform.target_interest = c.x350;
+    let p = c.transform.position;
+    set_union_vec(&mut c.x368, p);
+    c.transform.target_position = union_vec(&c.x368);
+    c.x374 = copy(c.transform.fov);
+    c.transform.target_fov = c.x374;
+}
+
+fn enter_script(c: &mut Camera) {
+    if c.mode != BOSS_INTRO {
+        set_up_script(c);
+    }
+}
+
+/// The cutscene interest follows a player's bone, `Camera_8002E6FC`.
+#[doc(alias = "Camera_8002E6FC")]
+pub fn script_look_at_player(game: &mut Game, slot: i32) {
+    let c = &mut game.camera.cam;
+    enter_script(c);
+    c.x341_b1_b2 = 1;
+    c.x344[0..4].copy_from_slice(&slot.to_be_bytes());
+    script_interest(game);
+}
+
+/// The cutscene interest goes to a point, `Camera_8002E818`.
+#[doc(alias = "Camera_8002E818")]
+pub fn script_look_at(game: &mut Game, pos: Vec3) {
+    let c = &mut game.camera.cam;
+    enter_script(c);
+    c.x341_b1_b2 = 2;
+    set_union_vec(&mut c.x344, pos);
+    script_interest(game);
+}
+
+/// The cutscene interest follows a callback's point, `Camera_8002E948`.
+#[doc(alias = "Camera_8002E948")]
+pub fn script_look_at_callback(game: &mut Game, cb: CodeRef) {
+    let c = &mut game.camera.cam;
+    enter_script(c);
+    c.x341_b1_b2 = 3;
+    c.x344[0..4].copy_from_slice(&cb.0.to_be_bytes());
+    script_interest(game);
+}
+
+/// The cutscene eye goes to a point, `Camera_8002EA64`.
+#[doc(alias = "Camera_8002EA64")]
+pub fn script_eye_at(c: &mut Camera, pos: Vec3) {
+    enter_script(c);
+    c.x341_b3_b4 = 1;
+    set_union_vec(&mut c.x35C, pos);
+    script_eye(c);
+}
+
+/// The orbiting cutscene eye's pitch, `Camera_8002EB5C`.
+#[doc(alias = "Camera_8002EB5C")]
+pub fn script_orbit_pitch(c: &mut Camera, pitch: f32) {
+    let v = copy(pitch);
+    script_orbit_with(c, 0x40, |c| c.x35C[4..8].copy_from_slice(&v.to_be_bytes()));
+}
+
+/// The orbiting cutscene eye's yaw, `Camera_8002EC7C`.
+#[doc(alias = "Camera_8002EC7C")]
+pub fn script_orbit_yaw(c: &mut Camera, yaw: f32) {
+    let v = copy(yaw);
+    script_orbit_with(c, 0x20, |c| c.x35C[8..12].copy_from_slice(&v.to_be_bytes()));
+}
+
+/// The orbiting cutscene eye's distance (whole units), `Camera_8002ED9C`.
+#[doc(alias = "Camera_8002ED9C")]
+pub fn script_orbit_distance(c: &mut Camera, distance: f32) {
+    let d = fp::fctiwz(reg(distance)) as i16;
+    script_orbit_with(c, 0x80, |c| c.x35C[2..4].copy_from_slice(&d.to_be_bytes()));
+}
+
+/// Enters the orbit as the orbit setters do (clearing the other two parts when it starts),
+/// stores one part, and marks it set.
+fn script_orbit_with(c: &mut Camera, bit: u8, store: impl FnOnce(&mut Camera)) {
+    enter_script(c);
+    if c.x341_b3_b4 != 2 {
+        c.x341_b3_b4 = 2;
+        c.x35C[0] &= !(0xE0 & !bit);
+    }
+    store(c);
+    c.x35C[0] |= bit;
+    script_eye(c);
+}
+
+/// The cutscene's target field of view, `Camera_8002EEC8`.
+#[doc(alias = "Camera_8002EEC8")]
+pub fn script_fov(c: &mut Camera, fov: f32) {
+    enter_script(c);
+    c.transform.target_fov = copy(fov);
+}
+
+/// Jumps the cutscene camera to its targets at once, `Camera_8002EF14`.
+#[doc(alias = "Camera_8002EF14")]
+pub fn script_jump(game: &mut Game) {
+    enter_script(&mut game.camera.cam);
+    game.camera.cam.x341_b5_b6 = 0;
+    script_interest(game);
+    let c = &mut game.camera.cam;
+    if c.x341_b1_b2 <= 3 {
+        let (start, end) = (c.x350, c.transform.target_interest);
+        let mut out = c.transform.interest;
+        script_lerp(c, start, end, &mut out);
+        c.transform.interest = out;
+    }
+    script_eye(c);
+    script_eye_step(c);
+    c.transform.fov = copy(c.transform.target_fov);
+}
+
+/// Starts a transition over `frames` frames from where the camera is, `Camera_8002F0E4`.
+#[doc(alias = "Camera_8002F0E4")]
+pub fn script_transition(c: &mut Camera, frames: i32) {
+    enter_script(c);
+    c.x341_b5_b6 = 1;
+    c.x378 = 0i32.to_be_bytes();
+    c.x37C = frames.to_be_bytes();
+    if c.x341_b1_b2 <= 3 {
+        c.x350 = c.transform.interest;
+    }
+    match c.x341_b3_b4 {
+        0 | 1 | 3 => {
+            let p = c.transform.position;
+            set_union_vec(&mut c.x368, p);
+        }
+        2 => {
+            let d = c.transform.position - c.transform.interest;
+            let (x, y, z) = (reg(d.x), reg(d.y), reg(d.z));
+            let xz = math::sqrt(mem(fp::fadds(fp::fmuls(x, x), fp::fmuls(z, z))));
+            let pitch = math::atan2(d.y, xz);
+            let yaw = math::atan2(d.x, d.z);
+            let len = fp::fadds(fp::fmuls(z, z), fp::fadds(fp::fmuls(x, x), fp::fmuls(y, y)));
+            let dist = fp::fctiwz(reg(math::sqrt(mem(len)))) as i16;
+            c.x368[0..2].copy_from_slice(&dist.to_be_bytes());
+            c.x368[4..8].copy_from_slice(&pitch.to_be_bytes());
+            c.x368[8..12].copy_from_slice(&yaw.to_be_bytes());
+        }
+        _ => {}
+    }
+    c.x374 = copy(c.transform.fov);
+}
+
+/// Whether the cutscene camera reached its targets, `Camera_8002F260`.
+#[doc(alias = "Camera_8002F260")]
+pub fn script_done(c: &Camera) -> bool {
+    c.x341_b7
+}
+
+/// The cutscene eye stays where it is, `Camera_8002F274`.
+#[doc(alias = "Camera_8002F274")]
+pub fn script_hold_eye(c: &mut Camera) {
+    let p = c.transform.position;
+    script_eye_at(c, p);
+}
+
+/// Runs the camera's process once and jumps both transforms to its targets,
+/// `Camera_8002F3AC`.
+#[doc(alias = "Camera_8002F3AC")]
+pub fn snap(r: &mut Running) {
+    update(r);
+    let c = &mut r.game.camera.cam;
+    for t in [&mut c.transform, &mut c.transform_copy] {
+        t.position = t.target_position;
+        t.interest = t.target_interest;
+        t.fov = t.target_fov;
+    }
 }

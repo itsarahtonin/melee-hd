@@ -323,3 +323,19 @@ Camera_80031074	leaf-check camera flags: every capture of it
 Camera_8003108C	leaf-check camera flags: every capture of it
 Camera_800310A0	leaf-check camera flags: every capture of it
 Camera_80031144	leaf-check camera flags: every capture of it
+Camera_8002BC78	leaf-check camera orbit_controls and pause_camera: every orbit rotation and pan builds its basis through it
+Camera_8002C1A8	leaf-check camera free_camera: every free-camera frame reads its controller through it, with random sticks and buttons
+Camera_8002C908	leaf-check camera free_camera: one to four frames after each setup, from the VS captures' states
+Camera_8002CB0C	leaf-check camera pause_camera: every pause-camera frame reads the pauser's controller through it, with random sticks and buttons
+Camera_8002CDDC	leaf-check camera pause_camera: one to four frames after each setup, from the VS captures' states
+Camera_8002D318	leaf-check camera training_and_clear_cameras: one to four frames after each setup
+Camera_8002D85C	leaf-check camera training_and_clear_cameras: one to four frames after each setup, with angles past the stage's
+Camera_8002DDC4	leaf-check camera fixed_camera: one to four frames with perturbed fixed-camera stage data
+Camera_8002DFE4	leaf-check camera cutscene_camera: every cutscene frame, jump and snap moves the interest and eye through it
+Camera_8002E158	leaf-check camera cutscene_camera: every cutscene frame eases the field of view and orbits through it
+Camera_8002E234	leaf-check camera cutscene_camera: every cutscene frame and jump steps the eye through it (point and full orbits)
+Camera_8002E490	leaf-check camera cutscene_camera: one to four frames after each script, by frames and by rate
+Camera_SetUpPauseCamera	leaf-check camera pause_camera: both wrappers call it with every slot and pauser kind
+fn_8002F908	leaf-check camera free_camera: every free-camera frame refreshes its bounds through it (Camera_8002F9E4)
+fn_8002FBA0	leaf-check camera free_camera: every free-camera frame refreshes its bounds through it (Camera_8002FC7C)
+Camera_8002FE38	leaf-check camera cutscene_camera: every script setter enters the cutscene camera through it

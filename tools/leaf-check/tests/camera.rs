@@ -15,12 +15,15 @@
 //! ```
 //!
 //! over a VS replay per legal stage (`tools/run/src/calls.rs` in ssbm-rs has the options;
-//! `camera-funcs.txt` lists the unit's functions by address, one per line).
+//! `camera-funcs.txt` lists the unit's functions by address, one per line), and again with
+//! `CAPTURE_FROM=0 --fields 400` into `$CAMERA_CALLS/bf-start` and so on for the calls a match
+//! makes as it starts. The special modes and the calls no replay makes are run from the VS
+//! states (`check_calls`).
 
 use std::collections::HashSet;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::{Condvar, Mutex, OnceLock};
 
 use gekko_fp::{FpMode, set_fp_mode};
 use leaf_check::{MODES, Rand, handle, hsd_reference};
@@ -30,7 +33,7 @@ use melee_capture::{Capture, DataMap, DiscIndex, MEM1, disc_index, find_archives
 use melee_data::archive::Archives;
 use melee_data::disc::Disc;
 use melee_sim::game::camera::{self, Bounds, Which};
-use melee_sim::game::handles::CameraBoxId;
+use melee_sim::game::handles::{CameraBoxId, CodeRef};
 use melee_sim::game::state::{Game, Running};
 use melee_sim::hsd::cobj::CObjId;
 use melee_sim::hsd::gobj::GObjId;
@@ -216,6 +219,33 @@ fn assert_line(text: &str) -> Option<String> {
         digits
     };
     Some(format!("{stem}.c:{line}"))
+}
+
+/// A turn among the checks running at once, at most [`Turn::MAX`].
+struct Turn;
+
+static TURNS: (Mutex<usize>, Condvar) = (Mutex::new(0), Condvar::new());
+
+impl Turn {
+    const MAX: usize = 3;
+
+    fn take() -> Turn {
+        let (count, freed) = &TURNS;
+        let mut n = count.lock().unwrap_or_else(|e| e.into_inner());
+        while *n >= Self::MAX {
+            n = freed.wait(n).unwrap_or_else(|e| e.into_inner());
+        }
+        *n += 1;
+        Turn
+    }
+}
+
+impl Drop for Turn {
+    fn drop(&mut self) {
+        let (count, freed) = &TURNS;
+        *count.lock().unwrap_or_else(|e| e.into_inner()) -= 1;
+        freed.notify_one();
+    }
 }
 
 /// How many of a function's captures [`check_fuzzed`] also perturbs.
@@ -406,6 +436,9 @@ fn check_runs(
     if paths.is_empty() {
         return;
     }
+    // Each check holds several copies of main memory and a reference of its own: a few at a
+    // time keep the suite's threads within memory.
+    let _turn = Turn::take();
     let Some(ctx) = hsd_reference() else { return };
     let disc = disc_archives();
     let mut skipped = Vec::new();
@@ -419,8 +452,9 @@ fn check_runs(
         };
         let copies = if n < FUZZED_CAPTURES { variants } else { 0 };
         for variant in 0..=copies {
+            let perturbed;
             let cap = if variant == 0 && !perturb_all {
-                copy_capture(&original)
+                &original
             } else {
                 let mut c = copy_capture(&original);
                 perturb(&mut Fuzz {
@@ -428,12 +462,13 @@ fn check_runs(
                     regs: &mut c.call.regs,
                     rand: &mut rand,
                 });
-                c
+                perturbed = c;
+                &perturbed
             };
             for mode in MODES {
                 set_fp_mode(mode);
                 let imported = catch_unwind(AssertUnwindSafe(|| {
-                    let mut imp = Importer::new(&cap, &data);
+                    let mut imp = Importer::new(cap, &data);
                     imp.world();
                     imp.stage();
                     imp.ids();
@@ -464,10 +499,7 @@ fn check_runs(
                             game: &mut game,
                             data: &archives,
                         },
-                        &Args {
-                            cap: &cap,
-                            maps: &maps,
-                        },
+                        &Args { cap, maps: &maps },
                     )
                 }));
                 let theirs = catch_unwind(AssertUnwindSafe(|| theirs(&ctx, &cap.call, run)));
@@ -1428,4 +1460,436 @@ fn debug_cameras() {
             (bone, 0.0)
         },
     );
+}
+
+// The special modes, entered and run for a few frames from the VS captures' states, with
+// random controllers.
+
+/// The buttons the pause and free cameras read: D-pad, L, R, A, X, Y.
+const CAMERA_BUTTONS: u64 = 0xF | 0x60 | 0x100 | 0xC00;
+
+impl Fuzz<'_> {
+    /// Random sticks on every controller (some pushed past the merged read's 0.85) and random
+    /// camera buttons held and pressed on every button map.
+    fn controllers(&mut self) {
+        let pads = sym("HSD_PadCopyStatus");
+        for i in 0..4 {
+            for o in [0x20, 0x24, 0x28, 0x2C] {
+                let v = match self.rand.below(4) {
+                    0 => 0.0,
+                    1 => self.rand.range(-1.0, 1.0),
+                    _ => self.rand.range(-0.2, 0.2),
+                };
+                self.put_f32(pads + 0x44 * i + o, v);
+            }
+        }
+        let map = sym("controller_map");
+        for i in 0..5 {
+            for o in [0, 8] {
+                let b = self.rand.bits() & CAMERA_BUTTONS & self.rand.bits();
+                self.put(map + 0x30 * i + o, (b >> 32) as u32);
+                self.put(map + 0x30 * i + o + 4, b as u32);
+            }
+        }
+    }
+}
+
+fn camera_gobj(ctx: &Ctx) -> u32 {
+    ctx.read_u32(sym("game_camera"))
+}
+
+/// Runs the camera's process `frames` times on ssbm-rs's side.
+fn their_frames(ctx: &Ctx, frames: u32) {
+    for _ in 0..frames {
+        fns::fn_8002F360(ctx, handle(ctx, camera_gobj(ctx)));
+    }
+}
+
+fn our_frames(r: &mut Running, frames: u32) {
+    for _ in 0..frames {
+        let g = r.game.camera.cam.gobj.expect("the camera's GObj");
+        camera::proc(r, g);
+    }
+}
+
+/// Frames to run: r6 of the perturbed call.
+fn frames(f: &mut Fuzz) {
+    f.regs.gpr[6] = 1 + f.rand.below(4) as u32;
+}
+
+#[test]
+fn pause_camera() {
+    check_calls(
+        BASE,
+        10,
+        |f| {
+            f.controllers();
+            f.regs.gpr[3] = [0, 1, 2, 3, 10, 11, 7, 0xFF][f.rand.below(8) as usize];
+            f.regs.gpr[4] = f.rand.below(7) as u32;
+            f.regs.gpr[5] = f.rand.below(2) as u32;
+            frames(f);
+        },
+        |r, a| {
+            let (slot, pauser) = (a.r(3) as i8, a.r(4) as i8);
+            match a.r(5) {
+                0 => camera::set_up_pause_zoomed(r.game, slot, pauser, false),
+                _ => camera::set_up_pause_zoomed(r.game, slot, pauser, true),
+            }
+            our_frames(r, a.r(6));
+            vec![]
+        },
+        |ctx, call| {
+            let g = &call.regs.gpr;
+            match g[5] {
+                0 => fns::Camera_SetUpPauseCameraWithDefaultZoom(ctx, g[3] as i8, g[4] as i8),
+                _ => fns::Camera_8002F760(ctx, g[3] as i8, g[4] as i8),
+            }
+            their_frames(ctx, g[6]);
+            (0, 0.0)
+        },
+    );
+}
+
+#[test]
+fn free_camera() {
+    check_calls(
+        BASE,
+        10,
+        |f| {
+            f.controllers();
+            f.regs.gpr[3] = f.rand.below(6) as u32;
+            f.regs.gpr[4] = f.rand.below(6) as u32;
+            f.regs.gpr[5] = f.rand.below(2) as u32;
+            frames(f);
+        },
+        |r, a| {
+            let (slot, port) = (a.r(3) as i8, a.r(4) as i8);
+            match a.r(5) {
+                0 => camera::set_up_free(r.game, slot, port),
+                _ => camera::set_up_free_2(r.game, slot, port),
+            }
+            our_frames(r, a.r(6));
+            vec![]
+        },
+        |ctx, call| {
+            let g = &call.regs.gpr;
+            match g[5] {
+                0 => fns::Camera_8002F9E4(ctx, g[3] as i8, g[4] as i8),
+                _ => fns::Camera_8002FC7C(ctx, g[3] as i8, g[4] as i8),
+            }
+            their_frames(ctx, g[6]);
+            (0, 0.0)
+        },
+    );
+}
+
+#[test]
+fn orbit_controls() {
+    check_calls(
+        BASE,
+        12,
+        |f| {
+            f.controllers();
+            f.regs.gpr[3] = f.rand.below(6) as u32;
+            f.regs.gpr[4] = f.rand.below(6) as u32;
+            for i in 1..=4 {
+                let v = f.float(0.0, 1.5);
+                f.set_f(i, v);
+            }
+        },
+        |r, a| {
+            camera::set_up_free(r.game, 0, 0);
+            let inputs = camera::read_inputs(r.game, a.r(4) as i32);
+            let next = camera::next_slot(r.game, a.r(3) as i32, 1);
+            let c = &mut r.game.camera.cam;
+            camera::orbit_zoom(c, a.f(1));
+            camera::orbit_rotate(c, a.f(2), a.f(3));
+            camera::orbit_pan(c, a.f(4), a.f(1));
+            camera::orbit_limit(r.game);
+            let at = scratch(&a.cap.call);
+            let i = &inputs;
+            let words = vec![
+                i.stick_x.to_bits(),
+                i.stick_y.to_bits(),
+                i.substick_x.to_bits(),
+                i.substick_y.to_bits(),
+                (i.pressed >> 32) as u32,
+                i.pressed as u32,
+                (i.triggered >> 32) as u32,
+                i.triggered as u32,
+            ];
+            vec![Out::R3(next as u32), Out::Words(at, words)]
+        },
+        |ctx, call| {
+            let g = &call.regs.gpr;
+            let f = |i: usize| call.regs.fpr[i].ps0;
+            fns::Camera_8002F9E4(ctx, 0, 0);
+            fns::Camera_8002B694(ctx, handle(ctx, scratch(call)), g[4] as i32);
+            let next = fns::Camera_8002BA00(ctx, g[3] as i32, 1);
+            fns::Camera_8002BAA8(ctx, f(1));
+            fns::Camera_8002BD88(ctx, f(2), f(3));
+            fns::Camera_8002C010(ctx, f(4), f(1));
+            fns::Camera_8002C5B4(ctx, handle(ctx, sym("game_camera") + 0x2D0));
+            (next as u32, 0.0)
+        },
+    );
+}
+
+#[test]
+fn training_and_clear_cameras() {
+    check_calls(
+        BASE,
+        20,
+        |f| {
+            f.regs.gpr[3] = f.rand.below(4) as u32;
+            f.regs.gpr[4] = f.rand.below(2) as u32;
+            frames(f);
+            let c = sym("game_camera");
+            f.nudge(c + 0x2C8, 1.0);
+            f.nudge(c + 0x2CC, 2.0);
+            let ci = sym("stage_info");
+            for o in [0x4C, 0x50, 0x54, 0x58] {
+                f.uniform(ci + o, 0.0, 60.0);
+            }
+            // Sometimes an angle past the stage's, which the clear camera clamps.
+            f.regs.gpr[9] = f.rand.below(2) as u32;
+            let (pitch, yaw) = (f.rand.range(-1.5, 1.5), f.rand.range(-2.0, 2.0));
+            f.set_f(12, pitch);
+            f.set_f(13, yaw);
+        },
+        |r, a| {
+            let slot = a.r(3) as i8;
+            match a.r(4) {
+                0 => camera::set_up_training(&mut r.game.camera.cam, slot, 4),
+                _ => camera::set_up_clear(r.game, slot),
+            }
+            if a.r(9) != 0 {
+                let c = &mut r.game.camera.cam;
+                c.pitch_offset = f32::from_bits(leaf_check::bits(a.f(12)));
+                c.yaw_offset = f32::from_bits(leaf_check::bits(a.f(13)));
+            }
+            our_frames(r, a.r(6));
+            vec![]
+        },
+        |ctx, call| {
+            let g = &call.regs.gpr;
+            match g[4] {
+                0 => fns::Camera_8002F784(ctx, g[3] as i8, 4),
+                _ => fns::Camera_8002F7AC(ctx, g[3] as i8),
+            }
+            if g[9] != 0 {
+                let c = sym("game_camera");
+                ctx.write_u32(c + 0x2C8, leaf_check::bits(call.regs.fpr[12].ps0));
+                ctx.write_u32(c + 0x2CC, leaf_check::bits(call.regs.fpr[13].ps0));
+            }
+            their_frames(ctx, g[6]);
+            (0, 0.0)
+        },
+    );
+}
+
+#[test]
+fn fixed_camera() {
+    check_calls(
+        BASE,
+        6,
+        |f| {
+            frames(f);
+            let ci = sym("stage_info");
+            for o in [0x5C, 0x60, 0x64] {
+                f.nudge(ci + o, 200.0);
+            }
+            f.uniform(ci + 0x64, 100.0, 900.0);
+            f.uniform(ci + 0x68, 20.0, 60.0);
+            f.nudge(ci + 0x6C, 20.0);
+            f.nudge(ci + 0x70, 20.0);
+        },
+        |r, a| {
+            camera::set_fixed(&mut r.game.camera.cam);
+            our_frames(r, a.r(6));
+            vec![]
+        },
+        |ctx, call| {
+            fns::Camera_SetModeToFixed(ctx);
+            their_frames(ctx, call.regs.gpr[6]);
+            (0, 0.0)
+        },
+    );
+}
+
+#[test]
+fn cutscene_camera() {
+    // A script: the interest on a point or a player, the eye on a point, where it is, or a full
+    // orbit; a transition over frames; then frames run, and at the end a jump or a snap.
+    check_calls(
+        BASE,
+        12,
+        |f| {
+            frames(f);
+            for g in 3..=5 {
+                f.regs.gpr[g] = f.rand.below(3) as u32;
+            }
+            f.regs.gpr[7] = f.rand.below(30) as u32;
+            random_point(f);
+            for i in 4..=7 {
+                let v = f.float(0.0, 1.0);
+                f.set_f(i, v);
+            }
+            let d = f.rand.range(20.0, 300.0);
+            f.set_f(8, d);
+            let fov = f.rand.range(20.0, 50.0);
+            f.set_f(9, fov);
+            // Sometimes a transition by rate, which no setter starts.
+            f.regs.gpr[8] = f.rand.below(2) as u32;
+            let (start, rate) = (f.rand.range(0.0, 1.1), f.rand.range(0.0, 0.6));
+            f.set_f(10, start);
+            f.set_f(11, rate);
+        },
+        |r, a| {
+            let g = |i| a.r(i);
+            let fv = |i| f32::from_bits(leaf_check::bits(a.f(i)));
+            let p = point(&a.cap.call.regs);
+            match g(3) {
+                0 => camera::script_look_at(r.game, p),
+                1 => camera::script_look_at_player(r.game, (g(7) % 2) as i32),
+                // A callback the script leaves null: none of the game's are ported.
+                _ => camera::script_look_at_callback(r.game, CodeRef(0)),
+            }
+            let c = &mut r.game.camera.cam;
+            match g(4) {
+                0 => camera::script_eye_at(c, p),
+                1 => camera::script_hold_eye(c),
+                _ => {
+                    camera::script_orbit_distance(c, fv(8));
+                    camera::script_orbit_yaw(c, fv(4));
+                    camera::script_orbit_pitch(c, fv(5));
+                }
+            }
+            camera::script_fov(c, fv(9));
+            camera::script_transition(c, g(7) as i32);
+            if g(8) != 0 {
+                c.x341_b5_b6 = 2;
+                c.x378 = fv(10).to_be_bytes();
+                c.x37C = fv(11).to_be_bytes();
+            }
+            our_frames(r, g(6));
+            let done = camera::script_done(&r.game.camera.cam);
+            match g(5) {
+                0 => camera::script_jump(r.game),
+                1 => camera::snap(r),
+                _ => {}
+            }
+            vec![Out::R3(done.into())]
+        },
+        |ctx, call| {
+            let g = &call.regs.gpr;
+            let f = |i: usize| call.regs.fpr[i].ps0;
+            let at = scratch(call);
+            leaf_check::put_vec(ctx, at, point(&call.regs));
+            match g[3] {
+                0 => fns::Camera_8002E818(ctx, handle(ctx, at)),
+                1 => fns::Camera_8002E6FC(ctx, (g[7] % 2) as i32),
+                _ => fns::Camera_8002E948(ctx, ssbm_rt::FnPtr::from_at(ssbm_rt::At::new(ctx, 0))),
+            }
+            match g[4] {
+                0 => fns::Camera_8002EA64(ctx, handle(ctx, at)),
+                1 => fns::Camera_8002F274(ctx),
+                _ => {
+                    fns::Camera_8002ED9C(ctx, f(8));
+                    fns::Camera_8002EC7C(ctx, f(4));
+                    fns::Camera_8002EB5C(ctx, f(5));
+                }
+            }
+            fns::Camera_8002EEC8(ctx, f(9));
+            fns::Camera_8002F0E4(ctx, g[7] as i32);
+            if g[8] != 0 {
+                let c = sym("game_camera");
+                let flags = ctx.read_u8(c + 0x341) & !0x06 | 2 << 1;
+                ctx.write_u8(c + 0x341, flags);
+                ctx.write_u32(c + 0x378, leaf_check::bits(f(10)));
+                ctx.write_u32(c + 0x37C, leaf_check::bits(f(11)));
+            }
+            their_frames(ctx, g[6]);
+            let done = fns::Camera_8002F260(ctx) as u32;
+            match g[5] {
+                0 => fns::Camera_8002EF14(ctx),
+                1 => fns::Camera_8002F3AC(ctx),
+                _ => {}
+            }
+            (done, 0.0)
+        },
+    );
+}
+
+#[test]
+fn camera_create() {
+    check_calls(
+        BASE,
+        0,
+        |_| {},
+        |r, _| {
+            camera::create(r.game);
+            vec![]
+        },
+        |ctx, _| {
+            fns::Camera_Create(ctx);
+            (0, 0.0)
+        },
+    );
+}
+
+// Setup calls the scene makes as a match starts.
+
+#[test]
+fn scene_setup() {
+    check("Camera_Init", |r, a| {
+        camera::init(&mut r.game.camera, a.r(3) as i32);
+        vec![]
+    });
+    check("Camera_Create", |r, _| {
+        camera::create(r.game);
+        vec![]
+    });
+    check("Camera_80029044", |r, a| {
+        let b = camera::alloc_box(&mut r.game.camera.boxes, a.r(3) as i32);
+        vec![Out::Box(Some(b))]
+    });
+    check("Camera_80029020", |r, _| {
+        let b = camera::alloc_box(&mut r.game.camera.boxes, camera::ACTIVE);
+        vec![Out::Box(Some(b))]
+    });
+    check("Camera_80028F5C", |r, a| {
+        let b = (a.r(3) != 0).then(|| a.camera_box(a.r(3)));
+        camera::reset_box(&mut r.game.camera.boxes, b, a.r(4) as i32);
+        vec![]
+    });
+    check("Camera_SetModeToStandard", |r, _| {
+        camera::set_standard(&mut r.game.camera.cam);
+        vec![]
+    });
+    check("Camera_SetBackgroundColor", |r, a| {
+        let c = &mut r.game.camera.cam;
+        camera::set_background_color(c, a.r(3) as u8, a.r(4) as u8, a.r(5) as u8);
+        vec![]
+    });
+    check("Camera_80030730", |r, a| {
+        camera::set_default_fov(&mut r.game.camera, f1(a));
+        vec![]
+    });
+    check("Camera_SetQuakeScale", |r, a| {
+        camera::set_quake_scale(&mut r.game.camera.cam, f1(a));
+        vec![]
+    });
+    check("Camera_800311CC", |r, a| {
+        camera::set_far(&mut r.game.camera.cam, f1(a));
+        vec![]
+    });
+    check("Camera_800311DC", |r, a| {
+        camera::set_near(&mut r.game.camera.cam, f1(a));
+        vec![]
+    });
+    check("Camera_8002F3AC", |r, _| {
+        camera::snap(r);
+        vec![]
+    });
 }
