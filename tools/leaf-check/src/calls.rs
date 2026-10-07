@@ -207,10 +207,12 @@ fn run_one(
     let data = DataMap {
         loaded: find_archives_in(index, &cap.call.mem1, &mut archives),
     };
+    let bank = melee_capture::audio::find_bank(&cap.call.mem1, &mut archives);
     let mut imp = Importer::new(&cap, &data).with_archives(&archives);
     imp.world();
     imp.stage();
     imp.ids();
+    imp.audio(bank);
     let Importer { mut game, maps, .. } = imp;
     // The imported state must be memory before anything runs, or differences afterwards
     // wouldn't be the call's.
@@ -218,6 +220,7 @@ fn run_one(
     before.world();
     before.stage();
     before.ids();
+    before.audio();
     if !before.diffs.is_empty() {
         return Outcome::Failed(format!(
             "the import doesn't round-trip: {}",
@@ -261,6 +264,7 @@ fn run_one(
     cmp.world();
     cmp.stage();
     cmp.ids();
+    cmp.audio();
     match ret {
         Ret::Nothing => {}
         Ret::Int(v) if v != r3 => cmp

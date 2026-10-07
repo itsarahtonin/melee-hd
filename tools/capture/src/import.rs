@@ -236,6 +236,12 @@ impl<'a> Importer<'a> {
         d
     }
 
+    /// The audio driver, the synth and the AX voices (`crate::audio`), with the sound bank
+    /// `crate::audio::find_bank` found.
+    pub fn audio(&mut self, bank: Option<melee_data::archive::ArchiveId>) {
+        self.game.audio = crate::audio::import(&self.cap.call.mem1, bank);
+    }
+
     /// The scheduler: every GObj on the process links with its processes, render link, HSD
     /// object and user data.
     pub fn world(&mut self) {

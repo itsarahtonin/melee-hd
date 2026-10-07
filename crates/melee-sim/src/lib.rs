@@ -5,6 +5,7 @@
 //! where the original fused, estimated or used paired singles. State is plain data, so a
 //! snapshot for rollback is a clone.
 
+pub mod audio;
 mod fpu;
 pub mod game;
 pub mod hsd;

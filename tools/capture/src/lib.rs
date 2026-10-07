@@ -2,6 +2,7 @@
 //! function's entry, `CAPTURE=DIR CAPTURE_FUNCS=...`), made into melee-sim states, so a port
 //! can run from a real state and be compared with ssbm-rs's run from the same one.
 
+pub mod audio;
 pub mod compare;
 pub mod import;
 pub mod items;

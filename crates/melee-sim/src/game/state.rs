@@ -161,6 +161,9 @@ pub struct Game {
     pub scene: gm_80479D58_t,
     /// How engine ticks fall on frames (`lb_804329F0`).
     pub pacing: crate::lb::pacing::Pacing,
+    /// The audio driver's voices, the synth and AX voices under them, and the timeline that
+    /// runs their frames.
+    pub audio: crate::audio::Audio,
     /// The VS match's controller (`gmvs.c`'s `controller`): its rules, timer, pause state,
     /// per-fighter respawn state and results.
     pub vs: VsSceneController,

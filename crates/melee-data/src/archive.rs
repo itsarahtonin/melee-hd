@@ -148,6 +148,17 @@ impl Archive {
         })
     }
 
+    /// A file that isn't a DAT archive (the sound bank's `smash2.sem`), whole, as a data
+    /// block with no relocations or symbols.
+    pub fn raw(file: &[u8]) -> Archive {
+        Archive {
+            data: file.into(),
+            relocs: Box::default(),
+            publics: Box::default(),
+            externs: Box::default(),
+        }
+    }
+
     /// The data block.
     pub fn data(&self) -> &[u8] {
         &self.data

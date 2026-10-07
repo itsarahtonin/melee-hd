@@ -116,6 +116,11 @@ impl<'a> Comparer<'a> {
         }
     }
 
+    /// The audio driver, the synth and the AX voices, byte for byte.
+    pub fn audio(&mut self) {
+        crate::audio::compare(self.mem, &self.game.audio, &mut self.diffs);
+    }
+
     /// The scheduler: each process link's GObjs in order, and what they hold.
     pub fn world(&mut self) {
         let heads = self.u32(sym("HSD_GObjPLinkHead"));

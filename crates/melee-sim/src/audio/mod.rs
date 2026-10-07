@@ -1,0 +1,106 @@
+//! The audio driver's bookkeeping, which is simulation (`docs/architecture.md`): playing a
+//! sound returns a handle game code keeps, and which voices are free, and so the handles new
+//! sounds get, depends on the driver's frames ending voices. So melee-sim runs HAL's driver
+//! ([`driver`]), the synth under it ([`synth`]) and the AX library's voice allocation
+//! ([`ax`]) as the original does, on the schedule ssbm-rs's audio interrupts keep relative to
+//! engine ticks ([`clock`]). Mixing and output are the presentation layer's: it reads the
+//! voices' parameter blocks, which describe exactly what the DSP would play.
+
+pub mod ax;
+pub mod clock;
+pub mod driver;
+pub mod synth;
+
+use melee_data::archive::Archives;
+
+use crate::game::handles::CodeRef;
+
+/// `HSD_SynthCallback`, the AX user callback the synth registers.
+pub const SYNTH_CALLBACK: CodeRef = CodeRef(0x8038_ABD4);
+
+/// Everything the audio driver keeps.
+#[derive(Clone, Debug, Default)]
+pub struct Audio {
+    pub ax: ax::Ax,
+    pub synth: synth::Synth,
+    pub driver: driver::Driver,
+    /// When audio frames run; none where the state came without a timeline (a single
+    /// captured call), and no frame runs then.
+    pub clock: Option<clock::Clock>,
+}
+
+impl Audio {
+    /// `__AXOutNewFrame`, an AX frame as far as it decides voices: the parameter blocks'
+    /// sync (which drops voices past the DSP's budget), the dropped voices' callbacks, the
+    /// user callback (the synth's frame, and the driver's in it) and the next command list's
+    /// cost. The aux effects' processing and the DSP's mix are presentation.
+    #[doc(alias = "__AXOutNewFrame")]
+    pub fn ax_frame(&mut self, data: &Archives) {
+        self.ax.sync_pbs(0);
+        // `__AXGetCommandListAddress`: the list the DSP is handed, and the next one.
+        self.ax.list_position ^= 1;
+        self.service_callback_stack();
+        match self.ax.user_callback {
+            None => {}
+            Some(SYNTH_CALLBACK) => self.synth_frame(data),
+            Some(o) => panic!("AX user callback {:#010x} isn't ported", o.0),
+        }
+        self.ax.next_frame();
+        self.ax.out_frame = (self.ax.out_frame + 1) & 1;
+    }
+
+    /// `__AXServiceCallbackStack`, with the dropped voices' callbacks reaching the synth.
+    pub fn service_callback_stack(&mut self) {
+        let mut dropped = Vec::new();
+        self.ax
+            .service_callback_stack(&mut |_, cb, v| dropped.push((cb, v)));
+        // Each callback ran before its voice was freed; dropcallback doesn't touch the AX
+        // library's stacks, so running them after in the same order is the same.
+        for (cb, v) in dropped {
+            match cb {
+                ax::DROP_CALLBACK => self.synth_drop(v),
+                other => panic!("AX voice callback {:#010x} isn't ported", other.0),
+            }
+        }
+    }
+
+    /// Runs the timeline up to the next tick's game code, with the audio frames before it.
+    pub fn tick_start(&mut self, data: &Archives) {
+        self.with_clock(data, |c, f| c.tick_start(f));
+    }
+
+    /// The end of a tick's game code.
+    pub fn tick_end(&mut self, data: &Archives) {
+        self.with_clock(data, |c, f| c.tick_end(f));
+    }
+
+    /// An ARAM load of `len` bytes inside a tick.
+    pub fn aram_load(&mut self, data: &Archives, len: u32) {
+        self.with_clock(data, |c, f| c.aram_load(len, f));
+    }
+
+    fn with_clock(
+        &mut self,
+        data: &Archives,
+        run: impl FnOnce(&mut clock::Clock, &mut dyn clock::Frames),
+    ) {
+        let Some(mut c) = self.clock.take() else {
+            return;
+        };
+        let mut f = Running { audio: self, data };
+        run(&mut c, &mut f);
+        self.clock = Some(c);
+    }
+}
+
+/// The audio state and the data its frames read, as the timeline's owner.
+struct Running<'a> {
+    audio: &'a mut Audio,
+    data: &'a Archives,
+}
+
+impl clock::Frames for Running<'_> {
+    fn audio_frame(&mut self) {
+        self.audio.ax_frame(self.data);
+    }
+}
