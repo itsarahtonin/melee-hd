@@ -304,6 +304,10 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
     d.pitch_target = m.i32(sym("AXDriver_804D6038"));
     d.pitch_due = m.i32(sym("AXDriver_804D77E0"));
     d.pitch_cents = m.i32(sym("AXDriver_804D77E4"));
+    for (i, b) in a.lb.banks.iter_mut().enumerate() {
+        *b = m.i32(sym("lbl_80433984") + 4 * i as u32);
+    }
+    let d = &mut a.driver;
     d.bank = bank;
     d.banks = m.i32(sym("AXDriver_804D77B0"));
     d.streams = m.i32(sym("AXDriver_804D77B8"));
@@ -617,6 +621,13 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
             "AXDriver_804D77BC",
             sym("AXDriver_804D77BC"),
             base.wrapping_add(d.stream_table),
+        );
+    }
+    for (i, b) in a.lb.banks.iter().enumerate() {
+        img.u32(
+            "lbl_80433984",
+            sym("lbl_80433984") + 4 * i as u32,
+            *b as u32,
         );
     }
     img.check(&m, diffs);

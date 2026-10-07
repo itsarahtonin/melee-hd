@@ -9,6 +9,7 @@ use super::super::handles::FighterId;
 use super::super::state::{Event, Running};
 use super::colanim::Overlay;
 use super::common::{FIGHTER_P_LINK, GA_AIR};
+use super::sound::Track;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::{aobj, tobj};
@@ -204,15 +205,20 @@ impl Running<'_> {
         self.clear_hitboxes(f);
     }
 
-    /// One of the character's smash sounds, at random (`ft_800889F4`, not ported).
+    /// One of the character's smash sounds, at random (`ft_800889F4`).
     fn cmd_smash_sound(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
         let fp = &self.game.fighters[f.0];
         let sfx = self
             .data
             .ptr(fp.ft_data.expect("a fighter without data").at(0x4C))
             .expect("ftData's sounds");
-        if self.data.ptr(sfx).is_some() {
-            unported_call("ft_800889F4");
+        if let Some(smash) = self.data.ptr(sfx) {
+            let n = self.data.u32(smash) as i32;
+            let ids = self.data.ptr(smash.at(4)).expect("the smash sounds' ids");
+            let ids: Vec<i32> = (0..n.max(0) as u32)
+                .map(|i| self.data.u32(ids.at(4 * i)) as i32)
+                .collect();
+            self.fighter_random_voice(f, &ids);
         }
     }
 
@@ -568,23 +574,28 @@ impl Running<'_> {
     }
 
     /// The sound command, `ftAction_80071B50`: a behavior, then (for a sound) its id and
-    /// volume and panning. Stopping one of the fighter's tracks is ported; playing isn't.
+    /// volume and panning.
     fn sound_command(&mut self, f: FighterId, which: Option<Overlay>) {
         let behavior = bits(self.cmd_word_in(f, which, 0), 6, 8);
         self.cmd_script(f, which).skip(1);
         match behavior {
             0..=6 => {
+                let sfx = self.cmd_word_in(f, which, 0) as i32;
                 self.cmd_script(f, which).skip(1);
-                const PLAY: [&str; 7] = [
-                    "ft_PlaySFX",
-                    "ft_80088478",
-                    "ft_800881D8",
-                    "ft_80088510",
-                    "ft_800885A8",
-                    "ft_80088640",
-                    "ft_80088328",
+                let w = self.cmd_word_in(f, which, 0);
+                let (vol, pan) = (bits(w, 16, 8) as u8, bits(w, 24, 8) as u8);
+                const TRACKS: [Track; 6] = [
+                    Track::Effect,
+                    Track::Voice,
+                    Track::Effect2,
+                    Track::Effect3,
+                    Track::Effect4,
+                    Track::Voice2,
                 ];
-                unported_call(PLAY[behavior as usize]);
+                match behavior {
+                    0 => self.fighter_play_sfx(f, sfx, vol, pan),
+                    b => self.fighter_play_track(f, TRACKS[b as usize - 1], sfx, vol, pan),
+                }
             }
             10..=15 => {
                 self.cmd_script(f, which).skip(1);

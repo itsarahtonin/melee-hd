@@ -22,6 +22,7 @@ pub mod motion;
 mod motion_tables;
 pub mod parts;
 pub mod phys;
+pub mod sound;
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 

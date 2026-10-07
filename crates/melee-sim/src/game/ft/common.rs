@@ -139,7 +139,9 @@ impl Running<'_> {
         }
         let attr = &self.game.fighter(gobj).smash_attrs;
         if attr.x2130_sfxBool == 0 && attr.x2118_frames >= sfx_frame {
-            unported_call("ft_PlaySFX");
+            let f = self.game.fighter_id(gobj);
+            self.fighter_play_sfx(f, 0x7B, 0x7F, 0x40);
+            self.game.fighter_mut(gobj).smash_attrs.x2130_sfxBool = 1;
         }
     }
 

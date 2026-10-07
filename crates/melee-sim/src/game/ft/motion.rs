@@ -180,7 +180,7 @@ impl Running<'_> {
     pub(super) fn key_off(&mut self, f: FighterId, base: i32) {
         let fp = &self.game.fighters[f.0];
         let track = base + 2 * i32::from(fp.player_idx) + i32::from(fp.is_sub_fighter);
-        self.game.events.push(Event::SfxKeyOffTrack(track));
+        self.sfx_play_track(crate::lb::audio::SFX_KEY_OFF, 0, 0x40, track);
     }
 
     /// Clears the fighter's hitboxes, `ftColl_8007AFF8`.

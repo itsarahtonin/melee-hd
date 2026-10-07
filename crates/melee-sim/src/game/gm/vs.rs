@@ -623,21 +623,6 @@ impl Game {
         }
     }
 
-    /// Asks the audio driver for a sound (`lbAudioAx_800237A8`).
-    pub fn play_sfx(&mut self, id: i32, volume: u8, pan: u8) {
-        self.events.push(Event::Sfx { id, volume, pan });
-    }
-
-    /// Asks the audio driver for a sound on a voice group (`lbAudioAx_80023870`).
-    pub fn play_sfx_group(&mut self, id: i32, volume: u8, pan: u8, group: i32) {
-        self.events.push(Event::SfxGroup {
-            id,
-            volume,
-            pan,
-            group,
-        });
-    }
-
     /// An audio-driver call the frontend acts on.
     pub fn audio(&mut self, func: u32, args: [i32; 4]) {
         self.events.push(Event::Audio { func, args });
@@ -705,7 +690,7 @@ impl Running<'_> {
                             assert_eq!(g.vs.state.unk_1C.0, COUNTDOWN.0, "the countdown's sounds");
                             let id = COUNTDOWN.1[g.vs.state.timer_seconds as usize] as i32;
                             if id >= 0 {
-                                g.play_sfx(id, 0x7F, 0x40);
+                                self.sfx_play(id, 0x7F, 0x40);
                             }
                         }
                     }
@@ -714,6 +699,8 @@ impl Running<'_> {
             }
         }
         let g = &mut *self.game;
+        // The loop only counts down; its sounds play in its order.
+        let mut sounds = Vec::new();
         for i in 0..4 {
             let f = &mut g.vs.state.fighters[i];
             if f.x1 == 0 {
@@ -729,10 +716,13 @@ impl Running<'_> {
                 } else {
                     0x7C865
                 };
-                g.play_sfx_group(id, 0x7F, 0x40, 0x19);
+                sounds.push(id);
             } else if left == 0 {
-                g.play_sfx_group(0x7C852, 0x7F, 0x40, 0x19);
+                sounds.push(0x7C852);
             }
+        }
+        for id in sounds {
+            self.sfx_play_track(id, 0x7F, 0x40, 0x19);
         }
     }
 
@@ -852,8 +842,8 @@ impl Running<'_> {
         if !g.vs.start.x1_5 {
             g.audio(0x8002_36DC, [0; 4]);
         }
-        g.audio(0x8002_3694, [0; 4]);
-        g.audio(0x8002_4C84, [0; 4]);
+        self.sfx_stop_all();
+        self.game.audio(0x8002_4C84, [0; 4]);
         code::call(self, addr::IFTIME_FREE_COUNTDOWN, &[]);
         let g = &*self.game;
         assert!(
@@ -1363,7 +1353,7 @@ impl Running<'_> {
             g.set_player_unk45(i, i32::from(cap_color(color as u8)));
             self.player_create_fighters(i);
             if self.game.vs.state.fighters[i as usize].x4[0] & 0x08 != 0 {
-                self.game.play_sfx(0x41F4E, 0x7F, 0x40);
+                self.sfx_play(0x41F4E, 0x7F, 0x40);
             }
         }
         self.kirby_costumes();

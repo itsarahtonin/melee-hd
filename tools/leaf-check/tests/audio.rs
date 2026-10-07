@@ -21,6 +21,8 @@
 //! (default `.../calls/audio/api`), captured the same way with those functions named instead.
 
 use leaf_check::calls::{Ret, check_calls};
+use melee_sim::game::ft::sound::Track;
+use melee_sim::game::handles::FighterId;
 
 const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/drv";
 
@@ -94,4 +96,84 @@ fn service_callback_stack() {
         g.game.audio.service_callback_stack();
         Ret::Nothing
     });
+}
+
+const API_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/api";
+
+fn api_dir() -> String {
+    std::env::var("AUDIO_API_CALLS").unwrap_or_else(|_| API_CALLS.to_owned())
+}
+
+/// The fighter in r3's slot (`Fighter*`, the GObj's user data).
+fn fighter(maps: &melee_capture::import::Maps, c: &ssbm_rt::capture::Call) -> FighterId {
+    *maps
+        .fighters
+        .get(&r(c, 3))
+        .unwrap_or_else(|| panic!("r3 {:#x} isn't a fighter the import knows", r(c, 3)))
+}
+
+#[test]
+fn lb_play() {
+    check_calls(&api_dir(), "lbAudioAx_800237A8", 1, &|g, _, c| {
+        Ret::Int(g.sfx_play(r(c, 3) as i32, r(c, 4) as i32, r(c, 5) as i32) as u32)
+    });
+}
+
+#[test]
+fn lb_play_track() {
+    check_calls(&api_dir(), "lbAudioAx_80023870", 50, &|g, _, c| {
+        let h = g.sfx_play_track(
+            r(c, 3) as i32,
+            r(c, 4) as i32,
+            r(c, 5) as i32,
+            r(c, 6) as i32,
+        );
+        Ret::Int(h as u32)
+    });
+}
+
+#[test]
+fn fighter_play_sfx() {
+    check_calls(&api_dir(), "ft_PlaySFX", 20, &|g, maps, c| {
+        g.fighter_play_sfx(
+            fighter(maps, c),
+            r(c, 4) as i32,
+            r(c, 5) as u8,
+            r(c, 6) as u8,
+        );
+        Ret::Nothing
+    });
+}
+
+#[test]
+fn fighter_tracks() {
+    for (name, t) in [
+        ("ft_800881D8", Track::Voice),
+        ("ft_80088328", Track::Voice2),
+        ("ft_80088478", Track::Effect),
+    ] {
+        check_calls(&api_dir(), name, 1, &|g, maps, c| {
+            g.fighter_play_track(
+                fighter(maps, c),
+                t,
+                r(c, 4) as i32,
+                r(c, 5) as u8,
+                r(c, 6) as u8,
+            );
+            Ret::Nothing
+        });
+    }
+}
+
+#[test]
+fn fighter_stop_tracks() {
+    for (name, t) in [
+        ("ft_80088770", Track::Voice),
+        ("ft_800887CC", Track::Voice2),
+    ] {
+        check_calls(&api_dir(), name, 1, &|g, maps, c| {
+            g.fighter_stop_track(fighter(maps, c), t);
+            Ret::Nothing
+        });
+    }
 }

@@ -6,7 +6,6 @@
 
 use gekko_fp as fp;
 
-use super::super::code::unported_call;
 use super::super::state::Running;
 use super::super::structs::Fighter;
 use crate::fpu::{mem, reg};
@@ -120,7 +119,9 @@ impl Running<'_> {
         {
             fp.fall_fast = true;
             fp.active_timer.lstick.y = 254;
-            unported_call("ft_PlaySFX");
+            let f = self.game.fighter_id(gobj);
+            self.fighter_play_sfx(f, 0x96, 0x7F, 0x40);
+            return true;
         }
         false
     }

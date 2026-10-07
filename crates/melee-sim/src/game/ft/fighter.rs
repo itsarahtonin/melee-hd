@@ -497,7 +497,9 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
             fp::fadds(fp::fadds(bottom, y_off), fp::fadds(blast_bottom, y_off)),
         );
         if reg(fp.prev_pos.y) >= line && reg(fp.cur_pos.y) < line {
-            unported_call("ft_PlaySFX");
+            // The warning near the bottom blast zone.
+            g.fighter_play_sfx(f, 96, 127, 64);
+            g.game.fighters[f.0].x2225_b0 = true;
         }
     }
     let fp = &mut g.game.fighters[f.0];

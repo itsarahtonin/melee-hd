@@ -84,7 +84,10 @@ pub enum Event {
     /// `HSD_AudioSFXKeyOffTrack`: the sound on a track stops.
     SfxKeyOffTrack(i32),
     /// `HSD_PadRumbleRemoveId`: a controller's rumble of one kind stops.
-    RumbleRemove { port: u8, id: i32 },
+    RumbleRemove {
+        port: u8,
+        id: i32,
+    },
     /// `HSD_PadRumbleAdd` (through `lb_80014574`): a controller rumbles with pattern `kind`
     /// for `frames` (-2: the pattern's length).
     RumbleAdd {
@@ -93,18 +96,40 @@ pub enum Event {
         kind: i32,
         frames: i32,
     },
-    /// A sound effect plays (`lbAudioAx_800237A8`: id, volume, pan).
-    Sfx { id: i32, volume: u8, pan: u8 },
-    /// A sound plays on a voice group (`lbAudioAx_80023870`: id, volume, pan, group).
-    SfxGroup {
+    /// A sound starts (`HSD_AudioSFXStartParam`, through `lbAudioAx_800237A8` or `80023870`):
+    /// its handle (-1 if none was free), id, the driver's volume and pan, and its track (0
+    /// none). What plays is the audio state's: the voices' parameter blocks.
+    SfxStart {
+        handle: i32,
         id: i32,
         volume: u8,
         pan: u8,
-        group: i32,
+        track: i32,
+    },
+    /// `HSD_AudioSFXKeyOff`: a sound stops.
+    SfxKeyOff(i32),
+    /// `HSD_AudioSFXKeyOffAll`: every sound stops.
+    SfxKeyOffAll,
+    /// A sound's pan, volume or pitch changes (`HSD_AudioSFXSetPan`, `SetVolumeEx`,
+    /// `SetPitchFid`).
+    SfxPan {
+        handle: i32,
+        pan: u8,
+    },
+    SfxVolume {
+        handle: i32,
+        volume: u8,
+    },
+    SfxPitch {
+        handle: i32,
+        cents: i16,
     },
     /// An audio-driver call the frontend acts on (the original function's address and its
     /// integer arguments): the crowd, the announcer, music changes.
-    Audio { func: u32, args: [i32; 4] },
+    Audio {
+        func: u32,
+        args: [i32; 4],
+    },
 }
 
 /// Everything a tick reads and writes.

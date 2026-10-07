@@ -24,6 +24,8 @@ pub struct Audio {
     pub ax: ax::Ax,
     pub synth: synth::Synth,
     pub driver: driver::Driver,
+    /// The game's audio library's state (`melee/lb/lbaudio_ax.c`).
+    pub lb: crate::lb::audio::LbAudio,
     /// When audio frames run; none where the state came without a timeline (a single
     /// captured call), and no frame runs then.
     pub clock: Option<clock::Clock>,
