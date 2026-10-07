@@ -6,6 +6,7 @@
 //! snapshot for rollback is a clone.
 
 mod fpu;
+pub mod game;
 pub mod hsd;
 pub mod input;
 pub mod lb;

@@ -21,6 +21,7 @@ fn main() -> ExitCode {
     match args.iter().map(String::as_str).collect::<Vec<_>>()[..] {
         ["compare", original, ours] => compare_files(original, ours),
         ["trace-check", trace, replay] => trace_check(trace, replay),
+        ["mirror-check", trace] => mirror_check(trace),
         _ => {
             eprintln!("usage: melee-oracle compare ORIGINAL.slp OURS.slp");
             eprintln!("       melee-oracle trace-check TRACE REPLAY.slp");
@@ -164,4 +165,98 @@ fn trace_check(trace_path: &str, replay_path: &str) -> ExitCode {
         return ExitCode::FAILURE;
     }
     ExitCode::SUCCESS
+}
+
+/// Imports every fighter in a trace into melee-sim's mirror of `Fighter` and compares it back
+/// with the bytes it came from: a check of the generated mirror (offsets, widths, bitfields).
+fn mirror_check(trace_path: &str) -> ExitCode {
+    use melee_sim::game::mirror::{Cx, Mem, Mirror};
+    use melee_sim::game::structs::Fighter;
+
+    /// Pointers round-trip through stable stand-in handles.
+    #[derive(Default)]
+    struct Ids {
+        handles: std::collections::HashMap<(&'static str, u32), u32>,
+        data: std::collections::HashMap<u32, u32>,
+        mismatches: Vec<String>,
+    }
+    impl Ids {
+        fn handle(&mut self, kind: &'static str, addr: u32) -> Option<u32> {
+            let n = self.handles.len() as u32;
+            (addr != 0).then(|| *self.handles.entry((kind, addr)).or_insert(n))
+        }
+    }
+    impl Cx for Ids {
+        fn import_handle(&mut self, kind: &'static str, addr: u32) -> Option<u32> {
+            self.handle(kind, addr)
+        }
+        fn import_data(&mut self, addr: u32) -> Option<melee_data::archive::DataRef> {
+            let n = self.data.len() as u32;
+            (addr != 0).then(|| melee_data::archive::DataRef {
+                archive: melee_data::archive::ArchiveId(0),
+                offset: *self.data.entry(addr).or_insert(n),
+            })
+        }
+        fn compare_handle(
+            &mut self,
+            path: &str,
+            kind: &'static str,
+            ours: Option<u32>,
+            theirs: u32,
+        ) {
+            if self.handle(kind, theirs) != ours {
+                self.mismatches
+                    .push(format!("{path}: handle {ours:?} vs {theirs:#x}"));
+            }
+        }
+        fn compare_data(
+            &mut self,
+            path: &str,
+            ours: Option<melee_data::archive::DataRef>,
+            theirs: u32,
+        ) {
+            let t = (theirs != 0).then(|| self.data[&theirs]);
+            if t != ours.map(|d| d.offset) {
+                self.mismatches
+                    .push(format!("{path}: data {ours:?} vs {theirs:#x}"));
+            }
+        }
+        fn mismatch(&mut self, path: &str, ours: String, theirs: String) {
+            self.mismatches.push(format!("{path}: {ours} vs {theirs}"));
+        }
+    }
+
+    let ticks = trace::read(trace_path);
+    let mut ids = Ids::default();
+    let mut fighters = 0;
+    for t in &ticks {
+        for r in t.of(Kind::Fighter) {
+            let m = Mem {
+                bytes: &r.bytes,
+                base: r.address,
+            };
+            assert_eq!(r.bytes.len() as u32, Fighter::SIZE, "trace's Fighter size");
+            let f = Fighter::import(&m, r.address, &mut ids);
+            f.compare(&m, r.address, "fighter", &mut ids);
+            if fighters == 0 || t.number % 300 == 0 {
+                println!(
+                    "tick {} port {} kind {} action {} pos {:?} percent {}",
+                    t.number, f.player_idx, f.kind, f.motion_id, f.cur_pos, f.dmg.x1830_percent
+                );
+            }
+            fighters += 1;
+        }
+    }
+    println!(
+        "{fighters} fighters round-tripped, {} mismatches",
+        ids.mismatches.len()
+    );
+    for m in ids.mismatches.iter().take(20) {
+        println!("  {m}");
+    }
+    if ids.mismatches.is_empty() {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
 }

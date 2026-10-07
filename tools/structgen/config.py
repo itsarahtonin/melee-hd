@@ -8,11 +8,16 @@ POINTERS = {
     "HSD_GObj": "Option<GObjId>",
     "HSD_JObj": "Option<JObjId>",
     "HSD_DObj": "Option<DObjId>",
-    "HSD_TObj": "Option<TObjId>",
-    "HSD_LObj": "Option<LObjId>",
-    "HSD_Shadow": "Option<ShadowId>",
     "Fighter": "Option<FighterId>",
     "Item": "Option<ItemId>",
+}
+
+# C types melee-sim already has: fields of these types use the Rust type, and no struct is
+# generated for them.
+EXTERNAL = {
+    "Vec": "Vec3",
+    "Vec3": "Vec3",
+    "Quaternion": "Quat",
 }
 
 # Pointee types that live in loaded game data: pointers to them become DataRef.
@@ -34,4 +39,9 @@ RENAME_FIELDS = {}
 
 PRELUDE = """use melee_data::archive::DataRef;
 
-use crate::game::handles::*;"""
+use crate::game::handles::{CodeRef, FighterId, ItemId, RawPtr};
+use crate::hsd::dobj::DObjId;
+use crate::hsd::gobj::GObjId;
+use crate::hsd::jobj::JObjId;
+use crate::quat::Quat;
+use crate::vec::Vec3;"""
