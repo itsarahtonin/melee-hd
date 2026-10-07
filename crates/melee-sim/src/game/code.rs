@@ -52,6 +52,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         0x8006_C624 => fighter::proc_accessory(game, gobj),
         0x8006_C80C => fighter::proc_coll_pos(game, gobj),
         0x8006_CA5C => fighter::proc_grab_coll(game, gobj),
+        0x8006_CB94 => super::ft::attack::proc_attack_coll(game, gobj),
         addr if super::it::item::run_proc(game, gobj, addr) => {}
         addr if super::it::kinds::run_event(game, gobj, addr) => {}
         super::ef::UPDATE_PROC => super::ef::update(game, gobj),

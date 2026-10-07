@@ -193,6 +193,10 @@ fn panic_text(p: &(dyn std::any::Any + Send)) -> String {
         .unwrap_or_else(|| "a panic".into())
 }
 
+/// A character's animation file found in the capture: its kind, name, and archive per
+/// animation offset.
+type AnimEntry = (i32, String, Vec<(u32, ArchiveId)>);
+
 /// What one capture's run came to.
 enum Outcome {
     Clean(usize),
@@ -221,7 +225,7 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode, first_init: bool
     // The fighter kinds the playing slots need, and their files on our side.
     let slots: Vec<i32> = (0..6).filter(|&s| game.player_pkind(s) != 3).collect();
     let mut named: Vec<(String, ArchiveId)> = Vec::new();
-    let mut anims: Vec<(i32, String, Vec<(u32, ArchiveId)>)> = Vec::new();
+    let mut anims: Vec<AnimEntry> = Vec::new();
     for &s in &slots {
         let m = mapping(game.player(s).ckind);
         for kind in [m.internal_id, m.extra_internal_id] {
@@ -447,7 +451,7 @@ fn part_flags() {
         ctx.write_u8(bone + 9, old[1]);
         ctx.write_u8(bone + 0xC, old_c[0]);
         ctx.write_u8(bone + 0xD, old_c[1]);
-        ctx.write_u32(index, (i % 3) as u32);
+        ctx.write_u32(index, i % 3);
         ssbm_types::fns::ftParts_80074194(
             &ctx,
             leaf_check::handle(&ctx, fighter),

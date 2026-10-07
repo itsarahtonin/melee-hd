@@ -8,6 +8,7 @@
 
 pub mod action;
 pub mod anim;
+pub mod attack;
 pub mod bind;
 pub mod co;
 pub mod colanim;
@@ -68,6 +69,9 @@ pub struct Globals {
     pub kirby: KirbyCostumes,
     /// Jigglypuff's hats (`ft_8045A1E0`).
     pub purin_hats: [Option<DataRef>; 5],
+    /// The attack collision's scratch (`ftcoll.c`'s damage logs and clank flags), which each
+    /// fighter's attack collision starts over.
+    pub hit_logs: attack::HitLogs,
 }
 
 /// The fighter kinds whose costumes Kirby can copy (`ftKb_Init_803C9FC8`'s entries).
@@ -95,9 +99,7 @@ impl KirbyCostumes {
     #[doc(alias = "ftKb_Init_800EE528")]
     pub fn reset(&mut self) {
         self.counts = [0; data::KIND_COUNT];
-        for m in &mut self.models {
-            *m = [(None, None); 6];
-        }
+        self.models.fill([(None, None); 6]);
     }
 }
 

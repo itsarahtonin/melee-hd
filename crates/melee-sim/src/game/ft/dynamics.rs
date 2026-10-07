@@ -4,6 +4,9 @@
 //!
 //! [`DynamicsData`]: super::super::structs::DynamicsData
 
+// NaN takes the original's branches, which the negated comparisons spell out.
+#![allow(clippy::neg_cmp_op_on_partial_ord)]
+
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 

@@ -17,6 +17,7 @@ use crate::hsd::lobj::LObjId;
 use crate::hsd::shadow::ShadowId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
+use crate::lb::hitcapsule::Victim;
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -1753,20 +1754,15 @@ impl Mirror for HitVictim {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         HitVictim {
-            victim: RawPtr(m.u32(at + 0x0)),
+            victim: Victim::import(m, at + 0x0, cx),
             x4: m.u32(at + 0x4),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.victim.0 != m.u32(at + 0x0) {
-            cx.mismatch(
-                &format!("{path}.victim"),
-                format!("{:#x}", self.victim.0),
-                format!("{:#x}", m.u32(at + 0x0)),
-            );
-        }
+        self.victim
+            .compare(m, at + 0x0, &format!("{path}.victim"), cx);
         if self.x4 != m.u32(at + 0x4) {
             cx.mismatch(
                 &format!("{path}.x4"),

@@ -1263,11 +1263,11 @@ impl Cx for Comparer<'_> {
         let known = match kind {
             "JObjId" => self.maps.jobjs.get(&theirs).map(|j| j.0),
             "GObjId" => self.maps.gobjs.get(&theirs).map(|g| g.0),
-            "FighterId" => self.maps.fighters.get(&theirs).map(|f| f.0),
+            "FighterId" | "VictimFighter" => self.maps.fighters.get(&theirs).map(|f| f.0),
             "PartsId" => self.maps.fighter_parts.get(&theirs).map(|p| p.0),
             "AttrsId" => self.maps.fighter_attrs.get(&theirs).map(|a| a.0),
             "DynamicsId" => self.maps.fighter_dynamics.get(&theirs).map(|d| d.0),
-            "ItemId" => self.maps.items.get(&theirs).map(|i| i.0),
+            "ItemId" | "VictimItem" => self.maps.items.get(&theirs).map(|i| i.0),
             "BoneTableId" => {
                 if let (Some(o), true) = (ours, theirs != 0) {
                     self.bone_table(path, BoneTableId(o), theirs);

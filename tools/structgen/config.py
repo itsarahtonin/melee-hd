@@ -96,6 +96,8 @@ SPLICE = {
     "ColorOverlay": ("script", 0, 0x24, "Script"),
     # A fighter's dynamic bones hold the joint-physics member of this union.
     "DynamicsData": ("desc", 0, 0x90, "lb_00F9_UnkDesc0"),
+    # The fighter or item a hitbox hit, by its user data.
+    "HitVictim": ("victim", 0, 4, "Victim"),
     # A bone id, or the figatree an animation's blend slot gives the chain.
     "BoneDynamicsDesc": ("bone_id", 0, 4, "BoneSlot"),
     # Pointers a computer player's state keeps into itself: offsets from the fields they point
@@ -115,6 +117,7 @@ EXTRA_USES = [
     "use crate::hsd::lobj::LObjId;",
     "use crate::hsd::shadow::ShadowId;",
     "use crate::lb::command::Script;",
+    "use crate::lb::hitcapsule::Victim;",
 ]
 
 # C types melee-sim already has: fields of these types use the Rust type, and no struct is
@@ -167,6 +170,7 @@ use crate::hsd::lobj::LObjId;
 use crate::hsd::shadow::ShadowId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
+use crate::lb::hitcapsule::Victim;
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;"""

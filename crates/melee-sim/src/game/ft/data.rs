@@ -180,9 +180,9 @@ impl Game {
     pub fn reset_fighter_data(&mut self) {
         self.ft.anim_files.resize(KIND_COUNT, None);
         let d = &mut self.ft.data;
-        for kind in 0..KIND_COUNT {
+        for (kind, tables) in KINDS.iter().enumerate().take(KIND_COUNT) {
             d.data_list[kind] = None;
-            for c in 0..usize::from(KINDS[kind].costume_count) {
+            for c in 0..usize::from(tables.costume_count) {
                 d.costumes[kind][c].joint = None;
                 d.costumes[kind][c].x8 = 0;
             }

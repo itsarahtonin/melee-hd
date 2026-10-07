@@ -17,6 +17,7 @@ use crate::hsd::lobj::LObjId;
 use crate::hsd::shadow::ShadowId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
+use crate::lb::hitcapsule::Victim;
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -880,7 +881,7 @@ impl Default for Fighter_x8B0_t {
 #[derive(Clone, Debug, PartialEq)]
 pub struct HitVictim {
     /// +0x0
-    pub victim: RawPtr,
+    pub victim: Victim,
     /// +0x4
     pub x4: u32,
 }

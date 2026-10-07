@@ -1481,10 +1481,49 @@ impl Importer<'_> {
     }
 }
 
+impl Importer<'_> {
+    /// Whether `addr` is the user data of a GObj on process link `link` in the capture.
+    fn on_link(&self, link: u32, addr: u32) -> bool {
+        let heads = self.u32(sym("HSD_GObjPLinkHead"));
+        let mut g = self.u32(heads + 4 * link);
+        while g != 0 {
+            if self.u32(g + 0x2C) == addr {
+                return true;
+            }
+            g = self.u32(g + 8);
+        }
+        false
+    }
+}
+
 impl Cx for Importer<'_> {
     fn import_handle(&mut self, kind: &'static str, addr: u32) -> Option<u32> {
         if addr == 0 {
             return None;
+        }
+        // A hitbox's victim: a live fighter's or item's user data, else nothing to follow.
+        match kind {
+            "VictimFighter" => {
+                if !self.on_link(8, addr) {
+                    return None;
+                }
+                return if self.freed {
+                    self.maps.fighters.get(&addr).map(|f| f.0)
+                } else {
+                    Some(self.fighter(addr).0)
+                };
+            }
+            "VictimItem" => {
+                if !self.on_link(9, addr) {
+                    return None;
+                }
+                return if self.freed {
+                    self.maps.items.get(&addr).map(|i| i.0)
+                } else {
+                    Some(self.item_slot(addr).0)
+                };
+            }
+            _ => {}
         }
         if self.freed {
             return match kind {
