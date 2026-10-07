@@ -3,3 +3,12 @@
 lb_sqrtf	leaf-check math: asinf and acosf call it on every input
 sin__Ff	leaf-check math: tanf calls it on every input
 cos__Ff	leaf-check math: tanf calls it on every input
+HSD_GObjProc_QueueProc	leaf-check gobj: every SetupProc, ChangeGObjPri and mid-tick change queues through it; run orders compared each step
+HSD_GObjProc_UnqueueProc	leaf-check gobj: every RemoveProc, GObjFree and ChangeGObjPri unqueues through it
+HSD_GObjProc_UnlinkProcFromGObj	leaf-check gobj: RemoveProc unlinks through it; process chains compared each step
+HSD_GObjProc_RemoveAllProcs	leaf-check gobj: HSD_GObjFree calls it
+GObj_PReorder	leaf-check gobj: every CreateGObj and ChangeGObjPri links through it; p_link orders compared each step
+GObj_GXReorder	leaf-check gobj: every render-link setup and relink goes through it; render orders compared each step
+HSD_GObjObject_80390B0C	leaf-check gobj: HSD_GObjFree releases objects through it; releases compared each step
+GObj_RemoveUserData	leaf-check gobj: HSD_GObjFree releases user data through it; releases compared each step
+HSD_GObjInit	leaf-check gobj: the test lays out HSD_GObjInit's tables with Melee's limits and compares the empty scheduler before the first step
