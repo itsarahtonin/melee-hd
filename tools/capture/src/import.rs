@@ -15,8 +15,10 @@ use melee_sim::hsd::dobj::{DObj, DObjId};
 use melee_sim::hsd::fobj::{FObj, FObjId};
 use melee_sim::hsd::gobj::{GObj, GObjId, P_LINKS, PROC_PRIORITIES, Proc, ProcId};
 use melee_sim::hsd::jobj::{self, Contents, JObj, JObjId};
+use melee_sim::hsd::mobj::{MObj, MObjClass, MObjId, Material, PeDesc};
 use melee_sim::hsd::pobj::{self, Binding, Envelope, PObj, PObjId, ShapeSet};
 use melee_sim::hsd::robj::{self, Exp, RObj, RObjId, Ref, Rvalue, RvalueId};
+use melee_sim::hsd::tobj::{Color, ImageRef, TObj, TObjId, TObjTev};
 use melee_sim::mtx::Mtx34;
 use melee_sim::quat::Quat;
 use melee_sim::vec::Vec3;
@@ -44,6 +46,8 @@ pub struct Maps {
     pub rvalues: HashMap<u32, RvalueId>,
     pub dobjs: HashMap<u32, DObjId>,
     pub pobjs: HashMap<u32, PObjId>,
+    pub mobjs: HashMap<u32, MObjId>,
+    pub tobjs: HashMap<u32, TObjId>,
     pub fighters: HashMap<u32, FighterId>,
 }
 
@@ -464,16 +468,166 @@ impl<'a> Importer<'a> {
         let next = (n != 0).then(|| self.dobj(n));
         let p = self.u32(a + 0xC);
         let pobj = (p != 0).then(|| self.pobj(p));
-        if self.u32(a + 0x10) != 0 {
-            self.unhandled.push(format!("DObj {a:#x}: AObj"));
-        }
+        let m = self.u32(a + 8);
+        let mobj = (m != 0).then(|| self.mobj(m));
+        let ao = self.u32(a + 0x10);
+        let aobj = (ao != 0).then(|| self.aobj(ao));
         self.game.objs.dobjs[id] = DObj {
             next,
-            // Materials aren't ported yet.
-            mobj_desc: None,
+            mobj,
             pobj,
+            aobj,
             flags: self.u32(a + 0x14),
         };
+        id
+    }
+
+    pub fn mobj(&mut self, a: u32) -> MObjId {
+        if let Some(&x) = self.maps.mobjs.get(&a) {
+            return x;
+        }
+        let id = MObjId(self.game.objs.mobjs.pool.alloc(MObj::default()));
+        self.maps.mobjs.insert(a, id);
+        let t = self.u32(a + 8);
+        let tobj = (t != 0).then(|| self.tobj(t));
+        let mat = match self.u32(a + 0xC) {
+            0 => None,
+            p => Some(Material {
+                ambient: self.color(p),
+                diffuse: self.color(p + 4),
+                specular: self.color(p + 8),
+                alpha: self.f32(p + 0xC),
+                shininess: self.f32(p + 0x10),
+            }),
+        };
+        let pe = match self.u32(a + 0x10) {
+            0 => None,
+            p => {
+                let b = |o| self.u8(p + o);
+                Some(PeDesc {
+                    flags: b(0),
+                    ref0: b(1),
+                    ref1: b(2),
+                    dst_alpha: b(3),
+                    ty: b(4),
+                    src_factor: b(5),
+                    dst_factor: b(6),
+                    logic_op: b(7),
+                    z_comp: b(8),
+                    alpha_comp0: b(9),
+                    alpha_op: b(10),
+                    alpha_comp1: b(11),
+                })
+            }
+        };
+        if self.u32(a) != sym("hsdMObj") {
+            self.unhandled
+                .push(format!("MObj {a:#x}: a class of its own"));
+        }
+        let ao = self.u32(a + 0x14);
+        let aobj = (ao != 0).then(|| self.aobj(ao));
+        self.game.objs.mobjs[id] = MObj {
+            class: MObjClass::Hsd,
+            rendermode: self.u32(a + 4),
+            tobj,
+            mat,
+            pe,
+            aobj,
+        };
+        id
+    }
+
+    fn color(&self, a: u32) -> Color {
+        Color {
+            r: self.u8(a),
+            g: self.u8(a + 1),
+            b: self.u8(a + 2),
+            a: self.u8(a + 3),
+        }
+    }
+
+    pub fn tobj(&mut self, a: u32) -> TObjId {
+        if let Some(&x) = self.maps.tobjs.get(&a) {
+            return x;
+        }
+        let id = TObjId(self.game.objs.tobjs.pool.alloc(TObj::default()));
+        self.maps.tobjs.insert(a, id);
+        let n = self.u32(a + 8);
+        let next = (n != 0).then(|| self.tobj(n));
+        let image = match self.u32(a + 0x58) {
+            0 => None,
+            p => match self.data.get(p) {
+                Some(d) => Some(ImageRef::Data(d)),
+                None if (0x8000_0000..0x804F_0000).contains(&p) => Some(ImageRef::Static(p)),
+                None => {
+                    self.unhandled
+                        .push(format!("TObj image in the heap {p:#x}"));
+                    None
+                }
+            },
+        };
+        if self.u32(a + 0x5C) != 0 || self.u32(a + 0x6C) != 0 {
+            self.unhandled
+                .push("TObj palette (an HSD_Tlut copy)".into());
+        }
+        let ao = self.u32(a + 0x64);
+        let aobj = (ao != 0).then(|| self.aobj(ao));
+        let tev = match self.u32(a + 0xA8) {
+            0 => None,
+            p => {
+                let b = |o| self.u8(p + o);
+                Some(TObjTev {
+                    color_op: b(0),
+                    alpha_op: b(1),
+                    color_bias: b(2),
+                    alpha_bias: b(3),
+                    color_scale: b(4),
+                    alpha_scale: b(5),
+                    color_clamp: b(6),
+                    alpha_clamp: b(7),
+                    color_in: [b(8), b(9), b(0xA), b(0xB)],
+                    alpha_in: [b(0xC), b(0xD), b(0xE), b(0xF)],
+                    konst: self.color(p + 0x10),
+                    tev0: self.color(p + 0x14),
+                    tev1: self.color(p + 0x18),
+                    active: self.u32(p + 0x1C),
+                })
+            }
+        };
+        let lod = self.u32(a + 0x60);
+        let imagetbl = self.u32(a + 0x68);
+        let o = TObj {
+            next,
+            id: self.u32(a + 0xC),
+            src: self.u32(a + 0x10),
+            mtxid: self.u32(a + 0x14),
+            rotate: Quat {
+                x: self.f32(a + 0x18),
+                y: self.f32(a + 0x1C),
+                z: self.f32(a + 0x20),
+                w: self.f32(a + 0x24),
+            },
+            scale: self.vec3(a + 0x28),
+            translate: self.vec3(a + 0x34),
+            wrap_s: self.u32(a + 0x40),
+            wrap_t: self.u32(a + 0x44),
+            repeat_s: self.u8(a + 0x48),
+            repeat_t: self.u8(a + 0x49),
+            flags: self.u32(a + 0x4C),
+            blending: self.f32(a + 0x50),
+            mag_filt: self.u32(a + 0x54),
+            imagedesc: image,
+            tlut: None,
+            lod: self.data(lod),
+            aobj,
+            imagetbl: self.data(imagetbl),
+            tluttbl: None,
+            tlut_no: self.u8(a + 0x70),
+            mtx: self.mtx(a + 0x74),
+            coord: self.u32(a + 0xA4),
+            tev,
+        };
+        self.game.objs.tobjs[id] = o;
         id
     }
 

@@ -452,6 +452,100 @@ impl<'a> Comparer<'a> {
         }
     }
 
+    fn mobj(&mut self, path: &str, o: Option<melee_sim::hsd::mobj::MObjId>, t: u32) {
+        if !Self::pair(
+            &mut self.maps.mobjs,
+            &mut self.seen,
+            &mut self.diffs,
+            "mobj",
+            path,
+            o,
+            t,
+        ) {
+            return;
+        }
+        let m = &self.game.objs.mobjs[o.unwrap()];
+        self.check(path, "rendermode", m.rendermode, self.u32(t + 4));
+        let mat = self.u32(t + 0xC);
+        let theirs = (mat != 0).then(|| {
+            let c = |a: u32| [self.u8(a), self.u8(a + 1), self.u8(a + 2), self.u8(a + 3)];
+            (
+                c(mat),
+                c(mat + 4),
+                c(mat + 8),
+                self.u32(mat + 0xC),
+                self.u32(mat + 0x10),
+            )
+        });
+        let ours = m.mat.map(|x| {
+            let c = |c: melee_sim::hsd::tobj::Color| [c.r, c.g, c.b, c.a];
+            (
+                c(x.ambient),
+                c(x.diffuse),
+                c(x.specular),
+                x.alpha.to_bits(),
+                x.shininess.to_bits(),
+            )
+        });
+        self.check(path, "material", ours, theirs);
+        self.aobj(&format!("{path} aobj"), m.aobj, self.u32(t + 0x14));
+        let (mut to, mut tt) = (m.tobj, self.u32(t + 8));
+        let mut i = 0;
+        while to.is_some() || tt != 0 {
+            let tp = format!("{path} tobj {i}");
+            if !Self::pair(
+                &mut self.maps.tobjs,
+                &mut self.seen,
+                &mut self.diffs,
+                "tobj",
+                &tp,
+                to,
+                tt,
+            ) {
+                break;
+            }
+            let x = &self.game.objs.tobjs[to.unwrap()];
+            let w = |s: &Self, o: u32| s.u32(tt + o);
+            self.check(
+                &tp,
+                "ids",
+                (x.id, x.src, x.mtxid, x.coord),
+                (w(self, 0xC), w(self, 0x10), w(self, 0x14), w(self, 0xA4)),
+            );
+            self.check(
+                &tp,
+                "flags and blending",
+                (x.flags, x.blending.to_bits(), x.tlut_no),
+                (w(self, 0x4C), w(self, 0x50), self.u8(tt + 0x70)),
+            );
+            let q = &x.rotate;
+            let srt: Vec<u32> = [
+                q.x,
+                q.y,
+                q.z,
+                q.w,
+                x.scale.x,
+                x.scale.y,
+                x.scale.z,
+                x.translate.x,
+                x.translate.y,
+                x.translate.z,
+            ]
+            .iter()
+            .map(|v| v.to_bits())
+            .collect();
+            let theirs: Vec<u32> = (0..10).map(|k| w(self, 0x18 + 4 * k)).collect();
+            self.check(&tp, "SRT", srt, theirs);
+            let mtx: Vec<u32> = x.mtx.m.iter().flatten().map(|v| v.to_bits()).collect();
+            let theirs: Vec<u32> = (0..12).map(|k| w(self, 0x74 + 4 * k)).collect();
+            self.check(&tp, "matrix", mtx, theirs);
+            self.aobj(&format!("{tp} aobj"), x.aobj, w(self, 0x64));
+            to = x.next;
+            tt = w(self, 8);
+            i += 1;
+        }
+    }
+
     fn dobjs(&mut self, path: &str, o: Option<melee_sim::hsd::dobj::DObjId>, t: u32) {
         let (mut o, mut t) = (o, t);
         let mut i = 0;
@@ -470,6 +564,8 @@ impl<'a> Comparer<'a> {
             }
             let d = &self.game.objs.dobjs[o.unwrap()];
             self.check(&dp, "flags", d.flags, self.u32(t + 0x14));
+            self.mobj(&format!("{dp} mobj"), d.mobj, self.u32(t + 8));
+            self.aobj(&format!("{dp} aobj"), d.aobj, self.u32(t + 0x10));
             let (mut p, mut tp) = (d.pobj, self.u32(t + 0xC));
             let mut k = 0;
             while p.is_some() || tp != 0 {
