@@ -443,7 +443,12 @@ impl<'a> Importer<'a> {
     /// The fighter code's globals.
     pub fn fighter_globals(&mut self) {
         self.fighter_data_globals();
-        self.game.ft.load_common = self.data.public("PlCo.dat", "ftLoadCommonData");
+        // Loaded once `Fighter_LoadCommonData` has copied its pointers out.
+        self.game.ft.load_common = if self.u32(sym("p_ftCommonData")) != 0 {
+            self.data.public("PlCo.dat", "ftLoadCommonData")
+        } else {
+            None
+        };
         self.game.pl.load_common = self.data.public("PdPm.dat", "plLoadCommonData");
         self.game.pl.stale_attack_instance = self.u16(sym("staleAttackInstance"));
         self.game.pl.attack_instance = self.u16(sym("unk_804D6480"));

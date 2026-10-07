@@ -57,8 +57,6 @@ pub struct AllocInfo {
 pub mod addr {
     /// `efAsync_LoadSync`: the character's effects.
     pub const EFASYNC_LOAD_SYNC: u32 = 0x8006_737C;
-    /// `it_8026B3F8`: registers an item a character's moves make.
-    pub const IT_8026B3F8: u32 = 0x8026_B3F8;
     /// `Fighter_Create` itself, for checks that stand it in.
     pub const FIGHTER_CREATE: u32 = 0x8006_8E98;
     /// `Fighter_FirstInitialize_80067A84`, likewise.

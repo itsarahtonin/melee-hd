@@ -1067,6 +1067,7 @@ ftCo_800D0FA0	leaf-check fighter_create: every Fox and Marth created from the st
 ftCo_800D105C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
 ftFx_Init_OnDeath	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
 ftFx_Init_OnLoad	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+it_8026B3F8	leaf-check fighter_create: Fox's OnLoad registers his three items through it; the character articles (it_804D6D38) compared after each slot
 ftFx_Init_LoadSpecialAttrs	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
 ftKb_Init_800EE528	leaf-check fighter_create: Player_80036DA4 runs it from the states before VS matches create their fighters; the whole state compared after
 ftMs_Init_OnDeath	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot

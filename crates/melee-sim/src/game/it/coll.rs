@@ -468,9 +468,8 @@ pub fn set_hit_damage(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize
         let f = super::owner::fighter_of(game, owner.unwrap());
         let scale_y = game.fighters[f.0].x34_scale.y;
         if reg(scale_y) != 1.0 {
-            let p = game
-                .it
-                .ft_scale_params
+            // `Fighter_804D6524`'s `x4` scales an item's damage by its owner's height.
+            let p = crate::game::ft::common_ptr(game, data, crate::game::ft::SCALE_PARAMS)
                 .expect("no fighter scale parameters");
             let scaled = super::owner::y_scaled(
                 fp::frsp(f64::from(dmg)),

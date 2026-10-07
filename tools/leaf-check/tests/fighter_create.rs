@@ -160,13 +160,10 @@ fn install(ctx: &Ctx) {
             ctx.regs.set_r(3, at);
         }
     });
-    for f in [addr::EFASYNC_LOAD_SYNC, addr::IT_8026B3F8] {
-        ctx.register(f, |ctx| {
-            let f = *ctx.native_stack().last().unwrap();
-            let call = (f, ctx.regs.r(3), ctx.regs.r(4));
-            THEIR_CALLS.with(|c| c.borrow_mut().push(call));
-        });
-    }
+    ctx.register(addr::EFASYNC_LOAD_SYNC, |ctx| {
+        let call = (addr::EFASYNC_LOAD_SYNC, ctx.regs.r(3), ctx.regs.r(4));
+        THEIR_CALLS.with(|c| c.borrow_mut().push(call));
+    });
 }
 
 fn import(cap: &Capture, data: &DataMap) -> (Game, Maps) {
@@ -174,6 +171,7 @@ fn import(cap: &Capture, data: &DataMap) -> (Game, Maps) {
     imp.world();
     imp.stage();
     imp.ids();
+    imp.items();
     imp.match_state();
     (imp.game, imp.maps)
 }
@@ -183,6 +181,7 @@ fn compare(mem: &[u8], data: &DataMap, game: &Game, maps: Maps) -> Vec<String> {
     cmp.world();
     cmp.stage();
     cmp.ids();
+    cmp.items();
     cmp.match_state();
     cmp.diffs
 }
@@ -307,7 +306,6 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode, first_init: bool
         // Ours.
         stubs::clear();
         stubs::set(addr::EFASYNC_LOAD_SYNC, Val::None);
-        stubs::set(addr::IT_8026B3F8, Val::None);
         let ours = catch_unwind(AssertUnwindSafe(|| {
             let mut r = Running {
                 game: &mut game,
@@ -345,7 +343,6 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode, first_init: bool
                 let same = of == tf
                     && args.iter().zip(regs).all(|(a, r)| match a {
                         Val::Int(v) => *v as u32 == r,
-                        Val::Data(d) => d.map_or(0, |d| after_data.addr(d)) == r,
                         _ => true,
                     });
                 if !same {

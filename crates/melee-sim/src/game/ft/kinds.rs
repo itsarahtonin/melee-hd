@@ -2,7 +2,6 @@
 //! (`OnLoad`), a spawn's (`OnDeath`) and the attribute changes' (`LoadSpecialAttrs`). Fox's
 //! and Marth's are ported.
 
-use super::super::code::{self, Val};
 use super::super::handles::{AttrsId, FighterId};
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
@@ -56,7 +55,7 @@ impl Running<'_> {
     }
 
     /// Fox's creation, `ftFx_Init_OnLoad`: he can wall jump, has his attributes, and registers
-    /// his blaster's shot, his blaster and his Illusion with the items (`it_8026B3F8`).
+    /// his blaster's shot, his blaster and his Illusion with the items.
     #[doc(alias = "ftFx_Init_OnLoad")]
     pub fn fox_on_load(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
@@ -73,11 +72,7 @@ impl Running<'_> {
         ];
         for (i, kind) in kinds.into_iter().enumerate() {
             let article = self.data.ptr(items.at(4 * i as u32));
-            code::call(
-                self,
-                super::create::addr::IT_8026B3F8,
-                &[Val::Data(article), Val::Int(kind)],
-            );
+            super::super::it::item::set_char_article(self.game, article, kind);
         }
     }
 

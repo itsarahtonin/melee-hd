@@ -150,8 +150,6 @@ pub enum Val {
     JObj(Option<crate::hsd::jobj::JObjId>),
     /// What an effect spawn returns: an effect, a generator, or null.
     Spawned(super::ef::Spawned),
-    /// A pointer into loaded game data.
-    Data(Option<melee_data::archive::DataRef>),
 }
 
 impl Val {

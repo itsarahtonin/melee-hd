@@ -326,6 +326,19 @@ impl<'a> Comparer<'a> {
         let bury = self.u32(sym("ftDevice_BuryThingCount"));
         self.check("ft", "bury things", game.ft.bury_things, bury);
         self.fighter_data_globals();
+        for (name, offset) in [
+            ("p_ftCommonData", 0),
+            ("Fighter_804D6548", melee_sim::game::ft::STALE_WEIGHTS),
+            ("Fighter_804D6524", melee_sim::game::ft::SCALE_PARAMS),
+        ] {
+            // Ours is a pointer in the loaded `ftLoadCommonData`, which sits in their memory.
+            let ours = game
+                .ft
+                .load_common
+                .map_or(0, |c| self.u32(self.data.addr(c.at(offset))));
+            let theirs = self.u32(sym(name));
+            self.check("ft", name, ours, theirs);
+        }
         let n = self.u16(sym("staleAttackInstance"));
         self.check("pl", "attack instance", game.pl.stale_attack_instance, n);
         let n = self.u16(sym("unk_804D6480"));

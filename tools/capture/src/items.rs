@@ -176,8 +176,6 @@ impl Importer<'_> {
         self.game.it.common_articles = data(self, "it_804D6D24");
         self.game.it.pokemon_articles = data(self, "it_804D6D30");
         self.game.it.colanims = data(self, "it_804D6D04");
-        self.game.it.ft_stale_weights = data(self, "Fighter_804D6548");
-        self.game.it.ft_scale_params = data(self, "Fighter_804D6524");
         let table = cap.u32(sym("it_804D6D38"));
         self.game.it.char_articles = if table == 0 {
             Vec::new()
@@ -189,10 +187,6 @@ impl Importer<'_> {
                 })
                 .collect()
         };
-        let refs = sym("ft_8045996C");
-        for (k, r) in self.game.it.fighter_refs.0.iter_mut().enumerate() {
-            *r = cap.u32(refs + 4 * k as u32) as i32;
-        }
         self.game.it.db_bubbles = cap.u32(sym("db_ShowItemCollisionBubbles")) as i32;
         // `db_ItemAndPokemonMenu.ShowItemPickupRange`, the second bit of the word at +0x20.
         self.game.it.db_pickup_range = cap.u32(sym("db_ItemAndPokemonMenu") + 0x20) >> 30 & 1;
@@ -257,8 +251,6 @@ impl Comparer<'_> {
             ("it_804D6D24", g.common_articles),
             ("it_804D6D30", g.pokemon_articles),
             ("it_804D6D04", g.colanims),
-            ("Fighter_804D6548", g.ft_stale_weights),
-            ("Fighter_804D6524", g.ft_scale_params),
         ] {
             let theirs = self.u32(sym(name));
             self.compare_data(name, ours, theirs);
@@ -269,11 +261,6 @@ impl Comparer<'_> {
                 let theirs = self.u32(table + 4 * k as u32);
                 self.compare_data(&format!("it_804D6D38[{k}]"), *ours, theirs);
             }
-        }
-        let refs = sym("ft_8045996C");
-        for (k, r) in g.fighter_refs.0.iter().enumerate() {
-            let theirs = self.u32(refs + 4 * k as u32);
-            self.check("ft_8045996C", &format!("[{k}]"), *r as u32, theirs);
         }
     }
 }

@@ -173,6 +173,17 @@ impl Running<'_> {
     }
 }
 
+/// Where `ftLoadCommonData` keeps the stale-move weights (`Fighter_804D6548`).
+pub const STALE_WEIGHTS: u32 = 0xC;
+/// Where `ftLoadCommonData` keeps the scale parameters (`Fighter_804D6524`).
+pub const SCALE_PARAMS: u32 = 0x30;
+
+/// One of the pointers `Fighter_LoadCommonData` copies out of `ftLoadCommonData`, by its
+/// offset there.
+pub fn common_ptr(game: &Game, data: &Archives, offset: u32) -> Option<DataRef> {
+    data.ptr(game.ft.load_common?.at(offset))
+}
+
 /// `ftCommonData`, the constants all fighters share.
 pub struct Common<'a> {
     data: &'a Archives,
