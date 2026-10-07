@@ -4,7 +4,6 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::{self, Val};
 use super::super::super::state::Running;
 use super::super::coll::scaled_by_height;
 use super::checks::{KIND_FOX, KIND_MEWTWO, abs};
@@ -14,9 +13,6 @@ use crate::fpu::{mem, reg};
 use crate::game::structs::Fighter;
 use crate::hsd::gobj::GObjId;
 use crate::mp::coll::{LEFT_EDGE, RIGHT_EDGE};
-
-/// `ft_PlaySFX`: the fighter's sounds (the audio port).
-pub(super) const FT_PLAY_SFX: u32 = 0x8008_8148;
 
 /// `ftCommon_MotionVars_walk`.
 const WALK_X0: usize = 0x0;
@@ -48,11 +44,7 @@ impl Running<'_> {
     /// Plays a fighter sound, `ft_PlaySFX`.
     pub(crate) fn play_sfx(&mut self, gobj: GObjId, id: i32, vol: i32, pan: i32) {
         let f = self.game.fighter_id(gobj);
-        code::call(
-            self,
-            FT_PLAY_SFX,
-            &[Val::Fighter(f), Val::Int(id), Val::Int(vol), Val::Int(pan)],
-        );
+        self.fighter_play_sfx(f, id, vol as u8, pan as u8);
     }
 
     /// `ftCo_Wait_IASA`.

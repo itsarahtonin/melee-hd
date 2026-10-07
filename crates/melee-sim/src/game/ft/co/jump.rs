@@ -2,9 +2,10 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::{self, Val, unported_call};
+use super::super::super::code::unported_call;
 use super::super::super::state::Running;
 use super::super::coll::PLATFORM_FILTER;
+use super::super::sound::Track;
 use super::PAD_XY;
 use super::checks::{KIND_MEWTWO, KIND_NESS, KIND_PEACH, KIND_YOSHI, abs};
 use super::ids::ms;
@@ -31,38 +32,26 @@ pub(super) const FT_80088770: u32 = 0x8008_8770;
 pub(super) const FT_800887CC: u32 = 0x8008_87CC;
 
 impl Running<'_> {
-    /// Plays a sound on one of the fighter's tracks: `ft_800881D8`, `ft_80088328`.
+    /// Plays a sound on one of the fighter's voice tracks: `ft_800881D8`, `ft_80088328`.
     pub(super) fn play_track(&mut self, gobj: GObjId, func: u32, id: i32) {
         let f = self.game.fighter_id(gobj);
-        code::call(
-            self,
-            func,
-            &[
-                Val::Fighter(f),
-                Val::Int(id),
-                Val::Int(0x7F),
-                Val::Int(0x40),
-            ],
-        );
+        let t = match func {
+            FT_800881D8 => Track::Voice,
+            FT_80088328 => Track::Voice2,
+            _ => unreachable!("not a voice track: {func:#x}"),
+        };
+        self.fighter_play_track(f, t, id, 0x7F, 0x40);
     }
 
-    /// Stops one of the fighter's voice tracks and forgets its sound: `ft_80088770` (`x2144`),
-    /// `ft_800887CC` (`x2148`).
-    #[doc(alias = "ft_80088770")]
-    #[doc(alias = "ft_800887CC")]
+    /// Stops one of the fighter's voice tracks: `ft_80088770`, `ft_800887CC`.
     pub(super) fn stop_track(&mut self, gobj: GObjId, func: u32) {
         let f = self.game.fighter_id(gobj);
-        match func {
-            FT_80088770 => {
-                self.key_off(f, 0x1E);
-                self.game.fighters[f.0].x2144 = -1;
-            }
-            FT_800887CC => {
-                self.key_off(f, 0x2A);
-                self.game.fighters[f.0].x2148 = -1;
-            }
-            _ => unreachable!("not a track stop: {func:#x}"),
-        }
+        let t = match func {
+            FT_80088770 => Track::Voice,
+            FT_800887CC => Track::Voice2,
+            _ => unreachable!("not a voice track: {func:#x}"),
+        };
+        self.fighter_stop_track(f, t);
     }
 
     /// The character's sound at `off` in its sound table (`ftData::x4C_sfx`).

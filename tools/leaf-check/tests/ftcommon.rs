@@ -51,10 +51,6 @@ fn dirs() -> Vec<String> {
 /// The code other parts of the port own, standing in on both sides.
 fn stubs() -> Vec<Stub> {
     let mut v: Vec<Stub> = [
-        // Sounds: `ft_PlaySFX` and the voice tracks' `ft_800881D8`, `ft_80088328`.
-        "ft_PlaySFX",
-        "ft_800881D8",
-        "ft_80088328",
         // Effects.
         "efAsync_Spawn",
         // A knockdown's impact effect.
