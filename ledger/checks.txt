@@ -78,3 +78,20 @@ HSD_RObjRemoveAll	leaf-check jobj: releasing constrained joints; live RObjs comp
 HSD_RObjFree	leaf-check jobj: constraint removal edits free through it; live RObjs compared
 HSD_RvalueRemoveAll	leaf-check jobj synthetic: releasing the expression joint; rvalue joints' ref counts compared
 HSD_RvalueResolveRefsAll	leaf-check jobj synthetic: loading resolves both expressions' rvalues; compared
+CObjInit	leaf-check cobj: HSD_CObjAlloc and HSD_CObjLoadDesc run it on every allocation; the new CObj and its WObjs compared
+CObjLoad	leaf-check cobj: HSD_CObjLoadDesc and HSD_CObjInit run it on every load; CObjs compared after
+CObjRelease	leaf-check cobj: HSD_GObj_80391120 releases every CObj through it; live CObj and WObj counts and AObj and FObj reuse compared
+CObjUpdateFunc	leaf-check cobj: HSD_CObjAnim hands every channel value to it, including synthetic anims of every channel; CObjs compared every frame
+roll2upvec	leaf-check cobj: HSD_CObjGetUpVector, HSD_CObjGetLeftVector, HSD_CObjSetRoll and the viewing matrices call it; results compared
+vec_normalize_check	leaf-check cobj: HSD_CObjGetEyeVector, HSD_CObjSetUpVector and HSD_CObjGetLeftVector call it, with vectors at FLT_MIN; results compared
+WObjLoad	leaf-check cobj: HSD_WObjLoadDesc loads through it; WObjs compared
+WObjRelease	leaf-check cobj: CObjs and LObjs release their WObjs through it; live WObj counts compared every step
+WObjUpdateFunc	leaf-check cobj: HSD_WObjInterpretAnim and HSD_CObjAnim hand every eye and interest channel value to it; WObjs compared every frame
+LObjUpdateFunc	leaf-check lobj: HSD_LObjAnim hands every channel value to it, including synthetic anims of every channel; LObjs compared every frame
+LObjLoad	leaf-check lobj: HSD_LObjLoadDesc loads each light through it; LObjs compared after
+LObjRelease	leaf-check lobj: HSD_LObjRemoveAll and the current-list functions release lights through it; live LObj and WObj counts compared every step
+FogUpdateFunc	leaf-check fog: HSD_FogInterpretAnim hands every channel value to it, including synthetic anims of every channel; fogs compared every frame
+FogRelease	leaf-check fog: HSD_GObj_803911C0 and HSD_GObj_80391120 release fogs through it; live fog and range-adjustment counts compared every step
+HSD_FogAdjLoadDesc	leaf-check fog: HSD_FogLoadDesc loads synthetic fogs' range adjustments through it; compared after
+HSD_RObjRemoveAnimAll	leaf-check cobj: HSD_WObjRemoveAnim removes synthetic WObjs' RObj animations through it; RObj AObjs and live counts compared
+HSD_RObjReqAnimAll	leaf-check cobj: HSD_WObjReqAnim requests synthetic WObjs' RObj animations through it; RObj AObjs compared

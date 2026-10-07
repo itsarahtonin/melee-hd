@@ -179,3 +179,11 @@ mpLib_8004D164	Returns mplib's collision data global; melee-sim's mp::Geometry h
 mpGetGroundCollVtx	Returns mplib's vertex array global; melee-sim's mp::Geometry holds it as a field.
 mpGetGroundCollLine	Returns mplib's line array global; melee-sim's mp::Geometry holds it as a field.
 mpGetGroundCollJoint	Returns mplib's joint array global; melee-sim's mp::Geometry holds it as a field.
+CObjInfoInit	Registers CObj's class with HAL's class system; melee-sim keeps CObjs in a typed pool (docs/engine.md).
+WObjInfoInit	Registers WObj's class with HAL's class system; melee-sim keeps WObjs in a typed pool (docs/engine.md).
+LObjInfoInit	Registers LObj's class with HAL's class system; melee-sim keeps LObjs in a typed pool (docs/engine.md).
+FogInfoInit	Registers the fog class with HAL's class system; melee-sim keeps fogs in a typed pool (docs/engine.md).
+FogAdjInfoInit	Registers the fog range-adjustment class with HAL's class system; melee-sim keeps them in a typed pool (docs/engine.md).
+CObjAmnesia	Class reset run when HSD_CreateMainHeap forgets the class library with the heap at a scene change; melee-sim resets the CObj pool (and the current camera) with the heap.
+WObjAmnesia	Class reset run when HSD_CreateMainHeap forgets the class library with the heap at a scene change; melee-sim resets the WObj pool with the heap.
+LObjAmnesia	Class reset run when HSD_CreateMainHeap forgets the class library with the heap at a scene change; melee-sim resets the LObj pool and the current lights with the heap.

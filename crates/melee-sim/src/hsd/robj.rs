@@ -221,7 +221,8 @@ pub fn remove_anim_all_by_flags(objs: &mut Objects, first: Option<RObjId>, flags
     }
 }
 
-/// `HSD_RObjRemoveAnimAll` (unchecked: no port calls it yet).
+/// `HSD_RObjRemoveAnimAll`.
+#[doc(alias = "HSD_RObjRemoveAnimAll")]
 pub fn remove_anim_all(objs: &mut Objects, first: Option<RObjId>) {
     remove_anim_all_by_flags(objs, first, 0x7FF);
 }
@@ -241,7 +242,8 @@ pub fn req_anim_all_by_flags(objs: &mut Objects, first: Option<RObjId>, frame: f
     }
 }
 
-/// `HSD_RObjReqAnimAll` (unchecked: no port calls it yet).
+/// `HSD_RObjReqAnimAll`.
+#[doc(alias = "HSD_RObjReqAnimAll")]
 pub fn req_anim_all(objs: &mut Objects, first: Option<RObjId>, frame: f32) {
     req_anim_all_by_flags(objs, first, frame, 0x7FF);
 }
