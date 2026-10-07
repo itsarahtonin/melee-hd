@@ -4,7 +4,7 @@ How melee-sim models HAL's sysdolphin engine (HSD) and the game's state. [The po
 
 ## One state, plain data
 
-The original runs everything in one address space: joints, display objects, materials, animations, fighters, items, the scheduler. melee-sim keeps all of it in the simulation state, as the original does, including display objects and their material and texture animation. The renderer reads that state and draws; it never feeds anything back. Keeping display objects in the state costs some snapshot size but keeps one model of what the game's code touches, and rollback stays a clone.
+The original runs everything in one address space: joints, display objects, materials, animations, fighters, items, the scheduler. melee-sim keeps all of it in the simulation state, as the original does, including display objects and their material and texture animation. The display pass that walks them each frame is simulation too, since it spawns particles and draws from the RNG ([architecture](architecture.md)); it emits draw commands for the presentation layer, which never feeds anything back. Keeping display objects in the state costs some snapshot size but keeps one model of what the game's code touches, and rollback stays a clone.
 
 ## Objects and identity
 

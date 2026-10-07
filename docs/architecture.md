@@ -18,6 +18,8 @@ In the original, rendering feeds some game state, and the simulation computes th
 - **Camera snapshots.** The game reads back a camera-mode snapshot's EFB copy to save it. The frontend renders that one image on request and hands it back as an input.
 - **Disc timing.** Loads finish outside the simulation; where the original polls a read (Pokémon Stadium's transformations), its completion is an input.
 
+The original's display traversal (`HSD_GObjRender` over the GX links, down through joints, display objects and shapes) changes game state as it draws. A joint's particle list spawns its particles the first time it is displayed, the particle system draws from the game's RNG, and setup computes joint and envelope matrices. So the display pass is simulation. melee-sim runs it where the original does, after a frame's engine ticks, and where the original issues GX commands it appends draw commands to the frame's output. The presentation layer turns those commands into GPU work, at any resolution or aspect ratio, but never decides what the pass runs.
+
 ## Exactness
 
 The original's float behavior matters only where it differs from IEEE single and double precision: fused multiply-adds, `frsqrte` and `fres` estimates, and paired singles. Those go through `gekko-fp`; plain arithmetic is native. The game's own `sqrtf`, sin, cos and atan replace platform math, which also makes the simulation agree across platforms. ssbm-rs's two float modes, Hardware (the console) and Slippi (Ishiiruka's x86-64 JIT, which recorded Slippi's replays), both remain available.
