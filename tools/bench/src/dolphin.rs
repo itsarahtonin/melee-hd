@@ -879,7 +879,7 @@ fn with_di_patch(ini: &str, byte: u8) -> String {
     use crate::gecko_words::{DI, DI_PATCH};
     let mut words = DI.to_vec();
     words[DI_PATCH] = (words[DI_PATCH] & 0xFFFF_0000) | u32::from(byte);
-    if words.len() % 2 == 0 {
+    if words.len().is_multiple_of(2) {
         words.push(0x6000_0000);
     }
     words.push(0);
