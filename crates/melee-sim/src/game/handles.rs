@@ -38,3 +38,22 @@ pub struct AttrsId(pub u32);
 /// One link of a fighter's dynamic bone chain (`DynamicsData`, `lb_8000FD48`'s allocations).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct DynamicsId(pub u32);
+
+/// An item's static logic table in the executable (`ItemLogicTable*`), by its address: the
+/// table itself is [`crate::game::it::tables`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ItemLogicRef(pub u32);
+
+/// An item's static table of states in the executable (`ItemStateTable*`, an array), by its
+/// address.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ItemStatesRef(pub u32);
+
+/// An item's table of its model's joints in depth-first order (`DynamicBoneTable`, from
+/// `item_dynamic_bones_alloc_data`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct BoneTableId(pub u32);
+
+/// An effect's slot (`EF_Effect`, an effect GObj's user data, from `efLib_AllocData`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct EffectId(pub u32);

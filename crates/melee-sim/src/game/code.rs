@@ -47,7 +47,18 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         0x8006_C624 => fighter::proc_accessory(game, gobj),
         0x8006_C80C => fighter::proc_coll_pos(game, gobj),
         0x8006_CA5C => fighter::proc_grab_coll(game, gobj),
+        addr if super::it::item::run_proc(game, gobj, addr) => {}
+        addr if super::it::kinds::run_event(game, gobj, addr) => {}
         other => unported("process", other),
+    }
+}
+
+/// Runs a callback that answers a question about its GObj (`HSD_GObjPredicate`: an item's
+/// state callbacks, which say whether to destroy it).
+pub fn run_pred(game: &mut Running, gobj: GObjId, f: CodeRef) -> bool {
+    match super::it::kinds::run_pred(game, gobj, f.0) {
+        Some(b) => b,
+        None => unported("predicate", f.0),
     }
 }
 

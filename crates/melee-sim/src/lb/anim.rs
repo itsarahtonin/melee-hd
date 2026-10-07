@@ -214,3 +214,34 @@ pub fn reset_translation(
     jobjs[j].translate = t;
     dirty(jobjs, j);
 }
+
+/// Sets the animations of a tree's joints below its root to run at `rate`, `lb_8000BA0C`
+/// (`lb_8000B9D8` skips the root `HSD_JObjWalkTree` hands it first).
+#[doc(alias = "lb_8000BA0C")]
+#[doc(alias = "lb_8000B9D8")]
+pub fn set_framerate(objs: &mut Objects, j: Option<JObjId>, rate: f32) {
+    let mut joints = Vec::new();
+    crate::hsd::jobj::walk_tree(&objs.jobjs, j, &mut |j, ty| {
+        if ty != 0 {
+            joints.push(j);
+        }
+    });
+    for j in joints {
+        let a = objs.jobjs[j].aobj;
+        crate::hsd::aobj::set_rate(&mut objs.aobjs, a, rate);
+    }
+}
+
+/// Makes a joint follow another's position and orientation (two constraint RObjs, flags
+/// `0x90000001` and `0x90000004`, prepended in that order), `lb_8000C2F8`.
+#[doc(alias = "lb_8000C2F8")]
+pub fn attach(objs: &mut Objects, j: Option<JObjId>, target: Option<JObjId>) {
+    for flags in [0x9000_0001, 0x9000_0004] {
+        let r = Some(crate::hsd::robj::alloc(&mut objs.robjs));
+        crate::hsd::robj::set_flags(&mut objs.robjs, r, flags);
+        if let Some(t) = target {
+            crate::hsd::robj::set_constraint_obj(objs, r, t);
+        }
+        jobj::prepend_robj(objs, j, r);
+    }
+}

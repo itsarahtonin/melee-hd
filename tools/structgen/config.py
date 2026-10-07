@@ -20,6 +20,12 @@ ROOTS = [
     "lb_00F9_UnkDesc0",
     "StartMeleeData",
     "gm_80479D58_t",
+    "HSD_ObjAllocUnk",
+    "Item_FtTrack",
+    "SpawnItem",
+    "EF_Effect",
+    "itFoxBlaster_ItemVars",
+    "itFoxLaser_ItemVars",
 ]
 
 # Handles for pointers to runtime objects, by the pointee's C name.
@@ -33,6 +39,10 @@ POINTERS = {
     "CmSubject": "Option<CameraBoxId>",
     "FighterBone": "Option<PartsId>",
     "DynamicsData": "Option<DynamicsId>",
+    # The items' static tables in the executable, by address (as `CodeRef` holds functions).
+    "ItemLogicTable": "Option<ItemLogicRef>",
+    "ItemStateTable": "Option<ItemStatesRef>",
+    "DynamicBoneTable": "Option<BoneTableId>",
 }
 
 # Handles for single pointer fields whose pointee type doesn't say what they are, by
@@ -43,6 +53,9 @@ FIELD_POINTERS = {
     # The character's attributes, copied from its data (`PUSH_ATTRS`).
     "Fighter.dat_attrs": "Option<AttrsId>",
     "Fighter.dat_attrs_backup": "Option<AttrsId>",
+    # A freed item's link to the next free item (`HSD_ObjFree` writes it over the first word),
+    # which a reused item keeps.
+    "Item.x0": "Option<ItemId>",
 }
 
 # Pointer fields into loaded game data whose pointee type doesn't say so (`void*`, pointers to
@@ -75,6 +88,7 @@ SPLICE = {
 # Lines the generated mirrors use besides the handles.
 EXTRA_USES = [
     "use crate::game::ft::dynamics::BoneSlot;",
+    "use crate::game::it::ItemVars;",
     "use crate::lb::command::Script;",
 ]
 
@@ -88,6 +102,8 @@ EXTERNAL = {
     "GroundVars": "GroundVars",
     # A union whose member the kind beside it picks, holding joint handles: hand-written.
     "ECBSource": "EcbSource",
+    # An item's variables, a union whose member the item's kind picks: hand-written.
+    "Item_ItemVars": "ItemVars",
 }
 
 # Pointee types that live in loaded game data: pointers to them become DataRef.
@@ -101,6 +117,9 @@ DATA_TYPES = {
     "GroundParam",
     "StageParam",
     "DynamicModelDesc",
+    "Article",
+    "ItemAttr",
+    "ItemStateDesc",
 }
 
 # Pointers whose pointee isn't mapped yet: an address that needs a decision before it is used.
@@ -114,6 +133,7 @@ PRELUDE = """use melee_data::archive::DataRef;
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
+use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;

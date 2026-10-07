@@ -6,7 +6,7 @@
 use std::collections::{HashMap, HashSet};
 
 use melee_data::archive::DataRef;
-use melee_sim::game::handles::FighterId;
+use melee_sim::game::handles::{BoneTableId, FighterId};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
 use melee_sim::game::structs::FighterBone;
@@ -269,7 +269,10 @@ impl<'a> Comparer<'a> {
                 }
             }
             Some(UserData::Ground(g)) => self.ground(path, g, self.u32(t + 0x2C)),
-            Some(UserData::Item(_)) | None => {}
+            Some(UserData::Item(i)) => self.item(path, i, self.u32(t + 0x2C)),
+            Some(UserData::Raw(a)) => self.check(path, "user data", a.0, self.u32(t + 0x2C)),
+            Some(UserData::Effect(e)) => self.effect(path, e, self.u32(t + 0x2C)),
+            None => {}
         }
     }
 
@@ -810,10 +813,11 @@ impl<'a> Comparer<'a> {
         let class = match m.class {
             melee_sim::hsd::mobj::MObjClass::Hsd => sym("hsdMObj"),
             melee_sim::hsd::mobj::MObjClass::Ground => sym("grMaterial_803E0A20"),
+            melee_sim::hsd::mobj::MObjClass::Item => sym("it_mobj"),
         };
         // Classes no port models (fighters' `ftMObj`) were reported when imported.
         let theirs = self.u32(t);
-        if [sym("hsdMObj"), sym("grMaterial_803E0A20")].contains(&theirs) {
+        if [sym("hsdMObj"), sym("grMaterial_803E0A20"), sym("it_mobj")].contains(&theirs) {
             self.check(path, "class", class, theirs);
         }
         self.check(path, "rendermode", m.rendermode, self.u32(t + 4));
@@ -959,6 +963,19 @@ impl Cx for Comparer<'_> {
     }
 
     fn compare_handle(&mut self, path: &str, kind: &'static str, ours: Option<u32>, theirs: u32) {
+        let dangling = match (kind, ours) {
+            ("GObjId", Some(o)) => self.maps.dangling_gobjs.get(&o),
+            ("JObjId", Some(o)) => self.maps.dangling_jobjs.get(&o),
+            _ => None,
+        };
+        if let Some(&addr) = dangling {
+            if addr != theirs {
+                self.diffs.push(format!(
+                    "{path}: {kind} ours dangling {addr:#x}, theirs {theirs:#x}"
+                ));
+            }
+            return;
+        }
         let known = match kind {
             "JObjId" => self.maps.jobjs.get(&theirs).map(|j| j.0),
             "GObjId" => self.maps.gobjs.get(&theirs).map(|g| g.0),
@@ -966,6 +983,14 @@ impl Cx for Comparer<'_> {
             "PartsId" => self.maps.fighter_parts.get(&theirs).map(|p| p.0),
             "AttrsId" => self.maps.fighter_attrs.get(&theirs).map(|a| a.0),
             "DynamicsId" => self.maps.fighter_dynamics.get(&theirs).map(|d| d.0),
+            "ItemId" => self.maps.items.get(&theirs).map(|i| i.0),
+            "BoneTableId" => {
+                if let (Some(o), true) = (ours, theirs != 0) {
+                    self.bone_table(path, BoneTableId(o), theirs);
+                }
+                self.maps.bone_tables.get(&theirs).map(|t| t.0)
+            }
+            "ItemLogicRef" | "ItemStatesRef" => (theirs != 0).then_some(theirs),
             "DObjId" => self.maps.dobjs.get(&theirs).map(|d| d.0),
             "GroundId" => self.maps.grounds.get(&theirs).map(|g| g.0),
             "StartHookId" => self.maps.start_hooks.get(&theirs).map(|h| h.0),

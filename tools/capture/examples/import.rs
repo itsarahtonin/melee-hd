@@ -16,12 +16,14 @@ fn main() {
     imp.world();
     imp.stage();
     imp.ids();
+    imp.items();
     let g = &imp.game;
     println!(
-        "{} GObjs, {} procs, {} fighters, {} stage objects, {} joints, {} AObjs, {} FObjs, {} DObjs, {} PObjs, {} RObjs",
+        "{} GObjs, {} procs, {} fighters, {} items, {} stage objects, {} joints, {} AObjs, {} FObjs, {} DObjs, {} PObjs, {} RObjs",
         g.world.gobjs.used(),
         g.world.procs.used(),
         g.fighters.used(),
+        g.items.used(),
         g.grounds.used(),
         g.objs.jobjs.pool.used(),
         g.objs.aobjs.pool.used(),
@@ -52,6 +54,7 @@ fn main() {
     cmp.world();
     cmp.stage();
     cmp.ids();
+    cmp.items();
     println!("round trip: {} differences", cmp.diffs.len());
     for d in cmp.diffs.iter().take(20) {
         println!("  {d}");

@@ -66,3 +66,9 @@ impl Game {
         );
     }
 }
+
+/// Whether the game is in training mode, `gm_8018841C`.
+#[doc(alias = "gm_8018841C")]
+pub fn is_training(game: &Game) -> bool {
+    game.game_mode == 0x1C
+}

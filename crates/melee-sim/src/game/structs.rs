@@ -8,6 +8,7 @@ use melee_data::archive::DataRef;
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
+use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -3732,7 +3733,7 @@ impl Default for CameraBoxFlags {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Item {
     /// +0x0
-    pub x0: RawPtr,
+    pub x0: Option<ItemId>,
     /// +0x4
     pub entity: Option<GObjId>,
     /// +0x8
@@ -3790,19 +3791,19 @@ pub struct Item {
     /// +0xac
     pub xAC_unk: Vec3,
     /// +0xb8
-    pub xB8_itemLogicTable: RawPtr,
+    pub xB8_itemLogicTable: Option<ItemLogicRef>,
     /// +0xbc
-    pub xBC_itemStateContainer: RawPtr,
+    pub xBC_itemStateContainer: Option<ItemStatesRef>,
     /// +0xc0
     pub ground_or_air: i32,
     /// +0xc4
-    pub xC4_article_data: RawPtr,
+    pub xC4_article_data: Option<DataRef>,
     /// +0xc8
     pub xC8_joint: Option<DataRef>,
     /// +0xcc
-    pub xCC_item_attr: RawPtr,
+    pub xCC_item_attr: Option<DataRef>,
     /// +0xd0
-    pub xD0_itemStateDesc: RawPtr,
+    pub xD0_itemStateDesc: Option<DataRef>,
     /// +0xd4
     pub xD4_dynamicBones: [Item_DynamicBones; 24],
     /// +0x374
@@ -3854,7 +3855,7 @@ pub struct Item {
     /// +0xb6c
     pub xB6C_vars: [xB6C_t; 2],
     /// +0xbbc
-    pub xBBC_dynamicBoneTable: RawPtr,
+    pub xBBC_dynamicBoneTable: Option<BoneTableId>,
     /// +0xbc0
     pub xBC0: RawPtr,
     /// +0xbc4
@@ -4090,13 +4091,13 @@ pub struct Item {
     /// +0xdd3
     pub xDD3_flag: [u8; 1],
     /// +0xdd4
-    pub xDD4_itemVar: [u8; 504],
+    pub xDD4_itemVar: ItemVars,
 }
 
 impl Default for Item {
     fn default() -> Self {
         Item {
-            x0: Default::default(),
+            x0: None,
             entity: None,
             x8: 0,
             spawn_kind: 0,
@@ -4125,13 +4126,13 @@ impl Default for Item {
             x94: Default::default(),
             xA0: Default::default(),
             xAC_unk: Default::default(),
-            xB8_itemLogicTable: Default::default(),
-            xBC_itemStateContainer: Default::default(),
+            xB8_itemLogicTable: None,
+            xBC_itemStateContainer: None,
             ground_or_air: 0,
-            xC4_article_data: Default::default(),
+            xC4_article_data: None,
             xC8_joint: None,
-            xCC_item_attr: Default::default(),
-            xD0_itemStateDesc: Default::default(),
+            xCC_item_attr: None,
+            xD0_itemStateDesc: None,
             xD4_dynamicBones: core::array::from_fn(|_| Default::default()),
             x374_dynamicBonesNum: 0,
             x378_itemColl: Default::default(),
@@ -4157,7 +4158,7 @@ impl Default for Item {
             xB6A: 0,
             xB6B: 0,
             xB6C_vars: core::array::from_fn(|_| Default::default()),
-            xBBC_dynamicBoneTable: Default::default(),
+            xBBC_dynamicBoneTable: None,
             xBC0: Default::default(),
             xBC4: Default::default(),
             xBC8: Default::default(),
@@ -4275,7 +4276,7 @@ impl Default for Item {
             xDD1_flag: [0; 1],
             xDD2_flag: [0; 1],
             xDD3_flag: [0; 1],
-            xDD4_itemVar: [0; 504],
+            xDD4_itemVar: Default::default(),
         }
     }
 }
@@ -7168,6 +7169,327 @@ impl Default for gm_80479D58_t {
             unk_8: 0,
             unk_C: 0,
             unk_10: Default::default(),
+        }
+    }
+}
+
+/// `HSD_ObjAllocUnk`, 0x68 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct HSD_ObjAllocUnk {
+    /// +0x0
+    pub x0: i32,
+    /// +0x4
+    pub x4: i32,
+    /// +0x8
+    pub x8: i32,
+    /// +0xc
+    pub xC: i32,
+    /// +0x10
+    pub x10: i32,
+    /// +0x14
+    pub x14: i32,
+    /// +0x18
+    pub x18: u32,
+    /// +0x1c
+    pub x1C: i32,
+    /// +0x20
+    pub x20: i32,
+    /// +0x24
+    pub x24: i32,
+    /// +0x28
+    pub x28: i32,
+    /// +0x2c
+    pub x2C: i32,
+    /// +0x30
+    pub x30: i32,
+    /// +0x34
+    pub x34: i32,
+    /// +0x38
+    pub x38: i32,
+    /// +0x3c
+    pub x3C: i32,
+    /// +0x40
+    pub x40: i32,
+    /// +0x44
+    pub x44: i32,
+    /// +0x48
+    pub x48: i32,
+    /// +0x4c
+    pub x4C: i32,
+    /// +0x50
+    pub x50: i32,
+    /// +0x54
+    pub x54: i32,
+    /// +0x58
+    pub x58: i32,
+    /// +0x5c
+    pub x5C: i32,
+    /// +0x60
+    pub x60: i32,
+    /// +0x64
+    pub x64: i32,
+}
+
+impl Default for HSD_ObjAllocUnk {
+    fn default() -> Self {
+        HSD_ObjAllocUnk {
+            x0: 0,
+            x4: 0,
+            x8: 0,
+            xC: 0,
+            x10: 0,
+            x14: 0,
+            x18: 0,
+            x1C: 0,
+            x20: 0,
+            x24: 0,
+            x28: 0,
+            x2C: 0,
+            x30: 0,
+            x34: 0,
+            x38: 0,
+            x3C: 0,
+            x40: 0,
+            x44: 0,
+            x48: 0,
+            x4C: 0,
+            x50: 0,
+            x54: 0,
+            x58: 0,
+            x5C: 0,
+            x60: 0,
+            x64: 0,
+        }
+    }
+}
+
+/// `Item_FtTrack`, 0x158 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Item_FtTrack {
+    /// +0x0
+    pub ecb_offset_arr: [_itECB; 11],
+    /// +0xb0
+    pub xB0: i32,
+    /// +0xb4
+    pub xB4: i32,
+    /// +0xb8
+    pub xB8: i32,
+    /// +0xbc
+    pub xBC: i32,
+    /// +0xc0
+    pub ft_pos_arr: [Vec3; 11],
+    /// +0x144
+    pub x144: u32,
+    /// +0x148
+    pub x148: u32,
+    /// +0x14c
+    pub x14C: u32,
+    /// +0x150
+    pub count: u32,
+    /// +0x154
+    pub x154: [u8; 1],
+}
+
+impl Default for Item_FtTrack {
+    fn default() -> Self {
+        Item_FtTrack {
+            ecb_offset_arr: core::array::from_fn(|_| Default::default()),
+            xB0: 0,
+            xB4: 0,
+            xB8: 0,
+            xBC: 0,
+            ft_pos_arr: core::array::from_fn(|_| Default::default()),
+            x144: 0,
+            x148: 0,
+            x14C: 0,
+            count: 0,
+            x154: [0; 1],
+        }
+    }
+}
+
+/// `SpawnItem`, 0x4c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SpawnItem {
+    /// +0x0
+    pub x0_parent_gobj: Option<GObjId>,
+    /// +0x4
+    pub x4_parent_gobj2: Option<GObjId>,
+    /// +0x8
+    pub kind: i32,
+    /// +0xc
+    pub hold_kind: i32,
+    /// +0x10
+    pub x10: i32,
+    /// +0x14
+    pub pos: Vec3,
+    /// +0x20
+    pub prev_pos: Vec3,
+    /// +0x2c
+    pub vel: Vec3,
+    /// +0x38
+    pub facing_dir: f32,
+    /// +0x3c
+    pub x3C_damage: i16,
+    /// +0x3e
+    pub x3E: i16,
+    /// +0x40
+    pub x40: i32,
+    /// +0x44
+    pub x44_flag: [u8; 1],
+    /// +0x45
+    pub x45_flag: [u8; 1],
+    /// +0x46
+    pub x46_flag: [u8; 1],
+    /// +0x47
+    pub x47_flag: [u8; 1],
+    /// +0x48
+    pub x48_ground_or_air: i32,
+}
+
+impl Default for SpawnItem {
+    fn default() -> Self {
+        SpawnItem {
+            x0_parent_gobj: None,
+            x4_parent_gobj2: None,
+            kind: 0,
+            hold_kind: 0,
+            x10: 0,
+            pos: Default::default(),
+            prev_pos: Default::default(),
+            vel: Default::default(),
+            facing_dir: 0.0,
+            x3C_damage: 0,
+            x3E: 0,
+            x40: 0,
+            x44_flag: [0; 1],
+            x45_flag: [0; 1],
+            x46_flag: [0; 1],
+            x47_flag: [0; 1],
+            x48_ground_or_air: 0,
+        }
+    }
+}
+
+/// `EF_Effect`, 0x2c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct EF_Effect {
+    /// +0x0
+    pub next: RawPtr,
+    /// +0x4
+    pub gobj: Option<GObjId>,
+    /// +0x8
+    pub parent_gobj: Option<GObjId>,
+    /// +0xc
+    pub attach_jobj: Option<JObjId>,
+    /// +0x10
+    pub update: Option<CodeRef>,
+    /// +0x14
+    pub user_data: RawPtr,
+    /// +0x18
+    pub params: Vec3,
+    /// +0x24
+    pub lifetime: u16,
+    /// +0x26
+    pub expire_flags: i8,
+    /// +0x27
+    pub scale_flags: u8,
+    /// +0x28
+    pub state_flags: u8,
+    /// +0x29
+    pub is_async: u8,
+    /// +0x2a
+    pub x2A: i8,
+    /// +0x2b
+    pub x2B: i8,
+}
+
+impl Default for EF_Effect {
+    fn default() -> Self {
+        EF_Effect {
+            next: Default::default(),
+            gobj: None,
+            parent_gobj: None,
+            attach_jobj: None,
+            update: None,
+            user_data: Default::default(),
+            params: Default::default(),
+            lifetime: 0,
+            expire_flags: 0,
+            scale_flags: 0,
+            state_flags: 0,
+            is_async: 0,
+            x2A: 0,
+            x2B: 0,
+        }
+    }
+}
+
+/// `itFoxBlaster_ItemVars`, 0xac bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itFoxBlaster_ItemVars {
+    /// +0x0
+    pub xDD4: i32,
+    /// +0x4
+    pub xDD8: i32,
+    /// +0x8
+    pub xDDC: i32,
+    /// +0xc
+    pub xDE0: i32,
+    /// +0x10
+    pub xDE4: [i32; 6],
+    /// +0x28
+    pub xDFC: [i32; 6],
+    /// +0x40
+    pub xE14: [Vec3; 6],
+    /// +0x88
+    pub angle: [f32; 6],
+    /// +0xa0
+    pub gfx_spawn_var: i32,
+    /// +0xa4
+    pub set_sfx_var2: i32,
+    /// +0xa8
+    pub owner: Option<GObjId>,
+}
+
+impl Default for itFoxBlaster_ItemVars {
+    fn default() -> Self {
+        itFoxBlaster_ItemVars {
+            xDD4: 0,
+            xDD8: 0,
+            xDDC: 0,
+            xDE0: 0,
+            xDE4: [0; 6],
+            xDFC: [0; 6],
+            xE14: core::array::from_fn(|_| Default::default()),
+            angle: [0.0; 6],
+            gfx_spawn_var: 0,
+            set_sfx_var2: 0,
+            owner: None,
+        }
+    }
+}
+
+/// `itFoxLaser_ItemVars`, 0x18 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itFoxLaser_ItemVars {
+    /// +0x0
+    pub scale: f32,
+    /// +0x4
+    pub angle: f32,
+    /// +0x8
+    pub speed: f32,
+    /// +0xc
+    pub pos: Vec3,
+}
+
+impl Default for itFoxLaser_ItemVars {
+    fn default() -> Self {
+        itFoxLaser_ItemVars {
+            scale: 0.0,
+            angle: 0.0,
+            speed: 0.0,
+            pos: Default::default(),
         }
     }
 }

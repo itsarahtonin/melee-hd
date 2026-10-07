@@ -8,6 +8,7 @@ use super::handles::*;
 use super::mirror::{Cx, Mem, Mirror, code};
 use super::structs::*;
 use crate::game::ft::dynamics::BoneSlot;
+use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -8285,7 +8286,7 @@ impl Mirror for Item {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         Item {
-            x0: RawPtr(m.u32(at + 0x0)),
+            x0: cx.import_handle("ItemId", m.u32(at + 0x0)).map(ItemId),
             entity: cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId),
             x8: m.u32(at + 0x8) as i32,
             spawn_kind: m.u32(at + 0xc) as i32,
@@ -8314,13 +8315,17 @@ impl Mirror for Item {
             x94: Vec3::import(m, at + 0x94, cx),
             xA0: Vec3::import(m, at + 0xa0, cx),
             xAC_unk: Vec3::import(m, at + 0xac, cx),
-            xB8_itemLogicTable: RawPtr(m.u32(at + 0xb8)),
-            xBC_itemStateContainer: RawPtr(m.u32(at + 0xbc)),
+            xB8_itemLogicTable: cx
+                .import_handle("ItemLogicRef", m.u32(at + 0xb8))
+                .map(ItemLogicRef),
+            xBC_itemStateContainer: cx
+                .import_handle("ItemStatesRef", m.u32(at + 0xbc))
+                .map(ItemStatesRef),
             ground_or_air: m.u32(at + 0xc0) as i32,
-            xC4_article_data: RawPtr(m.u32(at + 0xc4)),
+            xC4_article_data: cx.import_data(m.u32(at + 0xc4)),
             xC8_joint: cx.import_data(m.u32(at + 0xc8)),
-            xCC_item_attr: RawPtr(m.u32(at + 0xcc)),
-            xD0_itemStateDesc: RawPtr(m.u32(at + 0xd0)),
+            xCC_item_attr: cx.import_data(m.u32(at + 0xcc)),
+            xD0_itemStateDesc: cx.import_data(m.u32(at + 0xd0)),
             xD4_dynamicBones: core::array::from_fn(|i0| {
                 Item_DynamicBones::import(m, at + 0xd4 + i0 as u32 * 0x1c, cx)
             }),
@@ -8356,7 +8361,9 @@ impl Mirror for Item {
             xB6C_vars: core::array::from_fn(|i0| {
                 xB6C_t::import(m, at + 0xb6c + i0 as u32 * 0x28, cx)
             }),
-            xBBC_dynamicBoneTable: RawPtr(m.u32(at + 0xbbc)),
+            xBBC_dynamicBoneTable: cx
+                .import_handle("BoneTableId", m.u32(at + 0xbbc))
+                .map(BoneTableId),
             xBC0: RawPtr(m.u32(at + 0xbc0)),
             xBC4: _GXColor::import(m, at + 0xbc4, cx),
             xBC8: ItemModStruct::import(m, at + 0xbc8, cx),
@@ -8474,19 +8481,18 @@ impl Mirror for Item {
             xDD1_flag: m.bytes(at + 0xdd1),
             xDD2_flag: m.bytes(at + 0xdd2),
             xDD3_flag: m.bytes(at + 0xdd3),
-            xDD4_itemVar: m.bytes(at + 0xdd4),
+            xDD4_itemVar: ItemVars::import(m, at + 0xdd4, cx),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.x0.0 != m.u32(at + 0x0) {
-            cx.mismatch(
-                &format!("{path}.x0"),
-                format!("{:#x}", self.x0.0),
-                format!("{:#x}", m.u32(at + 0x0)),
-            );
-        }
+        cx.compare_handle(
+            &format!("{path}.x0"),
+            "ItemId",
+            self.x0.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
         cx.compare_handle(
             &format!("{path}.entity"),
             "GObjId",
@@ -8627,20 +8633,18 @@ impl Mirror for Item {
         self.xA0.compare(m, at + 0xa0, &format!("{path}.xA0"), cx);
         self.xAC_unk
             .compare(m, at + 0xac, &format!("{path}.xAC_unk"), cx);
-        if self.xB8_itemLogicTable.0 != m.u32(at + 0xb8) {
-            cx.mismatch(
-                &format!("{path}.xB8_itemLogicTable"),
-                format!("{:#x}", self.xB8_itemLogicTable.0),
-                format!("{:#x}", m.u32(at + 0xb8)),
-            );
-        }
-        if self.xBC_itemStateContainer.0 != m.u32(at + 0xbc) {
-            cx.mismatch(
-                &format!("{path}.xBC_itemStateContainer"),
-                format!("{:#x}", self.xBC_itemStateContainer.0),
-                format!("{:#x}", m.u32(at + 0xbc)),
-            );
-        }
+        cx.compare_handle(
+            &format!("{path}.xB8_itemLogicTable"),
+            "ItemLogicRef",
+            self.xB8_itemLogicTable.map(|h| h.0),
+            m.u32(at + 0xb8),
+        );
+        cx.compare_handle(
+            &format!("{path}.xBC_itemStateContainer"),
+            "ItemStatesRef",
+            self.xBC_itemStateContainer.map(|h| h.0),
+            m.u32(at + 0xbc),
+        );
         if self.ground_or_air != m.u32(at + 0xc0) as i32 {
             cx.mismatch(
                 &format!("{path}.ground_or_air"),
@@ -8648,32 +8652,26 @@ impl Mirror for Item {
                 format!("{:?}", m.u32(at + 0xc0) as i32),
             );
         }
-        if self.xC4_article_data.0 != m.u32(at + 0xc4) {
-            cx.mismatch(
-                &format!("{path}.xC4_article_data"),
-                format!("{:#x}", self.xC4_article_data.0),
-                format!("{:#x}", m.u32(at + 0xc4)),
-            );
-        }
+        cx.compare_data(
+            &format!("{path}.xC4_article_data"),
+            self.xC4_article_data,
+            m.u32(at + 0xc4),
+        );
         cx.compare_data(
             &format!("{path}.xC8_joint"),
             self.xC8_joint,
             m.u32(at + 0xc8),
         );
-        if self.xCC_item_attr.0 != m.u32(at + 0xcc) {
-            cx.mismatch(
-                &format!("{path}.xCC_item_attr"),
-                format!("{:#x}", self.xCC_item_attr.0),
-                format!("{:#x}", m.u32(at + 0xcc)),
-            );
-        }
-        if self.xD0_itemStateDesc.0 != m.u32(at + 0xd0) {
-            cx.mismatch(
-                &format!("{path}.xD0_itemStateDesc"),
-                format!("{:#x}", self.xD0_itemStateDesc.0),
-                format!("{:#x}", m.u32(at + 0xd0)),
-            );
-        }
+        cx.compare_data(
+            &format!("{path}.xCC_item_attr"),
+            self.xCC_item_attr,
+            m.u32(at + 0xcc),
+        );
+        cx.compare_data(
+            &format!("{path}.xD0_itemStateDesc"),
+            self.xD0_itemStateDesc,
+            m.u32(at + 0xd0),
+        );
         for i0 in 0..24 {
             self.xD4_dynamicBones[i0].compare(
                 m,
@@ -8830,13 +8828,12 @@ impl Mirror for Item {
                 cx,
             );
         }
-        if self.xBBC_dynamicBoneTable.0 != m.u32(at + 0xbbc) {
-            cx.mismatch(
-                &format!("{path}.xBBC_dynamicBoneTable"),
-                format!("{:#x}", self.xBBC_dynamicBoneTable.0),
-                format!("{:#x}", m.u32(at + 0xbbc)),
-            );
-        }
+        cx.compare_handle(
+            &format!("{path}.xBBC_dynamicBoneTable"),
+            "BoneTableId",
+            self.xBBC_dynamicBoneTable.map(|h| h.0),
+            m.u32(at + 0xbbc),
+        );
         if self.xBC0.0 != m.u32(at + 0xbc0) {
             cx.mismatch(
                 &format!("{path}.xBC0"),
@@ -9552,13 +9549,8 @@ impl Mirror for Item {
                 format!("{:02x?}", m.bytes::<1>(at + 0xdd3)),
             );
         }
-        if self.xDD4_itemVar != m.bytes::<504>(at + 0xdd4) {
-            cx.mismatch(
-                &format!("{path}.xDD4_itemVar"),
-                format!("{:02x?}", self.xDD4_itemVar),
-                format!("{:02x?}", m.bytes::<504>(at + 0xdd4)),
-            );
-        }
+        self.xDD4_itemVar
+            .compare(m, at + 0xdd4, &format!("{path}.xDD4_itemVar"), cx);
     }
 }
 
@@ -15982,5 +15974,730 @@ impl Mirror for gm_80479D58_t {
         }
         self.unk_10
             .compare(m, at + 0x10, &format!("{path}.unk_10"), cx);
+    }
+}
+
+impl Mirror for HSD_ObjAllocUnk {
+    const SIZE: u32 = 0x68;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        HSD_ObjAllocUnk {
+            x0: m.u32(at + 0x0) as i32,
+            x4: m.u32(at + 0x4) as i32,
+            x8: m.u32(at + 0x8) as i32,
+            xC: m.u32(at + 0xc) as i32,
+            x10: m.u32(at + 0x10) as i32,
+            x14: m.u32(at + 0x14) as i32,
+            x18: m.u32(at + 0x18),
+            x1C: m.u32(at + 0x1c) as i32,
+            x20: m.u32(at + 0x20) as i32,
+            x24: m.u32(at + 0x24) as i32,
+            x28: m.u32(at + 0x28) as i32,
+            x2C: m.u32(at + 0x2c) as i32,
+            x30: m.u32(at + 0x30) as i32,
+            x34: m.u32(at + 0x34) as i32,
+            x38: m.u32(at + 0x38) as i32,
+            x3C: m.u32(at + 0x3c) as i32,
+            x40: m.u32(at + 0x40) as i32,
+            x44: m.u32(at + 0x44) as i32,
+            x48: m.u32(at + 0x48) as i32,
+            x4C: m.u32(at + 0x4c) as i32,
+            x50: m.u32(at + 0x50) as i32,
+            x54: m.u32(at + 0x54) as i32,
+            x58: m.u32(at + 0x58) as i32,
+            x5C: m.u32(at + 0x5c) as i32,
+            x60: m.u32(at + 0x60) as i32,
+            x64: m.u32(at + 0x64) as i32,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0 != m.u32(at + 0x0) as i32 {
+            cx.mismatch(
+                &format!("{path}.x0"),
+                format!("{:?}", self.x0),
+                format!("{:?}", m.u32(at + 0x0) as i32),
+            );
+        }
+        if self.x4 != m.u32(at + 0x4) as i32 {
+            cx.mismatch(
+                &format!("{path}.x4"),
+                format!("{:?}", self.x4),
+                format!("{:?}", m.u32(at + 0x4) as i32),
+            );
+        }
+        if self.x8 != m.u32(at + 0x8) as i32 {
+            cx.mismatch(
+                &format!("{path}.x8"),
+                format!("{:?}", self.x8),
+                format!("{:?}", m.u32(at + 0x8) as i32),
+            );
+        }
+        if self.xC != m.u32(at + 0xc) as i32 {
+            cx.mismatch(
+                &format!("{path}.xC"),
+                format!("{:?}", self.xC),
+                format!("{:?}", m.u32(at + 0xc) as i32),
+            );
+        }
+        if self.x10 != m.u32(at + 0x10) as i32 {
+            cx.mismatch(
+                &format!("{path}.x10"),
+                format!("{:?}", self.x10),
+                format!("{:?}", m.u32(at + 0x10) as i32),
+            );
+        }
+        if self.x14 != m.u32(at + 0x14) as i32 {
+            cx.mismatch(
+                &format!("{path}.x14"),
+                format!("{:?}", self.x14),
+                format!("{:?}", m.u32(at + 0x14) as i32),
+            );
+        }
+        if self.x18 != m.u32(at + 0x18) {
+            cx.mismatch(
+                &format!("{path}.x18"),
+                format!("{:?}", self.x18),
+                format!("{:?}", m.u32(at + 0x18)),
+            );
+        }
+        if self.x1C != m.u32(at + 0x1c) as i32 {
+            cx.mismatch(
+                &format!("{path}.x1C"),
+                format!("{:?}", self.x1C),
+                format!("{:?}", m.u32(at + 0x1c) as i32),
+            );
+        }
+        if self.x20 != m.u32(at + 0x20) as i32 {
+            cx.mismatch(
+                &format!("{path}.x20"),
+                format!("{:?}", self.x20),
+                format!("{:?}", m.u32(at + 0x20) as i32),
+            );
+        }
+        if self.x24 != m.u32(at + 0x24) as i32 {
+            cx.mismatch(
+                &format!("{path}.x24"),
+                format!("{:?}", self.x24),
+                format!("{:?}", m.u32(at + 0x24) as i32),
+            );
+        }
+        if self.x28 != m.u32(at + 0x28) as i32 {
+            cx.mismatch(
+                &format!("{path}.x28"),
+                format!("{:?}", self.x28),
+                format!("{:?}", m.u32(at + 0x28) as i32),
+            );
+        }
+        if self.x2C != m.u32(at + 0x2c) as i32 {
+            cx.mismatch(
+                &format!("{path}.x2C"),
+                format!("{:?}", self.x2C),
+                format!("{:?}", m.u32(at + 0x2c) as i32),
+            );
+        }
+        if self.x30 != m.u32(at + 0x30) as i32 {
+            cx.mismatch(
+                &format!("{path}.x30"),
+                format!("{:?}", self.x30),
+                format!("{:?}", m.u32(at + 0x30) as i32),
+            );
+        }
+        if self.x34 != m.u32(at + 0x34) as i32 {
+            cx.mismatch(
+                &format!("{path}.x34"),
+                format!("{:?}", self.x34),
+                format!("{:?}", m.u32(at + 0x34) as i32),
+            );
+        }
+        if self.x38 != m.u32(at + 0x38) as i32 {
+            cx.mismatch(
+                &format!("{path}.x38"),
+                format!("{:?}", self.x38),
+                format!("{:?}", m.u32(at + 0x38) as i32),
+            );
+        }
+        if self.x3C != m.u32(at + 0x3c) as i32 {
+            cx.mismatch(
+                &format!("{path}.x3C"),
+                format!("{:?}", self.x3C),
+                format!("{:?}", m.u32(at + 0x3c) as i32),
+            );
+        }
+        if self.x40 != m.u32(at + 0x40) as i32 {
+            cx.mismatch(
+                &format!("{path}.x40"),
+                format!("{:?}", self.x40),
+                format!("{:?}", m.u32(at + 0x40) as i32),
+            );
+        }
+        if self.x44 != m.u32(at + 0x44) as i32 {
+            cx.mismatch(
+                &format!("{path}.x44"),
+                format!("{:?}", self.x44),
+                format!("{:?}", m.u32(at + 0x44) as i32),
+            );
+        }
+        if self.x48 != m.u32(at + 0x48) as i32 {
+            cx.mismatch(
+                &format!("{path}.x48"),
+                format!("{:?}", self.x48),
+                format!("{:?}", m.u32(at + 0x48) as i32),
+            );
+        }
+        if self.x4C != m.u32(at + 0x4c) as i32 {
+            cx.mismatch(
+                &format!("{path}.x4C"),
+                format!("{:?}", self.x4C),
+                format!("{:?}", m.u32(at + 0x4c) as i32),
+            );
+        }
+        if self.x50 != m.u32(at + 0x50) as i32 {
+            cx.mismatch(
+                &format!("{path}.x50"),
+                format!("{:?}", self.x50),
+                format!("{:?}", m.u32(at + 0x50) as i32),
+            );
+        }
+        if self.x54 != m.u32(at + 0x54) as i32 {
+            cx.mismatch(
+                &format!("{path}.x54"),
+                format!("{:?}", self.x54),
+                format!("{:?}", m.u32(at + 0x54) as i32),
+            );
+        }
+        if self.x58 != m.u32(at + 0x58) as i32 {
+            cx.mismatch(
+                &format!("{path}.x58"),
+                format!("{:?}", self.x58),
+                format!("{:?}", m.u32(at + 0x58) as i32),
+            );
+        }
+        if self.x5C != m.u32(at + 0x5c) as i32 {
+            cx.mismatch(
+                &format!("{path}.x5C"),
+                format!("{:?}", self.x5C),
+                format!("{:?}", m.u32(at + 0x5c) as i32),
+            );
+        }
+        if self.x60 != m.u32(at + 0x60) as i32 {
+            cx.mismatch(
+                &format!("{path}.x60"),
+                format!("{:?}", self.x60),
+                format!("{:?}", m.u32(at + 0x60) as i32),
+            );
+        }
+        if self.x64 != m.u32(at + 0x64) as i32 {
+            cx.mismatch(
+                &format!("{path}.x64"),
+                format!("{:?}", self.x64),
+                format!("{:?}", m.u32(at + 0x64) as i32),
+            );
+        }
+    }
+}
+
+impl Mirror for Item_FtTrack {
+    const SIZE: u32 = 0x158;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        Item_FtTrack {
+            ecb_offset_arr: core::array::from_fn(|i0| {
+                _itECB::import(m, at + 0x0 + i0 as u32 * 0x10, cx)
+            }),
+            xB0: m.u32(at + 0xb0) as i32,
+            xB4: m.u32(at + 0xb4) as i32,
+            xB8: m.u32(at + 0xb8) as i32,
+            xBC: m.u32(at + 0xbc) as i32,
+            ft_pos_arr: core::array::from_fn(|i0| Vec3::import(m, at + 0xc0 + i0 as u32 * 0xc, cx)),
+            x144: m.u32(at + 0x144),
+            x148: m.u32(at + 0x148),
+            x14C: m.u32(at + 0x14c),
+            count: m.u32(at + 0x150),
+            x154: m.bytes(at + 0x154),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        for i0 in 0..11 {
+            self.ecb_offset_arr[i0].compare(
+                m,
+                at + 0x0 + i0 as u32 * 0x10,
+                &format!("{}[{}]", format!("{path}.ecb_offset_arr"), i0),
+                cx,
+            );
+        }
+        if self.xB0 != m.u32(at + 0xb0) as i32 {
+            cx.mismatch(
+                &format!("{path}.xB0"),
+                format!("{:?}", self.xB0),
+                format!("{:?}", m.u32(at + 0xb0) as i32),
+            );
+        }
+        if self.xB4 != m.u32(at + 0xb4) as i32 {
+            cx.mismatch(
+                &format!("{path}.xB4"),
+                format!("{:?}", self.xB4),
+                format!("{:?}", m.u32(at + 0xb4) as i32),
+            );
+        }
+        if self.xB8 != m.u32(at + 0xb8) as i32 {
+            cx.mismatch(
+                &format!("{path}.xB8"),
+                format!("{:?}", self.xB8),
+                format!("{:?}", m.u32(at + 0xb8) as i32),
+            );
+        }
+        if self.xBC != m.u32(at + 0xbc) as i32 {
+            cx.mismatch(
+                &format!("{path}.xBC"),
+                format!("{:?}", self.xBC),
+                format!("{:?}", m.u32(at + 0xbc) as i32),
+            );
+        }
+        for i0 in 0..11 {
+            self.ft_pos_arr[i0].compare(
+                m,
+                at + 0xc0 + i0 as u32 * 0xc,
+                &format!("{}[{}]", format!("{path}.ft_pos_arr"), i0),
+                cx,
+            );
+        }
+        if self.x144 != m.u32(at + 0x144) {
+            cx.mismatch(
+                &format!("{path}.x144"),
+                format!("{:?}", self.x144),
+                format!("{:?}", m.u32(at + 0x144)),
+            );
+        }
+        if self.x148 != m.u32(at + 0x148) {
+            cx.mismatch(
+                &format!("{path}.x148"),
+                format!("{:?}", self.x148),
+                format!("{:?}", m.u32(at + 0x148)),
+            );
+        }
+        if self.x14C != m.u32(at + 0x14c) {
+            cx.mismatch(
+                &format!("{path}.x14C"),
+                format!("{:?}", self.x14C),
+                format!("{:?}", m.u32(at + 0x14c)),
+            );
+        }
+        if self.count != m.u32(at + 0x150) {
+            cx.mismatch(
+                &format!("{path}.count"),
+                format!("{:?}", self.count),
+                format!("{:?}", m.u32(at + 0x150)),
+            );
+        }
+        if self.x154 != m.bytes::<1>(at + 0x154) {
+            cx.mismatch(
+                &format!("{path}.x154"),
+                format!("{:02x?}", self.x154),
+                format!("{:02x?}", m.bytes::<1>(at + 0x154)),
+            );
+        }
+    }
+}
+
+impl Mirror for SpawnItem {
+    const SIZE: u32 = 0x4c;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        SpawnItem {
+            x0_parent_gobj: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
+            x4_parent_gobj2: cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId),
+            kind: m.u32(at + 0x8) as i32,
+            hold_kind: m.u32(at + 0xc) as i32,
+            x10: m.u32(at + 0x10) as i32,
+            pos: Vec3::import(m, at + 0x14, cx),
+            prev_pos: Vec3::import(m, at + 0x20, cx),
+            vel: Vec3::import(m, at + 0x2c, cx),
+            facing_dir: f32::from_bits(m.u32(at + 0x38)),
+            x3C_damage: m.u16(at + 0x3c) as i16,
+            x3E: m.u16(at + 0x3e) as i16,
+            x40: m.u32(at + 0x40) as i32,
+            x44_flag: m.bytes(at + 0x44),
+            x45_flag: m.bytes(at + 0x45),
+            x46_flag: m.bytes(at + 0x46),
+            x47_flag: m.bytes(at + 0x47),
+            x48_ground_or_air: m.u32(at + 0x48) as i32,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_handle(
+            &format!("{path}.x0_parent_gobj"),
+            "GObjId",
+            self.x0_parent_gobj.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
+        cx.compare_handle(
+            &format!("{path}.x4_parent_gobj2"),
+            "GObjId",
+            self.x4_parent_gobj2.map(|h| h.0),
+            m.u32(at + 0x4),
+        );
+        if self.kind != m.u32(at + 0x8) as i32 {
+            cx.mismatch(
+                &format!("{path}.kind"),
+                format!("{:?}", self.kind),
+                format!("{:?}", m.u32(at + 0x8) as i32),
+            );
+        }
+        if self.hold_kind != m.u32(at + 0xc) as i32 {
+            cx.mismatch(
+                &format!("{path}.hold_kind"),
+                format!("{:?}", self.hold_kind),
+                format!("{:?}", m.u32(at + 0xc) as i32),
+            );
+        }
+        if self.x10 != m.u32(at + 0x10) as i32 {
+            cx.mismatch(
+                &format!("{path}.x10"),
+                format!("{:?}", self.x10),
+                format!("{:?}", m.u32(at + 0x10) as i32),
+            );
+        }
+        self.pos.compare(m, at + 0x14, &format!("{path}.pos"), cx);
+        self.prev_pos
+            .compare(m, at + 0x20, &format!("{path}.prev_pos"), cx);
+        self.vel.compare(m, at + 0x2c, &format!("{path}.vel"), cx);
+        if self.facing_dir.to_bits() != m.u32(at + 0x38) {
+            cx.mismatch(
+                &format!("{path}.facing_dir"),
+                format!("{:?}", self.facing_dir),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x38))),
+            );
+        }
+        if self.x3C_damage != m.u16(at + 0x3c) as i16 {
+            cx.mismatch(
+                &format!("{path}.x3C_damage"),
+                format!("{:?}", self.x3C_damage),
+                format!("{:?}", m.u16(at + 0x3c) as i16),
+            );
+        }
+        if self.x3E != m.u16(at + 0x3e) as i16 {
+            cx.mismatch(
+                &format!("{path}.x3E"),
+                format!("{:?}", self.x3E),
+                format!("{:?}", m.u16(at + 0x3e) as i16),
+            );
+        }
+        if self.x40 != m.u32(at + 0x40) as i32 {
+            cx.mismatch(
+                &format!("{path}.x40"),
+                format!("{:?}", self.x40),
+                format!("{:?}", m.u32(at + 0x40) as i32),
+            );
+        }
+        if self.x44_flag != m.bytes::<1>(at + 0x44) {
+            cx.mismatch(
+                &format!("{path}.x44_flag"),
+                format!("{:02x?}", self.x44_flag),
+                format!("{:02x?}", m.bytes::<1>(at + 0x44)),
+            );
+        }
+        if self.x45_flag != m.bytes::<1>(at + 0x45) {
+            cx.mismatch(
+                &format!("{path}.x45_flag"),
+                format!("{:02x?}", self.x45_flag),
+                format!("{:02x?}", m.bytes::<1>(at + 0x45)),
+            );
+        }
+        if self.x46_flag != m.bytes::<1>(at + 0x46) {
+            cx.mismatch(
+                &format!("{path}.x46_flag"),
+                format!("{:02x?}", self.x46_flag),
+                format!("{:02x?}", m.bytes::<1>(at + 0x46)),
+            );
+        }
+        if self.x47_flag != m.bytes::<1>(at + 0x47) {
+            cx.mismatch(
+                &format!("{path}.x47_flag"),
+                format!("{:02x?}", self.x47_flag),
+                format!("{:02x?}", m.bytes::<1>(at + 0x47)),
+            );
+        }
+        if self.x48_ground_or_air != m.u32(at + 0x48) as i32 {
+            cx.mismatch(
+                &format!("{path}.x48_ground_or_air"),
+                format!("{:?}", self.x48_ground_or_air),
+                format!("{:?}", m.u32(at + 0x48) as i32),
+            );
+        }
+    }
+}
+
+impl Mirror for EF_Effect {
+    const SIZE: u32 = 0x2c;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        EF_Effect {
+            next: RawPtr(m.u32(at + 0x0)),
+            gobj: cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId),
+            parent_gobj: cx.import_handle("GObjId", m.u32(at + 0x8)).map(GObjId),
+            attach_jobj: cx.import_handle("JObjId", m.u32(at + 0xc)).map(JObjId),
+            update: code(m.u32(at + 0x10)),
+            user_data: RawPtr(m.u32(at + 0x14)),
+            params: Vec3::import(m, at + 0x18, cx),
+            lifetime: m.u16(at + 0x24),
+            expire_flags: m.u8(at + 0x26) as i8,
+            scale_flags: m.u8(at + 0x27),
+            state_flags: m.u8(at + 0x28),
+            is_async: m.u8(at + 0x29),
+            x2A: m.u8(at + 0x2a) as i8,
+            x2B: m.u8(at + 0x2b) as i8,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.next.0 != m.u32(at + 0x0) {
+            cx.mismatch(
+                &format!("{path}.next"),
+                format!("{:#x}", self.next.0),
+                format!("{:#x}", m.u32(at + 0x0)),
+            );
+        }
+        cx.compare_handle(
+            &format!("{path}.gobj"),
+            "GObjId",
+            self.gobj.map(|h| h.0),
+            m.u32(at + 0x4),
+        );
+        cx.compare_handle(
+            &format!("{path}.parent_gobj"),
+            "GObjId",
+            self.parent_gobj.map(|h| h.0),
+            m.u32(at + 0x8),
+        );
+        cx.compare_handle(
+            &format!("{path}.attach_jobj"),
+            "JObjId",
+            self.attach_jobj.map(|h| h.0),
+            m.u32(at + 0xc),
+        );
+        if self.update.map_or(0, |c| c.0) != m.u32(at + 0x10) {
+            cx.mismatch(
+                &format!("{path}.update"),
+                format!("{:?}", self.update),
+                format!("{:#x}", m.u32(at + 0x10)),
+            );
+        }
+        if self.user_data.0 != m.u32(at + 0x14) {
+            cx.mismatch(
+                &format!("{path}.user_data"),
+                format!("{:#x}", self.user_data.0),
+                format!("{:#x}", m.u32(at + 0x14)),
+            );
+        }
+        self.params
+            .compare(m, at + 0x18, &format!("{path}.params"), cx);
+        if self.lifetime != m.u16(at + 0x24) {
+            cx.mismatch(
+                &format!("{path}.lifetime"),
+                format!("{:?}", self.lifetime),
+                format!("{:?}", m.u16(at + 0x24)),
+            );
+        }
+        if self.expire_flags != m.u8(at + 0x26) as i8 {
+            cx.mismatch(
+                &format!("{path}.expire_flags"),
+                format!("{:?}", self.expire_flags),
+                format!("{:?}", m.u8(at + 0x26) as i8),
+            );
+        }
+        if self.scale_flags != m.u8(at + 0x27) {
+            cx.mismatch(
+                &format!("{path}.scale_flags"),
+                format!("{:?}", self.scale_flags),
+                format!("{:?}", m.u8(at + 0x27)),
+            );
+        }
+        if self.state_flags != m.u8(at + 0x28) {
+            cx.mismatch(
+                &format!("{path}.state_flags"),
+                format!("{:?}", self.state_flags),
+                format!("{:?}", m.u8(at + 0x28)),
+            );
+        }
+        if self.is_async != m.u8(at + 0x29) {
+            cx.mismatch(
+                &format!("{path}.is_async"),
+                format!("{:?}", self.is_async),
+                format!("{:?}", m.u8(at + 0x29)),
+            );
+        }
+        if self.x2A != m.u8(at + 0x2a) as i8 {
+            cx.mismatch(
+                &format!("{path}.x2A"),
+                format!("{:?}", self.x2A),
+                format!("{:?}", m.u8(at + 0x2a) as i8),
+            );
+        }
+        if self.x2B != m.u8(at + 0x2b) as i8 {
+            cx.mismatch(
+                &format!("{path}.x2B"),
+                format!("{:?}", self.x2B),
+                format!("{:?}", m.u8(at + 0x2b) as i8),
+            );
+        }
+    }
+}
+
+impl Mirror for itFoxBlaster_ItemVars {
+    const SIZE: u32 = 0xac;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itFoxBlaster_ItemVars {
+            xDD4: m.u32(at + 0x0) as i32,
+            xDD8: m.u32(at + 0x4) as i32,
+            xDDC: m.u32(at + 0x8) as i32,
+            xDE0: m.u32(at + 0xc) as i32,
+            xDE4: core::array::from_fn(|i0| m.u32(at + 0x10 + i0 as u32 * 0x4) as i32),
+            xDFC: core::array::from_fn(|i0| m.u32(at + 0x28 + i0 as u32 * 0x4) as i32),
+            xE14: core::array::from_fn(|i0| Vec3::import(m, at + 0x40 + i0 as u32 * 0xc, cx)),
+            angle: core::array::from_fn(|i0| f32::from_bits(m.u32(at + 0x88 + i0 as u32 * 0x4))),
+            gfx_spawn_var: m.u32(at + 0xa0) as i32,
+            set_sfx_var2: m.u32(at + 0xa4) as i32,
+            owner: cx.import_handle("GObjId", m.u32(at + 0xa8)).map(GObjId),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.xDD4 != m.u32(at + 0x0) as i32 {
+            cx.mismatch(
+                &format!("{path}.xDD4"),
+                format!("{:?}", self.xDD4),
+                format!("{:?}", m.u32(at + 0x0) as i32),
+            );
+        }
+        if self.xDD8 != m.u32(at + 0x4) as i32 {
+            cx.mismatch(
+                &format!("{path}.xDD8"),
+                format!("{:?}", self.xDD8),
+                format!("{:?}", m.u32(at + 0x4) as i32),
+            );
+        }
+        if self.xDDC != m.u32(at + 0x8) as i32 {
+            cx.mismatch(
+                &format!("{path}.xDDC"),
+                format!("{:?}", self.xDDC),
+                format!("{:?}", m.u32(at + 0x8) as i32),
+            );
+        }
+        if self.xDE0 != m.u32(at + 0xc) as i32 {
+            cx.mismatch(
+                &format!("{path}.xDE0"),
+                format!("{:?}", self.xDE0),
+                format!("{:?}", m.u32(at + 0xc) as i32),
+            );
+        }
+        for i0 in 0..6 {
+            if self.xDE4[i0] != m.u32(at + 0x10 + i0 as u32 * 0x4) as i32 {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.xDE4"), i0),
+                    format!("{:?}", self.xDE4[i0]),
+                    format!("{:?}", m.u32(at + 0x10 + i0 as u32 * 0x4) as i32),
+                );
+            }
+        }
+        for i0 in 0..6 {
+            if self.xDFC[i0] != m.u32(at + 0x28 + i0 as u32 * 0x4) as i32 {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.xDFC"), i0),
+                    format!("{:?}", self.xDFC[i0]),
+                    format!("{:?}", m.u32(at + 0x28 + i0 as u32 * 0x4) as i32),
+                );
+            }
+        }
+        for i0 in 0..6 {
+            self.xE14[i0].compare(
+                m,
+                at + 0x40 + i0 as u32 * 0xc,
+                &format!("{}[{}]", format!("{path}.xE14"), i0),
+                cx,
+            );
+        }
+        for i0 in 0..6 {
+            if self.angle[i0].to_bits() != m.u32(at + 0x88 + i0 as u32 * 0x4) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.angle"), i0),
+                    format!("{:?}", self.angle[i0]),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x88 + i0 as u32 * 0x4))),
+                );
+            }
+        }
+        if self.gfx_spawn_var != m.u32(at + 0xa0) as i32 {
+            cx.mismatch(
+                &format!("{path}.gfx_spawn_var"),
+                format!("{:?}", self.gfx_spawn_var),
+                format!("{:?}", m.u32(at + 0xa0) as i32),
+            );
+        }
+        if self.set_sfx_var2 != m.u32(at + 0xa4) as i32 {
+            cx.mismatch(
+                &format!("{path}.set_sfx_var2"),
+                format!("{:?}", self.set_sfx_var2),
+                format!("{:?}", m.u32(at + 0xa4) as i32),
+            );
+        }
+        cx.compare_handle(
+            &format!("{path}.owner"),
+            "GObjId",
+            self.owner.map(|h| h.0),
+            m.u32(at + 0xa8),
+        );
+    }
+}
+
+impl Mirror for itFoxLaser_ItemVars {
+    const SIZE: u32 = 0x18;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itFoxLaser_ItemVars {
+            scale: f32::from_bits(m.u32(at + 0x0)),
+            angle: f32::from_bits(m.u32(at + 0x4)),
+            speed: f32::from_bits(m.u32(at + 0x8)),
+            pos: Vec3::import(m, at + 0xc, cx),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.scale.to_bits() != m.u32(at + 0x0) {
+            cx.mismatch(
+                &format!("{path}.scale"),
+                format!("{:?}", self.scale),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x0))),
+            );
+        }
+        if self.angle.to_bits() != m.u32(at + 0x4) {
+            cx.mismatch(
+                &format!("{path}.angle"),
+                format!("{:?}", self.angle),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x4))),
+            );
+        }
+        if self.speed.to_bits() != m.u32(at + 0x8) {
+            cx.mismatch(
+                &format!("{path}.speed"),
+                format!("{:?}", self.speed),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x8))),
+            );
+        }
+        self.pos.compare(m, at + 0xc, &format!("{path}.pos"), cx);
     }
 }

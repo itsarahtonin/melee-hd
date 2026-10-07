@@ -40,6 +40,24 @@ impl<T> Pool<T> {
         slot
     }
 
+    /// A slot as `HSD_ObjAlloc` hands it out uncleared: the most recently freed keeps its last
+    /// contents, else a new one holds `fresh`.
+    pub fn alloc_stale(&mut self, fresh: T) -> u32 {
+        match self.free.pop() {
+            Some(slot) => {
+                self.used += 1;
+                self.peak = self.peak.max(self.used);
+                slot
+            }
+            None => self.alloc(fresh),
+        }
+    }
+
+    /// The slot the next allocation reuses (`HSD_ObjAllocData::freehead`), if any.
+    pub fn free_head(&self) -> Option<u32> {
+        self.free.last().copied()
+    }
+
     /// Returns `slot` to the pool, `HSD_ObjFree`.
     pub fn free(&mut self, slot: u32) {
         self.free.push(slot);

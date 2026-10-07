@@ -9,7 +9,8 @@ use melee_data::archive::{Archives, DataRef};
 use melee_sim::game::camera::CameraBoxes;
 use melee_sim::game::ft::AnimFile;
 use melee_sim::game::handles::{
-    AttrsId, CameraBoxId, DynamicsId, FighterId, GroundId, PartsId, StartHookId,
+    AttrsId, BoneTableId, CameraBoxId, DynamicsId, FighterId, GroundId, ItemId, PartsId,
+    StartHookId,
 };
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
@@ -72,6 +73,9 @@ pub struct Maps {
     pub lobjs: HashMap<u32, LObjId>,
     pub tobjs: HashMap<u32, TObjId>,
     pub fighters: HashMap<u32, FighterId>,
+    pub items: HashMap<u32, ItemId>,
+    pub effects: HashMap<u32, melee_sim::game::handles::EffectId>,
+    pub bone_tables: HashMap<u32, BoneTableId>,
     pub grounds: HashMap<u32, GroundId>,
     pub fogs: HashMap<u32, FogId>,
     pub start_hooks: HashMap<u32, StartHookId>,
@@ -79,6 +83,13 @@ pub struct Maps {
     pub fighter_parts: HashMap<u32, PartsId>,
     pub fighter_attrs: HashMap<u32, AttrsId>,
     pub fighter_dynamics: HashMap<u32, DynamicsId>,
+    /// Dangling pointers: slots made for objects freed before the capture that something
+    /// still points to (a GObj no list holds, or anything a freed item's stale bytes point
+    /// to), by slot, with the original's address. Nothing the simulation runs follows them, so
+    /// they compare by address: the original may have reused the address since, which pairs
+    /// with whatever lives there now.
+    pub dangling_gobjs: HashMap<u32, u32>,
+    pub dangling_jobjs: HashMap<u32, u32>,
 }
 
 pub struct Importer<'a> {
@@ -88,12 +99,21 @@ pub struct Importer<'a> {
     pub maps: Maps,
     /// Pointers the mirror met that no import handles yet, by handle kind.
     pub unhandled: Vec<String>,
-    /// Freed GObjs pointers still name, each given an unlinked slot.
-    pub dangling: Vec<u32>,
     /// How many bones the fighter being imported has, for its parts table.
     parts_len: u32,
     /// The archives `data` maps, for finding what a heap copy was made from.
     archives: Option<&'a Archives>,
+    /// Importing bytes that may be stale (an item's: a reused block keeps what its creation
+    /// didn't write, and a hitbox keeps its joint when it's turned off): a joint pointer resolves
+    /// only to a joint already imported, and dangles otherwise.
+    pub stale: bool,
+    /// The dangling slots by address, so one address gets one slot.
+    dangling_at: HashMap<(&'static str, u32), u32>,
+    /// The items whose contents are imported.
+    pub(crate) items_done: std::collections::HashSet<u32>,
+    /// The freed items and joint tables, released onto our free lists after the live ones.
+    pub(crate) free_items: Vec<u32>,
+    pub(crate) free_tables: Vec<u32>,
 }
 
 impl<'a> Importer<'a> {
@@ -104,9 +124,13 @@ impl<'a> Importer<'a> {
             game: Game::default(),
             maps: Maps::default(),
             unhandled: Vec::new(),
-            dangling: Vec::new(),
             parts_len: 0,
             archives: None,
+            stale: false,
+            dangling_at: HashMap::new(),
+            items_done: Default::default(),
+            free_items: Vec::new(),
+            free_tables: Vec::new(),
         }
     }
 
@@ -262,6 +286,7 @@ impl<'a> Importer<'a> {
             };
             self.game.world.procs[id.0] = proc;
         }
+        self.item_free_lists();
         let jobj_kind = self.u8(sym("HSD_GObj_JObjKind"));
         let light_kind = self.u8(sym("HSD_GObj_LightKind"));
         let fog_kind = self.u8(sym("HSD_GObj_FogKind"));
@@ -290,13 +315,15 @@ impl<'a> Importer<'a> {
             let ud = self.u32(g + 0x2C);
             let user_data = match user_data_kind {
                 4 if ud != 0 => Some(UserData::Fighter(self.fighter(ud))),
+                6 if ud != 0 => Some(UserData::Item(self.item(ud))),
+                8 if ud != 0 => Some(UserData::Effect(self.effect(ud))),
                 3 if ud != 0 => Some(UserData::Ground(self.ground(ud))),
                 0xFF => None,
                 _ if ud == 0 => None,
                 kind => {
                     self.unhandled
                         .push(format!("GObj {g:#x}: user data kind {kind}"));
-                    None
+                    Some(UserData::Raw(melee_sim::game::handles::RawPtr(ud)))
                 }
             };
             let render = self.u32(g + 0x1C);
@@ -361,6 +388,7 @@ impl<'a> Importer<'a> {
         let cg = cap.u32(sym("HSD_GObj_CurrentInvokedProcGObj"));
         w.current_gobj = (cg != 0).then(|| self.maps.gobjs[&cg]);
         self.statics();
+        self.release_free_lists();
     }
 
     /// The fighter code's globals.
@@ -992,6 +1020,7 @@ impl Importer<'_> {
         let class = match self.u32(a) {
             c if c == sym("hsdMObj") => MObjClass::Hsd,
             c if c == sym("grMaterial_803E0A20") => MObjClass::Ground,
+            c if c == sym("it_mobj") => MObjClass::Item,
             _ => {
                 self.unhandled
                     .push(format!("MObj {a:#x}: a class of its own"));
@@ -1214,6 +1243,29 @@ fn blank_gobj() -> GObj<melee_sim::game::state::GameKinds> {
     }
 }
 
+impl Importer<'_> {
+    /// A slot for a dangling pointer (see [`Maps::dangling_gobjs`]).
+    fn dangling(&mut self, kind: &'static str, addr: u32) -> u32 {
+        if let Some(&s) = self.dangling_at.get(&(kind, addr)) {
+            return s;
+        }
+        let slot = match kind {
+            "GObjId" => {
+                let id = self.game.world.gobjs.alloc(blank_gobj());
+                self.maps.dangling_gobjs.insert(id, addr);
+                id
+            }
+            _ => {
+                let id = jobj::alloc(&mut self.game.objs.jobjs).0;
+                self.maps.dangling_jobjs.insert(id, addr);
+                id
+            }
+        };
+        self.dangling_at.insert((kind, addr), slot);
+        slot
+    }
+}
+
 impl Cx for Importer<'_> {
     fn import_handle(&mut self, kind: &'static str, addr: u32) -> Option<u32> {
         if addr == 0 {
@@ -1236,10 +1288,14 @@ impl Cx for Importer<'_> {
             }
         }
         Some(match kind {
-            "JObjId" => self.jobj(addr).0,
+            "JObjId" if !self.stale => self.jobj(addr).0,
             "DObjId" => self.dobj(addr).0,
             "TObjId" => self.tobj(addr).0,
             "FighterId" => self.fighter(addr).0,
+            "ItemId" => self.item_slot(addr).0,
+            "BoneTableId" => self.bone_table(addr).0,
+            // Static tables in the executable, by address.
+            "ItemLogicRef" | "ItemStatesRef" => addr,
             "GroundId" => self.ground(addr).0,
             "StartHookId" => self.start_hook(addr).0,
             "CameraBoxId" => box_index(self.u32(sym("cm_804D645C")), addr),
@@ -1248,20 +1304,11 @@ impl Cx for Importer<'_> {
             "DynamicsId" => self.fighter_dynamics(addr).0,
             "GObjId" => match self.maps.gobjs.get(&addr) {
                 Some(g) => g.0,
-                // A GObj no process link holds is a freed one a pointer outlived (a fighter's
-                // last attacker, gone since). It stands in as an unlinked slot of its own, so
-                // the pointer round-trips and compares by identity; following it is a bug
-                // either side.
-                None => {
-                    // A pointer to a GObj no list holds (one freed since, which the original
-                    // still points to): a slot of its own keeps the pointer's identity.
-                    self.unhandled
-                        .push(format!("GObj {addr:#x} outside the process links"));
-                    let id = GObjId(self.game.world.gobjs.alloc(blank_gobj()));
-                    self.maps.gobjs.insert(addr, id);
-                    self.dangling.push(addr);
-                    id.0
-                }
+                None => self.dangling("GObjId", addr),
+            },
+            "JObjId" => match self.maps.jobjs.get(&addr) {
+                Some(j) => j.0,
+                None => self.dangling("JObjId", addr),
             },
             other => {
                 self.unhandled.push(format!("{other} {addr:#x}"));

@@ -1,0 +1,58 @@
+//! Item kinds (`ItemKind`) and the kinds' own code.
+
+pub mod foxblaster;
+pub mod foxlaser;
+
+use crate::game::state::Running;
+use crate::hsd::gobj::GObjId;
+
+/// Runs a kind's callback of the event kind (`HSD_GObjEvent`), if `addr` is one.
+pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
+    foxlaser::run_event(r, gobj, addr) || foxblaster::run_event(r, gobj, addr)
+}
+
+/// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
+pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
+    foxlaser::run_pred(r, gobj, addr).or_else(|| foxblaster::run_pred(r, gobj, addr))
+}
+
+/// `It_Kind_Foods`.
+pub const FOODS: i32 = 18;
+/// `It_Kind_M_Ball`, the Poké Ball.
+pub const M_BALL: i32 = 34;
+/// `It_Kind_L_Gun_Ray`: the first kind past the common items.
+pub const L_GUN_RAY: i32 = 35;
+/// `It_Kind_Kuriboh`: the first enemy, and the first kind of the second group of tables.
+pub const KURIBOH: i32 = 43;
+/// `It_Kind_Octarock_Stone`.
+pub const OCTAROCK_STONE: i32 = 47;
+/// `It_Kind_Mario_Fire`: the first character item.
+pub const MARIO_FIRE: i32 = 48;
+/// `It_Kind_Fox_Laser`.
+pub const FOX_LASER: i32 = 54;
+/// `It_Kind_Falco_Laser`.
+pub const FALCO_LASER: i32 = 55;
+/// `It_Kind_Link_Bomb`.
+pub const LINK_BOMB: i32 = 58;
+/// `It_Kind_CLink_Bomb`.
+pub const CLINK_BOMB: i32 = 59;
+/// `It_Kind_Fox_Blaster`.
+pub const FOX_BLASTER: i32 = 74;
+/// `It_Kind_Falco_Blaster`.
+pub const FALCO_BLASTER: i32 = 75;
+/// `It_Kind_Peach_Turnip`.
+pub const PEACH_TURNIP: i32 = 99;
+/// `It_Kind_Peach_Parasol`.
+pub const PEACH_PARASOL: i32 = 103;
+/// `It_Kind_Unk4`.
+pub const UNK4: i32 = 158;
+/// `It_PKind_Random`.
+pub const PKIND_RANDOM: i32 = 160;
+/// `It_PKind_Start`: the first Pokémon, and the third group of tables.
+pub const PKIND_START: i32 = 161;
+/// `It_PKind_Terminate`.
+pub const PKIND_TERMINATE: i32 = 191;
+/// `It_Kind_Old_Kuri`: the first stage item, and the last group of tables.
+pub const OLD_KURI: i32 = 208;
+/// `It_Kind_Arwing_Laser`.
+pub const ARWING_LASER: i32 = 234;

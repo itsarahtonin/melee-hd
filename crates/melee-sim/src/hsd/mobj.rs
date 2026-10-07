@@ -56,6 +56,8 @@ pub enum MObjClass {
     /// Stages' `gr_mobj` (`grMaterial_803E0A20`): HAL's but for its display setup, which adds
     /// the stage object's color overlay and alpha.
     Ground,
+    /// Items' `it_mobj` (`itmaterial.c`): HAL's but for its display setup.
+    Item,
 }
 
 /// `HSD_Material`.

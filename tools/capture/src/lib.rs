@@ -4,6 +4,7 @@
 
 pub mod compare;
 pub mod import;
+pub mod items;
 pub mod stage;
 pub mod vs;
 

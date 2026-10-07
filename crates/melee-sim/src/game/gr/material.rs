@@ -209,9 +209,14 @@ fn generic_command(data: &Archives, co: &mut ColorOverlay, opcode: u32) {
 }
 
 /// Runs a color overlay's script for one tick and advances its blends, `lb_80014258`:
-/// whether it ended (its script said so, or its duration ran out).
+/// whether it ended (its script said so, or its duration ran out). The owner's commands (0x15
+/// and up) go to `extra`.
 #[doc(alias = "lb_80014258")]
-pub fn run_overlay(data: &Archives, co: &mut ColorOverlay) -> bool {
+pub fn run_overlay_with(
+    data: &Archives,
+    co: &mut ColorOverlay,
+    extra: &mut dyn FnMut(&mut ColorOverlay, u32),
+) -> bool {
     if co.script.cursor.is_some() && co.script.timer != 0 {
         co.script.timer = (co.script.timer as i32).wrapping_sub(1) as u32;
     }
@@ -224,7 +229,7 @@ pub fn run_overlay(data: &Archives, co: &mut ColorOverlay) -> bool {
                 return true;
             }
         } else {
-            unimplemented!("color script command {opcode} (grMaterial_804D456C)");
+            extra(co, opcode);
         }
     }
     let byte = |v: f32| fp::fctiwz(reg(v)) as u8;
@@ -257,6 +262,14 @@ pub fn run_overlay(data: &Archives, co: &mut ColorOverlay) -> bool {
         }
     }
     false
+}
+
+/// [`run_overlay_with`] for a stage object's overlay, whose own commands go to
+/// `grMaterial_804D456C`.
+pub fn run_overlay(data: &Archives, co: &mut ColorOverlay) -> bool {
+    run_overlay_with(data, co, &mut |_, opcode| {
+        unimplemented!("color script command {opcode} (grMaterial_804D456C)")
+    })
 }
 
 /// Starts a color script on a stage object's overlay and runs its first tick,

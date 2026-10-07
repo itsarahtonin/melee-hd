@@ -10,7 +10,7 @@ use super::camera::CameraState;
 use super::gr;
 use super::handles::{CodeRef, FighterId, GroundId, ItemId};
 use super::structs::{
-    _StaticPlayer, ControllerMap, DynamicsData, Fighter, FighterBone, Ground, StageInfo,
+    _StaticPlayer, ControllerMap, DynamicsData, Fighter, FighterBone, Ground, Item, StageInfo,
     VsSceneController, gm_80479D58_t, ifMagnify,
 };
 use super::{ft, gm, pl};
@@ -29,6 +29,11 @@ pub enum UserData {
     Item(ItemId),
     /// A stage object (user data kind 3).
     Ground(GroundId),
+    /// An effect (user data kind 8).
+    Effect(super::handles::EffectId),
+    /// User data of a kind no port models yet (a sound's, an effect's), by its address in a
+    /// captured state: code that reads it stops.
+    Raw(super::handles::RawPtr),
 }
 
 /// The GObj object kinds as Melee's `HSD_GObj_80391260` numbers them, after the game's own
@@ -108,6 +113,12 @@ pub struct Game {
     pub world: World<GameKinds>,
     pub objs: Objects,
     pub fighters: Pool<Fighter>,
+    /// The items (`Item`, the item GObjs' user data, from `item_alloc_data`).
+    pub items: Pool<Item>,
+    /// The item code's other globals.
+    pub it: super::it::Globals,
+    /// The effects library's globals.
+    pub ef: super::ef::Globals,
     /// The stage objects (`Ground`, the stage GObjs' user data).
     pub grounds: Pool<Ground>,
     pub stage_info: StageInfo,
@@ -178,6 +189,8 @@ impl Host<GameKinds> for Running<'_> {
         match data {
             // `mem_free`: the block goes back to the heap.
             UserData::Ground(g) => self.game.grounds.free(g.0),
+            UserData::Item(i) => super::it::item::free_user_data(self.game, i),
+            UserData::Effect(e) => super::ef::free_user_data(self.game, e),
             other => panic!("removing {other:?} isn't ported"),
         }
     }
