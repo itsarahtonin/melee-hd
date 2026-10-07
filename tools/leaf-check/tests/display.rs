@@ -117,6 +117,39 @@ fn dirty(call: &mut Call, i: usize) {
     }
 }
 
+/// The GObjs on render link `link` whose callback is `cb`, in link order.
+fn rendered_all(call: &Call, link: u32, cb: &str) -> Vec<u32> {
+    let head = peek_u32(call, leaf_check::sym("HSD_GObjGXLinkHead"));
+    let cb = leaf_check::sym(cb);
+    let mut out = Vec::new();
+    let mut g = peek_u32(call, head + 4 * link);
+    while g != 0 {
+        if peek_u32(call, g + 0x1C) == cb {
+            out.push(g);
+        }
+        g = peek_u32(call, g + 0x10);
+    }
+    out
+}
+
+/// On some calls, draws another tree instead from the same state: a fighter's (skinned and
+/// enveloped shapes) or a stage object's, in the shadow render mode, which leaves out the
+/// fighters' and stages' own material classes that no port covers yet.
+fn other_tree(call: &mut Call, i: usize) {
+    let trees = match i % 6 {
+        1 | 4 => rendered_all(call, 5, "ftDrawCommon_80080E18"),
+        2 => rendered_all(call, 3, "grDisplay_801C5DB0"),
+        _ => return,
+    };
+    let Some(&g) = trees.get(i / 6 % trees.len().max(1)) else {
+        return;
+    };
+    call.regs.gpr[3] = peek_u32(call, g + 0x28);
+    call.regs.gpr[4] = 0;
+    call.regs.gpr[5] = [1, 2, 4][i / 6 % 3];
+    call.regs.gpr[6] = display::RENDER_SHADOW;
+}
+
 /// `HSD_JObjDispAll` from every call: its transparency pass varied over the three and the
 /// shadow render mode tried, its joint sometimes dirty.
 #[test]
@@ -125,6 +158,7 @@ fn disp_all() {
         "HSD_JObjDispAll",
         20,
         &|call, i| {
+            other_tree(call, i);
             dirty(call, i);
             if i % 4 == 3 {
                 call.regs.gpr[5] = [1, 2, 4][i / 4 % 3];
