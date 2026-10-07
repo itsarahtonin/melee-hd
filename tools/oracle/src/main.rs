@@ -8,6 +8,7 @@
 //! a tick apart. The comparison with melee-hd's own state builds on these traces; see
 //! `docs/oracle.md`.
 
+mod boot;
 mod diff;
 mod trace;
 
@@ -41,7 +42,9 @@ fn run(args: Vec<String>) -> ExitCode {
             eprintln!("usage: melee-oracle compare ORIGINAL.slp OURS.slp");
             eprintln!("       melee-oracle trace-check TRACE REPLAY.slp");
             eprintln!("       melee-oracle mirror-check TRACE");
-            eprintln!("       melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N]");
+            eprintln!(
+                "       melee-oracle diff TRACE REPLAY.slp [--from TICK [--against TICK]] [--ticks N] [--boot-diff]"
+            );
             eprintln!("       melee-oracle trace-info TRACE");
             eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");
             ExitCode::from(2)
@@ -394,6 +397,23 @@ fn trace_world(trace_path: &str, tick: &str) -> ExitCode {
                     (image.u32(g + 0xC) >> 16) & 0xFF,
                 );
                 g = image.u32(g + 8);
+            }
+        }
+        // The render links, `gx_link_max + 2` of them (the last holds the cameras).
+        let gx = image.u32(melee_capture::import::sym("HSD_GObjGXLinkHead"));
+        let max = image.u32(melee_capture::import::sym("HSD_GObjLibInitData")) >> 16 & 0xFF;
+        for link in 0..=max + 1 {
+            let mut g = image.u32(gx + 4 * link);
+            while g != 0 {
+                let f = image.u32(g + 0x1C);
+                let name = ssbm_types::symbol_at(f).map_or("?", |s| s.1);
+                println!(
+                    "gx_link {link}: {g:#010x} render {f:#010x} {name} priority {} links {:#x} kinds {:#06x}",
+                    image.u32(g + 4) >> 16 & 0xFF,
+                    (u64::from(image.u32(g + 0x20)) << 32) | u64::from(image.u32(g + 0x24)),
+                    image.u32(g + 4) & 0xFFFF,
+                );
+                g = image.u32(g + 0x10);
             }
         }
         return ExitCode::SUCCESS;

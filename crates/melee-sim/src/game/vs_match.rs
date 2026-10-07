@@ -226,6 +226,18 @@ impl Match {
     /// code loads and its fighters need with `load` (a disc file's bytes, by name). The scene
     /// loop is then ready for [`Match::step`].
     pub fn start(settings: &Settings, load: &mut dyn FnMut(&str) -> DiscFile) -> Match {
+        Match::start_from(settings, load, &mut |_, _| {})
+    }
+
+    /// [`Match::start`] with `boot` setting what the boot and the menus leave before the
+    /// match's scene starts (the oracle seeds it from ssbm-rs's trace until the boot and the
+    /// menus are ported): it runs on the new state, before anything of the scene's, and may
+    /// add the archives the boot loaded.
+    pub fn start_from(
+        settings: &Settings,
+        load: &mut dyn FnMut(&str) -> DiscFile,
+        boot: &mut dyn FnMut(&mut Game, &mut Archives),
+    ) -> Match {
         let mut game = Game {
             game_mode: settings.game_mode,
             rules: settings.rules.clone(),
@@ -244,6 +256,7 @@ impl Match {
         game.audio.dsp = settings.dsp;
         game.ft.address_seed = settings.fighter_addresses.iter().copied().collect();
         let mut data = Archives::default();
+        boot(&mut game, &mut data);
         // `lb_80014534`: the rumble scripts, then the match's own files in the order its
         // setup loads them.
         let mut archive = |name: &str| {
