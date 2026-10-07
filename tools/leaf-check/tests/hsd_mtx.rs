@@ -136,6 +136,50 @@ fn rotations_of_rotation_matrices_match() {
     });
 }
 
+/// `HSD_MtxGetRotation`'s boundaries: a sine of exactly ±1, and entries of exactly `FLT_MIN`,
+/// which take the ±π/2 shortcut instead of `atan2f`.
+#[test]
+fn rotation_boundaries_match() {
+    let Some(ctx) = leaf_check::reference() else {
+        return;
+    };
+    let ctx = &ctx;
+    let min = f32::MIN_POSITIVE;
+    let below = f32::from_bits(min.to_bits() - 1);
+    let mut cases = Vec::new();
+    for (tiny, sin) in [(min, 0.5), (min, -0.5), (below, 0.5), (-min, -0.5)] {
+        // Column 0 of length 0.5 with m[2][0] = ∓0.5 gives a sine of ±1.
+        cases.push(Mtx34 {
+            m: [
+                [tiny, tiny, 0.0, 0.0],
+                [tiny, tiny, 1.0, 0.0],
+                [sin, 1.0, 0.0, 0.0],
+            ],
+        });
+        // A cosine well above zero, with the z angle's x exactly at the threshold.
+        cases.push(Mtx34 {
+            m: [
+                [tiny, 0.0, 1.0, 0.0],
+                [tiny, 1.0, 0.0, 0.0],
+                [sin, 0.0, tiny, 0.0],
+            ],
+        });
+    }
+    for mode in leaf_check::MODES {
+        gekko_fp::set_fp_mode(mode);
+        for a in &cases {
+            put_mtx(ctx, A, a);
+            fns::HSD_MtxGetRotation(ctx, m(ctx, A), out_vec(ctx));
+            assert_eq!(
+                vec_bits(a.rotation_angles()),
+                read_f32s(ctx, OUT, 3),
+                "HSD_MtxGetRotation {a:?} {mode:?}"
+            );
+        }
+    }
+    gekko_fp::set_fp_mode(gekko_fp::FpMode::Hardware);
+}
+
 #[test]
 fn builders_match() {
     each_mode(40_000, 10.0, |ctx, f, mode| {

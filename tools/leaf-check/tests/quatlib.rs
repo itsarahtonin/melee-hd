@@ -159,3 +159,64 @@ fn products_and_interpolations_match() {
         );
     });
 }
+
+/// Interpolations between unit quaternions, as the game makes them with `EulerToQuat`: equal,
+/// opposite and unrelated pairs, at the ends, the middle and in between.
+#[test]
+fn unit_interpolations_match() {
+    each_mode(20_000, 4.0, |ctx, f, mode| {
+        let p = Quat::from_euler(f.vec());
+        let other = Quat::from_euler(f.vec());
+        let opposite = Quat::new(-p.x, -p.y, -p.z, -p.w);
+        for r in [p, opposite, other] {
+            for t in [0.0, 0.25, 0.5, 0.75, 1.0, f.next()] {
+                put_quat(ctx, A, p);
+                put_quat(ctx, B, r);
+                fns::HSD_QuatLib_8037EF28(ctx, q(ctx, A), q(ctx, B), out(ctx), arg(t));
+                assert_eq!(
+                    quat_bits(p.slerp(r, t)),
+                    read_f32s(ctx, OUT, 4),
+                    "HSD_QuatLib_8037EF28 {p:?} {r:?} {t} {mode:?}"
+                );
+            }
+        }
+    });
+}
+
+/// `MatToQuat` on half turns, whose traces are not positive, including ties between diagonal
+/// entries, where the first largest one is picked.
+#[test]
+fn half_turns_match() {
+    let Some(ctx) = leaf_check::reference() else {
+        return;
+    };
+    let ctx = &ctx;
+    let row = |a: f32, b: f32, c: f32| [a, b, c, 0.0];
+    let cases = [
+        [row(0.0, 1.0, 0.0), row(1.0, 0.0, 0.0), row(0.0, 0.0, -1.0)],
+        [row(0.0, 0.0, 1.0), row(0.0, -1.0, 0.0), row(1.0, 0.0, 0.0)],
+        [row(-1.0, 0.0, 0.0), row(0.0, 0.0, 1.0), row(0.0, 1.0, 0.0)],
+        [
+            row(-1.0, 0.0, 0.0),
+            row(0.0, -1.0, 0.0),
+            row(0.0, 0.0, -1.0),
+        ],
+        [row(1.0, 0.0, 0.0), row(0.0, -1.0, 0.0), row(0.0, 0.0, -1.0)],
+        [row(-1.0, 0.0, 0.0), row(0.0, 1.0, 0.0), row(0.0, 0.0, -1.0)],
+        [row(-1.0, 0.0, 0.0), row(0.0, -1.0, 0.0), row(0.0, 0.0, 1.0)],
+    ];
+    for mode in leaf_check::MODES {
+        gekko_fp::set_fp_mode(mode);
+        for m3 in cases {
+            let a = Mtx34 { m: m3 };
+            put_mtx(ctx, A, &a);
+            fns::MatToQuat(ctx, m(ctx, A), out(ctx));
+            assert_eq!(
+                quat_bits(Quat::from_matrix(&a)),
+                read_f32s(ctx, OUT, 4),
+                "MatToQuat {a:?} {mode:?}"
+            );
+        }
+    }
+    gekko_fp::set_fp_mode(gekko_fp::FpMode::Hardware);
+}
