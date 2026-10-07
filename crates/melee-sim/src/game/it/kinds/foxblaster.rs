@@ -5,12 +5,14 @@
 use super::super::item::{animate, change_state, destroy, logic, play_sfx, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
 use super::{FALCO_BLASTER, FOX_BLASTER};
+use crate::fpu::{mem, reg};
 use crate::game::code;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{Item, SpawnItem};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::vec::Vec3;
+use gekko_fp as fp;
 
 pub const MOTION8_ANIM: u32 = 0x802A_EBCC;
 pub const MOTION8_PHYS: u32 = 0x802A_EED4;
@@ -146,15 +148,69 @@ pub fn set_visible(r: &mut Running, gobj: GObjId, visibility: i32) {
 
 /// The accessory callback after a shot, `it_802ADEF0` (`it_802ADF10`): the muzzle flash, and
 /// the shots' history moves on.
+///
+/// The original keeps each flash as the address `efSync_Spawn` returned, cast to an `s32`
+/// (`xDE4`), and only ever moves it along the history: the flash is an effect handle here,
+/// which moves the same way (see docs/engine.md's uninitialized values).
 #[doc(alias = "it_802ADEF0")]
 #[doc(alias = "it_802ADF10")]
 pub fn on_shot(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
+    let kind = ip.kind;
     let v = ip.xDD4_itemVar.fox_blaster();
-    if owner == v.owner && v.gfx_spawn_var != 0 {
-        code::unported_call("it_802ADF10 (the blaster's muzzle flash, efSync_Spawn)");
+    if owner != v.owner || v.gfx_spawn_var == 0 {
+        return;
     }
+    v.gfx_spawn_var = 0;
+    let o = v.owner.expect("a blaster's flash without an owner");
+    let pos = r.game.ft_pos(o);
+    match kind {
+        FOX_BLASTER | FALCO_BLASTER => {
+            let muzzle = r.fox_muzzle(o);
+            let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
+            v.xE14[0] = Vec3::new(
+                mem(fp::fsubs(reg(muzzle.x), reg(pos.x))),
+                mem(fp::fsubs(reg(muzzle.y), reg(pos.y))),
+                mem(fp::fsubs(reg(muzzle.z), reg(pos.z))),
+            );
+            let grip = r.fox_grip(o);
+            let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
+            v.angle[0] = crate::math::atan2(
+                mem(fp::fsubs(reg(muzzle.y), reg(grip.y))),
+                mem(fp::fsubs(reg(muzzle.x), reg(grip.x))),
+            );
+            v.xDFC[0] = 0;
+            let angle = v.angle[0];
+            let flash = crate::game::ef::spawn(
+                r,
+                1166,
+                Some(gobj),
+                &[
+                    crate::game::ef::Arg::Vec(muzzle),
+                    crate::game::ef::Arg::Float(angle),
+                ],
+            );
+            item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().xDE4[0] = match flash {
+                crate::game::ef::Spawned::Effect(e) => Some(e),
+                crate::game::ef::Spawned::None => None,
+                other => panic!("the blaster's flash spawned {other:?}"),
+            };
+        }
+        0x8C | 0x8D => code::unported_call("ftKb_SpecialNFx_800FDC00 (Kirby's blaster flash)"),
+        _ => {}
+    }
+    let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
+    for i in (1..6).rev() {
+        v.xDE4[i] = v.xDE4[i - 1];
+        v.xDFC[i] = v.xDFC[i - 1];
+        v.xE14[i] = v.xE14[i - 1];
+        v.angle[i] = v.angle[i - 1];
+    }
+    v.xDE4[0] = None;
+    v.xDFC[0] = 0;
+    v.xE14[0] = Vec3::new(0.0, 0.0, 0.0);
+    v.angle[0] = 0.0;
 }
 
 /// Starts a shot's flash and recoil, `it_802AE1D0`.

@@ -22,6 +22,7 @@ pub mod create_model;
 pub mod data;
 pub mod dynamics;
 pub mod fighter;
+pub mod fox;
 pub mod ftlib;
 pub mod input;
 mod kind_tables;
