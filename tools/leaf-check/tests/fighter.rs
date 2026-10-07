@@ -1,0 +1,804 @@
+//! The fighter's per-frame processes, checked on real calls ssbm-rs saved from a Fox vs Sheik
+//! replay on Final Destination (`leaf_check::calls`). Regenerate the calls with ssbm-rs's
+//! runner (branch feat/state-trace), with `done.txt` listing every function address except
+//! the processes so only they are checked:
+//!
+//! ```text
+//! CAPTURE=$CALLS CAPTURE_FUNCS=Fighter_procHitlag,Fighter_procAnim,Fighter_procInput,\
+//! Fighter_procUpdate,Fighter_procMap,Fighter_procIK,Fighter_procAccessory,\
+//! Fighter_procCollPos,Fighter_procDynamics,Fighter_procCamera,Fighter_procPlayer,\
+//! Fighter_procGrabColl,Fighter_procAttackColl,Fighter_procCpu CAPTURE_EVERY=100 \
+//! LOCKSTEP_DONE=done.txt ssbm-run DISC --replay Game_20260129T133652.slp --fields 3000 \
+//! --port all --lockstep --known local/replays/known/Game_20260129T133652.txt
+//! ```
+//!
+//! `$CALLS` defaults to the directory below; set `FIGHTER_CALLS` to use another.
+
+use leaf_check::calls::{
+    Ret, check_calls, check_calls_with, gobj_arg, peek_u32, poke_bit, poke_f32, poke_u32,
+    user_data_arg,
+};
+use melee_sim::game::code::run_proc;
+use melee_sim::game::handles::{CodeRef, FighterId};
+
+const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/fighter-fd1";
+
+fn calls_dir() -> String {
+    std::env::var("FIGHTER_CALLS").unwrap_or_else(|_| CALLS.to_owned())
+}
+
+/// Runs the process at `addr` on the call's GObj, through the process table.
+fn check_proc(name: &str, addr: u32, min: usize) {
+    check_calls(&calls_dir(), name, min, &|g, maps, call| {
+        run_proc(g, gobj_arg(maps, call), CodeRef(addr));
+        Ret::Nothing
+    });
+}
+
+#[test]
+fn proc_hitlag() {
+    assert_eq!(leaf_check::sym("Fighter_procHitlag"), 0x8006_A1BC);
+    check_proc("Fighter_procHitlag", 0x8006_A1BC, 50);
+}
+
+/// Hitlag and the hit-stun freeze ending, and a held-over hitlag released, from real states;
+/// half the calls without a post-hitlag callback (most are effects', not ported).
+#[test]
+fn hitlag_endings() {
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procHitlag",
+        50,
+        &|call, i| {
+            let fp = user_data_arg(call);
+            match i % 3 {
+                0 => poke_f32(call, fp + 0x1954, 1.0),
+                1 => poke_f32(call, fp + 0x195C, 1.0),
+                _ => {
+                    poke_bit(call, fp + 0x221A, 1, true);
+                    poke_bit(call, fp + 0x2219, 7, true);
+                }
+            }
+            if i % 2 == 0 {
+                poke_u32(call, fp + 0x21D8, 0);
+            }
+        },
+        &|g, maps, call| {
+            run_proc(g, gobj_arg(maps, call), CodeRef(0x8006_A1BC));
+            Ret::Nothing
+        },
+    );
+}
+
+/// `ftCo_800C37A0`'s turn, mid-way, from procHitlag's states.
+#[test]
+fn turn_around_tick() {
+    let target = leaf_check::sym("ftCo_800C37A0");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procHitlag",
+        50,
+        &|call, i| {
+            call.addr = target;
+            poke_u32(call, user_data_arg(call) + 0x18F4, (i % 25) as u32 + 1);
+        },
+        &|g, maps, call| {
+            g.turn_around_tick(gobj_arg(maps, call));
+            Ret::Nothing
+        },
+    );
+}
+
+#[test]
+fn proc_input() {
+    check_proc("Fighter_procInput", 0x8006_AD10, 20);
+}
+
+#[test]
+fn proc_cpu() {
+    check_proc("Fighter_procCpu", 0x8006_ABA0, 60);
+}
+
+#[test]
+fn proc_accessory() {
+    check_proc("Fighter_procAccessory", 0x8006_C624, 60);
+}
+
+#[test]
+fn proc_grab_coll() {
+    check_proc("Fighter_procGrabColl", 0x8006_CA5C, 60);
+}
+
+#[test]
+fn proc_coll_pos() {
+    check_proc("Fighter_procCollPos", 0x8006_C80C, 40);
+}
+
+#[test]
+fn proc_update() {
+    check_proc("Fighter_procUpdate", 0x8006_B82C, 20);
+}
+
+#[test]
+fn proc_anim() {
+    check_proc("Fighter_procAnim", 0x8006_A360, 20);
+}
+
+/// The fighter a call's r3 points to (functions that take a `Fighter*`).
+fn fighter_arg(maps: &melee_capture::import::Maps, call: &ssbm_rt::capture::Call) -> FighterId {
+    *maps
+        .fighters
+        .get(&call.regs.gpr[3])
+        .expect("r3 isn't a fighter the import knows")
+}
+
+/// `ftAnim_8006E9B4` blending from the previous animation, from procAnim's states.
+#[test]
+fn anim_blending() {
+    let target = leaf_check::sym("ftAnim_8006E9B4");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procAnim",
+        30,
+        &|call, i| {
+            call.addr = target;
+            let fp = user_data_arg(call);
+            poke_f32(call, fp + 0x8A4, 4.0);
+            poke_f32(call, fp + 0x8A8, (i % 5) as f32);
+        },
+        &|g, maps, call| {
+            g.anim_joints(gobj_arg(maps, call));
+            Ret::Nothing
+        },
+    );
+}
+
+/// `ftAnim_8006F368` on every part, blending or not.
+#[test]
+fn part_is_animated() {
+    let target = leaf_check::sym("ftAnim_8006F368");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procAnim",
+        30,
+        &|call, i| {
+            call.addr = target;
+            let fp = user_data_arg(call);
+            call.regs.gpr[3] = fp;
+            call.regs.gpr[4] = (i % 30) as u32;
+            if i % 2 == 0 {
+                poke_f32(call, fp + 0x8A4, 2.0);
+            }
+        },
+        &|g, maps, call| {
+            let f = fighter_arg(maps, call);
+            Ret::Int(u32::from(g.part_is_animated(f, call.regs.gpr[4] as i32)))
+        },
+    );
+}
+
+/// `ftCo_800BFFD0` starting each color animation, over whatever plays.
+#[test]
+fn start_color_anim() {
+    let target = leaf_check::sym("ftCo_800BFFD0");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procAnim",
+        30,
+        &|call, i| {
+            call.addr = target;
+            call.regs.gpr[3] = user_data_arg(call);
+            call.regs.gpr[4] = (i * 7 % 140) as u32;
+            call.regs.gpr[5] = (i % 3) as u32 * 10;
+        },
+        &|g, maps, call| {
+            let f = fighter_arg(maps, call);
+            let gobj = g.game.fighters[f.0].gobj.expect("a fighter's GObj");
+            let r = g.start_color_anim(gobj, call.regs.gpr[4] as i32, call.regs.gpr[5] as i32);
+            Ret::Int(u32::from(r))
+        },
+    );
+}
+
+/// `ftCo_800C0200` ending each color animation below Spycloak's.
+#[test]
+fn end_color_anim() {
+    let target = leaf_check::sym("ftCo_800C0200");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procAnim",
+        30,
+        &|call, i| {
+            call.addr = target;
+            call.regs.gpr[3] = user_data_arg(call);
+            call.regs.gpr[4] = (i * 5 % 123) as u32;
+        },
+        &|g, maps, call| {
+            let f = fighter_arg(maps, call);
+            let gobj = g.game.fighters[f.0].gobj.expect("a fighter's GObj");
+            g.end_color_anim(gobj, call.regs.gpr[4] as i32);
+            Ret::Nothing
+        },
+    );
+}
+
+/// The animation callbacks real calls rarely reach, each run from every procAnim state
+/// through the callback table: whatever state the fighter is in, the callback's checks run
+/// on it.
+#[test]
+fn anim_callbacks() {
+    let target = leaf_check::sym("ftCo_AttackS3_Anim");
+    {
+        check_calls_with(
+            &calls_dir(),
+            "Fighter_procAnim",
+            20,
+            &|call, _| call.addr = target,
+            &|g, maps, call| {
+                let gobj = gobj_arg(maps, call);
+                melee_sim::game::code::run_fighter_cb(g, gobj, CodeRef(target));
+                Ret::Nothing
+            },
+        );
+    }
+}
+
+/// Runs the callback a fighter holds at `field` (an offset into `Fighter`) directly, from
+/// every saved call of `func`, on both sides: callbacks whose process doesn't finish on our
+/// side yet (something after them is unported) are checked anyway.
+fn check_held_callback(func: &str, field: u32, min: usize) {
+    check_calls_with(
+        &calls_dir(),
+        func,
+        min,
+        &|call, _| {
+            let cb = leaf_check::calls::peek_u32(call, user_data_arg(call) + field);
+            // A fighter without the callback: call something harmless that both sides have.
+            call.addr = if cb != 0 {
+                cb
+            } else {
+                leaf_check::sym("ftColl_800764DC")
+            };
+        },
+        &|g, maps, call| {
+            let gobj = gobj_arg(maps, call);
+            if call.addr == leaf_check::sym("ftColl_800764DC") {
+                g.combo_tick(gobj);
+            } else {
+                melee_sim::game::code::run_fighter_cb(g, gobj, CodeRef(call.addr));
+            }
+            Ret::Nothing
+        },
+    );
+}
+
+/// Each action state's physics callback (`phys_cb`), from procUpdate's states.
+#[test]
+fn phys_callbacks() {
+    check_held_callback("Fighter_procUpdate", 0x21A4, 40);
+}
+
+/// Each action state's animation callback (`anim_cb`), from procAnim's states.
+#[test]
+fn anim_held_callbacks() {
+    check_held_callback("Fighter_procAnim", 0x21A0, 40);
+}
+
+/// A float argument as the caller's register holds it (single precision, both lanes).
+fn float_arg(call: &mut ssbm_rt::capture::Call, n: usize, v: f32) {
+    let r = gekko_fp::lfs(v.to_bits());
+    call.regs.fpr[n] = gekko_fp::Ps::new(r, r);
+}
+
+/// Physics helpers that take a fighter and a float, run directly from procUpdate's states
+/// with friction from small to beyond any speed, and helpers the saved processes rarely
+/// reach.
+#[test]
+fn phys_helpers() {
+    let frictions = [0.0f32, 0.01, 0.05, 0.3, 1.0, 5.0, -0.2];
+    for name in [
+        "ftCommon_ApplyGroundedKnockbackFriction",
+        "ftCommon_ApplyShieldKnockbackFriction",
+    ] {
+        let target = leaf_check::sym(name);
+        check_calls_with(
+            &calls_dir(),
+            "Fighter_procUpdate",
+            60,
+            &|call, i| {
+                call.addr = target;
+                let fp = user_data_arg(call);
+                call.regs.gpr[3] = fp;
+                // A speed of either sign to slow.
+                let v = [3.0f32, -2.5, 0.04, -0.01, 0.0][i % 5];
+                poke_f32(
+                    call,
+                    fp + if name.contains("Shield") { 0xF4 } else { 0xF0 },
+                    v,
+                );
+                float_arg(call, 1, frictions[i % frictions.len()]);
+            },
+            &|g, maps, call| {
+                let f = fighter_arg(maps, call);
+                let friction = call.regs.fpr[1].ps0;
+                let fp = &mut g.game.fighters[f.0];
+                if name.contains("Shield") {
+                    melee_sim::game::state::Running::shield_knockback_friction(fp, friction);
+                } else {
+                    melee_sim::game::state::Running::grounded_knockback_friction(fp, friction);
+                }
+                Ret::Nothing
+            },
+        );
+    }
+    // `ftAnim_80070FD0`: part 0x35's rotation against x100, half of them changed.
+    let target = leaf_check::sym("ftAnim_80070FD0");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procUpdate",
+        60,
+        &|call, i| {
+            call.addr = target;
+            let fp = user_data_arg(call);
+            call.regs.gpr[3] = fp;
+            if i % 2 == 0 {
+                poke_f32(call, fp + 0x100, 0.25);
+            }
+        },
+        &|g, maps, call| {
+            let f = fighter_arg(maps, call);
+            Ret::Int(u32::from(g.x100_rot_changed(f)))
+        },
+    );
+    // `ft_80085134`: the animation's motion as air velocity.
+    let target = leaf_check::sym("ft_80085134");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procUpdate",
+        60,
+        &|call, _| call.addr = target,
+        &|g, maps, call| {
+            g.air_anim_motion(gobj_arg(maps, call));
+            Ret::Nothing
+        },
+    );
+    // `ftPartSetRotX` on every part, at angles of both signs.
+    let target = leaf_check::sym("ftPartSetRotX");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procUpdate",
+        60,
+        &|call, i| {
+            call.addr = target;
+            call.regs.gpr[3] = user_data_arg(call);
+            call.regs.gpr[4] = (i % 30) as u32;
+            float_arg(call, 1, (i as f32 - 40.0) * 0.07);
+        },
+        &|g, maps, call| {
+            let f = fighter_arg(maps, call);
+            let v = f32::from_bits(gekko_fp::stfs(call.regs.fpr[1].ps0));
+            g.game.part_set_rot_x(f, call.regs.gpr[4] as i32, v);
+            Ret::Nothing
+        },
+    );
+}
+
+/// `ftCo_IsCpuControlled` with every kind of player, as fighter or sub-fighter, and the CPU
+/// kind that plays as a human.
+#[test]
+fn is_cpu_controlled() {
+    let target = leaf_check::sym("ftCo_IsCpuControlled");
+    let players = leaf_check::sym("player_slots");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procCpu",
+        60,
+        &|call, i| {
+            call.addr = target;
+            let fp = user_data_arg(call);
+            call.regs.gpr[3] = fp;
+            let slot = u32::from(call.mem1[(fp + 0xC - 0x8000_0000) as usize]);
+            let player = players + slot * 0xE90;
+            poke_u32(call, player + 8, (i % 4) as u32);
+            poke_bit(call, fp + 0x221F, 4, i % 3 == 0);
+            if i % 5 == 0 {
+                poke_u32(call, fp + 0x1A88 + 0xC, 5);
+            }
+        },
+        &|g, maps, call| {
+            let f = fighter_arg(maps, call);
+            let fp = &g.game.fighters[f.0];
+            Ret::Int(u32::from(g.is_cpu_controlled(fp)))
+        },
+    );
+}
+
+/// `Fighter_procCollPos`'s rarer paths from real states: a depth scale other than 1, stamina
+/// matches' markers, and a fighter below the camera off the bottom edge.
+#[test]
+fn coll_pos_variants() {
+    let magnify = leaf_check::sym("ifMagnify_804A1DE0");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procCollPos",
+        40,
+        &|call, i| {
+            let fp = user_data_arg(call);
+            match i % 3 {
+                0 => poke_f32(call, fp + 0x3C, 1.25),
+                1 => {
+                    let at = (0x8046_B6A0u32 + 0x24C8 - 0x8000_0000) as usize;
+                    call.mem1[at] = (call.mem1[at] & 0x1F) | (2 << 5);
+                }
+                _ => {
+                    let slot = u32::from(call.mem1[(fp + 0xC - 0x8000_0000) as usize]);
+                    let state = magnify + 0x14 + slot * 0x10 + 0xC;
+                    call.mem1[(state - 0x8000_0000) as usize] = 0x80 | 3;
+                    poke_u32(call, fp + 0xE0, 1);
+                    poke_f32(call, fp + 0xB4, -400.0);
+                }
+            }
+        },
+        &|g, maps, call| {
+            run_proc(g, gobj_arg(maps, call), CodeRef(0x8006_C80C));
+            Ret::Nothing
+        },
+    );
+}
+
+/// `Fighter_procInput` without the action's input callback, on every saved call: the
+/// controls, dead zones and counters, whatever state the fighter is in.
+#[test]
+fn input_core() {
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procInput",
+        60,
+        &|call, _| {
+            let fp = user_data_arg(call);
+            poke_u32(call, fp + 0x219C, 0);
+        },
+        &|g, maps, call| {
+            run_proc(g, gobj_arg(maps, call), CodeRef(0x8006_AD10));
+            Ret::Nothing
+        },
+    );
+}
+
+/// `Fighter_procInput`'s controls at their edges, from real states: sticks exactly at the dead
+/// zones, jumps, B in each direction, Z and analog shoulders.
+#[test]
+fn input_variants() {
+    let pads = leaf_check::sym("HSD_PadGameStatus");
+    let common = leaf_check::sym("p_ftCommonData");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procInput",
+        60,
+        &|call, i| {
+            let fp = user_data_arg(call);
+            poke_u32(call, fp + 0x219C, 0);
+            let port = u32::from(call.mem1[(fp + 0x618 - 0x8000_0000) as usize]);
+            let pad = pads + port * 0x44;
+            let data = leaf_check::calls::peek_u32(call, common);
+            let dz_x = leaf_check::calls::peek_u32(call, data);
+            let dz_y = leaf_check::calls::peek_u32(call, data + 4);
+            let (button, x, y, l) = match i % 6 {
+                0 => (0, f32::from_bits(dz_x), -f32::from_bits(dz_y), 0.0),
+                1 => (0x400, 0.0, 0.0, 0.0),
+                2 => (0x200, 0.0, 1.0, 0.0),
+                3 => (0x200, -0.9, 0.0, 0.0),
+                4 => (0x10, 0.3, -0.95, 0.0),
+                _ => (0x100, 0.0, 0.0, 0.5),
+            };
+            poke_u32(call, pad, button);
+            poke_f32(call, pad + 0x20, x);
+            poke_f32(call, pad + 0x24, y);
+            poke_f32(call, pad + 0x30, l);
+        },
+        &|g, maps, call| {
+            run_proc(g, gobj_arg(maps, call), CodeRef(0x8006_AD10));
+            Ret::Nothing
+        },
+    );
+}
+
+/// `lb_8000D148` against the reference on random strokes, thresholds and centers.
+#[test]
+fn stick_crossed() {
+    use melee_sim::game::ft::input::stick_crossed;
+    leaf_check::each_mode(20_000, 2.0, |ctx, fl, _| {
+        let p: Vec<f32> = (0..7).map(|_| fl.next()).collect();
+        let regs: Vec<f64> = p.iter().map(|&v| leaf_check::arg(v)).collect();
+        let theirs = ssbm_types::fns::lb_8000D148(
+            ctx, regs[0], regs[1], regs[2], regs[3], regs[4], regs[5], regs[6],
+        );
+        let ours = stick_crossed(
+            regs[0], regs[1], regs[2], regs[3], regs[4], regs[5], regs[6],
+        );
+        assert_eq!(i32::from(ours), theirs, "lb_8000D148{p:?}");
+    });
+}
+
+/// `Fighter_ChangeMotionState` from procInput's states into common action states (no saved
+/// call reaches it: it loads its animation from ARAM, which lockstep captures leave out), from
+/// the first frame and partway in, with and without blending and some keep flags.
+#[test]
+fn change_motion_state() {
+    let target = leaf_check::sym("Fighter_ChangeMotionState");
+    // Wait, Walk, Dash, Run, KneeBend, Fall, Squat, Landing, Attack11, AttackHi3, AttackAirN,
+    // GuardOn, the character's first own state.
+    const STATES: [u32; 13] = [14, 15, 20, 21, 24, 29, 39, 42, 44, 56, 65, 178, 341];
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procInput",
+        40,
+        &|call, i| {
+            call.addr = target;
+            call.regs.gpr[4] = STATES[i % STATES.len()];
+            call.regs.gpr[5] = [0, 0, 0x4000, 0x200 | 0x800, 0][i % 5];
+            float_arg(call, 1, 0.0);
+            float_arg(call, 2, [1.0, 1.0, 0.5, 2.0][i % 4]);
+            float_arg(call, 3, [0.0, -1.0, 4.0][i % 3]);
+            call.regs.gpr[6] = 0;
+        },
+        &|g, maps, call| {
+            let gobj = gobj_arg(maps, call);
+            let f = |n: usize| f32::from_bits(gekko_fp::stfs(call.regs.fpr[n].ps0));
+            g.change_motion_state(
+                gobj,
+                call.regs.gpr[4] as i32,
+                call.regs.gpr[5],
+                f(1),
+                f(2),
+                f(3),
+                None,
+            );
+            Ret::Nothing
+        },
+    );
+}
+
+/// `Fighter_ChangeMotionState` with last-state effects for it to reset set first (hitboxes,
+/// hurtbox states and descriptions, model variants, part color animations, hit-stun, a bonus
+/// flag), and states started partway into their animations.
+#[test]
+fn change_motion_state_resets() {
+    let target = leaf_check::sym("Fighter_ChangeMotionState");
+    const STATES: [u32; 6] = [14, 20, 29, 39, 44, 341];
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procInput",
+        20,
+        &|call, i| {
+            let fp = user_data_arg(call);
+            call.addr = target;
+            call.regs.gpr[4] = STATES[i % STATES.len()];
+            call.regs.gpr[5] = 0;
+            float_arg(call, 1, [0.0, 0.0, 2.0][i % 3]);
+            float_arg(call, 2, 1.0);
+            float_arg(call, 3, 0.0);
+            call.regs.gpr[6] = 0;
+            match i % 4 {
+                0 => {
+                    poke_bit(call, fp + 0x2219, 3, true);
+                    poke_u32(call, fp + 0x914, 1);
+                    poke_bit(call, fp + 0x221A, 5, true);
+                    poke_bit(call, fp + 0x221D, 2, true);
+                }
+                1 => {
+                    poke_bit(call, fp + 0x221A, 6, true);
+                    poke_bit(call, fp + 0x2221, 1, true);
+                    poke_u32(call, fp + 0x1988, 1);
+                }
+                2 => {
+                    poke_u32(call, fp + 0x18F4, 1);
+                    poke_bit(call, fp + 0x221C, 6, true);
+                    poke_bit(call, fp + 0x2227, 4, true);
+                    // Into states whose attack flags start color animations.
+                    poke_bit(call, fp + 0x2226, 4, true);
+                    call.regs.gpr[4] = [44, 11][i / 4 % 2];
+                }
+                _ => {
+                    poke_bit(call, fp + 0x221E, 7, true);
+                    poke_u32(call, fp + 0xE0, 1 - peek_u32(call, fp + 0xE0));
+                    // The root part as a dynamic bone's (`ftData::x8->x10`).
+                    let x8 = peek_u32(call, peek_u32(call, fp + 0x10C) + 8);
+                    let root = call.mem1[(x8 + 0x10 - 0x8000_0000) as usize];
+                    let parts = peek_u32(call, fp + 0x5E8);
+                    poke_bit(call, parts + 0x10 * u32::from(root) + 8, 0, true);
+                }
+            }
+        },
+        &|g, maps, call| {
+            let gobj = gobj_arg(maps, call);
+            let f = |n: usize| f32::from_bits(gekko_fp::stfs(call.regs.fpr[n].ps0));
+            g.change_motion_state(
+                gobj,
+                call.regs.gpr[4] as i32,
+                call.regs.gpr[5],
+                f(1),
+                f(2),
+                f(3),
+                None,
+            );
+            Ret::Nothing
+        },
+    );
+}
+
+/// Binding the current figatree to the parts directly, from procAnim's states: the fighter's
+/// own (`ftAnim_8006F4C8`), and through another character's parts (`ftAnim_8006FCE4`, the
+/// figatree marked as made for Zelda, Sheik or the fighter itself), to the joints and to the
+/// blend skeleton.
+#[test]
+fn figatree_binding() {
+    let own = leaf_check::sym("ftAnim_8006F4C8");
+    let remapped = leaf_check::sym("ftAnim_8006FCE4");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procAnim",
+        40,
+        &|call, i| {
+            let fp = user_data_arg(call);
+            call.regs.gpr[3] = fp;
+            call.regs.gpr[4] = (i % 2) as u32;
+            if leaf_check::calls::peek_u32(call, fp + 0x590) == 0 {
+                // No figatree: nothing to bind; run the remap on itself.
+                call.addr = leaf_check::sym("ftPartsRemap");
+                let kind = leaf_check::calls::peek_u32(call, fp + 4);
+                call.regs.gpr[3] = kind;
+                call.regs.gpr[4] = kind;
+                call.regs.gpr[5] = i as u32 % 40;
+                return;
+            }
+            if i % 3 == 0 {
+                call.addr = own;
+                call.regs.gpr[5] = leaf_check::calls::peek_u32(call, fp + 0x590);
+            } else {
+                call.addr = remapped;
+                let word = leaf_check::calls::peek_u32(call, fp + 0x594);
+                let kind = leaf_check::calls::peek_u32(call, fp + 4);
+                let from = [19, 7, kind][i % 3];
+                poke_u32(call, fp + 0x594, word & !0x3F | from);
+            }
+        },
+        &|g, maps, call| {
+            if call.addr == leaf_check::sym("ftPartsRemap") {
+                let r = g.parts_remap(
+                    call.regs.gpr[3] as i32,
+                    call.regs.gpr[4] as i32,
+                    call.regs.gpr[5],
+                );
+                return Ret::Int(u32::from(r));
+            }
+            let f = fighter_arg(maps, call);
+            let blend = call.regs.gpr[4] != 0;
+            if call.addr == own {
+                let tree = g.game.fighters[f.0].x590.expect("a figatree");
+                g.bind_own_figatree(f, blend, tree);
+            } else {
+                g.bind_figatree_remapped(f, blend);
+            }
+            Ret::Nothing
+        },
+    );
+}
+
+/// Whether bonus 10, which `pl_8003FE1C` counts, counts points (`pl_80038824` asserts it).
+#[test]
+fn bonus_10_counts_points() {
+    let Some(ctx) = leaf_check::reference() else {
+        return;
+    };
+    assert_eq!(
+        ssbm_types::fns::gmDecisionGetType(&ctx, 10),
+        ssbm_types::enums::Gm_DecType_Point
+    );
+}
+
+/// `ftPartsRemap` between every pair of characters with fighters in the saved states, joint
+/// by joint, beyond the table's end included.
+#[test]
+fn parts_remap() {
+    let remap = leaf_check::sym("ftPartsRemap");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procCpu",
+        60,
+        &|call, i| {
+            call.addr = remap;
+            const KINDS: [u32; 3] = [1, 7, 19];
+            call.regs.gpr[3] = KINDS[i % 3];
+            call.regs.gpr[4] = KINDS[(i / 3) % 3];
+            call.regs.gpr[5] = (i * 7 % 90) as u32;
+        },
+        &|g, _, call| {
+            let r = g.parts_remap(
+                call.regs.gpr[3] as i32,
+                call.regs.gpr[4] as i32,
+                call.regs.gpr[5],
+            );
+            Ret::Int(u32::from(r))
+        },
+    );
+}
+
+/// The common state entries other states end in (waiting, falling, falling after a double
+/// jump, lying down), an animation played without a state change, and animation rates, from
+/// procInput's states.
+#[test]
+fn state_entries() {
+    let targets = [
+        "ft_8008A2BC",
+        "ftCo_Fall_Enter",
+        "ftCo_FallAerial_Enter",
+        "ftCo_DownSpot_Enter",
+        "ftCo_8008A6D8",
+        "ftAnim_SetAnimRate",
+    ];
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procInput",
+        40,
+        &|call, i| {
+            call.addr = leaf_check::sym(targets[i % targets.len()]);
+            // An idle animation, and a rate.
+            call.regs.gpr[4] = [2, 3, 4][i % 3];
+            float_arg(call, 1, [0.0, 0.5, 1.5][i % 3]);
+        },
+        &|g, maps, call| {
+            let gobj = gobj_arg(maps, call);
+            match targets
+                .iter()
+                .position(|&t| leaf_check::sym(t) == call.addr)
+            {
+                Some(0) => g.enter_wait(gobj),
+                Some(1) => g.enter_fall(gobj),
+                Some(2) => g.enter_fall_aerial(gobj),
+                Some(3) => g.enter_down_spot(gobj),
+                Some(4) => g.play_anim(gobj, call.regs.gpr[4] as i32),
+                _ => {
+                    let rate = f32::from_bits(gekko_fp::stfs(call.regs.fpr[1].ps0));
+                    g.set_anim_rate(gobj, rate);
+                }
+            }
+            Ret::Nothing
+        },
+    );
+}
+
+/// A smash attack's charge from real states: charging up to its hold frame and past the
+/// charge sound's frame, and released by letting go of A.
+#[test]
+fn smash_charge() {
+    let tick = leaf_check::sym("ftCo_800DEF38");
+    let input = leaf_check::sym("ftCo_800DF0D0");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procInput",
+        60,
+        &|call, i| {
+            let fp = user_data_arg(call);
+            let attrs = fp + 0x2114;
+            poke_u32(call, attrs, [2, 2, 4, 1][i % 4]);
+            poke_f32(call, attrs + 4, [10.0, 59.5, 3.0, 0.0][i % 4]);
+            poke_f32(call, attrs + 8, 60.0);
+            poke_f32(call, attrs + 0x10, 1.0);
+            poke_u32(call, attrs + 0x14, [1, 9, 0x10][i % 3]);
+            poke_u32(call, attrs + 0x1C, (i / 4 % 2) as u32);
+            call.addr = if i % 3 == 0 { input } else { tick };
+            // A released.
+            poke_u32(call, fp + 0x65C, 0);
+        },
+        &|g, maps, call| {
+            let gobj = gobj_arg(maps, call);
+            if call.addr == leaf_check::sym("ftCo_800DF0D0") {
+                g.smash_charge_input(gobj);
+            } else {
+                g.smash_charge_tick(gobj);
+            }
+            Ret::Nothing
+        },
+    );
+}

@@ -162,7 +162,7 @@ pub fn sqrt(x: f32) -> f32 {
 
 /// The inline `sqrtf` on a register, its result left in a register.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
-pub(crate) fn sqrt_reg(xr: f64) -> f64 {
+pub fn sqrt_reg(xr: f64) -> f64 {
     if !(xr > 0.0) {
         return xr;
     }

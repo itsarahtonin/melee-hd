@@ -46,15 +46,50 @@ pub struct Loaded {
     pub data: u32,
     pub data_len: u32,
     pub id: ArchiveId,
+    /// Its public symbols and their offsets in the data block.
+    pub publics: Vec<(String, u32)>,
 }
 
-/// The disc's archives by their headers' first three words, for [`find_archives_in`].
+/// The disc's archives by their headers' first three words, for [`find_archives_in`], and
+/// the fighters' animation files (`*AJ.dat`, one archive per animation, each loaded on its
+/// own).
 pub struct DiscIndex {
     by_header: HashMap<[u32; 3], Vec<(String, Vec<u8>)>>,
+    /// The animation files' sub-archives by file name: each one's offset and size in the
+    /// file.
+    anim_files: HashMap<String, Vec<(u32, u32)>>,
+    /// The animation files whole, by name.
+    anim_bytes: HashMap<String, Vec<u8>>,
+}
+
+impl DiscIndex {
+    /// The animation file named `name` (`PlFxAJ.dat`), whole.
+    pub fn anim_file(&self, name: &str) -> Option<&[u8]> {
+        self.anim_bytes.get(name).map(Vec::as_slice)
+    }
+}
+
+/// `ftData_Table_Unk0`: each character's animation file, `{ARAM address, count}`, once the
+/// game has copied it to ARAM.
+pub const FT_ANIM_FILES: u32 = 0x803C_0FC8;
+/// `ftData_803C23E4`: each character's animation file name.
+pub const FT_ANIM_FILE_NAMES: u32 = 0x803C_23E4;
+/// How many characters those tables cover.
+pub const FT_KINDS: u32 = 33;
+
+/// The NUL-terminated string at `addr` in `mem1`.
+pub fn c_string(mem1: &[u8], addr: u32) -> String {
+    let at = (addr - MEM1) as usize;
+    let end = mem1[at..].iter().position(|&b| b == 0).unwrap_or(0);
+    String::from_utf8_lossy(&mem1[at..at + end]).into_owned()
 }
 
 /// The disc's archives loaded in `mem1`, added to `archives` in address order, found by their
-/// headers and confirmed by their contents (every word relocation leaves alone).
+/// headers and confirmed by their contents (every word relocation leaves alone). After them
+/// come the animations of each fighter whose animation file the game has copied to ARAM
+/// (`ftData_Table_Unk0`): every sub-archive, named `FILE@OFFSET`, with no address in main
+/// memory. Fighters load their current animation from there, and one found loaded in main
+/// memory is the same archive.
 pub fn find_archives(mem1: &[u8], disc: &Disc, archives: &mut Archives) -> Vec<Loaded> {
     find_archives_in(&disc_index(disc), mem1, archives)
 }
@@ -62,6 +97,8 @@ pub fn find_archives(mem1: &[u8], disc: &Disc, archives: &mut Archives) -> Vec<L
 /// Indexes the disc's archives, once for many captures.
 pub fn disc_index(disc: &Disc) -> DiscIndex {
     let mut by_header: HashMap<[u32; 3], Vec<(String, Vec<u8>)>> = HashMap::new();
+    let mut anim_files: HashMap<String, Vec<(u32, u32)>> = HashMap::new();
+    let mut anim_bytes = HashMap::new();
     // `.usd` files are the English versions of `.dat` ones (Pokémon Stadium's `GrPs.usd`).
     let archive = |f: &&String| f.ends_with(".dat") || f.ends_with(".usd");
     for name in disc.files().unwrap().iter().filter(archive) {
@@ -73,6 +110,7 @@ pub fn disc_index(disc: &Disc) -> DiscIndex {
         if name.ends_with("AJ.dat") {
             // A fighter's animations: one archive per animation, each loaded on its own.
             let mut off = 0;
+            let subs = anim_files.entry(name.clone()).or_default();
             while off + 0x20 <= bytes.len() {
                 let size = w(off) as usize;
                 if size < 0x20 || off + size > bytes.len() {
@@ -83,8 +121,10 @@ pub fn disc_index(disc: &Disc) -> DiscIndex {
                     .entry([w(off), w(off + 4), w(off + 8)])
                     .or_default()
                     .push((format!("{name}@{off:#x}"), sub));
+                subs.push((off as u32, size as u32));
                 off = (off + size).next_multiple_of(32);
             }
+            anim_bytes.insert(name.clone(), bytes);
             continue;
         }
         by_header
@@ -92,11 +132,77 @@ pub fn disc_index(disc: &Disc) -> DiscIndex {
             .or_default()
             .push((name.clone(), bytes));
     }
-    DiscIndex { by_header }
+    DiscIndex {
+        by_header,
+        anim_files,
+        anim_bytes,
+    }
 }
 
 /// [`find_archives`] with an index made beforehand.
 pub fn find_archives_in(index: &DiscIndex, mem1: &[u8], archives: &mut Archives) -> Vec<Loaded> {
+    let word = |a: u32| {
+        let i = (a - MEM1) as usize;
+        u32::from_be_bytes(mem1[i..i + 4].try_into().unwrap())
+    };
+    let mut aram = Vec::new();
+    let mut anims = HashMap::new();
+    for kind in 0..FT_KINDS {
+        if word(FT_ANIM_FILES + 8 * kind) == 0 {
+            continue;
+        }
+        let name = c_string(mem1, word(FT_ANIM_FILE_NAMES + 4 * kind));
+        let (Some(subs), Some(file)) = (index.anim_files.get(&name), index.anim_file(&name)) else {
+            continue;
+        };
+        for &(off, size) in subs {
+            let archive = Archive::parse(&file[off as usize..(off + size) as usize]).unwrap();
+            let publics = archive.publics().map(|(n, o)| (n.to_owned(), o)).collect();
+            let id = archives.add(archive);
+            let sub = format!("{name}@{off:#x}");
+            anims.insert(sub.clone(), id);
+            aram.push(Loaded {
+                name: sub,
+                file: 0,
+                data: 0,
+                data_len: 0,
+                id,
+                publics,
+            });
+        }
+    }
+    let mut found = scan(index, mem1, archives, &|name, _| anims.get(name).copied());
+    found.extend(aram);
+    found
+}
+
+/// [`find_archives_in`] again, on memory after something ran from the state `before` was
+/// found in: an archive found where it was keeps its id, as does any animation (it may have
+/// been loaded where another was).
+pub fn find_archives_after(
+    index: &DiscIndex,
+    mem1: &[u8],
+    archives: &mut Archives,
+    before: &[Loaded],
+) -> Vec<Loaded> {
+    let mut found = scan(index, mem1, archives, &|name, file| {
+        before
+            .iter()
+            .find(|l| l.name == name && (l.file == file || l.file == 0))
+            .map(|l| l.id)
+    });
+    found.extend(before.iter().filter(|l| l.file == 0).cloned());
+    found
+}
+
+/// The archives in main memory; `known` gives the id of one already added, by name and
+/// address.
+fn scan(
+    index: &DiscIndex,
+    mem1: &[u8],
+    archives: &mut Archives,
+    known: &dyn Fn(&str, u32) -> Option<ArchiveId>,
+) -> Vec<Loaded> {
     let word = |i: usize| u32::from_be_bytes(mem1[i..i + 4].try_into().unwrap());
     let by_header = &index.by_header;
     let mut found = Vec::new();
@@ -119,15 +225,19 @@ pub fn find_archives_in(index: &DiscIndex, mem1: &[u8], archives: &mut Archives)
             .map(|(_, c)| c);
         match matched {
             Some((name, bytes)) => {
-                let archive = Archive::parse(bytes).unwrap();
+                let file = MEM1 + at as u32;
+                let id = known(name, file)
+                    .unwrap_or_else(|| archives.add(Archive::parse(bytes).unwrap()));
+                let archive = archives.get(id);
                 let data_len = archive.data().len() as u32;
-                let id = archives.add(archive);
+                let publics = archive.publics().map(|(n, o)| (n.to_owned(), o)).collect();
                 found.push(Loaded {
                     name: name.clone(),
-                    file: MEM1 + at as u32,
-                    data: MEM1 + at as u32 + 0x20,
+                    file,
+                    data: file + 0x20,
                     data_len,
                     id,
+                    publics,
                 });
                 at += bytes.len().next_multiple_of(32);
             }
@@ -176,6 +286,16 @@ impl DataMap {
         Some(DataRef {
             archive: l.id,
             offset: addr - l.data,
+        })
+    }
+
+    /// The public symbol `name` of the loaded file named `file`.
+    pub fn public(&self, file: &str, name: &str) -> Option<DataRef> {
+        let l = self.loaded.iter().find(|l| l.name == file)?;
+        let &(_, offset) = l.publics.iter().find(|(n, _)| n == name)?;
+        Some(DataRef {
+            archive: l.id,
+            offset,
         })
     }
 

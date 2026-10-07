@@ -65,7 +65,9 @@ fn median_us(n: u32, mut f: impl FnMut()) -> f64 {
 
 fn snapshot(paths: &[String]) {
     let disc = Disc::open(std::env::var("SSBM_DISC").expect("SSBM_DISC")).unwrap();
-    println!("| capture | GObjs | joints | snapshot | snapshot allocs | clone | restore | restore allocs |");
+    println!(
+        "| capture | GObjs | joints | snapshot | snapshot allocs | clone | restore | restore allocs |"
+    );
     println!("| --- | --- | --- | --- | --- | --- | --- | --- |");
     for path in paths {
         let cap = Capture::read(path.as_ref());
@@ -87,7 +89,10 @@ fn snapshot(paths: &[String]) {
             target.clone_from(std::hint::black_box(&game));
         });
         let ((), restore_allocs, _) = counted(|| target.clone_from(&game));
-        let name = std::path::Path::new(path).file_name().unwrap().to_string_lossy();
+        let name = std::path::Path::new(path)
+            .file_name()
+            .unwrap()
+            .to_string_lossy();
         println!(
             "| {name} | {} | {} | {:.2} MB | {allocs} | {clone_us:.1} µs | {restore_us:.1} µs | {restore_allocs} |",
             game.world.gobjs.used(),

@@ -27,3 +27,14 @@ pub struct StartHookId(pub u32);
 /// A camera box's slot (`CmSubject`): its index in the array `Camera_Init` allocates.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct CameraBoxId(pub u32);
+/// A fighter's parts table (`FighterBone[]`, `fighter_parts_alloc_data`): its joints by bone.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct PartsId(pub u32);
+
+/// A fighter's copy of its character's attributes (`fighter_dat_attrs_alloc_data`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct AttrsId(pub u32);
+
+/// One link of a fighter's dynamic bone chain (`DynamicsData`, `lb_8000FD48`'s allocations).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct DynamicsId(pub u32);

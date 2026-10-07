@@ -5,13 +5,17 @@
 
 use std::collections::HashMap;
 
-use melee_data::archive::DataRef;
+use melee_data::archive::{Archives, DataRef};
 use melee_sim::game::camera::CameraBoxes;
-use melee_sim::game::handles::{CameraBoxId, FighterId, GroundId, StartHookId};
+use melee_sim::game::ft::AnimFile;
+use melee_sim::game::handles::{
+    AttrsId, CameraBoxId, DynamicsId, FighterId, GroundId, PartsId, StartHookId,
+};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
 use melee_sim::game::structs::{
-    _StaticPlayer, Camera, CameraDebugMode, CmSubject, ControllerMap, Fighter,
+    _StaticPlayer, Camera, CameraDebugMode, CmSubject, ControllerMap, DynamicsData, Fighter,
+    FighterBone, VsSceneController, ifMagnify,
 };
 use melee_sim::hsd::aobj::{AObj, AObjId};
 use melee_sim::hsd::cobj::{CObj, CObjId};
@@ -25,7 +29,7 @@ use melee_sim::hsd::mobj::{MObj, MObjClass, MObjId, Material, PeDesc};
 use melee_sim::hsd::object::RefCount;
 use melee_sim::hsd::pobj::{self, Binding, Envelope, PObj, PObjId, ShapeSet};
 use melee_sim::hsd::robj::{self, Exp, RObj, RObjId, Ref, Rvalue, RvalueId};
-use melee_sim::hsd::tobj::{Color, ImageRef, TObj, TObjId, TObjTev};
+use melee_sim::hsd::tobj::{Color, ImageRef, TObj, TObjId, TObjTev, TlutTable};
 use melee_sim::hsd::wobj::{WObj, WObjId};
 use melee_sim::input::controller::Status;
 use melee_sim::mp::IslandId;
@@ -33,7 +37,13 @@ use melee_sim::mtx::Mtx34;
 use melee_sim::quat::Quat;
 use melee_sim::vec::Vec3;
 
-use crate::{Capture, DataMap, MEM1};
+use crate::{Capture, DataMap, FT_ANIM_FILE_NAMES, FT_ANIM_FILES, FT_KINDS, MEM1, c_string};
+
+/// `gmvs.c`'s `controller`, whose name other units' statics share.
+pub const VS_CONTROLLER: u32 = 0x8046_B6A0;
+
+/// The size of a fighter's attribute block (`fighter_dat_attrs_alloc_data`).
+pub const FIGHTER_ATTRS_SIZE: u32 = 0x424;
 
 /// A symbol's address in the game.
 pub fn sym(name: &str) -> u32 {
@@ -66,6 +76,9 @@ pub struct Maps {
     pub fogs: HashMap<u32, FogId>,
     pub start_hooks: HashMap<u32, StartHookId>,
     pub islands: HashMap<u32, IslandId>,
+    pub fighter_parts: HashMap<u32, PartsId>,
+    pub fighter_attrs: HashMap<u32, AttrsId>,
+    pub fighter_dynamics: HashMap<u32, DynamicsId>,
 }
 
 pub struct Importer<'a> {
@@ -75,6 +88,12 @@ pub struct Importer<'a> {
     pub maps: Maps,
     /// Pointers the mirror met that no import handles yet, by handle kind.
     pub unhandled: Vec<String>,
+    /// Freed GObjs pointers still name, each given an unlinked slot.
+    pub dangling: Vec<u32>,
+    /// How many bones the fighter being imported has, for its parts table.
+    parts_len: u32,
+    /// The archives `data` maps, for finding what a heap copy was made from.
+    archives: Option<&'a Archives>,
 }
 
 impl<'a> Importer<'a> {
@@ -85,7 +104,62 @@ impl<'a> Importer<'a> {
             game: Game::default(),
             maps: Maps::default(),
             unhandled: Vec::new(),
+            dangling: Vec::new(),
+            parts_len: 0,
+            archives: None,
         }
+    }
+
+    /// Lets the import look inside the archives `data` maps (texture palette tables).
+    pub fn with_archives(mut self, archives: &'a Archives) -> Self {
+        self.archives = Some(archives);
+        self
+    }
+
+    /// A TObj's palette animation table (`tluttbl`, at `a + 0x6C`): the heap copies of a
+    /// TexAnim's palette descriptors, found again as the descriptor table whose palettes are
+    /// theirs, in order.
+    fn tlut_table(&mut self, a: u32) -> Option<TlutTable> {
+        let tbl = self.u32(a + 0x6C);
+        if tbl == 0 {
+            return None;
+        }
+        let luts: Vec<u32> = (0..)
+            .map(|i| self.u32(tbl + 4 * i))
+            .take_while(|&t| t != 0)
+            .map(|t| self.u32(t))
+            .collect();
+        let found = (|| {
+            let archives = self.archives?;
+            let first = self.data.get(*luts.first()?)?;
+            let archive = archives.get(first.archive);
+            archive.relocs().iter().copied().find_map(|r| {
+                let ok = luts.iter().enumerate().all(|(i, &lut)| {
+                    let at = r + 4 * i as u32;
+                    archive
+                        .ptr(at)
+                        .and_then(|desc| archive.ptr(desc))
+                        .is_some_and(|l| {
+                            self.data
+                                .get(lut)
+                                .is_some_and(|d| d.archive == first.archive && d.offset == l)
+                        })
+                });
+                ok.then_some(TlutTable {
+                    table: DataRef {
+                        archive: first.archive,
+                        offset: r,
+                    },
+                    len: luts.len() as u16,
+                })
+            })
+        })();
+        if found.is_none() {
+            self.unhandled.push(format!(
+                "TObj palette table {tbl:#x} not found in its archive"
+            ));
+        }
+        found
     }
 
     fn u8(&self, a: u32) -> u8 {
@@ -136,6 +210,7 @@ impl<'a> Importer<'a> {
     /// The scheduler: every GObj on the process links with its processes, render link, HSD
     /// object and user data.
     pub fn world(&mut self) {
+        self.fighter_globals();
         let heads = self.u32(sym("HSD_GObjPLinkHead"));
         let mut order = Vec::new();
         for link in 0..P_LINKS as u32 {
@@ -285,6 +360,101 @@ impl<'a> Importer<'a> {
         w.next_proc = (next != 0).then(|| self.maps.procs[&next]);
         let cg = cap.u32(sym("HSD_GObj_CurrentInvokedProcGObj"));
         w.current_gobj = (cg != 0).then(|| self.maps.gobjs[&cg]);
+        self.statics();
+    }
+
+    /// The fighter code's globals.
+    pub fn fighter_globals(&mut self) {
+        self.game.ft.load_common = self.data.public("PlCo.dat", "ftLoadCommonData");
+        self.game.pl.load_common = self.data.public("PdPm.dat", "plLoadCommonData");
+        self.game.pl.stale_attack_instance = self.u16(sym("staleAttackInstance"));
+        self.game.pl.attack_instance = self.u16(sym("unk_804D6480"));
+        // The animation files `find_archives` found in ARAM.
+        self.game.ft.anim_files = (0..FT_KINDS)
+            .map(|kind| {
+                let aram = self.u32(FT_ANIM_FILES + 8 * kind);
+                if aram == 0 {
+                    return None;
+                }
+                let name = c_string(&self.cap.call.mem1, self.u32(FT_ANIM_FILE_NAMES + 4 * kind));
+                let prefix = format!("{name}@");
+                let anims = (self.data.loaded.iter())
+                    .filter(|l| l.file == 0)
+                    .filter_map(|l| {
+                        let off = l.name.strip_prefix(&prefix)?;
+                        Some((u32::from_str_radix(&off[2..], 16).unwrap(), l.id))
+                    })
+                    .collect();
+                Some(AnimFile { aram, anims })
+            })
+            .collect();
+    }
+
+    /// The debug settings and the controllers as fighters read them.
+    fn gm_and_pads(&mut self) {
+        self.game.gm.db_pause = self.u8(sym("gm_80479D58") + 0x10);
+        self.game.gm.db_level = self.u32(sym("DbLevel")) as i32;
+        let pads = sym("HSD_PadGameStatus");
+        for i in 0..4 {
+            self.game.pads[i as usize] = self.pad(pads + i * 0x44);
+        }
+    }
+
+    /// An `HSD_PadStatus`.
+    pub fn pad(&self, a: u32) -> Status {
+        read_pad(&self.cap.call.mem1, a)
+    }
+}
+
+/// An `HSD_PadStatus` in memory.
+pub fn read_pad(mem1: &[u8], a: u32) -> Status {
+    let i = (a - MEM1) as usize;
+    let b = &mem1[i..i + 0x44];
+    let w = |o: usize| u32::from_be_bytes(b[o..o + 4].try_into().unwrap());
+    let f = |o: usize| f32::from_bits(w(o));
+    Status {
+        button: w(0),
+        last_button: w(4),
+        trigger: w(8),
+        repeat: w(0xC),
+        release: w(0x10),
+        repeat_count: w(0x14) as i32,
+        stick_x: b[0x18] as i8,
+        stick_y: b[0x19] as i8,
+        sub_stick_x: b[0x1A] as i8,
+        sub_stick_y: b[0x1B] as i8,
+        analog_l: b[0x1C],
+        analog_r: b[0x1D],
+        analog_a: b[0x1E],
+        analog_b: b[0x1F],
+        nml_stick_x: f(0x20),
+        nml_stick_y: f(0x24),
+        nml_sub_stick_x: f(0x28),
+        nml_sub_stick_y: f(0x2C),
+        nml_analog_l: f(0x30),
+        nml_analog_r: f(0x34),
+        nml_analog_a: f(0x38),
+        nml_analog_b: f(0x3C),
+        cross_dir: b[0x40],
+        err: b[0x41] as i8,
+    }
+}
+
+impl Importer<'_> {
+    /// The game's static structs fighters use besides those [`Importer::stage`] imports: the
+    /// off-screen magnifier, the VS controller, the debug settings and the controllers as
+    /// fighters read them. After the GObjs, whose joints and entities they point to.
+    pub fn statics(&mut self) {
+        let cap = self.cap;
+        let mem = Mem {
+            bytes: &cap.call.mem1,
+            base: MEM1,
+        };
+        self.game.magnify = ifMagnify::import(&mem, sym("ifMagnify_804A1DE0"), self);
+        self.game.ft.wind_sources = self.u32(sym("ft_804D6578"));
+        self.game.ft.bury_things = self.u32(sym("ftDevice_BuryThingCount"));
+        self.game.vs = VsSceneController::import(&mem, VS_CONTROLLER, self);
+        self.gm_and_pads();
     }
 
     /// The game's globals the camera reads: the player slots, the game mode and the
@@ -394,6 +564,10 @@ impl<'a> Importer<'a> {
         if let Some(&f) = self.maps.fighters.get(&a) {
             return f;
         }
+        // Its parts table has an entry per bone: `ftPartsTable[kind]->parts_num`.
+        let kind = self.u32(a + 4);
+        let table = self.u32(self.u32(sym("ftPartsTable")) + 4 * kind);
+        self.parts_len = self.u32(table + 8);
         let id = FighterId(self.game.fighters.alloc(Fighter::default()));
         self.maps.fighters.insert(a, id);
         let cap = self.cap;
@@ -403,6 +577,54 @@ impl<'a> Importer<'a> {
         };
         let f = Fighter::import(&mem, a, self);
         self.game.fighters[id.0] = f;
+        id
+    }
+
+    /// A fighter's parts table, of `parts_len` bones.
+    fn fighter_parts(&mut self, a: u32) -> PartsId {
+        if let Some(&p) = self.maps.fighter_parts.get(&a) {
+            return p;
+        }
+        let id = PartsId(self.game.fighter_parts.alloc(Vec::new()));
+        self.maps.fighter_parts.insert(a, id);
+        let cap = self.cap;
+        let mem = Mem {
+            bytes: &cap.call.mem1,
+            base: MEM1,
+        };
+        let bones = (0..self.parts_len)
+            .map(|i| FighterBone::import(&mem, a + i * FighterBone::SIZE, self))
+            .collect();
+        self.game.fighter_parts[id.0] = bones;
+        id
+    }
+
+    /// A link of a fighter's dynamic bone chain, and the links after it.
+    fn fighter_dynamics(&mut self, a: u32) -> DynamicsId {
+        if let Some(&d) = self.maps.fighter_dynamics.get(&a) {
+            return d;
+        }
+        let id = DynamicsId(self.game.fighter_dynamics.alloc(DynamicsData::default()));
+        self.maps.fighter_dynamics.insert(a, id);
+        let cap = self.cap;
+        let mem = Mem {
+            bytes: &cap.call.mem1,
+            base: MEM1,
+        };
+        let d = DynamicsData::import(&mem, a, self);
+        self.game.fighter_dynamics[id.0] = d;
+        id
+    }
+
+    /// A fighter's attribute block.
+    fn fighter_attrs(&mut self, a: u32) -> AttrsId {
+        if let Some(&p) = self.maps.fighter_attrs.get(&a) {
+            return p;
+        }
+        let i = (a - MEM1) as usize;
+        let bytes = self.cap.call.mem1[i..i + FIGHTER_ATTRS_SIZE as usize].to_vec();
+        let id = AttrsId(self.game.fighter_attrs.alloc(bytes));
+        self.maps.fighter_attrs.insert(a, id);
         id
     }
 
@@ -809,10 +1031,11 @@ impl<'a> Importer<'a> {
                 }
             },
         };
-        if self.u32(a + 0x5C) != 0 || self.u32(a + 0x6C) != 0 {
+        if self.u32(a + 0x5C) != 0 {
             self.unhandled
                 .push("TObj palette (an HSD_Tlut copy)".into());
         }
+        let tluttbl = self.tlut_table(a);
         let ao = self.u32(a + 0x64);
         let aobj = (ao != 0).then(|| self.aobj(ao));
         let tev = match self.u32(a + 0xA8) {
@@ -864,7 +1087,7 @@ impl<'a> Importer<'a> {
             lod: self.data(lod),
             aobj,
             imagetbl: self.data(imagetbl),
-            tluttbl: None,
+            tluttbl,
             tlut_no: self.u8(a + 0x70),
             mtx: self.mtx(a + 0x74),
             coord: self.u32(a + 0xA4),
@@ -990,12 +1213,20 @@ impl Cx for Importer<'_> {
         Some(match kind {
             "JObjId" => self.jobj(addr).0,
             "DObjId" => self.dobj(addr).0,
+            "TObjId" => self.tobj(addr).0,
             "FighterId" => self.fighter(addr).0,
             "GroundId" => self.ground(addr).0,
             "StartHookId" => self.start_hook(addr).0,
             "CameraBoxId" => box_index(self.u32(sym("cm_804D645C")), addr),
+            "PartsId" => self.fighter_parts(addr).0,
+            "AttrsId" => self.fighter_attrs(addr).0,
+            "DynamicsId" => self.fighter_dynamics(addr).0,
             "GObjId" => match self.maps.gobjs.get(&addr) {
                 Some(g) => g.0,
+                // A GObj no process link holds is a freed one a pointer outlived (a fighter's
+                // last attacker, gone since). It stands in as an unlinked slot of its own, so
+                // the pointer round-trips and compares by identity; following it is a bug
+                // either side.
                 None => {
                     // A pointer to a GObj no list holds (one freed since, which the original
                     // still points to): a slot of its own keeps the pointer's identity.
@@ -1003,6 +1234,7 @@ impl Cx for Importer<'_> {
                         .push(format!("GObj {addr:#x} outside the process links"));
                     let id = GObjId(self.game.world.gobjs.alloc(blank_gobj()));
                     self.maps.gobjs.insert(addr, id);
+                    self.dangling.push(addr);
                     id.0
                 }
             },

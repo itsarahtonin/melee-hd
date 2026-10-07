@@ -5,11 +5,14 @@
 
 use melee_data::archive::DataRef;
 
+use crate::game::ft::dynamics::BoneSlot;
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::hsd::tobj::TObjId;
+use crate::lb::command::Script;
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -336,7 +339,7 @@ impl Default for itPickup {
 #[derive(Clone, Debug, PartialEq)]
 pub struct DynamicsDesc {
     /// +0x0
-    pub data: Option<DataRef>,
+    pub data: Option<DynamicsId>,
     /// +0x4
     pub count: u32,
     /// +0x8
@@ -357,7 +360,7 @@ impl Default for DynamicsDesc {
 #[derive(Clone, Debug, PartialEq)]
 pub struct BoneDynamicsDesc {
     /// +0x0
-    pub bone_id: i32,
+    pub bone_id: BoneSlot,
     /// +0x4
     pub dyn_desc: DynamicsDesc,
 }
@@ -365,7 +368,7 @@ pub struct BoneDynamicsDesc {
 impl Default for BoneDynamicsDesc {
     fn default() -> Self {
         BoneDynamicsDesc {
-            bone_id: 0,
+            bone_id: Default::default(),
             dyn_desc: Default::default(),
         }
     }
@@ -375,31 +378,13 @@ impl Default for BoneDynamicsDesc {
 #[derive(Clone, Debug, PartialEq)]
 pub struct CommandInfo {
     /// +0x0
-    pub timer: f32,
-    /// +0x4
-    pub frame_count: f32,
-    /// +0x8
-    pub x8: [u8; 4],
-    /// +0xc
-    pub loop_count: u32,
-    /// +0x10
-    pub event_return: [RawPtr; 3],
-    /// +0x1c
-    pub loop_count_dup: u32,
-    /// +0x20
-    pub unk_x18: u32,
+    pub script: Script,
 }
 
 impl Default for CommandInfo {
     fn default() -> Self {
         CommandInfo {
-            timer: 0.0,
-            frame_count: 0.0,
-            x8: [0; 4],
-            loop_count: 0,
-            event_return: core::array::from_fn(|_| Default::default()),
-            loop_count_dup: 0,
-            unk_x18: 0,
+            script: Default::default(),
         }
     }
 }
@@ -432,23 +417,7 @@ impl Default for _GXColor {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ColorOverlay {
     /// +0x0
-    pub x0_timer: i32,
-    /// +0x4
-    pub x4_pri: i32,
-    /// +0x8
-    pub x8_ptr1: Option<DataRef>,
-    /// +0xc
-    pub xC_loop: i32,
-    /// +0x10
-    pub x10_ptr2: RawPtr,
-    /// +0x14
-    pub x14: i32,
-    /// +0x18
-    pub x18_alloc: RawPtr,
-    /// +0x1c
-    pub x1c: i32,
-    /// +0x20
-    pub x20: i32,
+    pub script: Script,
     /// +0x24
     pub x24: i32,
     /// +0x28
@@ -514,15 +483,7 @@ pub struct ColorOverlay {
 impl Default for ColorOverlay {
     fn default() -> Self {
         ColorOverlay {
-            x0_timer: 0,
-            x4_pri: 0,
-            x8_ptr1: None,
-            xC_loop: 0,
-            x10_ptr2: Default::default(),
-            x14: 0,
-            x18_alloc: Default::default(),
-            x1c: 0,
-            x20: 0,
+            script: Default::default(),
             x24: 0,
             x28_colanim: [0; 4],
             x2C_hex: Default::default(),
@@ -586,7 +547,7 @@ pub struct CostumeTObjList {
     /// +0x4
     pub x5D0: RawPtr,
     /// +0x8
-    pub costume_tobjs: [RawPtr; 5],
+    pub costume_tobjs: [Option<TObjId>; 5],
 }
 
 impl Default for CostumeTObjList {
@@ -594,7 +555,7 @@ impl Default for CostumeTObjList {
         CostumeTObjList {
             n_costume_tobjs: 0,
             x5D0: Default::default(),
-            costume_tobjs: core::array::from_fn(|_| Default::default()),
+            costume_tobjs: [None; 5],
         }
     }
 }
@@ -2177,13 +2138,13 @@ pub struct Fighter {
     /// +0x18
     pub x18: i32,
     /// +0x1c
-    pub x1C_actionStateList: Option<DataRef>,
+    pub x1C_actionStateList: RawPtr,
     /// +0x20
-    pub x20_actionStateList: Option<DataRef>,
+    pub x20_actionStateList: RawPtr,
     /// +0x24
     pub x24: Option<DataRef>,
     /// +0x28
-    pub x28: RawPtr,
+    pub x28: Option<DataRef>,
     /// +0x2c
     pub facing_dir: f32,
     /// +0x30
@@ -2251,9 +2212,9 @@ pub struct Fighter {
     /// +0x2d0
     pub x2D0: RawPtr,
     /// +0x2d4
-    pub dat_attrs: RawPtr,
+    pub dat_attrs: Option<AttrsId>,
     /// +0x2d8
-    pub dat_attrs_backup: RawPtr,
+    pub dat_attrs_backup: Option<AttrsId>,
     /// +0x2dc
     pub x2DC: f32,
     /// +0x2e0
@@ -2299,7 +2260,7 @@ pub struct Fighter {
     /// +0x5cc
     pub tobj_list: CostumeTObjList,
     /// +0x5e8
-    pub parts: RawPtr,
+    pub parts: Option<PartsId>,
     /// +0x5ec
     pub dobj_list: DObjList,
     /// +0x5f4
@@ -3024,10 +2985,10 @@ impl Default for Fighter {
             motion_id: 0,
             anim_id: 0,
             x18: 0,
-            x1C_actionStateList: None,
-            x20_actionStateList: None,
+            x1C_actionStateList: Default::default(),
+            x20_actionStateList: Default::default(),
             x24: None,
-            x28: Default::default(),
+            x28: None,
             facing_dir: 0.0,
             facing_dir1: 0.0,
             x34_scale: Default::default(),
@@ -3061,8 +3022,8 @@ impl Default for Fighter {
             x2C4: Default::default(),
             x2CC: Default::default(),
             x2D0: Default::default(),
-            dat_attrs: Default::default(),
-            dat_attrs_backup: Default::default(),
+            dat_attrs: None,
+            dat_attrs_backup: None,
             x2DC: 0.0,
             x2E0: 0.0,
             x2E4: 0.0,
@@ -3085,7 +3046,7 @@ impl Default for Fighter {
             x5A8: 0,
             x5AC: Default::default(),
             tobj_list: Default::default(),
-            parts: Default::default(),
+            parts: None,
             dobj_list: Default::default(),
             x5F4_arr: core::array::from_fn(|_| Default::default()),
             x60C: Default::default(),
@@ -6088,6 +6049,897 @@ impl Default for ftCollisionBox {
             bottom: 0.0,
             left: Default::default(),
             right: Default::default(),
+        }
+    }
+}
+
+/// `FighterBone`, 0x10 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FighterBone {
+    /// +0x0
+    pub joint: Option<JObjId>,
+    /// +0x4
+    pub x4_jobj2: Option<JObjId>,
+    /// +0x8
+    pub x8: [u8; 2],
+    /// +0xc
+    pub xC_u: [u8; 4],
+}
+
+impl Default for FighterBone {
+    fn default() -> Self {
+        FighterBone {
+            joint: None,
+            x4_jobj2: None,
+            x8: [0; 2],
+            xC_u: [0; 4],
+        }
+    }
+}
+
+/// `ifMagnifyPlayer_state`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ifMagnifyPlayer_state {
+    /// +0x0 (bits 0..+1)
+    pub is_offscreen: bool,
+    /// +0x0 (bits 1..+1)
+    pub ignore_offscreen: bool,
+    /// +0x0 (bits 2..+6)
+    pub edge: u8,
+}
+
+impl Default for ifMagnifyPlayer_state {
+    fn default() -> Self {
+        ifMagnifyPlayer_state {
+            is_offscreen: false,
+            ignore_offscreen: false,
+            edge: 0,
+        }
+    }
+}
+
+/// `ifMagnifyPlayer`, 0x10 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ifMagnifyPlayer {
+    /// +0x0
+    pub gobj: Option<GObjId>,
+    /// +0x4
+    pub jobj: Option<JObjId>,
+    /// +0x8
+    pub idesc: RawPtr,
+    /// +0xc
+    pub state: ifMagnifyPlayer_state,
+}
+
+impl Default for ifMagnifyPlayer {
+    fn default() -> Self {
+        ifMagnifyPlayer {
+            gobj: None,
+            jobj: None,
+            idesc: Default::default(),
+            state: Default::default(),
+        }
+    }
+}
+
+/// `HSD_ImageDesc`, 0x18 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct HSD_ImageDesc {
+    /// +0x0
+    pub image_ptr: RawPtr,
+    /// +0x4
+    pub width: u16,
+    /// +0x6
+    pub height: u16,
+    /// +0x8
+    pub format: i32,
+    /// +0xc
+    pub mipmap: u32,
+    /// +0x10
+    pub minLOD: f32,
+    /// +0x14
+    pub maxLOD: f32,
+}
+
+impl Default for HSD_ImageDesc {
+    fn default() -> Self {
+        HSD_ImageDesc {
+            image_ptr: Default::default(),
+            width: 0,
+            height: 0,
+            format: 0,
+            mipmap: 0,
+            minLOD: 0.0,
+            maxLOD: 0.0,
+        }
+    }
+}
+
+/// `ifMagnify`, 0xf0 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ifMagnify {
+    /// +0x0
+    pub model_desc: RawPtr,
+    /// +0x4
+    pub x4: _GXColor,
+    /// +0x8
+    pub x8: _GXColor,
+    /// +0xc
+    pub xC: _GXColor,
+    /// +0x10
+    pub x10: _GXColor,
+    /// +0x14
+    pub player: [ifMagnifyPlayer; 6],
+    /// +0x74
+    pub image_descs: [HSD_ImageDesc; 5],
+    /// +0xec
+    pub pad: [u8; 4],
+}
+
+impl Default for ifMagnify {
+    fn default() -> Self {
+        ifMagnify {
+            model_desc: Default::default(),
+            x4: Default::default(),
+            x8: Default::default(),
+            xC: Default::default(),
+            x10: Default::default(),
+            player: core::array::from_fn(|_| Default::default()),
+            image_descs: core::array::from_fn(|_| Default::default()),
+            pad: [0; 4],
+        }
+    }
+}
+
+/// `VsSceneFighter`, 0xe bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct VsSceneFighter {
+    /// +0x0
+    pub x0: u8,
+    /// +0x1
+    pub x1: u8,
+    /// +0x2
+    pub slot_type: u8,
+    /// +0x3
+    pub spawn_point: i8,
+    /// +0x4
+    pub x4: [u8; 1],
+    /// +0x5
+    pub x5: u8,
+    /// +0x6
+    pub x6: u16,
+    /// +0x8
+    pub x8: u8,
+    /// +0x9
+    pub x9: u8,
+    /// +0xa
+    pub respawn_timer: u8,
+    /// +0xb
+    pub xB: u8,
+    /// +0xc
+    pub xC: u16,
+}
+
+impl Default for VsSceneFighter {
+    fn default() -> Self {
+        VsSceneFighter {
+            x0: 0,
+            x1: 0,
+            slot_type: 0,
+            spawn_point: 0,
+            x4: [0; 1],
+            x5: 0,
+            x6: 0,
+            x8: 0,
+            x9: 0,
+            respawn_timer: 0,
+            xB: 0,
+            xC: 0,
+        }
+    }
+}
+
+/// `MatchTeamData`, 0xc bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MatchTeamData {
+    /// +0x0
+    pub score: i32,
+    /// +0x4
+    pub subscore: i32,
+    /// +0x8
+    pub is_big_loser: u8,
+    /// +0x9
+    pub is_small_loser: u8,
+    /// +0xa
+    pub active: u8,
+}
+
+impl Default for MatchTeamData {
+    fn default() -> Self {
+        MatchTeamData {
+            score: 0,
+            subscore: 0,
+            is_big_loser: 0,
+            is_small_loser: 0,
+            active: 0,
+        }
+    }
+}
+
+/// `MatchPlayerData`, 0xa8 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MatchPlayerData {
+    /// +0x0
+    pub pkind: u8,
+    /// +0x1
+    pub ckind: i8,
+    /// +0x2
+    pub ftkind: i8,
+    /// +0x3
+    pub x3_u: [u8; 1],
+    /// +0x4
+    pub x4: u8,
+    /// +0x5
+    pub is_big_loser: u8,
+    /// +0x6
+    pub is_small_loser: u8,
+    /// +0x7
+    pub team: u8,
+    /// +0x8
+    pub stocks: i8,
+    /// +0x9
+    pub x9: u8,
+    /// +0xa
+    pub self_destructs: u16,
+    /// +0xc
+    pub percent: u16,
+    /// +0xe
+    pub xE: u16,
+    /// +0x10
+    pub kills: [u16; 4],
+    /// +0x18
+    pub x18: u16,
+    /// +0x1c
+    pub x1C: i32,
+    /// +0x20
+    pub x20: u32,
+    /// +0x24
+    pub x24: i32,
+    /// +0x28
+    pub x28: u32,
+    /// +0x2c
+    pub score: i32,
+    /// +0x30
+    pub x30: u32,
+    /// +0x34
+    pub x34: u8,
+    /// +0x35
+    pub x35_pad: [u8; 3],
+    /// +0x38
+    pub x38: u32,
+    /// +0x3c
+    pub x3C: u32,
+    /// +0x40
+    pub x40: u32,
+    /// +0x44
+    pub x44: u32,
+    /// +0x48
+    pub x48: u32,
+    /// +0x4c
+    pub x4C: u32,
+    /// +0x50
+    pub x50: u32,
+    /// +0x54
+    pub x54: u32,
+    /// +0x58
+    pub x58: u32,
+    /// +0x5c
+    pub x5C: u32,
+    /// +0x60
+    pub x60: u32,
+    /// +0x64
+    pub x64: u32,
+    /// +0x68
+    pub x68: u32,
+    /// +0x6c
+    pub x6C: u32,
+    /// +0x70
+    pub x70: u32,
+    /// +0x74
+    pub x74: u32,
+    /// +0x78
+    pub x78: u32,
+    /// +0x7c
+    pub x7C: u32,
+    /// +0x80
+    pub x80: u32,
+    /// +0x84
+    pub x84: u32,
+    /// +0x88
+    pub x88: u32,
+    /// +0x8c
+    pub x8C: u32,
+    /// +0x90
+    pub x90: u32,
+    /// +0x94
+    pub x94: u32,
+    /// +0x98
+    pub x98: u32,
+    /// +0x9c
+    pub x9C: i32,
+    /// +0xa0
+    pub xA0: i32,
+    /// +0xa4
+    pub xA4: u32,
+}
+
+impl Default for MatchPlayerData {
+    fn default() -> Self {
+        MatchPlayerData {
+            pkind: 0,
+            ckind: 0,
+            ftkind: 0,
+            x3_u: [0; 1],
+            x4: 0,
+            is_big_loser: 0,
+            is_small_loser: 0,
+            team: 0,
+            stocks: 0,
+            x9: 0,
+            self_destructs: 0,
+            percent: 0,
+            xE: 0,
+            kills: [0; 4],
+            x18: 0,
+            x1C: 0,
+            x20: 0,
+            x24: 0,
+            x28: 0,
+            score: 0,
+            x30: 0,
+            x34: 0,
+            x35_pad: [0; 3],
+            x38: 0,
+            x3C: 0,
+            x40: 0,
+            x44: 0,
+            x48: 0,
+            x4C: 0,
+            x50: 0,
+            x54: 0,
+            x58: 0,
+            x5C: 0,
+            x60: 0,
+            x64: 0,
+            x68: 0,
+            x6C: 0,
+            x70: 0,
+            x74: 0,
+            x78: 0,
+            x7C: 0,
+            x80: 0,
+            x84: 0,
+            x88: 0,
+            x8C: 0,
+            x90: 0,
+            x94: 0,
+            x98: 0,
+            x9C: 0,
+            xA0: 0,
+            xA4: 0,
+        }
+    }
+}
+
+/// `UnkResultPlayerData`, 0x508 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct UnkResultPlayerData {
+    /// +0x0
+    pub x0: [u8; 257],
+    /// +0x104
+    pub x104: [i32; 257],
+}
+
+impl Default for UnkResultPlayerData {
+    fn default() -> Self {
+        UnkResultPlayerData {
+            x0: [0; 257],
+            x104: [0; 257],
+        }
+    }
+}
+
+/// `MatchEnd`, 0x227c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MatchEnd {
+    /// +0x0
+    pub x0: u32,
+    /// +0x4
+    pub outcome: u8,
+    /// +0x5
+    pub match_kind: u8,
+    /// +0x6
+    pub is_teams: u8,
+    /// +0x7
+    pub x7: u8,
+    /// +0x8
+    pub frame_count: u32,
+    /// +0xc
+    pub sd_penalty: i8,
+    /// +0xd
+    pub n_winners: u8,
+    /// +0xe
+    pub n_team_winners: u8,
+    /// +0xf
+    pub loser: u8,
+    /// +0x10
+    pub winners: [u8; 6],
+    /// +0x16
+    pub team_winners: [u8; 5],
+    /// +0x1c
+    pub team_standings: [MatchTeamData; 5],
+    /// +0x58
+    pub player_standings: [MatchPlayerData; 6],
+    /// +0x448
+    pub _x448: [u8; 4],
+    /// +0x44c
+    pub x44C: [UnkResultPlayerData; 6],
+}
+
+impl Default for MatchEnd {
+    fn default() -> Self {
+        MatchEnd {
+            x0: 0,
+            outcome: 0,
+            match_kind: 0,
+            is_teams: 0,
+            x7: 0,
+            frame_count: 0,
+            sd_penalty: 0,
+            n_winners: 0,
+            n_team_winners: 0,
+            loser: 0,
+            winners: [0; 6],
+            team_winners: [0; 5],
+            team_standings: core::array::from_fn(|_| Default::default()),
+            player_standings: core::array::from_fn(|_| Default::default()),
+            _x448: [0; 4],
+            x44C: core::array::from_fn(|_| Default::default()),
+        }
+    }
+}
+
+/// `VsSceneState`, 0x24c8 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct VsSceneState {
+    /// +0x0
+    pub unk_0: u8,
+    /// +0x1
+    pub pauser: i8,
+    /// +0x2
+    pub pause_timer: u8,
+    /// +0x3
+    pub unk_3: u8,
+    /// +0x4
+    pub unpause_timer: u8,
+    /// +0x5
+    pub hud_enabled: u8,
+    /// +0x6
+    pub terminate_match: u8,
+    /// +0x7
+    pub is_singleplayer: u8,
+    /// +0x8
+    pub match_result: u8,
+    /// +0x9
+    pub unk_9: u8,
+    /// +0xa
+    pub unk_A: u8,
+    /// +0xb
+    pub unk_B: u8,
+    /// +0xc
+    pub unk_C: u8,
+    /// +0xd
+    pub unk_D: u8,
+    /// +0xe
+    pub match_over: u8,
+    /// +0xf
+    pub unk_F: u8,
+    /// +0x10
+    pub unk_10: i32,
+    /// +0x14
+    pub unk_14: i32,
+    /// +0x18
+    pub unk_18: u8,
+    /// +0x1c
+    pub unk_1C: RawPtr,
+    /// +0x20
+    pub unk_20: RawPtr,
+    /// +0x24
+    pub frame_count: u32,
+    /// +0x28
+    pub timer_seconds: u32,
+    /// +0x2c
+    pub unk_2C: u16,
+    /// +0x2e
+    pub unk_2E: u16,
+    /// +0x30
+    pub unk_30: u8,
+    /// +0x34
+    pub unk_34: f32,
+    /// +0x38
+    pub fighters: [VsSceneFighter; 6],
+    /// +0x8c
+    pub pad_8C: [i8; 448],
+    /// +0x24c
+    pub x24C: MatchEnd,
+}
+
+impl Default for VsSceneState {
+    fn default() -> Self {
+        VsSceneState {
+            unk_0: 0,
+            pauser: 0,
+            pause_timer: 0,
+            unk_3: 0,
+            unpause_timer: 0,
+            hud_enabled: 0,
+            terminate_match: 0,
+            is_singleplayer: 0,
+            match_result: 0,
+            unk_9: 0,
+            unk_A: 0,
+            unk_B: 0,
+            unk_C: 0,
+            unk_D: 0,
+            match_over: 0,
+            unk_F: 0,
+            unk_10: 0,
+            unk_14: 0,
+            unk_18: 0,
+            unk_1C: Default::default(),
+            unk_20: Default::default(),
+            frame_count: 0,
+            timer_seconds: 0,
+            unk_2C: 0,
+            unk_2E: 0,
+            unk_30: 0,
+            unk_34: 0.0,
+            fighters: core::array::from_fn(|_| Default::default()),
+            pad_8C: [0; 448],
+            x24C: Default::default(),
+        }
+    }
+}
+
+/// `StartMeleeRules`, 0x60 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct StartMeleeRules {
+    /// +0x0 (bits 0..+3)
+    pub match_kind: u8,
+    /// +0x0 (bits 3..+3)
+    pub x0_3: u8,
+    /// +0x0 (bits 6..+1)
+    pub timer_enabled: bool,
+    /// +0x0 (bits 7..+1)
+    pub timer_counts_up: bool,
+    /// +0x1 (bits 0..+1)
+    pub x1_0: bool,
+    /// +0x1 (bits 1..+1)
+    pub x1_1: bool,
+    /// +0x1 (bits 2..+1)
+    pub x1_2: bool,
+    /// +0x1 (bits 3..+1)
+    pub x1_3: bool,
+    /// +0x1 (bits 4..+1)
+    pub x1_4: bool,
+    /// +0x1 (bits 5..+1)
+    pub x1_5: bool,
+    /// +0x1 (bits 6..+1)
+    pub timer_shows_hours: bool,
+    /// +0x1 (bits 7..+1)
+    pub friendly_fire: bool,
+    /// +0x2 (bits 0..+1)
+    pub is_stock: bool,
+    /// +0x2 (bits 1..+1)
+    pub x2_1: bool,
+    /// +0x2 (bits 2..+1)
+    pub x2_2: bool,
+    /// +0x2 (bits 3..+1)
+    pub single_button: bool,
+    /// +0x2 (bits 4..+1)
+    pub disable_pausing: bool,
+    /// +0x2 (bits 5..+1)
+    pub x2_5: bool,
+    /// +0x2 (bits 6..+1)
+    pub x2_6: bool,
+    /// +0x2 (bits 7..+1)
+    pub x2_7: bool,
+    /// +0x3 (bits 0..+1)
+    pub x3_0: bool,
+    /// +0x3 (bits 1..+1)
+    pub x3_1: bool,
+    /// +0x3 (bits 2..+1)
+    pub x3_2: bool,
+    /// +0x3 (bits 3..+1)
+    pub x3_3: bool,
+    /// +0x3 (bits 4..+1)
+    pub x3_4: bool,
+    /// +0x3 (bits 5..+1)
+    pub x3_5: bool,
+    /// +0x3 (bits 6..+1)
+    pub x3_6: bool,
+    /// +0x3 (bits 7..+1)
+    pub x3_7: bool,
+    /// +0x4 (bits 0..+1)
+    pub x4_0: bool,
+    /// +0x4 (bits 1..+1)
+    pub is_vs: bool,
+    /// +0x4 (bits 2..+1)
+    pub x4_2: bool,
+    /// +0x4 (bits 3..+1)
+    pub x4_3: bool,
+    /// +0x4 (bits 4..+1)
+    pub x4_4: bool,
+    /// +0x4 (bits 5..+1)
+    pub x4_5: bool,
+    /// +0x4 (bits 6..+1)
+    pub x4_6: bool,
+    /// +0x4 (bits 7..+1)
+    pub x4_7: bool,
+    /// +0x5 (bits 0..+1)
+    pub x5_0: bool,
+    /// +0x5 (bits 1..+1)
+    pub x5_1: bool,
+    /// +0x5 (bits 2..+1)
+    pub x5_2: bool,
+    /// +0x5 (bits 3..+1)
+    pub x5_3: bool,
+    /// +0x5 (bits 4..+1)
+    pub x5_4: bool,
+    /// +0x5 (bits 5..+1)
+    pub x5_5: bool,
+    /// +0x5 (bits 6..+1)
+    pub x5_6: bool,
+    /// +0x5 (bits 7..+1)
+    pub x5_7: bool,
+    /// +0x6
+    pub x6: u8,
+    /// +0x7
+    pub x7: u8,
+    /// +0x8
+    pub is_teams: u8,
+    /// +0x9
+    pub x9: u8,
+    /// +0xa
+    pub xA: u8,
+    /// +0xb
+    pub item_freq: i8,
+    /// +0xc
+    pub sd_penalty: i8,
+    /// +0xd
+    pub xD: u8,
+    /// +0xe
+    pub stkind: u16,
+    /// +0x10
+    pub time_limit: u32,
+    /// +0x14
+    pub x14: u8,
+    /// +0x18
+    pub x18: u32,
+    /// +0x1c
+    pub x1C_pad: [u32; 1],
+    /// +0x20
+    pub x20: u64,
+    /// +0x28
+    pub x28: i32,
+    /// +0x2c
+    pub x2C: f32,
+    /// +0x30
+    pub x30: f32,
+    /// +0x34
+    pub game_speed: f32,
+    /// +0x38
+    pub on_unpause_override: Option<CodeRef>,
+    /// +0x3c
+    pub on_pause_override: Option<CodeRef>,
+    /// +0x40
+    pub check_for_pauser_override: Option<CodeRef>,
+    /// +0x44
+    pub on_match_start: Option<CodeRef>,
+    /// +0x48
+    pub on_frame_start: Option<CodeRef>,
+    /// +0x4c
+    pub on_frame_end: Option<CodeRef>,
+    /// +0x50
+    pub on_match_end: Option<CodeRef>,
+    /// +0x54
+    pub x54: RawPtr,
+    /// +0x58
+    pub x58: RawPtr,
+    /// +0x5c
+    pub pad_x5C: [u8; 4],
+}
+
+impl Default for StartMeleeRules {
+    fn default() -> Self {
+        StartMeleeRules {
+            match_kind: 0,
+            x0_3: 0,
+            timer_enabled: false,
+            timer_counts_up: false,
+            x1_0: false,
+            x1_1: false,
+            x1_2: false,
+            x1_3: false,
+            x1_4: false,
+            x1_5: false,
+            timer_shows_hours: false,
+            friendly_fire: false,
+            is_stock: false,
+            x2_1: false,
+            x2_2: false,
+            single_button: false,
+            disable_pausing: false,
+            x2_5: false,
+            x2_6: false,
+            x2_7: false,
+            x3_0: false,
+            x3_1: false,
+            x3_2: false,
+            x3_3: false,
+            x3_4: false,
+            x3_5: false,
+            x3_6: false,
+            x3_7: false,
+            x4_0: false,
+            is_vs: false,
+            x4_2: false,
+            x4_3: false,
+            x4_4: false,
+            x4_5: false,
+            x4_6: false,
+            x4_7: false,
+            x5_0: false,
+            x5_1: false,
+            x5_2: false,
+            x5_3: false,
+            x5_4: false,
+            x5_5: false,
+            x5_6: false,
+            x5_7: false,
+            x6: 0,
+            x7: 0,
+            is_teams: 0,
+            x9: 0,
+            xA: 0,
+            item_freq: 0,
+            sd_penalty: 0,
+            xD: 0,
+            stkind: 0,
+            time_limit: 0,
+            x14: 0,
+            x18: 0,
+            x1C_pad: [0; 1],
+            x20: 0,
+            x28: 0,
+            x2C: 0.0,
+            x30: 0.0,
+            game_speed: 0.0,
+            on_unpause_override: None,
+            on_pause_override: None,
+            check_for_pauser_override: None,
+            on_match_start: None,
+            on_frame_start: None,
+            on_frame_end: None,
+            on_match_end: None,
+            x54: Default::default(),
+            x58: Default::default(),
+            pad_x5C: [0; 4],
+        }
+    }
+}
+
+/// `VsSceneController`, 0x2528 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct VsSceneController {
+    /// +0x0
+    pub state: VsSceneState,
+    /// +0x24c8
+    pub start: StartMeleeRules,
+}
+
+impl Default for VsSceneController {
+    fn default() -> Self {
+        VsSceneController {
+            state: Default::default(),
+            start: Default::default(),
+        }
+    }
+}
+
+/// `DynamicsData`, 0x98 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DynamicsData {
+    /// +0x0
+    pub desc: lb_00F9_UnkDesc0,
+    /// +0x90
+    pub next: Option<DynamicsId>,
+    /// +0x94
+    pub unk_94: i32,
+}
+
+impl Default for DynamicsData {
+    fn default() -> Self {
+        DynamicsData {
+            desc: Default::default(),
+            next: None,
+            unk_94: 0,
+        }
+    }
+}
+
+/// `lb_00F9_UnkDesc0`, 0x90 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct lb_00F9_UnkDesc0 {
+    /// +0x0
+    pub jobj: Option<JObjId>,
+    /// +0x4
+    pub rotate: Quat,
+    /// +0x14
+    pub translate: Vec3,
+    /// +0x20
+    pub scale: Vec3,
+    /// +0x2c
+    pub unk_2C: Vec3,
+    /// +0x38
+    pub unk_38: Vec3,
+    /// +0x44
+    pub unk_44: f32,
+    /// +0x48
+    pub unk_48: f32,
+    /// +0x4c
+    pub unk_4C: f32,
+    /// +0x50
+    pub unk_50: f32,
+    /// +0x54
+    pub unk_54: i32,
+    /// +0x58
+    pub unk_58: Quat,
+    /// +0x68
+    pub unk_68: f32,
+    /// +0x6c
+    pub unk_6C: Vec3,
+    /// +0x78
+    pub unk_78: Vec3,
+    /// +0x84
+    pub unk_84: f32,
+    /// +0x88
+    pub unk_88: f32,
+    /// +0x8c
+    pub unk_8C: f32,
+}
+
+impl Default for lb_00F9_UnkDesc0 {
+    fn default() -> Self {
+        lb_00F9_UnkDesc0 {
+            jobj: None,
+            rotate: Default::default(),
+            translate: Default::default(),
+            scale: Default::default(),
+            unk_2C: Default::default(),
+            unk_38: Default::default(),
+            unk_44: 0.0,
+            unk_48: 0.0,
+            unk_4C: 0.0,
+            unk_50: 0.0,
+            unk_54: 0,
+            unk_58: Default::default(),
+            unk_68: 0.0,
+            unk_6C: Default::default(),
+            unk_78: Default::default(),
+            unk_84: 0.0,
+            unk_88: 0.0,
+            unk_8C: 0.0,
         }
     }
 }

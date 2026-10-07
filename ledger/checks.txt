@@ -339,3 +339,220 @@ Camera_SetUpPauseCamera	leaf-check camera pause_camera: both wrappers call it wi
 fn_8002F908	leaf-check camera free_camera: every free-camera frame refreshes its bounds through it (Camera_8002F9E4)
 fn_8002FBA0	leaf-check camera free_camera: every free-camera frame refreshes its bounds through it (Camera_8002FC7C)
 Camera_8002FE38	leaf-check camera cutscene_camera: every script setter enters the cutscene camera through it
+Fighter_procHitlag	leaf-check fighter: proc_hitlag and hitlag_endings run it on every saved call of it from a Final Destination replay
+Fighter_8006D10C	leaf-check fighter: hitlag_endings ends hitlag through it from saved procHitlag states
+Fighter_8006CFE0	leaf-check fighter: hitlag_endings releases held-over hitlag through it from saved procHitlag states
+ftCo_800C37A0	leaf-check fighter: turn_around_tick runs it mid-turn from every saved procHitlag state
+ft_800819A8	leaf-check fighter: proc_hitlag runs it on every saved call
+ftParts_GetBoneIndex	leaf-check fighter: turn_around_tick looks up TransN through it
+ftPartSetRotY	leaf-check fighter: turn_around_tick turns TransN and TopN through it
+Fighter_procAnim	leaf-check fighter: proc_anim runs it on every saved call of it
+ftAnim_8006EBA4	leaf-check fighter: proc_anim runs the fighter's animation through it on saved procAnim calls
+ftAnim_8006E9B4	leaf-check fighter: proc_anim steps the joints through it; anim_blending runs it mid-blend from saved procAnim states
+ftAnim_8006E054	leaf-check fighter: proc_anim takes TransN's motion out through it on saved procAnim calls
+ftAnim_8006E7B8	leaf-check fighter: proc_anim animates the parts through it on saved procAnim calls
+ftAnim_8006F3DC	leaf-check fighter: proc_anim and anim_blending read the animation's frame through it
+ftAnim_IsFramesRemaining	leaf-check fighter: proc_anim's animation callbacks ask it on saved procAnim calls
+ftAnim_8006F368	leaf-check fighter: part_is_animated calls it on every part from saved procAnim states, its result compared
+ftAnim_8006FE9C	leaf-check fighter: anim_blending blends the parts through it; proc_anim's falls do too
+ftAnim_8006FF74	leaf-check fighter: anim_blending copies the parts through it as blends finish
+ftAnim_800707B0	leaf-check fighter: proc_anim runs it on saved procAnim calls
+ftAction_80073240	leaf-check fighter: proc_anim runs each action's script through it on saved procAnim calls
+lb_8000B074	leaf-check fighter: proc_anim and part_is_animated ask it of every animated part
+lbFindJObjWithAObj	leaf-check fighter: anim_blending finds the blend skeleton's animation through it
+lbGetJObjFramerate	leaf-check fighter: anim_blending reads the blend's rate through it
+lbGetJObjCurrFrame	leaf-check fighter: anim_blending reads the blend skeleton's frame through it
+lb_8000C490	leaf-check fighter: anim_blending blends every animated part's pose through it
+lbCopyJObjSRT	leaf-check fighter: anim_blending copies finished blends through it
+lb_800144C8	leaf-check fighter: start_color_anim starts overlays through it, its result compared
+Player_GetMoreFlagsBit3	leaf-check fighter: proc_anim's off-screen check reads it
+Player_GetUnk6A8Ptr	leaf-check fighter: proc_anim's pl_800411C4 reads the counters through it
+pl_800411C4	leaf-check fighter: proc_anim runs it on saved procAnim calls
+fn_8004138C	leaf-check fighter: proc_anim's pl_800411C4 runs it on saved procAnim calls
+ftColl_800764DC	leaf-check fighter: proc_anim runs it on saved procAnim calls
+ftCommon_8007DD7C	leaf-check fighter: proc_anim pushes grounded fighters apart through it on saved procAnim calls
+ftCommon_8007E0E4	leaf-check fighter: proc_anim runs it on saved procAnim calls
+ftCommon_GetModelScale	leaf-check fighter: proc_anim scales TransN's motion through it
+ftCommon_8007F8B4	leaf-check fighter: proc_anim's nudge reads positions through it
+ftLib_IsSamePlayer	leaf-check fighter: proc_anim's nudge compares players through it
+ftCo_Wait_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in Wait
+ftCo_AttackAir_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in AttackAir
+ftCo_8008F744	leaf-check fighter: proc_anim's damage states count hitstun through it
+ftCo_Damage_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in Damage
+ftCo_DamageFly_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in DamageFly
+ftCo_EscapeAir_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in EscapeAir
+ftCo_CliffWait_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in CliffWait
+ftCo_800BFFD0	leaf-check fighter: start_color_anim calls it with every color animation from saved procAnim states, its result compared
+ftCo_800C0134	leaf-check fighter: end_color_anim restarts x488's overlay through it
+ftCo_800C0200	leaf-check fighter: end_color_anim calls it with every color animation below Spycloak's
+ftCo_800C0408	leaf-check fighter: proc_anim runs it on saved procAnim calls
+ftCo_800C0694	leaf-check fighter: proc_anim reads the playing color animation through it
+ftCo_Turn_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in Turn
+ftCo_RunBrake_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in RunBrake
+ftCo_Jump_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in Jump
+ftCo_KneeBend_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in KneeBend
+ftCo_JumpAerial_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in JumpAerial
+ftCo_Fall_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in Fall
+ftCo_Fall_Anim_Inner	leaf-check fighter: proc_anim's Fall leans through it
+ftCo_DeadDown_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in DeadDown
+ftCo_Landing_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in Landing and LandingAir
+ftCo_LandingAir_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in LandingAir
+ftCo_AttackHi3_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in AttackHi3
+ftCo_EscapeN_Anim	leaf-check fighter: proc_anim runs it on saved procAnim calls in EscapeN
+ftCo_800D71D8	leaf-check fighter: proc_anim runs it on saved procAnim calls
+ftCo_800DB500	leaf-check fighter: proc_anim runs it on saved procAnim calls
+ftCo_800DEF38	leaf-check fighter: proc_anim runs it on saved procAnim calls
+ifMagnify_802FC998	leaf-check fighter: proc_anim's off-screen check reads it
+ftCo_AttackS3_Anim	leaf-check fighter: anim_callbacks runs it from every saved procAnim state
+Fighter_procUpdate	leaf-check fighter: proc_update reaches it in 48 saved Fighter_procUpdate calls that compare clean
+ftCo_800C0A98	leaf-check fighter: proc_update reaches it in 20 saved Fighter_procUpdate calls that compare clean
+ftCo_800D3158	leaf-check fighter: proc_update reaches it in 21 saved Fighter_procUpdate calls that compare clean
+ftCo_AttackAir_Phys	leaf-check fighter: proc_update reaches it in 2 saved Fighter_procUpdate calls that compare clean
+ftCo_DamageFly_Phys	leaf-check fighter: proc_update reaches it in 6 saved Fighter_procUpdate calls that compare clean
+ftCo_Damage_OnEveryHitlag	leaf-check fighter: proc_update reaches it in 8 saved Fighter_procUpdate calls that compare clean
+ftCo_Damage_Phys	leaf-check fighter: proc_update reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_Fall_Phys	leaf-check fighter: proc_update reaches it in 3 saved Fighter_procUpdate calls that compare clean
+ftCo_JumpAerial_Phys	leaf-check fighter: proc_update reaches it in 2 saved Fighter_procUpdate calls that compare clean
+ftCo_Jump_Phys	leaf-check fighter: proc_update reaches it in 4 saved Fighter_procUpdate calls that compare clean
+ftColl_80076528	leaf-check fighter: proc_update reaches it in 21 saved Fighter_procUpdate calls that compare clean
+ftColl_8007AF28	leaf-check fighter: proc_update reaches it in 21 saved Fighter_procUpdate calls that compare clean
+ftColl_GetWindOffsetVec	leaf-check fighter: proc_update reaches it in 20 saved Fighter_procUpdate calls that compare clean
+ftCommon_CalcSelfAccel_AccelToVelClampedFrom	leaf-check fighter: proc_update reaches it in 11 saved Fighter_procUpdate calls that compare clean
+ftCommon_CalcSelfAccel_Deaccel	leaf-check fighter: proc_update reaches it in 7 saved Fighter_procUpdate calls that compare clean
+ftCommon_CalcSelfAccel_Drift	leaf-check fighter: proc_update reaches it in 11 saved Fighter_procUpdate calls that compare clean
+ftCommon_CalcSelfAccel_DriftFrom	leaf-check fighter: proc_update reaches it in 11 saved Fighter_procUpdate calls that compare clean
+ftCommon_CheckFallFast	leaf-check fighter: proc_update reaches it in 11 saved Fighter_procUpdate calls that compare clean
+ftCommon_Fall	leaf-check fighter: proc_update reaches it in 16 saved Fighter_procUpdate calls that compare clean
+ft_80084DB0	leaf-check fighter: proc_update reaches it in 11 saved Fighter_procUpdate calls that compare clean
+ft_80084EEC	leaf-check fighter: proc_update reaches it in 7 saved Fighter_procUpdate calls that compare clean
+ftCo_Attack11_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_AttackDash_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_AttackHi3_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_AttackLw3_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_AttackLw4_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_AttackS3_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_AttackS4_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_CatchWait_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_DamageFall_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_EscapeAir_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_GuardOn_Phys	leaf-check fighter: phys_callbacks reaches it in 2 saved Fighter_procUpdate calls that compare clean
+ftCo_Guard_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_KneeBend_Phys	leaf-check fighter: phys_callbacks reaches it in 3 saved Fighter_procUpdate calls that compare clean
+ftCo_LandingAir_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_Landing_Phys	leaf-check fighter: phys_callbacks reaches it in 5 saved Fighter_procUpdate calls that compare clean
+ftCo_ThrowB_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_ThrowHi_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_ThrowLw_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_ThrownLw_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_Turn_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCo_Wait_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ftCommon_CalcGroundAccel_Deaccel	leaf-check fighter: phys_callbacks reaches it in 25 saved Fighter_procUpdate calls that compare clean
+ftCommon_SetSelfMovementFromGroundedMovement	leaf-check fighter: phys_callbacks reaches it in 27 saved Fighter_procUpdate calls that compare clean
+ftFx_SpecialLwStart_Phys	leaf-check fighter: phys_callbacks reaches it in 1 saved Fighter_procUpdate calls that compare clean
+ft_80084F3C	leaf-check fighter: phys_callbacks reaches it in 20 saved Fighter_procUpdate calls that compare clean
+ft_80084FA8	leaf-check fighter: phys_callbacks reaches it in 2 saved Fighter_procUpdate calls that compare clean
+ft_80085004	leaf-check fighter: phys_callbacks reaches it in 3 saved Fighter_procUpdate calls that compare clean
+ft_80085030	leaf-check fighter: phys_callbacks reaches it in 6 saved Fighter_procUpdate calls that compare clean
+ft_GetGroundFrictionMultiplier	leaf-check fighter: phys_callbacks reaches it in 27 saved Fighter_procUpdate calls that compare clean
+ftCo_AttackS4_Anim	leaf-check fighter: anim_held_callbacks reaches it in 1 saved Fighter_procAnim calls that compare clean
+ftCo_Sleep_Anim	leaf-check fighter: anim_held_callbacks reaches it in 29 saved Fighter_procAnim calls that compare clean
+ftCommon_ApplyGroundedKnockbackFriction	leaf-check fighter: phys_helpers calls it on saved procUpdate states with speeds and frictions of both signs
+ftCommon_ApplyShieldKnockbackFriction	leaf-check fighter: phys_helpers calls it on saved procUpdate states with speeds and frictions of both signs
+ftAnim_80070FD0	leaf-check fighter: phys_helpers calls it on saved procUpdate states, half with x100 changed, its result compared
+ftPartGetRotX	leaf-check fighter: phys_helpers reads part 0x35 through it (ftAnim_80070FD0)
+ftPartSetRotX	leaf-check fighter: phys_helpers calls it on every part at angles of both signs
+ft_80085134	leaf-check fighter: phys_helpers calls it on every saved procUpdate state
+Fighter_procCpu	leaf-check fighter: proc_cpu runs it on every saved call of it
+Fighter_procAccessory	leaf-check fighter: proc_accessory runs it on every saved call of it
+Fighter_procGrabColl	leaf-check fighter: proc_grab_coll runs it on every saved call of it
+ftCo_IsCpuControlled	leaf-check fighter: is_cpu_controlled calls it with every player kind, as fighter and sub-fighter, its result compared
+Player_8003248C	leaf-check fighter: is_cpu_controlled reads the player kind through it
+Fighter_procCollPos	leaf-check fighter: proc_coll_pos reaches it in 80 saved Fighter_procCollPos calls that compare clean
+ftColl_8007AD18	leaf-check fighter: proc_coll_pos reaches it in 53 saved Fighter_procCollPos calls that compare clean
+ftColl_8007AE80	leaf-check fighter: proc_coll_pos reaches it in 53 saved Fighter_procCollPos calls that compare clean
+ft_8007C224	leaf-check fighter: proc_coll_pos reaches it in 53 saved Fighter_procCollPos calls that compare clean
+ft_8007C6DC	leaf-check fighter: proc_coll_pos reaches it in 53 saved Fighter_procCollPos calls that compare clean
+ifMagnify_802FB6E8	leaf-check fighter: proc_coll_pos reaches it in 3 saved Fighter_procCollPos calls that compare clean
+Fighter_UnkApplyTransformation_8006C0F0	leaf-check fighter: coll_pos_variants runs procCollPos with a depth scale of 1.25 from saved states
+Fighter_procInput	leaf-check fighter: proc_input runs it on every saved call of it; input_core and input_variants run it without the action's input callback, at the controls' edges
+Player_UpdateJoystickCountByIndex	leaf-check fighter: input_core and input_variants count stick movements through it
+Fighter_UnkIncrementCounters_8006ABEC	leaf-check fighter: input_variants runs it with jumps and B in each direction
+ftCommon_8008031C	leaf-check fighter: input_core and input_variants run it on every saved procInput state
+ftCo_Jump_GetInput	leaf-check fighter: input_variants presses X and taps up through it
+ftCo_800DF0D0	leaf-check fighter: input_core runs it on every saved procInput state
+gm_IsCurrently1PMode_inline	leaf-check fighter: input_core reads the mode through it
+gm_GetDbPauseFlag	leaf-check fighter: input_core reads the debug pause flags through it
+lbColl_80008428	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+lb_8000B4FC	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+lb_8000B5DC	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+lb_8000B6A4	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+lb_8000B760	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+lbAnim_InitFrames	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+fn_8001E60C	leaf-check fighter: figatree_binding reaches it in calls that compare clean
+lbAnim_8001E6D8	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+lbAnim_8001E7E8	leaf-check fighter: figatree_binding reaches it in calls that compare clean
+Player_8003544C	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+Player_GetActionStats	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+plStale_IncrementAttackInstance	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+plAttack_80037B08	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+pl_80037C60	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+pl_80038824	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+pl_8003FE1C	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+pl_80040330	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+Fighter_ChangeMotionState	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_GetNextJointInTree	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_8006EBE8	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_8006F4C8	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_8006FA58	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_8006FB88	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_8006FCE4	leaf-check fighter: figatree_binding reaches it in calls that compare clean
+ftAnim_8006FE08	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_800705E0	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_80070654	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_80070710	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_80070758	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_80070E74	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_80070F28	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAction_80073354	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAction_8007349C	leaf-check fighter: change_motion_state reaches it in calls that compare clean
+ftParts_80074A8C	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftPartsRemap	leaf-check fighter: figatree_binding reaches it in calls that compare clean
+ftParts_8007506C	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftPartSetRotZ	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftColl_8007AFF8	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftColl_8007B0C0	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftColl_8007B4E0	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftCommon_8007ECD4	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftCommon_8007F6A4	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftData_80085CD8	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftData_80085FD4	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ft_800890D0	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ft_800895E0	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ft_80089768	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftCo_8009CB40	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftCo_8009E7B4	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftCo_800C8B2C	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftSk_Init_UnkMotionStates4	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+JObjForeachAnim	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAnim_8006F0FC	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftAnim_SetAnimRate	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftAnim_80070458	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftAnim_800704F0	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftAction_800715EC	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAction_80071CA4	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAction_80071F34	leaf-check fighter: change_motion_state reaches it in calls that compare clean
+ftAction_800726F4	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftAction_8007296C	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAction_80072AAC	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+ftAction_80072C6C	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftColl_8007B62C	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftCommon_ClampAirDrift	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftCommon_8007D5D4	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftCommon_8007EFC0	leaf-check fighter: state_entries reaches it in calls that compare clean
+ft_8008A2BC	leaf-check fighter: state_entries reaches it in calls that compare clean
+ft_8008A348	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftCo_8008A6D8	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftCo_800C5240	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftCo_DownSpot_Enter	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftCo_Fall_Enter	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftCo_FallAerial_Enter	leaf-check fighter: state_entries reaches it in calls that compare clean

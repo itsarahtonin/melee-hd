@@ -12,7 +12,7 @@ fn main() {
     let mut archives = Archives::default();
     let loaded = find_archives(&cap.call.mem1, &disc, &mut archives);
     let data = DataMap { loaded };
-    let mut imp = Importer::new(&cap, &data);
+    let mut imp = Importer::new(&cap, &data).with_archives(&archives);
     imp.world();
     imp.stage();
     imp.ids();
@@ -30,6 +30,7 @@ fn main() {
         g.objs.pobjs.pool.used(),
         g.objs.robjs.pool.used(),
     );
+    println!("{} dynamic bone links", g.fighter_dynamics.used());
     let mut kinds: std::collections::BTreeMap<String, usize> = Default::default();
     for u in &imp.unhandled {
         let key = u.split_whitespace().skip(2).collect::<Vec<_>>().join(" ");
