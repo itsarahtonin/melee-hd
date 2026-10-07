@@ -59,6 +59,31 @@ impl Disc {
         Ok(data)
     }
 
+    /// A file's entry number (`DVDConvertPathToEntrynum`): its index in the file system table.
+    pub fn entrynum(&self, path: &str) -> Result<i32, DiscError> {
+        let mut partition = self
+            .reader
+            .open_partition_kind(PartitionKind::Data, &PartitionOptions::default())?;
+        let meta = partition.meta()?;
+        let fst = meta.fst().map_err(DiscError::InvalidFst)?;
+        fst.find(path)
+            .map(|(i, _)| i as i32)
+            .ok_or_else(|| DiscError::FileNotFound(path.to_owned()))
+    }
+
+    /// The path of the file with entry number `entrynum`.
+    pub fn path_of(&self, entrynum: i32) -> Result<String, DiscError> {
+        let mut partition = self
+            .reader
+            .open_partition_kind(PartitionKind::Data, &PartitionOptions::default())?;
+        let meta = partition.meta()?;
+        let fst = meta.fst().map_err(DiscError::InvalidFst)?;
+        fst.iter()
+            .find(|(i, node, _)| *i as i32 == entrynum && node.is_file())
+            .map(|(_, _, path)| path)
+            .ok_or_else(|| DiscError::FileNotFound(format!("entry {entrynum}")))
+    }
+
     /// The paths of every file on the disc, in file-system order.
     pub fn files(&self) -> Result<Vec<String>, DiscError> {
         let mut partition = self
@@ -66,21 +91,11 @@ impl Disc {
             .open_partition_kind(PartitionKind::Data, &PartitionOptions::default())?;
         let meta = partition.meta()?;
         let fst = meta.fst().map_err(DiscError::InvalidFst)?;
-        let mut out = Vec::new();
-        let mut dirs: Vec<(String, u32)> = Vec::new();
-        for (i, node, name) in fst.iter() {
-            while dirs.last().is_some_and(|d| i as u32 >= d.1) {
-                dirs.pop();
-            }
-            let prefix: String = dirs.iter().map(|d| format!("{}/", d.0)).collect();
-            if node.is_dir() {
-                if i != 0 {
-                    dirs.push((name.to_string(), node.length()));
-                }
-            } else {
-                out.push(format!("{prefix}{name}"));
-            }
-        }
-        Ok(out)
+        // The iterator gives each node's whole path.
+        Ok(fst
+            .iter()
+            .filter(|(_, node, _)| node.is_file())
+            .map(|(_, _, path)| path)
+            .collect())
     }
 }
