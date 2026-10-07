@@ -313,16 +313,7 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
     d.stream_id = m.i32(sym("AXDriver_804D6038"));
     d.pitch_due = m.i32(sym("AXDriver_804D77E0"));
     d.pitch_cents = m.i32(sym("AXDriver_804D77E4"));
-    for (i, b) in a.lb.banks.iter_mut().enumerate() {
-        *b = m.i32(sym("lbl_80433984") + 4 * i as u32);
-    }
-    for (name, at, f) in lb_fields(&mut a.lb) {
-        let _ = name;
-        match f {
-            LbField::I(v) => *v = m.i32(at),
-            LbField::F(v) => *v = m.f32(at),
-        }
-    }
+    a.lb = import_lb(mem1);
     let d = &mut a.driver;
     d.bank = bank;
     d.banks = m.i32(sym("AXDriver_804D77B0"));
@@ -332,6 +323,22 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
         d.stream_table = m.u32(sym("AXDriver_804D77BC")).wrapping_sub(base);
     }
     a
+}
+
+/// The game's audio library's state (`lbaudio_ax.c`'s globals).
+pub fn import_lb(mem1: &[u8]) -> melee_sim::lb::audio::LbAudio {
+    let m = Mem(mem1);
+    let mut lb = melee_sim::lb::audio::LbAudio::default();
+    for (i, b) in lb.banks.iter_mut().enumerate() {
+        *b = m.i32(sym("lbl_80433984") + 4 * i as u32);
+    }
+    for (_, at, f) in lb_fields(&mut lb) {
+        match f {
+            LbField::I(v) => *v = m.i32(at),
+            LbField::F(v) => *v = m.f32(at),
+        }
+    }
+    lb
 }
 
 /// One of lbaudio_ax's globals.

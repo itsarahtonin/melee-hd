@@ -339,6 +339,10 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
                     "tick {tick}'s game code ends at another time"
                 );
                 at_tick(&mut mem, tick);
+                // The library's own calls (the tick, the queue, the crowd) aren't in the log,
+                // only the driver calls they make: its state comes from the dump, and its own
+                // checks (`lb_audio_*`) cover it.
+                a.lb = audio::import_lb(&mem);
                 let mut diffs = Vec::new();
                 audio::compare(&mem, &a, &mut diffs);
                 assert!(
