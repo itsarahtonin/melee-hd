@@ -132,7 +132,6 @@ grLast_OnLoad	leaf-check stage: ground_on_load (Ground_OnLoad runs it)
 Ground_801C0FB8	leaf-check stage: ground_start runs the captured match start and compares the whole state
 grLast_8021A9AC	leaf-check stage: ground_start (the queued start hook)
 Ground_801C1E94	leaf-check stage: ground_fog runs the captured call and compares the whole state
-Camera_SetBackgroundColor	leaf-check stage: ground_fog (the clear color from the stage's fog)
 Ground_801C466C	leaf-check stage: ground_lights runs the captured call and compares the whole state
 Ground_801C20E0	leaf-check stage: ground_lights (the stage's light list through its overrides)
 Ground_801C43C4	leaf-check stage: ground_lights (which light animations loop)
@@ -147,8 +146,6 @@ Ground_801C3FA4	leaf-check stage: last_stage_ticks (every scene animation finds 
 mpLib_80058820	leaf-check stage: collision_gobj runs the captured call and compares the whole state
 grLast_OnInit	leaf-check stage: last_on_init runs Final Destination's captured setup and compares the whole state
 grLast_8021A7F4	leaf-check stage: last_create runs the captured call; ground_destroy_and_create creates map 9 with it
-Camera_800311DC	leaf-check stage: last_on_init (the camera's near plane)
-Camera_800311CC	leaf-check stage: last_on_init (the camera's far plane)
 Ground_801C39C0	leaf-check stage: last_on_init (the camera limits from the stage's points)
 Ground_801C3BB4	leaf-check stage: last_on_init (the blast zones from the stage's points)
 Ground_801C2D24	leaf-check stage: last_on_init (the points Ground_801C39C0 and Ground_801C3BB4 read); ground_set_apart_and_points (entry points)
@@ -287,3 +284,42 @@ grBattle_GObj5_Callback2	leaf-check stage: battle_empty_callbacks_and_demo calls
 grBattle_GObj5_Callback3	leaf-check stage: battle_empty_callbacks_and_demo calls it on a real stage and compares the whole state
 grBattle_GObj6_Callback3	leaf-check stage: battle_empty_callbacks_and_demo calls it on a real stage and compares the whole state
 grBattle_BG_Callback3	leaf-check stage: battle_empty_callbacks_and_demo calls it on a real stage and compares the whole state
+lbVector_WorldToScreen	leaf-check camera to_screen: every captured Camera_80030BBC and Camera_80030CD8 call projects through it, plus perturbed points behind and around the eye
+GXProject	leaf-check camera to_screen: lbVector_WorldToScreen projects every point through it; pixels compared
+Camera_80029124	leaf-check camera outside_bounds: every capture of it, plus perturbed points and margins
+Camera_8002928C	leaf-check camera is_framed: every capture of it, plus perturbed box states, timers and positions
+Camera_800293E0	leaf-check camera ease_extents: every capture of it, plus perturbed boxes
+Camera_8002958C	leaf-check camera track_bounds: every capture of it, plus perturbed boxes and transforms; bounds and boxes compared
+Camera_80029AAC	leaf-check camera ease_interest: every capture of it, plus perturbed bounds, transforms, speeds and zooms
+Camera_80029BC4	leaf-check camera fit_depth: every capture of it, plus perturbed bounds and fields of view
+Camera_80029C88	leaf-check camera ease_eye: every capture of it, plus perturbed transforms and speeds
+Camera_80029CF8	leaf-check camera frame: every capture of it, plus perturbed bounds and transforms (assertions matched)
+Camera_ApplyQuake	leaf-check camera apply_quake: every capture of it, plus perturbed quake offsets, scales and bounds
+Camera_SetQuakeOffset	leaf-check camera quake_offset_and_translation: every capture of it
+Camera_UpdateQuakes	leaf-check camera update_quakes: every capture of it
+Camera_8002A4AC	leaf-check camera cobj_update: every capture of it, plus perturbed transforms and translations; CObjs compared
+Camera_8002A768	leaf-check camera keep_in_bounds: every capture of it, plus perturbed transforms
+Camera_8002B0E0	leaf-check camera update_zoom: every capture of it (VS only: the 1P zoom's controller read isn't ported)
+Camera_8002B1F8	leaf-check camera zoom_on_player: every capture of it (VS only: the 1P zoom returns at once)
+Camera_8002B3D4	leaf-check camera standard: every capture of it, plus perturbed transforms and boxes
+fn_8002F360	leaf-check camera process: every capture of it, plus perturbed transforms and boxes
+Camera_8003010C	leaf-check camera flags: every capture of it
+Camera_80030130	leaf-check camera flags: every capture of it
+Camera_800307D0	leaf-check camera ground_span: every capture of it
+Camera_80030A50	leaf-check camera flags: every capture of it
+Camera_80030A78	leaf-check camera flags: every capture of it
+Camera_80030AC4	leaf-check camera flags: every capture of it
+Camera_80030AF8	leaf-check camera flags: every capture of it
+Camera_80030B24	leaf-check camera flags: every capture of it
+Camera_80030BA8	leaf-check camera flags: every capture of it
+Camera_80030BBC	leaf-check camera to_screen: every capture of it, plus perturbed points
+Camera_80030CD8	leaf-check camera to_screen: every capture of it; the pixel lands in the fighter
+Camera_80030CFC	leaf-check camera box_on_screen: every capture of it, plus perturbed boxes and tolerances
+Camera_80030DE4	leaf-check camera quake_offset_and_translation: every capture of it
+Camera_80030DF8	leaf-check camera quake_offset_and_translation: every capture of it
+Camera_RequestQuake	leaf-check camera quakes: every capture of it, on stages without a quake model, plus perturbed kinds and epicenters
+Camera_80031060	leaf-check camera flags: every capture of it
+Camera_80031074	leaf-check camera flags: every capture of it
+Camera_8003108C	leaf-check camera flags: every capture of it
+Camera_800310A0	leaf-check camera flags: every capture of it
+Camera_80031144	leaf-check camera flags: every capture of it

@@ -7,6 +7,7 @@
 //! color blends are done; `b26` lets the cycle advance, and the 30-second timer `xC8` sets it in
 //! phase 1. Map 7 sways in its `Last_GroundVars`.
 
+use super::super::camera;
 use super::super::state::{Game, Running};
 use super::super::structs::_GXColor;
 use super::anime;
@@ -196,16 +197,6 @@ pub fn proc_main(r: &mut Running, gobj: GObjId) {
     ground::quake_list_tick(r.game);
 }
 
-/// `Camera_SetBackgroundColor`: the game camera's clear color (camera code, here until the
-/// camera is ported).
-#[doc(alias = "Camera_SetBackgroundColor")]
-pub fn set_background_color(game: &mut Game, r: u8, g: u8, b: u8) {
-    let c = &mut game.camera.background_color;
-    c.r = r;
-    c.g = g;
-    c.b = b;
-}
-
 /// Times the scene, `grLast_8021B2E8`: the 30-second wait in phase 1 (in the boss stages, the
 /// boss's health instead), the swaying piece fading in and out, the closing scene's random
 /// fog colors, and the fog blend.
@@ -238,10 +229,10 @@ pub fn advance(r: &mut Running, gobj: GObjId) {
                 if reg(l.xDC) < 0.0 {
                     l.xDC = 0.0;
                 }
-                unimplemented!("Camera_RequestQuake (the camera) isn't ported");
+                camera::request_quake(r.game, camera::QUAKE_LOOP, None);
             }
         }
-        11 => unimplemented!("Camera_RequestQuake (the camera) isn't ported"),
+        11 => camera::request_quake(r.game, camera::QUAKE_LOOP, None),
         15 if b27 => {
             let current =
                 ground::fog_color(r.game).expect("Ground_801C2090 leaves its color unset");
@@ -621,20 +612,8 @@ pub fn on_init(r: &mut Running) {
     }
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
-    set_camera_depth(r.game, Some(1.0), Some(30000.0));
-}
-
-/// `Camera_800311DC` and `Camera_800311CC`: the game camera's near and far planes (camera code,
-/// here until the camera is ported).
-#[doc(alias = "Camera_800311DC")]
-#[doc(alias = "Camera_800311CC")]
-pub fn set_camera_depth(game: &mut Game, near: Option<f32>, far: Option<f32>) {
-    if let Some(n) = near {
-        game.camera.nearz = n;
-    }
-    if let Some(f) = far {
-        game.camera.farz = f;
-    }
+    camera::set_near(&mut r.game.camera.cam, 1.0);
+    camera::set_far(&mut r.game.camera.cam, 30000.0);
 }
 
 /// `grLast_OnLoad` does nothing; `grLast_8021A7EC` (`callback4`) answers false, and nothing

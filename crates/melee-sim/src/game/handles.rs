@@ -24,3 +24,6 @@ pub struct GroundId(pub u32);
 /// A start hook's slot (`Ground_801C10B8`'s list node, which `Ground_801C0FB8` runs and frees).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct StartHookId(pub u32);
+/// A camera box's slot (`CmSubject`): its index in the array `Camera_Init` allocates.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct CameraBoxId(pub u32);

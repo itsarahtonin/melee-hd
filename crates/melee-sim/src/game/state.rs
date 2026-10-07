@@ -6,9 +6,10 @@
 
 use melee_data::archive::Archives;
 
+use super::camera::CameraState;
 use super::gr;
 use super::handles::{CodeRef, FighterId, GroundId, ItemId};
-use super::structs::{Camera, Fighter, Ground, StageInfo};
+use super::structs::{_StaticPlayer, ControllerMap, Fighter, Ground, StageInfo};
 use crate::hsd::Objects;
 use crate::hsd::cobj::CObjId;
 use crate::hsd::fog::FogId;
@@ -80,8 +81,16 @@ pub struct Game {
     pub geometry: Option<gr::Geometry>,
     /// The stage code's other globals.
     pub gr: gr::Globals,
-    /// The game camera (`game_camera`).
-    pub camera: Camera,
+    /// The game camera (`game_camera`), its camera boxes and the rest of its state.
+    pub camera: CameraState,
+    /// The player slots (`player_slots`).
+    pub players: [_StaticPlayer; 6],
+    /// The current game mode (`state_machine.routing.curr_mode`, a `GameModeKind`).
+    pub game_mode: u8,
+    /// The controllers as the frame's game code reads them (`HSD_PadCopyStatus`).
+    pub pad_copy: [crate::input::controller::Status; 4],
+    /// The scenes' button maps (`controller_map`; its fifth entry merges every port).
+    pub controller_map: ControllerMap,
     pub rules: Rules,
 }
 

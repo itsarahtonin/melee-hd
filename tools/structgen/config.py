@@ -1,7 +1,18 @@
 """What structgen generates and how it maps C pointers to melee-sim handles."""
 
 # Structs to generate; everything they contain comes along.
-ROOTS = ["Fighter", "Item", "Ground", "StageInfo", "GroundParam", "Camera", "_StaticPlayer"]
+ROOTS = [
+    "Fighter",
+    "Item",
+    "Ground",
+    "StageInfo",
+    "GroundParam",
+    "Camera",
+    "CmSubject",
+    "CameraDebugMode",
+    "_StaticPlayer",
+    "controller_map",
+]
 
 # Handles for pointers to runtime objects, by the pointee's C name.
 POINTERS = {
@@ -10,6 +21,7 @@ POINTERS = {
     "HSD_DObj": "Option<DObjId>",
     "Fighter": "Option<FighterId>",
     "Item": "Option<ItemId>",
+    "CmSubject": "Option<CameraBoxId>",
 }
 
 # Handles for single pointer fields whose pointee type doesn't say what they are, by
@@ -61,7 +73,7 @@ DATA_TYPES = {
 # Pointers whose pointee isn't mapped yet: an address that needs a decision before it is used.
 DEFAULT_POINTER = "RawPtr"
 
-RENAME_TYPES = {}
+RENAME_TYPES = {"controller_map": "ControllerMap", "gm_controller_map": "GmControllerMap"}
 RENAME_FIELDS = {}
 
 PRELUDE = """use melee_data::archive::DataRef;

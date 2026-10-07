@@ -62,7 +62,9 @@ pub fn find_archives(mem1: &[u8], disc: &Disc, archives: &mut Archives) -> Vec<L
 /// Indexes the disc's archives, once for many captures.
 pub fn disc_index(disc: &Disc) -> DiscIndex {
     let mut by_header: HashMap<[u32; 3], Vec<(String, Vec<u8>)>> = HashMap::new();
-    for name in disc.files().unwrap().iter().filter(|f| f.ends_with(".dat")) {
+    // `.usd` files are the English versions of `.dat` ones (Pokémon Stadium's `GrPs.usd`).
+    let archive = |f: &&String| f.ends_with(".dat") || f.ends_with(".usd");
+    for name in disc.files().unwrap().iter().filter(archive) {
         let bytes = disc.read_file(name).unwrap();
         if bytes.len() < 0x20 {
             continue;

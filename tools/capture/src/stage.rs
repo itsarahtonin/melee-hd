@@ -6,7 +6,7 @@ use melee_data::archive::DataRef;
 use melee_sim::game::gr::{self, DynamicAttr, GroundVars, StageArchive, StartHook, vars_kind};
 use melee_sim::game::handles::{CodeRef, GroundId, StartHookId};
 use melee_sim::game::mirror::{Mem, Mirror};
-use melee_sim::game::structs::{Camera, Ground, GroundParam, StageInfo};
+use melee_sim::game::structs::{Ground, GroundParam, StageInfo};
 use melee_sim::hsd::fog::{Fog, FogAdj, FogId};
 use melee_sim::hsd::object::RefCount;
 use melee_sim::mp::{
@@ -299,7 +299,8 @@ impl Importer<'_> {
         self.game.gr.winds_active = cap.u32(sym("lb_804D63B0")) != 0;
         self.game.gr.wind_level = cap.u32(sym("lb_804D63B4")) as i32;
         self.game.geometry = self.geometry();
-        self.game.camera = Camera::import(&m, sym("game_camera"), self);
+        self.globals();
+        self.camera();
         self.game.objs.rng.seed = cap.u32(sym("seed"));
         // Animated particle events reach the game's effects once it has set this.
         let dptcl = cap.u32(sym("dptcl_callback")) != 0;
@@ -862,8 +863,7 @@ impl Comparer<'_> {
         if let Some(g) = &game.geometry {
             self.geometry(g);
         }
-        game.camera
-            .compare(&m, sym("game_camera"), "game_camera", self);
+        self.camera();
         self.check(
             "seed",
             "random seed",
