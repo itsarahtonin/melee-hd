@@ -9,6 +9,7 @@ use crate::game::handles::{CodeRef, FighterId, ItemId, RawPtr};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
 
@@ -744,33 +745,6 @@ impl Default for _ftECB {
     }
 }
 
-/// `ECBSource`, 0x2c bytes.
-#[derive(Clone, Debug, PartialEq)]
-pub struct ECBSource {
-    /// +0x0
-    pub kind: i32,
-    /// +0x4
-    pub x4: [u8; 28],
-    /// +0x20
-    pub x124: f32,
-    /// +0x24
-    pub x128: f32,
-    /// +0x28
-    pub x12C: f32,
-}
-
-impl Default for ECBSource {
-    fn default() -> Self {
-        ECBSource {
-            kind: 0,
-            x4: [0; 28],
-            x124: 0.0,
-            x128: 0.0,
-            x12C: 0.0,
-        }
-    }
-}
-
 /// `SurfaceData`, 0x14 bytes.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SurfaceData {
@@ -844,7 +818,7 @@ pub struct CollData {
     /// +0xe4
     pub xE4_ecb: _ftECB,
     /// +0x104
-    pub ecb_source: ECBSource,
+    pub ecb_source: EcbSource,
     /// +0x130
     pub x130_flags: u32,
     /// +0x134
@@ -3467,6 +3441,30 @@ impl Default for Fighter {
             x2330: Default::default(),
             x2338: Default::default(),
             mv: [0; 172],
+        }
+    }
+}
+
+/// `ftCollisionBox`, 0x18 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ftCollisionBox {
+    /// +0x0
+    pub top: f32,
+    /// +0x4
+    pub bottom: f32,
+    /// +0x8
+    pub left: Vec2,
+    /// +0x10
+    pub right: Vec2,
+}
+
+impl Default for ftCollisionBox {
+    fn default() -> Self {
+        ftCollisionBox {
+            top: 0.0,
+            bottom: 0.0,
+            left: Default::default(),
+            right: Default::default(),
         }
     }
 }

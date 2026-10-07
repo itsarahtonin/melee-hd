@@ -9,6 +9,7 @@ use super::structs::*;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
 
@@ -1569,60 +1570,6 @@ impl Mirror for _ftECB {
     }
 }
 
-impl Mirror for ECBSource {
-    const SIZE: u32 = 0x2c;
-
-    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
-        let _ = (&m, at, &cx);
-        ECBSource {
-            kind: m.u32(at + 0x0) as i32,
-            x4: m.bytes(at + 0x4),
-            x124: f32::from_bits(m.u32(at + 0x20)),
-            x128: f32::from_bits(m.u32(at + 0x24)),
-            x12C: f32::from_bits(m.u32(at + 0x28)),
-        }
-    }
-
-    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        let _ = (&m, at, path, &cx);
-        if self.kind != m.u32(at + 0x0) as i32 {
-            cx.mismatch(
-                &format!("{path}.kind"),
-                format!("{:?}", self.kind),
-                format!("{:?}", m.u32(at + 0x0) as i32),
-            );
-        }
-        if self.x4 != m.bytes::<28>(at + 0x4) {
-            cx.mismatch(
-                &format!("{path}.x4"),
-                format!("{:02x?}", self.x4),
-                format!("{:02x?}", m.bytes::<28>(at + 0x4)),
-            );
-        }
-        if self.x124.to_bits() != m.u32(at + 0x20) {
-            cx.mismatch(
-                &format!("{path}.x124"),
-                format!("{:?}", self.x124),
-                format!("{:?}", f32::from_bits(m.u32(at + 0x20))),
-            );
-        }
-        if self.x128.to_bits() != m.u32(at + 0x24) {
-            cx.mismatch(
-                &format!("{path}.x128"),
-                format!("{:?}", self.x128),
-                format!("{:?}", f32::from_bits(m.u32(at + 0x24))),
-            );
-        }
-        if self.x12C.to_bits() != m.u32(at + 0x28) {
-            cx.mismatch(
-                &format!("{path}.x12C"),
-                format!("{:?}", self.x12C),
-                format!("{:?}", f32::from_bits(m.u32(at + 0x28))),
-            );
-        }
-    }
-}
-
 impl Mirror for SurfaceData {
     const SIZE: u32 = 0x14;
 
@@ -1686,7 +1633,7 @@ impl Mirror for CollData {
             ecb: _ftECB::import(m, at + 0xa4, cx),
             prev_ecb: _ftECB::import(m, at + 0xc4, cx),
             xE4_ecb: _ftECB::import(m, at + 0xe4, cx),
-            ecb_source: ECBSource::import(m, at + 0x104, cx),
+            ecb_source: EcbSource::import(m, at + 0x104, cx),
             x130_flags: m.u32(at + 0x130),
             env_flags: m.u32(at + 0x134) as i32,
             prev_env_flags: m.u32(at + 0x138) as i32,
@@ -7836,5 +7783,40 @@ impl Mirror for Fighter {
                 format!("{:02x?}", m.bytes::<172>(at + 0x2340)),
             );
         }
+    }
+}
+
+impl Mirror for ftCollisionBox {
+    const SIZE: u32 = 0x18;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        ftCollisionBox {
+            top: f32::from_bits(m.u32(at + 0x0)),
+            bottom: f32::from_bits(m.u32(at + 0x4)),
+            left: Vec2::import(m, at + 0x8, cx),
+            right: Vec2::import(m, at + 0x10, cx),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.top.to_bits() != m.u32(at + 0x0) {
+            cx.mismatch(
+                &format!("{path}.top"),
+                format!("{:?}", self.top),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x0))),
+            );
+        }
+        if self.bottom.to_bits() != m.u32(at + 0x4) {
+            cx.mismatch(
+                &format!("{path}.bottom"),
+                format!("{:?}", self.bottom),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x4))),
+            );
+        }
+        self.left.compare(m, at + 0x8, &format!("{path}.left"), cx);
+        self.right
+            .compare(m, at + 0x10, &format!("{path}.right"), cx);
     }
 }

@@ -13,10 +13,13 @@
 //! each joint to a model joint ([`Kinds::JObj`]) and, when it updates a joint, passes the
 //! model joint's state ([`JointPose`]). Collision callbacks the stage registers on joints are
 //! [`Kinds::Callback`] tokens the caller dispatches.
+//!
+//! [`coll`] is `mpcoll.c`, how fighters and items move against this geometry each frame.
 
 // NaN takes the original's branches, which negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+pub mod coll;
 mod island;
 mod joint;
 mod nav;

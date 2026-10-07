@@ -1,7 +1,7 @@
 """What structgen generates and how it maps C pointers to melee-sim handles."""
 
 # Structs to generate; everything they contain comes along.
-ROOTS = ["Fighter"]
+ROOTS = ["Fighter", "ftCollisionBox"]
 
 # Handles for pointers to runtime objects, by the pointee's C name.
 POINTERS = {
@@ -18,6 +18,8 @@ EXTERNAL = {
     "Vec": "Vec3",
     "Vec3": "Vec3",
     "Quaternion": "Quat",
+    # A union whose member the kind beside it picks, holding joint handles: hand-written.
+    "ECBSource": "EcbSource",
 }
 
 # Pointee types that live in loaded game data: pointers to them become DataRef.
@@ -43,5 +45,6 @@ use crate::game::handles::{CodeRef, FighterId, ItemId, RawPtr};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;"""

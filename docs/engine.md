@@ -38,6 +38,12 @@ A few original functions read memory or registers they never set, and plain data
 - An FObj channel whose data ends right after its first key hands its update function a stack word instead of a value (`hsd::fobj::Value::Stale`). Over every VS stage and a Final Destination replay, that word was always a RAM address, a tiny negative float; every channel was a joint's branch visibility, which an address hides. Update functions resolve what any address gives where the result doesn't depend on which address, and count the rest as stale reads, which the oracle reports, so a case that matters can't pass unnoticed.
 - `resolveIKJoint1` reads two registers and two stack vectors it never set when the effector sits on the chain's root. No joint on the disc has an IK role and no game code gives one, so it can't happen in play; the port counts a stale read if it does.
 - `mpLib_80056C54` adds to a register its caller left when a walk starts on a wall (a line the walker stood on turned into one). The port takes that value as an explicit parameter, which ftDonkey's and itleadead's ports must supply.
+- `mpColl_8004A45C_Floor`, `mpColl_8004A678_Floor` and `mpColl_8004C328_Ceiling` take the floor (or ceiling) at the edge an object stops at, probed at that edge. A few floors in the data run right to left (on Great Bay, Pokémon Stadium and Big Blue), and such a floor can fail to reach its own end; the original then takes line -1 with the flags and normal its stack held. The port leaves those two fields as they were and counts a stale read (`mp::coll::CollStatics::stale_reads`).
+- `mpColl_80043754` returns a register its caller left when a move is so long its substep count overflows (over about 10¹⁰ units, or infinite) and no substep runs. The game never moves that far; the port returns false.
+
+## Hangs
+
+`mpColl_80046904` repeats its walls, ceiling and floor checks until the squeezes they apply stop changing, which on some geometry never happens: the original hangs. Its body is a function of the collision data, mpcoll's statics and a few locals, so the port watches for an iteration that starts from a state an earlier one started from and halts there instead. A loop can also drift instead of repeating (an ECB squeezed inside out widens a little each time round); the port runs it as long as the original, and checks bound it with a watchdog (`CollStatics::watchdog`, off in play) and skip the original there.
 
 ## Checking against ssbm-rs
 
