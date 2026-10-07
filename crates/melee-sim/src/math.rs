@@ -156,13 +156,22 @@ pub fn sqrt(x: f32) -> f32 {
     if !(xr > 0.0) {
         return x;
     }
+    mem(sqrt_reg(xr))
+}
+
+/// The inline `sqrtf` on a register, its result left in a register.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+pub(crate) fn sqrt_reg(xr: f64) -> f64 {
+    if !(xr > 0.0) {
+        return xr;
+    }
     let mut g = fp::frsqrte(xr);
     for _ in 0..3 {
         let gg = fp::fmul(g, g);
         let half = fp::fmul(0.5, g);
         g = fp::fmul(half, fp::fnmsub(xr, gg, 3.0));
     }
-    mem(fp::frsp(fp::fmul(xr, g)))
+    fp::frsp(fp::fmul(xr, g))
 }
 
 /// `lbVector_sqrtf_accurate`: the inline `sqrtf` with a fourth Newton step.
