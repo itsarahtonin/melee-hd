@@ -110,7 +110,9 @@ impl Running<'_> {
         self.game
             .world
             .init_user_data(gobj, USER_DATA_FIGHTER, UserData::Fighter(f));
-        self.game.load_fighter_data(self.data, info.kind);
+        if let Some(file) = self.game.load_fighter_data(self.data, info.kind) {
+            self.disc_load(file, 0);
+        }
         self.init_load(gobj, info);
         let kind = self.game.fighters[f.0].kind;
         let effects = kind_tables(kind).effect_file;
@@ -120,7 +122,9 @@ impl Running<'_> {
             &[code::Val::Int(i32::from(effects))],
         );
         let costume = i32::from(self.game.fighters[f.0].costume_id);
-        self.game.load_costume(self.data, kind, costume);
+        if let Some(file) = self.game.load_costume(self.data, kind, costume) {
+            self.disc_load(file, 0);
+        }
         self.load_costume_joint(gobj);
         self.init_anim_buffers(f);
         self.init_parts(f);

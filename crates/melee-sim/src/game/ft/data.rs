@@ -59,6 +59,9 @@ pub struct KindTables {
     pub load_special_attrs: u32,
 }
 
+/// `lbFile_8001668C`: a whole disc file's synchronous load, the audio timeline's seam.
+pub const LB_LOAD_FILE: u32 = 0x8001_668C;
+
 /// A fighter kind's tables.
 pub fn kind_tables(kind: i32) -> &'static KindTables {
     &KINDS[usize::try_from(kind).expect("a negative fighter kind")]
@@ -79,6 +82,8 @@ pub struct Costume {
 pub struct LoadedFiles {
     pub archives: Vec<(String, ArchiveId)>,
     pub anim_files: Vec<(String, AnimFile)>,
+    /// Each file's disc entry number and size, for the disc loads the audio timeline times.
+    pub entries: Vec<(String, i32, u32)>,
 }
 
 impl LoadedFiles {
@@ -91,6 +96,15 @@ impl LoadedFiles {
             .unwrap_or_else(|| {
                 panic!("{name} isn't loaded: the frontend loads it before the match")
             })
+    }
+
+    /// The disc entry number and size of the file named `name`.
+    pub fn entry(&self, name: &str) -> (i32, u32) {
+        self.entries
+            .iter()
+            .find(|(n, ..)| n == name)
+            .map(|&(_, e, len)| (e, len))
+            .unwrap_or_else(|| panic!("{name}'s disc entry isn't known"))
     }
 
     /// The animation file named `name`, in ARAM.
@@ -203,32 +217,35 @@ impl Game {
 
     /// Finds a kind's `ftData` in its data file unless it has, `ftData_8008572C`.
     #[doc(alias = "ftData_8008572C")]
-    pub fn load_fighter_data(&mut self, data: &Archives, kind: i32) {
+    pub fn load_fighter_data(&mut self, data: &Archives, kind: i32) -> Option<&'static str> {
         let k = kind as usize;
         if self.ft.data.data_list[k].is_some() {
-            return;
+            return None;
         }
         let t = kind_tables(kind);
         let file = t.dat_file.expect("a fighter kind without a data file");
         let archive = self.ft.data.files.archive(file);
         let symbol = t.data_symbol.expect("a fighter kind without data");
         self.ft.data.data_list[k] = Some(public(data, archive, symbol));
+        Some(file)
     }
 
     /// Finds a costume's model and material animation in its file unless it has,
     /// `ftData_80085820`.
     #[doc(alias = "ftData_80085820")]
-    pub fn load_costume(&mut self, data: &Archives, kind: i32, costume: i32) {
+    pub fn load_costume(
+        &mut self,
+        data: &Archives,
+        kind: i32,
+        costume: i32,
+    ) -> Option<&'static str> {
         let (k, c) = (kind as usize, costume as usize);
         if self.ft.data.costumes[k][c].joint.is_some() {
-            return;
+            return None;
         }
         let files = kind_tables(kind).costumes[c];
-        let archive = self
-            .ft
-            .data
-            .files
-            .archive(files.file.expect("a costume without a file"));
+        let file = files.file.expect("a costume without a file");
+        let archive = self.ft.data.files.archive(file);
         let joint = public(
             data,
             archive,
@@ -238,6 +255,7 @@ impl Game {
         entry.joint = Some(joint);
         // Without a material animation's name the original passes none, and clears the slot.
         entry.matanim = files.matanim.map(|m| public(data, archive, m));
+        Some(file)
     }
 }
 
@@ -265,7 +283,29 @@ impl Running<'_> {
         fp.x5A8 = 0;
         let kind = fp.kind;
         fp.x58C = kind_tables(kind).anim_count;
-        self.game.load_anim_file(kind);
+        if let Some((name, aram)) = self.game.load_anim_file(kind) {
+            self.disc_load(name, aram);
+        }
+    }
+
+    /// A fighter file's synchronous disc load (`lbFile_8001668C`), where the original loads
+    /// it, for the audio timeline that times it: `dest` its ARAM address, or 0 for main
+    /// memory, whose heap isn't modeled. Nothing without a timeline; until the audio port's
+    /// loader lands, a seam.
+    pub fn disc_load(&mut self, name: &str, dest: u32) {
+        if self.game.audio.clock.is_none() {
+            return;
+        }
+        let (entrynum, len) = self.game.ft.data.files.entry(name);
+        super::super::code::call(
+            self,
+            LB_LOAD_FILE,
+            &[
+                super::super::code::Val::Int(entrynum),
+                super::super::code::Val::Int(dest as i32),
+                super::super::code::Val::Int(len as i32),
+            ],
+        );
     }
 
     /// Loads animation `anim` of the fighter into its second buffer unless it's there, and
@@ -303,17 +343,19 @@ impl Game {
     /// address the frontend loaded it at. The original writes each animation's address into
     /// the kind's animation table, which `Running::anim_aram` works out from the file's.
     #[doc(alias = "ftData_80085A14")]
-    pub fn load_anim_file(&mut self, kind: i32) {
+    pub fn load_anim_file(&mut self, kind: i32) -> Option<(&'static str, u32)> {
         let k = kind as usize;
         self.ft.anim_files.resize(KIND_COUNT, None);
         if self.ft.anim_files[k].is_some() {
-            return;
+            return None;
         }
         let name = kind_tables(kind)
             .anim_file
             .expect("a fighter kind without animations");
         let file = self.ft.data.files.anim_file(name).clone();
+        let aram = file.aram;
         self.ft.anim_files[k] = Some(file);
+        Some((name, aram))
     }
 }
 

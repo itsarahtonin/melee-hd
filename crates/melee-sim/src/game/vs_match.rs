@@ -200,6 +200,13 @@ pub struct Frame {
     pub ended: bool,
 }
 
+/// A disc file as the frontend reads it: its entry number in the disc's file table and its
+/// bytes.
+pub struct DiscFile {
+    pub entrynum: i32,
+    pub bytes: Vec<u8>,
+}
+
 /// A running VS match: the game's state and the archives it has loaded.
 #[derive(Clone, Debug)]
 pub struct Match {
@@ -218,7 +225,7 @@ impl Match {
     /// (`gm_801A4BD4`) and entry (`gm_Scene_Vs_OnEnter`), loading the files the match's own
     /// code loads and its fighters need with `load` (a disc file's bytes, by name). The scene
     /// loop is then ready for [`Match::step`].
-    pub fn start(settings: &Settings, load: &mut dyn FnMut(&str) -> Vec<u8>) -> Match {
+    pub fn start(settings: &Settings, load: &mut dyn FnMut(&str) -> DiscFile) -> Match {
         let mut game = Game {
             game_mode: settings.game_mode,
             rules: settings.rules.clone(),
@@ -238,8 +245,9 @@ impl Match {
         let mut data = Archives::default();
         // `lb_80014534`: the rumble scripts, then the match's own files in the order its
         // setup loads them.
-        let mut archive =
-            |name: &str| Archive::parse(&load(name)).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+        let mut archive = |name: &str| {
+            Archive::parse(&load(name).bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"))
+        };
         let rumble = data.add(archive("LbRb.dat"));
         let table = data.get(rumble).public("lbRumbleData");
         let files = vs::MatchArchives {
@@ -341,13 +349,17 @@ pub fn load_fighter_files(
     game: &mut Game,
     data: &mut Archives,
     start: &StartMeleeData,
-    load: &mut dyn FnMut(&str) -> Vec<u8>,
+    load: &mut dyn FnMut(&str) -> DiscFile,
 ) {
     use super::ft::data::{LoadedFiles, kind_tables};
     let mut add = |files: &mut LoadedFiles, data: &mut Archives, name: &str| {
         if !files.archives.iter().any(|(n, _)| n == name) {
-            let a = Archive::parse(&load(name)).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+            let file = load(name);
+            let a = Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
             files.archives.push((name.to_owned(), data.add(a)));
+            files
+                .entries
+                .push((name.to_owned(), file.entrynum, file.bytes.len() as u32));
         }
     };
     let files = &mut game.ft.data.files;
@@ -387,7 +399,10 @@ pub fn load_fighter_files(
     }
     let mut aram = ARAM_ANIM_BASE;
     for name in anims {
-        let bytes = load(name);
+        let DiscFile { entrynum, bytes } = load(name);
+        files
+            .entries
+            .push((name.to_owned(), entrynum, bytes.len() as u32));
         let mut file = super::ft::AnimFile {
             aram,
             anims: Vec::new(),

@@ -160,9 +160,13 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 return ExitCode::FAILURE;
             };
             let started = catch_unwind(AssertUnwindSafe(|| {
-                let mut load = |name: &str| {
-                    disc.read_file(name)
-                        .unwrap_or_else(|e| panic!("{name}: {e}"))
+                let mut load = |name: &str| melee_sim::game::vs_match::DiscFile {
+                    entrynum: disc
+                        .entrynum(name)
+                        .unwrap_or_else(|e| panic!("{name}: {e}")),
+                    bytes: disc
+                        .read_file(name)
+                        .unwrap_or_else(|e| panic!("{name}: {e}")),
                 };
                 Match::start(&settings, &mut load)
             }));
