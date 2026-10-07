@@ -203,9 +203,13 @@ fn fobjs_match() {
                     arg(rate),
                 );
                 ours_log.clear();
-                fobj::interpret_all(&mut fobjs, &archives, ours_f, rate, &mut |t, v| {
-                    ours_log.push((t, v.to_bits()))
-                });
+                fobj::interpret_all(
+                    &mut fobjs,
+                    &archives,
+                    ours_f,
+                    rate,
+                    Some(&mut |t, v| ours_log.push((t, v.to_bits()))),
+                );
                 let theirs_log = UPDATES.with(|u| std::mem::take(&mut *u.borrow_mut()));
                 assert_eq!(
                     ours_log, theirs_log,
@@ -233,9 +237,13 @@ fn fobjs_match() {
                 arg(rate),
             );
             ours_log.clear();
-            fobj::stop_anim_all(&mut fobjs, &archives, ours_f, rate, &mut |t, v| {
-                ours_log.push((t, v.to_bits()))
-            });
+            fobj::stop_anim_all(
+                &mut fobjs,
+                &archives,
+                ours_f,
+                rate,
+                Some(&mut |t, v| ours_log.push((t, v.to_bits()))),
+            );
             let theirs_log = UPDATES.with(|u| std::mem::take(&mut *u.borrow_mut()));
             assert_eq!(ours_log, theirs_log, "{name} chain {chain:#x}: stop");
             // Freed and reloaded, both sides hand out the same objects in the same order.

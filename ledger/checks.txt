@@ -29,3 +29,4 @@ HSD_SListAlloc	leaf-check list: both alloc-and-link functions allocate through i
 HSD_SListAppendList	leaf-check list: HSD_SListAllocAndAppend links through it; contents compared every step
 HSD_SListPrependList	leaf-check list: HSD_SListAllocAndPrepend links through it; contents compared every step
 lbColl_80006E58	leaf-check lbcollision: static to its unit, so ssbm-types lists it under tu:: rather than fns::; the test compares every output directly
+fmodf	leaf-check aobj: fmodf_matches calls it at its address on random pairs in both float modes; looping AObjs wrap their frame through it, compared every step

@@ -1,5 +1,6 @@
 //! The game's own math routines, bit for bit: MSL's `sinf`, `cosf`, `tanf` and the inline
-//! `sqrtf`, and `lbtrigf`'s `atanf`, `atan2f`, `acosf` and `asinf`.
+//! `sqrtf`, `lbtrigf`'s `atanf`, `atan2f`, `acosf` and `asinf`, and the `fmodf` HSD's AObj
+//! carries.
 //!
 //! Each follows the instructions MWCC emitted, not just the C: which multiply-adds fused,
 //! which operations rounded to single precision, and the `frsqrte` estimate. `gekko-fp` does
@@ -296,4 +297,17 @@ pub fn acos(x: f32) -> f32 {
 pub fn asin(x: f32) -> f32 {
     let xr = reg(x);
     atan(mem(fp::fmuls(xr, rsqrt(fp::fnmsubs(xr, xr, 1.0)))))
+}
+
+/// `fmodf` on register values, the copy compiled into `sysdolphin/baselib/aobj.c`: `x` when
+/// `|y| > |x|`, else `x - y * trunc(x / y)` with the quotient through a 64-bit integer
+/// (saturating, so huge or NaN quotients give the runtime's results) and one fused
+/// multiply-subtract.
+#[doc(alias = "fmodf")]
+pub fn fmod(x: f64, y: f64) -> f64 {
+    if fp::fabs(y) > fp::fabs(x) {
+        return x;
+    }
+    let q = crate::ppc::cvt_dbl_usll(fp::fdivs(x, y)) as i64;
+    fp::fnmsubs(y, crate::ppc::cvt_sll_flt(q), x)
 }

@@ -174,3 +174,4 @@ OnReset	Console reset handler that stops the PAD library's serial traffic; the i
 SamplingHandler	Serial-interface interrupt handler that runs the sampling callback; the input layer's job.
 PADSetSamplingCallback	Installs the serial-interface sampling interrupt callback; the input layer's job.
 __PADDisableRecalibration	Sets the flag that stops PADInit recalibrating at boot; the input layer's job.
+_HSD_AObjForgetMemory	It only clears endcallback_list, which nothing in the game ever adds to; melee-sim keeps no such list (see hsd::aobj::invoke_end_callbacks).

@@ -10,6 +10,19 @@ use super::spline;
 use crate::fpu::{copy, mem, reg};
 use crate::ppc::slw_i;
 
+/// An animated object's update function (`HSD_ObjUpdateFunc`), handed each value with its
+/// channel type. `None` is the original's NULL: the value isn't computed, so a keyed value
+/// stays pending and a linear segment's slope waits for the next update.
+pub type Update<'a> = Option<&'a mut dyn FnMut(u8, f32)>;
+
+/// Lends an update function on for one call.
+pub(crate) fn again<'r>(update: &'r mut Update<'_>) -> Update<'r> {
+    match update {
+        Some(f) => Some(&mut **f),
+        None => None,
+    }
+}
+
 /// An FObj's slot.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct FObjId(pub u32);
@@ -308,7 +321,8 @@ fn load_data(data: &Archives, o: &mut FObj) -> u32 {
 /// Computes the current value and hands it to `update` with the channel type,
 /// `FObjUpdateAnim`.
 #[doc(alias = "FObjUpdateAnim")]
-fn update_anim(o: &mut FObj, update: &mut impl FnMut(u8, f32)) {
+fn update_anim(o: &mut FObj, update: Update) {
+    let Some(update) = update else { return };
     let fterm = || f64::from(o.fterm);
     let value = match o.op_intrp {
         OP_KEY => {
@@ -350,8 +364,11 @@ fn update_anim(o: &mut FObj, update: &mut impl FnMut(u8, f32)) {
                 o.p1
             }
         }
-        // The original leaves the value as it was on its stack: an op of 0 never updates in
-        // practice, since states 3 and 6 follow a load.
+        // Not reproduced yet: with an op of 0 the original hands the update whatever its stack
+        // holds where the value would go (ssbm-rs's hand-written FObjUpdateAnim rebuilds that
+        // stack). A channel whose data ends right after its first key gets here, reaching state
+        // 6 before a second load sets op_intrp: stage data does (GrCn.dat's single-key
+        // visibility channels; Final Destination's background change, per ssbm-rs).
         _ => return,
     };
     update(o.obj_type, copy(value));
@@ -365,7 +382,7 @@ pub fn interpret(
     data: &Archives,
     f: Option<FObjId>,
     rate: f32,
-    update: &mut impl FnMut(u8, f32),
+    mut update: Update,
 ) {
     let Some(f) = f else { return };
     let o = &mut fobjs[f.0];
@@ -383,13 +400,13 @@ pub fn interpret(
             6 => {
                 o.time = mem(fp::fadds(reg(o.time), fterm));
                 launch_key(o);
-                update_anim(o, update);
+                update_anim(o, again(&mut update));
                 return;
             }
             1 | 2 => state = load_data(data, o),
             3 => {
                 if o.flags & 0x80 != 0 {
-                    update_anim(o, update);
+                    update_anim(o, again(&mut update));
                 }
                 state = load_wait(data, o);
             }
@@ -401,7 +418,7 @@ pub fn interpret(
                     o.time = mem(fp::fsubs(reg(o.time), term));
                     o.set_state(state);
                 } else {
-                    update_anim(o, update);
+                    update_anim(o, again(&mut update));
                     o.set_state(5);
                     return;
                 }
@@ -422,24 +439,18 @@ pub fn interpret_all(
     data: &Archives,
     first: Option<FObjId>,
     rate: f32,
-    update: &mut impl FnMut(u8, f32),
+    mut update: Update,
 ) {
     let mut cur = first;
     while let Some(f) = cur {
-        interpret(fobjs, data, Some(f), rate, update);
+        interpret(fobjs, data, Some(f), rate, again(&mut update));
         cur = fobjs[f.0].next;
     }
 }
 
 /// Stops an FObj, first delivering a pending key, `HSD_FObjStopAnim`.
 #[doc(alias = "HSD_FObjStopAnim")]
-pub fn stop_anim(
-    fobjs: &mut FObjs,
-    data: &Archives,
-    f: Option<FObjId>,
-    rate: f32,
-    update: &mut impl FnMut(u8, f32),
-) {
+pub fn stop_anim(fobjs: &mut FObjs, data: &Archives, f: Option<FObjId>, rate: f32, update: Update) {
     let Some(id) = f else { return };
     if fobjs[id.0].op_intrp == OP_KEY {
         interpret(fobjs, data, f, rate, update);
@@ -454,11 +465,11 @@ pub fn stop_anim_all(
     data: &Archives,
     first: Option<FObjId>,
     rate: f32,
-    update: &mut impl FnMut(u8, f32),
+    mut update: Update,
 ) {
     let mut cur = first;
     while let Some(f) = cur {
-        stop_anim(fobjs, data, Some(f), rate, update);
+        stop_anim(fobjs, data, Some(f), rate, again(&mut update));
         cur = fobjs[f.0].next;
     }
 }
