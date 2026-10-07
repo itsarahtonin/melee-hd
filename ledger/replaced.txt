@@ -192,3 +192,4 @@ FogAdjInfoInit	Registers the fog range-adjustment class with HAL's class system;
 CObjAmnesia	Class reset run when HSD_CreateMainHeap forgets the class library with the heap at a scene change; melee-sim resets the CObj pool (and the current camera) with the heap.
 WObjAmnesia	Class reset run when HSD_CreateMainHeap forgets the class library with the heap at a scene change; melee-sim resets the WObj pool with the heap.
 LObjAmnesia	Class reset run when HSD_CreateMainHeap forgets the class library with the heap at a scene change; melee-sim resets the LObj pool and the current lights with the heap.
+psInitDataBankLocate	Relocates an effect bank's offsets in loaded data and fixes each command list's draw-order bits; melee-sim resolves bank offsets as it reads them and applies the fix to every kind it reads (hsd::particle::Bank, CmdList::kind).
