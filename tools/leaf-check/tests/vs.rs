@@ -800,10 +800,24 @@ fn key_repeat() {
         6,
         |f| {
             let map = sym("controller_map");
+            // Hold times about the map's own thresholds (`xF8`, `xFC`).
+            let half =
+                |f: &Fuzz, o: u32| u32::from(f.u8(map + o)) << 8 | u32::from(f.u8(map + o + 1));
+            let (mid, fast) = (half(f, 0xF8), half(f, 0xFC));
             for i in 0..4 {
-                let t = f.below(30);
+                let t = [0, 0, 1, f.below(30)][f.below(4) as usize];
                 f.put(map + 0x30 * i + 0x28, t);
-                let h = [0, 19, 39, 40, 99, 100][f.below(6) as usize];
+                let h = [
+                    0,
+                    19,
+                    39,
+                    40,
+                    99,
+                    100,
+                    mid.wrapping_sub(1),
+                    mid,
+                    fast.wrapping_sub(1),
+                ][f.below(9) as usize];
                 f.put(map + 0x30 * i + 0x2C, h);
             }
         },
@@ -1141,14 +1155,32 @@ fn respawn() {
 
 #[test]
 fn respawn_point() {
-    check("fn_80167638", |r, a| {
-        let (point, pos, off) = r.respawn_point(a.i(3));
-        vec![
-            Out::R3(point as u32),
-            Out::Words(a.r(4), vec_words(pos)),
-            Out::Words(a.r(5), vec_words(off)),
-        ]
-    });
+    check_fuzzed(
+        "fn_80167638",
+        8,
+        |f| {
+            // Which respawn platform places are taken.
+            let fighters = sym("controller") + 0x38;
+            for k in 0..6 {
+                let taken = f.below(3) == 0;
+                f.put8(fighters + 0xE * k + 8, u8::from(taken));
+            }
+            // Whether players respawn at their own entry points (`unk8C.b4`).
+            let flags = sym("stage_info") + 0x8C;
+            if f.below(2) == 0 {
+                let b = f.u8(flags);
+                f.put8(flags, b ^ 0x08);
+            }
+        },
+        |r, a| {
+            let (point, pos, off) = r.respawn_point(a.i(3));
+            vec![
+                Out::R3(point as u32),
+                Out::Words(a.r(4), vec_words(pos)),
+                Out::Words(a.r(5), vec_words(off)),
+            ]
+        },
+    );
 }
 
 // The pause screen.
@@ -1219,20 +1251,42 @@ fn pause_hide() {
 
 #[test]
 fn init_vs() {
-    check("fn_8016DCC0", |r, a| {
-        let d = StartMeleeData::import(&a.mem(), a.r(3), &mut NoPointers);
-        r.game.init_vs(&d);
-        vec![]
-    });
+    check_fuzzed(
+        "fn_8016DCC0",
+        8,
+        |f| {
+            // The timer's kind (`timer_enabled`, `timer_counts_up`) and its starting second.
+            let d = f.regs.gpr[3];
+            let b = f.u8(d) & !3 | f.below(4) as u8;
+            f.put8(d, b);
+            let second = [0, 1, 30, 60][f.below(4) as usize];
+            f.put8(d + 0x14, second);
+        },
+        |r, a| {
+            let d = StartMeleeData::import(&a.mem(), a.r(3), &mut NoPointers);
+            r.game.init_vs(&d);
+            vec![]
+        },
+    );
 }
 
 #[test]
 fn init_vs_player() {
-    check("fn_8016D8AC", |r, a| {
-        let d = PlayerInitData::import(&a.mem(), a.r(4), &mut NoPointers);
-        r.game.init_vs_player(a.i(3), &d);
-        vec![]
-    });
+    check_fuzzed(
+        "fn_8016D8AC",
+        6,
+        |f| {
+            // The slot a player's data names (0 for its own).
+            let d = f.regs.gpr[4];
+            let slot = f.below(5) as u8;
+            f.put8(d + 4, slot);
+        },
+        |r, a| {
+            let d = PlayerInitData::import(&a.mem(), a.r(4), &mut NoPointers);
+            r.game.init_vs_player(a.i(3), &d);
+            vec![]
+        },
+    );
 }
 
 #[test]
