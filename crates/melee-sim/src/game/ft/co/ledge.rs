@@ -14,9 +14,9 @@ use crate::mp::coll::LEFT_LEDGE_GRAB;
 use crate::vec::Vec3;
 
 /// `ftCommon_MotionVars_cliff`.
-const CLIFF_LEDGE_ID: usize = 0x0;
+pub(super) const CLIFF_LEDGE_ID: usize = 0x0;
 const CLIFF_X4: usize = 0x4;
-const CLIFF_X8: usize = 0x8;
+pub(super) const CLIFF_X8: usize = 0x8;
 
 /// `efAsync_Spawn`: an effect (the effects' port).
 pub(super) const EF_ASYNC_SPAWN: u32 = 0x8006_76F0;
@@ -198,7 +198,7 @@ impl Running<'_> {
     /// `ftCo_StopCeil_Anim`: falling when the animation says or ends.
     #[doc(alias = "ftCo_StopCeil_Anim")]
     pub fn co_stop_ceil_anim(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).throw_flag(2) || !self.anim_frames_remaining(gobj) {
+        if self.take_throw_flag3(gobj) || !self.anim_frames_remaining(gobj) {
             self.enter_fall(gobj);
         }
     }
@@ -270,6 +270,7 @@ impl Running<'_> {
     /// is, by the animation's offset; a ledge gone drops it.
     #[doc(alias = "ftCo_CliffCatch_Phys")]
     #[doc(alias = "ftCo_CliffWait_Phys")]
+    #[doc(alias = "ftCo_CliffJump1_Phys")]
     pub fn co_cliff_catch_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         let ledge = fp.mv_i32(CLIFF_LEDGE_ID);
@@ -359,25 +360,5 @@ impl Running<'_> {
             fp.x2227_b1 = true;
             self.enter_damage_fall(gobj);
         }
-    }
-
-    /// A ledge attack (`ftCo_8009AE38`), not ported yet.
-    pub fn cliff_attack_check(&mut self, _gobj: GObjId) -> bool {
-        unported_call("ftCo_8009AE38")
-    }
-
-    /// A ledge roll (`ftCo_8009AFD4`), not ported yet.
-    pub fn cliff_escape_check(&mut self, _gobj: GObjId) -> bool {
-        unported_call("ftCo_8009AFD4")
-    }
-
-    /// A ledge jump (`ftCo_8009B170`), not ported yet.
-    pub fn cliff_jump_check(&mut self, _gobj: GObjId) -> bool {
-        unported_call("ftCo_8009B170")
-    }
-
-    /// A ledge climb (`ftCo_8009AA0C`), not ported yet.
-    pub fn cliff_climb_check(&mut self, _gobj: GObjId) -> bool {
-        unported_call("ftCo_8009AA0C")
     }
 }

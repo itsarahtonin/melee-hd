@@ -518,6 +518,15 @@ fn stub_call_diffs(
                     format!("{j:?}"),
                     j.map_or(Some(0), |j| jobj_addr.get(&j).copied()),
                 ),
+                Val::F32Ref(v) => {
+                    if pointed[gi].map(|p| p[0]) != Some(v.to_bits()) {
+                        diffs.push(format!(
+                            "stubbed call {k} ({oa:#x}): r{} ours *{v:?}, theirs {:x?}",
+                            3 + gi,
+                            pointed[gi]
+                        ));
+                    }
+                }
                 Val::Vec(v) => {
                     let o = [v.x.to_bits(), v.y.to_bits(), v.z.to_bits()];
                     if pointed[gi] != Some(o) {

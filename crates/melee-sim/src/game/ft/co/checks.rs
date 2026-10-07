@@ -436,7 +436,8 @@ impl Running<'_> {
     pub fn escape_n_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
         if fp.input.held_buttons[0] & PAD_LR != 0 && self.escape_n_input(gobj) {
-            unported_call("ftCo_80099894");
+            self.enter_escape_n(gobj);
+            return true;
         }
         false
     }

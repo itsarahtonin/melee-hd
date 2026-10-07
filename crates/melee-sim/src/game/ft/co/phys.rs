@@ -29,7 +29,14 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Squat_Phys")]
     #[doc(alias = "ftCo_SquatRv_Phys")]
     #[doc(alias = "ftCo_AttackHi4_Phys")]
+    #[doc(alias = "ftCo_EscapeN_Phys")]
     #[doc(alias = "ftFx_SpecialLwStart_Phys")]
+    #[doc(alias = "ftCo_DownBound_Phys")]
+    #[doc(alias = "ftCo_DownWait_Phys")]
+    #[doc(alias = "ftCo_DownStand_Phys")]
+    #[doc(alias = "ftCo_DownAttack_Phys")]
+    #[doc(alias = "ftCo_DownSpot_Phys")]
+    #[doc(alias = "ftCo_Passive_Phys")]
     pub fn co_ground_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
     }
@@ -68,6 +75,7 @@ impl Running<'_> {
 
     /// `ftCo_Damage_Phys`: in hitstun the fighter can't drift.
     #[doc(alias = "ftCo_Damage_Phys")]
+    #[doc(alias = "ftCo_DownDamage_Phys")]
     pub fn co_damage_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if fp.ground_or_air == GA_AIR {
@@ -141,6 +149,8 @@ impl Running<'_> {
     /// Ground friction or the animation's motion: `ftCo_Attack11_Phys`, `ftCo_AttackS4_Phys`.
     #[doc(alias = "ftCo_Attack11_Phys")]
     #[doc(alias = "ftCo_AttackS4_Phys")]
+    #[doc(alias = "ftCo_Down_Phys")]
+    #[doc(alias = "ftCo_PassiveStand_Phys")]
     pub fn co_attack_ground_phys(&mut self, gobj: GObjId) {
         self.ground_friction_or_anim(gobj);
     }

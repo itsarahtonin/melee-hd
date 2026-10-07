@@ -11,13 +11,15 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8008_1504 => {
             g.co_cliff_catch_anim(gobj);
         }
-        // ftCo_CliffCatch_IASA, ftCo_LandingAir_IASA, ftCo_OttottoWait_Anim, ftCo_StopWall_IASA, ftCo_StopCeil_IASA, ftCo_MissFoot_IASA, ftCo_Sleep_IASA
-        0x8008_1540 | 0x8008_D7AC | 0x8009_A728 | 0x8009_EF40 | 0x8009_F0B8 | 0x8009_F43C
-        | 0x800B_FE70 => {
+        // ftCo_CliffCatch_IASA, ftCo_LandingAir_IASA, ftCo_DownBound_IASA, ftCo_DownStand_IASA, ftCo_Down_IASA, ftCo_DownAttack_IASA, ftCo_Passive_IASA, ftCo_PassiveStand_IASA, ftCo_EscapeN_IASA, ftCo_OttottoWait_Anim, ftCo_CliffClimb_IASA, ftCo_CliffAttack_IASA, ftCo_CliffEscape_IASA, ftCo_CliffJump1_IASA, ftCo_CliffJump2_IASA, ftCo_StopWall_IASA, ftCo_StopCeil_IASA, ftCo_DownDamage_IASA, ftCo_MissFoot_IASA, ftCo_Sleep_IASA, ftCo_DownSpot_IASA
+        0x8008_1540 | 0x8008_D7AC | 0x8009_7E1C | 0x8009_81D0 | 0x8009_83BC | 0x8009_85F0
+        | 0x8009_88E4 | 0x8009_8ADC | 0x8009_9A14 | 0x8009_A728 | 0x8009_ACA4 | 0x8009_AF90
+        | 0x8009_B12C | 0x8009_B2B4 | 0x8009_B460 | 0x8009_EF40 | 0x8009_F0B8 | 0x8009_F2B0
+        | 0x8009_F43C | 0x800B_FE70 | 0x800C_8C40 => {
             g.co_no_iasa(gobj);
         }
-        // ftCo_CliffCatch_Phys, ftCo_CliffWait_Phys
-        0x8008_1544 | 0x8009_A96C => {
+        // ftCo_CliffCatch_Phys, ftCo_CliffWait_Phys, ftCo_CliffJump1_Phys
+        0x8008_1544 | 0x8009_A96C | 0x8009_B2B8 => {
             g.co_cliff_catch_phys(gobj);
         }
         // ftCo_CliffCatch_Coll, ftCo_CliffWait_Coll
@@ -40,17 +42,18 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8008_A678 | 0x8008_D7D0 | 0x800C_9788 | 0x800C_AE60 | 0x800D_5F38 => {
             g.co_wait_coll(gobj);
         }
-        // ftCo_Attack11_Anim, ftCo_Attack12_Anim, ftCo_Attack13_Anim, ftCo_AttackDash_Anim, ftCo_AttackHi4_Anim, ftCo_AttackLw4_Anim, ftCo_StopWall_Anim, ftCo_Dash_Anim, ftCo_SquatRv_Anim
+        // ftCo_Attack11_Anim, ftCo_Attack12_Anim, ftCo_Attack13_Anim, ftCo_AttackDash_Anim, ftCo_AttackHi4_Anim, ftCo_AttackLw4_Anim, ftCo_DownStand_Anim, ftCo_Down_Anim, ftCo_DownAttack_Anim, ftCo_Passive_Anim, ftCo_PassiveStand_Anim, ftCo_StopWall_Anim, ftCo_Dash_Anim, ftCo_SquatRv_Anim
         0x8008_AC9C | 0x8008_B040 | 0x8008_B354 | 0x8008_B548 | 0x8008_CA98 | 0x8008_CCBC
-        | 0x8009_EF04 | 0x800C_A1F4 | 0x800D_6658 => {
+        | 0x8009_8194 | 0x8009_8380 | 0x8009_85B4 | 0x8009_88A8 | 0x8009_8AA0 | 0x8009_EF04
+        | 0x800C_A1F4 | 0x800D_6658 => {
             g.co_wait_when_done_anim(gobj);
         }
         // ftCo_Attack11_IASA, ftCo_Attack12_IASA
         0x8008_ACD8 | 0x8008_B07C => {
             g.co_attack1x_iasa(gobj);
         }
-        // ftCo_Attack11_Phys, ftCo_AttackS4_Phys
-        0x8008_ADF0 | 0x8008_C7F0 => {
+        // ftCo_Attack11_Phys, ftCo_AttackS4_Phys, ftCo_Down_Phys, ftCo_PassiveStand_Phys
+        0x8008_ADF0 | 0x8008_C7F0 | 0x8009_83C0 | 0x8009_8AE0 => {
             g.co_attack_ground_phys(gobj);
         }
         // ftCo_Attack11_Coll, ftCo_AttackDash_Coll, ftCo_AttackS3_Coll, ftCo_AttackHi3_Coll, ftCo_AttackLw3_Coll, ftCo_AttackS4_Coll, ftCo_AttackHi4_Coll, ftCo_AttackLw4_Coll
@@ -78,9 +81,11 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8008_B910 | 0x8008_BAD4 | 0x8008_CAD4 | 0x8008_CCF8 | 0x800C_EE00 => {
             g.co_attack_iasa(gobj);
         }
-        // ftCo_AttackS3_Phys, ftCo_AttackHi3_Phys, ftCo_AttackLw3_Phys, ftCo_AttackHi4_Phys, ftCo_AttackLw4_Phys, ftCo_LandingAir_Phys, ftCo_Turn_Phys, ftCo_KneeBend_Phys, ftCo_Landing_Phys, ftCo_Squat_Phys, ftCo_SquatRv_Phys, ftFx_SpecialLwStart_Phys
+        // ftCo_AttackS3_Phys, ftCo_AttackHi3_Phys, ftCo_AttackLw3_Phys, ftCo_AttackHi4_Phys, ftCo_AttackLw4_Phys, ftCo_LandingAir_Phys, ftCo_DownBound_Phys, ftCo_DownWait_Phys, ftCo_DownStand_Phys, ftCo_DownAttack_Phys, ftCo_Passive_Phys, ftCo_EscapeN_Phys, ftCo_DownSpot_Phys, ftCo_Turn_Phys, ftCo_KneeBend_Phys, ftCo_Landing_Phys, ftCo_Squat_Phys, ftCo_SquatRv_Phys, ftFx_SpecialLwStart_Phys
         0x8008_B940 | 0x8008_BB04 | 0x8008_BF84 | 0x8008_CB04 | 0x8008_CD28 | 0x8008_D7B0
-        | 0x800C_9BEC | 0x800C_B6AC | 0x800D_5F18 | 0x800D_623C | 0x800D_6784 | 0x800E_8864 => {
+        | 0x8009_7E20 | 0x8009_807C | 0x8009_81D4 | 0x8009_85F4 | 0x8009_88E8 | 0x8009_9A18
+        | 0x800C_8C44 | 0x800C_9BEC | 0x800C_B6AC | 0x800D_5F18 | 0x800D_623C | 0x800D_6784
+        | 0x800E_8864 => {
             g.co_ground_phys(gobj);
         }
         // ftCo_AttackLw3_Anim
@@ -120,17 +125,53 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8008_F7F0 => {
             g.co_damage_anim(gobj);
         }
-        // ftCo_Damage_Phys
-        0x8008_FB18 => {
+        // ftCo_Damage_IASA
+        0x8008_FA44 => {
+            g.co_damage_iasa(gobj);
+        }
+        // ftCo_Damage_Phys, ftCo_DownDamage_Phys
+        0x8008_FB18 | 0x8009_F2B4 => {
             g.co_damage_phys(gobj);
+        }
+        // ftCo_Damage_Coll
+        0x8008_FB64 => {
+            g.co_damage_coll(gobj);
         }
         // ftCo_DamageFly_Anim
         0x8008_FD98 => {
             g.co_damage_fly_anim(gobj);
         }
+        // ftCo_DamageFly_IASA, ftCo_DamageFlyRoll_IASA
+        0x8008_FF48 | 0x8009_0324 => {
+            g.co_damage_fly_iasa(gobj);
+        }
         // ftCo_DamageFly_Phys
         0x8008_FF84 => {
             g.co_damage_fly_phys(gobj);
+        }
+        // ftCo_DamageFly_Coll, ftCo_DamageFlyRoll_Coll
+        0x8009_00EC | 0x8009_04C0 => {
+            g.co_damage_fly_coll(gobj);
+        }
+        // ftCo_DamageFlyRoll_Anim
+        0x8009_01D0 => {
+            g.co_damage_fly_roll_anim(gobj);
+        }
+        // ftCo_DamageFlyRoll_Phys
+        0x8009_035C => {
+            g.co_damage_fly_roll_phys(gobj);
+        }
+        // ftCo_DamageFall_Anim, ftCo_Sleep_Anim
+        0x8009_0824 | 0x800B_FE6C => {
+            g.co_sleep_anim(gobj);
+        }
+        // ftCo_DamageFall_IASA
+        0x8009_0828 => {
+            g.co_damage_fall_iasa(gobj);
+        }
+        // ftCo_DamageFall_Coll
+        0x8009_095C => {
+            g.co_damage_fall_coll(gobj);
         }
         // ftCo_GuardOn_Phys, ftCo_Guard_Phys
         0x8009_2870 | 0x8009_2B70 => {
@@ -151,6 +192,43 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         // ftCo_FallSpecial_Coll
         0x8009_6C98 => {
             g.co_fall_special_coll(gobj);
+        }
+        // ftCo_DownBound_Anim
+        0x8009_7DC0 => {
+            g.co_down_bound_anim(gobj);
+        }
+        // ftCo_DownBound_Coll
+        0x8009_7E40 => {
+            g.co_down_bound_coll(gobj);
+        }
+        // ftCo_DownWait_Anim
+        0x8009_7FC0 => {
+            g.co_down_wait_anim(gobj);
+        }
+        // ftCo_DownWait_IASA
+        0x8009_802C => {
+            g.co_down_wait_iasa(gobj);
+        }
+        // ftCo_DownWait_Coll, ftCo_DownStand_Coll, ftCo_Passive_Coll, ftCo_DownSpot_Coll, ftCo_Turn_Coll, ftCo_KneeBend_Coll, ftCo_Squat_Coll, ftCo_SquatWait_Coll, ftCo_SquatRv_Coll
+        0x8009_809C | 0x8009_81F4 | 0x8009_8908 | 0x800C_8C64 | 0x800C_9C0C | 0x800C_B6CC
+        | 0x800D_625C | 0x800D_65B8 | 0x800D_67A4 => {
+            g.co_fall_off_coll(gobj);
+        }
+        // ftCo_Down_Coll, ftCo_DownAttack_Coll, ftCo_PassiveStand_Coll, ftCo_Escape_Coll, ftCo_EscapeN_Coll
+        0x8009_83E0 | 0x8009_8614 | 0x8009_8B00 | 0x8009_9734 | 0x8009_9A38 => {
+            g.co_escape_coll(gobj);
+        }
+        // ftCo_Escape_Anim
+        0x8009_94D8 => {
+            g.co_escape_anim(gobj);
+        }
+        // ftCo_Escape_IASA
+        0x8009_96F0 => {
+            g.co_escape_iasa(gobj);
+        }
+        // ftCo_Escape_Phys
+        0x8009_9714 => {
+            g.co_escape_phys(gobj);
         }
         // ftCo_EscapeAir_Anim
         0x8009_9BD0 => {
@@ -204,6 +282,34 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8009_A8FC => {
             g.co_cliff_wait_iasa(gobj);
         }
+        // ftCo_CliffClimb_Anim, ftCo_CliffAttack_Anim, ftCo_CliffEscape_Anim
+        0x8009_AC68 | 0x8009_AF70 | 0x8009_B10C => {
+            g.co_cliff_climb_anim(gobj);
+        }
+        // ftCo_CliffClimb_Phys, ftCo_CliffAttack_Phys, ftCo_CliffEscape_Phys
+        0x8009_ACA8 | 0x8009_AF94 | 0x8009_B130 => {
+            g.co_cliff_climb_phys(gobj);
+        }
+        // ftCo_CliffClimb_Coll, ftCo_CliffAttack_Coll, ftCo_CliffEscape_Coll, ftCo_CliffJump1_Coll
+        0x8009_ADA4 | 0x8009_AFB4 | 0x8009_B150 | 0x8009_B2D8 => {
+            g.co_cliff_climb_coll(gobj);
+        }
+        // ftCo_CliffJump1_Anim
+        0x8009_B278 => {
+            g.co_cliff_jump1_anim(gobj);
+        }
+        // ftCo_CliffJump2_Anim
+        0x8009_B424 => {
+            g.co_cliff_jump2_anim(gobj);
+        }
+        // ftCo_CliffJump2_Phys
+        0x8009_B464 => {
+            g.co_cliff_jump2_phys(gobj);
+        }
+        // ftCo_CliffJump2_Coll
+        0x8009_B4A0 => {
+            g.co_cliff_jump2_coll(gobj);
+        }
         // ftCo_StopWall_Coll
         0x8009_EF48 => {
             g.co_stop_wall_coll(gobj);
@@ -216,13 +322,21 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8009_F0C0 => {
             g.co_stop_ceil_coll(gobj);
         }
+        // ftCo_DownDamage_Anim
+        0x8009_F1E0 => {
+            g.co_down_damage_anim(gobj);
+        }
+        // ftCo_DownDamage_Coll
+        0x8009_F2D4 => {
+            g.co_down_damage_coll(gobj);
+        }
         // ftCo_MissFoot_Anim
         0x8009_F400 => {
             g.co_miss_foot_anim(gobj);
         }
-        // ftCo_Sleep_Anim
-        0x800B_FE6C => {
-            g.co_sleep_anim(gobj);
+        // ftCo_DownSpot_Anim
+        0x800C_8C04 => {
+            g.co_down_spot_anim(gobj);
         }
         // ftCo_Walk_Anim
         0x800C_95F4 => {
@@ -243,10 +357,6 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         // ftCo_Turn_IASA
         0x800C_99F8 => {
             g.co_turn_iasa(gobj);
-        }
-        // ftCo_Turn_Coll, ftCo_KneeBend_Coll, ftCo_Squat_Coll, ftCo_SquatWait_Coll, ftCo_SquatRv_Coll
-        0x800C_9C0C | 0x800C_B6CC | 0x800D_625C | 0x800D_65B8 | 0x800D_67A4 => {
-            g.co_fall_off_coll(gobj);
         }
         // ftCo_TurnRun_Anim
         0x800C_9E10 => {

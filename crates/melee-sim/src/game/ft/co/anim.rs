@@ -243,7 +243,7 @@ impl Running<'_> {
     /// `ftCo_8008F744`: hitstun (`mv` x0) counts down; at its end the fighter can act and its
     /// combo window opens.
     #[doc(alias = "ftCo_8008F744")]
-    fn damage_tick(&mut self, gobj: GObjId) {
+    pub(super) fn damage_tick(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.mv_f32(0) > 0.0 {
             fp.set_mv_f32(0, fp::fsubs(reg(fp.mv_f32(0)), 1.0));
@@ -283,5 +283,6 @@ impl Running<'_> {
 
     /// `ftCo_Sleep_Anim`: a sleeping fighter (Zelda while Sheik plays) does nothing.
     #[doc(alias = "ftCo_Sleep_Anim")]
+    #[doc(alias = "ftCo_DamageFall_Anim")]
     pub fn co_sleep_anim(&mut self, _gobj: GObjId) {}
 }

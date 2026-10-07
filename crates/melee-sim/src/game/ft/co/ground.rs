@@ -496,6 +496,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Attack12_Anim")]
     #[doc(alias = "ftCo_Attack13_Anim")]
     #[doc(alias = "ftCo_StopWall_Anim")]
+    #[doc(alias = "ftCo_Down_Anim")]
+    #[doc(alias = "ftCo_DownStand_Anim")]
+    #[doc(alias = "ftCo_DownAttack_Anim")]
+    #[doc(alias = "ftCo_Passive_Anim")]
+    #[doc(alias = "ftCo_PassiveStand_Anim")]
     pub fn co_wait_when_done_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_wait(gobj);
@@ -929,6 +934,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Squat_Coll")]
     #[doc(alias = "ftCo_SquatWait_Coll")]
     #[doc(alias = "ftCo_SquatRv_Coll")]
+    #[doc(alias = "ftCo_DownWait_Coll")]
+    #[doc(alias = "ftCo_DownStand_Coll")]
+    #[doc(alias = "ftCo_DownSpot_Coll")]
+    #[doc(alias = "ftCo_Passive_Coll")]
     pub fn co_fall_off_coll(&mut self, gobj: GObjId) {
         self.ground_coll_fall_off(gobj);
     }

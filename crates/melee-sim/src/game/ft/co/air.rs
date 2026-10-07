@@ -444,6 +444,20 @@ impl Running<'_> {
     #[doc(alias = "ftCo_MissFoot_IASA")]
     #[doc(alias = "ftCo_CliffCatch_IASA")]
     #[doc(alias = "ftCo_Sleep_IASA")]
+    #[doc(alias = "ftCo_EscapeN_IASA")]
+    #[doc(alias = "ftCo_DownBound_IASA")]
+    #[doc(alias = "ftCo_CliffClimb_IASA")]
+    #[doc(alias = "ftCo_CliffAttack_IASA")]
+    #[doc(alias = "ftCo_CliffEscape_IASA")]
+    #[doc(alias = "ftCo_CliffJump1_IASA")]
+    #[doc(alias = "ftCo_CliffJump2_IASA")]
+    #[doc(alias = "ftCo_Down_IASA")]
+    #[doc(alias = "ftCo_DownStand_IASA")]
+    #[doc(alias = "ftCo_DownAttack_IASA")]
+    #[doc(alias = "ftCo_DownDamage_IASA")]
+    #[doc(alias = "ftCo_DownSpot_IASA")]
+    #[doc(alias = "ftCo_Passive_IASA")]
+    #[doc(alias = "ftCo_PassiveStand_IASA")]
     pub fn co_no_iasa(&mut self, _gobj: GObjId) {}
 
     /// Falling helpless, `ftCo_80096900` (and `ftCo_800969D8`, which blends over `blend`
@@ -577,11 +591,6 @@ impl Running<'_> {
         } else {
             self.enter_wait(gobj);
         }
-    }
-
-    /// The tumble (`ftCo_80090780`), not ported yet.
-    pub(super) fn enter_damage_fall(&mut self, _gobj: GObjId) {
-        unported_call("ftCo_80090780")
     }
 
     /// `ftCo_800CC988`: the lean's blend between the fall animations.

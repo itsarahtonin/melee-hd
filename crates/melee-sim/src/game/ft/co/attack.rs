@@ -699,13 +699,4 @@ impl Running<'_> {
         let _ = gobj;
         unported_call("ftCo_800D8AE0")
     }
-
-    /// A roll from a dash with a shoulder held, `ftCo_80099264`.
-    #[doc(alias = "ftCo_80099264")]
-    pub fn escape_forward_check(&mut self, gobj: GObjId) -> bool {
-        if self.game.fighter(gobj).input.held_buttons[0] & PAD_LR != 0 {
-            unported_call("ftCo_800992A8");
-        }
-        false
-    }
 }

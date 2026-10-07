@@ -163,8 +163,8 @@ fn unported(what: &str, addr: u32) -> ! {
 }
 
 /// What an original function takes or returns in its registers, for [`call`]: an integer, a
-/// float as a register holds it, a GObj, a fighter (a `Fighter*`), or a vector passed or
-/// returned by pointer.
+/// float as a register holds it, a GObj, a fighter (a `Fighter*`), a joint, or a vector or
+/// float passed or returned by pointer.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Val {
     None,
@@ -176,6 +176,8 @@ pub enum Val {
     JObj(Option<crate::hsd::jobj::JObjId>),
     /// What an effect spawn returns: an effect, a generator, or null.
     Spawned(super::ef::Spawned),
+    /// A float passed by pointer.
+    F32Ref(f32),
 }
 
 impl Val {
