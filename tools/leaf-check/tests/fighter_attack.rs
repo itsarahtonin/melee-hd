@@ -196,7 +196,13 @@ fn run_one(ctx: &Ctx, path: &Path, i: usize, prepare: fn(&mut Call, usize)) -> O
     THEIRS.with(|t| t.borrow_mut().clear());
     let after = match catch_unwind(AssertUnwindSafe(|| run_capture(ctx, &cap.call))) {
         Ok(after) => after,
-        Err(p) => return Outcome::Skipped(format!("the reference stopped: {}", panic_text(&*p))),
+        Err(p) => {
+            let why = p
+                .downcast_ref::<ssbm_rt::Fault>()
+                .map(|f| format!("a fault at {:#x}", f.addr))
+                .unwrap_or_else(|| panic_text(&*p));
+            return Outcome::Skipped(format!("the reference stopped: {why}"));
+        }
     };
     let gobj = *maps
         .gobjs
@@ -337,17 +343,9 @@ impl Pick {
     }
 }
 
-/// Switches the other fighter's first hitbox on over this fighter's middle: a fresh box of
-/// varied damage, element, knockback and sound, sometimes phantom, sometimes sweeping, with
-/// no victims yet.
-fn arm_hitbox(call: &mut Call, i: usize) {
-    let gobj = call.regs.gpr[3];
-    let Some(other) = other_fighter(call, gobj) else {
-        return;
-    };
-    let (me, fp) = (fighter_of(call, gobj), fighter_of(call, other));
-    let mut pick = Pick(i as u32 * 7 + 3);
-    let hit = fp + 0x914;
+/// Writes a fresh live box at `hit` over `at`: varied damage, element, knockback and sound,
+/// sometimes phantom, sometimes sweeping, with no victims yet.
+fn arm_box(call: &mut Call, hit: u32, at: (f32, f32, f32), pick: &mut Pick, elements: &[u32]) {
     poke_u32(call, hit, 1);
     poke_u32(call, hit + 4, pick.next(4));
     poke_u32(call, hit + 8, pick.next(20));
@@ -367,7 +365,7 @@ fn arm_hitbox(call: &mut Call, i: usize) {
     );
     poke_u32(call, hit + 0x28, [0, 0, 0, 40, 90][pick.next(5) as usize]);
     poke_u32(call, hit + 0x2C, [0, 10, 30, 60][pick.next(4) as usize]);
-    let element = [0, 0, 0, 1, 2, 3, 5, 11, 13, 15][pick.next(10) as usize];
+    let element = elements[pick.next(elements.len() as u32) as usize];
     poke_u32(call, hit + 0x30, element);
     poke_u32(call, hit + 0x34, pick.next(10).wrapping_sub(3));
     poke_u32(call, hit + 0x38, pick.next(3));
@@ -379,10 +377,7 @@ fn arm_hitbox(call: &mut Call, i: usize) {
     poke_bit(call, hit + 0x42, 4, pick.next(2) == 0);
     poke_bit(call, hit + 0x42, 5, true);
     poke_bit(call, hit + 0x43, 1, pick.next(3) == 0);
-    poke_bit(call, hit + 0x43, 2, pick.next(5) == 0);
-    // Where: this fighter's position, raised to its middle, the sweep from a little away.
-    let pos = |o: u32| f32::from_bits(peek_u32(call, me + 0xB0 + o));
-    let (x, y, z) = (pos(0), pos(4) + 8.0, pos(8));
+    let (x, y, z) = at;
     let dx = [0.0, 3.0, -6.0, 12.0][pick.next(4) as usize];
     for (base, off) in [(0x4C, 0.0), (0x58, dx)] {
         poke_f32(call, hit + base, x + off);
@@ -393,6 +388,72 @@ fn arm_hitbox(call: &mut Call, i: usize) {
         poke_u32(call, hit + 0x74 + 8 * k, 0);
     }
     poke_u32(call, hit + 0x134, 0);
+}
+
+/// A fighter's middle: its position raised a little.
+fn middle(call: &Call, fp: u32) -> (f32, f32, f32) {
+    let pos = |o: u32| f32::from_bits(peek_u32(call, fp + 0xB0 + o));
+    (pos(0), pos(4) + 8.0, pos(8))
+}
+
+/// Switches the other fighter's first hitbox on over this fighter, and by the call's index
+/// sets up one of the cases real calls rarely reach: plain hits; this fighter's own first box
+/// on over the same place with both on the ground (clanks); this fighter's shield up; or both
+/// fighters' thrown hitboxes live and touching.
+fn arm_hitbox(call: &mut Call, i: usize) {
+    let gobj = call.regs.gpr[3];
+    let Some(other) = other_fighter(call, gobj) else {
+        return;
+    };
+    let (me, fp) = (fighter_of(call, gobj), fighter_of(call, other));
+    let mut pick = Pick(i as u32 * 7 + 3);
+    let at = middle(call, me);
+    let phantom = pick.next(5) == 0;
+    match i % 4 {
+        0 => {
+            arm_box(
+                call,
+                fp + 0x914,
+                at,
+                &mut pick,
+                &[0, 0, 0, 1, 2, 3, 5, 11, 13],
+            );
+            poke_bit(call, fp + 0x914 + 0x43, 2, phantom);
+        }
+        1 => {
+            // A clank needs ordinary boxes, on the ground.
+            let elements = [0, 0, 1, 3, 3];
+            arm_box(call, fp + 0x914, at, &mut pick, &elements);
+            arm_box(call, me + 0x914, at, &mut pick, &elements);
+            poke_u32(call, fp + 0xE0, 0);
+            poke_u32(call, me + 0xE0, 0);
+        }
+        2 => {
+            arm_box(call, fp + 0x914, at, &mut pick, &[0, 0, 2, 3, 11]);
+            poke_bit(call, fp + 0x914 + 0x43, 2, phantom);
+            // The shield up (`x221B_b0`), maybe one that only guards the front (`b3`) or only
+            // takes some boxes (`b4`), and its bubble moved over the box.
+            poke_bit(call, me + 0x221B, 0, true);
+            poke_bit(call, me + 0x221B, 3, pick.next(3) == 0);
+            poke_bit(call, me + 0x221B, 4, pick.next(4) == 0);
+            poke_f32(
+                call,
+                me + 0x19C0 + 0x20,
+                [4.0, 10.0, 16.0][pick.next(3) as usize],
+            );
+            poke_f32(call, me + 0x199C, [0.0, 0.25, 0.8][pick.next(3) as usize]);
+            poke_f32(call, me + 0x19B4, [0.0, 0.5][pick.next(2) as usize]);
+        }
+        _ => {
+            // Thrown fighters: both boxes live (`x2227_b2`), meeting, in the air or not.
+            let air = pick.next(3) != 0;
+            for f in [fp, me] {
+                arm_box(call, f + 0x1064, at, &mut pick, &[0]);
+                poke_bit(call, f + 0x2227, 2, true);
+                poke_u32(call, f + 0xE0, u32::from(air));
+            }
+        }
+    }
 }
 
 /// Hits from a fighter's box, from real states.
