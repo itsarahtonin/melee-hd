@@ -103,23 +103,23 @@ fn vector_routines_match() {
         );
         fns::PSVECScale(ctx, v(ctx, A), v(ctx, OUT), arg(s));
         assert_eq!(
-            vec_bits(a.scale(s)),
+            vec_bits(a.sdk_scale(s)),
             read_f32s(ctx, OUT, 3),
             "scale {a:?} {s} {mode:?}"
         );
         fns::PSVECNormalize(ctx, v(ctx, A), v(ctx, OUT));
         assert_eq!(
-            vec_bits(a.normalize()),
+            vec_bits(a.sdk_normalize()),
             read_f32s(ctx, OUT, 3),
             "normalize {a:?} {mode:?}"
         );
         let mag = bits(fns::PSVECMag(ctx, v(ctx, A)));
-        assert_eq!(a.length().to_bits(), mag, "mag {a:?} {mode:?}");
+        assert_eq!(a.sdk_length().to_bits(), mag, "mag {a:?} {mode:?}");
         let dot = bits(fns::PSVECDotProduct(ctx, v(ctx, A), v(ctx, B)));
-        assert_eq!(a.dot(b).to_bits(), dot, "dot {a:?} {b:?} {mode:?}");
+        assert_eq!(a.sdk_dot(b).to_bits(), dot, "dot {a:?} {b:?} {mode:?}");
         fns::PSVECCrossProduct(ctx, v(ctx, A), v(ctx, B), v(ctx, OUT));
         assert_eq!(
-            vec_bits(a.cross(b)),
+            vec_bits(a.sdk_cross(b)),
             read_f32s(ctx, OUT, 3),
             "cross {a:?} {b:?} {mode:?}"
         );

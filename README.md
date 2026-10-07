@@ -4,7 +4,7 @@ Super Smash Bros. Melee NTSC 1.02 (GALE01 revision 2) rebuilt in idiomatic Rust,
 
 melee-hd is the follow-on to [ssbm-rs](https://github.com/itsarahtonin/ssbm-rs), a faithful port that keeps the GameCube's memory layout and checks every function against the original machine code. melee-hd rewrites the game from scratch into native structures and checks its simulation against ssbm-rs at the [`melee-hd-base`](https://github.com/itsarahtonin/ssbm-rs/releases/tag/melee-hd-base) tag, tick by tick, and against Slippi replays.
 
-**Status:** early. The game's random numbers and math routines (sin, cos, tan, sqrt, atan, atan2, acos, asin) are ported and match ssbm-rs bit for bit; the game itself is not ported yet.
+**Status:** early. The game's random numbers, its math routines (sin, cos, tan, sqrt, atan, atan2, acos, asin), the SDK's paired-single vector and matrix routines and most of the game's own vector helpers are ported and match ssbm-rs bit for bit; the game itself is not ported yet.
 
 ## Goals
 

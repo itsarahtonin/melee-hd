@@ -159,6 +159,22 @@ pub fn sqrt(x: f32) -> f32 {
     mem(fp::frsp(fp::fmul(xr, g)))
 }
 
+/// `lbVector_sqrtf_accurate`: the inline `sqrtf` with a fourth Newton step.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+pub fn sqrt_accurate(x: f32) -> f32 {
+    let xr = reg(x);
+    if !(xr > 0.0) {
+        return x;
+    }
+    let mut g = fp::frsqrte(xr);
+    for _ in 0..4 {
+        let gg = fp::fmul(g, g);
+        let half = fp::fmul(0.5, g);
+        g = fp::fmul(half, fp::fnmsub(xr, gg, 3.0));
+    }
+    mem(fp::frsp(fp::fmul(xr, g)))
+}
+
 /// `1 / sqrt(x)` in single precision, lbtrigf's static `lb_sqrtf`; a NaN for negatives and
 /// NaN, infinity for zero.
 fn rsqrt(x: f64) -> f64 {
