@@ -194,7 +194,7 @@ fn destroy_all_calls() {
 #[test]
 fn pause_and_flag_calls() {
     each_dir("efLib_PauseAll", 1, &|r, maps, call| {
-        ef::pause_all(r.game, gobj_arg(maps, call));
+        ef::pause_all(r.game, maps.gobjs.get(&call.regs.gpr[3]).copied());
         Ret::Nothing
     });
 }
@@ -596,7 +596,11 @@ fn set_flags_resume_and_pause() {
             call.regs.gpr[4] = 1 << (i % 3);
         },
         &|r, maps, call| {
-            ef::set_flags(r.game, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+            ef::set_flags(
+                r.game,
+                maps.gobjs.get(&call.regs.gpr[3]).copied(),
+                call.regs.gpr[4] as i32,
+            );
             Ret::Nothing
         },
     );
@@ -605,7 +609,7 @@ fn set_flags_resume_and_pause() {
         "efLib_ResumeAll",
         &|call, _| call.regs.gpr[3] = call.regs.gpr[4],
         &|r, maps, call| {
-            ef::resume_all(r.game, gobj_arg(maps, call));
+            ef::resume_all(r.game, maps.gobjs.get(&call.regs.gpr[3]).copied());
             Ret::Nothing
         },
     );
@@ -618,7 +622,7 @@ fn set_flags_resume_and_pause() {
             call.regs.gpr[3] = word(call, ud + 8);
         },
         &|r, maps, call| {
-            ef::pause_all(r.game, gobj_arg(maps, call));
+            ef::pause_all(r.game, maps.gobjs.get(&call.regs.gpr[3]).copied());
             Ret::Nothing
         },
     );
@@ -646,6 +650,10 @@ fn destroy_calls() {
         "efLib_DestroyAll",
         &|call, _| call.regs.gpr[3] = call.regs.gpr[4],
         &|r, maps, call| {
+            // `efLib_DestroyAll` reads its GObj's object kind: a null spawner faults.
+            if call.regs.gpr[3] == 0 {
+                panic!("efLib_DestroyAll of a null GObj isn't ported (the original faults)");
+            }
             ef::destroy_all(r, gobj_arg(maps, call));
             Ret::Nothing
         },
@@ -818,7 +826,7 @@ fn queue_clear_calls() {
         &|r, maps, call| {
             let f = queue_owner(maps, call.regs.gpr[3]);
             let mut head = r.game.fighters[f.0].x60C;
-            ef::queue_clear(r, &mut head);
+            ef::queue_clear(r.game, &mut head);
             r.game.fighters[f.0].x60C = head;
             Ret::Nothing
         },
@@ -989,5 +997,56 @@ fn param_calls() {
                 Ret::Nothing
             },
         );
+    }
+}
+
+/// Lists the saved calls whose state doesn't import or round-trip (run with `--ignored`):
+/// those reach parts of the game the importer doesn't model yet, and are kept out of the
+/// directories the checks read.
+#[test]
+#[ignore = "a tool: screens new captures"]
+fn screen_captures() {
+    let Some(index) = disc_index() else { return };
+    for d in dirs() {
+        let Ok(entries) = std::fs::read_dir(&d) else {
+            continue;
+        };
+        for e in entries.flatten() {
+            let path = e.path();
+            if path.extension().is_none_or(|x| x != "call") {
+                continue;
+            }
+            let cap = Capture::read(&path);
+            let ok = catch_unwind(AssertUnwindSafe(|| {
+                let mut archives = Archives::default();
+                let data = DataMap {
+                    loaded: find_archives_in(index, &cap.call.mem1, &mut archives),
+                };
+                let mut imp = Importer::new(&cap, &data).with_archives(&archives);
+                imp.world();
+                imp.stage();
+                imp.ids();
+                let Importer { game, maps, .. } = imp;
+                if std::env::var_os("EF_DEBUG").is_some() {
+                    println!("queued {:x?}", maps.queued);
+                    for (&a, _) in &maps.fighters {
+                        println!("fighter {a:#x} x60C {:#x}", word(&cap.call, a + 0x60C));
+                    }
+                    for (&a, _) in &maps.items {
+                        println!("item {a:#x} xBC0 {:#x}", word(&cap.call, a + 0xBC0));
+                    }
+                }
+                let mut cmp = Comparer::new(&cap.call.mem1, &data, &game, maps);
+                cmp.world();
+                cmp.stage();
+                cmp.ids();
+                cmp.diffs.first().cloned()
+            }));
+            match ok {
+                Ok(None) => {}
+                Ok(Some(d)) => println!("BAD {} round trip: {d}", path.display()),
+                Err(_) => println!("BAD {} import panics", path.display()),
+            }
+        }
     }
 }

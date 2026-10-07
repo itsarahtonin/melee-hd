@@ -122,6 +122,13 @@ pub struct Importer<'a> {
     /// The freed items and joint tables, released onto our free lists after the live ones.
     pub(crate) free_items: Vec<u32>,
     pub(crate) free_tables: Vec<u32>,
+    /// The effects' and deferred spawns' freed blocks (their allocators' free lists), and the
+    /// slots made for those something still points to, released after the import.
+    pub(crate) ef_free: Option<(
+        std::collections::HashSet<u32>,
+        std::collections::HashSet<u32>,
+    )>,
+    pub(crate) ef_freed: Vec<(bool, u32)>,
 }
 
 impl<'a> Importer<'a> {
@@ -135,6 +142,8 @@ impl<'a> Importer<'a> {
             parts_len: 0,
             archives: None,
             stale: false,
+            ef_free: None,
+            ef_freed: Vec::new(),
             freed: false,
             dangling_at: HashMap::new(),
             items_done: Default::default(),

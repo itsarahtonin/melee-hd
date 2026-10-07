@@ -107,13 +107,13 @@ pub fn init(r: &mut Running) {
 }
 
 /// The effects on both effect links whose parent is `parent`, in link order.
-fn children_of(game: &Game, parent: GObjId) -> Vec<(GObjId, EffectId)> {
+fn children_of(game: &Game, parent: Option<GObjId>) -> Vec<(GObjId, EffectId)> {
     let mut out = Vec::new();
     for link in [P_LINK, P_LINK_AUX] {
         let mut g = game.world.first_in(link);
         while let Some(gobj) = g {
             if let Some(UserData::Effect(e)) = game.world.gobjs[gobj.0].user_data
-                && game.ef.effects[e.0].parent == Some(parent)
+                && game.ef.effects[e.0].parent == parent
             {
                 out.push((gobj, e));
             }
@@ -125,7 +125,7 @@ fn children_of(game: &Game, parent: GObjId) -> Vec<(GObjId, EffectId)> {
 
 /// Marks every effect `gobj` spawned with `flags`, `efLib_SetFlags`.
 #[doc(alias = "efLib_SetFlags")]
-pub fn set_flags(game: &mut Game, gobj: GObjId, flags: i32) {
+pub fn set_flags(game: &mut Game, gobj: Option<GObjId>, flags: i32) {
     for (_, e) in children_of(game, gobj) {
         let ef = &mut game.ef.effects[e.0];
         ef.expire_flags = (i32::from(ef.expire_flags) | flags) as i8;
@@ -195,7 +195,7 @@ pub fn destroy_all(r: &mut Running, gobj: GObjId) {
 
 /// Pauses every effect `gobj` spawned from its next update, `efLib_PauseAll`.
 #[doc(alias = "efLib_PauseAll")]
-pub fn pause_all(game: &mut Game, gobj: GObjId) {
+pub fn pause_all(game: &mut Game, gobj: Option<GObjId>) {
     for (_, e) in children_of(game, gobj) {
         let ef = &mut game.ef.effects[e.0];
         ef.state_flags = ef.state_flags & STATE_ASYNC | STATE_ENTERING_PAUSE;
@@ -204,7 +204,7 @@ pub fn pause_all(game: &mut Game, gobj: GObjId) {
 
 /// Resumes every effect `gobj` spawned, `efLib_ResumeAll`.
 #[doc(alias = "efLib_ResumeAll")]
-pub fn resume_all(game: &mut Game, gobj: GObjId) {
+pub fn resume_all(game: &mut Game, gobj: Option<GObjId>) {
     for (_, e) in children_of(game, gobj) {
         game.ef.effects[e.0].state_flags &= STATE_ASYNC;
     }

@@ -2,7 +2,7 @@
 //! of effect GObjs) and globals, deferred spawns, and the particle system's banks, particles,
 //! generators and app-SRTs, imported into melee-sim and compared back.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use melee_data::archive::DataRef;
 use melee_sim::game::ef::{self, Effect, EffectId, ParamEntry, Queued, QueuedId, Update};
@@ -64,6 +64,32 @@ impl Importer<'_> {
         self.game.objs.jobj.dptcl = self.u32_at(sym("dptcl_callback")) != 0;
         self.game.objs.jobj.sptcl = self.u32_at(sym("sptcl_callback")) != 0;
         self.particles();
+        for (effect, a) in std::mem::take(&mut self.ef_freed).into_iter().rev() {
+            if effect {
+                self.game.ef.effects.free(self.maps.effects[&a].0);
+            } else {
+                self.game.ef.queued.free(self.maps.queued[&a].0);
+            }
+        }
+    }
+
+    /// The blocks on efLib's and efAsync's allocators' free lists.
+    fn ef_free_sets(&mut self) -> &(HashSet<u32>, HashSet<u32>) {
+        if self.ef_free.is_none() {
+            let chain = |s: &Self, data: &str| {
+                let mut out = HashSet::new();
+                let mut b = s.u32_at(sym(data) + 4);
+                while b != 0 && out.insert(b) {
+                    b = s.u32_at(b);
+                }
+                out
+            };
+            self.ef_free = Some((
+                chain(self, "efLib_AllocData"),
+                chain(self, "efAsync_AllocData"),
+            ));
+        }
+        self.ef_free.as_ref().unwrap()
     }
 
     fn u32_at(&self, a: u32) -> u32 {
@@ -114,6 +140,12 @@ impl Importer<'_> {
         }
         let id = EffectId(self.game.ef.effects.alloc(Effect::default()));
         self.maps.effects.insert(a, id);
+        // A freed effect a pointer outlived (a spawn's `next`): a slot of its own, freed again
+        // after the import, so it pairs by identity and nothing follows it.
+        if self.ef_free_sets().0.contains(&a) {
+            self.ef_freed.push((true, a));
+            return id;
+        }
         let next = self.u32_at(a);
         let next = (next != 0).then(|| self.effect(next));
         let update = self.u32_at(a + 0x10);
@@ -155,6 +187,11 @@ impl Importer<'_> {
         }
         let id = QueuedId(self.game.ef.queued.alloc(Queued::default()));
         self.maps.queued.insert(a, id);
+        // Freed already (a queue mid-flush still names it): likewise.
+        if self.ef_free_sets().1.contains(&a) {
+            self.ef_freed.push((false, a));
+            return id;
+        }
         let next = self.u32_at(a);
         let next = (next != 0).then(|| self.queued(next));
         let j = self.u32_at(a + 0xC);
@@ -972,13 +1009,16 @@ impl Comparer<'_> {
             });
             self.check("particles", &format!("bank {b}"), ours, theirs);
         }
-        // The display pass's sorting state.
+        // The display pass's sorting state. A link's cached first particle without `TEX_EDGE`
+        // is read only in the display pass that sorted the link; between passes it can name a
+        // particle freed since, which the import leaves out: such a stale entry counts as none
+        // on either side.
         let d = &objs.psdisp;
         let at = |w: &HashMap<u32, u32>, a: u32| {
             if a == 0 {
                 u32::MAX
             } else {
-                w.get(&a).copied().unwrap_or(u32::MAX - 1)
+                w.get(&a).copied().unwrap_or(u32::MAX)
             }
         };
         let mut theirs = vec![u32::from(self.u8(sym("psFrameNum")))];
@@ -986,11 +1026,10 @@ impl Comparer<'_> {
         theirs.extend((0..16).map(|i| at(&where_t, self.u32(sym("particle_list") + 4 * i))));
         let mut ours = vec![u32::from(d.frame)];
         ours.extend(d.sorted.map(u32::from));
-        ours.extend(d.non_edge.map(|p| {
-            p.map_or(u32::MAX, |p| {
-                where_o.get(&p).copied().unwrap_or(u32::MAX - 1)
-            })
-        }));
+        ours.extend(
+            d.non_edge
+                .map(|p| p.map_or(u32::MAX, |p| where_o.get(&p).copied().unwrap_or(u32::MAX))),
+        );
         self.check("particles", "display sorting", ours, theirs);
     }
 

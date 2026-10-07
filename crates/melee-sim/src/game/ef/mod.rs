@@ -574,19 +574,15 @@ pub fn call(r: &mut Running, f: u32, args: &[super::code::Val]) -> Option<super:
             Val::None
         }
         0x8005_BA40 => {
-            pause_all(r.game, gobj(0).expect("efLib_PauseAll: gobj"));
+            pause_all(r.game, gobj(0));
             Val::None
         }
         0x8005_BAC4 => {
-            resume_all(r.game, gobj(0).expect("efLib_ResumeAll: gobj"));
+            resume_all(r.game, gobj(0));
             Val::None
         }
         0x8005_B704 => {
-            set_flags(
-                r.game,
-                gobj(0).expect("efLib_SetFlags: gobj"),
-                args[1].int(),
-            );
+            set_flags(r.game, gobj(0), args[1].int());
             Val::None
         }
         _ => return None,
