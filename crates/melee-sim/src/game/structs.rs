@@ -12,6 +12,7 @@ use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
 use crate::mp::coll::EcbSource;
@@ -7436,6 +7437,672 @@ impl Default for itFoxLaser_ItemVars {
             angle: 0.0,
             speed: 0.0,
             pos: Default::default(),
+        }
+    }
+}
+
+/// `IfDamageFlags`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct IfDamageFlags {
+    /// +0x0 (bits 0..+1)
+    pub explode_animation: bool,
+    /// +0x0 (bits 1..+1)
+    pub randomize_velocity: bool,
+    /// +0x0 (bits 2..+1)
+    pub force_digit_shake: bool,
+    /// +0x0 (bits 3..+1)
+    pub unk10: bool,
+    /// +0x0 (bits 4..+1)
+    pub hide_all_digits: bool,
+    /// +0x0 (bits 5..+2)
+    pub animation_status_id: u8,
+    /// +0x0 (bits 7..+1)
+    pub unk1: bool,
+}
+
+impl Default for IfDamageFlags {
+    fn default() -> Self {
+        IfDamageFlags {
+            explode_animation: false,
+            randomize_velocity: false,
+            force_digit_shake: false,
+            unk10: false,
+            hide_all_digits: false,
+            animation_status_id: 0,
+            unk1: false,
+        }
+    }
+}
+
+/// `IfDamageState`, 0x64 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct IfDamageState {
+    /// +0x0
+    pub HUD_parent_entity: Option<GObjId>,
+    /// +0x4
+    pub next: Option<GObjId>,
+    /// +0x8
+    pub player_slot: u8,
+    /// +0x9
+    pub unk9: u8,
+    /// +0xa
+    pub damage_percent: i16,
+    /// +0xc
+    pub old_damage: i16,
+    /// +0xe
+    pub damage_from_last_attack: u8,
+    /// +0xf
+    pub frames_of_shake_remaining: u8,
+    /// +0x10
+    pub flags: IfDamageFlags,
+    /// +0x14
+    pub translation_x: [f32; 4],
+    /// +0x24
+    pub translation_y: [f32; 4],
+    /// +0x34
+    pub velocity_x: [f32; 4],
+    /// +0x44
+    pub velocity_y: [f32; 4],
+    /// +0x54
+    pub jobjs: [Option<JObjId>; 4],
+}
+
+impl Default for IfDamageState {
+    fn default() -> Self {
+        IfDamageState {
+            HUD_parent_entity: None,
+            next: None,
+            player_slot: 0,
+            unk9: 0,
+            damage_percent: 0,
+            old_damage: 0,
+            damage_from_last_attack: 0,
+            frames_of_shake_remaining: 0,
+            flags: Default::default(),
+            translation_x: [0.0; 4],
+            translation_y: [0.0; 4],
+            velocity_x: [0.0; 4],
+            velocity_y: [0.0; 4],
+            jobjs: [None; 4],
+        }
+    }
+}
+
+/// `HudIndex`, 0x278 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct HudIndex {
+    /// +0x0
+    pub players: [IfDamageState; 6],
+    /// +0x258
+    pub damage_num_joint: Option<DataRef>,
+    /// +0x25c
+    pub damage_num_anims: Option<DataRef>,
+    /// +0x260
+    pub damage_num_matanims: Option<DataRef>,
+    /// +0x264
+    pub damage_num_shapeanims: Option<DataRef>,
+    /// +0x268
+    pub damage_mark_joint: Option<DataRef>,
+    /// +0x26c
+    pub damage_mark_anims: Option<DataRef>,
+    /// +0x270
+    pub damage_mark_matanims: Option<DataRef>,
+    /// +0x274
+    pub damage_mark_shapeanims: Option<DataRef>,
+}
+
+impl Default for HudIndex {
+    fn default() -> Self {
+        HudIndex {
+            players: core::array::from_fn(|_| Default::default()),
+            damage_num_joint: None,
+            damage_num_anims: None,
+            damage_num_matanims: None,
+            damage_num_shapeanims: None,
+            damage_mark_joint: None,
+            damage_mark_anims: None,
+            damage_mark_matanims: None,
+            damage_mark_shapeanims: None,
+        }
+    }
+}
+
+/// `Element_803F9628_x12`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Element_803F9628_x12 {
+    /// +0x0 (bits 0..+1)
+    pub x0: bool,
+    /// +0x0 (bits 1..+1)
+    pub x1: bool,
+    /// +0x0 (bits 2..+1)
+    pub x2: bool,
+    /// +0x0 (bits 3..+1)
+    pub x3: bool,
+    /// +0x0 (bits 4..+1)
+    pub x4: bool,
+    /// +0x0 (bits 5..+1)
+    pub x5: bool,
+    /// +0x0 (bits 6..+1)
+    pub x6: bool,
+    /// +0x0 (bits 7..+1)
+    pub x7: bool,
+}
+
+impl Default for Element_803F9628_x12 {
+    fn default() -> Self {
+        Element_803F9628_x12 {
+            x0: false,
+            x1: false,
+            x2: false,
+            x3: false,
+            x4: false,
+            x5: false,
+            x6: false,
+            x7: false,
+        }
+    }
+}
+
+/// `Element_803F9628`, 0x28 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Element_803F9628 {
+    /// +0x0
+    pub x0: Option<GObjId>,
+    /// +0x4
+    pub x4: u32,
+    /// +0x8
+    pub x8: Option<CodeRef>,
+    /// +0xc
+    pub xC: i32,
+    /// +0x10
+    pub x10: u8,
+    /// +0x11
+    pub x11: u8,
+    /// +0x12
+    pub x12: Element_803F9628_x12,
+    /// +0x13
+    pub x13: u8,
+    /// +0x14
+    pub x14: Option<DataRef>,
+    /// +0x18
+    pub x18: Option<CodeRef>,
+    /// +0x1c
+    pub x1C: Option<CodeRef>,
+    /// +0x20
+    pub x20: i32,
+    /// +0x24
+    pub x24: i32,
+}
+
+impl Default for Element_803F9628 {
+    fn default() -> Self {
+        Element_803F9628 {
+            x0: None,
+            x4: 0,
+            x8: None,
+            xC: 0,
+            x10: 0,
+            x11: 0,
+            x12: Default::default(),
+            x13: 0,
+            x14: None,
+            x18: None,
+            x1C: None,
+            x20: 0,
+            x24: 0,
+        }
+    }
+}
+
+/// `ScInfStcSlot`, 0x8 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScInfStcSlot {
+    /// +0x0
+    pub gobj: Option<GObjId>,
+    /// +0x4
+    pub gobj2: Option<GObjId>,
+}
+
+impl Default for ScInfStcSlot {
+    fn default() -> Self {
+        ScInfStcSlot {
+            gobj: None,
+            gobj2: None,
+        }
+    }
+}
+
+/// `ScInfStcModels`, 0x34 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScInfStcModels {
+    /// +0x0
+    pub scene_models: Option<DataRef>,
+    /// +0x4
+    pub slots: [ScInfStcSlot; 6],
+}
+
+impl Default for ScInfStcModels {
+    fn default() -> Self {
+        ScInfStcModels {
+            scene_models: None,
+            slots: core::array::from_fn(|_| Default::default()),
+        }
+    }
+}
+
+/// `ifTime_data`, 0x3c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ifTime_data {
+    /// +0x0
+    pub match_timer: Option<GObjId>,
+    /// +0x4
+    pub countdown_timer: Option<GObjId>,
+    /// +0x8
+    pub digits: [Option<JObjId>; 10],
+    /// +0x30
+    pub countdown_seconds: u8,
+    /// +0x31
+    pub pad31: [i8; 7],
+    /// +0x38
+    pub countdown_timer_models: Option<DataRef>,
+}
+
+impl Default for ifTime_data {
+    fn default() -> Self {
+        ifTime_data {
+            match_timer: None,
+            countdown_timer: None,
+            digits: [None; 10],
+            countdown_seconds: 0,
+            pad31: [0; 7],
+            countdown_timer_models: None,
+        }
+    }
+}
+
+/// `ifAll_804A0FD8_t`, 0x9c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ifAll_804A0FD8_t {
+    /// +0x0
+    pub gobj: Option<GObjId>,
+    /// +0x4
+    pub gobj_2: Option<GObjId>,
+    /// +0x8
+    pub x8: Option<JObjId>,
+    /// +0xc
+    pub xC: Vec3,
+    /// +0x18
+    pub x18: [Vec3; 6],
+    /// +0x60
+    pub x60: [Vec3; 3],
+    /// +0x84
+    pub x84: [Vec3; 2],
+}
+
+impl Default for ifAll_804A0FD8_t {
+    fn default() -> Self {
+        ifAll_804A0FD8_t {
+            gobj: None,
+            gobj_2: None,
+            x8: None,
+            xC: Default::default(),
+            x18: core::array::from_fn(|_| Default::default()),
+            x60: core::array::from_fn(|_| Default::default()),
+            x84: core::array::from_fn(|_| Default::default()),
+        }
+    }
+}
+
+/// `ifStock_804A1378_per_player`, 0x50 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ifStock_804A1378_per_player {
+    /// +0x0
+    pub x0: Option<GObjId>,
+    /// +0x4
+    pub x4: [Option<JObjId>; 8],
+    /// +0x24
+    pub x24: Option<JObjId>,
+    /// +0x28
+    pub x28: Option<JObjId>,
+    /// +0x2c
+    pub x2C: Option<JObjId>,
+    /// +0x30
+    pub x30: Option<JObjId>,
+    /// +0x34
+    pub x34: Option<JObjId>,
+    /// +0x38
+    pub x38: Option<JObjId>,
+    /// +0x3c
+    pub x3C: Option<JObjId>,
+    /// +0x40
+    pub x40: Option<JObjId>,
+    /// +0x44
+    pub x44: Option<JObjId>,
+    /// +0x48
+    pub coins: i32,
+    /// +0x4c
+    pub stocks: i32,
+}
+
+impl Default for ifStock_804A1378_per_player {
+    fn default() -> Self {
+        ifStock_804A1378_per_player {
+            x0: None,
+            x4: [None; 8],
+            x24: None,
+            x28: None,
+            x2C: None,
+            x30: None,
+            x34: None,
+            x38: None,
+            x3C: None,
+            x40: None,
+            x44: None,
+            coins: 0,
+            stocks: 0,
+        }
+    }
+}
+
+/// `ifStock_804A1378`, 0x204 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ifStock_804A1378 {
+    /// +0x0
+    pub x0: Option<DataRef>,
+    /// +0x4
+    pub x4: Option<DataRef>,
+    /// +0x8
+    pub player: [ifStock_804A1378_per_player; 6],
+    /// +0x1e8
+    pub gobj: Option<GObjId>,
+    /// +0x1ec
+    pub jobj: Option<JObjId>,
+    /// +0x1f0
+    pub pad1F0: [i8; 4],
+    /// +0x1f4
+    pub jobj_a: Option<JObjId>,
+    /// +0x1f8
+    pub jobj_b: Option<JObjId>,
+    /// +0x1fc
+    pub jobj_c: Option<JObjId>,
+    /// +0x200
+    pub jobj_d: Option<JObjId>,
+}
+
+impl Default for ifStock_804A1378 {
+    fn default() -> Self {
+        ifStock_804A1378 {
+            x0: None,
+            x4: None,
+            player: core::array::from_fn(|_| Default::default()),
+            gobj: None,
+            jobj: None,
+            pad1F0: [0; 4],
+            jobj_a: None,
+            jobj_b: None,
+            jobj_c: None,
+            jobj_d: None,
+        }
+    }
+}
+
+/// `IfStockStealAnim`, 0x24 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct IfStockStealAnim {
+    /// +0x0
+    pub start: Vec3,
+    /// +0xc
+    pub mid: Vec3,
+    /// +0x18
+    pub end: Vec3,
+}
+
+impl Default for IfStockStealAnim {
+    fn default() -> Self {
+        IfStockStealAnim {
+            start: Default::default(),
+            mid: Default::default(),
+            end: Default::default(),
+        }
+    }
+}
+
+/// `IfStockUserData`, 0x54 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct IfStockUserData {
+    /// +0x0
+    pub player: u8,
+    /// +0x1
+    pub mode: u8,
+    /// +0x2
+    pub flag: u8,
+    /// +0x3
+    pub x3: [u8; 2],
+    /// +0x5
+    pub anim: [u8; 7],
+    /// +0xc
+    pub steal: [IfStockStealAnim; 2],
+}
+
+impl Default for IfStockUserData {
+    fn default() -> Self {
+        IfStockUserData {
+            player: 0,
+            mode: 0,
+            flag: 0,
+            x3: [0; 2],
+            anim: [0; 7],
+            steal: core::array::from_fn(|_| Default::default()),
+        }
+    }
+}
+
+/// `ifStock_804A1774`, 0x318 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ifStock_804A1774 {
+    /// +0x0
+    pub x0: i8,
+    /// +0x1
+    pub x1: [i8; 130],
+    /// +0x83
+    pub x83: [i8; 133],
+    /// +0x108
+    pub x108: i32,
+    /// +0x10c
+    pub x10C: [Option<GObjId>; 131],
+}
+
+impl Default for ifStock_804A1774 {
+    fn default() -> Self {
+        ifStock_804A1774 {
+            x0: 0,
+            x1: [0; 130],
+            x83: [0; 133],
+            x108: 0,
+            x10C: [None; 131],
+        }
+    }
+}
+
+/// `ifStock_804A1ACC`, 0x314 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ifStock_804A1ACC {
+    /// +0x0
+    pub x0: i8,
+    /// +0x1
+    pub x1: [i8; 130],
+    /// +0x83
+    pub x83: [i8; 133],
+    /// +0x108
+    pub x108: Option<GObjId>,
+    /// +0x10c
+    pub x10C: [Option<GObjId>; 130],
+}
+
+impl Default for ifStock_804A1ACC {
+    fn default() -> Self {
+        ifStock_804A1ACC {
+            x0: 0,
+            x1: [0; 130],
+            x83: [0; 133],
+            x108: None,
+            x10C: [None; 130],
+        }
+    }
+}
+
+/// `un_804A1F10_t`, 0x38 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct un_804A1F10_t {
+    /// +0x0
+    pub x0: Option<DataRef>,
+    /// +0x4
+    pub x4: [Option<GObjId>; 4],
+    /// +0x14
+    pub x14: [_GXColor; 4],
+    /// +0x24
+    pub x24: [u8; 4],
+    /// +0x28
+    pub x28: [u8; 4],
+    /// +0x2c
+    pub x2C: [u8; 4],
+    /// +0x30
+    pub x30: u8,
+    /// +0x31
+    pub x31: i8,
+    /// +0x32
+    pub x32: u8,
+    /// +0x34
+    pub pad_34: RawPtr,
+}
+
+impl Default for un_804A1F10_t {
+    fn default() -> Self {
+        un_804A1F10_t {
+            x0: None,
+            x4: [None; 4],
+            x14: core::array::from_fn(|_| Default::default()),
+            x24: [0; 4],
+            x28: [0; 4],
+            x2C: [0; 4],
+            x30: 0,
+            x31: 0,
+            x32: 0,
+            pad_34: Default::default(),
+        }
+    }
+}
+
+/// `un_803F9E08_t`, 0x10 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct un_803F9E08_t {
+    /// +0x0 (bits 0..+1)
+    pub x0_b0: bool,
+    /// +0x0 (bits 1..+1)
+    pub x0_b1: bool,
+    /// +0x0 (bits 2..+3)
+    pub x0_b234: u8,
+    /// +0x0 (bits 5..+3)
+    pub x0_b567: u8,
+    /// +0x1
+    pub x1: u8,
+    /// +0x2
+    pub x2: u8,
+    /// +0x3
+    pub x3: u8,
+    /// +0x4
+    pub x4: i32,
+    /// +0x8
+    pub x8: i32,
+    /// +0xc
+    pub xC: Option<GObjId>,
+}
+
+impl Default for un_803F9E08_t {
+    fn default() -> Self {
+        un_803F9E08_t {
+            x0_b0: false,
+            x0_b1: false,
+            x0_b234: 0,
+            x0_b567: 0,
+            x1: 0,
+            x2: 0,
+            x3: 0,
+            x4: 0,
+            x8: 0,
+            xC: None,
+        }
+    }
+}
+
+/// `StaticModelDesc`, 0x10 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct StaticModelDesc {
+    /// +0x0
+    pub joint: Option<DataRef>,
+    /// +0x4
+    pub animjoint: Option<DataRef>,
+    /// +0x8
+    pub matanim_joint: Option<DataRef>,
+    /// +0xc
+    pub shapeanim_joint: Option<DataRef>,
+}
+
+impl Default for StaticModelDesc {
+    fn default() -> Self {
+        StaticModelDesc {
+            joint: None,
+            animjoint: None,
+            matanim_joint: None,
+            shapeanim_joint: None,
+        }
+    }
+}
+
+/// `un_804A1F58_x8_t`, 0x14 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct un_804A1F58_x8_t {
+    /// +0x0
+    pub x0: Option<GObjId>,
+    /// +0x4
+    pub x4: Option<TextId>,
+    /// +0x8
+    pub x8: u32,
+    /// +0xc
+    pub xC: u32,
+    /// +0x10
+    pub x10: u8,
+}
+
+impl Default for un_804A1F58_x8_t {
+    fn default() -> Self {
+        un_804A1F58_x8_t {
+            x0: None,
+            x4: None,
+            x8: 0,
+            xC: 0,
+            x10: 0,
+        }
+    }
+}
+
+/// `un_804A1F58_t`, 0x80 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct un_804A1F58_t {
+    /// +0x0
+    pub x0: u32,
+    /// +0x4
+    pub pad_x4: [i8; 4],
+    /// +0x8
+    pub x8: [un_804A1F58_x8_t; 6],
+}
+
+impl Default for un_804A1F58_t {
+    fn default() -> Self {
+        un_804A1F58_t {
+            x0: 0,
+            pad_x4: [0; 4],
+            x8: core::array::from_fn(|_| Default::default()),
         }
     }
 }

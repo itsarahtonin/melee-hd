@@ -23,6 +23,7 @@ pub mod pobj;
 pub mod pool;
 pub mod psdisp;
 pub mod robj;
+pub mod sis;
 pub mod spline;
 pub mod tobj;
 pub mod wobj;

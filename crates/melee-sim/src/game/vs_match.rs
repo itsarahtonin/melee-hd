@@ -243,6 +243,8 @@ impl Match {
             offset,
         });
         let mut r = m.running();
+        // `preloadState`: the scene's text arena (0x4800 bytes for a match).
+        r.game.sis.init(0x4800);
         init_scene(&mut r);
         r.game.gm.on_frame = Some(CodeRef(vs::ON_FRAME));
         r.vs_on_enter(&settings.start, files);

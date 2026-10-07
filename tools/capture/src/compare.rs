@@ -298,6 +298,7 @@ impl<'a> Comparer<'a> {
                 self.effect(&format!("{path} effect"), e, self.u32(t + 0x2C))
             }
             None => {}
+            Some(ud) => crate::hud::compare_user_data(self, path, ud, t),
         }
     }
 

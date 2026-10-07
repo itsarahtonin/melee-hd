@@ -338,6 +338,7 @@ impl<'a> Importer<'a> {
             };
             let user_data_kind = self.u8(g + 7);
             let ud = self.u32(g + 0x2C);
+            let release = self.u32(g + 0x30);
             let user_data = match user_data_kind {
                 4 if ud != 0 => Some(UserData::Fighter(self.fighter(ud))),
                 6 if ud != 0 => Some(UserData::Item(self.item(ud))),
@@ -345,6 +346,9 @@ impl<'a> Importer<'a> {
                 3 if ud != 0 => Some(UserData::Ground(self.ground(ud))),
                 0xFF => None,
                 _ if ud == 0 => None,
+                _ if release != 0 && crate::hud::user_data(self, release, ud).is_some() => {
+                    crate::hud::user_data(self, release, ud)
+                }
                 kind => {
                     self.unhandled
                         .push(format!("GObj {g:#x}: user data kind {kind}"));

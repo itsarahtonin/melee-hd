@@ -25,6 +25,20 @@ ROOTS = [
     "SpawnItem",
     "itFoxBlaster_ItemVars",
     "itFoxLaser_ItemVars",
+    # The HUD (`melee/if`).
+    "HudIndex",
+    "Element_803F9628",
+    "ScInfStcModels",
+    "ifTime_data",
+    "ifAll_804A0FD8_t",
+    "ifStock_804A1378",
+    "IfStockUserData",
+    "ifStock_804A1774",
+    "ifStock_804A1ACC",
+    "un_804A1F10_t",
+    "un_803F9E08_t",
+    "StaticModelDesc",
+    "un_804A1F58_t",
 ]
 
 # Handles for pointers to runtime objects, by the pointee's C name.
@@ -45,6 +59,7 @@ POINTERS = {
     "EF_Effect": "Option<EffectId>",
     "EF_QueuedEffect": "Option<QueuedId>",
     "HSD_Generator": "Option<GeneratorId>",
+    "HSD_Text": "Option<TextId>",
 }
 
 # Handles for single pointer fields whose pointee type doesn't say what they are, by
@@ -72,6 +87,17 @@ FIELD_DATA = {
     "StageInfo.x6C8",
     # Each animation's pair of bytes, in the character's data (`ftData::x10`).
     "Fighter.x28",
+    # The HUD's model tables in `IfAll.dat` (`DynamicModelDesc**` and animation lists).
+    "HudIndex.damage_num_anims",
+    "HudIndex.damage_num_matanims",
+    "HudIndex.damage_num_shapeanims",
+    "HudIndex.damage_mark_anims",
+    "HudIndex.damage_mark_matanims",
+    "HudIndex.damage_mark_shapeanims",
+    "ifTime_data.countdown_timer_models",
+    "ScInfStcModels.scene_models",
+    "ifStock_804A1378.x0",
+    "un_804A1F10_t.x0",
 }
 
 # Runs of fields replaced by one field of a hand-written type: struct name to (field name,
@@ -92,6 +118,7 @@ EXTRA_USES = [
     "use crate::game::ft::dynamics::BoneSlot;",
     "use crate::game::it::ItemVars;",
     "use crate::lb::command::Script;",
+    "use crate::hsd::sis::TextId;",
 ]
 
 # C types melee-sim already has: fields of these types use the Rust type, and no struct is
@@ -122,6 +149,9 @@ DATA_TYPES = {
     "Article",
     "ItemAttr",
     "ItemStateDesc",
+    "HSD_AnimJoint",
+    "HSD_MatAnimJoint",
+    "HSD_ShapeAnimJoint",
 }
 
 # Pointers whose pointee isn't mapped yet: an address that needs a decision before it is used.
@@ -139,6 +169,7 @@ use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
 use crate::mp::coll::EcbSource;

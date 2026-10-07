@@ -143,6 +143,8 @@ pub enum Out {
     F1(f64),
     /// Words at an address: an out parameter.
     Words(u32, Vec<u32>),
+    /// Bytes at an address.
+    Bytes(u32, Vec<u8>),
     /// The calls ssbm-rs's side made to a logging native, against ours.
     Logged(Vec<Logged>),
     /// A GObj in r3.
@@ -658,6 +660,14 @@ impl<'a> Check<'a> {
                                     (0..ws.len() as u32).map(|i| word(a + 4 * i)).collect();
                                 if &t != ws {
                                     diffs.push(format!("{a:#x}: ours {ws:x?}, theirs {t:x?}"));
+                                }
+                            }
+                            Out::Bytes(a, bs) => {
+                                let t: Vec<u8> = (0..bs.len())
+                                    .map(|i| after[(a - MEM1) as usize + i])
+                                    .collect();
+                                if &t != bs {
+                                    diffs.push(format!("{a:#x}: ours {bs:x?}, theirs {t:x?}"));
                                 }
                             }
                             Out::Logged(ours) => {

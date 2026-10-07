@@ -34,6 +34,10 @@ pub enum UserData {
     /// User data of a kind no port models yet (a sound's, an effect's), by its address in a
     /// captured state: code that reads it stops.
     Raw(super::handles::RawPtr),
+    /// A text the GObj draws and frees (`HSD_SisLib_803A5A2C`'s).
+    Text(crate::hsd::sis::TextId),
+    /// A text canvas's camera, which its canvas forgets when freed (`fn_803A60EC`'s).
+    SisCamera(GObjId),
 }
 
 /// The GObj object kinds as Melee's `HSD_GObj_80391260` numbers them, after the game's own
@@ -215,6 +219,8 @@ pub struct Game {
     pub ucf: super::ucf::Pads,
     /// The rumble patterns by kind (`lb_804D63C0`, `LbRb.dat`'s `lbRumbleData`).
     pub rumble_data: Option<melee_data::archive::DataRef>,
+    /// The text system (SisLib).
+    pub sis: crate::hsd::sis::SisLib,
 }
 
 /// The game as the scheduler's host for one call: the state and the game data it reads.
@@ -238,6 +244,8 @@ impl Host<GameKinds> for Running<'_> {
             UserData::Ground(g) => self.game.grounds.free(g.0),
             UserData::Item(i) => super::it::item::free_user_data(self.game, i),
             UserData::Effect(e) => super::ef::remove_user_data(self.game, e),
+            UserData::Text(t) => self.game.sis.free_text(t),
+            UserData::SisCamera(g) => self.game.sis.forget_camera(g),
             other => panic!("removing {other:?} isn't ported"),
         }
     }
@@ -246,6 +254,7 @@ impl Host<GameKinds> for Running<'_> {
         match obj {
             Obj::JObj(j) => crate::hsd::jobj::remove_all(&mut self.game.objs, Some(j)),
             Obj::Fog(f) => crate::hsd::fog::unref(&mut self.game.objs, Some(f)),
+            Obj::CObj(c) => crate::hsd::cobj::unref(&mut self.game.objs, Some(c)),
             other => panic!("releasing a GObj's {other:?} needs its port"),
         }
     }

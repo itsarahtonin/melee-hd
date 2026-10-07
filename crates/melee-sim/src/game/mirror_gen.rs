@@ -12,6 +12,7 @@ use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
 use crate::mp::coll::EcbSource;
@@ -16583,5 +16584,1384 @@ impl Mirror for itFoxLaser_ItemVars {
             );
         }
         self.pos.compare(m, at + 0xc, &format!("{path}.pos"), cx);
+    }
+}
+
+impl Mirror for IfDamageFlags {
+    const SIZE: u32 = 0x1;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        IfDamageFlags {
+            explode_animation: m.bits(at, 0, 1) != 0,
+            randomize_velocity: m.bits(at, 1, 1) != 0,
+            force_digit_shake: m.bits(at, 2, 1) != 0,
+            unk10: m.bits(at, 3, 1) != 0,
+            hide_all_digits: m.bits(at, 4, 1) != 0,
+            animation_status_id: m.bits(at, 5, 2) as u8,
+            unk1: m.bits(at, 7, 1) != 0,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if (self.explode_animation as u32) != m.bits(at, 0, 1) {
+            cx.mismatch(
+                &format!("{path}.explode_animation"),
+                format!("{:?}", self.explode_animation),
+                format!("{:?}", m.bits(at, 0, 1)),
+            );
+        }
+        if (self.randomize_velocity as u32) != m.bits(at, 1, 1) {
+            cx.mismatch(
+                &format!("{path}.randomize_velocity"),
+                format!("{:?}", self.randomize_velocity),
+                format!("{:?}", m.bits(at, 1, 1)),
+            );
+        }
+        if (self.force_digit_shake as u32) != m.bits(at, 2, 1) {
+            cx.mismatch(
+                &format!("{path}.force_digit_shake"),
+                format!("{:?}", self.force_digit_shake),
+                format!("{:?}", m.bits(at, 2, 1)),
+            );
+        }
+        if (self.unk10 as u32) != m.bits(at, 3, 1) {
+            cx.mismatch(
+                &format!("{path}.unk10"),
+                format!("{:?}", self.unk10),
+                format!("{:?}", m.bits(at, 3, 1)),
+            );
+        }
+        if (self.hide_all_digits as u32) != m.bits(at, 4, 1) {
+            cx.mismatch(
+                &format!("{path}.hide_all_digits"),
+                format!("{:?}", self.hide_all_digits),
+                format!("{:?}", m.bits(at, 4, 1)),
+            );
+        }
+        if (self.animation_status_id as u32) != m.bits(at, 5, 2) {
+            cx.mismatch(
+                &format!("{path}.animation_status_id"),
+                format!("{:?}", self.animation_status_id),
+                format!("{:?}", m.bits(at, 5, 2)),
+            );
+        }
+        if (self.unk1 as u32) != m.bits(at, 7, 1) {
+            cx.mismatch(
+                &format!("{path}.unk1"),
+                format!("{:?}", self.unk1),
+                format!("{:?}", m.bits(at, 7, 1)),
+            );
+        }
+    }
+}
+
+impl Mirror for IfDamageState {
+    const SIZE: u32 = 0x64;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        IfDamageState {
+            HUD_parent_entity: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
+            next: cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId),
+            player_slot: m.u8(at + 0x8),
+            unk9: m.u8(at + 0x9),
+            damage_percent: m.u16(at + 0xa) as i16,
+            old_damage: m.u16(at + 0xc) as i16,
+            damage_from_last_attack: m.u8(at + 0xe),
+            frames_of_shake_remaining: m.u8(at + 0xf),
+            flags: IfDamageFlags::import(m, at + 0x10, cx),
+            translation_x: core::array::from_fn(|i0| {
+                f32::from_bits(m.u32(at + 0x14 + i0 as u32 * 0x4))
+            }),
+            translation_y: core::array::from_fn(|i0| {
+                f32::from_bits(m.u32(at + 0x24 + i0 as u32 * 0x4))
+            }),
+            velocity_x: core::array::from_fn(|i0| {
+                f32::from_bits(m.u32(at + 0x34 + i0 as u32 * 0x4))
+            }),
+            velocity_y: core::array::from_fn(|i0| {
+                f32::from_bits(m.u32(at + 0x44 + i0 as u32 * 0x4))
+            }),
+            jobjs: core::array::from_fn(|i0| {
+                cx.import_handle("JObjId", m.u32(at + 0x54 + i0 as u32 * 0x4))
+                    .map(JObjId)
+            }),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_handle(
+            &format!("{path}.HUD_parent_entity"),
+            "GObjId",
+            self.HUD_parent_entity.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
+        cx.compare_handle(
+            &format!("{path}.next"),
+            "GObjId",
+            self.next.map(|h| h.0),
+            m.u32(at + 0x4),
+        );
+        if self.player_slot != m.u8(at + 0x8) {
+            cx.mismatch(
+                &format!("{path}.player_slot"),
+                format!("{:?}", self.player_slot),
+                format!("{:?}", m.u8(at + 0x8)),
+            );
+        }
+        if self.unk9 != m.u8(at + 0x9) {
+            cx.mismatch(
+                &format!("{path}.unk9"),
+                format!("{:?}", self.unk9),
+                format!("{:?}", m.u8(at + 0x9)),
+            );
+        }
+        if self.damage_percent != m.u16(at + 0xa) as i16 {
+            cx.mismatch(
+                &format!("{path}.damage_percent"),
+                format!("{:?}", self.damage_percent),
+                format!("{:?}", m.u16(at + 0xa) as i16),
+            );
+        }
+        if self.old_damage != m.u16(at + 0xc) as i16 {
+            cx.mismatch(
+                &format!("{path}.old_damage"),
+                format!("{:?}", self.old_damage),
+                format!("{:?}", m.u16(at + 0xc) as i16),
+            );
+        }
+        if self.damage_from_last_attack != m.u8(at + 0xe) {
+            cx.mismatch(
+                &format!("{path}.damage_from_last_attack"),
+                format!("{:?}", self.damage_from_last_attack),
+                format!("{:?}", m.u8(at + 0xe)),
+            );
+        }
+        if self.frames_of_shake_remaining != m.u8(at + 0xf) {
+            cx.mismatch(
+                &format!("{path}.frames_of_shake_remaining"),
+                format!("{:?}", self.frames_of_shake_remaining),
+                format!("{:?}", m.u8(at + 0xf)),
+            );
+        }
+        self.flags
+            .compare(m, at + 0x10, &format!("{path}.flags"), cx);
+        for i0 in 0..4 {
+            if self.translation_x[i0].to_bits() != m.u32(at + 0x14 + i0 as u32 * 0x4) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.translation_x"), i0),
+                    format!("{:?}", self.translation_x[i0]),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x14 + i0 as u32 * 0x4))),
+                );
+            }
+        }
+        for i0 in 0..4 {
+            if self.translation_y[i0].to_bits() != m.u32(at + 0x24 + i0 as u32 * 0x4) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.translation_y"), i0),
+                    format!("{:?}", self.translation_y[i0]),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x24 + i0 as u32 * 0x4))),
+                );
+            }
+        }
+        for i0 in 0..4 {
+            if self.velocity_x[i0].to_bits() != m.u32(at + 0x34 + i0 as u32 * 0x4) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.velocity_x"), i0),
+                    format!("{:?}", self.velocity_x[i0]),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x34 + i0 as u32 * 0x4))),
+                );
+            }
+        }
+        for i0 in 0..4 {
+            if self.velocity_y[i0].to_bits() != m.u32(at + 0x44 + i0 as u32 * 0x4) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.velocity_y"), i0),
+                    format!("{:?}", self.velocity_y[i0]),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x44 + i0 as u32 * 0x4))),
+                );
+            }
+        }
+        for i0 in 0..4 {
+            cx.compare_handle(
+                &format!("{}[{}]", format!("{path}.jobjs"), i0),
+                "JObjId",
+                self.jobjs[i0].map(|h| h.0),
+                m.u32(at + 0x54 + i0 as u32 * 0x4),
+            );
+        }
+    }
+}
+
+impl Mirror for HudIndex {
+    const SIZE: u32 = 0x278;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        HudIndex {
+            players: core::array::from_fn(|i0| {
+                IfDamageState::import(m, at + 0x0 + i0 as u32 * 0x64, cx)
+            }),
+            damage_num_joint: cx.import_data(m.u32(at + 0x258)),
+            damage_num_anims: cx.import_data(m.u32(at + 0x25c)),
+            damage_num_matanims: cx.import_data(m.u32(at + 0x260)),
+            damage_num_shapeanims: cx.import_data(m.u32(at + 0x264)),
+            damage_mark_joint: cx.import_data(m.u32(at + 0x268)),
+            damage_mark_anims: cx.import_data(m.u32(at + 0x26c)),
+            damage_mark_matanims: cx.import_data(m.u32(at + 0x270)),
+            damage_mark_shapeanims: cx.import_data(m.u32(at + 0x274)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        for i0 in 0..6 {
+            self.players[i0].compare(
+                m,
+                at + 0x0 + i0 as u32 * 0x64,
+                &format!("{}[{}]", format!("{path}.players"), i0),
+                cx,
+            );
+        }
+        cx.compare_data(
+            &format!("{path}.damage_num_joint"),
+            self.damage_num_joint,
+            m.u32(at + 0x258),
+        );
+        cx.compare_data(
+            &format!("{path}.damage_num_anims"),
+            self.damage_num_anims,
+            m.u32(at + 0x25c),
+        );
+        cx.compare_data(
+            &format!("{path}.damage_num_matanims"),
+            self.damage_num_matanims,
+            m.u32(at + 0x260),
+        );
+        cx.compare_data(
+            &format!("{path}.damage_num_shapeanims"),
+            self.damage_num_shapeanims,
+            m.u32(at + 0x264),
+        );
+        cx.compare_data(
+            &format!("{path}.damage_mark_joint"),
+            self.damage_mark_joint,
+            m.u32(at + 0x268),
+        );
+        cx.compare_data(
+            &format!("{path}.damage_mark_anims"),
+            self.damage_mark_anims,
+            m.u32(at + 0x26c),
+        );
+        cx.compare_data(
+            &format!("{path}.damage_mark_matanims"),
+            self.damage_mark_matanims,
+            m.u32(at + 0x270),
+        );
+        cx.compare_data(
+            &format!("{path}.damage_mark_shapeanims"),
+            self.damage_mark_shapeanims,
+            m.u32(at + 0x274),
+        );
+    }
+}
+
+impl Mirror for Element_803F9628_x12 {
+    const SIZE: u32 = 0x1;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        Element_803F9628_x12 {
+            x0: m.bits(at, 0, 1) != 0,
+            x1: m.bits(at, 1, 1) != 0,
+            x2: m.bits(at, 2, 1) != 0,
+            x3: m.bits(at, 3, 1) != 0,
+            x4: m.bits(at, 4, 1) != 0,
+            x5: m.bits(at, 5, 1) != 0,
+            x6: m.bits(at, 6, 1) != 0,
+            x7: m.bits(at, 7, 1) != 0,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if (self.x0 as u32) != m.bits(at, 0, 1) {
+            cx.mismatch(
+                &format!("{path}.x0"),
+                format!("{:?}", self.x0),
+                format!("{:?}", m.bits(at, 0, 1)),
+            );
+        }
+        if (self.x1 as u32) != m.bits(at, 1, 1) {
+            cx.mismatch(
+                &format!("{path}.x1"),
+                format!("{:?}", self.x1),
+                format!("{:?}", m.bits(at, 1, 1)),
+            );
+        }
+        if (self.x2 as u32) != m.bits(at, 2, 1) {
+            cx.mismatch(
+                &format!("{path}.x2"),
+                format!("{:?}", self.x2),
+                format!("{:?}", m.bits(at, 2, 1)),
+            );
+        }
+        if (self.x3 as u32) != m.bits(at, 3, 1) {
+            cx.mismatch(
+                &format!("{path}.x3"),
+                format!("{:?}", self.x3),
+                format!("{:?}", m.bits(at, 3, 1)),
+            );
+        }
+        if (self.x4 as u32) != m.bits(at, 4, 1) {
+            cx.mismatch(
+                &format!("{path}.x4"),
+                format!("{:?}", self.x4),
+                format!("{:?}", m.bits(at, 4, 1)),
+            );
+        }
+        if (self.x5 as u32) != m.bits(at, 5, 1) {
+            cx.mismatch(
+                &format!("{path}.x5"),
+                format!("{:?}", self.x5),
+                format!("{:?}", m.bits(at, 5, 1)),
+            );
+        }
+        if (self.x6 as u32) != m.bits(at, 6, 1) {
+            cx.mismatch(
+                &format!("{path}.x6"),
+                format!("{:?}", self.x6),
+                format!("{:?}", m.bits(at, 6, 1)),
+            );
+        }
+        if (self.x7 as u32) != m.bits(at, 7, 1) {
+            cx.mismatch(
+                &format!("{path}.x7"),
+                format!("{:?}", self.x7),
+                format!("{:?}", m.bits(at, 7, 1)),
+            );
+        }
+    }
+}
+
+impl Mirror for Element_803F9628 {
+    const SIZE: u32 = 0x28;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        Element_803F9628 {
+            x0: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
+            x4: m.u32(at + 0x4),
+            x8: code(m.u32(at + 0x8)),
+            xC: m.u32(at + 0xc) as i32,
+            x10: m.u8(at + 0x10),
+            x11: m.u8(at + 0x11),
+            x12: Element_803F9628_x12::import(m, at + 0x12, cx),
+            x13: m.u8(at + 0x13),
+            x14: cx.import_data(m.u32(at + 0x14)),
+            x18: code(m.u32(at + 0x18)),
+            x1C: code(m.u32(at + 0x1c)),
+            x20: m.u32(at + 0x20) as i32,
+            x24: m.u32(at + 0x24) as i32,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_handle(
+            &format!("{path}.x0"),
+            "GObjId",
+            self.x0.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
+        if self.x4 != m.u32(at + 0x4) {
+            cx.mismatch(
+                &format!("{path}.x4"),
+                format!("{:?}", self.x4),
+                format!("{:?}", m.u32(at + 0x4)),
+            );
+        }
+        if self.x8.map_or(0, |c| c.0) != m.u32(at + 0x8) {
+            cx.mismatch(
+                &format!("{path}.x8"),
+                format!("{:?}", self.x8),
+                format!("{:#x}", m.u32(at + 0x8)),
+            );
+        }
+        if self.xC != m.u32(at + 0xc) as i32 {
+            cx.mismatch(
+                &format!("{path}.xC"),
+                format!("{:?}", self.xC),
+                format!("{:?}", m.u32(at + 0xc) as i32),
+            );
+        }
+        if self.x10 != m.u8(at + 0x10) {
+            cx.mismatch(
+                &format!("{path}.x10"),
+                format!("{:?}", self.x10),
+                format!("{:?}", m.u8(at + 0x10)),
+            );
+        }
+        if self.x11 != m.u8(at + 0x11) {
+            cx.mismatch(
+                &format!("{path}.x11"),
+                format!("{:?}", self.x11),
+                format!("{:?}", m.u8(at + 0x11)),
+            );
+        }
+        self.x12.compare(m, at + 0x12, &format!("{path}.x12"), cx);
+        if self.x13 != m.u8(at + 0x13) {
+            cx.mismatch(
+                &format!("{path}.x13"),
+                format!("{:?}", self.x13),
+                format!("{:?}", m.u8(at + 0x13)),
+            );
+        }
+        cx.compare_data(&format!("{path}.x14"), self.x14, m.u32(at + 0x14));
+        if self.x18.map_or(0, |c| c.0) != m.u32(at + 0x18) {
+            cx.mismatch(
+                &format!("{path}.x18"),
+                format!("{:?}", self.x18),
+                format!("{:#x}", m.u32(at + 0x18)),
+            );
+        }
+        if self.x1C.map_or(0, |c| c.0) != m.u32(at + 0x1c) {
+            cx.mismatch(
+                &format!("{path}.x1C"),
+                format!("{:?}", self.x1C),
+                format!("{:#x}", m.u32(at + 0x1c)),
+            );
+        }
+        if self.x20 != m.u32(at + 0x20) as i32 {
+            cx.mismatch(
+                &format!("{path}.x20"),
+                format!("{:?}", self.x20),
+                format!("{:?}", m.u32(at + 0x20) as i32),
+            );
+        }
+        if self.x24 != m.u32(at + 0x24) as i32 {
+            cx.mismatch(
+                &format!("{path}.x24"),
+                format!("{:?}", self.x24),
+                format!("{:?}", m.u32(at + 0x24) as i32),
+            );
+        }
+    }
+}
+
+impl Mirror for ScInfStcSlot {
+    const SIZE: u32 = 0x8;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        ScInfStcSlot {
+            gobj: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
+            gobj2: cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_handle(
+            &format!("{path}.gobj"),
+            "GObjId",
+            self.gobj.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
+        cx.compare_handle(
+            &format!("{path}.gobj2"),
+            "GObjId",
+            self.gobj2.map(|h| h.0),
+            m.u32(at + 0x4),
+        );
+    }
+}
+
+impl Mirror for ScInfStcModels {
+    const SIZE: u32 = 0x34;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        ScInfStcModels {
+            scene_models: cx.import_data(m.u32(at + 0x0)),
+            slots: core::array::from_fn(|i0| {
+                ScInfStcSlot::import(m, at + 0x4 + i0 as u32 * 0x8, cx)
+            }),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_data(
+            &format!("{path}.scene_models"),
+            self.scene_models,
+            m.u32(at + 0x0),
+        );
+        for i0 in 0..6 {
+            self.slots[i0].compare(
+                m,
+                at + 0x4 + i0 as u32 * 0x8,
+                &format!("{}[{}]", format!("{path}.slots"), i0),
+                cx,
+            );
+        }
+    }
+}
+
+impl Mirror for ifTime_data {
+    const SIZE: u32 = 0x3c;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        ifTime_data {
+            match_timer: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
+            countdown_timer: cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId),
+            digits: core::array::from_fn(|i0| {
+                cx.import_handle("JObjId", m.u32(at + 0x8 + i0 as u32 * 0x4))
+                    .map(JObjId)
+            }),
+            countdown_seconds: m.u8(at + 0x30),
+            pad31: core::array::from_fn(|i0| m.u8(at + 0x31 + i0 as u32 * 0x1) as i8),
+            countdown_timer_models: cx.import_data(m.u32(at + 0x38)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_handle(
+            &format!("{path}.match_timer"),
+            "GObjId",
+            self.match_timer.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
+        cx.compare_handle(
+            &format!("{path}.countdown_timer"),
+            "GObjId",
+            self.countdown_timer.map(|h| h.0),
+            m.u32(at + 0x4),
+        );
+        for i0 in 0..10 {
+            cx.compare_handle(
+                &format!("{}[{}]", format!("{path}.digits"), i0),
+                "JObjId",
+                self.digits[i0].map(|h| h.0),
+                m.u32(at + 0x8 + i0 as u32 * 0x4),
+            );
+        }
+        if self.countdown_seconds != m.u8(at + 0x30) {
+            cx.mismatch(
+                &format!("{path}.countdown_seconds"),
+                format!("{:?}", self.countdown_seconds),
+                format!("{:?}", m.u8(at + 0x30)),
+            );
+        }
+        for i0 in 0..7 {
+            if self.pad31[i0] != m.u8(at + 0x31 + i0 as u32 * 0x1) as i8 {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.pad31"), i0),
+                    format!("{:?}", self.pad31[i0]),
+                    format!("{:?}", m.u8(at + 0x31 + i0 as u32 * 0x1) as i8),
+                );
+            }
+        }
+        cx.compare_data(
+            &format!("{path}.countdown_timer_models"),
+            self.countdown_timer_models,
+            m.u32(at + 0x38),
+        );
+    }
+}
+
+impl Mirror for ifAll_804A0FD8_t {
+    const SIZE: u32 = 0x9c;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        ifAll_804A0FD8_t {
+            gobj: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
+            gobj_2: cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId),
+            x8: cx.import_handle("JObjId", m.u32(at + 0x8)).map(JObjId),
+            xC: Vec3::import(m, at + 0xc, cx),
+            x18: core::array::from_fn(|i0| Vec3::import(m, at + 0x18 + i0 as u32 * 0xc, cx)),
+            x60: core::array::from_fn(|i0| Vec3::import(m, at + 0x60 + i0 as u32 * 0xc, cx)),
+            x84: core::array::from_fn(|i0| Vec3::import(m, at + 0x84 + i0 as u32 * 0xc, cx)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_handle(
+            &format!("{path}.gobj"),
+            "GObjId",
+            self.gobj.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
+        cx.compare_handle(
+            &format!("{path}.gobj_2"),
+            "GObjId",
+            self.gobj_2.map(|h| h.0),
+            m.u32(at + 0x4),
+        );
+        cx.compare_handle(
+            &format!("{path}.x8"),
+            "JObjId",
+            self.x8.map(|h| h.0),
+            m.u32(at + 0x8),
+        );
+        self.xC.compare(m, at + 0xc, &format!("{path}.xC"), cx);
+        for i0 in 0..6 {
+            self.x18[i0].compare(
+                m,
+                at + 0x18 + i0 as u32 * 0xc,
+                &format!("{}[{}]", format!("{path}.x18"), i0),
+                cx,
+            );
+        }
+        for i0 in 0..3 {
+            self.x60[i0].compare(
+                m,
+                at + 0x60 + i0 as u32 * 0xc,
+                &format!("{}[{}]", format!("{path}.x60"), i0),
+                cx,
+            );
+        }
+        for i0 in 0..2 {
+            self.x84[i0].compare(
+                m,
+                at + 0x84 + i0 as u32 * 0xc,
+                &format!("{}[{}]", format!("{path}.x84"), i0),
+                cx,
+            );
+        }
+    }
+}
+
+impl Mirror for ifStock_804A1378_per_player {
+    const SIZE: u32 = 0x50;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        ifStock_804A1378_per_player {
+            x0: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
+            x4: core::array::from_fn(|i0| {
+                cx.import_handle("JObjId", m.u32(at + 0x4 + i0 as u32 * 0x4))
+                    .map(JObjId)
+            }),
+            x24: cx.import_handle("JObjId", m.u32(at + 0x24)).map(JObjId),
+            x28: cx.import_handle("JObjId", m.u32(at + 0x28)).map(JObjId),
+            x2C: cx.import_handle("JObjId", m.u32(at + 0x2c)).map(JObjId),
+            x30: cx.import_handle("JObjId", m.u32(at + 0x30)).map(JObjId),
+            x34: cx.import_handle("JObjId", m.u32(at + 0x34)).map(JObjId),
+            x38: cx.import_handle("JObjId", m.u32(at + 0x38)).map(JObjId),
+            x3C: cx.import_handle("JObjId", m.u32(at + 0x3c)).map(JObjId),
+            x40: cx.import_handle("JObjId", m.u32(at + 0x40)).map(JObjId),
+            x44: cx.import_handle("JObjId", m.u32(at + 0x44)).map(JObjId),
+            coins: m.u32(at + 0x48) as i32,
+            stocks: m.u32(at + 0x4c) as i32,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_handle(
+            &format!("{path}.x0"),
+            "GObjId",
+            self.x0.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
+        for i0 in 0..8 {
+            cx.compare_handle(
+                &format!("{}[{}]", format!("{path}.x4"), i0),
+                "JObjId",
+                self.x4[i0].map(|h| h.0),
+                m.u32(at + 0x4 + i0 as u32 * 0x4),
+            );
+        }
+        cx.compare_handle(
+            &format!("{path}.x24"),
+            "JObjId",
+            self.x24.map(|h| h.0),
+            m.u32(at + 0x24),
+        );
+        cx.compare_handle(
+            &format!("{path}.x28"),
+            "JObjId",
+            self.x28.map(|h| h.0),
+            m.u32(at + 0x28),
+        );
+        cx.compare_handle(
+            &format!("{path}.x2C"),
+            "JObjId",
+            self.x2C.map(|h| h.0),
+            m.u32(at + 0x2c),
+        );
+        cx.compare_handle(
+            &format!("{path}.x30"),
+            "JObjId",
+            self.x30.map(|h| h.0),
+            m.u32(at + 0x30),
+        );
+        cx.compare_handle(
+            &format!("{path}.x34"),
+            "JObjId",
+            self.x34.map(|h| h.0),
+            m.u32(at + 0x34),
+        );
+        cx.compare_handle(
+            &format!("{path}.x38"),
+            "JObjId",
+            self.x38.map(|h| h.0),
+            m.u32(at + 0x38),
+        );
+        cx.compare_handle(
+            &format!("{path}.x3C"),
+            "JObjId",
+            self.x3C.map(|h| h.0),
+            m.u32(at + 0x3c),
+        );
+        cx.compare_handle(
+            &format!("{path}.x40"),
+            "JObjId",
+            self.x40.map(|h| h.0),
+            m.u32(at + 0x40),
+        );
+        cx.compare_handle(
+            &format!("{path}.x44"),
+            "JObjId",
+            self.x44.map(|h| h.0),
+            m.u32(at + 0x44),
+        );
+        if self.coins != m.u32(at + 0x48) as i32 {
+            cx.mismatch(
+                &format!("{path}.coins"),
+                format!("{:?}", self.coins),
+                format!("{:?}", m.u32(at + 0x48) as i32),
+            );
+        }
+        if self.stocks != m.u32(at + 0x4c) as i32 {
+            cx.mismatch(
+                &format!("{path}.stocks"),
+                format!("{:?}", self.stocks),
+                format!("{:?}", m.u32(at + 0x4c) as i32),
+            );
+        }
+    }
+}
+
+impl Mirror for ifStock_804A1378 {
+    const SIZE: u32 = 0x204;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        ifStock_804A1378 {
+            x0: cx.import_data(m.u32(at + 0x0)),
+            x4: cx.import_data(m.u32(at + 0x4)),
+            player: core::array::from_fn(|i0| {
+                ifStock_804A1378_per_player::import(m, at + 0x8 + i0 as u32 * 0x50, cx)
+            }),
+            gobj: cx.import_handle("GObjId", m.u32(at + 0x1e8)).map(GObjId),
+            jobj: cx.import_handle("JObjId", m.u32(at + 0x1ec)).map(JObjId),
+            pad1F0: core::array::from_fn(|i0| m.u8(at + 0x1f0 + i0 as u32 * 0x1) as i8),
+            jobj_a: cx.import_handle("JObjId", m.u32(at + 0x1f4)).map(JObjId),
+            jobj_b: cx.import_handle("JObjId", m.u32(at + 0x1f8)).map(JObjId),
+            jobj_c: cx.import_handle("JObjId", m.u32(at + 0x1fc)).map(JObjId),
+            jobj_d: cx.import_handle("JObjId", m.u32(at + 0x200)).map(JObjId),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_data(&format!("{path}.x0"), self.x0, m.u32(at + 0x0));
+        cx.compare_data(&format!("{path}.x4"), self.x4, m.u32(at + 0x4));
+        for i0 in 0..6 {
+            self.player[i0].compare(
+                m,
+                at + 0x8 + i0 as u32 * 0x50,
+                &format!("{}[{}]", format!("{path}.player"), i0),
+                cx,
+            );
+        }
+        cx.compare_handle(
+            &format!("{path}.gobj"),
+            "GObjId",
+            self.gobj.map(|h| h.0),
+            m.u32(at + 0x1e8),
+        );
+        cx.compare_handle(
+            &format!("{path}.jobj"),
+            "JObjId",
+            self.jobj.map(|h| h.0),
+            m.u32(at + 0x1ec),
+        );
+        for i0 in 0..4 {
+            if self.pad1F0[i0] != m.u8(at + 0x1f0 + i0 as u32 * 0x1) as i8 {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.pad1F0"), i0),
+                    format!("{:?}", self.pad1F0[i0]),
+                    format!("{:?}", m.u8(at + 0x1f0 + i0 as u32 * 0x1) as i8),
+                );
+            }
+        }
+        cx.compare_handle(
+            &format!("{path}.jobj_a"),
+            "JObjId",
+            self.jobj_a.map(|h| h.0),
+            m.u32(at + 0x1f4),
+        );
+        cx.compare_handle(
+            &format!("{path}.jobj_b"),
+            "JObjId",
+            self.jobj_b.map(|h| h.0),
+            m.u32(at + 0x1f8),
+        );
+        cx.compare_handle(
+            &format!("{path}.jobj_c"),
+            "JObjId",
+            self.jobj_c.map(|h| h.0),
+            m.u32(at + 0x1fc),
+        );
+        cx.compare_handle(
+            &format!("{path}.jobj_d"),
+            "JObjId",
+            self.jobj_d.map(|h| h.0),
+            m.u32(at + 0x200),
+        );
+    }
+}
+
+impl Mirror for IfStockStealAnim {
+    const SIZE: u32 = 0x24;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        IfStockStealAnim {
+            start: Vec3::import(m, at + 0x0, cx),
+            mid: Vec3::import(m, at + 0xc, cx),
+            end: Vec3::import(m, at + 0x18, cx),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        self.start
+            .compare(m, at + 0x0, &format!("{path}.start"), cx);
+        self.mid.compare(m, at + 0xc, &format!("{path}.mid"), cx);
+        self.end.compare(m, at + 0x18, &format!("{path}.end"), cx);
+    }
+}
+
+impl Mirror for IfStockUserData {
+    const SIZE: u32 = 0x54;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        IfStockUserData {
+            player: m.u8(at + 0x0),
+            mode: m.u8(at + 0x1),
+            flag: m.u8(at + 0x2),
+            x3: core::array::from_fn(|i0| m.u8(at + 0x3 + i0 as u32 * 0x1)),
+            anim: core::array::from_fn(|i0| m.u8(at + 0x5 + i0 as u32 * 0x1)),
+            steal: core::array::from_fn(|i0| {
+                IfStockStealAnim::import(m, at + 0xc + i0 as u32 * 0x24, cx)
+            }),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.player != m.u8(at + 0x0) {
+            cx.mismatch(
+                &format!("{path}.player"),
+                format!("{:?}", self.player),
+                format!("{:?}", m.u8(at + 0x0)),
+            );
+        }
+        if self.mode != m.u8(at + 0x1) {
+            cx.mismatch(
+                &format!("{path}.mode"),
+                format!("{:?}", self.mode),
+                format!("{:?}", m.u8(at + 0x1)),
+            );
+        }
+        if self.flag != m.u8(at + 0x2) {
+            cx.mismatch(
+                &format!("{path}.flag"),
+                format!("{:?}", self.flag),
+                format!("{:?}", m.u8(at + 0x2)),
+            );
+        }
+        for i0 in 0..2 {
+            if self.x3[i0] != m.u8(at + 0x3 + i0 as u32 * 0x1) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.x3"), i0),
+                    format!("{:?}", self.x3[i0]),
+                    format!("{:?}", m.u8(at + 0x3 + i0 as u32 * 0x1)),
+                );
+            }
+        }
+        for i0 in 0..7 {
+            if self.anim[i0] != m.u8(at + 0x5 + i0 as u32 * 0x1) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.anim"), i0),
+                    format!("{:?}", self.anim[i0]),
+                    format!("{:?}", m.u8(at + 0x5 + i0 as u32 * 0x1)),
+                );
+            }
+        }
+        for i0 in 0..2 {
+            self.steal[i0].compare(
+                m,
+                at + 0xc + i0 as u32 * 0x24,
+                &format!("{}[{}]", format!("{path}.steal"), i0),
+                cx,
+            );
+        }
+    }
+}
+
+impl Mirror for ifStock_804A1774 {
+    const SIZE: u32 = 0x318;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        ifStock_804A1774 {
+            x0: m.u8(at + 0x0) as i8,
+            x1: core::array::from_fn(|i0| m.u8(at + 0x1 + i0 as u32 * 0x1) as i8),
+            x83: core::array::from_fn(|i0| m.u8(at + 0x83 + i0 as u32 * 0x1) as i8),
+            x108: m.u32(at + 0x108) as i32,
+            x10C: core::array::from_fn(|i0| {
+                cx.import_handle("GObjId", m.u32(at + 0x10c + i0 as u32 * 0x4))
+                    .map(GObjId)
+            }),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0 != m.u8(at + 0x0) as i8 {
+            cx.mismatch(
+                &format!("{path}.x0"),
+                format!("{:?}", self.x0),
+                format!("{:?}", m.u8(at + 0x0) as i8),
+            );
+        }
+        for i0 in 0..130 {
+            if self.x1[i0] != m.u8(at + 0x1 + i0 as u32 * 0x1) as i8 {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.x1"), i0),
+                    format!("{:?}", self.x1[i0]),
+                    format!("{:?}", m.u8(at + 0x1 + i0 as u32 * 0x1) as i8),
+                );
+            }
+        }
+        for i0 in 0..133 {
+            if self.x83[i0] != m.u8(at + 0x83 + i0 as u32 * 0x1) as i8 {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.x83"), i0),
+                    format!("{:?}", self.x83[i0]),
+                    format!("{:?}", m.u8(at + 0x83 + i0 as u32 * 0x1) as i8),
+                );
+            }
+        }
+        if self.x108 != m.u32(at + 0x108) as i32 {
+            cx.mismatch(
+                &format!("{path}.x108"),
+                format!("{:?}", self.x108),
+                format!("{:?}", m.u32(at + 0x108) as i32),
+            );
+        }
+        for i0 in 0..131 {
+            cx.compare_handle(
+                &format!("{}[{}]", format!("{path}.x10C"), i0),
+                "GObjId",
+                self.x10C[i0].map(|h| h.0),
+                m.u32(at + 0x10c + i0 as u32 * 0x4),
+            );
+        }
+    }
+}
+
+impl Mirror for ifStock_804A1ACC {
+    const SIZE: u32 = 0x314;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        ifStock_804A1ACC {
+            x0: m.u8(at + 0x0) as i8,
+            x1: core::array::from_fn(|i0| m.u8(at + 0x1 + i0 as u32 * 0x1) as i8),
+            x83: core::array::from_fn(|i0| m.u8(at + 0x83 + i0 as u32 * 0x1) as i8),
+            x108: cx.import_handle("GObjId", m.u32(at + 0x108)).map(GObjId),
+            x10C: core::array::from_fn(|i0| {
+                cx.import_handle("GObjId", m.u32(at + 0x10c + i0 as u32 * 0x4))
+                    .map(GObjId)
+            }),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0 != m.u8(at + 0x0) as i8 {
+            cx.mismatch(
+                &format!("{path}.x0"),
+                format!("{:?}", self.x0),
+                format!("{:?}", m.u8(at + 0x0) as i8),
+            );
+        }
+        for i0 in 0..130 {
+            if self.x1[i0] != m.u8(at + 0x1 + i0 as u32 * 0x1) as i8 {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.x1"), i0),
+                    format!("{:?}", self.x1[i0]),
+                    format!("{:?}", m.u8(at + 0x1 + i0 as u32 * 0x1) as i8),
+                );
+            }
+        }
+        for i0 in 0..133 {
+            if self.x83[i0] != m.u8(at + 0x83 + i0 as u32 * 0x1) as i8 {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.x83"), i0),
+                    format!("{:?}", self.x83[i0]),
+                    format!("{:?}", m.u8(at + 0x83 + i0 as u32 * 0x1) as i8),
+                );
+            }
+        }
+        cx.compare_handle(
+            &format!("{path}.x108"),
+            "GObjId",
+            self.x108.map(|h| h.0),
+            m.u32(at + 0x108),
+        );
+        for i0 in 0..130 {
+            cx.compare_handle(
+                &format!("{}[{}]", format!("{path}.x10C"), i0),
+                "GObjId",
+                self.x10C[i0].map(|h| h.0),
+                m.u32(at + 0x10c + i0 as u32 * 0x4),
+            );
+        }
+    }
+}
+
+impl Mirror for un_804A1F10_t {
+    const SIZE: u32 = 0x38;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        un_804A1F10_t {
+            x0: cx.import_data(m.u32(at + 0x0)),
+            x4: core::array::from_fn(|i0| {
+                cx.import_handle("GObjId", m.u32(at + 0x4 + i0 as u32 * 0x4))
+                    .map(GObjId)
+            }),
+            x14: core::array::from_fn(|i0| _GXColor::import(m, at + 0x14 + i0 as u32 * 0x4, cx)),
+            x24: core::array::from_fn(|i0| m.u8(at + 0x24 + i0 as u32 * 0x1)),
+            x28: core::array::from_fn(|i0| m.u8(at + 0x28 + i0 as u32 * 0x1)),
+            x2C: core::array::from_fn(|i0| m.u8(at + 0x2c + i0 as u32 * 0x1)),
+            x30: m.u8(at + 0x30),
+            x31: m.u8(at + 0x31) as i8,
+            x32: m.u8(at + 0x32),
+            pad_34: RawPtr(m.u32(at + 0x34)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_data(&format!("{path}.x0"), self.x0, m.u32(at + 0x0));
+        for i0 in 0..4 {
+            cx.compare_handle(
+                &format!("{}[{}]", format!("{path}.x4"), i0),
+                "GObjId",
+                self.x4[i0].map(|h| h.0),
+                m.u32(at + 0x4 + i0 as u32 * 0x4),
+            );
+        }
+        for i0 in 0..4 {
+            self.x14[i0].compare(
+                m,
+                at + 0x14 + i0 as u32 * 0x4,
+                &format!("{}[{}]", format!("{path}.x14"), i0),
+                cx,
+            );
+        }
+        for i0 in 0..4 {
+            if self.x24[i0] != m.u8(at + 0x24 + i0 as u32 * 0x1) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.x24"), i0),
+                    format!("{:?}", self.x24[i0]),
+                    format!("{:?}", m.u8(at + 0x24 + i0 as u32 * 0x1)),
+                );
+            }
+        }
+        for i0 in 0..4 {
+            if self.x28[i0] != m.u8(at + 0x28 + i0 as u32 * 0x1) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.x28"), i0),
+                    format!("{:?}", self.x28[i0]),
+                    format!("{:?}", m.u8(at + 0x28 + i0 as u32 * 0x1)),
+                );
+            }
+        }
+        for i0 in 0..4 {
+            if self.x2C[i0] != m.u8(at + 0x2c + i0 as u32 * 0x1) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.x2C"), i0),
+                    format!("{:?}", self.x2C[i0]),
+                    format!("{:?}", m.u8(at + 0x2c + i0 as u32 * 0x1)),
+                );
+            }
+        }
+        if self.x30 != m.u8(at + 0x30) {
+            cx.mismatch(
+                &format!("{path}.x30"),
+                format!("{:?}", self.x30),
+                format!("{:?}", m.u8(at + 0x30)),
+            );
+        }
+        if self.x31 != m.u8(at + 0x31) as i8 {
+            cx.mismatch(
+                &format!("{path}.x31"),
+                format!("{:?}", self.x31),
+                format!("{:?}", m.u8(at + 0x31) as i8),
+            );
+        }
+        if self.x32 != m.u8(at + 0x32) {
+            cx.mismatch(
+                &format!("{path}.x32"),
+                format!("{:?}", self.x32),
+                format!("{:?}", m.u8(at + 0x32)),
+            );
+        }
+        if self.pad_34.0 != m.u32(at + 0x34) {
+            cx.mismatch(
+                &format!("{path}.pad_34"),
+                format!("{:#x}", self.pad_34.0),
+                format!("{:#x}", m.u32(at + 0x34)),
+            );
+        }
+    }
+}
+
+impl Mirror for un_803F9E08_t {
+    const SIZE: u32 = 0x10;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        un_803F9E08_t {
+            x0_b0: m.bits(at, 0, 1) != 0,
+            x0_b1: m.bits(at, 1, 1) != 0,
+            x0_b234: m.bits(at, 2, 3) as u8,
+            x0_b567: m.bits(at, 5, 3) as u8,
+            x1: m.u8(at + 0x1),
+            x2: m.u8(at + 0x2),
+            x3: m.u8(at + 0x3),
+            x4: m.u32(at + 0x4) as i32,
+            x8: m.u32(at + 0x8) as i32,
+            xC: cx.import_handle("GObjId", m.u32(at + 0xc)).map(GObjId),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if (self.x0_b0 as u32) != m.bits(at, 0, 1) {
+            cx.mismatch(
+                &format!("{path}.x0_b0"),
+                format!("{:?}", self.x0_b0),
+                format!("{:?}", m.bits(at, 0, 1)),
+            );
+        }
+        if (self.x0_b1 as u32) != m.bits(at, 1, 1) {
+            cx.mismatch(
+                &format!("{path}.x0_b1"),
+                format!("{:?}", self.x0_b1),
+                format!("{:?}", m.bits(at, 1, 1)),
+            );
+        }
+        if (self.x0_b234 as u32) != m.bits(at, 2, 3) {
+            cx.mismatch(
+                &format!("{path}.x0_b234"),
+                format!("{:?}", self.x0_b234),
+                format!("{:?}", m.bits(at, 2, 3)),
+            );
+        }
+        if (self.x0_b567 as u32) != m.bits(at, 5, 3) {
+            cx.mismatch(
+                &format!("{path}.x0_b567"),
+                format!("{:?}", self.x0_b567),
+                format!("{:?}", m.bits(at, 5, 3)),
+            );
+        }
+        if self.x1 != m.u8(at + 0x1) {
+            cx.mismatch(
+                &format!("{path}.x1"),
+                format!("{:?}", self.x1),
+                format!("{:?}", m.u8(at + 0x1)),
+            );
+        }
+        if self.x2 != m.u8(at + 0x2) {
+            cx.mismatch(
+                &format!("{path}.x2"),
+                format!("{:?}", self.x2),
+                format!("{:?}", m.u8(at + 0x2)),
+            );
+        }
+        if self.x3 != m.u8(at + 0x3) {
+            cx.mismatch(
+                &format!("{path}.x3"),
+                format!("{:?}", self.x3),
+                format!("{:?}", m.u8(at + 0x3)),
+            );
+        }
+        if self.x4 != m.u32(at + 0x4) as i32 {
+            cx.mismatch(
+                &format!("{path}.x4"),
+                format!("{:?}", self.x4),
+                format!("{:?}", m.u32(at + 0x4) as i32),
+            );
+        }
+        if self.x8 != m.u32(at + 0x8) as i32 {
+            cx.mismatch(
+                &format!("{path}.x8"),
+                format!("{:?}", self.x8),
+                format!("{:?}", m.u32(at + 0x8) as i32),
+            );
+        }
+        cx.compare_handle(
+            &format!("{path}.xC"),
+            "GObjId",
+            self.xC.map(|h| h.0),
+            m.u32(at + 0xc),
+        );
+    }
+}
+
+impl Mirror for StaticModelDesc {
+    const SIZE: u32 = 0x10;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        StaticModelDesc {
+            joint: cx.import_data(m.u32(at + 0x0)),
+            animjoint: cx.import_data(m.u32(at + 0x4)),
+            matanim_joint: cx.import_data(m.u32(at + 0x8)),
+            shapeanim_joint: cx.import_data(m.u32(at + 0xc)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_data(&format!("{path}.joint"), self.joint, m.u32(at + 0x0));
+        cx.compare_data(
+            &format!("{path}.animjoint"),
+            self.animjoint,
+            m.u32(at + 0x4),
+        );
+        cx.compare_data(
+            &format!("{path}.matanim_joint"),
+            self.matanim_joint,
+            m.u32(at + 0x8),
+        );
+        cx.compare_data(
+            &format!("{path}.shapeanim_joint"),
+            self.shapeanim_joint,
+            m.u32(at + 0xc),
+        );
+    }
+}
+
+impl Mirror for un_804A1F58_x8_t {
+    const SIZE: u32 = 0x14;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        un_804A1F58_x8_t {
+            x0: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
+            x4: cx.import_handle("TextId", m.u32(at + 0x4)).map(TextId),
+            x8: m.u32(at + 0x8),
+            xC: m.u32(at + 0xc),
+            x10: m.u8(at + 0x10),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_handle(
+            &format!("{path}.x0"),
+            "GObjId",
+            self.x0.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
+        cx.compare_handle(
+            &format!("{path}.x4"),
+            "TextId",
+            self.x4.map(|h| h.0),
+            m.u32(at + 0x4),
+        );
+        if self.x8 != m.u32(at + 0x8) {
+            cx.mismatch(
+                &format!("{path}.x8"),
+                format!("{:?}", self.x8),
+                format!("{:?}", m.u32(at + 0x8)),
+            );
+        }
+        if self.xC != m.u32(at + 0xc) {
+            cx.mismatch(
+                &format!("{path}.xC"),
+                format!("{:?}", self.xC),
+                format!("{:?}", m.u32(at + 0xc)),
+            );
+        }
+        if self.x10 != m.u8(at + 0x10) {
+            cx.mismatch(
+                &format!("{path}.x10"),
+                format!("{:?}", self.x10),
+                format!("{:?}", m.u8(at + 0x10)),
+            );
+        }
+    }
+}
+
+impl Mirror for un_804A1F58_t {
+    const SIZE: u32 = 0x80;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        un_804A1F58_t {
+            x0: m.u32(at + 0x0),
+            pad_x4: core::array::from_fn(|i0| m.u8(at + 0x4 + i0 as u32 * 0x1) as i8),
+            x8: core::array::from_fn(|i0| {
+                un_804A1F58_x8_t::import(m, at + 0x8 + i0 as u32 * 0x14, cx)
+            }),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0 != m.u32(at + 0x0) {
+            cx.mismatch(
+                &format!("{path}.x0"),
+                format!("{:?}", self.x0),
+                format!("{:?}", m.u32(at + 0x0)),
+            );
+        }
+        for i0 in 0..4 {
+            if self.pad_x4[i0] != m.u8(at + 0x4 + i0 as u32 * 0x1) as i8 {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.pad_x4"), i0),
+                    format!("{:?}", self.pad_x4[i0]),
+                    format!("{:?}", m.u8(at + 0x4 + i0 as u32 * 0x1) as i8),
+                );
+            }
+        }
+        for i0 in 0..6 {
+            self.x8[i0].compare(
+                m,
+                at + 0x8 + i0 as u32 * 0x14,
+                &format!("{}[{}]", format!("{path}.x8"), i0),
+                cx,
+            );
+        }
     }
 }

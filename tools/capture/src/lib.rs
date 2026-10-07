@@ -9,6 +9,7 @@ pub mod hud;
 pub mod import;
 pub mod items;
 pub mod playback;
+pub mod sis;
 pub mod stage;
 pub mod vs;
 

@@ -6,6 +6,7 @@
 //! becomes draw commands.
 
 pub mod devtext;
+pub mod text;
 
 /// The HUD's globals, one field per unit's statics.
 #[derive(Clone, Debug, Default)]

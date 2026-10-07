@@ -993,3 +993,4 @@ grLib_801C9BC8	leaf-check stage quake_loop_proc: every capture; last_stage_ticks
 grLib_801C9C40	leaf-check stage quake_proc: every capture (the fighters' landing quakes)
 DevText_AddToList	leaf-check hud devtext_ops: DevText_Show inserts through it; the pool and draw list compared after every run
 DevText_SetupCObj	leaf-check hud devtext_draw_all: DevText_DrawAll makes its camera through it; the camera and draw calls compared
+fn_803A60EC	leaf-check sis canvas_camera: freeing a canvas camera GObj releases its user data through it; the canvases compared

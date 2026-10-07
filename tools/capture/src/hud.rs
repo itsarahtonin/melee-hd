@@ -2,7 +2,9 @@
 //! back, pairing the GObjs, joints and cameras they point to as the scheduler's do.
 
 use melee_sim::game::hud::devtext::{DevText, DevTexts, Glyph, POOL};
+use melee_sim::game::state::UserData;
 use melee_sim::hsd::gobj::GObjId;
+use melee_sim::hsd::sis::TextId;
 
 use crate::compare::Comparer;
 use crate::import::{Importer, sym};
@@ -24,7 +26,7 @@ fn devtext_index(pool: u32, a: u32) -> Option<u8> {
 }
 
 /// Reads memory the way both sides need.
-trait Words {
+pub(crate) trait Words {
     fn b(&self, a: u32) -> u8;
     fn h(&self, a: u32) -> u16 {
         u16::from(self.b(a)) << 8 | u16::from(self.b(a + 1))
@@ -97,6 +99,13 @@ impl Importer<'_> {
     /// The HUD's and the debug text's globals.
     pub fn hud(&mut self) {
         self.devtext();
+        self.sis();
+    }
+
+    /// A GObj a global points to.
+    pub(crate) fn gobj_at(&mut self, a: u32) -> Option<GObjId> {
+        use melee_sim::game::mirror::Cx;
+        self.import_handle("GObjId", a).map(GObjId)
     }
 
     fn devtext(&mut self) {
@@ -137,6 +146,7 @@ impl Comparer<'_> {
     /// The HUD's and the debug text's globals, as [`Importer::hud`] imports them.
     pub fn hud(&mut self) {
         self.devtext();
+        self.sis();
     }
 
     fn devtext(&mut self) {
@@ -209,5 +219,43 @@ impl Comparer<'_> {
     pub(crate) fn compare_gobj(&mut self, path: &str, ours: Option<GObjId>, theirs: u32) {
         use melee_sim::game::mirror::Cx;
         self.compare_handle(path, "GObjId", ours.map(|g| g.0), theirs);
+    }
+}
+
+/// The HUD's and text system's GObj user data, by the release function the GObj holds.
+pub(crate) fn user_data(imp: &mut Importer, release: u32, ud: u32) -> Option<UserData> {
+    let mem: &[u8] = &imp.cap.call.mem1;
+    match release {
+        // HSD_SisLib_803A5A2C: a text.
+        0x803A_5A2C => {
+            let base = mem.w(sym("HSD_SisLib_804D796C"));
+            Some(UserData::Text(TextId(ud - base)))
+        }
+        // fn_803A60EC: a canvas's camera, its own GObj.
+        0x803A_60EC => Some(UserData::SisCamera(imp.gobj_at(ud)?)),
+        _ => None,
+    }
+}
+
+/// Compares a GObj's HUD or text user data with memory (the GObj at `t`).
+pub(crate) fn compare_user_data(cmp: &mut Comparer, path: &str, ud: UserData, t: u32) {
+    let mem = cmp.mem;
+    let theirs = mem.w(t + 0x2C);
+    let release = mem.w(t + 0x30);
+    match ud {
+        UserData::Text(x) => {
+            let base = mem.w(sym("HSD_SisLib_804D796C"));
+            cmp.check(
+                path,
+                "text user data",
+                (Some(x.0), 0x803A_5A2C),
+                (theirs.checked_sub(base), release),
+            );
+        }
+        UserData::SisCamera(g) => {
+            cmp.compare_gobj(&format!("{path} canvas camera"), Some(g), theirs);
+            cmp.check(path, "canvas camera release", 0x803A_60EC, release);
+        }
+        other => cmp.diff(path, "user data", other, format!("{theirs:#x}")),
     }
 }
