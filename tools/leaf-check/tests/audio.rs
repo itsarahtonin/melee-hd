@@ -800,3 +800,128 @@ fn stream_callbacks() {
         None
     });
 }
+
+const LB_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/lb";
+
+/// The audio library's tick and mix (`lbAudioAx_80027DF8` and the functions that set what it
+/// reads), on the saved calls in `AUDIO_LB_CALLS` (default above), captured as the driver's
+/// are with these functions named over the whole Final Destination match
+/// (`CAPTURE_EVERY=500`, `--fields 13000`).
+fn lb_dir() -> String {
+    std::env::var("AUDIO_LB_CALLS").unwrap_or_else(|_| LB_CALLS.to_owned())
+}
+
+#[test]
+fn lb_audio_tick() {
+    check_calls(&lb_dir(), "lbAudioAx_80027DF8", 20, &|g, _, _| {
+        g.lb_audio_tick();
+        Ret::Nothing
+    });
+}
+
+/// The tick from the same states with what it reads changed, so its branches all run: the
+/// crowd's loops wanted or not, timing out, playing, ended or never started, the queue
+/// holding sounds or flushing, held for the pause menu, and other volume settings.
+#[test]
+fn lb_audio_tick_varied() {
+    use leaf_check::calls::{check_calls_with, poke_u32};
+    check_calls_with(
+        &lb_dir(),
+        "lbAudioAx_80027DF8",
+        20,
+        &|call, i| {
+            let i = i as u32;
+            let w = |call: &mut ssbm_rt::capture::Call, a: u32, v: u32| poke_u32(call, a, v);
+            w(call, 0x804D_640C, u32::from(i % 4 == 3));
+            w(call, 0x804D_6420, i % 3);
+            w(call, 0x804D_6424, (i / 3) % 3);
+            w(call, 0x804D_6430, i % 2);
+            w(call, 0x804D_6434, 100);
+            w(call, 0x804D_6428, (i * 29) % 128);
+            w(call, 0x804D_642C, (i * 53) % 128);
+            let h = |k: u32| {
+                if (i + k).is_multiple_of(3) {
+                    u32::MAX
+                } else {
+                    (i * 37 + k) & 0x7FFF
+                }
+            };
+            w(call, 0x804D_38F0, h(0));
+            w(call, 0x804D_38F4, h(1));
+            w(call, 0x8043_373C, [0x84, 0x10, 0x83D60][(i % 3) as usize]);
+            w(call, 0x8043_3780, i % 3);
+            w(call, 0x804D_641C, u32::from(i % 5 == 1));
+            w(call, 0x804D_387C, (i * 13) % 128);
+            w(call, 0x804D_388C, (i * 7) % 128);
+            w(call, 0x804D_38CC, (i * 11) % 128);
+            w(call, 0x804D_3884, (i * 17) % 128);
+            w(call, 0x804D_38C8, (0.25 + 0.125 * (i % 6) as f32).to_bits());
+            w(call, 0x804D_38D8, (i * 19) % 256);
+        },
+        &|g, _, _| {
+            g.lb_audio_tick();
+            Ret::Nothing
+        },
+    );
+}
+
+/// The library's other entry points the VS scene and fighters call: saved calls where the
+/// match made them, and the rest from the tick's states.
+#[test]
+fn lb_audio_entries() {
+    use leaf_check::calls::check_calls_with;
+    check_calls(&lb_dir(), "lbAudioAx_80024C84", 1, &|g, _, _| {
+        g.lb_audio_reset();
+        Ret::Nothing
+    });
+    check_calls(&lb_dir(), "lbAudioAx_80024D50", 1, &|g, _, _| {
+        g.lb_audio_reset_flush();
+        Ret::Nothing
+    });
+    check_calls(&lb_dir(), "lbAudioAx_80024DC4", 1, &|g, _, c| {
+        g.lb_audio_queue(r(c, 3) as i32);
+        Ret::Nothing
+    });
+    check_calls(&lb_dir(), "lbAudioAx_8002500C", 1, &|g, _, c| {
+        g.lb_audio_crowd_a_less(r(c, 3) as i32);
+        Ret::Nothing
+    });
+    check_calls(&lb_dir(), "lbAudioAx_80025038", 1, &|g, _, c| {
+        g.lb_audio_crowd_b_less(r(c, 3) as i32);
+        Ret::Nothing
+    });
+    // Each from the tick's states, with its argument made from the call's index.
+    let from_tick =
+        |name: &'static str,
+         arg: fn(usize) -> u32,
+         ours: &(dyn Fn(&mut melee_sim::game::state::Running, u32) + Sync)| {
+            check_calls_with(
+                &lb_dir(),
+                "lbAudioAx_80027DF8",
+                20,
+                &|call, i| {
+                    call.addr = leaf_check::sym(name);
+                    call.regs.gpr[3] = arg(i);
+                },
+                &|g, _, c| {
+                    ours(g, r(c, 3));
+                    Ret::Nothing
+                },
+            );
+        };
+    let bit = |i: usize| (i % 2) as u32;
+    let none = |_: usize| 0;
+    from_tick("lbAudioAx_80024E84", bit, &|g, a| g.lb_audio_hold(a == 1));
+    from_tick("lbAudioAx_80024E50", bit, &|g, a| g.lb_audio_pause(a == 1));
+    from_tick("lbAudioAx_80024030", |i| (i % 12) as u32, &|g, a| {
+        g.lb_audio_call(a as i32)
+    });
+    from_tick("lbAudioAx_80024FDC", none, &|g, _| g.lb_audio_crowd_a());
+    from_tick("lbAudioAx_80024FF4", none, &|g, _| g.lb_audio_crowd_b());
+    from_tick("lbAudioAx_80024C84", none, &|g, _| g.lb_audio_reset());
+    from_tick(
+        "lbAudioAx_80024DC4",
+        |i| [0x84, 0x10, 0x85][i % 3],
+        &|g, a| g.lb_audio_queue(a as i32),
+    );
+}

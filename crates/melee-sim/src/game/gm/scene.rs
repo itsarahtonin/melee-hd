@@ -185,8 +185,9 @@ pub enum Resume {
 }
 
 /// The rest of a tick after [`begin_tick`], from `from`: the button maps and the scene's
-/// frame function when the game clock comes due, the pause mask, the hook before the
-/// processes, every process, and the tick counts. Returns whether the scene asked to end.
+/// frame function when the game clock comes due, the pause mask, the audio library's tick
+/// (`lbAudioAx_80027DF8`), the hook before the processes, every process, and the tick
+/// counts. Returns whether the scene asked to end.
 pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
     let g = &mut *r.game;
     if g.scene.unk_10.unk_38_0 {
@@ -219,7 +220,8 @@ pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
     if !g.pacing.due(1) {
         s.unk_28 |= !mask;
     }
-    if let Some(f) = s.pre_gobj_proc {
+    r.lb_audio_tick();
+    if let Some(f) = r.game.scene.unk_10.pre_gobj_proc {
         super::super::code::run_event(r, f.0);
     }
     let g = &mut *r.game;

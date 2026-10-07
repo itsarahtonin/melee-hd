@@ -28,6 +28,10 @@ pub fn reference() -> Option<Ctx> {
     dol.load_into(&ctx.mem).expect("main.dol fits in memory");
     ssbm_game::register(&ctx, |_| true);
     ctx.register(sym("lbArq_80014BD0"), aram_read);
+    // The audio interface's stream volume is a register for the disc's audio stream, which
+    // the game doesn't play: nothing in memory changes.
+    ctx.register(sym("AISetStreamVolLeft"), |_| {});
+    ctx.register(sym("AISetStreamVolRight"), |_| {});
     ctx.regs.set_r(1, STACK_TOP);
     // r2 and r13 as `__init_registers` sets them: its lis/ori pairs give the small-data bases.
     let init = sym("__init_registers");

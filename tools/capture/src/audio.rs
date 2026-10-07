@@ -316,6 +316,13 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
     for (i, b) in a.lb.banks.iter_mut().enumerate() {
         *b = m.i32(sym("lbl_80433984") + 4 * i as u32);
     }
+    for (name, at, f) in lb_fields(&mut a.lb) {
+        let _ = name;
+        match f {
+            LbField::I(v) => *v = m.i32(at),
+            LbField::F(v) => *v = m.f32(at),
+        }
+    }
     let d = &mut a.driver;
     d.bank = bank;
     d.banks = m.i32(sym("AXDriver_804D77B0"));
@@ -325,6 +332,73 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
         d.stream_table = m.u32(sym("AXDriver_804D77BC")).wrapping_sub(base);
     }
     a
+}
+
+/// One of lbaudio_ax's globals.
+enum LbField<'a> {
+    I(&'a mut i32),
+    F(&'a mut f32),
+}
+
+/// lbaudio_ax's globals the library's tick and mix read and write, by name and address.
+fn lb_fields(lb: &mut melee_sim::lb::audio::LbAudio) -> Vec<(&'static str, u32, LbField<'_>)> {
+    use LbField::{F, I};
+    let mut v = vec![
+        ("lbl_804D640C", 0x804D_640C, I(&mut lb.held)),
+        ("paused", 0x804D_6410, I(&mut lb.paused)),
+        ("lbl_804D6414", 0x804D_6414, I(&mut lb.x6414)),
+        ("lbl_804D6418", 0x804D_6418, I(&mut lb.x6418)),
+        ("lbl_804D641C", 0x804D_641C, I(&mut lb.flush_queue)),
+        ("lbl_804D387C", 0x804D_387C, I(&mut lb.music)),
+        ("synth_volume", 0x804D_3880, F(&mut lb.stream_volume)),
+        ("lbl_804D3884", 0x804D_3884, I(&mut lb.voice)),
+        ("lbl_804D3888", 0x804D_3888, I(&mut lb.volume_1)),
+        ("lbl_804D388C", 0x804D_388C, I(&mut lb.fx)),
+        ("lbl_804D3898", 0x804D_3898, I(&mut lb.volume_23)),
+        ("lbl_804D38A0", 0x804D_38A0, I(&mut lb.volume_47)),
+        ("lbl_804D38A8", 0x804D_38A8, I(&mut lb.volume_8)),
+        ("lbl_804D38AC", 0x804D_38AC, F(&mut lb.scale_1)),
+        ("lbl_804D38B0", 0x804D_38B0, F(&mut lb.scale_23_base)),
+        ("lbl_804D38B4", 0x804D_38B4, F(&mut lb.scale_23)),
+        ("lbl_804D38B8", 0x804D_38B8, F(&mut lb.scale_47)),
+        ("lbl_804D38BC", 0x804D_38BC, F(&mut lb.scale_8)),
+        ("lbl_804D38C0", 0x804D_38C0, F(&mut lb.music_scale)),
+        ("lbl_804D38C4", 0x804D_38C4, F(&mut lb.voice_scale)),
+        ("lbl_804D38C8", 0x804D_38C8, F(&mut lb.fx_scale)),
+        ("lbl_804D38CC", 0x804D_38CC, I(&mut lb.master)),
+        ("lbl_804D38D8", 0x804D_38D8, I(&mut lb.send)),
+        ("lbl_804D38DC", 0x804D_38DC, I(&mut lb.sent_send)),
+        ("lbl_804D38E0", 0x804D_38E0, I(&mut lb.send_wanted)),
+        ("lbl_804D38E4", 0x804D_38E4, F(&mut lb.duck)),
+        ("lbl_804D38E8", 0x804D_38E8, F(&mut lb.voice_duck)),
+        ("lbl_804D38EC", 0x804D_38EC, F(&mut lb.crowd_duck)),
+        ("lbl_804D63F0", 0x804D_63F0, F(&mut lb.sent_stream)),
+        ("lbl_804D63F4", 0x804D_63F4, I(&mut lb.sent_1)),
+        ("lbl_804D63FC", 0x804D_63FC, I(&mut lb.sent_23)),
+        ("lbl_804D6400", 0x804D_6400, I(&mut lb.sent_47)),
+        ("lbl_804D6404", 0x804D_6404, I(&mut lb.sent_8)),
+    ];
+    let [c0, c1] = &mut lb.crowd;
+    let [t0, t1] = &mut lb.crowd_timer;
+    let [v0, v1] = &mut lb.crowd_volume;
+    let [h0, h1] = &mut lb.crowd_handle;
+    v.extend([
+        ("lbl_804D6420", 0x804D_6420, I(c0)),
+        ("lbl_804D6424", 0x804D_6424, I(c1)),
+        ("lbl_804D6430", 0x804D_6430, I(t0)),
+        ("lbl_804D6434", 0x804D_6434, I(t1)),
+        ("lbl_804D6428", 0x804D_6428, I(v0)),
+        ("lbl_804D642C", 0x804D_642C, I(v1)),
+        ("lbl_804D38F0", 0x804D_38F0, I(h0)),
+        ("lbl_804D38F4", 0x804D_38F4, I(h1)),
+    ]);
+    for (i, q) in lb.queue.iter_mut().enumerate() {
+        v.push(("lbl_8043373C", 0x8043_373C + 4 * i as u32, I(q)));
+    }
+    for (i, t) in lb.queue_timer.iter_mut().enumerate() {
+        v.push(("lbl_80433780", 0x8043_3780 + 4 * i as u32, I(t)));
+    }
+    v
 }
 
 const DEVCOM_SIZE: u32 = 0x24;
@@ -891,6 +965,13 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
             sym("lbl_80433984") + 4 * i as u32,
             *b as u32,
         );
+    }
+    let mut lb = a.lb.clone();
+    for (name, at, f) in lb_fields(&mut lb) {
+        match f {
+            LbField::I(v) => img.u32(name, at, *v as u32),
+            LbField::F(v) => img.f32(name, at, *v),
+        }
     }
     img.check(diffs);
 }

@@ -974,3 +974,16 @@ pl_800401F0	leaf-check replay: ucf_sdi runs smash DI from replay captures and co
 lb_80014574	leaf-check fighter: change_motion_state and the procInput checks start rumbles through it on replay captures, and the pad library's rumble is compared after every call
 PStreamPauseCh	leaf-check audio: random_ops pauses channels through HSD_AudioPStreamPauseCh, before and after sounds' effects start
 PStreamResumeCh	leaf-check audio: random_ops resumes channels through HSD_AudioPStreamResumeCh, before and after sounds' effects start
+lbAudioAx_80027DF8	leaf-check audio: lb_audio_tick runs every saved call of it over a Final Destination match, lb_audio_tick_varied the same states with the crowd, the queue, the hold and the volume settings changed
+fn_80024654	leaf-check audio: lb_audio_tick and lb_audio_tick_varied run it every tick, the varied one with other volume settings; synth channels compared
+HSD_SynthStreamSetVolume	leaf-check audio: lb_audio_tick_varied reaches it through fn_80024654 when the music volume changes; synth nodes and voices compared
+lbAudioAx_80024DC4	leaf-check audio: lb_audio_entries runs every saved call of it and queues sounds from the tick's states
+lbAudioAx_80024FDC	leaf-check audio: lb_audio_entries runs it from the tick's states
+lbAudioAx_80024FF4	leaf-check audio: lb_audio_entries runs it from the tick's states
+lbAudioAx_8002500C	leaf-check audio: lb_audio_entries runs every saved call of it
+lbAudioAx_80025038	leaf-check audio: lb_audio_entries runs every saved call of it
+lbAudioAx_80024E84	leaf-check audio: lb_audio_entries holds and releases from the tick's states
+lbAudioAx_80024E50	leaf-check audio: lb_audio_entries pauses and resumes from the tick's states
+lbAudioAx_80024030	leaf-check audio: lb_audio_entries plays each of its sounds (and one past them) from the tick's states
+lbAudioAx_80024C84	leaf-check audio: lb_audio_entries runs the saved call at the match's end and the tick's states
+lbAudioAx_80024D50	leaf-check audio: lb_audio_entries runs the saved call at the match's end

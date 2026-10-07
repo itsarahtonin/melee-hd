@@ -724,6 +724,21 @@ impl Audio {
         }
     }
 
+    /// `HSD_SynthStreamSetVolume`: the effects' overall volume, which every playing effect
+    /// takes up (the audio interface's stream volume it also sets is the disc's audio stream,
+    /// which the game doesn't play).
+    #[doc(alias = "HSD_SynthStreamSetVolume")]
+    pub fn synth_stream_set_volume(&mut self, volume: f32) {
+        self.synth.master = volume;
+        self.synth.fading |= 0xFFFF;
+        for i in 0..NODES {
+            let node = self.synth.nodes[i];
+            if node.id > 0 && slw(1, u32::from(node.channel)) & 0xFFFF != 0 {
+                self.synth_update_volume(i);
+            }
+        }
+    }
+
     /// `HSD_SynthSFXVolumeEnvelope`: a frame of the channels' and nodes' fades. A node whose
     /// fade ends leaves the update list; one keyed off is freed, one pausing pauses.
     #[doc(alias = "HSD_SynthSFXVolumeEnvelope")]

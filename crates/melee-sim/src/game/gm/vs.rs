@@ -741,9 +741,8 @@ impl Running<'_> {
         if pauser == -1 {
             return;
         }
-        let g = &mut *self.game;
-        g.audio(0x8002_4E84, [1, 0, 0, 0]);
-        g.audio(0x8002_4030, [5, 0, 0, 0]);
+        self.lb_audio_hold(true);
+        self.lb_audio_call(5);
         code::call(self, addr::IFALL_802F3394, &[]);
         let start = self.game.vs.start.clone();
         if start.x3_7 {
@@ -790,9 +789,8 @@ impl Running<'_> {
         if i == -1 || i != i32::from(self.game.vs.state.pauser) {
             return;
         }
-        let g = &mut *self.game;
-        g.audio(0x8002_4E84, [0, 0, 0, 0]);
-        g.clear_db_pause_flag(bit);
+        self.lb_audio_hold(false);
+        self.game.clear_db_pause_flag(bit);
         code::call(self, addr::IFALL_802F33CC, &[]);
         self.game.hide_pause(i);
         self.game.pads.rumble.unpause_all();
@@ -843,7 +841,7 @@ impl Running<'_> {
             g.audio(0x8002_36DC, [0; 4]);
         }
         self.sfx_stop_all();
-        self.game.audio(0x8002_4C84, [0; 4]);
+        self.lb_audio_reset();
         code::call(self, addr::IFTIME_FREE_COUNTDOWN, &[]);
         let g = &*self.game;
         assert!(
@@ -955,7 +953,7 @@ impl Running<'_> {
             addr::IFSTATUS_802F7034,
             &[Val::Int(addr::FN_8016B88C as i32)],
         );
-        self.game.audio(0x8002_4D50, [0; 4]);
+        self.lb_audio_reset_flush();
         self.game.set_db_pause_flag(4);
         self.game.vs.state.unk_0 = 1;
     }
