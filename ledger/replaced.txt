@@ -144,3 +144,16 @@ __unregister_fragment	Unregisters C++ exception tables; melee-hd has no C++ exce
 __init_cpp_exceptions	Registers C++ exception tables; melee-hd has no C++ exception handling.
 __fini_cpp_exceptions	Unregisters C++ exception tables; melee-hd has no C++ exception handling.
 GetR2	Returns the small-data base register for C++ exception registration; melee-hd has no small-data area.
+exit	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+__kill_critical_regions	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+__stdio_atexit	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+__close_console	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+__write_console	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+__read_console	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+__flush_buffer	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+__prep_buffer	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+fwrite	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+__FileWrite	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+printf	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+vprintf	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+fwide	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
