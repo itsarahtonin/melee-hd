@@ -338,6 +338,7 @@ pub fn import_lb(mem1: &[u8]) -> melee_sim::lb::audio::LbAudio {
             LbField::F(v) => *v = m.f32(at),
         }
     }
+    lb.stem.copy_from_slice(m.bytes(sym("cur_hps_stem"), 0x40));
     lb
 }
 
@@ -980,6 +981,7 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
             LbField::F(v) => img.f32(name, at, *v),
         }
     }
+    img.put("cur_hps_stem", sym("cur_hps_stem"), &a.lb.stem);
     img.check(diffs);
 }
 

@@ -881,7 +881,7 @@ impl Running<'_> {
             g.pads.rumble.on(port);
         }
         if !g.vs.start.x1_5 {
-            g.audio(0x8002_36DC, [0; 4]);
+            self.lb_audio_music_stop();
         }
         self.sfx_stop_all();
         self.lb_audio_reset();

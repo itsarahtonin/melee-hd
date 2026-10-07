@@ -386,12 +386,9 @@ fn frame_reads() {
     check_frames(|_| None);
 }
 
-/// fn_8016CFE0's playback past the replay's end: the match quits. The quit plays the match's
-/// end sounds, which the VS code still hands the frontend as events (`lbAudioAx_80024C84` and
-/// the calls around it) where ssbm-rs's run drives the audio driver, so the audio state
-/// differs until the VS code's sounds go through the driver's port.
+/// fn_8016CFE0's playback past the replay's end: the match quits, with its end sounds and
+/// music reset going through the audio driver.
 #[test]
-#[ignore = "the match's end sounds don't go through the audio driver's port yet"]
 fn replay_end() {
     check_frames(|r| Some(*r.frames.keys().next_back().expect("frames")));
 }

@@ -1200,3 +1200,4 @@ ftCo_80090690	leaf-check fighter_procs: the camera calls' hit shakes
 ftCamera_UpdateCameraBox	leaf-check fighter_procs: the camera calls' boxes, both facings
 ftLib_GetCameraBonePos	leaf-check fighter_procs: every camera box
 ftCo_8009F480	leaf-check fighter_procs: the fighters' light from the camera calls' states (its lights have no animation on Final Destination)
+lbAudioAx_800236DC	leaf-check vs: vs_end stops the music from captures; replay replay_end at the replays' ends; the music state and the driver compared after
