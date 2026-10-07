@@ -1111,10 +1111,10 @@ fn screen_captures() {
                 let Importer { game, maps, .. } = imp;
                 if std::env::var_os("EF_DEBUG").is_some() {
                     println!("queued {:x?}", maps.queued);
-                    for (&a, _) in &maps.fighters {
+                    for &a in maps.fighters.keys() {
                         println!("fighter {a:#x} x60C {:#x}", word(&cap.call, a + 0x60C));
                     }
-                    for (&a, _) in &maps.items {
+                    for &a in maps.items.keys() {
                         println!("item {a:#x} xBC0 {:#x}", word(&cap.call, a + 0xBC0));
                     }
                 }
