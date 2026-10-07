@@ -99,13 +99,18 @@ pub struct HitLogs {
 }
 
 /// A hit's damage as an integer, at least 1 for any damage, `getEnvDmg`.
-fn whole_damage(dmg: f64) -> i32 {
+pub(super) fn whole_damage(dmg: f64) -> i32 {
     if dmg != 0.0 {
         let i = fp::fctiwz(dmg);
         if i != 0 { i } else { 1 }
     } else {
         0
     }
+}
+
+/// The effect a hit of `element` spawns (`getHitEffectId`).
+pub(super) fn hit_effect_id(element: u32) -> i32 {
+    HIT_EFFECTS[element as usize]
 }
 
 /// Which fighter a hitbox's GObj carries, for the victim lists.
@@ -771,7 +776,7 @@ impl Running<'_> {
     /// What a fighter's hit on another records, `ftColl_8007891C`: the attacker's stale-move
     /// queue, its combo against the victim, and the damage both players' statistics count.
     #[doc(alias = "ftColl_8007891C")]
-    fn record_fighter_hit(&mut self, attacker: GObjId, victim_gobj: GObjId, dmg: f64) {
+    pub(super) fn record_fighter_hit(&mut self, attacker: GObjId, victim_gobj: GObjId, dmg: f64) {
         self.stale_move_from_fighter(attacker, victim_gobj);
         let a = self.game.fighter_id(attacker);
         let attack_id = self.game.fighters[a.0].x2068_attackID;
@@ -1368,7 +1373,7 @@ impl Running<'_> {
 
     /// A hit's effect by its element (`spawnHitEffect`): the normal hit's spark by knockback
     /// (`ftColl_80078538`), others' own.
-    fn hit_effect(
+    pub(super) fn hit_effect(
         &mut self,
         me: FighterId,
         effect: i32,

@@ -10,6 +10,7 @@ pub mod action;
 pub mod anim;
 pub mod attack;
 pub mod bind;
+pub mod camera;
 pub mod co;
 pub mod colanim;
 pub mod coll;
@@ -29,6 +30,7 @@ pub mod motion;
 mod motion_tables;
 pub mod parts;
 pub mod phys;
+pub mod resolve;
 pub mod sound;
 pub mod spawn;
 

@@ -376,3 +376,14 @@ impl Running<'_> {
         }
     }
 }
+
+/// The fighters' light's process, `ftCo_8009F480`: animates its lights (`HSD_LObjAnimAll`).
+#[doc(alias = "ftCo_8009F480")]
+pub fn light_proc(r: &mut Running, gobj: GObjId) {
+    let first = match r.game.world.gobjs[gobj.0].obj {
+        Some(Obj::LObj(l)) => Some(l),
+        None => None,
+        other => panic!("the fighters' light GObj holds {other:?}"),
+    };
+    lobj::anim_all(&mut r.game.objs, r.data, first);
+}

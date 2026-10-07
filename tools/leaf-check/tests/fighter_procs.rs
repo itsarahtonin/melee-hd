@@ -1,9 +1,12 @@
-//! The fighters' attack collision (`Fighter_procAttackColl` and what it reaches) against
-//! ssbm-rs, from the processes' saved calls in a running match: each call runs on both sides
-//! and the whole state (the fighters with their hitboxes, hurtboxes and damage results, the
+//! The fighters' per-frame processes the fighter core left behind, against ssbm-rs, from their
+//! saved calls in a running match: the attack collision (`Fighter_procAttackColl` and what it
+//! reaches), the collision results (`Fighter_procCollResolve`), the camera
+//! (`Fighter_procCamera`) and the fighters' light (`ftCo_8009F480`). Each call runs on both
+//! sides and the whole state (the fighters with their hitboxes, hurtboxes and damage results, the
 //! items, the player blocks and their statistics, the audio driver) is compared afterwards, with the calls
-//! into the effects (`efSync_Spawn`) and the attack statistics (`pl_80038144`), which no port
-//! covers, stood in for on both sides and compared by their arguments.
+//! into the effects (`efSync_Spawn`), the attack statistics (`pl_80038144`) and the rumble
+//! (`lb_80014574`), which no port covers, stood in for on both sides and compared by their
+//! arguments.
 //!
 //! Real calls rarely land a hit, so each one also runs again with the other fighter's first
 //! hitbox switched on over this fighter, its fields varied by the call's index (`hit_*`).
@@ -34,7 +37,11 @@ use melee_capture::{Capture, DataMap, find_archives_after, find_archives_in};
 use melee_data::archive::Archives;
 use melee_sim::game::code::{Val, stubs};
 use melee_sim::game::ft::attack::{EFSYNC_SPAWN, PL_80038144, proc_attack_coll};
+use melee_sim::game::ft::camera::proc_camera;
+use melee_sim::game::ft::create_model::light_proc;
+use melee_sim::game::ft::resolve::{LB_80014574, proc_coll_resolve};
 use melee_sim::game::state::Running;
+use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::Ctx;
 use ssbm_rt::capture::Call;
 
@@ -70,6 +77,10 @@ fn stand_ins(ctx: &Ctx) {
     ctx.register(PL_80038144, |ctx| {
         let args = (3..10).map(|r| ctx.regs.r(r)).collect();
         THEIRS.with(|t| t.borrow_mut().push((PL_80038144, args)));
+    });
+    ctx.register(LB_80014574, |ctx| {
+        let args = (3..7).map(|r| ctx.regs.r(r)).collect();
+        THEIRS.with(|t| t.borrow_mut().push((LB_80014574, args)));
     });
 }
 
@@ -162,7 +173,13 @@ fn panic_text(p: &(dyn std::any::Any + Send)) -> String {
 }
 
 /// Runs one call on both sides and compares, after `prepare` changes it.
-fn run_one(ctx: &Ctx, path: &Path, i: usize, prepare: fn(&mut Call, usize)) -> Outcome {
+fn run_one(
+    ctx: &Ctx,
+    path: &Path,
+    i: usize,
+    prepare: fn(&mut Call, usize),
+    run: fn(&mut Running, GObjId),
+) -> Outcome {
     let index = disc_index().expect("SSBM_DISC");
     let mut cap = Capture::read(path);
     zero_unused(&mut cap.call);
@@ -213,12 +230,13 @@ fn run_one(ctx: &Ctx, path: &Path, i: usize, prepare: fn(&mut Call, usize)) -> O
     stubs::clear();
     stubs::set(EFSYNC_SPAWN, Val::None);
     stubs::set(PL_80038144, Val::None);
+    stubs::set(LB_80014574, Val::None);
     let run = catch_unwind(AssertUnwindSafe(|| {
         let mut r = Running {
             game: &mut game,
             data: &archives,
         };
-        proc_attack_coll(&mut r, gobj);
+        run(&mut r, gobj);
     }));
     if let Err(p) = run {
         let why = panic_text(&*p);
@@ -266,8 +284,8 @@ fn run_one(ctx: &Ctx, path: &Path, i: usize, prepare: fn(&mut Call, usize)) -> O
 
 /// Every saved call of `Fighter_procAttackColl`, changed by `prepare`, in both float modes;
 /// at least `min` compared clean in each.
-fn check(prepare: fn(&mut Call, usize), min: usize) {
-    let paths = saved_calls(&calls_dir(), "Fighter_procAttackColl");
+fn check(func: &str, run: fn(&mut Running, GObjId), prepare: fn(&mut Call, usize), min: usize) {
+    let paths = saved_calls(&calls_dir(), func);
     if disc_index().is_none() || paths.is_empty() {
         eprintln!(
             "no SSBM_DISC or no saved calls in {}: skipping",
@@ -292,7 +310,7 @@ fn check(prepare: fn(&mut Call, usize), min: usize) {
                         loop {
                             let i = next.fetch_add(1, Ordering::Relaxed);
                             let Some(p) = paths.get(i) else { break };
-                            let outcome = run_one(&ctx, p, i, prepare);
+                            let outcome = run_one(&ctx, p, i, prepare, run);
                             let mut r = results.lock().unwrap();
                             match outcome {
                                 Outcome::Clean => r.0 += 1,
@@ -304,7 +322,10 @@ fn check(prepare: fn(&mut Call, usize), min: usize) {
             }
         });
         let (clean, skipped) = results.into_inner().unwrap();
-        eprintln!("{mode:?}: {clean} of {} compared clean", paths.len());
+        eprintln!(
+            "{func} ({mode:?}): {clean} of {} compared clean",
+            paths.len()
+        );
         for (why, n) in &skipped {
             eprintln!("  skipped x{n}: {why}");
         }
@@ -315,7 +336,7 @@ fn check(prepare: fn(&mut Call, usize), min: usize) {
 #[test]
 fn proc_attack_coll_calls() {
     assert_eq!(sym("Fighter_procAttackColl"), 0x8006_CB94);
-    check(|_, _| {}, 100);
+    check("Fighter_procAttackColl", proc_attack_coll, |_, _| {}, 100);
 }
 
 /// The fighter GObj's user data in a call.
@@ -531,5 +552,39 @@ fn vary_attacker(call: &mut Call, fp: u32, pick: &mut Pick) {
 /// Hits from a fighter's box, from real states.
 #[test]
 fn proc_attack_coll_hits() {
-    check(arm_hitbox, 60);
+    check("Fighter_procAttackColl", proc_attack_coll, arm_hitbox, 60);
+}
+
+#[test]
+fn proc_coll_resolve_calls() {
+    assert_eq!(sym("Fighter_procCollResolve"), 0x8006_D1EC);
+    check("Fighter_procCollResolve", proc_coll_resolve, |_, _| {}, 100);
+}
+
+#[test]
+fn proc_camera_calls() {
+    assert_eq!(sym("Fighter_procCamera"), 0x8006_D9EC);
+    check("Fighter_procCamera", proc_camera, |_, _| {}, 100);
+}
+
+/// Runs the fighters' light's process instead, on the light's GObj (classifier 12 on
+/// process link 3).
+fn to_light(call: &mut Call, _: usize) {
+    let heads = peek_u32(call, sym("HSD_GObjPLinkHead"));
+    let mut g = peek_u32(call, heads + 4 * 3);
+    while g != 0 {
+        if peek_u32(call, g) >> 16 == 12 {
+            call.addr = 0x8009_F480;
+            call.regs.gpr[3] = g;
+            return;
+        }
+        g = peek_u32(call, g + 8);
+    }
+    panic!("no fighters' light GObj");
+}
+
+/// The fighters' light's animation, from the camera process's states.
+#[test]
+fn light_proc_calls() {
+    check("Fighter_procCamera", light_proc, to_light, 100);
 }
