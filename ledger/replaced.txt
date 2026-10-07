@@ -157,3 +157,7 @@ __FileWrite	C stdio and console output to the development UART, which only carri
 printf	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
 vprintf	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
 fwide	C stdio and console output to the development UART, which only carries debug text; melee-hd logs natively.
+mpLib_8004D164	Returns mplib's collision data global; melee-sim's mp::Geometry holds the data as fields.
+mpGetGroundCollVtx	Returns mplib's vertex array global; melee-sim's mp::Geometry holds it as a field.
+mpGetGroundCollLine	Returns mplib's line array global; melee-sim's mp::Geometry holds it as a field.
+mpGetGroundCollJoint	Returns mplib's joint array global; melee-sim's mp::Geometry holds it as a field.

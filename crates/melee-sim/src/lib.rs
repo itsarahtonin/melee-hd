@@ -8,6 +8,7 @@
 mod fpu;
 pub mod hsd;
 pub mod math;
+pub mod mp;
 pub mod mtx;
 mod pairs;
 pub mod ppc;
