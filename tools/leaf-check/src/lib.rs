@@ -31,6 +31,44 @@ pub fn reference() -> Option<Ctx> {
     Some(ctx)
 }
 
+/// The reference with HAL's heap and object allocators set up as `HSD_InitComponent` does
+/// (an OS heap from 0x80F00000 to 0x81500000, then `HSD_ObjInit`'s allocators), so ports
+/// that allocate HSD objects (joints, display objects, animations, ID-table entries) run.
+pub fn hsd_reference() -> Option<Ctx> {
+    use ssbm_rt::{Addr, Handle};
+    let ctx = reference()?;
+    let (lo, hi) = (HEAP_LO, HEAP_HI);
+    let lo =
+        ssbm_types::fns::OSInitAlloc(&ctx, handle::<Addr>(&ctx, lo), handle::<Addr>(&ctx, hi), 1)
+            .addr();
+    let lo = (lo + 31) & !31;
+    let heap =
+        ssbm_types::fns::OSCreateHeap(&ctx, handle::<Addr>(&ctx, lo), handle::<Addr>(&ctx, hi));
+    ssbm_types::fns::OSSetCurrentHeap(&ctx, heap);
+    ctx.write_u32(sym("current_heap"), heap as u32);
+    ssbm_types::fns::HSD_ObjSetHeap(&ctx, hi - lo, handle::<Addr>(&ctx, 0));
+    use ssbm_types::fns::*;
+    for init in [
+        HSD_ListInitAllocData,
+        HSD_AObjInitAllocData,
+        HSD_FObjInitAllocData,
+        HSD_IDInitAllocData,
+        HSD_VecInitAllocData,
+        HSD_MtxInitAllocData,
+        HSD_RObjInitAllocData,
+        HSD_RenderInitAllocData,
+        HSD_ShadowInitAllocData,
+        HSD_ZListInitAllocData,
+    ] {
+        init(&ctx);
+    }
+    Some(ctx)
+}
+
+/// The OS heap `hsd_reference` sets up.
+pub const HEAP_LO: u32 = 0x80F0_0000;
+pub const HEAP_HI: u32 = 0x8150_0000;
+
 /// A symbol's address.
 pub fn sym(name: &str) -> u32 {
     ssbm_types::symbols::SYMBOLS
