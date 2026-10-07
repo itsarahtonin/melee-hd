@@ -1527,6 +1527,38 @@ fn player_set_cpu_type() {
     });
 }
 
+/// The CPU setters from a running match's states, whose slots have fighters
+/// (`ft_80087BEC`, `ft_80087BC0`: the fighters' computer player state started afresh).
+#[test]
+fn player_set_cpu_on_fighters() {
+    check_calls(
+        "fn_8016CFE0",
+        6,
+        |f| {
+            f.regs.gpr[3] = f.below(4);
+            f.regs.gpr[4] = f.below(10);
+            f.regs.gpr[5] = f.below(2);
+        },
+        |r, a| {
+            if a.r(5) == 0 {
+                r.set_player_cpu_level(a.i(3), a.i(4));
+            } else {
+                r.set_player_cpu_type(a.i(3), a.i(4));
+            }
+            vec![]
+        },
+        |ctx, call| {
+            let (s, v) = (call.regs.gpr[3] as i32, call.regs.gpr[4] as i32);
+            if call.regs.gpr[5] == 0 {
+                fns::Player_SetPlayerAndEntityCpuLevel(ctx, s, v);
+            } else {
+                fns::Player_SetPlayerAndEntityCpuType(ctx, s, v);
+            }
+            (0, 0)
+        },
+    );
+}
+
 #[test]
 fn player_set_pos() {
     check("Player_80032768", |r, a| {

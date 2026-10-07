@@ -1083,3 +1083,5 @@ HSD_ShadowAlloc	leaf-check fighter_create: every Fox and Marth created from the 
 HSD_ShadowSetSize	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
 HSD_ShadowSetActive	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
 HSD_ShadowAddObject	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ft_80087BEC	leaf-check vs player_set_cpu_on_fighters: Player_SetPlayerAndEntityCpuLevel on match states with fighters; the whole state compared
+ft_80087BC0	leaf-check vs player_set_cpu_on_fighters: Player_SetPlayerAndEntityCpuType on match states with fighters; the whole state compared
