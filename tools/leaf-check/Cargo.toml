@@ -11,10 +11,12 @@ publish.workspace = true
 gekko-fp.workspace = true
 melee-capture = { path = "../capture" }
 melee-data.workspace = true
+melee-replay = { path = "../replay" }
 melee-sim = { workspace = true, features = ["stubs"] }
 ssbm-disc.workspace = true
 ssbm-game.workspace = true
 ssbm-rt.workspace = true
+ssbm-slippi.workspace = true
 ssbm-types.workspace = true
 
 [dev-dependencies]

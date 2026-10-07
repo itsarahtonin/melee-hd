@@ -392,6 +392,10 @@ impl Rules {
     }
 }
 
+/// The determinism fixes Slippi's playback set applies itself (`Init Stage Data`, `Init Player
+/// Data`).
+const PLAYBACK_INIT: [u32; 2] = [0x801C_154C, 0x8006_8EEC];
+
 /// Where a `C2` code's branch at `site` leads: its instructions, wherever the code handler or
 /// playback placed them, if `word` (what the site holds) is such a branch.
 pub fn placed(site: u32, word: u32) -> Option<u32> {
@@ -427,6 +431,12 @@ impl Rules {
                 }
                 _ => {}
             }
+        }
+        // Playback's own set has the fighter and stage data zeroing, which a game runs from
+        // boot, before a replay's codes (with the rest of the determinism fixes) join them.
+        let playback_only = codes.iter().all(|c| PLAYBACK_INIT.contains(&c.addr));
+        if playback_only {
+            return Ok(Rules::default());
         }
         Rules::from_codes(&codes)
     }
@@ -541,7 +551,8 @@ impl super::state::Running<'_> {
     /// slot moves to its stage's neutral point for its place among the players (FFA) or in the
     /// team order (teams of two), facing the centre. A team match whose teams aren't all pairs
     /// keeps the stage's spawns.
-    #[doc(alias = "code_8016E510")]
+    ///
+    /// The Gecko code at `0x8016E510`.
     pub fn neutral_spawn(&mut self, slot: i32) {
         const NONE: i32 = 3;
         let g = &*self.game;
@@ -618,7 +629,8 @@ impl super::state::Game {
     /// `Online/Core/BrawlOffscreenDamage`), in place of the magnifier's check: a fighter is
     /// off screen past the stage's camera limits, except in the scene 0x0120, while
     /// `x221F_b1` is set, and in actions 4 and 6.
-    #[doc(alias = "code_8006A880")]
+    ///
+    /// The Gecko code at `0x8006A880`.
     pub fn offscreen_limits(&self, f: super::handles::FighterId) -> bool {
         use super::gr::stage::{cam_bottom, cam_left, cam_right, cam_top};
         use crate::fpu::reg;

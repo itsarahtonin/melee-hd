@@ -881,3 +881,4 @@ HSD_AudioSFXSetPan	leaf-check audio: random_ops pans sounds through lbAudioAx_80
 HSD_AudioSFXSetVolumeEx	leaf-check audio: random_ops sets volumes through lbAudioAx_80024B58 before and after effects start
 HSD_AudioSFXSetPitchFid	leaf-check audio: set_pitch runs every saved call of it; random_ops bends through lbAudioAx_80024B94
 HSD_AudioSFXCheck	leaf-check audio: check runs every saved call of it; random_ops checks through lbAudioAx_80023710
+pl_800401F0	leaf-check replay: ucf_sdi runs smash DI from replay captures and compares the player blocks, whose SDI distances it adds to

@@ -440,6 +440,7 @@ thread_local! {
 /// keeps its stand-in.
 pub fn register_patched(ctx: &Ctx) {
     use ssbm_game::patched::{Code, PATCHED};
+    // `Code::Inject`'s words are offsets into the injected instructions and what they hold.
     let read = |a: u32| ctx.mem.read_u32(a).unwrap_or(0);
     let applied = |site: u32, code: &Code| match *code {
         Code::Word(w) => read(site) == w,
@@ -458,6 +459,15 @@ pub fn register_patched(ctx: &Ctx) {
                 .is_none_or(|b| b.sites.len() < p.sites.len())
         {
             best.insert(p.function, p);
+        }
+    }
+    // The places in injected code that other code calls (a playback GObj's process), where
+    // the codes sit in this memory.
+    for e in ssbm_game::patched::ENTRIES {
+        if applied(e.site, &e.code)
+            && let Some(body) = melee_sim::game::slippi::placed(e.site, read(e.site))
+        {
+            ctx.register_port(body + e.offset, e.port, ssbm_rt::Returns::Unknown);
         }
     }
     REPLACED.with(|r| {

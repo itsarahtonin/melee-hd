@@ -114,7 +114,8 @@ impl Running<'_> {
     /// UCF's pad buffer and 1.0 cardinals (`Fighter_procInput+0x750`): a human fighter's port
     /// records the raw stick of the poll this tick took, its sticks snap to their cardinals
     /// (except Zelda's in action 349), and the down-flick count follows the stick.
-    #[doc(alias = "code_8006B460")]
+    ///
+    /// The Gecko code at `0x8006B460`.
     pub fn ucf_pad_buffer(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.is_cpu_controlled(&self.game.fighters[f.0]) {
@@ -153,7 +154,8 @@ impl Running<'_> {
     /// on its y axis, a flick still counts if the stick left the dead zone this frame and the
     /// raw stick travelled more than 62 since two frames ago, unless both axes were already
     /// held.
-    #[doc(alias = "code_8008E54C")]
+    ///
+    /// The Gecko code at `0x8008E54C`.
     pub fn ucf_sdi(&self, gobj: GObjId, min: f64) -> bool {
         let fp = self.game.fighter(gobj);
         if fp.active_sticky.lstick.x > 1 && fp.active_sticky.lstick.y > 1 {

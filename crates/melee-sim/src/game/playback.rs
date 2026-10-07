@@ -234,7 +234,8 @@ impl Game {
 
     /// Counts the replay's frame (`fn_8016CFE0+0x2B4`): the first frame at the scene's first
     /// tick, else the next.
-    #[doc(alias = "code_8016D294")]
+    ///
+    /// The Gecko code at `0x8016D294`.
     pub fn playback_count_frame(&mut self) {
         let first = self.scene.unk_0 == 0;
         let p = self.playback_mut();
@@ -247,7 +248,8 @@ impl Game {
 
     /// Reads the counted frame's response (`fn_8016CFE0+0x2B8`, which asks the device until
     /// it answers): the frame the frontend supplied for it.
-    #[doc(alias = "code_8016D298")]
+    ///
+    /// The Gecko code at `0x8016D298`.
     pub fn playback_read_frame(&mut self) {
         let p = self.playback_mut();
         let index = p.frame_index;
@@ -278,7 +280,8 @@ impl Game {
 
     /// Whether a team player out of stocks takes one from a teammate this frame
     /// (`fn_8016B918+0xA8`): the replay has `port`'s player at the counted frame.
-    #[doc(alias = "code_8016B9C0")]
+    ///
+    /// The Gecko code at `0x8016B9C0`.
     pub fn playback_stock_steal(&self, port: u8) -> bool {
         let p = self.playback.as_ref().expect("a replay's match");
         let a = p.answers.as_ref().expect("the device's answers");
@@ -292,7 +295,8 @@ impl Game {
 
     /// Playback's per-frame process (`code_8016E748_4B0`): the frame's recorded seed, if it
     /// has one, becomes the random seed.
-    #[doc(alias = "code_8016E748_4B0")]
+    ///
+    /// The Gecko code at `0x8016E748`, from its entry at 0x4B0.
     pub fn playback_restore_seed(&mut self) {
         let f = &self.playback.as_ref().expect("a replay's match").frame;
         if f.bytes[2] != 0 {
@@ -317,7 +321,8 @@ impl Game {
     /// in playback's `Required: General Codes`): a costume the character doesn't have becomes
     /// its first, and of players with the same character, costume and shade, each later one
     /// gets the next shade.
-    #[doc(alias = "code_8016DED4")]
+    ///
+    /// The Gecko code at `0x8016DED4`.
     pub fn playback_settle_costumes(&mut self) {
         const NONE: i32 = 3;
         for i in 0..6 {
@@ -360,8 +365,8 @@ impl Running<'_> {
     /// two more such GObjs, whose processes (priorities 0 and 15) send each frame's start and
     /// items over EXI. The replay's `StartMeleeData` and settings are
     /// [`Settings::from_replay`](super::vs_match::Settings::from_replay)'s.
-    #[doc(alias = "code_8016E748")]
-    #[doc(alias = "code_8016E74C")]
+    ///
+    /// The Gecko codes at `0x8016E748` and `0x8016E74C`.
     pub fn playback_start(&mut self, seed: u32) {
         let g = &mut *self.game;
         g.objs.rng.seed = seed;
@@ -381,7 +386,8 @@ impl Running<'_> {
     /// follower (Nana) whose character isn't a transformation keeps its own. At the replay's
     /// first frame the fighter's position is settled: its first part's rotation, its
     /// collision positions, its player block's position, its camera box and the camera.
-    #[doc(alias = "code_8006B0DC")]
+    ///
+    /// The Gecko code at `0x8006B0DC`.
     pub fn playback_inject(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];

@@ -347,10 +347,12 @@ dependencies = [
  "gekko-fp",
  "melee-capture",
  "melee-data",
+ "melee-replay",
  "melee-sim",
  "ssbm-disc",
  "ssbm-game",
  "ssbm-rt",
+ "ssbm-slippi",
  "ssbm-types",
  "zstd",
 ]
