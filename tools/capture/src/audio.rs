@@ -343,29 +343,29 @@ pub fn import_clock(mem1: &[u8], tb: u64) -> Clock {
 /// Renders our state into the bytes the original keeps, and checks them against memory.
 pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
     let m = Mem(mem1);
-    let mut img = Image::default();
+    let mut img = Image::new(&m);
     let vpbs = sym("__AXVPB");
     let vpb = |v: Option<u8>| v.map_or(0, |i| vpbs + VPB_SIZE * u32::from(i));
     let code = |c: Option<CodeRef>| c.map_or(0, |c| c.0);
     for (i, v) in a.ax.voices.iter().enumerate() {
         let at = vpbs + VPB_SIZE * i as u32;
-        let r = format!("AX voice {i}");
-        img.u32(&r, at, vpb(v.next));
-        img.u32(&r, at + 4, vpb(v.prev));
-        img.u32(&r, at + 8, vpb(v.next1));
-        img.u32(&r, at + 0xC, v.priority);
-        img.u32(&r, at + 0x10, code(v.callback));
-        img.u32(&r, at + 0x14, v.user_context);
-        img.u32(&r, at + 0x18, i as u32);
-        img.u32(&r, at + 0x1C, v.sync);
-        img.u32(&r, at + 0x20, v.depop);
-        img.u32(&r, at + 0x24, v.update_ms);
-        img.u32(&r, at + 0x28, v.update_counter);
-        img.u32(&r, at + 0x2C, v.update_total);
-        img.u32(&r, at + 0x30, at + 0x34 + 2 * v.update_counter);
-        img.pb(&r, at + VPB_PB, &v.pb);
+        let r = R("AX voice", Some(i));
+        img.u32(r, at, vpb(v.next));
+        img.u32(r, at + 4, vpb(v.prev));
+        img.u32(r, at + 8, vpb(v.next1));
+        img.u32(r, at + 0xC, v.priority);
+        img.u32(r, at + 0x10, code(v.callback));
+        img.u32(r, at + 0x14, v.user_context);
+        img.u32(r, at + 0x18, i as u32);
+        img.u32(r, at + 0x1C, v.sync);
+        img.u32(r, at + 0x20, v.depop);
+        img.u32(r, at + 0x24, v.update_ms);
+        img.u32(r, at + 0x28, v.update_counter);
+        img.u32(r, at + 0x2C, v.update_total);
+        img.u32(r, at + 0x30, at + 0x34 + 2 * v.update_counter);
+        img.pb(r, at + VPB_PB, &v.pb);
         img.pb(
-            &format!("AX DSP block {i}"),
+            R("AX DSP block", Some(i)),
             sym("__AXPB") + 0xC0 * i as u32,
             &a.ax.dsp[i],
         );
@@ -428,32 +428,32 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
     let node = |n: Option<u8>| n.map_or(0, |i| nodes + NODE_SIZE * u32::from(i));
     for (i, n) in a.synth.nodes.iter().enumerate() {
         let at = nodes + NODE_SIZE * i as u32;
-        let r = format!("synth node {i}");
-        img.u32(&r, at, n.id as u32);
-        img.u32(&r, at + 4, n.sfx_id as u32);
-        img.u8(&r, at + 8, n.pad8);
-        img.u8(&r, at + 9, n.flags);
-        img.u8(&r, at + 0xA, n.voice_count);
-        img.u8(&r, at + 0xB, n.channel);
-        img.u32(&r, at + 0xC, vpb(n.voices[0]));
-        img.u32(&r, at + 0x10, vpb(n.voices[1]));
-        img.f32(&r, at + 0x14, n.base_ratio);
-        img.f32(&r, at + 0x18, n.pitch[0]);
-        img.f32(&r, at + 0x1C, n.pitch[1]);
-        img.u32(&r, at + 0x20, node(n.next_update));
-        img.u16(&r, at + 0x24, n.volume);
-        img.u8(&r, at + 0x26, n.update_pending);
-        img.u8(&r, at + 0x27, n.driver);
-        img.f32(&r, at + 0x28, n.vol);
-        img.f32(&r, at + 0x2C, n.vol_target);
-        img.u32(&r, at + 0x30, n.vol_frames as u32);
-        img.f32(&r, at + 0x34, n.vol2);
-        img.f32(&r, at + 0x38, n.vol2_target);
-        img.u32(&r, at + 0x3C, n.vol2_frames as u32);
-        img.u32(&r, at + 0x40, n.pan_word);
-        img.f32(&r, at + 0x44, n.mix[0]);
-        img.f32(&r, at + 0x48, n.mix[1]);
-        img.f32(&r, at + 0x4C, n.mix[2]);
+        let r = R("synth node", Some(i));
+        img.u32(r, at, n.id as u32);
+        img.u32(r, at + 4, n.sfx_id as u32);
+        img.u8(r, at + 8, n.pad8);
+        img.u8(r, at + 9, n.flags);
+        img.u8(r, at + 0xA, n.voice_count);
+        img.u8(r, at + 0xB, n.channel);
+        img.u32(r, at + 0xC, vpb(n.voices[0]));
+        img.u32(r, at + 0x10, vpb(n.voices[1]));
+        img.f32(r, at + 0x14, n.base_ratio);
+        img.f32(r, at + 0x18, n.pitch[0]);
+        img.f32(r, at + 0x1C, n.pitch[1]);
+        img.u32(r, at + 0x20, node(n.next_update));
+        img.u16(r, at + 0x24, n.volume);
+        img.u8(r, at + 0x26, n.update_pending);
+        img.u8(r, at + 0x27, n.driver);
+        img.f32(r, at + 0x28, n.vol);
+        img.f32(r, at + 0x2C, n.vol_target);
+        img.u32(r, at + 0x30, n.vol_frames as u32);
+        img.f32(r, at + 0x34, n.vol2);
+        img.f32(r, at + 0x38, n.vol2_target);
+        img.u32(r, at + 0x3C, n.vol2_frames as u32);
+        img.u32(r, at + 0x40, n.pan_word);
+        img.f32(r, at + 0x44, n.mix[0]);
+        img.f32(r, at + 0x48, n.mix[1]);
+        img.f32(r, at + 0x4C, n.mix[2]);
     }
     let s = &a.synth;
     for i in 0..64 {
@@ -548,37 +548,37 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
     let base = m.u32(sym("AXDriver_804D7798"));
     for (i, v) in a.driver.voices.iter().enumerate() {
         let at = sms + SM_SIZE * i as u32;
-        let r = format!("driver voice {i}");
-        img.u32(&r, at, sm(v.prev));
-        img.u32(&r, at + 4, sm(v.next));
-        img.u32(&r, at + 8, v.flags);
-        img.u32(&r, at + 0xC, v.handle as u32);
-        img.u32(&r, at + 0x10, v.synth_id as u32);
-        img.u16(&r, at + 0x14, v.effect);
-        img.u16(&r, at + 0x16, v.sound);
-        img.u8(&r, at + 0x18, v.track);
-        img.u8(&r, at + 0x19, v.priority);
-        img.u8(&r, at + 0x1A, v.stream_volume);
-        img.u8(&r, at + 0x1B, v.volume);
-        img.u8(&r, at + 0x1C, v.stream_pan);
-        img.u8(&r, at + 0x1D, v.pan);
-        img.u8(&r, at + 0x1E, v.x1e);
-        img.u16(&r, at + 0x20, v.pitch as u16);
-        img.u16(&r, at + 0x22, v.game_pitch as u16);
-        img.u8(&r, at + 0x24, v.sends[0]);
-        img.u8(&r, at + 0x25, v.sends[1]);
-        img.u8(&r, at + 0x26, v.send_scale[0]);
-        img.u8(&r, at + 0x27, v.send_scale[1]);
-        img.u8(&r, at + 0x28, v.dp12flag);
-        img.u8(&r, at + 0x29, v.channel);
-        img.u16(&r, at + 0x2A, v.loops);
+        let r = R("driver voice", Some(i));
+        img.u32(r, at, sm(v.prev));
+        img.u32(r, at + 4, sm(v.next));
+        img.u32(r, at + 8, v.flags);
+        img.u32(r, at + 0xC, v.handle as u32);
+        img.u32(r, at + 0x10, v.synth_id as u32);
+        img.u16(r, at + 0x14, v.effect);
+        img.u16(r, at + 0x16, v.sound);
+        img.u8(r, at + 0x18, v.track);
+        img.u8(r, at + 0x19, v.priority);
+        img.u8(r, at + 0x1A, v.stream_volume);
+        img.u8(r, at + 0x1B, v.volume);
+        img.u8(r, at + 0x1C, v.stream_pan);
+        img.u8(r, at + 0x1D, v.pan);
+        img.u8(r, at + 0x1E, v.x1e);
+        img.u16(r, at + 0x20, v.pitch as u16);
+        img.u16(r, at + 0x22, v.game_pitch as u16);
+        img.u8(r, at + 0x24, v.sends[0]);
+        img.u8(r, at + 0x25, v.sends[1]);
+        img.u8(r, at + 0x26, v.send_scale[0]);
+        img.u8(r, at + 0x27, v.send_scale[1]);
+        img.u8(r, at + 0x28, v.dp12flag);
+        img.u8(r, at + 0x29, v.channel);
+        img.u16(r, at + 0x2A, v.loops);
         let stream = if v.stream == 0 {
             0
         } else {
             base.wrapping_add(v.stream)
         };
-        img.u32(&r, at + 0x2C, stream);
-        img.u32(&r, at + 0x30, v.due as u32);
+        img.u32(r, at + 0x2C, stream);
+        img.u32(r, at + 0x30, v.due as u32);
     }
     let d = &a.driver;
     for i in 0..0x40 {
@@ -630,68 +630,88 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
             *b as u32,
         );
     }
-    img.check(&m, diffs);
+    img.check(diffs);
 }
 
-/// The bytes our state renders to, by address, with the region each belongs to.
-#[derive(Default)]
-struct Image {
-    bytes: Vec<(u32, u8, usize)>,
-    /// Each region's name and first address.
-    regions: Vec<(String, u32)>,
-    region_of: HashMap<String, usize>,
+/// A region of memory a comparison names in its report: what it is, and which element.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct R(&'static str, Option<usize>);
+
+impl From<&'static str> for R {
+    fn from(name: &'static str) -> Self {
+        R(name, None)
+    }
 }
 
-impl Image {
-    fn region(&mut self, r: &str, at: u32) -> usize {
-        if let Some(&i) = self.region_of.get(r) {
-            return i;
-        }
-        self.regions.push((r.to_owned(), at));
-        self.region_of.insert(r.to_owned(), self.regions.len() - 1);
-        self.regions.len() - 1
-    }
-    fn put(&mut self, r: &str, at: u32, b: &[u8]) {
-        let i = self.region(r, at);
-        for (k, &x) in b.iter().enumerate() {
-            self.bytes.push((at + k as u32, x, i));
+impl std::fmt::Display for R {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self.1 {
+            Some(i) => write!(f, "{} {i}", self.0),
+            None => f.write_str(self.0),
         }
     }
-    fn u8(&mut self, r: &str, at: u32, v: u8) {
-        self.put(r, at, &[v]);
-    }
-    fn u16(&mut self, r: &str, at: u32, v: u16) {
-        self.put(r, at, &v.to_be_bytes());
-    }
-    fn u32(&mut self, r: &str, at: u32, v: u32) {
-        self.put(r, at, &v.to_be_bytes());
-    }
-    fn f32(&mut self, r: &str, at: u32, v: f32) {
-        self.u32(r, at, v.to_bits());
-    }
-    fn pb(&mut self, r: &str, at: u32, pb: &Pb) {
-        // The block's padding (its last three halfwords) is left out.
-        for (k, w) in pb.words().iter().enumerate().take(PB_WORDS - 3) {
-            self.u16(r, at + 2 * k as u32, *w);
+}
+
+/// Our state rendered into the bytes the original keeps, checked against memory as it goes:
+/// per region, the first differing bytes.
+struct Image<'a> {
+    mem: &'a Mem<'a>,
+    regions: Vec<(R, Vec<String>)>,
+    region_of: HashMap<R, usize>,
+}
+
+impl<'a> Image<'a> {
+    fn new(mem: &'a Mem<'a>) -> Self {
+        Image {
+            mem,
+            regions: Vec::new(),
+            region_of: HashMap::new(),
         }
     }
-    /// Reports, per region, the first differing offsets.
-    fn check(&self, m: &Mem, diffs: &mut Vec<String>) {
-        let mut per: HashMap<usize, Vec<String>> = HashMap::new();
-        for &(at, ours, r) in &self.bytes {
-            let theirs = m.u8(at);
-            if ours != theirs {
-                let list = per.entry(r).or_default();
-                if list.len() < 6 {
-                    let off = at - self.regions[r].1;
-                    list.push(format!("+{off:#x}: ours {ours:02x}, theirs {theirs:02x}"));
-                }
+    fn put(&mut self, r: impl Into<R>, at: u32, b: &[u8]) {
+        let theirs = self.mem.bytes(at, b.len() as u32);
+        if theirs == b {
+            return;
+        }
+        let r = r.into();
+        let i = *self.region_of.entry(r).or_insert_with(|| {
+            self.regions.push((r, Vec::new()));
+            self.regions.len() - 1
+        });
+        let list = &mut self.regions[i].1;
+        for (k, (&ours, &theirs)) in b.iter().zip(theirs).enumerate() {
+            if ours != theirs && list.len() < 6 {
+                let a = at + k as u32;
+                list.push(format!("{a:#x}: ours {ours:02x}, theirs {theirs:02x}"));
             }
         }
-        let mut rs: Vec<_> = per.into_iter().collect();
-        rs.sort_by_key(|(r, _)| *r);
-        for (r, list) in rs {
-            diffs.push(format!("audio: {}: {}", self.regions[r].0, list.join(", ")));
+    }
+    fn u8(&mut self, r: impl Into<R>, at: u32, v: u8) {
+        self.put(r, at, &[v]);
+    }
+    fn u16(&mut self, r: impl Into<R>, at: u32, v: u16) {
+        self.put(r, at, &v.to_be_bytes());
+    }
+    fn u32(&mut self, r: impl Into<R>, at: u32, v: u32) {
+        self.put(r, at, &v.to_be_bytes());
+    }
+    fn f32(&mut self, r: impl Into<R>, at: u32, v: f32) {
+        self.u32(r, at, v.to_bits());
+    }
+    fn pb(&mut self, r: R, at: u32, pb: &Pb) {
+        // The block's padding (its last three halfwords) is left out.
+        let mut b = Vec::with_capacity(2 * (PB_WORDS - 3));
+        for w in pb.words().iter().take(PB_WORDS - 3) {
+            b.extend(w.to_be_bytes());
+        }
+        self.put(r, at, &b);
+    }
+    /// Reports each region that differs.
+    fn check(self, diffs: &mut Vec<String>) {
+        for (r, list) in self.regions {
+            if !list.is_empty() {
+                diffs.push(format!("audio: {r}: {}", list.join(", ")));
+            }
         }
     }
 }

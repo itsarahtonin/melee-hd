@@ -1,10 +1,12 @@
 //! The audio driver, the synth and the AX voice allocation, checked on real calls ssbm-rs saved
 //! from a Fox vs Sheik replay on Final Destination (`leaf_check::calls`): every saved call is
 //! run on both sides from the same state and the whole state compared, the audio state byte
-//! for byte. Regenerate the calls with ssbm-rs's runner (branch feat/state-trace, with its
-//! capture filter letting through calls that pass an interrupt point, `CAPTURE_INTERACTED=1`:
-//! the audio functions all mask interrupts, and no interrupt comes due inside a tick), with
-//! `done.txt` listing every function address except the captured ones:
+//! for byte. Regenerate the calls with ssbm-rs's runner (branch feat/state-trace) with a
+//! tools-only patch, `state-trace-probe.patch` beside the captures (not on a branch yet): its
+//! capture filter lets through calls that pass an interrupt point (`CAPTURE_INTERACTED=1`; the
+//! audio functions all mask interrupts, and no interrupt comes due inside a tick) and it adds
+//! the `AUDIO_TIMELINE` recorder. `done.txt` lists every function address except the captured
+//! ones:
 //!
 //! ```text
 //! CAPTURE_INTERACTED=1 CAPTURE=$AUDIO_CALLS CAPTURE_FUNCS=HSD_AudioSFXStartParam,\
@@ -184,28 +186,42 @@ const TIMELINE: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeli
 /// audio call game code made (ssbm-rs's runner logs them), with melee-sim's timeline deciding
 /// when audio frames run, and compare the whole audio state with ssbm-rs's at every tick's
 /// end, and the tick starts and ends with its time base. Regenerate with ssbm-rs's runner
-/// (branch feat/state-trace, with its `AUDIO_TIMELINE` recorder):
+/// (with the patch above, for its `AUDIO_TIMELINE` recorder):
 ///
 /// ```text
 /// AUDIO_START=1500 AUDIO_TIMELINE=$DIR ssbm-run DISC --replay Game_20260129T133652.slp \
 ///   --fields 30000 --port all --known local/replays/known/Game_20260129T133652.txt
 /// ```
 ///
-/// `AUDIO_TIMELINE` names the directory (default below), `AUDIO_TIMELINE_START` the tick to
+/// `AUDIO_TIMELINE` names the directory (default above), `AUDIO_TIMELINE_START` the tick to
 /// start from (1500) and `AUDIO_TIMELINE_END` the last tick (11847, before the match's end
 /// stops the music).
 #[test]
 fn timeline() {
-    use melee_capture::{Capture, audio};
-    let dir = std::env::var("AUDIO_TIMELINE").unwrap_or_else(|_| TIMELINE.to_owned());
     let num = |var: &str, default: u32| {
         std::env::var(var).map_or(default, |v| v.parse().expect("a tick number"))
     };
+    let dir = std::env::var("AUDIO_TIMELINE").unwrap_or_else(|_| TIMELINE.to_owned());
     let (start, end) = (
         num("AUDIO_TIMELINE_START", 1500),
         num("AUDIO_TIMELINE_END", 11847),
     );
-    let dir = std::path::Path::new(&dir);
+    run_timeline(&dir, start, end);
+}
+
+/// [`timeline`] in a four-player teams match on Battlefield (`Game_20260531T174251.slp`,
+/// recorded the same way into `AUDIO_TIMELINE_4P`), whose ticks load the most animations.
+#[test]
+fn timeline_four_players() {
+    let dir = std::env::var("AUDIO_TIMELINE_4P").unwrap_or_else(|_| TIMELINE_4P.to_owned());
+    run_timeline(&dir, 1500, 11576);
+}
+
+const TIMELINE_4P: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-bf4";
+
+fn run_timeline(dir: &str, start: u32, end: u32) {
+    use melee_capture::{Capture, audio};
+    let dir = std::path::Path::new(dir);
     let Ok(log) = std::fs::read_to_string(dir.join("log.txt")) else {
         eprintln!("no audio timeline in {}: skipping", dir.display());
         return;
