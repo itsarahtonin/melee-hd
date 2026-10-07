@@ -16,3 +16,6 @@ ssbm-disc.workspace = true
 ssbm-game.workspace = true
 ssbm-rt.workspace = true
 ssbm-types.workspace = true
+
+[dev-dependencies]
+zstd = "0.13"

@@ -352,6 +352,7 @@ dependencies = [
  "ssbm-game",
  "ssbm-rt",
  "ssbm-types",
+ "zstd",
 ]
 
 [[package]]
