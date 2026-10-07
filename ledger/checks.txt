@@ -1087,3 +1087,59 @@ HSD_ShadowAddObject	leaf-check fighter_create: every Fox and Marth created from 
 ft_80087BEC	leaf-check vs player_set_cpu_on_fighters: Player_SetPlayerAndEntityCpuLevel on match states with fighters; the whole state compared
 ft_80087BC0	leaf-check vs player_set_cpu_on_fighters: Player_SetPlayerAndEntityCpuType on match states with fighters; the whole state compared
 ftLib_GetNameTagHeight	leaf-check vs player_nametag_height: Player_800360D8 on match states, the fighter visible or not; the height compared
+
+# Fighters' attack collision (Fighter_procAttackColl and what it reaches): tools/leaf-check/tests/fighter_procs.rs runs its calls in running matches on both sides, again with the other fighter's box switched on over the fighter (and by the call a clank, a shield up or thrown boxes), and compares the whole state and the stood-in effects and attack statistics.
+Fighter_procAttackColl	leaf-check fighter_procs: every call compared, real and with a box switched on
+ftColl_800765E0	leaf-check fighter_procs: every call starts the logs over
+ftColl_80078C70	leaf-check fighter_procs: every call; the switched-on boxes hit, clank and hit shields
+ftColl_8007B868	leaf-check fighter_procs: thrown boxes and stage lines ask it in every call
+ftCommon_8007F804	leaf-check fighter_procs: every box test asks it
+lbColl_8000ACFC	leaf-check fighter_procs: every box tests its victims through it
+lbColl_8000805C	leaf-check fighter_procs: the switched-on boxes against the fighter's hurtboxes, phantom and not
+lbColl_80007BCC	leaf-check fighter_procs: the switched-on boxes against a raised shield
+lbColl_80008688	leaf-check fighter_procs: hits, clanks and shield hits remember their victims
+ftColl_80076808	leaf-check fighter_procs: clanks and shield hits
+ftColl_8007699C	leaf-check fighter_procs: the clank case's boxes
+ftColl_800784B4	leaf-check fighter_procs: the clank case's boxes, slashes among them
+ftColl_80076CBC	leaf-check fighter_procs: the shield case's hits
+ftColl_80076ED8	leaf-check fighter_procs: the switched-on boxes' hits
+ftColl_8007891C	leaf-check fighter_procs: every logged hit
+plStale_UpdateStaleMovesFromFighter	leaf-check fighter_procs: every logged hit
+ftColl_800763C0	leaf-check fighter_procs: every logged hit
+ftColl_80076444	leaf-check fighter_procs: every logged hit
+pl_8003EB30	leaf-check fighter_procs: every logged hit
+pl_80040ED4	leaf-check fighter_procs: every logged hit
+lbColl_80005BB0	leaf-check fighter_procs: hit sounds of every kind and severity the switched-on boxes get
+lbAudioAx_80024184	leaf-check fighter_procs: the hit sounds; the audio driver's state compared
+ftColl_8007AB48	leaf-check fighter_procs: every call
+ftColl_8007AB80	leaf-check fighter_procs: every call
+ftColl_8007A06C	leaf-check fighter_procs: the logged hits' knockback and damage results
+ftColl_80079C70	leaf-check fighter_procs: every logged hit
+ftColl_80079AB0	leaf-check fighter_procs: every logged hit, fixed and growing knockback
+ftColl_80078538	leaf-check fighter_procs: normal hits' sparks, small and big, through the ported effects
+ftColl_8007861C	leaf-check fighter_procs: every logged hit's attacker
+ftColl_8007BBCC	leaf-check fighter_procs: every call
+ftColl_8007925C	leaf-check fighter_procs: every call; items' boxes that could reach the fighter stop at the seam
+ft_8007C77C	leaf-check fighter_procs: every call (no coin battle)
+ftColl_8007BAC0	leaf-check fighter_procs: every call
+ftCo_800C0B20	leaf-check fighter_procs: every call, Final Destination's lines
+Ground_801C5700	leaf-check fighter_procs: every call that touches a line
+ft_8007C4BC	leaf-check fighter_procs: the thrown case's boxes
+ft_8007C2E0	leaf-check fighter_procs: the thrown case's boxes, in the air and not
+lbColl_800089B8	leaf-check fighter_procs: the thrown case's boxes that miss
+lbColl_80008820	leaf-check fighter_procs: the tips the switched-on boxes land
+Fighter_procCollResolve	leaf-check fighter_procs: every call, real and with a tip, shield hit, clank, dealt hit, shield push or held hitlag given
+ftCommon_CalcHitlag	leaf-check fighter_procs: the given results' hitlag
+Fighter_UnkRecursiveFunc_8006D044	leaf-check fighter_procs: the given results' hitlag starting
+ftCo_80090718	leaf-check fighter_procs: frames without a result, with and without a queued sound
+ftCo_800C8D00	leaf-check fighter_procs: every call (no stamina fighter falls)
+ftCommon_8007E2A4	leaf-check fighter_procs: the given shield pushes
+ftCo_800C2FD8	leaf-check fighter_procs: Marth's swings in the real calls
+ftCo_800A0DA4	leaf-check fighter_procs: every call
+lbColl_800083C4	leaf-check fighter_procs: every call's hurtboxes
+Fighter_procCamera	leaf-check fighter_procs: every call
+ftCommon_8008021C	leaf-check fighter_procs: every camera call
+ftCo_80090690	leaf-check fighter_procs: the camera calls' hit shakes
+ftCamera_UpdateCameraBox	leaf-check fighter_procs: the camera calls' boxes, both facings
+ftLib_GetCameraBonePos	leaf-check fighter_procs: every camera box
+ftCo_8009F480	leaf-check fighter_procs: the fighters' light from the camera calls' states (its lights have no animation on Final Destination)
