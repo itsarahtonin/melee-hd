@@ -347,7 +347,6 @@ type Stub = (u32, Ret);
 #[derive(Clone, Copy, Debug)]
 enum Ret {
     Nothing,
-    Int(i32),
     Float(f32),
     /// A null GObj.
     Null,
@@ -395,7 +394,6 @@ fn their_stub(ctx: &Ctx) {
     THEIR_CALLS.with(|c| c.borrow_mut().push((addr, gpr, fpr)));
     let ret = THEIR_STUBS.with(|s| s.borrow().iter().find(|s| s.0 == addr).map(|s| s.1));
     match ret {
-        Some(Ret::Int(v)) => ctx.regs.set_r(3, v as u32),
         Some(Ret::Float(v)) => ctx.regs.set_f(1, leaf_check::arg(v)),
         Some(Ret::Null) => ctx.regs.set_r(3, 0),
         _ => {}
@@ -559,7 +557,6 @@ fn check_runs(
     for &(addr, ret) in stubs {
         let ours = match ret {
             Ret::Nothing => melee_sim::game::code::Val::None,
-            Ret::Int(v) => melee_sim::game::code::Val::Int(v),
             Ret::Float(v) => melee_sim::game::code::Val::Float(leaf_check::arg(v)),
             Ret::Null => melee_sim::game::code::Val::GObj(None),
         };
@@ -749,22 +746,9 @@ fn controller() -> u32 {
     sym("controller")
 }
 
-/// The unported code the match's frame reaches, stood in for on both sides: the HUD
-/// (`ifStatus_802F7034`, `ifTime_FreeCountdown`, `ifAll_802F3394`, `ifTime_ShowTimers`,
-/// `ifAll_802F33CC`, `ifStatus_802F6508`, `ifStatus_802F6E1C`) and the fighter's rebirth
-/// (`ftCo_800D4FF4`).
-const FRAME_STUBS: [Stub; 9] = [
-    nothing(0x802F_7034),
-    nothing(0x802F_4248),
-    nothing(0x802F_3394),
-    nothing(0x802F_40B8),
-    nothing(0x802F_33CC),
-    nothing(0x802F_6508),
-    nothing(0x802F_6E1C),
-    nothing(0x800D_4FF4),
-    // ifTime_IsTimerHidden: the timer shows.
-    (0x802F_4898, Ret::Int(0)),
-];
+/// The unported code the match's frame reaches, stood in for on both sides: the fighter's
+/// rebirth (`ftCo_800D4FF4`).
+const FRAME_STUBS: [Stub; 1] = [nothing(0x800D_4FF4)];
 
 /// [`check_fuzzed`] with [`FRAME_STUBS`].
 fn check_frame(
@@ -1123,11 +1107,10 @@ fn reset_ranks() {
 
 #[test]
 fn vs_end() {
-    // The countdown's removal (`ifTime_FreeCountdown`) is the HUD's.
     check_calls_stubbed(
         "fn_8016CFE0",
         6,
-        &[nothing(0x802F_4248)],
+        &[],
         |f| {
             let c = sym("controller");
             let o = [1, 2, 3, 7][f.below(4) as usize];
@@ -1146,16 +1129,11 @@ fn vs_end() {
 
 #[test]
 fn respawn() {
-    // The fighter's rebirth (`ftCo_800D4FF4`) and the HUD (`ifStatus_802F6E1C`,
-    // `ifStatus_802F6508`) aren't ported.
+    // The fighter's rebirth (`ftCo_800D4FF4`) isn't ported.
     check_calls_stubbed(
         "fn_8016CFE0",
         4,
-        &[
-            nothing(0x800D_4FF4),
-            nothing(0x802F_6E1C),
-            nothing(0x802F_6508),
-        ],
+        &[nothing(0x800D_4FF4)],
         |f| {
             f.regs.gpr[3] = f.below(2);
             f.regs.gpr[4] = 0;
@@ -1592,18 +1570,9 @@ fn player_fighter_kind() {
     });
 }
 
-/// The HUD's functions the KO counts reach (`ifStatus_802F6D10`, `ifStatus_802F69C0`,
-/// `ifStatus_802F6AF8`, `ifStatus_802F6C04`): the HUD isn't ported.
-const KO_HUD: [Stub; 4] = [
-    nothing(0x802F_6D10),
-    nothing(0x802F_69C0),
-    nothing(0x802F_6AF8),
-    nothing(0x802F_6C04),
-];
-
 #[test]
 fn player_count_ko() {
-    check_stubbed("Player_UpdateKOsBySlot", &KO_HUD, |r, a| {
+    check_stubbed("Player_UpdateKOsBySlot", &[], |r, a| {
         r.player_count_ko(a.i(3), a.r(4) != 0, a.i(5));
         vec![]
     });
@@ -1611,7 +1580,7 @@ fn player_count_ko() {
 
 #[test]
 fn player_count_self_destruct() {
-    check_stubbed("Player_IncSelfDestructs", &KO_HUD, |r, a| {
+    check_stubbed("Player_IncSelfDestructs", &[], |r, a| {
         r.player_count_self_destruct(a.i(3), a.i(4));
         vec![]
     });

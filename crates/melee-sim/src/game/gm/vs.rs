@@ -60,18 +60,6 @@ const ENTRY_VOICES: (u32, [u32; 4]) = (0x803D_5620, [0x7C859, 0x7C85A, 0x7C85B, 
 
 /// The functions of the original's the match calls, by address.
 mod addr {
-    pub const IFTIME_IS_TIMER_HIDDEN: u32 = 0x802F_4898;
-    pub const IFTIME_FREE_COUNTDOWN: u32 = 0x802F_4248;
-    pub const IFTIME_SHOW_TIMERS: u32 = 0x802F_40B8;
-    pub const IFTIME_CREATE_TIMERS: u32 = 0x802F_446C;
-    pub const IFSTATUS_802F7034: u32 = 0x802F_7034;
-    pub const IFSTATUS_802F6508: u32 = 0x802F_6508;
-    pub const IFSTATUS_802F6EA4: u32 = 0x802F_6EA4;
-    pub const IFSTATUS_802F665C: u32 = 0x802F_665C;
-    pub const IFSTOCK_802F7EFC: u32 = 0x802F_7EFC;
-    pub const IFALL_802F3394: u32 = 0x802F_3394;
-    pub const IFALL_802F33CC: u32 = 0x802F_33CC;
-    pub const IFALL_802F390C: u32 = 0x802F_390C;
     pub const FN_8016B88C: u32 = 0x8016_B88C;
     pub const FN_8016B7B4: u32 = 0x8016_B7B4;
     pub const FN_8016B7F8: u32 = 0x8016_B7F8;
@@ -741,15 +729,12 @@ impl Running<'_> {
                 if g.vs.start.timer_counts_up {
                     s.timer_seconds = s.timer_seconds.saturating_add(1);
                 } else if s.timer_seconds != 0 {
-                    if s.timer_seconds < 6 {
-                        let hidden = code::call(self, addr::IFTIME_IS_TIMER_HIDDEN, &[]).int();
-                        if hidden == 0 {
-                            let g = &mut *self.game;
-                            assert_eq!(g.vs.state.unk_1C.0, COUNTDOWN.0, "the countdown's sounds");
-                            let id = COUNTDOWN.1[g.vs.state.timer_seconds as usize] as i32;
-                            if id >= 0 {
-                                self.sfx_play(id, 0x7F, 0x40);
-                            }
+                    if s.timer_seconds < 6 && !self.game.is_timer_hidden() {
+                        let g = &mut *self.game;
+                        assert_eq!(g.vs.state.unk_1C.0, COUNTDOWN.0, "the countdown's sounds");
+                        let id = COUNTDOWN.1[g.vs.state.timer_seconds as usize] as i32;
+                        if id >= 0 {
+                            self.sfx_play(id, 0x7F, 0x40);
                         }
                     }
                     self.game.vs.state.timer_seconds -= 1;
@@ -801,10 +786,10 @@ impl Running<'_> {
         }
         self.lb_audio_hold(true);
         self.lb_audio_call(5);
-        code::call(self, addr::IFALL_802F3394, &[]);
+        self.hide_hud_parts();
         let start = self.game.vs.start.clone();
         if start.x3_7 {
-            code::call(self, addr::IFTIME_SHOW_TIMERS, &[]);
+            self.show_timers();
         }
         if !start.x3_6 {
             let mut flag = 0;
@@ -849,7 +834,7 @@ impl Running<'_> {
         }
         self.lb_audio_hold(false);
         self.game.clear_db_pause_flag(bit);
-        code::call(self, addr::IFALL_802F33CC, &[]);
+        self.show_hud_parts();
         self.game.hide_pause(i);
         self.game.pads.rumble.unpause_all();
         let start = self.game.vs.start.clone();
@@ -900,7 +885,7 @@ impl Running<'_> {
         }
         self.sfx_stop_all();
         self.lb_audio_reset();
-        code::call(self, addr::IFTIME_FREE_COUNTDOWN, &[]);
+        self.free_countdown();
         let g = &*self.game;
         assert!(
             !(g.vs.state.match_result == OUTCOME_1P_GAME_OVER && g.vs.start.x4_3),
@@ -1006,11 +991,7 @@ impl Running<'_> {
     /// the crowd, and the match freezes.
     fn vs_match_over(&mut self) {
         self.vs_end();
-        code::call(
-            self,
-            addr::IFSTATUS_802F7034,
-            &[Val::Int(addr::FN_8016B88C as i32)],
-        );
+        self.announce_match_end(Some(CodeRef(addr::FN_8016B88C)));
         self.lb_audio_reset_flush();
         self.game.set_db_pause_flag(4);
         self.game.vs.state.unk_0 = 1;
@@ -1112,12 +1093,7 @@ impl Running<'_> {
             if donor == 6 {
                 continue;
             }
-            let shown = code::call(
-                self,
-                addr::IFSTOCK_802F7EFC,
-                &[Val::Int(i), Val::Int(donor)],
-            )
-            .int();
+            let shown = self.steal_stock(i, donor);
             if shown != 0 {
                 continue;
             }
@@ -1185,7 +1161,7 @@ impl Running<'_> {
         g.set_player_damage_at(slot, sub, damage);
         self.player_80032070(slot, sub != 0);
         if sub != 1 {
-            code::call(self, addr::IFSTATUS_802F6508, &[Val::Int(slot)]);
+            self.show_damage_display(slot);
             if self.game.vs.state.fighters[slot as usize].xC & 0x8000 != 0 {
                 super::super::camera::show_all_layers(&mut self.game.camera.cam);
             }
@@ -1651,6 +1627,8 @@ pub struct MatchArchives {
     pub pdpm: melee_data::archive::ArchiveId,
     /// `GmPause.dat`, the pause screen.
     pub gm_pause: melee_data::archive::ArchiveId,
+    /// The HUD's.
+    pub hud: crate::game::hud::all::HudArchives,
 }
 
 impl Game {
@@ -1724,7 +1702,7 @@ impl Running<'_> {
             code::call(self, f.0, &[Val::Int(0)]);
             super::super::camera::snap(self);
         }
-        code::call(self, addr::IFALL_802F390C, &[]);
+        self.create_hud(files.hud);
         code::call(self, addr::LBBGFLASH_INIT, &[Val::Int(0xFF)]);
         if let Some(f) = d.rules.on_match_start {
             code::call(self, f.0, &[]);
@@ -1744,24 +1722,16 @@ impl Running<'_> {
     pub fn vs_on_enter(&mut self, d: &StartMeleeData, files: MatchArchives) {
         self.start_vs(d, files);
         let lives = if d.rules.x1_2 { 8 } else { 3 };
-        code::call(
-            self,
-            addr::IFSTATUS_802F6EA4,
-            &[
-                Val::Int(lives),
-                Val::Int(-1),
-                Val::Int(-1),
-                Val::Int(0),
-                Val::Int(addr::FN_8016B7B4 as i32),
-                Val::Int(addr::FN_8016B7F8 as i32),
-            ],
+        self.announce(
+            lives,
+            -1,
+            -1,
+            0,
+            Some(CodeRef(addr::FN_8016B7B4)),
+            Some(CodeRef(addr::FN_8016B7F8)),
         );
-        code::call(self, addr::IFTIME_CREATE_TIMERS, &[]);
-        code::call(
-            self,
-            addr::IFSTATUS_802F665C,
-            &[Val::Int(i32::from(d.rules.x0_3))],
-        );
+        self.create_timers();
+        self.show_damage_displays(i32::from(d.rules.x0_3));
     }
 }
 

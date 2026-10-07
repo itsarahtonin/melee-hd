@@ -263,7 +263,7 @@ impl Running<'_> {
             if s.x0_b567 == 0 {
                 s.x0_b567 = s.x0_b234;
                 s.x1 = s.x1.wrapping_add(1);
-                let id = if s.x1 != 0 && s.x1 % 10 == 0 {
+                let id = if s.x1 != 0 && s.x1.is_multiple_of(10) {
                     0xB4
                 } else {
                     0xB3
@@ -408,7 +408,7 @@ impl Running<'_> {
                 let (rot, x) = if kind == 1 {
                     (0.0, -25.0)
                 } else {
-                    (mem(fp::frsp(3.141_592_7)), 25.0)
+                    (core::f32::consts::PI, 25.0)
                 };
                 jobj::set_rotation_z(&mut g.objs.jobjs, j, rot);
                 jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.y = y);

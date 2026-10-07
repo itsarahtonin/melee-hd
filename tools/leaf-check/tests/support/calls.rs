@@ -287,6 +287,10 @@ const FUZZED_CAPTURES: usize = 6;
 /// what it returns.
 pub type Stub = (u32, Ret);
 
+/// A function ssbm-rs's side runs natively in place of the original's: its address and the
+/// stand-in.
+pub type Native = (u32, fn(&Ctx));
+
 /// What a stand-in returns.
 #[derive(Clone, Copy, Debug)]
 pub enum Ret {
@@ -454,7 +458,7 @@ pub struct Check<'a> {
     pub stubs: &'a [Stub],
     /// Natives on ssbm-rs's side only (stand-ins for file loads whose files are loaded
     /// already, and loggers for [`Out::Logged`]).
-    pub natives: &'a [(u32, fn(&Ctx))],
+    pub natives: &'a [Native],
     /// Diffs whose path starts with one of these must round-trip on import.
     pub round_trip: &'a [&'a str],
     /// At most this many captures.
@@ -670,21 +674,19 @@ impl<'a> Check<'a> {
                                     diffs.push(format!("{a:#x}: ours {bs:x?}, theirs {t:x?}"));
                                 }
                             }
-                            Out::Logged(ours) => {
-                                if ours != &logged {
-                                    let k = ours
-                                        .iter()
-                                        .zip(&logged)
-                                        .position(|(a, b)| a != b)
-                                        .unwrap_or(ours.len().min(logged.len()));
-                                    diffs.push(format!(
-                                        "logged calls ({} ours, {} theirs) differ at {k}: ours {:x?}, theirs {:x?}",
-                                        ours.len(),
-                                        logged.len(),
-                                        ours.get(k),
-                                        logged.get(k)
-                                    ));
-                                }
+                            Out::Logged(ours) if ours != &logged => {
+                                let k = ours
+                                    .iter()
+                                    .zip(&logged)
+                                    .position(|(a, b)| a != b)
+                                    .unwrap_or(ours.len().min(logged.len()));
+                                diffs.push(format!(
+                                    "logged calls ({} ours, {} theirs) differ at {k}: ours {:x?}, theirs {:x?}",
+                                    ours.len(),
+                                    logged.len(),
+                                    ours.get(k),
+                                    logged.get(k)
+                                ));
                             }
                             _ => {}
                         }

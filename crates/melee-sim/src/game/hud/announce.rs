@@ -110,12 +110,12 @@ impl Running<'_> {
     pub fn announce_match_end(&mut self, on_start: Option<CodeRef>) {
         let s = &self.game.vs.state;
         let a = if s.unk_10 != 0 {
-            s.unk_10 as i32 - 1
+            s.unk_10.wrapping_sub(1)
         } else {
             -1
         };
         let b = if s.unk_14 != 0 {
-            s.unk_14 as i32 - 1
+            s.unk_14.wrapping_sub(1)
         } else {
             -1
         };

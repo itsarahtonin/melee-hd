@@ -10,6 +10,7 @@ use melee_data::archive::{Archive, Archives};
 
 use super::gm::{self, scene, vs};
 use super::handles::CodeRef;
+use super::hud;
 use super::mirror::{Cx, Mem, Mirror};
 use super::playback::{self, Playback};
 use super::slippi::{self, CodeError};
@@ -236,6 +237,12 @@ impl Match {
         let files = vs::MatchArchives {
             pdpm: data.add(load("PdPm.dat")),
             gm_pause: data.add(load("GmPause.usd")),
+            // `ifAll_802F390C`'s: `IfAll`, the names' font, the coin counter.
+            hud: hud::all::HudArchives {
+                if_all: data.add(load("IfAll.usd")),
+                sd_intro: data.add(load("SdIntro.dat")),
+                if_coget: data.add(load("IfCoGet.dat")),
+            },
         };
         let mut m = Match { game, data };
         m.game.rumble_data = table.map(|offset| melee_data::archive::DataRef {

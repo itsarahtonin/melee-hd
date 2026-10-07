@@ -31,6 +31,8 @@ Recursion follows the original's too (joint trees load along sibling chains), so
 
 Function pointers in the original (process functions, render callbacks, user-data and object release functions, animation update functions) become `Copy` tokens the game dispatches on, or, where a callback is only passed down a call (an animation update function), a closure parameter that is never stored. The game's functions the scheduler and the particle system call (processes, particle user functions, the new-generator hook) are dispatched through a trait the caller passes down (`gobj::Host`, `particle::Hooks`). Joints' particle callbacks, which efLib sets (an animation's particle events, and a particle list's first display), go through `particle::Hooks` too, so joint animation (`jobj::anim`, `jobj::anim_all`) takes the hooks; the game passes `code::ParticleHooks`.
 
+The display pass isn't ported yet. Render callbacks that only decide what to draw (the HUD's, `game::hud`, and the debug text's, `game::hud::devtext`) are functions returning that decision (`hud::Draw`, `devtext::Draw`), checked against the draw calls the original makes; the name tags' camera (`fn_802FCAC4`) also moves the names as it decides, so it takes the state mutably.
+
 ## Uninitialized values
 
 A few original functions read memory or registers they never set, and plain data can't hold what was there. Each case is probed in ssbm-rs to see what the word is in play, then modeled explicitly:
@@ -58,7 +60,7 @@ Some of these reads hand gameplay a heap address. Nana's CPU DI (`ftCo_800AC5A0`
 
 ## Seams
 
-Where game code calls a subsystem no port covers yet (fighter creation, items, the HUD), it goes through `game::code::call`, by the original function's address with its arguments as register values (`code::Val`), and stops there until that subsystem's port adds its arms. With the feature `stubs` (leaf-check enables it) a check can stand a function in on both sides and compare the calls each side made and their arguments, so the code around a seam is checked before what it calls is ported. The simulation itself never registers a stand-in.
+Where game code calls a subsystem no port covers yet (fighter creation, items, the HUD's magnifier), it goes through `game::code::call`, by the original function's address with its arguments as register values (`code::Val`), and stops there until that subsystem's port adds its arms. With the feature `stubs` (leaf-check enables it) a check can stand a function in on both sides and compare the calls each side made and their arguments, so the code around a seam is checked before what it calls is ported. The simulation itself never registers a stand-in.
 
 ## Effects
 

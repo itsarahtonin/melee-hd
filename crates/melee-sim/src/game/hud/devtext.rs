@@ -560,6 +560,7 @@ impl Game {
     /// Sets the screens up for a scene: their camera, an empty pool and the GObj that draws
     /// them, `DevText_Setup`.
     #[doc(alias = "DevText_Setup")]
+    #[allow(clippy::too_many_arguments)]
     pub fn devtext_setup(
         &mut self,
         data: &Archives,

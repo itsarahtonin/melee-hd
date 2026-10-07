@@ -54,13 +54,8 @@ mod addr {
     pub const FTDATA_8008578C: u32 = 0x8008_578C;
     pub const FTKB_SPECIALN_800EED50: u32 = 0x800E_ED50;
     pub const FTCO_800D4FF4: u32 = 0x800D_4FF4;
-    pub const IFSTATUS_802F6E1C: u32 = 0x802F_6E1C;
     pub const FT_80087BEC: u32 = 0x8008_7BEC;
     pub const FT_80087BC0: u32 = 0x8008_7BC0;
-    pub const IFSTATUS_802F6D10: u32 = 0x802F_6D10;
-    pub const IFSTATUS_802F69C0: u32 = 0x802F_69C0;
-    pub const IFSTATUS_802F6AF8: u32 = 0x802F_6AF8;
-    pub const IFSTATUS_802F6C04: u32 = 0x802F_6C04;
     pub const FTLIB_GET_NAME_TAG_HEIGHT: u32 = 0x8008_6F80;
     pub const FIGHTER_FIRST_INITIALIZE_80067A84: u32 = 0x8006_7A84;
 }
@@ -1062,7 +1057,7 @@ impl Running<'_> {
             if partner && self.game.ft_is_sleeping(second.expect("a second fighter")) {
                 code::call(self, addr::FTCO_800D4FF4, &[Val::GObj(second)]);
             }
-            code::call(self, addr::IFSTATUS_802F6E1C, &[Val::Int(slot)]);
+            self.damage_display_respawn(slot);
             return;
         }
         if self.game.ft_is_rebirth(first.expect("a fighter")) {
@@ -1114,21 +1109,17 @@ impl Running<'_> {
         let kos = &mut self.game.players[s].kos_by_player[other as usize];
         *kos = kos.saturating_add(1);
         if slot == other {
-            code::call(self, addr::IFSTATUS_802F6D10, &[Val::Int(other)]);
+            self.damage_display_fall(other);
             return;
         }
         if self.game.vs_is_teams() {
             let o = check_slot(other);
             if self.game.players[s].team == self.game.players[o].team {
-                code::call(
-                    self,
-                    addr::IFSTATUS_802F69C0,
-                    &[Val::Int(other), Val::Int(slot)],
-                );
+                self.damage_display_teammate_ko(other, slot);
                 return;
             }
         }
-        code::call(self, addr::IFSTATUS_802F6AF8, &[Val::Int(other)]);
+        self.damage_display_ko(other);
     }
 
     /// Counts a self-destruct and shows it, `Player_IncSelfDestructs` (for entity 0).
@@ -1137,7 +1128,7 @@ impl Running<'_> {
         let p = self.game.player_mut(slot);
         if sub == 0 && p.self_destructs < 0xFFFF {
             p.self_destructs += 1;
-            code::call(self, addr::IFSTATUS_802F6C04, &[Val::Int(slot)]);
+            self.damage_display_self_destruct(slot);
         }
     }
 

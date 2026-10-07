@@ -332,7 +332,7 @@ fn log_cobj(ctx: &Ctx) {
     ctx.regs.set_r(3, 1);
 }
 
-fn draw_natives() -> Vec<(u32, fn(&Ctx))> {
+fn draw_natives() -> Vec<calls::Native> {
     vec![
         (sym("hsd_80391A04"), log_text_scale as fn(&Ctx)),
         (sym("DrawRectangle"), log_rect),
@@ -699,7 +699,7 @@ fn camera_current(ctx: &Ctx) {
 
 fn nothing_native(_: &Ctx) {}
 
-fn render_natives() -> Vec<(u32, fn(&Ctx))> {
+fn render_natives() -> Vec<calls::Native> {
     vec![
         (sym("HSD_GObj_JObjCallback"), log_jobj_render as fn(&Ctx)),
         (sym("HSD_GObj_80390ED0"), log_links_render),
@@ -1166,7 +1166,7 @@ fn load_damage_models() {
 
 /// A KO's display and marks, from the match process's states with a random slot and rules.
 #[test]
-fn damage_display_ko() {
+fn damage_display_teammate_ko() {
     let stubs = hud_stubs();
     Check {
         perturb_all: true,
@@ -1187,7 +1187,7 @@ fn damage_display_ko() {
         ..Check::new("fn_8016C7D0", &|r, a| {
             let (slot, by) = (a.i(20), a.i(22));
             match a.r(21) {
-                0 => r.damage_display_ko(slot, by),
+                0 => r.damage_display_teammate_ko(slot, by),
                 _ => r.damage_display_fall(slot),
             }
             vec![]
@@ -1205,12 +1205,12 @@ fn damage_display_ko() {
 }
 
 #[test]
-fn damage_display_team_ko() {
+fn damage_display_ko() {
     let stubs = hud_stubs();
     Check {
         stubs: &stubs,
         ..Check::new("ifStatus_802F6AF8", &|r, a| {
-            r.damage_display_team_ko(a.i(3));
+            r.damage_display_ko(a.i(3));
             vec![]
         })
     }
@@ -2147,6 +2147,26 @@ fn create_nametag() {
     Check::new("NameTag_Create", &|r, a| {
         r.create_nametag(a.i(3));
         vec![]
+    })
+    .run();
+}
+
+/// `un_802FD28C` on the slot of a running tag's process.
+#[test]
+fn refresh_nametag() {
+    Check::new("fn_802FCC44", &|r, a| {
+        let g = gobj_arg(a, 3);
+        let Some(melee_sim::game::state::UserData::NameTagSlot(s)) = r.game.world.gobj(g).user_data
+        else {
+            panic!("a tag's process without its slot");
+        };
+        r.refresh_nametag(i32::from(s));
+        vec![]
+    })
+    .with_theirs(&|ctx, c| {
+        let ud = ctx.read_u32(c.regs.gpr[3] + 0x2C);
+        fns::un_802FD28C(ctx, i32::from(ctx.read_u8(ud)));
+        (0, 0)
     })
     .run();
 }

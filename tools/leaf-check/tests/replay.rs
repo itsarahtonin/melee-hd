@@ -347,19 +347,9 @@ fn costumes() {
     }
 }
 
-/// The HUD's functions the match's frame reaches, stood in for on both sides, as the VS
-/// checks stand them in.
-const FRAME_STUBS: [(u32, Option<u32>); 9] = [
-    (0x802F_7034, None),
-    (0x802F_4248, None),
-    (0x802F_3394, None),
-    (0x802F_40B8, None),
-    (0x802F_33CC, None),
-    (0x802F_6508, None),
-    (0x802F_6E1C, None),
-    (0x800D_4FF4, None),
-    (0x802F_4898, Some(0)),
-];
+/// The unported code the match's frame reaches, stood in for on both sides, as the VS checks
+/// stand it in: the fighter's rebirth (`ftCo_800D4FF4`).
+const FRAME_STUBS: [(u32, Option<u32>); 1] = [(0x800D_4FF4, None)];
 
 /// fn_8016CFE0 run from the button maps' states (which come just before it in a tick), with
 /// the frame counted from `index` (none: as captured) and read.
@@ -408,8 +398,9 @@ fn replay_end() {
 
 /// fn_8016B918's stock steals as the replay answers them: players out of stocks with their
 /// fighters asleep, and teammates with stocks to give, in several passes over the captures.
-/// The steal's own effects reach unported scoring, so the HUD's check stands in, saying the
-/// steal shows already; whether each side asks it says whether the replay's answer was read.
+/// The steal's own effects reach unported scoring, so every row's two flying icons are taken
+/// and the HUD (`ifStock_802F7EFC`) answers that the steal shows already; whether each side
+/// asks it says whether the replay's answer was read.
 #[test]
 fn stock_steals() {
     for (dir, replay) in replays() {
@@ -424,6 +415,10 @@ fn stock_steals() {
                         let block = players + 0xE90 * s;
                         let out = (s as usize + i + pass).is_multiple_of(3);
                         poke_u8(call, block + 0x8E, if out { 0 } else { 3 });
+                        // `ifStock_804A157C[s].anim[5..7]`: both flights taken.
+                        for k in 5..7 {
+                            poke_u8(call, 0x804A_157C + 0x54 * s + 5 + k, 1);
+                        }
                         for e in 0..2 {
                             let gobj = peek_u32(call, block + 0xB0 + 4 * e);
                             if gobj != 0 && out {
@@ -434,8 +429,7 @@ fn stock_steals() {
                     }
                 },
                 &Setup {
-                    // `ifStock_802F7EFC`: the steal shows already.
-                    stubs: &[(0x802F_7EFC, Some(1))],
+                    stubs: &[],
                     replay: Some(&replay),
                 },
                 &|g, _, _| {

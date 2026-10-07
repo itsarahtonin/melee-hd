@@ -994,3 +994,57 @@ grLib_801C9C40	leaf-check stage quake_proc: every capture (the fighters' landing
 DevText_AddToList	leaf-check hud devtext_ops: DevText_Show inserts through it; the pool and draw list compared after every run
 DevText_SetupCObj	leaf-check hud devtext_draw_all: DevText_DrawAll makes its camera through it; the camera and draw calls compared
 fn_803A60EC	leaf-check sis canvas_camera: freeing a canvas camera GObj releases its user data through it; the canvases compared
+lb_80013B14	leaf-check hud create_hud, nametags_init_and_free: the HUD's and the tags' cameras load through it; the cameras compared
+mn_8022F360	leaf-check hud damage_digits_proc: the digits' fresh animation stops its material channels through it; the joints compared
+mn_8022F3D8	leaf-check hud damage_digits_proc: the digits' fresh animation stops its material channels through it; the joints compared
+fn_802F36B8	leaf-check hud hud_camera_render: every capture, the draw decision compared
+ifAll_802F370C	leaf-check hud read_hud_layout: every layout count
+ifTime_SetTime	leaf-check hud set_timer_digits: every capture
+ifTime_UpdateCountdown	leaf-check hud countdown_proc: every capture
+ifTime_UpdateTimers	leaf-check hud timer_proc: every capture
+ifTime_CreateTimers	leaf-check hud create_timers: the timers compared after setup
+ifTime_Reset	leaf-check hud reset_timers: every capture
+ifStatus_PercentOnDeathAnimationThink	leaf-check hud damage_digits_fly: every capture
+ifStatus_802F4B84	leaf-check hud shake_damage_digits: every capture
+ifStatus_802F4EDC	leaf-check hud damage_digits_proc: every capture
+ifStatus_802F5B48	leaf-check hud damage_proc: every capture
+ifStatus_802F5DE0	leaf-check hud damage_digits_render: every capture, the draw decision compared
+ifStatus_802F5E50	leaf-check hud damage_mark_render: every capture, the draw decision compared
+ifStatus_802F5EC0	leaf-check hud create_damage_digits: every capture
+ifStatus_802F61FC	leaf-check hud create_damage_mark: every capture
+ifStatus_802F6508	leaf-check hud show_damage_display: every capture
+ifStatus_802F665C	leaf-check hud show_damage_displays: every capture
+ifStatus_802F66A4	leaf-check hud load_damage_models: every capture
+ifStatus_802F6AF8	leaf-check hud damage_display_ko: every capture
+ifStatus_802F6C04	leaf-check hud damage_display_self_destruct: every capture
+ifStatus_802F6E1C	leaf-check hud damage_display_respawn: every capture
+ifStatus_802F7034	leaf-check hud announce_match_end: every capture
+ifStatus_802F7134	leaf-check hud load_announcements: every capture
+fn_802F7288	leaf-check hud announcement_step: every capture
+fn_802F75D4	leaf-check hud ko_mark_procs: every capture
+fn_802F7670	leaf-check hud ko_mark_procs: every capture
+fn_802F770C	leaf-check hud ko_mark_render: every capture, the draw decision compared
+fn_802F77F8	leaf-check hud create_ko_mark: every capture
+fn_802F7994	leaf-check hud ko_mark_procs: every capture
+if_802F7E24	leaf-check hud load_ko_marks: every capture
+ifStock_802F8298	leaf-check hud stock_proc: fn_802F9410 runs it for stock-match rows; the icons compared
+ifStock_802F89F8	leaf-check hud stock_proc: fn_802F9410 runs it for coin rows (the mode perturbed); the digits compared
+fn_802F9410	leaf-check hud stock_proc: every capture, stocks and row modes perturbed
+fn_802F94E0	leaf-check hud stock_icons_render: every capture, the draw decision compared
+ifStock_802F98E8	leaf-check hud create_stock_icons: every capture
+fn_802FA6C4	leaf-check hud stock_tallies: every capture
+fn_802FAC34	leaf-check hud stock_tallies: every capture
+ifStock_802FAEC4	leaf-check hud load_stock_icons: every capture
+ifMagnify_802FC8E8	leaf-check hud hud_parts_hidden: ifAll_802F3394 sets the flag through it; the magnifier's state compared
+ifMagnify_802FC940	leaf-check hud hud_parts_hidden: ifAll_802F33CC clears the flag through it; the magnifier's state compared
+un_802FC9B4	leaf-check hud nametag_frame: every capture
+NameTag_RenderCallback	leaf-check hud nametag_render: every capture, the draw decision compared
+fn_802FCAC4	leaf-check hud nametag_camera_render: every capture
+un_802FCBA0	leaf-check hud load_nametag_model: every capture
+fn_802FCC44	leaf-check hud nametag_proc: every capture
+NameTag_Create	leaf-check hud create_nametag: every capture
+fn_802FD6CC	leaf-check hud hazard: the sign's render decision compared every frame of its run
+un_802FD708	leaf-check hud hazard: un_802FD8A0, un_802FD8C4 and un_802FD8E8 make the sign through it
+fn_802FDA4C	leaf-check hud arrow_render: every capture, the draw decision compared
+fn_802FED14	leaf-check hud coin_proc: every capture
+un_802FEFAC	leaf-check hud create_coin_counter: every capture

@@ -9,7 +9,6 @@ use super::super::gm::vs::{hud_color, player_color, stock_icon_frame};
 use super::super::handles::CodeRef;
 use super::super::pl::player::{PKIND_CPU, PKIND_HUMAN, PKIND_NONE};
 use super::super::state::{Game, OBJ_JOBJ, Obj, Running};
-use super::super::structs::IfDamageState;
 use super::{Draw, HIDDEN};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::{self, GObjId};
@@ -66,12 +65,6 @@ fn set_diffuse(objs: &mut Objects, j: JObjId, c: [u8; 3]) {
 }
 
 impl Game {
-    /// `ifStatus_GetHUDInfo`: a player's damage display state.
-    #[doc(alias = "ifStatus_GetHUDInfo")]
-    pub fn damage_display(&self, i: usize) -> &IfDamageState {
-        &self.hud.status.players[i]
-    }
-
     /// The display whose digits' GObj is `gobj`.
     fn display_of(&self, gobj: GObjId) -> Option<usize> {
         (0..6).find(|&i| self.hud.status.players[i].HUD_parent_entity == Some(gobj))
@@ -267,12 +260,8 @@ impl Running<'_> {
             return;
         }
         let hit = g.hud.status.players[i].damage_from_last_attack;
-        let mut mag = fp::fmuls(0.101_400_002_837_181_09, fp::frsp(f64::from(hit)));
-        if mag < 0.101_400_002_837_181_09 {
-            mag = 0.101_400_002_837_181_09;
-        } else if mag > 1.520_699_977_874_755_9 {
-            mag = 1.520_699_977_874_755_9;
-        }
+        let mag = fp::fmuls(0.101_400_002_837_181_09, fp::frsp(f64::from(hit)))
+            .clamp(0.101_400_002_837_181_09, 1.520_699_977_874_755_9);
         for k in 0..4 {
             let r = reg(g.objs.rng.draw_f32());
             let mut ox = fp::fmuls(mag, fp::fmuls(2.0, fp::fsubs(r, 0.5)));
@@ -332,8 +321,8 @@ impl Running<'_> {
             }
         }
         if anim::any_animated(&g.objs, Some(root)) {
-            for k in 0..4 {
-                let j = js[k].expect("a digit joint");
+            for (k, j) in js.iter().enumerate().take(4) {
+                let j = j.expect("a digit joint");
                 let t = g.objs.jobjs[j].translate;
                 let p = &mut g.hud.status.players[i];
                 p.translation_x[k] = t.x;
@@ -701,10 +690,10 @@ impl Running<'_> {
         }
     }
 
-    /// A player KO'd by another, `ifStatus_802F69C0`: outside stock matches, the KO-er's
-    /// mark first.
+    /// A player KO'd by a teammate, `ifStatus_802F69C0`: outside stock matches, the
+    /// teammate's mark first.
     #[doc(alias = "ifStatus_802F69C0")]
-    pub fn damage_display_ko(&mut self, slot: i32, by: i32) {
+    pub fn damage_display_teammate_ko(&mut self, slot: i32, by: i32) {
         let s = &self.game.vs.start;
         if s.match_kind != 1 && s.x2_5 {
             self.ko_mark(super::announce::MARK_7C30, by);
@@ -712,9 +701,9 @@ impl Running<'_> {
         self.stock_loss(slot, super::announce::MARK_7BB4);
     }
 
-    /// `ifStatus_802F6AF8`: a team KO.
+    /// `ifStatus_802F6AF8`: a KO by a rival (anyone outside a team match).
     #[doc(alias = "ifStatus_802F6AF8")]
-    pub fn damage_display_team_ko(&mut self, slot: i32) {
+    pub fn damage_display_ko(&mut self, slot: i32) {
         self.stock_loss(slot, super::announce::MARK_7AF8);
     }
 
