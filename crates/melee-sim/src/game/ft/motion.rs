@@ -117,7 +117,10 @@ impl Running<'_> {
             if aram >= 0x8000_0000 {
                 unported_call("ftData_80085CD8 from main memory");
             }
-            // `lbArq_80014BD0` copies the archive from ARAM; `HSD_ArchiveParse` relocates it.
+            // `lbArq_80014BD0` copies the archive from ARAM, which takes time on ssbm-rs's
+            // timeline; `HSD_ArchiveParse` relocates it.
+            let len = (self.data.u32(entry.at(8)) + 31) & !31;
+            self.game.audio.aram_load(self.data, len);
             let kind = self.game.fighters[src.0].kind;
             let file = self.game.ft.anim_files[kind as usize]
                 .as_ref()

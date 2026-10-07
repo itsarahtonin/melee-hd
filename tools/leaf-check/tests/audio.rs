@@ -358,8 +358,10 @@ fn random_ops() {
             cap.call.load(&ctx);
             let mut data = melee_data::archive::Archives::default();
             let bank = audio::find_bank(&cap.call.mem1, &mut data);
-            let mut game = Game::default();
-            game.audio = audio::import(&cap.call.mem1, bank);
+            let mut game = Game {
+                audio: audio::import(&cap.call.mem1, bank),
+                ..Game::default()
+            };
             let mut r = Running {
                 game: &mut game,
                 data: &data,

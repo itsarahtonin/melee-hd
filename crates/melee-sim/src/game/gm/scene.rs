@@ -3,7 +3,8 @@
 //! sets the pause mask, and runs every GObj process.
 //!
 //! The original renders a frame after each batch of ticks (`HSD_GObj_80390FC0` and the video
-//! copy) and mixes audio; the display pass and audio are left out here. It also takes as many
+//! copy) and mixes audio; the display pass and the mix are left out here (the audio driver's
+//! frames run on their own timeline, `crate::audio::clock`). It also takes as many
 //! ticks per frame as polls queued; melee-sim takes one poll per tick ([`step`]).
 
 use super::super::state::{Game, Running};
@@ -146,9 +147,15 @@ impl Game {
 /// oldest queued poll. Returns whether the scene asked to end. Not yet checked against
 /// ssbm-rs as a whole: a tick runs every process, the fighters' among them (its parts are:
 /// the clocks, the button maps, the frame function and the pause mask's halves).
+///
+/// The audio frames that fall before the tick on ssbm-rs's timeline run first, and its
+/// perf timer's read at the end lets time pass (`crate::audio::clock`).
 pub fn tick(r: &mut Running) -> bool {
+    r.game.audio.tick_start(r.data);
     begin_tick(r);
-    finish_tick(r, Resume::ButtonMaps)
+    let ended = finish_tick(r, Resume::ButtonMaps);
+    r.game.audio.tick_end(r.data);
+    ended
 }
 
 /// The tick's first part: the oldest poll into the master statuses and, when the game

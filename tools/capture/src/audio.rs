@@ -68,7 +68,7 @@ fn index(base: u32, size: u32, count: usize, p: u32) -> Option<u8> {
     }
     let off = p.wrapping_sub(base);
     assert!(
-        off % size == 0 && ((off / size) as usize) < count,
+        off.is_multiple_of(size) && ((off / size) as usize) < count,
         "{p:#x} isn't an element of the array at {base:#x}"
     );
     Some((off / size) as u8)
