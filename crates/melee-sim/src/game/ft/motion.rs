@@ -7,7 +7,7 @@ use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
 use super::super::code::{run_fighter_cb, unported_call};
-use super::super::handles::{FighterId, RawPtr};
+use super::super::handles::FighterId;
 use super::super::state::{Event, Running};
 use super::super::structs::Fighter;
 use super::anim::x594_bit;
@@ -432,8 +432,11 @@ impl Running<'_> {
             jobj::set_translate(&mut self.game.objs.jobjs, root, pos);
         }
         // `efAsync_QueueFlush`.
-        if self.game.fighters[f.0].x60C != RawPtr(0) {
-            unported_call("efAsync_QueueProcessDeferred");
+        if self.game.fighters[f.0].x60C.is_some() {
+            let gobj = self.game.fighters[f.0].gobj;
+            let mut head = self.game.fighters[f.0].x60C;
+            crate::game::ef::flush(self, gobj, &mut head);
+            self.game.fighters[f.0].x60C = head;
         }
         if flags & SKIP_HIT == 0 {
             if self.game.fighters[f.0].x2219_b3 {

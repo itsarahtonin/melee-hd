@@ -148,6 +148,7 @@ impl<'a> Comparer<'a> {
             }
         }
         self.statics();
+        self.effects();
     }
 
     /// The camera, its boxes, its second CObj, its default field of view and the debug
@@ -276,7 +277,9 @@ impl<'a> Comparer<'a> {
             Some(UserData::Ground(g)) => self.ground(path, g, self.u32(t + 0x2C)),
             Some(UserData::Item(i)) => self.item(path, i, self.u32(t + 0x2C)),
             Some(UserData::Raw(a)) => self.check(path, "user data", a.0, self.u32(t + 0x2C)),
-            Some(UserData::Effect(e)) => self.effect(path, e, self.u32(t + 0x2C)),
+            Some(UserData::Effect(e)) => {
+                self.effect(&format!("{path} effect"), e, self.u32(t + 0x2C))
+            }
             None => {}
         }
     }
@@ -1002,6 +1005,9 @@ impl Cx for Comparer<'_> {
             // A stale item's pointer may be into nothing: it pairs with nothing.
             "CameraBoxId" if theirs != 0 => try_box_index(self.u32(sym("cm_804D645C")), theirs),
             "TObjId" => self.maps.tobjs.get(&theirs).map(|t| t.0),
+            "QueuedId" => self.maps.queued.get(&theirs).map(|q| q.0),
+            "GeneratorId" => self.maps.generators.get(&theirs).map(|g| g.0),
+            "EffectId" => self.maps.effects.get(&theirs).map(|e| e.0),
             _ => None,
         };
         let known = known.or_else(|| self.handles.get(&(kind, theirs)).copied());

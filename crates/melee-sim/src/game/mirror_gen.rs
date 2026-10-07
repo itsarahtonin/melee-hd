@@ -4596,7 +4596,9 @@ impl Mirror for Fighter {
             x5F4_arr: core::array::from_fn(|i0| {
                 Fighter_x5F4_arr::import(m, at + 0x5f4 + i0 as u32 * 0x2, cx)
             }),
-            x60C: RawPtr(m.u32(at + 0x60c)),
+            x60C: cx
+                .import_handle("QueuedId", m.u32(at + 0x60c))
+                .map(QueuedId),
             x610_color_rgba: core::array::from_fn(|i0| {
                 _GXColor::import(m, at + 0x610 + i0 as u32 * 0x4, cx)
             }),
@@ -5348,13 +5350,12 @@ impl Mirror for Fighter {
                 cx,
             );
         }
-        if self.x60C.0 != m.u32(at + 0x60c) {
-            cx.mismatch(
-                &format!("{path}.x60C"),
-                format!("{:#x}", self.x60C.0),
-                format!("{:#x}", m.u32(at + 0x60c)),
-            );
-        }
+        cx.compare_handle(
+            &format!("{path}.x60C"),
+            "QueuedId",
+            self.x60C.map(|h| h.0),
+            m.u32(at + 0x60c),
+        );
         for i0 in 0..2 {
             self.x610_color_rgba[i0].compare(
                 m,
@@ -8364,7 +8365,9 @@ impl Mirror for Item {
             xBBC_dynamicBoneTable: cx
                 .import_handle("BoneTableId", m.u32(at + 0xbbc))
                 .map(BoneTableId),
-            xBC0: RawPtr(m.u32(at + 0xbc0)),
+            xBC0: cx
+                .import_handle("QueuedId", m.u32(at + 0xbc0))
+                .map(QueuedId),
             xBC4: _GXColor::import(m, at + 0xbc4, cx),
             xBC8: ItemModStruct::import(m, at + 0xbc8, cx),
             xBCC_unk: Vec2::import(m, at + 0xbcc, cx),
@@ -8834,13 +8837,12 @@ impl Mirror for Item {
             self.xBBC_dynamicBoneTable.map(|h| h.0),
             m.u32(at + 0xbbc),
         );
-        if self.xBC0.0 != m.u32(at + 0xbc0) {
-            cx.mismatch(
-                &format!("{path}.xBC0"),
-                format!("{:#x}", self.xBC0.0),
-                format!("{:#x}", m.u32(at + 0xbc0)),
-            );
-        }
+        cx.compare_handle(
+            &format!("{path}.xBC0"),
+            "QueuedId",
+            self.xBC0.map(|h| h.0),
+            m.u32(at + 0xbc0),
+        );
         self.xBC4
             .compare(m, at + 0xbc4, &format!("{path}.xBC4"), cx);
         self.xBC8
@@ -16431,124 +16433,6 @@ impl Mirror for SpawnItem {
                 &format!("{path}.x48_ground_or_air"),
                 format!("{:?}", self.x48_ground_or_air),
                 format!("{:?}", m.u32(at + 0x48) as i32),
-            );
-        }
-    }
-}
-
-impl Mirror for EF_Effect {
-    const SIZE: u32 = 0x2c;
-
-    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
-        let _ = (&m, at, &cx);
-        EF_Effect {
-            next: RawPtr(m.u32(at + 0x0)),
-            gobj: cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId),
-            parent_gobj: cx.import_handle("GObjId", m.u32(at + 0x8)).map(GObjId),
-            attach_jobj: cx.import_handle("JObjId", m.u32(at + 0xc)).map(JObjId),
-            update: code(m.u32(at + 0x10)),
-            user_data: RawPtr(m.u32(at + 0x14)),
-            params: Vec3::import(m, at + 0x18, cx),
-            lifetime: m.u16(at + 0x24),
-            expire_flags: m.u8(at + 0x26) as i8,
-            scale_flags: m.u8(at + 0x27),
-            state_flags: m.u8(at + 0x28),
-            is_async: m.u8(at + 0x29),
-            x2A: m.u8(at + 0x2a) as i8,
-            x2B: m.u8(at + 0x2b) as i8,
-        }
-    }
-
-    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        let _ = (&m, at, path, &cx);
-        if self.next.0 != m.u32(at + 0x0) {
-            cx.mismatch(
-                &format!("{path}.next"),
-                format!("{:#x}", self.next.0),
-                format!("{:#x}", m.u32(at + 0x0)),
-            );
-        }
-        cx.compare_handle(
-            &format!("{path}.gobj"),
-            "GObjId",
-            self.gobj.map(|h| h.0),
-            m.u32(at + 0x4),
-        );
-        cx.compare_handle(
-            &format!("{path}.parent_gobj"),
-            "GObjId",
-            self.parent_gobj.map(|h| h.0),
-            m.u32(at + 0x8),
-        );
-        cx.compare_handle(
-            &format!("{path}.attach_jobj"),
-            "JObjId",
-            self.attach_jobj.map(|h| h.0),
-            m.u32(at + 0xc),
-        );
-        if self.update.map_or(0, |c| c.0) != m.u32(at + 0x10) {
-            cx.mismatch(
-                &format!("{path}.update"),
-                format!("{:?}", self.update),
-                format!("{:#x}", m.u32(at + 0x10)),
-            );
-        }
-        if self.user_data.0 != m.u32(at + 0x14) {
-            cx.mismatch(
-                &format!("{path}.user_data"),
-                format!("{:#x}", self.user_data.0),
-                format!("{:#x}", m.u32(at + 0x14)),
-            );
-        }
-        self.params
-            .compare(m, at + 0x18, &format!("{path}.params"), cx);
-        if self.lifetime != m.u16(at + 0x24) {
-            cx.mismatch(
-                &format!("{path}.lifetime"),
-                format!("{:?}", self.lifetime),
-                format!("{:?}", m.u16(at + 0x24)),
-            );
-        }
-        if self.expire_flags != m.u8(at + 0x26) as i8 {
-            cx.mismatch(
-                &format!("{path}.expire_flags"),
-                format!("{:?}", self.expire_flags),
-                format!("{:?}", m.u8(at + 0x26) as i8),
-            );
-        }
-        if self.scale_flags != m.u8(at + 0x27) {
-            cx.mismatch(
-                &format!("{path}.scale_flags"),
-                format!("{:?}", self.scale_flags),
-                format!("{:?}", m.u8(at + 0x27)),
-            );
-        }
-        if self.state_flags != m.u8(at + 0x28) {
-            cx.mismatch(
-                &format!("{path}.state_flags"),
-                format!("{:?}", self.state_flags),
-                format!("{:?}", m.u8(at + 0x28)),
-            );
-        }
-        if self.is_async != m.u8(at + 0x29) {
-            cx.mismatch(
-                &format!("{path}.is_async"),
-                format!("{:?}", self.is_async),
-                format!("{:?}", m.u8(at + 0x29)),
-            );
-        }
-        if self.x2A != m.u8(at + 0x2a) as i8 {
-            cx.mismatch(
-                &format!("{path}.x2A"),
-                format!("{:?}", self.x2A),
-                format!("{:?}", m.u8(at + 0x2a) as i8),
-            );
-        }
-        if self.x2B != m.u8(at + 0x2b) as i8 {
-            cx.mismatch(
-                &format!("{path}.x2B"),
-                format!("{:?}", self.x2B),
-                format!("{:?}", m.u8(at + 0x2b) as i8),
             );
         }
     }

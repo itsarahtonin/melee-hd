@@ -109,7 +109,12 @@ impl Running<'_> {
                 let trans = self.bone(f, self.bone_index(fp, TRANS_N)).x4_jobj2;
                 self.anim_tree_trans(f, skel, trans, p35);
             } else {
-                jobj::anim_all(&mut self.game.objs, self.data, skel);
+                jobj::anim_all(
+                    &mut self.game.objs,
+                    self.data,
+                    &mut crate::game::code::ParticleHooks,
+                    skel,
+                );
             }
             if t_inv != 0.0 {
                 self.blend_parts(f, TRANS_N, t, t_inv);
@@ -176,7 +181,12 @@ impl Running<'_> {
         };
         while let Some(j) = jobj {
             if jobj == trans {
-                jobj::anim(&mut self.game.objs, self.data, Some(j));
+                jobj::anim(
+                    &mut self.game.objs,
+                    self.data,
+                    &mut crate::game::code::ParticleHooks,
+                    Some(j),
+                );
                 let t = self.game.objs.jobjs[j].translate;
                 let fp = &mut self.game.fighters[f.0];
                 fp.x698 = fp.x68C_transNPos;
@@ -187,7 +197,12 @@ impl Running<'_> {
                 fp.x6A4_transNOffset = fp.x68C_transNPos - fp.x698;
                 jobj::set_translate(&mut self.game.objs.jobjs, j, Vec3::default());
             } else if x594_bit(&self.game.fighters[f.0], 5) && jobj == p35 {
-                jobj::anim(&mut self.game.objs, self.data, Some(j));
+                jobj::anim(
+                    &mut self.game.objs,
+                    self.data,
+                    &mut crate::game::code::ParticleHooks,
+                    Some(j),
+                );
                 let t = self.game.objs.jobjs[j].translate;
                 let fp = &mut self.game.fighters[f.0];
                 fp.x6CC = fp.x6C0;
@@ -198,7 +213,12 @@ impl Running<'_> {
                 fp.x6D8 = fp.x6C0 - fp.x6CC;
                 jobj::set_translate(&mut self.game.objs.jobjs, j, Vec3::default());
             } else {
-                jobj::anim(&mut self.game.objs, self.data, Some(j));
+                jobj::anim(
+                    &mut self.game.objs,
+                    self.data,
+                    &mut crate::game::code::ParticleHooks,
+                    Some(j),
+                );
             }
             jobj = next_in_tree(&self.game.objs.jobjs, j, None);
         }
@@ -253,7 +273,12 @@ impl Running<'_> {
                 break;
             }
             if !bone_flag(&bone, 0) && !bone_flag(&bone, 5) {
-                jobj::anim(&mut self.game.objs, self.data, Some(j));
+                jobj::anim(
+                    &mut self.game.objs,
+                    self.data,
+                    &mut crate::game::code::ParticleHooks,
+                    Some(j),
+                );
             }
             i += 1;
             jobj = next_in_tree(&self.game.objs.jobjs, j, top);

@@ -118,6 +118,19 @@ pub trait Hooks {
         h: GeneratorHook,
         g: GeneratorId,
     );
+    /// A joint's particles from effect bank `bank`, index `idx`: an animated particle event
+    /// (`dptcl_callback`, `dynamic`) or a particle list entry on its first display
+    /// (`sptcl_callback`). Joints call it only once the game has set those callbacks
+    /// ([`super::jobj::Globals::dptcl`] and `sptcl`).
+    fn joint_particles(
+        &mut self,
+        objs: &mut Objects,
+        data: &Archives,
+        dynamic: bool,
+        bank: i32,
+        idx: i32,
+        jobj: JObjId,
+    );
 }
 
 /// `HSD_Particle`.

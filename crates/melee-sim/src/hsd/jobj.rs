@@ -13,6 +13,7 @@ use super::Objects;
 use super::aobj::{self, AObjId};
 use super::dobj::{self, DObjId};
 use super::fobj::{self, Value};
+use super::particle;
 use super::pool::Pool;
 use super::robj::{self, RObjId, inv_length};
 use super::spline;
@@ -184,8 +185,11 @@ impl IndexMut<JObjId> for JObjs {
 pub struct Globals {
     /// `current_jobj`.
     pub current: Option<JObjId>,
-    /// Whether the game has set `dptcl_callback` (`HSD_JObjSetDPtclCallback`).
+    /// Whether the game has set `dptcl_callback` (`HSD_JObjSetDPtclCallback`) and
+    /// `sptcl_callback` (`HSD_JObjSetSPtclCallback`): efLib does, and they go to the game's
+    /// [`particle::Hooks::joint_particles`].
     pub dptcl: bool,
+    pub sptcl: bool,
     /// Particle-list entries whose particles are still to spawn: the top bit `JObjLoad` sets
     /// in the loaded data, which the first display clears.
     pub pending_ptcl: HashSet<DataRef>,
@@ -611,6 +615,18 @@ pub fn set_rotation_z(jobjs: &mut JObjs, j: JObjId, v: f32) {
 /// path position, particle events, or matrix columns.
 #[doc(alias = "JObjUpdateFunc")]
 pub fn update(objs: &mut Objects, data: &Archives, j: JObjId, ty: u8, value: Value) {
+    update_with(objs, data, None, j, ty, value);
+}
+
+/// [`update`] from an animation, whose particle events reach the game's hooks.
+pub fn update_with(
+    objs: &mut Objects,
+    data: &Archives,
+    hooks: Option<&mut dyn particle::Hooks>,
+    j: JObjId,
+    ty: u8,
+    value: Value,
+) {
     use channel::*;
     let stale = matches!(value, Value::Stale);
     let fv = || value.or_address();
@@ -695,10 +711,24 @@ pub fn update(objs: &mut Objects, data: &Archives, j: JObjId, ty: u8, value: Val
         SETBYTE0..=SETFLOAT9 => {}
         DPTCL => {
             if objs.jobj.dptcl {
-                if stale {
+                // The callback gets the word the value is: the bank in its low six bits, the
+                // index above. A stale value's word is a RAM address, which names no particle
+                // the original could have meant.
+                let Value::Float(v) = value else {
                     objs.stale_reads += 1;
-                }
-                panic!("JObj particle events need the effect port");
+                    return;
+                };
+                let w = v.to_bits();
+                let hooks =
+                    hooks.expect("a constraint's particle event (only animations have them)");
+                hooks.joint_particles(
+                    objs,
+                    data,
+                    true,
+                    (w & 0x3F) as i32,
+                    (w >> 6 & 0xFF_FFFF) as i32,
+                    j,
+                );
             }
         }
         // No setter exists for these callbacks, so they stay null.
@@ -739,11 +769,17 @@ pub fn update(objs: &mut Objects, data: &Archives, j: JObjId, ty: u8, value: Val
 /// Animates the joint: its own channels, its references and its display objects,
 /// `HSD_JObjAnim`.
 #[doc(alias = "HSD_JObjAnim")]
-pub fn anim(objs: &mut Objects, data: &Archives, j: Option<JObjId>) {
+pub fn anim(
+    objs: &mut Objects,
+    data: &Archives,
+    hooks: &mut dyn particle::Hooks,
+    j: Option<JObjId>,
+) {
     let Some(j) = j else { return };
     check_depend(&mut objs.jobjs, Some(j));
     let a = objs.jobjs[j].aobj;
-    let mut up = |objs: &mut Objects, ty: u8, v: Value| update(objs, data, j, ty, v);
+    let mut up =
+        |objs: &mut Objects, ty: u8, v: Value| update_with(objs, data, Some(&mut *hooks), j, ty, v);
     aobj::interpret(objs, data, a, Some(&mut up));
     robj::anim_all(objs, data, objs.jobjs[j].robj);
     dobj::anim_all(objs, data, objs.jobjs[j].dobj());
@@ -751,12 +787,12 @@ pub fn anim(objs: &mut Objects, data: &Archives, j: Option<JObjId>) {
 
 /// `JObjAnimAll`.
 #[doc(alias = "JObjAnimAll")]
-fn anim_tree(objs: &mut Objects, data: &Archives, j: JObjId) {
-    anim(objs, data, Some(j));
+fn anim_tree(objs: &mut Objects, data: &Archives, hooks: &mut dyn particle::Hooks, j: JObjId) {
+    anim(objs, data, hooks, Some(j));
     if objs.jobjs[j].flags & INSTANCE == 0 {
         let mut cur = objs.jobjs[j].child;
         while let Some(c) = cur {
-            anim_tree(objs, data, c);
+            anim_tree(objs, data, hooks, c);
             cur = objs.jobjs[c].next;
         }
     }
@@ -764,10 +800,15 @@ fn anim_tree(objs: &mut Objects, data: &Archives, j: JObjId) {
 
 /// Animates a tree, `HSD_JObjAnimAll`.
 #[doc(alias = "HSD_JObjAnimAll")]
-pub fn anim_all(objs: &mut Objects, data: &Archives, j: Option<JObjId>) {
+pub fn anim_all(
+    objs: &mut Objects,
+    data: &Archives,
+    hooks: &mut dyn particle::Hooks,
+    j: Option<JObjId>,
+) {
     let Some(j) = j else { return };
     aobj::init_end_callback(&mut objs.aobjs);
-    anim_tree(objs, data, j);
+    anim_tree(objs, data, hooks, j);
     aobj::invoke_end_callbacks(&objs.aobjs);
 }
 
@@ -1564,8 +1605,8 @@ pub fn set_mtx_dirty(jobjs: &mut JObjs, j: Option<JObjId>) {
     }
 }
 
-/// Whether the game handles particle events (`HSD_JObjSetDPtclCallback`, unchecked until the
-/// effect port sets it).
+/// Whether the game handles particle events (`HSD_JObjSetDPtclCallback`).
+#[doc(alias = "HSD_JObjSetDPtclCallback")]
 pub fn set_dptcl_callback(objs: &mut Objects, set: bool) {
     objs.jobj.dptcl = set;
 }

@@ -14,9 +14,10 @@ use super::anime;
 use super::data::{LAST_CALLBACKS, StageCallbacks};
 use super::ground::{self, ParamColor, ground_of, jobj_of, map_gobj, nth_joint, set_param_color};
 use super::{grlib, material, setup};
-use crate::fpu::{mem, reg};
+use crate::fpu::{copy, mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
+use crate::vec::Vec3;
 use gekko_fp as fp;
 
 /// `grNLa_803E8010`: the background pieces the cycle animates, by slot: the map id it creates,
@@ -33,6 +34,14 @@ const PIECES: [[i16; 4]; 6] = [
 
 /// `grLast_803B8480`, `grLast_803B848C`, `grLast_803B8498`.
 const ONES: crate::vec::Vec3 = crate::vec::Vec3::new(1.0, 1.0, 1.0);
+
+/// The fog color phase 10 blends to (`grNLa_804DBBD4`).
+const BLEND_PHASE_10: _GXColor = _GXColor {
+    r: 0xAA,
+    g: 0xCA,
+    b: 0xFF,
+    a: 0,
+};
 
 /// The swaying piece's limits, as `grLast_804DBB7C` and friends: angular speeds and angles in
 /// radians, single precision as compiled.
@@ -377,9 +386,27 @@ pub fn set_phase(r: &mut Running, gobj: GObjId, phase: i32) {
         }
         9 => {
             pieces_anim(r, gobj, 8);
-            unimplemented!("phase 9's particle generator (grLib_801C96F8) isn't ported");
+            // The swaying piece's generator, at its part 5.
+            let sway = map_gobj(r.game, 7).expect("map 7");
+            let part = nth_joint(r.game, sway, 5);
+            let at = crate::lb::joint::world_position(&mut r.game.objs, r.data, part, None);
+            let gen_ = grlib::generator_at(r.game, r.data, 0x7531, 0x1E, at);
+            let sg = ground_of(r.game, sway);
+            r.game.grounds[sg.0].u.last().xE0 = gen_;
+            false
         }
-        10 => unimplemented!("phase 10's quake and generator removal aren't ported"),
+        10 => {
+            blend_to(r.game, gobj, BLEND_PHASE_10, 120.0);
+            let sway = map_gobj(r.game, 7).expect("map 7");
+            anime::set_rate(r.game, sway, 5, 7, 0.0, false);
+            let sg = ground_of(r.game, sway);
+            let gen_ = r.game.grounds[sg.0].u.last().xE0;
+            grlib::kill_generator(r.game, r.data, gen_.expect("grLib_801C9834: the generator"));
+            r.game.grounds[sg.0].u.last().xE0 = None;
+            r.game.grounds[g.0].u.map().b26 = true;
+            bright_colors(r.game);
+            return;
+        }
         13 | 14 | 16 | 17 => unimplemented!("phase {phase}'s material scripts aren't ported"),
         15 => false,
         _ => return,
@@ -526,7 +553,7 @@ pub fn init_sway(r: &mut Running, gobj: GObjId) {
     l.xD4 = d4;
     l.xD8 = d8;
     l.xDC = 0.0;
-    l.xE0.0 = 0;
+    l.xE0 = None;
     let part = nth_joint(r.game, gobj, 5).expect("HSD_JObjSetScale: jobj");
     jobj::set_srt(&mut r.game.objs.jobjs, part, |o| o.scale = ONES);
     r.game.grounds[g.0].x11_flags.b012 = 2;
@@ -594,9 +621,26 @@ pub fn proc_sway(r: &mut Running, gobj: GObjId) {
     jobj::set_angle(&mut r.game.objs.jobjs, j, |q| {
         q.y = mem(fp::fmuls(reg(ry), reg(fade)))
     });
-    if generator.0 != 0 {
-        unimplemented!("grLast_8021ADD0's generator (the particle system) isn't ported");
-    }
+    let Some(srt) = generator.and_then(|g| r.game.objs.generators[g].appsrt) else {
+        return;
+    };
+    // The generator takes part 5's position and its frame's turn.
+    let part = nth_joint(r.game, gobj, 5);
+    let world = |r: &mut Running, v: Option<Vec3>| {
+        crate::lb::joint::world_position(&mut r.game.objs, r.data, part, v)
+    };
+    let at = world(r, None);
+    let mut up = world(r, Some(Vec3::new(0.0, 1.0, 0.0))) - at;
+    up.normalize();
+    let mut fwd = world(r, Some(Vec3::new(0.0, 0.0, 1.0))) - at;
+    fwd.normalize();
+    let rot = Vec3::euler_angles_from_partial_basis(fwd, up);
+    let s = &mut r.game.objs.app_srts[srt];
+    s.translate = at;
+    s.rot.x = copy(rot.x);
+    s.rot.y = copy(rot.y);
+    s.rot.z = copy(rot.z);
+    s.status = 0;
 }
 
 /// Final Destination's setup, `grLast_OnInit`: its material scripts, its first four objects

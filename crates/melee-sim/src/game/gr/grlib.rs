@@ -1,10 +1,14 @@
 //! Shared stage helpers, `melee/gr/grlib.c`.
 
+use gekko_fp as fp;
 use melee_data::archive::Archives;
 
 use super::super::state::Game;
 use super::ground::ground_of;
+use crate::fpu::{mem, reg};
+use crate::hsd::generator::{self, GeneratorId};
 use crate::hsd::gobj::GObjId;
+use crate::hsd::jobj::JObjId;
 
 /// Measures the players' start points (points of interest 0 to 3), `grLib_801C9A10`: a point
 /// the stage lacks keeps its last measure.
@@ -39,4 +43,124 @@ pub fn kill_joint_generators(
 ) {
     let mut hooks = crate::game::code::ParticleHooks;
     crate::hsd::generator::kill_on_tree(&mut game.objs, data, &mut hooks, j);
+}
+
+/// A generator of the stage's effect `idx` from bank `bank` at `pos`, at the stage's scale,
+/// `grLib_801C96F8`.
+#[doc(alias = "grLib_801C96F8")]
+pub fn generator_at(
+    game: &mut Game,
+    data: &Archives,
+    idx: i32,
+    bank: i32,
+    pos: crate::vec::Vec3,
+) -> Option<GeneratorId> {
+    let mut hooks = crate::game::code::ParticleHooks;
+    let objs = &mut game.objs;
+    let g = generator::spawn(objs, data, &mut hooks, 0, bank, idx)?;
+    let s = match objs.generators[g].appsrt {
+        Some(s) => {
+            objs.app_srts[s].xa2 = 0;
+            s
+        }
+        None => crate::hsd::appsrt::add_to_generator(objs, g, 1),
+    };
+    objs.app_srts[s].translate = pos;
+    let k = reg(super::ground::scale(game));
+    let srt = &mut game.objs.app_srts[s];
+    srt.scale.x = mem(fp::fmuls(reg(srt.scale.x), k));
+    srt.scale.y = mem(fp::fmuls(reg(srt.scale.y), k));
+    srt.scale.z = mem(fp::fmuls(reg(srt.scale.z), k));
+    let o = &mut game.objs.generators[g];
+    o.pos.z = 0.0;
+    o.pos.y = 0.0;
+    o.pos.x = 0.0;
+    Some(g)
+}
+
+/// A generator following a joint that turns into its frame first, `grLib_801C97DC`.
+#[doc(alias = "grLib_801C97DC")]
+pub fn generator_oriented_on(
+    game: &mut Game,
+    data: &Archives,
+    idx: i32,
+    bank: i32,
+    j: Option<JObjId>,
+) {
+    let mut hooks = crate::game::code::ParticleHooks;
+    generator::spawn_oriented_on_jobj(&mut game.objs, data, &mut hooks, 0, bank, idx, j);
+}
+
+/// A generator following a joint, `grLib_801C9808`.
+#[doc(alias = "grLib_801C9808")]
+pub fn generator_on(
+    game: &mut Game,
+    data: &Archives,
+    idx: i32,
+    bank: i32,
+    j: Option<JObjId>,
+) -> Option<GeneratorId> {
+    let mut hooks = crate::game::code::ParticleHooks;
+    generator::spawn_on_jobj(&mut game.objs, data, &mut hooks, 0, bank, idx, j)
+}
+
+/// Removes a generator, `grLib_801C9834`.
+#[doc(alias = "grLib_801C9834")]
+pub fn kill_generator(game: &mut Game, data: &Archives, g: GeneratorId) {
+    let mut hooks = crate::game::code::ParticleHooks;
+    generator::kill(&mut game.objs, data, &mut hooks, g);
+}
+
+/// Removes a generator with its particles, `grLib_801C9874`.
+#[doc(alias = "grLib_801C9874")]
+pub fn kill_generator_and_particles(game: &mut Game, data: &Archives, g: GeneratorId) {
+    game.objs.generators[g].ty |= generator::KILL_PARTICLES;
+    kill_generator(game, data, g);
+}
+
+/// Removes the generators following a joint, with their particles, `grLib_801C98A0`.
+#[doc(alias = "grLib_801C98A0")]
+pub fn kill_joint_generators_and_particles(game: &mut Game, data: &Archives, j: Option<JObjId>) {
+    let Some(j) = j else { return };
+    let mut cur = game.objs.generators.head;
+    while let Some(g) = cur {
+        cur = game.objs.generators[g].next;
+        if game.objs.generators[g].jobj == Some(j) {
+            kill_generator_and_particles(game, data, g);
+        }
+    }
+}
+
+/// [`kill_joint_generators_and_particles`] over a joint's tree, `grLib_801C9908`.
+#[doc(alias = "grLib_801C9908")]
+pub fn kill_tree_generators_and_particles(game: &mut Game, data: &Archives, j: Option<JObjId>) {
+    let Some(j) = j else { return };
+    kill_joint_generators_and_particles(game, data, Some(j));
+    if game.objs.jobjs[j].flags & crate::hsd::jobj::INSTANCE != 0 {
+        return;
+    }
+    let mut c = game.objs.jobjs[j].child;
+    while let Some(ch) = c {
+        kill_tree_generators_and_particles(game, data, Some(ch));
+        c = game.objs.jobjs[ch].next;
+    }
+}
+
+/// A joint's particles from the stage's bank, from efLib's joint callbacks: plainly following
+/// the joint for an animated event (`dynamic`), else oriented by it, `grLib_801C99C0`.
+#[doc(alias = "grLib_801C99C0")]
+pub fn joint_particles(
+    objs: &mut crate::hsd::Objects,
+    data: &Archives,
+    hooks: &mut dyn crate::hsd::particle::Hooks,
+    bank: i32,
+    idx: i32,
+    j: JObjId,
+    dynamic: bool,
+) {
+    if dynamic {
+        generator::spawn_on_jobj(objs, data, hooks, 0, bank, idx, Some(j));
+    } else {
+        generator::spawn_oriented_on_jobj(objs, data, hooks, 0, bank, idx, Some(j));
+    }
 }

@@ -816,7 +816,12 @@ pub fn seek_anim(r: &mut Running, gobj: GObjId, frame: f32) {
     let speed = super::item(r.game, gobj).x5D0_animFrameSpeed;
     crate::lb::anim::set_framerate(&mut r.game.objs, j, speed);
     jobj::req_anim_all(&mut r.game.objs, j, frame);
-    jobj::anim_all(&mut r.game.objs, r.data, j);
+    jobj::anim_all(
+        &mut r.game.objs,
+        r.data,
+        &mut crate::game::code::ParticleHooks,
+        j,
+    );
     let f = crate::lb::anim::current_frame(&r.game.objs, j);
     item_mut(r.game, gobj).x5CC_currentAnimFrame = f;
 }
@@ -919,7 +924,12 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
         } else if flags & CMD_UPDATE != 0 {
             start_script(item_mut(r.game, gobj), data, desc);
         }
-        jobj::anim_all(&mut r.game.objs, data, model);
+        jobj::anim_all(
+            &mut r.game.objs,
+            data,
+            &mut crate::game::code::ParticleHooks,
+            model,
+        );
         super::anim::run_overlay(r, gobj);
         super::anim::run_script(r, gobj);
     } else {
@@ -972,7 +982,12 @@ pub fn proc_hitlag(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "Item_802694CC")]
 pub fn animate(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
-    jobj::anim_all(&mut r.game.objs, r.data, j);
+    jobj::anim_all(
+        &mut r.game.objs,
+        r.data,
+        &mut crate::game::code::ParticleHooks,
+        j,
+    );
     let f = crate::lb::anim::current_frame(&r.game.objs, j);
     item_mut(r.game, gobj).x5CC_currentAnimFrame = f;
     super::anim::run_script(r, gobj);

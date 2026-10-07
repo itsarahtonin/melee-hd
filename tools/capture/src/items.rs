@@ -3,12 +3,10 @@
 //! other games' state the items reach (mpcoll's statics, the effects' parameter table),
 //! imported into a `Game` and compared with memory.
 
-use melee_sim::game::ef::Param;
-use melee_sim::game::handles::{BoneTableId, EffectId, ItemId};
+use melee_sim::game::handles::{BoneTableId, ItemId};
 use melee_sim::game::it::{BoneTable, CHAR_ARTICLES, ItemVars, vars_kind};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
-use melee_sim::game::structs::{EF_Effect, HSD_ObjAllocUnk, Item, Item_FtTrack};
-use melee_sim::hsd::gobj::GObjId;
+use melee_sim::game::structs::{HSD_ObjAllocUnk, Item, Item_FtTrack};
 
 use crate::MEM1;
 use crate::compare::Comparer;
@@ -55,22 +53,6 @@ fn count_joints(word: impl Fn(u32) -> u32, root: u32) -> usize {
 }
 
 impl Importer<'_> {
-    /// An effect (`EF_Effect`), through its generated mirror.
-    pub fn effect(&mut self, a: u32) -> EffectId {
-        if let Some(&e) = self.maps.effects.get(&a) {
-            return e;
-        }
-        let id = EffectId(self.game.ef.effects.alloc(EF_Effect::default()));
-        self.maps.effects.insert(a, id);
-        let cap = self.cap;
-        let m = mem(&cap.call.mem1);
-        self.stale = true;
-        let fx = EF_Effect::import(&m, a, self);
-        self.stale = false;
-        self.game.ef.effects[id.0] = fx;
-        id
-    }
-
     /// An item's slot, without its contents yet (an item pointed to before its GObj is met).
     pub fn item_slot(&mut self, a: u32) -> ItemId {
         if let Some(&i) = self.maps.items.get(&a) {
@@ -217,22 +199,6 @@ impl Importer<'_> {
         let rules = melee_rules();
         self.game.it.teams = cap.call.mem1[(rules + 8 - MEM1) as usize] == 1;
         self.game.it.friendly_fire = cap.call.mem1[(rules + 1 - MEM1) as usize] & 1 != 0;
-        let params = sym("efLib_ParamTable");
-        for i in 0..8 {
-            let at = params + 8 * i as u32;
-            let gobj = self.gobj_handle(cap.u32(at));
-            let half = cap.u32(at + 4);
-            self.game.ef.params[i] = Param {
-                gobj,
-                gfx_id: (half >> 16) as u16,
-                alpha: half as u16,
-            };
-        }
-        self.game.ef.count = cap.u32(sym("efLib_EffectCount")) as i32;
-    }
-
-    fn gobj_handle(&mut self, a: u32) -> Option<GObjId> {
-        (a != 0).then(|| GObjId(self.import_handle("GObjId", a).expect("a GObj")))
     }
 }
 
@@ -253,24 +219,6 @@ impl Comparer<'_> {
         let m = mem(self.mem);
         let game = self.game;
         game.items[o.0].compare(&m, t, &format!("{path} item"), self);
-    }
-
-    /// An effect GObj's `EF_Effect`, the first time it is met.
-    pub(crate) fn effect(&mut self, path: &str, o: EffectId, t: u32) {
-        if !Self::pair(
-            &mut self.maps.effects,
-            &mut self.seen,
-            &mut self.diffs,
-            "effect",
-            path,
-            Some(o),
-            t,
-        ) {
-            return;
-        }
-        let m = mem(self.mem);
-        let game = self.game;
-        game.ef.effects[o.0].compare(&m, t, &format!("{path} effect"), self);
     }
 
     /// An item's joint table's entries for its model, the first time it is met.
@@ -327,17 +275,5 @@ impl Comparer<'_> {
             let theirs = self.u32(refs + 4 * k as u32);
             self.check("ft_8045996C", &format!("[{k}]"), *r as u32, theirs);
         }
-        let params = sym("efLib_ParamTable");
-        for (i, p) in game.ef.params.iter().enumerate() {
-            let at = params + 8 * i as u32;
-            let path = format!("efLib_ParamTable[{i}]");
-            let theirs = self.u32(at);
-            self.compare_handle(&path, "GObjId", p.gobj.map(|g| g.0), theirs);
-            let half = u32::from(p.gfx_id) << 16 | u32::from(p.alpha);
-            let theirs = self.u32(at + 4);
-            self.check(&path, "gfx and alpha", half, theirs);
-        }
-        let count = self.u32(sym("efLib_EffectCount"));
-        self.check("efLib_EffectCount", "count", game.ef.count as u32, count);
     }
 }

@@ -31,6 +31,9 @@ pub enum Ret {
     Int(u32),
     /// In f1, as the register holds it.
     Float(f64),
+    /// An effect, a generator or null in r3 (`efSync_Spawn`'s `void*`), paired by the
+    /// comparison.
+    Spawned(melee_sim::game::ef::Spawned),
 }
 
 /// How a set of saved calls went.
@@ -273,6 +276,11 @@ fn run_one(
         Ret::Float(v) if v.to_bits() != f1.to_bits() => cmp
             .diffs
             .push(format!("returned f1: ours {v:?}, theirs {f1:?}")),
+        Ret::Spawned(s) => {
+            if let Some(d) = spawned_diff(&cmp.maps, s, r3) {
+                cmp.diffs.push(d);
+            }
+        }
         _ => {}
     }
     if cmp.diffs.is_empty() {
@@ -348,4 +356,15 @@ pub fn poke_bit(call: &mut Call, addr: u32, bit: u32, v: bool) {
 /// The user data of the GObj in r3: the fighter (or item) a process runs on.
 pub fn user_data_arg(call: &Call) -> u32 {
     peek_u32(call, call.regs.gpr[3] + 0x2C)
+}
+
+/// Whether a spawn's result pairs with the pointer ssbm-rs's returned, after a comparison.
+pub fn spawned_diff(maps: &Maps, s: melee_sim::game::ef::Spawned, r3: u32) -> Option<String> {
+    use melee_sim::game::ef::Spawned;
+    let same = match s {
+        Spawned::None => r3 == 0,
+        Spawned::Effect(e) => maps.effects.get(&r3) == Some(&e),
+        Spawned::Generator(g) => maps.generators.get(&r3) == Some(&g),
+    };
+    (!same).then(|| format!("returned: ours {s:?}, theirs {r3:#x}"))
 }

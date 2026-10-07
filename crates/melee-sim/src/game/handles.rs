@@ -1,5 +1,8 @@
 //! Handles the game's structs hold where the original held pointers.
 
+pub use super::ef::QueuedId;
+pub use crate::hsd::generator::GeneratorId;
+
 /// A fighter's slot.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct FighterId(pub u32);

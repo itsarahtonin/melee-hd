@@ -9,7 +9,6 @@ use super::item::{attr_of, common_data, destroy};
 use super::{flag, item, item_mut};
 use crate::fpu::{mem, reg};
 use crate::game::code;
-use crate::game::handles::RawPtr;
 use crate::game::state::{Game, Running};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -122,18 +121,21 @@ pub fn set_xdcd_b3(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).xDCD_flag.x0.b3 = true;
 }
 
-/// Spawns the effects the item queued (`efAsync_QueueFlush` on `xBC0`). No queue is held by
-/// the kinds ported so far.
+/// Spawns the effects the item queued (`efAsync_QueueFlush` on `xBC0`).
 pub fn flush_effects(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xBC0 != RawPtr(0) {
-        code::unported_call("efAsync_QueueFlush");
+    let mut head = item(r.game, gobj).xBC0;
+    if head.is_some() {
+        crate::game::ef::flush(r, Some(gobj), &mut head);
+        item_mut(r.game, gobj).xBC0 = head;
     }
 }
 
 /// Drops the effects the item queued (`efAsync_QueueClear` on `xBC0`).
 pub fn clear_effect_queue(game: &mut Game, gobj: GObjId) {
-    if item(game, gobj).xBC0 != RawPtr(0) {
-        code::unported_call("efAsync_QueueClear");
+    let mut head = item(game, gobj).xBC0;
+    if head.is_some() {
+        crate::game::ef::queue_clear(game, &mut head);
+        item_mut(game, gobj).xBC0 = head;
     }
 }
 

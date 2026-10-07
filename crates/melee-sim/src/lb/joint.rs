@@ -49,3 +49,33 @@ pub fn world_position(
     jobj::setup_matrix(objs, data, Some(j));
     objs.jobjs[j].mtx.transform(o)
 }
+
+/// ORs `flags` into the render mode of the materials of a joint's display objects and of all
+/// its descendants', `lb_80011C18` (through `lb_80011B74` for each list of display objects).
+#[doc(alias = "lb_80011C18")]
+#[doc(alias = "lb_80011B74")]
+pub fn set_mobj_flags(objs: &mut Objects, j: JObjId, flags: u32) {
+    fn dobjs(objs: &mut Objects, d: Option<crate::hsd::dobj::DObjId>, flags: u32) {
+        let mut cur = d;
+        while let Some(dobj) = cur {
+            let m = objs.dobjs[dobj].mobj.expect("lb_80011B74: dobj->mobj");
+            objs.mobjs[m].rendermode |= flags;
+            cur = objs.dobjs[dobj].next;
+        }
+    }
+    fn tree(objs: &mut Objects, j: JObjId, flags: u32) {
+        if let Some(c) = objs.jobjs[j].child {
+            tree(objs, c, flags);
+        }
+        if let Some(n) = objs.jobjs[j].next {
+            tree(objs, n, flags);
+        }
+        let d = jobj::get_dobj(&objs.jobjs, Some(j));
+        dobjs(objs, d, flags);
+    }
+    if let Some(c) = objs.jobjs[j].child {
+        tree(objs, c, flags);
+    }
+    let d = jobj::get_dobj(&objs.jobjs, Some(j));
+    dobjs(objs, d, flags);
+}

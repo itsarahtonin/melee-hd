@@ -90,6 +90,10 @@ pub struct Maps {
     /// with whatever lives there now.
     pub dangling_gobjs: HashMap<u32, u32>,
     pub dangling_jobjs: HashMap<u32, u32>,
+    pub queued: HashMap<u32, melee_sim::game::ef::QueuedId>,
+    pub particles: HashMap<u32, melee_sim::hsd::particle::ParticleId>,
+    pub generators: HashMap<u32, melee_sim::hsd::generator::GeneratorId>,
+    pub app_srts: HashMap<u32, melee_sim::hsd::appsrt::AppSrtId>,
 }
 
 pub struct Importer<'a> {
@@ -399,6 +403,7 @@ impl<'a> Importer<'a> {
         let cg = cap.u32(sym("HSD_GObj_CurrentInvokedProcGObj"));
         w.current_gobj = (cg != 0).then(|| self.maps.gobjs[&cg]);
         self.statics();
+        self.effects();
         self.release_free_lists();
     }
 
@@ -1346,6 +1351,16 @@ impl Cx for Importer<'_> {
             "PartsId" => self.fighter_parts(addr).0,
             "AttrsId" => self.fighter_attrs(addr).0,
             "DynamicsId" => self.fighter_dynamics(addr).0,
+            "QueuedId" => self.queued(addr).0,
+            "GeneratorId" => match self.maps.generators.get(&addr) {
+                Some(g) => g.0,
+                None => {
+                    self.unhandled
+                        .push(format!("generator {addr:#x} outside the generator list"));
+                    return None;
+                }
+            },
+            "EffectId" => self.effect(addr).0,
             "GObjId" => match self.maps.gobjs.get(&addr) {
                 Some(g) => g.0,
                 None => self.dangling("GObjId", addr),

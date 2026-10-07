@@ -612,7 +612,12 @@ pub fn start_map(game: &mut Game, data: &Archives, gobj: GObjId, map_id: i32, an
     if loops(game, data, map_id, anim) {
         apply(game, j, true, 0x77A4, AnimOp::SetFlags(aobj::LOOP));
     }
-    jobj::anim_all(&mut game.objs, data, j);
+    jobj::anim_all(
+        &mut game.objs,
+        data,
+        &mut crate::game::code::ParticleHooks,
+        j,
+    );
 }
 
 /// The first animation of a stage object's part, `grAnime_801C8318`.

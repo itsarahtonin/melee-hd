@@ -246,6 +246,9 @@ const STAGE_PROCS: &[u32] = &[
     0x8021_A2D4,
     0x8021_A33C,
     0x8021_A3BC,
+    // efLib's particle processes, which run the generators the stages' animations spawn.
+    0x8005_C9A4,
+    0x8005_C9D0,
 ];
 
 /// Runs the stage's processes alone, in the scheduler's order, for `ticks` ticks on both sides
@@ -286,9 +289,32 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
                 p = pr.next;
             }
         }
-        let addr_of: std::collections::HashMap<GObjId, u32> =
+        let mut addr_of: std::collections::HashMap<GObjId, u32> =
             maps.gobjs.iter().map(|(&a, &g)| (g, a)).collect();
         for (gobj, f) in order {
+            // A process an earlier one removed, with its GObj, doesn't run.
+            let w = &game.world;
+            let live = std::iter::successors(w.gobjs[gobj.0].proc, |&p| w.procs[p.0].child)
+                .any(|p| w.procs[p.0].on_invoke == f && w.procs[p.0].gobj == gobj);
+            if !live {
+                continue;
+            }
+            if !addr_of.contains_key(&gobj) {
+                // A GObj made since the last comparison: compare again, which pairs it.
+                let _ = ctx.mem.read_bytes(0x8000_0000, &mut mem);
+                let mut cmp = Comparer::new(&mem, &data, &game, maps);
+                cmp.world();
+                cmp.stage();
+                cmp.ids();
+                if !cmp.diffs.is_empty() {
+                    for d in cmp.diffs.iter().take(30) {
+                        eprintln!("  {d}");
+                    }
+                    panic!("tick {tick}: {} differences", cmp.diffs.len());
+                }
+                maps = cmp.maps;
+                addr_of = maps.gobjs.iter().map(|(&a, &g)| (g, a)).collect();
+            }
             let ran = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 melee_sim::game::code::run_proc(
                     &mut Running {
@@ -301,6 +327,7 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
             }));
             if let Err(p) = ran {
                 let Some(why) = unported(&*p) else {
+                    eprintln!("tick {tick}: {f:#x?} on {gobj:?} panicked");
                     std::panic::resume_unwind(p)
                 };
                 set_fp_mode(FpMode::Hardware);
@@ -315,7 +342,10 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
                 return;
             }
             ctx.regs.restore(&cap.call.regs);
-            ctx.regs.set_r(3, addr_of[&gobj]);
+            let Some(&their_gobj) = addr_of.get(&gobj) else {
+                panic!("tick {tick}: {f:#x?} on {gobj:?}, which ssbm-rs's state has no GObj for");
+            };
+            ctx.regs.set_r(3, their_gobj);
             ctx.invoke(f.0);
             if debug_from.is_some_and(|d| tick >= d) {
                 let _ = ctx.mem.read_bytes(0x8000_0000, &mut mem);
@@ -364,9 +394,10 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
     eprintln!("{ticks} ticks agree; map 3 ends at {main:?}");
 }
 
-/// Final Destination's stage processes over almost two minutes of play from the first capture
-/// with the cycle running: phases 1 through 8 of its background cycle, up to phase 9, which
-/// starts a particle generator (the particle system isn't ported).
+/// Final Destination's stage processes over two and a half minutes of play from the first
+/// capture with the cycle running, with the particle system's processes: phases 1 through 9
+/// of its background cycle (phase 9's generator follows the swaying piece) and phase 10's
+/// start, up to its camera quake (the stage's quake model isn't ported).
 #[test]
 fn last_stage_ticks() {
     // The first capture once the match has started the cycle (the start hook clears `b0`).
@@ -382,7 +413,7 @@ fn last_stage_ticks() {
         return;
     };
     let every = std::env::var("STAGE_EVERY").map_or(600, |v| v.parse().unwrap());
-    stage_ticks(&first, 6400, every);
+    stage_ticks(&first, 12000, every);
 }
 
 /// The call's `i`th integer argument (r3 on).
@@ -1019,8 +1050,8 @@ thread_local! {
 
 use melee_sim::game::gr::battle;
 
+/// Battlefield's setup: its backgrounds' animations spawn particles from the stage's bank.
 #[test]
-#[ignore = "Battlefield's backgrounds spawn particles from their animations: needs the particle system"]
 fn battle_on_init() {
     check("grBattle_OnInit", &|r, _, _| battle::on_init(r));
 }
@@ -1058,7 +1089,6 @@ fn battle_proc_floor() {
 }
 
 #[test]
-#[ignore = "Battlefield's backgrounds spawn particles from their animations: needs the particle system"]
 fn battle_init_background() {
     check_proc("grBattle_GObj1_Callback0", battle::init_background);
     check_proc("grBattle_GObj2_Callback0", battle::init_background);
@@ -1091,14 +1121,14 @@ fn zako_proc() {
 }
 
 /// Battlefield's stage processes from the first capture of its sky, compared every 10 ticks,
-/// until its backgrounds' animations spawn particles (the particle system isn't ported).
+/// with the particle system's processes running the generators its backgrounds' animations
+/// spawn.
 #[test]
 fn battle_stage_ticks() {
     let Some(first) = captures("grBattle_BG_Callback2").into_iter().next() else {
         eprintln!("no captures of grBattle_BG_Callback2: skipping");
         return;
     };
-    // Its backgrounds' animations spawn particles every few seconds, which ends the run early.
     let every = std::env::var("STAGE_EVERY").map_or(10, |v| v.parse().unwrap());
     stage_ticks(&first, 9000, every);
 }

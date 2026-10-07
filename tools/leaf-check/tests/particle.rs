@@ -210,6 +210,18 @@ impl Hooks for TestHooks {
             }
         }
     }
+
+    fn joint_particles(
+        &mut self,
+        _: &mut Objects,
+        _: &Archives,
+        _: bool,
+        _: i32,
+        _: i32,
+        _: JObjId,
+    ) {
+        unreachable!("the test's joints have no particle events")
+    }
 }
 
 /// A bank to load: its archive and where its command and texture banks are.
