@@ -9,3 +9,4 @@ publish.workspace = true
 
 [dependencies]
 gekko-fp.workspace = true
+melee-data.workspace = true

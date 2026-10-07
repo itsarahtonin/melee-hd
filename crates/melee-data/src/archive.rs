@@ -6,6 +6,70 @@
 //! relocation table tells a pointer to offset 0 from a null. An archive is immutable game
 //! data, shared rather than snapshotted.
 
+use std::sync::Arc;
+
+/// An archive among those loaded, numbered in load order.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ArchiveId(pub u16);
+
+/// A place in a loaded archive's data: what a pointer into game data becomes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct DataRef {
+    pub archive: ArchiveId,
+    pub offset: u32,
+}
+
+impl DataRef {
+    pub fn at(self, offset: u32) -> DataRef {
+        DataRef {
+            archive: self.archive,
+            offset: self.offset + offset,
+        }
+    }
+}
+
+/// The archives loaded so far. Load order decides their ids, so a game's loads number them
+/// the same every time; archives are shared, never part of a snapshot.
+#[derive(Clone, Debug, Default)]
+pub struct Archives {
+    list: Vec<Arc<Archive>>,
+}
+
+impl Archives {
+    pub fn add(&mut self, archive: Archive) -> ArchiveId {
+        self.list.push(Arc::new(archive));
+        ArchiveId((self.list.len() - 1) as u16)
+    }
+
+    pub fn get(&self, id: ArchiveId) -> &Archive {
+        &self.list[id.0 as usize]
+    }
+
+    /// The pointer stored at `r`, in the same archive.
+    pub fn ptr(&self, r: DataRef) -> Option<DataRef> {
+        self.get(r.archive).ptr(r.offset).map(|offset| DataRef {
+            archive: r.archive,
+            offset,
+        })
+    }
+
+    pub fn u8(&self, r: DataRef) -> u8 {
+        self.get(r.archive).u8(r.offset)
+    }
+
+    pub fn u16(&self, r: DataRef) -> u16 {
+        self.get(r.archive).u16(r.offset)
+    }
+
+    pub fn u32(&self, r: DataRef) -> u32 {
+        self.get(r.archive).u32(r.offset)
+    }
+
+    pub fn f32(&self, r: DataRef) -> f32 {
+        self.get(r.archive).f32(r.offset)
+    }
+}
+
 /// `HSD_ArchiveHeader`'s size.
 const HEADER: usize = 0x20;
 

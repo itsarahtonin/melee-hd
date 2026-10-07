@@ -447,6 +447,7 @@ name = "melee-sim"
 version = "0.1.0"
 dependencies = [
  "gekko-fp",
+ "melee-data",
 ]
 
 [[package]]

@@ -12,3 +12,14 @@ GObj_GXReorder	leaf-check gobj: every render-link setup and relink goes through 
 HSD_GObjObject_80390B0C	leaf-check gobj: HSD_GObjFree releases objects through it; releases compared each step
 GObj_RemoveUserData	leaf-check gobj: HSD_GObjFree releases user data through it; releases compared each step
 HSD_GObjInit	leaf-check gobj: the test lays out HSD_GObjInit's tables with Melee's limits and compares the empty scheduler before the first step
+HSD_FObjRemove	leaf-check fobj: HSD_FObjRemoveAll frees through it; reuse order compared on reload
+HSD_FObjFree	leaf-check fobj: HSD_FObjRemoveAll frees through it; reuse order compared on reload
+HSD_FObjAlloc	leaf-check fobj: HSD_FObjLoadDesc allocates through it; reuse order compared on reload
+HSD_FObjSetState	leaf-check fobj: the interpreter sets every state through it; flags compared every frame
+HSD_FObjGetState	leaf-check fobj: the interpreter reads every state through it; flags compared every frame
+HSD_FObjStopAnim	leaf-check fobj: HSD_FObjStopAnimAll stops each FObj through it; updates compared
+HSD_FObjInterpretAnim	leaf-check fobj: HSD_FObjInterpretAnimAll runs each FObj through it; updates and state compared every frame
+parseFloat	leaf-check fobj: every keyframe value is parsed through it; values compared every frame
+parsePackInfo	leaf-check fobj: every opcode's pack count is parsed through it; nb_pack compared every frame
+FObjLaunchKeyData	leaf-check fobj: keyed channels launch through it; updates and flags compared every frame
+FObjUpdateAnim	leaf-check fobj: every value handed to the update function comes from it; compared every frame
