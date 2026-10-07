@@ -1,7 +1,7 @@
 //! The fighters' attack collision (`Fighter_procAttackColl` and what it reaches) against
 //! ssbm-rs, from the processes' saved calls in a running match: each call runs on both sides
 //! and the whole state (the fighters with their hitboxes, hurtboxes and damage results, the
-//! items, the players' statistics, the audio driver) is compared afterwards, with the calls
+//! items, the player blocks and their statistics, the audio driver) is compared afterwards, with the calls
 //! into the effects (`efSync_Spawn`) and the attack statistics (`pl_80038144`), which no port
 //! covers, stood in for on both sides and compared by their arguments.
 //!
@@ -177,6 +177,7 @@ fn run_one(ctx: &Ctx, path: &Path, i: usize, prepare: fn(&mut Call, usize)) -> O
     imp.stage();
     imp.ids();
     imp.items();
+    imp.match_state();
     imp.audio(bank);
     let Importer { mut game, maps, .. } = imp;
     let mut before = Comparer::new(&cap.call.mem1, &data, &game, maps.clone());
@@ -184,6 +185,7 @@ fn run_one(ctx: &Ctx, path: &Path, i: usize, prepare: fn(&mut Call, usize)) -> O
     before.stage();
     before.ids();
     before.items();
+    before.match_state();
     before.audio();
     // A later match's fighters hold a previous match's bytes past what they use (stale
     // dynamic-bone and texture handles), which the import doesn't follow.
@@ -233,6 +235,7 @@ fn run_one(ctx: &Ctx, path: &Path, i: usize, prepare: fn(&mut Call, usize)) -> O
     cmp.stage();
     cmp.ids();
     cmp.items();
+    cmp.match_state();
     cmp.audio();
     let ours: Vec<(u32, Vec<u32>)> = stubs::take()
         .iter()
@@ -361,10 +364,14 @@ fn arm_box(call: &mut Call, hit: u32, at: (f32, f32, f32), pick: &mut Pick, elem
     poke_u32(
         call,
         hit + 0x24,
-        [0, 30, 70, 100, 140][pick.next(5) as usize],
+        [0, 30, 70, 100, 140, 400][pick.next(6) as usize],
     );
     poke_u32(call, hit + 0x28, [0, 0, 0, 40, 90][pick.next(5) as usize]);
-    poke_u32(call, hit + 0x2C, [0, 10, 30, 60][pick.next(4) as usize]);
+    poke_u32(
+        call,
+        hit + 0x2C,
+        [0, 10, 30, 60, 3000][pick.next(5) as usize],
+    );
     let element = elements[pick.next(elements.len() as u32) as usize];
     poke_u32(call, hit + 0x30, element);
     poke_u32(call, hit + 0x34, pick.next(10).wrapping_sub(3));
@@ -407,7 +414,13 @@ fn arm_hitbox(call: &mut Call, i: usize) {
     };
     let (me, fp) = (fighter_of(call, gobj), fighter_of(call, other));
     let mut pick = Pick(i as u32 * 7 + 3);
-    let at = middle(call, me);
+    // Raised by up to about a hurtbox's reach, so some boxes only graze it (tips).
+    let (x, y, z) = middle(call, me);
+    let at = (
+        x,
+        y + [0.0, 0.0, 5.0, 9.0, 12.0, 15.0][pick.next(6) as usize],
+        z,
+    );
     let phantom = pick.next(5) == 0;
     match i % 4 {
         0 => {
