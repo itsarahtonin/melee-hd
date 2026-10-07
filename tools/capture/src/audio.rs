@@ -301,7 +301,7 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
     d.linked = m.i32(sym("AXDriver_804D77D0"));
     d.muted_channels = m.u32(sym("AXDriver_804D77CC"));
     d.aux_flags = m.u32(sym("AXDriver_804D603C"));
-    d.pitch_target = m.i32(sym("AXDriver_804D6038"));
+    d.stream_id = m.i32(sym("AXDriver_804D6038"));
     d.pitch_due = m.i32(sym("AXDriver_804D77E0"));
     d.pitch_cents = m.i32(sym("AXDriver_804D77E4"));
     for (i, b) in a.lb.banks.iter_mut().enumerate() {
@@ -603,7 +603,7 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
         ("AXDriver_804D77D0", d.linked as u32),
         ("AXDriver_804D77CC", d.muted_channels),
         ("AXDriver_804D603C", d.aux_flags),
-        ("AXDriver_804D6038", d.pitch_target as u32),
+        ("AXDriver_804D6038", d.stream_id as u32),
         ("AXDriver_804D77E0", d.pitch_due as u32),
         ("AXDriver_804D77E4", d.pitch_cents as u32),
         ("AXDriver_804D77B0", d.banks as u32),

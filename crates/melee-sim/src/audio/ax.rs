@@ -698,38 +698,6 @@ impl Ax {
         v.sync |= sync::COPYADDR | sync::COPYADPCM;
     }
 
-    /// `AXSetVoiceLoop`.
-    #[doc(alias = "AXSetVoiceLoop")]
-    pub fn set_voice_loop(&mut self, p: VoiceId, looped: u16) {
-        let v = self.v(p);
-        v.pb.addr.loop_flag = looped;
-        v.sync |= sync::COPYLOOP;
-    }
-
-    /// `AXSetVoiceLoopAddr`.
-    #[doc(alias = "AXSetVoiceLoopAddr")]
-    pub fn set_voice_loop_addr(&mut self, p: VoiceId, addr: u32) {
-        let v = self.v(p);
-        v.pb.addr.loop_address = addr;
-        v.sync |= sync::COPYLOOPADDR;
-    }
-
-    /// `AXSetVoiceEndAddr`.
-    #[doc(alias = "AXSetVoiceEndAddr")]
-    pub fn set_voice_end_addr(&mut self, p: VoiceId, addr: u32) {
-        let v = self.v(p);
-        v.pb.addr.end_address = addr;
-        v.sync |= sync::COPYENDADDR;
-    }
-
-    /// `AXSetVoiceCurrentAddr`.
-    #[doc(alias = "AXSetVoiceCurrentAddr")]
-    pub fn set_voice_current_addr(&mut self, p: VoiceId, addr: u32) {
-        let v = self.v(p);
-        v.pb.addr.current_address = addr;
-        v.sync |= sync::COPYCURADDR;
-    }
-
     /// `AXSetVoiceAdpcm`.
     #[doc(alias = "AXSetVoiceAdpcm")]
     pub fn set_voice_adpcm(&mut self, p: VoiceId, adpcm: &Adpcm) {
@@ -859,7 +827,6 @@ impl Ax {
 
     /// `__AXDumpVPB`: stops a voice the DSP has no cycles left for and queues its callback.
     /// (Its depop, which only the DSP's mix hears, is left out.)
-    #[doc(alias = "__AXDumpVPB")]
     fn dump_vpb(&mut self, p: VoiceId) {
         let i = usize::from(p);
         self.dsp[i].state = 0;

@@ -101,9 +101,9 @@ pub struct Driver {
     /// `AXDriver_804D603C`: which sends the streams leave alone (bits 0, 1) and the aux
     /// effects (bits 8-15).
     pub aux_flags: u32,
-    /// `AXDriver_804D6038`, `77E0`, `77E4`: a pitch change for one synth effect, due at the
-    /// next frame.
-    pub pitch_target: i32,
+    /// `AXDriver_804D6038`: the stream's (the music's) synth id; `77E0`, `77E4`: a pitch
+    /// change for it, due at the next frame.
+    pub stream_id: i32,
     pub pitch_due: i32,
     pub pitch_cents: i32,
     /// The sound bank (`AXDriver_804D7798`), its bank table (`77B4`, count `77B0`) and its
@@ -129,7 +129,7 @@ impl Default for Driver {
             linked: 0,
             muted_channels: 0,
             aux_flags: 0,
-            pitch_target: -1,
+            stream_id: -1,
             pitch_due: 0,
             pitch_cents: 0,
             bank: None,
@@ -501,9 +501,9 @@ impl Audio {
     pub fn driver_frame(&mut self, data: &Archives) {
         if self.driver.pitch_due != 0 {
             self.driver.pitch_due = 0;
-            if self.driver.pitch_target != -1 {
+            if self.driver.stream_id != -1 {
                 let x = cents(self.driver.pitch_cents.clamp(-0x2A30, 0x960));
-                self.synth_set_pitch_ratio(self.driver.pitch_target, 1, x);
+                self.synth_set_pitch_ratio(self.driver.stream_id, 1, x);
             }
         }
         let mut at = self.driver.active;
@@ -747,6 +747,37 @@ impl Audio {
             at = self.driver.voices[usize::from(v)].next;
         }
         self.driver.channel_sends[bus as usize][channel as usize] = level as u8;
+        true
+    }
+
+    /// `AXDriverStop`: keys off the driver's stream (the music).
+    #[doc(alias = "AXDriverStop")]
+    pub fn driver_stop(&mut self) -> bool {
+        if self.driver.stream_id == -1 {
+            return false;
+        }
+        self.synth_key_off(self.driver.stream_id);
+        self.driver.stream_id = -1;
+        true
+    }
+
+    /// `AXDriverPause`: pauses the driver's stream.
+    #[doc(alias = "AXDriverPause")]
+    pub fn driver_pause_stream(&mut self) -> bool {
+        if self.driver.stream_id == -1 {
+            return false;
+        }
+        self.synth_pause(self.driver.stream_id);
+        true
+    }
+
+    /// `AXDriverResume`.
+    #[doc(alias = "AXDriverResume")]
+    pub fn driver_resume_stream(&mut self) -> bool {
+        if self.driver.stream_id == -1 {
+            return false;
+        }
+        self.synth_resume(self.driver.stream_id);
         true
     }
 

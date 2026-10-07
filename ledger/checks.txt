@@ -812,3 +812,72 @@ it_80276174	leaf-check items: spawn_ground runs it on every captured call
 it_80279544	leaf-check items: anim_proc runs it on its captured calls that agree
 it_8027B070	leaf-check items: track_spawn, create and the spawns run it on their captured calls
 it_8029C4D4	leaf-check items: laser_coll runs it on every captured call
+lbAudioAx_800230C8	leaf-check audio: ft_PlaySFX and the fighter track tests run it through ft_80087D0C on every saved call
+lbAudioAx_80023130	leaf-check audio: ft_PlaySFX and the fighter track tests run it through ft_80087D0C on every saved call
+lbAudioAx_80023220	leaf-check audio: ft_PlaySFX and the fighter track tests run it through ft_80087D0C on every saved call
+lbAudioAx_800233EC	leaf-check audio: ft_PlaySFX and the fighter track tests run it through ft_80087D0C on every saved call
+lbAudioAx_800237A8	leaf-check audio: lb_play runs every saved call of it, fighter_play_sfx every ft_PlaySFX call
+lbAudioAx_80023870	leaf-check audio: lb_play_track runs every saved call of it; the fighter track tests reach it
+ft_80087C70	leaf-check audio: fighter_play_sfx and the fighter track tests run it through ft_80087D0C
+ft_80087D0C	leaf-check audio: fighter_play_sfx and the fighter track tests run it on every saved call
+ft_PlaySFX	leaf-check audio: fighter_play_sfx runs every saved call of it from a Final Destination replay
+ft_800881D8	leaf-check audio: fighter_tracks runs every saved call of it
+ft_80088328	leaf-check audio: fighter_tracks runs every saved call of it
+ft_80088478	leaf-check audio: fighter_tracks runs every saved call of it
+ft_80088510	leaf-check audio: fighter_other_tracks runs it from every saved ft_80088478 call
+ft_800885A8	leaf-check audio: fighter_other_tracks runs it from every saved ft_80088478 call
+ft_80088640	leaf-check audio: fighter_other_tracks runs it from every saved ft_80088478 call
+ftCo_800886D8	leaf-check audio: fighter_other_tracks runs it from every saved ft_80088478 call
+ft_80088770	leaf-check audio: fighter_stop_tracks runs every saved call of it
+ft_800887CC	leaf-check audio: fighter_stop_tracks runs every saved call of it
+ft_80088828	leaf-check audio: fighter_other_tracks runs it from every saved ft_80088770 call
+ft_80088884	leaf-check audio: fighter_other_tracks runs it from every saved ft_80088770 call
+ft_800888E0	leaf-check audio: fighter_other_tracks runs it from every saved ft_80088770 call
+ft_8008893C	leaf-check audio: fighter_other_tracks runs it from every saved ft_80088770 call
+ft_80088998	leaf-check audio: fighter_other_tracks runs it from every saved ft_80088770 call
+ft_800889F4	leaf-check audio: fighter_smash_voice runs it from every saved ft_800881D8 call with the fighter's smash sounds
+AXFreeVoice	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXAcquireVoice	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXSetVoicePriority	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+__AXServiceVPB	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXSetVoiceState	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXSetVoiceMix	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXSetVoiceItdOn	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXSetVoiceItdTarget	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXSetVoiceVe	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXSetVoiceVeDelta	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXSetVoiceAddr	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXSetVoiceAdpcm	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXSetVoiceSrc	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXSetVoiceSrcRatio	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+AXSetVoiceAdpcmLoop	leaf-check audio: random_ops, sync_pbs, synth_frame and timeline reach it starting, stopping and changing sounds; AX voices and blocks compared byte for byte
+__AXNextFrame	leaf-check audio: timeline runs every audio frame of a whole match through it; the command list's cycles and the AX state compared at every tick's end
+__AXOutNewFrame	leaf-check audio: timeline runs every audio frame of a whole match through it; the command list's cycles and the AX state compared at every tick's end
+HSD_SynthSFXStopNode	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+dropcallback	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_Synth_80389334	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthSFXPlayWithGroup	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthSFXKeyOff	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthSFXCheck	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthSFXSetVolumeFade	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthSFXSetPan	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthSFXSetMix	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthSFXUpdatePitch	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthSFXSetPitchRatio	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthSFXSetPriority	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthSFXVolumeEnvelope	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthSFXUpdateVolume	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthSFXUpdateMix	leaf-check audio: random_ops and timeline reach it through the driver's calls and frames; the synth's nodes compared byte for byte after every step and tick
+HSD_SynthPStreamMasterClockCallback	leaf-check audio: synth_frame, random_ops and timeline run it every frame (the stream's voice holds still without the DSP's mix)
+HSD_AudioSFXKeyOff	leaf-check audio: random_ops stops sounds by handle through lbAudioAx_800236B8
+HSD_AudioSFXKeyOffAll	leaf-check audio: random_ops stops every sound through lbAudioAx_80023694
+AXDriverExec	leaf-check audio: timeline and random_ops run every voice's commands through it
+parseWait	leaf-check audio: timeline and random_ops run every voice's commands through it
+AXDriverInterp	leaf-check audio: timeline and random_ops run every voice's commands through it
+AXDriverCallback	leaf-check audio: synth_frame runs it in every saved frame, timeline in every frame of a match
+AXDriverKillCallback	leaf-check audio: timeline and random_ops reach it as the synth drops and replaces effects
+AXDriverPauseCallback	leaf-check audio: random_ops pauses sounds' effects (HSD_SynthSFXPause) and runs frames until their fades end
+HSD_AudioSFXSetPan	leaf-check audio: random_ops pans sounds through lbAudioAx_80024B1C before and after their effects start
+HSD_AudioSFXSetVolumeEx	leaf-check audio: random_ops sets volumes through lbAudioAx_80024B58 before and after effects start
+HSD_AudioSFXSetPitchFid	leaf-check audio: set_pitch runs every saved call of it; random_ops bends through lbAudioAx_80024B94
+HSD_AudioSFXCheck	leaf-check audio: check runs every saved call of it; random_ops checks through lbAudioAx_80023710

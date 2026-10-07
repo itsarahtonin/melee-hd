@@ -461,6 +461,29 @@ impl Audio {
         }
     }
 
+    /// `HSD_SynthSFXPause`: fades the effect out to a pause (a stream waiting for its data
+    /// pauses at once).
+    #[doc(alias = "HSD_SynthSFXPause")]
+    pub fn synth_pause(&mut self, id: i32) {
+        let Some(n) = self.get_node(id) else { return };
+        self.node(n).flags |= 2;
+        self.synth_update_volume(n);
+        if self.synth.nodes[n].flags & 8 != 0 {
+            self.node(n).flags |= 6;
+        }
+    }
+
+    /// `HSD_SynthSFXResume`.
+    #[doc(alias = "HSD_SynthSFXResume")]
+    pub fn synth_resume(&mut self, id: i32) {
+        let Some(n) = self.get_node(id) else { return };
+        if self.synth.nodes[n].flags & 2 != 0 {
+            self.node(n).flags &= !6;
+            self.synth_update_pitch(n);
+            self.synth_update_volume(n);
+        }
+    }
+
     /// `HSD_SynthSFXCheck`: the id while the effect plays, else -1.
     #[doc(alias = "HSD_SynthSFXCheck")]
     pub fn synth_check(&self, id: i32) -> i32 {

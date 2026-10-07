@@ -323,3 +323,289 @@ fn timeline() {
     eprintln!("audio timeline: ticks {start} to {tick}, {calls} calls, clean");
     assert!(tick > start + 1000, "only reached tick {tick}");
 }
+
+/// The driver's, the synth's and lbaudio's game-facing functions in random sequences from real
+/// states (the saved `HSD_SynthCallback` calls): sounds started, stopped by handle, track and
+/// all, panned, turned up and down, bent, sent to the aux buses, channels faded, checked, and
+/// audio frames in between, on both sides, comparing results and the whole audio state after
+/// every step. Most of these the replays rarely or never reach: stopping single sounds, the
+/// parameter changes before and after a sound's effect starts, fades and the envelope.
+#[test]
+fn random_ops() {
+    use leaf_check::Rand;
+    use melee_capture::{Capture, audio};
+    use melee_sim::game::state::{Game, Running};
+    use ssbm_types::fns;
+    let paths = leaf_check::calls::saved_calls(&calls_dir(), "HSD_SynthCallback");
+    let Some(ctx) = leaf_check::reference() else {
+        return;
+    };
+    if paths.is_empty() {
+        eprintln!("no saved HSD_SynthCallback calls: skipping");
+        return;
+    }
+    const RANGES: [(u32, u32); 4] = [
+        (0x8040_7F00, 0x8040_8100),
+        (0x8043_3700, 0x8043_3A80),
+        (0x804A_8D00, 0x804C_6400),
+        (0x804D_6000, 0x804D_7800),
+    ];
+    let mut steps = 0;
+    for mode in leaf_check::MODES {
+        gekko_fp::set_fp_mode(mode);
+        for (n, path) in paths.iter().enumerate().step_by(3) {
+            let cap = Capture::read(path);
+            cap.call.load(&ctx);
+            let mut data = melee_data::archive::Archives::default();
+            let bank = audio::find_bank(&cap.call.mem1, &mut data);
+            let mut game = Game::default();
+            game.audio = audio::import(&cap.call.mem1, bank);
+            let mut r = Running {
+                game: &mut game,
+                data: &data,
+            };
+            let mut mem = cap.call.mem1.clone();
+            let mut rng = Rand(0x9E37_79B9 ^ (n as u64) << 20);
+            let mut handles: Vec<i32> = Vec::new();
+            for step in 0..400 {
+                let op = rng.below(16);
+                let pick = |rng: &mut Rand, hs: &[i32]| {
+                    if hs.is_empty() || rng.below(8) == 0 {
+                        rng.bits() as i32 & 0x7FFF
+                    } else {
+                        hs[rng.below(hs.len() as u64) as usize]
+                    }
+                };
+                let a = r
+                    .game
+                    .audio
+                    .driver
+                    .voices
+                    .iter()
+                    .filter(|v| v.flags >> 30 != 0);
+                handles.extend(a.map(|v| v.handle));
+                handles.sort_unstable();
+                handles.dedup();
+                let track = [0, 0x1E, 0x1F, 0x2A, 0x36, 0x42, 0x19][rng.below(7) as usize];
+                let (ours, theirs): (i32, i32) = match op {
+                    0..=2 => {
+                        let sound = rng.below(0x210) as i32;
+                        let (vol, pan) = (rng.below(256) as u8, rng.below(256) as u8);
+                        let ch = if rng.below(2) == 0 {
+                            7
+                        } else {
+                            rng.below(16) as i32
+                        };
+                        (
+                            r.game.audio.sfx_start(&data, sound, vol, pan, track, ch),
+                            fns::HSD_AudioSFXStartParam(&ctx, sound, vol, pan, track, ch),
+                        )
+                    }
+                    3 => {
+                        let h = pick(&mut rng, &handles);
+                        (r.sfx_stop(h), fns::lbAudioAx_800236B8(&ctx, h))
+                    }
+                    4 => {
+                        r.game.audio.sfx_key_off_track(track);
+                        fns::HSD_AudioSFXKeyOffTrack(&ctx, track);
+                        (0, 0)
+                    }
+                    5 if rng.below(10) == 0 => (r.sfx_stop_all(), fns::lbAudioAx_80023694(&ctx)),
+                    5 | 6 => {
+                        let (h, pan) = (pick(&mut rng, &handles), rng.below(160) as i32 - 16);
+                        r.sfx_pan(h, pan);
+                        fns::lbAudioAx_80024B1C(&ctx, h, pan);
+                        (0, 0)
+                    }
+                    7 => {
+                        let (h, vol) = (pick(&mut rng, &handles), rng.below(160) as i32 - 16);
+                        r.sfx_volume(h, vol);
+                        fns::lbAudioAx_80024B58(&ctx, h, vol);
+                        (0, 0)
+                    }
+                    8 => {
+                        let (h, c) = (pick(&mut rng, &handles), rng.below(3000) as i32 - 1500);
+                        (
+                            i32::from(r.sfx_pitch(h, c)),
+                            fns::lbAudioAx_80024B94(&ctx, h, c),
+                        )
+                    }
+                    9 => {
+                        let (h, bus, l) = (
+                            pick(&mut rng, &handles),
+                            rng.below(3) as i32,
+                            rng.below(256) as u8,
+                        );
+                        (
+                            i32::from(r.game.audio.sfx_set_mix(h, bus, l)),
+                            fns::HSD_AudioSFXSetMix(&ctx, h, bus, l),
+                        )
+                    }
+                    10 => {
+                        let (ch, bus, l) =
+                            (rng.below(17) as i32, rng.below(2) as i32, rng.bits() as i8);
+                        (
+                            i32::from(r.game.audio.sfx_set_mix_group(ch, bus, l)),
+                            fns::HSD_AudioSFXSetMixGroup(&ctx, ch, bus, l),
+                        )
+                    }
+                    11 => {
+                        let h = pick(&mut rng, &handles);
+                        (
+                            i32::from(r.sfx_playing(h)),
+                            fns::lbAudioAx_80023710(&ctx, h),
+                        )
+                    }
+                    12 => {
+                        let (vol, frames, ch) = (
+                            rng.below(256) as i32,
+                            rng.below(12) as u16,
+                            rng.below(16) as i32,
+                        );
+                        r.game.audio.synth_update_all_volume(vol, frames, ch);
+                        fns::HSD_SynthSFXUpdateAllVolume(&ctx, vol, frames, ch);
+                        (0, 0)
+                    }
+                    13 => {
+                        // A sound's effect paused or resumed (the game pauses only the music).
+                        let ids: Vec<i32> = r
+                            .game
+                            .audio
+                            .driver
+                            .voices
+                            .iter()
+                            .map(|v| v.synth_id)
+                            .collect();
+                        let id = ids[rng.below(ids.len() as u64) as usize];
+                        if rng.below(2) == 0 {
+                            r.game.audio.synth_pause(id);
+                            fns::HSD_SynthSFXPause(&ctx, id);
+                        } else {
+                            r.game.audio.synth_resume(id);
+                            fns::HSD_SynthSFXResume(&ctx, id);
+                        }
+                        (0, 0)
+                    }
+                    14 => match rng.below(3) {
+                        0 => (
+                            i32::from(r.game.audio.driver_pause_stream()),
+                            fns::AXDriverPause(&ctx),
+                        ),
+                        1 => (
+                            i32::from(r.game.audio.driver_resume_stream()),
+                            fns::AXDriverResume(&ctx),
+                        ),
+                        _ if rng.below(8) == 0 => (
+                            i32::from(r.game.audio.driver_stop()),
+                            fns::AXDriverStop(&ctx),
+                        ),
+                        _ => (0, 0),
+                    },
+                    _ => {
+                        let a = &mut r.game.audio;
+                        a.ax.sync_pbs(0);
+                        a.service_callback_stack();
+                        a.synth_frame(&data);
+                        fns::__AXSyncPBs(&ctx, 0);
+                        fns::__AXServiceCallbackStack(&ctx);
+                        fns::HSD_SynthCallback(&ctx);
+                        (0, 0)
+                    }
+                };
+                steps += 1;
+                let where_ = format!("{} ({mode:?}) step {step}, op {op}", path.display());
+                assert_eq!(ours, theirs, "{where_}: results differ");
+                for (lo, hi) in RANGES {
+                    let m = (lo - 0x8000_0000) as usize;
+                    let _ = ctx.mem.read_bytes(lo, &mut mem[m..m + (hi - lo) as usize]);
+                }
+                let mut diffs = Vec::new();
+                audio::compare(&mem, &r.game.audio, &mut diffs);
+                assert!(
+                    diffs.is_empty(),
+                    "{where_}: {}",
+                    diffs[..diffs.len().min(10)].join("\n    ")
+                );
+            }
+        }
+    }
+    gekko_fp::set_fp_mode(gekko_fp::FpMode::Hardware);
+    eprintln!("audio random operations: {steps} steps compared clean");
+}
+
+/// The effect tracks no saved call reached, run from `ft_80088478`'s calls (the same
+/// arguments) with the reference running each one instead, and their stops from
+/// `ft_80088770`'s.
+#[test]
+fn fighter_other_tracks() {
+    use leaf_check::calls::check_calls_with;
+    for (name, t) in [
+        ("ft_80088510", Track::Effect2),
+        ("ft_800885A8", Track::Effect3),
+        ("ft_80088640", Track::Effect4),
+        ("ftCo_800886D8", Track::Effect5),
+    ] {
+        check_calls_with(
+            &api_dir(),
+            "ft_80088478",
+            1,
+            &|call, _| call.addr = leaf_check::sym(name),
+            &|g, maps, c| {
+                g.fighter_play_track(
+                    fighter(maps, c),
+                    t,
+                    r(c, 4) as i32,
+                    r(c, 5) as u8,
+                    r(c, 6) as u8,
+                );
+                Ret::Nothing
+            },
+        );
+    }
+    for (name, t) in [
+        ("ft_80088828", Track::Effect),
+        ("ft_80088884", Track::Effect2),
+        ("ft_800888E0", Track::Effect3),
+        ("ft_8008893C", Track::Effect4),
+        ("ft_80088998", Track::Effect5),
+    ] {
+        check_calls_with(
+            &api_dir(),
+            "ft_80088770",
+            1,
+            &|call, _| call.addr = leaf_check::sym(name),
+            &|g, maps, c| {
+                g.fighter_stop_track(fighter(maps, c), t);
+                Ret::Nothing
+            },
+        );
+    }
+}
+
+/// `ft_800889F4`, a random smash voice, from `ft_800881D8`'s calls with the fighter's smash
+/// sounds (`ftData`'s `x4C_sfx->smash`) as its argument.
+#[test]
+fn fighter_smash_voice() {
+    use leaf_check::calls::{check_calls_with, peek_u32};
+    check_calls_with(
+        &api_dir(),
+        "ft_800881D8",
+        1,
+        &|call, _| {
+            call.addr = leaf_check::sym("ft_800889F4");
+            let ft_data = peek_u32(call, call.regs.gpr[3] + 0x10C);
+            call.regs.gpr[4] = peek_u32(call, peek_u32(call, ft_data + 0x4C));
+        },
+        &|g, maps, c| {
+            let f = fighter(maps, c);
+            let fd = g.game.fighters[f.0].ft_data.unwrap();
+            let sfx = g.data.ptr(fd.at(0x4C)).unwrap();
+            let smash = g.data.ptr(sfx).expect("smash sounds");
+            let n = g.data.u32(smash);
+            let ids = g.data.ptr(smash.at(4)).unwrap();
+            let ids: Vec<i32> = (0..n).map(|i| g.data.u32(ids.at(4 * i)) as i32).collect();
+            g.fighter_random_voice(f, &ids);
+            Ret::Nothing
+        },
+    );
+}
