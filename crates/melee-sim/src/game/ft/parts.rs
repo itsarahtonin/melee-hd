@@ -99,6 +99,19 @@ pub fn set_bone_bit(b: &mut FighterBone, byte: usize, bit: u32, v: bool) {
     }
 }
 
+/// The part's flags from its joint's (lighting, texture generation, specular and three
+/// others) and its depth in the tree, the head of `ftParts_80074194`.
+pub fn bone_from_joint(bone: &mut FighterBone, flags: u32, depth: u32) {
+    set_bone_bit(bone, 0, 1, true);
+    set_bone_bit(bone, 0, 7, flags & (1 << 7) != 0);
+    set_bone_bit(bone, 1, 0, flags & (1 << 8) != 0);
+    set_bone_bit(bone, 1, 1, flags & (1 << 16) != 0);
+    set_bone_bit(bone, 1, 2, flags & (1 << 18) != 0);
+    set_bone_bit(bone, 1, 3, flags & (1 << 20) != 0);
+    set_bone_bit(bone, 1, 4, flags & (1 << 19) != 0);
+    bone.xC_u[0] = depth as u8;
+}
+
 /// Sets a part's last DObj index, the seven-bit `xC_u.x0.xD` (the top bits of its byte).
 pub fn set_bone_xd(b: &mut FighterBone, v: u8) {
     b.xC_u[1] = (b.xC_u[1] & 1) | (v << 1);
@@ -188,14 +201,7 @@ impl Running<'_> {
             let flags = self.game.objs.jobjs[cur].flags;
             let bone = &mut self.game.fighter_parts[parts][part as usize];
             bone.joint = Some(cur);
-            set_bone_bit(bone, 0, 1, true);
-            set_bone_bit(bone, 0, 7, flags & (1 << 7) != 0);
-            set_bone_bit(bone, 1, 0, flags & (1 << 8) != 0);
-            set_bone_bit(bone, 1, 1, flags & (1 << 16) != 0);
-            set_bone_bit(bone, 1, 2, flags & (1 << 18) != 0);
-            set_bone_bit(bone, 1, 3, flags & (1 << 20) != 0);
-            set_bone_bit(bone, 1, 4, flags & (1 << 19) != 0);
-            bone.xC_u[0] = depth as u8;
+            bone_from_joint(bone, flags, depth as u32);
             let mut d = self.game.objs.jobjs[cur].dobj();
             let mut own = 0;
             while let Some(dobj) = d {

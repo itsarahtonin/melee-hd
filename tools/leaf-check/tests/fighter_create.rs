@@ -420,3 +420,65 @@ fn check(first_init: bool) {
         .join()
         .unwrap();
 }
+
+/// `ftParts_80074194`'s part flags on joints without DObjs, every flag bit and depth: the
+/// fighters' joints set few of them.
+#[test]
+fn part_flags() {
+    use melee_sim::game::ft::parts::{bone_from_joint, set_bone_xd};
+    use melee_sim::game::structs::FighterBone;
+    let Some(ctx) = leaf_check::reference() else {
+        return;
+    };
+    let scratch = leaf_check::SCRATCH;
+    let (fighter, bone, jobj, index) = (
+        scratch,
+        scratch + 0x3000,
+        scratch + 0x3100,
+        scratch + 0x3200,
+    );
+    let mut rand = leaf_check::Rand(0xB0E5);
+    for i in 0..4000u32 {
+        let flags = if i < 32 { 1 << i } else { rand.bits() as u32 };
+        let depth = rand.below(40) as u32;
+        let old = [rand.bits() as u8, rand.bits() as u8];
+        let old_c = [rand.bits() as u8, rand.bits() as u8];
+        ctx.fill(scratch, 0, 0x4000);
+        ctx.write_u32(jobj + 0x14, flags);
+        ctx.write_u32(jobj + 0x18, 0);
+        ctx.write_u8(bone + 8, old[0]);
+        ctx.write_u8(bone + 9, old[1]);
+        ctx.write_u8(bone + 0xC, old_c[0]);
+        ctx.write_u8(bone + 0xD, old_c[1]);
+        ctx.write_u32(index, (i % 3) as u32);
+        ssbm_types::fns::ftParts_80074194(
+            &ctx,
+            leaf_check::handle(&ctx, fighter),
+            leaf_check::handle(&ctx, bone),
+            leaf_check::handle(&ctx, jobj),
+            leaf_check::handle(&ctx, index),
+            depth,
+        );
+        let mut ours = FighterBone {
+            x8: old,
+            xC_u: [old_c[0], old_c[1], 0, 0],
+            ..FighterBone::default()
+        };
+        bone_from_joint(&mut ours, flags, depth);
+        // No DObjs: the last DObj index from the count so far, and no DObjs of its own.
+        let count = (i % 3) as u8;
+        set_bone_xd(&mut ours, if count != 0 { count - 1 } else { 0 });
+        melee_sim::game::ft::parts::set_bone_bit(&mut ours, 1, 6, false);
+        let theirs = [
+            ctx.read_u8(bone + 8),
+            ctx.read_u8(bone + 9),
+            ctx.read_u8(bone + 0xC),
+            ctx.read_u8(bone + 0xD),
+        ];
+        assert_eq!(
+            [ours.x8[0], ours.x8[1], ours.xC_u[0], ours.xC_u[1]],
+            theirs,
+            "flags {flags:#x}, depth {depth}"
+        );
+    }
+}
