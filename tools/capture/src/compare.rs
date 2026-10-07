@@ -202,10 +202,11 @@ impl<'a> Comparer<'a> {
             tp = self.u32(tp);
             i += 1;
         }
+        let obj = self.u32(t + 0x28);
         match g.obj {
-            Some(Obj::JObj(j)) => {
-                self.jobj_tree(&format!("{path} jobj"), Some(j), self.u32(t + 0x28))
-            }
+            Some(Obj::JObj(j)) => self.jobj_tree(&format!("{path} jobj"), Some(j), obj),
+            Some(Obj::CObj(c)) => self.cobj(&format!("{path} cobj"), c, obj),
+            Some(Obj::LObj(l)) => self.lobjs(&format!("{path} lobj"), Some(l), obj),
             None => {}
         }
         match g.user_data {
@@ -448,6 +449,174 @@ impl<'a> Comparer<'a> {
             self.aobj(&format!("{rp} aobj"), r.aobj, self.u32(t + 0x18));
             o = r.next;
             t = self.u32(t);
+            i += 1;
+        }
+    }
+
+    fn wobj(&mut self, path: &str, o: Option<melee_sim::hsd::wobj::WObjId>, t: u32) {
+        if !Self::pair(
+            &mut self.maps.wobjs,
+            &mut self.seen,
+            &mut self.diffs,
+            "wobj",
+            path,
+            o,
+            t,
+        ) {
+            return;
+        }
+        let w = &self.game.objs.wobjs[o.unwrap().0];
+        self.check(
+            path,
+            "refs and flags",
+            (w.ref_count.0, w.flags),
+            (self.u16(t + 4), self.u32(t + 8)),
+        );
+        self.check(
+            path,
+            "position",
+            [w.pos.x, w.pos.y, w.pos.z].map(f32::to_bits),
+            [self.u32(t + 0xC), self.u32(t + 0x10), self.u32(t + 0x14)],
+        );
+        self.aobj(&format!("{path} aobj"), w.aobj, self.u32(t + 0x18));
+        self.robjs(path, w.robj, self.u32(t + 0x1C));
+    }
+
+    fn cobj(&mut self, path: &str, o: melee_sim::hsd::cobj::CObjId, t: u32) {
+        if !Self::pair(
+            &mut self.maps.cobjs,
+            &mut self.seen,
+            &mut self.diffs,
+            "cobj",
+            path,
+            Some(o),
+            t,
+        ) {
+            return;
+        }
+        let c = &self.game.objs.cobjs[o];
+        let words = |s: &Self, a: u32, n: u32| (0..n).map(|i| s.u32(a + 4 * i)).collect::<Vec<_>>();
+        self.check(
+            path,
+            "refs and flags",
+            (c.ref_count.0, c.flags, c.projection_type),
+            (self.u16(t + 4), self.u32(t + 8), self.u8(t + 0x50)),
+        );
+        self.check(
+            path,
+            "viewport",
+            c.viewport.map(f32::to_bits).to_vec(),
+            words(self, t + 0xC, 4),
+        );
+        self.check(
+            path,
+            "scissor",
+            c.scissor,
+            [
+                self.u16(t + 0x1C),
+                self.u16(t + 0x1E),
+                self.u16(t + 0x20),
+                self.u16(t + 0x22),
+            ],
+        );
+        let mut proj = vec![c.up.x, c.up.y, c.up.z, c.near, c.far];
+        proj.extend(c.projection);
+        self.check(
+            path,
+            "up, planes and projection",
+            proj.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
+            words(self, t + 0x2C, 9),
+        );
+        self.check(
+            path,
+            "view matrix",
+            c.view_mtx
+                .m
+                .iter()
+                .flatten()
+                .map(|v| v.to_bits())
+                .collect::<Vec<_>>(),
+            words(self, t + 0x54, 12),
+        );
+        let pm = self.u32(t + 0x88);
+        self.check(
+            path,
+            "inverse view matrix",
+            c.inv_view_mtx.map(|m| {
+                m.m.iter()
+                    .flatten()
+                    .map(|v| v.to_bits())
+                    .collect::<Vec<_>>()
+            }),
+            (pm != 0).then(|| words(self, pm, 12)),
+        );
+        let (eye, interest, aobj) = (c.eyepos, c.interest, c.aobj);
+        self.wobj(&format!("{path} eye"), eye, self.u32(t + 0x24));
+        self.wobj(&format!("{path} interest"), interest, self.u32(t + 0x28));
+        self.aobj(&format!("{path} aobj"), aobj, self.u32(t + 0x84));
+    }
+
+    fn lobjs(&mut self, path: &str, o: Option<melee_sim::hsd::lobj::LObjId>, t: u32) {
+        let (mut o, mut t) = (o, t);
+        let mut i = 0;
+        while o.is_some() || t != 0 {
+            let lp = format!("{path} {i}");
+            if !Self::pair(
+                &mut self.maps.lobjs,
+                &mut self.seen,
+                &mut self.diffs,
+                "lobj",
+                &lp,
+                o,
+                t,
+            ) {
+                break;
+            }
+            let l = &self.game.objs.lobjs[o.unwrap()];
+            let rgba = |s: &Self, a: u32| [s.u8(a), s.u8(a + 1), s.u8(a + 2), s.u8(a + 3)];
+            self.check(
+                &lp,
+                "refs, flags and priority",
+                (l.ref_count.0, l.flags, l.priority),
+                (self.u16(t + 4), self.u16(t + 8), self.u16(t + 0xA)),
+            );
+            self.check(
+                &lp,
+                "colors",
+                (l.color, l.hw_color),
+                (rgba(self, t + 0x10), rgba(self, t + 0x14)),
+            );
+            self.check(
+                &lp,
+                "params",
+                l.params.to_vec(),
+                (0..6)
+                    .map(|k| self.u32(t + 0x20 + 4 * k))
+                    .collect::<Vec<_>>(),
+            );
+            self.check(
+                &lp,
+                "shininess and vector",
+                [l.shininess, l.lvec.x, l.lvec.y, l.lvec.z].map(f32::to_bits),
+                [
+                    self.u32(t + 0x38),
+                    self.u32(t + 0x3C),
+                    self.u32(t + 0x40),
+                    self.u32(t + 0x44),
+                ],
+            );
+            self.check(
+                &lp,
+                "light slots",
+                (l.id, l.spec_id),
+                (self.u32(t + 0x4C), self.u32(t + 0x90)),
+            );
+            let (pos, interest, aobj, next) = (l.position, l.interest, l.aobj, l.next);
+            self.wobj(&format!("{lp} position"), pos, self.u32(t + 0x18));
+            self.wobj(&format!("{lp} interest"), interest, self.u32(t + 0x1C));
+            self.aobj(&format!("{lp} aobj"), aobj, self.u32(t + 0x48));
+            o = next;
+            t = self.u32(t + 0xC);
             i += 1;
         }
     }

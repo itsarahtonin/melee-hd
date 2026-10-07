@@ -11,14 +11,18 @@ use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
 use melee_sim::game::structs::Fighter;
 use melee_sim::hsd::aobj::{AObj, AObjId};
+use melee_sim::hsd::cobj::{CObj, CObjId};
 use melee_sim::hsd::dobj::{DObj, DObjId};
 use melee_sim::hsd::fobj::{FObj, FObjId};
 use melee_sim::hsd::gobj::{GObj, GObjId, P_LINKS, PROC_PRIORITIES, Proc, ProcId};
 use melee_sim::hsd::jobj::{self, Contents, JObj, JObjId};
+use melee_sim::hsd::lobj::{LObj, LObjId};
 use melee_sim::hsd::mobj::{MObj, MObjClass, MObjId, Material, PeDesc};
+use melee_sim::hsd::object::RefCount;
 use melee_sim::hsd::pobj::{self, Binding, Envelope, PObj, PObjId, ShapeSet};
 use melee_sim::hsd::robj::{self, Exp, RObj, RObjId, Ref, Rvalue, RvalueId};
 use melee_sim::hsd::tobj::{Color, ImageRef, TObj, TObjId, TObjTev};
+use melee_sim::hsd::wobj::{WObj, WObjId};
 use melee_sim::mtx::Mtx34;
 use melee_sim::quat::Quat;
 use melee_sim::vec::Vec3;
@@ -47,6 +51,9 @@ pub struct Maps {
     pub dobjs: HashMap<u32, DObjId>,
     pub pobjs: HashMap<u32, PObjId>,
     pub mobjs: HashMap<u32, MObjId>,
+    pub wobjs: HashMap<u32, WObjId>,
+    pub cobjs: HashMap<u32, CObjId>,
+    pub lobjs: HashMap<u32, LObjId>,
     pub tobjs: HashMap<u32, TObjId>,
     pub fighters: HashMap<u32, FighterId>,
 }
@@ -171,6 +178,9 @@ impl<'a> Importer<'a> {
             self.game.world.procs[id.0] = proc;
         }
         let jobj_kind = self.u8(sym("HSD_GObj_JObjKind"));
+        let light_kind = self.u8(sym("HSD_GObj_LightKind"));
+        // The kinds' release functions are registered together, the camera's first.
+        let camera_kind = jobj_kind.wrapping_sub(2);
         for &g in &order {
             let id = self.maps.gobjs[&g];
             let obj_kind = self.u8(g + 6);
@@ -179,6 +189,10 @@ impl<'a> Importer<'a> {
                 None
             } else if obj_kind == jobj_kind {
                 Some(Obj::JObj(self.jobj(hsd_obj)))
+            } else if obj_kind == camera_kind {
+                Some(Obj::CObj(self.cobj(hsd_obj)))
+            } else if obj_kind == light_kind {
+                Some(Obj::LObj(self.lobj(hsd_obj)))
             } else {
                 self.unhandled
                     .push(format!("GObj {g:#x}: object kind {obj_kind}"));
@@ -478,6 +492,111 @@ impl<'a> Importer<'a> {
             pobj,
             aobj,
             flags: self.u32(a + 0x14),
+        };
+        id
+    }
+
+    pub fn wobj(&mut self, a: u32) -> WObjId {
+        if let Some(&x) = self.maps.wobjs.get(&a) {
+            return x;
+        }
+        let id = WObjId(self.game.objs.wobjs.alloc(WObj::default()));
+        self.maps.wobjs.insert(a, id);
+        let ao = self.u32(a + 0x18);
+        let aobj = (ao != 0).then(|| self.aobj(ao));
+        let ro = self.u32(a + 0x1C);
+        let robj = (ro != 0).then(|| self.robj(ro));
+        self.game.objs.wobjs[id.0] = WObj {
+            ref_count: RefCount(self.u16(a + 4)),
+            flags: self.u32(a + 8),
+            pos: self.vec3(a + 0xC),
+            aobj,
+            robj,
+        };
+        id
+    }
+
+    pub fn cobj(&mut self, a: u32) -> CObjId {
+        if let Some(&x) = self.maps.cobjs.get(&a) {
+            return x;
+        }
+        let id = CObjId(self.game.objs.cobjs.pool.alloc(CObj::default()));
+        self.maps.cobjs.insert(a, id);
+        let w = |s: &mut Self, at: u32| {
+            let p = s.u32(at);
+            (p != 0).then(|| s.wobj(p))
+        };
+        let eyepos = w(self, a + 0x24);
+        let interest = w(self, a + 0x28);
+        let ao = self.u32(a + 0x84);
+        let aobj = (ao != 0).then(|| self.aobj(ao));
+        let pm = self.u32(a + 0x88);
+        self.game.objs.cobjs[id] = CObj {
+            ref_count: RefCount(self.u16(a + 4)),
+            flags: self.u32(a + 8),
+            viewport: [
+                self.f32(a + 0xC),
+                self.f32(a + 0x10),
+                self.f32(a + 0x14),
+                self.f32(a + 0x18),
+            ],
+            scissor: [
+                self.u16(a + 0x1C),
+                self.u16(a + 0x1E),
+                self.u16(a + 0x20),
+                self.u16(a + 0x22),
+            ],
+            eyepos,
+            interest,
+            up: self.vec3(a + 0x2C),
+            near: self.f32(a + 0x38),
+            far: self.f32(a + 0x3C),
+            projection: [
+                self.f32(a + 0x40),
+                self.f32(a + 0x44),
+                self.f32(a + 0x48),
+                self.f32(a + 0x4C),
+            ],
+            projection_type: self.u8(a + 0x50),
+            view_mtx: self.mtx(a + 0x54),
+            aobj,
+            inv_view_mtx: (pm != 0).then(|| self.mtx(pm)),
+        };
+        id
+    }
+
+    pub fn lobj(&mut self, a: u32) -> LObjId {
+        if let Some(&x) = self.maps.lobjs.get(&a) {
+            return x;
+        }
+        let id = LObjId(self.game.objs.lobjs.pool.alloc(LObj::default()));
+        self.maps.lobjs.insert(a, id);
+        let n = self.u32(a + 0xC);
+        let next = (n != 0).then(|| self.lobj(n));
+        let w = |s: &mut Self, at: u32| {
+            let p = s.u32(at);
+            (p != 0).then(|| s.wobj(p))
+        };
+        let position = w(self, a + 0x18);
+        let interest = w(self, a + 0x1C);
+        let ao = self.u32(a + 0x48);
+        let aobj = (ao != 0).then(|| self.aobj(ao));
+        let rgba = |s: &Self, at: u32| [s.u8(at), s.u8(at + 1), s.u8(at + 2), s.u8(at + 3)];
+        self.game.objs.lobjs[id] = LObj {
+            ref_count: RefCount(self.u16(a + 4)),
+            flags: self.u16(a + 8),
+            priority: self.u16(a + 0xA),
+            next,
+            color: rgba(self, a + 0x10),
+            hw_color: rgba(self, a + 0x14),
+            position,
+            interest,
+            params: core::array::from_fn(|i| self.u32(a + 0x20 + 4 * i as u32)),
+            shininess: self.f32(a + 0x38),
+            lvec: self.vec3(a + 0x3C),
+            aobj,
+            id: self.u32(a + 0x4C),
+            spec_id: self.u32(a + 0x90),
         };
         id
     }

@@ -9,8 +9,10 @@ use melee_data::archive::Archives;
 use super::handles::{CodeRef, FighterId, ItemId};
 use super::structs::Fighter;
 use crate::hsd::Objects;
+use crate::hsd::cobj::CObjId;
 use crate::hsd::gobj::{GObjId, Host, Kinds, World};
 use crate::hsd::jobj::JObjId;
+use crate::hsd::lobj::LObjId;
 use crate::hsd::pool::Pool;
 
 /// What a GObj's user data is (`user_data`, by its `user_data_kind`).
@@ -24,6 +26,9 @@ pub enum UserData {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Obj {
     JObj(JObjId),
+    CObj(CObjId),
+    /// A light list's first light.
+    LObj(LObjId),
 }
 
 /// The game's types for the scheduler.
@@ -67,6 +72,7 @@ impl Host<GameKinds> for Running<'_> {
     fn remove_obj(&mut self, _kind: u8, obj: Obj) {
         match obj {
             Obj::JObj(j) => crate::hsd::jobj::remove_all(&mut self.game.objs, Some(j)),
+            other => panic!("releasing a GObj's {other:?} needs its port"),
         }
     }
 }
