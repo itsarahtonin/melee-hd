@@ -24,11 +24,12 @@
 //! The runner's mutated and mismatching saves aren't used and can be deleted.
 
 use std::path::PathBuf;
-use std::sync::{Condvar, Mutex};
+use std::sync::{Condvar, Mutex, OnceLock};
 
 use gekko_fp::{FpMode, set_fp_mode};
 use leaf_check::{MODES, reference};
 use melee_capture::compare::Comparer;
+use melee_capture::corpus::Corpus;
 use melee_capture::import::{Importer, Maps};
 use melee_capture::{Capture, DataMap, DiscIndex, MEM1, disc_index, find_archives_in};
 use melee_data::archive::{Archives, DataRef};
@@ -51,7 +52,7 @@ fn calls_dir() -> PathBuf {
 }
 
 /// Every capture of `func` under the calls directory, in name order.
-fn captures(func: &str) -> Vec<PathBuf> {
+fn captures(func: &str) -> Vec<Source> {
     let mut out = Vec::new();
     let Ok(dirs) = std::fs::read_dir(calls_dir()) else {
         return out;
@@ -63,12 +64,62 @@ fn captures(func: &str) -> Vec<PathBuf> {
         for f in files.flatten() {
             let name = f.file_name().to_string_lossy().into_owned();
             if name.starts_with(&format!("{func}-call")) && name.ends_with(".call") {
-                out.push(f.path());
+                out.push(Source::File(f.path()));
             }
         }
     }
-    out.sort();
+    out.sort_by_key(Source::name);
+    let addr = leaf_check::sym(func);
+    for (name, c) in corpora() {
+        out.extend(
+            (0..c.len())
+                .filter(|&i| c.addr(i) == addr)
+                .map(|i| Source::Corpus(c, i, format!("{name}#{i}"))),
+        );
+    }
     out
+}
+
+/// Every corpus in the calls directory (`NAME.corpus`), read once.
+fn corpora() -> &'static [(String, Corpus)] {
+    static CORPORA: OnceLock<Vec<(String, Corpus)>> = OnceLock::new();
+    CORPORA.get_or_init(|| {
+        let Ok(files) = std::fs::read_dir(calls_dir()) else {
+            return Vec::new();
+        };
+        let mut out: Vec<(String, Corpus)> = files
+            .flatten()
+            .filter(|f| f.path().extension().is_some_and(|e| e == "corpus"))
+            .map(|f| {
+                let name = f.file_name().to_string_lossy().into_owned();
+                (name, Corpus::read(&f.path()))
+            })
+            .collect();
+        out.sort_by(|a, b| a.0.cmp(&b.0));
+        out
+    })
+}
+
+/// A saved call: a file of its own, or one of a corpus's.
+enum Source {
+    File(PathBuf),
+    Corpus(&'static Corpus, usize, String),
+}
+
+impl Source {
+    fn read(&self) -> Capture {
+        match self {
+            Source::File(p) => Capture::read(p),
+            Source::Corpus(c, i, _) => c.capture(*i),
+        }
+    }
+
+    fn name(&self) -> String {
+        match self {
+            Source::File(p) => p.file_name().unwrap().to_string_lossy().into_owned(),
+            Source::Corpus(_, _, n) => n.clone(),
+        }
+    }
 }
 
 struct Env {
@@ -127,6 +178,10 @@ enum Ret {
     Words(u32, Vec<u32>),
     /// A float returned in f1.
     Float(f64),
+    /// A bool returned in r3, and words written at an address as with `Words`.
+    BoolWords(bool, u32, Vec<u32>),
+    /// An integer returned in r3, and words written as with `Words`.
+    IntWords(u32, u32, Vec<u32>),
 }
 
 /// A captured call, as our side's tests read its arguments.
@@ -240,13 +295,13 @@ fn check_calls(source: &str, func: &str, prep: &Prep<'_>, ours: &Ours) {
     let Some(env) = env() else { return };
     let mut blocked = Vec::new();
     let mut skipped = 0;
-    'captures: for path in &files {
-        let mut cap = Capture::read(path);
+    'captures: for source in &files {
+        let mut cap = source.read();
         if !prep(&mut cap.call) {
             skipped += 1;
             continue;
         }
-        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+        let name = source.name();
         for mode in MODES {
             set_fp_mode(mode);
             let mut archives = Archives::default();
@@ -315,6 +370,20 @@ fn check_calls(source: &str, func: &str, prep: &Prep<'_>, ours: &Ours) {
                 Ret::Float(v) => {
                     if v.to_bits() != f1.to_bits() {
                         cmp.diffs.push(format!("f1: ours {v}, theirs {f1}"));
+                    }
+                }
+                Ret::BoolWords(..) | Ret::IntWords(..) => {
+                    let (v, at, words) = match ret {
+                        Ret::BoolWords(b, at, w) => (u32::from(b), at, w),
+                        Ret::IntWords(v, at, w) => (v, at, w),
+                        _ => unreachable!(),
+                    };
+                    cmp.diffs_check("r3", v, r3);
+                    for (k, w) in words.iter().enumerate() {
+                        let at = at + 4 * k as u32;
+                        let i = (at - MEM1) as usize;
+                        let theirs = u32::from_be_bytes(after[i..i + 4].try_into().unwrap());
+                        cmp.diffs_check(&format!("{at:#x}"), *w, theirs);
                     }
                 }
                 Ret::Words(at, words) => {
@@ -437,6 +506,7 @@ fn vec_words(v: Vec3) -> Vec<u32> {
 
 use melee_sim::game::it::kinds::{foxblaster, foxlaser};
 use melee_sim::game::it::owner as it_owner;
+use melee_sim::game::it::spawn;
 use melee_sim::game::it::{anim, coll, ground, hitbox, item, lib26b1, lib279c, lib2725, maplib};
 
 // item.c
@@ -1264,14 +1334,6 @@ fn blaster_picked_up() {
     check_proc("itFoxBlaster_Logic96_PickedUp", foxblaster::picked_up);
 }
 
-#[test]
-fn blaster_remove() {
-    check("it_802AEAB4", &|r, a| {
-        foxblaster::remove(r, a.opt_gobj(0));
-        Ret::None
-    });
-}
-
 // Functions and branches no replay reached, run from real states: every item's hitlag
 // process capture (each item once a tick) with the function called and its arguments set.
 
@@ -1722,16 +1784,6 @@ fn blaster_spawn() {
     });
 }
 
-#[test]
-fn team_rules() {
-    check_on(TICKS, "gm_8016B168", &|_| true, &|r, _| {
-        Ret::Bool(it_owner::is_team_battle(r.game))
-    });
-    check_on(TICKS, "gm_8016B0D4", &|_| true, &|r, _| {
-        Ret::Bool(it_owner::friendly_fire(r.game))
-    });
-}
-
 /// Passes the item's owner, a fighter, first, and the item second.
 fn owner_first(c: &mut Call) -> bool {
     let item = c.regs.gpr[3];
@@ -1792,4 +1844,405 @@ fn y_scaled_knockback() {
         }
     }
     set_fp_mode(FpMode::Hardware);
+}
+
+// itspawn.c, from the items-on corpus (see the file's docs).
+
+/// The stage's item counts a pointer argument points to (`Ground_801C2AD8`'s 35 words).
+fn counts_arg(a: &Args, i: usize) -> [i32; 35] {
+    let p = a.int(i);
+    std::array::from_fn(|k| a.cap.u32(p + 4 * k as u32) as i32)
+}
+
+/// The 64-bit mask passed in the register pair from r5.
+fn mask_arg(a: &Args) -> u64 {
+    u64::from(a.int(2)) << 32 | u64::from(a.int(3))
+}
+
+/// Which of the spawn tables a pointer argument names.
+fn table_arg(a: &Args, i: usize) -> fn(&mut Game) -> &mut spawn::PickTable {
+    let p = a.int(i);
+    if p == leaf_check::sym("it_804A0E30") + 4 {
+        |g| &mut g.it.spawn.spawner.table
+    } else if p == leaf_check::sym("it_804A0E50") {
+        |g| &mut g.it.spawn.no_containers
+    } else if p == leaf_check::sym("it_804A0E60") {
+        |g| &mut g.it.spawn.monsters
+    } else {
+        panic!("a pick table at {p:#x}")
+    }
+}
+
+#[test]
+fn spawn_proc() {
+    check_proc("fn_8026C88C", spawn::proc_spawn);
+}
+
+#[test]
+fn spawn_setup() {
+    check("it_8026D018", &|r, _| {
+        spawn::setup(r);
+        Ret::None
+    });
+}
+
+#[test]
+fn spawn_tables() {
+    check("it_8026CB9C", &|r, a| {
+        let counts = counts_arg(a, 0);
+        let mask = mask_arg(a);
+        let t = &mut r.game.it.spawn.spawner.table;
+        spawn::build(t, &counts, mask, 0, a.float(0));
+        Ret::None
+    });
+    check("it_8026CD50", &|r, a| {
+        let counts = counts_arg(a, 0);
+        let mask = mask_arg(a);
+        let t = &mut r.game.it.spawn.no_containers;
+        spawn::build(t, &counts, mask, 6, a.float(0));
+        Ret::None
+    });
+    check("it_8026CF04", &|r, _| {
+        spawn::build_monsters(r.game, r.data);
+        Ret::None
+    });
+    check("it_8026CA4C", &|r, a| {
+        let counts = counts_arg(a, 1);
+        let mask = u64::from(a.int(2)) << 32 | u64::from(a.int(3));
+        let first = a.int(4) as i32;
+        let total = spawn::total(&counts, mask, first, a.float(0));
+        table_arg(a, 0)(r.game).total = total;
+        Ret::None
+    });
+}
+
+#[test]
+fn spawn_pick() {
+    check("it_8026C75C", &|r, a| {
+        Ret::Int(spawn::pick_kind(r.game, table_arg(a, 0)) as u32)
+    });
+    check("bisectValue", &|r, a| {
+        let t = table_arg(a, 1)(r.game).clone();
+        let w = t.weights.as_deref().unwrap();
+        Ret::Int(spawn::bisect(a.int(0) as i32, w, a.int(2) as i32, a.int(3) as i32) as u32)
+    });
+    check("it_8026D324", &|r, a| {
+        Ret::Bool(spawn::kind_on(r.game, a.int(0) as i32))
+    });
+}
+
+#[test]
+fn spawn_point() {
+    check("it_8026CB3C", &|r, a| {
+        let at = a.int(0);
+        match spawn::spawn_point(r.game, r.data) {
+            Some(p) => Ret::BoolWords(true, at, vec_words(p)),
+            None => Ret::Bool(false),
+        }
+    });
+    check("it_8026B684", &|r, a| {
+        let pos = a.vec(0);
+        Ret::Float(f64::from(it_owner::facing_for(r.game, r.data, pos)))
+    });
+}
+
+#[test]
+fn spawn_queries() {
+    // From the spawner's process: no item drawn and nothing spawned, only the answers.
+    check_on("fn_8026C88C", "it_8026C704", &|_| true, &|r, _| {
+        Ret::Bool(spawn::poke_balls_full(r.game))
+    });
+    check_on("fn_8026C88C", "it_8026D3CC", &|_| true, &|r, _| {
+        Ret::Bool(spawn::healing_on(r.game))
+    });
+    // The words go below the stack pointer, where nothing lives.
+    let words = |c: &mut Call| {
+        c.regs.gpr[3] = c.regs.gpr[1] - 0x200;
+        true
+    };
+    check_on("fn_8026C88C", "it_8026C47C", &words, &|r, a| {
+        let w = spawn::kinds_out(r.game);
+        Ret::Words(a.int(0), w.iter().map(|&x| x as u32).collect())
+    });
+    for kind in [0, 1, 6, 9, 54] {
+        let prep = move |c: &mut Call| {
+            c.regs.gpr[3] = kind;
+            true
+        };
+        check_on("fn_8026C88C", "it_80272828", &prep, &move |r, _| {
+            Ret::GObj(spawn::find_kind(r.game, kind as i32))
+        });
+    }
+}
+
+#[test]
+fn spawn_pick_without_poke_balls() {
+    // The table ending in a Poké Ball while no more may appear (as many out as allowed).
+    for size in [None, Some(1u8)] {
+        let prep = move |c: &mut Call| {
+            let t = c.regs.gpr[3];
+            if let Some(n) = size {
+                let w = w32(c, t) & 0x00FF_FFFF | u32::from(n) << 24;
+                set32(c, t, w);
+            }
+            let n = w32(c, t) >> 24;
+            let last = w32(c, t + 4) + n - 1;
+            let w = w32(c, last & !3);
+            let shift = 8 * (3 - (last & 3));
+            set32(c, last & !3, w & !(0xFF << shift) | 34 << shift);
+            let counts = leaf_check::sym("Item_804A0C64");
+            let limit = w32(c, counts + 0x20);
+            set32(c, counts + 0x1C, limit);
+            true
+        };
+        check_on("it_8026C75C", "it_8026C75C", &prep, &|r, a| {
+            Ret::Int(spawn::pick_kind(r.game, table_arg(a, 0)) as u32)
+        });
+    }
+}
+
+#[test]
+fn init_globals() {
+    check("Item_80266FCC", &|r, _| {
+        item::init_globals(r.game, r.data);
+        Ret::None
+    });
+}
+
+#[test]
+fn drop_at() {
+    // A shot dropped at a fighter's feet, from the spawner's states, then with the limit
+    // reached.
+    for full in [false, true] {
+        let prep = move |c: &mut Call| {
+            let at = c.regs.gpr[1] - 0x200;
+            for (k, v) in [0.0f32, 0.0, 0.0].iter().enumerate() {
+                set32(c, at + 4 * k as u32, v.to_bits());
+            }
+            c.regs.gpr[3] = at;
+            c.regs.gpr[4] = 54;
+            if full {
+                let counts = leaf_check::sym("Item_804A0C64");
+                let limit = w32(c, counts + 0x64);
+                set32(c, counts + 0x60, limit);
+            }
+            true
+        };
+        check_on("fn_8026C88C", "it_8026D258", &prep, &|r, a| {
+            Ret::Bool(spawn::drop_at(r, a.vec(0), 54))
+        });
+    }
+}
+
+/// Sets the random seed (`*HSD_RandSeedPtr`) of a captured call.
+fn set_seed(c: &mut Call, seed: u32) {
+    let at = w32(c, leaf_check::sym("HSD_RandSeedPtr"));
+    set32(c, at, seed);
+}
+
+/// Seeds spread over the generator's range.
+fn seeds() -> impl Iterator<Item = u32> {
+    (0..6u32).map(|i| i.wrapping_mul(0x9E37_79B9) ^ 0x5EED)
+}
+
+#[test]
+fn spawn_seeded() {
+    // The setup's first countdown and the spawn points, from many seeds.
+    for seed in seeds() {
+        let prep = move |c: &mut Call| {
+            set_seed(c, seed);
+            true
+        };
+        check_calls("it_8026D018", "it_8026D018", &prep, &|r, _| {
+            spawn::setup(r);
+            Ret::None
+        });
+        check_calls("it_8026CB3C", "it_8026CB3C", &prep, &|r, a| {
+            let at = a.int(0);
+            match spawn::spawn_point(r.game, r.data) {
+                Some(p) => Ret::BoolWords(true, at, vec_words(p)),
+                None => Ret::Bool(false),
+            }
+        });
+    }
+}
+
+#[test]
+fn spawn_bisect_edges() {
+    // Every weight's edge, and past the last.
+    for k in 0..40u32 {
+        let prep = move |c: &mut Call| {
+            let t = c.regs.gpr[4];
+            let n = w32(c, t) >> 24;
+            let i = k / 3;
+            if i > n {
+                return false;
+            }
+            let weights = w32(c, t + 0xC);
+            let at = weights + 2 * i.min(n - 1);
+            let w = (w32(c, at & !3) >> (16 * (1 - ((at & 2) >> 1)))) & 0xFFFF;
+            c.regs.gpr[3] = (w + k % 3).wrapping_sub(1) + if i == n { 50 } else { 0 };
+            true
+        };
+        check_calls("bisectValue", "bisectValue", &prep, &|r, a| {
+            let t = table_arg(a, 1)(r.game).clone();
+            let w = t.weights.as_deref().unwrap();
+            Ret::Int(spawn::bisect(a.int(0) as i32, w, a.int(2) as i32, a.int(3) as i32) as u32)
+        });
+    }
+}
+
+// itmaplib.c and itgroundcoll.c, from the items-on corpus.
+
+thread_local! {
+    /// The callback a captured call passed, for [`passed_cb`].
+    static PASSED: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+/// Runs the callback the captured call passed (`PASSED`), as the kinds' dispatch has it.
+fn passed_cb(r: &mut Running, g: GObjId) {
+    let a = PASSED.with(|p| p.get());
+    if !melee_sim::game::it::kinds::run_event(r, g, a) {
+        melee_sim::game::code::unported_call(&format!("item callback {a:#010x}"));
+    }
+}
+
+/// [`passed_cb`] for the callback in argument `i`.
+fn cb_arg(a: &Args, i: usize) -> ground::Event {
+    let addr = a.int(i);
+    PASSED.with(|p| p.set(addr));
+    passed_cb
+}
+
+#[test]
+fn maplib_queries() {
+    check("it_80276214", &|r, a| {
+        maplib::prep_coll(r.game, r.data, a.gobj(0));
+        Ret::None
+    });
+    check("it_80276278", &|r, a| {
+        maplib::turn_box(r.game, r.data, a.gobj(0));
+        Ret::None
+    });
+    check("it_802762D8", &|r, a| {
+        Ret::Bool(maplib::at_edge(r.game, a.gobj(0)))
+    });
+    check("it_80276308", &|r, a| {
+        Ret::Int(maplib::touched_wall(r.game, a.gobj(0)) as u32)
+    });
+    check("it_80276348", &|r, a| {
+        let (t, n) = maplib::touched_wall_normal(r.game, a.gobj(0));
+        match n {
+            Some(n) => Ret::IntWords(t as u32, a.int(1), vec_words(n)),
+            None => Ret::Int(t as u32),
+        }
+    });
+    check("it_802763E0", &|r, a| {
+        Ret::Int(maplib::touched_ceiling(r.game, a.gobj(0)) as u32)
+    });
+    check("it_80276408", &|r, a| {
+        let cd = r.game.items[a.maps.items[&(a.int(1) - 0x378)].0]
+            .x378_itemColl
+            .clone();
+        match maplib::surface_normal(&cd) {
+            Some(n) => Ret::Words(a.int(2), vec_words(n)),
+            None => Ret::None,
+        }
+    });
+    check("it_8027649C", &|r, a| {
+        Ret::Float(maplib::slope_angle(r.game, a.gobj(0)))
+    });
+    check("it_80276CB8", &|r, a| {
+        maplib::tilt_on_floor(r.game, r.data, a.gobj(0));
+        Ret::None
+    });
+    check("it_802765BC", &|r, a| {
+        maplib::tilt_to_slope(r.game, r.data, a.gobj(0), a.int(1) as i32);
+        Ret::None
+    });
+    check("it_80276CEC", &|r, a| {
+        maplib::remember_surface(r.game, a.gobj(0));
+        Ret::None
+    });
+}
+
+#[test]
+fn maplib_bounces() {
+    check("it_80276D9C", &|r, a| {
+        Ret::Bool(maplib::unstick(r.game, a.gobj(0), a.int(1) as i32))
+    });
+    check("it_80276FC4", &|r, a| {
+        maplib::bounce(r, a.gobj(0), a.int(1) as i32);
+        Ret::None
+    });
+    check("it_8027770C", &|r, a| {
+        Ret::Bool(maplib::bounce_off_wall(r.game, r.data, a.gobj(0)))
+    });
+    check("it_8027781C", &|r, a| {
+        Ret::Bool(maplib::reflect_velocity(r.game, r.data, a.gobj(0)))
+    });
+    check("it_80275D5C", &|r, a| {
+        let b: melee_sim::game::structs::_itECB = a.get(1);
+        maplib::set_box(r.game, a.gobj(0), b);
+        Ret::None
+    });
+    check("it_80275DFC", &|r, a| {
+        maplib::reset_box(r.game, a.gobj(0));
+        Ret::None
+    });
+}
+
+#[test]
+fn maplib_skids() {
+    check("it_80277040", &|r, a| {
+        Ret::Bool(maplib::slides(r.game, r.data, a.gobj(0)))
+    });
+    check("it_80277544", &|r, a| {
+        Ret::Bool(maplib::start_skid(r.game, r.data, a.gobj(0)))
+    });
+    check("it_8027737C", &|r, a| {
+        let at = a.int(1);
+        let mut pos = a.vec(1);
+        maplib::slide(r.game, r.data, a.gobj(0), &mut pos);
+        Ret::Words(at, vec_words(pos))
+    });
+}
+
+#[test]
+fn groundcoll() {
+    check("it_8026D564", &|r, a| {
+        Ret::Bool(ground::ground(r, a.gobj(0)))
+    });
+    check("it_8026D62C", &|r, a| {
+        let cb = cb_arg(a, 1);
+        ground::ground_or_fall(r, a.gobj(0), cb);
+        Ret::None
+    });
+    check("it_8026D8A4", &|r, a| {
+        let cb = cb_arg(a, 1);
+        Ret::Bool(ground::ground_to_ledge(r, a.gobj(0), cb))
+    });
+    check("it_8026DA08", &|r, a| Ret::Bool(ground::air(r, a.gobj(0))));
+    check("it_8026DF34", &|r, a| Ret::Bool(ground::air(r, a.gobj(0))));
+    check("it_8026DC24", &|r, a| {
+        Ret::Bool(ground::settles(r.game, r.data, a.gobj(0)))
+    });
+    check("it_8026DD5C", &|r, a| Ret::Bool(ground::land(r, a.gobj(0))));
+    check("it_8026DDFC", &|r, a| {
+        Ret::Bool(ground::count_landing(r, a.gobj(0)))
+    });
+    check("it_8026E15C", &|r, a| {
+        let cb = cb_arg(a, 1);
+        ground::fall(r, a.gobj(0), cb);
+        Ret::None
+    });
+    check("it_8026E32C", &|r, a| {
+        let cb = cb_arg(a, 1);
+        Ret::Int(ground::fall_unbreakable(r, a.gobj(0), cb) as u32)
+    });
+    check("it_8026E414", &|r, a| {
+        let cb = cb_arg(a, 1);
+        ground::fall_to_floor(r, a.gobj(0), cb);
+        Ret::None
+    });
 }

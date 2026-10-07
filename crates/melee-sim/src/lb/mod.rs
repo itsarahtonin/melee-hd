@@ -3,6 +3,7 @@
 pub mod anim;
 pub mod audio;
 pub mod cobj;
+pub mod colanim;
 pub mod collision;
 pub mod command;
 pub mod figatree;

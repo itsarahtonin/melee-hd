@@ -19,6 +19,7 @@ pub mod lib2725;
 pub mod lib279c;
 pub mod maplib;
 pub mod owner;
+pub mod spawn;
 pub mod tables;
 mod tables_gen;
 pub mod vars;
@@ -29,7 +30,9 @@ use melee_data::archive::DataRef;
 
 use super::handles::ItemId;
 use super::state::{Game, UserData};
-use super::structs::{HSD_ObjAllocUnk, Item, Item_FtTrack};
+use super::structs::{
+    HSD_ObjAllocUnk, Item, Item_FtTrack, PokemonSelectionState, db_ItemAndPokemonMenu_t,
+};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 use crate::hsd::pool::Pool;
@@ -91,19 +94,26 @@ pub struct Globals {
     /// to keep clear of (`Item_804A0CCC`).
     pub ft_track: Item_FtTrack,
     /// The debug menu's item collision bubbles (`db_ShowItemCollisionBubbles`, set to 1 at
-    /// boot) and item pickup ranges (`db_ItemAndPokemonMenu.ShowItemPickupRange`), which new
-    /// items copy into their debug draw flags (`Item::xDAA`).
+    /// boot), which new items copy into their debug draw flags (`Item::xDAA`).
     pub db_bubbles: i32,
-    pub db_pickup_range: u32,
+    /// The debug item menu (`db_ItemAndPokemonMenu`): whether items appear on their own, and
+    /// whether new items draw their pickup ranges.
+    pub db_menu: db_ItemAndPokemonMenu_t,
+    /// The random items' tables and countdown (`it_804A0E30`, `it_804A0E50`, `it_804A0E60`).
+    pub spawn: spawn::Tables,
+    /// The Poké Balls' last Pokémon and whether a rare one came out (`Item_804A0E24`).
+    pub pokemon: PokemonSelectionState,
+    /// `it_804D6D00`, set to -1 for each match.
+    pub x6d00: i8,
+    /// Items that appeared on their own (`it_804D6D0C`) and `it_804D6D08`, counted for the
+    /// match's records.
+    pub spawned: i32,
+    pub x6d08: i32,
     /// How many entries a hit check's damage log holds (`it_804D6D18`); the log itself
     /// (`it_804A0E70`) isn't kept, as no ported check fills it.
     pub damage_log_len: u32,
     /// Which of the checked item's hitboxes still check for clanks (`it_804D6D1C`).
     pub clank_boxes: [u8; 4],
-    /// The match's rules the items read (`gm_GetStartMeleeRules()`): whether it's a team
-    /// battle (`is_teams`) and team attacks hurt (`friendly_fire`).
-    pub teams: bool,
-    pub friendly_fire: bool,
 }
 
 /// An item GObj's `Item` (`gobj->user_data`).

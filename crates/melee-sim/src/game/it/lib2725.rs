@@ -345,3 +345,51 @@ pub fn drop_owner(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).owner = None;
     super::lib26b1::disable_pickup(game, gobj);
 }
+
+/// The spun joint's angle about the kind's spin axis, `it_80274990`.
+#[doc(alias = "it_80274990")]
+pub fn spin_angle(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
+    let j = spin_joint(game, data, gobj).expect("an item without a model");
+    let r = &game.objs.jobjs[j].rotate;
+    match item(game, gobj).xDC8_word.flags.x17 {
+        0 => r.z,
+        1 => r.x,
+        _ => r.y,
+    }
+}
+
+/// The bounce's sound (`xD84`), unless the item makes none, `it_8027321C`.
+#[doc(alias = "it_8027321C")]
+pub fn bounce_sfx(r: &mut Running, gobj: GObjId) {
+    let ip = item(r.game, gobj);
+    if ip.xDCD_flag.x0.b2 {
+        return;
+    }
+    let sfx = ip.xD84;
+    if ip.kind == super::kinds::UNK4 {
+        r.sfx_play_track(sfx, 127, 64, 154);
+        return;
+    }
+    super::item::play_sfx(r, gobj, sfx, 127, 64);
+}
+
+/// Stops the item's spin and squares its spun joint, `it_80274740`.
+#[doc(alias = "it_80274740")]
+pub fn stop_spin(game: &mut Game, data: &Archives, gobj: GObjId) {
+    let j = spin_joint(game, data, gobj).expect("an item without a model");
+    let ip = item_mut(game, gobj);
+    ip.xD3C_spinSpeed = 0.0;
+    let (axis, v) = (ip.xDC8_word.flags.x17, ip.xD3C_spinSpeed);
+    let jobjs = &mut game.objs.jobjs;
+    match axis {
+        0 => jobj::set_rotation_z(jobjs, j, v),
+        1 => jobj::set_rotation_x(jobjs, j, v),
+        _ => jobj::set_rotation_y(jobjs, j, v),
+    }
+}
+
+/// Stops the item, `it_80273454` (`itResetVelocity`).
+#[doc(alias = "it_80273454")]
+pub fn clear_velocity(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+}

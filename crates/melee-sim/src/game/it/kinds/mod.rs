@@ -16,6 +16,21 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     foxlaser::run_pred(r, gobj, addr).or_else(|| foxblaster::run_pred(r, gobj, addr))
 }
 
+/// The common items' kinds (`It_Kind_*`).
+pub const CAPSULE: i32 = 0;
+pub const BOX: i32 = 1;
+pub const TARU: i32 = 2;
+pub const EGG: i32 = 3;
+pub const KUSUDAMA: i32 = 4;
+pub const TARU_CANN: i32 = 5;
+pub const BOMBHEI: i32 = 6;
+pub const HEART: i32 = 8;
+pub const TOMATO: i32 = 9;
+pub const BAT: i32 = 11;
+pub const SWORD: i32 = 12;
+pub const G_SHELL: i32 = 14;
+pub const R_SHELL: i32 = 15;
+pub const HAMMER: i32 = 28;
 /// `It_Kind_Foods`.
 pub const FOODS: i32 = 18;
 /// `It_Kind_M_Ball`, the Poké Ball.

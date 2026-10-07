@@ -376,6 +376,8 @@ impl<'a> Comparer<'a> {
             base: MEM1,
         };
         let game = self.game;
+        let seed = self.u32(self.u32(sym("HSD_RandSeedPtr")));
+        self.check("HSD_RandSeedPtr", "seed", game.objs.rng.seed, seed);
         game.magnify
             .compare(&mem, sym("ifMagnify_804A1DE0"), "magnify", self);
         let (theirs, filter_gobj) = crate::read_coll_statics(self.mem);
@@ -1362,6 +1364,9 @@ impl Cx for Comparer<'_> {
     }
 
     fn compare_handle(&mut self, path: &str, kind: &'static str, ours: Option<u32>, theirs: u32) {
+        if ours.is_none() && self.maps.unfollowed.contains(&(kind, theirs)) {
+            return;
+        }
         let dangling = match (kind, ours) {
             ("GObjId", Some(o)) => self.maps.dangling_gobjs.get(&o),
             ("JObjId", Some(o)) => self.maps.dangling_jobjs.get(&o),

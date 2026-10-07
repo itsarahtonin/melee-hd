@@ -49,8 +49,8 @@ impl Running<'_> {
         self.depth_scale_matrix(gobj);
         self.update_model_scale(gobj);
         let fp = &mut self.game.fighters[f.0];
-        super::colanim::clear(&mut fp.x488);
-        super::colanim::clear(&mut fp.x408);
+        crate::lb::colanim::clear(&mut fp.x488);
+        crate::lb::colanim::clear(&mut fp.x408);
         self.init_metal(gobj);
         self.init_clear(gobj);
         self.init_x2034(gobj);
@@ -423,7 +423,7 @@ impl Running<'_> {
         fp.coll_data.cur_pos = fp.cur_pos;
         fp.coll_data.last_pos = fp.coll_data.cur_pos;
         let geometry = game.geometry.as_mut().expect("no collision geometry");
-        let mut hooks = super::coll::FighterCollHooks {
+        let mut hooks = super::coll::ObjCollHooks {
             objs: &mut game.objs,
             data: self.data,
             dynamic_attrs: &game.gr.dynamic_attrs,
@@ -465,7 +465,7 @@ impl Running<'_> {
     fn land_on_spawn(&mut self, f: FighterId) -> bool {
         let game = &mut *self.game;
         let geometry = game.geometry.as_mut().expect("no collision geometry");
-        let mut hooks = super::coll::FighterCollHooks {
+        let mut hooks = super::coll::ObjCollHooks {
             objs: &mut game.objs,
             data: self.data,
             dynamic_attrs: &game.gr.dynamic_attrs,
@@ -569,7 +569,7 @@ impl Running<'_> {
         if fp.x2226_b4 {
             unported_call("ftCo_800C88D4_inline");
         }
-        super::colanim::clear(&mut fp.x508);
+        crate::lb::colanim::clear(&mut fp.x508);
     }
 
     /// `x2034` and `x2038` from the common data when the player's rules set it,

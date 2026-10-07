@@ -13,10 +13,10 @@ pub fn clear_attack_record(ip: &mut Item) {
     ip.xD94.y = 0;
     ip.xD9C.x = 0.0;
     ip.xD9C.y = 6;
-    // Bits 0 to 7 of +0x10 and 3 to 7 of +0x11, counted from the top.
+    // All of +0x10 and the top five bits of +0x11 (`x10_b0` to `x11_b3`).
     let mut w = ip.xDA4_word.to_be_bytes();
     w[0] = 0;
-    w[1] &= 0xE0;
+    w[1] &= 0x07;
     ip.xDA4_word = u32::from_be_bytes(w);
 }
 

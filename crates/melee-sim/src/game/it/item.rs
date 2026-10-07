@@ -48,6 +48,7 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         PROC_HIT => proc_hit(r, gobj),
         PROC_REACT => proc_react(r, gobj),
         PROC_DYNAMICS => proc_dynamics(r, gobj),
+        super::spawn::PROC_SPAWN => super::spawn::proc_spawn(r, gobj),
         _ => return false,
     }
     true
@@ -417,7 +418,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     set_flag(&mut ip.xDCF_flag, 4, false);
     set_flag(&mut ip.xDCF_flag, 5, false);
     ip.xDAA = [1];
-    if r.game.it.db_pickup_range != 0 {
+    if r.game.it.db_menu.ShowItemPickupRange {
         set_flag(&mut item_mut(r.game, gobj).xDAA, 4, true);
     }
     let team = match parent {
@@ -1082,7 +1083,7 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
         if !ip.xDC8_word.flags.x9 {
             let mut v = vec_add(ip.x40_vel, ip.x70_nudge);
             if ip.ground_or_air == 0 && !ip.xDCD_flag.x0.b3 {
-                super::maplib::slide(r, gobj, &mut v);
+                super::maplib::slide(r.game, r.data, gobj, &mut v);
             }
             let ip = item_mut(r.game, gobj);
             ip.pos = vec_add(ip.pos, v);
@@ -1740,4 +1741,72 @@ pub fn hold(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
 #[doc(alias = "Item_IsGrabbable")]
 pub fn is_grabbable(game: &Game, gobj: GObjId) -> bool {
     super::item(game, gobj).xDC8_word.flags.x15 && logic(game, gobj).picked_up.is_some()
+}
+
+/// Resets the item code's globals for a match, `Item_80266FCC`: empty item and joint-table
+/// pools (the item links' pool, `item_link_alloc_data`, isn't modeled: no ported kind links),
+/// no items out with the common data's limits, and empty spawn tables.
+#[doc(alias = "Item_80266FCC")]
+pub fn init_globals(game: &mut Game, data: &Archives) {
+    game.items = Default::default();
+    game.it.bone_tables = Default::default();
+    let c = common_data(game);
+    let w = |off: u32| c.i32(data, off);
+    let n = &mut game.it.counts;
+    n.x0 = 0;
+    n.x8 = 0;
+    n.x10 = 0;
+    n.x18 = 0;
+    n.x1C = 0;
+    n.x24 = 0;
+    n.x2C = 0;
+    n.x34 = 0;
+    n.x3C = 0;
+    n.x40 = 0;
+    n.x48 = 0;
+    n.x50 = 0;
+    n.x58 = 0;
+    n.x60 = 0;
+    n.x4 = w(0);
+    n.xC = w(4);
+    n.x14 = w(8);
+    n.x20 = w(0xC);
+    n.x28 = w(0x10);
+    n.x30 = w(0x14);
+    n.x38 = w(0x18);
+    n.x44 = w(0x1C);
+    n.x4C = w(0x24);
+    n.x54 = w(0x20);
+    n.x5C = w(0x28);
+    n.x64 = w(0x148);
+    game.it.ft_track.x154[0] |= 0x80;
+    game.it.ft_track.count = 1;
+    game.it.pokemon.last_kind = UNSELECTED;
+    game.it.pokemon.previous_kind = UNSELECTED;
+    game.it.pokemon.rare_spawned = 0;
+    game.it.x6d00 = -1;
+    game.it.next_attack_id = 1;
+    game.it.made = 0;
+    game.it.spawned = 0;
+    game.it.x6d08 = 0;
+    let s = &mut game.it.spawn;
+    for t in [&mut s.monsters, &mut s.no_containers, &mut s.spawner.table] {
+        t.total = 0;
+    }
+    for t in [&mut s.monsters, &mut s.no_containers, &mut s.spawner.table] {
+        t.size = 0;
+    }
+}
+
+/// `It_Kind_Unselected`.
+const UNSELECTED: i32 = -1;
+
+/// Hands the item to its kind's `entered_air` callback, if it has one, and marks it
+/// skidding, `Item_8026ADC0`.
+#[doc(alias = "Item_8026ADC0")]
+pub fn enter_air_state(r: &mut Running, gobj: GObjId) {
+    if let Some(cb) = logic(r.game, gobj).entered_air {
+        call(r, gobj, cb);
+        item_mut(r.game, gobj).xDC8_word.flags.x1F = true;
+    }
 }

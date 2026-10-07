@@ -52,8 +52,8 @@ pub struct FilterInput {
     pub platforms: Vec<bool>,
 }
 
-/// What mpcoll asks of the game during a fighter's pass.
-pub struct FighterCollHooks<'a> {
+/// What mpcoll asks of the game during an object's pass (a fighter's or an item's).
+pub struct ObjCollHooks<'a> {
     pub objs: &'a mut Objects,
     pub data: &'a Archives,
     pub dynamic_attrs: &'a DynamicAttrs,
@@ -61,7 +61,7 @@ pub struct FighterCollHooks<'a> {
     pub filter: Option<FilterInput>,
 }
 
-impl CollHooks<StageColl> for FighterCollHooks<'_> {
+impl CollHooks<StageColl> for ObjCollHooks<'_> {
     /// The terrain a dynamic attribute area gives a floor at a point,
     /// `grDynamicAttr_801CA284`: the first area on the in-use list on a floor connected to it
     /// whose circle holds the point, else 0.
@@ -144,7 +144,7 @@ impl Running<'_> {
         &mut self,
         f: FighterId,
         prepare: impl FnOnce(&mut CollData),
-        pass: impl FnOnce(&mut Coll<'_, StageColl, FighterCollHooks<'_>>, &mut CollData) -> bool,
+        pass: impl FnOnce(&mut Coll<'_, StageColl, ObjCollHooks<'_>>, &mut CollData) -> bool,
     ) -> bool {
         self.fighter_coll_filtered(f, false, prepare, pass)
     }
@@ -155,7 +155,7 @@ impl Running<'_> {
         f: FighterId,
         filtered: bool,
         prepare: impl FnOnce(&mut CollData),
-        pass: impl FnOnce(&mut Coll<'_, StageColl, FighterCollHooks<'_>>, &mut CollData) -> bool,
+        pass: impl FnOnce(&mut Coll<'_, StageColl, ObjCollHooks<'_>>, &mut CollData) -> bool,
     ) -> bool {
         let threshold = if filtered {
             self.common().f32(0x25C)
@@ -171,7 +171,7 @@ impl Running<'_> {
                 .map(|l| geometry.line_surface(l) & LINE_PLATFORM != 0)
                 .collect(),
         });
-        let mut hooks = FighterCollHooks {
+        let mut hooks = ObjCollHooks {
             objs: &mut game.objs,
             data: self.data,
             dynamic_attrs: &game.gr.dynamic_attrs,
@@ -199,7 +199,7 @@ impl Running<'_> {
         gobj: GObjId,
         filtered: bool,
         prepare: impl FnOnce(&mut CollData),
-        pass: impl FnOnce(&mut Coll<'_, StageColl, FighterCollHooks<'_>>, &mut CollData) -> bool,
+        pass: impl FnOnce(&mut Coll<'_, StageColl, ObjCollHooks<'_>>, &mut CollData) -> bool,
     ) -> bool {
         let f = self.game.fighter_id(gobj);
         let hit = self.fighter_coll_filtered(f, filtered, prepare, pass);
@@ -298,7 +298,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
         let pass =
-            |c: &mut Coll<'_, StageColl, FighterCollHooks<'_>>, cd: &mut CollData, flags: u32| {
+            |c: &mut Coll<'_, StageColl, ObjCollHooks<'_>>, cd: &mut CollData, flags: u32| {
                 if unlocked.is_some() {
                     c.air_frame_unlocked(cd, flags)
                 } else {

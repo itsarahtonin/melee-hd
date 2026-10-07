@@ -70,8 +70,6 @@ mod addr {
     pub const EFASYNC_LOAD_SYNC: u32 = 0x8006_737C;
     pub const STAGE_802251E8: u32 = 0x8022_51E8;
     pub const ITEM_80266F70: u32 = 0x8026_6F70;
-    pub const ITEM_80266FCC: u32 = 0x8026_6FCC;
-    pub const IT_8026D018: u32 = 0x8026_D018;
     pub const STAGE_8022524C: u32 = 0x8022_524C;
     pub const STAGE_80225298: u32 = 0x8022_5298;
     pub const STAGE_80225074: u32 = 0x8022_5074;
@@ -1687,8 +1685,8 @@ impl Running<'_> {
         );
         self.game.vs.state.unk_34 = vs_speed_scale(self.game);
         code::call(self, addr::ITEM_80266F70, &[]);
-        code::call(self, addr::ITEM_80266FCC, &[]);
-        code::call(self, addr::IT_8026D018, &[]);
+        super::super::it::item::init_globals(self.game, self.data);
+        super::super::it::spawn::setup(self);
         self.game.audio(0x8002_785C, [0; 4]);
         code::call(self, addr::STAGE_8022524C, &[]);
         let tilt = self.game.stage_info.cam_info.cam_vertical_tilt;

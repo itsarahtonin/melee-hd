@@ -4,9 +4,12 @@
 //! imported into a `Game` and compared with memory.
 
 use melee_sim::game::handles::{BoneTableId, ItemId};
+use melee_sim::game::it::spawn::{PickTable, Spawner, Tables};
 use melee_sim::game::it::{BoneTable, CHAR_ARTICLES, ItemVars, vars_kind};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
-use melee_sim::game::structs::{HSD_ObjAllocUnk, Item, Item_FtTrack};
+use melee_sim::game::structs::{
+    HSD_ObjAllocUnk, Item, Item_FtTrack, PokemonSelectionState, db_ItemAndPokemonMenu_t,
+};
 
 use crate::MEM1;
 use crate::compare::Comparer;
@@ -14,11 +17,6 @@ use crate::import::{Importer, sym};
 
 /// Where an item's variables start (`Item::xDD4_itemVar`).
 const VARS: u32 = 0xDD4;
-
-/// `gm_GetStartMeleeRules()`: gmvs.c's `controller.start`.
-fn melee_rules() -> u32 {
-    sym("controller") + 0x24C8
-}
 
 fn mem(bytes: &[u8]) -> Mem<'_> {
     Mem { bytes, base: MEM1 }
@@ -191,11 +189,44 @@ impl Importer<'_> {
                 .collect()
         };
         self.game.it.db_bubbles = cap.u32(sym("db_ShowItemCollisionBubbles")) as i32;
-        // `db_ItemAndPokemonMenu.ShowItemPickupRange`, the second bit of the word at +0x20.
-        self.game.it.db_pickup_range = cap.u32(sym("db_ItemAndPokemonMenu") + 0x20) >> 30 & 1;
-        let rules = melee_rules();
-        self.game.it.teams = cap.call.mem1[(rules + 8 - MEM1) as usize] == 1;
-        self.game.it.friendly_fire = cap.call.mem1[(rules + 1 - MEM1) as usize] & 1 != 0;
+        self.game.it.db_menu =
+            db_ItemAndPokemonMenu_t::import(&m, sym("db_ItemAndPokemonMenu"), self);
+        self.game.it.pokemon = PokemonSelectionState::import(&m, sym("Item_804A0E24"), self);
+        self.game.it.x6d00 = cap.call.mem1[(sym("it_804D6D00") - MEM1) as usize] as i8;
+        self.game.it.spawned = cap.u32(sym("it_804D6D0C")) as i32;
+        self.game.it.x6d08 = cap.u32(sym("it_804D6D08")) as i32;
+        let sp = sym("it_804A0E30");
+        self.game.it.spawn = Tables {
+            spawner: Spawner {
+                timer: cap.u32(sp) as i32,
+                table: pick_table(|a| cap.u32(a), sp + 4),
+                x14: cap.u32(sp + 0x14) as i32,
+                mask: u64::from(cap.u32(sp + 0x18)) << 32 | u64::from(cap.u32(sp + 0x1C)),
+            },
+            no_containers: pick_table(|a| cap.u32(a), sym("it_804A0E50")),
+            monsters: pick_table(|a| cap.u32(a), sym("it_804A0E60")),
+        };
+    }
+}
+
+/// An `ItemPickTable` in memory: its arrays read as far as its size says.
+fn pick_table(word: impl Fn(u32) -> u32, a: u32) -> PickTable {
+    let byte = |x: u32| (word(x & !3) >> (8 * (3 - (x & 3)))) as u8;
+    let half = |x: u32| (word(x & !3) >> (16 * (1 - ((x & 2) >> 1)))) as u16;
+    let size = byte(a);
+    let total = half(a + 8);
+    let (kinds, weights) = (word(a + 4), word(a + 0xC));
+    // Inside `it_8026C75C`, a table drawn from without its last kind, the Poké Ball, is one
+    // shorter, with that kind's weight's start as its total: its arrays keep the entry.
+    let mut len = u32::from(size);
+    if kinds != 0 && weights != 0 && byte(kinds + len) == 34 && half(weights + 2 * len) == total {
+        len += 1;
+    }
+    PickTable {
+        size,
+        kinds: (kinds != 0).then(|| (0..len).map(|i| byte(kinds + i)).collect()),
+        total,
+        weights: (weights != 0).then(|| (0..len).map(|i| half(weights + 2 * i)).collect()),
     }
 }
 
@@ -266,5 +297,35 @@ impl Comparer<'_> {
                 self.compare_data(&format!("it_804D6D38[{k}]"), *ours, theirs);
             }
         }
+        g.db_menu.compare(
+            &m,
+            sym("db_ItemAndPokemonMenu"),
+            "db_ItemAndPokemonMenu",
+            self,
+        );
+        g.pokemon
+            .compare(&m, sym("Item_804A0E24"), "Item_804A0E24", self);
+        let x6d00 = self.mem[(sym("it_804D6D00") - MEM1) as usize] as i8;
+        self.check("it_804D6D00", "value", g.x6d00, x6d00);
+        let spawned = self.u32(sym("it_804D6D0C")) as i32;
+        self.check("it_804D6D0C", "value", g.spawned, spawned);
+        let x6d08 = self.u32(sym("it_804D6D08")) as i32;
+        self.check("it_804D6D08", "value", g.x6d08, x6d08);
+        let sp = sym("it_804A0E30");
+        let word = |a: u32| {
+            let i = (a - MEM1) as usize;
+            u32::from_be_bytes(self.mem[i..i + 4].try_into().unwrap())
+        };
+        let theirs = Tables {
+            spawner: Spawner {
+                timer: word(sp) as i32,
+                table: pick_table(word, sp + 4),
+                x14: word(sp + 0x14) as i32,
+                mask: u64::from(word(sp + 0x18)) << 32 | u64::from(word(sp + 0x1C)),
+            },
+            no_containers: pick_table(word, sym("it_804A0E50")),
+            monsters: pick_table(word, sym("it_804A0E60")),
+        };
+        self.check("it_804A0E30", "spawn tables", &g.spawn, &theirs);
     }
 }

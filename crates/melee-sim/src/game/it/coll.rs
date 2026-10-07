@@ -84,8 +84,8 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
                 && r.is_same_player(me.owner, other.owner)
                 && !other.xDCD_flag.x0.b7
                 && !flag(me.xDCE_flag, 2))
-            || (super::owner::is_team_battle(game)
-                && !super::owner::friendly_fire(game)
+            || (game.vs_is_teams()
+                && !game.vs_friendly_fire()
                 && !other.xDCD_flag.x0.b6
                 && !flag(me.xDCE_flag, 1)
                 && other.x20_team_id == me.x20_team_id);

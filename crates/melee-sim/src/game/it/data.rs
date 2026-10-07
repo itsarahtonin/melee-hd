@@ -134,7 +134,12 @@ pub mod attr {
     pub const X30: u32 = 0x30;
     pub const GRAB_RANGE: u32 = 0x38;
     pub const X40: u32 = 0x40;
+    /// `x50`: how fast it slides down slopes.
+    pub const X50: u32 = 0x50;
     pub const X54: u32 = 0x54;
+    /// `x58`: how much speed it keeps bouncing off walls; `x5C`: the speed it stops below.
+    pub const X58: u32 = 0x58;
+    pub const X5C: u32 = 0x5C;
     pub const SCALE: u32 = 0x60;
     pub const DESTROY_GFX: u32 = 0x64;
     pub const X68: u32 = 0x68;
@@ -158,6 +163,10 @@ impl Common {
     pub fn f32(self, data: &Archives, off: u32) -> f32 {
         data.f32(self.0.at(off))
     }
+
+    pub fn i32(self, data: &Archives, off: u32) -> i32 {
+        data.u32(self.0.at(off)) as i32
+    }
 }
 
 /// `ItemCommonData` field offsets.
@@ -165,10 +174,13 @@ pub mod common {
     pub const X2C: u32 = 0x2C;
     pub const LIFETIME: u32 = 0x30;
     pub const X34: u32 = 0x34;
+    pub const X38: u32 = 0x38;
     pub const X44: u32 = 0x44;
+    pub const X48: u32 = 0x48;
     pub const X4C: u32 = 0x4C;
     pub const X68: u32 = 0x68;
     pub const X6C: u32 = 0x6C;
+    pub const X74: u32 = 0x74;
     pub const X7C: u32 = 0x7C;
     /// `x80_float`: per hold kind.
     pub const X80: u32 = 0x80;
@@ -179,8 +191,14 @@ pub mod common {
     pub const XCC: u32 = 0xCC;
     pub const XD4: u32 = 0xD4;
     pub const XD8: u32 = 0xD8;
+    pub const XC0: u32 = 0xC0;
+    pub const XC4: u32 = 0xC4;
     pub const UNK_DEGREES: u32 = 0xE0;
+    pub const XE8: u32 = 0xE8;
+    pub const XF0: u32 = 0xF0;
     pub const XF4: u32 = 0xF4;
+    pub const XFC: u32 = 0xFC;
+    pub const X128: u32 = 0x128;
     pub const X14C: u32 = 0x14C;
     pub const X150: u32 = 0x150;
     pub const X154: u32 = 0x154;

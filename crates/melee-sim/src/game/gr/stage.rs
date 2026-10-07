@@ -189,3 +189,26 @@ pub fn cam_angles_of(i: &StageInfo) -> [f32; 4] {
         radians(c.cam_angle_right),
     ]
 }
+
+/// A random spot items may appear at, `Stage_80224FDC`: up to 21 tries among the stage's item
+/// points (127 on), then up to four among its first points, each drawing from fewer.
+#[doc(alias = "Stage_80224FDC")]
+pub fn random_item_point(game: &mut Game, data: &melee_data::archive::Archives) -> Option<Vec3> {
+    let mut n = 21;
+    while n != 0 {
+        let id = game.objs.rng.below(n).wrapping_add(127);
+        if let Some(p) = super::ground::point(game, data, id) {
+            return Some(p);
+        }
+        n -= 1;
+    }
+    let mut n = 4;
+    while n != 0 {
+        let id = game.objs.rng.below(n);
+        if let Some(p) = super::ground::point(game, data, id) {
+            return Some(p);
+        }
+        n = id;
+    }
+    None
+}

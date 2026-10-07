@@ -482,7 +482,7 @@ ftCo_Jump_GetInput	leaf-check fighter: input_variants presses X and taps up thro
 ftCo_800DF0D0	leaf-check fighter: input_core runs it on every saved procInput state
 gm_IsCurrently1PMode_inline	leaf-check fighter: input_core reads the mode through it
 gm_GetDbPauseFlag	leaf-check fighter: input_core reads the debug pause flags through it
-lbColl_80008428	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
+lbColl_80008428	leaf-check fighter: change_motion_state_resets reaches it (ftColl_8007AFF8) in calls that compare clean; leaf-check items: clear_hitbox and clear_hitboxes run it on every captured call
 lb_8000B4FC	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
 lb_8000B5DC	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
 lb_8000B6A4	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
@@ -1945,3 +1945,26 @@ ftCo_80099D70	leaf-check ftcommon_entries: run directly from saved fighter state
 ftCo_80097630	leaf-check ftcommon_entries: ftCo_800976A4, compared clean, plays the impact sound through it
 ft_80084A80	leaf-check ftcommon_entries: ftCo_800976A4, compared clean, reads the floor's sounds through it (set 2)
 ft_80084C74	leaf-check ftcommon_entries: ftCo_800976A4, compared clean, reads the floor's third sound set through it
+Item_80266FCC	leaf-check items: init_globals runs every captured call
+it_8026B684	leaf-check items: spawn_point runs every captured call
+it_8026C47C	leaf-check items: spawn_queries runs it from captured item states
+bisectValue	leaf-check items: spawn_pick runs every captured call
+it_8026C704	leaf-check items: spawn_queries runs it from captured item states
+it_8026C75C	leaf-check items: spawn_pick runs every captured call
+fn_8026C88C	leaf-check items: spawn_proc runs its captured calls (the one that drops an item stops at efSync_Spawn)
+it_8026CA4C	leaf-check items: spawn_tables runs every captured call
+it_8026CB3C	leaf-check items: spawn_point runs every captured call
+it_8026CB9C	leaf-check items: spawn_tables runs every captured call
+it_8026CD50	leaf-check items: spawn_tables runs every captured call
+it_8026CF04	leaf-check items: spawn_tables runs every captured call
+it_8026D018	leaf-check items: spawn_setup runs every captured call
+it_8026D258	leaf-check items: drop_at runs it from captured item states
+it_8026D324	leaf-check items: spawn_pick runs every captured call
+it_8026D3CC	leaf-check items: spawn_queries runs it from captured item states
+it_80272828	leaf-check items: spawn_queries runs it from captured item states
+ftLib_GetOpponentsDir	leaf-check items: spawn_point's it_8026B684 runs it on every captured call
+ftLib_GetCameraBonePos	leaf-check items: spawn_point's it_8026B684 runs it for each fighter on every captured call
+Ground_801C2AD8	leaf-check items: spawn_setup (it_8026D018) reads the stage's counts through it
+Ground_801C2AE8	leaf-check items: spawn_setup (it_8026D018) scales the first countdown by it
+Stage_80224FDC	leaf-check items: spawn_point (it_8026CB3C) runs it on every captured call
+it_8026C65C	leaf-check items: spawn_pick's it_8026C75C draws through it on every captured call

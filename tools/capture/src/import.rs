@@ -129,6 +129,9 @@ pub struct Maps {
     pub fighter_dobj_lists: HashMap<u32, DObjListId>,
     pub fighter_anim_bufs: HashMap<u32, AnimBufId>,
     pub shadows: HashMap<u32, ShadowId>,
+    /// Stale words where pointers were (an unused slot's leftover bytes) that the import left
+    /// unfollowed, as none: the same word afterwards compares equal.
+    pub unfollowed: std::collections::HashSet<(&'static str, u32)>,
 }
 
 /// The GObj class of items' links (`GObj_Create(7, ...)` in the string, yo-yo, grapple and
@@ -662,6 +665,8 @@ impl Importer<'_> {
             base: MEM1,
         };
         self.game.magnify = ifMagnify::import(&mem, sym("ifMagnify_804A1DE0"), self);
+        // The random numbers' seed, where `HSD_RandSeedPtr` points.
+        self.game.objs.rng.seed = self.u32(self.u32(sym("HSD_RandSeedPtr")));
         let (coll, filter_gobj) = crate::read_coll_statics(&cap.call.mem1);
         self.game.coll = coll;
         self.game.coll.floor_filter_gobj = self.import_handle("GObjId", filter_gobj).map(GObjId);
@@ -1646,7 +1651,10 @@ impl Cx for Importer<'_> {
                 "ItemId" => self.maps.items.get(&addr).map(|i| i.0),
                 "BoneTableId" => self.maps.bone_tables.get(&addr).map(|t| t.0),
                 "ItemLogicRef" | "ItemStatesRef" => Some(addr),
-                _ => None,
+                _ => {
+                    self.maps.unfollowed.insert((kind, addr));
+                    None
+                }
             };
         }
         // Static tables, by address: a word that was never set (an item kind without a logic
@@ -1666,6 +1674,7 @@ impl Cx for Importer<'_> {
             }
             self.unhandled
                 .push(format!("{kind} {addr:#x} outside main memory"));
+            self.maps.unfollowed.insert((kind, addr));
             return None;
         }
         if kind == "JObjId" && !self.maps.jobjs.contains_key(&addr) && !self.is_jobj(addr) {

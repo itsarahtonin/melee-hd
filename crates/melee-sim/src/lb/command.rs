@@ -99,6 +99,8 @@ impl Script {
 
 /// Runs an interpreter command, `Command_Execute`; false for an owner's command (10 and up).
 #[doc(alias = "Command_Execute")]
+#[doc(alias = "Command_00")]
+#[doc(alias = "Command_07")]
 pub fn execute(s: &mut Script, data: &Archives, command: u32) -> bool {
     match command {
         // Reset.

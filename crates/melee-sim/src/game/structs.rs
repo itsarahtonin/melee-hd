@@ -8091,3 +8091,579 @@ impl Default for Item_DynamicBones {
         }
     }
 }
+
+/// `db_ItemAndPokemonMenu_t`, 0x24 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct db_ItemAndPokemonMenu_t {
+    /// +0x0
+    pub DisplayStatus: u32,
+    /// +0x4
+    pub DisplayFadeTimer: u32,
+    /// +0x8
+    pub ItemSpawnsEnabled: i32,
+    /// +0xc
+    pub Player: i32,
+    /// +0x10
+    pub CurrentlySelectedItem: i32,
+    /// +0x14
+    pub CurrentlySelectedPokemon: i32,
+    /// +0x18
+    pub LastSelectedItem: i32,
+    /// +0x1c
+    pub LastSelectedPokemon: i32,
+    /// +0x20 (bits 0..+1)
+    pub ShowEnemyStompRange: bool,
+    /// +0x20 (bits 1..+1)
+    pub ShowItemPickupRange: bool,
+    /// +0x20 (bits 2..+1)
+    pub ShowCoinPickupRange: bool,
+}
+
+impl Default for db_ItemAndPokemonMenu_t {
+    fn default() -> Self {
+        db_ItemAndPokemonMenu_t {
+            DisplayStatus: 0,
+            DisplayFadeTimer: 0,
+            ItemSpawnsEnabled: 0,
+            Player: 0,
+            CurrentlySelectedItem: 0,
+            CurrentlySelectedPokemon: 0,
+            LastSelectedItem: 0,
+            LastSelectedPokemon: 0,
+            ShowEnemyStompRange: false,
+            ShowItemPickupRange: false,
+            ShowCoinPickupRange: false,
+        }
+    }
+}
+
+/// `itCapsule_ItemVars`, 0x8 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itCapsule_ItemVars {
+    /// +0x0
+    pub x0: i32,
+    /// +0x4
+    pub x4: i32,
+}
+
+impl Default for itCapsule_ItemVars {
+    fn default() -> Self {
+        itCapsule_ItemVars { x0: 0, x4: 0 }
+    }
+}
+
+/// `itHeart_ItemVars`, 0x1c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itHeart_ItemVars {
+    /// +0x0
+    pub xDD4_heal: i32,
+    /// +0x4
+    pub xDD8: [u8; 4],
+    /// +0x8
+    pub xDDC: i32,
+    /// +0xc
+    pub xDE0_filler: [u8; 8],
+    /// +0x14
+    pub xDE8_float: f32,
+    /// +0x18
+    pub xDEC: f32,
+}
+
+impl Default for itHeart_ItemVars {
+    fn default() -> Self {
+        itHeart_ItemVars {
+            xDD4_heal: 0,
+            xDD8: [0; 4],
+            xDDC: 0,
+            xDE0_filler: [0; 8],
+            xDE8_float: 0.0,
+            xDEC: 0.0,
+        }
+    }
+}
+
+/// `itTomato_ItemVars`, 0xc bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itTomato_ItemVars {
+    /// +0x0
+    pub heal_amount: i32,
+    /// +0x4 (bits 0..+1)
+    pub x4_b0: bool,
+    /// +0x8
+    pub x8: u32,
+}
+
+impl Default for itTomato_ItemVars {
+    fn default() -> Self {
+        itTomato_ItemVars {
+            heal_amount: 0,
+            x4_b0: false,
+            x8: 0,
+        }
+    }
+}
+
+/// `itBox_ItemVars`, 0x14 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itBox_ItemVars {
+    /// +0x0
+    pub opened: i32,
+    /// +0x4
+    pub despawn_timer: i32,
+    /// +0x8
+    pub spawned_gobj: Option<GObjId>,
+    /// +0xc
+    pub rot_vel_x: f32,
+    /// +0x10
+    pub rot_vel_y: f32,
+}
+
+impl Default for itBox_ItemVars {
+    fn default() -> Self {
+        itBox_ItemVars {
+            opened: 0,
+            despawn_timer: 0,
+            spawned_gobj: None,
+            rot_vel_x: 0.0,
+            rot_vel_y: 0.0,
+        }
+    }
+}
+
+/// `itTaru_ItemVars`, 0x20 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itTaru_ItemVars {
+    /// +0x0
+    pub xDD4: i32,
+    /// +0x4
+    pub xDD8: i32,
+    /// +0x8
+    pub xDDC: f32,
+    /// +0xc
+    pub xDE0: f32,
+    /// +0x10
+    pub xDE4: f32,
+    /// +0x14
+    pub xDE8: Vec3,
+}
+
+impl Default for itTaru_ItemVars {
+    fn default() -> Self {
+        itTaru_ItemVars {
+            xDD4: 0,
+            xDD8: 0,
+            xDDC: 0.0,
+            xDE0: 0.0,
+            xDE4: 0.0,
+            xDE8: Default::default(),
+        }
+    }
+}
+
+/// `itKusudama_ItemVars`, 0x8 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itKusudama_ItemVars {
+    /// +0x0
+    pub x0: i32,
+    /// +0x4
+    pub x4: i32,
+}
+
+impl Default for itKusudama_ItemVars {
+    fn default() -> Self {
+        itKusudama_ItemVars { x0: 0, x4: 0 }
+    }
+}
+
+/// `itBombHei_ItemVars`, 0x44 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itBombHei_ItemVars {
+    /// +0x0
+    pub xDD4: i32,
+    /// +0x4
+    pub xDD8: i32,
+    /// +0x8
+    pub xDDC: i32,
+    /// +0xc
+    pub xDE0: i32,
+    /// +0x10
+    pub xDE4: i32,
+    /// +0x14
+    pub xDE8: f32,
+    /// +0x18
+    pub xDEC: f32,
+    /// +0x1c
+    pub xDF0: f32,
+    /// +0x20
+    pub xDF4: f32,
+    /// +0x24
+    pub xDF8: f32,
+    /// +0x28
+    pub xDFC: f32,
+    /// +0x2c
+    pub _E00: i32,
+    /// +0x30
+    pub xE04: f32,
+    /// +0x34
+    pub _E08: i32,
+    /// +0x38
+    pub xE0C: Vec3,
+}
+
+impl Default for itBombHei_ItemVars {
+    fn default() -> Self {
+        itBombHei_ItemVars {
+            xDD4: 0,
+            xDD8: 0,
+            xDDC: 0,
+            xDE0: 0,
+            xDE4: 0,
+            xDE8: 0.0,
+            xDEC: 0.0,
+            xDF0: 0.0,
+            xDF4: 0.0,
+            xDF8: 0.0,
+            xDFC: 0.0,
+            _E00: 0,
+            xE04: 0.0,
+            _E08: 0,
+            xE0C: Default::default(),
+        }
+    }
+}
+
+/// `itGShell_HurtInit`, 0x20 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itGShell_HurtInit {
+    /// +0x0
+    pub state: i32,
+    /// +0x4
+    pub a_offset: Vec3,
+    /// +0x10
+    pub b_offset: Vec3,
+    /// +0x1c
+    pub scale: f32,
+}
+
+impl Default for itGShell_HurtInit {
+    fn default() -> Self {
+        itGShell_HurtInit {
+            state: 0,
+            a_offset: Default::default(),
+            b_offset: Default::default(),
+            scale: 0.0,
+        }
+    }
+}
+
+/// `itGShell_ItemVars`, 0x78 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itGShell_ItemVars {
+    /// +0x0
+    pub xDD4: f32,
+    /// +0x4
+    pub xDD8: f32,
+    /// +0x8
+    pub xDDC: f32,
+    /// +0xc
+    pub xDE0: f32,
+    /// +0x10
+    pub xDE4: f32,
+    /// +0x14
+    pub xDE8: i32,
+    /// +0x18 (bits 0..+1)
+    pub xDEC_b0: bool,
+    /// +0x18 (bits 1..+1)
+    pub xDEC_b1: bool,
+    /// +0x18 (bits 2..+1)
+    pub xDEC_b2: bool,
+    /// +0x18 (bits 3..+1)
+    pub xDEC_b3: bool,
+    /// +0x18 (bits 4..+1)
+    pub xDEC_b4: bool,
+    /// +0x18 (bits 5..+1)
+    pub xDEC_b5: bool,
+    /// +0x18 (bits 6..+1)
+    pub xDEC_b6: bool,
+    /// +0x18 (bits 7..+1)
+    pub xDEC_b7: bool,
+    /// +0x1c
+    pub xDF0: i32,
+    /// +0x20
+    pub xDF4: f32,
+    /// +0x24
+    pub xDF8: f32,
+    /// +0x28
+    pub xDFC: f32,
+    /// +0x2c
+    pub xE00: f32,
+    /// +0x30
+    pub xE04: f32,
+    /// +0x34 (bits 0..+1)
+    pub xE08_b0: bool,
+    /// +0x34 (bits 1..+1)
+    pub xE08_b1: bool,
+    /// +0x34 (bits 2..+1)
+    pub xE08_b2: bool,
+    /// +0x34 (bits 3..+1)
+    pub xE08_b3: bool,
+    /// +0x34 (bits 4..+1)
+    pub xE08_b4: bool,
+    /// +0x34 (bits 5..+1)
+    pub xE08_b5: bool,
+    /// +0x34 (bits 6..+1)
+    pub xE08_b6: bool,
+    /// +0x34 (bits 7..+1)
+    pub xE08_b7: bool,
+    /// +0x35
+    pub pad_E09: [i8; 3],
+    /// +0x38
+    pub xE0C: i32,
+    /// +0x3c
+    pub xE10: i32,
+    /// +0x40
+    pub xE14: i32,
+    /// +0x44
+    pub xE18: i32,
+    /// +0x48 (bits 0..+1)
+    pub xE1C_b0: bool,
+    /// +0x48 (bits 1..+1)
+    pub xE1C_b1: bool,
+    /// +0x48 (bits 2..+1)
+    pub xE1C_b2: bool,
+    /// +0x48 (bits 3..+1)
+    pub xE1C_b3: bool,
+    /// +0x48 (bits 4..+1)
+    pub xE1C_b4: bool,
+    /// +0x48 (bits 5..+1)
+    pub xE1C_b5: bool,
+    /// +0x48 (bits 6..+1)
+    pub xE1C_b6: bool,
+    /// +0x48 (bits 7..+1)
+    pub xE1C_b7: bool,
+    /// +0x49
+    pub pad_E1D: [i8; 3],
+    /// +0x4c
+    pub vel: Vec3,
+    /// +0x58
+    pub x58_hurtInit: itGShell_HurtInit,
+}
+
+impl Default for itGShell_ItemVars {
+    fn default() -> Self {
+        itGShell_ItemVars {
+            xDD4: 0.0,
+            xDD8: 0.0,
+            xDDC: 0.0,
+            xDE0: 0.0,
+            xDE4: 0.0,
+            xDE8: 0,
+            xDEC_b0: false,
+            xDEC_b1: false,
+            xDEC_b2: false,
+            xDEC_b3: false,
+            xDEC_b4: false,
+            xDEC_b5: false,
+            xDEC_b6: false,
+            xDEC_b7: false,
+            xDF0: 0,
+            xDF4: 0.0,
+            xDF8: 0.0,
+            xDFC: 0.0,
+            xE00: 0.0,
+            xE04: 0.0,
+            xE08_b0: false,
+            xE08_b1: false,
+            xE08_b2: false,
+            xE08_b3: false,
+            xE08_b4: false,
+            xE08_b5: false,
+            xE08_b6: false,
+            xE08_b7: false,
+            pad_E09: [0; 3],
+            xE0C: 0,
+            xE10: 0,
+            xE14: 0,
+            xE18: 0,
+            xE1C_b0: false,
+            xE1C_b1: false,
+            xE1C_b2: false,
+            xE1C_b3: false,
+            xE1C_b4: false,
+            xE1C_b5: false,
+            xE1C_b6: false,
+            xE1C_b7: false,
+            pad_E1D: [0; 3],
+            vel: Default::default(),
+            x58_hurtInit: Default::default(),
+        }
+    }
+}
+
+/// `itRShell_ItemVars`, 0x58 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itRShell_ItemVars {
+    /// +0x0
+    pub xDD4: f32,
+    /// +0x4
+    pub xDD8: f32,
+    /// +0x8
+    pub xDDC: f32,
+    /// +0xc
+    pub xDE0: f32,
+    /// +0x10
+    pub xDE4: f32,
+    /// +0x14
+    pub xDE8: i32,
+    /// +0x18
+    pub xDEC: i32,
+    /// +0x1c
+    pub xDF0: i32,
+    /// +0x20 (bits 0..+1)
+    pub xDF4_b0: bool,
+    /// +0x20 (bits 1..+1)
+    pub xDF4_b1: bool,
+    /// +0x20 (bits 2..+1)
+    pub xDF4_b2: bool,
+    /// +0x20 (bits 3..+1)
+    pub xDF4_b3: bool,
+    /// +0x20 (bits 4..+1)
+    pub xDF4_b4: bool,
+    /// +0x20 (bits 5..+1)
+    pub xDF4_b5: bool,
+    /// +0x20 (bits 6..+1)
+    pub xDF4_b6: bool,
+    /// +0x20 (bits 7..+1)
+    pub xDF4_b7: bool,
+    /// +0x21
+    pub pad_DF5: [i8; 43],
+    /// +0x4c
+    pub vel: Vec3,
+}
+
+impl Default for itRShell_ItemVars {
+    fn default() -> Self {
+        itRShell_ItemVars {
+            xDD4: 0.0,
+            xDD8: 0.0,
+            xDDC: 0.0,
+            xDE0: 0.0,
+            xDE4: 0.0,
+            xDE8: 0,
+            xDEC: 0,
+            xDF0: 0,
+            xDF4_b0: false,
+            xDF4_b1: false,
+            xDF4_b2: false,
+            xDF4_b3: false,
+            xDF4_b4: false,
+            xDF4_b5: false,
+            xDF4_b6: false,
+            xDF4_b7: false,
+            pad_DF5: [0; 43],
+            vel: Default::default(),
+        }
+    }
+}
+
+/// `itSword_ItemVars`, 0x5c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itSword_ItemVars {
+    /// +0x0
+    pub x0: i32,
+    /// +0x4
+    pub x4: i32,
+    /// +0x8
+    pub x8: i32,
+    /// +0xc
+    pub xC: i32,
+    /// +0x10
+    pub x10: f32,
+    /// +0x14
+    pub x14: f32,
+    /// +0x18
+    pub x18: f32,
+    /// +0x1c
+    pub x1C: i32,
+    /// +0x20
+    pub x20: i32,
+    /// +0x24
+    pub x24: i32,
+    /// +0x28
+    pub x28: f32,
+    /// +0x2c
+    pub x2C: f32,
+    /// +0x30
+    pub x30: f32,
+    /// +0x34
+    pub x34: i32,
+    /// +0x38
+    pub x38: i32,
+    /// +0x3c
+    pub x3C: i32,
+    /// +0x40
+    pub x40: f32,
+    /// +0x44
+    pub x44: f32,
+    /// +0x48
+    pub x48: f32,
+    /// +0x4c
+    pub x4C: f32,
+    /// +0x50
+    pub x50: f32,
+    /// +0x54
+    pub x54: i32,
+    /// +0x58
+    pub x58: f32,
+}
+
+impl Default for itSword_ItemVars {
+    fn default() -> Self {
+        itSword_ItemVars {
+            x0: 0,
+            x4: 0,
+            x8: 0,
+            xC: 0,
+            x10: 0.0,
+            x14: 0.0,
+            x18: 0.0,
+            x1C: 0,
+            x20: 0,
+            x24: 0,
+            x28: 0.0,
+            x2C: 0.0,
+            x30: 0.0,
+            x34: 0,
+            x38: 0,
+            x3C: 0,
+            x40: 0.0,
+            x44: 0.0,
+            x48: 0.0,
+            x4C: 0.0,
+            x50: 0.0,
+            x54: 0,
+            x58: 0.0,
+        }
+    }
+}
+
+/// `PokemonSelectionState`, 0xc bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PokemonSelectionState {
+    /// +0x0
+    pub last_kind: i32,
+    /// +0x4
+    pub previous_kind: i32,
+    /// +0x8
+    pub rare_spawned: i32,
+}
+
+impl Default for PokemonSelectionState {
+    fn default() -> Self {
+        PokemonSelectionState {
+            last_kind: 0,
+            previous_kind: 0,
+            rare_spawned: 0,
+        }
+    }
+}

@@ -36,18 +36,6 @@ pub fn team(game: &Game, gobj: Option<GObjId>) -> i32 {
     i32::from(fighter(game, gobj.expect("no fighter")).team)
 }
 
-/// Whether the match is a team battle, `gm_8016B168`.
-#[doc(alias = "gm_8016B168")]
-pub fn is_team_battle(game: &Game) -> bool {
-    game.it.teams
-}
-
-/// Whether team attacks hurt, `gm_8016B0D4`.
-#[doc(alias = "gm_8016B0D4")]
-pub fn friendly_fire(game: &Game) -> bool {
-    game.it.friendly_fire
-}
-
 /// The center of a fighter's ECB, `ftLib_GetECBCenter`.
 #[doc(alias = "ftLib_GetECBCenter")]
 pub fn ecb_center(game: &Game, gobj: GObjId) -> Vec3 {
@@ -191,4 +179,56 @@ pub fn release(r: &mut Running, gobj: GObjId, fighter_gobj: GObjId, special: boo
             code::unported_call("ftCommon_8007E6DC (ftLib_ReleaseItem)");
         }
     }
+}
+
+/// A fighter's camera bone's position, `ftLib_GetCameraBonePos`: the joint its attributes name
+/// for the camera to follow, offset by `co_attrs.x170`.
+#[doc(alias = "ftLib_GetCameraBonePos")]
+pub fn camera_bone_pos(game: &mut Game, data: &Archives, gobj: GObjId) -> Vec3 {
+    let fp = fighter(game, gobj);
+    let attrs = data
+        .ptr(fp.ft_data.expect("a fighter without data"))
+        .expect("a fighter without attributes");
+    let bone = data.u32(attrs.at(0x16C)) as usize;
+    let offset = fp.co_attrs.x170;
+    let parts = fp.parts.expect("a fighter without parts");
+    let j = game.fighter_parts[parts.0][bone].joint;
+    crate::lb::joint::world_position(&mut game.objs, data, j, Some(offset))
+}
+
+/// Which way most of a fighter's opponents are from `pos`, `ftLib_GetOpponentsDir`: 1 or -1
+/// (a random one on a tie). With no fighter, every awake fighter counts.
+#[doc(alias = "ftLib_GetOpponentsDir")]
+pub fn opponents_dir(game: &mut Game, data: &Archives, pos: Vec3, gobj: Option<GObjId>) -> f32 {
+    let me = gobj.map(|g| (g, fighter(game, g).player_idx, fighter(game, g).team));
+    let mut result = 0i32;
+    let mut cur = game.world.first_in(P_LINK_FIGHTER);
+    while let Some(g) = cur {
+        cur = game.world.gobjs[g.0].next;
+        if me.is_some_and(|(m, slot, _)| m == g || fighter(game, g).player_idx == slot) {
+            continue;
+        }
+        let other = fighter(game, g);
+        if other.is_sleeping
+            || (game.vs_is_teams() && me.is_some_and(|(_, _, team)| other.team == team))
+        {
+            continue;
+        }
+        let v = camera_bone_pos(game, data, g);
+        result = result.wrapping_add(if fp::fsubs(reg(v.x), reg(pos.x)) < 0.0 {
+            -1
+        } else {
+            1
+        });
+    }
+    if result == 0 {
+        result = if game.objs.rng.below(2) != 0 { 1 } else { -1 };
+    }
+    if result < 0 { -1.0 } else { 1.0 }
+}
+
+/// Which way most fighters are from `pos`, `it_8026B684`.
+#[doc(alias = "it_8026B684")]
+pub fn facing_for(game: &mut Game, data: &Archives, pos: Vec3) -> f32 {
+    opponents_dir(game, data, pos, None)
 }

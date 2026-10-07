@@ -301,7 +301,7 @@ pub fn run_script(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80279B64")]
 #[doc(alias = "it_80279BBC")]
 pub fn clear_overlay(ip: &mut Item) {
-    crate::game::gr::material::clear_overlay(&mut ip.x548_colorOverlay);
+    crate::lb::colanim::clear(&mut ip.x548_colorOverlay);
 }
 
 /// The items' own color script commands (`fn_80279B30`, through `it_804D51C8`).
@@ -319,9 +319,7 @@ pub fn run_overlay(r: &mut Running, gobj: GObjId) {
     let data = r.data;
     loop {
         let co = &mut item_mut(r.game, gobj).x548_colorOverlay;
-        let ended = crate::game::gr::material::run_overlay_with(data, co, &mut |co, op| {
-            overlay_command(data, co, op)
-        });
+        let ended = crate::lb::colanim::step(data, co, &mut |co, op| overlay_command(data, co, op));
         if !ended {
             return;
         }

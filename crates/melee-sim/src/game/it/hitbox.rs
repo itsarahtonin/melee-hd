@@ -2,11 +2,12 @@
 
 use gekko_fp as fp;
 
-use super::{item_mut, set_flag};
+use super::{item, item_mut, set_flag};
 use crate::fpu::{mem, reg};
 use crate::game::state::Game;
 use crate::hsd::gobj::GObjId;
 use crate::lb::hitcapsule;
+use melee_data::archive::Archives;
 
 /// Clears what the item's hits dealt and its damage multipliers, `it_802753DC`.
 #[doc(alias = "it_802753DC")]
@@ -67,4 +68,16 @@ pub fn end_blink(game: &mut Game, gobj: GObjId) {
 pub fn update_boxes(game: &mut Game, gobj: GObjId) {
     super::lib2725::ecb_motion(game, gobj);
     super::lib2725::ecb_extent(game, gobj);
+}
+
+/// Scales the damage of every hitbox that's on, `it_80275640`.
+#[doc(alias = "it_80275640")]
+pub fn scale_damage(game: &mut Game, data: &Archives, gobj: GObjId, mult: f64) {
+    for i in 0..4 {
+        let hit = &item(game, gobj).x5D4_hitboxes[i].hit;
+        if hit.state != hitcapsule::DISABLED {
+            let d = crate::ppc::cvt_fp2unsigned(fp::fmuls(reg(hit.damage), mult));
+            super::coll::set_hit_damage(game, data, gobj, i, d);
+        }
+    }
 }

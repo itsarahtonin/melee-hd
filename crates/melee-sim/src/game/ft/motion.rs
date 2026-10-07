@@ -194,11 +194,10 @@ impl Running<'_> {
 
     /// Clears the fighter's hitboxes, `ftColl_8007AFF8`.
     #[doc(alias = "ftColl_8007AFF8")]
-    #[doc(alias = "lbColl_80008428")]
     pub(super) fn clear_hitboxes(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
         for h in &mut fp.x914 {
-            h.state = 0;
+            crate::lb::hitcapsule::disable(h);
         }
         fp.x2219_b3 = false;
     }
@@ -391,7 +390,7 @@ impl Running<'_> {
         r.x207C.x = 0.0;
         r.x207C.y = 6;
         r.x10[0] = 0;
-        r.x10[1] &= !0x1F;
+        r.x10[1] &= 0x07;
         r.x2074_vec.x = fp::fctiwz(reg(fp.dmg.x1830_percent));
         let bits = [
             (0x40, fp.is_metal),

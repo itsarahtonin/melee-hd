@@ -43,6 +43,18 @@ ROOTS = [
     "BoneDynamicsDesc",
     # The element of an item's dynamic bones (`ItemDynamicBones`, hand-written).
     "Item_DynamicBones",
+    "db_ItemAndPokemonMenu_t",
+    "itCapsule_ItemVars",
+    "itHeart_ItemVars",
+    "itTomato_ItemVars",
+    "itBox_ItemVars",
+    "itTaru_ItemVars",
+    "itKusudama_ItemVars",
+    "itBombHei_ItemVars",
+    "itGShell_ItemVars",
+    "itRShell_ItemVars",
+    "itSword_ItemVars",
+    "PokemonSelectionState",
 ]
 
 # Handles for pointers to runtime objects, by the pointee's C name.

@@ -395,3 +395,18 @@ pub fn quake_list_tick(game: &mut Game) {
     // No source adds to the total: nothing blows.
     game.gr.wind_level = if game.gr.wind_level > 0 { -1 } else { 0 };
 }
+
+/// How often items appear on stage `stkind`, `Ground_801C2AE8`: the stage parameters' and its
+/// entry's percentages, multiplied, in a register.
+#[doc(alias = "Ground_801C2AE8")]
+pub fn item_freq_scale(game: &Game, data: &Archives, stkind: i32) -> f64 {
+    let p = game.gr.param.as_ref().expect("stage_info.param is null");
+    let pct = |v: i16| fp::fmuls(f64::from(0.01_f32), fp::frsp(f64::from(v)));
+    for i in 0..p.stage_param_count.max(0) as u32 {
+        let e = p.stage_params.expect("no stage parameters").at(0x64 * i);
+        if data.u32(e) as i32 == stkind {
+            return fp::fmuls(pct(p.x68), pct(data.u16(e.at(0x18)) as i16));
+        }
+    }
+    panic!("stage {stkind} has no stage parameters (ground.c:2343)")
+}
