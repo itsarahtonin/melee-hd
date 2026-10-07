@@ -1704,3 +1704,4 @@ ftPe_8011BA54	leaf-check ftcommon: reached from the held callbacks it serves in 
 ftPe_8011BAD8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
 grCorneria_801E2CE8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
 ftWalkCommon_800DFCA4	leaf-check ftcommon_entries: ftCo_Walk_Enter, run directly and compared clean, always enters the walk through it
+ftCo_Damage_SetMv8FromKbThreshold	leaf-check ftcommon_entries: run directly from saved fighter states, and from ftCo_DamageFly_Anim with the knockback smoke's timer running out, compared clean

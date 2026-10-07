@@ -76,7 +76,7 @@ fn f1(call: &Call, n: usize) -> f32 {
 /// Changes every other call's input: stick and C-stick (flicked from the center), buttons,
 /// the analog trigger and the input timers.
 fn vary_input(call: &mut Call, i: usize, fp: u32) {
-    if i % 2 == 0 {
+    if i.is_multiple_of(2) {
         return;
     }
     let k = i / 2;
@@ -99,7 +99,11 @@ fn vary_input(call: &mut Call, i: usize, fp: u32) {
     poke_f32(call, fp + 0x628, 0.0);
     poke_f32(call, fp + 0x62C, 0.0);
     let (cx, cy) = sticks[(k * 7 + 3) % sticks.len()];
-    let (cx, cy) = if k % 3 == 0 { (0.0, 0.0) } else { (cx, cy) };
+    let (cx, cy) = if k.is_multiple_of(3) {
+        (0.0, 0.0)
+    } else {
+        (cx, cy)
+    };
     poke_f32(call, fp + 0x638, cx);
     poke_f32(call, fp + 0x63C, cy);
     poke_f32(call, fp + 0x640, 0.0);

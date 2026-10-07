@@ -155,12 +155,8 @@ impl Running<'_> {
             rad = fp::fadds(rad, reg(6.2831855f32));
         }
         let mut deg = fp::fmuls(reg(57.29578f32), rad);
-        if deg < 0.0 {
-            deg = 0.0;
-        }
-        if deg > 359.0 {
-            deg = 359.0;
-        }
+        // NaN stays as the original's two compares leave it.
+        deg = deg.clamp(0.0, 359.0);
         let guard = fp::fsubs(reg(fp.mv_f32(GUARD_X8)), 10.0);
         let mut delta = fp::fsubs(deg, guard);
         if delta > 180.0 {
