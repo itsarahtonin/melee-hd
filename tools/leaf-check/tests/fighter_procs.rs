@@ -4,8 +4,8 @@
 //! (`Fighter_procCamera`) and the fighters' light (`ftCo_8009F480`). Each call runs on both
 //! sides and the whole state (the fighters with their hitboxes, hurtboxes and damage results, the
 //! items, the player blocks and their statistics, the audio driver) is compared afterwards, with the calls
-//! into the effects (`efSync_Spawn`), the attack statistics (`pl_80038144`) and the rumble
-//! (`lb_80014574`), which no port covers, stood in for on both sides and compared by their
+//! into the effects (`efSync_Spawn`, `efLib_PauseAll`) and the attack statistics
+//! (`pl_80038144`), which no port covers, stood in for on both sides and compared by their
 //! arguments.
 //!
 //! Real calls rarely land a hit, so each one also runs again with the other fighter's first
@@ -39,7 +39,7 @@ use melee_sim::game::code::{EF_PAUSE_ALL, Val, stubs};
 use melee_sim::game::ft::attack::{EFSYNC_SPAWN, PL_80038144, proc_attack_coll};
 use melee_sim::game::ft::camera::proc_camera;
 use melee_sim::game::ft::create_model::light_proc;
-use melee_sim::game::ft::resolve::{LB_80014574, proc_coll_resolve};
+use melee_sim::game::ft::resolve::proc_coll_resolve;
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::Ctx;
@@ -80,10 +80,6 @@ fn stand_ins(ctx: &Ctx) {
     });
     ctx.register(EF_PAUSE_ALL, |ctx| {
         THEIRS.with(|t| t.borrow_mut().push((EF_PAUSE_ALL, vec![ctx.regs.r(3)])));
-    });
-    ctx.register(LB_80014574, |ctx| {
-        let args = (3..7).map(|r| ctx.regs.r(r)).collect();
-        THEIRS.with(|t| t.borrow_mut().push((LB_80014574, args)));
     });
 }
 
@@ -233,7 +229,6 @@ fn run_one(
     stubs::clear();
     stubs::set(EFSYNC_SPAWN, Val::None);
     stubs::set(PL_80038144, Val::None);
-    stubs::set(LB_80014574, Val::None);
     stubs::set(EF_PAUSE_ALL, Val::None);
     let run = catch_unwind(AssertUnwindSafe(|| {
         let mut r = Running {
@@ -621,6 +616,10 @@ fn give_result(call: &mut Call, i: usize) {
             poke_f32(call, fp + 0x192C, [-1.0, 1.0][pick.next(2) as usize]);
         }
         _ => {
+            // A sound queued for after hitlag (`dmg.x1908`), played with none.
+            if pick.next(2) == 0 {
+                poke_u32(call, fp + 0x1908, [0x82, 0x11F][pick.next(2) as usize]);
+            }
             if pick.next(2) == 0 {
                 poke_bit(call, fp + 0x221A, 0, true);
             } else {

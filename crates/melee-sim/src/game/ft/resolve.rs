@@ -10,15 +10,18 @@
 
 use gekko_fp as fp;
 
-use super::super::code::{self, Val, run_fighter_cb, unported_call};
+use super::super::code::{run_fighter_cb, unported_call};
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::lb::joint::world_position;
 
-/// `lb_80014574`: queues a rumble on a controller, the rumble's seam.
-pub const LB_80014574: u32 = 0x8001_4574;
+/// The characters with sword attributes: Link, Marth, Young Link and Roy.
+const KIND_LINK: i32 = 6;
+const KIND_MARS: i32 = 18;
+const KIND_CLINK: i32 = 20;
+const KIND_EMBLEM: i32 = 26;
 
 /// `ftCo_MS_Squat` and the state after it (crouching), which shortens hitlag.
 const MS_SQUAT: u32 = 39;
@@ -66,7 +69,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         fp.dmg.x189C_unk_num_frames = mem(fp::fsubs(reg(fp.dmg.x189C_unk_num_frames), 1.0));
         if reg(fp.dmg.x189C_unk_num_frames) <= 0.0 && reg(fp.dmg.kb_applied) == 0.0 {
             fp.dmg.x189C_unk_num_frames = 0.0;
-            g.land_tip(gobj);
+            unported_call("ftColl_8007BE3C (a delayed tip's damage)");
         }
     }
     let fp = &g.game.fighters[f.0];
@@ -95,7 +98,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         let fp = &g.game.fighters[f.0];
         strength = fp.dmg.x1914;
         if fp.x2070[3] == 0x46 {
-            g.rumble(f, 0xE, 0);
+            g.start_rumble(f, 0xE, 0);
         } else {
             g.hit_rumble(f, strength);
         }
@@ -204,53 +207,6 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
 }
 
 impl Running<'_> {
-    /// A delayed tip's damage lands, `ftColl_8007BE3C`: its damage counts (armor first), its
-    /// attacker records the hit, and its effect spawns.
-    #[doc(alias = "ftColl_8007BE3C")]
-    fn land_tip(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        if !self.take_damage_temp(f) {
-            return;
-        }
-        let fp = &self.game.fighters[f.0];
-        let (source, dmg) = (fp.dmg.x1894, fp.dmg.x1898);
-        match source.map(|g| self.game.world.gobjs[g.0].classifier) {
-            Some(4) => self.record_fighter_hit(source.unwrap(), gobj, reg(dmg)),
-            Some(6) => unported_call("ftColl_80078998 (an item's delayed tip)"),
-            _ => {}
-        }
-        let fp = &self.game.fighters[f.0];
-        let d = &fp.dmg;
-        let effect = super::attack::hit_effect_id(d.x188c as u32);
-        let (pos, severity, kb) = (d.x1880, d.x1890 as u32, d.x187c);
-        let dmg = crate::ppc::cvt_fp2unsigned(reg(d.x1898));
-        self.hit_effect(f, effect, pos, severity, dmg, reg(kb));
-    }
-
-    /// Adds the held-back damage (`dmg.x1898`) to the frame's, through any armor (`x1834`),
-    /// `ftColl_80076640`; false while the armor holds.
-    #[doc(alias = "ftColl_80076640")]
-    fn take_damage_temp(&mut self, f: FighterId) -> bool {
-        let fp = &mut self.game.fighters[f.0];
-        let whole = super::attack::whole_damage(reg(fp.dmg.x1898));
-        if fp.x221C_b4 {
-            fp.dmg.x1834 = mem(fp::fsubs(reg(fp.dmg.x1834), reg(fp.dmg.x1898)));
-            if fp.dmg.x1834 < 0.0 {
-                fp.dmg.x1898 = mem(fp::fneg(reg(fp.dmg.x1834)));
-                fp.x221C_b4 = false;
-            }
-        }
-        if fp.x221C_b4 {
-            return false;
-        }
-        assert!(!(fp.dmg.x1898 > 500.0), "attack power over 500!!");
-        fp.dmg.x1838_percentTemp = mem(fp::fadds(reg(fp.dmg.x1838_percentTemp), reg(fp.dmg.x1898)));
-        if whole > fp.dmg.x183C_applied {
-            fp.dmg.x183C_applied = whole;
-        }
-        true
-    }
-
     /// Hitlag frames for a result of `strength`, `ftCommon_CalcHitlag`: scaled by the
     /// electric multiplier, and shorter crouching.
     #[doc(alias = "ftCommon_CalcHitlag")]
@@ -323,12 +279,49 @@ impl Running<'_> {
         fp.x98_atk_shield_kb.y = mem(fp::fmuls(fp::fneg(reg(n.x)), v));
     }
 
-    /// A sword's or item's afterimage follows it (`ftCo_800C2FD8`): nothing without one; an
-    /// afterimage isn't ported.
+    /// A sword's afterimage follows it, `ftCo_800C2FD8`: while one is on (`x2100` not -1),
+    /// each frame records where the sword's joint is and which way its blade points (its
+    /// matrix's first axis), in a ring of three for the trail's drawing, with the trail's two
+    /// widths from the character's sword attributes. A held sword item's isn't ported.
     #[doc(alias = "ftCo_800C2FD8")]
     fn afterimage(&mut self, f: FighterId) {
-        if self.game.fighters[f.0].x2100 != -1 {
-            unported_call("ftCo_800C2FD8 (an afterimage)");
+        let fp = &self.game.fighters[f.0];
+        if fp.x2100 == -1 {
+            return;
+        }
+        if fp.x2101_bits_8 {
+            unported_call("ftCo_800C2FD8 (a held item's afterimage)");
+        }
+        // The sword's attributes in the character's (Link's and Young Link's at x64, Marth's
+        // and Roy's at x78); any other character's are whatever the stack held.
+        let base = match fp.kind {
+            KIND_LINK | KIND_CLINK => 0x64,
+            KIND_MARS | KIND_EMBLEM => 0x78,
+            k => panic!("ftCo_800C2FD8: character {k} has no sword attributes to read"),
+        };
+        let attrs = &self.game.fighter_attrs[fp.dat_attrs.expect("a fighter without attributes").0];
+        let word = |o: usize| u32::from_be_bytes(attrs[base + o..base + o + 4].try_into().unwrap());
+        let (bone, width0, width1) = (
+            word(0x14),
+            f32::from_bits(word(0x18)),
+            f32::from_bits(word(0x1C)),
+        );
+        let parts = fp.parts.expect("a fighter without parts");
+        let joint = self.game.fighter_parts[parts.0][bone as usize].joint;
+        let at = usize::from(fp.x2101_bits_0to6);
+        let fp = &mut self.game.fighters[f.0];
+        fp.x20F8 = width0;
+        fp.x20FC = width1;
+        let pos = world_position(&mut self.game.objs, self.data, joint, None);
+        let m = self.game.objs.jobjs[joint.expect("the sword's joint")]
+            .mtx
+            .m;
+        let fp = &mut self.game.fighters[f.0];
+        fp.x20B0[at].x0 = pos;
+        fp.x20B0[at].xC = crate::vec::Vec3::new(m[0][0], m[1][0], m[2][0]);
+        fp.x2101_bits_0to6 = if at == 2 { 0 } else { at as u8 + 1 };
+        if fp.x2100 < 3 {
+            fp.x2100 += 1;
         }
     }
 
@@ -386,8 +379,8 @@ impl Running<'_> {
         h.skip_update_pos = true;
     }
 
-    /// Rumbles for a hit the fighter dealt, by its strength, `ftCommon_8007EE0C`.
-    #[doc(alias = "ftCommon_8007EE0C")]
+    /// Rumbles for a hit the fighter dealt, by its strength (`ftCommon_8007EE0C`): a
+    /// presentation event, which the checks don't see.
     fn hit_rumble(&mut self, f: FighterId, strength: i32) {
         let c = self.common();
         let t = fp::fmadds(
@@ -399,30 +392,6 @@ impl Running<'_> {
         if frames < 1 {
             return;
         }
-        self.rumble(f, 10, frames);
-    }
-
-    /// Rumbles the fighter's controller when its player has rumble on, `ftCommon_8007EBAC`
-    /// (`lb_80014574`, the seam).
-    #[doc(alias = "ftCommon_8007EBAC")]
-    fn rumble(&mut self, f: FighterId, kind: i32, frames: i32) {
-        let fp = &self.game.fighters[f.0];
-        let (slot, sub, port) = (
-            i32::from(fp.player_idx),
-            i32::from(fp.is_sub_fighter),
-            i32::from(fp.pad_port),
-        );
-        if self.game.rumble_enabled(slot, sub) && !fp.is_sleeping && !fp.stamina_dead {
-            code::call(
-                self,
-                LB_80014574,
-                &[
-                    Val::Int(port),
-                    Val::Int(kind.wrapping_add(2)),
-                    Val::Int(kind),
-                    Val::Int(frames),
-                ],
-            );
-        }
+        self.start_rumble(f, 10, frames as u32);
     }
 }

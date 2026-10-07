@@ -641,7 +641,7 @@ impl Running<'_> {
 
     /// Starts the fighter's rumble of kind `kind` for `frames` (0: the pattern's own) if its
     /// controller rumbles and the fighter is awake and alive, `ftCommon_8007EBAC`.
-    fn start_rumble(&mut self, f: FighterId, kind: u32, frames: u32) {
+    pub(super) fn start_rumble(&mut self, f: FighterId, kind: u32, frames: u32) {
         let fp = &self.game.fighters[f.0];
         if self
             .game
