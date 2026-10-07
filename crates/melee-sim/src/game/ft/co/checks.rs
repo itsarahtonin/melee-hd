@@ -417,8 +417,8 @@ impl Running<'_> {
     /// `ftCo_80091B9C`: the shield's `x24` from `ftCommonData` x68.
     #[doc(alias = "ftCo_80091B9C")]
     pub fn guard_set_x24(&mut self, gobj: GObjId) {
-        let v = self.common().u32(0x68);
-        self.game.fighter_mut(gobj).set_mv_i32(0x24, v as i32);
+        let v = gekko_fp::fctiwz(reg(self.common().f32(0x68)));
+        self.game.fighter_mut(gobj).set_mv_i32(0x24, v);
     }
 
     /// A spot dodge, `ftCo_80099794`: a shoulder held with the stick down (`inlineB0`).

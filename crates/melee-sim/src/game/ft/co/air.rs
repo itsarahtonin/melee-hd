@@ -318,14 +318,15 @@ impl Running<'_> {
         );
     }
 
-    /// Landing, `ftCo_Landing_Enter`: `allow_interrupt` lets the landing be cancelled once its
+    /// Landing, `ftCo_Landing_Enter`: `allow_interrupt` (a `bool` the original passes through
+    /// as whatever word it was given) lets the landing be cancelled once its
     /// lag passes; characters reset their once-per-airtime moves.
     #[doc(alias = "ftCo_Landing_Enter")]
     pub fn enter_landing(
         &mut self,
         gobj: GObjId,
         msid: i32,
-        allow_interrupt: bool,
+        allow_interrupt: i32,
         flags: u32,
         anim_start: f32,
         rate: f32,
@@ -333,7 +334,7 @@ impl Running<'_> {
         self.land(gobj);
         self.change_motion_state(gobj, msid, flags, anim_start, rate, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.set_mv_i32(LANDING_ALLOW_INTERRUPT, i32::from(allow_interrupt));
+        fp.set_mv_i32(LANDING_ALLOW_INTERRUPT, allow_interrupt);
         match fp.kind {
             KIND_MARIO | KIND_DR_MARIO => {
                 fp.set_u_i32(0x8, 0);
@@ -341,7 +342,7 @@ impl Running<'_> {
             }
             KIND_PEACH => {
                 fp.set_u_i32(0x14, 0);
-                if allow_interrupt {
+                if allow_interrupt == 1 {
                     self.call_kind_fn(FT_PE_8011D598, gobj);
                 }
             }
@@ -364,7 +365,7 @@ impl Running<'_> {
         if self.holding_hammer(gobj) {
             unported_call("ftCo_HammerLanding_Enter");
         }
-        self.enter_landing(gobj, ms::LANDING, true, 0, 0.0, 1.0);
+        self.enter_landing(gobj, ms::LANDING, 1, 0, 0.0, 1.0);
     }
 
     /// Landing helpless, `ftCo_LandingFallSpecial_Enter_Basic`.
@@ -373,7 +374,7 @@ impl Running<'_> {
         if self.holding_hammer(gobj) {
             unported_call("ftCo_HammerLanding_Enter");
         }
-        self.enter_landing(gobj, ms::LANDING_FALL_SPECIAL, false, 0, 0.0, 1.0);
+        self.enter_landing(gobj, ms::LANDING_FALL_SPECIAL, 0, 0, 0.0, 1.0);
     }
 
     /// Landing helpless over `landing_lag` frames, `ftCo_LandingFallSpecial_Enter`.
@@ -381,7 +382,7 @@ impl Running<'_> {
     pub fn enter_landing_fall_special(
         &mut self,
         gobj: GObjId,
-        allow_interrupt: bool,
+        allow_interrupt: i32,
         landing_lag: f32,
     ) {
         if self.holding_hammer(gobj) {
@@ -473,7 +474,7 @@ impl Running<'_> {
         gobj: GObjId,
         full_drift: i32,
         land_helpless: i32,
-        allow_interrupt: bool,
+        allow_interrupt: i32,
         drift: f32,
         landing_lag: f32,
         blend: f32,
@@ -491,7 +492,7 @@ impl Running<'_> {
         fp.set_mv_i32(FALL_SPECIAL_XC, full_drift);
         fp.set_mv_i32(FALL_SPECIAL_X10, land_helpless);
         fp.set_mv_f32(FALL_SPECIAL_LANDING_LAG, reg(landing_lag));
-        fp.set_mv_i32(FALL_SPECIAL_ALLOW_INTERRUPT, i32::from(allow_interrupt));
+        fp.set_mv_i32(FALL_SPECIAL_ALLOW_INTERRUPT, allow_interrupt);
         fp.set_mv_i32(FALL_SPECIAL_X0, 26);
         fp.set_mv_f32(FALL_SPECIAL_X4, 0.0);
         if fp.ground_or_air == super::super::common::GA_GROUND {
@@ -509,7 +510,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800968C8")]
     pub fn enter_fall_special_basic(&mut self, gobj: GObjId) {
         let lag = self.game.fighter(gobj).x2EC;
-        self.enter_fall_special(gobj, 1, 0, true, 1.0, lag, 0.0, true);
+        self.enter_fall_special(gobj, 1, 0, 1, 1.0, lag, 0.0, true);
     }
 
     /// `ftCo_FallSpecial_Anim`: the helpless fall leans as the fall does.
@@ -587,7 +588,7 @@ impl Running<'_> {
         let threshold = self.landing_threshold(f);
         let fp = self.game.fighter(gobj);
         if fp.mv_i32(FALL_SPECIAL_X10) != 0 || reg(fp.self_vel.y) < threshold {
-            let allow = fp.mv_i32(FALL_SPECIAL_ALLOW_INTERRUPT) != 0;
+            let allow = fp.mv_i32(FALL_SPECIAL_ALLOW_INTERRUPT);
             let lag = fp.mv_f32(FALL_SPECIAL_LANDING_LAG);
             self.enter_landing_fall_special(gobj, allow, lag);
         } else {
@@ -684,7 +685,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80099D70")]
     pub fn escape_air_land(&mut self, gobj: GObjId) {
         let lag = self.common().f32(0x344);
-        self.enter_landing_fall_special(gobj, false, lag);
+        self.enter_landing_fall_special(gobj, 0, lag);
     }
 
     /// `ftCo_EscapeAir_Anim`: helpless once the dodge plays out.
@@ -693,7 +694,7 @@ impl Running<'_> {
         if !self.anim_frames_remaining(gobj) {
             let c = self.common();
             let (drift, lag) = (c.f32(0x340), c.f32(0x344));
-            self.enter_fall_special(gobj, 1, 1, false, drift, lag, 0.0, true);
+            self.enter_fall_special(gobj, 1, 1, 0, drift, lag, 0.0, true);
         }
     }
 }

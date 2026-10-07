@@ -302,4 +302,4 @@ impl Running<'_> {
 }
 
 /// `FtPart_XRotN`.
-const X_ROT_N: i32 = 3;
+const X_ROT_N: i32 = 2;

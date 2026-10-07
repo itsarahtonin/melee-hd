@@ -203,10 +203,14 @@ impl Running<'_> {
         }
     }
 
-    /// `ftCo_StopCeil_Coll`: `ft_80082D40`.
+    /// `ftCo_StopCeil_Coll`: `ft_80083464` through platforms, landing normally.
     #[doc(alias = "ftCo_StopCeil_Coll")]
     pub fn co_stop_ceil_coll(&mut self, gobj: GObjId) {
-        self.air_coll_unlocked_land(gobj);
+        self.air_coll_filtered_full_unlocked(
+            gobj,
+            super::super::coll::PLATFORM_FILTER,
+            |g, gobj| g.land_normally(gobj),
+        );
     }
 
     /// Catching a ledge, `ftCliffCommon_80081370`: facing it, the fighter hangs from it,
@@ -315,12 +319,17 @@ impl Running<'_> {
         // `Ft_MF_SkipNametagVis`.
         self.change_motion_state(gobj, ms::CLIFF_WAIT, 1 << 15, 0.0, 1.0, 0.0, None);
         let c = self.common();
-        let (pct, low, high, intangible) = (c.f32(0x488), c.f32(0x48C), c.f32(0x490), c.i32(0x49C));
+        let (pct, low, high, intangible) = (
+            f64::from(c.i32(0x488)),
+            c.f32(0x48C),
+            c.f32(0x490),
+            c.i32(0x49C),
+        );
         let fp = self.game.fighter_mut(gobj);
         fp.x1A6A = 0x1FF;
         fp.x221D_b7 = true;
         fp.set_mv_i32(CLIFF_X8, 0);
-        let x4 = if fp.dmg.x1830_percent < pct {
+        let x4 = if reg(fp.dmg.x1830_percent) < pct {
             low
         } else {
             high

@@ -203,10 +203,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80099F1C")]
     pub fn pass_input(&self, gobj: GObjId) -> bool {
         let c = self.common();
-        let (t, window) = (fp::fneg(reg(c.f32(0x464))), c.i32(0x468));
+        let (t, window) = (fp::fneg(reg(c.f32(0x464))), reg(c.f32(0x468)));
         let fp = self.game.fighter(gobj);
         reg(fp.input.lstick[0].y) <= t
-            && i32::from(fp.active_timer.lstick.y) < window
+            && f64::from(fp.active_timer.lstick.y) < window
             && self.on_platform(gobj)
     }
 

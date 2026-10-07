@@ -46,10 +46,23 @@ impl Running<'_> {
         );
     }
 
-    /// Stops one of the fighter's tracks: `ft_80088770`, `ft_800887CC`.
+    /// Stops one of the fighter's voice tracks and forgets its sound: `ft_80088770` (`x2144`),
+    /// `ft_800887CC` (`x2148`).
+    #[doc(alias = "ft_80088770")]
+    #[doc(alias = "ft_800887CC")]
     pub(super) fn stop_track(&mut self, gobj: GObjId, func: u32) {
         let f = self.game.fighter_id(gobj);
-        code::call(self, func, &[Val::Fighter(f)]);
+        match func {
+            FT_80088770 => {
+                self.key_off(f, 0x1E);
+                self.game.fighters[f.0].x2144 = -1;
+            }
+            FT_800887CC => {
+                self.key_off(f, 0x2A);
+                self.game.fighters[f.0].x2148 = -1;
+            }
+            _ => unreachable!("not a track stop: {func:#x}"),
+        }
     }
 
     /// The character's sound at `off` in its sound table (`ftData::x4C_sfx`).

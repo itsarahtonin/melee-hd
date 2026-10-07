@@ -19,8 +19,8 @@ impl Running<'_> {
     /// A ledge option's state (`ftCo_Cliff_EnterState`), quick under `ftCommonData` x488
     /// percent, else slow.
     fn enter_cliff_state(&mut self, gobj: GObjId, quick: i32, slow: i32) {
-        let pct = self.common().f32(0x488);
-        let msid = if self.game.fighter(gobj).dmg.x1830_percent < pct {
+        let pct = f64::from(self.common().i32(0x488));
+        let msid = if reg(self.game.fighter(gobj).dmg.x1830_percent) < pct {
             quick
         } else {
             slow

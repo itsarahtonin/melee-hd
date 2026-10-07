@@ -585,11 +585,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_AttackHi4_CheckInput")]
     pub fn attack_hi4_check(&mut self, gobj: GObjId) -> bool {
         let c = self.common();
-        let (t, window) = (c.f32(0xCC), c.i32(0xD0));
+        let (t, window) = (c.f32(0xCC), reg(c.f32(0xD0)));
         let fp = self.game.fighter(gobj);
         let stick = fp.input.pressed_buttons & PAD_A != 0
             && fp.input.lstick[0].y >= t
-            && i32::from(fp.active_timer.lstick.y) < window;
+            && f64::from(fp.active_timer.lstick.y) < window;
         if !stick && !self.cstick_up_flick(gobj) {
             return false;
         }
@@ -629,11 +629,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_AttackLw4_CheckInput")]
     pub fn attack_lw4_check(&mut self, gobj: GObjId) -> bool {
         let c = self.common();
-        let (t, window) = (c.f32(0xD4), c.i32(0xD8));
+        let (t, window) = (c.f32(0xD4), reg(c.f32(0xD8)));
         let fp = self.game.fighter(gobj);
         let stick = fp.input.pressed_buttons & PAD_A != 0
             && fp.input.lstick[0].y <= t
-            && i32::from(fp.active_timer.lstick.y) < window;
+            && f64::from(fp.active_timer.lstick.y) < window;
         if !stick && !self.cstick_down_flick(gobj) {
             return false;
         }
@@ -681,8 +681,8 @@ impl Running<'_> {
     /// `ftCo_AttackDash_SetMv0`: the dash attack's grab window, `ftCommonData` x68.
     #[doc(alias = "ftCo_AttackDash_SetMv0")]
     pub fn attack_dash_set_mv0(&mut self, gobj: GObjId) {
-        let v = self.common().u32(0x68);
-        self.game.fighter_mut(gobj).set_mv_i32(ATTACK_X0, v as i32);
+        let v = gekko_fp::fctiwz(reg(self.common().f32(0x68)));
+        self.game.fighter_mut(gobj).set_mv_i32(ATTACK_X0, v);
     }
 
     /// `ftCo_AttackDash_IASA`: a grab out of it (`ftCo_800D8AE0`), then anything standing

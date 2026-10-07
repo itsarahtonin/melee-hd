@@ -10,7 +10,7 @@ use crate::hsd::gobj::GObjId;
 use crate::math::{self, sqrt_reg};
 
 /// `FtPart_XRotN`.
-const X_ROT_N: i32 = 3;
+const X_ROT_N: i32 = 2;
 
 /// `ftCo_MS_DamageFlyRoll`.
 const MS_DAMAGE_FLY_ROLL: i32 = 0x5B;

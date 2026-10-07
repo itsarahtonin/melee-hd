@@ -27,7 +27,7 @@ const FT_CO_8008DCE0: u32 = 0x8008_DCE0;
 /// `ftCo_DownBound_SfxIds`.
 const DOWN_BOUND_SFX: [i32; 4] = [9, 10, 11, 12];
 /// `FtPart_HipN`.
-const HIP_N: i32 = 2;
+const HIP_N: i32 = 4;
 /// `QuakeKind_Large`.
 const QUAKE_LARGE: i32 = 4;
 
@@ -194,7 +194,8 @@ impl Running<'_> {
         fp.x67D = 255;
         fp.x1A6A = 511;
         Self::grounded_knockback_if_landed(fp, max);
-        self.game.fighter_mut(gobj).set_mv_i32(DOWN_X4, 0);
+        // `downspot.x4`, a byte.
+        self.game.fighter_mut(gobj).mv[DOWN_X4] = 0;
     }
 
     /// Ground knockback from the air knockback on landing, `ftCommon_SetGroundedKnockbackIfLanded`:
@@ -246,8 +247,8 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let v = fp.x8c_kb_vel.x;
         let flags = fp.coll_data.env_flags;
-        if (reg(v) < fp::fneg(reg(t)) && flags & RIGHT_WALL_HUG != 0 && fp.mv_i32(DOWN_X4) != 1)
-            || (v > t && flags & LEFT_WALL_HUG != 0 && fp.mv_i32(DOWN_X4) != 2)
+        if (reg(v) < fp::fneg(reg(t)) && flags & RIGHT_WALL_HUG != 0 && fp.mv[DOWN_X4] != 1)
+            || (v > t && flags & LEFT_WALL_HUG != 0 && fp.mv[DOWN_X4] != 2)
         {
             unported_call("fn_800C7DC4");
         }
@@ -363,10 +364,10 @@ impl Running<'_> {
     /// `ftCommonData` x24C frames (`x67C`, `x67D`), or the C-stick up.
     #[doc(alias = "ftCo_80098400")]
     pub fn down_attack_buffered_check(&mut self, gobj: GObjId) -> bool {
-        let window = self.common().u32(0x24C);
+        let window = reg(self.common().f32(0x24C));
         let fp = self.game.fighter(gobj);
-        if u32::from(fp.x67C) < window
-            || u32::from(fp.x67D) < window
+        if f64::from(fp.x67C) < window
+            || f64::from(fp.x67D) < window
             || self.cstick_up_flick_down(gobj)
         {
             let msid = if fp.motion_id == ms::DOWN_BOUND_U {
@@ -433,7 +434,7 @@ impl Running<'_> {
     /// stamina) the fighter stays down (`ftCo_8009F184`).
     #[doc(alias = "ftCo_8009F0F0")]
     pub fn down_damage_check(&mut self, gobj: GObjId) -> bool {
-        let x428 = self.common().f32(0x428);
+        let x428 = f64::from(self.common().i32(0x428));
         let fp = self.game.fighter(gobj);
         let m = fp.motion_id;
         let down = [
@@ -444,7 +445,7 @@ impl Running<'_> {
             ms::DOWN_WAIT_D,
             ms::DOWN_DAMAGE_D,
         ];
-        if down.contains(&m) && (fp.stamina_dead || fp.dmg.x1838_percentTemp < x428) {
+        if down.contains(&m) && (fp.stamina_dead || reg(fp.dmg.x1838_percentTemp) < x428) {
             // `ftCo_8009F184`.
             let msid = if m == ms::DOWN_WAIT_U {
                 ms::DOWN_DAMAGE_U
@@ -469,7 +470,7 @@ impl Running<'_> {
     pub fn co_down_damage_anim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if !fp.stamina_dead {
-            fp.set_mv_i32(DOWN_X0, fp.mv_i32(DOWN_X0).wrapping_sub(1));
+            fp.set_mv_f32(DOWN_X0, fp::fsubs(reg(fp.mv_f32(DOWN_X0)), 1.0));
         }
         if self.anim_frames_remaining(gobj) {
             return;
@@ -481,7 +482,7 @@ impl Running<'_> {
             } else {
                 self.enter_fall(gobj);
             }
-        } else if fp.mv_i32(DOWN_X0) <= 0 {
+        } else if fp.mv_f32(DOWN_X0) <= 0.0 {
             let msid = if fp.motion_id == ms::DOWN_DAMAGE_U {
                 ms::DOWN_STAND_U
             } else {
@@ -532,9 +533,9 @@ impl Running<'_> {
             return false;
         }
         let c = self.common();
-        let (window, again) = (c.u32(0x250), c.u32(0x1C));
+        let (window, again) = (reg(c.f32(0x250)), c.u32(0x1C));
         let fp = self.game.fighter(gobj);
-        u32::from(fp.x680) < window && u32::from(fp.x684) >= again
+        f64::from(fp.x680) < window && u32::from(fp.x684) >= again
     }
 
     /// A tech in place on landing, `ftCo_8009872C`.
