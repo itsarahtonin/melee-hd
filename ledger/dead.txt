@@ -1,2 +1,4 @@
 # Functions that provably never run in NTSC 1.02, with the evidence.
 # One per line: NAME<TAB>evidence
+SPEC0_MakeStatus	MakeStatus starts as SPEC2_MakeStatus; PADSetSpec runs from gmMain_8015FD24 with 5 and from PADInit only when __PADSpec, the disc's bi2.bin pad spec (0 on NTSC 1.02), is nonzero.
+SPEC1_MakeStatus	MakeStatus starts as SPEC2_MakeStatus; PADSetSpec runs from gmMain_8015FD24 with 5 and from PADInit only when __PADSpec, the disc's bi2.bin pad spec (0 on NTSC 1.02), is nonzero.

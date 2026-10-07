@@ -7,6 +7,7 @@
 
 mod fpu;
 pub mod hsd;
+pub mod input;
 pub mod lb;
 pub mod math;
 pub mod mtx;
