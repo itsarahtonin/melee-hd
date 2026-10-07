@@ -845,7 +845,7 @@ impl Mem {
         let lib = self.read::<4>(PAD_LIB)?;
         let latest = (i32::from(lib[1]) + 4) % 5;
         let raw = self.read::<12>(RAW_QUEUE + 0x30 * latest as u32 + 12 * 2)?;
-        let poll = Some(counter_entry(&raw)).filter(|_| self.read::<4>(PAD_LIB) == Some(lib));
+        let poll = (self.read::<4>(PAD_LIB) == Some(lib)).then(|| counter_entry(&raw));
         // A frame that ended while this was read is no sample.
         let seed = self.u32(RANDOM_SEED)?;
         let qread = lib[1];

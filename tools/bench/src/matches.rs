@@ -228,7 +228,7 @@ fn splice(words: &mut [u32], at: usize, data: &[u8]) {
 /// A `C2` code: `words` at `addr`, then the branch back the code handler fills in.
 fn push_c2(s: &mut String, addr: u32, words: &[u32]) {
     let mut body = words.to_vec();
-    if body.len() % 2 == 0 {
+    if body.len().is_multiple_of(2) {
         body.push(0x6000_0000);
     }
     body.push(0);
