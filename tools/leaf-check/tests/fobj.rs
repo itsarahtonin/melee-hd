@@ -10,7 +10,7 @@ use leaf_check::{
 };
 use melee_data::archive::{Archive, Archives, DataRef};
 use melee_data::disc::Disc;
-use melee_sim::hsd::fobj::{self, FObjId, FObjs, Value};
+use melee_sim::hsd::fobj::{self, FObjId, FObjs};
 use melee_sim::hsd::spline;
 use ssbm_rt::{Addr, Ctx, Handle};
 use ssbm_types::fns;
@@ -291,6 +291,9 @@ fn fobjs_match() {
     set_fp_mode(FpMode::Hardware);
     let _ = sym;
     eprintln!("{chains_checked} chains, {frames_checked} frames compared, {stale} stale values");
-    assert!(stale > 0, "no stale values: the stage models' single-key channels weren't reached");
+    assert!(
+        stale > 0,
+        "no stale values: the stage models' single-key channels weren't reached"
+    );
     assert!(chains_checked >= 150, "only {chains_checked} chains");
 }
