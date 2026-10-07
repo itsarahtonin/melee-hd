@@ -54,13 +54,10 @@ mod addr {
     pub const FTKB_SPECIALN_800EED50: u32 = 0x800E_ED50;
     pub const FTCO_800D4FF4: u32 = 0x800D_4FF4;
     pub const IFSTATUS_802F6E1C: u32 = 0x802F_6E1C;
-    pub const FT_80087BEC: u32 = 0x8008_7BEC;
-    pub const FT_80087BC0: u32 = 0x8008_7BC0;
     pub const IFSTATUS_802F6D10: u32 = 0x802F_6D10;
     pub const IFSTATUS_802F69C0: u32 = 0x802F_69C0;
     pub const IFSTATUS_802F6AF8: u32 = 0x802F_6AF8;
     pub const IFSTATUS_802F6C04: u32 = 0x802F_6C04;
-    pub const FTLIB_GET_NAME_TAG_HEIGHT: u32 = 0x8008_6F80;
 }
 
 /// `Player_CheckSlot`: the original asserts a slot is in range.
@@ -1081,19 +1078,19 @@ impl Running<'_> {
     #[doc(alias = "Player_SetPlayerAndEntityCpuLevel")]
     pub fn set_player_cpu_level(&mut self, slot: i32, level: i32) {
         self.game.player_mut(slot).cpu_level = level as u8;
-        self.each_fighter(slot, addr::FT_80087BEC, level);
+        for i in 0..2 {
+            if let Some(g) = self.game.player(slot).entity(i) {
+                self.ft_set_cpu_level(g, level);
+            }
+        }
     }
 
     #[doc(alias = "Player_SetPlayerAndEntityCpuType")]
     pub fn set_player_cpu_type(&mut self, slot: i32, kind: i32) {
         self.game.player_mut(slot).cpu_type = kind as u8;
-        self.each_fighter(slot, addr::FT_80087BC0, kind);
-    }
-
-    fn each_fighter(&mut self, slot: i32, f: u32, arg: i32) {
         for i in 0..2 {
             if let Some(g) = self.game.player(slot).entity(i) {
-                code::call(self, f, &[Val::GObj(Some(g)), Val::Int(arg)]);
+                self.ft_set_cpu_type(g, kind);
             }
         }
     }
@@ -1153,7 +1150,7 @@ impl Running<'_> {
     #[doc(alias = "Player_800360D8")]
     pub fn player_nametag_height(&mut self, slot: i32) -> f64 {
         let g = self.game.player(slot).entity(0);
-        code::call(self, addr::FTLIB_GET_NAME_TAG_HEIGHT, &[Val::GObj(g)]).float()
+        self.ft_name_tag_height(g.expect("ftLib_GetNameTagHeight on no fighter faults"))
     }
 
     /// `Player_800366DC`.

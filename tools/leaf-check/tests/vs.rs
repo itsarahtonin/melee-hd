@@ -226,6 +226,11 @@ impl Fuzz<'_> {
         self.mem[(a - MEM1) as usize]
     }
 
+    fn u32(&self, a: u32) -> u32 {
+        let i = (a - MEM1) as usize;
+        u32::from_be_bytes(self.mem[i..i + 4].try_into().unwrap())
+    }
+
     fn put(&mut self, a: u32, v: u32) {
         let i = (a - MEM1) as usize;
         self.mem[i..i + 4].copy_from_slice(&v.to_be_bytes());
@@ -348,7 +353,6 @@ type Stub = (u32, Ret);
 enum Ret {
     Nothing,
     Int(i32),
-    Float(f32),
     /// A null GObj.
     Null,
 }
@@ -396,7 +400,6 @@ fn their_stub(ctx: &Ctx) {
     let ret = THEIR_STUBS.with(|s| s.borrow().iter().find(|s| s.0 == addr).map(|s| s.1));
     match ret {
         Some(Ret::Int(v)) => ctx.regs.set_r(3, v as u32),
-        Some(Ret::Float(v)) => ctx.regs.set_f(1, leaf_check::arg(v)),
         Some(Ret::Null) => ctx.regs.set_r(3, 0),
         _ => {}
     }
@@ -560,7 +563,6 @@ fn check_runs(
         let ours = match ret {
             Ret::Nothing => melee_sim::game::code::Val::None,
             Ret::Int(v) => melee_sim::game::code::Val::Int(v),
-            Ret::Float(v) => melee_sim::game::code::Val::Float(leaf_check::arg(v)),
             Ret::Null => melee_sim::game::code::Val::GObj(None),
         };
         melee_sim::game::code::stubs::set(addr, ours);
@@ -1758,11 +1760,20 @@ fn player_first_init() {
 
 #[test]
 fn player_nametag_height() {
-    check_calls_stubbed(
+    // With `ftLib_GetNameTagHeight` on the fighter, visible or not.
+    check_calls(
         "fn_8016CFE0",
         4,
-        &[(0x8008_6F80, Ret::Float(12.5))],
-        |f| f.regs.gpr[3] = f.below(2),
+        |f| {
+            f.regs.gpr[3] = f.below(2);
+            let players = sym("player_slots");
+            let g = f.u32(players + 0xE90 * f.regs.gpr[3] + 0xB0);
+            if g != 0 && f.below(2) == 0 {
+                let fp = f.u32(g + 0x2C);
+                let b = f.u8(fp + 0x221E);
+                f.put8(fp + 0x221E, b | 0x80);
+            }
+        },
         |r, a| {
             let h = r.player_nametag_height(a.i(3));
             vec![Out::R3(gekko_fp::stfs(h))]
