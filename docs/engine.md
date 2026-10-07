@@ -66,7 +66,89 @@ The display pass isn't driven yet: efLib's render callback (`ef::render`, the pa
 
 ## Audio
 
-`Game::audio` holds HAL's AX driver (its 96 virtual voices, free and active lists, handle counter and the sound bank's command stream tables), the synth (64 nodes, loaded effects, channel volumes, the volume update list) and the AX library's 64 voices with both copies of each parameter block (the CPU's and the DSP's) and the priority stacks. Without the DSP's mix, the DSP's blocks change only through the frame's sync, so a voice plays until it is keyed off and faded, stolen or dropped for the DSP's budget, exactly as in ssbm-rs's default runs. The sound bank (`smash2.sem`) is game data: an `Archive::raw` the driver reads command streams from by offset. The timeline (`audio::clock`) is part of the state; a state imported from a single captured call has none, and no audio frames run. A match started from its settings doesn't load the sound banks yet: with no bank, the driver starts nothing (the original's `HSD_AudioSFXStartParam` returns -1 the same way). The stream player's buffer refills, the aux effects, sound bank loading and the game's own audio state beyond the banks' load states aren't ported; the stream's frame stops with an unported call if it would act.
+`Game::audio` holds:
+
+- HAL's AX driver: its 96 virtual voices, the free and active lists, the handle counter and the sound bank's command stream tables.
+- The synth: 64 nodes, the loaded effects, the channel volumes, the volume update list and the music stream's state.
+- The AX library's 64 voices, with both copies of each parameter block (the CPU's and the DSP's) and the priority stacks.
+- HAL's device command queue (`audio::devcom`), which the music stream and the game's file loads read through.
+- The game's audio library's own state (`lb::audio::LbAudio`): the banks' load states, the crowd's loops, the queued sounds and the mix settings.
+- The DSP model.
+- The timeline (`audio::clock`).
+
+The sound bank (`smash2.sem`) and the music files are game data: `Archive::raw`s that the driver and the stream read by offset.
+
+**DSP models** (`audio::dsp`). In the silent model the DSP's blocks change only through the frame's sync, so a voice plays until it is keyed off and faded, stolen or dropped for the DSP's budget, as in ssbm-rs's default runs. In the sample-accurate model the DSP also runs each voice on the block list for its five milliseconds, as ssbm-rs's `AX=1` (Dolphin's AX microcode) does:
+
+- the resampler's position, the accelerator's address through ADPCM frames or PCM, looping, and stopping at the end of the samples;
+- the volume envelope and the bus ramps.
+
+What depends on the samples' values is the mix's, and the comparison leaves those words out in that model: the decoder's predictor and history, and the resampler's and buses' last samples. `vs_match::Settings::dsp` carries the model.
+
+**The music stream** runs as in the original. The master clock follows the playing voice through the three boxes, moves the voices' end and loop, and refills the box after the playing one through the device command queue: a disc read into a relay buffer, then on to ARAM. Its samples are the mix's, but the boxes' headers it reads into memory are state. Only in the sample-accurate model do voices advance, so only there does the stream refill.
+
+**The timeline** (`audio::clock`) is ssbm-rs's virtual hardware:
+
+- video fields, the pad sampling alarm, the 5 ms audio DMA and the DSP's answer;
+- disc reads, each finishing 20,250 ticks after its command (ssbm-rs's `DVD_LATENCY`, Slippi's fast disc speed);
+- ARAM transfers, which finish at once and raise their interrupt;
+- the interrupt handlers' costs, and the scene loop's waits and register reads.
+
+Each disc read also sets the disc driver's 10 s timeout alarm, which the read's interrupt cancels. Any event can be taken back before its time (`Clock::cancel`), as on the console: a cancelled or re-set alarm (`set_pad_alarm`, `cancel_pad_alarm`) and a stopped audio DMA (`stop_audio_dma`) leave nothing behind. ssbm-rs before its `ab3cd01` left such events queued, where a read's dead timeout cut a wait short 10 s after every disc read and moved the audio frames after it.
+
+That bug never reached the silent Final Destination and Battlefield timelines the checks use, which start at tick 1500. In the silent model a match makes no disc reads, and the dead events from the loads before tick 0 fell near tick 600. Re-recording them with the fixed ssbm-rs changed only ticks 580 to 602, and their start captures came out identical. It did reach the `AX=1` timeline, whose music refills read the disc every few seconds: its re-recording moved ticks 2855, 5107, 5214, 6608 and 8110.
+
+**Game file loads.** Pokémon Stadium loads each transformation's file during the match.
+
+- *The original's own load* is asynchronous and polled: `grpstadium.c`'s `startLoad` uses `lbFile_80016580` with a callback, and the stage waits for the callback. That is the case `docs/architecture.md` treats as an input.
+- *The replays ssbm-rs plays* (Slippi's codes) load it synchronously: the call returns into the codes' memory, as `lbFile_8001668C`, a request on the device command queue and then a loop that waits until the load's callback, taking interrupts as it waits.
+
+`Audio::file_load` models the synchronous load on the timeline, inside the tick, and an audio frame that comes due during the wait runs there. A read into the game's heap moves no bytes here: the loader takes the file from its archives.
+
+**The library's tick** (`lbAudioAx_80027DF8`) runs in the scene loop before the processes. It does three things:
+
+- starts the crowd's two loops, follows their volumes, or stops them;
+- hands the synth the channels' volumes and the music channels' aux send whenever the settings change;
+- runs the queued sounds' timers, or plays the queued sounds all at once when the scene asks.
+
+The VS scene's pause menu holds the music and the match's channels through `lbAudioAx_80024E84`, and its start and end reset the library's mix.
+
+**The aux effects** (reverb and the like, set up by `HSD_AudioSFXSetupAux`) are presentation. Their state lives in a heap of their own, and only the aux callbacks read it. Those callbacks touch only the mix buffers, so the game reads nothing they write. The driver's aux flags are state.
+
+**Where game logic reads audio.** Almost every audio call game code makes is fire-and-forget: handles are stored only to stop, pan or bend their sounds later. Game code calls the driver directly in one place only, the reset path's `HSD_DevComIsBusy`. Three paths make the game depend on *when a sound ends*, which is what makes voice lifetimes, the clock and the DSP model simulation:
+
+1. *The crowd* (`melee/sfx/crowdsfx.c`, set up for every match by `fn_8016E730`). Its per-frame state machine (`un_80321A00`) moves on only when the crowd's chant voice has stopped (`lbAudioAx_80023710`, so `HSD_AudioSFXCheck`). A start that fails, for example on a channel the pause menu or camera mode muted, counts as stopped. Whether a fighter's knockback then starts a gasp and awards bonus stat 0x5B (`un_80321EBC`, then `pl_8003FDA0`) depends on that, as does the focus fighter and which crowd sound plays next. A VS match reaches it.
+2. *Corneria's and Venom's Star Fox calls* (`Ground_801C54DC`, `grCorneria_801E277C`, `Ground_UpdateStarFoxSequence`). A call's window closes only after its voice line ends, so the sequence lives as long as its lines play. While it lives:
+   - the HUD's percents are hidden;
+   - a Fox or Falco side taunt can't start a call: starting one draws `HSD_Randi(5)` from the game's RNG and sets the taunt's damage callback;
+   - a taunt during a call earns bonus stat 0x8B at the match's end.
+
+   A VS match reaches it. In attract mode, Corneria's intro banter can block a taunt's call.
+3. *The tournament bracket's music* (`gmtou_1.c`'s `fn_8019AF50`) waits for the music stream to stop (`AXDriverCheck`) before starting the winner's. This is menus only.
+
+Other reads change nothing simulated:
+
+- the sound options menu's stereo setting;
+- the debug sound test's;
+- Kirby's copied voices (`lbAudioAx_800233EC` reads whether `kirbytm.ssm` is loaded, which only picks the sample, and only single-player loads it);
+- the stores and checks at fighter and item teardown, whose handles are cleared either way.
+
+Sound objects (`lbAudioAx_800263E8`) end by frame count, not with their voice. Several sound paths draw from the game's RNG whatever audio does, so a port keeps those draws even with audio out:
+
+- a sound object panned at 0 (`fn_80025FAC`'s `HSD_Randi(2)`; fighters' subaction sounds do this);
+- `ft_PlaySFX`'s voice ids 332 to 370;
+- `ft_800889F4`'s random voice;
+- `ftcoll.c`'s hit sounds;
+- stages' random music.
+
+**Not ported:**
+
+- The boot's audio setup.
+- Loading sound banks: `HSD_SynthSFXLoad` and the library's bank choice `lbAudioAx_8002785C`. A match started from its settings has no banks loaded, and the driver starts nothing (the original's `HSD_AudioSFXStartParam` returns -1 the same way).
+- Starting and stopping the music: `HSD_AudioPStreamStartChParam` and `lbAudioAx_800236DC`.
+- The library's object pool: `lbAudioAx_8002835C`.
+
+The VS port still hands those to the frontend as `Event::Audio`. A state imported from a single captured call has no timeline, and no audio frames run.
 
 ## Rulesets in the state
 
