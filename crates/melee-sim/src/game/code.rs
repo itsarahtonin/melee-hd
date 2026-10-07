@@ -138,11 +138,8 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         0x8007_61C8 => g.update_camera_box(gobj),
         // Hitlag.
         0x8008_E4F0 => g.co_damage_hitlag(gobj),
-        // efLib_PauseAll, a state's hitlag hook that freezes the fighter's effects: the
-        // effects' seam.
-        EF_PAUSE_ALL => {
-            call(g, EF_PAUSE_ALL, &[Val::GObj(Some(gobj))]);
-        }
+        // efLib_PauseAll, a state's hitlag hook that freezes the fighter's effects.
+        EF_PAUSE_ALL => super::ef::pause_all(g.game, Some(gobj)),
         other => unported("fighter callback", other),
     }
 }

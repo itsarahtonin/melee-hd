@@ -65,7 +65,7 @@ Some of these reads hand gameplay a heap address. Nana's CPU DI (`ftCo_800AC5A0`
 
 ## Seams
 
-Where game code calls a subsystem no port covers yet (the HUD, most fighters' own callbacks), it goes through `game::code::call`, by the original function's address with its arguments as register values (`code::Val`), and stops there until that subsystem's port adds its arms. With the feature `stubs` (leaf-check enables it) a check can stand a function in on both sides and compare the calls each side made and their arguments, so the code around a seam is checked before what it calls is ported. The simulation itself never registers a stand-in. The fighters' attack collision and collision results are checked with the effects they spawn or pause (`efSync_Spawn`, `efLib_PauseAll`, which the effects' own checks cover) and the attack statistics a hit records (`pl_80038144`) stood in for.
+Where game code calls a subsystem no port covers yet (the HUD, most fighters' own callbacks), it goes through `game::code::call`, by the original function's address with its arguments as register values (`code::Val`), and stops there until that subsystem's port adds its arms. With the feature `stubs` (leaf-check enables it) a check can stand a function in on both sides and compare the calls each side made and their arguments, so the code around a seam is checked before what it calls is ported. The simulation itself never registers a stand-in. The fighters' attack collision is checked with the attack statistics a hit records (`pl_80038144`) stood in for.
 
 ## Effects
 

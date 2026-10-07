@@ -4,9 +4,8 @@
 //! (`Fighter_procCamera`) and the fighters' light (`ftCo_8009F480`). Each call runs on both
 //! sides and the whole state (the fighters with their hitboxes, hurtboxes and damage results, the
 //! items, the player blocks and their statistics, the audio driver) is compared afterwards, with the calls
-//! into the effects (`efSync_Spawn`, `efLib_PauseAll`) and the attack statistics
-//! (`pl_80038144`), which no port covers, stood in for on both sides and compared by their
-//! arguments.
+//! into the attack statistics (`pl_80038144`), which no port covers, stood in for on both
+//! sides and compared by their arguments.
 //!
 //! Real calls rarely land a hit, so each one also runs again with the other fighter's first
 //! hitbox switched on over this fighter, its fields varied by the call's index (`hit_*`).
@@ -35,8 +34,8 @@ use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps};
 use melee_capture::{Capture, DataMap, find_archives_after, find_archives_in};
 use melee_data::archive::Archives;
-use melee_sim::game::code::{EF_PAUSE_ALL, Val, stubs};
-use melee_sim::game::ft::attack::{EFSYNC_SPAWN, PL_80038144, proc_attack_coll};
+use melee_sim::game::code::{Val, stubs};
+use melee_sim::game::ft::attack::{PL_80038144, proc_attack_coll};
 use melee_sim::game::ft::camera::proc_camera;
 use melee_sim::game::ft::create_model::light_proc;
 use melee_sim::game::ft::resolve::proc_coll_resolve;
@@ -56,30 +55,12 @@ thread_local! {
     static THEIRS: RefCell<Vec<(u32, Vec<u32>)>> = const { RefCell::new(Vec::new()) };
 }
 
-/// The effects that take a float through their fourth argument.
-fn takes_float(id: u32) -> bool {
-    matches!(id, 1000 | 0x3EF | 1005)
-}
-
 /// Stands in for the effects and the attack statistics on the reference, logging their
 /// arguments.
 fn stand_ins(ctx: &Ctx) {
-    ctx.register(EFSYNC_SPAWN, |ctx| {
-        let (id, gobj, pos, extra) = (ctx.regs.r(3), ctx.regs.r(4), ctx.regs.r(5), ctx.regs.r(6));
-        let mut args = vec![id, gobj];
-        args.extend((0..3).map(|i| ctx.read_u32(pos + 4 * i)));
-        if takes_float(id) {
-            args.push(ctx.read_u32(extra));
-        }
-        THEIRS.with(|t| t.borrow_mut().push((EFSYNC_SPAWN, args)));
-        ctx.regs.set_r(3, 0);
-    });
     ctx.register(PL_80038144, |ctx| {
         let args = (3..10).map(|r| ctx.regs.r(r)).collect();
         THEIRS.with(|t| t.borrow_mut().push((PL_80038144, args)));
-    });
-    ctx.register(EF_PAUSE_ALL, |ctx| {
-        THEIRS.with(|t| t.borrow_mut().push((EF_PAUSE_ALL, vec![ctx.regs.r(3)])));
     });
 }
 
@@ -103,6 +84,7 @@ fn our_words(maps: &Maps, f: u32, args: &[Val]) -> Vec<u32> {
             Val::Vec(v) => out.extend([v.x.to_bits(), v.y.to_bits(), v.z.to_bits()]),
             Val::Float(v) => out.push((*v as f32).to_bits()),
             Val::None => {}
+            other => panic!("a stood-in call's argument {other:?}"),
         }
     }
     if f == PL_80038144 {
@@ -227,9 +209,7 @@ fn run_one(
         .get(&cap.call.regs.gpr[3])
         .expect("r3 isn't a GObj the import knows");
     stubs::clear();
-    stubs::set(EFSYNC_SPAWN, Val::None);
     stubs::set(PL_80038144, Val::None);
-    stubs::set(EF_PAUSE_ALL, Val::None);
     let run = catch_unwind(AssertUnwindSafe(|| {
         let mut r = Running {
             game: &mut game,
@@ -297,7 +277,7 @@ fn check(func: &str, run: fn(&mut Running, GObjId), prepare: fn(&mut Call, usize
         let results = Mutex::new((0, std::collections::BTreeMap::new()));
         let workers = std::thread::available_parallelism()
             .map_or(4, |n| n.get())
-            .min(6);
+            .min(4);
         std::thread::scope(|s| {
             for _ in 0..workers {
                 std::thread::Builder::new()

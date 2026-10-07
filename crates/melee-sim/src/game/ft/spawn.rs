@@ -64,10 +64,9 @@ impl Running<'_> {
             self.game.player_cpu_level(slot),
         );
         self.init_cpu(f, kind, level, 0);
-        // `efAsync_QueueClear`: no effect is queued yet.
-        if self.game.fighters[f.0].x60C.0 != 0 {
-            unported_call("efAsync_QueueClear with queued effects");
-        }
+        let mut head = self.game.fighters[f.0].x60C;
+        crate::game::ef::queue_clear(self.game, &mut head);
+        self.game.fighters[f.0].x60C = head;
         self.init_thrown_hitbox(gobj);
         self.init_x1614(f);
     }

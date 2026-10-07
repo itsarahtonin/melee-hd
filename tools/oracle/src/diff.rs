@@ -26,7 +26,7 @@ use std::process::ExitCode;
 use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps, sym};
 use melee_capture::{Capture, DataMap, DiscIndex, Loaded, find_archives_after, find_archives_in};
-use melee_data::archive::{Archive, Archives};
+use melee_data::archive::Archives;
 use melee_data::disc::Disc;
 use melee_replay::Device;
 use melee_sim::game::playback::FIRST_FRAME;
@@ -161,10 +161,8 @@ pub fn diff(args: &[&str]) -> ExitCode {
             };
             let started = catch_unwind(AssertUnwindSafe(|| {
                 let mut load = |name: &str| {
-                    let file = disc
-                        .read_file(name)
-                        .unwrap_or_else(|e| panic!("{name}: {e}"));
-                    Archive::parse(&file).unwrap_or_else(|e| panic!("{name}: {e:?}"))
+                    disc.read_file(name)
+                        .unwrap_or_else(|e| panic!("{name}: {e}"))
                 };
                 Match::start(&settings, &mut load)
             }));

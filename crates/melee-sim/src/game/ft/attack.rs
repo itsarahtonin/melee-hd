@@ -24,8 +24,6 @@ use crate::mtx::Mtx34;
 use crate::ppc::cvt_fp2unsigned;
 use crate::vec::Vec3;
 
-/// `efSync_Spawn`, the effects' seam.
-pub const EFSYNC_SPAWN: u32 = 0x8005_FDDC;
 /// `pl_80038144`: the attack statistics a hit records, the player statistics' seam.
 pub const PL_80038144: u32 = 0x8003_8144;
 
@@ -144,13 +142,13 @@ impl Running<'_> {
         self.game.ft.hit_logs.tips.clear();
     }
 
-    /// The effects' seam: `efSync_Spawn(id, NULL, pos[, value])`.
+    /// Spawns an effect at `pos` with no owner, `efSync_Spawn(id, NULL, pos[, &value])`.
     fn spawn_effect(&mut self, id: i32, pos: Vec3, value: Option<f32>) {
-        let mut args = vec![Val::Int(id), Val::GObj(None), Val::Vec(pos)];
-        if let Some(v) = value {
-            args.push(Val::Float(f64::from(v)));
-        }
-        code::call(self, EFSYNC_SPAWN, &args);
+        use crate::game::ef::Arg;
+        match value {
+            Some(v) => crate::game::ef::spawn(self, id, None, &[Arg::Vec(pos), Arg::Float(v)]),
+            None => crate::game::ef::spawn(self, id, None, &[Arg::Vec(pos)]),
+        };
     }
 
     /// The fighter's own matrix when its scale's depth isn't 1 (Flat Zone's flat fighters),
