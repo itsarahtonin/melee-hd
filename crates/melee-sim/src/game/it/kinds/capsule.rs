@@ -3,10 +3,13 @@
 
 use super::super::ground::{fall, fall_to_floor, ground_or_fall, ground_skid};
 use super::super::item::{article, attr_of, change_state, common_data};
-use super::super::{drop, item, item_mut, lib26b1, lib2725};
-use crate::game::code;
+use gekko_fp as fp;
+
+use super::super::{drop, hitbox, item, item_mut, jobj_of, lib26b1, lib2725};
+use crate::fpu::mem;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
+use crate::hsd::jobj;
 use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x8027_CF00;
@@ -117,10 +120,24 @@ pub fn land_check(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).xDD4_itemVar.capsule().x0 = i32::from(gone);
 }
 
-/// Explodes the capsule, `it_8027CFE8`: hidden, harmless, it blows up for a while.
-fn explode(r: &mut Running, gobj: GObjId) {
+/// Explodes the capsule, `it_8027CFE8`: hidden, it blows up for a while, pushing the wind.
+#[doc(alias = "it_8027CFE8")]
+pub fn explode(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
-    code::unported_call("it_8027CFE8 (a capsule exploding: efSync_Spawn, lb_800119DC)");
+    let j = jobj_of(r.game, gobj);
+    jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
+    item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
+    lib2725::clear_velocity(r.game, gobj);
+    item_mut(r.game, gobj).xDD4_itemVar.capsule().x4 = 1;
+    lib2725::blast_effect(r, gobj);
+    hitbox::set_hit_ids(r.game, gobj);
+    hitbox::start_blink(r.game, gobj);
+    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib2725::start_vanishing(r.game, r.data, gobj);
+    let pos = item(r.game, gobj).pos;
+    let angle = mem(fp::frsp(60.0 * std::f64::consts::PI / 180.0));
+    crate::lb::wind::blast(&mut r.game.gr.winds, pos, 0x78, 1.0, 0.02, angle);
+    change_state(r, gobj, 5, 2);
 }
 
 /// Lands, stopped, `it_8027D0B8`.

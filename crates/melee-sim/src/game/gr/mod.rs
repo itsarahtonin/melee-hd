@@ -136,9 +136,9 @@ pub struct Globals {
     pub yaku_scripts: Vec<(u8, DataRef)>,
     /// The fighter code's registry of stage devices (`ftdevice.c`), which the stage resets.
     pub devices: FtDevices,
-    /// Whether any wind source sways jointed parts (`lb_804D63B0`, the sources' list, isn't
-    /// empty; stages add them, Final Destination and Battlefield never do).
-    pub winds_active: bool,
+    /// The wind sources that sway jointed parts (`lb_804D63A8`'s pool): stages and blasts add
+    /// them.
+    pub winds: crate::lb::wind::Winds,
     /// Whether wind blows (`lb_804D63B4`): 1 when it starts, 2 while it lasts, -1 when it
     /// stops, 0 otherwise.
     pub wind_level: i32,

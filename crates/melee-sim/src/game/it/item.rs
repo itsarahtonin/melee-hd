@@ -883,7 +883,7 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
         code::unported_call("it_8026BDCC");
     }
     if flags & MODEL_UPDATE != 0 {
-        code::unported_call("it_80274740");
+        lib2725::stop_spin(r.game, data, gobj);
     }
     if flags & COLANIM_PRESERVE == 0 {
         let colanims = r.game.it.colanims.expect("no item color animations");

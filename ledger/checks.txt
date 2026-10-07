@@ -2327,3 +2327,170 @@ it_8027570C	leaf-check items: green_shell's it_8028BAD8 runs it on every capture
 it_80275414	leaf-check items: green_shell's it_8028C3A8 runs it on every captured call
 it_802754D4	leaf-check items: green_shell's it_8028BE54 runs it on every captured call
 it_80299C48	leaf-check items: hammer's it_80293E34 runs it from captured item states
+it_802787B4	leaf-check items: effect_router runs every captured call
+it_80278800	leaf-check items: effect_router runs every captured call
+it_80278F2C	leaf-check items: script_commands runs it from captured item states
+it_8027CFE8	leaf-check items: capsule_explodes runs it from captured item states
+it_8027D670	leaf-check items: bob_omb runs it from captured item states
+it_8027D730	leaf-check items: bob_omb runs it from captured item states
+itBombhei_Logic6_Spawned	leaf-check items: bob_omb runs every captured call
+it_8027D820	leaf-check items: bob_omb runs it from captured item states
+fn_8027DAC8	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion0_Anim	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion0_Phys	leaf-check items: bob_omb runs every captured call
+itBombhei_UnkMotion0_Coll	leaf-check items: bob_omb runs every captured call
+it_8027DE18	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion1_Anim	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion1_Phys	leaf-check items: bob_omb runs every captured call
+itBombhei_UnkMotion1_Coll	leaf-check items: bob_omb runs every captured call
+itBombhei_Logic6_PickedUp	leaf-check items: bob_omb runs every captured call
+itBombhei_UnkMotion8_Anim	leaf-check items: bob_omb runs every captured call
+itBombhei_UnkMotion8_Phys	leaf-check items: bob_omb runs every captured call
+it_3F14_Logic6_Dropped	leaf-check items: bob_omb runs it from captured item states
+it_8027E978	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion3_Anim	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion3_Phys	leaf-check items: bob_omb runs every captured call
+itBombhei_UnkMotion3_Coll	leaf-check items: bob_omb runs every captured call
+it_8027EE04	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion2_Anim	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion2_Phys	leaf-check items: bob_omb runs every captured call
+itBombhei_UnkMotion2_Coll	leaf-check items: bob_omb runs every captured call
+it_8027F42C	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion4_Anim	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion4_Phys	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion4_Coll	leaf-check items: bob_omb runs it from captured item states
+it_8027F8E0	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion5_Anim	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion5_Phys	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion5_Coll	leaf-check items: bob_omb runs it from captured item states
+fn_8027FCA8	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion6_Anim	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion6_Phys	leaf-check items: bob_omb runs it from captured item states
+fn_8028007C	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion6_Coll	leaf-check items: bob_omb runs it from captured item states
+it_3F14_Logic6_Thrown	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion10_Anim	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion10_Phys	leaf-check items: bob_omb runs every captured call
+fn_80280974	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion10_Coll	leaf-check items: bob_omb runs every captured call
+it_80280DC0	leaf-check items: bob_omb runs it from captured item states
+it_3F14_Logic6_DmgDealt	leaf-check items: bob_omb runs it from captured item states
+it_3F14_Logic6_DmgReceived	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion11_Anim	leaf-check items: bob_omb runs every captured call
+itBombhei_UnkMotion11_Phys	leaf-check items: bob_omb runs every captured call
+itBombhei_UnkMotion11_Coll	leaf-check items: bob_omb runs every captured call
+it_3F14_Logic6_EnteredAir	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion12_Anim	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion12_Phys	leaf-check items: bob_omb runs it from captured item states
+itBombhei_UnkMotion12_Coll	leaf-check items: bob_omb runs it from captured item states
+itBombhei_Logic6_Clanked	leaf-check items: bob_omb runs it from captured item states
+itBombhei_Logic6_Reflected	leaf-check items: bob_omb runs it from captured item states
+it_3F14_Logic6_HitShield	leaf-check items: bob_omb runs it from captured item states
+it_3F14_Logic6_ShieldBounced	leaf-check items: bob_omb runs it from captured item states
+itBombhei_Logic6_EvtUnk	leaf-check items: bob_omb runs it from captured item states
+it_80286088	leaf-check items: crate_box runs it from captured item states
+itBox_Logic1_Spawned	leaf-check items: crate_box runs every captured call
+itBox_Logic1_Destroyed	leaf-check items: crate_box runs every captured call
+it_80286248	leaf-check items: crate_box runs it from captured item states
+it_80286340	leaf-check items: crate_box runs it from captured item states
+it_802863BC	leaf-check items: crate_box runs it from captured item states
+fn_80286480	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion0_Anim	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion0_Phys	leaf-check items: crate_box runs every captured call
+itBox_UnkMotion0_Coll	leaf-check items: crate_box runs every captured call
+it_8028655C	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion4_Anim	leaf-check items: crate_box runs every captured call
+itBox_UnkMotion1_Phys	leaf-check items: crate_box runs every captured call
+itBox_UnkMotion1_Coll	leaf-check items: crate_box runs every captured call
+itBox_Logic1_PickedUp	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion2_Anim	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion2_Phys	leaf-check items: crate_box runs it from captured item states
+itBox_Logic1_Thrown	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion4_Phys	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion3_Coll	leaf-check items: crate_box runs it from captured item states
+itBox_Logic1_Dropped	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion4_Coll	leaf-check items: crate_box runs it from captured item states
+it_80286AA4	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion6_Anim	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion6_Phys	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion6_Coll	leaf-check items: crate_box runs it from captured item states
+it_80286BA0	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion7_Anim	leaf-check items: crate_box runs every captured call
+itBox_UnkMotion7_Phys	leaf-check items: crate_box runs every captured call
+itBox_UnkMotion7_Coll	leaf-check items: crate_box runs every captured call
+itBox_Logic1_DmgDealt	leaf-check items: crate_box runs it from captured item states
+itBox_Logic1_Clanked	leaf-check items: crate_box runs it from captured item states
+itBox_Logic1_HitShield	leaf-check items: crate_box runs it from captured item states
+itBox_Logic1_Reflected	leaf-check items: crate_box runs it from captured item states
+itBox_Logic1_DmgReceived	leaf-check items: crate_box runs it from captured item states
+itBox_Logic1_EnteredAir	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion5_Anim	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion5_Phys	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion5_Coll	leaf-check items: crate_box runs it from captured item states
+itBox_Logic1_EvtUnk	leaf-check items: crate_box runs it from captured item states
+it_802870A4	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion8_Anim	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion8_Phys	leaf-check items: crate_box runs it from captured item states
+itBox_UnkMotion8_Coll	leaf-check items: crate_box runs it from captured item states
+it_8028733C	leaf-check items: crate_box runs it from captured item states
+it_3F14_Logic2_Spawned	leaf-check items: barrel runs every captured call
+it_802874F0	leaf-check items: barrel runs it from captured item states
+it_80287690	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion0_Anim	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion0_Phys	leaf-check items: barrel runs every captured call
+itTaru_UnkMotion0_Coll	leaf-check items: barrel runs every captured call
+it_80287D0C	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion1_Anim	leaf-check items: barrel runs every captured call
+itTaru_UnkMotion1_Phys	leaf-check items: barrel runs every captured call
+itTaru_UnkMotion1_Coll	leaf-check items: barrel runs every captured call
+itTaru_Logic2_PickedUp	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion2_Anim	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion2_Phys	leaf-check items: barrel runs it from captured item states
+itTaru_Logic2_Dropped	leaf-check items: barrel runs it from captured item states
+itTaru_Logic2_Thrown	leaf-check items: barrel runs it from captured item states
+it_80287F20	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion3_Anim	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion3_Phys	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion3_Coll	leaf-check items: barrel runs it from captured item states
+it_80288194	leaf-check items: barrel runs it from captured item states
+it_802881B4	leaf-check items: barrel runs it from captured item states
+it_802881FC	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion5_Anim	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion5_Phys	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion5_Coll	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion4_Anim	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion4_Phys	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion4_Coll	leaf-check items: barrel runs it from captured item states
+it_802885C8	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion6_Anim	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion6_Phys	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion6_Coll	leaf-check items: barrel runs it from captured item states
+it_802886C4	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion7_Anim	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion7_Phys	leaf-check items: barrel runs it from captured item states
+itTaru_UnkMotion7_Coll	leaf-check items: barrel runs it from captured item states
+it_3F14_Logic2_DmgDealt	leaf-check items: barrel runs it from captured item states
+it_3F14_Logic2_Clanked	leaf-check items: barrel runs it from captured item states
+it_3F14_Logic2_HitShield	leaf-check items: barrel runs it from captured item states
+it_3F14_Logic2_Reflected	leaf-check items: barrel runs it from captured item states
+it_3F14_Logic2_DmgReceived	leaf-check items: barrel runs it from captured item states
+itTaru_Logic2_EvtUnk	leaf-check items: barrel runs it from captured item states
+lb_8000B09C	leaf-check items: bob_omb's itBombhei_UnkMotion2_Anim runs it on every captured call
+it_80272C6C	leaf-check items: bob_omb's itBombhei_UnkMotion2_Anim runs it on every captured call
+lb_800100B0	leaf-check items: capsule_explodes and bob_omb's explosions run it from captured item states
+lb_800119DC	leaf-check items: capsule_explodes and bob_omb's explosions run it from captured item states
+it_80280B60	leaf-check items: bob_omb's it_3F14_Logic6_DmgDealt runs it from captured item states
+it_80272C08	leaf-check items: capsule_explodes runs it from captured item states
+it_8026BB44	leaf-check items: crate_box's it_80286AA4 runs it from captured item states
+it_80272A3C	leaf-check items: crate_box's it_80286AA4 and hammer's it_80293E34 run it from captured item states
+ftLib_StartItemRumble	leaf-check items: script_commands runs it from captured item states
+ftLib_StartItemRumbleAll	leaf-check items: script_commands runs it from captured item states
+ftLib_StopItemRumble	leaf-check items: script_commands runs it from captured item states
+it_80273598	leaf-check items: script_commands runs it from captured item states
+it_80273600	leaf-check items: script_commands runs it from captured item states
+it_80273648	leaf-check items: script_commands runs it from captured item states
+it_80274484	leaf-check items: bob_omb's it_3F14_Logic6_Thrown runs it from captured item states (thrown at another size)
+it_80274DFC	leaf-check items: bob_omb's it_3F14_Logic6_Thrown runs it from captured item states (thrown at another size)
+it_80274E44	leaf-check items: bob_omb's it_3F14_Logic6_Thrown runs it from captured item states (thrown at another size)
+it_80275534	leaf-check items: bob_omb's it_3F14_Logic6_Thrown runs it from captured item states (thrown at another size)
+it_80274ED8	leaf-check items: spawn_proc's fn_8026C88C runs it on every captured call

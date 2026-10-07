@@ -13,6 +13,7 @@ use crate::game::structs::{ColorOverlay, Item};
 use crate::hsd::gobj::GObjId;
 use crate::lb::command::{self, WAIT_FOR_FRAME};
 use crate::lb::hitcapsule;
+use crate::vec::Vec3;
 
 /// `0.003906f`, the scale of a command's fixed-point sizes and offsets.
 const FIXED: f32 = 0.003906;
@@ -211,10 +212,31 @@ pub fn sound(r: &mut Running, gobj: GObjId) {
     skip(r, gobj, 1);
 }
 
+/// Queues an effect from the script, `it_80278F2C`: its bone, id, and offset and spread in
+/// 1/256ths (`it_80278800`).
+#[doc(alias = "it_80278F2C")]
+pub fn script_effect(r: &mut Running, gobj: GObjId) {
+    let w: [u32; 5] = std::array::from_fn(|i| word(r, gobj, i as u32));
+    let hi = |v: u32| (v >> 16) as u16;
+    let lo = |v: u32| v as u16;
+    let bone = i32::from(hi(w[0]) & 0x3FF);
+    let ef_id = i32::from(hi(w[1]));
+    let unit = |h: u16| {
+        mem(fp::fmuls(
+            f64::from(0.003906_f32),
+            fp::frsp(f64::from(h as i16)),
+        ))
+    };
+    let offset = Vec3::new(unit(hi(w[2])), unit(lo(w[2])), unit(hi(w[3])));
+    let spread = Vec3::new(unit(lo(w[3])), unit(hi(w[4])), unit(lo(w[4])));
+    skip(r, gobj, 5);
+    super::effect::spawn(r, gobj, ef_id, bone, offset, spread, false);
+}
+
 /// Runs one of the items' own script commands (`it_803F22A8`, by opcode from 10).
 pub fn run_command(r: &mut Running, gobj: GObjId, opcode: u32) {
     match opcode {
-        10 => code::unported_call("it_80278F2C (an item script's effect)"),
+        10 => script_effect(r, gobj),
         11 => create_hitbox(r, gobj),
         12 => set_hitbox_damage(r, gobj),
         13 => set_hitbox_scale(r, gobj),
@@ -246,8 +268,24 @@ pub fn run_command(r: &mut Running, gobj: GObjId, opcode: u32) {
             item_mut(r.game, gobj).xDBC[0] |= 0x80;
             skip(r, gobj, 1);
         }
-        21..=23 => code::unported_call("it_80279888 (an item script's rumble)"),
-        24 => code::unported_call("it_80279958 (an item script's color animation)"),
+        // it_80279888, it_802798D4 and it_8027990C: rumble (13-bit kind and frames).
+        21..=23 => {
+            let w = word(r, gobj, 0);
+            let (kind, frames) = ((w >> 13 & 0x1FFF) as i32, (w & 0x1FFF) as i32);
+            match opcode {
+                21 => super::lib2725::rumble_owner(r, gobj, kind, frames),
+                22 => super::lib2725::stop_owner_rumble(r, gobj),
+                _ => super::lib2725::rumble_all(r, kind, frames),
+            }
+            skip(r, gobj, 1);
+        }
+        // it_80279958: a color animation (8-bit id, 18-bit frames).
+        24 => {
+            let w = word(r, gobj, 0);
+            let (id, frames) = ((w >> 18 & 0xFF) as i32, (w & 0x3_FFFF) as i32);
+            start_colanim(r.game, r.data, gobj, id, frames);
+            skip(r, gobj, 1);
+        }
         // it_802799A8: the color animation off.
         25 => {
             clear_overlay(item_mut(r.game, gobj));

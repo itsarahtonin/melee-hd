@@ -1,7 +1,9 @@
 //! Item kinds (`ItemKind`) and the kinds' own code.
 
 pub mod bat;
+pub mod bombhei;
 pub mod capsule;
+pub mod crate_box;
 pub mod foxblaster;
 pub mod foxlaser;
 pub mod gshell;
@@ -10,6 +12,7 @@ pub mod hammerhead;
 pub mod heart;
 pub mod rshell;
 pub mod sword;
+pub mod taru;
 pub mod tomato;
 
 use crate::game::state::Running;
@@ -22,6 +25,9 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || capsule::run_event(r, gobj, addr)
         || heart::run_event(r, gobj, addr)
         || tomato::run_event(r, gobj, addr)
+        || taru::run_event(r, gobj, addr)
+        || crate_box::run_event(r, gobj, addr)
+        || bombhei::run_event(r, gobj, addr)
         || rshell::run_event(r, gobj, addr)
         || gshell::run_event(r, gobj, addr)
         || hammerhead::run_event(r, gobj, addr)
@@ -37,6 +43,9 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| capsule::run_pred(r, gobj, addr))
         .or_else(|| heart::run_pred(r, gobj, addr))
         .or_else(|| tomato::run_pred(r, gobj, addr))
+        .or_else(|| taru::run_pred(r, gobj, addr))
+        .or_else(|| crate_box::run_pred(r, gobj, addr))
+        .or_else(|| bombhei::run_pred(r, gobj, addr))
         .or_else(|| rshell::run_pred(r, gobj, addr))
         .or_else(|| gshell::run_pred(r, gobj, addr))
         .or_else(|| hammerhead::run_pred(r, gobj, addr))

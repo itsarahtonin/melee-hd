@@ -525,3 +525,125 @@ pub fn start_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize) 
     ip.xDC8_word.flags.x16 = true;
     super::coll::update_hitbox(game, data, gobj, idx);
 }
+
+/// Whether the model still plays an animation, `it_80272C6C`.
+#[doc(alias = "it_80272C6C")]
+pub fn is_animating(game: &Game, gobj: GObjId) -> bool {
+    crate::lb::anim::any_animated(&game.objs, jobj_of(game, gobj))
+}
+
+/// Resizes the item to `scale`: its model, hitboxes (to `x3C`) and ranges, `it_80274484`.
+#[doc(alias = "it_80274484")]
+pub fn rescale(game: &mut Game, gobj: GObjId, j: JObjId, scale: f32) {
+    item_mut(game, gobj).scl = scale;
+    set_uniform_scale(game, j, scale);
+    let x3c = item(game, gobj).x3C;
+    super::hitbox::set_hit_scale(game, gobj, x3c);
+    scale_ranges(game, gobj);
+    scale_boxes(game, gobj);
+}
+
+/// Scales the pickup ranges by the item's scale, `it_80274DFC`.
+#[doc(alias = "it_80274DFC")]
+pub fn scale_ranges(game: &mut Game, gobj: GObjId) {
+    let ip = item_mut(game, gobj);
+    let s = reg(ip.scl);
+    for v in [&mut ip.xBCC_unk, &mut ip.xBD4_grabRange] {
+        v.x = mem(fp::fmuls(reg(v.x), s));
+        v.y = mem(fp::fmuls(reg(v.y), s));
+    }
+}
+
+/// Scales the two boxes `xBEC` and `xBDC` by the item's scale, `it_80274E44`.
+#[doc(alias = "it_80274E44")]
+pub fn scale_boxes(game: &mut Game, gobj: GObjId) {
+    let ip = item_mut(game, gobj);
+    let s = reg(ip.scl);
+    for b in [&mut ip.xBEC, &mut ip.xBDC] {
+        b.top = mem(fp::fmuls(reg(b.top), s));
+        b.bottom = mem(fp::fmuls(reg(b.bottom), s));
+        b.right = mem(fp::fmuls(reg(b.right), s));
+        b.left = mem(fp::fmuls(reg(b.left), s));
+    }
+}
+
+/// Counts an item the spawner dropped, `it_80274ED8`.
+#[doc(alias = "it_80274ED8")]
+pub fn count_spawned(game: &mut Game) {
+    game.it.spawned = game.it.spawned.wrapping_add(1);
+}
+
+/// The blast of an exploding item, `it_80272C08`: its effect (0x410), its sound, and its hits
+/// counted afresh.
+#[doc(alias = "it_80272C08")]
+pub fn blast_effect(r: &mut Running, gobj: GObjId) {
+    let pos = item(r.game, gobj).pos;
+    crate::game::ef::spawn(r, 0x410, Some(gobj), &[crate::game::ef::Arg::Vec(pos)]);
+    super::item::play_sfx(r, gobj, 116, 127, 64);
+    uncount_hits(r.game, gobj);
+}
+
+/// Starts a fighter's item rumble (id 1) of kind `kind` for `frames` if its controller rumbles
+/// and it's awake and alive (`ftLib_StartItemRumble`).
+#[doc(alias = "ftLib_StartItemRumble")]
+fn fighter_item_rumble(r: &mut Running, fighter: GObjId, kind: i32, frames: i32) {
+    let f = super::owner::fighter_of(r.game, fighter);
+    let fp = &r.game.fighters[f.0];
+    if !r
+        .game
+        .rumble_enabled(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter))
+    {
+        return;
+    }
+    if !fp.is_sleeping && !fp.stamina_dead {
+        let port = fp.pad_port;
+        r.rumble_start(port, 1, kind, frames);
+    }
+}
+
+/// Rumbles the holder's controller, `it_80273598`.
+#[doc(alias = "it_80273598")]
+pub fn rumble_owner(r: &mut Running, gobj: GObjId, kind: i32, frames: i32) {
+    let owner = item(r.game, gobj).owner;
+    if let Some(o) = owner
+        && super::item::is_fighter(r.game, owner)
+    {
+        fighter_item_rumble(r, o, kind, frames);
+    }
+}
+
+/// Stops the holder's item rumble, `it_80273600` (`ftLib_StopItemRumble`).
+#[doc(alias = "it_80273600")]
+#[doc(alias = "ftLib_StopItemRumble")]
+pub fn stop_owner_rumble(r: &mut Running, gobj: GObjId) {
+    let owner = item(r.game, gobj).owner;
+    if let Some(o) = owner
+        && super::item::is_fighter(r.game, owner)
+    {
+        let f = super::owner::fighter_of(r.game, o);
+        let fp = &r.game.fighters[f.0];
+        if r.game
+            .rumble_enabled(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter))
+        {
+            let port = fp.pad_port;
+            r.game.pads.rumble.remove_id(port, 1);
+        }
+    }
+}
+
+/// Rumbles every fighter's controller, `it_80273648` (`ftLib_StartItemRumbleAll`).
+#[doc(alias = "it_80273648")]
+#[doc(alias = "ftLib_StartItemRumbleAll")]
+pub fn rumble_all(r: &mut Running, kind: i32, frames: i32) {
+    let mut cur = r.game.world.first_in(super::owner::P_LINK_FIGHTER);
+    while let Some(g) = cur {
+        cur = r.game.world.gobjs[g.0].next;
+        fighter_item_rumble(r, g, kind, frames);
+    }
+}
+
+/// Hides a joint tree, `it_80272A3C`.
+#[doc(alias = "it_80272A3C")]
+pub fn hide_tree(game: &mut Game, j: Option<JObjId>) {
+    jobj::set_flags_all(&mut game.objs.jobjs, j, jobj::HIDDEN);
+}

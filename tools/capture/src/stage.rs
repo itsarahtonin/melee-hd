@@ -294,7 +294,7 @@ impl Importer<'_> {
             cursor: self.u16_at(z + 8) as i16,
             flags: self.u8_at(z + 0xA),
         };
-        self.game.gr.winds_active = cap.u32(sym("lb_804D63B0")) != 0;
+        self.game.gr.winds = winds(|a| cap.u32(a));
         self.game.gr.wind_level = cap.u32(sym("lb_804D63B4")) as i32;
         self.game.geometry = self.geometry();
         self.globals();
@@ -853,12 +853,12 @@ impl Comparer<'_> {
             }
             (o, t) => self.diff("zako", "slots", o.is_some(), format!("{t:#x}")),
         }
-        self.check(
-            "lb_804D63B0",
-            "wind sources",
-            game.gr.winds_active,
-            self.u32(sym("lb_804D63B0")) != 0,
-        );
+        let word = |a: u32| {
+            let i = (a - MEM1) as usize;
+            u32::from_be_bytes(self.mem[i..i + 4].try_into().unwrap())
+        };
+        let theirs = winds(word);
+        self.check("lb_804D63A8", "wind sources", &game.gr.winds, &theirs);
         self.check(
             "lb_804D63B4",
             "wind level",
@@ -1183,4 +1183,50 @@ impl Comparer<'_> {
             }
         }
     }
+}
+
+/// The wind sources' pool (`lb_804D63A8`, 8 entries of 0x38 bytes) and its free and blowing
+/// lists, read through `word`. A pool not yet allocated reads as freshly made.
+fn winds(word: impl Fn(u32) -> u32) -> melee_sim::lb::wind::Winds {
+    use melee_sim::lb::wind::{Wind, Winds};
+    let base = word(sym("lb_804D63A8"));
+    if base == 0 {
+        return Winds::default();
+    }
+    let index = |p: u32| {
+        (p != 0).then(|| {
+            let off = p.wrapping_sub(base);
+            assert!(
+                off < 8 * 0x38 && off.is_multiple_of(0x38),
+                "a wind source at {p:#x}"
+            );
+            (off / 0x38) as u8
+        })
+    };
+    let f = |a: u32| f32::from_bits(word(a));
+    let mut w = Winds::default();
+    for i in 0..8 {
+        let e = base + 0x38 * i as u32;
+        let head = word(e);
+        w.entries[i] = Wind {
+            kind: (head >> 24) as u8,
+            priority: (head >> 16) as u8,
+            x2: (head >> 8) as i8,
+            x3: head as i8,
+            pos: melee_sim::vec::Vec3::new(f(e + 4), f(e + 8), f(e + 0xC)),
+            x10: f(e + 0x10),
+            x14: f(e + 0x14),
+            x18: f(e + 0x18),
+            x1c: f(e + 0x1C),
+            scale: f(e + 0x20),
+            decay: f(e + 0x24),
+            frames: word(e + 0x28) as i32,
+            angle_step: f(e + 0x2C),
+            age: word(e + 0x30) as i32,
+        };
+        w.next[i] = index(word(e + 0x34));
+    }
+    w.free = index(word(sym("lb_804D63AC")));
+    w.active = index(word(sym("lb_804D63B0")));
+    w
 }

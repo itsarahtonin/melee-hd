@@ -10,7 +10,6 @@ use super::item::common_data;
 use super::kinds::{KURIBOH, M_BALL};
 use super::{P_LINK_ITEM, item};
 use crate::fpu::reg;
-use crate::game::code;
 use crate::game::state::{Game, Running};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -187,8 +186,9 @@ pub fn proc_spawn(r: &mut Running, _gobj: GObjId) {
         };
         // The rest of the original's stack copy is never read.
         spawn.x44_flag[0] |= 0x80;
-        if super::item::spawn_air(r, &mut spawn).is_some() {
-            code::unported_call("efSync_Spawn (an item appearing)");
+        if let Some(g) = super::item::spawn_air(r, &mut spawn) {
+            crate::game::ef::spawn(r, 0x420, Some(g), &[crate::game::ef::Arg::Vec(pos)]);
+            super::lib2725::count_spawned(r.game);
         }
     }
     reset_timer(r.game, r.data);

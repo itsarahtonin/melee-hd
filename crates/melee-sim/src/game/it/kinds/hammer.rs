@@ -12,7 +12,6 @@ use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
-use crate::hsd::jobj;
 use crate::lb::joint::world_position;
 use crate::vec::Vec3;
 
@@ -72,7 +71,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 fn hide_lost_head(r: &mut Running, gobj: GObjId) {
     if item(r.game, gobj).xD4C <= 0 {
         let head = lib2725::bone(r.game, r.data, gobj, 3);
-        jobj::set_flags_all(&mut r.game.objs.jobjs, head, jobj::HIDDEN);
+        lib2725::hide_tree(r.game, head);
     }
 }
 

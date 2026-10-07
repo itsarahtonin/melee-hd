@@ -104,6 +104,16 @@ pub fn set_hit_ids2(game: &mut Game, gobj: GObjId) {
     set_flag(&mut ip.xDCE_flag, 1, true);
 }
 
+/// Sets every hitbox that's on to `scale`, `it_80275534`.
+#[doc(alias = "it_80275534")]
+pub fn set_hit_scale(game: &mut Game, gobj: GObjId, scale: f32) {
+    for h in &mut item_mut(game, gobj).x5D4_hitboxes {
+        if h.hit.state != hitcapsule::DISABLED {
+            h.hit.scale = scale;
+        }
+    }
+}
+
 /// Sets `xDCD`'s hit flags, `it_80275444`.
 #[doc(alias = "it_80275444")]
 pub fn set_hit_ids(game: &mut Game, gobj: GObjId) {

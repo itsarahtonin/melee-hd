@@ -8,7 +8,7 @@ use super::super::ground::{air, fall_to_floor, fall_unbreakable, ground_or_fall,
 use super::super::item::{article, attr_of, change, change_state, common_data, play_sfx};
 use super::super::{coll, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
-use crate::game::code;
+use crate::game::ef::{Arg, SpawnKind};
 use crate::game::handles::CodeRef;
 use crate::game::state::{Game, Running};
 use crate::game::structs::itGShell_ItemVars;
@@ -117,12 +117,24 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 
 /// Starts the dust trail every `x30` frames, `it_8028B8D8`.
 #[doc(alias = "it_8028B8D8")]
+// NaN counts down, as the original's `<= 0` test has it.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn trail(r: &mut Running, gobj: GObjId) {
-    let v = vars(r.game, gobj);
-    if reg(v.xDDC) <= 0.0 {
-        code::unported_call("efAsync_Spawn (a shell's trail, effect 1029)");
+    if !(reg(vars(r.game, gobj).xDDC) <= 0.0) {
+        let v = vars(r.game, gobj);
+        v.xDDC = mem(fp::fsubs(reg(v.xDDC), 1.0));
+        return;
     }
-    v.xDDC = mem(fp::fsubs(reg(v.xDDC), 1.0));
+    let f = |r: &Running, off: u32| attr(r, gobj, off);
+    let back = -reg(item(r.game, gobj).facing_dir);
+    let v = Vec3::new(
+        mem(fp::fmuls(reg(f(r, 0x34)), back)),
+        f(r, 0x38),
+        f(r, 0x3C),
+    );
+    let j = jobj_of(r.game, gobj);
+    super::super::effect::queue(r, gobj, SpawnKind::PosOffset, 1029, j, &[Arg::Vec(v)]);
+    vars(r.game, gobj).xDDC = f(r, 0x30);
 }
 
 /// Counts down how long a hit shell can't hurt its owner, `it_8028B988`.

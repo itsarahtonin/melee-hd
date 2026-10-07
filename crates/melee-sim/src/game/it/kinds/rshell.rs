@@ -8,7 +8,7 @@ use super::super::ground::{air, fall_to_floor, fall_unbreakable, ground_or_fall,
 use super::super::item::{article, attr_of, change, change_state, common_data, play_sfx};
 use super::super::{coll, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
-use crate::game::code;
+use crate::game::ef::{Arg, SpawnKind};
 use crate::game::handles::CodeRef;
 use crate::game::state::{Game, Running};
 use crate::game::structs::itRShell_ItemVars;
@@ -135,12 +135,24 @@ fn sign(v: f64) -> i32 {
 
 /// Starts the dust trail every `x44` frames, `it_8028CFE0`.
 #[doc(alias = "it_8028CFE0")]
+// NaN counts down, as the original's `<= 0` test has it.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn trail(r: &mut Running, gobj: GObjId) {
-    let v = vars(r.game, gobj);
-    if reg(v.xDDC) <= 0.0 {
-        code::unported_call("efAsync_Spawn (a shell's trail, effect 1029)");
+    if !(reg(vars(r.game, gobj).xDDC) <= 0.0) {
+        let v = vars(r.game, gobj);
+        v.xDDC = mem(fp::fsubs(reg(v.xDDC), 1.0));
+        return;
     }
-    v.xDDC = mem(fp::fsubs(reg(v.xDDC), 1.0));
+    let f = |r: &Running, off: u32| attr_f(r, gobj, off);
+    let back = -reg(item(r.game, gobj).facing_dir);
+    let v = Vec3::new(
+        mem(fp::fmuls(reg(f(r, 0x48)), back)),
+        f(r, 0x4C),
+        f(r, 0x50),
+    );
+    let j = jobj_of(r.game, gobj);
+    super::super::effect::queue(r, gobj, SpawnKind::PosOffset, 1029, j, &[Arg::Vec(v)]);
+    vars(r.game, gobj).xDDC = f(r, 0x44);
 }
 
 /// Lands from a throw: chases at the attributes' launch speed, `it_8028D090`.

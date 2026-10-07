@@ -385,15 +385,10 @@ pub fn call(r: &mut Running, gobj: GObjId, f: CodeRef) {
     super::super::code::run_proc(r, gobj, f);
 }
 
-/// Ages the wind sources that sway jointed parts, `lb_800115F4`, and sets whether one blows
-/// (`lb_804D63B4`).
-#[doc(alias = "lb_800115F4")]
+/// Ages the wind sources that sway jointed parts and sets whether wind blows
+/// (`lb_804D63B4`), [`crate::lb::wind::tick`].
 pub fn quake_list_tick(game: &mut Game) {
-    if game.gr.winds_active {
-        unimplemented!("lb_800115F4's wind sources (lb_80011A50) aren't ported");
-    }
-    // No source adds to the total: nothing blows.
-    game.gr.wind_level = if game.gr.wind_level > 0 { -1 } else { 0 };
+    game.gr.wind_level = crate::lb::wind::tick(&mut game.gr.winds, game.gr.wind_level);
 }
 
 /// How often items appear on stage `stkind`, `Ground_801C2AE8`: the stage parameters' and its

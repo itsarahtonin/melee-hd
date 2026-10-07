@@ -2263,12 +2263,6 @@ fn capsule_spawned() {
     check_proc("itCapsule_Logic0_Spawned", capsule::spawned);
 }
 
-/// Zeroes the item's queued effects (`xBC0`), as an item that queued none.
-fn no_queued_effects(c: &mut Call) {
-    let ip = item_ptr(c);
-    set32(c, ip + 0xBC0, 0);
-}
-
 /// Makes the table without containers drop only capsules, from a seed.
 fn only_capsules(c: &mut Call, seed: u32) {
     let t = leaf_check::sym("it_804A0E50");
@@ -2285,12 +2279,8 @@ fn only_capsules(c: &mut Call, seed: u32) {
 
 #[test]
 fn capsule_landed() {
-    // From the capsules' standing states, with no queued effects (which wait for the
-    // effects' port).
-    let prep = |c: &mut Call| {
-        no_queued_effects(c);
-        item_kind(c) == 0
-    };
+    // From the capsules' standing states.
+    let prep = |c: &mut Call| item_kind(c) == 0;
     check_on(
         "itCapsule_UnkMotion0_Anim",
         "it_8027D0B8",
@@ -2313,11 +2303,10 @@ fn capsule_landed() {
 
 #[test]
 fn capsule_opens() {
-    // Opened where it stands, dropping capsules (the only kind ported that can come out).
-    // The sixth seed's capsule explodes, which waits for the effects' port.
-    for seed in seeds().take(5) {
+    // Opened where it stands, dropping capsules (the only kind ported that can come out); the
+    // sixth seed's capsule explodes.
+    for seed in seeds() {
         let prep = move |c: &mut Call| {
-            no_queued_effects(c);
             only_capsules(c, seed);
             item_kind(c) == 0
         };
@@ -2340,6 +2329,20 @@ fn capsule_opens() {
 }
 
 #[test]
+fn capsule_explodes() {
+    let prep = |c: &mut Call| item_kind(c) == 0;
+    check_on(
+        "itCapsule_UnkMotion0_Anim",
+        "it_8027CFE8",
+        &prep,
+        &|r, a| {
+            capsule::explode(r, a.gobj(0));
+            Ret::None
+        },
+    );
+}
+
+#[test]
 fn capsule_states() {
     check_pred("itCapsule_UnkMotion0_Anim", |r, g| {
         kinds::run_pred(r, g, capsule::ANIM0).unwrap()
@@ -2355,9 +2358,8 @@ fn capsule_states() {
     check_pred("itCapsule_UnkMotion4_Coll", capsule::coll4);
 }
 
-/// The capsules' standing captures, without queued effects (which wait for the effects' port).
+/// The capsules' standing captures.
 fn standing_capsule(c: &mut Call) -> bool {
-    no_queued_effects(c);
     item_kind(c) == 0
 }
 
@@ -2821,26 +2823,17 @@ impl Cb {
     }
 }
 
-/// Each callback on every captured call of it, its item's queued effects dropped (they wait
-/// for the effects' port).
+/// Each callback on every captured call of it.
 fn kind_direct(list: &[(&str, Cb)]) {
     for &(name, cb) in list {
-        let prep = |c: &mut Call| {
-            no_queued_effects(c);
-            true
-        };
-        check_calls(name, name, &prep, &move |r, a| cb.run(r, a.gobj(0)));
+        check(name, &move |r, a| cb.run(r, a.gobj(0)));
     }
 }
 
-/// Each callback run from the captures of `source` (items of kind `kind`), with no queued
-/// effects (which wait for the effects' port).
+/// Each callback run from the captures of `source` (items of kind `kind`).
 fn kind_perturbed(source: &str, kind: i32, list: &[(&str, Cb)]) {
     for &(name, cb) in list {
-        let prep = move |c: &mut Call| {
-            no_queued_effects(c);
-            item_kind(c) == kind
-        };
+        let prep = move |c: &mut Call| item_kind(c) == kind;
         check_on(source, name, &prep, &move |r, a| cb.run(r, a.gobj(0)));
     }
 }
@@ -2951,7 +2944,6 @@ fn bat() {
     // Thrown (state 3), a hit bounces it back.
     let thrown = |c: &mut Call| {
         set32(c, item_ptr(c) + 0x24, 3);
-        no_queued_effects(c);
         item_kind(c) == 11
     };
     check_on(
@@ -3060,7 +3052,6 @@ fn hammer() {
     // headless.
     for source in ["itHammer_UnkMotion1_Coll", "itHammer_UnkMotion3_Anim"] {
         let prep = |c: &mut Call| {
-            no_queued_effects(c);
             set32(c, item_ptr(c) + 0xD4C, 0);
             true
         };
@@ -3075,7 +3066,6 @@ fn hammer() {
     // hammers the head's chance was drawn for.
     for left in [1u32, 0, 2] {
         let prep = move |c: &mut Call| {
-            no_queued_effects(c);
             set32(c, item_ptr(c) + 0xD4C, left);
             true
         };
@@ -3129,7 +3119,6 @@ fn hammer_head() {
     // Near the end of its life, it blinks (hidden every `x44` ticks); at the end, it's gone.
     for life in [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0] {
         let prep = move |c: &mut Call| {
-            no_queued_effects(c);
             set32(c, item_ptr(c) + 0xD44, life.to_bits());
             item_kind(c) == 28
         };
@@ -3318,7 +3307,6 @@ fn red_shell() {
     // The chase's turn towards the nearest fighter, every frame instead of every `x40` (from
     // chasing shells only: a resting shell's hitboxes still hold a freed item's joints).
     let prep = |c: &mut Call| {
-        no_queued_effects(c);
         set32(c, item_ptr(c) + 0xDD4 + 0x10, 0);
         item_kind(c) == 15
     };
@@ -3343,6 +3331,134 @@ fn red_shell() {
 }
 
 #[test]
+fn bob_omb() {
+    use melee_sim::game::it::kinds::bombhei as b;
+    kind_direct(&[
+        ("itBombhei_Logic6_Spawned", Cb::Event(b::spawned)),
+        ("itBombhei_UnkMotion0_Anim", Cb::Pred(b::anim0)),
+        ("itBombhei_UnkMotion0_Phys", Cb::Event(b::idle)),
+        ("itBombhei_UnkMotion0_Coll", Cb::Pred(b::coll0)),
+        ("itBombhei_UnkMotion1_Anim", Cb::Pred(b::still)),
+        ("itBombhei_UnkMotion1_Phys", Cb::Event(b::phys1)),
+        ("itBombhei_UnkMotion1_Coll", Cb::Pred(b::coll1)),
+        ("itBombhei_Logic6_PickedUp", Cb::Event(b::picked_up)),
+        ("itBombhei_UnkMotion8_Anim", Cb::Pred(b::anim8)),
+        ("itBombhei_UnkMotion8_Phys", Cb::Event(b::idle)),
+        ("itBombhei_UnkMotion3_Anim", Cb::Pred(b::anim3)),
+        ("itBombhei_UnkMotion3_Phys", Cb::Event(b::idle)),
+        ("itBombhei_UnkMotion3_Coll", Cb::Pred(b::coll3)),
+        ("itBombhei_UnkMotion2_Anim", Cb::Pred(b::anim2)),
+        ("itBombhei_UnkMotion2_Phys", Cb::Event(b::idle)),
+        ("itBombhei_UnkMotion2_Coll", Cb::Pred(b::coll2)),
+        ("itBombhei_UnkMotion10_Anim", Cb::Pred(b::anim10)),
+        ("itBombhei_UnkMotion10_Phys", Cb::Event(b::phys_spin)),
+        ("itBombhei_UnkMotion10_Coll", Cb::Pred(b::coll10)),
+        ("itBombhei_UnkMotion11_Anim", Cb::Pred(b::anim11)),
+        ("itBombhei_UnkMotion11_Phys", Cb::Event(b::idle)),
+        ("itBombhei_UnkMotion11_Coll", Cb::Pred(b::coll11)),
+    ]);
+    // Every state's callbacks from the bob-ombs walking, lying, turning and flying.
+    for source in [
+        "itBombhei_UnkMotion0_Anim",
+        "itBombhei_UnkMotion1_Anim",
+        "itBombhei_UnkMotion2_Anim",
+        "itBombhei_UnkMotion3_Anim",
+        "itBombhei_UnkMotion10_Anim",
+    ] {
+        kind_perturbed(
+            source,
+            6,
+            &[
+                ("it_8027D820", Cb::Event(b::fuse)),
+                ("fn_8027DAC8", Cb::Event(b::landed)),
+                ("it_8027DE18", Cb::Event(b::fell)),
+                ("it_3F14_Logic6_Dropped", Cb::Event(b::dropped)),
+                ("it_8027E978", Cb::Event(b::stand_up)),
+                ("it_8027EE04", Cb::Event(b::walk)),
+                ("it_8027F42C", Cb::Event(b::turn)),
+                ("itBombhei_UnkMotion4_Anim", Cb::Pred(b::anim4)),
+                ("itBombhei_UnkMotion4_Phys", Cb::Event(b::idle)),
+                ("itBombhei_UnkMotion4_Coll", Cb::Pred(b::coll3)),
+                ("it_8027F8E0", Cb::Event(b::light)),
+                ("itBombhei_UnkMotion5_Anim", Cb::Pred(b::anim5)),
+                ("itBombhei_UnkMotion5_Phys", Cb::Event(b::idle)),
+                ("itBombhei_UnkMotion5_Coll", Cb::Pred(b::coll5)),
+                ("fn_8027FCA8", Cb::Event(b::light_air)),
+                ("itBombhei_UnkMotion6_Anim", Cb::Pred(b::anim6)),
+                ("itBombhei_UnkMotion6_Phys", Cb::Event(b::phys_spin)),
+                ("fn_8028007C", Cb::Event(b::landed_lit)),
+                ("itBombhei_UnkMotion6_Coll", Cb::Pred(b::coll6)),
+                ("it_3F14_Logic6_Thrown", Cb::Event(b::thrown)),
+                ("fn_80280974", Cb::Event(b::landed_thrown)),
+                ("it_80280DC0", Cb::Event(b::explode_once)),
+                ("it_8027D730", Cb::Event(b::detonate)),
+                ("it_3F14_Logic6_DmgDealt", Cb::Pred(b::dmg)),
+                ("it_3F14_Logic6_DmgReceived", Cb::Pred(b::dmg)),
+                ("it_3F14_Logic6_EnteredAir", Cb::Event(b::entered_air)),
+                ("itBombhei_UnkMotion12_Anim", Cb::Pred(b::still)),
+                ("itBombhei_UnkMotion12_Phys", Cb::Event(b::idle)),
+                ("itBombhei_UnkMotion12_Coll", Cb::Pred(b::coll12)),
+                ("itBombhei_Logic6_Clanked", Cb::Pred(b::clanked)),
+                ("itBombhei_Logic6_Reflected", Cb::Pred(b::reflected)),
+                ("it_3F14_Logic6_HitShield", Cb::Pred(b::hit_shield)),
+                ("it_3F14_Logic6_ShieldBounced", Cb::Pred(b::hit_shield)),
+            ],
+        );
+    }
+    // A lit bob-omb's fuse at its last frames, and the hard landings that set it off.
+    for fuse in [1.0f32, 2.0, 30.0] {
+        let prep = move |c: &mut Call| {
+            set32(c, item_ptr(c) + 0xDD4 + 0x1C, fuse.to_bits());
+            set32(c, item_ptr(c) + 0xDD4 + 0xC, 1);
+            item_kind(c) == 6
+        };
+        check_on(
+            "itBombhei_UnkMotion2_Anim",
+            "it_8027D820",
+            &prep,
+            &|r, a| {
+                b::fuse(r, a.gobj(0));
+                Ret::None
+            },
+        );
+    }
+    // Thrown at another size.
+    let prep = |c: &mut Call| {
+        set32(c, item_ptr(c) + 0xDD4 + 0x14, 1.5f32.to_bits());
+        item_kind(c) == 6
+    };
+    check_on(
+        "itBombhei_UnkMotion2_Anim",
+        "it_3F14_Logic6_Thrown",
+        &prep,
+        &|r, a| {
+            b::thrown(r, a.gobj(0));
+            Ret::None
+        },
+    );
+    // A bob-omb dropped lit at a point (as a stage or event drops one).
+    let prep = |c: &mut Call| {
+        vec_arg(c, 3, 0x3000, [10.0, 30.0, 0.0]);
+        true
+    };
+    check_on(
+        "itBombhei_UnkMotion2_Anim",
+        "it_8027D670",
+        &prep,
+        &|r, a| Ret::GObj(b::spawn_at(r, a.vec(0))),
+    );
+    check_on(
+        "itBombhei_UnkMotion2_Anim",
+        "itBombhei_Logic6_EvtUnk",
+        &pass_owner,
+        &|r, a| {
+            b::forget(r, a.gobj(0), a.opt_gobj(1));
+            Ret::None
+        },
+    );
+}
+
+#[test]
 fn shell_paths() {
     use melee_sim::game::it::kinds::{gshell as g, rshell as s};
     // The trail's countdown between puffs.
@@ -3351,7 +3467,6 @@ fn shell_paths() {
         ("itRshell_UnkMotion5_Anim", "it_8028CFE0", 15, 0x8),
     ] {
         let prep = move |c: &mut Call| {
-            no_queued_effects(c);
             set32(c, item_ptr(c) + 0xDD4 + off, 5.0f32.to_bits());
             item_kind(c) == kind
         };
@@ -3369,10 +3484,7 @@ fn shell_paths() {
         check_on(source, target, &prep, ours);
     }
     // A red shell landing from a throw, and taking to the air chasing.
-    let prep = |c: &mut Call| {
-        no_queued_effects(c);
-        item_kind(c) == 15
-    };
+    let prep = |c: &mut Call| item_kind(c) == 15;
     check_on("itRshell_UnkMotion5_Coll", "it_8028D090", &prep, &|r, a| {
         s::landed(r, a.gobj(0));
         Ret::None
@@ -3381,4 +3493,292 @@ fn shell_paths() {
         s::chase_air(r, a.gobj(0));
         Ret::None
     });
+}
+
+#[test]
+fn effect_router() {
+    use melee_sim::game::it::effect;
+    check("it_802787B4", &|r, a| {
+        effect::spawn_simple(r, a.gobj(0), a.int(1) as i32);
+        Ret::None
+    });
+    let ours: &Ours = &|r, a| {
+        let (id, bone) = (a.int(1) as i32, a.int(2) as i32);
+        effect::spawn(r, a.gobj(0), id, bone, a.vec(3), a.vec(4), a.int(5) == 1);
+        Ret::None
+    };
+    check("it_80278800", ours);
+    // One id of each of the router's ways, now and queued.
+    for id in [
+        0x402u32, 0x446, 0x417, 0x415, 0x44E, 0x423, 0x3E9, 0x3ED, 0x3F7, 0x435, 0x404, 0x513,
+        0x514, 0x515, 0x42B, 0x420,
+    ] {
+        for sync in [0u32, 1] {
+            let prep = move |c: &mut Call| {
+                c.regs.gpr[4] = id;
+                c.regs.gpr[8] = sync;
+                true
+            };
+            check_calls("it_80278800", "it_80278800", &prep, ours);
+        }
+    }
+}
+
+#[test]
+fn crate_box() {
+    use melee_sim::game::it::kinds::crate_box as b;
+    kind_direct(&[
+        ("itBox_Logic1_Spawned", Cb::Event(b::spawned)),
+        ("itBox_Logic1_Destroyed", Cb::Event(b::destroyed)),
+        ("itBox_UnkMotion0_Anim", Cb::Pred(b::anim0)),
+        ("itBox_UnkMotion0_Phys", Cb::Event(b::idle)),
+        ("itBox_UnkMotion0_Coll", Cb::Pred(b::coll0)),
+        ("itBox_UnkMotion4_Anim", Cb::Pred(b::no)),
+        ("itBox_UnkMotion1_Phys", Cb::Event(b::phys1)),
+        ("itBox_UnkMotion1_Coll", Cb::Pred(b::coll1)),
+        ("itBox_UnkMotion7_Anim", Cb::Pred(b::anim7)),
+        ("itBox_UnkMotion7_Phys", Cb::Event(b::idle)),
+        ("itBox_UnkMotion7_Coll", Cb::Pred(b::no)),
+        ("itBox_Logic1_DmgReceived", Cb::Pred(b::dmg_received)),
+    ]);
+    for source in ["itBox_UnkMotion0_Anim", "itBox_UnkMotion4_Anim"] {
+        kind_perturbed(
+            source,
+            1,
+            &[
+                ("fn_80286480", Cb::Event(b::landed)),
+                ("it_8028655C", Cb::Event(b::fell)),
+                ("itBox_Logic1_PickedUp", Cb::Event(b::picked_up)),
+                ("itBox_UnkMotion2_Anim", Cb::Pred(b::no)),
+                ("itBox_UnkMotion2_Phys", Cb::Event(b::idle)),
+                ("itBox_Logic1_Thrown", Cb::Event(b::thrown)),
+                ("itBox_UnkMotion4_Phys", Cb::Event(b::phys4)),
+                ("itBox_UnkMotion3_Coll", Cb::Pred(b::coll3)),
+                ("itBox_Logic1_Dropped", Cb::Event(b::dropped)),
+                ("itBox_UnkMotion4_Coll", Cb::Pred(b::coll4)),
+                ("it_80286AA4", Cb::Event(b::open_empty)),
+                ("itBox_UnkMotion6_Anim", Cb::Pred(b::anim6)),
+                ("itBox_UnkMotion6_Phys", Cb::Event(b::idle)),
+                ("itBox_UnkMotion6_Coll", Cb::Pred(b::no)),
+                ("it_80286BA0", Cb::Event(b::open)),
+                ("itBox_Logic1_DmgDealt", Cb::Pred(b::hit)),
+                ("itBox_Logic1_Clanked", Cb::Pred(b::hit)),
+                ("itBox_Logic1_HitShield", Cb::Pred(b::hit)),
+                ("itBox_Logic1_Reflected", Cb::Pred(b::hit)),
+                ("itBox_Logic1_EnteredAir", Cb::Event(b::entered_air)),
+                ("itBox_UnkMotion5_Anim", Cb::Pred(b::no)),
+                ("itBox_UnkMotion5_Phys", Cb::Event(b::idle)),
+                ("itBox_UnkMotion5_Coll", Cb::Pred(b::coll5)),
+                ("it_802870A4", Cb::Event(b::float)),
+                ("itBox_UnkMotion8_Anim", Cb::Pred(b::no)),
+                ("itBox_UnkMotion8_Phys", Cb::Event(b::phys8)),
+                ("itBox_UnkMotion8_Coll", Cb::Pred(b::no)),
+                ("it_8028733C", Cb::Event(b::follow)),
+                ("it_802863BC", Cb::Pred(b::lands_upright)),
+            ],
+        );
+    }
+    // Enough damage taken to break it.
+    let prep = |c: &mut Call| {
+        set32(c, item_ptr(c) + 0xC9C, 500);
+        item_kind(c) == 1
+    };
+    check_on(
+        "itBox_UnkMotion0_Anim",
+        "itBox_Logic1_DmgReceived",
+        &prep,
+        &|r, a| Ret::Bool(b::dmg_received(r, a.gobj(0))),
+    );
+    // The weighted draws, from the boxes' states (capsules the only kind to drop).
+    for seed in seeds() {
+        let prep = move |c: &mut Call| {
+            only_capsules(c, seed);
+            c.regs.gpr[4..8].copy_from_slice(&[3, 2, 1, 4]);
+            item_kind(c) == 1
+        };
+        check_on("itBox_UnkMotion0_Anim", "it_80286340", &prep, &|r, a| {
+            Ret::Bool(b::has_items(
+                r,
+                a.int(1) as i32,
+                a.int(2) as i32,
+                a.int(3) as i32,
+                a.int(4) as i32,
+            ))
+        });
+        check_on("itBox_UnkMotion0_Anim", "it_80286248", &prep, &|r, a| {
+            b::drop_items(
+                r,
+                a.gobj(0),
+                a.int(1) as i32,
+                a.int(2) as i32,
+                a.int(3) as i32,
+                a.int(4) as i32,
+            );
+            Ret::None
+        });
+    }
+    // A box floating with a barrel (here, the box itself).
+    let prep = |c: &mut Call| item_kind(c) == 1;
+    check_on("itBox_UnkMotion0_Anim", "it_80286088", &prep, &|r, a| {
+        Ret::GObj(b::spawn_floating(r, a.opt_gobj(0)))
+    });
+    check_on(
+        "itBox_UnkMotion0_Anim",
+        "itBox_Logic1_EvtUnk",
+        &pass_owner,
+        &|r, a| {
+            b::forget(r, a.gobj(0), a.opt_gobj(1));
+            Ret::None
+        },
+    );
+}
+
+#[test]
+fn barrel() {
+    use melee_sim::game::it::kinds::taru as t;
+    kind_direct(&[
+        ("it_3F14_Logic2_Spawned", Cb::Event(t::spawned)),
+        ("itTaru_UnkMotion0_Anim", Cb::Pred(t::anim0)),
+        ("itTaru_UnkMotion0_Phys", Cb::Event(t::idle)),
+        ("itTaru_UnkMotion0_Coll", Cb::Pred(t::coll0)),
+        ("itTaru_UnkMotion1_Anim", Cb::Pred(t::no)),
+        ("itTaru_UnkMotion1_Phys", Cb::Event(t::phys1)),
+        ("itTaru_UnkMotion1_Coll", Cb::Pred(t::coll1)),
+    ]);
+    for source in ["itTaru_UnkMotion0_Anim", "itTaru_UnkMotion1_Anim"] {
+        kind_perturbed(
+            source,
+            2,
+            &[
+                ("it_802874F0", Cb::Event(t::roll)),
+                ("it_80287690", Cb::Event(t::turn)),
+                ("it_80287D0C", Cb::Event(t::fell)),
+                ("itTaru_Logic2_PickedUp", Cb::Event(t::picked_up)),
+                ("itTaru_UnkMotion2_Anim", Cb::Pred(t::no)),
+                ("itTaru_UnkMotion2_Phys", Cb::Event(t::idle)),
+                ("itTaru_Logic2_Dropped", Cb::Event(t::let_go)),
+                ("itTaru_Logic2_Thrown", Cb::Event(t::thrown)),
+                ("it_80287F20", Cb::Event(t::let_go)),
+                ("itTaru_UnkMotion3_Anim", Cb::Pred(t::tick)),
+                ("itTaru_UnkMotion3_Phys", Cb::Event(t::phys3)),
+                ("itTaru_UnkMotion3_Coll", Cb::Pred(t::coll3)),
+                ("it_80288194", Cb::Event(t::rolling)),
+                ("it_802881B4", Cb::Event(t::land_rolling)),
+                ("it_802881FC", Cb::Event(t::rolling)),
+                ("itTaru_UnkMotion5_Anim", Cb::Pred(t::anim5)),
+                ("itTaru_UnkMotion5_Phys", Cb::Event(t::phys5)),
+                ("itTaru_UnkMotion5_Coll", Cb::Pred(t::coll5)),
+                ("itTaru_UnkMotion4_Anim", Cb::Pred(t::tick)),
+                ("itTaru_UnkMotion4_Phys", Cb::Event(t::phys4)),
+                ("itTaru_UnkMotion4_Coll", Cb::Pred(t::coll5)),
+                ("it_802885C8", Cb::Event(t::open_empty)),
+                ("itTaru_UnkMotion6_Anim", Cb::Pred(t::anim6)),
+                ("itTaru_UnkMotion6_Phys", Cb::Event(t::idle)),
+                ("itTaru_UnkMotion6_Coll", Cb::Pred(t::no)),
+                ("it_802886C4", Cb::Event(t::open)),
+                ("itTaru_UnkMotion7_Anim", Cb::Pred(t::anim7)),
+                ("itTaru_UnkMotion7_Phys", Cb::Event(t::idle)),
+                ("itTaru_UnkMotion7_Coll", Cb::Pred(t::no)),
+                ("it_3F14_Logic2_DmgDealt", Cb::Pred(t::hit)),
+                ("it_3F14_Logic2_Clanked", Cb::Pred(t::hit)),
+                ("it_3F14_Logic2_HitShield", Cb::Pred(t::hit)),
+                ("it_3F14_Logic2_Reflected", Cb::Pred(t::hit)),
+                ("it_3F14_Logic2_DmgReceived", Cb::Pred(t::dmg_received)),
+            ],
+        );
+    }
+    // Rolling and carried barrels, their speeds and tilts set (the `xDB0` flag a carried
+    // barrel straightens with).
+    for (speed, carried, slope) in [(0.5f32, 0u32, 0.3f32), (-2.0, 1, 0.0), (9.0, 1, -0.5)] {
+        let prep = move |c: &mut Call| {
+            let ip = item_ptr(c);
+            set32(c, ip + 0xDD4 + 0x10, speed.to_bits());
+            set32(c, ip + 0xDD4 + 0x14, slope.to_bits());
+            set32(c, ip + 0xDB0, carried);
+            item_kind(c) == 2
+        };
+        for (target, f) in [
+            ("it_802874F0", t::roll as fn(&mut Running, GObjId)),
+            ("it_80287690", t::turn),
+            ("itTaru_UnkMotion4_Phys", t::phys4),
+        ] {
+            check_on("itTaru_UnkMotion0_Anim", target, &prep, &move |r, a| {
+                f(r, a.gobj(0));
+                Ret::None
+            });
+        }
+        check_on(
+            "itTaru_UnkMotion0_Anim",
+            "itTaru_UnkMotion5_Coll",
+            &prep,
+            &|r, a| Ret::Bool(t::coll5(r, a.gobj(0))),
+        );
+    }
+    // Hits short of breaking it: a lying barrel knocked rolling (on a seed whose draw hits),
+    // a rolling one pushed.
+    for (msid, seed) in [(0u32, 0u32), (0, 1), (0, 2), (4, 0), (5, 0)] {
+        let prep = move |c: &mut Call| {
+            let ip = item_ptr(c);
+            set32(c, ip + 0x24, msid);
+            set32(c, ip + 0xC9C, 0);
+            set32(c, ip + 0xCA0, 12);
+            set_seed(c, seeds().nth(seed as usize).unwrap());
+            item_kind(c) == 2
+        };
+        check_on(
+            "itTaru_UnkMotion0_Anim",
+            "it_3F14_Logic2_DmgReceived",
+            &prep,
+            &|r, a| Ret::Bool(t::dmg_received(r, a.gobj(0))),
+        );
+    }
+    check_on(
+        "itTaru_UnkMotion0_Anim",
+        "itTaru_Logic2_EvtUnk",
+        &pass_owner,
+        &|r, a| {
+            t::forget(r, a.gobj(0), a.opt_gobj(1));
+            Ret::None
+        },
+    );
+}
+
+#[test]
+fn script_commands() {
+    use melee_sim::game::it::anim;
+    // Each of the items' own commands run at the script of an exploding item (the capsules'
+    // and bob-ombs' blasts have scripts), the command info in r4.
+    let prep = |c: &mut Call| {
+        let ip = item_ptr(c);
+        c.regs.gpr[4] = ip + 0x524;
+        w32(c, ip + 0x52C) != 0
+    };
+    for source in ["itCapsule_UnkMotion5_Anim", "itBombhei_UnkMotion11_Anim"] {
+        check_on(source, "it_80278F2C", &prep, &|r, a| {
+            anim::script_effect(r, a.gobj(0));
+            Ret::None
+        });
+        for (name, op) in [
+            ("it_80279888", 21),
+            ("it_802798D4", 22),
+            ("it_8027990C", 23),
+            ("it_80279958", 24),
+        ] {
+            check_on(source, name, &prep, &move |r, a| {
+                anim::run_command(r, a.gobj(0), op);
+                Ret::None
+            });
+        }
+    }
+}
+
+#[test]
+fn winds() {
+    use melee_sim::game::gr::ground;
+    // The wind sources age every stage tick; exploding bob-ombs' states have some blowing.
+    let tick: &Ours = &|r, _| {
+        ground::quake_list_tick(r.game);
+        Ret::None
+    };
+    check_on("itBombhei_UnkMotion11_Anim", "lb_800115F4", &|_| true, tick);
 }

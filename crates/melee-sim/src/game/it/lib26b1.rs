@@ -170,3 +170,10 @@ pub fn set_xdd0_b3(game: &mut Game, gobj: GObjId) {
 pub fn stop_keeping_clear(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).xDC8_word.flags.x1A = false;
 }
+
+/// Hides the item's model, `it_8026BB44`.
+#[doc(alias = "it_8026BB44")]
+pub fn hide(game: &mut Game, gobj: GObjId) {
+    let j = super::jobj_of(game, gobj);
+    super::lib2725::hide_tree(game, j);
+}

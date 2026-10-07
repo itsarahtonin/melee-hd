@@ -18,6 +18,35 @@ pub fn is_animated(objs: &Objects, j: JObjId) -> bool {
         .is_some_and(|a| objs.aobjs[a].flags & NO_ANIM == 0)
 }
 
+/// Whether any joint in the tree plays an animation, `lb_8000B09C`. The walk climbs out of a
+/// joint flagged `JOBJ_INSTANCE` (1 << 12) without visiting its later siblings.
+#[doc(alias = "lb_8000B09C")]
+pub fn any_animated(objs: &Objects, mut j: Option<JObjId>) -> bool {
+    while let Some(c) = j {
+        if is_animated(objs, c) {
+            return true;
+        }
+        let o = &objs.jobjs[c];
+        if (o.child.is_none() && o.next.is_none()) || o.flags & (1 << 12) != 0 {
+            let mut k = c;
+            j = loop {
+                let Some(p) = objs.jobjs[k].parent else {
+                    break None;
+                };
+                if let Some(n) = objs.jobjs[p].next {
+                    break Some(n);
+                }
+                k = p;
+            };
+        } else if o.child.is_some() {
+            j = o.child;
+        } else {
+            j = o.next;
+        }
+    }
+    false
+}
+
 /// The first joint in the tree (the joint, its descendants, then its later siblings') that
 /// has an animation, `lbFindJObjWithAObj`.
 #[doc(alias = "lbFindJObjWithAObj")]
