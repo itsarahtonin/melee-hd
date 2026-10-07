@@ -4,7 +4,7 @@
 use std::io::Read;
 
 const MAGIC: &[u8; 8] = b"SSBMTRC\0";
-const VERSION: u32 = 1;
+const VERSION: u32 = 2;
 
 /// What a region holds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -15,6 +15,8 @@ pub enum Kind {
     Camera,
     Fighter,
     Item,
+    /// A fighter's model joint, in its tree's pre-order.
+    JObj,
 }
 
 impl Kind {
@@ -26,6 +28,7 @@ impl Kind {
             3 => Kind::Camera,
             4 => Kind::Fighter,
             5 => Kind::Item,
+            6 => Kind::JObj,
             _ => return None,
         })
     }
