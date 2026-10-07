@@ -22,6 +22,8 @@
 use std::cell::RefCell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::Path;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use gekko_fp::set_fp_mode;
 use leaf_check::calls::{peek_u32, poke_bit, poke_f32, poke_u32, saved_calls};
@@ -264,30 +266,41 @@ fn check(prepare: fn(&mut Call, usize), min: usize) {
         );
         return;
     }
-    std::thread::Builder::new()
-        .stack_size(256 << 20)
-        .spawn(move || {
-            let ctx = hsd_reference().unwrap();
-            stand_ins(&ctx);
-            for mode in MODES {
-                set_fp_mode(mode);
-                let (mut clean, mut skipped) = (0, std::collections::BTreeMap::new());
-                for (i, p) in paths.iter().enumerate() {
-                    match run_one(&ctx, p, i, prepare) {
-                        Outcome::Clean => clean += 1,
-                        Outcome::Skipped(why) => *skipped.entry(why).or_insert(0) += 1,
-                    }
-                }
-                eprintln!("{mode:?}: {clean} of {} compared clean", paths.len());
-                for (why, n) in &skipped {
-                    eprintln!("  skipped x{n}: {why}");
-                }
-                assert!(clean >= min, "{mode:?}: only {clean} compared clean");
+    for mode in MODES {
+        let next = AtomicUsize::new(0);
+        let results = Mutex::new((0, std::collections::BTreeMap::new()));
+        let workers = std::thread::available_parallelism()
+            .map_or(4, |n| n.get())
+            .min(6);
+        std::thread::scope(|s| {
+            for _ in 0..workers {
+                std::thread::Builder::new()
+                    .stack_size(256 << 20)
+                    .spawn_scoped(s, || {
+                        set_fp_mode(mode);
+                        let ctx = hsd_reference().unwrap();
+                        stand_ins(&ctx);
+                        loop {
+                            let i = next.fetch_add(1, Ordering::Relaxed);
+                            let Some(p) = paths.get(i) else { break };
+                            let outcome = run_one(&ctx, p, i, prepare);
+                            let mut r = results.lock().unwrap();
+                            match outcome {
+                                Outcome::Clean => r.0 += 1,
+                                Outcome::Skipped(why) => *r.1.entry(why).or_insert(0) += 1,
+                            }
+                        }
+                    })
+                    .unwrap();
             }
-        })
-        .unwrap()
-        .join()
-        .unwrap();
+        });
+        let (clean, skipped) = results.into_inner().unwrap();
+        eprintln!("{mode:?}: {clean} of {} compared clean", paths.len());
+        for (why, n) in &skipped {
+            eprintln!("  skipped x{n}: {why}");
+        }
+        assert!(clean >= min, "{mode:?}: only {clean} compared clean");
+    }
 }
 
 #[test]
