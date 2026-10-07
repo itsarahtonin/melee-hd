@@ -17,7 +17,8 @@
 //! poll per frame): see `Env::calibrate`.
 //!
 //! Each run is timed and checked while it plays. The harness reads Dolphin's emulated memory
-//! (its MEM1 mapping) as each frame ends: the frames' times, and every fighter's action state,
+//! (its MEM1 mapping) as each frame ends: the frames' times, and every fighter's (followers such as
+//! Nana too) action state,
 //! position, facing, percent and stocks and the random seed, against the replay. A stretch of
 //! frames that differ means the run left the replay. Past the match's last frame ("GAME!"), the
 //! fighters' stocks and percents must be the replay's last.
@@ -37,6 +38,8 @@ const MATCH_MAJOR: u8 = 0x0E;
 const MATCH_MINOR: u8 = 1;
 const FIRST_FRAME: i32 = -123;
 const RANDOM_SEED: u32 = 0x804D_5F90;
+/// A fighter's struct, as ssbm-rs's state trace saves it.
+const FIGHTER_SIZE: usize = 0x23EC;
 const PLAYER_SLOTS: u32 = 0x8045_3080;
 const PLAYER_SLOT_SIZE: u32 = 0xE90;
 /// HSD's raw controller queue (5 polls of 4 controllers, 12 bytes each) and its library data,
@@ -200,7 +203,7 @@ impl Calibration {
 const ENDED: i32 = -1;
 
 /// Whether the fighters Dolphin shows are the replay's.
-fn same(got: &[Option<Fighter>; 4], want: &[Option<Fighter>; 4]) -> bool {
+fn same(got: &[Option<Fighter>; 8], want: &[Option<Fighter>; 8]) -> bool {
     got.iter().zip(want).all(|(g, w)| w.is_none() || g == w)
 }
 
@@ -545,13 +548,44 @@ impl Env {
         // The current stretch of differing frames: its first and its length.
         let (mut run_first, mut run_len) = (String::new(), 0usize);
         let (mut t_first, mut t_last) = (None::<Instant>, None::<Instant>);
-        let deadline = Instant::now() + Duration::from_secs(1800);
+        // MELEE_BENCH_DEADLINE=S gives a run S seconds (default 1800), for the slow interpreter.
+        let deadline = Instant::now()
+            + Duration::from_secs(
+                std::env::var("MELEE_BENCH_DEADLINE")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(1800),
+            );
         let verbose = std::env::var_os("MELEE_BENCH_VERBOSE").is_some();
         if mem.is_none() {
             eprintln!("{name}: found no emulated memory in Dolphin");
         }
         let mut next_report = Instant::now();
         let mut seen = None;
+        // How long the frame counter may stand still before the run counts as paused at the
+        // movie's end (MELEE_BENCH_STALL_S, default 2; the interpreter needs more).
+        let stall = Duration::from_secs(
+            std::env::var("MELEE_BENCH_STALL_S")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(2),
+        );
+        let dump = std::env::var("MELEE_BENCH_DUMP_FIGHTERS").ok().map(|v| {
+            let mut w = v.split(';');
+            let dir = w.next().unwrap().to_owned();
+            let lo: i32 = w.next().and_then(|x| x.parse().ok()).expect("DIR;LO;HI");
+            let hi: i32 = w.next().and_then(|x| x.parse().ok()).expect("DIR;LO;HI");
+            (dir, lo, hi)
+        });
+        let mut rnglog = std::env::var("MELEE_BENCH_RNGLOG").ok().map(|p| {
+            (
+                std::io::BufWriter::new(std::fs::File::create(p).unwrap()),
+                0u32,
+            )
+        });
+        let mut trace = std::env::var("MELEE_BENCH_TRACE")
+            .ok()
+            .map(|p| std::io::BufWriter::new(std::fs::File::create(p).unwrap()));
         let mut recent = std::collections::VecDeque::new();
         // MELEE_BENCH_NAP_US=N waits N µs between looks at the frame counter (default 100).
         let nap = Duration::from_micros(
@@ -578,7 +612,7 @@ impl Env {
             let Some(m) = &mem else { break };
             let Some(frame) = m.frame() else {
                 // The match ended early (a run that left the replay) and the game moved on.
-                if seen.is_some() && seen_at.elapsed() > Duration::from_secs(3) {
+                if seen.is_some() && seen_at.elapsed() > stall + Duration::from_secs(1) {
                     break;
                 }
                 std::thread::sleep(Duration::from_micros(200));
@@ -586,7 +620,7 @@ impl Env {
             };
             if Some(frame) == seen {
                 // Paused at the movie's end: the emulated machine stands still.
-                if seen_at.elapsed() > Duration::from_secs(2) {
+                if seen_at.elapsed() > stall {
                     end = m.sample();
                     break;
                 }
@@ -596,6 +630,95 @@ impl Env {
             seen = Some(frame);
             seen_at = Instant::now();
             let Some(s) = m.sample() else { continue };
+            // MELEE_BENCH_DUMP_FIGHTERS=DIR;LO;HI saves each fighter's struct (leaders 0-3,
+            // followers 4-7) at the end of frames LO to HI, as DIR/FRAME-INDEX.bin.
+            if let Some((dir, lo, hi)) = &dump
+                && (*lo..=*hi).contains(&(s.frame + ENDED))
+            {
+                // And the globals ssbm-rs's state trace saves: the players' blocks, stage_info
+                // and game_camera.
+                for (name, addr, len) in [
+                    ("players", PLAYER_SLOTS, 0x5760usize),
+                    ("stage", 0x8049_E6C8, 0x748),
+                    ("camera", 0x8045_2C68, 0x39C),
+                ] {
+                    let mut b = vec![0u8; len];
+                    if m.process
+                        .read(m.base + (addr & 0x01FF_FFFF) as usize, &mut b)
+                    {
+                        let _ = std::fs::write(
+                            Path::new(dir).join(format!("{}-{name}.bin", s.frame + ENDED)),
+                            b,
+                        );
+                    }
+                }
+                for i in 0..8u32 {
+                    let slot = PLAYER_SLOTS + PLAYER_SLOT_SIZE * (i % 4);
+                    let Some(gobj) = m.u32(slot + if i < 4 { 0xB0 } else { 0xB4 }) else {
+                        continue;
+                    };
+                    if gobj == 0 {
+                        continue;
+                    }
+                    if let Some(fp) = m.u32(gobj + 0x2C) {
+                        let mut b = vec![0u8; FIGHTER_SIZE];
+                        if m.process.read(m.base + (fp & 0x01FF_FFFF) as usize, &mut b) {
+                            let _ = std::fs::write(
+                                Path::new(dir).join(format!("{}-{i}.bin", s.frame + ENDED)),
+                                b,
+                            );
+                        }
+                    }
+                }
+            }
+            // MELEE_BENCH_RNGLOG=FILE copies out the random-number calls a logging Gecko code
+            // (a diagnostic, not part of the benchmark) keeps in a ring at 0x80002C00: count,
+            // then 60 entries of caller, seed before, scene frames and which function.
+            if let Some((out, done)) = rnglog.as_mut()
+                && let Some(count) = m.u32(0x8000_2C00)
+            {
+                use std::io::Write as _;
+                if count - *done > 60 {
+                    let _ = writeln!(out, "lost {} calls", count - *done - 60);
+                    *done = count - 60;
+                }
+                while *done < count {
+                    let at = 0x8000_2C10 + 16 * (*done % 60);
+                    if let Some(e) = m.read::<16>(at) {
+                        let w = |i: usize| u32::from_be_bytes(e[i..i + 4].try_into().unwrap());
+                        let _ = writeln!(
+                            out,
+                            "{} {} {:08X} {:08X}",
+                            w(8) as i32 - 123,
+                            w(12),
+                            w(0),
+                            w(4)
+                        );
+                    }
+                    *done += 1;
+                }
+            }
+            // MELEE_BENCH_TRACE=FILE logs each frame seen: frame, renders, unpaused ticks,
+            // seed, the HSD queue position, and the fighters' actions.
+            if let Some(t) = trace.as_mut() {
+                use std::io::Write as _;
+                let acts: Vec<String> = s
+                    .fighters
+                    .iter()
+                    .flatten()
+                    .map(|f| format!("{}:{:08X}:{:08X}:{:08X}", f.action, f.x, f.y, f.percent))
+                    .collect();
+                let _ = writeln!(
+                    t,
+                    "{} {} {} {:08X} {} {}",
+                    s.frame,
+                    s.renders,
+                    s.unpaused,
+                    s.seed,
+                    s.qread,
+                    acts.join(",")
+                );
+            }
             // Past the match's last frame the game shows "GAME!" and the stocks and percents
             // stay as they ended; the game then moves on to another scene.
             if polls.is_none() && s.frame > last {
@@ -789,9 +912,13 @@ struct Mem {
 struct Sample {
     /// The last frame run.
     frame: i32,
-    fighters: [Option<Fighter>; 4],
+    fighters: [Option<Fighter>; 8],
     /// The random seed.
     seed: u32,
+    /// The scene loop's counters: renders (the display pass, once per batch of ticks) and
+    /// unpaused ticks.
+    renders: u32,
+    unpaused: u32,
     /// The movie entry the last poll came from, by the calibration movie's third controller.
     poll: Option<i64>,
     /// HSD's queue position: it moves one a tick, so against the frame counter it tells a
@@ -840,10 +967,11 @@ impl Mem {
 
     fn sample(&self) -> Option<Sample> {
         let frame = self.frame()?;
-        let mut fighters = [None; 4];
-        for (port, f) in fighters.iter_mut().enumerate() {
-            let slot = PLAYER_SLOTS + PLAYER_SLOT_SIZE * port as u32;
-            let gobj = self.u32(slot + 0xB0)?;
+        // Leaders in 0 to 3, followers (Nana) in 4 to 7.
+        let mut fighters = [None; 8];
+        for (i, f) in fighters.iter_mut().enumerate() {
+            let slot = PLAYER_SLOTS + PLAYER_SLOT_SIZE * (i % 4) as u32;
+            let gobj = self.u32(slot + if i < 4 { 0xB0 } else { 0xB4 })?;
             if gobj == 0 {
                 continue;
             }
@@ -864,12 +992,16 @@ impl Mem {
         let poll = (self.read::<4>(PAD_LIB) == Some(lib)).then(|| counter_entry(&raw));
         // A frame that ended while this was read is no sample.
         let seed = self.u32(RANDOM_SEED)?;
+        let renders = self.u32(SCENE + 0x2C)?;
+        let unpaused = self.u32(SCENE + 0x30)?;
         let qread = lib[1];
         (self.frame()? == frame).then_some(Sample {
             qread,
             frame,
             fighters,
             seed,
+            renders,
+            unpaused,
             poll,
         })
     }
@@ -885,17 +1017,19 @@ fn replay_last_frame(replay: &Replay) -> i32 {
         .map_or(FIRST_FRAME, |(&k, _)| k)
 }
 
-/// Each frame's fighters (leaders) at the end of the frame, from the post-frame updates.
-fn post_frames(replay: &Replay) -> BTreeMap<i32, [Option<Fighter>; 4]> {
-    let mut out: BTreeMap<i32, [Option<Fighter>; 4]> = BTreeMap::new();
+/// Each frame's fighters at the end of the frame, from the post-frame updates: leaders in 0
+/// to 3, followers (Nana) in 4 to 7.
+fn post_frames(replay: &Replay) -> BTreeMap<i32, [Option<Fighter>; 8]> {
+    let mut out: BTreeMap<i32, [Option<Fighter>; 8]> = BTreeMap::new();
     for e in &replay.events {
         let p = &e.payload;
-        if e.command != event::POST_FRAME || p.len() < 0x21 || p[5] != 0 {
+        if e.command != event::POST_FRAME || p.len() < 0x21 {
             continue;
         }
         let frame = i32::from_be_bytes(p[0..4].try_into().unwrap());
         let word = |at: usize| u32::from_be_bytes(p[at..at + 4].try_into().unwrap());
-        out.entry(frame).or_default()[usize::from(p[4] & 3)] = Some(Fighter {
+        let index = usize::from(p[4] & 3) + if p[5] != 0 { 4 } else { 0 };
+        out.entry(frame).or_default()[index] = Some(Fighter {
             action: u16::from_be_bytes([p[7], p[8]]),
             x: word(9),
             y: word(0xD),
