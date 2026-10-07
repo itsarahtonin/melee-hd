@@ -13,7 +13,38 @@ use crate::ppc::slw_i;
 /// An animated object's update function (`HSD_ObjUpdateFunc`), handed each value with its
 /// channel type. `None` is the original's NULL: the value isn't computed, so a keyed value
 /// stays pending and a linear segment's slope waits for the next update.
-pub type Update<'a> = Option<&'a mut dyn FnMut(u8, f32)>;
+pub type Update<'a> = Option<&'a mut dyn FnMut(u8, Value)>;
+
+/// A value handed to an update function (`HSD_ObjData`).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Value {
+    Float(f32),
+    /// No value: `FObjUpdateAnim` has no case for the interpolation (0, a channel whose data
+    /// ends right after its first key, reaching state 6 before a second load sets `op_intrp`),
+    /// and the original hands over whatever its stack holds where the value would go.
+    ///
+    /// Probed in ssbm-rs over every VS stage and a Final Destination replay, that word is
+    /// always a RAM address (a stack slot, a return address, a heap object), which as a float
+    /// is negative and below 5e-38 in magnitude, mostly subnormal. Every channel seen was a joint's
+    /// branch visibility (`HSD_A_J_BRANCH`), which an address hides. Update functions resolve
+    /// what any address gives where that doesn't depend on which address, and count the rest
+    /// as stale reads (see `docs/engine.md`).
+    Stale,
+}
+
+impl Value {
+    /// The float, or what a RAM address is as one where only its sign and magnitude matter.
+    pub fn or_address(self) -> f32 {
+        match self {
+            Value::Float(v) => v,
+            Value::Stale => ADDRESS,
+        }
+    }
+}
+
+/// A RAM address (0x80000000 to 0x817FFFFF) read as a float, for comparisons any address
+/// gives the same answer to.
+const ADDRESS: f32 = f32::from_bits(0x8040_0000);
 
 /// Lends an update function on for one call.
 pub(crate) fn again<'r>(update: &'r mut Update<'_>) -> Update<'r> {
@@ -364,14 +395,10 @@ fn update_anim(o: &mut FObj, update: Update) {
                 o.p1
             }
         }
-        // Not reproduced yet: with an op of 0 the original hands the update whatever its stack
-        // holds where the value would go (ssbm-rs's hand-written FObjUpdateAnim rebuilds that
-        // stack). A channel whose data ends right after its first key gets here, reaching state
-        // 6 before a second load sets op_intrp: stage data does (GrCn.dat's single-key
-        // visibility channels; Final Destination's background change, per ssbm-rs).
-        _ => return,
+        // See `Value::Stale`.
+        _ => return update(o.obj_type, Value::Stale),
     };
-    update(o.obj_type, copy(value));
+    update(o.obj_type, Value::Float(copy(value)));
 }
 
 /// Advances one FObj by `rate` frames, calling `update` with each value it reaches,

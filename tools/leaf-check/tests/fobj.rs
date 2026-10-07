@@ -5,10 +5,12 @@
 use std::cell::RefCell;
 
 use gekko_fp::{FpMode, set_fp_mode};
-use leaf_check::{arg, bits, handle, inputs, reference, sym};
+use leaf_check::{
+    arg, bits, handle, inputs, logged, reference, same_updates, stage_anim_roots, sym,
+};
 use melee_data::archive::{Archive, Archives, DataRef};
 use melee_data::disc::Disc;
-use melee_sim::hsd::fobj::{self, FObjId, FObjs};
+use melee_sim::hsd::fobj::{self, FObjId, FObjs, Value};
 use melee_sim::hsd::spline;
 use ssbm_rt::{Addr, Ctx, Handle};
 use ssbm_types::fns;
@@ -37,6 +39,7 @@ fn fobj_chains(a: &Archive) -> Vec<u32> {
         .publics()
         .filter(|(n, _)| n.to_ascii_lowercase().contains("animjoint") && !n.contains("matanim"))
         .map(|(_, o)| o)
+        .chain(stage_anim_roots(a).0)
         .collect();
     let mut seen = std::collections::HashSet::new();
     while let Some(aj) = stack.pop() {
@@ -133,6 +136,7 @@ fn fobjs_match() {
     let disc = Disc::open(std::env::var("SSBM_DISC").unwrap()).unwrap();
     let mut chains_checked = 0;
     let mut frames_checked = 0u64;
+    let mut stale = 0u64;
     let mut seed = 0x2545_F491_4F6C_DD1Du64;
     let mut rand = move || {
         seed ^= seed << 13;
@@ -208,12 +212,12 @@ fn fobjs_match() {
                     &archives,
                     ours_f,
                     rate,
-                    Some(&mut |t, v| ours_log.push((t, v.to_bits()))),
+                    Some(&mut |t, v| ours_log.push((t, logged(v)))),
                 );
                 let theirs_log = UPDATES.with(|u| std::mem::take(&mut *u.borrow_mut()));
-                assert_eq!(
-                    ours_log, theirs_log,
-                    "{name} chain {chain:#x} frame {frame} rate {rate} in {mode:?}: updates"
+                assert!(
+                    same_updates(&ours_log, &theirs_log),
+                    "{name} chain {chain:#x} frame {frame} rate {rate} in {mode:?}: updates: {ours_log:?} vs {theirs_log:?}"
                 );
                 let (mut ta, mut oa) = (theirs_f, ours_f);
                 while let Some(o) = oa {
@@ -226,6 +230,7 @@ fn fobjs_match() {
                     ta = ctx.read_u32(ta);
                     oa = fobjs[o.0].next;
                 }
+                stale += ours_log.iter().filter(|(_, v)| v.is_none()).count() as u64;
                 frames_checked += 1;
             }
             let rate = 1.0;
@@ -242,10 +247,13 @@ fn fobjs_match() {
                 &archives,
                 ours_f,
                 rate,
-                Some(&mut |t, v| ours_log.push((t, v.to_bits()))),
+                Some(&mut |t, v| ours_log.push((t, logged(v)))),
             );
             let theirs_log = UPDATES.with(|u| std::mem::take(&mut *u.borrow_mut()));
-            assert_eq!(ours_log, theirs_log, "{name} chain {chain:#x}: stop");
+            assert!(
+                same_updates(&ours_log, &theirs_log),
+                "{name} chain {chain:#x}: stop: {ours_log:?} vs {theirs_log:?}"
+            );
             // Freed and reloaded, both sides hand out the same objects in the same order.
             let pairs = |t: u32, o: Option<FObjId>, fobjs: &FObjs| {
                 let (mut t, mut o, mut v) = (t, o, Vec::new());
@@ -282,6 +290,7 @@ fn fobjs_match() {
     }
     set_fp_mode(FpMode::Hardware);
     let _ = sym;
-    eprintln!("{chains_checked} chains, {frames_checked} frames compared");
+    eprintln!("{chains_checked} chains, {frames_checked} frames compared, {stale} stale values");
+    assert!(stale > 0, "no stale values: the stage models' single-key channels weren't reached");
     assert!(chains_checked >= 150, "only {chains_checked} chains");
 }

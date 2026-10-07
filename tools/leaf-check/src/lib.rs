@@ -289,3 +289,46 @@ impl Rand {
         lo + (hi - lo) * unit
     }
 }
+
+/// An update function's value as the tests log it: the float's bits, or `None` for
+/// `Value::Stale`.
+pub fn logged(v: melee_sim::hsd::fobj::Value) -> Option<u32> {
+    match v {
+        melee_sim::hsd::fobj::Value::Float(f) => Some(f.to_bits()),
+        melee_sim::hsd::fobj::Value::Stale => None,
+    }
+}
+
+/// Whether our updates are theirs: the same channel types and values, a stale value standing
+/// for whatever the original's stack held (see `Value::Stale`).
+pub fn same_updates(ours: &[(u8, Option<u32>)], theirs: &[(u8, u32)]) -> bool {
+    ours.len() == theirs.len()
+        && ours
+            .iter()
+            .zip(theirs)
+            .all(|(&(ot, ov), &(tt, tv))| ot == tt && ov.is_none_or(|v| v == tv))
+}
+
+/// The AnimJoint and MatAnimJoint roots of a stage's models (`map_head`'s model groups:
+/// joint, then null-terminated lists of AnimJoints and MatAnimJoints).
+pub fn stage_anim_roots(a: &melee_data::archive::Archive) -> (Vec<u32>, Vec<u32>) {
+    let (mut anim, mut matanim) = (Vec::new(), Vec::new());
+    let Some(head) = a.public("map_head") else {
+        return (anim, matanim);
+    };
+    let Some(groups) = a.ptr(head + 8) else {
+        return (anim, matanim);
+    };
+    for g in 0..a.u32(head + 0xC) {
+        let group = groups + g * 0x34;
+        for (at, out) in [(4, &mut anim), (8, &mut matanim)] {
+            let mut list = a.ptr(group + at);
+            while let Some(entry) = list {
+                let Some(root) = a.ptr(entry) else { break };
+                out.push(root);
+                list = Some(entry + 4);
+            }
+        }
+    }
+    (anim, matanim)
+}

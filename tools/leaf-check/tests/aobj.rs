@@ -10,11 +10,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use gekko_fp::{FpMode, set_fp_mode};
-use leaf_check::{arg, handle, inputs, reference, sym};
+use leaf_check::{arg, handle, inputs, logged, reference, same_updates, stage_anim_roots, sym};
 use melee_data::archive::{Archive, ArchiveId, Archives, DataRef};
 use melee_data::disc::Disc;
 use melee_sim::hsd::aobj::{self, AObjId, AObjs};
-use melee_sim::hsd::fobj::{self, FObjId, FObjs};
+use melee_sim::hsd::fobj::{self, FObjId, FObjs, Value};
 use melee_sim::{math, ppc};
 use ssbm_rt::{Addr, Ctx, Handle, Single};
 use ssbm_types::fns;
@@ -136,12 +136,9 @@ fn fmodf_matches() {
     set_fp_mode(FpMode::Hardware);
 }
 
-/// Every AObjDesc reachable from the archive's `*animjoint` and `*matanim_joint` publics.
-///
-/// A stage's `map_head` model groups aren't walked yet: some of their channels (GrCn.dat's)
-/// end right after their first key, and the original then hands the update function stale
-/// stack contents, which melee-sim's FObj doesn't reproduce (see `FObjUpdateAnim` in
-/// `hsd::fobj`).
+/// Every AObjDesc reachable from the archive's `*animjoint` and `*matanim_joint` publics and
+/// its stage models. Some stage channels end right after their first key, which hands the
+/// update function a stale value (`Value::Stale`).
 fn aobj_descs(a: &Archive) -> Vec<u32> {
     let fits = |o: u32, n: u32| o as usize + n as usize <= a.data().len();
     let lower = |n: &str| n.to_ascii_lowercase();
@@ -155,6 +152,9 @@ fn aobj_descs(a: &Archive) -> Vec<u32> {
         .filter(|(n, _)| lower(n).contains("matanim_joint"))
         .map(|(_, o)| o)
         .collect();
+    let (stage_anim, stage_matanim) = stage_anim_roots(a);
+    anim.extend(stage_anim);
+    matanim.extend(stage_matanim);
     let mut out = Vec::new();
     let mut seen = std::collections::HashSet::new();
     // AnimJoint: child, next, aobjdesc, robj_anim, flags.
@@ -488,7 +488,7 @@ fn aobjs_match() {
                             handle(ctx, OBJ),
                             handle(ctx, if null { 0 } else { UPDATE }),
                         );
-                        let mut log = |t: u8, v: f32| ours_log.push((t, v.to_bits()));
+                        let mut log = |t: u8, v: Value| ours_log.push((t, logged(v)));
                         aobj::interpret(
                             &mut s.aobjs,
                             &mut s.fobjs,
@@ -569,7 +569,7 @@ fn aobjs_match() {
                             handle(ctx, OBJ),
                             handle(ctx, if null { 0 } else { UPDATE }),
                         );
-                        let mut log = |t: u8, v: f32| ours_log.push((t, v.to_bits()));
+                        let mut log = |t: u8, v: Value| ours_log.push((t, logged(v)));
                         aobj::stop_anim(
                             &mut s.aobjs,
                             &mut s.fobjs,
@@ -642,7 +642,7 @@ fn aobjs_match() {
                         fns::HSD_AObjFree(ctx, z());
                         assert!(fns::HSD_AObjLoadDesc(ctx, handle(ctx, 0)).addr() == 0);
                         let (a, f) = (&mut s.aobjs, &mut s.fobjs);
-                        let mut log = |t: u8, v: f32| ours_log.push((t, v.to_bits()));
+                        let mut log = |t: u8, v: Value| ours_log.push((t, logged(v)));
                         assert_eq!(aobj::flags(a, None), 0);
                         aobj::set_flags(a, None, aobj::LOOP);
                         aobj::clear_flags(a, None, aobj::LOOP);
@@ -661,9 +661,9 @@ fn aobjs_match() {
                     }
                 };
                 let theirs_log = take_updates();
-                assert_eq!(
-                    ours_log, theirs_log,
-                    "{what} step {n} ({op}): update values"
+                assert!(
+                    same_updates(&ours_log, &theirs_log),
+                    "{what} step {n} ({op}): update values: {ours_log:?} vs {theirs_log:?}"
                 );
                 counts.updates += ours_log.len() as u64;
                 *counts.ops.entry(op).or_default() += 1;
@@ -700,6 +700,7 @@ fn aobjs_match() {
         counts.ends,
         counts.keyed
     );
-    assert_eq!(counts.bound_skipped, 0, "descs binding objects by ID");
+    // The Target Test stages' descs bind joints, which waits for JObj.
+    assert_eq!(counts.bound_skipped, 56, "descs binding objects by ID");
     assert!(counts.descs >= 1000, "only {} descs", counts.descs);
 }
