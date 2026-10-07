@@ -10,3 +10,13 @@ pub fn slw(a: u32, n: u32) -> u32 {
 pub fn slw_i(a: i32, n: u32) -> i32 {
     slw(a as u32, n) as i32
 }
+
+/// `divw`. Where the quotient overflows (a divisor of 0, or `i32::MIN` by -1) the result is
+/// all ones for a negative dividend and 0 otherwise, as ssbm-rs's processor gives it.
+pub fn divw(a: i32, b: i32) -> i32 {
+    if b == 0 || (a == i32::MIN && b == -1) {
+        if a < 0 { -1 } else { 0 }
+    } else {
+        a / b
+    }
+}
