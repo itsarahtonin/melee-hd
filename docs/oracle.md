@@ -8,7 +8,7 @@ melee-hd's simulation is checked against ssbm-rs at the `melee-hd-base` tag, who
 | --- | --- | --- | --- |
 | Replay events | Slippi replays, which ssbm-rs reproduces | Slippi's pre-frame, post-frame, item and frame-start events, field by field, through the timeline rollback settled on | `melee-oracle compare` |
 | Full state | ssbm-rs running the same inputs | Fighters, items, stage, RNG and camera every tick, read from ssbm-rs's memory into the same structs melee-hd's state produces | Traces read and checked (`melee-oracle trace-check`); the diff comes with the first ported state |
-| Leaf functions | ssbm-rs's ports | Math, collision geometry and other code whose inputs and outputs map directly | `leaf-check`: the RNG, the math routines, the SDK's vectors and matrices, and the game's vector helpers |
+| Leaf functions | ssbm-rs's ports | Math, collision geometry and other code whose inputs and outputs map directly | `leaf-check`: the RNG, the math routines, the SDK's vectors and matrices, HAL's matrix inverse, the game's vector helpers, and its hit collision geometry |
 
 **Replay events.** ssbm-rs plays the 40-replay smoke set to the same recordings as the original code, with documented entry-frame and off-screen-flag differences in 12. A melee-hd recording is compared with the original replay through ssbm-rs's own comparison (`ssbm_slippi::compare`). This covers VS matches only, and only what Slippi records.
 
