@@ -15,7 +15,7 @@ use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
 use melee_sim::game::structs::{
     _StaticPlayer, Camera, CameraDebugMode, CmSubject, ControllerMap, DynamicsData, Fighter,
-    FighterBone, VsSceneController, ifMagnify,
+    FighterBone, VsSceneController, gm_80479D58_t, ifMagnify,
 };
 use melee_sim::hsd::aobj::{AObj, AObjId};
 use melee_sim::hsd::cobj::{CObj, CObjId};
@@ -392,11 +392,17 @@ impl<'a> Importer<'a> {
 
     /// The debug settings and the controllers as fighters read them.
     fn gm_and_pads(&mut self) {
-        self.game.gm.db_pause = self.u8(sym("gm_80479D58") + 0x10);
+        let cap = self.cap;
+        let mem = Mem {
+            bytes: &cap.call.mem1,
+            base: MEM1,
+        };
+        // The scene loop's state holds the debug pause flags.
+        self.game.scene = gm_80479D58_t::import(&mem, sym("gm_80479D58"), self);
         self.game.gm.db_level = self.u32(sym("DbLevel")) as i32;
         let pads = sym("HSD_PadGameStatus");
         for i in 0..4 {
-            self.game.pads[i as usize] = self.pad(pads + i * 0x44);
+            self.game.pads.game[i as usize] = self.pad(pads + i * 0x44);
         }
     }
 
@@ -476,7 +482,7 @@ impl Importer<'_> {
         self.game.game_mode = self.u8(sym("state_machine"));
         let pads = sym("HSD_PadCopyStatus");
         for i in 0..4 {
-            self.game.pad_copy[i] = self.pad_status(pads + 0x44 * i as u32);
+            self.game.pads.copy[i] = self.pad_status(pads + 0x44 * i as u32);
         }
         self.game.controller_map = ControllerMap::import(&mem, sym("controller_map"), self);
     }
@@ -1212,6 +1218,22 @@ impl Cx for Importer<'_> {
     fn import_handle(&mut self, kind: &'static str, addr: u32) -> Option<u32> {
         if addr == 0 {
             return None;
+        }
+        // A stale word where a pointer was (an unused hit capsule's joint): nothing to follow.
+        if addr & 3 != 0 || !(MEM1..MEM1 + 0x0180_0000).contains(&addr) {
+            self.unhandled
+                .push(format!("{kind} {addr:#x} outside main memory"));
+            return None;
+        }
+        // A joint starts with its class, in the executable's data; a freed one with the
+        // allocator's free-list link.
+        if kind == "JObjId" && !self.maps.jobjs.contains_key(&addr) {
+            let class = self.u32(addr);
+            if !(0x8030_0000..0x8050_0000).contains(&class) {
+                self.unhandled
+                    .push(format!("JObj {addr:#x} with no class (freed or stale)"));
+                return None;
+            }
         }
         Some(match kind {
             "JObjId" => self.jobj(addr).0,

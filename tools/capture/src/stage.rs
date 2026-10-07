@@ -26,11 +26,6 @@ pub const GRLAST_YAKUMONO: u32 = 0x804D_6AD0;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
-/// The bob-omb rain flag, `gm_GetStartMeleeRules()->x6` (gmvs.c's `controller.start`).
-fn bombrain_addr() -> u32 {
-    sym("controller") + 0x24C8 + 6
-}
-
 /// The vertex, line and joint arrays' element sizes.
 const VTX_SIZE: u32 = 0x18;
 const LINE_SIZE: u32 = 8;
@@ -239,7 +234,6 @@ impl Importer<'_> {
             self.f32_at(sym("grAnime_804D695C")),
         );
         self.game.gr.stkind = cap.u32(sym("selected_stage")) as i32;
-        self.game.gr.bombrain = self.u8_at(bombrain_addr()) != 0;
         let yaku = cap.u32(GRLAST_YAKUMONO);
         self.game.gr.last_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRBATTLE_YAKUMONO);
@@ -734,12 +728,6 @@ impl Comparer<'_> {
             "stkind",
             game.gr.stkind,
             self.u32(sym("selected_stage")) as i32,
-        );
-        self.check(
-            "start melee rules",
-            "bob-omb rain",
-            game.gr.bombrain,
-            self.u8(bombrain_addr()) != 0,
         );
         let yaku = self.u32(GRLAST_YAKUMONO);
         self.check(

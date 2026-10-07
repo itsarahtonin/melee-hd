@@ -114,8 +114,6 @@ pub struct Globals {
     pub anime_loop: (f32, f32),
     /// The match's stage (`selected_stage.stkind`), which the match setup decides.
     pub stkind: i32,
-    /// Whether the match rains bob-ombs (`gm_GetStartMeleeRules()->x6`), from the match setup.
-    pub bombrain: bool,
     /// Final Destination's `yakumono_param` (its material scripts).
     pub last_yakumono: Option<DataRef>,
     /// Battlefield's `yakumono_param` (its backgrounds' fade scripts).

@@ -565,3 +565,67 @@ ftCo_8009A3C8	leaf-check fighter: ground_coll_ledges reaches it in calls that co
 grDynamicAttr_801CA284	leaf-check fighter: proc_map reaches it in calls that compare clean
 un_80322258	leaf-check fighter: proc_update reaches it in calls that compare clean
 ftCommon_UnlockECB	leaf-check fighter: proc_map_ecb_lock runs out the lock on saved procMap states
+Player_80032070	leaf-check vs respawn: fn_8016719C brings fighters back through it, the fighter's rebirth stood in for on both sides
+Player_8003221C	leaf-check vs player_awake: every capture
+Player_80036DD8	leaf-check vs player_common_data: the common data's pointer found in the loaded PdPm.dat equals the captured one
+Player_GetActionStats	leaf-check vs reset_action_stats and player player_accessors: their writes to the statistics go through it
+Player_GetPtrForSlot	leaf-check player player_accessors: every accessor goes through it
+Player_GetStaleMoveTableIndexPtr	leaf-check vs reset_stale_moves and reset_player_records: their writes go through it
+Player_GetStaleMoveTableIndexPtr2	leaf-check vs reset_player_records and forget_player_records: their writes go through it
+Player_GetUnk6A8Ptr	leaf-check vs reset_frame_counters: its writes go through it
+Player_IncSelfDestructs	leaf-check vs player_count_self_destruct: every capture, the HUD stood in for on both sides
+Player_InitAllPlayers	leaf-check vs init_all_players: every capture
+Player_SetHUDDamage	leaf-check vs player_set_damage: every capture
+Player_SetPlayerAndEntityCpuLevel	leaf-check vs player_set_cpu_level: every capture
+Player_SetPlayerAndEntityCpuType	leaf-check vs player_set_cpu_type: every capture
+Player_UpdateKOsBySlot	leaf-check vs player_count_ko: every capture, the HUD stood in for on both sides
+fn_80038FB8	leaf-check vs reset_bonus_counts: every capture
+fn_80160840	leaf-check vs cap_color: every capture
+fn_8016758C	leaf-check vs tick_platforms: every capture, plus perturbed platform timers
+fn_80167638	leaf-check vs respawn_point: every capture, and respawn
+fn_8016A4C8	leaf-check vs spawn_opponents: every capture
+fn_8016B918	leaf-check vs share_stocks: every capture, plus perturbed buttons and stocks
+fn_8016C7D0	leaf-check vs vs_proc: every capture
+fn_8016CD98	leaf-check vs vs_tick_clock: every capture, plus perturbed timers and entries
+fn_8016CFE0	leaf-check vs vs_frame: every capture, plus perturbed buttons, stocks, timers and pause state, the HUD stood in for
+fn_8016D634	leaf-check vs vs_after_end: every capture
+fn_8016D8AC	leaf-check vs init_vs_player: every capture
+fn_8016DCC0	leaf-check vs init_vs: every capture
+fn_8016DEEC	leaf-check vs face_opponents: every capture, plus perturbed directions and teams
+fn_8016E124	leaf-check vs kirby_costumes: every capture
+fn_8016E5C0	leaf-check vs alternate_stage: every capture, plus perturbed buttons
+fn_80171AD4	leaf-check vs reset_ranks: every capture
+fn_80171BA4	leaf-check vs rank_players: every capture, the result register included
+fn_80171DC4	leaf-check vs update_ranks: every capture, plus perturbed KO counts
+fn_801A0E34	leaf-check vs pause_proc: every capture, plus perturbed pausers and sticks
+fn_801A1134	leaf-check vs pause_create: a screen built from the loaded GmPause.dat equals each captured match's
+fn_801A396C	leaf-check vs key_repeat: every capture, plus perturbed timers
+ftLib_80086A4C	leaf-check player player_accessors: Player_80036790 writes through it
+ftLib_80086F4C	leaf-check player player_accessors: Player_80036058 reads through it
+ftLib_EnableInput	leaf-check player player_accessors: Player_80031848 writes through it
+ftLib_GetKind	leaf-check vs player_fighter_kind and player player_accessors (Player_80036394)
+ftLib_GetLastAttackerSlot	leaf-check player player_accessors: Player_80036428 reads through it
+ftLib_IsRebirth	leaf-check vs respawn: Player_80032070 tests partners through it
+ftLib_IsSleeping	leaf-check vs player_awake and player player_accessors (Player_8003219C)
+ftLib_SetPercent	leaf-check vs player_set_damage: Player_SetHUDDamage writes through it
+ft_80087AC0	leaf-check player player_accessors: Player_800366DC writes through it
+ft_80087BAC	leaf-check player player_accessors: Player_80036844 writes through it
+gm_80160854	leaf-check vs player_color: every capture
+gm_801677C0	leaf-check vs clear_db_pause: every capture
+gm_8016895C	leaf-check vs add_model_anim: every capture
+gm_801A3714	leaf-check vs map_any: every capture
+gm_801A3820	leaf-check vs map_all: every capture
+gm_801A3E88	leaf-check vs reset_controller_map: every capture
+gm_801A48A4	leaf-check vs pause_links: every capture, the 64-bit result included
+gm_DefaultVSGetPauser	leaf-check vs vs_pauser: every capture, plus perturbed buttons
+gm_DoPauseChecksAndRoutine	leaf-check vs vs_check_pause: every capture, plus perturbed buttons and pause state, the HUD stood in for
+gm_EvaluateAllControllerInputs	leaf-check vs evaluate_controller_inputs: every capture, plus perturbed buttons
+gm_GetFFAOutcome	leaf-check vs ffa_outcome: every capture, plus perturbed stocks and timers
+gm_GetMatchOutcome	leaf-check vs match_outcome: every capture, plus perturbed stocks and timers
+lb_80011E24	leaf-check vs pause_tree_nodes: every index into the captured pause screens
+plAttack_8003759C	leaf-check vs reset_action_stats: every capture
+plStale_ResetStaleMoveTableForPlayer	leaf-check vs reset_stale_moves: every capture
+pl_8003891C	leaf-check vs reset_player_records: every capture
+pl_80040DDC	leaf-check vs reset_frame_counters: every capture
+pl_80041524	leaf-check vs reset_x8c0: every capture
+pl_800418F4	leaf-check vs reset_x8d8: every capture

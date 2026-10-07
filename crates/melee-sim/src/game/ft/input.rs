@@ -65,7 +65,7 @@ impl Running<'_> {
             self.read_inputs(gobj);
         }
         let fp = &self.game.fighters[f.0];
-        if fp.input_disabled || fp.stamina_dead || self.game.gm.db_pause_flag(2) {
+        if fp.input_disabled || fp.stamina_dead || self.game.db_pause_flag(2) {
             let fp = &mut self.game.fighters[f.0];
             let i = &mut fp.input;
             i.lstick[2].x = copy(i.lstick[0].x);
@@ -108,8 +108,8 @@ impl Running<'_> {
         let one_player = super::super::gm::is_1p_mode(self.game);
         let db_level = self.game.gm.db_level;
         let single_button = self.game.vs.start.single_button;
-        let no_z = self.game.gm.db_pause_flag(0);
-        let pad = self.game.pads[self.game.fighters[f.0].pad_port as usize];
+        let no_z = self.game.db_pause_flag(0);
+        let pad = self.game.pads.game[self.game.fighters[f.0].pad_port as usize];
         let fp = &mut self.game.fighters[f.0];
         let i = &mut fp.input;
         if !fp.has_prev_input {

@@ -632,7 +632,9 @@ impl Running<'_> {
     /// controller rumbles and the fighter is awake and alive, `ftCommon_8007EBAC`.
     fn start_rumble(&mut self, f: FighterId, kind: u32, frames: u32) {
         let fp = &self.game.fighters[f.0];
-        if self.rumble_enabled(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter))
+        if self
+            .game
+            .rumble_enabled(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter))
             && !fp.is_sleeping
             && !fp.stamina_dead
         {

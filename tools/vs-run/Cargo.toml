@@ -1,0 +1,14 @@
+[package]
+name = "melee-vs-run"
+description = "Plays a Slippi replay's inputs into melee-sim's VS match, as far as the ported code reaches"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+melee-capture = { path = "../capture" }
+melee-data.workspace = true
+melee-sim.workspace = true
+ssbm-slippi.workspace = true

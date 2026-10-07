@@ -11,7 +11,7 @@ publish.workspace = true
 gekko-fp.workspace = true
 melee-capture = { path = "../capture" }
 melee-data.workspace = true
-melee-sim.workspace = true
+melee-sim = { workspace = true, features = ["stubs"] }
 ssbm-disc.workspace = true
 ssbm-game.workspace = true
 ssbm-rt.workspace = true

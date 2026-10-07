@@ -18,6 +18,8 @@ ROOTS = [
     "VsSceneController",
     "DynamicsData",
     "lb_00F9_UnkDesc0",
+    "StartMeleeData",
+    "gm_80479D58_t",
 ]
 
 # Handles for pointers to runtime objects, by the pointee's C name.

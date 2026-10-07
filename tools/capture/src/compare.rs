@@ -334,14 +334,14 @@ impl<'a> Comparer<'a> {
         self.check(
             "gm",
             "pause flags, debug level",
-            (g.db_pause, g.db_level),
+            (game.scene.unk_10.x0, g.db_level),
             (
                 self.u8(sym("gm_80479D58") + 0x10),
                 self.u32(sym("DbLevel")) as i32,
             ),
         );
         let pads = sym("HSD_PadGameStatus");
-        for (i, p) in game.pads.iter().enumerate() {
+        for (i, p) in game.pads.game.iter().enumerate() {
             let at = pads + 0x44 * i as u32;
             let theirs = crate::import::read_pad(self.mem, at);
             self.check(&format!("pads[{i}]"), "status", p, &theirs);

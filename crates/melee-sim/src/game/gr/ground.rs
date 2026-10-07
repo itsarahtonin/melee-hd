@@ -302,7 +302,8 @@ pub fn proc_watch(r: &mut Running, _gobj: GObjId) {
     if info.unk8C.b6 || info.unk8C.b7 {
         unimplemented!("Ground_801C0C2C's point search needs the fighters (Player_GetEntity)");
     }
-    if r.game.gr.bombrain {
+    // `gm_8016B238`: the rules' bob-omb rain.
+    if r.game.vs_x6() != 0 {
         unimplemented!("bob-omb rain needs the items (it_8026BE84)");
     }
 }

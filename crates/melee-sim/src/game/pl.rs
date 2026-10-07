@@ -1,15 +1,19 @@
-//! The player library (`melee/pl`): the player blocks fighters report their state to, and the
-//! match statistics kept there.
+//! The player library (`melee/pl`): the six player blocks (`player_slots`) that outlive a
+//! match's fighters, holding each slot's character, stocks, damage, KOs and the statistics
+//! the results screen and bonuses read, and the match statistics fighters report there.
+
+pub mod player;
+pub mod stats;
 
 use melee_data::archive::DataRef;
 
 use super::code::unported_call;
 use super::state::Running;
-use super::structs::{pl_x5EC_t, plActionStats};
+use super::structs::plActionStats;
 use gekko_fp as fp;
 
-/// The player library's globals that point into game data.
-#[derive(Clone, Debug, Default)]
+/// The player library's globals.
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Globals {
     /// `PdPm.dat`'s `plLoadCommonData`, whose first pointer `Player_80036DD8` keeps in
     /// `pl_804D6470`.
@@ -27,13 +31,6 @@ impl Running<'_> {
         self.data.ptr(base).expect("plLoadCommonData's data")
     }
 
-    /// A player's per-frame action counters, `Player_GetUnk6A8Ptr`.
-    #[doc(alias = "Player_GetUnk6A8Ptr")]
-    pub fn player_unk6a8(&mut self, slot: i32) -> &mut pl_x5EC_t {
-        assert!((0..6).contains(&slot), "player slot {slot}");
-        &mut self.game.players[slot as usize].stale_moves.x5EC
-    }
-
     /// `pl_800411C4`: the frame's counters end; repeated inputs count toward a bonus.
     #[doc(alias = "pl_800411C4")]
     pub fn pl_800411c4(&mut self, slot: i32, sub: i32) {
@@ -42,11 +39,11 @@ impl Running<'_> {
         }
         self.pl_8004138c(slot, sub);
         for i in 0..6 {
-            let e = &self.player_unk6a8(slot).x10[i];
+            let e = &self.game.player_unk6a8(slot).x10[i];
             if e.x12_b0 && e.x4 == 1 {
                 unported_call("pl_80038824 from pl_800411C4");
             }
-            let e = &mut self.player_unk6a8(slot).x10[i];
+            let e = &mut self.game.player_unk6a8(slot).x10[i];
             e.x0 = 0.0;
             e.x4 = 0;
             e.x8 = 0;
@@ -61,7 +58,7 @@ impl Running<'_> {
         if sub == 1 {
             return;
         }
-        for e in &mut self.player_unk6a8(slot).x10 {
+        for e in &mut self.game.player_unk6a8(slot).x10 {
             e.x10 = 0;
         }
     }
@@ -74,7 +71,7 @@ impl Running<'_> {
         }
         let (mut total, mut best) = (0.0, 0.0);
         for i in 0..6 {
-            let v = crate::fpu::reg(self.player_unk6a8(slot).x10[i].x0);
+            let v = crate::fpu::reg(self.game.player_unk6a8(slot).x10[i].x0);
             if best < v {
                 best = v;
             }
@@ -87,39 +84,6 @@ impl Running<'_> {
                 unported_call("pl_80038788");
             }
         }
-    }
-
-    /// `Player_GetMoreFlagsBit3`.
-    #[doc(alias = "Player_GetMoreFlagsBit3")]
-    pub fn player_more_flags_bit3(&self, slot: i32) -> bool {
-        assert!((0..6).contains(&slot), "player slot {slot}");
-        self.game.players[slot as usize].more_flags.b3
-    }
-
-    /// Who plays a slot's fighter (`Gm_PKind`), `Player_8003248C`: a sub-fighter (Nana) of a
-    /// human or computer player reads as a computer, unless the character transforms
-    /// (Zelda and Sheik).
-    #[doc(alias = "Player_8003248C")]
-    pub fn player_kind(&self, slot: i32, sub: i32) -> i32 {
-        assert!((0..6).contains(&slot), "player slot {slot}");
-        let p = &self.game.players[slot as usize];
-        // `ftMapping_list[ckind].has_transformation`.
-        let transforms = matches!(p.ckind, 18 | 19);
-        if sub == 1 && !transforms && (p.pkind == 0 || p.pkind == 1) {
-            return 1;
-        }
-        p.pkind
-    }
-
-    /// Whether a player's controller rumbles, `Player_8003544C`: never a sub-fighter's.
-    #[doc(alias = "Player_8003544C")]
-    pub fn rumble_enabled(&self, slot: i32, sub: i32) -> bool {
-        if sub != 0 {
-            return false;
-        }
-        assert!((0..6).contains(&slot), "player slot {slot}");
-        let p = &self.game.players[slot as usize];
-        p.player_state == 2 && p.flags.b0
     }
 
     /// Counts a point bonus for the player, `pl_80038824`. The original asserts the bonus

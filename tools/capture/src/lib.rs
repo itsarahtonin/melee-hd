@@ -5,6 +5,7 @@
 pub mod compare;
 pub mod import;
 pub mod stage;
+pub mod vs;
 
 use std::collections::HashMap;
 use std::path::Path;

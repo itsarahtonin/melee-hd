@@ -10,3 +10,8 @@ publish.workspace = true
 [dependencies]
 gekko-fp.workspace = true
 melee-data.workspace = true
+
+[features]
+# Lets checks stand a function of the original's in for code no port covers yet, so the code
+# around a `code::call` seam can be compared with ssbm-rs's with the same stand-in on its side.
+stubs = []

@@ -6943,3 +6943,231 @@ impl Default for lb_00F9_UnkDesc0 {
         }
     }
 }
+
+/// `PlayerInitData`, 0x24 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PlayerInitData {
+    /// +0x0
+    pub ckind: i8,
+    /// +0x1
+    pub slot_type: u8,
+    /// +0x2
+    pub stocks: i8,
+    /// +0x3
+    pub color: u8,
+    /// +0x4
+    pub slot: u8,
+    /// +0x5
+    pub spawn_pos: i8,
+    /// +0x6
+    pub spawn_dir: i8,
+    /// +0x7
+    pub sub_color: u8,
+    /// +0x8
+    pub handicap: i8,
+    /// +0x9
+    pub team: u8,
+    /// +0xa
+    pub nametag: u8,
+    /// +0xb
+    pub xB: u8,
+    /// +0xc (bits 0..+1)
+    pub rumble_enabled: bool,
+    /// +0xc (bits 1..+1)
+    pub xC_b1: bool,
+    /// +0xc (bits 2..+1)
+    pub vs_metal: bool,
+    /// +0xc (bits 3..+1)
+    pub xC_b3: bool,
+    /// +0xc (bits 4..+1)
+    pub vs_invisible: bool,
+    /// +0xc (bits 5..+1)
+    pub xC_b5: bool,
+    /// +0xc (bits 6..+1)
+    pub xC_b6: bool,
+    /// +0xc (bits 7..+1)
+    pub xC_b7: bool,
+    /// +0xd (bits 0..+1)
+    pub xD_b0: bool,
+    /// +0xd (bits 1..+1)
+    pub xD_b1: bool,
+    /// +0xd (bits 2..+1)
+    pub xD_b2: bool,
+    /// +0xd (bits 3..+1)
+    pub xD_b3: bool,
+    /// +0xd (bits 4..+1)
+    pub xD_b4: bool,
+    /// +0xd (bits 5..+1)
+    pub xD_b5: bool,
+    /// +0xd (bits 6..+1)
+    pub xD_b6: bool,
+    /// +0xd (bits 7..+1)
+    pub xD_b7: bool,
+    /// +0xe
+    pub cpu_kind: u8,
+    /// +0xf
+    pub cpu_level: u8,
+    /// +0x10
+    pub damage: u16,
+    /// +0x12
+    pub damage1: u16,
+    /// +0x14
+    pub hp: u16,
+    /// +0x18
+    pub attack_ratio: f32,
+    /// +0x1c
+    pub defense_ratio: f32,
+    /// +0x20
+    pub model_scale: f32,
+}
+
+impl Default for PlayerInitData {
+    fn default() -> Self {
+        PlayerInitData {
+            ckind: 0,
+            slot_type: 0,
+            stocks: 0,
+            color: 0,
+            slot: 0,
+            spawn_pos: 0,
+            spawn_dir: 0,
+            sub_color: 0,
+            handicap: 0,
+            team: 0,
+            nametag: 0,
+            xB: 0,
+            rumble_enabled: false,
+            xC_b1: false,
+            vs_metal: false,
+            xC_b3: false,
+            vs_invisible: false,
+            xC_b5: false,
+            xC_b6: false,
+            xC_b7: false,
+            xD_b0: false,
+            xD_b1: false,
+            xD_b2: false,
+            xD_b3: false,
+            xD_b4: false,
+            xD_b5: false,
+            xD_b6: false,
+            xD_b7: false,
+            cpu_kind: 0,
+            cpu_level: 0,
+            damage: 0,
+            damage1: 0,
+            hp: 0,
+            attack_ratio: 0.0,
+            defense_ratio: 0.0,
+            model_scale: 0.0,
+        }
+    }
+}
+
+/// `StartMeleeData`, 0x138 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct StartMeleeData {
+    /// +0x0
+    pub rules: StartMeleeRules,
+    /// +0x60
+    pub players: [PlayerInitData; 6],
+}
+
+impl Default for StartMeleeData {
+    fn default() -> Self {
+        StartMeleeData {
+            rules: Default::default(),
+            players: core::array::from_fn(|_| Default::default()),
+        }
+    }
+}
+
+/// `gm_DbPauseInputHandlers`, 0x8 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct gm_DbPauseInputHandlers {
+    /// +0x0
+    pub check_pause: Option<CodeRef>,
+    /// +0x4
+    pub check_framestep: Option<CodeRef>,
+}
+
+impl Default for gm_DbPauseInputHandlers {
+    fn default() -> Self {
+        gm_DbPauseInputHandlers {
+            check_pause: None,
+            check_framestep: None,
+        }
+    }
+}
+
+/// `gm_801677C0_s`, 0x30 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct gm_801677C0_s {
+    /// +0x0
+    pub x0: u8,
+    /// +0x1
+    pub x1: u8,
+    /// +0x2
+    pub x2: u8,
+    /// +0x3
+    pub x3: u8,
+    /// +0x4
+    pub db_input: gm_DbPauseInputHandlers,
+    /// +0x10
+    pub unk_20: u64,
+    /// +0x18
+    pub unk_28: u64,
+    /// +0x20
+    pub pre_gobj_proc: Option<CodeRef>,
+    /// +0x24
+    pub unk_34: i32,
+    /// +0x28 (bits 0..+1)
+    pub unk_38_0: bool,
+    /// +0x28 (bits 1..+1)
+    pub unk_38_1: bool,
+}
+
+impl Default for gm_801677C0_s {
+    fn default() -> Self {
+        gm_801677C0_s {
+            x0: 0,
+            x1: 0,
+            x2: 0,
+            x3: 0,
+            db_input: Default::default(),
+            unk_20: 0,
+            unk_28: 0,
+            pre_gobj_proc: None,
+            unk_34: 0,
+            unk_38_0: false,
+            unk_38_1: false,
+        }
+    }
+}
+
+/// `gm_80479D58_t`, 0x40 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct gm_80479D58_t {
+    /// +0x0
+    pub unk_0: u32,
+    /// +0x4
+    pub unk_4: u32,
+    /// +0x8
+    pub unk_8: u32,
+    /// +0xc
+    pub unk_C: i32,
+    /// +0x10
+    pub unk_10: gm_801677C0_s,
+}
+
+impl Default for gm_80479D58_t {
+    fn default() -> Self {
+        gm_80479D58_t {
+            unk_0: 0,
+            unk_4: 0,
+            unk_8: 0,
+            unk_C: 0,
+            unk_10: Default::default(),
+        }
+    }
+}

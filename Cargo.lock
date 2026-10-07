@@ -474,6 +474,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-vs-run"
+version = "0.1.0"
+dependencies = [
+ "melee-capture",
+ "melee-data",
+ "melee-sim",
+ "ssbm-slippi",
+]
+
+[[package]]
 name = "multiversion_no_op"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

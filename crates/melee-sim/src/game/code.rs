@@ -32,6 +32,10 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
             dynamic_attr::update(game.game);
         }
         0x801C_ADBC => super::gr::zako::proc(game, gobj),
+        super::gm::vs::PROC => game.vs_proc(),
+        // fn_801A4BD0: the scene GObj's first process, empty.
+        super::gm::vs::SCENE_PROC => {}
+        super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
         addr if last::run(game, gobj, addr) => {}
         addr if super::gr::battle::run(game, gobj, addr) => {}
         0x8006_A1BC => fighter::proc_hitlag(game, gobj),
@@ -57,6 +61,9 @@ pub fn run_event(game: &mut Running, f: u32) {
         0x8021_A740 => last::on_init(game),
         0x8021_A7C4 => last::on_load(game),
         0x8021_A7C8 => last::on_start(game),
+        super::gm::vs::ON_FRAME => game.vs_on_frame(),
+        // db_RunEveryFrame: returns at once below the debug ROM's level.
+        super::gm::vs::DB_RUN_EVERY_FRAME => game.game.assert_retail(),
         other => unported("function", other),
     }
 }
@@ -110,6 +117,102 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
 /// The original reaches a function no port covers yet: stopping beats diverging.
 fn unported(what: &str, addr: u32) -> ! {
     panic!("{what} {addr:#010x} isn't ported")
+}
+
+/// What an original function takes or returns in its registers, for [`call`]: an integer, a
+/// float as a register holds it, a GObj, or a vector passed or returned by pointer.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Val {
+    None,
+    Int(i32),
+    Float(f64),
+    GObj(Option<GObjId>),
+    Vec(crate::vec::Vec3),
+}
+
+impl Val {
+    pub fn int(self) -> i32 {
+        match self {
+            Val::Int(v) => v,
+            other => panic!("expected an integer, got {other:?}"),
+        }
+    }
+
+    pub fn float(self) -> f64 {
+        match self {
+            Val::Float(v) => v,
+            other => panic!("expected a float, got {other:?}"),
+        }
+    }
+
+    pub fn gobj(self) -> Option<GObjId> {
+        match self {
+            Val::GObj(g) => g,
+            other => panic!("expected a GObj, got {other:?}"),
+        }
+    }
+
+    pub fn vec(self) -> crate::vec::Vec3 {
+        match self {
+            Val::Vec(v) => v,
+            other => panic!("expected a vector, got {other:?}"),
+        }
+    }
+}
+
+/// Calls one of the original's functions by address: the seam where the match reaches code
+/// ported elsewhere (fighters, items, effects, the HUD). Arguments come in the original's
+/// order, an output vector's pointer standing for the vector it returns; until a subsystem's
+/// port adds its arms here, reaching one stops the simulation.
+pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
+    let _ = (&r, args);
+    #[cfg(feature = "stubs")]
+    if let Some(v) = stubs::get(f) {
+        stubs::log(f, args);
+        return v;
+    }
+    unported("function", f)
+}
+
+/// Stand-ins for unported functions in checks (feature `stubs`): a stubbed function returns
+/// its value instead of stopping, and the calls are logged with their arguments for the check
+/// to compare with the original's. The simulation itself never registers any.
+#[cfg(feature = "stubs")]
+pub mod stubs {
+    use super::Val;
+    use std::cell::RefCell;
+
+    thread_local! {
+        static STUBS: RefCell<Vec<(u32, Val)>> = const { RefCell::new(Vec::new()) };
+        static LOG: RefCell<Vec<(u32, Vec<Val>)>> = const { RefCell::new(Vec::new()) };
+    }
+
+    /// Makes `f` return `ret` on this thread.
+    pub fn set(f: u32, ret: Val) {
+        STUBS.with(|s| {
+            let mut s = s.borrow_mut();
+            s.retain(|&(a, _)| a != f);
+            s.push((f, ret));
+        });
+    }
+
+    pub fn clear() {
+        STUBS.with(|s| s.borrow_mut().clear());
+        LOG.with(|l| l.borrow_mut().clear());
+    }
+
+    pub fn get(f: u32) -> Option<Val> {
+        STUBS.with(|s| s.borrow().iter().find(|&&(a, _)| a == f).map(|&(_, v)| v))
+    }
+
+    pub fn log(f: u32, args: &[Val]) {
+        LOG.with(|l| l.borrow_mut().push((f, args.to_vec())));
+    }
+
+    /// The stubbed calls made since the last take.
+    pub fn take() -> Vec<(u32, Vec<Val>)> {
+        LOG.with(|l| std::mem::take(&mut *l.borrow_mut()))
+    }
 }
 
 /// The game's particle callbacks (efLib's and the stages'), by token. None is ported yet, so a

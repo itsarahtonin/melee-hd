@@ -468,6 +468,13 @@ pub struct Controllers {
     pub game: [Status; 4],
 }
 
+impl Default for Controllers {
+    /// The library as Melee sets it up, [`Controllers::melee`].
+    fn default() -> Self {
+        Controllers::melee()
+    }
+}
+
 impl Controllers {
     /// `HSD_PadInit`: the library's defaults with a queue of `qnum` polls and `nb_list`
     /// rumble nodes. The original also initializes the SDK's PAD library, which the input

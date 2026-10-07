@@ -164,7 +164,10 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007ECD4")]
     pub(super) fn stop_rumble(&mut self, f: FighterId, id: i32) {
         let fp = &self.game.fighters[f.0];
-        if self.rumble_enabled(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter)) {
+        if self
+            .game
+            .rumble_enabled(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter))
+        {
             let port = fp.pad_port;
             self.game
                 .events

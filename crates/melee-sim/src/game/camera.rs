@@ -1075,7 +1075,7 @@ pub fn update_zoom(game: &mut Game) {
     }
     // HSD_PadGetNmlSubStickY(Player_GetPadPort(0)), the port as a u8.
     let port = game.players[0].pad_port as usize;
-    let mut stick = reg(game.pad_copy[port].nml_sub_stick_y);
+    let mut stick = reg(game.pads.copy[port].nml_sub_stick_y);
     if stick < 0.0 {
         stick = fp::fneg(stick);
     }
@@ -1904,7 +1904,7 @@ pub fn read_inputs(game: &Game, slot: i32) -> Inputs {
         };
         let first = |pick: fn(&crate::input::controller::Status) -> (f32, f32)| {
             let mut v = (0.0, 0.0);
-            for p in &game.pad_copy {
+            for p in &game.pads.copy {
                 v = pick(p);
                 if pushed(v.0) || pushed(v.1) {
                     return v;
@@ -1925,7 +1925,7 @@ pub fn read_inputs(game: &Game, slot: i32) -> Inputs {
         };
     }
     let i = slot as u8 as usize;
-    let p = &game.pad_copy[i];
+    let p = &game.pads.copy[i];
     Inputs {
         stick_x: p.nml_stick_x,
         stick_y: p.nml_stick_y,

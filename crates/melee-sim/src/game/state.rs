@@ -11,7 +11,7 @@ use super::gr;
 use super::handles::{CodeRef, FighterId, GroundId, ItemId};
 use super::structs::{
     _StaticPlayer, ControllerMap, DynamicsData, Fighter, FighterBone, Ground, StageInfo,
-    VsSceneController, ifMagnify,
+    VsSceneController, gm_80479D58_t, ifMagnify,
 };
 use super::{ft, gm, pl};
 use crate::hsd::Objects;
@@ -88,6 +88,18 @@ pub enum Event {
         kind: i32,
         frames: i32,
     },
+    /// A sound effect plays (`lbAudioAx_800237A8`: id, volume, pan).
+    Sfx { id: i32, volume: u8, pan: u8 },
+    /// A sound plays on a voice group (`lbAudioAx_80023870`: id, volume, pan, group).
+    SfxGroup {
+        id: i32,
+        volume: u8,
+        pan: u8,
+        group: i32,
+    },
+    /// An audio-driver call the frontend acts on (the original function's address and its
+    /// integer arguments): the crowd, the announcer, music changes.
+    Audio { func: u32, args: [i32; 4] },
 }
 
 /// Everything a tick reads and writes.
@@ -109,8 +121,9 @@ pub struct Game {
     pub players: [_StaticPlayer; 6],
     /// The current game mode (`state_machine.routing.curr_mode`, a `GameModeKind`).
     pub game_mode: u8,
-    /// The controllers as the frame's game code reads them (`HSD_PadCopyStatus`).
-    pub pad_copy: [crate::input::controller::Status; 4],
+    /// The pad library: the poll queue, rumble and the master, copy and game statuses
+    /// (`HSD_PadCopyStatus` is what the frame's game code reads).
+    pub pads: crate::input::controller::Controllers,
     /// The scenes' button maps (`controller_map`; its fifth entry merges every port).
     pub controller_map: ControllerMap,
     pub rules: Rules,
@@ -130,17 +143,20 @@ pub struct Game {
     /// The off-screen magnifier (`ifMagnify_804A1DE0`): which players are off screen, which
     /// deals them damage over time.
     pub magnify: ifMagnify,
-    /// The game-mode layer's debug settings fighters read.
-    pub gm: gm::Globals,
     /// mpcoll's statics: the last pass's walls and correction, and the floor filter.
     pub coll: crate::mp::coll::CollStatics,
-    /// What the tick asked of the audio and pad drivers so far.
-    pub events: Vec<Event>,
-    /// The controllers as fighters read them each frame (`HSD_PadGameStatus`).
-    pub pads: [crate::input::controller::Status; 4],
-    /// The VS match's controller (`gmvs.c`'s `controller`): its frame count, pause state and
-    /// rules.
+    /// The scene loop's state (`gm_80479D58`): its tick counts, the debug pause flags and
+    /// the pause mask the scheduler reads.
+    pub scene: gm_80479D58_t,
+    /// How engine ticks fall on frames (`lb_804329F0`).
+    pub pacing: crate::lb::pacing::Pacing,
+    /// The VS match's controller (`gmvs.c`'s `controller`): its rules, timer, pause state,
+    /// per-fighter respawn state and results.
     pub vs: VsSceneController,
+    /// The game-mode layer's other globals.
+    pub gm: gm::Globals,
+    /// What the tick asked of the audio and pad drivers since the frontend last took them.
+    pub events: Vec<Event>,
 }
 
 /// The game as the scheduler's host for one call: the state and the game data it reads.
@@ -162,7 +178,7 @@ impl Host<GameKinds> for Running<'_> {
         match data {
             // `mem_free`: the block goes back to the heap.
             UserData::Ground(g) => self.game.grounds.free(g.0),
-            other => panic!("removing {other:?} needs its port"),
+            other => panic!("removing {other:?} isn't ported"),
         }
     }
 
