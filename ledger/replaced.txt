@@ -1,3 +1,146 @@
 # Functions melee-hd replaces with a native subsystem instead of porting.
 # One per line: NAME<TAB>reason
 __sinit_trigf_c	Static initializer; melee-sim's math tables are constants with its values.
+TRK_memcpy	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRK_memset	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+__TRK_reset	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKHandleRequestEvent	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKHandleSupportEvent	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKIdle	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKNubMainLoop	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKInitializeEventQueue	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKCopyEvent	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKGetNextEvent	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKPostEvent	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKConstructEvent	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDestructEvent	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKInitializeNub	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTerminateNub	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKNubWelcome	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKInitializeEndian	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKMessageSend	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKSetBufferUsed	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKInitializeMessageBuffers	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKGetFreeBuffer	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKGetBuffer	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKReleaseBuffer	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKResetBuffer	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKSetBufferPosition	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKAppendBuffer	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKReadBuffer	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKAppendBuffer1_ui16	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKAppendBuffer1_ui32	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKAppendBuffer1_ui64	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKAppendBuffer_ui8	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKAppendBuffer_ui32	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKReadBuffer1_ui8	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKReadBuffer1_ui16	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKReadBuffer1_ui32	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKReadBuffer1_ui64	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKReadBuffer_ui8	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKReadBuffer_ui32	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTestForPacket	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKGetInput	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKProcessInput	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKInitializeSerialHandler	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTerminateSerialHandler	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+usr_put_initialize	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKInitializeDispatcher	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDispatchMessage	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKMessageIntoReply	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKSendACK	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKStandardACK	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoUnsupported	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoConnect	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoDisconnect	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoReset	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoVersions	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoSupportMask	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoCPUType	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoReadMemory	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoWriteMemory	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoReadRegisters	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoWriteRegisters	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoFlushCache	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoContinue	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoStep	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoStop	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKSuppAccessFile	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKRequestSend	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKInitializeMutex	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKAcquireMutex	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKReleaseMutex	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKDoNotifyStopped	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRK_flush_cache	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRK_fill_mem	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+__TRK_get_MSR	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+__TRK_set_MSR	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKValidMemory32	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRK_ppc_memcpy	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetAccessMemory	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetReadInstruction	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetAccessDefault	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetAccessFP	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetAccessExtended1	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetAccessExtended2	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetVersions	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetSupportMask	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetCPUType	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKInterruptHandler	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKExceptionHandler	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKPostInterruptEvent	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKSwapAndGo	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKInterruptHandlerEnableInterrupts	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetInterrupt	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetAddStopInfo	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetAddExceptionInfo	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetEnableTrace	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetStepDone	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetDoStep	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetCheckStep	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetSingleStep	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetStepOutOfRange	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetGetPC	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetSupportRequest	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetFlushCache	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetStopped	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetSetStopped	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetStop	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKPPCAccessSPR	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKPPCAccessPairedSingleRegister	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKPPCAccessFPRegister	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKPPCAccessSpecialReg	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetSetInputPendingPtr	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+InitMetroTRK	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+EnableMetroTRKInterrupts	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetTranslate	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRK_copy_vector	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+__TRK_copy_vectors	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKInitializeTarget	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKSaveExtended1Block	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKRestoreExtended1Block	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetCPUMinorType	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRK_main	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKLoadContext	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKEXICallBack	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+InitMetroTRKCommTable	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKUARTInterruptHandler	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKInitializeIntDrivenUART	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+EnableEXI2Interrupts	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKPollUART	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRK_ReadUARTN	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRK_WriteUARTN	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+ReserveEXI2Port	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+UnreserveEXI2Port	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRK_board_display	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+TRKTargetContinue	MetroTRK, the debug monitor for a development debugger on EXI; it touches no game state, and melee-hd has no target debugger.
+memset	Byte fills of game memory; melee-hd initializes typed data directly.
+__fill_mem	Byte fills of game memory; melee-hd initializes typed data directly.
+memcpy	Byte copies of game memory; melee-hd copies typed data directly.
+__va_arg	C variadic arguments; Rust passes arguments directly.
+__destroy_global_chain	Runs C++ global destructors at exit; the game has none that matter and melee-hd exits normally.
+__register_fragment	Registers C++ exception tables; melee-hd has no C++ exception handling.
+__unregister_fragment	Unregisters C++ exception tables; melee-hd has no C++ exception handling.
+__init_cpp_exceptions	Registers C++ exception tables; melee-hd has no C++ exception handling.
+__fini_cpp_exceptions	Unregisters C++ exception tables; melee-hd has no C++ exception handling.
+GetR2	Returns the small-data base register for C++ exception registration; melee-hd has no small-data area.

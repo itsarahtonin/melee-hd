@@ -10,6 +10,6 @@ pub mod hsd;
 pub mod math;
 pub mod mtx;
 mod pairs;
-mod ppc;
+pub mod ppc;
 pub mod rng;
 pub mod vec;
