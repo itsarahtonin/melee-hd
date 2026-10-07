@@ -1,66 +1,18 @@
 //! melee-sim's vectors and matrices against ssbm-rs's ports of the SDK's paired-single
 //! routines, bit for bit, in both float modes.
 
-use gekko_fp::{FpMode, set_fp_mode};
-use leaf_check::{SCRATCH, arg, bits, handle, inputs, read_f32s, reference, write_f32s};
+use leaf_check::{
+    SCRATCH, arg, bits, each_mode, handle, mtx_bits, put_mtx, put_vec, read_f32s, reference,
+    vec_bits, write_f32s,
+};
 use melee_sim::mtx::Mtx34;
-use melee_sim::vec::Vec3;
 use ssbm_rt::{ArrV, Ctx, F32};
 use ssbm_types::fns;
 use ssbm_types::records::Vec as V;
 
-const MODES: [FpMode; 2] = [FpMode::Hardware, FpMode::Slippi];
 const A: u32 = SCRATCH;
 const B: u32 = SCRATCH + 0x40;
 const OUT: u32 = SCRATCH + 0x80;
-
-/// Float streams for vectors and matrices: mostly values in a game-like range, with special
-/// values and random bit patterns mixed in.
-struct Floats {
-    values: std::vec::Vec<f32>,
-    at: usize,
-}
-
-impl Floats {
-    fn new(range: f32) -> Self {
-        Floats {
-            values: inputs(range, 200_000),
-            at: 0,
-        }
-    }
-    fn next(&mut self) -> f32 {
-        self.at = (self.at + 7) % self.values.len();
-        self.values[self.at]
-    }
-    fn vec(&mut self) -> Vec3 {
-        Vec3::new(self.next(), self.next(), self.next())
-    }
-    fn mtx(&mut self) -> Mtx34 {
-        let mut m = Mtx34::default();
-        for row in &mut m.m {
-            for v in row {
-                *v = self.next();
-            }
-        }
-        m
-    }
-}
-
-fn put_vec(ctx: &Ctx, addr: u32, v: Vec3) {
-    write_f32s(ctx, addr, &[v.x, v.y, v.z]);
-}
-
-fn put_mtx(ctx: &Ctx, addr: u32, m: &Mtx34) {
-    write_f32s(ctx, addr, m.m.as_flattened());
-}
-
-fn vec_bits(v: Vec3) -> std::vec::Vec<u32> {
-    vec![v.x.to_bits(), v.y.to_bits(), v.z.to_bits()]
-}
-
-fn mtx_bits(m: &Mtx34) -> std::vec::Vec<u32> {
-    m.m.as_flattened().iter().map(|v| v.to_bits()).collect()
-}
 
 fn v<'a>(ctx: &'a Ctx, addr: u32) -> V<'a> {
     handle(ctx, addr)
@@ -68,19 +20,6 @@ fn v<'a>(ctx: &'a Ctx, addr: u32) -> V<'a> {
 
 fn m<'a>(ctx: &'a Ctx, addr: u32) -> ArrV<'a, F32, 4> {
     handle(ctx, addr)
-}
-
-/// Runs `check` over `n` cases in each float mode.
-fn each_mode(n: usize, range: f32, mut check: impl FnMut(&Ctx, &mut Floats, FpMode)) {
-    let Some(ctx) = reference() else { return };
-    for mode in MODES {
-        set_fp_mode(mode);
-        let mut floats = Floats::new(range);
-        for _ in 0..n {
-            check(&ctx, &mut floats, mode);
-        }
-    }
-    set_fp_mode(FpMode::Hardware);
 }
 
 #[test]

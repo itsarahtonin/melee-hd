@@ -7,7 +7,8 @@ use std::ops::{Add, Neg, Sub};
 use gekko_fp::{self as fp, Ps};
 
 use crate::math;
-use crate::pairs::{load1, load2, splat, store, store_paired};
+use crate::mtx::{Axis, Mtx34};
+use crate::pairs::{load1, load2, moved, splat, store, store_paired};
 
 /// `Vec3` in the original: three floats.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -328,5 +329,217 @@ impl Vec3 {
             store(fp::fmadds(bz, f, r(a.z))),
         );
         (d, (c - d).length_fused())
+    }
+
+    /// Rotates by `angle` radians about a coordinate axis with lbvector's approximate sine
+    /// and cosine, `lbVector_Rotate`.
+    #[doc(alias = "lbVector_Rotate")]
+    pub fn rotate(&mut self, axis: Axis, angle: f32) {
+        let a = r(angle);
+        let (s, c) = (approx_sin(a), approx_cos(a));
+        let (x, y, z) = (r(self.x), r(self.y), r(self.z));
+        *self = match axis {
+            Axis::X => Vec3::new(
+                moved(self.x),
+                store(fp::fmsubs(y, c, fp::fmuls(z, s))),
+                store(fp::fmadds(y, s, fp::fmuls(z, c))),
+            ),
+            Axis::Y => Vec3::new(
+                store(fp::fmadds(x, c, fp::fmuls(z, s))),
+                moved(self.y),
+                store(fp::fmsubs(z, c, fp::fmuls(x, s))),
+            ),
+            Axis::Z => Vec3::new(
+                store(fp::fmsubs(x, c, fp::fmuls(y, s))),
+                store(fp::fmadds(x, s, fp::fmuls(y, c))),
+                moved(self.z),
+            ),
+        };
+    }
+
+    /// Rotates by `angle` radians about `unit_axis`, `lbVector_RotateAboutUnitAxis`: two
+    /// rotations bring the axis onto z, the third turns by `angle`, and the first two are
+    /// undone.
+    #[doc(alias = "lbVector_RotateAboutUnitAxis")]
+    pub fn rotate_about(&mut self, unit_axis: Vec3, angle: f32) {
+        let (ay, az) = (r(unit_axis.y), r(unit_axis.z));
+        let len_yz = r(math::sqrt(store(fp::fadds(
+            fp::fmuls(ay, ay),
+            fp::fmuls(az, az),
+        ))));
+        let a = r(angle);
+        let (s, c) = (approx_sin(a), approx_cos(a));
+        let tilted = len_yz > f64::from(1.0e-10_f32);
+        // The axis's direction in the yz plane, when it has one.
+        let (uy, uz) = if tilted {
+            (fp::fdivs(az, len_yz), fp::fdivs(ay, len_yz))
+        } else {
+            (0.0, 0.0)
+        };
+        let (x, mut y, mut z) = (r(self.x), r(self.y), r(self.z));
+        if tilted {
+            (y, z) = (
+                fp::fmsubs(y, uy, fp::fmuls(z, uz)),
+                fp::fmadds(y, uz, fp::fmuls(z, uy)),
+            );
+        }
+        let ax = r(unit_axis.x);
+        let z2 = fp::fmadds(x, ax, fp::fmuls(z, len_yz));
+        let x2 = fp::fmsubs(x, len_yz, fp::fmuls(z, ax));
+        let x3 = fp::fmsubs(x2, c, fp::fmuls(y, s));
+        let y3 = fp::fmadds(x2, s, fp::fmuls(y, c));
+        let x4 = fp::fmadds(x3, len_yz, fp::fmuls(z2, ax));
+        let z4 = fp::fmadds(fp::fneg(x3), ax, fp::fmuls(z2, len_yz));
+        *self = if tilted {
+            Vec3::new(
+                store(x4),
+                store(fp::fmadds(y3, uy, fp::fmuls(z4, uz))),
+                store(fp::fmadds(fp::fneg(y3), uz, fp::fmuls(z4, uy))),
+            )
+        } else {
+            Vec3::new(store(x4), store(y3), store(z4))
+        };
+    }
+
+    /// Rotates about x, then y, then z by `angles`, `lbVector_ApplyEulerRotation`.
+    #[doc(alias = "lbVector_ApplyEulerRotation")]
+    pub fn rotate_euler(&mut self, angles: Vec3) {
+        self.rotate(Axis::X, angles.x);
+        self.rotate(Axis::Y, angles.y);
+        self.rotate(Axis::Z, angles.z);
+    }
+
+    /// The point at `t` (clamped to [0, 1]) on the parabola through `p[0]`, `p[1]` and `p[2]`
+    /// at 0, ½ and 1, `lbVector_8000DE38`.
+    // The original's two comparisons, which pass a NaN through.
+    #[allow(clippy::manual_clamp)]
+    #[doc(alias = "lbVector_8000DE38")]
+    pub fn quadratic(p: [Vec3; 3], t: f32) -> Vec3 {
+        let mut t = r(t);
+        if t > 1.0 {
+            t = 1.0;
+        } else if t < 0.0 {
+            t = 0.0;
+        }
+        let lane = |p0: f32, p1: f32, p2: f32| {
+            let (p0, p1, p2) = (r(p0), r(p1), r(p2));
+            let a = fp::fmadds(2.0, p2, fp::fmsubs(2.0, p0, fp::fmuls(4.0, p1)));
+            let b = fp::fsubs(fp::fmadds(fp::fneg(3.0), p0, fp::fmuls(4.0, p1)), p2);
+            store(fp::fadds(
+                p0,
+                fp::fmadds(t, fp::fmuls(a, t), fp::fmuls(b, t)),
+            ))
+        };
+        Vec3::new(
+            lane(p[0].x, p[1].x, p[2].x),
+            lane(p[0].y, p[1].y, p[2].y),
+            lane(p[0].z, p[1].z, p[2].z),
+        )
+    }
+
+    /// Euler angles (x, then y, then z) that rotate the standard basis onto the orthonormal
+    /// basis (`b`, `c`, `a`), `lbVector_EulerAnglesFromONB`.
+    #[doc(alias = "lbVector_EulerAnglesFromONB")]
+    pub fn euler_angles_from_basis(a: Vec3, b: Vec3, c: Vec3) -> Vec3 {
+        let bz = r(b.z);
+        if bz == fp::fneg(1.0) || bz == 1.0 {
+            let half_pi = std::f32::consts::FRAC_PI_2;
+            if bz == fp::fneg(1.0) {
+                Vec3::new(math::atan2(c.x, c.y), half_pi, 0.0)
+            } else {
+                Vec3::new(math::atan2(negated(c.x), c.y), negated(half_pi), 0.0)
+            }
+        } else {
+            Vec3::new(
+                math::atan2(c.z, a.z),
+                math::asin(negated(b.z)),
+                math::atan2(b.y, b.x),
+            )
+        }
+    }
+
+    /// The same for the basis (`c × a` normalized, `c`, `a`),
+    /// `lbVector_EulerAnglesFromPartialONB`.
+    #[doc(alias = "lbVector_EulerAnglesFromPartialONB")]
+    pub fn euler_angles_from_partial_basis(a: Vec3, c: Vec3) -> Vec3 {
+        let mut b = c.sdk_cross(a);
+        b.normalize();
+        Vec3::euler_angles_from_basis(a, b, c)
+    }
+}
+
+/// A float's negation as `fneg` makes it in a register, for a function that takes it as a
+/// `float` argument.
+fn negated(x: f32) -> f32 {
+    f32::from_bits(x.to_bits() ^ 0x8000_0000)
+}
+
+/// lbvector's inline polynomial sine (`lbvector_sin`): the angle wrapped once into [-π, π].
+fn approx_sin(angle: f64) -> f64 {
+    approx_sin_wrapped(wrap_once(angle))
+}
+
+/// lbvector's inline cosine (`lbvector_cos`): the sine of the angle plus π/2.
+fn approx_cos(angle: f64) -> f64 {
+    let shifted = fp::frsp(fp::fadd(angle, std::f64::consts::FRAC_PI_2));
+    approx_sin_wrapped(wrap_once(shifted))
+}
+
+fn wrap_once(angle: f64) -> f64 {
+    use std::f64::consts::{PI, TAU};
+    if angle > PI {
+        fp::frsp(fp::fsub(angle, TAU))
+    } else if angle < fp::fneg(PI) {
+        fp::frsp(fp::fadd(angle, TAU))
+    } else {
+        angle
+    }
+}
+
+/// a·0.987862 − a³·0.155271 + a⁵·0.005643, as MWCC fused it.
+fn approx_sin_wrapped(a: f64) -> f64 {
+    let (c1, c3, c5) = (
+        f64::from(0.987_862_f32),
+        f64::from(0.155_271_f32),
+        f64::from(0.005_643_f32),
+    );
+    let a5 = fp::fmuls(a, fp::fmuls(a, fp::fmuls(fp::fmuls(c5, a), a)));
+    let a3 = fp::fmuls(a, fp::fmuls(fp::fmuls(c3, a), a));
+    fp::fmadds(a, a5, fp::fmsubs(c1, a, a3))
+}
+
+impl Mtx34 {
+    /// The rotation by Euler angles about x, then y, then z with lbvector's approximate sine
+    /// and cosine, translation zero, `lbVector_CreateEulerMatrix`. The original reads the
+    /// angles from a `Quaternion`'s x, y and z.
+    #[doc(alias = "lbVector_CreateEulerMatrix")]
+    pub fn from_euler_approx(angles: Vec3) -> Mtx34 {
+        let (sx, cx) = (approx_sin(r(angles.x)), approx_cos(r(angles.x)));
+        let (sy, cy) = (approx_sin(r(angles.y)), approx_cos(r(angles.y)));
+        let (sz, cz) = (approx_sin(r(angles.z)), approx_cos(r(angles.z)));
+        let sxsy = fp::fmuls(sx, sy);
+        let cxsy = fp::fmuls(cx, sy);
+        Mtx34 {
+            m: [
+                [
+                    store(fp::fmuls(cy, cz)),
+                    store(fp::fmsubs(cz, sxsy, fp::fmuls(cx, sz))),
+                    store(fp::fmadds(cz, cxsy, fp::fmuls(sx, sz))),
+                    0.0,
+                ],
+                [
+                    store(fp::fmuls(cy, sz)),
+                    store(fp::fmadds(sz, sxsy, fp::fmuls(cx, cz))),
+                    store(fp::fmsubs(sz, cxsy, fp::fmuls(sx, cz))),
+                    0.0,
+                ],
+                [
+                    store(fp::fneg(sy)),
+                    store(fp::fmuls(sx, cy)),
+                    store(fp::fmuls(cx, cy)),
+                    0.0,
+                ],
+            ],
+        }
     }
 }
