@@ -2773,7 +2773,7 @@ fn item_lib_small() {
         "it_8027321C",
         &quiet,
         &|r, a| {
-            lib2725::bounce_sfx(r.game, a.gobj(0));
+            lib2725::bounce_sfx(r, a.gobj(0));
             Ret::None
         },
     );
