@@ -13,6 +13,14 @@ The original runs everything in one address space: joints, display objects, mate
 - HAL's class system (`class.c`: `hsdNew`, class info, method tables) becomes typed pools plus a class variant on objects whose class the game overrides: fighters set custom joint, interpolated-joint, shape and material classes, stages and items custom materials, refraction effects custom display objects and shapes. A variant picks the overridden behavior where the original dispatched through its method table.
 - Reference counts stay where the original keeps them: they decide when objects are freed, and so which slots are reused next.
 
+## The object state
+
+`hsd::Objects` holds every HSD pool (FObjs, AObjs, joints, references, display objects, shapes) and the HSD globals that point into them (the ID table, the current joint, the random seed). The original's objects reach each other freely: an animation can bind a joint, a joint owns display objects and references, a shape references the joints it is skinned to, and an update function can do anything mid-animation (a joint's particle event spawns an effect that loads joints and animations). So functions that cross object types take `&mut Objects`, and animation passes it to update functions with no borrow held across the call.
+
+Reference counts follow the original's: a joint stays alive while shapes, constraints or bindings refer to it, so a removal can leave joints for their last reference to free, exactly where the original does.
+
+Recursion follows the original's too (joint trees load along sibling chains), so the simulation needs a deep stack: the tests run it on a thread with one, and the player must as well.
+
 ## Game data
 
 - Archives load from the disc into `melee_data::archive::Archives`, numbered in load order. A pointer into loaded data is a `DataRef` (archive and offset). Archives are shared and immutable, not part of the state.
@@ -28,6 +36,8 @@ Function pointers in the original (process functions, render callbacks, user-dat
 A few original functions read memory or registers they never set, and plain data can't hold what was there. Each case is probed in ssbm-rs to see what the word is in play, then modeled explicitly:
 
 - An FObj channel whose data ends right after its first key hands its update function a stack word instead of a value (`hsd::fobj::Value::Stale`). Over every VS stage and a Final Destination replay, that word was always a RAM address, a tiny negative float; every channel was a joint's branch visibility, which an address hides. Update functions resolve what any address gives where the result doesn't depend on which address, and count the rest as stale reads, which the oracle reports, so a case that matters can't pass unnoticed.
+- `resolveIKJoint1` reads two registers and two stack vectors it never set when the effector sits on the chain's root. No joint on the disc has an IK role and no game code gives one, so it can't happen in play; the port counts a stale read if it does.
+- `mpLib_80056C54` adds to a register its caller left when a walk starts on a wall (a line the walker stood on turned into one). The port takes that value as an explicit parameter, which ftDonkey's and itleadead's ports must supply.
 
 ## Checking against ssbm-rs
 

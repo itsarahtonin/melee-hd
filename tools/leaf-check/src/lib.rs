@@ -41,6 +41,29 @@ pub fn reference() -> Option<Ctx> {
 pub fn hsd_reference() -> Option<Ctx> {
     use ssbm_rt::{Addr, Handle};
     let ctx = reference()?;
+    // The original reports a failed assertion over the serial port, which isn't there:
+    // surface it as a panic with its message instead.
+    ctx.register(sym("__assert"), |ctx| {
+        let s = |r: usize| {
+            let mut out = Vec::new();
+            let mut a = ctx.regs.r(r);
+            while a != 0 && out.len() < 256 {
+                let b = ctx.read_u8(a);
+                if b == 0 {
+                    break;
+                }
+                out.push(b);
+                a += 1;
+            }
+            String::from_utf8_lossy(&out).into_owned()
+        };
+        panic!(
+            "the original's assertion failed: {}:{}: {}",
+            s(3),
+            ctx.regs.r(4),
+            s(5)
+        );
+    });
     let (lo, hi) = (HEAP_LO, HEAP_HI);
     let lo =
         ssbm_types::fns::OSInitAlloc(&ctx, handle::<Addr>(&ctx, lo), handle::<Addr>(&ctx, hi), 1)
@@ -296,6 +319,7 @@ pub fn logged(v: melee_sim::hsd::fobj::Value) -> Option<u32> {
     match v {
         melee_sim::hsd::fobj::Value::Float(f) => Some(f.to_bits()),
         melee_sim::hsd::fobj::Value::Stale => None,
+        other => panic!("an FObj handed over {other:?}"),
     }
 }
 

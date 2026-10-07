@@ -13,8 +13,9 @@ use gekko_fp::{FpMode, set_fp_mode};
 use leaf_check::{arg, handle, inputs, logged, reference, same_updates, stage_anim_roots, sym};
 use melee_data::archive::{Archive, ArchiveId, Archives, DataRef};
 use melee_data::disc::Disc;
-use melee_sim::hsd::aobj::{self, AObjId, AObjs};
-use melee_sim::hsd::fobj::{self, FObjId, FObjs, Value};
+use melee_sim::hsd::Objects;
+use melee_sim::hsd::aobj::{self, AObjId};
+use melee_sim::hsd::fobj::{self, FObjId, Value};
 use melee_sim::{math, ppc};
 use ssbm_rt::{Addr, Ctx, Handle, Single};
 use ssbm_types::fns;
@@ -223,8 +224,7 @@ struct Sides<'c> {
     data_addr: u32,
     archives: Archives,
     id: ArchiveId,
-    aobjs: AObjs,
-    fobjs: FObjs,
+    objs: Objects,
     aobj_ids: Identity,
     fobj_ids: Identity,
 }
@@ -269,7 +269,7 @@ impl Sides<'_> {
     }
 
     fn fobj_fields_ours(&self, id: FObjId) -> String {
-        let o = &self.fobjs[id.0];
+        let o = &self.objs.fobjs[id.0];
         format!(
             "ad {:#x} head {:#x} len {} flags {:#x} op {} intrp {} type {} fv {} fs {} pack {} start {} fterm {} time {:#x} p0 {:#x} p1 {:#x} d0 {:#x} d1 {:#x}",
             o.ad,
@@ -301,11 +301,11 @@ impl Sides<'_> {
                 ctx.read_u32(sym("HSD_AObj_804D762C")) as i32,
                 ctx.read_u32(sym("HSD_AObj_804D7630")) as i32
             ),
-            (self.aobjs.stopped, self.aobjs.playing),
+            (self.objs.aobjs.stopped, self.objs.aobjs.playing),
             "{what}: end-callback counts"
         );
         let Some(a) = ours else { return };
-        let o = &self.aobjs[a];
+        let o = &self.objs.aobjs[a];
         let r = |off| ctx.read_u32(theirs + off);
         assert_eq!(
             [r(0), r(4), r(8), r(0xC), r(0x10), r(0x18)],
@@ -329,7 +329,7 @@ impl Sides<'_> {
                 "{what}: FObj"
             );
             tf = ctx.read_u32(tf);
-            of = self.fobjs[f.0].next;
+            of = self.objs.fobjs[f.0].next;
         }
     }
 
@@ -340,7 +340,12 @@ impl Sides<'_> {
         )
         .addr();
         let d = self.desc(desc);
-        let o = aobj::load_desc(&mut self.aobjs, &mut self.fobjs, &self.archives, Some(d));
+        let o = aobj::load_desc(
+            &mut self.objs.aobjs,
+            &mut self.objs.fobjs,
+            &self.archives,
+            Some(d),
+        );
         (t, o)
     }
 
@@ -353,7 +358,7 @@ impl Sides<'_> {
             None => 0,
         };
         let d = fdesc.map(|d| self.desc(d));
-        let o = fobj::load_desc(&mut self.fobjs, &self.archives, d);
+        let o = fobj::load_desc(&mut self.objs.fobjs, &self.archives, d);
         (t, o)
     }
 }
@@ -420,8 +425,7 @@ fn aobjs_match() {
             data_addr,
             archives,
             id,
-            aobjs: AObjs::default(),
-            fobjs: FObjs::default(),
+            objs: Objects::default(),
             aobj_ids: Identity::default(),
             fobj_ids: Identity::default(),
         };
@@ -436,15 +440,14 @@ fn aobjs_match() {
                 fns::HSD_AObjGetAllocData(ctx).addr(),
                 sym("aobj_alloc_data")
             );
-            s.aobjs = AObjs::default();
-            s.fobjs = FObjs::default();
+            s.objs = Objects::default();
             s.aobj_ids = Identity::default();
             s.fobj_ids = Identity::default();
             fns::HSD_AObjInitEndCallBack(ctx);
             let (mut ta, mut oa) = s.load(desc);
             let what = format!("{name} desc {desc:#x} in {mode:?}");
             s.compare(ta, oa, &format!("{what}: load"));
-            let end = s.aobjs[oa.unwrap()].end_frame;
+            let end = s.objs.aobjs[oa.unwrap()].end_frame;
             let frame = |r: u64| -> f32 {
                 let unit = (r >> 40) as f32 / (1u64 << 24) as f32;
                 match r % 10 {
@@ -462,16 +465,16 @@ fn aobjs_match() {
             // As the game starts one: optionally looping, then requested at a start frame.
             if rand() % 2 == 0 {
                 fns::HSD_AObjSetFlags(ctx, handle(ctx, ta), aobj::LOOP);
-                aobj::set_flags(&mut s.aobjs, oa, aobj::LOOP);
+                aobj::set_flags(&mut s.objs.aobjs, oa, aobj::LOOP);
             }
             let start = frame(rand());
             fns::HSD_AObjReqAnim(ctx, handle(ctx, ta), arg(start));
-            aobj::req_anim(&mut s.aobjs, &mut s.fobjs, oa, start);
+            aobj::req_anim(&mut s.objs.aobjs, &mut s.objs.fobjs, oa, start);
             s.compare(ta, oa, &format!("{what}: request at {start}"));
             let mut extras: Vec<(u32, Option<AObjId>)> = Vec::new();
             for n in 0..300 {
                 // A stopped AObj only interprets again once requested, as the game does.
-                let stopped = aobj::flags(&s.aobjs, oa) & aobj::NO_ANIM != 0;
+                let stopped = aobj::flags(&s.objs.aobjs, oa) & aobj::NO_ANIM != 0;
                 let r = if stopped && rand() % 4 == 0 {
                     80
                 } else {
@@ -488,17 +491,17 @@ fn aobjs_match() {
                             handle(ctx, OBJ),
                             handle(ctx, if null { 0 } else { UPDATE }),
                         );
-                        let mut log = |t: u8, v: Value| ours_log.push((t, logged(v)));
+                        let mut log =
+                            |_: &mut Objects, t: u8, v: Value| ours_log.push((t, logged(v)));
                         aobj::interpret(
-                            &mut s.aobjs,
-                            &mut s.fobjs,
+                            &mut s.objs,
                             &s.archives,
                             oa,
                             if null { None } else { Some(&mut log) },
                         );
-                        let flags = aobj::flags(&s.aobjs, oa);
+                        let flags = aobj::flags(&s.objs.aobjs, oa);
                         if was_playing && flags & aobj::REWINDED != 0 {
-                            let o = &s.aobjs[oa.unwrap()];
+                            let o = &s.objs.aobjs[oa.unwrap()];
                             if o.rewind_frame < o.end_frame {
                                 counts.loops += 1;
                             } else {
@@ -517,47 +520,47 @@ fn aobjs_match() {
                         // Rates the game sets: stopped, slowed, normal and sped up.
                         let rate = [0.0f32, 0.5, 1.0, 2.0, 1.25, 0.25][(rand() % 6) as usize];
                         fns::HSD_AObjSetRate(ctx, handle(ctx, ta), arg(rate));
-                        aobj::set_rate(&mut s.aobjs, oa, rate);
+                        aobj::set_rate(&mut s.objs.aobjs, oa, rate);
                         "rate"
                     }
                     74..=76 => {
                         let f = rand() as u32;
                         fns::HSD_AObjSetFlags(ctx, handle(ctx, ta), f);
-                        aobj::set_flags(&mut s.aobjs, oa, f);
+                        aobj::set_flags(&mut s.objs.aobjs, oa, f);
                         assert_eq!(
                             fns::HSD_AObjGetFlags(ctx, handle(ctx, ta)),
-                            aobj::flags(&s.aobjs, oa)
+                            aobj::flags(&s.objs.aobjs, oa)
                         );
                         "set flags"
                     }
                     77..=79 => {
                         let f = rand() as u32;
                         fns::HSD_AObjClearFlags(ctx, handle(ctx, ta), f);
-                        aobj::clear_flags(&mut s.aobjs, oa, f);
+                        aobj::clear_flags(&mut s.objs.aobjs, oa, f);
                         "clear flags"
                     }
                     80..=82 => {
                         let f = frame(rand());
                         fns::HSD_AObjReqAnim(ctx, handle(ctx, ta), arg(f));
-                        aobj::req_anim(&mut s.aobjs, &mut s.fobjs, oa, f);
+                        aobj::req_anim(&mut s.objs.aobjs, &mut s.objs.fobjs, oa, f);
                         "request"
                     }
                     83..=84 => {
                         let f = frame(rand());
                         fns::HSD_AObjSetCurrentFrame(ctx, handle(ctx, ta), arg(f));
-                        aobj::set_current_frame(&mut s.aobjs, &mut s.fobjs, oa, f);
+                        aobj::set_current_frame(&mut s.objs.aobjs, &mut s.objs.fobjs, oa, f);
                         "current frame"
                     }
                     85..=86 => {
                         let f = frame(rand());
                         fns::HSD_AObjSetRewindFrame(ctx, handle(ctx, ta), arg(f));
-                        aobj::set_rewind_frame(&mut s.aobjs, oa, f);
+                        aobj::set_rewind_frame(&mut s.objs.aobjs, oa, f);
                         "rewind frame"
                     }
                     87..=88 => {
                         let f = frame(rand());
                         fns::HSD_AObjSetEndFrame(ctx, handle(ctx, ta), arg(f));
-                        aobj::set_end_frame(&mut s.aobjs, oa, f);
+                        aobj::set_end_frame(&mut s.objs.aobjs, oa, f);
                         "end frame"
                     }
                     89..=91 => {
@@ -569,10 +572,10 @@ fn aobjs_match() {
                             handle(ctx, OBJ),
                             handle(ctx, if null { 0 } else { UPDATE }),
                         );
-                        let mut log = |t: u8, v: Value| ours_log.push((t, logged(v)));
+                        let mut log =
+                            |_: &mut Objects, t: u8, v: Value| ours_log.push((t, logged(v)));
                         aobj::stop_anim(
-                            &mut s.aobjs,
-                            &mut s.fobjs,
+                            &mut s.objs,
                             &s.archives,
                             oa,
                             if null { None } else { Some(&mut log) },
@@ -587,21 +590,21 @@ fn aobjs_match() {
                         };
                         let (tf, of) = s.load_fobjs(fdesc);
                         fns::HSD_AObjSetFObj(ctx, handle(ctx, ta), handle::<HSD_FObj>(ctx, tf));
-                        aobj::set_fobj(&mut s.aobjs, &mut s.fobjs, oa, of);
+                        aobj::set_fobj(&mut s.objs.aobjs, &mut s.objs.fobjs, oa, of);
                         "set fobj"
                     }
                     93 => {
                         fns::HSD_AObjRemove(ctx, handle(ctx, ta));
-                        aobj::remove(&mut s.aobjs, &mut s.fobjs, oa);
+                        aobj::remove(&mut s.objs.aobjs, &mut s.objs.fobjs, oa);
                         (ta, oa) = s.load(desc);
                         let f = frame(rand());
                         fns::HSD_AObjReqAnim(ctx, handle(ctx, ta), arg(f));
-                        aobj::req_anim(&mut s.aobjs, &mut s.fobjs, oa, f);
+                        aobj::req_anim(&mut s.objs.aobjs, &mut s.objs.fobjs, oa, f);
                         "remove and reload"
                     }
                     94 => {
                         let t = fns::HSD_AObjAlloc(ctx).addr();
-                        let o = Some(aobj::alloc(&mut s.aobjs));
+                        let o = Some(aobj::alloc(&mut s.objs.aobjs));
                         s.compare(t, o, &format!("{what} step {n}: alloc"));
                         extras.push((t, o));
                         "alloc"
@@ -610,18 +613,18 @@ fn aobjs_match() {
                         if !extras.is_empty() {
                             let (t, o) = extras.swap_remove((rand() as usize) % extras.len());
                             fns::HSD_AObjFree(ctx, handle(ctx, t));
-                            aobj::free(&mut s.aobjs, o);
+                            aobj::free(&mut s.objs.aobjs, o);
                         }
                         "free"
                     }
                     96 => {
                         fns::HSD_AObjInvokeCallBacks(ctx);
-                        aobj::invoke_end_callbacks(&s.aobjs);
+                        aobj::invoke_end_callbacks(&s.objs.aobjs);
                         "invoke end callbacks"
                     }
                     97 => {
                         fns::HSD_AObjInitEndCallBack(ctx);
-                        aobj::init_end_callback(&mut s.aobjs);
+                        aobj::init_end_callback(&mut s.objs.aobjs);
                         "init end callbacks"
                     }
                     _ => {
@@ -641,15 +644,14 @@ fn aobjs_match() {
                         fns::HSD_AObjRemove(ctx, z());
                         fns::HSD_AObjFree(ctx, z());
                         assert!(fns::HSD_AObjLoadDesc(ctx, handle(ctx, 0)).addr() == 0);
-                        let (a, f) = (&mut s.aobjs, &mut s.fobjs);
-                        let mut log = |t: u8, v: Value| ours_log.push((t, logged(v)));
+                        let (a, f) = (&mut s.objs.aobjs, &mut s.objs.fobjs);
+                        let mut log =
+                            |_: &mut Objects, t: u8, v: Value| ours_log.push((t, logged(v)));
                         assert_eq!(aobj::flags(a, None), 0);
                         aobj::set_flags(a, None, aobj::LOOP);
                         aobj::clear_flags(a, None, aobj::LOOP);
                         aobj::set_fobj(a, f, None, None);
                         aobj::req_anim(a, f, None, 1.0);
-                        aobj::stop_anim(a, f, &s.archives, None, Some(&mut log));
-                        aobj::interpret(a, f, &s.archives, None, Some(&mut log));
                         aobj::set_rate(a, None, 1.0);
                         aobj::set_rewind_frame(a, None, 1.0);
                         aobj::set_end_frame(a, None, 1.0);
@@ -657,6 +659,8 @@ fn aobjs_match() {
                         aobj::remove(a, f, None);
                         aobj::free(a, None);
                         assert!(aobj::load_desc(a, f, &s.archives, None).is_none());
+                        aobj::stop_anim(&mut s.objs, &s.archives, None, Some(&mut log));
+                        aobj::interpret(&mut s.objs, &s.archives, None, Some(&mut log));
                         "null"
                     }
                 };
@@ -669,17 +673,17 @@ fn aobjs_match() {
                 *counts.ops.entry(op).or_default() += 1;
                 s.compare(ta, oa, &format!("{what} step {n} ({op})"));
                 counts.steps += 1;
-                let mut f = oa.and_then(|a| s.aobjs[a].fobj);
+                let mut f = oa.and_then(|a| s.objs.aobjs[a].fobj);
                 while let Some(id) = f {
-                    if s.fobjs[id.0].op_intrp == 6 {
+                    if s.objs.fobjs[id.0].op_intrp == 6 {
                         counts.keyed += 1;
                         break;
                     }
-                    f = s.fobjs[id.0].next;
+                    f = s.objs.fobjs[id.0].next;
                 }
             }
             fns::HSD_AObjRemove(ctx, handle(ctx, ta));
-            aobj::remove(&mut s.aobjs, &mut s.fobjs, oa);
+            aobj::remove(&mut s.objs.aobjs, &mut s.objs.fobjs, oa);
             // Freed and reloaded, both sides hand out the same objects.
             let (ta, oa) = s.load(desc);
             s.compare(ta, oa, &format!("{what}: reload after remove"));

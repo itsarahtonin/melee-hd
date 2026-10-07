@@ -10,6 +10,7 @@ use leaf_check::{
 };
 use melee_data::archive::{Archive, Archives, DataRef};
 use melee_data::disc::Disc;
+use melee_sim::hsd::Objects;
 use melee_sim::hsd::fobj::{self, FObjId, FObjs};
 use melee_sim::hsd::spline;
 use ssbm_rt::{Addr, Ctx, Handle};
@@ -176,11 +177,11 @@ fn fobjs_match() {
             // A fresh pool on both sides for each chain.
             fns::HSD_ObjSetHeap(ctx, 0x0040_0000, handle::<Addr>(ctx, OBJ_HEAP));
             fns::HSD_FObjInitAllocData(ctx);
-            let mut fobjs = FObjs::default();
+            let mut objs = Objects::default();
             let theirs_f =
                 fns::HSD_FObjLoadDesc(ctx, handle::<_HSD_FObjDesc>(ctx, data_addr + chain)).addr();
             let ours_f = fobj::load_desc(
-                &mut fobjs,
+                &mut objs.fobjs,
                 &archives,
                 Some(DataRef {
                     archive: id,
@@ -189,7 +190,7 @@ fn fobjs_match() {
             );
             let startframe = [0.0f32, 0.0, 1.0, 3.5, -2.0][(rand() % 5) as usize];
             fns::HSD_FObjReqAnimAll(ctx, handle::<HSD_FObj>(ctx, theirs_f), arg(startframe));
-            fobj::req_anim_all(&mut fobjs, ours_f, startframe);
+            fobj::req_anim_all(&mut objs.fobjs, ours_f, startframe);
             let mut ours_log = Vec::new();
             for frame in 0..400 {
                 let rate = match rand() % 8 {
@@ -208,11 +209,11 @@ fn fobjs_match() {
                 );
                 ours_log.clear();
                 fobj::interpret_all(
-                    &mut fobjs,
+                    &mut objs,
                     &archives,
                     ours_f,
                     rate,
-                    Some(&mut |t, v| ours_log.push((t, logged(v)))),
+                    Some(&mut |_: &mut Objects, t, v| ours_log.push((t, logged(v)))),
                 );
                 let theirs_log = UPDATES.with(|u| std::mem::take(&mut *u.borrow_mut()));
                 assert!(
@@ -223,12 +224,12 @@ fn fobjs_match() {
                 while let Some(o) = oa {
                     assert_ne!(ta, 0, "{name} chain {chain:#x}: chain lengths");
                     assert_eq!(
-                        ours(&fobjs, o),
+                        ours(&objs.fobjs, o),
                         theirs(ctx, ta, data_addr),
                         "{name} chain {chain:#x} frame {frame} rate {rate} in {mode:?}"
                     );
                     ta = ctx.read_u32(ta);
-                    oa = fobjs[o.0].next;
+                    oa = objs.fobjs[o.0].next;
                 }
                 stale += ours_log.iter().filter(|(_, v)| v.is_none()).count() as u64;
                 frames_checked += 1;
@@ -243,11 +244,11 @@ fn fobjs_match() {
             );
             ours_log.clear();
             fobj::stop_anim_all(
-                &mut fobjs,
+                &mut objs,
                 &archives,
                 ours_f,
                 rate,
-                Some(&mut |t, v| ours_log.push((t, logged(v)))),
+                Some(&mut |_: &mut Objects, t, v| ours_log.push((t, logged(v)))),
             );
             let theirs_log = UPDATES.with(|u| std::mem::take(&mut *u.borrow_mut()));
             assert!(
@@ -264,20 +265,20 @@ fn fobjs_match() {
                 }
                 v
             };
-            let before = pairs(theirs_f, ours_f, &fobjs);
+            let before = pairs(theirs_f, ours_f, &objs.fobjs);
             fns::HSD_FObjRemoveAll(ctx, handle::<HSD_FObj>(ctx, theirs_f));
-            fobj::remove_all(&mut fobjs, ours_f);
+            fobj::remove_all(&mut objs.fobjs, ours_f);
             let t2 =
                 fns::HSD_FObjLoadDesc(ctx, handle::<_HSD_FObjDesc>(ctx, data_addr + chain)).addr();
             let o2 = fobj::load_desc(
-                &mut fobjs,
+                &mut objs.fobjs,
                 &archives,
                 Some(DataRef {
                     archive: id,
                     offset: chain,
                 }),
             );
-            let mut after = pairs(t2, o2, &fobjs);
+            let mut after = pairs(t2, o2, &objs.fobjs);
             let mut before_sorted = before.clone();
             before_sorted.sort_unstable();
             after.sort_unstable();

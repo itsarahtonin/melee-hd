@@ -38,3 +38,43 @@ mpIsland_8005A728	leaf-check mplib: mpLibLoad builds every stage's islands throu
 mpIsland_8005AE1C	leaf-check mplib: every joint and line change updates the static islands through mpIsland_8005B334; island lists compared after each step
 mpIsland_8005B004	leaf-check mplib: every joint and line change rebuilds the dynamic islands through mpIsland_8005B334; island lists compared after each step
 mpIsland_8005B334	leaf-check mplib: joint hides, moves, enables and line toggles update the islands through it; island lists compared after each step
+HSD_JObjSetMtxDirty	leaf-check jobj: flag and SRT edits dirty through it; flags compared every step
+HSD_DObjResolveRefsAll	leaf-check jobj: HSD_JObjLoadJoint resolves every DObj's shapes; envelopes and skin joints compared
+PObjLoad	leaf-check jobj: HSD_JObjLoadJoint loads every shape on the disc; PObjs compared
+HSD_PObjLoadDesc	leaf-check jobj: HSD_JObjLoadJoint loads every shape on the disc; PObjs compared
+HSD_PObjRemoveAll	leaf-check jobj: joint removal frees shapes through it; live PObj counts and joint ref counts compared
+PObjRelease	leaf-check jobj: joint removal frees shapes through it; live PObj counts and joint ref counts compared
+HSD_PObjResolveRefsAll	leaf-check jobj: HSD_JObjLoadJoint binds every envelope; envelope joints and ref counts compared
+JObjResetRST	leaf-check jobj: HSD_JObjResetRST edits run it per joint; SRT compared
+HSD_JObjWalkTree0	leaf-check jobj: HSD_JObjWalkTree visits through it; visit order and types compared
+HSD_JObjMakeMatrix	leaf-check jobj: every matrix setup makes the matrix through it; matrices compared
+HSD_JObjRemoveAnimByFlags	leaf-check jobj: HSD_JObjRemoveAnim and RemoveAnimAllByFlags edits; AObjs compared
+HSD_JObjReqAnimAllByFlags	leaf-check jobj: HSD_JObjReqAnimAll requests through it; AObj and FObj state compared
+JObjSortAnim	leaf-check jobj: HSD_JObjAddAnimAll sorts every loaded AObj; FObj chain order compared
+HSD_JObjAddAnim	leaf-check jobj: HSD_JObjAddAnimAll adds each joint's animation through it
+HSD_JObjAnim	leaf-check jobj: HSD_JObjAnimAll animates each joint through it, every frame
+JObjAnimAll	leaf-check jobj: HSD_JObjAnimAll recurses through it, every frame
+JObjLoad	leaf-check jobj: HSD_JObjLoadJoint loads every joint on the disc through it
+HSD_JObjResolveRefs	leaf-check jobj: HSD_JObjLoadJoint resolves every joint (instances, constraints, envelopes)
+HSD_JObjResolveRefsAll	leaf-check jobj: HSD_JObjLoadJoint resolves every tree through it
+HSD_JObjUnrefThis	leaf-check jobj: constraint, rvalue and envelope removal; ref counts and live joints compared
+HSD_JObjRemoveAll	leaf-check jobj: releasing a joint removes its children through it; live joints compared
+RecalcParentTrspBits	leaf-check jobj: reparent and add-next edits; flags compared
+HSD_JObjAddChild	leaf-check jobj: reparent and add-next edits; tree links compared
+HSD_JObjAlloc	leaf-check jobj: HSD_JObjLoadJoint allocates every joint through it
+resolveIKJoint1	leaf-check jobj synthetic: two- and one-bone IK chains with poles set up every step; matrices compared
+resolveIKJoint2	leaf-check jobj synthetic: a two-bone IK chain with limits set up every step; matrices compared
+JObjReleaseChild	leaf-check jobj: every unref and remove; live objects and ref counts compared
+JObjRelease	leaf-check jobj: every unref and remove; live objects and the ID table's effects compared
+HSD_RObjAnimAll	leaf-check jobj synthetic: animated constraints switch on and off every frame; RObj flags compared
+HSD_RObjRemoveAnimAllByFlags	leaf-check jobj: JObj anim-removal edits on animated constraints; RObj AObjs compared
+HSD_RObjReqAnimAllByFlags	leaf-check jobj: JObj request edits on animated constraints; RObj AObjs compared
+HSD_RObjAddAnimAll	leaf-check jobj synthetic: HSD_JObjAddAnimAll gives constraints their animations
+HSD_RObjGetGlobalPosition	leaf-check jobj: position, direction and IK constraints set up every step; matrices compared
+HSD_RObjUpdateAll	leaf-check jobj: every constrained joint's setup; matrices and SRT compared
+HSD_RObjResolveRefsAll	leaf-check jobj synthetic: loading resolves constraint targets and rvalues
+HSD_RObjLoadDesc	leaf-check jobj synthetic: every reference type loaded from descriptors; RObjs compared
+HSD_RObjRemoveAll	leaf-check jobj: releasing constrained joints; live RObjs compared
+HSD_RObjFree	leaf-check jobj: constraint removal edits free through it; live RObjs compared
+HSD_RvalueRemoveAll	leaf-check jobj synthetic: releasing the expression joint; rvalue joints' ref counts compared
+HSD_RvalueResolveRefsAll	leaf-check jobj synthetic: loading resolves both expressions' rvalues; compared

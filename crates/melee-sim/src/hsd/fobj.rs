@@ -5,15 +5,21 @@
 use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
+use super::Objects;
 use super::pool::Pool;
 use super::spline;
 use crate::fpu::{copy, mem, reg};
 use crate::ppc::slw_i;
+use crate::vec::Vec3;
 
 /// An animated object's update function (`HSD_ObjUpdateFunc`), handed each value with its
 /// channel type. `None` is the original's NULL: the value isn't computed, so a keyed value
 /// stays pending and a linear segment's slope waits for the next update.
-pub type Update<'a> = Option<&'a mut dyn FnMut(u8, Value)>;
+///
+/// It gets the whole object state, as the original's could reach any object: a joint's update
+/// can spawn an effect that loads more joints and animations. Interpretation holds no borrow
+/// across the call.
+pub type Update<'a> = Option<&'a mut dyn FnMut(&mut Objects, u8, Value)>;
 
 /// A value handed to an update function (`HSD_ObjData`).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -30,6 +36,10 @@ pub enum Value {
     /// what any address gives where that doesn't depend on which address, and count the rest
     /// as stale reads (see `docs/engine.md`).
     Stale,
+    /// A vector: a matrix column or position a constraint computes (`HSD_ObjData.p`).
+    Point(Vec3),
+    /// No data: a constraint's signal to rebuild the SRT from the matrix (a null pointer).
+    Empty,
 }
 
 impl Value {
@@ -38,6 +48,7 @@ impl Value {
         match self {
             Value::Float(v) => v,
             Value::Stale => ADDRESS,
+            Value::Point(_) | Value::Empty => panic!("{self:?} where a float was due"),
         }
     }
 }
@@ -352,8 +363,10 @@ fn load_data(data: &Archives, o: &mut FObj) -> u32 {
 /// Computes the current value and hands it to `update` with the channel type,
 /// `FObjUpdateAnim`.
 #[doc(alias = "FObjUpdateAnim")]
-fn update_anim(o: &mut FObj, update: Update) {
+fn update_anim(objs: &mut Objects, f: FObjId, update: &mut Update) {
     let Some(update) = update else { return };
+    let o = &mut objs.fobjs[f.0];
+    let ty = o.obj_type;
     let fterm = || f64::from(o.fterm);
     let value = match o.op_intrp {
         OP_KEY => {
@@ -396,23 +409,23 @@ fn update_anim(o: &mut FObj, update: Update) {
             }
         }
         // See `Value::Stale`.
-        _ => return update(o.obj_type, Value::Stale),
+        _ => return update(objs, ty, Value::Stale),
     };
-    update(o.obj_type, Value::Float(copy(value)));
+    update(objs, ty, Value::Float(copy(value)));
 }
 
 /// Advances one FObj by `rate` frames, calling `update` with each value it reaches,
 /// `HSD_FObjInterpretAnim`.
 #[doc(alias = "HSD_FObjInterpretAnim")]
 pub fn interpret(
-    fobjs: &mut FObjs,
+    objs: &mut Objects,
     data: &Archives,
     f: Option<FObjId>,
     rate: f32,
     mut update: Update,
 ) {
     let Some(f) = f else { return };
-    let o = &mut fobjs[f.0];
+    let o = &mut objs.fobjs[f.0];
     let mut state = o.state();
     if state == 0 {
         return;
@@ -423,19 +436,20 @@ pub fn interpret(
     }
     let mut fterm = 0.0;
     loop {
+        let o = &mut objs.fobjs[f.0];
         match state {
             6 => {
                 o.time = mem(fp::fadds(reg(o.time), fterm));
                 launch_key(o);
-                update_anim(o, again(&mut update));
+                update_anim(objs, f, &mut update);
                 return;
             }
             1 | 2 => state = load_data(data, o),
             3 => {
                 if o.flags & 0x80 != 0 {
-                    update_anim(o, again(&mut update));
+                    update_anim(objs, f, &mut update);
                 }
-                state = load_wait(data, o);
+                state = load_wait(data, &mut objs.fobjs[f.0]);
             }
             4 => {
                 let term = fp::frsp(f64::from(o.fterm));
@@ -445,8 +459,8 @@ pub fn interpret(
                     o.time = mem(fp::fsubs(reg(o.time), term));
                     o.set_state(state);
                 } else {
-                    update_anim(o, again(&mut update));
-                    o.set_state(5);
+                    update_anim(objs, f, &mut update);
+                    objs.fobjs[f.0].set_state(5);
                     return;
                 }
             }
@@ -462,7 +476,7 @@ pub fn interpret(
 /// `HSD_FObjInterpretAnimAll`.
 #[doc(alias = "HSD_FObjInterpretAnimAll")]
 pub fn interpret_all(
-    fobjs: &mut FObjs,
+    objs: &mut Objects,
     data: &Archives,
     first: Option<FObjId>,
     rate: f32,
@@ -470,25 +484,31 @@ pub fn interpret_all(
 ) {
     let mut cur = first;
     while let Some(f) = cur {
-        interpret(fobjs, data, Some(f), rate, again(&mut update));
-        cur = fobjs[f.0].next;
+        interpret(objs, data, Some(f), rate, again(&mut update));
+        cur = objs.fobjs[f.0].next;
     }
 }
 
 /// Stops an FObj, first delivering a pending key, `HSD_FObjStopAnim`.
 #[doc(alias = "HSD_FObjStopAnim")]
-pub fn stop_anim(fobjs: &mut FObjs, data: &Archives, f: Option<FObjId>, rate: f32, update: Update) {
+pub fn stop_anim(
+    objs: &mut Objects,
+    data: &Archives,
+    f: Option<FObjId>,
+    rate: f32,
+    update: Update,
+) {
     let Some(id) = f else { return };
-    if fobjs[id.0].op_intrp == OP_KEY {
-        interpret(fobjs, data, f, rate, update);
+    if objs.fobjs[id.0].op_intrp == OP_KEY {
+        interpret(objs, data, f, rate, update);
     }
-    fobjs[id.0].set_state(0);
+    objs.fobjs[id.0].set_state(0);
 }
 
 /// `HSD_FObjStopAnimAll`.
 #[doc(alias = "HSD_FObjStopAnimAll")]
 pub fn stop_anim_all(
-    fobjs: &mut FObjs,
+    objs: &mut Objects,
     data: &Archives,
     first: Option<FObjId>,
     rate: f32,
@@ -496,7 +516,7 @@ pub fn stop_anim_all(
 ) {
     let mut cur = first;
     while let Some(f) = cur {
-        stop_anim(fobjs, data, Some(f), rate, again(&mut update));
-        cur = fobjs[f.0].next;
+        stop_anim(objs, data, Some(f), rate, again(&mut update));
+        cur = objs.fobjs[f.0].next;
     }
 }

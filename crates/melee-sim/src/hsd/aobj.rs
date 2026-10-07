@@ -8,7 +8,9 @@ use std::ops::{Index, IndexMut};
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
+use super::Objects;
 use super::fobj::{self, FObjId, FObjs, Update, again};
+use super::jobj::JObjId;
 use super::pool::Pool;
 use crate::fpu::{copy, mem, reg};
 use crate::math;
@@ -28,8 +30,7 @@ pub const LOOP: u32 = 1 << 29;
 /// Stopped.
 pub const NO_ANIM: u32 = 1 << 30;
 
-/// `HSD_AObj`. The original's `hsd_obj`, the joint a descriptor can bind (a path animation's
-/// spline), waits for JObj (see [`load_desc`]).
+/// `HSD_AObj`.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AObj {
     pub flags: u32,
@@ -38,6 +39,9 @@ pub struct AObj {
     pub end_frame: f32,
     pub framerate: f32,
     pub fobj: Option<FObjId>,
+    /// The joint the descriptor binds (`hsd_obj`): a path animation's spline, or the frame
+    /// its translation is in. The AObj holds a reference to it.
+    pub hsd_obj: Option<JObjId>,
 }
 
 /// The AObj pool (`aobj_alloc_data`) and the counts `HSD_AObjInvokeCallBacks` reads. A new
@@ -143,17 +147,11 @@ pub fn req_anim(aobjs: &mut AObjs, fobjs: &mut FObjs, a: Option<AObjId>, frame: 
 /// Stops an AObj, first delivering its channels' pending keys at its rate,
 /// `HSD_AObjStopAnim`.
 #[doc(alias = "HSD_AObjStopAnim")]
-pub fn stop_anim(
-    aobjs: &mut AObjs,
-    fobjs: &mut FObjs,
-    data: &Archives,
-    a: Option<AObjId>,
-    update: Update,
-) {
+pub fn stop_anim(objs: &mut Objects, data: &Archives, a: Option<AObjId>, update: Update) {
     let Some(a) = a else { return };
-    let o = &mut aobjs[a];
-    fobj::stop_anim_all(fobjs, data, o.fobj, o.framerate, update);
-    o.flags |= NO_ANIM;
+    let o = &objs.aobjs[a];
+    fobj::stop_anim_all(objs, data, o.fobj, o.framerate, update);
+    objs.aobjs[a].flags |= NO_ANIM;
 }
 
 /// The current frame wrapped into `[rewind, end)`: the inline `getLoopedFrame`.
@@ -167,15 +165,9 @@ fn looped_frame(o: &AObj) -> f64 {
 /// request; loops or stops it at its end frame; and runs its channels, handing their values
 /// to `update` unless [`NO_UPDATE`] is set. `HSD_AObjInterpretAnim`.
 #[doc(alias = "HSD_AObjInterpretAnim")]
-pub fn interpret(
-    aobjs: &mut AObjs,
-    fobjs: &mut FObjs,
-    data: &Archives,
-    a: Option<AObjId>,
-    mut update: Update,
-) {
+pub fn interpret(objs: &mut Objects, data: &Archives, a: Option<AObjId>, mut update: Update) {
     let Some(a) = a else { return };
-    let o = &mut aobjs.pool[a.0];
+    let o = &mut objs.aobjs[a];
     if o.flags & NO_ANIM != 0 {
         return;
     }
@@ -189,40 +181,44 @@ pub fn interpret(
     }
     if o.flags & LOOP != 0 && reg(o.end_frame) <= reg(o.curr_frame) {
         if reg(o.rewind_frame) < reg(o.end_frame) {
-            fobj::stop_anim_all(fobjs, data, o.fobj, rate, again(&mut update));
+            let first = o.fobj;
+            fobj::stop_anim_all(objs, data, first, rate, again(&mut update));
+            let o = &mut objs.aobjs[a];
             o.curr_frame = mem(looped_frame(o));
-            fobj::req_anim_all(fobjs, o.fobj, o.curr_frame);
+            let (first, frame) = (o.fobj, o.curr_frame);
+            fobj::req_anim_all(&mut objs.fobjs, first, frame);
         } else {
             o.curr_frame = copy(o.end_frame);
         }
         rate = 0.0;
-        o.flags |= REWINDED;
+        objs.aobjs[a].flags |= REWINDED;
     } else {
         o.flags &= 0xFBFF_FFFF;
     }
+    let o = &objs.aobjs[a];
+    let first = o.fobj;
     if o.flags & NO_UPDATE != 0 {
-        fobj::interpret_all(fobjs, data, o.fobj, rate, None);
+        fobj::interpret_all(objs, data, first, rate, None);
     } else {
-        fobj::interpret_all(fobjs, data, o.fobj, rate, again(&mut update));
+        fobj::interpret_all(objs, data, first, rate, again(&mut update));
     }
+    let o = &objs.aobjs[a];
     if o.flags & LOOP == 0 && reg(o.end_frame) <= reg(o.curr_frame) {
         // HSD_AObjStopAnim, inlined.
-        fobj::stop_anim_all(fobjs, data, o.fobj, o.framerate, update);
-        o.flags |= NO_ANIM;
+        let (first, rate) = (o.fobj, o.framerate);
+        fobj::stop_anim_all(objs, data, first, rate, update);
+        objs.aobjs[a].flags |= NO_ANIM;
     }
-    if o.flags & NO_ANIM != 0 {
+    let aobjs = &mut objs.aobjs;
+    if aobjs[a].flags & NO_ANIM != 0 {
         aobjs.stopped = aobjs.stopped.wrapping_add(1);
     } else {
         aobjs.playing = aobjs.playing.wrapping_add(1);
     }
 }
 
-/// Builds an AObj and its FObj chain from a descriptor, `HSD_AObjLoadDesc`.
-///
-/// A descriptor with a nonzero `obj_id` also binds a joint, found in HSD's ID table or loaded
-/// (`HSD_JObjLoadJoint`), and `HSD_AObjRemove` unreferences it. That needs JObj, so it isn't
-/// ported yet: such a descriptor panics here rather than losing the joint. 56 of the disc's
-/// descriptors bind one, all in the Target Test stages (`GrTM*.dat`).
+/// Builds an AObj and its FObj chain from a descriptor that binds no joint,
+/// `HSD_AObjLoadDesc`. [`jobj::load_aobj`](super::jobj::load_aobj) handles any descriptor.
 #[doc(alias = "HSD_AObjLoadDesc")]
 pub fn load_desc(
     aobjs: &mut AObjs,
@@ -230,6 +226,21 @@ pub fn load_desc(
     data: &Archives,
     desc: Option<DataRef>,
 ) -> Option<AObjId> {
+    let (a, binds) = load_desc_unbound(aobjs, fobjs, data, desc)?;
+    assert!(
+        binds.is_none(),
+        "AObjDesc {desc:?} binds a joint: use jobj::load_aobj"
+    );
+    Some(a)
+}
+
+/// `HSD_AObjLoadDesc` up to binding: the AObj, and the joint descriptor it binds.
+pub(crate) fn load_desc_unbound(
+    aobjs: &mut AObjs,
+    fobjs: &mut FObjs,
+    data: &Archives,
+    desc: Option<DataRef>,
+) -> Option<(AObjId, Option<DataRef>)> {
     let desc = desc?;
     let a = alloc(aobjs);
     set_flags(aobjs, Some(a), data.u32(desc));
@@ -237,18 +248,20 @@ pub fn load_desc(
     set_end_frame(aobjs, Some(a), data.f32(desc.at(4)));
     let f = fobj::load_desc(fobjs, data, data.ptr(desc.at(8)));
     set_fobj(aobjs, fobjs, Some(a), f);
-    let obj_id = data.u32(desc.at(0xC));
-    assert!(
-        obj_id == 0,
-        "AObjDesc {desc:?} binds joint {obj_id:#x}, which needs JObj"
-    );
-    Some(a)
+    Some((a, data.ptr(desc.at(0xC))))
 }
 
 /// Frees an AObj and its FObj chain, `HSD_AObjRemove`.
 #[doc(alias = "HSD_AObjRemove")]
+///
+/// An AObj bound to a joint is removed with [`jobj::remove_aobj`](super::jobj::remove_aobj),
+/// which drops its reference.
 pub fn remove(aobjs: &mut AObjs, fobjs: &mut FObjs, a: Option<AObjId>) {
     let Some(a) = a else { return };
+    assert!(
+        aobjs[a].hsd_obj.is_none(),
+        "AObj bound to a joint: use jobj::remove_aobj"
+    );
     if let Some(f) = aobjs[a].fobj {
         fobj::remove_all(fobjs, Some(f));
     }
