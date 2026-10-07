@@ -40,6 +40,9 @@ A few original functions read memory or registers they never set, and plain data
 - `mpLib_80056C54` adds to a register its caller left when a walk starts on a wall (a line the walker stood on turned into one). The port takes that value as an explicit parameter, which ftDonkey's and itleadead's ports must supply.
 - A stage object's user data (`Ground`, from `alloc_user_data_ground`) is uncleared heap. At stage creation the heap is fresh, zero memory (the captures show it), and Slippi's playback codes zero the block anyway, so a new `Ground` starts as zero; a block reused mid-match (Final Destination's phases 14 and 17) would hold a freed object's bytes, which nothing reads before writing. A typed member of the stage variables compares only its own fields (`game::gr::vars`).
 - Final Destination's fog blend (`grLast_8021C500`) hands the fog a color whose alpha it never set. Nothing reads the fog's alpha, but the comparison would; the blend panics until a probe shows what the original leaves there (it runs from phase 10 on, past the particle system the cycle needs at phase 9).
+- `mpColl_8004A45C_Floor`, `mpColl_8004A678_Floor` and `mpColl_8004C328_Ceiling` take the floor (or ceiling) at the edge an object stops at, probed at that edge. A few floors in the data run right to left (on Great Bay, Pokémon Stadium and Big Blue), and such a floor can fail to reach its own end; the original then takes line -1 with the flags and normal its stack held. The port leaves those two fields as they were and counts a stale read (`mp::coll::CollStatics::stale_reads`).
+- `mpColl_80043754` returns a register its caller left when a move is so long its substep count overflows (over about 10¹⁰ units, or infinite) and no substep runs. The game never moves that far; the port returns false.
+
 
 ## Rulesets in the state
 
@@ -50,6 +53,11 @@ A few original functions read memory or registers they never set, and plain data
 - The stage's parameters (`grGroundParam`): the game sets colors and the scale in them, so `game::gr::Globals::param` holds the struct and `stage_info.param` keeps pointing at the archive.
 - `grDatFiles_801C6228` sets `rendermode` bit 26 in the materials a stage's `map_head` lists: `Objects::rendermode_patches` records the bits and `HSD_MObjLoadDesc` applies them.
 - `Ground_801C0800` writes the stage's `ALDYakuAll` scripts into the random stage item's states in the items' data: `game::gr::Globals::yaku_scripts` records them for the items' port.
+
+
+## Hangs
+
+`mpColl_80046904` repeats its walls, ceiling and floor checks until the squeezes they apply stop changing, which on some geometry never happens: the original hangs. Its body is a function of the collision data, mpcoll's statics and a few locals, so the port watches for an iteration that starts from a state an earlier one started from and halts there instead. A loop can also drift instead of repeating (an ECB squeezed inside out widens a little each time round); the port runs it as long as the original, and checks bound it with a watchdog (`CollStatics::watchdog`, off in play) and skip the original there.
 
 ## Checking against ssbm-rs
 

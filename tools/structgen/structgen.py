@@ -320,6 +320,7 @@ def main():
         "use crate::hsd::dobj::DObjId;",
         "use crate::hsd::gobj::GObjId;",
         "use crate::hsd::jobj::JObjId;",
+        "use crate::mp::coll::EcbSource;",
         "use crate::quat::Quat;",
         "use crate::vec::Vec3;",
         "",
