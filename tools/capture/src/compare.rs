@@ -16,7 +16,7 @@ use melee_sim::hsd::jobj::{Contents, JObjId};
 use melee_sim::hsd::pobj::Binding;
 use melee_sim::hsd::robj::{self, RObjId, Ref};
 
-use crate::import::{FIGHTER_ATTRS_SIZE, Maps, VS_CONTROLLER, box_index, sym};
+use crate::import::{FIGHTER_ATTRS_SIZE, Maps, VS_CONTROLLER, sym, try_box_index};
 use crate::{DataMap, FT_ANIM_FILES, FT_KINDS, MEM1};
 
 pub struct Comparer<'a> {
@@ -994,7 +994,8 @@ impl Cx for Comparer<'_> {
             "DObjId" => self.maps.dobjs.get(&theirs).map(|d| d.0),
             "GroundId" => self.maps.grounds.get(&theirs).map(|g| g.0),
             "StartHookId" => self.maps.start_hooks.get(&theirs).map(|h| h.0),
-            "CameraBoxId" if theirs != 0 => Some(box_index(self.u32(sym("cm_804D645C")), theirs)),
+            // A stale item's pointer may be into nothing: it pairs with nothing.
+            "CameraBoxId" if theirs != 0 => try_box_index(self.u32(sym("cm_804D645C")), theirs),
             "TObjId" => self.maps.tobjs.get(&theirs).map(|t| t.0),
             _ => None,
         };

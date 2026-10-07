@@ -107,6 +107,10 @@ pub struct Importer<'a> {
     /// didn't write, and a hitbox keeps its joint when it's turned off): a joint pointer resolves
     /// only to a joint already imported, and dangles otherwise.
     pub stale: bool,
+    /// Importing a freed item's bytes, which may never have been an item's (a block from an
+    /// earlier scene): only joints and GObjs (dangling if unknown), the free list's items and
+    /// static tables resolve; anything else is left unfollowed.
+    pub(crate) freed: bool,
     /// The dangling slots by address, so one address gets one slot.
     dangling_at: HashMap<(&'static str, u32), u32>,
     /// The items whose contents are imported.
@@ -127,6 +131,7 @@ impl<'a> Importer<'a> {
             parts_len: 0,
             archives: None,
             stale: false,
+            freed: false,
             dangling_at: HashMap::new(),
             items_done: Default::default(),
             free_items: Vec::new(),
@@ -1222,6 +1227,14 @@ pub fn box_index(base: u32, addr: u32) -> u32 {
     off / CmSubject::SIZE
 }
 
+/// [`box_index`] for a pointer that may be stale: none when it isn't into the array.
+pub fn try_box_index(base: u32, addr: u32) -> Option<u32> {
+    let off = addr.wrapping_sub(base);
+    off.is_multiple_of(CmSubject::SIZE)
+        .then_some(off / CmSubject::SIZE)
+        .filter(|&i| i < 0x100)
+}
+
 fn blank_gobj() -> GObj<melee_sim::game::state::GameKinds> {
     GObj {
         classifier: 0,
@@ -1271,8 +1284,27 @@ impl Cx for Importer<'_> {
         if addr == 0 {
             return None;
         }
+        if self.freed {
+            return match kind {
+                "JObjId" | "GObjId" => {
+                    let known = match kind {
+                        "JObjId" => self.maps.jobjs.get(&addr).map(|j| j.0),
+                        _ => self.maps.gobjs.get(&addr).map(|g| g.0),
+                    };
+                    Some(known.unwrap_or_else(|| self.dangling(kind, addr)))
+                }
+                "ItemId" => self.maps.items.get(&addr).map(|i| i.0),
+                "BoneTableId" => self.maps.bone_tables.get(&addr).map(|t| t.0),
+                "ItemLogicRef" | "ItemStatesRef" => Some(addr),
+                _ => None,
+            };
+        }
         // A stale word where a pointer was (an unused hit capsule's joint): nothing to follow.
+        // A joint or GObj pointer dangles (compared by address, see `Maps::dangling_gobjs`).
         if addr & 3 != 0 || !(MEM1..MEM1 + 0x0180_0000).contains(&addr) {
+            if matches!(kind, "JObjId" | "GObjId") {
+                return Some(self.dangling(kind, addr));
+            }
             self.unhandled
                 .push(format!("{kind} {addr:#x} outside main memory"));
             return None;
@@ -1282,9 +1314,7 @@ impl Cx for Importer<'_> {
         if kind == "JObjId" && !self.maps.jobjs.contains_key(&addr) {
             let class = self.u32(addr);
             if !(0x8030_0000..0x8050_0000).contains(&class) {
-                self.unhandled
-                    .push(format!("JObj {addr:#x} with no class (freed or stale)"));
-                return None;
+                return Some(self.dangling(kind, addr));
             }
         }
         Some(match kind {
@@ -1298,6 +1328,14 @@ impl Cx for Importer<'_> {
             "ItemLogicRef" | "ItemStatesRef" => addr,
             "GroundId" => self.ground(addr).0,
             "StartHookId" => self.start_hook(addr).0,
+            "CameraBoxId" if self.stale => {
+                let i = try_box_index(self.u32(sym("cm_804D645C")), addr);
+                if i.is_none() {
+                    self.unhandled
+                        .push(format!("camera box {addr:#x} not in the array"));
+                }
+                i?
+            }
             "CameraBoxId" => box_index(self.u32(sym("cm_804D645C")), addr),
             "PartsId" => self.fighter_parts(addr).0,
             "AttrsId" => self.fighter_attrs(addr).0,

@@ -139,6 +139,7 @@ impl Importer<'_> {
         }
         let m = mem(&cap.call.mem1);
         self.stale = true;
+        self.freed = true;
         for &b in &items {
             self.items_done.insert(b);
             let item = Item::import(&m, b, self);
@@ -146,6 +147,7 @@ impl Importer<'_> {
             self.game.items[id.0] = item;
         }
         self.stale = false;
+        self.freed = false;
         self.free_items = items;
         self.free_tables = tables;
     }
