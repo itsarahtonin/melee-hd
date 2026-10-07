@@ -454,3 +454,31 @@ pub fn bounce_off_shield(game: &mut Game, gobj: GObjId) -> bool {
     ip.x378_itemColl.set_facing_dir(dir);
     false
 }
+
+/// Knocked back off what it hit, `itColl_BounceOffVictim`: its speed scaled by the common
+/// data's `x58` across and `x5C` up, plus `x60`.
+#[doc(alias = "itColl_BounceOffVictim")]
+pub fn bounce_off_victim(game: &mut Game, data: &Archives, gobj: GObjId) {
+    let c = common_data(game);
+    let (sx, sy, up) = (
+        reg(c.f32(data, common::X58)),
+        reg(c.f32(data, common::X5C)),
+        reg(c.f32(data, common::X60)),
+    );
+    let ip = item_mut(game, gobj);
+    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), sx));
+    ip.x40_vel.y = mem(fp::fmadds(reg(ip.x40_vel.y), sy, up));
+}
+
+/// Sent back the way it came by a reflection, at the reflection's speed (`xC70`), with half
+/// its life left, `it_80273030`.
+#[doc(alias = "it_80273030")]
+pub fn reflected_back(game: &mut Game, gobj: GObjId) -> bool {
+    let ip = item_mut(game, gobj);
+    let k = reg(ip.xC70);
+    ip.x40_vel.x = mem(fp::fmuls(fp::fneg(reg(ip.x40_vel.x)), k));
+    ip.x40_vel.y = mem(fp::fmuls(fp::fneg(reg(ip.x40_vel.y)), k));
+    ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
+    ip.xD44_lifeTimer = ip.xD48_halfLifeTimer;
+    false
+}

@@ -1,8 +1,11 @@
 //! Item kinds (`ItemKind`) and the kinds' own code.
 
+pub mod bat;
 pub mod capsule;
 pub mod foxblaster;
 pub mod foxlaser;
+pub mod heart;
+pub mod tomato;
 
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
@@ -12,6 +15,9 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     foxlaser::run_event(r, gobj, addr)
         || foxblaster::run_event(r, gobj, addr)
         || capsule::run_event(r, gobj, addr)
+        || heart::run_event(r, gobj, addr)
+        || tomato::run_event(r, gobj, addr)
+        || bat::run_event(r, gobj, addr)
 }
 
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
@@ -19,6 +25,9 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     foxlaser::run_pred(r, gobj, addr)
         .or_else(|| foxblaster::run_pred(r, gobj, addr))
         .or_else(|| capsule::run_pred(r, gobj, addr))
+        .or_else(|| heart::run_pred(r, gobj, addr))
+        .or_else(|| tomato::run_pred(r, gobj, addr))
+        .or_else(|| bat::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).

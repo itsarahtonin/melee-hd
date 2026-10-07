@@ -2590,6 +2590,11 @@ fn drops() {
     );
 }
 
+/// A check taking a callback, a predicate, and a check returning what it touched.
+type WithEvent = fn(&mut Running, GObjId, ground::Event);
+type Pred = fn(&mut Running, GObjId) -> bool;
+type IntFn = fn(&mut Running, GObjId) -> i32;
+
 #[test]
 fn groundcoll_variants() {
     // Every variant from the capsules' falling and standing states, with the capsule's own
@@ -2601,7 +2606,7 @@ fn groundcoll_variants() {
         c.regs.gpr[5] = capsule::FELL;
         standing_capsule(c)
     };
-    let events: [(&str, fn(&mut Running, GObjId, ground::Event)); 8] = [
+    let events: [(&str, WithEvent); 8] = [
         ("it_8026E248", ground::fall_keep_hits),
         ("it_8026E4D0", ground::fall_to_floor_rescaled),
         ("it_8026E5A0", ground::fall_until_touch),
@@ -2633,7 +2638,7 @@ fn groundcoll_variants() {
                 Ret::None
             });
         }
-        let bools: [(&str, fn(&mut Running, GObjId) -> bool); 7] = [
+        let bools: [(&str, Pred); 7] = [
             ("it_8026D5CC", ground::ground_probe),
             ("it_8026D9A0", ground::air_stay),
             ("it_8026DA70", ground::air_probe),
@@ -2651,7 +2656,7 @@ fn groundcoll_variants() {
                 Ret::Bool(f(r, a.gobj(0)))
             });
         }
-        let ints: [(&str, fn(&mut Running, GObjId) -> i32); 2] = [
+        let ints: [(&str, IntFn); 2] = [
             ("it_8026DAA8", ground::air_touches),
             ("it_8026DB40", ground::air_touches_walls),
         ];
@@ -2787,4 +2792,164 @@ fn item_lib_small() {
             },
         );
     }
+}
+
+/// A kind's callback: an event or a predicate.
+#[derive(Clone, Copy)]
+enum Cb {
+    Event(fn(&mut Running, GObjId)),
+    Pred(fn(&mut Running, GObjId) -> bool),
+}
+
+impl Cb {
+    fn run(self, r: &mut Running, g: GObjId) -> Ret {
+        match self {
+            Cb::Event(f) => {
+                f(r, g);
+                Ret::None
+            }
+            Cb::Pred(f) => Ret::Bool(f(r, g)),
+        }
+    }
+}
+
+/// Each callback on every captured call of it, its item's queued effects dropped (they wait
+/// for the effects' port).
+fn kind_direct(list: &[(&str, Cb)]) {
+    for &(name, cb) in list {
+        let prep = |c: &mut Call| {
+            no_queued_effects(c);
+            true
+        };
+        check_calls(name, name, &prep, &move |r, a| cb.run(r, a.gobj(0)));
+    }
+}
+
+/// Each callback run from the captures of `source` (items of kind `kind`), with no queued
+/// effects (which wait for the effects' port).
+fn kind_perturbed(source: &str, kind: i32, list: &[(&str, Cb)]) {
+    for &(name, cb) in list {
+        let prep = move |c: &mut Call| {
+            no_queued_effects(c);
+            item_kind(c) == kind
+        };
+        check_on(source, name, &prep, &move |r, a| cb.run(r, a.gobj(0)));
+    }
+}
+
+#[test]
+fn heart() {
+    use melee_sim::game::it::kinds::heart as h;
+    kind_direct(&[
+        ("itHeart_Logic8_Spawned", Cb::Event(h::spawned)),
+        ("itHeart_Logic8_Destroyed", Cb::Event(h::destroyed)),
+        ("itHeart_UnkMotion0_Anim", Cb::Pred(h::spin)),
+        ("itHeart_UnkMotion0_Phys", Cb::Event(h::idle)),
+        ("itHeart_UnkMotion0_Coll", Cb::Pred(h::coll0)),
+        ("itHeart_UnkMotion3_Anim", Cb::Pred(h::spin)),
+        ("itHeart_UnkMotion3_Phys", Cb::Event(h::phys3)),
+        ("itHeart_UnkMotion3_Coll", Cb::Pred(h::coll3)),
+        ("itHeart_UnkMotion2_Anim", Cb::Pred(h::still)),
+        ("itHeart_UnkMotion2_Phys", Cb::Event(h::idle)),
+    ]);
+    kind_perturbed(
+        "itHeart_UnkMotion0_Anim",
+        8,
+        &[
+            ("it_80283C7C", Cb::Event(h::landed)),
+            ("it_80283DD4", Cb::Event(h::fell)),
+            ("it_80283BD4", Cb::Event(h::second_heal)),
+            ("itHeart_Logic8_PickedUp", Cb::Event(h::picked_up)),
+            ("itHeart_Logic8_Dropped", Cb::Event(h::dropped)),
+            ("itHeart_Logic8_EnteredAir", Cb::Event(h::entered_air)),
+            ("itHeart_UnkMotion4_Anim", Cb::Pred(h::still)),
+            ("itHeart_UnkMotion4_Phys", Cb::Event(h::idle)),
+            ("itHeart_UnkMotion4_Coll", Cb::Pred(h::coll4)),
+        ],
+    );
+}
+
+#[test]
+fn tomato() {
+    use melee_sim::game::it::kinds::tomato as t;
+    kind_direct(&[
+        ("itTomato_Logic9_Spawned", Cb::Event(t::spawned)),
+        ("itTomato_Logic9_Destroyed", Cb::Event(t::destroyed)),
+        ("itTomato_UnkMotion0_Anim", Cb::Pred(t::still)),
+        ("itTomato_UnkMotion0_Phys", Cb::Event(t::gravity)),
+        ("itTomato_UnkMotion0_Coll", Cb::Pred(t::falling)),
+        ("itTomato_UnkMotion1_Anim", Cb::Pred(t::still)),
+        ("itTomato_UnkMotion1_Phys", Cb::Event(t::idle)),
+        ("itTomato_UnkMotion1_Coll", Cb::Pred(t::coll1)),
+        ("itTomato_UnkMotion3_Anim", Cb::Pred(t::still)),
+        ("itTomato_UnkMotion3_Phys", Cb::Event(t::idle)),
+    ]);
+    kind_perturbed(
+        "itTomato_UnkMotion1_Anim",
+        9,
+        &[
+            ("it_80284358", Cb::Event(t::fell)),
+            ("it_802843E4", Cb::Event(t::landed)),
+            ("it_80284458", Cb::Event(t::slipped)),
+            ("it_8028428C", Cb::Event(t::second_heal)),
+            ("itTomato_Logic9_PickedUp", Cb::Event(t::picked_up)),
+            ("itTomato_Logic9_Dropped", Cb::Event(t::dropped)),
+            ("itTomato_Logic9_EnteredAir", Cb::Event(t::entered_air)),
+            ("itTomato_UnkMotion4_Anim", Cb::Pred(t::still)),
+            ("itTomato_UnkMotion4_Phys", Cb::Event(t::gravity)),
+            ("itTomato_UnkMotion4_Coll", Cb::Pred(t::falling)),
+            ("itTomato_UnkMotion5_Anim", Cb::Pred(t::still)),
+            ("itTomato_UnkMotion5_Phys", Cb::Event(t::idle)),
+            ("itTomato_UnkMotion5_Coll", Cb::Pred(t::coll5)),
+        ],
+    );
+}
+
+#[test]
+fn bat() {
+    use melee_sim::game::it::kinds::bat as b;
+    kind_direct(&[
+        ("itBat_Logic11_Spawned", Cb::Event(b::spawned)),
+        ("it_80284974", Cb::Event(b::landed)),
+        ("itBat_UnkMotion0_Anim", Cb::Pred(b::still)),
+        ("itBat_UnkMotion0_Phys", Cb::Event(b::idle)),
+        ("itBat_UnkMotion0_Coll", Cb::Pred(b::coll0)),
+        ("it_802849F0", Cb::Event(b::fell)),
+        ("itBat_UnkMotion3_Anim", Cb::Pred(b::still)),
+        ("itBat_UnkMotion3_Phys", Cb::Event(b::phys3)),
+        ("itBat_UnkMotion3_Coll", Cb::Pred(b::coll3)),
+        ("itBat_Logic11_PickedUp", Cb::Event(b::picked_up)),
+        ("itBat_UnkMotion2_Anim", Cb::Pred(b::still)),
+        ("itBat_UnkMotion2_Phys", Cb::Event(b::idle)),
+        ("itBat_UnkMotion2_Coll", Cb::Pred(b::still)),
+        ("itBat_Logic11_Dropped", Cb::Event(b::dropped)),
+        ("itBat_Logic11_DmgDealt", Cb::Pred(b::dmg_dealt)),
+        ("itBat_Logic11_Clanked", Cb::Pred(b::bounce)),
+    ]);
+    kind_perturbed(
+        "itBat_UnkMotion0_Anim",
+        11,
+        &[
+            ("itBat_Logic11_Thrown", Cb::Event(b::dropped)),
+            ("itBat_Logic11_EnteredAir", Cb::Event(b::entered_air)),
+            ("itBat_UnkMotion4_Anim", Cb::Pred(b::still)),
+            ("itBat_UnkMotion4_Phys", Cb::Event(b::idle)),
+            ("itBat_UnkMotion4_Coll", Cb::Pred(b::coll4)),
+            ("itBat_Logic11_Reflected", Cb::Pred(b::reflected)),
+            ("itBat_Logic11_HitShield", Cb::Pred(b::bounce)),
+            ("itBat_Logic11_ShieldBounced", Cb::Pred(b::shield_bounced)),
+        ],
+    );
+    // Thrown (state 3), a hit bounces it back.
+    let thrown = |c: &mut Call| {
+        set32(c, item_ptr(c) + 0x24, 3);
+        no_queued_effects(c);
+        item_kind(c) == 11
+    };
+    check_on(
+        "itBat_UnkMotion0_Anim",
+        "itBat_Logic11_DmgDealt",
+        &thrown,
+        &|r, a| Ret::Bool(melee_sim::game::it::kinds::bat::dmg_dealt(r, a.gobj(0))),
+    );
 }

@@ -180,6 +180,9 @@ pub mod common {
     pub const X44: u32 = 0x44;
     pub const X48: u32 = 0x48;
     pub const X54: u32 = 0x54;
+    pub const X58: u32 = 0x58;
+    pub const X5C: u32 = 0x5C;
+    pub const X60: u32 = 0x60;
     pub const X70: u32 = 0x70;
     pub const X4C: u32 = 0x4C;
     pub const X68: u32 = 0x68;

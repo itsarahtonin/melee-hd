@@ -2075,3 +2075,71 @@ it_80272860	leaf-check items: capsule_states' itCapsule_UnkMotion4_Phys falls th
 itColl_BounceOffShield	leaf-check items: capsule_hits' itCapsule_Logic0_ShieldBounced bounces through it from captured item states
 it_802751D8	leaf-check items: capsule_callbacks' itCapsule_UnkMotion5_Anim counts down through it from captured item states
 it_80279B88	leaf-check items: capsule_opens' new capsules start their appearing blink through it
+it_80283BD4	leaf-check items: heart runs it from captured item states
+itHeart_Logic8_Spawned	leaf-check items: heart runs every captured call
+itHeart_Logic8_Destroyed	leaf-check items: heart runs every captured call
+it_80283C7C	leaf-check items: heart runs it from captured item states
+itHeart_UnkMotion0_Anim	leaf-check items: heart runs it from captured item states
+itHeart_UnkMotion0_Phys	leaf-check items: heart runs every captured call
+itHeart_UnkMotion0_Coll	leaf-check items: heart runs every captured call
+it_80283DD4	leaf-check items: heart runs it from captured item states
+itHeart_UnkMotion3_Anim	leaf-check items: heart runs every captured call
+itHeart_UnkMotion3_Phys	leaf-check items: heart runs every captured call
+itHeart_UnkMotion3_Coll	leaf-check items: heart runs every captured call
+itHeart_Logic8_PickedUp	leaf-check items: heart runs it from captured item states
+itHeart_UnkMotion2_Anim	leaf-check items: heart runs every captured call
+itHeart_UnkMotion2_Phys	leaf-check items: heart runs every captured call
+itHeart_Logic8_Dropped	leaf-check items: heart runs it from captured item states
+itHeart_Logic8_EnteredAir	leaf-check items: heart runs it from captured item states
+itHeart_UnkMotion4_Anim	leaf-check items: heart runs it from captured item states
+itHeart_UnkMotion4_Phys	leaf-check items: heart runs it from captured item states
+itHeart_UnkMotion4_Coll	leaf-check items: heart runs it from captured item states
+it_8028428C	leaf-check items: tomato runs it from captured item states
+itTomato_Logic9_Spawned	leaf-check items: tomato runs every captured call
+itTomato_Logic9_Destroyed	leaf-check items: tomato runs every captured call
+it_80284358	leaf-check items: tomato runs it from captured item states
+itTomato_UnkMotion0_Anim	leaf-check items: tomato runs every captured call
+itTomato_UnkMotion0_Phys	leaf-check items: tomato runs every captured call
+itTomato_UnkMotion0_Coll	leaf-check items: tomato runs every captured call
+it_802843E4	leaf-check items: tomato runs it from captured item states
+itTomato_UnkMotion1_Anim	leaf-check items: tomato runs it from captured item states
+itTomato_UnkMotion1_Phys	leaf-check items: tomato runs every captured call
+itTomato_UnkMotion1_Coll	leaf-check items: tomato runs every captured call
+it_80284458	leaf-check items: tomato runs it from captured item states
+itTomato_UnkMotion4_Anim	leaf-check items: tomato runs it from captured item states
+itTomato_UnkMotion4_Phys	leaf-check items: tomato runs it from captured item states
+itTomato_UnkMotion4_Coll	leaf-check items: tomato runs it from captured item states
+itTomato_Logic9_PickedUp	leaf-check items: tomato runs it from captured item states
+itTomato_UnkMotion3_Anim	leaf-check items: tomato runs every captured call
+itTomato_UnkMotion3_Phys	leaf-check items: tomato runs every captured call
+itTomato_Logic9_Dropped	leaf-check items: tomato runs it from captured item states
+itTomato_Logic9_EnteredAir	leaf-check items: tomato runs it from captured item states
+itTomato_UnkMotion5_Anim	leaf-check items: tomato runs it from captured item states
+itTomato_UnkMotion5_Phys	leaf-check items: tomato runs it from captured item states
+itTomato_UnkMotion5_Coll	leaf-check items: tomato runs it from captured item states
+itBat_Logic11_Spawned	leaf-check items: bat runs every captured call
+it_80284974	leaf-check items: bat runs every captured call
+itBat_UnkMotion0_Anim	leaf-check items: bat runs it from captured item states
+itBat_UnkMotion0_Phys	leaf-check items: bat runs every captured call
+itBat_UnkMotion0_Coll	leaf-check items: bat runs every captured call
+it_802849F0	leaf-check items: bat runs every captured call
+itBat_UnkMotion3_Anim	leaf-check items: bat runs every captured call
+itBat_UnkMotion3_Phys	leaf-check items: bat runs every captured call
+itBat_UnkMotion3_Coll	leaf-check items: bat runs every captured call
+itBat_Logic11_PickedUp	leaf-check items: bat runs every captured call
+itBat_UnkMotion2_Anim	leaf-check items: bat runs every captured call
+itBat_UnkMotion2_Phys	leaf-check items: bat runs every captured call
+itBat_UnkMotion2_Coll	leaf-check items: bat runs every captured call
+itBat_Logic11_Dropped	leaf-check items: bat runs every captured call
+itBat_Logic11_Thrown	leaf-check items: bat runs it from captured item states
+itBat_Logic11_EnteredAir	leaf-check items: bat runs it from captured item states
+itBat_UnkMotion4_Anim	leaf-check items: bat runs it from captured item states
+itBat_UnkMotion4_Phys	leaf-check items: bat runs it from captured item states
+itBat_UnkMotion4_Coll	leaf-check items: bat runs it from captured item states
+itBat_Logic11_DmgDealt	leaf-check items: bat runs it from captured item states
+itBat_Logic11_Reflected	leaf-check items: bat runs it from captured item states
+itBat_Logic11_Clanked	leaf-check items: bat runs every captured call
+itBat_Logic11_HitShield	leaf-check items: bat runs it from captured item states
+itBat_Logic11_ShieldBounced	leaf-check items: bat runs it from captured item states
+itColl_BounceOffVictim	leaf-check items: bat's itBat_Logic11_Clanked bounces through it on every captured call
+it_80273030	leaf-check items: bat's itBat_Logic11_Reflected runs it from captured item states
