@@ -299,8 +299,8 @@ Camera_SetQuakeOffset	leaf-check camera quake_offset_and_translation: every capt
 Camera_UpdateQuakes	leaf-check camera update_quakes: every capture of it
 Camera_8002A4AC	leaf-check camera cobj_update: every capture of it, plus perturbed transforms and translations; CObjs compared
 Camera_8002A768	leaf-check camera keep_in_bounds: every capture of it, plus perturbed transforms
-Camera_8002B0E0	leaf-check camera update_zoom: every capture of it (VS only: the 1P zoom's controller read isn't ported)
-Camera_8002B1F8	leaf-check camera zoom_on_player: every capture of it (VS only: the 1P zoom returns at once)
+Camera_8002B0E0	leaf-check camera update_zoom: every capture of it, plus perturbed copies in the 1P modes with random C-sticks
+Camera_8002B1F8	leaf-check camera zoom_on_player: every capture of it, plus perturbed copies with the 1P zoom on and a sandbag
 Camera_8002B3D4	leaf-check camera standard: every capture of it, plus perturbed transforms and boxes
 fn_8002F360	leaf-check camera process: every capture of it, plus perturbed transforms and boxes
 Camera_8003010C	leaf-check camera flags: every capture of it

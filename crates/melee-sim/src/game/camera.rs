@@ -1070,8 +1070,33 @@ pub fn clear_translation(c: &mut Camera) {
 /// `Camera_8002B0E0`.
 #[doc(alias = "Camera_8002B0E0")]
 pub fn update_zoom(game: &mut Game) {
-    if super::gm::is_1p_mode(game) && reg(game.camera.cam.x2C0) > 0.0 {
-        unported("the 1P camera zoom's controller read")
+    if !(super::gm::is_1p_mode(game) && reg(game.camera.cam.x2C0) > 0.0) {
+        return;
+    }
+    // HSD_PadGetNmlSubStickY(Player_GetPadPort(0)), the port as a u8.
+    let port = game.players[0].pad_port as usize;
+    let mut stick = reg(game.pad_copy[port].nml_sub_stick_y);
+    if stick < 0.0 {
+        stick = fp::fneg(stick);
+    }
+    let c = &mut game.camera.cam;
+    let mut step = 0.0;
+    if stick < f64::from(0.85_f32) {
+        if i32::from(c.x2BA) > 0 {
+            c.x2BA = c.x2BA.wrapping_sub(1);
+        } else {
+            step = param(0xE4);
+        }
+    } else {
+        c.x2BA = fp::fctiwz(param(0xE0)) as i16;
+    }
+    c.x2BC = mem(fp::fnmsubs(step, param(0xD4), reg(c.x2BC)));
+    if reg(c.x2BC) < param(0xDC) {
+        c.x2BC = mem(param(0xDC));
+        return;
+    }
+    if reg(c.x2BC) > param(0xD8) {
+        c.x2BC = mem(param(0xD8));
     }
 }
 

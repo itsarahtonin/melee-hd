@@ -883,18 +883,49 @@ fn apply_quake() {
 
 #[test]
 fn zoom_on_player() {
-    check("Camera_8002B1F8", |r, a| {
-        camera::zoom_on_player(r.game, a.which(a.r(3)));
-        vec![]
-    });
+    // With the 1P zoom on, and now and then a Home-Run Contest sandbag in the second slot.
+    check_fuzzed(
+        "Camera_8002B1F8",
+        12,
+        |f| {
+            f.camera();
+            f.boxes();
+            let c = sym("game_camera");
+            f.uniform(c + 0x2BC, 0.3, 1.3);
+            f.uniform(c + 0x2C0, 50.0, 600.0);
+            if f.rand.below(2) == 0 {
+                f.put(sym("player_slots") + 0xE90 + 4, 0x1F);
+            }
+        },
+        |r, a| {
+            camera::zoom_on_player(r.game, a.which(a.r(3)));
+            vec![]
+        },
+    );
 }
 
 #[test]
 fn update_zoom() {
-    check("Camera_8002B0E0", |r, _| {
-        camera::update_zoom(r.game);
-        vec![]
-    });
+    // In the 1P modes too, with the zoom on and random C-sticks.
+    check_fuzzed(
+        "Camera_8002B0E0",
+        12,
+        |f| {
+            let m = [0x02, 0x03, 0x1C, 0x20, 0x2B][f.rand.below(5) as usize];
+            let i = (sym("state_machine") - MEM1) as usize;
+            f.mem[i] = m;
+            f.controllers();
+            let c = sym("game_camera");
+            f.uniform(c + 0x2BC, 0.0, 1.6);
+            f.uniform(c + 0x2C0, -50.0, 600.0);
+            let t = f.rand.below(3) as u16;
+            f.put16(c + 0x2BA, t);
+        },
+        |r, _| {
+            camera::update_zoom(r.game);
+            vec![]
+        },
+    );
 }
 
 #[test]
