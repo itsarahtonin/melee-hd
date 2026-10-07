@@ -556,6 +556,7 @@ impl Comparer<'_> {
         if !Self::pair(
             &mut self.maps.grounds,
             &mut self.seen,
+            &self.stale,
             &mut self.diffs,
             "ground",
             path,
@@ -573,6 +574,7 @@ impl Comparer<'_> {
         if !Self::pair(
             &mut self.maps.fogs,
             &mut self.seen,
+            &self.stale,
             &mut self.diffs,
             "fog",
             path,
@@ -906,6 +908,7 @@ impl Comparer<'_> {
             if !Self::pair(
                 &mut self.maps.start_hooks,
                 &mut self.seen,
+                &self.stale,
                 &mut self.diffs,
                 "start hook",
                 &path,
@@ -1113,6 +1116,7 @@ impl Comparer<'_> {
                         if !Self::pair(
                             &mut self.maps.islands,
                             &mut self.seen,
+                            &self.stale,
                             &mut self.diffs,
                             "island",
                             &path,

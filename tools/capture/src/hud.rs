@@ -1,13 +1,57 @@
 //! The HUD's and the debug text's globals (`melee/if`): imported from a capture and compared
 //! back, pairing the GObjs, joints and cameras they point to as the scheduler's do.
 
+use melee_sim::game::hud::ModelDesc;
 use melee_sim::game::hud::devtext::{DevText, DevTexts, Glyph, POOL};
+use melee_sim::game::hud::nametag::NameTags;
+use melee_sim::game::hud::small::{Coins, Hazard};
+use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::UserData;
+use melee_sim::game::structs::{
+    Element_803F9628, HudIndex, IfStockUserData, ScInfStcModels, StaticModelDesc, ifAll_804A0FD8_t,
+    ifStock_804A1ACC, ifStock_804A1378, ifStock_804A1774, ifTime_data, un_803F9E08_t,
+    un_804A1F10_t, un_804A1F58_t,
+};
 use melee_sim::hsd::gobj::GObjId;
 use melee_sim::hsd::sis::TextId;
 
+use crate::MEM1;
 use crate::compare::Comparer;
 use crate::import::{Importer, sym};
+
+/// The HUD units' statics' addresses.
+const IFALL: u32 = 0x804A_0FD8;
+const HIDDEN_FLAG: u32 = 0x804D_6D58;
+const ARCHIVE: u32 = 0x804D_6D5C;
+const STATUS: u32 = 0x804A_10C8;
+const STATUS_COUNT: u32 = 0x804D_6D60;
+const ANNOUNCEMENTS: u32 = 0x803F_9628;
+const KO_MARKS: u32 = 0x804A_1340;
+const TIME: u32 = 0x804A_1078;
+const TIMER_MODELS: u32 = 0x804A_10B4;
+const STOCK: u32 = 0x804A_1378;
+const STOCK_USERS: u32 = 0x804A_157C;
+const STOCK_1774: u32 = 0x804A_1774;
+const STOCK_1A8C: u32 = 0x804A_1A8C;
+const STOCK_1ACC: u32 = 0x804A_1ACC;
+const NAMETAG_MODEL: u32 = 0x804A_1ED0;
+const NAMETAG_GOBJS: u32 = 0x804A_1EE0;
+const NAMETAG_ENTRIES: u32 = 0x804A_1EF8;
+const NAMETAG_CAMERA: u32 = 0x804D_6D68;
+const NAMETAG_HIDDEN: u32 = 0x804D_6D6C;
+const NAMETAG_SHOWN: u32 = 0x804D_6D70;
+const NAMETAG_TEXT: u32 = 0x804D_6D78;
+const NAMETAG_CANVAS: u32 = 0x804D_6D7C;
+const HAZARD: u32 = 0x804D_6D80;
+const COINS: u32 = 0x803F_9E08;
+const COINS_ARCHIVE: u32 = 0x804D_6DA0;
+const COINS_SCENE: u32 = 0x804D_6DA4;
+const ARROWS: u32 = 0x804A_1F10;
+const ARROWS_HIDDEN: u32 = 0x804D_6D90;
+const ARROW_SLOTS: u32 = 0x804D_DBA8;
+const SCORES: u32 = 0x804A_1F58;
+/// `mn_8022EB04`, a player tag's user data release.
+const NAMETAG_RELEASE: u32 = 0x8022_EB04;
 
 /// `DevText`'s size.
 const DEVTEXT_SIZE: u32 = 0x34;
@@ -100,11 +144,98 @@ impl Importer<'_> {
     pub fn hud(&mut self) {
         self.devtext();
         self.sis();
+        self.hud_statics();
+    }
+
+    /// The HUD units' statics.
+    fn hud_statics(&mut self) {
+        let cap = self.cap;
+        let mem = Mem {
+            bytes: &cap.call.mem1,
+            base: MEM1,
+        };
+        let m: &[u8] = &cap.call.mem1;
+        let all = ifAll_804A0FD8_t::import(&mem, IFALL, self);
+        let status = HudIndex::import(&mem, STATUS, self);
+        let announcements = core::array::from_fn(|i| {
+            Element_803F9628::import(
+                &mem,
+                ANNOUNCEMENTS + i as u32 * Element_803F9628::SIZE,
+                self,
+            )
+        });
+        let ko_marks = ScInfStcModels::import(&mem, KO_MARKS, self);
+        let time = ifTime_data::import(&mem, TIME, self);
+        let tm = |s: &mut Self, o: u32| s.import_data(m.w(TIMER_MODELS + o));
+        let timer_models = ModelDesc {
+            joint: tm(self, 0),
+            anims: tm(self, 4),
+            matanims: tm(self, 8),
+            shapeanims: tm(self, 0xC),
+        };
+        let archive = m.w(ARCHIVE);
+        let archive = (archive != 0)
+            .then(|| self.data.get(m.w(archive + 0x20)).map(|d| d.archive))
+            .flatten();
+        let stock = ifStock_804A1378::import(&mem, STOCK, self);
+        let stock_users = core::array::from_fn(|i| {
+            IfStockUserData::import(&mem, STOCK_USERS + i as u32 * IfStockUserData::SIZE, self)
+        });
+        let stock_1774 = ifStock_804A1774::import(&mem, STOCK_1774, self);
+        let stock_1a8c = core::array::from_fn(|i| self.gobj_at(m.w(STOCK_1A8C + 4 * i as u32)));
+        let stock_1acc = ifStock_804A1ACC::import(&mem, STOCK_1ACC, self);
+        let nametags = NameTags {
+            model: StaticModelDesc::import(&mem, NAMETAG_MODEL, self),
+            gobjs: core::array::from_fn(|i| self.gobj_at(m.w(NAMETAG_GOBJS + 4 * i as u32))),
+            entries: core::array::from_fn(|i| m.w(NAMETAG_ENTRIES + 4 * i as u32) as i32),
+            camera: self.gobj_at(m.w(NAMETAG_CAMERA)),
+            hidden: m.b(NAMETAG_HIDDEN),
+            shown: core::array::from_fn(|i| m.b(NAMETAG_SHOWN + i as u32)),
+            text: self.import_handle("TextId", m.w(NAMETAG_TEXT)).map(TextId),
+            canvas: m.w(NAMETAG_CANVAS) as i32,
+        };
+        let hazard = Hazard {
+            gobj: self.gobj_at(m.w(HAZARD)),
+            timer: m.w(HAZARD + 4) as i32,
+            shown: m.w(HAZARD + 8) as i32,
+            hidden: m.w(HAZARD + 0xC) as i32,
+        };
+        let ca = m.w(COINS_ARCHIVE);
+        let coins = Coins {
+            state: un_803F9E08_t::import(&mem, COINS, self),
+            archive: (ca != 0)
+                .then(|| self.data.get(m.w(ca + 0x20)).map(|d| d.archive))
+                .flatten(),
+            scene: self.import_data(m.w(COINS_SCENE)),
+        };
+        let arrows = un_804A1F10_t::import(&mem, ARROWS, self);
+        let scores = un_804A1F58_t::import(&mem, SCORES, self);
+        let h = &mut self.game.hud;
+        h.stock = stock;
+        h.stock_users = stock_users;
+        h.stock_1774 = stock_1774;
+        h.stock_1a8c = stock_1a8c;
+        h.stock_1acc = stock_1acc;
+        h.nametags = nametags;
+        h.hazard = hazard;
+        h.coins = coins;
+        h.arrows = arrows;
+        h.arrows_hidden = m.w(ARROWS_HIDDEN) as i32;
+        h.scores = scores;
+        h.all = all;
+        h.hidden = m.b(HIDDEN_FLAG) != 0;
+        h.archive = archive;
+        h.status = status;
+        h.status_count = m.b(STATUS_COUNT);
+        h.status_flip = m.b(STATUS_COUNT + 1) as i8;
+        h.announcements = announcements;
+        h.ko_marks = ko_marks;
+        h.time = time;
+        h.timer_models = timer_models;
     }
 
     /// A GObj a global points to.
     pub(crate) fn gobj_at(&mut self, a: u32) -> Option<GObjId> {
-        use melee_sim::game::mirror::Cx;
         self.import_handle("GObjId", a).map(GObjId)
     }
 
@@ -147,6 +278,119 @@ impl Comparer<'_> {
     pub fn hud(&mut self) {
         self.devtext();
         self.sis();
+        self.hud_statics();
+    }
+
+    fn hud_statics(&mut self) {
+        let m = self.mem;
+        let mem = Mem {
+            bytes: m,
+            base: MEM1,
+        };
+        let game = self.game;
+        let h = &game.hud;
+        h.all.compare(&mem, IFALL, "hud all", self);
+        h.status.compare(&mem, STATUS, "hud status", self);
+        for (i, e) in h.announcements.iter().enumerate() {
+            let at = ANNOUNCEMENTS + i as u32 * Element_803F9628::SIZE;
+            e.compare(&mem, at, &format!("hud announcement {i}"), self);
+        }
+        h.ko_marks.compare(&mem, KO_MARKS, "hud KO marks", self);
+        h.time.compare(&mem, TIME, "hud time", self);
+        for (o, ours) in [
+            (0, h.timer_models.joint),
+            (4, h.timer_models.anims),
+            (8, h.timer_models.matanims),
+            (0xC, h.timer_models.shapeanims),
+        ] {
+            self.compare_data("hud timer models", ours, m.w(TIMER_MODELS + o));
+        }
+        h.stock.compare(&mem, STOCK, "hud stock", self);
+        for (i, u) in h.stock_users.iter().enumerate() {
+            let at = STOCK_USERS + i as u32 * IfStockUserData::SIZE;
+            u.compare(&mem, at, &format!("hud stock user {i}"), self);
+        }
+        h.stock_1774
+            .compare(&mem, STOCK_1774, "hud stock 1774", self);
+        for (i, g) in h.stock_1a8c.iter().enumerate() {
+            self.compare_gobj(
+                &format!("hud stock 1a8c[{i}]"),
+                *g,
+                m.w(STOCK_1A8C + 4 * i as u32),
+            );
+        }
+        h.stock_1acc
+            .compare(&mem, STOCK_1ACC, "hud stock 1acc", self);
+        let n = &h.nametags;
+        n.model
+            .compare(&mem, NAMETAG_MODEL, "hud nametag model", self);
+        for (i, g) in n.gobjs.iter().enumerate() {
+            self.compare_gobj(
+                &format!("hud nametag {i}"),
+                *g,
+                m.w(NAMETAG_GOBJS + 4 * i as u32),
+            );
+        }
+        self.compare_gobj("hud nametag camera", n.camera, m.w(NAMETAG_CAMERA));
+        self.compare_handle(
+            "hud nametag text",
+            "TextId",
+            n.text.map(|t| t.0),
+            m.w(NAMETAG_TEXT),
+        );
+        self.check(
+            "hud nametags",
+            "entries, hidden, shown, canvas",
+            (n.entries, n.hidden, n.shown, n.canvas),
+            (
+                core::array::from_fn::<i32, 6, _>(|i| m.w(NAMETAG_ENTRIES + 4 * i as u32) as i32),
+                m.b(NAMETAG_HIDDEN),
+                core::array::from_fn::<u8, 6, _>(|i| m.b(NAMETAG_SHOWN + i as u32)),
+                m.w(NAMETAG_CANVAS) as i32,
+            ),
+        );
+        let z = &h.hazard;
+        self.compare_gobj("hud hazard", z.gobj, m.w(HAZARD));
+        self.check(
+            "hud hazard",
+            "timer, shown, hidden",
+            (z.timer, z.shown, z.hidden),
+            (
+                m.w(HAZARD + 4) as i32,
+                m.w(HAZARD + 8) as i32,
+                m.w(HAZARD + 0xC) as i32,
+            ),
+        );
+        h.coins.state.compare(&mem, COINS, "hud coins", self);
+        let ca = m.w(COINS_ARCHIVE);
+        let theirs = (ca != 0)
+            .then(|| self.data.get(m.w(ca + 0x20)).map(|d| d.archive))
+            .flatten();
+        self.check("hud coins", "archive", h.coins.archive, theirs);
+        self.compare_data("hud coins scene", h.coins.scene, m.w(COINS_SCENE));
+        h.arrows.compare(&mem, ARROWS, "hud arrows", self);
+        self.check(
+            "hud arrows",
+            "hidden",
+            h.arrows_hidden,
+            m.w(ARROWS_HIDDEN) as i32,
+        );
+        h.scores.compare(&mem, SCORES, "hud scores", self);
+        let archive = m.w(ARCHIVE);
+        let theirs = (archive != 0)
+            .then(|| self.data.get(m.w(archive + 0x20)).map(|d| d.archive))
+            .flatten();
+        self.check(
+            "hud all",
+            "hidden, archive, display count and flip",
+            (h.hidden, h.archive, h.status_count, h.status_flip),
+            (
+                m.b(HIDDEN_FLAG) != 0,
+                theirs,
+                m.b(STATUS_COUNT),
+                m.b(STATUS_COUNT + 1) as i8,
+            ),
+        );
     }
 
     fn devtext(&mut self) {
@@ -217,7 +461,6 @@ impl Comparer<'_> {
     /// A GObj pointer: paired with ours, and compared in full if the scheduler doesn't
     /// hold it (the scheduler's comparison does the rest).
     pub(crate) fn compare_gobj(&mut self, path: &str, ours: Option<GObjId>, theirs: u32) {
-        use melee_sim::game::mirror::Cx;
         self.compare_handle(path, "GObjId", ours.map(|g| g.0), theirs);
     }
 }
@@ -233,8 +476,24 @@ pub(crate) fn user_data(imp: &mut Importer, release: u32, ud: u32) -> Option<Use
         }
         // fn_803A60EC: a canvas's camera, its own GObj.
         0x803A_60EC => Some(UserData::SisCamera(imp.gobj_at(ud)?)),
+        NAMETAG_RELEASE => Some(UserData::NameTagSlot(mem.b(ud))),
         _ => None,
     }
+}
+
+/// The HUD's user data set without a kind (the stock icons' and the arrows'), by where it
+/// points.
+pub(crate) fn kindless_user_data(ud: u32) -> Option<UserData> {
+    let size = IfStockUserData::SIZE;
+    if (STOCK_USERS..STOCK_USERS + 6 * size).contains(&ud)
+        && (ud - STOCK_USERS).is_multiple_of(size)
+    {
+        return Some(UserData::StockIcons(((ud - STOCK_USERS) / size) as u8));
+    }
+    if (ARROW_SLOTS..ARROW_SLOTS + 4).contains(&ud) {
+        return Some(UserData::ArrowSlot((ud - ARROW_SLOTS) as u8));
+    }
+    None
 }
 
 /// Compares a GObj's HUD or text user data with memory (the GObj at `t`).
@@ -255,6 +514,22 @@ pub(crate) fn compare_user_data(cmp: &mut Comparer, path: &str, ud: UserData, t:
         UserData::SisCamera(g) => {
             cmp.compare_gobj(&format!("{path} canvas camera"), Some(g), theirs);
             cmp.check(path, "canvas camera release", 0x803A_60EC, release);
+        }
+        UserData::NameTagSlot(slot) => {
+            cmp.check(
+                path,
+                "tag slot and release",
+                (slot, NAMETAG_RELEASE),
+                (mem.b(theirs), release),
+            );
+        }
+        UserData::StockIcons(_) | UserData::ArrowSlot(_) => {
+            cmp.check(
+                path,
+                "kindless user data",
+                Some(ud),
+                kindless_user_data(theirs),
+            );
         }
         other => cmp.diff(path, "user data", other, format!("{theirs:#x}")),
     }

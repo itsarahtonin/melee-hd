@@ -604,6 +604,7 @@ impl Comparer<'_> {
         if !Self::pair(
             &mut self.maps.effects,
             &mut self.seen,
+            &self.stale,
             &mut self.diffs,
             "effect",
             path,

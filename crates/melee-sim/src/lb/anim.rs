@@ -245,3 +245,63 @@ pub fn attach(objs: &mut Objects, j: Option<JObjId>, target: Option<JObjId>) {
         jobj::prepend_robj(objs, j, r);
     }
 }
+
+/// Whether any joint from `j` on (its descendants, its later siblings, and its ancestors'
+/// later siblings, in pre-order) still has an animation playing, `lb_8000B09C`.
+#[doc(alias = "lb_8000B09C")]
+pub fn any_animated(objs: &Objects, j: Option<JObjId>) -> bool {
+    let jobjs = &objs.jobjs;
+    let mut cur = j;
+    while let Some(c) = cur {
+        if is_animated(objs, c) {
+            return true;
+        }
+        let o = &jobjs[c];
+        cur = if (o.child.is_none() && o.next.is_none()) || o.flags & jobj::INSTANCE != 0 {
+            let mut up = c;
+            loop {
+                let Some(p) = jobjs[up].parent else {
+                    break None;
+                };
+                if let Some(n) = jobjs[p].next {
+                    break Some(n);
+                }
+                up = p;
+            }
+        } else if o.child.is_some() {
+            o.child
+        } else {
+            o.next
+        };
+    }
+    false
+}
+
+/// Adds the `i`th animations of three lists (joint, material and shape animations, any
+/// missing) to a joint tree, `lb_8000C07C`.
+#[doc(alias = "lb_8000C07C")]
+pub fn add_anim_index(
+    objs: &mut Objects,
+    data: &Archives,
+    j: Option<JObjId>,
+    i: u32,
+    anims: Option<DataRef>,
+    matanims: Option<DataRef>,
+    shapeanims: Option<DataRef>,
+) {
+    let pick = |l: Option<DataRef>| l.and_then(|l| data.ptr(l.at(4 * i)));
+    jobj::add_anim_all(objs, data, j, pick(anims), pick(matanims), pick(shapeanims));
+}
+
+/// [`add_anim_index`] with a `DynamicModelDesc`'s lists, `lb_8000C0E8`.
+#[doc(alias = "lb_8000C0E8")]
+pub fn add_model_anim(
+    objs: &mut Objects,
+    data: &Archives,
+    j: Option<JObjId>,
+    i: u32,
+    model: DataRef,
+) {
+    let list = |o: u32| data.ptr(model.at(o));
+    add_anim_index(objs, data, j, i, list(4), list(8), list(0xC));
+}

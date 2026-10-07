@@ -413,8 +413,8 @@ fn stub_call_diffs(maps: &Maps) -> Vec<String> {
 }
 
 /// Imports a capture's whole state.
-pub fn import(cap: &Capture, data: &DataMap) -> (Game, Maps, Vec<String>) {
-    let mut imp = Importer::new(cap, data);
+pub fn import(cap: &Capture, data: &DataMap, archives: &Archives) -> (Game, Maps, Vec<String>) {
+    let mut imp = Importer::new(cap, data).with_archives(archives);
     imp.world();
     imp.stage();
     imp.ids();
@@ -542,7 +542,7 @@ impl<'a> Check<'a> {
                 };
                 for mode in MODES {
                     set_fp_mode(mode);
-                    let imported = catch_unwind(AssertUnwindSafe(|| import(cap, &data)));
+                    let imported = catch_unwind(AssertUnwindSafe(|| import(cap, &data, &archives)));
                     let Ok((mut game, maps, _)) = imported else {
                         if variant == 0 && mode == FpMode::Hardware {
                             skipped.push(path.file_name().unwrap().to_string_lossy().into_owned());

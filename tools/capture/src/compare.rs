@@ -29,11 +29,58 @@ pub struct Comparer<'a> {
     handles: HashMap<(&'static str, u32), u32>,
     /// What this comparison has compared already, by kind and ssbm-rs address.
     pub(crate) seen: HashSet<(&'static str, u32)>,
+    /// ssbm-rs addresses the import paired with objects we have freed since: if the
+    /// reference's heap gives such an address to a new object, it pairs afresh.
+    pub(crate) stale: HashSet<(&'static str, u32)>,
     pub diffs: Vec<String>,
 }
 
 impl<'a> Comparer<'a> {
     pub fn new(mem: &'a [u8], data: &'a DataMap, game: &'a Game, maps: Maps) -> Self {
+        let o = &game.objs;
+        let mut stale = HashSet::new();
+        let mut add = |kind: &'static str, entries: Vec<(u32, u32)>, free: &dyn Fn(u32) -> bool| {
+            for (t, id) in entries {
+                if free(id) {
+                    stale.insert((kind, t));
+                }
+            }
+        };
+        add(
+            "jobj",
+            maps.jobjs.iter().map(|(&t, j)| (t, j.0)).collect(),
+            &|i| o.jobjs.pool.was_freed(i),
+        );
+        add(
+            "dobj",
+            maps.dobjs.iter().map(|(&t, d)| (t, d.0)).collect(),
+            &|i| o.dobjs.pool.was_freed(i),
+        );
+        add(
+            "pobj",
+            maps.pobjs.iter().map(|(&t, d)| (t, d.0)).collect(),
+            &|i| o.pobjs.pool.was_freed(i),
+        );
+        add(
+            "mobj",
+            maps.mobjs.iter().map(|(&t, d)| (t, d.0)).collect(),
+            &|i| o.mobjs.pool.was_freed(i),
+        );
+        add(
+            "tobj",
+            maps.tobjs.iter().map(|(&t, d)| (t, d.0)).collect(),
+            &|i| o.tobjs.pool.was_freed(i),
+        );
+        add(
+            "aobj",
+            maps.aobjs.iter().map(|(&t, d)| (t, d.0)).collect(),
+            &|i| o.aobjs.pool.was_freed(i),
+        );
+        add(
+            "robj",
+            maps.robjs.iter().map(|(&t, d)| (t, d.0)).collect(),
+            &|i| o.robjs.pool.was_freed(i),
+        );
         Comparer {
             mem,
             data,
@@ -41,6 +88,7 @@ impl<'a> Comparer<'a> {
             maps,
             handles: HashMap::new(),
             seen: HashSet::new(),
+            stale,
             diffs: Vec::new(),
         }
     }
@@ -88,9 +136,11 @@ impl<'a> Comparer<'a> {
 
     /// Pairs `ours` with ssbm-rs's object at `theirs`, or reports they don't pair; whether to
     /// compare them (the first time this comparison meets them).
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn pair<T: Copy + PartialEq + std::fmt::Debug>(
         map: &mut HashMap<u32, T>,
         seen: &mut HashSet<(&'static str, u32)>,
+        stale: &HashSet<(&'static str, u32)>,
         diffs: &mut Vec<String>,
         kind: &'static str,
         path: &str,
@@ -100,7 +150,11 @@ impl<'a> Comparer<'a> {
         match (ours, theirs) {
             (None, 0) => false,
             (Some(o), t) if t != 0 => {
-                let known = *map.entry(t).or_insert(o);
+                let mut known = *map.entry(t).or_insert(o);
+                if known != o && stale.contains(&(kind, t)) {
+                    map.insert(t, o);
+                    known = o;
+                }
                 if known != o {
                     diffs.push(format!(
                         "{path}: ours {o:?}, theirs {t:#x} (paired with {known:?})"
@@ -276,6 +330,7 @@ impl<'a> Comparer<'a> {
                 if Self::pair(
                     &mut self.maps.fighters,
                     &mut self.seen,
+                    &self.stale,
                     &mut self.diffs,
                     "fighter",
                     path,
@@ -297,7 +352,13 @@ impl<'a> Comparer<'a> {
             Some(UserData::Effect(e)) => {
                 self.effect(&format!("{path} effect"), e, self.u32(t + 0x2C))
             }
-            None => {}
+            None => {
+                // Kindless user data ours lacks.
+                let ud = self.u32(t + 0x2C);
+                if g.user_data_kind == 0xFF && crate::hud::kindless_user_data(ud).is_some() {
+                    self.diff(path, "kindless user data", "none", format!("{ud:#x}"));
+                }
+            }
             Some(ud) => crate::hud::compare_user_data(self, path, ud, t),
         }
     }
@@ -442,6 +503,7 @@ impl<'a> Comparer<'a> {
             if !Self::pair(
                 &mut self.maps.jobjs,
                 &mut self.seen,
+                &self.stale,
                 &mut self.diffs,
                 "jobj",
                 &path,
@@ -508,6 +570,7 @@ impl<'a> Comparer<'a> {
         if !Self::pair(
             &mut self.maps.aobjs,
             &mut self.seen,
+            &self.stale,
             &mut self.diffs,
             "aobj",
             path,
@@ -624,6 +687,7 @@ impl<'a> Comparer<'a> {
             if !Self::pair(
                 &mut self.maps.robjs,
                 &mut self.seen,
+                &self.stale,
                 &mut self.diffs,
                 "robj",
                 &rp,
@@ -659,6 +723,7 @@ impl<'a> Comparer<'a> {
         if !Self::pair(
             &mut self.maps.wobjs,
             &mut self.seen,
+            &self.stale,
             &mut self.diffs,
             "wobj",
             path,
@@ -688,6 +753,7 @@ impl<'a> Comparer<'a> {
         if !Self::pair(
             &mut self.maps.cobjs,
             &mut self.seen,
+            &self.stale,
             &mut self.diffs,
             "cobj",
             path,
@@ -766,6 +832,7 @@ impl<'a> Comparer<'a> {
             if !Self::pair(
                 &mut self.maps.lobjs,
                 &mut self.seen,
+                &self.stale,
                 &mut self.diffs,
                 "lobj",
                 &lp,
@@ -827,6 +894,7 @@ impl<'a> Comparer<'a> {
         if !Self::pair(
             &mut self.maps.mobjs,
             &mut self.seen,
+            &self.stale,
             &mut self.diffs,
             "mobj",
             path,
@@ -877,6 +945,7 @@ impl<'a> Comparer<'a> {
             if !Self::pair(
                 &mut self.maps.tobjs,
                 &mut self.seen,
+                &self.stale,
                 &mut self.diffs,
                 "tobj",
                 &tp,
@@ -965,6 +1034,7 @@ impl<'a> Comparer<'a> {
             if !Self::pair(
                 &mut self.maps.dobjs,
                 &mut self.seen,
+                &self.stale,
                 &mut self.diffs,
                 "dobj",
                 &dp,
@@ -984,6 +1054,7 @@ impl<'a> Comparer<'a> {
                 if !Self::pair(
                     &mut self.maps.pobjs,
                     &mut self.seen,
+                    &self.stale,
                     &mut self.diffs,
                     "pobj",
                     &pp,
@@ -1056,9 +1127,24 @@ impl Cx for Comparer<'_> {
             "QueuedId" => self.maps.queued.get(&theirs).map(|q| q.0),
             "GeneratorId" => self.maps.generators.get(&theirs).map(|g| g.0),
             "EffectId" => self.maps.effects.get(&theirs).map(|e| e.0),
+            "TextId" if theirs != 0 => {
+                Some(theirs.wrapping_sub(self.u32(sym("HSD_SisLib_804D796C"))))
+            }
             _ => None,
         };
         let known = known.or_else(|| self.handles.get(&(kind, theirs)).copied());
+        // A pointer to a joint freed during the call: ours is out or points to a joint we
+        // freed, theirs to the freed block (no class there).
+        if kind == "JObjId"
+            && theirs != 0
+            && ours.is_none_or(|o| self.game.objs.jobjs.pool.is_free(o))
+            && known.is_none()
+            && theirs & 3 == 0
+            && (MEM1..MEM1 + self.mem.len() as u32 - 4).contains(&theirs)
+            && !(0x8030_0000..0x8050_0000).contains(&self.u32(theirs))
+        {
+            return;
+        }
         match (ours, theirs, known) {
             (None, 0, _) => {}
             (Some(o), t, Some(k)) if t != 0 && k == o => {}

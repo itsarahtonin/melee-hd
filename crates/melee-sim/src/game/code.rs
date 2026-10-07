@@ -41,6 +41,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         // fn_801A4BD0: the scene GObj's first process, empty.
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
+        addr if super::hud::run_proc(game, gobj, addr) => {}
         addr if last::run(game, gobj, addr) => {}
         addr if super::gr::battle::run(game, gobj, addr) => {}
         0x8006_A1BC => fighter::proc_hitlag(game, gobj),
@@ -130,6 +131,17 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         // Hitlag.
         0x8008_E4F0 => g.co_damage_hitlag(gobj),
         other => unported("fighter callback", other),
+    }
+}
+
+/// Runs a HUD callback (`IfStatusCb`: an announcement's start or end) by address.
+pub fn run_hud_callback(r: &mut Running, f: CodeRef, arg: i32) {
+    match f.0 {
+        0x8016_B784 => r.vs_hud_on(arg),
+        0x8016_B7B4 => r.vs_ready(arg),
+        0x8016_B7F8 => r.vs_go(arg),
+        0x8016_B88C => r.vs_game_end(arg),
+        other => unported("HUD callback", other),
     }
 }
 

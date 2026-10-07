@@ -38,6 +38,12 @@ pub enum UserData {
     Text(crate::hsd::sis::TextId),
     /// A text canvas's camera, which its canvas forgets when freed (`fn_803A60EC`'s).
     SisCamera(GObjId),
+    /// A player's stock icons (`ifStock_804A157C[player]`, set without a kind).
+    StockIcons(u8),
+    /// An off-screen arrow's slot (`un_804DDBA8[slot]`, set without a kind).
+    ArrowSlot(u8),
+    /// A player tag's slot (a heap byte `mn_8022EB04` frees).
+    NameTagSlot(u8),
 }
 
 /// The GObj object kinds as Melee's `HSD_GObj_80391260` numbers them, after the game's own
@@ -246,6 +252,11 @@ impl Host<GameKinds> for Running<'_> {
             UserData::Effect(e) => super::ef::remove_user_data(self.game, e),
             UserData::Text(t) => self.game.sis.free_text(t),
             UserData::SisCamera(g) => self.game.sis.forget_camera(g),
+            // `mn_8022EB04`: the heap byte goes back.
+            UserData::NameTagSlot(_) => {}
+            UserData::StockIcons(_) | UserData::ArrowSlot(_) => {
+                unreachable!("user data set without a kind isn't released")
+            }
             other => panic!("removing {other:?} isn't ported"),
         }
     }

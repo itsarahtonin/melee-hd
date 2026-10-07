@@ -344,7 +344,7 @@ impl<'a> Importer<'a> {
                 6 if ud != 0 => Some(UserData::Item(self.item(ud))),
                 8 if ud != 0 => Some(UserData::Effect(self.effect(ud))),
                 3 if ud != 0 => Some(UserData::Ground(self.ground(ud))),
-                0xFF => None,
+                0xFF => crate::hud::kindless_user_data(ud),
                 _ if ud == 0 => None,
                 _ if release != 0 && crate::hud::user_data(self, release, ud).is_some() => {
                     crate::hud::user_data(self, release, ud)
@@ -1375,6 +1375,10 @@ impl Cx for Importer<'_> {
                 }
             },
             "EffectId" => self.effect(addr).0,
+            "TextId" => {
+                let base = self.u32(sym("HSD_SisLib_804D796C"));
+                addr - base
+            }
             "GObjId" => match self.maps.gobjs.get(&addr) {
                 Some(g) => g.0,
                 None => self.dangling("GObjId", addr),

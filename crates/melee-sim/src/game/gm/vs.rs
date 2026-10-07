@@ -91,6 +91,16 @@ mod addr {
     pub const SFX_SETUP_CROWD_SFX: u32 = 0x8032_1900;
     pub const LBBGFLASH_INIT: u32 = 0x8002_1A18;
     pub const GRSTADIUM_801D3B4C: u32 = 0x801D_3B4C;
+    pub const GRSTADIUM_801D4150: u32 = 0x801D_4150;
+    pub const GRSTADIUM_801D4084: u32 = 0x801D_4084;
+    pub const GRSTADIUM_801D410C: u32 = 0x801D_410C;
+    pub const GRSTADIUM_801D4040: u32 = 0x801D_4040;
+    pub const GRSTADIUM_801D40C8: u32 = 0x801D_40C8;
+    pub const GROUND_801C1154: u32 = 0x801C_1154;
+    pub const GROUND_801C1158: u32 = 0x801C_1158;
+    pub const FTLIB_ENABLE_ALL_INPUT: u32 = 0x8008_68A4;
+    pub const STAGE_802252E4: u32 = 0x8022_52E4;
+    pub const FN_8016B784: u32 = 0x8016_B784;
 }
 
 /// The match's live standings (`gm_16F1.c`'s `lbl_8046DBC8`, `lbl_804D65A8` and
@@ -658,6 +668,54 @@ impl Running<'_> {
         );
     }
 
+    /// The HUD comes on once GO! ends, `fn_8016B784` (GO!'s end callback).
+    #[doc(alias = "fn_8016B784")]
+    pub fn vs_hud_on(&mut self, _kind: i32) {
+        self.game.vs.state.hud_enabled = 1;
+        code::call(self, addr::GRSTADIUM_801D4150, &[]);
+    }
+
+    /// Ready's start (`fn_8016B7B4`): the stage's and Pokémon Stadium's screens, and the name
+    /// tags shown.
+    #[doc(alias = "fn_8016B7B4")]
+    pub fn vs_ready(&mut self, kind: i32) {
+        code::call(self, addr::GROUND_801C1154, &[]);
+        let f = if kind == 3 {
+            addr::GRSTADIUM_801D4084
+        } else {
+            addr::GRSTADIUM_801D410C
+        };
+        code::call(self, f, &[]);
+        self.game.show_nametags();
+    }
+
+    /// Ready's end (`fn_8016B7F8`): the fighters take input, the stage starts, and GO! (or,
+    /// with the rules' `x1_3`, at once its end), the name tags left to fade.
+    #[doc(alias = "fn_8016B7F8")]
+    pub fn vs_go(&mut self, _kind: i32) {
+        code::call(self, addr::FTLIB_ENABLE_ALL_INPUT, &[]);
+        let stkind = i32::from(self.game.vs.start.stkind);
+        code::call(
+            self,
+            addr::STAGE_802252E4,
+            &[Val::Int(stkind), Val::GObj(None)],
+        );
+        code::call(self, addr::GRSTADIUM_801D4040, &[]);
+        let kind = if self.game.vs.start.x1_3 { 8 } else { 4 };
+        self.announce(kind, -1, -1, 0, None, Some(CodeRef(addr::FN_8016B784)));
+        self.game.unshow_nametags();
+    }
+
+    /// GAME!'s start (`fn_8016B88C`): the stage's end and the HUD off.
+    #[doc(alias = "fn_8016B88C")]
+    pub fn vs_game_end(&mut self, kind: i32) {
+        code::call(self, addr::GROUND_801C1158, &[]);
+        if kind == 0 {
+            code::call(self, addr::GRSTADIUM_801D40C8, &[]);
+        }
+        self.game.vs.state.hud_enabled = 0;
+    }
+
     /// The match's process, `fn_8016C7D0`: the live standings.
     #[doc(alias = "fn_8016C7D0")]
     pub fn vs_proc(&mut self) {
@@ -1181,6 +1239,55 @@ pub fn player_color(port: u8, team: u8, is_teams: u8, pkind: u8) -> u32 {
         0..=3 => u32::from(port),
         _ => 0,
     }
+}
+
+/// A HUD colour's RGBA (`lbl_803B7864`), `gm_80160968`. Past the table's nine colours the
+/// original reads the table after it; no caller passes one.
+#[doc(alias = "gm_80160968")]
+pub fn hud_color(c: u32) -> [u8; 4] {
+    const COLORS: [[u8; 4]; 9] = [
+        [0x99, 0x1A, 0x1A, 0xFF],
+        [0x33, 0x33, 0x80, 0xFF],
+        [0x80, 0x66, 0x00, 0xFF],
+        [0x1A, 0x66, 0x1A, 0xFF],
+        [0x66, 0x66, 0x66, 0xFF],
+        [0x66, 0x4D, 0x4D, 0xFF],
+        [0x4D, 0x4D, 0x66, 0xFF],
+        [0x66, 0x59, 0x33, 0xFF],
+        [0x4D, 0x66, 0x4D, 0xFF],
+    ];
+    *COLORS
+        .get(usize::from(c as u8))
+        .unwrap_or_else(|| panic!("HUD colour {c} past the table isn't ported"))
+}
+
+/// A character's stock icon frame for a costume (`arg1` the fighter kind, which tells Zelda
+/// from Sheik), `gm_80168B34`.
+#[doc(alias = "gm_80168B34")]
+pub fn stock_icon_frame(ckind: i32, ftkind: i32, costume: i32) -> f64 {
+    // CKind_GKoops, CKind_Boy and CKind_Girl, CKind_MasterH, CKind_CrezyH; then Zelda and
+    // Sheik, Sandbag and Popo.
+    match ckind {
+        0x1D => return 58.0,
+        0x1B | 0x1C => return 26.0,
+        0x1A => return 28.0,
+        0x1E => return 27.0,
+        _ => {}
+    }
+    let base = match ckind {
+        0x12 | 0x13 => {
+            if ftkind == 7 {
+                0x19
+            } else {
+                0x12
+            }
+        }
+        0x1F => return 59.0,
+        0x20 => 0xE,
+        k if k > 0x13 => k.wrapping_sub(1),
+        k => k,
+    };
+    gekko_fp::frsp(f64::from(base.wrapping_add(costume.wrapping_mul(30))))
 }
 
 /// Caps a colour at 4, `fn_80160840`.

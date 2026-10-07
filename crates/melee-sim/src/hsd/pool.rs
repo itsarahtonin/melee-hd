@@ -12,6 +12,9 @@ pub struct Pool<T> {
     free: Vec<u32>,
     used: u32,
     peak: u32,
+    /// Whether each slot has been freed (and maybe reused) since it was made: for checks,
+    /// where a handle's pairing with an address no longer holds.
+    ever_freed: Vec<bool>,
 }
 
 impl<T> Default for Pool<T> {
@@ -21,6 +24,7 @@ impl<T> Default for Pool<T> {
             free: Vec::new(),
             used: 0,
             peak: 0,
+            ever_freed: Vec::new(),
         }
     }
 }
@@ -33,6 +37,7 @@ impl<T> Pool<T> {
             slot
         } else {
             self.slots.push(value);
+            self.ever_freed.push(false);
             (self.slots.len() - 1) as u32
         };
         self.used += 1;
@@ -61,7 +66,18 @@ impl<T> Pool<T> {
     /// Returns `slot` to the pool, `HSD_ObjFree`.
     pub fn free(&mut self, slot: u32) {
         self.free.push(slot);
+        self.ever_freed[slot as usize] = true;
         self.used -= 1;
+    }
+
+    /// Whether `slot` is on the free list (a freed object a handle can outlive).
+    pub fn is_free(&self, slot: u32) -> bool {
+        self.free.contains(&slot)
+    }
+
+    /// Whether `slot` has been freed since it was made, reused or not.
+    pub fn was_freed(&self, slot: u32) -> bool {
+        self.ever_freed.get(slot as usize).copied().unwrap_or(false)
     }
 
     pub fn used(&self) -> u32 {
@@ -80,6 +96,7 @@ impl<T> Pool<T> {
     {
         self.slots.clone_from(&other.slots);
         self.free.clone_from(&other.free);
+        self.ever_freed.clone_from(&other.ever_freed);
         self.used = other.used;
         self.peak = other.peak;
     }

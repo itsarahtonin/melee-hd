@@ -228,7 +228,8 @@ fn init() {
     Check {
         perturb_all: true,
         // The texts go first (their GObjs would keep pointers into the old arena), as a
-        // scene's end takes them.
+        // scene's end takes them, and with them the name tags' text.
+        perturb: &|f| f.put(0x804D_6D78, 0),
         ..Check::new("fn_8016C7D0", &|r, _| {
             r.destroy_all_texts();
             r.game.sis.init(0x4800);

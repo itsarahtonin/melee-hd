@@ -208,6 +208,7 @@ impl Comparer<'_> {
         if !Self::pair(
             &mut self.maps.items,
             &mut self.seen,
+            &self.stale,
             &mut self.diffs,
             "item",
             path,
