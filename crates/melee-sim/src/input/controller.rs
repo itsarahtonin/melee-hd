@@ -4,12 +4,14 @@
 //! track their own presses, releases and key repeat.
 //!
 //! The original polls the hardware inside `HSD_PadRenewRawStatus`; here the poll's result is
-//! an argument, and the requests it would make of the hardware (resetting a port) come back.
-//! Rumble, which the original interprets and stops alongside, isn't ported yet.
+//! an argument, and the requests it would make of the hardware (resetting a port, driving a
+//! rumble motor) come back.
 
 use gekko_fp as fp;
+use melee_data::archive::Archives;
 
 use super::pad::{ERR_NO_CONTROLLER, ERR_NONE, ERR_TRANSFER, PadStatus};
+use super::rumble::{Motor, Rumble};
 use crate::fpu::{mem, reg};
 use crate::math;
 
@@ -184,7 +186,7 @@ pub enum Flush {
     Terminate,
 }
 
-/// `PadLibData` without its rumble state.
+/// `PadLibData` without its rumble state, which is [`Controllers::rumble`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct PadLib {
     pub qnum: u8,
@@ -444,35 +446,49 @@ pub fn clamp_stick(x: i8, y: i8, shift: u8, min: i8, max: i8) -> (i8, i8) {
     (x, y)
 }
 
-/// The pad library: the raw queue and the master, copy and game statuses
-/// (`HSD_PadLibData`, `HSD_PadMasterStatus`, `HSD_PadCopyStatus`, `HSD_PadGameStatus`).
+/// What a poll asks of the hardware.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Requests {
+    /// The ports to reset (`PADReset`'s mask, bit 31 for port 0): those that reported no
+    /// controller.
+    pub reset: u32,
+    /// The new state of each port's rumble motor, where it changed (`PADControlMotor`).
+    pub motors: [Option<Motor>; 4],
+}
+
+/// The pad library: the raw queue, rumble and the master, copy and game statuses
+/// (`HSD_PadLibData`, `HSD_Rumble_804C22E0`, `HSD_PadMasterStatus`, `HSD_PadCopyStatus`,
+/// `HSD_PadGameStatus`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Controllers {
     pub lib: PadLib,
+    pub rumble: Rumble,
     pub master: [Status; 4],
     pub copy: [Status; 4],
     pub game: [Status; 4],
 }
 
 impl Controllers {
-    /// `HSD_PadInit`: the library's defaults with a queue of `qnum` polls. The original also
-    /// sets up rumble and initializes the SDK's PAD library, which the input layer does.
+    /// `HSD_PadInit`: the library's defaults with a queue of `qnum` polls and `nb_list`
+    /// rumble nodes. The original also initializes the SDK's PAD library, which the input
+    /// layer does.
     #[doc(alias = "HSD_PadInit")]
-    pub fn new(qnum: u8) -> Controllers {
+    pub fn new(qnum: u8, nb_list: u16) -> Controllers {
         Controllers {
             lib: PadLib::new(qnum),
+            rumble: Rumble::new(nb_list),
             master: [Status::DEFAULT; 4],
             copy: [Status::DEFAULT; 4],
             game: [Status::DEFAULT; 4],
         }
     }
 
-    /// The library as Melee sets it up (`gmMain_8015FD24`): five queued polls, sticks
-    /// clamped to radius 80 with the dead zone taken off, triggers to 140, and both scaled to
+    /// The library as Melee sets it up (`gmMain_8015FD24`): five queued polls, twelve rumble
+    /// nodes, sticks clamped to radius 80 with the dead zone taken off, triggers to 140, and both scaled to
     /// 1. Its `PADSetSpec(5)` picks the decoder [`read`](super::pad::read) always uses.
     #[doc(alias = "gmMain_8015FD24")]
     pub fn melee() -> Controllers {
-        let mut c = Controllers::new(5);
+        let mut c = Controllers::new(5, 12);
         let lib = &mut c.lib;
         lib.clamp_stick_type = 0;
         lib.clamp_stick_shift = 1;
@@ -498,16 +514,22 @@ impl Controllers {
         self.lib.reset_switch != 0
     }
 
-    /// `HSD_PadRenewRawStatus`: queues one poll of the four ports (`now`, what `PADRead`
-    /// reported: see [`read`](super::pad::read)) and follows the console's reset button
-    /// (`reset_pressed`, `OSGetResetSwitchState`). With `err_check`, a poll in which every
-    /// port failed is dropped. Returns the ports to reset (`PADReset`'s mask, bit 31 for port
-    /// 0): those that reported no controller.
+    /// `HSD_PadRenewRawStatus`: runs a frame of rumble, then queues one poll of the four
+    /// ports (`now`, what `PADRead` reported: see [`read`](super::pad::read)) and follows the
+    /// console's reset button (`reset_pressed`, `OSGetResetSwitchState`). With `err_check`, a
+    /// poll in which every port failed is dropped. `data` holds the rumble scripts.
     #[doc(alias = "HSD_PadRenewRawStatus")]
-    pub fn renew_raw(&mut self, now: PadData, err_check: bool, reset_pressed: bool) -> u32 {
+    pub fn renew_raw(
+        &mut self,
+        data: &Archives,
+        now: PadData,
+        err_check: bool,
+        reset_pressed: bool,
+    ) -> Requests {
+        let motors = self.rumble.interpret(data);
         let mut now = now;
         if err_check && now.iter().all(|s| s.err != ERR_NONE) {
-            return 0;
+            return Requests { reset: 0, motors };
         }
         let p = &mut self.lib;
         let qwrite = usize::from(p.qwrite);
@@ -538,7 +560,7 @@ impl Controllers {
             p.queue[qwrite] = now;
             p.qwrite = p.shift(p.qwrite);
         }
-        let mask = now
+        let reset = now
             .iter()
             .enumerate()
             .filter(|(_, s)| s.err == ERR_NO_CONTROLLER)
@@ -549,7 +571,7 @@ impl Controllers {
             p.reset_switch = 1;
             p.reset_switch_status = 0;
         }
-        mask
+        Requests { reset, motors }
     }
 
     /// `HSD_PadFlushQueue`.
@@ -639,21 +661,26 @@ impl Controllers {
         }
     }
 
-    /// `HSD_PadRenewStatus`: queues a poll and renews every status from the oldest. Returns
-    /// the ports to reset, as [`Controllers::renew_raw`] does.
+    /// `HSD_PadRenewStatus`: runs rumble, queues a poll and renews every status from the
+    /// oldest, as [`Controllers::renew_raw`] does.
     #[doc(alias = "HSD_PadRenewStatus")]
-    pub fn renew(&mut self, now: PadData, reset_pressed: bool) -> u32 {
-        let mask = self.renew_raw(now, false, reset_pressed);
+    pub fn renew(&mut self, data: &Archives, now: PadData, reset_pressed: bool) -> Requests {
+        let requests = self.renew_raw(data, now, false, reset_pressed);
         self.renew_master();
         self.renew_copy();
         self.renew_game();
-        mask
+        requests
     }
 
-    /// `HSD_PadReset`: drops the queued polls and forgets the reset button. The original also
-    /// stops all rumble (not ported yet) and recalibrates every port (the input layer's job).
+    /// `HSD_PadReset`: stops every rumble script, sets every port's motor to brake when idle,
+    /// drops the queued polls and forgets the reset button. The original also recalibrates
+    /// every port, which is the input layer's job.
     #[doc(alias = "HSD_PadReset")]
     pub fn reset(&mut self) {
+        self.rumble.remove_all();
+        for port in 0..4 {
+            self.rumble.off(port);
+        }
         self.flush_queue(Flush::Throwaway);
         self.lib.reset_switch = 0;
     }

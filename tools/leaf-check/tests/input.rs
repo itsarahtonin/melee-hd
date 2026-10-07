@@ -2,17 +2,23 @@
 //! library, bit for bit, in both float modes.
 //!
 //! The pure functions run on every stick position and on random and edge-case values. The pad
-//! library runs side by side with ssbm-rs's on random sequences of polls, renewals, flushes and
-//! resets, and every field of the queue and the twelve statuses must match after every step.
-//! Where ssbm-rs's code reaches the hardware (the serial interface, the reset button, rumble),
+//! library runs side by side with ssbm-rs's on random sequences of polls, renewals, flushes,
+//! resets and rumble requests, and every field of the queue, the twelve statuses and rumble
+//! must match after every step, with the same motor commands from every poll. Where ssbm-rs's
+//! code reaches the hardware (the serial interface, the reset button, the rumble motors),
 //! native stubs stand in and report what the test decides, which ours receives as arguments.
+
+#[path = "support/rumble.rs"]
+mod rumble;
 
 use std::cell::RefCell;
 
 use gekko_fp::{FpMode, set_fp_mode};
 use leaf_check::{SCRATCH, handle, reference, sym};
+use melee_data::archive::Archives;
 use melee_sim::input::controller::{self, Controllers, Flush, PadData, PadLib, Status};
 use melee_sim::input::pad::{self, PadStatus, Sample};
+use melee_sim::input::rumble::{Script, Table};
 use ssbm_rt::Ctx;
 
 /// ssbm-rs's functions, file-local ones included, under one name.
@@ -29,6 +35,8 @@ const MODES: [FpMode; 2] = [FpMode::Hardware, FpMode::Slippi];
 const PADS: u32 = SCRATCH;
 const DATA: u32 = SCRATCH + 0x100;
 const QUEUE: u32 = SCRATCH + 0x200;
+/// Rumble nodes for HSD_PadInit other than Melee's.
+const NODES: u32 = SCRATCH + 0x400;
 const PAD_SIZE: u32 = 12;
 const STATUS_SIZE: u32 = 0x44;
 
@@ -309,7 +317,13 @@ fn put_settings(ctx: &Ctx, p: &PadLib) {
     }
 }
 
-fn compare(ctx: &Ctx, ours: &Controllers, what: &dyn Fn() -> String) {
+fn compare(ctx: &Ctx, ours: &Controllers, nodes: &rumble::Places, what: &dyn Fn() -> String) {
+    assert_eq!(
+        rumble::ours(&ours.rumble, nodes),
+        rumble::theirs(ctx, nodes, ours.rumble.nodes.len()),
+        "rumble after {}",
+        what()
+    );
     let mut theirs = get_lib(ctx);
     let mut mine = ours.lib.clone();
     assert_eq!(
@@ -425,22 +439,18 @@ fn stubbed(pad_read: bool) -> Option<Ctx> {
     if pad_read {
         ctx.register(sym("PADRead"), stub_pad_read);
     }
-    let stubs: [(&str, ssbm_rt::Native); 15] = [
+    let stubs: [(&str, ssbm_rt::Native); 11] = [
         ("PADReset", stub_pad_reset),
         ("PADRecalibrate", stub_pad_recalibrate),
         ("PADInit", stub_nothing),
         ("OSGetResetSwitchState", stub_reset_switch),
-        ("HSD_PadRumbleInterpret", stub_nothing),
-        ("HSD_PadRumbleRemoveAll", stub_nothing),
-        ("HSD_PadRumbleOffN", stub_nothing),
-        ("HSD_PadRumbleInit", stub_nothing),
         ("SIIsChanBusy", stub_si_busy),
         ("SIGetStatus", stub_si_status),
         ("SIGetResponse", stub_si_response),
         ("SIGetType", stub_si_type),
         ("SITransfer", stub_si_transfer),
         ("SIGetTypeAsync", stub_si_type_async),
-        ("PADControlMotor", stub_nothing),
+        ("PADControlMotor", rumble::stub_control_motor),
     ];
     for (name, f) in stubs {
         ctx.register(sym(name), f);
@@ -745,7 +755,7 @@ fn pad_library_helpers_match() {
             }
         }
         for &(th, angle) in &adc {
-            let mut lib = Controllers::new(1).lib;
+            let mut lib = Controllers::new(1, 0).lib;
             lib.adc_th = th;
             lib.adc_angle = angle;
             ctx.write_u8(lib_at + 0x15, th as u8);
@@ -778,7 +788,7 @@ fn pad_library_helpers_match() {
 
     // HSD_PadCrossDir.
     for _ in 0..100_000 {
-        let mut lib = Controllers::new(1).lib;
+        let mut lib = Controllers::new(1, 0).lib;
         lib.cross_dir = rng.u8_of(&[0, 1, 2, 3, 3]);
         ctx.write_u8(lib_at + 0x29, lib.cross_dir);
         let mut s = Status::DEFAULT;
@@ -857,15 +867,29 @@ fn pad_library_sequences_match() {
     let ctx = &ctx;
     let mut rng = Rng(0xA5A5_5A5A_0123_4567);
     let game_queue = sym("gmMain_8046B108");
+    let game_nodes = sym("gmMain_8046B1F8");
+    // The scripts the rumble menu and a few priorities give; tests/rumble.rs runs the game
+    // data's.
+    let scripts = [
+        (Script::table(Table::Vibration), 0),
+        (Script::table(Table::Vibration), 3),
+    ];
+    let data = Archives::default();
     let (mut steps, mut sequences) = (0u64, 0u64);
     // How often the paths that need a run of polls were taken.
     let (mut held_repeats, mut full_queue, mut directions, mut kept) = (0u64, 0u64, 0u64, 0u64);
+    let mut motors = 0u64;
     for seq in 0..400u32 {
         let mode = MODES[seq as usize % 2];
         set_fp_mode(mode);
-        // The queue's memory is zero from boot, and HSD_PadInit runs once; clear it so
-        // what's left from the last sequence doesn't show in the comparison.
+        // The queue's and rumble nodes' memory is zero from boot, and HSD_PadInit runs once;
+        // clear them so what's left from the last sequence doesn't show in the comparison.
         let game = seq % 3 != 2;
+        let mut nodes = rumble::Places {
+            nodes: if game { game_nodes } else { NODES },
+            archives: Vec::new(),
+        };
+        rumble::clear_nodes(ctx, nodes.nodes, 12);
         let mut ours = if game {
             for a in (0..0xF0).step_by(4) {
                 ctx.write_u32(game_queue + a, 0);
@@ -877,8 +901,23 @@ fn pad_library_sequences_match() {
             for a in (0..0x100).step_by(4) {
                 ctx.write_u32(QUEUE + a, 0);
             }
-            fns::HSD_PadInit(ctx, qnum, handle(ctx, QUEUE), 0, handle(ctx, 0));
-            Controllers::new(qnum)
+            // Without nodes the list pointer is null, as ours has none to point at.
+            let nb_list = rng.below(13) as u16;
+            if nb_list == 0 {
+                nodes.nodes = 0;
+            }
+            fns::HSD_PadInit(
+                ctx,
+                qnum,
+                handle(ctx, QUEUE),
+                nb_list,
+                handle(ctx, nodes.nodes),
+            );
+            Controllers::new(qnum, nb_list)
+        };
+        let nodes = &nodes;
+        let compare = |ctx: &Ctx, ours: &Controllers, what: &dyn Fn() -> String| {
+            compare(ctx, ours, nodes, what)
         };
         compare(ctx, &ours, &|| format!("init, sequence {seq}"));
         if seq % 4 == 3 {
@@ -890,7 +929,7 @@ fn pad_library_sequences_match() {
         let errors = rng.chance(60);
         let length = 100 + rng.below(400);
         for step in 0..length {
-            let op = rng.below(100);
+            let op = rng.below(115);
             let what = |name: &str| format!("{name}, sequence {seq} step {step} {mode:?}");
             match op {
                 0..=34 => {
@@ -905,10 +944,21 @@ fn pad_library_sequences_match() {
                     });
                     full_queue += u64::from(ours.lib.qcount == ours.lib.qnum);
                     fns::HSD_PadRenewRawStatus(ctx, err_check as i32);
-                    let mask = ours.renew_raw(poll, err_check, reset);
+                    let req = ours.renew_raw(&data, poll, err_check, reset);
                     let resets = hw(|h| h.resets.clone());
-                    let expected: Vec<u32> = if mask != 0 { vec![mask] } else { vec![] };
+                    let expected: Vec<u32> = if req.reset != 0 {
+                        vec![req.reset]
+                    } else {
+                        vec![]
+                    };
                     assert_eq!(expected, resets, "{}", what("RenewRawStatus mask"));
+                    assert_eq!(
+                        rumble::as_commands(req.motors),
+                        rumble::take_motor_commands(),
+                        "{}",
+                        what("RenewRawStatus motors")
+                    );
+                    motors += req.motors.iter().flatten().count() as u64;
                     compare(ctx, &ours, &|| {
                         format!("{} {poll:?}", what("RenewRawStatus"))
                     });
@@ -947,10 +997,21 @@ fn pad_library_sequences_match() {
                         h.resets.clear();
                     });
                     fns::HSD_PadRenewStatus(ctx);
-                    let mask = ours.renew(poll, reset);
+                    let req = ours.renew(&data, poll, reset);
                     let resets = hw(|h| h.resets.clone());
-                    let expected: Vec<u32> = if mask != 0 { vec![mask] } else { vec![] };
+                    let expected: Vec<u32> = if req.reset != 0 {
+                        vec![req.reset]
+                    } else {
+                        vec![]
+                    };
                     assert_eq!(expected, resets, "{}", what("RenewStatus mask"));
+                    assert_eq!(
+                        rumble::as_commands(req.motors),
+                        rumble::take_motor_commands(),
+                        "{}",
+                        what("RenewStatus motors")
+                    );
+                    motors += req.motors.iter().flatten().count() as u64;
                     compare(ctx, &ours, &|| what("RenewStatus"));
                 }
                 88..=93 => {
@@ -978,7 +1039,7 @@ fn pad_library_sequences_match() {
                         what("GetResetSwitch")
                     );
                 }
-                _ => {
+                97..=99 => {
                     hw(|h| h.recalibrations.clear());
                     fns::HSD_PadReset(ctx);
                     ours.reset();
@@ -989,6 +1050,13 @@ fn pad_library_sequences_match() {
                         what("Reset recalibration")
                     );
                     compare(ctx, &ours, &|| what("Reset"));
+                }
+                _ => {
+                    let mut rand = || rng.next();
+                    let op = rumble::random_op(&mut rand, &scripts);
+                    let name = format!("{op:?}");
+                    rumble::apply(ctx, &mut ours.rumble, nodes, op, &|| what(&name));
+                    compare(ctx, &ours, &|| what(&name));
                 }
             }
             for s in ours.master.iter().chain(&ours.copy).chain(&ours.game) {
@@ -1002,6 +1070,7 @@ fn pad_library_sequences_match() {
     eprintln!(
         "pad library: {sequences} sequences, {steps} steps; held repeats {held_repeats}, polls \
          into a full queue {full_queue}, statuses with stick directions {directions}, failed \
-         transfers kept {kept}"
+         transfers kept {kept}, motor commands {motors}"
     );
+    assert!(motors > 0, "no poll drove a motor");
 }
