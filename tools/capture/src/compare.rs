@@ -282,6 +282,31 @@ impl<'a> Comparer<'a> {
         let game = self.game;
         game.magnify
             .compare(&mem, sym("ifMagnify_804A1DE0"), "magnify", self);
+        let (theirs, filter_gobj) = crate::read_coll_statics(self.mem);
+        let key = |s: &melee_sim::mp::coll::CollStatics| {
+            let v = |v: melee_sim::vec::Vec3| [v.x.to_bits(), v.y.to_bits(), v.z.to_bits()];
+            format!(
+                "{:?}/{} {:?}/{} {:#x} {} {:#x} {:x?} {} {:?} {:?}",
+                s.right_walls,
+                s.right_count,
+                s.left_walls,
+                s.left_count,
+                s.max_x.to_bits(),
+                s.line_id,
+                s.flags,
+                v(s.normal),
+                s.ecb_tiny,
+                s.floor_filter,
+                s.x64a8
+            )
+        };
+        self.check("mp", "collision statics", key(&game.coll), key(&theirs));
+        self.compare_handle(
+            "mp collision floor filter fighter",
+            "GObjId",
+            game.coll.floor_filter_gobj.map(|g| g.0),
+            filter_gobj,
+        );
         let wind = self.u32(sym("ft_804D6578"));
         self.check("ft", "wind sources", game.ft.wind_sources, wind);
         let bury = self.u32(sym("ftDevice_BuryThingCount"));

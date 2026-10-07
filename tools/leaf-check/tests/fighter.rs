@@ -802,3 +802,64 @@ fn smash_charge() {
         },
     );
 }
+
+#[test]
+fn proc_map() {
+    assert_eq!(leaf_check::sym("Fighter_procMap"), 0x8006_C27C);
+    check_proc("Fighter_procMap", 0x8006_C27C, 0);
+}
+
+/// The grounded collision callbacks from procMap's states with the fighter moved toward a
+/// ledge (Final Destination's edges are at about ±85.57), stick held either way: staying,
+/// stopping at the ledge, or falling off.
+#[test]
+fn ground_coll_ledges() {
+    let teeter = leaf_check::sym("ft_80084280");
+    let slide = leaf_check::sym("ft_80084104");
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procMap",
+        20,
+        &|call, i| {
+            let fp = user_data_arg(call);
+            call.addr = if i % 2 == 0 { teeter } else { slide };
+            let x = [80.0, 84.0, 85.0, 85.5, 86.0][i % 5] * [1.0, -1.0][i / 5 % 2];
+            poke_f32(call, fp + 0xB0, x);
+            poke_f32(call, fp + 0xB4, 0.0);
+            // The stick (`input.lstick[0].x`) toward the edge or away.
+            poke_f32(call, fp + 0x620, [1.0, -1.0, 0.0][i % 3] * x.signum());
+            poke_f32(call, fp + 0x2C, [1.0, -1.0][i / 3 % 2]);
+            poke_u32(call, fp + 0xE0, 0);
+        },
+        &|g, maps, call| {
+            let gobj = gobj_arg(maps, call);
+            if call.addr == leaf_check::sym("ft_80084280") {
+                g.ground_coll_teeter(gobj);
+            } else {
+                g.ground_coll(gobj);
+            }
+            Ret::Nothing
+        },
+    );
+}
+
+/// `Fighter_procMap` with the ECB lock running out this frame or still counting.
+#[test]
+fn proc_map_ecb_lock() {
+    check_calls_with(
+        &calls_dir(),
+        "Fighter_procMap",
+        20,
+        &|call, i| {
+            let fp = user_data_arg(call);
+            poke_u32(call, fp + 0x88C, [1, 3][i % 2]);
+            // `CollData::x130_flags`, locked and its neighbor bit set.
+            let flags = peek_u32(call, fp + 0x820);
+            poke_u32(call, fp + 0x820, flags | 0x18);
+        },
+        &|g, maps, call| {
+            run_proc(g, gobj_arg(maps, call), CodeRef(0x8006_C27C));
+            Ret::Nothing
+        },
+    );
+}

@@ -5,6 +5,7 @@
 use gekko_fp as fp;
 
 use super::super::code::{run_fighter_cb, unported_call};
+use super::super::gm::DB_DEBUG_ROM;
 use super::super::state::Running;
 use super::anim::x594_bit;
 use super::common::{GA_AIR, GA_GROUND};
@@ -459,7 +460,12 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
         run_fighter_cb(g, gobj, cb);
     }
     if g.game.fighters[f.0].ground_or_air == GA_GROUND {
-        unported_call("mpGetSpeed");
+        let fp = &g.game.fighters[f.0];
+        let geometry = g.game.geometry.as_ref().expect("no collision geometry");
+        if let Some(d) = geometry.line_speed(fp.coll_data.floor.index, fp.cur_pos) {
+            let fp = &mut g.game.fighters[f.0];
+            fp.cur_pos = fp.cur_pos.sdk_add(d);
+        }
     }
     let fp = &mut g.game.fighters[f.0];
     fp.cur_pos.x = mem(fp::fadds(reg(fp.cur_pos.x), reg(wind.x)));
@@ -496,7 +502,10 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
     }
     let fp = &mut g.game.fighters[f.0];
     if fp.dmg.x18A4_knockbackMagnitude != 0.0 && !fp.x221C_b6 {
-        unported_call("un_80322258");
+        let x = fp.cur_pos.x;
+        if !g.near_side_blast_zone(x) {
+            g.game.fighters[f.0].dmg.x18A4_knockbackMagnitude = 0.0;
+        }
     }
     g.hurt_capsules_follow(gobj);
 }
@@ -508,6 +517,54 @@ pub fn proc_cpu(g: &mut Running, gobj: GObjId) {
     if !fp.is_sleeping && g.is_cpu_controlled(fp) {
         unported_call("ftCo_800B3900");
     }
+}
+
+/// `Fighter_procMap`: the action's environment collision (`coll_cb`), after the ECB lock's
+/// countdown, with the model put at the fighter's position before and after.
+#[doc(alias = "Fighter_procMap")]
+pub fn proc_map(g: &mut Running, gobj: GObjId) {
+    let f = g.game.fighter_id(gobj);
+    let fp = &mut g.game.fighters[f.0];
+    if fp.is_sleeping {
+        return;
+    }
+    if fp.ecb_lock != 0 {
+        fp.ecb_lock -= 1;
+        if fp.ecb_lock == 0 {
+            unlock_ecb(fp);
+        }
+    }
+    fp.x2223_b5 = false;
+    let root = g.root_jobj(gobj);
+    let pos = g.game.fighters[f.0].cur_pos;
+    jobj::set_translate(&mut g.game.objs.jobjs, root, pos);
+    if let Some(cb) = g.game.fighters[f.0].coll_cb {
+        run_fighter_cb(g, gobj, cb);
+        // `ftKb_SpecialN_800F1D24`: Kirby's inhale timer.
+        if g.game.fighters[f.0].kind == 4 {
+            unported_call("ftKb_SpecialN_800F1D24");
+        }
+    }
+    let fp = &g.game.fighters[f.0];
+    if fp.ground_or_air == GA_GROUND {
+        let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
+        g.clear_air_counters(slot, sub);
+    }
+    let pos = g.game.fighters[f.0].cur_pos;
+    if g.game.gm.db_level >= DB_DEBUG_ROM && (pos.x.is_nan() || pos.y.is_nan() || pos.z.is_nan()) {
+        panic!(
+            "fighter procMap pos error.\tpos.x={}\tpos.y={}",
+            pos.x, pos.y
+        );
+    }
+    jobj::set_translate(&mut g.game.objs.jobjs, root, pos);
+}
+
+/// `ftCommon_UnlockECB`: the ECB follows the fighter's bones again.
+#[doc(alias = "ftCommon_UnlockECB")]
+pub fn unlock_ecb(fp: &mut super::super::structs::Fighter) {
+    fp.ecb_lock = 0;
+    fp.coll_data.x130_flags &= !(1 << 4);
 }
 
 /// `Fighter_procAccessory`: the action's accessory callbacks (held items and effects that

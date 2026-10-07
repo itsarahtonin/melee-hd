@@ -55,6 +55,17 @@ impl Running<'_> {
         }
     }
 
+    /// `pl_80041280`: grounded, the frame's air-time counters clear (Nana's don't count).
+    #[doc(alias = "pl_80041280")]
+    pub fn clear_air_counters(&mut self, slot: i32, sub: i32) {
+        if sub == 1 {
+            return;
+        }
+        for e in &mut self.player_unk6a8(slot).x10 {
+            e.x10 = 0;
+        }
+    }
+
     /// `fn_8004138C`: a bonus for one input dominating the frame's counters.
     #[doc(alias = "fn_8004138C")]
     fn pl_8004138c(&mut self, slot: i32, sub: i32) {

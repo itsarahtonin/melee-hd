@@ -132,6 +132,8 @@ pub struct Game {
     pub magnify: ifMagnify,
     /// The game-mode layer's debug settings fighters read.
     pub gm: gm::Globals,
+    /// mpcoll's statics: the last pass's walls and correction, and the floor filter.
+    pub coll: crate::mp::coll::CollStatics,
     /// What the tick asked of the audio and pad drivers so far.
     pub events: Vec<Event>,
     /// The controllers as fighters read them each frame (`HSD_PadGameStatus`).

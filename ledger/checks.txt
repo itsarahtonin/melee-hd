@@ -556,3 +556,12 @@ ftCo_800C5240	leaf-check fighter: state_entries reaches it in calls that compare
 ftCo_DownSpot_Enter	leaf-check fighter: state_entries reaches it in calls that compare clean
 ftCo_Fall_Enter	leaf-check fighter: state_entries reaches it in calls that compare clean
 ftCo_FallAerial_Enter	leaf-check fighter: state_entries reaches it in calls that compare clean
+pl_80041280	leaf-check fighter: proc_map reaches it in calls that compare clean
+Fighter_procMap	leaf-check fighter: proc_map reaches it in calls that compare clean
+ft_800827A0	leaf-check fighter: proc_map reaches it in calls that compare clean
+ft_80084104	leaf-check fighter: proc_map reaches it in calls that compare clean
+ft_80084280	leaf-check fighter: proc_map reaches it in calls that compare clean
+ftCo_8009A3C8	leaf-check fighter: ground_coll_ledges reaches it in calls that compare clean
+grDynamicAttr_801CA284	leaf-check fighter: proc_map reaches it in calls that compare clean
+un_80322258	leaf-check fighter: proc_update reaches it in calls that compare clean
+ftCommon_UnlockECB	leaf-check fighter: proc_map_ecb_lock runs out the lock on saved procMap states

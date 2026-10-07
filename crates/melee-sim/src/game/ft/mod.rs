@@ -11,6 +11,7 @@ pub mod anim;
 pub mod bind;
 pub mod co;
 pub mod colanim;
+pub mod coll;
 pub mod commands;
 pub mod common;
 pub mod dynamics;

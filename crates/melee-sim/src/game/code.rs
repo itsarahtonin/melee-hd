@@ -39,6 +39,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         0x8006_ABA0 => fighter::proc_cpu(game, gobj),
         0x8006_AD10 => game.proc_input(gobj),
         0x8006_B82C => fighter::proc_update(game, gobj),
+        0x8006_C27C => fighter::proc_map(game, gobj),
         0x8006_C624 => fighter::proc_accessory(game, gobj),
         0x8006_C80C => fighter::proc_coll_pos(game, gobj),
         0x8006_CA5C => fighter::proc_grab_coll(game, gobj),
@@ -97,6 +98,9 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         0x800C_B474 => g.co_jump_phys(gobj),
         0x8008_FB18 => g.co_damage_phys(gobj),
         0x8008_FF84 => g.co_damage_fly_phys(gobj),
+        // Collision.
+        0x8008_A678 | 0x800D_5F38 => g.ground_coll_teeter(gobj),
+        0x8008_AE10 | 0x8008_B638 | 0x8008_CD48 => g.ground_coll(gobj),
         // Hitlag.
         0x8008_E4F0 => g.co_damage_hitlag(gobj),
         other => unported("fighter callback", other),

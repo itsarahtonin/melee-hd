@@ -451,6 +451,9 @@ impl Importer<'_> {
             base: MEM1,
         };
         self.game.magnify = ifMagnify::import(&mem, sym("ifMagnify_804A1DE0"), self);
+        let (coll, filter_gobj) = crate::read_coll_statics(&cap.call.mem1);
+        self.game.coll = coll;
+        self.game.coll.floor_filter_gobj = self.import_handle("GObjId", filter_gobj).map(GObjId);
         self.game.ft.wind_sources = self.u32(sym("ft_804D6578"));
         self.game.ft.bury_things = self.u32(sym("ftDevice_BuryThingCount"));
         self.game.vs = VsSceneController::import(&mem, VS_CONTROLLER, self);

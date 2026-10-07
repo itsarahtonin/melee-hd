@@ -272,6 +272,38 @@ fn agreement(mem: &[u8], file: &[u8]) -> (usize, usize) {
     (same, n)
 }
 
+/// mpcoll's statics in memory (`mpColl_80458810` and the `mpColl_804D64xx` words), the floor
+/// filter's fighter as its address (for the caller to map).
+pub fn read_coll_statics(mem1: &[u8]) -> (melee_sim::mp::coll::CollStatics, u32) {
+    use melee_sim::game::handles::CodeRef;
+    use melee_sim::vec::Vec3;
+    let at = |a: u32| {
+        let i = (a - MEM1) as usize;
+        u32::from_be_bytes(mem1[i..i + 4].try_into().unwrap())
+    };
+    let r = |n: &str| at(import::sym(n));
+    let walls = import::sym("mpColl_80458810");
+    let f = |a: u32| f32::from_bits(at(a));
+    let code = |a: u32| (a != 0).then_some(CodeRef(a));
+    let s = melee_sim::mp::coll::CollStatics {
+        right_walls: std::array::from_fn(|i| at(walls + 4 * i as u32) as i32),
+        right_count: r("mpColl_804D6488") as i32,
+        left_walls: std::array::from_fn(|i| at(walls + 0x24 + 4 * i as u32) as i32),
+        left_count: r("mpColl_804D648C") as i32,
+        max_x: f(import::sym("mpColl_804D6490_max_x")),
+        line_id: r("mpColl_804D6494_line_id") as i32,
+        flags: r("mpColl_804D6498_flags"),
+        normal: Vec3::new(f(walls + 0x48), f(walls + 0x4C), f(walls + 0x50)),
+        ecb_tiny: r("mpColl_IsEcbTiny") != 0,
+        floor_filter: code(r("mpColl_804D64A0")),
+        floor_filter_gobj: None,
+        x64a8: code(r("mpColl_804D64A8")),
+        stale_reads: 0,
+        watchdog: None,
+    };
+    (s, r("mpColl_804D64A4"))
+}
+
 /// Maps addresses in loaded archives to `DataRef`s.
 pub struct DataMap {
     pub loaded: Vec<Loaded>,

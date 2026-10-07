@@ -199,10 +199,25 @@ impl Running<'_> {
         }
     }
 
-    /// Whether two floor lines are the same or neighbours; the neighbour test needs the
-    /// stage's collision geometry, which isn't on `Game` yet.
+    /// Whether two floor lines are the same or neighbours.
     fn floors_meet(&self, a: i32, b: i32) -> bool {
-        a == b || unported_call("mpLineGetNext")
+        let geometry = self.game.geometry.as_ref().expect("no collision geometry");
+        a == b || geometry.line_next(a) == b || geometry.line_prev(a) == b
+    }
+
+    /// Whether `x` is within the crowd's margin of the stage's sides (`gCrowdConfig`'s
+    /// `horiz_margin` inside the enabled floors' bounds), `un_80322258`.
+    #[doc(alias = "un_80322258")]
+    pub fn near_side_blast_zone(&self, x: f32) -> bool {
+        let crowd = self.load_common(0x54);
+        let margin = reg(self.data.f32(crowd.at(0x2C)));
+        let b = self
+            .game
+            .geometry
+            .as_ref()
+            .expect("no collision geometry")
+            .bounds[1];
+        reg(x) < fp::fadds(margin, reg(b.left)) || reg(x) > fp::fsubs(reg(b.right), margin)
     }
 
     /// `ftCommon_8007DD7C`: pushes from the other grounded fighters on the same floor.
