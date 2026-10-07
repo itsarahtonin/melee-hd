@@ -299,8 +299,8 @@ impl Importer<'_> {
         // Animated particle events reach the game's effects once it has set this.
         let dptcl = cap.u32(sym("dptcl_callback")) != 0;
         melee_sim::hsd::jobj::set_dptcl_callback(&mut self.game.objs, dptcl);
-        // Slippi's playback codes replace the call at 0x8021AAE4 (`bl grLast_8021B2E8`).
-        self.game.rules.slippi = cap.u32(0x8021_AAE4) != 0x4800_0805;
+        // The Slippi ruleset's codes the game runs (Final Destination's background is one).
+        (self.game.rules, self.game.ucf) = crate::playback::rules(&cap.call.mem1);
     }
 
     /// HSD's ID table (`default_table`): joints by the descriptor they were loaded from.

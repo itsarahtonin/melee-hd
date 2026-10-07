@@ -46,14 +46,25 @@ pub const OBJ_FOG: u8 = 4;
 /// The user data kind of stage objects.
 pub const USER_DATA_GROUND: u8 = 3;
 
-/// Gameplay toggles (`docs/architecture.md`, rulesets).
+/// Gameplay toggles (`docs/architecture.md`, rulesets): the Slippi ruleset's codes, each rule
+/// on or off ([`Rules::from_codes`] reads them from a replay; `game::slippi` lists them).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Rules {
-    /// The Slippi ruleset's online determinism fixes from Slippi's playback codes: the stage
-    /// objects' user data is zeroed when allocated (`Ground_GetStageGObj`), and Final
-    /// Destination's background cycle keeps the random seed it draws from to itself
+    /// The online determinism fixes (`Common` and `Online/Core`): among those the ported code
+    /// reaches, the stage objects' user data is zeroed when allocated (`Ground_GetStageGObj`),
+    /// and Final Destination's background cycle keeps the random seed it draws from to itself
     /// (`grLast_8021AAB0`).
     pub slippi: bool,
+    /// UCF 0.84 (`game::ucf`).
+    pub ucf: bool,
+    /// Neutral spawn points.
+    pub neutral_spawn: bool,
+    /// Wobbling prevention.
+    pub prevent_wobbling: bool,
+    /// Off-screen damage from the stage's camera limits.
+    pub offscreen_limits: bool,
+    /// The Ice Climbers' freeze glitch fix.
+    pub freeze_glitch_fix: bool,
 }
 
 /// What a GObj's HSD object is (`hsd_obj`, by its `obj_kind`).
@@ -196,6 +207,10 @@ pub struct Game {
     pub gm: gm::Globals,
     /// What the tick asked of the audio and pad drivers since the frontend last took them.
     pub events: Vec<Event>,
+    /// Slippi replay playback's state, in a match a replay drives (`playback`).
+    pub playback: Option<super::playback::Playback>,
+    /// UCF's pad buffer (with [`Rules::ucf`]).
+    pub ucf: super::ucf::Pads,
 }
 
 /// The game as the scheduler's host for one call: the state and the game data it reads.

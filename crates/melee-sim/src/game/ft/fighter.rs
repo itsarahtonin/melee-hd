@@ -226,7 +226,11 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         let fp = &g.game.fighters[f.0];
         if fp.dmg.x1830_percent < mem(fp::frsp(f64::from(limit))) {
             let slot = i32::from(fp.player_idx);
-            let off = g.magnify_offscreen(slot) && g.game.player_more_flags_bit3(slot);
+            let off = if g.game.rules.offscreen_limits {
+                g.game.offscreen_limits(f)
+            } else {
+                g.magnify_offscreen(slot)
+            } && g.game.player_more_flags_bit3(slot);
             let fp = &mut g.game.fighters[f.0];
             if off {
                 fp.dmg.x1910 = fp.dmg.x1910.wrapping_add(1);

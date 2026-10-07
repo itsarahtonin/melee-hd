@@ -292,6 +292,7 @@ impl<'a> Importer<'a> {
     pub fn match_state(&mut self) {
         self.globals();
         self.pads();
+        self.playback();
         let cap = self.cap;
         let mem = Mem {
             bytes: &cap.call.mem1,
@@ -417,6 +418,7 @@ impl<'a> Comparer<'a> {
     /// The match's state, as [`Importer::match_state`] imports it, after [`Comparer::globals`].
     pub fn match_state(&mut self) {
         self.globals();
+        self.playback();
         let mem = Mem {
             bytes: self.mem,
             base: MEM1,

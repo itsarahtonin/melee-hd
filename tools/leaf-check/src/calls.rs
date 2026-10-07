@@ -213,6 +213,9 @@ fn run_one(
     imp.stage();
     imp.ids();
     imp.audio(bank);
+    // The player blocks, pads, scene and match state, and in a replay run Slippi's playback
+    // with the ruleset's state: playback's codes patch functions the reference runs patched.
+    imp.match_state();
     let Importer { mut game, maps, .. } = imp;
     // The imported state must be memory before anything runs, or differences afterwards
     // wouldn't be the call's.
@@ -221,6 +224,7 @@ fn run_one(
     before.stage();
     before.ids();
     before.audio();
+    before.match_state();
     if !before.diffs.is_empty() {
         return Outcome::Failed(format!(
             "the import doesn't round-trip: {}",
@@ -265,6 +269,7 @@ fn run_one(
     cmp.stage();
     cmp.ids();
     cmp.audio();
+    cmp.match_state();
     match ret {
         Ret::Nothing => {}
         Ret::Int(v) if v != r3 => cmp

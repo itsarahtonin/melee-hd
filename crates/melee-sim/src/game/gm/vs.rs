@@ -917,6 +917,12 @@ impl Running<'_> {
         } else {
             let o = self.game.match_outcome();
             self.game.vs.state.match_result = o;
+            if self.game.playback.is_some() {
+                self.game.playback_count_frame();
+                if o == OUTCOME_NONE {
+                    self.game.playback_read_frame();
+                }
+            }
             if o != OUTCOME_NONE {
                 self.vs_match_over();
                 return;
@@ -932,6 +938,9 @@ impl Running<'_> {
         self.game.vs.state.match_result = o;
         if o != OUTCOME_NONE {
             self.vs_match_over();
+        } else if self.game.playback_terminated() {
+            // `code_8016D304`: the replay ended.
+            self.vs_quit(-1, OUTCOME_NO_CONTEST);
         } else {
             self.vs_tick_clock();
         }
@@ -1025,9 +1034,15 @@ impl Running<'_> {
                 continue;
             }
             let port = g.player_port(i);
-            g.assert_retail();
-            if g.pads.copy[usize::from(port as u8)].trigger & 0x1000 == 0 {
-                continue;
+            if g.playback.is_some() {
+                if !g.playback_stock_steal(port as u8) {
+                    continue;
+                }
+            } else {
+                g.assert_retail();
+                if g.pads.copy[usize::from(port as u8)].trigger & 0x1000 == 0 {
+                    continue;
+                }
             }
             let team = g.player_team(i);
             let donor = (0..6)
@@ -1343,6 +1358,10 @@ impl Running<'_> {
                 g.set_player_facing(i, dir);
             }
             g.set_player_pos(i, pos);
+            if g.rules.neutral_spawn {
+                self.neutral_spawn(i);
+            }
+            let g = &mut *self.game;
             let teams = u8::from(g.vs.start.is_teams == 1);
             let color = player_color(
                 g.player_port(i) as u8,
@@ -1495,6 +1514,9 @@ impl Game {
                 }
             }
         }
+        if self.playback.is_some() {
+            self.playback_settle_costumes();
+        }
     }
 
     /// Whether the stage starts with its alternate layout, `fn_8016E5C0`: the rules' choice
@@ -1552,6 +1574,9 @@ impl Running<'_> {
     pub fn start_vs(&mut self, d: &StartMeleeData, files: MatchArchives) {
         // `db_Setup` sets the debug menus up; on a retail disc it does nothing that lasts.
         self.game.assert_retail();
+        if let Some(seed) = self.game.playback.as_ref().map(|p| p.start_seed) {
+            self.playback_start(seed);
+        }
         self.game.set_db_pause_handlers(PAUSE_ON_START, STEP_ON_Z);
         self.game.set_pre_gobj_proc(DB_RUN_EVERY_FRAME);
         self.game.set_clock_mask(1);

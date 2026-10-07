@@ -3,7 +3,6 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
 use super::super::super::state::Running;
 use super::super::common::GA_AIR;
 use crate::fpu::{mem, reg};
@@ -111,19 +110,22 @@ impl Running<'_> {
     pub fn co_damage_hitlag(&mut self, gobj: GObjId) {
         let c = self.common();
         let (min, window, scale) = (reg(c.f32(0x4B0)), c.i32(0x4B4), reg(c.f32(0x4B8)));
-        let fp = self.game.fighter_mut(gobj);
+        let fp = self.game.fighter(gobj);
         let (sx, sy) = (reg(fp.input.lstick[0].x), reg(fp.input.lstick[0].y));
         if fp.allow_sdi
             && fp::fadds(fp::fmuls(sx, sx), fp::fmuls(sy, sy)) >= fp::fmuls(min, min)
             && (i32::from(fp.active_timer.lstick.x) < window
-                || i32::from(fp.active_timer.lstick.y) < window)
+                || i32::from(fp.active_timer.lstick.y) < window
+                || self.game.rules.ucf && self.ucf_sdi(gobj, min))
         {
+            let fp = self.game.fighter_mut(gobj);
             let (dx, dy) = (fp::fmuls(sx, scale), fp::fmuls(sy, scale));
             fp.cur_pos.x = mem(fp::fadds(reg(fp.cur_pos.x), dx));
             fp.cur_pos.y = mem(fp::fadds(reg(fp.cur_pos.y), dy));
             fp.active_timer.lstick.x = 254;
             fp.active_timer.lstick.y = 254;
-            unported_call("pl_800401F0");
+            let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
+            self.game.add_sdi_distance(slot, sub, dx, dy);
         }
     }
 }

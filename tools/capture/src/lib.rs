@@ -6,6 +6,7 @@ pub mod audio;
 pub mod compare;
 pub mod import;
 pub mod items;
+pub mod playback;
 pub mod stage;
 pub mod vs;
 

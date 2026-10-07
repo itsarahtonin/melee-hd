@@ -232,7 +232,10 @@ impl<'a> Comparer<'a> {
                 &pp,
                 "s_link and function",
                 (pr.s_link, pr.on_invoke.0),
-                (self.u8(tp + 0xC), self.u32(tp + 0x14)),
+                (
+                    self.u8(tp + 0xC),
+                    crate::playback::code_ref(self.mem, self.u32(tp + 0x14)).0,
+                ),
             );
             self.check(
                 &pp,

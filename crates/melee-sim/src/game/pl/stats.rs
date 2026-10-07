@@ -40,6 +40,16 @@ impl _StaticPlayer {
 }
 
 impl Game {
+    /// Adds how far smash DI moved a player to their stats (`xCDC`, `xCE0`), `pl_800401F0`.
+    #[doc(alias = "pl_800401F0")]
+    pub fn add_sdi_distance(&mut self, slot: i32, _sub: i32, dx: f64, dy: f64) {
+        use gekko_fp as fp;
+        let abs = |v: f64| if v < fp::frsp(0.0) { fp::fneg(v) } else { v };
+        let t = self.player_stale_moves(slot);
+        t.xCDC = crate::fpu::mem(fp::fadds(crate::fpu::reg(t.xCDC), abs(dx)));
+        t.xCE0 = crate::fpu::mem(fp::fadds(crate::fpu::reg(t.xCE0), abs(dy)));
+    }
+
     /// Clears every slot for a new match, `Player_InitAllPlayers`.
     #[doc(alias = "Player_InitAllPlayers")]
     pub fn init_all_players(&mut self) {

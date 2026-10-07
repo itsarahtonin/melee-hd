@@ -293,7 +293,7 @@ impl<'a> Importer<'a> {
                 flags_2: flags & 0x40 != 0,
                 flags_3: flags >> 4 & 3,
                 gobj: self.maps.gobjs[&self.u32(p + 0x10)],
-                on_invoke: melee_sim::game::handles::CodeRef(self.u32(p + 0x14)),
+                on_invoke: crate::playback::code_ref(&self.cap.call.mem1, self.u32(p + 0x14)),
             };
             self.game.world.procs[id.0] = proc;
         }

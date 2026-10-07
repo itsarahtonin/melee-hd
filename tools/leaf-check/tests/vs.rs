@@ -145,6 +145,9 @@ fn theirs(
     run: Option<&Theirs<'_>>,
 ) -> (Vec<u8>, u32, u32) {
     call.load(ctx);
+    // A replay run's captures hold Slippi's playback codes: the functions they patch run as
+    // patched.
+    leaf_check::register_patched(ctx);
     match run {
         Some(run) => {
             let (r3, r4) = run(ctx, call);

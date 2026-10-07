@@ -12,9 +12,13 @@ use super::code;
 use super::gm::{self, scene, vs};
 use super::handles::CodeRef;
 use super::mirror::{Cx, Mem, Mirror};
+use super::playback::{self, Playback};
+use super::slippi::{self, CodeError};
 use super::state::{Event, Game, Rules, Running};
 use super::structs::StartMeleeData;
+use super::ucf;
 use crate::input::controller::{PadData, Requests};
+use crate::input::pad::PadStatus;
 
 /// What a match starts from.
 #[derive(Clone, Debug)]
@@ -27,6 +31,26 @@ pub struct Settings {
     /// The game mode the match runs in (`GameModeKind`): VS for an ordinary match.
     pub game_mode: u8,
     pub rules: Rules,
+    /// UCF's pad buffer as the match starts (with `rules.ucf`).
+    pub ucf: ucf::Pads,
+    /// A Slippi replay drives the match through Slippi's playback codes
+    /// ([`Match::step_replay`]).
+    pub playback: bool,
+}
+
+/// What Slippi's playback hands the game at a replay's start (the Slippi EXI device's answer
+/// to its game info request), from the replay's game start event.
+#[derive(Clone, Debug)]
+pub struct ReplayStart {
+    /// The match's `StartMeleeData` as the replay recorded it (0x138 bytes), with the
+    /// device's one change: a player who started the match as Sheik starts as Sheik.
+    pub info: Vec<u8>,
+    pub seed: u32,
+    /// The players' nametags, eight characters each.
+    pub nametags: [[u16; 8]; 4],
+    /// The replay's code list as playback applies it: without the codes it leaves out, which
+    /// leaves the codes that affect gameplay.
+    pub codes: Vec<u8>,
 }
 
 /// A player in [`Settings::vs`].
@@ -87,7 +111,33 @@ impl Settings {
             seed: 0,
             game_mode: gm::GM_VS,
             rules: Rules::default(),
+            ucf: ucf::Pads::default(),
+            playback: false,
         }
+    }
+
+    /// A replay's match as Slippi's playback codes set it up (`fn_8016E730+0x18`): the
+    /// replay's `StartMeleeData` with its callbacks cleared (the codes zero 0x40 to 0x5C) and
+    /// the empty nametags of its human players dropped, its seed, and the rules its code list
+    /// makes. The replay's UCF toggles, PAL and Pokémon Stadium flags and player names go to
+    /// places only codes these rules don't include read, and the HUD.
+    pub fn from_replay(r: &ReplayStart) -> Result<Settings, CodeError> {
+        let mut info = r.info.clone();
+        info[0x40..0x5C].fill(0);
+        for (i, tag) in r.nametags.iter().enumerate() {
+            let p = 0x60 + 0x24 * i;
+            if info[p + 1] == 0 && info[p + 10] != 0x78 && tag[0] >> 8 == 0 {
+                info[p + 10] = 0x78;
+            }
+        }
+        let codes = slippi::parse_codes(&r.codes);
+        let mut s = Settings::from_game_info(&info, r.seed);
+        // Playback boots into the debug VS mode, whose scene runs the match.
+        s.game_mode = gm::GM_DEBUG_VS;
+        s.rules = Rules::from_codes(&codes)?;
+        s.ucf = ucf::Pads::from_codes(&codes).unwrap_or_default();
+        s.playback = true;
+        Ok(s)
     }
 
     /// The settings a Slippi replay's game start records: its game info block (the match's
@@ -108,6 +158,8 @@ impl Settings {
             seed,
             game_mode: gm::GM_VS,
             rules: Rules::default(),
+            ucf: ucf::Pads::default(),
+            playback: false,
         }
     }
 }
@@ -164,6 +216,14 @@ impl Match {
             ..Game::default()
         };
         game.objs.rng.seed = settings.seed;
+        game.ucf = settings.ucf;
+        if settings.playback {
+            game.playback = Some(Playback {
+                start_seed: settings.seed,
+                ..Playback::default()
+            });
+            game.pads.playback = true;
+        }
         let mut data = Archives::default();
         // `lb_80014534`: the rumble scripts, then the match's own files in the order its
         // setup loads them.
@@ -192,6 +252,25 @@ impl Match {
             game: &mut self.game,
             data: &self.data,
         }
+    }
+
+    /// One frame of a replay's match: what the tick may ask the Slippi device, answered from
+    /// `source`, and a poll of four connected controllers at rest, as a replay run's
+    /// controllers report.
+    pub fn step_replay(&mut self, source: &mut dyn playback::Source) -> Frame {
+        let answers = Playback::answers(&self.game, source);
+        self.game
+            .playback
+            .as_mut()
+            .expect("a replay's match")
+            .answers = Some(answers);
+        let out = self.step([PadStatus::default(); 4]);
+        self.game
+            .playback
+            .as_mut()
+            .expect("a replay's match")
+            .answers = None;
+        out
     }
 
     /// One frame: the controllers' poll queued, then one engine tick.

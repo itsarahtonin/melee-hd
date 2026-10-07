@@ -1,0 +1,12 @@
+[package]
+name = "melee-replay"
+description = "Slippi replays as melee-sim match input: the settings and frames Slippi's playback hands the game"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+melee-sim.workspace = true
+ssbm-slippi.workspace = true
