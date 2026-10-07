@@ -326,11 +326,11 @@ fn prune_empty_lines(verts: &[Vec2], lines: &mut [Line]) {
 }
 
 impl<K: Kinds> Geometry<K> {
-    /// Loads a stage's collision data, `mpLibLoad`: `coll_data` is the stage archive's
+    /// Loads a stage's collision data, the geometry part of `mpLibLoad` (which
+    /// `game::gr::setup::load_collision` ports whole): `coll_data` is the stage archive's
     /// `coll_data` (None for the default floor), `scale` the stage's scale
     /// (`Ground_801C0498`), `grkind` the stage kind. The caller resets the stage's dynamic
     /// attribute areas first (`grDynamicAttr_801CA0B4`), as the original does here.
-    #[doc(alias = "mpLibLoad")]
     pub fn load(data: &Archives, coll_data: Option<DataRef>, scale: f32, grkind: i32) -> Self {
         let (verts, mut lines, ranges, descs) = match coll_data {
             Some(c) => read_data(data, c),

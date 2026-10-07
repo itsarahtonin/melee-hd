@@ -1,6 +1,7 @@
 //! Dispatch of the original's function pointers. A [`CodeRef`] is the original function's
 //! address; each table here maps the addresses a kind of pointer can hold to their ports.
 
+use super::camera;
 use super::handles::CodeRef;
 use super::state::Running;
 use melee_data::archive::Archives;
@@ -15,6 +16,7 @@ use crate::hsd::particle::{Callback, GeneratorHook, ParticleId, UserData, UserFu
 pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
     use super::gr::{dynamic_attr, ground, last};
     match proc.0 {
+        camera::PROC => camera::proc(game, gobj),
         0x801C_1CD0 => ground::proc_anim(game, gobj),
         0x801C_1D38 => ground::proc_callback(game, gobj),
         0x801C_0C2C => ground::proc_watch(game, gobj),

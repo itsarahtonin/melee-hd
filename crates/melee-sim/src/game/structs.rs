@@ -2387,7 +2387,7 @@ pub struct Fighter {
     /// +0x88c
     pub ecb_lock: i32,
     /// +0x890
-    pub x890_cameraBox: RawPtr,
+    pub x890_cameraBox: Option<CameraBoxId>,
     /// +0x894
     pub cur_anim_frame: f32,
     /// +0x898
@@ -3129,7 +3129,7 @@ impl Default for Fighter {
             x6E4: Default::default(),
             coll_data: Default::default(),
             ecb_lock: 0,
-            x890_cameraBox: Default::default(),
+            x890_cameraBox: None,
             cur_anim_frame: 0.0,
             x898_unk: 0.0,
             frame_speed_mul: 0.0,
@@ -3855,7 +3855,7 @@ pub struct Item {
     /// +0x51c
     pub x51C: Option<GObjId>,
     /// +0x520
-    pub x520_cameraBox: RawPtr,
+    pub x520_cameraBox: Option<CameraBoxId>,
     /// +0x524
     pub x524_cmd: CommandInfo,
     /// +0x548
@@ -4177,7 +4177,7 @@ impl Default for Item {
             ecb_lock: 0,
             owner: None,
             x51C: None,
-            x520_cameraBox: Default::default(),
+            x520_cameraBox: None,
             x524_cmd: Default::default(),
             x548_colorOverlay: Default::default(),
             x5C8: 0,
@@ -5234,6 +5234,123 @@ impl Default for Camera {
     }
 }
 
+/// `CmSubjectExtents`, 0x14 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CmSubjectExtents {
+    /// +0x0
+    pub h: Vec2,
+    /// +0x8
+    pub v: Vec3,
+}
+
+impl Default for CmSubjectExtents {
+    fn default() -> Self {
+        CmSubjectExtents {
+            h: Default::default(),
+            v: Default::default(),
+        }
+    }
+}
+
+/// `CmSubject`, 0x6c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CmSubject {
+    /// +0x0
+    pub next: Option<CameraBoxId>,
+    /// +0x4
+    pub prev: Option<CameraBoxId>,
+    /// +0x8
+    pub state: i32,
+    /// +0xc (bits 0..+1)
+    pub on_ledge: bool,
+    /// +0xc (bits 1..+1)
+    pub force_inactive: bool,
+    /// +0xc (bits 2..+1)
+    pub was_framed: bool,
+    /// +0xe
+    pub state_timer: i16,
+    /// +0x10
+    pub pos: Vec3,
+    /// +0x1c
+    pub bone_pos: Vec3,
+    /// +0x28
+    pub facing_dir: f32,
+    /// +0x2c
+    pub ext: CmSubjectExtents,
+    /// +0x40
+    pub target_ext: CmSubjectExtents,
+    /// +0x54
+    pub x54: Vec3,
+    /// +0x60
+    pub x60: Vec3,
+}
+
+impl Default for CmSubject {
+    fn default() -> Self {
+        CmSubject {
+            next: None,
+            prev: None,
+            state: 0,
+            on_ledge: false,
+            force_inactive: false,
+            was_framed: false,
+            state_timer: 0,
+            pos: Default::default(),
+            bone_pos: Default::default(),
+            facing_dir: 0.0,
+            ext: Default::default(),
+            target_ext: Default::default(),
+            x54: Default::default(),
+            x60: Default::default(),
+        }
+    }
+}
+
+/// `CameraDebugMode`, 0x5c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CameraDebugMode {
+    /// +0x0
+    pub last_mode: i32,
+    /// +0x4
+    pub ply_slot: i32,
+    /// +0x8
+    pub follow_int_offset: Vec3,
+    /// +0x14
+    pub follow_eye_offset: Vec3,
+    /// +0x20
+    pub follow_eye_pos: Vec3,
+    /// +0x2c
+    pub follow_int_pos: Vec3,
+    /// +0x38
+    pub follow_fov: f32,
+    /// +0x3c
+    pub free_int_pos: Vec3,
+    /// +0x48
+    pub free_eye_pos: Vec3,
+    /// +0x54
+    pub free_fov: f32,
+    /// +0x58
+    pub _58: [u8; 4],
+}
+
+impl Default for CameraDebugMode {
+    fn default() -> Self {
+        CameraDebugMode {
+            last_mode: 0,
+            ply_slot: 0,
+            follow_int_offset: Default::default(),
+            follow_eye_offset: Default::default(),
+            follow_eye_pos: Default::default(),
+            follow_int_pos: Default::default(),
+            follow_fov: 0.0,
+            free_int_pos: Default::default(),
+            free_eye_pos: Default::default(),
+            free_fov: 0.0,
+            _58: [0; 4],
+        }
+    }
+}
+
 /// `_StaticPlayer_flags`, 0x1 bytes.
 #[derive(Clone, Debug, PartialEq)]
 pub struct _StaticPlayer_flags {
@@ -5878,6 +5995,75 @@ impl Default for _StaticPlayer {
             struct_func: None,
             stale_moves: Default::default(),
             xDB0: [0; 224],
+        }
+    }
+}
+
+/// `gm_controller_map`, 0x30 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct GmControllerMap {
+    /// +0x0
+    pub button: u64,
+    /// +0x8
+    pub trigger: u64,
+    /// +0x10
+    pub repeat: u64,
+    /// +0x18
+    pub release: u64,
+    /// +0x20
+    pub repeat2: u64,
+    /// +0x28
+    pub repeat_timer: i32,
+    /// +0x2c
+    pub x2C: i32,
+}
+
+impl Default for GmControllerMap {
+    fn default() -> Self {
+        GmControllerMap {
+            button: 0,
+            trigger: 0,
+            repeat: 0,
+            release: 0,
+            repeat2: 0,
+            repeat_timer: 0,
+            x2C: 0,
+        }
+    }
+}
+
+/// `controller_map`, 0x100 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ControllerMap {
+    /// +0x0
+    pub x0: [GmControllerMap; 5],
+    /// +0xf0
+    pub xF0: Option<CodeRef>,
+    /// +0xf4
+    pub xF4: u16,
+    /// +0xf6
+    pub xF6: u8,
+    /// +0xf8
+    pub xF8: u16,
+    /// +0xfa
+    pub xFA: u8,
+    /// +0xfc
+    pub xFC: u16,
+    /// +0xfe
+    pub xFE: u8,
+}
+
+impl Default for ControllerMap {
+    fn default() -> Self {
+        ControllerMap {
+            x0: core::array::from_fn(|_| Default::default()),
+            xF0: None,
+            xF4: 0,
+            xF6: 0,
+            xF8: 0,
+            xFA: 0,
+            xFC: 0,
+            xFE: 0,
         }
     }
 }

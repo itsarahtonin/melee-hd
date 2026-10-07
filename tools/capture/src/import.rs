@@ -6,10 +6,13 @@
 use std::collections::HashMap;
 
 use melee_data::archive::DataRef;
-use melee_sim::game::handles::{FighterId, GroundId, StartHookId};
+use melee_sim::game::camera::CameraBoxes;
+use melee_sim::game::handles::{CameraBoxId, FighterId, GroundId, StartHookId};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
-use melee_sim::game::structs::Fighter;
+use melee_sim::game::structs::{
+    _StaticPlayer, Camera, CameraDebugMode, CmSubject, ControllerMap, Fighter,
+};
 use melee_sim::hsd::aobj::{AObj, AObjId};
 use melee_sim::hsd::cobj::{CObj, CObjId};
 use melee_sim::hsd::dobj::{DObj, DObjId};
@@ -24,6 +27,7 @@ use melee_sim::hsd::pobj::{self, Binding, Envelope, PObj, PObjId, ShapeSet};
 use melee_sim::hsd::robj::{self, Exp, RObj, RObjId, Ref, Rvalue, RvalueId};
 use melee_sim::hsd::tobj::{Color, ImageRef, TObj, TObjId, TObjTev};
 use melee_sim::hsd::wobj::{WObj, WObjId};
+use melee_sim::input::controller::Status;
 use melee_sim::mp::IslandId;
 use melee_sim::mtx::Mtx34;
 use melee_sim::quat::Quat;
@@ -283,6 +287,108 @@ impl<'a> Importer<'a> {
         w.current_gobj = (cg != 0).then(|| self.maps.gobjs[&cg]);
     }
 
+    /// The game's globals the camera reads: the player slots, the game mode and the
+    /// controllers. [`Importer::stage`] imports them with the camera.
+    pub fn globals(&mut self) {
+        let cap = self.cap;
+        let mem = Mem {
+            bytes: &cap.call.mem1,
+            base: MEM1,
+        };
+        let players = sym("player_slots");
+        for i in 0..self.game.players.len() as u32 {
+            self.game.players[i as usize] =
+                _StaticPlayer::import(&mem, players + i * _StaticPlayer::SIZE, self);
+        }
+        self.game.game_mode = self.u8(sym("state_machine"));
+        let pads = sym("HSD_PadCopyStatus");
+        for i in 0..4 {
+            self.game.pad_copy[i] = self.pad_status(pads + 0x44 * i as u32);
+        }
+        self.game.controller_map = ControllerMap::import(&mem, sym("controller_map"), self);
+    }
+
+    /// An `HSD_PadStatus`.
+    fn pad_status(&self, a: u32) -> Status {
+        let f = |o: u32| self.f32(a + o);
+        let b = |o: u32| self.u8(a + o);
+        Status {
+            button: self.u32(a),
+            last_button: self.u32(a + 4),
+            trigger: self.u32(a + 8),
+            repeat: self.u32(a + 0xC),
+            release: self.u32(a + 0x10),
+            repeat_count: self.u32(a + 0x14) as i32,
+            stick_x: b(0x18) as i8,
+            stick_y: b(0x19) as i8,
+            sub_stick_x: b(0x1A) as i8,
+            sub_stick_y: b(0x1B) as i8,
+            analog_l: b(0x1C),
+            analog_r: b(0x1D),
+            analog_a: b(0x1E),
+            analog_b: b(0x1F),
+            nml_stick_x: f(0x20),
+            nml_stick_y: f(0x24),
+            nml_sub_stick_x: f(0x28),
+            nml_sub_stick_y: f(0x2C),
+            nml_analog_l: f(0x30),
+            nml_analog_r: f(0x34),
+            nml_analog_a: f(0x38),
+            nml_analog_b: f(0x3C),
+            cross_dir: b(0x40),
+            err: b(0x41) as i8,
+        }
+    }
+
+    /// The camera (`game_camera`), its boxes, its second CObj, its default field of view and
+    /// the debug cameras' state.
+    pub fn camera(&mut self) {
+        let cap = self.cap;
+        let mem = Mem {
+            bytes: &cap.call.mem1,
+            base: MEM1,
+        };
+        let base = self.u32(sym("cm_804D645C"));
+        // The array's length isn't kept: every box is on the framed list or the free list.
+        let mut n = 0;
+        let mut seen = 0;
+        for (head, link) in [("cm_804D6460", 0), ("cm_804D6458", 4)] {
+            let mut b = self.u32(sym(head));
+            while b != 0 {
+                n = n.max(box_index(base, b) + 1);
+                seen += 1;
+                b = self.u32(b + link);
+            }
+        }
+        if seen != n {
+            self.unhandled
+                .push(format!("{} camera boxes off both lists", n - seen));
+        }
+        let boxes = (0..n)
+            .map(|i| CmSubject::import(&mem, base + i * CmSubject::SIZE, self))
+            .collect();
+        let id = |s: &Self, name: &str| {
+            let b = s.u32(sym(name));
+            (b != 0).then(|| CameraBoxId(box_index(base, b)))
+        };
+        let boxes = CameraBoxes {
+            boxes,
+            free: id(self, "cm_804D6458"),
+            first: id(self, "cm_804D6460"),
+            last: id(self, "cm_804D6468"),
+        };
+        let cam = Camera::import(&mem, sym("game_camera"), self);
+        let copy = self.u32(sym("cm_804D6464"));
+        let cobj_copy = (copy != 0).then(|| self.cobj(copy));
+        let debug = CameraDebugMode::import(&mem, sym("cm_80453004"), self);
+        let c = &mut self.game.camera;
+        c.cam = cam;
+        c.boxes = boxes;
+        c.cobj_copy = cobj_copy;
+        c.fov = f32::from_bits(cap.u32(sym("cm_803BCCA0") + 0x40));
+        c.debug = debug;
+    }
+
     /// A fighter, through its generated mirror.
     pub fn fighter(&mut self, a: u32) -> FighterId {
         if let Some(&f) = self.maps.fighters.get(&a) {
@@ -386,7 +492,10 @@ impl<'a> Importer<'a> {
         self.maps.fobjs.insert(a, id);
         let n = self.u32(a);
         let next = (n != 0).then(|| self.fobj(n));
-        let head = self.data(self.u32(a + 8)).expect("FObj without data");
+        let ad_head = self.u32(a + 8);
+        let head = self
+            .data(ad_head)
+            .unwrap_or_else(|| panic!("FObj {a:#x}'s data {ad_head:#x} isn't in a loaded archive"));
         let ad = self.u32(a + 4);
         // A loaded FObj's cursor is null until its first request sets it; ours holds offset 0.
         let ad = if ad == 0 {
@@ -842,6 +951,16 @@ impl<'a> Importer<'a> {
     }
 }
 
+/// A camera box's index in the array at `base`.
+pub fn box_index(base: u32, addr: u32) -> u32 {
+    let off = addr.wrapping_sub(base);
+    assert!(
+        off.is_multiple_of(CmSubject::SIZE),
+        "camera box {addr:#x} isn't in the array at {base:#x}"
+    );
+    off / CmSubject::SIZE
+}
+
 fn blank_gobj() -> GObj<melee_sim::game::state::GameKinds> {
     GObj {
         classifier: 0,
@@ -874,6 +993,7 @@ impl Cx for Importer<'_> {
             "FighterId" => self.fighter(addr).0,
             "GroundId" => self.ground(addr).0,
             "StartHookId" => self.start_hook(addr).0,
+            "CameraBoxId" => box_index(self.u32(sym("cm_804D645C")), addr),
             "GObjId" => match self.maps.gobjs.get(&addr) {
                 Some(g) => g.0,
                 None => {

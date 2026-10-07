@@ -14,7 +14,7 @@ use melee_sim::hsd::jobj::{Contents, JObjId};
 use melee_sim::hsd::pobj::Binding;
 use melee_sim::hsd::robj::{self, RObjId, Ref};
 
-use crate::import::{Maps, sym};
+use crate::import::{Maps, box_index, sym};
 use crate::{DataMap, MEM1};
 
 pub struct Comparer<'a> {
@@ -140,6 +140,40 @@ impl<'a> Comparer<'a> {
                 i += 1;
             }
         }
+    }
+
+    /// The camera, its boxes, its second CObj, its default field of view and the debug
+    /// cameras' state. [`Comparer::stage`] compares them with the stage.
+    pub fn camera(&mut self) {
+        let mem = Mem {
+            bytes: self.mem,
+            base: MEM1,
+        };
+        let game = self.game;
+        let c = &game.camera;
+        c.cam.compare(&mem, sym("game_camera"), "camera", self);
+        let base = self.u32(sym("cm_804D645C"));
+        for (i, b) in c.boxes.boxes.iter().enumerate() {
+            let at = base + i as u32 * melee_sim::game::structs::CmSubject::SIZE;
+            b.compare(&mem, at, &format!("camera box {i}"), self);
+        }
+        for (name, ours) in [
+            ("cm_804D6458", c.boxes.free),
+            ("cm_804D6460", c.boxes.first),
+            ("cm_804D6468", c.boxes.last),
+        ] {
+            let theirs = self.u32(sym(name));
+            self.compare_handle(name, "CameraBoxId", ours.map(|b| b.0), theirs);
+        }
+        let copy = self.u32(sym("cm_804D6464"));
+        match c.cobj_copy {
+            Some(o) => self.cobj("camera cobj copy", o, copy),
+            None => self.check("camera cobj copy", "CObj", 0, copy),
+        }
+        let fov = self.u32(sym("cm_803BCCA0") + 0x40);
+        self.check("camera", "default fov", c.fov.to_bits(), fov);
+        c.debug
+            .compare(&mem, sym("cm_80453004"), "camera debug", self);
     }
 
     fn gobj(&mut self, path: &str, o: GObjId, t: u32) {
@@ -795,6 +829,7 @@ impl Cx for Comparer<'_> {
             "DObjId" => self.maps.dobjs.get(&theirs).map(|d| d.0),
             "GroundId" => self.maps.grounds.get(&theirs).map(|g| g.0),
             "StartHookId" => self.maps.start_hooks.get(&theirs).map(|h| h.0),
+            "CameraBoxId" if theirs != 0 => Some(box_index(self.u32(sym("cm_804D645C")), theirs)),
             _ => None,
         };
         let known = known.or_else(|| self.handles.get(&(kind, theirs)).copied());
