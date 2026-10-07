@@ -564,6 +564,10 @@ pub fn import_clock(mem1: &[u8], tb: u64) -> Clock {
             issued + 16 + melee_sim::audio::clock::DISC_LATENCY,
             melee_sim::audio::clock::EventKind::DiscDone,
         );
+        c.disc_timeout = Some(c.schedule(
+            issued + 16 + melee_sim::audio::clock::DISC_TIMEOUT,
+            melee_sim::audio::clock::EventKind::DiscTimeout,
+        ));
     }
     c
 }

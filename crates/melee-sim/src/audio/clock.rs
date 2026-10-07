@@ -19,10 +19,14 @@
 //!
 //! The constants are ssbm-rs's (`ssbm_sdk`'s `GAME_WAIT_STEP`, `DSP_FRAME_TICKS`, read steps)
 //! and the read counts of the code between waits, measured from its runs; they reproduce its
-//! tick starts and audio frames exactly over whole matches. Two things move ssbm-rs's
-//! timeline that this doesn't model: a cancelled alarm stays in ssbm-rs's event queue and cuts
-//! a wait short when its time comes (the disc driver's 10 s timeout, after every disc read),
-//! and an audio frame due inside a tick would run there; see `docs/architecture.md`.
+//! tick starts and audio frames exactly over whole matches.
+//!
+//! An event can be taken back before its time, as on the console: a cancelled or re-set alarm
+//! leaves the OS's queue, and a stopped audio DMA raises no more interrupts. Each disc read
+//! sets the disc driver's timeout alarm, which the read's interrupt cancels; ssbm-rs before
+//! its `ab3cd01` left such events queued, where they cut a wait short (see
+//! `docs/engine.md`). One thing this doesn't model: an audio frame due inside a tick would run
+//! there.
 
 /// Time base ticks per video field.
 pub const FIELD: u64 = 675_675;
@@ -49,6 +53,8 @@ pub const ARAM_CHUNK: u64 = 64;
 /// A disc read's time from its command to its interrupt, ssbm-rs's `DVD_LATENCY` (Slippi's
 /// fast disc speed; a drive's transfer time isn't modeled).
 pub const DISC_LATENCY: u64 = 20_250;
+/// The disc driver's timeout for a read (`DVDLowRead`'s alarm: 10 s of the time base).
+pub const DISC_TIMEOUT: u64 = 10 * 40_500_000;
 /// Where the audio interrupt's handler runs the user callback, where the disc interrupt's
 /// handler runs the disc driver's callback, and the ARAM interrupt's handler its own.
 const AI_CALLBACK: u64 = 64;
@@ -68,6 +74,8 @@ pub enum EventKind {
     DspResume,
     /// A disc read finishes (the disc interface interrupt).
     DiscDone,
+    /// The disc driver's timeout alarm, which a read's interrupt cancels long before.
+    DiscTimeout,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -90,6 +98,8 @@ pub struct Clock {
     pub ai_pending: bool,
     pub di_pending: bool,
     pub aram_pending: u32,
+    /// The disc driver's timeout alarm, while a read is in flight, by its event's `seq`.
+    pub disc_timeout: Option<u64>,
     /// Pad samples queued and not yet ticked.
     pub pads: u32,
     /// The pad alarm's period.
@@ -166,13 +176,36 @@ impl Clock {
         c
     }
 
-    pub fn schedule(&mut self, at: u64, kind: EventKind) {
-        self.events.push(Event {
-            at,
-            seq: self.seq,
-            kind,
-        });
+    /// Schedules an event, returning its `seq` to cancel it by.
+    pub fn schedule(&mut self, at: u64, kind: EventKind) -> u64 {
+        let seq = self.seq;
+        self.events.push(Event { at, seq, kind });
         self.seq += 1;
+        seq
+    }
+
+    /// Takes back an event that hasn't happened: nothing happens at its time, and no wait
+    /// stops for it.
+    pub fn cancel(&mut self, seq: u64) {
+        self.events.retain(|e| e.seq != seq);
+    }
+
+    /// Sets the pad alarm to fire at `first` and every `period` after (`OSSetPeriodicAlarm`),
+    /// taking back its old schedule.
+    pub fn set_pad_alarm(&mut self, first: u64, period: u64) {
+        self.cancel_pad_alarm();
+        self.alarm_period = period;
+        self.schedule(first, EventKind::PadAlarm);
+    }
+
+    /// Cancels the pad alarm (`OSCancelAlarm`).
+    pub fn cancel_pad_alarm(&mut self) {
+        self.events.retain(|e| e.kind != EventKind::PadAlarm);
+    }
+
+    /// Stops the audio DMA: the block playing raises no interrupt.
+    pub fn stop_audio_dma(&mut self) {
+        self.events.retain(|e| e.kind != EventKind::AudioDma);
     }
 
     /// The next event, by time then scheduling order.
@@ -206,6 +239,7 @@ impl Clock {
                     }
                     EventKind::DspResume => self.dsp_ready = true,
                     EventKind::DiscDone => self.di_pending = true,
+                    EventKind::DiscTimeout => panic!("a disc read timed out"),
                 }
             } else if self.ai_pending {
                 self.ai_pending = false;
@@ -228,6 +262,10 @@ impl Clock {
                 self.now = start + log.spent;
             } else if self.di_pending {
                 self.di_pending = false;
+                // The interrupt's handler cancels the read's timeout before its callback.
+                if let Some(seq) = self.disc_timeout.take() {
+                    self.cancel(seq);
+                }
                 let start = self.now;
                 let log = f.disc_done(DI_CALLBACK);
                 self.apply(start, &log);
@@ -245,7 +283,10 @@ impl Clock {
     /// Schedules a handler's disc reads and raises its ARAM transfers' interrupts.
     fn apply(&mut self, start: u64, log: &HwLog) {
         for &r in &log.reads {
+            assert!(self.disc_timeout.is_none(), "two disc reads in flight");
             self.schedule(start + r + DISC_LATENCY, EventKind::DiscDone);
+            self.disc_timeout =
+                Some(self.schedule(start + r + DISC_TIMEOUT, EventKind::DiscTimeout));
         }
         self.aram_pending += log.aram;
     }
@@ -312,5 +353,76 @@ impl Clock {
     pub fn tick_end(&mut self, f: &mut dyn Frames) {
         self.game_code(f);
         self.read(TICK_READ, f);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Handlers that take no time, and game code that issues one disc read.
+    struct Stub {
+        read: bool,
+    }
+
+    impl Frames for Stub {
+        fn audio_frame(&mut self, base: u64) -> HwLog {
+            HwLog::at(base)
+        }
+        fn disc_done(&mut self, base: u64) -> HwLog {
+            HwLog::at(base)
+        }
+        fn aram_done(&mut self, base: u64) -> HwLog {
+            HwLog::at(base)
+        }
+        fn take_log(&mut self) -> HwLog {
+            let mut log = HwLog::default();
+            if std::mem::take(&mut self.read) {
+                log.disc_read();
+            }
+            log
+        }
+    }
+
+    fn kinds(c: &Clock) -> Vec<EventKind> {
+        let mut e = c.events.clone();
+        e.sort_by_key(|e| (e.at, e.seq));
+        e.into_iter().map(|e| e.kind).collect()
+    }
+
+    #[test]
+    fn disc_interrupt_takes_back_the_timeout() {
+        let mut c = Clock::new(0, AUDIO_FRAME, 675_000, 675_000);
+        let mut f = Stub { read: true };
+        c.tick_end(&mut f);
+        assert!(c.disc_timeout.is_some());
+        assert!(kinds(&c).contains(&EventKind::DiscTimeout));
+        for _ in 0..3 {
+            c.tick_start(&mut f);
+            c.tick_end(&mut f);
+        }
+        assert_eq!(c.disc_timeout, None);
+        assert!(!kinds(&c).contains(&EventKind::DiscTimeout));
+        assert!(!kinds(&c).contains(&EventKind::DiscDone));
+    }
+
+    #[test]
+    fn cancelled_events_stop_no_wait() {
+        let mut c = Clock::new(0, AUDIO_FRAME, 675_000, 675_000);
+        let seq = c.schedule(5_000, EventKind::DspResume);
+        c.cancel(seq);
+        c.wait(WAIT_STEP, &mut Stub { read: false });
+        assert_eq!(c.now, WAIT_STEP);
+    }
+
+    #[test]
+    fn alarm_set_again_and_dma_stopped() {
+        let mut c = Clock::new(0, AUDIO_FRAME, 675_000, 675_000);
+        c.set_pad_alarm(1_000_000, 500_000);
+        c.stop_audio_dma();
+        assert_eq!(kinds(&c), [EventKind::Field, EventKind::PadAlarm]);
+        assert_eq!(c.next_at(), FIELD);
+        c.cancel_pad_alarm();
+        assert_eq!(kinds(&c), [EventKind::Field]);
     }
 }
