@@ -374,7 +374,11 @@ fn arm_box(call: &mut Call, hit: u32, at: (f32, f32, f32), pick: &mut Pick, elem
     );
     let element = elements[pick.next(elements.len() as u32) as usize];
     poke_u32(call, hit + 0x30, element);
-    poke_u32(call, hit + 0x34, pick.next(10).wrapping_sub(3));
+    poke_u32(
+        call,
+        hit + 0x34,
+        [-10i32, -3, 0, 2, 6][pick.next(5) as usize] as u32,
+    );
     poke_u32(call, hit + 0x38, pick.next(3));
     poke_u32(call, hit + 0x3C, [0, 1, 2, 13][pick.next(4) as usize]);
     poke_bit(call, hit + 0x40, 0, true);
@@ -422,6 +426,7 @@ fn arm_hitbox(call: &mut Call, i: usize) {
         z,
     );
     let phantom = pick.next(5) == 0;
+    vary_attacker(call, fp, &mut pick);
     match i % 4 {
         0 => {
             arm_box(
@@ -432,6 +437,9 @@ fn arm_hitbox(call: &mut Call, i: usize) {
                 &[0, 0, 0, 1, 2, 3, 5, 11, 13],
             );
             poke_bit(call, fp + 0x914 + 0x43, 2, phantom);
+            if pick.next(2) == 0 {
+                graze(call, me, fp + 0x914, &mut pick);
+            }
         }
         1 => {
             // A clank needs ordinary boxes, on the ground.
@@ -467,6 +475,36 @@ fn arm_hitbox(call: &mut Call, i: usize) {
             }
         }
     }
+}
+
+/// Moves a box of a fixed radius to just reach the fighter's first hurtbox, where it was last
+/// frame, so it lands a tip (a hit by less than `ftCommonData` x7A8).
+fn graze(call: &mut Call, me: u32, hit: u32, pick: &mut Pick) {
+    let hurt = me + 0x11A0;
+    let a = |o: u32| f32::from_bits(peek_u32(call, hurt + 0x28 + o));
+    let (x, y, z) = (a(0), a(4), a(8));
+    let r_hurt = f32::from_bits(peek_u32(call, hurt + 0x1C));
+    let r_hit = 3.0;
+    poke_f32(call, hit + 0x1C, r_hit);
+    poke_bit(call, hit + 0x43, 1, true);
+    poke_bit(call, hit + 0x43, 2, false);
+    let d = [0.02, 0.1, 0.3, 0.7, 1.5, 3.0][pick.next(6) as usize];
+    for base in [0x4C, 0x58] {
+        poke_f32(call, hit + base, x + r_hurt + r_hit - d);
+        poke_f32(call, hit + base + 4, y);
+        poke_f32(call, hit + base + 8, z);
+    }
+}
+
+/// Varies the attacker's attack kind (`x2073`, which the statistics count apart) and where
+/// its player's stale-move queue stands.
+fn vary_attacker(call: &mut Call, fp: u32, pick: &mut Pick) {
+    let kind = [10, 52, 70, 76, 92, 93, 96][pick.next(7) as usize];
+    let w = peek_u32(call, fp + 0x2070);
+    poke_u32(call, fp + 0x2070, (w & !0xFF) | kind);
+    let slot = peek_u32(call, fp + 0xC) >> 24;
+    let player = sym("player_slots") + 0xE90 * slot;
+    poke_u32(call, player + 0xBC, pick.next(10));
 }
 
 /// Hits from a fighter's box, from real states.
