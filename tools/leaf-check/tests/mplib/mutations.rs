@@ -158,7 +158,7 @@ fn pose(ctx: &Ctx, j: u32) -> JointPose {
 
 /// Whether reclassifying a joint's dynamic lines is safe: the original asserts on a dynamic
 /// line without length, so the game never moves one onto its other end.
-fn dynamics_safe(s: &Stage, joint: usize) -> bool {
+pub fn dynamics_safe(s: &Stage, joint: usize) -> bool {
     let r = s.g.joints[joint].desc.ranges[GROUP_DYNAMIC];
     (r.start as usize..(r.start + r.count.max(0)) as usize).all(|l| {
         let line = s.g.lines[l];
@@ -453,6 +453,13 @@ fn mutate(s: &mut Stage) -> &'static str {
 }
 
 pub fn run(s: &mut Stage, n: &mut Counts, steps: usize) {
+    steps_with(s, n, steps, true);
+    queries::run(s, n, 30);
+}
+
+/// The mutations alone, each followed by the state check, with the queries between them
+/// when `with_queries` is set.
+pub fn steps_with(s: &mut Stage, n: &mut Counts, steps: usize, with_queries: bool) {
     let ctx = s.ctx;
     build_tree(s);
     for k in 0..JOBJ_COUNT {
@@ -473,10 +480,9 @@ pub fn run(s: &mut Stage, n: &mut Counts, steps: usize) {
         }
         n.add(name);
         state::check(s, &format!("after step {step}, {name}"));
-        if step % 30 == 29 {
+        if with_queries && step % 30 == 29 {
             queries::run(s, n, 15);
             queries::island_queries(s, n);
         }
     }
-    queries::run(s, n, 30);
 }
