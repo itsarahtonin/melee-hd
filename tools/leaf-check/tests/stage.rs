@@ -30,7 +30,7 @@ use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::Ctx;
 
-const DEFAULT_CALLS: &str = "C:/Projects/scratch/stage/calls";
+const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/stage";
 
 fn calls_dir() -> PathBuf {
     std::env::var("STAGE_CALLS")

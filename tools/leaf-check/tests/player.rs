@@ -20,7 +20,7 @@ use melee_sim::vec::Vec3;
 use ssbm_rt::{Ctx, Handle};
 use ssbm_types::fns;
 
-const DEFAULT_CALLS: &str = "C:/Projects/scratch/match/calls";
+const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/match";
 
 /// The states the sequences start from: the match's frame, as it plays.
 const BASE: &str = "fn_8016CFE0";

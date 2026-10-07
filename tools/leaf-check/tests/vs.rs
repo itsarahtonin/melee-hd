@@ -43,7 +43,7 @@ use melee_sim::vec::Vec3;
 use ssbm_rt::{Ctx, Handle};
 use ssbm_types::fns;
 
-const DEFAULT_CALLS: &str = "C:/Projects/scratch/match/calls";
+const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/match";
 
 fn calls_dir() -> PathBuf {
     std::env::var("MATCH_CALLS")
