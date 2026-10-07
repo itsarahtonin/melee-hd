@@ -332,7 +332,35 @@ impl Env {
                 codes.display()
             )
         });
+        let ini = match self.cpu_stick_byte(name) {
+            Some(byte) => with_di_patch(&ini, byte),
+            None => ini,
+        };
         std::fs::write(settings.join("GALE01.ini"), ini).unwrap();
+    }
+
+    /// For a match where a fighter runs CPU code (Nana), the byte the CPU's DI took as its stick
+    /// when the match was recorded: the low byte of that fighter's address in ssbm-rs, from the
+    /// start of its state trace (`DIR/NAME.start.trace`, which `make-matches.sh` writes). None
+    /// for a match without one.
+    fn cpu_stick_byte(&self, name: &str) -> Option<u8> {
+        let has_follower = self
+            .replay(name)
+            .frames
+            .values()
+            .any(|f| f.followers.iter().any(Option::is_some));
+        if !has_follower {
+            return None;
+        }
+        let path = self.dir.join(format!("{name}.start.trace"));
+        let address = follower_address(&path).unwrap_or_else(|| {
+            panic!(
+                "{name} has a fighter running CPU code: its DI patch needs ssbm-rs's state trace \
+                 of the match's start, {} (make-matches.sh writes it)",
+                path.display()
+            )
+        });
+        Some(address as u8)
     }
 
     fn command_line(&self, dtm: &Path, speed: f64) -> String {
@@ -841,6 +869,68 @@ impl Env {
             result.fps = f64::from(result.last - result.first) / (b - a).as_secs_f64();
         }
         result
+    }
+}
+
+/// The match's Gecko codes with the DI patch (`tools/bench/gecko/di.s`), a benchmark-only
+/// code: on the path where `ftCo_800AC5A0` takes a stick it never set, it gives the CPU the
+/// byte it took when the match was recorded, which came from the fighter's heap address.
+fn with_di_patch(ini: &str, byte: u8) -> String {
+    use crate::gecko_words::{DI, DI_PATCH};
+    let mut words = DI.to_vec();
+    words[DI_PATCH] = (words[DI_PATCH] & 0xFFFF_0000) | u32::from(byte);
+    if words.len() % 2 == 0 {
+        words.push(0x6000_0000);
+    }
+    words.push(0);
+    let mut code = String::from("$melee-bench DI patch\n");
+    code +=
+        &format!("*Benchmark only: the CPU's unset DI stick is {byte:#04X}, as when recorded.\n");
+    code += &format!("C20AC6D0 {:08X}\n", words.len() / 2);
+    for pair in words.chunks(2) {
+        code += &format!("{:08X} {:08X}\n", pair[0], pair[1]);
+    }
+    let (gecko, enabled) = ini.split_once("[Gecko_Enabled]").expect("[Gecko_Enabled]");
+    format!(
+        "{gecko}{code}[Gecko_Enabled]{}\n$melee-bench DI patch\n",
+        enabled.trim_end()
+    )
+}
+
+/// The address of the first follower (Nana) in an ssbm-rs state trace (`STATE_TRACE`): magic,
+/// version, then zstd frames of ticks, each a number, a region count and regions (kind, address,
+/// owning GObj, length, bytes; header integers little-endian). Kind 4 is a `Fighter`.
+fn follower_address(path: &Path) -> Option<u32> {
+    use std::io::Read;
+    let file = std::fs::File::open(path).ok()?;
+    let mut file = std::io::BufReader::new(file);
+    let mut head = [0u8; 12];
+    file.read_exact(&mut head).ok()?;
+    if &head[..8] != b"SSBMTRC\0" {
+        return None;
+    }
+    let mut z = zstd::stream::read::Decoder::with_buffer(file).ok()?;
+    let u32le = |z: &mut dyn Read| -> Option<u32> {
+        let mut b = [0u8; 4];
+        z.read_exact(&mut b).ok()?;
+        Some(u32::from_le_bytes(b))
+    };
+    loop {
+        let _tick = u32le(&mut z)?;
+        let count = u32le(&mut z)?;
+        for _ in 0..count {
+            let mut kind = [0u8; 1];
+            z.read_exact(&mut kind).ok()?;
+            let address = u32le(&mut z)?;
+            let _gobj = u32le(&mut z)?;
+            let len = u32le(&mut z)? as usize;
+            let mut bytes = vec![0u8; len];
+            z.read_exact(&mut bytes).ok()?;
+            // Fighter::is_sub_fighter, fp+0x221F bit 4.
+            if kind[0] == 4 && bytes.get(0x221F).is_some_and(|b| b & 0x08 != 0) {
+                return Some(address);
+            }
+        }
     }
 }
 

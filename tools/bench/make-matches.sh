@@ -4,7 +4,8 @@
 # controllers (NAME.slp), then two checks that the recording is a match anyone can play from its
 # controllers: ssbm-rs's replay check plays it back through Slippi's playback codes with the
 # console's floating point (NAME.check.log), and ssbm-rs plays its recorded controllers again
-# and compares (NAME.pads.log). Both must find no divergence.
+# and compares (NAME.pads.log). Both must find no divergence. Last, ssbm-rs's state trace of the
+# match's first frames (NAME.start.trace) keeps the fighters' heap addresses.
 #
 #   SSBM_RUN=.../ssbm-run.exe SSBM_DISC=... bash tools/bench/make-matches.sh DIR [NAME...]
 #
@@ -28,6 +29,9 @@ make() {
     local check=$?
     BENCH_CODES=$out.ini BENCH_PADS=$out.slp BENCH_SLP=$out.pads.slp "$run" --fields "$fields" > "$out.pads.log" 2>&1
     local pads=$?
+    # The fighters' heap addresses at the match's start (ssbm-rs's state trace), which a match
+    # with a fighter running CPU code needs in Dolphin (melee-bench's DI patch).
+    STATE_TRACE=$out.start.trace BENCH_CODES=$out.ini BENCH_PADS=$out.slp "$run" --port sysdolphin/baselib/perf --fields 300 > /dev/null 2>&1
     echo "$name: $(grep -h '^replay check' "$out.check.log") (exit $check); $(grep -h '^bench check' "$out.pads.log") (exit $pads)"
 }
 
