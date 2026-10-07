@@ -491,7 +491,12 @@ fn graze(call: &mut Call, me: u32, hit: u32, pick: &mut Pick) {
         poke_u32(call, hurt + 0x34 + o, peek_u32(call, hurt + 0x28 + o));
     }
     poke_bit(call, hurt + 0x24, 0, true);
-    let r_hurt = f32::from_bits(peek_u32(call, hurt + 0x1C));
+    // The test measures the hurtbox's radius through its bone's matrix (`HSD_JObj::mtx`):
+    // a scaled bone scales it.
+    let bone = peek_u32(call, hurt + 0x20);
+    let m = |o: u32| f64::from(f32::from_bits(peek_u32(call, bone + 0x44 + o)));
+    let bone_scale = (m(0) * m(0) + m(0x10) * m(0x10) + m(0x20) * m(0x20)).sqrt() as f32;
+    let r_hurt = f32::from_bits(peek_u32(call, hurt + 0x1C)) * bone_scale;
     let r_hit = 3.0;
     poke_f32(call, hit + 0x1C, r_hit);
     poke_bit(call, hit + 0x43, 1, true);
