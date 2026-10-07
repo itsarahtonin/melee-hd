@@ -97,7 +97,7 @@ impl Audio {
         self.with_clock(data, |c, f| c.aram_load(len, f));
     }
 
-    fn with_clock(
+    pub(crate) fn with_clock(
         &mut self,
         data: &Archives,
         run: impl FnOnce(&mut clock::Clock, &mut dyn clock::Frames),
@@ -138,5 +138,9 @@ impl clock::Frames for Running<'_> {
 
     fn take_log(&mut self) -> HwLog {
         std::mem::take(&mut self.audio.hw)
+    }
+
+    fn file_loaded(&mut self) -> bool {
+        self.audio.devcom.file_loaded
     }
 }

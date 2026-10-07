@@ -1,13 +1,14 @@
 //! HAL's device command queue (`sysdolphin/baselib/devcom.c`): disc reads into main memory,
 //! into a relay buffer, or through a relay buffer into ARAM, and ARAM transfers, queued by
 //! priority and run one disc read and one ARAM transfer at a time. The synth's sound bank
-//! loads and the music stream read through it.
+//! loads and the music stream read through it, and so do the game's own file loads
+//! (`lbFile`), such as Pokémon Stadium's transformations during a match.
 //!
 //! The disc and ARAM are platform: a read completes on the timeline after the disc's latency
 //! (`super::clock`), and an ARAM transfer at once, raising the ARAM interrupt, as ssbm-rs's
 //! hardware does. What a read puts in main memory that game code reads (the stream's box
 //! headers, a bank's header) comes from the file's bytes; music and samples bound for ARAM are
-//! the mix's.
+//! the mix's, and a game file's bytes reach whoever loaded it through [`Archives`].
 
 use melee_data::archive::{ArchiveId, Archives};
 
@@ -27,6 +28,8 @@ pub mod cb {
     pub const FIRST_HAKO_DATA: CodeRef = CodeRef(0x8038_B120);
     pub const FIRST_HAKO_HEADER: CodeRef = CodeRef(0x8038_B380);
     pub const STREAM_HEADER: CodeRef = CodeRef(0x8038_B3E0);
+    /// `lbFile_8001615C`: a synchronous file load's end.
+    pub const FILE_LOADED: CodeRef = CodeRef(0x8001_615C);
 }
 
 /// `HSD_DevCom`, a queued command.
@@ -104,6 +107,9 @@ pub struct DevCom {
     pub arq_done: Vec<ArqDone>,
     /// The disc files reads come from, by entry number.
     pub files: Vec<(i32, ArchiveId)>,
+    /// `lbFile`'s `cancel` (0x804D63C8), which a synchronous file load clears and its
+    /// callback sets.
+    pub file_loaded: bool,
 }
 
 /// `HSD_DevCom_804C6330_bufs`' address, and `pstHakoHeader`'s: memory destinations reads
@@ -229,6 +235,42 @@ impl Audio {
             self.devcom_dvd_wake_up(data);
             self.devcom_aram_wake_up();
         }
+        id
+    }
+
+    /// `lbFile_800161C4`: a synchronous load of `size` bytes of disc file `file` from `src`
+    /// to `dest` (memory, or ARAM with kind 0x23): the game waits for it, taking interrupts
+    /// as it waits, the audio frames among them. Returns the request's id. The file's bytes
+    /// are the loader's to take from [`Archives`].
+    #[allow(clippy::too_many_arguments)]
+    #[doc(alias = "lbFile_800161C4")]
+    pub fn file_load(
+        &mut self,
+        data: &Archives,
+        file: i32,
+        src: u32,
+        dest: u32,
+        size: u32,
+        kind: u16,
+        pri: i32,
+    ) -> i32 {
+        assert!(
+            self.clock.is_some(),
+            "a disc load without the timeline never ends"
+        );
+        self.devcom.file_loaded = false;
+        let id = self.devcom_request(
+            data,
+            file,
+            src,
+            dest,
+            size,
+            kind,
+            pri,
+            Some(cb::FILE_LOADED),
+            0,
+        );
+        self.with_clock(data, |c, f| c.wait_for_load(f));
         id
     }
 
@@ -450,6 +492,7 @@ impl Audio {
             cb::FIRST_HAKO_DATA => self.stream_first_hako_data(),
             cb::FIRST_HAKO_HEADER => self.stream_first_hako_header(data),
             cb::STREAM_HEADER => self.stream_header(data, buf.expect("the stream's header")),
+            cb::FILE_LOADED => self.devcom.file_loaded = true,
             other => panic!("device command callback {:#010x} isn't ported", other.0),
         }
     }

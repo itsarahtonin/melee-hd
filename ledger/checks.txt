@@ -883,6 +883,7 @@ HSD_DevComRequest	leaf-check audio: timeline_samples reaches it on every music r
 HSD_DevComDVDWakeUp	leaf-check audio: timeline_samples reaches it on every music refill, stream_start and stream_callbacks from saved calls; the queue, its nodes and ARAM requests compared every tick
 HSD_DevComARAMWakeUp	leaf-check audio: timeline_samples reaches it on every music refill, stream_start and stream_callbacks from saved calls; the queue, its nodes and ARAM requests compared every tick
 HSD_DevComUnlink	leaf-check audio: timeline_samples reaches it on every music refill, stream_start and stream_callbacks from saved calls; the queue, its nodes and ARAM requests compared every tick
+lbFile_800161C4	leaf-check audio: timeline_stadium replays Pokémon Stadium's transformation loads (lbFile_8001668C's request and wait) inside their ticks; tick ends, audio frames and the queue compared every tick
 HSD_AudioSFXKeyOff	leaf-check audio: random_ops stops sounds by handle through lbAudioAx_800236B8
 HSD_AudioSFXKeyOffAll	leaf-check audio: random_ops stops every sound through lbAudioAx_80023694
 AXDriverExec	leaf-check audio: timeline and random_ops run every voice's commands through it

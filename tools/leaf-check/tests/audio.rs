@@ -226,12 +226,24 @@ fn timeline_samples() {
     run_timeline(&dir, 1500, 11847, DspModel::Samples);
 }
 
+/// [`timeline`] on Pokémon Stadium (`Game_20260129T131206.slp`, recorded the same way into
+/// `AUDIO_TIMELINE_PS`), whose transformations load from the disc during the match.
+#[test]
+fn timeline_stadium() {
+    let dir = std::env::var("AUDIO_TIMELINE_PS").unwrap_or_else(|_| TIMELINE_PS.to_owned());
+    run_timeline(&dir, 1500, 13671, DspModel::Silent);
+}
+
+const TIMELINE_PS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-ps1";
+
 const TIMELINE_AX: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-fd1-ax";
 
 const TIMELINE_4P: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-bf4";
 
 fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
     use melee_capture::{Capture, audio};
+    use melee_sim::audio::devcom;
+    use melee_sim::game::handles::CodeRef;
     let dir = std::path::Path::new(dir);
     let Ok(log) = std::fs::read_to_string(dir.join("log.txt")) else {
         eprintln!("no audio timeline in {}: skipping", dir.display());
@@ -358,6 +370,23 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
                     }
                     "HSD_AudioSFXCheck" => u32::from(a.sfx_check(r(3) as i32)),
                     "HSD_AudioSFXKeyOff" => u32::from(a.sfx_key_off(r(3) as i32)),
+                    // Game code's own file loads, which wait for the disc.
+                    "HSD_DevComRequest" => {
+                        assert_eq!(
+                            CodeRef(r(9)),
+                            devcom::cb::FILE_LOADED,
+                            "tick {tick}: an asynchronous load isn't replayed: {line}"
+                        );
+                        a.file_load(
+                            &data,
+                            r(3) as i32,
+                            r(4),
+                            r(5),
+                            r(6),
+                            r(7) as u16,
+                            r(8) as i32,
+                        ) as u32
+                    }
                     other => panic!("tick {tick}: the replay doesn't take {other}"),
                 };
                 assert_eq!(ours, ret, "tick {tick}: {line}");

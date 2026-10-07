@@ -413,6 +413,7 @@ fn import_devcom(m: &Mem) -> DevCom {
             m.u8(sym("devComRelayBufFlag")),
             m.u8(sym("devComRelayBufFlag") + 1),
         ],
+        file_loaded: m.u32(LB_FILE_CANCEL) != 0,
         ..DevCom::default()
     };
     for q in 0..4 {
@@ -427,6 +428,9 @@ fn import_devcom(m: &Mem) -> DevCom {
     }
     d
 }
+
+/// `lbFile`'s `cancel`, the flag its synchronous loads wait on.
+const LB_FILE_CANCEL: u32 = 0x804D_63C8;
 
 /// The device command queue against memory: its globals, and its nodes walked from each root
 /// on both sides, pairing slots with addresses as they're met.
@@ -468,6 +472,11 @@ fn compare_devcom(m: &Mem, d: &DevCom, diffs: &mut Vec<String>) {
             "devComRelayBufFlag[1]",
             u32::from(d.relay_busy[1]),
             u32::from(m.u8(sym("devComRelayBufFlag") + 1)),
+        ),
+        (
+            "lbFile cancel",
+            u32::from(d.file_loaded),
+            m.u32(LB_FILE_CANCEL),
         ),
     ] {
         if ours != theirs {

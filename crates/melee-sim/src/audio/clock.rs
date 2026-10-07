@@ -124,6 +124,8 @@ pub trait Frames {
     fn aram_done(&mut self, base: u64) -> HwLog;
     /// What the game's code between handlers did to the hardware.
     fn take_log(&mut self) -> HwLog;
+    /// Whether the game's file load has called back.
+    fn file_loaded(&mut self) -> bool;
 }
 
 /// Time a stretch of the audio code took at the hardware, and what it started: the disc reads
@@ -349,6 +351,18 @@ impl Clock {
         self.read(ARAM_CHUNK * u64::from(len.div_ceil(0x1000)), f);
     }
 
+    /// The game waiting inside a tick for its file load: `lbFile`'s loop, a wait point each
+    /// spin (`lb_800195D0`), until the load's callback.
+    pub fn wait_for_load(&mut self, f: &mut dyn Frames) {
+        self.game_code(f);
+        loop {
+            self.wait(WAIT_STEP, f);
+            if f.file_loaded() {
+                break;
+            }
+        }
+    }
+
     /// The perf timer's read at the end of a tick.
     pub fn tick_end(&mut self, f: &mut dyn Frames) {
         self.game_code(f);
@@ -381,6 +395,9 @@ mod tests {
                 log.disc_read();
             }
             log
+        }
+        fn file_loaded(&mut self) -> bool {
+            true
         }
     }
 
