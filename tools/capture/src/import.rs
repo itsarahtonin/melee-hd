@@ -9,8 +9,8 @@ use melee_data::archive::{Archives, DataRef};
 use melee_sim::game::camera::CameraBoxes;
 use melee_sim::game::ft::AnimFile;
 use melee_sim::game::handles::{
-    AttrsId, BoneTableId, CameraBoxId, DynamicsId, FighterId, GroundId, ItemId, PartsId,
-    StartHookId,
+    AnimBufId, AttrsId, BoneTableId, CameraBoxId, DObjListId, DynamicsId, FighterId, GroundId,
+    ItemId, PartsId, StartHookId,
 };
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
@@ -30,6 +30,7 @@ use melee_sim::hsd::mobj::{MObj, MObjClass, MObjId, Material, PeDesc};
 use melee_sim::hsd::object::RefCount;
 use melee_sim::hsd::pobj::{self, Binding, Envelope, PObj, PObjId, ShapeSet};
 use melee_sim::hsd::robj::{self, Exp, RObj, RObjId, Ref, Rvalue, RvalueId};
+use melee_sim::hsd::shadow::{Shadow, ShadowId, ShadowImage};
 use melee_sim::hsd::tobj::{Color, ImageRef, TObj, TObjId, TObjTev, TlutTable};
 use melee_sim::hsd::wobj::{WObj, WObjId};
 use melee_sim::input::controller::Status;
@@ -54,6 +55,25 @@ pub fn sym(name: &str) -> u32 {
         .unwrap_or_else(|| panic!("no symbol {name}"))
         .0
 }
+
+/// The fighter data's globals' addresses: `gFtDataList`, `CostumeListsForeachCharacter`,
+/// `ftData_UnkIntPairs`, `ft_8045996C`, `ft_8045993C`, `Fighter_804D64F8`, `cur_data`,
+/// `ftCo_09F4.c`'s `lobj0` and `lobj1`, `ft_804D6580`, `ft_804D6588`, `ft_80459B88`,
+/// `ftKb_Init_803C9FC8` and `ft_8045A1E0`.
+pub const FT_DATA_LIST: u32 = 0x8045_98B8;
+pub const COSTUME_LISTS: u32 = 0x803C_0EC0;
+pub const DEMO_ANIMS: u32 = 0x803C_25F4;
+pub const REF_COUNTS: u32 = 0x8045_996C;
+pub const SLOT_WORDS: u32 = 0x8045_993C;
+pub const SPAWN_COUNTER: u32 = 0x804D_64F8;
+pub const DYNAMICS_FREE: u32 = 0x804D_63A4;
+pub const LOBJ0: u32 = 0x804D_6568;
+pub const LOBJ1: u32 = 0x804D_656C;
+pub const METAL_MOBJ: u32 = 0x804D_6580;
+pub const CLEAR_MOBJ: u32 = 0x804D_6588;
+pub const KIRBY_COUNTS: u32 = 0x8045_9B88;
+pub const KIRBY_TABLES: u32 = 0x803C_9FC8;
+pub const PURIN_HATS: u32 = 0x8045_A1E0;
 
 /// What maps ssbm-rs's objects to the slots made for them.
 #[derive(Clone, Default)]
@@ -94,6 +114,9 @@ pub struct Maps {
     pub particles: HashMap<u32, melee_sim::hsd::particle::ParticleId>,
     pub generators: HashMap<u32, melee_sim::hsd::generator::GeneratorId>,
     pub app_srts: HashMap<u32, melee_sim::hsd::appsrt::AppSrtId>,
+    pub fighter_dobj_lists: HashMap<u32, DObjListId>,
+    pub fighter_anim_bufs: HashMap<u32, AnimBufId>,
+    pub shadows: HashMap<u32, ShadowId>,
 }
 
 pub struct Importer<'a> {
@@ -419,6 +442,7 @@ impl<'a> Importer<'a> {
 
     /// The fighter code's globals.
     pub fn fighter_globals(&mut self) {
+        self.fighter_data_globals();
         self.game.ft.load_common = self.data.public("PlCo.dat", "ftLoadCommonData");
         self.game.pl.load_common = self.data.public("PdPm.dat", "plLoadCommonData");
         self.game.pl.stale_attack_instance = self.u16(sym("staleAttackInstance"));
@@ -442,6 +466,79 @@ impl<'a> Importer<'a> {
                 Some(AnimFile { aram, anims })
             })
             .collect();
+    }
+
+    /// The fighter data's globals, the spawn counter, the free dynamics links, the fighters'
+    /// lights and materials, and Kirby's and Jigglypuff's tables; the files loaded, by name,
+    /// as what the frontend would have handed over.
+    fn fighter_data_globals(&mut self) {
+        use melee_sim::game::ft::data::{KIND_COUNT, kind_tables};
+        let ft = &mut self.game.ft;
+        ft.data.files.archives = self
+            .data
+            .loaded
+            .iter()
+            .filter(|l| l.file != 0)
+            .map(|l| (l.name.clone(), l.id))
+            .collect();
+        for kind in 0..KIND_COUNT as u32 {
+            let d = self.u32(FT_DATA_LIST + 4 * kind);
+            self.game.ft.data.data_list[kind as usize] = self.data(d);
+            let list = self.u32(COSTUME_LISTS + 8 * kind);
+            let n = if list != 0 {
+                kind_tables(kind as i32).costume_count
+            } else {
+                0
+            };
+            for c in 0..u32::from(n) {
+                let e = list + 0x18 * c;
+                let joint = self.u32(e);
+                let matanim = self.u32(e + 4);
+                let costume = melee_sim::game::ft::data::Costume {
+                    joint: self.data(joint),
+                    matanim: self.data(matanim),
+                    x8: self.u32(e + 8),
+                };
+                self.game.ft.data.costumes[kind as usize][c as usize] = costume;
+            }
+            self.game.ft.data.demo_anims[kind as usize] = self.u32(DEMO_ANIMS + 8 * kind);
+            self.game.ft.data.ref_counts[kind as usize] = self.u32(REF_COUNTS + 4 * kind) as i32;
+            self.game.ft.kirby.counts[kind as usize] = self.u32(KIRBY_COUNTS + 4 * kind) as i32;
+        }
+        for s in 0..6 {
+            let at = SLOT_WORDS + 8 * s;
+            self.game.ft.data.slot_words[s as usize] = melee_sim::game::ft::data::Ft8045993C {
+                x0: self.u32(at),
+                x6: self.u8(at + 6),
+            };
+        }
+        self.game.ft.spawn_counter = self.u32(SPAWN_COUNTER);
+        let free = self.u32(DYNAMICS_FREE);
+        self.game.ft.dynamics_free = (free != 0).then(|| self.fighter_dynamics(free));
+        for (at, slot) in [(LOBJ0, 0), (LOBJ1, 1)] {
+            let l = self.u32(at);
+            let l = (l != 0).then(|| self.lobj(l));
+            if slot == 0 {
+                self.game.ft.lobj0 = l;
+            } else {
+                self.game.ft.lobj1 = l;
+            }
+        }
+        let m = self.u32(METAL_MOBJ);
+        self.game.ft.metal_mobj = (m != 0).then(|| self.mobj(m));
+        let m = self.u32(CLEAR_MOBJ);
+        self.game.ft.clear_mobj = (m != 0).then(|| self.mobj(m));
+        for (i, &kind) in melee_sim::game::ft::KIRBY_COSTUME_KINDS.iter().enumerate() {
+            let table = self.u32(KIRBY_TABLES + 4 * kind as u32);
+            for c in 0..6 {
+                let (j, m) = (self.u32(table + 8 * c), self.u32(table + 8 * c + 4));
+                self.game.ft.kirby.models[i][c as usize] = (self.data(j), self.data(m));
+            }
+        }
+        for i in 0..5 {
+            let h = self.u32(PURIN_HATS + 4 * i);
+            self.game.ft.purin_hats[i as usize] = self.data(h);
+        }
     }
 
     /// The debug settings and the controllers as fighters read them.
@@ -639,6 +736,19 @@ impl Importer<'_> {
             base: MEM1,
         };
         let f = Fighter::import(&mem, a, self);
+        // Its DObj lists: the main model's and the second model's first `count` DObjs.
+        for (list, at) in [(f.dobj_list.data, a + 0x5EC), (f.x203C.data, a + 0x203C)] {
+            if let Some(l) = list {
+                let (count, data) = (self.u32(at), self.u32(at + 4));
+                let dobjs = (0..count)
+                    .map(|i| {
+                        let d = self.u32(data + 4 * i);
+                        (d != 0).then(|| self.dobj(d))
+                    })
+                    .collect();
+                self.game.fighter_dobj_lists[l.0] = dobjs;
+            }
+        }
         self.game.fighters[id.0] = f;
         id
     }
@@ -676,6 +786,71 @@ impl Importer<'_> {
         };
         let d = DynamicsData::import(&mem, a, self);
         self.game.fighter_dynamics[id.0] = d;
+        id
+    }
+
+    /// A fighter model's DObj list, its entries filled in once the fighter's import knows
+    /// their count ([`Importer::fighter`]).
+    fn fighter_dobj_list(&mut self, a: u32) -> DObjListId {
+        if let Some(&l) = self.maps.fighter_dobj_lists.get(&a) {
+            return l;
+        }
+        let id = DObjListId(self.game.fighter_dobj_lists.alloc(Vec::new()));
+        self.maps.fighter_dobj_lists.insert(a, id);
+        id
+    }
+
+    /// A fighter's animation buffer.
+    fn fighter_anim_buf(&mut self, a: u32) -> AnimBufId {
+        if let Some(&b) = self.maps.fighter_anim_bufs.get(&a) {
+            return b;
+        }
+        let id = AnimBufId(self.game.fighter_anim_bufs.alloc(()));
+        self.maps.fighter_anim_bufs.insert(a, id);
+        id
+    }
+
+    /// A shadow (`HSD_Shadow`), its camera and texture.
+    pub fn shadow(&mut self, a: u32) -> ShadowId {
+        if let Some(&s) = self.maps.shadows.get(&a) {
+            return s;
+        }
+        let id = ShadowId(self.game.objs.shadows.alloc(Shadow::default()));
+        self.maps.shadows.insert(a, id);
+        let mut objects = Vec::new();
+        let mut node = self.u32(a);
+        while node != 0 {
+            let j = self.u32(node + 4);
+            objects.push(self.jobj(j));
+            node = self.u32(node);
+        }
+        let cam = self.u32(a + 4);
+        let camera = (cam != 0).then(|| self.cobj(cam));
+        let tex = self.u32(a + 8);
+        let texture = (tex != 0).then(|| self.tobj(tex));
+        let desc = if tex != 0 { self.u32(tex + 0x58) } else { 0 };
+        let image = if desc != 0 {
+            ShadowImage {
+                format: self.u32(desc + 8),
+                width: self.u16(desc + 4),
+                height: self.u16(desc + 6),
+                allocated: self.u32(desc) != 0,
+            }
+        } else {
+            ShadowImage::default()
+        };
+        self.game.objs.shadows[id.0] = Shadow {
+            objects,
+            camera,
+            texture,
+            scale_s: self.f32(a + 0xC),
+            scale_t: self.f32(a + 0x10),
+            trans_s: self.f32(a + 0x14),
+            trans_t: self.f32(a + 0x18),
+            active: self.u32(a + 0x1C) != 0,
+            intensity: self.u8(a + 0x20),
+            image,
+        };
         id
     }
 
@@ -1047,6 +1222,7 @@ impl Importer<'_> {
             c if c == sym("hsdMObj") => MObjClass::Hsd,
             c if c == sym("grMaterial_803E0A20") => MObjClass::Ground,
             c if c == sym("it_mobj") => MObjClass::Item,
+            c if c == sym("ftMObj") => MObjClass::Fighter,
             _ => {
                 self.unhandled
                     .push(format!("MObj {a:#x}: a class of its own"));
@@ -1371,6 +1547,10 @@ impl Cx for Importer<'_> {
                 }
             },
             "EffectId" => self.effect(addr).0,
+            "DObjListId" => self.fighter_dobj_list(addr).0,
+            "AnimBufId" => self.fighter_anim_buf(addr).0,
+            "LObjId" => self.lobj(addr).0,
+            "ShadowId" => self.shadow(addr).0,
             "GObjId" => match self.maps.gobjs.get(&addr) {
                 Some(g) => g.0,
                 None => self.dangling("GObjId", addr),

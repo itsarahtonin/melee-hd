@@ -83,6 +83,27 @@ impl PObj {
 #[derive(Clone, Debug, Default)]
 pub struct PObjs {
     pub pool: Pool<PObj>,
+    /// The class new shapes load as (`HSD_PObjSetDefaultClass`).
+    pub default_class: PObjClass,
+    /// Display lists `lbRefract_PObjLoad` has rewritten in the loaded data: each vertex's
+    /// position-matrix index copied over its last texture-matrix index. By display list: the
+    /// vertex stride and the two indexes' offsets in a vertex, for the display pass to apply.
+    pub refract_patches: std::collections::HashMap<DataRef, (u8, u8, u8)>,
+}
+
+/// A PObj class: HAL's, or one the game derives from it whose loader differs.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PObjClass {
+    #[default]
+    Hsd,
+    /// Fighters' `ftPObj` (`ftParts_PObjInfoInit`), loaded by `lbRefract_PObjLoad`.
+    Fighter,
+}
+
+/// Sets the class new shapes load as, `HSD_PObjSetDefaultClass` (`None`, HAL's).
+#[doc(alias = "HSD_PObjSetDefaultClass")]
+pub fn set_default_class(pobjs: &mut PObjs, class: PObjClass) {
+    pobjs.default_class = class;
 }
 
 impl Index<PObjId> for PObjs {
@@ -143,7 +164,62 @@ pub fn load_desc(pobjs: &mut PObjs, data: &Archives, desc: Option<DataRef>) -> O
         display: data.ptr(desc.at(0x10)),
         u,
     };
+    if pobjs.default_class == PObjClass::Fighter
+        && let Some(patch) = refract_load(&pobjs[p], data)
+    {
+        let display = pobjs[p].display.expect("a shape without a display list");
+        pobjs.refract_patches.insert(display, patch);
+    }
     Some(p)
+}
+
+/// `lbRefract_PObjLoad`'s part after HAL's loader: for a shape flagged 0x2000 with a
+/// position-matrix index and a texture-matrix index past the first two attributes, it copies
+/// each vertex's position-matrix index over its last texture-matrix index in the loaded
+/// display list. That rewrites game data only the display pass reads; the rewrite comes back
+/// as the vertex stride and the two offsets, for [`PObjs::refract_patches`].
+#[doc(alias = "lbRefract_PObjLoad")]
+fn refract_load(p: &PObj, data: &Archives) -> Option<(u8, u8, u8)> {
+    if p.flags & 0x2000 == 0 {
+        return None;
+    }
+    let (mut stride, mut pnmtx, mut last) = (0i32, -1i32, -1i32);
+    let mut v = p.verts;
+    while let Some(at) = v {
+        let attr = data.u32(at);
+        // GX_VA_NULL.
+        if attr == 0xFF {
+            break;
+        }
+        let ty = data.u32(at.at(4));
+        match attr {
+            1..=8 => {
+                last = stride;
+                stride += 1;
+            }
+            0 => {
+                pnmtx = stride;
+                stride += 1;
+            }
+            9 | 10 | 13..=20 => stride += if ty == 3 { 2 } else { 1 },
+            11 | 12 => match ty {
+                3 => stride += 2,
+                2 => stride += 1,
+                _ => match data.u32(at.at(0xC)) {
+                    0 | 3 => stride += 2,
+                    1 | 4 => stride += 3,
+                    2 => stride += 4,
+                    _ => {}
+                },
+            },
+            _ => {}
+        }
+        v = Some(at.at(0x18));
+    }
+    if pnmtx == -1 || last < 2 {
+        return None;
+    }
+    Some((stride as u8, pnmtx as u8, last as u8))
 }
 
 /// The static `loadShapeSetDesc`.

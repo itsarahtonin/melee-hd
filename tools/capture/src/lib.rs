@@ -205,6 +205,52 @@ pub fn find_archives_after(
     found
 }
 
+/// [`find_archives_after`], with archives added beforehand by name (files loaded for the
+/// port's side, which the original loaded where it chose): any copy of one found in memory is
+/// that archive.
+pub fn find_archives_named(
+    index: &DiscIndex,
+    mem1: &[u8],
+    archives: &mut Archives,
+    before: &[Loaded],
+    named: &[(String, ArchiveId)],
+) -> Vec<Loaded> {
+    let mut found = scan(index, mem1, archives, &|name, file| {
+        named
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|&(_, id)| id)
+            .or_else(|| {
+                before
+                    .iter()
+                    .find(|l| l.name == name && (l.file == file || l.file == 0))
+                    .map(|l| l.id)
+            })
+    });
+    found.extend(before.iter().filter(|l| l.file == 0).cloned());
+    found
+}
+
+/// The disc's file named `name`, whole, if the index has it as an archive.
+pub fn disc_file<'a>(index: &'a DiscIndex, name: &str) -> Option<&'a [u8]> {
+    index
+        .by_header
+        .values()
+        .flatten()
+        .find(|(n, _)| n == name)
+        .map(|(_, b)| b.as_slice())
+}
+
+/// An animation file's sub-archives (`NAME@OFFSET`, one per animation) by offset.
+pub fn anim_subarchives(index: &DiscIndex, name: &str) -> Vec<(u32, Vec<u8>)> {
+    let (Some(subs), Some(file)) = (index.anim_files.get(name), index.anim_file(name)) else {
+        return Vec::new();
+    };
+    subs.iter()
+        .map(|&(off, size)| (off, file[off as usize..(off + size) as usize].to_vec()))
+        .collect()
+}
+
 /// The archives in main memory; `known` gives the id of one already added, by name and
 /// address.
 fn scan(

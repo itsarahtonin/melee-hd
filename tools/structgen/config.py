@@ -58,6 +58,17 @@ FIELD_POINTERS = {
     # A freed item's link to the next free item (`HSD_ObjFree` writes it over the first word),
     # which a reused item keeps.
     "Item.x0": "Option<ItemId>",
+    # The DObjs of a fighter's model, and of its second model (`fighter_dobj_list_alloc_data`,
+    # `fighter_x2040_alloc_data`).
+    "DObjList.data": "Option<DObjListId>",
+    # The fighter's animation buffers (`fighter_x59C_alloc_data`), which hold a copy of the
+    # animation archive last loaded into them.
+    "Fighter.x59C": "Option<AnimBufId>",
+    "Fighter.x5A0": "Option<AnimBufId>",
+    # The fighter's own light (`lb_80011AC4`).
+    "Fighter.x588": "Option<LObjId>",
+    # The shadow `lbShadow_8000ED54` allocates.
+    "LbShadow.shadow": "Option<ShadowId>",
 }
 
 # Pointer fields into loaded game data whose pointee type doesn't say so (`void*`, pointers to
@@ -72,12 +83,14 @@ FIELD_DATA = {
     "StageInfo.x6C8",
     # Each animation's pair of bytes, in the character's data (`ftData::x10`).
     "Fighter.x28",
+    # The costume's texture-animation indices, in the character's data (`ftData::x8->x8.xC`).
+    "CostumeTObjList.x5D0",
 }
 
 # Runs of fields replaced by one field of a hand-written type: struct name to (field name,
-# first offset, end offset, Rust type). Command scripts' interpreter state is one: the
-# original casts a color overlay to a CommandInfo, and their return stack holds pointers or
-# loop counts and runs past its three slots into the words after it.
+# first offset, end offset, Rust type), or a list of such runs. Command scripts' interpreter
+# state is one: the original casts a color overlay to a CommandInfo, and their return stack
+# holds pointers or loop counts and runs past its three slots into the words after it.
 SPLICE = {
     "CommandInfo": ("script", 0, 0x24, "Script"),
     "ColorOverlay": ("script", 0, 0x24, "Script"),
@@ -85,12 +98,22 @@ SPLICE = {
     "DynamicsData": ("desc", 0, 0x90, "lb_00F9_UnkDesc0"),
     # A bone id, or the figatree an animation's blend slot gives the chain.
     "BoneDynamicsDesc": ("bone_id", 0, 4, "BoneSlot"),
+    # Pointers a computer player's state keeps into itself: offsets from the fields they point
+    # into, which don't depend on where the fighter is.
+    "CpuFighter": [
+        ("x444", 0x444, 0x448, "CpuInputRef444"),
+        ("x448", 0x448, 0x44C, "CpuInputRef448"),
+        ("write_pos", 0x554, 0x558, "CpuWritePos"),
+    ],
 }
 
 # Lines the generated mirrors use besides the handles.
 EXTRA_USES = [
+    "use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};",
     "use crate::game::ft::dynamics::BoneSlot;",
     "use crate::game::it::ItemVars;",
+    "use crate::hsd::lobj::LObjId;",
+    "use crate::hsd::shadow::ShadowId;",
     "use crate::lb::command::Script;",
 ]
 
@@ -132,6 +155,7 @@ RENAME_FIELDS = {}
 
 PRELUDE = """use melee_data::archive::DataRef;
 
+use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
@@ -139,6 +163,8 @@ use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::hsd::lobj::LObjId;
+use crate::hsd::shadow::ShadowId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
 use crate::mp::coll::EcbSource;

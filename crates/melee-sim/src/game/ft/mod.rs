@@ -14,15 +14,22 @@ pub mod colanim;
 pub mod coll;
 pub mod commands;
 pub mod common;
+pub mod cpu;
+pub mod create;
+pub mod create_model;
+pub mod data;
 pub mod dynamics;
 pub mod fighter;
 pub mod ftlib;
 pub mod input;
+mod kind_tables;
+pub mod kinds;
 pub mod motion;
 mod motion_tables;
 pub mod parts;
 pub mod phys;
 pub mod sound;
+pub mod spawn;
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
@@ -44,6 +51,54 @@ pub struct Globals {
     /// Each character's animation file once the game has copied it to ARAM
     /// (`ftData_Table_Unk0`), by kind.
     pub anim_files: Vec<Option<AnimFile>>,
+    /// The kinds' data, costumes and loaded files (`ftdata.c`'s globals).
+    pub data: data::DataGlobals,
+    /// The next spawn number (`Fighter_804D64F8`).
+    pub spawn_counter: u32,
+    /// The first free dynamics link (`lb_00F9.c`'s `cur_data`); each link's `next` leads to
+    /// the one after it.
+    pub dynamics_free: Option<super::handles::DynamicsId>,
+    /// The fighters' light and its first ambient light (`ftCo_09F4.c`'s `lobj0`, `lobj1`).
+    pub lobj0: Option<crate::hsd::lobj::LObjId>,
+    pub lobj1: Option<crate::hsd::lobj::LObjId>,
+    /// The fighters' metal and clear materials (`ft_804D6580`, `ft_804D6588`).
+    pub metal_mobj: Option<crate::hsd::mobj::MObjId>,
+    pub clear_mobj: Option<crate::hsd::mobj::MObjId>,
+    /// Kirby's copied costumes (`ft_80459B88`, `ftKb_Init_803C9FC8`).
+    pub kirby: KirbyCostumes,
+    /// Jigglypuff's hats (`ft_8045A1E0`).
+    pub purin_hats: [Option<DataRef>; 5],
+}
+
+/// The fighter kinds whose costumes Kirby can copy (`ftKb_Init_803C9FC8`'s entries).
+pub const KIRBY_COSTUME_KINDS: [usize; 5] = [3, 15, 16, 22, 24];
+
+/// Kirby's copies of other characters' costumes: a count per kind (`ft_80459B88`), and for
+/// each kind Kirby copies a hat from, six models and material animations.
+#[derive(Clone, Debug, PartialEq)]
+pub struct KirbyCostumes {
+    pub counts: [i32; data::KIND_COUNT],
+    pub models: [[(Option<DataRef>, Option<DataRef>); 6]; 5],
+}
+
+impl Default for KirbyCostumes {
+    fn default() -> Self {
+        KirbyCostumes {
+            counts: [0; data::KIND_COUNT],
+            models: [[(None, None); 6]; 5],
+        }
+    }
+}
+
+impl KirbyCostumes {
+    /// `ftKb_Init_800EE528`.
+    #[doc(alias = "ftKb_Init_800EE528")]
+    pub fn reset(&mut self) {
+        self.counts = [0; data::KIND_COUNT];
+        for m in &mut self.models {
+            *m = [(None, None); 6];
+        }
+    }
 }
 
 /// A character's animation file in ARAM: one archive per animation, which a fighter copies
@@ -86,7 +141,7 @@ impl Running<'_> {
     }
 
     /// `ftLoadCommonData`'s pointer at `offset`.
-    fn load_common(&self, offset: u32) -> DataRef {
+    pub(super) fn load_common(&self, offset: u32) -> DataRef {
         let base = self
             .game
             .ft
@@ -127,6 +182,11 @@ pub struct Common<'a> {
 impl Common<'_> {
     pub fn f32(&self, offset: u32) -> f32 {
         self.data.f32(self.at.at(offset))
+    }
+
+    /// Where `offset` into the common data is.
+    pub fn at(&self, offset: u32) -> DataRef {
+        self.at.at(offset)
     }
 
     pub fn i32(&self, offset: u32) -> i32 {

@@ -7,6 +7,7 @@
 //! 0..6 fails the original's assertion, which stops the simulation here.
 
 use super::super::code::{self, Val};
+use super::super::ft::create::AllocInfo;
 use super::super::state::{Game, Running};
 use super::super::structs::{_StaticPlayer, StaleMoveTable, pl_x5EC_t, plActionStats};
 use crate::hsd::gobj::GObjId;
@@ -48,8 +49,6 @@ const FT_MAPPING: [u8; 0x90] = [
 
 /// The functions of the original's the player blocks call, by address.
 mod addr {
-    pub const FTLIB_DISABLE_INPUT: u32 = 0x8008_67E8;
-    pub const FIGHTER_CREATE: u32 = 0x8006_8E98;
     pub const FTDATA_800855C8: u32 = 0x8008_55C8;
     pub const FTDATA_8008578C: u32 = 0x8008_578C;
     pub const FTKB_SPECIALN_800EED50: u32 = 0x800E_ED50;
@@ -62,7 +61,6 @@ mod addr {
     pub const IFSTATUS_802F6AF8: u32 = 0x802F_6AF8;
     pub const IFSTATUS_802F6C04: u32 = 0x802F_6C04;
     pub const FTLIB_GET_NAME_TAG_HEIGHT: u32 = 0x8008_6F80;
-    pub const FIGHTER_FIRST_INITIALIZE_80067A84: u32 = 0x8006_7A84;
 }
 
 /// `Player_CheckSlot`: the original asserts a slot is in range.
@@ -951,7 +949,7 @@ impl Running<'_> {
     #[doc(alias = "Player_80031790")]
     pub fn player_disable_input(&mut self, slot: i32) {
         for g in self.playing_entities(slot).into_iter().flatten() {
-            code::call(self, addr::FTLIB_DISABLE_INPUT, &[Val::GObj(Some(g))]);
+            self.game.ft_disable_input(g);
         }
     }
 
@@ -981,20 +979,16 @@ impl Running<'_> {
             self.game.player_mut(slot).flags.b2 = true;
         }
         // `plAllocInfo`: fighter kind, slot, `x5` -1, and whether it's the second fighter
-        // and a transformation.
+        // and a transformation. The original's stack holds the info's other bits, which
+        // `Fighter_Create` never reads.
         let create = |r: &mut Self, kind: i8, sub: bool, transformation: u8| {
-            code::call(
-                r,
-                addr::FIGHTER_CREATE,
-                &[
-                    Val::Int(i32::from(kind)),
-                    Val::Int(slot),
-                    Val::Int(-1),
-                    Val::Int(i32::from(sub)),
-                    Val::Int(i32::from(transformation & 1)),
-                ],
-            )
-            .gobj()
+            Some(r.fighter_create(AllocInfo {
+                kind: i32::from(kind),
+                slot: slot as u8,
+                x5: -1,
+                sub,
+                transformation: transformation & 1 != 0,
+            }))
         };
         let g = create(self, m.internal_id, false, 0);
         let p = self.game.player_mut(slot);
@@ -1182,6 +1176,6 @@ impl Running<'_> {
     /// allocator (`Player_AllocData`) serves nothing in melee-sim.
     #[doc(alias = "Player_80036DA4")]
     pub fn player_80036da4(&mut self) {
-        code::call(self, addr::FIGHTER_FIRST_INITIALIZE_80067A84, &[]);
+        self.fighter_first_init();
     }
 }

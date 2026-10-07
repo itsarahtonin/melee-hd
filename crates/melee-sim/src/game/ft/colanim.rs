@@ -371,7 +371,7 @@ const SPYCLOAK_START: i32 = 123;
 
 /// Stops an overlay, `lb_80014498`.
 #[doc(alias = "lb_80014498")]
-fn clear(co: &mut ColorOverlay) {
+pub(super) fn clear(co: &mut ColorOverlay) {
     co.script.cursor = None;
     co.script.frame_count = 0;
     co.x28_colanim = [0; 4];

@@ -150,6 +150,8 @@ pub enum Val {
     JObj(Option<crate::hsd::jobj::JObjId>),
     /// What an effect spawn returns: an effect, a generator, or null.
     Spawned(super::ef::Spawned),
+    /// A pointer into loaded game data.
+    Data(Option<melee_data::archive::DataRef>),
 }
 
 impl Val {
@@ -196,6 +198,15 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     unported("function", f)
+}
+
+/// A ported function stood in for in a check (feature `stubs`), as [`call`] stands in for an
+/// unported one: its value if a stand-in is registered, the call logged with its arguments.
+#[cfg(feature = "stubs")]
+pub fn stubbed(f: u32, args: &[Val]) -> Option<Val> {
+    let v = stubs::get(f)?;
+    stubs::log(f, args);
+    Some(v)
 }
 
 /// Stand-ins for unported functions in checks (feature `stubs`): a stubbed function returns

@@ -193,6 +193,24 @@ pub struct Globals {
     /// Particle-list entries whose particles are still to spawn: the top bit `JObjLoad` sets
     /// in the loaded data, which the first display clears.
     pub pending_ptcl: HashSet<DataRef>,
+    /// The class new joints load as (`HSD_JObjSetDefaultClass`).
+    pub default_class: JObjClass,
+}
+
+/// A JObj class whose loader differs from HAL's.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum JObjClass {
+    #[default]
+    Hsd,
+    /// Fighters' `ftIntpJObj` (`ftParts_IntpJObjInfoInit`): the blend skeleton's joints,
+    /// loaded without their display objects (`ftParts_IntpJObjLoad`).
+    FighterIntp,
+}
+
+/// Sets the class new joints load as, `HSD_JObjSetDefaultClass` (HAL's for `Hsd`).
+#[doc(alias = "HSD_JObjSetDefaultClass")]
+pub fn set_default_class(objs: &mut Objects, class: JObjClass) {
+    objs.jobj.default_class = class;
 }
 
 /// The joint's children, first to last.
@@ -831,8 +849,10 @@ fn load_sub(
 }
 
 /// Fills a new joint from its descriptor and loads its children and later siblings,
-/// `JObjLoad`.
+/// `JObjLoad`; for fighters' blend skeletons (`ftParts_IntpJObjLoad`), with the descriptor's
+/// contents taken as none.
 #[doc(alias = "JObjLoad")]
+#[doc(alias = "ftParts_IntpJObjLoad")]
 fn load(objs: &mut Objects, data: &Archives, j: JObjId, joint: DataRef, parent: Option<JObjId>) {
     let flags = data.u32(joint.at(4));
     if flags & INSTANCE == 0 {
@@ -844,7 +864,10 @@ fn load(objs: &mut Objects, data: &Archives, j: JObjId, joint: DataRef, parent: 
     o.next = next;
     o.parent = parent;
     o.flags |= flags;
-    let u = data.ptr(joint.at(0x10));
+    let u = match objs.jobj.default_class {
+        JObjClass::Hsd => data.ptr(joint.at(0x10)),
+        JObjClass::FighterIntp => None,
+    };
     if o.flags & SPLINE != 0 {
         o.u = Contents::Spline(u);
     } else if o.flags & PTCL != 0 {

@@ -128,12 +128,17 @@ class Gen:
         """A record's fields, with any run config.SPLICE names replaced by one field of the
         hand-written type it gives."""
         r = self.recs[rid]
-        splice = config.SPLICE.get(rec_name(rid))
+        splices = config.SPLICE.get(rec_name(rid), [])
+        if isinstance(splices, tuple):
+            splices = [splices]
         out = []
+        done = set()
         for f in r["fields"]:
             off = f["offset_bits"] // 8
-            if splice and splice[1] <= off < splice[2]:
-                if off == splice[1] and f["offset_bits"] % 8 == 0 and not any("splice" in g for g in out):
+            splice = next((sp for sp in splices if sp[1] <= off < sp[2]), None)
+            if splice:
+                if off == splice[1] and f["offset_bits"] % 8 == 0 and splice[0] not in done:
+                    done.add(splice[0])
                     out.append({"name": splice[0], "offset_bits": off * 8, "splice": splice[3]})
                 continue
             out.append(f)

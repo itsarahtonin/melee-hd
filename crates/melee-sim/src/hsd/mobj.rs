@@ -58,6 +58,9 @@ pub enum MObjClass {
     Ground,
     /// Items' `it_mobj` (`itmaterial.c`): HAL's but for its display setup.
     Item,
+    /// Fighters' `ftMObj` (`ftMaterial_800BF260`): HAL's but for its display setup
+    /// (`ftMaterial_800BF2B8`).
+    Fighter,
 }
 
 /// `HSD_Material`.

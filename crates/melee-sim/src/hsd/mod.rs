@@ -23,6 +23,7 @@ pub mod pobj;
 pub mod pool;
 pub mod psdisp;
 pub mod robj;
+pub mod shadow;
 pub mod spline;
 pub mod tobj;
 pub mod wobj;
@@ -47,6 +48,7 @@ pub struct Objects {
     pub cobjs: cobj::CObjs,
     pub lobjs: lobj::LObjs,
     pub fogs: fog::Fogs,
+    pub shadows: shadow::Shadows,
     /// HSD's ID table (`HSD_IDInsertToTable` with a null table): joints by the descriptor
     /// they were loaded from.
     pub ids: id::IdTable<DataRef, jobj::JObjId>,

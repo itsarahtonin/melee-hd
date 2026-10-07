@@ -4,14 +4,18 @@
 //!
 //! [`DynamicsData`]: super::super::structs::DynamicsData
 
-use melee_data::archive::DataRef;
+use gekko_fp as fp;
+use melee_data::archive::{Archives, DataRef};
 
 use super::super::code::unported_call;
-use super::super::handles::FighterId;
+use super::super::handles::{DynamicsId, FighterId};
 use super::super::mirror::{Cx, Mem, Mirror};
-use super::super::state::Running;
+use super::super::state::{Game, Running};
+use super::super::structs::DynamicsDesc;
 use super::anim::{bone_flag, x594_bit};
-use crate::hsd::jobj::{self, USE_QUATERNION};
+use crate::fpu::{copy, mem, reg};
+use crate::hsd::jobj::{self, JObjId, USE_QUATERNION};
+use crate::quat::Quat;
 use crate::vec::Vec3;
 
 const KIND_KIRBY: i32 = 4;
@@ -186,4 +190,149 @@ impl Running<'_> {
         );
         p
     }
+}
+
+impl Game {
+    /// Takes the first free dynamics link (`cur_data`), or none when they're all in use.
+    fn pop_dynamics_link(&mut self) -> Option<DynamicsId> {
+        let link = self.ft.dynamics_free?;
+        self.ft.dynamics_free = self.fighter_dynamics[link.0].next;
+        self.fighter_dynamics[link.0].next = None;
+        Some(link)
+    }
+
+    /// Builds a chain of up to `n` links down `root` and its first children, taking each from
+    /// the free links, and sizes each link from the next one's position, `lb_8000FD48`. Links
+    /// run out silently: the chain ends early and isn't sized.
+    #[doc(alias = "lb_8000FD48")]
+    pub fn load_dynamics_chain(
+        &mut self,
+        data: &Archives,
+        root: Option<JObjId>,
+        desc: &mut DynamicsDesc,
+        n: u32,
+    ) {
+        let Some(mut j) = root else {
+            desc.data = None;
+            return;
+        };
+        desc.count = 0;
+        let mut cur: Option<DynamicsId> = None;
+        while (desc.count as i32) < n as i32 {
+            let link = self.pop_dynamics_link();
+            match cur {
+                None => desc.data = link,
+                Some(c) => self.fighter_dynamics[c.0].next = link,
+            }
+            cur = link;
+            let Some(l) = link else { return };
+            if !self.objs.jobjs[j].mtx_is_dirty() {
+                jobj::set_mtx_dirty_sub(&mut self.objs.jobjs, j);
+            }
+            if self.objs.jobjs[j].mtx_is_dirty() {
+                jobj::setup_matrix_sub(&mut self.objs, data, j);
+            }
+            let o = &self.objs.jobjs[j];
+            let m = &o.mtx.m;
+            let d = &mut self.fighter_dynamics[l.0].desc;
+            d.jobj = Some(j);
+            d.rotate = o.rotate;
+            d.scale = o.scale;
+            d.translate = o.translate;
+            d.unk_2C = Vec3::new(copy(m[0][3]), copy(m[1][3]), copy(m[2][3]));
+            d.unk_58 = d.rotate;
+            d.unk_38.x = 1.0;
+            d.unk_38.y = 0.0;
+            d.unk_38.z = 0.0;
+            d.unk_44 = 0.0;
+            d.unk_8C = 0.0;
+            d.unk_48 = 0.0;
+            self.fighter_dynamics[l.0].next = None;
+            self.fighter_dynamics[l.0].unk_94 = 0;
+            desc.count += 1;
+            match self.objs.jobjs[j].child {
+                Some(c) => j = c,
+                None if (desc.count as i32) < n as i32 => {
+                    panic!("lb_8000FD48: a chain longer than its joints faults on a null joint")
+                }
+                None => {}
+            }
+        }
+        let mut cur = desc.data.expect("lb_8000FD48: a chain of no links");
+        while let Some(next) = self.fighter_dynamics[cur.0].next {
+            let (a, b) = (
+                self.fighter_dynamics[cur.0].desc.unk_2C,
+                self.fighter_dynamics[next.0].desc.unk_2C,
+            );
+            let dy = fp::fsubs(reg(a.y), reg(b.y));
+            let dx = fp::fsubs(reg(a.x), reg(b.x));
+            let dz = fp::fsubs(reg(a.z), reg(b.z));
+            let sq = fp::fmadds(dz, dz, fp::fmadds(dx, dx, fp::fmuls(dy, dy)));
+            // The inline `sqrtf`, taken for anything not at most zero (a NaN too).
+            let len = if !(sq <= 0.0) { newton_sqrt(sq) } else { sq };
+            self.fighter_dynamics[cur.0].desc.unk_48 = mem(len);
+            let t = self.fighter_dynamics[next.0].desc.translate;
+            // `fabsf` as the branches compile it: anything not at least zero is negated.
+            let abs = |v: f32| {
+                let r = reg(v);
+                if r >= 0.0 { r } else { fp::fneg(r) }
+            };
+            let (x, y, z) = (abs(t.x), abs(t.y), abs(t.z));
+            self.fighter_dynamics[cur.0].desc.unk_54 = if !(z <= y) {
+                if !(z <= x) { -1 } else { 0 }
+            } else if !(y <= x) {
+                1
+            } else {
+                0
+            };
+            cur = next;
+        }
+    }
+
+    /// Gives a chain's links their physics parameters from the character's data, and the
+    /// chain its position, `lb_80011710`.
+    #[doc(alias = "lb_80011710")]
+    pub fn set_dynamics_params(&mut self, data: &Archives, src: DataRef, desc: &mut DynamicsDesc) {
+        let pos = crate::game::mirror::read_vec3(data, src.at(8));
+        desc.pos = Vec3::new(copy(pos.x), copy(pos.y), copy(pos.z));
+        let inner = data.ptr(src).expect("a dynamics description without links");
+        let raw = |at: DataRef| f32::from_bits(data.u32(at));
+        let raw3 = |at: DataRef| Vec3::new(raw(at), raw(at.at(4)), raw(at.at(8)));
+        let mut link = desc.data;
+        for i in 0..data.u32(src.at(4)) as i32 {
+            let l = link.expect("lb_80011710: more parameters than links faults");
+            let e = inner.at(0x3C * i as u32);
+            let d = &mut self.fighter_dynamics[l.0].desc;
+            d.unk_4C = copy(data.f32(e));
+            d.unk_50 = copy(data.f32(e.at(4)));
+            d.unk_58 = Quat {
+                x: raw(e.at(8)),
+                y: raw(e.at(0xC)),
+                z: raw(e.at(0x10)),
+                w: raw(e.at(0x14)),
+            };
+            d.unk_68 = copy(data.f32(e.at(0x18)));
+            d.unk_6C = raw3(e.at(0x1C));
+            d.unk_78 = raw3(e.at(0x28));
+            d.unk_84 = copy(data.f32(e.at(0x34)));
+            d.unk_88 = copy(data.f32(e.at(0x38)));
+            d.unk_8C = if reg(d.unk_48) != 0.0 {
+                mem(fp::fdivs(reg(pos.z), reg(d.unk_48)))
+            } else {
+                0.0
+            };
+            link = self.fighter_dynamics[l.0].next;
+        }
+    }
+}
+
+/// The inline `sqrtf`'s three Newton steps on `frsqrte`, for a value already known positive.
+fn newton_sqrt(x: f64) -> f64 {
+    let mut g = fp::frsqrte(x);
+    for _ in 0..3 {
+        let gg = fp::fmul(g, g);
+        let half = fp::fmul(0.5, g);
+        g = fp::fmul(half, fp::fnmsub(x, gg, 3.0));
+    }
+    fp::frsp(fp::fmul(x, g))
 }

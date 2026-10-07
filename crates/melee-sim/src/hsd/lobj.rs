@@ -639,6 +639,32 @@ pub fn load(objs: &mut Objects, data: &Archives, l: LObjId, desc: DataRef) {
     }
 }
 
+/// An `HSD_LightDesc` in the executable's data rather than a loaded archive: its flags, color
+/// and position. Only ambient and infinite lights are met there.
+#[derive(Clone, Copy, Debug)]
+pub struct StaticLightDesc {
+    pub flags: u16,
+    pub color: [u8; 4],
+    pub position: Option<Vec3>,
+}
+
+/// A light loaded from a descriptor in the executable's data, `HSD_LObjLoadDesc` and
+/// `LObjLoad` on it.
+pub fn load_static(objs: &mut Objects, desc: &StaticLightDesc) -> LObjId {
+    let l = LObjId(objs.lobjs.pool.alloc(LObj::default()));
+    set_color(&mut objs.lobjs, l, desc.color);
+    set_flags(&mut objs.lobjs, Some(l), u32::from(desc.flags));
+    match desc.flags & TYPE_MASK {
+        AMBIENT => {}
+        INFINITE => {
+            let p = desc.position.map(|p| wobj::load_static(objs, p));
+            set_position_wobj(objs, Some(l), p);
+        }
+        _ => panic!("a static light of type {}", desc.flags & TYPE_MASK),
+    }
+    l
+}
+
 /// A chain of lights loaded from a chain of descriptors, `HSD_LObjLoadDesc`. Each light is
 /// allocated and loaded before the next. A descriptor naming a class panics: melee-sim has
 /// no class registry, and nothing in the game names one.

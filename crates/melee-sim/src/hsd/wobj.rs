@@ -139,6 +139,13 @@ pub fn init(objs: &mut Objects, data: &Archives, w: Option<WObjId>, desc: Option
     robj::resolve_refs_all(objs, data, r, rdesc);
 }
 
+/// A WObj loaded from a descriptor in the executable's data: at `pos`, with no references.
+pub fn load_static(objs: &mut Objects, pos: Vec3) -> WObjId {
+    let w = alloc(&mut objs.wobjs);
+    set(&mut objs.wobjs[w.0], pos);
+    w
+}
+
 /// A WObj loaded from a descriptor, `HSD_WObjLoadDesc`. A descriptor naming a class panics:
 /// melee-sim has no class registry, and nothing in the game names one.
 #[doc(alias = "HSD_WObjLoadDesc")]

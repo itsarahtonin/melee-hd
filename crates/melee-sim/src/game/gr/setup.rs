@@ -657,6 +657,15 @@ fn light_list(game: &Game, data: &Archives) -> Option<DataRef> {
     None
 }
 
+/// The lights fighters use: the stage's own (`stage_info.map_plit`, through
+/// `Ground_801C20E0`), or none for the defaults, `Ground_801C49B4`.
+#[doc(alias = "Ground_801C49B4")]
+pub fn fighter_light_list(game: &Game, data: &Archives) -> Option<DataRef> {
+    let list = game.stage_info.map_plit?;
+    light_overrides(data, datfiles::main_head(game), list);
+    Some(list)
+}
+
 /// Applies the archive's light overrides to a light list, `Ground_801C20E0`: the list is used
 /// as it is unless an override for one of its lights sets a flag, which would make the
 /// original edit the loaded list and descriptors (the stages ported have none).
