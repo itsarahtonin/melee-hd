@@ -1,23 +1,26 @@
 //! Dolphin's speed on the benchmark matches, the baseline of the performance goal.
 //!
-//! `melee-bench dolphin [--dir DIR] [--runs N] [--calibrate] MATCH...` plays each match
+//! `melee-bench dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]` plays each match
 //! (`DIR/MATCH.slp`, made as `docs/performance.md` says) in a portable mainline Dolphin
 //! (`DOLPHIN`, default `C:\Projects\dolphin-dev\Dolphin-x64`) on the disc `SSBM_DISC`, `N` times
 //! (default 5), and reports the median of the emulated frames per second over the match's
-//! frames. Dolphin runs headless and unseen: batch mode, the Null video backend, no audio
-//! output, unlimited speed, the CPU on the emulation thread (one core), on a desktop nobody sees,
-//! with its own user directory (`DIR/dolphin-user`), no memory cards and no controller backends.
+//! frames, with the machine. Dolphin runs headless and unseen: batch mode, the Null video
+//! backend, no audio output, unlimited speed, the CPU on the emulation thread (one core), on a
+//! desktop nobody sees, with its own user directory (`DIR/dolphin-user`), no memory cards and no
+//! controller devices but the movie's. A job object ends Dolphin with the harness.
 //!
 //! The match: the Gecko codes `melee-bench codes` writes boot the game into it (`DIR/MATCH.ini`,
-//! as the game settings file), and a DTM movie plays the replay's controllers. A movie holds one
-//! entry per controller poll, so where the match's frames fall in it depends on how long Dolphin
-//! takes to boot and load; `--calibrate` finds that once per match with a movie whose third
-//! controller counts its polls, and keeps it in `DIR/MATCH.dolphin`.
+//! as the game's settings), and a DTM movie plays the replay's controllers. A movie holds one
+//! entry per controller poll, and Dolphin polls twice a field while the game's ticks keep their
+//! own clock, so which poll each frame takes drifts, and near a poll's time depends on how long
+//! the frame's work before it took. `--calibrate` finds it per match (`DIR/MATCH.dolphin`, a
+//! poll per frame): see `Env::calibrate`.
 //!
-//! Each run is timed and checked while it plays: the harness reads Dolphin's emulated memory
-//! (its MEM1 mapping) every half millisecond or so, timing the match's frames and comparing each
-//! frame it sees with the replay's post-frame updates: every fighter's action state, position,
-//! facing, percent and stocks. A run that differs anywhere is reported as out of sync.
+//! Each run is timed and checked while it plays. The harness reads Dolphin's emulated memory
+//! (its MEM1 mapping) as each frame ends: the frames' times, and every fighter's action state,
+//! position, facing, percent and stocks and the random seed, against the replay. A stretch of
+//! frames that differ means the run left the replay. Past the match's last frame ("GAME!"), the
+//! fighters' stocks and percents must be the replay's last.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -37,7 +40,7 @@ const RANDOM_SEED: u32 = 0x804D_5F90;
 const PLAYER_SLOTS: u32 = 0x8045_3080;
 const PLAYER_SLOT_SIZE: u32 = 0xE90;
 /// HSD's raw controller queue (5 polls of 4 controllers, 12 bytes each) and its library data,
-/// whose byte at +1 is the next entry it writes.
+/// whose byte at +1 is the next entry it hands a tick.
 const RAW_QUEUE: u32 = 0x8046_B108;
 const PAD_LIB: u32 = 0x804C_1F78;
 
@@ -64,6 +67,7 @@ pub fn main(args: &[String]) {
         names = matches::MATCHES.iter().map(|m| m.name.to_owned()).collect();
     }
     let env = Env::new(dir);
+    crate::win::raise_thread_priority();
     if calibrate {
         for name in &names {
             let cal = env.calibrate(name);
@@ -148,34 +152,43 @@ impl Calibration {
         }
     }
 
-    /// The calibration from the (frame, poll) a run saw, frames 0 to `last`. A sample read just
-    /// as the next tick took its poll shows a poll two too far: a lone such frame doesn't
-    /// count. Frames not seen keep `prior`'s poll, or take their neighbours' pace.
-    fn from_seen(seen: &[(i32, i64)], last: i32, prior: Option<&Calibration>) -> Calibration {
-        let v: BTreeMap<i32, i64> = seen
-            .iter()
-            .map(|&(f, p)| (f, p - 2 * i64::from(f)))
-            .collect();
-        let good: BTreeMap<i32, i64> = v
-            .iter()
-            .filter(|&(f, &x)| {
-                let (a, b) = (v.get(&(f - 1)), v.get(&(f + 1)));
-                !(a.is_some_and(|&a| x >= a + 2) && b.is_none_or(|&b| x >= b + 2))
-            })
-            .map(|(&f, &x)| (f, x))
-            .collect();
-        let polls = (0..=last)
-            .map(|f| match (good.get(&f), prior) {
-                (Some(&x), _) => x + 2 * i64::from(f),
-                (None, Some(c)) => c.poll(f),
-                (None, None) => {
-                    let near = good
-                        .range(..f)
-                        .next_back()
-                        .or_else(|| good.range(f..).next())
-                        .expect("no polls seen");
-                    near.1 + 2 * i64::from(f)
+    /// Each frame's poll (as its offset from twice the frame) from what runs showed: at some
+    /// frames shown by runs that played the replay (`trusted`), at others guessed from any run
+    /// (`guess`). A frame takes its trusted value, else one trusted on both sides of it, else
+    /// its guess, else the nearer guess.
+    fn from_runs(
+        trusted: &BTreeMap<i32, i64>,
+        guess: &BTreeMap<i32, i64>,
+        last: i32,
+    ) -> Calibration {
+        let near = |m: &BTreeMap<i32, i64>, f: i32| -> Option<(i64, bool)> {
+            let before = m.range(..=f).next_back();
+            let after = m.range(f..).next();
+            match (before, after) {
+                (Some((_, &a)), Some((_, &b))) if a == b => Some((a, true)),
+                (Some((&fa, &a)), Some((&fb, &b))) => {
+                    Some((if f - fa <= fb - f { a } else { b }, false))
                 }
+                (Some((_, &a)), None) | (None, Some((_, &a))) => Some((a, false)),
+                (None, None) => None,
+            }
+        };
+        let polls = (0..=last)
+            .map(|f| {
+                let v = match (
+                    trusted.get(&f),
+                    near(trusted, f),
+                    guess.get(&f),
+                    near(guess, f),
+                ) {
+                    (Some(&v), ..) => v,
+                    (_, Some((v, true)), ..) => v,
+                    (_, _, Some(&v), _) => v,
+                    (_, _, _, Some((v, _))) => v,
+                    (_, Some((v, false)), None, None) => v,
+                    _ => panic!("no polls seen"),
+                };
+                v + 2 * i64::from(f)
             })
             .collect();
         Calibration { polls }
@@ -212,13 +225,16 @@ struct RunResult {
     torn: usize,
     /// Where the run left the replay: a stretch of frames that all differ.
     desync: Option<String>,
+    /// About where that stretch starts (frames not sampled make it approximate).
+    desync_frame: Option<i32>,
     /// The fighters' stocks and percents once the match is over, against the replay's last
     /// frame: `None` if the run never got there.
     end_check: Option<Result<(), String>>,
 }
 
-/// Consecutive differing frames that make a desync rather than torn samples.
-const DESYNC_RUN: usize = 20;
+/// Consecutive differing frames (two seconds) that make a desync rather than torn samples or a
+/// harness kept waiting on a busy machine: a real desync lasts the rest of the match.
+const DESYNC_RUN: usize = 120;
 
 impl RunResult {
     fn in_sync(&self) -> bool {
@@ -317,7 +333,7 @@ impl Env {
         std::fs::write(settings.join("GALE01.ini"), ini).unwrap();
     }
 
-    fn command_line(&self, dtm: &Path) -> String {
+    fn command_line(&self, dtm: &Path, speed: f64) -> String {
         // MELEE_BENCH_CONFIG=SYSTEM.SECTION.KEY=VALUE[;...] adds settings, for experiments.
         let extra: String = std::env::var("MELEE_BENCH_CONFIG")
             .unwrap_or_default()
@@ -332,7 +348,7 @@ impl Env {
         };
         format!(
             "-u \"{}\" -b -v Null {movie}\
-             -C Dolphin.Core.CPUThread=False -C Dolphin.Core.EmulationSpeed=0 \
+             -C Dolphin.Core.CPUThread=False -C Dolphin.Core.EmulationSpeed={speed} \
              -C Dolphin.Core.GFXBackend=Null -C \"Dolphin.DSP.Backend=No Audio Output\" \
              -C Dolphin.Interface.UsePanicHandlers=False -C Dolphin.Interface.ConfirmStop=False \
              -C Dolphin.Core.EnableCheats=True {extra}-e \"{}\"",
@@ -361,36 +377,41 @@ impl Env {
     }
 
     /// Finds where the match's frames fall in the movie. A movie's third controller (an unused
-    /// port) counts its polls on its sticks, so a run shows which poll each frame's tick took.
-    /// The first run has the fighters stand still; each next one plays the replay's controllers
-    /// placed by what the last one showed, until every frame took its own controllers: where a
-    /// frame's tick reads near a poll's time, which poll it gets can depend on how much the
-    /// game did before reading, so the match itself must be playing.
+    /// port) counts its polls (`counter_pad`), so a run shows which poll each frame's tick took.
+    /// The first run has the fighters stand still. Where a tick reads close to a poll's time,
+    /// which poll it gets can depend on how much the game did first, so each next run plays the
+    /// replay's controllers placed by what the runs so far showed, and what it shows before it
+    /// leaves the replay is kept as true; until a run plays the whole match as the replay did.
     fn calibrate(&self, name: &str) -> Calibration {
         let replay = self.replay(name);
         let last = replay_last_frame(&replay);
         let pads = pads_by_frame(&replay);
         let count = 2_000 + 3 * (last - FIRST_FRAME + 200) as usize;
+        let mut trusted: BTreeMap<i32, i64> = BTreeMap::new();
+        let mut guess: BTreeMap<i32, i64> = BTreeMap::new();
         let mut cal: Option<Calibration> = None;
+        let mut converged = false;
         for round in 1..=MAX_CALIBRATION_ROUNDS {
             let mut entries = match &cal {
                 None => vec![[Pad::NEUTRAL; 4]; count],
                 Some(c) => dtm_entries(&pads, c, last + 60),
             };
             for (i, e) in entries.iter_mut().enumerate() {
-                e[2] = Pad {
-                    stick: [code(i, 0), code(i, 1)],
-                    cstick: [code(i, 2), code(i, 3)],
-                    ..Pad::NEUTRAL
-                };
+                e[2] = counter_pad(i);
             }
             let dtm = self.user.join(format!("{name}-calibrate.dtm"));
             std::fs::create_dir_all(&self.user).unwrap();
             std::fs::write(&dtm, dtm_bytes(&entries)).unwrap();
             let mut seen: BTreeMap<i32, i64> = BTreeMap::new();
-            self.run(name, &dtm, &Replay::default(), Some((&mut seen, last + 2)));
+            let shown = if cal.is_some() {
+                &replay
+            } else {
+                &Replay::default()
+            };
+            let r = self.run(name, &dtm, shown, Some((&mut seen, last + 2)));
+            let reached = seen.keys().next_back() >= Some(&last);
             assert!(
-                seen.keys().next_back() >= Some(&last),
+                reached || cal.is_some(),
                 "{name}: the calibration saw frames up to {:?}, not the match's",
                 seen.keys().next_back()
             );
@@ -405,37 +426,43 @@ impl Env {
                 )
                 .unwrap();
             }
-            let next = Calibration::from_seen(&known, last, cal.as_ref());
-            // Which frames took another frame's controllers.
-            let wrong: Vec<i32> = match &cal {
-                None => vec![0],
-                Some(_) => known
-                    .iter()
-                    .filter(|&&(f, p)| {
-                        next.poll(f) == p
-                            && entries.get(p as usize).is_none_or(|e| {
-                                let want = pads.get(&f).copied().unwrap_or([Pad::NEUTRAL; 4]);
-                                e[0] != want[0] || e[1] != want[1]
-                            })
-                    })
-                    .map(|&(f, _)| f)
-                    .collect(),
+            let observed: BTreeMap<i32, i64> = known
+                .iter()
+                .map(|&(f, p)| (f, p - 2 * i64::from(f)))
+                .collect();
+            let good_until = match (&cal, r.desync_frame) {
+                (None, _) => -1,
+                // The frame where it left still took its poll as the replay's match would.
+                (Some(_), Some(d)) => d,
+                (Some(_), None) => last,
             };
+            trusted.extend(observed.range(..=good_until).map(|(&f, &v)| (f, v)));
+            // Guesses for the frames no run has shown yet: the still run's polls, and what
+            // later runs showed before they left the replay.
+            let shown_until = if cal.is_none() { last } else { good_until };
+            guess.extend(observed.range(..=shown_until).map(|(&f, &v)| (f, v)));
             eprintln!(
-                "{name}: calibration round {round}: {} frames seen, {} took another frame's controllers{}",
+                "{name}: calibration round {round}: {} frames seen; {}",
                 known.len(),
-                wrong.len(),
-                wrong
-                    .first()
-                    .map_or(String::new(), |f| format!(" (first {f})"))
+                match (&cal, r.desync_frame) {
+                    (None, _) => "the fighters stood still".to_owned(),
+                    (Some(_), Some(d)) => format!("left the replay about frame {d}"),
+                    (Some(_), None) => "played the whole match as the replay did".to_owned(),
+                }
             );
-            let done = wrong.is_empty();
-            cal = Some(next);
-            if done {
+            // A run that played the whole match keeps the placement it played with.
+            if cal.is_some() && r.desync_frame.is_none() && reached {
+                converged = true;
                 break;
             }
+            cal = Some(Calibration::from_runs(&trusted, &guess, last));
         }
         let cal = cal.unwrap();
+        if !converged {
+            eprintln!(
+                "{name}: warning: no calibration run played the whole match in {MAX_CALIBRATION_ROUNDS} rounds; runs will likely leave the replay"
+            );
+        }
         let text: String = cal.polls.iter().map(|p| format!("{p}\n")).collect();
         std::fs::write(self.calibration_path(name), text).unwrap();
         cal
@@ -445,7 +472,7 @@ impl Env {
     fn write_dtm(&self, name: &str, replay: &Replay, cal: &Calibration) -> PathBuf {
         let last = replay_last_frame(replay);
         // The movie ends two seconds after the match (MELEE_BENCH_STOP=F: at frame F's poll),
-        // where Dolphin pauses, so the harness can read the match as it ended.
+        // where Dolphin pauses rather than play on (a pause also shows the state there).
         let stop = std::env::var("MELEE_BENCH_STOP")
             .ok()
             .and_then(|f| f.parse().ok())
@@ -476,7 +503,14 @@ impl Env {
         let exe = self.dolphin.join("Dolphin.exe");
         let dolphin = Hidden::spawn(
             &exe.to_string_lossy(),
-            &self.command_line(dtm),
+            &self.command_line(
+                dtm,
+                if polls.is_some() {
+                    CALIBRATION_SPEED
+                } else {
+                    0.0
+                },
+            ),
             &self.dolphin.to_string_lossy(),
         )
         .unwrap_or_else(|e| panic!("starting {}: {e}", exe.display()));
@@ -488,6 +522,7 @@ impl Env {
             checked: 0,
             torn: 0,
             desync: None,
+            desync_frame: None,
             end_check: None,
         };
         let mut end = None;
@@ -501,6 +536,14 @@ impl Env {
         }
         let mut next_report = Instant::now();
         let mut seen = None;
+        let mut recent = std::collections::VecDeque::new();
+        // MELEE_BENCH_NAP_US=N waits N µs between looks at the frame counter (default 100).
+        let nap = Duration::from_micros(
+            std::env::var("MELEE_BENCH_NAP_US")
+                .ok()
+                .and_then(|n| n.parse().ok())
+                .unwrap_or(100),
+        );
         let mut seen_at = Instant::now();
         while Instant::now() < deadline && !dolphin.wait(0) {
             if verbose
@@ -509,23 +552,19 @@ impl Env {
             {
                 next_report += Duration::from_secs(1);
                 eprintln!(
-                    "scene {:02X?}, frames {:?}, pad library {:02X?}",
+                    "{name}: scene {:02X?}, frames {:?}",
                     m.read::<4>(SCENE),
-                    m.u32(SCENE + 0x28),
-                    m.read::<8>(PAD_LIB),
+                    m.u32(SCENE + 0x28)
                 );
-                for e in 0..5 {
-                    eprintln!("  raw {e}: {:02X?}", m.read::<0x30>(RAW_QUEUE + 0x30 * e));
-                }
-                eprintln!("  master 1: {:02X?}", m.read::<0x44>(0x804C_1FAC));
-                if let Some(s) = m.sample() {
-                    eprintln!("  fighters: {:?}", s.fighters);
-                }
             }
             // A new frame's counter, caught as soon as it changes, comes before the next tick
             // has updated any fighter: the sample then shows the frame that just ended.
             let Some(m) = &mem else { break };
             let Some(frame) = m.frame() else {
+                // The match ended early (a run that left the replay) and the game moved on.
+                if seen.is_some() && seen_at.elapsed() > Duration::from_secs(3) {
+                    break;
+                }
                 std::thread::sleep(Duration::from_micros(200));
                 continue;
             };
@@ -535,12 +574,18 @@ impl Env {
                     end = m.sample();
                     break;
                 }
-                std::thread::yield_now();
+                std::thread::sleep(nap);
                 continue;
             }
             seen = Some(frame);
             seen_at = Instant::now();
             let Some(s) = m.sample() else { continue };
+            // Past the match's last frame the game shows "GAME!" and the stocks and percents
+            // stay as they ended; the game then moves on to another scene.
+            if polls.is_none() && s.frame > last {
+                end = Some(s);
+                break;
+            }
             let now = Instant::now();
             if s.frame < result.first {
                 result.first = s.frame;
@@ -550,19 +595,30 @@ impl Env {
                 result.last = s.frame;
                 t_last = Some(now);
             }
+            let mut stop = false;
             if let Some((p, until)) = polls.as_mut() {
-                if let Some(i) = s.poll {
+                // The queue moves one a tick, so its position less the frame is the same for
+                // every sample taken before the next tick took its poll, and one more for those
+                // after: only the first kind count.
+                let k = (i32::from(s.qread) - s.frame).rem_euclid(5);
+                recent.push_back(k);
+                if recent.len() > 64 {
+                    recent.pop_front();
+                }
+                let mode = (0..5)
+                    .max_by_key(|m| recent.iter().filter(|&&x| x == *m).count())
+                    .unwrap();
+                if let Some(i) = s.poll
+                    && k == mode
+                {
                     // The latest poll is the one the frame before's tick took.
                     p.entry(s.frame - 1).or_insert(i);
                 }
                 if s.frame >= *until {
-                    eprintln!(
-                        "fourth controller, movie {CALIBRATION_PAD:?}: game polled {:02X?}",
-                        s.fourth
-                    );
-                    break;
+                    stop = true;
                 }
-            } else if let Some(want) = expected.get(&(s.frame + ENDED))
+            }
+            if let Some(want) = expected.get(&(s.frame + ENDED))
                 && s.fighters.iter().any(Option::is_some)
             {
                 result.checked += 1;
@@ -587,8 +643,12 @@ impl Env {
                     run_len += 1;
                     if run_len == DESYNC_RUN && result.desync.is_none() {
                         result.desync = Some(run_first.clone());
+                        result.desync_frame = Some(s.frame + ENDED - DESYNC_RUN as i32 + 1);
                     }
                 }
+            }
+            if stop {
+                break;
             }
         }
         if run_len < DESYNC_RUN {
@@ -646,6 +706,11 @@ impl Env {
     }
 }
 
+/// Calibration plays at twice the console's speed, not unlimited: the game then idles between
+/// frames, and a sample taken as a frame ends reads the poll that frame took before the next
+/// frame takes its own.
+const CALIBRATION_SPEED: f64 = 2.0;
+
 /// Calibration runs at most this many times per match.
 const MAX_CALIBRATION_ROUNDS: usize = 12;
 
@@ -662,29 +727,40 @@ fn dtm_entries(pads: &BTreeMap<i32, [Pad; 4]>, cal: &Calibration, stop: i32) -> 
     entries
 }
 
-/// What the calibration movie's fourth controller holds, to show how the game sees a movie's
-/// buttons, sticks and triggers.
-const CALIBRATION_PAD: Pad = Pad {
-    buttons: 0x0000,
-    stick: [0x80 + 40, 0x80 - 30],
-    cstick: [0x80 + 20, 0x80 - 10],
-    triggers: [100, 50],
-};
+/// The buttons the calibration movie's third controller counts its polls on, lowest first:
+/// Start, X and B change every poll or two, so the controller never holds a reset combination.
+const COUNTER_BUTTONS: [u16; 12] = [
+    0x1000, 0x0400, 0x0200, 0x0800, 0x0100, 0x0010, 0x0001, 0x0002, 0x0004, 0x0008, 0x0040, 0x0020,
+];
 
-/// A 6-bit piece of `i` for the calibration movie's sticks: piece `n`, offset into 0x80..0xC0.
-fn code(i: usize, n: u32) -> u8 {
-    0x80 + ((i >> (6 * n)) & 0x3F) as u8
+/// The third controller of the calibration movie's entry `i`: `i` in its buttons and (seven
+/// bits each, below the 140 Melee clamps at) its triggers. The game spends the same work on a
+/// controller's buttons and triggers whatever they hold, so this leaves the frames' timing as
+/// the benchmark's still controller would; moving the sticks would not.
+fn counter_pad(i: usize) -> Pad {
+    let mut buttons = 0;
+    for (n, &b) in COUNTER_BUTTONS.iter().enumerate() {
+        if i >> n & 1 != 0 {
+            buttons |= b;
+        }
+    }
+    Pad {
+        buttons,
+        triggers: [(i >> 12 & 0x7F) as u8, (i >> 19 & 0x7F) as u8],
+        ..Pad::NEUTRAL
+    }
 }
 
-fn decode(stick: [i8; 4]) -> Option<i64> {
+/// The entry a `PADStatus` of the third controller comes from.
+fn counter_entry(status: &[u8; 12]) -> i64 {
+    let buttons = u16::from_be_bytes([status[0], status[1]]);
     let mut i = 0i64;
-    for (n, &v) in stick.iter().enumerate() {
-        if !(0..64).contains(&v) {
-            return None;
+    for (n, &b) in COUNTER_BUTTONS.iter().enumerate() {
+        if buttons & b != 0 {
+            i |= 1 << n;
         }
-        i |= i64::from(v) << (6 * n);
     }
-    Some(i)
+    i | i64::from(status[6] & 0x7F) << 12 | i64::from(status[7] & 0x7F) << 19
 }
 
 /// Dolphin's emulated main memory, as mapped into its process.
@@ -702,8 +778,9 @@ struct Sample {
     seed: u32,
     /// The movie entry the last poll came from, by the calibration movie's third controller.
     poll: Option<i64>,
-    /// The fourth controller's last poll, as `HSD_PadRenewRawStatus` queued it (a `PADStatus`).
-    fourth: [u8; 12],
+    /// HSD's queue position: it moves one a tick, so against the frame counter it tells a
+    /// sample read after the next tick took its poll.
+    qread: u8,
 }
 
 impl Mem {
@@ -768,17 +845,16 @@ impl Mem {
         let lib = self.read::<4>(PAD_LIB)?;
         let latest = (i32::from(lib[1]) + 4) % 5;
         let raw = self.read::<12>(RAW_QUEUE + 0x30 * latest as u32 + 12 * 2)?;
-        let poll = decode([raw[2] as i8, raw[3] as i8, raw[4] as i8, raw[5] as i8])
-            .filter(|_| self.read::<4>(PAD_LIB) == Some(lib));
-        let fourth = self.read::<12>(RAW_QUEUE + 0x30 * latest as u32 + 12 * 3)?;
+        let poll = Some(counter_entry(&raw)).filter(|_| self.read::<4>(PAD_LIB) == Some(lib));
         // A frame that ended while this was read is no sample.
         let seed = self.u32(RANDOM_SEED)?;
+        let qread = lib[1];
         (self.frame()? == frame).then_some(Sample {
+            qread,
             frame,
             fighters,
             seed,
             poll,
-            fourth,
         })
     }
 }

@@ -98,6 +98,8 @@ unsafe extern "system" {
     fn TerminateProcess(h: HANDLE, code: u32) -> BOOL;
     fn GetExitCodeProcess(h: HANDLE, code: *mut u32) -> BOOL;
     fn CloseHandle(h: HANDLE) -> BOOL;
+    fn GetCurrentThread() -> HANDLE;
+    fn SetThreadPriority(thread: HANDLE, priority: i32) -> BOOL;
     fn CreateJobObjectW(sa: *mut c_void, name: *const u16) -> HANDLE;
     fn SetInformationJobObject(job: HANDLE, class: i32, info: *mut c_void, len: u32) -> BOOL;
     fn AssignProcessToJobObject(job: HANDLE, process: HANDLE) -> BOOL;
@@ -323,5 +325,15 @@ impl Drop for Process {
         unsafe {
             CloseHandle(self.0);
         }
+    }
+}
+
+/// Raises the calling thread's priority a step, so the harness's sampler wakes on time on a busy
+/// machine.
+pub fn raise_thread_priority() {
+    const THREAD_PRIORITY_ABOVE_NORMAL: i32 = 1;
+    // SAFETY: plain Win32 calls on the current thread's pseudo-handle.
+    unsafe {
+        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
     }
 }
