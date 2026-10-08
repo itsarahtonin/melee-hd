@@ -2682,3 +2682,23 @@ HSD_SynthSFXBankDeflagSync	leaf-check audio timeline_entry: every logged call
 HSD_SynthSFXStopRange	leaf-check audio bank_calls, bank_deflag_moves, timeline_entry: every unload and deflag stops its bank's effects through it
 HSD_AudioPStreamStartChParam	leaf-check audio timeline_entry: the match's music start, logged; the whole audio state compared every tick
 HSD_DevComCancelEx	leaf-check audio bank_calls, timeline_entry: every load cancel
+Stage_802251E8	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the match's start selects the stage through it; the whole state compared from the first tick
+Ground_801C0754	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Stage_802251E8 loads FD through it; compared from the first tick
+grDatFiles_801C6038	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Ground_801C0754 loads GrNLa.dat and its parameters through it; compared from the first tick
+grDatFiles_801C6228	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): grDatFiles_801C6038 marks FD's materials through it; the materials loaded later compared from the first tick
+Ground_801C28CC	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Ground_801C0754 writes the item frequencies through it; stage_info compared from the first tick
+Stage_8022524C	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the match's setup runs FD's setup through it; compared from the first tick
+Stage_80225298	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the match's setup runs FD's load hook through it; compared from the first tick
+Stage_80225074	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the match's start chooses FD's music through it (the stream's start stood in); the seed and stage_info compared from the first tick
+Ground_801C28AC	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Stage_80225074 reaches it on FD (case 6, the unlock-all draw); compared from the first tick
+Ground_801C24F8	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Ground_801C28AC's body (one port for both)
+gm_80164ABC	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Ground_801C24F8's case 6 asks it, the trace's unlock-all code set; the seed compared from the first tick
+gm_8016B3A0	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Stage_80225074 asks it in a VS match; compared from the first tick
+tyDisplay_8031C2CC	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Ground_801C0754 loads the trophy data through it (its disc load timed); compared from the first tick
+Toy_803124BC	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): tyDisplay_8031C2CC's load (one port for both)
+Item_80266F70	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the match's setup takes ItCo.usd's common data through it; the items' globals compared from the first tick
+it_8027870C	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Item_80266F70's body (one port for both)
+grStadium_801D4084	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the Ready announcement reaches it off Pokemon Stadium (nothing to show); compared every tick
+grStadium_801D4040	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): GO! reaches it off Pokemon Stadium; compared every tick
+Stage_802252E4	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): GO! starts FD's match through it; compared every tick
+ftLib_EnableAllInput	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): GO! lets both fighters take input through it; compared every tick

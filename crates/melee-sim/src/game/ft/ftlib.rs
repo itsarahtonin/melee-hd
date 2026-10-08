@@ -78,6 +78,16 @@ impl Game {
         self.fighter_mut(gobj).input_disabled = false;
     }
 
+    /// Every fighter takes input, `ftLib_EnableAllInput`.
+    #[doc(alias = "ftLib_EnableAllInput")]
+    pub fn ft_enable_all_input(&mut self) {
+        let mut cur = self.world.first_in(super::common::FIGHTER_P_LINK);
+        while let Some(g) = cur {
+            self.ft_enable_input(g);
+            cur = self.world.gobjs[g.0].next;
+        }
+    }
+
     #[doc(alias = "ftLib_80086A4C")]
     pub fn ft_80086a4c(&mut self, gobj: GObjId, v: f32) {
         self.fighter_mut(gobj).dmg.x1958 = v;

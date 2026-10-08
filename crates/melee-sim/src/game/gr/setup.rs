@@ -5,11 +5,12 @@
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
+use super::super::code::unported_call;
 use super::super::handles::{CodeRef, GroundId, StartHookId};
 use super::super::state::{
     Game, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, USER_DATA_GROUND, UserData,
 };
-use super::super::structs::Ground;
+use super::super::structs::{Ground, GroundParam};
 use super::data::{StageCallbacks, stage_data};
 use super::datfiles::{self, GrJoint, MapHead};
 use super::ground::{self, ground_of, jobj_of, nth_joint, scale};
@@ -20,6 +21,7 @@ use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::{aobj, fog, lobj};
 use crate::mtx::Mtx34;
 use crate::vec::Vec3;
+use melee_data::archive::ArchiveId;
 
 /// `It_Kind_Old_Kuri`: the first kind the stage item table holds.
 pub const IT_KIND_OLD_KURI: i32 = 208;
@@ -902,6 +904,7 @@ pub fn create_collision_gobj(game: &mut Game) {
 /// parameters, its items' descriptions, its collision, fog and lights, then the stage's own
 /// setup.
 #[doc(alias = "Ground_801C0800")]
+#[doc(alias = "Stage_8022524C")]
 pub fn setup(r: &mut Running, grkind: i32) {
     let (game, data) = (&mut *r.game, r.data);
     let p = game.gr.param.clone().expect("stage_info.param is null");
@@ -951,6 +954,7 @@ pub fn setup(r: &mut Running, grkind: i32) {
 
 /// Runs the stage's load hook, `Ground_OnLoad`.
 #[doc(alias = "Ground_OnLoad")]
+#[doc(alias = "Stage_80225298")]
 pub fn on_load(r: &mut Running, grkind: i32) {
     super::super::code::run_event(r, stage_data(grkind).on_load);
 }
@@ -1035,4 +1039,255 @@ fn forget_points(
             }
         }
     }
+}
+
+/// `St_Kind_Heal`, whose stage archive (none) comes from the preload.
+const ST_KIND_HEAL: i32 = 0x55;
+
+/// Picks the match's stage and loads it, `Stage_802251E8`: the stage kind's ground kind.
+#[doc(alias = "Stage_802251E8")]
+pub fn select(r: &mut Running, stkind: i32, archive: Option<ArchiveId>) {
+    r.game.gr.stkind = stkind;
+    let grkind = crate::lb::audio::ground_kind(stkind) as i32;
+    load(r, grkind, stkind, archive);
+}
+
+/// Loads a stage, `Ground_801C0754`: `stage_info` reset, the stage's archive and what it
+/// exports, the stage's item frequencies, its line and shadow callbacks, and the trophies'
+/// bookkeeping.
+#[doc(alias = "Ground_801C0754")]
+pub fn load(r: &mut Running, grkind: i32, stkind: i32, archive: Option<ArchiveId>) {
+    reset(r.game);
+    r.game.stage_info.grkind = grkind;
+    let stage = stage_data(grkind);
+    load_dat(
+        r,
+        stage
+            .file
+            .map(|f| (f, archive.expect("the stage's archive"))),
+        stkind != ST_KIND_HEAL,
+    );
+    item_frequencies(r.game, r.data, stkind);
+    let code = |a: u32| (a != 0).then_some(CodeRef(a));
+    r.game.stage_info.on_touch_line = code(stage.on_touch_line);
+    r.game.stage_info.on_check_shadow_render = code(stage.on_check_shadow_render);
+    // `Ground_801C5878`: `tyDisplay_8031C2CC`, then, outside the single-player modes, no
+    // single-player display.
+    r.load_trophy_data();
+    if !super::super::gm::is_1p_mode(r.game) {
+        r.game.stage_info.x6E4[0] = -1;
+    }
+}
+
+/// Loads the stage's archive into the table's first free slot, `grDatFiles_801C6038` (with
+/// its main stage's exports, as every stage's own load does): a disc load unless it was
+/// preloaded, its `map_head`, `stage_info`'s pointers into it, its particle bank (64) and its
+/// marked materials. No archive gives the defaults.
+#[doc(alias = "grDatFiles_801C6038")]
+pub fn load_dat(r: &mut Running, file: Option<(&str, ArchiveId)>, _from_disc: bool) {
+    let slot = r
+        .game
+        .gr
+        .archives
+        .iter()
+        .position(Option::is_none)
+        .expect("the original's assertion failed: grdatfiles.c:229");
+    let Some((name, archive)) = file else {
+        unimplemented!("a stage without an archive (grDatFiles_803E0848's defaults)");
+    };
+    // `lbArchive_800171CC`: the preload holds no stage archive in a match, so it loads.
+    r.disc_load(name, super::super::ft::data::MAIN_MEMORY);
+    let data = r.data;
+    let a = data.get(archive);
+    let public = |n: &str| a.public(n).map(|offset| DataRef { archive, offset });
+    let map_head = public("map_head");
+    r.game.gr.archives[slot] = Some(super::StageArchive {
+        archive,
+        map_head,
+        kind: 0,
+    });
+    let i = &mut r.game.stage_info;
+    i.coll_data = public("coll_data");
+    i.param = public("grGroundParam");
+    i.itemdata = public("itemdata");
+    i.ald_yaku_all = public("ALDYakuAll");
+    i.map_ptcl = public("map_ptcl");
+    i.map_texg = public("map_texg");
+    i.yakumono_param = public("yakumono_param");
+    i.map_plit = public("map_plit");
+    i.quake_model_set = public("quake_model_set");
+    r.game.gr.param = i.param.map(|p| read_ground_param(data, p));
+    if let (Some(ptcl), Some(texg)) = (i.map_ptcl, i.map_texg) {
+        crate::hsd::particle::load_data_bank(&mut r.game.objs, data, 0x40, ptcl, texg, None, None);
+    }
+    mark_materials(r.game, data, map_head);
+}
+
+/// Marks the materials the `map_head` lists (`unk28`) `1 << 26`, `grDatFiles_801C6228`: in
+/// the loaded descriptors, which [`crate::hsd::Objects::rendermode_patches`] holds.
+#[doc(alias = "grDatFiles_801C6228")]
+pub fn mark_materials(game: &mut Game, data: &Archives, map_head: Option<DataRef>) {
+    let Some(h) = map_head else { return };
+    let (Some(list), n) = (data.ptr(h.at(0x28)), data.u32(h.at(0x2C)) as i32) else {
+        return;
+    };
+    for k in 0..n.max(0) as u32 {
+        if let Some(d) = data.ptr(list.at(4 * k)) {
+            *game.objs.rendermode_patches.entry(d).or_default() |= 1 << 26;
+        }
+    }
+}
+
+/// The stage's `grGroundParam`, copied out of its archive: its one pointer, the stage
+/// parameters, points into the same archive.
+fn read_ground_param(data: &Archives, at: DataRef) -> GroundParam {
+    use super::super::mirror::{Cx, Mem, Mirror};
+    struct Pointers(melee_data::archive::ArchiveId);
+    impl Cx for Pointers {
+        fn import_handle(&mut self, kind: &'static str, _: u32) -> Option<u32> {
+            panic!("grGroundParam holds a {kind}")
+        }
+        fn import_data(&mut self, offset: u32) -> Option<DataRef> {
+            (offset != 0).then_some(DataRef {
+                archive: self.0,
+                offset,
+            })
+        }
+        fn compare_handle(&mut self, _: &str, _: &'static str, _: Option<u32>, _: u32) {
+            unreachable!()
+        }
+        fn compare_data(&mut self, _: &str, _: Option<DataRef>, _: u32) {
+            unreachable!()
+        }
+        fn mismatch(&mut self, _: &str, _: String, _: String) {
+            unreachable!()
+        }
+    }
+    let mem = Mem {
+        bytes: data.get(at.archive).data(),
+        base: 0,
+    };
+    GroundParam::import(&mem, at.offset, &mut Pointers(at.archive))
+}
+
+/// The stage's item frequencies for stage kind `stkind`, `Ground_801C28CC`: each of the
+/// parameters' 35 rates times the stage's entry's, into `stage_info.xA0` on.
+#[doc(alias = "Ground_801C28CC")]
+pub fn item_frequencies(game: &mut Game, data: &Archives, stkind: i32) {
+    let p = game.gr.param.as_ref().expect("stage_info.param is null");
+    let param = game.stage_info.param.expect("stage_info.param is null");
+    let entries = p.stage_params;
+    for i in 0..p.stage_param_count.max(0) as u32 {
+        let e = entries.expect("no stage parameters").at(0x64 * i);
+        if data.u32(e) as i32 == stkind {
+            for j in 0..35u32 {
+                let a = data.u16(param.at(2 * (53 + j))) as i16;
+                let b = data.u16(e.at(2 * (13 + j))) as i16;
+                let v = i32::from(a) * i32::from(b);
+                let si = &mut game.stage_info;
+                if j == 0 {
+                    si.xA0 = v;
+                } else {
+                    let at = 4 * (j as usize - 1);
+                    si.xA4_pad[at..at + 4].copy_from_slice(&v.to_be_bytes());
+                }
+            }
+            return;
+        }
+    }
+    panic!(
+        "stage {stkind} has no stage parameters among {}",
+        p.stage_param_count
+    );
+}
+
+/// `BGM_Undefined`.
+const BGM_UNDEFINED: i32 = -1;
+
+/// The stage's music by `flags`, `Ground_801C28AC` (`Ground_801C24F8`): the stage kind's
+/// parameters pick its usual or its alternate song (bits 1 and 2; with bit 4 they choose, the
+/// alternate by chance or unlock, bit 0x40 forcing it), from its sudden death's (bit 0x10),
+/// its single player's (0x20) or its own; and whether the alternate plays.
+#[doc(alias = "Ground_801C28AC")]
+#[doc(alias = "Ground_801C24F8")]
+pub fn music(game: &mut Game, data: &Archives, stkind: i32, mut flags: u32) -> (i32, bool) {
+    let p = game.gr.param.as_ref().expect("stage_info.param is null");
+    let (entries, count) = (p.stage_params, p.stage_param_count);
+    let (mut bgm, mut alternate) = (BGM_UNDEFINED, false);
+    for i in 0..count.max(0) as u32 {
+        let e = entries.expect("no stage parameters").at(0x64 * i);
+        if data.u32(e) as i32 != stkind {
+            continue;
+        }
+        let w = |o: u32| data.u32(e.at(o));
+        let chance = i32::from(data.u16(e.at(0x16)) as i16);
+        if flags & 4 != 0 {
+            let forced = flags & 0x40 != 0;
+            let roll = |game: &mut Game, unlocked: bool| {
+                unlocked && (chance > game.objs.rng.below(100) || forced)
+            };
+            let alt = match data.u16(e.at(0x14)) as i16 {
+                0 => Some(forced),
+                1 => Some(game.objs.rng.below(0xC) == 0 || forced),
+                8 => Some(false),
+                2 => Some(roll(game, true)),
+                3 => unported_call("gm_IsCKindUnlocked(CKind_Mars)"),
+                4 => unported_call("gm_IsCKindUnlocked(CKind_CLink)"),
+                5 => unported_call("Toy_803048C0(0x11A)"),
+                6 => {
+                    let all = game.gm.unlocks.all_characters();
+                    Some(roll(game, all))
+                }
+                7 => {
+                    let all = game.gm.unlocks.all_stages();
+                    Some(roll(game, all))
+                }
+                _ => None,
+            };
+            match alt {
+                Some(true) => flags |= 2,
+                Some(false) => flags |= 1,
+                None => {}
+            }
+        }
+        let si = &mut game.stage_info;
+        let pick = |usual: u32, alt: u32| -> (i32, bool) {
+            if alt != BGM_UNDEFINED as u32 {
+                (alt as i32, true)
+            } else {
+                (usual as i32, false)
+            }
+        };
+        if flags & 0x10 != 0 {
+            si.unk8C.b0 = false;
+            if flags & 1 != 0 {
+                bgm = w(0xC) as i32;
+            } else if flags & 2 != 0 {
+                (bgm, alternate) = pick(w(0xC), w(0x10));
+            }
+        } else if flags & 0x20 != 0 {
+            if flags & 1 != 0 {
+                bgm = w(0xC) as i32;
+                si.unk8C.b0 = false;
+            } else if flags & 2 != 0 {
+                (bgm, alternate) = pick(w(0xC), w(0x10));
+                si.unk8C.b0 = alternate;
+            }
+        } else if flags & 1 != 0 {
+            bgm = w(4) as i32;
+            si.unk8C.b0 = false;
+        } else if flags & 2 != 0 {
+            (bgm, alternate) = pick(w(4), w(8));
+            si.unk8C.b0 = alternate;
+        }
+        break;
+    }
+    assert!(
+        bgm != BGM_UNDEFINED,
+        "the original's assertion failed: bgm!=BGM_Undefined"
+    );
+    if bgm == -2 {
+        unported_call("lbAudioAx_8002305C");
+    }
+    (bgm, alternate)
 }

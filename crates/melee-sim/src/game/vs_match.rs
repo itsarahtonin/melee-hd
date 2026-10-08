@@ -45,6 +45,10 @@ pub struct Settings {
     /// order (`ft::Globals::address_seed`), where the frontend knows them: the oracle takes
     /// them from ssbm-rs's trace. Empty, the fighters' addresses are 0.
     pub fighter_addresses: Vec<u32>,
+    /// What the save data has unlocked, and whether the unlock-all codes run: the stage's
+    /// music choice reads it (`gm_80164ABC`), and on some stages that decides whether it
+    /// draws from the random seed (see engine.md). Slippi Dolphin runs the codes.
+    pub unlocks: super::gm::Unlocks,
 }
 
 /// What Slippi's playback hands the game at a replay's start (the Slippi EXI device's answer
@@ -125,6 +129,7 @@ impl Settings {
             ucf: ucf::Pads::default(),
             playback: false,
             fighter_addresses: Vec::new(),
+            unlocks: super::gm::Unlocks::slippi(),
         }
     }
 
@@ -177,6 +182,7 @@ impl Settings {
             playback: false,
             dsp: DspModel::Samples,
             fighter_addresses: Vec::new(),
+            unlocks: super::gm::Unlocks::slippi(),
         }
     }
 }
@@ -247,6 +253,8 @@ impl Match {
             pacing: crate::lb::pacing::Pacing::new(),
             ..Game::default()
         };
+        // The stage's code reads the same game mode (`gm_GetCurrentGameMode`).
+        game.gr.game_mode = settings.game_mode;
         game.objs.rng.seed = settings.seed;
         game.ucf = settings.ucf;
         if settings.playback {
@@ -257,6 +265,7 @@ impl Match {
             game.pads.playback = true;
         }
         game.ft.address_seed = settings.fighter_addresses.iter().copied().collect();
+        game.gm.unlocks = settings.unlocks;
         let mut data = Archives::default();
         boot(&mut game, &mut data);
         // After the boot's state, which may bring its own audio library.
@@ -293,7 +302,24 @@ impl Match {
             },
             // `lbBgFlash_Init`'s.
             lb_bf: data.add(archive("LbBf.dat")),
+            // `Item_80266F70`'s.
+            it_co: data.add(archive("ItCo.usd")),
+            // `Stage_802251E8`'s stage archive.
+            stage: {
+                let grkind = crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind));
+                super::gr::data::stage_data(grkind as i32)
+                    .file
+                    .map(|name| data.add(archive(name)))
+            },
         };
+        // The trophies' data the stage load reads in (`Toy_803124BC`), for its disc load's
+        // timing.
+        let ty = load(super::gm::TROPHY_DATA_FILE);
+        entries.push((
+            super::gm::TROPHY_DATA_FILE.to_owned(),
+            ty.entrynum,
+            ty.bytes.len() as u32,
+        ));
         load_fighter_files(&mut game, &mut data, &settings.start, load);
         // The effect files `efAsync_LoadSync` takes as the match and its fighters ask for
         // them: disc data, each read before it's needed. The common and menu effects

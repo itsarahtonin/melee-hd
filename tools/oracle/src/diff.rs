@@ -199,6 +199,11 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 return ExitCode::FAILURE;
             };
             settings.fighter_addresses = fighter_addresses(&image);
+            // The save data's unlocks and the unlock-all codes, as the boot state has them.
+            settings.unlocks = melee_sim::game::gm::Unlocks::from_memory(&|a| {
+                let i = (a - 0x8000_0000) as usize;
+                u32::from_be_bytes(boot[i..i + 4].try_into().unwrap())
+            });
             let started = catch_unwind(AssertUnwindSafe(|| {
                 let mut load = |name: &str| melee_sim::game::vs_match::DiscFile {
                     entrynum: disc

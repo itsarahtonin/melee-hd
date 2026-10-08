@@ -68,22 +68,7 @@ mod addr {
     pub const FN_80180AC0: u32 = 0x8018_0AC0;
     pub const EFLIB_INIT: u32 = 0x8005_B4B8;
     pub const EFASYNC_LOAD_SYNC: u32 = 0x8006_737C;
-    pub const STAGE_802251E8: u32 = 0x8022_51E8;
-    pub const ITEM_80266F70: u32 = 0x8026_6F70;
-    pub const STAGE_8022524C: u32 = 0x8022_524C;
-    pub const STAGE_80225298: u32 = 0x8022_5298;
-    pub const STAGE_80225074: u32 = 0x8022_5074;
     pub const SFX_SETUP_CROWD_SFX: u32 = 0x8032_1900;
-    pub const GRSTADIUM_801D3B4C: u32 = 0x801D_3B4C;
-    pub const GRSTADIUM_801D4150: u32 = 0x801D_4150;
-    pub const GRSTADIUM_801D4084: u32 = 0x801D_4084;
-    pub const GRSTADIUM_801D410C: u32 = 0x801D_410C;
-    pub const GRSTADIUM_801D4040: u32 = 0x801D_4040;
-    pub const GRSTADIUM_801D40C8: u32 = 0x801D_40C8;
-    pub const GROUND_801C1154: u32 = 0x801C_1154;
-    pub const GROUND_801C1158: u32 = 0x801C_1158;
-    pub const FTLIB_ENABLE_ALL_INPUT: u32 = 0x8008_68A4;
-    pub const STAGE_802252E4: u32 = 0x8022_52E4;
     pub const FN_8016B784: u32 = 0x8016_B784;
 }
 
@@ -645,31 +630,22 @@ impl Running<'_> {
         let f = &mut self.game.vs.state.fighters[slot as usize];
         f.x1 = 0x82;
         f.slot_type = pkind;
-        code::call(
-            self,
-            addr::GRSTADIUM_801D3B4C,
-            &[Val::Int(slot), Val::Int(pkind.into())],
-        );
+        self.stadium_entrance(slot, pkind.into());
     }
 
     /// The HUD comes on once GO! ends, `fn_8016B784` (GO!'s end callback).
     #[doc(alias = "fn_8016B784")]
     pub fn vs_hud_on(&mut self, _kind: i32) {
         self.game.vs.state.hud_enabled = 1;
-        code::call(self, addr::GRSTADIUM_801D4150, &[]);
+        self.stadium_hud_on();
     }
 
     /// Ready's start (`fn_8016B7B4`): the stage's and Pokémon Stadium's screens, and the name
     /// tags shown.
     #[doc(alias = "fn_8016B7B4")]
     pub fn vs_ready(&mut self, kind: i32) {
-        code::call(self, addr::GROUND_801C1154, &[]);
-        let f = if kind == 3 {
-            addr::GRSTADIUM_801D4084
-        } else {
-            addr::GRSTADIUM_801D410C
-        };
-        code::call(self, f, &[]);
+        // `Ground_801C1154`, which does nothing.
+        self.stadium_ready(kind == 3);
         self.game.show_nametags();
     }
 
@@ -677,14 +653,10 @@ impl Running<'_> {
     /// with the rules' `x1_3`, at once its end), the name tags left to fade.
     #[doc(alias = "fn_8016B7F8")]
     pub fn vs_go(&mut self, _kind: i32) {
-        code::call(self, addr::FTLIB_ENABLE_ALL_INPUT, &[]);
+        self.game.ft_enable_all_input();
         let stkind = i32::from(self.game.vs.start.stkind);
-        code::call(
-            self,
-            addr::STAGE_802252E4,
-            &[Val::Int(stkind), Val::GObj(None)],
-        );
-        code::call(self, addr::GRSTADIUM_801D4040, &[]);
+        self.start_stage(stkind);
+        self.stadium_go();
         let kind = if self.game.vs.start.x1_3 { 8 } else { 4 };
         self.announce(kind, -1, -1, 0, None, Some(CodeRef(addr::FN_8016B784)));
         self.game.unshow_nametags();
@@ -693,9 +665,9 @@ impl Running<'_> {
     /// GAME!'s start (`fn_8016B88C`): the stage's end and the HUD off.
     #[doc(alias = "fn_8016B88C")]
     pub fn vs_game_end(&mut self, kind: i32) {
-        code::call(self, addr::GROUND_801C1158, &[]);
+        self.stage_match_end();
         if kind == 0 {
-            code::call(self, addr::GRSTADIUM_801D40C8, &[]);
+            self.stadium_game();
         }
         self.game.vs.state.hud_enabled = 0;
     }
@@ -1629,6 +1601,10 @@ pub struct MatchArchives {
     pub hud: crate::game::hud::all::HudArchives,
     /// `LbBf.dat`, the background flash's color animations.
     pub lb_bf: melee_data::archive::ArchiveId,
+    /// `ItCo.usd`, the items' common data, which the scene preloads.
+    pub it_co: melee_data::archive::ArchiveId,
+    /// The stage's archive (`StageData::data1`), when the stage has one.
+    pub stage: Option<melee_data::archive::ArchiveId>,
 }
 
 impl Game {
@@ -1682,13 +1658,9 @@ impl Running<'_> {
         super::super::gr::setup::reset_devices(self.game);
         self.game.coll.reset();
         super::super::gr::setup::prepare(self.game);
-        code::call(
-            self,
-            addr::STAGE_802251E8,
-            &[Val::Int(i32::from(d.rules.stkind)), Val::Int(0)],
-        );
+        super::super::gr::setup::select(self, i32::from(d.rules.stkind), files.stage);
         self.game.vs.state.unk_34 = vs_speed_scale(self.game);
-        code::call(self, addr::ITEM_80266F70, &[]);
+        super::super::it::item::load_common_data(self.game, self.data, files.it_co);
         super::super::it::item::init_globals(self.game, self.data);
         super::super::it::spawn::setup(self);
         // The match's sound banks load through the device command queue when the boot left a
@@ -1698,11 +1670,13 @@ impl Running<'_> {
         } else {
             self.game.audio(0x8002_785C, [0; 4]);
         }
-        code::call(self, addr::STAGE_8022524C, &[]);
+        // `Stage_8022524C` and `Stage_80225298` hand the stage's ground kind on.
+        let grkind = self.game.stage_info.grkind;
+        super::super::gr::setup::setup(self, grkind);
         let tilt = self.game.stage_info.cam_info.cam_vertical_tilt;
         super::super::camera::set_default_fov(&mut self.game.camera, tilt);
         self.place_players();
-        code::call(self, addr::STAGE_80225298, &[]);
+        super::super::gr::setup::on_load(self, grkind);
         self.enable_match_camera();
         super::super::camera::snap(self);
         self.disc_load("GmPause.usd", MAIN_MEMORY);
@@ -1729,7 +1703,7 @@ impl Running<'_> {
         }
         if !d.rules.x1_4 {
             let alt = self.game.alternate_stage(d);
-            code::call(self, addr::STAGE_80225074, &[Val::Int(alt)]);
+            self.start_stage_music(alt);
         }
     }
 

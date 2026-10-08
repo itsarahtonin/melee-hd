@@ -458,13 +458,16 @@ impl<'a> Comparer<'a> {
         let g = &game.gm;
         self.check(
             "gm",
-            "pause flags, debug level",
-            (game.scene.unk_10.x0, g.db_level),
+            "pause flags, debug level, trophies' data loaded",
+            (game.scene.unk_10.x0, g.db_level, g.trophy_data),
             (
                 self.u8(sym("gm_80479D58") + 0x10),
                 self.u32(sym("DbLevel")) as i32,
+                self.u32(sym("_Toy_sbss_804D6ED0")) != 0,
             ),
         );
+        let unlocks = melee_sim::game::gm::Unlocks::from_memory(&|a| self.u32(a));
+        self.check("gm", "unlocks", g.unlocks, unlocks);
         let pads = sym("HSD_PadGameStatus");
         for (i, p) in game.pads.game.iter().enumerate() {
             let at = pads + 0x44 * i as u32;

@@ -212,3 +212,109 @@ pub fn random_item_point(game: &mut Game, data: &melee_data::archive::Archives) 
     }
     None
 }
+
+impl super::super::state::Running<'_> {
+    /// Chooses and starts the stage's music, `Stage_80225074`: a sudden death's in a
+    /// sudden death match, Super Sudden Death's in that mode, else by `which` (0 the stage's
+    /// own choice, 3 its usual song, 2 its alternate, 1 its single player's); the song
+    /// starts, and the stage keeps which it is and whether it's the alternate. Returns
+    /// `which`.
+    #[doc(alias = "Stage_80225074")]
+    pub fn start_stage_music(&mut self, which: i32) -> i32 {
+        let flags = if self.game.vs_x6() != 0 {
+            if self.game.stage_info.unk8C.b0 || which == 2 {
+                0x12
+            } else {
+                0x11
+            }
+        } else if super::super::gm::is_super_sudden_death(self.game) {
+            match which {
+                2 => 0x22,
+                1 => 0x64,
+                _ => 0x24,
+            }
+        } else {
+            match which {
+                0 => 4,
+                3 => 1,
+                2 => 2,
+                1 => 0x44,
+                _ => panic!("the original's assertion failed: stage.c:526"),
+            }
+        };
+        let stkind = self.game.gr.stkind;
+        let (bgm, alternate) = super::setup::music(self.game, self.data, stkind, flags);
+        // `lbAudioAx_80023F28`: the song streams from the disc (the audio port's).
+        super::super::code::call(self, 0x8002_3F28, &[super::super::code::Val::Int(bgm)]);
+        self.game.stage_info.x98 = bgm;
+        self.game.stage_info.unk8C.b1 = alternate;
+        which
+    }
+}
+
+/// `Gr_Kind_Corneria`, `Gr_Kind_Venom` and `Gr_Kind_PStadium`.
+const GR_KIND_CORNERIA: i32 = 0x0E;
+const GR_KIND_VENOM: i32 = 0x0F;
+const GR_KIND_PSTADIUM: i32 = 0x10;
+
+impl super::super::state::Running<'_> {
+    /// Pokémon Stadium's big screen shows `cmd` (`grStadium_801D2528` on its display object);
+    /// any other stage has none.
+    fn stadium_screen(&mut self, cmd: i32) {
+        if self.game.stage_info.grkind == GR_KIND_PSTADIUM {
+            super::super::code::unported_call(&format!("grStadium_801D2528({cmd})"));
+        }
+    }
+
+    /// A player's entrance on Pokémon Stadium's screen, `grStadium_801D3B4C`.
+    // Ports `grStadium_801D3B4C`; aliased once a check reaches it.
+    pub fn stadium_entrance(&mut self, _slot: i32, _slot_type: i32) {
+        self.stadium_screen(9);
+    }
+
+    /// `grStadium_801D4150`: the screen as the HUD comes on.
+    // Ports `grStadium_801D4150`; aliased once a check reaches it.
+    pub fn stadium_hud_on(&mut self) {
+        self.stadium_screen(1);
+    }
+
+    /// `grStadium_801D4084` and `grStadium_801D410C`: the screen for Ready.
+    #[doc(alias = "grStadium_801D4084")]
+    // Ports `grStadium_801D410C`; aliased once a check reaches it.
+    pub fn stadium_ready(&mut self, sudden_death: bool) {
+        self.stadium_screen(if sudden_death { 0xA } else { 0xD });
+    }
+
+    /// `grStadium_801D4040`: the screen for GO!.
+    #[doc(alias = "grStadium_801D4040")]
+    pub fn stadium_go(&mut self) {
+        self.stadium_screen(0xB);
+    }
+
+    /// `grStadium_801D40C8`: the screen for GAME!.
+    // Ports `grStadium_801D40C8`; aliased once a check reaches it.
+    pub fn stadium_game(&mut self) {
+        self.stadium_screen(0xC);
+    }
+
+    /// The stage's end of the match, `Ground_801C1158`: Pokémon Stadium's screen, or
+    /// Corneria's and Venom's Arwings; nothing elsewhere.
+    // Ports `Ground_801C1158`; aliased once a check reaches it.
+    pub fn stage_match_end(&mut self) {
+        match self.game.stage_info.grkind {
+            GR_KIND_PSTADIUM => super::super::code::unported_call("grStadium_801D39A0"),
+            GR_KIND_CORNERIA | GR_KIND_VENOM => {
+                super::super::code::unported_call("grCorneria_801E2A6C")
+            }
+            _ => {}
+        }
+    }
+
+    /// Starts the stage's match, `Stage_802252E4`: the stage kind given, its ground kind the
+    /// selected stage's.
+    #[doc(alias = "Stage_802252E4")]
+    pub fn start_stage(&mut self, _stkind: i32) {
+        let grkind = crate::lb::audio::ground_kind(self.game.gr.stkind) as i32;
+        super::setup::start(self, grkind);
+    }
+}

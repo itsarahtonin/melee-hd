@@ -1774,6 +1774,36 @@ pub fn is_grabbable(game: &Game, gobj: GObjId) -> bool {
     super::item(game, gobj).xDC8_word.flags.x15 && logic(game, gobj).picked_up.is_some()
 }
 
+/// Takes the items' common data from `ItCo.usd`, `Item_80266F70` (`it_8027870C`, whose
+/// argument goes unread): the scene preloads it, so nothing loads from the disc; its
+/// `itPublicData` points to the common data, the articles, the color animations and the
+/// Pokémon's.
+#[doc(alias = "Item_80266F70")]
+#[doc(alias = "it_8027870C")]
+pub fn load_common_data(game: &mut Game, data: &Archives, it_co: melee_data::archive::ArchiveId) {
+    let public = data
+        .get(it_co)
+        .public("itPublicData")
+        .map(|offset| DataRef {
+            archive: it_co,
+            offset,
+        })
+        .expect("Cannot find symbol itPublicData.");
+    let it = &mut game.it;
+    it.common = data.ptr(public);
+    it.common_articles = data.ptr(public.at(4));
+    let table = data.ptr(public.at(8));
+    it.char_articles = match table {
+        Some(t) => (0..super::CHAR_ARTICLES as u32)
+            .map(|k| data.ptr(t.at(4 * k)))
+            .collect(),
+        None => Vec::new(),
+    };
+    it.pokemon_articles = data.ptr(public.at(0xC));
+    // `it_804D6D40` (`x10`), the stage enemies' data, which no ported code reads.
+    it.colanims = data.ptr(public.at(0x14));
+}
+
 /// Resets the item code's globals for a match, `Item_80266FCC`: empty item and joint-table
 /// pools (the item links' pool, `item_link_alloc_data`, isn't modeled: no ported kind links),
 /// no items out with the common data's limits, and empty spawn tables.
