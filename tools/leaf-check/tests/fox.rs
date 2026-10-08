@@ -74,13 +74,8 @@ fn stubs(yes: bool) -> Vec<Stub> {
         ext::FTANIM_80070C48,
         ext::FTANIM_80070CC4,
         ext::PL_80040120,
-        ext::FTPICKUPITEM_80094818,
         ext::GRCORNERIA_801E2AF4,
         ext::FT_8008A324,
-        ext::FT_80089824,
-        ext::FT_800892A0,
-        ext::FT_800851C0,
-        ext::FT_80085088,
     ]
     .iter()
     .map(|&a| (a, StubRet::Nothing))
@@ -101,7 +96,6 @@ fn stubs(yes: bool) -> Vec<Stub> {
     // An item's hold kind: the one-handed pose, or none.
     v.push((ext::IT_GET_HOLD_KIND, StubRet::Int(if yes { 3 } else { 0 })));
     // The Illusion's ghost: none made (a ghost would be a GObj the stand-in can't make).
-    v.push((ext::IT_8029CEB4, StubRet::Int(0)));
     // The root's z rotation, during the reflector's turn.
     v.push((
         ext::FT_PART_GET_ROT_Z,

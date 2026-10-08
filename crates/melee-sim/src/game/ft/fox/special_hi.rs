@@ -392,7 +392,7 @@ impl Running<'_> {
                 self.fox_special_hi_rotate_model(gobj);
                 let fp = &mut self.game.fighters[f.0];
                 fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_HI_CREATE_LAUNCH_GFX));
-                fp.x21F8 = Some(CodeRef(ext::FTCOMMON_8007F76C));
+                fp.x21F8 = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
                 return;
             }
         }
@@ -436,7 +436,7 @@ impl Running<'_> {
         fp.self_vel.y = mem(fp::fmuls(speed, s));
         self.fox_special_hi_rotate_model(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x21F8 = Some(CodeRef(ext::FTCOMMON_8007F76C));
+        fp.x21F8 = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
         fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_HI_CREATE_LAUNCH_GFX));
         fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
     }
@@ -511,7 +511,7 @@ impl Running<'_> {
             self.land(gobj);
         }
         self.change_motion_state(gobj, ms::SPECIAL_HI_LANDING, 0, 0.0, 1.0, 0.0, None);
-        self.game.fighter_mut(gobj).x21F8 = Some(CodeRef(ext::FTCOMMON_8007F76C));
+        self.game.fighter_mut(gobj).x21F8 = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
     }
 
     /// The aerial flight's end, `ftFx_SpecialHiLanding_GroundToAir`.
@@ -519,7 +519,7 @@ impl Running<'_> {
     pub fn fox_special_hi_landing_ground_to_air(&mut self, gobj: GObjId) {
         self.destroy_effects(gobj);
         self.change_motion_state(gobj, ms::SPECIAL_HI_FALL, 0, 0.0, 1.0, 0.0, None);
-        self.game.fighter_mut(gobj).x21F8 = Some(CodeRef(ext::FTCOMMON_8007F76C));
+        self.game.fighter_mut(gobj).x21F8 = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
     }
 
     /// The bounce, `ftFx_SpecialHiBound_Anim`: falling helplessly once the script says or
@@ -550,7 +550,7 @@ impl Running<'_> {
     #[doc(alias = "ftFx_SpecialHiBound_Phys")]
     pub fn fox_special_hi_bound_phys(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).ground_or_air == GA_AIR {
-            self.ext_gobj(ext::FT_800851C0, gobj);
+            self.air_anim_rise(gobj);
             self.ext_fighter(ext::FTCOMMON_CALC_SELF_ACCEL_DEACCEL_QUICK_AIR, gobj);
             return;
         }
@@ -580,7 +580,7 @@ impl Running<'_> {
         self.anim_update(gobj);
         let v = reg(self.fox_attr_f32(f, attr::FIREFOX_BOUND_VEL_X));
         let fp = &mut self.game.fighters[f.0];
-        fp.x21F8 = Some(CodeRef(ext::FTCOMMON_8007F76C));
+        fp.x21F8 = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
         fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), v));
         fp.cmd_vars[0] = 0;
         // `ftFox_SpecialHiBound_SetVars`.

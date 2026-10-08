@@ -26,6 +26,30 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8008_15E4 | 0x8009_A98C => {
             g.co_cliff_catch_coll(gobj);
         }
+        // ftCo_Attack100Start_Anim
+        0x800D_6C0C => {
+            g.co_attack100_start_anim(gobj);
+        }
+        // ftCo_Attack100Loop_Anim
+        0x800D_6D48 => {
+            g.co_attack100_loop_anim(gobj);
+        }
+        // ftCo_Attack100End_Anim
+        0x800D_6E34 => {
+            g.co_attack100_end_anim(gobj);
+        }
+        // ftCo_Attack100Loop_IASA
+        0x800D_6E70 => {
+            g.co_attack100_loop_iasa(gobj);
+        }
+        // ftCo_Attack100Start_Phys, ftCo_Attack100Loop_Phys, ftCo_Attack100End_Phys
+        0x800D_6E98 | 0x800D_6EB8 | 0x800D_6ED8 => {
+            g.co_attack_ground_phys(gobj);
+        }
+        // ftCo_Attack100Start_Coll, ftCo_Attack100Loop_Coll, ftCo_Attack100End_Coll
+        0x800D_6EF8 | 0x800D_6F18 | 0x800D_6F38 => {
+            g.co_attack_coll(gobj);
+        }
         // ftCo_Wait_Anim
         0x8008_A494 => {
             g.co_wait_anim(gobj);

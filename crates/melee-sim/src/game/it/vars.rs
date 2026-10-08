@@ -105,6 +105,7 @@ macro_rules! members {
 members! {
     FoxBlaster, fox_blaster, itFoxBlaster_ItemVars, [FOX_BLASTER, FALCO_BLASTER];
     FoxLaser, fox_laser, itFoxLaser_ItemVars, [FOX_LASER, FALCO_LASER];
+    FoxIllusion, fox_illusion, itFoxIllusion_ItemVars, [FOX_ILLUSION, FALCO_PHANTASM];
     Capsule, capsule, itCapsule_ItemVars, [CAPSULE];
     Heart, heart, itHeart_ItemVars, [HEART];
     Tomato, tomato, itTomato_ItemVars, [TOMATO];

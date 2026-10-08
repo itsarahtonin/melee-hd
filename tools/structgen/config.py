@@ -25,6 +25,7 @@ ROOTS = [
     "SpawnItem",
     "itFoxBlaster_ItemVars",
     "itFoxLaser_ItemVars",
+    "itFoxIllusion_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",

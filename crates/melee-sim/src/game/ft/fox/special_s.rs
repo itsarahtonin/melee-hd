@@ -7,7 +7,7 @@ use super::super::super::code::Val;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::motion::flags::SKIP_RUMBLE;
-use super::{GA_AIR, KIND_FOX, PAD_B, addr, attr, ext, facing_dir_int, ms, mv, ret_gobj};
+use super::{GA_AIR, KIND_FOX, PAD_B, addr, attr, facing_dir_int, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -229,15 +229,8 @@ impl Running<'_> {
             IT_KIND_FALCO_PHANTASM
         };
         let (pos, facing) = (fp.cur_pos, fp.facing_dir);
-        let ghost = ret_gobj(self.ext(
-            ext::IT_8029CEB4,
-            &[
-                Val::GObj(Some(gobj)),
-                Val::Vec(pos),
-                Val::Int(kind),
-                Val::Float(reg(facing)),
-            ],
-        ));
+        let ghost =
+            super::super::super::it::kinds::foxillusion::spawn(self, gobj, pos, kind, facing);
         if let Some(g) = ghost {
             let fp = &mut self.game.fighters[f.0];
             fp.mv.set_gobj_at(mv::S_GHOST_GOBJ, Some(g));
@@ -300,7 +293,7 @@ impl Running<'_> {
     /// `ftFx_SpecialS_Phys`: the animation's motion along the ground, the trail.
     #[doc(alias = "ftFx_SpecialS_Phys")]
     pub fn fox_special_s_phys(&mut self, gobj: GObjId) {
-        self.ext_gobj(ext::FT_80085088, gobj);
+        self.ground_anim_speed_facing(gobj);
         self.fox_special_s_trail(gobj);
     }
 

@@ -82,23 +82,16 @@ pub mod ext {
     pub const FTANIM_80070CC4: u32 = 0x8007_0CC4;
     pub const PL_800386D8: u32 = 0x8003_86D8;
     pub const PL_80040120: u32 = 0x8004_0120;
-    pub const IT_8029CEB4: u32 = 0x8029_CEB4;
     pub const IT_GET_HOLD_KIND: u32 = 0x8026_B320;
-    pub const FTPICKUPITEM_80094818: u32 = 0x8009_4818;
     pub const FT_PART_GET_ROT_Z: u32 = 0x8007_5F48;
     pub const GRCORNERIA_801E2D14: u32 = 0x801E_2D14;
     pub const GRCORNERIA_801E2C34: u32 = 0x801E_2C34;
     pub const GRCORNERIA_801E2B80: u32 = 0x801E_2B80;
     pub const GRCORNERIA_801E2AF4: u32 = 0x801E_2AF4;
     pub const FT_8008A324: u32 = 0x8008_A324;
-    pub const FT_80089824: u32 = 0x8008_9824;
-    pub const FT_800892A0: u32 = 0x8008_92A0;
-    pub const FT_800851C0: u32 = 0x8008_51C0;
-    pub const FT_80085088: u32 = 0x8008_5088;
     /// Callbacks Fox's code stores by address.
     pub const EFLIB_PAUSE_ALL: u32 = 0x8005_BA40;
     pub const EFLIB_RESUME_ALL: u32 = 0x8005_BAC4;
-    pub const FTCOMMON_8007F76C: u32 = 0x8007_F76C;
 }
 
 /// Fox's functions other code reaches by address.
@@ -312,15 +305,6 @@ impl Running<'_> {
 /// `ftGetFacingDirInt`.
 pub(crate) fn facing_dir_int(facing: f32) -> i32 {
     if facing < 0.0 { -1 } else { 1 }
-}
-
-/// A GObj a seam returned: a stand-in's integer 0 is null.
-pub(crate) fn ret_gobj(v: Val) -> Option<GObjId> {
-    match v {
-        Val::GObj(g) => g,
-        Val::Int(0) => None,
-        other => panic!("expected a GObj, got {other:?}"),
-    }
 }
 
 /// Runs one of Fox's callbacks a fighter holds (`void (*)(HSD_GObj*)`: action states'

@@ -385,9 +385,16 @@ impl Running<'_> {
         if val[3] == 98 && fp.item_gobj.is_some() {
             unported_call("it_8026B6C8");
         }
+        self.game.fighters[f.0].x2070 = val;
+        self.reset_attack_record(f);
+    }
+
+    /// Starts the fighter's attack record over (`x2074`), `ft_80089460` (`ft_80089768`'s
+    /// clearing): no hits, the percent it started at, and the conditions it began under
+    /// (metal, a partner, invincible, and the like).
+    #[doc(alias = "ft_80089460")]
+    pub(crate) fn reset_attack_record(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
-        fp.x2070 = val;
-        // `ft_80089768`.
         let r = &mut fp.x2074;
         r.x2074_vec.x = 0;
         r.x2074_vec.y = 0;
@@ -409,6 +416,38 @@ impl Running<'_> {
                 fp.x2074.x10[0] |= mask;
             }
         }
+    }
+
+    /// A new instance of the same attack, `ft_800892A0`: a new attack instance, the move kept.
+    #[doc(alias = "ft_800892A0")]
+    pub(crate) fn renew_attack_instance(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let before = self.game.pl.stale_attack_instance;
+        self.game.pl.stale_attack_instance = match before.wrapping_add(1) {
+            0 => 1,
+            n => n,
+        };
+        self.game.fighters[f.0].x206C_attack_instance = before;
+    }
+
+    /// A looping attack's next hit counts anew (`x21EC`): `onPkPc21EC` (Pikachu's and
+    /// Pichu's jab) and the down tilt's `callUnk`.
+    #[doc(alias = "onPkPc21EC")]
+    #[doc(alias = "callUnk")]
+    pub fn attack_counts_anew(&mut self, gobj: GObjId) {
+        self.renew_attack_instance(gobj);
+        self.renew_attack_record(gobj);
+    }
+
+    /// A new record of the same attack, `ft_80089824`: the record started over, a new record
+    /// number, and the attack counted in the player's statistics again.
+    #[doc(alias = "ft_80089824")]
+    pub(crate) fn renew_attack_record(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.reset_attack_record(f);
+        let n = self.game.next_attack_record();
+        self.game.fighters[f.0].x2074.x2088 = n;
+        self.count_attack(gobj, [0; 4]);
     }
 
     /// Changes the fighter's action state to `msid`, `Fighter_ChangeMotionState`. `start` is

@@ -157,6 +157,8 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         // Hitlag.
         0x8008_E4F0 => g.co_damage_hitlag(gobj),
         0x8008_E714 => g.co_damage_exit_hitlag(gobj),
+        0x8008_AB50 | 0x8008_BC00 => g.attack_counts_anew(gobj),
+        super::ft::phys::SPEED_TOWARD_FACING => g.speed_toward_facing(gobj),
         // Sheik's knockback hooks.
         super::ft::co::hit::SEAK_ON_KNOCKBACK_ENTER => g.seak_on_knockback_enter(gobj),
         super::ft::co::hit::SEAK_ON_KNOCKBACK_EXIT => g.seak_on_knockback_exit(gobj),

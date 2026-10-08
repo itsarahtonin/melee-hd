@@ -16403,6 +16403,37 @@ impl Mirror for itFoxLaser_ItemVars {
     }
 }
 
+impl Mirror for itFoxIllusion_ItemVars {
+    const SIZE: u32 = 0xc;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itFoxIllusion_ItemVars {
+            xDD4: cx.import_data(m.u32(at + 0x0)),
+            xDD8: f32::from_bits(m.u32(at + 0x4)),
+            xDDC: cx.import_handle("JObjId", m.u32(at + 0x8)).map(JObjId),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_data(&format!("{path}.xDD4"), self.xDD4, m.u32(at + 0x0));
+        if self.xDD8.to_bits() != m.u32(at + 0x4) {
+            cx.mismatch(
+                &format!("{path}.xDD8"),
+                format!("{:?}", self.xDD8),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x4))),
+            );
+        }
+        cx.compare_handle(
+            &format!("{path}.xDDC"),
+            "JObjId",
+            self.xDDC.map(|h| h.0),
+            m.u32(at + 0x8),
+        );
+    }
+}
+
 impl Mirror for IfDamageFlags {
     const SIZE: u32 = 0x1;
 

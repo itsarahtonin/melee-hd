@@ -5,6 +5,7 @@ pub mod bombhei;
 pub mod capsule;
 pub mod crate_box;
 pub mod foxblaster;
+pub mod foxillusion;
 pub mod foxlaser;
 pub mod gshell;
 pub mod hammer;
@@ -23,6 +24,7 @@ use crate::hsd::gobj::GObjId;
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     foxlaser::run_event(r, gobj, addr)
         || foxblaster::run_event(r, gobj, addr)
+        || foxillusion::run_event(r, gobj, addr)
         || capsule::run_event(r, gobj, addr)
         || heart::run_event(r, gobj, addr)
         || tomato::run_event(r, gobj, addr)
@@ -42,6 +44,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     foxlaser::run_pred(r, gobj, addr)
         .or_else(|| foxblaster::run_pred(r, gobj, addr))
+        .or_else(|| foxillusion::run_pred(r, gobj, addr))
         .or_else(|| capsule::run_pred(r, gobj, addr))
         .or_else(|| heart::run_pred(r, gobj, addr))
         .or_else(|| tomato::run_pred(r, gobj, addr))
@@ -88,6 +91,9 @@ pub const MARIO_FIRE: i32 = 48;
 pub const FOX_LASER: i32 = 54;
 /// `It_Kind_Falco_Laser`.
 pub const FALCO_LASER: i32 = 55;
+/// `It_Kind_Fox_Illusion` and `It_Kind_Falco_Phantasm`.
+pub const FOX_ILLUSION: i32 = 56;
+pub const FALCO_PHANTASM: i32 = 57;
 /// `It_Kind_Link_Bomb`.
 pub const LINK_BOMB: i32 = 58;
 /// `It_Kind_CLink_Bomb`.

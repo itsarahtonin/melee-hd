@@ -11,6 +11,7 @@ use super::item::{article, common_data, is_fighter};
 use super::{flag, item, item_mut, jobj_of, set_flag};
 use crate::fpu::{mem, reg};
 use crate::game::code;
+use crate::game::ft::common::{GA_AIR, GA_GROUND};
 use crate::game::state::{Game, Running};
 use crate::game::structs::_itECB;
 use crate::hsd::gobj::GObjId;
@@ -61,19 +62,31 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
     code::unported_call("it_802703E8 (fighters' hitboxes against an item)");
 }
 
-/// Other items' hitboxes against the item's hitboxes (clanks) and hurtboxes, `it_802706D0`.
+/// `HitElement_Catch` and `HitElement_Inert`.
+const ELEMENT_CATCH: u32 = 8;
+const ELEMENT_INERT: u32 = 11;
+
+/// Other items' hitboxes against the item's hitboxes (clanks) and hurtboxes, `it_802706D0`:
+/// of the items it may meet (not its own player's or a teammate's, unless their flags say),
+/// the later ones' boxes clank with its own that can (`it_804D6D1C` marks those); an inert
+/// box only touches. The hits on its hurtboxes and an inert box's touch of them stop at their
+/// seams.
 #[doc(alias = "it_802706D0")]
 pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
-    let game = &*r.game;
-    let me = item(game, gobj);
+    use super::P_LINK_ITEM;
+    use hitcapsule::Victim;
+    let me_id = super::item_of(r.game, gobj);
     let mut passed = false;
-    let mut cur = game.world.first_in(super::P_LINK_ITEM);
+    let mut count = 0;
+    let mut cur = r.game.world.first_in(P_LINK_ITEM);
     while let Some(g) = cur {
-        cur = game.world.gobjs[g.0].next;
+        cur = r.game.world.gobjs[g.0].next;
         if g == gobj {
             passed = true;
             continue;
         }
+        let game = &*r.game;
+        let me = item(game, gobj);
         let other = item(game, g);
         let skip = (me.owner.is_none()
             && other.owner.is_none()
@@ -92,21 +105,174 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
         if skip {
             continue;
         }
-        let checks_clanks = passed && !flag(me.xDD0_flag, 1);
-        let any_box = me
-            .x5D4_hitboxes
-            .iter()
-            .any(|h| h.hit.state != hitcapsule::DISABLED);
-        let other_box = other
-            .x5D4_hitboxes
-            .iter()
-            .any(|h| h.hit.state != hitcapsule::DISABLED);
-        if (checks_clanks && any_box) || (other_box && me.xAC8_hurtboxNum != 0) {
-            code::unported_call("it_802706D0 (an item's hitboxes against another item)");
+        let other_id = super::item_of(game, g);
+        let clanks = passed && !flag(me.xDD0_flag, 1);
+        if clanks {
+            count = 0;
+            for k in 0..4 {
+                let (me, other) = (item(r.game, gobj), item(r.game, g));
+                let h = &me.x5D4_hitboxes[k].hit;
+                let can = h.state != hitcapsule::DISABLED
+                    && h.element != ELEMENT_CATCH
+                    && ((h.x40_b2 && other.ground_or_air == GA_AIR)
+                        || (h.x40_b3 && other.ground_or_air == GA_GROUND))
+                    && !hitcapsule::has_victim(h, Victim::Item(other_id));
+                r.game.it.clank_boxes[k] = u8::from(can);
+                if can {
+                    count += 1;
+                }
+            }
         }
-        if other_box && checks_clanks {
-            code::unported_call("it_802706D0 (clanks between items)");
+        for hi in 0..4 {
+            let (me, other) = (item(r.game, gobj), item(r.game, g));
+            let h = &other.x5D4_hitboxes[hi].hit;
+            if h.state == hitcapsule::DISABLED
+                || !h.x42_b7
+                || (!(h.x40_b2 && me.ground_or_air == GA_AIR)
+                    && !(h.x40_b3 && me.ground_or_air == GA_GROUND))
+                || hitcapsule::has_victim(h, Victim::Item(me_id))
+            {
+                continue;
+            }
+            if clanks && count != 0 {
+                let mut clanked = false;
+                for i in 0..4 {
+                    if r.game.it.clank_boxes[i] == 0 {
+                        continue;
+                    }
+                    let (me, other) = (item(r.game, gobj), item(r.game, g));
+                    let (theirs, mine) = (&other.x5D4_hitboxes[hi].hit, &me.x5D4_hitboxes[i].hit);
+                    if theirs.element == ELEMENT_INERT || mine.element == ELEMENT_INERT {
+                        let inert_theirs = theirs.element == ELEMENT_INERT;
+                        if theirs.element != mine.element && boxes_touch(r.game, g, hi, gobj, i) {
+                            if inert_theirs {
+                                let o = item_mut(r.game, g);
+                                set_flag(&mut o.xDCE_flag, 6, true);
+                                o.toucher = Some(gobj);
+                            } else {
+                                let ent = item(r.game, g).entity;
+                                let m = item_mut(r.game, gobj);
+                                set_flag(&mut m.xDCE_flag, 6, true);
+                                m.toucher = ent;
+                            }
+                            clanked = true;
+                            break;
+                        }
+                    } else if theirs.x40_b0 && mine.x40_b0 && boxes_touch(r.game, g, hi, gobj, i) {
+                        clank(r, g, hi, gobj, i);
+                        clanked = true;
+                        break;
+                    }
+                }
+                if clanked {
+                    continue;
+                }
+            }
+            let me = item(r.game, gobj);
+            if me.xAC8_hurtboxNum == 0 {
+                continue;
+            }
+            if item(r.game, g).x5D4_hitboxes[hi].hit.element == ELEMENT_INERT {
+                code::unported_call("lbColl_80008248 (an inert box touching an item's hurtbox)");
+            } else if me.xD0C != 2 {
+                for n in 0..usize::from(me.xAC8_hurtboxNum) {
+                    let mut hit = item(r.game, g).x5D4_hitboxes[hi].hit.clone();
+                    let (hs, ms) = (item(r.game, g).scl, item(r.game, gobj).scl);
+                    let mut hurt = item(r.game, gobj).xACC_itemHurtbox[n].clone();
+                    let touch = hitcapsule::hits_hurtbox(
+                        &mut r.game.objs,
+                        r.data,
+                        &mut hit,
+                        &mut hurt,
+                        None,
+                        false,
+                        hs,
+                        ms,
+                        0.0,
+                    );
+                    item_mut(r.game, gobj).xACC_itemHurtbox[n] = hurt;
+                    let h = &mut item_mut(r.game, g).x5D4_hitboxes[hi].hit;
+                    h.hurt_coll_pos = hit.hurt_coll_pos;
+                    h.coll_distance = hit.coll_distance;
+                    if touch {
+                        code::unported_call("it_802706D0's hit on an item's hurtbox");
+                    }
+                }
+            }
         }
+    }
+}
+
+/// Whether item `a`'s box `i` touches item `b`'s box `j` (`lbColl_80007AFC`), each keeping
+/// where it met the other.
+fn boxes_touch(game: &mut Game, a: GObjId, i: usize, b: GObjId, j: usize) -> bool {
+    let mut sa = hitcapsule::shape(&item(game, a).x5D4_hitboxes[i].hit);
+    let mut sb = hitcapsule::shape(&item(game, b).x5D4_hitboxes[j].hit);
+    let (ka, kb) = (item(game, a).scl, item(game, b).scl);
+    let touch = crate::lb::collision::hitboxes_touch(&mut sa, &mut sb, ka, kb);
+    item_mut(game, a).x5D4_hitboxes[i].hit.hurt_coll_pos = sa.contact;
+    item_mut(game, b).x5D4_hitboxes[j].hit.hurt_coll_pos = sb.contact;
+    touch
+}
+
+/// Two items' boxes clank, `it_8026FE68`: each one whose damage the other's outweighs (by
+/// more than `ItemCommonData` xB4 less) remembers the other, keeps the damage, the other's
+/// kind and position and which way it was pushed, with the clank's effect between them.
+#[doc(alias = "it_8026FE68")]
+fn clank(r: &mut Running, a: GObjId, i: usize, b: GObjId, j: usize) {
+    use hitcapsule::Victim;
+    let mid = {
+        let (h1, h3) = (
+            &item(r.game, a).x5D4_hitboxes[i].hit,
+            &item(r.game, b).x5D4_hitboxes[j].hit,
+        );
+        let m = |p: f32, q: f32| mem(fp::fmuls(0.5, fp::fadds(reg(p), reg(q))));
+        Vec3::new(
+            m(h1.hurt_coll_pos.x, h3.hurt_coll_pos.x),
+            m(h1.hurt_coll_pos.y, h3.hurt_coll_pos.y),
+            m(h1.hurt_coll_pos.z, h3.hurt_coll_pos.z),
+        )
+    };
+    let c = common_data(r.game);
+    let (margin, slow) = (c.i32(r.data, common::XB4), c.f32(r.data, common::XD4));
+    // The second item's box first, then the first's.
+    for (me, mi, other, oi, clear) in [(b, j, a, i, true), (a, i, b, j, false)] {
+        let mine = reg(item(r.game, me).x5D4_hitboxes[mi].hit.damage);
+        let theirs = reg(item(r.game, other).x5D4_hitboxes[oi].hit.damage);
+        if fp::fctiwz(mine).wrapping_sub(margin) >= fp::fctiwz(theirs) {
+            continue;
+        }
+        let dmg = fp::fctiwz(mine);
+        let kind = if item(r.game, me).x5D4_hitboxes[mi].hit.x41_b5 {
+            4
+        } else {
+            3
+        };
+        let victim = Victim::Item(super::item_of(r.game, other));
+        r.item_add_victim(me, mi, kind, victim, clear);
+        if dmg > item(r.game, me).xC48 {
+            let (okind, opos) = (item(r.game, other).kind, item(r.game, other).pos);
+            let ip = item_mut(r.game, me);
+            ip.xC48 = dmg;
+            ip.xCF4_fighterGObjUnk = None;
+            ip.xC38 = okind;
+            ip.xCD4 = opos;
+            let vx = reg(ip.x40_vel.x);
+            let mag = if vx < 0.0 { fp::fneg(vx) } else { vx };
+            ip.xCB8_outDamageDirection = if mag < reg(slow) {
+                if reg(ip.pos.x) > reg(opos.x) {
+                    -1.0
+                } else {
+                    1.0
+                }
+            } else if vx < 0.0 {
+                -1.0
+            } else {
+                1.0
+            };
+        }
+        let ent = item(r.game, me).entity;
+        crate::game::ef::spawn(r, 0x41C, ent, &[crate::game::ef::Arg::Vec(mid)]);
     }
 }
 

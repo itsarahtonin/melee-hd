@@ -151,6 +151,9 @@ impl Running<'_> {
 impl Running<'_> {
     /// Ground friction or the animation's motion: `ftCo_Attack11_Phys`, `ftCo_AttackS4_Phys`.
     #[doc(alias = "ftCo_Attack11_Phys")]
+    #[doc(alias = "ftCo_Attack100Start_Phys")]
+    #[doc(alias = "ftCo_Attack100Loop_Phys")]
+    #[doc(alias = "ftCo_Attack100End_Phys")]
     #[doc(alias = "ftCo_AttackS4_Phys")]
     #[doc(alias = "ftCo_Down_Phys")]
     #[doc(alias = "ftCo_PassiveStand_Phys")]

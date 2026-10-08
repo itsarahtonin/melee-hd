@@ -1243,7 +1243,14 @@ impl Running<'_> {
     /// newly hit it can't clank this frame.
     #[doc(alias = "it_8026FAC4")]
     #[doc(alias = "it_8026FA2C")]
-    fn item_add_victim(&mut self, g: GObjId, j: usize, kind: i32, v: Victim, clear: bool) {
+    pub(crate) fn item_add_victim(
+        &mut self,
+        g: GObjId,
+        j: usize,
+        kind: i32,
+        v: Victim,
+        clear: bool,
+    ) {
         use super::super::it::{self, P_LINK_ITEM};
         let ip = it::item(self.game, g);
         let (id, group) = (ip.xAC4_ignoreItemID, ip.x5D4_hitboxes[j].hit.x4);

@@ -7367,6 +7367,27 @@ impl Default for itFoxLaser_ItemVars {
     }
 }
 
+/// `itFoxIllusion_ItemVars`, 0xc bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itFoxIllusion_ItemVars {
+    /// +0x0
+    pub xDD4: Option<DataRef>,
+    /// +0x4
+    pub xDD8: f32,
+    /// +0x8
+    pub xDDC: Option<JObjId>,
+}
+
+impl Default for itFoxIllusion_ItemVars {
+    fn default() -> Self {
+        itFoxIllusion_ItemVars {
+            xDD4: None,
+            xDD8: 0.0,
+            xDDC: None,
+        }
+    }
+}
+
 /// `IfDamageFlags`, 0x1 bytes.
 #[derive(Clone, Debug, PartialEq)]
 pub struct IfDamageFlags {

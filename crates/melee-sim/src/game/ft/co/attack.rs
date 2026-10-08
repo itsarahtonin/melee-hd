@@ -19,6 +19,9 @@ const KIND_MARS: i32 = 18;
 
 /// `ftCommon_MotionVars_attack1`, `attackdash`, `attacklw3`.
 const ATTACK_X0: usize = 0x0;
+/// `ftCommon_MotionVars_attack100`: the cycle started, and A came again.
+const ATTACK100_X0: usize = 0x0;
+const ATTACK100_X4: usize = 0x4;
 
 /// `onPkPc21EC` and the down tilt's `callUnk`: the move's hit counts toward staling
 /// (`ft_800892A0`, `ft_80089824`).
@@ -193,9 +196,80 @@ impl Running<'_> {
             fp.x1A54 = fp.x1A54.wrapping_add(1);
         }
         if fp.x1A54 >= fp.co_attrs.rapid_jab_window && fp.x2218_b2 {
-            unported_call("fn_800D6AC4");
+            self.enter_attack100(gobj);
+            return true;
         }
         false
+    }
+
+    /// The rapid jab's start, `fn_800D6AC4` (`fn_800D6B8C`, `ftCo_800D6B00`): an item in
+    /// reach is picked up instead; Mr. Game & Watch's own isn't ported.
+    #[doc(alias = "fn_800D6AC4")]
+    #[doc(alias = "fn_800D6B8C")]
+    #[doc(alias = "ftCo_800D6B00")]
+    pub fn enter_attack100(&mut self, gobj: GObjId) {
+        if self.game.fighter(gobj).kind == KIND_GAME_WATCH {
+            unported_call("ftGw_Attack100Start_Enter");
+        }
+        if self.pick_up_item_check(gobj) {
+            return;
+        }
+        let fp = self.game.fighter_mut(gobj);
+        fp.x2210 = [0; 4];
+        self.change_motion_state(gobj, ms::ATTACK100_START, 0, 0.0, 1.0, 0.0, None);
+        self.anim_update(gobj);
+        let fp = self.game.fighter_mut(gobj);
+        fp.set_mv_i32(ATTACK100_X0, 0);
+        fp.set_mv_i32(ATTACK100_X4, 0);
+    }
+
+    /// `ftCo_Attack100Start_Anim`: the loop once the start's frames run out.
+    #[doc(alias = "ftCo_Attack100Start_Anim")]
+    pub fn co_attack100_start_anim(&mut self, gobj: GObjId) {
+        if !self.anim_frames_remaining(gobj) {
+            let flags = super::super::motion::flags::SKIP_ATTACK_COUNT;
+            self.change_motion_state(gobj, ms::ATTACK100_LOOP, flags, 0.0, 1.0, 0.0, None);
+        }
+    }
+
+    /// `ftCo_Attack100Loop_Anim`: each cycle a new attack; at the script's mark, the end
+    /// unless A came again (then an item in reach is picked up, or the loop goes on).
+    #[doc(alias = "ftCo_Attack100Loop_Anim")]
+    pub fn co_attack100_loop_anim(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter(gobj);
+        if fp.cur_anim_frame >= 0.0 && fp.cur_anim_frame < fp.frame_speed_mul {
+            self.game.fighter_mut(gobj).set_mv_i32(ATTACK100_X0, 1);
+            self.renew_attack_instance(gobj);
+            self.renew_attack_record(gobj);
+        }
+        let fp = self.game.fighter_mut(gobj);
+        let mark = fp.throw_flag(3);
+        fp.set_throw_flag(3, false);
+        if !mark {
+            return;
+        }
+        if fp.mv_i32(ATTACK100_X0) != 0 && fp.mv_i32(ATTACK100_X4) == 0 {
+            self.change_motion_state(gobj, ms::ATTACK100_END, 0, 0.0, 1.0, 0.0, None);
+        } else if !self.pick_up_item_check(gobj) {
+            self.game.fighter_mut(gobj).set_mv_i32(ATTACK100_X4, 0);
+        }
+    }
+
+    /// `ftCo_Attack100End_Anim`: waiting once its frames run out.
+    #[doc(alias = "ftCo_Attack100End_Anim")]
+    pub fn co_attack100_end_anim(&mut self, gobj: GObjId) {
+        if !self.anim_frames_remaining(gobj) {
+            self.enter_wait(gobj);
+        }
+    }
+
+    /// `ftCo_Attack100Loop_IASA`: A pressed or let go keeps the loop going.
+    #[doc(alias = "ftCo_Attack100Loop_IASA")]
+    pub fn co_attack100_loop_iasa(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        if fp.input.pressed_buttons & PAD_A != 0 || fp.input.released_buttons & PAD_A != 0 {
+            fp.set_mv_i32(ATTACK100_X4, 1);
+        }
     }
 
     /// `ftCo_Attack11_IASA` and `ftCo_Attack12_IASA`.
@@ -262,6 +336,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_AttackHi4_Coll")]
     #[doc(alias = "ftCo_AttackLw4_Coll")]
     #[doc(alias = "ftCo_AttackDash_Coll")]
+    #[doc(alias = "ftCo_Attack100Start_Coll")]
+    #[doc(alias = "ftCo_Attack100Loop_Coll")]
+    #[doc(alias = "ftCo_Attack100End_Coll")]
     pub fn co_attack_coll(&mut self, gobj: GObjId) {
         self.ground_coll(gobj);
     }

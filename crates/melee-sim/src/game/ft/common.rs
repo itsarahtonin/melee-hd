@@ -27,6 +27,17 @@ pub const FIGHTER_P_LINK: u8 = 8;
 const PI: f64 = std::f64::consts::PI;
 
 impl Running<'_> {
+    /// The held item taken in hand again, `ftpickupitem_80094818`: the character's pickup
+    /// hook (`ftData_OnItemPickupExt`) and the player's item record (`pl_8003E17C`). Nothing
+    /// without an item; holding one isn't ported.
+    #[doc(alias = "ftpickupitem_80094818")]
+    pub fn retake_held_item(&mut self, gobj: GObjId, _flag: bool) {
+        let fp = self.game.fighter(gobj);
+        if fp.x1978.is_some() || fp.item_gobj.is_some() {
+            unported_call("ftpickupitem_80094818 with an item held");
+        }
+    }
+
     /// `ftCo_800C37A0`: a turn that spins the model about TransN over `ftCommonData` x648
     /// frames (`dmg.x18F4` left); at its end the fighter faces the other way.
     #[doc(alias = "ftCo_800C37A0")]
