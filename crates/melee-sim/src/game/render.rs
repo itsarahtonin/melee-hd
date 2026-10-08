@@ -203,6 +203,39 @@ impl Running<'_> {
         }
     }
 
+    /// A text GObj's render callback, `HSD_SisLib_803A84BC`: in the third pass, a shown text
+    /// with a string takes the current camera's viewing matrix, runs its own render
+    /// callback, then is laid out and typed ([`crate::hsd::sis::SisLib::layout_text`]).
+    pub fn render_text(&mut self, gobj: GObjId, pass: i32) {
+        if pass != 2 {
+            return;
+        }
+        let Some(super::state::UserData::Text(t)) = self.game.world.gobj(gobj).user_data else {
+            panic!("a text render callback on a GObj without its text");
+        };
+        let tx = self.game.sis.text(t);
+        if tx.hidden != 0 || tx.sis_buffer.is_none() {
+            return;
+        }
+        let callback = tx.render_callback;
+        let c = self
+            .game
+            .objs
+            .cobjs
+            .current
+            .expect("HSD_SisLib_803A84BC: no current camera");
+        crate::hsd::cobj::viewing_mtx_copy(&mut self.game.objs, self.data, c);
+        if let Some(cb) = callback {
+            code::unported_call(&format!("the text render callback {cb:#010x}"));
+        }
+        let d = self.game.sis.layout_text(self.data, t);
+        self.game
+            .objs
+            .display
+            .draws
+            .push(display::Draw::SisText(Box::new(d)));
+    }
+
     /// A light GObj's render callback (`HSD_GObj_LObjCallback`; the stage's
     /// `Ground_801C4640` and the fighters' `ftCo_8009F54C` are the same).
     #[doc(alias = "Ground_801C4640")]
@@ -270,6 +303,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         0x8008_0E18 => r.render_fighter(gobj, pass),
         0x8026_EECC => r.render_item(gobj, pass),
         crate::lb::bgflash::RENDER => r.render_bg_flash(),
+        crate::hsd::sis::TEXT_RENDER => r.render_text(gobj, pass),
         super::hud::magnify::CAMERA_RENDER => r.render_magnifier(gobj),
         super::hud::magnify::BUBBLE_RENDER => r.render_bubble(gobj, pass),
         // The HUD's.

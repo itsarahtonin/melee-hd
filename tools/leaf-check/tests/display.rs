@@ -1054,3 +1054,128 @@ fn bubble() {
         },
     );
 }
+
+/// SIS strings for the text checks: a laid-out line with spacing, scale and color changes,
+/// a space and a second line; nested pushes past the stack's 16 bytes and their pops; typing
+/// delays, a stop, a page break and a reset; pushes that fit the stack only once pops remove
+/// records, spacing left changed across a line, and blank lines. Glyphs are the default
+/// font's (0x20xx).
+const SIS_STRINGS: [&[u8]; 6] = [
+    &[
+        7, 0, 10, 0, 20, 12, 200, 100, 50, 14, 1, 0x40, 0, 0xC0, 10, 0xF4, 0, 0, 0, 0x20, 0x31,
+        0x20, 0x2A, 26, 0x20, 0x35, 11, 15, 13, 3, 0x20, 0x24, 0x20, 0x30, 0,
+    ],
+    &[
+        7, 0, 0, 0, 0, 12, 1, 2, 3, 12, 4, 5, 6, 12, 7, 8, 9, 12, 10, 11, 12, 12, 13, 14, 15, 14,
+        1, 0, 1, 0, 16, 0x20, 0x31, 18, 20, 0x20, 0x32, 21, 19, 17, 13, 13, 15, 13, 13, 13, 0x20,
+        0x33, 22, 0x20, 0x34, 23, 24, 0x20, 0x35, 25, 0,
+    ],
+    &[
+        6, 0, 3, 0, 2, 7, 0, 5, 0, 6, 0x20, 0x31, 5, 0, 9, 0x20, 0x32, 3, 0x20, 0x33, 4, 0x20,
+        0x34, 0,
+    ],
+    &[
+        7, 0, 0, 0, 0, 0x20, 0x31, 2, 7, 0, 3, 0, 4, 0x20, 0x32, 26, 0x20, 0x36, 0,
+    ],
+    &[
+        12, 9, 9, 9, 16, 1, 7, 0, 1, 0, 2, 0x20, 0x31, 0x20, 0x2A, 3, 0x20, 0x31, 0,
+    ],
+    &[
+        7, 0, 4, 0, 6, 12, 1, 2, 3, 12, 4, 5, 6, 12, 7, 8, 9, 13, 13, 12, 1, 1, 1, 12, 2, 2, 2, 12,
+        3, 3, 3, 13, 13, 13, 10, 2, 0, 1, 0, 0x20, 0x31, 0x20, 0x32, 3, 3, 0x20, 0x33, 11, 3, 0x20,
+        0x34, 0,
+    ],
+];
+
+/// A text's render callback (`HSD_SisLib_803A84BC`) in each pass, and, from the same states,
+/// on [`SIS_STRINGS`] written into the arena's free space: with kerning, fitting into a
+/// narrow box and each alignment, other spacing and glyph heights, and typing from the start,
+/// part-way, mid-delay, past skipped glyphs and to a stop.
+#[test]
+fn text_render() {
+    // Each saved call takes four of the variants.
+    for shift in [0, 4, 8, 12] {
+        text_render_from(shift);
+    }
+}
+
+fn text_render_from(shift: usize) {
+    each2(
+        "HSD_SisLib_803A84BC",
+        10,
+        &|call, i| {
+            let v = (i + shift) % 13;
+            call.regs.gpr[4] = if v == 8 { [0, 1][i % 2] } else { 2 };
+            if v == 0 || v == 8 {
+                return;
+            }
+            let text = peek_u32(call, call.regs.gpr[3] + 0x2C);
+            if v == 9 || v == 10 {
+                // A string of the loaded font's table (`HSD_SisLib_804D1124[2]`, past its glyph
+                // images and widths), in that font, kerned.
+                let table = peek_u32(call, leaf_check::sym("HSD_SisLib_804D1124") + 8);
+                let s = peek_u32(call, table + 4 * (2 + (i / 2 % 3) as u32));
+                if table == 0 || s == 0 {
+                    return;
+                }
+                poke_u32(call, text + 0x5C, s);
+                call.mem1[(text + 0x4F - 0x8000_0000) as usize] = 2;
+                call.mem1[(text + 0x49 - 0x8000_0000) as usize] = (v - 9) as u8;
+                return;
+            }
+            // The string at the end of the free list's head block, clear of what the stack's
+            // growth takes from its start.
+            let head = peek_u32(call, leaf_check::sym("free_head"));
+            let at = head + 12 + peek_u32(call, head + 8) - 0x100;
+            let s = match v {
+                11 => SIS_STRINGS[2],
+                12 => SIS_STRINGS[5],
+                _ => SIS_STRINGS[(v - 1) % 5],
+            };
+            for (k, &b) in s.iter().enumerate() {
+                call.mem1[(at + k as u32 - 0x8000_0000) as usize] = b;
+            }
+            poke_u32(call, text + 0x5C, at);
+            let byte = |call: &mut Call, o: u32, b: u8| {
+                call.mem1[(text + o - 0x8000_0000) as usize] = b;
+            };
+            match v {
+                // Kerning, fitting into a narrow box, right-aligned.
+                2 | 6 => {
+                    byte(call, 0x48, 1);
+                    byte(call, 0x49, 1);
+                    byte(call, 0x4A, [2, 0][v / 6]);
+                    leaf_check::calls::poke_f32(call, text + 0xC, 3.5);
+                    // Default spacing (`x3C`), which each line's measurement subtracts.
+                    leaf_check::calls::poke_f32(call, text + 0x3C, 2.0);
+                }
+                // Typing past every glyph and line to the stop.
+                11 => {
+                    poke_u32(call, text + 0x60, 0);
+                    poke_u32(call, text + 0x98, 5);
+                }
+                // Taller glyphs and spacing, which lines and their positions scale by.
+                12 => {
+                    leaf_check::calls::poke_f32(call, text + 0x28, 1.5);
+                    leaf_check::calls::poke_f32(call, text + 0x3C, 3.0);
+                    leaf_check::calls::poke_f32(call, text + 0x40, 0.5);
+                }
+                // Typing: from the start past two skipped stops, then mid-delay at a glyph.
+                3 => {
+                    poke_u32(call, text + 0x60, 0);
+                    poke_u32(call, text + 0x98, 2);
+                }
+                7 => {
+                    poke_u32(call, text + 0x60, at + 10);
+                    poke_u32(call, text + 0x94, 3);
+                    poke_u32(call, text + 0x98, 0);
+                }
+                _ => {}
+            }
+        },
+        &|r, maps, call| {
+            r.render_text(gobj_arg(maps, call), call.regs.gpr[4] as i32);
+            Ret::Nothing
+        },
+    );
+}

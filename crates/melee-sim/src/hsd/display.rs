@@ -97,6 +97,8 @@ pub enum Draw {
         link: usize,
         first: Option<ParticleId>,
     },
+    /// A text's background and glyphs (`HSD_SisLib_803A84BC`).
+    SisText(Box<super::sis::TextDraw>),
     /// The render copied into a player's magnifier bubble (`lb_800122C8`).
     MagnifierCopy(u8),
     /// Flat-colored quads in the current camera's view at depth 0 (`hsd_80391A04`'s debug
