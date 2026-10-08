@@ -697,4 +697,6 @@ pub fn give_winds(call: &mut Call, i: usize, n: usize) {
     }
     poke_u32(call, crate::sym("lb_804D63B0"), active);
     poke_u32(call, crate::sym("lb_804D63AC"), free);
+    // Whether a box's wind blew last frame (`lb_804D63B4`).
+    poke_u32(call, crate::sym("lb_804D63B4"), [0, 1, 2, u32::MAX][i % 4]);
 }

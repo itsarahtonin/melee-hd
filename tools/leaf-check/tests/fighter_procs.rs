@@ -646,15 +646,25 @@ fn proc_dynamics_calls() {
     check("Fighter_procDynamics", proc_dynamics, |_, _| {}, 100);
 }
 
-/// The chains swung with the wind blowing, on a flat floor at the fighter's height, at
-/// another size, in the air, around a collider on one of the fighter's joints, and on Flat
-/// Zone, by the call's index.
+/// The chains swung with the wind blowing (always), and by the call's index on a flat floor
+/// at heights about the fighter's, at another size, in the air, around a collider on one of
+/// the fighter's joints, on Flat Zone, or with their links stiffer and pulled back toward the
+/// animation.
 fn vary_dynamics(call: &mut Call, i: usize) {
     let fp = fighter_of(call, call.regs.gpr[3]);
-    match i % 6 {
-        0 => leaf_check::calls::give_winds(call, i, 1 + i % 8),
-        1 => poke_bit(call, fp + 0x2228, 1, true),
-        2 => poke_f32(call, fp + 0x38, [0.8, 1.3][i / 6 % 2]),
+    leaf_check::calls::give_winds(call, i, 1 + i % 8);
+    match i % 7 {
+        0 => {}
+        1 => {
+            poke_bit(call, fp + 0x2228, 1, true);
+            let y = f32::from_bits(peek_u32(call, fp + 0xB4));
+            poke_f32(
+                call,
+                fp + 0xB4,
+                y + [3.0, 6.0, 9.0, 12.0, 15.0, 20.0][i / 7 % 6],
+            );
+        }
+        2 => poke_f32(call, fp + 0x38, [0.8, 1.3][i / 7 % 2]),
         3 => poke_u32(call, fp + 0xE0, 1),
         4 => {
             // A sphere around the fighter's second part.
@@ -664,18 +674,33 @@ fn vary_dynamics(call: &mut Call, i: usize) {
             poke_f32(call, c, 0.5);
             poke_f32(call, c + 4, 1.0);
             poke_f32(call, c + 8, -0.5);
-            poke_f32(call, c + 0xC, [1.5, 4.0, 0.3][i / 6 % 3]);
+            poke_f32(call, c + 0xC, [1.5, 4.0, 0.3][i / 7 % 3]);
             poke_u32(call, c + 0x10, j);
             poke_u32(call, c + 0x24, 1);
             call.mem1[(fp + 0x166C - 0x8000_0000) as usize] = 1;
         }
-        _ => poke_u32(call, sym("stage_info") + 0x88, 0x1B),
+        5 => poke_u32(call, sym("stage_info") + 0x88, 0x1B),
+        _ => {
+            // Each chain's stiffness scale (`pos.x`), and each link's stiffness and pull back
+            // toward the animation (`unk_4C`, `unk_50`).
+            for k in 0..peek_u32(call, fp + 0x3E0).min(10) {
+                let desc = fp + 0x2F0 + 0x18 * k + 4;
+                poke_f32(call, desc + 8, [0.5, 1.0, 2.0][i / 7 % 3]);
+                let mut link = peek_u32(call, desc);
+                while link != 0 {
+                    poke_f32(call, link + 0x4C, 0.3);
+                    poke_f32(call, link + 0x50, [0.05, 0.4][i / 7 % 2]);
+                    link = peek_u32(call, link + 0x90);
+                }
+            }
+        }
     }
 }
 
 #[test]
 fn proc_dynamics_varied() {
-    check("Fighter_procDynamics", proc_dynamics, vary_dynamics, 100);
+    // Marth's cape when a box's wind stops (level -1) reaches `ftCo_8009E4A8`, not ported.
+    check("Fighter_procDynamics", proc_dynamics, vary_dynamics, 90);
 }
 
 #[test]

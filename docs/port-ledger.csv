@@ -2527,7 +2527,7 @@ address,name,unit,status,where,check
 0x8009e1d4,ftCo_8009E1D4,melee/ft/ftdynamics,unaccounted,"",""
 0x8009e318,ftCo_8009E318,melee/ft/ftdynamics,unaccounted,"",""
 0x8009e4a8,ftCo_8009E4A8,melee/ft/ftdynamics,unaccounted,"",""
-0x8009e614,ftCo_8009E614,melee/ft/ftdynamics,ported,"crates/melee-sim/src/game/ft/dynamics.rs:330","leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes) (Marth's and Roy's capes' wind isn't in these matches: the call returns at its kind)"
+0x8009e614,ftCo_8009E614,melee/ft/ftdynamics,ported,"crates/melee-sim/src/game/ft/dynamics.rs:330","leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes) (Marth's cape as a box's wind starts; as it stops it reaches ftCo_8009E4A8, not ported)"
 0x8009e714,ftCo_8009E714,melee/ft/ftdynamics,unaccounted,"",""
 0x8009e7b4,ftCo_8009E7B4,melee/ft/ftdynamics,ported,"crates/melee-sim/src/game/ft/dynamics.rs:154","leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean"
 0x8009eaf8,ftCo_8009EAF8,melee/ft/ftdynamics,unaccounted,"",""
