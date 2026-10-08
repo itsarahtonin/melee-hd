@@ -580,3 +580,54 @@ fn refract_camera() {
         },
     );
 }
+
+/// The particles' render callback in the drawing passes (`efLib_render_callback` with
+/// `psDispParticles`' app-SRT updates), from the effects captures' particle process states,
+/// their app-SRTs' display frames moved on so the update runs.
+#[test]
+fn particle_render() {
+    let root = std::env::var("EFFECT_CALLS")
+        .unwrap_or_else(|_| "C:/Projects/ssbm-rs-publication/local/calls/effects".into());
+    let Ok(entries) = std::fs::read_dir(&root) else {
+        return;
+    };
+    let render = leaf_check::sym("efLib_render_callback");
+    let frame = leaf_check::sym("psFrameNum");
+    for d in entries.flatten().filter(|e| e.path().is_dir()) {
+        let d = d.path().to_string_lossy().into_owned();
+        for from in ["efLib_particles_proc_main", "efLib_particles_proc_aux"] {
+            let setup = Setup {
+                gx: true,
+                ..Setup::default()
+            };
+            check_calls_in(
+                &d,
+                from,
+                0,
+                &|call, i| {
+                    let gobjs = rendered_all(call, 7, "efLib_render_callback");
+                    let gobjs = if i % 2 == 0 {
+                        gobjs
+                    } else {
+                        rendered_all(call, 8, "efLib_render_callback")
+                    };
+                    if let Some(&g) = gobjs.first() {
+                        call.addr = render;
+                        call.regs.gpr[3] = g;
+                        call.regs.gpr[4] = 1 + (i / 2 % 2) as u32;
+                        // A new display frame: the app-SRTs update.
+                        let at = (frame - 0x8000_0000) as usize;
+                        call.mem1[at] = call.mem1[at].wrapping_add(1).max(1);
+                    }
+                },
+                &setup,
+                &|r, maps, call| {
+                    if call.addr == render {
+                        r.render_particles(gobj_arg(maps, call), call.regs.gpr[4] as i32);
+                    }
+                    Ret::Nothing
+                },
+            );
+        }
+    }
+}

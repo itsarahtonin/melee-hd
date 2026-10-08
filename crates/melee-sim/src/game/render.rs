@@ -164,16 +164,11 @@ impl Running<'_> {
     }
 
     /// The particle GObjs' render callback, `efLib_render_callback`: the links it sorts and
-    /// draws. Drawing a particle that has an app-SRT brings the app-SRT's matrices up to date
-    /// once a display frame and freezes a one-shot one (`psDispSubAppSRT`), which no port
-    /// covers yet.
+    /// draws, the app-SRTs of the particles drawn brought up to date.
     pub fn render_particles(&mut self, gobj: GObjId, pass: i32) {
         let links = super::ef::eflib::render(self.game, gobj, pass);
-        let ps = &self.game.objs.particles;
-        for &(_, first) in &links {
-            if std::iter::successors(first, |&p| ps[p].next).any(|p| ps[p].appsrt.is_some()) {
-                panic!("psDispSubAppSRT isn't ported");
-            }
+        if let 1 | 2 = pass {
+            crate::hsd::psdisp::setup_app_srts(&mut self.game.objs, self.data, &links, pass as u32);
         }
         for (link, first) in links {
             self.game
