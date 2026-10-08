@@ -898,6 +898,10 @@ fn script_effects() {
                 call.regs.gpr[5] = part;
                 call.regs.gpr[6] = common;
                 call.regs.gpr[7] = (k / 2 % 2) as u32;
+                if k % 5 == 1 || matches!(IDS[k % IDS.len()], 0x438 | 0x439) {
+                    // Another size, for the effects sized by it.
+                    poke_f32(call, fp + 0x38, 1.3);
+                }
                 if k.is_multiple_of(7) {
                     // The footstep parts' cycle at its last (`x2220_b0`, 4), to wrap.
                     let o = (fp + 0x2220 - 0x8000_0000) as usize;
@@ -940,8 +944,9 @@ fn script_effects() {
 }
 
 /// Where each stretch of the fighter's action scripts starts: the start of each of its
-/// actions' scripts and each command after a wait, up to the first loop, jump or end.
-fn script_stretches(call: &ssbm_rt::capture::Call, fp: u32) -> Vec<u32> {
+/// actions' scripts and each command after a wait, up to the first loop, jump or end; with
+/// whether the stretch makes a hitbox.
+fn script_stretches(call: &ssbm_rt::capture::Call, fp: u32) -> Vec<(u32, bool)> {
     use melee_sim::game::ft::action::COMMAND_WORDS;
     let table = peek_u32(call, fp + 0x24);
     let mut anims: Vec<i32> = [peek_u32(call, fp + 0x1C), peek_u32(call, fp + 0x20)]
@@ -961,14 +966,17 @@ fn script_stretches(call: &ssbm_rt::capture::Call, fp: u32) -> Vec<u32> {
         if script == 0 {
             continue;
         }
-        out.push(script);
+        out.push((script, false));
         let mut at = script;
         for _ in 0..400 {
             let op = peek_u32(call, at) >> 26;
+            if op == 11 {
+                out.last_mut().unwrap().1 = true;
+            }
             match op {
                 1 | 2 => {
                     at += 4;
-                    out.push(at);
+                    out.push((at, false));
                 }
                 8 => at += 4,
                 10.. if op < 59 => at += 4 * u32::from(COMMAND_WORDS[op as usize - 10]),
@@ -981,23 +989,42 @@ fn script_stretches(call: &ssbm_rt::capture::Call, fp: u32) -> Vec<u32> {
 }
 
 /// The fighter's own script commands, ported and not, as the game's data has them: every
-/// stretch of every action's script the fighter has run from procAnim's states, with the
-/// fighter's size, a released smash's charge, its hitboxes already out (in the group a new
-/// one joins or another) and a spike already counted changed so their branches run.
+/// stretch of every action's script the fighter has run from procAnim's states (every other
+/// call one that makes a hitbox), and from the camera process's (a late process, whose
+/// hitboxes follow their bones at once), with the fighter's size, a released smash's charge,
+/// its hitboxes already out (in the group a new one joins or another) and a spike already
+/// counted changed so their branches run.
 #[test]
 fn script_commands() {
-    let n = leaf_check::calls::saved_calls(&calls_dir(), "Fighter_procAnim").len();
     let target = leaf_check::sym("ftAction_80073240");
-    for pass in 0..6 {
+    for (pass, from) in [
+        "Fighter_procAnim",
+        "Fighter_procAnim",
+        "Fighter_procAnim",
+        "Fighter_procAnim",
+        "Fighter_procAnim",
+        "Fighter_procAnim",
+        "Fighter_procCamera",
+        "Fighter_procCamera",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let n = leaf_check::calls::saved_calls(&calls_dir(), from).len();
         check_calls_with(
             &calls_dir(),
-            "Fighter_procAnim",
+            from,
             20,
             &|call, i| {
                 let k = pass * n + i;
                 let fp = user_data_arg(call);
-                let stretches = script_stretches(call, fp);
-                let at = stretches[(k * 7919) % stretches.len()];
+                let all = script_stretches(call, fp);
+                let hits: Vec<_> = all.iter().filter(|s| s.1).collect();
+                let at = if k.is_multiple_of(2) && !hits.is_empty() {
+                    hits[(k / 2 * 7919) % hits.len()].0
+                } else {
+                    all[(k * 7919) % all.len()].0
+                };
                 call.addr = target;
                 poke_f32(call, fp + 0x3E4, 0.0);
                 poke_u32(call, fp + 0x3EC, at);
