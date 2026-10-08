@@ -57,7 +57,6 @@ fn stubs() -> Vec<Stub> {
         // The crowd.
         "un_80322598",
         // The player library's statistics.
-        "pl_8003FC44",
         "pl_80040048",
         "pl_8003FFDC",
         "pl_8003E0E8",

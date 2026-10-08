@@ -19,6 +19,25 @@ pub fn is_heavy(game: &Game, data: &Archives, gobj: GObjId) -> bool {
     attr_of(item(game, gobj)).is_heavy(data)
 }
 
+/// How a fighter uses the item (its attributes' `x0_78`), `it_8026B30C`.
+// Ports `it_8026B30C`; aliased once a check reaches it.
+pub fn use_kind(game: &Game, data: &Archives, gobj: GObjId) -> i32 {
+    i32::from(attr_of(item(game, gobj)).x0_78(data))
+}
+
+/// Scales the item to `mul` times its attributes' scale, `it_8026BAE8`.
+#[doc(alias = "it_8026BAE8")]
+pub fn set_scale(game: &mut Game, data: &Archives, gobj: GObjId, mul: f32) {
+    let ip = item(game, gobj);
+    let scale = mem(fp::fmuls(
+        reg(mul),
+        reg(attr_of(ip).f32(data, super::data::attr::SCALE)),
+    ));
+    super::item_mut(game, gobj).scl = scale;
+    let j = super::jobj_of(game, gobj).expect("the item's joint");
+    super::lib2725::set_uniform_scale(game, j, scale);
+}
+
 /// Lets fighters pick the item up, `it_8026B390`.
 #[doc(alias = "it_8026B390")]
 pub fn enable_pickup(game: &mut Game, gobj: GObjId) {

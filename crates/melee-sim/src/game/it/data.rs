@@ -75,6 +75,11 @@ impl Attr {
         data.u8(self.0) & 0x80 != 0
     }
 
+    /// `x0_78`: how a fighter uses the item (0 thrown, 2 swung, 3 shot, ...).
+    pub fn x0_78(self, data: &Archives) -> u8 {
+        (data.u8(self.0) >> 3) & 0xF
+    }
+
     /// `x1_1`: the axis the item spins about.
     pub fn x1_1(self, data: &Archives) -> u8 {
         data.u8(self.0.at(1)) >> 6

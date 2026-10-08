@@ -60,6 +60,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         0x8006_CB94 => super::ft::attack::proc_attack_coll(game, gobj),
         0x8006_D1EC => super::ft::resolve::proc_coll_resolve(game, gobj),
         0x8006_D9AC => fighter::proc_dynamics(game, gobj),
+        0x8006_DA4C => fighter::proc_player(game, gobj),
         0x8006_D9EC => super::ft::camera::proc_camera(game, gobj),
         0x8009_F480 => super::ft::create_model::light_proc(game, gobj),
         addr if super::it::item::run_proc(game, gobj, addr) => {}

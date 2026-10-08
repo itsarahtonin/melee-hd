@@ -101,7 +101,6 @@ fn stubs(yes: bool) -> Vec<Stub> {
     // The common states' crowd and statistics, which their ports stand in for.
     for n in [
         "un_80322598",
-        "pl_8003FC44",
         "pl_80040048",
         "pl_8003FFDC",
         "pl_8003E0E8",

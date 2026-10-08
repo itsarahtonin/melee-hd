@@ -36,8 +36,6 @@ const FALL_SPECIAL_ALLOW_INTERRUPT: usize = 0x18;
 const UN_80322598: u32 = 0x8032_2598;
 /// `un_803224DC`: the crowd's reaction to a landing.
 const UN_803224DC: u32 = 0x8032_24DC;
-/// `pl_8003FC44`: counts a jump that landed (the player library's port).
-const PL_8003FC44: u32 = 0x8003_FC44;
 
 impl Running<'_> {
     /// `ftCo_Fall_IASA_Inner` (`ftCo_Fall_IASA`, `ftCo_FallAerial_IASA`): specials, item
@@ -255,7 +253,7 @@ impl Running<'_> {
             let fp = self.game.fighter(gobj);
             if fp.x2227_b0 && fp.x1968_jumpsUsed <= 1 {
                 let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
-                code::call(self, PL_8003FC44, &[Val::Int(slot), Val::Int(sub)]);
+                self.game.record_jump_left(slot, sub);
             }
         }
         self.touch_ground(gobj);
@@ -285,7 +283,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         if fp.x2227_b0 && fp.x1968_jumpsUsed <= 1 {
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
-            code::call(self, PL_8003FC44, &[Val::Int(slot), Val::Int(sub)]);
+            self.game.record_jump_left(slot, sub);
         }
     }
 

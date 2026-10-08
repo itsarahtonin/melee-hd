@@ -2732,3 +2732,9 @@ fn_800C6F34	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): fn_
 ftCo_800C6B6C	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both platforms start to sink through it; compared every tick
 ftCo_EntryEnd_Anim	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both fighters leave the entry through it (fall or wait); compared every tick
 ftCo_EntryEnd_Phys	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both platforms sink in it; compared every tick
+Fighter_procPlayer	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both fighters' player blocks take position and facing through it each tick; compared every tick
+pl_8003FAA8	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Fighter_procPlayer reaches it each tick (before GO, where the frame count gates the records); the player blocks compared every tick
+fn_8003F53C	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): pl_8003FAA8's input records (A/B released, L/R, presses), each tick; the player blocks compared every tick
+ft_800877F8	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): fn_8003F53C reads the held buttons through it; compared every tick
+ft_80087818	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): fn_8003F53C reads the pressed buttons through it; compared every tick
+pl_8003FC44	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): a landing with a jump left records it; the player blocks compared every tick

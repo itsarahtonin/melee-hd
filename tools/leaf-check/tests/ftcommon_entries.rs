@@ -31,7 +31,6 @@ fn stubs() -> Vec<Stub> {
         "ftColl_8007B1B8",
         "ftColl_CreateReflectHit",
         "un_80322598",
-        "pl_8003FC44",
         "pl_80040048",
         "pl_8003FFDC",
         "pl_8003E0E8",

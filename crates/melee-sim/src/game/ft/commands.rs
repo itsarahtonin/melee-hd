@@ -900,7 +900,8 @@ impl Running<'_> {
     pub(super) fn go_airborne_jumped(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
         if fp.x2227_b0 && fp.x1968_jumpsUsed <= 1 {
-            unported_call("pl_8003FC44");
+            let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
+            self.game.record_jump_left(slot, sub);
         }
         let fp = &mut self.game.fighters[f.0];
         fp.ground_or_air = GA_AIR;

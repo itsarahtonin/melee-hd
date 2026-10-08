@@ -2,6 +2,7 @@
 //! match's fighters, holding each slot's character, stocks, damage, KOs and the statistics
 //! the results screen and bonuses read, and the match statistics fighters report there.
 
+pub mod bonus;
 pub mod player;
 pub mod stats;
 

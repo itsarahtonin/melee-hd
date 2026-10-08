@@ -611,6 +611,21 @@ pub fn proc_ik(g: &mut Running, gobj: GObjId) {
     }
 }
 
+/// `Fighter_procPlayer`: unless the fighter sleeps, its player block takes its position and
+/// facing, and the frame's bonus records.
+#[doc(alias = "Fighter_procPlayer")]
+pub fn proc_player(g: &mut Running, gobj: GObjId) {
+    let fp = g.game.fighter(gobj);
+    if fp.is_sleeping {
+        return;
+    }
+    let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
+    let (pos, prev, facing) = (fp.cur_pos, fp.prev_pos, fp.facing_dir);
+    g.game.set_player_entity_pos(slot, i32::from(sub), pos);
+    g.game.set_player_facing_if(slot, sub, facing);
+    g.frame_stats(slot, i32::from(sub), pos, prev);
+}
+
 /// `Fighter_procDynamics`: the dynamic bone chains swing, unless the fighter sleeps or
 /// `x2219_b5` holds it.
 #[doc(alias = "Fighter_procDynamics")]
