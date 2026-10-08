@@ -120,6 +120,16 @@ fn proc_update() {
 }
 
 #[test]
+fn proc_ik() {
+    check_proc("Fighter_procIK", 0x8006_C5F4, 60);
+}
+
+#[test]
+fn proc_dynamics() {
+    check_proc("Fighter_procDynamics", 0x8006_D9AC, 60);
+}
+
+#[test]
 fn proc_anim() {
     check_proc("Fighter_procAnim", 0x8006_A360, 20);
 }
@@ -1053,6 +1063,130 @@ fn script_commands() {
             },
             &|g, maps, call| {
                 g.run_commands(gobj_arg(maps, call));
+                Ret::Nothing
+            },
+        );
+    }
+}
+
+/// The dynamic bones' library from procDynamics' states, by the call's index: the links and
+/// wind sources reset (`lb_8000FA94`), a fighter's chain freed (`lb_8000FD18`), and with
+/// wind sources given (some of every kind, the pool full or not), the sources aged
+/// (`lb_800115F4`), a box's wind and a point's added (`lb_80011A50`, `lb_800119DC`, taking
+/// over the strongest-priority source when the pool is full) and the wind at a point
+/// (`lb_800101C8`, `lb_800103B8`).
+#[test]
+fn dynamics_library() {
+    use melee_sim::lb::wind;
+    const FUNCS: [&str; 7] = [
+        "lb_8000FA94",
+        "lb_8000FD18",
+        "lb_800115F4",
+        "lb_80011A50",
+        "lb_800119DC",
+        "lb_800101C8",
+        "lb_800103B8",
+    ];
+    let n = leaf_check::calls::saved_calls(&calls_dir(), "Fighter_procDynamics").len();
+    for pass in 0..2 {
+        check_calls_with(
+            &calls_dir(),
+            "Fighter_procDynamics",
+            20,
+            &|call, i| {
+                let k = pass * n + i;
+                let which = k % FUNCS.len();
+                let fp = user_data_arg(call);
+                leaf_check::calls::give_winds(call, k, [0, 3, 8, 8, 1][k / 7 % 5]);
+                call.addr = leaf_check::sym(FUNCS[which]);
+                let p = call.regs.gpr[1] - 0x4000;
+                let at = [(k as f32 - 40.0) * 3.0, 20.0 - (k % 9) as f32 * 9.0, 1.5];
+                for (j, v) in at.iter().enumerate() {
+                    poke_f32(call, p + 4 * j as u32, *v);
+                }
+                match which {
+                    1 => {
+                        let set = k as u32 / 7 % peek_u32(call, fp + 0x3E0).max(1);
+                        call.regs.gpr[3] = fp + 0x2F0 + 0x18 * set + 4;
+                        // For ours: the fighter and the set.
+                        (call.regs.gpr[5], call.regs.gpr[6]) = (fp, set);
+                    }
+                    3 | 4 => {
+                        call.regs.gpr[3] = p;
+                        call.regs.gpr[4] = [120, u32::MAX, 1][k % 3];
+                        for (r, v) in [
+                            0.9f32,
+                            0.02,
+                            std::f32::consts::FRAC_PI_3,
+                            -80.0,
+                            60.0,
+                            80.0,
+                            -10.0,
+                        ]
+                        .iter()
+                        .enumerate()
+                        {
+                            float_arg(call, r + 1, *v);
+                        }
+                    }
+                    5 | 6 => {
+                        call.regs.gpr[3] = p;
+                        call.regs.gpr[4] = fp + 0x1670 + 0x18;
+                        call.regs.gpr[5] = fp;
+                    }
+                    _ => {}
+                }
+            },
+            &|g, maps, call| {
+                let r = &call.regs.gpr;
+                let f = |n: usize| f32::from_bits(gekko_fp::stfs(call.regs.fpr[n].ps0));
+                let v = |a: u32| {
+                    let w = |a: u32| f32::from_bits(peek_u32(call, a));
+                    melee_sim::vec::Vec3::new(w(a), w(a + 4), w(a + 8))
+                };
+                let name = FUNCS
+                    .iter()
+                    .find(|n| leaf_check::sym(n) == call.addr)
+                    .expect("one of the library's functions");
+                match *name {
+                    "lb_8000FA94" => g.game.reset_dynamics(),
+                    "lb_8000FD18" => {
+                        let fid = maps.fighters[&r[5]];
+                        let set = &mut g.game.fighters[fid.0].dynamic_bone_sets[r[6] as usize];
+                        let mut desc = set.dyn_desc.clone();
+                        g.game.free_dynamics_chain(&mut desc);
+                        g.game.fighters[fid.0].dynamic_bone_sets[r[6] as usize].dyn_desc = desc;
+                    }
+                    "lb_800115F4" => {
+                        let gr = &mut g.game.gr;
+                        gr.wind_level = wind::tick(&mut gr.winds, gr.wind_level);
+                    }
+                    "lb_80011A50" => {
+                        let slot = wind::push(
+                            &mut g.game.gr.winds,
+                            v(r[3]),
+                            r[4] as i32,
+                            f(1),
+                            f(2),
+                            f(3),
+                            f(4),
+                            f(5),
+                            f(6),
+                            f(7),
+                        );
+                        let base = peek_u32(call, leaf_check::sym("lb_804D63A8"));
+                        return Ret::Int(slot.map_or(0, |s| base + 0x38 * u32::from(s)));
+                    }
+                    "lb_800119DC" => {
+                        wind::blast(&mut g.game.gr.winds, v(r[3]), r[4] as i32, f(1), f(2), f(3))
+                    }
+                    _ => {
+                        let fid = maps.fighters[&r[5]];
+                        let (dir, len) = wind::force_at(&g.game.gr.winds, v(r[3]));
+                        g.game.fighters[fid.0].x1670[0].x18 = dir;
+                        return Ret::Float(f64::from(len));
+                    }
+                }
                 Ret::Nothing
             },
         );

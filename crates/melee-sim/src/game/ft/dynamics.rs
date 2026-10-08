@@ -16,8 +16,12 @@ use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::{Game, Running};
 use super::super::structs::DynamicsDesc;
 use super::anim::{bone_flag, x594_bit};
+use super::common::GA_AIR;
 use crate::fpu::{copy, mem, reg};
+use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId, USE_QUATERNION};
+use crate::lb::dynamics::Collider;
+use crate::lb::joint::world_position;
 use crate::quat::Quat;
 use crate::vec::Vec3;
 
@@ -195,6 +199,162 @@ impl Running<'_> {
     }
 }
 
+const KIND_KOOPA: i32 = 5;
+const KIND_PEACH: i32 = 9;
+const KIND_MEWTWO: i32 = 16;
+const KIND_GKOOPS: i32 = 31;
+
+/// `Gr_Kind_Flatzone`, where fighters are flat.
+const GR_FLATZONE: i32 = 0x1B;
+
+impl Running<'_> {
+    /// Swings the fighter's dynamic bone chains a frame, `ftCo_8009E0A8` (`ftCo_8009DD94`
+    /// with `x2228_b1`, whose chains take a flat floor at the fighter's height instead of the
+    /// stage's): the colliders follow their joints, Marth's and Roy's capes follow the wind,
+    /// and each chain swings, against the floor while the fighter stands at its normal size
+    /// (Bowser's and Giga Bowser's never). On Flat Zone the model is flattened (its x scale
+    /// the fighter's) only while the chains swing.
+    #[doc(alias = "ftCo_8009E0A8")]
+    #[doc(alias = "ftCo_8009DD94")]
+    pub fn swing_chains(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let fp = &self.game.fighters[f.0];
+        let n = fp.dynamics_num;
+        let flat_floor = fp.x2228_b1;
+        let flatzone = n != 0 && self.game.stage_info.grkind == GR_FLATZONE;
+        let root = self.root_jobj(gobj);
+        let mut scale_x = 0.0;
+        if flatzone {
+            let sy = self.game.fighters[f.0].x34_scale.y;
+            let o = &mut self.game.objs.jobjs[root];
+            scale_x = o.scale.x;
+            o.scale.x = sy;
+            if !o.mtx_is_dirty() {
+                jobj::set_mtx_dirty_sub(&mut self.game.objs.jobjs, root);
+            }
+        }
+        let fp = &self.game.fighters[f.0];
+        // Only at exactly normal size (a NaN size takes the original's other branch).
+        let ground = if reg(fp.x34_scale.y) == 1.0 {
+            if fp.kind == KIND_MEWTWO && (0xDF..=0xE8).contains(&fp.motion_id) {
+                true
+            } else {
+                !(fp.ground_or_air == GA_AIR || fp.kind == KIND_KOOPA || fp.kind == KIND_GKOOPS)
+            }
+        } else {
+            false
+        };
+        self.place_colliders(gobj);
+        self.capes_in_wind(f);
+        let fp = &self.game.fighters[f.0];
+        let count = usize::from(fp.x166C);
+        assert!(
+            count <= fp.x1670.len(),
+            "more dynamics colliders than a fighter holds"
+        );
+        let colliders: Vec<Collider> = fp.x1670[..count]
+            .iter()
+            .map(|c| Collider {
+                radius: c.v2,
+                center: c.x18,
+            })
+            .collect();
+        let flat = flat_floor.then_some(fp.cur_pos.y);
+        let kind = fp.kind;
+        let last = (n - 1).max(0);
+        let sets: Vec<(usize, i32)> = match kind {
+            KIND_PEACH => (0..last)
+                .map(|i| (i as usize, 3))
+                .chain(std::iter::once((last as usize, 0)))
+                .collect(),
+            KIND_MEWTWO => (0..n).map(|i| (i as usize, 8)).collect(),
+            _ => (0..n).map(|i| (i as usize, 0)).collect(),
+        };
+        for (i, first_wind) in sets {
+            let set = &self.game.fighters[f.0].dynamic_bone_sets[i];
+            let (desc, bone) = (set.dyn_desc.clone(), set.bone_id);
+            self.game
+                .swing_chain(self.data, &desc, &colliders, flat, bone, first_wind, ground);
+        }
+        if flatzone {
+            let o = &mut self.game.objs.jobjs[root];
+            o.scale.x = scale_x;
+            if !o.mtx_is_dirty() {
+                jobj::set_mtx_dirty_sub(&mut self.game.objs.jobjs, root);
+            }
+            for i in 0..n as usize {
+                let set = &self.game.fighters[f.0].dynamic_bone_sets[i];
+                let d = set.dyn_desc.data.expect("a chain of no links");
+                let mut j = self.game.fighter_dynamics[d.0]
+                    .desc
+                    .jobj
+                    .expect("a link without a joint");
+                while let Some(c) = self.game.objs.jobjs[j].child {
+                    j = c;
+                }
+                jobj::setup_matrix(&mut self.game.objs, self.data, Some(j));
+            }
+        }
+        if self.game.playback.is_some() {
+            // Playback's codes set up every dirty matrix of the model here.
+            self.setup_dirty_matrices(Some(root));
+        }
+    }
+
+    /// Slippi's playback code at `ftCo_8009DD94+0x2FC`: every joint of the model whose matrix
+    /// is dirty and not the game's own sets it up, children before siblings.
+    fn setup_dirty_matrices(&mut self, j: Option<JObjId>) {
+        let Some(j) = j else { return };
+        if self.game.objs.jobjs[j].mtx_is_dirty() {
+            jobj::setup_matrix_sub(&mut self.game.objs, self.data, j);
+        }
+        let (child, next) = (self.game.objs.jobjs[j].child, self.game.objs.jobjs[j].next);
+        self.setup_dirty_matrices(child);
+        self.setup_dirty_matrices(next);
+    }
+
+    /// The colliders the chains swing around follow their joints, `ftColl_8007AF60`.
+    #[doc(alias = "ftColl_8007AF60")]
+    fn place_colliders(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        for i in 0..usize::from(self.game.fighters[f.0].x166C) {
+            let c = &self.game.fighters[f.0].x1670[i];
+            let (j, off) = (c.jobj, c.v1);
+            let at = world_position(&mut self.game.objs, self.data, j, Some(off));
+            self.game.fighters[f.0].x1670[i].x18 = at;
+        }
+    }
+
+    /// Marth's and Roy's capes in the wind, `ftCo_8009E614`: physics back on for every chain
+    /// when a box's wind starts, under an animation that moves them itself.
+    #[doc(alias = "ftCo_8009E614")]
+    fn capes_in_wind(&mut self, f: FighterId) {
+        let fp = &self.game.fighters[f.0];
+        if !matches!(fp.kind, KIND_MARS | KIND_EMBLEM) || fp.x2227_b6 {
+            return;
+        }
+        match self.game.gr.wind_level {
+            -1 => unported_call("ftCo_8009E4A8"),
+            1 => {
+                let fp = &self.game.fighters[f.0];
+                if x594_bit(fp, 4) || x594_bit(fp, 3) {
+                    let (frame, speed) = (fp.cur_anim_frame, fp.frame_speed_mul);
+                    let n = self.data.u32(self.dynamics_desc(f));
+                    for i in 0..n {
+                        self.set_bone_dynamics(f, i as usize, true, BoneSlot::Id(0));
+                    }
+                    if self.game.fighters[f.0].x590.is_some() {
+                        let gobj = self.game.fighters[f.0].gobj.expect("a fighter's GObj");
+                        self.start_anim(gobj, reg(frame), reg(speed), 0.0);
+                        self.anim_joints(gobj);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 impl Game {
     /// Takes the first free dynamics link (`cur_data`), or none when they're all in use.
     fn pop_dynamics_link(&mut self) -> Option<DynamicsId> {
@@ -239,6 +399,12 @@ impl Game {
             let m = &o.mtx.m;
             let d = &mut self.fighter_dynamics[l.0].desc;
             d.jobj = Some(j);
+            if o.stale_w {
+                // The link keeps the joint's rotation, w and all.
+                self.objs.stale_reads += 1;
+            }
+            let o = &self.objs.jobjs[j];
+            let d = &mut self.fighter_dynamics[l.0].desc;
             d.rotate = o.rotate;
             d.scale = o.scale;
             d.translate = o.translate;

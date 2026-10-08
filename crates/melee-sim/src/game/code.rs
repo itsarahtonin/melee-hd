@@ -50,11 +50,13 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         0x8006_AD10 => game.proc_input(gobj),
         0x8006_B82C => fighter::proc_update(game, gobj),
         0x8006_C27C => fighter::proc_map(game, gobj),
+        0x8006_C5F4 => fighter::proc_ik(game, gobj),
         0x8006_C624 => fighter::proc_accessory(game, gobj),
         0x8006_C80C => fighter::proc_coll_pos(game, gobj),
         0x8006_CA5C => fighter::proc_grab_coll(game, gobj),
         0x8006_CB94 => super::ft::attack::proc_attack_coll(game, gobj),
         0x8006_D1EC => super::ft::resolve::proc_coll_resolve(game, gobj),
+        0x8006_D9AC => fighter::proc_dynamics(game, gobj),
         0x8006_D9EC => super::ft::camera::proc_camera(game, gobj),
         0x8009_F480 => super::ft::create_model::light_proc(game, gobj),
         addr if super::it::item::run_proc(game, gobj, addr) => {}

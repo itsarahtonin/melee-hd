@@ -88,7 +88,6 @@ fn stubs(yes: bool) -> Vec<Stub> {
         ext::FTCOMMON_8007D92C,
         ext::FTCOLL_CREATE_REFLECT_HIT,
         ext::FTCO_8009A184,
-        ext::LB_800119DC,
         ext::GRCORNERIA_801E2AF4,
         ext::FT_8008A324,
         ext::FT_80089824,

@@ -105,7 +105,6 @@ pub mod ext {
     pub const FTCO_8009A184: u32 = 0x8009_A184;
     pub const FTCO_8009A134: u32 = 0x8009_A134;
     pub const FTCO_80099F1C: u32 = 0x8009_9F1C;
-    pub const LB_800119DC: u32 = 0x8001_19DC;
     pub const GRCORNERIA_801E2D14: u32 = 0x801E_2D14;
     pub const GRCORNERIA_801E2CE8: u32 = 0x801E_2CE8;
     pub const GRCORNERIA_801E2C34: u32 = 0x801E_2C34;

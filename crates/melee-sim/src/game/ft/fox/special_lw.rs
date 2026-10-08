@@ -515,16 +515,8 @@ impl Running<'_> {
         fp.facing_dir = fp.ReflectAttr.x1A2C_reflectHitDirection;
         let j = self.part_joint(gobj, PART_HIP_N);
         let at = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
-        self.ext(
-            ext::LB_800119DC,
-            &[
-                Val::Vec(at),
-                Val::Int(120),
-                Val::Float(fp::frsp(3.0)),
-                Val::Float(fp::frsp(0.1)),
-                Val::Float(fp::frsp(fp::fdiv(std::f64::consts::PI, 3.0))),
-            ],
-        );
+        let third = mem(fp::frsp(fp::fdiv(std::f64::consts::PI, 3.0)));
+        crate::lb::wind::blast(&mut self.game.gr.winds, at, 120, 3.0, 0.1, third);
         let msid = if self.game.fighter(gobj).ground_or_air == GA_GROUND {
             ms::SPECIAL_LW_HIT
         } else {

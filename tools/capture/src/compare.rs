@@ -745,11 +745,18 @@ impl<'a> Comparer<'a> {
                 (self.u16(t + 4), self.u16(t + 6), self.u32(t + 0x14)),
             );
             let q = &j.rotate;
+            // A stale w (`JObj::stale_w`) is a stack word the original never set: it isn't
+            // compared.
+            let w = if j.stale_w {
+                f32::from_bits(self.u32(t + 0x28))
+            } else {
+                q.w
+            };
             let srt: Vec<u32> = [
                 q.x,
                 q.y,
                 q.z,
-                q.w,
+                w,
                 j.scale.x,
                 j.scale.y,
                 j.scale.z,

@@ -243,7 +243,7 @@ grAnime_801C69FC	leaf-check stage: last_stage_ticks (each scene's animations att
 grMaterial_801C8B28	leaf-check stage: last_stage_ticks (each scene's animations)
 grMaterial_801C8B68	leaf-check stage: last_stage_ticks (each scene's animations)
 grDatFiles_801C6330	leaf-check stage: last_stage_ticks (each scene's animations find their archive)
-lb_800115F4	leaf-check stage: last_proc_main and last_stage_ticks (the wind level each tick)
+lb_800115F4	leaf-check stage: last_proc_main and last_stage_ticks (the wind level each tick); leaf-check fighter: dynamics_library ages given sources of every kind
 lb_80014258	leaf-check stage: ground_proc_anim and last_stage_ticks (the color overlays each tick)
 grMaterial_801C9698	leaf-check stage: ground_proc_anim and last_stage_ticks (the color overlays each tick)
 grDynamicAttr_801CA224	leaf-check stage: stage_collision_proc runs every captured call; last_stage_ticks
@@ -2488,8 +2488,8 @@ it_3F14_Logic2_DmgReceived	leaf-check items: barrel runs it from captured item s
 itTaru_Logic2_EvtUnk	leaf-check items: barrel runs it from captured item states
 lb_8000B09C	leaf-check items: bob_omb's itBombhei_UnkMotion2_Anim runs it on every captured call
 it_80272C6C	leaf-check items: bob_omb's itBombhei_UnkMotion2_Anim runs it on every captured call
-lb_800100B0	leaf-check items: capsule_explodes and bob_omb's explosions run it from captured item states
-lb_800119DC	leaf-check items: capsule_explodes and bob_omb's explosions run it from captured item states
+lb_800100B0	leaf-check items: capsule_explodes and bob_omb's explosions run it from captured item states; leaf-check fighter: dynamics_library, the pool full or not; leaf-check fox: fox_functions (Fox's reflector's wind)
+lb_800119DC	leaf-check items: capsule_explodes and bob_omb's explosions run it from captured item states; leaf-check fighter: dynamics_library, the pool full or not; leaf-check fox: fox_functions (Fox's reflector's wind)
 it_80280B60	leaf-check items: bob_omb's it_3F14_Logic6_DmgDealt runs it from captured item states
 it_80272C08	leaf-check items: capsule_explodes runs it from captured item states
 it_8026BB44	leaf-check items: crate_box's it_80286AA4 runs it from captured item states
@@ -2553,3 +2553,23 @@ itKusudama_Logic4_EvtUnk	leaf-check items: party_ball runs it from captured item
 gm_8017E068	leaf-check items: one_player_level runs it from captured item states
 it_8026BB20	leaf-check items: party_ball's it_8028A544 runs it from captured item states
 it_80272A18	leaf-check items: party_ball's it_8028A544 runs it from captured item states
+lb_8000FA94	leaf-check fighter: dynamics_library runs it from procDynamics' states, over given wind sources
+lb_8000FCDC	leaf-check fighter: dynamics_library checks the reset it ends in (lb_8000FA94); the allocation itself is the VS scene's start, which runs only in a native match
+lb_8000FD18	leaf-check fighter: dynamics_library runs it from procDynamics' states, freeing each fighter's chains
+lb_800101C8	leaf-check fighter: dynamics_library runs it from procDynamics' states, with given wind sources; leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it
+lb_800103B8	leaf-check fighter: dynamics_library runs it from procDynamics' states, with given wind sources
+lb_800103D8	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes)
+lb_8001044C	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes)
+lb_80011A50	leaf-check fighter: dynamics_library runs it from procDynamics' states, the pool full or not, returning the source
+fn_80020AEC	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+lbBgFlash_80020E38	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+fn_8002113C	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+lbBgFlash_80021410	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+Fighter_procIK	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+Fighter_procDynamics	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes)
+ftColl_8007AF60	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes)
+fn_8008998C	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+ft_80089B08	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+ftCo_8009DD94	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes)
+ftCo_8009E0A8	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes)
+ftCo_8009E614	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes) (Marth's and Roy's capes' wind isn't in these matches: the call returns at its kind)

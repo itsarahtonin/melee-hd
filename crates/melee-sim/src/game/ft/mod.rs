@@ -26,6 +26,7 @@ pub mod effect;
 pub mod fighter;
 pub mod fox;
 pub mod ftlib;
+pub mod ik;
 pub mod input;
 mod kind_tables;
 pub mod kinds;

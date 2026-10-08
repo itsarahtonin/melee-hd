@@ -6,6 +6,7 @@ pub mod cobj;
 pub mod colanim;
 pub mod collision;
 pub mod command;
+pub mod dynamics;
 pub mod figatree;
 pub mod hitcapsule;
 pub mod joint;

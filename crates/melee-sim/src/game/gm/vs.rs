@@ -65,7 +65,6 @@ mod addr {
     pub const FN_8016B7F8: u32 = 0x8016_B7F8;
     pub const FN_80182B5C: u32 = 0x8018_2B5C;
     pub const FN_80180AC0: u32 = 0x8018_0AC0;
-    pub const LB_8000FCDC: u32 = 0x8000_FCDC;
     pub const EFLIB_INIT: u32 = 0x8005_B4B8;
     pub const EFASYNC_LOAD_SYNC: u32 = 0x8006_737C;
     pub const STAGE_802251E8: u32 = 0x8022_51E8;
@@ -1670,7 +1669,7 @@ impl Running<'_> {
         super::super::camera::create(self.game);
         self.game.init_vs(d);
         self.game.refract_init(self.data, files.lb_rf);
-        code::call(self, addr::LB_8000FCDC, &[]);
+        self.game.alloc_dynamics();
         code::call(self, addr::EFLIB_INIT, &[]);
         code::call(self, addr::EFASYNC_LOAD_SYNC, &[Val::Int(0)]);
         code::call(self, addr::EFASYNC_LOAD_SYNC, &[Val::Int(0x1F)]);

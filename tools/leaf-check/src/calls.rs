@@ -658,3 +658,43 @@ pub fn spawned_diff(maps: &Maps, s: melee_sim::game::ef::Spawned, r3: u32) -> Op
     };
     (!same).then(|| format!("returned: ours {s:?}, theirs {r3:#x}"))
 }
+
+/// The wind sources' pool (`lb_804D63A8`), given `n` sources by the call's index: boxes over
+/// the stage and points near the fighters, fading, pulsing, some for ever; the rest free.
+pub fn give_winds(call: &mut Call, i: usize, n: usize) {
+    let base = peek_u32(call, crate::sym("lb_804D63A8"));
+    let mut active = 0;
+    let mut free = 0;
+    for k in (0..8).rev() {
+        let a = base + 0x38 * k as u32;
+        if k < n {
+            let point = (i + k) % 2 == 1;
+            poke_u32(call, a, if point { 0x0264_0000 } else { 0x0100_0000 });
+            let dir = if point {
+                [(k as f32 - 3.0) * 7.0, 12.0 + k as f32, 0.0]
+            } else {
+                [0.6 - 0.3 * k as f32, -0.4, 0.2]
+            };
+            for (w, v) in dir.iter().enumerate() {
+                poke_f32(call, a + 4 + 4 * w as u32, *v);
+            }
+            let bounds = [-200.0, 150.0 - 40.0 * (i % 3) as f32, 200.0, -50.0];
+            for (w, v) in bounds.iter().enumerate() {
+                poke_f32(call, a + 0x10 + 4 * w as u32, *v);
+            }
+            poke_f32(call, a + 0x20, 0.5 + 0.7 * k as f32);
+            poke_f32(call, a + 0x24, [0.0, 0.02, 0.4][(i + k) % 3]);
+            poke_u32(call, a + 0x28, [u32::MAX, 1, 30][(i + 2 * k) % 3]);
+            poke_f32(call, a + 0x2C, std::f32::consts::FRAC_PI_3);
+            poke_u32(call, a + 0x30, (i * 3 + k) as u32 % 50);
+            poke_u32(call, a + 0x34, active);
+            active = a;
+        } else {
+            poke_u32(call, a, 0);
+            poke_u32(call, a + 0x34, free);
+            free = a;
+        }
+    }
+    poke_u32(call, crate::sym("lb_804D63B0"), active);
+    poke_u32(call, crate::sym("lb_804D63AC"), free);
+}
