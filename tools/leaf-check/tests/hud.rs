@@ -2139,7 +2139,6 @@ fn player_stock_icon() {
 
 #[test]
 fn nametag_proc() {
-    let stubs = [(0x8008_6F80, Ret::Float(12.5))];
     Check {
         variants: 8,
         perturb: &|f| {
@@ -2153,7 +2152,6 @@ fn nametag_proc() {
             let v = [0u8, 1, 3][f.below(3) as usize];
             f.put8(players + 0xE90 * s + 0x8E, v);
         },
-        stubs: &stubs,
         ..Check::new("fn_802FCC44", &|r, a| {
             r.nametag_proc(gobj_arg(a, 3));
             vec![]
