@@ -316,6 +316,7 @@ impl<'a> Importer<'a> {
     /// `crate::audio::find_bank` found.
     pub fn audio(&mut self, bank: Option<melee_data::archive::ArchiveId>) {
         self.game.audio = crate::audio::import(&self.cap.call.mem1, bank);
+        self.game.crowd = crate::audio::import_crowd(&self.cap.call.mem1);
     }
 
     /// The scheduler: every GObj on the process links with its processes, render link, HSD

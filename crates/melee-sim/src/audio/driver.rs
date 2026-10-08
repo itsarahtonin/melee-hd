@@ -104,6 +104,8 @@ pub struct Driver {
     /// `AXDriver_804D6038`: the stream's (the music's) synth id; `77E0`, `77E4`: a pitch
     /// change for it, due at the next frame.
     pub stream_id: i32,
+    /// `AXDriver_804D77E8`: the audio frame the stream started at.
+    pub stream_started: i32,
     pub pitch_due: i32,
     pub pitch_cents: i32,
     /// The sound bank (`AXDriver_804D7798`), its bank table (`77B4`, count `77B0`) and its
@@ -130,6 +132,7 @@ impl Default for Driver {
             muted_channels: 0,
             aux_flags: 0,
             stream_id: -1,
+            stream_started: 0,
             pitch_due: 0,
             pitch_cents: 0,
             bank: None,
@@ -818,6 +821,18 @@ impl Audio {
             assert_eq!(voice.flags & STATE_MASK, STATE_ACTIVE, "PStreamResumeCh");
         }
         self.dv(v).flags &= !PAUSED;
+        true
+    }
+
+    /// `HSD_AudioPStreamStartChParam`: the music from disc file `entrynum` (the path's
+    /// entry number) at `volume` on `track`, keying off the last.
+    #[doc(alias = "HSD_AudioPStreamStartChParam")]
+    pub fn music_start(&mut self, data: &Archives, entrynum: i32, volume: u8, track: i32) -> bool {
+        if self.driver.stream_id != -1 {
+            self.synth_key_off(self.driver.stream_id);
+        }
+        self.driver.stream_id = self.stream_start(data, entrynum, 0xFF, volume, track);
+        self.driver.stream_started = self.driver.frame;
         true
     }
 

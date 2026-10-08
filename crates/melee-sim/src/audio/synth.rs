@@ -154,6 +154,8 @@ pub struct Synth {
     /// `AXPBSRC` stays as initialized: current address fraction 0, no last samples).
     pub src_ratio: u32,
     pub stream: Stream,
+    /// The sound banks and their loads.
+    pub banks: super::bank::Banks,
 }
 
 impl Default for Synth {
@@ -176,6 +178,7 @@ impl Default for Synth {
             pause: None,
             src_ratio: 0,
             stream: Stream::default(),
+            banks: super::bank::Banks::default(),
         }
     }
 }
@@ -719,6 +722,21 @@ impl Audio {
                 let node = self.synth.nodes[i];
                 if node.id > 0 && slw(1, u32::from(node.channel)) & mask != 0 {
                     self.synth_update_volume(i);
+                }
+            }
+        }
+    }
+
+    /// `stopRange`: stops every effect whose first voice plays from `lo` up to `hi` (sample
+    /// addresses).
+    pub fn synth_stop_range(&mut self, lo: u32, hi: u32) {
+        for i in 0..NODES {
+            let node = self.synth.nodes[i];
+            if node.id > 0 {
+                let v = node.voices[0].expect("a playing node without its voice");
+                let addr = self.ax.voices[usize::from(v)].pb.addr.current_address;
+                if (lo..hi).contains(&addr) {
+                    self.synth_stop_node(i);
                 }
             }
         }

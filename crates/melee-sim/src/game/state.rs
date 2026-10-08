@@ -220,6 +220,8 @@ pub struct Game {
     /// The audio driver's voices, the synth and AX voices under them, and the timeline that
     /// runs their frames.
     pub audio: crate::audio::Audio,
+    /// The crowd's gasps, chants and cheers (`crowdsfx`).
+    pub crowd: super::sfx::Crowd,
     /// The VS match's controller (`gmvs.c`'s `controller`): its rules, timer, pause state,
     /// per-fighter respawn state and results.
     pub vs: VsSceneController,

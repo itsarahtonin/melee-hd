@@ -46,6 +46,8 @@ const AI_HANDLER: u64 = 120;
 /// From the render's wait to its sleep, and from the wake to the pad check.
 const BEFORE_SLEEP: u64 = 32;
 const AFTER_WAKE: u64 = 24;
+/// From the render's wait to the pad check when a frame buffer is free.
+const NO_SLEEP: u64 = 40;
 /// The perf timer's time base read at a tick's start and end.
 const TICK_READ: u64 = 16;
 /// Time an ARAM load takes per 4 KB chunk (eight register reads).
@@ -111,6 +113,13 @@ pub struct Clock {
     pub woken: bool,
     /// Whether the DSP has answered the last frame's mail (`__AXOutDspReady` 1).
     pub dsp_ready: bool,
+    /// Audio frames are placed ([`Clock::place_audio_frames`]) rather than scheduled; the last
+    /// one's start.
+    pub placed_frames: bool,
+    pub last_frame: Option<u64>,
+    /// Rounds of a scene's loop that start without waiting for a frame buffer: its first
+    /// (no render before it) and its second (a buffer is still free).
+    pub scene_start: u8,
 }
 
 /// What the timeline asks of its owner. Each handler starts its time log at `base`, the time
@@ -124,8 +133,19 @@ pub trait Frames {
     fn aram_done(&mut self, base: u64) -> HwLog;
     /// What the game's code between handlers did to the hardware.
     fn take_log(&mut self) -> HwLog;
-    /// Whether the game's file load has called back.
-    fn file_loaded(&mut self) -> bool;
+    /// Whether what the game waits for has happened.
+    fn done(&mut self, w: Wait) -> bool;
+}
+
+/// What the game waits for in a loop with a wait point each spin.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Wait {
+    /// Its file load's callback (`lbFile`'s `cancel`).
+    FileLoaded,
+    /// Room in the sound bank load queue (`HSD_SynthSFXLoad`'s spin).
+    SfxQueueRoom,
+    /// No sound bank load queued (`HSD_SynthSFXWaitForLoadCompletion`).
+    SfxLoadsDone,
 }
 
 /// Time a stretch of the audio code took at the hardware, and what it started: the disc reads
@@ -237,7 +257,11 @@ impl Clock {
                     }
                     EventKind::AudioDma => {
                         self.ai_pending = true;
-                        self.schedule(self.now + AUDIO_FRAME, EventKind::AudioDma);
+                        if self.placed_frames {
+                            self.last_frame = Some(self.now);
+                        } else {
+                            self.schedule(self.now + AUDIO_FRAME, EventKind::AudioDma);
+                        }
                     }
                     EventKind::DspResume => self.dsp_ready = true,
                     EventKind::DiscDone => self.di_pending = true,
@@ -323,16 +347,30 @@ impl Clock {
     pub fn tick_start(&mut self, f: &mut dyn Frames) {
         self.game_code(f);
         if self.ticks_left == 0 {
-            // The render's wait, then the sleep until a retrace frees a frame buffer.
-            self.wait(WAIT_STEP, f);
-            self.now += BEFORE_SLEEP;
-            self.woken = false;
-            while !self.woken {
-                let next = self.next_at();
-                self.now = self.now.max(next);
-                self.service(f);
+            let start = self.scene_start;
+            self.scene_start = start.saturating_sub(1);
+            if start < 2 {
+                // The render's wait.
+                self.wait(WAIT_STEP, f);
             }
-            self.read(AFTER_WAKE, f);
+            if start == 0 && !self.woken {
+                // The sleep until a retrace frees a frame buffer: the one shown before the
+                // last frame was copied, two buffers back.
+                self.now += BEFORE_SLEEP;
+                while !self.woken {
+                    let next = self.next_at();
+                    self.now = self.now.max(next);
+                    self.service(f);
+                }
+                self.read(AFTER_WAKE, f);
+            } else if start < 2 {
+                // A buffer is free: a read, the frame's GX finish interrupt and a read before
+                // the pad check (the sleep's wake covers the last two otherwise,
+                // `AFTER_WAKE`).
+                self.read(NO_SLEEP, f);
+            }
+            // The frame's copy: the next one needs a retrace after it.
+            self.woken = false;
             // The scene loop's wait for a pad sample, and one more wait after it.
             while self.pads == 0 {
                 self.wait(WAIT_STEP, f);
@@ -343,6 +381,20 @@ impl Clock {
         self.ticks_left -= 1;
         self.pads -= 1;
         self.read(TICK_READ, f);
+    }
+
+    /// A scene's loop starts (`gm_801A4D34`'s prologue): the pad queue keeps only its newest
+    /// sample, and the first round waits for a sample without rendering first.
+    pub fn start_scene_loop(&mut self, f: &mut dyn Frames) {
+        self.game_code(f);
+        if std::mem::take(&mut self.placed_frames) {
+            self.events.retain(|e| e.kind != EventKind::AudioDma);
+            let start = self.last_frame.take().expect("a placed audio frame");
+            self.schedule(start + AUDIO_FRAME, EventKind::AudioDma);
+        }
+        self.pads = self.pads.min(1);
+        self.ticks_left = 0;
+        self.scene_start = 2;
     }
 
     /// Time a tick's ARAM loads take (`ARAM_CHUNK` per 4 KB).
@@ -357,10 +409,41 @@ impl Clock {
         self.game_code(f);
         loop {
             self.wait(WAIT_STEP, f);
-            if f.file_loaded() {
+            if f.done(Wait::FileLoaded) {
                 break;
             }
         }
+    }
+
+    /// The game waiting for `w` in a loop that checks before each wait point.
+    pub fn wait_until(&mut self, f: &mut dyn Frames, w: Wait) {
+        self.game_code(f);
+        while !f.done(w) {
+            self.wait(WAIT_STEP, f);
+        }
+    }
+
+    /// The audio frames of a stretch of code the model doesn't cover (a scene's entry), at
+    /// the times their driver callbacks ran: their interrupts were taken `AI_CALLBACK` before.
+    /// They replace the DMA's schedule until the scene's loop starts, which takes it up from
+    /// the last.
+    pub fn place_audio_frames(&mut self, callbacks: &[u64]) {
+        self.events.retain(|e| e.kind != EventKind::AudioDma);
+        for &tb in callbacks {
+            self.schedule(tb - AI_CALLBACK, EventKind::AudioDma);
+        }
+        self.placed_frames = true;
+    }
+
+    /// Time passing to `tb` through code the model doesn't cover, its interrupts taken as
+    /// their events come due.
+    pub fn catch_up(&mut self, tb: u64, f: &mut dyn Frames) {
+        self.game_code(f);
+        while self.next_at() <= tb {
+            self.now = self.now.max(self.next_at());
+            self.service(f);
+        }
+        self.now = self.now.max(tb);
     }
 
     /// The perf timer's read at the end of a tick.
@@ -396,7 +479,7 @@ mod tests {
             }
             log
         }
-        fn file_loaded(&mut self) -> bool {
+        fn done(&mut self, _: Wait) -> bool {
             true
         }
     }

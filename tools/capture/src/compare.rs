@@ -173,6 +173,7 @@ impl<'a> Comparer<'a> {
     /// The audio driver, the synth and the AX voices, byte for byte.
     pub fn audio(&mut self) {
         crate::audio::compare(self.mem, &self.game.audio, &mut self.diffs);
+        crate::audio::compare_crowd(self.mem, &self.game.crowd, &mut self.diffs);
     }
 
     /// The scheduler: each process link's GObjs in order, and what they hold.

@@ -44,6 +44,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
         addr if super::hud::run_proc(game, gobj, addr) => {}
+        super::sfx::addr::PROC => game.crowd_proc(),
         addr if last::run(game, gobj, addr) => {}
         addr if super::gr::battle::run(game, gobj, addr) => {}
         0x8006_A1BC => fighter::proc_hitlag(game, gobj),
@@ -236,6 +237,9 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::fox::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::sfx::call(r, f, args) {
         return v;
     }
     unported("function", f)

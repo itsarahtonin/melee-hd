@@ -268,7 +268,7 @@ impl Running<'_> {
         self.enter_fall_special(gobj, 1, 0, 1, mobility, landing_lag, 0.0, true);
     }
 
-    /// `ftCommon_AirToGroundStateChange`: lands (`ftCommon_8007D7FC`), then the state from the
+    /// `ftCommon_AirToGroundStateChange`: lands ([`land`](Self::land)), then the state from the
     /// same frame.
     pub(crate) fn fox_air_to_ground(&mut self, gobj: GObjId, msid: i32, flags: u32) {
         self.land(gobj);

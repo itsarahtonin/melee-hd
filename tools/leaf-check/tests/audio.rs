@@ -259,20 +259,47 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
     let disc_path = std::env::var("SSBM_DISC").expect("SSBM_DISC");
     let disc = melee_data::disc::Disc::open(&disc_path).expect("the disc");
     audio::load_stream(&mut a, &disc, &mut data);
+    // The files the queue reads in the replay: the sound banks, and the music the log starts.
+    for e in melee_sim::lb::audio::SSM_US {
+        audio::load_disc_file(&mut a, &disc, &mut data, e);
+    }
+    for line in log
+        .lines()
+        .filter(|l| l.starts_with("C HSD_AudioPStreamStartChParam "))
+    {
+        // Older recordings logged the path's address instead of its entry number.
+        let e = u32::from_str_radix(line.split_whitespace().nth(2).unwrap(), 16).unwrap();
+        if e < 0x1_0000 {
+            audio::load_disc_file(&mut a, &disc, &mut data, e as i32);
+        }
+    }
     let mut diffs = Vec::new();
     audio::compare(&cap.call.mem1, &a, &mut diffs);
     assert!(diffs.is_empty(), "the import doesn't round-trip: {diffs:?}");
 
     // Each tick's end in the dump: its number and the ranges, overlaid on the start's memory.
-    const RANGES: [(u32, u32); 4] = [
+    // `dump2.zst` adds the library's file names and the rest of its tables.
+    const RANGES_1: [(u32, u32); 4] = [
         (0x8040_7F00, 0x8040_8100),
         (0x8043_3700, 0x8043_3A80),
         (0x804A_8D00, 0x804C_6400),
         (0x804D_6000, 0x804D_7900),
     ];
-    let dump = zstd::decode_all(&std::fs::read(dir.join("dump.zst")).unwrap()[..]).unwrap();
+    const RANGES_2: [(u32, u32); 5] = [
+        (0x803B_B300, 0x803B_B3C0),
+        (0x8040_7F00, 0x8040_8100),
+        (0x8043_3700, 0x8043_3C30),
+        (0x804A_8D00, 0x804C_6400),
+        (0x804D_6000, 0x804D_7900),
+    ];
+    let (dump_file, ranges): (&str, &[(u32, u32)]) = if dir.join("dump2.zst").exists() {
+        ("dump2.zst", &RANGES_2)
+    } else {
+        ("dump.zst", &RANGES_1)
+    };
+    let dump = zstd::decode_all(&std::fs::read(dir.join(dump_file)).unwrap()[..]).unwrap();
     // Each record: the tick, the ranges, and the device command queue's nodes in the heap.
-    let fixed: usize = RANGES.iter().map(|(lo, hi)| (hi - lo) as usize).sum();
+    let fixed: usize = ranges.iter().map(|(lo, hi)| (hi - lo) as usize).sum();
     let mut records = std::collections::HashMap::new();
     let mut o = 0;
     while o < dump.len() {
@@ -283,13 +310,32 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
         o += len;
     }
     let mut mem = cap.call.mem1.clone();
+    // The audio heap at each tick's end that changed it (`heap.zst`): (tick, start, bytes).
+    let heaps: Vec<(u32, u32, Vec<u8>)> = std::fs::read(dir.join("heap.zst"))
+        .map(|z| {
+            let h = zstd::decode_all(&z[..]).unwrap();
+            let mut v = Vec::new();
+            let mut o = 0;
+            while o < h.len() {
+                let w = |o: usize| u32::from_le_bytes(h[o..o + 4].try_into().unwrap());
+                let (t, at, n) = (w(o), w(o + 4), w(o + 8) as usize);
+                v.push((t, at, h[o + 12..o + 12 + n].to_vec()));
+                o += 12 + n;
+            }
+            v
+        })
+        .unwrap_or_default();
     let at_tick = |mem: &mut Vec<u8>, tick: u32| {
+        for (_, at, bytes) in heaps.iter().filter(|h| h.0 <= tick) {
+            let m = (at - 0x8000_0000) as usize;
+            mem[m..m + bytes.len()].copy_from_slice(bytes);
+        }
         let &(at, len) = records
             .get(&tick)
             .unwrap_or_else(|| panic!("tick {tick} isn't in the dump"));
         let r = &dump[at..at + len];
         let mut o = 4;
-        for (lo, hi) in RANGES {
+        for &(lo, hi) in ranges {
             let n = (hi - lo) as usize;
             let m = (lo - 0x8000_0000) as usize;
             mem[m..m + n].copy_from_slice(&r[o..o + n]);
@@ -307,6 +353,38 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
 
     let hex = |s: &str| u32::from_str_radix(s, 16).unwrap();
     let mut tick = start;
+    let mut in_tick = false;
+    // The ticks whose end a scene's entry follows: game code made calls before the next tick.
+    // With their audio frames, by when the driver callback ran: the game's own code decided
+    // when they were taken.
+    let entries: std::collections::HashMap<u32, Vec<u64>> = {
+        let mut map = std::collections::HashMap::new();
+        let (mut last_e, mut call, mut frames) = (None, false, Vec::new());
+        for l in log.lines() {
+            let mut w = l.split_whitespace();
+            match w.next() {
+                Some("E") => {
+                    last_e = w.next().map(|t| t.parse::<u32>().unwrap());
+                    call = false;
+                    frames.clear();
+                }
+                Some("C") if last_e.is_some() => call = true,
+                Some("A") if last_e.is_some() => frames.push(w.next().unwrap().parse().unwrap()),
+                Some("S") => {
+                    if call {
+                        map.insert(last_e.unwrap(), std::mem::take(&mut frames));
+                    }
+                    last_e = None;
+                }
+                _ => {}
+            }
+        }
+        map
+    };
+    if let Some(frames) = entries.get(&start) {
+        a.clock_place_audio_frames(&data, frames);
+    }
+    let mut caught_up = false;
     let mut lines = log
         .lines()
         .skip_while(|l| *l != format!("E {start} {}", cap.call.regs.tb));
@@ -317,6 +395,12 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
         let p: Vec<&str> = line.split_whitespace().collect();
         match p[0] {
             "S" => {
+                in_tick = true;
+                // Calls between ticks that the timeline caught up to were a scene's entry:
+                // its loop starts.
+                if std::mem::take(&mut caught_up) {
+                    a.start_scene_loop(&data);
+                }
                 tick = p[1].parse().unwrap();
                 if tick > end {
                     break;
@@ -330,8 +414,16 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
                 );
             }
             "R" => a.aram_load(&data, hex(p[1])),
-            "A" => frames = frames.wrapping_add(1),
+            "A" => {
+                frames = frames.wrapping_add(1);
+                // In a scene's entry the game's own code decides when interrupts are taken:
+                // the frame starts where the log has it.
+            }
             "E" => {
+                in_tick = false;
+                if let Some(frames) = entries.get(&tick) {
+                    a.clock_place_audio_frames(&data, frames);
+                }
                 let tb: u64 = p[2].parse().unwrap();
                 assert_eq!(
                     a.clock.as_ref().unwrap().now,
@@ -342,7 +434,17 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
                 // The library's own calls (the tick, the queue, the crowd) aren't in the log,
                 // only the driver calls they make: its state comes from the dump, and its own
                 // checks (`lb_audio_*`) cover it.
+                // The banks' part is the replay's own (the bank loads' callback runs it).
+                let mine = a.lb.clone();
                 a.lb = audio::import_lb(&mem);
+                a.lb.banks = mine.banks;
+                a.lb.bank_want = mine.bank_want;
+                a.lb.bank_have = mine.bank_have;
+                a.lb.bank_load = mine.bank_load;
+                a.lb.fgm_loaded = mine.fgm_loaded;
+                a.lb.fgm_wanted = mine.fgm_wanted;
+                a.lb.fgm_pending = mine.fgm_pending;
+                a.lb.ssm_file = mine.ssm_file;
                 let mut diffs = Vec::new();
                 audio::compare(&mem, &a, &mut diffs);
                 assert!(
@@ -356,7 +458,14 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
             "C" => {
                 calls += 1;
                 let r = |i: usize| hex(p[2 + i - 3]);
-                let ret = hex(p[p.len() - 1]);
+                let arrow = p.iter().position(|&w| w == "->").expect("a call's result");
+                let ret = hex(p[arrow + 1]);
+                // Between ticks (a scene's end and the next one's entry), game code's time is
+                // its own: the timeline catches up to when the call was made.
+                if !in_tick && let Some(tb) = p.get(arrow + 2) {
+                    a.clock_catch_up(&data, tb.parse().unwrap());
+                    caught_up = true;
+                }
                 let ours = match p[1] {
                     "HSD_AudioSFXStartParam" => a.sfx_start(
                         &data,
@@ -376,6 +485,55 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
                     "HSD_AudioSFXCheck" => u32::from(a.sfx_check(r(3) as i32)),
                     "HSD_AudioSFXKeyOff" => u32::from(a.sfx_key_off(r(3) as i32)),
                     "HSD_AudioPStreamPauseCh" => u32::from(a.sfx_pause_channel(r(3) as i32)),
+                    "HSD_AudioPStreamStartChParam" => {
+                        u32::from(a.music_start(&data, r(3) as i32, r(4) as u8, r(5) as i32))
+                    }
+                    "AXDriverStop" => u32::from(a.driver_stop()),
+                    // The library's bank loader (the match's banks, from game state the log
+                    // gives as these calls' arguments).
+                    "lbAudioAx_80026F2C" => {
+                        a.lb.unwant_banks(r(3));
+                        ret
+                    }
+                    "lbAudioAx_8002702C" => {
+                        a.lb.want_banks(r(3), u64::from(r(5)) << 32 | u64::from(r(6)));
+                        ret
+                    }
+                    "lbAudioAx_80027168" => {
+                        a.lb_start_bank_loads(&data);
+                        ret
+                    }
+                    // lbAudioAx_8002785C's line comes as it returns, after its calls: it ends
+                    // with lbAudioAx_80027648's wait, inlined.
+                    "lbAudioAx_80027648" | "lbAudioAx_8002785C" => {
+                        a.lb_wait_for_banks(&data);
+                        ret
+                    }
+                    "HSD_AudioSFXSetMixGroup" => {
+                        u32::from(a.sfx_set_mix_group(r(3) as i32, r(4) as i32, r(5) as i8))
+                    }
+                    // The path's entry number is what it returns.
+                    "HSD_SynthSFXLoad" => {
+                        let cb = (r(5) != 0).then_some(CodeRef(r(5)));
+                        a.sfx_load(&data, ret as i32, r(4) as i32, cb, r(6) as i32) as u32
+                    }
+                    "HSD_SynthSFXCancelLoad" => u32::from(a.sfx_cancel_load(&data, r(3) as i32)),
+                    "HSD_SynthSFXBankDeflag" => {
+                        a.sfx_bank_deflag(&data, r(3) as i32);
+                        ret
+                    }
+                    "HSD_SynthSFXBankDeflagSync" => {
+                        a.sfx_bank_deflag_sync();
+                        ret
+                    }
+                    "HSD_SynthSFXWaitForLoadCompletion" => {
+                        a.sfx_wait_for_loads(&data);
+                        ret
+                    }
+                    "HSD_SynthSFXUnloadBank" => {
+                        a.sfx_unload_bank(r(3) as i32);
+                        ret
+                    }
                     "HSD_AudioPStreamResumeCh" => u32::from(a.sfx_resume_channel(r(3) as i32)),
                     // Game code's own file loads, which wait for the disc.
                     "HSD_DevComRequest" => {
@@ -725,9 +883,29 @@ fn check_stream(
     func: &str,
     ours: &dyn Fn(&mut melee_sim::audio::Audio, &ssbm_rt::capture::Call) -> Option<u32>,
 ) {
-    use melee_capture::{Capture, audio};
     let dir = std::env::var("AUDIO_STREAM_CALLS").unwrap_or_else(|_| STREAM_CALLS.to_owned());
-    let paths = leaf_check::calls::saved_calls(&dir, func);
+    check_audio_only(&dir, func, ours);
+}
+
+/// Saved calls run on both sides with only the audio state imported and compared, for
+/// states the rest of the import doesn't take (the boot's, before the scheduler exists).
+fn check_audio_only(
+    dir: &str,
+    func: &str,
+    ours: &dyn Fn(&mut melee_sim::audio::Audio, &ssbm_rt::capture::Call) -> Option<u32>,
+) {
+    check_audio_only_with(dir, func, &|_| {}, ours);
+}
+
+/// [`check_audio_only`] with each call changed first.
+fn check_audio_only_with(
+    dir: &str,
+    func: &str,
+    prepare: &dyn Fn(&mut ssbm_rt::capture::Call),
+    ours: &dyn Fn(&mut melee_sim::audio::Audio, &ssbm_rt::capture::Call) -> Option<u32>,
+) {
+    use melee_capture::{Capture, audio};
+    let paths = leaf_check::calls::saved_calls(dir, func);
     let Some(ctx) = leaf_check::reference() else {
         return;
     };
@@ -735,15 +913,11 @@ fn check_stream(
         eprintln!("no saved {func} calls in {dir}: skipping");
         return;
     }
-    // The disc drive is outside memory: a read the queue starts goes out and nothing more
-    // (its end is the timeline's, `timeline_samples`).
-    ctx.register(leaf_check::sym("DVDReadAsyncPrio"), |ctx| {
-        ctx.regs.set_r(3, 1)
-    });
     for mode in leaf_check::MODES {
         gekko_fp::set_fp_mode(mode);
         for path in &paths {
-            let cap = Capture::read(path);
+            let mut cap = Capture::read(path);
+            prepare(&mut cap.call);
             let mut data = melee_data::archive::Archives::default();
             let bank = audio::find_bank(&cap.call.mem1, &mut data);
             let mut a = audio::import(&cap.call.mem1, bank);
@@ -934,4 +1108,367 @@ fn lb_audio_entries() {
         |i| [0x84, 0x10, 0x85][i % 3],
         &|g, a| g.lb_audio_queue(a as i32),
     );
+}
+
+const CROWD_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/crowd";
+
+/// The crowd (`crowdsfx.c`), on the saved calls in `AUDIO_CROWD_CALLS` (default above),
+/// captured as the driver's are with its functions named over the Final Destination match
+/// (`CAPTURE_FROM=0 CAPTURE_EVERY=600 --fields 13000`), and in `AUDIO_CROWD_BF4_CALLS`
+/// (default beside it) its process over the four-player Battlefield match.
+fn crowd_dir() -> String {
+    std::env::var("AUDIO_CROWD_CALLS").unwrap_or_else(|_| CROWD_CALLS.to_owned())
+}
+
+/// The replays the crowd's calls come from, with their directories: the Final Destination
+/// singles (every crowd function) and a four-player Battlefield match (its process, where
+/// enough fighters can fall past the bottom at once). Slippi's codes hook the crowd's process
+/// to talk to the Slippi device, which the replay answers for (`SLIPPI_REPLAYS`).
+fn crowd_sets() -> Vec<(String, ssbm_slippi::Replay)> {
+    let slp = std::env::var("SLIPPI_REPLAYS")
+        .unwrap_or_else(|_| "C:/Users/USER/Documents/Slippi".into());
+    let bf4 =
+        std::env::var("AUDIO_CROWD_BF4_CALLS").unwrap_or_else(|_| format!("{CROWD_CALLS}-bf4"));
+    [
+        (crowd_dir(), "2026-01/Game_20260129T133652"),
+        (bf4, "2026-05/Game_20260531T174251"),
+    ]
+    .into_iter()
+    .filter_map(|(dir, name)| {
+        let bytes = std::fs::read(format!("{slp}/{name}.slp")).ok()?;
+        Some((dir, ssbm_slippi::Replay::parse(&bytes).expect("a replay")))
+    })
+    .collect()
+}
+
+/// [`check_calls_with`](leaf_check::calls::check_calls_with) on each set, with its replay's
+/// Slippi device.
+fn check_crowd(
+    func: &str,
+    min: usize,
+    prepare: &leaf_check::calls::Prepare,
+    ours: &leaf_check::calls::Ours,
+) {
+    for (dir, replay) in crowd_sets() {
+        if leaf_check::calls::saved_calls(&dir, func).is_empty() {
+            continue;
+        }
+        leaf_check::calls::check_calls_in(
+            &dir,
+            func,
+            min,
+            prepare,
+            &leaf_check::calls::Setup {
+                stubs: &[],
+                replay: Some(&replay),
+                gx: false,
+            },
+            ours,
+        );
+    }
+}
+
+fn f(call: &ssbm_rt::capture::Call, i: usize) -> f64 {
+    call.regs.fpr[i].ps0
+}
+
+#[test]
+fn crowd_calls() {
+    check_crowd("sfx_setupCrowdSFX", 1, &|_, _| {}, &|g, _, _| {
+        g.crowd_setup();
+        Ret::Nothing
+    });
+    check_crowd("fn_803219AC", 10, &|_, _| {}, &|g, _, _| {
+        g.crowd_proc();
+        Ret::Nothing
+    });
+    check_crowd("un_8032233C", 4, &|_, _| {}, &|g, _, c| {
+        g.crowd_knockback(r(c, 3), r(c, 4));
+        Ret::Nothing
+    });
+    check_crowd("un_803224DC", 4, &|_, _| {}, &|g, _, c| {
+        Ret::Int(u32::from(g.crowd_side_blast(r(c, 3), f(c, 1), f(c, 2))))
+    });
+    check_crowd("un_80322598", 1, &|_, _| {}, &|g, _, c| {
+        Ret::Int(g.crowd_recovery(r(c, 3), f(c, 1)) as u32)
+    });
+    check_crowd("un_803222EC", 1, &|_, _| {}, &|g, _, c| {
+        Ret::Float(g.crowd_angle_scale(f(c, 1), f(c, 2)))
+    });
+}
+
+/// The crowd's process and entry points from its process's states with its state changed,
+/// so every branch runs: chanting or done, ending or not, the cheer's time, a followed
+/// fighter, and hits of every strength at each fighter.
+#[test]
+fn crowd_varied() {
+    use leaf_check::calls::{peek_u32, poke_u32};
+    const CROWD: u32 = 0x804A_2F08;
+    // Each field from its own hash of the call's index, so their combinations spread.
+    let vary = |call: &mut ssbm_rt::capture::Call, i: usize| {
+        let h = |f: u32, n: u32| {
+            let x = (i as u32 ^ f.wrapping_mul(0x9E37_79B9)).wrapping_mul(0x85EB_CA6B);
+            ((x ^ (x >> 13)).wrapping_mul(0xC2B2_AE35) >> 8) % n
+        };
+        let w =
+            |call: &mut ssbm_rt::capture::Call, k: u32, v: u32| poke_u32(call, CROWD + 4 * k, v);
+        // The fighters' spawn numbers, from the fighter link.
+        let mut spawns = Vec::new();
+        let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+        let mut g = peek_u32(call, heads + 4 * 8);
+        let mut k = 0;
+        while g != 0 {
+            let fp = peek_u32(call, g + 0x2C);
+            spawns.push(peek_u32(call, fp + 8));
+            // Knockback, percent and height, so hits of each strength land on fighters
+            // worth following and fighters fall past the bottom.
+            let kb = [0.0f32, 60.0, 100.0, 160.0, 250.0][h(10 + k, 5) as usize];
+            poke_u32(call, fp + 0x18A4, kb.to_bits());
+            let pct = [10.0f32, 80.0, 150.0][h(20 + k, 3) as usize];
+            poke_u32(call, fp + 0x1830, pct.to_bits());
+            if h(30 + k, 2) == 0 {
+                poke_u32(call, fp + 0xB4, (-500.0f32).to_bits());
+            }
+            k += 1;
+            g = peek_u32(call, g + 8);
+        }
+        let n = spawns.len().max(1) as u32;
+        let pick = |f: u32| spawns.get(h(f, n) as usize).copied().unwrap_or(0);
+        w(call, 0, pick(1));
+        w(call, 1, [0, 3, 40, 0x10000][h(2, 4) as usize]);
+        w(call, 2, (40.0 + 30.0 * h(3, 6) as f32).to_bits());
+        w(call, 3, if h(4, 3) == 0 { 0 } else { pick(5) });
+        w(call, 4, [0, 30, 1200, 5000][h(6, 4) as usize]);
+        w(call, 6, h(7, 10));
+        w(call, 7, h(8, 2));
+        w(call, 8, h(9, 2));
+        w(call, 9, h(40, 4));
+    };
+    check_crowd("fn_803219AC", 10, &vary, &|g, _, _| {
+        g.crowd_proc();
+        Ret::Nothing
+    });
+    let from_proc =
+        |name: &'static str,
+         ours: &(
+              dyn Fn(&mut melee_sim::game::state::Running, &ssbm_rt::capture::Call) -> Ret + Sync
+          )| {
+            for pass in 0..3 {
+                check_crowd(
+                    "fn_803219AC",
+                    10,
+                    &|call, i| {
+                        vary(call, i + 1000 * pass);
+                        call.addr = leaf_check::sym(name);
+                        let spawn = peek_u32(call, 0x804A_2F08);
+                        call.regs.gpr[3] = spawn;
+                        call.regs.gpr[4] = if i % 2 == 0 {
+                            spawn
+                        } else {
+                            peek_u32(call, 0x804A_2F08 + 12)
+                        };
+                        if name == "un_8032201C" {
+                            call.regs.gpr[4] = (i % 4) as u32;
+                        }
+                        call.regs.fpr[1].ps0 = -120.0 + 25.0 * (i % 11) as f64;
+                        call.regs.fpr[2].ps0 = 20.0 + 40.0 * (i % 6) as f64;
+                    },
+                    &|g, _, c| ours(g, c),
+                );
+            }
+        };
+
+    from_proc("un_8032201C", &|g, c| {
+        Ret::Int(u32::from(g.crowd_react(r(c, 3), r(c, 4) as i32)))
+    });
+    from_proc("un_80321C70", &|g, _| {
+        g.crowd_end_chant();
+        Ret::Nothing
+    });
+    from_proc("un_80322314", &|g, _| {
+        g.crowd_transform();
+        Ret::Nothing
+    });
+    from_proc("un_8032233C", &|g, c| {
+        g.crowd_knockback(r(c, 3), r(c, 4));
+        Ret::Nothing
+    });
+    from_proc("un_803224DC", &|g, c| {
+        Ret::Int(u32::from(g.crowd_side_blast(r(c, 3), f(c, 1), f(c, 2))))
+    });
+    from_proc("un_80322598", &|g, c| {
+        Ret::Int(g.crowd_recovery(r(c, 3), f(c, 1)) as u32)
+    });
+}
+
+const TIMELINE_ENTRY: &str =
+    "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline2-fd1-entry";
+
+/// [`timeline`] from tick 0's end (`AUDIO_START=0`, into `AUDIO_TIMELINE_ENTRY`): the VS
+/// scene's entry, its sound bank loads in the background, its files' loads, the fighters'
+/// setup and the music's start, then the match's first ticks.
+#[test]
+fn timeline_entry() {
+    let dir = std::env::var("AUDIO_TIMELINE_ENTRY").unwrap_or_else(|_| TIMELINE_ENTRY.to_owned());
+    run_timeline(&dir, 0, 1500, DspModel::Silent);
+}
+
+const BANK_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/bank";
+
+/// The sound banks' loading (`synth.c`) and the library's bank choice, on every call saved
+/// from boot to the match's start of the Final Destination and four-player Battlefield
+/// replays (`AUDIO_BANK_CALLS`, default above, a directory per replay; captured as the
+/// driver's are with these functions named, `CAPTURE_FROM=0 CAPTURE_EVERY=1 --fields 400`).
+fn bank_dirs() -> Vec<String> {
+    let root = std::env::var("AUDIO_BANK_CALLS").unwrap_or_else(|_| BANK_CALLS.to_owned());
+    ["Game_20260129T133652", "Game_20260531T174251"]
+        .iter()
+        .map(|n| format!("{root}/{n}"))
+        .collect()
+}
+
+/// A path's entry number on the disc, from the C string at `at` in the call's memory.
+fn entrynum_at(call: &ssbm_rt::capture::Call, at: u32) -> i32 {
+    let m = &call.mem1[(at - 0x8000_0000) as usize..];
+    let path = std::str::from_utf8(&m[..m.iter().position(|&b| b == 0).unwrap()]).unwrap();
+    let disc = std::env::var("SSBM_DISC").expect("SSBM_DISC");
+    melee_data::disc::Disc::open(&disc)
+        .expect("the disc")
+        .entrynum(path)
+        .unwrap_or_else(|e| panic!("{path}: {e}"))
+}
+
+#[test]
+fn bank_calls() {
+    use melee_sim::game::handles::CodeRef;
+    let data = melee_data::archive::Archives::default();
+    for dir in bank_dirs() {
+        check_audio_only(&dir, "HSD_SynthSFXLoad", &|a, c| {
+            let cb = (r(c, 5) != 0).then_some(CodeRef(r(c, 5)));
+            let e = entrynum_at(c, r(c, 3));
+            Some(a.sfx_load(&data, e, r(c, 4) as i32, cb, r(c, 6) as i32) as u32)
+        });
+        check_audio_only(&dir, "HSD_SynthSFXCancelLoad", &|a, c| {
+            Some(u32::from(a.sfx_cancel_load(&data, r(c, 3) as i32)))
+        });
+        check_audio_only(&dir, "HSD_SynthSFXUnloadBank", &|a, c| {
+            a.sfx_unload_bank(r(c, 3) as i32);
+            None
+        });
+        check_audio_only(&dir, "HSD_SynthSFXAllocateBank", &|a, c| {
+            a.sfx_allocate_bank(r(c, 3) as i32);
+            None
+        });
+        check_audio_only(&dir, "HSD_SynthSFXBankDeflag", &|a, c| {
+            a.sfx_bank_deflag(&data, r(c, 3) as i32);
+            None
+        });
+    }
+}
+
+/// The library's choice of the match's banks (`lbAudioAx_8002785C` up to its loads, which
+/// `timeline_entry` covers): its loads and their wait stood in for on both sides, so the
+/// banks it wants and the stage's send are what's compared.
+#[test]
+fn match_bank_choice() {
+    use leaf_check::calls::{Setup, check_calls_in, poke_u32};
+    for dir in bank_dirs() {
+        check_calls_in(
+            &dir,
+            "lbAudioAx_8002785C",
+            1,
+            // Nothing wanted is loading, so the inlined wait ends at once.
+            &|call, _| {
+                for i in 0..56 {
+                    poke_u32(call, 0x8043_38A4 + 4 * i, u32::MAX);
+                }
+            },
+            &Setup {
+                stubs: &[(0x8002_7168, None)],
+                gx: false,
+                replay: None,
+            },
+            &|g, _, _| {
+                if g.lb_choose_match_banks() {
+                    // Where the port starts the loads, which the reference's stand-in takes.
+                    melee_sim::game::code::stubs::log(0x8002_7168, &[]);
+                }
+                Ret::Nothing
+            },
+        );
+    }
+}
+
+/// A loaded group dropped from the effect table and the audio heap
+/// (`HSD_SynthSFXGroupDataRemove`, which a full ARAM's bank choice does), from the boot's
+/// bank unload states: each of the banks' groups in turn.
+#[test]
+fn bank_group_remove() {
+    use leaf_check::calls::peek_u32;
+    for dir in bank_dirs() {
+        for pick in 0..3usize {
+            check_audio_only_with(
+                &dir,
+                "HSD_SynthSFXUnloadBank",
+                &|call| {
+                    let mut groups = Vec::new();
+                    for bank in 0..32 {
+                        let mut n =
+                            peek_u32(call, leaf_check::sym("HSD_Synth_804C2AE0") + 4 * bank);
+                        while n != 0 {
+                            groups.push(peek_u32(call, n + 4));
+                            n = peek_u32(call, n);
+                        }
+                    }
+                    call.addr = leaf_check::sym("HSD_SynthSFXGroupDataRemove");
+                    call.regs.gpr[3] = groups.get(pick).copied().unwrap_or(u32::MAX);
+                },
+                &|a, c| {
+                    a.sfx_group_remove(r(c, 3) as i32);
+                    None
+                },
+            );
+        }
+    }
+}
+
+/// A bank's groups moved within ARAM (`HSD_SynthSFXBankDeflag` through
+/// `HSD_SynthSFXGroupDataReaddress`): the boot's deflag finds its groups packed already, so
+/// the bank's start is moved down first and each group has to follow it. Then each move's
+/// callback (`HSD_SynthSFXGroupDataReaddressCallback`) with moves outstanding.
+#[test]
+fn bank_deflag_moves() {
+    use leaf_check::calls::{peek_u32, poke_u32};
+    use leaf_check::sym;
+    let data = melee_data::archive::Archives::default();
+    for dir in bank_dirs() {
+        for shift in [0x20u32, 0x1000] {
+            check_audio_only_with(
+                &dir,
+                "HSD_SynthSFXBankDeflag",
+                &|call| {
+                    let head = sym("hsd_SynthSFXBankHead") + 4 * call.regs.gpr[3];
+                    poke_u32(call, head, peek_u32(call, head).wrapping_sub(shift));
+                },
+                &|a, c| {
+                    a.sfx_bank_deflag(&data, r(c, 3) as i32);
+                    None
+                },
+            );
+        }
+        for moving in [1u32, 3] {
+            check_audio_only_with(
+                &dir,
+                "HSD_SynthSFXBankDeflag",
+                &|call| {
+                    poke_u32(call, sym("sfxGroupDataReaddressCounter"), moving);
+                    call.addr = sym("HSD_SynthSFXGroupDataReaddressCallback");
+                },
+                &|a, _| {
+                    a.sfx_readdressed();
+                    None
+                },
+            );
+        }
+    }
 }

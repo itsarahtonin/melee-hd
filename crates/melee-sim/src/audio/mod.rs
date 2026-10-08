@@ -7,10 +7,12 @@
 //! voices' parameter blocks, which describe exactly what the DSP would play.
 
 pub mod ax;
+pub mod bank;
 pub mod clock;
 pub mod devcom;
 pub mod driver;
 pub mod dsp;
+pub mod heap;
 pub mod stream;
 pub mod synth;
 
@@ -31,6 +33,8 @@ pub struct Audio {
     pub driver: driver::Driver,
     /// The device command queue the music stream and sound bank loads read through.
     pub devcom: devcom::DevCom,
+    /// The audio heap the queue's nodes and the banks' effect groups live in.
+    pub heap: heap::Heap,
     /// Time the audio code's hardware accesses take, for the timeline (empty between its
     /// steps).
     pub hw: HwLog,
@@ -92,6 +96,23 @@ impl Audio {
         self.with_clock(data, |c, f| c.tick_end(f));
     }
 
+    /// Game code outside the timeline's model (a scene's end and the next one's entry) ran
+    /// until time `tb`: what came due by then runs.
+    pub fn clock_catch_up(&mut self, data: &Archives, tb: u64) {
+        self.with_clock(data, |c, f| c.catch_up(tb, f));
+    }
+
+    /// The audio frames of a stretch of code outside the timeline's model, by when their
+    /// driver callbacks ran.
+    pub fn clock_place_audio_frames(&mut self, data: &Archives, callbacks: &[u64]) {
+        self.with_clock(data, |c, _| c.place_audio_frames(callbacks));
+    }
+
+    /// A scene's loop starts.
+    pub fn start_scene_loop(&mut self, data: &Archives) {
+        self.with_clock(data, |c, f| c.start_scene_loop(f));
+    }
+
     /// An ARAM load of `len` bytes inside a tick.
     pub fn aram_load(&mut self, data: &Archives, len: u32) {
         self.with_clock(data, |c, f| c.aram_load(len, f));
@@ -140,7 +161,12 @@ impl clock::Frames for Running<'_> {
         std::mem::take(&mut self.audio.hw)
     }
 
-    fn file_loaded(&mut self) -> bool {
-        self.audio.devcom.file_loaded
+    fn done(&mut self, w: clock::Wait) -> bool {
+        let b = &self.audio.synth.banks;
+        match w {
+            clock::Wait::FileLoaded => self.audio.devcom.file_loaded,
+            clock::Wait::SfxQueueRoom => b.load_count < 6,
+            clock::Wait::SfxLoadsDone => b.load_count == 0,
+        }
     }
 }

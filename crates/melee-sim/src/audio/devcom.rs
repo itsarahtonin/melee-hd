@@ -30,6 +30,11 @@ pub mod cb {
     pub const STREAM_HEADER: CodeRef = CodeRef(0x8038_B3E0);
     /// `lbFile_8001615C`: a synchronous file load's end.
     pub const FILE_LOADED: CodeRef = CodeRef(0x8001_615C);
+    /// The synth's sound bank loads: a bank's header in, its samples in, an effect group
+    /// moved within ARAM.
+    pub const SFX_HEADER: CodeRef = CodeRef(0x8038_87DC);
+    pub const SFX_SAMPLES: CodeRef = CodeRef(0x8038_83B4);
+    pub const SFX_READDRESS: CodeRef = CodeRef(0x8038_8EB4);
 }
 
 /// `HSD_DevCom`, a queued command.
@@ -72,6 +77,26 @@ pub enum ArqDone {
     DvdStd(u8),
     /// `HSD_DevComDVDARAMEndCallback`: its last chunk.
     DvdEnd(u8),
+    /// `HSD_DevComStdCallback`: one chunk of an ARAM command.
+    Std(u8),
+    /// `HSD_DevComARAMCallback`: an ARAM command's last.
+    Aram(u8),
+    /// A transfer posted with no callback (an ARAM-to-ARAM move's first half).
+    None,
+}
+
+impl ArqDone {
+    /// The callback's address, as the request holds it.
+    pub fn callback(self) -> u32 {
+        match self {
+            ArqDone::DvdStd(_) => 0x8038_F098,
+            ArqDone::DvdEnd(_) => 0x8038_F110,
+            ArqDone::Std(_) => 0x8038_EB50,
+            ArqDone::Aram(_) => 0x8038_EBCC,
+            // `ARQPostRequest` puts `__ARQCallbackHack` in place of no callback.
+            ArqDone::None => 0x8035_1FDC,
+        }
+    }
 }
 
 /// The queue's state.
@@ -116,6 +141,8 @@ pub struct DevCom {
 /// fill.
 pub const RELAY_BUFS: u32 = 0x804C_6340;
 pub const HAKO_HEADERS: u32 = 0x804C_4540;
+/// `hsd_SynthSFXLoadBuf`: where a sound bank's header is read.
+pub const SFX_LOAD_BUF: u32 = 0x804C_2AC0;
 
 impl DevCom {
     fn node(&mut self, i: u16) -> &mut Command {
@@ -160,7 +187,7 @@ impl DevCom {
         Some(i as u8)
     }
 
-    fn file(&self, entrynum: i32) -> ArchiveId {
+    pub fn file(&self, entrynum: i32) -> ArchiveId {
         self.files
             .iter()
             .find(|f| f.0 == entrynum)
@@ -197,6 +224,8 @@ impl Audio {
                 dc
             }
             None => {
+                // `HSD_AudioMalloc`: sixteen at a time from the audio heap.
+                self.heap.alloc(16 * 0x24).expect("audio heap overflow.");
                 let base = d.nodes.len() as u16;
                 d.nodes.extend([Command::default(); 16]);
                 for i in 1..15 {
@@ -233,7 +262,7 @@ impl Audio {
         if d.heads[pri].is_none() {
             d.heads[pri] = Some(dc);
             self.devcom_dvd_wake_up(data);
-            self.devcom_aram_wake_up();
+            self.devcom_aram_wake_up(data);
         }
         id
     }
@@ -319,22 +348,62 @@ impl Audio {
         }
     }
 
-    /// `HSD_DevComARAMWakeUp`: starts the first waiting ARAM command. Only clearing ARAM
-    /// (kind 3) is ported; the others move data the mix uses.
+    /// `HSD_DevComARAMWakeUp`: starts the first waiting ARAM command (the data it moves is
+    /// the mix's).
     #[doc(alias = "HSD_DevComARAMWakeUp")]
-    pub fn devcom_aram_wake_up(&mut self) {
+    pub fn devcom_aram_wake_up(&mut self, data: &Archives) {
         if self.devcom.aram_busy != 0 {
             return;
         }
         self.devcom.aram = self.devcom.heads[3];
-        if let Some(dc) = self.devcom.aram {
-            let c = self.dc(dc);
-            assert_eq!(c.cancel, 0, "a cancelled ARAM command isn't ported");
-            crate::game::code::unported_call(&format!(
-                "HSD_DevComARAMWakeUp for ARAM command kind {:#x}",
-                c.kind
-            ));
+        let Some(dc) = self.devcom.aram else {
+            return;
+        };
+        let c = self.dc(dc);
+        if c.cancel != 0 {
+            if let Some(cb) = c.callback {
+                self.devcom_callback(data, cb, c.id, c.args, None, true);
+            }
+            self.devcom.unlink(dc);
+            self.devcom_aram_wake_up(data);
+            return;
         }
+        let Some(b) = self.devcom.relay_buf() else {
+            return;
+        };
+        let relay = RELAY_BUFS + BUF_SIZE * u32::from(b);
+        let chunk = |c: &Command| {
+            if c.size > BUF_SIZE {
+                (BUF_SIZE, ArqDone::Std(b))
+            } else {
+                (c.size, ArqDone::Aram(b))
+            }
+        };
+        match c.kind {
+            // Clearing ARAM, a relay buffer of zeros at a time.
+            3 => {
+                let (size, done) = chunk(&c);
+                self.arq_post(b, 0, 0, relay, c.dest, size, done);
+                let n = self.devcom.node(dc);
+                n.dest += size;
+                n.size -= size;
+            }
+            0xB => self.arq_post(b, 0, 0, c.src, c.dest, c.size, ArqDone::Aram(b)),
+            0x19 => self.arq_post(b, 0, 1, c.src, c.dest, c.size, ArqDone::Aram(b)),
+            0x1A => self.arq_post(b, 0, 1, c.src, relay, c.size, ArqDone::Aram(b)),
+            // ARAM to ARAM through the relay buffer.
+            0x1B => {
+                let (size, done) = chunk(&c);
+                self.arq_post(b, 1, 1, c.src, relay, size, ArqDone::None);
+                self.arq_post(b, 0, 0, relay, c.dest, size, done);
+                let n = self.devcom.node(dc);
+                n.src += size;
+                n.dest += size;
+                n.size -= size;
+            }
+            k => panic!("an ARAM command of kind {k:#x}"),
+        }
+        self.devcom.aram_busy = 1;
     }
 
     /// The disc read the queue started is done (its DVD callback): what it read reaches
@@ -351,7 +420,7 @@ impl Audio {
             0x21 => {
                 // `HSD_DevComDVDMemCallback`.
                 let n = c.size.min(MEM_CHUNK) as usize;
-                if c.dest.wrapping_sub(HAKO_HEADERS) < 0x60 {
+                if c.dest.wrapping_sub(HAKO_HEADERS) < 0x60 || c.dest == SFX_LOAD_BUF {
                     let b = bytes(self);
                     self.devcom_to_memory(c.dest, &b[at..(at + n).min(b.len())]);
                 }
@@ -389,7 +458,7 @@ impl Audio {
                 let b = self.devcom.dvd_buf;
                 self.devcom.relay_busy[usize::from(b)] = 0;
                 self.devcom_dvd_wake_up(data);
-                self.devcom_aram_wake_up();
+                self.devcom_aram_wake_up(data);
             }
             0x23 => {
                 // The relay buffer on to ARAM (the samples are the mix's).
@@ -405,6 +474,7 @@ impl Audio {
                 };
                 self.arq_post(
                     b,
+                    0,
                     0,
                     RELAY_BUFS + BUF_SIZE * u32::from(b),
                     c.dest,
@@ -426,15 +496,21 @@ impl Audio {
         }
     }
 
-    /// `ARQPostRequest` of request `[buf][0]`, from main memory to ARAM: done at once, its
-    /// callback with the ARAM interrupt.
-    fn arq_post(&mut self, buf: u8, kind: u32, source: u32, dest: u32, length: u32, done: ArqDone) {
-        let callback = match done {
-            ArqDone::DvdStd(_) => 0x8038_F098,
-            ArqDone::DvdEnd(_) => 0x8038_F110,
-        };
+    /// `ARQPostRequest` of request `[buf][slot]` (kind 0 main memory to ARAM, 1 back): done
+    /// at once, its callback with the ARAM interrupt.
+    #[allow(clippy::too_many_arguments)]
+    fn arq_post(
+        &mut self,
+        buf: u8,
+        slot: usize,
+        kind: u32,
+        source: u32,
+        dest: u32,
+        length: u32,
+        done: ArqDone,
+    ) {
         // `ARQPostRequest` leaves the request's priority word as it was.
-        let r = &mut self.devcom.arq[usize::from(buf)][0];
+        let r = &mut self.devcom.arq[usize::from(buf)][slot];
         *r = ArqRequest {
             next: 0,
             owner: 0,
@@ -443,7 +519,7 @@ impl Audio {
             source,
             dest,
             length,
-            callback,
+            callback: done.callback(),
         };
         self.hw.arq_post();
         self.devcom.arq_done.push(done);
@@ -453,12 +529,34 @@ impl Audio {
     pub fn devcom_aram_done(&mut self, data: &Archives) {
         let done = self.devcom.arq_done.remove(0);
         let buf = match done {
+            ArqDone::None => return,
+            ArqDone::Std(b) => {
+                self.devcom_std_done(data, b);
+                return;
+            }
+            ArqDone::Aram(b) => {
+                // `HSD_DevComARAMCallback`: the command's callback, the command freed.
+                let dc = self
+                    .devcom
+                    .aram
+                    .expect("an ARAM command finished with none");
+                let c = self.dc(dc);
+                let relay = c.kind == 0x1A;
+                if let Some(cb) = c.callback {
+                    let bytes = relay.then(|| vec![0u8; 0]);
+                    self.devcom_callback(data, cb, c.id, c.args, bytes.as_deref(), c.cancel != 0);
+                }
+                self.devcom.unlink(dc);
+                self.devcom.release(dc);
+                self.devcom_std_done(data, b);
+                return;
+            }
             ArqDone::DvdStd(b) | ArqDone::DvdEnd(b) => b,
         };
         // `HSD_DevComDVDStdCallback`.
         self.devcom.relay_busy[usize::from(buf)] = 0;
         self.devcom_dvd_wake_up(data);
-        self.devcom_aram_wake_up();
+        self.devcom_aram_wake_up(data);
         if let ArqDone::DvdEnd(b) = done {
             // `HSD_DevComDVDARAMEndCallback`.
             let dc = self.devcom.ending[usize::from(b)].expect("the transfer's command");
@@ -473,8 +571,58 @@ impl Audio {
         }
     }
 
-    /// A read's bytes into main memory: one of the stream's box headers.
+    /// `HSD_DevComStdCallback`: the ARAM is free, and so is the relay buffer.
+    fn devcom_std_done(&mut self, data: &Archives, buf: u8) {
+        self.devcom.aram_busy = 0;
+        self.devcom.relay_busy[usize::from(buf)] = 0;
+        self.devcom_dvd_wake_up(data);
+        self.devcom_aram_wake_up(data);
+    }
+
+    /// `HSD_DevComCancelEx` with no new callback: a waiting command is called back
+    /// cancelled and dropped; the one being moved finishes cancelled.
+    #[doc(alias = "HSD_DevComCancelEx")]
+    pub fn devcom_cancel(&mut self, data: &Archives, id: i32) {
+        let q = (id & 3) as usize;
+        let mut cur = self.devcom.heads[q];
+        while let Some(dc) = cur {
+            let c = self.dc(dc);
+            if c.id == id {
+                if self.devcom.heads[q] == Some(dc) {
+                    self.devcom.node(dc).cancel = 1;
+                } else {
+                    if let Some(cb) = c.callback {
+                        self.devcom_callback(data, cb, c.id, c.args, None, true);
+                    }
+                    self.devcom.unlink(dc);
+                }
+                return;
+            }
+            cur = c.next;
+        }
+        for i in 0..2 {
+            if let Some(dc) = self.devcom.ending[i]
+                && self.dc(dc).id == id
+            {
+                let n = self.devcom.node(dc);
+                n.callback = None;
+                n.args = 0;
+                n.cancel = 1;
+            }
+        }
+    }
+
+    /// A read's bytes into main memory: one of the stream's box headers, or a sound bank's
+    /// header (the rest of what reads put in the audio heap the loads parse from the file).
     fn devcom_to_memory(&mut self, dest: u32, bytes: &[u8]) {
+        if dest == SFX_LOAD_BUF {
+            for (i, w) in self.synth.banks.load_buf.iter_mut().enumerate() {
+                *w = bytes
+                    .get(4 * i..4 * i + 4)
+                    .map_or(0, |b| u32::from_be_bytes(b.try_into().unwrap()));
+            }
+            return;
+        }
         let off = dest.wrapping_sub(HAKO_HEADERS);
         assert!(
             off < 0x60 && off.is_multiple_of(0x20) && bytes.len() <= 0x20,
@@ -502,6 +650,9 @@ impl Audio {
             cb::FIRST_HAKO_HEADER => self.stream_first_hako_header(data),
             cb::STREAM_HEADER => self.stream_header(data, buf.expect("the stream's header")),
             cb::FILE_LOADED => self.devcom.file_loaded = true,
+            cb::SFX_HEADER => self.sfx_header_loaded(data),
+            cb::SFX_SAMPLES => self.sfx_samples_loaded(data),
+            cb::SFX_READDRESS => self.sfx_readdressed(),
             other => panic!("device command callback {:#010x} isn't ported", other.0),
         }
     }

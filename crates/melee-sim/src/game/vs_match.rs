@@ -259,10 +259,22 @@ impl Match {
         game.ft.address_seed = settings.fighter_addresses.iter().copied().collect();
         let mut data = Archives::default();
         boot(&mut game, &mut data);
+        if game.audio.clock.is_some() {
+            // The sound banks the match's bank choice may load, for the device command queue
+            // to read.
+            for name in crate::lb::audio::SSM_NAMES {
+                let file = load(&format!("audio/us/{name}"));
+                let id = data.add(Archive::raw(&file.bytes));
+                game.audio.devcom.files.push((file.entrynum, id));
+            }
+        }
         // `lb_80014534`: the rumble scripts, then the match's own files in the order its
-        // setup loads them.
+        // setup loads them, each with its disc entry for the loads the audio timeline times.
+        let entries = &mut game.ft.data.files.entries;
         let mut archive = |name: &str| {
-            Archive::parse(&load(name).bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"))
+            let file = load(name);
+            entries.push((name.to_owned(), file.entrynum, file.bytes.len() as u32));
+            Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"))
         };
         let rumble = data.add(archive("LbRb.dat"));
         let table = data.get(rumble).public("lbRumbleData");
