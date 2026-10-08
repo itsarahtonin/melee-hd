@@ -385,6 +385,14 @@ impl Match {
         init_scene(&mut r);
         r.game.gm.on_frame = Some(CodeRef(vs::ON_FRAME));
         r.vs_on_enter(&settings.start, files);
+        // The polls the pad alarm queued while the scene set up, which the timeline counted
+        // (`HSD_PadRenewRawStatus` from the alarm): controllers at rest, as a replay's are.
+        let polls = r.game.audio.clock.as_ref().map_or(0, |c| c.pads);
+        for _ in 0..polls {
+            r.game
+                .pads
+                .renew_raw(r.data, [PadStatus::default(); 4], false, false);
+        }
         r.game.start_scene_loop();
         m
     }

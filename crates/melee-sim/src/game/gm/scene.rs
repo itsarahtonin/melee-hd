@@ -255,7 +255,13 @@ pub fn step(r: &mut Running, poll: PadData, reset_pressed: bool) -> Tick {
 /// [`step`] up to the frame's display pass, where ssbm-rs's state traces sample the
 /// original: whether the pass is due ([`render_screen`]).
 pub fn step_tick(r: &mut Running, poll: PadData, reset_pressed: bool) -> (Tick, bool) {
-    let pads = r.game.pads.renew_raw(r.data, poll, false, reset_pressed);
+    // The loop waits for a poll only when none is queued (`lb_80019894`): the scene's first
+    // round runs on the one its setup left.
+    let pads = if r.game.pads.lib.qcount == 0 {
+        r.game.pads.renew_raw(r.data, poll, false, reset_pressed)
+    } else {
+        Requests::default()
+    };
     r.game.pacing.update();
     if r.game.pads.reset_switch() {
         return (Tick { pads, ended: true }, false);
