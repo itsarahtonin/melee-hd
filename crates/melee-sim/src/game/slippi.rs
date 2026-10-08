@@ -324,6 +324,12 @@ impl Rules {
     /// The rules a replay's gameplay codes make (its code list as Slippi's playback applies
     /// it, without the codes playback leaves out).
     pub fn from_codes(codes: &[Code]) -> Result<Rules, CodeError> {
+        // Playback's own set has the fighter and stage data zeroing, which a game runs from
+        // boot, before a replay's codes (with the rest of the determinism fixes) join them; a
+        // list of only those (the benchmark matches', which record no ruleset) makes none.
+        if codes.iter().all(|c| PLAYBACK_INIT.contains(&c.addr)) {
+            return Ok(Rules::default());
+        }
         let mut seen = Vec::new();
         for c in codes {
             let k = KNOWN
@@ -431,12 +437,6 @@ impl Rules {
                 }
                 _ => {}
             }
-        }
-        // Playback's own set has the fighter and stage data zeroing, which a game runs from
-        // boot, before a replay's codes (with the rest of the determinism fixes) join them.
-        let playback_only = codes.iter().all(|c| PLAYBACK_INIT.contains(&c.addr));
-        if playback_only {
-            return Ok(Rules::default());
         }
         Rules::from_codes(&codes)
     }
