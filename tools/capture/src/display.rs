@@ -50,6 +50,18 @@ impl Importer<'_> {
             l.lightmask_attnfunc,
             l.lightmask_alpha,
         ) = (d, s, a, al);
+        // The textures materials take shadows and toon shading from (`tobj_shadows`, chained
+        // through their own `next`, and `tobj_toon`).
+        let t = self.cap.u32(sym("tobj_shadows"));
+        self.game.objs.mobjs.shadows = (t != 0).then(|| self.tobj(t));
+        let t = self.cap.u32(sym("tobj_toon"));
+        self.game.objs.mobjs.toon = (t != 0).then(|| self.tobj(t));
+        // The GObjs being drawn (`HSD_GObj_804D7814`, `HSD_GObj_804D7818`).
+        let r = self.cap.u32(sym("HSD_GObj_804D7814"));
+        self.game.world.rendering = self.gobj_handle(r);
+        let r = self.cap.u32(sym("HSD_GObj_804D7818"));
+        self.game.world.rendering_camera = self.gobj_handle(r);
+        self.game.objs.display.offscreen = self.cap.u32(sym("current_render_pass")) == 3;
         let j = self.cap.u32(sym("current_jobj"));
         self.game.objs.jobj.current = (j != 0).then(|| self.jobj(j));
         for name in ["current_dobj", "current_mobj"] {
@@ -122,6 +134,26 @@ impl Comparer<'_> {
             self.u32(sym("current_mobj")) != 0,
         );
         self.check("display", "current joint, dobj, mobj", current, theirs);
+        use melee_sim::game::mirror::Cx;
+        let shadows = self.game.objs.mobjs.shadows;
+        let t = self.u32(sym("tobj_shadows"));
+        self.tobj_chain("display shadow textures", shadows, t);
+        let toon = self.game.objs.mobjs.toon;
+        let t = self.u32(sym("tobj_toon"));
+        self.check("display", "toon texture", toon.is_some(), t != 0);
+        let w = &self.game.world;
+        let (r, rc) = (w.rendering.map(|g| g.0), w.rendering_camera.map(|g| g.0));
+        let t = self.u32(sym("HSD_GObj_804D7814"));
+        self.compare_handle("display rendering GObj", "GObjId", r, t);
+        let t = self.u32(sym("HSD_GObj_804D7818"));
+        self.compare_handle("display rendering camera GObj", "GObjId", rc, t);
+        let pass = self.u32(sym("current_render_pass"));
+        self.check(
+            "display",
+            "render pass offscreen",
+            self.game.objs.display.offscreen,
+            pass == 3,
+        );
         self.refract();
     }
 }
@@ -208,5 +240,14 @@ impl Comparer<'_> {
             .collect();
         let theirs: Vec<u32> = (0..12).map(|k| self.u32(at + 0x10 + 4 * k)).collect();
         self.check("refract", "projection", ours, theirs);
+    }
+}
+
+impl Importer<'_> {
+    /// A GObj pointer as our handle (none for null).
+    fn gobj_handle(&mut self, a: u32) -> Option<melee_sim::hsd::gobj::GObjId> {
+        use melee_sim::game::mirror::Cx;
+        self.import_handle("GObjId", a)
+            .map(melee_sim::hsd::gobj::GObjId)
     }
 }

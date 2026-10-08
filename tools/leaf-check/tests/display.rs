@@ -631,3 +631,118 @@ fn particle_render() {
         }
     }
 }
+
+const CALLS2: &str = "C:/Projects/ssbm-rs-publication/local/calls/display2";
+
+/// The second capture set's directories (`DISPLAY2_CALLS`): the game camera's, stages',
+/// fighters', the magnifier's and the text's render callbacks.
+fn dirs2() -> Vec<String> {
+    let calls = std::env::var("DISPLAY2_CALLS").unwrap_or_else(|_| CALLS2.into());
+    CAPTURED
+        .iter()
+        .map(|name| format!("{calls}/{name}"))
+        .filter(|d| std::path::Path::new(d).exists())
+        .collect()
+}
+
+/// [`each`] over the second capture set.
+fn each2(
+    func: &str,
+    min: usize,
+    prepare: &leaf_check::calls::Prepare,
+    ours: &leaf_check::calls::Ours,
+) {
+    for d in dirs2() {
+        let setup = Setup {
+            gx: true,
+            ..Setup::default()
+        };
+        check_calls_in(&d, func, min, prepare, &setup, ours);
+    }
+}
+
+/// A stage object's render callback in each pass, its joints sometimes dirty.
+#[test]
+fn stage_object() {
+    each2(
+        "grDisplay_801C5DB0",
+        20,
+        &|call, i| {
+            call.regs.gpr[4] = (i % 3) as u32;
+            dirty(call, i / 3);
+        },
+        &|r, maps, call| {
+            r.render_stage_object(gobj_arg(maps, call), call.regs.gpr[4] as i32);
+            Ret::Nothing
+        },
+    );
+}
+
+/// A fighter's render callback in each pass, its joints sometimes dirty.
+#[test]
+fn fighter() {
+    each2(
+        "ftDrawCommon_80080E18",
+        10,
+        &|call, i| {
+            call.regs.gpr[4] = (i % 3) as u32;
+            dirty(call, i / 3);
+        },
+        &|r, maps, call| {
+            r.render_fighter(gobj_arg(maps, call), call.regs.gpr[4] as i32);
+            Ret::Nothing
+        },
+    );
+}
+
+/// The fighters' shadows (`lbShadow_8000F38C`), from its saved call and from the fighters'
+/// render callbacks' states, with and without the camera's debug flag.
+#[test]
+fn shadows() {
+    let shadow = leaf_check::sym("lbShadow_8000F38C");
+    for from in ["lbShadow_8000F38C", "ftDrawCommon_80080E18"] {
+        each2(
+            from,
+            1,
+            &|call, i| {
+                call.addr = shadow;
+                call.regs.gpr[3] = (i % 2) as u32;
+                dirty(call, i);
+            },
+            &|r, _, call| {
+                r.shadow_render(call.regs.gpr[3] != 0);
+                Ret::Nothing
+            },
+        );
+    }
+}
+
+/// The game camera's render callback (`fn_800301D0`), from the stage objects' render
+/// states, with its layers sometimes hidden.
+#[test]
+fn game_camera() {
+    let cb = leaf_check::sym("fn_800301D0");
+    each2(
+        "grDisplay_801C5DB0",
+        10,
+        &|call, i| {
+            let cams = rendered_all(call, 64, "fn_800301D0");
+            if let Some(&g) = cams.first() {
+                call.addr = cb;
+                call.regs.gpr[3] = g;
+                call.regs.gpr[4] = 0;
+                if i % 3 == 1 {
+                    // `game_camera.x398`: some layers hidden.
+                    let at = leaf_check::sym("game_camera") + 0x398;
+                    call.mem1[(at - 0x8000_0000) as usize] ^= [0x20, 0x08, 0x80][i / 3 % 3];
+                }
+            }
+        },
+        &|r, maps, call| {
+            if call.addr == cb {
+                r.render_game_camera(gobj_arg(maps, call));
+            }
+            Ret::Nothing
+        },
+    );
+}

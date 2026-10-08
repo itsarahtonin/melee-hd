@@ -22,6 +22,7 @@ impl Running<'_> {
     /// for pass 0, `HSD_GObj_80390FC0`.
     #[doc(alias = "HSD_GObj_80390FC0")]
     pub fn render_frame(&mut self) {
+        display::set_offscreen(&mut self.game.objs, false);
         let mut cur = self.game.world.gx_head[GX_LINKS];
         while let Some(g) = cur {
             if let Some(cb) = self.game.world.gobj(g).render {
@@ -95,6 +96,82 @@ impl Running<'_> {
         if display::camera_begin(&mut self.game.objs, self.data, c) {
             self.render_links(gobj, mask);
             display::camera_end(&mut self.game.objs);
+        }
+    }
+
+    /// Sets the game camera's links and runs the passes `mask` names over them.
+    fn camera_pass(&mut self, gobj: GObjId, prios: u64, mask: u32) {
+        self.game.world.gobj_mut(gobj).gxlink_prios = prios;
+        self.render_links(gobj, mask);
+    }
+
+    /// The game camera's render callback, `fn_800301D0`: refraction's projection, the camera
+    /// brought up to date (`Camera_8002A4AC`), the fighters' shadows, then through the camera
+    /// the render links layer by layer: the background and stage in layer 2, then layers 1
+    /// and 0 (`render_gxlink_pass`), the screen copied for refraction, the fighters' passes
+    /// (`Camera_800311EC`, `Camera_80031328`), fog off, the foreground, and layer 3. Each
+    /// link set depends on which of the camera's layers are hidden (`x398`). The debug
+    /// drawings (collisions, zones, special points) aren't modeled.
+    #[doc(alias = "fn_800301D0")]
+    pub fn render_game_camera(&mut self, gobj: GObjId) {
+        use super::camera;
+        let Some(Obj::CObj(c)) = self.game.world.gobj(gobj).obj else {
+            panic!("the game camera GObj holds no CObj");
+        };
+        crate::lb::refract::set_camera(&self.game.objs, &mut self.game.refract, c);
+        camera::update_cobj(self.game, gobj);
+        let shadows_debug = self.game.camera.cam.x399_b7;
+        self.shadow_render(shadows_debug);
+        if !display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
+            return;
+        }
+        self.game.objs.display.draws.push(display::Draw::Erase);
+        self.stage_fog_update(c);
+        crate::hsd::lobj::delete_current_all(&mut self.game.objs, None);
+        let cam = &self.game.camera.cam;
+        let bit = |hidden: bool, v: u64| if hidden { 0 } else { v };
+        let prio1 = bit(cam.x398_b4, 1);
+        let prio8 = bit(cam.x398_b2, 8);
+        let prio80 = bit(cam.x398_b3, 0x80);
+        let b0 = bit(cam.x398_b0, 0x20);
+        let b1 = bit(cam.x398_b1, 0x40);
+        let b4 = bit(cam.x398_b4, 0x10);
+        camera::set_layer(&mut self.game.camera.cam, 2);
+        self.camera_pass(gobj, prio1 | prio8, 7);
+        camera::set_layer(&mut self.game.camera.cam, 1);
+        self.camera_pass(gobj, prio8, 7);
+        camera::set_layer(&mut self.game.camera.cam, 0);
+        self.camera_pass(gobj, prio8, 3);
+        crate::lb::refract::copy_screen(&mut self.game.objs, &self.game.refract);
+        // `Camera_800311EC`.
+        camera::set_pass(&mut self.game.camera.cam, 1);
+        self.camera_pass(gobj, prio1 | b0 | b1, 3);
+        camera::set_pass(&mut self.game.camera.cam, 0);
+        self.camera_pass(gobj, b1 | b4 | b0, 3);
+        camera::set_pass(&mut self.game.camera.cam, 0);
+        self.camera_pass(gobj, prio1 | prio8, 4);
+        // `Camera_80031328`.
+        camera::set_pass(&mut self.game.camera.cam, 0);
+        self.camera_pass(gobj, prio1 | b4 | b0 | b1, 4);
+        display::fog_set(&mut self.game.objs, None);
+        self.camera_pass(gobj, prio80, 7);
+        camera::set_layer(&mut self.game.camera.cam, 3);
+        self.camera_pass(gobj, prio8, 7);
+        let cam = &self.game.camera.cam;
+        if camera::stage_visible(cam)
+            && (camera::draw_collisions(cam) || cam.x399_b4 || camera::draw_special_points(cam))
+        {
+            crate::game::code::unported_call("mpLib_8005A2DC");
+        }
+        display::camera_end(&mut self.game.objs);
+    }
+
+    /// The stage's fog fitted to the camera, `Ground_801C4FAC`, for stages that ask for it
+    /// (`stage_info.unk8C.b3`), which no port covers yet.
+    #[doc(alias = "Ground_801C4FAC")]
+    fn stage_fog_update(&mut self, _c: crate::hsd::cobj::CObjId) {
+        if self.game.stage_info.unk8C.b3 {
+            crate::game::code::unported_call("Ground_801C4FAC");
         }
     }
 
@@ -189,6 +266,10 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         FOG_CALLBACK => r.render_fog(gobj),
         0x801C_1E2C => r.render_stage_fog(gobj),
         super::ef::eflib::RENDER => r.render_particles(gobj, pass),
+        0x8003_01D0 => r.render_game_camera(gobj),
+        0x801C_5DB0 => r.render_stage_object(gobj, pass),
+        0x8008_0E18 => r.render_fighter(gobj, pass),
+        0x8026_EECC => r.render_item(gobj, pass),
         // The HUD's.
         0x802F_36B8 => {
             let d = r.game.hud_camera_render(gobj);

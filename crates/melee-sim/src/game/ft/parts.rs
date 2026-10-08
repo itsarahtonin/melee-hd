@@ -297,6 +297,74 @@ impl Running<'_> {
         self.game.clear_part_vis(gobj);
     }
 
+    /// Shows the DObjs of each model group's current choice and hides the rest, unless the
+    /// lookup has been shown, `ftParts_80074B6C`. The original marks the lookup shown inside
+    /// the group loop, so a lookup with no groups stays unshown.
+    #[doc(alias = "ftParts_80074B6C")]
+    pub fn show_parts_vis(&mut self, f: FighterId, idx: usize, list: Option<DObjListId>) {
+        let vis = &self.game.fighters[f.0].x5AC;
+        let Some(lookup) = vis.xC[idx] else { return };
+        if vis.cleared[idx] != 0 {
+            return;
+        }
+        let model_num = vis.model_num;
+        for i in 0..model_num {
+            let chosen = i32::from(self.game.fighters[f.0].x5F4_arr[i as usize].idx);
+            let entry = lookup.at(8 * i);
+            let n = self.data.u32(entry) as i32;
+            for j in 0..n {
+                let t = self
+                    .data
+                    .ptr(entry.at(4))
+                    .expect("FtPartsVisLookup::x4")
+                    .at(8 * j as u32);
+                let count = self.data.u32(t) as i32;
+                let bytes = self.data.ptr(t.at(4));
+                for k in 0..count {
+                    let b = bytes.expect("TempS::x4").at(k as u32);
+                    let index = usize::from(self.data.u8(b));
+                    let l = list.expect("a fighter without a DObj list");
+                    let d = self.game.fighter_dobj_lists[l.0][index];
+                    let dobjs = &mut self.game.objs.dobjs;
+                    if j == chosen {
+                        crate::hsd::dobj::clear_flags(dobjs, d, 1);
+                    } else {
+                        crate::hsd::dobj::set_flags(dobjs, d, 1);
+                    }
+                }
+            }
+            self.game.fighters[f.0].x5AC.cleared[idx] = 1;
+        }
+    }
+
+    /// Shows (`show`) or hides a model group, `ftParts_800750C8`: group 2 (the low-poly
+    /// models) covers lookups 2 (on the second DObj list) and 3. Kirby's and Jigglypuff's
+    /// model events no port covers yet.
+    #[doc(alias = "ftParts_800750C8")]
+    pub fn set_parts_vis(&mut self, f: FighterId, group: usize, show: bool) {
+        match self.game.fighters[f.0].kind {
+            4 => crate::game::code::unported_call("ftKb_UnkIntBoolFunc0"),
+            15 => crate::game::code::unported_call("ftPr_Init_UnkIntBoolFunc0"),
+            _ => {}
+        }
+        let (main, second) = {
+            let fp = &self.game.fighters[f.0];
+            (fp.dobj_list.data, fp.x203C.data)
+        };
+        let lists: &[(usize, Option<DObjListId>)] = if group == 2 {
+            &[(2, second), (3, main)]
+        } else {
+            &[(group, main)]
+        };
+        for &(idx, list) in lists {
+            if show {
+                self.show_parts_vis(f, idx, list);
+            } else {
+                self.hide_parts_vis(f, idx, list);
+            }
+        }
+    }
+
     /// Hides every DObj a visibility lookup names unless it has, `ftParts_80074D7C`.
     #[doc(alias = "ftParts_80074D7C")]
     pub fn hide_parts_vis(&mut self, f: FighterId, idx: usize, list: Option<DObjListId>) {

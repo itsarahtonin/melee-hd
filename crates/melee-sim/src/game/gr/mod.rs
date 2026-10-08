@@ -8,6 +8,7 @@ pub mod anime;
 pub mod battle;
 pub mod data;
 pub mod datfiles;
+pub mod display;
 pub mod dynamic_attr;
 pub mod grlib;
 pub mod ground;

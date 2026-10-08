@@ -21,6 +21,7 @@ use super::lobj::{self, LObjId};
 use super::mobj::{self, MObjClass, MObjId};
 use super::particle::{Hooks, ParticleId};
 use super::pobj::{self, Binding, PObjId};
+use super::tobj::{self, TObjId};
 use crate::mtx::Mtx34;
 
 /// A transparency pass (`HSD_TrspMask`).
@@ -36,6 +37,8 @@ const JOBJ_ROOT_SHIFT: u32 = 28;
 const DOBJ_TRSP_SHIFT: u32 = 1;
 /// `DOBJ_HIDDEN`.
 const DOBJ_HIDDEN: u32 = 1;
+/// A translucent material (`RENDER_XLU`).
+const RENDER_XLU: u32 = 1 << 30;
 /// A render mode that skips materials, as shadows draw (`RENDER_SHADOW`).
 pub const RENDER_SHADOW: u32 = 1 << 26;
 /// A material with a specular highlight (`RENDER_SPECULAR`).
@@ -76,8 +79,17 @@ pub enum Draw {
         rendermode: u32,
         vmtx: Option<Mtx34>,
     },
+    /// The current camera's viewport erased to the erase color (`HSD_CObjEraseScreen`).
+    Erase,
     /// The screen copied into refraction's source texture (`lbRefract_80022560`).
     RefractCopy,
+    /// The render copied into a shadow's texture (`HSD_ShadowEndRender`).
+    ShadowCopy(super::shadow::ShadowId),
+    /// Later draws render offscreen (`true`, into a texture) or to the screen
+    /// (`HSD_StartRender`).
+    Offscreen(bool),
+    /// A shadow camera's volume drawn into its texture (`lbShadow_8000F214`).
+    ShadowVolume(super::shadow::ShadowId),
     /// Debug text: a screen's rectangles and glyphs (`DevText_Draw`).
     Text(Box<crate::game::hud::devtext::Draw>),
     /// A particle link, from its first particle as the last sort left it (`psDispParticles`).
@@ -91,6 +103,17 @@ pub enum Draw {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Display {
     pub draws: Vec<Draw>,
+    /// The render pass (`current_render_pass`): offscreen, into a texture, or the screen.
+    pub offscreen: bool,
+    /// The fighter whose trees draw, for its materials.
+    pub fighter: Option<FighterMaterial>,
+}
+
+/// Starts a render pass, `HSD_StartRender`: offscreen (a shadow's texture) or the screen.
+#[doc(alias = "HSD_StartRender")]
+pub fn set_offscreen(objs: &mut Objects, offscreen: bool) {
+    objs.display.offscreen = offscreen;
+    objs.display.draws.push(Draw::Offscreen(offscreen));
 }
 
 /// The transparency pass a GObj render pass draws, `HSD_GObj_80390EB8` (`HSD_GObj_804085F0`).
@@ -290,7 +313,7 @@ pub fn dobj_disp(
     mobj::set_current(&mut objs.mobjs, m);
     let m = m.expect("a display object without a material");
     if rendermode & RENDER_SHADOW == 0 {
-        material_setup(objs, m);
+        material_setup(objs, data, m);
     }
     let mut p = objs.dobjs[d].pobj;
     while let Some(x) = p {
@@ -305,18 +328,103 @@ pub fn dobj_disp(
 
 /// A material's display setup by its class (`setup`): HAL's, or the classes no port
 /// covers yet.
-fn material_setup(objs: &mut Objects, m: MObjId) {
+fn material_setup(objs: &mut Objects, data: &Archives, m: MObjId) {
     match objs.mobjs[m].class {
-        MObjClass::Hsd => {
+        // The stages' (`fn_801C8EF8`) and items' (`fn_80277D8C`) setups differ from HAL's
+        // only in the TEV stages and blending they add for their color overlays, which are
+        // GX's.
+        MObjClass::Hsd | MObjClass::Ground | MObjClass::Item => {
             mobj::setup(objs, m);
+            texture_matrices(objs, data, m);
             setup_channel_mode(objs, m);
         }
-        // grMaterial_803E0A20's setup.
-        MObjClass::Ground => panic!("fn_801C8EF8 isn't ported"),
-        // it_mobj's setup.
-        MObjClass::Item => panic!("fn_80277D8C isn't ported"),
-        // ftMObj's setup.
-        MObjClass::Fighter => panic!("ftMaterial_800BF2B8 isn't ported"),
+        MObjClass::Fighter => fighter_material(objs, data, m),
+    }
+}
+
+/// What a fighter's material setup reads of the fighter that draws (the GObj being drawn,
+/// `HSD_GObj_804D7814`), set by the fighter's render callback while its trees draw.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct FighterMaterial {
+    /// The fighter draws refracted (`x2226_b5`): refraction's chain for its vibration frame.
+    pub refract: Option<TObjId>,
+    /// Its materials are swapped for the metal or the other shared material.
+    pub swapped: bool,
+    /// It draws translucent (`x61D` set).
+    pub translucent: bool,
+    /// `x2223_b2`.
+    pub x2223_b2: bool,
+    /// Its color overlay lights it (`x7C_flag2` and `x7C_light_enable`).
+    pub overlay_light: bool,
+    /// Its own light, and the fighters' lights (`lobj0`).
+    pub light: Option<LObjId>,
+    pub lights: Option<LObjId>,
+}
+
+/// A fighter's material setup, `ftMaterial_800BF2B8`: a refracted fighter's refraction
+/// texture; otherwise HAL's setup (the metal and other shared materials no port covers yet),
+/// and when the overlay lights the fighter but the material leaves alpha to the lights
+/// (translucent, or `x2223_b2`), the fighter's light set up with alpha (`ftCo_8009F75C`).
+#[doc(alias = "ftMaterial_800BF2B8")]
+fn fighter_material(objs: &mut Objects, data: &Archives, m: MObjId) {
+    let fm = objs
+        .display
+        .fighter
+        .expect("a fighter's material drawn outside its fighter");
+    if let Some(t) = fm.refract {
+        // `lbRefract_80022998`.
+        tobj::setup(&mut objs.tobjs, Some(t));
+        return;
+    }
+    if fm.swapped {
+        panic!("ft_804D6580 isn't ported");
+    }
+    mobj::setup(objs, m);
+    texture_matrices(objs, data, m);
+    let rendermode = objs.mobjs[m].rendermode | if fm.translucent { RENDER_XLU } else { 0 };
+    setup_channel_mode(objs, m);
+    let texp = fm.overlay_light && rendermode & RENDER_XLU == 0 && !fm.x2223_b2;
+    if !texp && fm.overlay_light {
+        // `ftCo_8009F75C(fp, true)`.
+        lobj::set_flags(&mut objs.lobjs, fm.light, 1 << 4);
+        lobj::replace_current(objs, fm.lights);
+        lobj::add_current(objs, fm.light);
+        let c = objs
+            .cobjs
+            .current
+            .expect("HSD_LObjSetupInit: no current camera");
+        lobj_setup_init(objs, data, c);
+    }
+}
+
+/// The rest of what `TObjSetupMtx` changes as it loads a material's texture matrices for
+/// GX, after [`mobj::setup`]: a shadow texture's matrix takes the current camera's inverse
+/// view matrix, made if it's out of date, and a highlight texture's the current infinite
+/// light's vector.
+fn texture_matrices(objs: &mut Objects, data: &Archives, m: MObjId) {
+    let o = &objs.mobjs[m];
+    let mut chain: Vec<TObjId> = objs.tobjs.chain(o.tobj).collect();
+    if o.rendermode & mobj::RENDER_SHADOW != 0 {
+        chain.extend(objs.tobjs.chain(objs.mobjs.shadows));
+    }
+    for t in chain {
+        let o = &objs.tobjs[t];
+        if o.id == tobj::GX_TEXMAP_NULL {
+            continue;
+        }
+        match o.flags & tobj::COORD_MASK {
+            tobj::COORD_SHADOW => {
+                let c = objs.cobjs.current.expect("TObjSetupMtx: no current camera");
+                super::cobj::inv_viewing_mtx_direct(&mut objs.cobjs, c);
+            }
+            tobj::COORD_HILIGHT => {
+                if let Some(l) = lobj::current_by_type(&objs.lobjs, lobj::INFINITE) {
+                    assert!(objs.cobjs.current.is_some(), "cobj");
+                    lobj::light_vector(objs, data, Some(l));
+                }
+            }
+            _ => {}
+        }
     }
 }
 

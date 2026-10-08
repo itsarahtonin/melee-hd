@@ -12,6 +12,8 @@ use super::jobj::{self, JObjId};
 use super::mobj;
 use super::pool::Pool;
 use super::tobj::{self, TObjId};
+use crate::mtx::Mtx34;
+use crate::vec::Vec3;
 
 /// A shadow's slot (`HSD_Shadow`, from `shadow_alloc_data`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -134,5 +136,215 @@ pub fn set_active(objs: &mut Objects, s: ShadowId, active: bool) {
         mobj::add_shadow_texture(objs, texture);
     } else {
         mobj::delete_shadow_texture(objs, Some(texture));
+    }
+}
+
+/// Stops casting the shadow from a joint, or from every joint, dropping the references,
+/// `HSD_ShadowDeleteObject`.
+#[doc(alias = "HSD_ShadowDeleteObject")]
+pub fn delete_object(objs: &mut Objects, s: Option<ShadowId>, j: Option<JObjId>) {
+    let Some(s) = s else { return };
+    match j {
+        Some(j) => {
+            if let Some(i) = objs.shadows[s.0].objects.iter().position(|&o| o == j) {
+                jobj::unref(objs, Some(j));
+                objs.shadows[s.0].objects.remove(i);
+            }
+        }
+        None => {
+            while let Some(&o) = objs.shadows[s.0].objects.first() {
+                jobj::unref(objs, Some(o));
+                objs.shadows[s.0].objects.remove(0);
+            }
+        }
+    }
+}
+
+/// Renders the joints the shadow casts from through its camera, `HSD_ShadowStartRender`:
+/// nothing without joints; else the camera current, each joint's tree in the shadow render
+/// mode for the opaque and edge passes, and the camera's end. The texture's clearing and
+/// colors are GX's.
+#[doc(alias = "HSD_ShadowStartRender")]
+pub fn start_render(
+    objs: &mut Objects,
+    data: &melee_data::archive::Archives,
+    hooks: &mut dyn super::particle::Hooks,
+    s: ShadowId,
+) {
+    if objs.shadows[s.0].objects.is_empty() {
+        return;
+    }
+    let camera = objs.shadows[s.0].camera;
+    super::display::camera_begin(objs, data, camera);
+    let mut i = 0;
+    while let Some(&j) = objs.shadows[s.0].objects.get(i) {
+        super::display::jobj_disp_all(
+            objs,
+            data,
+            hooks,
+            Some(j),
+            None,
+            super::display::TRSP_OPA | super::display::TRSP_TEXEDGE,
+            super::display::RENDER_SHADOW,
+        );
+        i += 1;
+    }
+    super::display::camera_end(objs);
+}
+
+/// Copies the render into the shadow's texture, allocating its image first if it has none,
+/// and makes the texture's projection from the camera, `HSD_ShadowEndRender` (with the
+/// static `makeMatrix`).
+#[doc(alias = "HSD_ShadowEndRender")]
+pub fn end_render(objs: &mut Objects, s: ShadowId) {
+    let img = objs.shadows[s.0].image;
+    if !img.allocated {
+        set_size(objs, s, img.width, img.height);
+    }
+    objs.display.draws.push(super::display::Draw::ShadowCopy(s));
+    let sh = &objs.shadows[s.0];
+    let c = sh.camera.expect("a shadow without a camera");
+    let o = &objs.cobjs[c];
+    let p = o.projection;
+    let (ss, st, ts, tt) = (sh.scale_s, sh.scale_t, sh.trans_s, sh.trans_t);
+    let prj = match o.projection_type {
+        cobj::PERSPECTIVE => Mtx34::light_perspective(p[0], p[1], ss, st, ts, tt),
+        cobj::FRUSTUM => Mtx34::light_frustum(p[0], p[1], p[2], p[3], o.near, ss, st, ts, tt),
+        cobj::ORTHO => Mtx34::light_ortho(p[0], p[1], p[2], p[3], ss, st, ts, tt),
+        _ => panic!("a shadow camera without a projection"),
+    };
+    let m = prj.concat(&o.view_mtx);
+    let t = sh.texture.expect("a shadow without a texture");
+    objs.tobjs[t].mtx = m;
+}
+
+/// Fits the shadow's camera to a rectangle, `HSD_ShadowSetViewingRect`: an orthographic
+/// camera takes it as its planes, a perspective one the aspect and field of view it spans
+/// at the eye's distance, a frustum one its planes scaled to the near plane.
+#[doc(alias = "HSD_ShadowSetViewingRect")]
+pub fn set_viewing_rect(
+    objs: &mut Objects,
+    data: &melee_data::archive::Archives,
+    s: ShadowId,
+    rect: [f32; 4],
+) {
+    use crate::fpu::{mem, reg};
+    use gekko_fp as fp;
+    let [top, bottom, left, right] = rect;
+    let c = objs.shadows[s.0].camera;
+    let distance = cobj::eye_distance(objs, data, c);
+    assert!(reg(distance) > 0.0, "distance > 0.0F");
+    match objs.cobjs[c.expect("a shadow without a camera")].projection_type {
+        cobj::PERSPECTIVE => {
+            let abs = |v: f32| f32::from_bits(v.to_bits() & 0x7FFF_FFFF);
+            let width = if reg(abs(top)) > reg(abs(bottom)) {
+                abs(top)
+            } else {
+                abs(bottom)
+            };
+            let height = if reg(abs(left)) > reg(abs(right)) {
+                abs(left)
+            } else {
+                abs(right)
+            };
+            cobj::set_aspect(&mut objs.cobjs, c, mem(fp::fdivs(reg(height), reg(width))));
+            cobj::set_fov(&mut objs.cobjs, c, crate::math::atan2(height, distance));
+        }
+        cobj::ORTHO => cobj::set_ortho(&mut objs.cobjs, c, top, bottom, left, right),
+        cobj::FRUSTUM => {
+            let scale = fp::fdivs(reg(cobj::near(&objs.cobjs, c)), reg(distance));
+            assert!(scale > 0.0, "scale > 0.0F");
+            let f = |v: f32| mem(fp::fmuls(scale, reg(v)));
+            cobj::set_frustum(&mut objs.cobjs, c, f(top), f(bottom), f(left), f(right));
+        }
+        _ => panic!("a shadow camera without a projection"),
+    }
+}
+
+/// `HSD_ViewingRect`: a rectangle grown around points as an eye at `origin` sees them.
+#[derive(Clone, Copy, Debug)]
+pub struct ViewingRect {
+    pub origin: Vec3,
+    pub eye_v: Vec3,
+    pub eye_vn: Vec3,
+    pub up_v: Vec3,
+    pub right_v: Vec3,
+    pub distance: f32,
+    pub top: f32,
+    pub bottom: f32,
+    pub left: f32,
+    pub right: f32,
+    pub perspective: bool,
+}
+
+impl ViewingRect {
+    /// An empty rectangle for an eye at `position` looking at `interest`,
+    /// `HSD_ViewingRectInit`.
+    #[doc(alias = "HSD_ViewingRectInit")]
+    pub fn new(position: Vec3, interest: Vec3, up: Vec3, perspective: bool) -> ViewingRect {
+        let eye_v = interest.sdk_sub(position);
+        let eye_vn = eye_v.sdk_normalize();
+        let v = up.sdk_normalize();
+        let right_v = eye_vn.sdk_cross(v);
+        let up_v = right_v.sdk_cross(eye_vn);
+        ViewingRect {
+            origin: position,
+            eye_v,
+            eye_vn,
+            up_v,
+            right_v,
+            distance: eye_v.sdk_length(),
+            top: -f32::MAX,
+            right: -f32::MAX,
+            bottom: f32::MAX,
+            left: f32::MAX,
+            perspective,
+        }
+    }
+
+    /// Whether the rectangle has area, `HSD_ViewingRectCheck`.
+    #[doc(alias = "HSD_ViewingRectCheck")]
+    pub fn check(&self) -> bool {
+        use crate::fpu::reg;
+        reg(self.top) > reg(self.bottom) && reg(self.right) > reg(self.left)
+    }
+
+    /// Grows the rectangle to take in a rectangle around `position`, `HSD_ViewingRectAddRect`.
+    #[doc(alias = "HSD_ViewingRectAddRect")]
+    pub fn add_rect(&mut self, position: Vec3, t0: f32, b0: f32, l0: f32, r0: f32) {
+        use crate::fpu::{mem, reg};
+        use gekko_fp as fp;
+        let o2p = position.sdk_sub(self.origin);
+        let dot = o2p.sdk_dot(self.eye_vn);
+        let (x, y, top, bottom, left, right);
+        if self.perspective {
+            if reg(dot) <= 0.0 {
+                return;
+            }
+            let scale = mem(fp::fdivs(reg(self.distance), reg(dot)));
+            let e2p = o2p.sdk_scale(scale).sdk_sub(self.eye_v);
+            x = self.right_v.sdk_dot(e2p);
+            y = self.up_v.sdk_dot(e2p);
+            let s = |v: f32| mem(fp::fmuls(reg(v), reg(scale)));
+            (top, bottom, left, right) = (s(t0), s(b0), s(l0), s(r0));
+        } else {
+            let e2p = o2p.sdk_sub(self.eye_vn.sdk_scale(dot));
+            x = self.right_v.sdk_dot(e2p);
+            y = self.up_v.sdk_dot(e2p);
+            (top, bottom, left, right) = (t0, b0, l0, r0);
+        }
+        let add = |a: f32, b: f32| mem(fp::fadds(reg(a), reg(b)));
+        if reg(add(x, right)) > reg(self.right) {
+            self.right = add(x, right);
+        }
+        if reg(add(x, left)) < reg(self.left) {
+            self.left = add(x, left);
+        }
+        if reg(add(y, top)) > reg(self.top) {
+            self.top = add(y, top);
+        }
+        if reg(add(y, bottom)) < reg(self.bottom) {
+            self.bottom = add(y, bottom);
+        }
     }
 }
