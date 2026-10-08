@@ -104,7 +104,7 @@ The display pass runs after each frame's engine ticks, as the scene loop runs it
 
 The sound bank (`smash2.sem`), the sound effect files (`audio/us/*.ssm`) and the music files are game data: `Archive::raw`s that the driver, the bank loads and the stream read by offset.
 
-**Sound banks** (`audio::bank`, `lb::audio`). A scene's entry picks the banks it wants (`lbAudioAx_8002785C` for a match: its characters' and its stage's) and loads them through the synth's queue of up to six loads. Each load reads the file's header into `hsd_SynthSFXLoadBuf`, then its effect group into a block of the audio heap, then its samples to ARAM. When ARAM runs short the library drops banks the scene doesn't want and moves the rest down (`HSD_SynthSFXBankDeflag`, ARAM-to-ARAM through a relay buffer). Where heap blocks land is state: the effect table points into them. The library waits for the loads with interrupts taken, so the audio frames run during the wait. `vs_match::Match::start` loads the match's banks this way when the boot left a timeline, and otherwise still hands the frontend an `Event::Audio`.
+**Sound banks** (`audio::bank`, `lb::audio`). A scene's entry picks the banks it wants (`lbAudioAx_8002785C` for a match: its characters' and its stage's) and loads them through the synth's queue of up to six loads. Each load reads the file's header into `hsd_SynthSFXLoadBuf`, then its effect group into a block of the audio heap, then its samples to ARAM. When ARAM runs short the library drops banks the scene doesn't want and moves the rest down (`HSD_SynthSFXBankDeflag`, ARAM-to-ARAM through a relay buffer). Where heap blocks land is state: the effect table points into them. The library waits for the loads with interrupts taken, so the audio frames run during the wait. `vs_match::Match::start` loads the match's banks this way when the boot left a timeline, and otherwise still hands the frontend an `Event::Audio`. Before the match's scene it runs what comes between the boot's last tick and it: that scene's loop ends (its last frame's render and copy, and `HSD_VIWaitXFBFlush`'s wait for the next retrace, after which the scene change reads no clock), and the VS mode loads the announcer's bank (`gm_LoadAnnouncer`), which a bank load the menus left running finishes before. The stage's music then starts as the stage chooses it (`lbAudioAx_80023F28`), its file named by the disc's entry numbers for `/audio/` (`lb::audio::HPS`).
 
 **DSP models** (`audio::dsp`). In the silent model the DSP's blocks change only through the frame's sync, so a voice plays until it is keyed off and faded, stolen or dropped for the DSP's budget, as in ssbm-rs's `AX=0` runs. In the sample-accurate model the DSP also runs each voice on the block list for its five milliseconds, as ssbm-rs's default runs (Dolphin's AX microcode) do:
 
@@ -171,12 +171,10 @@ Sound objects (`lbAudioAx_800263E8`) end by frame count, not with their voice. S
 
 **Not ported:**
 
-- The boot's audio setup. A match started from its settings alone has no banks loaded, and the driver starts nothing (the original's `HSD_AudioSFXStartParam` returns -1 the same way).
-- The stage's music choice, `Stage_80225074` (`Ground_801C24F8`, `lbAudioAx_80023F28`). On Final Destination, Battlefield, Yoshi's Story and Pokémon Stadium it draws `HSD_Randi(100)` only when the save data has every character unlocked (`gm_80164ABC`). Slippi's playback leaves the unlock codes out, so the save data decides. Starting the music itself (`HSD_AudioPStreamStartChParam`) is ported.
-- The stage's own file loads, inside `Stage_802251E8` (the stage file and `TyDatai.usd`).
-- The library's object pool: `lbAudioAx_8002835C`.
+- The boot's audio setup. A match started from its settings alone has no banks loaded, and the driver starts nothing (the original's `HSD_AudioSFXStartParam` returns -1 the same way); its bank and music calls go to the frontend as `Event::Audio`.
+- Sound objects: `lbAudioAx_800263E8` and their process. Only the fighter script's positional sound command (`ftAction_80072320`) makes them, and it isn't ported, so the port has none. The pool's reset (`lbAudioAx_8002835C`) and the calls that stop an owner's sound objects (`lbAudioAx_80026510`, `lbAudioAx_800265C4`) are ported, and they check that there are none.
 
-The VS port still hands those to the frontend as `Event::Audio`. A state imported from a single captured call has no timeline, and no audio frames run.
+A state imported from a single captured call has no timeline, and no audio frames run.
 
 ## Rulesets in the state
 

@@ -578,6 +578,8 @@ pub fn import_lb(mem1: &[u8]) -> melee_sim::lb::audio::LbAudio {
         }
     }
     lb.stem.copy_from_slice(m.bytes(sym("cur_hps_stem"), 0x40));
+    lb.hps_file
+        .copy_from_slice(m.bytes(sym("cur_hps_file"), 0x40));
     lb.ssm_file
         .copy_from_slice(m.bytes(sym("cur_ssm_file"), 0x40));
     lb
@@ -666,6 +668,7 @@ fn lb_fields(lb: &mut melee_sim::lb::audio::LbAudio) -> Vec<(&'static str, u32, 
         ("lbl_804D6448", 0x804D_6448, I(&mut lb.fgm_loaded)),
         ("lbl_804D644C", 0x804D_644C, I(&mut lb.fgm_wanted)),
         ("ssm_stem_pos", 0x804D_38D0, I(&mut lb.ssm_stem_pos)),
+        ("hps_stem_pos", 0x804D_38D4, I(&mut lb.hps_stem_pos)),
         ("lbl_804D6450", 0x804D_6450, U(&mut lb.fgm_pending)),
     ]);
     v
@@ -1280,6 +1283,7 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
         }
     }
     img.put("cur_hps_stem", sym("cur_hps_stem"), &a.lb.stem);
+    img.put("cur_hps_file", sym("cur_hps_file"), &a.lb.hps_file);
     img.check(diffs);
 }
 

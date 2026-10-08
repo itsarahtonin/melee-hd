@@ -108,6 +108,11 @@ impl Audio {
         self.with_clock(data, |c, _| c.place_audio_frames(callbacks));
     }
 
+    /// A scene's loop ends, and the next scene's preparation runs.
+    pub fn end_scene_loop(&mut self, data: &Archives) {
+        self.with_clock(data, |c, f| c.end_scene_loop(f));
+    }
+
     /// A scene's loop starts.
     pub fn start_scene_loop(&mut self, data: &Archives) {
         self.with_clock(data, |c, f| c.start_scene_loop(f));

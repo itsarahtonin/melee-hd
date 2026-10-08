@@ -330,9 +330,14 @@ impl Match {
         // match's setup registers them (`efAsync_LoadSync(0)` and `(0x1F)`).
         for (i, f) in super::ef::FILES.iter().enumerate() {
             if let Some((name, _)) = f {
-                let a =
-                    Archive::parse(&load(name).bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+                let file = load(name);
+                let a = Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
                 game.ef.files[i] = Some(data.add(a));
+                game.ft.data.files.entries.push((
+                    (*name).to_owned(),
+                    file.entrynum,
+                    file.bytes.len() as u32,
+                ));
             }
         }
         let mut names: Vec<(String, ArchiveId)> = [
@@ -380,6 +385,13 @@ impl Match {
             offset,
         });
         let mut r = m.running();
+        // The boot's last scene ends (its tick's end is where the boot state was taken), then
+        // the VS mode's step before the match's scene (`gmVsMelee_EnterVs`, which a replay's
+        // playback takes too): the announcer's bank.
+        if r.game.audio.clock.is_some() {
+            r.game.audio.end_scene_loop(r.data);
+        }
+        r.load_announcer();
         // `preloadState`: the scene's text arena (0x4800 bytes for a match).
         r.game.sis.init(0x4800);
         init_scene(&mut r);
@@ -394,6 +406,30 @@ impl Match {
                 .renew_raw(r.data, [PadStatus::default(); 4], false, false);
         }
         r.game.start_scene_loop();
+        // The scene loop's prologue on the audio timeline: its pad queue's flush and a first
+        // round without a render.
+        if r.game.audio.clock.is_some() {
+            r.game.audio.start_scene_loop(r.data);
+        }
+        // The song the stage started, for the device command queue to read: its first reads
+        // finish in the scene's first ticks.
+        let stem = m.game.audio.lb.stem;
+        let len = stem.iter().position(|&c| c == 0).unwrap_or(stem.len());
+        if m.game.audio.clock.is_some() && len > 1 {
+            let path = std::str::from_utf8(&stem[1..len]).expect("a music path");
+            let file = load(path);
+            if !m
+                .game
+                .audio
+                .devcom
+                .files
+                .iter()
+                .any(|f| f.0 == file.entrynum)
+            {
+                let id = m.data.add(Archive::raw(&file.bytes));
+                m.game.audio.devcom.files.push((file.entrynum, id));
+            }
+        }
         m
     }
 
@@ -487,8 +523,7 @@ pub fn init_scene(r: &mut Running) {
     g.world.setup_proc(gobj, CodeRef(vs::SCENE_PROC), 0);
     g.gm.scene_gobj = Some(gobj);
     g.reset_controller_map();
-    // `lbAudioAx_8002835C`: the audio driver's scene change.
-    g.audio(0x8002_835C, [0; 4]);
+    g.lb_reset_sound_objects();
 }
 
 /// Where the fighters' animation files start in ARAM (the ARAM heap's start, where the debug

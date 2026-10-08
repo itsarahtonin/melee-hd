@@ -2750,3 +2750,10 @@ HSD_SisLib_803A8134	leaf-check display text_render: each line HSD_SisLib_803A84B
 HSD_SisLib_803A7684	leaf-check display text_render: the strings' scale, color, size and alignment pushes, past the stack's first 16 bytes; state stacks compared
 HSD_SisLib_803A7F0C	leaf-check display text_render: the strings' pops and their measurement's; state stacks compared
 ftCo_8008DB10	leaf-check display heavy_hit_flash: from the fighters' render states, each element, knockback around the thresholds, with and without damage dealt; the flash's overlay compared
+lbAudioAx_80023F28	melee-oracle diff: Stage_80225074 starts the match's music through it; on both v5-mixed traces the device command queue, the stream and the AX voices compare clean from tick 1 (the pad library aside, docs/oracle.md)
+gm_LoadAnnouncer	melee-oracle diff: Match::start_from loads the announcer's bank through it; the banks, the synth's loads and the audio heap compare clean at tick 1. leaf-check audio timeline_entry and timeline_entry_mixed run its parts (lbAudioAx_80026F2C, 8002702C, 80027168, 80027648) from the log
+lbAudioAx_8002835C	melee-oracle diff: every scene's setup runs it; the GObjs compared every tick hold no sound object
+lbAudioAx_80026510	leaf-check items destroy: every saved item destruction reaches it through Item_8026B0B4, with no sound object
+lbAudioAx_800265C4	leaf-check items destroy: Item_8026B0B4 asks it for each sound slot, with a playing voice's handle put in each slot in turn
+Item_8026B0B4	leaf-check items destroy: every saved item destruction, as saved and with a playing voice's handle in each of its three sound slots; the audio state compared after
+Item_8026A8EC	leaf-check items destroy: every saved call, as saved and with a playing voice's handle in each sound slot

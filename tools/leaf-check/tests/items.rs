@@ -1561,11 +1561,9 @@ fn end_hitlags() {
 
 #[test]
 fn react_shield() {
-    // Bouncing off a shield in the air (hitting one destroys a shot, which waits for the
-    // audio driver's port).
-    // Bit 4 bounces at any angle; without it, only below the limit, after turning (above it
-    // the shot hits the shield and is destroyed, which waits for the audio port).
-    for (bits, angle) in [(0x0C, 2.0f32), (0x04, 0.5)] {
+    // Bouncing off a shield in the air. Bit 4 bounces at any angle; without it, only below
+    // the limit, after turning, and above it the shot hits the shield and is destroyed.
+    for (bits, angle) in [(0x0C, 2.0f32), (0x04, 0.5), (0x08, 2.0)] {
         let bounce = move |c: &mut Call| {
             let ip = item_ptr(c);
             set32(c, ip + 0xC0, 1);
@@ -1575,6 +1573,29 @@ fn react_shield() {
         };
         check_on(TICKS, "Item_80269DC8", &bounce, &|r, a| {
             Ret::Bool(item::react_shield(r, a.gobj(0)))
+        });
+    }
+}
+
+/// An item destroyed (`Item_8026A8EC`), its sounds stopped (`Item_8026B0B4`) among the rest,
+/// from every saved call of it: as saved, then with a playing sound's handle (the driver's
+/// first active voice) in each of its three sound slots in turn, which none of the saves has.
+#[test]
+fn destroy() {
+    for slot in [None, Some(0xD64), Some(0xD68), Some(0xD6C)] {
+        let prep = move |c: &mut Call| {
+            let Some(at) = slot else { return true };
+            let voice = w32(c, leaf_check::sym("AXDriver_804D7794"));
+            if voice == 0 {
+                return false;
+            }
+            let handle = w32(c, voice + 0xC);
+            set32(c, item_ptr(c) + at, handle);
+            true
+        };
+        check_calls("Item_8026A8EC", "Item_8026A8EC", &prep, &|r, a| {
+            item::destroy(r, a.gobj(0));
+            Ret::None
         });
     }
 }

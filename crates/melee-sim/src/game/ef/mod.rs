@@ -473,6 +473,10 @@ impl<'a> Args<'a> {
     }
 }
 
+/// The effect files every scene's preload holds (`lbDvd`'s `preloadCommonFiles`):
+/// `EfCoData.dat` and `EfMnData.dat`.
+const PRELOADED: [usize; 2] = [0, 0x1F];
+
 /// Loads effect file `index` if it isn't, `efAsync_LoadSync`: registers its two banks with
 /// the particle system and keeps its effect descriptors. The file comes from the frontend's
 /// set ([`Globals::files`]); whether the original had preloaded it only decides whether
@@ -492,6 +496,11 @@ pub fn load_sync(r: &mut Running, index: i32) {
     }
     let archive = r.game.ef.files[i]
         .unwrap_or_else(|| panic!("efAsync_LoadSync: {file} wasn't loaded by the frontend"));
+    // `lbArchive_80017040`: from the preload if the scene's preload holds it (the common
+    // effects, `lbDvd`'s `preloadCommonFiles`), else from the disc.
+    if !PRELOADED.contains(&i) {
+        r.disc_load(file, crate::game::ft::data::MAIN_MEMORY);
+    }
     let offset = r
         .data
         .get(archive)

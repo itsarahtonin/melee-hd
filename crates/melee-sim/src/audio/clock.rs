@@ -383,6 +383,22 @@ impl Clock {
         self.read(TICK_READ, f);
     }
 
+    /// A scene's loop ends after a tick that asked for the next scene (`gm_801A4D34`'s last
+    /// round): the frame's wait point (`lb_800195D0`), its render and copy, and the wait for
+    /// the copy to show (`HSD_VIWaitXFBFlush`, until the next retrace). The scene's exit and
+    /// the next one's preparation (`gm_801A4014`'s `on_exit`s, `preloadState`) read no clock
+    /// before the next scene's first audio call.
+    pub fn end_scene_loop(&mut self, f: &mut dyn Frames) {
+        self.game_code(f);
+        self.wait(WAIT_STEP, f);
+        self.woken = false;
+        while !self.woken {
+            let next = self.next_at();
+            self.now = self.now.max(next);
+            self.service(f);
+        }
+    }
+
     /// A scene's loop starts (`gm_801A4D34`'s prologue): the pad queue keeps only its newest
     /// sample, and the first round waits for a sample without rendering first.
     pub fn start_scene_loop(&mut self, f: &mut dyn Frames) {
