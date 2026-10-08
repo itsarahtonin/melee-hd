@@ -409,7 +409,12 @@ fn stub_call_diffs(maps: &Maps) -> Vec<String> {
                     }
                     fi += 1;
                 }
-                Val::Vec(_) | Val::None | Val::JObj(_) | Val::Spawned(_) => gi += 1,
+                Val::Vec(_)
+                | Val::Fighter(_)
+                | Val::None
+                | Val::JObj(_)
+                | Val::Spawned(_)
+                | Val::F32Ref(_) => gi += 1,
             }
         }
     }

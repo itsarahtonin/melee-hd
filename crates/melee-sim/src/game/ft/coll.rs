@@ -112,7 +112,7 @@ impl Running<'_> {
     /// Stays on the ground, pushed off ledges (`ft_800827A0`: mpcoll's grounded pass with
     /// ledges stopping nothing).
     #[doc(alias = "ft_800827A0")]
-    fn ground_coll_slide(&mut self, f: FighterId) -> bool {
+    pub(crate) fn ground_coll_slide(&mut self, f: FighterId) -> bool {
         self.fighter_coll(f, |_| {}, |c, cd| c.ground_frame(cd, 5, 2))
     }
 

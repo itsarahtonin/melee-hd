@@ -10,6 +10,7 @@ use super::structs::*;
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones};
 use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
+use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
@@ -4856,13 +4857,13 @@ impl Mirror for Fighter {
             x222A_b5: m.bits(at, 69973, 1) != 0,
             x222A_b6: m.bits(at, 69974, 1) != 0,
             x222A_b7: m.bits(at, 69975, 1) != 0,
-            u: m.bytes(at + 0x222c),
+            u: FighterVars::import(m, at + 0x222c, cx),
             bury_grkind: m.u32(at + 0x2324) as i32,
             bury_timer_1: m.u32(at + 0x2328),
             bury_timer_2: m.u32(at + 0x232c),
             x2330: IntVec2::import(m, at + 0x2330, cx),
             x2338: IntVec2::import(m, at + 0x2338, cx),
-            mv: m.bytes(at + 0x2340),
+            mv: MotionVars::import(m, at + 0x2340, cx),
         }
     }
 
@@ -7510,13 +7511,7 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69975, 1)),
             );
         }
-        if self.u != m.bytes::<248>(at + 0x222c) {
-            cx.mismatch(
-                &format!("{path}.u"),
-                format!("{:02x?}", self.u),
-                format!("{:02x?}", m.bytes::<248>(at + 0x222c)),
-            );
-        }
+        self.u.compare(m, at + 0x222c, &format!("{path}.u"), cx);
         if self.bury_grkind != m.u32(at + 0x2324) as i32 {
             cx.mismatch(
                 &format!("{path}.bury_grkind"),
@@ -7542,13 +7537,7 @@ impl Mirror for Fighter {
             .compare(m, at + 0x2330, &format!("{path}.x2330"), cx);
         self.x2338
             .compare(m, at + 0x2338, &format!("{path}.x2338"), cx);
-        if self.mv != m.bytes::<172>(at + 0x2340) {
-            cx.mismatch(
-                &format!("{path}.mv"),
-                format!("{:02x?}", self.mv),
-                format!("{:02x?}", m.bytes::<172>(at + 0x2340)),
-            );
-        }
+        self.mv.compare(m, at + 0x2340, &format!("{path}.mv"), cx);
     }
 }
 
@@ -16292,7 +16281,10 @@ impl Mirror for itFoxBlaster_ItemVars {
             xDD8: m.u32(at + 0x4) as i32,
             xDDC: m.u32(at + 0x8) as i32,
             xDE0: m.u32(at + 0xc) as i32,
-            xDE4: core::array::from_fn(|i0| m.u32(at + 0x10 + i0 as u32 * 0x4) as i32),
+            xDE4: core::array::from_fn(|i| {
+                cx.import_handle("EffectId", m.u32(at + 0x10 + 4 * i as u32))
+                    .map(EffectId)
+            }),
             xDFC: core::array::from_fn(|i0| m.u32(at + 0x28 + i0 as u32 * 0x4) as i32),
             xE14: core::array::from_fn(|i0| Vec3::import(m, at + 0x40 + i0 as u32 * 0xc, cx)),
             angle: core::array::from_fn(|i0| f32::from_bits(m.u32(at + 0x88 + i0 as u32 * 0x4))),
@@ -16332,14 +16324,13 @@ impl Mirror for itFoxBlaster_ItemVars {
                 format!("{:?}", m.u32(at + 0xc) as i32),
             );
         }
-        for i0 in 0..6 {
-            if self.xDE4[i0] != m.u32(at + 0x10 + i0 as u32 * 0x4) as i32 {
-                cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.xDE4"), i0),
-                    format!("{:?}", self.xDE4[i0]),
-                    format!("{:?}", m.u32(at + 0x10 + i0 as u32 * 0x4) as i32),
-                );
-            }
+        for i in 0..6 {
+            cx.compare_handle(
+                &format!("{path}.xDE4[{i}]"),
+                "EffectId",
+                self.xDE4[i].map(|h| h.0),
+                m.u32(at + 0x10 + 4 * i as u32),
+            );
         }
         for i0 in 0..6 {
             if self.xDFC[i0] != m.u32(at + 0x28 + i0 as u32 * 0x4) as i32 {

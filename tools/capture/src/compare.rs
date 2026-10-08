@@ -6,7 +6,7 @@
 use std::collections::{HashMap, HashSet};
 
 use melee_data::archive::DataRef;
-use melee_sim::game::handles::{BoneTableId, FighterId};
+use melee_sim::game::handles::{BoneTableId, EffectId, FighterId};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
 use melee_sim::game::structs::FighterBone;
@@ -1408,6 +1408,10 @@ impl Cx for Comparer<'_> {
         match (ours, theirs, known) {
             (None, 0, _) => {}
             (Some(o), t, Some(k)) if t != 0 && k == o => {}
+            // An effect a field names before its GObj is met pairs as the GObj's would.
+            (Some(o), t, None) if t != 0 && kind == "EffectId" => {
+                self.maps.effects.insert(t, EffectId(o));
+            }
             (Some(o), t, None) if t != 0 => {
                 self.handles.insert((kind, t), o);
             }

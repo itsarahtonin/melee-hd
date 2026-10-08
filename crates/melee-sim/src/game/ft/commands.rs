@@ -673,7 +673,7 @@ impl Running<'_> {
 
     /// Takes the fighter into the air as falling off something, `ftCommon_8007D5D4`.
     #[doc(alias = "ftCommon_8007D5D4")]
-    pub(super) fn go_airborne(&mut self, f: FighterId) {
+    pub(crate) fn go_airborne(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
         fp.ground_or_air = GA_AIR;
         fp.gr_vel = 0.0;
@@ -728,7 +728,7 @@ impl Running<'_> {
     /// (`ftAnim_80070458`); Kirby's copied ability follows (not ported).
     #[doc(alias = "ftAnim_800704F0")]
     #[doc(alias = "ftAnim_80070458")]
-    fn texture_anim(&mut self, gobj: GObjId, i: i32, frame: f32) {
+    pub(crate) fn texture_anim(&mut self, gobj: GObjId, i: i32, frame: f32) {
         let f = self.game.fighter_id(gobj);
         let list = &self.game.fighters[f.0].tobj_list;
         assert!(

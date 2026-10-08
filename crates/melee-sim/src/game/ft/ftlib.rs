@@ -44,6 +44,12 @@ impl Game {
         (MS_REBIRTH..=MS_REBIRTH_WAIT).contains(&self.fighter(gobj).motion_id)
     }
 
+    /// `ftLib_GetPos`.
+    #[doc(alias = "ftLib_GetPos")]
+    pub fn ft_pos(&self, gobj: GObjId) -> crate::vec::Vec3 {
+        self.fighter(gobj).cur_pos
+    }
+
     #[doc(alias = "ftLib_GetKind")]
     pub fn ft_kind(&self, gobj: GObjId) -> i32 {
         self.fighter(gobj).kind
