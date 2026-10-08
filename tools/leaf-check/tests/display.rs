@@ -794,14 +794,19 @@ fn flash_variant(call: &mut Call, v: usize) {
         byte(call, d + 8 + i, x8[i as usize]);
         byte(call, d + 0xC + i, 0x40 + i as u8 * 0x31);
     }
-    // The wipe: by 40 across, strips 16 high, 5 steps a frame, near its end or its start.
-    let (x30, x34, x38) = if v == 4 { (0, 600, 470) } else { (0, 80, 32) };
+    // The wipe: by 40 across, strips 16 high; near its start, 5 steps a frame, or near its
+    // end, 25 steps, which finish its last row and the wipe.
+    let (x30, x34, x38, steps) = if v == 4 {
+        (0, 600, 470, 25)
+    } else {
+        (0, 80, 32, 5)
+    };
     for (o, b) in [(0x30, x30), (0x31, 40), (0x32, 16), (0x33, 0)] {
         byte(call, d + o, b);
     }
     poke_u32(call, d + 0x34, x34);
     poke_u32(call, d + 0x38, x38);
-    poke_u32(call, d + 0x3C, 5);
+    poke_u32(call, d + 0x3C, steps);
 }
 
 /// The flash GObj's process (`fn_800204C8`) in each mode, from the fighters' render states.
