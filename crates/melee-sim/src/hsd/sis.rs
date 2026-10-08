@@ -8,9 +8,13 @@
 //! where the next allocation goes. The heap is modelled by position: each block is an offset
 //! into the arena, a text's handle is its block's data offset, and the encoded strings are
 //! bytes in the arena, so allocations, frees and merges land where the original's do.
-//! Drawing a text (`HSD_SisLib_803A84BC`) belongs to the display pass.
+//! Drawing a text (`HSD_SisLib_803A84BC`, in `draw`) belongs to the display pass, and lays the
+//! text out and runs its typing as it draws.
 
 use std::collections::BTreeMap;
+
+mod draw;
+pub use draw::{Glyph, TextDraw};
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
@@ -160,6 +164,10 @@ pub struct SisLib {
     /// strings (glyph images, glyph widths, then the encoded strings).
     pub font_archives: [Option<ArchiveId>; FONTS],
     pub font_tables: [Option<DataRef>; FONTS],
+    /// The string cursors state stacks save (a subroutine's return, opcode 9): the original
+    /// saves the pointer, a place in loaded data, so a stack's cursor record holds its index
+    /// here instead ([`SisLib::cursor_records`]).
+    pub saved_cursors: Vec<SisPtr>,
 }
 
 /// `HSD_SisLib_8040C4B8`, a canvas camera's descriptor (made orthographic after loading).
@@ -209,6 +217,7 @@ impl SisLib {
         self.first_canvas = None;
         self.font_archives = [None; FONTS];
         self.font_tables = [None; FONTS];
+        self.saved_cursors.clear();
     }
 
     fn block(&self, b: u32) -> Block {
@@ -704,6 +713,20 @@ impl SisLib {
         }
     }
 
+    /// Where a text's state stack holds saved cursors (opcode 9's records): the arena offset
+    /// of each record's four cursor bytes, walking the records down from the top as
+    /// `HSD_SisLib_803A7F0C` does.
+    pub fn cursor_records(&self, t: TextId) -> Vec<u32> {
+        let tx = self.text(t);
+        let Some(st) = tx.state_stack else {
+            return Vec::new();
+        };
+        stack_cursor_records(&self.arena[st as usize..], tx.state_stack_used)
+            .into_iter()
+            .map(|o| st + o)
+            .collect()
+    }
+
     /// The arena's bytes from `at`, for checks.
     pub fn bytes(&self, at: u32, n: u32) -> &[u8] {
         &self.arena[at as usize..(at + n) as usize]
@@ -722,6 +745,26 @@ impl SisLib {
             cur = self.canvas(c).next;
         }
     }
+}
+
+/// The offsets of the cursor records' bytes in a state stack's first `used` bytes.
+pub fn stack_cursor_records(stack: &[u8], used: u16) -> Vec<u32> {
+    let mut out = Vec::new();
+    let mut pos = i32::from(used) - 1;
+    while pos >= 0 {
+        let kind = stack[pos as usize] & 0x7F;
+        let size = match kind {
+            1 | 3 | 5 => 4,
+            2 => 3,
+            4 => 1,
+            _ => 0,
+        };
+        if kind == 5 {
+            out.push((pos - 4) as u32);
+        }
+        pos -= size + 1;
+    }
+    out
 }
 
 /// Encodes an ASCII string in SIS (`HSD_SisLib_803A67EC`): letters, digits and a few marks

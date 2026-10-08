@@ -2682,3 +2682,7 @@ HSD_SynthSFXBankDeflagSync	leaf-check audio timeline_entry: every logged call
 HSD_SynthSFXStopRange	leaf-check audio bank_calls, bank_deflag_moves, timeline_entry: every unload and deflag stops its bank's effects through it
 HSD_AudioPStreamStartChParam	leaf-check audio timeline_entry: the match's music start, logged; the whole audio state compared every tick
 HSD_DevComCancelEx	leaf-check audio bank_calls, timeline_entry: every load cancel
+HSD_SisLib_803A84BC	leaf-check display text_render: its saved calls in each pass, and from them on SIS strings written into the arena and on the loaded font's strings: layout, kerning, fitting, alignment, typing, page breaks and resets; text, string and state stack compared
+HSD_SisLib_803A8134	leaf-check display text_render: each line HSD_SisLib_803A84BC lays out is measured through it; widths compared through the layout
+HSD_SisLib_803A7684	leaf-check display text_render: the strings' scale, color, size and alignment pushes, past the stack's first 16 bytes; state stacks compared
+HSD_SisLib_803A7F0C	leaf-check display text_render: the strings' pops and their measurement's; state stacks compared
