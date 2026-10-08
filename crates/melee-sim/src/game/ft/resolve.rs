@@ -134,9 +134,9 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         strength = g.game.fighters[f.0].x19A4;
     } else if fp.dmg.int_value != 0 {
         if reg(fp.dmg.x191C) != 0.0 && fp.victim_gobj.is_none() && fp.target_item_gobj.is_none() {
-            unported_call("a clank's recoil (ftCo_80099D9C)");
+            g.enter_rebound(gobj);
         }
-        strength = fp.dmg.int_value;
+        strength = g.game.fighters[f.0].dmg.int_value;
     } else if fp.dmg.x1914 != 0 {
         if let Some(cb) = fp.deal_dmg_cb {
             run_fighter_cb(g, gobj, cb);

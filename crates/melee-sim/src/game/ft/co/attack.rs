@@ -22,6 +22,9 @@ const ATTACK_X0: usize = 0x0;
 /// `ftCommon_MotionVars_attack100`: the cycle started, and A came again.
 const ATTACK100_X0: usize = 0x0;
 const ATTACK100_X4: usize = 0x4;
+/// `ftCommon_MotionVars_rebound`: the push, and the recoil's animation speed.
+const REBOUND_X0: usize = 0x0;
+const REBOUND_SPEED: usize = 0x4;
 
 /// `onPkPc21EC` and the down tilt's `callUnk`: the move's hit counts toward staling
 /// (`ft_800892A0`, `ft_80089824`).
@@ -261,6 +264,63 @@ impl Running<'_> {
         if !self.anim_frames_remaining(gobj) {
             self.enter_wait(gobj);
         }
+    }
+
+    /// A clank's recoil, `ftCo_80099D9C`: a frame's stop, then the recoil played over the
+    /// character's clank length stretched by the clank's strength (`dmg.x191C`), pushed back
+    /// along the ground away from the clank.
+    #[doc(alias = "ftCo_80099D9C")]
+    pub fn enter_rebound(&mut self, gobj: GObjId) {
+        self.change_motion_state(gobj, ms::REBOUND_STOP, 0, 0.0, 1.0, 0.0, None);
+        let c = self.common();
+        let (mul, add) = (c.f32(0x3D8), c.f32(0x3DC));
+        let fp = self.game.fighter_mut(gobj);
+        let strength = reg(fp.dmg.x191C);
+        let speed = fp::fdivs(
+            fp::fadds(f64::from(0.1_f32), reg(fp.co_attrs.clank_animation_length)),
+            strength,
+        );
+        fp.set_mv_f32(REBOUND_SPEED, speed);
+        let push = fp::fmuls(
+            fp::fneg(reg(fp.dmg.facing_dir)),
+            fp::fmadds(strength, reg(mul), reg(add)),
+        );
+        fp.set_mv_f32(REBOUND_X0, push);
+        let v = fp.mv_f32(REBOUND_X0);
+        self.ground_push(gobj, v);
+    }
+
+    /// `ftCo_ReboundStop_Anim` (`ftCo_80099E44`): the recoil at its speed.
+    #[doc(alias = "ftCo_ReboundStop_Anim")]
+    #[doc(alias = "ftCo_80099E44")]
+    pub fn co_rebound_stop_anim(&mut self, gobj: GObjId) {
+        let speed = self.game.fighter(gobj).mv_f32(REBOUND_SPEED);
+        self.change_motion_state(gobj, ms::REBOUND, 0, 0.0, speed, 0.0, None);
+    }
+
+    /// `ftCo_Rebound_Anim`: waiting once the recoil's frames run out.
+    #[doc(alias = "ftCo_Rebound_Anim")]
+    pub fn co_rebound_anim(&mut self, gobj: GObjId) {
+        if !self.anim_frames_remaining(gobj) {
+            self.enter_wait(gobj);
+        }
+    }
+
+    /// `ftCo_Rebound_Phys`: the push's first frame, then ground friction.
+    #[doc(alias = "ftCo_Rebound_Phys")]
+    pub fn co_rebound_phys(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        if fp.mv_f32(REBOUND_X0) != 0.0 {
+            fp.set_mv_f32(REBOUND_X0, 0.0);
+        } else {
+            self.ground_friction(gobj);
+        }
+    }
+
+    /// `ftCo_Rebound_Coll`: off a ledge, the fighter falls.
+    #[doc(alias = "ftCo_Rebound_Coll")]
+    pub fn co_rebound_coll(&mut self, gobj: GObjId) {
+        self.ground_coll_fall_off(gobj);
     }
 
     /// `ftCo_Attack100Loop_IASA`: A pressed or let go keeps the loop going.

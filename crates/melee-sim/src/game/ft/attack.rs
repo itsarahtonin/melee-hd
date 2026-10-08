@@ -518,6 +518,129 @@ impl Running<'_> {
         false
     }
 
+    /// An item's box `j` clanks with the fighter's box `m`, `ftColl_80077970`: each box the
+    /// other doesn't outdamage by more than the clank range (`x3CC`) recoils, the fighter's as
+    /// in a fighter's clank, the item's remembering the fighter and which way it was pushed
+    /// (`recordItemClank`), each with a spark between them.
+    #[doc(alias = "ftColl_80077970")]
+    #[doc(alias = "recordItemClank")]
+    fn item_clank(&mut self, g: GObjId, j: usize, me: FighterId, m: usize) {
+        use super::super::it;
+        let range = self.common().i32(0x3CC);
+        let (h1, h2) = (
+            &it::item(self.game, g).x5D4_hitboxes[j].hit,
+            &self.game.fighters[me.0].x914[m],
+        );
+        let mid = |a: f32, b: f32| mem(fp::fmuls(fp::fadds(reg(a), reg(b)), 0.5));
+        let midpoint = Vec3::new(
+            mid(h1.hurt_coll_pos.x, h2.hurt_coll_pos.x),
+            mid(h1.hurt_coll_pos.y, h2.hurt_coll_pos.y),
+            mid(h1.hurt_coll_pos.z, h2.hurt_coll_pos.z),
+        );
+        let (d1, d2) = (reg(h1.damage), reg(h2.damage));
+        let item_victim = Victim::Item(it::item_of(self.game, g));
+        if fp::fctiwz(d2).wrapping_sub(range) < fp::fctiwz(d1) {
+            let dmg = whole_damage(d2);
+            self.hit_group(me, m, 3, item_victim, true);
+            let x = it::item(self.game, g).pos.x;
+            self.clank_recoil(me, m, dmg, x);
+            self.spawn_effect(1052, midpoint, None);
+        }
+        if fp::fctiwz(d1).wrapping_sub(range) < fp::fctiwz(d2) {
+            let dmg = whole_damage(d1);
+            let kind = if it::item(self.game, g).x5D4_hitboxes[j].hit.x41_b5 {
+                4
+            } else {
+                3
+            };
+            self.item_add_victim(g, j, kind, victim(me), false);
+            if dmg > it::item(self.game, g).xC48 {
+                let slow =
+                    super::super::it::item::common_data(self.game).f32(self.data, IT_SLOW_FOR_ITEM);
+                let (fg, fx) = (
+                    self.game.fighters[me.0].gobj,
+                    self.game.fighters[me.0].cur_pos.x,
+                );
+                let ip = it::item_mut(self.game, g);
+                ip.xCF4_fighterGObjUnk = fg;
+                ip.xC48 = dmg;
+                let vx = reg(ip.x40_vel.x);
+                let mag = if vx < 0.0 { fp::fneg(vx) } else { vx };
+                ip.xCB8_outDamageDirection = if mag < reg(slow) {
+                    if reg(ip.pos.x) > reg(fx) { -1.0 } else { 1.0 }
+                } else if vx < 0.0 {
+                    -1.0
+                } else {
+                    1.0
+                };
+            }
+            self.spawn_effect(1052, midpoint, None);
+        }
+    }
+
+    /// The fighter reflects item `g`'s box `j`, `ftColl_80077464`: the item remembers it;
+    /// damage past the reflector's limit overpowers it (the item keeps the damage and which
+    /// way, the reflector its excess); else the item turns the fighter's, taking its attack's
+    /// record and the reflector's damage and speed factors. Either way the reflector notes
+    /// which way the hit came from.
+    #[doc(alias = "ftColl_80077464")]
+    fn reflect_item(&mut self, g: GObjId, j: usize, me: FighterId) {
+        use super::super::it;
+        self.item_add_victim(g, j, 7, victim(me), false);
+        let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
+        let damage = whole_damage(reg(h.damage));
+        let second = h.x41_b5;
+        let fp = &self.game.fighters[me.0];
+        let (fx, fg) = (fp.cur_pos.x, fp.gobj);
+        let over = damage > fp.ReflectAttr.x1A30_maxDamage;
+        let (x2070, rec, dmg_mul, speed_mul) = (
+            i32::from_be_bytes(fp.x2070),
+            fp.x2074.clone(),
+            fp.ReflectAttr.x1A34_damageMul,
+            fp.ReflectAttr.x1A38_speedMul,
+        );
+        let (b5, b4) = (fp.x2218_b5, fp.x2218_b4);
+        let ip = it::item_mut(self.game, g);
+        if over {
+            if second {
+                if damage > ip.xC4C {
+                    ip.xC4C = damage;
+                }
+            } else if damage > ip.xC34_damageDealt {
+                ip.xC34_damageDealt = damage;
+            }
+        } else {
+            ip.xC64_reflectGObj = fg;
+            ip.xC74 = x2070;
+            ip.xC78 = rec.x2074_vec;
+            ip.xC80 = rec.x207C;
+            ip.xC88 = i32::from_be_bytes(rec.x10);
+            ip.xC8C = rec.x2088;
+        }
+        ip.xC68 = if reg(fx) > reg(ip.pos.x) { -1.0 } else { 1.0 };
+        if !over {
+            ip.xC6C = dmg_mul;
+            ip.xC70 = speed_mul;
+            ip.xDCC_flag.b2 = b5;
+            if b4 {
+                ip.xDCC_flag.b1 = true;
+            }
+        }
+        let (vx, ix) = (reg(ip.x40_vel.x), ip.pos.x);
+        let dir = if vx != 0.0 {
+            if vx > 0.0 { -1.0 } else { 1.0 }
+        } else if reg(ix) > reg(fx) {
+            -1.0
+        } else {
+            1.0
+        };
+        let fp = &mut self.game.fighters[me.0];
+        if over {
+            fp.ReflectAttr.x1A3C_damageOver = damage;
+        }
+        fp.ReflectAttr.x1A2C_reflectHitDirection = dir;
+    }
+
     /// The clank's sound, `ftColl_800784B4`: a random sword clash between two slashes.
     #[doc(alias = "ftColl_800784B4")]
     fn clank_sound(&mut self, me: FighterId, v: FighterId, j: usize, m: usize) {
@@ -1024,7 +1147,8 @@ impl Running<'_> {
                 && it::item(self.game, g).x5D4_hitboxes[j].hit.x41_b7
                 && self.item_box_hits_bubble(g, j, me, Bubble::Reflect, false)
             {
-                unported_call("ftColl_80077464 (a fighter reflecting an item)");
+                self.reflect_item(g, j, me);
+                return;
             }
             let mf = &self.game.fighters[me.0];
             let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
@@ -1047,14 +1171,19 @@ impl Running<'_> {
                         continue;
                     }
                     if self.item_box_touches(g, j, me, m) {
-                        unported_call("ftColl_8007925C (an inert box touching another)");
+                        let fg = self.game.fighters[me.0].gobj;
+                        let ip = it::item_mut(self.game, g);
+                        it::set_flag(&mut ip.xDCE_flag, 6, true);
+                        ip.toucher = fg;
+                        return;
                     }
                 } else {
                     if !h.x40_b0 || !theirs.x40_b0 {
                         continue;
                     }
                     if self.item_box_touches(g, j, me, m) {
-                        unported_call("ftColl_80077970 (an item's box clanking with a fighter's)");
+                        self.item_clank(g, j, me, m);
+                        return;
                     }
                 }
             }
