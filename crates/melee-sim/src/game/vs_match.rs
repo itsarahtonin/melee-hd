@@ -279,6 +279,15 @@ impl Match {
             },
         };
         load_fighter_files(&mut game, &mut data, &settings.start, load);
+        // The effect files `efAsync_LoadSync` takes as the match and its fighters ask for
+        // them: disc data, each read before it's needed.
+        for (i, f) in super::ef::FILES.iter().enumerate() {
+            if let Some((name, _)) = f {
+                let a =
+                    Archive::parse(&load(name).bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+                game.ef.files[i] = Some(data.add(a));
+            }
+        }
         let mut m = Match { game, data };
         m.game.rumble_data = table.map(|offset| melee_data::archive::DataRef {
             archive: rumble,
