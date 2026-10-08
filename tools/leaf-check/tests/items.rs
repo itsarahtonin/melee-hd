@@ -5,8 +5,8 @@
 //!
 //! The captures are game memory, kept out of the repository in `ITEM_CALLS` (default below,
 //! beside the function lists the commands use); tests skip when it has no capture of their
-//! function. Both sets come from ssbm-rs's runner (branch `feat/state-trace`, built in
-//! `C:/Projects/ssbm-rs-state-trace` with `cargo build --release -p ssbm-run`) on a Fox against
+//! function. Both sets come from ssbm-rs's runner (its main since the state trace landed there,
+//! built with `cargo build --release -p ssbm-run`) on a Fox against
 //! Sheik replay on Final Destination, with `items-funcs.txt` listing the item units' functions
 //! (item.c through it_279C.c, itfoxlaser.c and itfoxblaster.c: `ADDR NAME` per line, from the
 //! decomp's symbols.txt), `procs-funcs.txt` the item processes and creation functions, and

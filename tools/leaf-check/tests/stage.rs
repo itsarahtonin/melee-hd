@@ -3,7 +3,7 @@
 //! the whole state afterwards, in both float modes.
 //!
 //! The captures are game memory, kept out of the repository. Regenerate them with ssbm-rs's
-//! runner (branch `feat/state-trace`), from `C:/Projects/ssbm-rs-state-trace`:
+//! runner (its main since the state trace landed there):
 //!
 //! ```text
 //! cargo build --release -p ssbm-run
