@@ -269,6 +269,9 @@ impl Match {
         }
         game.ft.address_seed = settings.fighter_addresses.iter().copied().collect();
         game.gm.unlocks = settings.unlocks;
+        // `main` turns the items' own spawning on (`db_EnableItemSpawns`; `gmMain_804D6594`
+        // is false on a retail disc).
+        game.it.db_menu.ItemSpawnsEnabled = 1;
         let mut data = Archives::default();
         boot(&mut game, &mut data);
         // After the boot's state, which may bring its own audio library.

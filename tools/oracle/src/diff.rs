@@ -113,6 +113,7 @@ fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> Vec<String> {
     cmp.world();
     cmp.stage();
     cmp.ids();
+    cmp.items();
     cmp.audio();
     cmp.match_state();
     cmp.display();
@@ -328,6 +329,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 imp.world();
                 imp.stage();
                 imp.ids();
+                imp.items();
                 imp.audio(bank);
                 // Memory doesn't say which DSP model ran: the replay's settings do.
                 imp.game.audio.dsp = settings.dsp;
@@ -339,13 +341,25 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 }
                 (imp.game, imp.maps, imp.unhandled)
             }));
-            let (game, _maps, unhandled) = match imported {
+            let (mut game, _maps, unhandled) = match imported {
                 Ok(v) => v,
                 Err(p) => {
                     println!("importing trace tick {n}: {}", panic_text(&p));
                     return ExitCode::FAILURE;
                 }
             };
+            // The disc files the audio driver's device commands read: the music stream's
+            // and the sound banks, as a started match has them.
+            if game.audio.clock.is_some() {
+                melee_capture::audio::load_stream(&mut game.audio, &disc, &mut data);
+                for name in melee_sim::lb::audio::SSM_NAMES {
+                    let path = format!("audio/us/{name}");
+                    let e = disc
+                        .entrynum(&path)
+                        .unwrap_or_else(|e| panic!("{path}: {e}"));
+                    melee_capture::audio::load_disc_file(&mut game.audio, &disc, &mut data, e);
+                }
+            }
             if game.playback.is_none() {
                 eprintln!("{trace_path}: tick {n} isn't in a replay's match");
                 return ExitCode::FAILURE;

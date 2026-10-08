@@ -42,7 +42,7 @@ fn import_compares_back_clean() {
     assert!(out.contains("trace tick 200 imported and compared back: 0 differences"));
     // The match stops at the first process no port covers, named with the tick.
     assert!(
-        out.contains("stopped in tick 201 (replay frame 77)"),
+        out.contains("stopped in tick 286 (replay frame 162)"),
         "{out}"
     );
     assert!(out.contains("isn't ported"), "{out}");
