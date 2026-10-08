@@ -5,6 +5,7 @@
 pub mod audio;
 pub mod compare;
 pub mod effects;
+pub mod heap;
 pub mod hud;
 pub mod import;
 pub mod items;
