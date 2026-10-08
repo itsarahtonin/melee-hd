@@ -110,6 +110,18 @@ pub struct Maps {
     /// with whatever lives there now.
     pub dangling_gobjs: HashMap<u32, u32>,
     pub dangling_jobjs: HashMap<u32, u32>,
+    /// Fighters and items likewise: a word that was never set, such as a human player's
+    /// CPU block (`CpuFighter`, which only a CPU player's process fills), where the heap block
+    /// held other objects' bytes.
+    pub dangling_fighters: HashMap<u32, u32>,
+    pub dangling_items: HashMap<u32, u32>,
+    /// Camera boxes likewise (an item kind that never takes one): an index past the boxes'
+    /// array, from [`DANGLING_BOX`] on, stands for the address.
+    pub dangling_boxes: HashMap<u32, u32>,
+    pub dangling_bone_tables: HashMap<u32, u32>,
+    /// Deferred spawn queues likewise (an item's queue head it never set), from
+    /// [`DANGLING_BOX`] on, past any slot the pool hands out.
+    pub dangling_queued: HashMap<u32, u32>,
     pub queued: HashMap<u32, melee_sim::game::ef::QueuedId>,
     pub particles: HashMap<u32, melee_sim::hsd::particle::ParticleId>,
     pub generators: HashMap<u32, melee_sim::hsd::generator::GeneratorId>,
@@ -118,6 +130,16 @@ pub struct Maps {
     pub fighter_anim_bufs: HashMap<u32, AnimBufId>,
     pub shadows: HashMap<u32, ShadowId>,
 }
+
+/// The GObj class of items' links (`GObj_Create(7, ...)` in the string, yo-yo, grapple and
+/// chain items), whose user data (kind 6, like an item's) is an `ItemLink`.
+const ITEM_LINK_CLASS: u16 = 7;
+
+/// The first index a dangling camera box gets (see [`Maps::dangling_boxes`]).
+pub const DANGLING_BOX: u32 = 0x1000_0000;
+
+/// Where the arena starts (`OSGetArenaLo` at boot): the executable's code and data lie below.
+const HEAP: u32 = 0x804E_EC00;
 
 pub struct Importer<'a> {
     pub cap: &'a Capture,
@@ -140,6 +162,10 @@ pub struct Importer<'a> {
     pub(crate) freed: bool,
     /// The dangling slots by address, so one address gets one slot.
     dangling_at: HashMap<(&'static str, u32), u32>,
+    /// The fighters' and items' blocks, as their GObjs hold them: a pointer to anything else
+    /// dangles.
+    live_fighters: std::collections::HashSet<u32>,
+    live_items: std::collections::HashSet<u32>,
     /// The items whose contents are imported.
     pub(crate) items_done: std::collections::HashSet<u32>,
     /// The freed items and joint tables, released onto our free lists after the live ones.
@@ -169,6 +195,8 @@ impl<'a> Importer<'a> {
             ef_freed: Vec::new(),
             freed: false,
             dangling_at: HashMap::new(),
+            live_fighters: Default::default(),
+            live_items: Default::default(),
             items_done: Default::default(),
             free_items: Vec::new(),
             free_tables: Vec::new(),
@@ -290,6 +318,16 @@ impl<'a> Importer<'a> {
                 let id = GObjId(self.game.world.gobjs.alloc(blank_gobj()));
                 self.maps.gobjs.insert(g, id);
                 order.push(g);
+                let ud = self.u32(g + 0x2C);
+                match self.u8(g + 7) {
+                    4 if ud != 0 => {
+                        self.live_fighters.insert(ud);
+                    }
+                    6 if ud != 0 && self.u16(g) != ITEM_LINK_CLASS => {
+                        self.live_items.insert(ud);
+                    }
+                    _ => {}
+                }
                 g = self.u32(g + 8);
             }
         }
@@ -364,6 +402,13 @@ impl<'a> Importer<'a> {
             let release = self.u32(g + 0x30);
             let user_data = match user_data_kind {
                 4 if ud != 0 => Some(UserData::Fighter(self.fighter(ud))),
+                // Kind 6 on a GObj of class 7 is an item's link (`ItemLink`: the Ice Climbers'
+                // string, Ness's yo-yo, Samus's grapple beam, Sheik's chain), which no port
+                // models yet.
+                6 if ud != 0 && self.u16(g) == ITEM_LINK_CLASS => {
+                    self.unhandled.push(format!("GObj {g:#x}: an item link"));
+                    Some(UserData::Raw(melee_sim::game::handles::RawPtr(ud)))
+                }
                 6 if ud != 0 => Some(UserData::Item(self.item(ud))),
                 8 if ud != 0 => Some(UserData::Effect(self.effect(ud))),
                 3 if ud != 0 => Some(UserData::Ground(self.ground(ud))),
@@ -880,6 +925,13 @@ impl Importer<'_> {
     pub fn jobj(&mut self, a: u32) -> JObjId {
         if let Some(&j) = self.maps.jobjs.get(&a) {
             return j;
+        }
+        // A freed joint (its class word now the allocator's free-list link) that a stale
+        // link still names, from a live joint's references or a freed object's bytes: it
+        // dangles, compared by address, so the original handing its block to a new joint
+        // pairs that joint afresh.
+        if !Self::is_jobj(self, a) {
+            return JObjId(self.dangling("JObjId", a));
         }
         let id = jobj::alloc(&mut self.game.objs.jobjs);
         self.maps.jobjs.insert(a, id);
@@ -1464,6 +1516,15 @@ fn blank_gobj() -> GObj<melee_sim::game::state::GameKinds> {
 }
 
 impl Importer<'_> {
+    /// Whether a joint lives at `a`: a joint lives in the heap and starts with its class, in
+    /// the executable's data; a freed one with the allocator's free-list link. A stale word can
+    /// also point into the executable's own data, where a code address passes for a class.
+    fn is_jobj(&self, a: u32) -> bool {
+        (HEAP..MEM1 + 0x0180_0000).contains(&a)
+            && a & 3 == 0
+            && (0x8030_0000..0x8050_0000).contains(&self.u32(a))
+    }
+
     /// A slot for a dangling pointer (see [`Maps::dangling_gobjs`]).
     fn dangling(&mut self, kind: &'static str, addr: u32) -> u32 {
         if let Some(&s) = self.dangling_at.get(&(kind, addr)) {
@@ -1473,6 +1534,31 @@ impl Importer<'_> {
             "GObjId" => {
                 let id = self.game.world.gobjs.alloc(blank_gobj());
                 self.maps.dangling_gobjs.insert(id, addr);
+                id
+            }
+            "FighterId" => {
+                let id = self.game.fighters.alloc(Default::default());
+                self.maps.dangling_fighters.insert(id, addr);
+                id
+            }
+            "ItemId" => {
+                let id = self.game.items.alloc(Default::default());
+                self.maps.dangling_items.insert(id, addr);
+                id
+            }
+            "BoneTableId" => {
+                let id = self.game.it.bone_tables.alloc(Default::default());
+                self.maps.dangling_bone_tables.insert(id, addr);
+                id
+            }
+            "QueuedId" => {
+                let id = DANGLING_BOX + self.maps.dangling_queued.len() as u32;
+                self.maps.dangling_queued.insert(id, addr);
+                id
+            }
+            "CameraBoxId" => {
+                let id = DANGLING_BOX + self.maps.dangling_boxes.len() as u32;
+                self.maps.dangling_boxes.insert(id, addr);
                 id
             }
             _ => {
@@ -1545,42 +1631,48 @@ impl Cx for Importer<'_> {
                 _ => None,
             };
         }
+        // Static tables, by address: a word that was never set (an item kind without a logic
+        // table) keeps whatever it holds.
+        if matches!(kind, "ItemLogicRef" | "ItemStatesRef") {
+            return Some(addr);
+        }
         // A stale word where a pointer was (an unused hit capsule's joint): nothing to follow.
         // A joint or GObj pointer dangles (compared by address, see `Maps::dangling_gobjs`).
         if addr & 3 != 0 || !(MEM1..MEM1 + 0x0180_0000).contains(&addr) {
-            if matches!(kind, "JObjId" | "GObjId") {
+            if matches!(
+                kind,
+                "JObjId" | "GObjId" | "FighterId" | "ItemId" | "BoneTableId" | "QueuedId"
+            ) || kind == "CameraBoxId" && self.stale
+            {
                 return Some(self.dangling(kind, addr));
             }
             self.unhandled
                 .push(format!("{kind} {addr:#x} outside main memory"));
             return None;
         }
-        // A joint starts with its class, in the executable's data; a freed one with the
-        // allocator's free-list link.
-        if kind == "JObjId" && !self.maps.jobjs.contains_key(&addr) {
-            let class = self.u32(addr);
-            if !(0x8030_0000..0x8050_0000).contains(&class) {
-                return Some(self.dangling(kind, addr));
-            }
+        if kind == "JObjId" && !self.maps.jobjs.contains_key(&addr) && !self.is_jobj(addr) {
+            return Some(self.dangling(kind, addr));
         }
         Some(match kind {
             "JObjId" if !self.stale => self.jobj(addr).0,
             "DObjId" => self.dobj(addr).0,
             "TObjId" => self.tobj(addr).0,
-            "FighterId" => self.fighter(addr).0,
-            "ItemId" => self.item_slot(addr).0,
+            "FighterId" if self.live_fighters.contains(&addr) => self.fighter(addr).0,
+            "FighterId" => self.dangling(kind, addr),
+            "ItemId" if self.live_items.contains(&addr) || self.maps.items.contains_key(&addr) => {
+                self.item_slot(addr).0
+            }
+            "ItemId" => self.dangling(kind, addr),
             "BoneTableId" => self.bone_table(addr).0,
             // Static tables in the executable, by address.
             "ItemLogicRef" | "ItemStatesRef" => addr,
             "GroundId" => self.ground(addr).0,
             "StartHookId" => self.start_hook(addr).0,
             "CameraBoxId" if self.stale => {
-                let i = try_box_index(self.u32(sym("cm_804D645C")), addr);
-                if i.is_none() {
-                    self.unhandled
-                        .push(format!("camera box {addr:#x} not in the array"));
+                match try_box_index(self.u32(sym("cm_804D645C")), addr) {
+                    Some(i) => i,
+                    None => self.dangling(kind, addr),
                 }
-                i?
             }
             "CameraBoxId" => box_index(self.u32(sym("cm_804D645C")), addr),
             "PartsId" => self.fighter_parts(addr).0,

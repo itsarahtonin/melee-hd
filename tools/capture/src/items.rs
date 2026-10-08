@@ -77,7 +77,10 @@ impl Importer<'_> {
         item.xDD4_itemVar = ItemVars::import_as(vars_kind(item.kind), &m, a + VARS, self);
         self.stale = false;
         let table = cap.u32(a + 0xBBC);
-        if let Some(t) = item.xBBC_dynamicBoneTable {
+        // A dangling table (a word never set) has no entries to read.
+        if let Some(t) = item.xBBC_dynamicBoneTable
+            && !self.maps.dangling_bone_tables.contains_key(&t.0)
+        {
             let root = cap.u32(cap.u32(a + 4) + 0x28);
             let len = count_joints(|x| cap.u32(x), root);
             let mut bones = BoneTable {

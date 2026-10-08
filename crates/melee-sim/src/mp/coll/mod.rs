@@ -179,10 +179,9 @@ impl Mirror for EcbSource {
                 for (i, v) in [up, down, front, back, angle].iter().enumerate() {
                     word(4 + 4 * i as u32, "x4.x0_1", v.to_bits());
                 }
-                // The joint member's last two words: only items use a box, and they start from
-                // a cleared source, so these stay zero.
-                word(0x18, "x4.x0.x10C_joint[4]", 0);
-                word(0x1C, "x4.x0.x10C_joint[5]", 0);
+                // The joint member's last two words aren't the box's: only items use a box, and
+                // an item made in a reused block keeps the old object's bytes there (setting the
+                // box writes its five words), which nothing reads while the source is a box.
             }
             EcbShape::Joints {
                 x108_joint,

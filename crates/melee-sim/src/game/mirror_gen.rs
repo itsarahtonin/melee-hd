@@ -7,6 +7,7 @@ use super::gr::GroundVars;
 use super::handles::*;
 use super::mirror::{Cx, Mem, Mirror, code};
 use super::structs::*;
+use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones};
 use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::it::ItemVars;
@@ -754,59 +755,6 @@ impl Mirror for itPickup {
     }
 }
 
-impl Mirror for DynamicsDesc {
-    const SIZE: u32 = 0x14;
-
-    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
-        let _ = (&m, at, &cx);
-        DynamicsDesc {
-            data: cx
-                .import_handle("DynamicsId", m.u32(at + 0x0))
-                .map(DynamicsId),
-            count: m.u32(at + 0x4),
-            pos: Vec3::import(m, at + 0x8, cx),
-        }
-    }
-
-    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        let _ = (&m, at, path, &cx);
-        cx.compare_handle(
-            &format!("{path}.data"),
-            "DynamicsId",
-            self.data.map(|h| h.0),
-            m.u32(at + 0x0),
-        );
-        if self.count != m.u32(at + 0x4) {
-            cx.mismatch(
-                &format!("{path}.count"),
-                format!("{:?}", self.count),
-                format!("{:?}", m.u32(at + 0x4)),
-            );
-        }
-        self.pos.compare(m, at + 0x8, &format!("{path}.pos"), cx);
-    }
-}
-
-impl Mirror for BoneDynamicsDesc {
-    const SIZE: u32 = 0x18;
-
-    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
-        let _ = (&m, at, &cx);
-        BoneDynamicsDesc {
-            bone_id: BoneSlot::import(m, at + 0x0, cx),
-            dyn_desc: DynamicsDesc::import(m, at + 0x4, cx),
-        }
-    }
-
-    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        let _ = (&m, at, path, &cx);
-        self.bone_id
-            .compare(m, at + 0x0, &format!("{path}.bone_id"), cx);
-        self.dyn_desc
-            .compare(m, at + 0x4, &format!("{path}.dyn_desc"), cx);
-    }
-}
-
 impl Mirror for CommandInfo {
     const SIZE: u32 = 0x24;
 
@@ -1152,42 +1100,6 @@ impl Mirror for FtPartsVis {
                 &format!("{}[{}]", format!("{path}.xC"), i0),
                 self.xC[i0],
                 m.u32(at + 0xc + i0 as u32 * 0x4),
-            );
-        }
-    }
-}
-
-impl Mirror for CostumeTObjList {
-    const SIZE: u32 = 0x1c;
-
-    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
-        let _ = (&m, at, &cx);
-        CostumeTObjList {
-            n_costume_tobjs: m.u32(at + 0x0),
-            x5D0: cx.import_data(m.u32(at + 0x4)),
-            costume_tobjs: core::array::from_fn(|i0| {
-                cx.import_handle("TObjId", m.u32(at + 0x8 + i0 as u32 * 0x4))
-                    .map(TObjId)
-            }),
-        }
-    }
-
-    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        let _ = (&m, at, path, &cx);
-        if self.n_costume_tobjs != m.u32(at + 0x0) {
-            cx.mismatch(
-                &format!("{path}.n_costume_tobjs"),
-                format!("{:?}", self.n_costume_tobjs),
-                format!("{:?}", m.u32(at + 0x0)),
-            );
-        }
-        cx.compare_data(&format!("{path}.x5D0"), self.x5D0, m.u32(at + 0x4));
-        for i0 in 0..5 {
-            cx.compare_handle(
-                &format!("{}[{}]", format!("{path}.costume_tobjs"), i0),
-                "TObjId",
-                self.costume_tobjs[i0].map(|h| h.0),
-                m.u32(at + 0x8 + i0 as u32 * 0x4),
             );
         }
     }
@@ -4551,9 +4463,7 @@ impl Mirror for Fighter {
             x2E4: f32::from_bits(m.u32(at + 0x2e4)),
             x2E8: f32::from_bits(m.u32(at + 0x2e8)),
             x2EC: f32::from_bits(m.u32(at + 0x2ec)),
-            dynamic_bone_sets: core::array::from_fn(|i0| {
-                BoneDynamicsDesc::import(m, at + 0x2f0 + i0 as u32 * 0x18, cx)
-            }),
+            dynamic_bone_sets: DynamicBoneSets::import(m, at + 0x2f0, cx),
             dynamics_num: m.u32(at + 0x3e0) as i32,
             x3E4_fighterCmdScript: CommandInfo::import(m, at + 0x3e4, cx),
             x408: ColorOverlay::import(m, at + 0x408, cx),
@@ -5235,14 +5145,8 @@ impl Mirror for Fighter {
                 format!("{:?}", f32::from_bits(m.u32(at + 0x2ec))),
             );
         }
-        for i0 in 0..10 {
-            self.dynamic_bone_sets[i0].compare(
-                m,
-                at + 0x2f0 + i0 as u32 * 0x18,
-                &format!("{}[{}]", format!("{path}.dynamic_bone_sets"), i0),
-                cx,
-            );
-        }
+        self.dynamic_bone_sets
+            .compare(m, at + 0x2f0, &format!("{path}.dynamic_bone_sets"), cx);
         if self.dynamics_num != m.u32(at + 0x3e0) as i32 {
             cx.mismatch(
                 &format!("{path}.dynamics_num"),
@@ -7648,38 +7552,6 @@ impl Mirror for Fighter {
     }
 }
 
-impl Mirror for Item_DynamicBones {
-    const SIZE: u32 = 0x1c;
-
-    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
-        let _ = (&m, at, &cx);
-        Item_DynamicBones {
-            flags: m.u32(at + 0x0) as i32,
-            skeleton: cx.import_handle("JObjId", m.u32(at + 0x4)).map(JObjId),
-            dyn_desc: DynamicsDesc::import(m, at + 0x8, cx),
-        }
-    }
-
-    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        let _ = (&m, at, path, &cx);
-        if self.flags != m.u32(at + 0x0) as i32 {
-            cx.mismatch(
-                &format!("{path}.flags"),
-                format!("{:?}", self.flags),
-                format!("{:?}", m.u32(at + 0x0) as i32),
-            );
-        }
-        cx.compare_handle(
-            &format!("{path}.skeleton"),
-            "JObjId",
-            self.skeleton.map(|h| h.0),
-            m.u32(at + 0x4),
-        );
-        self.dyn_desc
-            .compare(m, at + 0x8, &format!("{path}.dyn_desc"), cx);
-    }
-}
-
 impl Mirror for ItemHitbox {
     const SIZE: u32 = 0x13c;
 
@@ -8307,9 +8179,7 @@ impl Mirror for Item {
             xC8_joint: cx.import_data(m.u32(at + 0xc8)),
             xCC_item_attr: cx.import_data(m.u32(at + 0xcc)),
             xD0_itemStateDesc: cx.import_data(m.u32(at + 0xd0)),
-            xD4_dynamicBones: core::array::from_fn(|i0| {
-                Item_DynamicBones::import(m, at + 0xd4 + i0 as u32 * 0x1c, cx)
-            }),
+            xD4_dynamicBones: ItemDynamicBones::import(m, at + 0xd4, cx),
             x374_dynamicBonesNum: m.u32(at + 0x374) as i32,
             x378_itemColl: CollData::import(m, at + 0x378, cx),
             ecb_lock: m.u32(at + 0x514) as i32,
@@ -8655,14 +8525,8 @@ impl Mirror for Item {
             self.xD0_itemStateDesc,
             m.u32(at + 0xd0),
         );
-        for i0 in 0..24 {
-            self.xD4_dynamicBones[i0].compare(
-                m,
-                at + 0xd4 + i0 as u32 * 0x1c,
-                &format!("{}[{}]", format!("{path}.xD4_dynamicBones"), i0),
-                cx,
-            );
-        }
+        self.xD4_dynamicBones
+            .compare(m, at + 0xd4, &format!("{path}.xD4_dynamicBones"), cx);
         if self.x374_dynamicBonesNum != m.u32(at + 0x374) as i32 {
             cx.mismatch(
                 &format!("{path}.x374_dynamicBonesNum"),
@@ -17942,5 +17806,90 @@ impl Mirror for un_804A1F58_t {
                 cx,
             );
         }
+    }
+}
+
+impl Mirror for DynamicsDesc {
+    const SIZE: u32 = 0x14;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        DynamicsDesc {
+            data: cx
+                .import_handle("DynamicsId", m.u32(at + 0x0))
+                .map(DynamicsId),
+            count: m.u32(at + 0x4),
+            pos: Vec3::import(m, at + 0x8, cx),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_handle(
+            &format!("{path}.data"),
+            "DynamicsId",
+            self.data.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
+        if self.count != m.u32(at + 0x4) {
+            cx.mismatch(
+                &format!("{path}.count"),
+                format!("{:?}", self.count),
+                format!("{:?}", m.u32(at + 0x4)),
+            );
+        }
+        self.pos.compare(m, at + 0x8, &format!("{path}.pos"), cx);
+    }
+}
+
+impl Mirror for BoneDynamicsDesc {
+    const SIZE: u32 = 0x18;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        BoneDynamicsDesc {
+            bone_id: BoneSlot::import(m, at + 0x0, cx),
+            dyn_desc: DynamicsDesc::import(m, at + 0x4, cx),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        self.bone_id
+            .compare(m, at + 0x0, &format!("{path}.bone_id"), cx);
+        self.dyn_desc
+            .compare(m, at + 0x4, &format!("{path}.dyn_desc"), cx);
+    }
+}
+
+impl Mirror for Item_DynamicBones {
+    const SIZE: u32 = 0x1c;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        Item_DynamicBones {
+            flags: m.u32(at + 0x0) as i32,
+            skeleton: cx.import_handle("JObjId", m.u32(at + 0x4)).map(JObjId),
+            dyn_desc: DynamicsDesc::import(m, at + 0x8, cx),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.flags != m.u32(at + 0x0) as i32 {
+            cx.mismatch(
+                &format!("{path}.flags"),
+                format!("{:?}", self.flags),
+                format!("{:?}", m.u32(at + 0x0) as i32),
+            );
+        }
+        cx.compare_handle(
+            &format!("{path}.skeleton"),
+            "JObjId",
+            self.skeleton.map(|h| h.0),
+            m.u32(at + 0x4),
+        );
+        self.dyn_desc
+            .compare(m, at + 0x8, &format!("{path}.dyn_desc"), cx);
     }
 }

@@ -832,13 +832,22 @@ impl Comparer<'_> {
                     self.check(
                         &format!("zako slot {i}"),
                         "fields",
-                        (o.point, o.timer, o.item.map(Some), o.x8),
+                        (o.point, o.timer, o.x8),
                         (
                             self.u16(e) as i16,
                             self.u16(e + 2) as i16,
-                            gobj_pair(self, e + 4),
                             self.u32(e + 8) as i32,
                         ),
+                    );
+                    // A slot's GObj can be one freed since (a dangling pointer, compared by
+                    // address).
+                    use melee_sim::game::mirror::Cx;
+                    let theirs = self.u32(e + 4);
+                    self.compare_handle(
+                        &format!("zako slot {i} item"),
+                        "GObjId",
+                        o.item.map(|g| g.0),
+                        theirs,
                     );
                 }
             }
@@ -879,6 +888,15 @@ impl Comparer<'_> {
                 if let Some(k) = self.data.get(key) {
                     theirs += 1;
                     let ours = self.game.objs.ids.get(k);
+                    // A freed joint the table still names dangles, compared by address.
+                    let dangling = ours.and_then(|o| self.maps.dangling_jobjs.get(&o.0).copied());
+                    if let Some(addr) = dangling {
+                        if addr != value {
+                            self.diff(&format!("ID table {k:?}"), "dangling joint", addr, value);
+                        }
+                        e = self.u32(e);
+                        continue;
+                    }
                     let mut paired = self.maps.jobjs.get(&value).copied();
                     if paired.is_none() && ours.is_some() {
                         // A joint no GObj reaches (a constraint's target): pair it here.
@@ -1047,9 +1065,16 @@ impl Comparer<'_> {
             .map(f32::to_bits);
             let theirs: [u32; 4] = std::array::from_fn(|k| self.u32(a + 0x10 + 4 * k as u32));
             self.check(&path, "bounds", ours, theirs);
+            // A joint freed since (Pokémon Stadium's transformation pieces) dangles, compared
+            // by address.
             let jo = self.u32(a + 0x20);
-            let theirs = (jo != 0).then(|| self.maps.jobjs.get(&jo).copied());
-            self.check(&path, "joint", joint.jobj.map(Some), theirs);
+            use melee_sim::game::mirror::Cx;
+            self.compare_handle(
+                &format!("{path} joint"),
+                "JObjId",
+                joint.jobj.map(|j| j.0),
+                jo,
+            );
             self.check(
                 &path,
                 "callbacks",

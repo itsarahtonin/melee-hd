@@ -16,6 +16,7 @@ pub mod colanim;
 pub mod coll;
 pub mod commands;
 pub mod common;
+pub mod counted;
 pub mod cpu;
 pub mod create;
 pub mod create_model;

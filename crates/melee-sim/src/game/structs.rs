@@ -5,6 +5,7 @@
 
 use melee_data::archive::DataRef;
 
+use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones};
 use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::gr::GroundVars;
@@ -341,45 +342,6 @@ impl Default for itPickup {
     }
 }
 
-/// `DynamicsDesc`, 0x14 bytes.
-#[derive(Clone, Debug, PartialEq)]
-pub struct DynamicsDesc {
-    /// +0x0
-    pub data: Option<DynamicsId>,
-    /// +0x4
-    pub count: u32,
-    /// +0x8
-    pub pos: Vec3,
-}
-
-impl Default for DynamicsDesc {
-    fn default() -> Self {
-        DynamicsDesc {
-            data: None,
-            count: 0,
-            pos: Default::default(),
-        }
-    }
-}
-
-/// `BoneDynamicsDesc`, 0x18 bytes.
-#[derive(Clone, Debug, PartialEq)]
-pub struct BoneDynamicsDesc {
-    /// +0x0
-    pub bone_id: BoneSlot,
-    /// +0x4
-    pub dyn_desc: DynamicsDesc,
-}
-
-impl Default for BoneDynamicsDesc {
-    fn default() -> Self {
-        BoneDynamicsDesc {
-            bone_id: Default::default(),
-            dyn_desc: Default::default(),
-        }
-    }
-}
-
 /// `CommandInfo`, 0x24 bytes.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CommandInfo {
@@ -541,27 +503,6 @@ impl Default for FtPartsVis {
             model_num: 0,
             cleared: [0; 5],
             xC: [None; 5],
-        }
-    }
-}
-
-/// `CostumeTObjList`, 0x1c bytes.
-#[derive(Clone, Debug, PartialEq)]
-pub struct CostumeTObjList {
-    /// +0x0
-    pub n_costume_tobjs: u32,
-    /// +0x4
-    pub x5D0: Option<DataRef>,
-    /// +0x8
-    pub costume_tobjs: [Option<TObjId>; 5],
-}
-
-impl Default for CostumeTObjList {
-    fn default() -> Self {
-        CostumeTObjList {
-            n_costume_tobjs: 0,
-            x5D0: None,
-            costume_tobjs: [None; 5],
         }
     }
 }
@@ -2232,7 +2173,7 @@ pub struct Fighter {
     /// +0x2ec
     pub x2EC: f32,
     /// +0x2f0
-    pub dynamic_bone_sets: [BoneDynamicsDesc; 10],
+    pub dynamic_bone_sets: DynamicBoneSets,
     /// +0x3e0
     pub dynamics_num: i32,
     /// +0x3e4
@@ -3035,7 +2976,7 @@ impl Default for Fighter {
             x2E4: 0.0,
             x2E8: 0.0,
             x2EC: 0.0,
-            dynamic_bone_sets: core::array::from_fn(|_| Default::default()),
+            dynamic_bone_sets: Default::default(),
             dynamics_num: 0,
             x3E4_fighterCmdScript: Default::default(),
             x408: Default::default(),
@@ -3409,27 +3350,6 @@ impl Default for Fighter {
             x2330: Default::default(),
             x2338: Default::default(),
             mv: [0; 172],
-        }
-    }
-}
-
-/// `Item_DynamicBones`, 0x1c bytes.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Item_DynamicBones {
-    /// +0x0
-    pub flags: i32,
-    /// +0x4
-    pub skeleton: Option<JObjId>,
-    /// +0x8
-    pub dyn_desc: DynamicsDesc,
-}
-
-impl Default for Item_DynamicBones {
-    fn default() -> Self {
-        Item_DynamicBones {
-            flags: 0,
-            skeleton: None,
-            dyn_desc: Default::default(),
         }
     }
 }
@@ -3810,7 +3730,7 @@ pub struct Item {
     /// +0xd0
     pub xD0_itemStateDesc: Option<DataRef>,
     /// +0xd4
-    pub xD4_dynamicBones: [Item_DynamicBones; 24],
+    pub xD4_dynamicBones: ItemDynamicBones,
     /// +0x374
     pub x374_dynamicBonesNum: i32,
     /// +0x378
@@ -4138,7 +4058,7 @@ impl Default for Item {
             xC8_joint: None,
             xCC_item_attr: None,
             xD0_itemStateDesc: None,
-            xD4_dynamicBones: core::array::from_fn(|_| Default::default()),
+            xD4_dynamicBones: Default::default(),
             x374_dynamicBonesNum: 0,
             x378_itemColl: Default::default(),
             ecb_lock: 0,
@@ -8107,6 +8027,66 @@ impl Default for un_804A1F58_t {
             x0: 0,
             pad_x4: [0; 4],
             x8: core::array::from_fn(|_| Default::default()),
+        }
+    }
+}
+
+/// `DynamicsDesc`, 0x14 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DynamicsDesc {
+    /// +0x0
+    pub data: Option<DynamicsId>,
+    /// +0x4
+    pub count: u32,
+    /// +0x8
+    pub pos: Vec3,
+}
+
+impl Default for DynamicsDesc {
+    fn default() -> Self {
+        DynamicsDesc {
+            data: None,
+            count: 0,
+            pos: Default::default(),
+        }
+    }
+}
+
+/// `BoneDynamicsDesc`, 0x18 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BoneDynamicsDesc {
+    /// +0x0
+    pub bone_id: BoneSlot,
+    /// +0x4
+    pub dyn_desc: DynamicsDesc,
+}
+
+impl Default for BoneDynamicsDesc {
+    fn default() -> Self {
+        BoneDynamicsDesc {
+            bone_id: Default::default(),
+            dyn_desc: Default::default(),
+        }
+    }
+}
+
+/// `Item_DynamicBones`, 0x1c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Item_DynamicBones {
+    /// +0x0
+    pub flags: i32,
+    /// +0x4
+    pub skeleton: Option<JObjId>,
+    /// +0x8
+    pub dyn_desc: DynamicsDesc,
+}
+
+impl Default for Item_DynamicBones {
+    fn default() -> Self {
+        Item_DynamicBones {
+            flags: 0,
+            skeleton: None,
+            dyn_desc: Default::default(),
         }
     }
 }
