@@ -169,6 +169,8 @@ pub struct Importer<'a> {
     /// dangles.
     live_fighters: std::collections::HashSet<u32>,
     live_items: std::collections::HashSet<u32>,
+    /// The effects some GObj holds (user data kind 8), as `world` finds them.
+    live_effects: std::collections::HashSet<u32>,
     /// The items whose contents are imported.
     pub(crate) items_done: std::collections::HashSet<u32>,
     /// The freed items and joint tables, released onto our free lists after the live ones.
@@ -200,6 +202,7 @@ impl<'a> Importer<'a> {
             dangling_at: HashMap::new(),
             live_fighters: Default::default(),
             live_items: Default::default(),
+            live_effects: Default::default(),
             items_done: Default::default(),
             free_items: Vec::new(),
             free_tables: Vec::new(),
@@ -328,6 +331,9 @@ impl<'a> Importer<'a> {
                     }
                     6 if ud != 0 && self.u16(g) != ITEM_LINK_CLASS => {
                         self.live_items.insert(ud);
+                    }
+                    8 if ud != 0 => {
+                        self.live_effects.insert(ud);
                     }
                     _ => {}
                 }
@@ -1714,6 +1720,16 @@ impl Cx for Importer<'_> {
                     return None;
                 }
             },
+            // A pointer an effect outlived (a blaster's old flashes) into memory its pool gave
+            // back: neither live nor on the free list, so nothing to follow.
+            "EffectId"
+                if !self.live_effects.contains(&addr)
+                    && !self.maps.effects.contains_key(&addr)
+                    && !self.on_effect_free_list(addr) =>
+            {
+                self.maps.unfollowed.insert((kind, addr));
+                return None;
+            }
             "EffectId" => self.effect(addr).0,
             "TextId" => {
                 let base = self.u32(sym("HSD_SisLib_804D796C"));

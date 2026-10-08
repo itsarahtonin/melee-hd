@@ -100,6 +100,11 @@ impl Importer<'_> {
     }
 
     /// The blocks on efLib's and efAsync's allocators' free lists.
+    /// Whether a block is on efLib's free list.
+    pub(crate) fn on_effect_free_list(&mut self, a: u32) -> bool {
+        self.ef_free_sets().0.contains(&a)
+    }
+
     fn ef_free_sets(&mut self) -> &(HashSet<u32>, HashSet<u32>) {
         if self.ef_free.is_none() {
             let chain = |s: &Self, data: &str| {
