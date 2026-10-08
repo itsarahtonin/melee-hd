@@ -296,8 +296,12 @@ impl Running<'_> {
     /// Re-applies the parts' extra animations still playing, `ftAnim_80070E74`.
     #[doc(alias = "ftAnim_80070E74")]
     fn reapply_part_anims(&mut self, f: FighterId) {
-        if self.game.fighters[f.0].x8B0.iter().any(|s| s.x10 != -1) {
-            unported_call("ftAnim_ApplyPartAnim");
+        let gobj = self.game.fighters[f.0].gobj.expect("a fighter's GObj");
+        for i in 0..5 {
+            let anim = self.game.fighters[f.0].x8B0[i].x10;
+            if anim != -1 {
+                self.apply_part_anim(gobj, i as i32, i32::from(anim), 0.0);
+            }
         }
     }
 

@@ -2738,3 +2738,10 @@ fn_8003F53C	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): pl_
 ft_800877F8	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): fn_8003F53C reads the held buttons through it; compared every tick
 ft_80087818	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): fn_8003F53C reads the pressed buttons through it; compared every tick
 pl_8003FC44	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): a landing with a jump left records it; the player blocks compared every tick
+ftAnim_ApplyPartAnim	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Fox's and Sheik's part animation commands reach it (no blend frames); the parts' joints compared every tick
+ftAnim_80070904	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): ftAnim_ApplyPartAnim gives the parts their animations through it; compared every tick
+ftAnim_GetNextAnimJointInTree	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): ftAnim_80070904 walks the part animation trees through it; compared every tick
+ftAction_800727C8	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the fighters' scripts' part animation command, six times; compared every tick
+ftAction_80072CD8	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the floor sound command, once (FD's terrain sound); compared every tick
+ftCo_AirCatchHit_Coll	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Fox's aerial neutral special's collision, ten frames; compared every tick
+it_8026BAE8	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Fox's blaster is scaled through it; the item compared every tick

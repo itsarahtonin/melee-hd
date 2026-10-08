@@ -78,15 +78,12 @@ pub mod ms {
 pub mod ext {
     pub const FTCOMMON_CALC_SELF_ACCEL_DEACCEL_QUICK_AIR: u32 = 0x8007_CF58;
     pub const FTCOLL_8007AEF8: u32 = 0x8007_AEF8;
-    pub const FTANIM_APPLY_PART_ANIM: u32 = 0x8007_0B88;
     pub const FTANIM_80070FB4: u32 = 0x8007_0FB4;
     pub const FTANIM_80070C48: u32 = 0x8007_0C48;
     pub const FTANIM_80070CC4: u32 = 0x8007_0CC4;
-    pub const FTCO_AIR_CATCH_HIT_COLL: u32 = 0x8008_2B78;
     pub const PL_800386D8: u32 = 0x8003_86D8;
     pub const PL_80040120: u32 = 0x8004_0120;
     pub const IT_8029CEB4: u32 = 0x8029_CEB4;
-    pub const IT_8026BAE8: u32 = 0x8026_BAE8;
     pub const IT_GET_HOLD_KIND: u32 = 0x8026_B320;
     pub const FTPICKUPITEM_80094818: u32 = 0x8009_4818;
     pub const FT_PART_GET_ROT_Z: u32 = 0x8007_5F48;

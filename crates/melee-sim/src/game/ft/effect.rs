@@ -328,6 +328,36 @@ impl Running<'_> {
         }
     }
 
+    /// The floor's sound command, `ftAction_80072CD8`: on the ground, the floor's terrain picks
+    /// the sound (`ft_80084BFC`, set 0) and its effect, at the model's foot (or its other
+    /// one); where the terrain has none, the command's own sound plays. Three words, as the
+    /// sound command it plays through.
+    #[doc(alias = "ftAction_80072CD8")]
+    pub(super) fn cmd_floor_sound(&mut self, gobj: GObjId, f: FighterId) {
+        let w0 = self.cmd_word_main(f, 0);
+        let mut play = 1;
+        if let Some((s, p, gfx_id)) = self.floor_sounds(gobj, 0) {
+            play = p;
+            if s[0] != -1 {
+                let w2 = self.cmd_word_main(f, 2);
+                self.play_sound_words(f, [w0, s[0] as u32, w2]);
+            }
+            if gfx_id != -1 {
+                let x8 = self.ft_data_x8(&self.game.fighters[f.0]);
+                let part = self
+                    .data
+                    .u8(x8.at(if bits(w0, 14, 1) == 0 { 0x13 } else { 0x14 }));
+                let zero = Vec3::new(0.0, 0.0, 0.0);
+                self.script_effect(gobj, gfx_id, i32::from(part), false, false, zero, zero);
+            }
+        }
+        if play != 0 {
+            self.sound_command_main(f);
+            return;
+        }
+        self.cmd_script_main(f).skip(3);
+    }
+
     /// The footstep command, `ftAction_80072E4C`: the floor's terrain picks the step's sound
     /// (`ft_80084C38`, set 1) and its dust, the dust spawns, and the step rumbles the controller.
     /// Three words, as the sound command it plays through.

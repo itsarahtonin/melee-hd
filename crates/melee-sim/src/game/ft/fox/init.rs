@@ -109,8 +109,8 @@ impl Running<'_> {
     pub fn fox_on_knockback_enter(&mut self, gobj: GObjId) {
         self.texture_anim(gobj, 1, 3.0);
         self.texture_anim(gobj, 0, 3.0);
-        self.apply_part_anim(gobj, 3, 3);
-        self.apply_part_anim(gobj, 4, 3);
+        self.apply_part_anim(gobj, 3, 3, 0.0);
+        self.apply_part_anim(gobj, 4, 3, 0.0);
     }
 
     /// Leaving knockback, `ftFx_Init_OnKnockbackExit`.
@@ -118,21 +118,8 @@ impl Running<'_> {
     pub fn fox_on_knockback_exit(&mut self, gobj: GObjId) {
         self.texture_anim(gobj, 1, 0.0);
         self.texture_anim(gobj, 0, 0.0);
-        self.apply_part_anim(gobj, 3, 2);
-        self.apply_part_anim(gobj, 4, 2);
-    }
-
-    /// `ftAnim_ApplyPartAnim(gobj, part, anim, 0.0)`.
-    fn apply_part_anim(&mut self, gobj: GObjId, part: i32, anim: i32) {
-        self.ext(
-            ext::FTANIM_APPLY_PART_ANIM,
-            &[
-                Val::GObj(Some(gobj)),
-                Val::Int(part),
-                Val::Int(anim),
-                Val::Float(0.0),
-            ],
-        );
+        self.apply_part_anim(gobj, 3, 2, 0.0);
+        self.apply_part_anim(gobj, 4, 2, 0.0);
     }
 }
 

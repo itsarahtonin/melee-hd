@@ -71,13 +71,10 @@ fn stubs(yes: bool) -> Vec<Stub> {
     let mut v: Vec<Stub> = [
         ext::FTCOMMON_CALC_SELF_ACCEL_DEACCEL_QUICK_AIR,
         ext::FTCOLL_8007AEF8,
-        ext::FTANIM_APPLY_PART_ANIM,
         ext::FTANIM_80070FB4,
         ext::FTANIM_80070C48,
         ext::FTANIM_80070CC4,
-        ext::FTCO_AIR_CATCH_HIT_COLL,
         ext::PL_80040120,
-        ext::IT_8026BAE8,
         ext::FTPICKUPITEM_80094818,
         ext::FTCOLL_CREATE_REFLECT_HIT,
         ext::GRCORNERIA_801E2AF4,

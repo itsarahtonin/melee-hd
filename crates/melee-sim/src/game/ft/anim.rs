@@ -15,6 +15,7 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, INSTANCE, JObjId, USE_QUATERNION};
 use crate::lb::anim::{blend, copy_srt, current_frame, framerate, is_animated};
 use crate::vec::Vec3;
+use melee_data::archive::{Archives, DataRef};
 
 /// `FtPart` 0x35, the part some characters' animations move alongside TransN.
 const PART_35: i32 = 0x35;
@@ -369,6 +370,65 @@ impl Running<'_> {
         }
     }
 
+    /// Plays animation `anim` of the character's part animation set `slot` (`ftData::x1C`),
+    /// blending into it over `frames` frames (0 at once), `ftAnim_ApplyPartAnim`.
+    #[doc(alias = "ftAnim_ApplyPartAnim")]
+    pub fn apply_part_anim(&mut self, gobj: GObjId, slot: i32, anim: i32, frames: f32) {
+        let f = self.game.fighter_id(gobj);
+        let fp = &self.game.fighters[f.0];
+        let ft_data = fp.ft_data.expect("a fighter without data");
+        let list = self.data.ptr(ft_data.at(0x1C)).expect("ftData x1C");
+        let set = self
+            .data
+            .ptr(list.at(4 * slot as u32))
+            .expect("ftData x1C entry");
+        let start = i32::from(self.data.u16(set));
+        let anims = self.data.ptr(set.at(8)).expect("the set's animations");
+        let aj = self.data.ptr(anims.at(4 * anim as u32));
+        let blend = if frames != 0.0 {
+            mem(fp::fdivs(reg(first_end_frame(self.data, aj)), reg(frames)))
+        } else {
+            0.0
+        };
+        let e = &mut self.game.fighters[f.0].x8B0[slot as usize];
+        e.x11 = anim as i8;
+        e.x4 = frames;
+        e.x8 = 0.0;
+        e.xC = blend;
+        self.add_part_anims(f, start, aj);
+    }
+
+    /// Gives the parts from `start` on an AnimJoint tree's animations, `ftAnim_80070904`:
+    /// joint by joint in the tree's order, skipping the character's optional parts; each
+    /// part not held (`flags_b0`) whose joint animates plays it on its blend joint from frame
+    /// 0, marked as playing a part animation (`flags_b5`).
+    #[doc(alias = "ftAnim_80070904")]
+    fn add_part_anims(&mut self, f: FighterId, start: i32, aj: Option<DataRef>) {
+        let kind = self.game.fighters[f.0].kind;
+        let parts = self.game.fighters[f.0]
+            .parts
+            .expect("a fighter without parts");
+        let mut stack = Vec::new();
+        let (mut i, mut cur) = (start, aj);
+        while let Some(a) = cur {
+            while self.part_mask(kind, i) != 0 {
+                i += 1;
+            }
+            let b = self.bone(f, i);
+            if !bone_flag(&b, 0) && self.data.ptr(a.at(8)).is_some() {
+                let j = b.x4_jobj2;
+                let objs = &mut self.game.objs;
+                jobj::add_anim(objs, self.data, j, Some(a), None, None);
+                jobj::clear_flags(&mut objs.jobjs, j, 0x20000);
+                jobj::req_anim_by_flags(objs, j, 1, 0.0);
+                jobj::anim(objs, self.data, &mut crate::game::code::ParticleHooks, j);
+                self.game.fighter_parts[parts.0][i as usize].x8[0] |= 0x04;
+            }
+            i += 1;
+            cur = next_anim_joint(self.data, a, &mut stack);
+        }
+    }
+
     /// Blends each of the five part animations (`x8B0`) in progress, `ftAnim_800707B0`.
     #[doc(alias = "ftAnim_800707B0")]
     pub fn blend_part_anims(&mut self, gobj: GObjId) {
@@ -438,6 +498,50 @@ impl Running<'_> {
 
 /// The next joint after `j` in a depth-first walk that stays below `top` (or the whole
 /// tree, for None), not entering instances.
+/// How deep `ftAnim_GetNextAnimJointInTree` follows a tree (`ftAnim_804590D8`).
+const MAX_ANIM_JOINT_DEPTH: usize = 30;
+
+/// The AnimJoint after `aj` in a depth-first walk, `ftAnim_GetNextAnimJointInTree`: its child,
+/// else its next sibling, else the nearest ancestor's next sibling.
+#[doc(alias = "ftAnim_GetNextAnimJointInTree")]
+fn next_anim_joint(data: &Archives, aj: DataRef, stack: &mut Vec<DataRef>) -> Option<DataRef> {
+    if let Some(child) = data.ptr(aj) {
+        stack.push(aj);
+        assert!(
+            stack.len() < MAX_ANIM_JOINT_DEPTH,
+            "fighter joint depth num over!"
+        );
+        return Some(child);
+    }
+    if let Some(next) = data.ptr(aj.at(4)) {
+        return Some(next);
+    }
+    while let Some(parent) = stack.pop() {
+        if let Some(next) = data.ptr(parent.at(4)) {
+            return Some(next);
+        }
+    }
+    None
+}
+
+/// The end frame of the first AnimJoint in the tree with an animation, or 0,
+/// `lb_8000BFF0` (`lb_8000BECC` finds it).
+// Ports `lb_8000BFF0`; aliased once a check reaches it.
+// Ports `lb_8000BECC`; aliased once a check reaches it.
+fn first_end_frame(data: &Archives, aj: Option<DataRef>) -> f32 {
+    fn find(data: &Archives, aj: Option<DataRef>) -> Option<DataRef> {
+        let aj = aj?;
+        if data.ptr(aj.at(8)).is_some() {
+            return Some(aj);
+        }
+        find(data, data.ptr(aj)).or_else(|| find(data, data.ptr(aj.at(4))))
+    }
+    match find(data, aj) {
+        Some(a) => data.f32(data.ptr(a.at(8)).expect("aobjdesc").at(4)),
+        None => 0.0,
+    }
+}
+
 fn next_in_tree(jobjs: &jobj::JObjs, j: JObjId, top: Option<JObjId>) -> Option<JObjId> {
     if jobjs[j].flags & INSTANCE == 0
         && let Some(c) = jobjs[j].child

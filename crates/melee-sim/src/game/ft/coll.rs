@@ -444,6 +444,14 @@ impl Running<'_> {
         }
     }
 
+    /// The airborne pass, landing normally, `ftCo_AirCatchHit_Coll`.
+    #[doc(alias = "ftCo_AirCatchHit_Coll")]
+    pub fn co_air_catch_hit_coll(&mut self, gobj: GObjId) {
+        if self.air_coll_land(gobj) {
+            self.land_normally(gobj);
+        }
+    }
+
     /// The airborne pass, `cb` on landing, `ft_80082C74`.
     #[doc(alias = "ft_80082C74")]
     pub fn air_coll_then(&mut self, gobj: GObjId, cb: Cb) {

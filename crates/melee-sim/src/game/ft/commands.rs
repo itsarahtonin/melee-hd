@@ -164,6 +164,7 @@ impl Running<'_> {
             26 => self.cmd_article_visible(gobj, f, w),
             27 => self.cmd_fighter_visible(gobj, f, w),
             30 => self.cmd_texture_anim(gobj, f, w),
+            31 => self.cmd_part_anim(gobj, w, true),
             33 => self.cmd_rumble(gobj, f, w),
             34 => self.cmd_stop_rumble(gobj, f, w),
             35 => self.cmd_sword(gobj, f, w),
@@ -180,6 +181,7 @@ impl Running<'_> {
             1 => return self.cmd_create_hitbox(gobj, f),
             7 => return self.sound_command(f, None),
             28 => return self.cmd_random_sfx(gobj, f),
+            44 => return self.cmd_floor_sound(gobj, f),
             45 => return self.cmd_footstep(gobj, f),
             _ => match COMMANDS.get(index as usize) {
                 Some(name) => unported_call(name),
@@ -520,6 +522,19 @@ impl Running<'_> {
         }
     }
 
+    /// Plays a part animation (`ftAction_800727C8`), over the command's frames unless a
+    /// state started partway in catches up on it (`ftAction_8007283C`, at once).
+    #[doc(alias = "ftAction_800727C8")]
+    // Ports `ftAction_8007283C`; aliased once a check reaches it.
+    fn cmd_part_anim(&mut self, gobj: GObjId, w: u32, blend: bool) {
+        let frames = if blend {
+            mem(fp::frsp(f64::from(bits(w, 20, 12))))
+        } else {
+            0.0
+        };
+        self.apply_part_anim(gobj, sbits(w, 6, 7), sbits(w, 13, 7), frames);
+    }
+
     /// Rumbles the fighter's controller, or every fighter's (`ftCommon_8007EC30`).
     fn cmd_rumble(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let (kind, frames) = (bits(w, 7, 12), bits(w, 19, 13));
@@ -636,7 +651,11 @@ impl Running<'_> {
             46 => self.skip_8007309c(f),
             47 => self.skip_80073108(f),
             48 => self.skip_8007320c(f),
-            31 => unported_call("ftAction_8007283C"),
+            31 => {
+                let w = self.cmd_word(f, 0);
+                self.cmd_part_anim(gobj, w, false);
+                self.cmd_skip(f, 1);
+            }
             _ if index < 49 => self.fighter_command(gobj, index),
             _ => panic!("fighter command {} doesn't exist", index + 10),
         }

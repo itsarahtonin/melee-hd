@@ -9,7 +9,7 @@ use super::super::super::it::kinds::{foxblaster, foxlaser};
 use super::super::super::state::Running;
 use super::super::motion::flags::{KEEP_GFX, SKIP_ATTACK_COUNT, SKIP_MODEL};
 use super::{BLASTER, KIND_FALCO, KIND_FOX, PAD_B, addr, attr, ext, ms, mv};
-use crate::fpu::reg;
+use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -115,10 +115,8 @@ impl Running<'_> {
         let Some(b) = b else {
             panic!("ftToSpecialNFox::Caution!!! (the blaster wasn't made)");
         };
-        self.ext(
-            ext::IT_8026BAE8,
-            &[Val::GObj(Some(b)), Val::Float(fp::frsp(0.85))],
-        );
+        let data = self.data;
+        crate::game::it::lib26b1::set_scale(self.game, data, b, mem(fp::frsp(0.85)));
         self.set_damage_cb(gobj, Some(addr::REMOVE_BLASTER_CB));
     }
 
@@ -375,7 +373,8 @@ impl Running<'_> {
                             0.850_000_023_841_857_9,
                             fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.model_scaling)),
                         );
-                        self.ext(ext::IT_8026BAE8, &[Val::GObj(Some(b)), Val::Float(scale)]);
+                        let data = self.data;
+                        crate::game::it::lib26b1::set_scale(self.game, data, b, mem(scale));
                         self.set_damage_cb(gobj, Some(addr::REMOVE_BLASTER_CB));
                     }
                     return;
@@ -556,7 +555,7 @@ impl Running<'_> {
     #[doc(alias = "ftFx_SpecialAirNLoop_Coll")]
     #[doc(alias = "ftFx_SpecialAirNEnd_Coll")]
     pub fn fox_special_air_n_coll(&mut self, gobj: GObjId) {
-        self.ext_gobj(ext::FTCO_AIR_CATCH_HIT_COLL, gobj);
+        self.co_air_catch_hit_coll(gobj);
     }
 }
 

@@ -610,6 +610,10 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800C_6D38 => {
             g.co_entry_end_phys(gobj);
         }
+        // ftCo_AirCatchHit_Coll
+        0x8008_2B78 => {
+            g.co_air_catch_hit_coll(gobj);
+        }
         _ => return false,
     }
     true
