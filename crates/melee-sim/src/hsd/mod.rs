@@ -6,6 +6,7 @@ pub mod aobj;
 pub mod appsrt;
 pub mod bytecode;
 pub mod cobj;
+pub mod display;
 pub mod dobj;
 pub mod fobj;
 pub mod fog;
@@ -60,6 +61,8 @@ pub struct Objects {
     pub generators: generator::Generators,
     pub app_srts: appsrt::AppSrts,
     pub psdisp: psdisp::Globals,
+    /// The display pass's output for the frame (`display::Draw`s).
+    pub display: display::Display,
     /// Bits the game has ORed into loaded MObjDescs' `rendermode` (a stage marks some of its
     /// materials, `grDatFiles_801C6228`): the loader reads the descriptor as the game left it.
     pub rendermode_patches: std::collections::HashMap<DataRef, u32>,

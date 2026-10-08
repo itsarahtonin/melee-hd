@@ -952,6 +952,16 @@ impl Importer<'_> {
         let contents = if flags & jobj::SPLINE != 0 {
             Contents::Spline(self.data(u))
         } else if flags & jobj::PTCL != 0 {
+            // Entries still to spawn have their word's top bit set (`JObjLoad`).
+            let mut p = u;
+            while p != 0 {
+                if self.u32(p + 4) & 0x8000_0000 != 0
+                    && let Some(e) = self.data(p)
+                {
+                    self.game.objs.jobj.pending_ptcl.insert(e);
+                }
+                p = self.u32(p);
+            }
             Contents::Particles(self.data(u))
         } else {
             Contents::DObjs((u != 0).then(|| self.dobj(u)))
@@ -1330,7 +1340,10 @@ impl Importer<'_> {
             0 => None,
             p => match self.data.get(p) {
                 Some(d) => Some(ImageRef::Data(d)),
+                None if p == sym("imagedesc0") => Some(ImageRef::RefractFrame),
                 None if (0x8000_0000..0x804F_0000).contains(&p) => Some(ImageRef::Static(p)),
+                // lbRefract's heap array of indirect maps' descriptors, 0x18 bytes each.
+                None if self.refract_map(p).is_some() => self.refract_map(p).map(ImageRef::Refract),
                 None => {
                     self.unhandled
                         .push(format!("TObj image in the heap {p:#x}"));

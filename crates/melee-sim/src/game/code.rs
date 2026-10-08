@@ -66,6 +66,13 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
     }
 }
 
+/// Runs a GObj's render callback (`GObj_RenderFunc`) for a render pass.
+pub fn run_render(game: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) {
+    if !super::render::run(game, gobj, cb, pass) {
+        unported("render callback", cb.0)
+    }
+}
+
 /// Runs a callback that answers a question about its GObj (`HSD_GObjPredicate`: an item's
 /// state callbacks, which say whether to destroy it).
 pub fn run_pred(game: &mut Running, gobj: GObjId, f: CodeRef) -> bool {

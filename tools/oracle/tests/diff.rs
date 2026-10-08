@@ -8,7 +8,7 @@
 
 use std::process::Command;
 
-const TRACE: &str = "C:/Projects/ssbm-rs-publication/local/traces/Game_20260129T133652.trc";
+const TRACE: &str = "C:/Projects/ssbm-rs-publication/local/traces/v4/Game_20260129T133652.trc";
 const REPLAY: &str = "C:/Users/USER/Documents/Slippi/2026-01/Game_20260129T133652.slp";
 
 /// The oracle's output for `args` after `diff TRACE REPLAY`, or none when what it needs isn't
@@ -76,4 +76,25 @@ fn start_reports_its_seam() {
     // Until the whole match is ported, it stops at a seam, before a difference.
     assert!(!out.contains(" differs in "), "{out}");
     assert!(out.contains("isn't ported"), "{out}");
+}
+
+#[test]
+fn boot_state_seeds() {
+    let Some(out) = diff(&["--boot-diff"]) else {
+        return;
+    };
+    // What the seeding leaves different from the boot state is only what the scene's own
+    // setup sets: the button maps and the rumble data pointer.
+    let mut lines = out
+        .lines()
+        .skip_while(|l| !l.contains("against the boot state"));
+    assert!(lines.next().is_some(), "{out}");
+    let diffs: Vec<&str> = lines.take_while(|l| l.starts_with("  ")).collect();
+    assert!(!diffs.is_empty(), "{out}");
+    for d in diffs {
+        assert!(
+            d.starts_with("  controller_map") || d.starts_with("  lb_804D63C0"),
+            "{d}"
+        );
+    }
 }

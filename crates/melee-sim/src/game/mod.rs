@@ -17,6 +17,7 @@ pub mod mirror;
 mod mirror_gen;
 pub mod pl;
 pub mod playback;
+pub mod render;
 pub mod slippi;
 pub mod state;
 pub mod structs;

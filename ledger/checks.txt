@@ -1400,3 +1400,32 @@ ftFx_SpecialS_Phys	leaf-check fox: fox_functions runs it from real Fox states, i
 ftFx_SpecialS_ReturnFloatVarIndexed	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_Throw_Anim	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftLib_GetPos	leaf-check items: blaster_on_shot_inner reaches it through the muzzle flash, whose offset from the owner is compared
+lbAudioAx_800236DC	leaf-check vs: vs_end stops the music from captures; replay replay_end at the replays' ends; the music state and the driver compared after
+HSD_JObjDispAll	leaf-check display disp_all: every saved call from a replay's render pass, with other passes, the shadow render mode and dirty joints
+HSD_JObjDisp	leaf-check display disp: every saved call, display objects and particle lists, with other passes and dirty joints
+HSD_JObjDispDObj	leaf-check display disp_all and disp reach it on every call that draws a joint
+HSD_JObjDispSub	leaf-check display disp_all and disp reach it on every call that draws a joint
+HSD_DObjDisp	leaf-check display disp_all and disp reach it for every display object drawn
+HSD_PObjDisp	leaf-check display disp_all and disp reach it for every shape drawn; the joints its setup brings up to date compared after
+HSD_SetupChannelMode	leaf-check display disp_all and disp reach it through specular materials; the lights compared after
+HSD_LObjSetup	leaf-check display lobj_setup_init and lobj_callback run it on every active light; disp_all through specular materials
+HSD_LObjSetupSpecularInit	leaf-check display disp_all and disp reach it through specular joints; the lights compared after
+HSD_LObjSetupInit	leaf-check display lobj_setup_init: every saved call; the lights, their slots and masks compared after
+HSD_GObj_LObjCallback	leaf-check display lobj_callback: every saved call
+Ground_801C4640	leaf-check display lobj_callback: run from every light callback's state
+ftCo_8009F54C	leaf-check display lobj_callback: run from every light callback's state
+Ground_801C1E2C	leaf-check display stage_fog: every saved call
+HSD_GObj_FogCallback	leaf-check display fog_callback: run from the stage fog callback's states
+HSD_FogSet	leaf-check display stage_fog, fog_callback and camera_callback reach it
+HSD_GObj_JObjCallback	leaf-check display jobj_callback: every saved call, in each pass
+HSD_GObj_80390EB8	leaf-check display jobj_callback runs every pass through it
+HSD_CObjSetCurrent	leaf-check display camera_callback and frame start every generic camera's drawing through it; the view matrices compared after
+HSD_CObjEndCurrent	leaf-check display camera_callback and frame end every generic camera's drawing through it
+HSD_GObj_803910D8	leaf-check display camera_callback: each generic camera from the light callbacks' states, over its own links and the stage's, the fighters', the particles' and the lights'
+HSD_GObj_80390ED0	leaf-check display camera_callback and frame run every camera's passes through it
+HSD_GObj_80390FC0	leaf-check display frame: the frame's pass from the light callbacks' states, the cameras no port covers given no callback
+lbRefract_800222A4	leaf-check display refract_init: from every light callback's capture, refraction's chains made again from LbRf.dat and compared with memory
+lbRefract_8002247C	leaf-check display refract_camera: every max-link camera from the light callbacks' states, with and without users
+lbRefract_80022560	leaf-check display refract_camera: from the light callbacks' states, with and without users
+lbRefract_80022BB8	leaf-check display refract_users: from the light callbacks' states with one to three users
+lbRefSetUnuse	leaf-check display refract_users: from the light callbacks' states with one to three users

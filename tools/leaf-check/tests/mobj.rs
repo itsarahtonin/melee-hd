@@ -972,6 +972,8 @@ fn drawable(s: &Sides, m: MObjId) -> bool {
             None => return false,
             Some(ImageRef::Data(r)) => s.archives.u32(r.at(8)),
             Some(ImageRef::Static(a)) => s.ctx.read_u32(a + 8),
+            // Refraction's maps aren't paletted.
+            Some(ImageRef::Refract(_) | ImageRef::RefractFrame) => return true,
         };
         if !paletted(format) {
             return true;

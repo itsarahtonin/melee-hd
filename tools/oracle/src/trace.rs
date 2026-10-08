@@ -1,12 +1,12 @@
 //! Reads ssbm-rs's `STATE_TRACE` files: the game's raw state at the end of every engine tick
 //! (ssbm-rs `tools/run/src/trace.rs` documents the format). Version 3 adds main memory
 //! (`STATE_TRACE_MEMORY=1`): each tick's changed pages, XORed with what they held the tick
-//! before, which [`Image`] keeps whole.
+//! before, which [`Image`] keeps whole. Version 4 adds the time base to those ticks.
 
 use std::io::Read;
 
 const MAGIC: &[u8; 8] = b"SSBMTRC\0";
-const VERSIONS: std::ops::RangeInclusive<u32> = 2..=3;
+const VERSIONS: std::ops::RangeInclusive<u32> = 2..=4;
 
 /// Main memory's address and size.
 pub const MEM1: u32 = 0x8000_0000;
@@ -25,6 +25,8 @@ pub enum Kind {
     JObj,
     /// A page of main memory XORed with what it held at the previous tick.
     Page,
+    /// The time base at the tick's end, with memory (version 4).
+    Time,
 }
 
 impl Kind {
@@ -38,6 +40,7 @@ impl Kind {
             5 => Kind::Item,
             6 => Kind::JObj,
             7 => Kind::Page,
+            8 => Kind::Time,
             _ => return None,
         })
     }
@@ -129,7 +132,8 @@ pub fn read(path: &str) -> Vec<Tick> {
     let mut r = Reader::open(path);
     let mut ticks = Vec::new();
     while let Some(mut tick) = r.tick() {
-        tick.regions.retain(|r| r.kind != Kind::Page);
+        tick.regions
+            .retain(|r| !matches!(r.kind, Kind::Page | Kind::Time));
         ticks.push(tick);
     }
     ticks
@@ -162,6 +166,8 @@ pub struct Image {
     pub mem1: Vec<u8>,
     /// Whether any tick so far held pages.
     pub seen: bool,
+    /// The time base at the last tick that held it.
+    pub tb: Option<u64>,
 }
 
 impl Default for Image {
@@ -169,6 +175,7 @@ impl Default for Image {
         Image {
             mem1: vec![0; MEM1_SIZE],
             seen: false,
+            tb: None,
         }
     }
 }
@@ -182,6 +189,9 @@ impl Image {
                 *m ^= x;
             }
             self.seen = true;
+        }
+        if let Some(t) = tick.of(Kind::Time).next() {
+            self.tb = Some(u64::from_be_bytes(t.bytes[..8].try_into().unwrap()));
         }
     }
 

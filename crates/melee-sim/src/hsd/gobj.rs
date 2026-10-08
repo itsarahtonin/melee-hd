@@ -159,6 +159,10 @@ pub struct World<K: Kinds> {
     /// Process links whose processes don't run, by bit (the scene loop's pause mask that
     /// Melee points `HSD_GObjLibInitData.unk_2` at).
     pub skip_links: u64,
+    /// The GObj whose render callback a camera's pass runs (`HSD_GObj_804D7814`), and the
+    /// max-link GObj (a camera's) whose callback runs (`HSD_GObj_804D7818`).
+    pub rendering: Option<GObjId>,
+    pub rendering_camera: Option<GObjId>,
 }
 
 impl<K: Kinds> Default for World<K> {
@@ -198,6 +202,8 @@ impl<K: Kinds> World<K> {
             current_gobj: None,
             delayed: Delayed::default(),
             skip_links: 0,
+            rendering: None,
+            rendering_camera: None,
         }
     }
 

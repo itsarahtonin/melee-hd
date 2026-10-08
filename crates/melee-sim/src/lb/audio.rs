@@ -79,6 +79,8 @@ pub struct LbAudio {
     pub sent_8: i32,
     pub sent_1: i32,
     pub sent_send: i32,
+    /// `cur_hps_stem`: the playing music file's stem, empty with no music.
+    pub stem: [u8; 0x40],
 }
 
 impl Default for LbAudio {
@@ -125,6 +127,7 @@ impl Default for LbAudio {
             sent_8: 0,
             sent_1: 0,
             sent_send: -1,
+            stem: [0; 0x40],
         }
     }
 }
@@ -576,6 +579,16 @@ impl Running<'_> {
                 a.sfx_resume_channel(ch);
             }
         }
+    }
+
+    /// Stops the music, `lbAudioAx_800236DC`: the driver's stream stops and no file plays.
+    #[doc(alias = "lbAudioAx_800236DC")]
+    pub fn lb_audio_music_stop(&mut self) -> i32 {
+        self.game.audio.driver_stop();
+        let lb = &mut self.game.audio.lb;
+        lb.x6418 = 0;
+        lb.stem[0] = 0;
+        -1
     }
 
     /// Resets the library's mix for a new scene (`lbAudioAx_80024C84`): nothing held or

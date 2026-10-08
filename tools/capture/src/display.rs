@@ -1,0 +1,212 @@
+//! The display pass's statics in a captured state: the current camera, the current and
+//! active lights with their GX slot masks, the current joint, display object and material,
+//! and refraction's state, imported into melee-sim and compared back.
+
+use melee_sim::hsd::list::{self, SListId};
+use melee_sim::hsd::lobj::MAX_GXLIGHT;
+
+use crate::compare::Comparer;
+use crate::import::{Importer, sym};
+
+/// The light statics' symbols and what each holds.
+const MASKS: [&str; 4] = [
+    "lightmask_diffuse",
+    "lightmask_specular",
+    "lightmask_attnfunc",
+    "lightmask_alpha",
+];
+
+impl Importer<'_> {
+    /// The display statics: the current camera (`HSD_CObjGetCurrent`), the current lights
+    /// (`current_lights`) and the active ones by GX slot, and the current joint, display object
+    /// and material, which are null between draws.
+    pub fn display(&mut self) {
+        let c = self.cap.u32(sym("current"));
+        self.game.objs.cobjs.current = (c != 0).then(|| self.cobj(c));
+        let mut at = self.cap.u32(sym("current_lights"));
+        let mut prev: Option<SListId> = None;
+        while at != 0 {
+            let l = self.cap.u32(at + 4);
+            let l = self.lobj(l);
+            let n = list::alloc(&mut self.game.objs.lobjs.nodes, l);
+            match prev {
+                Some(p) => self.game.objs.lobjs.nodes[p.0].next = Some(n),
+                None => self.game.objs.lobjs.current = Some(n),
+            }
+            prev = Some(n);
+            at = self.cap.u32(at);
+        }
+        let active = sym("active_lights");
+        for i in 0..MAX_GXLIGHT {
+            let l = self.cap.u32(active + 4 * i as u32);
+            self.game.objs.lobjs.active[i] = (l != 0).then(|| self.lobj(l));
+        }
+        self.game.objs.lobjs.nb_active = self.cap.u32(sym("nb_active_lights")) as i32;
+        let [d, s, a, al] = MASKS.map(|m| self.cap.u32(sym(m)));
+        let l = &mut self.game.objs.lobjs;
+        (
+            l.lightmask_diffuse,
+            l.lightmask_specular,
+            l.lightmask_attnfunc,
+            l.lightmask_alpha,
+        ) = (d, s, a, al);
+        let j = self.cap.u32(sym("current_jobj"));
+        self.game.objs.jobj.current = (j != 0).then(|| self.jobj(j));
+        for name in ["current_dobj", "current_mobj"] {
+            if self.cap.u32(sym(name)) != 0 {
+                self.unhandled.push(format!("{name} is set"));
+            }
+        }
+        self.refract();
+    }
+}
+
+impl Comparer<'_> {
+    /// [`Importer::display`]'s statics.
+    pub fn display(&mut self) {
+        let objs = &self.game.objs;
+        let t = self.u32(sym("current"));
+        match objs.cobjs.current {
+            Some(c) if t != 0 => self.cobj("display current camera", c, t),
+            ours => self.check("display", "current camera", ours.is_some(), t != 0),
+        }
+        let mut node = objs.lobjs.current;
+        let mut at = self.u32(sym("current_lights"));
+        let mut i = 0;
+        while node.is_some() || at != 0 {
+            let (Some(n), true) = (node, at != 0) else {
+                self.check(
+                    "display",
+                    "current lights",
+                    format!("{i} and more: {}", node.is_some()),
+                    format!("{i} and more: {}", at != 0),
+                );
+                break;
+            };
+            let l = self.game.objs.lobjs.nodes[n.0];
+            let t = self.u32(at + 4);
+            self.lobjs(&format!("display current light {i}"), Some(l.data), t);
+            node = l.next;
+            at = self.u32(at);
+            i += 1;
+        }
+        let active = sym("active_lights");
+        for k in 0..MAX_GXLIGHT {
+            let t = self.u32(active + 4 * k as u32);
+            let o = self.game.objs.lobjs.active[k];
+            let path = format!("display active light {k}");
+            match o {
+                Some(l) if t != 0 => self.lobjs(&path, Some(l), t),
+                _ => self.check(&path, "set", o.is_some(), t != 0),
+            }
+        }
+        let l = &self.game.objs.lobjs;
+        let ours = (
+            l.nb_active as u32,
+            l.lightmask_diffuse,
+            l.lightmask_specular,
+            l.lightmask_attnfunc,
+            l.lightmask_alpha,
+        );
+        let [d, s, a, al] = MASKS.map(|m| self.u32(sym(m)));
+        let theirs = (self.u32(sym("nb_active_lights")), d, s, a, al);
+        self.check("display", "active lights and masks", ours, theirs);
+        let current = (
+            self.game.objs.jobj.current.is_some(),
+            self.game.objs.dobjs.current.is_some(),
+            self.game.objs.mobjs.current.is_some(),
+        );
+        let theirs = (
+            self.u32(sym("current_jobj")) != 0,
+            self.u32(sym("current_dobj")) != 0,
+            self.u32(sym("current_mobj")) != 0,
+        );
+        self.check("display", "current joint, dobj, mobj", current, theirs);
+        self.refract();
+    }
+}
+
+/// lbRefract's state (`lbl_804336D0`): users, image, image descriptors, texture chains,
+/// projection.
+const REFRACT: &str = "lbl_804336D0";
+/// An `HSD_ImageDesc`'s size.
+const IMAGE_DESC: u32 = 0x18;
+
+impl Importer<'_> {
+    /// Which of lbRefract's indirect maps' descriptors `p` is, if any.
+    pub(crate) fn refract_map(&self, p: u32) -> Option<u8> {
+        let base = self.cap.u32(sym(REFRACT) + 8);
+        let data = self.cap.u32(sym("refract_data"));
+        if base == 0 || data == 0 {
+            return None;
+        }
+        let n = u32::from(self.cap.call.mem1[(data - crate::MEM1) as usize]);
+        let off = p.wrapping_sub(base);
+        (off.is_multiple_of(IMAGE_DESC) && off / IMAGE_DESC < n).then_some((off / IMAGE_DESC) as u8)
+    }
+
+    /// Refraction's users, table, texture chains and projection.
+    pub fn refract(&mut self) {
+        let at = sym(REFRACT);
+        let r = &mut self.game.refract;
+        r.users = self.cap.u32(at) as i32;
+        let data = self.cap.u32(sym("refract_data"));
+        self.game.refract.data = self.data.get(data);
+        if data != 0 && self.game.refract.data.is_none() {
+            self.unhandled
+                .push(format!("refract_data {data:#x} outside LbRf.dat"));
+        }
+        let n = if data == 0 {
+            0
+        } else {
+            u32::from(self.cap.call.mem1[(data - crate::MEM1) as usize])
+        };
+        let list = self.cap.u32(at + 0xC);
+        let tobjs = (0..n)
+            .filter(|_| list != 0)
+            .map(|i| self.tobj(self.cap.u32(list + 4 * i)))
+            .collect();
+        self.game.refract.tobjs = tobjs;
+        let mut m = melee_sim::mtx::Mtx34::default();
+        for (i, v) in m.m.iter_mut().flatten().enumerate() {
+            *v = f32::from_bits(self.cap.u32(at + 0x10 + 4 * i as u32));
+        }
+        self.game.refract.texture_mtx = m;
+    }
+}
+
+impl Comparer<'_> {
+    /// [`Importer::refract`]'s state; the texture chains' TObjs compare as materials' do.
+    pub fn refract(&mut self) {
+        let at = sym(REFRACT);
+        let r = self.game.refract.clone();
+        self.check("refract", "users", r.users, self.u32(at) as i32);
+        let data = self.u32(sym("refract_data"));
+        let theirs = self.data_ref(data);
+        self.check("refract", "table", r.data, theirs);
+        let list = self.u32(at + 0xC);
+        let n = r.tobjs.len() as u32;
+        let theirs_n = if data == 0 {
+            0
+        } else {
+            u32::from(self.u8(data))
+        };
+        self.check("refract", "chains", n, theirs_n);
+        for (i, t) in r.tobjs.iter().enumerate() {
+            if list == 0 {
+                break;
+            }
+            let tt = self.u32(list + 4 * i as u32);
+            self.tobj_chain(&format!("refract chain {i}"), Some(*t), tt);
+        }
+        let ours: Vec<u32> = r
+            .texture_mtx
+            .m
+            .iter()
+            .flatten()
+            .map(|v| v.to_bits())
+            .collect();
+        let theirs: Vec<u32> = (0..12).map(|k| self.u32(at + 0x10 + 4 * k)).collect();
+        self.check("refract", "projection", ours, theirs);
+    }
+}

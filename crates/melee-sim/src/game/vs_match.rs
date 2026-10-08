@@ -204,6 +204,8 @@ pub struct Frame {
     pub pads: Requests,
     /// The scene asked to end: the match is over and its results would follow.
     pub ended: bool,
+    /// The display pass's draw commands, for the presentation layer.
+    pub draws: Vec<crate::hsd::display::Draw>,
 }
 
 /// A disc file as the frontend reads it: its entry number in the disc's file table and its
@@ -226,6 +228,18 @@ impl Match {
     /// code loads and its fighters need with `load` (a disc file's bytes, by name). The scene
     /// loop is then ready for [`Match::step`].
     pub fn start(settings: &Settings, load: &mut dyn FnMut(&str) -> DiscFile) -> Match {
+        Match::start_from(settings, load, &mut |_, _| {})
+    }
+
+    /// [`Match::start`] with `boot` setting what the boot and the menus leave before the
+    /// match's scene starts (the oracle seeds it from ssbm-rs's trace until the boot and the
+    /// menus are ported): it runs on the new state, before anything of the scene's, and may
+    /// add the archives the boot loaded.
+    pub fn start_from(
+        settings: &Settings,
+        load: &mut dyn FnMut(&str) -> DiscFile,
+        boot: &mut dyn FnMut(&mut Game, &mut Archives),
+    ) -> Match {
         let mut game = Game {
             game_mode: settings.game_mode,
             rules: settings.rules.clone(),
@@ -244,6 +258,7 @@ impl Match {
         game.audio.dsp = settings.dsp;
         game.ft.address_seed = settings.fighter_addresses.iter().copied().collect();
         let mut data = Archives::default();
+        boot(&mut game, &mut data);
         // `lb_80014534`: the rumble scripts, then the match's own files in the order its
         // setup loads them.
         let mut archive = |name: &str| {
@@ -252,6 +267,8 @@ impl Match {
         let rumble = data.add(archive("LbRb.dat"));
         let table = data.get(rumble).public("lbRumbleData");
         let files = vs::MatchArchives {
+            // `lbRefract_800222A4`'s refraction table.
+            lb_rf: data.add(archive("LbRf.dat")),
             pdpm: data.add(archive("PdPm.dat")),
             gm_pause: data.add(archive("GmPause.usd")),
             // `ifAll_802F390C`'s: `IfAll`, the names' font, the coin counter.
@@ -316,6 +333,7 @@ impl Match {
             events: std::mem::take(&mut self.game.events),
             pads: t.pads,
             ended: t.ended,
+            draws: std::mem::take(&mut self.game.objs.display.draws),
         }
     }
 }

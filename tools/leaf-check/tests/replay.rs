@@ -162,6 +162,7 @@ fn recorded_inputs() {
                 &Setup {
                     stubs: &[UPDATE_CAMERA_BOX],
                     replay: Some(&replay),
+                    gx: false,
                 },
                 &|g, maps, call| {
                     run_proc(g, gobj_arg(maps, call), CodeRef(0x8006_AD10));
@@ -231,6 +232,7 @@ fn ucf_sdi() {
                 &Setup {
                     stubs: &[],
                     replay: Some(&replay),
+                    gx: false,
                 },
                 &|g, maps, call| {
                     run_fighter_cb(g, gobj_arg(maps, call), CodeRef(0x8008_E4F0));
@@ -276,6 +278,7 @@ fn offscreen_limits() {
             &Setup {
                 stubs: &[],
                 replay: Some(&replay),
+                gx: false,
             },
             &|g, maps, call| {
                 run_proc(g, gobj_arg(maps, call), CodeRef(0x8006_A360));
@@ -332,6 +335,7 @@ fn costumes() {
                 &Setup {
                     stubs: &[],
                     replay: Some(&replay),
+                    gx: false,
                 },
                 &|g, _, call| {
                     let mem = Mem {
@@ -369,6 +373,7 @@ fn check_frames(index: impl Fn(&Replay) -> Option<i32>) {
             &Setup {
                 stubs: &FRAME_STUBS,
                 replay: Some(&replay),
+                gx: false,
             },
             &|g, _, _| {
                 let answers = Playback::answers(g.game, &mut Device(&replay));
@@ -386,12 +391,9 @@ fn frame_reads() {
     check_frames(|_| None);
 }
 
-/// fn_8016CFE0's playback past the replay's end: the match quits. The quit plays the match's
-/// end sounds, which the VS code still hands the frontend as events (`lbAudioAx_80024C84` and
-/// the calls around it) where ssbm-rs's run drives the audio driver, so the audio state
-/// differs until the VS code's sounds go through the driver's port.
+/// fn_8016CFE0's playback past the replay's end: the match quits, with its end sounds and
+/// music reset going through the audio driver.
 #[test]
-#[ignore = "the match's end sounds don't go through the audio driver's port yet"]
 fn replay_end() {
     check_frames(|r| Some(*r.frames.keys().next_back().expect("frames")));
 }
@@ -431,6 +433,7 @@ fn stock_steals() {
                 &Setup {
                     stubs: &[],
                     replay: Some(&replay),
+                    gx: false,
                 },
                 &|g, _, _| {
                     let answers = Playback::answers(g.game, &mut Device(&replay));
@@ -463,6 +466,7 @@ fn seed_restore() {
             &Setup {
                 stubs: &[],
                 replay: Some(&replay),
+                gx: false,
             },
             &|g, _, _| {
                 g.game.playback_restore_seed();

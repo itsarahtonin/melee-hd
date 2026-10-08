@@ -104,11 +104,10 @@ fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> Vec<String> {
     cmp.ids();
     cmp.audio();
     cmp.match_state();
+    cmp.display();
     cmp.diffs
 }
 
-/// The trace tick that ran the VS scene's first tick: the first whose scene loop has counted
-/// one tick with the playback's frame count at the replay's first frame.
 /// The fighters' addresses in the trace, in the order the match created them: each player
 /// slot's fighters, the first and then the second.
 fn fighter_addresses(image: &Image) -> Vec<u32> {
@@ -125,18 +124,22 @@ fn fighter_addresses(image: &Image) -> Vec<u32> {
     out
 }
 
+/// The trace tick that ran the VS scene's first tick: the first whose scene loop has counted
+/// one tick with the playback's frame count at the replay's first frame.
 fn is_first_tick(image: &Image) -> bool {
     image.u32(sym("gm_80479D58")) == 1 && image.u32(0x804D_6CF4) as i32 == FIRST_FRAME
 }
 
 pub fn diff(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut against, mut pos) = (None, u32::MAX, None, Vec::new());
+    let mut boot_diff = false;
     let mut it = args.iter();
     while let Some(&a) = it.next() {
         match a {
             "--from" => from = it.next().and_then(|t| t.parse::<u32>().ok()),
             "--ticks" => limit = it.next().and_then(|t| t.parse().ok()).expect("--ticks N"),
             "--against" => against = it.next().and_then(|t| t.parse::<u32>().ok()),
+            "--boot-diff" => boot_diff = true,
             _ => pos.push(a),
         }
     }
@@ -169,7 +172,20 @@ pub fn diff(args: &[&str]) -> ExitCode {
     };
     let (mut m, mut files, mut tick) = match from {
         None => {
-            let Some(t) = advance(&mut image, &|_, im| im.seen && is_first_tick(im)) else {
+            // The boot state: memory at the end of the tick before the match's scene.
+            let mut boot = None;
+            let mut first_seen = None;
+            while first_seen.is_none() {
+                let before = (image.mem1.clone(), image.tb);
+                let Some(t) = advance(&mut image, &|_, _| true) else {
+                    break;
+                };
+                if image.seen && is_first_tick(&image) {
+                    first_seen = Some(t);
+                    boot = Some(before);
+                }
+            }
+            let (Some(t), Some((boot, Some(boot_tb)))) = (first_seen, boot) else {
                 eprintln!(
                     "{trace_path}: no tick runs the match's first, or no memory in the trace"
                 );
@@ -185,7 +201,29 @@ pub fn diff(args: &[&str]) -> ExitCode {
                         .read_file(name)
                         .unwrap_or_else(|e| panic!("{name}: {e}")),
                 };
-                Match::start(&settings, &mut load)
+                let mut fresh = None;
+                let started = catch_unwind(AssertUnwindSafe(|| {
+                    Match::start_from(&settings, &mut load, &mut |g, data| {
+                        crate::boot::seed(g, data, &boot, boot_tb);
+                        fresh = Some(g.clone());
+                    })
+                }));
+                if boot_diff {
+                    let g = fresh.as_ref().expect("the new match's state");
+                    let d = crate::boot::differences(g, &boot);
+                    println!("seeded: {}", crate::boot::SEEDED.join("; "));
+                    println!(
+                        "a new match's state against the boot state: {} differences",
+                        d.len()
+                    );
+                    for line in &d {
+                        println!("  {line}");
+                    }
+                }
+                match started {
+                    Ok(m) => m,
+                    Err(p) => std::panic::resume_unwind(p),
+                }
             }));
             let m = match started {
                 Ok(m) => m,
@@ -235,6 +273,11 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 imp.ids();
                 imp.audio(bank);
                 imp.match_state();
+                imp.display();
+                if let Some(tb) = image.tb {
+                    imp.game.audio.clock =
+                        Some(melee_capture::audio::import_clock(&image.mem1, tb));
+                }
                 (imp.game, imp.maps, imp.unhandled)
             }));
             let (game, _maps, unhandled) = match imported {

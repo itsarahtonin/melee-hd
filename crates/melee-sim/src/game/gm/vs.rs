@@ -65,7 +65,6 @@ mod addr {
     pub const FN_8016B7F8: u32 = 0x8016_B7F8;
     pub const FN_80182B5C: u32 = 0x8018_2B5C;
     pub const FN_80180AC0: u32 = 0x8018_0AC0;
-    pub const LBREFRACT_800222A4: u32 = 0x8002_22A4;
     pub const LB_8000FCDC: u32 = 0x8000_FCDC;
     pub const EFLIB_INIT: u32 = 0x8005_B4B8;
     pub const EFASYNC_LOAD_SYNC: u32 = 0x8006_737C;
@@ -881,7 +880,7 @@ impl Running<'_> {
             g.pads.rumble.on(port);
         }
         if !g.vs.start.x1_5 {
-            g.audio(0x8002_36DC, [0; 4]);
+            self.lb_audio_music_stop();
         }
         self.sfx_stop_all();
         self.lb_audio_reset();
@@ -1623,6 +1622,8 @@ impl Game {
 /// The archives the match's own setup loads, in the order the original loads them.
 #[derive(Clone, Copy, Debug)]
 pub struct MatchArchives {
+    /// `LbRf.dat`, the refraction textures' table.
+    pub lb_rf: melee_data::archive::ArchiveId,
     /// `PdPm.dat`, whose `plLoadCommonData` the player library keeps.
     pub pdpm: melee_data::archive::ArchiveId,
     /// `GmPause.dat`, the pause screen.
@@ -1670,7 +1671,7 @@ impl Running<'_> {
         super::super::camera::init(&mut self.game.camera, 70);
         super::super::camera::create(self.game);
         self.game.init_vs(d);
-        code::call(self, addr::LBREFRACT_800222A4, &[]);
+        self.game.refract_init(self.data, files.lb_rf);
         code::call(self, addr::LB_8000FCDC, &[]);
         code::call(self, addr::EFLIB_INIT, &[]);
         code::call(self, addr::EFASYNC_LOAD_SYNC, &[Val::Int(0)]);
