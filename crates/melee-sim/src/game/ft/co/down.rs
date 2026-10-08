@@ -46,7 +46,7 @@ impl Running<'_> {
     /// -1 when it has none, which also sets the flag), the set's flag and its effect (or -1).
     #[doc(alias = "ft_80084A80")]
     // Ports `ft_80084BFC`; aliased once a check reaches it.
-    // Ports `ft_80084C38`; aliased once a check reaches it.
+    #[doc(alias = "ft_80084C38")]
     #[doc(alias = "ft_80084C74")]
     pub fn floor_sounds(&self, gobj: GObjId, set: usize) -> Option<([i32; 4], i32, i32)> {
         let fp = self.game.fighter(gobj);

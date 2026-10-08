@@ -22,6 +22,7 @@ pub mod create;
 pub mod create_model;
 pub mod data;
 pub mod dynamics;
+pub mod effect;
 pub mod fighter;
 pub mod fox;
 pub mod ftlib;

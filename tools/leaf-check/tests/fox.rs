@@ -471,21 +471,9 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
 }
 
 /// Functions no saved state can finish yet, with what stops them: code other parts of the
-/// port own that runs in every state they're reached from.
-const SCRIPT: &str = "the new state's script runs a fighter command not ported (ftAction_80071028, an effect, or ftAction_80071FC8)";
-const BLOCKED: &[(&str, &str)] = &[
-    ("ftFx_SpecialAirHi_AirToGround", SCRIPT),
-    ("ftFx_SpecialAirHi_Enter", SCRIPT),
-    ("ftFx_SpecialHiFall_Enter", SCRIPT),
-    ("ftFx_SpecialHiBound_Enter", SCRIPT),
-    ("ftFx_SpecialLw_Enter", SCRIPT),
-    ("ftFx_SpecialAirLw_Enter", SCRIPT),
-    ("ftFx_SpecialLwHit_Enter", SCRIPT),
-    ("ftFx_SpecialSStart_Enter", SCRIPT),
-    ("ftFx_SpecialAirSStart_Enter", SCRIPT),
-    ("ftFx_SpecialS_Enter", SCRIPT),
-    ("ftFx_SpecialAirS_Enter", SCRIPT),
-];
+/// port own that runs in every state they're reached from. Empty now; one that compares clean
+/// fails the check until it's taken off.
+const BLOCKED: &[(&str, &str)] = &[];
 
 /// Every one of Fox's functions compares clean from some real state: its own saved calls or
 /// its unit's neighbours'.

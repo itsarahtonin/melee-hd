@@ -863,3 +863,171 @@ fn proc_map_ecb_lock() {
         },
     );
 }
+
+/// Every effect id `ftCo_8009F834` spawns its own way, and ids it spawns plainly or not at
+/// all, on parts of the fighter's own, common and the character's data's ids, spread at
+/// random or not, from procAnim's states (grounded and in the air).
+#[test]
+fn script_effects() {
+    const IDS: &[u32] = &[
+        0x10, 0x24F, 0x250, 0x7530, 0x7917, 0x3E7, 0x3E8, 0x3E9, 0x3EA, 0x3EB, 0x3EC, 0x3ED, 0x3EE,
+        0x3EF, 0x3F0, 0x3F1, 0x3F2, 0x3F3, 0x3F4, 0x3F5, 0x3F6, 0x3F7, 0x3F8, 0x3F9, 0x3FA, 0x3FB,
+        0x3FC, 0x3FD, 0x3FE, 0x3FF, 0x400, 0x401, 0x402, 0x403, 0x404, 0x405, 0x406, 0x407, 0x408,
+        0x409, 0x40A, 0x40B, 0x40C, 0x40D, 0x40E, 0x40F, 0x410, 0x411, 0x412, 0x413, 0x414, 0x415,
+        0x416, 0x417, 0x41B, 0x41C, 0x41D, 0x41E, 0x41F, 0x420, 0x421, 0x422, 0x423, 0x424, 0x425,
+        0x426, 0x427, 0x428, 0x429, 0x42A, 0x42B, 0x437, 0x438, 0x439, 0x43A, 0x445, 0x446, 0x447,
+        0x448, 0x44A, 0x44B, 0x44C, 0x486, 0x487, 0x488, 0x494, 0x495, 0x496, 0x49C, 0x49D, 0x49E,
+        0x4C0, 0x4C1, 0x4C2, 0x4C3, 0x4C4, 0x4C5, 0x4C6, 0x4D0, 0x4D1, 0x4D2, 0x4D8, 0x4D9, 0x4DA,
+        0x4E0, 0x4E1, 0x4E2, 0x4E3, 0x4E4, 0x4E5, 0x4E6, 0x4E7, 0x4FD, 0x4FE, 0x4FF, 0x500, 0x501,
+        0x502, 0x503, 0x512, 0x513, 0x514, 0x515, 0x516, 0x600,
+    ];
+    let target = leaf_check::sym("ftCo_8009F834");
+    let n = leaf_check::calls::saved_calls(&calls_dir(), "Fighter_procAnim").len();
+    for pass in 0..IDS.len().div_ceil(n.max(1)) {
+        check_calls_with(
+            &calls_dir(),
+            "Fighter_procAnim",
+            20,
+            &|call, i| {
+                let k = pass * n + i;
+                call.addr = target;
+                let fp = user_data_arg(call);
+                call.regs.gpr[4] = IDS[k % IDS.len()];
+                // Own parts, the data's footstep and effect parts, and common part ids.
+                let (part, common) = [(0, 0), (2, 0), (0x8D, 0), (0x8E, 0), (4, 1), (1, 0)][k % 6];
+                call.regs.gpr[5] = part;
+                call.regs.gpr[6] = common;
+                call.regs.gpr[7] = (k / 2 % 2) as u32;
+                if k.is_multiple_of(7) {
+                    // The footstep parts' cycle at its last (`x2220_b0`, 4), to wrap.
+                    let o = (fp + 0x2220 - 0x8000_0000) as usize;
+                    call.mem1[o] = call.mem1[o] & 0x1F | 0x80;
+                }
+                let p = call.regs.gpr[1] - 0x4000;
+                let v = [
+                    k as f32 * 0.75 - 4.0,
+                    2.5,
+                    -1.25,
+                    [0.0, 1.5][k % 2],
+                    0.5,
+                    [3.0, 0.0][k % 2],
+                ];
+                for (j, x) in v.iter().enumerate() {
+                    poke_f32(call, p + 4 * j as u32, *x);
+                }
+                call.regs.gpr[8] = p;
+                call.regs.gpr[9] = p + 0xC;
+            },
+            &|g, maps, call| {
+                let r = &call.regs.gpr;
+                let v = |a: u32| {
+                    let w = |a: u32| f32::from_bits(peek_u32(call, a));
+                    melee_sim::vec::Vec3::new(w(a), w(a + 4), w(a + 8))
+                };
+                g.script_effect(
+                    gobj_arg(maps, call),
+                    r[4] as i32,
+                    r[5] as i32,
+                    r[6] != 0,
+                    r[7] != 0,
+                    v(r[8]),
+                    v(r[9]),
+                );
+                Ret::Nothing
+            },
+        );
+    }
+}
+
+/// Where each stretch of the fighter's action scripts starts: the start of each of its
+/// actions' scripts and each command after a wait, up to the first loop, jump or end.
+fn script_stretches(call: &ssbm_rt::capture::Call, fp: u32) -> Vec<u32> {
+    use melee_sim::game::ft::action::COMMAND_WORDS;
+    let table = peek_u32(call, fp + 0x24);
+    let mut anims: Vec<i32> = [peek_u32(call, fp + 0x1C), peek_u32(call, fp + 0x20)]
+        .iter()
+        .flat_map(|&t| {
+            melee_sim::game::ft::motion_table(t)
+                .iter()
+                .map(|m| m.anim_id)
+        })
+        .filter(|&a| a >= 0)
+        .collect();
+    anims.sort_unstable();
+    anims.dedup();
+    let mut out = Vec::new();
+    for a in anims {
+        let script = peek_u32(call, table + 0x18 * a as u32 + 0xC);
+        if script == 0 {
+            continue;
+        }
+        out.push(script);
+        let mut at = script;
+        for _ in 0..400 {
+            let op = peek_u32(call, at) >> 26;
+            match op {
+                1 | 2 => {
+                    at += 4;
+                    out.push(at);
+                }
+                8 => at += 4,
+                10.. if op < 59 => at += 4 * u32::from(COMMAND_WORDS[op as usize - 10]),
+                // An end, a loop, a jump or a return: what follows isn't reached in order.
+                _ => break,
+            }
+        }
+    }
+    out
+}
+
+/// The fighter's own script commands, ported and not, as the game's data has them: every
+/// stretch of every action's script the fighter has run from procAnim's states, with the
+/// fighter's size, a released smash's charge, its hitboxes already out (in the group a new
+/// one joins or another) and a spike already counted changed so their branches run.
+#[test]
+fn script_commands() {
+    let n = leaf_check::calls::saved_calls(&calls_dir(), "Fighter_procAnim").len();
+    let target = leaf_check::sym("ftAction_80073240");
+    for pass in 0..6 {
+        check_calls_with(
+            &calls_dir(),
+            "Fighter_procAnim",
+            20,
+            &|call, i| {
+                let k = pass * n + i;
+                let fp = user_data_arg(call);
+                let stretches = script_stretches(call, fp);
+                let at = stretches[(k * 7919) % stretches.len()];
+                call.addr = target;
+                poke_f32(call, fp + 0x3E4, 0.0);
+                poke_u32(call, fp + 0x3EC, at);
+                poke_u32(call, fp + 0x3F0, 0);
+                match k % 5 {
+                    0 => poke_f32(call, fp + 0x38, 1.25),
+                    1 => {
+                        poke_u32(call, fp + 0x2114, 3);
+                        poke_f32(call, fp + 0x2118, (k % 40) as f32);
+                        poke_f32(call, fp + 0x211C, 59.0);
+                        poke_f32(call, fp + 0x2120, 1.4);
+                    }
+                    2 => {
+                        // Every hitbox out in group 0, one of them in group 1.
+                        for h in 0..4 {
+                            poke_u32(call, fp + 0x914 + 0x138 * h, 1);
+                            poke_u32(call, fp + 0x918 + 0x138 * h, u32::from(h == 2));
+                        }
+                    }
+                    3 => {
+                        poke_bit(call, fp + 0x2084, 0, true);
+                        poke_f32(call, fp + 0x2138, -1.0);
+                    }
+                    _ => poke_u32(call, fp + 0x914 + 0x138, 1),
+                }
+            },
+            &|g, maps, call| {
+                g.run_commands(gobj_arg(maps, call));
+                Ret::Nothing
+            },
+        );
+    }
+}
