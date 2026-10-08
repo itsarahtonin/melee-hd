@@ -214,6 +214,14 @@ impl Running<'_> {
         handle
     }
 
+    /// Plays a sound on channel 5 or 6, where the crowd's chants and cheers go
+    /// (`lbAudioAx_800240B4`, `lbAudioAx_8002411C`).
+    #[doc(alias = "lbAudioAx_800240B4")]
+    #[doc(alias = "lbAudioAx_8002411C")]
+    pub fn sfx_play_channel(&mut self, id: i32, channel: i32) -> i32 {
+        self.sfx_start(id, 0x7F, 0x40, 0, channel)
+    }
+
     /// Plays a sound on no track, `lbAudioAx_800237A8`. Ids past the last play the silent
     /// one.
     #[doc(alias = "lbAudioAx_800237A8")]

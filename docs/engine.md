@@ -138,13 +138,13 @@ The VS scene's pause menu holds the music and the match's channels through `lbAu
 
 **Where game logic reads audio.** Almost every audio call game code makes is fire-and-forget: handles are stored only to stop, pan or bend their sounds later. Game code calls the driver directly in one place only, the reset path's `HSD_DevComIsBusy`. Three paths make the game depend on *when a sound ends*, which is what makes voice lifetimes, the clock and the DSP model simulation:
 
-1. *The crowd* (`melee/sfx/crowdsfx.c`, set up for every match by `fn_8016E730`). Its per-frame state machine (`un_80321A00`) moves on only when the crowd's chant voice has stopped (`lbAudioAx_80023710`, so `HSD_AudioSFXCheck`). A start that fails, for example on a channel the pause menu or camera mode muted, counts as stopped. Whether a fighter's knockback then starts a gasp and awards bonus stat 0x5B (`un_80321EBC`, then `pl_8003FDA0`) depends on that, as does the focus fighter and which crowd sound plays next. A VS match reaches it.
+1. *The crowd* (`melee/sfx/crowdsfx.c`, set up for every match by `fn_8016E730`). Its per-frame state machine (`un_80321A00`) moves on only when the crowd's chant voice has stopped (`lbAudioAx_80023710`, so `HSD_AudioSFXCheck`). A start that fails, for example on a channel the pause menu or camera mode muted, counts as stopped. Whether a fighter's knockback then starts a gasp and awards bonus stat 0x5B (`un_80321EBC`, then `pl_8003FDA0`) depends on that, as does the focus fighter and which crowd sound plays next. A VS match reaches it. Ported (`game::sfx`): its GObj, process and entry points; the fighters' calls into it reach it through `code::call`.
 2. *Corneria's and Venom's Star Fox calls* (`Ground_801C54DC`, `grCorneria_801E277C`, `Ground_UpdateStarFoxSequence`). A call's window closes only after its voice line ends, so the sequence lives as long as its lines play. While it lives:
    - the HUD's percents are hidden;
    - a Fox or Falco side taunt can't start a call: starting one draws `HSD_Randi(5)` from the game's RNG and sets the taunt's damage callback;
    - a taunt during a call earns bonus stat 0x8B at the match's end.
 
-   A VS match reaches it. In attract mode, Corneria's intro banter can block a taunt's call.
+   A VS match reaches it. In attract mode, Corneria's intro banter can block a taunt's call. Not ported: it waits for Corneria's and Venom's stage ports, which own the call windows and the sequence; the taunt's side waits for Fox's and Falco's.
 3. *The tournament bracket's music* (`gmtou_1.c`'s `fn_8019AF50`) waits for the music stream to stop (`AXDriverCheck`) before starting the winner's. This is menus only.
 
 Other reads change nothing simulated:

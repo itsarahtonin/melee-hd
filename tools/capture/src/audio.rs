@@ -325,6 +325,62 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
     a
 }
 
+/// `crowdsfx` and `crowdsfx_ptr`.
+const CROWD: u32 = 0x804A_2F08;
+const CROWD_PTR: u32 = 0x804D_7050;
+
+/// The crowd's state (`crowdsfx.c`).
+pub fn import_crowd(mem1: &[u8]) -> melee_sim::game::sfx::Crowd {
+    let m = Mem(mem1);
+    let w = |i: u32| m.u32(CROWD + 4 * i);
+    melee_sim::game::sfx::Crowd {
+        set_up: match m.u32(CROWD_PTR) {
+            0 => false,
+            CROWD => true,
+            p => panic!("crowdsfx_ptr {p:#x} isn't crowdsfx"),
+        },
+        last_spawn: w(0),
+        since: w(1) as i32,
+        last_kb: f32::from_bits(w(2)),
+        focus: w(3),
+        cheer: w(4) as i32,
+        chant: w(5) as i32,
+        chants: w(6) as i32,
+        end: w(7) as i32,
+        big_end: w(8) as i32,
+        near_bottom: w(9) as i32,
+        cheer_handle: w(10) as i32,
+        chant_handle: w(11) as i32,
+    }
+}
+
+/// The crowd's state against memory.
+pub fn compare_crowd(mem1: &[u8], c: &melee_sim::game::sfx::Crowd, diffs: &mut Vec<String>) {
+    let m = Mem(mem1);
+    let mut img = Image::new(&m);
+    img.u32("crowdsfx_ptr", CROWD_PTR, if c.set_up { CROWD } else { 0 });
+    for (i, v) in [
+        c.last_spawn,
+        c.since as u32,
+        c.last_kb.to_bits(),
+        c.focus,
+        c.cheer as u32,
+        c.chant as u32,
+        c.chants as u32,
+        c.end as u32,
+        c.big_end as u32,
+        c.near_bottom as u32,
+        c.cheer_handle as u32,
+        c.chant_handle as u32,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        img.u32("crowdsfx", CROWD + 4 * i as u32, v);
+    }
+    img.check(diffs);
+}
+
 /// The game's audio library's state (`lbaudio_ax.c`'s globals).
 pub fn import_lb(mem1: &[u8]) -> melee_sim::lb::audio::LbAudio {
     let m = Mem(mem1);

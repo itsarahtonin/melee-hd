@@ -935,3 +935,194 @@ fn lb_audio_entries() {
         &|g, a| g.lb_audio_queue(a as i32),
     );
 }
+
+const CROWD_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/crowd";
+
+/// The crowd (`crowdsfx.c`), on the saved calls in `AUDIO_CROWD_CALLS` (default above),
+/// captured as the driver's are with its functions named over the Final Destination match
+/// (`CAPTURE_FROM=0 CAPTURE_EVERY=600 --fields 13000`), and in `AUDIO_CROWD_BF4_CALLS`
+/// (default beside it) its process over the four-player Battlefield match.
+fn crowd_dir() -> String {
+    std::env::var("AUDIO_CROWD_CALLS").unwrap_or_else(|_| CROWD_CALLS.to_owned())
+}
+
+/// The replays the crowd's calls come from, with their directories: the Final Destination
+/// singles (every crowd function) and a four-player Battlefield match (its process, where
+/// enough fighters can fall past the bottom at once). Slippi's codes hook the crowd's process
+/// to talk to the Slippi device, which the replay answers for (`SLIPPI_REPLAYS`).
+fn crowd_sets() -> Vec<(String, ssbm_slippi::Replay)> {
+    let slp = std::env::var("SLIPPI_REPLAYS")
+        .unwrap_or_else(|_| "C:/Users/USER/Documents/Slippi".into());
+    let bf4 =
+        std::env::var("AUDIO_CROWD_BF4_CALLS").unwrap_or_else(|_| format!("{CROWD_CALLS}-bf4"));
+    [
+        (crowd_dir(), "2026-01/Game_20260129T133652"),
+        (bf4, "2026-05/Game_20260531T174251"),
+    ]
+    .into_iter()
+    .filter_map(|(dir, name)| {
+        let bytes = std::fs::read(format!("{slp}/{name}.slp")).ok()?;
+        Some((dir, ssbm_slippi::Replay::parse(&bytes).expect("a replay")))
+    })
+    .collect()
+}
+
+/// [`check_calls_with`](leaf_check::calls::check_calls_with) on each set, with its replay's
+/// Slippi device.
+fn check_crowd(
+    func: &str,
+    min: usize,
+    prepare: &leaf_check::calls::Prepare,
+    ours: &leaf_check::calls::Ours,
+) {
+    for (dir, replay) in crowd_sets() {
+        if leaf_check::calls::saved_calls(&dir, func).is_empty() {
+            continue;
+        }
+        leaf_check::calls::check_calls_in(
+            &dir,
+            func,
+            min,
+            prepare,
+            &leaf_check::calls::Setup {
+                stubs: &[],
+                replay: Some(&replay),
+                gx: false,
+            },
+            ours,
+        );
+    }
+}
+
+fn f(call: &ssbm_rt::capture::Call, i: usize) -> f64 {
+    call.regs.fpr[i].ps0
+}
+
+#[test]
+fn crowd_calls() {
+    check_crowd("sfx_setupCrowdSFX", 1, &|_, _| {}, &|g, _, _| {
+        g.crowd_setup();
+        Ret::Nothing
+    });
+    check_crowd("fn_803219AC", 10, &|_, _| {}, &|g, _, _| {
+        g.crowd_proc();
+        Ret::Nothing
+    });
+    check_crowd("un_8032233C", 4, &|_, _| {}, &|g, _, c| {
+        g.crowd_knockback(r(c, 3), r(c, 4));
+        Ret::Nothing
+    });
+    check_crowd("un_803224DC", 4, &|_, _| {}, &|g, _, c| {
+        Ret::Int(u32::from(g.crowd_side_blast(r(c, 3), f(c, 1), f(c, 2))))
+    });
+    check_crowd("un_80322598", 1, &|_, _| {}, &|g, _, c| {
+        Ret::Int(g.crowd_recovery(r(c, 3), f(c, 1)) as u32)
+    });
+    check_crowd("un_803222EC", 1, &|_, _| {}, &|g, _, c| {
+        Ret::Float(g.crowd_angle_scale(f(c, 1), f(c, 2)))
+    });
+}
+
+/// The crowd's process and entry points from its process's states with its state changed,
+/// so every branch runs: chanting or done, ending or not, the cheer's time, a followed
+/// fighter, and hits of every strength at each fighter.
+#[test]
+fn crowd_varied() {
+    use leaf_check::calls::{peek_u32, poke_u32};
+    const CROWD: u32 = 0x804A_2F08;
+    // Each field from its own hash of the call's index, so their combinations spread.
+    let vary = |call: &mut ssbm_rt::capture::Call, i: usize| {
+        let h = |f: u32, n: u32| {
+            let x = (i as u32 ^ f.wrapping_mul(0x9E37_79B9)).wrapping_mul(0x85EB_CA6B);
+            ((x ^ (x >> 13)).wrapping_mul(0xC2B2_AE35) >> 8) % n
+        };
+        let w =
+            |call: &mut ssbm_rt::capture::Call, k: u32, v: u32| poke_u32(call, CROWD + 4 * k, v);
+        // The fighters' spawn numbers, from the fighter link.
+        let mut spawns = Vec::new();
+        let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+        let mut g = peek_u32(call, heads + 4 * 8);
+        let mut k = 0;
+        while g != 0 {
+            let fp = peek_u32(call, g + 0x2C);
+            spawns.push(peek_u32(call, fp + 8));
+            // Knockback, percent and height, so hits of each strength land on fighters
+            // worth following and fighters fall past the bottom.
+            let kb = [0.0f32, 60.0, 100.0, 160.0, 250.0][h(10 + k, 5) as usize];
+            poke_u32(call, fp + 0x18A4, kb.to_bits());
+            let pct = [10.0f32, 80.0, 150.0][h(20 + k, 3) as usize];
+            poke_u32(call, fp + 0x1830, pct.to_bits());
+            if h(30 + k, 2) == 0 {
+                poke_u32(call, fp + 0xB4, (-500.0f32).to_bits());
+            }
+            k += 1;
+            g = peek_u32(call, g + 8);
+        }
+        let n = spawns.len().max(1) as u32;
+        let pick = |f: u32| spawns.get(h(f, n) as usize).copied().unwrap_or(0);
+        w(call, 0, pick(1));
+        w(call, 1, [0, 3, 40, 0x10000][h(2, 4) as usize]);
+        w(call, 2, (40.0 + 30.0 * h(3, 6) as f32).to_bits());
+        w(call, 3, if h(4, 3) == 0 { 0 } else { pick(5) });
+        w(call, 4, [0, 30, 1200, 5000][h(6, 4) as usize]);
+        w(call, 6, h(7, 10));
+        w(call, 7, h(8, 2));
+        w(call, 8, h(9, 2));
+        w(call, 9, h(40, 4));
+    };
+    check_crowd("fn_803219AC", 10, &vary, &|g, _, _| {
+        g.crowd_proc();
+        Ret::Nothing
+    });
+    let from_proc =
+        |name: &'static str,
+         ours: &(
+              dyn Fn(&mut melee_sim::game::state::Running, &ssbm_rt::capture::Call) -> Ret + Sync
+          )| {
+            for pass in 0..3 {
+                check_crowd(
+                    "fn_803219AC",
+                    10,
+                    &|call, i| {
+                        vary(call, i + 1000 * pass);
+                        call.addr = leaf_check::sym(name);
+                        let spawn = peek_u32(call, 0x804A_2F08);
+                        call.regs.gpr[3] = spawn;
+                        call.regs.gpr[4] = if i % 2 == 0 {
+                            spawn
+                        } else {
+                            peek_u32(call, 0x804A_2F08 + 12)
+                        };
+                        if name == "un_8032201C" {
+                            call.regs.gpr[4] = (i % 4) as u32;
+                        }
+                        call.regs.fpr[1].ps0 = -120.0 + 25.0 * (i % 11) as f64;
+                        call.regs.fpr[2].ps0 = 20.0 + 40.0 * (i % 6) as f64;
+                    },
+                    &|g, _, c| ours(g, c),
+                );
+            }
+        };
+
+    from_proc("un_8032201C", &|g, c| {
+        Ret::Int(u32::from(g.crowd_react(r(c, 3), r(c, 4) as i32)))
+    });
+    from_proc("un_80321C70", &|g, _| {
+        g.crowd_end_chant();
+        Ret::Nothing
+    });
+    from_proc("un_80322314", &|g, _| {
+        g.crowd_transform();
+        Ret::Nothing
+    });
+    from_proc("un_8032233C", &|g, c| {
+        g.crowd_knockback(r(c, 3), r(c, 4));
+        Ret::Nothing
+    });
+    from_proc("un_803224DC", &|g, c| {
+        Ret::Int(u32::from(g.crowd_side_blast(r(c, 3), f(c, 1), f(c, 2))))
+    });
+    from_proc("un_80322598", &|g, c| {
+        Ret::Int(g.crowd_recovery(r(c, 3), f(c, 1)) as u32)
+    });
+}
