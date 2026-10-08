@@ -3782,3 +3782,156 @@ fn winds() {
     };
     check_on("itBombhei_UnkMotion11_Anim", "lb_800115F4", &|_| true, tick);
 }
+
+#[test]
+fn party_ball() {
+    use melee_sim::game::it::kinds::kusudama as k;
+    kind_direct(&[
+        ("itKusudama_Logic4_Spawned", Cb::Event(k::spawned)),
+        ("itKusudama_UnkMotion0_Anim", Cb::Pred(k::upright)),
+        ("itKusudama_UnkMotion0_Phys", Cb::Event(k::idle)),
+        ("itKusudama_UnkMotion0_Coll", Cb::Pred(k::coll0)),
+        ("itKusudama_UnkMotion1_Anim", Cb::Pred(k::anim1)),
+        ("itKusudama_UnkMotion1_Phys", Cb::Event(k::idle)),
+        ("itKusudama_UnkMotion1_Coll", Cb::Pred(k::coll1)),
+        ("itKusudama_UnkMotion2_Anim", Cb::Pred(k::upright)),
+        ("itKusudama_UnkMotion2_Phys", Cb::Event(k::phys2)),
+        ("itKusudama_UnkMotion2_Coll", Cb::Pred(k::coll2)),
+        ("itKusudama_UnkMotion3_Anim", Cb::Pred(k::anim3)),
+        ("itKusudama_UnkMotion3_Phys", Cb::Event(k::idle)),
+        ("itKusudama_UnkMotion3_Coll", Cb::Pred(k::coll3)),
+        ("itKusudama_Logic4_PickedUp", Cb::Event(k::picked_up)),
+        ("itKusudama_UnkMotion4_Anim", Cb::Pred(k::no)),
+        ("itKusudama_UnkMotion4_Phys", Cb::Event(k::idle)),
+        ("itKusudama_Logic4_Thrown", Cb::Event(k::thrown)),
+        ("itKusudama_UnkMotion8_Anim", Cb::Pred(k::anim8)),
+        ("itKusudama_UnkMotion8_Phys", Cb::Event(k::idle)),
+        ("itKusudama_UnkMotion8_Coll", Cb::Pred(k::no)),
+        ("itKusudama_Logic4_DmgReceived", Cb::Pred(k::dmg_received)),
+    ]);
+    for source in [
+        "itKusudama_UnkMotion0_Anim",
+        "itKusudama_UnkMotion2_Anim",
+        "itKusudama_UnkMotion3_Anim",
+    ] {
+        kind_perturbed(
+            source,
+            4,
+            &[
+                (
+                    "it_80289B50",
+                    Cb::Event(|r, g| k::open_or_burst(r, g, true)),
+                ),
+                ("it_8028A190", Cb::Event(k::stopped)),
+                ("it_8028A3CC", Cb::Event(k::fell)),
+                ("it_8028A544", Cb::Event(k::rise)),
+                ("itKusudama_UnkMotion6_Anim", Cb::Pred(k::no)),
+                ("itKusudama_UnkMotion6_Phys", Cb::Event(k::phys6)),
+                ("itKusudama_UnkMotion5_Coll", Cb::Pred(k::coll5)),
+                ("itKusudama_Logic4_Dropped", Cb::Event(k::dropped)),
+                ("itKusudama_UnkMotion6_Coll", Cb::Pred(k::coll6)),
+                ("it_8028AC74", Cb::Event(k::burst)),
+                ("itKusudama_UnkMotion7_Anim", Cb::Pred(k::anim7)),
+                ("itKusudama_UnkMotion7_Phys", Cb::Event(k::idle)),
+                ("itKusudama_UnkMotion7_Coll", Cb::Pred(k::no)),
+                ("it_8028AD44", Cb::Event(k::open)),
+                ("itKusudama_Logic4_DmgDealt", Cb::Pred(k::dmg_dealt)),
+                ("itKusudama_Logic4_Clanked", Cb::Pred(k::clanked)),
+                ("itKusudama_Logic4_HitShield", Cb::Pred(k::clanked)),
+                ("itKusudama_Logic4_Reflected", Cb::Pred(k::clanked)),
+                ("it_80289A00", Cb::Event(k::face_front)),
+            ],
+        );
+    }
+    for angle in [0.0f32, 1.5707964, 4.0] {
+        let prep = move |c: &mut Call| {
+            set_f(c, 1, angle);
+            item_kind(c) == 4
+        };
+        check_on(
+            "itKusudama_UnkMotion0_Anim",
+            "it_802897C8",
+            &prep,
+            &|r, a| {
+                k::tip_towards(r, a.gobj(0), a.float(0));
+                Ret::None
+            },
+        );
+        check_on(
+            "itKusudama_UnkMotion0_Anim",
+            "it_80289910",
+            &prep,
+            &|r, a| {
+                k::tip_to(r, a.gobj(0), a.float(0));
+                Ret::None
+            },
+        );
+    }
+    // The rain from each weight (capsules the only kind to drop, no monsters), unowned.
+    for (seed, w) in seeds().zip([
+        [1u32, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+        [1, 1, 1],
+        [5, 2, 3],
+        [0, 0, 7],
+    ]) {
+        let prep = move |c: &mut Call| {
+            only_capsules(c, seed);
+            set32(c, leaf_check::sym("Item_804A0C64") + 0x30, 0);
+            set32(c, item_ptr(c) + 0x518, 0);
+            c.regs.gpr[4..7].copy_from_slice(&w);
+            c.regs.gpr[7] = 2;
+            item_kind(c) == 4
+        };
+        check_on(
+            "itKusudama_UnkMotion0_Anim",
+            "it_80289BE8",
+            &prep,
+            &|r, a| {
+                k::rain(
+                    r,
+                    a.gobj(0),
+                    a.int(1) as i32,
+                    a.int(2) as i32,
+                    a.int(3) as i32,
+                );
+                Ret::None
+            },
+        );
+        check_on(
+            "itKusudama_UnkMotion0_Anim",
+            "it_8028A114",
+            &prep,
+            &|r, a| {
+                Ret::Bool(k::has_items(
+                    r,
+                    a.int(1) as i32,
+                    a.int(2) as i32,
+                    a.int(3) as i32,
+                    2,
+                ))
+            },
+        );
+    }
+    check_on(
+        "itKusudama_UnkMotion0_Anim",
+        "itKusudama_Logic4_EvtUnk",
+        &pass_owner,
+        &|r, a| {
+            k::forget(r, a.gobj(0), a.opt_gobj(1));
+            Ret::None
+        },
+    );
+}
+
+#[test]
+fn one_player_level() {
+    // Outside the single-player modes, from the items' VS states.
+    check_on(
+        "itKusudama_UnkMotion0_Anim",
+        "gm_8017E068",
+        &|_| true,
+        &|r, _| Ret::Int(item::one_player_cpu_level(r) as u32),
+    );
+}

@@ -2494,3 +2494,51 @@ it_80274DFC	leaf-check items: bob_omb's it_3F14_Logic6_Thrown runs it from captu
 it_80274E44	leaf-check items: bob_omb's it_3F14_Logic6_Thrown runs it from captured item states (thrown at another size)
 it_80275534	leaf-check items: bob_omb's it_3F14_Logic6_Thrown runs it from captured item states (thrown at another size)
 it_80274ED8	leaf-check items: spawn_proc's fn_8026C88C runs it on every captured call
+itKusudama_Logic4_Spawned	leaf-check items: party_ball runs every captured call
+it_802897C8	leaf-check items: party_ball runs it from captured item states
+it_80289910	leaf-check items: party_ball runs it from captured item states
+it_80289A00	leaf-check items: party_ball runs it from captured item states
+it_80289B50	leaf-check items: party_ball runs it from captured item states
+it_80289BE8	leaf-check items: party_ball runs it from captured item states
+it_8028A114	leaf-check items: party_ball runs it from captured item states
+it_8028A190	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion0_Anim	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion0_Phys	leaf-check items: party_ball runs every captured call
+itKusudama_UnkMotion0_Coll	leaf-check items: party_ball runs every captured call
+itKusudama_UnkMotion1_Anim	leaf-check items: party_ball runs every captured call
+itKusudama_UnkMotion1_Phys	leaf-check items: party_ball runs every captured call
+itKusudama_UnkMotion1_Coll	leaf-check items: party_ball runs every captured call
+it_8028A3CC	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion2_Anim	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion2_Phys	leaf-check items: party_ball runs every captured call
+itKusudama_UnkMotion2_Coll	leaf-check items: party_ball runs every captured call
+it_8028A544	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion3_Anim	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion3_Phys	leaf-check items: party_ball runs every captured call
+itKusudama_UnkMotion3_Coll	leaf-check items: party_ball runs every captured call
+itKusudama_Logic4_PickedUp	leaf-check items: party_ball runs every captured call
+itKusudama_UnkMotion4_Anim	leaf-check items: party_ball runs every captured call
+itKusudama_UnkMotion4_Phys	leaf-check items: party_ball runs every captured call
+itKusudama_Logic4_Thrown	leaf-check items: party_ball runs every captured call
+itKusudama_UnkMotion6_Anim	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion6_Phys	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion5_Coll	leaf-check items: party_ball runs it from captured item states
+itKusudama_Logic4_Dropped	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion6_Coll	leaf-check items: party_ball runs it from captured item states
+it_8028AC74	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion7_Anim	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion7_Phys	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion7_Coll	leaf-check items: party_ball runs it from captured item states
+it_8028AD44	leaf-check items: party_ball runs it from captured item states
+itKusudama_UnkMotion8_Anim	leaf-check items: party_ball runs every captured call
+itKusudama_UnkMotion8_Phys	leaf-check items: party_ball runs every captured call
+itKusudama_UnkMotion8_Coll	leaf-check items: party_ball runs every captured call
+itKusudama_Logic4_DmgDealt	leaf-check items: party_ball runs it from captured item states
+itKusudama_Logic4_Clanked	leaf-check items: party_ball runs it from captured item states
+itKusudama_Logic4_HitShield	leaf-check items: party_ball runs it from captured item states
+itKusudama_Logic4_Reflected	leaf-check items: party_ball runs it from captured item states
+itKusudama_Logic4_DmgReceived	leaf-check items: party_ball runs every captured call
+itKusudama_Logic4_EvtUnk	leaf-check items: party_ball runs it from captured item states
+gm_8017E068	leaf-check items: one_player_level runs it from captured item states
+it_8026BB20	leaf-check items: party_ball's it_8028A544 runs it from captured item states
+it_80272A18	leaf-check items: party_ball's it_8028A544 runs it from captured item states

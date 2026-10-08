@@ -556,9 +556,8 @@ pub fn open(r: &mut Running, gobj: GObjId) {
     play_sfx(r, gobj, 0xFB, 0x7F, 0x40);
     let pos = item(r.game, gobj).pos;
     crate::game::camera::request_quake(r, 2, Some(pos));
-    let zero = Vec3::new(0.0, 0.0, 0.0);
-    if !drop::drop_coins(r, gobj, pos, Some(zero))
-        && drop::drop_monster(r, Some(gobj), pos, Some(zero)).is_none()
+    if !drop::drop_coins(r, gobj, pos, None)
+        && drop::drop_monster(r, Some(gobj), pos, None).is_none()
     {
         drop::drop_contents(r, gobj, 1, false);
     }

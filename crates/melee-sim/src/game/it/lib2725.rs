@@ -647,3 +647,9 @@ pub fn rumble_all(r: &mut Running, kind: i32, frames: i32) {
 pub fn hide_tree(game: &mut Game, j: Option<JObjId>) {
     jobj::set_flags_all(&mut game.objs.jobjs, j, jobj::HIDDEN);
 }
+
+/// Shows a joint tree, `it_80272A18`.
+#[doc(alias = "it_80272A18")]
+pub fn show_tree(game: &mut Game, j: Option<JObjId>) {
+    jobj::clear_flags_all(&mut game.objs.jobjs, j, jobj::HIDDEN);
+}

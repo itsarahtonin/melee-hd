@@ -10,6 +10,7 @@ pub mod gshell;
 pub mod hammer;
 pub mod hammerhead;
 pub mod heart;
+pub mod kusudama;
 pub mod rshell;
 pub mod sword;
 pub mod taru;
@@ -25,6 +26,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || capsule::run_event(r, gobj, addr)
         || heart::run_event(r, gobj, addr)
         || tomato::run_event(r, gobj, addr)
+        || kusudama::run_event(r, gobj, addr)
         || taru::run_event(r, gobj, addr)
         || crate_box::run_event(r, gobj, addr)
         || bombhei::run_event(r, gobj, addr)
@@ -43,6 +45,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| capsule::run_pred(r, gobj, addr))
         .or_else(|| heart::run_pred(r, gobj, addr))
         .or_else(|| tomato::run_pred(r, gobj, addr))
+        .or_else(|| kusudama::run_pred(r, gobj, addr))
         .or_else(|| taru::run_pred(r, gobj, addr))
         .or_else(|| crate_box::run_pred(r, gobj, addr))
         .or_else(|| bombhei::run_pred(r, gobj, addr))

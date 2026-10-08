@@ -688,9 +688,29 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     debug_owner_bubbles(r.game, gobj, owner);
     super::lib279c::track_spawn(r, gobj, spawn);
     super::anim::clear_overlay(item_mut(r.game, gobj));
-    // `ItUnkHoldKind`: enemies and stage items in single-player modes.
+    hold_kind_scale(r, gobj);
+}
+
+/// The CPU level of the single-player mode being played, `gm_8017E068`: -1 outside Classic,
+/// Adventure and All-Star.
+#[doc(alias = "gm_8017E068")]
+pub fn one_player_cpu_level(r: &Running) -> i32 {
+    // `fn_8017DF28`: those modes' records.
+    if (3..=5).contains(&r.game.gr.game_mode) {
+        code::unported_call("fn_8017DF28 (a single-player mode's record)");
+    }
+    -1
+}
+
+/// Enemies and stage items take the common data's damage scale for the single-player mode's
+/// CPU level (`ItUnkHoldKind`).
+fn hold_kind_scale(r: &mut Running, gobj: GObjId) {
     if matches!(super::item(r.game, gobj).hold_kind, 4..=7) {
-        code::unported_call("gm_8017E068 (an item's single-player damage scale)");
+        let level = one_player_cpu_level(r);
+        if level >= 0 {
+            let c = common_data(r.game).f32(r.data, common::X80 + 4 * level as u32);
+            item_mut(r.game, gobj).xC3C = c;
+        }
     }
 }
 

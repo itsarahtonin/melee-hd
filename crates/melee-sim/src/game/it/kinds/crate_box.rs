@@ -175,11 +175,10 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80286248")]
 pub fn drop_items(r: &mut Running, gobj: GObjId, w1: i32, w2: i32, w3: i32, special: i32) {
     let pos = item(r.game, gobj).pos;
-    let zero = Vec3::new(0.0, 0.0, 0.0);
-    if drop::drop_coins(r, gobj, pos, Some(zero)) {
+    if drop::drop_coins(r, gobj, pos, None) {
         return;
     }
-    if drop::drop_monster(r, Some(gobj), pos, Some(zero)).is_some() {
+    if drop::drop_monster(r, Some(gobj), pos, None).is_some() {
         return;
     }
     let same = r.game.objs.rng.below(special) == 0;

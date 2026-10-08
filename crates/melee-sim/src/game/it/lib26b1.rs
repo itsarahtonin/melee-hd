@@ -177,3 +177,10 @@ pub fn hide(game: &mut Game, gobj: GObjId) {
     let j = super::jobj_of(game, gobj);
     super::lib2725::hide_tree(game, j);
 }
+
+/// Shows the item's model, `it_8026BB20`.
+#[doc(alias = "it_8026BB20")]
+pub fn show(game: &mut Game, gobj: GObjId) {
+    let j = super::jobj_of(game, gobj);
+    super::lib2725::show_tree(game, j);
+}
