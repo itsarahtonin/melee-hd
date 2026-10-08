@@ -2617,3 +2617,36 @@ un_803224DC	leaf-check audio: crowd_calls runs saved calls of the crowd from a F
 un_80322598	leaf-check audio: crowd_calls runs saved calls of the crowd from a Final Destination and a four-player Battlefield match, crowd_varied its process and entry points from those states with the crowd, the fighters' knockback, percent and height, and the arguments changed; the crowd's state, the audio state and the players' bonus counts compared
 lbAudioAx_800240B4	leaf-check audio: crowd_calls and crowd_varied play the crowd's chants and cheers through it
 lbAudioAx_8002411C	leaf-check audio: crowd_calls and crowd_varied play the crowd's chants and cheers through it
+fn_80026650	leaf-check audio timeline_entry: the bank loads' callback picks the next background bank through it; the whole audio state compared every tick
+fn_80026C04	leaf-check audio timeline_entry: every bank load the scene entry makes ends in it; the whole audio state compared every tick
+fn_800267B0	leaf-check audio timeline_entry: lbAudioAx_80027168 makes room through it; the whole audio state compared every tick
+fn_800268B4	leaf-check audio timeline_entry: lbAudioAx_80027168 counts the banks through it; the whole audio state compared every tick
+fn_800269AC	leaf-check audio timeline_entry: lbAudioAx_80027168 cancels the background loads through it; the whole audio state compared every tick
+fn_80027488	leaf-check audio timeline_entry: lbAudioAx_8002785C's inlined wait for the banks, at its logged return; the whole audio state compared every tick
+lbAudioAx_80026E84	leaf-check audio match_bank_choice: every character's banks, from the boot's bank choice states
+lbAudioAx_80026EBC	leaf-check audio match_bank_choice: the stage's banks, from the boot's bank choice states
+lbAudioAx_80026F2C	leaf-check audio timeline_entry (every logged call), match_bank_choice
+lbAudioAx_8002702C	leaf-check audio timeline_entry (every logged call), match_bank_choice
+lbAudioAx_80027168	leaf-check audio timeline_entry: every logged call; the whole audio state compared every tick
+lbAudioAx_80027648	leaf-check audio timeline_entry: every logged call, and inlined at lbAudioAx_8002785C's logged return; the whole audio state compared every tick
+lbAudioAx_8002785C	leaf-check audio match_bank_choice (its choice, the loads stood in for) and timeline_entry (its loads and wait, from its logged inner calls)
+OSAllocFromHeap	leaf-check audio timeline_entry (every bank group and queue node block), bank_calls; the audio heap compared every tick
+OSFreeToHeap	leaf-check audio timeline_entry, bank_group_remove; the audio heap compared after every run
+HSD_SynthSFXSampleLoadCallback	leaf-check audio timeline_entry: every bank load the scene entry makes; the whole audio state compared every tick
+HSD_SynthSFXHeaderLoadCallback	leaf-check audio timeline_entry: every bank load the scene entry makes; the whole audio state compared every tick
+HSD_SynthSFXLoadNewProc	leaf-check audio timeline_entry, bank_calls: each load the queue starts
+HSD_SynthSFXLoad	leaf-check audio bank_calls (every saved call), timeline_entry (every logged call)
+HSD_SynthSFXWaitForLoadCompletion	leaf-check audio timeline_entry: every logged call, with its wait on the timeline
+HSD_SynthSFXGetPendingLoadCount	leaf-check audio timeline_entry: the waits for the loads count through it
+HSD_SynthSFXCancelLoad	leaf-check audio bank_calls (every saved call), timeline_entry (every logged call)
+HSD_SynthSFXAllocateBank	leaf-check audio bank_calls: every saved call
+HSD_SynthSFXUnloadBank	leaf-check audio bank_calls: every saved call
+HSD_SynthSFXDataUnlink	leaf-check audio bank_group_remove: every effect of each removed group
+HSD_SynthSFXGroupDataRemove	leaf-check audio bank_group_remove: each of the first three groups, from every saved bank unload state
+HSD_SynthSFXGroupDataReaddressCallback	leaf-check audio bank_deflag_moves: with one and three moves outstanding
+HSD_SynthSFXGroupDataReaddress	leaf-check audio bank_deflag_moves: the bank's start moved down 0x20 and 0x1000 bytes before each saved deflag
+HSD_SynthSFXBankDeflag	leaf-check audio bank_calls (every saved call), bank_deflag_moves, timeline_entry
+HSD_SynthSFXBankDeflagSync	leaf-check audio timeline_entry: every logged call
+HSD_SynthSFXStopRange	leaf-check audio bank_calls, bank_deflag_moves, timeline_entry: every unload and deflag stops its bank's effects through it
+HSD_AudioPStreamStartChParam	leaf-check audio timeline_entry: the match's music start, logged; the whole audio state compared every tick
+HSD_DevComCancelEx	leaf-check audio bank_calls, timeline_entry: every load cancel

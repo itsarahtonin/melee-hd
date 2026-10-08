@@ -12,6 +12,7 @@ use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
 use super::super::code::{self, Val};
+use super::super::ft::data::MAIN_MEMORY;
 use super::super::handles::CodeRef;
 use super::super::pl::player::{PKIND_HUMAN, PKIND_NONE};
 use super::super::state::{Event, Game, Running};
@@ -1670,11 +1671,14 @@ impl Running<'_> {
         super::super::camera::init(&mut self.game.camera, 70);
         super::super::camera::create(self.game);
         self.game.init_vs(d);
+        // The scene's files load where the original loads them, timed on the audio timeline.
+        self.disc_load("LbRf.dat", MAIN_MEMORY);
         self.game.refract_init(self.data, files.lb_rf);
         code::call(self, addr::LB_8000FCDC, &[]);
         code::call(self, addr::EFLIB_INIT, &[]);
         code::call(self, addr::EFASYNC_LOAD_SYNC, &[Val::Int(0)]);
         code::call(self, addr::EFASYNC_LOAD_SYNC, &[Val::Int(0x1F)]);
+        self.disc_load("PdPm.dat", MAIN_MEMORY);
         self.game.load_player_common(self.data, files.pdpm);
         super::super::gr::setup::reset_devices(self.game);
         self.game.coll.reset();
@@ -1688,7 +1692,13 @@ impl Running<'_> {
         code::call(self, addr::ITEM_80266F70, &[]);
         super::super::it::item::init_globals(self.game, self.data);
         super::super::it::spawn::setup(self);
-        self.game.audio(0x8002_785C, [0; 4]);
+        // The match's sound banks load through the device command queue when the boot left a
+        // timeline to time them; a match from its settings alone leaves them to the frontend.
+        if self.game.audio.clock.is_some() {
+            self.lb_load_match_banks();
+        } else {
+            self.game.audio(0x8002_785C, [0; 4]);
+        }
         code::call(self, addr::STAGE_8022524C, &[]);
         let tilt = self.game.stage_info.cam_info.cam_vertical_tilt;
         super::super::camera::set_default_fov(&mut self.game.camera, tilt);
@@ -1696,12 +1706,17 @@ impl Running<'_> {
         code::call(self, addr::STAGE_80225298, &[]);
         self.enable_match_camera();
         super::super::camera::snap(self);
+        self.disc_load("GmPause.usd", MAIN_MEMORY);
         super::pause::create(self, files.gm_pause);
         code::call(self, addr::SFX_SETUP_CROWD_SFX, &[]);
         if let Some(f) = self.game.vs.start.on_unpause_override {
             code::call(self, f.0, &[Val::Int(0)]);
             super::super::camera::snap(self);
         }
+        // `NameTag` setup's `SdIntro.dat`, then the coin counter's `IfCoGet.dat`; `IfAll`
+        // stays loaded from before the match.
+        self.disc_load("SdIntro.dat", MAIN_MEMORY);
+        self.disc_load("IfCoGet.dat", MAIN_MEMORY);
         self.create_hud(files.hud);
         self.bg_flash_init(0xFF, files.lb_bf);
         if let Some(f) = d.rules.on_match_start {

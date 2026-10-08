@@ -904,7 +904,7 @@ impl crate::audio::Audio {
 }
 
 /// `ssm_files`.
-const SSM_NAMES: [&str; 55] = [
+pub const SSM_NAMES: [&str; 55] = [
     "main.ssm",
     "pokemon.ssm",
     "nr_title.ssm",
