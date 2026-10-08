@@ -38,6 +38,15 @@ pub fn framerate(objs: &Objects, j: Option<JObjId>) -> f32 {
     }
 }
 
+/// The tree's animation's last frame, `lbGetJObjEndFrame`.
+#[doc(alias = "lbGetJObjEndFrame")]
+pub fn end_frame(objs: &Objects, j: Option<JObjId>) -> f32 {
+    match with_aobj(&objs.jobjs, j) {
+        Some(j) => objs.aobjs[objs.jobjs[j].aobj.unwrap()].end_frame,
+        None => 0.0,
+    }
+}
+
 /// The tree's animation frame, `lbGetJObjCurrFrame`.
 #[doc(alias = "lbGetJObjCurrFrame")]
 pub fn current_frame(objs: &Objects, j: Option<JObjId>) -> f32 {
@@ -108,6 +117,79 @@ pub fn blend(jobjs: &mut JObjs, a: JObjId, b: JObjId, out: JObjId, t: f64, t_inv
     };
     let q1 = as_quat(&ja, quat_a);
     let mut q2 = as_quat(&jb, quat_b);
+    let sq = |x: f64| fp::fmuls(x, x);
+    let (x1, y1, z1, w1) = (reg(q1.x), reg(q1.y), reg(q1.z), reg(q1.w));
+    let (x2, y2, z2, w2) = (reg(q2.x), reg(q2.y), reg(q2.z), reg(q2.w));
+    let (sx, sy) = (sq(fp::fadds(x1, x2)), sq(fp::fadds(y1, y2)));
+    let (sz, sw) = (sq(fp::fadds(z1, z2)), sq(fp::fadds(w1, w2)));
+    let (dx, dy) = (sq(fp::fsubs(x1, x2)), sq(fp::fsubs(y1, y2)));
+    let (dz, dw) = (sq(fp::fsubs(z1, z2)), sq(fp::fsubs(w1, w2)));
+    let sums = fp::fadds(sw, fp::fadds(sz, fp::fadds(sx, sy)));
+    let diffs = fp::fadds(dw, fp::fadds(dz, fp::fadds(dx, dy)));
+    if diffs > sums {
+        q2 = Quat {
+            x: mem(fp::fneg(x2)),
+            y: mem(fp::fneg(y2)),
+            z: mem(fp::fneg(z2)),
+            w: mem(fp::fneg(w2)),
+        };
+    }
+    jobjs[out].rotate = q1.slerp(q2, mem(t_inv));
+    jobj::set_flags(jobjs, Some(out), USE_QUATERNION);
+    jobj::set_flags(jobjs, Some(out), MTX_DIRTY);
+}
+
+/// Blends a joint description's pose (`desc`, weighted `t`) with joint `b`'s (weighted
+/// `t_inv`) into `out`, `lb_8000C868`: as [`blend`], `b`'s quaternion flag alone deciding
+/// whether the rotations can stay Euler angles.
+#[doc(alias = "lb_8000C868")]
+pub fn blend_from_desc(
+    jobjs: &mut JObjs,
+    data: &Archives,
+    desc: DataRef,
+    b: JObjId,
+    out: JObjId,
+    t: f64,
+    t_inv: f64,
+) {
+    let (ra, sa, ta) = joint_srt(data, desc);
+    let jb = jobjs[b].clone();
+    let lerp = |x: f32, y: f32| mem(fp::fmadds(reg(x), t, fp::fmuls(reg(y), t_inv)));
+    {
+        let o = &mut jobjs[out];
+        o.translate.x = lerp(ta.x, jb.translate.x);
+        o.translate.y = lerp(ta.y, jb.translate.y);
+        o.translate.z = lerp(ta.z, jb.translate.z);
+        o.scale.x = lerp(sa.x, jb.scale.x);
+        o.scale.y = lerp(sa.y, jb.scale.y);
+        o.scale.z = lerp(sa.z, jb.scale.z);
+    }
+    let quat_b = jb.flags & USE_QUATERNION != 0;
+    if !quat_b {
+        let abs = |d: f64| if d < 0.0 { fp::fneg(d) } else { d };
+        let d = |x: f32, y: f32| abs(fp::fsubs(reg(x), reg(y)));
+        let rb = jb.rotate;
+        if d(ra.x, rb.x) <= 9.999999747378752e-05
+            && d(ra.y, rb.y) <= 9.999999747378752e-05
+            && d(ra.z, rb.z) <= 9.999999747378752e-05
+        {
+            let o = &mut jobjs[out];
+            (o.rotate.x, o.rotate.y, o.rotate.z) = (ra.x, ra.y, ra.z);
+            jobj::clear_flags(jobjs, Some(out), USE_QUATERNION);
+            jobj::set_flags(jobjs, Some(out), MTX_DIRTY);
+            return;
+        }
+    }
+    let q1 = Quat::from_euler(Vec3::new(ra.x, ra.y, ra.z));
+    let mut q2 = if quat_b {
+        jb.rotate
+    } else {
+        Quat::from_euler(Vec3::new(
+            copy(jb.rotate.x),
+            copy(jb.rotate.y),
+            copy(jb.rotate.z),
+        ))
+    };
     let sq = |x: f64| fp::fmuls(x, x);
     let (x1, y1, z1, w1) = (reg(q1.x), reg(q1.y), reg(q1.z), reg(q1.w));
     let (x2, y2, z2, w2) = (reg(q2.x), reg(q2.y), reg(q2.z), reg(q2.w));

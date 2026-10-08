@@ -445,7 +445,7 @@ impl Running<'_> {
         }
     }
 
-    /// A jump input this frame, `ftCo_Jump_GetInput`: 1 tapping up, 2 on X or Y, 0 none.
+    /// A jump input this frame, `ftCo_Jump_GetInput`: 1 tapping up, 3 on X or Y, 0 none.
     #[doc(alias = "ftCo_Jump_GetInput")]
     pub fn jump_input(&self, gobj: GObjId) -> i32 {
         let c = self.common();
@@ -455,7 +455,7 @@ impl Running<'_> {
             return 1;
         }
         if fp.input.pressed_buttons & PAD_XY != 0 {
-            return 2;
+            return 3;
         }
         0
     }

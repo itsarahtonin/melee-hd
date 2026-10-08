@@ -78,7 +78,7 @@ impl Running<'_> {
             unported_call("itGetKind");
         }
         if fp.ground_or_air != GA_GROUND {
-            unported_call("ftCommon_8007D7FC");
+            self.land(gobj);
         }
         self.change_motion_state(gobj, MS_WAIT, 0, 0.0, 1.0, blend, None);
         // `ftCo_8008A698`: holding an item not held in both hands plays `ftCo_MS_DeadUpFall`'s
@@ -105,7 +105,8 @@ impl Running<'_> {
         }
         // `ftCo_Fall_inline`.
         if fp.stamina_dead {
-            unported_call("ftCo_80090780");
+            self.enter_damage_fall(gobj);
+            return;
         }
         if fp.item_gobj.is_some() {
             unported_call("itGetKind");

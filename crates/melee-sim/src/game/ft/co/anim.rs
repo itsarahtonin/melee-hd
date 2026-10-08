@@ -30,15 +30,7 @@ impl Running<'_> {
         if self.game.fighter(gobj).stamina_dead {
             self.enter_down_spot(gobj);
         } else {
-            self.wait_anim_tick(gobj);
-        }
-    }
-
-    /// `ftCo_8008A7A8`: when the idle animation ends, the next is picked (not ported yet:
-    /// only the check that it hasn't ended).
-    fn wait_anim_tick(&mut self, gobj: GObjId) {
-        if !self.anim_frames_remaining(gobj) {
-            unported_call("ftCo_8008A7A8");
+            self.wait_anim_tick(gobj, 0x24);
         }
     }
 
@@ -74,6 +66,7 @@ impl Running<'_> {
 
     /// `ftCo_Jump_Anim`.
     #[doc(alias = "ftCo_Jump_Anim")]
+    #[doc(alias = "ftCo_Pass_Anim")]
     pub fn co_jump_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_fall(gobj);
@@ -85,23 +78,6 @@ impl Running<'_> {
     pub fn co_jump_aerial_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_fall_aerial(gobj);
-        }
-    }
-
-    /// `ftCo_KneeBend_Anim`: the jump leaves the ground after the character's jump squat.
-    #[doc(alias = "ftCo_KneeBend_Anim")]
-    pub fn co_knee_bend_anim(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter(gobj);
-        if fp.cur_anim_frame >= fp.co_attrs.jump_startup_time || !self.anim_frames_remaining(gobj) {
-            unported_call("ftCo_Jump_Enter");
-        }
-    }
-
-    /// `ftCo_EscapeAir_Anim`.
-    #[doc(alias = "ftCo_EscapeAir_Anim")]
-    pub fn co_escape_air_anim(&mut self, gobj: GObjId) {
-        if !self.anim_frames_remaining(gobj) {
-            unported_call("ftCo_80096900");
         }
     }
 
@@ -211,7 +187,23 @@ impl Running<'_> {
         let x4 = reg(fp.mv_f32(4));
         fp.set_mv_f32(4, fp::fmadds(ease, fp::fsubs(target, x4), x4));
         if fp.mv_f32(4) != 0.0 && smid != fp.mv_i32(0) {
-            unported_call("ftAnim_8006EDD0");
+            let frame = fp.cur_anim_frame;
+            let f = self.game.fighter_id(gobj);
+            self.play_second_anim(f, smid, frame, 1.0);
+            let skel = self.game.fighters[f.0].x8AC_animSkeleton;
+            jobj::anim_all(
+                &mut self.game.objs,
+                self.data,
+                &mut crate::game::code::ParticleHooks,
+                skel,
+            );
+            let lean = self.game.fighters[f.0].mv_f32(4);
+            if lean != 1.0 {
+                self.blend_parts(f, TRANS_N, reg(lean), fp::fsubs(1.0, reg(lean)));
+            } else {
+                self.copy_parts(f, TRANS_N);
+            }
+            self.game.fighters[f.0].set_mv_i32(0, smid);
         }
     }
 
@@ -223,7 +215,7 @@ impl Running<'_> {
         if !self.anim_frames_remaining(gobj) && !fp.x221C_b6 {
             if fp.ground_or_air == GA_AIR {
                 if fp.stamina_dead {
-                    unported_call("ftCo_80090780");
+                    self.enter_damage_fall(gobj);
                 } else if !self.damage_tech(gobj) {
                     self.enter_fall(gobj);
                 }
@@ -236,18 +228,11 @@ impl Running<'_> {
     /// `ftCo_DamageFly_Anim`: the tumble trail's timer, hitstun, then tumbling.
     #[doc(alias = "ftCo_DamageFly_Anim")]
     pub fn co_damage_fly_anim(&mut self, gobj: GObjId) {
-        // `inlineD0`: the knockback smoke's timer.
-        let fp = self.game.fighter_mut(gobj);
-        if fp.mv_i32(8) != 0 {
-            fp.set_mv_i32(8, fp.mv_i32(8).wrapping_sub(1));
-            if fp.mv_i32(8) == 0 {
-                unported_call("efAsync_Spawn");
-            }
-        }
+        self.knockback_smoke(gobj);
         self.damage_tick(gobj);
         let fp = self.game.fighter(gobj);
         if !self.anim_frames_remaining(gobj) && !fp.x221C_b6 && !self.damage_tech(gobj) {
-            unported_call("ftCo_80090780");
+            self.enter_damage_fall(gobj);
         }
     }
 
@@ -267,7 +252,7 @@ impl Running<'_> {
     /// `ftCo_8008F744`: hitstun (`mv` x0) counts down; at its end the fighter can act and its
     /// combo window opens.
     #[doc(alias = "ftCo_8008F744")]
-    fn damage_tick(&mut self, gobj: GObjId) {
+    pub(super) fn damage_tick(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.mv_f32(0) > 0.0 {
             fp.set_mv_f32(0, fp::fsubs(reg(fp.mv_f32(0)), 1.0));
@@ -307,5 +292,6 @@ impl Running<'_> {
 
     /// `ftCo_Sleep_Anim`: a sleeping fighter (Zelda while Sheik plays) does nothing.
     #[doc(alias = "ftCo_Sleep_Anim")]
+    #[doc(alias = "ftCo_DamageFall_Anim")]
     pub fn co_sleep_anim(&mut self, _gobj: GObjId) {}
 }

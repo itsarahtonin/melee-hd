@@ -4456,7 +4456,7 @@ impl Mirror for Fighter {
             x294_itPickup: itPickup::import(m, at + 0x294, cx),
             x2C4: Vec2::import(m, at + 0x2c4, cx),
             x2CC: RawPtr(m.u32(at + 0x2cc)),
-            x2D0: RawPtr(m.u32(at + 0x2d0)),
+            x2D0: cx.import_handle("AttrsId", m.u32(at + 0x2d0)).map(AttrsId),
             dat_attrs: cx.import_handle("AttrsId", m.u32(at + 0x2d4)).map(AttrsId),
             dat_attrs_backup: cx.import_handle("AttrsId", m.u32(at + 0x2d8)).map(AttrsId),
             x2DC: f32::from_bits(m.u32(at + 0x2dc)),
@@ -5092,13 +5092,12 @@ impl Mirror for Fighter {
                 format!("{:#x}", m.u32(at + 0x2cc)),
             );
         }
-        if self.x2D0.0 != m.u32(at + 0x2d0) {
-            cx.mismatch(
-                &format!("{path}.x2D0"),
-                format!("{:#x}", self.x2D0.0),
-                format!("{:#x}", m.u32(at + 0x2d0)),
-            );
-        }
+        cx.compare_handle(
+            &format!("{path}.x2D0"),
+            "AttrsId",
+            self.x2D0.map(|h| h.0),
+            m.u32(at + 0x2d0),
+        );
         cx.compare_handle(
             &format!("{path}.dat_attrs"),
             "AttrsId",

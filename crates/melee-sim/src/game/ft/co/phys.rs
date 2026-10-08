@@ -10,7 +10,7 @@ use crate::hsd::gobj::GObjId;
 use crate::math::{self, sqrt_reg};
 
 /// `FtPart_XRotN`.
-const X_ROT_N: i32 = 3;
+const X_ROT_N: i32 = 2;
 
 /// `ftCo_MS_DamageFlyRoll`.
 const MS_DAMAGE_FLY_ROLL: i32 = 0x5B;
@@ -26,13 +26,26 @@ impl Running<'_> {
     #[doc(alias = "ftCo_AttackLw3_Phys")]
     #[doc(alias = "ftCo_AttackLw4_Phys")]
     #[doc(alias = "ftCo_Turn_Phys")]
+    #[doc(alias = "ftCo_Squat_Phys")]
+    #[doc(alias = "ftCo_SquatRv_Phys")]
+    #[doc(alias = "ftCo_AttackHi4_Phys")]
+    #[doc(alias = "ftCo_EscapeN_Phys")]
     #[doc(alias = "ftFx_SpecialLwStart_Phys")]
+    #[doc(alias = "ftCo_DownBound_Phys")]
+    #[doc(alias = "ftCo_DownWait_Phys")]
+    #[doc(alias = "ftCo_DownStand_Phys")]
+    #[doc(alias = "ftCo_DownAttack_Phys")]
+    #[doc(alias = "ftCo_DownSpot_Phys")]
+    #[doc(alias = "ftCo_Passive_Phys")]
+    #[doc(alias = "ftCo_GuardOff_Phys")]
     pub fn co_ground_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
     }
 
     /// `ftCo_Wait_Phys`: friction, and the shield's hit position follows again.
     #[doc(alias = "ftCo_Wait_Phys")]
+    #[doc(alias = "ftCo_GuardSetOff_Phys")]
+    #[doc(alias = "ftCo_SquatWait_Phys")]
     pub fn co_wait_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
         // `ftColl_8007AEE0`.
@@ -41,9 +54,13 @@ impl Running<'_> {
 
     /// Gravity and drift: `ftCo_Fall_Phys`, `ftCo_AttackAir_Phys`, `ftCo_JumpAerial_Phys`.
     #[doc(alias = "ftCo_Fall_Phys")]
+    #[doc(alias = "ftCo_ItemScrewAir_Phys")]
     #[doc(alias = "ftCo_DamageFall_Phys")]
     #[doc(alias = "ftCo_AttackAir_Phys")]
     #[doc(alias = "ftCo_JumpAerial_Phys")]
+    #[doc(alias = "ftCo_FallAerial_Phys")]
+    #[doc(alias = "ftCo_Pass_Phys")]
+    #[doc(alias = "ftCo_MissFoot_Phys")]
     pub fn co_air_phys(&mut self, gobj: GObjId) {
         self.air_physics(gobj);
     }
@@ -61,6 +78,7 @@ impl Running<'_> {
 
     /// `ftCo_Damage_Phys`: in hitstun the fighter can't drift.
     #[doc(alias = "ftCo_Damage_Phys")]
+    #[doc(alias = "ftCo_DownDamage_Phys")]
     pub fn co_damage_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if fp.ground_or_air == GA_AIR {
@@ -134,6 +152,8 @@ impl Running<'_> {
     /// Ground friction or the animation's motion: `ftCo_Attack11_Phys`, `ftCo_AttackS4_Phys`.
     #[doc(alias = "ftCo_Attack11_Phys")]
     #[doc(alias = "ftCo_AttackS4_Phys")]
+    #[doc(alias = "ftCo_Down_Phys")]
+    #[doc(alias = "ftCo_PassiveStand_Phys")]
     pub fn co_attack_ground_phys(&mut self, gobj: GObjId) {
         self.ground_friction_or_anim(gobj);
     }
@@ -148,10 +168,11 @@ impl Running<'_> {
         self.ground_anim_motion(gobj, friction, facing);
     }
 
-    /// `ftCo_Guard_Phys`, `ftCo_GuardOn_Phys`: friction, and the shield's and reflector's hit
-    /// positions follow again.
+    /// `ftCo_Guard_Phys`, `ftCo_GuardOn_Phys`, `ftCo_GuardReflect_Phys`: friction, and the
+    /// shield's and reflector's hit positions follow again.
     #[doc(alias = "ftCo_Guard_Phys")]
     #[doc(alias = "ftCo_GuardOn_Phys")]
+    #[doc(alias = "ftCo_GuardReflect_Phys")]
     pub fn co_guard_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
         let fp = self.game.fighter_mut(gobj);
@@ -204,5 +225,9 @@ impl Running<'_> {
 
     /// `ftCo_ThrownLw_Phys`: nothing.
     #[doc(alias = "ftCo_ThrownLw_Phys")]
+    #[doc(alias = "ftCo_Ottotto_Phys")]
+    #[doc(alias = "ftCo_OttottoWait_Phys")]
+    #[doc(alias = "ftCo_StopWall_Phys")]
+    #[doc(alias = "ftCo_StopCeil_Phys")]
     pub fn co_no_phys(&mut self, _gobj: GObjId) {}
 }

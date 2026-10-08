@@ -1429,3 +1429,519 @@ lbRefract_8002247C	leaf-check display refract_camera: every max-link camera from
 lbRefract_80022560	leaf-check display refract_camera: from the light callbacks' states, with and without users
 lbRefract_80022BB8	leaf-check display refract_users: from the light callbacks' states with one to three users
 lbRefSetUnuse	leaf-check display refract_users: from the light callbacks' states with one to three users
+# The fighters' common action states (ftCommon), checked from saved fighter processes of
+# Final Destination and Battlefield replays by tools/leaf-check/tests/ftcommon.rs and ftcommon_entries.rs.
+lbGetJObjEndFrame	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+lb_8000C868	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+lb_8000D008	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftAnim_8006EDD0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftAnim_8006F484	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftAnim_80070010	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftAnim_80070108	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftAnim_80070A10	leaf-check ftcommon_entries: reached from the entries it serves in clean comparisons
+ftColl_8007B760	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCommon_CalcGroundAccel_DashRun	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCommon_SetGroundedKnockbackIfLanded	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCommon_CalcSelfAccel_AccelToVelClamped	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCommon_8007D60C	leaf-check ftcommon_entries: reached from the entries it serves in clean comparisons
+ftCommon_8007D6A4	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCommon_8007D780	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCommon_8007D7FC	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCommon_8007D92C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_GetLStickAngle	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_GetCStickAngle	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCommon_UpdateFacing	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCommon_8007DB24	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCommon_8007E2FC	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCommon_8007EBAC	leaf-check ftcommon_entries: reached from the entries it serves in clean comparisons
+ftCommon_800804A0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCliffCommon_80081298	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCliffCommon_80081370	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_CliffCatch_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_CliffCatch_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_CliffCatch_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_CliffCatch_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftWallJump_8008169C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_80081A00	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_80081D0C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_80081DD4	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_80081F2C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80082084	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_800821DC	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_CheckGroundAndLedge	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_8008239C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_800824A0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80082578	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80082708	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_80082838	leaf-check ftcommon_entries: reached from the entries it serves in clean comparisons
+ft_80082B1C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80082C74	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_80082D40	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80082E3C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80082F28	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_80083090	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_800831CC	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_80083318	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80083464	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_800835B0	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_8008370C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_80083844	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80083910	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80083A48	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80083B68	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80083C00	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80083F88	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_8008403C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_800841B8	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_800843FC	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_800844EC	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_800845B4	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_800846B0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_800847D0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_800848DC	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_80084A18	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_80084E1C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_800851D0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftData_80085E50	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_8008A244	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Wait_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Wait_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_8008A698	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8008A7A8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Attack1_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+checkAttack11	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Attack11_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Attack11_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Attack11_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+checkAttack12	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Attack12_Anim	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Attack12_IASA	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+checkAttack13	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Attack13_Anim	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Attack13_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_AttackDash_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_AttackDash_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackDash_SetMv0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_AttackDash_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackS3_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+decideAngle	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_AttackS3_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackS3_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackHi3_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_AttackHi3_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackHi3_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackLw3_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_AttackLw3_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackLw3_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackLw3_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackS4_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_AttackS4_8008C114	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_AttackS4_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackS4_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackHi4_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_AttackHi4_CheckInputNoD0	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_AttackHi4_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackHi4_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackHi4_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackHi4_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackLw4_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_AttackLw4_Anim	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_AttackLw4_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackLw4_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackAir_CheckItemThrowInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_AttackAir_GetMsidFromCStick	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_AttackAir_EnterFromCStick	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_AttackAir_EnterFromMsid	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_AttackAirN_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackAirF_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackAirB_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackAirHi_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackAirLw_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_AttackAir_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_LandingAir_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_LandingAir_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+doIasa	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Damage_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Damage_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_8008FC94	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DamageFly_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DamageFly_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_80090184	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DamageFlyRoll_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DamageFlyRoll_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DamageFlyRoll_Phys	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DamageFlyRoll_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_80090780	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DamageFall_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DamageFall_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DamageFall_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_80090984	leaf-check ftcommon_entries: reached from the entries it serves in clean comparisons
+ftCo_80091A4C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80091AD8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80091B90	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80091B9C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80091BC4	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80091D58	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80091E78	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80092158	leaf-check ftcommon_entries: reached from the entries it serves in clean comparisons
+ftCo_800921DC	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800923B4	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80092450	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800924C0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800925A4	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_GuardOn_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_GuardOn_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_GuardOn_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800928CC	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80092908	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Guard_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Guard_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Guard_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_80092BCC	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80092BE8	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80092C54	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_GuardOff_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_GuardOff_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_GuardOff_Phys	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_GuardOff_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80092E50	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80092ED8	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80092F2C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80093240	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800932DC	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_GuardSetOff_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_GuardSetOff_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_GuardSetOff_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_GuardSetOff_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_80093694	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009370C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80093790	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80093850	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009388C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800939B4	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80093A50	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80093BC0	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_GuardReflect_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_GuardReflect_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_GuardReflect_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_GuardReflect_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_80094098	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80094138	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftpickupitem_80094790	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80094E54	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009515C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80095328	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009563C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_SpecialS_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_SpecialAir_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800968C8	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80096900	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800969D8	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_FallSpecial_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_FallSpecial_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_FallSpecial_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_FallSpecial_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_80096CC8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80096D28	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80097570	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DownBound_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DownBound_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DownBound_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DownBound_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_80097E8C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80097F38	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DownWait_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DownWait_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DownWait_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DownWait_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800980BC	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80098160	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DownStand_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DownStand_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DownStand_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DownStand_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Down_CheckInput	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Down_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Down_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Down_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Down_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_80098400	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800984D4	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009856C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DownAttack_Anim	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_DownAttack_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_DownAttack_Phys	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_DownAttack_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_800986B0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009872C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Passive_Anim	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Passive_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Passive_Phys	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Passive_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_80098928	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_PassiveStand_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_PassiveStand_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_PassiveStand_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_PassiveStand_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_8009917C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80099264	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800992A8	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80099314	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Escape_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Escape_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Escape_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Escape_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_80099794	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009980C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80099894	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800998EC	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_EscapeN_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_EscapeN_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_EscapeN_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_80099A58	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80099A9C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_EscapeAir_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_EscapeAir_Coll	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80099F1C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_80099F9C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009A080	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009A134	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009A184	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009A228	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Pass_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Pass_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Pass_Phys	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Pass_Coll	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009A410	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Ottotto_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Ottotto_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Ottotto_Phys	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Ottotto_Coll	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009A6B8	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_OttottoWait_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_OttottoWait_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_OttottoWait_Phys	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_OttottoWait_Coll	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009A804	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_CliffWait_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_CliffWait_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_CliffWait_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_8009AA0C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009AAFC	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009AB9C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_CliffClimb_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_CliffClimb_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_CliffClimb_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_CliffClimb_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_8009AE14	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009AE38	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009AEA4	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_CliffAttack_Anim	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_CliffAttack_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_CliffAttack_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_CliffAttack_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009AFD4	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009B040	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_CliffEscape_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_CliffEscape_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_CliffEscape_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_CliffEscape_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009B170	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009B1B8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_CliffJump1_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_CliffJump1_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_CliffJump1_Phys	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_CliffJump1_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_CliffJump2_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_CliffJump2_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_CliffJump2_Phys	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_CliffJump2_Coll	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009EDA4	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_StopWall_Anim	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_StopWall_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_StopWall_Phys	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_StopWall_Coll	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009EF68	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_8009EFA4	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_StopCeil_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_StopCeil_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_StopCeil_Phys	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_StopCeil_Coll	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009F0F0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DownDamage_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DownDamage_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DownDamage_Phys	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_DownDamage_Coll	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009F39C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_MissFoot_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_MissFoot_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_MissFoot_Phys	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_MissFoot_Coll	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Sleep_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_800C3B10	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800C703C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800C7CA0	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_DownSpot_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DownSpot_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_DownSpot_Phys	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_DownSpot_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Walk_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Walk_CheckInput_Ottotto	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Walk_Enter	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Walk_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Walk_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Walk_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Walk_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_800C97A8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Turn_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Turn_Enter	leaf-check ftcommon_entries: reached from the entries it serves in clean comparisons
+ftCo_Turn_Enter_Basic	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Turn_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Turn_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+fn_800C9C2C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Turn_Enter_Smash	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+fn_800C9CEC	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+fn_800C9D40	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_TurnRun_Enter	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_TurnRun_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_TurnRun_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_TurnRun_Phys	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_TurnRun_Coll	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Dash_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Dash_Enter	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Dash_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Dash_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Dash_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Dash_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+fn_800CA5F0	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+fn_800CA644	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+fn_800CA698	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Run_Enter	leaf-check ftcommon_entries: reached from the entries it serves in clean comparisons
+ftCo_Run_Enter_Full	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Run_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Run_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Run_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Run_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_RunBrake_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_RunBrake_Enter	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_RunBrake_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_RunBrake_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_RunBrake_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Jump_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+fn_800CAF78	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800CB024	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800CB110	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Jump_Enter	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Jump_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Jump_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_KneeBend_Enter	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_KneeBend_Check_ShortHop	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_KneeBend_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_KneeBend_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ft_800CB6EC	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ft_did_jump	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800CB870	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800CB8E0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_JumpAerial_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800CBAC4	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_JumpAerial_Enter_Basic	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_JumpAerial_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_JumpAerial_Phys_Cb	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_JumpAerial_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_800CC988	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Fall_IASA_Inner	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Fall_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Fall_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_FallAerial_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_FallAerial_IASA	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_FallAerial_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_FallAerial_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800CECE8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_AttackS42_IASA	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800CEE70	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800D0EC8	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ft_800D2D0C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_ItemScrewAir_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_ItemScrewAir_IASA	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_ItemScrewAir_Phys	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_ItemScrewAir_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Landing_Enter	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_LandingFallSpecial_Enter	leaf-check ftcommon_entries: reached from the entries it serves in clean comparisons
+ftCo_Landing_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Landing_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Squat_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+fn_800D5F84	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800D5FB0	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Squat_Enter	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Squat_Anim	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Squat_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Squat_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Squat_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_SquatWait_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+fn_800D62C4	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800D638C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_SquatWait_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_SquatWait_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_SquatWait_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_SquatWait_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_SquatRv_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_SquatRv_Enter	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_SquatRv_Anim	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_SquatRv_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_SquatRv_Phys	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_SquatRv_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800D6824	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800D68C0	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_Attack100_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800D69C4	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_Attack_800D6A50	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800D705C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800D7100	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800D7268	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800D72A0	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800D730C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_JumpAerialF1_Anim	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_JumpAerialF1_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_JumpAerialF1_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_JumpAerialF1_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
+ftCo_Catch_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800D8A38	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800D8B9C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800DE9B8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800DE9D8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800DF1C8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800DF21C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800DF2D8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800DF30C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800DF3A8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800DF3DC	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800DF478	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800DF644	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800DF678	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800DF6F8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800DF72C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800DF79C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_800DF910	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftWalkCommon_GetWalkType	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftWalkCommon_800DFC70	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftWalkCommon_800DFDDC	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftWalkCommon_800DFEC8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftWalkCommon_800E0060	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftFx_AppealS_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftKb_SpecialN_800F1F1C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftPe_8011BA54	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftPe_8011BAD8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+grCorneria_801E2CE8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftWalkCommon_800DFCA4	leaf-check ftcommon_entries: ftCo_Walk_Enter, run directly and compared clean, always enters the walk through it
+ftCo_Damage_SetMv8FromKbThreshold	leaf-check ftcommon_entries: run directly from saved fighter states, and from ftCo_DamageFly_Anim with the knockback smoke's timer running out, compared clean
+ftCo_800976A4	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800978D4	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009794C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80097D40	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80097D88	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800987D0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009B2F8	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80099D70	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80097630	leaf-check ftcommon_entries: ftCo_800976A4, compared clean, plays the impact sound through it
+ft_80084A80	leaf-check ftcommon_entries: ftCo_800976A4, compared clean, reads the floor's sounds through it (set 2)
+ft_80084C74	leaf-check ftcommon_entries: ftCo_800976A4, compared clean, reads the floor's third sound set through it

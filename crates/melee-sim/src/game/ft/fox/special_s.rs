@@ -427,8 +427,7 @@ impl Running<'_> {
     /// `ftFx_SpecialSEnd_Coll`: falling off the edge.
     #[doc(alias = "ftFx_SpecialSEnd_Coll")]
     pub fn fox_special_s_end_coll(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        if !self.ground_coll_slide(f) {
+        if !self.ground_coll_slide(gobj) {
             self.enter_fall(gobj);
         }
     }

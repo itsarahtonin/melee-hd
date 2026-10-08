@@ -29,6 +29,7 @@ fn with_coll<R>(
         objs: &mut game.objs,
         data: r.data,
         dynamic_attrs: &game.gr.dynamic_attrs,
+        filter: None,
     };
     let mut coll = Coll {
         g: game.geometry.as_mut().expect("no collision geometry"),

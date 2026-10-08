@@ -8,7 +8,6 @@ use super::super::code::unported_call;
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::super::structs::{Fighter, ftCollisionBox};
-use super::common::GA_GROUND;
 use crate::fpu::{copy, mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -40,7 +39,7 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         if fp.smash_attrs.x2135 == -1 && self.land_on_spawn(f) && !self.game.fighters[f.0].x2229_b6
         {
-            self.land(f);
+            self.touch_ground(gobj);
         } else {
             self.go_airborne(f);
         }
@@ -331,7 +330,7 @@ impl Running<'_> {
         }
         self.load_special_attrs(gobj);
         let fp = &self.game.fighters[f.0];
-        if fp.x2D0.0 != 0 {
+        if fp.x2D0.is_some() {
             unported_call("ftCo_800D0CBC");
         }
         if fp.x2222_b0 {
@@ -428,6 +427,7 @@ impl Running<'_> {
             objs: &mut game.objs,
             data: self.data,
             dynamic_attrs: &game.gr.dynamic_attrs,
+            filter: None,
         };
         let mut coll = Coll {
             g: geometry,
@@ -469,6 +469,7 @@ impl Running<'_> {
             objs: &mut game.objs,
             data: self.data,
             dynamic_attrs: &game.gr.dynamic_attrs,
+            filter: None,
         };
         let mut coll = Coll {
             g: geometry,
@@ -487,41 +488,6 @@ impl Running<'_> {
         } else {
             false
         }
-    }
-
-    /// Puts the fighter on the ground it stands on, `ftCommon_8007D6A4`; the original asserts
-    /// the floor is one.
-    #[doc(alias = "ftCommon_8007D6A4")]
-    fn land(&mut self, f: FighterId) {
-        let fp = &mut self.game.fighters[f.0];
-        if super::anim::x594_bit(fp, 0) {
-            fp.self_vel.x = mem(fp::fmuls(reg(fp.x6A4_transNOffset.z), reg(fp.facing_dir)));
-        }
-        // `ftCommon_ClampGroundVel`.
-        let max = reg(fp.co_attrs.ground_max_horizontal_velocity);
-        if reg(fp.gr_vel) < fp::fneg(max) {
-            fp.gr_vel = mem(fp::fneg(max));
-        } else if reg(fp.gr_vel) > max {
-            fp.gr_vel = mem(max);
-        }
-        fp.ground_or_air = GA_GROUND;
-        fp.gr_vel = fp.self_vel.x;
-        fp.x1968_jumpsUsed = 0;
-        fp.x1969_walljumpUsed = 0;
-        fp.x2227_b0 = false;
-        super::fighter::unlock_ecb(fp);
-        let line = fp.coll_data.floor.index;
-        // `ft_80084A18`.
-        let live = self
-            .game
-            .geometry
-            .as_ref()
-            .expect("no collision geometry")
-            .line_live(line);
-        assert!(
-            live,
-            "the original's assertion failed: fighter ground error"
-        );
     }
 
     /// Fits the fighter's camera box to it, `ftCamera_80076064`.
