@@ -142,7 +142,7 @@ impl Importer<'_> {
         }
         let n = u32::from(self.cap.call.mem1[(data - crate::MEM1) as usize]);
         let off = p.wrapping_sub(base);
-        (off % IMAGE_DESC == 0 && off / IMAGE_DESC < n).then(|| (off / IMAGE_DESC) as u8)
+        (off.is_multiple_of(IMAGE_DESC) && off / IMAGE_DESC < n).then_some((off / IMAGE_DESC) as u8)
     }
 
     /// Refraction's users, table, texture chains and projection.

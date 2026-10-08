@@ -347,7 +347,7 @@ const VIEW_DIRTY: u32 = 1 << 30;
 /// lights and fog with the fighters' lights, the particles, the light GObjs, the joint tree
 /// on link 15) and, on some, its view matrix left to rebuild.
 fn vary_camera(call: &mut Call, g: u32, i: usize) {
-    if i % 5 != 0 {
+    if !i.is_multiple_of(5) {
         let links: u64 = [
             1 << 0 | 1 << 4,
             1 << 7 | 1 << 8,
