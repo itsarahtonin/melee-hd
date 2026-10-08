@@ -439,3 +439,130 @@ fn fog_callback() {
         },
     );
 }
+
+/// `lbRefract_800222A4` against the state it left: from each light callback's capture,
+/// refraction's chains are forgotten and made again from `LbRf.dat`, and the result compared
+/// with memory (the reference can't run it: it reads the disc). The capture's users and
+/// projection stay as they were.
+#[test]
+fn refract_init() {
+    use melee_capture::compare::Comparer;
+    use melee_capture::import::Importer;
+    use melee_capture::{Capture, DataMap, find_archives_in};
+    use melee_data::archive::Archives;
+    let Some(index) = leaf_check::disc_index() else {
+        return;
+    };
+    let mut checked = 0;
+    for d in dirs() {
+        for path in leaf_check::calls::saved_calls(&d, "HSD_GObj_LObjCallback") {
+            let cap = Capture::read(&path);
+            let mut archives = Archives::default();
+            let data = DataMap {
+                loaded: find_archives_in(index, &cap.call.mem1, &mut archives),
+            };
+            let lb_rf = data
+                .loaded
+                .iter()
+                .find(|l| l.name == "LbRf.dat")
+                .expect("LbRf.dat is loaded")
+                .id;
+            let mut imp = Importer::new(&cap, &data).with_archives(&archives);
+            imp.world();
+            imp.display();
+            // The world's own gaps (fighters' material classes) are other ports'.
+            let gaps: Vec<_> = imp
+                .unhandled
+                .iter()
+                .filter(|u| u.contains("refract") || u.contains("TObj image"))
+                .collect();
+            assert!(gaps.is_empty(), "{gaps:?}");
+            let Importer {
+                mut game, mut maps, ..
+            } = imp;
+            let mut chain = game.refract.tobjs.clone();
+            while let Some(t) = chain.pop() {
+                maps.tobjs.retain(|_, v| *v != t);
+                chain.extend(game.objs.tobjs[t].next);
+            }
+            let users = game.refract.users;
+            game.refract.tobjs.clear();
+            game.refract.data = None;
+            game.refract_init(&archives, lb_rf);
+            game.refract.users = users;
+            let mut cmp = Comparer::new(&cap.call.mem1, &data, &game, maps);
+            cmp.refract();
+            assert!(cmp.diffs.is_empty(), "{}: {:?}", path.display(), cmp.diffs);
+            checked += 1;
+        }
+    }
+    assert!(checked > 0 || dirs().is_empty());
+}
+
+/// Refraction's users counted up (`lbRefract_80022BB8`) and down (`lbRefSetUnuse`), from
+/// the light callbacks' states with one to three users.
+#[test]
+fn refract_users() {
+    let users = leaf_check::sym("lbl_804336D0");
+    for (func, up) in [("lbRefract_80022BB8", true), ("lbRefSetUnuse", false)] {
+        let addr = leaf_check::sym(func);
+        each(
+            "HSD_GObj_LObjCallback",
+            1,
+            &|call, i| {
+                call.addr = addr;
+                poke_u32(call, users, 1 + (i % 3) as u32);
+            },
+            &|r, _, _| {
+                if up {
+                    r.game.refract_use();
+                } else {
+                    r.game.refract_unuse();
+                }
+                Ret::Nothing
+            },
+        );
+    }
+}
+
+/// The screen copy's projection for each camera (`lbRefract_8002247C`), with and without
+/// users, and the copy itself (`lbRefract_80022560`), from the light callbacks' states.
+#[test]
+fn refract_camera() {
+    let users = leaf_check::sym("lbl_804336D0");
+    let set = leaf_check::sym("lbRefract_8002247C");
+    each(
+        "HSD_GObj_LObjCallback",
+        1,
+        &|call, i| {
+            let head = peek_u32(call, leaf_check::sym("HSD_GObjGXLinkHead"));
+            let mut cams = Vec::new();
+            let mut g = peek_u32(call, head + 4 * 64);
+            while g != 0 {
+                cams.push(peek_u32(call, g + 0x28));
+                g = peek_u32(call, g + 0x10);
+            }
+            call.addr = set;
+            call.regs.gpr[3] = cams[i % cams.len()];
+            poke_u32(call, users, (i % 4 != 0) as u32);
+        },
+        &|r, maps, call| {
+            let c = maps.cobjs[&call.regs.gpr[3]];
+            melee_sim::lb::refract::set_camera(&r.game.objs, &mut r.game.refract, c);
+            Ret::Nothing
+        },
+    );
+    let copy = leaf_check::sym("lbRefract_80022560");
+    each(
+        "HSD_GObj_LObjCallback",
+        1,
+        &|call, i| {
+            call.addr = copy;
+            poke_u32(call, users, (i % 2) as u32);
+        },
+        &|r, _, _| {
+            melee_sim::lb::refract::copy_screen(&mut r.game.objs, &r.game.refract);
+            Ret::Nothing
+        },
+    );
+}

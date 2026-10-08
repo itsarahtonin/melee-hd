@@ -100,6 +100,10 @@ impl Color {
 pub enum ImageRef {
     Data(DataRef),
     Static(u32),
+    /// Refraction's indirect map `n`, which `lbRefract_800222A4` generates on the heap.
+    Refract(u8),
+    /// Refraction's copy of the screen (`imagedesc0` in lbrefract.c).
+    RefractFrame,
 }
 
 /// A texture animation's palettes (`tluttbl`), by its table of `HSD_TlutDesc` pointers.

@@ -130,7 +130,7 @@ impl<'a> Comparer<'a> {
         }
     }
 
-    fn data_ref(&self, a: u32) -> Option<DataRef> {
+    pub(crate) fn data_ref(&self, a: u32) -> Option<DataRef> {
         (a != 0).then(|| self.data.get(a)).flatten()
     }
 
@@ -1177,7 +1177,17 @@ impl<'a> Comparer<'a> {
         });
         self.check(path, "material", ours, theirs);
         self.aobj(&format!("{path} aobj"), m.aobj, self.u32(t + 0x14));
-        let (mut to, mut tt) = (m.tobj, self.u32(t + 8));
+        self.tobj_chain(path, m.tobj, self.u32(t + 8));
+    }
+
+    /// A chain of TObjs, `to` ours and `tt` theirs.
+    pub(crate) fn tobj_chain(
+        &mut self,
+        path: &str,
+        to: Option<melee_sim::hsd::tobj::TObjId>,
+        tt: u32,
+    ) {
+        let (mut to, mut tt) = (to, tt);
         let mut i = 0;
         while to.is_some() || tt != 0 {
             let tp = format!("{path} tobj {i}");

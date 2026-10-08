@@ -1,6 +1,6 @@
-//! The display pass's HSD statics in a captured state: the current camera, the current and
-//! active lights with their GX slot masks, and the current joint, display object and
-//! material, imported into melee-sim and compared back.
+//! The display pass's statics in a captured state: the current camera, the current and
+//! active lights with their GX slot masks, the current joint, display object and material,
+//! and refraction's state, imported into melee-sim and compared back.
 
 use melee_sim::hsd::list::{self, SListId};
 use melee_sim::hsd::lobj::MAX_GXLIGHT;
@@ -57,6 +57,7 @@ impl Importer<'_> {
                 self.unhandled.push(format!("{name} is set"));
             }
         }
+        self.refract();
     }
 }
 
@@ -121,5 +122,91 @@ impl Comparer<'_> {
             self.u32(sym("current_mobj")) != 0,
         );
         self.check("display", "current joint, dobj, mobj", current, theirs);
+        self.refract();
+    }
+}
+
+/// lbRefract's state (`lbl_804336D0`): users, image, image descriptors, texture chains,
+/// projection.
+const REFRACT: &str = "lbl_804336D0";
+/// An `HSD_ImageDesc`'s size.
+const IMAGE_DESC: u32 = 0x18;
+
+impl Importer<'_> {
+    /// Which of lbRefract's indirect maps' descriptors `p` is, if any.
+    pub(crate) fn refract_map(&self, p: u32) -> Option<u8> {
+        let base = self.cap.u32(sym(REFRACT) + 8);
+        let data = self.cap.u32(sym("refract_data"));
+        if base == 0 || data == 0 {
+            return None;
+        }
+        let n = u32::from(self.cap.call.mem1[(data - crate::MEM1) as usize]);
+        let off = p.wrapping_sub(base);
+        (off % IMAGE_DESC == 0 && off / IMAGE_DESC < n).then(|| (off / IMAGE_DESC) as u8)
+    }
+
+    /// Refraction's users, table, texture chains and projection.
+    pub fn refract(&mut self) {
+        let at = sym(REFRACT);
+        let r = &mut self.game.refract;
+        r.users = self.cap.u32(at) as i32;
+        let data = self.cap.u32(sym("refract_data"));
+        self.game.refract.data = self.data.get(data);
+        if data != 0 && self.game.refract.data.is_none() {
+            self.unhandled
+                .push(format!("refract_data {data:#x} outside LbRf.dat"));
+        }
+        let n = if data == 0 {
+            0
+        } else {
+            u32::from(self.cap.call.mem1[(data - crate::MEM1) as usize])
+        };
+        let list = self.cap.u32(at + 0xC);
+        let tobjs = (0..n)
+            .filter(|_| list != 0)
+            .map(|i| self.tobj(self.cap.u32(list + 4 * i)))
+            .collect();
+        self.game.refract.tobjs = tobjs;
+        let mut m = melee_sim::mtx::Mtx34::default();
+        for (i, v) in m.m.iter_mut().flatten().enumerate() {
+            *v = f32::from_bits(self.cap.u32(at + 0x10 + 4 * i as u32));
+        }
+        self.game.refract.texture_mtx = m;
+    }
+}
+
+impl Comparer<'_> {
+    /// [`Importer::refract`]'s state; the texture chains' TObjs compare as materials' do.
+    pub fn refract(&mut self) {
+        let at = sym(REFRACT);
+        let r = self.game.refract.clone();
+        self.check("refract", "users", r.users, self.u32(at) as i32);
+        let data = self.u32(sym("refract_data"));
+        let theirs = self.data_ref(data);
+        self.check("refract", "table", r.data, theirs);
+        let list = self.u32(at + 0xC);
+        let n = r.tobjs.len() as u32;
+        let theirs_n = if data == 0 {
+            0
+        } else {
+            u32::from(self.u8(data))
+        };
+        self.check("refract", "chains", n, theirs_n);
+        for (i, t) in r.tobjs.iter().enumerate() {
+            if list == 0 {
+                break;
+            }
+            let tt = self.u32(list + 4 * i as u32);
+            self.tobj_chain(&format!("refract chain {i}"), Some(*t), tt);
+        }
+        let ours: Vec<u32> = r
+            .texture_mtx
+            .m
+            .iter()
+            .flatten()
+            .map(|v| v.to_bits())
+            .collect();
+        let theirs: Vec<u32> = (0..12).map(|k| self.u32(at + 0x10 + 4 * k)).collect();
+        self.check("refract", "projection", ours, theirs);
     }
 }

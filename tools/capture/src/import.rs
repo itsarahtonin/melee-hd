@@ -1335,7 +1335,10 @@ impl Importer<'_> {
             0 => None,
             p => match self.data.get(p) {
                 Some(d) => Some(ImageRef::Data(d)),
+                None if p == sym("imagedesc0") => Some(ImageRef::RefractFrame),
                 None if (0x8000_0000..0x804F_0000).contains(&p) => Some(ImageRef::Static(p)),
+                // lbRefract's heap array of indirect maps' descriptors, 0x18 bytes each.
+                None if self.refract_map(p).is_some() => self.refract_map(p).map(ImageRef::Refract),
                 None => {
                     self.unhandled
                         .push(format!("TObj image in the heap {p:#x}"));

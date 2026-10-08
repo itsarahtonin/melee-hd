@@ -76,6 +76,8 @@ pub enum Draw {
         rendermode: u32,
         vmtx: Option<Mtx34>,
     },
+    /// The screen copied into refraction's source texture (`lbRefract_80022560`).
+    RefractCopy,
     /// A particle link, from its first particle as the last sort left it (`psDispParticles`).
     Particles {
         link: usize,

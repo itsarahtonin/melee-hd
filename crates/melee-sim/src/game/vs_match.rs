@@ -267,6 +267,8 @@ impl Match {
         let rumble = data.add(archive("LbRb.dat"));
         let table = data.get(rumble).public("lbRumbleData");
         let files = vs::MatchArchives {
+            // `lbRefract_800222A4`'s refraction table.
+            lb_rf: data.add(archive("LbRf.dat")),
             pdpm: data.add(archive("PdPm.dat")),
             gm_pause: data.add(archive("GmPause.usd")),
             // `ifAll_802F390C`'s: `IfAll`, the names' font, the coin counter.
