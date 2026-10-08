@@ -2749,3 +2749,4 @@ HSD_SisLib_803A84BC	leaf-check display text_render: its saved calls in each pass
 HSD_SisLib_803A8134	leaf-check display text_render: each line HSD_SisLib_803A84BC lays out is measured through it; widths compared through the layout
 HSD_SisLib_803A7684	leaf-check display text_render: the strings' scale, color, size and alignment pushes, past the stack's first 16 bytes; state stacks compared
 HSD_SisLib_803A7F0C	leaf-check display text_render: the strings' pops and their measurement's; state stacks compared
+ftCo_8008DB10	leaf-check display heavy_hit_flash: from the fighters' render states, each element, knockback around the thresholds, with and without damage dealt; the flash's overlay compared
