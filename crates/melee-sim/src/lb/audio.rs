@@ -15,8 +15,27 @@ pub const SFX_KEY_OFF: i32 = 0x83D61;
 /// The game's audio library's own state.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LbAudio {
-    /// `lbl_80433984`: each sound bank's load state (2: loaded).
+    /// `lbl_80433984`: each sound bank's load state (-1 not loaded, 1 loaded in the
+    /// background, 2 loaded).
     pub banks: [i32; 56],
+    /// `lbl_804337C4`, `lbl_804338A4`: the banks the next scene wants and the ones the loader
+    /// works toward (-1 or 1); `lbl_80433A64`: each bank's load (its file's entry number) or
+    /// -1.
+    pub bank_want: [i32; 56],
+    pub bank_have: [i32; 56],
+    pub bank_load: [i32; 56],
+    /// `lbl_804D6438`: the ARAM the wanted banks may take; `lbl_804D643C`, `6440`, `6444`:
+    /// the three sound banks' sizes; `lbl_804D6448`: what's loaded; `lbl_804D644C`: what's
+    /// wanted; `lbl_804D6450`: what's still to load.
+    pub fgm_room: i32,
+    pub fgm_banks: [i32; 3],
+    pub fgm_loaded: i32,
+    pub fgm_wanted: i32,
+    pub fgm_pending: u32,
+    /// `cur_ssm_file` and `ssm_stem_pos`: the bank file name being loaded, after its
+    /// directory.
+    pub ssm_file: [u8; 0x40],
+    pub ssm_stem_pos: i32,
     /// `lbl_804D640C`: the music and the match's channels are held for the pause menu; the
     /// crowd's and the queue's timers stand still.
     pub held: i32,
@@ -86,8 +105,20 @@ pub struct LbAudio {
 impl Default for LbAudio {
     /// As the game's data initializes it.
     fn default() -> Self {
+        let mut ssm_file = [0u8; 0x40];
+        ssm_file[..7].copy_from_slice(b"/audio/");
         LbAudio {
             banks: [0; 56],
+            bank_want: [0; 56],
+            bank_have: [0; 56],
+            bank_load: [0; 56],
+            fgm_room: 0,
+            fgm_banks: [0; 3],
+            fgm_loaded: 0,
+            fgm_wanted: 0,
+            fgm_pending: 0,
+            ssm_file,
+            ssm_stem_pos: 7,
             held: 0,
             paused: 0,
             flush_queue: 0,
@@ -795,3 +826,479 @@ const KIRBY_SFX: [(i32, i32); 75] = [
     (230070, 330219),
     (540000, 540000),
 ];
+
+/// `fn_80026C04`: the library's callback when one of its background bank loads is in.
+pub const BANK_LOADED: crate::game::handles::CodeRef = crate::game::handles::CodeRef(0x8002_6C04);
+
+/// `ssm_files`' entry numbers on the disc (GALE01 revision 2's file table), with the US
+/// language's directory (`/audio/us/`) and without (`/audio/`).
+pub const SSM_US: [i32; 55] = [
+    169, 185, 179, 178, 176, 180, 142, 144, 146, 147, 151, 153, 156, 160, 161, 165, 167, 168, 170,
+    171, 172, 175, 182, 183, 184, 188, 189, 194, 192, 159, 154, 148, 173, 162, 143, 145, 157, 164,
+    174, 181, 193, 155, 163, 158, 191, 141, 152, 187, 186, 139, 150, 177, 140, 166, 149,
+];
+const SSM_JP: [i32; 55] = [
+    84, 111, 99, 98, 96, 100, 9, 12, 16, 18, 23, 48, 53, 63, 74, 79, 82, 83, 85, 86, 90, 95, 108,
+    109, 110, 117, 119, 212, 208, 58, 50, 19, 91, 75, 11, 15, 55, 78, 94, 104, 211, 52, 76, 57,
+    196, 8, 47, 115, 114, 2, 22, 97, 3, 81, 20,
+];
+
+/// `s32_arr_803BB5D0`'s second column: each bank's load priority (5: never in the
+/// background).
+const SSM_PRIORITY: [i8; 56] = [
+    5, 5, 0, 0, 4, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 5, 1, 2, 5, 0,
+];
+
+/// `offsets_arr_803BC4E4`'s first column: each bank's size in ARAM.
+const SSM_SIZE: [u32; 56] = [
+    2045824, 561760, 153024, 239264, 121888, 54176, 443328, 298400, 206368, 430560, 599712, 573216,
+    487936, 477600, 586208, 526752, 328672, 372992, 372736, 513088, 562912, 509024, 416736, 580128,
+    613088, 334528, 319040, 590176, 321472, 165344, 427872, 495520, 563712, 572832, 176224, 441760,
+    490240, 360064, 150144, 54208, 387872, 428896, 304096, 144480, 382272, 34880, 78592, 123104,
+    101504, 160576, 1168864, 348160, 363936, 663136, 1536, 0,
+];
+
+impl LbAudio {
+    /// The disc file of bank `slot` in the language's directory.
+    pub fn ssm_entrynum(&self, slot: usize) -> i32 {
+        if self.ssm_stem_pos == 10 {
+            SSM_US[slot]
+        } else {
+            SSM_JP[slot]
+        }
+    }
+
+    /// `fn_80026650`: the next bank to load in the background: the wanted one of the highest
+    /// priority not loaded or loading.
+    #[doc(alias = "fn_80026650")]
+    fn next_background_bank(&self) -> Option<usize> {
+        (0..=4).rev().find_map(|p| {
+            (0..55).find(|&i| {
+                i32::from(SSM_PRIORITY[i]) == p && self.bank_have[i] == 1 && self.banks[i] == -1
+            })
+        })
+    }
+}
+
+impl crate::audio::Audio {
+    /// `fn_80026C04`: a background bank load is in (its size counted as loaded), and the
+    /// next one starts.
+    #[doc(alias = "fn_80026C04")]
+    pub fn lb_bank_loaded(&mut self, data: &melee_data::archive::Archives, entrynum: i32, _: i32) {
+        let lb = &mut self.lb;
+        if entrynum != -1
+            && let Some(i) = (0..55).find(|&i| lb.bank_load[i] == entrynum)
+        {
+            lb.banks[i] = 1;
+            lb.fgm_wanted -= SSM_SIZE[i] as i32;
+            lb.fgm_pending = lb.fgm_pending.wrapping_sub(SSM_SIZE[i]);
+            lb.fgm_loaded += SSM_SIZE[i] as i32;
+        }
+        if let Some(slot) = self.lb.next_background_bank() {
+            self.lb_load_bank_name(slot);
+            let e = self.lb.ssm_entrynum(slot);
+            self.lb.bank_load[slot] = self.sfx_load(data, e, 2, Some(BANK_LOADED), 0);
+        }
+    }
+}
+
+/// `ssm_files`.
+const SSM_NAMES: [&str; 55] = [
+    "main.ssm",
+    "pokemon.ssm",
+    "nr_title.ssm",
+    "nr_select.ssm",
+    "nr_1p.ssm",
+    "nr_vs.ssm",
+    "captain.ssm",
+    "clink.ssm",
+    "dk.ssm",
+    "drmario.ssm",
+    "falco.ssm",
+    "fox.ssm",
+    "gkoopa.ssm",
+    "ice.ssm",
+    "kirby.ssm",
+    "koopa.ssm",
+    "link.ssm",
+    "luigi.ssm",
+    "mario.ssm",
+    "mars.ssm",
+    "mewtwo.ssm",
+    "ness.ssm",
+    "peach.ssm",
+    "pichu.ssm",
+    "pikachu.ssm",
+    "purin.ssm",
+    "samus.ssm",
+    "zs.ssm",
+    "yoshi.ssm",
+    "gw.ssm",
+    "ganon.ssm",
+    "emblem.ssm",
+    "mhands.ssm",
+    "kirbytm.ssm",
+    "castle.ssm",
+    "corneria.ssm",
+    "greatbay.ssm",
+    "kongo.ssm",
+    "mutecity.ssm",
+    "onett.ssm",
+    "zebes.ssm",
+    "garden.ssm",
+    "klaid.ssm",
+    "greens.ssm",
+    "venom.ssm",
+    "bigblue.ssm",
+    "fourside.ssm",
+    "pupupu.ssm",
+    "pstadium.ssm",
+    "1padv.ssm",
+    "ending.ssm",
+    "nr_name.ssm",
+    "1pend.ssm",
+    "last.ssm",
+    "end.ssm",
+];
+
+impl LbAudio {
+    /// `strcpy(&cur_ssm_file[ssm_stem_pos], ssm_files[slot])`: the bank's file name after the
+    /// language's directory, leaving what a longer name left past its end.
+    pub fn set_ssm_name(&mut self, slot: usize) {
+        let at = self.ssm_stem_pos as usize;
+        let name = SSM_NAMES[slot].as_bytes();
+        self.ssm_file[at..at + name.len()].copy_from_slice(name);
+        self.ssm_file[at + name.len()] = 0;
+    }
+}
+
+impl crate::audio::Audio {
+    fn lb_load_bank_name(&mut self, slot: usize) {
+        self.lb.set_ssm_name(slot);
+    }
+}
+
+/// `s32_arr_803BB5D0`'s third column: the order a full ARAM drops banks the next scene
+/// doesn't want in.
+const SSM_DROP: [i8; 55] = [
+    5, 5, 0, 0, 4, 4, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 1, 5, 1, 2, 5,
+];
+
+/// `lbl_803BB3C0`'s banks: each character's (by `CharacterKind`), as a mask of bank slots.
+const CHARACTER_BANKS: [u64; 33] = [
+    0x40,
+    0x100,
+    0x800,
+    0x20000000,
+    0x4000,
+    0x8000,
+    0x10000,
+    0x20000,
+    0x40000,
+    0x80000,
+    0x100000,
+    0x200000,
+    0x400000,
+    0x1000000,
+    0x2000,
+    0x2000000,
+    0x4000000,
+    0x10000000,
+    0x8000000,
+    0x8000000,
+    0x400,
+    0x80,
+    0x200,
+    0x80000000,
+    0x800000,
+    0x40000000,
+    0x100000000,
+    0,
+    0,
+    0x1000,
+    0x100000000,
+    0,
+    0x2000,
+];
+
+/// `s32_arr_803BB6B0`: each ground kind's bank slot (55 for none) and its music channels'
+/// aux B send.
+const GROUND_BANK: [u8; 111] = [
+    55, 55, 34, 55, 37, 41, 36, 55, 40, 42, 55, 55, 55, 43, 35, 44, 48, 55, 38, 45, 39, 46, 55, 55,
+    55, 55, 55, 55, 47, 55, 55, 49, 49, 49, 49, 55, 55, 53, 55, 55, 49, 55, 55, 55, 55, 55, 55, 55,
+    55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55,
+    55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55,
+    55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 0,
+];
+const GROUND_SEND: [u8; 111] = [
+    1, 1, 1, 1, 1, 1, 1, 24, 64, 128, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 72, 136, 1, 1, 56, 56, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+];
+
+/// `stage_id_map`'s ground kinds, by stage kind (`Stage_8022519C`).
+const STAGE_GROUND: [u8; 286] = [
+    0, 1, 12, 16, 2, 4, 8, 14, 10, 20, 18, 3, 5, 6, 7, 9, 11, 13, 21, 24, 25, 26, 15, 17, 19, 22,
+    22, 27, 28, 29, 30, 36, 37, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+    57, 58, 59, 60, 61, 62, 63, 64, 65, 31, 2, 4, 5, 32, 7, 8, 33, 13, 13, 13, 14, 14, 16, 34, 18,
+    20, 22, 22, 36, 36, 37, 37, 39, 38, 67, 66, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+    24, 25, 18, 19, 20, 21, 16, 2, 36, 2, 25, 7, 6, 37, 16, 22, 22, 24, 6, 7, 14, 15, 6, 16, 36,
+    25, 4, 7, 6, 24, 6, 19, 8, 10, 11, 13, 12, 13, 22, 14, 18, 16, 16, 24, 20, 21, 19, 36, 36, 36,
+    7, 6, 7, 6, 2, 4, 6, 10, 25, 18, 16, 12, 24, 7, 3, 5, 12, 25, 20, 16, 22, 16, 27, 18, 36, 37,
+    3, 4, 6, 8, 10, 13, 14, 16, 24, 18, 20, 17, 22, 2, 7, 12, 36, 11, 25, 5, 15, 21, 37, 27, 9, 36,
+    7, 2, 10, 20, 12, 16, 8, 6, 11, 22, 18, 3, 68, 36, 14, 5, 4, 37, 8, 2, 25, 9, 11, 21, 69, 15,
+    13, 7, 12, 24, 14, 34, 6, 28, 21, 12, 25, 16, 7, 7, 17, 19, 36, 27, 7, 70, 10, 24, 37, 37, 5,
+    10, 2, 3, 6, 7, 18, 14, 16, 20, 22, 25, 17, 37, 27, 15, 16, 6, 7, 37, 36, 16, 37, 25, 12, 27,
+    2, 37, 6, 36, 16, 7, 36,
+];
+
+/// The scene groups' bank masks (`lbAudioAx_80026F2C`'s flags): 1 the common banks, 2 the
+/// menus', 4 the fighters', 8 the stages', 16 the single-player modes'.
+fn group_mask(flags: u32) -> u64 {
+    let mut mask = 0u64;
+    for (bit, m) in [
+        (1, 0x0048_0000_0000_0003u64),
+        (2, 0x3C),
+        (4, 0x0080_0003_FFFF_FFC0),
+        (8, 0x0023_FFFC_0000_0000),
+        (16, 0x0014_0000_0000_0000),
+    ] {
+        if flags & bit != 0 {
+            mask = mask.wrapping_add(m);
+        }
+    }
+    mask
+}
+
+/// `lbAudioAx_80026E84`: a character's banks.
+#[doc(alias = "lbAudioAx_80026E84")]
+pub fn character_banks(ckind: i32) -> u64 {
+    usize::try_from(ckind)
+        .ok()
+        .and_then(|k| CHARACTER_BANKS.get(k).copied())
+        .unwrap_or(0)
+}
+
+/// `Stage_8022519C`: a stage kind's ground kind.
+pub fn ground_kind(stkind: i32) -> usize {
+    usize::from(STAGE_GROUND[stkind as usize])
+}
+
+/// `lbAudioAx_80026EBC`: a stage's bank.
+#[doc(alias = "lbAudioAx_80026EBC")]
+pub fn stage_banks(stkind: i32) -> u64 {
+    match GROUND_BANK.get(ground_kind(stkind)) {
+        Some(&55) | None => 0,
+        Some(&shift) => 1 << shift,
+    }
+}
+
+impl LbAudio {
+    /// `lbAudioAx_80026F2C`: the scene groups' banks no longer wanted.
+    #[doc(alias = "lbAudioAx_80026F2C")]
+    pub fn unwant_banks(&mut self, flags: u32) {
+        let mut mask = group_mask(flags);
+        for w in self.bank_want.iter_mut().take(55) {
+            if mask & 1 != 0 {
+                *w = -1;
+            }
+            mask >>= 1;
+        }
+    }
+
+    /// `lbAudioAx_8002702C`: the scene groups' banks in `mask` (and the common banks) wanted.
+    #[doc(alias = "lbAudioAx_8002702C")]
+    pub fn want_banks(&mut self, flags: u32, mask: u64) {
+        let mut mask = mask.wrapping_add(0x0048_0000_0000_0003);
+        let mut groups = group_mask(flags);
+        for w in self.bank_want.iter_mut().take(55) {
+            if groups & 1 != 0 && mask & 1 != 0 {
+                *w = 1;
+            }
+            groups >>= 1;
+            mask >>= 1;
+        }
+    }
+
+    /// `fn_800268B4`: the wanted, loaded and still-to-load sizes, from the banks' states.
+    #[doc(alias = "fn_800268B4")]
+    fn count_banks(&mut self) {
+        self.fgm_pending = 0;
+        self.fgm_wanted = 0;
+        self.fgm_loaded = 0;
+        for (i, &size) in SSM_SIZE.iter().enumerate().take(55) {
+            match (self.bank_have[i] != -1, self.banks[i] != -1) {
+                (true, false) => {
+                    self.fgm_wanted += size as i32;
+                    self.fgm_pending = self.fgm_pending.wrapping_add(size);
+                }
+                (false, true) => self.fgm_loaded += size as i32,
+                (true, true) => {
+                    self.fgm_wanted += size as i32;
+                    self.fgm_loaded += size as i32;
+                }
+                (false, false) => {}
+            }
+        }
+    }
+}
+
+impl crate::audio::Audio {
+    /// `fn_800269AC`: the background loads of banks not loaded yet are cancelled; if loads
+    /// remain, waits for them and empties bank 2.
+    #[doc(alias = "fn_800269AC")]
+    fn lb_cancel_background_loads(&mut self, data: &melee_data::archive::Archives) {
+        if self.sfx_pending_loads() == 0 {
+            return;
+        }
+        for (i, &priority) in SSM_PRIORITY.iter().enumerate().take(55) {
+            if priority != 5 && self.lb.bank_load[i] != -1 && self.lb.banks[i] == -1 {
+                // The original retries up to 0x40 times with a busy delay between; the cancel
+                // finds the load the first time or never.
+                let e = self.lb.bank_load[i];
+                self.sfx_cancel_load(data, e);
+                self.lb.bank_load[i] = -1;
+                self.lb.banks[i] = -1;
+            }
+        }
+        if self.sfx_pending_loads() != 0 {
+            self.sfx_wait_for_loads(data);
+            self.sfx_unload_bank(2);
+            for (i, &priority) in SSM_PRIORITY.iter().enumerate().take(55) {
+                if priority != 5 {
+                    self.lb.banks[i] = -1;
+                    self.lb.bank_load[i] = -1;
+                }
+            }
+        }
+    }
+
+    /// `fn_800267B0`: while the wanted banks don't fit, drops loaded banks the scene doesn't
+    /// want, in their drop order, then packs bank 2.
+    #[doc(alias = "fn_800267B0")]
+    fn lb_make_room(&mut self, data: &melee_data::archive::Archives) {
+        if self.lb.fgm_pending == 0 {
+            return;
+        }
+        for order in 0..5 {
+            let mut j = 0;
+            while (self.lb.fgm_room as u32)
+                < (self.lb.fgm_loaded as u32).wrapping_add(self.lb.fgm_pending)
+                && j < 55
+            {
+                let lb = &self.lb;
+                if lb.banks[j] != -1 && i32::from(SSM_DROP[j]) == order && lb.bank_have[j] == -1 {
+                    let e = lb.bank_load[j];
+                    self.sfx_group_remove(e);
+                    let lb = &mut self.lb;
+                    lb.bank_load[j] = -1;
+                    lb.banks[j] = -1;
+                    lb.fgm_loaded -= SSM_SIZE[j] as i32;
+                }
+                j += 1;
+            }
+        }
+        self.sfx_bank_deflag(data, 2);
+        self.sfx_bank_deflag_sync();
+    }
+
+    /// `lbAudioAx_80027168`: starts loading the wanted banks in the background, after
+    /// cancelling stale loads and making room.
+    #[doc(alias = "lbAudioAx_80027168")]
+    pub fn lb_start_bank_loads(&mut self, data: &melee_data::archive::Archives) {
+        for (i, &priority) in SSM_PRIORITY.iter().enumerate().take(55) {
+            if priority != 5 && self.lb.banks[i] == 2 {
+                self.lb.banks[i] = 1;
+            }
+        }
+        let count = (0..55)
+            .filter(|&i| SSM_PRIORITY[i] != 5 && self.lb.bank_want[i] != -1)
+            .count();
+        if count == 0 {
+            return;
+        }
+        self.lb_cancel_background_loads(data);
+        self.lb.bank_have = self.lb.bank_want;
+        self.lb.count_banks();
+        self.lb_make_room(data);
+        assert!(
+            (self.lb.fgm_room as u32)
+                >= (self.lb.fgm_loaded as u32).wrapping_add(self.lb.fgm_pending),
+            "FGM load size is over"
+        );
+        if let Some(slot) = self.lb.next_background_bank() {
+            self.lb_load_bank_name(slot);
+            let e = self.lb.ssm_entrynum(slot);
+            self.lb.bank_load[slot] = self.sfx_load(data, e, 2, Some(BANK_LOADED), 0);
+        }
+    }
+
+    /// `lbAudioAx_80027648`: waits until the wanted banks are in, then marks them loaded.
+    #[doc(alias = "lbAudioAx_80027648")]
+    #[doc(alias = "fn_80027488")]
+    pub fn lb_wait_for_banks(&mut self, data: &melee_data::archive::Archives) {
+        loop {
+            let lb = &mut self.lb;
+            if (0..55).any(|i| lb.bank_have[i] == 1 && lb.banks[i] == -1) {
+                assert!(
+                    self.synth.banks.load_count != 0,
+                    "lbAudioAx_80027648 would wait forever for a bank nothing loads"
+                );
+                self.sfx_wait_for_loads(data);
+                continue;
+            }
+            for i in 0..55 {
+                if lb.bank_have[i] == 1 && lb.banks[i] == 1 {
+                    lb.banks[i] = 2;
+                }
+            }
+            return;
+        }
+    }
+}
+
+impl crate::game::state::Running<'_> {
+    /// `lbAudioAx_8002785C`: the match's banks: its characters' and its stage's, loaded
+    /// before it starts; the music channels' aux B send from the stage.
+    #[doc(alias = "lbAudioAx_8002785C")]
+    pub fn lb_load_match_banks(&mut self) {
+        if self.lb_choose_match_banks() {
+            let a = &mut self.game.audio;
+            a.lb_start_bank_loads(self.data);
+            a.lb_wait_for_banks(self.data);
+        }
+    }
+
+    /// [`lb_load_match_banks`](Self::lb_load_match_banks)'s choice: the stage's send, and the
+    /// banks wanted (lbAudioAx_80026F2C and lbAudioAx_8002702C). Whether any are.
+    pub fn lb_choose_match_banks(&mut self) -> bool {
+        assert!(
+            !self.game.vs_is_singleplayer(),
+            "the single-player modes' banks (gm_80169370) aren't ported"
+        );
+        let mut result = 0u64;
+        for i in 0..4 {
+            if self.game.player_pkind(i) != crate::game::pl::player::PKIND_NONE {
+                result |= character_banks(self.game.player_ckind(i));
+            }
+        }
+        let stkind = crate::game::gr::stage::stkind(self.game);
+        if stkind == 0xD9 || stkind == 0xE5 {
+            result |= 0x2_0000_4000;
+        }
+        if stkind == 0x46 || stkind == 0x47 {
+            result |= 0xC00;
+        }
+        self.game.audio.lb.send = i32::from(GROUND_SEND[ground_kind(stkind)]);
+        result |= stage_banks(stkind);
+        if result != 0 {
+            let lb = &mut self.game.audio.lb;
+            lb.unwant_banks(0xC);
+            lb.want_banks(0xC, result);
+        }
+        result != 0
+    }
+}

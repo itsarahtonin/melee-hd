@@ -133,11 +133,21 @@ fn sfx_table(m: &Mem) -> Vec<Vec<Sfx>> {
             let mut out = Vec::new();
             let mut e = m.u32(hash + 4 * b);
             while e != 0 {
+                // An effect's voices are its count's; the bytes after a one-voice effect are
+                // the next one's.
+                let n = m.i32(e + 8);
+                let voice = |k: u32| {
+                    if (k as i32) < n {
+                        sfx_voice(m, e + 0x40 * k)
+                    } else {
+                        SfxVoice::default()
+                    }
+                };
                 out.push(Sfx {
                     id: m.i32(e + 4),
-                    voice_count: m.i32(e + 8),
+                    voice_count: n,
                     rate: m.i32(e + 0xC),
-                    voices: [sfx_voice(m, e), sfx_voice(m, e + 0x40)],
+                    voices: [voice(0), voice(1)],
                 });
                 e = m.u32(e);
             }
@@ -213,6 +223,9 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
         n.pan_word = m.u32(at + 0x40);
         n.mix = [m.f32(at + 0x44), m.f32(at + 0x48), m.f32(at + 0x4C)];
     }
+    a.heap = import_heap(&m);
+    a.synth.banks = import_banks(&m);
+    a.driver.stream_started = m.i32(sym("AXDriver_804D77E8"));
     let s = &mut a.synth;
     s.sfx = sfx_table(&m);
     for i in 0..64 {
@@ -325,6 +338,175 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
     a
 }
 
+/// The audio heap's descriptor (`HeapArray[HSD_Synth_804D6018]`).
+fn heap_desc(m: &Mem) -> u32 {
+    m.u32(sym("HeapArray")) + 0xC * m.u32(sym("HSD_Synth_804D6018"))
+}
+
+/// The audio heap: its size and its free and allocated cells, as their lists hold them.
+fn import_heap(m: &Mem) -> melee_sim::audio::heap::Heap {
+    use melee_sim::audio::heap::{Cell, Heap};
+    if m.i32(sym("HSD_Synth_804D6018")) < 0 {
+        return Heap::default();
+    }
+    let hd = heap_desc(m);
+    let list = |mut c: u32| {
+        let mut v = Vec::new();
+        while c != 0 {
+            v.push(Cell {
+                at: c,
+                size: m.u32(c + 8),
+            });
+            c = m.u32(c + 4);
+        }
+        v
+    };
+    Heap {
+        size: m.i32(hd),
+        free: list(m.u32(hd + 4)),
+        allocated: list(m.u32(hd + 8)),
+    }
+}
+
+/// The synth's sound banks and their loads.
+fn import_banks(m: &Mem) -> melee_sim::audio::bank::Banks {
+    use melee_sim::audio::bank::{Banks, SfxGroup, SfxLoad};
+    let mut b = Banks::default();
+    for (i, l) in b.loads.iter_mut().enumerate() {
+        let at = sym("HSD_Synth_804C2A60") + 0x10 * i as u32;
+        *l = SfxLoad {
+            entrynum: m.i32(at),
+            bank: m.i32(at + 4),
+            callback: code(m.u32(at + 8)),
+            mode: m.i32(at + 0xC),
+        };
+    }
+    b.load_count = m.i32(sym("HSD_Synth_804D772C"));
+    b.cancelling = m.i32(sym("HSD_Synth_804D7738"));
+    for i in 0..2 {
+        b.requests[i] = m.i32(sym("HSD_Synth_804D6028") + 4 * i as u32);
+    }
+    for (i, w) in b.load_buf.iter_mut().enumerate() {
+        *w = m.u32(sym("hsd_SynthSFXLoadBuf") + 4 * i as u32);
+    }
+    for (bank, g) in b.groups.iter_mut().enumerate() {
+        let mut n = m.u32(sym("HSD_Synth_804C2AE0") + 4 * bank as u32);
+        while n != 0 {
+            g.push(SfxGroup {
+                block: n,
+                entrynum: m.i32(n + 4),
+                base: m.i32(n + 8),
+                count: m.i32(n + 0xC),
+                aram: m.u32(n + 0x10),
+                size: m.u32(n + 0x14),
+            });
+            n = m.u32(n);
+        }
+    }
+    for i in 0..32 {
+        b.next[i] = m.i32(sym("hsd_SynthSFXBank") + 4 * i as u32);
+    }
+    for i in 0..33 {
+        b.head[i] = m.i32(sym("hsd_SynthSFXBankHead") + 4 * i as u32);
+    }
+    b.count = m.i32(sym("hsd_SynthSFXBankNum"));
+    b.aram_end = m.u32(sym("hsd_SynthSFXBankAREnd"));
+    b.moving = m.i32(sym("sfxGroupDataReaddressCounter"));
+    b.block = m.u32(sym("HSD_Synth_804D7730"));
+    b.cursor = m.u32(sym("HSD_Synth_804D7734"));
+    b
+}
+
+/// The heap and the banks into the image.
+fn put_banks(img: &mut Image, m: &Mem, a: &Audio) {
+    let h = &a.heap;
+    if m.i32(sym("HSD_Synth_804D6018")) >= 0 {
+        let hd = heap_desc(m);
+        let head = |v: &[melee_sim::audio::heap::Cell]| v.first().map_or(0, |c| c.at);
+        img.u32("audio heap", hd, h.size as u32);
+        img.u32("audio heap free list", hd + 4, head(&h.free));
+        img.u32("audio heap allocated list", hd + 8, head(&h.allocated));
+        for list in [&h.free, &h.allocated] {
+            for (i, c) in list.iter().enumerate() {
+                let prev = if i == 0 { 0 } else { list[i - 1].at };
+                let next = list.get(i + 1).map_or(0, |c| c.at);
+                img.u32("audio heap cell", c.at, prev);
+                img.u32("audio heap cell", c.at + 4, next);
+                img.u32("audio heap cell", c.at + 8, c.size);
+            }
+        }
+    }
+    let b = &a.synth.banks;
+    for (i, l) in b.loads.iter().enumerate() {
+        let at = sym("HSD_Synth_804C2A60") + 0x10 * i as u32;
+        img.u32("HSD_Synth_804C2A60", at, l.entrynum as u32);
+        img.u32("HSD_Synth_804C2A60", at + 4, l.bank as u32);
+        img.u32("HSD_Synth_804C2A60", at + 8, l.callback.map_or(0, |c| c.0));
+        img.u32("HSD_Synth_804C2A60", at + 0xC, l.mode as u32);
+    }
+    img.u32(
+        "HSD_Synth_804D772C",
+        sym("HSD_Synth_804D772C"),
+        b.load_count as u32,
+    );
+    img.u32(
+        "HSD_Synth_804D7738",
+        sym("HSD_Synth_804D7738"),
+        b.cancelling as u32,
+    );
+    for i in 0..2 {
+        let at = sym("HSD_Synth_804D6028") + 4 * i as u32;
+        img.u32("HSD_Synth_804D6028", at, b.requests[i] as u32);
+    }
+    for (i, w) in b.load_buf.iter().enumerate() {
+        img.u32(
+            "hsd_SynthSFXLoadBuf",
+            sym("hsd_SynthSFXLoadBuf") + 4 * i as u32,
+            *w,
+        );
+    }
+    for (bank, g) in b.groups.iter().enumerate() {
+        img.u32(
+            "HSD_Synth_804C2AE0",
+            sym("HSD_Synth_804C2AE0") + 4 * bank as u32,
+            g.first().map_or(0, |n| n.block),
+        );
+        for (i, n) in g.iter().enumerate() {
+            let at = n.block;
+            img.u32("sound bank group", at, g.get(i + 1).map_or(0, |n| n.block));
+            img.u32("sound bank group", at + 4, n.entrynum as u32);
+            img.u32("sound bank group", at + 8, n.base as u32);
+            img.u32("sound bank group", at + 0xC, n.count as u32);
+            img.u32("sound bank group", at + 0x10, n.aram);
+            img.u32("sound bank group", at + 0x14, n.size);
+        }
+    }
+    for i in 0..32 {
+        let at = sym("hsd_SynthSFXBank") + 4 * i as u32;
+        img.u32("hsd_SynthSFXBank", at, b.next[i] as u32);
+    }
+    for i in 0..33 {
+        let at = sym("hsd_SynthSFXBankHead") + 4 * i as u32;
+        img.u32("hsd_SynthSFXBankHead", at, b.head[i] as u32);
+    }
+    img.u32(
+        "hsd_SynthSFXBankNum",
+        sym("hsd_SynthSFXBankNum"),
+        b.count as u32,
+    );
+    img.u32(
+        "hsd_SynthSFXBankAREnd",
+        sym("hsd_SynthSFXBankAREnd"),
+        b.aram_end,
+    );
+    let at = sym("sfxGroupDataReaddressCounter");
+    img.u32("sfxGroupDataReaddressCounter", at, b.moving as u32);
+    img.u32("HSD_Synth_804D7730", sym("HSD_Synth_804D7730"), b.block);
+    img.u32("HSD_Synth_804D7734", sym("HSD_Synth_804D7734"), b.cursor);
+    let at = sym("AXDriver_804D77E8");
+    img.u32("AXDriver_804D77E8", at, a.driver.stream_started as u32);
+}
+
 /// `crowdsfx` and `crowdsfx_ptr`.
 const CROWD: u32 = 0x804A_2F08;
 const CROWD_PTR: u32 = 0x804D_7050;
@@ -391,22 +573,26 @@ pub fn import_lb(mem1: &[u8]) -> melee_sim::lb::audio::LbAudio {
     for (_, at, f) in lb_fields(&mut lb) {
         match f {
             LbField::I(v) => *v = m.i32(at),
+            LbField::U(v) => *v = m.u32(at),
             LbField::F(v) => *v = m.f32(at),
         }
     }
     lb.stem.copy_from_slice(m.bytes(sym("cur_hps_stem"), 0x40));
+    lb.ssm_file
+        .copy_from_slice(m.bytes(sym("cur_ssm_file"), 0x40));
     lb
 }
 
 /// One of lbaudio_ax's globals.
 enum LbField<'a> {
     I(&'a mut i32),
+    U(&'a mut u32),
     F(&'a mut f32),
 }
 
 /// lbaudio_ax's globals the library's tick and mix read and write, by name and address.
 fn lb_fields(lb: &mut melee_sim::lb::audio::LbAudio) -> Vec<(&'static str, u32, LbField<'_>)> {
-    use LbField::{F, I};
+    use LbField::{F, I, U};
     let mut v = vec![
         ("lbl_804D640C", 0x804D_640C, I(&mut lb.held)),
         ("paused", 0x804D_6410, I(&mut lb.paused)),
@@ -462,6 +648,26 @@ fn lb_fields(lb: &mut melee_sim::lb::audio::LbAudio) -> Vec<(&'static str, u32, 
     for (i, t) in lb.queue_timer.iter_mut().enumerate() {
         v.push(("lbl_80433780", 0x8043_3780 + 4 * i as u32, I(t)));
     }
+    for (name, at, arr) in [
+        ("lbl_804337C4", 0x8043_37C4, &mut lb.bank_want),
+        ("lbl_804338A4", 0x8043_38A4, &mut lb.bank_have),
+        ("lbl_80433A64", 0x8043_3A64, &mut lb.bank_load),
+    ] {
+        for (i, x) in arr.iter_mut().enumerate() {
+            v.push((name, at + 4 * i as u32, I(x)));
+        }
+    }
+    let [b0, b1, b2] = &mut lb.fgm_banks;
+    v.extend([
+        ("lbl_804D6438", 0x804D_6438, I(&mut lb.fgm_room)),
+        ("lbl_804D643C", 0x804D_643C, I(b0)),
+        ("lbl_804D6440", 0x804D_6440, I(b1)),
+        ("lbl_804D6444", 0x804D_6444, I(b2)),
+        ("lbl_804D6448", 0x804D_6448, I(&mut lb.fgm_loaded)),
+        ("lbl_804D644C", 0x804D_644C, I(&mut lb.fgm_wanted)),
+        ("ssm_stem_pos", 0x804D_38D0, I(&mut lb.ssm_stem_pos)),
+        ("lbl_804D6450", 0x804D_6450, U(&mut lb.fgm_pending)),
+    ]);
     v
 }
 
@@ -564,7 +770,39 @@ fn import_devcom(m: &Mem) -> DevCom {
             d.arq[i][j] = arq_request(m, sym("devComARQR") + 0x40 * i as u32 + 0x20 * j as u32);
         }
     }
+    d.arq_done = arq_in_flight(m);
     d
+}
+
+/// The ARAM queue's transfers in flight, in the order they finish: the high-priority one
+/// under way and those queued behind it, then the low-priority ones. Each is told by its
+/// callback, and its buffer by which of `devComARQR`'s requests it is.
+fn arq_in_flight(m: &Mem) -> Vec<melee_sim::audio::devcom::ArqDone> {
+    use melee_sim::audio::devcom::ArqDone;
+    let mut v = Vec::new();
+    for (pending, queue) in [
+        ("__ARQRequestPendingHi", "__ARQRequestQueueHi"),
+        ("__ARQRequestPendingLo", "__ARQRequestQueueLo"),
+    ] {
+        let mut chain = vec![m.u32(sym(pending))];
+        let mut q = m.u32(sym(queue));
+        while q != 0 {
+            chain.push(q);
+            q = m.u32(q);
+        }
+        for req in chain.into_iter().filter(|&r| r != 0) {
+            let b = (req.wrapping_sub(sym("devComARQR")) / 0x40) as u8;
+            v.push(match m.u32(req + 0x1C) {
+                0x8038_F098 => ArqDone::DvdStd(b),
+                0x8038_F110 => ArqDone::DvdEnd(b),
+                0x8038_EB50 => ArqDone::Std(b),
+                0x8038_EBCC => ArqDone::Aram(b),
+                0x8035_1FDC => ArqDone::None,
+                cb => panic!("an ARAM transfer in flight with callback {cb:#x}"),
+            });
+        }
+    }
+    v
 }
 
 /// `lbFile`'s `cancel`, the flag its synchronous loads wait on.
@@ -632,9 +870,10 @@ fn compare_devcom(m: &Mem, d: &DevCom, diffs: &mut Vec<String>) {
             }
         }
     }
-    if !d.arq_done.is_empty() {
+    let theirs = arq_in_flight(m);
+    if d.arq_done != theirs {
         diffs.push(format!(
-            "audio: ARAM transfers waiting for their interrupt: {:?}",
+            "audio: ARAM transfers in flight: ours {:x?}, theirs {theirs:x?}",
             d.arq_done
         ));
     }
@@ -1030,10 +1269,13 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
             *b as u32,
         );
     }
+    put_banks(&mut img, &m, a);
+    img.put("cur_ssm_file", sym("cur_ssm_file"), &a.lb.ssm_file);
     let mut lb = a.lb.clone();
     for (name, at, f) in lb_fields(&mut lb) {
         match f {
             LbField::I(v) => img.u32(name, at, *v as u32),
+            LbField::U(v) => img.u32(name, at, *v),
             LbField::F(v) => img.f32(name, at, *v),
         }
     }
@@ -1136,6 +1378,16 @@ impl<'a> Image<'a> {
 /// device command queue's files, for its reads.
 pub fn load_stream(a: &mut Audio, disc: &melee_data::disc::Disc, archives: &mut Archives) {
     let e = a.synth.stream.entrynum;
+    load_disc_file(a, disc, archives, e);
+}
+
+/// Disc file `e` for the device command queue to read.
+pub fn load_disc_file(
+    a: &mut Audio,
+    disc: &melee_data::disc::Disc,
+    archives: &mut Archives,
+    e: i32,
+) {
     if e <= 0 || a.devcom.files.iter().any(|f| f.0 == e) {
         return;
     }

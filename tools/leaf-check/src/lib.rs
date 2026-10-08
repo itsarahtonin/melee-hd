@@ -32,6 +32,11 @@ pub fn reference() -> Option<Ctx> {
     // the game doesn't play: nothing in memory changes.
     ctx.register(sym("AISetStreamVolLeft"), |_| {});
     ctx.register(sym("AISetStreamVolRight"), |_| {});
+    // The disc drive is outside memory too: a read the device command queue starts goes out
+    // and nothing more (its end is the audio timeline's).
+    ctx.register(sym("DVDReadAsyncPrio"), |ctx| ctx.regs.set_r(3, 1));
+    // So is the ARAM's DMA: a transfer the ARAM queue starts goes out and nothing more.
+    ctx.register(sym("ARStartDMA"), |_| {});
     ctx.regs.set_r(1, STACK_TOP);
     // r2 and r13 as `__init_registers` sets them: its lis/ori pairs give the small-data bases.
     let init = sym("__init_registers");
