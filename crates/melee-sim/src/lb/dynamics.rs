@@ -123,6 +123,13 @@ impl Game {
         self.gr.wind_level = 0;
     }
 
+    /// Whether a box's wind blows, `lb_80011ABC`: 1 as it starts, 2 while it lasts, -1 as it
+    /// stops, else 0.
+    #[doc(alias = "lb_80011ABC")]
+    pub fn wind_level(&self) -> i32 {
+        self.gr.wind_level
+    }
+
     /// Gives a chain's links back to the free list, last first, `lb_8000FD18`.
     #[doc(alias = "lb_8000FD18")]
     pub fn free_dynamics_chain(&mut self, desc: &mut DynamicsDesc) {

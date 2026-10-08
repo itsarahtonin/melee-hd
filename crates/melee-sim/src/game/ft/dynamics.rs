@@ -160,8 +160,10 @@ impl Running<'_> {
             }
             return;
         }
-        if matches!(fp.kind, KIND_MARS | KIND_EMBLEM) {
-            unported_call("lb_80011ABC");
+        // Marth's and Roy's capes follow the wind while a box's blows.
+        if matches!(fp.kind, KIND_MARS | KIND_EMBLEM) && self.game.wind_level() > 0 {
+            self.set_dynamics(f, true);
+            return;
         }
         if !x594_bit(fp, 4) {
             let on = !x594_bit(fp, 3);
@@ -333,7 +335,7 @@ impl Running<'_> {
         if !matches!(fp.kind, KIND_MARS | KIND_EMBLEM) || fp.x2227_b6 {
             return;
         }
-        match self.game.gr.wind_level {
+        match self.game.wind_level() {
             -1 => unported_call("ftCo_8009E4A8"),
             1 => {
                 let fp = &self.game.fighters[f.0];
