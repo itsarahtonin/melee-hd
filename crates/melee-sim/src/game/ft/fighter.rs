@@ -649,8 +649,30 @@ pub fn proc_grab_coll(g: &mut Running, gobj: GObjId) {
     if !g.game.fighter(gobj).x2219_b1 && g.game.ft.bury_things != 0 {
         unported_call("ftCo_800C0A28");
     }
-    if g.game.fighter(gobj).x221E_b6 {
-        unported_call("ftColl_80078A2C");
+    if !g.game.fighter(gobj).x221E_b6 {
+        return;
+    }
+    g.grab_fighters(gobj);
+    if let Some(victim) = g.game.fighter(gobj).victim_gobj {
+        let f = g.game.fighter_id(gobj);
+        if !g.game.fighters[f.0].x2225_b1 {
+            let sfx = g.ft_data_sfx(f, 0x30);
+            g.fighter_play_sfx(f, sfx, 0x7F, 0x40);
+        }
+        g.grab_landed(gobj, victim);
+        let fp = g.game.fighter(gobj);
+        let (grab, grabbed) = (fp.grab_cb, fp.grabbed_cb);
+        run_fighter_cb(g, gobj, grab.expect("a grab without its callback"));
+        g.run_grabbed_cb(
+            grabbed.expect("a grab without its victim's callback"),
+            victim,
+            gobj,
+        );
+        return;
+    }
+    g.grab_items(gobj);
+    if g.game.fighter(gobj).target_item_gobj.is_some() {
+        unported_call("it_8027B4A4 (a fighter catching an item)");
     }
 }
 

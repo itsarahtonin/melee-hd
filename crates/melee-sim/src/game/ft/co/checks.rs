@@ -243,8 +243,8 @@ impl Running<'_> {
             return false;
         }
         if fp.input.held_buttons[0] & PAD_LR != 0 && fp.input.pressed_buttons & PAD_A != 0 {
-            let _ = msid;
-            unported_call("ftCo_800D8C54");
+            self.enter_catch(gobj, msid);
+            return true;
         }
         false
     }

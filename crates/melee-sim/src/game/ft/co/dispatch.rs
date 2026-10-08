@@ -614,6 +614,26 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8008_2B78 => {
             g.co_air_catch_hit_coll(gobj);
         }
+        // ftCo_Catch_Anim, ftCo_CatchDash_Anim
+        0x800D_8CC8 | 0x800D_8D24 => {
+            g.co_catch_anim(gobj);
+        }
+        // ftCo_Catch_IASA, ftCo_CatchDash_IASA
+        0x800D_8D80 | 0x800D_8D84 => {
+            g.co_no_iasa(gobj);
+        }
+        // ftCo_Catch_Phys
+        0x800D_8D88 => {
+            g.co_catch_phys(gobj);
+        }
+        // ftCo_CatchDash_Phys
+        0x800D_8DD0 => {
+            g.co_catch_dash_phys(gobj);
+        }
+        // ftCo_Catch_Coll, ftCo_CatchDash_Coll
+        0x800D_8E08 | 0x800D_8E6C => {
+            g.co_catch_coll(gobj);
+        }
         _ => return false,
     }
     true

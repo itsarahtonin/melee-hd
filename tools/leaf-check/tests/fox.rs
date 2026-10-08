@@ -76,7 +76,6 @@ fn stubs(yes: bool) -> Vec<Stub> {
         ext::FTANIM_80070CC4,
         ext::PL_80040120,
         ext::FTPICKUPITEM_80094818,
-        ext::FTCOLL_CREATE_REFLECT_HIT,
         ext::GRCORNERIA_801E2AF4,
         ext::FT_8008A324,
         ext::FT_80089824,
@@ -96,13 +95,7 @@ fn stubs(yes: bool) -> Vec<Stub> {
         v.push((a, b));
     }
     // The common states' crowd and statistics, which their ports stand in for.
-    for n in [
-        "un_80322598",
-        "pl_80040048",
-        "pl_8003FFDC",
-        "pl_8003E0E8",
-        "pl_8003E114",
-    ] {
+    for n in ["un_80322598", "pl_80040048", "pl_8003FFDC"] {
         v.push((leaf_check::sym(n), StubRet::Nothing));
     }
     v.push((leaf_check::sym("un_803224DC"), StubRet::Int(0)));

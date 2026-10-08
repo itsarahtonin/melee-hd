@@ -7,7 +7,7 @@ use gekko_fp as fp;
 use super::super::super::code::unported_call;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::checks::{KIND_CLINK, KIND_PIKACHU, abs};
+use super::checks::{KIND_CLINK, KIND_PIKACHU, KIND_SAMUS, abs};
 use super::checks::{KIND_GAME_WATCH, KIND_KIRBY, KIND_LINK, KIND_NESS, KIND_PEACH, KIND_PICHU};
 use super::ids::ms;
 use super::{PAD_A, PAD_LR};
@@ -687,16 +687,42 @@ impl Running<'_> {
 
     /// `ftCo_AttackDash_IASA`: a grab out of it (`ftCo_800D8AE0`), then anything standing
     /// allows.
-    // Ports `ftCo_AttackDash_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_AttackDash_IASA")]
     pub fn co_attack_dash_iasa(&mut self, gobj: GObjId) {
         if !self.attack_dash_catch_check(gobj) && self.game.fighter(gobj).allow_interrupt {
             self.co_wait_iasa(gobj);
         }
     }
 
-    /// A grab out of a dash attack (`ftCo_800D8AE0`), not ported yet.
+    /// A grab out of a dash attack, `ftCo_800D8AE0`: holding an item, a shoulder throws it
+    /// (`ftCo_800952DC`); else unless Link's hookshot or Samus's grapple is out
+    /// (`fn_800D8E94`, `fn_800D952C`), a shoulder within the grab window grabs; the window
+    /// counts down.
+    #[doc(alias = "ftCo_800D8AE0")]
+    #[doc(alias = "ftCo_800952DC")]
     pub fn attack_dash_catch_check(&mut self, gobj: GObjId) -> bool {
-        let _ = gobj;
-        unported_call("ftCo_800D8AE0")
+        let fp = self.game.fighter(gobj);
+        let shoulder = fp.input.held_buttons[0] & PAD_LR != 0;
+        if fp.item_gobj.is_some() && shoulder {
+            self.enter_item_throw(gobj, ms::LIGHT_THROW_DASH);
+            return true;
+        }
+        if (fp.kind == KIND_LINK || fp.kind == KIND_CLINK) && fp.u_i32(0xC) != 0 {
+            return false;
+        }
+        if fp.kind == KIND_SAMUS && fp.u_i32(0x10) != 0 {
+            return false;
+        }
+        let window = fp.mv_i32(ATTACK_X0);
+        if shoulder && window != 0 {
+            self.enter_catch(gobj, ms::CATCH_DASH);
+            return true;
+        }
+        if window != 0 {
+            self.game
+                .fighter_mut(gobj)
+                .set_mv_i32(ATTACK_X0, window.wrapping_sub(1));
+        }
+        false
     }
 }

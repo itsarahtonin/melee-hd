@@ -194,6 +194,8 @@ pub fn remove_victim(hit: &mut HitCapsule, victim: Victim) {
 
 /// `HurtCapsuleState`: an intangible hurtbox can't be hit.
 pub const HURT_INTANGIBLE: i32 = 2;
+/// `HurtCapsule_Enabled`.
+pub const HURT_ENABLED: i32 = 0;
 
 /// The radius a hitbox tests with: its own, or scaled by its owner's size unless fixed.
 fn hit_radius(hit: &HitCapsule, owner_scale: f32) -> f32 {
@@ -277,6 +279,36 @@ pub fn hits_hurtbox(
         hit.coll_distance = h.overlap;
         h.touching
     })
+}
+
+/// Tests a grab box against a hurtbox, `lbColl_80007ECC`: [`hits_hurtbox`] on an enabled
+/// hurtbox, never phantom.
+#[doc(alias = "lbColl_80007ECC")]
+#[allow(clippy::too_many_arguments)]
+pub fn grabs_hurtbox(
+    objs: &mut Objects,
+    data: &Archives,
+    hit: &mut HitCapsule,
+    hurt: &mut HurtCapsule,
+    mtx: Option<&Mtx34>,
+    hit_owner_scale: f32,
+    hurt_owner_scale: f32,
+    z: f32,
+) -> bool {
+    if hurt.state != HURT_ENABLED {
+        return false;
+    }
+    hits_hurtbox(
+        objs,
+        data,
+        hit,
+        hurt,
+        mtx,
+        false,
+        hit_owner_scale,
+        hurt_owner_scale,
+        z,
+    )
 }
 
 /// Tests a hitbox against a shield, reflector or absorber bubble, `lbColl_80007BCC`: as

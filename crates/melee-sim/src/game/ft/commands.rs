@@ -181,6 +181,7 @@ impl Running<'_> {
             1 => return self.cmd_create_hitbox(gobj, f),
             7 => return self.sound_command(f, None),
             28 => return self.cmd_random_sfx(gobj, f),
+            24 => return self.cmd_throw_hitbox(gobj, f),
             44 => return self.cmd_floor_sound(gobj, f),
             45 => return self.cmd_footstep(gobj, f),
             _ => match COMMANDS.get(index as usize) {
@@ -232,14 +233,14 @@ impl Running<'_> {
         };
         let j = self.bone_joint(gobj, bone);
         self.game.fighters[f.0].x914[id].jobj = j;
-        self.hitbox_damage(f, id, bits(w[0], 22, 10));
+        self.hitbox_damage(f, id, false, bits(w[0], 22, 10));
         let fixed = |v: f64| mem(fp::fmuls(reg(FIXED), v));
         let h = &mut self.game.fighters[f.0].x914[id];
         h.scale = fixed(ufloat(bits(w[1], 0, 16)));
         h.b_offset.x = fixed(sfloat(sbits(w[1], 16, 16)));
         h.b_offset.y = fixed(sfloat(sbits(w[2], 0, 16)));
         h.b_offset.z = fixed(sfloat(sbits(w[2], 16, 16)));
-        self.hitbox_angle(gobj, f, id, bits(w[3], 0, 9) as i32);
+        self.hitbox_angle(gobj, f, id, false, bits(w[3], 0, 9) as i32);
         let h = &mut self.game.fighters[f.0].x914[id];
         h.x24 = bits(w[3], 9, 9);
         h.x28 = bits(w[3], 18, 9);
@@ -286,7 +287,7 @@ impl Running<'_> {
     /// A hitbox's damage, `ftColl_8007ABD0`: scaled by the fighter's height and a released
     /// smash's charge, its hit count from that, then weakened by how stale the move is.
     #[doc(alias = "ftColl_8007ABD0")]
-    fn hitbox_damage(&mut self, f: FighterId, id: usize, damage: u32) {
+    fn hitbox_damage(&mut self, f: FighterId, id: usize, throw: bool, damage: u32) {
         let fp = &self.game.fighters[f.0];
         let mut dmg = fp::frsp(f64::from(damage));
         if fp.x34_scale.y != 1.0 {
@@ -302,9 +303,34 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let attack = fp.x2068_attackID;
         let stale = crate::game::it::owner::stale_damage(self.game, self.data, f, attack, dmg);
-        let h = &mut self.game.fighters[f.0].x914[id];
+        let fp = &mut self.game.fighters[f.0];
+        let h = if throw {
+            &mut fp.xDF4[id]
+        } else {
+            &mut fp.x914[id]
+        };
         h.unk_count = fp::fctiwz(dmg) as u32;
         h.damage = mem(stale);
+    }
+
+    /// A throw's hitbox, `ftAction_80071E04`: one of the throw's two (`xDF4`), its damage
+    /// (`ftColl_8007ABD0`), angle (`ftColl_8007AC9C`), knockback growth, fixed and base
+    /// knockback, element and sound. Three words.
+    #[doc(alias = "ftAction_80071E04")]
+    fn cmd_throw_hitbox(&mut self, gobj: GObjId, f: FighterId) {
+        let w: [u32; 3] = std::array::from_fn(|i| self.cmd_word(f, i as u32));
+        let id = bits(w[0], 6, 3) as usize;
+        assert!(id < 2, "throw hitbox {id} of a command");
+        self.hitbox_damage(f, id, true, bits(w[0], 9, 23));
+        self.hitbox_angle(gobj, f, id, true, bits(w[1], 0, 9) as i32);
+        let h = &mut self.game.fighters[f.0].xDF4[id];
+        h.x24 = bits(w[1], 9, 9);
+        h.x28 = bits(w[1], 18, 9);
+        h.x2C = bits(w[2], 0, 9);
+        h.element = bits(w[2], 9, 4);
+        h.sfx_severity = bits(w[2], 13, 3) as i32;
+        h.sfx_kind = bits(w[2], 16, 4) as i32;
+        self.cmd_skip(f, 3);
     }
 
     /// A released smash attack's damage, `ftCo_800DEEB8`: more the longer it charged.
@@ -329,8 +355,13 @@ impl Running<'_> {
     #[doc(alias = "ftColl_8007AC9C")]
     #[doc(alias = "ftColl_8007AC68")]
     #[doc(alias = "pl_80037ECC")]
-    fn hitbox_angle(&mut self, _gobj: GObjId, f: FighterId, id: usize, angle: i32) {
-        self.game.fighters[f.0].x914[id].kb_angle = angle;
+    fn hitbox_angle(&mut self, _gobj: GObjId, f: FighterId, id: usize, throw: bool, angle: i32) {
+        let fp = &mut self.game.fighters[f.0];
+        if throw {
+            fp.xDF4[id].kb_angle = angle;
+        } else {
+            fp.x914[id].kb_angle = angle;
+        }
         let a = angle as u32;
         let c = self.common();
         let (lo, hi) = (c.u32(0x7E8), c.u32(0x7EC));
@@ -525,7 +556,7 @@ impl Running<'_> {
     /// Plays a part animation (`ftAction_800727C8`), over the command's frames unless a
     /// state started partway in catches up on it (`ftAction_8007283C`, at once).
     #[doc(alias = "ftAction_800727C8")]
-    // Ports `ftAction_8007283C`; aliased once a check reaches it.
+    #[doc(alias = "ftAction_8007283C")]
     fn cmd_part_anim(&mut self, gobj: GObjId, w: u32, blend: bool) {
         let frames = if blend {
             mem(fp::frsp(f64::from(bits(w, 20, 12))))

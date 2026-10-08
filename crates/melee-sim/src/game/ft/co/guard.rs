@@ -3,7 +3,7 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::{self, Val, unported_call};
+use super::super::super::code::unported_call;
 use super::super::super::ef::{self, Arg};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
@@ -35,13 +35,38 @@ const GUARD_X20: usize = 0x20;
 const GUARD_X24: usize = 0x24;
 const GUARD_X2C: usize = 0x2C;
 
-/// `ftColl_8007B1B8`, `ftColl_CreateReflectHit`: the shield's and powershield's hit shapes
-/// (the fighter collision's port).
-const FT_COLL_8007B1B8: u32 = 0x8007_B1B8;
-const FT_COLL_CREATE_REFLECT_HIT: u32 = 0x8007_B23C;
-/// `pl_8003E0E8`, `pl_8003E114`: the shield's statistics (the player library's port).
-const PL_8003E0E8: u32 = 0x8003_E0E8;
-const PL_8003E114: u32 = 0x8003_E114;
+/// A reflector's descriptor (`ReflectDesc`): its part, the most damage it reflects, its
+/// offset and size, the reflected attack's damage and speed factors, and its behavior.
+pub struct ReflectDesc {
+    pub bone: i32,
+    pub max_damage: i32,
+    pub offset: Vec3,
+    pub size: f32,
+    pub damage_mul: f32,
+    pub speed_mul: f32,
+    pub behavior: u8,
+}
+
+/// The fighter's shield on `joint`, its hits calling `cb`, `ftColl_8007B1B8` (the shield
+/// descriptor's bone, radius and offset given).
+#[doc(alias = "ftColl_8007B1B8")]
+fn set_shield_hit(
+    fp: &mut super::super::super::structs::Fighter,
+    cb: CodeRef,
+    joint: Option<crate::hsd::jobj::JObjId>,
+    radius: f32,
+    offset: Vec3,
+) {
+    fp.x221B.x221B_b0 = true;
+    fp.x221B.x221B_b1 = false;
+    fp.x221B.x221B_b2 = false;
+    fp.x221B.x221B_b3 = false;
+    fp.x221B.x221B_b4 = false;
+    fp.shield_hit_cb = Some(cb);
+    fp.shield_hit.bone = joint;
+    fp.shield_hit.size = radius;
+    fp.shield_hit.offset = offset;
+}
 
 /// The shield's callbacks: a hit on it (`ftCo_80092E50`), a powershield's reflection
 /// (`ftCo_80093790`), and the shield stun's hitlag hooks (`ftCo_80093240`, `ftCo_800932DC`).
@@ -102,13 +127,10 @@ impl Running<'_> {
     /// [`ON_SHIELD_HIT`].
     #[doc(alias = "ftCo_80092450")]
     pub fn shield_hit_shape(&mut self, gobj: GObjId) {
-        let args = [
-            Val::GObj(Some(gobj)),
-            Val::None,
-            Val::Int(ON_SHIELD_HIT.0 as i32),
-        ];
-        code::call(self, FT_COLL_8007B1B8, &args);
-        self.game.fighter_mut(gobj).x221A_b7 = true;
+        let joint = self.shield_joint(gobj);
+        let fp = self.game.fighter_mut(gobj);
+        set_shield_hit(fp, ON_SHIELD_HIT, joint, 1.0, Vec3::new(0.0, 0.0, 0.0));
+        fp.x221A_b7 = true;
     }
 
     /// The shield's size, `inlineB0`: Yoshi's egg is fixed; the others shrink with health and
@@ -331,7 +353,7 @@ impl Running<'_> {
             fp.x221A_b7 = false;
             fp.x221B.x221B_b0 = false;
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
-            code::call(self, PL_8003E0E8, &[Val::Int(slot), Val::Int(sub)]);
+            self.record_shield_break(slot, sub);
             unported_call("ftCo_80098B20");
         }
         let x10 = reg(fp.mv_f32(GUARD_X10));
@@ -468,12 +490,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80092BE8")]
     pub fn enter_guard_off(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        let args = [
-            Val::Int(i32::from(fp.player_idx)),
-            Val::Int(i32::from(fp.is_sub_fighter)),
-            Val::Float(reg(fp.shield_health)),
-        ];
-        code::call(self, PL_8003E114, &args);
+        let (slot, health) = (i32::from(fp.player_idx), fp.shield_health);
+        self.record_shield_drop(slot, health);
         if self.game.fighter(gobj).kind == KIND_YOSHI {
             unported_call("ftYs_Shield_8012C49C");
         }
@@ -676,12 +694,38 @@ impl Running<'_> {
     /// The powershield's reflector on the shield's joint, `ftCo_8009370C`.
     #[doc(alias = "ftCo_8009370C")]
     pub fn powershield_reflect_shape(&mut self, gobj: GObjId, on_reflect: CodeRef) {
-        let args = [
-            Val::GObj(Some(gobj)),
-            Val::None,
-            Val::Int(on_reflect.0 as i32),
-        ];
-        code::call(self, FT_COLL_CREATE_REFLECT_HIT, &args);
+        let f = self.game.fighter_id(gobj);
+        let x8 = self.ft_data_x8(&self.game.fighters[f.0]);
+        let c = self.common();
+        let d = ReflectDesc {
+            bone: i32::from(self.data.u8(x8.at(0x11))),
+            max_damage: gekko_fp::fctiwz(reg(self.game.fighters[f.0].shield_health)),
+            offset: Vec3::new(0.0, 0.0, 0.0),
+            size: c.f32(0x2A8),
+            damage_mul: c.f32(0x2AC),
+            speed_mul: c.f32(0x2B0),
+            behavior: 1,
+        };
+        self.create_reflect_hit(gobj, &d, on_reflect);
+    }
+
+    /// The fighter's reflector from a descriptor, its reflections calling `cb`,
+    /// `ftColl_CreateReflectHit`.
+    // Ports `ftColl_CreateReflectHit`; aliased once a check reaches it.
+    pub fn create_reflect_hit(&mut self, gobj: GObjId, d: &ReflectDesc, cb: CodeRef) {
+        let f = self.game.fighter_id(gobj);
+        let joint = self.bones(f)[d.bone as usize].joint;
+        let fp = &mut self.game.fighters[f.0];
+        fp.reflecting = true;
+        fp.x2218_b4 = false;
+        fp.reflect_hit_cb = Some(cb);
+        fp.ReflectAttr.x1A30_maxDamage = d.max_damage;
+        fp.ReflectAttr.x1A34_damageMul = d.damage_mul;
+        fp.ReflectAttr.x1A38_speedMul = d.speed_mul;
+        fp.x2218_b5 = d.behavior & 1 != 0;
+        fp.reflect_hit.bone = joint;
+        fp.reflect_hit.size = d.size;
+        fp.reflect_hit.offset = d.offset;
     }
 
     /// The fighter's effects removed, `ftCommon_8007DB24`.
@@ -829,13 +873,13 @@ impl Running<'_> {
         false
     }
 
-    /// A shield grab with A within its window (`mv` x24), `ftCo_800D8B9C` (grabs aren't
-    /// ported yet).
+    /// A shield grab with A within its window (`mv` x24), `ftCo_800D8B9C`.
     #[doc(alias = "ftCo_800D8B9C")]
     pub fn guard_catch_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter_mut(gobj);
         if fp.input.pressed_buttons & PAD_A != 0 && fp.mv_i32(GUARD_X24) != 0 {
-            unported_call("ftCo_800D8C54");
+            self.enter_catch(gobj, ms::CATCH_DASH);
+            return true;
         }
         if fp.mv_i32(GUARD_X24) != 0 {
             fp.set_mv_i32(GUARD_X24, fp.mv_i32(GUARD_X24).wrapping_sub(1));
