@@ -20,6 +20,7 @@
 //! which shows what the comparison covers; `--against TICK` compares it with a later tick's
 //! memory instead, which shows the comparison telling states apart.
 
+use gekko_fp::{FpMode, set_fp_mode};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::process::ExitCode;
 
@@ -144,6 +145,9 @@ pub fn diff(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut against, mut pos) = (None, u32::MAX, None, Vec::new());
     let (mut boot_diff, mut all) = (false, false);
     let mut ignore: Vec<String> = Vec::new();
+    // A replay doesn't say how its floats were computed: Slippi's Dolphin recorded it, and
+    // ssbm-run plays replays that way unless told `--fp hardware` (the benchmark matches).
+    let mut fp_mode = FpMode::Slippi;
     let mut it = args.iter();
     while let Some(&a) = it.next() {
         match a {
@@ -152,6 +156,13 @@ pub fn diff(args: &[&str]) -> ExitCode {
             "--against" => against = it.next().and_then(|t| t.parse::<u32>().ok()),
             "--boot-diff" => boot_diff = true,
             "--all" => all = true,
+            "--fp" => {
+                fp_mode = match it.next().copied() {
+                    Some("hardware") => FpMode::Hardware,
+                    Some("slippi") => FpMode::Slippi,
+                    _ => panic!("--fp hardware|slippi"),
+                }
+            }
             "--ignore" => ignore.extend(
                 it.next()
                     .expect("--ignore TEXT[,TEXT...]")
@@ -172,9 +183,12 @@ pub fn diff(args: &[&str]) -> ExitCode {
         }
     }
     let [trace_path, replay_path] = pos[..] else {
-        eprintln!("usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N]");
+        eprintln!(
+            "usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N] [--fp hardware|slippi]"
+        );
         return ExitCode::from(2);
     };
+    set_fp_mode(fp_mode);
     let disc_path = std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc");
     let disc = Disc::open(&disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
     let bytes = std::fs::read(replay_path).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
