@@ -143,7 +143,8 @@ impl Running<'_> {
         if id == 0 || id == prev[3] {
             return;
         }
-        if id >= 64 {
+        // `StatsAttack_Count`, 0x64.
+        if id >= 100 {
             if !sub {
                 // `x358.x0.by_attack_hi[id]`, which the id indexes from the array's start:
                 // past it, the words after.
