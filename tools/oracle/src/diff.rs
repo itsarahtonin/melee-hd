@@ -279,6 +279,8 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 imp.stage();
                 imp.ids();
                 imp.audio(bank);
+                // Memory doesn't say which DSP model ran: the replay's settings do.
+                imp.game.audio.dsp = settings.dsp;
                 imp.match_state();
                 imp.display();
                 if let Some(tb) = image.tb {

@@ -8,7 +8,8 @@
 
 use std::process::Command;
 
-const TRACE: &str = "C:/Projects/ssbm-rs-publication/local/traces/v5/Game_20260129T133652.trc";
+const TRACE: &str =
+    "C:/Projects/ssbm-rs-publication/local/traces/v5-mixed/Game_20260129T133652.trc";
 const REPLAY: &str = "C:/Users/USER/Documents/Slippi/2026-01/Game_20260129T133652.slp";
 
 /// The oracle's output for `args` after `diff TRACE REPLAY`, or none when what it needs isn't

@@ -16,10 +16,10 @@ use super::ax::{Ax, Pb};
 /// recordings carry their sound flag.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum DspModel {
-    /// Voices end only when keyed off, stolen or dropped (ssbm-rs's default).
+    /// Voices end only when keyed off, stolen or dropped (ssbm-rs's `AX=0`).
     #[default]
     Silent,
-    /// Voices also end when their samples end (ssbm-rs's `AX=1`, the console's behavior).
+    /// Voices also end when their samples end (ssbm-rs's default, the console's behavior).
     Samples,
 }
 

@@ -154,8 +154,9 @@ impl Settings {
 
     /// The settings a Slippi replay's game start records: its game info block (the match's
     /// `StartMeleeData` as the game held it, 0x138 bytes) and random seed. A replay doesn't
-    /// say how its sound played; this takes the silent model, as ssbm-rs plays replays
-    /// unless told `AX=1`, so the two compare.
+    /// say how its sound played; this takes the sample-accurate model, as Slippi Dolphin
+    /// recorded it and ssbm-rs plays replays unless told `AX=0`, so the two compare.
+    /// [`DspModel::Silent`] stays available by setting `dsp`.
     pub fn from_game_info(info: &[u8], seed: u32) -> Settings {
         assert_eq!(
             info.len(),
@@ -174,7 +175,7 @@ impl Settings {
             rules: Rules::default(),
             ucf: ucf::Pads::default(),
             playback: false,
-            dsp: DspModel::Silent,
+            dsp: DspModel::Samples,
             fighter_addresses: Vec::new(),
         }
     }
@@ -255,10 +256,11 @@ impl Match {
             });
             game.pads.playback = true;
         }
-        game.audio.dsp = settings.dsp;
         game.ft.address_seed = settings.fighter_addresses.iter().copied().collect();
         let mut data = Archives::default();
         boot(&mut game, &mut data);
+        // After the boot's state, which may bring its own audio library.
+        game.audio.dsp = settings.dsp;
         if game.audio.clock.is_some() {
             // The sound banks the match's bank choice may load, for the device command queue
             // to read.
