@@ -107,6 +107,8 @@ pub fn run_event(game: &mut Running, f: u32) {
 
 /// `efLib_PauseAll`.
 pub const EF_PAUSE_ALL: u32 = 0x8005_BA40;
+/// `efLib_ResumeAll`.
+pub const EF_RESUME_ALL: u32 = 0x8005_BAC4;
 
 /// Runs a callback a fighter holds that takes its GObj (`void (*)(HSD_GObj*)`): an action
 /// state's animation, input, physics, collision and camera callbacks, accessories, hitlag
@@ -154,8 +156,14 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         0x8007_61C8 => g.update_camera_box(gobj),
         // Hitlag.
         0x8008_E4F0 => g.co_damage_hitlag(gobj),
+        0x8008_E714 => g.co_damage_exit_hitlag(gobj),
+        // Sheik's knockback hooks.
+        super::ft::co::hit::SEAK_ON_KNOCKBACK_ENTER => g.seak_on_knockback_enter(gobj),
+        super::ft::co::hit::SEAK_ON_KNOCKBACK_EXIT => g.seak_on_knockback_exit(gobj),
         // efLib_PauseAll, a state's hitlag hook that freezes the fighter's effects.
         EF_PAUSE_ALL => super::ef::pause_all(g.game, Some(gobj)),
+        // efLib_ResumeAll, a state's hook for hitlag's end.
+        EF_RESUME_ALL => super::ef::resume_all(g.game, Some(gobj)),
         other => unported("fighter callback", other),
     }
 }

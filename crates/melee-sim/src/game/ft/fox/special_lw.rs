@@ -174,7 +174,7 @@ impl Running<'_> {
     #[doc(alias = "ftFx_SpecialLwHit_Phys")]
     pub fn fox_special_lw_reflect_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
-        self.ext_gobj(ext::FTCOLL_8007AEF8, gobj);
+        self.reflect_follow(gobj);
     }
 
     /// Their aerial physics.
@@ -183,7 +183,7 @@ impl Running<'_> {
     #[doc(alias = "ftFx_SpecialAirLwHit_Phys")]
     pub fn fox_special_air_lw_reflect_phys(&mut self, gobj: GObjId) {
         self.fox_special_air_lw_phys(gobj);
-        self.ext_gobj(ext::FTCOLL_8007AEF8, gobj);
+        self.reflect_follow(gobj);
     }
 
     /// Off the ground (`ft_80082708`), into an aerial state from the same frame.

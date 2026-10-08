@@ -172,6 +172,7 @@ fn run_one(
         imp.items();
         imp.match_state();
         imp.audio(bank);
+        imp.bg_flash();
         let Importer { game, maps, .. } = imp;
         (game, maps)
     }));
@@ -186,6 +187,7 @@ fn run_one(
     before.items();
     before.match_state();
     before.audio();
+    before.bg_flash();
     // A later match's fighters hold a previous match's bytes past what they use (stale
     // dynamic-bone and texture handles), which the import doesn't follow.
     if !before.diffs.is_empty() {
@@ -234,6 +236,7 @@ fn run_one(
     cmp.items();
     cmp.match_state();
     cmp.audio();
+    cmp.bg_flash();
     let ours: Vec<(u32, Vec<u32>)> = stubs::take()
         .iter()
         .map(|(f, args)| (*f, our_words(&maps, *f, args)))
@@ -623,6 +626,40 @@ fn proc_coll_resolve_results() {
         proc_coll_resolve,
         give_result,
         80,
+    );
+}
+
+/// Gives the fighter a hit with knockback, by the call's index: its strength from barely any
+/// to a tumble's, with and without damage, either way round, at the Sakurai angle or a set
+/// one (a spike among them), on each hurtbox, plain, fire or electric, at low and high
+/// percents.
+fn give_knockback(call: &mut Call, i: usize) {
+    let fp = fighter_of(call, call.regs.gpr[3]);
+    let mut pick = Pick(i as u32 * 17 + 3);
+    let kb = [2.0, 30.0, 75.0, 95.0, 140.0, 260.0][i % 6];
+    poke_f32(call, fp + 0x1850, kb);
+    poke_f32(call, fp + 0x1838, [0.0, 4.0, 13.0][pick.next(3) as usize]);
+    poke_u32(call, fp + 0x183C, 1 + pick.next(20));
+    poke_f32(call, fp + 0x1844, [-1.0, 1.0][pick.next(2) as usize]);
+    poke_u32(
+        call,
+        fp + 0x1848,
+        [361, 361, 45, 80, 280, 30][pick.next(6) as usize],
+    );
+    poke_u32(call, fp + 0x184C, pick.next(3));
+    poke_u32(call, fp + 0x1860, [0, 0, 0, 1, 2][pick.next(5) as usize]);
+    poke_f32(call, fp + 0x1830, [0.0, 40.0, 150.0][pick.next(3) as usize]);
+}
+
+/// Hits with knockback: the reaction, hitstun's entry and the hit's shake and rumble, from
+/// real states.
+#[test]
+fn proc_coll_resolve_knockback() {
+    check(
+        "Fighter_procCollResolve",
+        proc_coll_resolve,
+        give_knockback,
+        60,
     );
 }
 

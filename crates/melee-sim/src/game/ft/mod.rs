@@ -151,6 +151,16 @@ impl Game {
     }
 }
 
+impl<'a> Running<'a> {
+    /// `p_ftCommonData`.
+    pub fn common(&self) -> Common<'a> {
+        Common {
+            data: self.data,
+            at: self.load_common(0),
+        }
+    }
+}
+
 impl Running<'_> {
     pub fn fighter(&self, gobj: GObjId) -> &Fighter {
         self.game.fighter(gobj)
@@ -177,14 +187,6 @@ impl Running<'_> {
     /// `Fighter_804D651C`).
     pub fn common_ptr(&self, offset: u32) -> DataRef {
         self.load_common(offset)
-    }
-
-    /// `p_ftCommonData`.
-    pub fn common(&self) -> Common<'_> {
-        Common {
-            data: self.data,
-            at: self.load_common(0),
-        }
     }
 
     /// `ftPartsTable[kind]`.

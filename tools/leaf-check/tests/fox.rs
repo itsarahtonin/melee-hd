@@ -70,7 +70,6 @@ fn stubs(yes: bool) -> Vec<Stub> {
     let b = StubRet::Int(i32::from(yes));
     let mut v: Vec<Stub> = [
         ext::FTCOMMON_CALC_SELF_ACCEL_DEACCEL_QUICK_AIR,
-        ext::FTCOLL_8007AEF8,
         ext::FTANIM_80070FB4,
         ext::FTANIM_80070C48,
         ext::FTANIM_80070CC4,

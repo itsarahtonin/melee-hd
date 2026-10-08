@@ -343,7 +343,7 @@ impl Running<'_> {
     }
 
     /// `doFlyRoll`: a tumble's roll follows its trajectory.
-    fn fly_roll(&mut self, gobj: GObjId) {
+    pub(super) fn fly_roll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
         let x = mem(fp::fadds(reg(fp.self_vel.x), reg(fp.x8c_kb_vel.x)));

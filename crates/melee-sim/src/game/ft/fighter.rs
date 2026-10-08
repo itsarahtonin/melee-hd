@@ -43,8 +43,10 @@ pub fn proc_hitlag(g: &mut Running, gobj: GObjId) {
         if fp.dmg.x195c_hitlag_frames <= 0.0 {
             fp.dmg.x195c_hitlag_frames = 0.0;
             if fp.x221A_b3 {
-                unported_call("ftCo_80090718");
+                g.queued_sounds(f);
+                g.game.fighters[f.0].x221A_b3 = false;
             }
+            let fp = &mut g.game.fighters[f.0];
             if fp.dmg.x1954 == 0.0 && !fp.x2219_b7 {
                 end_hitlag(g, gobj);
             }

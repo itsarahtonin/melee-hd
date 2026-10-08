@@ -1326,7 +1326,7 @@ pub struct dmg {
     /// +0xdc
     pub x1908: i32,
     /// +0xe0
-    pub x190C: RawPtr,
+    pub x190C: Option<DataRef>,
     /// +0xe4
     pub x1910: i32,
     /// +0xe8
@@ -1413,7 +1413,7 @@ impl Default for dmg {
             x1900: 0.0,
             x1904: 0.0,
             x1908: 0,
-            x190C: Default::default(),
+            x190C: None,
             x1910: 0,
             x1914: 0,
             int_value: 0,

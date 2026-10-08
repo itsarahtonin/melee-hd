@@ -181,6 +181,12 @@ impl Running<'_> {
         fp.reflect_hit.skip_update_pos = false;
     }
 
+    /// The reflector's bubble follows the fighter again, `ftColl_8007AEF8`.
+    #[doc(alias = "ftColl_8007AEF8")]
+    pub fn reflect_follow(&mut self, gobj: GObjId) {
+        self.game.fighter_mut(gobj).reflect_hit.skip_update_pos = false;
+    }
+
     /// `ftCo_EscapeAir_Phys`: an air dodge's momentum decays until it ends.
     #[doc(alias = "ftCo_EscapeAir_Phys")]
     pub fn co_escape_air_phys(&mut self, gobj: GObjId) {

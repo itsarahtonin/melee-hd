@@ -1,9 +1,8 @@
 //! What the frame's collisions come to for a fighter (`Fighter_procCollResolve`): its shield
 //! regrows or wears down, a delayed tip lands, the strongest result of the attack collision
 //! (a hit's knockback, a tip, a shield hit, a clank, a hit it dealt) picks its reaction and
-//! hitlag, and the frame's damage bookkeeping starts over. The damage states a hit enters
-//! (`ftCo_8008EC90` and its neighbours) and a broken shield aren't ported: those calls stop
-//! there.
+//! hitlag, and the frame's damage bookkeeping starts over. A broken shield isn't ported: it
+//! stops there.
 
 // NaN takes the original's branches, which the negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -77,8 +76,54 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
     let kb = fp.dmg.kb_applied;
     let mut strength = 0;
     let mut tip = false;
+    let mut knocked = false;
     if reg(kb) != 0.0 {
-        unported_call("a hit's knockback (ftCo_Damage_CalcKnockback and the damage states)");
+        let ga = fp.ground_or_air;
+        g.game.fighters[f.0].dmg.x189C_unk_num_frames = 0.0;
+        let dmg = reg(g.game.fighters[f.0].dmg.x1838_percentTemp);
+        g.take_damage_coins(f, dmg);
+        g.calc_knockback(f);
+        if g.game.fighters[f.0].kind == KIND_KIRBY {
+            unported_call("ftKb_SpecialN_800F5BA4 (Kirby losing his ability)");
+        }
+        if let Some(cb) = g.game.fighters[f.0].take_dmg_2_cb {
+            run_fighter_cb(g, gobj, cb);
+        }
+        if g.game.fighters[f.0].no_kb {
+            unported_call(
+                "a hand's hit without knockback (ftMh_MS_341_8014FE58, ftCh_Init_80156014)",
+            );
+        }
+        match g.game.fighters[f.0].x1828 {
+            0 => g.damage_pick_reaction(gobj),
+            1 => {
+                g.damage_hooks(gobj);
+                g.damage_reaction(gobj, 0.0);
+            }
+            2 => {
+                g.damage_hooks(gobj);
+                g.damage_no_reaction(gobj);
+            }
+            3 => {
+                g.damage_hooks(gobj);
+                // `ftCo_8008EB58`.
+                if g.hit_too_light(f) {
+                    g.damage_no_reaction(gobj);
+                }
+            }
+            _ => {}
+        }
+        let fp = &g.game.fighters[f.0];
+        let (element, applied, mul) = (
+            fp.dmg.x1860_element,
+            fp.dmg.x183C_applied,
+            fp.x1960_vibrateMult,
+        );
+        knocked = true;
+        g.start_hit_shake(f, element, applied, msid, ga, mul);
+        let dmg = fp::fctiwz(reg(g.game.fighters[f.0].dmg.x1838_percentTemp));
+        g.damage_rumble(f, dmg);
+        strength = applied;
     } else if reg(fp.dmg.x18a0) != 0.0 {
         strength = fp.dmg.x1840;
         tip = true;
@@ -143,6 +188,9 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
                 fp.dmg.x195c_hitlag_frames = max;
             }
             fp.allow_sdi = true;
+            if knocked {
+                fp.x221A_b3 = true;
+            }
             if tip {
                 fp.dmg.x189C_unk_num_frames = fp.dmg.x195c_hitlag_frames;
             }
@@ -254,20 +302,27 @@ impl Running<'_> {
     /// The sounds a hit queued for when hitlag ends, played now there's none,
     /// `ftCo_80090718`.
     #[doc(alias = "ftCo_80090718")]
-    fn queued_sounds(&mut self, f: FighterId) {
+    pub(crate) fn queued_sounds(&mut self, f: FighterId) {
         let id = self.game.fighters[f.0].dmg.x1908;
         if id != -1 {
             self.fighter_play_sfx(f, id, 0x7F, 0x40);
             self.game.fighters[f.0].dmg.x1908 = -1;
         }
-        if self.game.fighters[f.0].dmg.x190C != super::super::handles::RawPtr(0) {
-            unported_call("ft_800889F4 from ftCo_80090718 (a queued random voice)");
+        if let Some(arr) = self.game.fighters[f.0].dmg.x190C {
+            // `FtSFXArr`: a count and its ids.
+            let n = self.data.u32(arr) as i32;
+            let at = self.data.ptr(arr.at(4)).expect("a voice set's ids");
+            let ids: Vec<i32> = (0..n.max(0) as u32)
+                .map(|i| self.data.u32(at.at(4 * i)) as i32)
+                .collect();
+            self.fighter_random_voice(f, &ids);
+            self.game.fighters[f.0].dmg.x190C = None;
         }
     }
 
     /// A stamina fighter out of stamina falls (`ftCo_800C8D00`); not ported.
     #[doc(alias = "ftCo_800C8D00")]
-    fn stamina_out(&mut self, gobj: GObjId) {
+    pub(crate) fn stamina_out(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).x2224_b3 {
             unported_call("ftCo_800C8D00 (a stamina fighter out)");
         }

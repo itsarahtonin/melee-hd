@@ -265,7 +265,7 @@ impl Running<'_> {
         fp.x2226_b2 = false;
         fp.x2170 = 0.0;
         fp.dmg.x1908 = -1;
-        fp.dmg.x190C = Default::default();
+        fp.dmg.x190C = None;
         fp.x2227_b4 = false;
         fp.x213C = -1;
         fp.x2227_b5 = false;

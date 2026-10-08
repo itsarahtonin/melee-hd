@@ -2550,7 +2550,7 @@ impl Mirror for dmg {
             x1900: f32::from_bits(m.u32(at + 0xd4)),
             x1904: f32::from_bits(m.u32(at + 0xd8)),
             x1908: m.u32(at + 0xdc) as i32,
-            x190C: RawPtr(m.u32(at + 0xe0)),
+            x190C: cx.import_data(m.u32(at + 0xe0)),
             x1910: m.u32(at + 0xe4) as i32,
             x1914: m.u32(at + 0xe8) as i32,
             int_value: m.u32(at + 0xec) as i32,
@@ -2911,13 +2911,7 @@ impl Mirror for dmg {
                 format!("{:?}", m.u32(at + 0xdc) as i32),
             );
         }
-        if self.x190C.0 != m.u32(at + 0xe0) {
-            cx.mismatch(
-                &format!("{path}.x190C"),
-                format!("{:#x}", self.x190C.0),
-                format!("{:#x}", m.u32(at + 0xe0)),
-            );
-        }
+        cx.compare_data(&format!("{path}.x190C"), self.x190C, m.u32(at + 0xe0));
         if self.x1910 != m.u32(at + 0xe4) as i32 {
             cx.mismatch(
                 &format!("{path}.x1910"),

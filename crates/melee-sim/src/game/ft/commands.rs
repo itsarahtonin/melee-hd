@@ -99,7 +99,7 @@ const SMASH_RELEASE: i32 = 3;
 impl Running<'_> {
     /// The script a command runs in: the action's (`x3E4_fighterCmdScript`) or a color
     /// overlay's.
-    fn cmd_script(&mut self, f: FighterId, which: Option<Overlay>) -> &mut Script {
+    pub(super) fn cmd_script(&mut self, f: FighterId, which: Option<Overlay>) -> &mut Script {
         let fp = &mut self.game.fighters[f.0];
         match which {
             None => &mut fp.x3E4_fighterCmdScript.script,
@@ -113,7 +113,7 @@ impl Running<'_> {
         self.cmd_word_in(f, None, n)
     }
 
-    fn cmd_word_in(&self, f: FighterId, which: Option<Overlay>, n: u32) -> u32 {
+    pub(super) fn cmd_word_in(&self, f: FighterId, which: Option<Overlay>, n: u32) -> u32 {
         let fp = &self.game.fighters[f.0];
         let s = match which {
             None => &fp.x3E4_fighterCmdScript.script,
@@ -177,7 +177,7 @@ impl Running<'_> {
             46 => self.cmd_smash_charge(gobj, f, w),
             47 => self.cmd_vibrate(gobj, f, w),
             // Commands of more than one word step over them themselves.
-            0 => return self.cmd_effect(gobj, f),
+            0 => return self.cmd_effect(gobj, f, None),
             1 => return self.cmd_create_hitbox(gobj, f),
             7 => return self.sound_command(f, None),
             28 => return self.cmd_random_sfx(gobj, f),
@@ -881,7 +881,7 @@ impl Running<'_> {
     pub(super) fn overlay_command(&mut self, gobj: GObjId, which: Overlay, i: u32, alt: bool) {
         let f = self.game.fighter_id(gobj);
         match (alt, i) {
-            (false, 0) => unported_call("ftAction_80071028"),
+            (false, 0) => self.cmd_effect(gobj, f, Some(which)),
             (false, 1) => self.sound_command(f, Some(which)),
             (false, 2) => {
                 // `ftAction_800730B8`.

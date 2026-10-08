@@ -3,7 +3,8 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
+use super::super::super::code::{run_fighter_cb, unported_call};
+use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::parts::TRANS_N;
 use crate::fpu::{mem, reg};
@@ -271,12 +272,13 @@ impl Running<'_> {
     }
 
     /// `ftCommon_8007F86C`: the character's own reaction to leaving hitstun
-    /// (`ftData_OnKnockbackExit`). Unchecked: every character the saved calls have reacts,
-    /// and no reaction is ported.
+    /// (`ftData_OnKnockbackExit`).
+    #[doc(alias = "ftCommon_8007F86C")]
     pub fn knockback_exit(&mut self, gobj: GObjId) {
-        // Captain Falcon, Samus, Game & Watch, the hands and the wireframes have none.
-        if !matches!(self.game.fighter(gobj).kind, 2 | 13 | 24 | 27..=30) {
-            unported_call("ftData_OnKnockbackExit");
+        let kind = self.game.fighter(gobj).kind;
+        let cb = super::kind_callbacks::ON_KNOCKBACK_EXIT[kind as usize];
+        if cb != 0 {
+            run_fighter_cb(self, gobj, CodeRef(cb));
         }
     }
 

@@ -77,7 +77,6 @@ pub mod ms {
 /// `code::call` once its part is ported.
 pub mod ext {
     pub const FTCOMMON_CALC_SELF_ACCEL_DEACCEL_QUICK_AIR: u32 = 0x8007_CF58;
-    pub const FTCOLL_8007AEF8: u32 = 0x8007_AEF8;
     pub const FTANIM_80070FB4: u32 = 0x8007_0FB4;
     pub const FTANIM_80070C48: u32 = 0x8007_0C48;
     pub const FTANIM_80070CC4: u32 = 0x8007_0CC4;

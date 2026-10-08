@@ -126,6 +126,8 @@ FIELD_DATA = {
     "StageInfo.x6C8",
     # Each animation's pair of bytes, in the character's data (`ftData::x10`).
     "Fighter.x28",
+    # The voice a hard hit queues for when hitlag ends (`FtSFX::x1C`, `x20`).
+    "dmg.x190C",
     # The HUD's model tables in `IfAll.dat` (`DynamicModelDesc**` and animation lists).
     "HudIndex.damage_num_anims",
     "HudIndex.damage_num_matanims",

@@ -119,6 +119,19 @@ impl Running<'_> {
         }
     }
 
+    /// A hit's knockback of at least `pl_804D6470` x98 counts in the player's stats
+    /// (`xCE4`), `pl_80040270`; a sub-fighter's doesn't.
+    #[doc(alias = "pl_80040270")]
+    pub fn record_knockback(&mut self, slot: i32, sub: bool, kb: f32) {
+        if sub {
+            return;
+        }
+        if reg(kb) >= reg(self.bonus_param_f32(0x98)) {
+            let t = self.game.player_stale_moves(slot);
+            t.xCE4 = t.xCE4.wrapping_add(1);
+        }
+    }
+
     /// `pl_804D6470`'s word at `off`.
     pub(super) fn bonus_param(&self, off: u32) -> u32 {
         self.data.u32(self.pl_data().at(off))
