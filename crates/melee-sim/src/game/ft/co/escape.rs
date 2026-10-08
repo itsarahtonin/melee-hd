@@ -8,6 +8,9 @@ use super::ids::ms;
 use crate::fpu::reg;
 use crate::hsd::gobj::GObjId;
 
+/// The stick's lowest y for UCF's shield drop (the code's first data word).
+const UCF_DROP_Y: f32 = -0.8;
+
 /// `ftCommon_MotionVars_escape` (and `itemthrow4`'s timer, which shares its first word).
 const ESCAPE_X0: usize = 0x0;
 
@@ -124,21 +127,50 @@ impl Running<'_> {
         if (fp.input.lstick[0].y <= y && i32::from(fp.active_timer.lstick.y) < window)
             || fp.input.cstick[0].y <= y
         {
-            self.enter_escape_n(gobj);
-            return true;
+            return self.enter_escape_n(gobj);
         }
         false
     }
 
-    /// A spot dodge, `ftCo_80099894` (Yoshi's drops his egg's shield first), with a rumble.
+    /// A spot dodge, `ftCo_80099894` (Yoshi's drops his egg's shield first), with a rumble;
+    /// false when UCF's shield drop takes the input instead.
     #[doc(alias = "ftCo_80099894")]
-    pub fn enter_escape_n(&mut self, gobj: GObjId) {
+    pub fn enter_escape_n(&mut self, gobj: GObjId) -> bool {
+        if self.game.rules.ucf && self.ucf_shield_drop(gobj) {
+            return false;
+        }
         if self.game.fighter(gobj).kind == KIND_YOSHI {
             unported_call("ftCo_80099954");
         }
         self.enter_escape_n_common(gobj);
         let f = self.game.fighter_id(gobj);
         self.start_rumble(f, 23, 0);
+        true
+    }
+
+    /// UCF 0.84's shield drop (the code at `0x800998A4`): on a platform, with the C-stick
+    /// above the spot dodge's threshold, the stick's horizontal timer past the roll's window
+    /// and the stick down no further than -0.8 but far from the centre (its raw units, plus 2
+    /// each, more than 80 apart in all), the code returns past its caller's success, so the
+    /// spot dodge check says no and the platform drop after it can run.
+    fn ucf_shield_drop(&self, gobj: GObjId) -> bool {
+        let c = self.common();
+        let (y_min, window) = (reg(c.f32(0x314)), c.i32(0x320));
+        let fp = self.game.fighter(gobj);
+        if !(reg(fp.input.cstick[0].y) > y_min)
+            || i32::from(fp.active_timer.lstick.x) < window
+            || !(reg(fp.input.lstick[0].y) > reg(UCF_DROP_Y))
+            || fp.coll_data.floor.index == -1
+            || fp.coll_data.floor.flags & 0x100 == 0
+        {
+            return false;
+        }
+        let sq = |v: f32| {
+            let u = crate::game::ucf::units(v).wrapping_add(2);
+            u.wrapping_mul(u)
+        };
+        let d = sq(fp.input.lstick[0].y).wrapping_add(sq(fp.input.lstick[0].x));
+        d > 6400
     }
 
     /// `ftCo_800998EC`: the spot dodge's state.

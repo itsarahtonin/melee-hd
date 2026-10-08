@@ -49,7 +49,8 @@ The fighter mirrors come from `tools/structgen`, which generates each game struc
 | --- | --- | --- | --- |
 | UCF 0.84 | Pad Buffer + 1.0 Cardinals (`8006B460`) | `Fighter_procInput` | Ported, checked |
 | UCF 0.84 | SDI (`8008E54C`) | `ftCo_Damage_OnEveryHitlag` | Ported, checked |
-| UCF 0.84 | Dashback (`800C9A44`), DBOOC SquatRv Fix (`800D65EC`), Shield Drop (`800998A4`), Shield Drop Extended (`8009A0B8`), Shield SDI (`80093294`), Tumble (`800908F4`) | `ftCo_Turn_IASA`, `ftCo_SquatRv_CheckInput`, `ftCo_80099894`, `ftCo_8009A080`, `ftCo_80093240`, `ftCo_DamageFall_IASA` | Waits for its host's port, which reads `Game::ucf` |
+| UCF 0.84 | Shield Drop (`800998A4`) | `ftCo_80099894` | Ported, checked |
+| UCF 0.84 | Dashback (`800C9A44`), DBOOC SquatRv Fix (`800D65EC`), Shield Drop Extended (`8009A0B8`), Shield SDI (`80093294`), Tumble (`800908F4`) | `ftCo_Turn_IASA`, `ftCo_SquatRv_CheckInput`, `ftCo_8009A080`, `ftCo_80093240`, `ftCo_DamageFall_IASA` | Waits for its host's port, which reads `Game::ucf` |
 | Neutral spawns | `8016E510` | `fn_8016E2BC` | Ported, checked |
 | Off-screen limits | BrawlOffscreenDamage (`8006A880`) | `Fighter_procAnim` | Ported, checked |
 | Determinism | Init Stage Data (`801C154C`), FD background (`8021AAE4`) | `Ground_GetStageGObj`, `grLast_8021AAB0` | Ported, checked |

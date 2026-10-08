@@ -89,7 +89,7 @@ const UNITS: f32 = 80.0;
 
 /// A stick axis in whole units of 1/80, as the codes convert it: `|v| * 80 - 0.0001`,
 /// rounded toward zero.
-fn units(v: f32) -> i32 {
+pub(crate) fn units(v: f32) -> i32 {
     fp::fctiwz(fp::fmsubs(fp::fabs(reg(v)), reg(UNITS), reg(BIAS)))
 }
 

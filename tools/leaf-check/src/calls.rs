@@ -397,7 +397,11 @@ fn run_one(
         Outcome::Failed(format!(
             "{} differences:\n    {}",
             cmp.diffs.len(),
-            cmp.diffs[..cmp.diffs.len().min(20)].join("\n    ")
+            cmp.diffs[..cmp
+                .diffs
+                .len()
+                .min(std::env::var("CALLS_DIFFS").map_or(20, |v| v.parse().unwrap_or(20)))]
+                .join("\n    ")
         ))
     }
 }
