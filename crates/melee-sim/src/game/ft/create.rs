@@ -76,6 +76,8 @@ impl Running<'_> {
             return;
         }
         self.game.reset_fighter_data();
+        // `Fighter_LoadCommonData`'s `lbArchive_LoadSymbols`: from the disc.
+        self.disc_load("PlCo.dat", super::data::MAIN_MEMORY);
         self.game.load_fighter_common(self.data);
         self.game.reset_fighter_ref_counts();
         self.create_fighter_light();

@@ -244,8 +244,7 @@ impl super::super::state::Running<'_> {
         };
         let stkind = self.game.gr.stkind;
         let (bgm, alternate) = super::setup::music(self.game, self.data, stkind, flags);
-        // `lbAudioAx_80023F28`: the song streams from the disc (the audio port's).
-        super::super::code::call(self, 0x8002_3F28, &[super::super::code::Val::Int(bgm)]);
+        self.lb_play_music(bgm);
         self.game.stage_info.x98 = bgm;
         self.game.stage_info.unk8C.b1 = alternate;
         which

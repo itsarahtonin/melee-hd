@@ -2749,7 +2749,6 @@ HSD_SisLib_803A84BC	leaf-check display text_render: its saved calls in each pass
 HSD_SisLib_803A8134	leaf-check display text_render: each line HSD_SisLib_803A84BC lays out is measured through it; widths compared through the layout
 HSD_SisLib_803A7684	leaf-check display text_render: the strings' scale, color, size and alignment pushes, past the stack's first 16 bytes; state stacks compared
 HSD_SisLib_803A7F0C	leaf-check display text_render: the strings' pops and their measurement's; state stacks compared
-Item_8026B0B4	melee-oracle diff, Fox vs Sheik FD ticks 1-207 with the audio port's seams stood in (docs/oracle.md): the lasers' destruction (the audio library's calls stood in) (3 calls)
 pl_80037BC0	melee-oracle diff, Fox vs Sheik FD ticks 1-207 with the audio port's seams stood in (docs/oracle.md): each landed hit counts in the attacker's statistics through it (2 calls)
 fn_80037F00	melee-oracle diff, Fox vs Sheik FD ticks 1-207 with the audio port's seams stood in (docs/oracle.md): each landed attack's record taken by its victim (2 calls)
 pl_80038144	melee-oracle diff, Fox vs Sheik FD ticks 1-207 with the audio port's seams stood in (docs/oracle.md): each landed attack's statistics (Fox's laser on Sheik, the first hits) (2 calls)
@@ -2809,6 +2808,13 @@ ftCo_LandingAir_EnterWithLag	melee-oracle diff, Fox vs Sheik FD ticks 1-207 with
 ftCo_LandingAir_EnterWithMsidLag	melee-oracle diff, Fox vs Sheik FD ticks 1-207 with the audio port's seams stood in (docs/oracle.md): an aerial's landing (1 calls)
 ftCo_Landing_Enter_Basic	melee-oracle diff, Fox vs Sheik FD ticks 1-207 with the audio port's seams stood in (docs/oracle.md): a normal landing (4 calls)
 ftCo_8008DB10	leaf-check display heavy_hit_flash: from the fighters' render states, each element, knockback around the thresholds, with and without damage dealt; the flash's overlay compared
+lbAudioAx_80023F28	melee-oracle diff: Stage_80225074 starts the match's music through it; on both v5-mixed traces the device command queue, the stream and the AX voices compare clean from tick 1 (the pad library aside, docs/oracle.md)
+gm_LoadAnnouncer	melee-oracle diff: Match::start_from loads the announcer's bank through it; the banks, the synth's loads and the audio heap compare clean at tick 1. leaf-check audio timeline_entry and timeline_entry_mixed run its parts (lbAudioAx_80026F2C, 8002702C, 80027168, 80027648) from the log
+lbAudioAx_8002835C	melee-oracle diff: every scene's setup runs it; the GObjs compared every tick hold no sound object
+lbAudioAx_80026510	leaf-check items destroy: every saved item destruction reaches it through Item_8026B0B4, with no sound object
+lbAudioAx_800265C4	leaf-check items destroy: Item_8026B0B4 asks it for each sound slot, with a playing voice's handle put in each slot in turn
+Item_8026B0B4	leaf-check items destroy: every saved item destruction, as saved and with a playing voice's handle in each of its three sound slots; the audio state compared after
+Item_8026A8EC	leaf-check items destroy: every saved call, as saved and with a playing voice's handle in each sound slot
 ftCo_Damage_CalcKnockback	leaf-check fighter_procs proc_coll_resolve_knockback (hits of every strength, angle and element on real states), and melee-oracle diff, Fox vs Sheik FD ticks 1-285 with the audio port's seams stood in (docs/oracle.md): Fox's hit on Sheik at tick 208 (1 call)
 ftCo_8008EC90	leaf-check fighter_procs proc_coll_resolve_knockback (hits of every strength, angle and element on real states), and melee-oracle diff, Fox vs Sheik FD ticks 1-285 with the audio port's seams stood in (docs/oracle.md): the hit's reaction picked (1 call)
 ftCo_800C44CC	leaf-check fighter_procs proc_coll_resolve_knockback (hits of every strength, angle and element on real states), and melee-oracle diff, Fox vs Sheik FD ticks 1-285 with the audio port's seams stood in (docs/oracle.md): not a binding hit (1 call)

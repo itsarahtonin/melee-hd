@@ -385,12 +385,18 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
         a.clock_place_audio_frames(&data, frames);
     }
     let mut caught_up = false;
+    let mut scene_ended = false;
     let mut lines = log
         .lines()
         .skip_while(|l| *l != format!("E {start} {}", cap.call.regs.tb));
     lines.next().expect("the start tick's end in the log");
     a.tick_end(&data);
+    // The log counts the frames the scene's end runs.
     let (mut calls, mut frames) = (0usize, a.driver.frame);
+    if entries.contains_key(&start) {
+        a.end_scene_loop(&data);
+        scene_ended = true;
+    }
     for line in lines {
         let p: Vec<&str> = line.split_whitespace().collect();
         match p[0] {
@@ -424,6 +430,7 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
                 if let Some(frames) = entries.get(&tick) {
                     a.clock_place_audio_frames(&data, frames);
                 }
+                let scene_end = entries.contains_key(&tick);
                 let tb: u64 = p[2].parse().unwrap();
                 assert_eq!(
                     a.clock.as_ref().unwrap().now,
@@ -454,6 +461,10 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
                 );
                 assert_eq!(a.driver.frame, frames, "tick {tick}: audio frames run");
                 a.tick_end(&data);
+                if scene_end {
+                    a.end_scene_loop(&data);
+                    scene_ended = true;
+                }
             }
             "C" => {
                 calls += 1;
@@ -463,6 +474,14 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
                 // Between ticks (a scene's end and the next one's entry), game code's time is
                 // its own: the timeline catches up to when the call was made.
                 if !in_tick && let Some(tb) = p.get(arrow + 2) {
+                    // The next scene's first call comes as the scene's end leaves off.
+                    if std::mem::take(&mut scene_ended) {
+                        assert_eq!(
+                            a.clock.as_ref().unwrap().now,
+                            tb.parse::<u64>().unwrap(),
+                            "the next scene's first call after its loop's end"
+                        );
+                    }
                     a.clock_catch_up(&data, tb.parse().unwrap());
                     caught_up = true;
                 }
@@ -1311,6 +1330,19 @@ const TIMELINE_ENTRY: &str =
 fn timeline_entry() {
     let dir = std::env::var("AUDIO_TIMELINE_ENTRY").unwrap_or_else(|_| TIMELINE_ENTRY.to_owned());
     run_timeline(&dir, 0, 1500, DspModel::Silent);
+}
+
+const TIMELINE_ENTRY_MIXED: &str =
+    "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline3-fd1-entry-mixed";
+
+/// [`timeline_entry`] in the sample-accurate model (ssbm-rs's default, `AUDIO_START=0`
+/// without `AX`, into `AUDIO_TIMELINE_ENTRY_MIXED`): the same entry with the voices following
+/// their samples and the music refilling from the disc, to tick 1178.
+#[test]
+fn timeline_entry_mixed() {
+    let dir = std::env::var("AUDIO_TIMELINE_ENTRY_MIXED")
+        .unwrap_or_else(|_| TIMELINE_ENTRY_MIXED.to_owned());
+    run_timeline(&dir, 0, 1178, DspModel::Samples);
 }
 
 const BANK_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/bank";

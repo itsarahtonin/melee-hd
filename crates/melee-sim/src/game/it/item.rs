@@ -1543,8 +1543,8 @@ pub fn release_from(r: &mut Running, gobj: GObjId, fighter: GObjId) {
 
 /// Destroys the item, `Item_8026A8EC`: its hitboxes, count, effects, destroy effect and
 /// sound, the kind's `destroyed` callback, its holder's hand, its camera box, its sounds, and
-/// its GObj. (No alias yet: stopping its sounds waits for the audio driver's port, so no
-/// capture reaches its end.)
+/// its GObj.
+#[doc(alias = "Item_8026A8EC")]
 pub fn destroy(r: &mut Running, gobj: GObjId) {
     assert!(
         is_item(r.game, Some(gobj)),
@@ -1701,28 +1701,20 @@ pub fn stop_sfx2(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).sfx_unk2 = NO_SFX;
 }
 
-/// `lbAudioAx_80026510` and `lbAudioAx_800265C4`: the audio library's sound objects a GObj
-/// owns, all of them or the one on a voice, keyed off and freed (the audio port's).
-const LBAUDIOAX_80026510: u32 = 0x8002_6510;
-const LBAUDIOAX_800265C4: u32 = 0x8002_65C4;
-
-/// Stops every sound the item made, `Item_8026B0B4`: the audio library's objects it owns, its
-/// third sound's, then its two slots' sounds (each stopped once, through its object if it
-/// has one), all three slots emptied.
+/// Stops every sound the item made, `Item_8026B0B4`: the sound objects it owns, then its
+/// three slots (a slot a sound object held is stopped there, the others by handle).
 #[doc(alias = "Item_8026B0B4")]
 pub fn stop_all_sfx(r: &mut Running, gobj: GObjId) {
-    let owner = code::Val::GObj(Some(gobj));
-    code::call(r, LBAUDIOAX_80026510, &[owner]);
-    let x6c = super::item(r.game, gobj).xD6C;
-    if x6c != NO_SFX {
-        code::call(r, LBAUDIOAX_800265C4, &[owner, code::Val::Int(x6c)]);
+    r.game.lb_stop_owned_sound_objects(gobj);
+    let xd6c = super::item(r.game, gobj).xD6C;
+    if xd6c != NO_SFX {
+        r.game.lb_stop_owned_sound_object(gobj, xd6c);
         item_mut(r.game, gobj).xD6C = NO_SFX;
     }
     for second in [false, true] {
         let ip = super::item(r.game, gobj);
         let h = if second { ip.sfx_unk2 } else { ip.sfx_unk1 };
-        if h != NO_SFX && code::call(r, LBAUDIOAX_800265C4, &[owner, code::Val::Int(h)]).int() == 1
-        {
+        if h != NO_SFX && r.game.lb_stop_owned_sound_object(gobj, h) {
             r.sfx_stop(h);
             let ip = item_mut(r.game, gobj);
             if second {

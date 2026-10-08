@@ -98,8 +98,12 @@ pub struct LbAudio {
     pub sent_8: i32,
     pub sent_1: i32,
     pub sent_send: i32,
-    /// `cur_hps_stem`: the playing music file's stem, empty with no music.
+    /// `cur_hps_stem`: the playing music file's path, empty with no music.
     pub stem: [u8; 0x40],
+    /// `cur_hps_file` and `hps_stem_pos`: the music file name last looked up, after its
+    /// directory.
+    pub hps_file: [u8; 0x40],
+    pub hps_stem_pos: i32,
 }
 
 impl Default for LbAudio {
@@ -107,6 +111,7 @@ impl Default for LbAudio {
     fn default() -> Self {
         let mut ssm_file = [0u8; 0x40];
         ssm_file[..7].copy_from_slice(b"/audio/");
+        let hps_file = ssm_file;
         LbAudio {
             banks: [0; 56],
             bank_want: [0; 56],
@@ -159,6 +164,8 @@ impl Default for LbAudio {
             sent_1: 0,
             sent_send: -1,
             stem: [0; 0x40],
+            hps_file,
+            hps_stem_pos: 7,
         }
     }
 }
@@ -631,6 +638,45 @@ impl Running<'_> {
         }
     }
 
+    /// Starts song `bgm` (`lbAudioAx_80023F28`) unless it's the one playing: the music
+    /// stops, the song's path becomes the playing one, and its stream starts at full volume
+    /// on track 1. Returns whether it was left alone (a song out of range, or the same one).
+    /// Without a timeline (a match from its settings alone, whose audio the boot didn't set
+    /// up) the frontend is told instead.
+    #[doc(alias = "lbAudioAx_80023F28")]
+    pub fn lb_play_music(&mut self, bgm: i32) -> bool {
+        if !(0..0x62).contains(&bgm) {
+            return true;
+        }
+        if self.game.audio.clock.is_none() {
+            self.game.audio(0x8002_3F28, [bgm, 0, 0, 0]);
+            return false;
+        }
+        // `getHPSFile`: the song's name after the directory.
+        let lb = &mut self.game.audio.lb;
+        let at = lb.hps_stem_pos as usize;
+        let name = HPS_NAMES[bgm as usize].as_bytes();
+        lb.hps_file[at..at + name.len()].copy_from_slice(name);
+        lb.hps_file[at + name.len()] = 0;
+        let len = |b: &[u8]| b.iter().position(|&c| c == 0).unwrap_or(b.len());
+        let file = lb.hps_file;
+        if file[0] == 0 || file[..len(&file)] == lb.stem[..len(&lb.stem)] {
+            return true;
+        }
+        self.lb_audio_music_stop();
+        self.game.audio.lb.stem = file;
+        assert!(
+            file.starts_with(b"/audio/") && at == 7,
+            "a music file outside /audio/"
+        );
+        // `fn_80023ED4`: twice the volume (`VOL_MAX`, 0x7F), on track 1 (both in range).
+        let (volume, track) = (0x7F * 2, 1);
+        self.game
+            .audio
+            .music_start(self.data, HPS[bgm as usize], volume, track);
+        false
+    }
+
     /// Stops the music, `lbAudioAx_800236DC`: the driver's stream stops and no file plays.
     #[doc(alias = "lbAudioAx_800236DC")]
     pub fn lb_audio_music_stop(&mut self) -> i32 {
@@ -840,6 +886,162 @@ const KIRBY_SFX: [(i32, i32); 75] = [
 
 /// `fn_80026C04`: the library's callback when one of its background bank loads is in.
 pub const BANK_LOADED: crate::game::handles::CodeRef = crate::game::handles::CodeRef(0x8002_6C04);
+
+/// `HSD_GOBJ_PLINK_AUDIO_AX`: the p_link the library's sound objects live on.
+pub const P_LINK_SOUND_OBJECTS: u8 = 62;
+
+impl crate::game::state::Game {
+    /// The library's sound objects for a new scene, `lbAudioAx_8002835C`
+    /// (`HSD_ObjAllocInit` of their pool): a scene's start has none.
+    ///
+    /// A sound object is a GObj on [`P_LINK_SOUND_OBJECTS`] that follows one sound's pan and
+    /// volume for its owner (`lbAudioAx_800263E8`). Only the fighter script's positional
+    /// sound command (`ftAction_80072320`) makes them, and it isn't ported, so the port has
+    /// none and the pool holds nothing to model.
+    #[doc(alias = "lbAudioAx_8002835C")]
+    pub fn lb_reset_sound_objects(&mut self) {
+        self.assert_no_sound_objects();
+    }
+
+    /// Keys off and frees the sound objects `target` owns, `lbAudioAx_80026510`; whether
+    /// there were any. There are none (see
+    /// [`lb_reset_sound_objects`](Self::lb_reset_sound_objects)).
+    #[doc(alias = "lbAudioAx_80026510")]
+    pub fn lb_stop_owned_sound_objects(&mut self, _target: crate::hsd::gobj::GObjId) -> bool {
+        self.assert_no_sound_objects();
+        false
+    }
+
+    /// Keys off and frees `target`'s sound object playing `voice`, `lbAudioAx_800265C4`;
+    /// whether there was one. There are none.
+    #[doc(alias = "lbAudioAx_800265C4")]
+    pub fn lb_stop_owned_sound_object(
+        &mut self,
+        _target: crate::hsd::gobj::GObjId,
+        _voice: i32,
+    ) -> bool {
+        self.assert_no_sound_objects();
+        false
+    }
+
+    fn assert_no_sound_objects(&self) {
+        assert!(
+            self.world.first_in(P_LINK_SOUND_OBJECTS).is_none(),
+            "a sound object (lbAudioAx_800263E8), which nothing in the port makes"
+        );
+    }
+}
+
+/// `hps_files`: the music files, by song.
+pub const HPS_NAMES: [&str; 98] = [
+    "1p_qk.hps",
+    "akaneia.hps",
+    "baloon.hps",
+    "bigblue.hps",
+    "castle.hps",
+    "continue.hps",
+    "corneria.hps",
+    "docmari.hps",
+    "ending.hps",
+    "famidemo.hps",
+    "ff_1p01.hps",
+    "ff_1p02.hps",
+    "ff_bad.hps",
+    "ff_dk.hps",
+    "ff_emb.hps",
+    "ff_flat.hps",
+    "ff_fox.hps",
+    "ff_fzero.hps",
+    "ff_good.hps",
+    "ff_ice.hps",
+    "ff_kirby.hps",
+    "ff_link.hps",
+    "ff_mario.hps",
+    "ff_nes.hps",
+    "ff_poke.hps",
+    "ff_samus.hps",
+    "ff_step1.hps",
+    "ff_step2.hps",
+    "ff_step3.hps",
+    "ff_yoshi.hps",
+    "flatzone.hps",
+    "fourside.hps",
+    "gameover.hps",
+    "garden.hps",
+    "greatbay.hps",
+    "greens.hps",
+    "howto.hps",
+    "howto_s.hps",
+    "hyaku.hps",
+    "hyaku2.hps",
+    "icemt.hps",
+    "inis1_01.hps",
+    "inis1_02.hps",
+    "inis2_01.hps",
+    "inis2_02.hps",
+    "intro_es.hps",
+    "intro_nm.hps",
+    "item_h.hps",
+    "item_s.hps",
+    "izumi.hps",
+    "kongo.hps",
+    "kraid.hps",
+    "menu01.hps",
+    "menu02.hps",
+    "menu3.hps",
+    "mrider.hps",
+    "mutecity.hps",
+    "old_dk.hps",
+    "old_kb.hps",
+    "old_ys.hps",
+    "onetto.hps",
+    "onetto2.hps",
+    "opening.hps",
+    "pokesta.hps",
+    "pstadium.hps",
+    "pura.hps",
+    "rcruise.hps",
+    "s_info1.hps",
+    "s_info2.hps",
+    "s_info3.hps",
+    "s_new1.hps",
+    "s_new2.hps",
+    "s_newcom.hps",
+    "s_select.hps",
+    "saria.hps",
+    "shrine.hps",
+    "siren.hps",
+    "smari3.hps",
+    "sp_end.hps",
+    "sp_giga.hps",
+    "sp_metal.hps",
+    "sp_zako.hps",
+    "swm_15min.hps",
+    "target.hps",
+    "venom.hps",
+    "vl_battle.hps",
+    "vl_castle.hps",
+    "vl_corneria.hps",
+    "vl_cosmos.hps",
+    "vl_figure1.hps",
+    "vl_figure2.hps",
+    "vl_fzero.hps",
+    "vl_last_v2.hps",
+    "vs_hyou1.hps",
+    "vs_hyou2.hps",
+    "yorster.hps",
+    "ystory.hps",
+    "zebes.hps",
+];
+
+/// `hps_files`' entry numbers on the disc (GALE01 revision 2's file table), in `/audio/`.
+pub const HPS: [i32; 98] = [
+    4, 5, 6, 7, 10, 13, 14, 17, 21, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
+    40, 41, 42, 43, 44, 45, 46, 49, 51, 54, 56, 59, 60, 61, 62, 64, 65, 66, 67, 68, 69, 70, 71, 72,
+    73, 77, 80, 87, 88, 89, 92, 93, 101, 102, 103, 105, 106, 107, 112, 113, 116, 118, 130, 131,
+    132, 133, 134, 135, 136, 120, 121, 122, 123, 125, 126, 127, 128, 129, 137, 195, 197, 198, 199,
+    200, 201, 202, 203, 204, 205, 206, 207, 209, 210,
+];
 
 /// `ssm_files`' entry numbers on the disc (GALE01 revision 2's file table), with the US
 /// language's directory (`/audio/us/`) and without (`/audio/`).
@@ -1281,6 +1483,22 @@ impl crate::game::state::Running<'_> {
             a.lb_start_bank_loads(self.data);
             a.lb_wait_for_banks(self.data);
         }
+    }
+
+    /// The announcer's bank (`nr_vs.ssm`), loaded before a VS match's scene starts,
+    /// `gm_LoadAnnouncer`: the scene banks given up for it, and its load waited for. Without a
+    /// timeline the frontend is told instead.
+    #[doc(alias = "gm_LoadAnnouncer")]
+    pub fn load_announcer(&mut self) {
+        if self.game.audio.clock.is_none() {
+            self.game.audio(0x8016_8FC4, [0; 4]);
+            return;
+        }
+        let a = &mut self.game.audio;
+        a.lb.unwant_banks(0x12);
+        a.lb.want_banks(2, 0x20);
+        a.lb_start_bank_loads(self.data);
+        a.lb_wait_for_banks(self.data);
     }
 
     /// [`lb_load_match_banks`](Self::lb_load_match_banks)'s choice: the stage's send, and the
