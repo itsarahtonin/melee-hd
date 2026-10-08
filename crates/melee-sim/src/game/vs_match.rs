@@ -264,6 +264,12 @@ impl Match {
         let mut archive = |name: &str| {
             Archive::parse(&load(name).bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"))
         };
+        // The common and menu effects (`EfCoData.dat`, `EfMnData.dat`), which the scene
+        // preloads and the match's setup registers (`efAsync_LoadSync(0)` and `(0x1F)`).
+        for i in [0, 0x1F] {
+            let (name, _) = crate::game::ef::FILES[i].expect("an effect file");
+            game.ef.files[i] = Some(data.add(archive(name)));
+        }
         let rumble = data.add(archive("LbRb.dat"));
         let table = data.get(rumble).public("lbRumbleData");
         let files = vs::MatchArchives {
