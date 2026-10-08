@@ -12,8 +12,9 @@
 
 use gekko_fp as fp;
 
-use super::super::code::{self, Val, unported_call};
+use super::super::code::unported_call;
 use super::super::handles::FighterId;
+use super::super::pl::trick::AttackRecord;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
@@ -23,9 +24,6 @@ use crate::lb::hitcapsule::{self, Victim};
 use crate::mtx::Mtx34;
 use crate::ppc::cvt_fp2unsigned;
 use crate::vec::Vec3;
-
-/// `pl_80038144`: the attack statistics a hit records, the player statistics' seam.
-pub const PL_80038144: u32 = 0x8003_8144;
 
 /// `HSD_GOBJ_PLINK_FIGHTER`.
 const P_LINK_FIGHTER: u8 = 8;
@@ -441,7 +439,7 @@ impl Running<'_> {
     /// Remembers `victim` in each live box of `f`'s group of box `i` (`ftColl_80076808`);
     /// with `clear`, a box that newly hits it can't clank this frame.
     #[doc(alias = "ftColl_80076808")]
-    fn hit_group(&mut self, f: FighterId, i: usize, kind: i32, v: Victim, clear: bool) {
+    pub(crate) fn hit_group(&mut self, f: FighterId, i: usize, kind: i32, v: Victim, clear: bool) {
         let group = self.game.fighters[f.0].x914[i].x4;
         for k in 0..4 {
             let cur = &mut self.game.fighters[f.0].x914[k];
@@ -1219,7 +1217,7 @@ impl Running<'_> {
 
     /// An item's hitbox damage, `it_8026B1D4`: its damage, plus for an item whose speed
     /// counts (`xDC8_word` bit 0x14) the speed's share, at least 1.
-    // Ports `it_8026B1D4`; aliased once a check reaches it.
+    #[doc(alias = "it_8026B1D4")]
     fn item_damage(&self, g: GObjId, j: usize) -> f64 {
         let ip = super::super::it::item(self.game, g);
         let mut dmg = reg(ip.x5D4_hitboxes[j].hit.damage);
@@ -1243,8 +1241,8 @@ impl Running<'_> {
     /// Remembers the fighter in the item's boxes of box `j`'s group as kind `kind`, and in
     /// every item sharing its id's (`it_8026FAC4`, `it_8026FA2C`); with `clear`, a box that
     /// newly hit it can't clank this frame.
-    // Ports `it_8026FAC4`; aliased once a check reaches it.
-    // Ports `it_8026FA2C`; aliased once a check reaches it.
+    #[doc(alias = "it_8026FAC4")]
+    #[doc(alias = "it_8026FA2C")]
     fn item_add_victim(&mut self, g: GObjId, j: usize, kind: i32, v: Victim, clear: bool) {
         use super::super::it::{self, P_LINK_ITEM};
         let ip = it::item(self.game, g);
@@ -1279,7 +1277,7 @@ impl Running<'_> {
     /// tip) is remembered by the item, which keeps the most damage it dealt and which way;
     /// then, unless the fighter is invincible there, logged and recorded. An item taken on
     /// touch (`x0_78` 4) and a tip stop at their seams. Returns whether the box hit.
-    // Ports `ftColl_80077C60`; aliased once a check reaches it.
+    #[doc(alias = "ftColl_80077C60")]
     fn take_item_hit(&mut self, g: GObjId, j: usize, me: FighterId, n: usize) -> bool {
         use super::super::it;
         let data = self.data;
@@ -1384,9 +1382,9 @@ impl Running<'_> {
     /// queue (`plStale_UpdateStaleMovesFromItem`), its combo against the victim
     /// (`ftColl_8007646C`), and the damage both players' statistics count, when a fighter
     /// owns the item.
-    // Ports `ftColl_80078998`; aliased once a check reaches it.
-    // Ports `plStale_UpdateStaleMovesFromItem`; aliased once a check reaches it.
-    // Ports `ftColl_8007646C`; aliased once a check reaches it.
+    #[doc(alias = "ftColl_80078998")]
+    #[doc(alias = "plStale_UpdateStaleMovesFromItem")]
+    #[doc(alias = "ftColl_8007646C")]
     fn record_item_hit(&mut self, g: GObjId, victim_gobj: GObjId, dmg: f64) {
         use super::super::it;
         let ip = it::item(self.game, g);
@@ -1843,6 +1841,7 @@ impl Running<'_> {
                     1,
                     kind,
                     x2070,
+                    AttackRecord::Fighter(a_gobj),
                     instance,
                     false,
                     grounded,
@@ -1860,7 +1859,17 @@ impl Running<'_> {
                     unported_call("pl_80041B08 (a Bob-omb's hit counted)");
                 }
                 if super::super::it::item::is_fighter(self.game, owner) {
-                    self.attack_landed(owner, gobj, 2, kind, x2070, instance, false, grounded);
+                    self.attack_landed(
+                        owner,
+                        gobj,
+                        2,
+                        kind,
+                        x2070,
+                        AttackRecord::Item(item),
+                        instance,
+                        false,
+                        grounded,
+                    );
                 } else {
                     unported_call("pl_8003D60C (an ownerless item's hit)");
                 }
@@ -1927,13 +1936,14 @@ impl Running<'_> {
     /// seam).
     #[doc(alias = "ftColl_8007861C")]
     #[allow(clippy::too_many_arguments)]
-    fn attack_landed(
+    pub(crate) fn attack_landed(
         &mut self,
         attacker: Option<GObjId>,
         gobj: GObjId,
         kind: i32,
         akind: i32,
         x2070: u32,
+        record: AttackRecord,
         instance: u16,
         keep_source: bool,
         grounded: bool,
@@ -1963,18 +1973,8 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[me.0];
         fp.dmg.x18CC = kind;
         fp.dmg.x18D0 = akind;
-        code::call(
-            self,
-            PL_80038144,
-            &[
-                Val::GObj(attacker),
-                Val::GObj(Some(gobj)),
-                Val::Int(x2070 as i32),
-                Val::Int(i32::from(instance)),
-                Val::Int(i32::from(grounded)),
-                Val::Int(prev),
-            ],
-        );
+        let _ = grounded;
+        self.record_attack(attacker, gobj, x2070, record, instance, prev);
     }
 
     /// The lipstick flower's damage this frame, `ftColl_8007BBCC`: the logged hits of the

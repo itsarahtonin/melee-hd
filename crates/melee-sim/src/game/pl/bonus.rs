@@ -83,7 +83,7 @@ fn abs(v: f64) -> f64 {
 /// Where a windowed check keeps its flag: a point bonus's count (`x904[kind]`), or a word
 /// of the records.
 #[derive(Clone, Copy)]
-enum Flag {
+pub(super) enum Flag {
     Bonus(i32),
     Record(usize),
 }
@@ -102,12 +102,29 @@ impl Game {
 }
 
 impl Running<'_> {
+    /// A broken shield, bonus 0x40 (Nana's don't count), `pl_8003E0E8`.
+    // Ports `pl_8003E0E8`; aliased once a check reaches it.
+    pub fn record_shield_break(&mut self, slot: i32, sub: i32) {
+        if sub != 0 {
+            return;
+        }
+        self.count_bonus(slot, 0x40);
+    }
+
+    /// A shield dropped at no more than `x84` health, bonus 0x41, `pl_8003E114`.
+    // Ports `pl_8003E114`; aliased once a check reaches it.
+    pub fn record_shield_drop(&mut self, slot: i32, health: f32) {
+        if reg(health) <= reg(self.bonus_param_f32(0x84)) {
+            self.set_flag(slot, Flag::Bonus(0x41), 1);
+        }
+    }
+
     /// `pl_804D6470`'s word at `off`.
-    fn bonus_param(&self, off: u32) -> u32 {
+    pub(super) fn bonus_param(&self, off: u32) -> u32 {
         self.data.u32(self.pl_data().at(off))
     }
 
-    fn bonus_param_f32(&self, off: u32) -> f32 {
+    pub(super) fn bonus_param_f32(&self, off: u32) -> f32 {
         self.data.f32(self.pl_data().at(off))
     }
 
@@ -122,7 +139,7 @@ impl Running<'_> {
 
     /// Sets a point bonus's flag (`setPointValue`; the original asserts the slot is a player's
     /// and the bonus counts points, which every caller's is), or a record's word.
-    fn set_flag(&mut self, slot: i32, flag: Flag, v: u32) {
+    pub(super) fn set_flag(&mut self, slot: i32, flag: Flag, v: u32) {
         let p = self.game.player_mut(slot);
         match flag {
             Flag::Bonus(kind) => p.stale_moves.x904[kind as usize] = v,
@@ -134,7 +151,7 @@ impl Running<'_> {
     /// window the flag goes up once `value` reaches `threshold`; at each later window's end it
     /// comes down unless `value` grew by `threshold` since the last (`last`, a record). Whether
     /// a window ended.
-    // Ports `pl_8003906C`; aliased once a check reaches it.
+    #[doc(alias = "pl_8003906C")]
     #[allow(clippy::too_many_arguments)]
     fn bonus_window(
         &mut self,
@@ -170,7 +187,7 @@ impl Running<'_> {
     }
 
     /// [`Self::bonus_window`] on a float, `pl_80039238`.
-    // Ports `pl_80039238`; aliased once a check reaches it.
+    #[doc(alias = "pl_80039238")]
     fn bonus_window_f32(
         &mut self,
         slot: i32,
@@ -234,7 +251,7 @@ impl Running<'_> {
     /// run, frames in the air and on the ground, on steep slopes, nudged, off screen (and at
     /// which edge), holding a crate, the Screw Attack, Mr. Saturn or another logged item,
     /// and resized; the timers count down.
-    // Ports `fn_8003EE2C`; aliased once a check reaches it.
+    #[doc(alias = "fn_8003EE2C")]
     fn frame_counters(&mut self, slot: i32, index: i32) {
         let g = self.game.player_entity_at(slot, index);
         if index == 1 || !counting(self.game) {
@@ -341,7 +358,7 @@ impl Running<'_> {
     /// The bonuses decided over frame windows, `fn_8003F294`: attacks of three kinds, hits
     /// landed and taken, attacks made, `xD70`, crates held, `xCD8`, the smash DI's distance,
     /// and A/B presses (whose window also settles the quickest press, `xDD1` bit 5).
-    // Ports `fn_8003F294`; aliased once a check reaches it.
+    #[doc(alias = "fn_8003F294")]
     fn frame_windows(&mut self, slot: i32, index: i32) {
         if index == 1 {
             return;
@@ -433,7 +450,7 @@ impl Running<'_> {
     /// The frame's distances, `fn_8003F654`: how far knockback carried the fighter (and the
     /// farthest, for its attacker too), how far it walked, rose and fell under its own power,
     /// its average distance from its opponents and from the camera's center.
-    // Ports `fn_8003F654`; aliased once a check reaches it.
+    #[doc(alias = "fn_8003F654")]
     fn frame_distances(&mut self, slot: i32, index: i32, pos: Vec3, prev: Vec3) {
         let g = self.game.player_entity_at(slot, index);
         if !counting(self.game) || index == 1 {

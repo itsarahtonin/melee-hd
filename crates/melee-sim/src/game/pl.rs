@@ -5,6 +5,7 @@
 pub mod bonus;
 pub mod player;
 pub mod stats;
+pub mod trick;
 
 use melee_data::archive::DataRef;
 

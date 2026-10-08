@@ -36,7 +36,7 @@ use melee_capture::import::{Importer, Maps};
 use melee_capture::{Capture, DataMap, find_archives_after, find_archives_in};
 use melee_data::archive::Archives;
 use melee_sim::game::code::{Val, stubs};
-use melee_sim::game::ft::attack::{PL_80038144, proc_attack_coll};
+use melee_sim::game::ft::attack::proc_attack_coll;
 use melee_sim::game::ft::camera::proc_camera;
 use melee_sim::game::ft::create_model::light_proc;
 use melee_sim::game::ft::fighter::{proc_dynamics, proc_ik};
@@ -57,14 +57,9 @@ thread_local! {
     static THEIRS: RefCell<Vec<(u32, Vec<u32>)>> = const { RefCell::new(Vec::new()) };
 }
 
-/// Stands in for the effects and the attack statistics on the reference, logging their
-/// arguments.
-fn stand_ins(ctx: &Ctx) {
-    ctx.register(PL_80038144, |ctx| {
-        let args = (3..10).map(|r| ctx.regs.r(r)).collect();
-        THEIRS.with(|t| t.borrow_mut().push((PL_80038144, args)));
-    });
-}
+/// Stands in for code no port covers on the reference, logging the arguments: none now (the
+/// attack statistics, `pl_80038144`, run on both sides).
+fn stand_ins(_ctx: &Ctx) {}
 
 /// Our stood-in calls as the reference's words, with GObjs at their original addresses.
 fn our_words(maps: &Maps, f: u32, args: &[Val]) -> Vec<u32> {
@@ -89,10 +84,7 @@ fn our_words(maps: &Maps, f: u32, args: &[Val]) -> Vec<u32> {
             other => panic!("a stood-in call's argument {other:?}"),
         }
     }
-    if f == PL_80038144 {
-        // r6, the attacker's `x2074`, isn't passed: ours carries the attacker.
-        out.insert(3, 0);
-    }
+    let _ = f;
     out
 }
 
@@ -218,7 +210,6 @@ fn run_one(
         .get(&cap.call.regs.gpr[3])
         .expect("r3 isn't a GObj the import knows");
     stubs::clear();
-    stubs::set(PL_80038144, Val::None);
     let run = catch_unwind(AssertUnwindSafe(|| {
         let mut r = Running {
             game: &mut game,
@@ -247,12 +238,7 @@ fn run_one(
         .iter()
         .map(|(f, args)| (*f, our_words(&maps, *f, args)))
         .collect();
-    let mut theirs = THEIRS.with(|t| std::mem::take(&mut *t.borrow_mut()));
-    for (f, args) in &mut theirs {
-        if *f == PL_80038144 {
-            args[3] = 0;
-        }
-    }
+    let theirs = THEIRS.with(|t| std::mem::take(&mut *t.borrow_mut()));
     if ours != theirs {
         cmp.diffs.push(format!(
             "stood-in calls: ours {ours:x?}, theirs {theirs:x?}"

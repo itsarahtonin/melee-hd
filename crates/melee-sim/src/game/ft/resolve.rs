@@ -18,6 +18,7 @@ use crate::hsd::gobj::GObjId;
 use crate::lb::joint::world_position;
 
 /// The characters with sword attributes: Link, Marth, Young Link and Roy.
+const KIND_KIRBY: i32 = 4;
 const KIND_LINK: i32 = 6;
 const KIND_MARS: i32 = 18;
 const KIND_CLINK: i32 = 20;
@@ -118,7 +119,12 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         run_fighter_cb(g, gobj, cb);
     }
     if reg(kb) == 0.0 && reg(g.game.fighters[f.0].dmg.x1838_percentTemp) != 0.0 {
-        unported_call("damage without knockback (Fighter_TakeDamage_8006CC7C)");
+        let dmg = reg(g.game.fighters[f.0].dmg.x1838_percentTemp);
+        g.take_damage_coins(f, dmg);
+        if g.game.fighters[f.0].kind == KIND_KIRBY {
+            unported_call("ftKb_SpecialN_800F5C34 (Kirby losing his ability)");
+        }
+        g.forget_attacker_grounded(f);
     }
     g.stamina_out(gobj);
     if strength != 0 {

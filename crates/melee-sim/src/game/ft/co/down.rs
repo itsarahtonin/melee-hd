@@ -43,7 +43,7 @@ impl Running<'_> {
     /// `ft_80084C74` for sets 0, 1 and 2): `None` off the ground; else its sounds (the first
     /// -1 when it has none, which also sets the flag), the set's flag and its effect (or -1).
     #[doc(alias = "ft_80084A80")]
-    // Ports `ft_80084BFC`; aliased once a check reaches it.
+    #[doc(alias = "ft_80084BFC")]
     #[doc(alias = "ft_80084C38")]
     #[doc(alias = "ft_80084C74")]
     pub fn floor_sounds(&self, gobj: GObjId, set: usize) -> Option<([i32; 4], i32, i32)> {
