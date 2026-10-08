@@ -355,6 +355,18 @@ impl<'a> Comparer<'a> {
             Some(UserData::Ground(g)) => self.ground(path, g, self.u32(t + 0x2C)),
             Some(UserData::Item(i)) => self.item(path, i, self.u32(t + 0x2C)),
             Some(UserData::Raw(a)) => self.check(path, "user data", a.0, self.u32(t + 0x2C)),
+            Some(UserData::BgFlash) => {
+                let (ud, release) = (self.u32(t + 0x2C), self.u32(t + 0x30));
+                self.check(path, "flash release", melee_sim::lb::bgflash::FREE, release);
+                let mem = Mem {
+                    bytes: self.mem,
+                    base: MEM1,
+                };
+                match self.game.bgflash.user.clone() {
+                    Some(u) => u.compare(&mem, ud, &format!("{path} flash"), self),
+                    None => self.diff(path, "flash user data", "none", format!("{ud:#x}")),
+                }
+            }
             Some(UserData::Effect(e)) => {
                 self.effect(&format!("{path} effect"), e, self.u32(t + 0x2C))
             }

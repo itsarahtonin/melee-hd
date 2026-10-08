@@ -2541,3 +2541,57 @@ itKusudama_Logic4_EvtUnk	leaf-check items: party_ball runs it from captured item
 gm_8017E068	leaf-check items: one_player_level runs it from captured item states
 it_8026BB20	leaf-check items: party_ball's it_8028A544 runs it from captured item states
 it_80272A18	leaf-check items: party_ball's it_8028A544 runs it from captured item states
+lbShadow_8000F38C	leaf-check display shadows: from its saved call and the fighters' render states, with and without the camera's debug flag; shadows, cameras and joints compared
+lbShadow_8000EEE0	leaf-check display stage_object: the stage objects' render callback runs it for objects that take shadows; shadow state compared
+lbShadow_8000EFEC	leaf-check display stage_object: lbShadow_8000EEE0 limits the shadows through it
+HSD_ShadowStartRender	leaf-check display shadows: lbShadow_8000F38C renders each shadow through it
+HSD_ShadowEndRender	leaf-check display shadows: lbShadow_8000F38C ends each shadow through it; texture projections compared
+HSD_ShadowDeleteObject	leaf-check display shadows: lbShadow_8000F38C clears each shadow's joints through it
+HSD_ShadowSetViewingRect	leaf-check display shadows: lbShadow_8000F38C fits each shadow's camera through it; cameras compared
+HSD_ViewingRectInit	leaf-check display shadows: lbShadow_8000F38C sets up each shadow's rectangle through it
+HSD_ViewingRectCheck	leaf-check display shadows: lbShadow_8000F38C fits each rectangle through it
+HSD_ViewingRectAddRect	leaf-check display shadows: lbShadow_8000F38C grows each rectangle through it
+HSD_StartRender	leaf-check display shadows and frame: the render pass compared after each
+fn_800301D0	leaf-check display game_camera: from the stage objects' render states, its layers sometimes hidden; the whole pass's state compared
+Ground_801C4FAC	leaf-check display game_camera: the game camera's pass runs it before the stage draws
+grDisplay_801C5B90	leaf-check display game_camera: the game camera's pass draws the stage through it
+grDisplay_801C5DB0	leaf-check display stage_object: its saved calls in each pass, joints sometimes dirty
+ftDrawCommon_80080E18	leaf-check display fighter: its saved calls in each pass, joints sometimes dirty
+ftDrawCommon_800805C8	leaf-check display fighter: ftDrawCommon_80080E18 draws through it
+ftDrawCommon_8008051C	leaf-check display fighter and magnifier: the fighters' draws shake the view through it, a shaking fighter forced in the magnifier check
+ftDrawCommon_80081168	leaf-check display shadows: lbShadow_8000F38C shows the low models through it
+ftDrawCommon_80081200	leaf-check display shadows: lbShadow_8000F38C shows the main models through it
+ftDrawCommon_80080C28	leaf-check display magnifier: the magnifier draws each fighter off screen through it, the fighters forced off screen
+ftLib_UpdateScreenVisibility	leaf-check display fighter: ftDrawCommon_80080E18 marks the fighter on or off screen through it; x2188 and x221F_b0 compared
+ftLib_CanBeMagnified	leaf-check display magnifier: the magnifier asks it of each fighter off screen
+ftLib_IsItemVisible	leaf-check display game_camera: held items' render callbacks ask it of their fighter
+ftParts_80074B6C	leaf-check display fighter: the fighters' draws set their model groups through it; visibility flags compared
+ftParts_800750C8	leaf-check display fighter: the fighters' draws set their model groups through it; visibility flags compared
+ftCo_8009F5AC	leaf-check display fighter: each fighter's draw sets up its light through it; lights compared
+ftCo_8009F75C	leaf-check display fighter: ftMaterial_800BF2B8 sets up the light's alpha through it
+ftCo_8009F7F8	leaf-check display fighter: each fighter's draw resets the lights through it
+ftCo_800C0658	leaf-check display fighter: the fighters' lights and materials read the running overlay through it
+ftMaterial_800BF2B8	leaf-check display fighter and disp_all: the fighters' materials set up through it; materials, textures and lights compared
+it_8026EECC	leaf-check display game_camera: the game camera's pass draws the items through it
+it_8026EB18	leaf-check display game_camera: it_8026EECC draws the item's tree through it
+ifMagnify_802FBBDC	leaf-check display magnifier: its saved calls and the fighters' render states, players ignored, the HUD hidden, the fighters off screen
+ifMagnify_802FB8C0	leaf-check display bubble: its saved calls in each pass, the player sometimes off screen
+ifMagnify_802FB73C	leaf-check display bubble: the bubbles find their edge through it; edges compared
+fn_8001FC08	leaf-check display bg_flash_proc: fn_800204C8 steps each fade through it, over fades up, down and past their targets
+fn_800204C8	leaf-check display bg_flash_proc: from the fighters' render states, in each mode
+fn_8001FEC4	leaf-check display bg_flash_render: its saved calls, the flash off and on in each mode
+lbBgFlash_800205F0	leaf-check display bg_flash_setters: on a flash in each mode, with short and long fades
+lbBgFlash_8002063C	leaf-check display bg_flash_setters: on a flash in each mode, with short and long fades
+lbBgFlash_80020688	leaf-check display bg_flash_setters: on a flash in each mode, with short and long fades
+lbBgFlash_800206D4	leaf-check display bg_flash_setters: with varied colors and lengths
+lbBgFlash_InitState	leaf-check display bg_flash_setters: with varied colors
+fn_800208B0	leaf-check display bg_flash_setters: with varied alphas
+lbBgFlash_SetFlashScale	leaf-check display bg_flash_setters: with varied scales
+lbBgFlash_Proc	leaf-check display bg_flash_overlay: each of LbBf.dat's animations started on the overlay, scaled and with alpha, and an overlay that stopped
+fn_80021C80	leaf-check display bg_flash_overlay: lbBgFlash_Proc runs the overlay through it
+lbBgFlash_80021C48	leaf-check display bg_flash_anim: each animation over what the overlay plays
+lbBgFlash_Init	melee-oracle diff: the VS setup runs it; the flash's state, GObjs and user data compared at the first tick
+lbBgFlash_800208EC	melee-oracle diff: lbBgFlash_Init makes the flash's GObjs through it; compared at the first tick
+lbBgFlash_800209F4	melee-oracle diff: lbBgFlash_800208EC with priority 10 (one port for both)
+fn_80021C1C	melee-oracle diff: lbBgFlash_Init stops the overlay through it; compared at the first tick
+lbBgFlash_Free	melee-oracle diff: the flash's user data released with its GObj; the GObj pool compared

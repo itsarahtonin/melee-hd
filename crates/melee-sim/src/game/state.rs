@@ -44,6 +44,10 @@ pub enum UserData {
     ArrowSlot(u8),
     /// A player tag's slot (a heap byte `mn_8022EB04` frees).
     NameTagSlot(u8),
+    /// The background flash's overlay ([`crate::lb::bgflash::BgFlash::user`]).
+    BgFlash,
+    /// A player's magnifier bubble (`&ifMagnify_804A1DE0.player[slot]`).
+    MagnifyPlayer(u8),
 }
 
 /// The GObj object kinds as Melee's `HSD_GObj_80391260` numbers them, after the game's own
@@ -225,6 +229,8 @@ pub struct Game {
     pub hud: super::hud::Hud,
     /// Refraction's textures and users (`lbrefract.c`).
     pub refract: crate::lb::refract::Refract,
+    /// The background flash (`lbbgflash.c`, `lb_0219.c`).
+    pub bgflash: crate::lb::bgflash::BgFlash,
     /// What the tick asked of the audio and pad drivers since the frontend last took them.
     pub events: Vec<Event>,
     /// Slippi replay playback's state, in a match a replay drives (`playback`).
@@ -262,6 +268,9 @@ impl Host<GameKinds> for Running<'_> {
             UserData::SisCamera(g) => self.game.sis.forget_camera(g),
             // `mn_8022EB04`: the heap byte goes back.
             UserData::NameTagSlot(_) => {}
+            UserData::BgFlash => self.game.bg_flash_free(),
+            // `ifMagnify_802FC3BC` does nothing.
+            UserData::MagnifyPlayer(_) => {}
             UserData::StockIcons(_) | UserData::ArrowSlot(_) => {
                 unreachable!("user data set without a kind isn't released")
             }

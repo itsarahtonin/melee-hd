@@ -97,6 +97,21 @@ pub enum Draw {
         link: usize,
         first: Option<ParticleId>,
     },
+    /// The render copied into a player's magnifier bubble (`lb_800122C8`).
+    MagnifierCopy(u8),
+    /// Flat-colored quads in the current camera's view at depth 0 (`hsd_80391A04`'s debug
+    /// drawing: the background flash's).
+    Quads(Vec<Quad>),
+}
+
+/// A quad of [`Draw::Quads`]: two corners and its color.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Quad {
+    pub x0: f32,
+    pub y0: f32,
+    pub x1: f32,
+    pub y1: f32,
+    pub color: [u8; 4],
 }
 
 /// The display pass's output for the frame.

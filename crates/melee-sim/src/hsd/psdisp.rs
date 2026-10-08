@@ -43,7 +43,9 @@ pub fn setup_app_srts(
                 break;
             }
             let next = pp.next;
-            if !(crate::fpu::reg(pp.size) < crate::fpu::reg(MIN_SIZE)) {
+            // Not below the minimum, NaN included.
+            let small = crate::fpu::reg(pp.size) < crate::fpu::reg(MIN_SIZE);
+            if !small {
                 let v = *vmtx.get_or_insert_with(|| {
                     let c = objs
                         .cobjs

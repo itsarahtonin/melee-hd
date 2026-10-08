@@ -55,6 +55,9 @@ ROOTS = [
     "itRShell_ItemVars",
     "itSword_ItemVars",
     "PokemonSelectionState",
+    # The background flash (`lbbgflash.c`, `lb_0219.c`).
+    "BgFlashData",
+    "BgFlashUserData",
 ]
 
 # Handles for pointers to runtime objects, by the pointee's C name.

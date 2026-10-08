@@ -2,6 +2,7 @@
 
 pub mod anim;
 pub mod audio;
+pub mod bgflash;
 pub mod cobj;
 pub mod colanim;
 pub mod collision;

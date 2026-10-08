@@ -5,6 +5,10 @@
 use melee_sim::hsd::list::{self, SListId};
 use melee_sim::hsd::lobj::MAX_GXLIGHT;
 
+use melee_sim::game::mirror::{Cx, Mem, Mirror};
+use melee_sim::game::structs::BgFlashData;
+
+use crate::MEM1;
 use crate::compare::Comparer;
 use crate::import::{Importer, sym};
 
@@ -70,6 +74,22 @@ impl Importer<'_> {
             }
         }
         self.refract();
+        self.bg_flash();
+    }
+
+    /// The background flash's statics (`lbl_80433658`, `flash_gobj`, `lbl_804D63DC`,
+    /// `flash_scale`); its user data comes with its GObj.
+    pub fn bg_flash(&mut self) {
+        let mem = Mem {
+            bytes: &self.cap.call.mem1,
+            base: MEM1,
+        };
+        self.game.bgflash.data = BgFlashData::import(&mem, sym("lbl_80433658"), self);
+        let g = self.cap.u32(sym("flash_gobj"));
+        self.game.bgflash.gobj = self.gobj_handle(g);
+        let t = self.cap.u32(sym("lbl_804D63DC"));
+        self.game.bgflash.table = self.import_data(t);
+        self.game.bgflash.scale = f32::from_bits(self.cap.u32(sym("flash_scale")));
     }
 }
 
@@ -155,6 +175,23 @@ impl Comparer<'_> {
             pass == 3,
         );
         self.refract();
+        self.bg_flash();
+    }
+
+    /// [`Importer::bg_flash`]'s statics.
+    pub fn bg_flash(&mut self) {
+        let mem = Mem {
+            bytes: self.mem,
+            base: MEM1,
+        };
+        let f = self.game.bgflash.clone();
+        f.data.compare(&mem, sym("lbl_80433658"), "bgflash", self);
+        let t = self.u32(sym("flash_gobj"));
+        self.compare_handle("bgflash gobj", "GObjId", f.gobj.map(|g| g.0), t);
+        let t = self.u32(sym("lbl_804D63DC"));
+        self.compare_data("bgflash table", f.table, t);
+        let t = self.u32(sym("flash_scale"));
+        self.check("bgflash", "scale", f.scale.to_bits(), t);
     }
 }
 

@@ -173,12 +173,10 @@ impl Running<'_> {
         if !keeps_fog
             && !camera::draw_collisions(&self.game.camera.cam)
             && self.game.stage_info.unk8C.b2
+            && let Some(fg) = self.game.stage_info.x12C
+            && let Some(Obj::Fog(f)) = self.game.world.gobj(fg).obj
         {
-            if let Some(fg) = self.game.stage_info.x12C
-                && let Some(Obj::Fog(f)) = self.game.world.gobj(fg).obj
-            {
-                display::fog_set(&mut self.game.objs, Some(f));
-            }
+            display::fog_set(&mut self.game.objs, Some(f));
         }
     }
 }

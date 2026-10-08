@@ -8667,3 +8667,102 @@ impl Default for PokemonSelectionState {
         }
     }
 }
+
+/// `BgFlashState`, 0x1 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BgFlashState {
+    /// +0x0 (bits 0..+1)
+    pub active: bool,
+    /// +0x0 (bits 1..+7)
+    pub mode: u8,
+}
+
+impl Default for BgFlashState {
+    fn default() -> Self {
+        BgFlashState {
+            active: false,
+            mode: 0,
+        }
+    }
+}
+
+/// `BgFlashData`, 0x48 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BgFlashData {
+    /// +0x0
+    pub state: BgFlashState,
+    /// +0x1
+    pub pad1: [u8; 3],
+    /// +0x4
+    pub x4: _GXColor,
+    /// +0x8
+    pub x8: _GXColor,
+    /// +0xc
+    pub xC: _GXColor,
+    /// +0x10
+    pub x10: [f32; 4],
+    /// +0x20
+    pub x20: [f32; 4],
+    /// +0x30
+    pub x30: u8,
+    /// +0x31
+    pub x31: u8,
+    /// +0x32
+    pub x32: u8,
+    /// +0x33
+    pub x33: u8,
+    /// +0x34
+    pub x34: i32,
+    /// +0x38
+    pub x38: i32,
+    /// +0x3c
+    pub x3C: i32,
+    /// +0x40
+    pub x40: Option<GObjId>,
+    /// +0x44
+    pub x44: Option<GObjId>,
+}
+
+impl Default for BgFlashData {
+    fn default() -> Self {
+        BgFlashData {
+            state: Default::default(),
+            pad1: [0; 3],
+            x4: Default::default(),
+            x8: Default::default(),
+            xC: Default::default(),
+            x10: [0.0; 4],
+            x20: [0.0; 4],
+            x30: 0,
+            x31: 0,
+            x32: 0,
+            x33: 0,
+            x34: 0,
+            x38: 0,
+            x3C: 0,
+            x40: None,
+            x44: None,
+        }
+    }
+}
+
+/// `BgFlashUserData`, 0x84 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BgFlashUserData {
+    /// +0x0
+    pub x0: u8,
+    /// +0x1
+    pub pad_01: [u8; 3],
+    /// +0x4
+    pub x4: ColorOverlay,
+}
+
+impl Default for BgFlashUserData {
+    fn default() -> Self {
+        BgFlashUserData {
+            x0: 0,
+            pad_01: [0; 3],
+            x4: Default::default(),
+        }
+    }
+}

@@ -19169,3 +19169,190 @@ impl Mirror for PokemonSelectionState {
         }
     }
 }
+
+impl Mirror for BgFlashState {
+    const SIZE: u32 = 0x1;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        BgFlashState {
+            active: m.bits(at, 0, 1) != 0,
+            mode: m.bits(at, 1, 7) as u8,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if (self.active as u32) != m.bits(at, 0, 1) {
+            cx.mismatch(
+                &format!("{path}.active"),
+                format!("{:?}", self.active),
+                format!("{:?}", m.bits(at, 0, 1)),
+            );
+        }
+        if (self.mode as u32) != m.bits(at, 1, 7) {
+            cx.mismatch(
+                &format!("{path}.mode"),
+                format!("{:?}", self.mode),
+                format!("{:?}", m.bits(at, 1, 7)),
+            );
+        }
+    }
+}
+
+impl Mirror for BgFlashData {
+    const SIZE: u32 = 0x48;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        BgFlashData {
+            state: BgFlashState::import(m, at + 0x0, cx),
+            pad1: core::array::from_fn(|i0| m.u8(at + 0x1 + i0 as u32 * 0x1)),
+            x4: _GXColor::import(m, at + 0x4, cx),
+            x8: _GXColor::import(m, at + 0x8, cx),
+            xC: _GXColor::import(m, at + 0xc, cx),
+            x10: core::array::from_fn(|i0| f32::from_bits(m.u32(at + 0x10 + i0 as u32 * 0x4))),
+            x20: core::array::from_fn(|i0| f32::from_bits(m.u32(at + 0x20 + i0 as u32 * 0x4))),
+            x30: m.u8(at + 0x30),
+            x31: m.u8(at + 0x31),
+            x32: m.u8(at + 0x32),
+            x33: m.u8(at + 0x33),
+            x34: m.u32(at + 0x34) as i32,
+            x38: m.u32(at + 0x38) as i32,
+            x3C: m.u32(at + 0x3c) as i32,
+            x40: cx.import_handle("GObjId", m.u32(at + 0x40)).map(GObjId),
+            x44: cx.import_handle("GObjId", m.u32(at + 0x44)).map(GObjId),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        self.state
+            .compare(m, at + 0x0, &format!("{path}.state"), cx);
+        for i0 in 0..3 {
+            if self.pad1[i0] != m.u8(at + 0x1 + i0 as u32 * 0x1) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.pad1"), i0),
+                    format!("{:?}", self.pad1[i0]),
+                    format!("{:?}", m.u8(at + 0x1 + i0 as u32 * 0x1)),
+                );
+            }
+        }
+        self.x4.compare(m, at + 0x4, &format!("{path}.x4"), cx);
+        self.x8.compare(m, at + 0x8, &format!("{path}.x8"), cx);
+        self.xC.compare(m, at + 0xc, &format!("{path}.xC"), cx);
+        for i0 in 0..4 {
+            if self.x10[i0].to_bits() != m.u32(at + 0x10 + i0 as u32 * 0x4) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.x10"), i0),
+                    format!("{:?}", self.x10[i0]),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x10 + i0 as u32 * 0x4))),
+                );
+            }
+        }
+        for i0 in 0..4 {
+            if self.x20[i0].to_bits() != m.u32(at + 0x20 + i0 as u32 * 0x4) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.x20"), i0),
+                    format!("{:?}", self.x20[i0]),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x20 + i0 as u32 * 0x4))),
+                );
+            }
+        }
+        if self.x30 != m.u8(at + 0x30) {
+            cx.mismatch(
+                &format!("{path}.x30"),
+                format!("{:?}", self.x30),
+                format!("{:?}", m.u8(at + 0x30)),
+            );
+        }
+        if self.x31 != m.u8(at + 0x31) {
+            cx.mismatch(
+                &format!("{path}.x31"),
+                format!("{:?}", self.x31),
+                format!("{:?}", m.u8(at + 0x31)),
+            );
+        }
+        if self.x32 != m.u8(at + 0x32) {
+            cx.mismatch(
+                &format!("{path}.x32"),
+                format!("{:?}", self.x32),
+                format!("{:?}", m.u8(at + 0x32)),
+            );
+        }
+        if self.x33 != m.u8(at + 0x33) {
+            cx.mismatch(
+                &format!("{path}.x33"),
+                format!("{:?}", self.x33),
+                format!("{:?}", m.u8(at + 0x33)),
+            );
+        }
+        if self.x34 != m.u32(at + 0x34) as i32 {
+            cx.mismatch(
+                &format!("{path}.x34"),
+                format!("{:?}", self.x34),
+                format!("{:?}", m.u32(at + 0x34) as i32),
+            );
+        }
+        if self.x38 != m.u32(at + 0x38) as i32 {
+            cx.mismatch(
+                &format!("{path}.x38"),
+                format!("{:?}", self.x38),
+                format!("{:?}", m.u32(at + 0x38) as i32),
+            );
+        }
+        if self.x3C != m.u32(at + 0x3c) as i32 {
+            cx.mismatch(
+                &format!("{path}.x3C"),
+                format!("{:?}", self.x3C),
+                format!("{:?}", m.u32(at + 0x3c) as i32),
+            );
+        }
+        cx.compare_handle(
+            &format!("{path}.x40"),
+            "GObjId",
+            self.x40.map(|h| h.0),
+            m.u32(at + 0x40),
+        );
+        cx.compare_handle(
+            &format!("{path}.x44"),
+            "GObjId",
+            self.x44.map(|h| h.0),
+            m.u32(at + 0x44),
+        );
+    }
+}
+
+impl Mirror for BgFlashUserData {
+    const SIZE: u32 = 0x84;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        BgFlashUserData {
+            x0: m.u8(at + 0x0),
+            pad_01: core::array::from_fn(|i0| m.u8(at + 0x1 + i0 as u32 * 0x1)),
+            x4: ColorOverlay::import(m, at + 0x4, cx),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0 != m.u8(at + 0x0) {
+            cx.mismatch(
+                &format!("{path}.x0"),
+                format!("{:?}", self.x0),
+                format!("{:?}", m.u8(at + 0x0)),
+            );
+        }
+        for i0 in 0..3 {
+            if self.pad_01[i0] != m.u8(at + 0x1 + i0 as u32 * 0x1) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.pad_01"), i0),
+                    format!("{:?}", self.pad_01[i0]),
+                    format!("{:?}", m.u8(at + 0x1 + i0 as u32 * 0x1)),
+                );
+            }
+        }
+        self.x4.compare(m, at + 0x4, &format!("{path}.x4"), cx);
+    }
+}

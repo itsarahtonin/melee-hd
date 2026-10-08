@@ -243,7 +243,7 @@ pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
 /// Runs a frame of the scene loop with one controller poll: the pad library queues the poll
 /// (`HSD_PadRenewRawStatus`, which the original's polling alarm runs), the clocks take up a
 /// new game speed (`lb_80019894`), one engine tick runs, and unless the scene ended at once
-/// the display pass runs and the frame counts as rendered.
+/// the display pass runs on the screen and the frame counts as rendered.
 pub fn step(r: &mut Running, poll: PadData, reset_pressed: bool) -> Tick {
     let pads = r.game.pads.renew_raw(r.data, poll, false, reset_pressed);
     r.game.pacing.update();
@@ -252,6 +252,8 @@ pub fn step(r: &mut Running, poll: PadData, reset_pressed: bool) -> Tick {
     }
     let ended = tick(r);
     if r.game.scene.unk_C != 2 {
+        // `HSD_StartRender(HSD_RP_SCREEN)`.
+        crate::hsd::display::set_offscreen(&mut r.game.objs, false);
         r.render_frame();
         let sc = &mut r.game.scene;
         if sc.unk_4 != u32::MAX - 1 {

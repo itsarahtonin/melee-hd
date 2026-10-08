@@ -38,6 +38,8 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         // The recording codes' processes send the frame over EXI and change nothing.
         super::playback::RECORD_FRAME_START_PROC | super::playback::RECORD_ITEMS_PROC => {}
         super::gm::vs::PROC => game.vs_proc(),
+        crate::lb::bgflash::PROC => game.game.bgflash.proc(),
+        crate::lb::bgflash::OVERLAY_PROC => game.bg_flash_proc(),
         // fn_801A4BD0: the scene GObj's first process, empty.
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),

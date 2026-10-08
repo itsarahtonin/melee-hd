@@ -277,6 +277,8 @@ impl Match {
                 sd_intro: data.add(archive("SdIntro.dat")),
                 if_coget: data.add(archive("IfCoGet.dat")),
             },
+            // `lbBgFlash_Init`'s.
+            lb_bf: data.add(archive("LbBf.dat")),
         };
         load_fighter_files(&mut game, &mut data, &settings.start, load);
         let mut m = Match { game, data };

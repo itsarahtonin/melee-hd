@@ -168,6 +168,13 @@ fn disp_all() {
             }
         },
         &|r, maps, call| {
+            // A fighter's materials read the fighter being drawn.
+            if let Some(g) = r.game.world.rendering
+                && let Some(melee_sim::game::state::UserData::Fighter(f)) =
+                    r.game.world.gobj(g).user_data
+            {
+                r.game.objs.display.fighter = Some(r.material_info(f));
+            }
             let g = &call.regs.gpr;
             let j = (g[3] != 0).then(|| maps.jobjs[&g[3]]);
             display::jobj_disp_all(
@@ -742,6 +749,302 @@ fn game_camera() {
             if call.addr == cb {
                 r.render_game_camera(gobj_arg(maps, call));
             }
+            Ret::Nothing
+        },
+    );
+}
+
+/// `lbl_80433658`, the background flash's state.
+fn flash_state() -> u32 {
+    leaf_check::sym("lbl_80433658")
+}
+
+/// Sets the flash's mode (and turns it on), its colors, fade and wipe for variant `v`.
+fn flash_variant(call: &mut Call, v: usize) {
+    let d = flash_state();
+    let byte = |call: &mut Call, a: u32, b: u8| call.mem1[(a - 0x8000_0000) as usize] = b;
+    let (mode, x10, x20, x8) = match v {
+        // A fade up and down, some channels at their targets or past them.
+        0 => (
+            0,
+            [10.5, 250.0, 3.0, 128.25],
+            [3.3, 10.0, -2.0, -200.0],
+            [20, 255, 0, 0],
+        ),
+        1 => (
+            2,
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0042, 255.0, -1.0, 0.5],
+            [1, 255, 0, 255],
+        ),
+        2 => (
+            1,
+            [254.9, 1.0, 100.0, 7.0],
+            [0.2, -0.75, 0.0, -7.0],
+            [255, 0, 100, 0],
+        ),
+        // Wipes, and the hold.
+        3 | 4 => (v as u8, [0.0; 4], [0.0; 4], [0; 4]),
+        _ => (5, [0.0; 4], [0.0; 4], [0; 4]),
+    };
+    byte(call, d, mode);
+    for i in 0..4u32 {
+        leaf_check::calls::poke_f32(call, d + 0x10 + 4 * i, x10[i as usize]);
+        leaf_check::calls::poke_f32(call, d + 0x20 + 4 * i, x20[i as usize]);
+        byte(call, d + 8 + i, x8[i as usize]);
+        byte(call, d + 0xC + i, 0x40 + i as u8 * 0x31);
+    }
+    // The wipe: by 40 across, strips 16 high, 5 steps a frame, near its end or its start.
+    let (x30, x34, x38) = if v == 4 { (0, 600, 470) } else { (0, 80, 32) };
+    for (o, b) in [(0x30, x30), (0x31, 40), (0x32, 16), (0x33, 0)] {
+        byte(call, d + o, b);
+    }
+    poke_u32(call, d + 0x34, x34);
+    poke_u32(call, d + 0x38, x38);
+    poke_u32(call, d + 0x3C, 5);
+}
+
+/// The flash GObj's process (`fn_800204C8`) in each mode, from the fighters' render states.
+#[test]
+fn bg_flash_proc() {
+    let f = leaf_check::sym("fn_800204C8");
+    each2(
+        "ftDrawCommon_80080E18",
+        10,
+        &|call, i| {
+            call.addr = f;
+            if i % 7 != 6 {
+                flash_variant(call, i % 7);
+            }
+        },
+        &|r, _, _| {
+            r.game.bgflash.proc();
+            Ret::Nothing
+        },
+    );
+}
+
+/// The flash's render callback (`fn_8001FEC4`), off and on in each mode.
+#[test]
+fn bg_flash_render() {
+    each2(
+        "fn_8001FEC4",
+        5,
+        &|call, i| {
+            if i % 7 != 6 {
+                flash_variant(call, i % 7);
+            }
+        },
+        &|r, _, _| {
+            r.render_bg_flash();
+            Ret::Nothing
+        },
+    );
+}
+
+/// The overlay GObj's process (`lbBgFlash_Proc`), with `LbBf.dat`'s animations started on
+/// it as `lbBgFlash_80021C48` starts them, scaled and with alpha.
+#[test]
+fn bg_flash_overlay() {
+    let f = leaf_check::sym("lbBgFlash_Proc");
+    each2(
+        "ftDrawCommon_80080E18",
+        10,
+        &|call, i| {
+            let g = peek_u32(call, leaf_check::sym("flash_gobj"));
+            call.addr = f;
+            call.regs.gpr[3] = g;
+            let ud = peek_u32(call, g + 0x2C);
+            let co = ud + 4;
+            let id = (i % 16) as u32;
+            if i % 4 != 3 {
+                let table = peek_u32(call, leaf_check::sym("lbl_804D63DC"));
+                let script = peek_u32(call, table + 8 * id);
+                poke_u32(call, co + 0x28, id);
+                poke_u32(call, co + 4, (i % 3) as u32);
+                poke_u32(call, co + 8, script);
+                poke_u32(call, co, 0);
+                poke_u32(call, co + 0xC, 0);
+                call.mem1[(co + 0x7C - 0x8000_0000) as usize] &= 0x3F;
+            } else {
+                // An overlay that colored and stopped.
+                call.mem1[(co + 0x7C - 0x8000_0000) as usize] |= 0x80;
+            }
+            call.mem1[(ud - 0x8000_0000) as usize] = [0xFF, 0x80, 0x01][i % 3];
+            let scale = [1.0, 0.2, 1.7][i / 3 % 3];
+            leaf_check::calls::poke_f32(call, leaf_check::sym("flash_scale"), scale);
+        },
+        &|r, _, _| {
+            r.bg_flash_proc();
+            Ret::Nothing
+        },
+    );
+}
+
+/// `lbBgFlash_80021C48` with each animation over what the overlay plays.
+#[test]
+fn bg_flash_anim() {
+    let f = leaf_check::sym("lbBgFlash_80021C48");
+    each2(
+        "ftDrawCommon_80080E18",
+        10,
+        &|call, i| {
+            call.addr = f;
+            call.regs.gpr[3] = (i % 16) as u32;
+            call.regs.gpr[4] = (i % 5) as u32 * 7;
+            if i % 2 == 1 {
+                // Something else playing.
+                let g = peek_u32(call, leaf_check::sym("flash_gobj"));
+                let co = peek_u32(call, g + 0x2C) + 4;
+                poke_u32(call, co + 0x28, (i / 2 % 16) as u32);
+            }
+        },
+        &|r, _, call| {
+            let (id, frames) = (call.regs.gpr[3], call.regs.gpr[4]);
+            let started = r.game.bg_flash_anim(r.data, id, frames);
+            Ret::Int(u32::from(started))
+        },
+    );
+}
+
+/// The flash's fades and holds (`lbBgFlash_800205F0` and the rest), on a flash in each
+/// mode.
+#[test]
+fn bg_flash_setters() {
+    let names = [
+        "lbBgFlash_800205F0",
+        "lbBgFlash_8002063C",
+        "lbBgFlash_80020688",
+        "lbBgFlash_800206D4",
+        "lbBgFlash_InitState",
+        "fn_800208B0",
+        "lbBgFlash_SetFlashScale",
+    ];
+    let funcs = names.map(leaf_check::sym);
+    let (c1, c2) = (
+        leaf_check::sym("lbl_804D3840"),
+        leaf_check::sym("lbl_804D3844"),
+    );
+    each2(
+        "ftDrawCommon_80080E18",
+        10,
+        &|call, i| {
+            flash_variant(call, i / 7 % 7);
+            call.addr = funcs[i % 7];
+            let n = [0, 1, 7, 60, -3, 255][i / 7 % 6] as u32;
+            call.regs.gpr[3] = n;
+            if i % 7 == 3 || i % 7 == 4 {
+                poke_u32(call, c1, 0x10FF_7F00u32.rotate_left(i as u32));
+                poke_u32(call, c2, 0x00C0_FF33u32.rotate_right(i as u32));
+                call.regs.gpr[3] = c1;
+                call.regs.gpr[4] = c2;
+                call.regs.gpr[5] = n;
+            }
+            call.regs.fpr[1].ps0 = [0.2, 1.0, 3.5][i % 3];
+        },
+        &|r, _, call| {
+            let f = &mut r.game.bgflash;
+            let n = call.regs.gpr[3] as i32;
+            let color = |a: u32| {
+                let w = peek_u32(call, a).to_be_bytes();
+                melee_sim::game::structs::_GXColor {
+                    r: w[0],
+                    g: w[1],
+                    b: w[2],
+                    a: w[3],
+                }
+            };
+            match funcs.iter().position(|&a| a == call.addr) {
+                Some(0) => f.fade_white_to_black(n),
+                Some(1) => f.fade_to_black(n),
+                Some(2) => f.fade_to_white(n),
+                Some(3) => f.fade(
+                    color(call.regs.gpr[3]),
+                    color(call.regs.gpr[4]),
+                    call.regs.gpr[5] as i32,
+                ),
+                Some(4) => f.set_color(color(call.regs.gpr[3])),
+                Some(5) => f.set_black(n as u8),
+                _ => f.set_scale(call.regs.fpr[1].ps0 as f32),
+            }
+            Ret::Nothing
+        },
+    );
+}
+
+/// The HUD's hidden flag (`ifAll_IsHUDHidden`'s).
+const HUD_HIDDEN: u32 = 0x804D_6D58;
+
+/// The magnifier camera's render callback (`ifMagnify_802FBBDC`), from its saved calls and
+/// the fighters' render states, with players ignored or the HUD hidden.
+#[test]
+fn magnifier() {
+    let f = leaf_check::sym("ifMagnify_802FBBDC");
+    for from in ["ifMagnify_802FBBDC", "ftDrawCommon_80080E18"] {
+        each2(
+            from,
+            3,
+            &|call, i| {
+                if call.addr != f {
+                    let cams = rendered_all(call, 64, "ifMagnify_802FBBDC");
+                    let Some(&g) = cams.first() else {
+                        return;
+                    };
+                    call.addr = f;
+                    call.regs.gpr[3] = g;
+                    call.regs.gpr[4] = 0;
+                }
+                let players = leaf_check::sym("ifMagnify_804A1DE0") + 0x14;
+                match i % 4 {
+                    // A player the magnifier ignores.
+                    1 => {
+                        let at = players + 0x10 * (i as u32 / 4 % 2) + 0xC;
+                        call.mem1[(at - 0x8000_0000) as usize] |= 0x40;
+                    }
+                    // The HUD hidden (`ifAll_IsHUDHidden`'s flag).
+                    2 => call.mem1[(HUD_HIDDEN - 0x8000_0000) as usize] = 1,
+                    // The fighters off screen (`x221F_b0`), the second one's shaking.
+                    3 => {
+                        for (k, g) in rendered_all(call, 5, "ftDrawCommon_80080E18")
+                            .into_iter()
+                            .enumerate()
+                        {
+                            let fp = peek_u32(call, g + 0x2C);
+                            call.mem1[(fp + 0x221F - 0x8000_0000) as usize] |= 0x80;
+                            if k == 1 {
+                                leaf_check::calls::poke_f32(call, fp + 0x18B8, 1.5);
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            },
+            &|r, maps, call| {
+                if call.addr == f {
+                    r.render_magnifier(gobj_arg(maps, call));
+                }
+                Ret::Nothing
+            },
+        );
+    }
+}
+
+/// A player's bubble's render callback (`ifMagnify_802FB8C0`) in each pass.
+#[test]
+fn bubble() {
+    each2(
+        "ifMagnify_802FB8C0",
+        10,
+        &|call, i| {
+            call.regs.gpr[4] = [0, 0, 1, 2][i % 4];
+            if i % 2 == 0 {
+                // The player off screen.
+                let ud = peek_u32(call, call.regs.gpr[3] + 0x2C);
+                call.mem1[(ud + 0xC - 0x8000_0000) as usize] |= 0x80;
+            }
+        },
+        &|r, maps, call| {
+            r.render_bubble(gobj_arg(maps, call), call.regs.gpr[4] as i32);
             Ret::Nothing
         },
     );

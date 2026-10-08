@@ -465,6 +465,11 @@ impl Comparer<'_> {
     }
 }
 
+/// The magnifier's bubbles' user data release, and where its players sit.
+const BUBBLE_FREE: u32 = melee_sim::game::hud::magnify::BUBBLE_FREE;
+const MAGNIFY_PLAYERS: u32 = 0x14;
+const MAGNIFY_PLAYER_SIZE: u32 = 0x10;
+
 /// The HUD's and text system's GObj user data, by the release function the GObj holds.
 pub(crate) fn user_data(imp: &mut Importer, release: u32, ud: u32) -> Option<UserData> {
     let mem: &[u8] = &imp.cap.call.mem1;
@@ -477,6 +482,11 @@ pub(crate) fn user_data(imp: &mut Importer, release: u32, ud: u32) -> Option<Use
         // fn_803A60EC: a canvas's camera, its own GObj.
         0x803A_60EC => Some(UserData::SisCamera(imp.gobj_at(ud)?)),
         NAMETAG_RELEASE => Some(UserData::NameTagSlot(mem.b(ud))),
+        BUBBLE_FREE => {
+            let players = sym("ifMagnify_804A1DE0") + MAGNIFY_PLAYERS;
+            let slot = ud.checked_sub(players)? / MAGNIFY_PLAYER_SIZE;
+            (slot < 6).then_some(UserData::MagnifyPlayer(slot as u8))
+        }
         _ => None,
     }
 }
@@ -521,6 +531,15 @@ pub(crate) fn compare_user_data(cmp: &mut Comparer, path: &str, ud: UserData, t:
                 "tag slot and release",
                 (slot, NAMETAG_RELEASE),
                 (mem.b(theirs), release),
+            );
+        }
+        UserData::MagnifyPlayer(slot) => {
+            let players = sym("ifMagnify_804A1DE0") + MAGNIFY_PLAYERS;
+            cmp.check(
+                path,
+                "bubble player and release",
+                (players + u32::from(slot) * MAGNIFY_PLAYER_SIZE, BUBBLE_FREE),
+                (theirs, release),
             );
         }
         UserData::StockIcons(_) | UserData::ArrowSlot(_) => {

@@ -59,30 +59,31 @@ impl Running<'_> {
     pub fn update_screen_visibility(&mut self, g: GObjId) -> bool {
         let f = self.game.fighter_id(g);
         let fp = &self.game.fighters[f.0];
-        if !fp.x2229_b3 && !fp.x2220_b7 {
-            if let Some(cg) = camera::gobj(&self.game.camera.cam) {
-                let c = match self.game.world.gobj(cg).obj {
-                    Some(Obj::CObj(c)) => Some(c),
-                    _ => None,
-                };
-                if c == self.game.objs.cobjs.current {
-                    let b = fp.x890_cameraBox.expect("a fighter without a camera box");
-                    let shown = match camera::box_to_screen(self.game, self.data, b) {
-                        Some((p, inside)) => {
-                            let fp = &mut self.game.fighters[f.0];
-                            fp.x2188.x = p[0];
-                            fp.x2188.y = p[1];
-                            inside
-                        }
-                        None => false,
-                    };
-                    if shown {
-                        self.game.fighters[f.0].x221F_b0 = false;
-                        return true;
+        if !fp.x2229_b3
+            && !fp.x2220_b7
+            && let Some(cg) = camera::gobj(&self.game.camera.cam)
+        {
+            let c = match self.game.world.gobj(cg).obj {
+                Some(Obj::CObj(c)) => Some(c),
+                _ => None,
+            };
+            if c == self.game.objs.cobjs.current {
+                let b = fp.x890_cameraBox.expect("a fighter without a camera box");
+                let shown = match camera::box_to_screen(self.game, self.data, b) {
+                    Some((p, inside)) => {
+                        let fp = &mut self.game.fighters[f.0];
+                        fp.x2188.x = p[0];
+                        fp.x2188.y = p[1];
+                        inside
                     }
-                    self.game.fighters[f.0].x221F_b0 = true;
-                    return camera::box_on_screen(self.game, self.data, b, 15.0);
+                    None => false,
+                };
+                if shown {
+                    self.game.fighters[f.0].x221F_b0 = false;
+                    return true;
                 }
+                self.game.fighters[f.0].x221F_b0 = true;
+                return camera::box_on_screen(self.game, self.data, b, 15.0);
             }
         }
         self.game.fighters[f.0].x221F_b0 = false;
@@ -106,8 +107,8 @@ impl Running<'_> {
     }
 
     /// What the fighter's materials read while its trees draw (`ftMaterial_800BF2B8`'s
-    /// fighter).
-    fn material_info(&self, f: FighterId) -> FighterMaterial {
+    /// fighter, `HSD_GObj_804D7814`'s).
+    pub fn material_info(&self, f: FighterId) -> FighterMaterial {
         let fp = &self.game.fighters[f.0];
         let o = self.active_overlay(f);
         FighterMaterial {
@@ -198,6 +199,41 @@ impl Running<'_> {
         }
         if pass == 2 && self.game.fighters[f.0].x2100 > 1 {
             code::unported_call("ftCo_800C2600");
+        }
+    }
+
+    /// A fighter drawn into the magnifier, `ftDrawCommon_80080C28`: with its light, its
+    /// low models (when it has them), its tree through the shaken view (refraction's users
+    /// don't draw), and its accessory.
+    #[doc(alias = "ftDrawCommon_80080C28")]
+    pub fn draw_magnified(&mut self, g: GObjId, pass: i32) {
+        let f = self.game.fighter_id(g);
+        if self.game.fighters[f.0].x21FC_flag[0] & 1 == 0 {
+            return;
+        }
+        let fp = &self.game.fighters[f.0];
+        if !fp.invisible && !fp.x221E_b5 && !fp.x2226_b5 {
+            self.fighter_light(f);
+            if self.game.fighters[f.0].x5AC.xC[1].is_some() {
+                self.set_parts_vis(f, 0, false);
+                self.set_parts_vis(f, 2, false);
+                self.set_parts_vis(f, 4, false);
+                self.set_parts_vis(f, 1, true);
+            }
+            let fp = &mut self.game.fighters[f.0];
+            fp.x2223_b2 = false;
+            fp.x2223_b3 = false;
+            fp.x2227_b7 = false;
+            fp.x2228_b0 = true;
+            let vmtx = self.shake_view(f);
+            let root = self.fighter_root(g);
+            self.draw_fighter_tree(f, root, vmtx, pass);
+            self.kind_draw(f);
+            // `ftCo_800C8AF0` stops refraction only for `x2226_b5`, which doesn't draw here.
+            self.fighter_light_reset(f);
+        }
+        if let Some(a) = self.game.fighters[f.0].x20A0_accessory {
+            self.draw_fighter_tree(f, Some(a), None, pass);
         }
     }
 

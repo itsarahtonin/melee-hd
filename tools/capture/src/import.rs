@@ -15,8 +15,8 @@ use melee_sim::game::handles::{
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
 use melee_sim::game::structs::{
-    _StaticPlayer, Camera, CameraDebugMode, CmSubject, ControllerMap, DynamicsData, Fighter,
-    FighterBone, VsSceneController, gm_80479D58_t, ifMagnify,
+    _StaticPlayer, BgFlashUserData, Camera, CameraDebugMode, CmSubject, ControllerMap,
+    DynamicsData, Fighter, FighterBone, VsSceneController, gm_80479D58_t, ifMagnify,
 };
 use melee_sim::hsd::aobj::{AObj, AObjId};
 use melee_sim::hsd::cobj::{CObj, CObjId};
@@ -34,6 +34,7 @@ use melee_sim::hsd::shadow::{Shadow, ShadowId, ShadowImage};
 use melee_sim::hsd::tobj::{Color, ImageRef, TObj, TObjId, TObjTev, TlutTable};
 use melee_sim::hsd::wobj::{WObj, WObjId};
 use melee_sim::input::controller::Status;
+use melee_sim::lb::bgflash;
 use melee_sim::mp::IslandId;
 use melee_sim::mtx::Mtx34;
 use melee_sim::quat::Quat;
@@ -421,6 +422,14 @@ impl<'a> Importer<'a> {
                 6 if ud != 0 => Some(UserData::Item(self.item(ud))),
                 8 if ud != 0 => Some(UserData::Effect(self.effect(ud))),
                 3 if ud != 0 => Some(UserData::Ground(self.ground(ud))),
+                bgflash::USER_DATA_KIND if ud != 0 && release == bgflash::FREE => {
+                    let mem = Mem {
+                        bytes: &self.cap.call.mem1,
+                        base: MEM1,
+                    };
+                    self.game.bgflash.user = Some(BgFlashUserData::import(&mem, ud, self));
+                    Some(UserData::BgFlash)
+                }
                 0xFF => crate::hud::kindless_user_data(ud),
                 _ if ud == 0 => None,
                 _ if release != 0 && crate::hud::user_data(self, release, ud).is_some() => {

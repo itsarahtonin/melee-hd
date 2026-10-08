@@ -74,7 +74,6 @@ mod addr {
     pub const STAGE_80225298: u32 = 0x8022_5298;
     pub const STAGE_80225074: u32 = 0x8022_5074;
     pub const SFX_SETUP_CROWD_SFX: u32 = 0x8032_1900;
-    pub const LBBGFLASH_INIT: u32 = 0x8002_1A18;
     pub const GRSTADIUM_801D3B4C: u32 = 0x801D_3B4C;
     pub const GRSTADIUM_801D4150: u32 = 0x801D_4150;
     pub const GRSTADIUM_801D4084: u32 = 0x801D_4084;
@@ -1628,6 +1627,8 @@ pub struct MatchArchives {
     pub gm_pause: melee_data::archive::ArchiveId,
     /// The HUD's.
     pub hud: crate::game::hud::all::HudArchives,
+    /// `LbBf.dat`, the background flash's color animations.
+    pub lb_bf: melee_data::archive::ArchiveId,
 }
 
 impl Game {
@@ -1702,7 +1703,7 @@ impl Running<'_> {
             super::super::camera::snap(self);
         }
         self.create_hud(files.hud);
-        code::call(self, addr::LBBGFLASH_INIT, &[Val::Int(0xFF)]);
+        self.bg_flash_init(0xFF, files.lb_bf);
         if let Some(f) = d.rules.on_match_start {
             code::call(self, f.0, &[]);
         }

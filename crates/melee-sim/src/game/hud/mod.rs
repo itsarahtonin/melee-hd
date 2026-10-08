@@ -8,6 +8,7 @@
 pub mod all;
 pub mod announce;
 pub mod devtext;
+pub mod magnify;
 pub mod nametag;
 pub mod small;
 pub mod status;

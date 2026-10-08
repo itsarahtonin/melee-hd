@@ -22,7 +22,6 @@ impl Running<'_> {
     /// for pass 0, `HSD_GObj_80390FC0`.
     #[doc(alias = "HSD_GObj_80390FC0")]
     pub fn render_frame(&mut self) {
-        display::set_offscreen(&mut self.game.objs, false);
         let mut cur = self.game.world.gx_head[GX_LINKS];
         while let Some(g) = cur {
             if let Some(cb) = self.game.world.gobj(g).render {
@@ -270,6 +269,9 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         0x801C_5DB0 => r.render_stage_object(gobj, pass),
         0x8008_0E18 => r.render_fighter(gobj, pass),
         0x8026_EECC => r.render_item(gobj, pass),
+        crate::lb::bgflash::RENDER => r.render_bg_flash(),
+        super::hud::magnify::CAMERA_RENDER => r.render_magnifier(gobj),
+        super::hud::magnify::BUBBLE_RENDER => r.render_bubble(gobj, pass),
         // The HUD's.
         0x802F_36B8 => {
             let d = r.game.hud_camera_render(gobj);
