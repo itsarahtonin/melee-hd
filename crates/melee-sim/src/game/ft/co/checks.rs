@@ -8,7 +8,7 @@ use super::super::super::code::{self, Val, unported_call};
 use super::super::super::state::Running;
 use super::ids::ms;
 use super::kind_callbacks as kinds;
-use super::{PAD_A, PAD_B, PAD_DPAD_DOWN, PAD_DPAD_UP, PAD_L_R, PAD_LR};
+use super::{PAD_A, PAD_B, PAD_DPAD_UP, PAD_L_R, PAD_LR};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::math;
@@ -21,7 +21,6 @@ pub(super) const KIND_PEACH: i32 = 9;
 pub(super) const KIND_SAMUS: i32 = 13;
 pub(super) const KIND_YOSHI: i32 = 14;
 pub(super) const KIND_MEWTWO: i32 = 16;
-pub(super) const KIND_FALCO: i32 = 22;
 pub(super) const KIND_CLINK: i32 = 20;
 pub(super) const KIND_PIKACHU: i32 = 12;
 pub(super) const KIND_PICHU: i32 = 23;
@@ -260,22 +259,12 @@ impl Running<'_> {
         false
     }
 
-    /// Fox's and Falco's side taunt on Corneria and Venom, `ftFx_AppealS_CheckInput`.
-    #[doc(alias = "ftFx_AppealS_CheckInput")]
+    /// Whether the stage is Corneria or Venom, where Fox's and Falco's side taunt calls their
+    /// team, `grCorneria_801E2CE8`.
     #[doc(alias = "grCorneria_801E2CE8")]
-    pub fn fox_appeal_s_check(&mut self, gobj: GObjId) -> bool {
-        let fp = self.game.fighter(gobj);
-        if fp.kind != KIND_FOX && fp.kind != KIND_FALCO {
-            return false;
-        }
+    pub fn corneria_taunt_stage(&self) -> bool {
         let gr = self.game.stage_info.grkind;
-        if !(gr == GR_KIND_CORNERIA || gr == GR_KIND_VENOM) {
-            return false;
-        }
-        if fp.input.held_buttons[0] & PAD_DPAD_DOWN == 0 && fp.x682 == 1 {
-            unported_call("ftFox_CheckAppealSCount");
-        }
-        false
+        gr == GR_KIND_CORNERIA || gr == GR_KIND_VENOM
     }
 
     /// Stopping a walk, `ft_8008A244`: the stick turned back or let go.

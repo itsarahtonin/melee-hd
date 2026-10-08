@@ -69,54 +69,47 @@ fn dirs() -> Vec<String> {
 fn stubs(yes: bool) -> Vec<Stub> {
     let b = StubRet::Int(i32::from(yes));
     let mut v: Vec<Stub> = [
-        ext::FTCOMMON_8007DB24,
-        ext::FTCOMMON_8007D7FC,
         ext::FTCOMMON_CALC_SELF_ACCEL_DEACCEL_QUICK_AIR,
         ext::FTCOLL_8007AEF8,
-        ext::FTCO_80096900,
-        ext::FTCOMMON_8007D60C,
         ext::FTANIM_APPLY_PART_ANIM,
         ext::FTANIM_80070FB4,
         ext::FTANIM_80070C48,
         ext::FTANIM_80070CC4,
-        ext::FT_80083F88,
         ext::FTCO_AIR_CATCH_HIT_COLL,
         ext::PL_80040120,
         ext::IT_8026BAE8,
         ext::FTPICKUPITEM_80094818,
-        ext::FTCOMMON_UPDATE_FACING,
-        ext::FTCOMMON_8007D92C,
         ext::FTCOLL_CREATE_REFLECT_HIT,
-        ext::FTCO_8009A184,
         ext::GRCORNERIA_801E2AF4,
         ext::FT_8008A324,
         ext::FT_80089824,
         ext::FT_800892A0,
         ext::FT_800851C0,
         ext::FT_80085088,
-        ext::FTCO_LANDING_FALL_SPECIAL_ENTER,
     ]
     .iter()
     .map(|&a| (a, StubRet::Nothing))
     .collect();
     for a in [
-        ext::FT_80082708,
-        ext::FT_80081D0C,
-        ext::FT_CHECK_GROUND_AND_LEDGE,
-        ext::FTCLIFFCOMMON_80081298,
-        ext::FTCO_8009A134,
-        ext::FTCO_80099F1C,
-        ext::FTCO_JUMP_CHECK_INPUT,
-        ext::FTCO_800CB870,
-        ext::FTCO_800C97A8,
         ext::PL_800386D8,
         ext::GRCORNERIA_801E2D14,
-        ext::GRCORNERIA_801E2CE8,
         ext::GRCORNERIA_801E2C34,
         ext::GRCORNERIA_801E2B80,
     ] {
         v.push((a, b));
     }
+    // The common states' crowd and statistics, which their ports stand in for.
+    for n in [
+        "un_80322598",
+        "pl_8003FC44",
+        "pl_80040048",
+        "pl_8003FFDC",
+        "pl_8003E0E8",
+        "pl_8003E114",
+    ] {
+        v.push((leaf_check::sym(n), StubRet::Nothing));
+    }
+    v.push((leaf_check::sym("un_803224DC"), StubRet::Int(0)));
     // An item's hold kind: the one-handed pose, or none.
     v.push((ext::IT_GET_HOLD_KIND, StubRet::Int(if yes { 3 } else { 0 })));
     // The Illusion's ghost: none made (a ghost would be a GObj the stand-in can't make).

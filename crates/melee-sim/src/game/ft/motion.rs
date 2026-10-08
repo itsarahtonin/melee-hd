@@ -594,12 +594,7 @@ impl Running<'_> {
             self.reset_x488(gobj);
         }
         if flags & KEEP_GFX == 0 && self.game.fighters[f.0].x2219_b0 {
-            // `ftCommon_8007DB24`: the state's effects go.
-            super::super::code::call(
-                self,
-                0x8007_DB24,
-                &[super::super::code::Val::GObj(Some(gobj))],
-            );
+            self.destroy_effects(gobj);
         }
         if flags & KEEP_ACCESSORY == 0
             && let Some(acc) = self.game.fighters[f.0].x20A0_accessory

@@ -31,7 +31,6 @@ use super::super::structs::Fighter;
 use crate::fpu::mem;
 
 /// `HSD_PAD_*`, as the fighter's input holds them.
-pub(super) const PAD_DPAD_DOWN: u32 = 1 << 2;
 pub(super) const PAD_DPAD_UP: u32 = 1 << 3;
 pub(super) const PAD_L_R: u32 = (1 << 6) | (1 << 5);
 pub(super) const PAD_A: u32 = 1 << 8;

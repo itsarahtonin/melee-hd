@@ -169,7 +169,7 @@ impl Running<'_> {
     /// `ftFx_SpecialSStart_Coll`: off the ground, the aerial wind-up.
     #[doc(alias = "ftFx_SpecialSStart_Coll")]
     pub fn fox_special_s_start_coll(&mut self, gobj: GObjId) {
-        if !self.ext_gobj_bool(ext::FT_80082708, gobj) {
+        if !self.ground_coll_off_ledges(gobj) {
             self.fox_special_s_start_ground_to_air(gobj);
         }
     }
@@ -181,7 +181,7 @@ impl Running<'_> {
         if self.check_ground_and_ledge(gobj, dir) {
             return true;
         }
-        self.ext_gobj_bool(ext::FTCLIFFCOMMON_80081298, gobj);
+        self.catch_ledge_check(gobj);
         false
     }
 
@@ -196,7 +196,7 @@ impl Running<'_> {
     /// `ftFx_SpecialSStart_GroundToAir`.
     #[doc(alias = "ftFx_SpecialSStart_GroundToAir")]
     pub fn fox_special_s_start_ground_to_air(&mut self, gobj: GObjId) {
-        self.ext_fighter(ext::FTCOMMON_8007D60C, gobj);
+        self.go_airborne_jumped(self.game.fighter_id(gobj));
         let frame = self.game.fighter(gobj).cur_anim_frame;
         self.change_motion_state(
             gobj,
@@ -314,7 +314,7 @@ impl Running<'_> {
     /// `ftFx_SpecialS_Coll`.
     #[doc(alias = "ftFx_SpecialS_Coll")]
     pub fn fox_special_s_coll(&mut self, gobj: GObjId) {
-        if !self.ext_gobj_bool(ext::FT_80082708, gobj) {
+        if !self.ground_coll_off_ledges(gobj) {
             self.fox_special_s_ground_to_air(gobj);
         }
     }
@@ -330,7 +330,7 @@ impl Running<'_> {
     /// `ftFx_SpecialS_GroundToAir`.
     #[doc(alias = "ftFx_SpecialS_GroundToAir")]
     pub fn fox_special_s_ground_to_air(&mut self, gobj: GObjId) {
-        self.ext_fighter(ext::FTCOMMON_8007D60C, gobj);
+        self.go_airborne_jumped(self.game.fighter_id(gobj));
         let frame = self.game.fighter(gobj).cur_anim_frame;
         self.change_motion_state(
             gobj,
@@ -438,10 +438,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let lag = self.fox_attr_f32(f, attr::ILLUSION_LANDING_LAG);
         if self.fox_air_coll(gobj) {
-            self.ext(
-                ext::FTCO_LANDING_FALL_SPECIAL_ENTER,
-                &[Val::GObj(Some(gobj)), Val::Int(0), Val::Float(reg(lag))],
-            );
+            self.enter_landing_fall_special(gobj, 0, lag);
         }
     }
 

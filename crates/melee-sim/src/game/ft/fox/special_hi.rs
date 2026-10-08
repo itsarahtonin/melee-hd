@@ -148,7 +148,7 @@ impl Running<'_> {
     /// `ftFx_SpecialHiHold_Coll`.
     #[doc(alias = "ftFx_SpecialHiHold_Coll")]
     pub fn fox_special_hi_hold_coll(&mut self, gobj: GObjId) {
-        if !self.ext_gobj_bool(ext::FT_80082708, gobj) {
+        if !self.ground_coll_off_ledges(gobj) {
             self.fox_special_hi_hold_ground_to_air(gobj);
         }
     }
@@ -161,13 +161,13 @@ impl Running<'_> {
             self.fox_special_hi_hold_air_air_to_ground(gobj);
             return;
         }
-        self.ext_gobj_bool(ext::FTCLIFFCOMMON_80081298, gobj);
+        self.catch_ledge_check(gobj);
     }
 
     /// `ftFx_SpecialHiHold_GroundToAir`.
     #[doc(alias = "ftFx_SpecialHiHold_GroundToAir")]
     pub fn fox_special_hi_hold_ground_to_air(&mut self, gobj: GObjId) {
-        self.ext_fighter(ext::FTCOMMON_8007D60C, gobj);
+        self.go_airborne_jumped(self.game.fighter_id(gobj));
         let frame = self.game.fighter(gobj).cur_anim_frame;
         self.change_motion_state(
             gobj,
@@ -256,7 +256,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         let n = fp.mv_i32(mv::HI_UNK2).wrapping_add(1);
         fp.set_mv_i32(mv::HI_UNK2, n);
-        if !self.ext_gobj_bool(ext::FT_80082708, gobj) {
+        if !self.ground_coll_off_ledges(gobj) {
             self.fox_special_hi_ground_to_air(gobj);
             return;
         }
@@ -277,7 +277,7 @@ impl Running<'_> {
         {
             return true;
         }
-        !self.ext_gobj_bool(ext::FTCO_8009A134, gobj)
+        !self.pass_skip_floor(gobj)
     }
 
     /// `ftFx_SpecialAirHi_Coll`: a bounce off a floor hit head on, or a turn along a
@@ -301,7 +301,7 @@ impl Running<'_> {
             turn = true;
         }
         if !turn {
-            if self.ext_gobj_bool(ext::FTCLIFFCOMMON_80081298, gobj) {
+            if self.catch_ledge_check(gobj) {
                 return;
             }
             let fp = &self.game.fighters[f.0];
@@ -333,7 +333,7 @@ impl Running<'_> {
     /// `ftFx_SpecialHi_GroundToAir`.
     #[doc(alias = "ftFx_SpecialHi_GroundToAir")]
     pub fn fox_special_hi_ground_to_air(&mut self, gobj: GObjId) {
-        self.ext_fighter(ext::FTCOMMON_8007D60C, gobj);
+        self.go_airborne_jumped(self.game.fighter_id(gobj));
         let frame = self.game.fighter(gobj).cur_anim_frame;
         self.change_motion_state(
             gobj,
@@ -377,9 +377,9 @@ impl Running<'_> {
             let fp = &self.game.fighters[f.0];
             let dir = Vec3::new(temp_stick, fp.input.lstick[0].y, 0.0);
             if !(reg(fp.coll_data.floor.normal.angle_xy(dir)) < reg(HALF_PI))
-                && !self.ext_gobj_bool(ext::FTCO_8009A134, gobj)
+                && !self.pass_skip_floor(gobj)
             {
-                self.ext_fighter(ext::FTCOMMON_UPDATE_FACING, gobj);
+                self.face_stick(gobj);
                 self.change_motion_state(gobj, ms::SPECIAL_HI, 0, 0.0, 1.0, 0.0, None);
                 self.fox_special_hi_launch_vars(gobj);
                 let speed = reg(self.fox_attr_f32(f, attr::FIREFOX_SPEED));
@@ -396,7 +396,7 @@ impl Running<'_> {
                 return;
             }
         }
-        self.ext_fighter(ext::FTCOMMON_8007D60C, gobj);
+        self.go_airborne_jumped(self.game.fighter_id(gobj));
         self.fox_special_air_hi_enter(gobj);
     }
 
@@ -415,7 +415,7 @@ impl Running<'_> {
                 temp_stick = fp::fneg(temp_stick);
             }
             if temp_stick > reg(self.fox_attr_f32(f, attr::FIREFOX_FACING_STICK_RANGE_MIN)) {
-                self.ext_fighter(ext::FTCOMMON_UPDATE_FACING, gobj);
+                self.face_stick(gobj);
             }
             let fp = &mut self.game.fighters[f.0];
             let s = &fp.input.lstick[0];
@@ -472,7 +472,7 @@ impl Running<'_> {
     pub fn fox_special_hi_landing_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let (m, l) = self.fox_special_hi_fall_attrs(f);
-        if !self.ext_gobj_bool(ext::FT_80082708, gobj) {
+        if !self.ground_coll_off_ledges(gobj) {
             self.fall_special(gobj, m, l);
         }
     }
@@ -484,13 +484,13 @@ impl Running<'_> {
             self.fox_special_hi_fall_enter(gobj);
             return;
         }
-        self.ext_gobj_bool(ext::FTCLIFFCOMMON_80081298, gobj);
+        self.catch_ledge_check(gobj);
     }
 
     /// Landing from the end's fall, `ftFx_SpecialHiFall_Enter`.
     #[doc(alias = "ftFx_SpecialHiFall_Enter")]
     pub fn fox_special_hi_fall_enter(&mut self, gobj: GObjId) {
-        self.ext_fighter(ext::FTCOMMON_8007D7FC, gobj);
+        self.land(gobj);
         self.change_motion_state(
             gobj,
             ms::SPECIAL_HI_LANDING,
@@ -506,9 +506,9 @@ impl Running<'_> {
     /// The grounded flight's end, `ftFx_SpecialHiFall_AirToGround`.
     #[doc(alias = "ftFx_SpecialHiFall_AirToGround")]
     pub fn fox_special_hi_fall_air_to_ground(&mut self, gobj: GObjId) {
-        self.ext_gobj(ext::FTCOMMON_8007DB24, gobj);
+        self.destroy_effects(gobj);
         if self.game.fighter(gobj).ground_or_air == GA_AIR {
-            self.ext_fighter(ext::FTCOMMON_8007D7FC, gobj);
+            self.land(gobj);
         }
         self.change_motion_state(gobj, ms::SPECIAL_HI_LANDING, 0, 0.0, 1.0, 0.0, None);
         self.game.fighter_mut(gobj).x21F8 = Some(CodeRef(ext::FTCOMMON_8007F76C));
@@ -517,7 +517,7 @@ impl Running<'_> {
     /// The aerial flight's end, `ftFx_SpecialHiLanding_GroundToAir`.
     #[doc(alias = "ftFx_SpecialHiLanding_GroundToAir")]
     pub fn fox_special_hi_landing_ground_to_air(&mut self, gobj: GObjId) {
-        self.ext_gobj(ext::FTCOMMON_8007DB24, gobj);
+        self.destroy_effects(gobj);
         self.change_motion_state(gobj, ms::SPECIAL_HI_FALL, 0, 0.0, 1.0, 0.0, None);
         self.game.fighter_mut(gobj).x21F8 = Some(CodeRef(ext::FTCOMMON_8007F76C));
     }
@@ -563,10 +563,10 @@ impl Running<'_> {
         if self.game.fighter(gobj).ground_or_air == GA_AIR {
             let dir = facing_dir_int(self.game.fighter(gobj).facing_dir);
             if self.check_ground_and_ledge(gobj, dir) {
-                self.ext_fighter(ext::FTCOMMON_8007D7FC, gobj);
+                self.land(gobj);
                 return;
             }
-            self.ext_gobj_bool(ext::FTCLIFFCOMMON_80081298, gobj);
+            self.catch_ledge_check(gobj);
         } else {
             self.ground_coll(gobj);
         }
