@@ -253,6 +253,17 @@ impl Running<'_> {
         self.sfx_start(id, 0x7F, 0x40, 0, channel)
     }
 
+    /// Plays a sound at full volume, centered, `lbAudioAx_80024304`: the entrance's
+    /// (0x8A-0x8C) as 0x8B on track 0x16, the rest on none.
+    #[doc(alias = "lbAudioAx_80024304")]
+    pub fn sfx_play_entry(&mut self, id: i32) -> i32 {
+        let (id, track) = match id {
+            0x8A..=0x8C => (0x8B, 0x16),
+            _ => (id, 0),
+        };
+        self.sfx_start(id, 0x7F, 0x40, track, 7)
+    }
+
     /// Plays a sound on no track, `lbAudioAx_800237A8`. Ids past the last play the silent
     /// one.
     #[doc(alias = "lbAudioAx_800237A8")]

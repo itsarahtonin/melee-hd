@@ -2713,3 +2713,22 @@ ifMagnify_802FC870	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.m
 ifMagnify_802FC7C0	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): ifMagnify_802FC870's colors (one port for both)
 ifMagnify_802FC3C0	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): ifMagnify_802FC870 makes the six bubbles through it; compared every tick
 ifMagnify_802FC618	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): ifMagnify_802FC870 makes the magnifier's camera through it; compared every tick
+ftCo_Entry_Anim	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both fighters wait out their entry delay in it; compared every tick
+ftCo_Entry_IASA	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the entry states' empty callbacks (one port for all five)
+ftCo_Entry_Phys	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the entry states' empty callbacks (one port for all five)
+ftCo_Entry_Coll	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the entry states' empty callbacks (one port for all five)
+ftCo_EntryStart_IASA	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the entry states' empty callbacks (one port for all five)
+ftCo_EntryEnd_IASA	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the entry states' empty callbacks (one port for all five)
+ftCo_800C6408	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both fighters rise from their platforms through it (accessory, effect 0x43E, sound, color animation); compared every tick
+ftCommon_SetAccessory	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): ftCo_800C6408 loads each platform through it; compared every tick
+lbAudioAx_80024304	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): ftCo_800C6408 plays the entrance sound through it; the audio state as the sound leaves it compared
+ftCo_EntryStart_Anim	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both fighters' rise counts down in it; compared every tick
+ftCo_EntryStart_Phys	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both fighters unsquash and their platforms grow in it; compared every tick
+ftCo_EntryStart_Coll	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both fighters' entry collision (airborne, through ft_80083E64); compared every tick
+ftCo_EntryEnd_Coll	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): ftCo_EntryStart_Coll's body (one port for both)
+ft_80083E64	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the entry states' airborne collision passes through it, each frame; compared every tick
+fn_800C69F4	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both platforms follow their fighters through it while they rise; compared every tick
+fn_800C6F34	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): fn_800C69F4's body (one port for both)
+ftCo_800C6B6C	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both platforms start to sink through it; compared every tick
+ftCo_EntryEnd_Anim	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both fighters leave the entry through it (fall or wait); compared every tick
+ftCo_EntryEnd_Phys	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): both platforms sink in it; compared every tick

@@ -16,6 +16,7 @@ pub mod damage;
 pub mod dispatch;
 pub mod down;
 pub mod enter;
+pub mod entry;
 pub mod escape;
 pub mod ground;
 pub mod guard;

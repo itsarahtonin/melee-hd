@@ -570,6 +570,46 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800D_DA60 | 0x800D_DB90 | 0x800D_DD04 => {
             g.co_throw_phys(gobj);
         }
+        // ftCo_Entry_Anim
+        0x800C_6370 => {
+            g.co_entry_anim(gobj);
+        }
+        // ftCo_Entry_IASA, ftCo_Entry_Phys, ftCo_Entry_Coll, ftCo_EntryStart_IASA, ftCo_EntryEnd_IASA
+        0x800C_63B4 | 0x800C_63B8 | 0x800C_6404 | 0x800C_673C | 0x800C_6D34 => {
+            g.co_entry_none(gobj);
+        }
+        // fn_800C63BC
+        0x800C_63BC => {
+            g.co_entry_land(gobj);
+        }
+        // fn_800C63E0
+        0x800C_63E0 => {
+            g.co_entry_airborne(gobj);
+        }
+        // ftCo_EntryStart_Anim
+        0x800C_6700 => {
+            g.co_entry_start_anim(gobj);
+        }
+        // ftCo_EntryStart_Phys
+        0x800C_6740 => {
+            g.co_entry_start_phys(gobj);
+        }
+        // ftCo_EntryStart_Coll, ftCo_EntryEnd_Coll
+        0x800C_6950 | 0x800C_6E90 => {
+            g.co_entry_coll(gobj);
+        }
+        // fn_800C69F4, fn_800C6F34
+        0x800C_69F4 | 0x800C_6F34 => {
+            g.entry_platform_follow(gobj);
+        }
+        // ftCo_EntryEnd_Anim
+        0x800C_6CC8 => {
+            g.co_entry_end_anim(gobj);
+        }
+        // ftCo_EntryEnd_Phys
+        0x800C_6D38 => {
+            g.co_entry_end_phys(gobj);
+        }
         _ => return false,
     }
     true

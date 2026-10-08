@@ -776,6 +776,16 @@ impl Running<'_> {
         self.ground_coll_slip(gobj, cb);
     }
 
+    /// The airborne pass with the ECB `b`, `cb` on landing, `ft_80083E64`.
+    #[doc(alias = "ft_80083E64")]
+    pub fn air_coll_box_then(&mut self, gobj: GObjId, b: &ftCollisionBox, cb: Cb) {
+        let f = self.game.fighter_id(gobj);
+        let b = facing_box(b, self.game.fighters[f.0].facing_dir);
+        if self.air_coll(gobj, false, |_| {}, |c, cd| c.air_frame_box(cd, &b, 0)) {
+            cb(self, gobj);
+        }
+    }
+
     /// The grounded pass with the ECB `b`, `cb` off the ground, `ft_800846B0`.
     #[doc(alias = "ft_800846B0")]
     pub fn ground_coll_box_then(&mut self, gobj: GObjId, b: &ftCollisionBox, cb: Cb) {
