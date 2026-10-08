@@ -25,10 +25,13 @@ use std::process::ExitCode;
 
 use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps, sym};
-use melee_capture::{Capture, DataMap, DiscIndex, Loaded, find_archives_after, find_archives_in};
-use melee_data::archive::Archives;
+use melee_capture::{
+    Capture, DataMap, DiscIndex, Loaded, find_archives_after, find_archives_in, find_archives_named,
+};
+use melee_data::archive::{ArchiveId, Archives};
 use melee_data::disc::Disc;
 use melee_replay::Device;
+use melee_sim::game::code::{Val, stubs};
 use melee_sim::game::playback::FIRST_FRAME;
 use melee_sim::game::vs_match::{Match, Settings};
 use ssbm_slippi::replay::Replay;
@@ -85,11 +88,18 @@ fn name_addresses(text: &str) -> String {
 struct Files<'a> {
     index: &'a DiscIndex,
     loaded: Vec<Loaded>,
+    /// The archives a started match loaded itself, by name, which the scans find wherever the
+    /// original loads them (a fighter's animations go to its buffer as it plays them).
+    named: Vec<(String, ArchiveId)>,
 }
 
 impl Files<'_> {
     fn refresh(&mut self, mem: &[u8], archives: &mut Archives) -> DataMap {
-        self.loaded = find_archives_after(self.index, mem, archives, &self.loaded);
+        self.loaded = if self.named.is_empty() {
+            find_archives_after(self.index, mem, archives, &self.loaded)
+        } else {
+            find_archives_named(self.index, mem, archives, &self.loaded, &self.named)
+        };
         DataMap {
             loaded: self.loaded.clone(),
         }
@@ -132,7 +142,8 @@ fn is_first_tick(image: &Image) -> bool {
 
 pub fn diff(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut against, mut pos) = (None, u32::MAX, None, Vec::new());
-    let mut boot_diff = false;
+    let (mut boot_diff, mut all) = (false, false);
+    let mut ignore: Vec<String> = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
         match a {
@@ -140,6 +151,23 @@ pub fn diff(args: &[&str]) -> ExitCode {
             "--ticks" => limit = it.next().and_then(|t| t.parse().ok()).expect("--ticks N"),
             "--against" => against = it.next().and_then(|t| t.parse::<u32>().ok()),
             "--boot-diff" => boot_diff = true,
+            "--all" => all = true,
+            "--ignore" => ignore.extend(
+                it.next()
+                    .expect("--ignore TEXT[,TEXT...]")
+                    .split(',')
+                    .map(str::to_owned),
+            ),
+            "--stand-in" => {
+                let spec = it.next().expect("--stand-in ADDR[=VALUE]");
+                let (addr, value) = match spec.split_once('=') {
+                    Some((a, v)) => (a, Val::Int(v.parse().expect("--stand-in's value"))),
+                    None => (*spec, Val::None),
+                };
+                let addr = u32::from_str_radix(addr.trim_start_matches("0x"), 16)
+                    .expect("--stand-in's address, in hex");
+                stubs::set(addr, value);
+            }
             _ => pos.push(a),
         }
     }
@@ -171,7 +199,9 @@ pub fn diff(args: &[&str]) -> ExitCode {
         }
         None
     };
-    let (mut m, mut files, mut tick) = match from {
+    // The tick the image holds when the comparison starts, if it's the one the match runs
+    // first (the start path reads it to find the match's first tick).
+    let (mut m, mut files, mut tick, mut held) = match from {
         None => {
             // Before version 5 the trace leaves out the page the OS heap descriptors share
             // with the GX FIFO, so the boot state's audio heap can't be seeded.
@@ -254,8 +284,9 @@ pub fn diff(args: &[&str]) -> ExitCode {
             let files = Files {
                 index: &index,
                 loaded: Vec::new(),
+                named: m.files.clone(),
             };
-            (m, files, t - 1)
+            (m, files, t - 1, Some(t))
         }
         Some(n) => {
             if advance(&mut image, &|t, _| t == n).is_none() || !image.seen {
@@ -345,8 +376,9 @@ pub fn diff(args: &[&str]) -> ExitCode {
             let files = Files {
                 index: &index,
                 loaded,
+                named: Vec::new(),
             };
-            (m, files, n)
+            (m, files, n, None)
         }
     };
     let frame_of = |t: u32, first: Option<u32>| {
@@ -359,23 +391,41 @@ pub fn diff(args: &[&str]) -> ExitCode {
     };
     let mut device = Device(&replay);
     let mut compared = 0;
+    // A state taken up at a tick's end has that frame's display pass still to run; a started
+    // match has run none of its ticks.
+    let mut render_due = from.is_some() && m.game.scene.unk_C != 2;
     let stop = loop {
         if compared >= limit {
             break None;
         }
-        let Some(t) = advance(&mut image, &|t, _| t == tick + 1) else {
+        let next = match held.take() {
+            Some(t) if t == tick + 1 => Some(t),
+            _ => advance(&mut image, &|t, _| t == tick + 1),
+        };
+        let Some(t) = next else {
             println!("the trace ends after tick {tick}");
             break None;
         };
         tick = t;
-        let stepped = catch_unwind(AssertUnwindSafe(|| m.step_replay(&mut device)));
+        // The trace samples each tick before the frame's display pass, which runs before the
+        // next tick.
+        let stepped = catch_unwind(AssertUnwindSafe(|| {
+            if render_due {
+                m.render();
+            }
+            m.step_replay_tick(&mut device)
+        }));
         let ended = match stepped {
-            Ok(f) => f.ended,
+            Ok((f, due)) => {
+                render_due = due;
+                f.ended
+            }
             Err(p) => break Some(Stop::Seam(panic_text(&p))),
         };
         let data = files.refresh(&image.mem1, &mut m.data);
         // Objects pair afresh each tick, by where they're reached from: the heap reuses blocks.
-        let diffs = compare(&image.mem1, &data, &m, Maps::default());
+        let mut diffs = compare(&image.mem1, &data, &m, Maps::default());
+        diffs.retain(|d| !ignore.iter().any(|p| d.contains(p.as_str())));
         compared += 1;
         if !diffs.is_empty() {
             break Some(Stop::Differ(diffs));
@@ -401,7 +451,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 d.len(),
                 d[0]
             );
-            for line in d.iter().skip(1).take(30) {
+            for line in d.iter().skip(1).take(if all { usize::MAX } else { 30 }) {
                 println!("  {line}");
             }
             ExitCode::FAILURE

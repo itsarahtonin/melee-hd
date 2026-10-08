@@ -6,7 +6,7 @@
 //! [`code::call`](super::code::call) and the scheduler's process table; until those ports fill
 //! their arms in, a match stops at the first unported function it reaches, saying which.
 
-use melee_data::archive::{Archive, Archives};
+use melee_data::archive::{Archive, ArchiveId, Archives};
 
 use super::gm::{self, scene, vs};
 use super::handles::CodeRef;
@@ -227,6 +227,9 @@ pub struct DiscFile {
 pub struct Match {
     pub game: Game,
     pub data: Archives,
+    /// The archives the match's start loaded, by file name (an animation's as
+    /// `FILE@OFFSET`), for tools that find them in the original's memory.
+    pub files: Vec<(String, ArchiveId)>,
 }
 
 impl Match {
@@ -332,7 +335,46 @@ impl Match {
                 game.ef.files[i] = Some(data.add(a));
             }
         }
-        let mut m = Match { game, data };
+        let mut names: Vec<(String, ArchiveId)> = [
+            ("LbRb.dat", rumble),
+            ("LbRf.dat", files.lb_rf),
+            ("PdPm.dat", files.pdpm),
+            ("GmPause.usd", files.gm_pause),
+            ("IfAll.usd", files.hud.if_all),
+            ("SdIntro.dat", files.hud.sd_intro),
+            ("IfCoGet.dat", files.hud.if_coget),
+            ("LbBf.dat", files.lb_bf),
+            ("ItCo.usd", files.it_co),
+        ]
+        .into_iter()
+        .map(|(n, id)| (n.to_owned(), id))
+        .collect();
+        let grkind = crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind));
+        if let (Some(name), Some(id)) =
+            (super::gr::data::stage_data(grkind as i32).file, files.stage)
+        {
+            // The stage table's paths start at the disc's root.
+            names.push((name.trim_start_matches('/').to_owned(), id));
+        }
+        let ft_files = &game.ft.data.files;
+        names.extend(ft_files.archives.iter().cloned());
+        for (name, file) in &ft_files.anim_files {
+            names.extend(
+                file.anims
+                    .iter()
+                    .map(|&(off, id)| (format!("{name}@{off:#x}"), id)),
+            );
+        }
+        for (f, id) in super::ef::FILES.iter().zip(&game.ef.files) {
+            if let (Some((name, _)), Some(id)) = (f, id) {
+                names.push(((*name).to_owned(), *id));
+            }
+        }
+        let mut m = Match {
+            game,
+            data,
+            files: names,
+        };
         m.game.rumble_data = table.map(|offset| melee_data::archive::DataRef {
             archive: rumble,
             offset,
@@ -350,7 +392,11 @@ impl Match {
     /// Takes up a match from a state: one imported from a capture of the original, say, at
     /// the start of an engine tick.
     pub fn resume(game: Game, data: Archives) -> Match {
-        Match { game, data }
+        Match {
+            game,
+            data,
+            files: Vec::new(),
+        }
     }
 
     fn running(&mut self) -> Running<'_> {
@@ -364,19 +410,41 @@ impl Match {
     /// `source`, and a poll of four connected controllers at rest, as a replay run's
     /// controllers report.
     pub fn step_replay(&mut self, source: &mut dyn playback::Source) -> Frame {
+        let (mut out, render) = self.step_replay_tick(source);
+        if render {
+            out.draws = self.render();
+        }
+        out
+    }
+
+    /// [`Match::step_replay`] up to the frame's display pass, where ssbm-rs's state traces
+    /// sample the original: whether the pass is due, which [`Match::render`] runs.
+    pub fn step_replay_tick(&mut self, source: &mut dyn playback::Source) -> (Frame, bool) {
         let answers = Playback::answers(&self.game, source);
         self.game
             .playback
             .as_mut()
             .expect("a replay's match")
             .answers = Some(answers);
-        let out = self.step([PadStatus::default(); 4]);
+        let (t, render) = scene::step_tick(&mut self.running(), [PadStatus::default(); 4], false);
         self.game
             .playback
             .as_mut()
             .expect("a replay's match")
             .answers = None;
-        out
+        let out = Frame {
+            events: std::mem::take(&mut self.game.events),
+            pads: t.pads,
+            ended: t.ended,
+            draws: Vec::new(),
+        };
+        (out, render)
+    }
+
+    /// The frame's display pass after [`Match::step_replay_tick`]: its draw commands.
+    pub fn render(&mut self) -> Vec<crate::hsd::display::Draw> {
+        scene::render_screen(&mut self.running());
+        std::mem::take(&mut self.game.objs.display.draws)
     }
 
     /// One frame: the controllers' poll queued, then one engine tick.

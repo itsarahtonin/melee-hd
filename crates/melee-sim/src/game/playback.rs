@@ -50,9 +50,6 @@ pub const SEED_PROC: u32 = 0x8016_E748 + 0x4B0;
 pub const RECORD_FRAME_START_PROC: u32 = 0x8016_E74C + 0x6E0;
 pub const RECORD_ITEMS_PROC: u32 = 0x8016_E74C + 0x788;
 
-/// `ftCamera_UpdateCameraBox`, which the first frame's resync calls.
-const FT_CAMERA_UPDATE_CAMERA_BOX: u32 = 0x8007_61C8;
-
 /// What a pre-frame update recorded for one character, as the frame response carries it.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct CharacterFrame {
@@ -444,11 +441,7 @@ impl Running<'_> {
         fp.coll_data.x38 = generation;
         let (slot, which) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
         self.game.set_player_entity_pos(slot, which, pos);
-        super::code::call(
-            self,
-            FT_CAMERA_UPDATE_CAMERA_BOX,
-            &[super::code::Val::GObj(Some(gobj))],
-        );
+        self.update_camera_box(gobj);
         let fp = &self.game.fighters[f.0];
         let b = fp.x890_cameraBox.expect("a fighter's camera box");
         let cb = &mut self.game.camera.boxes[b];

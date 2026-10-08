@@ -457,7 +457,7 @@ impl DataMap {
             .loaded
             .iter()
             .find(|l| l.id == r.archive)
-            .expect("archive not loaded");
+            .unwrap_or_else(|| panic!("archive {:?} not loaded (at {:#x})", r.archive, r.offset));
         l.data + r.offset
     }
 }

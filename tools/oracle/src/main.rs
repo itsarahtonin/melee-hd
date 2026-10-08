@@ -45,6 +45,9 @@ fn run(args: Vec<String>) -> ExitCode {
             eprintln!(
                 "       melee-oracle diff TRACE REPLAY.slp [--from TICK [--against TICK]] [--ticks N] [--boot-diff]"
             );
+            eprintln!(
+                "                         [--all] [--ignore TEXT,...] [--stand-in ADDR[=VALUE]]"
+            );
             eprintln!("       melee-oracle trace-info TRACE");
             eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");
             ExitCode::from(2)

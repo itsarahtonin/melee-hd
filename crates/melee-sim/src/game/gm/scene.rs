@@ -245,20 +245,32 @@ pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
 /// new game speed (`lb_80019894`), one engine tick runs, and unless the scene ended at once
 /// the display pass runs on the screen and the frame counts as rendered.
 pub fn step(r: &mut Running, poll: PadData, reset_pressed: bool) -> Tick {
+    let (t, render) = step_tick(r, poll, reset_pressed);
+    if render {
+        render_screen(r);
+    }
+    t
+}
+
+/// [`step`] up to the frame's display pass, where ssbm-rs's state traces sample the
+/// original: whether the pass is due ([`render_screen`]).
+pub fn step_tick(r: &mut Running, poll: PadData, reset_pressed: bool) -> (Tick, bool) {
     let pads = r.game.pads.renew_raw(r.data, poll, false, reset_pressed);
     r.game.pacing.update();
     if r.game.pads.reset_switch() {
-        return Tick { pads, ended: true };
+        return (Tick { pads, ended: true }, false);
     }
     let ended = tick(r);
-    if r.game.scene.unk_C != 2 {
-        // `HSD_StartRender(HSD_RP_SCREEN)`.
-        crate::hsd::display::set_offscreen(&mut r.game.objs, false);
-        r.render_frame();
-        let sc = &mut r.game.scene;
-        if sc.unk_4 != u32::MAX - 1 {
-            sc.unk_4 = sc.unk_4.wrapping_add(1);
-        }
+    (Tick { pads, ended }, r.game.scene.unk_C != 2)
+}
+
+/// The frame's display pass on the screen (`HSD_StartRender(HSD_RP_SCREEN)`), which counts
+/// the frame as rendered.
+pub fn render_screen(r: &mut Running) {
+    crate::hsd::display::set_offscreen(&mut r.game.objs, false);
+    r.render_frame();
+    let sc = &mut r.game.scene;
+    if sc.unk_4 != u32::MAX - 1 {
+        sc.unk_4 = sc.unk_4.wrapping_add(1);
     }
-    Tick { pads, ended }
 }
