@@ -618,32 +618,17 @@ fn init_debug_menus() {
 
 // The HUD.
 
-use calls::{Ret, Stub, nothing};
+use calls::{Ret, Stub};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::hud::Draw as HudDraw;
 use melee_sim::hsd::gobj::GObjId;
 
-/// The units the HUD reaches that no port covers yet, stood in for on both sides: the
-/// magnifier's setup, the results' scoring, and the stage's, Pokemon Stadium's and the
-/// stage's start hooks the match's callbacks reach.
-const HUD_STUBS: [Stub; 10] = [
-    nothing(0x802F_C870),
-    (0x8016_C658, Ret::Int(7)),
-    nothing(0x801C_1154),
-    nothing(0x801C_1158),
-    nothing(0x801D_4150),
-    nothing(0x801D_4084),
-    nothing(0x801D_410C),
-    nothing(0x801D_4040),
-    nothing(0x801D_40C8),
-    nothing(0x8022_52E4),
-];
+/// The unit the HUD reaches that no port covers yet, stood in for on both sides: the
+/// results' scoring.
+const HUD_STUBS: [Stub; 1] = [(0x8016_C658, Ret::Int(7))];
 
-/// [`HUD_STUBS`] with `ftLib_EnableAllInput`.
 fn hud_stubs() -> Vec<Stub> {
-    let mut v = HUD_STUBS.to_vec();
-    v.push(nothing(0x8008_68A4));
-    v
+    HUD_STUBS.to_vec()
 }
 
 fn gobj_arg(a: &calls::Args, r: usize) -> GObjId {

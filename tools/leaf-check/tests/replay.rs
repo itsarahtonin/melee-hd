@@ -85,9 +85,6 @@ fn pick<T: Copy>(values: &[T], n: usize) -> T {
     values[n % values.len()]
 }
 
-/// `ftCamera_UpdateCameraBox`, which the first frame's settling calls: not ported.
-const UPDATE_CAMERA_BOX: (u32, Option<u32>) = (0x8007_61C8, None);
-
 /// Fighter_procInput with the recorded inputs, UCF's pad buffer and cardinals, and the first
 /// frame's settling: the frame's sticks (raw values at the cardinals' thresholds, processed
 /// ones at the down-flick's), the fighter's stick history and down-flick count, and the frame
@@ -160,7 +157,7 @@ fn recorded_inputs() {
                     }
                 },
                 &Setup {
-                    stubs: &[UPDATE_CAMERA_BOX],
+                    stubs: &[],
                     replay: Some(&replay),
                     gx: false,
                 },

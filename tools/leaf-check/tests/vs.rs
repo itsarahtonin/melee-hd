@@ -1976,11 +1976,10 @@ fn player_common_data() {
 
 #[test]
 fn vs_announce_entry() {
-    // grStadium_801D3B4C, Pokémon Stadium's screen, isn't ported.
     check_calls_stubbed(
         "fn_8016CFE0",
         4,
-        &[nothing(0x801D_3B4C)],
+        &[],
         |f| {
             f.regs.gpr[3] = f.below(4);
             f.regs.gpr[4] = f.below(4);
