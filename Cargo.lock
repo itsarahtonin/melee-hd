@@ -434,8 +434,10 @@ dependencies = [
 name = "melee-bench"
 version = "0.1.0"
 dependencies = [
+ "gekko-fp",
  "melee-capture",
  "melee-data",
+ "melee-replay",
  "melee-sim",
  "ssbm-slippi",
  "zstd",

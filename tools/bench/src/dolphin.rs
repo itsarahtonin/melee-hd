@@ -28,14 +28,15 @@ use std::time::{Duration, Instant};
 
 use ssbm_slippi::replay::{Replay, event};
 
+use crate::machine;
 use crate::matches;
+use crate::sync::{FIRST_FRAME, Fighter, post_frames, replay_last_frame, same};
 use crate::win::{Hidden, Process};
 
 /// The scene controller: major scene, minor scene at +3, frames at +0x28.
 const SCENE: u32 = 0x8047_9D30;
 const MATCH_MAJOR: u8 = 0x0E;
 const MATCH_MINOR: u8 = 1;
-const FIRST_FRAME: i32 = -123;
 const RANDOM_SEED: u32 = 0x804D_5F90;
 /// A fighter's struct, as ssbm-rs's state trace saves it.
 const FIGHTER_SIZE: usize = 0x23EC;
@@ -200,22 +201,6 @@ impl Calibration {
 /// What a sample taken as a frame's counter changes shows: the replay's frame this much off the
 /// counter's.
 const ENDED: i32 = -1;
-
-/// Whether the fighters Dolphin shows are the replay's.
-fn same(got: &[Option<Fighter>; 8], want: &[Option<Fighter>; 8]) -> bool {
-    got.iter().zip(want).all(|(g, w)| w.is_none() || g == w)
-}
-
-/// One fighter at the end of a frame.
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Fighter {
-    action: u16,
-    x: u32,
-    y: u32,
-    facing: u32,
-    percent: u32,
-    stocks: u8,
-}
 
 struct RunResult {
     fps: f64,
@@ -897,41 +882,12 @@ fn with_di_patch(ini: &str, byte: u8) -> String {
     )
 }
 
-/// The address of the first follower (Nana) in an ssbm-rs state trace (`STATE_TRACE`): magic,
-/// version, then zstd frames of ticks, each a number, a region count and regions (kind, address,
-/// owning GObj, length, bytes; header integers little-endian). Kind 4 is a `Fighter`.
+/// The address of the first follower (Nana) in an ssbm-rs state trace.
 fn follower_address(path: &Path) -> Option<u32> {
-    use std::io::Read;
-    let file = std::fs::File::open(path).ok()?;
-    let mut file = std::io::BufReader::new(file);
-    let mut head = [0u8; 12];
-    file.read_exact(&mut head).ok()?;
-    if &head[..8] != b"SSBMTRC\0" {
-        return None;
-    }
-    let mut z = zstd::stream::read::Decoder::with_buffer(file).ok()?;
-    let u32le = |z: &mut dyn Read| -> Option<u32> {
-        let mut b = [0u8; 4];
-        z.read_exact(&mut b).ok()?;
-        Some(u32::from_le_bytes(b))
-    };
-    loop {
-        let _tick = u32le(&mut z)?;
-        let count = u32le(&mut z)?;
-        for _ in 0..count {
-            let mut kind = [0u8; 1];
-            z.read_exact(&mut kind).ok()?;
-            let address = u32le(&mut z)?;
-            let _gobj = u32le(&mut z)?;
-            let len = u32le(&mut z)? as usize;
-            let mut bytes = vec![0u8; len];
-            z.read_exact(&mut bytes).ok()?;
-            // Fighter::is_sub_fighter, fp+0x221F bit 4.
-            if kind[0] == 4 && bytes.get(0x221F).is_some_and(|b| b & 0x08 != 0) {
-                return Some(address);
-            }
-        }
-    }
+    crate::sync::traced_fighters(path)?
+        .into_iter()
+        .find(|f| f.follower)
+        .map(|f| f.address)
 }
 
 /// Calibration plays at twice the console's speed, not unlimited: the game then idles between
@@ -1096,40 +1052,6 @@ impl Mem {
     }
 }
 
-/// The last frame the replay has a post-frame update for.
-fn replay_last_frame(replay: &Replay) -> i32 {
-    replay
-        .frames
-        .iter()
-        .rev()
-        .find(|(_, f)| f.complete)
-        .map_or(FIRST_FRAME, |(&k, _)| k)
-}
-
-/// Each frame's fighters at the end of the frame, from the post-frame updates: leaders in 0
-/// to 3, followers (Nana) in 4 to 7.
-fn post_frames(replay: &Replay) -> BTreeMap<i32, [Option<Fighter>; 8]> {
-    let mut out: BTreeMap<i32, [Option<Fighter>; 8]> = BTreeMap::new();
-    for e in &replay.events {
-        let p = &e.payload;
-        if e.command != event::POST_FRAME || p.len() < 0x21 {
-            continue;
-        }
-        let frame = i32::from_be_bytes(p[0..4].try_into().unwrap());
-        let word = |at: usize| u32::from_be_bytes(p[at..at + 4].try_into().unwrap());
-        let index = usize::from(p[4] & 3) + if p[5] != 0 { 4 } else { 0 };
-        out.entry(frame).or_default()[index] = Some(Fighter {
-            action: u16::from_be_bytes([p[7], p[8]]),
-            x: word(9),
-            y: word(0xD),
-            facing: word(0x11),
-            percent: word(0x15),
-            stocks: p[0x20],
-        });
-    }
-    out
-}
-
 /// One controller's state in a movie entry.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Pad {
@@ -1263,23 +1185,4 @@ fn pad_bytes(p: &Pad) -> [u8; 8] {
         p.cstick[0],
         p.cstick[1],
     ]
-}
-
-/// This machine, for the record: processor, cores, memory and Windows version.
-fn machine() -> String {
-    let ps = |cmd: &str| {
-        std::process::Command::new("powershell")
-            .args(["-NoProfile", "-Command", cmd])
-            .output()
-            .ok()
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
-            .unwrap_or_default()
-    };
-    let cpu = ps("(Get-CimInstance Win32_Processor).Name");
-    let cores = ps("(Get-CimInstance Win32_Processor).NumberOfCores");
-    let ram = ps("[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)");
-    let os = ps(
-        "(Get-CimInstance Win32_OperatingSystem).Caption + ' ' + (Get-CimInstance Win32_OperatingSystem).Version",
-    );
-    format!("Machine: {cpu} ({cores} cores), {ram} GB RAM, {os}")
 }
