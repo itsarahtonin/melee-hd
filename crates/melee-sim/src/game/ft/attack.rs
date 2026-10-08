@@ -668,8 +668,8 @@ impl Running<'_> {
     }
 
     /// The other fighter's box `j` hits this fighter's shield, `ftColl_80076CBC`: the
-    /// attacker's shield-hit push and the shield's damage, recoil and spark; a broken shield
-    /// isn't ported.
+    /// attacker's shield-hit push and the shield's damage, recoil and spark, or a
+    /// powershield's flash.
     #[doc(alias = "ftColl_80076CBC")]
     fn shield_hit(&mut self, v: FighterId, j: usize, me: FighterId) {
         self.hit_group(v, j, 1, victim(me), false);
@@ -713,13 +713,20 @@ impl Running<'_> {
             mf.x19A8 = other_gobj;
         }
         if mf.x221C_b2 {
-            unported_call("ftCo_80094138 (a shield broken by a hit)");
+            // A powershield: no damage, the release window, a flash and its sound.
+            let (gobj, slot) = (mf.gobj.expect("a fighter without a GObj"), i32::from(mf.player_idx));
+            self.guard_release_window(gobj);
+            self.start_color_anim(gobj, 118, 0);
+            self.fighter_play_sfx(me, 104, 0x7F, 0x40);
+            self.record_powershield(slot);
+            self.spawn_effect(27, pos, None);
+        } else {
+            let total = dmg.wrapping_add(x34);
+            mf.x19A0_shieldDamageTaken = mf.x19A0_shieldDamageTaken.wrapping_add(total.max(0));
+            mf.x19BC_shieldDamageTaken3 = i32::from(other_player);
+            mf.x221F_b6 = other_sub;
+            self.spawn_effect(1052, pos, None);
         }
-        let total = dmg.wrapping_add(x34);
-        mf.x19A0_shieldDamageTaken = mf.x19A0_shieldDamageTaken.wrapping_add(total.max(0));
-        mf.x19BC_shieldDamageTaken3 = i32::from(other_player);
-        mf.x221F_b6 = other_sub;
-        self.spawn_effect(1052, pos, None);
         let push = self.game.fighters[me.0].shield_unk0;
         if push != 0.0 {
             self.game.fighters[v.0].x1964 = push;

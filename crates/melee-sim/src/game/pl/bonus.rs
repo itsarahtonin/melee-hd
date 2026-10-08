@@ -132,6 +132,13 @@ impl Running<'_> {
         }
     }
 
+    /// A powershield counts in the player's stats (`xCD8`), `pl_8003E150`, Nana's too.
+    #[doc(alias = "pl_8003E150")]
+    pub fn record_powershield(&mut self, slot: i32) {
+        let t = self.game.player_stale_moves(slot);
+        t.xCD8 = t.xCD8.wrapping_add(1);
+    }
+
     /// A throw that came within `pl_804D6470` x4C of the victim's mash timer sets the quick
     /// throw's bonus (`pl_80040614`'s test, `pl_80038788` with 0x2D).
     pub fn record_throw_timer(&mut self, slot: i32, timer: f32) {
