@@ -1,12 +1,15 @@
 //! Reads ssbm-rs's `STATE_TRACE` files: the game's raw state at the end of every engine tick
 //! (ssbm-rs `tools/run/src/trace.rs` documents the format). Version 3 adds main memory
 //! (`STATE_TRACE_MEMORY=1`): each tick's changed pages, XORed with what they held the tick
-//! before, which [`Image`] keeps whole. Version 4 adds the time base to those ticks.
+//! before, which [`Image`] keeps whole. Version 4 adds the time base to those ticks. Version 5
+//! records the pages the main thread's stack and the GX FIFO share with the rest of memory,
+//! their own bytes held at zero, where earlier versions left those pages out (the OS heap
+//! descriptors after the FIFO among them).
 
 use std::io::Read;
 
 const MAGIC: &[u8; 8] = b"SSBMTRC\0";
-const VERSIONS: std::ops::RangeInclusive<u32> = 2..=4;
+const VERSIONS: std::ops::RangeInclusive<u32> = 2..=5;
 
 /// Main memory's address and size.
 pub const MEM1: u32 = 0x8000_0000;
@@ -88,6 +91,8 @@ type Decoder = zstd::Decoder<'static, std::io::BufReader<std::io::BufReader<std:
 /// A trace read a tick at a time.
 pub struct Reader {
     path: String,
+    /// The format's version.
+    pub version: u32,
     z: Decoder,
     next: u32,
 }
@@ -107,6 +112,7 @@ impl Reader {
         );
         Reader {
             path: path.to_owned(),
+            version,
             z: zstd::Decoder::new(r).unwrap(),
             next: 0,
         }

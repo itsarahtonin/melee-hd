@@ -1670,14 +1670,14 @@ impl Running<'_> {
         super::super::camera::init(&mut self.game.camera, 70);
         super::super::camera::create(self.game);
         self.game.init_vs(d);
-        // The scene's files load where the original loads them, timed on the audio timeline,
-        // except `LbRf.dat` and `PdPm.dat` here: their waits would take a seeded match's
-        // pending bank load into an audio heap the oracle's traces leave out (docs/oracle.md).
+        // The scene's files load where the original loads them, timed on the audio timeline.
+        self.disc_load("LbRf.dat", MAIN_MEMORY);
         self.game.refract_init(self.data, files.lb_rf);
         self.game.alloc_dynamics();
         code::call(self, addr::EFLIB_INIT, &[]);
         code::call(self, addr::EFASYNC_LOAD_SYNC, &[Val::Int(0)]);
         code::call(self, addr::EFASYNC_LOAD_SYNC, &[Val::Int(0x1F)]);
+        self.disc_load("PdPm.dat", MAIN_MEMORY);
         self.game.load_player_common(self.data, files.pdpm);
         super::super::gr::setup::reset_devices(self.game);
         self.game.coll.reset();

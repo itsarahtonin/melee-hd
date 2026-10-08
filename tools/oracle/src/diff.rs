@@ -155,6 +155,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
         .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let index = melee_capture::disc_index(&disc);
     let mut reader = Reader::open(trace_path);
+    let version = reader.version;
     let mut image = Image::default();
     // Reads the trace up to tick `n` (or the match's first tick), keeping memory's image.
     let mut first = None;
@@ -172,6 +173,12 @@ pub fn diff(args: &[&str]) -> ExitCode {
     };
     let (mut m, mut files, mut tick) = match from {
         None => {
+            // Before version 5 the trace leaves out the page the OS heap descriptors share
+            // with the GX FIFO, so the boot state's audio heap can't be seeded.
+            if version < 5 {
+                eprintln!("{trace_path}: seeding the boot state needs a version 5 trace");
+                return ExitCode::FAILURE;
+            }
             // The boot state: memory at the end of the tick before the match's scene.
             let mut boot = None;
             let mut first_seen = None;
