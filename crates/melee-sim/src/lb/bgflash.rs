@@ -10,13 +10,13 @@ use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
 use crate::fpu::{mem, reg};
-use crate::game::gr::material::{clear_overlay, run_overlay_with};
 use crate::game::handles::CodeRef;
 use crate::game::state::{Game, OBJ_CAMERA, Obj, Running, UserData};
 use crate::game::structs::{_GXColor, BgFlashData, BgFlashUserData};
 use crate::hsd::cobj::{self, StaticDesc};
 use crate::hsd::display::{Draw, Quad};
 use crate::hsd::gobj::GObjId;
+use crate::lb::colanim;
 use crate::vec::Vec3;
 
 /// `fn_800204C8`, the flash GObj's process.
@@ -243,8 +243,8 @@ impl BgFlash {
 
 impl Game {
     /// Starts `LbBf.dat`'s color animation `id` on the flash's overlay unless one of higher
-    /// priority plays, `lbBgFlash_80021C48` (`lb_800144C8`); `frames` limits it (0 for its
-    /// script's length).
+    /// priority plays, `lbBgFlash_80021C48` ([`colanim::start`]); `frames` limits it (0 for
+    /// its script's length).
     #[doc(alias = "lbBgFlash_80021C48")]
     pub fn bg_flash_anim(&mut self, data: &Archives, id: u32, frames: u32) -> bool {
         let table = self.bgflash.table.expect("LbBf.dat's lbBgFlashColAnimData");
@@ -254,26 +254,14 @@ impl Game {
             .as_mut()
             .expect("the flash's user data")
             .x4;
-        let entry = |i: u32| table.at(8 * i);
-        let cur = u32::from_be_bytes(co.x28_colanim);
-        if data.u8(entry(cur).at(4)) > data.u8(entry(id).at(4)) {
-            return false;
-        }
-        co.x28_colanim = id.to_be_bytes();
-        co.script.frame_count = frames;
-        co.script.cursor = data.ptr(entry(id));
-        co.script.timer = 0;
-        co.script.loop_count = 0;
-        co.x7C_flag2 = false;
-        co.x7C_color_enable = false;
-        true
+        colanim::start(co, data, table, id as i32, frames as i32)
     }
 
     /// Stops the flash's overlay, `fn_80021C1C`.
     #[doc(alias = "fn_80021C1C")]
     pub fn bg_flash_reset(&mut self) {
         let u = self.bgflash.user.as_mut().expect("the flash's user data");
-        clear_overlay(&mut u.x4);
+        colanim::clear(&mut u.x4);
     }
 
     /// The flash's user data released, `lbBgFlash_Free`.
@@ -369,10 +357,10 @@ impl Running<'_> {
         let co = &mut self.game.bgflash.user.as_mut().expect("user data").x4;
         // `fn_80021C18` takes the owner's commands and does nothing, so the script would
         // stay on one.
-        while run_overlay_with(data, co, &mut |_, op| {
+        while colanim::step(data, co, &mut |_, op| {
             panic!("LbBf.dat's color command {op:#x} never ends in the original")
         }) {
-            clear_overlay(co);
+            colanim::clear(co);
         }
     }
 
