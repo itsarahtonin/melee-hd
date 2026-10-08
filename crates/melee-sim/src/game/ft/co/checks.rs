@@ -28,8 +28,8 @@ pub(super) const KIND_GAME_WATCH: i32 = 24;
 pub(super) const KIND_KIRBY: i32 = 4;
 
 /// `Gr_Kind_Corneria`, `Gr_Kind_Venom`.
-const GR_KIND_CORNERIA: i32 = 7;
-const GR_KIND_VENOM: i32 = 19;
+const GR_KIND_CORNERIA: i32 = 0x0E;
+const GR_KIND_VENOM: i32 = 0x0F;
 
 /// The absolute value as the original's `ABS` computes it on a register.
 pub(super) fn abs(v: f64) -> f64 {
