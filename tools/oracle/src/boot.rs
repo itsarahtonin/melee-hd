@@ -18,6 +18,7 @@ use melee_sim::input::rumble::Script;
 pub const SEEDED: &[&str] = &[
     "pad library: queue read and write positions, queued count, queued polls, reset button",
     "pad library: master, copy and game statuses",
+    "the random seed as the menus leave it, which Slippi's playback replaces at the match's start",
     concat!(
         "the audio library: AX, synth, driver and lb audio as the boot and menus leave them, ",
         "with their sound bank and the audio timeline at the boot state's time base"
@@ -91,6 +92,13 @@ pub fn seed(game: &mut Game, archives: &mut Archives, mem: &[u8], tb: u64) {
         }),
         "a rumble script the menus started is still running: seeding it isn't modeled"
     );
+    // `*HSD_RandSeedPtr`: the menus' draws leave it; the replay's seed replaces it only when
+    // the match starts (`playback_start`).
+    let word = |a: u32| {
+        let i = (a - melee_capture::MEM1) as usize;
+        u32::from_be_bytes(mem[i..i + 4].try_into().expect("a word"))
+    };
+    game.objs.rng.seed = word(word(melee_capture::import::sym("HSD_RandSeedPtr")));
     let bank = melee_capture::audio::find_bank(mem, archives);
     game.audio = melee_capture::audio::import(mem, bank);
     game.audio.clock = Some(melee_capture::audio::import_clock(mem, tb));
