@@ -107,18 +107,64 @@ pub fn check_calls_in(
     setup: &Setup,
     ours: &Ours,
 ) {
+    run_checks(dir, func, min_compared, &[], prepare, setup, ours);
+}
+
+/// A stand-in for an unported function, on both sides: its address and what it returns. The
+/// calls each side makes to stand-ins are compared, in order, with their arguments.
+pub type Stub = (u32, StubRet);
+
+/// What a stand-in returns.
+#[derive(Clone, Copy, Debug)]
+pub enum StubRet {
+    Nothing,
+    Int(i32),
+    Float(f32),
+}
+
+/// [`check_calls_with`], with `stubs` standing in for unported code on both sides and their
+/// calls compared with their arguments; returns each float mode's report.
+pub fn check_calls_stubbed(
+    dir: &str,
+    func: &str,
+    min_compared: usize,
+    stubs: &[Stub],
+    prepare: &Prepare,
+    ours: &Ours,
+) -> Vec<Report> {
+    run_checks(
+        dir,
+        func,
+        min_compared,
+        stubs,
+        prepare,
+        &Setup::default(),
+        ours,
+    )
+}
+
+fn run_checks(
+    dir: &str,
+    func: &str,
+    min_compared: usize,
+    stubs: &[Stub],
+    prepare: &Prepare,
+    setup: &Setup,
+    ours: &Ours,
+) -> Vec<Report> {
     quiet_unported_panics();
     let paths = saved_calls(dir, func);
     let Some(index) = disc_index() else {
         eprintln!("SSBM_DISC is unset: skipping {func}'s saved calls");
-        return;
+        return Vec::new();
     };
     if paths.is_empty() {
         eprintln!("no saved calls of {func} in {dir}: skipping");
-        return;
+        return Vec::new();
     }
+    let mut reports = Vec::new();
     for mode in MODES {
-        let report = run_calls(&paths, index, mode, prepare, setup, ours);
+        let report = run_calls(&paths, index, mode, stubs, prepare, setup, ours);
         let mut skipped: std::collections::BTreeMap<&str, usize> = Default::default();
         for (_, why) in &report.skipped {
             *skipped.entry(why.as_str()).or_default() += 1;
@@ -155,7 +201,9 @@ pub fn check_calls_in(
             "{func} ({mode:?}): only {} saved calls compared, expected at least {min_compared}",
             report.compared
         );
+        reports.push(report);
     }
+    reports
 }
 
 /// Runs the calls at `paths` on worker threads (each with its own reference) in `mode`.
@@ -163,6 +211,7 @@ pub fn run_calls(
     paths: &[PathBuf],
     index: &DiscIndex,
     mode: FpMode,
+    stubs: &[Stub],
     prepare: &Prepare,
     setup: &Setup,
     ours: &Ours,
@@ -192,10 +241,12 @@ pub fn run_calls(
                         });
                         melee_sim::game::code::stubs::set(addr, v);
                     }
+                    install_logged_stubs(&ctx, stubs);
                     loop {
                         let i = next.fetch_add(1, Ordering::Relaxed);
                         let Some(path) = paths.get(i) else { break };
-                        let outcome = run_one(&ctx, path, i, index, prepare, ours);
+                        let outcome =
+                            run_one(&ctx, path, i, index, prepare, ours, !stubs.is_empty());
                         let name = path.file_name().unwrap().to_string_lossy().into_owned();
                         let mut r = report.lock().unwrap();
                         match outcome {
@@ -236,6 +287,7 @@ fn run_one(
     index: &DiscIndex,
     prepare: &Prepare,
     ours: &Ours,
+    logged: bool,
 ) -> Outcome {
     use std::panic::{AssertUnwindSafe, catch_unwind};
     let mut cap = Capture::read(path);
@@ -253,6 +305,8 @@ fn run_one(
     // The player blocks, pads, scene and match state, and in a replay run Slippi's playback
     // with the ruleset's state: playback's codes patch functions the reference runs patched.
     imp.match_state();
+    // The item code's globals: what a fighter's items count and track.
+    imp.items();
     let Importer { mut game, maps, .. } = imp;
     // The imported state must be memory before anything runs, or differences afterwards
     // wouldn't be the call's.
@@ -262,6 +316,7 @@ fn run_one(
     before.ids();
     before.audio();
     before.match_state();
+    before.items();
     if !before.diffs.is_empty() {
         return Outcome::Failed(format!(
             "the import doesn't round-trip: {}",
@@ -269,6 +324,7 @@ fn run_one(
         ));
     }
     CALLED.with(|c| c.borrow_mut().clear());
+    THEIR_CALLS.with(|c| c.borrow_mut().clear());
     let _ = melee_sim::game::code::stubs::take();
     let after = match catch_unwind(AssertUnwindSafe(|| run_capture(ctx, &cap.call))) {
         Ok(after) => after,
@@ -304,13 +360,16 @@ fn run_one(
         loaded: find_archives_after(index, &after, &mut archives, &data.loaded),
     };
     let mut cmp = Comparer::new(&after, &data, &game, maps);
-    // The stand-ins each side called, in order.
-    let ours_called: Vec<u32> = melee_sim::game::code::stubs::take()
-        .iter()
-        .map(|c| c.0)
-        .collect();
+    // The stand-ins each side called, in order: with their arguments for logged stand-ins.
+    let ours_log = melee_sim::game::code::stubs::take();
+    let theirs_logged = THEIR_CALLS.with(|c| std::mem::take(&mut *c.borrow_mut()));
+    if logged {
+        cmp.diffs
+            .extend(stub_call_diffs(&cmp.maps, &ours_log, &theirs_logged));
+    }
+    let ours_called: Vec<u32> = ours_log.iter().map(|c| c.0).collect();
     let theirs_called = CALLED.with(|c| std::mem::take(&mut *c.borrow_mut()));
-    if ours_called != theirs_called {
+    if !logged && ours_called != theirs_called {
         cmp.diffs.push(format!(
             "stand-ins called: ours {ours_called:x?}, theirs {theirs_called:x?}"
         ));
@@ -320,6 +379,7 @@ fn run_one(
     cmp.ids();
     cmp.audio();
     cmp.match_state();
+    cmp.items();
     match ret {
         Ret::Nothing => {}
         Ret::Int(v) if v != r3 => cmp
@@ -360,6 +420,145 @@ fn their_stub(ctx: &ssbm_rt::Ctx) {
     if let Some(Some(v)) = STUBS.with(|s| s.borrow().iter().find(|s| s.0 == addr).map(|s| s.1)) {
         ctx.regs.set_r(3, v);
     }
+}
+
+/// A call the reference made to a stand-in: its address, r3 to r10, f1 to f4, and the three
+/// floats each of r3 to r10 points to when it holds an address in main memory (a vector passed
+/// by pointer).
+type TheirCall = (u32, [u32; 8], [f64; 4], [Option<[u32; 3]>; 8]);
+
+thread_local! {
+    static THEIR_LOGGED_STUBS: std::cell::RefCell<Vec<Stub>> = const { std::cell::RefCell::new(Vec::new()) };
+    static THEIR_CALLS: std::cell::RefCell<Vec<TheirCall>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Registers logged stand-ins on the reference and on our side, for this thread (after
+/// [`run_calls`] has cleared ours).
+fn install_logged_stubs(ctx: &ssbm_rt::Ctx, stubs: &[Stub]) {
+    use melee_sim::game::code::{Val, stubs as ours};
+    THEIR_LOGGED_STUBS.with(|s| *s.borrow_mut() = stubs.to_vec());
+    for &(addr, ret) in stubs {
+        ours::set(
+            addr,
+            match ret {
+                StubRet::Nothing => Val::None,
+                StubRet::Int(v) => Val::Int(v),
+                StubRet::Float(v) => Val::Float(crate::arg(v)),
+            },
+        );
+        ctx.register(addr, their_logged_stub);
+    }
+}
+
+/// The stand-in the reference runs for every stubbed address: logs the call and returns what
+/// [`THEIR_LOGGED_STUBS`] says.
+fn their_logged_stub(ctx: &ssbm_rt::Ctx) {
+    let addr = *ctx.native_stack().last().expect("a stub runs as a native");
+    let r = &ctx.regs;
+    let gpr: [u32; 8] = std::array::from_fn(|i| r.r(3 + i));
+    let fpr: [f64; 4] = std::array::from_fn(|i| r.f(1 + i));
+    let pointed = gpr.map(|a| {
+        (0x8000_0000..0x817F_FFF4)
+            .contains(&a)
+            .then(|| [ctx.read_u32(a), ctx.read_u32(a + 4), ctx.read_u32(a + 8)])
+    });
+    THEIR_CALLS.with(|c| c.borrow_mut().push((addr, gpr, fpr, pointed)));
+    let ret = THEIR_LOGGED_STUBS.with(|s| s.borrow().iter().find(|s| s.0 == addr).map(|s| s.1));
+    match ret {
+        Some(StubRet::Int(v)) => ctx.regs.set_r(3, v as u32),
+        Some(StubRet::Float(v)) => ctx.regs.set_f(1, crate::arg(v)),
+        _ => {}
+    }
+}
+
+/// Our calls to stand-ins against the reference's: the same functions in the same order with
+/// the same arguments.
+fn stub_call_diffs(
+    maps: &Maps,
+    ours: &[(u32, Vec<melee_sim::game::code::Val>)],
+    theirs: &[TheirCall],
+) -> Vec<String> {
+    use melee_sim::game::code::Val;
+    let gobj_addr: std::collections::HashMap<_, u32> =
+        maps.gobjs.iter().map(|(&a, &g)| (g, a)).collect();
+    let fighter_addr: std::collections::HashMap<_, u32> =
+        maps.fighters.iter().map(|(&a, &f)| (f, a)).collect();
+    let jobj_addr: std::collections::HashMap<_, u32> =
+        maps.jobjs.iter().map(|(&a, &j)| (j, a)).collect();
+    let mut diffs = Vec::new();
+    if ours.len() != theirs.len() {
+        diffs.push(format!(
+            "stubbed calls: ours {:x?}, theirs {:x?}",
+            ours.iter().map(|c| c.0).collect::<Vec<_>>(),
+            theirs.iter().map(|c| c.0).collect::<Vec<_>>()
+        ));
+        return diffs;
+    }
+    for (k, ((oa, args), (ta, gpr, fpr, pointed))) in ours.iter().zip(theirs).enumerate() {
+        if oa != ta {
+            diffs.push(format!("stubbed call {k}: ours {oa:#x}, theirs {ta:#x}"));
+            continue;
+        }
+        let (mut gi, mut fi) = (0, 0);
+        for a in args {
+            let mut int = |what: String, ours: Option<u32>| {
+                if ours.is_some_and(|o| o != gpr[gi]) {
+                    diffs.push(format!(
+                        "stubbed call {k} ({oa:#x}): r{} ours {what}, theirs {:#x}",
+                        3 + gi,
+                        gpr[gi]
+                    ));
+                }
+            };
+            match *a {
+                Val::Int(v) => int(format!("{v:#x}"), Some(v as u32)),
+                Val::GObj(g) => int(
+                    format!("{g:?}"),
+                    g.map_or(Some(0), |g| gobj_addr.get(&g).copied()),
+                ),
+                Val::Fighter(f) => int(format!("{f:?}"), fighter_addr.get(&f).copied()),
+                Val::JObj(j) => int(
+                    format!("{j:?}"),
+                    j.map_or(Some(0), |j| jobj_addr.get(&j).copied()),
+                ),
+                Val::F32Ref(v) => {
+                    if pointed[gi].map(|p| p[0]) != Some(v.to_bits()) {
+                        diffs.push(format!(
+                            "stubbed call {k} ({oa:#x}): r{} ours *{v:?}, theirs {:x?}",
+                            3 + gi,
+                            pointed[gi]
+                        ));
+                    }
+                }
+                Val::Vec(v) => {
+                    let o = [v.x.to_bits(), v.y.to_bits(), v.z.to_bits()];
+                    if pointed[gi] != Some(o) {
+                        diffs.push(format!(
+                            "stubbed call {k} ({oa:#x}): r{} ours {v:?}, theirs {:x?}",
+                            3 + gi,
+                            pointed[gi]
+                        ));
+                    }
+                }
+                Val::Float(v) => {
+                    if v.to_bits() != fpr[fi].to_bits() {
+                        diffs.push(format!(
+                            "stubbed call {k} ({oa:#x}): f{} ours {v:?}, theirs {:?}",
+                            1 + fi,
+                            fpr[fi]
+                        ));
+                    }
+                    fi += 1;
+                    continue;
+                }
+                // A spawn's result isn't an argument any stand-in takes.
+                Val::Spawned(_) | Val::None => {}
+            }
+            gi += 1;
+        }
+    }
+    diffs
 }
 
 /// The GObj argument in r3, as our handle.
