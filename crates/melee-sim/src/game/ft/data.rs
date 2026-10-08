@@ -59,8 +59,9 @@ pub struct KindTables {
     pub load_special_attrs: u32,
 }
 
-/// `lbFile_8001668C`: a whole disc file's synchronous load, the audio timeline's seam.
-pub const LB_LOAD_FILE: u32 = 0x8001_668C;
+/// The destination a fighter file's load into main memory names: the heap isn't modeled, so
+/// its address there isn't known; any main-memory address makes the load a disc read.
+pub const MAIN_MEMORY: u32 = 0x8000_0000;
 
 /// A fighter kind's tables.
 pub fn kind_tables(kind: i32) -> &'static KindTables {
@@ -289,23 +290,15 @@ impl Running<'_> {
     }
 
     /// A fighter file's synchronous disc load (`lbFile_8001668C`), where the original loads
-    /// it, for the audio timeline that times it: `dest` its ARAM address, or 0 for main
-    /// memory, whose heap isn't modeled. Nothing without a timeline; until the audio port's
-    /// loader lands, a seam.
+    /// it, on the audio timeline that times it: `dest` its ARAM address, or [`MAIN_MEMORY`]
+    /// for main memory, whose heap isn't modeled. Nothing without a timeline (a state
+    /// imported from a single call).
     pub fn disc_load(&mut self, name: &str, dest: u32) {
         if self.game.audio.clock.is_none() {
             return;
         }
         let (entrynum, len) = self.game.ft.data.files.entry(name);
-        super::super::code::call(
-            self,
-            LB_LOAD_FILE,
-            &[
-                super::super::code::Val::Int(entrynum),
-                super::super::code::Val::Int(dest as i32),
-                super::super::code::Val::Int(len as i32),
-            ],
-        );
+        self.game.audio.load_file(self.data, entrynum, dest, len);
     }
 
     /// Loads animation `anim` of the fighter into its second buffer unless it's there, and
