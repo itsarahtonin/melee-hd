@@ -558,8 +558,11 @@ impl Running<'_> {
             mf.x19A8 = other_gobj;
         }
         if mf.x221C_b2 {
-            unported_call("ftCo_80094138 (a shield broken by a hit)");
+            // `ftCo_80094138`: a powershield's window lets the shield drop at once.
+            let g = mf.gobj.expect("a fighter without a GObj");
+            self.guard_release_window(g);
         }
+        let mf = &mut self.game.fighters[me.0];
         let total = dmg.wrapping_add(x34);
         mf.x19A0_shieldDamageTaken = mf.x19A0_shieldDamageTaken.wrapping_add(total.max(0));
         mf.x19BC_shieldDamageTaken3 = i32::from(other_player);

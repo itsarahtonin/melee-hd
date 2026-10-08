@@ -232,7 +232,7 @@ impl Running<'_> {
         self.damage_tick(gobj);
         let fp = self.game.fighter(gobj);
         if !self.anim_frames_remaining(gobj) && !fp.x221C_b6 && !self.damage_tech(gobj) {
-            unported_call("ftCo_80090780");
+            self.enter_damage_fall(gobj);
         }
     }
 

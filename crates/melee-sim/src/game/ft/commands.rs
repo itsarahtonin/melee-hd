@@ -261,9 +261,9 @@ impl Running<'_> {
     }
 
     /// Lands, or leaves the ground as falling or as jumped.
-    fn cmd_airborne(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
+    fn cmd_airborne(&mut self, gobj: GObjId, f: FighterId, w: u32) {
         match bits(w, 6, 26) {
-            0 => unported_call("ftCommon_8007D7FC"),
+            0 => self.land(gobj),
             1 => self.go_airborne(f),
             2 => self.go_airborne_jumped(f),
             _ => {}
