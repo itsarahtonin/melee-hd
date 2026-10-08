@@ -11,6 +11,7 @@ use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBone
 use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
+use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
@@ -13343,7 +13344,7 @@ impl Mirror for ifMagnifyPlayer {
         ifMagnifyPlayer {
             gobj: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
             jobj: cx.import_handle("JObjId", m.u32(at + 0x4)).map(JObjId),
-            idesc: RawPtr(m.u32(at + 0x8)),
+            idesc: MagnifyImage::import(m, at + 0x8, cx),
             state: ifMagnifyPlayer_state::import(m, at + 0xc, cx),
         }
     }
@@ -13362,13 +13363,8 @@ impl Mirror for ifMagnifyPlayer {
             self.jobj.map(|h| h.0),
             m.u32(at + 0x4),
         );
-        if self.idesc.0 != m.u32(at + 0x8) {
-            cx.mismatch(
-                &format!("{path}.idesc"),
-                format!("{:#x}", self.idesc.0),
-                format!("{:#x}", m.u32(at + 0x8)),
-            );
-        }
+        self.idesc
+            .compare(m, at + 0x8, &format!("{path}.idesc"), cx);
         self.state
             .compare(m, at + 0xc, &format!("{path}.state"), cx);
     }
@@ -13380,7 +13376,7 @@ impl Mirror for HSD_ImageDesc {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         HSD_ImageDesc {
-            image_ptr: RawPtr(m.u32(at + 0x0)),
+            image_ptr: TexBuffer::import(m, at + 0x0, cx),
             width: m.u16(at + 0x4),
             height: m.u16(at + 0x6),
             format: m.u32(at + 0x8) as i32,
@@ -13392,13 +13388,8 @@ impl Mirror for HSD_ImageDesc {
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.image_ptr.0 != m.u32(at + 0x0) {
-            cx.mismatch(
-                &format!("{path}.image_ptr"),
-                format!("{:#x}", self.image_ptr.0),
-                format!("{:#x}", m.u32(at + 0x0)),
-            );
-        }
+        self.image_ptr
+            .compare(m, at + 0x0, &format!("{path}.image_ptr"), cx);
         if self.width != m.u16(at + 0x4) {
             cx.mismatch(
                 &format!("{path}.width"),
@@ -13450,7 +13441,7 @@ impl Mirror for ifMagnify {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         ifMagnify {
-            model_desc: RawPtr(m.u32(at + 0x0)),
+            model_desc: cx.import_data(m.u32(at + 0x0)),
             x4: _GXColor::import(m, at + 0x4, cx),
             x8: _GXColor::import(m, at + 0x8, cx),
             xC: _GXColor::import(m, at + 0xc, cx),
@@ -13467,13 +13458,11 @@ impl Mirror for ifMagnify {
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.model_desc.0 != m.u32(at + 0x0) {
-            cx.mismatch(
-                &format!("{path}.model_desc"),
-                format!("{:#x}", self.model_desc.0),
-                format!("{:#x}", m.u32(at + 0x0)),
-            );
-        }
+        cx.compare_data(
+            &format!("{path}.model_desc"),
+            self.model_desc,
+            m.u32(at + 0x0),
+        );
         self.x4.compare(m, at + 0x4, &format!("{path}.x4"), cx);
         self.x8.compare(m, at + 0x8, &format!("{path}.x8"), cx);
         self.xC.compare(m, at + 0xc, &format!("{path}.xC"), cx);

@@ -2709,3 +2709,7 @@ ftZd_Init_OnLoad	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md)
 ftZd_Init_LoadSpecialAttrs	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Zelda's creation copies her attributes through it; compared from the first tick
 ftZd_Init_OnDeath	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Zelda's spawn runs it; compared from the first tick
 ftCo_800BFD04	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Zelda's creation puts her to sleep through it; compared every tick
+ifMagnify_802FC870	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the HUD's setup makes the magnifier through it; the bubbles, their textures and camera compared every tick
+ifMagnify_802FC7C0	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): ifMagnify_802FC870's colors (one port for both)
+ifMagnify_802FC3C0	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): ifMagnify_802FC870 makes the six bubbles through it; compared every tick
+ifMagnify_802FC618	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): ifMagnify_802FC870 makes the magnifier's camera through it; compared every tick

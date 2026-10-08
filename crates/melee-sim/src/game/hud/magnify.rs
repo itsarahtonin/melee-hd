@@ -9,11 +9,18 @@
 
 use gekko_fp as fp;
 
-use super::super::state::{Obj, Running, UserData};
+use melee_data::archive::{ArchiveId, DataRef};
+
+use super::super::handles::CodeRef;
+use super::super::mirror::{Cx, Mem, Mirror};
+use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, Obj, Running, UserData};
+use super::super::structs::{HSD_ImageDesc, ifMagnify};
 use crate::fpu::{mem, reg};
 use crate::hsd::display::{self, Draw};
-use crate::hsd::gobj::GObjId;
+use crate::hsd::gobj::{self, GObjId};
+use crate::hsd::tobj::ImageRef;
 use crate::hsd::{cobj, jobj};
+use crate::lb::cobj::{CObjDesc, load_cobj};
 use crate::math;
 use crate::vec::Vec3;
 
@@ -30,7 +37,214 @@ const EDGE_Y: f32 = 162.7;
 /// `EDGE_Y / EDGE_X`: the corners' slope.
 const CORNER: f32 = 0.643_846_4;
 
+/// `ifMagnify_804A1DE0`'s address, for the bubbles' image copies (`image_descs`).
+const MAGNIFY: u32 = 0x804A_1DE0;
+/// Where `image_descs` starts in it, and an image descriptor's size.
+const IMAGE_DESCS: u32 = 0x74;
+const IMAGE_DESC_SIZE: u32 = 0x18;
+
+/// The magnifier camera's descriptor, `ifMagnify_803F97E8`: orthographic over the screen, its
+/// eye 300 in front.
+const CAMERA_DESC: cobj::StaticDesc = cobj::StaticDesc {
+    flags: 0,
+    projection_type: 3,
+    viewport: [0, 640, 0, 480],
+    scissor: [0, 640, 0, 480],
+    eye: Vec3::new(0.0, 0.0, 300.0),
+    interest: Vec3::new(0.0, 0.0, 0.0),
+    roll: 0.0,
+    near: 0.1,
+    far: 32768.0,
+    projection: [0.0, 0.0, 0.0, 0.0],
+};
+
+/// A bubble's texture's image (`ifMagnifyPlayer::idesc`): the model's own, in `IfAll.dat`,
+/// for the first player, and the magnifier's copies (`image_descs`, static) for the others.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct MagnifyImage(pub Option<ImageRef>);
+
+impl Mirror for MagnifyImage {
+    const SIZE: u32 = 4;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        MagnifyImage(match m.u32(at) {
+            0 => None,
+            p => Some(match cx.import_data(p) {
+                Some(d) => ImageRef::Data(d),
+                None => ImageRef::Static(p),
+            }),
+        })
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let theirs = m.u32(at);
+        match self.0 {
+            Some(ImageRef::Data(d)) => cx.compare_data(path, Some(d), theirs),
+            Some(ImageRef::Static(a)) if a == theirs => {}
+            None if theirs == 0 => {}
+            ours => cx.mismatch(path, format!("{ours:?}"), format!("{theirs:#x}")),
+        }
+    }
+}
+
+/// An image's pixels (`HSD_ImageDesc::image_ptr`) in the magnifier's copies: a buffer from the
+/// heap the bubbles render into, which only the presentation reads, so only whether there is
+/// one is state (see engine.md).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct TexBuffer(pub bool);
+
+impl Mirror for TexBuffer {
+    const SIZE: u32 = 4;
+
+    fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
+        TexBuffer(m.u32(at) != 0)
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let theirs = m.u32(at) != 0;
+        if self.0 != theirs {
+            cx.mismatch(path, format!("{}", self.0), format!("{theirs}"));
+        }
+    }
+}
+
 impl Running<'_> {
+    /// Sets the off-screen magnifier up, `ifMagnify_802FC870`: cleared, the stage's four
+    /// colors (`ifMagnify_802FC7C0`), `IfAll.dat`'s `lupe` model, each player's bubble and
+    /// the magnifier's camera.
+    #[doc(alias = "ifMagnify_802FC870")]
+    #[doc(alias = "ifMagnify_802FC7C0")]
+    pub fn create_magnifier(&mut self, if_all: ArchiveId) {
+        let keep = self.game.magnify.image_descs.clone();
+        self.game.magnify = ifMagnify {
+            image_descs: keep,
+            ..Default::default()
+        };
+        // `Ground_801C0604` and the others hand back the stage parameters' colors.
+        let p = self
+            .game
+            .gr
+            .param
+            .as_ref()
+            .expect("stage_info.param is null");
+        let colors = (p.xB8.clone(), p.xC0.clone(), p.xD0.clone(), p.xD8.clone());
+        let m = &mut self.game.magnify;
+        (m.x4, m.x8, m.xC, m.x10) = colors;
+        let lupe = self
+            .data
+            .get(if_all)
+            .public("lupe")
+            .expect("Cannot find symbol lupe.");
+        self.game.magnify.model_desc = Some(DataRef {
+            archive: if_all,
+            offset: lupe,
+        });
+        for slot in 0..6 {
+            self.create_bubble(slot);
+        }
+        self.create_magnifier_camera();
+    }
+
+    /// A player's bubble, `ifMagnify_802FC3C0`: the `lupe` model on a GObj of its own, its
+    /// texture the model's image for the first player and a copy of it on the heap for the
+    /// others, its arrow and its frame in the player's color.
+    #[doc(alias = "ifMagnify_802FC3C0")]
+    fn create_bubble(&mut self, slot: u8) {
+        let i = usize::from(slot);
+        if let Some(g) = self.game.magnify.player[i].gobj {
+            gobj::free(self, g);
+        }
+        let data = self.data;
+        let g = &mut *self.game;
+        let gobj = g.world.create(0xE, 15, 0);
+        g.world
+            .init_user_data(gobj, 0xE, UserData::MagnifyPlayer(slot));
+        let desc = g.magnify.model_desc.expect("the magnifier's model");
+        let model = data.ptr(desc).expect("lupe's model");
+        let j = jobj::load_joint(&mut g.objs, data, data.ptr(model)).expect("lupe's joint");
+        g.world.set_obj(gobj, OBJ_JOBJ, Obj::JObj(j));
+        g.world.setup_gx_link(gobj, CodeRef(BUBBLE_RENDER), 0xB, 0);
+        let child = super::super::gm::pause::tree_nodes(&g.objs.jobjs, Some(j), &[2])[0]
+            .expect("the bubble's image joint");
+        let d = g.objs.jobjs[child].dobj().expect("child->u.dobj");
+        let d = g.objs.dobjs[d].next.expect("dobj->next");
+        let m = g.objs.dobjs[d].mobj.expect("dobj->mobj");
+        let t = g.objs.mobjs[m].tobj.expect("mobj->tobj");
+        if slot == 0 {
+            g.magnify.player[0].idesc = MagnifyImage(g.objs.tobjs[t].imagedesc);
+        } else {
+            let Some(ImageRef::Data(src)) = g.magnify.player[0].idesc.0 else {
+                panic!("the first bubble's image isn't the model's");
+            };
+            // The copy's pixels: a buffer `HSD_MemAlloc` gives (`GXGetTexBufferSize`).
+            g.magnify.image_descs[i - 1] = HSD_ImageDesc {
+                image_ptr: TexBuffer(true),
+                width: data.u16(src.at(4)),
+                height: data.u16(src.at(6)),
+                format: data.u32(src.at(8)) as i32,
+                mipmap: data.u32(src.at(0xC)),
+                minLOD: data.f32(src.at(0x10)),
+                maxLOD: data.f32(src.at(0x14)),
+            };
+            let at = MAGNIFY + IMAGE_DESCS + IMAGE_DESC_SIZE * (u32::from(slot) - 1);
+            g.magnify.player[i].idesc = MagnifyImage(Some(ImageRef::Static(at)));
+            g.objs.tobjs[t].imagedesc = Some(ImageRef::Static(at));
+        }
+        let arrow = super::super::gm::pause::tree_nodes(&g.objs.jobjs, Some(j), &[1])[0]
+            .expect("the bubble's arrow joint");
+        g.magnify.player[i].jobj = Some(arrow);
+        let color = super::super::gm::vs::hud_color(super::super::gm::vs::player_color(
+            slot,
+            g.player_team(i32::from(slot)) as u8,
+            u8::from(g.vs_is_teams()),
+            g.player_pkind(i32::from(slot)) as u8,
+        ));
+        for jj in [arrow, child] {
+            let d = g.objs.jobjs[jj].dobj().expect("u.dobj");
+            let m = g.objs.dobjs[d].mobj.expect("dobj->mobj");
+            let mat = g.objs.mobjs[m].mat.as_mut().expect("mobj->mat");
+            mat.diffuse.r = color[0];
+            mat.diffuse.g = color[1];
+            mat.diffuse.b = color[2];
+        }
+        let p = &mut g.magnify.player[i];
+        p.gobj = Some(gobj);
+        p.state.is_offscreen = false;
+        p.state.ignore_offscreen = false;
+    }
+
+    /// The magnifier's camera, `ifMagnify_802FC618`: orthographic over the first bubble's
+    /// image at a tenth of its size, its viewport and scissor the image's.
+    #[doc(alias = "ifMagnify_802FC618")]
+    fn create_magnifier_camera(&mut self) {
+        let data = self.data;
+        let g = &mut *self.game;
+        let gobj = g.world.create(0xE, 15, 0);
+        let c = load_cobj(&mut g.objs, data, CObjDesc::Static(&CAMERA_DESC));
+        g.world.set_obj(gobj, OBJ_CAMERA, Obj::CObj(c));
+        g.world
+            .setup_gx_link_max(gobj, CodeRef(CAMERA_RENDER), 0, false);
+        g.world.gobj_mut(gobj).gxlink_prios = 0x10;
+        let Some(ImageRef::Data(src)) = g.magnify.player[0].idesc.0 else {
+            panic!("the first bubble's image isn't the model's");
+        };
+        let (w, h) = (data.u16(src.at(4)), data.u16(src.at(6)));
+        let scale = reg(0.1);
+        let half_h = mem(fp::fmuls(scale, fp::frsp(f64::from(h))));
+        let half_w = mem(fp::fmuls(scale, fp::frsp(f64::from(w))));
+        let neg = |v: f32| mem(fp::fneg(reg(v)));
+        cobj::set_ortho(
+            &mut g.objs.cobjs,
+            Some(c),
+            half_h,
+            neg(half_h),
+            neg(half_w),
+            half_w,
+        );
+        cobj::set_viewport(&mut g.objs.cobjs, Some(c), [0, w as i16, 0, h as i16]);
+        cobj::set_scissor(&mut g.objs.cobjs, Some(c), [0, w, 0, h]);
+    }
+
     /// Whether the magnifier shows anything, `ifMagnify_IsHUDVisible`: the match shows its
     /// HUD, nothing hides it, and no boss intro plays.
     fn magnifier_visible(&self) -> bool {

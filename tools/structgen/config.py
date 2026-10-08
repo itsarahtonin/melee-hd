@@ -137,6 +137,8 @@ FIELD_DATA = {
     "ScInfStcModels.scene_models",
     "ifStock_804A1378.x0",
     "un_804A1F10_t.x0",
+    # The magnifier's model (`lupe` in `IfAll.dat`).
+    "ifMagnify.model_desc",
     # The costume's texture-animation indices, in the character's data (`ftData::x8->x8.xC`).
     "CostumeTObjList.x5D0",
 }
@@ -169,6 +171,12 @@ SPLICE = {
         ("u", 0x222C, 0x2324, "FighterVars"),
         ("mv", 0x2340, 0x23EC, "MotionVars"),
     ],
+    # A magnifier bubble's texture's image: the model's own (in IfAll.dat) for the first,
+    # the magnifier's own copies (static) for the others.
+    "ifMagnifyPlayer": ("idesc", 8, 0xC, "MagnifyImage"),
+    # An image's pixels: the magnifier's copies render into buffers from the heap, which only
+    # the presentation reads.
+    "HSD_ImageDesc": ("image_ptr", 0, 4, "TexBuffer"),
     # An item's dynamic bones, likewise set up to a count.
     "Item": ("xD4_dynamicBones", 0xD4, 0x374, "ItemDynamicBones"),
 }
@@ -185,6 +193,7 @@ EXTRA_USES = [
     "use crate::lb::command::Script;",
     "use crate::hsd::sis::TextId;",
     "use crate::lb::hitcapsule::Victim;",
+    "use crate::game::hud::magnify::{MagnifyImage, TexBuffer};",
 ]
 
 # C types melee-sim already has: fields of these types use the Rust type, and no struct is
@@ -235,6 +244,7 @@ use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBone
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
+use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::handles::*;
 use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;

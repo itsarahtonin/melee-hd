@@ -5,7 +5,6 @@
 use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, DataRef};
 
-use super::super::code;
 use super::super::gm::pause::tree_nodes;
 use super::super::handles::CodeRef;
 use super::super::state::{Game, OBJ_CAMERA, OBJ_LIGHT, Obj, Running};
@@ -19,12 +18,6 @@ use crate::vec::Vec3;
 
 /// `fn_802F36B8`, the HUD camera's render callback.
 pub const CAMERA_PROC: u32 = 0x802F_36B8;
-
-/// The HUD's functions no port covers yet, by address.
-mod addr {
-    /// `ifMagnify_802FC870`: the off-screen magnifier's setup.
-    pub const IFMAGNIFY_802FC870: u32 = 0x802F_C870;
-}
 
 /// The archives the HUD loads at a match's start, in the order it loads them.
 #[derive(Clone, Copy, Debug)]
@@ -190,7 +183,7 @@ impl Running<'_> {
         self.load_stock_icons();
         self.game.reset_timers();
         self.load_ko_marks();
-        code::call(self, addr::IFMAGNIFY_802FC870, &[]);
+        self.create_magnifier(files.if_all);
         self.create_arrows();
         self.game.init_hazard();
         self.init_nametags(files.sd_intro);

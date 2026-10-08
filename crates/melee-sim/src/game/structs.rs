@@ -11,6 +11,7 @@ use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
+use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
@@ -6033,7 +6034,7 @@ pub struct ifMagnifyPlayer {
     /// +0x4
     pub jobj: Option<JObjId>,
     /// +0x8
-    pub idesc: RawPtr,
+    pub idesc: MagnifyImage,
     /// +0xc
     pub state: ifMagnifyPlayer_state,
 }
@@ -6053,7 +6054,7 @@ impl Default for ifMagnifyPlayer {
 #[derive(Clone, Debug, PartialEq)]
 pub struct HSD_ImageDesc {
     /// +0x0
-    pub image_ptr: RawPtr,
+    pub image_ptr: TexBuffer,
     /// +0x4
     pub width: u16,
     /// +0x6
@@ -6086,7 +6087,7 @@ impl Default for HSD_ImageDesc {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ifMagnify {
     /// +0x0
-    pub model_desc: RawPtr,
+    pub model_desc: Option<DataRef>,
     /// +0x4
     pub x4: _GXColor,
     /// +0x8
@@ -6106,7 +6107,7 @@ pub struct ifMagnify {
 impl Default for ifMagnify {
     fn default() -> Self {
         ifMagnify {
-            model_desc: Default::default(),
+            model_desc: None,
             x4: Default::default(),
             x8: Default::default(),
             xC: Default::default(),
