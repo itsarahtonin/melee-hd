@@ -127,7 +127,7 @@ That bug never reached the silent Final Destination and Battlefield timelines th
 - *The original's own load* is asynchronous and polled: `grpstadium.c`'s `startLoad` uses `lbFile_80016580` with a callback, and the stage waits for the callback. That is the case `docs/architecture.md` treats as an input.
 - *The replays ssbm-rs plays* (Slippi's codes) load it synchronously: the call returns into the codes' memory, as `lbFile_8001668C`, a request on the device command queue and then a loop that waits until the load's callback, taking interrupts as it waits.
 
-`Audio::file_load` models the synchronous load on the timeline, inside the tick, and an audio frame that comes due during the wait runs there. A read into the game's heap moves no bytes here: the loader takes the file from its archives. A match's entry loads its files the same way where the original does: the fighters' files, `GmPause.usd`, `SdIntro.dat` and `IfCoGet.dat` (`Running::disc_load`, timed only when the boot left a timeline). `LbRf.dat` and `PdPm.dat`, which load first, aren't timed yet: their waits would take a seeded match's pending bank load into the audio heap, which the oracle's traces leave out (see [the oracle notes](oracle.md)).
+`Audio::file_load` models the synchronous load on the timeline, inside the tick, and an audio frame that comes due during the wait runs there. A read into the game's heap moves no bytes here: the loader takes the file from its archives. A match's entry loads its files the same way where the original does: the fighters' files, `GmPause.usd`, `SdIntro.dat`, `IfCoGet.dat` and `LbBf.dat` (`Running::disc_load`, timed only when the boot left a timeline). `LbRf.dat` and `PdPm.dat`, which load first, aren't timed yet: their waits would take a seeded match's pending bank load into the audio heap, which the oracle's traces leave out (see [the oracle notes](oracle.md)).
 
 **The library's tick** (`lbAudioAx_80027DF8`) runs in the scene loop before the processes. It does three things:
 
@@ -169,7 +169,7 @@ Sound objects (`lbAudioAx_800263E8`) end by frame count, not with their voice. S
 
 - The boot's audio setup. A match started from its settings alone has no banks loaded, and the driver starts nothing (the original's `HSD_AudioSFXStartParam` returns -1 the same way).
 - The stage's music choice, `Stage_80225074` (`Ground_801C24F8`, `lbAudioAx_80023F28`). On Final Destination, Battlefield, Yoshi's Story and Pokémon Stadium it draws `HSD_Randi(100)` only when the save data has every character unlocked (`gm_80164ABC`). Slippi's playback leaves the unlock codes out, so the save data decides. Starting the music itself (`HSD_AudioPStreamStartChParam`) is ported.
-- The stage's own file loads, inside `Stage_802251E8` (the stage file and `TyDatai.usd`), and `LbBf.dat`, inside `lbBgFlash`.
+- The stage's own file loads, inside `Stage_802251E8` (the stage file and `TyDatai.usd`).
 - The library's object pool: `lbAudioAx_8002835C`.
 
 The VS port still hands those to the frontend as `Event::Audio`. A state imported from a single captured call has no timeline, and no audio frames run.

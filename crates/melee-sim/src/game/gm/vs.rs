@@ -1718,6 +1718,7 @@ impl Running<'_> {
         self.disc_load("SdIntro.dat", MAIN_MEMORY);
         self.disc_load("IfCoGet.dat", MAIN_MEMORY);
         self.create_hud(files.hud);
+        self.disc_load("LbBf.dat", MAIN_MEMORY);
         self.bg_flash_init(0xFF, files.lb_bf);
         if let Some(f) = d.rules.on_match_start {
             code::call(self, f.0, &[]);
