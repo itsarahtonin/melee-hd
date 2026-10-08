@@ -132,7 +132,7 @@ impl Running<'_> {
     /// The grounded neutral special, `ftFx_SpecialN_Enter`.
     #[doc(alias = "ftFx_SpecialN_Enter")]
     pub fn fox_special_n_enter(&mut self, gobj: GObjId) {
-        self.ext_fighter(ext::FTCOMMON_8007D7FC, gobj);
+        self.land(gobj);
         self.change_motion_state(gobj, ms::SPECIAL_N_START, 0, 0.0, 1.0, 0.0, None);
         self.fox_special_n_init(gobj);
         let fp = self.game.fighter_mut(gobj);

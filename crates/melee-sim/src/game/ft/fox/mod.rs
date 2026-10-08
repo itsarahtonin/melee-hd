@@ -79,7 +79,6 @@ pub mod ext {
     pub const FT_80082708: u32 = 0x8008_2708;
     pub const FTCOMMON_8007DB24: u32 = 0x8007_DB24;
     pub const FT_CHECK_GROUND_AND_LEDGE: u32 = 0x8008_22A4;
-    pub const FTCOMMON_8007D7FC: u32 = 0x8007_D7FC;
     pub const FTCLIFFCOMMON_80081298: u32 = 0x8008_1298;
     pub const FTCOMMON_CALC_SELF_ACCEL_DEACCEL_QUICK_AIR: u32 = 0x8007_CF58;
     pub const FTCOLL_8007AEF8: u32 = 0x8007_AEF8;
@@ -308,10 +307,10 @@ impl Running<'_> {
         );
     }
 
-    /// `ftCommon_AirToGroundStateChange`: lands (`ftCommon_8007D7FC`), then the state from the
+    /// `ftCommon_AirToGroundStateChange`: lands ([`land`](Self::land)), then the state from the
     /// same frame.
     pub(crate) fn fox_air_to_ground(&mut self, gobj: GObjId, msid: i32, flags: u32) {
-        self.ext_fighter(ext::FTCOMMON_8007D7FC, gobj);
+        self.land(gobj);
         let frame = self.game.fighter(gobj).cur_anim_frame;
         self.change_motion_state(gobj, msid, flags, frame, 1.0, 0.0, None);
     }

@@ -490,7 +490,7 @@ impl Running<'_> {
     /// Landing from the end's fall, `ftFx_SpecialHiFall_Enter`.
     #[doc(alias = "ftFx_SpecialHiFall_Enter")]
     pub fn fox_special_hi_fall_enter(&mut self, gobj: GObjId) {
-        self.ext_fighter(ext::FTCOMMON_8007D7FC, gobj);
+        self.land(gobj);
         self.change_motion_state(
             gobj,
             ms::SPECIAL_HI_LANDING,
@@ -508,7 +508,7 @@ impl Running<'_> {
     pub fn fox_special_hi_fall_air_to_ground(&mut self, gobj: GObjId) {
         self.ext_gobj(ext::FTCOMMON_8007DB24, gobj);
         if self.game.fighter(gobj).ground_or_air == GA_AIR {
-            self.ext_fighter(ext::FTCOMMON_8007D7FC, gobj);
+            self.land(gobj);
         }
         self.change_motion_state(gobj, ms::SPECIAL_HI_LANDING, 0, 0.0, 1.0, 0.0, None);
         self.game.fighter_mut(gobj).x21F8 = Some(CodeRef(ext::FTCOMMON_8007F76C));
@@ -563,7 +563,7 @@ impl Running<'_> {
         if self.game.fighter(gobj).ground_or_air == GA_AIR {
             let dir = facing_dir_int(self.game.fighter(gobj).facing_dir);
             if self.check_ground_and_ledge(gobj, dir) {
-                self.ext_fighter(ext::FTCOMMON_8007D7FC, gobj);
+                self.land(gobj);
                 return;
             }
             self.ext_gobj_bool(ext::FTCLIFFCOMMON_80081298, gobj);
