@@ -163,15 +163,28 @@ impl Running<'_> {
         self.knockdown_impact(gobj);
     }
 
-    /// Knocked down on landing, `ftCo_80097D40` (`ftCo_80097D88` without the clear): face up
-    /// or down as the hips land (`ftCo_8009794C`); the Sandbag has its own.
+    /// Knocked down on landing, `ftCo_80097D40`: the bounce, its wall reflection count
+    /// (`downspot.x4`, a byte) cleared.
     #[doc(alias = "ftCo_80097D40")]
-    #[doc(alias = "ftCo_80097D88")]
-    #[doc(alias = "ftCo_8009794C")]
     pub fn enter_down_bound(&mut self, gobj: GObjId) {
+        self.enter_down_bound_keep(gobj);
+        self.game.fighter_mut(gobj).mv[DOWN_X4] = 0;
+    }
+
+    /// `ftCo_80097D88`: [`Self::enter_down_bound`] keeping the reflection count; the Sandbag
+    /// has its own.
+    #[doc(alias = "ftCo_80097D88")]
+    pub fn enter_down_bound_keep(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).is_sandbag {
             unported_call("ftCo_80097AF4");
         }
+        self.down_bound(gobj);
+    }
+
+    /// The bounce, `ftCo_8009794C`: face up or down as the hips land, the dust, and the
+    /// ground knockback.
+    #[doc(alias = "ftCo_8009794C")]
+    pub fn down_bound(&mut self, gobj: GObjId) {
         if self.is_airborne(gobj) {
             self.land(gobj);
         }
@@ -192,8 +205,6 @@ impl Running<'_> {
         fp.x67D = 255;
         fp.x1A6A = 511;
         Self::grounded_knockback_if_landed(fp, max);
-        // `downspot.x4`, a byte.
-        self.game.fighter_mut(gobj).mv[DOWN_X4] = 0;
     }
 
     /// Ground knockback from the air knockback on landing, `ftCommon_SetGroundedKnockbackIfLanded`:

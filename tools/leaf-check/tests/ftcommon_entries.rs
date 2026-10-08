@@ -658,15 +658,36 @@ fn ground() {
                 Ret::Nothing
             },
         ),
-        gobj("ftCo_80099894", IN, |g, o| {
-            let fp = g.game.fighter(o);
-            eprintln!(
-                "DBG kind {} motion {} x5A4 {:#x} x594 {:?} gr {}",
-                fp.kind, fp.motion_id, fp.x5A4, fp.x594, fp.ground_or_air
-            );
-            g.enter_escape_n(o);
-            Ret::Nothing
-        }),
+        // `ftCo_80099894` through its callers: UCF's shield drop returns past the caller's
+        // success, which a direct call has nowhere to go.
+        gobj("ftCo_8009980C", IN, |g, o| b(g.escape_n_check_any(o))),
+        gobj("ftCo_80099794", IN, |g, o| b(g.escape_n_check(o))),
+        // The stick where UCF's shield drop looks: down past the spot dodge but above -0.8,
+        // and out to the side, on a floor that may be a platform.
+        case(
+            "ftCo_8009980C",
+            IN,
+            |call, i, fp| {
+                let x = [0.65f32, 0.3, -0.7, 0.62][i % 4];
+                poke_f32(call, fp + 0x620, x);
+                poke_f32(call, fp + 0x624, [-0.75f32, -0.79, -0.72][i % 3]);
+                poke_f32(call, fp + 0x638, 0.0);
+                poke_f32(call, fp + 0x63C, 0.0);
+                let t = peek_u32(call, fp + 0x670) & 0xFF;
+                poke_u32(
+                    call,
+                    fp + 0x670,
+                    (0xFE << 24) | ([0u32, 2][i % 2] << 16) | t,
+                );
+                let flags = peek_u32(call, fp + 0x840);
+                poke_u32(
+                    call,
+                    fp + 0x840,
+                    if i % 3 == 2 { flags } else { flags | 0x100 },
+                );
+            },
+            |g, o, _, _| b(g.escape_n_check_any(o)),
+        ),
         gobj("ftCo_800998EC", IN, |g, o| {
             g.enter_escape_n_common(o);
             Ret::Nothing
@@ -1135,8 +1156,16 @@ fn down() {
             g.knockdown_dust(o);
             Ret::Nothing
         }),
-        gobj("ftCo_8009794C", MAP, |g, o| {
+        gobj("ftCo_80097D40", MAP, |g, o| {
             g.enter_down_bound(o);
+            Ret::Nothing
+        }),
+        gobj("ftCo_80097D88", MAP, |g, o| {
+            g.enter_down_bound_keep(o);
+            Ret::Nothing
+        }),
+        gobj("ftCo_8009794C", MAP, |g, o| {
+            g.down_bound(o);
             Ret::Nothing
         }),
         gobj("ftCo_80097E8C", IN, |g, o| {
