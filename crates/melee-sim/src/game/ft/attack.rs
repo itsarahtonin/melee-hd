@@ -189,14 +189,13 @@ impl Running<'_> {
         (reg(fp.x34_scale.z) != 1.0).then_some(Mtx34 { m: fp.x44_mtx })
     }
 
-    /// Whether a hitbox can't touch the fighter because something else holds it: unless it
-    /// is still 0, the thrown fighter's thrower (`x1064_thrownHitbox.x134`, a GObj pointer the
-    /// mirror keeps as raw bytes) isn't modeled.
+    /// A thrown fighter's thrower (`x1064_thrownHitbox.x134.owner`, `Fighter::x1198`).
     fn thrower(&self, f: FighterId) -> Option<GObjId> {
-        if self.game.fighters[f.0].x1064_thrownHitbox.x134.is_set() {
-            unported_call("a thrown fighter's thrower (Fighter::x1198)");
+        let x134 = self.game.fighters[f.0].x1064_thrownHitbox.x134;
+        if x134.is_set() && x134.thrower().is_none() {
+            unported_call("a thrown fighter's hitbox word that isn't a thrower");
         }
-        None
+        x134.thrower()
     }
 
     /// The highest of the fighter's invincibility states, `ftColl_8007B868`: 2 makes it
@@ -250,7 +249,10 @@ impl Running<'_> {
         {
             return;
         }
-        // The thrower can't hit the fighter it throws (`x1198 == this_gobj`): no thrower here.
+        // The thrower can't hit the fighter it throws (`x1198 == this_gobj`).
+        if self.thrower(v) == Some(gobj) {
+            return;
+        }
         let mut count = 0;
         if passed && !self.game.fighters[me.0].x221B.x221B_b5 {
             let other_ga = self.game.fighters[v.0].ground_or_air;
