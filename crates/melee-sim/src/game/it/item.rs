@@ -1591,7 +1591,7 @@ pub fn destroy(r: &mut Running, gobj: GObjId) {
     if r.game.items[i.0].x374_dynamicBonesNum > 0 {
         code::unported_call("lb_8000FD18 (an item's dynamic bones)");
     }
-    stop_all_sfx(r.game, gobj);
+    stop_all_sfx(r, gobj);
     lib26b1::clear_effect_queue(r.game, gobj);
     gobj::free(r, gobj);
 }
@@ -1701,10 +1701,51 @@ pub fn stop_sfx2(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).sfx_unk2 = NO_SFX;
 }
 
-/// Stops every sound the item made (`Item_8026B0B4`): it starts by asking the audio driver to
-/// stop the GObj's sounds (`lbAudioAx_80026510`).
-pub fn stop_all_sfx(_game: &mut Game, _gobj: GObjId) {
-    code::unported_call("lbAudioAx_80026510");
+/// `lbAudioAx_80026510` and `lbAudioAx_800265C4`: the audio library's sound objects a GObj
+/// owns, all of them or the one on a voice, keyed off and freed (the audio port's).
+const LBAUDIOAX_80026510: u32 = 0x8002_6510;
+const LBAUDIOAX_800265C4: u32 = 0x8002_65C4;
+
+/// Stops every sound the item made, `Item_8026B0B4`: the audio library's objects it owns, its
+/// third sound's, then its two slots' sounds (each stopped once, through its object if it
+/// has one), all three slots emptied.
+#[doc(alias = "Item_8026B0B4")]
+pub fn stop_all_sfx(r: &mut Running, gobj: GObjId) {
+    let owner = code::Val::GObj(Some(gobj));
+    code::call(r, LBAUDIOAX_80026510, &[owner]);
+    let x6c = super::item(r.game, gobj).xD6C;
+    if x6c != NO_SFX {
+        code::call(r, LBAUDIOAX_800265C4, &[owner, code::Val::Int(x6c)]);
+        item_mut(r.game, gobj).xD6C = NO_SFX;
+    }
+    for second in [false, true] {
+        let ip = super::item(r.game, gobj);
+        let h = if second { ip.sfx_unk2 } else { ip.sfx_unk1 };
+        if h != NO_SFX && code::call(r, LBAUDIOAX_800265C4, &[owner, code::Val::Int(h)]).int() == 1
+        {
+            r.sfx_stop(h);
+            let ip = item_mut(r.game, gobj);
+            if second {
+                ip.sfx_unk2 = NO_SFX;
+            } else {
+                ip.sfx_unk1 = NO_SFX;
+            }
+        }
+    }
+    for second in [false, true] {
+        let ip = super::item(r.game, gobj);
+        let h = if second { ip.sfx_unk2 } else { ip.sfx_unk1 };
+        if h != NO_SFX {
+            r.sfx_stop(h);
+        }
+        let ip = item_mut(r.game, gobj);
+        if second {
+            ip.sfx_unk2 = NO_SFX;
+        } else {
+            ip.sfx_unk1 = NO_SFX;
+        }
+    }
+    item_mut(r.game, gobj).xD6C = NO_SFX;
 }
 
 /// A fighter takes the item in hand at its part `part`, `Item_8026AB54`: the pickup sound, the

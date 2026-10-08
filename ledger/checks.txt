@@ -2749,3 +2749,4 @@ HSD_SisLib_803A84BC	leaf-check display text_render: its saved calls in each pass
 HSD_SisLib_803A8134	leaf-check display text_render: each line HSD_SisLib_803A84BC lays out is measured through it; widths compared through the layout
 HSD_SisLib_803A7684	leaf-check display text_render: the strings' scale, color, size and alignment pushes, past the stack's first 16 bytes; state stacks compared
 HSD_SisLib_803A7F0C	leaf-check display text_render: the strings' pops and their measurement's; state stacks compared
+Item_8026B0B4	melee-oracle diff, Fox vs Sheik FD ticks 1-207 with the audio port's seams stood in (docs/oracle.md): the lasers' destruction (the audio library's calls stood in) (3 calls)
