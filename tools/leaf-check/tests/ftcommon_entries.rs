@@ -187,6 +187,10 @@ fn b(v: bool) -> Ret {
 
 /// Runs each case from every saved call of its process: none may differ.
 fn run(cases: Vec<Case>) {
+    // One test's cases at a time: each loads a reference per worker, and six tests at once
+    // run the machine out of memory.
+    static ONE_AT_A_TIME: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _turn = ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
     let stubs = stubs();
     let mut none = Vec::new();
     let mut failed = Vec::new();
