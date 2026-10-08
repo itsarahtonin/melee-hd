@@ -173,13 +173,13 @@ impl Running<'_> {
             // ftMh_MS_341_8014FE10, ftCh_Init_80155FCC: the hands' entrances.
             0x1B => unported_call("ftMh_MS_341_8014FE10"),
             0x1C => unported_call("ftCh_Init_80155FCC"),
-            _ if info.transformation => unported_call("ftCo_800BFD04"),
+            _ if info.transformation => self.sleep(gobj),
             _ if self.game.player_flags_bit3(i32::from(info.slot)) => self.enter_entry(gobj),
             _ => {
                 if self.game.fighters[f.0].no_normal_motion {
                     panic!("the original's assertion failed: ellegal flag fp->no_normal_motion");
                 }
-                unported_call("ftCommon_8007D92C");
+                self.fall_or_wait(gobj);
             }
         }
         self.game.ft_disable_input(gobj);
@@ -487,5 +487,24 @@ impl Game {
             .public("ftLoadCommonData")
             .expect("the original's assertion failed: Cannot find symbol ftLoadCommonData.");
         self.ft.load_common = Some(DataRef { archive, offset });
+    }
+}
+
+impl Running<'_> {
+    /// Puts the fighter to sleep, out of the match until it's woken (a transformation's
+    /// other half, Zelda while Sheik plays), `ftCo_800BFD04`: the sleeping state, invisible,
+    /// out of the camera's framing.
+    #[doc(alias = "ftCo_800BFD04")]
+    pub fn sleep(&mut self, gobj: GObjId) {
+        self.change_motion_state(gobj, super::co::ids::ms::SLEEP, 0, 0.0, 1.0, 0.0, None);
+        let fp = self.game.fighter_mut(gobj);
+        fp.invisible = true;
+        fp.x221E_b1 = true;
+        fp.x221E_b2 = true;
+        fp.x2219_b1 = true;
+        let b = fp.x890_cameraBox.expect("a fighter without a camera box");
+        fp.is_sleeping = true;
+        fp.x221F_b1 = true;
+        self.game.camera.boxes[b].state = super::super::camera::INACTIVE;
     }
 }

@@ -2702,3 +2702,10 @@ grStadium_801D4084	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.m
 grStadium_801D4040	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): GO! reaches it off Pokemon Stadium; compared every tick
 Stage_802252E4	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): GO! starts FD's match through it; compared every tick
 ftLib_EnableAllInput	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): GO! lets both fighters take input through it; compared every tick
+ftSk_Init_OnLoad	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Sheik's creation runs it; the fighter compared from the first tick
+ftSk_Init_LoadSpecialAttrs	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Sheik's creation copies her attributes through it; compared from the first tick
+ftSk_Init_OnDeath	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Sheik's spawn runs it; compared from the first tick
+ftZd_Init_OnLoad	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Zelda, Sheik's sleeping partner, runs it at creation; compared from the first tick
+ftZd_Init_LoadSpecialAttrs	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Zelda's creation copies her attributes through it; compared from the first tick
+ftZd_Init_OnDeath	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Zelda's spawn runs it; compared from the first tick
+ftCo_800BFD04	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Zelda's creation puts her to sleep through it; compared every tick

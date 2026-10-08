@@ -349,6 +349,8 @@ impl Running<'_> {
             0 => {}
             0x800E_57AC => self.fox_on_load(gobj),
             0x8013_64AC => self.mars_on_load(gobj),
+            0x8011_00EC => self.seak_on_load(gobj),
+            0x8013_9334 => self.zelda_on_load(gobj),
             other => unported_call(&format!("fighter OnLoad {other:#010x}")),
         }
     }
@@ -360,6 +362,8 @@ impl Running<'_> {
             0 => {}
             0x800E_5554 => self.fox_on_death(gobj),
             0x8013_6258 => self.mars_on_death(gobj),
+            0x8011_0094 => self.seak_on_death(gobj),
+            0x8013_92DC => self.zelda_on_death(gobj),
             other => unported_call(&format!("fighter OnDeath {other:#010x}")),
         }
     }
@@ -372,6 +376,8 @@ impl Running<'_> {
             0 => panic!("the original's assertion failed: ftKindCalcIndiviParamTable"),
             0x800E_5858 => self.fox_load_special_attrs(gobj),
             0x8013_64E8 => self.mars_load_special_attrs(gobj),
+            0x8011_03C8 => self.seak_load_special_attrs(gobj),
+            0x8013_9590 => self.zelda_load_special_attrs(gobj),
             other => unported_call(&format!("fighter LoadSpecialAttrs {other:#010x}")),
         }
     }

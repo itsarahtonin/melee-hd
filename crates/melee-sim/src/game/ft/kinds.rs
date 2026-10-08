@@ -10,6 +10,17 @@ use crate::hsd::gobj::GObjId;
 /// callbacks copy.
 const FOX_ATTRS_SIZE: usize = 0xD4;
 const MARS_ATTRS_SIZE: usize = 0x98;
+/// `ftSeakAttributes`.
+const SEAK_ATTRS_SIZE: usize = 0x74;
+
+/// `ftZelda_DatAttrs`.
+const ZELDA_ATTRS_SIZE: usize = 0xA8;
+
+/// Zelda's items: `It_Kind_Zelda_DinFire` and `_DinFire_Explode`.
+const ZELDA_ITEMS: [i32; 2] = [108, 109];
+
+/// Sheik's items: `It_Kind_Seak_NeedleThrow`, `_NeedleHeld`, `_Vanish` and `_Chain`.
+const SEAK_ITEMS: [i32; 4] = [79, 80, 85, 97];
 
 /// `It_Kind_Fox_Illusion`.
 const IT_KIND_FOX_ILLUSION: i32 = 56;
@@ -112,5 +123,72 @@ impl Running<'_> {
     pub fn mars_load_special_attrs(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.copy_attrs(f, MARS_ATTRS_SIZE);
+    }
+
+    /// Sheik's creation, `ftSk_Init_OnLoad`: she can wall jump, has her attributes, and
+    /// registers her needles (thrown and held), her vanish's smoke and her chain with the
+    /// items.
+    #[doc(alias = "ftSk_Init_OnLoad")]
+    pub fn seak_on_load(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.game.fighters[f.0].can_walljump = true;
+        self.push_attrs(f, SEAK_ATTRS_SIZE);
+        let d = self.game.fighters[f.0]
+            .ft_data
+            .expect("a fighter without data");
+        let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
+        for (i, kind) in SEAK_ITEMS.into_iter().enumerate() {
+            let article = self.data.ptr(items.at(4 * i as u32));
+            super::super::it::item::set_char_article(self.game, article, kind);
+        }
+    }
+
+    /// Sheik's spawn, `ftSk_Init_OnDeath`: her variables cleared, her first model variant
+    /// and her second model hidden.
+    #[doc(alias = "ftSk_Init_OnDeath")]
+    pub fn seak_on_death(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        fp.u[..12].copy_from_slice(&[0; 12]);
+        self.game.set_part_vis(gobj, 0, 0);
+        self.game.set_part_vis(gobj, 1, -1);
+    }
+
+    /// `ftSk_Init_LoadSpecialAttrs`.
+    #[doc(alias = "ftSk_Init_LoadSpecialAttrs")]
+    pub fn seak_load_special_attrs(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.copy_attrs(f, SEAK_ATTRS_SIZE);
+    }
+
+    /// Zelda's creation, `ftZd_Init_OnLoad`: her attributes, and Din's Fire, charging and
+    /// exploding, registered with the items.
+    #[doc(alias = "ftZd_Init_OnLoad")]
+    pub fn zelda_on_load(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.push_attrs(f, ZELDA_ATTRS_SIZE);
+        let d = self.game.fighters[f.0]
+            .ft_data
+            .expect("a fighter without data");
+        let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
+        for (i, kind) in ZELDA_ITEMS.into_iter().enumerate() {
+            let article = self.data.ptr(items.at(4 * i as u32));
+            super::super::it::item::set_char_article(self.game, article, kind);
+        }
+    }
+
+    /// Zelda's spawn, `ftZd_Init_OnDeath`: both models' first variants, `x222C` cleared.
+    #[doc(alias = "ftZd_Init_OnDeath")]
+    pub fn zelda_on_death(&mut self, gobj: GObjId) {
+        self.game.set_part_vis(gobj, 0, 0);
+        self.game.set_part_vis(gobj, 1, 0);
+        let fp = self.game.fighter_mut(gobj);
+        fp.u[..4].copy_from_slice(&[0; 4]);
+    }
+
+    /// `ftZd_Init_LoadSpecialAttrs`.
+    #[doc(alias = "ftZd_Init_LoadSpecialAttrs")]
+    pub fn zelda_load_special_attrs(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.copy_attrs(f, ZELDA_ATTRS_SIZE);
     }
 }
