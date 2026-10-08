@@ -43,6 +43,18 @@ const HURT_ENABLED: i32 = 0;
 /// `ftCo_MS_DamageIce`.
 const MS_DAMAGE_ICE: i32 = 325;
 
+/// `It_Kind_BombHei`, and `It_Kind_Unk4`, which hits no fighter.
+const IT_KIND_BOMBHEI: i32 = 6;
+const IT_KIND_UNK4: i32 = 158;
+
+/// `ItCo.dat`'s common item data (`it_804D6D28`): the speed below which an item's hit
+/// pushes away from it rather than along its flight, for the damage result and for its
+/// own record; and the speed damage's slope and offset (`x80_float[5]`, `[6]`).
+const IT_SLOW_FOR_RESULT: u32 = 0x78;
+const IT_SLOW_FOR_ITEM: u32 = 0xD4;
+const IT_SPEED_DAMAGE: u32 = 0x94;
+const IT_SPEED_DAMAGE_BASE: u32 = 0x98;
+
 /// The hit sounds by severity (`ftColl_803C0C40`) and the slash-on-slash clank sounds
 /// (`ftColl_803C0C4C`).
 const HIT_SFX: [i32; 3] = [141, 142, 143];
@@ -60,18 +72,27 @@ const HIT_KIND_SFX: [i32; 42] = [
     220079, 220082, 220085, 540000, 540000, 525,
 ];
 
+/// The fighter's bubbles an item's hitbox can meet.
+#[derive(Clone, Copy)]
+enum Bubble {
+    Shield,
+    Reflect,
+    Absorb,
+}
+
 /// How many entries each damage log holds.
 const LOG_LEN: usize = 20;
 
-/// The hitbox a logged hit came from (`DmgLogEntry::xC`): one of a fighter's.
+/// The hitbox a logged hit came from (`DmgLogEntry::xC`): one of a fighter's (`x0` 1) or of
+/// an item's (2), by its GObj.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct LoggedHit {
-    pub fighter: FighterId,
-    pub index: usize,
+pub enum LoggedHit {
+    Fighter { fighter: FighterId, index: usize },
+    Item { item: GObjId, index: usize },
 }
 
-/// A logged hit (`DmgLogEntry`). Only fighters' hits (`x0` 1) are logged yet: items' and the
-/// stage's stop at their seams before they would log.
+/// A logged hit (`DmgLogEntry`): a fighter's or an item's. The stage's stop at their seams
+/// before they would log.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LogEntry {
     /// The attacker's character (`kind`) and GObj, the thrown fighter's thrower for a thrown
@@ -641,7 +662,7 @@ impl Running<'_> {
                 let entry = LogEntry {
                     kind: af.kind,
                     gobj: af.gobj,
-                    hit: LoggedHit {
+                    hit: LoggedHit::Fighter {
                         fighter: v,
                         index: j,
                     },
@@ -698,7 +719,7 @@ impl Running<'_> {
                 let entry = LogEntry {
                     kind: af.kind,
                     gobj: af.gobj,
-                    hit: LoggedHit {
+                    hit: LoggedHit::Fighter {
                         fighter: v,
                         index: j,
                     },
@@ -734,6 +755,11 @@ impl Running<'_> {
     fn hit_sound(&mut self, v: FighterId, j: usize, me: FighterId, n: usize) {
         let h0 = &self.game.fighters[v.0].x914[j];
         let (severity, kind) = (h0.sfx_severity, h0.sfx_kind);
+        self.hit_sound_of(me, n, kind, severity);
+    }
+
+    /// A hit's sound on hurtbox `n` for a hitbox's sound kind and severity.
+    fn hit_sound_of(&mut self, me: FighterId, n: usize, kind: i32, severity: i32) {
         let mf = &self.game.fighters[me.0];
         if mf.x1988 != 0
             || mf.x198C != 0
@@ -917,7 +943,10 @@ impl Running<'_> {
     }
 
     /// The items' hitboxes against this fighter, `ftColl_8007925C`: each item not on its side
-    /// whose hitbox could reach it. Tests past that point aren't ported.
+    /// (team rules aside) whose hitbox can reach it and hasn't already hit it, against its
+    /// reflector and absorber, its own hitboxes (a clank), its shield, then its hurtboxes,
+    /// where the first one hit takes the hit and its sound. Reflecting, absorbing, clanking,
+    /// shields and inert boxes stop at their seams.
     #[doc(alias = "ftColl_8007925C")]
     pub fn hits_from_items(&mut self, gobj: GObjId) {
         use super::super::it::{self, P_LINK_ITEM};
@@ -926,7 +955,7 @@ impl Running<'_> {
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
             let ip = it::item(self.game, g);
-            if ip.kind == 158 {
+            if ip.kind == IT_KIND_UNK4 {
                 continue;
             }
             let (owner, b5, b6, team) = (
@@ -942,13 +971,11 @@ impl Running<'_> {
             if teams && team == self.game.fighters[me.0].team {
                 continue;
             }
-            if !self.game.fighters[me.0].x221B.x221B_b5 {
-                // The clank flags of the fighter's own boxes, which only the clank test past
-                // the seam reads.
-                let thrown = self.thrower(me).is_some();
-                let _ = thrown;
-                let ip = it::item(self.game, g);
-                let item_ga = ip.ground_or_air;
+            // The fighter's own boxes that could clank with the item's (`ftColl_804D6560`),
+            // unless a thrower holds the fighter.
+            let mut clanks = 0;
+            if !self.game.fighters[me.0].x221B.x221B_b5 && self.thrower(me).is_none() {
+                let item_ga = it::item(self.game, g).ground_or_air;
                 for i in 0..4 {
                     let h = &self.game.fighters[me.0].x914[i];
                     let can = h.state != hitcapsule::DISABLED
@@ -958,33 +985,447 @@ impl Running<'_> {
                         && ((h.x40_b2 && item_ga == GA_AIR) || (h.x40_b3 && item_ga == GA_GROUND))
                         && !hitcapsule::has_victim(h, Victim::Item(it::item_of(self.game, g)));
                     self.game.ft.hit_logs.clank[i] = can;
+                    clanks += i32::from(can);
                 }
             }
             for j in 0..4 {
-                let ip = it::item(self.game, g);
-                let ib = &ip.x5D4_hitboxes[j];
-                let h = &ib.hit;
-                let mf = &self.game.fighters[me.0];
-                if h.state == hitcapsule::DISABLED || !h.x42_b5 {
-                    continue;
-                }
-                if !((h.x40_b2 && mf.ground_or_air == GA_AIR)
-                    || (h.x40_b3 && mf.ground_or_air == GA_GROUND))
-                {
-                    continue;
-                }
-                if h.x42_b2 && reg(mf.facing_dir) == reg(ip.facing_dir) {
-                    continue;
-                }
-                if self.game.vs_x5_2() && !ib.x138 {
-                    continue;
-                }
-                if hitcapsule::has_victim(h, victim(me)) {
-                    continue;
-                }
-                unported_call("ftColl_8007925C (an item's hitbox against a fighter)");
+                self.item_box_against(gobj, me, g, j, clanks);
             }
         }
+    }
+
+    /// One of an item's hitboxes against the fighter, `ftColl_8007925C`'s inner loop.
+    fn item_box_against(&mut self, gobj: GObjId, me: FighterId, g: GObjId, j: usize, clanks: i32) {
+        use super::super::it;
+        let ip = it::item(self.game, g);
+        let ib = &ip.x5D4_hitboxes[j];
+        let h = &ib.hit;
+        let mf = &self.game.fighters[me.0];
+        if h.state == hitcapsule::DISABLED || !h.x42_b5 {
+            return;
+        }
+        if !((h.x40_b2 && mf.ground_or_air == GA_AIR)
+            || (h.x40_b3 && mf.ground_or_air == GA_GROUND))
+        {
+            return;
+        }
+        if h.x42_b2 && reg(mf.facing_dir) == reg(ip.facing_dir) {
+            return;
+        }
+        if self.game.vs_x5_2() && !ib.x138 {
+            return;
+        }
+        if hitcapsule::has_victim(h, victim(me)) {
+            return;
+        }
+        let phantom = h.x43_b2;
+        let element = h.element;
+        if element != ELEMENT_INERT && !phantom && h.x42_b4 {
+            let mf = &self.game.fighters[me.0];
+            if mf.reflecting
+                && it::item(self.game, g).x5D4_hitboxes[j].hit.x41_b7
+                && self.item_box_hits_bubble(g, j, me, Bubble::Reflect, false)
+            {
+                unported_call("ftColl_80077464 (a fighter reflecting an item)");
+            }
+            let mf = &self.game.fighters[me.0];
+            let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
+            if mf.x2218_b6
+                && (h.x42_b0 || (mf.x2218_b7 && h.x41_b7))
+                && self.item_box_hits_bubble(g, j, me, Bubble::Absorb, false)
+            {
+                unported_call("it_8026FAC4 from ftColl_8007925C (a fighter absorbing an item)");
+            }
+        }
+        if !self.game.fighters[me.0].x221B.x221B_b5 && !phantom && clanks != 0 {
+            for m in 0..4 {
+                if !self.game.ft.hit_logs.clank[m] {
+                    continue;
+                }
+                let theirs = &self.game.fighters[me.0].x914[m];
+                let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
+                if element == ELEMENT_INERT || theirs.element == ELEMENT_INERT {
+                    if element == theirs.element {
+                        continue;
+                    }
+                    if self.item_box_touches(g, j, me, m) {
+                        unported_call("ftColl_8007925C (an inert box touching another)");
+                    }
+                } else {
+                    if !h.x40_b0 || !theirs.x40_b0 {
+                        continue;
+                    }
+                    if self.item_box_touches(g, j, me, m) {
+                        unported_call("ftColl_80077970 (an item's box clanking with a fighter's)");
+                    }
+                }
+            }
+        }
+        let mf = &self.game.fighters[me.0];
+        let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
+        if element != ELEMENT_INERT && mf.x221B.x221B_b0 && h.x42_b1 {
+            let ix = it::item(self.game, g).pos.x;
+            let mut facing = true;
+            if mf.x221B.x221B_b3 {
+                if -1.0 == reg(mf.facing_dir) {
+                    if reg(mf.cur_pos.x) < reg(ix) {
+                        facing = false;
+                    }
+                } else if reg(mf.cur_pos.x) > reg(ix) {
+                    facing = false;
+                }
+            }
+            if mf.x221B.x221B_b4 && !h.x42_b4 {
+                facing = false;
+            }
+            if facing && self.item_box_hits_bubble(g, j, me, Bubble::Shield, phantom) {
+                unported_call("ftColl_80077688 (an item hitting a shield)");
+            }
+        }
+        if element == ELEMENT_INERT {
+            unported_call("lbColl_80008248 (an inert item box against hurtboxes)");
+        }
+        let mf = &self.game.fighters[me.0];
+        if mf.x1988 == 2 || mf.x198C == 2 {
+            return;
+        }
+        let grab_only = it::item(self.game, g).x5D4_hitboxes[j].hit.x42_b6;
+        let mut n = 0;
+        while n < usize::from(self.game.fighters[me.0].hurt_capsules_len) {
+            if grab_only && self.game.fighters[me.0].hurt_capsules[n].is_grabbable == 0 {
+                n += 1;
+                continue;
+            }
+            if self.item_box_hits_hurtbox(g, j, me, n, phantom) {
+                if self.take_item_hit(g, j, me, n) {
+                    self.item_hit_sound(g, j, me, n);
+                }
+                return;
+            }
+            n += 1;
+        }
+        let _ = gobj;
+    }
+
+    /// The hitbox a logged hit names.
+    fn logged_capsule(&self, hit: LoggedHit) -> &super::super::structs::HitCapsule {
+        match hit {
+            LoggedHit::Fighter { fighter, index } => &self.game.fighters[fighter.0].x914[index],
+            LoggedHit::Item { item, index } => {
+                &super::super::it::item(self.game, item).x5D4_hitboxes[index].hit
+            }
+        }
+    }
+
+    /// The knockback an item's hitbox deals this fighter (`ftColl_8007A06C`'s item case): the
+    /// owner's attack ratio when a fighter owns it.
+    fn item_knockback(&self, me: FighterId, item: GObjId, hit: LoggedHit, count: u32) -> f64 {
+        let owner = super::super::it::item(self.game, item).owner;
+        let attack = if super::super::it::item::is_fighter(self.game, owner) {
+            let o = self.game.fighter(owner.expect("an owner"));
+            self.game.player_attack_ratio(i32::from(o.player_idx))
+        } else {
+            1.0
+        };
+        let fp = &self.game.fighters[me.0];
+        let defense = self.game.player_defense_ratio(i32::from(fp.player_idx));
+        let ratio = self.game.vs_damage_ratio();
+        self.knockback(me, hit, count, ratio, attack, defense, fp.co_attrs.weight)
+    }
+
+    /// Whether the item's box `j` touches the fighter's box `m` (`lbColl_80007AFC`), each
+    /// keeping where it met the other.
+    fn item_box_touches(&mut self, g: GObjId, j: usize, me: FighterId, m: usize) -> bool {
+        let ip = super::super::it::item(self.game, g);
+        let mut a = hitcapsule::shape(&ip.x5D4_hitboxes[j].hit);
+        let mut b = hitcapsule::shape(&self.game.fighters[me.0].x914[m]);
+        let (sa, sb) = (ip.scl, self.game.fighters[me.0].x34_scale.y);
+        let touch = hitboxes_touch(&mut a, &mut b, sa, sb);
+        super::super::it::item_mut(self.game, g).x5D4_hitboxes[j]
+            .hit
+            .hurt_coll_pos = a.contact;
+        self.game.fighters[me.0].x914[m].hurt_coll_pos = b.contact;
+        touch
+    }
+
+    /// Whether the item's box `j` touches one of the fighter's bubbles (`lbColl_80007BCC`).
+    fn item_box_hits_bubble(
+        &mut self,
+        g: GObjId,
+        j: usize,
+        me: FighterId,
+        which: Bubble,
+        phantom: bool,
+    ) -> bool {
+        let mtx = self.own_matrix(me);
+        let ip = super::super::it::item(self.game, g);
+        let mut hit = ip.x5D4_hitboxes[j].hit.clone();
+        let hit_scale = ip.scl;
+        let fp = &mut self.game.fighters[me.0];
+        let (scale, z) = (fp.x34_scale.y, fp.cur_pos.z);
+        let bubble = match which {
+            Bubble::Shield => &mut fp.shield_hit,
+            Bubble::Reflect => &mut fp.reflect_hit,
+            Bubble::Absorb => &mut fp.absorb_hit,
+        };
+        let touch = hitcapsule::hits_bubble(
+            &mut self.game.objs,
+            self.data,
+            &mut hit,
+            bubble,
+            mtx.as_ref(),
+            phantom,
+            hit_scale,
+            scale,
+            z,
+        );
+        let h = &mut super::super::it::item_mut(self.game, g).x5D4_hitboxes[j].hit;
+        h.hurt_coll_pos = hit.hurt_coll_pos;
+        h.coll_distance = hit.coll_distance;
+        touch
+    }
+
+    /// Whether the item's box `j` touches the fighter's hurtbox `n` (`lbColl_8000805C`).
+    fn item_box_hits_hurtbox(
+        &mut self,
+        g: GObjId,
+        j: usize,
+        me: FighterId,
+        n: usize,
+        phantom: bool,
+    ) -> bool {
+        let mtx = self.own_matrix(me);
+        let ip = super::super::it::item(self.game, g);
+        let mut hit = ip.x5D4_hitboxes[j].hit.clone();
+        let hit_scale = ip.scl;
+        let fp = &mut self.game.fighters[me.0];
+        let (scale, z) = (fp.x34_scale.y, fp.cur_pos.z);
+        let touch = hitcapsule::hits_hurtbox(
+            &mut self.game.objs,
+            self.data,
+            &mut hit,
+            &mut fp.hurt_capsules[n].capsule,
+            mtx.as_ref(),
+            phantom,
+            hit_scale,
+            scale,
+            z,
+        );
+        let h = &mut super::super::it::item_mut(self.game, g).x5D4_hitboxes[j].hit;
+        h.hurt_coll_pos = hit.hurt_coll_pos;
+        h.coll_distance = hit.coll_distance;
+        touch
+    }
+
+    /// An item's hitbox damage, `it_8026B1D4`: its damage, plus for an item whose speed
+    /// counts (`xDC8_word` bit 0x14) the speed's share, at least 1.
+    // Ports `it_8026B1D4`; aliased once a check reaches it.
+    fn item_damage(&self, g: GObjId, j: usize) -> f64 {
+        let ip = super::super::it::item(self.game, g);
+        let mut dmg = reg(ip.x5D4_hitboxes[j].hit.damage);
+        if ip.xDC8_word.flags.x14 {
+            let v = ip.x40_vel;
+            let (x, y, z) = (reg(v.x), reg(v.y), reg(v.z));
+            let speed = crate::math::sqrt_reg(fp::fadds(
+                fp::fmuls(z, z),
+                fp::fadds(fp::fmuls(x, x), fp::fmuls(y, y)),
+            ));
+            let c = super::super::it::item::common_data(self.game);
+            dmg = fp::fmadds(speed, reg(c.f32(self.data, IT_SPEED_DAMAGE)), dmg);
+            dmg = fp::fadds(dmg, reg(c.f32(self.data, IT_SPEED_DAMAGE_BASE)));
+            if dmg <= 1.0 {
+                return 1.0;
+            }
+        }
+        dmg
+    }
+
+    /// Remembers the fighter in the item's boxes of box `j`'s group as kind `kind`, and in
+    /// every item sharing its id's (`it_8026FAC4`, `it_8026FA2C`); with `clear`, a box that
+    /// newly hit it can't clank this frame.
+    // Ports `it_8026FAC4`; aliased once a check reaches it.
+    // Ports `it_8026FA2C`; aliased once a check reaches it.
+    fn item_add_victim(&mut self, g: GObjId, j: usize, kind: i32, v: Victim, clear: bool) {
+        use super::super::it::{self, P_LINK_ITEM};
+        let ip = it::item(self.game, g);
+        let (id, group) = (ip.xAC4_ignoreItemID, ip.x5D4_hitboxes[j].hit.x4);
+        let add = |game: &mut super::super::state::Game, item: GObjId| {
+            for k in 0..4 {
+                let cur = &mut it::item_mut(game, item).x5D4_hitboxes[k].hit;
+                if cur.state != hitcapsule::DISABLED
+                    && cur.x4 == group
+                    && hitcapsule::add_victim(cur, kind, v)
+                    && clear
+                {
+                    game.it.clank_boxes[k] = 0;
+                }
+            }
+        };
+        if id == 0 {
+            add(self.game, g);
+            return;
+        }
+        let mut cur = self.game.world.first_in(P_LINK_ITEM);
+        while let Some(o) = cur {
+            cur = self.game.world.gobjs[o.0].next;
+            if it::item(self.game, o).xAC4_ignoreItemID == id {
+                add(self.game, o);
+            }
+        }
+    }
+
+    /// The fighter takes item `g`'s box `j` on hurtbox `n`, `ftColl_80077C60`: the damage
+    /// scaled by a grab's and the frozen state's factors and the fighter's own; a hit (not a
+    /// tip) is remembered by the item, which keeps the most damage it dealt and which way;
+    /// then, unless the fighter is invincible there, logged and recorded. An item taken on
+    /// touch (`x0_78` 4) and a tip stop at their seams. Returns whether the box hit.
+    // Ports `ftColl_80077C60`; aliased once a check reaches it.
+    fn take_item_hit(&mut self, g: GObjId, j: usize, me: FighterId, n: usize) -> bool {
+        use super::super::it;
+        let data = self.data;
+        let ip = it::item(self.game, g);
+        if it::item::attr_of(ip).x0_78(data) == 4 {
+            unported_call("ftColl_80077C60 (an item a fighter takes on touch)");
+        }
+        let raw = self.item_damage(g, j);
+        let mut f3 = raw;
+        let mf = &self.game.fighters[me.0];
+        if mf.victim_gobj.is_some() && !mf.x221B.x221B_b5 {
+            f3 = fp::fmuls(f3, reg(self.common().f32(0x128)));
+        }
+        if mf.motion_id == MS_DAMAGE_ICE {
+            f3 = fp::fmuls(f3, reg(self.common().f32(0x714)));
+        }
+        let mut dmg = fp::fmuls(f3, reg(self.game.fighters[me.0].dmg.x182c_behavior));
+        let tip = self.common().f32(0x7A8);
+        let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
+        if reg(h.coll_distance) < reg(tip) {
+            let mf = &self.game.fighters[me.0];
+            if self.game.ft.hit_logs.hits.is_empty()
+                && mf.dmg.x189C_unk_num_frames == 0.0
+                && !hitcapsule::has_victim2(h, victim(me))
+            {
+                unported_call("ftColl_80077C60 (an item's tip, it_8026FC00)");
+            }
+            return false;
+        }
+        let mode = if h.x41_b5 { 5 } else { 0 };
+        self.game.ft.hit_logs.tips.clear();
+        self.item_add_victim(g, j, mode, victim(me), false);
+        let ip = it::item(self.game, g);
+        if dmg > fp::frsp(f64::from(ip.xC34_damageDealt)) {
+            let slow = reg(it::item::common_data(self.game).f32(data, IT_SLOW_FOR_ITEM));
+            let me_gobj = self.game.fighters[me.0].gobj;
+            let mx = self.game.fighters[me.0].cur_pos.x;
+            let ip = it::item_mut(self.game, g);
+            ip.xC34_damageDealt = fp::fctiwz(dmg);
+            ip.xCF4_fighterGObjUnk = me_gobj;
+            let vx = reg(ip.x40_vel.x);
+            let speed = if vx < 0.0 { fp::fneg(vx) } else { vx };
+            ip.xCB8_outDamageDirection = if speed < slow {
+                if reg(ip.pos.x) > reg(mx) { -1.0 } else { 1.0 }
+            } else if vx < 0.0 {
+                -1.0
+            } else {
+                1.0
+            };
+        }
+        let mut logged = false;
+        let mf = &self.game.fighters[me.0];
+        if mf.x1988 == 0
+            && mf.x198C == 0
+            && !mf.x221D_b6
+            && mf.hurt_capsules[n].capsule.state == HURT_ENABLED
+        {
+            let count = whole_damage(dmg);
+            let mf = &mut self.game.fighters[me.0];
+            if mf.x221C_b4 {
+                mf.dmg.x1834 = mem(fp::fsubs(reg(mf.dmg.x1834), dmg));
+                if mf.dmg.x1834 < 0.0 {
+                    dmg = fp::fneg(reg(mf.dmg.x1834));
+                    mf.x221C_b4 = false;
+                }
+            }
+            if !mf.x221C_b4 {
+                assert!(!(dmg > 500.0), "attack power over 500!! {dmg}");
+                mf.dmg.x1838_percentTemp = mem(fp::fadds(reg(mf.dmg.x1838_percentTemp), dmg));
+                if count > mf.dmg.x183C_applied {
+                    mf.dmg.x183C_applied = count;
+                }
+                let ip = it::item(self.game, g);
+                let h = &ip.x5D4_hitboxes[j].hit;
+                let entry = LogEntry {
+                    kind: ip.kind,
+                    gobj: ip.entity,
+                    hit: LoggedHit::Item { item: g, index: j },
+                    hurt: n,
+                    pos: h.hurt_coll_pos,
+                    damage: h.damage,
+                    count: cvt_fp2unsigned(raw),
+                };
+                let hits = &mut self.game.ft.hit_logs.hits;
+                assert!(hits.len() < LOG_LEN, "damage log over {LOG_LEN}!!");
+                hits.push(entry);
+                logged = true;
+            }
+            let vg = self.game.fighters[me.0]
+                .gobj
+                .expect("a fighter without its GObj");
+            self.record_item_hit(g, vg, dmg);
+        }
+        if !logged {
+            let pos = it::item(self.game, g).x5D4_hitboxes[j].hit.hurt_coll_pos;
+            self.spawn_effect(1052, pos, None);
+        }
+        true
+    }
+
+    /// What an item's hit on a fighter records, `ftColl_80078998`: the owner's stale-move
+    /// queue (`plStale_UpdateStaleMovesFromItem`), its combo against the victim
+    /// (`ftColl_8007646C`), and the damage both players' statistics count, when a fighter
+    /// owns the item.
+    // Ports `ftColl_80078998`; aliased once a check reaches it.
+    // Ports `plStale_UpdateStaleMovesFromItem`; aliased once a check reaches it.
+    // Ports `ftColl_8007646C`; aliased once a check reaches it.
+    fn record_item_hit(&mut self, g: GObjId, victim_gobj: GObjId, dmg: f64) {
+        use super::super::it;
+        let ip = it::item(self.game, g);
+        let (owner, attack_id, instance, kind) = (
+            ip.owner,
+            ip.xD88_attackID,
+            ip.xD8C_attack_instance,
+            i32::from(ip.xD90[3]),
+        );
+        let owned = it::item::is_fighter(self.game, owner);
+        if owned && owner != Some(victim_gobj) {
+            let slot = i32::from(self.game.fighter(owner.expect("an owner")).player_idx);
+            self.game.record_stale_move(slot, attack_id, instance);
+        }
+        if owned {
+            let msid = it::lib26b1::attack_id(self.game, g);
+            self.count_combo(owner.expect("an owner"), victim_gobj, msid);
+        }
+        if owned {
+            let (of, vf) = (
+                self.game.fighter(owner.expect("an owner")),
+                self.game.fighter(victim_gobj),
+            );
+            let (ap, asub, vp, vsub) = (
+                i32::from(of.player_idx),
+                i32::from(of.is_sub_fighter),
+                i32::from(vf.player_idx),
+                i32::from(vf.is_sub_fighter),
+            );
+            self.count_damage(dmg, ap, asub, vp, vsub, kind);
+        }
+    }
+
+    /// An item's hit's sound (`ftColl_8007925C`'s tail): the plain hit sound by severity when
+    /// the hurtbox is invincible, else the hitbox's own by kind and severity.
+    fn item_hit_sound(&mut self, g: GObjId, j: usize, me: FighterId, n: usize) {
+        let h = &super::super::it::item(self.game, g).x5D4_hitboxes[j].hit;
+        let (severity, kind) = (h.sfx_severity, h.sfx_kind);
+        self.hit_sound_of(me, n, kind, severity);
     }
 
     /// Stage devices that hurt or bury fighters, `ftColl_8007BAC0`: none of the registered
@@ -1220,7 +1661,7 @@ impl Running<'_> {
     ) -> f64 {
         let c = self.common();
         let fp = &self.game.fighters[me.0];
-        let h = &self.game.fighters[hit.fighter.0].x914[hit.index];
+        let h = self.logged_capsule(hit);
         let f = |o: u32| reg(c.f32(o));
         let w = fp::fmuls(reg(weight), f(0xF4));
         let weight_term = fp::fsubs(f(0xF8), fp::fdivs(fp::fmuls(w, f(0xF8)), fp::fadds(1.0, w)));
@@ -1277,12 +1718,17 @@ impl Running<'_> {
         let mut best = -1.0;
         let mut best_at = None;
         for (i, e) in log.iter().enumerate() {
-            let attacker = self
-                .game
-                .fighter_id(e.gobj.expect("a logged hit without its GObj"));
-            let kb = self.fighter_knockback(me, attacker, e.hit, e.count);
+            let kb = match e.hit {
+                LoggedHit::Fighter { .. } => {
+                    let attacker = self
+                        .game
+                        .fighter_id(e.gobj.expect("a logged hit without its GObj"));
+                    self.fighter_knockback(me, attacker, e.hit, e.count)
+                }
+                LoggedHit::Item { item, .. } => self.item_knockback(me, item, e.hit, e.count),
+            };
             if !tips {
-                let h = &self.game.fighters[e.hit.fighter.0].x914[e.hit.index];
+                let h = self.logged_capsule(e.hit);
                 let (element, severity) = (h.element, h.sfx_severity);
                 let dmg = cvt_fp2unsigned(reg(e.damage));
                 let effect = HIT_EFFECTS[element as usize];
@@ -1290,8 +1736,10 @@ impl Running<'_> {
             }
             if kb > best {
                 let fp = &self.game.fighters[me.0];
-                let held =
-                    fp.victim_gobj.is_some() && !fp.x221B.x221B_b5 && fp.victim_gobj == e.gobj;
+                let held = matches!(e.hit, LoggedHit::Fighter { .. })
+                    && fp.victim_gobj.is_some()
+                    && !fp.x221B.x221B_b5
+                    && fp.victim_gobj == e.gobj;
                 self.game.fighters[me.0].x221C_b0 = held;
                 best = kb;
                 best_at = Some(i);
@@ -1299,17 +1747,39 @@ impl Running<'_> {
         }
         let e = log[best_at
             .expect("no logged hit with knockback above -1 (the original reads a stale index)")];
-        let attacker = self
-            .game
-            .fighter_id(e.gobj.expect("a logged hit without its GObj"));
-        let h = &self.game.fighters[e.hit.fighter.0].x914[e.hit.index];
+        let h = self.logged_capsule(e.hit);
         let (kb_angle, element, severity) = (h.kb_angle as u32, h.element, h.sfx_severity);
         let fp = &self.game.fighters[me.0];
-        let ax = self.game.fighters[attacker.0].cur_pos.x;
-        let mut dir: f32 = if reg(fp.cur_pos.x) > reg(ax) {
-            -1.0
-        } else {
-            1.0
+        let mut dir: f32 = match e.hit {
+            LoggedHit::Fighter { .. } => {
+                let attacker = self
+                    .game
+                    .fighter_id(e.gobj.expect("a logged hit without its GObj"));
+                let ax = self.game.fighters[attacker.0].cur_pos.x;
+                if reg(fp.cur_pos.x) > reg(ax) {
+                    -1.0
+                } else {
+                    1.0
+                }
+            }
+            LoggedHit::Item { item, .. } => {
+                let ip = super::super::it::item(self.game, item);
+                let slow = reg(super::super::it::item::common_data(self.game)
+                    .f32(self.data, IT_SLOW_FOR_RESULT));
+                let vx = reg(ip.x40_vel.x);
+                let speed = if vx < 0.0 { fp::fneg(vx) } else { vx };
+                if speed < slow {
+                    if reg(fp.cur_pos.x) > reg(ip.pos.x) {
+                        -1.0
+                    } else {
+                        1.0
+                    }
+                } else if vx < 0.0 {
+                    1.0
+                } else {
+                    -1.0
+                }
+            }
         };
         let mut angle = fp::frsp(f64::from(kb_angle));
         let hurt = &fp.hurt_capsules[e.hurt];
@@ -1354,10 +1824,48 @@ impl Running<'_> {
             // The hit result's damage: a float where the layout has an integer.
             d.x186c = e.damage.to_bits() as i32;
         }
-        let a_gobj = self.game.fighters[attacker.0]
-            .gobj
-            .expect("a fighter without its GObj");
-        self.attack_landed(Some(a_gobj), gobj, 1, height == 0);
+        let grounded = height == 0;
+        match e.hit {
+            LoggedHit::Fighter { .. } => {
+                let a = self
+                    .game
+                    .fighter_id(e.gobj.expect("a logged hit without its GObj"));
+                let af = &self.game.fighters[a.0];
+                let (a_gobj, kind, x2070, instance) = (
+                    af.gobj.expect("a fighter without its GObj"),
+                    af.kind,
+                    u32::from_be_bytes(af.x2070),
+                    af.x2074.x2088,
+                );
+                self.attack_landed(
+                    Some(a_gobj),
+                    gobj,
+                    1,
+                    kind,
+                    x2070,
+                    instance,
+                    false,
+                    grounded,
+                );
+            }
+            LoggedHit::Item { item, .. } => {
+                let ip = super::super::it::item(self.game, item);
+                let (kind, owner, x2070, instance) = (
+                    ip.kind,
+                    ip.owner,
+                    u32::from_be_bytes(ip.xD90),
+                    ip.xDA8_short,
+                );
+                if kind == IT_KIND_BOMBHEI {
+                    unported_call("pl_80041B08 (a Bob-omb's hit counted)");
+                }
+                if super::super::it::item::is_fighter(self.game, owner) {
+                    self.attack_landed(owner, gobj, 2, kind, x2070, instance, false, grounded);
+                } else {
+                    unported_call("pl_8003D60C (an ownerless item's hit)");
+                }
+            }
+        }
         if element == ELEMENT_ELECTRIC {
             let v = self.common().f32(0x1A4);
             self.game.fighters[me.0].x1960_vibrateMult = v;
@@ -1413,33 +1921,46 @@ impl Running<'_> {
         }
     }
 
-    /// Who hit the fighter and with what, `ftColl_8007861C` for a fighter's attack (`kind`
-    /// 1): the attacker's spawn number and player, then the attack statistics
-    /// (`pl_80038144`, the seam).
+    /// Who hit the fighter and with what, `ftColl_8007861C`: the attacking fighter's spawn
+    /// number and player (an item's owner's, `kind` 2), or none, which forgets the last
+    /// attacker's player unless `keep_source`; then the attack statistics (`pl_80038144`, the
+    /// seam).
     #[doc(alias = "ftColl_8007861C")]
-    fn attack_landed(&mut self, attacker: Option<GObjId>, gobj: GObjId, kind: i32, grounded: bool) {
+    #[allow(clippy::too_many_arguments)]
+    fn attack_landed(
+        &mut self,
+        attacker: Option<GObjId>,
+        gobj: GObjId,
+        kind: i32,
+        akind: i32,
+        x2070: u32,
+        instance: u16,
+        keep_source: bool,
+        grounded: bool,
+    ) {
         let a = attacker.map(|g| self.game.fighter_id(g));
         let me = self.game.fighter_id(gobj);
-        let (spawn, player, sub, akind, x2070, instance) = match a {
+        let prev = self.game.fighters[me.0].dmg.x18c4_source_ply;
+        match a {
             Some(a) => {
                 let af = &self.game.fighters[a.0];
-                (
-                    af.x8_spawnNum,
-                    af.player_idx,
-                    af.is_sub_fighter,
-                    af.kind,
-                    u32::from_be_bytes(af.x2070),
-                    af.x2074.x2088,
-                )
+                let (spawn, player, sub) = (af.x8_spawnNum, af.player_idx, af.is_sub_fighter);
+                let fp = &mut self.game.fighters[me.0];
+                fp.dmg.x18C0 = if a == me { 0 } else { spawn };
+                fp.dmg.x18c4_source_ply = i32::from(player);
+                fp.dmg.x18C8 = -1;
+                fp.x221F_b5 = sub;
             }
-            None => unported_call("ftColl_8007861C without an attacker"),
-        };
+            None => {
+                let fp = &mut self.game.fighters[me.0];
+                fp.dmg.x18C0 = 0;
+                fp.dmg.x18C8 = -1;
+                if !keep_source {
+                    fp.dmg.x18c4_source_ply = 6;
+                }
+            }
+        }
         let fp = &mut self.game.fighters[me.0];
-        let prev = fp.dmg.x18c4_source_ply;
-        fp.dmg.x18C0 = if a == Some(me) { 0 } else { spawn };
-        fp.dmg.x18c4_source_ply = i32::from(player);
-        fp.dmg.x18C8 = -1;
-        fp.x221F_b5 = sub;
         fp.dmg.x18CC = kind;
         fp.dmg.x18D0 = akind;
         code::call(
@@ -1462,7 +1983,7 @@ impl Running<'_> {
     pub fn lipstick_damage(&self) -> f64 {
         let mut dmg = 0.0;
         for e in &self.game.ft.hit_logs.hits {
-            let h = &self.game.fighters[e.hit.fighter.0].x914[e.hit.index];
+            let h = self.logged_capsule(e.hit);
             if h.element == ELEMENT_LIPSTICK {
                 dmg = fp::fadds(dmg, reg(h.damage));
             }
