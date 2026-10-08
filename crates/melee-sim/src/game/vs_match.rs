@@ -399,7 +399,11 @@ impl Match {
         r.vs_on_enter(&settings.start, files);
         // The polls the pad alarm queued while the scene set up, which the timeline counted
         // (`HSD_PadRenewRawStatus` from the alarm): controllers at rest, as a replay's are.
-        let polls = r.game.audio.clock.as_ref().map_or(0, |c| c.pads);
+        // The timeline's count starts from the boot state's queue, which the seeded pad library
+        // already holds: only the alarms since are new polls.
+        let polls = r.game.audio.clock.as_ref().map_or(0, |c| {
+            c.pads.saturating_sub(u32::from(r.game.pads.lib.qcount))
+        });
         for _ in 0..polls {
             r.game
                 .pads
