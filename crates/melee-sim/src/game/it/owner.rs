@@ -181,9 +181,8 @@ pub fn release(r: &mut Running, gobj: GObjId, fighter_gobj: GObjId, special: boo
     }
 }
 
-/// A fighter's camera bone's position, `ftLib_GetCameraBonePos`: the joint its attributes name
-/// for the camera to follow, offset by `co_attrs.x170`.
-#[doc(alias = "ftLib_GetCameraBonePos")]
+/// A fighter's camera bone's position (`ftLib_GetCameraBonePos`, whose port is the fighters'
+/// `camera_bone_pos`) from the game and data alone, as the item code reaches it.
 pub fn camera_bone_pos(game: &mut Game, data: &Archives, gobj: GObjId) -> Vec3 {
     let fp = fighter(game, gobj);
     let attrs = data

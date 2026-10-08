@@ -1963,7 +1963,6 @@ it_8026D324	leaf-check items: spawn_pick runs every captured call
 it_8026D3CC	leaf-check items: spawn_queries runs it from captured item states
 it_80272828	leaf-check items: spawn_queries runs it from captured item states
 ftLib_GetOpponentsDir	leaf-check items: spawn_point's it_8026B684 runs it on every captured call
-ftLib_GetCameraBonePos	leaf-check items: spawn_point's it_8026B684 runs it for each fighter on every captured call
 Ground_801C2AD8	leaf-check items: spawn_setup (it_8026D018) reads the stage's counts through it
 Ground_801C2AE8	leaf-check items: spawn_setup (it_8026D018) scales the first countdown by it
 Stage_80224FDC	leaf-check items: spawn_point (it_8026CB3C) runs it on every captured call
