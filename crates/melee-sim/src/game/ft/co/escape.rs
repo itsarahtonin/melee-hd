@@ -153,6 +153,7 @@ impl Running<'_> {
     /// and the stick down no further than -0.8 but far from the centre (its raw units, plus 2
     /// each, more than 80 apart in all), the code returns past its caller's success, so the
     /// spot dodge check says no and the platform drop after it can run.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
     fn ucf_shield_drop(&self, gobj: GObjId) -> bool {
         let c = self.common();
         let (y_min, window) = (reg(c.f32(0x314)), c.i32(0x320));

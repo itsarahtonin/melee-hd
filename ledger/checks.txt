@@ -1705,3 +1705,14 @@ ftPe_8011BAD8	leaf-check ftcommon: reached from the held callbacks it serves in 
 grCorneria_801E2CE8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
 ftWalkCommon_800DFCA4	leaf-check ftcommon_entries: ftCo_Walk_Enter, run directly and compared clean, always enters the walk through it
 ftCo_Damage_SetMv8FromKbThreshold	leaf-check ftcommon_entries: run directly from saved fighter states, and from ftCo_DamageFly_Anim with the knockback smoke's timer running out, compared clean
+ftCo_800976A4	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800978D4	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009794C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80097D40	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80097D88	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_800987D0	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_8009B2F8	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80099D70	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
+ftCo_80097630	leaf-check ftcommon_entries: ftCo_800976A4, compared clean, plays the impact sound through it
+ft_80084A80	leaf-check ftcommon_entries: ftCo_800976A4, compared clean, reads the floor's sounds through it (set 2)
+ft_80084C74	leaf-check ftcommon_entries: ftCo_800976A4, compared clean, reads the floor's third sound set through it
