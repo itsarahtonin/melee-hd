@@ -114,6 +114,7 @@ pub const EF_PAUSE_ALL: u32 = 0x8005_BA40;
 pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
     match cb.0 {
         addr if super::ft::fox::run(g, gobj, addr) => {}
+        addr if super::ft::seak::run(g, gobj, addr) => {}
         addr if super::ft::co::dispatch::run(g, gobj, addr) => {}
         // Animation.
         0x8008_A494 => g.co_wait_anim(gobj),
@@ -238,6 +239,9 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::fox::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::seak::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::sfx::call(r, f, args) {

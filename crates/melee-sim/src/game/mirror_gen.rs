@@ -16409,6 +16409,107 @@ impl Mirror for itFoxLaser_ItemVars {
     }
 }
 
+impl Mirror for itSeakNeedleHeld_ItemVars {
+    const SIZE: u32 = 0x4;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itSeakNeedleHeld_ItemVars {
+            owner: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_handle(
+            &format!("{path}.owner"),
+            "GObjId",
+            self.owner.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
+    }
+}
+
+impl Mirror for itSeakNeedleThrown_ItemVars {
+    const SIZE: u32 = 0x2c;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itSeakNeedleThrown_ItemVars {
+            xDD4: f32::from_bits(m.u32(at + 0x0)),
+            xDD8: f32::from_bits(m.u32(at + 0x4)),
+            xDDC: f32::from_bits(m.u32(at + 0x8)),
+            xDE0: f32::from_bits(m.u32(at + 0xc)),
+            xDE4: Vec3::import(m, at + 0x10, cx),
+            xDF0: f32::from_bits(m.u32(at + 0x1c)),
+            xDF4: m.u32(at + 0x20) as i32,
+            xDF8: f32::from_bits(m.u32(at + 0x24)),
+            xDFC: f32::from_bits(m.u32(at + 0x28)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.xDD4.to_bits() != m.u32(at + 0x0) {
+            cx.mismatch(
+                &format!("{path}.xDD4"),
+                format!("{:?}", self.xDD4),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x0))),
+            );
+        }
+        if self.xDD8.to_bits() != m.u32(at + 0x4) {
+            cx.mismatch(
+                &format!("{path}.xDD8"),
+                format!("{:?}", self.xDD8),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x4))),
+            );
+        }
+        if self.xDDC.to_bits() != m.u32(at + 0x8) {
+            cx.mismatch(
+                &format!("{path}.xDDC"),
+                format!("{:?}", self.xDDC),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x8))),
+            );
+        }
+        if self.xDE0.to_bits() != m.u32(at + 0xc) {
+            cx.mismatch(
+                &format!("{path}.xDE0"),
+                format!("{:?}", self.xDE0),
+                format!("{:?}", f32::from_bits(m.u32(at + 0xc))),
+            );
+        }
+        self.xDE4.compare(m, at + 0x10, &format!("{path}.xDE4"), cx);
+        if self.xDF0.to_bits() != m.u32(at + 0x1c) {
+            cx.mismatch(
+                &format!("{path}.xDF0"),
+                format!("{:?}", self.xDF0),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x1c))),
+            );
+        }
+        if self.xDF4 != m.u32(at + 0x20) as i32 {
+            cx.mismatch(
+                &format!("{path}.xDF4"),
+                format!("{:?}", self.xDF4),
+                format!("{:?}", m.u32(at + 0x20) as i32),
+            );
+        }
+        if self.xDF8.to_bits() != m.u32(at + 0x24) {
+            cx.mismatch(
+                &format!("{path}.xDF8"),
+                format!("{:?}", self.xDF8),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x24))),
+            );
+        }
+        if self.xDFC.to_bits() != m.u32(at + 0x28) {
+            cx.mismatch(
+                &format!("{path}.xDFC"),
+                format!("{:?}", self.xDFC),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x28))),
+            );
+        }
+    }
+}
+
 impl Mirror for IfDamageFlags {
     const SIZE: u32 = 0x1;
 

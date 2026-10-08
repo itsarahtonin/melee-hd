@@ -842,10 +842,10 @@ impl Importer<'_> {
                 self.game.fighter_dobj_lists[l.0] = dobjs;
             }
         }
-        // Fox's and Falco's blaster (`ftFox_FighterVars::x222C_blasterGObj`).
-        if melee_sim::game::ft::vars::holds_blaster(f.kind) {
-            let at = a + 0x222C;
-            f.u.import_gobj(melee_sim::game::ft::vars::FOX_BLASTER, &mem, at, self);
+        // The GObjs the character keeps in `u` (Fox's and Falco's blaster, Sheik's needles and
+        // chain).
+        for &off in melee_sim::game::ft::vars::gobj_words(f.kind) {
+            f.u.import_gobj(off, &mem, a + 0x222C, self);
         }
         self.game.fighters[id.0] = f;
         id

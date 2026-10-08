@@ -7367,6 +7367,58 @@ impl Default for itFoxLaser_ItemVars {
     }
 }
 
+/// `itSeakNeedleHeld_ItemVars`, 0x4 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itSeakNeedleHeld_ItemVars {
+    /// +0x0
+    pub owner: Option<GObjId>,
+}
+
+impl Default for itSeakNeedleHeld_ItemVars {
+    fn default() -> Self {
+        itSeakNeedleHeld_ItemVars { owner: None }
+    }
+}
+
+/// `itSeakNeedleThrown_ItemVars`, 0x2c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itSeakNeedleThrown_ItemVars {
+    /// +0x0
+    pub xDD4: f32,
+    /// +0x4
+    pub xDD8: f32,
+    /// +0x8
+    pub xDDC: f32,
+    /// +0xc
+    pub xDE0: f32,
+    /// +0x10
+    pub xDE4: Vec3,
+    /// +0x1c
+    pub xDF0: f32,
+    /// +0x20
+    pub xDF4: i32,
+    /// +0x24
+    pub xDF8: f32,
+    /// +0x28
+    pub xDFC: f32,
+}
+
+impl Default for itSeakNeedleThrown_ItemVars {
+    fn default() -> Self {
+        itSeakNeedleThrown_ItemVars {
+            xDD4: 0.0,
+            xDD8: 0.0,
+            xDDC: 0.0,
+            xDE0: 0.0,
+            xDE4: Default::default(),
+            xDF0: 0.0,
+            xDF4: 0,
+            xDF8: 0.0,
+            xDFC: 0.0,
+        }
+    }
+}
+
 /// `IfDamageFlags`, 0x1 bytes.
 #[derive(Clone, Debug, PartialEq)]
 pub struct IfDamageFlags {

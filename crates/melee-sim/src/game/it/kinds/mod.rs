@@ -12,6 +12,9 @@ pub mod hammerhead;
 pub mod heart;
 pub mod kusudama;
 pub mod rshell;
+pub mod seakneedleheld;
+pub mod seakneedlethrown;
+pub mod seakvanish;
 pub mod sword;
 pub mod taru;
 pub mod tomato;
@@ -36,6 +39,9 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || hammer::run_event(r, gobj, addr)
         || sword::run_event(r, gobj, addr)
         || bat::run_event(r, gobj, addr)
+        || seakneedleheld::run_event(r, gobj, addr)
+        || seakneedlethrown::run_event(r, gobj, addr)
+        || seakvanish::run_event(r, gobj, addr)
 }
 
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
@@ -55,6 +61,9 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| hammer::run_pred(r, gobj, addr))
         .or_else(|| sword::run_pred(r, gobj, addr))
         .or_else(|| bat::run_pred(r, gobj, addr))
+        .or_else(|| seakneedleheld::run_pred(r, gobj, addr))
+        .or_else(|| seakneedlethrown::run_pred(r, gobj, addr))
+        .or_else(|| seakvanish::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -96,6 +105,11 @@ pub const CLINK_BOMB: i32 = 59;
 pub const FOX_BLASTER: i32 = 74;
 /// `It_Kind_Falco_Blaster`.
 pub const FALCO_BLASTER: i32 = 75;
+/// `It_Kind_Seak_NeedleThrow`, `_NeedleHeld`, `_Vanish`, `_Chain`.
+pub const SEAK_NEEDLE_THROW: i32 = 79;
+pub const SEAK_NEEDLE_HELD: i32 = 80;
+pub const SEAK_VANISH: i32 = 85;
+pub const SEAK_CHAIN: i32 = 97;
 /// `It_Kind_Peach_Turnip`.
 pub const PEACH_TURNIP: i32 = 99;
 /// `It_Kind_Peach_Parasol`.
