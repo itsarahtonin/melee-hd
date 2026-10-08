@@ -64,12 +64,38 @@ impl Importer<'_> {
         self.game.objs.jobj.dptcl = self.u32_at(sym("dptcl_callback")) != 0;
         self.game.objs.jobj.sptcl = self.u32_at(sym("sptcl_callback")) != 0;
         self.particles();
-        for (effect, a) in std::mem::take(&mut self.ef_freed).into_iter().rev() {
-            if effect {
-                self.game.ef.effects.free(self.maps.effects[&a].0);
-            } else {
-                self.game.ef.queued.free(self.maps.queued[&a].0);
+        // Every block on the two allocators' free lists gets a freed slot (those no pointer
+        // reaches as well), freed in reverse so the pools' free lists run as the allocators' do
+        // and new effects reuse them in the same order; each block's first word (`next`) is the
+        // link to the block after it, as `HSD_ObjFree` leaves it.
+        self.ef_freed.clear();
+        let effects = self.free_chain(sym("efLib_AllocData") + 4);
+        let queued = self.free_chain(sym("efAsync_AllocData") + 4);
+        // Slots for all of them first, then the frees (a slot freed at once would be the next
+        // one handed out).
+        for &a in &effects {
+            if !self.maps.effects.contains_key(&a) {
+                let e = EffectId(self.game.ef.effects.alloc(Effect::default()));
+                self.maps.effects.insert(a, e);
             }
+        }
+        for &a in &queued {
+            if !self.maps.queued.contains_key(&a) {
+                let q = QueuedId(self.game.ef.queued.alloc(Queued::default()));
+                self.maps.queued.insert(a, q);
+            }
+        }
+        for a in effects.iter().rev() {
+            let e = self.maps.effects[a];
+            let link = self.game.ef.effects.free_head().map(EffectId);
+            self.game.ef.effects[e.0].next = link;
+            self.game.ef.effects.free(e.0);
+        }
+        for a in queued.iter().rev() {
+            let q = self.maps.queued[a];
+            let link = self.game.ef.queued.free_head().map(QueuedId);
+            self.game.ef.queued[q.0].next = link;
+            self.game.ef.queued.free(q.0);
         }
     }
 
@@ -611,6 +637,12 @@ impl Comparer<'_> {
             Some(o),
             t,
         ) {
+            return;
+        }
+        // A freed effect (a spawn's `next` can name one; no code reads `next`) keeps what its
+        // block held, the free list's link aside, and nothing reads it: it pairs by identity
+        // only, as the freed slot it is.
+        if self.game.ef.effects.is_free(o.0) {
             return;
         }
         let e = self.game.ef.effects[o.0].clone();

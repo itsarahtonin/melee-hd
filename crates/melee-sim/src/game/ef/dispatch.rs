@@ -663,7 +663,7 @@ pub fn process_deferred(r: &mut Running, gobj: Option<GObjId>, q: QueuedId) {
         }
         None => panic!("[EfASync] unknown type {kind}"),
     }
-    r.game.ef.queued.free(q.0);
+    super::eflib::free_queued(r.game, q);
 }
 
 /// Runs every deferred spawn of a queue, oldest last as they were pushed, and empties it,
@@ -683,7 +683,7 @@ pub fn queue_clear(game: &mut super::super::state::Game, head: &mut Option<Queue
     let mut cur = head.take();
     while let Some(q) = cur {
         cur = game.ef.queued[q.0].next;
-        game.ef.queued.free(q.0);
+        super::eflib::free_queued(game, q);
     }
 }
 

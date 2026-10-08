@@ -14,6 +14,7 @@ pub mod colanim;
 pub mod coll;
 pub mod commands;
 pub mod common;
+pub mod counted;
 pub mod dynamics;
 pub mod fighter;
 pub mod ftlib;

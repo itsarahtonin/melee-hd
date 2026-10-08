@@ -1093,6 +1093,11 @@ impl Cx for Comparer<'_> {
         let dangling = match (kind, ours) {
             ("GObjId", Some(o)) => self.maps.dangling_gobjs.get(&o),
             ("JObjId", Some(o)) => self.maps.dangling_jobjs.get(&o),
+            ("FighterId", Some(o)) => self.maps.dangling_fighters.get(&o),
+            ("ItemId", Some(o)) => self.maps.dangling_items.get(&o),
+            ("CameraBoxId", Some(o)) => self.maps.dangling_boxes.get(&o),
+            ("BoneTableId", Some(o)) => self.maps.dangling_bone_tables.get(&o),
+            ("QueuedId", Some(o)) => self.maps.dangling_queued.get(&o),
             _ => None,
         };
         if let Some(&addr) = dangling {

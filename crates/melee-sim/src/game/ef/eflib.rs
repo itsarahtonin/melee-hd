@@ -218,7 +218,24 @@ pub fn remove_user_data(game: &mut Game, e: EffectId) {
     if ef.is_async == 0 {
         game.ef.count = game.ef.count.wrapping_sub(1);
     }
+    free_effect(game, e);
+}
+
+/// Returns an effect's block to efLib's allocator, `HSD_ObjFree`: the block's first word, the
+/// effect's `next`, becomes the free list's link to the block freed before it, which a spawn
+/// that chained this effect still reads.
+pub(super) fn free_effect(game: &mut Game, e: EffectId) {
+    let link = game.ef.effects.free_head().map(EffectId);
+    game.ef.effects[e.0].next = link;
     game.ef.effects.free(e.0);
+}
+
+/// Returns a deferred spawn's block to efAsync's allocator, `HSD_ObjFree`: its `next` becomes
+/// the free list's link.
+pub(super) fn free_queued(game: &mut Game, q: super::QueuedId) {
+    let link = game.ef.queued.free_head().map(super::QueuedId);
+    game.ef.queued[q.0].next = link;
+    game.ef.queued.free(q.0);
 }
 
 /// Destroys the oldest counted effects until fewer than 64 are left, `efLib_RemoveLast`.

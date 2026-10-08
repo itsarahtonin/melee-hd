@@ -18,9 +18,10 @@
 //! (`bf4` from `Game_20260531T175747.slp`), `fd4-start` with `CAPTURE_FUNCS=efLib_Init,...
 //! --fields 400`, and one directory per replay with other characters' effect files loaded
 //! (`luigi-mario`, `mewtwo`, `peach`, `pikachu`, `yl`, `CAPTURE_FUNCS=efSync_Spawn,
-//! efAsync_Spawn,efLib_Update --fields 4000`). `screen_captures` lists captures whose state
-//! the importer can't represent (fighters it doesn't model yet, a spawn inside a queue flush),
-//! which are kept elsewhere. `EFFECT_CALLS` names the directory, by default below; the tests
+//! efAsync_Spawn,efLib_Update --fields 4000`), and the four-player debug matches' directories
+//! in `EFFECT_DVS_CALLS` (`dvs.sh` there, with every character no replay covers).
+//! `screen_captures` lists captures whose state the importer can't represent (a spawn inside a
+//! queue flush, a stale joint tree's animation data), which are kept elsewhere. `EFFECT_CALLS` names the directory, by default below; the tests
 //! skip without it.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -48,12 +49,17 @@ fn calls_root() -> PathBuf {
 }
 
 /// The capture directories (one per replay), in name order.
+/// The four-player debug matches' captures (`EFFECT_DVS_CALLS`, by default below): one
+/// directory per match, with the characters no replay covers. See `dvs.sh` beside
+/// [`DEFAULT_CALLS`] for how they were made.
+const DEFAULT_DVS_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/effects-dvs";
+
 fn dirs() -> Vec<String> {
-    let Ok(entries) = std::fs::read_dir(calls_root()) else {
-        return Vec::new();
-    };
-    let mut v: Vec<String> = entries
-        .flatten()
+    let dvs = std::env::var("EFFECT_DVS_CALLS").unwrap_or_else(|_| DEFAULT_DVS_CALLS.into());
+    let mut v: Vec<String> = [calls_root(), PathBuf::from(dvs)]
+        .iter()
+        .filter_map(|root| std::fs::read_dir(root).ok())
+        .flat_map(|entries| entries.flatten())
         .filter(|e| e.path().is_dir())
         .map(|e| e.path().to_string_lossy().into_owned())
         .collect();
@@ -124,12 +130,37 @@ fn spawn_calls() {
     });
 }
 
-/// The fighter whose queue head `head` (a pointer to `Fighter::x60C`) is.
-fn queue_owner(maps: &Maps, head: u32) -> melee_sim::game::handles::FighterId {
-    *maps
-        .fighters
-        .get(&(head - 0x60C))
-        .unwrap_or_else(|| panic!("queue head {head:#x} isn't a fighter's"))
+/// Whose queue head `head` is: a fighter's (`Fighter::x60C`) or an item's (`Item::xBC0`).
+#[derive(Clone, Copy)]
+enum QueueOwner {
+    Fighter(melee_sim::game::handles::FighterId),
+    Item(melee_sim::game::handles::ItemId),
+}
+
+fn queue_owner(maps: &Maps, head: u32) -> QueueOwner {
+    if let Some(&f) = maps.fighters.get(&(head.wrapping_sub(0x60C))) {
+        QueueOwner::Fighter(f)
+    } else if let Some(&i) = maps.items.get(&(head.wrapping_sub(0xBC0))) {
+        QueueOwner::Item(i)
+    } else {
+        panic!("queue head {head:#x} is neither a fighter's nor an item's")
+    }
+}
+
+impl QueueOwner {
+    fn head(self, r: &Running) -> Option<ef::QueuedId> {
+        match self {
+            QueueOwner::Fighter(f) => r.game.fighters[f.0].x60C,
+            QueueOwner::Item(i) => r.game.items[i.0].xBC0,
+        }
+    }
+
+    fn set_head(self, r: &mut Running, head: Option<ef::QueuedId>) {
+        match self {
+            QueueOwner::Fighter(f) => r.game.fighters[f.0].x60C = head,
+            QueueOwner::Item(i) => r.game.items[i.0].xBC0 = head,
+        }
+    }
 }
 
 #[test]
@@ -141,7 +172,7 @@ fn queue_calls() {
         let kind = SpawnKind::from_u8(g[5] as u8).expect("a spawn kind");
         let jobj = (g[7] != 0).then(|| maps.jobjs[&g[7]]);
         let mut get = |i, k| decode(maps, call, 8, i, k);
-        let mut head = r.game.fighters[f.0].x60C;
+        let mut head = f.head(r);
         ef::queue_with(
             r,
             gobj,
@@ -151,7 +182,7 @@ fn queue_calls() {
             jobj,
             &mut Args::lazy(&mut get),
         );
-        r.game.fighters[f.0].x60C = head;
+        f.set_head(r, head);
         Ret::Nothing
     });
 }
@@ -176,7 +207,7 @@ fn queue_priority_calls() {
             let kind = SpawnKind::from_u8(g[5] as u8).expect("a spawn kind");
             let jobj = (g[7] != 0).then(|| maps.jobjs[&g[7]]);
             let mut get = |i, k| decode(maps, call, 8, i, k);
-            let mut head = r.game.fighters[f.0].x60C;
+            let mut head = f.head(r);
             ef::queue_with(
                 r,
                 gobj,
@@ -186,7 +217,7 @@ fn queue_priority_calls() {
                 jobj,
                 &mut Args::lazy(&mut get),
             );
-            r.game.fighters[f.0].x60C = head;
+            f.set_head(r, head);
             Ret::Nothing
         },
     );
@@ -197,9 +228,9 @@ fn flush_calls() {
     each_dir("efAsync_QueueFlush", 1, &|r, maps, call| {
         let gobj = maps.gobjs.get(&call.regs.gpr[3]).copied();
         let f = queue_owner(maps, call.regs.gpr[4]);
-        let mut head = r.game.fighters[f.0].x60C;
+        let mut head = f.head(r);
         ef::flush(r, gobj, &mut head);
-        r.game.fighters[f.0].x60C = head;
+        f.set_head(r, head);
         Ret::Nothing
     });
 }
@@ -763,14 +794,35 @@ fn remove_last_calls() {
 
 /// A joint in a call's state: its spawner's, or else an effect's.
 fn some_joint(call: &Call) -> u32 {
+    // A GObj in a process link that holds a joint (its object kind is the joints'; a freed
+    // joint no longer starts with its class).
+    let jobj_kind = call.mem1[(leaf_check::sym("HSD_GObj_JObjKind") - MEM1) as usize];
+    let joint_of = |g: u32| {
+        let j = word(call, g + 0x28);
+        (call.mem1[(g + 6 - MEM1) as usize] == jobj_kind
+            && j != 0
+            && (0x8030_0000..0x8050_0000).contains(&word(call, j)))
+        .then_some(j)
+    };
+    let listed = |g: u32| {
+        (0..64).any(|link| {
+            (0..)
+                .map_while(|i| nth_in_link(call, link, i))
+                .any(|x| x == g)
+        })
+    };
     let spawner = call.regs.gpr[4];
-    if spawner != 0 && word(call, spawner + 0x28) != 0 {
-        return word(call, spawner + 0x28);
+    if spawner != 0
+        && listed(spawner)
+        && let Some(j) = joint_of(spawner)
+    {
+        return j;
     }
-    (0..)
-        .map_while(|i| nth_in_link(call, 11, i))
-        .map(|g| word(call, g + 0x28))
-        .find(|&j| j != 0)
+    // An effect's joint, else any.
+    [11].into_iter()
+        .chain(0..64)
+        .flat_map(|link| (0..).map_while(move |i| nth_in_link(call, link, i)))
+        .find_map(joint_of)
         .expect("a joint in the state")
 }
 
@@ -907,9 +959,9 @@ fn queue_clear_calls() {
         &|call, _| call.regs.gpr[3] = call.regs.gpr[4],
         &|r, maps, call| {
             let f = queue_owner(maps, call.regs.gpr[3]);
-            let mut head = r.game.fighters[f.0].x60C;
+            let mut head = f.head(r);
             ef::queue_clear(r.game, &mut head);
-            r.game.fighters[f.0].x60C = head;
+            f.set_head(r, head);
             Ret::Nothing
         },
     );

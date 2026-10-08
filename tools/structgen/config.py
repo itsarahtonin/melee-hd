@@ -39,6 +39,10 @@ ROOTS = [
     "un_803F9E08_t",
     "StaticModelDesc",
     "un_804A1F58_t",
+    # The element of a fighter's dynamic bone sets (`DynamicBoneSets`, hand-written).
+    "BoneDynamicsDesc",
+    # The element of an item's dynamic bones (`ItemDynamicBones`, hand-written).
+    "Item_DynamicBones",
 ]
 
 # Handles for pointers to runtime objects, by the pointee's C name.
@@ -111,10 +115,15 @@ SPLICE = {
     "DynamicsData": ("desc", 0, 0x90, "lb_00F9_UnkDesc0"),
     # A bone id, or the figatree an animation's blend slot gives the chain.
     "BoneDynamicsDesc": ("bone_id", 0, 4, "BoneSlot"),
+    # A fighter's dynamic bone sets, set up to the count after them and stale past it.
+    "Fighter": ("dynamic_bone_sets", 0x2F0, 0x3E0, "DynamicBoneSets"),
+    # An item's dynamic bones, likewise.
+    "Item": ("xD4_dynamicBones", 0xD4, 0x374, "ItemDynamicBones"),
 }
 
 # Lines the generated mirrors use besides the handles.
 EXTRA_USES = [
+    "use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones};",
     "use crate::game::ft::dynamics::BoneSlot;",
     "use crate::game::it::ItemVars;",
     "use crate::lb::command::Script;",
@@ -133,6 +142,8 @@ EXTERNAL = {
     "ECBSource": "EcbSource",
     # An item's variables, a union whose member the item's kind picks: hand-written.
     "Item_ItemVars": "ItemVars",
+    # A fighter's costume textures, set up to a count and stale past it: hand-written.
+    "CostumeTObjList": "CostumeTObjList",
 }
 
 # Pointee types that live in loaded game data: pointers to them become DataRef.
@@ -162,6 +173,7 @@ RENAME_FIELDS = {}
 
 PRELUDE = """use melee_data::archive::DataRef;
 
+use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
