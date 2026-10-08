@@ -243,7 +243,7 @@ grAnime_801C69FC	leaf-check stage: last_stage_ticks (each scene's animations att
 grMaterial_801C8B28	leaf-check stage: last_stage_ticks (each scene's animations)
 grMaterial_801C8B68	leaf-check stage: last_stage_ticks (each scene's animations)
 grDatFiles_801C6330	leaf-check stage: last_stage_ticks (each scene's animations find their archive)
-lb_800115F4	leaf-check stage: last_proc_main and last_stage_ticks (the wind level each tick)
+lb_800115F4	leaf-check stage: last_proc_main and last_stage_ticks (the wind level each tick); leaf-check fighter: dynamics_library ages given sources of every kind
 lb_80014258	leaf-check stage: ground_proc_anim and last_stage_ticks (the color overlays each tick)
 grMaterial_801C9698	leaf-check stage: ground_proc_anim and last_stage_ticks (the color overlays each tick)
 grDynamicAttr_801CA224	leaf-check stage: stage_collision_proc runs every captured call; last_stage_ticks
@@ -545,6 +545,18 @@ ftAction_800726F4	leaf-check fighter: state_entries reaches it in calls that com
 ftAction_8007296C	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
 ftAction_80072AAC	leaf-check fighter: change_motion_state_resets reaches it in calls that compare clean
 ftAction_80072C6C	leaf-check fighter: state_entries reaches it in calls that compare clean
+ftAction_80071028	leaf-check fighter: script_commands runs every stretch of the fighters' action scripts from procAnim's states (and fox_functions Fox's specials)
+ftAction_8007121C	leaf-check fighter: script_commands runs every stretch of the fighters' action scripts from procAnim's states, with the fighter's size, a released smash's charge and hitboxes already out changed
+ftAction_80071FC8	leaf-check fighter: script_commands runs every stretch of the fighters' action scripts from procAnim's states
+ftAction_80072E4C	leaf-check fighter: script_commands runs every stretch of the fighters' action scripts from procAnim's states
+ft_80084C38	leaf-check fighter: script_commands runs every stretch of the fighters' action scripts from procAnim's states: the footstep command reaches it
+ftCommon_80080484	leaf-check fighter: script_commands runs every stretch of the fighters' action scripts from procAnim's states: the hitbox command reaches it, with a charge's count unset or set
+ftColl_8007ABD0	leaf-check fighter: script_commands runs every stretch of the fighters' action scripts from procAnim's states: the hitbox command reaches it
+ftCo_800DEEB8	leaf-check fighter: script_commands runs every stretch of the fighters' action scripts from procAnim's states: the hitbox command reaches it, with a released smash's charge
+ftColl_8007AC9C	leaf-check fighter: script_commands runs every stretch of the fighters' action scripts from procAnim's states: the hitbox command reaches it
+ftColl_8007AC68	leaf-check fighter: script_commands runs every stretch of the fighters' action scripts from procAnim's states: the hitbox command reaches it
+pl_80037ECC	leaf-check fighter: script_commands runs every stretch of the fighters' action scripts from procAnim's states: the hitbox command reaches it, with a spike counted or not
+ftCo_8009F834	leaf-check fighter: script_effects runs it on every effect id it spawns its own way and others, on own, common and data parts, from procAnim's states
 ftColl_8007B62C	leaf-check fighter: state_entries reaches it in calls that compare clean
 ftCommon_ClampAirDrift	leaf-check fighter: state_entries reaches it in calls that compare clean
 ftCommon_8007D5D4	leaf-check fighter: state_entries reaches it in calls that compare clean
@@ -1219,10 +1231,10 @@ ftFx_Init_OnKnockbackEnter	leaf-check fox: fox_functions runs it from real Fox s
 ftFx_Init_OnKnockbackExit	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_Init_OnLoadForFalco	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirHiStart_Enter	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
-ftFx_SpecialAirHi_AirToGround	leaf-check fox: fox_functions runs it from real Fox states; its new state's script stops at a fighter command not ported yet (ftAction_80071028, ftAction_80071FC8), so it compares once that lands (BLOCKED, which fails when it does)
+ftFx_SpecialAirHi_AirToGround	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirHi_Anim	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirHi_Coll	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
-ftFx_SpecialAirHi_Enter	leaf-check fox: fox_functions runs it from real Fox states; its new state's script stops at a fighter command not ported yet (ftAction_80071028, ftAction_80071FC8), so it compares once that lands (BLOCKED, which fails when it does)
+ftFx_SpecialAirHi_Enter	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirHi_IASA	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirHi_Phys	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirLwEnd_AirToGround	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
@@ -1252,7 +1264,7 @@ ftFx_SpecialAirLwTurn_Coll	leaf-check fox: fox_functions runs it from real Fox s
 ftFx_SpecialAirLwTurn_GroundToAir	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirLwTurn_IASA	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirLwTurn_Phys	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
-ftFx_SpecialAirLw_Enter	leaf-check fox: fox_functions runs it from real Fox states; its new state's script stops at a fighter command not ported yet (ftAction_80071028, ftAction_80071FC8), so it compares once that lands (BLOCKED, which fails when it does)
+ftFx_SpecialAirLw_Enter	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirNEnd_Anim	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirNEnd_Coll	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirNEnd_IASA	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
@@ -1274,24 +1286,24 @@ ftFx_SpecialAirSEnd_Phys	leaf-check fox: fox_functions runs it from real Fox sta
 ftFx_SpecialAirSStart_AirToGround	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirSStart_Anim	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirSStart_Coll	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
-ftFx_SpecialAirSStart_Enter	leaf-check fox: fox_functions runs it from real Fox states; its new state's script stops at a fighter command not ported yet (ftAction_80071028, ftAction_80071FC8), so it compares once that lands (BLOCKED, which fails when it does)
+ftFx_SpecialAirSStart_Enter	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirSStart_IASA	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirSStart_Phys	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirS_AirToGround	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirS_Anim	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirS_Coll	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
-ftFx_SpecialAirS_Enter	leaf-check fox: fox_functions runs it from real Fox states; its new state's script stops at a fighter command not ported yet (ftAction_80071028, ftAction_80071FC8), so it compares once that lands (BLOCKED, which fails when it does)
+ftFx_SpecialAirS_Enter	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirS_IASA	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialAirS_Phys	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialHiBound_Anim	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialHiBound_Coll	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
-ftFx_SpecialHiBound_Enter	leaf-check fox: fox_functions runs it from real Fox states; its new state's script stops at a fighter command not ported yet (ftAction_80071028, ftAction_80071FC8), so it compares once that lands (BLOCKED, which fails when it does)
+ftFx_SpecialHiBound_Enter	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialHiBound_IASA	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialHiBound_Phys	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialHiFall_AirToGround	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialHiFall_Anim	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialHiFall_Coll	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
-ftFx_SpecialHiFall_Enter	leaf-check fox: fox_functions runs it from real Fox states; its new state's script stops at a fighter command not ported yet (ftAction_80071028, ftAction_80071FC8), so it compares once that lands (BLOCKED, which fails when it does)
+ftFx_SpecialHiFall_Enter	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialHiFall_IASA	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialHiFall_Phys	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialHiHoldAir_AirToGround	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
@@ -1326,7 +1338,7 @@ ftFx_SpecialLwEnd_Phys	leaf-check fox: fox_functions runs it from real Fox state
 ftFx_SpecialLwHit_Anim	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialLwHit_Check	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialLwHit_Coll	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
-ftFx_SpecialLwHit_Enter	leaf-check fox: fox_functions runs it from real Fox states; its new state's script stops at a fighter command not ported yet (ftAction_80071028, ftAction_80071FC8), so it compares once that lands (BLOCKED, which fails when it does)
+ftFx_SpecialLwHit_Enter	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialLwHit_GroundToAir	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialLwHit_IASA	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialLwHit_Phys	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
@@ -1356,7 +1368,7 @@ ftFx_SpecialLw_CreateLoopGFX	leaf-check fox: fox_functions runs it from real Fox
 ftFx_SpecialLw_CreateReflectGFX	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialLw_CreateReflectHit	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialLw_CreateStartGFX	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
-ftFx_SpecialLw_Enter	leaf-check fox: fox_functions runs it from real Fox states; its new state's script stops at a fighter command not ported yet (ftAction_80071028, ftAction_80071FC8), so it compares once that lands (BLOCKED, which fails when it does)
+ftFx_SpecialLw_Enter	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialLw_Turn	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialNEnd_Anim	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialNEnd_Coll	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
@@ -1383,7 +1395,7 @@ ftFx_SpecialSEnd_IASA	leaf-check fox: fox_functions runs it from real Fox states
 ftFx_SpecialSEnd_Phys	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialSStart_Anim	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialSStart_Coll	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
-ftFx_SpecialSStart_Enter	leaf-check fox: fox_functions runs it from real Fox states; its new state's script stops at a fighter command not ported yet (ftAction_80071028, ftAction_80071FC8), so it compares once that lands (BLOCKED, which fails when it does)
+ftFx_SpecialSStart_Enter	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialSStart_GroundToAir	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialSStart_IASA	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialSStart_Phys	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
@@ -1392,7 +1404,7 @@ ftFx_SpecialS_CheckGhostRemove	leaf-check fox: fox_functions runs it from real F
 ftFx_SpecialS_Coll	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialS_CopyGhostPosIndexed	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialS_CreateGFX	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
-ftFx_SpecialS_Enter	leaf-check fox: fox_functions runs it from real Fox states; its new state's script stops at a fighter command not ported yet (ftAction_80071028, ftAction_80071FC8), so it compares once that lands (BLOCKED, which fails when it does)
+ftFx_SpecialS_Enter	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialS_GetCmdVar2	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialS_GroundToAir	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
 ftFx_SpecialS_IASA	leaf-check fox: fox_functions runs it from real Fox states, its own saved calls and its unit's, and compares the whole state
@@ -1927,7 +1939,6 @@ ftWalkCommon_800DFC70	leaf-check ftcommon: reached from the held callbacks it se
 ftWalkCommon_800DFDDC	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
 ftWalkCommon_800DFEC8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
 ftWalkCommon_800E0060	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
-ftFx_AppealS_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
 ftKb_SpecialN_800F1F1C	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
 ftPe_8011BA54	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
 ftPe_8011BAD8	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
@@ -2476,8 +2487,8 @@ it_3F14_Logic2_DmgReceived	leaf-check items: barrel runs it from captured item s
 itTaru_Logic2_EvtUnk	leaf-check items: barrel runs it from captured item states
 lb_8000B09C	leaf-check items: bob_omb's itBombhei_UnkMotion2_Anim runs it on every captured call
 it_80272C6C	leaf-check items: bob_omb's itBombhei_UnkMotion2_Anim runs it on every captured call
-lb_800100B0	leaf-check items: capsule_explodes and bob_omb's explosions run it from captured item states
-lb_800119DC	leaf-check items: capsule_explodes and bob_omb's explosions run it from captured item states
+lb_800100B0	leaf-check items: capsule_explodes and bob_omb's explosions run it from captured item states; leaf-check fighter: dynamics_library, the pool full or not; leaf-check fox: fox_functions (Fox's reflector's wind)
+lb_800119DC	leaf-check items: capsule_explodes and bob_omb's explosions run it from captured item states; leaf-check fighter: dynamics_library, the pool full or not; leaf-check fox: fox_functions (Fox's reflector's wind)
 it_80280B60	leaf-check items: bob_omb's it_3F14_Logic6_DmgDealt runs it from captured item states
 it_80272C08	leaf-check items: capsule_explodes runs it from captured item states
 it_8026BB44	leaf-check items: crate_box's it_80286AA4 runs it from captured item states
@@ -2595,3 +2606,24 @@ lbBgFlash_800208EC	melee-oracle diff: lbBgFlash_Init makes the flash's GObjs thr
 lbBgFlash_800209F4	melee-oracle diff: lbBgFlash_800208EC with priority 10 (one port for both)
 fn_80021C1C	melee-oracle diff: lbBgFlash_Init stops the overlay through it; compared at the first tick
 lbBgFlash_Free	melee-oracle diff: the flash's user data released with its GObj; the GObj pool compared
+lb_8000FA94	leaf-check fighter: dynamics_library runs it from procDynamics' states, over given wind sources
+lb_8000FCDC	leaf-check fighter: dynamics_library checks the reset it ends in (lb_8000FA94); the allocation itself is the VS scene's start, which runs only in a native match
+lb_8000FD18	leaf-check fighter: dynamics_library runs it from procDynamics' states, freeing each fighter's chains
+lb_800101C8	leaf-check fighter: dynamics_library runs it from procDynamics' states, with given wind sources; leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it
+lb_800103B8	leaf-check fighter: dynamics_library runs it from procDynamics' states, with given wind sources
+lb_800103D8	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes)
+lb_8001044C	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes)
+lb_80011A50	leaf-check fighter: dynamics_library runs it from procDynamics' states, the pool full or not, returning the source
+fn_80020AEC	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+lbBgFlash_80020E38	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+fn_8002113C	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+lbBgFlash_80021410	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+Fighter_procIK	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+Fighter_procDynamics	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes)
+ftColl_8007AF60	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes)
+fn_8008998C	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+ft_80089B08	leaf-check fighter_procs: proc_ik_calls and proc_ik_varied (the legs' flags, the root off the floor) reach it; leaf-check fighter: proc_ik
+ftCo_8009DD94	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes)
+ftCo_8009E0A8	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes)
+ftCo_8009E614	leaf-check fighter_procs: proc_dynamics_calls and proc_dynamics_varied (wind, a flat floor, other sizes, the air, a collider, Flat Zone) reach it; leaf-check fighter: proc_dynamics (a replay, playback's codes) (Marth's cape as a box's wind starts; as it stops it reaches ftCo_8009E4A8, not ported)
+lb_80011ABC	leaf-check fighter_procs: proc_dynamics_varied reaches it with given wind levels (Marth's cape); leaf-check ftcommon_entries: Marth's states' animations (ftCo_8009E7B4)

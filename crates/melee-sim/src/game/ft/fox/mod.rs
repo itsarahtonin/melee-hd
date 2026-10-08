@@ -76,21 +76,12 @@ pub mod ms {
 /// The functions other parts of the port own that Fox's code calls, by address: each answers
 /// `code::call` once its part is ported.
 pub mod ext {
-    pub const FT_80082708: u32 = 0x8008_2708;
-    pub const FTCOMMON_8007DB24: u32 = 0x8007_DB24;
-    pub const FT_CHECK_GROUND_AND_LEDGE: u32 = 0x8008_22A4;
-    pub const FTCOMMON_8007D7FC: u32 = 0x8007_D7FC;
-    pub const FTCLIFFCOMMON_80081298: u32 = 0x8008_1298;
     pub const FTCOMMON_CALC_SELF_ACCEL_DEACCEL_QUICK_AIR: u32 = 0x8007_CF58;
     pub const FTCOLL_8007AEF8: u32 = 0x8007_AEF8;
-    pub const FTCO_80096900: u32 = 0x8009_6900;
-    pub const FT_80081D0C: u32 = 0x8008_1D0C;
-    pub const FTCOMMON_8007D60C: u32 = 0x8007_D60C;
     pub const FTANIM_APPLY_PART_ANIM: u32 = 0x8007_0B88;
     pub const FTANIM_80070FB4: u32 = 0x8007_0FB4;
     pub const FTANIM_80070C48: u32 = 0x8007_0C48;
     pub const FTANIM_80070CC4: u32 = 0x8007_0CC4;
-    pub const FT_80083F88: u32 = 0x8008_3F88;
     pub const FTCO_AIR_CATCH_HIT_COLL: u32 = 0x8008_2B78;
     pub const PL_800386D8: u32 = 0x8003_86D8;
     pub const PL_80040120: u32 = 0x8004_0120;
@@ -99,15 +90,8 @@ pub mod ext {
     pub const IT_GET_HOLD_KIND: u32 = 0x8026_B320;
     pub const FTPICKUPITEM_80094818: u32 = 0x8009_4818;
     pub const FT_PART_GET_ROT_Z: u32 = 0x8007_5F48;
-    pub const FTCOMMON_UPDATE_FACING: u32 = 0x8007_D9FC;
-    pub const FTCOMMON_8007D92C: u32 = 0x8007_D92C;
     pub const FTCOLL_CREATE_REFLECT_HIT: u32 = 0x8007_B23C;
-    pub const FTCO_8009A184: u32 = 0x8009_A184;
-    pub const FTCO_8009A134: u32 = 0x8009_A134;
-    pub const FTCO_80099F1C: u32 = 0x8009_9F1C;
-    pub const LB_800119DC: u32 = 0x8001_19DC;
     pub const GRCORNERIA_801E2D14: u32 = 0x801E_2D14;
-    pub const GRCORNERIA_801E2CE8: u32 = 0x801E_2CE8;
     pub const GRCORNERIA_801E2C34: u32 = 0x801E_2C34;
     pub const GRCORNERIA_801E2B80: u32 = 0x801E_2B80;
     pub const GRCORNERIA_801E2AF4: u32 = 0x801E_2AF4;
@@ -116,10 +100,6 @@ pub mod ext {
     pub const FT_800892A0: u32 = 0x8008_92A0;
     pub const FT_800851C0: u32 = 0x8008_51C0;
     pub const FT_80085088: u32 = 0x8008_5088;
-    pub const FTCO_LANDING_FALL_SPECIAL_ENTER: u32 = 0x800D_5CB0;
-    pub const FTCO_JUMP_CHECK_INPUT: u32 = 0x800C_AED0;
-    pub const FTCO_800CB870: u32 = 0x800C_B870;
-    pub const FTCO_800C97A8: u32 = 0x800C_97A8;
     /// Callbacks Fox's code stores by address.
     pub const EFLIB_PAUSE_ALL: u32 = 0x8005_BA40;
     pub const EFLIB_RESUME_ALL: u32 = 0x8005_BAC4;
@@ -272,11 +252,6 @@ impl Running<'_> {
         self.ext(f, &[Val::GObj(Some(gobj))]);
     }
 
-    /// One taking the fighter's GObj and returning a `bool`.
-    pub(crate) fn ext_gobj_bool(&mut self, f: u32, gobj: GObjId) -> bool {
-        self.ext(f, &[Val::GObj(Some(gobj))]).int() != 0
-    }
-
     /// One taking the `Fighter*` and returning nothing.
     pub(crate) fn ext_fighter(&mut self, f: u32, gobj: GObjId) {
         let id = self.game.fighter_id(gobj);
@@ -285,33 +260,18 @@ impl Running<'_> {
 
     /// `ft_CheckGroundAndLedge(gobj, dir)`.
     pub(crate) fn check_ground_and_ledge(&mut self, gobj: GObjId, dir: i32) -> bool {
-        self.ext(
-            ext::FT_CHECK_GROUND_AND_LEDGE,
-            &[Val::GObj(Some(gobj)), Val::Int(dir)],
-        )
-        .int()
-            != 0
+        self.air_coll_ground_and_ledge(gobj, dir)
     }
 
     /// `ftCo_80096900(gobj, 1, 0, true, mobility, landing_lag)`: falling helplessly.
     pub(crate) fn fall_special(&mut self, gobj: GObjId, mobility: f32, landing_lag: f32) {
-        self.ext(
-            ext::FTCO_80096900,
-            &[
-                Val::GObj(Some(gobj)),
-                Val::Int(1),
-                Val::Int(0),
-                Val::Int(1),
-                Val::Float(crate::fpu::reg(mobility)),
-                Val::Float(crate::fpu::reg(landing_lag)),
-            ],
-        );
+        self.enter_fall_special(gobj, 1, 0, 1, mobility, landing_lag, 0.0, true);
     }
 
     /// `ftCommon_AirToGroundStateChange`: lands (`ftCommon_8007D7FC`), then the state from the
     /// same frame.
     pub(crate) fn fox_air_to_ground(&mut self, gobj: GObjId, msid: i32, flags: u32) {
-        self.ext_fighter(ext::FTCOMMON_8007D7FC, gobj);
+        self.land(gobj);
         let frame = self.game.fighter(gobj).cur_anim_frame;
         self.change_motion_state(gobj, msid, flags, frame, 1.0, 0.0, None);
     }

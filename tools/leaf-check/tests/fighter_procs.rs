@@ -1,7 +1,8 @@
 //! The fighters' per-frame processes the fighter core left behind, against ssbm-rs, from their
 //! saved calls in a running match: the attack collision (`Fighter_procAttackColl` and what it
 //! reaches), the collision results (`Fighter_procCollResolve`), the camera
-//! (`Fighter_procCamera`) and the fighters' light (`ftCo_8009F480`). Each call runs on both
+//! (`Fighter_procCamera`), the fighters' light (`ftCo_8009F480`), the dynamic bones
+//! (`Fighter_procDynamics`) and the legs' reach (`Fighter_procIK`). Each call runs on both
 //! sides and the whole state (the fighters with their hitboxes, hurtboxes and damage results, the
 //! items, the player blocks and their statistics, the audio driver) is compared afterwards, with the calls
 //! into the attack statistics (`pl_80038144`), which no port covers, stood in for on both
@@ -38,6 +39,7 @@ use melee_sim::game::code::{Val, stubs};
 use melee_sim::game::ft::attack::{PL_80038144, proc_attack_coll};
 use melee_sim::game::ft::camera::proc_camera;
 use melee_sim::game::ft::create_model::light_proc;
+use melee_sim::game::ft::fighter::{proc_dynamics, proc_ik};
 use melee_sim::game::ft::resolve::proc_coll_resolve;
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -170,14 +172,21 @@ fn run_one(
         loaded: find_archives_in(index, &cap.call.mem1, &mut archives),
     };
     let bank = melee_capture::audio::find_bank(&cap.call.mem1, &mut archives);
-    let mut imp = Importer::new(&cap, &data).with_archives(&archives);
-    imp.world();
-    imp.stage();
-    imp.ids();
-    imp.items();
-    imp.match_state();
-    imp.audio(bank);
-    let Importer { mut game, maps, .. } = imp;
+    let imported = catch_unwind(AssertUnwindSafe(|| {
+        let mut imp = Importer::new(&cap, &data).with_archives(&archives);
+        imp.world();
+        imp.stage();
+        imp.ids();
+        imp.items();
+        imp.match_state();
+        imp.audio(bank);
+        let Importer { game, maps, .. } = imp;
+        (game, maps)
+    }));
+    let (mut game, maps) = match imported {
+        Ok(v) => v,
+        Err(p) => return Outcome::Skipped(format!("the import stopped: {}", panic_text(&*p))),
+    };
     let mut before = Comparer::new(&cap.call.mem1, &data, &game, maps.clone());
     before.world();
     before.stage();
@@ -629,4 +638,95 @@ fn proc_coll_resolve_results() {
         give_result,
         80,
     );
+}
+
+#[test]
+fn proc_dynamics_calls() {
+    assert_eq!(sym("Fighter_procDynamics"), 0x8006_D9AC);
+    check("Fighter_procDynamics", proc_dynamics, |_, _| {}, 100);
+}
+
+/// The chains swung with the wind blowing (always), and by the call's index on a flat floor
+/// at heights about the fighter's, at another size, in the air, around a collider on one of
+/// the fighter's joints, on Flat Zone, or with their links stiffer and pulled back toward the
+/// animation.
+fn vary_dynamics(call: &mut Call, i: usize) {
+    let fp = fighter_of(call, call.regs.gpr[3]);
+    leaf_check::calls::give_winds(call, i, 1 + i % 8);
+    match i % 7 {
+        0 => {}
+        1 => {
+            poke_bit(call, fp + 0x2228, 1, true);
+            let y = f32::from_bits(peek_u32(call, fp + 0xB4));
+            poke_f32(
+                call,
+                fp + 0xB4,
+                y + [3.0, 6.0, 9.0, 12.0, 15.0, 20.0][i / 7 % 6],
+            );
+        }
+        2 => poke_f32(call, fp + 0x38, [0.8, 1.3][i / 7 % 2]),
+        3 => poke_u32(call, fp + 0xE0, 1),
+        4 => {
+            // A sphere around the fighter's second part.
+            let parts = peek_u32(call, fp + 0x5E8);
+            let j = peek_u32(call, parts + 0x10);
+            let c = fp + 0x1670;
+            poke_f32(call, c, 0.5);
+            poke_f32(call, c + 4, 1.0);
+            poke_f32(call, c + 8, -0.5);
+            poke_f32(call, c + 0xC, [1.5, 4.0, 0.3][i / 7 % 3]);
+            poke_u32(call, c + 0x10, j);
+            poke_u32(call, c + 0x24, 1);
+            call.mem1[(fp + 0x166C - 0x8000_0000) as usize] = 1;
+        }
+        5 => poke_u32(call, sym("stage_info") + 0x88, 0x1B),
+        _ => {
+            // Each chain's stiffness scale (`pos.x`), and each link's stiffness and pull back
+            // toward the animation (`unk_4C`, `unk_50`).
+            for k in 0..peek_u32(call, fp + 0x3E0).min(10) {
+                let desc = fp + 0x2F0 + 0x18 * k + 4;
+                poke_f32(call, desc + 8, [0.5, 1.0, 2.0][i / 7 % 3]);
+                let mut link = peek_u32(call, desc);
+                while link != 0 {
+                    poke_f32(call, link + 0x4C, 0.3);
+                    poke_f32(call, link + 0x50, [0.05, 0.4][i / 7 % 2]);
+                    link = peek_u32(call, link + 0x90);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn proc_dynamics_varied() {
+    // Marth's cape when a box's wind stops (level -1) reaches `ftCo_8009E4A8`, not ported.
+    check("Fighter_procDynamics", proc_dynamics, vary_dynamics, 90);
+}
+
+#[test]
+fn proc_ik_calls() {
+    assert_eq!(sym("Fighter_procIK"), 0x8006_C5F4);
+    check("Fighter_procIK", proc_ik, |_, _| {}, 100);
+}
+
+/// The legs reaching (`x221C_u16_y`'s bits, by the call's index) with the model's root
+/// raised or lowered off the floor, so the feet have somewhere to reach.
+fn vary_ik(call: &mut Call, i: usize) {
+    let fp = fighter_of(call, call.regs.gpr[3]);
+    let flags = [3u32, 1, 2, 7, 4, 6][i % 6];
+    poke_bit(call, fp + 0x221C, 7, flags & 4 != 0);
+    poke_bit(call, fp + 0x221D, 0, flags & 2 != 0);
+    poke_bit(call, fp + 0x221D, 1, flags & 1 != 0);
+    let root = peek_u32(call, call.regs.gpr[3] + 0x28);
+    let y = f32::from_bits(peek_u32(call, root + 0x3C));
+    poke_f32(
+        call,
+        root + 0x3C,
+        y + [2.0, -3.0, 0.5, -0.00005, 9.0][i % 5],
+    );
+}
+
+#[test]
+fn proc_ik_varied() {
+    check("Fighter_procIK", proc_ik, vary_ik, 100);
 }

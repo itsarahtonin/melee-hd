@@ -120,6 +120,16 @@ fn proc_update() {
 }
 
 #[test]
+fn proc_ik() {
+    check_proc("Fighter_procIK", 0x8006_C5F4, 60);
+}
+
+#[test]
+fn proc_dynamics() {
+    check_proc("Fighter_procDynamics", 0x8006_D9AC, 60);
+}
+
+#[test]
 fn proc_anim() {
     check_proc("Fighter_procAnim", 0x8006_A360, 20);
 }
@@ -862,4 +872,323 @@ fn proc_map_ecb_lock() {
             Ret::Nothing
         },
     );
+}
+
+/// Every effect id `ftCo_8009F834` spawns its own way, and ids it spawns plainly or not at
+/// all, on parts of the fighter's own, common and the character's data's ids, spread at
+/// random or not, from procAnim's states (grounded and in the air).
+#[test]
+fn script_effects() {
+    const IDS: &[u32] = &[
+        0x10, 0x24F, 0x250, 0x7530, 0x7917, 0x3E7, 0x3E8, 0x3E9, 0x3EA, 0x3EB, 0x3EC, 0x3ED, 0x3EE,
+        0x3EF, 0x3F0, 0x3F1, 0x3F2, 0x3F3, 0x3F4, 0x3F5, 0x3F6, 0x3F7, 0x3F8, 0x3F9, 0x3FA, 0x3FB,
+        0x3FC, 0x3FD, 0x3FE, 0x3FF, 0x400, 0x401, 0x402, 0x403, 0x404, 0x405, 0x406, 0x407, 0x408,
+        0x409, 0x40A, 0x40B, 0x40C, 0x40D, 0x40E, 0x40F, 0x410, 0x411, 0x412, 0x413, 0x414, 0x415,
+        0x416, 0x417, 0x41B, 0x41C, 0x41D, 0x41E, 0x41F, 0x420, 0x421, 0x422, 0x423, 0x424, 0x425,
+        0x426, 0x427, 0x428, 0x429, 0x42A, 0x42B, 0x437, 0x438, 0x439, 0x43A, 0x445, 0x446, 0x447,
+        0x448, 0x44A, 0x44B, 0x44C, 0x486, 0x487, 0x488, 0x494, 0x495, 0x496, 0x49C, 0x49D, 0x49E,
+        0x4C0, 0x4C1, 0x4C2, 0x4C3, 0x4C4, 0x4C5, 0x4C6, 0x4D0, 0x4D1, 0x4D2, 0x4D8, 0x4D9, 0x4DA,
+        0x4E0, 0x4E1, 0x4E2, 0x4E3, 0x4E4, 0x4E5, 0x4E6, 0x4E7, 0x4FD, 0x4FE, 0x4FF, 0x500, 0x501,
+        0x502, 0x503, 0x512, 0x513, 0x514, 0x515, 0x516, 0x600,
+    ];
+    let target = leaf_check::sym("ftCo_8009F834");
+    let n = leaf_check::calls::saved_calls(&calls_dir(), "Fighter_procAnim").len();
+    for pass in 0..IDS.len().div_ceil(n.max(1)) {
+        check_calls_with(
+            &calls_dir(),
+            "Fighter_procAnim",
+            20,
+            &|call, i| {
+                let k = pass * n + i;
+                call.addr = target;
+                let fp = user_data_arg(call);
+                call.regs.gpr[4] = IDS[k % IDS.len()];
+                // Own parts, the data's footstep and effect parts, and common part ids.
+                let (part, common) = [(0, 0), (2, 0), (0x8D, 0), (0x8E, 0), (4, 1), (1, 0)][k % 6];
+                call.regs.gpr[5] = part;
+                call.regs.gpr[6] = common;
+                call.regs.gpr[7] = (k / 2 % 2) as u32;
+                if k % 5 == 1 || matches!(IDS[k % IDS.len()], 0x438 | 0x439) {
+                    // Another size, for the effects sized by it.
+                    poke_f32(call, fp + 0x38, 1.3);
+                }
+                if k.is_multiple_of(7) {
+                    // The footstep parts' cycle at its last (`x2220_b0`, 4), to wrap.
+                    let o = (fp + 0x2220 - 0x8000_0000) as usize;
+                    call.mem1[o] = call.mem1[o] & 0x1F | 0x80;
+                }
+                let p = call.regs.gpr[1] - 0x4000;
+                let v = [
+                    k as f32 * 0.75 - 4.0,
+                    2.5,
+                    -1.25,
+                    [0.0, 1.5][k % 2],
+                    0.5,
+                    [3.0, 0.0][k % 2],
+                ];
+                for (j, x) in v.iter().enumerate() {
+                    poke_f32(call, p + 4 * j as u32, *x);
+                }
+                call.regs.gpr[8] = p;
+                call.regs.gpr[9] = p + 0xC;
+            },
+            &|g, maps, call| {
+                let r = &call.regs.gpr;
+                let v = |a: u32| {
+                    let w = |a: u32| f32::from_bits(peek_u32(call, a));
+                    melee_sim::vec::Vec3::new(w(a), w(a + 4), w(a + 8))
+                };
+                g.script_effect(
+                    gobj_arg(maps, call),
+                    r[4] as i32,
+                    r[5] as i32,
+                    r[6] != 0,
+                    r[7] != 0,
+                    v(r[8]),
+                    v(r[9]),
+                );
+                Ret::Nothing
+            },
+        );
+    }
+}
+
+/// Where each stretch of the fighter's action scripts starts: the start of each of its
+/// actions' scripts and each command after a wait, up to the first loop, jump or end; with
+/// whether the stretch makes a hitbox.
+fn script_stretches(call: &ssbm_rt::capture::Call, fp: u32) -> Vec<(u32, bool)> {
+    use melee_sim::game::ft::action::COMMAND_WORDS;
+    let table = peek_u32(call, fp + 0x24);
+    let mut anims: Vec<i32> = [peek_u32(call, fp + 0x1C), peek_u32(call, fp + 0x20)]
+        .iter()
+        .flat_map(|&t| {
+            melee_sim::game::ft::motion_table(t)
+                .iter()
+                .map(|m| m.anim_id)
+        })
+        .filter(|&a| a >= 0)
+        .collect();
+    anims.sort_unstable();
+    anims.dedup();
+    let mut out = Vec::new();
+    for a in anims {
+        let script = peek_u32(call, table + 0x18 * a as u32 + 0xC);
+        if script == 0 {
+            continue;
+        }
+        out.push((script, false));
+        let mut at = script;
+        for _ in 0..400 {
+            let op = peek_u32(call, at) >> 26;
+            if op == 11 {
+                out.last_mut().unwrap().1 = true;
+            }
+            match op {
+                1 | 2 => {
+                    at += 4;
+                    out.push((at, false));
+                }
+                8 => at += 4,
+                10.. if op < 59 => at += 4 * u32::from(COMMAND_WORDS[op as usize - 10]),
+                // An end, a loop, a jump or a return: what follows isn't reached in order.
+                _ => break,
+            }
+        }
+    }
+    out
+}
+
+/// The fighter's own script commands, ported and not, as the game's data has them: every
+/// stretch of every action's script the fighter has run from procAnim's states (every other
+/// call one that makes a hitbox), and from the camera process's (a late process, whose
+/// hitboxes follow their bones at once), with the fighter's size, a released smash's charge,
+/// its hitboxes already out (in the group a new one joins or another) and a spike already
+/// counted changed so their branches run.
+#[test]
+fn script_commands() {
+    let target = leaf_check::sym("ftAction_80073240");
+    for (pass, from) in [
+        "Fighter_procAnim",
+        "Fighter_procAnim",
+        "Fighter_procAnim",
+        "Fighter_procAnim",
+        "Fighter_procAnim",
+        "Fighter_procAnim",
+        "Fighter_procCamera",
+        "Fighter_procCamera",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let n = leaf_check::calls::saved_calls(&calls_dir(), from).len();
+        check_calls_with(
+            &calls_dir(),
+            from,
+            20,
+            &|call, i| {
+                let k = pass * n + i;
+                let fp = user_data_arg(call);
+                let all = script_stretches(call, fp);
+                let hits: Vec<_> = all.iter().filter(|s| s.1).collect();
+                let at = if k.is_multiple_of(2) && !hits.is_empty() {
+                    hits[(k / 2 * 7919) % hits.len()].0
+                } else {
+                    all[(k * 7919) % all.len()].0
+                };
+                call.addr = target;
+                poke_f32(call, fp + 0x3E4, 0.0);
+                poke_u32(call, fp + 0x3EC, at);
+                poke_u32(call, fp + 0x3F0, 0);
+                match k % 5 {
+                    0 => poke_f32(call, fp + 0x38, 1.25),
+                    1 => {
+                        poke_u32(call, fp + 0x2114, 3);
+                        poke_f32(call, fp + 0x2118, (k % 40) as f32);
+                        poke_f32(call, fp + 0x211C, 59.0);
+                        poke_f32(call, fp + 0x2120, 1.4);
+                    }
+                    2 => {
+                        // Every hitbox out in group 0, one of them in group 1.
+                        for h in 0..4 {
+                            poke_u32(call, fp + 0x914 + 0x138 * h, 1);
+                            poke_u32(call, fp + 0x918 + 0x138 * h, u32::from(h == 2));
+                        }
+                    }
+                    3 => {
+                        poke_bit(call, fp + 0x2084, 0, true);
+                        poke_f32(call, fp + 0x2138, -1.0);
+                    }
+                    _ => poke_u32(call, fp + 0x914 + 0x138, 1),
+                }
+            },
+            &|g, maps, call| {
+                g.run_commands(gobj_arg(maps, call));
+                Ret::Nothing
+            },
+        );
+    }
+}
+
+/// The dynamic bones' library from procDynamics' states, by the call's index: the links and
+/// wind sources reset (`lb_8000FA94`), a fighter's chain freed (`lb_8000FD18`), and with
+/// wind sources given (some of every kind, the pool full or not), the sources aged
+/// (`lb_800115F4`), a box's wind and a point's added (`lb_80011A50`, `lb_800119DC`, taking
+/// over the strongest-priority source when the pool is full) and the wind at a point
+/// (`lb_800101C8`, `lb_800103B8`).
+#[test]
+fn dynamics_library() {
+    use melee_sim::lb::wind;
+    const FUNCS: [&str; 7] = [
+        "lb_8000FA94",
+        "lb_8000FD18",
+        "lb_800115F4",
+        "lb_80011A50",
+        "lb_800119DC",
+        "lb_800101C8",
+        "lb_800103B8",
+    ];
+    let n = leaf_check::calls::saved_calls(&calls_dir(), "Fighter_procDynamics").len();
+    for pass in 0..2 {
+        check_calls_with(
+            &calls_dir(),
+            "Fighter_procDynamics",
+            20,
+            &|call, i| {
+                let k = pass * n + i;
+                let which = k % FUNCS.len();
+                let fp = user_data_arg(call);
+                leaf_check::calls::give_winds(call, k, [0, 3, 8, 8, 1][k / 7 % 5]);
+                call.addr = leaf_check::sym(FUNCS[which]);
+                let p = call.regs.gpr[1] - 0x4000;
+                let at = [(k as f32 - 40.0) * 3.0, 20.0 - (k % 9) as f32 * 9.0, 1.5];
+                for (j, v) in at.iter().enumerate() {
+                    poke_f32(call, p + 4 * j as u32, *v);
+                }
+                match which {
+                    1 => {
+                        let set = k as u32 / 7 % peek_u32(call, fp + 0x3E0).max(1);
+                        call.regs.gpr[3] = fp + 0x2F0 + 0x18 * set + 4;
+                        // For ours: the fighter and the set.
+                        (call.regs.gpr[5], call.regs.gpr[6]) = (fp, set);
+                    }
+                    3 | 4 => {
+                        call.regs.gpr[3] = p;
+                        call.regs.gpr[4] = [120, u32::MAX, 1][k % 3];
+                        for (r, v) in [
+                            0.9f32,
+                            0.02,
+                            std::f32::consts::FRAC_PI_3,
+                            -80.0,
+                            60.0,
+                            80.0,
+                            -10.0,
+                        ]
+                        .iter()
+                        .enumerate()
+                        {
+                            float_arg(call, r + 1, *v);
+                        }
+                    }
+                    5 | 6 => {
+                        call.regs.gpr[3] = p;
+                        call.regs.gpr[4] = fp + 0x1670 + 0x18;
+                        call.regs.gpr[5] = fp;
+                    }
+                    _ => {}
+                }
+            },
+            &|g, maps, call| {
+                let r = &call.regs.gpr;
+                let f = |n: usize| f32::from_bits(gekko_fp::stfs(call.regs.fpr[n].ps0));
+                let v = |a: u32| {
+                    let w = |a: u32| f32::from_bits(peek_u32(call, a));
+                    melee_sim::vec::Vec3::new(w(a), w(a + 4), w(a + 8))
+                };
+                let name = FUNCS
+                    .iter()
+                    .find(|n| leaf_check::sym(n) == call.addr)
+                    .expect("one of the library's functions");
+                match *name {
+                    "lb_8000FA94" => g.game.reset_dynamics(),
+                    "lb_8000FD18" => {
+                        let fid = maps.fighters[&r[5]];
+                        let set = &mut g.game.fighters[fid.0].dynamic_bone_sets[r[6] as usize];
+                        let mut desc = set.dyn_desc.clone();
+                        g.game.free_dynamics_chain(&mut desc);
+                        g.game.fighters[fid.0].dynamic_bone_sets[r[6] as usize].dyn_desc = desc;
+                    }
+                    "lb_800115F4" => {
+                        let gr = &mut g.game.gr;
+                        gr.wind_level = wind::tick(&mut gr.winds, gr.wind_level);
+                    }
+                    "lb_80011A50" => {
+                        let slot = wind::push(
+                            &mut g.game.gr.winds,
+                            v(r[3]),
+                            r[4] as i32,
+                            f(1),
+                            f(2),
+                            f(3),
+                            f(4),
+                            f(5),
+                            f(6),
+                            f(7),
+                        );
+                        let base = peek_u32(call, leaf_check::sym("lb_804D63A8"));
+                        return Ret::Int(slot.map_or(0, |s| base + 0x38 * u32::from(s)));
+                    }
+                    "lb_800119DC" => {
+                        wind::blast(&mut g.game.gr.winds, v(r[3]), r[4] as i32, f(1), f(2), f(3))
+                    }
+                    _ => {
+                        let fid = maps.fighters[&r[5]];
+                        let (dir, len) = wind::force_at(&g.game.gr.winds, v(r[3]));
+                        g.game.fighters[fid.0].x1670[0].x18 = dir;
+                        return Ret::Float(f64::from(len));
+                    }
+                }
+                Ret::Nothing
+            },
+        );
+    }
 }

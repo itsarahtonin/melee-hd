@@ -51,8 +51,6 @@ fn dirs() -> Vec<String> {
 /// The code other parts of the port own, standing in on both sides.
 fn stubs() -> Vec<Stub> {
     let mut v: Vec<Stub> = [
-        // A knockdown's impact effect.
-        "ftCo_8009F834",
         // The shield's and powershield's hit shapes.
         "ftColl_8007B1B8",
         "ftColl_CreateReflectHit",
@@ -70,8 +68,6 @@ fn stubs() -> Vec<Stub> {
     .collect();
     // The crowd's landing reaction: no reaction, so the knockback it would clear stays.
     v.push((leaf_check::sym("un_803224DC"), StubRet::Int(0)));
-    // Whether an item (a projectile) can be stepped on: none can.
-    v.push((leaf_check::sym("it_8026BC68"), StubRet::Int(0)));
     // Every character's specials' entries.
     for table in [
         &kinds::SPECIAL_N,

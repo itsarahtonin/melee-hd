@@ -41,7 +41,7 @@ impl Running<'_> {
         if !(kind == KIND_FOX || kind == KIND_FALCO) {
             return false;
         }
-        if self.ext(ext::GRCORNERIA_801E2CE8, &[]).int() == 0 {
+        if !self.corneria_taunt_stage() {
             return false;
         }
         let fp = self.game.fighter(gobj);

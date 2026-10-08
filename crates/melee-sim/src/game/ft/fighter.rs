@@ -603,6 +603,25 @@ pub fn proc_accessory(g: &mut Running, gobj: GObjId) {
     }
 }
 
+/// `Fighter_procIK`: a grounded fighter's legs reach for the floor.
+#[doc(alias = "Fighter_procIK")]
+pub fn proc_ik(g: &mut Running, gobj: GObjId) {
+    if !g.game.fighter(gobj).is_sleeping {
+        g.plant_legs(gobj);
+    }
+}
+
+/// `Fighter_procDynamics`: the dynamic bone chains swing, unless the fighter sleeps or
+/// `x2219_b5` holds it.
+#[doc(alias = "Fighter_procDynamics")]
+pub fn proc_dynamics(g: &mut Running, gobj: GObjId) {
+    let fp = g.game.fighter(gobj);
+    if fp.is_sleeping || fp.x2219_b5 {
+        return;
+    }
+    g.swing_chains(gobj);
+}
+
 /// `Fighter_procGrabColl`: burial devices, then the fighter's grab boxes against fighters
 /// and items.
 #[doc(alias = "Fighter_procGrabColl")]

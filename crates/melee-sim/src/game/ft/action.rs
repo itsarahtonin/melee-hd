@@ -9,7 +9,7 @@ use crate::hsd::gobj::GObjId;
 use crate::lb::command::{self, WAIT_FOR_FRAME};
 
 /// Each fighter command's length in words (`ftAction_803C0870`), from opcode 10.
-const COMMAND_WORDS: [u8; 49] = [
+pub const COMMAND_WORDS: [u8; 49] = [
     5, 5, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 7, 4, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 2, 1, 4,
 ];

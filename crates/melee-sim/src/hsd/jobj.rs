@@ -109,6 +109,10 @@ pub struct JObj {
     pub flags: u32,
     pub u: Contents,
     pub rotate: Quat,
+    /// Whether `rotate.w` is a stack word the original never set (`lb_8001044C`'s rotations;
+    /// see engine.md): the comparer leaves it out, and a quaternion read of it counts a stale
+    /// read.
+    pub stale_w: bool,
     pub scale: Vec3,
     pub translate: Vec3,
     pub mtx: Mtx34,
@@ -134,6 +138,7 @@ impl Default for JObj {
             flags: MTX_DIRTY,
             u: Contents::default(),
             rotate: Quat::default(),
+            stale_w: false,
             scale: Vec3::new(1.0, 1.0, 1.0),
             translate: Vec3::default(),
             mtx: Mtx34::default(),
@@ -611,7 +616,19 @@ pub fn set_scale(jobjs: &mut JObjs, j: JObjId, s: Vec3) {
 
 /// `HSD_JObjSetRotation` (inline): the whole quaternion, any flags.
 pub fn set_rotation(jobjs: &mut JObjs, j: JObjId, q: Quat) {
-    set_srt(jobjs, j, |o| o.rotate = q);
+    set_srt(jobjs, j, |o| {
+        o.rotate = q;
+        o.stale_w = false;
+    });
+}
+
+/// `HSD_JObjSetRotation` from a quaternion local whose w the caller never set: the Euler
+/// angles, the old w kept and marked stale.
+pub fn set_rotation_stale_w(jobjs: &mut JObjs, j: JObjId, r: Vec3) {
+    set_srt(jobjs, j, |o| {
+        (o.rotate.x, o.rotate.y, o.rotate.z) = (r.x, r.y, r.z);
+        o.stale_w = true;
+    });
 }
 
 /// `HSD_JObjSetRotationX` (inline).
@@ -1557,6 +1574,10 @@ fn make_mtx(objs: &mut Objects, data: &Archives, j: JObjId) {
 /// `HSD_JObjSetupMatrixSub`.
 #[doc(alias = "HSD_JObjSetupMatrixSub")]
 pub fn setup_matrix_sub(objs: &mut Objects, data: &Archives, j: JObjId) {
+    let o = &objs.jobjs[j];
+    if o.stale_w && o.flags & USE_QUATERNION != 0 {
+        objs.stale_reads += 1;
+    }
     make_mtx(objs, data, j);
     objs.jobjs[j].flags &= !MTX_DIRTY;
     if objs.jobjs[j].flags & USER_DEF_MTX != 0 {

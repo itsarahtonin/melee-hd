@@ -64,7 +64,7 @@ impl Running<'_> {
             || self.attack1_check(gobj)
             || self.escape_n_check(gobj)
             || self.guard_check(gobj)
-            || self.fox_appeal_s_check(gobj)
+            || self.fox_appeal_s_check_input(gobj)
             || self.appeal_check(gobj)
             || self.jump_check(gobj)
             || self.dash_check(gobj)

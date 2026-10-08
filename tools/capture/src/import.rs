@@ -68,6 +68,8 @@ pub const REF_COUNTS: u32 = 0x8045_996C;
 pub const SLOT_WORDS: u32 = 0x8045_993C;
 pub const SPAWN_COUNTER: u32 = 0x804D_64F8;
 pub const DYNAMICS_FREE: u32 = 0x804D_63A4;
+/// `lb_804D63A0`, the dynamics links' block.
+pub const DYNAMICS_POOL: u32 = 0x804D_63A0;
 pub const LOBJ0: u32 = 0x804D_6568;
 pub const LOBJ1: u32 = 0x804D_656C;
 pub const METAL_MOBJ: u32 = 0x804D_6580;
@@ -172,6 +174,8 @@ pub struct Importer<'a> {
     live_items: std::collections::HashSet<u32>,
     /// The effects some GObj holds (user data kind 8), as `world` finds them.
     live_effects: std::collections::HashSet<u32>,
+    /// The dynamics links whose contents are imported (the rest only hold their slot).
+    dynamics_read: std::collections::HashSet<u32>,
     /// The items whose contents are imported.
     pub(crate) items_done: std::collections::HashSet<u32>,
     /// The freed items and joint tables, released onto our free lists after the live ones.
@@ -204,6 +208,7 @@ impl<'a> Importer<'a> {
             live_fighters: Default::default(),
             live_items: Default::default(),
             live_effects: Default::default(),
+            dynamics_read: Default::default(),
             items_done: Default::default(),
             free_items: Vec::new(),
             free_tables: Vec::new(),
@@ -316,6 +321,16 @@ impl<'a> Importer<'a> {
     /// The scheduler: every GObj on the process links with its processes, render link, HSD
     /// object and user data.
     pub fn world(&mut self) {
+        // The dynamics links' slots first, in address order, so a link's handle is its slot
+        // (`lb_8000FA94` resets them by slot); a link's contents come in when something
+        // reaches it (a link nothing reaches can hold an earlier scene's joint).
+        let links = self.u32(DYNAMICS_POOL);
+        if links != 0 {
+            for k in 0..melee_sim::lb::dynamics::LINKS {
+                let id = DynamicsId(self.game.fighter_dynamics.alloc(DynamicsData::default()));
+                self.maps.fighter_dynamics.insert(links + 0x98 * k, id);
+            }
+        }
         self.fighter_globals();
         let heads = self.u32(sym("HSD_GObjPLinkHead"));
         let mut order = Vec::new();
@@ -854,11 +869,17 @@ impl Importer<'_> {
 
     /// A link of a fighter's dynamic bone chain, and the links after it.
     fn fighter_dynamics(&mut self, a: u32) -> DynamicsId {
-        if let Some(&d) = self.maps.fighter_dynamics.get(&a) {
-            return d;
+        if !self.dynamics_read.insert(a) {
+            return self.maps.fighter_dynamics[&a];
         }
-        let id = DynamicsId(self.game.fighter_dynamics.alloc(DynamicsData::default()));
-        self.maps.fighter_dynamics.insert(a, id);
+        let id = match self.maps.fighter_dynamics.get(&a) {
+            Some(&d) => d,
+            None => {
+                let id = DynamicsId(self.game.fighter_dynamics.alloc(DynamicsData::default()));
+                self.maps.fighter_dynamics.insert(a, id);
+                id
+            }
+        };
         let cap = self.cap;
         let mem = Mem {
             bytes: &cap.call.mem1,
@@ -1006,6 +1027,7 @@ impl Importer<'_> {
                 z: self.f32(a + 0x24),
                 w: self.f32(a + 0x28),
             },
+            stale_w: false,
             scale: self.vec3(a + 0x2C),
             translate: self.vec3(a + 0x38),
             mtx: self.mtx(a + 0x44),

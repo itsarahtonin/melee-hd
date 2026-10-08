@@ -35,9 +35,6 @@ const LEDGE_GRAB_MASK: i32 = LEFT_LEDGE_GRAB | RIGHT_LEDGE_GRAB;
 /// The item P-link (`HSD_GOBJ_PLINK_ITEM`).
 const ITEM_P_LINK: u8 = 9;
 
-/// `it_8026BC68`: whether an item can be stepped on (items' port).
-const IT_8026BC68: u32 = 0x8026_BC68;
-
 /// `ftCo_80096CC8`: the floor filter that lets a fighter holding down drop through platforms.
 pub const PLATFORM_FILTER: CodeRef = CodeRef(0x8009_6CC8);
 
@@ -224,7 +221,7 @@ impl Running<'_> {
         let mut cur = self.game.world.first_in(ITEM_P_LINK);
         while let Some(item) = cur {
             cur = self.game.world.gobjs[item.0].next;
-            if code::call(self, IT_8026BC68, &[Val::GObj(Some(item))]).int() != 0 {
+            if crate::game::it::lib26b1::is_stomp(self.game, item) {
                 // `lb_80014638` against the item's span, which the items' port holds.
                 unported_call("lb_80014638 with a steppable item");
             }

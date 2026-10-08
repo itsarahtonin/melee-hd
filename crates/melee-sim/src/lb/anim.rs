@@ -62,8 +62,10 @@ pub fn current_frame(objs: &Objects, j: Option<JObjId>) -> f32 {
 pub fn copy_srt(jobjs: &mut JObjs, src: JObjId, dst: JObjId) {
     let s = &jobjs[src];
     let (r, sc, t, q) = (s.rotate, s.scale, s.translate, s.flags & USE_QUATERNION);
+    let stale = s.stale_w;
     let d = &mut jobjs[dst];
     (d.rotate, d.scale, d.translate) = (r, sc, t);
+    d.stale_w = stale;
     if q != 0 {
         jobj::set_flags(jobjs, Some(dst), USE_QUATERNION);
     } else {
@@ -99,6 +101,7 @@ pub fn blend(jobjs: &mut JObjs, a: JObjId, b: JObjId, out: JObjId, t: f64, t_inv
             && d(ra.z, rb.z) <= 9.999999747378752e-05
         {
             jobjs[out].rotate = ra;
+            jobjs[out].stale_w = ja.stale_w;
             jobj::clear_flags(jobjs, Some(out), USE_QUATERNION);
             jobj::set_flags(jobjs, Some(out), MTX_DIRTY);
             return;
@@ -135,6 +138,7 @@ pub fn blend(jobjs: &mut JObjs, a: JObjId, b: JObjId, out: JObjId, t: f64, t_inv
         };
     }
     jobjs[out].rotate = q1.slerp(q2, mem(t_inv));
+    jobjs[out].stale_w = false;
     jobj::set_flags(jobjs, Some(out), USE_QUATERNION);
     jobj::set_flags(jobjs, Some(out), MTX_DIRTY);
 }

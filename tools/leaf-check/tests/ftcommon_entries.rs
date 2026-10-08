@@ -28,8 +28,6 @@ fn dirs() -> Vec<String> {
 
 fn stubs() -> Vec<Stub> {
     let mut v: Vec<Stub> = [
-        // A knockdown's impact effect.
-        "ftCo_8009F834",
         "ftColl_8007B1B8",
         "ftColl_CreateReflectHit",
         "un_80322598",
@@ -43,7 +41,6 @@ fn stubs() -> Vec<Stub> {
     .map(|n| (leaf_check::sym(n), StubRet::Nothing))
     .collect();
     v.push((leaf_check::sym("un_803224DC"), StubRet::Int(0)));
-    v.push((leaf_check::sym("it_8026BC68"), StubRet::Int(0)));
     for table in [
         &kinds::SPECIAL_N,
         &kinds::SPECIAL_S,

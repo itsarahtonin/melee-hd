@@ -153,3 +153,90 @@ pub fn tick(w: &mut Winds, level: i32) -> i32 {
     }
     if level > 0 { -1 } else { 0 }
 }
+
+/// Empties the pool, `lb_8000FA94`'s second half: every source free, in order, its kind
+/// cleared and the rest as it was.
+pub fn reset(w: &mut Winds) {
+    for (i, e) in w.entries.iter_mut().enumerate() {
+        e.kind = 0;
+        w.next[i] = (i < 7).then_some(i as u8 + 1);
+    }
+    w.free = Some(0);
+    w.active = None;
+}
+
+/// A box's push of `pos` over the box `x10`..`x1c`, `lb_80011A50`; its source when added.
+#[doc(alias = "lb_80011A50")]
+#[allow(clippy::too_many_arguments)]
+pub fn push(
+    w: &mut Winds,
+    pos: Vec3,
+    frames: i32,
+    scale: f32,
+    decay: f32,
+    angle_step: f32,
+    x10: f32,
+    x14: f32,
+    x18: f32,
+    x1c: f32,
+) -> Option<u8> {
+    let src = Wind {
+        kind: 1,
+        priority: 0,
+        pos,
+        scale,
+        decay,
+        frames,
+        angle_step,
+        x10,
+        x14,
+        x18,
+        x1c,
+        ..Wind::default()
+    };
+    add(w, &src)
+}
+
+/// The wind at `at`, `lb_800101C8` (`lb_800103B8` calls it): its direction and strength, from
+/// every blowing source's strength waving with its age: a box's push where `at` is inside it,
+/// a blast's away from its center, weaker with the square of the distance past 20.
+#[doc(alias = "lb_800101C8")]
+#[doc(alias = "lb_800103B8")]
+pub fn force_at(w: &Winds, at: Vec3) -> (Vec3, f32) {
+    let mut out = Vec3::new(0.0, 0.0, 0.0);
+    let mut cur = w.active;
+    while let Some(c) = cur {
+        let s = &w.entries[c as usize];
+        let phase = fp::fmuls(fp::frsp(f64::from(s.age)), reg(s.angle_step));
+        let wave = fp::fadd(1.0, reg(crate::math::cos(mem(phase))));
+        let k = fp::frsp(fp::fmul(fp::fmul(0.5, reg(s.scale)), wave));
+        if s.kind == 1 {
+            if reg(at.x) > reg(s.x10)
+                && reg(at.x) < reg(s.x18)
+                && reg(at.y) < reg(s.x14)
+                && reg(at.y) > reg(s.x1c)
+            {
+                out.x = mem(fp::fmadds(reg(s.pos.x), k, reg(out.x)));
+                out.y = mem(fp::fmadds(reg(s.pos.y), k, reg(out.y)));
+                out.z = mem(fp::fmadds(reg(s.pos.z), k, reg(out.z)));
+            }
+        } else {
+            let mut d = Vec3::new(
+                mem(fp::fsubs(reg(at.x), reg(s.pos.x))),
+                mem(fp::fsubs(reg(at.y), reg(s.pos.y))),
+                mem(fp::fsubs(reg(at.z), reg(s.pos.z))),
+            );
+            let mut near = fp::frsp(fp::fmul(0.05, reg(d.normalize())));
+            if near < 1.0 {
+                near = 1.0;
+            }
+            let inv = fp::frsp(fp::fdiv(1.0, fp::fmuls(near, near)));
+            out.x = mem(fp::fmadds(inv, fp::fmuls(reg(d.x), k), reg(out.x)));
+            out.y = mem(fp::fmadds(inv, fp::fmuls(reg(d.y), k), reg(out.y)));
+            out.z = mem(fp::fmadds(inv, fp::fmuls(reg(d.z), k), reg(out.z)));
+        }
+        cur = w.next[c as usize];
+    }
+    let len = out.normalize();
+    (out, len)
+}

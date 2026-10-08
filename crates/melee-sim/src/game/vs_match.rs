@@ -264,12 +264,6 @@ impl Match {
         let mut archive = |name: &str| {
             Archive::parse(&load(name).bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"))
         };
-        // The common and menu effects (`EfCoData.dat`, `EfMnData.dat`), which the scene
-        // preloads and the match's setup registers (`efAsync_LoadSync(0)` and `(0x1F)`).
-        for i in [0, 0x1F] {
-            let (name, _) = crate::game::ef::FILES[i].expect("an effect file");
-            game.ef.files[i] = Some(data.add(archive(name)));
-        }
         let rumble = data.add(archive("LbRb.dat"));
         let table = data.get(rumble).public("lbRumbleData");
         let files = vs::MatchArchives {
@@ -287,6 +281,17 @@ impl Match {
             lb_bf: data.add(archive("LbBf.dat")),
         };
         load_fighter_files(&mut game, &mut data, &settings.start, load);
+        // The effect files `efAsync_LoadSync` takes as the match and its fighters ask for
+        // them: disc data, each read before it's needed. The common and menu effects
+        // (`EfCoData.dat`, `EfMnData.dat`) are among them: the scene preloads those, and the
+        // match's setup registers them (`efAsync_LoadSync(0)` and `(0x1F)`).
+        for (i, f) in super::ef::FILES.iter().enumerate() {
+            if let Some((name, _)) = f {
+                let a =
+                    Archive::parse(&load(name).bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+                game.ef.files[i] = Some(data.add(a));
+            }
+        }
         let mut m = Match { game, data };
         m.game.rumble_data = table.map(|offset| melee_data::archive::DataRef {
             archive: rumble,

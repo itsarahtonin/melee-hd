@@ -20,8 +20,6 @@ use crate::hsd::jobj;
 use crate::math::{self, sqrt_reg};
 use crate::mp::coll::{LEFT_WALL_HUG, RIGHT_WALL_HUG};
 
-/// `ftCo_8009F834`: a fighter's effect (the effects' port).
-const FT_CO_8009F834: u32 = 0x8009_F834;
 /// `ftCo_8008DCE0`: hitstun's entry (the damage port).
 const FT_CO_8008DCE0: u32 = 0x8008_DCE0;
 /// `ftCo_DownBound_SfxIds`.
@@ -46,7 +44,7 @@ impl Running<'_> {
     /// -1 when it has none, which also sets the flag), the set's flag and its effect (or -1).
     #[doc(alias = "ft_80084A80")]
     // Ports `ft_80084BFC`; aliased once a check reaches it.
-    // Ports `ft_80084C38`; aliased once a check reaches it.
+    #[doc(alias = "ft_80084C38")]
     #[doc(alias = "ft_80084C74")]
     pub fn floor_sounds(&self, gobj: GObjId, set: usize) -> Option<([i32; 4], i32, i32)> {
         let fp = self.game.fighter(gobj);
@@ -125,17 +123,7 @@ impl Running<'_> {
             }
         }
         let zero = crate::vec::Vec3::new(0.0, 0.0, 0.0);
-        let args = [
-            Val::GObj(Some(gobj)),
-            Val::Int(effect),
-            Val::Int(0),
-            Val::Int(0),
-            Val::Int(0),
-            Val::Vec(zero),
-            Val::Vec(zero),
-            Val::Float(0.0),
-        ];
-        code::call(self, FT_CO_8009F834, &args);
+        self.script_effect(gobj, effect, 0, false, false, zero, zero);
         if flag != 0 {
             self.impact_sfx(gobj, &DOWN_BOUND_SFX, dist);
         }

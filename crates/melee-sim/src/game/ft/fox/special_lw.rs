@@ -117,7 +117,7 @@ impl Running<'_> {
             } else {
                 self.fox_special_air_lw_loop_enter(gobj);
             }
-            self.ext_gobj(ext::FTCOMMON_8007DB24, gobj);
+            self.destroy_effects(gobj);
             self.game.fighter_mut(gobj).accessory4_cb =
                 Some(CodeRef(addr::SPECIAL_LW_CREATE_LOOP_GFX));
         }
@@ -132,7 +132,7 @@ impl Running<'_> {
     /// Dropping through a platform during the start, `ftFx_SpecialLwStart_CheckPass`.
     #[doc(alias = "ftFx_SpecialLwStart_CheckPass")]
     pub fn fox_special_lw_start_check_pass(&mut self, gobj: GObjId) -> bool {
-        if self.ext_gobj_bool(ext::FTCO_80099F1C, gobj) {
+        if self.pass_input(gobj) {
             self.fox_special_lw_start_pass(gobj);
             return true;
         }
@@ -142,15 +142,7 @@ impl Running<'_> {
     /// `ftFco_8009A184` into an aerial state from the same frame, and the reflector.
     fn fox_lw_pass(&mut self, gobj: GObjId, msid: i32) {
         let frame = self.game.fighter(gobj).cur_anim_frame;
-        self.ext(
-            ext::FTCO_8009A184,
-            &[
-                Val::GObj(Some(gobj)),
-                Val::Int(msid),
-                Val::Int(COLL_FLAGS as i32),
-                Val::Float(reg(frame)),
-            ],
-        );
+        self.enter_pass_as(gobj, msid, COLL_FLAGS, frame);
         self.fox_special_lw_create_reflect_hit(gobj);
     }
 
@@ -196,12 +188,12 @@ impl Running<'_> {
 
     /// Off the ground (`ft_80082708`), into an aerial state from the same frame.
     fn fox_lw_ground_coll(&mut self, gobj: GObjId) -> bool {
-        !self.ext_gobj_bool(ext::FT_80082708, gobj)
+        !self.ground_coll_off_ledges(gobj)
     }
 
     /// On the ground (`ft_80081D0C`).
     fn fox_lw_air_coll(&mut self, gobj: GObjId) -> bool {
-        self.ext_gobj_bool(ext::FT_80081D0C, gobj)
+        self.air_coll_land(gobj)
     }
 
     /// `ftFx_SpecialLwStart_Coll`.
@@ -258,9 +250,7 @@ impl Running<'_> {
     /// `ftFx_SpecialLwLoop_IASA`: turning, jumping, or dropping through a platform.
     #[doc(alias = "ftFx_SpecialLwLoop_IASA")]
     pub fn fox_special_lw_loop_iasa(&mut self, gobj: GObjId) {
-        if !self.fox_special_lw_turn_check(gobj)
-            && !self.ext_gobj_bool(ext::FTCO_JUMP_CHECK_INPUT, gobj)
-        {
+        if !self.fox_special_lw_turn_check(gobj) && !self.jump_check(gobj) {
             self.fox_special_lw_loop_check_pass(gobj);
         }
     }
@@ -269,14 +259,14 @@ impl Running<'_> {
     #[doc(alias = "ftFx_SpecialAirLwLoop_IASA")]
     pub fn fox_special_air_lw_loop_iasa(&mut self, gobj: GObjId) {
         if !self.fox_special_lw_turn_check(gobj) {
-            self.ext_gobj_bool(ext::FTCO_800CB870, gobj);
+            self.jump_aerial_check(gobj);
         }
     }
 
     /// `ftFx_SpecialLwLoop_CheckPass`.
     #[doc(alias = "ftFx_SpecialLwLoop_CheckPass")]
     pub fn fox_special_lw_loop_check_pass(&mut self, gobj: GObjId) -> bool {
-        if self.ext_gobj_bool(ext::FTCO_80099F1C, gobj) {
+        if self.pass_input(gobj) {
             self.fox_special_lw_loop_pass(gobj);
             return true;
         }
@@ -421,7 +411,7 @@ impl Running<'_> {
     /// Turning around in the loop, `ftFx_SpecialLwTurn_Check`.
     #[doc(alias = "ftFx_SpecialLwTurn_Check")]
     pub fn fox_special_lw_turn_check(&mut self, gobj: GObjId) -> bool {
-        if !self.ext_gobj_bool(ext::FTCO_800C97A8, gobj) {
+        if !self.turn_input(gobj) {
             return false;
         }
         let msid = if self.game.fighter(gobj).ground_or_air == GA_GROUND {
@@ -471,7 +461,7 @@ impl Running<'_> {
     pub fn fox_special_lw_hit_anim(&mut self, gobj: GObjId) {
         self.fox_lw_update_release(gobj);
         if !self.anim_frames_remaining(gobj) && self.fox_special_lw_hit_check(gobj) {
-            self.ext_gobj(ext::FTCOMMON_8007DB24, gobj);
+            self.destroy_effects(gobj);
             self.game.fighter_mut(gobj).accessory4_cb =
                 Some(CodeRef(addr::SPECIAL_LW_CREATE_LOOP_GFX));
         }
@@ -515,16 +505,8 @@ impl Running<'_> {
         fp.facing_dir = fp.ReflectAttr.x1A2C_reflectHitDirection;
         let j = self.part_joint(gobj, PART_HIP_N);
         let at = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
-        self.ext(
-            ext::LB_800119DC,
-            &[
-                Val::Vec(at),
-                Val::Int(120),
-                Val::Float(fp::frsp(3.0)),
-                Val::Float(fp::frsp(0.1)),
-                Val::Float(fp::frsp(fp::fdiv(std::f64::consts::PI, 3.0))),
-            ],
-        );
+        let third = mem(fp::frsp(fp::fdiv(std::f64::consts::PI, 3.0)));
+        crate::lb::wind::blast(&mut self.game.gr.winds, at, 120, 3.0, 0.1, third);
         let msid = if self.game.fighter(gobj).ground_or_air == GA_GROUND {
             ms::SPECIAL_LW_HIT
         } else {
@@ -541,8 +523,8 @@ impl Running<'_> {
     #[doc(alias = "ftFx_SpecialAirLwEnd_Anim")]
     pub fn fox_special_lw_end_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
-            self.ext_gobj(ext::FTCOMMON_8007DB24, gobj);
-            self.ext_gobj(ext::FTCOMMON_8007D92C, gobj);
+            self.destroy_effects(gobj);
+            self.fall_or_wait(gobj);
         }
     }
 
