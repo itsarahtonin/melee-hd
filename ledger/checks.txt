@@ -2745,3 +2745,7 @@ ftAction_800727C8	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md
 ftAction_80072CD8	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): the floor sound command, once (FD's terrain sound); compared every tick
 ftCo_AirCatchHit_Coll	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Fox's aerial neutral special's collision, ten frames; compared every tick
 it_8026BAE8	melee-oracle diff, Fox vs Sheik FD ticks 1-105 (docs/oracle.md): Fox's blaster is scaled through it; the item compared every tick
+HSD_SisLib_803A84BC	leaf-check display text_render: its saved calls in each pass, and from them on SIS strings written into the arena and on the loaded font's strings: layout, kerning, fitting, alignment, typing, page breaks and resets; text, string and state stack compared
+HSD_SisLib_803A8134	leaf-check display text_render: each line HSD_SisLib_803A84BC lays out is measured through it; widths compared through the layout
+HSD_SisLib_803A7684	leaf-check display text_render: the strings' scale, color, size and alignment pushes, past the stack's first 16 bytes; state stacks compared
+HSD_SisLib_803A7F0C	leaf-check display text_render: the strings' pops and their measurement's; state stacks compared

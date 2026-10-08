@@ -219,6 +219,19 @@ impl Importer<'_> {
             let t = mem.w(sym("HSD_SisLib_804D1124") + 4 * i);
             s.font_tables[i as usize] = (t != 0).then(|| data.get(t).expect("a font's table"));
         }
+        // The state stacks' saved cursors: pointers in memory, tokens in ours.
+        let texts: Vec<TextId> = s.texts.keys().map(|&k| TextId(k)).collect();
+        for t in texts {
+            for at in s.cursor_records(t) {
+                let a = mem.w(base + at);
+                let p = sis_ptr(base, size, data, a).expect("a saved cursor");
+                let token = s.saved_cursors.len() as u32;
+                s.saved_cursors.push(p);
+                for (i, b) in token.to_be_bytes().into_iter().enumerate() {
+                    s.arena[(at + i as u32) as usize] = b;
+                }
+            }
+        }
         for (t, e) in entities {
             s.texts.get_mut(&t.0).unwrap().entity = self.gobj_at(e);
         }
@@ -292,8 +305,23 @@ impl Comparer<'_> {
                 && st == tst
             {
                 let n = u32::from(ours.state_stack_capacity);
-                let theirs: Vec<u8> = (0..n).map(|i| mem.b(base + st + i)).collect();
-                self.check(&path, "state stack", s.bytes(st, n).to_vec(), theirs);
+                let mut theirs: Vec<u8> = (0..n).map(|i| mem.b(base + st + i)).collect();
+                let mut ours_bytes = s.bytes(st, n).to_vec();
+                // Saved cursors: our token's cursor against their pointer.
+                for at in s.cursor_records(t) {
+                    let i = (at - st) as usize;
+                    let token = u32::from_be_bytes(ours_bytes[i..i + 4].try_into().unwrap());
+                    let ptr = mem.w(base + at);
+                    self.check(
+                        &path,
+                        "saved cursor",
+                        s.saved_cursors.get(token as usize).copied(),
+                        sis_ptr(base, size, self.data, ptr),
+                    );
+                    ours_bytes[i..i + 4].fill(0);
+                    theirs[i..i + 4].fill(0);
+                }
+                self.check(&path, "state stack", ours_bytes, theirs);
             }
             cur = ours.next;
             k += 1;
