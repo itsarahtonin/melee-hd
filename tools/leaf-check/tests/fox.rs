@@ -387,14 +387,14 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
 
 /// Which unit a function is in, by its address.
 fn unit(addr: u32) -> usize {
-    match addr {
-        ..0x800E_5970 => 0,
-        ..0x800E_5CB0 => 1,
-        ..0x800E_7100 => 2,
-        ..0x800E_83E0 => 3,
-        ..0x800E_9DF8 => 4,
-        _ => 5,
-    }
+    const STARTS: [u32; 5] = [
+        0x800E_5970,
+        0x800E_5CB0,
+        0x800E_7100,
+        0x800E_83E0,
+        0x800E_9DF8,
+    ];
+    STARTS.iter().filter(|&&s| addr >= s).count()
 }
 
 /// Each of Fox's functions run from the captures of its unit's other functions, with the

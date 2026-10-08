@@ -1,6 +1,9 @@
 //! Fire Fox and Fire Bird (`ftfoxspecialhi.c`): the charge, the launch in the stick's
 //! direction (along the floor on the ground), the bounce off walls and floors, and the end.
 
+// The original's comparisons are kept as written: a NaN fails them.
+#![allow(clippy::neg_cmp_op_on_partial_ord)]
+
 use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
