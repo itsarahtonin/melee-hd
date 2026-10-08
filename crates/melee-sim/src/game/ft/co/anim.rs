@@ -245,7 +245,7 @@ impl Running<'_> {
         let x14 = fp.mv_f32(0x14);
         if x14 != 0.0 && x14 <= window {
             fp.input.pressed_buttons |= (1 << 10) | (1 << 11);
-            unported_call("ftCo_800CB870");
+            return self.jump_aerial_check(gobj);
         }
         false
     }
