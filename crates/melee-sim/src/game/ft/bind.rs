@@ -33,7 +33,7 @@ pub fn x594_word(x594: [u8; 4]) -> u32 {
 /// The next joint descriptor after `joint` in a depth-first walk, `ftAnim_GetNextJointInTree`:
 /// its child, else its next sibling, else the nearest ancestor's next sibling.
 #[doc(alias = "ftAnim_GetNextJointInTree")]
-fn next_joint(
+pub(super) fn next_joint(
     data: &melee_data::archive::Archives,
     joint: DataRef,
     stack: &mut Vec<DataRef>,

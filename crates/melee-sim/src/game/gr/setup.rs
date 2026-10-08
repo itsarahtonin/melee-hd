@@ -657,6 +657,79 @@ fn light_list(game: &Game, data: &Archives) -> Option<DataRef> {
     None
 }
 
+/// The lights fighters use, loaded (`lb_80011AC4` on `Ground_801C49B4`'s list): the stage's
+/// own (`stage_info.map_plit`) as its light overrides leave them, or none, for the defaults.
+#[doc(alias = "Ground_801C49B4")]
+pub fn load_fighter_lights(game: &mut Game, data: &Archives) -> Option<Option<lobj::LObjId>> {
+    let list = game.stage_info.map_plit?;
+    let entries = overridden_lights(data, datfiles::main_head(game), list);
+    let mut first = None;
+    let mut prev: Option<lobj::LObjId> = None;
+    for (entry, flags) in entries {
+        let desc = data.ptr(entry).expect("a light list entry without a light");
+        let l = lobj::alloc(&mut game.objs.lobjs);
+        lobj::load_flags(&mut game.objs, data, l, desc, flags);
+        if let Some(anims) = data.ptr(entry.at(4)) {
+            lobj::add_anim_all(&mut game.objs, data, Some(l), data.ptr(anims));
+        }
+        match prev {
+            Some(p) => game.objs.lobjs[p].next = Some(l),
+            None => first = Some(l),
+        }
+        prev = Some(l);
+    }
+    Some(first)
+}
+
+/// The light list as `Ground_801C20E0` leaves it in the loaded data: when an override for
+/// one of its lights sets a flag, every light but the ambient ones keeps only if an override
+/// sets one of its flags, with its diffuse (4), specular (8) and 0x400 flags as the override
+/// says. The original edits the list and descriptors in place, which leaves them the same
+/// when it runs again; here each entry comes back with the flags its light has.
+fn overridden_lights(data: &Archives, head: MapHead, lights: DataRef) -> Vec<(DataRef, u16)> {
+    assert!(data.ptr(lights).is_some(), "ground.c: *lightset");
+    let (list, n) = head.light_overrides(data);
+    let find = |desc: Option<DataRef>| -> Option<u8> {
+        (0..n.max(0) as u32)
+            .map(|i| list.expect("light overrides").at(8 * i))
+            .find(|&o| data.ptr(o) == desc)
+            .map(|o| data.u8(o.at(4)) & 0xE0)
+    };
+    let mut entries = Vec::new();
+    let mut at = lights;
+    while let Some(entry) = data.ptr(at) {
+        entries.push(entry);
+        at = at.at(4);
+    }
+    let matched = entries
+        .iter()
+        .any(|&e| find(data.ptr(e)).is_some_and(|bits| bits != 0));
+    let mut out = Vec::new();
+    for e in entries {
+        let desc = data.ptr(e).expect("a light list entry without a light");
+        let mut flags = data.u16(desc.at(8));
+        if matched && flags & 3 != 0 {
+            match find(Some(desc)) {
+                Some(bits) if bits != 0 => {
+                    let set = |f: &mut u16, on: bool, bit: u16| {
+                        if on {
+                            *f |= bit;
+                        } else {
+                            *f &= !bit;
+                        }
+                    };
+                    set(&mut flags, bits & 0x40 != 0, 4);
+                    set(&mut flags, bits & 0x80 != 0, 8);
+                    set(&mut flags, bits & 0x20 != 0, 0x400);
+                }
+                _ => continue,
+            }
+        }
+        out.push((e, flags));
+    }
+    out
+}
+
 /// Applies the archive's light overrides to a light list, `Ground_801C20E0`: the list is used
 /// as it is unless an override for one of its lights sets a flag, which would make the
 /// original edit the loaded list and descriptors (the stages ported have none).

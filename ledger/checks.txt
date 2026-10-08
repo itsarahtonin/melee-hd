@@ -1048,3 +1048,155 @@ un_802FD708	leaf-check hud hazard: un_802FD8A0, un_802FD8C4 and un_802FD8E8 make
 fn_802FDA4C	leaf-check hud arrow_render: every capture, the draw decision compared
 fn_802FED14	leaf-check hud coin_proc: every capture
 un_802FEFAC	leaf-check hud create_coin_counter: every capture
+lb_8000CDC0	leaf-check fighter_create: Player_80036DA4 runs it from the states before VS matches create their fighters; the whole state compared after
+lbShadow_8000ED54	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+lb_8000FD48	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+lb_80011710	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+lbAnim_8001E8F8	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+lbRefract_PObjLoad	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+Fighter_800679B0	leaf-check fighter_create: Player_80036DA4 runs it from the states before VS matches create their fighters; the whole state compared after
+Fighter_FirstInitialize_80067A84	leaf-check fighter_create: Player_80036DA4 runs it from the states before VS matches create their fighters; the whole state compared after
+Fighter_LoadCommonData	leaf-check fighter_create: Player_80036DA4 runs it from the states before VS matches create their fighters; the whole state compared after
+Fighter_UpdateModelScale	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+Fighter_UnkInitReset_80067C98	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+Fighter_Spawn	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+Fighter_UnkUpdateCostumeJoint_800686E4	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+Fighter_UnkUpdateVecFromBones_8006876C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+Fighter_ResetInputData_80068854	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+Fighter_UnkInitLoad_80068914	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+Fighter_NewSpawn_80068E40	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+Fighter_80068E64	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+Fighter_Create	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftAnim_8006FE48	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftAnim_80070200	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftAnim_80070308	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftAnim_8007077C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftParts_80073758	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftParts_IntpJObjLoad	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftPartsPObjSetDefaultClass	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftPartsPObjClearDefaultClass	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftParts_SetupParts	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftParts_8007462C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftParts_8007482C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftParts_8007487C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftParts_800749CC	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftParts_80074A4C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftParts_80074ACC	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftParts_80074D7C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftParts_80074E58	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftParts_80075240	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCamera_80076064	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftColl_8007B320	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ft_8007C17C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ft_8007C630	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCommon_8007D6A4	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCommon_8007E2FC	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ft_80081938	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ft_80081B38	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ft_80082A68	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ft_800852B0	leaf-check fighter_create: Player_80036DA4 runs it from the states before VS matches create their fighters; the whole state compared after
+ft_8008549C	leaf-check fighter_create: Player_80036DA4 runs it from the states before VS matches create their fighters; the whole state compared after
+ftData_8008572C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftData_80085820	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftData_80085A14	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftData_80085B10	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftData_80085E50	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftLib_DisableInput	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ft_80088A50	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ft_800892D4	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_8009CF84	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_8009F4A4	leaf-check fighter_create: Player_80036DA4 runs it from the states before VS matches create their fighters; the whole state compared after
+ftCo_8009F578	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_800A101C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_800A1B38	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_800B9704	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ft_800C0098	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_800C09B4	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_800C61B0	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_800C8064	leaf-check fighter_create: Player_80036DA4 runs it from the states before VS matches create their fighters; the whole state compared after
+ftCo_800C8438	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ft_800C85B8	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_800C884C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_800C89A0	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_800C8F6C	leaf-check fighter_create: Player_80036DA4 runs it from the states before VS matches create their fighters; the whole state compared after
+ftCo_800C8FC4	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_800D0FA0	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftCo_800D105C	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftFx_Init_OnDeath	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftFx_Init_OnLoad	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+it_8026B3F8	leaf-check fighter_create: Fox's OnLoad registers his three items through it; the character articles (it_804D6D38) compared after each slot
+ftFx_Init_LoadSpecialAttrs	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftKb_Init_800EE528	leaf-check fighter_create: Player_80036DA4 runs it from the states before VS matches create their fighters; the whole state compared after
+ftMs_Init_OnDeath	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftMs_Init_OnLoad	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ftMs_Init_LoadSpecialAttrs	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+Ground_801C49B4	leaf-check fighter_create: Player_80036DA4 runs it from the states before VS matches create their fighters; the whole state compared after
+grCorneria_801E2D90	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+grBigBlue_801EF844	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+grInishie1_801FCAAC	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+grVenom_80206D10	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+HSD_PObjSetDefaultClass	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+HSD_JObjSetDefaultClass	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+HSD_ShadowAlloc	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+HSD_ShadowSetSize	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+HSD_ShadowSetActive	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+HSD_ShadowAddObject	leaf-check fighter_create: every Fox and Marth created from the states before VS matches create their fighters reaches it; the whole state compared after each slot
+ft_80087BEC	leaf-check vs player_set_cpu_on_fighters: Player_SetPlayerAndEntityCpuLevel on match states with fighters; the whole state compared
+ft_80087BC0	leaf-check vs player_set_cpu_on_fighters: Player_SetPlayerAndEntityCpuType on match states with fighters; the whole state compared
+ftLib_GetNameTagHeight	leaf-check vs player_nametag_height: Player_800360D8 on match states, the fighter visible or not; the height compared
+
+# Fighters' attack collision (Fighter_procAttackColl and what it reaches): tools/leaf-check/tests/fighter_procs.rs runs its calls in running matches on both sides, again with the other fighter's box switched on over the fighter (and by the call a clank, a shield up or thrown boxes), and compares the whole state and the stood-in effects and attack statistics.
+Fighter_procAttackColl	leaf-check fighter_procs: every call compared, real and with a box switched on
+ftColl_800765E0	leaf-check fighter_procs: every call starts the logs over
+ftColl_80078C70	leaf-check fighter_procs: every call; the switched-on boxes hit, clank and hit shields
+ftColl_8007B868	leaf-check fighter_procs: thrown boxes and stage lines ask it in every call
+ftCommon_8007F804	leaf-check fighter_procs: every box test asks it
+lbColl_8000ACFC	leaf-check fighter_procs: every box tests its victims through it
+lbColl_8000805C	leaf-check fighter_procs: the switched-on boxes against the fighter's hurtboxes, phantom and not
+lbColl_80007BCC	leaf-check fighter_procs: the switched-on boxes against a raised shield
+lbColl_80008688	leaf-check fighter_procs: hits, clanks and shield hits remember their victims
+ftColl_80076808	leaf-check fighter_procs: clanks and shield hits
+ftColl_8007699C	leaf-check fighter_procs: the clank case's boxes
+ftColl_800784B4	leaf-check fighter_procs: the clank case's boxes, slashes among them
+ftColl_80076CBC	leaf-check fighter_procs: the shield case's hits
+ftColl_80076ED8	leaf-check fighter_procs: the switched-on boxes' hits
+ftColl_8007891C	leaf-check fighter_procs: every logged hit
+plStale_UpdateStaleMovesFromFighter	leaf-check fighter_procs: every logged hit
+ftColl_800763C0	leaf-check fighter_procs: every logged hit
+ftColl_80076444	leaf-check fighter_procs: every logged hit
+pl_8003EB30	leaf-check fighter_procs: every logged hit
+pl_80040ED4	leaf-check fighter_procs: every logged hit
+lbColl_80005BB0	leaf-check fighter_procs: hit sounds of every kind and severity the switched-on boxes get
+lbAudioAx_80024184	leaf-check fighter_procs: the hit sounds; the audio driver's state compared
+ftColl_8007AB48	leaf-check fighter_procs: every call
+ftColl_8007AB80	leaf-check fighter_procs: every call
+ftColl_8007A06C	leaf-check fighter_procs: the logged hits' knockback and damage results
+ftColl_80079C70	leaf-check fighter_procs: every logged hit
+ftColl_80079AB0	leaf-check fighter_procs: every logged hit, fixed and growing knockback
+ftColl_80078538	leaf-check fighter_procs: normal hits' sparks, small and big, through the ported effects
+ftColl_8007861C	leaf-check fighter_procs: every logged hit's attacker
+ftColl_8007BBCC	leaf-check fighter_procs: every call
+ftColl_8007925C	leaf-check fighter_procs: every call; items' boxes that could reach the fighter stop at the seam
+ft_8007C77C	leaf-check fighter_procs: every call (no coin battle)
+ftColl_8007BAC0	leaf-check fighter_procs: every call
+ftCo_800C0B20	leaf-check fighter_procs: every call, Final Destination's lines
+Ground_801C5700	leaf-check fighter_procs: every call that touches a line
+ft_8007C4BC	leaf-check fighter_procs: the thrown case's boxes
+ft_8007C2E0	leaf-check fighter_procs: the thrown case's boxes, in the air and not
+lbColl_800089B8	leaf-check fighter_procs: the thrown case's boxes that miss
+lbColl_80008820	leaf-check fighter_procs: the tips the switched-on boxes land
+Fighter_procCollResolve	leaf-check fighter_procs: every call, real and with a tip, shield hit, clank, dealt hit, shield push or held hitlag given
+ftCommon_CalcHitlag	leaf-check fighter_procs: the given results' hitlag
+Fighter_UnkRecursiveFunc_8006D044	leaf-check fighter_procs: the given results' hitlag starting
+ftCo_80090718	leaf-check fighter_procs: frames without a result, with and without a queued sound
+ftCo_800C8D00	leaf-check fighter_procs: every call (no stamina fighter falls)
+ftCommon_8007E2A4	leaf-check fighter_procs: the given shield pushes
+ftCo_800C2FD8	leaf-check fighter_procs: Marth's swings in the real calls
+ftCo_800A0DA4	leaf-check fighter_procs: every call
+lbColl_800083C4	leaf-check fighter_procs: every call's hurtboxes
+Fighter_procCamera	leaf-check fighter_procs: every call
+ftCommon_8008021C	leaf-check fighter_procs: every camera call
+ftCo_80090690	leaf-check fighter_procs: the camera calls' hit shakes
+ftCamera_UpdateCameraBox	leaf-check fighter_procs: the camera calls' boxes, both facings
+ftLib_GetCameraBonePos	leaf-check fighter_procs: every camera box
+ftCo_8009F480	leaf-check fighter_procs: the fighters' light from the camera calls' states (its lights have no animation on Final Destination)

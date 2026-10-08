@@ -18,7 +18,7 @@ use std::process::ExitCode;
 
 use melee_capture::import::Importer;
 use melee_capture::{Capture, DataMap, disc_index, find_archives_in};
-use melee_data::archive::{Archive, Archives};
+use melee_data::archive::Archives;
 use melee_data::disc::Disc;
 use melee_replay::Device;
 use melee_sim::game::gm::scene::{self, Resume};
@@ -62,11 +62,13 @@ fn run(args: Vec<String>) -> ExitCode {
     );
     let started = catch_unwind(AssertUnwindSafe(|| match &from {
         None => {
-            let mut load = |name: &str| {
-                let file = disc
+            let mut load = |name: &str| melee_sim::game::vs_match::DiscFile {
+                entrynum: disc
+                    .entrynum(name)
+                    .unwrap_or_else(|e| panic!("{name}: {e}")),
+                bytes: disc
                     .read_file(name)
-                    .unwrap_or_else(|e| panic!("{name}: {e}"));
-                Archive::parse(&file).unwrap_or_else(|e| panic!("{name}: {e:?}"))
+                    .unwrap_or_else(|e| panic!("{name}: {e}")),
             };
             Match::start(&settings, &mut load)
         }

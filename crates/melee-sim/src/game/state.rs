@@ -190,6 +190,12 @@ pub struct Game {
     /// `fighter_dat_attrs_alloc_data` block's big-endian bytes, whose layout each character
     /// defines.
     pub fighter_attrs: Pool<Vec<u8>>,
+    /// Fighters' lists of their models' DObjs (`DObjList::data`): the main model's (up to
+    /// 124) and the second model's (up to 32), the first `count` of each meaningful.
+    pub fighter_dobj_lists: Pool<Vec<Option<crate::hsd::dobj::DObjId>>>,
+    /// Fighters' animation buffers (`fighter_x59C_alloc_data`). What a buffer holds is the
+    /// archive of the animation loaded into it, which the fighter names (`x590`, `x598`).
+    pub fighter_anim_bufs: Pool<()>,
     /// The links of fighters' dynamic bone chains (`BoneDynamicsDesc::dyn_desc`), each a
     /// joint's physics state.
     pub fighter_dynamics: Pool<DynamicsData>,

@@ -66,14 +66,14 @@ pub fn ecb_center(game: &Game, gobj: GObjId) -> Vec3 {
 /// (`ftData_80085560` with 1).
 #[doc(alias = "ftLib_IncFighterRefCount")]
 pub fn inc_fighter_refs(game: &mut Game, kind: i32) {
-    let r = &mut game.it.fighter_refs.0[kind as usize];
+    let r = &mut game.ft.data.ref_counts[kind as usize];
     *r = r.wrapping_add(1);
 }
 
 /// Counts such an object out, `ftLib_DecFighterRefCount`; the original asserts the count stays
 /// at or above zero (`ftData_80085560`).
 pub fn dec_fighter_refs(game: &mut Game, kind: i32) {
-    let r = &mut game.it.fighter_refs.0[kind as usize];
+    let r = &mut game.ft.data.ref_counts[kind as usize];
     *r = r.wrapping_sub(1);
     assert!(*r >= 0, "fighter reference counter error!");
 }
@@ -108,7 +108,8 @@ pub fn stale_mul(game: &Game, data: &Archives, slot: u8, move_id: i32) -> f64 {
     if move_id == 1 {
         return 1.0;
     }
-    let weights = game.it.ft_stale_weights.expect("no stale-move weights");
+    let weights = crate::game::ft::common_ptr(game, data, crate::game::ft::STALE_WEIGHTS)
+        .expect("no stale-move weights");
     for i in 0..9 {
         let m = i32::from(table.StaleMoves[k as usize].move_id);
         if m == 0 {

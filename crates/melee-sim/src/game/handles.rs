@@ -60,3 +60,12 @@ pub struct BoneTableId(pub u32);
 /// An effect's slot (`EF_Effect`, an effect GObj's user data, from `efLib_AllocData`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct EffectId(pub u32);
+/// A fighter model's list of DObjs (`DObjList::data`, from `fighter_dobj_list_alloc_data` or
+/// `fighter_x2040_alloc_data`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct DObjListId(pub u32);
+
+/// One of a fighter's animation buffers (`fighter_x59C_alloc_data`): where the archive of an
+/// animation it loads is copied.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct AnimBufId(pub u32);

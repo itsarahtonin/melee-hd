@@ -6,7 +6,7 @@
 use gekko_fp as fp;
 
 use super::super::handles::FighterId;
-use super::super::state::Running;
+use super::super::state::{Game, Running};
 use super::super::structs::{Fighter, FighterBone};
 use super::parts::TRANS_N;
 use crate::fpu::{mem, reg};
@@ -458,5 +458,87 @@ fn next_in_tree(jobjs: &jobj::JObjs, j: JObjId, top: Option<JObjId>) -> Option<J
             return Some(n);
         }
         j = p;
+    }
+}
+
+impl Running<'_> {
+    /// Gives the fighter's model its costume's material animations, at frame 0, and finds
+    /// the costume's animated textures, stopped, `ftAnim_80070308` (with `ftAnim_80070200`).
+    #[doc(alias = "ftAnim_80070308")]
+    #[doc(alias = "ftAnim_80070200")]
+    pub fn costume_anims(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let root = self.root_jobj(gobj);
+        let fp = &self.game.fighters[f.0];
+        let matanim =
+            self.game.ft.data.costumes[fp.kind as usize][usize::from(fp.costume_id)].matanim;
+        jobj::add_anim_all(
+            &mut self.game.objs,
+            self.data,
+            Some(root),
+            None,
+            matanim,
+            None,
+        );
+        jobj::req_anim_all(&mut self.game.objs, Some(root), 0.0);
+        // `ftAnim_80070200` on `ftData::x8->x8`.
+        let fp = &self.game.fighters[f.0];
+        let data = fp.ft_data.expect("a fighter without data");
+        let x8 = self.data.ptr(data.at(8)).expect("ftData::x8").at(8);
+        let n = self.data.u32(x8);
+        assert!(
+            n <= 5,
+            "the original's assertion failed: fighter tobj num over!"
+        );
+        let table = self.data.ptr(x8.at(4)).expect("ftData_x8_x8::xC");
+        let costume = u32::from(fp.costume_id);
+        let indices = self
+            .data
+            .ptr(table.at(4 * costume))
+            .or_else(|| self.data.ptr(table))
+            .expect("a costume without texture animations");
+        let (list, count) = (fp.dobj_list.data, fp.dobj_list.count);
+        self.game.fighters[f.0].tobj_list.n_costume_tobjs = n;
+        self.game.fighters[f.0].tobj_list.x5D0 = Some(indices);
+        for i in 0..n {
+            let index = i32::from(self.data.u16(indices.at(2 * i)));
+            let t = self.nth_tobj(list, count, index);
+            self.game.fighters[f.0].tobj_list.costume_tobjs[i as usize] = Some(t);
+            let a = self.game.objs.tobjs[t].aobj;
+            assert!(
+                a.is_some(),
+                "the original's assertion failed: can't find fighter texture anim!"
+            );
+            crate::hsd::aobj::set_rate(&mut self.game.objs.aobjs, a, 0.0);
+        }
+    }
+
+    /// Loads the fighter's blend skeleton, the costume's joints without their display
+    /// objects, and points the parts' second joints at it, `ftAnim_8006FE48` (with
+    /// `ftParts_8007482C`).
+    #[doc(alias = "ftAnim_8006FE48")]
+    #[doc(alias = "ftParts_8007482C")]
+    pub fn load_blend_skeleton(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let joint = self.game.fighters[f.0].x108_costume_joint;
+        jobj::set_default_class(&mut self.game.objs, jobj::JObjClass::FighterIntp);
+        let skeleton = jobj::load_joint(&mut self.game.objs, self.data, joint);
+        jobj::set_default_class(&mut self.game.objs, jobj::JObjClass::Hsd);
+        let fp = &mut self.game.fighters[f.0];
+        fp.x8AC_animSkeleton = skeleton;
+        fp.x8A4_animBlendFrames = 0.0;
+        fp.x8A8_anim_frame = 0.0;
+        self.setup_blend_parts(gobj);
+    }
+}
+
+impl Game {
+    /// Clears the fighter's part animations' slots, `ftAnim_8007077C`.
+    #[doc(alias = "ftAnim_8007077C")]
+    pub fn reset_part_anims(&mut self, f: FighterId) {
+        for a in &mut self.fighters[f.0].x8B0 {
+            a.x11 = -1;
+            a.x10 = -1;
+        }
     }
 }

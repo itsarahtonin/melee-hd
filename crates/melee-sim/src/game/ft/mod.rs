@@ -8,21 +8,31 @@
 
 pub mod action;
 pub mod anim;
+pub mod attack;
 pub mod bind;
+pub mod camera;
 pub mod co;
 pub mod colanim;
 pub mod coll;
 pub mod commands;
 pub mod common;
+pub mod cpu;
+pub mod create;
+pub mod create_model;
+pub mod data;
 pub mod dynamics;
 pub mod fighter;
 pub mod ftlib;
 pub mod input;
+mod kind_tables;
+pub mod kinds;
 pub mod motion;
 mod motion_tables;
 pub mod parts;
 pub mod phys;
+pub mod resolve;
 pub mod sound;
+pub mod spawn;
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
@@ -44,6 +54,63 @@ pub struct Globals {
     /// Each character's animation file once the game has copied it to ARAM
     /// (`ftData_Table_Unk0`), by kind.
     pub anim_files: Vec<Option<AnimFile>>,
+    /// The kinds' data, costumes and loaded files (`ftdata.c`'s globals).
+    pub data: data::DataGlobals,
+    /// The next spawn number (`Fighter_804D64F8`).
+    pub spawn_counter: u32,
+    /// The first free dynamics link (`lb_00F9.c`'s `cur_data`); each link's `next` leads to
+    /// the one after it.
+    pub dynamics_free: Option<super::handles::DynamicsId>,
+    /// The fighters' light and its first ambient light (`ftCo_09F4.c`'s `lobj0`, `lobj1`).
+    pub lobj0: Option<crate::hsd::lobj::LObjId>,
+    pub lobj1: Option<crate::hsd::lobj::LObjId>,
+    /// The fighters' metal and clear materials (`ft_804D6580`, `ft_804D6588`).
+    pub metal_mobj: Option<crate::hsd::mobj::MObjId>,
+    pub clear_mobj: Option<crate::hsd::mobj::MObjId>,
+    /// Kirby's copied costumes (`ft_80459B88`, `ftKb_Init_803C9FC8`).
+    pub kirby: KirbyCostumes,
+    /// Jigglypuff's hats (`ft_8045A1E0`).
+    pub purin_hats: [Option<DataRef>; 5],
+    /// Each fighter's address in the original (`Fighter*`, its user data), by slot: a few
+    /// places read it as a number (Nana's computer DI takes its low byte), so it is state,
+    /// recorded when `Fighter_Create` allocates the fighter (`docs/engine.md`).
+    pub addresses: std::collections::BTreeMap<u32, u32>,
+    /// The addresses the original's allocator gives the next fighters, in creation order,
+    /// as the frontend seeds them (from ssbm-rs's trace); a fighter created without one
+    /// records 0. An input until an allocator model computes them.
+    pub address_seed: std::collections::VecDeque<u32>,
+    /// The attack collision's scratch (`ftcoll.c`'s damage logs and clank flags), which each
+    /// fighter's attack collision starts over.
+    pub hit_logs: attack::HitLogs,
+}
+
+/// The fighter kinds whose costumes Kirby can copy (`ftKb_Init_803C9FC8`'s entries).
+pub const KIRBY_COSTUME_KINDS: [usize; 5] = [3, 15, 16, 22, 24];
+
+/// Kirby's copies of other characters' costumes: a count per kind (`ft_80459B88`), and for
+/// each kind Kirby copies a hat from, six models and material animations.
+#[derive(Clone, Debug, PartialEq)]
+pub struct KirbyCostumes {
+    pub counts: [i32; data::KIND_COUNT],
+    pub models: [[(Option<DataRef>, Option<DataRef>); 6]; 5],
+}
+
+impl Default for KirbyCostumes {
+    fn default() -> Self {
+        KirbyCostumes {
+            counts: [0; data::KIND_COUNT],
+            models: [[(None, None); 6]; 5],
+        }
+    }
+}
+
+impl KirbyCostumes {
+    /// `ftKb_Init_800EE528`.
+    #[doc(alias = "ftKb_Init_800EE528")]
+    pub fn reset(&mut self) {
+        self.counts = [0; data::KIND_COUNT];
+        self.models.fill([(None, None); 6]);
+    }
 }
 
 /// A character's animation file in ARAM: one archive per animation, which a fighter copies
@@ -86,7 +153,7 @@ impl Running<'_> {
     }
 
     /// `ftLoadCommonData`'s pointer at `offset`.
-    fn load_common(&self, offset: u32) -> DataRef {
+    pub(super) fn load_common(&self, offset: u32) -> DataRef {
         let base = self
             .game
             .ft
@@ -118,6 +185,17 @@ impl Running<'_> {
     }
 }
 
+/// Where `ftLoadCommonData` keeps the stale-move weights (`Fighter_804D6548`).
+pub const STALE_WEIGHTS: u32 = 0xC;
+/// Where `ftLoadCommonData` keeps the scale parameters (`Fighter_804D6524`).
+pub const SCALE_PARAMS: u32 = 0x30;
+
+/// One of the pointers `Fighter_LoadCommonData` copies out of `ftLoadCommonData`, by its
+/// offset there.
+pub fn common_ptr(game: &Game, data: &Archives, offset: u32) -> Option<DataRef> {
+    data.ptr(game.ft.load_common?.at(offset))
+}
+
 /// `ftCommonData`, the constants all fighters share.
 pub struct Common<'a> {
     data: &'a Archives,
@@ -127,6 +205,11 @@ pub struct Common<'a> {
 impl Common<'_> {
     pub fn f32(&self, offset: u32) -> f32 {
         self.data.f32(self.at.at(offset))
+    }
+
+    /// Where `offset` into the common data is.
+    pub fn at(&self, offset: u32) -> DataRef {
+        self.at.at(offset)
     }
 
     pub fn i32(&self, offset: u32) -> i32 {

@@ -90,19 +90,11 @@ pub struct Globals {
     /// The fighters' ECBs and positions, as the first item takes them each tick for the items
     /// to keep clear of (`Item_804A0CCC`).
     pub ft_track: Item_FtTrack,
-    /// How many live objects need each fighter kind's data (`ftdata.c`'s `ft_8045996C`),
-    /// which character items count themselves in (`ftLib_IncFighterRefCount`).
-    pub fighter_refs: FighterRefs,
     /// The debug menu's item collision bubbles (`db_ShowItemCollisionBubbles`, set to 1 at
     /// boot) and item pickup ranges (`db_ItemAndPokemonMenu.ShowItemPickupRange`), which new
     /// items copy into their debug draw flags (`Item::xDAA`).
     pub db_bubbles: i32,
     pub db_pickup_range: u32,
-    /// The fighters' stale-move weights (`Fighter_804D6548`), in `PlCo.dat`.
-    pub ft_stale_weights: Option<DataRef>,
-    /// The fighters' scale parameters (`Fighter_804D6524`), in `PlCo.dat`: `x4` scales an
-    /// item's damage by its owner's height (`it_80272460`).
-    pub ft_scale_params: Option<DataRef>,
     /// How many entries a hit check's damage log holds (`it_804D6D18`); the log itself
     /// (`it_804A0E70`) isn't kept, as no ported check fills it.
     pub damage_log_len: u32,
@@ -112,19 +104,6 @@ pub struct Globals {
     /// battle (`is_teams`) and team attacks hurt (`friendly_fire`).
     pub teams: bool,
     pub friendly_fire: bool,
-}
-
-/// How many fighter kinds `ft_8045996C` counts.
-pub const FIGHTER_KINDS: usize = 33;
-
-/// `ft_8045996C`, by fighter kind.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FighterRefs(pub [i32; FIGHTER_KINDS]);
-
-impl Default for FighterRefs {
-    fn default() -> Self {
-        FighterRefs([0; FIGHTER_KINDS])
-    }
 }
 
 /// An item GObj's `Item` (`gobj->user_data`).

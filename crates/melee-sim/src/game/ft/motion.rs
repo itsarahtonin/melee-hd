@@ -19,7 +19,7 @@ use crate::hsd::jobj::{self, USE_QUATERNION};
 
 /// `FighterKind`s the state change treats apart.
 const KIND_PEACH: i32 = 9;
-const KIND_NANA: i32 = 11;
+pub(super) const KIND_NANA: i32 = 11;
 const KIND_LUIGI: i32 = 17;
 
 /// The state change's flags (`MotionFlags`), each keeping one effect of the last state.
@@ -122,30 +122,36 @@ impl Running<'_> {
             let len = (self.data.u32(entry.at(8)) + 31) & !31;
             self.game.audio.aram_load(self.data, len);
             let kind = self.game.fighters[src.0].kind;
-            let file = self.game.ft.anim_files[kind as usize]
-                .as_ref()
-                .expect("the character's animation file isn't in ARAM");
-            let off = self.data.u32(entry.at(4));
-            let &(_, id) = file
-                .anims
-                .iter()
-                .find(|&&(o, _)| o == off)
-                .unwrap_or_else(|| panic!("no animation at {off:#x} of character {kind}'s file"));
-            let name = self.c_string(self.data.ptr(entry).expect("an animation without a name"));
-            let archive = self.data.get(id);
-            let offset = archive
-                .public(&name)
-                .unwrap_or_else(|| panic!("{name} isn't in its animation's archive"));
-            Some(DataRef {
-                archive: id,
-                offset,
-            })
+            Some(self.anim_tree(kind, entry))
         } else {
             None
         };
         let fp = &mut self.game.fighters[f.0];
         fp.x590 = tree;
         fp.x5A4 = aram;
+    }
+
+    /// The figatree of a kind's animation table entry, as copying its archive from ARAM
+    /// (`lbArq_80014BD0`) and relocating it (`HSD_ArchiveParse`) finds it.
+    pub(super) fn anim_tree(&self, kind: i32, entry: DataRef) -> DataRef {
+        let file = self.game.ft.anim_files[kind as usize]
+            .as_ref()
+            .expect("the character's animation file isn't in ARAM");
+        let off = self.data.u32(entry.at(4));
+        let &(_, id) = file
+            .anims
+            .iter()
+            .find(|&&(o, _)| o == off)
+            .unwrap_or_else(|| panic!("no animation at {off:#x} of character {kind}'s file"));
+        let name = self.c_string(self.data.ptr(entry).expect("an animation without a name"));
+        let archive = self.data.get(id);
+        let offset = archive
+            .public(&name)
+            .unwrap_or_else(|| panic!("{name} isn't in its animation's archive"));
+        DataRef {
+            archive: id,
+            offset,
+        }
     }
 
     /// The NUL-terminated string at `at`.

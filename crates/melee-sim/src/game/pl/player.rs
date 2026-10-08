@@ -7,6 +7,7 @@
 //! 0..6 fails the original's assertion, which stops the simulation here.
 
 use super::super::code::{self, Val};
+use super::super::ft::create::AllocInfo;
 use super::super::state::{Game, Running};
 use super::super::structs::{_StaticPlayer, StaleMoveTable, pl_x5EC_t, plActionStats};
 use crate::hsd::gobj::GObjId;
@@ -48,16 +49,10 @@ const FT_MAPPING: [u8; 0x90] = [
 
 /// The functions of the original's the player blocks call, by address.
 mod addr {
-    pub const FTLIB_DISABLE_INPUT: u32 = 0x8008_67E8;
-    pub const FIGHTER_CREATE: u32 = 0x8006_8E98;
     pub const FTDATA_800855C8: u32 = 0x8008_55C8;
     pub const FTDATA_8008578C: u32 = 0x8008_578C;
     pub const FTKB_SPECIALN_800EED50: u32 = 0x800E_ED50;
     pub const FTCO_800D4FF4: u32 = 0x800D_4FF4;
-    pub const FT_80087BEC: u32 = 0x8008_7BEC;
-    pub const FT_80087BC0: u32 = 0x8008_7BC0;
-    pub const FTLIB_GET_NAME_TAG_HEIGHT: u32 = 0x8008_6F80;
-    pub const FIGHTER_FIRST_INITIALIZE_80067A84: u32 = 0x8006_7A84;
 }
 
 /// `Player_CheckSlot`: the original asserts a slot is in range.
@@ -946,7 +941,7 @@ impl Running<'_> {
     #[doc(alias = "Player_80031790")]
     pub fn player_disable_input(&mut self, slot: i32) {
         for g in self.playing_entities(slot).into_iter().flatten() {
-            code::call(self, addr::FTLIB_DISABLE_INPUT, &[Val::GObj(Some(g))]);
+            self.game.ft_disable_input(g);
         }
     }
 
@@ -976,20 +971,30 @@ impl Running<'_> {
             self.game.player_mut(slot).flags.b2 = true;
         }
         // `plAllocInfo`: fighter kind, slot, `x5` -1, and whether it's the second fighter
-        // and a transformation.
+        // and a transformation. The original's stack holds the info's other bits, which
+        // `Fighter_Create` never reads.
         let create = |r: &mut Self, kind: i8, sub: bool, transformation: u8| {
-            code::call(
-                r,
-                addr::FIGHTER_CREATE,
+            let info = AllocInfo {
+                kind: i32::from(kind),
+                slot: slot as u8,
+                x5: -1,
+                sub,
+                transformation: transformation & 1 != 0,
+            };
+            #[cfg(feature = "stubs")]
+            if let Some(v) = code::stubbed(
+                super::super::ft::create::addr::FIGHTER_CREATE,
                 &[
-                    Val::Int(i32::from(kind)),
+                    Val::Int(info.kind),
                     Val::Int(slot),
-                    Val::Int(-1),
-                    Val::Int(i32::from(sub)),
-                    Val::Int(i32::from(transformation & 1)),
+                    Val::Int(i32::from(info.x5)),
+                    Val::Int(i32::from(info.sub)),
+                    Val::Int(i32::from(info.transformation)),
                 ],
-            )
-            .gobj()
+            ) {
+                return v.gobj();
+            }
+            Some(r.fighter_create(info))
         };
         let g = create(self, m.internal_id, false, 0);
         let p = self.game.player_mut(slot);
@@ -1068,19 +1073,19 @@ impl Running<'_> {
     #[doc(alias = "Player_SetPlayerAndEntityCpuLevel")]
     pub fn set_player_cpu_level(&mut self, slot: i32, level: i32) {
         self.game.player_mut(slot).cpu_level = level as u8;
-        self.each_fighter(slot, addr::FT_80087BEC, level);
+        for i in 0..2 {
+            if let Some(g) = self.game.player(slot).entity(i) {
+                self.ft_set_cpu_level(g, level);
+            }
+        }
     }
 
     #[doc(alias = "Player_SetPlayerAndEntityCpuType")]
     pub fn set_player_cpu_type(&mut self, slot: i32, kind: i32) {
         self.game.player_mut(slot).cpu_type = kind as u8;
-        self.each_fighter(slot, addr::FT_80087BC0, kind);
-    }
-
-    fn each_fighter(&mut self, slot: i32, f: u32, arg: i32) {
         for i in 0..2 {
             if let Some(g) = self.game.player(slot).entity(i) {
-                code::call(self, f, &[Val::GObj(Some(g)), Val::Int(arg)]);
+                self.ft_set_cpu_type(g, kind);
             }
         }
     }
@@ -1136,7 +1141,7 @@ impl Running<'_> {
     #[doc(alias = "Player_800360D8")]
     pub fn player_nametag_height(&mut self, slot: i32) -> f64 {
         let g = self.game.player(slot).entity(0);
-        code::call(self, addr::FTLIB_GET_NAME_TAG_HEIGHT, &[Val::GObj(g)]).float()
+        self.ft_name_tag_height(g.expect("ftLib_GetNameTagHeight on no fighter faults"))
     }
 
     /// `Player_800366DC`.
@@ -1173,6 +1178,6 @@ impl Running<'_> {
     /// allocator (`Player_AllocData`) serves nothing in melee-sim.
     #[doc(alias = "Player_80036DA4")]
     pub fn player_80036da4(&mut self) {
-        code::call(self, addr::FIGHTER_FIRST_INITIALIZE_80067A84, &[]);
+        self.fighter_first_init();
     }
 }

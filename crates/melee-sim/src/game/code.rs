@@ -53,6 +53,10 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         0x8006_C624 => fighter::proc_accessory(game, gobj),
         0x8006_C80C => fighter::proc_coll_pos(game, gobj),
         0x8006_CA5C => fighter::proc_grab_coll(game, gobj),
+        0x8006_CB94 => super::ft::attack::proc_attack_coll(game, gobj),
+        0x8006_D1EC => super::ft::resolve::proc_coll_resolve(game, gobj),
+        0x8006_D9EC => super::ft::camera::proc_camera(game, gobj),
+        0x8009_F480 => super::ft::create_model::light_proc(game, gobj),
         addr if super::it::item::run_proc(game, gobj, addr) => {}
         addr if super::it::kinds::run_event(game, gobj, addr) => {}
         super::ef::UPDATE_PROC => super::ef::update(game, gobj),
@@ -87,6 +91,9 @@ pub fn run_event(game: &mut Running, f: u32) {
         other => unported("function", other),
     }
 }
+
+/// `efLib_PauseAll`.
+pub const EF_PAUSE_ALL: u32 = 0x8005_BA40;
 
 /// Runs a callback a fighter holds that takes its GObj (`void (*)(HSD_GObj*)`): an action
 /// state's animation, input, physics, collision and camera callbacks, accessories, hitlag
@@ -128,8 +135,12 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         // Collision.
         0x8008_A678 | 0x800D_5F38 => g.ground_coll_teeter(gobj),
         0x8008_AE10 | 0x8008_B638 | 0x8008_CD48 => g.ground_coll(gobj),
+        // Camera.
+        0x8007_61C8 => g.update_camera_box(gobj),
         // Hitlag.
         0x8008_E4F0 => g.co_damage_hitlag(gobj),
+        // efLib_PauseAll, a state's hitlag hook that freezes the fighter's effects.
+        EF_PAUSE_ALL => super::ef::pause_all(g.game, Some(gobj)),
         other => unported("fighter callback", other),
     }
 }
@@ -208,6 +219,15 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     unported("function", f)
+}
+
+/// A ported function stood in for in a check (feature `stubs`), as [`call`] stands in for an
+/// unported one: its value if a stand-in is registered, the call logged with its arguments.
+#[cfg(feature = "stubs")]
+pub fn stubbed(f: u32, args: &[Val]) -> Option<Val> {
+    let v = stubs::get(f)?;
+    stubs::log(f, args);
+    Some(v)
 }
 
 /// Stand-ins for unported functions in checks (feature `stubs`): a stubbed function returns

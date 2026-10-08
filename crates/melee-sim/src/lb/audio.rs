@@ -222,6 +222,32 @@ impl Running<'_> {
         }
     }
 
+    /// Plays a sound on the track some ids keep, `lbAudioAx_80024184`: the shield, hit and
+    /// crowd sounds have tracks of their own, id 525 takes `track` (none for -1), and the
+    /// rest play on none.
+    #[doc(alias = "lbAudioAx_80024184")]
+    pub fn sfx_play_tracked(&mut self, id: i32, vol: i32, pan: i32, track: i32) -> i32 {
+        let track = match id {
+            86 => 9,
+            87 => 8,
+            88 => 7,
+            89 => 12,
+            90 => 11,
+            91 => 10,
+            111 => 13,
+            112 => 14,
+            113 => 15,
+            101 => 16,
+            102 => 17,
+            103 => 18,
+            84 => 23,
+            0x12E => 24,
+            0x20D if track != -1 => track,
+            _ => 0,
+        };
+        self.sfx_start(id, vol, pan, track, 7)
+    }
+
     /// Plays a sound on a track, cutting off the track's last one, or keys the track off for
     /// [`SFX_KEY_OFF`], `lbAudioAx_80023870`.
     #[doc(alias = "lbAudioAx_80023870")]

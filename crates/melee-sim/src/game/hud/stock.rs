@@ -91,7 +91,7 @@ impl Game {
 
 impl Running<'_> {
     /// `efSync_Spawn(kind, gobj, pos)`: effects are another port's.
-    fn spawn_effect(&mut self, kind: i32, gobj: GObjId, pos: Vec3) {
+    fn spawn_stock_effect(&mut self, kind: i32, gobj: GObjId, pos: Vec3) {
         crate::game::ef::spawn(self, kind, Some(gobj), &[crate::game::ef::Arg::Vec(pos)]);
     }
 
@@ -217,7 +217,7 @@ impl Running<'_> {
                             mem(fp::fadds(reg(b.y), reg(a.y))),
                             mem(fp::fadds(reg(b.z), reg(a.z))),
                         );
-                        self.spawn_effect(0x474, gobj, at);
+                        self.spawn_stock_effect(0x474, gobj, at);
                     }
                     let u = &mut self.game.hud.stock_users[p];
                     if u.anim[i] < 10 {
@@ -267,11 +267,11 @@ impl Running<'_> {
                     if a == 1 {
                         c.x = f.start.x;
                         c.y = f.start.y;
-                        self.spawn_effect(0x475, gobj, c);
+                        self.spawn_stock_effect(0x475, gobj, c);
                     } else if a == 10 {
                         c.x = f.end.x;
                         c.y = f.end.y;
-                        self.spawn_effect(0x476, gobj, c);
+                        self.spawn_stock_effect(0x476, gobj, c);
                     }
                     self.game.hud.stock_users[p].anim[i] += 1;
                 } else {

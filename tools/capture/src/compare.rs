@@ -343,6 +343,12 @@ impl<'a> Comparer<'a> {
                     };
                     let fighter = &self.game.fighters[f.0];
                     fighter.compare(&mem, ud, &format!("{path} fighter"), self);
+                    let address = self.game.ft.addresses.get(&f.0).copied();
+                    if address != Some(ud) {
+                        self.diffs.push(format!(
+                            "{path} fighter: address ours {address:x?}, theirs {ud:#x}"
+                        ));
+                    }
                     self.fighter_blocks(&format!("{path} fighter"), f, ud);
                 }
             }
@@ -401,6 +407,20 @@ impl<'a> Comparer<'a> {
         self.check("ft", "wind sources", game.ft.wind_sources, wind);
         let bury = self.u32(sym("ftDevice_BuryThingCount"));
         self.check("ft", "bury things", game.ft.bury_things, bury);
+        self.fighter_data_globals();
+        for (name, offset) in [
+            ("p_ftCommonData", 0),
+            ("Fighter_804D6548", melee_sim::game::ft::STALE_WEIGHTS),
+            ("Fighter_804D6524", melee_sim::game::ft::SCALE_PARAMS),
+        ] {
+            // Ours is a pointer in the loaded `ftLoadCommonData`, which sits in their memory.
+            let ours = game
+                .ft
+                .load_common
+                .map_or(0, |c| self.u32(self.data.addr(c.at(offset))));
+            let theirs = self.u32(sym(name));
+            self.check("ft", name, ours, theirs);
+        }
         let n = self.u16(sym("staleAttackInstance"));
         self.check("pl", "attack instance", game.pl.stale_attack_instance, n);
         let n = self.u16(sym("unk_804D6480"));
@@ -435,6 +455,114 @@ impl<'a> Comparer<'a> {
             let at = pads + 0x44 * i as u32;
             let theirs = crate::import::read_pad(self.mem, at);
             self.check(&format!("pads[{i}]"), "status", p, &theirs);
+        }
+    }
+
+    /// The fighter data's globals, as [`crate::import::Importer`] imports them.
+    fn fighter_data_globals(&mut self) {
+        use crate::import::*;
+        use melee_sim::game::ft::data::{KIND_COUNT, kind_tables};
+        let game = self.game;
+        let ft = &game.ft;
+        for kind in 0..KIND_COUNT as u32 {
+            let k = kind as usize;
+            let d = self.u32(FT_DATA_LIST + 4 * kind);
+            self.compare_data(&format!("ft data {kind}"), ft.data.data_list[k], d);
+            let list = self.u32(COSTUME_LISTS + 8 * kind);
+            let n = if list != 0 {
+                kind_tables(kind as i32).costume_count
+            } else {
+                0
+            };
+            for c in 0..u32::from(n) {
+                let e = list + 0x18 * c;
+                let ours = ft.data.costumes[k][c as usize];
+                let path = format!("ft costume {kind}/{c}");
+                self.compare_data(&format!("{path} joint"), ours.joint, self.u32(e));
+                self.compare_data(&format!("{path} matanim"), ours.matanim, self.u32(e + 4));
+                self.check(&path, "x8", ours.x8, self.u32(e + 8));
+            }
+            self.check(
+                "ft",
+                &format!("demo anims {kind}"),
+                ft.data.demo_anims[k],
+                self.u32(DEMO_ANIMS + 8 * kind),
+            );
+            self.check(
+                "ft",
+                &format!("ref count {kind}"),
+                ft.data.ref_counts[k],
+                self.u32(REF_COUNTS + 4 * kind) as i32,
+            );
+            self.check(
+                "ft",
+                &format!("kirby count {kind}"),
+                ft.kirby.counts[k],
+                self.u32(KIRBY_COUNTS + 4 * kind) as i32,
+            );
+        }
+        for s in 0..6u32 {
+            let at = SLOT_WORDS + 8 * s;
+            let o = ft.data.slot_words[s as usize];
+            self.check(
+                "ft",
+                &format!("slot word {s}"),
+                (o.x0, o.x6),
+                (self.u32(at), self.u8(at + 6)),
+            );
+        }
+        self.check(
+            "ft",
+            "spawn counter",
+            ft.spawn_counter,
+            self.u32(SPAWN_COUNTER),
+        );
+        // The free dynamics links, in order.
+        let mut ours = ft.dynamics_free;
+        let mut theirs = self.u32(DYNAMICS_FREE);
+        let mut i = 0;
+        while ours.is_some() || theirs != 0 {
+            self.compare_handle(
+                &format!("ft free dynamics link {i}"),
+                "DynamicsId",
+                ours.map(|d| d.0),
+                theirs,
+            );
+            if ours.is_none() || theirs == 0 {
+                break;
+            }
+            ours = game.fighter_dynamics[ours.unwrap().0].next;
+            theirs = self.u32(theirs + 0x90);
+            i += 1;
+        }
+        for (at, ours, name) in [(LOBJ0, ft.lobj0, "lobj0"), (LOBJ1, ft.lobj1, "lobj1")] {
+            let t = self.u32(at);
+            match ours {
+                Some(_) if t != 0 => self.lobjs(&format!("ft {name}"), ours, t),
+                _ => self.check("ft", name, ours.is_some(), t != 0),
+            }
+        }
+        for (at, ours, name) in [
+            (METAL_MOBJ, ft.metal_mobj, "metal mobj"),
+            (CLEAR_MOBJ, ft.clear_mobj, "clear mobj"),
+        ] {
+            self.mobj(&format!("ft {name}"), ours, self.u32(at));
+        }
+        for (i, &kind) in melee_sim::game::ft::KIRBY_COSTUME_KINDS.iter().enumerate() {
+            let table = self.u32(KIRBY_TABLES + 4 * kind as u32);
+            for c in 0..6u32 {
+                let (j, m) = ft.kirby.models[i][c as usize];
+                let path = format!("ft kirby costume {kind}/{c}");
+                self.compare_data(&format!("{path} joint"), j, self.u32(table + 8 * c));
+                self.compare_data(&format!("{path} matanim"), m, self.u32(table + 8 * c + 4));
+            }
+        }
+        for i in 0..5u32 {
+            self.compare_data(
+                &format!("ft purin hat {i}"),
+                ft.purin_hats[i as usize],
+                self.u32(PURIN_HATS + 4 * i),
+            );
         }
     }
 
@@ -473,6 +601,33 @@ impl<'a> Comparer<'a> {
                 }
             }
         }
+        // The DObj lists' first `count` entries, and the fighter's light.
+        for (field, list, at) in [
+            ("dobj_list", fighter.dobj_list.data, t + 0x5EC),
+            ("x203C", fighter.x203C.data, t + 0x203C),
+        ] {
+            let (count, data) = (self.u32(at), self.u32(at + 4));
+            if let Some(l) = list
+                && data != 0
+            {
+                let ours = self.game.fighter_dobj_lists[l.0].clone();
+                for i in 0..count {
+                    let o = ours.get(i as usize).copied().flatten();
+                    let d = self.u32(data + 4 * i);
+                    self.dobjs_one(&format!("{path}.{field}[{i}]"), o, d);
+                }
+            }
+        }
+        let shadow = self.u32(t + 0x20A4 + 4);
+        if let Some(s) = fighter.x20A4.shadow
+            && shadow != 0
+        {
+            self.shadow(&format!("{path}.x20A4.shadow"), s, shadow);
+        }
+        let light = self.u32(t + 0x588);
+        if fighter.x588.is_some() && light != 0 {
+            self.lobjs(&format!("{path}.x588"), fighter.x588, light);
+        }
         // Each chain link, where both sides have one (the handles compare as the fighter
         // does).
         for i in 0..fighter.dynamic_bone_sets.len() {
@@ -493,6 +648,71 @@ impl<'a> Comparer<'a> {
                 theirs = self.u32(theirs + 0x90);
                 k += 1;
             }
+        }
+    }
+
+    /// A shadow: the joints it casts from, its camera and texture, and its settings.
+    fn shadow(&mut self, path: &str, s: melee_sim::hsd::shadow::ShadowId, t: u32) {
+        if !Self::pair(
+            &mut self.maps.shadows,
+            &mut self.seen,
+            &self.stale,
+            &mut self.diffs,
+            "shadow",
+            path,
+            Some(s),
+            t,
+        ) {
+            return;
+        }
+        let sh = self.game.objs.shadows[s.0].clone();
+        let mut node = self.u32(t);
+        let mut theirs = Vec::new();
+        while node != 0 {
+            theirs.push(self.u32(node + 4));
+            node = self.u32(node);
+        }
+        self.check(path, "objects", sh.objects.len(), theirs.len());
+        for (i, (&o, &tj)) in sh.objects.iter().zip(&theirs).enumerate() {
+            self.compare_handle(&format!("{path}.objects[{i}]"), "JObjId", Some(o.0), tj);
+        }
+        if let Some(c) = sh.camera {
+            self.cobj(&format!("{path}.camera"), c, self.u32(t + 4));
+        }
+        self.compare_handle(
+            &format!("{path}.texture"),
+            "TObjId",
+            sh.texture.map(|x| x.0),
+            self.u32(t + 8),
+        );
+        let f = |c: &Self, o: u32| c.u32(t + o);
+        self.check(
+            path,
+            "scale, translation",
+            [sh.scale_s, sh.scale_t, sh.trans_s, sh.trans_t].map(f32::to_bits),
+            [f(self, 0xC), f(self, 0x10), f(self, 0x14), f(self, 0x18)],
+        );
+        self.check(
+            path,
+            "active, intensity",
+            (sh.active, sh.intensity),
+            (self.u32(t + 0x1C) != 0, self.u8(t + 0x20)),
+        );
+        let tex = self.u32(t + 8);
+        let desc = if tex != 0 { self.u32(tex + 0x58) } else { 0 };
+        if desc != 0 {
+            let i = sh.image;
+            self.check(
+                path,
+                "image",
+                (i.format, i.width, i.height, i.allocated),
+                (
+                    self.u32(desc + 8),
+                    self.u16(desc + 4),
+                    self.u16(desc + 6),
+                    self.u32(desc) != 0,
+                ),
+            );
         }
     }
 
@@ -908,10 +1128,18 @@ impl<'a> Comparer<'a> {
             melee_sim::hsd::mobj::MObjClass::Hsd => sym("hsdMObj"),
             melee_sim::hsd::mobj::MObjClass::Ground => sym("grMaterial_803E0A20"),
             melee_sim::hsd::mobj::MObjClass::Item => sym("it_mobj"),
+            melee_sim::hsd::mobj::MObjClass::Fighter => sym("ftMObj"),
         };
-        // Classes no port models (fighters' `ftMObj`) were reported when imported.
+        // Classes no port models (items' and effects') were reported when imported.
         let theirs = self.u32(t);
-        if [sym("hsdMObj"), sym("grMaterial_803E0A20"), sym("it_mobj")].contains(&theirs) {
+        if [
+            sym("hsdMObj"),
+            sym("grMaterial_803E0A20"),
+            sym("it_mobj"),
+            sym("ftMObj"),
+        ]
+        .contains(&theirs)
+        {
             self.check(path, "class", class, theirs);
         }
         self.check(path, "rendermode", m.rendermode, self.u32(t + 4));
@@ -1043,8 +1271,34 @@ impl<'a> Comparer<'a> {
             ) {
                 break;
             }
-            let d = &self.game.objs.dobjs[o.unwrap()];
-            self.check(&dp, "flags", d.flags, self.u32(t + 0x14));
+            self.dobj_fields(&dp, o.unwrap(), t);
+            o = self.game.objs.dobjs[o.unwrap()].next;
+            t = self.u32(t + 4);
+            i += 1;
+        }
+    }
+
+    /// One DObj, not the ones after it: paired, and compared if this is the first meeting.
+    fn dobjs_one(&mut self, path: &str, o: Option<melee_sim::hsd::dobj::DObjId>, t: u32) {
+        if Self::pair(
+            &mut self.maps.dobjs,
+            &mut self.seen,
+            &self.stale,
+            &mut self.diffs,
+            "dobj",
+            path,
+            o,
+            t,
+        ) {
+            self.dobj_fields(path, o.unwrap(), t);
+        }
+    }
+
+    /// A DObj's fields, material, animation and shapes.
+    fn dobj_fields(&mut self, dp: &str, o: melee_sim::hsd::dobj::DObjId, t: u32) {
+        {
+            let d = &self.game.objs.dobjs[o];
+            self.check(dp, "flags", d.flags, self.u32(t + 0x14));
             self.mobj(&format!("{dp} mobj"), d.mobj, self.u32(t + 8));
             self.aobj(&format!("{dp} aobj"), d.aobj, self.u32(t + 0x10));
             let (mut p, mut tp) = (d.pobj, self.u32(t + 0xC));
@@ -1073,9 +1327,6 @@ impl<'a> Comparer<'a> {
                 tp = self.u32(tp + 4);
                 k += 1;
             }
-            o = d.next;
-            t = self.u32(t + 4);
-            i += 1;
         }
     }
 }
@@ -1106,11 +1357,11 @@ impl Cx for Comparer<'_> {
         let known = match kind {
             "JObjId" => self.maps.jobjs.get(&theirs).map(|j| j.0),
             "GObjId" => self.maps.gobjs.get(&theirs).map(|g| g.0),
-            "FighterId" => self.maps.fighters.get(&theirs).map(|f| f.0),
+            "FighterId" | "VictimFighter" => self.maps.fighters.get(&theirs).map(|f| f.0),
             "PartsId" => self.maps.fighter_parts.get(&theirs).map(|p| p.0),
             "AttrsId" => self.maps.fighter_attrs.get(&theirs).map(|a| a.0),
             "DynamicsId" => self.maps.fighter_dynamics.get(&theirs).map(|d| d.0),
-            "ItemId" => self.maps.items.get(&theirs).map(|i| i.0),
+            "ItemId" | "VictimItem" => self.maps.items.get(&theirs).map(|i| i.0),
             "BoneTableId" => {
                 if let (Some(o), true) = (ours, theirs != 0) {
                     self.bone_table(path, BoneTableId(o), theirs);
@@ -1118,6 +1369,10 @@ impl Cx for Comparer<'_> {
                 self.maps.bone_tables.get(&theirs).map(|t| t.0)
             }
             "ItemLogicRef" | "ItemStatesRef" => (theirs != 0).then_some(theirs),
+            "DObjListId" => self.maps.fighter_dobj_lists.get(&theirs).map(|l| l.0),
+            "AnimBufId" => self.maps.fighter_anim_bufs.get(&theirs).map(|b| b.0),
+            "LObjId" => self.maps.lobjs.get(&theirs).map(|l| l.0),
+            "ShadowId" => self.maps.shadows.get(&theirs).map(|s| s.0),
             "DObjId" => self.maps.dobjs.get(&theirs).map(|d| d.0),
             "GroundId" => self.maps.grounds.get(&theirs).map(|g| g.0),
             "StartHookId" => self.maps.start_hooks.get(&theirs).map(|h| h.0),

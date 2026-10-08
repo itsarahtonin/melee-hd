@@ -88,3 +88,38 @@ impl Game {
         self.fighter_mut(gobj).x2228_b5 = arg & 1 != 0;
     }
 }
+
+impl Running<'_> {
+    /// Sets the computer player's level, its state started afresh, `ft_80087BEC`.
+    #[doc(alias = "ft_80087BEC")]
+    pub fn ft_set_cpu_level(&mut self, gobj: GObjId, level: i32) {
+        let f = self.game.fighter_id(gobj);
+        let c = &self.game.fighters[f.0].cpu;
+        let (kind, x14) = (c.kind, c.x14);
+        self.init_cpu(f, kind, level, x14);
+    }
+
+    /// Sets the computer player's kind, its state started afresh, `ft_80087BC0`.
+    #[doc(alias = "ft_80087BC0")]
+    pub fn ft_set_cpu_type(&mut self, gobj: GObjId, kind: i32) {
+        let f = self.game.fighter_id(gobj);
+        let c = &self.game.fighters[f.0].cpu;
+        let (level, x14) = (c.level, c.x14);
+        self.init_cpu(f, kind, level, x14);
+    }
+
+    /// How high above the fighter its name tag goes: its character's own height while
+    /// invisible, else its attributes', `ftLib_GetNameTagHeight`.
+    #[doc(alias = "ftLib_GetNameTagHeight")]
+    pub fn ft_name_tag_height(&self, gobj: GObjId) -> f64 {
+        let fp = self.game.fighter(gobj);
+        let h = if fp.invisible {
+            let d = fp.ft_data.expect("a fighter without data");
+            let attrs = self.data.ptr(d).expect("ftData::x0");
+            self.data.f32(attrs.at(0xFC))
+        } else {
+            fp.co_attrs.name_tag_height
+        };
+        crate::fpu::reg(h)
+    }
+}

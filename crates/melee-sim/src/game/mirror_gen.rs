@@ -7,14 +7,18 @@ use super::gr::GroundVars;
 use super::handles::*;
 use super::mirror::{Cx, Mem, Mirror, code};
 use super::structs::*;
+use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::hsd::lobj::LObjId;
+use crate::hsd::shadow::ShadowId;
 use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
+use crate::lb::hitcapsule::Victim;
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -1160,7 +1164,7 @@ impl Mirror for CostumeTObjList {
         let _ = (&m, at, &cx);
         CostumeTObjList {
             n_costume_tobjs: m.u32(at + 0x0),
-            x5D0: RawPtr(m.u32(at + 0x4)),
+            x5D0: cx.import_data(m.u32(at + 0x4)),
             costume_tobjs: core::array::from_fn(|i0| {
                 cx.import_handle("TObjId", m.u32(at + 0x8 + i0 as u32 * 0x4))
                     .map(TObjId)
@@ -1177,13 +1181,7 @@ impl Mirror for CostumeTObjList {
                 format!("{:?}", m.u32(at + 0x0)),
             );
         }
-        if self.x5D0.0 != m.u32(at + 0x4) {
-            cx.mismatch(
-                &format!("{path}.x5D0"),
-                format!("{:#x}", self.x5D0.0),
-                format!("{:#x}", m.u32(at + 0x4)),
-            );
-        }
+        cx.compare_data(&format!("{path}.x5D0"), self.x5D0, m.u32(at + 0x4));
         for i0 in 0..5 {
             cx.compare_handle(
                 &format!("{}[{}]", format!("{path}.costume_tobjs"), i0),
@@ -1202,7 +1200,9 @@ impl Mirror for DObjList {
         let _ = (&m, at, &cx);
         DObjList {
             count: m.u32(at + 0x0),
-            data: RawPtr(m.u32(at + 0x4)),
+            data: cx
+                .import_handle("DObjListId", m.u32(at + 0x4))
+                .map(DObjListId),
         }
     }
 
@@ -1215,13 +1215,12 @@ impl Mirror for DObjList {
                 format!("{:?}", m.u32(at + 0x0)),
             );
         }
-        if self.data.0 != m.u32(at + 0x4) {
-            cx.mismatch(
-                &format!("{path}.data"),
-                format!("{:#x}", self.data.0),
-                format!("{:#x}", m.u32(at + 0x4)),
-            );
-        }
+        cx.compare_handle(
+            &format!("{path}.data"),
+            "DObjListId",
+            self.data.map(|h| h.0),
+            m.u32(at + 0x4),
+        );
     }
 }
 
@@ -1756,20 +1755,15 @@ impl Mirror for HitVictim {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         HitVictim {
-            victim: RawPtr(m.u32(at + 0x0)),
+            victim: Victim::import(m, at + 0x0, cx),
             x4: m.u32(at + 0x4),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.victim.0 != m.u32(at + 0x0) {
-            cx.mismatch(
-                &format!("{path}.victim"),
-                format!("{:#x}", self.victim.0),
-                format!("{:#x}", m.u32(at + 0x0)),
-            );
-        }
+        self.victim
+            .compare(m, at + 0x0, &format!("{path}.victim"), cx);
         if self.x4 != m.u32(at + 0x4) {
             cx.mismatch(
                 &format!("{path}.x4"),
@@ -3436,12 +3430,12 @@ impl Mirror for CpuFighter {
             xFC: core::array::from_fn(|i0| {
                 Fighter_x1A88_xFC_t::import(m, at + 0xfc + i0 as u32 * 0x1c, cx)
             }),
-            x444: RawPtr(m.u32(at + 0x444)),
-            x448: RawPtr(m.u32(at + 0x448)),
+            x444: CpuInputRef444::import(m, at + 0x444, cx),
+            x448: CpuInputRef448::import(m, at + 0x448, cx),
             command_duration: m.u32(at + 0x44c),
             csP: RawPtr(m.u32(at + 0x450)),
             buffer: core::array::from_fn(|i0| m.u8(at + 0x454 + i0 as u32 * 0x1) as i8),
-            write_pos: RawPtr(m.u32(at + 0x554)),
+            write_pos: CpuWritePos::import(m, at + 0x554, cx),
             x558: f32::from_bits(m.u32(at + 0x558)),
             x55C: f32::from_bits(m.u32(at + 0x55c)),
             x560: f32::from_bits(m.u32(at + 0x560)),
@@ -3952,20 +3946,10 @@ impl Mirror for CpuFighter {
                 cx,
             );
         }
-        if self.x444.0 != m.u32(at + 0x444) {
-            cx.mismatch(
-                &format!("{path}.x444"),
-                format!("{:#x}", self.x444.0),
-                format!("{:#x}", m.u32(at + 0x444)),
-            );
-        }
-        if self.x448.0 != m.u32(at + 0x448) {
-            cx.mismatch(
-                &format!("{path}.x448"),
-                format!("{:#x}", self.x448.0),
-                format!("{:#x}", m.u32(at + 0x448)),
-            );
-        }
+        self.x444
+            .compare(m, at + 0x444, &format!("{path}.x444"), cx);
+        self.x448
+            .compare(m, at + 0x448, &format!("{path}.x448"), cx);
         if self.command_duration != m.u32(at + 0x44c) {
             cx.mismatch(
                 &format!("{path}.command_duration"),
@@ -3989,13 +3973,8 @@ impl Mirror for CpuFighter {
                 );
             }
         }
-        if self.write_pos.0 != m.u32(at + 0x554) {
-            cx.mismatch(
-                &format!("{path}.write_pos"),
-                format!("{:#x}", self.write_pos.0),
-                format!("{:#x}", m.u32(at + 0x554)),
-            );
-        }
+        self.write_pos
+            .compare(m, at + 0x554, &format!("{path}.write_pos"), cx);
         if self.x558.to_bits() != m.u32(at + 0x558) {
             cx.mismatch(
                 &format!("{path}.x558"),
@@ -4172,7 +4151,7 @@ impl Mirror for LbShadow {
             x0_b5: m.bits(at, 5, 1) != 0,
             x0_b6: m.bits(at, 6, 1) != 0,
             x0_b7: m.bits(at, 7, 1) != 0,
-            shadow: RawPtr(m.u32(at + 0x4)),
+            shadow: cx.import_handle("ShadowId", m.u32(at + 0x4)).map(ShadowId),
         }
     }
 
@@ -4234,13 +4213,12 @@ impl Mirror for LbShadow {
                 format!("{:?}", m.bits(at, 7, 1)),
             );
         }
-        if self.shadow.0 != m.u32(at + 0x4) {
-            cx.mismatch(
-                &format!("{path}.shadow"),
-                format!("{:#x}", self.shadow.0),
-                format!("{:#x}", m.u32(at + 0x4)),
-            );
-        }
+        cx.compare_handle(
+            &format!("{path}.shadow"),
+            "ShadowId",
+            self.shadow.map(|h| h.0),
+            m.u32(at + 0x4),
+        );
     }
 }
 
@@ -4581,13 +4559,17 @@ impl Mirror for Fighter {
             x408: ColorOverlay::import(m, at + 0x408, cx),
             x488: ColorOverlay::import(m, at + 0x488, cx),
             x508: ColorOverlay::import(m, at + 0x508, cx),
-            x588: RawPtr(m.u32(at + 0x588)),
+            x588: cx.import_handle("LObjId", m.u32(at + 0x588)).map(LObjId),
             x58C: m.u32(at + 0x58c),
             x590: cx.import_data(m.u32(at + 0x590)),
             x594: m.bytes(at + 0x594),
             x598: cx.import_data(m.u32(at + 0x598)),
-            x59C: RawPtr(m.u32(at + 0x59c)),
-            x5A0: RawPtr(m.u32(at + 0x5a0)),
+            x59C: cx
+                .import_handle("AnimBufId", m.u32(at + 0x59c))
+                .map(AnimBufId),
+            x5A0: cx
+                .import_handle("AnimBufId", m.u32(at + 0x5a0))
+                .map(AnimBufId),
             x5A4: m.u32(at + 0x5a4),
             x5A8: m.u32(at + 0x5a8),
             x5AC: FtPartsVis::import(m, at + 0x5ac, cx),
@@ -5280,13 +5262,12 @@ impl Mirror for Fighter {
             .compare(m, at + 0x488, &format!("{path}.x488"), cx);
         self.x508
             .compare(m, at + 0x508, &format!("{path}.x508"), cx);
-        if self.x588.0 != m.u32(at + 0x588) {
-            cx.mismatch(
-                &format!("{path}.x588"),
-                format!("{:#x}", self.x588.0),
-                format!("{:#x}", m.u32(at + 0x588)),
-            );
-        }
+        cx.compare_handle(
+            &format!("{path}.x588"),
+            "LObjId",
+            self.x588.map(|h| h.0),
+            m.u32(at + 0x588),
+        );
         if self.x58C != m.u32(at + 0x58c) {
             cx.mismatch(
                 &format!("{path}.x58C"),
@@ -5303,20 +5284,18 @@ impl Mirror for Fighter {
             );
         }
         cx.compare_data(&format!("{path}.x598"), self.x598, m.u32(at + 0x598));
-        if self.x59C.0 != m.u32(at + 0x59c) {
-            cx.mismatch(
-                &format!("{path}.x59C"),
-                format!("{:#x}", self.x59C.0),
-                format!("{:#x}", m.u32(at + 0x59c)),
-            );
-        }
-        if self.x5A0.0 != m.u32(at + 0x5a0) {
-            cx.mismatch(
-                &format!("{path}.x5A0"),
-                format!("{:#x}", self.x5A0.0),
-                format!("{:#x}", m.u32(at + 0x5a0)),
-            );
-        }
+        cx.compare_handle(
+            &format!("{path}.x59C"),
+            "AnimBufId",
+            self.x59C.map(|h| h.0),
+            m.u32(at + 0x59c),
+        );
+        cx.compare_handle(
+            &format!("{path}.x5A0"),
+            "AnimBufId",
+            self.x5A0.map(|h| h.0),
+            m.u32(at + 0x5a0),
+        );
         if self.x5A4 != m.u32(at + 0x5a4) {
             cx.mismatch(
                 &format!("{path}.x5A4"),

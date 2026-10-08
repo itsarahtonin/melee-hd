@@ -5,6 +5,7 @@
 
 use melee_data::archive::DataRef;
 
+use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
@@ -12,9 +13,12 @@ use crate::game::it::ItemVars;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::hsd::lobj::LObjId;
+use crate::hsd::shadow::ShadowId;
 use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
+use crate::lb::hitcapsule::Victim;
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -547,7 +551,7 @@ pub struct CostumeTObjList {
     /// +0x0
     pub n_costume_tobjs: u32,
     /// +0x4
-    pub x5D0: RawPtr,
+    pub x5D0: Option<DataRef>,
     /// +0x8
     pub costume_tobjs: [Option<TObjId>; 5],
 }
@@ -556,7 +560,7 @@ impl Default for CostumeTObjList {
     fn default() -> Self {
         CostumeTObjList {
             n_costume_tobjs: 0,
-            x5D0: Default::default(),
+            x5D0: None,
             costume_tobjs: [None; 5],
         }
     }
@@ -568,14 +572,14 @@ pub struct DObjList {
     /// +0x0
     pub count: u32,
     /// +0x4
-    pub data: RawPtr,
+    pub data: Option<DObjListId>,
 }
 
 impl Default for DObjList {
     fn default() -> Self {
         DObjList {
             count: 0,
-            data: Default::default(),
+            data: None,
         }
     }
 }
@@ -878,7 +882,7 @@ impl Default for Fighter_x8B0_t {
 #[derive(Clone, Debug, PartialEq)]
 pub struct HitVictim {
     /// +0x0
-    pub victim: RawPtr,
+    pub victim: Victim,
     /// +0x4
     pub x4: u32,
 }
@@ -1771,9 +1775,9 @@ pub struct CpuFighter {
     /// +0xfc
     pub xFC: [Fighter_x1A88_xFC_t; 30],
     /// +0x444
-    pub x444: RawPtr,
+    pub x444: CpuInputRef444,
     /// +0x448
-    pub x448: RawPtr,
+    pub x448: CpuInputRef448,
     /// +0x44c
     pub command_duration: u32,
     /// +0x450
@@ -1781,7 +1785,7 @@ pub struct CpuFighter {
     /// +0x454
     pub buffer: [i8; 256],
     /// +0x554
-    pub write_pos: RawPtr,
+    pub write_pos: CpuWritePos,
     /// +0x558
     pub x558: f32,
     /// +0x55c
@@ -1974,7 +1978,7 @@ pub struct LbShadow {
     /// +0x0 (bits 7..+1)
     pub x0_b7: bool,
     /// +0x4
-    pub shadow: RawPtr,
+    pub shadow: Option<ShadowId>,
 }
 
 impl Default for LbShadow {
@@ -1988,7 +1992,7 @@ impl Default for LbShadow {
             x0_b5: false,
             x0_b6: false,
             x0_b7: false,
-            shadow: Default::default(),
+            shadow: None,
         }
     }
 }
@@ -2240,7 +2244,7 @@ pub struct Fighter {
     /// +0x508
     pub x508: ColorOverlay,
     /// +0x588
-    pub x588: RawPtr,
+    pub x588: Option<LObjId>,
     /// +0x58c
     pub x58C: u32,
     /// +0x590
@@ -2250,9 +2254,9 @@ pub struct Fighter {
     /// +0x598
     pub x598: Option<DataRef>,
     /// +0x59c
-    pub x59C: RawPtr,
+    pub x59C: Option<AnimBufId>,
     /// +0x5a0
-    pub x5A0: RawPtr,
+    pub x5A0: Option<AnimBufId>,
     /// +0x5a4
     pub x5A4: u32,
     /// +0x5a8
@@ -3037,13 +3041,13 @@ impl Default for Fighter {
             x408: Default::default(),
             x488: Default::default(),
             x508: Default::default(),
-            x588: Default::default(),
+            x588: None,
             x58C: 0,
             x590: None,
             x594: [0; 4],
             x598: None,
-            x59C: Default::default(),
-            x5A0: Default::default(),
+            x59C: None,
+            x5A0: None,
             x5A4: 0,
             x5A8: 0,
             x5AC: Default::default(),

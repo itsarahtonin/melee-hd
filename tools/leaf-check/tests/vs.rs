@@ -226,6 +226,11 @@ impl Fuzz<'_> {
         self.mem[(a - MEM1) as usize]
     }
 
+    fn u32(&self, a: u32) -> u32 {
+        let i = (a - MEM1) as usize;
+        u32::from_be_bytes(self.mem[i..i + 4].try_into().unwrap())
+    }
+
     fn put(&mut self, a: u32, v: u32) {
         let i = (a - MEM1) as usize;
         self.mem[i..i + 4].copy_from_slice(&v.to_be_bytes());
@@ -347,7 +352,6 @@ type Stub = (u32, Ret);
 #[derive(Clone, Copy, Debug)]
 enum Ret {
     Nothing,
-    Float(f32),
     /// A null GObj.
     Null,
 }
@@ -394,7 +398,6 @@ fn their_stub(ctx: &Ctx) {
     THEIR_CALLS.with(|c| c.borrow_mut().push((addr, gpr, fpr)));
     let ret = THEIR_STUBS.with(|s| s.borrow().iter().find(|s| s.0 == addr).map(|s| s.1));
     match ret {
-        Some(Ret::Float(v)) => ctx.regs.set_f(1, leaf_check::arg(v)),
         Some(Ret::Null) => ctx.regs.set_r(3, 0),
         _ => {}
     }
@@ -557,7 +560,6 @@ fn check_runs(
     for &(addr, ret) in stubs {
         let ours = match ret {
             Ret::Nothing => melee_sim::game::code::Val::None,
-            Ret::Float(v) => melee_sim::game::code::Val::Float(leaf_check::arg(v)),
             Ret::Null => melee_sim::game::code::Val::GObj(None),
         };
         melee_sim::game::code::stubs::set(addr, ours);
@@ -1503,6 +1505,38 @@ fn player_set_cpu_type() {
     });
 }
 
+/// The CPU setters from a running match's states, whose slots have fighters
+/// (`ft_80087BEC`, `ft_80087BC0`: the fighters' computer player state started afresh).
+#[test]
+fn player_set_cpu_on_fighters() {
+    check_calls(
+        "fn_8016CFE0",
+        6,
+        |f| {
+            f.regs.gpr[3] = f.below(4);
+            f.regs.gpr[4] = f.below(10);
+            f.regs.gpr[5] = f.below(2);
+        },
+        |r, a| {
+            if a.r(5) == 0 {
+                r.set_player_cpu_level(a.i(3), a.i(4));
+            } else {
+                r.set_player_cpu_type(a.i(3), a.i(4));
+            }
+            vec![]
+        },
+        |ctx, call| {
+            let (s, v) = (call.regs.gpr[3] as i32, call.regs.gpr[4] as i32);
+            if call.regs.gpr[5] == 0 {
+                fns::Player_SetPlayerAndEntityCpuLevel(ctx, s, v);
+            } else {
+                fns::Player_SetPlayerAndEntityCpuType(ctx, s, v);
+            }
+            (0, 0)
+        },
+    );
+}
+
 #[test]
 fn player_set_pos() {
     check("Player_80032768", |r, a| {
@@ -1613,10 +1647,10 @@ fn slot_args(f: &mut Fuzz) {
 
 #[test]
 fn player_disable_input() {
-    check_calls_stubbed(
+    // With `ftLib_DisableInput` (and `Fighter_ResetInputData_80068854`) on the fighters.
+    check_calls(
         "fn_8016CFE0",
         6,
-        &[nothing(0x8008_67E8)],
         slot_args,
         |r, a| {
             r.player_disable_input(a.i(3));
@@ -1727,11 +1761,20 @@ fn player_first_init() {
 
 #[test]
 fn player_nametag_height() {
-    check_calls_stubbed(
+    // With `ftLib_GetNameTagHeight` on the fighter, visible or not.
+    check_calls(
         "fn_8016CFE0",
         4,
-        &[(0x8008_6F80, Ret::Float(12.5))],
-        |f| f.regs.gpr[3] = f.below(2),
+        |f| {
+            f.regs.gpr[3] = f.below(2);
+            let players = sym("player_slots");
+            let g = f.u32(players + 0xE90 * f.regs.gpr[3] + 0xB0);
+            if g != 0 && f.below(2) == 0 {
+                let fp = f.u32(g + 0x2C);
+                let b = f.u8(fp + 0x221E);
+                f.put8(fp + 0x221E, b | 0x80);
+            }
+        },
         |r, a| {
             let h = r.player_nametag_height(a.i(3));
             vec![Out::R3(gekko_fp::stfs(h))]

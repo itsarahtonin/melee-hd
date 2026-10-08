@@ -220,6 +220,12 @@ pub fn at_limit(game: &mut Game, hold_kind: i32) -> bool {
     }
 }
 
+/// Registers a character item's article as its character loads, `it_8026B3F8`.
+#[doc(alias = "it_8026B3F8")]
+pub fn set_char_article(game: &mut Game, article: Option<DataRef>, kind: i32) {
+    game.it.char_articles[(kind - KURIBOH) as usize] = article;
+}
+
 /// An item kind's article (`it_804D6D24` and friends, by `Item_80267978`'s split).
 pub fn article_of(game: &Game, data: &Archives, kind: i32) -> Option<DataRef> {
     let g = &game.it;
