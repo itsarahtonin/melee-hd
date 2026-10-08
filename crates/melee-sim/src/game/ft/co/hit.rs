@@ -511,7 +511,7 @@ impl Running<'_> {
         let element = fp.dmg.x1860_element;
         match self.damage_color_anim(gobj, element, level) {
             None => unported_call("ftCo_8008DA4C's unset result (a hit with no damage)"),
-            Some(true) => unported_call("ftCo_800C0408"),
+            Some(true) => self.color_anim_update(gobj),
             Some(false) => {}
         }
         self.forget_attacker_grounded(f);
@@ -536,8 +536,13 @@ impl Running<'_> {
             return;
         }
         let fp = &self.game.fighters[f.0];
-        if fp.victim_gobj.is_some() {
-            unported_call("ftCo_8008EC90 with a grab's partner hit");
+        if let Some(other) = fp.victim_gobj {
+            if fp.x221B.x221B_b5 {
+                self.holder_hit(gobj, other);
+            } else {
+                self.held_hit(gobj, other);
+            }
+            return;
         }
         if let Some(item) = fp.item_gobj
             && lib26b1::is_heavy(self.game, self.data, item)
@@ -555,6 +560,128 @@ impl Running<'_> {
             self.damage_hooks(gobj);
             self.damage_reaction(gobj, 0.0);
         }
+    }
+
+    /// `ftCo_8008EC90`'s `inlineB1`: held fast, or with too little damage taken this
+    /// frame to break free.
+    fn held_fast(&self, gobj: GObjId) -> bool {
+        let fp = self.game.fighter(gobj);
+        fp.x221C_b0 || reg(fp.dmg.x1838_percentTemp) < reg(self.common().f32(0x3C0))
+    }
+
+    /// A held fighter's hit, `ftCo_8008EC90` with `x221B_b5` clear. Held fast, it stays
+    /// held: with its holder hit too and too lightly to react, both share the hit's
+    /// hitlag, else the holder throws it off (`ftCo_800DE854`, not ported); not hit, the
+    /// holder shares the hitlag. Else the grab breaks, and it takes hitstun, its holder
+    /// too when the holder isn't hit itself (`ftCo_800DE2F0`, not ported).
+    fn held_hit(&mut self, gobj: GObjId, other: GObjId) {
+        let ff = self.game.fighter_id(gobj);
+        let of = self.game.fighter_id(other);
+        if self.held_fast(gobj) {
+            if self.game.fighters[of.0].dmg.kb_applied != 0.0 {
+                if self.hit_too_light(of) {
+                    self.damage_no_reaction(gobj);
+                    let (applied, mul) = {
+                        let o = &self.game.fighters[of.0];
+                        (o.dmg.x183C_applied, o.x1960_vibrateMult)
+                    };
+                    let fp = &mut self.game.fighters[ff.0];
+                    fp.dmg.x183C_applied = applied;
+                    fp.x1960_vibrateMult = mul;
+                    self.game.fighters[of.0].x1828 = 3;
+                    return;
+                }
+                unported_call("ftCo_800DE854 (thrown off by a hit holder)");
+            }
+            let applied = self.game.fighters[ff.0].dmg.x183C_applied;
+            if applied != 0 {
+                let o = &self.game.fighters[of.0];
+                let lag = self.hitlag(applied, o.motion_id, o.x1960_vibrateMult);
+                let o = &mut self.game.fighters[of.0];
+                o.dmg.x195c_hitlag_frames = mem(lag);
+                o.allow_sdi = true;
+                if !o.x2219_b5 {
+                    if let Some(cb) = o.pre_hitlag_cb {
+                        run_fighter_cb(self, gobj, cb);
+                    }
+                    self.game.fighters[of.0].x2219_b5 = true;
+                }
+            }
+            let fp = &mut self.game.fighters[ff.0];
+            fp.input.pressed_buttons = 0;
+            fp.input.released_buttons = 0;
+            self.damage_no_reaction(gobj);
+            return;
+        }
+        self.grab_break(other, gobj);
+        self.damage_hooks(gobj);
+        self.damage_reaction(gobj, 0.0);
+        if self.game.fighters[of.0].dmg.kb_applied != 0.0 {
+            self.game.fighters[of.0].x1828 = 1;
+        } else {
+            self.damage_hooks(other);
+            unported_call("ftCo_800DE2F0 (a holder knocked back by its victim's escape)");
+        }
+    }
+
+    /// A holder's hit, `ftCo_8008EC90` with `x221B_b5` set. Too light to react, it keeps
+    /// holding: with its victim hit too and held fast, both share the hit's hitlag and
+    /// the victim keeps its state; else it lets go and takes hitstun, and an unhit victim
+    /// is knocked away by the holder's grab hitbox (`ftCo_800DCFD4`, not ported).
+    fn holder_hit(&mut self, gobj: GObjId, other: GObjId) {
+        let ff = self.game.fighter_id(gobj);
+        let of = self.game.fighter_id(other);
+        let other_hit = self.game.fighters[of.0].dmg.kb_applied != 0.0;
+        if self.hit_too_light(ff) {
+            if other_hit {
+                if self.held_fast(other) {
+                    let (applied, mul) = {
+                        let fp = &self.game.fighters[ff.0];
+                        (fp.dmg.x183C_applied, fp.x1960_vibrateMult)
+                    };
+                    let o = &mut self.game.fighters[of.0];
+                    o.dmg.x183C_applied = applied;
+                    o.x1960_vibrateMult = mul;
+                    if self.hit_too_light(ff) {
+                        self.damage_no_reaction(gobj);
+                    }
+                    self.game.fighters[of.0].x1828 = 2;
+                    return;
+                }
+                self.grab_break(gobj, other);
+                self.damage_hooks(gobj);
+                self.damage_reaction(gobj, 0.0);
+                self.game.fighters[of.0].x1828 = 1;
+                return;
+            }
+            if self.hit_too_light(ff) {
+                self.damage_no_reaction(gobj);
+            }
+            return;
+        }
+        if other_hit {
+            if self.held_fast(other) {
+                unported_call("ftCo_800DE854 (thrown off by a hit holder)");
+            }
+            self.grab_break(gobj, other);
+            self.damage_hooks(gobj);
+            self.damage_reaction(gobj, 0.0);
+            self.game.fighters[of.0].x1828 = 1;
+            return;
+        }
+        self.damage_hooks(other);
+        unported_call("ftCo_800DCFD4 (a victim knocked away as its holder is hit)");
+    }
+
+    /// The grab broken, `ftCo_800DCE34`: both let go (`ftCo_800DC920`), and `b`'s model
+    /// placed where it is (`a`'s instead when `b` was held, which letting go has cleared).
+    #[doc(alias = "ftCo_800DCE34")]
+    fn grab_break(&mut self, a: GObjId, b: GObjId) {
+        self.grab_release(a, b);
+        let g = if self.game.fighter(b).x221B.x221B_b7 { a } else { b };
+        let root = self.root_jobj(g);
+        let pos = self.game.fighter(g).cur_pos;
+        crate::hsd::jobj::set_translate(&mut self.game.objs.jobjs, root, pos);
     }
 
     /// Bound by a hit, `ftCo_800C44CC`: a disabling hit (not the sandbag) binds, except
