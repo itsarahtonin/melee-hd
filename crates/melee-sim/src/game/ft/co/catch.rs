@@ -343,9 +343,4 @@ impl Running<'_> {
             other => unported_call(&format!("grabbed callback {other:#010x}")),
         }
     }
-
-    /// Caught, `fn_800DAADC`: not ported yet.
-    pub fn enter_capture_pulled(&mut self, _victim: GObjId, _grabber: GObjId) {
-        unported_call("fn_800DAADC (pulled into a grab)");
-    }
 }

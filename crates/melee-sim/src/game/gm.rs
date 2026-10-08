@@ -3,6 +3,7 @@
 
 pub mod input;
 pub mod pause;
+pub mod results;
 pub mod scene;
 pub mod vs;
 
