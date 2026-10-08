@@ -78,6 +78,8 @@ pub enum Draw {
     },
     /// The screen copied into refraction's source texture (`lbRefract_80022560`).
     RefractCopy,
+    /// Debug text: a screen's rectangles and glyphs (`DevText_Draw`).
+    Text(Box<crate::game::hud::devtext::Draw>),
     /// A particle link, from its first particle as the last sort left it (`psDispParticles`).
     Particles {
         link: usize,
@@ -312,7 +314,9 @@ fn material_setup(objs: &mut Objects, m: MObjId) {
         // grMaterial_803E0A20's setup.
         MObjClass::Ground => panic!("fn_801C8EF8 isn't ported"),
         // it_mobj's setup.
-        MObjClass::Item => panic!("itMaterial_8027D6EC isn't ported"),
+        MObjClass::Item => panic!("fn_80277D8C isn't ported"),
+        // ftMObj's setup.
+        MObjClass::Fighter => panic!("ftMaterial_800BF2B8 isn't ported"),
     }
 }
 

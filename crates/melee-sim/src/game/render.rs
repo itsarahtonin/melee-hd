@@ -81,14 +81,49 @@ impl Running<'_> {
     /// A camera GObj's render callback, `HSD_GObj_803910D8`: passes 0 to 2 of its links.
     #[doc(alias = "HSD_GObj_803910D8")]
     pub fn render_camera(&mut self, gobj: GObjId) {
+        self.render_camera_links(gobj, 7);
+    }
+
+    /// A camera GObj's drawing: its camera current, the passes `mask` names over its links,
+    /// and its end, as `HSD_GObj_803910D8` does for all three passes.
+    fn render_camera_links(&mut self, gobj: GObjId, mask: u32) {
         let c = match self.game.world.gobj(gobj).obj {
             Some(Obj::CObj(c)) => Some(c),
             None => None,
-            other => panic!("HSD_GObj_803910D8 on {other:?}"),
+            other => panic!("a camera callback on {other:?}"),
         };
         if display::camera_begin(&mut self.game.objs, self.data, c) {
-            self.render_links(gobj, 7);
+            self.render_links(gobj, mask);
             display::camera_end(&mut self.game.objs);
+        }
+    }
+
+    /// Does what a HUD render callback decided.
+    fn render_hud(&mut self, d: Option<super::hud::Draw>) {
+        match d {
+            Some(super::hud::Draw::JObjs(g, pass)) => self.render_jobj(g, pass),
+            Some(super::hud::Draw::Camera(g, mask)) => self.render_camera_links(g, mask),
+            None => {}
+        }
+    }
+
+    /// The debug text's drawing GObj, `DevText_DrawAll`: its camera made current, fog off,
+    /// and the screens' text and rectangles handed on as draw commands.
+    pub fn render_devtext(&mut self, pass: i32) {
+        use super::hud::devtext::Draw as Text;
+        for d in self.game.devtext_draw_all(self.data, pass) {
+            match d {
+                Text::Camera(c) => {
+                    display::camera_begin(&mut self.game.objs, self.data, Some(c));
+                }
+                Text::NoFog => display::fog_set(&mut self.game.objs, None),
+                other => self
+                    .game
+                    .objs
+                    .display
+                    .draws
+                    .push(display::Draw::Text(Box::new(other))),
+            }
         }
     }
 
@@ -159,6 +194,44 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         FOG_CALLBACK => r.render_fog(gobj),
         0x801C_1E2C => r.render_stage_fog(gobj),
         super::ef::eflib::RENDER => r.render_particles(gobj, pass),
+        // The HUD's.
+        0x802F_36B8 => {
+            let d = r.game.hud_camera_render(gobj);
+            r.render_hud(d);
+        }
+        0x802F_CAC4 => {
+            let d = r.nametag_camera_render(gobj);
+            r.render_hud(d);
+        }
+        0x802F_CAA4 => {
+            let d = r.game.nametag_render(gobj, pass);
+            r.render_hud(d);
+        }
+        0x802F_770C => {
+            let d = r.game.ko_mark_render(gobj, pass);
+            r.render_hud(d);
+        }
+        0x802F_D6CC => {
+            let d = r.game.hazard_render(gobj, pass);
+            r.render_hud(d);
+        }
+        0x802F_DA4C => {
+            let d = r.game.arrow_render(gobj, pass);
+            r.render_hud(d);
+        }
+        0x802F_5DE0 => {
+            let d = r.game.damage_digits_render(gobj, pass);
+            r.render_hud(d);
+        }
+        0x802F_5E50 => {
+            let d = r.game.damage_mark_render(gobj, pass);
+            r.render_hud(d);
+        }
+        0x802F_94E0 => {
+            let d = r.game.stock_icons_render(gobj, pass);
+            r.render_hud(d);
+        }
+        super::hud::devtext::DRAW_ALL => r.render_devtext(pass),
         _ => return false,
     }
     true

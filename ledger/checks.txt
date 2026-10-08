@@ -1224,3 +1224,8 @@ HSD_CObjEndCurrent	leaf-check display camera_callback and frame end every generi
 HSD_GObj_803910D8	leaf-check display camera_callback: each generic camera from the light callbacks' states, over its own links and the stage's, the fighters', the particles' and the lights'
 HSD_GObj_80390ED0	leaf-check display camera_callback and frame run every camera's passes through it
 HSD_GObj_80390FC0	leaf-check display frame: the frame's pass from the light callbacks' states, the cameras no port covers given no callback
+lbRefract_800222A4	leaf-check display refract_init: from every light callback's capture, refraction's chains made again from LbRf.dat and compared with memory
+lbRefract_8002247C	leaf-check display refract_camera: every max-link camera from the light callbacks' states, with and without users
+lbRefract_80022560	leaf-check display refract_camera: from the light callbacks' states, with and without users
+lbRefract_80022BB8	leaf-check display refract_users: from the light callbacks' states with one to three users
+lbRefSetUnuse	leaf-check display refract_users: from the light callbacks' states with one to three users
