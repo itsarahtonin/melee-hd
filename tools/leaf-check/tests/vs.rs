@@ -397,9 +397,8 @@ fn their_stub(ctx: &Ctx) {
     let fpr = [r.f(1), r.f(2), r.f(3)];
     THEIR_CALLS.with(|c| c.borrow_mut().push((addr, gpr, fpr)));
     let ret = THEIR_STUBS.with(|s| s.borrow().iter().find(|s| s.0 == addr).map(|s| s.1));
-    match ret {
-        Some(Ret::Null) => ctx.regs.set_r(3, 0),
-        _ => {}
+    if let Some(Ret::Null) = ret {
+        ctx.regs.set_r(3, 0);
     }
 }
 
