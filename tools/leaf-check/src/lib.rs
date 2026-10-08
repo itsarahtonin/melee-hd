@@ -12,6 +12,16 @@ use melee_sim::quat::Quat;
 use melee_sim::vec::Vec3;
 use ssbm_rt::Ctx;
 
+/// How many worker threads a check runs its saved calls on: `LEAF_CHECK_WORKERS`, 2 by
+/// default, so a suite run with `--test-threads=2` keeps to about four cores.
+pub fn workers() -> usize {
+    std::env::var("LEAF_CHECK_WORKERS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .filter(|&n: &usize| n > 0)
+        .unwrap_or(2)
+}
+
 /// Where the reference's stack starts: MEM1 above everything the DOL loads.
 const STACK_TOP: u32 = 0x817F_0000;
 

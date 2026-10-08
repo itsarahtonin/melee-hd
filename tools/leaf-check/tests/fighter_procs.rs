@@ -284,9 +284,7 @@ fn check(func: &str, run: fn(&mut Running, GObjId), prepare: fn(&mut Call, usize
     for mode in MODES {
         let next = AtomicUsize::new(0);
         let results = Mutex::new((0, std::collections::BTreeMap::new()));
-        let workers = std::thread::available_parallelism()
-            .map_or(4, |n| n.get())
-            .min(4);
+        let workers = leaf_check::workers();
         std::thread::scope(|s| {
             for _ in 0..workers {
                 std::thread::Builder::new()
