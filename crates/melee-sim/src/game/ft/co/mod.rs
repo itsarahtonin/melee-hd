@@ -30,6 +30,7 @@ pub mod ledge;
 pub mod multijump;
 pub mod phys;
 pub mod squat;
+pub mod throw;
 
 use super::super::structs::Fighter;
 use crate::fpu::mem;

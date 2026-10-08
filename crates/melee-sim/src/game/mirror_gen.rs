@@ -21,7 +21,7 @@ use crate::hsd::shadow::ShadowId;
 use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
-use crate::lb::hitcapsule::Victim;
+use crate::lb::hitcapsule::{HitOwner, Victim};
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -1747,7 +1747,7 @@ impl Mirror for HitCapsule {
             victims_2: core::array::from_fn(|i0| {
                 HitVictim::import(m, at + 0xd4 + i0 as u32 * 0x8, cx)
             }),
-            x134: m.bytes(at + 0x134),
+            x134: HitOwner::import(m, at + 0x134, cx),
         }
     }
 
@@ -2077,13 +2077,8 @@ impl Mirror for HitCapsule {
                 cx,
             );
         }
-        if self.x134 != m.bytes::<4>(at + 0x134) {
-            cx.mismatch(
-                &format!("{path}.x134"),
-                format!("{:02x?}", self.x134),
-                format!("{:02x?}", m.bytes::<4>(at + 0x134)),
-            );
-        }
+        self.x134
+            .compare(m, at + 0x134, &format!("{path}.x134"), cx);
     }
 }
 

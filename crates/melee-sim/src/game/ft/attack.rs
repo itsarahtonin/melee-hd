@@ -85,8 +85,19 @@ const LOG_LEN: usize = 20;
 /// an item's (2), by its GObj.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LoggedHit {
-    Fighter { fighter: FighterId, index: usize },
-    Item { item: GObjId, index: usize },
+    Fighter {
+        fighter: FighterId,
+        index: usize,
+    },
+    Item {
+        item: GObjId,
+        index: usize,
+    },
+    /// A throw's hitbox (`Fighter::xDF4`), which deals its hit directly.
+    Throw {
+        fighter: FighterId,
+        index: usize,
+    },
 }
 
 /// A logged hit (`DmgLogEntry`): a fighter's or an item's. The stage's stop at their seams
@@ -116,7 +127,7 @@ pub struct HitLogs {
 }
 
 /// A hit's damage as an integer, at least 1 for any damage, `getEnvDmg`.
-fn whole_damage(dmg: f64) -> i32 {
+pub(crate) fn whole_damage(dmg: f64) -> i32 {
     if dmg != 0.0 {
         let i = fp::fctiwz(dmg);
         if i != 0 { i } else { 1 }
@@ -182,7 +193,7 @@ impl Running<'_> {
     /// is still 0, the thrown fighter's thrower (`x1064_thrownHitbox.x134`, a GObj pointer the
     /// mirror keeps as raw bytes) isn't modeled.
     fn thrower(&self, f: FighterId) -> Option<GObjId> {
-        if self.game.fighters[f.0].x1064_thrownHitbox.x134 != [0; 4] {
+        if self.game.fighters[f.0].x1064_thrownHitbox.x134.is_set() {
             unported_call("a thrown fighter's thrower (Fighter::x1198)");
         }
         None
@@ -287,7 +298,7 @@ impl Running<'_> {
             return;
         }
         // A box that only hits its owner's grab victim.
-        if h0.x134[0] & 0x80 != 0
+        if h0.x134.grabbed_victim_only()
             && vf.victim_gobj.is_some()
             && vf.x221B.x221B_b5
             && vf.victim_gobj != Some(gobj)
@@ -916,7 +927,7 @@ impl Running<'_> {
     /// What a fighter's hit on another records, `ftColl_8007891C`: the attacker's stale-move
     /// queue, its combo against the victim, and the damage both players' statistics count.
     #[doc(alias = "ftColl_8007891C")]
-    fn record_fighter_hit(&mut self, attacker: GObjId, victim_gobj: GObjId, dmg: f64) {
+    pub(crate) fn record_fighter_hit(&mut self, attacker: GObjId, victim_gobj: GObjId, dmg: f64) {
         self.stale_move_from_fighter(attacker, victim_gobj);
         let a = self.game.fighter_id(attacker);
         let attack_id = self.game.fighters[a.0].x2068_attackID;
@@ -1238,6 +1249,7 @@ impl Running<'_> {
     fn logged_capsule(&self, hit: LoggedHit) -> &super::super::structs::HitCapsule {
         match hit {
             LoggedHit::Fighter { fighter, index } => &self.game.fighters[fighter.0].x914[index],
+            LoggedHit::Throw { fighter, index } => &self.game.fighters[fighter.0].xDF4[index],
             LoggedHit::Item { item, index } => {
                 &super::super::it::item(self.game, item).x5D4_hitboxes[index].hit
             }
@@ -1783,7 +1795,7 @@ impl Running<'_> {
     /// match's and players' ratios, capped at `x108`.
     #[doc(alias = "ftColl_80079AB0")]
     #[allow(clippy::too_many_arguments)]
-    fn knockback(
+    pub(crate) fn knockback(
         &self,
         me: FighterId,
         hit: LoggedHit,
@@ -1860,6 +1872,7 @@ impl Running<'_> {
                     self.fighter_knockback(me, attacker, e.hit, e.count)
                 }
                 LoggedHit::Item { item, .. } => self.item_knockback(me, item, e.hit, e.count),
+                LoggedHit::Throw { .. } => unreachable!("a throw's hitbox in the damage log"),
             };
             if !tips {
                 let h = self.logged_capsule(e.hit);
@@ -1885,6 +1898,7 @@ impl Running<'_> {
         let (kb_angle, element, severity) = (h.kb_angle as u32, h.element, h.sfx_severity);
         let fp = &self.game.fighters[me.0];
         let mut dir: f32 = match e.hit {
+            LoggedHit::Throw { .. } => unreachable!("a throw's hitbox in the damage log"),
             LoggedHit::Fighter { .. } => {
                 let attacker = self
                     .game
@@ -1960,6 +1974,7 @@ impl Running<'_> {
         }
         let grounded = height == 0;
         match e.hit {
+            LoggedHit::Throw { .. } => unreachable!("a throw's hitbox in the damage log"),
             LoggedHit::Fighter { .. } => {
                 let a = self
                     .game

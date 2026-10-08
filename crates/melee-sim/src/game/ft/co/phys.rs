@@ -109,7 +109,7 @@ impl Running<'_> {
         }
         let slow = reg(self.common().f32(0x1C8));
         let fp = self.game.fighter(gobj);
-        if u32::from_be_bytes(fp.x1064_thrownHitbox.x134) != 0 {
+        if fp.x1064_thrownHitbox.x134.is_set() {
             let k = fp.x8c_kb_vel;
             let sq = |v: f32| fp::fmuls(reg(v), reg(v));
             let speed = sqrt_reg(fp::fadds(sq(k.z), fp::fadds(sq(k.x), sq(k.y))));
@@ -215,6 +215,7 @@ impl Running<'_> {
 
     /// `ftCo_ThrowB_Phys`, `ftCo_ThrowHi_Phys`, `ftCo_ThrowLw_Phys`: a throw in the air keeps
     /// its set velocity, or the animation's.
+    #[doc(alias = "ftCo_ThrowF_Phys")]
     #[doc(alias = "ftCo_ThrowB_Phys")]
     #[doc(alias = "ftCo_ThrowHi_Phys")]
     #[doc(alias = "ftCo_ThrowLw_Phys")]

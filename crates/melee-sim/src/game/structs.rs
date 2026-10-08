@@ -21,7 +21,7 @@ use crate::hsd::shadow::ShadowId;
 use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
-use crate::lb::hitcapsule::Victim;
+use crate::lb::hitcapsule::{HitOwner, Victim};
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -941,7 +941,7 @@ pub struct HitCapsule {
     /// +0xd4
     pub victims_2: [HitVictim; 12],
     /// +0x134
-    pub x134: [u8; 4],
+    pub x134: HitOwner,
 }
 
 impl Default for HitCapsule {
@@ -996,7 +996,7 @@ impl Default for HitCapsule {
             coll_distance: 0.0,
             victims_1: core::array::from_fn(|_| Default::default()),
             victims_2: core::array::from_fn(|_| Default::default()),
-            x134: [0; 4],
+            x134: Default::default(),
         }
     }
 }

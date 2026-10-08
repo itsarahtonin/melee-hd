@@ -157,6 +157,8 @@ SPLICE = {
     "DynamicsData": ("desc", 0, 0x90, "lb_00F9_UnkDesc0"),
     # The fighter or item a hitbox hit, by its user data.
     "HitVictim": ("victim", 0, 4, "Victim"),
+    # A hitbox's grabbed-victim-only bit, or a thrown fighter's hitbox's thrower.
+    "HitCapsule": ("x134", 0x134, 0x138, "HitOwner"),
     # A bone id, or the figatree an animation's blend slot gives the chain.
     "BoneDynamicsDesc": ("bone_id", 0, 4, "BoneSlot"),
     # Pointers a computer player's state keeps into itself: offsets from the fields they point
@@ -195,7 +197,7 @@ EXTRA_USES = [
     "use crate::hsd::shadow::ShadowId;",
     "use crate::lb::command::Script;",
     "use crate::hsd::sis::TextId;",
-    "use crate::lb::hitcapsule::Victim;",
+    "use crate::lb::hitcapsule::{HitOwner, Victim};",
     "use crate::game::hud::magnify::{MagnifyImage, TexBuffer};",
 ]
 
@@ -258,7 +260,7 @@ use crate::hsd::lobj::LObjId;
 use crate::hsd::shadow::ShadowId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
-use crate::lb::hitcapsule::Victim;
+use crate::lb::hitcapsule::{HitOwner, Victim};
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;"""

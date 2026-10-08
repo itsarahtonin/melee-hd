@@ -10,6 +10,7 @@ use crate::game::handles::{FighterId, ItemId};
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::structs::{HitCapsule, HitResult, HurtCapsule};
 use crate::hsd::Objects;
+use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::lb::collision::{HitShape, hit_hurt};
 use crate::lb::joint::world_position;
@@ -57,6 +58,79 @@ impl Mirror for Victim {
                 };
                 if ours != theirs {
                     cx.mismatch(path, format!("{self:?}"), format!("{theirs:#x}"));
+                }
+            }
+        }
+    }
+}
+
+/// `HitCapsule::x134`, a union: a hitbox's grabbed-victim-only bit (`hit_grabbed_victim_only`,
+/// the top bit), or on a thrown fighter's hitbox its thrower (`owner`, a GObj pointer).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HitOwner {
+    Bits([u8; 4]),
+    Thrower(GObjId),
+}
+
+impl Default for HitOwner {
+    fn default() -> Self {
+        HitOwner::Bits([0; 4])
+    }
+}
+
+impl HitOwner {
+    /// Whether the word is nonzero: a thrower, or the bit.
+    pub fn is_set(&self) -> bool {
+        *self != HitOwner::Bits([0; 4])
+    }
+
+    /// The top bit, as `hit_grabbed_victim_only` reads it (a pointer's is set).
+    pub fn grabbed_victim_only(&self) -> bool {
+        match self {
+            HitOwner::Bits(b) => b[0] & 0x80 != 0,
+            HitOwner::Thrower(_) => true,
+        }
+    }
+
+    pub fn set_grabbed_victim_only(&mut self, v: bool) {
+        let HitOwner::Bits(b) = self else {
+            panic!("setting a thrower's word as the grabbed-victim-only bit");
+        };
+        if v {
+            b[0] |= 0x80;
+        } else {
+            b[0] &= !0x80;
+        }
+    }
+
+    /// The thrower, when the word holds one.
+    pub fn thrower(&self) -> Option<GObjId> {
+        match self {
+            HitOwner::Thrower(g) => Some(*g),
+            HitOwner::Bits(_) => None,
+        }
+    }
+}
+
+impl Mirror for HitOwner {
+    const SIZE: u32 = 4;
+
+    /// A GObj's address is a thrower; anything else, the bits.
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let a = m.u32(at);
+        match (a != 0).then(|| cx.import_handle("GObjId", a)).flatten() {
+            Some(g) => HitOwner::Thrower(GObjId(g)),
+            None => HitOwner::Bits(m.bytes(at)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        match *self {
+            HitOwner::Thrower(g) => cx.compare_handle(path, "GObjId", Some(g.0), m.u32(at)),
+            HitOwner::Bits(b) => {
+                let theirs: [u8; 4] = m.bytes(at);
+                if b != theirs {
+                    cx.mismatch(path, format!("{b:02x?}"), format!("{theirs:02x?}"));
                 }
             }
         }

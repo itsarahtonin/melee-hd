@@ -132,6 +132,14 @@ impl Running<'_> {
         }
     }
 
+    /// A throw that came within `pl_804D6470` x4C of the victim's mash timer sets the quick
+    /// throw's bonus (`pl_80040614`'s test, `pl_80038788` with 0x2D).
+    pub fn record_throw_timer(&mut self, slot: i32, timer: f32) {
+        if reg(timer) <= reg(self.bonus_param_f32(0x4C)) {
+            self.set_flag(slot, Flag::Bonus(0x2D), 1);
+        }
+    }
+
     /// `pl_804D6470`'s word at `off`.
     pub(super) fn bonus_param(&self, off: u32) -> u32 {
         self.data.u32(self.pl_data().at(off))

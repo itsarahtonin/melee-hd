@@ -199,7 +199,7 @@ impl Running<'_> {
     #[doc(alias = "ftAction_8007121C")]
     fn cmd_create_hitbox(&mut self, gobj: GObjId, f: FighterId) {
         let w: [u32; 6] = std::array::from_fn(|i| self.cmd_word(f, i as u32));
-        let thrown = self.game.fighters[f.0].x1064_thrownHitbox.x134 != [0; 4];
+        let thrown = self.game.fighters[f.0].x1064_thrownHitbox.x134.is_set();
         if bits(w[3], 28, 1) != 0 && !thrown {
             self.cmd_skip(f, 5);
             self.smash_since_hitbox(f);
@@ -265,9 +265,9 @@ impl Running<'_> {
         h.x41_b7 = false;
         // `x134.hit_grabbed_victim_only`, from the word after the command's five.
         if bits(w[5], 12, 1) != 0 {
-            h.x134[0] |= 0x80;
+            h.x134.set_grabbed_victim_only(true);
         } else {
-            h.x134[0] &= !0x80;
+            h.x134.set_grabbed_victim_only(false);
         }
         h.x42_b1 = true;
         h.x42_b2 = false;

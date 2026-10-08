@@ -146,6 +146,26 @@ impl Running<'_> {
         self.fighter_coll_filtered(f, false, prepare, pass)
     }
 
+    /// A collision pass from `last` to `cur`, the ECB zeroed first (`mpColl_80043670`), as code
+    /// that moves a fighter itself runs it; the fighter ends where it does.
+    pub(crate) fn fighter_coll_placed(
+        &mut self,
+        f: FighterId,
+        last: Vec3,
+        cur: Vec3,
+        pass: impl FnOnce(&mut Coll<'_, StageColl, ObjCollHooks<'_>>, &mut CollData) -> bool,
+    ) -> bool {
+        self.fighter_coll(
+            f,
+            |cd| {
+                cd.last_pos = last;
+                cd.request_clear();
+                cd.cur_pos = cur;
+            },
+            pass,
+        )
+    }
+
     /// [`Self::fighter_coll`], with the inputs of the fighter's floor filter when `filtered`.
     fn fighter_coll_filtered(
         &mut self,

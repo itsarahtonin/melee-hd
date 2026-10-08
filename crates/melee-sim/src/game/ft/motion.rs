@@ -450,6 +450,18 @@ impl Running<'_> {
         self.count_attack(gobj, [0; 4]);
     }
 
+    /// A thrown fighter's hitbox takes its thrower, `ftColl_8007B8CC`: its owner, team and
+    /// player.
+    #[doc(alias = "ftColl_8007B8CC")]
+    pub(crate) fn thrown_hitbox_owner(&mut self, f: FighterId, thrower: GObjId) {
+        let tf = self.game.fighter(thrower);
+        let (team, slot) = (tf.team, tf.player_idx);
+        let fp = &mut self.game.fighters[f.0];
+        fp.x1064_thrownHitbox.x134 = crate::lb::hitcapsule::HitOwner::Thrower(thrower);
+        fp.x119C_teamUnk = team;
+        fp.grabber_unk1 = slot;
+    }
+
     /// Changes the fighter's action state to `msid`, `Fighter_ChangeMotionState`. `start` is
     /// the animation frame to start from, `speed` its rate, `blend` the frames to blend into
     /// it over (0: the animation's own; -1: none); `flags` ([`flags`]) keep effects of the
@@ -469,9 +481,6 @@ impl Running<'_> {
         use flags::*;
         let f = self.game.fighter_id(gobj);
         let root = self.root_jobj(gobj);
-        if other.is_some() {
-            unported_call("Fighter_ChangeMotionState with another fighter's animation");
-        }
         {
             let fp = &mut self.game.fighters[f.0];
             fp.motion_id = msid;
@@ -499,7 +508,7 @@ impl Running<'_> {
             }
         }
         if flags & SKIP_THROW_EXCEPTION == 0 {
-            self.game.fighters[f.0].x1064_thrownHitbox.x134 = [0; 4];
+            self.game.fighters[f.0].x1064_thrownHitbox.x134 = Default::default();
         }
         if flags & KEEP_COL_ANIM_HIT_STATUS == 0 {
             if self.game.fighters[f.0].x1988 != 0 {
@@ -751,18 +760,26 @@ impl Running<'_> {
                 speed = 0.0;
             }
             let anim = fp.anim_id;
-            let entry = fp
+            // With `other`, the other fighter's animation (a thrown fighter plays its
+            // thrower's).
+            let src = other.map_or(f, |o| self.game.fighter_id(o));
+            let sp = &self.game.fighters[src.0];
+            let entry = sp
                 .x24
                 .expect("a fighter without animations")
                 .at(ANIM_ENTRY_SIZE * anim as u32);
-            let pair = fp
+            let pair = sp
                 .x28
                 .expect("a fighter without animation pairs")
                 .at(2 * anim as u32);
+            let fp = &mut self.game.fighters[f.0];
             fp.x594 = self.data.u32(entry.at(0x10)).to_be_bytes();
             self.dynamics_for_anim(f, pair);
             if flags & SKIP_ANIM == 0 {
-                self.load_anim(f, f, anim);
+                self.load_anim(f, src, anim);
+                if let Some(o) = other {
+                    self.thrown_hitbox_owner(f, o);
+                }
                 let script = self.data.ptr(entry.at(0xC));
                 let s = &mut self.game.fighters[f.0].x3E4_fighterCmdScript.script;
                 s.cursor = script;

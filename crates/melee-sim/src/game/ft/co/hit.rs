@@ -714,7 +714,7 @@ impl Running<'_> {
     /// The knockback's hitbox turns on, `ftColl_8007B7A4`: for at least `frames` frames,
     /// with its color animation.
     // Ports `ftColl_8007B7A4`; aliased once a check reaches it.
-    fn knockback_hitbox(&mut self, gobj: GObjId, frames: i32) {
+    pub(crate) fn knockback_hitbox(&mut self, gobj: GObjId, frames: i32) {
         let fp = self.game.fighter_mut(gobj);
         if frames > fp.x1994 {
             fp.x1994 = frames;
@@ -726,7 +726,7 @@ impl Running<'_> {
     /// Directional influence, `ftCo_8008E5A4`: the stick's part across the knockback turns
     /// it by up to `ftCommonData` x1A8 degrees, toward the stick's side.
     #[doc(alias = "ftCo_8008E5A4")]
-    fn directional_influence(&mut self, gobj: GObjId) {
+    pub(crate) fn directional_influence(&mut self, gobj: GObjId) {
         let x1a8 = reg(self.common().f32(0x1A8));
         let fp = self.game.fighter_mut(gobj);
         let (sx, sy) = (reg(fp.input.lstick[0].x), reg(fp.input.lstick[0].y));

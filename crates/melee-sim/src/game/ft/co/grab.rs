@@ -295,7 +295,8 @@ impl Running<'_> {
             msid = ms::THROW_LW;
         }
         if msid != fp.motion_id {
-            unported_call("ftCo_800DD4B0 (a throw)");
+            self.enter_throw(gobj, msid);
+            return true;
         }
         false
     }
