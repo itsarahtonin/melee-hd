@@ -474,12 +474,26 @@ fn refract_init() {
             let gaps: Vec<_> = imp
                 .unhandled
                 .iter()
-                .filter(|u| u.contains("refract") || u.contains("TObj image"))
+                .filter(|u| u.contains("refract"))
                 .collect();
             assert!(gaps.is_empty(), "{gaps:?}");
             let Importer {
                 mut game, mut maps, ..
             } = imp;
+            // Each chain is the indirect map then the screen copy.
+            for &t in &game.refract.tobjs {
+                let next = game.objs.tobjs[t].next.expect("the screen copy");
+                assert!(matches!(
+                    (
+                        game.objs.tobjs[t].imagedesc,
+                        game.objs.tobjs[next].imagedesc
+                    ),
+                    (
+                        Some(melee_sim::hsd::tobj::ImageRef::Refract(_)),
+                        Some(melee_sim::hsd::tobj::ImageRef::RefractFrame)
+                    )
+                ));
+            }
             let mut chain = game.refract.tobjs.clone();
             while let Some(t) = chain.pop() {
                 maps.tobjs.retain(|_, v| *v != t);
