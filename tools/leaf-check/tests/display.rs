@@ -1179,3 +1179,51 @@ fn text_render_from(shift: usize) {
         },
     );
 }
+
+/// The background flash a heavy hit sets off (`ftCo_8008DB10`), from the fighters' render
+/// states: each element, knockback around the thresholds, with and without damage dealt.
+#[test]
+fn heavy_hit_flash() {
+    let f = leaf_check::sym("ftCo_8008DB10");
+    each2(
+        "ftDrawCommon_80080E18",
+        10,
+        &|call, i| {
+            call.addr = f;
+            let element = [0, 1, 2, 3, 5, 13][i % 6];
+            call.regs.gpr[4] = element;
+            // At, just past or short of the element's threshold (`p_ftCommonData->x178` and
+            // on), or at another element's. (The data gives every element 160, and the
+            // simulation reads it from the disc, so which one is read can't show.)
+            let common = peek_u32(call, leaf_check::sym("p_ftCommonData"));
+            let offset = match element {
+                1 => 0x17C,
+                2 => 0x180,
+                5 => 0x184,
+                13 => 0x188,
+                _ => 0x178,
+            };
+            let offset = if i % 5 == 4 {
+                0x178 + 4 * (i as u32 / 5 % 5)
+            } else {
+                offset
+            };
+            let threshold = f32::from_bits(peek_u32(call, common + offset));
+            let kb = match i % 5 {
+                0 => threshold,
+                1 => f32::from_bits(threshold.to_bits() + 1),
+                2 => f32::from_bits(threshold.to_bits() - 1),
+                _ => threshold,
+            };
+            call.regs.fpr[1].ps0 = f64::from(kb);
+            let fp = peek_u32(call, call.regs.gpr[3] + 0x2C);
+            let damage = if i % 7 == 3 { 0.0 } else { 12.0 };
+            leaf_check::calls::poke_f32(call, fp + 0x1838, damage);
+        },
+        &|r, maps, call| {
+            let kb = call.regs.fpr[1].ps0 as f32;
+            r.heavy_hit_flash(gobj_arg(maps, call), call.regs.gpr[4] as i32, kb);
+            Ret::Nothing
+        },
+    );
+}

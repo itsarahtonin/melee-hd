@@ -2808,3 +2808,4 @@ ftCo_AttackDash_IASA	melee-oracle diff, Fox vs Sheik FD ticks 1-207 with the aud
 ftCo_LandingAir_EnterWithLag	melee-oracle diff, Fox vs Sheik FD ticks 1-207 with the audio port's seams stood in (docs/oracle.md): an aerial's landing (1 calls)
 ftCo_LandingAir_EnterWithMsidLag	melee-oracle diff, Fox vs Sheik FD ticks 1-207 with the audio port's seams stood in (docs/oracle.md): an aerial's landing (1 calls)
 ftCo_Landing_Enter_Basic	melee-oracle diff, Fox vs Sheik FD ticks 1-207 with the audio port's seams stood in (docs/oracle.md): a normal landing (4 calls)
+ftCo_8008DB10	leaf-check display heavy_hit_flash: from the fighters' render states, each element, knockback around the thresholds, with and without damage dealt; the flash's overlay compared

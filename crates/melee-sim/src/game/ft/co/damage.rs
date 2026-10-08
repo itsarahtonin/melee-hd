@@ -21,7 +21,33 @@ const DAMAGE_X14: usize = 0x14;
 const DAMAGE_X1A: usize = 0x1A;
 const DAMAGE_X1B: usize = 0x1B;
 
+/// `HitElement_Fire`, `_Electric`, `_Ice` and `_Dark`.
+const ELEMENT_FIRE: i32 = 1;
+const ELEMENT_ELECTRIC: i32 = 2;
+const ELEMENT_ICE: i32 = 5;
+const ELEMENT_DARK: i32 = 13;
+
 impl Running<'_> {
+    /// The background flash a heavy hit sets off, `ftCo_8008DB10`: a hit that dealt damage
+    /// and knocks back past its element's threshold in the common data starts the element's
+    /// `LbBf.dat` animation (fire 3, electric 4, ice 5, darkness 6, any other 2).
+    #[doc(alias = "ftCo_8008DB10")]
+    pub fn heavy_hit_flash(&mut self, gobj: GObjId, element: i32, kb: f32) {
+        if self.game.fighter(gobj).dmg.x1838_percentTemp == 0.0 {
+            return;
+        }
+        let (threshold, anim) = match element {
+            ELEMENT_FIRE => (0x17C, 3),
+            ELEMENT_ELECTRIC => (0x180, 4),
+            ELEMENT_ICE => (0x184, 5),
+            ELEMENT_DARK => (0x188, 6),
+            _ => (0x178, 2),
+        };
+        if reg(kb) > reg(self.common().f32(threshold)) {
+            self.game.bg_flash_anim(self.data, anim, 0);
+        }
+    }
+
     /// Leaving hitstun early (`doIasa`): once `x1B` frames pass, an up special or a double
     /// jump out of a downward tumble; else a jump input buffered for the end of hitstun.
     fn damage_early_out(&mut self, gobj: GObjId) -> bool {
