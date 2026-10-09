@@ -219,7 +219,7 @@ impl Running<'_> {
 
     /// Air friction against the horizontal velocity, the stronger `ftCommonData` x1FC past
     /// the most drift; whether it was, `ftCommon_CalcSelfAccel_DeaccelQuickAir`.
-    // Ports `ftCommon_CalcSelfAccel_DeaccelQuickAir`; aliased once a check reaches it.
+    #[doc(alias = "ftCommon_CalcSelfAccel_DeaccelQuickAir")]
     pub fn self_accel_deaccel_quick_air(&mut self, gobj: GObjId) -> bool {
         let oob = reg(self.common().f32(0x1FC));
         let fp = self.game.fighter_mut(gobj);

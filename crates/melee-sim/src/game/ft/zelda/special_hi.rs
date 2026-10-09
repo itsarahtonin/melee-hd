@@ -59,7 +59,7 @@ impl Running<'_> {
 
     /// `ftZd_SpecialHi_801396AC` (an accessory): the wind-up's effect, then no more
     /// accessory.
-    // Ports `ftZd_SpecialHi_801396AC`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_801396AC")]
     pub fn zelda_special_hi_start_gfx_once(&mut self, gobj: GObjId) {
         self.zelda_special_hi_start_gfx(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;
@@ -67,7 +67,7 @@ impl Running<'_> {
 
     /// The wind-up's effect on the top joint, once (`x2219_b0`), `ftZd_SpecialHi_801396E0`:
     /// the hip's position is taken first (and not used).
-    // Ports `ftZd_SpecialHi_801396E0`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_801396E0")]
     pub fn zelda_special_hi_start_gfx(&mut self, gobj: GObjId) {
         if !self.game.fighter(gobj).x2219_b0 {
             let _ = self.zelda_hip_pos(gobj);
@@ -84,7 +84,7 @@ impl Running<'_> {
     }
 
     /// The reappearance's effect at the hip, once, `ftZd_SpecialHi_8013979C` (an accessory).
-    // Ports `ftZd_SpecialHi_8013979C`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_8013979C")]
     pub fn zelda_special_hi_appear_gfx(&mut self, gobj: GObjId) {
         let pos = self.zelda_hip_pos(gobj);
         if !self.game.fighter(gobj).x2219_b0 {
@@ -107,7 +107,7 @@ impl Running<'_> {
     }
 
     /// The grounded wind-up, `ftZd_SpecialHi_Enter`: stopped.
-    // Ports `ftZd_SpecialHi_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_Enter")]
     pub fn zelda_special_hi_enter(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.gr_vel = 0.0;
@@ -123,7 +123,7 @@ impl Running<'_> {
     }
 
     /// The aerial wind-up, `ftZd_SpecialAirHi_Enter`: the speeds divided down (`x38`, `x3C`).
-    // Ports `ftZd_SpecialAirHi_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirHi_Enter")]
     pub fn zelda_special_air_hi_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let x38 = reg(self.zelda_attr_f32(f, attr::X38));
@@ -141,7 +141,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialHiStart_0_Anim`: the travel along the floor once the wind-up ends.
-    // Ports `ftZd_SpecialHiStart_0_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHiStart_0_Anim")]
     pub fn zelda_special_hi_start_0_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.zelda_special_hi_travel_ground(gobj);
@@ -149,7 +149,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialAirHiStart_0_Anim`: the travel through the air.
-    // Ports `ftZd_SpecialAirHiStart_0_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirHiStart_0_Anim")]
     pub fn zelda_special_air_hi_start_0_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.zelda_special_hi_travel_air(gobj);
@@ -157,17 +157,17 @@ impl Running<'_> {
     }
 
     /// The states' empty callbacks.
-    // Ports `ftZd_SpecialHiStart_0_IASA`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialAirHiStart_0_IASA`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialHiStart_1_IASA`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialAirHiStart_1_IASA`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialHi_IASA`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialAirHi_IASA`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialAirHiStart_1_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHiStart_0_IASA")]
+    #[doc(alias = "ftZd_SpecialAirHiStart_0_IASA")]
+    #[doc(alias = "ftZd_SpecialHiStart_1_IASA")]
+    #[doc(alias = "ftZd_SpecialAirHiStart_1_IASA")]
+    #[doc(alias = "ftZd_SpecialHi_IASA")]
+    #[doc(alias = "ftZd_SpecialAirHi_IASA")]
+    #[doc(alias = "ftZd_SpecialAirHiStart_1_Phys")]
     pub fn zelda_special_hi_nothing(&mut self, _gobj: GObjId) {}
 
     /// `ftZd_SpecialAirHiStart_0_Phys`: the wind-up's own fall (`x40`, `x44`), slowing.
-    // Ports `ftZd_SpecialAirHiStart_0_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirHiStart_0_Phys")]
     pub fn zelda_special_air_hi_start_0_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let g = reg(self.zelda_attr_f32(f, attr::X40));
@@ -177,7 +177,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialHiStart_0_Coll`: off the ground, the aerial wind-up.
-    // Ports `ftZd_SpecialHiStart_0_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHiStart_0_Coll")]
     pub fn zelda_special_hi_start_0_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_off_ledges(gobj) {
             self.zelda_special_hi_start_0_to_air(gobj);
@@ -185,7 +185,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialAirHiStart_0_Coll`: landing, the grounded wind-up; else a ledge.
-    // Ports `ftZd_SpecialAirHiStart_0_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirHiStart_0_Coll")]
     pub fn zelda_special_air_hi_start_0_coll(&mut self, gobj: GObjId) {
         let dir = facing_dir_int(self.game.fighter(gobj).facing_dir);
         if self.check_ground_and_ledge(gobj, dir) {
@@ -196,7 +196,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialHi_80139B44`.
-    // Ports `ftZd_SpecialHi_80139B44`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_80139B44")]
     pub fn zelda_special_hi_start_0_to_air(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne_jumped(f);
@@ -214,7 +214,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialHi_80139BB0`.
-    // Ports `ftZd_SpecialHi_80139BB0`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_80139BB0")]
     pub fn zelda_special_hi_start_0_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_HI_START_0, TRANSITION_FLAGS_1);
         self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::HI_801396AC));
@@ -229,7 +229,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialHiStart_1_Anim`: the reappearance on the ground once the travel ends.
-    // Ports `ftZd_SpecialHiStart_1_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHiStart_1_Anim")]
     pub fn zelda_special_hi_start_1_anim(&mut self, gobj: GObjId) {
         if self.zelda_special_hi_count_down(gobj) {
             self.zelda_special_hi_appear_ground(gobj);
@@ -237,7 +237,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialAirHiStart_1_Anim`: the reappearance in the air.
-    // Ports `ftZd_SpecialAirHiStart_1_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirHiStart_1_Anim")]
     pub fn zelda_special_air_hi_start_1_anim(&mut self, gobj: GObjId) {
         if self.zelda_special_hi_count_down(gobj) {
             self.zelda_special_hi_appear_air(gobj);
@@ -245,14 +245,14 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialHiStart_1_Phys`: the travel along the floor.
-    // Ports `ftZd_SpecialHiStart_1_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHiStart_1_Phys")]
     pub fn zelda_special_hi_start_1_phys(&mut self, gobj: GObjId) {
         self.self_movement_from_ground(gobj);
     }
 
     /// `ftZd_SpecialHiStart_1_Coll`: off the floor, the travel goes on in the air (or Zelda
     /// reappears there against a wall); along it, she reappears against a wall.
-    // Ports `ftZd_SpecialHiStart_1_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHiStart_1_Coll")]
     pub fn zelda_special_hi_start_1_coll(&mut self, gobj: GObjId) {
         let walls = |r: &Running| {
             r.game.fighter(gobj).coll_data.env_flags & (LEFT_WALL_MASK | RIGHT_WALL_MASK) != 0
@@ -275,7 +275,7 @@ impl Running<'_> {
     /// `ftZd_SpecialAirHiStart_1_Coll`: meeting the ground (after `x4C` frames, or where she
     /// can't pass through), the travel goes on along it; else a ledge, or reappearing against
     /// a surface met head on (`ftCommon_HandleTeleportCollisions`).
-    // Ports `ftZd_SpecialAirHiStart_1_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirHiStart_1_Coll")]
     pub fn zelda_special_air_hi_start_1_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
@@ -324,7 +324,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialHi_80139F6C`: the travel off the floor, on through the air.
-    // Ports `ftZd_SpecialHi_80139F6C`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_80139F6C")]
     pub fn zelda_special_hi_travel_to_air(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne_jumped(f);
@@ -344,7 +344,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialHi_80139FE8`: the travel onto the floor, on along it.
-    // Ports `ftZd_SpecialHi_80139FE8`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_80139FE8")]
     pub fn zelda_special_hi_travel_to_ground(&mut self, gobj: GObjId) {
         self.land(gobj);
         let frame = self.game.fighter(gobj).cur_anim_frame;
@@ -384,7 +384,7 @@ impl Running<'_> {
     /// The travel along the floor, `ftZd_SpecialHi_8013A058`: with the stick pushed far
     /// enough (`x50`), away from the floor's normal and not down through it, along the floor
     /// at its speed; else the travel through the air.
-    // Ports `ftZd_SpecialHi_8013A058`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_8013A058")]
     pub fn zelda_special_hi_travel_ground(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let mag = self.zelda_stick_mag(gobj);
@@ -419,7 +419,7 @@ impl Running<'_> {
 
     /// The travel through the air, `ftZd_SpecialHi_8013A244`: in the stick's direction when
     /// pushed far enough, else straight up.
-    // Ports `ftZd_SpecialHi_8013A244`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_8013A244")]
     pub fn zelda_special_hi_travel_air(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let mut mag = self.zelda_stick_mag(gobj);
@@ -461,7 +461,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialHi_Anim`: standing once the reappearance ends.
-    // Ports `ftZd_SpecialHi_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_Anim")]
     pub fn zelda_special_hi_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_wait(gobj);
@@ -469,7 +469,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialAirHi_Anim`: falling helplessly once it ends (`x68`, `x6C`).
-    // Ports `ftZd_SpecialAirHi_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirHi_Anim")]
     pub fn zelda_special_air_hi_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             let f = self.game.fighter_id(gobj);
@@ -481,7 +481,7 @@ impl Running<'_> {
 
     /// `ftZd_SpecialAirHi_Phys`: once the script says (`cmd_vars[0]`), falling with the drift
     /// held to `x5C` of the most; before, the rise slowing by a tenth each frame.
-    // Ports `ftZd_SpecialAirHi_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirHi_Phys")]
     pub fn zelda_special_air_hi_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] != 0 {
@@ -499,7 +499,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialHi_Coll`: off the floor, the aerial reappearance.
-    // Ports `ftZd_SpecialHi_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_Coll")]
     pub fn zelda_special_hi_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_slide(gobj) {
             self.zelda_special_hi_end_to_air(gobj);
@@ -507,7 +507,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialAirHi_Coll`: landing helplessly (`x6C` frames); else a ledge.
-    // Ports `ftZd_SpecialAirHi_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirHi_Coll")]
     pub fn zelda_special_air_hi_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let dir = facing_dir_int(self.game.fighters[f.0].facing_dir);
@@ -520,7 +520,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialHi_8013A648`.
-    // Ports `ftZd_SpecialHi_8013A648`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_8013A648")]
     pub fn zelda_special_hi_end_to_air(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne_jumped(f);
@@ -553,7 +553,7 @@ impl Running<'_> {
 
     /// Reappearing on the ground, `ftZd_SpecialHi_8013A6A8`: a share (`x64`) of the travel's
     /// speed kept.
-    // Ports `ftZd_SpecialHi_8013A6A8`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_8013A6A8")]
     pub fn zelda_special_hi_appear_ground(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.change_motion_state(gobj, ms::SPECIAL_HI, 0, 0.0, 1.0, 0.0, None);
@@ -565,7 +565,7 @@ impl Running<'_> {
     }
 
     /// Reappearing in the air, `ftZd_SpecialHi_8013A764`.
-    // Ports `ftZd_SpecialHi_8013A764`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialHi_8013A764")]
     pub fn zelda_special_hi_appear_air(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.change_motion_state(gobj, ms::SPECIAL_AIR_HI, 0, 0.0, 1.0, 0.0, None);
