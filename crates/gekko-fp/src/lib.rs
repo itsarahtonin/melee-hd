@@ -145,36 +145,77 @@ pub(crate) fn round_c(c: f64) -> f64 {
     f64::from_bits((bits & keep) + (bits & round))
 }
 
+/// Which fused multiply-add [`mul_add`] takes on this thread: [`UNDETECTED`] before the first,
+/// then [`HARDWARE`] or [`PORTABLE`].
+const UNDETECTED: u8 = 0;
+const HARDWARE: u8 = 1;
+const PORTABLE: u8 = 2;
+
 thread_local! {
-    static PORTABLE: Cell<bool> = const { Cell::new(false) };
+    static FMA_PATH: Cell<u8> = const { Cell::new(UNDETECTED) };
 }
 
 /// Makes this thread's fused multiply-adds take the portable path (`f64::mul_add`) even where
-/// the hardware one is there: for checking the two against each other.
+/// the hardware one is there, for checking the two against each other; `false` goes back to
+/// the hardware one where the processor has it.
 #[inline]
 pub fn set_portable_fma(portable: bool) {
-    PORTABLE.with(|p| p.set(portable));
+    FMA_PATH.with(|p| p.set(if portable { PORTABLE } else { UNDETECTED }));
 }
 
 /// `a * c + b` rounded once to double: IEEE 754's fusedMultiplyAdd, the same bits either way.
 /// x86-64's FMA3 does it in one instruction where the processor has it (detected at run time);
 /// elsewhere `f64::mul_add`, which is the hardware instruction on aarch64 and the C library's
-/// software `fma` on an x86-64 build without FMA.
+/// `fma` on x86-64.
 #[inline]
 pub(crate) fn mul_add(a: f64, c: f64, b: f64) -> f64 {
     #[cfg(target_arch = "x86_64")]
-    if std::arch::is_x86_feature_detected!("fma") && !PORTABLE.with(Cell::get) {
-        // SAFETY: the processor has FMA3, checked above.
-        return unsafe { mul_add_fma3(a, c, b) };
+    {
+        let mut path = FMA_PATH.with(Cell::get);
+        if path == UNDETECTED {
+            path = detect_fma();
+        }
+        if path == HARDWARE {
+            // SAFETY: the processor has FMA3 (`detect_fma`).
+            return unsafe { mul_add_fma3(a, c, b) };
+        }
     }
     a.mul_add(c, b)
 }
 
 #[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "fma")]
-fn mul_add_fma3(a: f64, c: f64, b: f64) -> f64 {
-    use std::arch::x86_64::{_mm_cvtsd_f64, _mm_fmadd_sd, _mm_set_sd};
-    _mm_cvtsd_f64(_mm_fmadd_sd(_mm_set_sd(a), _mm_set_sd(c), _mm_set_sd(b)))
+#[cold]
+#[inline(never)]
+fn detect_fma() -> u8 {
+    let path = if std::arch::is_x86_feature_detected!("fma") {
+        HARDWARE
+    } else {
+        PORTABLE
+    };
+    FMA_PATH.with(|p| p.set(path));
+    path
+}
+
+/// FMA3's `vfmadd213sd`, written out so it inlines into code built without the feature.
+///
+/// # Safety
+///
+/// The processor must have FMA3.
+#[cfg(target_arch = "x86_64")]
+#[inline(always)]
+unsafe fn mul_add_fma3(a: f64, c: f64, b: f64) -> f64 {
+    let mut r = a;
+    // SAFETY: the caller checked FMA3; the instruction touches nothing but its registers.
+    unsafe {
+        std::arch::asm!(
+            "vfmadd213sd {r}, {c}, {b}",
+            r = inout(xmm_reg) r,
+            c = in(xmm_reg) c,
+            b = in(xmm_reg) b,
+            options(pure, nomem, nostack, preserves_flags),
+        );
+    }
+    r
 }
 
 #[inline]
