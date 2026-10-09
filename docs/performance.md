@@ -50,11 +50,13 @@ Size, clone and restore are well inside their targets. A restore reuses the targ
 
 `melee-bench native [--dir DIR] [--runs N] [MATCH...]` (`tools/bench/src/native.rs`) plays each benchmark match natively and headless on one thread: from the replay's start through `vs_match`'s replay path (Slippi's playback codes, `Match::step_replay`), with the display pass, in the console's floating point (`FpMode::Hardware`, as the matches were made). The match's files are read from the disc before the clock starts, and the fighters' addresses come from the match's start trace (`NAME.start.trace`), as the oracle takes them. A run is timed from the match's first tick to its last frame, and afterwards every frame's fighters (action state, position, facing, percent and stocks) are checked against the replay's post-frame updates, the fields the Dolphin harness checks. It prints `melee-bench dolphin`'s table (median of 5 runs, with the machine), so the two divide. A run that stops before the match's last frame is no result: its row says where it stopped and why, and gives no speed.
 
-The Fox–Fox match now plays natively from its first frame to its last, in sync with the replay at every one of its 15,575 frames. A single provisional run (2026-10-09, melee-hd `c49f88a`, AMD Ryzen 7 9800X3D, other work running on the machine; not the result) took 2,231 frames per second. The official figures, the median of 5 runs on a quiet machine with Dolphin's side measured the same way, go in this table:
+The Fox–Fox match plays natively from its first frame to its last, in sync with the replay at every one of its 15,575 frames. The first official benchmark (2026-10-09, melee-hd `37e5d8d`, release, AMD Ryzen 7 9800X3D, 62 GB, Windows 11 Pro 10.0.26200, the machine quiet and melee-hd's agents paused; median of 5 runs each; every run in sync, Dolphin's with its final stocks and percents equal):
 
-| match | melee-hd native, median frames/s | Dolphin, median frames/s | ratio |
+| match | melee-hd native, median frames/s (runs) | Dolphin, median frames/s (runs) | ratio |
 | --- | --- | --- | --- |
-| `fox-fox-fd` | to be measured | to be measured | |
+| `fox-fox-fd` | 3,311 (3,365, 3,335, 3,302, 3,311, 3,292) | 397 (388, 390, 397, 397, 398) | 8.3× |
+
+The target is at least 20× (aim 30×). Earlier provisional figures (melee-hd 2,231, Dolphin 150 to 190 frames/s) were taken with other work loading the machine and understate both sides.
 
 Dolphin's side, the baseline, is below.
 
