@@ -69,13 +69,13 @@ The rule is the goal's: no change may alter a checked bit. Each step was checked
 | Build (2026-10-09) | Frames/s to frame 4,572 | Against main |
 | --- | --- | --- |
 | Before (main) | 2,240 | |
-| Step 1: gekko-fp's ops (`c87dd86`) | 2,810 | 1.25× |
-| And the inlined FMA3 instruction and `HSD_MtxSRT`'s memo (`34d2064`, `cddc206`) | 3,690 | 1.65× |
-| And `sinf`'s and `cosf`'s memo (`3193d48`) | 3,760 | 1.68× |
-| And the float mode read without a thread-local (`e41e09f`) | 4,230 | 1.89× |
-| And the `dist` profile (`8f79c6c`) | 4,590 | 2.05× |
+| Step 1: gekko-fp's ops (`21e16ef`) | 2,810 | 1.25× |
+| And the inlined FMA3 instruction and `HSD_MtxSRT`'s memo (`49b54e7`, `03905db`) | 3,690 | 1.65× |
+| And `sinf`'s and `cosf`'s memo (`520b8e3`) | 3,760 | 1.68× |
+| And the float mode read without a thread-local (`852c66d`) | 4,230 | 1.89× |
+| And the `dist` profile (`2a97a99`) | 4,590 | 2.05× |
 
-On the whole match, against the final release build, an archive's pointer words looked up in a bitmap instead of a binary search of its relocations (`44afdbb`) gained about 3% (4,180 against 4,060 frames per second, median of seven alternating runs).
+On the whole match, against the final release build, an archive's pointer words looked up in a bitmap instead of a binary search of its relocations (`1989185`) gained about 3% (4,180 against 4,060 frames per second, median of seven alternating runs).
 
 **gekko-fp.** melee-hd builds a copy of ssbm-rs's `gekko-fp` (at `melee-hd-base`, `crates/gekko-fp`), patched in for every crate that uses it, ssbm-rs's reference side included (the workspace's `[patch]`), since ssbm-rs itself isn't changed for melee-hd. Its changes are for speed only:
 
