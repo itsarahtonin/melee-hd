@@ -462,8 +462,10 @@ pub fn diff(args: &[&str]) -> ExitCode {
     };
     let mut device = Device(&replay);
     let mut compared = 0;
-    let mut stale = StaleReads::default();
-    stale.counts = (m.game.objs.stale_reads, m.game.coll.stale_reads);
+    let mut stale = StaleReads {
+        counts: (m.game.objs.stale_reads, m.game.coll.stale_reads),
+        ..Default::default()
+    };
     // A state taken up at a tick's end has that frame's display pass still to run; a started
     // match has run none of its ticks.
     let mut render_due = from.is_some() && m.game.scene.unk_C != 2;
