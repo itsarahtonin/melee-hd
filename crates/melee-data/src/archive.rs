@@ -87,9 +87,24 @@ pub struct Archive {
     data: Box<[u8]>,
     /// Offsets of the words that hold pointers, sorted.
     relocs: Box<[u32]>,
+    /// The aligned ones again, one bit per word of the data, for reading a pointer without a
+    /// search.
+    pointer_words: Box<[u64]>,
     publics: Box<[(String, u32)]>,
     /// Extern symbols: their names and the first slot of each chain that refers to them.
     externs: Box<[(String, u32)]>,
+}
+
+/// A bit per aligned word of a `len`-byte data block, set for the words `relocs` names.
+fn pointer_words(relocs: &[u32], len: usize) -> Box<[u64]> {
+    let mut bits = vec![0u64; len.div_ceil(4 * 64)];
+    for &r in relocs.iter().filter(|&&r| r % 4 == 0) {
+        let word = (r / 4) as usize;
+        if let Some(b) = bits.get_mut(word / 64) {
+            *b |= 1 << (word % 64);
+        }
+    }
+    bits.into()
 }
 
 fn be32(b: &[u8], at: usize) -> Result<u32, ArchiveError> {
@@ -141,6 +156,7 @@ impl Archive {
         };
         relocs.sort_unstable();
         Ok(Archive {
+            pointer_words: pointer_words(&relocs, data.len()),
             data: data.into(),
             relocs: relocs.into(),
             publics: publics.iter().map(|&(off, sym)| (name(sym), off)).collect(),
@@ -154,6 +170,7 @@ impl Archive {
         Archive {
             data: file.into(),
             relocs: Box::default(),
+            pointer_words: Box::default(),
             publics: Box::default(),
             externs: Box::default(),
         }
@@ -196,7 +213,11 @@ impl Archive {
 
     /// Whether the word at `offset` is a pointer.
     pub fn is_pointer(&self, offset: u32) -> bool {
-        self.relocs.binary_search(&offset).is_ok()
+        let word = (offset / 4) as usize;
+        match self.pointer_words.get(word / 64) {
+            Some(bits) if offset % 4 == 0 => bits >> (word % 64) & 1 != 0,
+            _ => self.relocs.binary_search(&offset).is_ok(),
+        }
     }
 
     /// The word at `offset` as a pointer: the offset it points at, or `None` for a null.
@@ -237,5 +258,27 @@ impl Archive {
             offset = self.u32(offset);
         }
         slots
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The bitmap answers as the search does: aligned words, unaligned relocations, and
+    /// relocations past the data's end.
+    #[test]
+    fn pointer_words_agree_with_the_relocations() {
+        let relocs = vec![0, 4, 8, 252, 256, 1002, 4096, 5000, 8188, 9000, 9001];
+        let mut a = Archive::raw(&[0; 8192]);
+        a.pointer_words = pointer_words(&relocs, a.data.len());
+        a.relocs = relocs.clone().into();
+        for offset in 0..10_000 {
+            assert_eq!(
+                a.is_pointer(offset),
+                relocs.binary_search(&offset).is_ok(),
+                "{offset}"
+            );
+        }
     }
 }
