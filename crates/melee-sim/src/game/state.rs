@@ -27,6 +27,8 @@ use crate::hsd::pool::Pool;
 pub enum UserData {
     Fighter(FighterId),
     Item(ItemId),
+    /// A link of an item made of links (user data kind 6 on a GObj of class 7, `ItemLink`).
+    ItemLink(super::handles::ItemLinkId),
     /// A stage object (user data kind 3).
     Ground(GroundId),
     /// An effect (user data kind 8).
@@ -265,6 +267,8 @@ impl Host<GameKinds> for Running<'_> {
             // `mem_free`: the block goes back to the heap.
             UserData::Ground(g) => self.game.grounds.free(g.0),
             UserData::Item(i) => super::it::item::free_user_data(self.game, i),
+            // `it_802A2474`: the link goes back to `item_link_alloc_data`.
+            UserData::ItemLink(l) => super::it::link::free(self.game, l),
             UserData::Effect(e) => super::ef::remove_user_data(self.game, e),
             UserData::Text(t) => self.game.sis.free_text(t),
             UserData::SisCamera(g) => self.game.sis.forget_camera(g),

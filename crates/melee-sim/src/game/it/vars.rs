@@ -116,6 +116,9 @@ members! {
     GShell, gshell, itGShell_ItemVars, [G_SHELL];
     RShell, rshell, itRShell_ItemVars, [R_SHELL];
     Sword, sword, itSword_ItemVars, [SWORD];
+    SeakNeedleHeld, seak_needle_held, itSeakNeedleHeld_ItemVars, [SEAK_NEEDLE_HELD];
+    SeakNeedleThrown, seak_needle_thrown, itSeakNeedleThrown_ItemVars, [SEAK_NEEDLE_THROW];
+    SeakChain, seak_chain, itSeakChain_ItemVars, [SEAK_CHAIN];
 }
 
 impl Default for ItemVars {

@@ -11,6 +11,11 @@ pub struct FighterId(pub u32);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ItemId(pub u32);
 
+/// An item link's slot (`ItemLink`, the user data of the GObjs of class 7 that make up a
+/// string, yo-yo, grapple beam or chain item, from `item_link_alloc_data`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ItemLinkId(pub u32);
+
 /// A function pointer: the original function's address, which the game dispatches on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct CodeRef(pub u32);

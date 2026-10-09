@@ -2978,3 +2978,240 @@ itFoxillusion_UnkMotion2_Anim	melee-oracle diff, Fox vs Fox FD (local/bench/fox-
 itFoxillusion_UnkMotion2_Phys	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the afterimage's fade movement (24 calls)
 fn_800DAADC	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the victim caught (the grabbed callback) (7 calls)
 ftParts_80074B0C	melee-oracle diff, Fox vs Sheik FD (v5-mixed) taken up at tick 2500, ticks 2501-2765 in Slippi float mode with no stand-ins (docs/oracle.md): a model's variant chosen anew in tick 2688
+fn_80112ED8	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+fn_80113038	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+fn_80114034	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+fn_801140B0	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+fn_8011412C	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftColl_8007B8A8	leaf-check sheik: sheik_functions reaches it through ftSk_SpecialS_UpdateHitboxes from real Sheik states and compares the whole state
+ftSk_Init_80110198	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_Init_OnItemDrop	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_Init_OnItemInvisible	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_Init_OnItemPickup	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_Init_OnItemVisible	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHiStart_0_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHiStart_0_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHiStart_0_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHiStart_0_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHiStart_1_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHiStart_1_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHiStart_1_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHiStart_1_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHi_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHi_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHi_Enter	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHi_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirHi_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirLw2_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirLw2_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirLw2_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirLw2_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirLw_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirLw_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirLw_Enter	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirLw_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirLw_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNCancel_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNCancel_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNCancel_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNCancel_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNEnd_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNEnd_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNEnd_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNEnd_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNLoop_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNLoop_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNLoop_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNLoop_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNStart_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNStart_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNStart_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirNStart_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirN_Enter	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirSEnd_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirSEnd_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirSEnd_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirSEnd_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirSStart_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirSStart_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirSStart_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirSStart_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirS_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirS_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirS_Enter	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirS_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialAirS_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHiStart_0_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHiStart_0_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHiStart_0_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHiStart_0_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHiStart_1_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHiStart_1_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHiStart_1_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHiStart_1_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_80112F48	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_80112FA8	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_80113324	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_80113390	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_8011374C	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_801137C8	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_80113838	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_80113A30	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_80113E40	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_80113EAC	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_80113F68	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_Enter	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialHi_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw2_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw2_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw2_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw2_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw_8011444C	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw_801144B8	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw_80114680	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw_801146EC	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw_80114758	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw_Enter	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialLw_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNCancel_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNCancel_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNCancel_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNCancel_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNEnd_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNEnd_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNEnd_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNEnd_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNLoop_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNLoop_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNLoop_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNLoop_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNStart_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNStart_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNStart_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialNStart_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialN_80111FBC	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialN_801120D4	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialN_Enter	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialSEnd_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialSEnd_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialSEnd_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialSEnd_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialSStart_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialSStart_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialSStart_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialSStart_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80110490	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80110610	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80110788	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_8011097C	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80110AEC	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80110BCC	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80110E4C	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80110EE8	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80110F58	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80110F64	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80110F70	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80111440	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_801114E4	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80111830	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80111988	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80111CB0	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80111D54	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80111DF8	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80111EB4	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80111F70	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_80111FA0	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_Anim	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_ChainSomething	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_CheckAndDestroyChain	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_CheckInitChain	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_Coll	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_Enter	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_IASA	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_Phys	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_UpdateHitboxes	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+ftSk_SpecialS_ZeroHitboxPositions	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+itSeakNeedleHeld_Logic110_EvtUnk	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakNeedleHeld_Logic110_PickedUp	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakNeedleThrown_Logic109_Destroyed	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakNeedleThrown_Logic109_EvtUnk	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakVanish_Logic42_DmgDealt	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedleheld_UnkMotion0_Anim	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedleheld_UnkMotion0_Coll	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedleheld_UnkMotion0_Phys	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion0_Anim	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion0_Coll	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion0_Phys	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion1_Anim	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion1_Coll	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion1_Phys	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion2_Anim	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion2_Coll	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion2_Phys	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion3_Anim	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion3_Coll	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion3_Phys	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion4_Anim	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion4_Coll	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakneedlethrown_UnkMotion4_Phys	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+itSeakvanish_UnkMotion0_Anim	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_2725_Logic109_Clanked	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_2725_Logic109_DmgDealt	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_2725_Logic109_DmgReceived	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_2725_Logic109_HitShield	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_2725_Logic109_Reflected	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_2725_Logic109_ShieldBounced	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_802AFD8C	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_802AFEA8	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_802AFF08	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_802B00F4	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_802B18B0	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_802B19AC	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_802B1C60	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_802B1D40	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+it_802B1DCC	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
+shootNeedles	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+fn_802BB428	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+fn_802BB44C	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+fn_802BB574	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+fn_802BB694	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+fn_802BB784	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+itSeakChain_Logic54_EvtUnk	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+itSeakChain_Spawn	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+itSeakchain_UnkMotion4_Anim	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_2725_Logic54_PickedUp	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_8026B724	leaf-check sheik: sheik_functions reaches it through it_802BAEEC from real chain states and compares the whole state
+it_8026B73C	leaf-check sheik: sheik_functions reaches it through it_802BAF0C from real chain states and compares the whole state
+it_80275328	leaf-check sheik: sheik_functions reaches it through it_802BAF2C from real chain states and compares the whole state
+it_802A2474	leaf-check sheik: sheik_functions reaches it through the links' release when it_802BB20C frees them from real chain states and compares the whole state
+it_802A24D0	leaf-check sheik: sheik_functions reaches it through it_802BAF2C from real chain states and compares the whole state
+it_802A3C98	leaf-check sheik: sheik_functions reaches it through the chain's accessories from real chain states and compares the whole state
+it_802A43B8	leaf-check sheik: sheik_functions reaches it through fn_802BB44C from real chain states and compares the whole state
+it_802A43EC	leaf-check sheik: sheik_functions reaches it through the chain's accessories from real chain states and compares the whole state
+it_802A4420	leaf-check sheik: sheik_functions reaches it through the chain's accessories from real chain states and compares the whole state
+it_802A6DC8	leaf-check sheik: sheik_functions reaches it through it_802BCB88 from real chain states and compares the whole state
+it_802BAEEC	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BAF0C	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BAF2C	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BB20C	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BB938	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BBAEC	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BBB0C	leaf-check sheik: sheik_functions reaches it through fn_802BB44C and fn_802BB784 from real chain states and compares the whole state
+it_802BBC38	leaf-check sheik: sheik_functions reaches it through fn_802BB784 from real chain states and compares the whole state
+it_802BBD64	leaf-check sheik: sheik_functions reaches it through fn_802BB44C from real chain states and compares the whole state
+it_802BBED0	leaf-check sheik: sheik_functions reaches it through fn_802BB574 from real chain states and compares the whole state
+it_802BC080	leaf-check sheik: sheik_functions reaches it through fn_802BB694 from real chain states and compares the whole state
+it_802BC94C	leaf-check sheik: sheik_functions reaches it through fn_802BB784 from real chain states and compares the whole state
+it_802BCA30	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BCB88	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BCED4	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BCF2C	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BCF84	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BCFC4	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802A24A0	leaf-check sheik link_render: every capture of the chain's links being drawn, whether each side draws the link's joints compared

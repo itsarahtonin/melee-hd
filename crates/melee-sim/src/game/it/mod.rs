@@ -19,6 +19,7 @@ pub mod kinds;
 pub mod lib26b1;
 pub mod lib2725;
 pub mod lib279c;
+pub mod link;
 pub mod maplib;
 pub mod owner;
 pub mod spawn;
@@ -33,7 +34,7 @@ use melee_data::archive::DataRef;
 use super::handles::ItemId;
 use super::state::{Game, UserData};
 use super::structs::{
-    HSD_ObjAllocUnk, Item, Item_FtTrack, PokemonSelectionState, db_ItemAndPokemonMenu_t,
+    HSD_ObjAllocUnk, Item, Item_FtTrack, ItemLink, PokemonSelectionState, db_ItemAndPokemonMenu_t,
 };
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -75,6 +76,9 @@ impl Default for BoneTable {
 pub struct Globals {
     /// The items' joint tables (`item_dynamic_bones_alloc_data`).
     pub bone_tables: Pool<BoneTable>,
+    /// The links of items made of links (`item_link_alloc_data`), each the user data of a GObj
+    /// of class 7: see [`link`].
+    pub links: Pool<ItemLink>,
     /// How many items of each hold kind are out, and the limits (`Item_804A0C64`).
     pub counts: HSD_ObjAllocUnk,
     /// Items made so far (`it_804D6D10`), which numbers each new item (`Item::x1C`).

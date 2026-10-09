@@ -3,11 +3,12 @@
 //!
 //! Each character's and state's code reads and writes its own member at its offsets, so both
 //! stay big-endian bytes, as the original keeps them, read and written at the decomp's offsets.
-//! A few members hold a pointer to a GObj (Fox's and Falco's blaster in `u`, their Illusion's
-//! ghost in `mv`) or a joint (a grab's hold point in `mv`): such a word holds a handle instead
-//! of its bytes once code stores one there (or the importer types it), and compares as a
-//! handle. A state leaves its handles behind for the next, so several words can hold one. Reading those bytes as data, or a handle where the bytes hold something else, is a
-//! model error and stops.
+//! A few members hold a pointer to a GObj (Fox's and Falco's blaster and Sheik's needles and
+//! chain in `u`, Fox's Illusion's ghost in `mv`) or a joint (a grab's hold point in `mv`): such
+//! a word holds a handle instead of its bytes once code stores one there (or the importer types
+//! it), and compares as a handle. A state leaves its handles behind for the next, so several
+//! words can hold one. Reading those bytes as data, or a handle where the bytes hold something
+//! else, is a model error and stops.
 
 use std::ops::{Index, IndexMut, Range, RangeFrom, RangeFull, RangeTo};
 
@@ -29,6 +30,20 @@ pub const FOX_BLASTER: usize = 0;
 /// `Ft_Kind_Falco`).
 pub fn holds_blaster(kind: i32) -> bool {
     matches!(kind, 1 | 22)
+}
+
+/// Where Sheik's held needles (`ftSeak_FighterVars::x4`) and chain (`x8`) are in `u`.
+pub const SEAK_NEEDLES: usize = 4;
+pub const SEAK_CHAIN: usize = 8;
+
+/// The words of `u` a fighter of `kind` keeps GObjs in, which the importer types: Fox's and
+/// Falco's blaster, Sheik's held needles and chain (`Ft_Kind_Seak`).
+pub fn gobj_words(kind: i32) -> &'static [usize] {
+    match kind {
+        _ if holds_blaster(kind) => &[FOX_BLASTER],
+        7 => &[SEAK_NEEDLES, SEAK_CHAIN],
+        _ => &[],
+    }
 }
 
 /// `Fighter_FighterVars`.

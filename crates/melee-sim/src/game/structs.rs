@@ -7388,6 +7388,157 @@ impl Default for itFoxIllusion_ItemVars {
     }
 }
 
+/// `itSeakNeedleHeld_ItemVars`, 0x4 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itSeakNeedleHeld_ItemVars {
+    /// +0x0
+    pub owner: Option<GObjId>,
+}
+
+impl Default for itSeakNeedleHeld_ItemVars {
+    fn default() -> Self {
+        itSeakNeedleHeld_ItemVars { owner: None }
+    }
+}
+
+/// `itSeakNeedleThrown_ItemVars`, 0x2c bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itSeakNeedleThrown_ItemVars {
+    /// +0x0
+    pub xDD4: f32,
+    /// +0x4
+    pub xDD8: f32,
+    /// +0x8
+    pub xDDC: f32,
+    /// +0xc
+    pub xDE0: f32,
+    /// +0x10
+    pub xDE4: Vec3,
+    /// +0x1c
+    pub xDF0: f32,
+    /// +0x20
+    pub xDF4: i32,
+    /// +0x24
+    pub xDF8: f32,
+    /// +0x28
+    pub xDFC: f32,
+}
+
+impl Default for itSeakNeedleThrown_ItemVars {
+    fn default() -> Self {
+        itSeakNeedleThrown_ItemVars {
+            xDD4: 0.0,
+            xDD8: 0.0,
+            xDDC: 0.0,
+            xDE0: 0.0,
+            xDE4: Default::default(),
+            xDF0: 0.0,
+            xDF4: 0,
+            xDF8: 0.0,
+            xDFC: 0.0,
+        }
+    }
+}
+
+/// `ItemLink`, 0x1d8 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ItemLink {
+    /// +0x0
+    pub prev: Option<ItemLinkId>,
+    /// +0x4
+    pub next: Option<ItemLinkId>,
+    /// +0x8
+    pub vel: Vec3,
+    /// +0x14
+    pub pos: Vec3,
+    /// +0x20
+    pub x20: Vec3,
+    /// +0x2c (bits 0..+1)
+    pub x2C_b0: bool,
+    /// +0x2c (bits 1..+1)
+    pub x2C_b1: bool,
+    /// +0x2c (bits 2..+1)
+    pub x2C_b2: bool,
+    /// +0x2c (bits 3..+1)
+    pub x2C_b3: bool,
+    /// +0x2c (bits 4..+1)
+    pub x2C_b4: bool,
+    /// +0x2c (bits 5..+1)
+    pub x2C_b5: bool,
+    /// +0x2c (bits 6..+1)
+    pub x2C_b6: bool,
+    /// +0x2c (bits 7..+1)
+    pub x2C_b7: bool,
+    /// +0x30
+    pub coll_data: CollData,
+    /// +0x1cc
+    pub x1CC: i32,
+    /// +0x1d0
+    pub gobj: Option<GObjId>,
+    /// +0x1d4
+    pub jobj: Option<JObjId>,
+}
+
+impl Default for ItemLink {
+    fn default() -> Self {
+        ItemLink {
+            prev: None,
+            next: None,
+            vel: Default::default(),
+            pos: Default::default(),
+            x20: Default::default(),
+            x2C_b0: false,
+            x2C_b1: false,
+            x2C_b2: false,
+            x2C_b3: false,
+            x2C_b4: false,
+            x2C_b5: false,
+            x2C_b6: false,
+            x2C_b7: false,
+            coll_data: Default::default(),
+            x1CC: 0,
+            gobj: None,
+            jobj: None,
+        }
+    }
+}
+
+/// `itSeakChain_ItemVars`, 0xd0 bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itSeakChain_ItemVars {
+    /// +0x0
+    pub x0: Option<ItemLinkId>,
+    /// +0x4
+    pub x4: Option<ItemLinkId>,
+    /// +0x8
+    pub parent_gobj: Option<GObjId>,
+    /// +0xc
+    pub pad_C: [u8; 4],
+    /// +0x10
+    pub x10: i32,
+    /// +0x14
+    pub x14: i32,
+    /// +0x18
+    pub x18: i32,
+    /// +0x1c
+    pub history: [Vec3; 15],
+}
+
+impl Default for itSeakChain_ItemVars {
+    fn default() -> Self {
+        itSeakChain_ItemVars {
+            x0: None,
+            x4: None,
+            parent_gobj: None,
+            pad_C: [0; 4],
+            x10: 0,
+            x14: 0,
+            x18: 0,
+            history: core::array::from_fn(|_| Default::default()),
+        }
+    }
+}
+
 /// `IfDamageFlags`, 0x1 bytes.
 #[derive(Clone, Debug, PartialEq)]
 pub struct IfDamageFlags {
