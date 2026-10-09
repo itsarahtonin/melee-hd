@@ -9,6 +9,9 @@
 //! (`matches.rs`).
 //!
 //! `melee-bench dolphin ...`: Dolphin's speed on the benchmark matches (`dolphin.rs`).
+//!
+//! `melee-bench native ...`: melee-hd's speed on the same matches, natively on one core, and
+//! `melee-bench snapshot-match ...`: snapshots of a match's states as it plays (`native.rs`).
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
@@ -24,6 +27,8 @@ use melee_sim::game::state::Game;
 mod dolphin;
 mod gecko_words;
 mod matches;
+mod native;
+mod sync;
 #[cfg(windows)]
 mod win;
 
@@ -58,6 +63,25 @@ fn counted<T>(f: impl FnOnce() -> T) -> (T, usize, usize) {
     let (a, b) = (ALLOCS.load(Relaxed), BYTES.load(Relaxed));
     let out = f();
     (out, ALLOCS.load(Relaxed) - a, BYTES.load(Relaxed) - b)
+}
+
+/// This machine, for the record: processor, cores, memory and Windows version.
+fn machine() -> String {
+    let ps = |cmd: &str| {
+        std::process::Command::new("powershell")
+            .args(["-NoProfile", "-Command", cmd])
+            .output()
+            .ok()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+            .unwrap_or_default()
+    };
+    let cpu = ps("(Get-CimInstance Win32_Processor).Name");
+    let cores = ps("(Get-CimInstance Win32_Processor).NumberOfCores");
+    let ram = ps("[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)");
+    let os = ps(
+        "(Get-CimInstance Win32_OperatingSystem).Caption + ' ' + (Get-CimInstance Win32_OperatingSystem).Version",
+    );
+    format!("Machine: {cpu} ({cores} cores), {ram} GB RAM, {os}")
 }
 
 /// The median over 5 runs of the mean time of `n` calls of `f`, in microseconds.
@@ -131,8 +155,10 @@ fn main() {
         Some("codes") if args.len() == 2 => codes(&args[1]),
         #[cfg(windows)]
         Some("dolphin") => dolphin::main(&args[1..]),
+        Some("native") => native::main(&args[1..]),
+        Some("snapshot-match") => native::snapshots(&args[1..]),
         _ => eprintln!(
-            "melee-bench snapshot CALL... | codes DIR | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]"
+            "melee-bench snapshot CALL... | codes DIR | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]              | native [--dir DIR] [--runs N] [MATCH...] | snapshot-match [--dir DIR] [--every TICKS] [MATCH]"
         ),
     }
 }
