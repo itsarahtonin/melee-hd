@@ -32,6 +32,7 @@ pub mod input;
 mod kind_tables;
 pub mod kinds;
 pub mod light;
+pub mod mars;
 pub mod motion;
 mod motion_tables;
 pub mod parts;

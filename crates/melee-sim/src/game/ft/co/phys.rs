@@ -184,6 +184,12 @@ impl Running<'_> {
         fp.reflect_hit.skip_update_pos = false;
     }
 
+    /// The shield's bubble follows the fighter again, `ftColl_8007AEE0`.
+    #[doc(alias = "ftColl_8007AEE0")]
+    pub fn shield_follow(&mut self, gobj: GObjId) {
+        self.game.fighter_mut(gobj).shield_hit.skip_update_pos = false;
+    }
+
     /// The reflector's bubble follows the fighter again, `ftColl_8007AEF8`.
     #[doc(alias = "ftColl_8007AEF8")]
     pub fn reflect_follow(&mut self, gobj: GObjId) {

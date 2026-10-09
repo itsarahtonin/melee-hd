@@ -184,6 +184,7 @@ impl Running<'_> {
             24 => return self.cmd_throw_hitbox(gobj, f),
             44 => return self.cmd_floor_sound(gobj, f),
             45 => return self.cmd_footstep(gobj, f),
+            48 => return self.cmd_wind(gobj, f),
             _ => match COMMANDS.get(index as usize) {
                 Some(name) => unported_call(name),
                 None => panic!("fighter command {} doesn't exist", index + 10),
@@ -287,7 +288,7 @@ impl Running<'_> {
     /// A hitbox's damage, `ftColl_8007ABD0`: scaled by the fighter's height and a released
     /// smash's charge, its hit count from that, then weakened by how stale the move is.
     #[doc(alias = "ftColl_8007ABD0")]
-    fn hitbox_damage(&mut self, f: FighterId, id: usize, throw: bool, damage: u32) {
+    pub(crate) fn hitbox_damage(&mut self, f: FighterId, id: usize, throw: bool, damage: u32) {
         let fp = &self.game.fighters[f.0];
         let mut dmg = fp::frsp(f64::from(damage));
         if fp.x34_scale.y != 1.0 {
@@ -510,7 +511,7 @@ impl Running<'_> {
     /// A model's variant chosen, `ftParts_80074B0C`: a new one marks the models changed and
     /// hides the first visibility group's parts until they are shown again.
     #[doc(alias = "ftParts_80074B0C")]
-    fn set_model_variant(&mut self, f: FighterId, i: usize, v: i32) {
+    pub(crate) fn set_model_variant(&mut self, f: FighterId, i: usize, v: i32) {
         let fp = &mut self.game.fighters[f.0];
         if v != i32::from(fp.x5F4_arr[i].idx) {
             fp.x5F4_arr[i].idx = v as i8;
@@ -518,6 +519,21 @@ impl Running<'_> {
             let list = fp.dobj_list.data;
             self.hide_parts_vis(f, 0, list);
         }
+    }
+
+    /// Wind from a bone, `ftAction_80073118`: the bone, then the offset from it, the blast's
+    /// strength and decay, its frames (120 when negative) and angle step, as 1/256ths
+    /// (`ftCo_8009E714`). Four words.
+    #[doc(alias = "ftAction_80073118")]
+    fn cmd_wind(&mut self, gobj: GObjId, f: FighterId) {
+        let w: [u32; 4] = core::array::from_fn(|i| self.cmd_word(f, i as u32));
+        let unit = |v: i32| mem(fp::fmuls(reg(0.003_906_f32), fp::frsp(f64::from(v))));
+        let bone = bits(w[0], 24, 8) as usize;
+        let (x, y) = (unit(sbits(w[1], 0, 16)), unit(sbits(w[1], 16, 16)));
+        let (scale, decay) = (unit(sbits(w[2], 0, 16)), unit(sbits(w[2], 16, 16)));
+        let (frames, angle) = (sbits(w[3], 0, 16), unit(sbits(w[3], 16, 16)));
+        self.cmd_skip(f, 4);
+        self.bone_wind(gobj, bone, frames, x, y, scale, decay, angle);
     }
 
     /// Shows each model's previous variant.

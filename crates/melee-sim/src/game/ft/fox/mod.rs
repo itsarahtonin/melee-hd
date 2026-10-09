@@ -76,7 +76,6 @@ pub mod ms {
 /// The functions other parts of the port own that Fox's code calls, by address: each answers
 /// `code::call` once its part is ported.
 pub mod ext {
-    pub const FTCOMMON_CALC_SELF_ACCEL_DEACCEL_QUICK_AIR: u32 = 0x8007_CF58;
     pub const FTANIM_80070FB4: u32 = 0x8007_0FB4;
     pub const FTANIM_80070C48: u32 = 0x8007_0C48;
     pub const FTANIM_80070CC4: u32 = 0x8007_0CC4;
@@ -237,12 +236,6 @@ impl Running<'_> {
     /// One taking the fighter's GObj and returning nothing.
     pub(crate) fn ext_gobj(&mut self, f: u32, gobj: GObjId) {
         self.ext(f, &[Val::GObj(Some(gobj))]);
-    }
-
-    /// One taking the `Fighter*` and returning nothing.
-    pub(crate) fn ext_fighter(&mut self, f: u32, gobj: GObjId) {
-        let id = self.game.fighter_id(gobj);
-        self.ext(f, &[Val::Fighter(id)]);
     }
 
     /// `ft_CheckGroundAndLedge(gobj, dir)`.

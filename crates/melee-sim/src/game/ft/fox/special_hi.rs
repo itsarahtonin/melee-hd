@@ -10,7 +10,7 @@ use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::motion::flags::*;
-use super::{GA_AIR, addr, attr, ext, facing_dir_int, ms, mv};
+use super::{GA_AIR, addr, attr, facing_dir_int, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -551,7 +551,7 @@ impl Running<'_> {
     pub fn fox_special_hi_bound_phys(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).ground_or_air == GA_AIR {
             self.air_anim_rise(gobj);
-            self.ext_fighter(ext::FTCOMMON_CALC_SELF_ACCEL_DEACCEL_QUICK_AIR, gobj);
+            self.deaccel_quick_air(gobj);
             return;
         }
         self.ground_friction(gobj);
