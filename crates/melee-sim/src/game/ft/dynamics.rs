@@ -126,15 +126,15 @@ fn twin_joint(
     if Some(a) == target {
         return Some(b);
     }
-    if jobjs[a].child.is_some() {
-        if let Some(t) = twin_joint(jobjs, jobjs[a].child, jobjs[b].child, target) {
-            return Some(t);
-        }
+    if jobjs[a].child.is_some()
+        && let Some(t) = twin_joint(jobjs, jobjs[a].child, jobjs[b].child, target)
+    {
+        return Some(t);
     }
-    if jobjs[a].next.is_some() {
-        if let Some(t) = twin_joint(jobjs, jobjs[a].next, jobjs[b].next, target) {
-            return Some(t);
-        }
+    if jobjs[a].next.is_some()
+        && let Some(t) = twin_joint(jobjs, jobjs[a].next, jobjs[b].next, target)
+    {
+        return Some(t);
     }
     None
 }

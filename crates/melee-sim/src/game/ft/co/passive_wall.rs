@@ -97,9 +97,7 @@ impl Running<'_> {
             self.cling_to_wall(gobj, ms::PASSIVE_WALL_JUMP, timer, used, side);
             let fp = &mut self.game.fighters[f.0];
             fp.wall_jump_input_timer = MAX_INPUT_FRAMES;
-            if fp.x1969_walljumpUsed < 255 {
-                fp.x1969_walljumpUsed += 1;
-            }
+            fp.x1969_walljumpUsed = fp.x1969_walljumpUsed.saturating_add(1);
             return true;
         }
         false
