@@ -62,6 +62,11 @@ impl<const N: usize> Vars<N> {
         }
     }
 
+    /// The words that hold handles, by offset.
+    pub fn handles(&self) -> &[(usize, Handle)] {
+        &self.handles
+    }
+
     fn handle(&self, off: usize) -> Option<Handle> {
         self.handles
             .iter()

@@ -164,6 +164,11 @@ fn fighter(
 /// A callback, run through the port's dispatch.
 fn cb(name: &'static str, from: &'static str) -> Case {
     gobj(name, from, move |g, gobj| {
+        // Run in another state, a callback would read the handle a state variable holds
+        // (a grab's hold joint, say) as data, which melee-sim refuses.
+        if !g.game.fighter(gobj).mv.handles().is_empty() {
+            panic!("{}a state variable holds a handle", leaf_check::calls::SKIP);
+        }
         run_fighter_cb(g, gobj, CodeRef(leaf_check::sym(name)));
         Ret::Nothing
     })
