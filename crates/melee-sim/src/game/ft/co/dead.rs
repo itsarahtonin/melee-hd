@@ -3,6 +3,7 @@
 use gekko_fp as fp;
 
 use super::super::super::code::{run_fighter_cb, unported_call};
+use super::super::super::ef::Arg;
 use super::super::super::gr::stage;
 use super::super::super::it::item;
 use super::super::super::state::Running;
@@ -21,6 +22,21 @@ const DEAD_ATTACK: usize = 0x30;
 
 /// The slot that stands for no one.
 const NO_SLOT: i32 = 6;
+
+/// `QuakeKind_Large`, the fighters' GObj list, and the wireframes' characters.
+const QUAKE_LARGE: i32 = 4;
+const P_LINK_FIGHTER: u8 = 8;
+const CKIND_BOY: i32 = 0x1B;
+const CKIND_GIRL: i32 = 0x1C;
+
+/// The blast zone a fighter left by.
+#[derive(Clone, Copy)]
+enum Side {
+    Left,
+    Right,
+    Down,
+    Up,
+}
 
 /// The order `ft_80088C5C` stops the fighter's tracks in.
 const TRACKS: [Track; 7] = [
@@ -321,18 +337,161 @@ impl Running<'_> {
         self.game.player_mut(last).set_ext_u32(0xD54, t);
     }
 
-    pub fn enter_dead_right(&mut self, _gobj: GObjId) {
-        unported_call("ftCo_800D3950");
+    /// A KO past a blast zone, `ftCo_800D3680` (left), `ftCo_800D3950` (right),
+    /// `ftCo_800D3BC8` (bottom) and `ftCo_800D3E40` (top, under stamina's or sudden
+    /// death's rule): out of play (`enterDead`), its sound, and the KO's blast where it
+    /// left, kept within the zones.
+    #[doc(alias = "ftCo_800D3680")]
+    #[doc(alias = "ftCo_800D3950")]
+    #[doc(alias = "ftCo_800D3BC8")]
+    #[doc(alias = "ftCo_800D3E40")]
+    fn enter_dead_side(&mut self, gobj: GObjId, side: Side) {
+        let (msid, sfx, angle, along_x) = match side {
+            Side::Left => (ms::DEAD_LEFT, 0x88, -std::f32::consts::FRAC_PI_2, false),
+            Side::Right => (ms::DEAD_RIGHT, 0x89, std::f32::consts::FRAC_PI_2, false),
+            Side::Down => (ms::DEAD_DOWN, 0x61, 0.0, true),
+            Side::Up => (ms::DEAD_UP, 0x61, std::f32::consts::PI, true),
+        };
+        self.enter_dead(gobj, msid);
+        let f = self.game.fighter_id(gobj);
+        self.play_sfx(gobj, sfx, 0x7F, 0x40);
+        let id = self.fighter_sfx(f, sfx);
+        self.lb_audio_queue(id);
+        let mut pos = self.game.fighters[f.0].cur_pos;
+        let g = &*self.game;
+        let clamp = |v: &mut f32, lo: f32, hi: f32| {
+            if *v > hi {
+                *v = hi;
+            }
+            if *v < lo {
+                *v = lo;
+            }
+        };
+        if along_x {
+            clamp(&mut pos.x, stage::blast_left(g), stage::blast_right(g));
+        } else {
+            clamp(&mut pos.y, stage::blast_bottom(g), stage::blast_top(g));
+        }
+        self.spawn_dead_effect(gobj, pos, angle);
+        self.drop_coins(gobj);
     }
-    pub fn enter_dead_left(&mut self, _gobj: GObjId) {
-        unported_call("ftCo_800D3680");
+
+    pub fn enter_dead_right(&mut self, gobj: GObjId) {
+        self.enter_dead_side(gobj, Side::Right);
     }
-    pub fn enter_dead_down(&mut self, _gobj: GObjId) {
-        unported_call("ftCo_800D3BC8");
+    pub fn enter_dead_left(&mut self, gobj: GObjId) {
+        self.enter_dead_side(gobj, Side::Left);
     }
-    pub fn enter_dead_up(&mut self, _gobj: GObjId) {
-        unported_call("ftCo_800D3E40");
+    pub fn enter_dead_down(&mut self, gobj: GObjId) {
+        self.enter_dead_side(gobj, Side::Down);
     }
+    pub fn enter_dead_up(&mut self, gobj: GObjId) {
+        self.enter_dead_side(gobj, Side::Up);
+    }
+
+    /// Out of play past a zone (`enterDead`): what it lets go of, the state with its frames
+    /// (`ftCommonData` x500), its flags, the last attacker noted, and the death itself
+    /// (`processDeath`).
+    fn enter_dead(&mut self, gobj: GObjId, msid: i32) {
+        let f = self.game.fighter_id(gobj);
+        self.leave_play(gobj);
+        let frames = self.common().i32(0x500);
+        self.game.fighters[f.0].set_mv_i32(DEAD_FRAMES, frames);
+        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
+        self.set_dead_flags(gobj);
+        let fp = &self.game.fighters[f.0];
+        let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
+        self.record_ko_attacker(slot, sub);
+        self.process_death(gobj);
+    }
+
+    /// A KO (`processDeath`): invisible, the screen's quake, the rumble (`ftCo_800D35FC`),
+    /// the KO counted, its sounds stopped, then its two death cries (`ftCo_800D38B8`).
+    #[doc(alias = "ftCo_800D35FC")]
+    #[doc(alias = "ftCo_800D38B8")]
+    fn process_death(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let fp = &mut self.game.fighters[f.0];
+        fp.invisible = true;
+        fp.x221F_b1 = true;
+        let pos = fp.cur_pos;
+        super::super::super::camera::request_quake(self, QUAKE_LARGE, Some(pos));
+        let c = self.common();
+        let (mine, theirs) = (c.u32(0x4F8), c.u32(0x4FC));
+        self.start_rumble(f, 5, mine);
+        let mut cur = self.game.world.first_in(P_LINK_FIGHTER);
+        while let Some(other) = cur {
+            let o = self.game.fighter_id(other);
+            if o != f && !self.game.fighters[o.0].is_sleeping {
+                self.start_rumble(o, 6, theirs);
+            }
+            cur = self.game.world.gobjs[other.0].next;
+        }
+        self.count_ko(gobj);
+        self.stop_fighter_sounds(gobj);
+        for off in [0x4, 0x8] {
+            let id = self.character_sfx(gobj, off);
+            self.fighter_play_track(f, Track::Voice, id, 0x7F, 0x40);
+            if !self.game.fighters[f.0].x2225_b6 {
+                let id = self.fighter_sfx(f, id);
+                self.lb_audio_queue(id);
+            }
+        }
+    }
+
+    /// The KO's blast at `pos` turned to `angle` (`spawnDeadEffect`): in the player's
+    /// colors, the wireframes' own kind (`gm_801693BC`).
+    #[doc(alias = "gm_801693BC")]
+    fn spawn_dead_effect(&mut self, gobj: GObjId, pos: crate::vec::Vec3, angle: f32) {
+        let slot = i32::from(self.game.fighter(gobj).player_idx);
+        let i = self.game.player_unk45(slot) * 4;
+        let rgb = |g: &Self, off: u32| {
+            let t = g.common_ptr(off);
+            let b = |k: u32| u32::from(g.data.u8(t.at(i + k)));
+            (b(0) << 16) | (b(1) << 8) | b(2)
+        };
+        let (rgb1, rgb2) = (rgb(self, 0x48), rgb(self, 0x4C));
+        if self.game.player_flags_bit1(slot) {
+            unported_call("gm_801693BC for a slot that leaves");
+        }
+        let ckind = self.game.player_ckind(slot);
+        let wireframe = (CKIND_BOY..=CKIND_GIRL).contains(&ckind);
+        let kind = if wireframe { 0x42C } else { 0x42B };
+        let scale = self.common().f32(0x4F4);
+        super::super::super::ef::spawn(
+            self,
+            kind,
+            Some(gobj),
+            &[
+                Arg::Vec(pos),
+                Arg::Float(angle),
+                Arg::Float(scale),
+                Arg::Int(rgb1),
+                Arg::Int(rgb2),
+            ],
+        );
+    }
+
+    /// `ftCo_DeadLeft_Anim` and the other zones' deaths: when the frames run out, out of
+    /// play for now.
+    #[doc(alias = "ftCo_DeadLeft_Anim")]
+    #[doc(alias = "ftCo_DeadRight_Anim")]
+    #[doc(alias = "ftCo_DeadDown_Anim")]
+    #[doc(alias = "ftCo_DeadUp_Anim")]
+    pub fn co_dead_anim(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        fp.set_mv_i32(DEAD_FRAMES, fp.mv_i32(DEAD_FRAMES).wrapping_sub(1));
+        if fp.mv_i32(DEAD_FRAMES) == 0 {
+            self.out_of_play(gobj);
+        }
+    }
+
+    /// `ftCo_DeadLeft_Cam` and the other zones' deaths: nothing.
+    #[doc(alias = "ftCo_DeadLeft_Cam")]
+    #[doc(alias = "ftCo_DeadRight_Cam")]
+    #[doc(alias = "ftCo_DeadDown_Cam")]
+    #[doc(alias = "ftCo_DeadUp_Cam")]
+    pub fn co_dead_cam(&mut self, _gobj: GObjId) {}
     pub fn enter_dead_up_fall(&mut self, _gobj: GObjId) {
         unported_call("ftCo_800D4780");
     }

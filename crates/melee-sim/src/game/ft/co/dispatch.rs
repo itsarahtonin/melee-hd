@@ -85,6 +85,14 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800D_EE64 => {
             g.ground_coll(gobj);
         }
+        // ftCo_DeadDown_Anim, ftCo_DeadLeft_Anim, ftCo_DeadRight_Anim, ftCo_DeadUp_Anim
+        0x800D_3E00 | 0x800D_3910 | 0x800D_3B88 | 0x800D_4078 => {
+            g.co_dead_anim(gobj);
+        }
+        // ftCo_DeadDown_Cam, ftCo_DeadLeft_Cam, ftCo_DeadRight_Cam, ftCo_DeadUp_Cam
+        0x800D_3E3C | 0x800D_394C | 0x800D_3BC4 | 0x800D_40B4 => {
+            g.co_dead_cam(gobj);
+        }
         // ftCo_DeadUpStar_Anim
         0x800D_42E4 => {
             g.co_dead_up_star_anim(gobj);
@@ -651,10 +659,6 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         // ftCo_ItemScrewAir_Anim
         0x800D_2EF8 => {
             g.co_item_screw_air_anim(gobj);
-        }
-        // ftCo_DeadDown_Anim
-        0x800D_3E00 => {
-            g.co_dead_down_anim(gobj);
         }
         // ftCo_Landing_IASA
         0x800D_5D78 => {
