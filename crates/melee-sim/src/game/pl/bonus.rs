@@ -159,7 +159,7 @@ impl Running<'_> {
 
     /// A ledge another fighter holds, `pl_8003FFDC`: unless it's the player's own, bonus 0x46
     /// for the holder when the other last caught a different ledge (`ft_80087A98`).
-    // Ports `pl_8003FFDC`; aliased once a check reaches it.
+    #[doc(alias = "pl_8003FFDC")]
     pub fn record_ledge_steal(
         &mut self,
         slot: i32,

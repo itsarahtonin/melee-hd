@@ -101,13 +101,7 @@ fn stubs(yes: bool) -> Vec<Stub> {
         StubRet::Int(if yes { 3 } else { 0 }),
     ));
     // The common states' crowd and statistics, which their ports stand in for.
-    for n in [
-        "un_80322598",
-        "pl_80040048",
-        "pl_8003FFDC",
-        "pl_8003E0E8",
-        "pl_8003E114",
-    ] {
+    for n in ["un_80322598", "pl_8003E0E8", "pl_8003E114"] {
         v.push((leaf_check::sym(n), StubRet::Nothing));
     }
     v.push((leaf_check::sym("un_803224DC"), StubRet::Int(0)));

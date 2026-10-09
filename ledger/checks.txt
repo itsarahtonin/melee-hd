@@ -3221,5 +3221,6 @@ ftCommon_FallBasic	leaf-check sheik: sheik_functions reaches it through ftSk_Spe
 ftCommon_8007DA24	leaf-check sheik: sheik_functions reaches it through ftSk_SpecialHi_80113A30 from real Sheik states and compares the whole state
 it_802703E8	melee-oracle diff, Fox vs Sheik FD ticks 1-1222 (docs/oracle.md): every tick for each of Sheik's items with hurtboxes, the fighters' hitboxes tested against them (none lands)
 pl_80040048	melee-oracle diff, Fox vs Sheik FD ticks 1-1222 (docs/oracle.md): Sheik's ledge catches (tick 939 on)
+pl_8003FFDC	leaf-check ftcommon coll_callbacks: the ledge catch's statistics with the call compared live
 ftCo_Cliff_Cam	melee-oracle diff, Fox vs Sheik FD ticks 1-1222 (docs/oracle.md): Sheik hanging from the ledge (tick 939 on)
 mpLib_8005811C	melee-oracle diff, Fox vs Sheik FD ticks 1-1222 (docs/oracle.md): Sheik hanging from the ledge, each frame of the hang (Final Destination's ledges have no joint callback)
