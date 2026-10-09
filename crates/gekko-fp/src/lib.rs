@@ -17,6 +17,9 @@
 //! in both modes (`docs/performance.md`).
 
 use std::cell::Cell;
+#[cfg(target_arch = "x86_64")]
+use std::sync::atomic::AtomicU8;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 mod estimate;
 mod paired;
@@ -54,16 +57,30 @@ thread_local! {
     static FP_MODE: Cell<FpMode> = const { Cell::new(FpMode::Hardware) };
 }
 
+/// How many threads have set [`FpMode::Slippi`] and not set it back (one that ends in it
+/// stays counted). While none has, every thread is in [`FpMode::Hardware`] and the mode
+/// needs no thread-local read, which isn't inlined across crates on Windows. Each thread
+/// counts only itself, so the count it reads includes its own change.
+static SLIPPI_THREADS: AtomicUsize = AtomicUsize::new(0);
+
 /// The floating-point mode of the current thread.
 #[inline]
 pub fn fp_mode() -> FpMode {
+    if SLIPPI_THREADS.load(Ordering::Relaxed) == 0 {
+        return FpMode::Hardware;
+    }
     FP_MODE.with(Cell::get)
 }
 
 /// Sets the floating-point mode for the current thread.
 #[inline]
 pub fn set_fp_mode(mode: FpMode) {
-    FP_MODE.with(|m| m.set(mode));
+    let old = FP_MODE.with(|m| m.replace(mode));
+    match (old, mode) {
+        (FpMode::Hardware, FpMode::Slippi) => SLIPPI_THREADS.fetch_add(1, Ordering::Relaxed),
+        (FpMode::Slippi, FpMode::Hardware) => SLIPPI_THREADS.fetch_sub(1, Ordering::Relaxed),
+        _ => 0,
+    };
 }
 
 #[inline]
@@ -145,22 +162,36 @@ pub(crate) fn round_c(c: f64) -> f64 {
     f64::from_bits((bits & keep) + (bits & round))
 }
 
-/// Which fused multiply-add [`mul_add`] takes on this thread: [`UNDETECTED`] before the first,
-/// then [`HARDWARE`] or [`PORTABLE`].
+/// Which fused multiply-add [`mul_add`] takes: [`UNDETECTED`] before the first, then
+/// [`HARDWARE`] or [`PORTABLE`], for every thread but those [`set_portable_fma`] sets.
+#[cfg(target_arch = "x86_64")]
 const UNDETECTED: u8 = 0;
+#[cfg(target_arch = "x86_64")]
 const HARDWARE: u8 = 1;
+#[cfg(target_arch = "x86_64")]
 const PORTABLE: u8 = 2;
+#[cfg(target_arch = "x86_64")]
+static FMA_PATH: AtomicU8 = AtomicU8::new(UNDETECTED);
 
 thread_local! {
-    static FMA_PATH: Cell<u8> = const { Cell::new(UNDETECTED) };
+    static PORTABLE_HERE: Cell<bool> = const { Cell::new(false) };
 }
+
+/// How many threads have [`set_portable_fma`] on (counted as [`SLIPPI_THREADS`] is), so the
+/// others need no thread-local read.
+static PORTABLE_THREADS: AtomicUsize = AtomicUsize::new(0);
 
 /// Makes this thread's fused multiply-adds take the portable path (`f64::mul_add`) even where
 /// the hardware one is there, for checking the two against each other; `false` goes back to
 /// the hardware one where the processor has it.
 #[inline]
 pub fn set_portable_fma(portable: bool) {
-    FMA_PATH.with(|p| p.set(if portable { PORTABLE } else { UNDETECTED }));
+    let old = PORTABLE_HERE.with(|p| p.replace(portable));
+    match (old, portable) {
+        (false, true) => PORTABLE_THREADS.fetch_add(1, Ordering::Relaxed),
+        (true, false) => PORTABLE_THREADS.fetch_sub(1, Ordering::Relaxed),
+        _ => 0,
+    };
 }
 
 /// `a * c + b` rounded once to double: IEEE 754's fusedMultiplyAdd, the same bits either way.
@@ -170,17 +201,28 @@ pub fn set_portable_fma(portable: bool) {
 #[inline]
 pub(crate) fn mul_add(a: f64, c: f64, b: f64) -> f64 {
     #[cfg(target_arch = "x86_64")]
+    if !portable_fma() {
+        // SAFETY: the processor has FMA3 (`detect_fma`).
+        return unsafe { mul_add_fma3(a, c, b) };
+    }
+    a.mul_add(c, b)
+}
+
+/// Whether this thread's fused multiply-adds take the portable path: where the processor
+/// has no FMA3, or after [`set_portable_fma`].
+#[inline]
+pub fn portable_fma() -> bool {
+    #[cfg(target_arch = "x86_64")]
     {
-        let mut path = FMA_PATH.with(Cell::get);
+        let mut path = FMA_PATH.load(Ordering::Relaxed);
         if path == UNDETECTED {
             path = detect_fma();
         }
-        if path == HARDWARE {
-            // SAFETY: the processor has FMA3 (`detect_fma`).
-            return unsafe { mul_add_fma3(a, c, b) };
-        }
+        path != HARDWARE
+            || (PORTABLE_THREADS.load(Ordering::Relaxed) != 0 && PORTABLE_HERE.with(Cell::get))
     }
-    a.mul_add(c, b)
+    #[cfg(not(target_arch = "x86_64"))]
+    true
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -192,7 +234,7 @@ fn detect_fma() -> u8 {
     } else {
         PORTABLE
     };
-    FMA_PATH.with(|p| p.set(path));
+    FMA_PATH.store(path, Ordering::Relaxed);
     path
 }
 
