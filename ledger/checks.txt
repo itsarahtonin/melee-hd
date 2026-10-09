@@ -3215,6 +3215,13 @@ it_802BCF2C	leaf-check sheik: sheik_functions runs it from real states of Sheik'
 it_802BCF84	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
 it_802BCFC4	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
 it_802A24A0	leaf-check sheik link_render: every capture of the chain's links being drawn, whether each side draws the link's joints compared
+ftCommon_CalcSelfAccel_DeaccelAir	leaf-check sheik: sheik_functions reaches it through the up and down specials' aerial physics from real Sheik states and compares the whole state
+ftCommon_ClampSelfVelX	leaf-check sheik: sheik_functions reaches it through ftSk_SpecialAirHi_Phys from real Sheik states and compares the whole state
+ftCommon_FallBasic	leaf-check sheik: sheik_functions reaches it through ftSk_SpecialAirHi_Phys from real Sheik states and compares the whole state
+ftCommon_8007DA24	leaf-check sheik: sheik_functions reaches it through ftSk_SpecialHi_80113A30 from real Sheik states and compares the whole state
+it_802703E8	melee-oracle diff, Fox vs Sheik FD ticks 1-1222 (docs/oracle.md): every tick for each of Sheik's items with hurtboxes, the fighters' hitboxes tested against them (none lands)
+pl_8003FFDC	leaf-check ftcommon coll_callbacks: the ledge catch's statistics with the call compared live
+mpLib_8005811C	melee-oracle diff, Fox vs Sheik FD ticks 1-1222 (docs/oracle.md): Sheik hanging from the ledge, each frame of the hang (Final Destination's ledges have no joint callback)
 pl_80038788	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): a point bonus set (1 call)
 plBonusLib_8003D514	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the rivals' places at a KO (7 calls)
 pl_8003D644	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): a KO's stats (7 calls)

@@ -12,7 +12,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
-use crate::game::it::ItemVars;
+use crate::game::it::{ItemVars, Var};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -7302,44 +7302,61 @@ impl Default for SpawnItem {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itFoxBlaster_ItemVars {
     /// +0x0
-    pub xDD4: i32,
+    pub xDD4: Var<i32>,
     /// +0x4
-    pub xDD8: i32,
+    pub xDD8: Var<i32>,
     /// +0x8
-    pub xDDC: i32,
+    pub xDDC: Var<i32>,
     /// +0xc
-    pub xDE0: i32,
+    pub xDE0: Var<i32>,
     /// +0x10
-    pub xDE4: [Option<EffectId>; 6],
+    pub xDE4: [Var<Option<EffectId>>; 6],
     /// +0x28
-    pub xDFC: [i32; 6],
+    pub xDFC: [Var<i32>; 6],
     /// +0x40
-    pub xE14: [Vec3; 6],
+    pub xE14: [Var<Vec3>; 6],
     /// +0x88
-    pub angle: [f32; 6],
+    pub angle: [Var<f32>; 6],
     /// +0xa0
-    pub gfx_spawn_var: i32,
+    pub gfx_spawn_var: Var<i32>,
     /// +0xa4
-    pub set_sfx_var2: i32,
+    pub set_sfx_var2: Var<i32>,
     /// +0xa8
-    pub owner: Option<GObjId>,
+    pub owner: Var<Option<GObjId>>,
 }
 
 impl Default for itFoxBlaster_ItemVars {
     fn default() -> Self {
         itFoxBlaster_ItemVars {
-            xDD4: 0,
-            xDD8: 0,
-            xDDC: 0,
-            xDE0: 0,
-            xDE4: [None; 6],
-            xDFC: [0; 6],
-            xE14: core::array::from_fn(|_| Default::default()),
-            angle: [0.0; 6],
-            gfx_spawn_var: 0,
-            set_sfx_var2: 0,
-            owner: None,
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+            xDE0: Var::new(Default::default()),
+            xDE4: core::array::from_fn(|_| Var::new(None)),
+            xDFC: core::array::from_fn(|_| Var::new(Default::default())),
+            xE14: core::array::from_fn(|_| Var::new(Default::default())),
+            angle: core::array::from_fn(|_| Var::new(Default::default())),
+            gfx_spawn_var: Var::new(Default::default()),
+            set_sfx_var2: Var::new(Default::default()),
+            owner: Var::new(Default::default()),
         }
+    }
+}
+
+impl itFoxBlaster_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+        self.xDE0.mark_stale();
+        self.xDE4.iter_mut().for_each(|v| v.mark_stale());
+        self.xDFC.iter_mut().for_each(|v| v.mark_stale());
+        self.xE14.iter_mut().for_each(|v| v.mark_stale());
+        self.angle.iter_mut().for_each(|v| v.mark_stale());
+        self.gfx_spawn_var.mark_stale();
+        self.set_sfx_var2.mark_stale();
+        self.owner.mark_stale();
     }
 }
 
@@ -7347,23 +7364,33 @@ impl Default for itFoxBlaster_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itFoxLaser_ItemVars {
     /// +0x0
-    pub scale: f32,
+    pub scale: Var<f32>,
     /// +0x4
-    pub angle: f32,
+    pub angle: Var<f32>,
     /// +0x8
-    pub speed: f32,
+    pub speed: Var<f32>,
     /// +0xc
-    pub pos: Vec3,
+    pub pos: Var<Vec3>,
 }
 
 impl Default for itFoxLaser_ItemVars {
     fn default() -> Self {
         itFoxLaser_ItemVars {
-            scale: 0.0,
-            angle: 0.0,
-            speed: 0.0,
-            pos: Default::default(),
+            scale: Var::new(Default::default()),
+            angle: Var::new(Default::default()),
+            speed: Var::new(Default::default()),
+            pos: Var::new(Default::default()),
         }
+    }
+}
+
+impl itFoxLaser_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.scale.mark_stale();
+        self.angle.mark_stale();
+        self.speed.mark_stale();
+        self.pos.mark_stale();
     }
 }
 
@@ -7371,20 +7398,29 @@ impl Default for itFoxLaser_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itFoxIllusion_ItemVars {
     /// +0x0
-    pub xDD4: Option<DataRef>,
+    pub xDD4: Var<Option<DataRef>>,
     /// +0x4
-    pub xDD8: f32,
+    pub xDD8: Var<f32>,
     /// +0x8
-    pub xDDC: Option<JObjId>,
+    pub xDDC: Var<Option<JObjId>>,
 }
 
 impl Default for itFoxIllusion_ItemVars {
     fn default() -> Self {
         itFoxIllusion_ItemVars {
-            xDD4: None,
-            xDD8: 0.0,
-            xDDC: None,
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
         }
+    }
+}
+
+impl itFoxIllusion_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
     }
 }
 
@@ -7392,12 +7428,21 @@ impl Default for itFoxIllusion_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itSeakNeedleHeld_ItemVars {
     /// +0x0
-    pub owner: Option<GObjId>,
+    pub owner: Var<Option<GObjId>>,
 }
 
 impl Default for itSeakNeedleHeld_ItemVars {
     fn default() -> Self {
-        itSeakNeedleHeld_ItemVars { owner: None }
+        itSeakNeedleHeld_ItemVars {
+            owner: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itSeakNeedleHeld_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.owner.mark_stale();
     }
 }
 
@@ -7405,38 +7450,53 @@ impl Default for itSeakNeedleHeld_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itSeakNeedleThrown_ItemVars {
     /// +0x0
-    pub xDD4: f32,
+    pub xDD4: Var<f32>,
     /// +0x4
-    pub xDD8: f32,
+    pub xDD8: Var<f32>,
     /// +0x8
-    pub xDDC: f32,
+    pub xDDC: Var<f32>,
     /// +0xc
-    pub xDE0: f32,
+    pub xDE0: Var<f32>,
     /// +0x10
-    pub xDE4: Vec3,
+    pub xDE4: Var<Vec3>,
     /// +0x1c
-    pub xDF0: f32,
+    pub xDF0: Var<f32>,
     /// +0x20
-    pub xDF4: i32,
+    pub xDF4: Var<i32>,
     /// +0x24
-    pub xDF8: f32,
+    pub xDF8: Var<f32>,
     /// +0x28
-    pub xDFC: f32,
+    pub xDFC: Var<f32>,
 }
 
 impl Default for itSeakNeedleThrown_ItemVars {
     fn default() -> Self {
         itSeakNeedleThrown_ItemVars {
-            xDD4: 0.0,
-            xDD8: 0.0,
-            xDDC: 0.0,
-            xDE0: 0.0,
-            xDE4: Default::default(),
-            xDF0: 0.0,
-            xDF4: 0,
-            xDF8: 0.0,
-            xDFC: 0.0,
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+            xDE0: Var::new(Default::default()),
+            xDE4: Var::new(Default::default()),
+            xDF0: Var::new(Default::default()),
+            xDF4: Var::new(Default::default()),
+            xDF8: Var::new(Default::default()),
+            xDFC: Var::new(Default::default()),
         }
+    }
+}
+
+impl itSeakNeedleThrown_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+        self.xDE0.mark_stale();
+        self.xDE4.mark_stale();
+        self.xDF0.mark_stale();
+        self.xDF4.mark_stale();
+        self.xDF8.mark_stale();
+        self.xDFC.mark_stale();
     }
 }
 
@@ -7507,35 +7567,49 @@ impl Default for ItemLink {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itSeakChain_ItemVars {
     /// +0x0
-    pub x0: Option<ItemLinkId>,
+    pub x0: Var<Option<ItemLinkId>>,
     /// +0x4
-    pub x4: Option<ItemLinkId>,
+    pub x4: Var<Option<ItemLinkId>>,
     /// +0x8
-    pub parent_gobj: Option<GObjId>,
+    pub parent_gobj: Var<Option<GObjId>>,
     /// +0xc
-    pub pad_C: [u8; 4],
+    pub pad_C: [Var<u8>; 4],
     /// +0x10
-    pub x10: i32,
+    pub x10: Var<i32>,
     /// +0x14
-    pub x14: i32,
+    pub x14: Var<i32>,
     /// +0x18
-    pub x18: i32,
+    pub x18: Var<i32>,
     /// +0x1c
-    pub history: [Vec3; 15],
+    pub history: [Var<Vec3>; 15],
 }
 
 impl Default for itSeakChain_ItemVars {
     fn default() -> Self {
         itSeakChain_ItemVars {
-            x0: None,
-            x4: None,
-            parent_gobj: None,
-            pad_C: [0; 4],
-            x10: 0,
-            x14: 0,
-            x18: 0,
-            history: core::array::from_fn(|_| Default::default()),
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            parent_gobj: Var::new(Default::default()),
+            pad_C: core::array::from_fn(|_| Var::new(Default::default())),
+            x10: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+            x18: Var::new(Default::default()),
+            history: core::array::from_fn(|_| Var::new(Default::default())),
         }
+    }
+}
+
+impl itSeakChain_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.parent_gobj.mark_stale();
+        self.pad_C.iter_mut().for_each(|v| v.mark_stale());
+        self.x10.mark_stale();
+        self.x14.mark_stale();
+        self.x18.mark_stale();
+        self.history.iter_mut().for_each(|v| v.mark_stale());
     }
 }
 
@@ -8314,14 +8388,25 @@ impl Default for db_ItemAndPokemonMenu_t {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itCapsule_ItemVars {
     /// +0x0
-    pub x0: i32,
+    pub x0: Var<i32>,
     /// +0x4
-    pub x4: i32,
+    pub x4: Var<i32>,
 }
 
 impl Default for itCapsule_ItemVars {
     fn default() -> Self {
-        itCapsule_ItemVars { x0: 0, x4: 0 }
+        itCapsule_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itCapsule_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
     }
 }
 
@@ -8329,29 +8414,41 @@ impl Default for itCapsule_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itHeart_ItemVars {
     /// +0x0
-    pub xDD4_heal: i32,
+    pub xDD4_heal: Var<i32>,
     /// +0x4
-    pub xDD8: [u8; 4],
+    pub xDD8: Var<[u8; 4]>,
     /// +0x8
-    pub xDDC: i32,
+    pub xDDC: Var<i32>,
     /// +0xc
-    pub xDE0_filler: [u8; 8],
+    pub xDE0_filler: [Var<u8>; 8],
     /// +0x14
-    pub xDE8_float: f32,
+    pub xDE8_float: Var<f32>,
     /// +0x18
-    pub xDEC: f32,
+    pub xDEC: Var<f32>,
 }
 
 impl Default for itHeart_ItemVars {
     fn default() -> Self {
         itHeart_ItemVars {
-            xDD4_heal: 0,
-            xDD8: [0; 4],
-            xDDC: 0,
-            xDE0_filler: [0; 8],
-            xDE8_float: 0.0,
-            xDEC: 0.0,
+            xDD4_heal: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+            xDE0_filler: core::array::from_fn(|_| Var::new(Default::default())),
+            xDE8_float: Var::new(Default::default()),
+            xDEC: Var::new(Default::default()),
         }
+    }
+}
+
+impl itHeart_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4_heal.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+        self.xDE0_filler.iter_mut().for_each(|v| v.mark_stale());
+        self.xDE8_float.mark_stale();
+        self.xDEC.mark_stale();
     }
 }
 
@@ -8359,20 +8456,29 @@ impl Default for itHeart_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itTomato_ItemVars {
     /// +0x0
-    pub heal_amount: i32,
+    pub heal_amount: Var<i32>,
     /// +0x4 (bits 0..+1)
-    pub x4_b0: bool,
+    pub x4_b0: Var<bool>,
     /// +0x8
-    pub x8: u32,
+    pub x8: Var<u32>,
 }
 
 impl Default for itTomato_ItemVars {
     fn default() -> Self {
         itTomato_ItemVars {
-            heal_amount: 0,
-            x4_b0: false,
-            x8: 0,
+            heal_amount: Var::new(Default::default()),
+            x4_b0: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
         }
+    }
+}
+
+impl itTomato_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.heal_amount.mark_stale();
+        self.x4_b0.mark_stale();
+        self.x8.mark_stale();
     }
 }
 
@@ -8380,26 +8486,37 @@ impl Default for itTomato_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itBox_ItemVars {
     /// +0x0
-    pub opened: i32,
+    pub opened: Var<i32>,
     /// +0x4
-    pub despawn_timer: i32,
+    pub despawn_timer: Var<i32>,
     /// +0x8
-    pub spawned_gobj: Option<GObjId>,
+    pub spawned_gobj: Var<Option<GObjId>>,
     /// +0xc
-    pub rot_vel_x: f32,
+    pub rot_vel_x: Var<f32>,
     /// +0x10
-    pub rot_vel_y: f32,
+    pub rot_vel_y: Var<f32>,
 }
 
 impl Default for itBox_ItemVars {
     fn default() -> Self {
         itBox_ItemVars {
-            opened: 0,
-            despawn_timer: 0,
-            spawned_gobj: None,
-            rot_vel_x: 0.0,
-            rot_vel_y: 0.0,
+            opened: Var::new(Default::default()),
+            despawn_timer: Var::new(Default::default()),
+            spawned_gobj: Var::new(Default::default()),
+            rot_vel_x: Var::new(Default::default()),
+            rot_vel_y: Var::new(Default::default()),
         }
+    }
+}
+
+impl itBox_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.opened.mark_stale();
+        self.despawn_timer.mark_stale();
+        self.spawned_gobj.mark_stale();
+        self.rot_vel_x.mark_stale();
+        self.rot_vel_y.mark_stale();
     }
 }
 
@@ -8407,29 +8524,41 @@ impl Default for itBox_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itTaru_ItemVars {
     /// +0x0
-    pub xDD4: i32,
+    pub xDD4: Var<i32>,
     /// +0x4
-    pub xDD8: i32,
+    pub xDD8: Var<i32>,
     /// +0x8
-    pub xDDC: f32,
+    pub xDDC: Var<f32>,
     /// +0xc
-    pub xDE0: f32,
+    pub xDE0: Var<f32>,
     /// +0x10
-    pub xDE4: f32,
+    pub xDE4: Var<f32>,
     /// +0x14
-    pub xDE8: Vec3,
+    pub xDE8: Var<Vec3>,
 }
 
 impl Default for itTaru_ItemVars {
     fn default() -> Self {
         itTaru_ItemVars {
-            xDD4: 0,
-            xDD8: 0,
-            xDDC: 0.0,
-            xDE0: 0.0,
-            xDE4: 0.0,
-            xDE8: Default::default(),
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+            xDE0: Var::new(Default::default()),
+            xDE4: Var::new(Default::default()),
+            xDE8: Var::new(Default::default()),
         }
+    }
+}
+
+impl itTaru_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+        self.xDE0.mark_stale();
+        self.xDE4.mark_stale();
+        self.xDE8.mark_stale();
     }
 }
 
@@ -8437,14 +8566,25 @@ impl Default for itTaru_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itKusudama_ItemVars {
     /// +0x0
-    pub x0: i32,
+    pub x0: Var<i32>,
     /// +0x4
-    pub x4: i32,
+    pub x4: Var<i32>,
 }
 
 impl Default for itKusudama_ItemVars {
     fn default() -> Self {
-        itKusudama_ItemVars { x0: 0, x4: 0 }
+        itKusudama_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itKusudama_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
     }
 }
 
@@ -8452,56 +8592,77 @@ impl Default for itKusudama_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itBombHei_ItemVars {
     /// +0x0
-    pub xDD4: i32,
+    pub xDD4: Var<i32>,
     /// +0x4
-    pub xDD8: i32,
+    pub xDD8: Var<i32>,
     /// +0x8
-    pub xDDC: i32,
+    pub xDDC: Var<i32>,
     /// +0xc
-    pub xDE0: i32,
+    pub xDE0: Var<i32>,
     /// +0x10
-    pub xDE4: i32,
+    pub xDE4: Var<i32>,
     /// +0x14
-    pub xDE8: f32,
+    pub xDE8: Var<f32>,
     /// +0x18
-    pub xDEC: f32,
+    pub xDEC: Var<f32>,
     /// +0x1c
-    pub xDF0: f32,
+    pub xDF0: Var<f32>,
     /// +0x20
-    pub xDF4: f32,
+    pub xDF4: Var<f32>,
     /// +0x24
-    pub xDF8: f32,
+    pub xDF8: Var<f32>,
     /// +0x28
-    pub xDFC: f32,
+    pub xDFC: Var<f32>,
     /// +0x2c
-    pub _E00: i32,
+    pub _E00: Var<i32>,
     /// +0x30
-    pub xE04: f32,
+    pub xE04: Var<f32>,
     /// +0x34
-    pub _E08: i32,
+    pub _E08: Var<i32>,
     /// +0x38
-    pub xE0C: Vec3,
+    pub xE0C: Var<Vec3>,
 }
 
 impl Default for itBombHei_ItemVars {
     fn default() -> Self {
         itBombHei_ItemVars {
-            xDD4: 0,
-            xDD8: 0,
-            xDDC: 0,
-            xDE0: 0,
-            xDE4: 0,
-            xDE8: 0.0,
-            xDEC: 0.0,
-            xDF0: 0.0,
-            xDF4: 0.0,
-            xDF8: 0.0,
-            xDFC: 0.0,
-            _E00: 0,
-            xE04: 0.0,
-            _E08: 0,
-            xE0C: Default::default(),
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+            xDE0: Var::new(Default::default()),
+            xDE4: Var::new(Default::default()),
+            xDE8: Var::new(Default::default()),
+            xDEC: Var::new(Default::default()),
+            xDF0: Var::new(Default::default()),
+            xDF4: Var::new(Default::default()),
+            xDF8: Var::new(Default::default()),
+            xDFC: Var::new(Default::default()),
+            _E00: Var::new(Default::default()),
+            xE04: Var::new(Default::default()),
+            _E08: Var::new(Default::default()),
+            xE0C: Var::new(Default::default()),
         }
+    }
+}
+
+impl itBombHei_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+        self.xDE0.mark_stale();
+        self.xDE4.mark_stale();
+        self.xDE8.mark_stale();
+        self.xDEC.mark_stale();
+        self.xDF0.mark_stale();
+        self.xDF4.mark_stale();
+        self.xDF8.mark_stale();
+        self.xDFC.mark_stale();
+        self._E00.mark_stale();
+        self.xE04.mark_stale();
+        self._E08.mark_stale();
+        self.xE0C.mark_stale();
     }
 }
 
@@ -8509,23 +8670,33 @@ impl Default for itBombHei_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itGShell_HurtInit {
     /// +0x0
-    pub state: i32,
+    pub state: Var<i32>,
     /// +0x4
-    pub a_offset: Vec3,
+    pub a_offset: Var<Vec3>,
     /// +0x10
-    pub b_offset: Vec3,
+    pub b_offset: Var<Vec3>,
     /// +0x1c
-    pub scale: f32,
+    pub scale: Var<f32>,
 }
 
 impl Default for itGShell_HurtInit {
     fn default() -> Self {
         itGShell_HurtInit {
-            state: 0,
-            a_offset: Default::default(),
-            b_offset: Default::default(),
-            scale: 0.0,
+            state: Var::new(Default::default()),
+            a_offset: Var::new(Default::default()),
+            b_offset: Var::new(Default::default()),
+            scale: Var::new(Default::default()),
         }
+    }
+}
+
+impl itGShell_HurtInit {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.state.mark_stale();
+        self.a_offset.mark_stale();
+        self.b_offset.mark_stale();
+        self.scale.mark_stale();
     }
 }
 
@@ -8533,91 +8704,91 @@ impl Default for itGShell_HurtInit {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itGShell_ItemVars {
     /// +0x0
-    pub xDD4: f32,
+    pub xDD4: Var<f32>,
     /// +0x4
-    pub xDD8: f32,
+    pub xDD8: Var<f32>,
     /// +0x8
-    pub xDDC: f32,
+    pub xDDC: Var<f32>,
     /// +0xc
-    pub xDE0: f32,
+    pub xDE0: Var<f32>,
     /// +0x10
-    pub xDE4: f32,
+    pub xDE4: Var<f32>,
     /// +0x14
-    pub xDE8: i32,
+    pub xDE8: Var<i32>,
     /// +0x18 (bits 0..+1)
-    pub xDEC_b0: bool,
+    pub xDEC_b0: Var<bool>,
     /// +0x18 (bits 1..+1)
-    pub xDEC_b1: bool,
+    pub xDEC_b1: Var<bool>,
     /// +0x18 (bits 2..+1)
-    pub xDEC_b2: bool,
+    pub xDEC_b2: Var<bool>,
     /// +0x18 (bits 3..+1)
-    pub xDEC_b3: bool,
+    pub xDEC_b3: Var<bool>,
     /// +0x18 (bits 4..+1)
-    pub xDEC_b4: bool,
+    pub xDEC_b4: Var<bool>,
     /// +0x18 (bits 5..+1)
-    pub xDEC_b5: bool,
+    pub xDEC_b5: Var<bool>,
     /// +0x18 (bits 6..+1)
-    pub xDEC_b6: bool,
+    pub xDEC_b6: Var<bool>,
     /// +0x18 (bits 7..+1)
-    pub xDEC_b7: bool,
+    pub xDEC_b7: Var<bool>,
     /// +0x1c
-    pub xDF0: i32,
+    pub xDF0: Var<i32>,
     /// +0x20
-    pub xDF4: f32,
+    pub xDF4: Var<f32>,
     /// +0x24
-    pub xDF8: f32,
+    pub xDF8: Var<f32>,
     /// +0x28
-    pub xDFC: f32,
+    pub xDFC: Var<f32>,
     /// +0x2c
-    pub xE00: f32,
+    pub xE00: Var<f32>,
     /// +0x30
-    pub xE04: f32,
+    pub xE04: Var<f32>,
     /// +0x34 (bits 0..+1)
-    pub xE08_b0: bool,
+    pub xE08_b0: Var<bool>,
     /// +0x34 (bits 1..+1)
-    pub xE08_b1: bool,
+    pub xE08_b1: Var<bool>,
     /// +0x34 (bits 2..+1)
-    pub xE08_b2: bool,
+    pub xE08_b2: Var<bool>,
     /// +0x34 (bits 3..+1)
-    pub xE08_b3: bool,
+    pub xE08_b3: Var<bool>,
     /// +0x34 (bits 4..+1)
-    pub xE08_b4: bool,
+    pub xE08_b4: Var<bool>,
     /// +0x34 (bits 5..+1)
-    pub xE08_b5: bool,
+    pub xE08_b5: Var<bool>,
     /// +0x34 (bits 6..+1)
-    pub xE08_b6: bool,
+    pub xE08_b6: Var<bool>,
     /// +0x34 (bits 7..+1)
-    pub xE08_b7: bool,
+    pub xE08_b7: Var<bool>,
     /// +0x35
-    pub pad_E09: [i8; 3],
+    pub pad_E09: [Var<i8>; 3],
     /// +0x38
-    pub xE0C: i32,
+    pub xE0C: Var<i32>,
     /// +0x3c
-    pub xE10: i32,
+    pub xE10: Var<i32>,
     /// +0x40
-    pub xE14: i32,
+    pub xE14: Var<i32>,
     /// +0x44
-    pub xE18: i32,
+    pub xE18: Var<i32>,
     /// +0x48 (bits 0..+1)
-    pub xE1C_b0: bool,
+    pub xE1C_b0: Var<bool>,
     /// +0x48 (bits 1..+1)
-    pub xE1C_b1: bool,
+    pub xE1C_b1: Var<bool>,
     /// +0x48 (bits 2..+1)
-    pub xE1C_b2: bool,
+    pub xE1C_b2: Var<bool>,
     /// +0x48 (bits 3..+1)
-    pub xE1C_b3: bool,
+    pub xE1C_b3: Var<bool>,
     /// +0x48 (bits 4..+1)
-    pub xE1C_b4: bool,
+    pub xE1C_b4: Var<bool>,
     /// +0x48 (bits 5..+1)
-    pub xE1C_b5: bool,
+    pub xE1C_b5: Var<bool>,
     /// +0x48 (bits 6..+1)
-    pub xE1C_b6: bool,
+    pub xE1C_b6: Var<bool>,
     /// +0x48 (bits 7..+1)
-    pub xE1C_b7: bool,
+    pub xE1C_b7: Var<bool>,
     /// +0x49
-    pub pad_E1D: [i8; 3],
+    pub pad_E1D: [Var<i8>; 3],
     /// +0x4c
-    pub vel: Vec3,
+    pub vel: Var<Vec3>,
     /// +0x58
     pub x58_hurtInit: itGShell_HurtInit,
 }
@@ -8625,51 +8796,101 @@ pub struct itGShell_ItemVars {
 impl Default for itGShell_ItemVars {
     fn default() -> Self {
         itGShell_ItemVars {
-            xDD4: 0.0,
-            xDD8: 0.0,
-            xDDC: 0.0,
-            xDE0: 0.0,
-            xDE4: 0.0,
-            xDE8: 0,
-            xDEC_b0: false,
-            xDEC_b1: false,
-            xDEC_b2: false,
-            xDEC_b3: false,
-            xDEC_b4: false,
-            xDEC_b5: false,
-            xDEC_b6: false,
-            xDEC_b7: false,
-            xDF0: 0,
-            xDF4: 0.0,
-            xDF8: 0.0,
-            xDFC: 0.0,
-            xE00: 0.0,
-            xE04: 0.0,
-            xE08_b0: false,
-            xE08_b1: false,
-            xE08_b2: false,
-            xE08_b3: false,
-            xE08_b4: false,
-            xE08_b5: false,
-            xE08_b6: false,
-            xE08_b7: false,
-            pad_E09: [0; 3],
-            xE0C: 0,
-            xE10: 0,
-            xE14: 0,
-            xE18: 0,
-            xE1C_b0: false,
-            xE1C_b1: false,
-            xE1C_b2: false,
-            xE1C_b3: false,
-            xE1C_b4: false,
-            xE1C_b5: false,
-            xE1C_b6: false,
-            xE1C_b7: false,
-            pad_E1D: [0; 3],
-            vel: Default::default(),
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+            xDE0: Var::new(Default::default()),
+            xDE4: Var::new(Default::default()),
+            xDE8: Var::new(Default::default()),
+            xDEC_b0: Var::new(Default::default()),
+            xDEC_b1: Var::new(Default::default()),
+            xDEC_b2: Var::new(Default::default()),
+            xDEC_b3: Var::new(Default::default()),
+            xDEC_b4: Var::new(Default::default()),
+            xDEC_b5: Var::new(Default::default()),
+            xDEC_b6: Var::new(Default::default()),
+            xDEC_b7: Var::new(Default::default()),
+            xDF0: Var::new(Default::default()),
+            xDF4: Var::new(Default::default()),
+            xDF8: Var::new(Default::default()),
+            xDFC: Var::new(Default::default()),
+            xE00: Var::new(Default::default()),
+            xE04: Var::new(Default::default()),
+            xE08_b0: Var::new(Default::default()),
+            xE08_b1: Var::new(Default::default()),
+            xE08_b2: Var::new(Default::default()),
+            xE08_b3: Var::new(Default::default()),
+            xE08_b4: Var::new(Default::default()),
+            xE08_b5: Var::new(Default::default()),
+            xE08_b6: Var::new(Default::default()),
+            xE08_b7: Var::new(Default::default()),
+            pad_E09: core::array::from_fn(|_| Var::new(Default::default())),
+            xE0C: Var::new(Default::default()),
+            xE10: Var::new(Default::default()),
+            xE14: Var::new(Default::default()),
+            xE18: Var::new(Default::default()),
+            xE1C_b0: Var::new(Default::default()),
+            xE1C_b1: Var::new(Default::default()),
+            xE1C_b2: Var::new(Default::default()),
+            xE1C_b3: Var::new(Default::default()),
+            xE1C_b4: Var::new(Default::default()),
+            xE1C_b5: Var::new(Default::default()),
+            xE1C_b6: Var::new(Default::default()),
+            xE1C_b7: Var::new(Default::default()),
+            pad_E1D: core::array::from_fn(|_| Var::new(Default::default())),
+            vel: Var::new(Default::default()),
             x58_hurtInit: Default::default(),
         }
+    }
+}
+
+impl itGShell_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+        self.xDE0.mark_stale();
+        self.xDE4.mark_stale();
+        self.xDE8.mark_stale();
+        self.xDEC_b0.mark_stale();
+        self.xDEC_b1.mark_stale();
+        self.xDEC_b2.mark_stale();
+        self.xDEC_b3.mark_stale();
+        self.xDEC_b4.mark_stale();
+        self.xDEC_b5.mark_stale();
+        self.xDEC_b6.mark_stale();
+        self.xDEC_b7.mark_stale();
+        self.xDF0.mark_stale();
+        self.xDF4.mark_stale();
+        self.xDF8.mark_stale();
+        self.xDFC.mark_stale();
+        self.xE00.mark_stale();
+        self.xE04.mark_stale();
+        self.xE08_b0.mark_stale();
+        self.xE08_b1.mark_stale();
+        self.xE08_b2.mark_stale();
+        self.xE08_b3.mark_stale();
+        self.xE08_b4.mark_stale();
+        self.xE08_b5.mark_stale();
+        self.xE08_b6.mark_stale();
+        self.xE08_b7.mark_stale();
+        self.pad_E09.iter_mut().for_each(|v| v.mark_stale());
+        self.xE0C.mark_stale();
+        self.xE10.mark_stale();
+        self.xE14.mark_stale();
+        self.xE18.mark_stale();
+        self.xE1C_b0.mark_stale();
+        self.xE1C_b1.mark_stale();
+        self.xE1C_b2.mark_stale();
+        self.xE1C_b3.mark_stale();
+        self.xE1C_b4.mark_stale();
+        self.xE1C_b5.mark_stale();
+        self.xE1C_b6.mark_stale();
+        self.xE1C_b7.mark_stale();
+        self.pad_E1D.iter_mut().for_each(|v| v.mark_stale());
+        self.vel.mark_stale();
+        self.x58_hurtInit.mark_stale();
     }
 }
 
@@ -8677,65 +8898,89 @@ impl Default for itGShell_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itRShell_ItemVars {
     /// +0x0
-    pub xDD4: f32,
+    pub xDD4: Var<f32>,
     /// +0x4
-    pub xDD8: f32,
+    pub xDD8: Var<f32>,
     /// +0x8
-    pub xDDC: f32,
+    pub xDDC: Var<f32>,
     /// +0xc
-    pub xDE0: f32,
+    pub xDE0: Var<f32>,
     /// +0x10
-    pub xDE4: f32,
+    pub xDE4: Var<f32>,
     /// +0x14
-    pub xDE8: i32,
+    pub xDE8: Var<i32>,
     /// +0x18
-    pub xDEC: i32,
+    pub xDEC: Var<i32>,
     /// +0x1c
-    pub xDF0: i32,
+    pub xDF0: Var<i32>,
     /// +0x20 (bits 0..+1)
-    pub xDF4_b0: bool,
+    pub xDF4_b0: Var<bool>,
     /// +0x20 (bits 1..+1)
-    pub xDF4_b1: bool,
+    pub xDF4_b1: Var<bool>,
     /// +0x20 (bits 2..+1)
-    pub xDF4_b2: bool,
+    pub xDF4_b2: Var<bool>,
     /// +0x20 (bits 3..+1)
-    pub xDF4_b3: bool,
+    pub xDF4_b3: Var<bool>,
     /// +0x20 (bits 4..+1)
-    pub xDF4_b4: bool,
+    pub xDF4_b4: Var<bool>,
     /// +0x20 (bits 5..+1)
-    pub xDF4_b5: bool,
+    pub xDF4_b5: Var<bool>,
     /// +0x20 (bits 6..+1)
-    pub xDF4_b6: bool,
+    pub xDF4_b6: Var<bool>,
     /// +0x20 (bits 7..+1)
-    pub xDF4_b7: bool,
+    pub xDF4_b7: Var<bool>,
     /// +0x21
-    pub pad_DF5: [i8; 43],
+    pub pad_DF5: [Var<i8>; 43],
     /// +0x4c
-    pub vel: Vec3,
+    pub vel: Var<Vec3>,
 }
 
 impl Default for itRShell_ItemVars {
     fn default() -> Self {
         itRShell_ItemVars {
-            xDD4: 0.0,
-            xDD8: 0.0,
-            xDDC: 0.0,
-            xDE0: 0.0,
-            xDE4: 0.0,
-            xDE8: 0,
-            xDEC: 0,
-            xDF0: 0,
-            xDF4_b0: false,
-            xDF4_b1: false,
-            xDF4_b2: false,
-            xDF4_b3: false,
-            xDF4_b4: false,
-            xDF4_b5: false,
-            xDF4_b6: false,
-            xDF4_b7: false,
-            pad_DF5: [0; 43],
-            vel: Default::default(),
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+            xDE0: Var::new(Default::default()),
+            xDE4: Var::new(Default::default()),
+            xDE8: Var::new(Default::default()),
+            xDEC: Var::new(Default::default()),
+            xDF0: Var::new(Default::default()),
+            xDF4_b0: Var::new(Default::default()),
+            xDF4_b1: Var::new(Default::default()),
+            xDF4_b2: Var::new(Default::default()),
+            xDF4_b3: Var::new(Default::default()),
+            xDF4_b4: Var::new(Default::default()),
+            xDF4_b5: Var::new(Default::default()),
+            xDF4_b6: Var::new(Default::default()),
+            xDF4_b7: Var::new(Default::default()),
+            pad_DF5: core::array::from_fn(|_| Var::new(Default::default())),
+            vel: Var::new(Default::default()),
         }
+    }
+}
+
+impl itRShell_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+        self.xDE0.mark_stale();
+        self.xDE4.mark_stale();
+        self.xDE8.mark_stale();
+        self.xDEC.mark_stale();
+        self.xDF0.mark_stale();
+        self.xDF4_b0.mark_stale();
+        self.xDF4_b1.mark_stale();
+        self.xDF4_b2.mark_stale();
+        self.xDF4_b3.mark_stale();
+        self.xDF4_b4.mark_stale();
+        self.xDF4_b5.mark_stale();
+        self.xDF4_b6.mark_stale();
+        self.xDF4_b7.mark_stale();
+        self.pad_DF5.iter_mut().for_each(|v| v.mark_stale());
+        self.vel.mark_stale();
     }
 }
 
@@ -8743,80 +8988,109 @@ impl Default for itRShell_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itSword_ItemVars {
     /// +0x0
-    pub x0: i32,
+    pub x0: Var<i32>,
     /// +0x4
-    pub x4: i32,
+    pub x4: Var<i32>,
     /// +0x8
-    pub x8: i32,
+    pub x8: Var<i32>,
     /// +0xc
-    pub xC: i32,
+    pub xC: Var<i32>,
     /// +0x10
-    pub x10: f32,
+    pub x10: Var<f32>,
     /// +0x14
-    pub x14: f32,
+    pub x14: Var<f32>,
     /// +0x18
-    pub x18: f32,
+    pub x18: Var<f32>,
     /// +0x1c
-    pub x1C: i32,
+    pub x1C: Var<i32>,
     /// +0x20
-    pub x20: i32,
+    pub x20: Var<i32>,
     /// +0x24
-    pub x24: i32,
+    pub x24: Var<i32>,
     /// +0x28
-    pub x28: f32,
+    pub x28: Var<f32>,
     /// +0x2c
-    pub x2C: f32,
+    pub x2C: Var<f32>,
     /// +0x30
-    pub x30: f32,
+    pub x30: Var<f32>,
     /// +0x34
-    pub x34: i32,
+    pub x34: Var<i32>,
     /// +0x38
-    pub x38: i32,
+    pub x38: Var<i32>,
     /// +0x3c
-    pub x3C: i32,
+    pub x3C: Var<i32>,
     /// +0x40
-    pub x40: f32,
+    pub x40: Var<f32>,
     /// +0x44
-    pub x44: f32,
+    pub x44: Var<f32>,
     /// +0x48
-    pub x48: f32,
+    pub x48: Var<f32>,
     /// +0x4c
-    pub x4C: f32,
+    pub x4C: Var<f32>,
     /// +0x50
-    pub x50: f32,
+    pub x50: Var<f32>,
     /// +0x54
-    pub x54: i32,
+    pub x54: Var<i32>,
     /// +0x58
-    pub x58: f32,
+    pub x58: Var<f32>,
 }
 
 impl Default for itSword_ItemVars {
     fn default() -> Self {
         itSword_ItemVars {
-            x0: 0,
-            x4: 0,
-            x8: 0,
-            xC: 0,
-            x10: 0.0,
-            x14: 0.0,
-            x18: 0.0,
-            x1C: 0,
-            x20: 0,
-            x24: 0,
-            x28: 0.0,
-            x2C: 0.0,
-            x30: 0.0,
-            x34: 0,
-            x38: 0,
-            x3C: 0,
-            x40: 0.0,
-            x44: 0.0,
-            x48: 0.0,
-            x4C: 0.0,
-            x50: 0.0,
-            x54: 0,
-            x58: 0.0,
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+            x18: Var::new(Default::default()),
+            x1C: Var::new(Default::default()),
+            x20: Var::new(Default::default()),
+            x24: Var::new(Default::default()),
+            x28: Var::new(Default::default()),
+            x2C: Var::new(Default::default()),
+            x30: Var::new(Default::default()),
+            x34: Var::new(Default::default()),
+            x38: Var::new(Default::default()),
+            x3C: Var::new(Default::default()),
+            x40: Var::new(Default::default()),
+            x44: Var::new(Default::default()),
+            x48: Var::new(Default::default()),
+            x4C: Var::new(Default::default()),
+            x50: Var::new(Default::default()),
+            x54: Var::new(Default::default()),
+            x58: Var::new(Default::default()),
         }
+    }
+}
+
+impl itSword_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.x10.mark_stale();
+        self.x14.mark_stale();
+        self.x18.mark_stale();
+        self.x1C.mark_stale();
+        self.x20.mark_stale();
+        self.x24.mark_stale();
+        self.x28.mark_stale();
+        self.x2C.mark_stale();
+        self.x30.mark_stale();
+        self.x34.mark_stale();
+        self.x38.mark_stale();
+        self.x3C.mark_stale();
+        self.x40.mark_stale();
+        self.x44.mark_stale();
+        self.x48.mark_stale();
+        self.x4C.mark_stale();
+        self.x50.mark_stale();
+        self.x54.mark_stale();
+        self.x58.mark_stale();
     }
 }
 

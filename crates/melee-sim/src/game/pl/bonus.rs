@@ -132,6 +132,26 @@ impl Running<'_> {
         }
     }
 
+    /// A ledge another fighter holds, `pl_8003FFDC`: unless it's the player's own, bonus 0x46
+    /// for the holder when the other last caught a different ledge (`ft_80087A98`).
+    #[doc(alias = "pl_8003FFDC")]
+    pub fn record_ledge_steal(
+        &mut self,
+        slot: i32,
+        _sub: i32,
+        other: i32,
+        other_sub: i32,
+        ledge: i32,
+    ) {
+        let g = self
+            .game
+            .player_entity_at(other, other_sub)
+            .expect("a ledge steal without the other fighter");
+        if slot != other && ledge != self.game.fighter(g).x213C {
+            self.count_bonus(slot, 0x46);
+        }
+    }
+
     /// A powershield counts in the player's stats (`xCD8`), `pl_8003E150`, Nana's too.
     #[doc(alias = "pl_8003E150")]
     pub fn record_powershield(&mut self, slot: i32) {

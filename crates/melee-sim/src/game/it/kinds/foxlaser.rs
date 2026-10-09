@@ -103,10 +103,10 @@ pub fn spawn(
     let lifetime = r.data.f32(attrs.at(LIFETIME));
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
     let v = item_mut(r.game, gobj).xDD4_itemVar.fox_laser();
-    v.scale = 0.0;
-    v.angle = angle;
-    v.speed = speed;
-    v.pos = spawn.pos;
+    v.scale.set(0.0);
+    v.angle.set(angle);
+    v.speed.set(speed);
+    v.pos.set(spawn.pos);
     super::super::item::debug_owner_bubbles(r.game, gobj, Some(parent));
 }
 
@@ -133,9 +133,10 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     let max = r.data.f32(attrs.at(SCALE));
     let j = jobj_of(r.game, gobj).expect("a shot without a model");
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.fox_laser().clone();
-    ip.x40_vel.x = mem(fp::fmuls(reg(v.speed), reg(math::cos(v.angle))));
-    ip.x40_vel.y = mem(fp::fmuls(reg(v.speed), reg(math::sin(v.angle))));
+    let v = ip.xDD4_itemVar.fox_laser();
+    let (speed, angle) = (v.speed.get(), v.angle.get());
+    ip.x40_vel.x = mem(fp::fmuls(reg(speed), reg(math::cos(angle))));
+    ip.x40_vel.y = mem(fp::fmuls(reg(speed), reg(math::sin(angle))));
     ip.x40_vel.z = 0.0;
     ip.facing_dir = if reg(ip.x40_vel.x) > 0.0 { 1.0 } else { -1.0 };
     let half_pi = fp::fdiv(std::f64::consts::PI, 2.0);
@@ -153,20 +154,21 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     )));
     lib2725::set_rotation_x(r.game, j, x);
     let v = item_mut(r.game, gobj).xDD4_itemVar.fox_laser();
-    let speed = reg(v.speed);
+    let speed = reg(v.speed.get());
     let mag = if speed < fp::frsp(0.0) {
         fp::fneg(speed)
     } else {
         speed
     };
-    v.scale = mem(fp::fadds(reg(v.scale), fp::fdivs(mag, 11.25)));
-    if reg(v.scale) > reg(max) {
-        v.scale = max;
+    v.scale
+        .update(|old| mem(fp::fadds(reg(old), fp::fdivs(mag, 11.25))));
+    if reg(v.scale.get()) > reg(max) {
+        v.scale.set(max);
     }
-    if reg(v.scale) < f64::from(1e-5_f32) {
-        v.scale = 1e-3;
+    if reg(v.scale.get()) < f64::from(1e-5_f32) {
+        v.scale.set(1e-3);
     }
-    let s = v.scale;
+    let s = v.scale.get();
     lib2725::set_scale_z(r.game, j, s);
     lib2725::tick_lifetime(r.game, gobj)
 }
@@ -176,7 +178,7 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
 pub fn physics(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let pos = ip.pos;
-    ip.xDD4_itemVar.fox_laser().pos = pos;
+    ip.xDD4_itemVar.fox_laser().pos.set(pos);
 }
 
 /// Whether the shot's move since last frame crosses the stage, stopping it there, `it_8029C4D4`
@@ -184,7 +186,7 @@ pub fn physics(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8029C4D4")]
 pub fn hits_stage(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let from = ip.xDD4_itemVar.fox_laser().pos;
+    let from = ip.xDD4_itemVar.fox_laser().pos.get();
     let to = ip.pos;
     match super::super::ground::stage_crossing(r.game, from, to) {
         Some(p) => {
@@ -233,10 +235,10 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
         lib2725::set_rotation_y(r.game, j, y);
     }
     let v = item_mut(r.game, gobj).xDD4_itemVar.fox_laser();
-    v.scale = 1e-3;
+    v.scale.set(1e-3);
     lib2725::set_scale_z(r.game, j, 1e-3);
     let v = item_mut(r.game, gobj).xDD4_itemVar.fox_laser();
-    v.angle = turned(v.angle, std::f64::consts::PI);
+    v.angle.update(|old| turned(old, std::f64::consts::PI));
     false
 }
 
@@ -249,8 +251,8 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     ip.x40_vel.mirror_xy(n);
     let (vy, vx) = (ip.x40_vel.y, ip.x40_vel.x);
     let v = ip.xDD4_itemVar.fox_laser();
-    v.scale = 1e-3;
-    v.angle = normalize(math::atan2(vy, vx));
+    v.scale.set(1e-3);
+    v.angle.set(normalize(math::atan2(vy, vx)));
     false
 }
 

@@ -33,6 +33,8 @@ pub struct Comparer<'a> {
     /// reference's heap gives such an address to a new object, it pairs afresh.
     pub(crate) stale: HashSet<(&'static str, u32)>,
     pub diffs: Vec<String>,
+    /// The fields code read while they were stale (`Cx::stale_read`).
+    pub stale_reads: Vec<String>,
 }
 
 impl<'a> Comparer<'a> {
@@ -90,6 +92,7 @@ impl<'a> Comparer<'a> {
             seen: HashSet::new(),
             stale,
             diffs: Vec::new(),
+            stale_reads: Vec::new(),
         }
     }
 
@@ -1483,5 +1486,9 @@ impl Cx for Comparer<'_> {
     fn mismatch(&mut self, path: &str, ours: String, theirs: String) {
         self.diffs
             .push(format!("{path}: ours {ours}, theirs {theirs}"));
+    }
+
+    fn stale_read(&mut self, path: &str) {
+        self.stale_reads.push(path.to_owned());
     }
 }

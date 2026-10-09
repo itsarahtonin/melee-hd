@@ -209,6 +209,41 @@ impl Running<'_> {
         fp.x74_self_accel.x = mem(f);
     }
 
+    /// Air friction against the horizontal velocity, `ftCommon_CalcSelfAccel_DeaccelAir`
+    /// ([`Self::self_accel_deaccel`] with the aerial friction, which the original inlines).
+    #[doc(alias = "ftCommon_CalcSelfAccel_DeaccelAir")]
+    pub fn self_accel_deaccel_air(fp: &mut Fighter) {
+        let friction = reg(fp.co_attrs.aerial_friction);
+        Self::self_accel_deaccel(fp, friction);
+    }
+
+    /// Keeps the horizontal speed within `max` either way, `ftCommon_ClampSelfVelX`.
+    #[doc(alias = "ftCommon_ClampSelfVelX")]
+    pub fn clamp_self_vel_x(fp: &mut Fighter, max: f64) {
+        let v = reg(fp.self_vel.x);
+        if v < fp::fneg(max) {
+            fp.self_vel.x = mem(fp::fneg(max));
+        } else if v > max {
+            fp.self_vel.x = mem(max);
+        }
+    }
+
+    /// The character's own gravity, `ftCommon_FallBasic`.
+    #[doc(alias = "ftCommon_FallBasic")]
+    pub fn fall_basic(fp: &mut Fighter) {
+        let (g, t) = (reg(fp.co_attrs.gravity), reg(fp.co_attrs.terminal_velocity));
+        Self::fall(fp, g, t);
+    }
+
+    /// Faces the stick when it's pushed past the horizontal dead zone, `ftCommon_8007DA24`.
+    #[doc(alias = "ftCommon_8007DA24")]
+    pub fn face_stick_if_pushed(&mut self, gobj: GObjId) {
+        let dead = reg(self.common().f32(0));
+        if abs(reg(self.game.fighter(gobj).input.lstick[0].x)) > dead {
+            self.face_stick(gobj);
+        }
+    }
+
     /// Ground friction on knockback, `ftCommon_ApplyGroundedKnockbackFriction`.
     #[doc(alias = "ftCommon_ApplyGroundedKnockbackFriction")]
     pub fn grounded_knockback_friction(fp: &mut Fighter, friction: f64) {
