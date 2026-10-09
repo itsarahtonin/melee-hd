@@ -204,10 +204,10 @@ pub fn spawn(
     let ip = item_mut(r.game, gobj);
     let pos = ip.pos;
     let v = ip.xDD4_itemVar.seak_needle_thrown();
-    v.xDF4 = -1;
-    v.xDFC = 0.0;
-    v.xDF8 = 0.0;
-    v.xDE4 = pos;
+    v.xDF4.set(-1);
+    v.xDFC.set(0.0);
+    v.xDF8.set(0.0);
+    v.xDE4.set(pos);
     lib26b1::set_xdcd_b3(r.game, gobj);
     Some(gobj)
 }
@@ -262,15 +262,15 @@ pub fn fly(r: &mut Running, gobj: GObjId, owner: GObjId) {
         factor,
         1.570_796_370_506_286_6,
     ));
-    ip.xDD4_itemVar.seak_needle_thrown().xDF0 = angle;
+    ip.xDD4_itemVar.seak_needle_thrown().xDF0.set(angle);
     ip.x40_vel.x = mem(fp::fmuls(fp::fneg(speed), reg(math::cos(angle))));
     ip.x40_vel.y = mem(fp::fmuls(speed, reg(math::sin(angle))));
     ip.x40_vel.z = 0.0;
     let (pos, vel) = (ip.pos, ip.x40_vel);
     let v = ip.xDD4_itemVar.seak_needle_thrown();
-    v.xDE4.x = mem(fp::fnmsubs(3.0, reg(vel.x), reg(pos.x)));
-    v.xDE4.y = mem(fp::fnmsubs(3.0, reg(vel.y), reg(pos.y)));
-    v.xDE4.z = 0.0;
+    v.xDE4.set_x(mem(fp::fnmsubs(3.0, reg(vel.x), reg(pos.x))));
+    v.xDE4.set_y(mem(fp::fnmsubs(3.0, reg(vel.y), reg(pos.y))));
+    v.xDE4.set_z(0.0);
     let rot = flight_rotation(r, gobj);
     set_rotation_x(r, child, rot);
     debug_owner_bubbles(r.game, gobj, Some(owner));
@@ -280,7 +280,7 @@ pub fn fly(r: &mut Running, gobj: GObjId, owner: GObjId) {
 fn flight_rotation(r: &mut Running, gobj: GObjId) -> f32 {
     let ip = item_mut(r.game, gobj);
     let (pos, facing) = (ip.pos, ip.facing_dir);
-    let from = ip.xDD4_itemVar.seak_needle_thrown().xDE4;
+    let from = ip.xDD4_itemVar.seak_needle_thrown().xDE4.get();
     let a = math::atan2(
         mem(fp::fsubs(reg(pos.y), reg(from.y))),
         mem(fp::fsubs(reg(pos.x), reg(from.x))),
@@ -299,10 +299,10 @@ pub fn drop_loose(r: &mut Running, gobj: GObjId, owner: GObjId) {
     let max = DROP_FALL_MAX[r.game.objs.rng.below(8) as usize];
     let accel = DROP_FALL_ACCEL[r.game.objs.rng.below(8) as usize];
     let v = item_mut(r.game, gobj).xDD4_itemVar.seak_needle_thrown();
-    v.xDD4 = mem(fp::fmuls(sign, reg(spin)));
-    v.xDD8 = 0.0;
-    v.xDDC = max;
-    v.xDE0 = accel;
+    v.xDD4.set(mem(fp::fmuls(sign, reg(spin))));
+    v.xDD8.set(0.0);
+    v.xDDC.set(max);
+    v.xDE0.set(accel);
     debug_owner_bubbles(r.game, gobj, Some(owner));
 }
 
@@ -318,17 +318,17 @@ fn setup_bounce(r: &mut Running, gobj: GObjId) {
     let max = BOUNCE_FALL_MAX[r.game.objs.rng.below(8) as usize];
     let accel = BOUNCE_FALL_ACCEL[r.game.objs.rng.below(8) as usize];
     let v = item_mut(r.game, gobj).xDD4_itemVar.seak_needle_thrown();
-    v.xDD4 = spin;
-    v.xDD8 = vx;
-    v.xDDC = max;
-    v.xDE0 = accel;
+    v.xDD4.set(spin);
+    v.xDD8.set(vx);
+    v.xDDC.set(max);
+    v.xDE0.set(accel);
 }
 
 /// Remembers where the needle is (`xDE4`).
 fn remember_pos(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let pos = ip.pos;
-    ip.xDD4_itemVar.seak_needle_thrown().xDE4 = pos;
+    ip.xDD4_itemVar.seak_needle_thrown().xDE4.set(pos);
 }
 
 /// The flight's animation, `itSeakneedlethrown_UnkMotion0_Anim`.
@@ -346,7 +346,8 @@ pub fn animate_1(r: &mut Running, gobj: GObjId) -> bool {
     let spin = item_mut(r.game, gobj)
         .xDD4_itemVar
         .seak_needle_thrown()
-        .xDD4;
+        .xDD4
+        .get();
     add_rotation_x(r, child, spin);
     lib2725::tick_lifetime(r.game, gobj)
 }
@@ -359,7 +360,8 @@ pub fn animate_2(r: &mut Running, gobj: GObjId) -> bool {
     let a = item_mut(r.game, gobj)
         .xDD4_itemVar
         .seak_needle_thrown()
-        .xDF0;
+        .xDF0
+        .get();
     set_rotation_x(r, child, a);
     lib2725::tick_lifetime(r.game, gobj)
 }
@@ -379,7 +381,8 @@ pub fn animate_4(r: &mut Running, gobj: GObjId) -> bool {
     let spin = item_mut(r.game, gobj)
         .xDD4_itemVar
         .seak_needle_thrown()
-        .xDD4;
+        .xDD4
+        .get();
     add_rotation_x(r, child, spin);
     false
 }
@@ -390,11 +393,12 @@ pub fn animate_4(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itSeakneedlethrown_UnkMotion4_Phys")]
 pub fn tumble_physics(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.seak_needle_thrown().clone();
-    ip.x40_vel.x = v.xDD8;
-    ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), reg(v.xDE0)));
-    if reg(ip.x40_vel.y) < reg(v.xDDC) {
-        ip.x40_vel.y = v.xDDC;
+    let v = ip.xDD4_itemVar.seak_needle_thrown();
+    let (vx, accel, max) = (v.xDD8.get(), v.xDE0.get(), v.xDDC.get());
+    ip.x40_vel.x = vx;
+    ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), reg(accel)));
+    if reg(ip.x40_vel.y) < reg(max) {
+        ip.x40_vel.y = max;
     }
 }
 
@@ -442,7 +446,7 @@ fn line_live(r: &Running, line: i32) -> bool {
 /// angle becomes both angles.
 fn check_ground_hit(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let from = ip.xDD4_itemVar.seak_needle_thrown().xDE4;
+    let from = ip.xDD4_itemVar.seak_needle_thrown().xDE4.get();
     let to = ip.pos;
     let hit = r
         .game
@@ -455,15 +459,15 @@ fn check_ground_hit(r: &mut Running, gobj: GObjId) -> bool {
     };
     let ip = item_mut(r.game, gobj);
     ip.pos = hit.pos;
-    ip.xDD4_itemVar.seak_needle_thrown().xDF4 = hit.line;
+    ip.xDD4_itemVar.seak_needle_thrown().xDF4.set(hit.line);
     if !line_live(r, hit.line) {
         return false;
     }
     ride_line(r, gobj, hit.line);
     let a = math::atan2(hit.normal.y, hit.normal.x);
     let v = item_mut(r.game, gobj).xDD4_itemVar.seak_needle_thrown();
-    v.xDFC = a;
-    v.xDF8 = a;
+    v.xDFC.set(a);
+    v.xDF8.set(a);
     true
 }
 
@@ -492,7 +496,8 @@ pub fn collide_0(r: &mut Running, gobj: GObjId) -> bool {
                 item_mut(r.game, gobj)
                     .xDD4_itemVar
                     .seak_needle_thrown()
-                    .xDF0 = rot;
+                    .xDF0
+                    .set(rot);
                 change_state(r, gobj, 2, change::ANIM_UPDATE);
                 play_sfx(r, gobj, SFX_STICK, 127, 64);
             }
@@ -536,8 +541,8 @@ pub fn collide_2(r: &mut Running, gobj: GObjId) -> bool {
     reset_velocity(r, gobj);
     // `itSeakNeedleThrown_Coll2_Inline`.
     let v = item_mut(r.game, gobj).xDD4_itemVar.seak_needle_thrown();
-    v.xDFC = v.xDF8;
-    let line = v.xDF4;
+    v.xDFC.set(v.xDF8.get());
+    let line = v.xDF4.get();
     if line != -1 {
         if line_live(r, line) {
             ride_line(r, gobj, line);
@@ -551,16 +556,22 @@ pub fn collide_2(r: &mut Running, gobj: GObjId) -> bool {
             item_mut(r.game, gobj)
                 .xDD4_itemVar
                 .seak_needle_thrown()
-                .xDF8 = a;
+                .xDF8
+                .set(a);
         }
     } else {
         reset_velocity(r, gobj);
     }
     // `itSeakNeedleThrown_Coll2_Rotate`.
     let v = item_mut(r.game, gobj).xDD4_itemVar.seak_needle_thrown();
-    if reg(v.xDF8) != reg(v.xDFC) {
-        v.xDF0 = mem(fp::fadds(reg(v.xDF0), fp::fsubs(reg(v.xDF8), reg(v.xDFC))));
-        let a = v.xDF0;
+    if reg(v.xDF8.get()) != reg(v.xDFC.get()) {
+        v.xDF0.update(|old| {
+            mem(fp::fadds(
+                reg(old),
+                fp::fsubs(reg(v.xDF8.get()), reg(v.xDFC.get())),
+            ))
+        });
+        let a = v.xDF0.get();
         set_rotation_x(r, child, a);
     }
     false
@@ -585,7 +596,8 @@ pub fn collide_4(r: &mut Running, gobj: GObjId) -> bool {
         item_mut(r.game, gobj)
             .xDD4_itemVar
             .seak_needle_thrown()
-            .xDF0 = a;
+            .xDF0
+            .set(a);
         change_state(r, gobj, 2, change::ANIM_UPDATE);
         enter_air(item_mut(r.game, gobj));
         reset_velocity(r, gobj);
@@ -633,16 +645,16 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     let pos = ip.pos;
     let v = ip.xDD4_itemVar.seak_needle_thrown();
-    let dx = fp::fsubs(reg(pos.x), reg(v.xDE4.x));
-    let dy = fp::fsubs(reg(pos.y), reg(v.xDE4.y));
-    v.xDE4.x = mem(fp::fadds(reg(pos.x), dx));
-    v.xDE4.y = mem(fp::fadds(reg(pos.y), dy));
-    v.xDE4.z = 0.0;
+    let dx = fp::fsubs(reg(pos.x), reg(v.xDE4.x()));
+    let dy = fp::fsubs(reg(pos.y), reg(v.xDE4.y()));
+    v.xDE4.set_x(mem(fp::fadds(reg(pos.x), dx)));
+    v.xDE4.set_y(mem(fp::fadds(reg(pos.y), dy)));
+    v.xDE4.set_z(0.0);
     let rot = flight_rotation(r, gobj);
     let child = child_of(r, gobj);
     set_rotation_x(r, child, rot);
     let ip = item_mut(r.game, gobj);
-    let from = ip.xDD4_itemVar.seak_needle_thrown().xDE4;
+    let from = ip.xDD4_itemVar.seak_needle_thrown().xDE4.get();
     let angle = math::atan2(
         mem(fp::fsubs(reg(pos.y), reg(from.y))),
         mem(fp::fsubs(reg(pos.x), reg(from.x))),

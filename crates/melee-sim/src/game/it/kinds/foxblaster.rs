@@ -132,14 +132,19 @@ pub fn set_visible(r: &mut Running, gobj: GObjId, visibility: i32) {
     let root = jobj_of(game, gobj);
     let child = root.and_then(|j| game.objs.jobjs[j].child);
     let v = item_mut(game, gobj).xDD4_itemVar.fox_blaster();
-    if v.set_sfx_var2 != visibility {
-        v.set_sfx_var2 = visibility;
+    if v.set_sfx_var2.get() != visibility {
+        v.set_sfx_var2.set(visibility);
         if visibility == 2 {
             play_kind_sfx(r, gobj, 0x1AE14, 0x18700);
         }
     }
     let game = &mut *r.game;
-    match item_mut(game, gobj).xDD4_itemVar.fox_blaster().set_sfx_var2 {
+    match item_mut(game, gobj)
+        .xDD4_itemVar
+        .fox_blaster()
+        .set_sfx_var2
+        .get()
+    {
         0 | 2 => jobj::set_flags_all(&mut game.objs.jobjs, child, jobj::HIDDEN),
         1 => jobj::clear_flags_all(&mut game.objs.jobjs, child, jobj::HIDDEN),
         _ => {}
@@ -159,29 +164,29 @@ pub fn on_shot(r: &mut Running, gobj: GObjId) {
     let owner = ip.owner;
     let kind = ip.kind;
     let v = ip.xDD4_itemVar.fox_blaster();
-    if owner != v.owner || v.gfx_spawn_var == 0 {
+    if owner != v.owner.get() || v.gfx_spawn_var.get() == 0 {
         return;
     }
-    v.gfx_spawn_var = 0;
-    let o = v.owner.expect("a blaster's flash without an owner");
+    v.gfx_spawn_var.set(0);
+    let o = v.owner.get().expect("a blaster's flash without an owner");
     let pos = r.game.ft_pos(o);
     match kind {
         FOX_BLASTER | FALCO_BLASTER => {
             let muzzle = r.fox_muzzle(o);
             let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
-            v.xE14[0] = Vec3::new(
+            v.xE14[0].set(Vec3::new(
                 mem(fp::fsubs(reg(muzzle.x), reg(pos.x))),
                 mem(fp::fsubs(reg(muzzle.y), reg(pos.y))),
                 mem(fp::fsubs(reg(muzzle.z), reg(pos.z))),
-            );
+            ));
             let grip = r.fox_grip(o);
             let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
-            v.angle[0] = crate::math::atan2(
+            v.angle[0].set(crate::math::atan2(
                 mem(fp::fsubs(reg(muzzle.y), reg(grip.y))),
                 mem(fp::fsubs(reg(muzzle.x), reg(grip.x))),
-            );
-            v.xDFC[0] = 0;
-            let angle = v.angle[0];
+            ));
+            v.xDFC[0].set(0);
+            let angle = v.angle[0].get();
             let flash = crate::game::ef::spawn(
                 r,
                 1166,
@@ -191,35 +196,39 @@ pub fn on_shot(r: &mut Running, gobj: GObjId) {
                     crate::game::ef::Arg::Float(angle),
                 ],
             );
-            item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().xDE4[0] = match flash {
+            item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().xDE4[0].set(match flash {
                 crate::game::ef::Spawned::Effect(e) => Some(e),
                 crate::game::ef::Spawned::None => None,
                 other => panic!("the blaster's flash spawned {other:?}"),
-            };
+            });
         }
         0x8C | 0x8D => code::unported_call("ftKb_SpecialNFx_800FDC00 (Kirby's blaster flash)"),
         _ => {}
     }
     let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
     for i in (1..6).rev() {
-        v.xDE4[i] = v.xDE4[i - 1];
-        v.xDFC[i] = v.xDFC[i - 1];
-        v.xE14[i] = v.xE14[i - 1];
-        v.angle[i] = v.angle[i - 1];
+        let x = v.xDE4[i - 1].get();
+        v.xDE4[i].set(x);
+        let x = v.xDFC[i - 1].get();
+        v.xDFC[i].set(x);
+        let x = v.xE14[i - 1].get();
+        v.xE14[i].set(x);
+        let x = v.angle[i - 1].get();
+        v.angle[i].set(x);
     }
-    v.xDE4[0] = None;
-    v.xDFC[0] = 0;
-    v.xE14[0] = Vec3::new(0.0, 0.0, 0.0);
-    v.angle[0] = 0.0;
+    v.xDE4[0].set(None);
+    v.xDFC[0].set(0);
+    v.xE14[0].set(Vec3::new(0.0, 0.0, 0.0));
+    v.angle[0].set(0.0);
 }
 
 /// Starts a shot's flash and recoil, `it_802AE1D0`.
 #[doc(alias = "it_802AE1D0")]
 pub fn shot(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    ip.xDD4_itemVar.fox_blaster().xDD4 = 1;
+    ip.xDD4_itemVar.fox_blaster().xDD4.set(1);
     ip.on_accessory = Some(crate::game::handles::CodeRef(ON_SHOT));
-    ip.xDD4_itemVar.fox_blaster().gfx_spawn_var = 1;
+    ip.xDD4_itemVar.fox_blaster().gfx_spawn_var.set(1);
 }
 
 /// The first child `n` levels down (null-safe, as the original walks it).
@@ -252,7 +261,7 @@ pub fn recoil(game: &mut Game, gobj: GObjId) {
     let Some(j1) = j4.and_then(|j| game.objs.jobjs[j].next) else {
         return;
     };
-    let f = item_mut(game, gobj).xDD4_itemVar.fox_blaster().xDD4 as usize;
+    let f = item_mut(game, gobj).xDD4_itemVar.fox_blaster().xDD4.get() as usize;
     jobj::set_srt(&mut game.objs.jobjs, j1, |o| o.translate.z = RECOIL_Z[f]);
     let j2 = game.objs.jobjs[j1].next.expect("jobj");
     jobj::set_srt(&mut game.objs.jobjs, j2, |o| o.scale.y = RECOIL_SCALE[f]);
@@ -260,10 +269,10 @@ pub fn recoil(game: &mut Game, gobj: GObjId) {
     let j3 = game.objs.jobjs[j2].next.expect("jobj");
     lib2725::set_rotation_x(game, j3, RECOIL_TURN[f]);
     let v = item_mut(game, gobj).xDD4_itemVar.fox_blaster();
-    if v.xDD4 > 0 && v.xDD4 < 14 {
-        v.xDD4 += 1;
-        if v.xDD4 >= 14 {
-            v.xDD4 = 0;
+    if v.xDD4.get() > 0 && v.xDD4.get() < 14 {
+        v.xDD4.update(|old| old + 1);
+        if v.xDD4.get() >= 14 {
+            v.xDD4.set(0);
         }
     }
 }
@@ -273,12 +282,16 @@ pub fn recoil(game: &mut Game, gobj: GObjId) {
 pub fn start_pulse(r: &mut Running, gobj: GObjId) {
     let game = &mut *r.game;
     let v = item_mut(game, gobj).xDD4_itemVar.fox_blaster();
-    if v.xDD8 != 4 {
-        v.xDD8 = 1;
-        v.xDDC = 1;
-        if v.xDE0 == 0 {
+    if v.xDD8.get() != 4 {
+        v.xDD8.set(1);
+        v.xDDC.set(1);
+        if v.xDE0.get() == 0 {
             play_kind_sfx(r, gobj, 0x1AE05, 0x186F1);
-            item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().xDE0 = 1;
+            item_mut(r.game, gobj)
+                .xDD4_itemVar
+                .fox_blaster()
+                .xDE0
+                .set(1);
         }
     }
 }
@@ -287,9 +300,9 @@ pub fn start_pulse(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802AE608")]
 pub fn end_pulse(game: &mut Game, gobj: GObjId) {
     let v = item_mut(game, gobj).xDD4_itemVar.fox_blaster();
-    if v.xDD8 != 0 {
-        v.xDD8 = 3;
-        v.xDDC = -1;
+    if v.xDD8.get() != 0 {
+        v.xDD8.set(3);
+        v.xDDC.set(-1);
     }
 }
 
@@ -303,17 +316,17 @@ pub fn pulse(game: &mut Game, gobj: GObjId) {
     let Some(target) = down(game, root, 4) else {
         return;
     };
-    let f = item_mut(game, gobj).xDD4_itemVar.fox_blaster().xDD8 as usize;
+    let f = item_mut(game, gobj).xDD4_itemVar.fox_blaster().xDD8.get() as usize;
     jobj::set_srt(&mut game.objs.jobjs, target, |o| o.translate.y = PULSE_Y[f]);
     let v = item_mut(game, gobj).xDD4_itemVar.fox_blaster();
-    if v.xDD8 > 0 && v.xDD8 < 4 {
-        v.xDD8 = v.xDD8.wrapping_add(v.xDDC);
-        if v.xDD8 >= 5 {
-            v.xDD8 = 4;
-            v.xDDC = 0;
-        } else if v.xDD8 <= 0 {
-            v.xDD8 = 0;
-            v.xDDC = 0;
+    if v.xDD8.get() > 0 && v.xDD8.get() < 4 {
+        v.xDD8.update(|old| old.wrapping_add(v.xDDC.get()));
+        if v.xDD8.get() >= 5 {
+            v.xDD8.set(4);
+            v.xDDC.set(0);
+        } else if v.xDD8.get() <= 0 {
+            v.xDD8.set(0);
+            v.xDDC.set(0);
         }
     }
 }
@@ -333,17 +346,17 @@ pub fn reset(game: &mut Game, gobj: GObjId) {
     set_command_vars(ip, 0);
     ip.xDCC_flag.b3 = false;
     let v = ip.xDD4_itemVar.fox_blaster();
-    v.xDD4 = 0;
-    v.xDD8 = 0;
-    v.xDDC = 0;
-    v.xDE0 = 0;
-    v.gfx_spawn_var = 0;
-    v.set_sfx_var2 = 1;
+    v.xDD4.set(0);
+    v.xDD8.set(0);
+    v.xDDC.set(0);
+    v.xDE0.set(0);
+    v.gfx_spawn_var.set(0);
+    v.set_sfx_var2.set(1);
     for i in 0..6 {
-        v.xDE4[i] = None;
-        v.xDFC[i] = 0;
-        v.xE14[i] = Vec3::new(0.0, 0.0, 0.0);
-        v.angle[i] = 0.0;
+        v.xDE4[i].set(None);
+        v.xDFC[i].set(0);
+        v.xE14[i].set(Vec3::new(0.0, 0.0, 0.0));
+        v.angle[i].set(0.0);
     }
 }
 
@@ -376,7 +389,11 @@ pub fn spawn(
     spawn.x44_flag[0] &= !0x80;
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
-    item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().owner = Some(fighter);
+    item_mut(r.game, gobj)
+        .xDD4_itemVar
+        .fox_blaster()
+        .owner
+        .set(Some(fighter));
     reset(r.game, gobj);
     super::super::item::pick_up(r, gobj, fighter, part);
     Some(gobj)
@@ -387,7 +404,7 @@ pub fn remove(r: &mut Running, gobj: Option<GObjId>) {
     let Some(gobj) = gobj else { return };
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xDD4_itemVar.fox_blaster().owner = None;
+    ip.xDD4_itemVar.fox_blaster().owner.set(None);
     crate::game::ef::destroy_all(r, gobj);
     destroy(r, gobj);
 }
@@ -405,7 +422,11 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
     if vars != 0 {
         change_state(r, gobj, 0xA, flags);
     } else {
-        let owner = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().owner;
+        let owner = item_mut(r.game, gobj)
+            .xDD4_itemVar
+            .fox_blaster()
+            .owner
+            .get();
         let action = match item(r.game, gobj).kind {
             FOX_BLASTER | FALCO_BLASTER => blaster_action(r.game, owner),
             0x8C | 0x8D => code::unported_call("ftKb_SpecialNFx_800FDD4C"),
@@ -421,7 +442,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 pub fn release(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
-    let vowner = ip.xDD4_itemVar.fox_blaster().owner;
+    let vowner = ip.xDD4_itemVar.fox_blaster().owner.get();
     if owner == vowner {
         match item(r.game, gobj).kind {
             FOX_BLASTER | FALCO_BLASTER => {
@@ -435,7 +456,7 @@ pub fn release(r: &mut Running, gobj: GObjId) {
     }
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xDD4_itemVar.fox_blaster().owner = None;
+    ip.xDD4_itemVar.fox_blaster().owner.set(None);
     crate::game::ef::destroy_all(r, gobj);
 }
 
@@ -446,7 +467,11 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
     let msid = item(r.game, gobj).msid;
     let kind = item(r.game, gobj).kind;
     if !matches!(msid, 2 | 5..=8) {
-        let owner = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().owner;
+        let owner = item_mut(r.game, gobj)
+            .xDD4_itemVar
+            .fox_blaster()
+            .owner
+            .get();
         let action = match kind {
             FOX_BLASTER | FALCO_BLASTER => blaster_action(r.game, owner),
             0x8C | 0x8D => code::unported_call("ftKb_SpecialNFx_800FDD4C"),
@@ -457,7 +482,11 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
             animate(r, gobj);
         }
     }
-    let owner = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().owner;
+    let owner = item_mut(r.game, gobj)
+        .xDD4_itemVar
+        .fox_blaster()
+        .owner
+        .get();
     let Some(o) = owner else {
         clear(r, gobj);
         return false;
@@ -476,7 +505,11 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
             _ => true,
         };
         if not_needed {
-            item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().owner = None;
+            item_mut(r.game, gobj)
+                .xDD4_itemVar
+                .fox_blaster()
+                .owner
+                .set(None);
             destroy(r, gobj);
             // The original then destroys the effects of the GObj it just freed
             // (`efLib_DestroyAll`), which finds none: destroying the item destroyed them.
@@ -490,7 +523,7 @@ pub fn clear(r: &mut Running, gobj: GObjId) {
     release(r, gobj);
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xDD4_itemVar.fox_blaster().owner = None;
+    ip.xDD4_itemVar.fox_blaster().owner.set(None);
     crate::game::ef::destroy_all(r, gobj);
     destroy(r, gobj);
 }
@@ -501,6 +534,7 @@ pub fn scale_with_owner(r: &mut Running, gobj: GObjId) -> bool {
         .xDD4_itemVar
         .fox_blaster()
         .owner
+        .get()
         .is_some()
     {
         code::unported_call("ftCo_800BF228 (a resized blaster owner)");

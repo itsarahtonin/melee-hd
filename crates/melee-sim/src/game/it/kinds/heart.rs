@@ -73,7 +73,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> melee_data::archive::DataRef {
 #[doc(alias = "it_80283BD4")]
 pub fn second_heal(r: &mut Running, gobj: GObjId) {
     let h = r.data.u32(attr(r, gobj, 4)) as i32;
-    item_mut(r.game, gobj).xDD4_itemVar.heart().xDD4_heal = h;
+    item_mut(r.game, gobj).xDD4_itemVar.heart().xDD4_heal.set(h);
 }
 
 /// `itHeart_Logic8_Spawned`: popping up, falling.
@@ -84,16 +84,16 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.x40_vel = Vec3::new(0.0, vy, 0.0);
     let v = ip.xDD4_itemVar.heart();
-    v.xDD4_heal = heal;
-    v.xDD8[0] &= !0x80;
-    v.xDDC = 0;
+    v.xDD4_heal.set(heal);
+    v.xDD8.get()[0] &= !0x80;
+    v.xDDC.set(0);
     fell(r, gobj);
 }
 
 /// `itHeart_Logic8_Destroyed`: a heart from an event frees its slot.
 #[doc(alias = "itHeart_Logic8_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    if item_mut(r.game, gobj).xDD4_itemVar.heart().xDD8[0] & 0x80 != 0 {
+    if item_mut(r.game, gobj).xDD4_itemVar.heart().xDD8.get()[0] & 0x80 != 0 {
         code::unported_call("gm_80473A18 (an event's heart slots)");
     }
 }

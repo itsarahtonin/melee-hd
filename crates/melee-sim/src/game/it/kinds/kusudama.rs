@@ -142,7 +142,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     ip.xDAC_itcmd_var0 = 0;
     ip.xDB0_itcmd_var1 = 0;
     ip.xDB4_itcmd_var2 = 0;
-    vars(r.game, gobj).x0 = 0;
+    vars(r.game, gobj).x0.set(0);
     fell(r, gobj);
 }
 
@@ -458,8 +458,8 @@ pub fn rise(r: &mut Running, gobj: GObjId) {
     ip.x40_vel.x = 0.0;
     ip.x40_vel.y = x18;
     let v = ip.xDD4_itemVar.kusudama();
-    v.x4 = fp::fctiwz(reg(x1c));
-    v.x0 = 1;
+    v.x4.set(fp::fctiwz(reg(x1c)));
+    v.x0.set(1);
     maplib::enter_air(item_mut(r.game, gobj));
     hitbox::set_hit_ids(r.game, gobj);
     lib26b1::show(r.game, gobj);
@@ -478,7 +478,7 @@ pub fn rise(r: &mut Running, gobj: GObjId) {
 fn hang(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
-    ip.xDD4_itemVar.kusudama().x4 = 0x5A;
+    ip.xDD4_itemVar.kusudama().x4.set(0x5A);
     super::super::set_flag(&mut ip.xDD1_flag, 1, true);
     lib26b1::disable_pickup(r.game, gobj);
     let j = root(r, gobj);
@@ -491,8 +491,8 @@ fn hang(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itKusudama_UnkMotion3_Anim")]
 pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
     let v = vars(r.game, gobj);
-    v.x4 = v.x4.wrapping_sub(1);
-    if v.x4 <= 0 {
+    v.x4.update(|old| old.wrapping_sub(1));
+    if v.x4.get() <= 0 {
         hang(r, gobj);
     }
     tip_towards(r, gobj, 0.0);
@@ -589,8 +589,8 @@ pub fn burst(r: &mut Running, gobj: GObjId) {
     ip.x40_vel.y = 0.0;
     super::super::set_flag(&mut ip.xDCF_flag, 2, true);
     let v = ip.xDD4_itemVar.kusudama();
-    v.x0 = 1;
-    v.x4 = 0x28;
+    v.x0.set(1);
+    v.x4.set(0x28);
     hitbox::set_hit_ids(r.game, gobj);
     change_state(r, gobj, 7, change::ANIM_UPDATE);
 }
@@ -611,8 +611,8 @@ pub fn open(r: &mut Running, gobj: GObjId) {
     ip.x40_vel.y = 0.0;
     super::super::set_flag(&mut ip.xDCF_flag, 2, true);
     let v = ip.xDD4_itemVar.kusudama();
-    v.x0 = 1;
-    v.x4 = 0x55;
+    v.x0.set(1);
+    v.x4.set(0x55);
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 8, change::ANIM_UPDATE);
 }
@@ -634,14 +634,14 @@ pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
         }
     }
     let v = vars(r.game, gobj);
-    v.x4 = v.x4.wrapping_sub(1);
-    v.x4 <= 0
+    v.x4.update(|old| old.wrapping_sub(1));
+    v.x4.get() <= 0
 }
 
 /// `itKusudama_Logic4_DmgDealt`: an unopened ball opens or bursts.
 #[doc(alias = "itKusudama_Logic4_DmgDealt")]
 pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).x0 == 0 {
+    if vars(r.game, gobj).x0.get() == 0 {
         open_or_burst(r, gobj, false);
     }
     false
@@ -659,7 +659,9 @@ pub fn clanked(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itKusudama_Logic4_DmgReceived")]
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     let limit = attr_f(r, gobj, 0x20);
-    if vars(r.game, gobj).x0 == 0 && fp::frsp(f64::from(item(r.game, gobj).xC9C)) >= reg(limit) {
+    if vars(r.game, gobj).x0.get() == 0
+        && fp::frsp(f64::from(item(r.game, gobj).xC9C)) >= reg(limit)
+    {
         open_or_burst(r, gobj, false);
     }
     false

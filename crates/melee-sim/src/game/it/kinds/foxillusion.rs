@@ -57,7 +57,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// The owner's ghost joint tree, if it has one yet.
 fn ghost(game: &mut Game, gobj: GObjId) -> Option<JObjId> {
-    item_mut(game, gobj).xDD4_itemVar.fox_illusion().xDDC
+    item_mut(game, gobj).xDD4_itemVar.fox_illusion().xDDC.get()
 }
 
 /// The afterimage behind a dash, `it_8029CEB4`: made at `pos` facing `facing_dir`, for
@@ -111,7 +111,7 @@ fn setup(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.xD44_lifeTimer = lifetime;
     ip.xD5C = 0;
-    ip.xDD4_itemVar.fox_illusion().xDD4 = joint;
+    ip.xDD4_itemVar.fox_illusion().xDD4.set(joint);
     lib26b1::disable_pickup(r.game, gobj);
     let owner = item(r.game, gobj)
         .owner
@@ -134,7 +134,11 @@ fn setup(r: &mut Running, gobj: GObjId) {
     super::super::hitbox::set_hit_scale(r.game, gobj, x3c);
     lib2725::scale_ranges(r.game, gobj);
     lib2725::scale_boxes(r.game, gobj);
-    item_mut(r.game, gobj).xDD4_itemVar.fox_illusion().xDDC = None;
+    item_mut(r.game, gobj)
+        .xDD4_itemVar
+        .fox_illusion()
+        .xDDC
+        .set(None);
 }
 
 /// The owner's ghost, `it_8029CD78`: its model loaded, turned as the afterimage and sized as
@@ -143,8 +147,8 @@ fn setup(r: &mut Running, gobj: GObjId) {
 fn make_ghost(r: &mut Running, gobj: GObjId) -> Option<JObjId> {
     let root = jobj_of(r.game, gobj).expect("an afterimage without a model");
     let v = item_mut(r.game, gobj).xDD4_itemVar.fox_illusion();
-    assert!(v.xDDC.is_none(), "illusion add twice.");
-    let joint = v.xDD4;
+    assert!(v.xDDC.get().is_none(), "illusion add twice.");
+    let joint = v.xDD4.get();
     let g = jobj::load_joint(&mut r.game.objs, r.data, joint)?;
     let (q, stale) = {
         let o = &r.game.objs.jobjs[root];
@@ -171,7 +175,11 @@ fn follow(r: &mut Running, gobj: GObjId) -> bool {
         && ghost(r.game, gobj).is_none()
     {
         let g = make_ghost(r, gobj);
-        item_mut(r.game, gobj).xDD4_itemVar.fox_illusion().xDDC = g;
+        item_mut(r.game, gobj)
+            .xDD4_itemVar
+            .fox_illusion()
+            .xDDC
+            .set(g);
     }
     if owner.is_none_or(|o| r.fox_special_s_ghost_gone(o)) {
         return true;
@@ -256,7 +264,7 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
         jobj::remove_all(&mut r.game.objs, g);
     }
     let ip = item_mut(r.game, gobj);
-    ip.xDD4_itemVar.fox_illusion().xDDC = None;
+    ip.xDD4_itemVar.fox_illusion().xDDC.set(None);
     ip.owner = None;
     ip.xDC8_word.flags.x13 = false;
 }
