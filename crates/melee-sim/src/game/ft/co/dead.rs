@@ -19,6 +19,24 @@ const DEAD_PHASE: usize = 0x4;
 const DEAD_FROZEN: usize = 0x28;
 const DEAD_MOTION: usize = 0x2C;
 const DEAD_ATTACK: usize = 0x30;
+/// The screen KO's: the approach's step and how far along it is (`walk.slow_anim_frame`,
+/// `walk.middle_anim_frame`), the fighter's place in the game camera's view (`x50`) and the
+/// fall's motion still to add to it (`x5C`).
+const DEAD_STEP: usize = 0x8;
+const DEAD_ALONG: usize = 0xC;
+const DEAD_VIEW_POS: usize = 0x10;
+const DEAD_VIEW_VEL: usize = 0x1C;
+
+/// `fn_800D4DD4`, the screen KO's accessory, by address.
+pub const DEAD_UP_FALL_ACCESSORY: u32 = 0x800D_4DD4;
+
+/// `lbl_803B7500`: the fighter turned to face the screen.
+const FACE_SCREEN: crate::quat::Quat = crate::quat::Quat {
+    x: 0.0,
+    y: std::f32::consts::PI,
+    z: 0.0,
+    w: 0.0,
+};
 
 /// The slot that stands for no one.
 const NO_SLOT: i32 = 6;
@@ -248,6 +266,7 @@ impl Running<'_> {
     /// scaled from the camera's top to the blast zone's, its y at the zone.
     #[doc(alias = "ftCamera_80076320")]
     #[doc(alias = "ftCo_DeadUpStar_Cam")]
+    #[doc(alias = "ftCo_DeadUpFall_Cam")]
     pub fn dead_up_cam(&mut self, gobj: GObjId) {
         self.update_camera_box(gobj);
         let center = stage::cam_center(self.game);
@@ -492,8 +511,249 @@ impl Running<'_> {
     #[doc(alias = "ftCo_DeadDown_Cam")]
     // Ports `ftCo_DeadUp_Cam`; aliased once a check reaches it.
     pub fn co_dead_cam(&mut self, _gobj: GObjId) {}
-    pub fn enter_dead_up_fall(&mut self, _gobj: GObjId) {
-        unported_call("ftCo_800D4780");
+    /// The screen KO, `ftCo_800D4780`: the fighter falls toward the camera.
+    #[doc(alias = "ftCo_800D4780")]
+    pub fn enter_dead_up_fall(&mut self, gobj: GObjId) {
+        self.enter_dead_up_screen(gobj, ms::DEAD_UP_FALL);
+        self.game.fighter_mut(gobj).set_mv_i32(DEAD_FROZEN, 0);
+    }
+
+    /// A vector of the death states' variables, `off` bytes into `mv`.
+    fn dead_vec(&self, gobj: GObjId, off: usize) -> crate::vec::Vec3 {
+        let fp = self.game.fighter(gobj);
+        crate::vec::Vec3::new(fp.mv_f32(off), fp.mv_f32(off + 4), fp.mv_f32(off + 8))
+    }
+
+    fn set_dead_vec(&mut self, gobj: GObjId, off: usize, v: crate::vec::Vec3) {
+        let fp = self.game.fighter_mut(gobj);
+        fp.set_mv_f32(off, reg(v.x));
+        fp.set_mv_f32(off + 4, reg(v.y));
+        fp.set_mv_f32(off + 8, reg(v.z));
+    }
+
+    /// The fighter turned to face the screen, unless its depth is scaled.
+    fn face_screen(&mut self, gobj: GObjId) {
+        let root = self.root_jobj(gobj);
+        if self.game.fighter(gobj).x34_scale.z == 1.0 {
+            crate::hsd::jobj::set_rotation(&mut self.game.objs.jobjs, root, FACE_SCREEN);
+        }
+    }
+
+    /// The screen KO's start, `ftCo_800D4580`: out of play, the fighter placed in the game
+    /// camera's view at `ftCommonData`'s start (the display pass puts it in the world each
+    /// frame, `x2220_b7`), facing the screen, with the KO's flash.
+    #[doc(alias = "ftCo_800D4580")]
+    fn enter_dead_up_screen(&mut self, gobj: GObjId, msid: i32) {
+        let c = self.common();
+        let frames = c.i32(0x524);
+        let start = crate::vec::Vec3::new(c.f32(0x538), c.f32(0x53C), c.f32(0x540));
+        self.leave_play(gobj);
+        let fp = self.game.fighter_mut(gobj);
+        fp.set_mv_i32(DEAD_FRAMES, frames);
+        fp.set_mv_i32(DEAD_PHASE, 0);
+        self.set_dead_vec(gobj, DEAD_VIEW_POS, start);
+        let fp = self.game.fighter_mut(gobj);
+        fp.set_mv_f32(DEAD_VIEW_VEL + 8, 0.0);
+        fp.set_mv_f32(DEAD_VIEW_VEL + 4, 0.0);
+        fp.set_mv_f32(DEAD_VIEW_VEL, 0.0);
+        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
+        self.game.fighter_mut(gobj).x2220_b7 = true;
+        self.face_screen(gobj);
+        self.set_dead_flags(gobj);
+        self.stop_fighter_sounds(gobj);
+        // `ftCommon_8007EFC0`.
+        self.game.fighter_mut(gobj).x209A = 1;
+        self.start_color_anim(gobj, 0x2B, 0);
+        let fp = self.game.fighter(gobj);
+        let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
+        self.record_ko_attacker(slot, sub);
+    }
+
+    /// The fighter hits the camera, `ftCo_800D481C`: the hit's state, facing the screen
+    /// again, a rumble for it and one for everyone else awake, a quake, a scream and the
+    /// accessory that stops it below the camera.
+    #[doc(alias = "ftCo_800D481C")]
+    fn dead_up_hit_camera(&mut self, gobj: GObjId, msid: i32) {
+        use super::super::motion::flags::{SKIP_COL_ANIM, SKIP_RUMBLE};
+        self.change_motion_state(gobj, msid, SKIP_RUMBLE | SKIP_COL_ANIM, 0.0, 1.0, 0.0, None);
+        self.game.fighter_mut(gobj).x2220_b7 = true;
+        self.face_screen(gobj);
+        let fp = self.game.fighter_mut(gobj);
+        fp.x2219_b1 = true;
+        fp.x221E_b1 = true;
+        fp.x221E_b2 = true;
+        let c = self.common();
+        let (mine, others) = (c.u32(0x4F8), c.u32(0x4FC));
+        let f = self.game.fighter_id(gobj);
+        self.start_rumble(f, 5, mine);
+        let mut next = self.game.world.first_in(P_LINK_FIGHTER);
+        while let Some(o) = next {
+            next = self.game.world.gobj(o).next;
+            let of = self.game.fighter_id(o);
+            if of != f && !self.game.fighters[of.0].is_sleeping {
+                self.start_rumble(of, 6, others);
+            }
+        }
+        let pos = self.game.fighters[f.0].cur_pos;
+        super::super::super::camera::request_quake(self, QUAKE_LARGE, Some(pos));
+        // `ft_800889F4` with the character's camera-hit screams (`FtSFX::x20`).
+        let ft_data = self.game.fighters[f.0]
+            .ft_data
+            .expect("a fighter without ftData");
+        let sfx = self
+            .data
+            .ptr(ft_data.at(0x4C))
+            .expect("ftData without sounds");
+        if let Some(arr) = self.data.ptr(sfx.at(0x20)) {
+            let n = self.data.u32(arr) as i32;
+            let ids = self.data.ptr(arr.at(4)).expect("a voice set's ids");
+            self.fighter_random_voice_in(f, ids, n);
+        }
+        self.drop_coins(gobj);
+        self.game.fighters[f.0].accessory4_cb = Some(super::super::super::handles::CodeRef(
+            DEAD_UP_FALL_ACCESSORY,
+        ));
+    }
+
+    /// `ftCo_DeadUpFall_Anim`: the screen KO's phases. After its wait the fighter comes
+    /// toward the camera; it hits it; it slides down it; out of sight below, the KO counts,
+    /// with its sound, rumble and quake; then it's out of play.
+    #[doc(alias = "ftCo_DeadUpFall_Anim")]
+    pub fn co_dead_up_fall_anim(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let fp = &mut self.game.fighters[f.0];
+        if fp.mv_i32(DEAD_PHASE) == 1 {
+            let along = fp::fadds(reg(fp.mv_f32(DEAD_ALONG)), reg(fp.mv_f32(DEAD_STEP)));
+            fp.set_mv_f32(DEAD_ALONG, along);
+            if fp.mv_i32(DEAD_FROZEN) != 0 {
+                unported_call("ftCo_DeadUpFall_Anim frozen (its spin)");
+            }
+        }
+        let fp = &mut self.game.fighters[f.0];
+        if fp.mv_i32(DEAD_FRAMES) != 0 {
+            fp.set_mv_i32(DEAD_FRAMES, fp.mv_i32(DEAD_FRAMES).wrapping_sub(1));
+        }
+        if fp.mv_i32(DEAD_FRAMES) != 0 {
+            return;
+        }
+        let c = self.common();
+        let fp = &mut self.game.fighters[f.0];
+        match fp.mv_i32(DEAD_PHASE) {
+            0 => {
+                let n = c.i32(0x528);
+                let step = fp::fdivs(1.0, fp::frsp(f64::from(n)));
+                fp.set_mv_f32(DEAD_STEP, step);
+                fp.set_mv_f32(DEAD_ALONG, reg(fp.mv_f32(DEAD_STEP)));
+                fp.set_mv_i32(DEAD_FRAMES, n);
+                fp.set_mv_i32(DEAD_PHASE, 1);
+            }
+            1 => {
+                if fp.mv_i32(DEAD_FROZEN) != 0 {
+                    unported_call("ftCo_80090AC0 (a frozen fighter hitting the camera)");
+                }
+                let msid = if fp.x34_scale.z != 1.0 {
+                    ms::DEAD_UP_FALL_HIT_CAMERA_FLAT
+                } else {
+                    ms::DEAD_UP_FALL_HIT_CAMERA
+                };
+                self.dead_up_hit_camera(gobj, msid);
+                let frames = c.i32(0x52C);
+                let fp = &mut self.game.fighters[f.0];
+                fp.set_mv_i32(DEAD_FRAMES, frames);
+                fp.set_mv_i32(DEAD_PHASE, 2);
+            }
+            2 => {
+                fp.self_vel.y = c.f32(0x550);
+                fp.self_vel.z = c.f32(0x55C);
+                fp.set_mv_i32(DEAD_FRAMES, c.i32(0x530));
+                fp.set_mv_i32(DEAD_PHASE, 3);
+            }
+            3 => {
+                self.stop_dead(gobj);
+                if self.game.fighters[f.0].mv_i32(DEAD_FROZEN) != 0 {
+                    self.destroy_effects(gobj);
+                }
+                let fp = &mut self.game.fighters[f.0];
+                fp.x221F_b1 = true;
+                fp.invisible = true;
+                self.count_ko(gobj);
+                self.stop_fighter_sounds(gobj);
+                self.play_sfx(gobj, 0x61, 0x7F, 0x40);
+                // `ft_8008805C`.
+                let id = self.fighter_sfx(f, 0x61);
+                self.lb_audio_queue(id);
+                self.start_rumble(f, 0xD, 0);
+                let pos = self.game.fighters[f.0].cur_pos;
+                super::super::super::camera::request_quake(self, QUAKE_LARGE, Some(pos));
+                let fp = &mut self.game.fighters[f.0];
+                fp.set_mv_i32(DEAD_FRAMES, c.i32(0x534));
+                fp.set_mv_i32(DEAD_PHASE, 4);
+            }
+            4 => self.out_of_play(gobj),
+            _ => {}
+        }
+    }
+
+    /// `ftCo_DeadUpFall_Phys`: the approach moves the fighter's place in the view from
+    /// `ftCommonData`'s start to its end; sliding down, its own gravity moves it (unless
+    /// the animation's rotation held it still this frame, `ftAnim_80070FD0`).
+    #[doc(alias = "ftCo_DeadUpFall_Phys")]
+    pub fn co_dead_up_fall_phys(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let c = self.common();
+        match self.game.fighters[f.0].mv_i32(DEAD_PHASE) {
+            1 => {
+                if self.game.fighters[f.0].x2222_b6 && !self.x100_rot_changed(f) {
+                    return;
+                }
+                let a = crate::vec::Vec3::new(c.f32(0x538), c.f32(0x53C), c.f32(0x540));
+                let b = crate::vec::Vec3::new(c.f32(0x544), c.f32(0x548), c.f32(0x54C));
+                let t = self.game.fighters[f.0].mv_f32(DEAD_ALONG);
+                self.set_dead_vec(gobj, DEAD_VIEW_POS, a.lerp(b, t));
+            }
+            3 => {
+                let (g, term) = (reg(c.f32(0x554)), reg(c.f32(0x558)));
+                Self::fall(&mut self.game.fighters[f.0], g, term);
+                let vel = self.game.fighters[f.0].self_vel;
+                let v = self.dead_vec(gobj, DEAD_VIEW_VEL) + vel;
+                self.set_dead_vec(gobj, DEAD_VIEW_VEL, v);
+                if self.game.fighters[f.0].x2222_b6 && !self.x100_rot_changed(f) {
+                    return;
+                }
+                let p = self.dead_vec(gobj, DEAD_VIEW_POS) + v;
+                self.set_dead_vec(gobj, DEAD_VIEW_POS, p);
+                let fp = &mut self.game.fighters[f.0];
+                fp.set_mv_f32(DEAD_VIEW_VEL + 8, 0.0);
+                fp.set_mv_f32(DEAD_VIEW_VEL + 4, 0.0);
+                fp.set_mv_f32(DEAD_VIEW_VEL, 0.0);
+            }
+            _ => {}
+        }
+    }
+
+    /// `fn_800D4DD4`: sliding down the camera, the fighter stops once below its bounds.
+    #[doc(alias = "fn_800D4DD4")]
+    pub fn dead_up_fall_below_camera(&mut self, gobj: GObjId) {
+        if self.game.fighter(gobj).mv_i32(DEAD_PHASE) == 3 {
+            let bottom = stage::cam_bottom(self.game);
+            if self.game.fighter(gobj).cur_pos.y < bottom {
+                self.stop_dead(gobj);
+            }
+        }
+    }
+
+    /// Where the display pass puts a fighter positioned by the camera (`x2220_b7`,
+    /// `ftDrawCommon_80080E18`'s inline): its place in the game camera's view (`x50`) through
+    /// the camera's inverse view matrix (`Camera_800310B8`, rebuilt), as its position and its
+    /// root joint's.
+    pub fn place_by_camera(&mut self, gobj: GObjId) {
+        let c = super::super::super::camera::cobj_copy_view(self.game, self.data);
+        let m = crate::hsd::cobj::inv_viewing_mtx(&mut self.game.objs, self.data, c)
+            .expect("the camera's inverse view matrix");
+        let pos = m.transform(self.dead_vec(gobj, DEAD_VIEW_POS));
+        self.game.fighter_mut(gobj).cur_pos = pos;
+        let j = self.root_jobj(gobj);
+        crate::hsd::jobj::set_translate(&mut self.game.objs.jobjs, j, pos);
     }
     pub fn enter_dead_up_fall_ice(&mut self, _gobj: GObjId) {
         unported_call("ftCo_800D47B8");

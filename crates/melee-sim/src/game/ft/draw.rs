@@ -292,7 +292,7 @@ impl Running<'_> {
         match camera::pass(&self.game.camera.cam) {
             1 => {
                 if self.game.fighters[f.0].x2220_b7 {
-                    code::unported_call("ftDrawCommon_80080E18's camera-relative position");
+                    self.place_by_camera(g);
                 }
                 if self.game.fighters[f.0].x5AC.xC[4].is_some() {
                     self.draw_outline(g, pass, false);
