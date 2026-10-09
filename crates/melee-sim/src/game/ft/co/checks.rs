@@ -377,18 +377,90 @@ impl Running<'_> {
         false
     }
 
-    /// Picking up an item with A, `ftpickupitem_80094790`: an item in reach, when not holding
-    /// a second one. Items' reach (`ftpickupitem_800942A0`) is the items' port; with none in
-    /// the match there's nothing to pick up.
+    /// Picking up an item with A, `ftpickupitem_80094790`: an item in reach, light or heavy,
+    /// when not holding a second one.
     #[doc(alias = "ftpickupitem_80094790")]
     pub fn pick_up_item_check(&mut self, gobj: GObjId) -> bool {
         if self.game.fighter(gobj).x1978.is_some() {
             return false;
         }
-        if self.game.world.first_in(ITEM_P_LINK).is_some() {
-            unported_call("ftpickupitem_800942A0 with items in the match");
+        if self.item_in_reach(gobj, 3).is_some() {
+            unported_call("ftpickupitem_80094694 (picking an item up)");
         }
         false
+    }
+
+    /// The nearest item the fighter can take, `ftpickupitem_800942A0`: one a fighter can
+    /// pick up (`Item_IsGrabbable`), light (`flags` bit 0) or heavy (bit 1), whose grab
+    /// point lies in the box the fighter's pickup offsets (`x294_itPickup`, grounded or
+    /// aerial for light items) and the item's grab range make; a fighter holding an item
+    /// only takes food, and none for a computer of kind 28.
+    #[doc(alias = "ftpickupitem_800942A0")]
+    pub fn item_in_reach(&mut self, gobj: GObjId, flags: u32) -> Option<GObjId> {
+        use crate::game::it::{self, item::is_grabbable, lib26b1::is_heavy};
+        let fp = self.game.fighter(gobj);
+        if self.is_cpu_controlled(fp) && fp.cpu.kind == 28 {
+            return None;
+        }
+        let pickup = &fp.x294_itPickup;
+        let light = if fp.ground_or_air == super::super::common::GA_GROUND {
+            pickup.gr_light_offset
+        } else {
+            pickup.air_light_offset
+        };
+        let heavy_offset = pickup.gr_heavy_offset;
+        let mut min_dist_sq = fp::frsp(30000.0);
+        let mut result = None;
+        let mut cur = self.game.world.first_in(ITEM_P_LINK);
+        while let Some(c) = cur {
+            cur = self.game.world.gobj(c).next;
+            if !is_grabbable(self.game, c) {
+                continue;
+            }
+            let heavy = is_heavy(self.game, self.data, c);
+            let fp = self.game.fighter(gobj);
+            if fp.x2222_b4 {
+                unported_call("it_8026B47C (a healing item's amount)");
+            }
+            let kind = it::item(self.game, c).kind;
+            // `it_8026B4F0`: the foods.
+            let food = matches!(kind, 8 | 9 | 18 | 159 | 0xCD | 0xE2);
+            if fp.item_gobj.is_some() && !food {
+                continue;
+            }
+            if !(!heavy && flags & 1 != 0 || heavy && flags & 2 != 0) {
+                continue;
+            }
+            // `it_8026B344`, `itGetGrabRangeX`, `itGetGrabRangeY`.
+            let ip = it::item(self.game, c);
+            let it_x = mem(fp::fmadds(
+                reg(ip.facing_dir),
+                reg(ip.xBCC_unk.x),
+                reg(ip.pos.x),
+            ));
+            let it_y = mem(fp::fadds(reg(ip.pos.y), reg(ip.xBCC_unk.y)));
+            let (x_range, y_range) = (reg(ip.xBD4_grabRange.x), reg(ip.xBD4_grabRange.y));
+            let v = if heavy { heavy_offset } else { light };
+            let x1 = reg(v.z);
+            let x0 = fp::fmadds(reg(fp.facing_dir), reg(v.x), reg(fp.cur_pos.x));
+            let y0 = fp::fadds(reg(fp.cur_pos.y), reg(v.y));
+            let y1 = reg(v.w);
+            let (it_x, it_y) = (reg(it_x), reg(it_y));
+            if fp::fsubs(fp::fsubs(x0, x1), x_range) < it_x
+                && fp::fadds(x_range, fp::fadds(x0, x1)) > it_x
+                && fp::fsubs(fp::fsubs(y0, y1), y_range) < it_y
+                && fp::fadds(y_range, fp::fadds(y0, y1)) > it_y
+            {
+                let y_diff = fp::fsubs(it_y, y0);
+                let x_diff = fp::fsubs(it_x, x0);
+                let dist_sq = fp::fmadds(x_diff, x_diff, fp::fmuls(y_diff, y_diff));
+                if dist_sq < min_dist_sq {
+                    result = Some(c);
+                    min_dist_sq = dist_sq;
+                }
+            }
+        }
+        result
     }
 
     /// Whether the held item is the hammer, `ftCo_800C5240`.
@@ -565,9 +637,9 @@ impl Running<'_> {
             && fp.input.pressed_buttons & PAD_A != 0
             && !fp.x2224_b1
             && u32::from(fp.x683) >= window
-            && self.game.world.first_in(ITEM_P_LINK).is_some()
+            && self.item_in_reach(gobj, 1).is_some()
         {
-            unported_call("ftpickupitem_800942A0 with items in the match");
+            unported_call("fn_800D6F58 (catching an item in the air)");
         }
         false
     }

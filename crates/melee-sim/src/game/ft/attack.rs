@@ -1431,11 +1431,40 @@ impl Running<'_> {
         }
     }
 
+    /// Remembers the fighter as tipped by the item's boxes of box `j`'s group, in every item
+    /// sharing its id (`it_8026FC00`).
+    #[doc(alias = "it_8026FC00")]
+    fn item_tip_victim(&mut self, g: GObjId, j: usize, kind: i32, v: Victim) {
+        use super::super::it::{self, P_LINK_ITEM};
+        let ip = it::item(self.game, g);
+        let (id, group) = (ip.xAC4_ignoreItemID, ip.x5D4_hitboxes[j].hit.x4);
+        let add = |game: &mut super::super::state::Game, item: GObjId| {
+            for k in 0..4 {
+                let cur = &mut it::item_mut(game, item).x5D4_hitboxes[k].hit;
+                if cur.state != hitcapsule::DISABLED && cur.x4 == group {
+                    hitcapsule::add_victim2(cur, kind, v);
+                }
+            }
+        };
+        if id == 0 {
+            add(self.game, g);
+            return;
+        }
+        let mut cur = self.game.world.first_in(P_LINK_ITEM);
+        while let Some(o) = cur {
+            cur = self.game.world.gobjs[o.0].next;
+            if it::item(self.game, o).xAC4_ignoreItemID == id {
+                add(self.game, o);
+            }
+        }
+    }
+
     /// The fighter takes item `g`'s box `j` on hurtbox `n`, `ftColl_80077C60`: the damage
     /// scaled by a grab's and the frozen state's factors and the fighter's own; a hit (not a
     /// tip) is remembered by the item, which keeps the most damage it dealt and which way;
-    /// then, unless the fighter is invincible there, logged and recorded. An item taken on
-    /// touch (`x0_78` 4) and a tip stop at their seams. Returns whether the box hit.
+    /// then, unless the fighter is invincible there, logged and recorded; a tip is logged as
+    /// one, at half damage, with its sound. An item taken on touch (`x0_78` 4) stops at its
+    /// seam. Returns whether the box hit.
     #[doc(alias = "ftColl_80077C60")]
     fn take_item_hit(&mut self, g: GObjId, j: usize, me: FighterId, n: usize) -> bool {
         use super::super::it;
@@ -1462,7 +1491,46 @@ impl Running<'_> {
                 && mf.dmg.x189C_unk_num_frames == 0.0
                 && !hitcapsule::has_victim2(h, victim(me))
             {
-                unported_call("ftColl_80077C60 (an item's tip, it_8026FC00)");
+                let mode = if h.x41_b5 { 5 } else { 0 };
+                self.item_tip_victim(g, j, mode, victim(me));
+                let mf = &self.game.fighters[me.0];
+                if mf.x1988 == 0
+                    && mf.x198C == 0
+                    && !mf.x221D_b6
+                    && mf.hurt_capsules[n].capsule.state == HURT_ENABLED
+                {
+                    let int_scaled = fp::fctiwz(dmg);
+                    let int_raw = fp::fctiwz(raw);
+                    let mut half = fp::fmuls(0.5, fp::frsp(f64::from(int_scaled)));
+                    if fp::fctiwz(half) == 0 && int_scaled != 0 {
+                        half = 1.0;
+                    }
+                    let mut half_raw = fp::frsp(f64::from(int_raw / 2));
+                    if half_raw == 0.0 && int_raw != 0 {
+                        half_raw = 1.0;
+                    }
+                    let whole = fp::fctiwz(half);
+                    let mf = &mut self.game.fighters[me.0];
+                    if whole > mf.dmg.x1840 {
+                        mf.dmg.x1840 = whole;
+                    }
+                    let ip = it::item(self.game, g);
+                    let entry = LogEntry {
+                        kind: ip.kind,
+                        gobj: ip.entity,
+                        hit: LoggedHit::Item { item: g, index: j },
+                        hurt: n,
+                        pos: ip.x5D4_hitboxes[j].hit.hurt_coll_pos,
+                        damage: mem(half),
+                        count: cvt_fp2unsigned(half_raw),
+                    };
+                    let tips = &mut self.game.ft.hit_logs.tips;
+                    assert!(tips.len() < LOG_LEN, "tip log over {LOG_LEN}!!");
+                    tips.push(entry);
+                }
+                // `ftColl_80078488`.
+                self.fighter_play_sfx(me, 85, 0x7F, 0x40);
+                return true;
             }
             return false;
         }

@@ -197,9 +197,32 @@ impl Running<'_> {
         if let Some(a) = self.game.fighters[f.0].x20A0_accessory {
             self.draw_fighter_tree(f, Some(a), None, pass);
         }
-        if pass == 2 && self.game.fighters[f.0].x2100 > 1 {
-            code::unported_call("ftCo_800C2600");
+        self.draw_afterimage(f, pass);
+    }
+
+    /// A sword's afterimage, `ftCo_800C2600`: in the translucent pass, once the ring holds
+    /// two of the sword's positions, the strip between them ([`display::Draw::Afterimage`]),
+    /// its colors from the character's sword attributes. A held sword item's isn't ported.
+    #[doc(alias = "ftCo_800C2600")]
+    fn draw_afterimage(&mut self, f: FighterId, pass: i32) {
+        let fp = &self.game.fighters[f.0];
+        if pass != 2 || fp.x2100 <= 1 {
+            return;
         }
+        if fp.x2101_bits_8 {
+            code::unported_call("it_80285300 (a held sword's afterimage)");
+        }
+        // Link's and Young Link's sword attributes, Marth's and Roy's; any other character's
+        // are whatever the stack held.
+        match fp.kind {
+            6 | 20 | 18 | 26 => {}
+            k => panic!("ftCo_800C2600: character {k} has no sword attributes to read"),
+        }
+        self.game
+            .objs
+            .display
+            .draws
+            .push(display::Draw::Afterimage(f));
     }
 
     /// A fighter drawn into the magnifier, `ftDrawCommon_80080C28`: with its light, its

@@ -104,6 +104,11 @@ pub enum Draw {
     /// A flat-colored quad in the current camera's view at depth 0 (`hsd_80391A04`'s debug
     /// drawing: the background flash's).
     Quad(Quad),
+    /// A fighter's sword afterimage (`ftCo_800C2600`): a triangle strip blended over the
+    /// current camera's view, which the presentation builds from the fighter's afterimage
+    /// ring (`x20B0`, `x2100`, `x2101`), its two widths (`x20F8`, `x20FC`) and the sword
+    /// attributes' colors, as the pass left them.
+    Afterimage(crate::game::handles::FighterId),
 }
 
 /// A quad of [`Draw::Quad`]: two corners and its color.

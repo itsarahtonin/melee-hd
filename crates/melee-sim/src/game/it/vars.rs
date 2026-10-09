@@ -94,7 +94,13 @@ macro_rules! members {
                         }
                     }
                     $(ItemVars::$variant(v) => {
-                        v.compare(m, at, &format!("{path}.{}", stringify!($accessor)), cx)
+                        let path = format!("{path}.{}", stringify!($accessor));
+                        let skip = NEVER_WRITTEN
+                            .iter()
+                            .filter(|(k, _)| *k == VarsKind::$variant)
+                            .map(|(_, f)| format!("{path}.{f}"))
+                            .collect();
+                        v.compare(m, at, &path, &mut Unwritten { cx, skip })
                     })*
                 }
             }
@@ -119,6 +125,42 @@ members! {
     SeakNeedleHeld, seak_needle_held, itSeakNeedleHeld_ItemVars, [SEAK_NEEDLE_HELD];
     SeakNeedleThrown, seak_needle_thrown, itSeakNeedleThrown_ItemVars, [SEAK_NEEDLE_THROW];
     SeakChain, seak_chain, itSeakChain_ItemVars, [SEAK_CHAIN];
+}
+
+/// Members' fields no code ever writes or reads: they keep whatever a freed item of another
+/// kind left in the block (the Illusion's `xDD8`, a Fox laser's count before it), which the
+/// new member's zeros don't stand for, so the comparer leaves them out.
+const NEVER_WRITTEN: &[(VarsKind, &str)] = &[(VarsKind::FoxIllusion, "xDD8")];
+
+/// A comparison that drops the mismatches of [`NEVER_WRITTEN`] fields.
+struct Unwritten<'a> {
+    cx: &'a mut dyn Cx,
+    skip: Vec<String>,
+}
+
+impl Cx for Unwritten<'_> {
+    fn import_handle(&mut self, kind: &'static str, addr: u32) -> Option<u32> {
+        self.cx.import_handle(kind, addr)
+    }
+    fn import_data(&mut self, addr: u32) -> Option<melee_data::archive::DataRef> {
+        self.cx.import_data(addr)
+    }
+    fn compare_handle(&mut self, path: &str, kind: &'static str, ours: Option<u32>, theirs: u32) {
+        self.cx.compare_handle(path, kind, ours, theirs)
+    }
+    fn compare_data(
+        &mut self,
+        path: &str,
+        ours: Option<melee_data::archive::DataRef>,
+        theirs: u32,
+    ) {
+        self.cx.compare_data(path, ours, theirs)
+    }
+    fn mismatch(&mut self, path: &str, ours: String, theirs: String) {
+        if !self.skip.iter().any(|s| s == path) {
+            self.cx.mismatch(path, ours, theirs)
+        }
+    }
 }
 
 impl Default for ItemVars {
