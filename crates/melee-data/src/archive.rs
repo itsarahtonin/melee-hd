@@ -215,7 +215,7 @@ impl Archive {
     pub fn is_pointer(&self, offset: u32) -> bool {
         let word = (offset / 4) as usize;
         match self.pointer_words.get(word / 64) {
-            Some(bits) if offset % 4 == 0 => bits >> (word % 64) & 1 != 0,
+            Some(bits) if offset.is_multiple_of(4) => bits >> (word % 64) & 1 != 0,
             _ => self.relocs.binary_search(&offset).is_ok(),
         }
     }
