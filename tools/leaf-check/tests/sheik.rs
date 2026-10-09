@@ -1,12 +1,12 @@
-//! Sheik's own code (`melee/ft/kinds/ftSeak`) and her needles' and Vanish's items against
+//! Sheik's own code (`melee/ft/kinds/ftSeak`) and her needles', chain's and Vanish's items against
 //! ssbm-rs's ports, from real game states: every saved call of a Sheik function is imported,
 //! run on both sides, and the whole state compared afterwards. Each function also runs from
 //! the captures of its unit's other functions, with the fighter's buttons, stick, script and
 //! state variables changed, so callbacks no capture reached (and branches few did) run from
 //! real states of the same moves.
 //!
-//! What Sheik's code reaches in other parts of the port (the transformation, the chain item,
-//! a few common helpers) stands in on both sides ([`stubs`]); each check runs twice, with the
+//! What Sheik's code reaches in other parts of the port (the transformation, a few common
+//! helpers) stands in on both sides ([`stubs`]); each check runs twice, with the
 //! stand-ins that answer a question answering no, then yes, and the calls each side made to
 //! them are compared with their arguments.
 //!
@@ -38,6 +38,12 @@
 //!   STALL_BEATS=200 MONKEY_HOLD=... (the same CAPTURE_ variables, CAPTURE=$D/script1) \
 //!   ssbm-run "$SSBM_DISC" --mode e --matches 20 --monkey 20 --fields 9000 --port all --lockstep
 //! ```
+//!
+//! `script2` is the same match again with `CAPTURE_EVERY=7` and `CAPTURE_FUNCS=@$D/chain-funcs.txt`
+//! (the chain's accessories, `it_802BB938`, `it_802BCB88` and the side special's swing
+//! callbacks), for more of the chain's states, and `render1` its first 3000 fields with
+//! `CAPTURE_EVERY=500`, `CAPTURE_FUNCS=it_802A24A0` and `LOCKSTEP_DONE` without it, for the links'
+//! render callback ([`link_render`]).
 
 use std::collections::BTreeMap;
 
@@ -148,9 +154,8 @@ const CHAIN_INNER: &[&str] = &[
     "it_802BC94C",
 ];
 
-/// The chain item's unit (`itseakchain.c`), the last.
+/// The chain item's unit's first function.
 const CHAIN_START: u32 = 0x802B_AEEC;
-const CHAIN_UNIT: usize = STARTS.len() - 1;
 
 /// The units, by their first function's address: ftseak, ftseakspecials, ftseakspecialn,
 /// ftseakspecialhi, ftseakspeciallw, itseakneedlethrown, itseakneedleheld, itseakvanish and
@@ -698,4 +703,39 @@ fn sheik_functions() {
         one || unblocked.is_empty(),
         "compare clean now, take them off BLOCKED: {unblocked:?}"
     );
+}
+
+/// The links' render callback (`it_802A24A0`) from captures of the chain's links being drawn
+/// (`render1`): the joint tree's callback (`HSD_GObj_JObjCallback`) stands in on both sides,
+/// and whether each side calls it, with which GObj and pass, is compared.
+#[test]
+fn link_render() {
+    let dir = format!("{}/render1", base());
+    if saved_calls(&dir, "it_802A24A0").is_empty() {
+        return;
+    }
+    let draw = leaf_check::sym("HSD_GObj_JObjCallback");
+    let reports = check_calls_stubbed(
+        &dir,
+        "it_802A24A0",
+        1,
+        &[(draw, StubRet::Nothing)],
+        &|_, _| {},
+        &|g, maps, call| {
+            let gobj = gobj_arg(maps, call);
+            if melee_sim::game::it::link::drawn(g.game, gobj) {
+                melee_sim::game::code::call(
+                    g,
+                    draw,
+                    &[
+                        melee_sim::game::code::Val::GObj(Some(gobj)),
+                        melee_sim::game::code::Val::Int(call.regs.gpr[4] as i32),
+                    ],
+                );
+            }
+            Ret::Nothing
+        },
+    );
+    let clean: usize = reports.iter().map(|r| r.clean.len()).sum();
+    eprintln!("it_802A24A0: {clean} calls compared clean");
 }

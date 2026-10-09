@@ -2958,3 +2958,41 @@ it_802B1C60	leaf-check sheik: sheik_functions runs it from real states of Sheik'
 it_802B1D40	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
 it_802B1DCC	leaf-check sheik: sheik_functions runs it from real states of Sheik's needles and Vanish's flash, its own saved calls and its unit's, and compares the whole state
 shootNeedles	leaf-check sheik: sheik_functions runs it from real Sheik states, its own saved calls and its unit's, and compares the whole state
+fn_802BB428	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+fn_802BB44C	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+fn_802BB574	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+fn_802BB694	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+fn_802BB784	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+itSeakChain_Logic54_EvtUnk	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+itSeakChain_Spawn	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+itSeakchain_UnkMotion4_Anim	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_2725_Logic54_PickedUp	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_8026B724	leaf-check sheik: sheik_functions reaches it through it_802BAEEC from real chain states and compares the whole state
+it_8026B73C	leaf-check sheik: sheik_functions reaches it through it_802BAF0C from real chain states and compares the whole state
+it_80275328	leaf-check sheik: sheik_functions reaches it through it_802BAF2C from real chain states and compares the whole state
+it_802A2474	leaf-check sheik: sheik_functions reaches it through the links' release when it_802BB20C frees them from real chain states and compares the whole state
+it_802A24D0	leaf-check sheik: sheik_functions reaches it through it_802BAF2C from real chain states and compares the whole state
+it_802A3C98	leaf-check sheik: sheik_functions reaches it through the chain's accessories from real chain states and compares the whole state
+it_802A43B8	leaf-check sheik: sheik_functions reaches it through fn_802BB44C from real chain states and compares the whole state
+it_802A43EC	leaf-check sheik: sheik_functions reaches it through the chain's accessories from real chain states and compares the whole state
+it_802A4420	leaf-check sheik: sheik_functions reaches it through the chain's accessories from real chain states and compares the whole state
+it_802A6DC8	leaf-check sheik: sheik_functions reaches it through it_802BCB88 from real chain states and compares the whole state
+it_802BAEEC	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BAF0C	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BAF2C	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BB20C	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BB938	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BBAEC	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BBB0C	leaf-check sheik: sheik_functions reaches it through fn_802BB44C and fn_802BB784 from real chain states and compares the whole state
+it_802BBC38	leaf-check sheik: sheik_functions reaches it through fn_802BB784 from real chain states and compares the whole state
+it_802BBD64	leaf-check sheik: sheik_functions reaches it through fn_802BB44C from real chain states and compares the whole state
+it_802BBED0	leaf-check sheik: sheik_functions reaches it through fn_802BB574 from real chain states and compares the whole state
+it_802BC080	leaf-check sheik: sheik_functions reaches it through fn_802BB694 from real chain states and compares the whole state
+it_802BC94C	leaf-check sheik: sheik_functions reaches it through fn_802BB784 from real chain states and compares the whole state
+it_802BCA30	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BCB88	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BCED4	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BCF2C	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BCF84	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802BCFC4	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
+it_802A24A0	leaf-check sheik link_render: every capture of the chain's links being drawn, whether each side draws the link's joints compared

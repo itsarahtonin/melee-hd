@@ -74,12 +74,17 @@ pub fn reset(game: &mut Game, gobj: GObjId, l: ItemLinkId) {
     k.jobj = None;
 }
 
+/// Whether a link's render callback draws its model, `it_802A24A0`'s decision: once the link
+/// is out.
+#[doc(alias = "it_802A24A0")]
+pub fn drawn(game: &Game, gobj: GObjId) -> bool {
+    link(game, link_of(game, gobj)).x2C_b0
+}
+
 impl Running<'_> {
-    /// A link's render callback, `it_802A24A0`: its model, once it is out.
-    #[doc(alias = "it_802A24A0")]
+    /// A link's render callback, `it_802A24A0`: its model ([`drawn`]).
     pub fn render_link(&mut self, gobj: GObjId, pass: i32) {
-        let l = link_of(self.game, gobj);
-        if link(self.game, l).x2C_b0 {
+        if drawn(self.game, gobj) {
             self.render_jobj(gobj, pass);
         }
     }
