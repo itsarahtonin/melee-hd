@@ -40,9 +40,10 @@ fn import_compares_back_clean() {
         return;
     };
     assert!(out.contains("trace tick 200 imported and compared back: 0 differences"));
-    // The match stops at the first process no port covers, named with the tick.
+    // The match stops at the first process no port covers, named with the tick: past Sheik's
+    // aerial needles, at the fighters' hitboxes against her thrown needle.
     assert!(
-        out.contains("stopped in tick 286 (replay frame 162)"),
+        out.contains("stopped in tick 293 (replay frame 169)"),
         "{out}"
     );
     assert!(out.contains("isn't ported"), "{out}");
