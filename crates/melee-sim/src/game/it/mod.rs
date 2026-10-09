@@ -27,7 +27,7 @@ pub mod tables;
 mod tables_gen;
 pub mod vars;
 
-pub use vars::{ItemVars, VarsKind, vars_kind};
+pub use vars::{ItemVars, Var, VarsKind, vars_kind};
 
 use melee_data::archive::DataRef;
 

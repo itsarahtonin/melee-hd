@@ -60,6 +60,9 @@ pub trait Cx {
     fn compare_handle(&mut self, path: &str, kind: &'static str, ours: Option<u32>, theirs: u32);
     fn compare_data(&mut self, path: &str, ours: Option<DataRef>, theirs: u32);
     fn mismatch(&mut self, path: &str, ours: String, theirs: String);
+    /// Code read the field at `path` while it was stale (a new item's variable it hadn't
+    /// written, `it::Var`).
+    fn stale_read(&mut self, _path: &str) {}
 }
 
 /// A struct melee-sim mirrors from the game.

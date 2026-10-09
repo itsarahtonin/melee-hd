@@ -2,12 +2,17 @@
 //! one member of the union, so which member an item holds follows its kind ([`vars_kind`]).
 //!
 //! Items come from `HSD_ObjAlloc`, which doesn't clear its blocks, and item creation doesn't
-//! clear the variables either: a new item's variables hold a freed item's bytes until its
-//! kind's code writes them, so a new item's member starts as those bytes read as the member,
-//! and the bytes past a member shorter than the union aren't compared.
+//! clear the variables either: a new item's variables hold the bytes its block's last item left
+//! until its kind's code writes them. Every field of a new item's member starts stale ([`Var`]):
+//! its value is the block's where melee-hd knows it (the same member, or bytes read as the
+//! member, whose pointers become null) and zero where it doesn't (another member's), a write
+//! makes it live, the comparer leaves a stale field out, and a read of a stale field marks it,
+//! which the comparer reports ([`Cx::stale_read`]). The bytes past a member shorter than the
+//! union aren't compared.
 
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::structs::*;
+use crate::vec::Vec3;
 
 /// The union's size.
 pub const SIZE: usize = 0x1F8;
@@ -53,19 +58,18 @@ macro_rules! members {
             }
 
             $(
-                /// The member. A new item's untyped bytes become it, read as the member
-                /// (pointers in them, stale, become null); the kind's code writes each field it
-                /// reads (see the module's docs).
+                /// The member. A new item's block holding raw bytes or another member becomes
+                /// this one (see the module's docs), every field stale.
                 pub fn $accessor(&mut self) -> &mut $ty {
-                    // Another kind's member, left by the freed item whose block this is: its
-                    // bytes aren't kept, so the member starts from zeros (the kind writes each
-                    // field before it reads it).
+                    // Another member's bytes aren't kept: zeros stand for them.
                     if !matches!(self, ItemVars::Bytes(_) | ItemVars::$variant(_)) {
                         *self = ItemVars::Bytes([0; SIZE]);
                     }
                     if let ItemVars::Bytes(b) = self {
                         let m = Mem { bytes: &b[..], base: 0 };
-                        *self = ItemVars::$variant($ty::import(&m, 0, &mut Stale));
+                        let mut v = $ty::import(&m, 0, &mut Stale);
+                        v.mark_stale();
+                        *self = ItemVars::$variant(v);
                     }
                     match self {
                         ItemVars::$variant(v) => v,
@@ -76,6 +80,14 @@ macro_rules! members {
                     }
                 }
             )*
+
+            /// Marks the member's fields stale, as a new item finds them in its block.
+            pub fn mark_stale(&mut self) {
+                match self {
+                    ItemVars::Bytes(_) => {}
+                    $(ItemVars::$variant(v) => v.mark_stale(),)*
+                }
+            }
         }
 
         impl Mirror for ItemVars {
@@ -94,13 +106,7 @@ macro_rules! members {
                         }
                     }
                     $(ItemVars::$variant(v) => {
-                        let path = format!("{path}.{}", stringify!($accessor));
-                        let skip = NEVER_WRITTEN
-                            .iter()
-                            .filter(|(k, _)| *k == VarsKind::$variant)
-                            .map(|(_, f)| format!("{path}.{f}"))
-                            .collect();
-                        v.compare(m, at, &path, &mut Unwritten { cx, skip })
+                        v.compare(m, at, &format!("{path}.{}", stringify!($accessor)), cx)
                     })*
                 }
             }
@@ -127,42 +133,6 @@ members! {
     SeakChain, seak_chain, itSeakChain_ItemVars, [SEAK_CHAIN];
 }
 
-/// Members' fields no code ever writes or reads: they keep whatever a freed item of another
-/// kind left in the block (the Illusion's `xDD8`, a Fox laser's count before it), which the
-/// new member's zeros don't stand for, so the comparer leaves them out.
-const NEVER_WRITTEN: &[(VarsKind, &str)] = &[(VarsKind::FoxIllusion, "xDD8")];
-
-/// A comparison that drops the mismatches of [`NEVER_WRITTEN`] fields.
-struct Unwritten<'a> {
-    cx: &'a mut dyn Cx,
-    skip: Vec<String>,
-}
-
-impl Cx for Unwritten<'_> {
-    fn import_handle(&mut self, kind: &'static str, addr: u32) -> Option<u32> {
-        self.cx.import_handle(kind, addr)
-    }
-    fn import_data(&mut self, addr: u32) -> Option<melee_data::archive::DataRef> {
-        self.cx.import_data(addr)
-    }
-    fn compare_handle(&mut self, path: &str, kind: &'static str, ours: Option<u32>, theirs: u32) {
-        self.cx.compare_handle(path, kind, ours, theirs)
-    }
-    fn compare_data(
-        &mut self,
-        path: &str,
-        ours: Option<melee_data::archive::DataRef>,
-        theirs: u32,
-    ) {
-        self.cx.compare_data(path, ours, theirs)
-    }
-    fn mismatch(&mut self, path: &str, ours: String, theirs: String) {
-        if !self.skip.iter().any(|s| s == path) {
-            self.cx.mismatch(path, ours, theirs)
-        }
-    }
-}
-
 impl Default for ItemVars {
     fn default() -> Self {
         ItemVars::Bytes([0; SIZE])
@@ -187,5 +157,130 @@ impl Cx for Stale {
     }
     fn mismatch(&mut self, _: &str, _: String, _: String) {
         unreachable!()
+    }
+}
+
+/// A field of an item's variables: its value, whether it's stale (left by the block's last
+/// item, for each of a vector's components), and whether code read it while stale. Code reads
+/// it with [`get`](Var::get) and writes it with [`set`](Var::set); the comparer leaves a stale
+/// field out and reports a stale read ([`Cx::stale_read`]).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Var<T> {
+    v: T,
+    /// A bit for each stale component: one for a vector's three, all three for anything else.
+    stale: u8,
+    /// Whether code read the field while it was stale, since the item was made.
+    read: bool,
+}
+
+const ALL: u8 = 0b111;
+
+impl<T: Copy> Var<T> {
+    /// A live field holding `v`.
+    pub const fn new(v: T) -> Self {
+        Var {
+            v,
+            stale: 0,
+            read: false,
+        }
+    }
+
+    /// The value, marking a stale read.
+    pub fn get(&mut self) -> T {
+        self.read |= self.stale != 0;
+        self.v
+    }
+
+    /// Writes the value, which makes the field live.
+    pub fn set(&mut self, v: T) {
+        self.v = v;
+        self.stale = 0;
+    }
+
+    /// Reads, changes and writes the value.
+    pub fn update(&mut self, f: impl FnOnce(T) -> T) {
+        let v = self.get();
+        self.set(f(v));
+    }
+
+    /// Marks the field stale, as a new item finds it.
+    pub fn mark_stale(&mut self) {
+        self.stale = ALL;
+        self.read = false;
+    }
+
+    /// The value as the comparer sees it, without marking a read.
+    pub fn peek(&self) -> &T {
+        &self.v
+    }
+
+    /// Whether the comparer compares the field: a stale read is reported at `path`, and a stale
+    /// field is left out.
+    pub fn live(&self, path: &str, cx: &mut dyn Cx) -> bool {
+        if self.read {
+            cx.stale_read(path);
+        }
+        self.stale == 0
+    }
+}
+
+impl Var<Vec3> {
+    fn component(&mut self, i: u8) -> f32 {
+        self.read |= self.stale & 1 << i != 0;
+        [self.v.x, self.v.y, self.v.z][i as usize]
+    }
+
+    /// The vector's x, marking a stale read.
+    pub fn x(&mut self) -> f32 {
+        self.component(0)
+    }
+
+    /// The vector's y, marking a stale read.
+    pub fn y(&mut self) -> f32 {
+        self.component(1)
+    }
+
+    /// The vector's z, marking a stale read.
+    pub fn z(&mut self) -> f32 {
+        self.component(2)
+    }
+
+    /// Writes the vector's x, which makes it live.
+    pub fn set_x(&mut self, v: f32) {
+        self.v.x = v;
+        self.stale &= !1;
+    }
+
+    /// Writes the vector's y, which makes it live.
+    pub fn set_y(&mut self, v: f32) {
+        self.v.y = v;
+        self.stale &= !2;
+    }
+
+    /// Writes the vector's z, which makes it live.
+    pub fn set_z(&mut self, v: f32) {
+        self.v.z = v;
+        self.stale &= !4;
+    }
+
+    /// Compares the vector's live components with memory.
+    pub fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        if self.live(path, cx) {
+            self.v.compare(m, at, path, cx);
+            return;
+        }
+        for (i, (c, ours)) in [("x", self.v.x), ("y", self.v.y), ("z", self.v.z)]
+            .into_iter()
+            .enumerate()
+        {
+            let theirs = m.u32(at + 4 * i as u32);
+            if self.stale & 1 << i == 0 && ours.to_bits() != theirs {
+                cx.mismatch(
+                    &format!("{path}.{c}"),
+                    format!("{ours:?}"),
+                    format!("{:?}", f32::from_bits(theirs)),
+                );
+            }
+        }
     }
 }

@@ -53,9 +53,6 @@ fn stubs() -> Vec<Stub> {
     let mut v: Vec<Stub> = [
         // The crowd.
         "un_80322598",
-        // The player library's statistics.
-        "pl_80040048",
-        "pl_8003FFDC",
     ]
     .iter()
     .map(|n| (leaf_check::sym(n), StubRet::Nothing))

@@ -101,23 +101,23 @@ fn step(to: f32, from: f32, frames: i32) -> f32 {
 #[doc(alias = "it_80284FC4")]
 pub fn grow(game: &mut Game, gobj: GObjId, frames: i32, to: f32) {
     let v = vars(game, gobj);
-    v.x4 = 0;
-    v.x8 = frames;
-    v.xC = 1;
-    v.x10 = 1.0;
-    v.x14 = to;
-    v.x18 = step(v.x14, v.x10, frames);
+    v.x4.set(0);
+    v.x8.set(frames);
+    v.xC.set(1);
+    v.x10.set(1.0);
+    v.x14.set(to);
+    v.x18.set(step(v.x14.get(), v.x10.get(), frames));
 }
 
 /// The blade's length eases back to 1 over `frames`, `it_80285024` (`inlineA1` with 4).
 #[doc(alias = "it_80285024")]
 pub fn shrink(game: &mut Game, gobj: GObjId, frames: i32) {
     let v = vars(game, gobj);
-    v.x4 = frames;
-    v.x8 = 0;
-    v.xC = -1;
-    v.x14 = 1.0;
-    v.x18 = step(v.x14, v.x10, v.x4);
+    v.x4.set(frames);
+    v.x8.set(0);
+    v.xC.set(-1);
+    v.x14.set(1.0);
+    v.x18.set(step(v.x14.get(), v.x10.get(), v.x4.get()));
 }
 
 /// One eased value: a count stepping toward its end, and a value stepping toward its target.
@@ -155,30 +155,39 @@ fn ease_one(
 #[doc(alias = "it_80285084")]
 pub fn ease_length(game: &mut Game, gobj: GObjId) {
     let v = vars(game, gobj);
-    let (end, target) = (v.x8, v.x14);
-    let (mut c, mut d, mut x, mut dx) = (v.x4, v.xC, v.x10, v.x18);
+    let (end, target) = (v.x8.get(), v.x14.get());
+    let (mut c, mut d, mut x, mut dx) = (v.x4.get(), v.xC.get(), v.x10.get(), v.x18.get());
     ease_one(&mut c, end, &mut d, &mut x, target, &mut dx);
-    (v.x4, v.xC, v.x10, v.x18) = (c, d, x, dx);
+    v.x4.set(c);
+    v.xC.set(d);
+    v.x10.set(x);
+    v.x18.set(dx);
 }
 
 /// Steps the blade's width, `it_80285140`.
 #[doc(alias = "it_80285140")]
 pub fn ease_width(game: &mut Game, gobj: GObjId) {
     let v = vars(game, gobj);
-    let (end, target) = (v.x20, v.x2C);
-    let (mut c, mut d, mut x, mut dx) = (v.x1C, v.x24, v.x28, v.x30);
+    let (end, target) = (v.x20.get(), v.x2C.get());
+    let (mut c, mut d, mut x, mut dx) = (v.x1C.get(), v.x24.get(), v.x28.get(), v.x30.get());
     ease_one(&mut c, end, &mut d, &mut x, target, &mut dx);
-    (v.x1C, v.x24, v.x28, v.x30) = (c, d, x, dx);
+    v.x1C.set(c);
+    v.x24.set(d);
+    v.x28.set(x);
+    v.x30.set(dx);
 }
 
 /// Steps the swing's stretch, `it_802851FC`.
 #[doc(alias = "it_802851FC")]
 pub fn ease_swing(game: &mut Game, gobj: GObjId) {
     let v = vars(game, gobj);
-    let (end, target) = (v.x38, v.x44);
-    let (mut c, mut d, mut x, mut dx) = (v.x34, v.x3C, v.x40, v.x48);
+    let (end, target) = (v.x38.get(), v.x44.get());
+    let (mut c, mut d, mut x, mut dx) = (v.x34.get(), v.x3C.get(), v.x40.get(), v.x48.get());
     ease_one(&mut c, end, &mut d, &mut x, target, &mut dx);
-    (v.x34, v.x3C, v.x40, v.x48) = (c, d, x, dx);
+    v.x34.set(c);
+    v.x3C.set(d);
+    v.x40.set(x);
+    v.x48.set(dx);
 }
 
 /// Scales the blade's joints from the eased values, `it_80284E30`.
@@ -192,11 +201,14 @@ pub fn scale_blade(r: &mut Running, gobj: GObjId) {
     let v = vars(r.game, gobj);
     let y = fp::fmuls(
         f64::from(0.3_f32),
-        fp::fmuls(reg(v.x28), fp::fmuls(reg(v.x4C), reg(v.x10))),
+        fp::fmuls(
+            reg(v.x28.get()),
+            fp::fmuls(reg(v.x4C.get()), reg(v.x10.get())),
+        ),
     );
     let scale = if msid == 2 {
-        let xz = mem(fp::fmadds(1.5, reg(v.x40), y));
-        Vec3::new(xz, mem(fp::fadds(y, reg(v.x40))), xz)
+        let xz = mem(fp::fmadds(1.5, reg(v.x40.get()), y));
+        Vec3::new(xz, mem(fp::fadds(y, reg(v.x40.get()))), xz)
     } else {
         Vec3::new(1.0, mem(y), 1.0)
     };
@@ -209,45 +221,45 @@ pub fn scale_blade(r: &mut Running, gobj: GObjId) {
 /// The width eases back to 1 over 4 frames (`inlineA2`).
 fn narrow(game: &mut Game, gobj: GObjId) {
     let v = vars(game, gobj);
-    v.x1C = 4;
-    v.x20 = 0;
-    v.x24 = -1;
-    v.x2C = 1.0;
-    v.x30 = step(v.x2C, v.x28, v.x1C);
+    v.x1C.set(4);
+    v.x20.set(0);
+    v.x24.set(-1);
+    v.x2C.set(1.0);
+    v.x30.set(step(v.x2C.get(), v.x28.get(), v.x1C.get()));
 }
 
 /// The width eases from 1 to 2 over 4 frames (`inlineC1`).
 fn widen(game: &mut Game, gobj: GObjId) {
     let v = vars(game, gobj);
-    v.x1C = 0;
-    v.x20 = 4;
-    v.x24 = 1;
-    v.x28 = 1.0;
-    v.x2C = 2.0;
-    v.x30 = step(v.x2C, v.x28, 4);
+    v.x1C.set(0);
+    v.x20.set(4);
+    v.x24.set(1);
+    v.x28.set(1.0);
+    v.x2C.set(2.0);
+    v.x30.set(step(v.x2C.get(), v.x28.get(), 4));
 }
 
 /// The swing eases back to its rest length (`inlineA3`).
 fn unswing(r: &mut Running, gobj: GObjId) {
     let (rest, _, frames) = attrs(r, gobj);
     let v = vars(r.game, gobj);
-    v.x34 = frames;
-    v.x38 = 0;
-    v.x3C = -1;
-    v.x44 = rest;
-    v.x48 = step(rest, v.x40, frames);
+    v.x34.set(frames);
+    v.x38.set(0);
+    v.x3C.set(-1);
+    v.x44.set(rest);
+    v.x48.set(step(rest, v.x40.get(), frames));
 }
 
 /// The swing eases out to its full length (`inlineD1`).
 fn swing(r: &mut Running, gobj: GObjId) {
     let (rest, full, frames) = attrs(r, gobj);
     let v = vars(r.game, gobj);
-    v.x34 = 0;
-    v.x38 = frames;
-    v.x3C = 1;
-    v.x40 = rest;
-    v.x44 = full;
-    v.x48 = step(full, rest, frames);
+    v.x34.set(0);
+    v.x38.set(frames);
+    v.x3C.set(1);
+    v.x40.set(rest);
+    v.x44.set(full);
+    v.x48.set(step(full, rest, frames));
 }
 
 /// Steps every eased value and scales the blade (`inlineA4`); the states' animation,
@@ -288,15 +300,28 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let b6 = r.game.it.bone_tables[t.0].bones[6].expect("bone 6");
     let y = r.game.objs.jobjs[b6].scale.y;
     let v = vars(r.game, gobj);
-    (v.x0, v.x4, v.x8, v.xC) = (0, 0, 0, 0);
-    (v.x10, v.x14, v.x18) = (1.0, 1.0, 0.0);
-    (v.x1C, v.x20, v.x24) = (0, 0, 0);
-    (v.x28, v.x2C, v.x30) = (1.0, 1.0, 0.0);
-    (v.x34, v.x38, v.x3C) = (0, 0, 0);
-    (v.x40, v.x44, v.x48) = (1.0, 1.0, 0.0);
-    v.x50 = 0.0;
-    v.x4C = y;
-    v.x54 = 0;
+    v.x0.set(0);
+    v.x4.set(0);
+    v.x8.set(0);
+    v.xC.set(0);
+    v.x10.set(1.0);
+    v.x14.set(1.0);
+    v.x18.set(0.0);
+    v.x1C.set(0);
+    v.x20.set(0);
+    v.x24.set(0);
+    v.x28.set(1.0);
+    v.x2C.set(1.0);
+    v.x30.set(0.0);
+    v.x34.set(0);
+    v.x38.set(0);
+    v.x3C.set(0);
+    v.x40.set(1.0);
+    v.x44.set(1.0);
+    v.x48.set(0.0);
+    v.x50.set(0.0);
+    v.x4C.set(y);
+    v.x54.set(0);
     fell(r, gobj);
 }
 
@@ -389,10 +414,10 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
     }
     let (_, _, frames) = attrs(r, gobj);
     let v = vars(r.game, gobj);
-    if v.x3C == 0 && v.x34 == v.x38 {
-        if v.x38 == 0 {
+    if v.x3C.get() == 0 && v.x34.get() == v.x38.get() {
+        if v.x38.get() == 0 {
             swing(r, gobj);
-        } else if v.x38 == frames {
+        } else if v.x38.get() == frames {
             unswing(r, gobj);
         }
     }

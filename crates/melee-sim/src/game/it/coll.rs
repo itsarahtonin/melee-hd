@@ -54,12 +54,95 @@ pub fn share_group_victims(game: &mut Game, gobj: GObjId, idx: usize) {
     hitcapsule::clear_victims(&mut item_mut(game, gobj).x5D4_hitboxes[idx].hit);
 }
 
-/// Fighters' hitboxes against the item's hurtboxes, `it_802703E8`.
+/// The fighters' process link.
+const P_LINK_FIGHTER: u8 = 8;
+
+/// Fighters' hitboxes against the item's hurtboxes, `it_802703E8`: of the fighters that may
+/// hit it (not its owner, nor a thrown fighter its owner threw, unless its flags say; not a
+/// teammate in a team match without friendly fire), each box that can reach it where it is
+/// and hasn't hit it yet tests the item's hurtboxes, and the first it touches is a hit (an
+/// inert box only touches).
+#[doc(alias = "it_802703E8")]
 pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
+    use hitcapsule::Victim;
     if item(r.game, gobj).xAC8_hurtboxNum == 0 {
         return;
     }
-    code::unported_call("it_802703E8 (fighters' hitboxes against an item)");
+    let me_id = super::item_of(r.game, gobj);
+    let mut cur = r.game.world.first_in(P_LINK_FIGHTER);
+    while let Some(fg) = cur {
+        cur = r.game.world.gobjs[fg.0].next;
+        let game = &*r.game;
+        let me = item(game, gobj);
+        let any = flag(me.xDCE_flag, 0);
+        if me.owner == Some(fg) && !any {
+            continue;
+        }
+        let f = game.fighter_id(fg);
+        let x134 = game.fighters[f.0].x1064_thrownHitbox.x134;
+        if x134.is_set() && x134.thrower().is_none() {
+            code::unported_call("a thrown fighter's hitbox word that isn't a thrower");
+        }
+        let thrower = x134.thrower();
+        if !(thrower.is_none() || thrower != me.owner || any) {
+            continue;
+        }
+        let team = match thrower {
+            Some(t) => super::owner::team(game, Some(t)) & 0xFF,
+            None => i32::from(game.fighters[f.0].team),
+        };
+        if game.vs_is_teams()
+            && !game.vs_friendly_fire()
+            && !flag(me.xDCE_flag, 1)
+            && team == i32::from(me.x20_team_id)
+        {
+            continue;
+        }
+        for hi in 0..4 {
+            let me = item(r.game, gobj);
+            let h = &r.game.fighters[f.0].x914[hi];
+            if h.state == hitcapsule::DISABLED
+                || h.element == ELEMENT_CATCH
+                || !h.x42_b7
+                || ((!h.x40_b2 || me.ground_or_air != GA_AIR)
+                    && (!h.x40_b3 || me.ground_or_air != GA_GROUND))
+                || hitcapsule::has_victim(h, Victim::Item(me_id))
+                || me.xD0C == 2
+            {
+                continue;
+            }
+            for n in 0..usize::from(me.xAC8_hurtboxNum) {
+                let mut hit = r.game.fighters[f.0].x914[hi].clone();
+                let hs = r.game.fighters[f.0].x34_scale.y;
+                let ms = item(r.game, gobj).scl;
+                let mut hurt = item(r.game, gobj).xACC_itemHurtbox[n].clone();
+                let touch = hitcapsule::hits_hurtbox(
+                    &mut r.game.objs,
+                    r.data,
+                    &mut hit,
+                    &mut hurt,
+                    None,
+                    false,
+                    hs,
+                    ms,
+                    0.0,
+                );
+                item_mut(r.game, gobj).xACC_itemHurtbox[n] = hurt;
+                let h = &mut r.game.fighters[f.0].x914[hi];
+                h.hurt_coll_pos = hit.hurt_coll_pos;
+                h.coll_distance = hit.coll_distance;
+                if !touch {
+                    continue;
+                }
+                if r.game.fighters[f.0].x914[hi].element != ELEMENT_INERT {
+                    code::unported_call("it_802703E8's hit on an item's hurtbox");
+                } else {
+                    r.game.fighters[f.0].unk_gobj = Some(gobj);
+                }
+                break;
+            }
+        }
+    }
 }
 
 /// `HitElement_Catch` and `HitElement_Inert`.

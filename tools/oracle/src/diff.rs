@@ -19,6 +19,10 @@
 //! With `--from`, the imported state is first compared back with the memory it came from,
 //! which shows what the comparison covers; `--against TICK` compares it with a later tick's
 //! memory instead, which shows the comparison telling states apart.
+//!
+//! Stale reads don't stop the run: each tick where code read what the original leaves
+//! unset (HSD's objects' and mpcoll's counts, a new item's variables it hadn't written,
+//! `it::Var`) is reported at the end with what was read.
 
 use gekko_fp::{FpMode, set_fp_mode};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -107,8 +111,9 @@ impl Files<'_> {
     }
 }
 
-/// The whole state compared with memory, as the capture checks compare it.
-fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> Vec<String> {
+/// The whole state compared with memory, as the capture checks compare it: the differences,
+/// and the fields code read while they were stale.
+fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> (Vec<String>, Vec<String>) {
     let mut cmp = Comparer::new(mem, data, &m.game, maps);
     cmp.world();
     cmp.stage();
@@ -117,7 +122,45 @@ fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> Vec<String> {
     cmp.audio();
     cmp.match_state();
     cmp.display();
-    cmp.diffs
+    (cmp.diffs, cmp.stale_reads)
+}
+
+/// The stale reads a run met: the first tick of each, in order.
+#[derive(Default)]
+struct StaleReads {
+    seen: Vec<(u32, String)>,
+    counts: (u32, u32),
+}
+
+impl StaleReads {
+    /// Notes the stale reads the state shows after tick `at`.
+    fn note(&mut self, at: u32, m: &Match, fields: Vec<String>) {
+        let counts = (m.game.objs.stale_reads, m.game.coll.stale_reads);
+        if counts.0 > self.counts.0 {
+            self.seen
+                .push((at, "HSD's objects (`Objects::stale_reads`)".into()));
+        }
+        if counts.1 > self.counts.1 {
+            self.seen
+                .push((at, "mpcoll (`CollStatics::stale_reads`)".into()));
+        }
+        self.counts = self.counts.max(counts);
+        for f in fields {
+            if !self.seen.iter().any(|(_, s)| *s == f) {
+                self.seen.push((at, f));
+            }
+        }
+    }
+
+    /// Prints them, each tick named by `tick`.
+    fn report(&self, tick: &dyn Fn(u32) -> String) {
+        if self.seen.is_empty() {
+            println!("no stale reads");
+        }
+        for (at, what) in &self.seen {
+            println!("stale read in {}: {what}", tick(*at));
+        }
+    }
 }
 
 /// The fighters' addresses in the trace, in the order the match created them: each player
@@ -372,7 +415,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
             let m = Match::resume(game, data);
             // The import compared back with the memory it came from: what the comparison can
             // tell apart before anything runs.
-            let back = compare(&image.mem1, &map, &m, Maps::default());
+            let (back, _) = compare(&image.mem1, &map, &m, Maps::default());
             println!(
                 "trace tick {n} imported and compared back: {} differences",
                 back.len()
@@ -391,7 +434,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 let data = DataMap {
                     loaded: find_archives_after(&index, &image.mem1, &mut archives, &loaded),
                 };
-                let d = compare(&image.mem1, &data, &m, Maps::default());
+                let (d, _) = compare(&image.mem1, &data, &m, Maps::default());
                 println!(
                     "trace tick {n} imported, compared with tick {t}: {} differences",
                     d.len()
@@ -419,6 +462,10 @@ pub fn diff(args: &[&str]) -> ExitCode {
     };
     let mut device = Device(&replay);
     let mut compared = 0;
+    let mut stale = StaleReads {
+        counts: (m.game.objs.stale_reads, m.game.coll.stale_reads),
+        ..Default::default()
+    };
     // A state taken up at a tick's end has that frame's display pass still to run; a started
     // match has run none of its ticks.
     let mut render_due = from.is_some() && m.game.scene.unk_C != 2;
@@ -452,7 +499,8 @@ pub fn diff(args: &[&str]) -> ExitCode {
         };
         let data = files.refresh(&image.mem1, &mut m.data);
         // Objects pair afresh each tick, by where they're reached from: the heap reuses blocks.
-        let mut diffs = compare(&image.mem1, &data, &m, Maps::default());
+        let (mut diffs, reads) = compare(&image.mem1, &data, &m, Maps::default());
+        stale.note(tick, &m, reads);
         diffs.retain(|d| !ignore.iter().any(|p| d.contains(p.as_str())));
         compared += 1;
         if !diffs.is_empty() {
@@ -464,6 +512,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
         }
     };
     let at = format!("tick {tick}{}", frame_of(tick, first));
+    stale.report(&|t| format!("tick {t}{}", frame_of(t, first)));
     match stop {
         None => {
             println!("{compared} ticks compared, no difference");

@@ -40,13 +40,15 @@ fn import_compares_back_clean() {
         return;
     };
     assert!(out.contains("trace tick 200 imported and compared back: 0 differences"));
-    // The match stops at the first process no port covers, named with the tick: past Sheik's
-    // aerial needles, at the fighters' hitboxes against her thrown needle.
+    // Taken up from an import, play reaches a new item's unused hitboxes in tick 609, whose
+    // joints the item never writes: its block keeps them from the freed item it held before,
+    // which the import doesn't carry over (docs/oracle.md).
     assert!(
-        out.contains("stopped in tick 293 (replay frame 169)"),
+        out.contains("tick 609 (replay frame 485) differs in 2 places"),
         "{out}"
     );
-    assert!(out.contains("isn't ported"), "{out}");
+    assert!(out.contains("x5D4_hitboxes[2].hit.jobj"), "{out}");
+    assert!(out.contains("x5D4_hitboxes[3].hit.jobj"), "{out}");
 }
 
 #[test]
@@ -75,9 +77,15 @@ fn start_reports_its_seam() {
     let Some(out) = diff(&[]) else {
         return;
     };
-    // Until the whole match is ported, it stops at a seam, before a difference.
+    // Until the whole match is ported, it stops at a seam, before a difference: Sheik turning
+    // into Zelda (`ftCommon_8007EFC8`). Nothing read a stale field on the way.
     assert!(!out.contains(" differs in "), "{out}");
+    assert!(
+        out.contains("stopped in tick 1223 (replay frame 1099)"),
+        "{out}"
+    );
     assert!(out.contains("isn't ported"), "{out}");
+    assert!(out.contains("no stale reads"), "{out}");
 }
 
 #[test]

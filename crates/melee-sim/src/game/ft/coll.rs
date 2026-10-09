@@ -4,7 +4,7 @@
 
 use gekko_fp as fp;
 
-use super::super::code::{self, Val, unported_call};
+use super::super::code::unported_call;
 use super::super::gr::{DynamicAttrs, Geometry, StageColl};
 use super::super::handles::{CodeRef, FighterId};
 use super::super::state::Running;
@@ -913,14 +913,9 @@ impl Running<'_> {
             Some(other) => {
                 let o = self.game.fighter(other);
                 let ledge = o.mv_i32(0);
-                let args = [
-                    Val::Int(i32::from(o.player_idx)),
-                    Val::Int(i32::from(o.is_sub_fighter)),
-                    Val::Int(i32::from(fp.player_idx)),
-                    Val::Int(i32::from(fp.is_sub_fighter)),
-                    Val::Int(ledge),
-                ];
-                code::call(self, PL_8003FFDC, &args);
+                let (os, osub) = (i32::from(o.player_idx), i32::from(o.is_sub_fighter));
+                let (ms, msub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
+                self.record_ledge_steal(os, osub, ms, msub, ledge);
                 self.game.fighter_mut(gobj).x213C = ledge;
                 false
             }
@@ -957,9 +952,6 @@ impl Running<'_> {
         self.game.fighter(gobj).ground_or_air == GA_AIR
     }
 }
-
-/// `pl_8003FFDC`: counts a ledge taken from another fighter.
-const PL_8003FFDC: u32 = 0x8003_FFDC;
 
 /// A value scaled by a fighter's height, `ftCo_CalcYScaledKnockback`: `k` 0 leaves it, a
 /// negative `k` divides by the scale for `-k`, else the scale's distance from 1 times `k`

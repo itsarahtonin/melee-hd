@@ -7,14 +7,13 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::Val;
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::seakvanish;
 use super::super::super::state::Running;
 use super::super::fox::facing_dir_int;
 use super::super::motion::flags::*;
-use super::{addr, attr, ext, ms, mv};
+use super::{addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::math;
@@ -425,7 +424,7 @@ impl Running<'_> {
             fp.set_mv_f32(mv::HI_VEL_X, reg(s.x));
             fp.set_mv_f32(mv::HI_VEL_Y, reg(s.y));
         } else {
-            self.seak_ext(ext::FTCOMMON_8007DA24, &[Val::Fighter(f)]);
+            self.face_stick_if_pushed(gobj);
             angle = fp::frsp(fp::fdiv(std::f64::consts::PI, 2.0));
             let fp = &mut self.game.fighters[f.0];
             fp.set_mv_f32(mv::HI_VEL_X, 0.0);
@@ -471,23 +470,18 @@ impl Running<'_> {
     pub fn seak_special_air_hi_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] != 0 {
-            self.seak_ext(ext::FTCOMMON_FALL_BASIC, &[Val::Fighter(f)]);
+            Self::fall_basic(&mut self.game.fighters[f.0]);
             let x4c = reg(self.seak_attr_f32(f, attr::X4C));
             let max = reg(self.game.fighters[f.0].co_attrs.air_drift_max);
-            let limit = mem(fp::fmuls(x4c, max));
-            self.seak_ext(
-                ext::FTCOMMON_CLAMP_SELF_VEL_X,
-                &[Val::Fighter(f), Val::Float(reg(limit))],
-            );
+            // The limit goes as a float argument, rounded to single.
+            let limit = fp::fmuls(x4c, max);
+            Self::clamp_self_vel_x(&mut self.game.fighters[f.0], limit);
             return;
         }
         let fp = &mut self.game.fighters[f.0];
         let vy = reg(fp.self_vel.y);
         fp.self_vel.y = mem(fp::fsubs(vy, fp::fdivs(vy, 10.0)));
-        self.seak_ext(
-            ext::FTCOMMON_CALC_SELF_ACCEL_DEACCEL_AIR,
-            &[Val::Fighter(f)],
-        );
+        Self::self_accel_deaccel_air(&mut self.game.fighters[f.0]);
     }
 
     /// `ftSk_SpecialHi_Coll`: off the floor, the aerial reappearance.

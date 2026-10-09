@@ -3215,6 +3215,13 @@ it_802BCF2C	leaf-check sheik: sheik_functions runs it from real states of Sheik'
 it_802BCF84	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
 it_802BCFC4	leaf-check sheik: sheik_functions runs it from real states of Sheik's chain, its own saved calls and its unit's, and compares the whole state
 it_802A24A0	leaf-check sheik link_render: every capture of the chain's links being drawn, whether each side draws the link's joints compared
+ftCommon_CalcSelfAccel_DeaccelAir	leaf-check sheik: sheik_functions reaches it through the up and down specials' aerial physics from real Sheik states and compares the whole state
+ftCommon_ClampSelfVelX	leaf-check sheik: sheik_functions reaches it through ftSk_SpecialAirHi_Phys from real Sheik states and compares the whole state
+ftCommon_FallBasic	leaf-check sheik: sheik_functions reaches it through ftSk_SpecialAirHi_Phys from real Sheik states and compares the whole state
+ftCommon_8007DA24	leaf-check sheik: sheik_functions reaches it through ftSk_SpecialHi_80113A30 from real Sheik states and compares the whole state
+it_802703E8	melee-oracle diff, Fox vs Sheik FD ticks 1-1222 (docs/oracle.md): every tick for each of Sheik's items with hurtboxes, the fighters' hitboxes tested against them (none lands)
+pl_8003FFDC	leaf-check ftcommon coll_callbacks: the ledge catch's statistics with the call compared live
+mpLib_8005811C	melee-oracle diff, Fox vs Sheik FD ticks 1-1222 (docs/oracle.md): Sheik hanging from the ledge, each frame of the hang (Final Destination's ledges have no joint callback)
 pl_80038788	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): a point bonus set (1 call)
 plBonusLib_8003D514	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the rivals' places at a KO (7 calls)
 pl_8003D644	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): a KO's stats (7 calls)
@@ -3383,7 +3390,6 @@ ftMs_SpecialS_80137FF8	leaf-check marth: marth_functions runs it from real Marth
 ftMs_SpecialS_8013809C	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
 ftMs_SpecialS_80138148	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
 ftMs_SpecialS_Enter	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
-ftCommon_FallBasic	leaf-check marth: ftMs_SpecialAirNStart_Phys reaches it in clean comparisons
 ftCommon_CalcSelfAccel_DeaccelQuickAir	leaf-check marth: ftMs_SpecialAirHi_Phys reaches it before the slash rises, in clean comparisons; leaf-check fox: the Fire Fox bounce and the reflector reach it
 ftCommon_CalcSelfAccel_DriftSimple	leaf-check marth: Dolphin Slash's descent (ftMs_SpecialHi_Phys, ftMs_SpecialAirHi_Phys) reaches it in clean comparisons
 ft_80085204	leaf-check marth: Dancing Blade's last two swings in the air (ftMs_SpecialS3_Phys, ftMs_SpecialS4_Phys) reach it in clean comparisons

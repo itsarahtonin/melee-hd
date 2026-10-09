@@ -5,8 +5,8 @@
 //! state variables changed, so callbacks no capture reached (and branches few did) run from
 //! real states of the same moves.
 //!
-//! What Sheik's code reaches in other parts of the port (the transformation, a few common
-//! helpers) stands in on both sides ([`stubs`]); each check runs twice, with the
+//! What Sheik's code reaches in other parts of the port (the transformation, the yo-yo's
+//! stage check) stands in on both sides ([`stubs`]); each check runs twice, with the
 //! stand-ins that answer a question answering no, then yes, and the calls each side made to
 //! them are compared with their arguments.
 //!
@@ -87,10 +87,6 @@ fn stubs(yes: bool) -> Vec<Stub> {
     let b = StubRet::Int(i32::from(yes));
     let mut v: Vec<Stub> = [
         ext::FTCOMMON_8007EFC8,
-        ext::FTCOMMON_CLAMP_SELF_VEL_X,
-        ext::FTCOMMON_FALL_BASIC,
-        ext::FTCOMMON_CALC_SELF_ACCEL_DEACCEL_AIR,
-        ext::FTCOMMON_8007DA24,
         fox_ext::FTANIM_80070FB4,
         fox_ext::FTANIM_80070C48,
         fox_ext::FTANIM_80070CC4,
@@ -105,13 +101,7 @@ fn stubs(yes: bool) -> Vec<Stub> {
         StubRet::Int(if yes { 3 } else { 0 }),
     ));
     // The common states' crowd and statistics, which their ports stand in for.
-    for n in [
-        "un_80322598",
-        "pl_80040048",
-        "pl_8003FFDC",
-        "pl_8003E0E8",
-        "pl_8003E114",
-    ] {
+    for n in ["un_80322598", "pl_8003E0E8", "pl_8003E114"] {
         v.push((leaf_check::sym(n), StubRet::Nothing));
     }
     v.push((leaf_check::sym("un_803224DC"), StubRet::Int(0)));

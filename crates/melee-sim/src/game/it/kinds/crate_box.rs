@@ -135,15 +135,15 @@ pub fn spawn_floating(r: &mut Running, parent: Option<GObjId>) -> Option<GObjId>
     spawn.x44_flag[0] &= !0x80;
     spawn.x40 = 0;
     let gobj = super::super::item::spawn_air(r, &mut spawn)?;
-    vars(r.game, gobj).spawned_gobj = parent;
+    vars(r.game, gobj).spawned_gobj.set(parent);
     let scale = 0.034_906_584_769_487_38;
     for i in 0..2 {
         let f = r.game.objs.rng.draw_f32();
         let v = mem(fp::frsp(fp::fmul(fp::fsubs(reg(f), 0.5), scale)));
         if i == 0 {
-            vars(r.game, gobj).rot_vel_x = v;
+            vars(r.game, gobj).rot_vel_x.set(v);
         } else {
-            vars(r.game, gobj).rot_vel_y = v;
+            vars(r.game, gobj).rot_vel_y.set(v);
         }
     }
     item_mut(r.game, gobj).xDC8_word.flags.x19 = false;
@@ -157,15 +157,15 @@ pub fn spawn_floating(r: &mut Running, parent: Option<GObjId>) -> Option<GObjId>
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     super::super::set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
     let v = vars(r.game, gobj);
-    v.opened = 0;
-    v.spawned_gobj = None;
+    v.opened.set(0);
+    v.spawned_gobj.set(None);
     fell(r, gobj);
 }
 
 /// `itBox_Logic1_Destroyed`: a barrel's box lets go of it.
 #[doc(alias = "itBox_Logic1_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    if vars(r.game, gobj).spawned_gobj.is_some() {
+    if vars(r.game, gobj).spawned_gobj.get().is_some() {
         code::unported_call("grKongo_801D8058 (a Kongo Jungle barrel's box gone)");
     }
 }
@@ -296,7 +296,7 @@ fn spin(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj).expect("a box without a model");
     let (vx, vy) = {
         let v = vars(r.game, gobj);
-        (v.rot_vel_x, v.rot_vel_y)
+        (v.rot_vel_x.get(), v.rot_vel_y.get())
     };
     let mut q = r.game.objs.jobjs[j].rotate;
     q.x = wrap_turn(mem(fp::fadds(reg(q.x), reg(vx))));
@@ -311,7 +311,7 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
     let accel = a.f32(r.data, super::super::data::attr::FALL_SPEED);
     let max = a.f32(r.data, super::super::data::attr::FALL_SPEED_MAX);
     lib2725::fall(r.game, gobj, accel, max);
-    if vars(r.game, gobj).spawned_gobj.is_some() {
+    if vars(r.game, gobj).spawned_gobj.get().is_some() {
         let ip = item_mut(r.game, gobj);
         ip.x40_vel.z = mem(fp::fmuls(reg(ip.x40_vel.z), f64::from(0.95_f32)));
         spin(r, gobj);
@@ -416,8 +416,8 @@ pub fn open_empty(r: &mut Running, gobj: GObjId) {
     ip.x40_vel.y = 0.0;
     super::super::set_flag(&mut ip.xDCF_flag, 2, true);
     let v = vars(r.game, gobj);
-    v.opened = 1;
-    v.despawn_timer = 40;
+    v.opened.set(1);
+    v.despawn_timer.set(40);
     hitbox::set_hit_ids(r.game, gobj);
     let pos = item(r.game, gobj).pos;
     crate::lb::wind::blast(
@@ -453,8 +453,8 @@ pub fn open(r: &mut Running, gobj: GObjId) {
     ip.x40_vel.y = 0.0;
     super::super::set_flag(&mut ip.xDCF_flag, 2, true);
     let v = vars(r.game, gobj);
-    v.opened = 1;
-    v.despawn_timer = 40;
+    v.opened.set(1);
+    v.despawn_timer.set(40);
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 7, 2);
 }
@@ -463,8 +463,8 @@ pub fn open(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itBox_UnkMotion7_Anim")]
 pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
     let v = vars(r.game, gobj);
-    v.despawn_timer = v.despawn_timer.wrapping_sub(1);
-    v.despawn_timer <= 0
+    v.despawn_timer.update(|old| old.wrapping_sub(1));
+    v.despawn_timer.get() <= 0
 }
 
 /// Hitting something (or being reflected), an unopened box breaks, `itBox_Logic1_DmgDealt`
@@ -474,7 +474,7 @@ pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itBox_Logic1_HitShield")]
 #[doc(alias = "itBox_Logic1_Reflected")]
 pub fn hit(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).opened == 0 {
+    if vars(r.game, gobj).opened.get() == 0 {
         break_open(r, gobj);
     }
     false
@@ -484,7 +484,8 @@ pub fn hit(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itBox_Logic1_DmgReceived")]
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     let limit = attr_f(r, gobj, 0x14);
-    if vars(r.game, gobj).opened == 0 && fp::frsp(f64::from(item(r.game, gobj).xC9C)) >= reg(limit)
+    if vars(r.game, gobj).opened.get() == 0
+        && fp::frsp(f64::from(item(r.game, gobj).xC9C)) >= reg(limit)
     {
         break_open(r, gobj);
     }
@@ -547,12 +548,12 @@ fn nudge(r: &mut Running, v: f32) -> f32 {
 /// `itBox_UnkMotion8_Phys`: floating, it tumbles at randomly changing rates.
 #[doc(alias = "itBox_UnkMotion8_Phys")]
 pub fn phys8(r: &mut Running, gobj: GObjId) {
-    let vx = vars(r.game, gobj).rot_vel_x;
+    let vx = vars(r.game, gobj).rot_vel_x.get();
     let vx = nudge(r, vx);
-    vars(r.game, gobj).rot_vel_x = vx;
-    let vy = vars(r.game, gobj).rot_vel_y;
+    vars(r.game, gobj).rot_vel_x.set(vx);
+    let vy = vars(r.game, gobj).rot_vel_y.get();
     let vy = nudge(r, vy);
-    vars(r.game, gobj).rot_vel_y = vy;
+    vars(r.game, gobj).rot_vel_y.set(vy);
     spin(r, gobj);
 }
 
@@ -561,7 +562,7 @@ pub fn phys8(r: &mut Running, gobj: GObjId) {
 // NaN keeps following, as the original's `>= 0` test has it.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn follow(r: &mut Running, gobj: GObjId) {
-    let parent = vars(r.game, gobj).spawned_gobj;
+    let parent = vars(r.game, gobj).spawned_gobj.get();
     if let Some(p) = parent {
         let j = jobj_of(r.game, p).expect("a barrel without a model");
         let target = r.game.objs.jobjs[j].translate;

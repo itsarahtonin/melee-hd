@@ -242,6 +242,10 @@ DATA_TYPES = {
     "HSD_ShapeAnimJoint",
 }
 
+# The members of an item's variables: their fields (and the fields of the structs nested in
+# them) are `it::Var`s, which start stale in a new item (see `it::vars`).
+TRACKED = {r for r in ROOTS if r.endswith("_ItemVars")}
+
 # Pointers whose pointee isn't mapped yet: an address that needs a decision before it is used.
 DEFAULT_POINTER = "RawPtr"
 
@@ -257,7 +261,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::handles::*;
-use crate::game::it::ItemVars;
+use crate::game::it::{ItemVars, Var};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;

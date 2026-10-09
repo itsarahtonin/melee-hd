@@ -4,7 +4,9 @@
 Each C struct becomes a plain-data Rust struct with one field per C field: integers and
 floats keep their width, arrays become arrays, nested structs nest, bitfields become their own
 fields, and unions become big-endian byte arrays (state code often writes one member and reads
-another, which a byte array reproduces exactly). Pointers become the handle the config maps
+another, which a byte array reproduces exactly). The fields of an item's variables
+(`config.TRACKED`, and the structs nested in them) are `it::Var`s, which know whether a new item
+has written them yet. Pointers become the handle the config maps
 their pointee to (`config.py`); function pointers become `CodeRef`, the original function's
 address, which the game dispatches on. C types melee-sim already has (vectors, quaternions)
 use its types.
@@ -63,6 +65,14 @@ class Gen:
         self.recs = types["records"]
         self.done = set()
         self.order = []
+        self.current = None
+        # The tracked structs (`config.TRACKED` and the structs nested in them), and the
+        # records that use each record, to check a nested one isn't used elsewhere.
+        self.tracked = set()
+        self.users = {}
+
+    def is_tracked(self, rid):
+        return rid in self.tracked
 
     def external(self, t):
         return t["k"] == "rec" and rec_name(t["id"]) in config.EXTERNAL
@@ -109,20 +119,32 @@ class Gen:
             r = self.recs[t["id"]]
             if r["kind"] == "union":
                 return f"[u8; {r['size']}]"
-            self.want(t["id"])
+            self.want(t["id"], self.current)
             return rust_type_name(t["id"])
         if k == "void":
             return "()"
         raise ValueError(f"no Rust type for {t}")
 
-    def want(self, rid):
+    def want(self, rid, user=None):
+        self.users.setdefault(rid, set()).add(user)
+        if user in self.tracked or rec_name(rid) in config.TRACKED:
+            self.tracked.add(rid)
         if rid in self.done:
             return
         self.done.add(rid)
+        saved = self.current
+        self.current = rid
         for f in self.fields(rid):
             if "splice" not in f:
                 self.ty(f["type"])
+        self.current = saved
         self.order.append(rid)
+
+    def check_tracked(self):
+        for rid in self.tracked:
+            if rec_name(rid) not in config.TRACKED:
+                others = self.users[rid] - self.tracked
+                assert not others, f"{rec_name(rid)} is nested in a tracked struct and used elsewhere"
 
     def fields(self, rid):
         """A record's fields, with any run config.SPLICE names replaced by one field of the
@@ -155,7 +177,10 @@ class Gen:
             off = f["offset_bits"] // 8
             bits = f" (bits {f['offset_bits'] % 8}..+{f['bits']})" if "bits" in f else ""
             if "splice" in f:
+                assert not self.is_tracked(rid), f"a splice in tracked {name}"
                 t = f["splice"]
+            elif self.is_tracked(rid):
+                t = self.tracked_ty(rid, f)
             else:
                 t = bit_type(f["bits"]) if "bits" in f else self.handle_array(rid, f) or self.field_override(rid, f) or self.ty(f["type"])
             out.append(f"    /// +{off:#x}{bits}")
@@ -168,6 +193,8 @@ class Gen:
         for f in self.fields(rid):
             if "splice" in f:
                 d = "Default::default()"
+            elif self.is_tracked(rid):
+                d = self.tracked_default(rid, f)
             else:
                 ha = self.handle_array(rid, f)
                 d = f"[None; {f['type']['n']}]" if ha else "None" if self.field_override(rid, f) else self.default(f)
@@ -175,7 +202,84 @@ class Gen:
         out.append("        }")
         out.append("    }")
         out.append("}")
+        if self.is_tracked(rid):
+            out.append("")
+            out.append(f"impl {name} {{")
+            out.append("    /// Marks every field stale, as a new item finds its variables.")
+            out.append("    pub fn mark_stale(&mut self) {")
+            for f in self.fields(rid):
+                fname = field_name(f["name"])
+                t = f["type"]
+                if "bits" not in f and t["k"] == "arr":
+                    assert t["of"]["k"] != "arr", f"a nested array in tracked {name}"
+                    out.append(f"        self.{fname}.iter_mut().for_each(|v| v.mark_stale());")
+                else:
+                    out.append(f"        self.{fname}.mark_stale();")
+            out.append("    }")
+            out.append("}")
         return "\n".join(out)
+
+    # A tracked struct's fields: each value an `it::Var`, element by element in arrays; nested
+    # structs are tracked themselves.
+
+    def nested(self, t):
+        """Whether `t` is a struct a tracked field holds as a tracked struct of its own."""
+        return t["k"] == "rec" and not self.external(t) and self.recs[t["id"]]["kind"] != "union"
+
+    def tracked_ty(self, rid, f):
+        if "bits" in f:
+            return f"Var<{bit_type(f['bits'])}>"
+        key = f"{rec_name(rid)}.{f['name']}"
+        if self.handle_array(rid, f):
+            return f"[Var<Option<{config.FIELD_HANDLE_ARRAYS[key]}>>; {f['type']['n']}]"
+        over = self.field_override(rid, f)
+        if over:
+            return f"Var<{over}>"
+        return self.wrap_ty(f["type"])
+
+    def wrap_ty(self, t):
+        if t["k"] == "arr":
+            return f"[{self.wrap_ty(t['of'])}; {t['n']}]"
+        if self.nested(t):
+            return self.ty(t)
+        return f"Var<{self.ty(t)}>"
+
+    def tracked_default(self, rid, f):
+        if "bits" in f or self.field_override(rid, f):
+            return "Var::new(Default::default())"
+        if self.handle_array(rid, f):
+            return "core::array::from_fn(|_| Var::new(None))"
+        return self.wrap_default(f["type"])
+
+    def wrap_default(self, t):
+        if t["k"] == "arr":
+            return f"core::array::from_fn(|_| {self.wrap_default(t['of'])})"
+        if self.nested(t):
+            return "Default::default()"
+        return "Var::new(Default::default())"
+
+    def wrap_import(self, t, at, depth=0):
+        if t["k"] == "arr":
+            es = self.size(t["of"])
+            i = f"i{depth}"
+            inner = self.wrap_import(t["of"], f"{at} + {i} as u32 * {es:#x}", depth + 1)
+            return f"core::array::from_fn(|{i}| {inner})"
+        if self.nested(t):
+            return self.import_expr(t, at, depth)
+        return f"Var::new({self.import_expr(t, at, depth)})"
+
+    def wrap_compare(self, t, ours, at, path, depth=0):
+        """Statements comparing a tracked field's `ours` with memory: a stale value is left out."""
+        if t["k"] == "arr":
+            es = self.size(t["of"])
+            i = f"i{depth}"
+            inner = self.wrap_compare(t["of"], f"{ours}[{i}]", f"{at} + {i} as u32 * {es:#x}", f"format!(\"{{}}[{{}}]\", {path}, {i})", depth + 1)
+            return [f"for {i} in 0..{t['n']} {{"] + ["    " + s for s in inner] + ["}"]
+        if self.nested(t) or (t["k"] == "rec" and self.ty(t) == "Vec3"):
+            # A nested tracked struct, or a vector, which compares its live components.
+            return [f"{ours}.compare(m, {at}, &{path}, cx);"]
+        inner = self.compare_stmts(t, f"(*{ours}.peek())", at, path, depth)
+        return [f"if {ours}.live(&{path}, cx) {{"] + ["    " + s for s in inner] + ["}"]
 
     def handle_array(self, rid, f):
         """The type config.FIELD_HANDLE_ARRAYS gives this array of words, if any."""
@@ -287,11 +391,15 @@ class Gen:
         name = rust_type_name(rid)
         imp = []
         cmp = []
+        tracked = self.is_tracked(rid)
         for f in self.fields(rid):
             fname = field_name(f["name"])
             off = f["offset_bits"] // 8
             at = f"at + {off:#x}"
             path = f"format!(\"{{path}}.{f['name']}\")"
+            if tracked:
+                self.tracked_mirror(rid, f, fname, at, path, imp, cmp)
+                continue
             if "splice" in f:
                 imp.append(f"            {fname}: {f['splice']}::import(m, {at}, cx),")
                 cmp.append(f"        self.{fname}.compare(m, {at}, &{path}, cx);")
@@ -342,6 +450,44 @@ class Gen:
         out.append("}")
         return "\n".join(out)
 
+    def tracked_mirror(self, rid, f, fname, at, path, imp, cmp):
+        """A tracked struct's field's import and comparison."""
+        def guarded(stmts):
+            cmp.append(f"        if self.{fname}.live(&{path}, cx) {{")
+            cmp.extend("            " + s for s in stmts)
+            cmp.append("        }")
+        if "bits" in f:
+            bt = bit_type(f["bits"])
+            read = f"m.bits(at, {f['offset_bits']}, {f['bits']})"
+            imp.append(f"            {fname}: Var::new({read} != 0)," if bt == "bool" else f"            {fname}: Var::new({read} as {bt}),")
+            guarded([f"if (*self.{fname}.peek() as u32) != {read} {{ cx.mismatch(&{path}, format!(\"{{:?}}\", self.{fname}.peek()), format!(\"{{:?}}\", {read})); }}"])
+            return
+        if self.handle_array(rid, f):
+            h = config.FIELD_HANDLE_ARRAYS[f"{rec_name(rid)}.{f['name']}"]
+            n = f["type"]["n"]
+            imp.append(f'            {fname}: core::array::from_fn(|i| Var::new(cx.import_handle("{h}", m.u32({at} + 4 * i as u32)).map({h}))),')
+            cmp.append(f"        for i in 0..{n} {{")
+            cmp.append(f'            let p = format!("{{path}}.{f["name"]}[{{i}}]");')
+            cmp.append(f"            if self.{fname}[i].live(&p, cx) {{")
+            cmp.append(f'                cx.compare_handle(&p, "{h}", self.{fname}[i].peek().map(|h| h.0), m.u32({at} + 4 * i as u32));')
+            cmp.append("            }")
+            cmp.append("        }")
+            return
+        over = self.field_override(rid, f)
+        if over:
+            assert f["type"]["k"] == "ptr", f"{rec_name(rid)}.{f['name']} isn't a pointer"
+            if over == "Option<DataRef>":
+                imp.append(f"            {fname}: Var::new(cx.import_data(m.u32({at}))),")
+                guarded([f"cx.compare_data(&{path}, *self.{fname}.peek(), m.u32({at}));"])
+                return
+            handle = over[len("Option<"):-1]
+            imp.append(f'            {fname}: Var::new(cx.import_handle("{handle}", m.u32({at})).map({handle})),')
+            guarded([f'cx.compare_handle(&{path}, "{handle}", self.{fname}.peek().map(|h| h.0), m.u32({at}));'])
+            return
+        imp.append(f"            {fname}: {self.wrap_import(f['type'], at)},")
+        for st in self.wrap_compare(f["type"], f"self.{fname}", at, path):
+            cmp.append("        " + st)
+
 
 def main():
     types = json.load(open(sys.argv[1], encoding="utf-8"))
@@ -350,6 +496,7 @@ def main():
     by_name = {rec_name(rid): rid for rid in types["records"]}
     for root in config.ROOTS:
         g.want(by_name[root])
+    g.check_tracked()
     structs = HEADER + [
         "#![allow(non_snake_case, non_camel_case_types, unused_imports, clippy::all)]",
         "",
@@ -360,7 +507,7 @@ def main():
         structs.append(g.struct(rid))
         structs.append("")
     mirror = HEADER + [
-        "#![allow(non_snake_case, unused_comparisons, unused_imports, clippy::all)]",
+        "#![allow(non_snake_case, unused_comparisons, unused_imports, unused_parens, clippy::all)]",
         "",
         "use super::handles::*;",
         "use super::mirror::{Cx, Mem, Mirror, code};",
@@ -374,6 +521,7 @@ def main():
         *config.EXTRA_USES,
         "use crate::quat::Quat;",
         "use crate::vec::Vec3;",
+        "use crate::game::it::Var;",
         "",
     ]
     for rid in g.order:
