@@ -58,6 +58,15 @@ The Fox–Fox match plays natively from its first frame to its last, in sync wit
 
 The target is at least 20× (aim 30×). Earlier provisional figures (melee-hd 2,231, Dolphin 150 to 190 frames/s) were taken with other work loading the machine and understate both sides.
 
+After the speed work below (2026-10-09, melee-hd `86dc9ab`, the same machine, quiet, median of 5 runs, every run in sync; Dolphin's figure is the one above, its build and configuration unchanged):
+
+| match | build | melee-hd native, median frames/s (runs) | ratio to Dolphin's 397 |
+| --- | --- | --- | --- |
+| `fox-fox-fd` | release | 6,637 (6,697, 6,637, 6,768, 6,304, 6,356) | 16.7× |
+| `fox-fox-fd` | `dist` | 7,174 (7,194, 7,174, 7,235, 6,794, 6,851) | 18.1× |
+
+Speed work is parked here until more of the game is ported, since new content changes the profile; profile-guided optimization (an estimated 10 to 15%) is the next step when it resumes.
+
 This round's speed work (below) is measured provisionally, on a loaded machine, against main built the same way: on the whole match about 4,340 frames per second in release and 4,680 in the `dist` profile (`cargo build --profile dist -p melee-bench`), median of five alternating runs each, against 2,340 for main before it (a28bb77), so about 1.85× and 2.0×. Dolphin's side, the baseline, is below.
 
 **Profile.** A sampled profile of that run (samply at 4 kHz, about 10,000 samples on the simulation's thread; `melee-bench symbolize RVA...` names the functions at a profile's offsets in its own executable, when the profiler can't find the PDB), by share of samples including what each calls: the engine ticks 69%, the display pass 19%, and the match's setup and disc reads, outside the timed stretch, the rest. In the ticks, joint matrices (`HSD_JObjSetupMatrix`: `Mtx34::srt` 21%, `Mtx34::concat` 13%) take 34%, about half of it from the playback codes' pass over every dirty matrix of each fighter's model (16%); the fighters' bone dynamics (`swing_chains`) 24%; animation interpretation (AObjs and FObjs) about 13%; collision about 5%. By function alone, the bit-exact fused float operations (`gekko_fp::fmadds`, `fmsub`, `fnmsubs`, the paired `ps_madds0` and `ps_madds1`, and the C library's `fma` under them) take about 33%, and `sin` and `cos` with their range reduction about 10%. That was before the speed work below.
