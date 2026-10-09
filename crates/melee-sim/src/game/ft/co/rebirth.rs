@@ -57,15 +57,6 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800D4FF4")]
     #[doc(alias = "ftCommon_8007E690")]
     pub fn enter_rebirth(&mut self, gobj: GObjId) {
-        #[cfg(feature = "stubs")]
-        if super::super::super::code::stubbed(
-            0x800D_4FF4,
-            &[super::super::super::code::Val::GObj(Some(gobj))],
-        )
-        .is_some()
-        {
-            return;
-        }
         self.fighter_spawn(gobj);
         let slot = i32::from(self.game.fighter(gobj).player_idx);
         let point = self.game.player_unk4e(slot) as i8;
