@@ -1,14 +1,13 @@
 //! The transformation into Zelda (`ftseakspeciallw.c`): the first half's slowdown and wind,
-//! the swap itself (`ftCommon_8007EFC8`, which the transformation's part of the port owns), and
-//! the second half, which Zelda's own down special also ends in.
+//! the swap itself (`ftCommon_8007EFC8`, `ft::transform`), and the second half, which Zelda's
+//! own down special also ends in.
 
 use gekko_fp as fp;
 
-use super::super::super::code::Val;
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::{GA_GROUND, addr, attr, ext, ms};
+use super::{GA_GROUND, addr, attr, ms};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 
@@ -54,13 +53,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8011412C")]
     pub fn seak_special_lw_swap(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).accessory4_cb = None;
-        self.seak_ext(
-            ext::FTCOMMON_8007EFC8,
-            &[
-                Val::GObj(Some(gobj)),
-                Val::Int(ext::FTZD_SPECIAL_LW_8013B4D8 as i32),
-            ],
-        );
+        self.transform(gobj, CodeRef(super::super::zelda::addr::LW_8013B4D8));
     }
 
     /// The first half, `ftSk_SpecialLw_Enter` and `ftSk_SpecialAirLw_Enter`: the speeds

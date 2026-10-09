@@ -3281,3 +3281,7 @@ gm_80167320	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15
 gm_801693BC	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the KO blast's kind (4 calls)
 gm_8016A1F8	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the single-player test at a KO (6 calls)
 pl_80040120	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): a taunt's stats (6 calls)
+ftCommon_8007EFC8	melee-oracle diff, Fox vs Sheik FD ticks 1-1356 (docs/oracle.md): Sheik turning into Zelda in tick 1223
+ftLib_SetScale	melee-oracle diff, Fox vs Sheik FD ticks 1-1356 (docs/oracle.md): the transformation sets Zelda's scale (tick 1223)
+ft_80081C88	melee-oracle diff, Fox vs Sheik FD ticks 1-1356 (docs/oracle.md): the transformation scales Zelda's ledge snaps (tick 1223)
+ftZd_SpecialLw_8013B4D8	melee-oracle diff, Fox vs Sheik FD ticks 1-1356 (docs/oracle.md): the transformation's second half on Zelda (tick 1223)
