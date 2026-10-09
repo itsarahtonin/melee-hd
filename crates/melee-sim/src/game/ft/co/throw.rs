@@ -238,7 +238,11 @@ impl Running<'_> {
             }
         }
         if !vf.x221C_b4 {
-            assert!(!(dmg > 500.0), "attack power over 500!! {dmg}");
+            // NaN passes, as the original's `!(dmg > 500.0)` does.
+            assert!(
+                dmg.partial_cmp(&500.0) != Some(std::cmp::Ordering::Greater),
+                "attack power over 500!! {dmg}"
+            );
             vf.dmg.x1838_percentTemp = mem(fp::fadds(reg(vf.dmg.x1838_percentTemp), dmg));
             if count > vf.dmg.x183C_applied {
                 vf.dmg.x183C_applied = count;

@@ -71,7 +71,7 @@ impl Game {
         r.x7 = self.vs_unk_c();
         // `kills` holds four; the fifth and sixth land in `x18` and the padding after it.
         let mut kills = [[0u16; 6]; 6];
-        for i in 0..6 {
+        for (i, row) in kills.iter_mut().enumerate() {
             let pkind = self.player_pkind(i as i32) as u8;
             r.player_standings[i].pkind = pkind;
             if pkind == PKIND_NA {
@@ -143,25 +143,24 @@ impl Game {
             p.x9C = (pl.ext_u32(0xD04) / 60) as i32;
             p.xA0 = (pl.ext_u32(0xD68) / 60) as i32;
             p.xA4 = pl.stale_moves.xCB0 as u32;
-            for j in 0..6 {
+            for (j, k) in row.iter_mut().enumerate() {
                 if r.player_standings[j].pkind != PKIND_NA {
-                    kills[i][j] = self.player_kos(s, j as i32) as u16;
+                    *k = self.player_kos(s, j as i32) as u16;
                 }
             }
             let p = &mut r.player_standings[i];
-            p.kills.copy_from_slice(&kills[i][..4]);
-            p.x18 = kills[i][4];
+            p.kills.copy_from_slice(&row[..4]);
+            p.x18 = row[4];
         }
-        for i in 0..6 {
+        for (i, row) in kills.iter().enumerate() {
             if r.player_standings[i].pkind == PKIND_NA {
                 continue;
             }
             let team_i = r.player_standings[i].team;
-            for j in 0..6 {
+            for (j, &k) in row.iter().enumerate() {
                 if r.player_standings[j].pkind == PKIND_NA {
                     continue;
                 }
-                let k = kills[i][j];
                 let other = if r.is_teams == 1 {
                     r.player_standings[j].team != team_i
                 } else {
@@ -303,17 +302,11 @@ const STATS_CATCH: usize = 51;
 /// less the two the original's cursor skips.
 #[doc(alias = "pl_80040A9C")]
 fn down_attacks(counts: &[u32; 100]) -> u32 {
-    let mut sum = 0u32;
-    let mut cursor = 51u32;
-    let mut idx = STATS_DOWN_ATTACK_D;
-    for _ in 0..11 {
-        if cursor.wrapping_sub(51) > 1 {
-            sum = sum.wrapping_add(counts[idx + 1]);
-        }
-        idx += 1;
-        cursor += 1;
-    }
-    sum
+    // The cursor runs from 51 alongside the eleven and skips its first two.
+    counts[STATS_DOWN_ATTACK_D + 1..STATS_DOWN_ATTACK_D + 12]
+        .iter()
+        .skip(2)
+        .fold(0u32, |sum, &c| sum.wrapping_add(c))
 }
 
 /// `StatsAttack_DownAttackD`.
