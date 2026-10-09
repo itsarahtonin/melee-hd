@@ -134,6 +134,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         strength = g.game.fighters[f.0].x19A4;
     } else if fp.dmg.int_value != 0 {
         if reg(fp.dmg.x191C) != 0.0 && fp.victim_gobj.is_none() && fp.target_item_gobj.is_none() {
+            g.damage_hooks(gobj);
             g.enter_rebound(gobj);
         }
         strength = g.game.fighters[f.0].dmg.int_value;

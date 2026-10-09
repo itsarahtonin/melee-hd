@@ -7,6 +7,28 @@ use crate::hsd::gobj::GObjId;
 /// Runs the common state callback at `cb`, if one is ported here.
 pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
     match cb {
+        // ftCo_CaptureDamageHi_Anim, ftCo_CaptureDamageLw_Anim
+        0x800D_C2E4 | 0x800D_C468 => {
+            g.co_capture_damage_anim(gobj);
+        }
+        // ftCo_CaptureDamageHi_IASA, ftCo_CaptureDamageLw_IASA
+        0x800D_C328 | 0x800D_C4AC => {}
+        // ftCo_CaptureDamageHi_Phys
+        0x800D_C32C => {
+            g.co_capture_damage_hi_phys(gobj);
+        }
+        // ftCo_CaptureDamageHi_Coll
+        0x800D_C34C => {
+            g.co_capture_damage_hi_coll(gobj);
+        }
+        // ftCo_CaptureDamageLw_Phys
+        0x800D_C4B0 => {
+            g.co_capture_damage_lw_phys(gobj);
+        }
+        // ftCo_CaptureDamageLw_Coll
+        0x800D_C5EC => {
+            g.co_capture_damage_lw_coll(gobj);
+        }
         // ftCo_Rebirth_Anim
         0x800D_52F8 => {
             g.co_rebirth_anim(gobj);

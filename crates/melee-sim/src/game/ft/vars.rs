@@ -42,6 +42,10 @@ pub struct Vars<const N: usize> {
     bytes: [u8; N],
     /// The words that hold handles, by offset: their bytes aren't the state there.
     handles: Vec<(usize, Handle)>,
+    /// The bytes left of a handle's word that a narrower write overwrote in part: in memory
+    /// they hold part of an address, which melee-sim doesn't have. They don't compare, and
+    /// reading one stops.
+    stale: Vec<usize>,
 }
 
 impl<const N: usize> Default for Vars<N> {
@@ -49,6 +53,7 @@ impl<const N: usize> Default for Vars<N> {
         Vars {
             bytes: [0; N],
             handles: Vec::new(),
+            stale: Vec::new(),
         }
     }
 }
@@ -59,6 +64,7 @@ impl<const N: usize> Vars<N> {
         Vars {
             bytes,
             handles: Vec::new(),
+            stale: Vec::new(),
         }
     }
 
@@ -134,10 +140,23 @@ impl<const N: usize> Vars<N> {
                 "reading a fighter's variables at {start:#x}..{end:#x} as bytes, where +{o:#x} holds {h:?}"
             );
         }
+        if let Some(b) = self.stale.iter().find(|&&b| (start..end).contains(&b)) {
+            panic!(
+                "reading a fighter's variables at {start:#x}..{end:#x}, where +{b:#x} holds part of an address"
+            );
+        }
     }
 
     fn write(&mut self, start: usize, end: usize) {
-        self.handles.retain(|&(o, _)| end <= o || start >= o + 4);
+        let stale = &mut self.stale;
+        self.handles.retain(|&(o, _)| {
+            let keep = end <= o || start >= o + 4;
+            if !keep {
+                stale.extend((o..o + 4).filter(|b| !(start..end).contains(b)));
+            }
+            keep
+        });
+        self.stale.retain(|b| !(start..end).contains(b));
     }
 }
 
@@ -193,7 +212,9 @@ impl<const N: usize> Mirror for Vars<N> {
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let theirs: [u8; N] = m.bytes(at);
-        let skip = |i: usize| self.handles.iter().any(|&(o, _)| (o..o + 4).contains(&i));
+        let skip = |i: usize| {
+            self.handles.iter().any(|&(o, _)| (o..o + 4).contains(&i)) || self.stale.contains(&i)
+        };
         let differ = (0..N).any(|i| !skip(i) && self.bytes[i] != theirs[i]);
         if differ {
             cx.mismatch(

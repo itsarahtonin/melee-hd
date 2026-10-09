@@ -617,10 +617,133 @@ impl Running<'_> {
         jobj::set_translate(&mut self.game.objs.jobjs, root, pos);
     }
 
-    /// The hold's hooks for a victim held anew, `fn_800DB5D8`: not ported.
-    // Ports `fn_800DB5D8`; aliased once a check reaches it.
-    fn capture_wait_hooks(&mut self, _gobj: GObjId) {
-        unported_call("fn_800DB5D8 (a held victim lifted)");
+    /// A held victim's hooks for its new state, `fn_800DB5D8`: in Yoshi's mouth it turns
+    /// invisible (not ported); it can't be thrown out of hitstun for a while.
+    #[doc(alias = "fn_800DB5D8")]
+    fn capture_wait_hooks(&mut self, gobj: GObjId) {
+        self.capture_yoshi_check(gobj);
+        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+    }
+
+    /// Held still, high or low, `fn_800DB790` (`fn_800DBAE4`): the state, in Yoshi's mouth
+    /// invisible (not ported), and with wobbling prevention its count of the holder's hits
+    /// starting over (the Gecko codes at `0x800DB880` and `0x800DBBD4`).
+    fn capture_wait_state(&mut self, gobj: GObjId, msid: i32) {
+        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
+        self.capture_yoshi_check(gobj);
+        let wobbling = self.game.rules.prevent_wobbling;
+        let fp = self.game.fighter_mut(gobj);
+        fp.x1A6A = 0x1FF;
+        if wobbling {
+            fp.mv[0x44] = 0;
+            fp.mv[0x46..0x48].copy_from_slice(&[0xFF, 0xFF]);
+        }
+    }
+
+    /// Hit while held, `ftCo_800DC284` (`ftCo_800DC3A4` low): the hold's flinch, its timer
+    /// from 0.
+    #[doc(alias = "ftCo_800DC284")]
+    #[doc(alias = "ftCo_800DC3A4")]
+    pub fn enter_capture_damage(&mut self, gobj: GObjId, high: bool) {
+        let msid = if high {
+            ms::CAPTURE_DAMAGE_HI
+        } else {
+            ms::CAPTURE_DAMAGE_LW
+        };
+        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
+        self.game.fighter_mut(gobj).set_mv_f32(WAIT_MASH_TIMER, 0.0);
+        self.capture_wait_hooks(gobj);
+    }
+
+    /// The hold's frame for a victim, `fn_800DB8A4`: its frames, the hold's timer down, and
+    /// its mashing.
+    #[doc(alias = "fn_800DB8A4")]
+    fn capture_tick(&mut self, gobj: GObjId) {
+        let c = self.common();
+        let (dec, mash) = (c.f32(0x3A4), c.f32(0x3A8));
+        let fp = self.game.fighter_mut(gobj);
+        fp.set_mv_f32(
+            WAIT_FRAMES,
+            fp::frsp(fp::fadd(reg(fp.mv_f32(WAIT_FRAMES)), 1.0)),
+        );
+        fp.grab_timer = mem(fp::fsubs(reg(fp.grab_timer), reg(dec)));
+        let mashed = self.grab_mash(gobj, mash);
+        self.game
+            .fighter_mut(gobj)
+            .set_mv_i32(WAIT_MASHED, i32::from(mashed));
+    }
+
+    /// `ftCo_CaptureDamageHi_Anim` (`ftCo_CaptureDamageLw_Anim`): the hold's frame; when
+    /// the flinch ends, held still again.
+    #[doc(alias = "ftCo_CaptureDamageHi_Anim")]
+    #[doc(alias = "ftCo_CaptureDamageLw_Anim")]
+    pub fn co_capture_damage_anim(&mut self, gobj: GObjId) {
+        self.capture_tick(gobj);
+        if !self.anim_frames_remaining(gobj) {
+            let msid = if self.game.fighter(gobj).motion_id == ms::CAPTURE_DAMAGE_HI {
+                ms::CAPTURE_WAIT_HI
+            } else {
+                ms::CAPTURE_WAIT_LW
+            };
+            self.capture_wait_state(gobj, msid);
+        }
+    }
+
+    /// `ftCo_CaptureDamageHi_Phys`: to the hold point.
+    #[doc(alias = "ftCo_CaptureDamageHi_Phys")]
+    pub fn co_capture_damage_hi_phys(&mut self, gobj: GObjId) {
+        self.move_to_hold(gobj);
+    }
+
+    /// `ftCo_CaptureDamageHi_Coll`: touching down, the low flinch from the same frame
+    /// (`fn_800DC384`).
+    #[doc(alias = "ftCo_CaptureDamageHi_Coll")]
+    #[doc(alias = "fn_800DC384")]
+    pub fn co_capture_damage_hi_coll(&mut self, gobj: GObjId) {
+        if !self.game.fighter(gobj).x2226_b2 {
+            self.air_coll_touch_then(gobj, |g, gobj| g.capture_damage_switch(gobj, false));
+        }
+    }
+
+    /// The flinch switched high or low from the same frame, `fn_800DC404` (`fn_800DC624`
+    /// high): the hooks, to the hold point; going high also runs the high collision and
+    /// moves the model there.
+    #[doc(alias = "fn_800DC404")]
+    #[doc(alias = "fn_800DC624")]
+    fn capture_damage_switch(&mut self, gobj: GObjId, high: bool) {
+        let msid = if high {
+            ms::CAPTURE_DAMAGE_HI
+        } else {
+            ms::CAPTURE_DAMAGE_LW
+        };
+        let frame = self.game.fighter(gobj).cur_anim_frame;
+        self.change_motion_state(gobj, msid, UPDATE_CMD, frame, 1.0, 0.0, None);
+        self.capture_wait_hooks(gobj);
+        let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
+        self.follow_hold(gobj, grabber);
+        if high {
+            self.co_capture_damage_hi_coll(gobj);
+            let root = self.root_jobj(gobj);
+            let pos = self.game.fighter(gobj).cur_pos;
+            jobj::set_translate(&mut self.game.objs.jobjs, root, pos);
+        }
+    }
+
+    /// `ftCo_CaptureDamageLw_Phys`: to the hold point; pulled up off the ground, the high
+    /// flinch.
+    #[doc(alias = "ftCo_CaptureDamageLw_Phys")]
+    pub fn co_capture_damage_lw_phys(&mut self, gobj: GObjId) {
+        if self.move_to_hold(gobj) {
+            self.capture_damage_switch(gobj, true);
+        }
+    }
+
+    /// `ftCo_CaptureDamageLw_Coll`: off a ledge, the high flinch.
+    #[doc(alias = "ftCo_CaptureDamageLw_Coll")]
+    pub fn co_capture_damage_lw_coll(&mut self, gobj: GObjId) {
+        if !self.game.fighter(gobj).x2226_b2 {
+            self.ground_coll_fall_off_then(gobj, |g, gobj| g.capture_damage_switch(gobj, true));
+        }
     }
 
     /// Held, `fn_800DB6C8`: high or low as it was pulled, a tether's end given up, and the
@@ -632,18 +755,7 @@ impl Running<'_> {
         } else {
             ms::CAPTURE_WAIT_LW
         };
-        // `fn_800DB790`, `fn_800DBAE4`.
-        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
-        self.capture_yoshi_check(gobj);
-        let wobbling = self.game.rules.prevent_wobbling;
-        let fp = self.game.fighter_mut(gobj);
-        fp.x1A6A = 0x1FF;
-        if wobbling {
-            // Wobbling prevention (the Gecko codes at `0x800DB880` and `0x800DBBD4`): the
-            // count of the holder's hits starts over, with no hit last.
-            fp.mv[0x44] = 0;
-            fp.mv[0x46..0x48].copy_from_slice(&[0xFF, 0xFF]);
-        }
+        self.capture_wait_state(gobj, msid);
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
         match self.game.fighter(grabber).kind {
             KIND_YOSHI => unported_call("ftCo_800DB368 (held by Yoshi)"),
