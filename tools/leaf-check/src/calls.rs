@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use gekko_fp::{FpMode, set_fp_mode};
+use crate::fp::{FpMode, set_fp_mode};
 use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps};
 use melee_capture::{Capture, DataMap, DiscIndex, find_archives_after, find_archives_in};

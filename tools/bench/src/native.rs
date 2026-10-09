@@ -23,11 +23,11 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use gekko_fp::{FpMode, set_fp_mode};
 use melee_data::disc::Disc;
 use melee_replay::Device;
 use melee_sim::game::state::Game;
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
+use melee_sim::gekko_fp::{self, FpMode, set_fp_mode};
 use ssbm_slippi::replay::Replay;
 
 use crate::sync::{FIRST_FRAME, Fighter, post_frames, replay_last_frame, same};

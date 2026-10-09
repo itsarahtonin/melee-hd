@@ -166,7 +166,7 @@ fn rotation_boundaries_match() {
         });
     }
     for mode in leaf_check::MODES {
-        gekko_fp::set_fp_mode(mode);
+        leaf_check::fp::set_fp_mode(mode);
         for a in &cases {
             put_mtx(ctx, A, a);
             fns::HSD_MtxGetRotation(ctx, m(ctx, A), out_vec(ctx));
@@ -177,7 +177,7 @@ fn rotation_boundaries_match() {
             );
         }
     }
-    gekko_fp::set_fp_mode(gekko_fp::FpMode::Hardware);
+    leaf_check::fp::set_fp_mode(leaf_check::fp::FpMode::Hardware);
 }
 
 #[test]

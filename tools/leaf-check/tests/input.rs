@@ -13,7 +13,7 @@ mod rumble;
 
 use std::cell::RefCell;
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{SCRATCH, handle, reference, sym};
 use melee_data::archive::Archives;
 use melee_sim::input::controller::{self, Controllers, Flush, PadData, PadLib, Status};

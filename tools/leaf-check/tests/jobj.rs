@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use materials::{Ids, View};
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{FILE_MAX, Rand, handle, hsd_reference, load_archive, stage_anim_roots};
 use melee_data::archive::{Archive, ArchiveId, Archives, DataRef};
 use melee_data::disc::Disc;

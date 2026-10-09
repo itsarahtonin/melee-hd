@@ -9,7 +9,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{Rand, arg, handle, hsd_reference, sym};
 use melee_data::archive::{Archive, ArchiveId, Archives, DataRef};
 use melee_data::disc::Disc;
@@ -97,7 +97,7 @@ fn native_delete(ctx: &Ctx) {
 fn native_set_ud(ctx: &Ctx) {
     let p = ctx.regs.r(3);
     let idx = ctx.regs.r(4) & 0xFF;
-    let v = gekko_fp::stfs(ctx.regs.f(1));
+    let v = leaf_check::fp::stfs(ctx.regs.f(1));
     log(format!("setud {} {idx} {v:#x}", ctx.read_u16(p + 0x1E)));
     ctx.write_u32(USERDATA + 4 * idx, v);
     ctx.regs.set_r(3, 0);
@@ -1304,7 +1304,12 @@ fn random_op(s: &mut Sides, rand: &mut Rand, what: &str) -> Option<&'static str>
                 }
                 _ => both(
                     &what,
-                    || rt = i64::from(gekko_fp::stfs(fns::hsd_8039DAD4(ctx, handle(ctx, gt)))),
+                    || {
+                        rt = i64::from(leaf_check::fp::stfs(fns::hsd_8039DAD4(
+                            ctx,
+                            handle(ctx, gt),
+                        )))
+                    },
                     || ro = i64::from(generator::emit(objs, data, hooks, go).to_bits()),
                 ),
             }

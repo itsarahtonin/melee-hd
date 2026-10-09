@@ -27,7 +27,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::PathBuf;
 use std::sync::{Condvar, Mutex, OnceLock};
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{MODES, Rand, hsd_reference};
 use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps, sym};
@@ -1792,11 +1792,11 @@ fn player_nametag_height() {
         },
         |r, a| {
             let h = r.player_nametag_height(a.i(3));
-            vec![Out::R3(gekko_fp::stfs(h))]
+            vec![Out::R3(leaf_check::fp::stfs(h))]
         },
         |ctx, call| {
             let h = fns::Player_800360D8(ctx, call.regs.gpr[3] as i32);
-            (gekko_fp::stfs(h), 0)
+            (leaf_check::fp::stfs(h), 0)
         },
     );
 }

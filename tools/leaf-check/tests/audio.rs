@@ -616,7 +616,7 @@ fn random_ops() {
     ];
     let mut steps = 0;
     for mode in leaf_check::MODES {
-        gekko_fp::set_fp_mode(mode);
+        leaf_check::fp::set_fp_mode(mode);
         for (n, path) in paths.iter().enumerate().step_by(3) {
             let cap = Capture::read(path);
             cap.call.load(&ctx);
@@ -810,7 +810,7 @@ fn random_ops() {
             }
         }
     }
-    gekko_fp::set_fp_mode(gekko_fp::FpMode::Hardware);
+    leaf_check::fp::set_fp_mode(leaf_check::fp::FpMode::Hardware);
     eprintln!("audio random operations: {steps} steps compared clean");
 }
 
@@ -933,7 +933,7 @@ fn check_audio_only_with(
         return;
     }
     for mode in leaf_check::MODES {
-        gekko_fp::set_fp_mode(mode);
+        leaf_check::fp::set_fp_mode(mode);
         for path in &paths {
             let mut cap = Capture::read(path);
             prepare(&mut cap.call);

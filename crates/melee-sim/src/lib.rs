@@ -5,6 +5,10 @@
 //! where the original fused, estimated or used paired singles. State is plain data, so a
 //! snapshot for rollback is a clone.
 
+/// The float crate the simulation computes with, melee-hd's copy of ssbm-rs's `gekko-fp`: set
+/// its mode (`gekko_fp::set_fp_mode`) to run the simulation in the console's or Slippi's.
+pub use gekko_fp;
+
 pub mod audio;
 mod fpu;
 pub mod game;

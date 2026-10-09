@@ -7,7 +7,7 @@
 #[path = "support/display.rs"]
 mod display;
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{Floats, MODES, Rand, handle, hsd_reference, reference, write_f32s};
 use melee_sim::hsd::mobj::{self, MObjs};
 use melee_sim::hsd::tobj::{self, TObjId, TObjs};

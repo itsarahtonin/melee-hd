@@ -6,7 +6,24 @@
 
 pub mod calls;
 
-use gekko_fp::{FpMode, set_fp_mode};
+/// The float crate the checks use: ssbm-rs's `gekko-fp`, which the reference computes with,
+/// unchanged. melee-sim computes with melee-hd's faster copy (`melee_sim::gekko_fp`), so the
+/// checks compare the copy against the original; setting the mode here sets both.
+pub mod fp {
+    pub use gekko_fp::*;
+
+    /// Sets the floating-point mode for the current thread, in ssbm-rs's crate (the
+    /// reference's) and in melee-sim's copy alike.
+    pub fn set_fp_mode(mode: FpMode) {
+        gekko_fp::set_fp_mode(mode);
+        melee_sim::gekko_fp::set_fp_mode(match mode {
+            FpMode::Hardware => melee_sim::gekko_fp::FpMode::Hardware,
+            FpMode::Slippi => melee_sim::gekko_fp::FpMode::Slippi,
+        });
+    }
+}
+
+use fp::{FpMode, set_fp_mode};
 use melee_sim::mtx::Mtx34;
 use melee_sim::quat::Quat;
 use melee_sim::vec::Vec3;

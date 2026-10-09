@@ -206,7 +206,7 @@ fn half_turns_match() {
         [row(-1.0, 0.0, 0.0), row(0.0, -1.0, 0.0), row(0.0, 0.0, 1.0)],
     ];
     for mode in leaf_check::MODES {
-        gekko_fp::set_fp_mode(mode);
+        leaf_check::fp::set_fp_mode(mode);
         for m3 in cases {
             let a = Mtx34 { m: m3 };
             put_mtx(ctx, A, &a);
@@ -218,5 +218,5 @@ fn half_turns_match() {
             );
         }
     }
-    gekko_fp::set_fp_mode(gekko_fp::FpMode::Hardware);
+    leaf_check::fp::set_fp_mode(leaf_check::fp::FpMode::Hardware);
 }

@@ -9,7 +9,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{arg, handle, inputs, logged, reference, same_updates, stage_anim_roots, sym};
 use melee_data::archive::{Archive, ArchiveId, Archives, DataRef};
 use melee_data::disc::Disc;

@@ -26,7 +26,7 @@
 use std::path::PathBuf;
 use std::sync::{Condvar, Mutex, OnceLock};
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{MODES, reference};
 use melee_capture::compare::Comparer;
 use melee_capture::corpus::Corpus;
@@ -199,7 +199,7 @@ impl Args<'_> {
 
     /// The `i`th float argument (f1 on), as the original passes a single.
     fn float(&self, i: usize) -> f32 {
-        f32::from_bits(gekko_fp::stfs(self.cap.call.regs.fpr[1 + i].ps0))
+        f32::from_bits(leaf_check::fp::stfs(self.cap.call.regs.fpr[1 + i].ps0))
     }
 
     /// The GObj in the `i`th argument.
@@ -1111,7 +1111,7 @@ fn clear_hit_ids2() {
 #[test]
 fn scale_hitbox() {
     check("it_80275594", &|r, a| {
-        let mult = gekko_fp::lfs(a.float(0).to_bits());
+        let mult = leaf_check::fp::lfs(a.float(0).to_bits());
         hitbox::scale_hitbox(r.game, a.gobj(0), a.int(1) as usize, mult);
         Ret::None
     });

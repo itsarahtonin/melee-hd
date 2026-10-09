@@ -1,7 +1,7 @@
 //! melee-sim's math and random numbers against ssbm-rs's ports, bit for bit, in both float
 //! modes.
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{arg, bits, inputs, reference, sym};
 use melee_sim::{math, rng::Rng};
 use ssbm_types::fns;

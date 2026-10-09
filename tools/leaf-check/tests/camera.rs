@@ -25,7 +25,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::PathBuf;
 use std::sync::{Condvar, Mutex, OnceLock};
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{MODES, Rand, handle, hsd_reference};
 use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps, box_index, sym};

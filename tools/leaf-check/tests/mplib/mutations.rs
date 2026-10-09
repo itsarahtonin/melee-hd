@@ -374,7 +374,7 @@ fn mutate(s: &mut Stage) -> &'static str {
                     .map(|(cb, user, joint)| {
                         assert_eq!(cb, JOINT_CALLBACK);
                         // The original passes `x50`, a float, converted to an integer.
-                        let x50 = gekko_fp::fctiwz(arg(f32::from_bits(x50))) as u32;
+                        let x50 = leaf_check::fp::fctiwz(arg(f32::from_bits(x50))) as u32;
                         [user.unwrap_or(0), joint as u32, COLL, x50, 3, 0]
                     })
                     .into_iter()

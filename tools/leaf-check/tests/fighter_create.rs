@@ -32,7 +32,7 @@ use std::collections::HashSet;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::PathBuf;
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{MODES, disc_index, hsd_reference, sym};
 use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps};

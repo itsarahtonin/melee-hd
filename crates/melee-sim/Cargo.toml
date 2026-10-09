@@ -8,7 +8,9 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
-gekko-fp.workspace = true
+# melee-hd's faster copy of ssbm-rs's gekko-fp (docs/performance.md); ssbm-rs's crates, the
+# leaf-checks' reference among them, keep the upstream crate.
+gekko-fp = { package = "melee-gekko-fp", path = "../gekko-fp" }
 melee-data.workspace = true
 melee-derive = { path = "../melee-derive" }
 

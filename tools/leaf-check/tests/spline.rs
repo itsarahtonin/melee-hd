@@ -6,7 +6,7 @@
 //! B-spline and cardinal curves, no Bézier. Built splines cover Bézier curves and degenerate
 //! data: coincident control points, zero-length segments, zero tension and total length.
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{Rand, dat, handle, load_archive, read_f32s, reference, write_f32s};
 use melee_data::archive::{Archive, Archives, DataRef};
 use melee_data::disc::Disc;

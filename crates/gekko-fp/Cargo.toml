@@ -1,11 +1,14 @@
 [package]
-name = "gekko-fp"
+name = "melee-gekko-fp"
 description = "Bit-exact floating-point operations of the GameCube's Gekko CPU (melee-hd's copy of ssbm-rs's, at melee-hd-base, made faster: a hardware fused multiply-add and out-of-line NaN paths)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+
+[lib]
+name = "gekko_fp"
 
 [dev-dependencies]
 num-bigint = "0.4"

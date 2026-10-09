@@ -2,7 +2,7 @@
 //! for bit, in both float modes: return values and everything written through pointers,
 //! including what a rejected test leaves unwritten.
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{SCRATCH, arg, bits, handle, inputs, read_f32s, reference, write_f32s};
 use melee_sim::lb::collision::{
     self, HitShape, SweptCircle, closest_on_segment, closest_on_segment_xy, hit_hurt,

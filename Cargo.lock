@@ -257,9 +257,7 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 [[package]]
 name = "gekko-fp"
 version = "0.1.0"
-dependencies = [
- "num-bigint",
-]
+source = "git+https://github.com/itsarahtonin/ssbm-rs?tag=melee-hd-base#a8c43c0317f7c92405186c3976c3c98545e1e9b1"
 
 [[package]]
 name = "generic-array"
@@ -436,7 +434,6 @@ dependencies = [
 name = "melee-bench"
 version = "0.1.0"
 dependencies = [
- "gekko-fp",
  "melee-capture",
  "melee-data",
  "melee-replay",
@@ -474,10 +471,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-gekko-fp"
+version = "0.1.0"
+dependencies = [
+ "num-bigint",
+]
+
+[[package]]
 name = "melee-oracle"
 version = "0.1.0"
 dependencies = [
- "gekko-fp",
  "melee-capture",
  "melee-data",
  "melee-replay",
@@ -500,9 +503,9 @@ dependencies = [
 name = "melee-sim"
 version = "0.1.0"
 dependencies = [
- "gekko-fp",
  "melee-data",
  "melee-derive",
+ "melee-gekko-fp",
 ]
 
 [[package]]

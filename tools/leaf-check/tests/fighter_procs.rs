@@ -28,8 +28,8 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use gekko_fp::set_fp_mode;
 use leaf_check::calls::{peek_u32, poke_bit, poke_f32, poke_u32, saved_calls};
+use leaf_check::fp::set_fp_mode;
 use leaf_check::{MODES, disc_index, hsd_reference, run_capture, sym};
 use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps};

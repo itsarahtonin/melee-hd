@@ -53,12 +53,12 @@ fn stubs() -> Vec<Stub> {
 
 /// A float argument as the caller's register holds it.
 fn float_arg(call: &mut Call, n: usize, v: f32) {
-    let r = gekko_fp::lfs(v.to_bits());
-    call.regs.fpr[n] = gekko_fp::Ps::new(r, r);
+    let r = leaf_check::fp::lfs(v.to_bits());
+    call.regs.fpr[n] = leaf_check::fp::Ps::new(r, r);
 }
 
 fn f1(call: &Call, n: usize) -> f32 {
-    f32::from_bits(gekko_fp::stfs(call.regs.fpr[n].ps0))
+    f32::from_bits(leaf_check::fp::stfs(call.regs.fpr[n].ps0))
 }
 
 /// Changes every other call's input: stick and C-stick (flicked from the center), buttons,
@@ -928,9 +928,9 @@ fn air() {
             },
             |_, _, _, call| {
                 Ret::Float(melee_sim::game::ft::coll::scaled_by_height(
-                    gekko_fp::lfs(f1(call, 1).to_bits()),
-                    gekko_fp::lfs(f1(call, 2).to_bits()),
-                    gekko_fp::lfs(f1(call, 3).to_bits()),
+                    leaf_check::fp::lfs(f1(call, 1).to_bits()),
+                    leaf_check::fp::lfs(f1(call, 2).to_bits()),
+                    leaf_check::fp::lfs(f1(call, 3).to_bits()),
                 ))
             },
         ),
@@ -1125,7 +1125,7 @@ fn with_cb(name: &'static str, run: impl Fn(&mut Running, GObjId) + Sync + 'stat
 fn down() {
     run(vec![
         fighter("ftCommon_SetGroundedKnockbackIfLanded", MAP, |g, o| {
-            let max = gekko_fp::lfs(g.common().f32(0x164).to_bits());
+            let max = leaf_check::fp::lfs(g.common().f32(0x164).to_bits());
             let f = g.game.fighter_id(o);
             Running::grounded_knockback_if_landed(&mut g.game.fighters[f.0], max);
             Ret::Nothing
@@ -1233,7 +1233,7 @@ fn down() {
             },
         ),
         gobj("ftAnim_8006F484", ANIM, |g, o| {
-            Ret::Float(gekko_fp::lfs(g.anim_end_frame(o).to_bits()))
+            Ret::Float(leaf_check::fp::lfs(g.anim_end_frame(o).to_bits()))
         }),
         case(
             "lbGetJObjEndFrame",
@@ -1245,7 +1245,7 @@ fn down() {
             |g, o, _, _| {
                 let root = g.root_jobj(o);
                 let e = melee_sim::lb::anim::end_frame(&g.game.objs, Some(root));
-                Ret::Float(gekko_fp::lfs(e.to_bits()))
+                Ret::Float(leaf_check::fp::lfs(e.to_bits()))
             },
         ),
     ]);

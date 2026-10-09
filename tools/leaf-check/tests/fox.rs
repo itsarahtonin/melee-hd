@@ -182,7 +182,7 @@ fn run_fox(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             g.game.fighters[f.0].x6C0 = v;
             Ret::Nothing
         }
-        "ftFx_SpecialS_ReturnFloatVarIndexed" => Ret::Float(gekko_fp::lfs(
+        "ftFx_SpecialS_ReturnFloatVarIndexed" => Ret::Float(leaf_check::fp::lfs(
             g.fox_special_s_blend_frame(gobj_arg(maps, call), r(1) as i32)
                 .to_bits(),
         )),

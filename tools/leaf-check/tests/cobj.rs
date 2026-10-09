@@ -10,8 +10,8 @@
 #[path = "support/hsd.rs"]
 mod hsd;
 
-use gekko_fp::{FpMode, set_fp_mode};
 use hsd::{Data, Hsd, Identity, words};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{Floats, MODES, Rand, SCRATCH, arg, dat, handle, hsd_reference, put_vec};
 use melee_data::archive::Archive;
 use melee_data::disc::Disc;

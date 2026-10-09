@@ -18,7 +18,7 @@ use std::collections::{HashMap, HashSet};
 
 use materials::{Ids, K_MOBJ, K_TOBJ, View};
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{MODES, Rand, SCRATCH, arg, handle, hsd_reference, inputs, load_archive};
 use melee_data::archive::{Archive, ArchiveId, Archives, DataRef};
 use melee_data::disc::Disc;

@@ -24,7 +24,7 @@
 //! unset (HSD's objects' and mpcoll's counts, a new item's variables it hadn't written,
 //! `it::Var`) is reported at the end with what was read.
 
-use gekko_fp::{FpMode, set_fp_mode};
+use melee_sim::gekko_fp::{FpMode, set_fp_mode};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::process::ExitCode;
 

@@ -6,7 +6,7 @@
 //! runs programs built from the opcode table instead: random stack-safe sequences over
 //! every instruction, with random immediates, arguments and seeds.
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{Rand, dat, handle, load_archive, reference, sym, write_f32s};
 use melee_data::archive::{Archive, Archives, DataRef};
 use melee_data::disc::Disc;

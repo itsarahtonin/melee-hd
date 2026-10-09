@@ -296,8 +296,8 @@ fn anim_held_callbacks() {
 
 /// A float argument as the caller's register holds it (single precision, both lanes).
 fn float_arg(call: &mut ssbm_rt::capture::Call, n: usize, v: f32) {
-    let r = gekko_fp::lfs(v.to_bits());
-    call.regs.fpr[n] = gekko_fp::Ps::new(r, r);
+    let r = leaf_check::fp::lfs(v.to_bits());
+    call.regs.fpr[n] = leaf_check::fp::Ps::new(r, r);
 }
 
 /// Physics helpers that take a fighter and a float, run directly from procUpdate's states
@@ -386,7 +386,7 @@ fn phys_helpers() {
         },
         &|g, maps, call| {
             let f = fighter_arg(maps, call);
-            let v = f32::from_bits(gekko_fp::stfs(call.regs.fpr[1].ps0));
+            let v = f32::from_bits(leaf_check::fp::stfs(call.regs.fpr[1].ps0));
             g.game.part_set_rot_x(f, call.regs.gpr[4] as i32, v);
             Ret::Nothing
         },
@@ -554,7 +554,7 @@ fn change_motion_state() {
         },
         &|g, maps, call| {
             let gobj = gobj_arg(maps, call);
-            let f = |n: usize| f32::from_bits(gekko_fp::stfs(call.regs.fpr[n].ps0));
+            let f = |n: usize| f32::from_bits(leaf_check::fp::stfs(call.regs.fpr[n].ps0));
             g.change_motion_state(
                 gobj,
                 call.regs.gpr[4] as i32,
@@ -622,7 +622,7 @@ fn change_motion_state_resets() {
         },
         &|g, maps, call| {
             let gobj = gobj_arg(maps, call);
-            let f = |n: usize| f32::from_bits(gekko_fp::stfs(call.regs.fpr[n].ps0));
+            let f = |n: usize| f32::from_bits(leaf_check::fp::stfs(call.regs.fpr[n].ps0));
             g.change_motion_state(
                 gobj,
                 call.regs.gpr[4] as i32,
@@ -769,7 +769,7 @@ fn state_entries() {
                 Some(3) => g.enter_down_spot(gobj),
                 Some(4) => g.play_anim(gobj, call.regs.gpr[4] as i32),
                 _ => {
-                    let rate = f32::from_bits(gekko_fp::stfs(call.regs.fpr[1].ps0));
+                    let rate = f32::from_bits(leaf_check::fp::stfs(call.regs.fpr[1].ps0));
                     g.set_anim_rate(gobj, rate);
                 }
             }
@@ -1139,7 +1139,7 @@ fn dynamics_library() {
             },
             &|g, maps, call| {
                 let r = &call.regs.gpr;
-                let f = |n: usize| f32::from_bits(gekko_fp::stfs(call.regs.fpr[n].ps0));
+                let f = |n: usize| f32::from_bits(leaf_check::fp::stfs(call.regs.fpr[n].ps0));
                 let v = |a: u32| {
                     let w = |a: u32| f32::from_bits(peek_u32(call, a));
                     melee_sim::vec::Vec3::new(w(a), w(a + 4), w(a + 8))

@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use gekko_fp::FpMode;
+use leaf_check::fp::FpMode;
 use leaf_check::{handle, sym};
 use melee_data::archive::Archive;
 use melee_sim::mp::{Geometry, Kinds};

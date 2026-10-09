@@ -241,10 +241,10 @@ fn run_sheik(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             g.seak_special_s_update_hitbox(gobj_in(maps, call, 3), pos, r(2) as i32);
             Ret::Nothing
         }
-        "ftSk_SpecialS_80110F58" => Ret::Float(gekko_fp::lfs(
+        "ftSk_SpecialS_80110F58" => Ret::Float(leaf_check::fp::lfs(
             g.seak_stick_x(gobj_arg(maps, call)).to_bits(),
         )),
-        "ftSk_SpecialS_80110F64" => Ret::Float(gekko_fp::lfs(
+        "ftSk_SpecialS_80110F64" => Ret::Float(leaf_check::fp::lfs(
             g.seak_stick_y(gobj_arg(maps, call)).to_bits(),
         )),
         "ftSk_SpecialS_80111F70" => b(g.seak_lets_go(gobj_in(maps, call, 3))),

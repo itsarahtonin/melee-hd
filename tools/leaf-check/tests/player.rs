@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{MODES, Rand, arg, handle, hsd_reference};
 use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps, sym};

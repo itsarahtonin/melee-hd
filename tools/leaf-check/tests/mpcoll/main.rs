@@ -28,7 +28,7 @@ mod place;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{SCRATCH, bits, hsd_reference, sym};
 use melee_data::archive::{Archive, ArchiveId, Archives, DataRef};
 use melee_data::disc::Disc;

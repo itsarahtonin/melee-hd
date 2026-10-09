@@ -4,7 +4,7 @@
 
 use std::cell::RefCell;
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{
     arg, bits, handle, inputs, logged, reference, same_updates, stage_anim_roots, sym,
 };

@@ -18,7 +18,7 @@
 
 use std::path::PathBuf;
 
-use gekko_fp::{FpMode, set_fp_mode};
+use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{MODES, reference, run_capture};
 use melee_capture::compare::Comparer;
 use melee_capture::import::Importer;
