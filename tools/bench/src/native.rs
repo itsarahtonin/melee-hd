@@ -274,7 +274,13 @@ fn on_sim_thread<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T
 /// What this build is: the commit of the melee-hd checkout it was built from.
 fn version() -> String {
     let rev = std::process::Command::new("git")
-        .args(["-C", env!("CARGO_MANIFEST_DIR"), "rev-parse", "--short", "HEAD"])
+        .args([
+            "-C",
+            env!("CARGO_MANIFEST_DIR"),
+            "rev-parse",
+            "--short",
+            "HEAD",
+        ])
         .output()
         .ok()
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())

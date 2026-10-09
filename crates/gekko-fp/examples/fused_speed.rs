@@ -1,7 +1,7 @@
 //! How long the fused single ops take on each fused multiply-add path, against a bare
 //! `mul_add` and rounding (`cargo run --release --example fused_speed`).
 
-use gekko_fp::{fmadds, fnmsubs, set_portable_fma};
+use gekko_fp::{Ps, fmadds, fnmsubs, ps_madd, ps_madds0, set_portable_fma};
 use std::hint::black_box;
 use std::time::Instant;
 
@@ -31,12 +31,28 @@ fn floor() {
     println!("bare mul_add + frsp: {ns:.2} ns per op ({x})");
 }
 
+/// Chained paired ops: each lane's result feeds the next op's frC.
+fn paired(label: &str) {
+    let n = 20_000_000u32;
+    let mut x = Ps::new(1.0, 2.0);
+    let t = Instant::now();
+    for i in 0..n {
+        let a = black_box(Ps::splat(0.5 + f64::from(i & 7) / 64.0));
+        x = ps_madd(a, x, black_box(Ps::new(0.25, 0.5)));
+        x = ps_madds0(black_box(Ps::new(0.5, 0.25)), x, a);
+    }
+    let ns = t.elapsed().as_secs_f64() * 1e9 / f64::from(2 * n);
+    println!("{label} paired: {ns:.2} ns per op ({x:?})");
+}
+
 fn main() {
     floor();
     for _ in 0..2 {
         set_portable_fma(false);
         run("hardware");
+        paired("hardware");
         set_portable_fma(true);
         run("portable");
+        paired("portable");
     }
 }
