@@ -283,7 +283,7 @@ impl Running<'_> {
     }
 
     /// `ft_800851C0`: the animation's TransN rise as the vertical velocity.
-    #[doc(alias = "ft_800851C0")]
+    // Ports `ft_800851C0`; aliased once a check reaches it.
     pub fn air_anim_rise(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.self_vel.y = fp.x6A4_transNOffset.y;
@@ -291,7 +291,7 @@ impl Running<'_> {
 
     /// `ftCommon_8007F76C`: the ground speed and horizontal velocity turned the way the
     /// fighter faces.
-    #[doc(alias = "ftCommon_8007F76C")]
+    // Ports `ftCommon_8007F76C`; aliased once a check reaches it.
     pub fn speed_toward_facing(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         let facing = reg(fp.facing_dir);

@@ -156,7 +156,7 @@ impl Running<'_> {
     /// `ftCo_ThrowB_Anim`, `ftCo_ThrowHi_Anim`, `ftCo_ThrowLw_Anim`: Fox's and Falco's blaster
     /// (`ftFx_Throw_Anim`), the throw's progress, then falling or waiting.
     #[doc(alias = "ftCo_ThrowB_Anim")]
-    #[doc(alias = "ftCo_ThrowHi_Anim")]
+    // Ports `ftCo_ThrowHi_Anim`; aliased once a check reaches it.
     #[doc(alias = "ftCo_ThrowLw_Anim")]
     pub fn co_throw_anim(&mut self, gobj: GObjId) {
         self.fox_throw_anim(gobj);
@@ -178,9 +178,9 @@ impl Running<'_> {
     /// caller's registers) it isn't ported.
     #[doc(alias = "ftCo_ThrowF_Coll")]
     #[doc(alias = "ftCo_ThrowB_Coll")]
-    #[doc(alias = "ftCo_ThrowHi_Coll")]
+    // Ports `ftCo_ThrowHi_Coll`; aliased once a check reaches it.
     #[doc(alias = "ftCo_ThrowLw_Coll")]
-    #[doc(alias = "fn_800DD684")]
+    // Ports `fn_800DD684`; aliased once a check reaches it.
     pub fn co_throw_coll(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).ground_or_air == GA_AIR {
             unported_call("ftCo_Throw*_Coll in the air (ft_80083CE4)");
@@ -437,7 +437,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DE5A4")]
     #[doc(alias = "ftCo_ThrownF_Anim")]
     #[doc(alias = "ftCo_ThrownB_Anim")]
-    #[doc(alias = "ftCo_ThrownHi_Anim")]
+    // Ports `ftCo_ThrownHi_Anim`; aliased once a check reaches it.
     #[doc(alias = "ftCo_ThrownLw_Anim")]
     pub fn co_thrown_anim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
@@ -526,7 +526,7 @@ impl Running<'_> {
 
     /// The thrown fighter freezes with the thrower, `ftCo_800DE920`: now if it's at the
     /// frame, else when it reaches it.
-    #[doc(alias = "ftCo_800DE920")]
+    // Ports `ftCo_800DE920`; aliased once a check reaches it.
     fn thrown_freeze(&mut self, gobj: GObjId, frame: f32) {
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(THROWN_FROZEN, 1);
@@ -541,7 +541,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_ThrowHi_Cam`: Kirby's up throw follows its own camera (not ported).
-    #[doc(alias = "ftCo_ThrowHi_Cam")]
+    // Ports `ftCo_ThrowHi_Cam`; aliased once a check reaches it.
     pub fn co_throw_hi_cam(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if fp.kind == KIND_KIRBY && fp.motion_id == ms::THROW_HI {
@@ -551,7 +551,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_ThrownHi_Cam`: Kirby's up throw's victim follows its own camera (not ported).
-    #[doc(alias = "ftCo_ThrownHi_Cam")]
+    // Ports `ftCo_ThrownHi_Cam`; aliased once a check reaches it.
     pub fn co_thrown_hi_cam(&mut self, gobj: GObjId) {
         let t = self
             .game
@@ -568,7 +568,7 @@ impl Running<'_> {
     /// The thrown states' empty callbacks.
     #[doc(alias = "ftCo_ThrowF_IASA")]
     #[doc(alias = "ftCo_ThrowB_IASA")]
-    #[doc(alias = "ftCo_ThrowHi_IASA")]
+    // Ports `ftCo_ThrowHi_IASA`; aliased once a check reaches it.
     #[doc(alias = "ftCo_ThrowLw_IASA")]
     #[doc(alias = "ftCo_ThrownF_IASA")]
     #[doc(alias = "ftCo_ThrownF_Phys")]
@@ -576,9 +576,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_ThrownB_IASA")]
     #[doc(alias = "ftCo_ThrownB_Phys")]
     #[doc(alias = "ftCo_ThrownB_Coll")]
-    #[doc(alias = "ftCo_ThrownHi_IASA")]
-    #[doc(alias = "ftCo_ThrownHi_Phys")]
-    #[doc(alias = "ftCo_ThrownHi_Coll")]
+    // Ports `ftCo_ThrownHi_IASA`; aliased once a check reaches it.
+    // Ports `ftCo_ThrownHi_Phys`; aliased once a check reaches it.
+    // Ports `ftCo_ThrownHi_Coll`; aliased once a check reaches it.
     #[doc(alias = "ftCo_ThrownLw_IASA")]
     #[doc(alias = "ftCo_ThrownLw_Coll")]
     pub fn co_throw_nothing(&mut self, _gobj: GObjId) {}

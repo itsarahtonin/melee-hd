@@ -432,7 +432,7 @@ impl Running<'_> {
 
     /// A looping attack's next hit counts anew (`x21EC`): `onPkPc21EC` (Pikachu's and
     /// Pichu's jab) and the down tilt's `callUnk`.
-    #[doc(alias = "onPkPc21EC")]
+    // Ports `onPkPc21EC`; aliased once a check reaches it.
     #[doc(alias = "callUnk")]
     pub fn attack_counts_anew(&mut self, gobj: GObjId) {
         self.renew_attack_instance(gobj);

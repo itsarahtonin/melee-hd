@@ -163,7 +163,7 @@ fn make_ghost(r: &mut Running, gobj: GObjId) -> Option<JObjId> {
 /// the dash's script says (`cmd_vars[2]` 2); gone when the dash is over; fading when its
 /// lifetime runs out.
 #[doc(alias = "itFoxillusion_UnkMotion0_Anim")]
-#[doc(alias = "itFoxillusion_UnkMotion1_Anim")]
+// Ports `itFoxillusion_UnkMotion1_Anim`; aliased once a check reaches it.
 fn follow(r: &mut Running, gobj: GObjId) -> bool {
     let owner = item(r.game, gobj).owner;
     if let Some(o) = owner
@@ -188,7 +188,7 @@ fn follow(r: &mut Running, gobj: GObjId) -> bool {
 /// The afterimage and its ghost along the dash's trail, `itFoxillusion_UnkMotion0_Phys` (and
 /// `UnkMotion1`): the trail's second and fourth points and turns.
 #[doc(alias = "itFoxillusion_UnkMotion0_Phys")]
-#[doc(alias = "itFoxillusion_UnkMotion1_Phys")]
+// Ports `itFoxillusion_UnkMotion1_Phys`; aliased once a check reaches it.
 fn follow_trail(r: &mut Running, gobj: GObjId) {
     let Some(owner) = item(r.game, gobj).owner else {
         return;
@@ -262,7 +262,7 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
 }
 
 /// Forgets a GObj the afterimage points to, `it_8029D948` (`it_8026B894`).
-#[doc(alias = "it_8029D948")]
+// Ports `it_8029D948`; aliased once a check reaches it.
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

@@ -218,7 +218,7 @@ fn boxes_touch(game: &mut Game, a: GObjId, i: usize, b: GObjId, j: usize) -> boo
 /// Two items' boxes clank, `it_8026FE68`: each one whose damage the other's outweighs (by
 /// more than `ItemCommonData` xB4 less) remembers the other, keeps the damage, the other's
 /// kind and position and which way it was pushed, with the clank's effect between them.
-#[doc(alias = "it_8026FE68")]
+// Ports `it_8026FE68`; aliased once a check reaches it.
 fn clank(r: &mut Running, a: GObjId, i: usize, b: GObjId, j: usize) {
     use hitcapsule::Victim;
     let mid = {

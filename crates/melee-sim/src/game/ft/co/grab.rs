@@ -106,7 +106,7 @@ impl Running<'_> {
     /// The grab's states' friction (`ftCommonData` x64 of the ground's): `ftCo_CatchPull_Phys`,
     /// `ftCo_CatchAttack_Phys` (and `ftCo_CatchWait_Phys`'s).
     #[doc(alias = "ftCo_CatchPull_Phys")]
-    #[doc(alias = "ftCo_CatchAttack_Phys")]
+    // Ports `ftCo_CatchAttack_Phys`; aliased once a check reaches it.
     pub fn co_catch_hold_phys(&mut self, gobj: GObjId) {
         let mul = reg(self.common().f32(0x64));
         let fp = self.game.fighter_mut(gobj);
@@ -120,16 +120,16 @@ impl Running<'_> {
     /// `ftCo_CatchAttack_Coll`.
     #[doc(alias = "ftCo_CatchPull_Coll")]
     #[doc(alias = "ftCo_CatchWait_Coll")]
-    #[doc(alias = "ftCo_CatchAttack_Coll")]
+    // Ports `ftCo_CatchAttack_Coll`; aliased once a check reaches it.
     pub fn co_catch_hold_coll(&mut self, gobj: GObjId) {
         self.ground_coll_then(gobj, |g, gobj| g.catch_fall_apart(gobj));
     }
 
     /// Off the ground while holding, `fn_800DA004` (`fn_800DA440`, `fn_800DA618`): both let
     /// go and fall.
-    #[doc(alias = "fn_800DA004")]
-    #[doc(alias = "fn_800DA440")]
-    #[doc(alias = "fn_800DA618")]
+    // Ports `fn_800DA004`; aliased once a check reaches it.
+    // Ports `fn_800DA440`; aliased once a check reaches it.
+    // Ports `fn_800DA618`; aliased once a check reaches it.
     fn catch_fall_apart(&mut self, gobj: GObjId) {
         let victim = self.game.fighter(gobj).victim_gobj.expect("holding no one");
         self.grab_release(gobj, victim);
@@ -143,7 +143,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800DA054")]
     #[doc(alias = "fn_800DA190")]
     #[doc(alias = "fn_800DA4A0")]
-    #[doc(alias = "fn_800DA678")]
+    // Ports `fn_800DA678`; aliased once a check reaches it.
     pub fn catch_follow(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
         if self.game.fighter(gobj).accessory1_cb == Some(CodeRef(PULL_FOLLOW))
@@ -206,7 +206,7 @@ impl Running<'_> {
     }
 
     /// Back to holding after a pummel, `fn_800DA2B0`.
-    #[doc(alias = "fn_800DA2B0")]
+    // Ports `fn_800DA2B0`; aliased once a check reaches it.
     fn reenter_catch_wait(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, ms::CATCH_WAIT, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
@@ -232,14 +232,14 @@ impl Running<'_> {
     }
 
     /// The hold's damage hooks clear themselves, `fn_800DA490` (`fn_800DA668`).
-    #[doc(alias = "fn_800DA490")]
-    #[doc(alias = "fn_800DA668")]
+    // Ports `fn_800DA490`; aliased once a check reaches it.
+    // Ports `fn_800DA668`; aliased once a check reaches it.
     pub fn catch_on_damage(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).take_dmg_cb = None;
     }
 
     /// A pummel, `fn_800DA4FC`.
-    #[doc(alias = "fn_800DA4FC")]
+    // Ports `fn_800DA4FC`; aliased once a check reaches it.
     fn enter_catch_attack(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).gr_vel = 0.0;
         self.change_motion_state(gobj, ms::CATCH_ATTACK, 0, 0.0, 1.0, 0.0, None);
@@ -250,7 +250,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_CatchAttack_Anim`: holding again once the pummel's frames run out.
-    #[doc(alias = "ftCo_CatchAttack_Anim")]
+    // Ports `ftCo_CatchAttack_Anim`; aliased once a check reaches it.
     pub fn co_catch_attack_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.reenter_catch_wait(gobj);
@@ -303,7 +303,7 @@ impl Running<'_> {
 
     /// Letting go, `ftCo_800DA698`: pushed back (in the air, up too), and with `cut` the
     /// victim breaks free.
-    #[doc(alias = "ftCo_800DA698")]
+    // Ports `ftCo_800DA698`; aliased once a check reaches it.
     pub fn enter_catch_cut(&mut self, gobj: GObjId, cut: bool) {
         let c = self.common();
         let (gr, air_x, air_y) = (c.f32(0x370), c.f32(0x374), c.f32(0x378));
@@ -328,8 +328,8 @@ impl Running<'_> {
 
     /// `ftCo_CatchCut_Anim` (`ftCo_CaptureCut_Anim`): falling or waiting once its frames run
     /// out.
-    #[doc(alias = "ftCo_CatchCut_Anim")]
-    #[doc(alias = "ftCo_CaptureCut_Anim")]
+    // Ports `ftCo_CatchCut_Anim`; aliased once a check reaches it.
+    // Ports `ftCo_CaptureCut_Anim`; aliased once a check reaches it.
     pub fn co_catch_cut_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.fall_or_wait(gobj);
@@ -337,7 +337,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_CatchCut_Phys`: the hold's friction on the ground, else falling and drifting.
-    #[doc(alias = "ftCo_CatchCut_Phys")]
+    // Ports `ftCo_CatchCut_Phys`; aliased once a check reaches it.
     pub fn co_catch_cut_phys(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).ground_or_air == GA_GROUND {
             self.co_catch_hold_phys(gobj);
@@ -347,7 +347,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_CatchCut_Coll`: on the ground, standing or falling; in the air, landing.
-    #[doc(alias = "ftCo_CatchCut_Coll")]
+    // Ports `ftCo_CatchCut_Coll`; aliased once a check reaches it.
     pub fn co_catch_cut_coll(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).ground_or_air == GA_GROUND {
             self.ground_coll(gobj);
@@ -359,8 +359,8 @@ impl Running<'_> {
     /// The grab's end for both, `ftCo_800DC920`: each forgets the other (a frozen partner
     /// thaws, `Fighter_UnkSetFlag_8006CFBC`). A victim the grab made part of the grabber's
     /// model (Yoshi's egg, Kirby's swallow) isn't ported.
-    #[doc(alias = "ftCo_800DC920")]
-    #[doc(alias = "Fighter_UnkSetFlag_8006CFBC")]
+    // Ports `ftCo_800DC920`; aliased once a check reaches it.
+    // Ports `Fighter_UnkSetFlag_8006CFBC`; aliased once a check reaches it.
     pub fn grab_release(&mut self, a: GObjId, b: GObjId) {
         for g in [a, b] {
             let fp = self.game.fighter_mut(g);
@@ -425,8 +425,8 @@ impl Running<'_> {
     /// The victim moved to the hold point, `fn_800DAD18`: whether it was pulled up off the
     /// ground (`ftCommonData` x3C4 times its size).
     #[doc(alias = "fn_800DAD18")]
-    #[doc(alias = "ftCo_CapturePulledHi_Phys")]
-    #[doc(alias = "ftCo_CaptureWaitHi_Phys")]
+    // Ports `ftCo_CapturePulledHi_Phys`; aliased once a check reaches it.
+    // Ports `ftCo_CaptureWaitHi_Phys`; aliased once a check reaches it.
     pub fn move_to_hold(&mut self, gobj: GObjId) -> bool {
         let (dx, dy, dz) = self.hold_offset(gobj);
         let lift = reg(self.common().f32(0x3C4));
@@ -519,7 +519,7 @@ impl Running<'_> {
 
     /// `ftCo_CapturePulledHi_Coll` (`ftCo_CaptureWaitHi_Coll`): touching down, the low pull
     /// (`fn_800DAEEC`) or hold (`fn_800DBBF8`).
-    #[doc(alias = "ftCo_CapturePulledHi_Coll")]
+    // Ports `ftCo_CapturePulledHi_Coll`; aliased once a check reaches it.
     pub fn co_capture_pulled_hi_coll(&mut self, gobj: GObjId) {
         if !self.game.fighter(gobj).x2226_b2 {
             self.air_coll_touch_then(gobj, |g, gobj| g.capture_land(gobj, ms::CAPTURE_PULLED_LW));
@@ -527,7 +527,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_CaptureWaitHi_Coll`.
-    #[doc(alias = "ftCo_CaptureWaitHi_Coll")]
+    // Ports `ftCo_CaptureWaitHi_Coll`; aliased once a check reaches it.
     pub fn co_capture_wait_hi_coll(&mut self, gobj: GObjId) {
         if !self.game.fighter(gobj).x2226_b2 {
             self.air_coll_touch_then(gobj, |g, gobj| g.capture_land(gobj, ms::CAPTURE_WAIT_LW));
@@ -536,10 +536,10 @@ impl Running<'_> {
 
     /// A held victim touches down, `fn_800DAEEC` (`fn_800DBBF8`): landed into the low state
     /// from the same frame, and to the hold point.
-    #[doc(alias = "fn_800DAEEC")]
-    #[doc(alias = "fn_800DAECC")]
-    #[doc(alias = "fn_800DBBF8")]
-    #[doc(alias = "fn_800DBAC4")]
+    // Ports `fn_800DAEEC`; aliased once a check reaches it.
+    // Ports `fn_800DAECC`; aliased once a check reaches it.
+    // Ports `fn_800DBBF8`; aliased once a check reaches it.
+    // Ports `fn_800DBAC4`; aliased once a check reaches it.
     fn capture_land(&mut self, gobj: GObjId, msid: i32) {
         self.land(gobj);
         let frame = self.game.fighter(gobj).cur_anim_frame;
@@ -592,8 +592,8 @@ impl Running<'_> {
     /// A held victim leaves the ground, `fn_800DB230` (`fn_800DBED4`): airborne with its
     /// ECB free, the high state from the same frame, to the hold point, its airborne
     /// collision run, and its model moved there.
-    #[doc(alias = "fn_800DB230")]
-    #[doc(alias = "fn_800DBED4")]
+    // Ports `fn_800DB230`; aliased once a check reaches it.
+    // Ports `fn_800DBED4`; aliased once a check reaches it.
     fn capture_lift(&mut self, gobj: GObjId, msid: i32) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);
@@ -618,7 +618,7 @@ impl Running<'_> {
     }
 
     /// The hold's hooks for a victim held anew, `fn_800DB5D8`: not ported.
-    #[doc(alias = "fn_800DB5D8")]
+    // Ports `fn_800DB5D8`; aliased once a check reaches it.
     fn capture_wait_hooks(&mut self, _gobj: GObjId) {
         unported_call("fn_800DB5D8 (a held victim lifted)");
     }
@@ -662,7 +662,7 @@ impl Running<'_> {
     /// `ftCo_CaptureWaitHi_Anim` (`ftCo_CaptureWaitLw_Anim`): the hold counts down, faster
     /// for mashing (`ftCommon_GrabMash`); at 0 the victim breaks free, jumping if it buffered
     /// one or holds up; mashing speeds the struggle's animation for a while.
-    #[doc(alias = "ftCo_CaptureWaitHi_Anim")]
+    // Ports `ftCo_CaptureWaitHi_Anim`; aliased once a check reaches it.
     #[doc(alias = "ftCo_CaptureWaitLw_Anim")]
     pub fn co_capture_wait_anim(&mut self, gobj: GObjId) {
         let c = self.common();
@@ -762,7 +762,7 @@ impl Running<'_> {
     /// The victims' states' interrupt, `fn_800DC014` (`ftCo_CaptureWaitHi_IASA`,
     /// `ftCo_CaptureWaitLw_IASA`): a jump early in the hold is buffered for the escape.
     #[doc(alias = "fn_800DC014")]
-    #[doc(alias = "ftCo_CaptureWaitHi_IASA")]
+    // Ports `ftCo_CaptureWaitHi_IASA`; aliased once a check reaches it.
     #[doc(alias = "ftCo_CaptureWaitLw_IASA")]
     pub fn co_capture_wait_iasa(&mut self, gobj: GObjId) {
         let window = reg(self.common().f32(0x3AC));
@@ -773,14 +773,14 @@ impl Running<'_> {
     }
 
     /// Whether the stick is up for a jump, `fn_800DC044`.
-    #[doc(alias = "fn_800DC044")]
+    // Ports `fn_800DC044`; aliased once a check reaches it.
     fn capture_jump_held(&self, gobj: GObjId) -> bool {
         let t = reg(self.common().f32(0x70));
         reg(self.game.fighter(gobj).input.lstick[0].y) >= t
     }
 
     /// Breaking free on the ground, `ftCo_CaptureCut_Enter`: the grab ends, pushed back.
-    #[doc(alias = "ftCo_CaptureCut_Enter")]
+    // Ports `ftCo_CaptureCut_Enter`; aliased once a check reaches it.
     pub fn enter_capture_cut(&mut self, gobj: GObjId) {
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
         self.grab_release(grabber, gobj);
@@ -797,7 +797,7 @@ impl Running<'_> {
 
     /// `ftCo_CaptureCut_Phys`: its friction (`ftCommonData` x36C of the ground's) on the
     /// ground, else falling and drifting.
-    #[doc(alias = "ftCo_CaptureCut_Phys")]
+    // Ports `ftCo_CaptureCut_Phys`; aliased once a check reaches it.
     pub fn co_capture_cut_phys(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).ground_or_air == GA_GROUND {
             let mul = reg(self.common().f32(0x36C));
@@ -812,9 +812,9 @@ impl Running<'_> {
 
     /// `ftCo_CaptureCut_Coll`: on the ground, airborne off a ledge (`fn_800DC8D8`); in the
     /// air, landing (`fn_800DC8FC`).
-    #[doc(alias = "ftCo_CaptureCut_Coll")]
-    #[doc(alias = "fn_800DC8D8")]
-    #[doc(alias = "fn_800DC8FC")]
+    // Ports `ftCo_CaptureCut_Coll`; aliased once a check reaches it.
+    // Ports `fn_800DC8D8`; aliased once a check reaches it.
+    // Ports `fn_800DC8FC`; aliased once a check reaches it.
     pub fn co_capture_cut_coll(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).ground_or_air == GA_GROUND {
             self.ground_coll_then(gobj, |g, gobj| {
@@ -827,7 +827,7 @@ impl Running<'_> {
     }
 
     /// Jumping free, `fn_800DC070`: airborne, pushed back and up, and the grab ends.
-    #[doc(alias = "fn_800DC070")]
+    // Ports `fn_800DC070`; aliased once a check reaches it.
     pub fn enter_capture_jump(&mut self, gobj: GObjId) {
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
         let f = self.game.fighter_id(gobj);
@@ -843,7 +843,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_CaptureJump_Anim`: its frames counted; falling once they run out.
-    #[doc(alias = "ftCo_CaptureJump_Anim")]
+    // Ports `ftCo_CaptureJump_Anim`; aliased once a check reaches it.
     pub fn co_capture_jump_anim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_f32(JUMP_FRAMES, fp::fadds(reg(fp.mv_f32(JUMP_FRAMES)), 1.0));
@@ -853,7 +853,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_CaptureJump_IASA`: past `ftCommonData` x3B8 frames, the aerial actions.
-    #[doc(alias = "ftCo_CaptureJump_IASA")]
+    // Ports `ftCo_CaptureJump_IASA`; aliased once a check reaches it.
     pub fn co_capture_jump_iasa(&mut self, gobj: GObjId) {
         let after = reg(self.common().f32(0x3B8));
         if reg(self.game.fighter(gobj).mv_f32(JUMP_FRAMES)) >= after {
@@ -869,7 +869,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_CaptureJump_Phys`: gravity and drift.
-    #[doc(alias = "ftCo_CaptureJump_Phys")]
+    // Ports `ftCo_CaptureJump_Phys`; aliased once a check reaches it.
     pub fn co_capture_jump_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         let (g, t) = (reg(fp.co_attrs.gravity), reg(fp.co_attrs.terminal_velocity));
@@ -879,15 +879,15 @@ impl Running<'_> {
 
     /// The pull's victim keeps still where it is held (`ftCo_CapturePulledHi_Phys`): the
     /// hold point, as [`Self::move_to_hold`].
-    #[doc(alias = "ftCo_CapturePulledHi_Anim")]
-    #[doc(alias = "ftCo_CapturePulledHi_IASA")]
+    // Ports `ftCo_CapturePulledHi_Anim`; aliased once a check reaches it.
+    // Ports `ftCo_CapturePulledHi_IASA`; aliased once a check reaches it.
     #[doc(alias = "ftCo_CapturePulledLw_Anim")]
     #[doc(alias = "ftCo_CapturePulledLw_IASA")]
     #[doc(alias = "ftCo_CatchWait_Anim")]
     #[doc(alias = "ftCo_CatchPull_IASA")]
-    #[doc(alias = "ftCo_CatchAttack_IASA")]
-    #[doc(alias = "ftCo_CatchCut_IASA")]
-    #[doc(alias = "ftCo_CaptureCut_IASA")]
+    // Ports `ftCo_CatchAttack_IASA`; aliased once a check reaches it.
+    // Ports `ftCo_CatchCut_IASA`; aliased once a check reaches it.
+    // Ports `ftCo_CaptureCut_IASA`; aliased once a check reaches it.
     pub fn co_grab_nothing(&mut self, _gobj: GObjId) {}
 
     /// `ftCo_CapturePulledHi_Phys` and `ftCo_CaptureWaitHi_Phys`: to the hold point.
@@ -896,7 +896,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_CaptureJump_Coll` (`ftCo_AirCatchHit_Coll`).
-    #[doc(alias = "ftCo_CaptureJump_Coll")]
+    // Ports `ftCo_CaptureJump_Coll`; aliased once a check reaches it.
     pub fn co_capture_jump_coll(&mut self, gobj: GObjId) {
         self.co_air_catch_hit_coll(gobj);
     }

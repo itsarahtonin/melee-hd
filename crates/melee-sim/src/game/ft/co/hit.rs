@@ -675,7 +675,7 @@ impl Running<'_> {
 
     /// The grab broken, `ftCo_800DCE34`: both let go (`ftCo_800DC920`), and `b`'s model
     /// placed where it is (`a`'s instead when `b` was held, which letting go has cleared).
-    #[doc(alias = "ftCo_800DCE34")]
+    // Ports `ftCo_800DCE34`; aliased once a check reaches it.
     fn grab_break(&mut self, a: GObjId, b: GObjId) {
         self.grab_release(a, b);
         let g = if self.game.fighter(b).x221B.x221B_b7 {

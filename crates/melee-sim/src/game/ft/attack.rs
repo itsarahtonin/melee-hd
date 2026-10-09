@@ -536,7 +536,6 @@ impl Running<'_> {
     /// in a fighter's clank, the item's remembering the fighter and which way it was pushed
     /// (`recordItemClank`), each with a spark between them.
     #[doc(alias = "ftColl_80077970")]
-    #[doc(alias = "recordItemClank")]
     fn item_clank(&mut self, g: GObjId, j: usize, me: FighterId, m: usize) {
         use super::super::it;
         let range = self.common().i32(0x3CC);
