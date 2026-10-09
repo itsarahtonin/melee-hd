@@ -7389,7 +7389,7 @@ impl Default for itFoxIllusion_ItemVars {
 }
 
 /// `itSeakNeedleHeld_ItemVars`, 0x4 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itSeakNeedleHeld_ItemVars {
     /// +0x0
     pub owner: Option<GObjId>,
@@ -7402,7 +7402,7 @@ impl Default for itSeakNeedleHeld_ItemVars {
 }
 
 /// `itSeakNeedleThrown_ItemVars`, 0x2c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itSeakNeedleThrown_ItemVars {
     /// +0x0
     pub xDD4: f32,
@@ -7441,7 +7441,7 @@ impl Default for itSeakNeedleThrown_ItemVars {
 }
 
 /// `ItemLink`, 0x1d8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ItemLink {
     /// +0x0
     pub prev: Option<ItemLinkId>,
@@ -7504,7 +7504,7 @@ impl Default for ItemLink {
 }
 
 /// `itSeakChain_ItemVars`, 0xd0 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itSeakChain_ItemVars {
     /// +0x0
     pub x0: Option<ItemLinkId>,
