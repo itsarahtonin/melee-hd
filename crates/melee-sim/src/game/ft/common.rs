@@ -431,18 +431,38 @@ impl Running<'_> {
         }
         let (x, y) = (reg(fp.cur_pos.x), reg(fp.cur_pos.y));
         if x > right {
-            unported_call("ftCo_800D3950");
+            self.enter_dead_right(gobj);
+            return true;
         }
         if x < left {
-            unported_call("ftCo_800D3680");
+            self.enter_dead_left(gobj);
+            return true;
         }
         if y > top
             && (fp.ground_or_air == GA_GROUND || fp.x2222_b3 || reg(fp.x8c_kb_vel.y) > kb_limit)
         {
-            unported_call("Player_GetMoreFlagsBit5");
+            let (slot, ice) = (
+                i32::from(fp.player_idx),
+                fp.motion_id == super::co::ids::ms::DAMAGE_ICE,
+            );
+            if self.game.player_more_flags_bit5(slot) {
+                self.enter_dead_up(gobj);
+            } else {
+                let roll = self.game.objs.rng.below(100) + 1;
+                let star_chance = self.common().i32(0x520);
+                let free = super::super::camera::is_free(&self.game.camera.cam);
+                match (!free && star_chance >= roll, ice) {
+                    (true, true) => self.enter_dead_up_fall_ice(gobj),
+                    (true, false) => self.enter_dead_up_fall(gobj),
+                    (false, true) => self.enter_dead_up_star_ice(gobj),
+                    (false, false) => self.enter_dead_up_star(gobj),
+                }
+            }
+            return true;
         }
         if y < bottom {
-            unported_call("ftCo_800D3BC8");
+            self.enter_dead_down(gobj);
+            return true;
         }
         false
     }

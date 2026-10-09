@@ -14,6 +14,7 @@ pub mod catch;
 pub mod checks;
 pub mod cliff;
 pub mod damage;
+pub mod dead;
 pub mod dispatch;
 pub mod down;
 pub mod enter;
@@ -29,6 +30,7 @@ pub mod kind_callbacks;
 pub mod ledge;
 pub mod multijump;
 pub mod phys;
+pub mod rebirth;
 pub mod squat;
 pub mod throw;
 

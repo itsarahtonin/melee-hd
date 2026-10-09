@@ -7,6 +7,70 @@ use crate::hsd::gobj::GObjId;
 /// Runs the common state callback at `cb`, if one is ported here.
 pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
     match cb {
+        // ftCo_Rebirth_Anim
+        0x800D_52F8 => {
+            g.co_rebirth_anim(gobj);
+        }
+        // ftCo_Rebirth_IASA
+        0x800D_5358 => {
+            g.co_rebirth_iasa(gobj);
+        }
+        // ftCo_Rebirth_Phys, ftCo_RebirthWait_Phys
+        0x800D_535C | 0x800D_58F4 => {
+            g.co_rebirth_phys(gobj);
+        }
+        // ftCo_Rebirth_Coll
+        0x800D_5470 => {
+            g.co_rebirth_coll(gobj);
+        }
+        // ftCo_Rebirth_Cam
+        0x800D_5A6C => {
+            g.co_rebirth_cam(gobj);
+        }
+        // ftCo_RebirthWait_Anim
+        0x800D_56EC => {
+            g.co_rebirth_wait_anim(gobj);
+        }
+        // ftCo_RebirthWait_IASA
+        0x800D_575C => {
+            g.co_rebirth_wait_iasa(gobj);
+        }
+        // ftCo_RebirthWait_Coll
+        0x800D_5A08 => {
+            g.co_rebirth_wait_coll(gobj);
+        }
+        // fn_800D54A4
+        0x800D_54A4 => {
+            g.platform_follow(gobj);
+        }
+        // fn_800D55B4
+        0x800D_55B4 => {
+            g.platform_follow_sub(gobj);
+        }
+        // ftCo_AppealS_Anim
+        0x800D_ECF4 => {
+            g.co_appeal_s_anim(gobj);
+        }
+        // ftCo_AppealS_IASA
+        0x800D_ED30 => {
+            g.co_appeal_s_iasa(gobj);
+        }
+        // ftCo_AppealS_Phys
+        0x800D_EE44 => {
+            g.ground_friction_or_anim(gobj);
+        }
+        // ftCo_AppealS_Coll
+        0x800D_EE64 => {
+            g.ground_coll(gobj);
+        }
+        // ftCo_DeadUpStar_Anim
+        0x800D_42E4 => {
+            g.co_dead_up_star_anim(gobj);
+        }
+        // ftCo_DeadUpStar_Cam
+        0x800D_4560 => {
+            g.dead_up_cam(gobj);
+        }
         // ftCo_CliffCatch_Anim
         0x8008_1504 => {
             g.co_cliff_catch_anim(gobj);

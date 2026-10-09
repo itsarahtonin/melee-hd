@@ -52,7 +52,6 @@ mod addr {
     pub const FTDATA_800855C8: u32 = 0x8008_55C8;
     pub const FTDATA_8008578C: u32 = 0x8008_578C;
     pub const FTKB_SPECIALN_800EED50: u32 = 0x800E_ED50;
-    pub const FTCO_800D4FF4: u32 = 0x800D_4FF4;
 }
 
 /// `Player_CheckSlot`: the original asserts a slot is in range.
@@ -1058,15 +1057,15 @@ impl Running<'_> {
         let (first, second) = (p.entity(0), p.entity(1));
         let partner = p.flags.b2 && mapping(p.ckind).has_transformation == 0;
         if !sub {
-            code::call(self, addr::FTCO_800D4FF4, &[Val::GObj(first)]);
+            self.enter_rebirth(first.expect("a fighter"));
             if partner && self.game.ft_is_sleeping(second.expect("a second fighter")) {
-                code::call(self, addr::FTCO_800D4FF4, &[Val::GObj(second)]);
+                self.enter_rebirth(second.expect("a second fighter"));
             }
             self.damage_display_respawn(slot);
             return;
         }
         if self.game.ft_is_rebirth(first.expect("a fighter")) {
-            code::call(self, addr::FTCO_800D4FF4, &[Val::GObj(second)]);
+            self.enter_rebirth(second.expect("a second fighter"));
         }
     }
 

@@ -643,6 +643,11 @@ impl Running<'_> {
         self.catch_ledge_check(gobj);
     }
 
+    /// The airborne pass with the grounded ECB flags and no callback (`ft_80083DCC`'s).
+    pub fn air_coll_plain(&mut self, gobj: GObjId) {
+        self.air_coll(gobj, false, |_| {}, |c, cd| c.air_frame(cd, 5, 1));
+    }
+
     /// The airborne pass with the grounded ECB flags, `cb` on landing, `ft_80083844`.
     #[doc(alias = "ft_80083844")]
     pub fn air_coll_grounded_ecb_then(&mut self, gobj: GObjId, cb: Cb) {

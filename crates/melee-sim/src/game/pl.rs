@@ -3,6 +3,7 @@
 //! the results screen and bonuses read, and the match statistics fighters report there.
 
 pub mod bonus;
+pub mod death;
 pub mod player;
 pub mod stats;
 pub mod trick;
@@ -91,7 +92,7 @@ impl Running<'_> {
     /// Counts a point bonus for the player, `pl_80038824`. The original asserts the bonus
     /// counts points (`gmDecisionGetType`), which its callers' bonuses do.
     #[doc(alias = "pl_80038824")]
-    fn count_bonus(&mut self, slot: i32, kind: usize) {
+    pub(crate) fn count_bonus(&mut self, slot: i32, kind: usize) {
         assert!((0..6).contains(&slot), "player slot {slot}");
         let n = &mut self.game.players[slot as usize].stale_moves.x904[kind];
         *n = n.wrapping_add(1);
