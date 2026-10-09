@@ -635,7 +635,15 @@ impl Running<'_> {
         // `fn_800DB790`, `fn_800DBAE4`.
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.capture_yoshi_check(gobj);
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        let wobbling = self.game.rules.prevent_wobbling;
+        let fp = self.game.fighter_mut(gobj);
+        fp.x1A6A = 0x1FF;
+        if wobbling {
+            // Wobbling prevention (the Gecko codes at `0x800DB880` and `0x800DBBD4`): the
+            // count of the holder's hits starts over, with no hit last.
+            fp.mv[0x44] = 0;
+            fp.mv[0x46..0x48].copy_from_slice(&[0xFF, 0xFF]);
+        }
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
         match self.game.fighter(grabber).kind {
             KIND_YOSHI => unported_call("ftCo_800DB368 (held by Yoshi)"),

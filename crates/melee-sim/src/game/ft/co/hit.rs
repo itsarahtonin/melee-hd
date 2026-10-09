@@ -487,8 +487,24 @@ impl Running<'_> {
     /// and the attacker forgotten.
     // Ports `ftCo_8008E9D0`; aliased once a check reaches it.
     pub fn damage_no_reaction(&mut self, gobj: GObjId) {
+        self.damage_no_reaction_at(gobj, false);
+    }
+
+    /// [`Self::damage_no_reaction`], `wobble_site` at the copy wobbling prevention hooks
+    /// (the Gecko code at `0x8008F090`, in a held fighter's hit): with the rule, a victim
+    /// held (`CapturePulledHi` to `CaptureDamageLw`) by Popo counts the hit (not ported).
+    fn damage_no_reaction_at(&mut self, gobj: GObjId, wobble_site: bool) {
         let f = self.game.fighter_id(gobj);
         self.stamina_out(gobj);
+        if wobble_site && self.game.rules.prevent_wobbling {
+            let fp = &self.game.fighters[f.0];
+            if (223..=228).contains(&fp.motion_id)
+                && let Some(holder) = fp.victim_gobj
+                && self.game.fighter(holder).x2222_b5
+            {
+                unported_call("wobbling prevention's count of Popo's hits");
+            }
+        }
         let m = self.game.fighters[f.0].motion_id;
         if m == ms::CAPTURE_WAIT_HI || m == ms::CAPTURE_DAMAGE_HI {
             unported_call("ftCo_800DC284 (hit while held high)");
@@ -610,7 +626,7 @@ impl Running<'_> {
             let fp = &mut self.game.fighters[ff.0];
             fp.input.pressed_buttons = 0;
             fp.input.released_buttons = 0;
-            self.damage_no_reaction(gobj);
+            self.damage_no_reaction_at(gobj, true);
             return;
         }
         self.grab_break(other, gobj);
