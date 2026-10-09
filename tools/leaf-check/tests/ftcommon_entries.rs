@@ -27,7 +27,7 @@ fn dirs() -> Vec<String> {
 }
 
 fn stubs() -> Vec<Stub> {
-    let mut v: Vec<Stub> = ["un_80322598", "pl_80040048", "pl_8003FFDC"]
+    let mut v: Vec<Stub> = ["un_80322598", "pl_8003FFDC"]
         .iter()
         .map(|n| (leaf_check::sym(n), StubRet::Nothing))
         .collect();
