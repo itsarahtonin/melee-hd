@@ -8,7 +8,7 @@ use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::motion::flags::{KEEP_GFX, SKIP_COL_ANIM, UPDATE_CMD};
-use super::{GA_GROUND, PAD_B, addr, attr, ext, ms, mv};
+use super::{GA_GROUND, PAD_B, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 
@@ -163,7 +163,7 @@ impl Running<'_> {
             let t = reg(fp.co_attrs.terminal_velocity);
             Self::fall(fp, g, t);
         }
-        self.ext_fighter(ext::FTCOMMON_CALC_SELF_ACCEL_DEACCEL_QUICK_AIR, gobj);
+        self.self_accel_deaccel_quick_air(gobj);
     }
 
     /// The loop's, turn's and hit's grounded physics: friction, and the reflector's bubble

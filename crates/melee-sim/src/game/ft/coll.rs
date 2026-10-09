@@ -922,21 +922,6 @@ impl Running<'_> {
         }
     }
 
-    /// Wall jumping off the wall the fighter hugs, `ftWallJump_8008169C` (the jump itself isn't
-    /// ported).
-    #[doc(alias = "ftWallJump_8008169C")]
-    pub fn wall_jump_check(&mut self, gobj: GObjId) -> bool {
-        let fp = self.game.fighter(gobj);
-        if !fp.can_walljump {
-            return false;
-        }
-        let flags = fp.coll_data.env_flags;
-        if flags & (RIGHT_WALL_HUG | LEFT_WALL_HUG) == 0 {
-            return false;
-        }
-        unported_call("ftWallJump_8008169C against a wall")
-    }
-
     /// The landing threshold, `ftCo_800D0EC8`: `ftCommonData` x310 scaled by the fighter's
     /// height, negated.
     #[doc(alias = "ftCo_800D0EC8")]

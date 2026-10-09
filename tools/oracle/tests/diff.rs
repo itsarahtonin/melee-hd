@@ -78,10 +78,11 @@ fn start_reports_its_seam() {
         return;
     };
     // Until the whole match is ported, it stops at a seam, before a difference: past Sheik
-    // turning into Zelda (tick 1223), a wall jump. Nothing read a stale field on the way.
+    // turning into Zelda (tick 1223), a script command no port covers yet. Nothing read a
+    // stale field on the way.
     assert!(!out.contains(" differs in "), "{out}");
     assert!(
-        out.contains("stopped in tick 1357 (replay frame 1233)"),
+        out.contains("stopped in tick 1752 (replay frame 1628)"),
         "{out}"
     );
     assert!(out.contains("isn't ported"), "{out}");
