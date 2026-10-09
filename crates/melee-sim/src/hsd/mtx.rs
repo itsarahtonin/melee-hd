@@ -2,10 +2,13 @@
 //! the SDK's use paired singles: inverses, decomposition, and building a joint's matrix from
 //! its scale, rotation and translation.
 
+use std::cell::RefCell;
+
 use gekko_fp as fp;
 
 use crate::fpu::{copy, mem, reg};
 use crate::math;
+use crate::memo::{self, Memo};
 use crate::mtx::Mtx34;
 use crate::quat::{Quat, column_length};
 use crate::vec::Vec3;
@@ -269,8 +272,44 @@ impl Mtx34 {
     /// A joint's matrix from its scale, Euler rotation and translation, `HSD_MtxSRT`. With
     /// `parent_scale`, each row's scale is divided by the parent's on that axis, so the
     /// parent's scale doesn't shear the child.
+    ///
+    /// It depends only on its inputs' bits and the float mode, so the result is kept
+    /// (`memo`): a joint whose parent moved but whose own SRT didn't gets the same matrix
+    /// without its six sines and cosines.
     #[doc(alias = "HSD_MtxSRT")]
     pub fn srt(scale: Vec3, rotate: Vec3, translate: Vec3, parent_scale: Option<Vec3>) -> Mtx34 {
+        thread_local! {
+            static SRT: RefCell<Memo<[u32; 14], Mtx34, 11>> = const { RefCell::new(Memo::new()) };
+        }
+        let p = parent_scale.unwrap_or_default();
+        let key = [
+            scale.x.to_bits(),
+            scale.y.to_bits(),
+            scale.z.to_bits(),
+            rotate.x.to_bits(),
+            rotate.y.to_bits(),
+            rotate.z.to_bits(),
+            translate.x.to_bits(),
+            translate.y.to_bits(),
+            translate.z.to_bits(),
+            p.x.to_bits(),
+            p.y.to_bits(),
+            p.z.to_bits(),
+            u32::from(parent_scale.is_some()),
+            memo::mode(),
+        ];
+        Memo::get(&SRT, key, memo::hash(&key), || {
+            Mtx34::srt_uncached(scale, rotate, translate, parent_scale)
+        })
+    }
+
+    /// [`Mtx34::srt`] without its memo.
+    pub(crate) fn srt_uncached(
+        scale: Vec3,
+        rotate: Vec3,
+        translate: Vec3,
+        parent_scale: Option<Vec3>,
+    ) -> Mtx34 {
         let (sx, cx) = (reg(math::sin(rotate.x)), reg(math::cos(rotate.x)));
         let (sy, cy) = (reg(math::sin(rotate.y)), reg(math::cos(rotate.y)));
         let (sz, cz) = (reg(math::sin(rotate.z)), reg(math::cos(rotate.z)));
