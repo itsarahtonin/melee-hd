@@ -29,13 +29,13 @@ pub fn clear_damage_log(game: &mut Game) {
 }
 
 /// An entry of the damage log (`DamageLogEntry`): what hit (1 a fighter, 2 an item), the
-/// attacker's GObj, its hitbox and the item's hurtbox it hit.
+/// attacker's GObj and its hitbox. The original also keeps the hurtbox hit, which nothing
+/// reads.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DamageLogEntry {
     pub kind: i32,
     pub source: GObjId,
     pub hit: usize,
-    pub hurt: usize,
 }
 
 /// The damage log's size (`it_804A0E70`'s entries).
@@ -75,7 +75,7 @@ fn abs(v: f64) -> f64 {
 /// Item `g`'s box `hi` lands on item `me`'s hurtbox `n`, `it_802706D0_sub3`: the box
 /// remembers it, the attacker keeps the damage it dealt, which way and to whom, the victim
 /// adds the damage, the hit is logged, and the hit's sound plays.
-fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId, n: usize) {
+fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId) {
     use hitcapsule::Victim;
     let me_id = super::item_of(r.game, me);
     let kind = if item(r.game, g).x5D4_hitboxes[hi].hit.x41_b4 {
@@ -119,7 +119,6 @@ fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId, n: usize) {
             kind: 2,
             source: g,
             hit: hi,
-            hurt: n,
         },
     );
     // `it_8027B408`: an enemy's damage counts in the attacker's owner's statistics.
@@ -240,7 +239,7 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
                     continue;
                 }
                 if r.game.fighters[f.0].x914[hi].element != ELEMENT_INERT {
-                    fighter_hits_item(r, fg, hi, gobj, n);
+                    fighter_hits_item(r, fg, hi, gobj);
                 } else {
                     r.game.fighters[f.0].unk_gobj = Some(gobj);
                 }
@@ -253,7 +252,7 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
 /// Fighter `fg`'s box `hi` lands on the item's hurtbox `n` (`it_802703E8`): the box
 /// remembers it (`ftColl_80076808`), the fighter keeps the damage (`dmg.x1914`), the item adds
 /// it, the hit is logged, and the hit's sound plays.
-fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId, n: usize) {
+fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId) {
     use hitcapsule::Victim;
     let f = r.game.fighter_id(fg);
     let me_id = super::item_of(r.game, me);
@@ -273,7 +272,6 @@ fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId, n: usiz
             kind: 1,
             source: fg,
             hit: hi,
-            hurt: n,
         },
     );
     // `it_8027B378`: an enemy's damage counts in the fighter's statistics.
@@ -428,7 +426,7 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
                     h.hurt_coll_pos = hit.hurt_coll_pos;
                     h.coll_distance = hit.coll_distance;
                     if touch {
-                        item_hits_item(r, g, hi, gobj, n);
+                        item_hits_item(r, g, hi, gobj);
                         break;
                     }
                 }
