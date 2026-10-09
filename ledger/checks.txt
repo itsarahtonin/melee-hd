@@ -3285,3 +3285,9 @@ ftCommon_8007EFC8	melee-oracle diff, Fox vs Sheik FD ticks 1-1356 (docs/oracle.m
 ftLib_SetScale	melee-oracle diff, Fox vs Sheik FD ticks 1-1356 (docs/oracle.md): the transformation sets Zelda's scale (tick 1223)
 ft_80081C88	melee-oracle diff, Fox vs Sheik FD ticks 1-1356 (docs/oracle.md): the transformation scales Zelda's ledge snaps (tick 1223)
 ftZd_SpecialLw_8013B4D8	melee-oracle diff, Fox vs Sheik FD ticks 1-1356 (docs/oracle.md): the transformation's second half on Zelda (tick 1223)
+ftCo_8009E318	melee-oracle diff, Fox vs Sheik FD ticks 1-7659 (docs/oracle.md): a script toggling a dynamic part, physics on (tick 1752) and off again (tick 1832)
+ftCo_8009E1D4	melee-oracle diff, Fox vs Sheik FD ticks 1-7659 (docs/oracle.md): the animation skeleton's twin of the part whose physics goes on (tick 1752)
+ftAnim_8006EED4	melee-oracle diff, Fox vs Sheik FD ticks 1-7659 (docs/oracle.md): the action's animation put back on the part whose physics goes off (tick 1832)
+ftAnim_8006F994	melee-oracle diff, Fox vs Sheik FD ticks 1-7659 (docs/oracle.md): the part's costume joint, for ftAnim_8006EED4
+ftAnim_8006F954	melee-oracle diff, Fox vs Sheik FD ticks 1-7659 (docs/oracle.md): the figatree bound to the part's subtree, for ftAnim_8006EED4
+ftAnim_8006F7C8	melee-oracle diff, Fox vs Sheik FD ticks 1-7659 (docs/oracle.md): the figatree, the fighter's own, bound to the part's subtree

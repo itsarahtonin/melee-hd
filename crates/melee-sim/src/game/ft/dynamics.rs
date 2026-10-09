@@ -71,6 +71,75 @@ impl Mirror for BoneSlot {
 }
 
 impl Running<'_> {
+    /// A part's dynamics toggled, `ftCo_8009E318`: the chain link on the part's joint found,
+    /// its bone flag flipped and the chain's slot set past it (physics off from the link on,
+    /// the action's animation put back on the part from `frame`) or at it (physics on, the
+    /// part's and its animation skeleton twin's own animations removed); -1 with no such link.
+    #[doc(alias = "ftCo_8009E318")]
+    pub fn toggle_part_dynamics(&mut self, gobj: GObjId, part: i32, frame: f32) -> i32 {
+        let f = self.game.fighter_id(gobj);
+        let part_j = self.bone(f, part).joint;
+        let parts = self.game.fighters[f.0]
+            .parts
+            .expect("a fighter without parts");
+        for i in 0..self.game.fighters[f.0].dynamics_num as usize {
+            let mut link = self.game.fighters[f.0].dynamic_bone_sets[i].dyn_desc.data;
+            let mut j = 0;
+            while let Some(d) = link {
+                if self.game.fighter_dynamics[d.0].desc.jobj == part_j {
+                    let b = &mut self.game.fighter_parts[parts.0][part as usize];
+                    if b.x8[0] & 0x80 != 0 {
+                        b.x8[0] &= !0x80;
+                        self.game.fighters[f.0].dynamic_bone_sets[i].bone_id = BoneSlot::Id(j + 1);
+                        if self.game.fighters[f.0].x590.is_some() {
+                            let speed = self.game.fighters[f.0].frame_speed_mul;
+                            self.restart_part_anim(f, part, frame, speed);
+                        }
+                    } else {
+                        b.x8[0] |= 0x80;
+                        self.game.fighters[f.0].dynamic_bone_sets[i].bone_id = BoneSlot::Id(j);
+                        let root = super::super::gr::ground::jobj_of(self.game, gobj);
+                        let skel = self.game.fighters[f.0].x8AC_animSkeleton;
+                        let twin = twin_joint(&self.game.objs.jobjs, root, skel, part_j);
+                        self.remove_anim(part_j);
+                        self.remove_anim(twin);
+                    }
+                    return 0;
+                }
+                link = self.game.fighter_dynamics[d.0].next;
+                j += 1;
+            }
+        }
+        -1
+    }
+}
+
+/// The joint of `b`'s tree in the place `target` holds in `a`'s, `ftCo_8009E1D4`.
+#[doc(alias = "ftCo_8009E1D4")]
+fn twin_joint(
+    jobjs: &crate::hsd::jobj::JObjs,
+    a: Option<JObjId>,
+    b: Option<JObjId>,
+    target: Option<JObjId>,
+) -> Option<JObjId> {
+    let (a, b) = (a?, b?);
+    if Some(a) == target {
+        return Some(b);
+    }
+    if jobjs[a].child.is_some() {
+        if let Some(t) = twin_joint(jobjs, jobjs[a].child, jobjs[b].child, target) {
+            return Some(t);
+        }
+    }
+    if jobjs[a].next.is_some() {
+        if let Some(t) = twin_joint(jobjs, jobjs[a].next, jobjs[b].next, target) {
+            return Some(t);
+        }
+    }
+    None
+}
+
+impl Running<'_> {
     /// The character's dynamics description (`ftData::x2C`).
     fn dynamics_desc(&self, f: FighterId) -> DataRef {
         let fp = &self.game.fighters[f.0];
