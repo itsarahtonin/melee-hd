@@ -1124,6 +1124,24 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         }
     }
 
+    /// Tells a ledge's joint that it is held, `mpLib_8005811C`: its first callback with
+    /// ground kind 3.
+    #[doc(alias = "mpLib_8005811C")]
+    pub fn ledge_held(&mut self, cd: &mut CollData, ledge_id: i32) {
+        if ledge_id == -1 {
+            return;
+        }
+        let joint = self.g.joint_from_line(ledge_id);
+        if joint != -1 {
+            let (cb, data) = self.g.callback(joint);
+            if let Some(cb) = cb {
+                let x50 = fp::fctiwz(reg(cd.x50));
+                self.hooks
+                    .joint_callback(self.g, cb, data, joint, cd, x50, 3, 0.0);
+            }
+        }
+    }
+
     /// Calls the ceiling's joint callback with ground kind 0 (`mpCollEnd_inline2`).
     fn ceiling_callback(&mut self, cd: &mut CollData, line_id: i32, dy: f32) {
         let joint = self.g.joint_from_line(line_id);

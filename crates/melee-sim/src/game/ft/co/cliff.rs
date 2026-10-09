@@ -16,6 +16,26 @@ use crate::hsd::gobj::GObjId;
 const CLIFF_JUMP_X0: usize = 0x0;
 
 impl Running<'_> {
+    /// A ledge hang's camera callback, `ftCo_Cliff_Cam`: the camera box, and in the air the
+    /// ledge's joint told it is held (`mpLib_8005811C`) and the box marked on a ledge.
+    #[doc(alias = "ftCo_Cliff_Cam")]
+    pub fn cliff_cam(&mut self, gobj: GObjId) {
+        self.update_camera_box(gobj);
+        let fp = self.game.fighter(gobj);
+        if fp.ground_or_air == GA_AIR {
+            let ledge = fp.mv_i32(CLIFF_LEDGE_ID);
+            let mut cd = fp.coll_data.clone();
+            let data = self.data;
+            crate::game::it::maplib::with_stage_coll(self.game, data, |c| {
+                c.ledge_held(&mut cd, ledge)
+            });
+            let fp = self.game.fighter_mut(gobj);
+            fp.coll_data = cd;
+            let b = fp.x890_cameraBox.expect("a fighter without a camera box");
+            self.game.camera.boxes[b].on_ledge = true;
+        }
+    }
+
     /// A ledge option's state (`ftCo_Cliff_EnterState`), quick under `ftCommonData` x488
     /// percent, else slow.
     fn enter_cliff_state(&mut self, gobj: GObjId, quick: i32, slow: i32) {

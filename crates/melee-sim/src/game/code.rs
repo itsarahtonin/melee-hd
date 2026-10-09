@@ -155,6 +155,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         0x8008_AE10 | 0x8008_B638 | 0x8008_CD48 => g.ground_coll(gobj),
         // Camera.
         0x8007_61C8 => g.update_camera_box(gobj),
+        0x8008_1644 => g.cliff_cam(gobj),
         // Hitlag.
         0x8008_E4F0 => g.co_damage_hitlag(gobj),
         0x8008_E714 => g.co_damage_exit_hitlag(gobj),
