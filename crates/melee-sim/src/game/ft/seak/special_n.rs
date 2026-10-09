@@ -274,6 +274,7 @@ impl Running<'_> {
     #[doc(alias = "ftSk_SpecialNLoop_Phys")]
     #[doc(alias = "ftSk_SpecialNCancel_Phys")]
     #[doc(alias = "ftSk_SpecialNEnd_Phys")]
+    #[doc(alias = "ftSk_SpecialSStart_Phys")]
     #[doc(alias = "ftSk_SpecialS_Phys")]
     #[doc(alias = "ftSk_SpecialSEnd_Phys")]
     #[doc(alias = "ftSk_SpecialHiStart_0_Phys")]

@@ -66,6 +66,8 @@ const DROP_FALL_ACCEL: [f32; 8] = [-0.1, -0.12, -0.14, -0.18, -0.2, -0.22, -0.24
 const BOUNCE_VEL_X: [f32; 8] = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4];
 const BOUNCE_FALL_MAX: [f32; 8] = [-2.0, -2.1, -2.2, -2.3, -2.4, -2.5, -2.6, -2.7];
 const BOUNCE_FALL_ACCEL: [f32; 8] = [-0.1, -0.12, -0.14, -0.18, -0.2, -0.22, -0.24, -0.26];
+// The original's literals, kept as written.
+#[allow(clippy::approx_constant)]
 const BOUNCE_SPIN: [f32; 8] = [
     0.523_598_8,
     0.610_865_24,
@@ -86,12 +88,12 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         ANIM_0 => animate_0(r, gobj),
         ANIM_1 => animate_1(r, gobj),
         ANIM_2 => animate_2(r, gobj),
-        ANIM_3 => lib2725::tick_lifetime(r.game, gobj),
+        ANIM_3 => animate_3(r, gobj),
         ANIM_4 => animate_4(r, gobj),
         COLL_0 => collide_0(r, gobj),
         COLL_1 => collide_1(r, gobj),
         COLL_2 => collide_2(r, gobj),
-        COLL_3 => false,
+        COLL_3 => collide_3(r, gobj),
         COLL_4 => collide_4(r, gobj),
         DMG_DEALT | CLANKED | DMG_RECEIVED | HIT_SHIELD => maybe_bounce(r, gobj),
         REFLECTED => reflected(r, gobj),
@@ -104,7 +106,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),
-        PHYS_0 | PHYS_2 => {}
+        PHYS_0 | PHYS_2 => still(r, gobj),
         PHYS_1 | PHYS_4 => tumble_physics(r, gobj),
         PHYS_3 => stop(r, gobj),
         _ => return false,
@@ -362,6 +364,12 @@ pub fn animate_2(r: &mut Running, gobj: GObjId) -> bool {
     lib2725::tick_lifetime(r.game, gobj)
 }
 
+/// `itSeakneedlethrown_UnkMotion3_Anim`: the lifetime counted down.
+#[doc(alias = "itSeakneedlethrown_UnkMotion3_Anim")]
+pub fn animate_3(r: &mut Running, gobj: GObjId) -> bool {
+    lib2725::tick_lifetime(r.game, gobj)
+}
+
 /// The bounce's animation, `itSeakneedlethrown_UnkMotion4_Anim`: the needle spins, with no
 /// lifetime.
 #[doc(alias = "itSeakneedlethrown_UnkMotion4_Anim")]
@@ -389,6 +397,12 @@ pub fn tumble_physics(r: &mut Running, gobj: GObjId) {
         ip.x40_vel.y = v.xDDC;
     }
 }
+
+/// The flight's and the stuck needle's physics, `itSeakneedlethrown_UnkMotion0_Phys` and
+/// `_UnkMotion2_Phys`: none.
+#[doc(alias = "itSeakneedlethrown_UnkMotion0_Phys")]
+#[doc(alias = "itSeakneedlethrown_UnkMotion2_Phys")]
+pub fn still(_r: &mut Running, _gobj: GObjId) {}
 
 /// `itSeakneedlethrown_UnkMotion3_Phys`: no motion.
 #[doc(alias = "itSeakneedlethrown_UnkMotion3_Phys")]
@@ -549,6 +563,12 @@ pub fn collide_2(r: &mut Running, gobj: GObjId) -> bool {
         let a = v.xDF0;
         set_rotation_x(r, child, a);
     }
+    false
+}
+
+/// `itSeakneedlethrown_UnkMotion3_Coll`: none.
+#[doc(alias = "itSeakneedlethrown_UnkMotion3_Coll")]
+pub fn collide_3(_r: &mut Running, _gobj: GObjId) -> bool {
     false
 }
 

@@ -16,8 +16,8 @@ impl Running<'_> {
         self.seak_check_and_destroy_chain(gobj);
     }
 
-    /// `ftSk_Init_UnkMotionStates4`: the full charge's flash, while all six needles are held.
-    #[doc(alias = "ftSk_Init_UnkMotionStates4")]
+    /// `ftSk_Init_UnkMotionStates4`, by address: the full charge's flash, while all six needles
+    /// are held (`ft::colanim` ports it, inline where the color animations reset).
     pub fn seak_full_charge_flash(&mut self, gobj: GObjId) {
         if self.seak_needle_count(gobj) == 6 {
             self.start_color_anim(gobj, 86, 0);

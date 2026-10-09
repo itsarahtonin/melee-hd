@@ -17,8 +17,8 @@ pub const EVT_UNK: u32 = 0x802B_1DCC;
 /// Runs one of the flash's predicates, if `addr` is one.
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM => lib2725::tick_life(r.game, gobj),
-        DMG_DEALT => false,
+        ANIM => animate(r, gobj),
+        DMG_DEALT => dmg_dealt(r, gobj),
         _ => return None,
     })
 }
@@ -64,6 +64,18 @@ pub fn init(r: &mut Running, gobj: GObjId, owner: GObjId) {
     lib26b1::set_xdd0_b3(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
+}
+
+/// The flash's animation, `itSeakvanish_UnkMotion0_Anim`: gone once its life runs out.
+#[doc(alias = "itSeakvanish_UnkMotion0_Anim")]
+pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
+    lib2725::tick_life(r.game, gobj)
+}
+
+/// Hitting something, `itSeakVanish_Logic42_DmgDealt`: the flash stays.
+#[doc(alias = "itSeakVanish_Logic42_DmgDealt")]
+pub fn dmg_dealt(_r: &mut Running, _gobj: GObjId) -> bool {
+    false
 }
 
 /// Forgets a GObj the flash points to, `it_802B1DCC` (`it_8026B894`).

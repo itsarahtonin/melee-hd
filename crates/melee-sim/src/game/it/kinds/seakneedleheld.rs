@@ -24,7 +24,7 @@ pub const EVT_UNK: u32 = 0x802B_1C40;
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM => animate(r, gobj),
-        COLL => false,
+        COLL => collide(r, gobj),
         _ => return None,
     })
 }
@@ -32,7 +32,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 /// Runs one of the needles' events, if `addr` is one.
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        PHYS => {}
+        PHYS => physics(r, gobj),
         PICKED_UP => picked_up(r, gobj),
         _ => return false,
     }
@@ -143,6 +143,16 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     } else {
         panic!("jobj (the needles' model has no child)");
     }
+    false
+}
+
+/// The needles' physics, `itSeakneedleheld_UnkMotion0_Phys`: none.
+#[doc(alias = "itSeakneedleheld_UnkMotion0_Phys")]
+pub fn physics(_r: &mut Running, _gobj: GObjId) {}
+
+/// The needles' collision, `itSeakneedleheld_UnkMotion0_Coll`: none.
+#[doc(alias = "itSeakneedleheld_UnkMotion0_Coll")]
+pub fn collide(_r: &mut Running, _gobj: GObjId) -> bool {
     false
 }
 
