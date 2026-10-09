@@ -6,7 +6,11 @@
 //! which operations rounded to single precision, and the `frsqrte` estimate. `gekko-fp` does
 //! the arithmetic, so the console's (or Slippi's) rounding follows its mode.
 
+use std::cell::RefCell;
+
 use gekko_fp as fp;
+
+use crate::memo::{self, Memo};
 
 /// `__sincos_on_quadrant` (MSL/math_data.c).
 const QUADRANT: [u32; 8] = [
@@ -107,10 +111,20 @@ fn sin_poly(ysq: f64, last: fn(f64, f64, f64) -> f64) -> f64 {
     last(ysq, z, p(9))
 }
 
-/// `sinf`.
+/// `sinf`. Its result depends only on the angle's bits (and the float mode), so it is kept
+/// for angles that come again (`memo`).
 #[doc(alias = "sinf")]
 #[doc(alias = "sin__Ff")]
 pub fn sin(x: f32) -> f32 {
+    thread_local! {
+        static SIN: RefCell<Memo<[u32; 2], f32, 12>> = const { RefCell::new(Memo::new()) };
+    }
+    let key = [x.to_bits(), memo::mode()];
+    Memo::get(&SIN, key, memo::hash(&key), || sin_uncached(x))
+}
+
+/// [`sin`] without its memo.
+pub(crate) fn sin_uncached(x: f32) -> f32 {
     let (n, y) = reduce(x);
     let n = n << 1;
     if fp::fabs(y) < reg_bits(SINCOS_EPSILON) {
@@ -124,10 +138,19 @@ pub fn sin(x: f32) -> f32 {
     }
 }
 
-/// `cosf`.
+/// `cosf`, kept like [`sin`].
 #[doc(alias = "cosf")]
 #[doc(alias = "cos__Ff")]
 pub fn cos(x: f32) -> f32 {
+    thread_local! {
+        static COS: RefCell<Memo<[u32; 2], f32, 12>> = const { RefCell::new(Memo::new()) };
+    }
+    let key = [x.to_bits(), memo::mode()];
+    Memo::get(&COS, key, memo::hash(&key), || cos_uncached(x))
+}
+
+/// [`cos`] without its memo.
+pub(crate) fn cos_uncached(x: f32) -> f32 {
     let (n, y) = reduce(x);
     let n = n << 1;
     if fp::fabs(y) < reg_bits(SINCOS_EPSILON) {

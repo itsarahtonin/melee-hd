@@ -65,6 +65,7 @@ pub(crate) fn mode() -> u32 {
 mod tests {
     use gekko_fp::{FpMode, set_fp_mode};
 
+    use crate::math;
     use crate::mtx::Mtx34;
     use crate::vec::Vec3;
 
@@ -93,6 +94,37 @@ mod tests {
         fn vec(&mut self) -> Vec3 {
             Vec3::new(self.float(), self.float(), self.float())
         }
+    }
+
+    /// Many more inputs than slots, each asked for again soon after (a hit) and again much
+    /// later (usually replaced by then): every answer must be the uncached routine's. (The
+    /// sine's and cosine's tables are keyed by the float mode like the others, though no single
+    /// gives either different bits in the two modes: all 2^32 were tried once.)
+    #[test]
+    fn sin_and_cos_match_uncached() {
+        for mode in MODES {
+            set_fp_mode(mode);
+            let mut rng = Bits(0x2545_F491_4F6C_DD1D);
+            let xs: Vec<f32> = (0..50_000).map(|_| rng.float()).collect();
+            for pass in 0..2 {
+                for (i, &x) in xs.iter().enumerate() {
+                    for y in [x, xs[i / 2]] {
+                        let (s, c) = (math::sin_uncached(y), math::cos_uncached(y));
+                        assert_eq!(
+                            math::sin(y).to_bits(),
+                            s.to_bits(),
+                            "sin {y:?} {mode:?} {pass}"
+                        );
+                        assert_eq!(
+                            math::cos(y).to_bits(),
+                            c.to_bits(),
+                            "cos {y:?} {mode:?} {pass}"
+                        );
+                    }
+                }
+            }
+        }
+        set_fp_mode(FpMode::Hardware);
     }
 
     /// Many more inputs than slots, each asked for again soon after (a hit) and again much
