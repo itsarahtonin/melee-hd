@@ -202,26 +202,44 @@ pub fn sort(
     (out, rest)
 }
 
+/// The links a display pass draws and where each starts, in link order (at most [`LINKS`],
+/// held inline).
+#[derive(Clone, Copy, Debug, Default)]
+pub struct DrawnLinks {
+    n: usize,
+    links: [(usize, Option<ParticleId>); LINKS],
+}
+
+impl DrawnLinks {
+    fn push(&mut self, link: usize, first: Option<ParticleId>) {
+        self.links[self.n] = (link, first);
+        self.n += 1;
+    }
+}
+
+impl std::ops::Deref for DrawnLinks {
+    type Target = [(usize, Option<ParticleId>)];
+    fn deref(&self) -> &Self::Target {
+        &self.links[..self.n]
+    }
+}
+
 /// `psDispParticles`' simulation side: with `sw` 0 it advances the display frame; otherwise
 /// it sorts each link `target_link` names and returns where drawing starts in each: the link's
 /// first particle for the edge pass (`sw` 1, which stops at the first particle without
 /// `TEX_EDGE`), its first without for the other.
-pub fn disp_particles(
-    objs: &mut Objects,
-    target_link: u32,
-    sw: u32,
-) -> Vec<(usize, Option<ParticleId>)> {
+pub fn disp_particles(objs: &mut Objects, target_link: u32, sw: u32) -> DrawnLinks {
+    let mut out = DrawnLinks::default();
     if sw == 0 {
         let d = &mut objs.psdisp;
         d.frame = if d.frame < 0xFF { d.frame + 1 } else { 1 };
-        return Vec::new();
+        return out;
     }
-    let mut out = Vec::new();
     for link in 0..LINKS {
         if target_link & (1 << link) != 0 {
             let frame = objs.psdisp.frame;
             let (sorted, non_edge) = sort(objs, link, frame);
-            out.push((link, if sw == 1 { sorted } else { non_edge }));
+            out.push(link, if sw == 1 { sorted } else { non_edge });
         }
     }
     out

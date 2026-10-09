@@ -254,29 +254,34 @@ impl Running<'_> {
             count <= fp.x1670.len(),
             "more dynamics colliders than a fighter holds"
         );
-        let colliders: Vec<Collider> = fp.x1670[..count]
-            .iter()
-            .map(|c| Collider {
+        // On the stack: a fighter holds at most `x1670.len()` colliders.
+        let mut held = [Collider {
+            radius: 0.0,
+            center: crate::vec::Vec3::ZERO,
+        }; 1];
+        for (dst, c) in held.iter_mut().zip(&fp.x1670[..count]) {
+            *dst = Collider {
                 radius: c.v2,
                 center: c.x18,
-            })
-            .collect();
+            };
+        }
+        let colliders = &held[..count];
         let flat = flat_floor.then_some(fp.cur_pos.y);
         let kind = fp.kind;
         let last = (n - 1).max(0);
-        let sets: Vec<(usize, i32)> = match kind {
-            KIND_PEACH => (0..last)
-                .map(|i| (i as usize, 3))
-                .chain(std::iter::once((last as usize, 0)))
-                .collect(),
-            KIND_MEWTWO => (0..n).map(|i| (i as usize, 8)).collect(),
-            _ => (0..n).map(|i| (i as usize, 0)).collect(),
-        };
-        for (i, first_wind) in sets {
-            let set = &self.game.fighters[f.0].dynamic_bone_sets[i];
+        // Each set and the wind its first link takes: Peach's all but the last 3, Mewtwo's 8.
+        let sets = if kind == KIND_PEACH { last + 1 } else { n };
+        for i in 0..sets.max(0) {
+            let first_wind = match kind {
+                KIND_PEACH if i < last => 3,
+                KIND_PEACH => 0,
+                KIND_MEWTWO => 8,
+                _ => 0,
+            };
+            let set = &self.game.fighters[f.0].dynamic_bone_sets[i as usize];
             let (desc, bone) = (set.dyn_desc.clone(), set.bone_id);
             self.game
-                .swing_chain(self.data, &desc, &colliders, flat, bone, first_wind, ground);
+                .swing_chain(self.data, &desc, colliders, flat, bone, first_wind, ground);
         }
         if flatzone {
             let o = &mut self.game.objs.jobjs[root];

@@ -640,17 +640,22 @@ impl Game {
     #[doc(alias = "DevText_DrawAll")]
     pub fn devtext_draw_all(&mut self, data: &Archives, pass: i32) -> Vec<Draw> {
         let mut out = Vec::new();
+        self.devtext_draw_all_into(data, pass, &mut out);
+        out
+    }
+
+    /// [`Game::devtext_draw_all`] appending to `out`.
+    pub fn devtext_draw_all_into(&mut self, data: &Archives, pass: i32, out: &mut Vec<Draw>) {
         if pass as u32 != PASS_BOTTOM_HALF as u32 {
-            return out;
+            return;
         }
         let mut text = self.hud.devtext.draw_list;
         out.push(Draw::NoFog);
-        self.devtext_setup_cobj(data, &mut out);
+        self.devtext_setup_cobj(data, out);
         while let Some(t) = text {
             let d = &mut self.hud.devtext.pool[usize::from(t)];
-            d.draw(&mut out);
+            d.draw(out);
             text = d.next;
         }
-        out
     }
 }

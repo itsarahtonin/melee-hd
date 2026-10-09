@@ -306,16 +306,12 @@ pub fn reset_translation(
 #[doc(alias = "lb_8000BA0C")]
 #[doc(alias = "lb_8000B9D8")]
 pub fn set_framerate(objs: &mut Objects, j: Option<JObjId>, rate: f32) {
-    let mut joints = Vec::new();
-    crate::hsd::jobj::walk_tree(&objs.jobjs, j, &mut |j, ty| {
+    let (jobjs, aobjs) = (&objs.jobjs, &mut objs.aobjs);
+    crate::hsd::jobj::walk_tree(jobjs, j, &mut |j, ty| {
         if ty != 0 {
-            joints.push(j);
+            crate::hsd::aobj::set_rate(aobjs, jobjs[j].aobj, rate);
         }
     });
-    for j in joints {
-        let a = objs.jobjs[j].aobj;
-        crate::hsd::aobj::set_rate(&mut objs.aobjs, a, rate);
-    }
 }
 
 /// Makes a joint follow another's position and orientation (two constraint RObjs, flags

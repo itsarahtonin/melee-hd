@@ -2,7 +2,7 @@
 //! processes, map collision, points of interest, camera limits and blast zones, fog and lights.
 
 use gekko_fp as fp;
-use melee_data::archive::Archives;
+use melee_data::archive::{Archives, DataRef};
 
 use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Obj, Running, UserData};
@@ -245,19 +245,21 @@ pub(super) fn update_coll_joint(game: &mut Game, data: &Archives, joint: i32) {
     });
 }
 
-/// The stage's collision joints for a map id: the stage's own table's, then its archive's.
-fn coll_joints(game: &Game, data: &Archives, map_id: i32) -> (Vec<GrJoint>, Vec<GrJoint>) {
-    let own = stage_data(game.stage_info.grkind).joints.to_vec();
-    let from_archive = match datfiles::archive_for(game, data, map_id) {
+/// The stage's collision joints for a map id: the stage's own table's, then where its
+/// archive's are and how many (read as they're used, from data that doesn't change).
+fn coll_joints(
+    game: &Game,
+    data: &Archives,
+    map_id: i32,
+) -> (&'static [GrJoint], Option<DataRef>, u32) {
+    let own = stage_data(game.stage_info.grkind).joints;
+    match datfiles::archive_for(game, data, map_id) {
         Some(head) => {
             let (list, n) = head.entry(data, map_id).coll_joints(data);
-            (0..n.max(0) as u32)
-                .map(|i| GrJoint::read(data, list.expect("collision joints").at(6 * i)))
-                .collect()
+            (own, list, n.max(0) as u32)
         }
-        None => Vec::new(),
-    };
-    (own, from_archive)
+        None => (own, None, 0),
+    }
 }
 
 /// Moves a map's collision joints with its model, `Ground_UpdateMapColl`, unless the map's
@@ -277,13 +279,14 @@ pub fn update_map_coll(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
     let mut moved = false;
     game.gr.coll_stamp = game.gr.coll_stamp.wrapping_add(1);
     let stamp = game.gr.coll_stamp;
-    let (own, from_archive) = coll_joints(game, data, map_id);
+    let (own, list, n) = coll_joints(game, data, map_id);
     for j in own.iter().filter(|j| i32::from(j.y) == map_id) {
         update_coll_joint(game, data, j.x.into());
         game.geometry.as_mut().unwrap().joints[j.x as usize].stamp = stamp;
         moved = true;
     }
-    for j in &from_archive {
+    for i in 0..n {
+        let j = &GrJoint::read(data, list.expect("collision joints").at(6 * i));
         let g = game.geometry.as_mut().unwrap();
         if stamp != g.joints[j.x as usize].stamp {
             update_coll_joint(game, data, j.x.into());

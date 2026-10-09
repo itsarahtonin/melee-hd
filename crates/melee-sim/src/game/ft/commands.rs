@@ -421,10 +421,7 @@ impl Running<'_> {
         if let Some(smash) = self.data.ptr(sfx) {
             let n = self.data.u32(smash) as i32;
             let ids = self.data.ptr(smash.at(4)).expect("the smash sounds' ids");
-            let ids: Vec<i32> = (0..n.max(0) as u32)
-                .map(|i| self.data.u32(ids.at(4 * i)) as i32)
-                .collect();
-            self.fighter_random_voice(f, &ids);
+            self.fighter_random_voice_in(f, ids, n);
         }
     }
 

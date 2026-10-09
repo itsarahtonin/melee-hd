@@ -163,7 +163,7 @@ impl Running<'_> {
         blend: bool,
     ) {
         let kind = self.game.fighters[f.0].kind;
-        let mut stack = Vec::new();
+        let mut stack = super::bind::JointStack::new();
         let mut i = start;
         let mut joint = joint;
         while let Some(desc) = joint {

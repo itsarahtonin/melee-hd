@@ -312,10 +312,7 @@ impl Running<'_> {
             // `FtSFXArr`: a count and its ids.
             let n = self.data.u32(arr) as i32;
             let at = self.data.ptr(arr.at(4)).expect("a voice set's ids");
-            let ids: Vec<i32> = (0..n.max(0) as u32)
-                .map(|i| self.data.u32(at.at(4 * i)) as i32)
-                .collect();
-            self.fighter_random_voice(f, &ids);
+            self.fighter_random_voice_in(f, at, n);
             self.game.fighters[f.0].dmg.x190C = None;
         }
     }

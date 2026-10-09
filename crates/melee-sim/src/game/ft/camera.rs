@@ -37,24 +37,25 @@ impl Running<'_> {
         let d = &mut self.game.fighters[f.0].dmg;
         d.x18BC = 0.0;
         d.x18B8 = 0.0;
-        let mut shakes = Vec::new();
+        // At most three shakes, held inline: the hit's, the grab mash's, the smash charge's.
+        let mut shakes = [None; 3];
         if let Some(s) = self.hit_shake(f) {
-            shakes.push(s);
+            shakes[0] = Some(s);
         }
         let fp = &self.game.fighters[f.0];
         if fp.x2224_b5 {
             let table = self.load_common(0x28);
             let row = self.data.ptr(table).expect("the grab-mash shake table");
-            shakes.push(self.vec2(row, u32::from(fp.x1A52)));
+            shakes[1] = Some(self.vec2(row, u32::from(fp.x1A52)));
         }
         let s = &fp.smash_attrs;
         if s.state == SMASH_CHARGING || s.state == SMASH_HELD {
             let table = self.load_common(0x2C);
             let row = self.data.ptr(table).expect("the smash charge shake table");
-            shakes.push(self.vec2(row, u32::from(s.x212C)));
+            shakes[2] = Some(self.vec2(row, u32::from(s.x212C)));
         }
         let d = &mut self.game.fighters[f.0].dmg;
-        for (x, y) in shakes {
+        for (x, y) in shakes.into_iter().flatten() {
             d.x18B8 = mem(fp::fadds(reg(d.x18B8), reg(x)));
             d.x18BC = mem(fp::fadds(reg(d.x18BC), reg(y)));
         }

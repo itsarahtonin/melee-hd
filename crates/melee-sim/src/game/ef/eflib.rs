@@ -106,30 +106,29 @@ pub fn init(r: &mut Running) {
     }
 }
 
-/// The effects on both effect links whose parent is `parent`, in link order.
-fn children_of(game: &Game, parent: Option<GObjId>) -> Vec<(GObjId, EffectId)> {
-    let mut out = Vec::new();
+/// `f` on each effect on both effect links whose parent is `parent`, in link order (it
+/// changes no links).
+fn each_child(game: &mut Game, parent: Option<GObjId>, mut f: impl FnMut(&mut Game, EffectId)) {
     for link in [P_LINK, P_LINK_AUX] {
         let mut g = game.world.first_in(link);
         while let Some(gobj) = g {
+            g = game.world.gobjs[gobj.0].next;
             if let Some(UserData::Effect(e)) = game.world.gobjs[gobj.0].user_data
                 && game.ef.effects[e.0].parent == parent
             {
-                out.push((gobj, e));
+                f(game, e);
             }
-            g = game.world.gobjs[gobj.0].next;
         }
     }
-    out
 }
 
 /// Marks every effect `gobj` spawned with `flags`, `efLib_SetFlags`.
 #[doc(alias = "efLib_SetFlags")]
 pub fn set_flags(game: &mut Game, gobj: Option<GObjId>, flags: i32) {
-    for (_, e) in children_of(game, gobj) {
+    each_child(game, gobj, |game, e| {
         let ef = &mut game.ef.effects[e.0];
         ef.expire_flags = (i32::from(ef.expire_flags) | flags) as i8;
-    }
+    });
 }
 
 /// Destroys a counted effect's GObj, removing the generators on its joints and any stored
@@ -161,11 +160,19 @@ fn detach_tree(r: &mut Running, gobj: GObjId) {
     let Some(Obj::JObj(j)) = w.obj else {
         panic!("a joint GObj without a joint")
     };
-    let mut joints = Vec::new();
-    jobj::walk_tree(&r.game.objs.jobjs, Some(j), &mut |j, _| joints.push(j));
-    for j in joints {
+    // `HSD_JObjWalkTree`'s order: a joint, then its own children (detaching changes no joint
+    // links).
+    fn walk(r: &mut Running, j: JObjId) {
         generator::detach_jobj(&mut r.game.objs, r.data, &mut ParticleHooks, j);
+        if r.game.objs.jobjs[j].flags & jobj::INSTANCE == 0 {
+            let mut cur = r.game.objs.jobjs[j].child;
+            while let Some(c) = cur {
+                walk(r, c);
+                cur = r.game.objs.jobjs[c].next;
+            }
+        }
     }
+    walk(r, j);
 }
 
 /// Destroys every effect `gobj` spawned and the generators on `gobj`'s own joints, and forgets
@@ -196,18 +203,18 @@ pub fn destroy_all(r: &mut Running, gobj: GObjId) {
 /// Pauses every effect `gobj` spawned from its next update, `efLib_PauseAll`.
 #[doc(alias = "efLib_PauseAll")]
 pub fn pause_all(game: &mut Game, gobj: Option<GObjId>) {
-    for (_, e) in children_of(game, gobj) {
+    each_child(game, gobj, |game, e| {
         let ef = &mut game.ef.effects[e.0];
         ef.state_flags = ef.state_flags & STATE_ASYNC | STATE_ENTERING_PAUSE;
-    }
+    });
 }
 
 /// Resumes every effect `gobj` spawned, `efLib_ResumeAll`.
 #[doc(alias = "efLib_ResumeAll")]
 pub fn resume_all(game: &mut Game, gobj: Option<GObjId>) {
-    for (_, e) in children_of(game, gobj) {
+    each_child(game, gobj, |game, e| {
         game.ef.effects[e.0].state_flags &= STATE_ASYNC;
-    }
+    });
 }
 
 /// Frees an effect as its GObj goes, `efLib_remove_user_data`.
@@ -505,10 +512,10 @@ pub fn create_attach_pos(
 /// particle drawing for its pass (`psDispParticles`, links 0 and 2 on render link 7, link 1 on
 /// 8). The color update state it sets is presentation.
 #[doc(alias = "efLib_render_callback")]
-pub fn render(game: &mut Game, gobj: GObjId, pass: i32) -> Vec<(usize, Option<ParticleId>)> {
+pub fn render(game: &mut Game, gobj: GObjId, pass: i32) -> crate::hsd::psdisp::DrawnLinks {
     let sw = match pass {
         0..=2 => pass as u32,
-        _ => return Vec::new(),
+        _ => return crate::hsd::psdisp::DrawnLinks::default(),
     };
     let links = if game.world.gobjs[gobj.0].gx_link == 7 {
         0b101

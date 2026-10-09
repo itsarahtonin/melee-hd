@@ -30,13 +30,49 @@ pub fn x594_word(x594: [u8; 4]) -> u32 {
     u32::from_be_bytes(x594)
 }
 
+/// A walk's stack of ancestors, at most `N` deep, held inline.
+pub(super) struct DataStack<const N: usize> {
+    items: [Option<DataRef>; N],
+    len: usize,
+}
+
+impl<const N: usize> DataStack<N> {
+    pub(super) fn new() -> Self {
+        DataStack {
+            items: [None; N],
+            len: 0,
+        }
+    }
+
+    pub(super) fn push(&mut self, d: DataRef) {
+        self.items[self.len] = Some(d);
+        self.len += 1;
+    }
+
+    pub(super) fn pop(&mut self) -> Option<DataRef> {
+        self.len = self.len.checked_sub(1)?;
+        self.items[self.len]
+    }
+
+    pub(super) fn last(&self) -> Option<DataRef> {
+        self.items[self.len.checked_sub(1)?]
+    }
+
+    pub(super) fn len(&self) -> usize {
+        self.len
+    }
+}
+
+/// The joint walks' stack (`ftAnim_GetNextJointInTree`'s).
+pub(super) type JointStack = DataStack<MAX_JOINT_DEPTH>;
+
 /// The next joint descriptor after `joint` in a depth-first walk, `ftAnim_GetNextJointInTree`:
 /// its child, else its next sibling, else the nearest ancestor's next sibling.
 #[doc(alias = "ftAnim_GetNextJointInTree")]
 pub(super) fn next_joint(
     data: &melee_data::archive::Archives,
     joint: DataRef,
-    stack: &mut Vec<DataRef>,
+    stack: &mut JointStack,
 ) -> Option<DataRef> {
     if let Some(child) = data.ptr(joint.at(8)) {
         stack.push(joint);
@@ -49,7 +85,7 @@ pub(super) fn next_joint(
     if let Some(next) = data.ptr(joint.at(0xC)) {
         return Some(next);
     }
-    while let Some(&parent) = stack.last() {
+    while let Some(parent) = stack.last() {
         stack.pop();
         if let Some(next) = data.ptr(parent.at(0xC)) {
             return Some(next);
@@ -122,7 +158,7 @@ impl Running<'_> {
             self.data
                 .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x10)),
         );
-        let mut stack = Vec::new();
+        let mut stack = JointStack::new();
         let mut i = part;
         let mut joint = joint;
         while let Some(desc) = joint {

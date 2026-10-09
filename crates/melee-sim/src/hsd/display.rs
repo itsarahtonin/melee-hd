@@ -101,12 +101,12 @@ pub enum Draw {
     SisText(Box<super::sis::TextDraw>),
     /// The render copied into a player's magnifier bubble (`lb_800122C8`).
     MagnifierCopy(u8),
-    /// Flat-colored quads in the current camera's view at depth 0 (`hsd_80391A04`'s debug
+    /// A flat-colored quad in the current camera's view at depth 0 (`hsd_80391A04`'s debug
     /// drawing: the background flash's).
-    Quads(Vec<Quad>),
+    Quad(Quad),
 }
 
-/// A quad of [`Draw::Quads`]: two corners and its color.
+/// A quad of [`Draw::Quad`]: two corners and its color.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Quad {
     pub x0: f32,
@@ -124,6 +124,8 @@ pub struct Display {
     pub offscreen: bool,
     /// The fighter whose trees draw, for its materials.
     pub fighter: Option<FighterMaterial>,
+    /// The debug text's drawing as its screens hand it on, reused frame to frame.
+    pub devtext: Vec<crate::game::hud::devtext::Draw>,
 }
 
 /// Starts a render pass, `HSD_StartRender`: offscreen (a shadow's texture) or the screen.
@@ -420,28 +422,37 @@ fn fighter_material(objs: &mut Objects, data: &Archives, m: MObjId) {
 /// light's vector.
 fn texture_matrices(objs: &mut Objects, data: &Archives, m: MObjId) {
     let o = &objs.mobjs[m];
-    let mut chain: Vec<TObjId> = objs.tobjs.chain(o.tobj).collect();
-    if o.rendermode & mobj::RENDER_SHADOW != 0 {
-        chain.extend(objs.tobjs.chain(objs.mobjs.shadows));
+    let shadows = (o.rendermode & mobj::RENDER_SHADOW != 0)
+        .then_some(objs.mobjs.shadows)
+        .flatten();
+    // The material's textures, then the shadows' (no setup here changes either chain).
+    for first in [o.tobj, shadows] {
+        let mut next = first;
+        while let Some(t) = next {
+            next = objs.tobjs[t].next;
+            texture_matrix(objs, data, t);
+        }
     }
-    for t in chain {
-        let o = &objs.tobjs[t];
-        if o.id == tobj::GX_TEXMAP_NULL {
-            continue;
+}
+
+/// One texture's part of [`texture_matrices`].
+fn texture_matrix(objs: &mut Objects, data: &Archives, t: TObjId) {
+    let o = &objs.tobjs[t];
+    if o.id == tobj::GX_TEXMAP_NULL {
+        return;
+    }
+    match o.flags & tobj::COORD_MASK {
+        tobj::COORD_SHADOW => {
+            let c = objs.cobjs.current.expect("TObjSetupMtx: no current camera");
+            super::cobj::inv_viewing_mtx_direct(&mut objs.cobjs, c);
         }
-        match o.flags & tobj::COORD_MASK {
-            tobj::COORD_SHADOW => {
-                let c = objs.cobjs.current.expect("TObjSetupMtx: no current camera");
-                super::cobj::inv_viewing_mtx_direct(&mut objs.cobjs, c);
+        tobj::COORD_HILIGHT => {
+            if let Some(l) = lobj::current_by_type(&objs.lobjs, lobj::INFINITE) {
+                assert!(objs.cobjs.current.is_some(), "cobj");
+                lobj::light_vector(objs, data, Some(l));
             }
-            tobj::COORD_HILIGHT => {
-                if let Some(l) = lobj::current_by_type(&objs.lobjs, lobj::INFINITE) {
-                    assert!(objs.cobjs.current.is_some(), "cobj");
-                    lobj::light_vector(objs, data, Some(l));
-                }
-            }
-            _ => {}
         }
+        _ => {}
     }
 }
 
@@ -490,11 +501,13 @@ pub fn pobj_disp(
             }
         }
         pobj::ENVELOPE => {
-            let Binding::Envelopes(envs) = &objs.pobjs[p].u else {
+            // Lent out while the joints are set up, which reads no shape.
+            let Binding::Envelopes(envs) = &mut objs.pobjs[p].u else {
                 panic!("an enveloped shape without envelopes");
             };
-            let envs = envs.clone();
+            let envs = std::mem::take(envs);
             setup_envelopes(objs, data, j, &envs);
+            objs.pobjs[p].u = Binding::Envelopes(envs);
         }
         _ => {}
     }

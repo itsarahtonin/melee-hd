@@ -498,6 +498,20 @@ impl Match {
         std::mem::take(&mut self.game.objs.display.draws)
     }
 
+    /// Takes a frame's buffers back once the frontend is done with it, so later frames fill
+    /// them rather than allocating new ones. Changes nothing the game reads.
+    pub fn recycle(&mut self, mut frame: Frame) {
+        frame.events.clear();
+        frame.draws.clear();
+        if self.game.events.is_empty() && self.game.events.capacity() < frame.events.capacity() {
+            self.game.events = frame.events;
+        }
+        let draws = &mut self.game.objs.display.draws;
+        if draws.is_empty() && draws.capacity() < frame.draws.capacity() {
+            *draws = frame.draws;
+        }
+    }
+
     /// One frame: the controllers' poll queued, then one engine tick.
     pub fn step(&mut self, pads: PadData) -> Frame {
         let t = scene::step(&mut self.running(), pads, false);

@@ -77,7 +77,7 @@ impl Running<'_> {
             .ptr(fp.ft_data.expect("a fighter without data").at(0x5C));
         // Each joint descriptor names its part's joint in the ID table.
         let mut joint = first;
-        let mut stack = Vec::new();
+        let mut stack = super::bind::JointStack::new();
         let mut idx = 0;
         while let Some(j) = joint {
             if self.part_mask(kind, idx) != 0 {
@@ -94,7 +94,7 @@ impl Running<'_> {
             joint = next_joint(self.data, j, &mut stack);
         }
         let mut joint = first;
-        let mut stack = Vec::new();
+        let mut stack = super::bind::JointStack::new();
         let (mut part, mut count) = (0i32, 0usize);
         while let Some(j) = joint {
             if self.part_mask(kind, part) != 0 {

@@ -91,6 +91,9 @@ pub struct Globals {
     /// The attack collision's scratch (`ftcoll.c`'s damage logs and clank flags), which each
     /// fighter's attack collision starts over.
     pub hit_logs: attack::HitLogs,
+    /// Which lines are platforms, for a filtered collision pass's floor filter: a buffer
+    /// each such pass fills and empties.
+    pub platforms: Vec<bool>,
 }
 
 /// The fighter kinds whose costumes Kirby can copy (`ftKb_Init_803C9FC8`'s entries).
