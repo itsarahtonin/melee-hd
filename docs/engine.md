@@ -4,7 +4,7 @@ How melee-sim models HAL's sysdolphin engine (HSD) and the game's state. [The po
 
 ## One state, plain data
 
-The original runs everything in one address space: joints, display objects, materials, animations, fighters, items, the scheduler. melee-sim keeps all of it in the simulation state, as the original does, including display objects and their material and texture animation. The display pass that walks them each frame is simulation too, since it spawns particles and draws from the RNG ([architecture](architecture.md)); it emits draw commands for the presentation layer, which never feeds anything back. Keeping display objects in the state costs some snapshot size but keeps one model of what the game's code touches, and rollback stays a clone.
+The original runs everything in one address space: joints, display objects, materials, animations, fighters, items, the scheduler. melee-sim keeps all of it in the simulation state, as the original does, including display objects and their material and texture animation. The display pass that walks them each frame is simulation too, since it spawns particles and draws from the RNG ([architecture](architecture.md)); it emits draw commands for the presentation layer, which never feeds anything back. Keeping display objects in the state costs some snapshot size but keeps one model of what the game's code touches, and rollback stays a clone. A restore is `clone_from`, which the state's types derive field by field (`melee_derive::CloneFrom`), so it reuses the target's vectors and pools rather than allocating; spare storage that isn't state (freed shapes' envelope lists kept for reuse) is marked to stay with the target.
 
 ## Objects and identity
 

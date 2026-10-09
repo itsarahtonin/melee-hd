@@ -31,26 +31,28 @@ AMD Ryzen 7 9800X3D (8 cores), 62 GB RAM, Windows 11 Pro, Rust 1.98.1.
 
 `melee-bench snapshot-match [--dir DIR] [--every TICKS] [MATCH]` measures a real match's states the same way, as the match plays natively (as `melee-bench native` plays it, `fox-fox-fd` by default) as far as it runs: every `TICKS` ticks (default 1000) the state is kept, and afterwards each is measured, together with a restore followed by 8 ticks (rollback's window) and the allocations each of those ticks makes, which the "no allocations" target counts.
 
-On the Fox–Fox match as far as it runs (2026-10-08; melee-hd with the Fox port's branch, which starts the benchmark matches and plays this one to frame 811, where it stops at `ftAnim_8006DF0C`), every 150 ticks:
+On the Fox–Fox match (2026-10-09, as far as it runs: to frame 4,572 of 15,451, tick 4,695, where it stops at `Player_GetMoreFlagsBit5`), every 750 ticks:
 
-| Tick (frame) | GObjs | Joints | Snapshot | Allocations | Clone | Restore | Restore allocations | Restore and 8 ticks | Allocations per tick |
+| Tick (frame) | GObjs | Joints | Snapshot | Allocations | Clone | Restore | Restore allocations | Restore and 8 ticks | Allocations per frame |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 150 (26) | 67 | 539 | 0.74 MB | 1,532 | 82.1 µs | 87.7 µs | 1,532 | 3.91 ms | 1,660 (max 2,091) |
-| 300 (176) | 65 | 521 | 0.76 MB | 1,535 | 85.5 µs | 71.5 µs | 1,535 | 3.13 ms | 1,589 (max 1,800) |
-| 450 (326) | 67 | 531 | 0.76 MB | 1,535 | 91.0 µs | 98.5 µs | 1,535 | 3.24 ms | 1,582 (max 1,884) |
-| 600 (476) | 65 | 521 | 0.76 MB | 1,535 | 97.3 µs | 72.7 µs | 1,535 | 3.59 ms | 1,444 (max 1,789) |
-| 750 (626) | 66 | 523 | 0.76 MB | 1,535 | 92.3 µs | 86.9 µs | 1,535 | 3.47 ms | 1,615 (max 1,861) |
-| 900 (776) | 66 | 522 | 0.77 MB | 1,535 | 99.2 µs | 97.1 µs | 1,535 | 3.39 ms | 1,593 (max 1,596) |
+| 750 (626) | 66 | 523 | 0.76 MB | 1,536 | 99.0 µs | 19.8 µs | 0 | 3.68 ms | 1 |
+| 1500 (1376) | 70 | 533 | 0.77 MB | 1,537 | 100.2 µs | 29.5 µs | 0 | 4.12 ms | 1 |
+| 2250 (2126) | 66 | 529 | 0.78 MB | 1,536 | 100.5 µs | 28.8 µs | 0 | 3.46 ms | 1 |
+| 3000 (2876) | 69 | 540 | 0.77 MB | 1,540 | 104.6 µs | 29.4 µs | 0 | 4.31 ms | 1 (max 4) |
+| 3750 (3626) | 65 | 521 | 0.78 MB | 1,537 | 106.0 µs | 29.3 µs | 0 | 3.65 ms | 1 |
+| 4500 (4376) | 67 | 528 | 0.78 MB | 1,536 | 96.1 µs | 24.6 µs | 0 | 3.23 ms | 1 |
 
-A tick of this match allocates about 1,600 times, far from the target's none; restore and 8 ticks is already under 4 ms with that.
+Size, clone and restore are well inside their targets. A restore reuses the target's storage: the state's types derive `melee_derive::CloneFrom`, a `Clone` whose `clone_from` copies field by field (each field's own `clone_from`, so vectors, boxes and pools keep their capacity), and the few containers that would build anew (maps, file lists of strings) are copied only when they differ. A snapshot (`clone`) still allocates, since it makes a new copy. Restore and 8 ticks is at the 4 ms target, over it on some states: the ticks are the cost (see the profile below).
 
-Size and clone time are well inside the targets. Restoring still allocates: derived `clone_from` rebuilds every owned `Vec` and map rather than reusing the target's storage, so the state's containers need `clone_from` implementations that reuse capacity (pools already have `restore_from`) before restores are allocation-free.
+**Allocations.** An engine tick allocated about 1,550 times on this match (2026-10-08), almost all in the display pass and joint walks that collected vectors to walk over. Now walks read each next link as they go (none of their bodies changes the links they walk), envelopes are lent out instead of copied, small fixed-size lists are held inline, symbol names and voice ids are read in place, a freed shape's envelope lists are kept for the next shapes to reuse (spare storage a restore keeps and a snapshot leaves out), and `Match::recycle` takes a frame's event and draw buffers back. A frame's only allocation left is the text draw's box (`Draw::SisText`), the presentation's output. An engine tick still allocates the first time something grows past what it has held (a pool's first new slot, a fighter's first handle word): `melee-bench`'s check `ticks_and_restores_dont_allocate` plays the match to tick 4,600, restores its state from tick 1,000 and plays ticks 1,000 to 4,600 again, as a rollback does, and asserts that the restore and every one of those ticks make no allocation. `melee-bench alloc-sites [--from TICK] [--ticks N] [--rollback] [MATCH]` tallies where a stretch of ticks allocates, by backtrace (with a profiling build: line tables on, `CARGO_PROFILE_RELEASE_DEBUG=line-tables-only`).
 
 ## Simulation speed
 
 `melee-bench native [--dir DIR] [--runs N] [MATCH...]` (`tools/bench/src/native.rs`) plays each benchmark match natively and headless on one thread: from the replay's start through `vs_match`'s replay path (Slippi's playback codes, `Match::step_replay`), with the display pass, in the console's floating point (`FpMode::Hardware`, as the matches were made). The match's files are read from the disc before the clock starts, and the fighters' addresses come from the match's start trace (`NAME.start.trace`), as the oracle takes them. A run is timed from the match's first tick to its last frame, and afterwards every frame's fighters (action state, position, facing, percent and stocks) are checked against the replay's post-frame updates, the fields the Dolphin harness checks. It prints `melee-bench dolphin`'s table (median of 5 runs, with the machine), so the two divide. A run that stops before the match's last frame is no result: its row says where it stopped and why, and gives no speed.
 
-melee-hd's side isn't measured yet: it comes with the one-character Final Destination milestone, once the Fox–Fox match steps natively to its end. As a first look (2026-10-08, not a result): with the Fox port's branch merged, the Fox–Fox match runs in sync to frame 811 of 15,451 (934 ticks) before code no port covers yet stops it, at about 2,100 frames per second over that stretch, which starts with the match's entry. Dolphin's side, the baseline, is below.
+melee-hd's side isn't measured yet: it comes with the one-character Final Destination milestone, once the Fox–Fox match steps natively to its end. As a look so far (2026-10-09, not a result): the Fox–Fox match runs in sync to frame 4,572 of 15,451 (4,695 ticks) before code no port covers yet stops it, at about 2,230 frames per second over that stretch (about 1,830 before the allocations came out). Dolphin's side, the baseline, is below.
+
+**Profile.** A sampled profile of that run (samply at 4 kHz, about 10,000 samples on the simulation's thread; `melee-bench symbolize RVA...` names the functions at a profile's offsets in its own executable, when the profiler can't find the PDB), by share of samples including what each calls: the engine ticks 69%, the display pass 19%, and the match's setup and disc reads, outside the timed stretch, the rest. In the ticks, joint matrices (`HSD_JObjSetupMatrix`: `Mtx34::srt` 21%, `Mtx34::concat` 13%) take 34%, about half of it from the playback codes' pass over every dirty matrix of each fighter's model (16%); the fighters' bone dynamics (`swing_chains`) 24%; animation interpretation (AObjs and FObjs) about 13%; collision about 5%. By function alone, the bit-exact fused float operations (`gekko_fp::fmadds`, `fmsub`, `fnmsubs`, the paired `ps_madds0` and `ps_madds1`, and the C library's `fma` under them) take about 33%, and `sin` and `cos` with their range reduction about 10%. Nothing is optimized for speed yet beyond the allocations; no change may alter a checked bit.
 
 ## Benchmark matches
 
