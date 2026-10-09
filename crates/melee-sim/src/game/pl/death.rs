@@ -276,6 +276,32 @@ impl Running<'_> {
         }
     }
 
+    /// A ledge caught after a hit, `pl_80040048`: a strong enough hit counts a recovery
+    /// (`xCE8`), and a stronger one with a jump or less used scores bonus 0x48 (Nana's don't
+    /// count, nor a fighter no one hit).
+    #[doc(alias = "pl_80040048")]
+    #[doc(alias = "ft_80087AA4")]
+    #[doc(alias = "ft_80087AB4")]
+    pub fn record_ledge_catch(&mut self, slot: i32, sub: bool) {
+        let gobj = self
+            .game
+            .player_entity_at(slot, i32::from(sub))
+            .expect("a slot without its fighter");
+        let last = self.game.ft_last_attacker(gobj);
+        if sub || last == NO_SLOT {
+            return;
+        }
+        let fp = self.game.fighter(gobj);
+        let (kb, special_fall, jumps) = (fp.dmg.x18d8.kb_applied1, fp.x2227_b5, fp.x1968_jumpsUsed);
+        if reg(kb) >= reg(self.bonus_param_f32(0x98)) {
+            let t = &mut self.game.player_mut(slot).stale_moves;
+            t.xCE8 = t.xCE8.wrapping_add(1);
+        }
+        if reg(kb) >= reg(self.bonus_param_f32(0xA0)) && !special_fall && jumps <= 1 {
+            self.count_bonus(slot, 0x48);
+        }
+    }
+
     /// Where each rival stood at a KO that wasn't off the top, `plBonusLib_8003D514`: every
     /// other player in play notes it saw one, and whether it faced away from the KO.
     #[doc(alias = "plBonusLib_8003D514")]

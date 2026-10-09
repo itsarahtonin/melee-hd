@@ -899,11 +899,7 @@ impl Running<'_> {
         match self.ledge_taken_by(gobj) {
             None => {
                 let (slot, sub) = (fp.player_idx, fp.is_sub_fighter);
-                code::call(
-                    self,
-                    PL_80040048,
-                    &[Val::Int(i32::from(slot)), Val::Int(i32::from(sub))],
-                );
+                self.record_ledge_catch(i32::from(slot), sub);
                 self.enter_cliff_catch(gobj);
                 true
             }
@@ -955,8 +951,6 @@ impl Running<'_> {
     }
 }
 
-/// `pl_80040048`: counts a ledge catch (the player library's port).
-const PL_80040048: u32 = 0x8004_0048;
 /// `pl_8003FFDC`: counts a ledge taken from another fighter.
 const PL_8003FFDC: u32 = 0x8003_FFDC;
 
