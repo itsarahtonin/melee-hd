@@ -85,6 +85,19 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800D_EE64 => {
             g.ground_coll(gobj);
         }
+        // ftCo_PassiveWall_Anim, _IASA, _Phys, _Coll (the tech and the wall jump)
+        0x800C_2028 => {
+            g.co_passive_wall_anim(gobj);
+        }
+        0x800C_2180 => {
+            g.co_passive_wall_iasa(gobj);
+        }
+        0x800C_22C0 => {
+            g.co_passive_wall_phys(gobj);
+        }
+        0x800C_2348 => {
+            g.co_passive_wall_coll(gobj);
+        }
         // ftCo_Cliff_Cam
         0x8008_1644 => {
             g.co_cliff_cam(gobj);

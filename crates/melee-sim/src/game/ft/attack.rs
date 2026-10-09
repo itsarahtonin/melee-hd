@@ -925,7 +925,7 @@ impl Running<'_> {
     /// Plays a hitbox's sound by its kind and severity, `lbColl_80005BB0`: on `track` for the
     /// heaviest of kind 13, else on none.
     #[doc(alias = "lbColl_80005BB0")]
-    fn hit_kind_sound(&mut self, kind: i32, severity: i32, track: i32) -> i32 {
+    pub(crate) fn hit_kind_sound(&mut self, kind: i32, severity: i32, track: i32) -> i32 {
         let id = HIT_KIND_SFX[(kind * 3 + severity) as usize];
         let track = if kind == 13 && severity == 2 {
             track
@@ -1431,6 +1431,34 @@ impl Running<'_> {
         }
     }
 
+    /// Remembers the fighter as a tip's victim in the item's boxes of box `j`'s group, and in
+    /// every item sharing its id's, `it_8026FC00`.
+    #[doc(alias = "it_8026FC00")]
+    fn item_tip_group(&mut self, g: GObjId, j: usize, kind: i32, v: Victim) {
+        use super::super::it::{self, P_LINK_ITEM};
+        let ip = it::item(self.game, g);
+        let (id, group) = (ip.xAC4_ignoreItemID, ip.x5D4_hitboxes[j].hit.x4);
+        let add = |game: &mut super::super::state::Game, item: GObjId| {
+            for k in 0..4 {
+                let cur = &mut it::item_mut(game, item).x5D4_hitboxes[k].hit;
+                if cur.state != hitcapsule::DISABLED && cur.x4 == group {
+                    hitcapsule::add_victim2(cur, kind, v);
+                }
+            }
+        };
+        if id == 0 {
+            add(self.game, g);
+            return;
+        }
+        let mut cur = self.game.world.first_in(P_LINK_ITEM);
+        while let Some(o) = cur {
+            cur = self.game.world.gobjs[o.0].next;
+            if it::item(self.game, o).xAC4_ignoreItemID == id {
+                add(self.game, o);
+            }
+        }
+    }
+
     /// The fighter takes item `g`'s box `j` on hurtbox `n`, `ftColl_80077C60`: the damage
     /// scaled by a grab's and the frozen state's factors and the fighter's own; a hit (not a
     /// tip) is remembered by the item, which keeps the most damage it dealt and which way;
@@ -1458,13 +1486,56 @@ impl Running<'_> {
         let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
         if reg(h.coll_distance) < reg(tip) {
             let mf = &self.game.fighters[me.0];
-            if self.game.ft.hit_logs.hits.is_empty()
-                && mf.dmg.x189C_unk_num_frames == 0.0
-                && !hitcapsule::has_victim2(h, victim(me))
+            if !self.game.ft.hit_logs.hits.is_empty()
+                || mf.dmg.x189C_unk_num_frames != 0.0
+                || hitcapsule::has_victim2(h, victim(me))
             {
-                unported_call("ftColl_80077C60 (an item's tip, it_8026FC00)");
+                return false;
             }
-            return false;
+            let mode = if h.x41_b5 { 5 } else { 0 };
+            self.item_tip_group(g, j, mode, victim(me));
+            let mf = &self.game.fighters[me.0];
+            if mf.x1988 == 0
+                && mf.x198C == 0
+                && !mf.x221D_b6
+                && mf.hurt_capsules[n].capsule.state == HURT_ENABLED
+            {
+                // Half the damage, from the damage taken whole (at least 1), and half the raw
+                // damage's knockback count.
+                let (scaled, whole_raw) = (fp::fctiwz(dmg), fp::fctiwz(raw));
+                let half = fp::fmuls(0.5, fp::frsp(f64::from(scaled)));
+                let half = if fp::fctiwz(half) == 0 && scaled != 0 {
+                    1.0
+                } else {
+                    half
+                };
+                let half_raw = fp::frsp(f64::from(whole_raw / 2));
+                let half_raw = if half_raw == 0.0 && whole_raw != 0 {
+                    1.0
+                } else {
+                    half_raw
+                };
+                let mf = &mut self.game.fighters[me.0];
+                if fp::fctiwz(half) > mf.dmg.x1840 {
+                    mf.dmg.x1840 = fp::fctiwz(half);
+                }
+                let ip = it::item(self.game, g);
+                let entry = LogEntry {
+                    kind: ip.kind,
+                    gobj: ip.entity,
+                    hit: LoggedHit::Item { item: g, index: j },
+                    hurt: n,
+                    pos: ip.x5D4_hitboxes[j].hit.hurt_coll_pos,
+                    damage: mem(half),
+                    count: cvt_fp2unsigned(half_raw),
+                };
+                let tips = &mut self.game.ft.hit_logs.tips;
+                assert!(tips.len() < LOG_LEN, "tip log over {LOG_LEN}!!");
+                tips.push(entry);
+            }
+            // `ftColl_80078488`.
+            self.fighter_play_sfx(me, 85, 0x7F, 0x40);
+            return true;
         }
         let mode = if h.x41_b5 { 5 } else { 0 };
         self.game.ft.hit_logs.tips.clear();

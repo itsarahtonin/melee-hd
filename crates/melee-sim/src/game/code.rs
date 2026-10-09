@@ -117,6 +117,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
     match cb.0 {
         addr if super::ft::fox::run(g, gobj, addr) => {}
         addr if super::ft::seak::run(g, gobj, addr) => {}
+        addr if super::ft::zelda::run(g, gobj, addr) => {}
         addr if super::ft::co::dispatch::run(g, gobj, addr) => {}
         // Animation.
         0x8008_A494 => g.co_wait_anim(gobj),
@@ -214,6 +215,9 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         // Sheik's knockback hooks.
         super::ft::co::hit::SEAK_ON_KNOCKBACK_ENTER => g.seak_on_knockback_enter(gobj),
         super::ft::co::hit::SEAK_ON_KNOCKBACK_EXIT => g.seak_on_knockback_exit(gobj),
+        // Zelda's, the same.
+        super::ft::zelda::addr::ON_KNOCKBACK_ENTER => g.seak_on_knockback_enter(gobj),
+        super::ft::zelda::addr::ON_KNOCKBACK_EXIT => g.seak_on_knockback_exit(gobj),
         // efLib_PauseAll, a state's hitlag hook that freezes the fighter's effects.
         EF_PAUSE_ALL => super::ef::pause_all(g.game, Some(gobj)),
         // efLib_ResumeAll, a state's hook for hitlag's end.
@@ -303,6 +307,9 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::seak::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::zelda::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::sfx::call(r, f, args) {

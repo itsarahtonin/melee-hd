@@ -258,7 +258,7 @@ impl Running<'_> {
     /// Animates the parts in `part`'s subtree that play the action's animation,
     /// `ftAnim_8006E7B8`.
     #[doc(alias = "ftAnim_8006E7B8")]
-    fn anim_part_tree(&mut self, f: FighterId, part: i32) {
+    pub(super) fn anim_part_tree(&mut self, f: FighterId, part: i32) {
         aobj::init_end_callback(&mut self.game.objs.aobjs);
         let mut i = part;
         let top_bone = self.bone(f, part);

@@ -385,10 +385,88 @@ impl Running<'_> {
         if self.game.fighter(gobj).x1978.is_some() {
             return false;
         }
-        if self.game.world.first_in(ITEM_P_LINK).is_some() {
-            unported_call("ftpickupitem_800942A0 with items in the match");
+        if self.item_in_reach(gobj, 3).is_some() {
+            unported_call("ftpickupitem_80094694 (picking an item up)");
         }
         false
+    }
+
+    /// The nearest item the fighter can pick up, `ftpickupitem_800942A0`: of the items it
+    /// may take (light ones with `flags` bit 0, heavy ones with bit 1; no healing item while
+    /// `x2222_b4`, only a healing one or a coin while holding an item), the one whose pickup
+    /// point (`it_8026B344`) lies within its grab range of the fighter's reach box
+    /// (`x294_itPickup`), nearest the box's center. None for a CPU of kind 28.
+    #[doc(alias = "ftpickupitem_800942A0")]
+    pub fn item_in_reach(&self, gobj: GObjId, flags: u32) -> Option<GObjId> {
+        use crate::game::it::{self, kinds, lib26b1};
+        let fp = self.game.fighter(gobj);
+        let p = &fp.x294_itPickup;
+        let light = if fp.ground_or_air == super::super::common::GA_GROUND {
+            &p.gr_light_offset
+        } else {
+            &p.air_light_offset
+        };
+        if self.is_cpu_controlled(fp) && fp.cpu.kind == 28 {
+            return None;
+        }
+        // `it_8026B47C`: a healing item's heal; `it_8026B4F0`: what can be taken while holding
+        // an item (`It_Kind_Coin`, `_Lucky_Egg`, `_WhispyHealApple` besides the food).
+        const COIN: i32 = 159;
+        const LUCKY_EGG: i32 = 205;
+        const WHISPY_HEAL_APPLE: i32 = 226;
+        let heals = |k: i32| {
+            [kinds::HEART, kinds::TOMATO, kinds::FOODS, LUCKY_EGG].contains(&k)
+                || k == WHISPY_HEAL_APPLE
+        };
+        let mut min = 30000.0;
+        let mut found = None;
+        let mut cur = self.game.world.first_in(ITEM_P_LINK);
+        while let Some(g) = cur {
+            cur = self.game.world.gobjs[g.0].next;
+            if !it::item::is_grabbable(self.game, g) {
+                continue;
+            }
+            let heavy = lib26b1::is_heavy(self.game, self.data, g);
+            let ip = it::item(self.game, g);
+            if fp.x2222_b4 && heals(ip.kind) {
+                unported_call("it_8026B47C (a healing item's heal)");
+            }
+            let takes_held = heals(ip.kind) || ip.kind == COIN;
+            if fp.item_gobj.is_some() && !takes_held {
+                continue;
+            }
+            if !((!heavy && flags & 1 != 0) || (heavy && flags & 2 != 0)) {
+                continue;
+            }
+            let it_x = mem(fp::fmadds(
+                reg(ip.facing_dir),
+                reg(ip.xBCC_unk.x),
+                reg(ip.pos.x),
+            ));
+            let it_y = mem(fp::fadds(reg(ip.pos.y), reg(ip.xBCC_unk.y)));
+            let (xr, yr) = (reg(ip.xBD4_grabRange.x), reg(ip.xBD4_grabRange.y));
+            let v = if heavy { &p.gr_heavy_offset } else { light };
+            let x1 = reg(v.z);
+            let x0 = mem(fp::fmadds(reg(fp.facing_dir), reg(v.x), reg(fp.cur_pos.x)));
+            let y0 = mem(fp::fadds(reg(fp.cur_pos.y), reg(v.y)));
+            let y1 = reg(v.w);
+            let (x0, y0) = (reg(x0), reg(y0));
+            let (ix, iy) = (reg(it_x), reg(it_y));
+            if fp::fsubs(fp::fsubs(x0, x1), xr) < ix
+                && fp::fadds(xr, fp::fadds(x0, x1)) > ix
+                && fp::fsubs(fp::fsubs(y0, y1), yr) < iy
+                && fp::fadds(yr, fp::fadds(y0, y1)) > iy
+            {
+                let dy = fp::fsubs(iy, y0);
+                let dx = fp::fsubs(ix, x0);
+                let d = fp::fmadds(dx, dx, fp::fmuls(dy, dy));
+                if d < min {
+                    found = Some(g);
+                    min = d;
+                }
+            }
+        }
+        found
     }
 
     /// Whether the held item is the hammer, `ftCo_800C5240`.
@@ -565,9 +643,9 @@ impl Running<'_> {
             && fp.input.pressed_buttons & PAD_A != 0
             && !fp.x2224_b1
             && u32::from(fp.x683) >= window
-            && self.game.world.first_in(ITEM_P_LINK).is_some()
+            && self.item_in_reach(gobj, 1).is_some()
         {
-            unported_call("ftpickupitem_800942A0 with items in the match");
+            unported_call("fn_800D6F58 (catching an item in the air)");
         }
         false
     }

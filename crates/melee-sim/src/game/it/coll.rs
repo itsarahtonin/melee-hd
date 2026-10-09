@@ -25,6 +25,110 @@ pub const HURT_ENABLED: i32 = 0;
 #[doc(alias = "it_8026F9A0")]
 pub fn clear_damage_log(game: &mut Game) {
     game.it.damage_log_len = 0;
+    game.it.damage_log.clear();
+}
+
+/// An entry of the damage log (`DamageLogEntry`): what hit (1 a fighter, 2 an item), the
+/// attacker's GObj and its hitbox. The original also keeps the hurtbox hit, which nothing
+/// reads.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DamageLogEntry {
+    pub kind: i32,
+    pub source: GObjId,
+    pub hit: usize,
+}
+
+/// The damage log's size (`it_804A0E70`'s entries).
+const DAMAGE_LOG_SIZE: usize = 15;
+
+/// Logs a hit on the item, `it_8026F9AC`.
+#[doc(alias = "it_8026F9AC")]
+fn log_damage(game: &mut Game, e: DamageLogEntry) {
+    assert!(
+        game.it.damage_log.len() < DAMAGE_LOG_SIZE,
+        "damage log over {DAMAGE_LOG_SIZE}!!"
+    );
+    game.it.damage_log.push(e);
+    game.it.damage_log_len += 1;
+}
+
+/// Whether the item is one of the adventure's enemies, whose hits count in the players'
+/// statistics, `it_8026B6C8`: Goombas to Octoroks, Old Goombas to the Arwings, but Whispy's
+/// apples and the Kyasarin's egg.
+#[doc(alias = "it_8026B6C8")]
+fn is_enemy(game: &Game, gobj: GObjId) -> bool {
+    use super::kinds::{ARWING_LASER, KURIBOH, OCTAROCK_STONE, OLD_KURI};
+    /// `It_Kind_Kyasarin_Egg`, `It_Kind_WhispyApple`.
+    const KYASARIN_EGG: i32 = 236;
+    const WHISPY_APPLE: i32 = 225;
+    let kind = item(game, gobj).kind;
+    ((KURIBOH..OCTAROCK_STONE).contains(&kind) || (OLD_KURI..ARWING_LASER).contains(&kind))
+        && kind != KYASARIN_EGG
+        && kind != WHISPY_APPLE
+}
+
+/// `ABS` as the original's macro spells it.
+fn abs(v: f64) -> f64 {
+    if v < 0.0 { fp::fneg(v) } else { v }
+}
+
+/// Item `g`'s box `hi` lands on item `me`'s hurtbox `n`, `it_802706D0_sub3`: the box
+/// remembers it, the attacker keeps the damage it dealt, which way and to whom, the victim
+/// adds the damage, the hit is logged, and the hit's sound plays.
+fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId) {
+    use hitcapsule::Victim;
+    let me_id = super::item_of(r.game, me);
+    let kind = if item(r.game, g).x5D4_hitboxes[hi].hit.x41_b4 {
+        8
+    } else {
+        0
+    };
+    r.item_add_victim(g, hi, kind, Victim::Item(me_id), false);
+    let slow = reg(common_data(r.game).f32(r.data, common::XD4));
+    let (attacker, victim) = (item(r.game, g), item(r.game, me));
+    let vx = reg(attacker.x40_vel.x);
+    let dir = if abs(vx) < slow {
+        if attacker.pos.x > victim.pos.x {
+            -1.0
+        } else {
+            1.0
+        }
+    } else if vx < 0.0 {
+        -1.0
+    } else {
+        1.0
+    };
+    let hit = &attacker.x5D4_hitboxes[hi].hit;
+    let dmg = fp::fctiwz(reg(hit.damage));
+    let (sfx_kind, sfx_severity) = (hit.sfx_kind, hit.sfx_severity);
+    let (victim_kind, victim_pos) = (victim.kind, victim.pos);
+    let a = item_mut(r.game, g);
+    a.xCB8_outDamageDirection = dir;
+    a.xC34_damageDealt = dmg;
+    a.xCF4_fighterGObjUnk = None;
+    a.xC38 = victim_kind;
+    a.xCD4 = victim_pos;
+    let v = item_mut(r.game, me);
+    v.xCA0 = v.xCA0.wrapping_add(dmg);
+    if dmg > v.xCA4 {
+        v.xCA4 = dmg;
+    }
+    log_damage(
+        r.game,
+        DamageLogEntry {
+            kind: 2,
+            source: g,
+            hit: hi,
+        },
+    );
+    // `it_8027B408`: an enemy's damage counts in the attacker's owner's statistics.
+    if is_enemy(r.game, me) {
+        code::unported_call("it_8027B408 (an item's hit on an enemy, in the statistics)");
+    }
+    if victim_kind == super::kinds::PKIND_RANDOM {
+        code::unported_call("it_802706D0's hit on a Pokémon's hurtbox");
+    }
+    r.hit_kind_sound(sfx_kind, sfx_severity, -1);
 }
 
 /// Gives a hitbox that joins a group the victims its group's other boxes remember, else none,
@@ -135,13 +239,57 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
                     continue;
                 }
                 if r.game.fighters[f.0].x914[hi].element != ELEMENT_INERT {
-                    code::unported_call("it_802703E8's hit on an item's hurtbox");
+                    fighter_hits_item(r, fg, hi, gobj);
                 } else {
                     r.game.fighters[f.0].unk_gobj = Some(gobj);
                 }
                 break;
             }
         }
+    }
+}
+
+/// Fighter `fg`'s box `hi` lands on the item's hurtbox `n` (`it_802703E8`): the box
+/// remembers it (`ftColl_80076808`), the fighter keeps the damage (`dmg.x1914`), the item adds
+/// it, the hit is logged, and the hit's sound plays.
+fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId) {
+    use hitcapsule::Victim;
+    let f = r.game.fighter_id(fg);
+    let me_id = super::item_of(r.game, me);
+    r.hit_group(f, hi, 0, Victim::Item(me_id), false);
+    let hit = &r.game.fighters[f.0].x914[hi];
+    let dmg = fp::fctiwz(reg(hit.damage));
+    let (sfx_kind, sfx_severity) = (hit.sfx_kind, hit.sfx_severity);
+    r.game.fighters[f.0].dmg.x1914 = dmg;
+    let v = item_mut(r.game, me);
+    v.xCA0 = v.xCA0.wrapping_add(dmg);
+    if dmg > v.xCA4 {
+        v.xCA4 = dmg;
+    }
+    log_damage(
+        r.game,
+        DamageLogEntry {
+            kind: 1,
+            source: fg,
+            hit: hi,
+        },
+    );
+    // `it_8027B378`: an enemy's damage counts in the fighter's statistics.
+    if is_enemy(r.game, me) {
+        code::unported_call("it_8027B378 (a fighter's hit on an enemy, in the statistics)");
+    }
+    if item(r.game, me).kind == super::kinds::PKIND_RANDOM {
+        code::unported_call("it_802703E8's hit on a Pokémon's hurtbox");
+    }
+    r.hit_kind_sound(sfx_kind, sfx_severity, -1);
+}
+
+/// The hitbox a damage log entry names: an item's or a fighter's.
+fn logged_hit(game: &Game, e: &DamageLogEntry) -> crate::game::structs::HitCapsule {
+    if e.kind == 1 {
+        game.fighter(e.source).x914[e.hit].clone()
+    } else {
+        item(game, e.source).x5D4_hitboxes[e.hit].hit.clone()
     }
 }
 
@@ -278,7 +426,8 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
                     h.hurt_coll_pos = hit.hurt_coll_pos;
                     h.coll_distance = hit.coll_distance;
                     if touch {
-                        code::unported_call("it_802706D0's hit on an item's hurtbox");
+                        item_hits_item(r, g, hi, gobj);
+                        break;
                     }
                 }
             }
@@ -359,13 +508,127 @@ fn clank(r: &mut Running, a: GObjId, i: usize, b: GObjId, j: usize) {
     }
 }
 
-/// What the item's damage log decides: who hit it hardest, from where, and the knockback,
-/// `it_80270E30`.
+/// `hit_effect_ids`: the effect a hit spawns by its element (-1 none).
+const HIT_EFFECT_IDS: [i32; 17] = [
+    1000, 1002, 1001, 1004, 1145, 1005, -1, -1, -1, 1000, 1000, -1, -1, 1046, -1, -1, 0,
+];
+
+/// What the item's damage log decides, `it_80270E30`: each hit's knockback (from its fixed
+/// knockback, or the item's damage with the hit's), capped (`ItemCommonData` x9C), and its
+/// effect where it landed; the strongest one gives who hit the item, from which side, the
+/// angle, knockback and element.
 #[doc(alias = "it_80270E30")]
-pub fn take_hits(r: &mut Running, _gobj: GObjId) {
-    if r.game.it.damage_log_len != 0 {
-        code::unported_call("it_80270E30 (an item taking hits)");
+pub fn take_hits(r: &mut Running, gobj: GObjId) {
+    if r.game.it.damage_log_len == 0 {
+        return;
     }
+    let c = common_data(r.game);
+    let k = |o: u32| reg(c.f32(r.data, 0x80 + 4 * o));
+    let (cap, slow) = (reg(c.f32(r.data, 0x9C)), reg(c.f32(r.data, 0x78)));
+    let damage_mul = reg(r.data.f32(
+        item(r.game, gobj)
+            .xCC_item_attr
+            .expect("an item without attributes")
+            .at(0x1C),
+    ));
+    let u = |v: u32| fp::frsp(f64::from(v));
+    let mut max = -1.0;
+    let mut strongest = None;
+    let entries = r.game.it.damage_log.clone();
+    for (index, e) in entries.iter().enumerate() {
+        let hit = logged_hit(r.game, e);
+        let kb = if hit.x28 != 0 {
+            let t = fp::fmuls(k(9), fp::fmuls(k(10), u(hit.x28)));
+            let t = fp::fmadds(k(10), k(8), t);
+            let t = fp::fmuls(damage_mul, t);
+            let t = fp::fmadds(k(11), t, k(12));
+            fp::fmadds(fp::fmuls(f64::from(0.01_f32), u(hit.x24)), t, u(hit.x2C))
+        } else {
+            let me = item(r.game, gobj);
+            let sum = fp::fadds(fp::frsp(f64::from(me.xC9C)), fp::frsp(f64::from(me.xCA0)));
+            let t = fp::fmuls(k(9), fp::fmuls(reg(hit.damage), sum));
+            let t = fp::fmadds(k(8), sum, t);
+            let t = fp::fmuls(damage_mul, t);
+            let t = fp::fmadds(k(11), t, k(12));
+            fp::fmadds(fp::fmuls(f64::from(0.01_f32), u(hit.x24)), t, u(hit.x2C))
+        };
+        let kb = if kb >= cap { cap } else { kb };
+        let me = item(r.game, gobj);
+        if !flag(me.xDCF_flag, 1) {
+            let pos = hit.hurt_coll_pos;
+            if me.hold_kind == 4 || me.hold_kind == 6 {
+                match HIT_EFFECT_IDS[hit.element as usize] {
+                    -1 | 0 => {}
+                    _ => code::unported_call("it_80270E30's effect on an enemy"),
+                }
+            } else {
+                let arg = crate::game::ef::Arg::Float(hit.damage);
+                crate::game::ef::spawn(r, 1000, Some(gobj), &[crate::game::ef::Arg::Vec(pos), arg]);
+            }
+        }
+        if kb > max {
+            max = kb;
+            strongest = Some(index);
+        }
+    }
+    let Some(index) = strongest else {
+        panic!("it_80270E30: no hit's knockback over -1, the original reads a stale index")
+    };
+    let e = &entries[index];
+    match e.kind {
+        1 => {
+            let fp = r.game.fighter(e.source);
+            let (slot, x) = (i32::from(fp.player_idx), fp.cur_pos.x);
+            let me = item(r.game, gobj);
+            let dir = if me.pos.x > x { -1.0 } else { 1.0 };
+            let ip = item_mut(r.game, gobj);
+            ip.xCB0_source_ply = slot;
+            ip.xCEC_fighterGObj = Some(e.source);
+            ip.xCF0_itemGObj = None;
+            ip.xCCC_incDamageDirection = dir;
+            // `it_8027B4A4`: an enemy's hit counts in the fighter's statistics.
+            if is_enemy(r.game, gobj) {
+                code::unported_call("it_8027B4A4 (an enemy hit, in the statistics)");
+            }
+        }
+        2 => {
+            let owner = item(r.game, e.source).owner;
+            let (src, fighter) = match owner {
+                Some(o) if is_fighter(r.game, Some(o)) => {
+                    (i32::from(r.game.fighter(o).player_idx), Some(o))
+                }
+                _ => (6, None),
+            };
+            let attacker = item(r.game, e.source);
+            let (kind, pos, vx) = (attacker.kind, attacker.pos, reg(attacker.x40_vel.x));
+            let me = item(r.game, gobj);
+            let dir = if abs(vx) < slow {
+                if me.pos.x > pos.x { -1.0 } else { 1.0 }
+            } else if vx < 0.0 {
+                1.0
+            } else {
+                -1.0
+            };
+            let ip = item_mut(r.game, gobj);
+            ip.xCB0_source_ply = src;
+            ip.xCEC_fighterGObj = None;
+            ip.xCF0_itemGObj = fighter;
+            ip.xCB4 = kind;
+            ip.xCE0 = pos;
+            ip.xCCC_incDamageDirection = dir;
+            // `it_8027B508`: an enemy's hit counts in the attacker's owner's statistics.
+            if is_enemy(r.game, gobj) {
+                code::unported_call("it_8027B508 (an enemy hit, in the statistics)");
+            }
+        }
+        _ => {}
+    }
+    let hit = logged_hit(r.game, e);
+    let ip = item_mut(r.game, gobj);
+    ip.xCAC_angle = hit.kb_angle;
+    ip.xCC8_knockback = mem(max);
+    ip.xCC4 = hit.element as i32;
+    set_flag(&mut ip.xDCF_flag, 6, hit.x43_b0);
 }
 
 /// Brings a hitbox's position up to date, `it_8027129C`: a new one starts where its joint

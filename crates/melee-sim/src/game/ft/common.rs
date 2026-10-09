@@ -160,8 +160,17 @@ impl Running<'_> {
     /// `ftCo_800D71D8`: a delayed item pickup's window.
     #[doc(alias = "ftCo_800D71D8")]
     pub fn item_pickup_tick(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).x209C != 0 {
-            unported_call("ftpickupitem_800942A0");
+        if self.game.fighter(gobj).x209C == 0 {
+            return;
+        }
+        let found = self.item_in_reach(gobj, 1);
+        let fp = self.game.fighter_mut(gobj);
+        fp.x209C -= 1;
+        if fp.x209C == 0 {
+            fp.x2224_b1 = true;
+        }
+        if found.is_some() {
+            unported_call("fn_800D6F58 (catching an item in the air)");
         }
     }
 

@@ -217,6 +217,22 @@ impl Running<'_> {
         Self::self_accel_deaccel(fp, friction);
     }
 
+    /// Air friction against the horizontal velocity, the stronger `ftCommonData` x1FC past
+    /// the most drift; whether it was, `ftCommon_CalcSelfAccel_DeaccelQuickAir`.
+    // Ports `ftCommon_CalcSelfAccel_DeaccelQuickAir`; aliased once a check reaches it.
+    pub fn self_accel_deaccel_quick_air(&mut self, gobj: GObjId) -> bool {
+        let oob = reg(self.common().f32(0x1FC));
+        let fp = self.game.fighter_mut(gobj);
+        let past = abs(reg(fp.self_vel.x)) > reg(fp.co_attrs.air_drift_max);
+        let friction = if past {
+            oob
+        } else {
+            reg(fp.co_attrs.aerial_friction)
+        };
+        Self::self_accel_deaccel(fp, friction);
+        past
+    }
+
     /// Keeps the horizontal speed within `max` either way, `ftCommon_ClampSelfVelX`.
     #[doc(alias = "ftCommon_ClampSelfVelX")]
     pub fn clamp_self_vel_x(fp: &mut Fighter, max: f64) {
