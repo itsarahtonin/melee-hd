@@ -357,10 +357,25 @@ struct SYMBOL_INFOW {
     Name: [u16; 1024],
 }
 
+#[repr(C)]
+struct IMAGEHLP_LINEW64 {
+    SizeOfStruct: u32,
+    Key: *mut c_void,
+    LineNumber: u32,
+    FileName: *mut u16,
+    Address: u64,
+}
+
 #[link(name = "dbghelp")]
 unsafe extern "system" {
     fn SymInitializeW(process: HANDLE, path: *const u16, invade: BOOL) -> BOOL;
     fn SymFromAddrW(process: HANDLE, addr: u64, disp: *mut u64, sym: *mut SYMBOL_INFOW) -> BOOL;
+    fn SymGetLineFromAddrW64(
+        process: HANDLE,
+        addr: u64,
+        disp: *mut u32,
+        line: *mut IMAGEHLP_LINEW64,
+    ) -> BOOL;
 }
 
 #[link(name = "kernel32")]
@@ -389,8 +404,29 @@ pub fn symbolize(rvas: &[u64]) -> Vec<Option<String>> {
                 sym.SizeOfStruct = 88;
                 sym.MaxNameLen = 1024;
                 let mut disp = 0u64;
-                (SymFromAddrW(process, base + rva, &mut disp, &mut sym) != 0)
-                    .then(|| String::from_utf16_lossy(&sym.Name[..sym.NameLen.min(1024) as usize]))
+                if SymFromAddrW(process, base + rva, &mut disp, &mut sym) == 0 {
+                    return None;
+                }
+                let name = String::from_utf16_lossy(&sym.Name[..sym.NameLen.min(1024) as usize]);
+                // The source line, which folded functions and missing symbols don't confuse.
+                let mut line: IMAGEHLP_LINEW64 = std::mem::zeroed();
+                line.SizeOfStruct = std::mem::size_of::<IMAGEHLP_LINEW64>() as u32;
+                let mut d = 0u32;
+                if SymGetLineFromAddrW64(process, base + rva, &mut d, &mut line) == 0 {
+                    return Some(name);
+                }
+                let mut n = 0;
+                while *line.FileName.add(n) != 0 {
+                    n += 1;
+                }
+                let file = String::from_utf16_lossy(std::slice::from_raw_parts(line.FileName, n));
+                let short: Vec<&str> = file.rsplit(['\\', '/']).take(2).collect();
+                Some(format!(
+                    "{name} ({}/{}:{})",
+                    short[short.len() - 1],
+                    short[0],
+                    line.LineNumber
+                ))
             })
             .collect()
     }

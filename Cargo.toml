@@ -20,3 +20,8 @@ ssbm-game = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-b
 ssbm-rt = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
 ssbm-disc = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
 ssbm-types = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
+
+# melee-hd's copy of ssbm-rs's gekko-fp (at melee-hd-base) with a hardware fused multiply-add
+# (crates/gekko-fp, docs/performance.md), for every crate that uses it, the reference's too.
+[patch."https://github.com/itsarahtonin/ssbm-rs"]
+gekko-fp = { path = "crates/gekko-fp" }

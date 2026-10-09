@@ -62,6 +62,27 @@ Dolphin's side, the baseline, is below.
 
 **Profile.** A sampled profile of that run (samply at 4 kHz, about 10,000 samples on the simulation's thread; `melee-bench symbolize RVA...` names the functions at a profile's offsets in its own executable, when the profiler can't find the PDB), by share of samples including what each calls: the engine ticks 69%, the display pass 19%, and the match's setup and disc reads, outside the timed stretch, the rest. In the ticks, joint matrices (`HSD_JObjSetupMatrix`: `Mtx34::srt` 21%, `Mtx34::concat` 13%) take 34%, about half of it from the playback codes' pass over every dirty matrix of each fighter's model (16%); the fighters' bone dynamics (`swing_chains`) 24%; animation interpretation (AObjs and FObjs) about 13%; collision about 5%. By function alone, the bit-exact fused float operations (`gekko_fp::fmadds`, `fmsub`, `fnmsubs`, the paired `ps_madds0` and `ps_madds1`, and the C library's `fma` under them) take about 33%, and `sin` and `cos` with their range reduction about 10%. Nothing is optimized for speed yet beyond the allocations; no change may alter a checked bit.
 
+### Speed work
+
+The rule is the goal's: no change may alter a checked bit. Each step is checked by the oracle's diff on the Fox ditto (still clean through tick 4,695, where the first KO stops it), the leaf-checks it touches, and `melee-bench native` before and after. The timings are provisional: one core, below-normal priority, alternating builds run after run, on the machine above while another agent built and tested; each figure is the median of three runs to frame 4,572 (4,695 ticks).
+
+**Step 1: gekko-fp (2026-10-09).** melee-hd now builds a copy of ssbm-rs's `gekko-fp` (at `melee-hd-base`, `crates/gekko-fp`), patched in for every crate that uses it, ssbm-rs's reference side included (the workspace's `[patch]`), since ssbm-rs itself isn't changed for melee-hd. Its changes are for speed only:
+
+- The fused multiply-add takes x86-64's FMA3 instruction where the processor has it (detected at run time, `_mm_fmadd_sd`), and `f64::mul_add` otherwise: the C library's `fma` on x86-64, the hardware `fmadd` on aarch64. On Windows the C library's `fma` already uses the instruction, so this gains little by itself; the profile's 33% in the fused operations was mostly the code around the multiply-add.
+- The NaN results, `frsp` of a NaN and the single fused ops' halfway correction (a double result exactly between two singles) are computed in out-of-line, cold functions. Before, the compiler computed them on every operation and picked the result afterwards, which put them in the critical path of every chain of float operations. A microbenchmark of chained `fmadds` and `fnmsubs` (`cargo run --release -p gekko-fp --example fused_speed`) went from 7.5 to 3.9 ns per operation (a bare `mul_add` and rounding takes 2.5).
+- frC's rounding to 25 bits is skipped when nothing lies below the rounding bit, which is always so for a single.
+- `lfs` widens a finite single with the processor's own conversion (the same exact value); infinities and NaNs keep the bitwise path, which moves a NaN's payload over unquieted.
+- The operations are marked `#[inline]` so they inline into melee-sim (without the cold paths, inlining them made the run slower).
+
+`tests/against_upstream.rs` checks the copy against the unchanged upstream crate (`tests/upstream`, its source with only its module paths changed): every operation, scalar and paired, in both float modes and on both multiply-add paths, on 74 special values (zeros, infinities, quiet and signaling NaNs with payloads, double and single subnormals, halfway and near-halfway mantissas) in every combination of three, on a million random operand triples per mode (any double, any single, singles in the game's ranges, sums that cancel), on 400,000 constructed halfway results, and `lfs` on every single whose exponent is all zeros or all ones. Each of the four changes made wrong on purpose fails it. The leaf-checks' reference runs on the same copy, so it is this test and the oracle's diff, against traces of ssbm-rs's unchanged code, that check the copy.
+
+| Build | Frames/s | Against main in the same set |
+| --- | --- | --- |
+| Before (main, a650709) | 2,280 | |
+| Hardware multiply-add, everything inlined | 2,070 to 2,200 | about 9% slower |
+| And the NaN and halfway paths out of line, frC's skip | 2,450 to 2,600 | about 9% faster |
+| And `lfs` (step 1) | 2,990 | 31% faster |
+
 ## Benchmark matches
 
 | Match | Stage | Fighters (costume) | Seed | Frames | Length | Ends |

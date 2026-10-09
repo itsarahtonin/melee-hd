@@ -260,6 +260,8 @@ fn on_sim_thread<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T
         .stack_size(STACK)
         .spawn(move || {
             set_fp_mode(FpMode::Hardware);
+            // `GEKKO_PORTABLE_FMA=1`: the portable fused multiply-add, to time against.
+            gekko_fp::set_portable_fma(std::env::var_os("GEKKO_PORTABLE_FMA").is_some());
             #[cfg(windows)]
             crate::win::raise_thread_priority();
             f()
