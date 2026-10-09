@@ -3404,7 +3404,7 @@ ftMs_SpecialS_80137FF8	leaf-check marth: marth_functions runs it from real Marth
 ftMs_SpecialS_8013809C	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
 ftMs_SpecialS_80138148	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
 ftMs_SpecialS_Enter	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
-ftCommon_CalcSelfAccel_DeaccelQuickAir	leaf-check marth: ftMs_SpecialAirHi_Phys reaches it before the slash rises, in clean comparisons; leaf-check fox: the Fire Fox bounce and the reflector reach it
+ftCommon_CalcSelfAccel_DeaccelQuickAir	leaf-check marth: ftMs_SpecialAirHi_Phys reaches it before the slash rises, in clean comparisons; leaf-check fox: the Fire Fox bounce and the reflector reach it; leaf-check zelda: zelda_functions reaches it through ftZd_SpecialAirN_Phys from real Zelda states and compares the whole state
 ftCommon_CalcSelfAccel_DriftSimple	leaf-check marth: Dolphin Slash's descent (ftMs_SpecialHi_Phys, ftMs_SpecialAirHi_Phys) reaches it in clean comparisons
 ft_80085204	leaf-check marth: Dancing Blade's last two swings in the air (ftMs_SpecialS3_Phys, ftMs_SpecialS4_Phys) reach it in clean comparisons
 ft_80085154	leaf-check marth: Dolphin Slash's rise (ftMs_SpecialHi_Phys, ftMs_SpecialAirHi_Phys) reaches it in clean comparisons
@@ -3419,3 +3419,127 @@ ftCo_DeadUpFall_Anim	melee-oracle diff, Fox vs Marth BF benchmark ticks 1-15176 
 ftCo_DeadUpFall_Phys	melee-oracle diff, Fox vs Marth BF benchmark ticks 1-15176 in the hardware float mode (docs/oracle.md): Marth's KO toward the screen from tick 13789 moves through it, its place in the camera's view put in the world by the display pass; compared every tick
 ftCo_DeadUpFall_Cam	melee-oracle diff, Fox vs Marth BF benchmark ticks 1-15176 in the hardware float mode (docs/oracle.md): Marth's KO toward the screen from tick 13789 keeps its camera box through it; compared every tick
 fn_800D4DD4	melee-oracle diff, Fox vs Marth BF benchmark ticks 1-15176 in the hardware float mode (docs/oracle.md): Marth's KO toward the screen from tick 13789 stops below the camera through it; compared every tick
+ftZd_Init_OnItemDrop	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_Init_OnKnockbackEnter	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_Init_OnKnockbackExit	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHiStart_0_Anim	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHiStart_0_Coll	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHiStart_0_IASA	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHiStart_0_Phys	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHiStart_1_Anim	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHiStart_1_Coll	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHiStart_1_IASA	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHiStart_1_Phys	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHi_Anim	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHi_Coll	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHi_Enter	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHi_IASA	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirHi_Phys	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirLw2_Anim	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirLw2_Coll	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirLw2_IASA	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirLw2_Phys	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirLw_Anim	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirLw_Coll	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirLw_Enter	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirLw_IASA	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirLw_Phys	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirN_Anim	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirN_Coll	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirN_Enter	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirN_IASA	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirN_Phys	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHiStart_0_Anim	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHiStart_0_Coll	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHiStart_0_IASA	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHiStart_1_Anim	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHiStart_1_Coll	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHiStart_1_IASA	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHiStart_1_Phys	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_801396AC	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_801396E0	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_8013979C	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_80139B44	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_80139BB0	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_80139F6C	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_80139FE8	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_8013A058	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_8013A244	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_8013A648	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_8013A6A8	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_8013A764	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_Anim	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_Coll	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_Enter	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialHi_IASA	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw2_Anim	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw2_Coll	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw2_IASA	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_8013ADB4	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_8013AE30	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_8013AEAC	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_8013B1CC	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_8013B238	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_8013B400	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_8013B46C	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_Anim	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_Coll	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_Enter	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_IASA	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialN_8013A830	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialN_8013A8AC	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialN_8013AC88	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialN_8013AD1C	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialN_8013ADB0	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialN_Anim	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialN_Coll	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialN_Enter	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialN_IASA	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialN_Phys	leaf-check zelda: zelda_functions runs it from real Zelda states, its own saved calls and its unit's, and compares the whole state
+ftZd_Init_801393AC	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_8013B540	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_8013B574	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_8013B5C4	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialLw_8013B5EC	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialS_Enter	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirS_Enter	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialSStart_Anim	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialSLoop_Anim	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialSEnd_Anim	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirSStart_Anim	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirSLoop_Anim	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirSEnd_Anim	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialSStart_IASA	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialSLoop_IASA	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialSEnd_IASA	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirSStart_IASA	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirSLoop_IASA	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirSEnd_IASA	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialSStart_Phys	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirSStart_Phys	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirSLoop_Phys	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirSEnd_Phys	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialSStart_Coll	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialSLoop_Coll	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialSEnd_Coll	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirSStart_Coll	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirSLoop_Coll	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftZd_SpecialAirSEnd_Coll	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+itZeldaDinFire_GetOwner	leaf-check zelda: zelda_functions reaches it through ftZd_SpecialSLoop_Anim and ftZd_SpecialAirSLoop_Anim from real Zelda states and compares the whole state
+it_802C3AFC	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+it_802C3BAC	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+itZeldaDinFire_Logic65_Destroyed	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+it_802C3D44	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+it_802C3D74	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+itZeldadinfire_UnkMotion0_Anim	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+itZeldadinfire_UnkMotion1_Anim	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+itZeldadinfire_UnkMotion0_Phys	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+itZeldadinfire_UnkMotion0_Coll	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+itZeldaDinFire_Logic65_Reflected	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+itZeldaDinFire_Logic65_EvtUnk	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+it_802C4580	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+itZeldaDinFireExplode_Logic66_Destroyed	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+it_802C46C4	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+itZeldadinfireexplode_UnkMotion0_Anim	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+itZeldadinfireexplode_UnkMotion0_Phys	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+itZeldaDinFireExplode_Logic66_EvtUnk	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state

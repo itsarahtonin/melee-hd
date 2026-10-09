@@ -34,13 +34,13 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialN_8013A830` (an accessory).
-    // Ports `ftZd_SpecialN_8013A830`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialN_8013A830")]
     pub fn zelda_special_n_gfx_ground(&mut self, gobj: GObjId) {
         self.zelda_special_n_gfx(gobj, GFX_GROUND);
     }
 
     /// `ftZd_SpecialN_8013A8AC` (an accessory).
-    // Ports `ftZd_SpecialN_8013A8AC`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialN_8013A8AC")]
     pub fn zelda_special_n_gfx_air(&mut self, gobj: GObjId) {
         self.zelda_special_n_gfx(gobj, GFX_AIR);
     }
@@ -56,7 +56,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialN_Enter`.
-    // Ports `ftZd_SpecialN_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialN_Enter")]
     pub fn zelda_special_n_enter(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, ms::SPECIAL_N, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
@@ -65,7 +65,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialAirN_Enter`: the fall stopped, the drift divided down (`x8`).
-    // Ports `ftZd_SpecialAirN_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirN_Enter")]
     pub fn zelda_special_air_n_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let x8 = reg(self.zelda_attr_f32(f, attr::X8));
@@ -107,7 +107,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialN_Anim`: standing once it ends.
-    // Ports `ftZd_SpecialN_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialN_Anim")]
     pub fn zelda_special_n_anim(&mut self, gobj: GObjId) {
         self.zelda_special_n_script(gobj);
         if !self.anim_frames_remaining(gobj) {
@@ -116,7 +116,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialAirN_Anim`: falling once it ends.
-    // Ports `ftZd_SpecialAirN_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirN_Anim")]
     pub fn zelda_special_air_n_anim(&mut self, gobj: GObjId) {
         self.zelda_special_n_script(gobj);
         if !self.anim_frames_remaining(gobj) {
@@ -125,13 +125,13 @@ impl Running<'_> {
     }
 
     /// The states' empty IASA callbacks, and the reflection's (`ftZd_SpecialN_8013ADB0`).
-    // Ports `ftZd_SpecialN_IASA`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialAirN_IASA`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialN_8013ADB0`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialN_IASA")]
+    #[doc(alias = "ftZd_SpecialAirN_IASA")]
+    #[doc(alias = "ftZd_SpecialN_8013ADB0")]
     pub fn zelda_special_n_nothing(&mut self, _gobj: GObjId) {}
 
     /// `ftZd_SpecialN_Phys`: friction, the reflector following.
-    // Ports `ftZd_SpecialN_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialN_Phys")]
     pub fn zelda_special_n_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
         self.reflect_follow(gobj);
@@ -139,7 +139,7 @@ impl Running<'_> {
 
     /// `ftZd_SpecialAirN_Phys`: the hover's frames count down (`specialn.x0`), then the fall
     /// (`xC`, terminal velocity); the drift slowing, the reflector following.
-    // Ports `ftZd_SpecialAirN_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirN_Phys")]
     pub fn zelda_special_air_n_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let n = self.game.fighters[f.0].mv_i32(mv::N_X0);
@@ -155,7 +155,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialN_Coll`: off the ground, the aerial spin.
-    // Ports `ftZd_SpecialN_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialN_Coll")]
     pub fn zelda_special_n_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_off_ledges(gobj) {
             self.zelda_special_n_to_air(gobj);
@@ -163,7 +163,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialAirN_Coll`: landing, the grounded spin.
-    // Ports `ftZd_SpecialAirN_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirN_Coll")]
     pub fn zelda_special_air_n_coll(&mut self, gobj: GObjId) {
         if self.air_coll_land(gobj) {
             self.zelda_special_n_to_ground(gobj);
@@ -171,7 +171,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialN_8013AC88`: the reflector made anew if on.
-    // Ports `ftZd_SpecialN_8013AC88`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialN_8013AC88")]
     pub fn zelda_special_n_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_N, COLL_FLAGS);
         if self.game.fighter(gobj).cmd_vars[0] == 2 {
@@ -181,7 +181,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialN_8013AD1C`.
-    // Ports `ftZd_SpecialN_8013AD1C`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialN_8013AD1C")]
     pub fn zelda_special_n_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_N, COLL_FLAGS);
         if self.game.fighter(gobj).cmd_vars[0] == 2 {

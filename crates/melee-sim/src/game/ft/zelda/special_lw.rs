@@ -38,20 +38,20 @@ impl Running<'_> {
     }
 
     /// The first half's effect, `ftZd_SpecialLw_8013ADB4` (an accessory).
-    // Ports `ftZd_SpecialLw_8013ADB4`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw_8013ADB4")]
     pub fn zelda_special_lw_start_gfx(&mut self, gobj: GObjId) {
         self.zelda_part_gfx(gobj, GFX_START, PART_START_GFX);
     }
 
     /// The second half's effect, `ftZd_SpecialLw_8013AE30` (an accessory).
-    // Ports `ftZd_SpecialLw_8013AE30`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw_8013AE30")]
     pub fn zelda_special_lw_end_gfx(&mut self, gobj: GObjId) {
         self.zelda_part_gfx(gobj, GFX_END, PART_HIP_N);
     }
 
     /// The swap, `ftZd_SpecialLw_8013AEAC` (an accessory): `ftCommon_8007EFC8` with Sheik's
     /// second half.
-    // Ports `ftZd_SpecialLw_8013AEAC`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw_8013AEAC")]
     pub fn zelda_special_lw_swap(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).accessory4_cb = None;
         self.transform(gobj, CodeRef(super::super::seak::addr::LW_80114758));
@@ -77,20 +77,20 @@ impl Running<'_> {
         self.game.fighters[f.0].accessory4_cb = Some(CodeRef(addr::LW_8013ADB4));
     }
 
-    // Ports `ftZd_SpecialLw_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw_Enter")]
     pub fn zelda_special_lw_enter(&mut self, gobj: GObjId) {
         self.zelda_special_lw_enter_as(gobj, ms::SPECIAL_LW);
     }
 
-    // Ports `ftZd_SpecialAirLw_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirLw_Enter")]
     pub fn zelda_special_air_lw_enter(&mut self, gobj: GObjId) {
         self.zelda_special_lw_enter_as(gobj, ms::SPECIAL_AIR_LW);
     }
 
     /// The first half's end, `ftZd_SpecialLw_Anim` and `ftZd_SpecialAirLw_Anim`: the swap
     /// next.
-    // Ports `ftZd_SpecialLw_Anim`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialAirLw_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw_Anim")]
+    #[doc(alias = "ftZd_SpecialAirLw_Anim")]
     pub fn zelda_special_lw_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::LW_8013AEAC));
@@ -98,15 +98,15 @@ impl Running<'_> {
     }
 
     /// The states' empty IASA callbacks.
-    // Ports `ftZd_SpecialLw_IASA`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialAirLw_IASA`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialLw2_IASA`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialAirLw2_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw_IASA")]
+    #[doc(alias = "ftZd_SpecialAirLw_IASA")]
+    #[doc(alias = "ftZd_SpecialLw2_IASA")]
+    #[doc(alias = "ftZd_SpecialAirLw2_IASA")]
     pub fn zelda_no_iasa(&mut self, _gobj: GObjId) {}
 
     /// The aerial halves' fall (`x78`, `x7C`), slowing.
-    // Ports `ftZd_SpecialAirLw_Phys`; aliased once a check reaches it.
-    // Ports `ftZd_SpecialAirLw2_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirLw_Phys")]
+    #[doc(alias = "ftZd_SpecialAirLw2_Phys")]
     pub fn zelda_special_air_lw_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let g = reg(self.zelda_attr_f32(f, attr::X78));
@@ -116,7 +116,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialLw_Coll`: off the ground, the aerial first half.
-    // Ports `ftZd_SpecialLw_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw_Coll")]
     pub fn zelda_special_lw_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_off_ledges(gobj) {
             self.zelda_special_lw_to_air(gobj);
@@ -124,7 +124,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialAirLw_Coll`: landing, the grounded first half.
-    // Ports `ftZd_SpecialAirLw_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirLw_Coll")]
     pub fn zelda_special_air_lw_coll(&mut self, gobj: GObjId) {
         if self.air_coll_land(gobj) {
             self.zelda_special_lw_to_ground(gobj);
@@ -132,21 +132,21 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialLw_8013B1CC`.
-    // Ports `ftZd_SpecialLw_8013B1CC`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw_8013B1CC")]
     pub fn zelda_special_lw_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_LW, COLL_FLAGS);
         self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::LW_8013ADB4));
     }
 
     /// `ftZd_SpecialLw_8013B238`.
-    // Ports `ftZd_SpecialLw_8013B238`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw_8013B238")]
     pub fn zelda_special_lw_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_LW, COLL_FLAGS);
         self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::LW_8013ADB4));
     }
 
     /// `ftZd_SpecialLw2_Anim`: standing once the second half ends.
-    // Ports `ftZd_SpecialLw2_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw2_Anim")]
     pub fn zelda_special_lw2_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_wait(gobj);
@@ -154,7 +154,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialAirLw2_Anim`: falling once it ends.
-    // Ports `ftZd_SpecialAirLw2_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirLw2_Anim")]
     pub fn zelda_special_air_lw2_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_fall(gobj);
@@ -162,7 +162,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialLw2_Coll`.
-    // Ports `ftZd_SpecialLw2_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw2_Coll")]
     pub fn zelda_special_lw2_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_off_ledges(gobj) {
             self.zelda_special_lw2_to_air(gobj);
@@ -170,7 +170,7 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialAirLw2_Coll`.
-    // Ports `ftZd_SpecialAirLw2_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialAirLw2_Coll")]
     pub fn zelda_special_air_lw2_coll(&mut self, gobj: GObjId) {
         if self.air_coll_land(gobj) {
             self.zelda_special_lw2_to_ground(gobj);
@@ -178,14 +178,14 @@ impl Running<'_> {
     }
 
     /// `ftZd_SpecialLw_8013B400`.
-    // Ports `ftZd_SpecialLw_8013B400`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw_8013B400")]
     pub fn zelda_special_lw2_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_LW2, COLL_FLAGS);
         self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::LW_8013AE30));
     }
 
     /// `ftZd_SpecialLw_8013B46C`.
-    // Ports `ftZd_SpecialLw_8013B46C`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_SpecialLw_8013B46C")]
     pub fn zelda_special_lw2_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_LW2, COLL_FLAGS);
         self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::LW_8013AE30));

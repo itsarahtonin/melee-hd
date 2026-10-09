@@ -440,7 +440,7 @@ impl Running<'_> {
     /// Sheik entering knockback, `ftSk_Init_OnKnockbackEnter`: the hurt textures. Zelda's
     /// (`ftZd_Init_OnKnockbackEnter`) is the same.
     #[doc(alias = "ftSk_Init_OnKnockbackEnter")]
-    // Ports `ftZd_Init_OnKnockbackEnter`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_Init_OnKnockbackEnter")]
     pub fn seak_on_knockback_enter(&mut self, gobj: GObjId) {
         self.texture_anim(gobj, 1, 3.0);
         self.texture_anim(gobj, 0, 3.0);
@@ -448,7 +448,7 @@ impl Running<'_> {
 
     /// Sheik leaving knockback, `ftSk_Init_OnKnockbackExit`.
     #[doc(alias = "ftSk_Init_OnKnockbackExit")]
-    // Ports `ftZd_Init_OnKnockbackExit`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_Init_OnKnockbackExit")]
     pub fn seak_on_knockback_exit(&mut self, gobj: GObjId) {
         self.texture_anim(gobj, 1, 0.0);
         self.texture_anim(gobj, 0, 0.0);

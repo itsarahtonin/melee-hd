@@ -12,6 +12,7 @@ pub mod init;
 pub mod special_hi;
 pub mod special_lw;
 pub mod special_n;
+pub mod special_s;
 
 use super::super::handles::FighterId;
 use super::super::state::Running;
@@ -50,6 +51,10 @@ pub mod addr {
     pub const ON_ITEM_DROP: u32 = 0x8013_953C;
     pub const ON_KNOCKBACK_ENTER: u32 = 0x8013_9624;
     pub const ON_KNOCKBACK_EXIT: u32 = 0x8013_9668;
+    pub const INIT_801393AC: u32 = 0x8013_93AC;
+    // The side special.
+    pub const SPECIAL_S_ENTER: u32 = 0x8013_B638;
+    pub const SPECIAL_AIR_S_ENTER: u32 = 0x8013_B6D8;
     // The neutral special.
     pub const N_8013A830: u32 = 0x8013_A830;
     pub const N_8013A8AC: u32 = 0x8013_A8AC;
@@ -82,6 +87,11 @@ pub(crate) mod mv {
     pub const HI_X18: usize = 0x18;
     /// `specialn.x0`.
     pub const N_X0: usize = 0;
+    /// `specials.x0`, `x4`, `x8`, `xC`.
+    pub const S_X0: usize = 0;
+    pub const S_X4: usize = 4;
+    pub const S_X8: usize = 8;
+    pub const S_XC: usize = 0xC;
 }
 
 /// `ftZelda_DatAttrs`' offsets.
@@ -89,6 +99,8 @@ pub(crate) mod attr {
     pub const X4: usize = 4;
     pub const X8: usize = 8;
     pub const XC: usize = 0xC;
+    pub const X2C: usize = 0x2C;
+    pub const X34: usize = 0x34;
     pub const X38: usize = 0x38;
     pub const X3C: usize = 0x3C;
     pub const X40: usize = 0x40;
@@ -135,6 +147,7 @@ impl Running<'_> {
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
     init::run(g, gobj, addr)
         || special_n::run(g, gobj, addr)
+        || special_s::run(g, gobj, addr)
         || special_hi::run(g, gobj, addr)
         || special_lw::run(g, gobj, addr)
 }

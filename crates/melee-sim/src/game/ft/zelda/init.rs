@@ -27,7 +27,7 @@ impl Running<'_> {
     }
 
     /// Dropping the item, `ftZd_Init_OnItemDrop` (as Fox's).
-    // Ports `ftZd_Init_OnItemDrop`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_Init_OnItemDrop")]
     pub fn zelda_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_drop(gobj, flag);
     }

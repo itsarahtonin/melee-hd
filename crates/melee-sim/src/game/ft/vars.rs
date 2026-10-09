@@ -35,13 +35,17 @@ pub fn holds_blaster(kind: i32) -> bool {
 /// Where Sheik's held needles (`ftSeak_FighterVars::x4`) and chain (`x8`) are in `u`.
 pub const SEAK_NEEDLES: usize = 4;
 pub const SEAK_CHAIN: usize = 8;
+/// `ftZelda_FighterVars::x222C`: Zelda's Din's Fire.
+pub const ZELDA_DIN_FIRE: usize = 0;
 
 /// The words of `u` a fighter of `kind` keeps GObjs in, which the importer types: Fox's and
-/// Falco's blaster, Sheik's held needles and chain (`Ft_Kind_Seak`).
+/// Falco's blaster, Sheik's held needles and chain (`Ft_Kind_Seak`), Zelda's Din's Fire
+/// (`Ft_Kind_Zelda`).
 pub fn gobj_words(kind: i32) -> &'static [usize] {
     match kind {
         _ if holds_blaster(kind) => &[FOX_BLASTER],
         7 => &[SEAK_NEEDLES, SEAK_CHAIN],
+        19 => &[ZELDA_DIN_FIRE],
         _ => &[],
     }
 }

@@ -7613,6 +7613,94 @@ impl itSeakChain_ItemVars {
     }
 }
 
+/// `itZeldaDinFire_ItemVars`, 0x24 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itZeldaDinFire_ItemVars {
+    /// +0x0
+    pub padDD4: Var<i32>,
+    /// +0x4
+    pub xDD8: Var<f32>,
+    /// +0x8
+    pub xDDC: Var<i32>,
+    /// +0xc
+    pub xDE0: Var<Option<GObjId>>,
+    /// +0x10
+    pub xDE4: Var<i32>,
+    /// +0x14
+    pub xDE8: Var<f32>,
+    /// +0x18
+    pub xDEC: Var<f32>,
+    /// +0x1c
+    pub xDF0: Var<f32>,
+    /// +0x20
+    pub xDF4: Var<u32>,
+}
+
+impl Default for itZeldaDinFire_ItemVars {
+    fn default() -> Self {
+        itZeldaDinFire_ItemVars {
+            padDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+            xDE0: Var::new(Default::default()),
+            xDE4: Var::new(Default::default()),
+            xDE8: Var::new(Default::default()),
+            xDEC: Var::new(Default::default()),
+            xDF0: Var::new(Default::default()),
+            xDF4: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itZeldaDinFire_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.padDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+        self.xDE0.mark_stale();
+        self.xDE4.mark_stale();
+        self.xDE8.mark_stale();
+        self.xDEC.mark_stale();
+        self.xDF0.mark_stale();
+        self.xDF4.mark_stale();
+    }
+}
+
+/// `itZeldaDinFireExplode_ItemVars`, 0x10 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itZeldaDinFireExplode_ItemVars {
+    /// +0x0
+    pub xDD4: Var<f32>,
+    /// +0x4
+    pub xDD8: Var<f32>,
+    /// +0x8
+    pub xDDC: Var<Option<GObjId>>,
+    /// +0xc
+    pub xDE0: Var<i32>,
+}
+
+impl Default for itZeldaDinFireExplode_ItemVars {
+    fn default() -> Self {
+        itZeldaDinFireExplode_ItemVars {
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+            xDE0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itZeldaDinFireExplode_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+        self.xDE0.mark_stale();
+    }
+}
+
 /// `IfDamageFlags`, 0x1 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IfDamageFlags {
