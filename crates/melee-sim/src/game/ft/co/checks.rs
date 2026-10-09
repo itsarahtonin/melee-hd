@@ -390,77 +390,82 @@ impl Running<'_> {
         false
     }
 
-    /// The nearest item the fighter can take, `ftpickupitem_800942A0`: one a fighter can
-    /// pick up (`Item_IsGrabbable`), light (`flags` bit 0) or heavy (bit 1), whose grab
-    /// point lies in the box the fighter's pickup offsets (`x294_itPickup`, grounded or
-    /// aerial for light items) and the item's grab range make; a fighter holding an item
-    /// only takes food, and none for a computer of kind 28.
+    /// The nearest item the fighter can pick up, `ftpickupitem_800942A0`: of the items it
+    /// may take (light ones with `flags` bit 0, heavy ones with bit 1; no healing item while
+    /// `x2222_b4`, only a healing one or a coin while holding an item), the one whose pickup
+    /// point (`it_8026B344`) lies within its grab range of the fighter's reach box
+    /// (`x294_itPickup`), nearest the box's center. None for a CPU of kind 28.
     #[doc(alias = "ftpickupitem_800942A0")]
-    pub fn item_in_reach(&mut self, gobj: GObjId, flags: u32) -> Option<GObjId> {
-        use crate::game::it::{self, item::is_grabbable, lib26b1::is_heavy};
+    pub fn item_in_reach(&self, gobj: GObjId, flags: u32) -> Option<GObjId> {
+        use crate::game::it::{self, kinds, lib26b1};
         let fp = self.game.fighter(gobj);
+        let p = &fp.x294_itPickup;
+        let light = if fp.ground_or_air == super::super::common::GA_GROUND {
+            &p.gr_light_offset
+        } else {
+            &p.air_light_offset
+        };
         if self.is_cpu_controlled(fp) && fp.cpu.kind == 28 {
             return None;
         }
-        let pickup = &fp.x294_itPickup;
-        let light = if fp.ground_or_air == super::super::common::GA_GROUND {
-            pickup.gr_light_offset
-        } else {
-            pickup.air_light_offset
+        // `it_8026B47C`: a healing item's heal; `it_8026B4F0`: what can be taken while holding
+        // an item (`It_Kind_Coin`, `_Lucky_Egg`, `_WhispyHealApple` besides the food).
+        const COIN: i32 = 159;
+        const LUCKY_EGG: i32 = 205;
+        const WHISPY_HEAL_APPLE: i32 = 226;
+        let heals = |k: i32| {
+            [kinds::HEART, kinds::TOMATO, kinds::FOODS, LUCKY_EGG].contains(&k)
+                || k == WHISPY_HEAL_APPLE
         };
-        let heavy_offset = pickup.gr_heavy_offset;
-        let mut min_dist_sq = fp::frsp(30000.0);
-        let mut result = None;
+        let mut min = 30000.0;
+        let mut found = None;
         let mut cur = self.game.world.first_in(ITEM_P_LINK);
-        while let Some(c) = cur {
-            cur = self.game.world.gobj(c).next;
-            if !is_grabbable(self.game, c) {
+        while let Some(g) = cur {
+            cur = self.game.world.gobjs[g.0].next;
+            if !it::item::is_grabbable(self.game, g) {
                 continue;
             }
-            let heavy = is_heavy(self.game, self.data, c);
-            let fp = self.game.fighter(gobj);
-            if fp.x2222_b4 {
-                unported_call("it_8026B47C (a healing item's amount)");
+            let heavy = lib26b1::is_heavy(self.game, self.data, g);
+            let ip = it::item(self.game, g);
+            if fp.x2222_b4 && heals(ip.kind) {
+                unported_call("it_8026B47C (a healing item's heal)");
             }
-            let kind = it::item(self.game, c).kind;
-            // `it_8026B4F0`: the foods.
-            let food = matches!(kind, 8 | 9 | 18 | 159 | 0xCD | 0xE2);
-            if fp.item_gobj.is_some() && !food {
+            let takes_held = heals(ip.kind) || ip.kind == COIN;
+            if fp.item_gobj.is_some() && !takes_held {
                 continue;
             }
-            if !(!heavy && flags & 1 != 0 || heavy && flags & 2 != 0) {
+            if !((!heavy && flags & 1 != 0) || (heavy && flags & 2 != 0)) {
                 continue;
             }
-            // `it_8026B344`, `itGetGrabRangeX`, `itGetGrabRangeY`.
-            let ip = it::item(self.game, c);
             let it_x = mem(fp::fmadds(
                 reg(ip.facing_dir),
                 reg(ip.xBCC_unk.x),
                 reg(ip.pos.x),
             ));
             let it_y = mem(fp::fadds(reg(ip.pos.y), reg(ip.xBCC_unk.y)));
-            let (x_range, y_range) = (reg(ip.xBD4_grabRange.x), reg(ip.xBD4_grabRange.y));
-            let v = if heavy { heavy_offset } else { light };
+            let (xr, yr) = (reg(ip.xBD4_grabRange.x), reg(ip.xBD4_grabRange.y));
+            let v = if heavy { &p.gr_heavy_offset } else { light };
             let x1 = reg(v.z);
-            let x0 = fp::fmadds(reg(fp.facing_dir), reg(v.x), reg(fp.cur_pos.x));
-            let y0 = fp::fadds(reg(fp.cur_pos.y), reg(v.y));
+            let x0 = mem(fp::fmadds(reg(fp.facing_dir), reg(v.x), reg(fp.cur_pos.x)));
+            let y0 = mem(fp::fadds(reg(fp.cur_pos.y), reg(v.y)));
             let y1 = reg(v.w);
-            let (it_x, it_y) = (reg(it_x), reg(it_y));
-            if fp::fsubs(fp::fsubs(x0, x1), x_range) < it_x
-                && fp::fadds(x_range, fp::fadds(x0, x1)) > it_x
-                && fp::fsubs(fp::fsubs(y0, y1), y_range) < it_y
-                && fp::fadds(y_range, fp::fadds(y0, y1)) > it_y
+            let (x0, y0) = (reg(x0), reg(y0));
+            let (ix, iy) = (reg(it_x), reg(it_y));
+            if fp::fsubs(fp::fsubs(x0, x1), xr) < ix
+                && fp::fadds(xr, fp::fadds(x0, x1)) > ix
+                && fp::fsubs(fp::fsubs(y0, y1), yr) < iy
+                && fp::fadds(yr, fp::fadds(y0, y1)) > iy
             {
-                let y_diff = fp::fsubs(it_y, y0);
-                let x_diff = fp::fsubs(it_x, x0);
-                let dist_sq = fp::fmadds(x_diff, x_diff, fp::fmuls(y_diff, y_diff));
-                if dist_sq < min_dist_sq {
-                    result = Some(c);
-                    min_dist_sq = dist_sq;
+                let dy = fp::fsubs(iy, y0);
+                let dx = fp::fsubs(ix, x0);
+                let d = fp::fmadds(dx, dx, fp::fmuls(dy, dy));
+                if d < min {
+                    found = Some(g);
+                    min = d;
                 }
             }
         }
-        result
+        found
     }
 
     /// Whether the held item is the hammer, `ftCo_800C5240`.

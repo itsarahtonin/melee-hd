@@ -115,9 +115,11 @@ pub struct Globals {
     /// match's records.
     pub spawned: i32,
     pub x6d08: i32,
-    /// How many entries a hit check's damage log holds (`it_804D6D18`); the log itself
-    /// (`it_804A0E70`) isn't kept, as no ported check fills it.
+    /// How many entries a hit check's damage log holds (`it_804D6D18`), and the entries
+    /// (`it_804A0E70`): what hit the item this check, which [`coll::take_hits`] reads in the
+    /// same process (the original's entries are pointers, compared through the count only).
     pub damage_log_len: u32,
+    pub damage_log: Vec<coll::DamageLogEntry>,
     /// Which of the checked item's hitboxes still check for clanks (`it_804D6D1C`).
     pub clank_boxes: [u8; 4],
 }

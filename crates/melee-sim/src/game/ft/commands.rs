@@ -176,6 +176,11 @@ impl Running<'_> {
             43 => self.cmd_x2225_b2(gobj, f, w),
             46 => self.cmd_smash_charge(gobj, f, w),
             47 => self.cmd_vibrate(gobj, f, w),
+            40 => {
+                // `ftAction_80072B94`: a part's dynamics toggled.
+                let frame = self.game.fighters[f.0].cur_anim_frame;
+                self.toggle_part_dynamics(gobj, sbits(w, 6, 26), frame);
+            }
             // Commands of more than one word step over them themselves.
             0 => return self.cmd_effect(gobj, f, None),
             1 => return self.cmd_create_hitbox(gobj, f),

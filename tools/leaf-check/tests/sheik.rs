@@ -5,8 +5,8 @@
 //! state variables changed, so callbacks no capture reached (and branches few did) run from
 //! real states of the same moves.
 //!
-//! What Sheik's code reaches in other parts of the port (the transformation, the yo-yo's
-//! stage check) stands in on both sides ([`stubs`]); each check runs twice, with the
+//! What Sheik's code reaches in other parts of the port (the yo-yo's stage check, Fox's
+//! animation helpers) stands in on both sides ([`stubs`]); each check runs twice, with the
 //! stand-ins that answer a question answering no, then yes, and the calls each side made to
 //! them are compared with their arguments.
 //!
@@ -86,7 +86,6 @@ fn dirs() -> Vec<String> {
 fn stubs(yes: bool) -> Vec<Stub> {
     let b = StubRet::Int(i32::from(yes));
     let mut v: Vec<Stub> = [
-        ext::FTCOMMON_8007EFC8,
         fox_ext::FTANIM_80070FB4,
         fox_ext::FTANIM_80070C48,
         fox_ext::FTANIM_80070CC4,

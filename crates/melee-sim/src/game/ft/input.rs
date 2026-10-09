@@ -355,7 +355,26 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         let a = fp.input.held_buttons[0] & PAD_A != 0;
         match fp.smash_attrs.state {
-            1 if a => unported_call("Fighter_SmashChargeShakeTable"),
+            1 if a => {
+                // The model shakes through `Fighter_SmashChargeShakeTable`'s rows.
+                let rate = fp.frame_speed_mul;
+                let table = self.load_common(0x2C);
+                let rows = self.data.u32(table.at(4)) as u8;
+                let fp = self.game.fighter_mut(gobj);
+                let s = &mut fp.smash_attrs;
+                s.state = 2;
+                s.x2124_frameSpeedMul = rate;
+                s.x212C = 0;
+                s.x212D = rows;
+                s.x2130_sfxBool = 0;
+                let color = s.x2128;
+                self.set_anim_rate(gobj, 0.0);
+                if color != 0x7B {
+                    self.start_color_anim(gobj, color, 0);
+                }
+                let f = self.game.fighter_id(gobj);
+                self.start_rumble(f, 0x24, 0);
+            }
             1 => fp.smash_attrs.state = 0,
             2 if !a => {
                 fp.smash_attrs.state = 3;

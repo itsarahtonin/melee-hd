@@ -7,8 +7,8 @@
 //! the fighter's attribute block, all read at the decomp's offsets.
 //!
 //! Where Sheik's code reaches code another part of the port owns and hasn't ported yet (the
-//! transformation, the chain's links), it calls it through `code::call` by the original's
-//! address ([`ext`]), which stops until that part adds its arms. Other code reaches Sheik's
+//! yo-yo's stage check), it calls it through `code::call` by the original's address
+//! ([`ext`]), which stops until that part adds its arms. Other code reaches Sheik's
 //! through [`call`] and [`run`] the same way.
 
 pub mod init;
@@ -56,12 +56,8 @@ pub mod ms {
 /// The functions other parts of the port own that Sheik's code calls, by address: each
 /// answers `code::call` once its part is ported.
 pub mod ext {
-    /// `ftCommon_8007EFC8`: the transformation into Zelda.
-    pub const FTCOMMON_8007EFC8: u32 = 0x8007_EFC8;
     /// `ftNs_AttackHi4_YoyoCheckEnvColl`: whether the stage lies between two points.
     pub const FTNS_YOYO_CHECK_ENV_COLL: u32 = 0x8011_4FF8;
-    /// `ftZd_SpecialLw_8013B4D8`: the transformation's end callback, stored by address.
-    pub const FTZD_SPECIAL_LW_8013B4D8: u32 = 0x8013_B4D8;
 }
 
 /// Sheik's functions other code reaches by address.

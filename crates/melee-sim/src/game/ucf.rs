@@ -153,8 +153,8 @@ impl Running<'_> {
     /// UCF's dashback (`ftCo_Turn_IASA+0x50`, where the turn's first frames flip the facing):
     /// on the turn's frame 2, a smash the way the turn faces, fresh this frame or the last,
     /// whose raw stick travelled more than 75 along x since two frames ago, turns the fighter
-    /// at once, so the rest of the interrupt dashes. Not for Nana; with one in the slot, the
-    /// code also turns her CPU's stick (not ported).
+    /// at once, so the rest of the interrupt dashes. Not for Nana; with another fighter in the
+    /// slot, the code also turns that one's CPU stick.
     ///
     /// The Gecko code at `0x800C9A44`; the caller has flipped the facing already.
     pub fn ucf_dashback(&mut self, gobj: GObjId) {
@@ -176,8 +176,23 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(0, 1);
         fp.set_mv_i32(0x18, 1);
-        if self.game.player_entity_at(slot, 1).is_some() {
-            super::code::unported_call("UCF's dashback for Nana's CPU stick");
+        // The code then turns the CPU stick of the slot's other fighter (Nana's, meant), any
+        // other fighter's too (a sleeping Zelda or Sheik): through its CPU block's input
+        // pointer (`x1A88.x444`, an entry of its inputs, `xFC`), the entry's facing and its
+        // stick fully the turned way (127, or -128 facing left).
+        if let Some(other) = self.game.player_entity_at(slot, 1) {
+            let facing = self.game.fighter(gobj).facing_dir;
+            let o = self.game.fighter_mut(other);
+            let Some(at) = o.cpu.x444.0 else {
+                super::code::unported_call("UCF's dashback through a null CPU input pointer")
+            };
+            assert!(
+                at % 0x1C == 0 && at / 0x1C < 30,
+                "UCF's dashback: the CPU input pointer is off its entries"
+            );
+            let e = &mut o.cpu.xFC[(at / 0x1C) as usize];
+            e.facing_dir = facing;
+            e.lstick.x = (0x7F + (facing.to_bits() >> 31)) as u8 as i8;
         }
     }
 

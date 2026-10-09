@@ -42,7 +42,9 @@ pub mod seak;
 pub mod second;
 pub mod sound;
 pub mod spawn;
+pub mod transform;
 pub mod vars;
+pub mod zelda;
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 

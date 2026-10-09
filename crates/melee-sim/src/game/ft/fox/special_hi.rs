@@ -551,7 +551,7 @@ impl Running<'_> {
     pub fn fox_special_hi_bound_phys(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).ground_or_air == GA_AIR {
             self.air_anim_rise(gobj);
-            self.deaccel_quick_air(gobj);
+            self.self_accel_deaccel_quick_air(gobj);
             return;
         }
         self.ground_friction(gobj);

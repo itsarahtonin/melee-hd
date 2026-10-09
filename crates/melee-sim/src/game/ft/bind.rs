@@ -302,6 +302,207 @@ impl Running<'_> {
         }
     }
 
+    /// The costume's joint descriptor for the part on `j` (its joint or blend joint), walking
+    /// the costume's tree from `joint`, `ftAnim_8006F994`. The original runs off its end (and
+    /// returns what a register holds) when no part has the joint.
+    #[doc(alias = "ftAnim_8006F994")]
+    fn part_joint_desc(
+        &self,
+        f: FighterId,
+        j: Option<JObjId>,
+        joint: Option<DataRef>,
+    ) -> Option<DataRef> {
+        let kind = self.game.fighters[f.0].kind;
+        let mut stack = JointStack::new();
+        let mut i = 0;
+        let mut joint = joint;
+        while let Some(desc) = joint {
+            while self.part_mask(kind, i) != 0 {
+                i += 1;
+            }
+            let bone = self.bone(f, i);
+            if j == bone.joint || j == bone.x4_jobj2 {
+                return Some(desc);
+            }
+            i += 1;
+            joint = next_joint(self.data, desc, &mut stack);
+        }
+        panic!("ftAnim_8006F994: no part has the joint, the original returns a stale register")
+    }
+
+    /// Binds the action's figatree to `part`'s subtree, `ftAnim_8006F954`: through the parts
+    /// of the character it was made for when that's another.
+    #[doc(alias = "ftAnim_8006F954")]
+    fn bind_part_figatree(&mut self, f: FighterId, part: i32, blend: bool) {
+        let fp = &self.game.fighters[f.0];
+        if fp.kind as u32 != x594_word(fp.x594) & 0x3F {
+            self.bind_part_figatree_remapped(f, part, blend);
+        } else {
+            let tree = fp.x590.expect("no figatree");
+            self.bind_part_own_figatree(f, part, blend, tree);
+        }
+    }
+
+    /// `ftAnim_8006F7C8`: the nodes before `part` skipped, then one node per animated bone of
+    /// its subtree (until a bone no deeper than it).
+    #[doc(alias = "ftAnim_8006F7C8")]
+    fn bind_part_own_figatree(&mut self, f: FighterId, part: i32, blend: bool, tree: DataRef) {
+        let data = self.data;
+        let kind = self.game.fighters[f.0].kind;
+        let bits = (x594_word(self.game.fighters[f.0].x594) >> 9) & 0x1FFF;
+        let depth = self.bone(f, part).xC_u[0];
+        let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
+        let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
+        let mut i = 0;
+        while i < part {
+            let m = self.part_mask(kind, i);
+            if m == 0 || m & bits != 0 {
+                track = track.at(data.u8(node) as i8 as u32 * TRACK_SIZE);
+                node = node.at(1);
+            }
+            i += 1;
+        }
+        loop {
+            let frames = data.u8(node) as i8;
+            if frames == -1 {
+                break;
+            }
+            while !bone_flag(&self.bone(f, i), 1) {
+                i += 1;
+            }
+            while bone_flag(&self.bone(f, i), 2) {
+                let m = self.part_mask(kind, i);
+                if m == 0 || m & bits != 0 {
+                    break;
+                }
+                i += 1;
+            }
+            let bone = self.bone(f, i);
+            if bone.xC_u[0] <= depth && i != part {
+                break;
+            }
+            if !bone_flag(&bone, 0) && !bone_flag(&bone, 5) {
+                let j = self.anim_joint(f, i, blend);
+                bind_tracks(&mut self.game.objs, data, j, tree, track, frames);
+            }
+            track = track.at(frames as u32 * TRACK_SIZE);
+            i += 1;
+            node = node.at(1);
+        }
+    }
+
+    /// `ftAnim_8006F628`: [`Self::bind_part_own_figatree`] for a figatree made for another
+    /// character, through the parts' remapping.
+    // Ports `ftAnim_8006F628`; aliased once a check reaches it.
+    fn bind_part_figatree_remapped(&mut self, f: FighterId, part: i32, blend: bool) {
+        let data = self.data;
+        let fp = &self.game.fighters[f.0];
+        let tree = fp.x590.expect("no figatree");
+        let word = x594_word(fp.x594);
+        let (bits, from) = ((word >> 9) & 0x1FFF, (word & 0x3F) as i32);
+        let to = fp.kind;
+        let depth = self.bone(f, part).xC_u[0];
+        let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
+        let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
+        let mut i = 0;
+        while i < part {
+            let m = self.part_mask(from, i);
+            if m == 0 || m & bits != 0 {
+                track = track.at(data.u8(node) as i8 as u32 * TRACK_SIZE);
+                node = node.at(1);
+            }
+            i += 1;
+        }
+        loop {
+            let frames = data.u8(node) as i8;
+            if frames == -1 {
+                break;
+            }
+            loop {
+                let m = self.part_mask(from, i);
+                if m == 0 || m & bits != 0 {
+                    break;
+                }
+                i += 1;
+            }
+            if self.bone(f, i).xC_u[0] <= depth && i != part {
+                break;
+            }
+            let p = self.parts_remap(to, from, i as u32);
+            if p != INVALID {
+                let p = i32::from(p);
+                let bone = self.bone(f, p);
+                if bone_flag(&bone, 1) && !bone_flag(&bone, 0) && !bone_flag(&bone, 5) {
+                    let j = self.anim_joint(f, p, blend);
+                    if bone_flag(&bone, 3) {
+                        bind_tracks(&mut self.game.objs, data, j, tree, track, frames);
+                    } else {
+                        bind_tracks_no_translation(
+                            &mut self.game.objs,
+                            data,
+                            j,
+                            tree,
+                            track,
+                            frames,
+                        );
+                    }
+                }
+            }
+            node = node.at(1);
+            i += 1;
+            track = track.at(frames as u32 * TRACK_SIZE);
+        }
+    }
+
+    /// Puts the action's animation back on `part`'s subtree from `frame` at `speed`,
+    /// `ftAnim_8006EED4` (the figatree it's given is the action's, `x590`): the parts reset
+    /// to the costume's pose and bound to the figatree, on their blend joints too while
+    /// blending, then animated once.
+    #[doc(alias = "ftAnim_8006EED4")]
+    pub fn restart_part_anim(&mut self, f: FighterId, part: i32, frame: f32, speed: f32) {
+        let bone = self.bone(f, part);
+        let j = bone.joint;
+        let costume = self.game.fighters[f.0].x108_costume_joint;
+        let desc = self.part_joint_desc(f, j, costume);
+        let set_rate = |r: &mut Self, t: Option<JObjId>| {
+            r.tree_anims(t, |aobjs, a| aobj::set_rate(aobjs, Some(a), speed));
+        };
+        let set_loop = |r: &mut Self, t: Option<JObjId>| {
+            r.tree_anims(t, |aobjs, a| aobj::set_flags(aobjs, Some(a), aobj::LOOP));
+        };
+        if self.game.fighters[f.0].x8A4_animBlendFrames == 0.0 {
+            self.reset_parts(f, part, desc, false);
+            self.bind_part_figatree(f, part, false);
+            self.request_anim(j, frame);
+            let anim = self.game.fighters[f.0].anim_id;
+            let entry = self.anim_entry(f, anim);
+            if self.data.u8(entry.at(0x10)) & 0x40 != 0 {
+                set_loop(self, j);
+            }
+            set_rate(self, j);
+            self.anim_part_tree(f, part);
+            return;
+        }
+        let j2 = bone.x4_jobj2;
+        self.reset_parts(f, part, desc, true);
+        self.bind_part_figatree(f, part, true);
+        self.request_anim(j2, frame);
+        self.request_anim(j, frame);
+        if self.game.fighters[f.0].x594[0] & 0x40 != 0 {
+            set_loop(self, j2);
+            set_loop(self, j);
+        }
+        set_rate(self, j2);
+        set_rate(self, j);
+        jobj::anim_all(
+            &mut self.game.objs,
+            self.data,
+            &mut crate::game::code::ParticleHooks,
+            j2,
+        );
+        self.anim_part_tree(f, part);
+    }
+
     /// Requests a joint tree's own animations from `frame`, `ftAnim_80070710`.
     #[doc(alias = "ftAnim_80070710")]
     pub(super) fn request_anim(&mut self, j: Option<JObjId>, frame: f32) {

@@ -29,6 +29,7 @@ pub mod jump;
 pub mod kind_callbacks;
 pub mod ledge;
 pub mod multijump;
+pub mod passive_wall;
 pub mod phys;
 pub mod rebirth;
 pub mod squat;

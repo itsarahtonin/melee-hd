@@ -158,6 +158,36 @@ impl Importer<'_> {
         id
     }
 
+    /// The damage log's entries (`it_804A0E70`, up to `it_804D6D18`): each attacker's fighter
+    /// or item, and which of its hitboxes its hit pointer names.
+    fn damage_log(&self) -> Vec<melee_sim::game::it::coll::DamageLogEntry> {
+        let cap = self.cap;
+        let log = sym("it_804A0E70");
+        let n = cap.u32(sym("it_804D6D18")).min(15);
+        (0..n)
+            .map(|i| {
+                let e = log + 0x10 * i;
+                let (kind, src, hit) = (cap.u32(e) as i32, cap.u32(e + 4), cap.u32(e + 8));
+                let (source, base, size) = match kind {
+                    1 => {
+                        let f = self.maps.fighters[&src];
+                        (self.game.fighters[f.0].gobj, 0x914, 0x138)
+                    }
+                    2 => {
+                        let it = self.maps.items[&src];
+                        (self.game.items[it.0].entity, 0x5D4, 0x13C)
+                    }
+                    _ => panic!("a damage log entry of kind {kind}"),
+                };
+                melee_sim::game::it::coll::DamageLogEntry {
+                    kind,
+                    source: source.expect("a damage log attacker without its GObj"),
+                    hit: ((hit - src - base) / size) as usize,
+                }
+            })
+            .collect()
+    }
+
     /// The item code's globals, and the effects' parameters and mpcoll's statics the items
     /// reach. Call after [`Importer::world`].
     pub fn items(&mut self) {
@@ -168,6 +198,7 @@ impl Importer<'_> {
         self.game.it.made = cap.u32(sym("it_804D6D10")) as i32;
         self.game.it.next_attack_id = cap.u32(sym("it_804D6D14"));
         self.game.it.damage_log_len = cap.u32(sym("it_804D6D18"));
+        self.game.it.damage_log = self.damage_log();
         self.game.it.clank_boxes = cap.u32(sym("it_804D6D1C")).to_be_bytes();
         let data = |s: &mut Self, name: &str| {
             let a = s.cap.u32(sym(name));

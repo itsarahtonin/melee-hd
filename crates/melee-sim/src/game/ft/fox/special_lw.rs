@@ -163,7 +163,7 @@ impl Running<'_> {
             let t = reg(fp.co_attrs.terminal_velocity);
             Self::fall(fp, g, t);
         }
-        self.deaccel_quick_air(gobj);
+        self.self_accel_deaccel_quick_air(gobj);
     }
 
     /// The loop's, turn's and hit's grounded physics: friction, and the reflector's bubble

@@ -166,7 +166,7 @@ impl Running<'_> {
             let fp = &mut self.game.fighters[f.0];
             let (g, t) = (reg(fp.co_attrs.gravity), reg(fp.co_attrs.terminal_velocity));
             Self::fall(fp, g, t);
-            self.deaccel_quick_air(gobj);
+            self.self_accel_deaccel_quick_air(gobj);
         }
     }
 

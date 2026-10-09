@@ -327,11 +327,6 @@ impl Running<'_> {
         self.air_coll_ledges_then(gobj, |g, gobj| g.tumble_land(gobj));
     }
 
-    /// A wall tech (`ftCo_800C1D38`), not ported yet.
-    pub fn passive_wall_check(&mut self, _gobj: GObjId) -> bool {
-        unported_call("ftCo_800C1D38")
-    }
-
     /// A ceiling tech (`ftCo_800C23A0`), not ported yet.
     pub fn passive_ceil_check(&mut self, _gobj: GObjId) -> bool {
         unported_call("ftCo_800C23A0")

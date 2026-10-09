@@ -72,7 +72,7 @@ impl Running<'_> {
 
     /// Resets the fighter for a spawn at its player's position, `Fighter_UnkInitReset_80067C98`.
     #[doc(alias = "Fighter_UnkInitReset_80067C98")]
-    fn init_reset(&mut self, f: FighterId) {
+    pub(crate) fn init_reset(&mut self, f: FighterId) {
         let spawn = self.game.new_spawn_number();
         let slot = i32::from(self.game.fighters[f.0].player_idx);
         let coords = self.game.player_pos(slot);
@@ -492,7 +492,7 @@ impl Running<'_> {
 
     /// Fits the fighter's camera box to it, `ftCamera_80076064`.
     #[doc(alias = "ftCamera_80076064")]
-    fn init_camera_box(&mut self, f: FighterId) {
+    pub(crate) fn init_camera_box(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
         let b = fp.x890_cameraBox.expect("a fighter without a camera box");
         let x3c = self
@@ -530,7 +530,7 @@ impl Running<'_> {
     /// Scales the fighter's model to its model scale (`x34_scale.z` across, if set),
     /// `Fighter_UpdateModelScale`.
     #[doc(alias = "Fighter_UpdateModelScale")]
-    fn update_model_scale(&mut self, gobj: GObjId) {
+    pub(crate) fn update_model_scale(&mut self, gobj: GObjId) {
         let root = self.root_jobj(gobj);
         let fp = self.game.fighter(gobj);
         let model = mem(Running::model_scale(fp));

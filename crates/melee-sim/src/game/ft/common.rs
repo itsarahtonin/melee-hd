@@ -164,13 +164,13 @@ impl Running<'_> {
         if self.game.fighter(gobj).x209C == 0 {
             return;
         }
-        let item = self.item_in_reach(gobj, 1);
+        let found = self.item_in_reach(gobj, 1);
         let fp = self.game.fighter_mut(gobj);
         fp.x209C -= 1;
         if fp.x209C == 0 {
             fp.x2224_b1 = true;
         }
-        if item.is_some() {
+        if found.is_some() {
             unported_call("fn_800D6F58 (catching an item in the air)");
         }
     }
