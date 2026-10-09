@@ -19,7 +19,7 @@ const CLOCK_MASKS: [u64; 2] = [u64::MAX, u64::MAX];
 const PAUSE_LINKS: [u64; 8] = [0, 0x82FFFA, 0, 0x8EFFFA, 0x800FFA, 0x808FFA, 0x800FFA, 0];
 
 /// What a tick hands back besides the state.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Tick {
     /// What the pad library asked of the hardware (resets, rumble motors).
     pub pads: Requests,

@@ -152,7 +152,7 @@ impl Update {
 /// each spawn sets what its update reads before the update runs, and nothing else reads them,
 /// so the slot's leftover words are no state: a new effect starts them at zero, and the oracle
 /// compares the parts its update reads (`x2A` and `x2B`, which nothing reads, aren't kept).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Effect {
     /// The next effect of a spawn that made several (`next`).
     pub next: Option<EffectId>,
@@ -217,7 +217,7 @@ impl SpawnKind {
 
 /// `EF_QueuedEffect`: a spawn `efAsync_Spawn` deferred. Its words the kind doesn't use are
 /// never read.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Queued {
     pub next: Option<QueuedId>,
     pub kind: u8,
@@ -279,7 +279,7 @@ pub const FILES: [Option<(&str, &str)>; 51] = {
 };
 
 /// efLib's and efAsync's globals.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct Globals {
     /// The effects (`efLib_AllocData`).
     pub effects: Pool<Effect>,

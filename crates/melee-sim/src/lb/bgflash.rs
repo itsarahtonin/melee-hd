@@ -4,7 +4,7 @@
 //! of the flash's GObj, scaled by the flash scale.
 //!
 //! The simulation keeps the flash's state (`lbl_80433658`), the overlay's GObj and user data,
-//! the animation table and the scale. Drawing it is a [`Draw::Quads`] of the color.
+//! the animation table and the scale. Drawing it is [`Draw::Quad`]s of the color.
 
 use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, Archives, DataRef};
@@ -60,7 +60,7 @@ const CAMERA_DESC: StaticDesc = StaticDesc {
 };
 
 /// The flash's state.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct BgFlash {
     /// `lbl_80433658`: the mode, the colors and the fade's steps, the wipe's, and the GObjs.
     pub data: BgFlashData,
@@ -189,13 +189,13 @@ impl BgFlash {
         self.scale = scale;
     }
 
-    /// The quads the flash draws, `fn_8001FEC4`'s: none while off; its color over the
+    /// The quads the flash draws, to `out`, `fn_8001FEC4`'s: none while off; its color over the
     /// screen in modes 0 to 2 and 5; a finished wipe black over it in mode 3; else the
     /// wipe's strips, downward from the top (mode 3) or from where it stands (mode 4).
-    pub fn quads(&self) -> Vec<Quad> {
+    pub fn quads(&self, out: &mut dyn FnMut(Quad)) {
         let d = &self.data;
         if d.state.active {
-            return Vec::new();
+            return;
         }
         let mode = d.state.mode;
         let quad = |x0: i32, y0: i32, x1: i32, y1: i32, c: [u8; 4]| Quad {
@@ -207,37 +207,35 @@ impl BgFlash {
         };
         let black = channels(&BLACK);
         if !(3..5).contains(&mode) {
-            return vec![quad(0, 0, WIDTH, HEIGHT, channels(&d.xC))];
+            out(quad(0, 0, WIDTH, HEIGHT, channels(&d.xC)));
+            return;
         }
         if d.x33 != 0 {
-            return if mode == 3 {
-                vec![quad(0, 0, WIDTH, HEIGHT, black)]
-            } else {
-                Vec::new()
-            };
+            if mode == 3 {
+                out(quad(0, 0, WIDTH, HEIGHT, black));
+            }
+            return;
         }
         if d.x30 != 0 {
-            return Vec::new();
+            return;
         }
         let h = i32::from(d.x32);
         assert!(h != 0, "fn_8001FEC4: a wipe of strips 0 high never ends");
-        let mut out = Vec::new();
         if mode == 3 {
             let mut y = 0;
             while y <= d.x38 {
                 let right = if y == d.x38 { d.x34 } else { WIDTH };
-                out.push(quad(0, y, right, y + h, black));
+                out(quad(0, y, right, y + h, black));
                 y += h;
             }
         } else {
             let mut y = d.x38;
             while y <= HEIGHT {
                 let left = if y == d.x38 { d.x34 } else { 0 };
-                out.push(quad(left, y, WIDTH, y + h, black));
+                out(quad(left, y, WIDTH, y + h, black));
                 y += h;
             }
         }
-        out
     }
 }
 
@@ -371,7 +369,6 @@ impl Running<'_> {
         if self.game.bgflash.data.state.active {
             return;
         }
-        let quads = self.game.bgflash.quads();
         let c = self
             .game
             .objs
@@ -379,6 +376,8 @@ impl Running<'_> {
             .current
             .expect("hsd_80391A04: no camera");
         cobj::viewing_mtx_copy(&mut self.game.objs, self.data, c);
-        self.game.objs.display.draws.push(Draw::Quads(quads));
+        let g = &mut *self.game;
+        let draws = &mut g.objs.display.draws;
+        g.bgflash.quads(&mut |q| draws.push(Draw::Quad(q)));
     }
 }

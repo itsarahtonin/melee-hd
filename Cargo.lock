@@ -463,6 +463,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "melee-oracle"
 version = "0.1.0"
 dependencies = [
@@ -491,6 +500,7 @@ version = "0.1.0"
 dependencies = [
  "gekko-fp",
  "melee-data",
+ "melee-derive",
 ]
 
 [[package]]

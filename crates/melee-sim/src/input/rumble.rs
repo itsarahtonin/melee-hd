@@ -177,7 +177,7 @@ pub struct Port {
 
 /// The rumble library: `PadLibData`'s `rumble_info`, the nodes it hands out
 /// (`gmMain_8046B1F8` in Melee) and the ports (`HSD_Rumble_804C22E0`).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Rumble {
     /// The most scripts one port may run.
     pub max_list: u16,

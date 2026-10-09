@@ -89,7 +89,7 @@ pub struct Event {
 }
 
 /// The timeline's state.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
 pub struct Clock {
     /// The time base.
     pub now: u64,
@@ -151,7 +151,7 @@ pub enum Wait {
 /// Time a stretch of the audio code took at the hardware, and what it started: the disc reads
 /// (each by the time into the stretch its command went out) and ARAM transfers, which finish
 /// at once and interrupt.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
 pub struct HwLog {
     pub spent: u64,
     pub reads: Vec<u64>,

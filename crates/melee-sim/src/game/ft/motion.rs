@@ -143,10 +143,14 @@ impl Running<'_> {
             .iter()
             .find(|&&(o, _)| o == off)
             .unwrap_or_else(|| panic!("no animation at {off:#x} of character {kind}'s file"));
-        let name = self.c_string(self.data.ptr(entry).expect("an animation without a name"));
+        let mut buf = [0u8; 128];
+        let name = self.c_string(
+            self.data.ptr(entry).expect("an animation without a name"),
+            &mut buf,
+        );
         let archive = self.data.get(id);
         let offset = archive
-            .public(&name)
+            .public(name)
             .unwrap_or_else(|| panic!("{name} isn't in its animation's archive"));
         DataRef {
             archive: id,
@@ -154,19 +158,23 @@ impl Running<'_> {
         }
     }
 
-    /// The NUL-terminated string at `at`.
-    fn c_string(&self, at: DataRef) -> String {
-        let mut out = Vec::new();
+    /// The NUL-terminated string at `at`, read into `buf` (a symbol name: ASCII, and shorter).
+    fn c_string<'b>(&self, at: DataRef, buf: &'b mut [u8]) -> &'b str {
         let mut i = 0;
         loop {
-            let b = self.data.u8(at.at(i));
+            let b = self.data.u8(at.at(i as u32));
             if b == 0 {
                 break;
             }
-            out.push(b);
+            assert!(
+                i < buf.len(),
+                "a symbol name longer than {} bytes",
+                buf.len()
+            );
+            buf[i] = b;
             i += 1;
         }
-        String::from_utf8_lossy(&out).into_owned()
+        std::str::from_utf8(&buf[..i]).expect("an ASCII symbol name")
     }
 
     /// Stops the fighter's rumble of kind `id` if its controller rumbles, `ftCommon_8007ECD4`.

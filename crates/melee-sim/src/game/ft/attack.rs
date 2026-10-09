@@ -119,7 +119,7 @@ pub struct LogEntry {
 }
 
 /// The attack collision's scratch: the damage logs and the clank flags.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct HitLogs {
     pub hits: Vec<LogEntry>,
     pub tips: Vec<LogEntry>,
@@ -1613,22 +1613,17 @@ impl Running<'_> {
         }
         let coll = &fp.coll_data;
         let flags = coll.env_flags;
-        let mut lines = Vec::new();
-        if flags & (0x8000 | 0x10000) != 0 {
-            lines.push(coll.floor.index);
-        }
-        if flags & (0x2000 | 0x4000) != 0 {
-            lines.push(coll.ceiling.index);
-        }
-        if flags & 0xFC0 != 0 {
-            lines.push(coll.right_facing_wall.index);
-        }
-        if flags & 0x3F != 0 {
-            lines.push(coll.left_facing_wall.index);
-        }
+        let touched = [
+            (flags & (0x8000 | 0x10000) != 0, coll.floor.index),
+            (flags & (0x2000 | 0x4000) != 0, coll.ceiling.index),
+            (flags & 0xFC0 != 0, coll.right_facing_wall.index),
+            (flags & 0x3F != 0, coll.left_facing_wall.index),
+        ];
         let mut hazard = false;
-        for line in lines {
-            hazard = self.line_hazard(line);
+        for (touching, line) in touched {
+            if touching {
+                hazard = self.line_hazard(line);
+            }
         }
         if hazard {
             unported_call("ftCo_800C0B20 (a stage line's damage)");
@@ -1768,8 +1763,14 @@ impl Running<'_> {
     /// `ftColl_8007A06C` on the hit log): its effects spawn as each hit is weighed.
     #[doc(alias = "ftColl_8007AB48")]
     pub fn take_hits(&mut self, gobj: GObjId) {
-        let log = self.game.ft.hit_logs.hits.clone();
+        // Lent out while the hits are weighed, which logs none.
+        let log = std::mem::take(&mut self.game.ft.hit_logs.hits);
         self.weigh_hits(gobj, &log, false);
+        assert!(
+            self.game.ft.hit_logs.hits.is_empty(),
+            "a hit logged while weighing"
+        );
+        self.game.ft.hit_logs.hits = log;
     }
 
     /// The same for the tips (`ftColl_8007AB80`), with no effects; `x18a0` keeps the result's
@@ -1777,8 +1778,13 @@ impl Running<'_> {
     #[doc(alias = "ftColl_8007AB80")]
     pub fn take_tip_hits(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).dmg.x187c = 0.0;
-        let log = self.game.ft.hit_logs.tips.clone();
+        let log = std::mem::take(&mut self.game.ft.hit_logs.tips);
         self.weigh_hits(gobj, &log, true);
+        assert!(
+            self.game.ft.hit_logs.tips.is_empty(),
+            "a tip logged while weighing"
+        );
+        self.game.ft.hit_logs.tips = log;
         let fp = self.game.fighter_mut(gobj);
         fp.dmg.x18a0 = fp.dmg.x187c;
     }

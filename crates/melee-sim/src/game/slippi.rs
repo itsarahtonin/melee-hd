@@ -227,7 +227,7 @@ fn fnv(words: impl Iterator<Item = u32>) -> u64 {
 }
 
 /// One code of a list, as a code handler reads it.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq)]
 pub struct Code {
     pub kind: u8,
     pub addr: u32,
@@ -279,7 +279,7 @@ pub fn parse_codes(raw: &[u8]) -> Vec<Code> {
 }
 
 /// What [`Rules::from_codes`] can't play.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq)]
 pub enum CodeError {
     /// A code no rule covers.
     Unknown { kind: u8, addr: u32 },

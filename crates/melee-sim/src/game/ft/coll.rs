@@ -43,10 +43,10 @@ pub type Cb = fn(&mut Running<'_>, GObjId);
 
 /// What a fighter's floor filter reads: its stick, `ftCommonData` x25C, and which lines are
 /// platforms.
-pub struct FilterInput {
+pub struct FilterInput<'a> {
     pub stick_y: f32,
     pub threshold: f32,
-    pub platforms: Vec<bool>,
+    pub platforms: &'a [bool],
 }
 
 /// What mpcoll asks of the game during an object's pass (a fighter's or an item's).
@@ -55,7 +55,7 @@ pub struct ObjCollHooks<'a> {
     pub data: &'a Archives,
     pub dynamic_attrs: &'a DynamicAttrs,
     /// The fighter's floor filter's inputs, for a filtered pass.
-    pub filter: Option<FilterInput>,
+    pub filter: Option<FilterInput<'a>>,
 }
 
 impl CollHooks<StageColl> for ObjCollHooks<'_> {
@@ -181,12 +181,18 @@ impl Running<'_> {
         };
         let game = &mut *self.game;
         let geometry = game.geometry.as_mut().expect("no collision geometry");
+        let platforms = &mut game.ft.platforms;
+        platforms.clear();
+        if filtered {
+            platforms.extend(
+                (0..geometry.lines.len() as i32)
+                    .map(|l| geometry.line_surface(l) & LINE_PLATFORM != 0),
+            );
+        }
         let filter = filtered.then(|| FilterInput {
             stick_y: game.fighters[f.0].input.lstick[0].y,
             threshold,
-            platforms: (0..geometry.lines.len() as i32)
-                .map(|l| geometry.line_surface(l) & LINE_PLATFORM != 0)
-                .collect(),
+            platforms: &game.ft.platforms,
         });
         let mut hooks = ObjCollHooks {
             objs: &mut game.objs,
@@ -206,6 +212,7 @@ impl Running<'_> {
         prepare(cd);
         let hit = pass(&mut coll, cd);
         fp.cur_pos = fp.coll_data.cur_pos;
+        game.ft.platforms.clear();
         hit
     }
 

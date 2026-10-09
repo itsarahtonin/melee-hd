@@ -6,7 +6,7 @@
 //! keys by identity behaves as the original's pointer comparisons did.
 
 /// A pool's slots. A slot stays in place when freed; `T` holds its last contents until reused.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct Pool<T> {
     slots: Vec<T>,
     free: Vec<u32>,

@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 
 /// `HSD_IDTable`: values of type `V` by key.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct IdTable<K, V> {
     map: HashMap<K, V>,
 }

@@ -66,7 +66,7 @@ impl Glyph {
 
 /// A screen (`DevText`). `prev` and `next` are pool indices, and `buf` stands for the buffer
 /// its creator passes, which the screen alone writes.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct DevText {
     pub x: i16,
     pub y: i16,
@@ -92,11 +92,11 @@ pub struct DevText {
 
 /// A debug menu's state (`un_80304138_objalloc_t`): the debug menus aren't ported, only
 /// their pool, which every scene resets.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct DebugMenu;
 
 /// The system's globals (`textdraw.c`'s statics and `textlib_1.c`'s menu pool).
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct DevTexts {
     /// `devtext_pool`.
     pub pool: Vec<DevText>,
@@ -120,7 +120,7 @@ pub struct DevTexts {
 
 /// What drawing a screen asks of the presentation layer, its floats as the registers
 /// pass them.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub enum Draw {
     /// `HSD_FogSet(NULL)`.
     NoFog,
@@ -640,17 +640,22 @@ impl Game {
     #[doc(alias = "DevText_DrawAll")]
     pub fn devtext_draw_all(&mut self, data: &Archives, pass: i32) -> Vec<Draw> {
         let mut out = Vec::new();
+        self.devtext_draw_all_into(data, pass, &mut out);
+        out
+    }
+
+    /// [`Game::devtext_draw_all`] appending to `out`.
+    pub fn devtext_draw_all_into(&mut self, data: &Archives, pass: i32, out: &mut Vec<Draw>) {
         if pass as u32 != PASS_BOTTOM_HALF as u32 {
-            return out;
+            return;
         }
         let mut text = self.hud.devtext.draw_list;
         out.push(Draw::NoFog);
-        self.devtext_setup_cobj(data, &mut out);
+        self.devtext_setup_cobj(data, out);
         while let Some(t) = text {
             let d = &mut self.hud.devtext.pool[usize::from(t)];
-            d.draw(&mut out);
+            d.draw(out);
             text = d.next;
         }
-        out
     }
 }

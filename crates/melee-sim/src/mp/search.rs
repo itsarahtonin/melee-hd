@@ -376,14 +376,16 @@ fn searchable(flags: u32, kind: u32) -> bool {
 impl<K: Kinds> Geometry<K> {
     /// The joints a search visits, in list order: near enough, not skipped, and the only one
     /// asked for if any.
-    fn searched_joints(&self, joint_skip: i32, joint_only: i32) -> Vec<usize> {
-        self.joint_list()
-            .filter(|&j| {
-                self.joints[j].flags & JOINT_TOO_FAR == 0
-                    && joint_skip != j as i32
-                    && (joint_only == -1 || joint_only == j as i32)
-            })
-            .collect()
+    fn searched_joints(
+        &self,
+        joint_skip: i32,
+        joint_only: i32,
+    ) -> impl Iterator<Item = usize> + '_ {
+        self.joint_list().filter(move |&j| {
+            self.joints[j].flags & JOINT_TOO_FAR == 0
+                && joint_skip != j as i32
+                && (joint_only == -1 || joint_only == j as i32)
+        })
     }
 
     /// A joint's lines of one group, then its dynamic lines.

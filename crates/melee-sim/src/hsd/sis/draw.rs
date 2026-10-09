@@ -314,7 +314,7 @@ const ALIGNMENT: u8 = 4;
 const CURSOR: u8 = 5;
 
 /// What a text draws: its background, if it has one, and its glyphs.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct TextDraw {
     pub text: TextId,
     /// Left, top, right, bottom (top and bottom down the screen), and the color.

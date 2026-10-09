@@ -52,7 +52,7 @@ pub type FighterVars = Vars<0xF8>;
 pub type MotionVars = Vars<0xAC>;
 
 /// A union of `N` bytes whose words at some offsets may hold handles.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Vars<const N: usize> {
     bytes: [u8; N],
     /// The words that hold handles, by offset: their bytes aren't the state there.

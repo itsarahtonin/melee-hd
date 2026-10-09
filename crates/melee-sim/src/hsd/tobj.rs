@@ -165,7 +165,7 @@ impl TObjTev {
 }
 
 /// `HSD_TObj`. Its `HSD_Obj` reference counts are never used for TObjs, so they aren't kept.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct TObj {
     pub next: Option<TObjId>,
     /// `GXTexMapID`, reassigned by [`assign_resources`].
@@ -203,7 +203,7 @@ pub struct TObj {
 }
 
 /// The TObj pool and `tobj_head`.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct TObjs {
     pub pool: Pool<TObj>,
     /// The chain the display pass last set up (`tobj_head`).

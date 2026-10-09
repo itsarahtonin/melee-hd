@@ -14,7 +14,7 @@ pub struct Cell {
 
 /// The heap's descriptor (`HeapDesc`): its size and its free and allocated cells, each list in
 /// its order.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
 pub struct Heap {
     pub size: i32,
     /// In address order.

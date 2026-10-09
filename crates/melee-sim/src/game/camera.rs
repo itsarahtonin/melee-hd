@@ -96,7 +96,7 @@ fn param(offset: u32) -> f64 {
 
 /// The camera boxes: the array `Camera_Init` allocates, the framed list (oldest first, walked
 /// newest first through `prev`) and the free list (through `prev`).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct CameraBoxes {
     pub boxes: Vec<CmSubject>,
     /// The next box handed out (`cm_804D6458`).
@@ -120,7 +120,7 @@ impl IndexMut<CameraBoxId> for CameraBoxes {
 }
 
 /// The camera's state.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct CameraState {
     /// `game_camera`.
     pub cam: Camera,

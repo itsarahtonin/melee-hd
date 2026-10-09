@@ -47,16 +47,34 @@ fn part_mask(parts: u32) -> u32 {
 #[doc(alias = "grAnime_801C706C")]
 pub fn joint_anims(objs: &mut Objects, j: JObjId, mask: u32, recurse: bool) -> Vec<AObjId> {
     let mut out = Vec::new();
-    walk(objs, j, mask, recurse, &mut out);
+    walk(objs, j, mask, recurse, &mut |_, a| out.push(a));
     out
 }
 
-fn walk(objs: &mut Objects, j: JObjId, mask: u32, recurse: bool, out: &mut Vec<AObjId>) {
+/// [`joint_anims`] handing each animation to `f` as the walk reaches it (what `f` does to the
+/// animations changes nothing the walk reads).
+pub fn each_joint_anim(
+    objs: &mut Objects,
+    j: JObjId,
+    mask: u32,
+    recurse: bool,
+    f: &mut dyn FnMut(&mut aobj::AObjs, AObjId),
+) {
+    walk(objs, j, mask, recurse, f);
+}
+
+fn walk(
+    objs: &mut Objects,
+    j: JObjId,
+    mask: u32,
+    recurse: bool,
+    out: &mut dyn FnMut(&mut aobj::AObjs, AObjId),
+) {
     let o = &objs.jobjs[j];
     if mask & JOBJ_MASK != 0
         && let Some(a) = o.aobj
     {
-        out.push(a);
+        out(&mut objs.aobjs, a);
     }
     let mut d = jobj::get_dobj(&objs.jobjs, Some(j));
     while let Some(dobj) = d {
@@ -64,21 +82,21 @@ fn walk(objs: &mut Objects, j: JObjId, mask: u32, recurse: bool, out: &mut Vec<A
         if mask & DOBJ_MASK != 0
             && let Some(a) = dd.aobj
         {
-            out.push(a);
+            out(&mut objs.aobjs, a);
         }
         if let Some(m) = dd.mobj {
             let mo = &objs.mobjs[m];
             if mask & MOBJ_MASK != 0
                 && let Some(a) = mo.aobj
             {
-                out.push(a);
+                out(&mut objs.aobjs, a);
             }
             let mut t = mo.tobj;
             while let Some(to) = t {
                 if mask & TOBJ_MASK != 0
                     && let Some(a) = objs.tobjs[to].aobj
                 {
-                    out.push(a);
+                    out(&mut objs.aobjs, a);
                 }
                 t = objs.tobjs[to].next;
             }
@@ -87,7 +105,7 @@ fn walk(objs: &mut Objects, j: JObjId, mask: u32, recurse: bool, out: &mut Vec<A
             && let Some(p) = dd.pobj
             && let Some(a) = pobj::shape_set(&mut objs.pobjs, p).and_then(|s| s.aobj)
         {
-            out.push(a);
+            out(&mut objs.aobjs, a);
         }
         d = objs.dobjs[dobj].next;
     }
@@ -96,7 +114,7 @@ fn walk(objs: &mut Objects, j: JObjId, mask: u32, recurse: bool, out: &mut Vec<A
         if mask & ROBJ_MASK != 0
             && let Some(a) = objs.robjs[ro].aobj
         {
-            out.push(a);
+            out(&mut objs.aobjs, a);
         }
         r = objs.robjs[ro].next;
     }
@@ -129,21 +147,17 @@ pub enum AnimOp {
 pub fn apply(game: &mut Game, j: Option<JObjId>, recurse: bool, mask: u32, op: AnimOp) {
     let Some(j) = j else { return };
     let (rewind, end) = game.gr.anime_loop;
-    let aobjs = joint_anims(&mut game.objs, j, mask, recurse);
-    let a = &mut game.objs.aobjs;
-    for x in aobjs {
-        match op {
-            AnimOp::LoopBetween => {
-                aobj::set_flags(a, Some(x), aobj::LOOP);
-                aobj::set_rewind_frame(a, Some(x), rewind);
-                aobj::set_end_frame(a, Some(x), end);
-            }
-            AnimOp::Loop => aobj::set_flags(a, Some(x), aobj::LOOP),
-            AnimOp::NoLoop => aobj::clear_flags(a, Some(x), aobj::LOOP),
-            AnimOp::Rate(r) => aobj::set_rate(a, Some(x), r),
-            AnimOp::SetFlags(f) => aobj::set_flags(a, Some(x), f),
+    each_joint_anim(&mut game.objs, j, mask, recurse, &mut |a, x| match op {
+        AnimOp::LoopBetween => {
+            aobj::set_flags(a, Some(x), aobj::LOOP);
+            aobj::set_rewind_frame(a, Some(x), rewind);
+            aobj::set_end_frame(a, Some(x), end);
         }
-    }
+        AnimOp::Loop => aobj::set_flags(a, Some(x), aobj::LOOP),
+        AnimOp::NoLoop => aobj::clear_flags(a, Some(x), aobj::LOOP),
+        AnimOp::Rate(r) => aobj::set_rate(a, Some(x), r),
+        AnimOp::SetFlags(f) => aobj::set_flags(a, Some(x), f),
+    });
 }
 
 /// Loops a stage object's part's animations between two frames, `grAnime_801C775C`.
@@ -624,9 +638,11 @@ pub fn start_map(game: &mut Game, data: &Archives, gobj: GObjId, map_id: i32, an
 #[doc(alias = "grAnime_801C8318")]
 pub fn first_anim(game: &mut Game, gobj: GObjId, part: i32, parts: u32) -> Option<AObjId> {
     let j = nth_joint(game, gobj, part)?;
-    joint_anims(&mut game.objs, j, part_mask(parts), true)
-        .first()
-        .copied()
+    let mut first = None;
+    each_joint_anim(&mut game.objs, j, part_mask(parts), true, &mut |_, a| {
+        first.get_or_insert(a);
+    });
+    first
 }
 
 /// Whether a stage object's part's first animation has finished (`AOBJ_NO_ANIM`),

@@ -56,7 +56,7 @@ const CAMERA_DESC: StaticDesc = StaticDesc {
 };
 
 /// The tags' statics (`ifnametag.c`).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct NameTags {
     /// `un_804A1ED0`: the marker model.
     pub model: StaticModelDesc,

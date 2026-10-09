@@ -337,3 +337,61 @@ pub fn raise_thread_priority() {
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
     }
 }
+
+#[repr(C)]
+struct SYMBOL_INFOW {
+    SizeOfStruct: u32,
+    TypeIndex: u32,
+    Reserved: [u64; 2],
+    Index: u32,
+    Size: u32,
+    ModBase: u64,
+    Flags: u32,
+    Value: u64,
+    Address: u64,
+    Register: u32,
+    Scope: u32,
+    Tag: u32,
+    NameLen: u32,
+    MaxNameLen: u32,
+    Name: [u16; 1024],
+}
+
+#[link(name = "dbghelp")]
+unsafe extern "system" {
+    fn SymInitializeW(process: HANDLE, path: *const u16, invade: BOOL) -> BOOL;
+    fn SymFromAddrW(process: HANDLE, addr: u64, disp: *mut u64, sym: *mut SYMBOL_INFOW) -> BOOL;
+}
+
+#[link(name = "kernel32")]
+unsafe extern "system" {
+    fn GetCurrentProcess() -> HANDLE;
+    fn GetModuleHandleW(name: *const u16) -> HANDLE;
+}
+
+/// The names of functions at offsets (RVAs) in this executable, from its PDB: for profiles
+/// whose symbols the profiler couldn't find.
+pub fn symbolize(rvas: &[u64]) -> Vec<Option<String>> {
+    // SAFETY: plain dbghelp calls on this process; the symbol buffer outlives each call.
+    unsafe {
+        let process = GetCurrentProcess();
+        let base = GetModuleHandleW(null_mut()) as u64;
+        // The executable names its PDB without a directory: search beside it.
+        let dir = std::env::current_exe()
+            .ok()
+            .and_then(|e| e.parent().map(|d| d.as_os_str().to_owned()))
+            .unwrap_or_default();
+        let dir: Vec<u16> = dir.encode_wide().chain(Some(0)).collect();
+        SymInitializeW(process, dir.as_ptr(), 1);
+        rvas.iter()
+            .map(|&rva| {
+                let mut sym: SYMBOL_INFOW = std::mem::zeroed();
+                sym.SizeOfStruct = 88;
+                sym.MaxNameLen = 1024;
+                let mut disp = 0u64;
+                (SymFromAddrW(process, base + rva, &mut disp, &mut sym) != 0)
+                    .then(|| String::from_utf16_lossy(&sym.Name[..sym.NameLen.min(1024) as usize]))
+            })
+            .collect()
+    }
+}

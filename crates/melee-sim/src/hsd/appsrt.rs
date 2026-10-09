@@ -23,7 +23,7 @@ pub const STILL: u8 = 2;
 
 /// `HSD_psAppSRT`. `next` stays null and `freefunc`, which nothing in the game sets, stays
 /// null, so neither is kept.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct AppSrt {
     /// The generator whose joint moves it, if any.
     pub gp: Option<GeneratorId>,
@@ -46,7 +46,7 @@ pub struct AppSrt {
 }
 
 /// The app-SRT pool (`HSD_PSAppSrt_804D10B0`) and its counts.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct AppSrts {
     pub pool: Pool<AppSrt>,
     /// Live app-SRTs (`hsd_804D78DE`) and the most at once (`hsd_804D78D8`).

@@ -55,7 +55,7 @@ pub const NO_LEFT_VECTOR: Vec3 = Vec3::new(1.0, 0.0, 0.0);
 const DEG_TO_RAD: f32 = 0.017_453_292;
 
 /// `HSD_CObj`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct CObj {
     pub ref_count: RefCount,
     pub flags: u32,
@@ -88,7 +88,7 @@ impl CObj {
 
 /// The CObj pool and the camera being drawn (`current`, set by the display pass's
 /// `HSD_CObjSetCurrent`).
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct CObjs {
     pub pool: Pool<CObj>,
     pub current: Option<CObjId>,

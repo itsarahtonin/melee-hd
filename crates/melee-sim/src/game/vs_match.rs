@@ -22,7 +22,7 @@ use crate::input::controller::{PadData, Requests};
 use crate::input::pad::PadStatus;
 
 /// What a match starts from.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct Settings {
     /// The match's rules and players (`StartMeleeData`): characters, costumes, ports, teams,
     /// stocks, timer, stage and the rest, as the character and stage selects leave them.
@@ -53,7 +53,7 @@ pub struct Settings {
 
 /// What Slippi's playback hands the game at a replay's start (the Slippi EXI device's answer
 /// to its game info request), from the replay's game start event.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct ReplayStart {
     /// The match's `StartMeleeData` as the replay recorded it (0x138 bytes), with the
     /// device's one change: a player who started the match as Sheik starts as Sheik.
@@ -203,7 +203,7 @@ impl Cx for NoPointers {
 }
 
 /// What a frame hands the frontend.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Frame {
     /// Sounds and the like, in the order the tick asked for them.
     pub events: Vec<Event>,
@@ -223,7 +223,7 @@ pub struct DiscFile {
 }
 
 /// A running VS match: the game's state and the archives it has loaded.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct Match {
     pub game: Game,
     pub data: Archives,
@@ -496,6 +496,20 @@ impl Match {
     pub fn render(&mut self) -> Vec<crate::hsd::display::Draw> {
         scene::render_screen(&mut self.running());
         std::mem::take(&mut self.game.objs.display.draws)
+    }
+
+    /// Takes a frame's buffers back once the frontend is done with it, so later frames fill
+    /// them rather than allocating new ones. Changes nothing the game reads.
+    pub fn recycle(&mut self, mut frame: Frame) {
+        frame.events.clear();
+        frame.draws.clear();
+        if self.game.events.is_empty() && self.game.events.capacity() < frame.events.capacity() {
+            self.game.events = frame.events;
+        }
+        let draws = &mut self.game.objs.display.draws;
+        if draws.is_empty() && draws.capacity() < frame.draws.capacity() {
+            *draws = frame.draws;
+        }
     }
 
     /// One frame: the controllers' poll queued, then one engine tick.

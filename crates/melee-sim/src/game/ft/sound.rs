@@ -3,6 +3,8 @@
 //! player, the second for the second Ice Climber), whose handles the fighter keeps
 //! (`x2144`..`x2160`) to stop them later.
 
+use melee_data::archive::DataRef;
+
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::lb::audio::{SFX_KEY_OFF, SFX_NONE, bank_range, bank_size_step, sfx_bank};
@@ -199,5 +201,14 @@ impl Running<'_> {
     pub fn fighter_random_voice(&mut self, f: FighterId, ids: &[i32]) {
         let i = self.game.objs.rng.below(ids.len() as i32);
         self.fighter_play_track(f, Track::Voice, ids[i as usize], 0x7F, 0x40);
+    }
+
+    /// [`Running::fighter_random_voice`] over `n` ids (words) in the loaded data at `ids`.
+    pub fn fighter_random_voice_in(&mut self, f: FighterId, ids: DataRef, n: i32) {
+        let n = n.max(0);
+        let i = self.game.objs.rng.below(n);
+        assert!((0..n).contains(&i), "a voice set's index past its ids");
+        let id = self.data.u32(ids.at(4 * i as u32)) as i32;
+        self.fighter_play_track(f, Track::Voice, id, 0x7F, 0x40);
     }
 }

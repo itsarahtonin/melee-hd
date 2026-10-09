@@ -27,7 +27,7 @@ use crate::quat::Quat;
 use crate::vec::Vec3;
 
 /// `Vec2`, 0x8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Vec2 {
     /// +0x0
     pub x: f32,
@@ -42,7 +42,7 @@ impl Default for Vec2 {
 }
 
 /// `ftCo_DatAttrs_xBC_t`, 0x20 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ftCo_DatAttrs_xBC_t {
     /// +0x0
     pub size: f32,
@@ -66,7 +66,7 @@ impl Default for ftCo_DatAttrs_xBC_t {
 }
 
 /// `ftCo_DatAttrs`, 0x184 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ftCo_DatAttrs {
     /// +0x0
     pub walk_accel_mul: f32,
@@ -324,7 +324,7 @@ impl Default for ftCo_DatAttrs {
 }
 
 /// `itPickup`, 0x30 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itPickup {
     /// +0x0
     pub gr_light_offset: Quat,
@@ -345,7 +345,7 @@ impl Default for itPickup {
 }
 
 /// `CommandInfo`, 0x24 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct CommandInfo {
     /// +0x0
     pub script: Script,
@@ -360,7 +360,7 @@ impl Default for CommandInfo {
 }
 
 /// `_GXColor`, 0x4 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct _GXColor {
     /// +0x0
     pub r: u8,
@@ -384,7 +384,7 @@ impl Default for _GXColor {
 }
 
 /// `ColorOverlay`, 0x80 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ColorOverlay {
     /// +0x0
     pub script: Script,
@@ -489,7 +489,7 @@ impl Default for ColorOverlay {
 }
 
 /// `FtPartsVis`, 0x20 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct FtPartsVis {
     /// +0x0
     pub model_num: u32,
@@ -510,7 +510,7 @@ impl Default for FtPartsVis {
 }
 
 /// `DObjList`, 0x8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct DObjList {
     /// +0x0
     pub count: u32,
@@ -528,7 +528,7 @@ impl Default for DObjList {
 }
 
 /// `Fighter_x5F4_arr`, 0x2 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Fighter_x5F4_arr {
     /// +0x0
     pub prev: i8,
@@ -543,7 +543,7 @@ impl Default for Fighter_x5F4_arr {
 }
 
 /// `Fighter_input`, 0x50 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Fighter_input {
     /// +0x0
     pub lstick: [Vec2; 3],
@@ -573,7 +573,7 @@ impl Default for Fighter_input {
 }
 
 /// `U8Vec2`, 0x2 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct U8Vec2 {
     /// +0x0
     pub x: u8,
@@ -588,7 +588,7 @@ impl Default for U8Vec2 {
 }
 
 /// `FtInputTimers`, 0x3 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct FtInputTimers {
     /// +0x0
     pub lstick: U8Vec2,
@@ -606,7 +606,7 @@ impl Default for FtInputTimers {
 }
 
 /// `_ECBFlagStruct`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct _ECBFlagStruct {
     /// +0x0 (bits 0..+1)
     pub b0: bool,
@@ -633,7 +633,7 @@ impl Default for _ECBFlagStruct {
 }
 
 /// `_ftECB`, 0x20 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct _ftECB {
     /// +0x0
     pub top: Vec2,
@@ -657,7 +657,7 @@ impl Default for _ftECB {
 }
 
 /// `SurfaceData`, 0x14 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct SurfaceData {
     /// +0x0
     pub index: i32,
@@ -678,7 +678,7 @@ impl Default for SurfaceData {
 }
 
 /// `CollData`, 0x19c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct CollData {
     /// +0x0
     pub x0_gobj: Option<GObjId>,
@@ -792,7 +792,7 @@ impl Default for CollData {
 }
 
 /// `Fighter_x8B0_t`, 0x14 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Fighter_x8B0_t {
     /// +0x0
     pub x0: i32,
@@ -822,7 +822,7 @@ impl Default for Fighter_x8B0_t {
 }
 
 /// `HitVictim`, 0x8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct HitVictim {
     /// +0x0
     pub victim: Victim,
@@ -840,7 +840,7 @@ impl Default for HitVictim {
 }
 
 /// `HitCapsule`, 0x138 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct HitCapsule {
     /// +0x0
     pub state: i32,
@@ -1002,7 +1002,7 @@ impl Default for HitCapsule {
 }
 
 /// `HurtCapsule`, 0x44 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct HurtCapsule {
     /// +0x0
     pub state: i32,
@@ -1062,7 +1062,7 @@ impl Default for HurtCapsule {
 }
 
 /// `FighterHurtCapsule`, 0x4c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct FighterHurtCapsule {
     /// +0x0
     pub capsule: HurtCapsule,
@@ -1083,7 +1083,7 @@ impl Default for FighterHurtCapsule {
 }
 
 /// `Fighter_x1614_t`, 0x2c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Fighter_x1614_t {
     /// +0x0
     pub x0: f32,
@@ -1110,7 +1110,7 @@ impl Default for Fighter_x1614_t {
 }
 
 /// `Fighter_x1670_t`, 0x28 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Fighter_x1670_t {
     /// +0x0
     pub v1: Vec3,
@@ -1140,7 +1140,7 @@ impl Default for Fighter_x1670_t {
 }
 
 /// `ft_800898B4_t`, 0x14 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ft_800898B4_t {
     /// +0x0
     pub x0: i32,
@@ -1203,7 +1203,7 @@ impl Default for ft_800898B4_t {
 }
 
 /// `lb_80014638_arg0_t`, 0x18 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct lb_80014638_arg0_t {
     /// +0x0
     pub x0: Vec3,
@@ -1221,7 +1221,7 @@ impl Default for lb_80014638_arg0_t {
 }
 
 /// `dmg`, 0x134 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct dmg {
     /// +0x0
     pub x182c_behavior: f32,
@@ -1434,7 +1434,7 @@ impl Default for dmg {
 }
 
 /// `HitResult`, 0x24 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct HitResult {
     /// +0x0
     pub bone: Option<JObjId>,
@@ -1461,7 +1461,7 @@ impl Default for HitResult {
 }
 
 /// `Fighter_ReflectAttr`, 0x14 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Fighter_ReflectAttr {
     /// +0x0
     pub x1A2C_reflectHitDirection: f32,
@@ -1488,7 +1488,7 @@ impl Default for Fighter_ReflectAttr {
 }
 
 /// `Fighter_AbsorbAttr`, 0xc bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Fighter_AbsorbAttr {
     /// +0x0
     pub x1A40_absorbHitDirection: f32,
@@ -1509,7 +1509,7 @@ impl Default for Fighter_AbsorbAttr {
 }
 
 /// `S8Vec2`, 0x2 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct S8Vec2 {
     /// +0x0
     pub x: i8,
@@ -1524,7 +1524,7 @@ impl Default for S8Vec2 {
 }
 
 /// `Fighter_x1A88_xFC_t`, 0x1c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Fighter_x1A88_xFC_t {
     /// +0x0
     pub x0: u32,
@@ -1563,7 +1563,7 @@ impl Default for Fighter_x1A88_xFC_t {
 }
 
 /// `CpuFighter`, 0x57c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct CpuFighter {
     /// +0x0
     pub buttons: u32,
@@ -1848,7 +1848,7 @@ impl Default for CpuFighter {
 }
 
 /// `S32Vec2`, 0x8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct S32Vec2 {
     /// +0x0
     pub x: i32,
@@ -1863,7 +1863,7 @@ impl Default for S32Vec2 {
 }
 
 /// `Struct207C`, 0x8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Struct207C {
     /// +0x0
     pub x: f32,
@@ -1878,7 +1878,7 @@ impl Default for Struct207C {
 }
 
 /// `Struct2074`, 0x18 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Struct2074 {
     /// +0x0
     pub x2074_vec: S32Vec2,
@@ -1902,7 +1902,7 @@ impl Default for Struct2074 {
 }
 
 /// `LbShadow`, 0x8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct LbShadow {
     /// +0x0 (bits 0..+1)
     pub x0_b0: bool,
@@ -1941,7 +1941,7 @@ impl Default for LbShadow {
 }
 
 /// `Fighter_x20B0_t`, 0x18 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Fighter_x20B0_t {
     /// +0x0
     pub x0: Vec3,
@@ -1959,7 +1959,7 @@ impl Default for Fighter_x20B0_t {
 }
 
 /// `_SmashAttr`, 0x28 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct _SmashAttr {
     /// +0x0
     pub state: i32,
@@ -2019,7 +2019,7 @@ impl Default for _SmashAttr {
 }
 
 /// `Fighter_x221B`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Fighter_x221B {
     /// +0x0 (bits 0..+1)
     pub x221B_b0: bool,
@@ -2055,7 +2055,7 @@ impl Default for Fighter_x221B {
 }
 
 /// `IntVec2`, 0x8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IntVec2 {
     /// +0x0
     pub x: i32,
@@ -2070,7 +2070,7 @@ impl Default for IntVec2 {
 }
 
 /// `Fighter`, 0x23ec bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Fighter {
     /// +0x0
     pub gobj: Option<GObjId>,
@@ -3357,7 +3357,7 @@ impl Default for Fighter {
 }
 
 /// `ItemHitbox`, 0x13c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ItemHitbox {
     /// +0x0
     pub hit: HitCapsule,
@@ -3381,7 +3381,7 @@ impl Default for ItemHitbox {
 }
 
 /// `lb_80014638_arg1_t`, 0x14 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct lb_80014638_arg1_t {
     /// +0x0
     pub unk_x: f32,
@@ -3402,7 +3402,7 @@ impl Default for lb_80014638_arg1_t {
 }
 
 /// `xB6C_t`, 0x28 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct xB6C_t {
     /// +0x0
     pub xB6C: Vec3,
@@ -3432,7 +3432,7 @@ impl Default for xB6C_t {
 }
 
 /// `ItemModStruct`, 0x4 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ItemModStruct {
     /// +0x0
     pub x0_unk: _GXColor,
@@ -3447,7 +3447,7 @@ impl Default for ItemModStruct {
 }
 
 /// `_itECB`, 0x10 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct _itECB {
     /// +0x0
     pub top: f32,
@@ -3471,7 +3471,7 @@ impl Default for _itECB {
 }
 
 /// `flag32_flags`, 0x4 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct flag32_flags {
     /// +0x0 (bits 0..+1)
     pub x0: bool,
@@ -3567,7 +3567,7 @@ impl Default for flag32_flags {
 }
 
 /// `flag32`, 0x4 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct flag32 {
     /// +0x0
     pub flags: flag32_flags,
@@ -3582,7 +3582,7 @@ impl Default for flag32 {
 }
 
 /// `Item_xDCC_flag`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Item_xDCC_flag {
     /// +0x0 (bits 0..+1)
     pub b0: bool,
@@ -3609,7 +3609,7 @@ impl Default for Item_xDCC_flag {
 }
 
 /// `CameraBoxFlags_x0`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct CameraBoxFlags_x0 {
     /// +0x0 (bits 0..+2)
     pub b01: u8,
@@ -3642,7 +3642,7 @@ impl Default for CameraBoxFlags_x0 {
 }
 
 /// `CameraBoxFlags`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct CameraBoxFlags {
     /// +0x0
     pub x0: CameraBoxFlags_x0,
@@ -3657,7 +3657,7 @@ impl Default for CameraBoxFlags {
 }
 
 /// `Item`, 0xfcc bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Item {
     /// +0x0
     pub x0: Option<ItemId>,
@@ -4209,7 +4209,7 @@ impl Default for Item {
 }
 
 /// `Ground_x10_flags`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Ground_x10_flags {
     /// +0x0 (bits 0..+1)
     pub b0: bool,
@@ -4245,7 +4245,7 @@ impl Default for Ground_x10_flags {
 }
 
 /// `Ground_x11_flags`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Ground_x11_flags {
     /// +0x0 (bits 0..+3)
     pub b012: u8,
@@ -4275,7 +4275,7 @@ impl Default for Ground_x11_flags {
 }
 
 /// `Ground`, 0x204 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Ground {
     /// +0x0
     pub x0: i32,
@@ -4326,7 +4326,7 @@ impl Default for Ground {
 }
 
 /// `StageBlastZone`, 0x10 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct StageBlastZone {
     /// +0x0
     pub left: f32,
@@ -4350,7 +4350,7 @@ impl Default for StageBlastZone {
 }
 
 /// `StageCameraInfo`, 0x74 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct StageCameraInfo {
     /// +0x0
     pub cam_bounds: StageBlastZone,
@@ -4434,7 +4434,7 @@ impl Default for StageCameraInfo {
 }
 
 /// `StageInfo_unk8C`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct StageInfo_unk8C {
     /// +0x0 (bits 0..+1)
     pub b0: bool,
@@ -4470,7 +4470,7 @@ impl Default for StageInfo_unk8C {
 }
 
 /// `StageInfo`, 0x748 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct StageInfo {
     /// +0x0
     pub cam_info: StageCameraInfo,
@@ -4656,7 +4656,7 @@ impl Default for StageInfo {
 }
 
 /// `GroundParam`, 0xdc bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct GroundParam {
     /// +0x0
     pub y: f32,
@@ -4794,7 +4794,7 @@ impl Default for GroundParam {
 }
 
 /// `CameraTransformState`, 0x38 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct CameraTransformState {
     /// +0x0
     pub interest: Vec3,
@@ -4824,7 +4824,7 @@ impl Default for CameraTransformState {
 }
 
 /// `CameraQuake`, 0x10 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct CameraQuake {
     /// +0x0
     pub epicenter: Vec3,
@@ -4842,7 +4842,7 @@ impl Default for CameraQuake {
 }
 
 /// `Camera_x2D0`, 0x34 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Camera_x2D0 {
     /// +0x0
     pub y_max: f32,
@@ -4893,7 +4893,7 @@ impl Default for Camera_x2D0 {
 }
 
 /// `Camera`, 0x39c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Camera {
     /// +0x0
     pub gobj: Option<GObjId>,
@@ -5124,7 +5124,7 @@ impl Default for Camera {
 }
 
 /// `CmSubjectExtents`, 0x14 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct CmSubjectExtents {
     /// +0x0
     pub h: Vec2,
@@ -5142,7 +5142,7 @@ impl Default for CmSubjectExtents {
 }
 
 /// `CmSubject`, 0x6c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct CmSubject {
     /// +0x0
     pub next: Option<CameraBoxId>,
@@ -5196,7 +5196,7 @@ impl Default for CmSubject {
 }
 
 /// `CameraDebugMode`, 0x5c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct CameraDebugMode {
     /// +0x0
     pub last_mode: i32,
@@ -5241,7 +5241,7 @@ impl Default for CameraDebugMode {
 }
 
 /// `_StaticPlayer_flags`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct _StaticPlayer_flags {
     /// +0x0 (bits 0..+1)
     pub b0: bool,
@@ -5277,7 +5277,7 @@ impl Default for _StaticPlayer_flags {
 }
 
 /// `_StaticPlayer_more_flags`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct _StaticPlayer_more_flags {
     /// +0x0 (bits 0..+1)
     pub b0: bool,
@@ -5310,7 +5310,7 @@ impl Default for _StaticPlayer_more_flags {
 }
 
 /// `_StaticPlayer_flagsAE`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct _StaticPlayer_flagsAE {
     /// +0x0 (bits 0..+1)
     pub b0: bool,
@@ -5346,7 +5346,7 @@ impl Default for _StaticPlayer_flagsAE {
 }
 
 /// `StaleMoveTable_StaleMoves`, 0x4 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct StaleMoveTable_StaleMoves {
     /// +0x0
     pub move_id: u16,
@@ -5364,7 +5364,7 @@ impl Default for StaleMoveTable_StaleMoves {
 }
 
 /// `plAttackStats`, 0x1ac bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct plAttackStats {
     /// +0x0
     pub total: u32,
@@ -5400,7 +5400,7 @@ impl Default for plAttackStats {
 }
 
 /// `plActionStats`, 0x5c0 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct plActionStats {
     /// +0x0
     pub attacks: plAttackStats,
@@ -5478,7 +5478,7 @@ impl Default for plActionStats {
 }
 
 /// `pl_x5EC_t_x10`, 0x14 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct pl_x5EC_t_x10 {
     /// +0x0
     pub x0: f32,
@@ -5511,7 +5511,7 @@ impl Default for pl_x5EC_t_x10 {
 }
 
 /// `pl_x5EC_t`, 0x88 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct pl_x5EC_t {
     /// +0x0
     pub x0: u8,
@@ -5538,7 +5538,7 @@ impl Default for pl_x5EC_t {
 }
 
 /// `pl_x8C0_t_x4`, 0x4 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct pl_x8C0_t_x4 {
     /// +0x0
     pub x0: u16,
@@ -5559,7 +5559,7 @@ impl Default for pl_x8C0_t_x4 {
 }
 
 /// `pl_x8C0_t`, 0x18 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct pl_x8C0_t {
     /// +0x0
     pub x0: i32,
@@ -5577,7 +5577,7 @@ impl Default for pl_x8C0_t {
 }
 
 /// `pl_x8D8_t_x4`, 0x8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct pl_x8D8_t_x4 {
     /// +0x0
     pub x0: u32,
@@ -5598,7 +5598,7 @@ impl Default for pl_x8D8_t_x4 {
 }
 
 /// `pl_x8D8_t`, 0x2c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct pl_x8D8_t {
     /// +0x0
     pub x0: i32,
@@ -5616,7 +5616,7 @@ impl Default for pl_x8D8_t {
 }
 
 /// `StaleMoveTable`, 0xcf4 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct StaleMoveTable {
     /// +0x0
     pub current_index: i32,
@@ -5745,7 +5745,7 @@ impl Default for StaleMoveTable {
 }
 
 /// `_StaticPlayer`, 0xe90 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct _StaticPlayer {
     /// +0x0
     pub player_state: i32,
@@ -5889,7 +5889,7 @@ impl Default for _StaticPlayer {
 }
 
 /// `gm_controller_map`, 0x30 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct GmControllerMap {
     /// +0x0
     pub button: u64,
@@ -5922,7 +5922,7 @@ impl Default for GmControllerMap {
 }
 
 /// `controller_map`, 0x100 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ControllerMap {
     /// +0x0
     pub x0: [GmControllerMap; 5],
@@ -5958,7 +5958,7 @@ impl Default for ControllerMap {
 }
 
 /// `ftCollisionBox`, 0x18 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ftCollisionBox {
     /// +0x0
     pub top: f32,
@@ -5982,7 +5982,7 @@ impl Default for ftCollisionBox {
 }
 
 /// `FighterBone`, 0x10 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct FighterBone {
     /// +0x0
     pub joint: Option<JObjId>,
@@ -6006,7 +6006,7 @@ impl Default for FighterBone {
 }
 
 /// `ifMagnifyPlayer_state`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ifMagnifyPlayer_state {
     /// +0x0 (bits 0..+1)
     pub is_offscreen: bool,
@@ -6027,7 +6027,7 @@ impl Default for ifMagnifyPlayer_state {
 }
 
 /// `ifMagnifyPlayer`, 0x10 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ifMagnifyPlayer {
     /// +0x0
     pub gobj: Option<GObjId>,
@@ -6051,7 +6051,7 @@ impl Default for ifMagnifyPlayer {
 }
 
 /// `HSD_ImageDesc`, 0x18 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct HSD_ImageDesc {
     /// +0x0
     pub image_ptr: TexBuffer,
@@ -6084,7 +6084,7 @@ impl Default for HSD_ImageDesc {
 }
 
 /// `ifMagnify`, 0xf0 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ifMagnify {
     /// +0x0
     pub model_desc: Option<DataRef>,
@@ -6120,7 +6120,7 @@ impl Default for ifMagnify {
 }
 
 /// `VsSceneFighter`, 0xe bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct VsSceneFighter {
     /// +0x0
     pub x0: u8,
@@ -6168,7 +6168,7 @@ impl Default for VsSceneFighter {
 }
 
 /// `MatchTeamData`, 0xc bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct MatchTeamData {
     /// +0x0
     pub score: i32,
@@ -6195,7 +6195,7 @@ impl Default for MatchTeamData {
 }
 
 /// `MatchPlayerData`, 0xa8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct MatchPlayerData {
     /// +0x0
     pub pkind: u8,
@@ -6360,7 +6360,7 @@ impl Default for MatchPlayerData {
 }
 
 /// `UnkResultPlayerData`, 0x508 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct UnkResultPlayerData {
     /// +0x0
     pub x0: [u8; 257],
@@ -6378,7 +6378,7 @@ impl Default for UnkResultPlayerData {
 }
 
 /// `MatchEnd`, 0x227c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct MatchEnd {
     /// +0x0
     pub x0: u32,
@@ -6438,7 +6438,7 @@ impl Default for MatchEnd {
 }
 
 /// `VsSceneState`, 0x24c8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct VsSceneState {
     /// +0x0
     pub unk_0: u8,
@@ -6540,7 +6540,7 @@ impl Default for VsSceneState {
 }
 
 /// `StartMeleeRules`, 0x60 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct StartMeleeRules {
     /// +0x0 (bits 0..+3)
     pub match_kind: u8,
@@ -6768,7 +6768,7 @@ impl Default for StartMeleeRules {
 }
 
 /// `VsSceneController`, 0x2528 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct VsSceneController {
     /// +0x0
     pub state: VsSceneState,
@@ -6786,7 +6786,7 @@ impl Default for VsSceneController {
 }
 
 /// `DynamicsData`, 0x98 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct DynamicsData {
     /// +0x0
     pub desc: lb_00F9_UnkDesc0,
@@ -6807,7 +6807,7 @@ impl Default for DynamicsData {
 }
 
 /// `lb_00F9_UnkDesc0`, 0x90 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct lb_00F9_UnkDesc0 {
     /// +0x0
     pub jobj: Option<JObjId>,
@@ -6873,7 +6873,7 @@ impl Default for lb_00F9_UnkDesc0 {
 }
 
 /// `PlayerInitData`, 0x24 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct PlayerInitData {
     /// +0x0
     pub ckind: i8,
@@ -6993,7 +6993,7 @@ impl Default for PlayerInitData {
 }
 
 /// `StartMeleeData`, 0x138 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct StartMeleeData {
     /// +0x0
     pub rules: StartMeleeRules,
@@ -7011,7 +7011,7 @@ impl Default for StartMeleeData {
 }
 
 /// `gm_DbPauseInputHandlers`, 0x8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct gm_DbPauseInputHandlers {
     /// +0x0
     pub check_pause: Option<CodeRef>,
@@ -7029,7 +7029,7 @@ impl Default for gm_DbPauseInputHandlers {
 }
 
 /// `gm_801677C0_s`, 0x30 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct gm_801677C0_s {
     /// +0x0
     pub x0: u8,
@@ -7074,7 +7074,7 @@ impl Default for gm_801677C0_s {
 }
 
 /// `gm_80479D58_t`, 0x40 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct gm_80479D58_t {
     /// +0x0
     pub unk_0: u32,
@@ -7101,7 +7101,7 @@ impl Default for gm_80479D58_t {
 }
 
 /// `HSD_ObjAllocUnk`, 0x68 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct HSD_ObjAllocUnk {
     /// +0x0
     pub x0: i32,
@@ -7191,7 +7191,7 @@ impl Default for HSD_ObjAllocUnk {
 }
 
 /// `Item_FtTrack`, 0x158 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Item_FtTrack {
     /// +0x0
     pub ecb_offset_arr: [_itECB; 11],
@@ -7236,7 +7236,7 @@ impl Default for Item_FtTrack {
 }
 
 /// `SpawnItem`, 0x4c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct SpawnItem {
     /// +0x0
     pub x0_parent_gobj: Option<GObjId>,
@@ -7299,7 +7299,7 @@ impl Default for SpawnItem {
 }
 
 /// `itFoxBlaster_ItemVars`, 0xac bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itFoxBlaster_ItemVars {
     /// +0x0
     pub xDD4: i32,
@@ -7344,7 +7344,7 @@ impl Default for itFoxBlaster_ItemVars {
 }
 
 /// `itFoxLaser_ItemVars`, 0x18 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itFoxLaser_ItemVars {
     /// +0x0
     pub scale: f32,
@@ -7368,7 +7368,7 @@ impl Default for itFoxLaser_ItemVars {
 }
 
 /// `itFoxIllusion_ItemVars`, 0xc bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itFoxIllusion_ItemVars {
     /// +0x0
     pub xDD4: Option<DataRef>,
@@ -7389,7 +7389,7 @@ impl Default for itFoxIllusion_ItemVars {
 }
 
 /// `itSeakNeedleHeld_ItemVars`, 0x4 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itSeakNeedleHeld_ItemVars {
     /// +0x0
     pub owner: Option<GObjId>,
@@ -7402,7 +7402,7 @@ impl Default for itSeakNeedleHeld_ItemVars {
 }
 
 /// `itSeakNeedleThrown_ItemVars`, 0x2c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itSeakNeedleThrown_ItemVars {
     /// +0x0
     pub xDD4: f32,
@@ -7441,7 +7441,7 @@ impl Default for itSeakNeedleThrown_ItemVars {
 }
 
 /// `ItemLink`, 0x1d8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ItemLink {
     /// +0x0
     pub prev: Option<ItemLinkId>,
@@ -7504,7 +7504,7 @@ impl Default for ItemLink {
 }
 
 /// `itSeakChain_ItemVars`, 0xd0 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itSeakChain_ItemVars {
     /// +0x0
     pub x0: Option<ItemLinkId>,
@@ -7540,7 +7540,7 @@ impl Default for itSeakChain_ItemVars {
 }
 
 /// `IfDamageFlags`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IfDamageFlags {
     /// +0x0 (bits 0..+1)
     pub explode_animation: bool,
@@ -7573,7 +7573,7 @@ impl Default for IfDamageFlags {
 }
 
 /// `IfDamageState`, 0x64 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IfDamageState {
     /// +0x0
     pub HUD_parent_entity: Option<GObjId>,
@@ -7627,7 +7627,7 @@ impl Default for IfDamageState {
 }
 
 /// `HudIndex`, 0x278 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct HudIndex {
     /// +0x0
     pub players: [IfDamageState; 6],
@@ -7666,7 +7666,7 @@ impl Default for HudIndex {
 }
 
 /// `Element_803F9628_x12`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Element_803F9628_x12 {
     /// +0x0 (bits 0..+1)
     pub x0: bool,
@@ -7702,7 +7702,7 @@ impl Default for Element_803F9628_x12 {
 }
 
 /// `Element_803F9628`, 0x28 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Element_803F9628 {
     /// +0x0
     pub x0: Option<GObjId>,
@@ -7753,7 +7753,7 @@ impl Default for Element_803F9628 {
 }
 
 /// `ScInfStcSlot`, 0x8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ScInfStcSlot {
     /// +0x0
     pub gobj: Option<GObjId>,
@@ -7771,7 +7771,7 @@ impl Default for ScInfStcSlot {
 }
 
 /// `ScInfStcModels`, 0x34 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ScInfStcModels {
     /// +0x0
     pub scene_models: Option<DataRef>,
@@ -7789,7 +7789,7 @@ impl Default for ScInfStcModels {
 }
 
 /// `ifTime_data`, 0x3c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ifTime_data {
     /// +0x0
     pub match_timer: Option<GObjId>,
@@ -7819,7 +7819,7 @@ impl Default for ifTime_data {
 }
 
 /// `ifAll_804A0FD8_t`, 0x9c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ifAll_804A0FD8_t {
     /// +0x0
     pub gobj: Option<GObjId>,
@@ -7852,7 +7852,7 @@ impl Default for ifAll_804A0FD8_t {
 }
 
 /// `ifStock_804A1378_per_player`, 0x50 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ifStock_804A1378_per_player {
     /// +0x0
     pub x0: Option<GObjId>,
@@ -7903,7 +7903,7 @@ impl Default for ifStock_804A1378_per_player {
 }
 
 /// `ifStock_804A1378`, 0x204 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ifStock_804A1378 {
     /// +0x0
     pub x0: Option<DataRef>,
@@ -7945,7 +7945,7 @@ impl Default for ifStock_804A1378 {
 }
 
 /// `IfStockStealAnim`, 0x24 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IfStockStealAnim {
     /// +0x0
     pub start: Vec3,
@@ -7966,7 +7966,7 @@ impl Default for IfStockStealAnim {
 }
 
 /// `IfStockUserData`, 0x54 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IfStockUserData {
     /// +0x0
     pub player: u8,
@@ -7996,7 +7996,7 @@ impl Default for IfStockUserData {
 }
 
 /// `ifStock_804A1774`, 0x318 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ifStock_804A1774 {
     /// +0x0
     pub x0: i8,
@@ -8023,7 +8023,7 @@ impl Default for ifStock_804A1774 {
 }
 
 /// `ifStock_804A1ACC`, 0x314 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct ifStock_804A1ACC {
     /// +0x0
     pub x0: i8,
@@ -8050,7 +8050,7 @@ impl Default for ifStock_804A1ACC {
 }
 
 /// `un_804A1F10_t`, 0x38 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct un_804A1F10_t {
     /// +0x0
     pub x0: Option<DataRef>,
@@ -8092,7 +8092,7 @@ impl Default for un_804A1F10_t {
 }
 
 /// `un_803F9E08_t`, 0x10 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct un_803F9E08_t {
     /// +0x0 (bits 0..+1)
     pub x0_b0: bool,
@@ -8134,7 +8134,7 @@ impl Default for un_803F9E08_t {
 }
 
 /// `StaticModelDesc`, 0x10 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct StaticModelDesc {
     /// +0x0
     pub joint: Option<DataRef>,
@@ -8158,7 +8158,7 @@ impl Default for StaticModelDesc {
 }
 
 /// `un_804A1F58_x8_t`, 0x14 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct un_804A1F58_x8_t {
     /// +0x0
     pub x0: Option<GObjId>,
@@ -8185,7 +8185,7 @@ impl Default for un_804A1F58_x8_t {
 }
 
 /// `un_804A1F58_t`, 0x80 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct un_804A1F58_t {
     /// +0x0
     pub x0: u32,
@@ -8206,7 +8206,7 @@ impl Default for un_804A1F58_t {
 }
 
 /// `DynamicsDesc`, 0x14 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct DynamicsDesc {
     /// +0x0
     pub data: Option<DynamicsId>,
@@ -8227,7 +8227,7 @@ impl Default for DynamicsDesc {
 }
 
 /// `BoneDynamicsDesc`, 0x18 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct BoneDynamicsDesc {
     /// +0x0
     pub bone_id: BoneSlot,
@@ -8245,7 +8245,7 @@ impl Default for BoneDynamicsDesc {
 }
 
 /// `Item_DynamicBones`, 0x1c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Item_DynamicBones {
     /// +0x0
     pub flags: i32,
@@ -8266,7 +8266,7 @@ impl Default for Item_DynamicBones {
 }
 
 /// `db_ItemAndPokemonMenu_t`, 0x24 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct db_ItemAndPokemonMenu_t {
     /// +0x0
     pub DisplayStatus: u32,
@@ -8311,7 +8311,7 @@ impl Default for db_ItemAndPokemonMenu_t {
 }
 
 /// `itCapsule_ItemVars`, 0x8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itCapsule_ItemVars {
     /// +0x0
     pub x0: i32,
@@ -8326,7 +8326,7 @@ impl Default for itCapsule_ItemVars {
 }
 
 /// `itHeart_ItemVars`, 0x1c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itHeart_ItemVars {
     /// +0x0
     pub xDD4_heal: i32,
@@ -8356,7 +8356,7 @@ impl Default for itHeart_ItemVars {
 }
 
 /// `itTomato_ItemVars`, 0xc bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itTomato_ItemVars {
     /// +0x0
     pub heal_amount: i32,
@@ -8377,7 +8377,7 @@ impl Default for itTomato_ItemVars {
 }
 
 /// `itBox_ItemVars`, 0x14 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itBox_ItemVars {
     /// +0x0
     pub opened: i32,
@@ -8404,7 +8404,7 @@ impl Default for itBox_ItemVars {
 }
 
 /// `itTaru_ItemVars`, 0x20 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itTaru_ItemVars {
     /// +0x0
     pub xDD4: i32,
@@ -8434,7 +8434,7 @@ impl Default for itTaru_ItemVars {
 }
 
 /// `itKusudama_ItemVars`, 0x8 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itKusudama_ItemVars {
     /// +0x0
     pub x0: i32,
@@ -8449,7 +8449,7 @@ impl Default for itKusudama_ItemVars {
 }
 
 /// `itBombHei_ItemVars`, 0x44 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itBombHei_ItemVars {
     /// +0x0
     pub xDD4: i32,
@@ -8506,7 +8506,7 @@ impl Default for itBombHei_ItemVars {
 }
 
 /// `itGShell_HurtInit`, 0x20 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itGShell_HurtInit {
     /// +0x0
     pub state: i32,
@@ -8530,7 +8530,7 @@ impl Default for itGShell_HurtInit {
 }
 
 /// `itGShell_ItemVars`, 0x78 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itGShell_ItemVars {
     /// +0x0
     pub xDD4: f32,
@@ -8674,7 +8674,7 @@ impl Default for itGShell_ItemVars {
 }
 
 /// `itRShell_ItemVars`, 0x58 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itRShell_ItemVars {
     /// +0x0
     pub xDD4: f32,
@@ -8740,7 +8740,7 @@ impl Default for itRShell_ItemVars {
 }
 
 /// `itSword_ItemVars`, 0x5c bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itSword_ItemVars {
     /// +0x0
     pub x0: i32,
@@ -8821,7 +8821,7 @@ impl Default for itSword_ItemVars {
 }
 
 /// `PokemonSelectionState`, 0xc bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct PokemonSelectionState {
     /// +0x0
     pub last_kind: i32,
@@ -8842,7 +8842,7 @@ impl Default for PokemonSelectionState {
 }
 
 /// `BgFlashState`, 0x1 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct BgFlashState {
     /// +0x0 (bits 0..+1)
     pub active: bool,
@@ -8860,7 +8860,7 @@ impl Default for BgFlashState {
 }
 
 /// `BgFlashData`, 0x48 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct BgFlashData {
     /// +0x0
     pub state: BgFlashState,
@@ -8920,7 +8920,7 @@ impl Default for BgFlashData {
 }
 
 /// `BgFlashUserData`, 0x84 bytes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct BgFlashUserData {
     /// +0x0
     pub x0: u8,

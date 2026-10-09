@@ -353,7 +353,7 @@ pub struct Voice {
 }
 
 /// The AX library's state.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq)]
 pub struct Ax {
     pub voices: [Voice; VOICES],
     /// The DSP's parameter blocks (`__AXPB`).

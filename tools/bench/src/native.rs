@@ -191,10 +191,12 @@ fn run_once(b: &Bench, files: &mut Files) -> Run {
                 if samples.last().is_none_or(|s| s.0 != now) {
                     samples.push((now, fighters(&m.game)));
                 }
+                let ended = f.ended;
+                m.recycle(f);
                 if now >= b.last {
                     break;
                 }
-                if f.ended {
+                if ended {
                     stopped = Some(format!("the match ended at frame {now}"));
                     break;
                 }
@@ -404,7 +406,9 @@ pub fn snapshots(args: &[String]) {
             match catch_unwind(AssertUnwindSafe(|| m.step_replay(&mut device))) {
                 Ok(f) => {
                     ticks += 1;
-                    if f.ended || frame(&m) >= b.last {
+                    let ended = f.ended;
+                    m.recycle(f);
+                    if ended || frame(&m) >= b.last {
                         break format!("the match's end at frame {}", frame(&m));
                     }
                 }
@@ -436,12 +440,14 @@ pub fn snapshots(args: &[String]) {
                 let us = median_us(5, || {
                     work.game.clone_from(game);
                     for _ in 0..ROLLBACK_TICKS {
-                        std::hint::black_box(work.step_replay(&mut device));
+                        let f = work.step_replay(&mut device);
+                        work.recycle(std::hint::black_box(f));
                     }
                 });
                 work.game.clone_from(game);
                 for _ in 0..ROLLBACK_TICKS {
-                    let (_, n, _) = counted(|| work.step_replay(&mut device));
+                    let (f, n, _) = counted(|| work.step_replay(&mut device));
+                    work.recycle(f);
                     tick_allocs.push(n);
                 }
                 us
@@ -465,4 +471,166 @@ pub fn snapshots(args: &[String]) {
             );
         }
     });
+}
+
+/// `melee-bench alloc-sites [--dir DIR] [--from TICK] [--ticks N] [MATCH]`: plays the match
+/// (default `fox-fox-fd`) to tick `TICK` (default 4000), then tallies where the next `N` ticks'
+/// allocations come from (default 20; `crate::allocs`).
+pub fn alloc_sites(args: &[String]) {
+    let mut from = 4000u64;
+    let mut ticks = 20u64;
+    let mut rollback = false;
+    let mut rest = Vec::new();
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--from" => from = it.next().and_then(|n| n.parse().ok()).expect("--from TICK"),
+            "--ticks" => ticks = it.next().and_then(|n| n.parse().ok()).expect("--ticks N"),
+            "--rollback" => rollback = true,
+            _ => rest.push(a.clone()),
+        }
+    }
+    let (dir, _, names, _) = args_dir(&rest);
+    let name = names
+        .first()
+        .cloned()
+        .unwrap_or_else(|| "fox-fox-fd".into());
+    on_sim_thread(move || {
+        let mut files = files();
+        let b = match Bench::open(&dir, &name) {
+            Ok(b) => b,
+            Err(e) => {
+                println!("{name}: {e}");
+                return;
+            }
+        };
+        let mut m = b.start(&mut files);
+        let mut device = Device(&b.replay);
+        for _ in 0..from {
+            let f = m.step_replay(&mut device);
+            m.recycle(f);
+        }
+        // With `--rollback`, the stretch plays once, then again from its start's state
+        // restored, and the second time is tallied.
+        if rollback {
+            let kept = m.game.clone();
+            for _ in 0..ticks {
+                let f = m.step_replay(&mut device);
+                m.recycle(f);
+            }
+            m.game.clone_from(&kept);
+        }
+        // The engine ticks and the display passes apart.
+        let mut tally: [BTreeMap<String, usize>; 2] = Default::default();
+        let mut allocating = Vec::new();
+        for i in 0..ticks {
+            let ((mut f, render), t) = crate::allocs::sites(|| m.step_replay_tick(&mut device));
+            if !t.is_empty() {
+                allocating.push(from + i);
+            }
+            for (k, v) in t {
+                *tally[0].entry(k).or_insert(0) += v;
+            }
+            if render {
+                let (draws, t) = crate::allocs::sites(|| m.render());
+                f.draws = draws;
+                for (k, v) in t {
+                    *tally[1].entry(k).or_insert(0) += v;
+                }
+            }
+            m.recycle(f);
+        }
+        println!(
+            "{name}: {} engine ticks allocate; the last {:?}",
+            allocating.len(),
+            &allocating[allocating.len().saturating_sub(8)..]
+        );
+        // A rollback's restore: the state from before 8 more ticks put back.
+        let snap = m.game.clone();
+        for _ in 0..ROLLBACK_TICKS {
+            let f = m.step_replay(&mut device);
+            m.recycle(f);
+        }
+        let ((), restore) = crate::allocs::sites(|| m.game.clone_from(&snap));
+        let total: usize = restore.values().sum();
+        println!("{name}: a restore after {ROLLBACK_TICKS} ticks: {total} allocations");
+        let mut sites: Vec<(String, usize)> = restore.into_iter().collect();
+        sites.sort_by_key(|a| std::cmp::Reverse(a.1));
+        for (site, n) in sites.iter().take(30) {
+            println!("{n:8}  {site}");
+        }
+        for (what, tally) in ["engine ticks", "display passes"].iter().zip(tally) {
+            let total: usize = tally.values().sum();
+            println!(
+                "{name}: {what}, ticks {from} to {}: {total} allocations, {:.1} per tick",
+                from + ticks,
+                total as f64 / ticks as f64
+            );
+            let mut sites: Vec<(String, usize)> = tally.into_iter().collect();
+            sites.sort_by_key(|a| std::cmp::Reverse(a.1));
+            for (site, n) in sites.iter().take(40) {
+                println!("{:8.1}  {site}", *n as f64 / ticks as f64);
+            }
+        }
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Where the benchmark matches are on this machine (`BENCH_DIR` overrides).
+    const BENCH_DIR: &str = "C:/Projects/ssbm-rs-publication/local/bench";
+    /// The Fox-Fox match's stretch the check replays: from a state kept at the first tick to
+    /// the last, where melee-hd's ports still run it in sync.
+    const FROM: u64 = 1000;
+    const TO: u64 = 4600;
+
+    /// The "no allocations" target (`docs/performance.md`): the Fox-Fox match played to `TO`,
+    /// its state at `FROM` restored (a rollback), and every engine tick from there to `TO`
+    /// played again, counting allocations: the restore and each tick make none.
+    #[test]
+    fn ticks_and_restores_dont_allocate() {
+        let dir = PathBuf::from(std::env::var("BENCH_DIR").unwrap_or_else(|_| BENCH_DIR.into()));
+        if std::env::var("SSBM_DISC").is_err() || !dir.join("fox-fox-fd.slp").exists() {
+            eprintln!(
+                "no SSBM_DISC or no benchmark matches in {}: skipping",
+                dir.display()
+            );
+            return;
+        }
+        let failures = on_sim_thread(move || {
+            let mut files = files();
+            let b = Bench::open(&dir, "fox-fox-fd").expect("the Fox-Fox match");
+            let mut m = b.start(&mut files);
+            let mut device = Device(&b.replay);
+            let mut kept = None;
+            for t in 0..TO {
+                if t == FROM {
+                    kept = Some(m.game.clone());
+                }
+                let f = m.step_replay(&mut device);
+                m.recycle(f);
+            }
+            let kept = kept.expect("the match ran to the kept state");
+            let ((), restore, _) = counted(|| m.game.clone_from(&kept));
+            let mut failures = Vec::new();
+            if restore != 0 {
+                failures.push(format!("the restore made {restore} allocations"));
+            }
+            for t in FROM..TO {
+                let ((f, render), n, _) = counted(|| m.step_replay_tick(&mut device));
+                if n != 0 {
+                    failures.push(format!("tick {t} made {n} allocations"));
+                }
+                let mut f = f;
+                if render {
+                    f.draws = m.render();
+                }
+                m.recycle(f);
+            }
+            failures
+        });
+        assert!(failures.is_empty(), "{}", failures.join("\n"));
+    }
 }

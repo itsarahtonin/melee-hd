@@ -23,6 +23,7 @@ use melee_data::archive::Archives;
 use melee_data::disc::Disc;
 use melee_sim::game::state::Game;
 
+mod allocs;
 #[cfg(windows)]
 mod dolphin;
 mod gecko_words;
@@ -41,16 +42,22 @@ static BYTES: AtomicUsize = AtomicUsize::new(0);
 
 unsafe impl GlobalAlloc for Counting {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        ALLOCS.fetch_add(1, Relaxed);
-        BYTES.fetch_add(layout.size(), Relaxed);
+        if !allocs::inside() {
+            ALLOCS.fetch_add(1, Relaxed);
+            BYTES.fetch_add(layout.size(), Relaxed);
+            allocs::sample();
+        }
         unsafe { System.alloc(layout) }
     }
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         unsafe { System.dealloc(ptr, layout) }
     }
     unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
-        ALLOCS.fetch_add(1, Relaxed);
-        BYTES.fetch_add(new_size.saturating_sub(layout.size()), Relaxed);
+        if !allocs::inside() {
+            ALLOCS.fetch_add(1, Relaxed);
+            BYTES.fetch_add(new_size.saturating_sub(layout.size()), Relaxed);
+            allocs::sample();
+        }
         unsafe { System.realloc(ptr, layout, new_size) }
     }
 }
@@ -157,8 +164,22 @@ fn main() {
         Some("dolphin") => dolphin::main(&args[1..]),
         Some("native") => native::main(&args[1..]),
         Some("snapshot-match") => native::snapshots(&args[1..]),
+        Some("alloc-sites") => native::alloc_sites(&args[1..]),
+        #[cfg(windows)]
+        Some("symbolize") => {
+            let rvas: Vec<u64> = args[1..]
+                .iter()
+                .map(|a| {
+                    u64::from_str_radix(a.trim_start_matches("0x"), 16).expect("an RVA in hex")
+                })
+                .collect();
+            for (rva, name) in rvas.iter().zip(win::symbolize(&rvas)) {
+                println!("{rva:#x}	{}", name.unwrap_or_else(|| "?".into()));
+            }
+        }
         _ => eprintln!(
-            "melee-bench snapshot CALL... | codes DIR | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]              | native [--dir DIR] [--runs N] [MATCH...] | snapshot-match [--dir DIR] [--every TICKS] [MATCH]"
+            "melee-bench snapshot CALL... | codes DIR | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]              | native [--dir DIR] [--runs N] [MATCH...] | snapshot-match [--dir DIR] [--every TICKS] [MATCH] \
+             | alloc-sites [--dir DIR] [--from TICK] [--ticks N] [MATCH]"
         ),
     }
 }

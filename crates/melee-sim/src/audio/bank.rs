@@ -36,7 +36,7 @@ pub struct SfxGroup {
 }
 
 /// The banks' state.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq)]
 pub struct Banks {
     /// `HSD_Synth_804C2A60` and its count (`HSD_Synth_804D772C`): the queued loads, the first
     /// running; entries past the count keep what they held.

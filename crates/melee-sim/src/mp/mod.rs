@@ -179,7 +179,7 @@ pub struct Bounds {
 }
 
 /// The loaded geometry: everything `mplib.c` and `mpisland.c` keep in their globals.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct Geometry<K: Kinds> {
     pub vertices: Vec<Vertex>,
     pub lines: Vec<Line>,

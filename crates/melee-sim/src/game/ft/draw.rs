@@ -21,10 +21,10 @@ impl Running<'_> {
     /// Each fighter's model groups, by `xC[1]` having a lookup: `hide` hidden, then `show`
     /// shown.
     fn set_models(&mut self, hide: [usize; 3], show: usize) {
-        let w = &self.game.world;
-        let fighters: Vec<GObjId> =
-            std::iter::successors(w.first_in(P_LINK_FIGHTER), |&g| w.gobj(g).next).collect();
-        for g in fighters {
+        // Showing parts changes no GObj links.
+        let mut next = self.game.world.first_in(P_LINK_FIGHTER);
+        while let Some(g) = next {
+            next = self.game.world.gobj(g).next;
             let f = self.game.fighter_id(g);
             if self.game.fighters[f.0].x5AC.xC[1].is_some() {
                 for h in hide {

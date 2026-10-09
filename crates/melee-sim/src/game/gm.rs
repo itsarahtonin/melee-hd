@@ -26,7 +26,7 @@ pub const GM_CRUEL_VS: u8 = 38;
 pub const GM_EVENT: u8 = 43;
 
 /// The game-mode layer's globals besides the scene loop's and the match's.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Globals {
     /// The debug level (`DbLevel`): 0 on a retail disc, where the debug menus, pause frame
     /// stepping and debug buttons never run. Their paths aren't ported.

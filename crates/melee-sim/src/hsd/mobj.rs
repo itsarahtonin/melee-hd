@@ -143,7 +143,7 @@ impl PeDesc {
 
 /// `HSD_MObj`. Its compiled TEV (`tevdesc`, `texp`) is the display pass's, made from this
 /// state, and isn't kept.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct MObj {
     pub class: MObjClass,
     pub rendermode: u32,
@@ -161,7 +161,7 @@ impl MObj {
 }
 
 /// The MObj pool and mobj.c's globals.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct MObjs {
     pub pool: Pool<MObj>,
     /// The MObj the display pass is drawing (`current_mobj`).

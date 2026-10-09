@@ -23,9 +23,10 @@ const FIGHTER_LIGHT_LINK: usize = 4;
 const SHADOW_LIGHT: u16 = 0x400;
 
 impl Running<'_> {
-    fn fighter_gobjs(&self) -> Vec<GObjId> {
-        let w = &self.game.world;
-        std::iter::successors(w.first_in(P_LINK_FIGHTER), |&g| w.gobj(g).next).collect()
+    /// The first fighter GObj; walks over the fighters read each one's `next` after it (the
+    /// rendering changes no links).
+    fn first_fighter_gobj(&self) -> Option<GObjId> {
+        self.game.world.first_in(P_LINK_FIGHTER)
     }
 
     /// The light the shadows come from: among the fighters' light GObjs' lights, the first
@@ -60,8 +61,9 @@ impl Running<'_> {
     /// shadow camera's volume into its texture (the camera's debug flag).
     #[doc(alias = "lbShadow_8000F38C")]
     pub fn shadow_render(&mut self, draw_volume: bool) {
-        let fighters = self.fighter_gobjs();
-        for &g in &fighters {
+        let mut next = self.first_fighter_gobj();
+        while let Some(g) = next {
+            next = self.game.world.gobj(g).next;
             self.game.fighter_mut(g).x20A4.x0_b2 = false;
         }
         let l = self.shadow_light();
@@ -98,7 +100,9 @@ impl Running<'_> {
             up = Vec3::new(0.0, 0.0, -1.0);
         }
         self.show_main_models();
-        for &g in &fighters {
+        let mut next = self.first_fighter_gobj();
+        while let Some(g) = next {
+            next = self.game.world.gobj(g).next;
             let f = self.game.fighter_id(g);
             self.game.fighters[f.0].x20A4.x0_b0 = no_light;
             if let Some(s) = self.game.fighters[f.0].x20A4.shadow {

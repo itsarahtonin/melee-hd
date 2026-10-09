@@ -408,7 +408,7 @@ impl Running<'_> {
         let parts = self.game.fighters[f.0]
             .parts
             .expect("a fighter without parts");
-        let mut stack = Vec::new();
+        let mut stack = super::bind::DataStack::<MAX_ANIM_JOINT_DEPTH>::new();
         let (mut i, mut cur) = (start, aj);
         while let Some(a) = cur {
             while self.part_mask(kind, i) != 0 {
@@ -513,7 +513,11 @@ const MAX_ANIM_JOINT_DEPTH: usize = 30;
 /// The AnimJoint after `aj` in a depth-first walk, `ftAnim_GetNextAnimJointInTree`: its child,
 /// else its next sibling, else the nearest ancestor's next sibling.
 #[doc(alias = "ftAnim_GetNextAnimJointInTree")]
-fn next_anim_joint(data: &Archives, aj: DataRef, stack: &mut Vec<DataRef>) -> Option<DataRef> {
+fn next_anim_joint(
+    data: &Archives,
+    aj: DataRef,
+    stack: &mut super::bind::DataStack<MAX_ANIM_JOINT_DEPTH>,
+) -> Option<DataRef> {
     if let Some(child) = data.ptr(aj) {
         stack.push(aj);
         assert!(

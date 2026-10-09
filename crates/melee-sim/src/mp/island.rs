@@ -36,7 +36,7 @@ pub struct Island {
 }
 
 /// The island lists (`mpIsland_80458E88`).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Islands {
     /// Every island ever allocated, in allocation order.
     pub arena: Vec<Island>,

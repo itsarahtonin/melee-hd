@@ -20,7 +20,7 @@ use crate::vec::Vec3;
 pub struct ShadowId(pub u32);
 
 /// `HSD_Shadow`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Shadow {
     /// The joints it casts from, most recently added first (`objects`).
     pub objects: Vec<JObjId>,

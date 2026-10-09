@@ -29,7 +29,7 @@ pub enum VarsKind {
 }
 
 /// `union GroundVars`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub enum GroundVars {
     /// The union's big-endian bytes, as the original keeps them, for objects no port reads as
     /// a type.
@@ -43,7 +43,7 @@ pub enum GroundVars {
 }
 
 /// `grNBa_BG_Vars`: Battlefield's sky.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct BattleBgVars {
     pub state: i32,
     /// The background showing and the one fading out, by map id.
@@ -60,7 +60,7 @@ impl Default for GroundVars {
 
 /// `Map_GroundVars`: the generic member a stage's main object uses (Final Destination's
 /// background cycle keeps its state here).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct MapVars {
     pub b0: bool,
     pub b1: bool,
@@ -93,7 +93,7 @@ pub struct MapVars {
 }
 
 /// `Last_GroundVars`: Final Destination's swaying background object.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct LastVars {
     pub xC4: f32,
     pub xC8: f32,

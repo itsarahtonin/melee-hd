@@ -122,7 +122,7 @@ pub struct Stream {
 }
 
 /// The synth's state.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Synth {
     pub nodes: [Node; NODES],
     /// `hsd_SynthSFXDataHash`: the loaded effects by id modulo 32, in list order.

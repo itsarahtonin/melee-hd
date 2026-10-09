@@ -25,7 +25,7 @@ pub struct FogId(pub u32);
 pub struct FogAdjId(pub u32);
 
 /// `HSD_Fog`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Fog {
     pub ref_count: RefCount,
     /// `GXFogType`.
@@ -44,7 +44,7 @@ pub struct Fog {
 
 /// `HSD_FogAdj`: the range adjustment's center and width in screen pixels and the projection
 /// it is computed for. Its `aobj` is never set.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct FogAdj {
     pub ref_count: RefCount,
     pub center: i16,
@@ -53,7 +53,7 @@ pub struct FogAdj {
 }
 
 /// The fog and range-adjustment pools.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct Fogs {
     pub fogs: Pool<Fog>,
     pub adjs: Pool<FogAdj>,

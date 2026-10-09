@@ -101,7 +101,7 @@ impl CharacterFrame {
 }
 
 /// A frame response as playback keeps it: the bytes the codes read words and bytes from.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Frame {
     pub bytes: [u8; FRAME_LEN],
 }
@@ -127,7 +127,7 @@ pub trait Source {
 /// What a tick of a replay's match may ask the device, answered before it runs: the frame it
 /// reads if it reads one, and which ports have a player at the frame it ends up counted at
 /// (the one it reads, or the last if it reads none).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Answers {
     pub index: i32,
     pub frame: Frame,
@@ -181,7 +181,7 @@ impl Frame {
 
 /// Playback's state in a match (`lbl_804D6660`'s buffers and the frame number the codes keep
 /// in `mnCharSel_804D6CF4`'s word).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Playback {
     /// The replay's random seed, which the match's start restores.
     pub start_seed: u32,

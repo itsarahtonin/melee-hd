@@ -31,7 +31,7 @@ pub const LOOP: u32 = 1 << 29;
 pub const NO_ANIM: u32 = 1 << 30;
 
 /// `HSD_AObj`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct AObj {
     pub flags: u32,
     pub curr_frame: f32,
@@ -48,7 +48,7 @@ pub struct AObj {
 /// one is `HSD_AObjInitAllocData`.
 #[doc(alias = "HSD_AObjInitAllocData")]
 #[doc(alias = "HSD_AObjGetAllocData")]
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct AObjs {
     pub pool: Pool<AObj>,
     /// AObjs that were stopped after being interpreted, since `init_end_callback`

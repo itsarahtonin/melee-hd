@@ -37,7 +37,7 @@ pub struct Envelope {
 }
 
 /// `HSD_ShapeSet`: the shapes a morphing shape blends, in the archive, and its blend state.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct ShapeSet {
     pub flags: u16,
     pub nb_shape: u16,
@@ -53,7 +53,7 @@ pub struct ShapeSet {
 }
 
 /// What a shape is bound to, the original's union `u`, by its type.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub enum Binding {
     Skin(Option<JObjId>),
     ShapeSet(ShapeSet),
@@ -63,7 +63,7 @@ pub enum Binding {
 }
 
 /// `HSD_PObj`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct PObj {
     pub next: Option<PObjId>,
     pub verts: Option<DataRef>,
@@ -80,7 +80,7 @@ impl PObj {
 }
 
 /// The PObj pool.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct PObjs {
     pub pool: Pool<PObj>,
     /// The class new shapes load as (`HSD_PObjSetDefaultClass`).
@@ -89,6 +89,61 @@ pub struct PObjs {
     /// position-matrix index copied over its last texture-matrix index. By display list: the
     /// vertex stride and the two indexes' offsets in a vertex, for the display pass to apply.
     pub refract_patches: std::collections::HashMap<DataRef, (u8, u8, u8)>,
+    /// Envelope lists freed shapes leave, emptied, for later shapes' to reuse: no state, so a
+    /// restore keeps the target's and a snapshot starts without.
+    #[clone_from(keep)]
+    pub spare_lists: Vec<Vec<Vec<Envelope>>>,
+    #[clone_from(keep)]
+    pub spare_sets: Vec<Vec<Envelope>>,
+}
+
+/// Which of `spares` to reuse for `n` items: the smallest that holds them, else the largest.
+fn best_fit<T>(spares: &[Vec<T>], n: usize) -> Option<usize> {
+    let fits = (0..spares.len())
+        .filter(|&i| spares[i].capacity() >= n)
+        .min_by_key(|&i| spares[i].capacity());
+    fits.or_else(|| (0..spares.len()).max_by_key(|&i| spares[i].capacity()))
+}
+
+/// How many spare envelope lists and sets a [`PObjs`] keeps at most.
+const SPARES: usize = 256;
+
+impl PObjs {
+    /// An emptied envelope list for `n` sets: the smallest spare that holds them, else the
+    /// largest (grown), else a new one.
+    fn take_list(&mut self, n: usize) -> Vec<Vec<Envelope>> {
+        match best_fit(&self.spare_lists, n) {
+            Some(i) => self.spare_lists.swap_remove(i),
+            None => Vec::with_capacity(n),
+        }
+    }
+
+    /// An empty envelope set for `n` envelopes, likewise.
+    fn take_set(&mut self, n: usize) -> Vec<Envelope> {
+        match best_fit(&self.spare_sets, n) {
+            Some(i) => self.spare_sets.swap_remove(i),
+            None => Vec::with_capacity(n),
+        }
+    }
+
+    /// Keeps a freed shape's envelope lists for reuse, up to [`SPARES`] of each.
+    fn give_back(&mut self, mut list: Vec<Vec<Envelope>>) {
+        for mut set in list.drain(..) {
+            if self.spare_sets.len() < SPARES {
+                set.clear();
+                if self.spare_sets.capacity() == 0 {
+                    self.spare_sets.reserve_exact(SPARES);
+                }
+                self.spare_sets.push(set);
+            }
+        }
+        if self.spare_lists.len() < SPARES {
+            if self.spare_lists.capacity() == 0 {
+                self.spare_lists.reserve_exact(SPARES);
+            }
+            self.spare_lists.push(list);
+        }
+    }
 }
 
 /// A PObj class: HAL's, or one the game derives from it whose loader differs.
@@ -139,20 +194,21 @@ pub fn load_desc(pobjs: &mut PObjs, data: &Archives, desc: Option<DataRef>) -> O
         data.ptr(desc).is_none(),
         "PObjDesc {desc:?} names a class, which isn't supported"
     );
-    let p = PObjId(pobjs.pool.alloc(PObj {
+    let blank = || PObj {
         next: None,
         verts: None,
         flags: 0,
         n_display: 0,
         display: None,
         u: Binding::Skin(None),
-    }));
+    };
+    let p = PObjId(pobjs.pool.alloc(blank()));
     let next = load_desc(pobjs, data, data.ptr(desc.at(4)));
     let flags = data.u16(desc.at(0xC));
     let at = desc.at(0x14);
     let u = match flags & TYPE_MASK {
         SHAPEANIM => Binding::ShapeSet(load_shape_set(data, data.ptr(at).expect("shape set"))),
-        ENVELOPE => Binding::Envelopes(load_envelopes(data, data.ptr(at))),
+        ENVELOPE => Binding::Envelopes(load_envelopes(pobjs, data, data.ptr(at))),
         SKIN => Binding::Skin(None),
         _ => panic!("pobj: unexected type."),
     };
@@ -247,18 +303,34 @@ fn load_shape_set(data: &Archives, d: DataRef) -> ShapeSet {
     }
 }
 
-/// The envelopes' weights, joints unresolved, the static `loadEnvelopeDesc`.
-fn load_envelopes(data: &Archives, list: Option<DataRef>) -> Vec<Vec<Envelope>> {
-    let mut out = Vec::new();
-    let Some(mut slot) = list else { return out };
-    while let Some(mut edesc) = data.ptr(slot) {
-        let mut env = Vec::new();
-        while data.ptr(edesc).is_some() {
+/// The envelopes' weights, joints unresolved, the static `loadEnvelopeDesc`, in freed shapes'
+/// lists where there are spares.
+fn load_envelopes(pobjs: &mut PObjs, data: &Archives, list: Option<DataRef>) -> Vec<Vec<Envelope>> {
+    let Some(mut slot) = list else {
+        return pobjs.take_list(0);
+    };
+    let mut sets = 0;
+    let mut s = slot;
+    while data.ptr(s).is_some() {
+        sets += 1;
+        s = s.at(4);
+    }
+    let mut out = pobjs.take_list(sets);
+    while let Some(edesc) = data.ptr(slot) {
+        let mut n = 0;
+        let mut e = edesc;
+        while data.ptr(e).is_some() {
+            n += 1;
+            e = e.at(8);
+        }
+        let mut env = pobjs.take_set(n);
+        let mut e = edesc;
+        while data.ptr(e).is_some() {
             env.push(Envelope {
                 jobj: None,
-                weight: copy(data.f32(edesc.at(4))),
+                weight: copy(data.f32(e.at(4))),
             });
-            edesc = edesc.at(8);
+            e = e.at(8);
         }
         out.push(env);
         slot = slot.at(4);
@@ -277,6 +349,7 @@ pub fn remove(objs: &mut Objects, p: Option<PObjId>) {
             for e in envs.iter().flatten() {
                 jobj::unref_this(objs, e.jobj);
             }
+            objs.pobjs.give_back(envs);
         }
         Binding::Skin(j) => jobj::unref_this(objs, j),
     }

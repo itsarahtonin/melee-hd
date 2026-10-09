@@ -97,7 +97,7 @@ impl Default for Contents {
 }
 
 /// `HSD_JObj`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct JObj {
     /// `HSD_Obj`'s reference counts: by owners (`u16::MAX` for none) and by individual
     /// references (constraints, instances, the current joint).
@@ -167,7 +167,7 @@ impl JObj {
 }
 
 /// The JObj pool.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct JObjs {
     pub pool: Pool<JObj>,
 }
@@ -186,7 +186,7 @@ impl IndexMut<JObjId> for JObjs {
 }
 
 /// jobj.c's globals.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct Globals {
     /// `current_jobj`.
     pub current: Option<JObjId>,
@@ -223,12 +223,14 @@ fn children(jobjs: &JObjs, j: JObjId) -> impl Iterator<Item = JObjId> + '_ {
     std::iter::successors(jobjs[j].child, move |&c| jobjs[c].next)
 }
 
-/// The joint's own children: none for an instance, whose child is another tree.
-fn own_children(jobjs: &JObjs, j: JObjId) -> Vec<JObjId> {
+/// The joint's first own child: none for an instance, whose child is another tree. Walks
+/// over a joint's own children read each next sibling after visiting a child, as the
+/// original's loops do; the visits change no tree links.
+fn first_own_child(jobjs: &JObjs, j: JObjId) -> Option<JObjId> {
     if jobjs[j].flags & INSTANCE != 0 {
-        Vec::new()
+        None
     } else {
-        children(jobjs, j).collect()
+        jobjs[j].child
     }
 }
 
@@ -372,8 +374,10 @@ pub fn remove_anim_by_flags(objs: &mut Objects, j: Option<JObjId>, flags: u32) {
 pub fn remove_anim_all_by_flags(objs: &mut Objects, j: Option<JObjId>, flags: u32) {
     let Some(j) = j else { return };
     remove_anim_by_flags(objs, Some(j), flags);
-    for c in own_children(&objs.jobjs, j) {
-        remove_anim_all_by_flags(objs, Some(c), flags);
+    let mut c = first_own_child(&objs.jobjs, j);
+    while let Some(x) = c {
+        remove_anim_all_by_flags(objs, Some(x), flags);
+        c = objs.jobjs[x].next;
     }
 }
 
@@ -406,8 +410,10 @@ pub fn req_anim_by_flags(objs: &mut Objects, j: Option<JObjId>, flags: u32, fram
 pub fn req_anim_all_by_flags(objs: &mut Objects, j: Option<JObjId>, flags: u32, frame: f32) {
     let Some(j) = j else { return };
     req_anim_by_flags(objs, Some(j), flags, frame);
-    for c in own_children(&objs.jobjs, j) {
-        req_anim_all_by_flags(objs, Some(c), flags, frame);
+    let mut c = first_own_child(&objs.jobjs, j);
+    while let Some(x) = c {
+        req_anim_all_by_flags(objs, Some(x), flags, frame);
+        c = objs.jobjs[x].next;
     }
 }
 
@@ -492,8 +498,10 @@ pub fn foreach_anim(
         }
         r = objs.robjs[id].next;
     }
-    for c in own_children(&objs.jobjs, j) {
-        foreach_anim(objs, c, mask, f);
+    let mut c = first_own_child(&objs.jobjs, j);
+    while let Some(x) = c {
+        foreach_anim(objs, x, mask, f);
+        c = objs.jobjs[x].next;
     }
 }
 
@@ -1315,8 +1323,10 @@ pub fn set_flags(jobjs: &mut JObjs, j: Option<JObjId>, flags: u32) {
 pub fn set_flags_all(jobjs: &mut JObjs, j: Option<JObjId>, flags: u32) {
     let Some(j) = j else { return };
     set_flags(jobjs, Some(j), flags);
-    for c in own_children(jobjs, j) {
-        set_flags_all(jobjs, Some(c), flags);
+    let mut c = first_own_child(jobjs, j);
+    while let Some(x) = c {
+        set_flags_all(jobjs, Some(x), flags);
+        c = jobjs[x].next;
     }
 }
 
@@ -1335,8 +1345,10 @@ pub fn clear_flags(jobjs: &mut JObjs, j: Option<JObjId>, flags: u32) {
 pub fn clear_flags_all(jobjs: &mut JObjs, j: Option<JObjId>, flags: u32) {
     let Some(j) = j else { return };
     clear_flags(jobjs, Some(j), flags);
-    for c in own_children(jobjs, j) {
-        clear_flags_all(jobjs, Some(c), flags);
+    let mut c = first_own_child(jobjs, j);
+    while let Some(x) = c {
+        clear_flags_all(jobjs, Some(x), flags);
+        c = jobjs[x].next;
     }
 }
 
@@ -1631,11 +1643,13 @@ pub fn setup_matrix(objs: &mut Objects, data: &Archives, j: Option<JObjId>) {
 #[doc(alias = "HSD_JObjSetMtxDirtySub")]
 pub fn set_mtx_dirty_sub(jobjs: &mut JObjs, j: JObjId) {
     jobjs[j].flags |= MTX_DIRTY;
-    for c in own_children(jobjs, j) {
-        let o = &jobjs[c];
+    let mut c = first_own_child(jobjs, j);
+    while let Some(x) = c {
+        let o = &jobjs[x];
         if o.flags & MTX_INDEP_PARENT == 0 && !o.mtx_is_dirty() {
-            set_mtx_dirty_sub(jobjs, c);
+            set_mtx_dirty_sub(jobjs, x);
         }
+        c = jobjs[x].next;
     }
 }
 

@@ -72,7 +72,7 @@ pub const ECB_SOURCE_FIXED: i32 = 2;
 pub const WALLS_MAX: usize = 9;
 
 /// The union in `ECBSource`: which member holds is decided by `kind` beside it.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub enum EcbShape {
     /// A fighter's joints (`ECBSource_x4_x0`): the root and the six the ECB is fitted around.
     Joints {
@@ -90,7 +90,7 @@ pub enum EcbShape {
 }
 
 /// `ECBSource`, mirrored by hand: its union holds joint handles or floats as `kind` says.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct EcbSource {
     /// +0x0
     pub kind: i32,
@@ -203,7 +203,7 @@ impl Mirror for EcbSource {
 
 /// mpcoll.c's statics: scratch results the checks leave for the corrections, and the floor
 /// filter of the pass in progress.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct CollStatics {
     /// The right walls (solid on their left, met by an ECB's left side) the last right-wall
     /// check collected (`mpColl_80458810.right`, counted by `mpColl_804D6488`).

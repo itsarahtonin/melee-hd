@@ -187,7 +187,10 @@ impl Running<'_> {
     /// and the screens' text and rectangles handed on as draw commands.
     pub fn render_devtext(&mut self, pass: i32) {
         use super::hud::devtext::Draw as Text;
-        for d in self.game.devtext_draw_all(self.data, pass) {
+        let mut drawn = std::mem::take(&mut self.game.objs.display.devtext);
+        drawn.clear();
+        self.game.devtext_draw_all_into(self.data, pass, &mut drawn);
+        for d in drawn.drain(..) {
             match d {
                 Text::Camera(c) => {
                     display::camera_begin(&mut self.game.objs, self.data, Some(c));
@@ -201,6 +204,7 @@ impl Running<'_> {
                     .push(display::Draw::Text(Box::new(other))),
             }
         }
+        self.game.objs.display.devtext = drawn;
     }
 
     /// A text GObj's render callback, `HSD_SisLib_803A84BC`: in the third pass, a shown text
@@ -279,7 +283,7 @@ impl Running<'_> {
         if let 1 | 2 = pass {
             crate::hsd::psdisp::setup_app_srts(&mut self.game.objs, self.data, &links, pass as u32);
         }
-        for (link, first) in links {
+        for &(link, first) in links.iter() {
             self.game
                 .objs
                 .display

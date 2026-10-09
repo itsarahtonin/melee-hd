@@ -19,9 +19,10 @@ const TRSP_SHIFT: u32 = 18;
 const ROOT_SHIFT: u32 = 28;
 
 impl Running<'_> {
-    fn fighters(&self) -> Vec<GObjId> {
-        let w = &self.game.world;
-        std::iter::successors(w.first_in(P_LINK_FIGHTER), |&g| w.gobj(g).next).collect()
+    /// The first fighter GObj; the next are each one's `next` (walks over them change no
+    /// links).
+    fn first_fighter(&self) -> Option<GObjId> {
+        self.game.world.first_in(P_LINK_FIGHTER)
     }
 
     /// The stage's shadow check for a fighter at `pos` against a joint
@@ -51,12 +52,15 @@ impl Running<'_> {
     /// shadow nothing holds off, the rest are held off this time.
     #[doc(alias = "lbShadow_8000EFEC")]
     pub fn shadow_limit(&mut self) {
-        let fighters = self.fighters();
-        for &g in &fighters {
+        let mut f = self.first_fighter();
+        while let Some(g) = f {
             self.game.fighter_mut(g).x20A4.x0_b2 = false;
+            f = self.game.world.gobj(g).next;
         }
         let mut count = 0;
-        for &g in &fighters {
+        let mut f = self.first_fighter();
+        while let Some(g) = f {
+            f = self.game.world.gobj(g).next;
             let ls = &mut self.game.fighter_mut(g).x20A4;
             let any = ls.x0_b0 || ls.x0_b1 || ls.x0_b2 || ls.x0_b3 || ls.x0_b4 || ls.x0_b5;
             if !any {
@@ -93,9 +97,11 @@ impl Running<'_> {
             return;
         }
         if flags & (trsp << TRSP_SHIFT) != 0 {
-            for g in self.fighters() {
+            let mut f = self.first_fighter();
+            while let Some(g) = f {
                 let casts = camera::shadows(&self.game.camera.cam) || self.stage_receives_shadow();
                 self.game.fighter_mut(g).x20A4.x0_b4 = !casts;
+                f = self.game.world.gobj(g).next;
             }
             self.shadow_limit();
             let mut hooks = code::ParticleHooks;
@@ -164,7 +170,9 @@ impl Running<'_> {
             let j = jobj_of(self.game, gobj);
             self.stage_disp_all(j, None, display::pass_trsp(pass));
         } else {
-            for g in self.fighters() {
+            let mut f = self.first_fighter();
+            while let Some(g) = f {
+                f = self.game.world.gobj(g).next;
                 self.game.fighter_mut(g).x20A4.x0_b4 = false;
                 self.shadow_update(g);
             }
