@@ -65,11 +65,14 @@ impl Mirror for Victim {
 }
 
 /// `HitCapsule::x134`, a union: a hitbox's grabbed-victim-only bit (`hit_grabbed_victim_only`,
-/// the top bit), or on a thrown fighter's hitbox its thrower (`owner`, a GObj pointer).
+/// the top bit), or on a thrown fighter's hitbox its thrower (`owner`, a GObj pointer). A box
+/// that held a thrower and has the bit cleared keeps the pointer's other bits
+/// (`ClearedThrower`): no longer a pointer, which nothing may read as one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HitOwner {
     Bits([u8; 4]),
     Thrower(GObjId),
+    ClearedThrower(GObjId),
 }
 
 impl Default for HitOwner {
@@ -89,12 +92,23 @@ impl HitOwner {
         match self {
             HitOwner::Bits(b) => b[0] & 0x80 != 0,
             HitOwner::Thrower(_) => true,
+            HitOwner::ClearedThrower(_) => false,
         }
     }
 
+    /// Sets or clears the top bit. A thrower's pointer already has it set, so setting it
+    /// leaves the word; clearing it would leave the pointer's other bits, which aren't kept.
     pub fn set_grabbed_victim_only(&mut self, v: bool) {
-        let HitOwner::Bits(b) = self else {
-            panic!("setting a thrower's word as the grabbed-victim-only bit");
+        let b = match *self {
+            HitOwner::Bits(ref mut b) => b,
+            HitOwner::Thrower(g) | HitOwner::ClearedThrower(g) => {
+                *self = if v {
+                    HitOwner::Thrower(g)
+                } else {
+                    HitOwner::ClearedThrower(g)
+                };
+                return;
+            }
         };
         if v {
             b[0] |= 0x80;
@@ -108,6 +122,9 @@ impl HitOwner {
         match self {
             HitOwner::Thrower(g) => Some(*g),
             HitOwner::Bits(_) => None,
+            HitOwner::ClearedThrower(_) => {
+                panic!("reading a thrower's word with its top bit cleared as a pointer")
+            }
         }
     }
 }
@@ -115,10 +132,12 @@ impl HitOwner {
 impl Mirror for HitOwner {
     const SIZE: u32 = 4;
 
-    /// A GObj's address is a thrower; anything else, the bits.
+    /// A GObj's address is a thrower; anything else, the bits: a word outside main memory is
+    /// never a pointer, whatever the importer would pair it with.
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let a = m.u32(at);
-        match (a != 0).then(|| cx.import_handle("GObjId", a)).flatten() {
+        let pointer = (0x8000_0000..0x8180_0000).contains(&a);
+        match pointer.then(|| cx.import_handle("GObjId", a)).flatten() {
             Some(g) => HitOwner::Thrower(GObjId(g)),
             None => HitOwner::Bits(m.bytes(at)),
         }
@@ -127,6 +146,14 @@ impl Mirror for HitOwner {
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         match *self {
             HitOwner::Thrower(g) => cx.compare_handle(path, "GObjId", Some(g.0), m.u32(at)),
+            HitOwner::ClearedThrower(g) => {
+                let theirs = m.u32(at);
+                if theirs & 0x8000_0000 != 0 {
+                    cx.mismatch(path, format!("{self:?}"), format!("{theirs:#x}"));
+                } else {
+                    cx.compare_handle(path, "GObjId", Some(g.0), theirs | 0x8000_0000);
+                }
+            }
             HitOwner::Bits(b) => {
                 let theirs: [u8; 4] = m.bytes(at);
                 if b != theirs {

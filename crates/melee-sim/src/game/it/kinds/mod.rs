@@ -20,6 +20,8 @@ pub mod seakvanish;
 pub mod sword;
 pub mod taru;
 pub mod tomato;
+pub mod zeldadinfire;
+pub mod zeldadinfireexplode;
 
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
@@ -46,6 +48,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || seakneedlethrown::run_event(r, gobj, addr)
         || seakvanish::run_event(r, gobj, addr)
         || seakchain::run_event(r, gobj, addr)
+        || zeldadinfire::run_event(r, gobj, addr)
+        || zeldadinfireexplode::run_event(r, gobj, addr)
 }
 
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
@@ -70,6 +74,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| seakneedlethrown::run_pred(r, gobj, addr))
         .or_else(|| seakvanish::run_pred(r, gobj, addr))
         .or_else(|| seakchain::run_pred(r, gobj, addr))
+        .or_else(|| zeldadinfire::run_pred(r, gobj, addr))
+        .or_else(|| zeldadinfireexplode::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -110,6 +116,9 @@ pub const FALCO_PHANTASM: i32 = 57;
 pub const LINK_BOMB: i32 = 58;
 /// `It_Kind_CLink_Bomb`.
 pub const CLINK_BOMB: i32 = 59;
+/// `It_Kind_Zelda_DinFire` and `_DinFire_Explode`.
+pub const ZELDA_DIN_FIRE: i32 = 108;
+pub const ZELDA_DIN_FIRE_EXPLODE: i32 = 109;
 /// `It_Kind_Fox_Blaster`.
 pub const FOX_BLASTER: i32 = 74;
 /// `It_Kind_Falco_Blaster`.

@@ -7,8 +7,7 @@
 //! What Zelda's code reaches in other parts of the port that isn't ported (Fox's animation
 //! helpers) stands in on both sides ([`stubs`]); each check runs twice, with the stand-ins that
 //! answer a question answering no, then yes, and the calls each side made to them are compared
-//! with their arguments. Din's Fire (the side special and its two items) isn't ported yet:
-//! [`PORTED_UNITS`] leaves those units out.
+//! with their arguments.
 //!
 //! The captures are game memory, kept out of the repository in `ZELDA_CALLS` (default below),
 //! one directory per run, beside the function lists the runs use: `zelda-funcs.txt` (`ADDR
@@ -26,19 +25,34 @@
 //!   --lockstep --known local/replays/known/NAME.txt
 //! ```
 //!
-//! for `Game_20260129T133652`.
+//! for `Game_20260129T133652`, then the same for `Game_20260129T170722`, `Game_20260129T165132`,
+//! `Game_20260129T170952` and `Game_20260129T133041`. No replay has Din's Fire, so `script1` is
+//! a debug VS match of two Zeldas on Final Destination whose first port a script drives
+//! through the specials but the transformation (`MONKEY_HOLD`: Start every ten fields from 30,
+//! then from field 400 every 150 fields one of: B with the stick held right for 70 fields, B
+//! left for 20, a jump then B right and up, B left then left and down, B alone for 20, B up for
+//! 20), the monkey playing on after:
+//!
+//! ```text
+//! MATCH_FIGHTERS=18 MATCH_STAGES=32 MATCH_PLAYERS=2 MATCH_TIME=480 UNLOCK_ALL=1 MONKEY_B=2 \
+//!   STALL_BEATS=200 MONKEY_HOLD=... (the same CAPTURE_ variables, CAPTURE=$D/script1) \
+//!   ssbm-run "$SSBM_DISC" --mode e --matches 20 --monkey 20 --fields 9000 --port all --lockstep
+//! ```
 
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
-    Report, Ret, Stub, StubRet, check_calls_stubbed, gobj_arg, poke_f32, poke_u32, saved_calls,
-    user_data_arg,
+    Report, Ret, Stub, StubRet, check_calls_stubbed, gobj_arg, peek_u32, poke_f32, poke_u32,
+    saved_calls, user_data_arg,
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::fox::ext as fox_ext;
 use melee_sim::game::handles::CodeRef;
+use melee_sim::game::it::kinds::{zeldadinfire, zeldadinfireexplode};
 use melee_sim::game::state::Running;
+use melee_sim::hsd::gobj::GObjId;
+use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
 
 const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/zelda";
@@ -101,20 +115,16 @@ fn functions() -> Vec<(u32, String)> {
 }
 
 /// Functions not run here: fighter creation's (the oracle checks them), the dress's removal
-/// (`ftZd_Init_801395C8`, not ported), and Din's Fire's hooks on the character, which come with
-/// Din's Fire.
+/// (`ftZd_Init_801395C8`, not ported), and the fire's owner getter, whose GObj return the
+/// check can't compare (the hold's callbacks read it).
 fn skipped(name: &str, _addr: u32) -> bool {
     matches!(
         name,
         "ftZd_Init_OnLoad"
             | "ftZd_Init_OnDeath"
             | "ftZd_Init_LoadSpecialAttrs"
-            | "ftZd_Init_801393AC"
             | "ftZd_Init_801395C8"
-            | "ftZd_SpecialLw_8013B540"
-            | "ftZd_SpecialLw_8013B574"
-            | "ftZd_SpecialLw_8013B5C4"
-            | "ftZd_SpecialLw_8013B5EC"
+            | "itZeldaDinFire_GetOwner"
     )
 }
 
@@ -130,8 +140,13 @@ const STARTS: [u32; 7] = [
     0x802C_4580,
 ];
 
-/// The units ported so far: all but Din's Fire's.
-const PORTED_UNITS: [usize; 4] = [0, 1, 2, 3];
+/// The units ported so far: all.
+const PORTED_UNITS: [usize; 7] = [0, 1, 2, 3, 4, 5, 6];
+
+/// Whether a unit's functions take a fighter (else an item).
+fn fighter_unit(u: usize) -> bool {
+    u <= 4
+}
 
 /// Which unit a function is in, by its address.
 fn unit(addr: u32) -> usize {
@@ -145,24 +160,115 @@ fn name_of(addr: u32) -> String {
         .map_or_else(|| format!("{addr:#x}"), |s| s.2.to_owned())
 }
 
+/// A vector argument, the three floats at `addr` in the call's memory.
+fn vec_at(call: &Call, addr: u32) -> Vec3 {
+    let f = |o: u32| f32::from_bits(peek_u32(call, addr + o));
+    Vec3::new(f(0), f(4), f(8))
+}
+
+/// A float argument in `f1` or `f2`, as single precision.
+fn fpr(call: &Call, i: usize) -> f32 {
+    call.regs.fpr[i].ps0 as f32
+}
+
+/// The GObj in register `r` (none for null).
+fn gobj_in(maps: &Maps, call: &Call, r: usize) -> Option<GObjId> {
+    let a = call.regs.gpr[r];
+    (a != 0).then(|| *maps.gobjs.get(&a).expect("not a GObj the import knows"))
+}
+
 /// Runs Zelda's function `call.addr` as its signature takes it.
 fn run_zelda(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     let name = name_of(call.addr);
-    let gobj = gobj_arg(maps, call);
+    let r = |i: usize| call.regs.gpr[3 + i];
+    let b = |v: bool| Ret::Int(u32::from(v));
     match name.as_str() {
-        "ftZd_Init_OnItemPickup" => g.zelda_on_item_pickup(gobj, call.regs.gpr[4] != 0),
-        "ftZd_Init_OnItemDrop" => g.zelda_on_item_drop(gobj, call.regs.gpr[4] != 0),
-        _ => run_fighter_cb(g, gobj, CodeRef(call.addr)),
+        "ftZd_Init_OnItemPickup" => {
+            g.zelda_on_item_pickup(gobj_arg(maps, call), r(1) != 0);
+            Ret::Nothing
+        }
+        "ftZd_Init_OnItemDrop" => {
+            g.zelda_on_item_drop(gobj_arg(maps, call), r(1) != 0);
+            Ret::Nothing
+        }
+        "ftZd_SpecialLw_8013B540" => b(g.zelda_din_fire_held(gobj_arg(maps, call))),
+        "ftZd_SpecialLw_8013B574" => b(g.zelda_din_fire_released(gobj_arg(maps, call))),
+        "it_802C3AFC" => b(zeldadinfire::hit_stage(g, gobj_arg(maps, call))),
+        "it_802C3BAC" => {
+            let pos = vec_at(call, r(1));
+            zeldadinfire::spawn(g, gobj_arg(maps, call), pos, fpr(call, 1));
+            Ret::Nothing
+        }
+        "it_802C3D74" => {
+            zeldadinfire::start(g, gobj_arg(maps, call));
+            Ret::Nothing
+        }
+        "it_802C3D44" => {
+            zeldadinfire::let_go(g, gobj_in(maps, call, 3));
+            Ret::Nothing
+        }
+        "itZeldaDinFire_Logic65_EvtUnk" => {
+            zeldadinfire::forget(g, gobj_arg(maps, call), gobj_in(maps, call, 4));
+            Ret::Nothing
+        }
+        "it_802C4580" => {
+            let pos = vec_at(call, r(2));
+            let fire = gobj_in(maps, call, 4).expect("a null fire");
+            zeldadinfireexplode::spawn(
+                g,
+                gobj_arg(maps, call),
+                fire,
+                pos,
+                fpr(call, 1),
+                fpr(call, 2),
+            );
+            Ret::Nothing
+        }
+        "it_802C46C4" => {
+            zeldadinfireexplode::start(g, gobj_arg(maps, call));
+            Ret::Nothing
+        }
+        "itZeldaDinFireExplode_Logic66_EvtUnk" => {
+            zeldadinfireexplode::forget(g, gobj_arg(maps, call), gobj_in(maps, call, 4));
+            Ret::Nothing
+        }
+        _ => {
+            let gobj = gobj_arg(maps, call);
+            if fighter_unit(unit(call.addr)) {
+                run_fighter_cb(g, gobj, CodeRef(call.addr));
+                return Ret::Nothing;
+            }
+            if let Some(v) = melee_sim::game::it::kinds::run_pred(g, gobj, call.addr) {
+                return b(v);
+            }
+            assert!(
+                melee_sim::game::it::kinds::run_event(g, gobj, call.addr),
+                "{name} isn't an item callback the port knows"
+            );
+            Ret::Nothing
+        }
     }
-    Ret::Nothing
 }
 
-/// Sets up a call of `name` whose arguments aren't only the GObj (the item hooks' flag).
-fn arguments(call: &mut Call, name: &str, i: usize) {
-    if let "ftZd_Init_OnItemPickup" | "ftZd_Init_OnItemDrop" = name {
-        call.regs.gpr[4] = (i % 2) as u32;
+/// Sets up a call of `name` whose arguments aren't only the GObj: the item hooks' flag, the
+/// fire's collision data, and from a neighbour's state an item's owner.
+fn arguments(call: &mut Call, name: &str, i: usize, neighbour: bool) {
+    match name {
+        "ftZd_Init_OnItemPickup" | "ftZd_Init_OnItemDrop" => {
+            call.regs.gpr[4] = (i % 2) as u32;
+        }
+        "it_802C3AFC" if neighbour => call.regs.gpr[4] = user_data_arg(call) + 0x378,
+        "itZeldaDinFire_Logic65_EvtUnk" | "itZeldaDinFireExplode_Logic66_EvtUnk" if neighbour => {
+            call.regs.gpr[4] = peek_u32(call, user_data_arg(call) + 0x518);
+        }
+        "it_802C46C4" if neighbour => call.regs.gpr[4] = user_data_arg(call),
+        _ => {}
     }
 }
+
+/// Functions that can't run from a neighbour's state: the items' spawns, which take their
+/// parent's arguments (they run as saved).
+const NOT_FROM_NEIGHBOURS: &[&str] = &["it_802C3BAC", "it_802C4580"];
 
 /// The fighter's controls and script and state variables changed so the callbacks' branches
 /// run: B held or not, a shield button pressed, the stick pushed every way and flicked, the
@@ -238,7 +344,7 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
                     &name,
                     0,
                     &stubs(yes),
-                    &|call, i| arguments(call, &name, i),
+                    &|call, i| arguments(call, &name, i, false),
                     &run_zelda,
                 );
                 tally(&reports, counts);
@@ -254,7 +360,9 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
     for u in PORTED_UNITS {
         let targets: Vec<(u32, String)> = funcs
             .iter()
-            .filter(|(a, n)| unit(*a) == u && !skipped(n, *a))
+            .filter(|(a, n)| {
+                unit(*a) == u && !skipped(n, *a) && !NOT_FROM_NEIGHBOURS.contains(&n.as_str())
+            })
             .cloned()
             .collect();
         if targets.is_empty() {
@@ -262,7 +370,11 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
         }
         let mut runs = Vec::new();
         for (a, src) in &funcs {
-            if unit(*a) != u || !wanted(src) || skipped(src, *a) {
+            if unit(*a) != u
+                || !wanted(src)
+                || skipped(src, *a)
+                || NOT_FROM_NEIGHBOURS.contains(&src.as_str())
+            {
                 continue;
             }
             for dir in dirs() {
@@ -294,8 +406,10 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
                             if std::env::var_os("ZELDA_TRACE").is_some() {
                                 eprintln!("{src} #{i} (yes {yes}) runs {n}");
                             }
-                            vary(call, shift + i);
-                            arguments(call, n, i);
+                            if fighter_unit(u) {
+                                vary(call, shift + i);
+                            }
+                            arguments(call, n, i, true);
                         },
                         &run_zelda,
                     );

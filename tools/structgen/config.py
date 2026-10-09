@@ -31,6 +31,9 @@ ROOTS = [
     # Items made of links (Sheik's chain): the links (`ItemLink`) and the chain's variables.
     "ItemLink",
     "itSeakChain_ItemVars",
+    # Zelda's Din's Fire and its explosion.
+    "itZeldaDinFire_ItemVars",
+    "itZeldaDinFireExplode_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",
