@@ -12,6 +12,7 @@ pub mod hammerhead;
 pub mod heart;
 pub mod kusudama;
 pub mod rshell;
+pub mod seakchain;
 pub mod seakneedleheld;
 pub mod seakneedlethrown;
 pub mod seakvanish;
@@ -42,6 +43,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || seakneedleheld::run_event(r, gobj, addr)
         || seakneedlethrown::run_event(r, gobj, addr)
         || seakvanish::run_event(r, gobj, addr)
+        || seakchain::run_event(r, gobj, addr)
 }
 
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
@@ -64,6 +66,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| seakneedleheld::run_pred(r, gobj, addr))
         .or_else(|| seakneedlethrown::run_pred(r, gobj, addr))
         .or_else(|| seakvanish::run_pred(r, gobj, addr))
+        .or_else(|| seakchain::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).

@@ -16510,6 +16510,215 @@ impl Mirror for itSeakNeedleThrown_ItemVars {
     }
 }
 
+impl Mirror for ItemLink {
+    const SIZE: u32 = 0x1d8;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        ItemLink {
+            prev: cx
+                .import_handle("ItemLinkId", m.u32(at + 0x0))
+                .map(ItemLinkId),
+            next: cx
+                .import_handle("ItemLinkId", m.u32(at + 0x4))
+                .map(ItemLinkId),
+            vel: Vec3::import(m, at + 0x8, cx),
+            pos: Vec3::import(m, at + 0x14, cx),
+            x20: Vec3::import(m, at + 0x20, cx),
+            x2C_b0: m.bits(at, 352, 1) != 0,
+            x2C_b1: m.bits(at, 353, 1) != 0,
+            x2C_b2: m.bits(at, 354, 1) != 0,
+            x2C_b3: m.bits(at, 355, 1) != 0,
+            x2C_b4: m.bits(at, 356, 1) != 0,
+            x2C_b5: m.bits(at, 357, 1) != 0,
+            x2C_b6: m.bits(at, 358, 1) != 0,
+            x2C_b7: m.bits(at, 359, 1) != 0,
+            coll_data: CollData::import(m, at + 0x30, cx),
+            x1CC: m.u32(at + 0x1cc) as i32,
+            gobj: cx.import_handle("GObjId", m.u32(at + 0x1d0)).map(GObjId),
+            jobj: cx.import_handle("JObjId", m.u32(at + 0x1d4)).map(JObjId),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_handle(
+            &format!("{path}.prev"),
+            "ItemLinkId",
+            self.prev.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
+        cx.compare_handle(
+            &format!("{path}.next"),
+            "ItemLinkId",
+            self.next.map(|h| h.0),
+            m.u32(at + 0x4),
+        );
+        self.vel.compare(m, at + 0x8, &format!("{path}.vel"), cx);
+        self.pos.compare(m, at + 0x14, &format!("{path}.pos"), cx);
+        self.x20.compare(m, at + 0x20, &format!("{path}.x20"), cx);
+        if (self.x2C_b0 as u32) != m.bits(at, 352, 1) {
+            cx.mismatch(
+                &format!("{path}.x2C_b0"),
+                format!("{:?}", self.x2C_b0),
+                format!("{:?}", m.bits(at, 352, 1)),
+            );
+        }
+        if (self.x2C_b1 as u32) != m.bits(at, 353, 1) {
+            cx.mismatch(
+                &format!("{path}.x2C_b1"),
+                format!("{:?}", self.x2C_b1),
+                format!("{:?}", m.bits(at, 353, 1)),
+            );
+        }
+        if (self.x2C_b2 as u32) != m.bits(at, 354, 1) {
+            cx.mismatch(
+                &format!("{path}.x2C_b2"),
+                format!("{:?}", self.x2C_b2),
+                format!("{:?}", m.bits(at, 354, 1)),
+            );
+        }
+        if (self.x2C_b3 as u32) != m.bits(at, 355, 1) {
+            cx.mismatch(
+                &format!("{path}.x2C_b3"),
+                format!("{:?}", self.x2C_b3),
+                format!("{:?}", m.bits(at, 355, 1)),
+            );
+        }
+        if (self.x2C_b4 as u32) != m.bits(at, 356, 1) {
+            cx.mismatch(
+                &format!("{path}.x2C_b4"),
+                format!("{:?}", self.x2C_b4),
+                format!("{:?}", m.bits(at, 356, 1)),
+            );
+        }
+        if (self.x2C_b5 as u32) != m.bits(at, 357, 1) {
+            cx.mismatch(
+                &format!("{path}.x2C_b5"),
+                format!("{:?}", self.x2C_b5),
+                format!("{:?}", m.bits(at, 357, 1)),
+            );
+        }
+        if (self.x2C_b6 as u32) != m.bits(at, 358, 1) {
+            cx.mismatch(
+                &format!("{path}.x2C_b6"),
+                format!("{:?}", self.x2C_b6),
+                format!("{:?}", m.bits(at, 358, 1)),
+            );
+        }
+        if (self.x2C_b7 as u32) != m.bits(at, 359, 1) {
+            cx.mismatch(
+                &format!("{path}.x2C_b7"),
+                format!("{:?}", self.x2C_b7),
+                format!("{:?}", m.bits(at, 359, 1)),
+            );
+        }
+        self.coll_data
+            .compare(m, at + 0x30, &format!("{path}.coll_data"), cx);
+        if self.x1CC != m.u32(at + 0x1cc) as i32 {
+            cx.mismatch(
+                &format!("{path}.x1CC"),
+                format!("{:?}", self.x1CC),
+                format!("{:?}", m.u32(at + 0x1cc) as i32),
+            );
+        }
+        cx.compare_handle(
+            &format!("{path}.gobj"),
+            "GObjId",
+            self.gobj.map(|h| h.0),
+            m.u32(at + 0x1d0),
+        );
+        cx.compare_handle(
+            &format!("{path}.jobj"),
+            "JObjId",
+            self.jobj.map(|h| h.0),
+            m.u32(at + 0x1d4),
+        );
+    }
+}
+
+impl Mirror for itSeakChain_ItemVars {
+    const SIZE: u32 = 0xd0;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itSeakChain_ItemVars {
+            x0: cx
+                .import_handle("ItemLinkId", m.u32(at + 0x0))
+                .map(ItemLinkId),
+            x4: cx
+                .import_handle("ItemLinkId", m.u32(at + 0x4))
+                .map(ItemLinkId),
+            parent_gobj: cx.import_handle("GObjId", m.u32(at + 0x8)).map(GObjId),
+            pad_C: core::array::from_fn(|i0| m.u8(at + 0xc + i0 as u32 * 0x1)),
+            x10: m.u32(at + 0x10) as i32,
+            x14: m.u32(at + 0x14) as i32,
+            x18: m.u32(at + 0x18) as i32,
+            history: core::array::from_fn(|i0| Vec3::import(m, at + 0x1c + i0 as u32 * 0xc, cx)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_handle(
+            &format!("{path}.x0"),
+            "ItemLinkId",
+            self.x0.map(|h| h.0),
+            m.u32(at + 0x0),
+        );
+        cx.compare_handle(
+            &format!("{path}.x4"),
+            "ItemLinkId",
+            self.x4.map(|h| h.0),
+            m.u32(at + 0x4),
+        );
+        cx.compare_handle(
+            &format!("{path}.parent_gobj"),
+            "GObjId",
+            self.parent_gobj.map(|h| h.0),
+            m.u32(at + 0x8),
+        );
+        for i0 in 0..4 {
+            if self.pad_C[i0] != m.u8(at + 0xc + i0 as u32 * 0x1) {
+                cx.mismatch(
+                    &format!("{}[{}]", format!("{path}.pad_C"), i0),
+                    format!("{:?}", self.pad_C[i0]),
+                    format!("{:?}", m.u8(at + 0xc + i0 as u32 * 0x1)),
+                );
+            }
+        }
+        if self.x10 != m.u32(at + 0x10) as i32 {
+            cx.mismatch(
+                &format!("{path}.x10"),
+                format!("{:?}", self.x10),
+                format!("{:?}", m.u32(at + 0x10) as i32),
+            );
+        }
+        if self.x14 != m.u32(at + 0x14) as i32 {
+            cx.mismatch(
+                &format!("{path}.x14"),
+                format!("{:?}", self.x14),
+                format!("{:?}", m.u32(at + 0x14) as i32),
+            );
+        }
+        if self.x18 != m.u32(at + 0x18) as i32 {
+            cx.mismatch(
+                &format!("{path}.x18"),
+                format!("{:?}", self.x18),
+                format!("{:?}", m.u32(at + 0x18) as i32),
+            );
+        }
+        for i0 in 0..15 {
+            self.history[i0].compare(
+                m,
+                at + 0x1c + i0 as u32 * 0xc,
+                &format!("{}[{}]", format!("{path}.history"), i0),
+                cx,
+            );
+        }
+    }
+}
+
 impl Mirror for IfDamageFlags {
     const SIZE: u32 = 0x1;
 

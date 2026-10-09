@@ -97,6 +97,7 @@ pub struct Maps {
     pub tobjs: HashMap<u32, TObjId>,
     pub fighters: HashMap<u32, FighterId>,
     pub items: HashMap<u32, ItemId>,
+    pub item_links: HashMap<u32, melee_sim::game::handles::ItemLinkId>,
     pub effects: HashMap<u32, melee_sim::game::handles::EffectId>,
     pub bone_tables: HashMap<u32, BoneTableId>,
     pub grounds: HashMap<u32, GroundId>,
@@ -178,6 +179,10 @@ pub struct Importer<'a> {
     dynamics_read: std::collections::HashSet<u32>,
     /// The items whose contents are imported.
     pub(crate) items_done: std::collections::HashSet<u32>,
+    /// The items' links whose contents are imported, and the freed ones, released onto our
+    /// free list after the live ones (see `links.rs`).
+    pub(crate) links_done: std::collections::HashSet<u32>,
+    pub(crate) free_links: Vec<u32>,
     /// The freed items and joint tables, released onto our free lists after the live ones.
     pub(crate) free_items: Vec<u32>,
     pub(crate) free_tables: Vec<u32>,
@@ -210,6 +215,8 @@ impl<'a> Importer<'a> {
             live_effects: Default::default(),
             dynamics_read: Default::default(),
             items_done: Default::default(),
+            links_done: Default::default(),
+            free_links: Default::default(),
             free_items: Vec::new(),
             free_tables: Vec::new(),
         }
@@ -398,6 +405,7 @@ impl<'a> Importer<'a> {
             self.game.world.procs[id.0] = proc;
         }
         self.item_free_lists();
+        self.link_free_list();
         self.map_generators();
         let jobj_kind = self.u8(sym("HSD_GObj_JObjKind"));
         let light_kind = self.u8(sym("HSD_GObj_LightKind"));
@@ -429,11 +437,9 @@ impl<'a> Importer<'a> {
             let user_data = match user_data_kind {
                 4 if ud != 0 => Some(UserData::Fighter(self.fighter(ud))),
                 // Kind 6 on a GObj of class 7 is an item's link (`ItemLink`: the Ice Climbers'
-                // string, Ness's yo-yo, Samus's grapple beam, Sheik's chain), which no port
-                // models yet.
+                // string, Ness's yo-yo, Samus's grapple beam, Sheik's chain).
                 6 if ud != 0 && self.u16(g) == ITEM_LINK_CLASS => {
-                    self.unhandled.push(format!("GObj {g:#x}: an item link"));
-                    Some(UserData::Raw(melee_sim::game::handles::RawPtr(ud)))
+                    Some(UserData::ItemLink(self.item_link(ud)))
                 }
                 6 if ud != 0 => Some(UserData::Item(self.item(ud))),
                 8 if ud != 0 => Some(UserData::Effect(self.effect(ud))),
@@ -521,6 +527,7 @@ impl<'a> Importer<'a> {
         self.statics();
         self.effects();
         self.release_free_lists();
+        self.release_free_links();
     }
 
     /// The fighter code's globals.
@@ -1689,6 +1696,7 @@ impl Cx for Importer<'_> {
                     Some(known.unwrap_or_else(|| self.dangling(kind, addr)))
                 }
                 "ItemId" => self.maps.items.get(&addr).map(|i| i.0),
+                "ItemLinkId" => self.maps.item_links.get(&addr).map(|l| l.0),
                 "BoneTableId" => self.maps.bone_tables.get(&addr).map(|t| t.0),
                 "ItemLogicRef" | "ItemStatesRef" => Some(addr),
                 _ => {
@@ -1730,6 +1738,7 @@ impl Cx for Importer<'_> {
                 self.item_slot(addr).0
             }
             "ItemId" => self.dangling(kind, addr),
+            "ItemLinkId" => self.item_link_slot(addr).0,
             "BoneTableId" => self.bone_table(addr).0,
             // Static tables in the executable, by address.
             "ItemLogicRef" | "ItemStatesRef" => addr,

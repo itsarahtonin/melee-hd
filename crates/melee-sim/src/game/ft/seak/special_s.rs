@@ -1,8 +1,7 @@
 //! The chain (`ftseakspecials.c`): drawing it, swinging it with the stick (the pose blends
 //! toward the stick's direction, eased), its hitboxes switched on while it moves fast enough,
-//! and retracting it. The chain item's own code (`itseakchain.c`, links of `ItemLink` like
-//! Link's hookshot) is another part of the port's: Sheik's code reaches it by address
-//! ([`ext`]), and it reaches Sheik's queries ([`call`]).
+//! and retracting it. The chain item's own code is `it::kinds::seakchain`, which asks Sheik's
+//! queries here.
 
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -12,6 +11,7 @@ use gekko_fp as fp;
 use super::super::super::code::Val;
 use super::super::super::handles::CodeRef;
 use super::super::super::it::item::article;
+use super::super::super::it::kinds::seakchain;
 use super::super::super::state::Running;
 use super::super::parts::TRANS_N;
 use super::{GA_AIR, PAD_B, addr, attr, ms, mv, u};
@@ -22,20 +22,6 @@ use crate::hsd::jobj;
 use crate::lb::hitcapsule;
 use crate::math;
 use crate::vec::Vec3;
-
-/// The chain item's functions Sheik's code calls, by address.
-pub mod ext {
-    pub const IT_SEAK_CHAIN_SPAWN: u32 = 0x802B_B290;
-    /// Destroys the chain.
-    pub const IT_802BB20C: u32 = 0x802B_B20C;
-    /// The chain's hitlag hooks (`it_8026B724`, `it_8026B73C`).
-    pub const IT_802BAEEC: u32 = 0x802B_AEEC;
-    pub const IT_802BAF0C: u32 = 0x802B_AF0C;
-    /// Retracts it.
-    pub const IT_802BCF84: u32 = 0x802B_CF84;
-    /// Throws it out at a velocity.
-    pub const IT_802BCFC4: u32 = 0x802B_CFC4;
-}
 
 /// `transition_flags`: what the chain's states keep between the ground and the air.
 const TRANSITION_FLAGS: u32 = {
@@ -398,7 +384,7 @@ impl Running<'_> {
         let Some(chain) = self.seak_chain(gobj) else {
             return;
         };
-        self.seak_ext(ext::IT_802BB20C, &[Val::GObj(Some(chain))]);
+        seakchain::destroy(self, chain);
         self.seak_special_s_chain_resume(gobj);
         self.set_seak_chain(gobj, None);
         let fp = self.game.fighter_mut(gobj);
@@ -410,7 +396,7 @@ impl Running<'_> {
     #[doc(alias = "ftSk_SpecialS_80110EE8")]
     pub fn seak_special_s_chain_pause(&mut self, gobj: GObjId) {
         if let Some(chain) = self.seak_chain(gobj) {
-            self.seak_ext(ext::IT_802BAEEC, &[Val::GObj(Some(chain))]);
+            seakchain::hitlag_start(self, chain);
         }
     }
 
@@ -419,9 +405,27 @@ impl Running<'_> {
     #[doc(alias = "ftSk_SpecialS_ChainSomething")]
     pub fn seak_special_s_chain_resume(&mut self, gobj: GObjId) {
         if let Some(chain) = self.seak_chain(gobj) {
-            self.seak_ext(ext::IT_802BAF0C, &[Val::GObj(Some(chain))]);
+            seakchain::hitlag_end(self, chain);
             self.game.fighter_mut(gobj).set_mv_i32(mv::S_X20, 2);
         }
+    }
+
+    /// The stick's motion since last frame (`u.sk.lstick_delta`), which swings the chain.
+    pub fn seak_stick_delta(&self, gobj: GObjId) -> (f32, f32) {
+        let fp = self.game.fighter(gobj);
+        (u_f32(fp, u::LSTICK_DELTA), u_f32(fp, u::LSTICK_DELTA + 4))
+    }
+
+    /// The side special's hitbox frames as a word (`specials.x1C`, which the chain reads as
+    /// `mv.co.common.x1C`).
+    pub fn seak_special_s_x1c(&self, gobj: GObjId) -> i32 {
+        self.game.fighter(gobj).mv_i32(mv::S_X1C)
+    }
+
+    /// `ftColl_8007AFF8` for the chain: Sheik's hitboxes cleared.
+    pub fn seak_chain_clear_hitboxes(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.clear_hitboxes(f);
     }
 
     /// The stick's x, for the chain, `ftSk_SpecialS_80110F58`.
@@ -495,15 +499,7 @@ impl Running<'_> {
         let j = self.bone_joint(gobj, PART_L3RD_NA);
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
         let facing = self.game.fighter(gobj).facing_dir;
-        let v = self.seak_ext(
-            ext::IT_SEAK_CHAIN_SPAWN,
-            &[
-                Val::GObj(Some(gobj)),
-                Val::Vec(pos),
-                Val::Float(reg(facing)),
-            ],
-        );
-        let chain = super::super::fox::ret_gobj(v);
+        let chain = seakchain::spawn(self, gobj, pos, facing);
         self.set_seak_chain(gobj, chain);
         let fp = self.game.fighter_mut(gobj);
         fp.x1984_heldItemSpec = chain;
@@ -545,7 +541,7 @@ impl Running<'_> {
             let speed = reg(self.seak_chain_attr(chain, CHAIN_X50));
             let facing = reg(super::super::super::it::item(self.game, chain).facing_dir);
             let vel = Vec3::new(mem(fp::fmuls(speed, facing)), 0.0, 0.0);
-            self.seak_ext(ext::IT_802BCFC4, &[Val::GObj(Some(chain)), Val::Vec(vel)]);
+            seakchain::throw(self, chain, vel);
         }
         let n = self.game.fighters[f.0].mv_i32(mv::S_X0);
         fp::frsp(f64::from(n)) > reg(self.seak_attr_f32(f, attr::X20))
@@ -760,12 +756,12 @@ impl Running<'_> {
         if n < x28 {
             let chain = self.seak_chain(gobj);
             if n == reg(self.seak_attr_f32(f, attr::X24)) {
-                self.seak_ext(ext::IT_802BCF84, &[Val::GObj(chain)]);
+                seakchain::to_retract(self, chain.expect("it_802BCF84 on a null chain"));
             }
             self.seak_special_s_chain_hits(gobj);
         } else if n == x28 {
             let chain = self.seak_chain(gobj);
-            self.seak_ext(ext::IT_802BB20C, &[Val::GObj(chain)]);
+            seakchain::destroy(self, chain.expect("it_802BB20C on a null chain"));
         } else {
             self.seak_special_s_chain_hits(gobj);
         }

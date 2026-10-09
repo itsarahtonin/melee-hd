@@ -49,9 +49,8 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::fox::ext as fox_ext;
 use melee_sim::game::ft::seak::ext;
-use melee_sim::game::ft::seak::special_s::ext as chain_ext;
 use melee_sim::game::handles::{CodeRef, FighterId};
-use melee_sim::game::it::kinds::{seakneedleheld, seakneedlethrown, seakvanish};
+use melee_sim::game::it::kinds::{seakchain, seakneedleheld, seakneedlethrown, seakvanish};
 use melee_sim::game::state::Running;
 use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
@@ -86,11 +85,6 @@ fn stubs(yes: bool) -> Vec<Stub> {
         ext::FTCOMMON_FALL_BASIC,
         ext::FTCOMMON_CALC_SELF_ACCEL_DEACCEL_AIR,
         ext::FTCOMMON_8007DA24,
-        chain_ext::IT_802BB20C,
-        chain_ext::IT_802BAEEC,
-        chain_ext::IT_802BAF0C,
-        chain_ext::IT_802BCF84,
-        chain_ext::IT_802BCFC4,
         fox_ext::FTANIM_80070FB4,
         fox_ext::FTANIM_80070C48,
         fox_ext::FTANIM_80070CC4,
@@ -99,8 +93,6 @@ fn stubs(yes: bool) -> Vec<Stub> {
     .map(|&a| (a, StubRet::Nothing))
     .collect();
     v.push((ext::FTNS_YOYO_CHECK_ENV_COLL, b));
-    // The chain: none made (it would be a GObj the stand-in can't make).
-    v.push((chain_ext::IT_SEAK_CHAIN_SPAWN, StubRet::Int(0)));
     // An item's hold kind: the one-handed pose, or none.
     v.push((
         fox_ext::IT_GET_HOLD_KIND,
@@ -134,13 +126,27 @@ fn functions() -> Vec<(u32, String)> {
         .collect()
 }
 
-/// Functions other parts of the port own: fighter creation's, and the chain item's.
-fn skipped(name: &str, addr: u32) -> bool {
+/// Functions not run here: fighter creation's (the oracle checks them), and the chain's
+/// helpers that take its attributes' pointer, which run inside the chain's callbacks
+/// ([`CHAIN_INNER`]).
+fn skipped(name: &str, _addr: u32) -> bool {
     matches!(
         name,
         "ftSk_Init_OnLoad" | "ftSk_Init_OnDeath" | "ftSk_Init_LoadSpecialAttrs"
-    ) || unit(addr) == CHAIN_UNIT
+    ) || CHAIN_INNER.contains(&name)
 }
+
+/// The chain's helpers that take a link and the chain's attributes (`itSeakChain_Attrs*`):
+/// they run inside the chain's accessories (`fn_802BB44C`, `fn_802BB574`, `fn_802BB694`,
+/// `fn_802BB784`), whose captures compare the whole state after them.
+const CHAIN_INNER: &[&str] = &[
+    "it_802BBB0C",
+    "it_802BBC38",
+    "it_802BBD64",
+    "it_802BBED0",
+    "it_802BC080",
+    "it_802BC94C",
+];
 
 /// The chain item's unit (`itseakchain.c`), the last.
 const CHAIN_START: u32 = 0x802B_AEEC;
@@ -198,6 +204,12 @@ fn fighter_arg(maps: &Maps, call: &Call) -> FighterId {
         .fighters
         .get(&call.regs.gpr[3])
         .expect("r3 isn't a fighter the import knows")
+}
+
+/// The GObj of the `Item*` in r3.
+fn item_arg(g: &Running, maps: &Maps, call: &Call) -> melee_sim::hsd::gobj::GObjId {
+    let i = maps.items[&call.regs.gpr[3]];
+    g.game.items[i.0].entity.expect("an item without its GObj")
 }
 
 /// The GObj in register `r` (none for null).
@@ -291,6 +303,48 @@ fn run_sheik(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             seakneedleheld::forget(g, gobj_arg(maps, call), gobj_in(maps, call, 4));
             Ret::Nothing
         }
+        // The chain.
+        "itSeakChain_Spawn" => {
+            let pos = vec_at(call, r(1));
+            seakchain::spawn(g, gobj_arg(maps, call), pos, f1(call));
+            Ret::Nothing
+        }
+        "it_802BAF2C" => {
+            let gobj = item_arg(g, maps, call);
+            let j = (r(1) != 0).then(|| maps.jobjs[&r(1)]);
+            seakchain::make_links(g, gobj, j);
+            Ret::Nothing
+        }
+        "it_802BB938" | "it_802BBAEC" => {
+            let l = maps.item_links[&r(0)];
+            let rise = call.regs.fpr[1].ps0;
+            let env = if name == "it_802BB938" {
+                seakchain::link_coll(g, l, r(1) != 0, rise)
+            } else {
+                seakchain::link_coll_call(g, l, r(1) != 0, rise)
+            };
+            Ret::Int(env as u32)
+        }
+        "it_802BCA30" => {
+            let gobj = item_arg(g, maps, call);
+            seakchain::tip_to_hand(g, gobj);
+            Ret::Nothing
+        }
+        "it_802BCB88" => {
+            let gobj = item_arg(g, maps, call);
+            let at = vec_at(call, r(1));
+            seakchain::line_up(g, gobj, at);
+            Ret::Nothing
+        }
+        "it_802BCFC4" => {
+            let vel = vec_at(call, r(1));
+            seakchain::throw(g, gobj_arg(maps, call), vel);
+            Ret::Nothing
+        }
+        "itSeakChain_Logic54_EvtUnk" => {
+            seakchain::forget(g, gobj_arg(maps, call), gobj_in(maps, call, 4));
+            Ret::Nothing
+        }
         // Vanish's flash.
         "it_802B1C60" => {
             let pos = vec_at(call, r(1));
@@ -356,7 +410,8 @@ fn arguments(call: &mut Call, name: &str, i: usize, neighbour: bool) {
         | "it_802B1D40"
         | "itSeakNeedleThrown_Logic109_EvtUnk"
         | "itSeakNeedleHeld_Logic110_EvtUnk"
-        | "it_802B1DCC" => {
+        | "it_802B1DCC"
+        | "itSeakChain_Logic54_EvtUnk" => {
             call.regs.gpr[4] = item_owner(call);
         }
         "it_802AFEA8" => {
@@ -485,7 +540,21 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
 
 /// Functions that can't run from a neighbour's state: the items' spawns, which take their
 /// parent's arguments (they run as saved).
-const NOT_FROM_NEIGHBOURS: &[&str] = &["it_802AFD8C", "it_802B19AC", "it_802B1C60"];
+const NOT_FROM_NEIGHBOURS: &[&str] = &[
+    "it_802AFD8C",
+    "it_802B19AC",
+    "it_802B1C60",
+    "itSeakChain_Spawn",
+    "it_802BAF2C",
+    "it_802BB938",
+    "it_802BBAEC",
+    "it_802BCA30",
+    "it_802BCB88",
+    "it_802BCFC4",
+    // The swing from a state whose chain isn't out past its first link stores a register
+    // its caller set (`it_802BC080`'s `env_flags`, never written when its loop doesn't run).
+    "fn_802BB694",
+];
 
 /// The item hooks, which also run from the neutral special's states: the held needles are the
 /// item they hold ([`hold_needles`]).
@@ -501,7 +570,15 @@ const NEEDLES_UNIT: usize = 2;
 
 /// Functions whose saved calls don't hold their unit's GObj in r3, so other functions can't run
 /// from them: `ftSk_SpecialS_80110490` takes the `Fighter*`.
-const NOT_A_SOURCE: &[&str] = &["ftSk_SpecialS_80110490"];
+const NOT_A_SOURCE: &[&str] = &[
+    "ftSk_SpecialS_80110490",
+    "it_802BAF2C",
+    "it_802BB938",
+    "it_802BBAEC",
+    "it_802BCA30",
+    "it_802BCB88",
+    "itSeakChain_Spawn",
+];
 
 /// Each of Sheik's functions run from the captures of its unit's other functions, the fighters'
 /// with the controls and variables changed.
@@ -523,10 +600,10 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
         let mut runs = Vec::new();
         for (a, src) in &funcs {
             if unit(*a) != u
-                || u == CHAIN_UNIT
                 || !wanted(src)
                 || NOT_FROM_NEIGHBOURS.contains(&src.as_str())
                 || NOT_A_SOURCE.contains(&src.as_str())
+                || CHAIN_INNER.contains(&src.as_str())
             {
                 continue;
             }

@@ -302,6 +302,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         0x801C_5DB0 => r.render_stage_object(gobj, pass),
         0x8008_0E18 => r.render_fighter(gobj, pass),
         0x8026_EECC => r.render_item(gobj, pass),
+        super::it::link::RENDER => r.render_link(gobj, pass),
         crate::lb::bgflash::RENDER => r.render_bg_flash(),
         crate::hsd::sis::TEXT_RENDER => r.render_text(gobj, pass),
         super::hud::magnify::CAMERA_RENDER => r.render_magnifier(gobj),

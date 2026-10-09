@@ -355,6 +355,7 @@ impl<'a> Comparer<'a> {
             }
             Some(UserData::Ground(g)) => self.ground(path, g, self.u32(t + 0x2C)),
             Some(UserData::Item(i)) => self.item(path, i, self.u32(t + 0x2C)),
+            Some(UserData::ItemLink(l)) => self.item_link(path, l, self.u32(t + 0x2C)),
             Some(UserData::Raw(a)) => self.check(path, "user data", a.0, self.u32(t + 0x2C)),
             Some(UserData::BgFlash) => {
                 let (ud, release) = (self.u32(t + 0x2C), self.u32(t + 0x30));
@@ -1416,6 +1417,7 @@ impl Cx for Comparer<'_> {
             "AttrsId" => self.maps.fighter_attrs.get(&theirs).map(|a| a.0),
             "DynamicsId" => self.maps.fighter_dynamics.get(&theirs).map(|d| d.0),
             "ItemId" | "VictimItem" => self.maps.items.get(&theirs).map(|i| i.0),
+            "ItemLinkId" => self.maps.item_links.get(&theirs).map(|l| l.0),
             "BoneTableId" => {
                 if let (Some(o), true) = (ours, theirs != 0) {
                     self.bone_table(path, BoneTableId(o), theirs);

@@ -10,6 +10,7 @@ pub mod effects;
 pub mod hud;
 pub mod import;
 pub mod items;
+pub mod links;
 pub mod playback;
 pub mod sis;
 pub mod stage;

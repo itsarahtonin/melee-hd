@@ -27,6 +27,9 @@ ROOTS = [
     "itFoxLaser_ItemVars",
     "itSeakNeedleHeld_ItemVars",
     "itSeakNeedleThrown_ItemVars",
+    # Items made of links (Sheik's chain): the links (`ItemLink`) and the chain's variables.
+    "ItemLink",
+    "itSeakChain_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",
@@ -70,6 +73,7 @@ POINTERS = {
     "HSD_TObj": "Option<TObjId>",
     "Fighter": "Option<FighterId>",
     "Item": "Option<ItemId>",
+    "ItemLink": "Option<ItemLinkId>",
     "CmSubject": "Option<CameraBoxId>",
     "FighterBone": "Option<PartsId>",
     "DynamicsData": "Option<DynamicsId>",
