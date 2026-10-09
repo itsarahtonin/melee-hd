@@ -70,7 +70,7 @@ impl Running<'_> {
 
     /// The flash at the hip, `ftSk_SpecialHi_80112F48`.
     #[doc(alias = "ftSk_SpecialHi_80112F48")]
-    fn seak_special_hi_spawn_flash(&mut self, gobj: GObjId) {
+    pub fn seak_special_hi_spawn_flash(&mut self, gobj: GObjId) {
         let mut pos = self.seak_hip_pos(gobj);
         pos.z = 0.0;
         let facing = self.game.fighter(gobj).facing_dir;
@@ -79,7 +79,7 @@ impl Running<'_> {
 
     /// The explosion's effect at the hip, once, `ftSk_SpecialHi_80112FA8`.
     #[doc(alias = "ftSk_SpecialHi_80112FA8")]
-    fn seak_special_hi_vanish_gfx(&mut self, gobj: GObjId) {
+    pub fn seak_special_hi_vanish_gfx(&mut self, gobj: GObjId) {
         let pos = self.seak_hip_pos(gobj);
         if !self.game.fighter(gobj).x2219_b0 {
             spawn(self, GFX_VANISH, Some(gobj), &[Arg::Vec(pos)]);
@@ -575,6 +575,8 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::HI_FN_80112ED8 => g.seak_special_hi_vanish(gobj),
         addr::HI_FN_80113038 => g.seak_special_hi_appear_gfx(gobj),
+        0x8011_2F48 => g.seak_special_hi_spawn_flash(gobj),
+        0x8011_2FA8 => g.seak_special_hi_vanish_gfx(gobj),
         addr::SPECIAL_HI_ENTER => g.seak_special_hi_enter(gobj),
         addr::SPECIAL_AIR_HI_ENTER => g.seak_special_air_hi_enter(gobj),
         0x8011_3194 => g.seak_special_hi_start_0_anim(gobj),

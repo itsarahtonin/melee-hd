@@ -139,12 +139,12 @@ fn skipped(name: &str, addr: u32) -> bool {
     matches!(
         name,
         "ftSk_Init_OnLoad" | "ftSk_Init_OnDeath" | "ftSk_Init_LoadSpecialAttrs"
-    ) || (CHAIN_START..CHAIN_END).contains(&addr)
+    ) || unit(addr) == CHAIN_UNIT
 }
 
-/// The chain item's unit (`itseakchain.c`).
+/// The chain item's unit (`itseakchain.c`), the last.
 const CHAIN_START: u32 = 0x802B_AEEC;
-const CHAIN_END: u32 = 0x802B_D000;
+const CHAIN_UNIT: usize = STARTS.len() - 1;
 
 /// The units, by their first function's address: ftseak, ftseakspecials, ftseakspecialn,
 /// ftseakspecialhi, ftseakspeciallw, itseakneedlethrown, itseakneedleheld, itseakvanish and
@@ -324,8 +324,12 @@ fn run_sheik(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     }
 }
 
-/// Sets up a call of `name` whose arguments aren't only the GObj.
-fn arguments(call: &mut Call, name: &str, i: usize) {
+/// Sets up a call of `name` whose arguments aren't only the GObj, run from a neighbour's
+/// state (`neighbour`) or as saved (where only the item hooks' flag changes).
+fn arguments(call: &mut Call, name: &str, i: usize, neighbour: bool) {
+    if !neighbour && !name.starts_with("ftSk_Init_OnItem") {
+        return;
+    }
     match name {
         "ftSk_Init_OnItemPickup" | "ftSk_Init_OnItemDrop" => {
             call.regs.gpr[4] = (i % 2) as u32;
@@ -346,8 +350,26 @@ fn arguments(call: &mut Call, name: &str, i: usize) {
             call.regs.gpr[4] = fp + OUT;
             call.regs.gpr[5] = (i % 4) as u32;
         }
+        // An item and its owner, or a GObj it points to.
+        "it_802AFF08"
+        | "it_802B00F4"
+        | "it_802B1D40"
+        | "itSeakNeedleThrown_Logic109_EvtUnk"
+        | "itSeakNeedleHeld_Logic110_EvtUnk"
+        | "it_802B1DCC" => {
+            call.regs.gpr[4] = item_owner(call);
+        }
+        "it_802AFEA8" => {
+            call.regs.gpr[4] = item_owner(call);
+            call.regs.gpr[5] = (i % 2) as u32;
+        }
         _ => {}
     }
+}
+
+/// The owner of the item whose GObj is in r3 (`Item::owner`).
+fn item_owner(call: &Call) -> u32 {
+    peek_u32(call, user_data_arg(call) + 0x518)
 }
 
 /// The item hooks need an item in hand: Sheik holds her needles as her item, if she has them
@@ -452,7 +474,7 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
                     &name,
                     0,
                     &stubs(yes),
-                    &|call, i| arguments(call, &name, i),
+                    &|call, i| arguments(call, &name, i, false),
                     &run_sheik,
                 );
                 tally(&reports, counts);
@@ -461,27 +483,25 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
     }
 }
 
-/// Functions that can't run from a neighbour's state: queries and helpers with their own
-/// arguments (run as saved), and the chain's start, which reads the chain it made.
-const NOT_FROM_NEIGHBOURS: &[&str] = &[
-    "ftSk_SpecialS_80110490",
-    "ftSk_SpecialS_80110610",
-    "ftSk_SpecialS_UpdateHitboxes",
-    "ftSk_SpecialS_80110F58",
-    "ftSk_SpecialS_80110F64",
-    "ftSk_SpecialS_80111F70",
-    "ftSk_SpecialS_80111FA0",
-    "it_802AFD8C",
-    "it_802AFEA8",
-    "it_802AFF08",
-    "it_802B00F4",
-    "it_802B19AC",
-    "it_802B1C60",
-    "it_802B1D40",
-    "itSeakNeedleThrown_Logic109_EvtUnk",
-    "itSeakNeedleHeld_Logic110_EvtUnk",
-    "it_802B1DCC",
+/// Functions that can't run from a neighbour's state: the items' spawns, which take their
+/// parent's arguments (they run as saved).
+const NOT_FROM_NEIGHBOURS: &[&str] = &["it_802AFD8C", "it_802B19AC", "it_802B1C60"];
+
+/// The item hooks, which also run from the neutral special's states: the held needles are the
+/// item they hold ([`hold_needles`]).
+const ITEM_HOOKS: &[&str] = &[
+    "ftSk_Init_OnItemPickup",
+    "ftSk_Init_OnItemInvisible",
+    "ftSk_Init_OnItemVisible",
+    "ftSk_Init_OnItemDrop",
 ];
+
+/// The neutral special's unit.
+const NEEDLES_UNIT: usize = 2;
+
+/// Functions whose saved calls don't hold their unit's GObj in r3, so other functions can't run
+/// from them: `ftSk_SpecialS_80110490` takes the `Fighter*`.
+const NOT_A_SOURCE: &[&str] = &["ftSk_SpecialS_80110490"];
 
 /// Each of Sheik's functions run from the captures of its unit's other functions, the fighters'
 /// with the controls and variables changed.
@@ -491,7 +511,9 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
         let targets: Vec<(u32, String)> = funcs
             .iter()
             .filter(|(a, n)| {
-                unit(*a) == u && !skipped(n, *a) && !NOT_FROM_NEIGHBOURS.contains(&n.as_str())
+                (unit(*a) == u || u == NEEDLES_UNIT && ITEM_HOOKS.contains(&n.as_str()))
+                    && !skipped(n, *a)
+                    && !NOT_FROM_NEIGHBOURS.contains(&n.as_str())
             })
             .cloned()
             .collect();
@@ -500,7 +522,12 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
         }
         let mut runs = Vec::new();
         for (a, src) in &funcs {
-            if unit(*a) != u || !wanted(src) || NOT_FROM_NEIGHBOURS.contains(&src.as_str()) {
+            if unit(*a) != u
+                || u == CHAIN_UNIT
+                || !wanted(src)
+                || NOT_FROM_NEIGHBOURS.contains(&src.as_str())
+                || NOT_A_SOURCE.contains(&src.as_str())
+            {
                 continue;
             }
             for dir in dirs() {
@@ -535,7 +562,7 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
                             if fighter_unit(u) {
                                 vary(call, shift + i);
                             }
-                            arguments(call, n, i);
+                            arguments(call, n, i, true);
                         },
                         &run_sheik,
                     );
