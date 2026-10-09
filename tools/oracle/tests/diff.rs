@@ -73,19 +73,17 @@ fn later_tick_differs() {
 }
 
 #[test]
-fn start_reports_its_seam() {
+fn start_reaches_the_end() {
     let Some(out) = diff(&[]) else {
         return;
     };
-    // Until the whole match is ported, it stops at a seam, before a difference: past Sheik
-    // turning into Zelda and back and items hitting items, an item's tip. Nothing read a stale
-    // field on the way.
+    // From its start the whole match compares to the trace's end with no difference, Sheik
+    // turning into Zelda and back and items hitting items among it, and nothing read a stale
+    // field.
     assert!(!out.contains(" differs in "), "{out}");
-    assert!(
-        out.contains("stopped in tick 11034 (replay frame 10910)"),
-        "{out}"
-    );
-    assert!(out.contains("isn't ported"), "{out}");
+    assert!(!out.contains("isn't ported"), "{out}");
+    assert!(out.contains("the trace ends after tick 11928"), "{out}");
+    assert!(out.contains("11928 ticks compared, no difference"), "{out}");
     assert!(out.contains("no stale reads"), "{out}");
 }
 
