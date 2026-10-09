@@ -85,6 +85,10 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800D_EE64 => {
             g.ground_coll(gobj);
         }
+        // ftCo_Cliff_Cam
+        0x8008_1644 => {
+            g.co_cliff_cam(gobj);
+        }
         // ftCo_DeadDown_Anim, ftCo_DeadLeft_Anim, ftCo_DeadRight_Anim, ftCo_DeadUp_Anim
         0x800D_3E00 | 0x800D_3910 | 0x800D_3B88 | 0x800D_4078 => {
             g.co_dead_anim(gobj);
