@@ -157,7 +157,8 @@ impl Running<'_> {
         }
     }
 
-    /// `ftCo_800D71D8`: a delayed item pickup's window.
+    /// `ftCo_800D71D8`: a delayed item pickup's window, an item caught in reach while it
+    /// lasts.
     #[doc(alias = "ftCo_800D71D8")]
     pub fn item_pickup_tick(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).x209C == 0 {

@@ -219,7 +219,7 @@ impl Running<'_> {
 
     /// Air friction against the horizontal velocity, the stronger `ftCommonData` x1FC past
     /// the most drift; whether it was, `ftCommon_CalcSelfAccel_DeaccelQuickAir`.
-    // Ports `ftCommon_CalcSelfAccel_DeaccelQuickAir`; aliased once a check reaches it.
+    #[doc(alias = "ftCommon_CalcSelfAccel_DeaccelQuickAir")]
     pub fn self_accel_deaccel_quick_air(&mut self, gobj: GObjId) -> bool {
         let oob = reg(self.common().f32(0x1FC));
         let fp = self.game.fighter_mut(gobj);
@@ -356,6 +356,41 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.self_vel.x = mem(fp::fmuls(reg(fp.x6A4_transNOffset.z), reg(fp.facing_dir)));
         fp.self_vel.y = fp.x6A4_transNOffset.y;
+    }
+
+    /// `ft_80085204`: the animation's forward TransN motion as the horizontal velocity.
+    #[doc(alias = "ft_80085204")]
+    pub fn air_anim_motion_x(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        fp.self_vel.x = mem(fp::fmuls(reg(fp.x6A4_transNOffset.z), reg(fp.facing_dir)));
+    }
+
+    /// `ft_80085154`: the animation's TransN motion turned by the stick's angle
+    /// (`lstick_angle`) as the air velocity.
+    #[doc(alias = "ft_80085154")]
+    pub fn air_anim_motion_angled(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        let c = reg(crate::math::cos(fp.lstick_angle));
+        let s = reg(crate::math::sin(fp.lstick_angle));
+        let y = reg(fp.x6A4_transNOffset.y);
+        let z = fp::fmuls(reg(fp.x6A4_transNOffset.z), reg(fp.facing_dir));
+        fp.self_vel.x = mem(fp::fmsubs(z, c, fp::fmuls(y, s)));
+        fp.self_vel.y = mem(fp::fmadds(z, s, fp::fmuls(y, c)));
+    }
+
+    /// Air drift toward the stick's share of `target_max`, `accel_max` at a time, once the
+    /// stick passes `threshold`, `ftCommon_CalcSelfAccel_DriftSimple` (through
+    /// `ftCommon_CalcSelfAccel_AccelToVelClamped`).
+    #[doc(alias = "ftCommon_CalcSelfAccel_DriftSimple")]
+    pub fn drift_simple(fp: &mut Fighter, threshold: f64, accel_max: f64, target_max: f64) {
+        let x = reg(fp.input.lstick[0].x);
+        let (accel, target) = if abs(x) >= threshold {
+            (fp::fmuls(x, accel_max), fp::fmuls(x, target_max))
+        } else {
+            (0.0, 0.0)
+        };
+        let (vel, friction) = (reg(fp.self_vel.x), reg(fp.co_attrs.aerial_friction));
+        Self::accel_to_vel_clamped(fp, vel, accel, target, friction);
     }
 }
 

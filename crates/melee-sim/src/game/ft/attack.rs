@@ -1462,8 +1462,9 @@ impl Running<'_> {
     /// The fighter takes item `g`'s box `j` on hurtbox `n`, `ftColl_80077C60`: the damage
     /// scaled by a grab's and the frozen state's factors and the fighter's own; a hit (not a
     /// tip) is remembered by the item, which keeps the most damage it dealt and which way;
-    /// then, unless the fighter is invincible there, logged and recorded. An item taken on
-    /// touch (`x0_78` 4) and a tip stop at their seams. Returns whether the box hit.
+    /// then, unless the fighter is invincible there, logged and recorded; a tip is logged as
+    /// one, at half damage, with its sound. An item taken on touch (`x0_78` 4) stops at its
+    /// seam. Returns whether the box hit.
     #[doc(alias = "ftColl_80077C60")]
     fn take_item_hit(&mut self, g: GObjId, j: usize, me: FighterId, n: usize) -> bool {
         use super::super::it;

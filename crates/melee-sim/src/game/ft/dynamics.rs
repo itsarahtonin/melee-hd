@@ -279,6 +279,32 @@ const KIND_GKOOPS: i32 = 31;
 const GR_FLATZONE: i32 = 0x1B;
 
 impl Running<'_> {
+    /// Wind blown from a point `(x, y)` off a bone, `ftCo_8009E714`: `frames` long (120 when
+    /// negative), with its strength, decay and angle step (`lb_800119DC`).
+    #[doc(alias = "ftCo_8009E714")]
+    #[allow(clippy::too_many_arguments)]
+    pub fn bone_wind(
+        &mut self,
+        gobj: GObjId,
+        bone: usize,
+        frames: i32,
+        x: f32,
+        y: f32,
+        scale: f32,
+        decay: f32,
+        angle: f32,
+    ) {
+        let parts = self
+            .game
+            .fighter(gobj)
+            .parts
+            .expect("a fighter without parts");
+        let joint = self.game.fighter_parts[parts.0][bone].joint;
+        let at = crate::vec::Vec3::new(x, y, 0.0);
+        let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, joint, Some(at));
+        let frames = if frames < 0 { 120 } else { frames };
+        crate::lb::wind::blast(&mut self.game.gr.winds, pos, frames, scale, decay, angle);
+    }
     /// Swings the fighter's dynamic bone chains a frame, `ftCo_8009E0A8` (`ftCo_8009DD94`
     /// with `x2228_b1`, whose chains take a flat floor at the fighter's height instead of the
     /// stage's): the colliders follow their joints, Marth's and Roy's capes follow the wind,

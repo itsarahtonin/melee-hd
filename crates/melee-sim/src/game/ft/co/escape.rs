@@ -16,7 +16,7 @@ const ESCAPE_X0: usize = 0x0;
 
 impl Running<'_> {
     /// `ftCheckThrowB3`: the script's flag 3, cleared as it's read.
-    pub(super) fn take_throw_flag3(&mut self, gobj: GObjId) -> bool {
+    pub(crate) fn take_throw_flag3(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter_mut(gobj);
         if fp.throw_flag(3) {
             fp.set_throw_flag(3, false);

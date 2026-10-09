@@ -377,9 +377,8 @@ impl Running<'_> {
         false
     }
 
-    /// Picking up an item with A, `ftpickupitem_80094790`: an item in reach, when not holding
-    /// a second one. Items' reach (`ftpickupitem_800942A0`) is the items' port; with none in
-    /// the match there's nothing to pick up.
+    /// Picking up an item with A, `ftpickupitem_80094790`: an item in reach, light or heavy,
+    /// when not holding a second one.
     #[doc(alias = "ftpickupitem_80094790")]
     pub fn pick_up_item_check(&mut self, gobj: GObjId) -> bool {
         if self.game.fighter(gobj).x1978.is_some() {

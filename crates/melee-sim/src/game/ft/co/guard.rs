@@ -50,7 +50,7 @@ pub struct ReflectDesc {
 /// The fighter's shield on `joint`, its hits calling `cb`, `ftColl_8007B1B8` (the shield
 /// descriptor's bone, radius and offset given).
 #[doc(alias = "ftColl_8007B1B8")]
-fn set_shield_hit(
+pub(crate) fn set_shield_hit(
     fp: &mut super::super::super::structs::Fighter,
     cb: CodeRef,
     joint: Option<crate::hsd::jobj::JObjId>,
@@ -311,9 +311,19 @@ impl Running<'_> {
     pub fn enter_guard_on(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).kind {
             KIND_YOSHI => unported_call("ftYs_Init_8012BECC"),
-            KIND_MARS => unported_call("ftParts_80074B0C"),
+            KIND_MARS => {
+                self.enter_guard_on_common(gobj);
+                self.mars_sheathe(gobj);
+            }
             _ => self.enter_guard_on_common(gobj),
         }
+    }
+
+    /// Marth's sword put away as he shields: its sheathed model variant and the sound.
+    fn mars_sheathe(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.set_model_variant(f, 1, 1);
+        self.play_sfx(gobj, 190115, 127, 64);
     }
 
     /// `ftCo_800924C0`.
@@ -787,7 +797,10 @@ impl Running<'_> {
     pub fn enter_guard_reflect(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).kind {
             KIND_YOSHI => unported_call("ftYs_Shield_8012C914"),
-            KIND_MARS => unported_call("ftParts_80074B0C"),
+            KIND_MARS => {
+                self.enter_guard_reflect_common(gobj);
+                self.mars_sheathe(gobj);
+            }
             _ => self.enter_guard_reflect_common(gobj),
         }
     }

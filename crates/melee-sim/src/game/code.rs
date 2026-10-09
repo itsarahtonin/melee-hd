@@ -117,6 +117,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
     match cb.0 {
         addr if super::ft::fox::run(g, gobj, addr) => {}
         addr if super::ft::seak::run(g, gobj, addr) => {}
+        addr if super::ft::mars::run(g, gobj, addr) => {}
         addr if super::ft::zelda::run(g, gobj, addr) => {}
         addr if super::ft::co::dispatch::run(g, gobj, addr) => {}
         // Animation.
@@ -307,6 +308,9 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::seak::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::mars::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::ft::zelda::call(r, f, args) {

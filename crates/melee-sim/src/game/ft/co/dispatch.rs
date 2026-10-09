@@ -114,9 +114,21 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800D_42E4 => {
             g.co_dead_up_star_anim(gobj);
         }
-        // ftCo_DeadUpStar_Cam
-        0x800D_4560 => {
+        // ftCo_DeadUpStar_Cam, ftCo_DeadUpFall_Cam
+        0x800D_4560 | 0x800D_4E30 => {
             g.dead_up_cam(gobj);
+        }
+        // ftCo_DeadUpFall_Anim
+        0x800D_4A08 => {
+            g.co_dead_up_fall_anim(gobj);
+        }
+        // ftCo_DeadUpFall_Phys
+        0x800D_4CE8 => {
+            g.co_dead_up_fall_phys(gobj);
+        }
+        // fn_800D4DD4, the screen KO's accessory
+        super::dead::DEAD_UP_FALL_ACCESSORY => {
+            g.dead_up_fall_below_camera(gobj);
         }
         // ftCo_CliffCatch_Anim
         0x8008_1504 => {

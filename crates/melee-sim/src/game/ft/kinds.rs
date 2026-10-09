@@ -118,6 +118,12 @@ impl Running<'_> {
         fp.u[..4].copy_from_slice(&[0; 4]);
     }
 
+    /// Roy's creation, `ftMs_Init_OnLoadForRoy`: Marth's attribute layout, pushed.
+    // Ports `ftMs_Init_OnLoadForRoy`; aliased once a check reaches it.
+    pub fn mars_on_load_for_roy(&mut self, f: FighterId) {
+        self.push_attrs(f, MARS_ATTRS_SIZE);
+    }
+
     /// `ftMs_Init_LoadSpecialAttrs`.
     #[doc(alias = "ftMs_Init_LoadSpecialAttrs")]
     pub fn mars_load_special_attrs(&mut self, gobj: GObjId) {
