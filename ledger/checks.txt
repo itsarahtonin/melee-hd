@@ -2977,3 +2977,4 @@ it_8029D798	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 
 itFoxillusion_UnkMotion2_Anim	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the afterimage fading (12 calls)
 itFoxillusion_UnkMotion2_Phys	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the afterimage's fade movement (24 calls)
 fn_800DAADC	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the victim caught (the grabbed callback) (7 calls)
+ftParts_80074B0C	melee-oracle diff, Fox vs Sheik FD (v5-mixed) taken up at tick 2500, ticks 2501-2765 in Slippi float mode with no stand-ins (docs/oracle.md): a model's variant chosen anew in tick 2688

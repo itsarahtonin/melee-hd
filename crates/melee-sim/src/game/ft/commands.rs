@@ -504,11 +504,22 @@ impl Running<'_> {
         self.game.fighters[f.0].x2218_b2 = bits(w, 6, 26) & 1 != 0;
     }
 
-    /// Shows one of a model's variants (`ftParts_80074B0C`; changing it isn't ported).
+    /// Shows one of a model's variants.
     fn cmd_model_variant(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let (i, v) = (sbits(w, 6, 7), sbits(w, 13, 19));
-        if v != i32::from(self.game.fighters[f.0].x5F4_arr[i as usize].idx) {
-            unported_call("ftParts_80074D7C");
+        self.set_model_variant(f, i as usize, v);
+    }
+
+    /// A model's variant chosen, `ftParts_80074B0C`: a new one marks the models changed and
+    /// hides the first visibility group's parts until they are shown again.
+    #[doc(alias = "ftParts_80074B0C")]
+    fn set_model_variant(&mut self, f: FighterId, i: usize, v: i32) {
+        let fp = &mut self.game.fighters[f.0];
+        if v != i32::from(fp.x5F4_arr[i].idx) {
+            fp.x5F4_arr[i].idx = v as i8;
+            fp.x221D_b2 = true;
+            let list = fp.dobj_list.data;
+            self.hide_parts_vis(f, 0, list);
         }
     }
 
