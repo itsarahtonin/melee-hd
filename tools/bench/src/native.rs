@@ -479,12 +479,14 @@ pub fn snapshots(args: &[String]) {
 pub fn alloc_sites(args: &[String]) {
     let mut from = 4000u64;
     let mut ticks = 20u64;
+    let mut rollback = false;
     let mut rest = Vec::new();
     let mut it = args.iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--from" => from = it.next().and_then(|n| n.parse().ok()).expect("--from TICK"),
             "--ticks" => ticks = it.next().and_then(|n| n.parse().ok()).expect("--ticks N"),
+            "--rollback" => rollback = true,
             _ => rest.push(a.clone()),
         }
     }
@@ -507,6 +509,16 @@ pub fn alloc_sites(args: &[String]) {
         for _ in 0..from {
             let f = m.step_replay(&mut device);
             m.recycle(f);
+        }
+        // With `--rollback`, the stretch plays once, then again from its start's state
+        // restored, and the second time is tallied.
+        if rollback {
+            let kept = m.game.clone();
+            for _ in 0..ticks {
+                let f = m.step_replay(&mut device);
+                m.recycle(f);
+            }
+            m.game.clone_from(&kept);
         }
         // The engine ticks and the display passes apart.
         let mut tally: [BTreeMap<String, usize>; 2] = Default::default();
@@ -543,7 +555,7 @@ pub fn alloc_sites(args: &[String]) {
         let total: usize = restore.values().sum();
         println!("{name}: a restore after {ROLLBACK_TICKS} ticks: {total} allocations");
         let mut sites: Vec<(String, usize)> = restore.into_iter().collect();
-        sites.sort_by(|a, b| b.1.cmp(&a.1));
+        sites.sort_by_key(|a| std::cmp::Reverse(a.1));
         for (site, n) in sites.iter().take(30) {
             println!("{n:8}  {site}");
         }
@@ -555,10 +567,70 @@ pub fn alloc_sites(args: &[String]) {
                 total as f64 / ticks as f64
             );
             let mut sites: Vec<(String, usize)> = tally.into_iter().collect();
-            sites.sort_by(|a, b| b.1.cmp(&a.1));
+            sites.sort_by_key(|a| std::cmp::Reverse(a.1));
             for (site, n) in sites.iter().take(40) {
                 println!("{:8.1}  {site}", *n as f64 / ticks as f64);
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Where the benchmark matches are on this machine (`BENCH_DIR` overrides).
+    const BENCH_DIR: &str = "C:/Projects/ssbm-rs-publication/local/bench";
+    /// The Fox-Fox match's stretch the check replays: from a state kept at the first tick to
+    /// the last, where melee-hd's ports still run it in sync.
+    const FROM: u64 = 1000;
+    const TO: u64 = 4600;
+
+    /// The "no allocations" target (`docs/performance.md`): the Fox-Fox match played to `TO`,
+    /// its state at `FROM` restored (a rollback), and every engine tick from there to `TO`
+    /// played again, counting allocations: the restore and each tick make none.
+    #[test]
+    fn ticks_and_restores_dont_allocate() {
+        let dir = PathBuf::from(std::env::var("BENCH_DIR").unwrap_or_else(|_| BENCH_DIR.into()));
+        if std::env::var("SSBM_DISC").is_err() || !dir.join("fox-fox-fd.slp").exists() {
+            eprintln!(
+                "no SSBM_DISC or no benchmark matches in {}: skipping",
+                dir.display()
+            );
+            return;
+        }
+        let failures = on_sim_thread(move || {
+            let mut files = files();
+            let b = Bench::open(&dir, "fox-fox-fd").expect("the Fox-Fox match");
+            let mut m = b.start(&mut files);
+            let mut device = Device(&b.replay);
+            let mut kept = None;
+            for t in 0..TO {
+                if t == FROM {
+                    kept = Some(m.game.clone());
+                }
+                let f = m.step_replay(&mut device);
+                m.recycle(f);
+            }
+            let kept = kept.expect("the match ran to the kept state");
+            let ((), restore, _) = counted(|| m.game.clone_from(&kept));
+            let mut failures = Vec::new();
+            if restore != 0 {
+                failures.push(format!("the restore made {restore} allocations"));
+            }
+            for t in FROM..TO {
+                let ((f, render), n, _) = counted(|| m.step_replay_tick(&mut device));
+                if n != 0 {
+                    failures.push(format!("tick {t} made {n} allocations"));
+                }
+                let mut f = f;
+                if render {
+                    f.draws = m.render();
+                }
+                m.recycle(f);
+            }
+            failures
+        });
+        assert!(failures.is_empty(), "{}", failures.join("\n"));
+    }
 }

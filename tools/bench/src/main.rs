@@ -165,6 +165,18 @@ fn main() {
         Some("native") => native::main(&args[1..]),
         Some("snapshot-match") => native::snapshots(&args[1..]),
         Some("alloc-sites") => native::alloc_sites(&args[1..]),
+        #[cfg(windows)]
+        Some("symbolize") => {
+            let rvas: Vec<u64> = args[1..]
+                .iter()
+                .map(|a| {
+                    u64::from_str_radix(a.trim_start_matches("0x"), 16).expect("an RVA in hex")
+                })
+                .collect();
+            for (rva, name) in rvas.iter().zip(win::symbolize(&rvas)) {
+                println!("{rva:#x}	{}", name.unwrap_or_else(|| "?".into()));
+            }
+        }
         _ => eprintln!(
             "melee-bench snapshot CALL... | codes DIR | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]              | native [--dir DIR] [--runs N] [MATCH...] | snapshot-match [--dir DIR] [--every TICKS] [MATCH] \
              | alloc-sites [--dir DIR] [--from TICK] [--ticks N] [MATCH]"
