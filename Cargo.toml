@@ -25,3 +25,11 @@ ssbm-types = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-
 # (crates/gekko-fp, docs/performance.md), for every crate that uses it, the reference's too.
 [patch."https://github.com/itsarahtonin/ssbm-rs"]
 gekko-fp = { path = "crates/gekko-fp" }
+
+# The release build optimized as one program, for timing and shipping: about 8% faster than
+# release on the native benchmark (docs/performance.md), and slower to build, so checks and
+# tests stay on release. `cargo build --profile dist -p melee-bench`.
+[profile.dist]
+inherits = "release"
+lto = "fat"
+codegen-units = 1

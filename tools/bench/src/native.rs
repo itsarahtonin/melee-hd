@@ -271,16 +271,16 @@ fn on_sim_thread<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T
         .unwrap()
 }
 
-/// What this build is: melee-hd's commit.
+/// What this build is: the commit of the melee-hd checkout it was built from.
 fn version() -> String {
     let rev = std::process::Command::new("git")
-        .args(["rev-parse", "--short", "HEAD"])
+        .args(["-C", env!("CARGO_MANIFEST_DIR"), "rev-parse", "--short", "HEAD"])
         .output()
         .ok()
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "unknown commit".into());
-    format!("melee-hd {rev} (release, one core, FpMode::Hardware)")
+    format!("melee-hd {rev} (optimized, one core, FpMode::Hardware)")
 }
 
 pub fn main(args: &[String]) {
