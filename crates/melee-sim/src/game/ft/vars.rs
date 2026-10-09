@@ -63,7 +63,10 @@ impl<const N: usize> Vars<N> {
     }
 
     fn handle(&self, off: usize) -> Option<Handle> {
-        self.handles.iter().find(|&&(o, _)| o == off).map(|&(_, h)| h)
+        self.handles
+            .iter()
+            .find(|&&(o, _)| o == off)
+            .map(|&(_, h)| h)
     }
 
     /// The GObj pointer at `off`: the handle stored there, or none for a null word.

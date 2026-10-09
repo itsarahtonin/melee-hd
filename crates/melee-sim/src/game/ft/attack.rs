@@ -714,7 +714,10 @@ impl Running<'_> {
         }
         if mf.x221C_b2 {
             // A powershield: no damage, the release window, a flash and its sound.
-            let (gobj, slot) = (mf.gobj.expect("a fighter without a GObj"), i32::from(mf.player_idx));
+            let (gobj, slot) = (
+                mf.gobj.expect("a fighter without a GObj"),
+                i32::from(mf.player_idx),
+            );
             self.guard_release_window(gobj);
             self.start_color_anim(gobj, 118, 0);
             self.fighter_play_sfx(me, 104, 0x7F, 0x40);

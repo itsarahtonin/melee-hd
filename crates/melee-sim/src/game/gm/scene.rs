@@ -172,9 +172,12 @@ fn queue_alarm_polls(r: &mut Running, taking: u32) {
     };
     let want = c.pads + taking;
     while u32::from(r.game.pads.lib.qcount) < want {
-        r.game
-            .pads
-            .renew_raw(r.data, [crate::input::pad::PadStatus::default(); 4], false, false);
+        r.game.pads.renew_raw(
+            r.data,
+            [crate::input::pad::PadStatus::default(); 4],
+            false,
+            false,
+        );
     }
 }
 
@@ -289,7 +292,11 @@ pub fn step_tick(r: &mut Running, poll: PadData, reset_pressed: bool) -> (Tick, 
     // A round ticks once per poll it found queued (on the timeline, which counts the
     // round's ticks), or until the scene asks to end, then renders once.
     let round_over = r.game.scene.unk_C != 0
-        || r.game.audio.clock.as_ref().is_none_or(|c| c.ticks_left == 0);
+        || r.game
+            .audio
+            .clock
+            .as_ref()
+            .is_none_or(|c| c.ticks_left == 0);
     (Tick { pads, ended }, r.game.scene.unk_C != 2 && round_over)
 }
 

@@ -678,7 +678,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DCE34")]
     fn grab_break(&mut self, a: GObjId, b: GObjId) {
         self.grab_release(a, b);
-        let g = if self.game.fighter(b).x221B.x221B_b7 { a } else { b };
+        let g = if self.game.fighter(b).x221B.x221B_b7 {
+            a
+        } else {
+            b
+        };
         let root = self.root_jobj(g);
         let pos = self.game.fighter(g).cur_pos;
         crate::hsd::jobj::set_translate(&mut self.game.objs.jobjs, root, pos);
