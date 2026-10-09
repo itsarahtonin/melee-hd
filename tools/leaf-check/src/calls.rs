@@ -235,10 +235,7 @@ pub fn run_calls(
 ) -> Report {
     let next = AtomicUsize::new(0);
     let report = Mutex::new(Report::default());
-    let workers = std::thread::available_parallelism()
-        .map_or(4, |n| n.get())
-        .min(8)
-        .min(paths.len());
+    let workers = crate::workers().min(paths.len());
     std::thread::scope(|s| {
         for _ in 0..workers {
             std::thread::Builder::new()
