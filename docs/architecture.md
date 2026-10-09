@@ -32,7 +32,7 @@ The original's display traversal (`HSD_GObjRender` over the GX links, down throu
 
 ## Exactness
 
-The original's float behavior matters only where it differs from IEEE single and double precision: fused multiply-adds, `frsqrte` and `fres` estimates, and paired singles. Those go through `gekko-fp`; plain arithmetic is native. The game's own `sqrtf`, sin, cos and atan replace platform math, which also makes the simulation agree across platforms. ssbm-rs's two float modes, Hardware (the console) and Slippi (Ishiiruka's x86-64 JIT, which recorded Slippi's replays), both remain available.
+The original's float behavior matters only where it differs from IEEE single and double precision: fused multiply-adds, `frsqrte` and `fres` estimates, and paired singles. Those go through `gekko-fp` (melee-hd builds a faster copy of ssbm-rs's, checked against the unchanged one; see [performance](performance.md)); plain arithmetic is native. The game's own `sqrtf`, sin, cos and atan replace platform math, which also makes the simulation agree across platforms. ssbm-rs's two float modes, Hardware (the console) and Slippi (Ishiiruka's x86-64 JIT, which recorded Slippi's replays), both remain available.
 
 ## Rulesets
 
