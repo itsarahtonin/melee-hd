@@ -150,6 +150,37 @@ impl Running<'_> {
         pad.flicked = flicked;
     }
 
+    /// UCF's dashback (`ftCo_Turn_IASA+0x50`, where the turn's first frames flip the facing):
+    /// on the turn's frame 2, a smash the way the turn faces, fresh this frame or the last,
+    /// whose raw stick travelled more than 75 along x since two frames ago, turns the fighter
+    /// at once, so the rest of the interrupt dashes. Not for Nana; with one in the slot, the
+    /// code also turns her CPU's stick (not ported).
+    ///
+    /// The Gecko code at `0x800C9A44`; the caller has flipped the facing already.
+    pub fn ucf_dashback(&mut self, gobj: GObjId) {
+        let t = reg(self.common().f32(0x3C));
+        let fp = self.game.fighter(gobj);
+        if fp.is_sub_fighter || fp.cur_anim_frame.to_bits() != 0x4000_0000 {
+            return;
+        }
+        if fp::fmuls(reg(fp.facing_dir), reg(fp.input.lstick[0].x)) < t {
+            return;
+        }
+        if fp.active_timer.lstick.x > 1 {
+            return;
+        }
+        if self.game.ucf.0[usize::from(fp.pad_port)].travel().0 <= 5625 {
+            return;
+        }
+        let slot = i32::from(fp.player_idx);
+        let fp = self.game.fighter_mut(gobj);
+        fp.set_mv_i32(0, 1);
+        fp.set_mv_i32(0x18, 1);
+        if self.game.player_entity_at(slot, 1).is_some() {
+            super::code::unported_call("UCF's dashback for Nana's CPU stick");
+        }
+    }
+
     /// UCF's SDI (`ftCo_Damage_OnEveryHitlag+0x5C`): with the stick held past the SDI window
     /// on its y axis, a flick still counts if the stick left the dead zone this frame and the
     /// raw stick travelled more than 62 since two frames ago, unless both axes were already

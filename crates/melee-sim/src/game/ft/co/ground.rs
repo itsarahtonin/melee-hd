@@ -860,6 +860,9 @@ impl Running<'_> {
             }
         };
         flip(self);
+        if self.game.rules.ucf && self.game.fighter(gobj).mv_i32(TURN_HAS_TURNED) == 0 {
+            self.ucf_dashback(gobj);
+        }
         if self.special_s_check(gobj)
             || self.special_lw_check(gobj)
             || self.special_hi_check(gobj)
