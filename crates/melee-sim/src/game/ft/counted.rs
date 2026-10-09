@@ -17,7 +17,7 @@ use crate::game::structs::{BoneDynamicsDesc, Item_DynamicBones};
 use crate::hsd::tobj::TObjId;
 
 /// `CostumeTObjList`, 0x1c bytes.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct CostumeTObjList {
     /// +0x0
     pub n_costume_tobjs: u32,
@@ -79,7 +79,7 @@ impl Mirror for CostumeTObjList {
 macro_rules! counted_array {
     ($(#[$doc:meta])* $name:ident, $elem:ty, $n:literal) => {
         $(#[$doc])*
-        #[derive(Clone, Debug, Default, PartialEq)]
+        #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
         pub struct $name(pub [$elem; $n]);
 
         impl $name {

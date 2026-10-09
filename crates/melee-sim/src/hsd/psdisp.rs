@@ -102,7 +102,7 @@ fn update_app_srt(objs: &mut Objects, s: super::appsrt::AppSrtId, vmtx: &Mtx34, 
 }
 
 /// psdisp.c's state.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct Globals {
     /// The display frame, 1 to 255 (`psFrameNum`).
     pub frame: u8,

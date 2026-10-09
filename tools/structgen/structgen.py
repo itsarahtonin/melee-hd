@@ -148,7 +148,8 @@ class Gen:
         r = self.recs[rid]
         name = rust_type_name(rid)
         out = [f"/// `{rec_name(rid)}`, {r['size']:#x} bytes."]
-        out.append("#[derive(Clone, Debug, PartialEq)]")
+        # CloneFrom: a restore copies field by field, reusing the target's storage.
+        out.append("#[derive(melee_derive::CloneFrom, Debug, PartialEq)]")
         out.append(f"pub struct {name} {{")
         for f in self.fields(rid):
             off = f["offset_bits"] // 8

@@ -1,0 +1,16 @@
+[package]
+name = "melee-derive"
+description = "melee-sim's derives: Clone with a clone_from that reuses the target's storage, field by field"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.107"
+quote = "1.0.47"
+syn = { version = "2.0.119", default-features = false, features = ["derive", "parsing", "printing", "proc-macro"] }

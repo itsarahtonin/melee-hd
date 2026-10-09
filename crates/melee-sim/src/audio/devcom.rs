@@ -100,7 +100,7 @@ impl ArqDone {
 }
 
 /// The queue's state.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
 pub struct DevCom {
     /// The command nodes, allocated sixteen at a time from the audio heap and never freed.
     pub nodes: Vec<Command>,

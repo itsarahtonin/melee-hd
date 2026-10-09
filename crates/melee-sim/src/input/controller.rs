@@ -187,7 +187,7 @@ pub enum Flush {
 }
 
 /// `PadLibData` without its rumble state, which is [`Controllers::rumble`].
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct PadLib {
     pub qnum: u8,
     pub qread: u8,
@@ -459,7 +459,7 @@ pub struct Requests {
 /// The pad library: the raw queue, rumble and the master, copy and game statuses
 /// (`HSD_PadLibData`, `HSD_Rumble_804C22E0`, `HSD_PadMasterStatus`, `HSD_PadCopyStatus`,
 /// `HSD_PadGameStatus`).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Controllers {
     /// Slippi's playback codes patch the library (`HSD_PadRenewRawStatus+0x8C`,
     /// `HSD_PadRenewMasterStatus+0x38`): a poll goes to the queue's read position, and the

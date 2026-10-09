@@ -26,7 +26,7 @@ use crate::game::handles::CodeRef;
 pub const SYNTH_CALLBACK: CodeRef = CodeRef(0x8038_ABD4);
 
 /// Everything the audio driver keeps.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct Audio {
     pub ax: ax::Ax,
     pub synth: synth::Synth,

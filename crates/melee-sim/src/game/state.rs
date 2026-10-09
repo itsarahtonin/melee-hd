@@ -64,7 +64,7 @@ pub const USER_DATA_GROUND: u8 = 3;
 
 /// Gameplay toggles (`docs/architecture.md`, rulesets): the Slippi ruleset's codes, each rule
 /// on or off ([`Rules::from_codes`] reads them from a replay; `game::slippi` lists them).
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
 pub struct Rules {
     /// The online determinism fixes (`Common` and `Online/Core`): among those the ported code
     /// reaches, the stage objects' user data is zeroed when allocated (`Ground_GetStageGObj`),
@@ -94,7 +94,7 @@ pub enum Obj {
 }
 
 /// The game's types for the scheduler.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct GameKinds;
 
 impl Kinds for GameKinds {
@@ -106,7 +106,7 @@ impl Kinds for GameKinds {
 
 /// What the simulation hands the presentation: sounds and controller rumble, which the
 /// original passes to the audio and pad drivers mid-tick.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub enum Event {
     /// `HSD_AudioSFXKeyOffTrack`: the sound on a track stops.
     SfxKeyOffTrack(i32),
@@ -160,7 +160,7 @@ pub enum Event {
 }
 
 /// Everything a tick reads and writes.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct Game {
     pub world: World<GameKinds>,
     pub objs: Objects,

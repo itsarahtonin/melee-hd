@@ -41,7 +41,7 @@ pub const JOINT_APP_SCALE: u16 = 1 << 12;
 /// a line's end (0 to 2), a tornado's speed (0), a box's size (0 to 2) and axes (3 to 11,
 /// by row), a sphere's speed and latitude and longitude ranges (0 to 4). `callback` is never
 /// read or set, so it isn't kept.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Generator {
     pub next: Option<GeneratorId>,
     pub kind: u32,
@@ -73,7 +73,7 @@ pub struct Generator {
 }
 
 /// The generator pool (`hsd_804D0F90`) and generator.c's globals.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct Generators {
     pub pool: Pool<Generator>,
     /// The generator list (`hsd_804D78FC`).

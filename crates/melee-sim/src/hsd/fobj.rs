@@ -78,7 +78,7 @@ const OP_SLP: u8 = 5;
 const OP_KEY: u8 = 6;
 
 /// `HSD_FObj`.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct FObj {
     pub next: Option<FObjId>,
     /// The archive holding the keyframe data.

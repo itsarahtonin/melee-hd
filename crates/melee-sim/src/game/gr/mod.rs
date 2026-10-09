@@ -36,7 +36,7 @@ pub const GR_KIND_LAST: i32 = 37;
 
 /// The collision geometry's view of the game: joints follow stage joints, and stage objects
 /// register callbacks with themselves as the data.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct StageColl;
 
 impl crate::mp::Kinds for StageColl {
@@ -49,7 +49,7 @@ impl crate::mp::Kinds for StageColl {
 pub type Geometry = crate::mp::Geometry<StageColl>;
 
 /// A loaded stage archive (`UnkArchiveStruct`, an entry of `grDatFiles_8049EE10`).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct StageArchive {
     /// The archive (`unk0`, an `HSD_Archive*`).
     pub archive: ArchiveId,
@@ -61,7 +61,7 @@ pub struct StageArchive {
 
 /// A start hook (`Ground_801C10B8`'s node): a process `Ground_801C0FB8` calls with a stage
 /// object when the match starts.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct StartHook {
     pub next: Option<StartHookId>,
     pub gobj: Option<GObjId>,
@@ -70,7 +70,7 @@ pub struct StartHook {
 
 /// A dynamic attribute area (`grDynamicAttr_UnkStruct`): a circle on a floor that changes its
 /// terrain for a while.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct DynamicAttr {
     /// The next area in its list, by index.
     pub next: Option<u8>,
@@ -83,7 +83,7 @@ pub struct DynamicAttr {
 }
 
 /// The dynamic attribute areas (`grDynamicAttr_8049EFA0` and its two lists).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct DynamicAttrs {
     pub areas: [DynamicAttr; 4],
     /// The areas in use (`grDynamicAttr_804D6960`) and free (`grDynamicAttr_804D6964`).
@@ -92,7 +92,7 @@ pub struct DynamicAttrs {
 }
 
 /// The stage code's globals besides `stage_info`.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct Globals {
     /// The loaded stage archives (`grDatFiles_8049EE10`).
     pub archives: [Option<StageArchive>; 4],
@@ -146,7 +146,7 @@ pub struct Globals {
 }
 
 /// `ftdevice.c`'s globals: stage objects registered as devices fighters interact with.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct FtDevices {
     /// `ft_804D6570`.
     pub x6570: i32,

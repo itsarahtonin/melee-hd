@@ -57,7 +57,7 @@ const ENVELOPE_MAX: usize = 10;
 /// What the presentation layer draws, in the order the original issues the GX commands each
 /// stands for. Objects are named by handle: the presentation reads their state as the pass
 /// left it.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub enum Draw {
     /// A camera starts drawing: its viewport, scissor, projection and view
     /// (`HSD_CObjSetCurrent`).
@@ -117,7 +117,7 @@ pub struct Quad {
 }
 
 /// The display pass's output for the frame.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Display {
     pub draws: Vec<Draw>,
     /// The render pass (`current_render_pass`): offscreen, into a texture, or the screen.

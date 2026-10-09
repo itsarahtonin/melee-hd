@@ -26,7 +26,7 @@ const JOBJ_RENDER: u32 = 0x8039_1070;
 const DEG_TO_RAD: f64 = 0.017_453_292_384_743_69;
 
 /// `PauseData` (`lbl_80479B10`) and the screen's archive and GObj.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct PauseScreen {
     pub background: Option<JObjId>,
     pub analog_stick: Option<JObjId>,

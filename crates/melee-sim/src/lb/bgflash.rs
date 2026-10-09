@@ -60,7 +60,7 @@ const CAMERA_DESC: StaticDesc = StaticDesc {
 };
 
 /// The flash's state.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct BgFlash {
     /// `lbl_80433658`: the mode, the colors and the fade's steps, the wipe's, and the GObjs.
     pub data: BgFlashData,

@@ -15,7 +15,7 @@ use super::structs::plActionStats;
 use gekko_fp as fp;
 
 /// The player library's globals.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Globals {
     /// `PdPm.dat`'s `plLoadCommonData`, whose first pointer `Player_80036DD8` keeps in
     /// `pl_804D6470`.

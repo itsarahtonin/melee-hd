@@ -97,7 +97,7 @@ impl Default for Contents {
 }
 
 /// `HSD_JObj`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct JObj {
     /// `HSD_Obj`'s reference counts: by owners (`u16::MAX` for none) and by individual
     /// references (constraints, instances, the current joint).
@@ -167,7 +167,7 @@ impl JObj {
 }
 
 /// The JObj pool.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct JObjs {
     pub pool: Pool<JObj>,
 }
@@ -186,7 +186,7 @@ impl IndexMut<JObjId> for JObjs {
 }
 
 /// jobj.c's globals.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct Globals {
     /// `current_jobj`.
     pub current: Option<JObjId>,

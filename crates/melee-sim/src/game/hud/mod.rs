@@ -55,7 +55,7 @@ pub struct ModelDesc {
 }
 
 /// The HUD's globals, one field per unit's statics.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct Hud {
     /// The debug text screens (`textdraw.c`, `textlib.c`).
     pub devtext: devtext::DevTexts,

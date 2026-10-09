@@ -10,6 +10,7 @@ publish.workspace = true
 [dependencies]
 gekko-fp.workspace = true
 melee-data.workspace = true
+melee-derive = { path = "../melee-derive" }
 
 [features]
 # Lets checks stand a function of the original's in for code no port covers yet, so the code

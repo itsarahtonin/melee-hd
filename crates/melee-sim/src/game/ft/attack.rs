@@ -119,7 +119,7 @@ pub struct LogEntry {
 }
 
 /// The attack collision's scratch: the damage logs and the clank flags.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct HitLogs {
     pub hits: Vec<LogEntry>,
     pub tips: Vec<LogEntry>,

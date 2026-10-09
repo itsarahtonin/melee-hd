@@ -24,7 +24,7 @@ pub struct Clock {
 }
 
 /// `lb_804329F0`.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
 pub struct Pacing {
     pub clocks: [Clock; 2],
     /// The pads' sampling rate in milliseconds (`x4`).

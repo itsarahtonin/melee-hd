@@ -67,7 +67,7 @@ pub struct Exp {
 }
 
 /// `HSD_RObj`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct RObj {
     pub next: Option<RObjId>,
     pub flags: u32,
@@ -113,7 +113,7 @@ impl RObj {
 }
 
 /// `HSD_Rvalue`: one joint an expression reads, and which of its values.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Rvalue {
     pub next: Option<RvalueId>,
     pub flags: u32,
@@ -121,13 +121,13 @@ pub struct Rvalue {
 }
 
 /// The RObj pool (`robj_alloc_data`).
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct RObjs {
     pub pool: Pool<RObj>,
 }
 
 /// The Rvalue pool (`rvalue_alloc_data`).
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct Rvalues {
     pub pool: Pool<Rvalue>,
 }

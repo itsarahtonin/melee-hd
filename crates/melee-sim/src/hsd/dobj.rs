@@ -22,7 +22,7 @@ pub const DOBJ_ANIM: u32 = 0x2;
 pub const ALL_ANIM: u32 = 0x7FF;
 
 /// `HSD_DObj`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct DObj {
     pub next: Option<DObjId>,
     pub mobj: Option<MObjId>,
@@ -33,7 +33,7 @@ pub struct DObj {
 }
 
 /// The DObj pool and `current_dobj`.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct DObjs {
     pub pool: Pool<DObj>,
     /// Set by `HSD_DObjSetCurrent`; nothing reads it.

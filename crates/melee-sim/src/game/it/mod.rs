@@ -56,7 +56,7 @@ pub const CHAR_ARTICLES: usize = (kinds::PKIND_START - kinds::KURIBOH) as usize;
 /// An item's table of its model's joints in depth-first order (`DynamicBoneTable`). The
 /// original's block comes uncleared from `HSD_ObjAlloc` and only the model's joints are
 /// written, so `len` says how many entries mean anything; the rest are never read.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct BoneTable {
     pub bones: [Option<JObjId>; BONE_TABLE_LEN],
     pub len: u8,
@@ -72,7 +72,7 @@ impl Default for BoneTable {
 }
 
 /// The item code's globals.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct Globals {
     /// The items' joint tables (`item_dynamic_bones_alloc_data`).
     pub bone_tables: Pool<BoneTable>,

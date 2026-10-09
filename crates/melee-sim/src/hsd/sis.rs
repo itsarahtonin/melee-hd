@@ -95,7 +95,7 @@ pub struct Canvas {
 
 /// `HSD_Text`. The fields `HSD_SisLib_803A5ACC` leaves as the heap held them are `None` until
 /// something writes them (`HSD_SisLib_803A6368` writes all but `x88` and `x9F`).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Text {
     pub pos: Vec3,
     pub box_size: [f32; 2],
@@ -141,7 +141,7 @@ pub struct Text {
 }
 
 /// The text system's state.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct SisLib {
     /// The arena's size (`HSD_SisLib_804D7968`); no arena before the first scene's setup.
     pub size: u32,
@@ -151,10 +151,14 @@ pub struct SisLib {
     pub free_head: Option<u32>,
     pub used_head: Option<u32>,
     /// Every header written, by offset; only those the lists reach are meaningful.
+    #[clone_from(if_changed)]
     pub blocks: BTreeMap<u32, Block>,
     /// The objects in live blocks, by data offset.
+    #[clone_from(if_changed)]
     pub texts: BTreeMap<u32, Text>,
+    #[clone_from(if_changed)]
     pub canvases: BTreeMap<u32, Canvas>,
+    #[clone_from(if_changed)]
     pub buffers: BTreeMap<u32, Buffer>,
     /// `HSD_SisLib_804D7978`: the first text.
     pub first_text: Option<TextId>,

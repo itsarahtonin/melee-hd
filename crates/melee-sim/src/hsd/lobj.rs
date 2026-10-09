@@ -46,7 +46,7 @@ pub const RAW_PARAM: u16 = 1 << 6;
 pub const MAX_GXLIGHT: usize = 9;
 
 /// `HSD_LObj`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct LObj {
     pub ref_count: RefCount,
     pub flags: u16,
@@ -125,7 +125,7 @@ fn update(objs: &mut Objects, l: LObjId, ty: u8, value: Value) {
 
 /// The LObj pool, the current lights (`current_lights`, with its own list nodes), the active
 /// table (`active_lights`, `nb_active_lights`) and the light masks.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct LObjs {
     pub pool: Pool<LObj>,
     pub current: Option<SListId>,

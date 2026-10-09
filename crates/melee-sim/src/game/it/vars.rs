@@ -35,7 +35,7 @@ macro_rules! members {
 
         /// `union Item_ItemVars`, as big as the original's.
         #[allow(clippy::large_enum_variant)]
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
         pub enum ItemVars {
             /// The union's big-endian bytes, as the original keeps them, for items no port
             /// reads as a type.

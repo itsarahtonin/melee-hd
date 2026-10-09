@@ -43,7 +43,7 @@ pub trait Kinds: Clone + Debug + 'static {
 }
 
 /// `HSD_GObj`.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct GObj<K: Kinds> {
     pub classifier: u16,
     pub p_link: u8,
@@ -65,7 +65,7 @@ pub struct GObj<K: Kinds> {
 }
 
 /// `HSD_GObjProc`.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct Proc<K: Kinds> {
     /// The owner's next older process.
     pub child: Option<ProcId>,
@@ -137,7 +137,7 @@ impl Place {
 
 /// The scheduler's state. Its fields are public so a captured game's state can be rebuilt
 /// (`tools/capture`); game code goes through the methods.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct World<K: Kinds> {
     pub gobjs: Pool<GObj<K>>,
     pub procs: Pool<Proc<K>>,

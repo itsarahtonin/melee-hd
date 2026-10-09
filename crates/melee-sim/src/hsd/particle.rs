@@ -134,7 +134,7 @@ pub trait Hooks {
 }
 
 /// `HSD_Particle`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Particle {
     pub next: Option<ParticleId>,
     pub kind: u32,
@@ -280,7 +280,7 @@ impl CmdList {
 }
 
 /// The particle pool (`hsd_804D0F60`) and particle.c's globals.
-#[derive(Clone, Debug)]
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct Particles {
     pub pool: Pool<Particle>,
     /// Each link's particles (`hsd_804D0908`).

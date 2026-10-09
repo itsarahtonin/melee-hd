@@ -75,7 +75,7 @@ mod addr {
 /// The match's live standings (`gm_16F1.c`'s `lbl_8046DBC8`, `lbl_804D65A8` and
 /// `lbl_804D65B0`): each player's rank, the lowest rank, and whether the first ranking has
 /// been taken and who led or trailed in it.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Ranks {
     /// `lbl_8046DBC8.x0`, `x1`: the first ranking with a leader was taken.
     pub taken: u8,

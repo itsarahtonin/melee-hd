@@ -51,7 +51,7 @@ use super::structs::Fighter;
 use crate::hsd::gobj::GObjId;
 
 /// The fighter code's globals that point into game data or hold settings.
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct Globals {
     /// `PlCo.dat`'s `ftLoadCommonData`, which `Fighter_LoadCommonData` copies into
     /// `p_ftCommonData`, `ftPartsTable` and the other common pointers.
@@ -83,6 +83,7 @@ pub struct Globals {
     /// Each fighter's address in the original (`Fighter*`, its user data), by slot: a few
     /// places read it as a number (Nana's computer DI takes its low byte), so it is state,
     /// recorded when `Fighter_Create` allocates the fighter (`docs/engine.md`).
+    #[clone_from(if_changed)]
     pub addresses: std::collections::BTreeMap<u32, u32>,
     /// The addresses the original's allocator gives the next fighters, in creation order,
     /// as the frontend seeds them (from ssbm-rs's trace); a fighter created without one
@@ -101,7 +102,7 @@ pub const KIRBY_COSTUME_KINDS: [usize; 5] = [3, 15, 16, 22, 24];
 
 /// Kirby's copies of other characters' costumes: a count per kind (`ft_80459B88`), and for
 /// each kind Kirby copies a hat from, six models and material animations.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct KirbyCostumes {
     pub counts: [i32; data::KIND_COUNT],
     pub models: [[(Option<DataRef>, Option<DataRef>); 6]; 5],
@@ -127,7 +128,7 @@ impl KirbyCostumes {
 
 /// A character's animation file in ARAM: one archive per animation, which a fighter copies
 /// into its animation buffer when it starts that animation (`ftData_80085CD8`).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct AnimFile {
     /// Where in ARAM the game put it. Fighters keep which animation they last loaded as its
     /// ARAM address (`Fighter::x5A4`).

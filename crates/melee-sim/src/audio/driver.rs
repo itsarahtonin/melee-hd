@@ -79,7 +79,7 @@ pub struct Voice {
 }
 
 /// The driver's state.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq)]
 pub struct Driver {
     pub voices: [Voice; VOICES],
     /// `AXDriver_804C5920`: the voice each synth node plays for.

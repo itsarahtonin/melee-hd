@@ -79,11 +79,14 @@ pub struct Costume {
 
 /// The disc files the frontend has loaded for the fighter code, by name: archives in main
 /// memory, and animation files in ARAM with the address it put each at.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct LoadedFiles {
+    #[clone_from(if_changed)]
     pub archives: Vec<(String, ArchiveId)>,
+    #[clone_from(if_changed)]
     pub anim_files: Vec<(String, AnimFile)>,
     /// Each file's disc entry number and size, for the disc loads the audio timeline times.
+    #[clone_from(if_changed)]
     pub entries: Vec<(String, i32, u32)>,
 }
 
@@ -130,7 +133,7 @@ pub struct Ft8045993C {
 }
 
 /// The fighter data's globals.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct DataGlobals {
     /// The files the frontend has loaded (an input, never compared as state).
     pub files: LoadedFiles,

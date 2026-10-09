@@ -35,7 +35,7 @@ pub struct Wind {
 }
 
 /// The pool of wind sources and its two lists, by index.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct Winds {
     pub entries: [Wind; 8],
     pub next: [Option<u8>; 8],

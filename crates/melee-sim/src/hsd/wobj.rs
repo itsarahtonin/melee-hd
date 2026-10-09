@@ -26,7 +26,7 @@ pub const PATH_RELATIVE: u32 = 1;
 pub const DIRTY: u32 = 2;
 
 /// `HSD_WObj`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct WObj {
     pub ref_count: RefCount,
     pub flags: u32,

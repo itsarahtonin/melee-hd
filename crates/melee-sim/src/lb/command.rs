@@ -42,7 +42,7 @@ impl Slot {
 }
 
 /// The interpreter's state, `CommandInfo`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Script {
     /// The timer, as raw bits: a float in a `CommandInfo`, an integer in a `ColorOverlay`.
     pub timer: u32,

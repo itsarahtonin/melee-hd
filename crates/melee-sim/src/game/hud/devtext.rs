@@ -66,7 +66,7 @@ impl Glyph {
 
 /// A screen (`DevText`). `prev` and `next` are pool indices, and `buf` stands for the buffer
 /// its creator passes, which the screen alone writes.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct DevText {
     pub x: i16,
     pub y: i16,
@@ -92,11 +92,11 @@ pub struct DevText {
 
 /// A debug menu's state (`un_80304138_objalloc_t`): the debug menus aren't ported, only
 /// their pool, which every scene resets.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct DebugMenu;
 
 /// The system's globals (`textdraw.c`'s statics and `textlib_1.c`'s menu pool).
-#[derive(Clone, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct DevTexts {
     /// `devtext_pool`.
     pub pool: Vec<DevText>,
@@ -120,7 +120,7 @@ pub struct DevTexts {
 
 /// What drawing a screen asks of the presentation layer, its floats as the registers
 /// pass them.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub enum Draw {
     /// `HSD_FogSet(NULL)`.
     NoFog,
