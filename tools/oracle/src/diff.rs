@@ -20,6 +20,7 @@
 //! which shows what the comparison covers; `--against TICK` compares it with a later tick's
 //! memory instead, which shows the comparison telling states apart.
 
+use gekko_fp::{FpMode, set_fp_mode};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::process::ExitCode;
 
@@ -112,6 +113,7 @@ fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> Vec<String> {
     cmp.world();
     cmp.stage();
     cmp.ids();
+    cmp.items();
     cmp.audio();
     cmp.match_state();
     cmp.display();
@@ -144,6 +146,9 @@ pub fn diff(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut against, mut pos) = (None, u32::MAX, None, Vec::new());
     let (mut boot_diff, mut all) = (false, false);
     let mut ignore: Vec<String> = Vec::new();
+    // A replay doesn't say how its floats were computed: Slippi's Dolphin recorded it, and
+    // ssbm-run plays replays that way unless told `--fp hardware` (the benchmark matches).
+    let mut fp_mode = FpMode::Slippi;
     let mut it = args.iter();
     while let Some(&a) = it.next() {
         match a {
@@ -152,6 +157,13 @@ pub fn diff(args: &[&str]) -> ExitCode {
             "--against" => against = it.next().and_then(|t| t.parse::<u32>().ok()),
             "--boot-diff" => boot_diff = true,
             "--all" => all = true,
+            "--fp" => {
+                fp_mode = match it.next().copied() {
+                    Some("hardware") => FpMode::Hardware,
+                    Some("slippi") => FpMode::Slippi,
+                    _ => panic!("--fp hardware|slippi"),
+                }
+            }
             "--ignore" => ignore.extend(
                 it.next()
                     .expect("--ignore TEXT[,TEXT...]")
@@ -172,9 +184,12 @@ pub fn diff(args: &[&str]) -> ExitCode {
         }
     }
     let [trace_path, replay_path] = pos[..] else {
-        eprintln!("usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N]");
+        eprintln!(
+            "usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N] [--fp hardware|slippi]"
+        );
         return ExitCode::from(2);
     };
+    set_fp_mode(fp_mode);
     let disc_path = std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc");
     let disc = Disc::open(&disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
     let bytes = std::fs::read(replay_path).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
@@ -314,6 +329,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 imp.world();
                 imp.stage();
                 imp.ids();
+                imp.items();
                 imp.audio(bank);
                 // Memory doesn't say which DSP model ran: the replay's settings do.
                 imp.game.audio.dsp = settings.dsp;
@@ -325,13 +341,25 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 }
                 (imp.game, imp.maps, imp.unhandled)
             }));
-            let (game, _maps, unhandled) = match imported {
+            let (mut game, _maps, unhandled) = match imported {
                 Ok(v) => v,
                 Err(p) => {
                     println!("importing trace tick {n}: {}", panic_text(&p));
                     return ExitCode::FAILURE;
                 }
             };
+            // The disc files the audio driver's device commands read: the music stream's
+            // and the sound banks, as a started match has them.
+            if game.audio.clock.is_some() {
+                melee_capture::audio::load_stream(&mut game.audio, &disc, &mut data);
+                for name in melee_sim::lb::audio::SSM_NAMES {
+                    let path = format!("audio/us/{name}");
+                    let e = disc
+                        .entrynum(&path)
+                        .unwrap_or_else(|e| panic!("{path}: {e}"));
+                    melee_capture::audio::load_disc_file(&mut game.audio, &disc, &mut data, e);
+                }
+            }
             if game.playback.is_none() {
                 eprintln!("{trace_path}: tick {n} isn't in a replay's match");
                 return ExitCode::FAILURE;

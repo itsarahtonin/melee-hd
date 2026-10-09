@@ -109,7 +109,7 @@ impl Running<'_> {
         }
         let slow = reg(self.common().f32(0x1C8));
         let fp = self.game.fighter(gobj);
-        if u32::from_be_bytes(fp.x1064_thrownHitbox.x134) != 0 {
+        if fp.x1064_thrownHitbox.x134.is_set() {
             let k = fp.x8c_kb_vel;
             let sq = |v: f32| fp::fmuls(reg(v), reg(v));
             let speed = sqrt_reg(fp::fadds(sq(k.z), fp::fadds(sq(k.x), sq(k.y))));
@@ -151,6 +151,9 @@ impl Running<'_> {
 impl Running<'_> {
     /// Ground friction or the animation's motion: `ftCo_Attack11_Phys`, `ftCo_AttackS4_Phys`.
     #[doc(alias = "ftCo_Attack11_Phys")]
+    #[doc(alias = "ftCo_Attack100Start_Phys")]
+    #[doc(alias = "ftCo_Attack100Loop_Phys")]
+    #[doc(alias = "ftCo_Attack100End_Phys")]
     #[doc(alias = "ftCo_AttackS4_Phys")]
     #[doc(alias = "ftCo_Down_Phys")]
     #[doc(alias = "ftCo_PassiveStand_Phys")]
@@ -181,6 +184,12 @@ impl Running<'_> {
         fp.reflect_hit.skip_update_pos = false;
     }
 
+    /// The reflector's bubble follows the fighter again, `ftColl_8007AEF8`.
+    #[doc(alias = "ftColl_8007AEF8")]
+    pub fn reflect_follow(&mut self, gobj: GObjId) {
+        self.game.fighter_mut(gobj).reflect_hit.skip_update_pos = false;
+    }
+
     /// `ftCo_EscapeAir_Phys`: an air dodge's momentum decays until it ends.
     #[doc(alias = "ftCo_EscapeAir_Phys")]
     pub fn co_escape_air_phys(&mut self, gobj: GObjId) {
@@ -206,6 +215,7 @@ impl Running<'_> {
 
     /// `ftCo_ThrowB_Phys`, `ftCo_ThrowHi_Phys`, `ftCo_ThrowLw_Phys`: a throw in the air keeps
     /// its set velocity, or the animation's.
+    #[doc(alias = "ftCo_ThrowF_Phys")]
     #[doc(alias = "ftCo_ThrowB_Phys")]
     #[doc(alias = "ftCo_ThrowHi_Phys")]
     #[doc(alias = "ftCo_ThrowLw_Phys")]

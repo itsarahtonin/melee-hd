@@ -57,6 +57,12 @@ macro_rules! members {
                 /// (pointers in them, stale, become null); the kind's code writes each field it
                 /// reads (see the module's docs).
                 pub fn $accessor(&mut self) -> &mut $ty {
+                    // Another kind's member, left by the freed item whose block this is: its
+                    // bytes aren't kept, so the member starts from zeros (the kind writes each
+                    // field before it reads it).
+                    if !matches!(self, ItemVars::Bytes(_) | ItemVars::$variant(_)) {
+                        *self = ItemVars::Bytes([0; SIZE]);
+                    }
                     if let ItemVars::Bytes(b) = self {
                         let m = Mem { bytes: &b[..], base: 0 };
                         *self = ItemVars::$variant($ty::import(&m, 0, &mut Stale));
@@ -99,6 +105,7 @@ macro_rules! members {
 members! {
     FoxBlaster, fox_blaster, itFoxBlaster_ItemVars, [FOX_BLASTER, FALCO_BLASTER];
     FoxLaser, fox_laser, itFoxLaser_ItemVars, [FOX_LASER, FALCO_LASER];
+    FoxIllusion, fox_illusion, itFoxIllusion_ItemVars, [FOX_ILLUSION, FALCO_PHANTASM];
     Capsule, capsule, itCapsule_ItemVars, [CAPSULE];
     Heart, heart, itHeart_ItemVars, [HEART];
     Tomato, tomato, itTomato_ItemVars, [TOMATO];

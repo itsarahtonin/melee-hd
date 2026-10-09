@@ -20,7 +20,7 @@ use melee_data::archive::{Archives, DataRef};
 /// `FtPart` 0x35, the part some characters' animations move alongside TransN.
 const PART_35: i32 = 0x35;
 /// `FtPart_XRotN`.
-const X_ROT_N: i32 = 3;
+const X_ROT_N: i32 = 2;
 
 /// The fighter's `x594` bits, most significant first.
 pub fn x594_bit(fp: &Fighter, bit: u32) -> bool {
@@ -491,7 +491,16 @@ impl Running<'_> {
             }
         }
         if self.game.fighters[f.0].x2226_b2 {
-            super::super::code::unported_call("ftAnim_8006DF0C");
+            self.hip_to_root(f);
+        }
+    }
+
+    /// `ftAnim_8006DF0C`: with `x2221_b2`, the hip's offset point brought into the model's
+    /// space for the character's bone (not ported); nothing otherwise.
+    #[doc(alias = "ftAnim_8006DF0C")]
+    fn hip_to_root(&mut self, f: FighterId) {
+        if self.game.fighters[f.0].x2221_b2 {
+            super::super::code::unported_call("ftAnim_8006DF0C with x2221_b2");
         }
     }
 }

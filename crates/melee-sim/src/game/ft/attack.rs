@@ -12,8 +12,9 @@
 
 use gekko_fp as fp;
 
-use super::super::code::{self, Val, unported_call};
+use super::super::code::unported_call;
 use super::super::handles::FighterId;
+use super::super::pl::trick::AttackRecord;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
@@ -23,9 +24,6 @@ use crate::lb::hitcapsule::{self, Victim};
 use crate::mtx::Mtx34;
 use crate::ppc::cvt_fp2unsigned;
 use crate::vec::Vec3;
-
-/// `pl_80038144`: the attack statistics a hit records, the player statistics' seam.
-pub const PL_80038144: u32 = 0x8003_8144;
 
 /// `HSD_GOBJ_PLINK_FIGHTER`.
 const P_LINK_FIGHTER: u8 = 8;
@@ -87,8 +85,19 @@ const LOG_LEN: usize = 20;
 /// an item's (2), by its GObj.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LoggedHit {
-    Fighter { fighter: FighterId, index: usize },
-    Item { item: GObjId, index: usize },
+    Fighter {
+        fighter: FighterId,
+        index: usize,
+    },
+    Item {
+        item: GObjId,
+        index: usize,
+    },
+    /// A throw's hitbox (`Fighter::xDF4`), which deals its hit directly.
+    Throw {
+        fighter: FighterId,
+        index: usize,
+    },
 }
 
 /// A logged hit (`DmgLogEntry`): a fighter's or an item's. The stage's stop at their seams
@@ -118,7 +127,7 @@ pub struct HitLogs {
 }
 
 /// A hit's damage as an integer, at least 1 for any damage, `getEnvDmg`.
-fn whole_damage(dmg: f64) -> i32 {
+pub(crate) fn whole_damage(dmg: f64) -> i32 {
     if dmg != 0.0 {
         let i = fp::fctiwz(dmg);
         if i != 0 { i } else { 1 }
@@ -180,14 +189,13 @@ impl Running<'_> {
         (reg(fp.x34_scale.z) != 1.0).then_some(Mtx34 { m: fp.x44_mtx })
     }
 
-    /// Whether a hitbox can't touch the fighter because something else holds it: unless it
-    /// is still 0, the thrown fighter's thrower (`x1064_thrownHitbox.x134`, a GObj pointer the
-    /// mirror keeps as raw bytes) isn't modeled.
+    /// A thrown fighter's thrower (`x1064_thrownHitbox.x134.owner`, `Fighter::x1198`).
     fn thrower(&self, f: FighterId) -> Option<GObjId> {
-        if self.game.fighters[f.0].x1064_thrownHitbox.x134 != [0; 4] {
-            unported_call("a thrown fighter's thrower (Fighter::x1198)");
+        let x134 = self.game.fighters[f.0].x1064_thrownHitbox.x134;
+        if x134.is_set() && x134.thrower().is_none() {
+            unported_call("a thrown fighter's hitbox word that isn't a thrower");
         }
-        None
+        x134.thrower()
     }
 
     /// The highest of the fighter's invincibility states, `ftColl_8007B868`: 2 makes it
@@ -241,7 +249,10 @@ impl Running<'_> {
         {
             return;
         }
-        // The thrower can't hit the fighter it throws (`x1198 == this_gobj`): no thrower here.
+        // The thrower can't hit the fighter it throws (`x1198 == this_gobj`).
+        if self.thrower(v) == Some(gobj) {
+            return;
+        }
         let mut count = 0;
         if passed && !self.game.fighters[me.0].x221B.x221B_b5 {
             let other_ga = self.game.fighters[v.0].ground_or_air;
@@ -289,7 +300,7 @@ impl Running<'_> {
             return;
         }
         // A box that only hits its owner's grab victim.
-        if h0.x134[0] & 0x80 != 0
+        if h0.x134.grabbed_victim_only()
             && vf.victim_gobj.is_some()
             && vf.x221B.x221B_b5
             && vf.victim_gobj != Some(gobj)
@@ -441,7 +452,7 @@ impl Running<'_> {
     /// Remembers `victim` in each live box of `f`'s group of box `i` (`ftColl_80076808`);
     /// with `clear`, a box that newly hits it can't clank this frame.
     #[doc(alias = "ftColl_80076808")]
-    fn hit_group(&mut self, f: FighterId, i: usize, kind: i32, v: Victim, clear: bool) {
+    pub(crate) fn hit_group(&mut self, f: FighterId, i: usize, kind: i32, v: Victim, clear: bool) {
         let group = self.game.fighters[f.0].x914[i].x4;
         for k in 0..4 {
             let cur = &mut self.game.fighters[f.0].x914[k];
@@ -520,6 +531,128 @@ impl Running<'_> {
         false
     }
 
+    /// An item's box `j` clanks with the fighter's box `m`, `ftColl_80077970`: each box the
+    /// other doesn't outdamage by more than the clank range (`x3CC`) recoils, the fighter's as
+    /// in a fighter's clank, the item's remembering the fighter and which way it was pushed
+    /// (`recordItemClank`), each with a spark between them.
+    #[doc(alias = "ftColl_80077970")]
+    fn item_clank(&mut self, g: GObjId, j: usize, me: FighterId, m: usize) {
+        use super::super::it;
+        let range = self.common().i32(0x3CC);
+        let (h1, h2) = (
+            &it::item(self.game, g).x5D4_hitboxes[j].hit,
+            &self.game.fighters[me.0].x914[m],
+        );
+        let mid = |a: f32, b: f32| mem(fp::fmuls(fp::fadds(reg(a), reg(b)), 0.5));
+        let midpoint = Vec3::new(
+            mid(h1.hurt_coll_pos.x, h2.hurt_coll_pos.x),
+            mid(h1.hurt_coll_pos.y, h2.hurt_coll_pos.y),
+            mid(h1.hurt_coll_pos.z, h2.hurt_coll_pos.z),
+        );
+        let (d1, d2) = (reg(h1.damage), reg(h2.damage));
+        let item_victim = Victim::Item(it::item_of(self.game, g));
+        if fp::fctiwz(d2).wrapping_sub(range) < fp::fctiwz(d1) {
+            let dmg = whole_damage(d2);
+            self.hit_group(me, m, 3, item_victim, true);
+            let x = it::item(self.game, g).pos.x;
+            self.clank_recoil(me, m, dmg, x);
+            self.spawn_effect(1052, midpoint, None);
+        }
+        if fp::fctiwz(d1).wrapping_sub(range) < fp::fctiwz(d2) {
+            let dmg = whole_damage(d1);
+            let kind = if it::item(self.game, g).x5D4_hitboxes[j].hit.x41_b5 {
+                4
+            } else {
+                3
+            };
+            self.item_add_victim(g, j, kind, victim(me), false);
+            if dmg > it::item(self.game, g).xC48 {
+                let slow =
+                    super::super::it::item::common_data(self.game).f32(self.data, IT_SLOW_FOR_ITEM);
+                let (fg, fx) = (
+                    self.game.fighters[me.0].gobj,
+                    self.game.fighters[me.0].cur_pos.x,
+                );
+                let ip = it::item_mut(self.game, g);
+                ip.xCF4_fighterGObjUnk = fg;
+                ip.xC48 = dmg;
+                let vx = reg(ip.x40_vel.x);
+                let mag = if vx < 0.0 { fp::fneg(vx) } else { vx };
+                ip.xCB8_outDamageDirection = if mag < reg(slow) {
+                    if reg(ip.pos.x) > reg(fx) { -1.0 } else { 1.0 }
+                } else if vx < 0.0 {
+                    -1.0
+                } else {
+                    1.0
+                };
+            }
+            self.spawn_effect(1052, midpoint, None);
+        }
+    }
+
+    /// The fighter reflects item `g`'s box `j`, `ftColl_80077464`: the item remembers it;
+    /// damage past the reflector's limit overpowers it (the item keeps the damage and which
+    /// way, the reflector its excess); else the item turns the fighter's, taking its attack's
+    /// record and the reflector's damage and speed factors. Either way the reflector notes
+    /// which way the hit came from.
+    #[doc(alias = "ftColl_80077464")]
+    fn reflect_item(&mut self, g: GObjId, j: usize, me: FighterId) {
+        use super::super::it;
+        self.item_add_victim(g, j, 7, victim(me), false);
+        let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
+        let damage = whole_damage(reg(h.damage));
+        let second = h.x41_b5;
+        let fp = &self.game.fighters[me.0];
+        let (fx, fg) = (fp.cur_pos.x, fp.gobj);
+        let over = damage > fp.ReflectAttr.x1A30_maxDamage;
+        let (x2070, rec, dmg_mul, speed_mul) = (
+            i32::from_be_bytes(fp.x2070),
+            fp.x2074.clone(),
+            fp.ReflectAttr.x1A34_damageMul,
+            fp.ReflectAttr.x1A38_speedMul,
+        );
+        let (b5, b4) = (fp.x2218_b5, fp.x2218_b4);
+        let ip = it::item_mut(self.game, g);
+        if over {
+            if second {
+                if damage > ip.xC4C {
+                    ip.xC4C = damage;
+                }
+            } else if damage > ip.xC34_damageDealt {
+                ip.xC34_damageDealt = damage;
+            }
+        } else {
+            ip.xC64_reflectGObj = fg;
+            ip.xC74 = x2070;
+            ip.xC78 = rec.x2074_vec;
+            ip.xC80 = rec.x207C;
+            ip.xC88 = i32::from_be_bytes(rec.x10);
+            ip.xC8C = rec.x2088;
+        }
+        ip.xC68 = if reg(fx) > reg(ip.pos.x) { -1.0 } else { 1.0 };
+        if !over {
+            ip.xC6C = dmg_mul;
+            ip.xC70 = speed_mul;
+            ip.xDCC_flag.b2 = b5;
+            if b4 {
+                ip.xDCC_flag.b1 = true;
+            }
+        }
+        let (vx, ix) = (reg(ip.x40_vel.x), ip.pos.x);
+        let dir = if vx != 0.0 {
+            if vx > 0.0 { -1.0 } else { 1.0 }
+        } else if reg(ix) > reg(fx) {
+            -1.0
+        } else {
+            1.0
+        };
+        let fp = &mut self.game.fighters[me.0];
+        if over {
+            fp.ReflectAttr.x1A3C_damageOver = damage;
+        }
+        fp.ReflectAttr.x1A2C_reflectHitDirection = dir;
+    }
+
     /// The clank's sound, `ftColl_800784B4`: a random sword clash between two slashes.
     #[doc(alias = "ftColl_800784B4")]
     fn clank_sound(&mut self, me: FighterId, v: FighterId, j: usize, m: usize) {
@@ -534,8 +667,8 @@ impl Running<'_> {
     }
 
     /// The other fighter's box `j` hits this fighter's shield, `ftColl_80076CBC`: the
-    /// attacker's shield-hit push and the shield's damage, recoil and spark; a broken shield
-    /// isn't ported.
+    /// attacker's shield-hit push and the shield's damage, recoil and spark, or a
+    /// powershield's flash.
     #[doc(alias = "ftColl_80076CBC")]
     fn shield_hit(&mut self, v: FighterId, j: usize, me: FighterId) {
         self.hit_group(v, j, 1, victim(me), false);
@@ -579,13 +712,23 @@ impl Running<'_> {
             mf.x19A8 = other_gobj;
         }
         if mf.x221C_b2 {
-            unported_call("ftCo_80094138 (a shield broken by a hit)");
+            // A powershield: no damage, the release window, a flash and its sound.
+            let (gobj, slot) = (
+                mf.gobj.expect("a fighter without a GObj"),
+                i32::from(mf.player_idx),
+            );
+            self.guard_release_window(gobj);
+            self.start_color_anim(gobj, 118, 0);
+            self.fighter_play_sfx(me, 104, 0x7F, 0x40);
+            self.record_powershield(slot);
+            self.spawn_effect(27, pos, None);
+        } else {
+            let total = dmg.wrapping_add(x34);
+            mf.x19A0_shieldDamageTaken = mf.x19A0_shieldDamageTaken.wrapping_add(total.max(0));
+            mf.x19BC_shieldDamageTaken3 = i32::from(other_player);
+            mf.x221F_b6 = other_sub;
+            self.spawn_effect(1052, pos, None);
         }
-        let total = dmg.wrapping_add(x34);
-        mf.x19A0_shieldDamageTaken = mf.x19A0_shieldDamageTaken.wrapping_add(total.max(0));
-        mf.x19BC_shieldDamageTaken3 = i32::from(other_player);
-        mf.x221F_b6 = other_sub;
-        self.spawn_effect(1052, pos, None);
         let push = self.game.fighters[me.0].shield_unk0;
         if push != 0.0 {
             self.game.fighters[v.0].x1964 = push;
@@ -795,7 +938,7 @@ impl Running<'_> {
     /// What a fighter's hit on another records, `ftColl_8007891C`: the attacker's stale-move
     /// queue, its combo against the victim, and the damage both players' statistics count.
     #[doc(alias = "ftColl_8007891C")]
-    fn record_fighter_hit(&mut self, attacker: GObjId, victim_gobj: GObjId, dmg: f64) {
+    pub(crate) fn record_fighter_hit(&mut self, attacker: GObjId, victim_gobj: GObjId, dmg: f64) {
         self.stale_move_from_fighter(attacker, victim_gobj);
         let a = self.game.fighter_id(attacker);
         let attack_id = self.game.fighters[a.0].x2068_attackID;
@@ -1026,7 +1169,8 @@ impl Running<'_> {
                 && it::item(self.game, g).x5D4_hitboxes[j].hit.x41_b7
                 && self.item_box_hits_bubble(g, j, me, Bubble::Reflect, false)
             {
-                unported_call("ftColl_80077464 (a fighter reflecting an item)");
+                self.reflect_item(g, j, me);
+                return;
             }
             let mf = &self.game.fighters[me.0];
             let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
@@ -1049,14 +1193,19 @@ impl Running<'_> {
                         continue;
                     }
                     if self.item_box_touches(g, j, me, m) {
-                        unported_call("ftColl_8007925C (an inert box touching another)");
+                        let fg = self.game.fighters[me.0].gobj;
+                        let ip = it::item_mut(self.game, g);
+                        it::set_flag(&mut ip.xDCE_flag, 6, true);
+                        ip.toucher = fg;
+                        return;
                     }
                 } else {
                     if !h.x40_b0 || !theirs.x40_b0 {
                         continue;
                     }
                     if self.item_box_touches(g, j, me, m) {
-                        unported_call("ftColl_80077970 (an item's box clanking with a fighter's)");
+                        self.item_clank(g, j, me, m);
+                        return;
                     }
                 }
             }
@@ -1111,6 +1260,7 @@ impl Running<'_> {
     fn logged_capsule(&self, hit: LoggedHit) -> &super::super::structs::HitCapsule {
         match hit {
             LoggedHit::Fighter { fighter, index } => &self.game.fighters[fighter.0].x914[index],
+            LoggedHit::Throw { fighter, index } => &self.game.fighters[fighter.0].xDF4[index],
             LoggedHit::Item { item, index } => {
                 &super::super::it::item(self.game, item).x5D4_hitboxes[index].hit
             }
@@ -1219,7 +1369,7 @@ impl Running<'_> {
 
     /// An item's hitbox damage, `it_8026B1D4`: its damage, plus for an item whose speed
     /// counts (`xDC8_word` bit 0x14) the speed's share, at least 1.
-    // Ports `it_8026B1D4`; aliased once a check reaches it.
+    #[doc(alias = "it_8026B1D4")]
     fn item_damage(&self, g: GObjId, j: usize) -> f64 {
         let ip = super::super::it::item(self.game, g);
         let mut dmg = reg(ip.x5D4_hitboxes[j].hit.damage);
@@ -1243,9 +1393,16 @@ impl Running<'_> {
     /// Remembers the fighter in the item's boxes of box `j`'s group as kind `kind`, and in
     /// every item sharing its id's (`it_8026FAC4`, `it_8026FA2C`); with `clear`, a box that
     /// newly hit it can't clank this frame.
-    // Ports `it_8026FAC4`; aliased once a check reaches it.
-    // Ports `it_8026FA2C`; aliased once a check reaches it.
-    fn item_add_victim(&mut self, g: GObjId, j: usize, kind: i32, v: Victim, clear: bool) {
+    #[doc(alias = "it_8026FAC4")]
+    #[doc(alias = "it_8026FA2C")]
+    pub(crate) fn item_add_victim(
+        &mut self,
+        g: GObjId,
+        j: usize,
+        kind: i32,
+        v: Victim,
+        clear: bool,
+    ) {
         use super::super::it::{self, P_LINK_ITEM};
         let ip = it::item(self.game, g);
         let (id, group) = (ip.xAC4_ignoreItemID, ip.x5D4_hitboxes[j].hit.x4);
@@ -1279,7 +1436,7 @@ impl Running<'_> {
     /// tip) is remembered by the item, which keeps the most damage it dealt and which way;
     /// then, unless the fighter is invincible there, logged and recorded. An item taken on
     /// touch (`x0_78` 4) and a tip stop at their seams. Returns whether the box hit.
-    // Ports `ftColl_80077C60`; aliased once a check reaches it.
+    #[doc(alias = "ftColl_80077C60")]
     fn take_item_hit(&mut self, g: GObjId, j: usize, me: FighterId, n: usize) -> bool {
         use super::super::it;
         let data = self.data;
@@ -1384,9 +1541,9 @@ impl Running<'_> {
     /// queue (`plStale_UpdateStaleMovesFromItem`), its combo against the victim
     /// (`ftColl_8007646C`), and the damage both players' statistics count, when a fighter
     /// owns the item.
-    // Ports `ftColl_80078998`; aliased once a check reaches it.
-    // Ports `plStale_UpdateStaleMovesFromItem`; aliased once a check reaches it.
-    // Ports `ftColl_8007646C`; aliased once a check reaches it.
+    #[doc(alias = "ftColl_80078998")]
+    #[doc(alias = "plStale_UpdateStaleMovesFromItem")]
+    #[doc(alias = "ftColl_8007646C")]
     fn record_item_hit(&mut self, g: GObjId, victim_gobj: GObjId, dmg: f64) {
         use super::super::it;
         let ip = it::item(self.game, g);
@@ -1649,7 +1806,7 @@ impl Running<'_> {
     /// match's and players' ratios, capped at `x108`.
     #[doc(alias = "ftColl_80079AB0")]
     #[allow(clippy::too_many_arguments)]
-    fn knockback(
+    pub(crate) fn knockback(
         &self,
         me: FighterId,
         hit: LoggedHit,
@@ -1726,6 +1883,7 @@ impl Running<'_> {
                     self.fighter_knockback(me, attacker, e.hit, e.count)
                 }
                 LoggedHit::Item { item, .. } => self.item_knockback(me, item, e.hit, e.count),
+                LoggedHit::Throw { .. } => unreachable!("a throw's hitbox in the damage log"),
             };
             if !tips {
                 let h = self.logged_capsule(e.hit);
@@ -1751,6 +1909,7 @@ impl Running<'_> {
         let (kb_angle, element, severity) = (h.kb_angle as u32, h.element, h.sfx_severity);
         let fp = &self.game.fighters[me.0];
         let mut dir: f32 = match e.hit {
+            LoggedHit::Throw { .. } => unreachable!("a throw's hitbox in the damage log"),
             LoggedHit::Fighter { .. } => {
                 let attacker = self
                     .game
@@ -1826,6 +1985,7 @@ impl Running<'_> {
         }
         let grounded = height == 0;
         match e.hit {
+            LoggedHit::Throw { .. } => unreachable!("a throw's hitbox in the damage log"),
             LoggedHit::Fighter { .. } => {
                 let a = self
                     .game
@@ -1843,6 +2003,7 @@ impl Running<'_> {
                     1,
                     kind,
                     x2070,
+                    AttackRecord::Fighter(a_gobj),
                     instance,
                     false,
                     grounded,
@@ -1860,7 +2021,17 @@ impl Running<'_> {
                     unported_call("pl_80041B08 (a Bob-omb's hit counted)");
                 }
                 if super::super::it::item::is_fighter(self.game, owner) {
-                    self.attack_landed(owner, gobj, 2, kind, x2070, instance, false, grounded);
+                    self.attack_landed(
+                        owner,
+                        gobj,
+                        2,
+                        kind,
+                        x2070,
+                        AttackRecord::Item(item),
+                        instance,
+                        false,
+                        grounded,
+                    );
                 } else {
                     unported_call("pl_8003D60C (an ownerless item's hit)");
                 }
@@ -1927,13 +2098,14 @@ impl Running<'_> {
     /// seam).
     #[doc(alias = "ftColl_8007861C")]
     #[allow(clippy::too_many_arguments)]
-    fn attack_landed(
+    pub(crate) fn attack_landed(
         &mut self,
         attacker: Option<GObjId>,
         gobj: GObjId,
         kind: i32,
         akind: i32,
         x2070: u32,
+        record: AttackRecord,
         instance: u16,
         keep_source: bool,
         grounded: bool,
@@ -1963,18 +2135,8 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[me.0];
         fp.dmg.x18CC = kind;
         fp.dmg.x18D0 = akind;
-        code::call(
-            self,
-            PL_80038144,
-            &[
-                Val::GObj(attacker),
-                Val::GObj(Some(gobj)),
-                Val::Int(x2070 as i32),
-                Val::Int(i32::from(instance)),
-                Val::Int(i32::from(grounded)),
-                Val::Int(prev),
-            ],
-        );
+        let _ = grounded;
+        self.record_attack(attacker, gobj, x2070, record, instance, prev);
     }
 
     /// The lipstick flower's damage this frame, `ftColl_8007BBCC`: the logged hits of the

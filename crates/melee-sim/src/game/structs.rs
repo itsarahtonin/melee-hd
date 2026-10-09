@@ -21,7 +21,7 @@ use crate::hsd::shadow::ShadowId;
 use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
-use crate::lb::hitcapsule::Victim;
+use crate::lb::hitcapsule::{HitOwner, Victim};
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -941,7 +941,7 @@ pub struct HitCapsule {
     /// +0xd4
     pub victims_2: [HitVictim; 12],
     /// +0x134
-    pub x134: [u8; 4],
+    pub x134: HitOwner,
 }
 
 impl Default for HitCapsule {
@@ -996,7 +996,7 @@ impl Default for HitCapsule {
             coll_distance: 0.0,
             victims_1: core::array::from_fn(|_| Default::default()),
             victims_2: core::array::from_fn(|_| Default::default()),
-            x134: [0; 4],
+            x134: Default::default(),
         }
     }
 }
@@ -1326,7 +1326,7 @@ pub struct dmg {
     /// +0xdc
     pub x1908: i32,
     /// +0xe0
-    pub x190C: RawPtr,
+    pub x190C: Option<DataRef>,
     /// +0xe4
     pub x1910: i32,
     /// +0xe8
@@ -1413,7 +1413,7 @@ impl Default for dmg {
             x1900: 0.0,
             x1904: 0.0,
             x1908: 0,
-            x190C: Default::default(),
+            x190C: None,
             x1910: 0,
             x1914: 0,
             int_value: 0,
@@ -7363,6 +7363,27 @@ impl Default for itFoxLaser_ItemVars {
             angle: 0.0,
             speed: 0.0,
             pos: Default::default(),
+        }
+    }
+}
+
+/// `itFoxIllusion_ItemVars`, 0xc bytes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct itFoxIllusion_ItemVars {
+    /// +0x0
+    pub xDD4: Option<DataRef>,
+    /// +0x4
+    pub xDD8: f32,
+    /// +0x8
+    pub xDDC: Option<JObjId>,
+}
+
+impl Default for itFoxIllusion_ItemVars {
+    fn default() -> Self {
+        itFoxIllusion_ItemVars {
+            xDD4: None,
+            xDD8: 0.0,
+            xDDC: None,
         }
     }
 }

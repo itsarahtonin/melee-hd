@@ -8,6 +8,7 @@ use gekko_fp as fp;
 use super::super::ef::{self, Arg, SpawnKind};
 use super::super::handles::FighterId;
 use super::super::state::Running;
+use super::colanim::Overlay;
 use super::common::GA_GROUND;
 use super::sound::Track;
 use crate::fpu::{mem, reg};
@@ -265,12 +266,12 @@ impl Running<'_> {
     /// The effect command, `ftAction_80071028`: an effect on a part at an offset spread by a
     /// range, unless the fighter is invisible (`ftAction_800711DC` steps over it). Five words.
     #[doc(alias = "ftAction_80071028")]
-    pub(super) fn cmd_effect(&mut self, gobj: GObjId, f: FighterId) {
+    pub(super) fn cmd_effect(&mut self, gobj: GObjId, f: FighterId, which: Option<Overlay>) {
         if self.game.fighters[f.0].invisible {
-            self.cmd_script_main(f).skip(5);
+            self.cmd_script(f, which).skip(5);
             return;
         }
-        let w = self.cmd_word_main(f, 0);
+        let w = self.cmd_word_in(f, which, 0);
         let bone = if bits(w, 16, 1) != 0 {
             let ft_data = self.game.fighters[f.0]
                 .ft_data
@@ -282,17 +283,17 @@ impl Running<'_> {
         };
         let common = bits(w, 14, 1) != 0;
         let on_state = bits(w, 15, 1) != 0;
-        let w1 = self.cmd_word_main(f, 1);
+        let w1 = self.cmd_word_in(f, which, 1);
         let gfx_id = bits(w1, 0, 16) as i32;
-        let w2 = self.cmd_word_main(f, 2);
-        let w3 = self.cmd_word_main(f, 3);
-        let w4 = self.cmd_word_main(f, 4);
+        let w2 = self.cmd_word_in(f, which, 2);
+        let w3 = self.cmd_word_in(f, which, 3);
+        let w4 = self.cmd_word_in(f, which, 4);
         let fixed = |v: f64| mem(fp::fmuls(reg(FIXED), v));
         let s16 = |v: u32| fp::frsp(f64::from(v as u16 as i16));
         let u16f = |v: u32| fp::frsp(f64::from(v as u16));
         let offset = Vec3::new(fixed(s16(w2 >> 16)), fixed(s16(w2)), fixed(s16(w3 >> 16)));
         let range = Vec3::new(fixed(u16f(w3)), fixed(u16f(w4 >> 16)), fixed(u16f(w4)));
-        self.cmd_script_main(f).skip(5);
+        self.cmd_script(f, which).skip(5);
         self.script_effect(gobj, gfx_id, bone, common, on_state, offset, range);
     }
 

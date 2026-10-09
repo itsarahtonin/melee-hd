@@ -99,7 +99,7 @@ const SMASH_RELEASE: i32 = 3;
 impl Running<'_> {
     /// The script a command runs in: the action's (`x3E4_fighterCmdScript`) or a color
     /// overlay's.
-    fn cmd_script(&mut self, f: FighterId, which: Option<Overlay>) -> &mut Script {
+    pub(super) fn cmd_script(&mut self, f: FighterId, which: Option<Overlay>) -> &mut Script {
         let fp = &mut self.game.fighters[f.0];
         match which {
             None => &mut fp.x3E4_fighterCmdScript.script,
@@ -113,7 +113,7 @@ impl Running<'_> {
         self.cmd_word_in(f, None, n)
     }
 
-    fn cmd_word_in(&self, f: FighterId, which: Option<Overlay>, n: u32) -> u32 {
+    pub(super) fn cmd_word_in(&self, f: FighterId, which: Option<Overlay>, n: u32) -> u32 {
         let fp = &self.game.fighters[f.0];
         let s = match which {
             None => &fp.x3E4_fighterCmdScript.script,
@@ -177,10 +177,11 @@ impl Running<'_> {
             46 => self.cmd_smash_charge(gobj, f, w),
             47 => self.cmd_vibrate(gobj, f, w),
             // Commands of more than one word step over them themselves.
-            0 => return self.cmd_effect(gobj, f),
+            0 => return self.cmd_effect(gobj, f, None),
             1 => return self.cmd_create_hitbox(gobj, f),
             7 => return self.sound_command(f, None),
             28 => return self.cmd_random_sfx(gobj, f),
+            24 => return self.cmd_throw_hitbox(gobj, f),
             44 => return self.cmd_floor_sound(gobj, f),
             45 => return self.cmd_footstep(gobj, f),
             _ => match COMMANDS.get(index as usize) {
@@ -198,7 +199,7 @@ impl Running<'_> {
     #[doc(alias = "ftAction_8007121C")]
     fn cmd_create_hitbox(&mut self, gobj: GObjId, f: FighterId) {
         let w: [u32; 6] = std::array::from_fn(|i| self.cmd_word(f, i as u32));
-        let thrown = self.game.fighters[f.0].x1064_thrownHitbox.x134 != [0; 4];
+        let thrown = self.game.fighters[f.0].x1064_thrownHitbox.x134.is_set();
         if bits(w[3], 28, 1) != 0 && !thrown {
             self.cmd_skip(f, 5);
             self.smash_since_hitbox(f);
@@ -232,14 +233,14 @@ impl Running<'_> {
         };
         let j = self.bone_joint(gobj, bone);
         self.game.fighters[f.0].x914[id].jobj = j;
-        self.hitbox_damage(f, id, bits(w[0], 22, 10));
+        self.hitbox_damage(f, id, false, bits(w[0], 22, 10));
         let fixed = |v: f64| mem(fp::fmuls(reg(FIXED), v));
         let h = &mut self.game.fighters[f.0].x914[id];
         h.scale = fixed(ufloat(bits(w[1], 0, 16)));
         h.b_offset.x = fixed(sfloat(sbits(w[1], 16, 16)));
         h.b_offset.y = fixed(sfloat(sbits(w[2], 0, 16)));
         h.b_offset.z = fixed(sfloat(sbits(w[2], 16, 16)));
-        self.hitbox_angle(gobj, f, id, bits(w[3], 0, 9) as i32);
+        self.hitbox_angle(gobj, f, id, false, bits(w[3], 0, 9) as i32);
         let h = &mut self.game.fighters[f.0].x914[id];
         h.x24 = bits(w[3], 9, 9);
         h.x28 = bits(w[3], 18, 9);
@@ -264,9 +265,9 @@ impl Running<'_> {
         h.x41_b7 = false;
         // `x134.hit_grabbed_victim_only`, from the word after the command's five.
         if bits(w[5], 12, 1) != 0 {
-            h.x134[0] |= 0x80;
+            h.x134.set_grabbed_victim_only(true);
         } else {
-            h.x134[0] &= !0x80;
+            h.x134.set_grabbed_victim_only(false);
         }
         h.x42_b1 = true;
         h.x42_b2 = false;
@@ -286,7 +287,7 @@ impl Running<'_> {
     /// A hitbox's damage, `ftColl_8007ABD0`: scaled by the fighter's height and a released
     /// smash's charge, its hit count from that, then weakened by how stale the move is.
     #[doc(alias = "ftColl_8007ABD0")]
-    fn hitbox_damage(&mut self, f: FighterId, id: usize, damage: u32) {
+    fn hitbox_damage(&mut self, f: FighterId, id: usize, throw: bool, damage: u32) {
         let fp = &self.game.fighters[f.0];
         let mut dmg = fp::frsp(f64::from(damage));
         if fp.x34_scale.y != 1.0 {
@@ -302,9 +303,34 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let attack = fp.x2068_attackID;
         let stale = crate::game::it::owner::stale_damage(self.game, self.data, f, attack, dmg);
-        let h = &mut self.game.fighters[f.0].x914[id];
+        let fp = &mut self.game.fighters[f.0];
+        let h = if throw {
+            &mut fp.xDF4[id]
+        } else {
+            &mut fp.x914[id]
+        };
         h.unk_count = fp::fctiwz(dmg) as u32;
         h.damage = mem(stale);
+    }
+
+    /// A throw's hitbox, `ftAction_80071E04`: one of the throw's two (`xDF4`), its damage
+    /// (`ftColl_8007ABD0`), angle (`ftColl_8007AC9C`), knockback growth, fixed and base
+    /// knockback, element and sound. Three words.
+    #[doc(alias = "ftAction_80071E04")]
+    fn cmd_throw_hitbox(&mut self, gobj: GObjId, f: FighterId) {
+        let w: [u32; 3] = std::array::from_fn(|i| self.cmd_word(f, i as u32));
+        let id = bits(w[0], 6, 3) as usize;
+        assert!(id < 2, "throw hitbox {id} of a command");
+        self.hitbox_damage(f, id, true, bits(w[0], 9, 23));
+        self.hitbox_angle(gobj, f, id, true, bits(w[1], 0, 9) as i32);
+        let h = &mut self.game.fighters[f.0].xDF4[id];
+        h.x24 = bits(w[1], 9, 9);
+        h.x28 = bits(w[1], 18, 9);
+        h.x2C = bits(w[2], 0, 9);
+        h.element = bits(w[2], 9, 4);
+        h.sfx_severity = bits(w[2], 13, 3) as i32;
+        h.sfx_kind = bits(w[2], 16, 4) as i32;
+        self.cmd_skip(f, 3);
     }
 
     /// A released smash attack's damage, `ftCo_800DEEB8`: more the longer it charged.
@@ -329,8 +355,13 @@ impl Running<'_> {
     #[doc(alias = "ftColl_8007AC9C")]
     #[doc(alias = "ftColl_8007AC68")]
     #[doc(alias = "pl_80037ECC")]
-    fn hitbox_angle(&mut self, _gobj: GObjId, f: FighterId, id: usize, angle: i32) {
-        self.game.fighters[f.0].x914[id].kb_angle = angle;
+    fn hitbox_angle(&mut self, _gobj: GObjId, f: FighterId, id: usize, throw: bool, angle: i32) {
+        let fp = &mut self.game.fighters[f.0];
+        if throw {
+            fp.xDF4[id].kb_angle = angle;
+        } else {
+            fp.x914[id].kb_angle = angle;
+        }
         let a = angle as u32;
         let c = self.common();
         let (lo, hi) = (c.u32(0x7E8), c.u32(0x7EC));
@@ -473,11 +504,22 @@ impl Running<'_> {
         self.game.fighters[f.0].x2218_b2 = bits(w, 6, 26) & 1 != 0;
     }
 
-    /// Shows one of a model's variants (`ftParts_80074B0C`; changing it isn't ported).
+    /// Shows one of a model's variants.
     fn cmd_model_variant(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let (i, v) = (sbits(w, 6, 7), sbits(w, 13, 19));
-        if v != i32::from(self.game.fighters[f.0].x5F4_arr[i as usize].idx) {
-            unported_call("ftParts_80074D7C");
+        self.set_model_variant(f, i as usize, v);
+    }
+
+    /// A model's variant chosen, `ftParts_80074B0C`: a new one marks the models changed and
+    /// hides the first visibility group's parts until they are shown again.
+    #[doc(alias = "ftParts_80074B0C")]
+    fn set_model_variant(&mut self, f: FighterId, i: usize, v: i32) {
+        let fp = &mut self.game.fighters[f.0];
+        if v != i32::from(fp.x5F4_arr[i].idx) {
+            fp.x5F4_arr[i].idx = v as i8;
+            fp.x221D_b2 = true;
+            let list = fp.dobj_list.data;
+            self.hide_parts_vis(f, 0, list);
         }
     }
 
@@ -525,7 +567,7 @@ impl Running<'_> {
     /// Plays a part animation (`ftAction_800727C8`), over the command's frames unless a
     /// state started partway in catches up on it (`ftAction_8007283C`, at once).
     #[doc(alias = "ftAction_800727C8")]
-    // Ports `ftAction_8007283C`; aliased once a check reaches it.
+    #[doc(alias = "ftAction_8007283C")]
     fn cmd_part_anim(&mut self, gobj: GObjId, w: u32, blend: bool) {
         let frames = if blend {
             mem(fp::frsp(f64::from(bits(w, 20, 12))))
@@ -850,7 +892,7 @@ impl Running<'_> {
     pub(super) fn overlay_command(&mut self, gobj: GObjId, which: Overlay, i: u32, alt: bool) {
         let f = self.game.fighter_id(gobj);
         match (alt, i) {
-            (false, 0) => unported_call("ftAction_80071028"),
+            (false, 0) => self.cmd_effect(gobj, f, Some(which)),
             (false, 1) => self.sound_command(f, Some(which)),
             (false, 2) => {
                 // `ftAction_800730B8`.

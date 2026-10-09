@@ -1,6 +1,7 @@
-//! Sheik's character callbacks (`ftseak.c`): the damage hook, the full charge's flash, the
-//! item hooks and the knockback hooks. Her creation and spawn (`ftSk_Init_OnLoad`,
-//! `ftSk_Init_OnDeath`, `ftSk_Init_LoadSpecialAttrs`) come with fighter creation (`ft::kinds`).
+//! Sheik's character callbacks (`ftseak.c`): the damage hook, the full charge's flash and the
+//! item hooks. Her knockback hooks are in `ft::co::hit`, and her creation and spawn
+//! (`ftSk_Init_OnLoad`, `ftSk_Init_OnDeath`, `ftSk_Init_LoadSpecialAttrs`) come with fighter
+//! creation (`ft::kinds`).
 
 use super::super::super::code::Val;
 use super::super::super::state::Running;
@@ -48,21 +49,6 @@ impl Running<'_> {
     pub fn seak_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_drop(gobj, flag);
     }
-
-    /// Entering knockback, `ftSk_Init_OnKnockbackEnter` (`Fighter_OnKnockbackEnter(gobj, 1)`):
-    /// the hurt textures.
-    #[doc(alias = "ftSk_Init_OnKnockbackEnter")]
-    pub fn seak_on_knockback_enter(&mut self, gobj: GObjId) {
-        self.texture_anim(gobj, 1, 3.0);
-        self.texture_anim(gobj, 0, 3.0);
-    }
-
-    /// Leaving knockback, `ftSk_Init_OnKnockbackExit`.
-    #[doc(alias = "ftSk_Init_OnKnockbackExit")]
-    pub fn seak_on_knockback_exit(&mut self, gobj: GObjId) {
-        self.texture_anim(gobj, 1, 0.0);
-        self.texture_anim(gobj, 0, 0.0);
-    }
 }
 
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
@@ -71,8 +57,6 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::UNK_MOTION_STATES_4 => g.seak_full_charge_flash(gobj),
         addr::ON_ITEM_INVISIBLE => g.seak_on_item_invisible(gobj),
         addr::ON_ITEM_VISIBLE => g.seak_on_item_visible(gobj),
-        addr::ON_KNOCKBACK_ENTER => g.seak_on_knockback_enter(gobj),
-        addr::ON_KNOCKBACK_EXIT => g.seak_on_knockback_exit(gobj),
         _ => return false,
     }
     true

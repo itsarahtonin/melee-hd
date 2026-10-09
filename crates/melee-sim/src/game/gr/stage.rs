@@ -272,7 +272,7 @@ impl super::super::state::Running<'_> {
     }
 
     /// `grStadium_801D4150`: the screen as the HUD comes on.
-    // Ports `grStadium_801D4150`; aliased once a check reaches it.
+    #[doc(alias = "grStadium_801D4150")]
     pub fn stadium_hud_on(&mut self) {
         self.stadium_screen(1);
     }

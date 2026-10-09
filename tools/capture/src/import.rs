@@ -854,6 +854,21 @@ impl Importer<'_> {
         for &off in melee_sim::game::ft::vars::gobj_words(f.kind) {
             f.u.import_gobj(off, &mem, a + 0x222C, self);
         }
+        // The state's variables' handles where the states that read them keep them: a grab's
+        // hold joint (`mv` 0x18) while pulling, holding or pummeling (`ft::co::grab`), Fox's
+        // and Falco's Illusion's ghost (0x44) in their side special (`ft::fox::special_s`),
+        // and a thrown fighter's thrower (0xC) until its next state takes it (`x21EC`,
+        // `fn_800DE798`).
+        let mv = a + 0x2340;
+        if matches!(f.motion_id, 213 | 215 | 216 | 217) {
+            f.mv.import_jobj(0x18, &mem, mv, self);
+        }
+        if melee_sim::game::ft::vars::holds_blaster(f.kind) && (347..=352).contains(&f.motion_id) {
+            f.mv.import_gobj(0x44, &mem, mv, self);
+        }
+        if f.x21EC == Some(melee_sim::game::handles::CodeRef(0x800D_E798)) {
+            f.mv.import_gobj(0xC, &mem, mv, self);
+        }
         self.game.fighters[id.0] = f;
         id
     }

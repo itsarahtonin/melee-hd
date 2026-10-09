@@ -5,7 +5,7 @@
 use gekko_fp as fp;
 
 use super::super::super::camera;
-use super::super::super::code::{self, Val, unported_call};
+use super::super::super::code::unported_call;
 use super::super::super::ef;
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
@@ -20,8 +20,6 @@ use crate::hsd::jobj;
 use crate::math::{self, sqrt_reg};
 use crate::mp::coll::{LEFT_WALL_HUG, RIGHT_WALL_HUG};
 
-/// `ftCo_8008DCE0`: hitstun's entry (the damage port).
-const FT_CO_8008DCE0: u32 = 0x8008_DCE0;
 /// `ftCo_DownBound_SfxIds`.
 const DOWN_BOUND_SFX: [i32; 4] = [9, 10, 11, 12];
 /// `FtPart_HipN`.
@@ -43,7 +41,7 @@ impl Running<'_> {
     /// `ft_80084C74` for sets 0, 1 and 2): `None` off the ground; else its sounds (the first
     /// -1 when it has none, which also sets the flag), the set's flag and its effect (or -1).
     #[doc(alias = "ft_80084A80")]
-    // Ports `ft_80084BFC`; aliased once a check reaches it.
+    #[doc(alias = "ft_80084BFC")]
     #[doc(alias = "ft_80084C38")]
     #[doc(alias = "ft_80084C74")]
     pub fn floor_sounds(&self, gobj: GObjId, set: usize) -> Option<([i32; 4], i32, i32)> {
@@ -449,12 +447,8 @@ impl Running<'_> {
             } else {
                 ms::DOWN_DAMAGE_D
             };
-            let facing = reg(fp.facing_dir);
-            code::call(
-                self,
-                FT_CO_8008DCE0,
-                &[Val::GObj(Some(gobj)), Val::Int(msid), Val::Float(facing)],
-            );
+            let facing = fp.facing_dir;
+            self.enter_damage(gobj, msid, facing);
             self.game.fighter_mut(gobj).x1A6A = 1;
             return true;
         }

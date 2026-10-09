@@ -23,6 +23,10 @@ use crate::{MODES, disc_index, reference, run_capture};
 /// is compared with the reference's r3 or f1.
 pub type Ours<'a> = dyn Fn(&mut Running, &Maps, &Call) -> Ret + Sync + 'a;
 
+/// How a call's run says it can't compare: a panic starting with this skips the call, as an
+/// unported function does.
+pub const SKIP: &str = "skip: ";
+
 /// A function's result.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Ret {
@@ -366,7 +370,7 @@ fn run_one(
         Ok(ret) => ret,
         Err(p) => {
             let why = panic_text(&*p);
-            return if why.contains("isn't ported") {
+            return if why.contains("isn't ported") || why.starts_with(SKIP) {
                 Outcome::Skipped(why)
             } else {
                 Outcome::Failed(format!("our port panicked: {why}"))
@@ -606,7 +610,7 @@ fn quiet_unported_panics() {
                 .map(String::as_str)
                 .or_else(|| info.payload().downcast_ref::<&str>().copied())
                 .unwrap_or("");
-            if !text.contains("isn't ported") {
+            if !text.contains("isn't ported") && !text.starts_with(SKIP) {
                 default(info);
             }
         }));

@@ -7,7 +7,7 @@ use gekko_fp as fp;
 use super::super::super::code::unported_call;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::checks::{KIND_CLINK, KIND_PIKACHU, abs};
+use super::checks::{KIND_CLINK, KIND_PIKACHU, KIND_SAMUS, abs};
 use super::checks::{KIND_GAME_WATCH, KIND_KIRBY, KIND_LINK, KIND_NESS, KIND_PEACH, KIND_PICHU};
 use super::ids::ms;
 use super::{PAD_A, PAD_LR};
@@ -19,6 +19,12 @@ const KIND_MARS: i32 = 18;
 
 /// `ftCommon_MotionVars_attack1`, `attackdash`, `attacklw3`.
 const ATTACK_X0: usize = 0x0;
+/// `ftCommon_MotionVars_attack100`: the cycle started, and A came again.
+const ATTACK100_X0: usize = 0x0;
+const ATTACK100_X4: usize = 0x4;
+/// `ftCommon_MotionVars_rebound`: the push, and the recoil's animation speed.
+const REBOUND_X0: usize = 0x0;
+const REBOUND_SPEED: usize = 0x4;
 
 /// `onPkPc21EC` and the down tilt's `callUnk`: the move's hit counts toward staling
 /// (`ft_800892A0`, `ft_80089824`).
@@ -193,9 +199,137 @@ impl Running<'_> {
             fp.x1A54 = fp.x1A54.wrapping_add(1);
         }
         if fp.x1A54 >= fp.co_attrs.rapid_jab_window && fp.x2218_b2 {
-            unported_call("fn_800D6AC4");
+            self.enter_attack100(gobj);
+            return true;
         }
         false
+    }
+
+    /// The rapid jab's start, `fn_800D6AC4` (`fn_800D6B8C`, `ftCo_800D6B00`): an item in
+    /// reach is picked up instead; Mr. Game & Watch's own isn't ported.
+    #[doc(alias = "fn_800D6AC4")]
+    #[doc(alias = "fn_800D6B8C")]
+    #[doc(alias = "ftCo_800D6B00")]
+    pub fn enter_attack100(&mut self, gobj: GObjId) {
+        if self.game.fighter(gobj).kind == KIND_GAME_WATCH {
+            unported_call("ftGw_Attack100Start_Enter");
+        }
+        if self.pick_up_item_check(gobj) {
+            return;
+        }
+        let fp = self.game.fighter_mut(gobj);
+        fp.x2210 = [0; 4];
+        self.change_motion_state(gobj, ms::ATTACK100_START, 0, 0.0, 1.0, 0.0, None);
+        self.anim_update(gobj);
+        let fp = self.game.fighter_mut(gobj);
+        fp.set_mv_i32(ATTACK100_X0, 0);
+        fp.set_mv_i32(ATTACK100_X4, 0);
+    }
+
+    /// `ftCo_Attack100Start_Anim`: the loop once the start's frames run out.
+    #[doc(alias = "ftCo_Attack100Start_Anim")]
+    pub fn co_attack100_start_anim(&mut self, gobj: GObjId) {
+        if !self.anim_frames_remaining(gobj) {
+            let flags = super::super::motion::flags::SKIP_ATTACK_COUNT;
+            self.change_motion_state(gobj, ms::ATTACK100_LOOP, flags, 0.0, 1.0, 0.0, None);
+        }
+    }
+
+    /// `ftCo_Attack100Loop_Anim`: each cycle a new attack; at the script's mark, the end
+    /// unless A came again (then an item in reach is picked up, or the loop goes on).
+    #[doc(alias = "ftCo_Attack100Loop_Anim")]
+    pub fn co_attack100_loop_anim(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter(gobj);
+        if fp.cur_anim_frame >= 0.0 && fp.cur_anim_frame < fp.frame_speed_mul {
+            self.game.fighter_mut(gobj).set_mv_i32(ATTACK100_X0, 1);
+            self.renew_attack_instance(gobj);
+            self.renew_attack_record(gobj);
+        }
+        let fp = self.game.fighter_mut(gobj);
+        let mark = fp.throw_flag(3);
+        fp.set_throw_flag(3, false);
+        if !mark {
+            return;
+        }
+        if fp.mv_i32(ATTACK100_X0) != 0 && fp.mv_i32(ATTACK100_X4) == 0 {
+            self.change_motion_state(gobj, ms::ATTACK100_END, 0, 0.0, 1.0, 0.0, None);
+        } else if !self.pick_up_item_check(gobj) {
+            self.game.fighter_mut(gobj).set_mv_i32(ATTACK100_X4, 0);
+        }
+    }
+
+    /// `ftCo_Attack100End_Anim`: waiting once its frames run out.
+    #[doc(alias = "ftCo_Attack100End_Anim")]
+    pub fn co_attack100_end_anim(&mut self, gobj: GObjId) {
+        if !self.anim_frames_remaining(gobj) {
+            self.enter_wait(gobj);
+        }
+    }
+
+    /// A clank's recoil, `ftCo_80099D9C`: a frame's stop, then the recoil played over the
+    /// character's clank length stretched by the clank's strength (`dmg.x191C`), pushed back
+    /// along the ground away from the clank.
+    #[doc(alias = "ftCo_80099D9C")]
+    pub fn enter_rebound(&mut self, gobj: GObjId) {
+        self.change_motion_state(gobj, ms::REBOUND_STOP, 0, 0.0, 1.0, 0.0, None);
+        let c = self.common();
+        let (mul, add) = (c.f32(0x3D8), c.f32(0x3DC));
+        let fp = self.game.fighter_mut(gobj);
+        let strength = reg(fp.dmg.x191C);
+        let speed = fp::fdivs(
+            fp::fadds(f64::from(0.1_f32), reg(fp.co_attrs.clank_animation_length)),
+            strength,
+        );
+        fp.set_mv_f32(REBOUND_SPEED, speed);
+        let push = fp::fmuls(
+            fp::fneg(reg(fp.dmg.facing_dir)),
+            fp::fmadds(strength, reg(mul), reg(add)),
+        );
+        fp.set_mv_f32(REBOUND_X0, push);
+        let v = fp.mv_f32(REBOUND_X0);
+        self.ground_push(gobj, v);
+    }
+
+    /// `ftCo_ReboundStop_Anim` (`ftCo_80099E44`): the recoil at its speed.
+    #[doc(alias = "ftCo_ReboundStop_Anim")]
+    #[doc(alias = "ftCo_80099E44")]
+    pub fn co_rebound_stop_anim(&mut self, gobj: GObjId) {
+        let speed = self.game.fighter(gobj).mv_f32(REBOUND_SPEED);
+        self.change_motion_state(gobj, ms::REBOUND, 0, 0.0, speed, 0.0, None);
+    }
+
+    /// `ftCo_Rebound_Anim`: waiting once the recoil's frames run out.
+    #[doc(alias = "ftCo_Rebound_Anim")]
+    pub fn co_rebound_anim(&mut self, gobj: GObjId) {
+        if !self.anim_frames_remaining(gobj) {
+            self.enter_wait(gobj);
+        }
+    }
+
+    /// `ftCo_Rebound_Phys`: the push's first frame, then ground friction.
+    #[doc(alias = "ftCo_Rebound_Phys")]
+    pub fn co_rebound_phys(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        if fp.mv_f32(REBOUND_X0) != 0.0 {
+            fp.set_mv_f32(REBOUND_X0, 0.0);
+        } else {
+            self.ground_friction(gobj);
+        }
+    }
+
+    /// `ftCo_Rebound_Coll`: off a ledge, the fighter falls.
+    #[doc(alias = "ftCo_Rebound_Coll")]
+    pub fn co_rebound_coll(&mut self, gobj: GObjId) {
+        self.ground_coll_fall_off(gobj);
+    }
+
+    /// `ftCo_Attack100Loop_IASA`: A pressed or let go keeps the loop going.
+    #[doc(alias = "ftCo_Attack100Loop_IASA")]
+    pub fn co_attack100_loop_iasa(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        if fp.input.pressed_buttons & PAD_A != 0 || fp.input.released_buttons & PAD_A != 0 {
+            fp.set_mv_i32(ATTACK100_X4, 1);
+        }
     }
 
     /// `ftCo_Attack11_IASA` and `ftCo_Attack12_IASA`.
@@ -262,6 +396,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_AttackHi4_Coll")]
     #[doc(alias = "ftCo_AttackLw4_Coll")]
     #[doc(alias = "ftCo_AttackDash_Coll")]
+    #[doc(alias = "ftCo_Attack100Start_Coll")]
+    #[doc(alias = "ftCo_Attack100Loop_Coll")]
+    #[doc(alias = "ftCo_Attack100End_Coll")]
     pub fn co_attack_coll(&mut self, gobj: GObjId) {
         self.ground_coll(gobj);
     }
@@ -687,16 +824,42 @@ impl Running<'_> {
 
     /// `ftCo_AttackDash_IASA`: a grab out of it (`ftCo_800D8AE0`), then anything standing
     /// allows.
-    // Ports `ftCo_AttackDash_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_AttackDash_IASA")]
     pub fn co_attack_dash_iasa(&mut self, gobj: GObjId) {
         if !self.attack_dash_catch_check(gobj) && self.game.fighter(gobj).allow_interrupt {
             self.co_wait_iasa(gobj);
         }
     }
 
-    /// A grab out of a dash attack (`ftCo_800D8AE0`), not ported yet.
+    /// A grab out of a dash attack, `ftCo_800D8AE0`: holding an item, a shoulder throws it
+    /// (`ftCo_800952DC`); else unless Link's hookshot or Samus's grapple is out
+    /// (`fn_800D8E94`, `fn_800D952C`), a shoulder within the grab window grabs; the window
+    /// counts down.
+    #[doc(alias = "ftCo_800D8AE0")]
+    #[doc(alias = "ftCo_800952DC")]
     pub fn attack_dash_catch_check(&mut self, gobj: GObjId) -> bool {
-        let _ = gobj;
-        unported_call("ftCo_800D8AE0")
+        let fp = self.game.fighter(gobj);
+        let shoulder = fp.input.held_buttons[0] & PAD_LR != 0;
+        if fp.item_gobj.is_some() && shoulder {
+            self.enter_item_throw(gobj, ms::LIGHT_THROW_DASH);
+            return true;
+        }
+        if (fp.kind == KIND_LINK || fp.kind == KIND_CLINK) && fp.u_i32(0xC) != 0 {
+            return false;
+        }
+        if fp.kind == KIND_SAMUS && fp.u_i32(0x10) != 0 {
+            return false;
+        }
+        let window = fp.mv_i32(ATTACK_X0);
+        if shoulder && window != 0 {
+            self.enter_catch(gobj, ms::CATCH_DASH);
+            return true;
+        }
+        if window != 0 {
+            self.game
+                .fighter_mut(gobj)
+                .set_mv_i32(ATTACK_X0, window.wrapping_sub(1));
+        }
+        false
     }
 }

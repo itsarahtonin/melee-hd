@@ -153,10 +153,32 @@ impl Game {
 /// perf timer's read at the end lets time pass (`crate::audio::clock`).
 pub fn tick(r: &mut Running) -> bool {
     r.game.audio.tick_start(r.data);
+    queue_alarm_polls(r, 1);
     begin_tick(r);
     let ended = finish_tick(r, Resume::ButtonMaps);
     r.game.audio.tick_end(r.data);
+    queue_alarm_polls(r, 0);
     ended
+}
+
+/// The pad alarm's polls on the timeline that the pad library hasn't queued yet
+/// (`HSD_PadRenewRawStatus` from the alarm): the alarm runs a little faster than video
+/// fields, so now and then a round finds two queued and ticks twice. `taking` counts the
+/// tick about to read its poll. Only replay runs keep a timeline, and their controllers are
+/// at rest.
+fn queue_alarm_polls(r: &mut Running, taking: u32) {
+    let Some(c) = r.game.audio.clock.as_ref() else {
+        return;
+    };
+    let want = c.pads + taking;
+    while u32::from(r.game.pads.lib.qcount) < want {
+        r.game.pads.renew_raw(
+            r.data,
+            [crate::input::pad::PadStatus::default(); 4],
+            false,
+            false,
+        );
+    }
 }
 
 /// The tick's first part: the oldest poll into the master statuses and, when the game
@@ -267,7 +289,15 @@ pub fn step_tick(r: &mut Running, poll: PadData, reset_pressed: bool) -> (Tick, 
         return (Tick { pads, ended: true }, false);
     }
     let ended = tick(r);
-    (Tick { pads, ended }, r.game.scene.unk_C != 2)
+    // A round ticks once per poll it found queued (on the timeline, which counts the
+    // round's ticks), or until the scene asks to end, then renders once.
+    let round_over = r.game.scene.unk_C != 0
+        || r.game
+            .audio
+            .clock
+            .as_ref()
+            .is_none_or(|c| c.ticks_left == 0);
+    (Tick { pads, ended }, r.game.scene.unk_C != 2 && round_over)
 }
 
 /// The frame's display pass on the screen (`HSD_StartRender(HSD_RP_SCREEN)`), which counts

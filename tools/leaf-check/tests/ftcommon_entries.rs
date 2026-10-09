@@ -27,18 +27,10 @@ fn dirs() -> Vec<String> {
 }
 
 fn stubs() -> Vec<Stub> {
-    let mut v: Vec<Stub> = [
-        "ftColl_8007B1B8",
-        "ftColl_CreateReflectHit",
-        "un_80322598",
-        "pl_80040048",
-        "pl_8003FFDC",
-        "pl_8003E0E8",
-        "pl_8003E114",
-    ]
-    .iter()
-    .map(|n| (leaf_check::sym(n), StubRet::Nothing))
-    .collect();
+    let mut v: Vec<Stub> = ["un_80322598", "pl_80040048", "pl_8003FFDC"]
+        .iter()
+        .map(|n| (leaf_check::sym(n), StubRet::Nothing))
+        .collect();
     v.push((leaf_check::sym("un_803224DC"), StubRet::Int(0)));
     for table in [
         &kinds::SPECIAL_N,
@@ -172,6 +164,11 @@ fn fighter(
 /// A callback, run through the port's dispatch.
 fn cb(name: &'static str, from: &'static str) -> Case {
     gobj(name, from, move |g, gobj| {
+        // Run in another state, a callback would read the handle a state variable holds
+        // (a grab's hold joint, say) as data, which melee-sim refuses.
+        if !g.game.fighter(gobj).mv.handles().is_empty() {
+            panic!("{}a state variable holds a handle", leaf_check::calls::SKIP);
+        }
         run_fighter_cb(g, gobj, CodeRef(leaf_check::sym(name)));
         Ret::Nothing
     })

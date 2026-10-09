@@ -265,7 +265,7 @@ impl Running<'_> {
         fp.x2226_b2 = false;
         fp.x2170 = 0.0;
         fp.dmg.x1908 = -1;
-        fp.dmg.x190C = Default::default();
+        fp.dmg.x190C = None;
         fp.x2227_b4 = false;
         fp.x213C = -1;
         fp.x2227_b5 = false;
@@ -277,7 +277,7 @@ impl Running<'_> {
         fp.dmg.x1830_percent = mem(fp::frsp(f64::from(damage)));
         fp.x100 = -1.0;
         fp.x2210 = [0; 4];
-        fp.x1064_thrownHitbox.x134 = [0; 4];
+        fp.x1064_thrownHitbox.x134 = Default::default();
         fp.x2150 = -1;
         fp.x2154 = -1;
         fp.x2158 = -1;

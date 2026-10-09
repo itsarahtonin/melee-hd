@@ -14,7 +14,7 @@ impl Running<'_> {
     }
 
     /// Whether the fighter holds a heavy item (a crate), `ft_800878BC`.
-    // Ports `ft_800878BC`; aliased once a check reaches it.
+    #[doc(alias = "ft_800878BC")]
     pub fn ft_holds_heavy(&self, gobj: GObjId) -> bool {
         self.game
             .fighter(gobj)
@@ -57,19 +57,19 @@ impl Game {
     }
 
     /// Whether the fighter is in one of the death states, `ftLib_IsDead`.
-    // Ports `ftLib_IsDead`; aliased once a check reaches it.
+    #[doc(alias = "ftLib_IsDead")]
     pub fn ft_is_dead(&self, gobj: GObjId) -> bool {
         (MS_DEAD_DOWN..=MS_DEAD_UP_FALL_HIT_CAMERA_ICE).contains(&self.fighter(gobj).motion_id)
     }
 
     /// The fighter's percent, truncated, `ftLib_GetPercent`.
-    // Ports `ftLib_GetPercent`; aliased once a check reaches it.
+    #[doc(alias = "ftLib_GetPercent")]
     pub fn ft_percent(&self, gobj: GObjId) -> i32 {
         gekko_fp::fctiwz(crate::fpu::reg(self.fighter(gobj).dmg.x1830_percent))
     }
 
     /// The grounded fighter's floor's slope in radians, `ftLib_GetGroundSlopeAngle`.
-    // Ports `ftLib_GetGroundSlopeAngle`; aliased once a check reaches it.
+    #[doc(alias = "ftLib_GetGroundSlopeAngle")]
     pub fn ft_ground_slope_angle(&self, gobj: GObjId) -> f32 {
         let fp = self.fighter(gobj);
         assert!(
@@ -81,7 +81,7 @@ impl Game {
     }
 
     /// Whether another fighter pushes this one, `ftLib_IsBeingNudged`.
-    // Ports `ftLib_IsBeingNudged`; aliased once a check reaches it.
+    #[doc(alias = "ftLib_IsBeingNudged")]
     pub fn ft_is_being_nudged(&self, gobj: GObjId) -> bool {
         self.fighter(gobj).xF8_playerNudgeVel.x != 0.0
     }
@@ -100,8 +100,8 @@ impl Game {
 
     /// Whether the fighter holds an item of `kind` (`ft_80087900`, the Screw Attack;
     /// `ft_80087944`, Mr. Saturn).
-    // Ports `ft_80087900`; aliased once a check reaches it.
-    // Ports `ft_80087944`; aliased once a check reaches it.
+    #[doc(alias = "ft_80087900")]
+    #[doc(alias = "ft_80087944")]
     pub fn ft_holds_item_kind(&self, gobj: GObjId, kind: i32) -> bool {
         // `itGetKind`.
         self.fighter(gobj)
@@ -110,7 +110,7 @@ impl Game {
     }
 
     /// Whether the fighter is resized, metal or otherwise changed, `ft_80087AEC`.
-    // Ports `ft_80087AEC`; aliased once a check reaches it.
+    #[doc(alias = "ft_80087AEC")]
     pub fn ft_80087aec(&self, gobj: GObjId) -> bool {
         let fp = self.fighter(gobj);
         fp.x34_scale.y != fp.x34_scale.x || fp.x2226_b4 || fp.is_metal || fp.x197C.is_some()
@@ -118,7 +118,7 @@ impl Game {
 
     /// What moves the fighter most, `ft_80087B34`: 0 its own velocity, 1 knockback, 2 a
     /// shield's push.
-    // Ports `ft_80087B34`; aliased once a check reaches it.
+    #[doc(alias = "ft_80087B34")]
     pub fn ft_80087b34(&self, gobj: GObjId) -> i32 {
         use crate::fpu::reg;
         use gekko_fp as fp;

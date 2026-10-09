@@ -70,19 +70,12 @@ fn stubs(yes: bool) -> Vec<Stub> {
     let b = StubRet::Int(i32::from(yes));
     let mut v: Vec<Stub> = [
         ext::FTCOMMON_CALC_SELF_ACCEL_DEACCEL_QUICK_AIR,
-        ext::FTCOLL_8007AEF8,
         ext::FTANIM_80070FB4,
         ext::FTANIM_80070C48,
         ext::FTANIM_80070CC4,
         ext::PL_80040120,
-        ext::FTPICKUPITEM_80094818,
-        ext::FTCOLL_CREATE_REFLECT_HIT,
         ext::GRCORNERIA_801E2AF4,
         ext::FT_8008A324,
-        ext::FT_80089824,
-        ext::FT_800892A0,
-        ext::FT_800851C0,
-        ext::FT_80085088,
     ]
     .iter()
     .map(|&a| (a, StubRet::Nothing))
@@ -96,20 +89,13 @@ fn stubs(yes: bool) -> Vec<Stub> {
         v.push((a, b));
     }
     // The common states' crowd and statistics, which their ports stand in for.
-    for n in [
-        "un_80322598",
-        "pl_80040048",
-        "pl_8003FFDC",
-        "pl_8003E0E8",
-        "pl_8003E114",
-    ] {
+    for n in ["un_80322598", "pl_80040048", "pl_8003FFDC"] {
         v.push((leaf_check::sym(n), StubRet::Nothing));
     }
     v.push((leaf_check::sym("un_803224DC"), StubRet::Int(0)));
     // An item's hold kind: the one-handed pose, or none.
     v.push((ext::IT_GET_HOLD_KIND, StubRet::Int(if yes { 3 } else { 0 })));
     // The Illusion's ghost: none made (a ghost would be a GObj the stand-in can't make).
-    v.push((ext::IT_8029CEB4, StubRet::Int(0)));
     // The root's z rotation, during the reflector's turn.
     v.push((
         ext::FT_PART_GET_ROT_Z,

@@ -107,6 +107,8 @@ pub fn run_event(game: &mut Running, f: u32) {
 
 /// `efLib_PauseAll`.
 pub const EF_PAUSE_ALL: u32 = 0x8005_BA40;
+/// `efLib_ResumeAll`.
+pub const EF_RESUME_ALL: u32 = 0x8005_BAC4;
 
 /// Runs a callback a fighter holds that takes its GObj (`void (*)(HSD_GObj*)`): an action
 /// state's animation, input, physics, collision and camera callbacks, accessories, hitlag
@@ -155,8 +157,68 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         0x8007_61C8 => g.update_camera_box(gobj),
         // Hitlag.
         0x8008_E4F0 => g.co_damage_hitlag(gobj),
+        0x8008_E714 => g.co_damage_exit_hitlag(gobj),
+        // The throws'.
+        0x800D_D8C4 => g.co_throw_f_anim(gobj),
+        0x800D_DA10 | 0x800D_DB40 | 0x800D_DCB4 => g.co_throw_anim(gobj),
+        0x800D_D930 => g.co_throw_phys(gobj),
+        0x800D_D990 | 0x800D_DAC0 | 0x800D_DBF0 | 0x800D_DD64 => g.co_throw_coll(gobj),
+        0x800D_DC70 => g.co_throw_hi_cam(gobj),
+        0x800D_D92C | 0x800D_DA5C | 0x800D_DB8C | 0x800D_DD00 => g.co_throw_nothing(gobj),
+        // Thrown.
+        0x800D_E69C | 0x800D_E6C8 | 0x800D_E6F4 | 0x800D_E76C => g.co_thrown_anim(gobj),
+        0x800D_E6BC | 0x800D_E6C0 | 0x800D_E6C4 | 0x800D_E6E8 | 0x800D_E6EC | 0x800D_E6F0
+        | 0x800D_E714 | 0x800D_E718 | 0x800D_E71C | 0x800D_E78C | 0x800D_E794 => {
+            g.co_throw_nothing(gobj)
+        }
+        0x800D_E720 => g.co_thrown_hi_cam(gobj),
+        0x800D_E508 => g.thrown_follow(gobj),
+        0x800D_E798 => g.thrown_on_change(gobj),
+        // The grab's: fn_800D9CE8, the holds' hooks.
+        0x800D_9CE8 => g.catch_landed(gobj),
+        0x800D_A190 | 0x800D_A4A0 | 0x800D_A678 => g.catch_follow(gobj),
+        0x800D_A490 | 0x800D_A668 => g.catch_on_damage(gobj),
+        // ftCo_CatchPull_Anim, ftCo_CatchWait_Anim, ftCo_CatchAttack_Anim, ftCo_CatchCut_Anim
+        0x800D_9E80 => g.co_catch_pull_anim(gobj),
+        0x800D_A318 => g.co_grab_nothing(gobj),
+        0x800D_A568 => g.co_catch_attack_anim(gobj),
+        0x800D_A744 | 0x800D_C7F0 => g.co_catch_cut_anim(gobj),
+        // The holds' interrupts.
+        0x800D_9F90 | 0x800D_A5A4 | 0x800D_A780 | 0x800D_AC74 | 0x800D_B008 | 0x800D_C82C => {
+            g.co_grab_nothing(gobj)
+        }
+        0x800D_A31C => g.co_catch_wait_iasa(gobj),
+        0x800D_BA4C | 0x800D_BD30 => g.co_capture_wait_iasa(gobj),
+        0x800D_C160 => g.co_capture_jump_iasa(gobj),
+        // The holds' physics and collision.
+        0x800D_9F94 | 0x800D_A5A8 => g.co_catch_hold_phys(gobj),
+        0x800D_9FDC | 0x800D_A418 | 0x800D_A5F0 => g.co_catch_hold_coll(gobj),
+        0x800D_A784 => g.co_catch_cut_phys(gobj),
+        0x800D_A7E4 => g.co_catch_cut_coll(gobj),
+        // The victim's.
+        0x800D_AC70 | 0x800D_B004 => g.co_grab_nothing(gobj),
+        0x800D_ADE8 | 0x800D_BA6C => g.co_capture_hi_phys(gobj),
+        0x800D_AE94 => g.co_capture_pulled_hi_coll(gobj),
+        0x800D_BA8C => g.co_capture_wait_hi_coll(gobj),
+        0x800D_B00C => g.co_capture_pulled_lw_phys(gobj),
+        0x800D_B1F8 => g.co_capture_pulled_lw_coll(gobj),
+        0x800D_B908 | 0x800D_BD10 => g.co_capture_wait_anim(gobj),
+        0x800D_BD50 => g.co_capture_wait_lw_phys(gobj),
+        0x800D_BE9C => g.co_capture_wait_lw_coll(gobj),
+        0x800D_C830 => g.co_capture_cut_phys(gobj),
+        0x800D_C890 => g.co_capture_cut_coll(gobj),
+        0x800D_C110 => g.co_capture_jump_anim(gobj),
+        0x800D_C224 => g.co_capture_jump_phys(gobj),
+        0x800D_C264 => g.co_capture_jump_coll(gobj),
+        0x8008_AB50 | 0x8008_BC00 => g.attack_counts_anew(gobj),
+        super::ft::phys::SPEED_TOWARD_FACING => g.speed_toward_facing(gobj),
+        // Sheik's knockback hooks.
+        super::ft::co::hit::SEAK_ON_KNOCKBACK_ENTER => g.seak_on_knockback_enter(gobj),
+        super::ft::co::hit::SEAK_ON_KNOCKBACK_EXIT => g.seak_on_knockback_exit(gobj),
         // efLib_PauseAll, a state's hitlag hook that freezes the fighter's effects.
         EF_PAUSE_ALL => super::ef::pause_all(g.game, Some(gobj)),
+        // efLib_ResumeAll, a state's hook for hitlag's end.
+        EF_RESUME_ALL => super::ef::resume_all(g.game, Some(gobj)),
         other => unported("fighter callback", other),
     }
 }

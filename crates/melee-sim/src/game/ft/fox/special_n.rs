@@ -8,7 +8,7 @@ use super::super::super::code::Val;
 use super::super::super::it::kinds::{foxblaster, foxlaser};
 use super::super::super::state::Running;
 use super::super::motion::flags::{KEEP_GFX, SKIP_ATTACK_COUNT, SKIP_MODEL};
-use super::{BLASTER, KIND_FALCO, KIND_FOX, PAD_B, addr, attr, ext, ms, mv};
+use super::{BLASTER, KIND_FALCO, KIND_FOX, PAD_B, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -52,8 +52,8 @@ impl Running<'_> {
     /// Leaving the neutral special's loop, `ftFx_SpecialN_OnChangeAction` (`x21EC`).
     #[doc(alias = "ftFx_SpecialN_OnChangeAction")]
     pub fn fox_special_n_on_change_action(&mut self, gobj: GObjId) {
-        self.ext_gobj(ext::FT_800892A0, gobj);
-        self.ext_gobj(ext::FT_80089824, gobj);
+        self.renew_attack_instance(gobj);
+        self.renew_attack_record(gobj);
     }
 
     /// Takes the blaster away, `ftFx_SpecialN_RemoveBlaster`.
@@ -283,10 +283,7 @@ impl Running<'_> {
         let b = self.fox_blaster(gobj);
         foxblaster::set_visible(self, b.expect("a null blaster"), vis as i32);
         if self.game.fighter(gobj).cmd_vars[1] == 2 {
-            self.ext(
-                ext::FTPICKUPITEM_80094818,
-                &[Val::GObj(Some(gobj)), Val::Int(0)],
-            );
+            self.retake_held_item(gobj, false);
         }
         let b = self.fox_blaster(gobj);
         if self.game.fighter(gobj).cmd_vars[3] == 2
@@ -449,10 +446,7 @@ impl Running<'_> {
             0 => {
                 self.set_fox_blaster(gobj, None);
                 self.set_damage_cb(gobj, None);
-                self.ext(
-                    ext::FTPICKUPITEM_80094818,
-                    &[Val::GObj(Some(gobj)), Val::Int(0)],
-                );
+                self.retake_held_item(gobj, false);
             }
             _ => {}
         }

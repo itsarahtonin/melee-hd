@@ -36,7 +36,7 @@ use melee_capture::import::{Importer, Maps};
 use melee_capture::{Capture, DataMap, find_archives_after, find_archives_in};
 use melee_data::archive::Archives;
 use melee_sim::game::code::{Val, stubs};
-use melee_sim::game::ft::attack::{PL_80038144, proc_attack_coll};
+use melee_sim::game::ft::attack::proc_attack_coll;
 use melee_sim::game::ft::camera::proc_camera;
 use melee_sim::game::ft::create_model::light_proc;
 use melee_sim::game::ft::fighter::{proc_dynamics, proc_ik};
@@ -57,14 +57,9 @@ thread_local! {
     static THEIRS: RefCell<Vec<(u32, Vec<u32>)>> = const { RefCell::new(Vec::new()) };
 }
 
-/// Stands in for the effects and the attack statistics on the reference, logging their
-/// arguments.
-fn stand_ins(ctx: &Ctx) {
-    ctx.register(PL_80038144, |ctx| {
-        let args = (3..10).map(|r| ctx.regs.r(r)).collect();
-        THEIRS.with(|t| t.borrow_mut().push((PL_80038144, args)));
-    });
-}
+/// Stands in for code no port covers on the reference, logging the arguments: none now (the
+/// attack statistics, `pl_80038144`, run on both sides).
+fn stand_ins(_ctx: &Ctx) {}
 
 /// Our stood-in calls as the reference's words, with GObjs at their original addresses.
 fn our_words(maps: &Maps, f: u32, args: &[Val]) -> Vec<u32> {
@@ -89,10 +84,7 @@ fn our_words(maps: &Maps, f: u32, args: &[Val]) -> Vec<u32> {
             other => panic!("a stood-in call's argument {other:?}"),
         }
     }
-    if f == PL_80038144 {
-        // r6, the attacker's `x2074`, isn't passed: ours carries the attacker.
-        out.insert(3, 0);
-    }
+    let _ = f;
     out
 }
 
@@ -180,6 +172,7 @@ fn run_one(
         imp.items();
         imp.match_state();
         imp.audio(bank);
+        imp.bg_flash();
         let Importer { game, maps, .. } = imp;
         (game, maps)
     }));
@@ -194,6 +187,7 @@ fn run_one(
     before.items();
     before.match_state();
     before.audio();
+    before.bg_flash();
     // A later match's fighters hold a previous match's bytes past what they use (stale
     // dynamic-bone and texture handles), which the import doesn't follow.
     if !before.diffs.is_empty() {
@@ -218,7 +212,6 @@ fn run_one(
         .get(&cap.call.regs.gpr[3])
         .expect("r3 isn't a GObj the import knows");
     stubs::clear();
-    stubs::set(PL_80038144, Val::None);
     let run = catch_unwind(AssertUnwindSafe(|| {
         let mut r = Running {
             game: &mut game,
@@ -243,16 +236,12 @@ fn run_one(
     cmp.items();
     cmp.match_state();
     cmp.audio();
+    cmp.bg_flash();
     let ours: Vec<(u32, Vec<u32>)> = stubs::take()
         .iter()
         .map(|(f, args)| (*f, our_words(&maps, *f, args)))
         .collect();
-    let mut theirs = THEIRS.with(|t| std::mem::take(&mut *t.borrow_mut()));
-    for (f, args) in &mut theirs {
-        if *f == PL_80038144 {
-            args[3] = 0;
-        }
-    }
+    let theirs = THEIRS.with(|t| std::mem::take(&mut *t.borrow_mut()));
     if ours != theirs {
         cmp.diffs.push(format!(
             "stood-in calls: ours {ours:x?}, theirs {theirs:x?}"
@@ -637,6 +626,40 @@ fn proc_coll_resolve_results() {
         proc_coll_resolve,
         give_result,
         80,
+    );
+}
+
+/// Gives the fighter a hit with knockback, by the call's index: its strength from barely any
+/// to a tumble's, with and without damage, either way round, at the Sakurai angle or a set
+/// one (a spike among them), on each hurtbox, plain, fire or electric, at low and high
+/// percents.
+fn give_knockback(call: &mut Call, i: usize) {
+    let fp = fighter_of(call, call.regs.gpr[3]);
+    let mut pick = Pick(i as u32 * 17 + 3);
+    let kb = [2.0, 30.0, 75.0, 95.0, 140.0, 260.0][i % 6];
+    poke_f32(call, fp + 0x1850, kb);
+    poke_f32(call, fp + 0x1838, [0.0, 4.0, 13.0][pick.next(3) as usize]);
+    poke_u32(call, fp + 0x183C, 1 + pick.next(20));
+    poke_f32(call, fp + 0x1844, [-1.0, 1.0][pick.next(2) as usize]);
+    poke_u32(
+        call,
+        fp + 0x1848,
+        [361, 361, 45, 80, 280, 30][pick.next(6) as usize],
+    );
+    poke_u32(call, fp + 0x184C, pick.next(3));
+    poke_u32(call, fp + 0x1860, [0, 0, 0, 1, 2][pick.next(5) as usize]);
+    poke_f32(call, fp + 0x1830, [0.0, 40.0, 150.0][pick.next(3) as usize]);
+}
+
+/// Hits with knockback: the reaction, hitstun's entry and the hit's shake and rumble, from
+/// real states.
+#[test]
+fn proc_coll_resolve_knockback() {
+    check(
+        "Fighter_procCollResolve",
+        proc_coll_resolve,
+        give_knockback,
+        60,
     );
 }
 

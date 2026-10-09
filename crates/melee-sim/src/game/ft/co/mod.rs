@@ -10,6 +10,7 @@
 pub mod air;
 pub mod anim;
 pub mod attack;
+pub mod catch;
 pub mod checks;
 pub mod cliff;
 pub mod damage;
@@ -18,8 +19,10 @@ pub mod down;
 pub mod enter;
 pub mod entry;
 pub mod escape;
+pub mod grab;
 pub mod ground;
 pub mod guard;
+pub mod hit;
 pub mod ids;
 pub mod jump;
 pub mod kind_callbacks;
@@ -27,6 +30,7 @@ pub mod ledge;
 pub mod multijump;
 pub mod phys;
 pub mod squat;
+pub mod throw;
 
 use super::super::structs::Fighter;
 use crate::fpu::mem;

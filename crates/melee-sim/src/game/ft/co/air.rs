@@ -202,7 +202,7 @@ impl Running<'_> {
 
     /// Landing out of an aerial, `ftCo_LandingAir_EnterWithLag`: the aerial's landing lag,
     /// cut by an L-cancel (a shoulder pressed in the last `ftCommonData` xE4 frames, `x67F`).
-    // Ports `ftCo_LandingAir_EnterWithLag`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_LandingAir_EnterWithLag")]
     pub fn enter_landing_air_with_lag(&mut self, gobj: GObjId) {
         let c = self.common();
         let (window, div) = (c.i32(0xE4), reg(c.f32(0xE8)));
@@ -236,7 +236,7 @@ impl Running<'_> {
 
     /// Landing out of an aerial into `msid`, its animation fit to `lag` frames,
     /// `ftCo_LandingAir_EnterWithMsidLag`.
-    // Ports `ftCo_LandingAir_EnterWithMsidLag`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_LandingAir_EnterWithMsidLag")]
     pub fn enter_landing_air(&mut self, gobj: GObjId, msid: i32, lag: f32) {
         self.land(gobj);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
@@ -358,7 +358,7 @@ impl Running<'_> {
     }
 
     /// The normal landing, `ftCo_Landing_Enter_Basic` (with the hammer, its own).
-    // Ports `ftCo_Landing_Enter_Basic`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_Landing_Enter_Basic")]
     pub fn enter_landing_basic(&mut self, gobj: GObjId) {
         if self.holding_hammer(gobj) {
             unported_call("ftCo_HammerLanding_Enter");
@@ -459,6 +459,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Passive_IASA")]
     #[doc(alias = "ftCo_PassiveStand_IASA")]
     #[doc(alias = "ftCo_GuardSetOff_IASA")]
+    #[doc(alias = "ftCo_Catch_IASA")]
+    #[doc(alias = "ftCo_CatchDash_IASA")]
+    #[doc(alias = "ftCo_Rebound_IASA")]
     pub fn co_no_iasa(&mut self, _gobj: GObjId) {}
 
     /// Falling helpless, `ftCo_80096900` (and `ftCo_800969D8`, which blends over `blend`

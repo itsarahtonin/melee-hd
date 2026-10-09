@@ -260,6 +260,45 @@ impl Running<'_> {
         self.ground_anim_motion(gobj, friction, facing);
     }
 
+    /// The animation's TransN motion as the ground speed itself when `x594_b0` says it
+    /// drives the fighter, else friction, `ft_800850E0`.
+    #[doc(alias = "ft_800850E0")]
+    pub fn ground_anim_speed(&mut self, gobj: GObjId, friction: f64, facing: f64) {
+        let fp = self.game.fighter_mut(gobj);
+        if super::anim::x594_bit(fp, 0) {
+            fp.gr_vel = mem(fp::fmuls(reg(fp.x6A4_transNOffset.z), facing));
+        } else {
+            Self::ground_accel_deaccel(fp, friction);
+        }
+        self.self_movement_from_ground(gobj);
+    }
+
+    /// `ft_80085088`: [`Self::ground_anim_speed`] with the ground friction, facing the
+    /// fighter's way.
+    #[doc(alias = "ft_80085088")]
+    pub fn ground_anim_speed_facing(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter(gobj);
+        let (friction, facing) = (reg(fp.co_attrs.ground_friction), reg(fp.facing_dir));
+        self.ground_anim_speed(gobj, friction, facing);
+    }
+
+    /// `ft_800851C0`: the animation's TransN rise as the vertical velocity.
+    // Ports `ft_800851C0`; aliased once a check reaches it.
+    pub fn air_anim_rise(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        fp.self_vel.y = fp.x6A4_transNOffset.y;
+    }
+
+    /// `ftCommon_8007F76C`: the ground speed and horizontal velocity turned the way the
+    /// fighter faces.
+    // Ports `ftCommon_8007F76C`; aliased once a check reaches it.
+    pub fn speed_toward_facing(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        let facing = reg(fp.facing_dir);
+        fp.gr_vel = mem(fp::fmuls(facing, abs(reg(fp.gr_vel))));
+        fp.self_vel.x = mem(fp::fmuls(facing, abs(reg(fp.self_vel.x))));
+    }
+
     /// `ft_80085134`: the animation's TransN motion as the air velocity.
     #[doc(alias = "ft_80085134")]
     pub fn air_anim_motion(&mut self, gobj: GObjId) {
@@ -268,6 +307,9 @@ impl Running<'_> {
         fp.self_vel.y = fp.x6A4_transNOffset.y;
     }
 }
+
+/// `ftCommon_8007F76C`, which states keep as a callback.
+pub const SPEED_TOWARD_FACING: u32 = 0x8007_F76C;
 
 /// A speed slowed by `friction`, stopping at 0.
 fn toward_zero(v: f32, friction: f64) -> f32 {

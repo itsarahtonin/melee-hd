@@ -51,16 +51,11 @@ fn dirs() -> Vec<String> {
 /// The code other parts of the port own, standing in on both sides.
 fn stubs() -> Vec<Stub> {
     let mut v: Vec<Stub> = [
-        // The shield's and powershield's hit shapes.
-        "ftColl_8007B1B8",
-        "ftColl_CreateReflectHit",
         // The crowd.
         "un_80322598",
         // The player library's statistics.
         "pl_80040048",
         "pl_8003FFDC",
-        "pl_8003E0E8",
-        "pl_8003E114",
     ]
     .iter()
     .map(|n| (leaf_check::sym(n), StubRet::Nothing))

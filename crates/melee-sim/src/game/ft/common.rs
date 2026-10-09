@@ -27,6 +27,17 @@ pub const FIGHTER_P_LINK: u8 = 8;
 const PI: f64 = std::f64::consts::PI;
 
 impl Running<'_> {
+    /// The held item taken in hand again, `ftpickupitem_80094818`: the character's pickup
+    /// hook (`ftData_OnItemPickupExt`) and the player's item record (`pl_8003E17C`). Nothing
+    /// without an item; holding one isn't ported.
+    #[doc(alias = "ftpickupitem_80094818")]
+    pub fn retake_held_item(&mut self, gobj: GObjId, _flag: bool) {
+        let fp = self.game.fighter(gobj);
+        if fp.x1978.is_some() || fp.item_gobj.is_some() {
+            unported_call("ftpickupitem_80094818 with an item held");
+        }
+    }
+
     /// `ftCo_800C37A0`: a turn that spins the model about TransN over `ftCommonData` x648
     /// frames (`dmg.x18F4` left); at its end the fighter faces the other way.
     #[doc(alias = "ftCo_800C37A0")]
@@ -83,9 +94,67 @@ impl Running<'_> {
         self.game.magnify.player[slot as usize].state.is_offscreen
     }
 
-    /// `Fighter_TakeDamage_8006CC7C`, not ported yet.
-    pub fn take_damage(&mut self, _f: FighterId, _amount: f64) {
-        unported_call("Fighter_TakeDamage_8006CC7C");
+    /// The fighter takes `amount` damage, `Fighter_TakeDamage_8006CC7C`, unless it's armored
+    /// (`x2226_b4` without `x2226_b3`): the percent (capped at 999) and the metal box's and
+    /// `x2038`'s health, its player block's, the player's damage records (`pl_8003EC9C`), and
+    /// a stamina fighter's knockout (`ftCo_800C8C84`).
+    #[doc(alias = "Fighter_TakeDamage_8006CC7C")]
+    pub fn take_damage(&mut self, f: FighterId, amount: f64) {
+        let fp = &mut self.game.fighters[f.0];
+        if fp.x2226_b4 && !fp.x2226_b3 {
+            return;
+        }
+        fp.dmg.x1830_percent = mem(fp::fadds(reg(fp.dmg.x1830_percent), amount));
+        if fp.metal_timer != 0 {
+            fp.metal_health = fp::fctiwz(fp::fsubs(fp::frsp(f64::from(fp.metal_health)), amount));
+        }
+        if fp.x2034 != 0 {
+            fp.x2038 = fp::fctiwz(fp::fsubs(fp::frsp(f64::from(fp.x2038)), amount));
+        }
+        if reg(fp.dmg.x1830_percent) > 999.0 {
+            fp.dmg.x1830_percent = 999.0;
+        }
+        let (slot, sub, percent) = (
+            i32::from(fp.player_idx),
+            i32::from(fp.is_sub_fighter),
+            fp.dmg.x1830_percent,
+        );
+        self.game
+            .set_player_damage_at(slot, sub, fp::fctiwz(reg(percent)));
+        // `pl_8003EC9C`: the damage taken and the highest percent.
+        if sub == 0 {
+            let t = self.game.player_stale_moves(slot);
+            t.xC60 = mem(fp::fadds(reg(t.xC60), amount));
+            if reg(t.xC64) < reg(percent) {
+                t.xC64 = percent;
+            }
+            self.game.player_mut(slot).set_ext_u32(0xD10, 0);
+        }
+        // `ftCo_800C8C84`.
+        let fp = &self.game.fighters[f.0];
+        if !fp.stamina_dead && fp.x2225_b7 && fp.dmg.x18F0 == 0 {
+            unported_call("ftCo_800C8C84 (a stamina fighter's knockout)");
+        }
+    }
+
+    /// A grounded fighter forgets who last hit it, `ftCommon_800804FC`.
+    #[doc(alias = "ftCommon_800804FC")]
+    pub fn forget_attacker_grounded(&mut self, f: FighterId) {
+        let fp = &mut self.game.fighters[f.0];
+        if fp.ground_or_air == GA_GROUND {
+            fp.dmg.x18c4_source_ply = 6;
+            fp.dmg.x18C8 = -1;
+        }
+    }
+
+    /// Damage taken outside a knockback (`Fighter_UnkTakeDamage_8006CC30`): the damage, then in
+    /// a coin match the coins it knocks out (`ftCommon_8007EA90`).
+    #[doc(alias = "Fighter_UnkTakeDamage_8006CC30")]
+    pub fn take_damage_coins(&mut self, f: FighterId, amount: f64) {
+        self.take_damage(f, amount);
+        if self.game.vs_is_coins() {
+            unported_call("ftCommon_8007EA90 (a coin match's coins)");
+        }
     }
 
     /// `ftCo_800D71D8`: a delayed item pickup's window.

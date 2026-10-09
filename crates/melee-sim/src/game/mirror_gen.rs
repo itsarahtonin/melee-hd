@@ -21,7 +21,7 @@ use crate::hsd::shadow::ShadowId;
 use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
-use crate::lb::hitcapsule::Victim;
+use crate::lb::hitcapsule::{HitOwner, Victim};
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -1747,7 +1747,7 @@ impl Mirror for HitCapsule {
             victims_2: core::array::from_fn(|i0| {
                 HitVictim::import(m, at + 0xd4 + i0 as u32 * 0x8, cx)
             }),
-            x134: m.bytes(at + 0x134),
+            x134: HitOwner::import(m, at + 0x134, cx),
         }
     }
 
@@ -2077,13 +2077,8 @@ impl Mirror for HitCapsule {
                 cx,
             );
         }
-        if self.x134 != m.bytes::<4>(at + 0x134) {
-            cx.mismatch(
-                &format!("{path}.x134"),
-                format!("{:02x?}", self.x134),
-                format!("{:02x?}", m.bytes::<4>(at + 0x134)),
-            );
-        }
+        self.x134
+            .compare(m, at + 0x134, &format!("{path}.x134"), cx);
     }
 }
 
@@ -2550,7 +2545,7 @@ impl Mirror for dmg {
             x1900: f32::from_bits(m.u32(at + 0xd4)),
             x1904: f32::from_bits(m.u32(at + 0xd8)),
             x1908: m.u32(at + 0xdc) as i32,
-            x190C: RawPtr(m.u32(at + 0xe0)),
+            x190C: cx.import_data(m.u32(at + 0xe0)),
             x1910: m.u32(at + 0xe4) as i32,
             x1914: m.u32(at + 0xe8) as i32,
             int_value: m.u32(at + 0xec) as i32,
@@ -2911,13 +2906,7 @@ impl Mirror for dmg {
                 format!("{:?}", m.u32(at + 0xdc) as i32),
             );
         }
-        if self.x190C.0 != m.u32(at + 0xe0) {
-            cx.mismatch(
-                &format!("{path}.x190C"),
-                format!("{:#x}", self.x190C.0),
-                format!("{:#x}", m.u32(at + 0xe0)),
-            );
-        }
+        cx.compare_data(&format!("{path}.x190C"), self.x190C, m.u32(at + 0xe0));
         if self.x1910 != m.u32(at + 0xe4) as i32 {
             cx.mismatch(
                 &format!("{path}.x1910"),
@@ -16406,6 +16395,37 @@ impl Mirror for itFoxLaser_ItemVars {
             );
         }
         self.pos.compare(m, at + 0xc, &format!("{path}.pos"), cx);
+    }
+}
+
+impl Mirror for itFoxIllusion_ItemVars {
+    const SIZE: u32 = 0xc;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itFoxIllusion_ItemVars {
+            xDD4: cx.import_data(m.u32(at + 0x0)),
+            xDD8: f32::from_bits(m.u32(at + 0x4)),
+            xDDC: cx.import_handle("JObjId", m.u32(at + 0x8)).map(JObjId),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        cx.compare_data(&format!("{path}.xDD4"), self.xDD4, m.u32(at + 0x0));
+        if self.xDD8.to_bits() != m.u32(at + 0x4) {
+            cx.mismatch(
+                &format!("{path}.xDD8"),
+                format!("{:?}", self.xDD8),
+                format!("{:?}", f32::from_bits(m.u32(at + 0x4))),
+            );
+        }
+        cx.compare_handle(
+            &format!("{path}.xDDC"),
+            "JObjId",
+            self.xDDC.map(|h| h.0),
+            m.u32(at + 0x8),
+        );
     }
 }
 

@@ -3,29 +3,44 @@
 //!
 //! Each character's and state's code reads and writes its own member at its offsets, so both
 //! stay big-endian bytes, as the original keeps them, read and written at the decomp's offsets.
-//! A few members hold a GObj pointer (Fox's and Falco's blaster in `u`, their Illusion's ghost
-//! in `mv`, Sheik's held needles and chain in `u`): such a word holds a handle instead of its
-//! bytes once code stores one there (or the importer types it), and compares as a handle.
-//! Reading those bytes as data, or a handle where the bytes hold something else, is a model
-//! error and stops.
+//! A few members hold a pointer to a GObj (Fox's and Falco's blaster and Sheik's needles and
+//! chain in `u`, Fox's Illusion's ghost in `mv`) or a joint (a grab's hold point in `mv`): such
+//! a word holds a handle instead of its bytes once code stores one there (or the importer types
+//! it), and compares as a handle. A state leaves its handles behind for the next, so several
+//! words can hold one. Reading those bytes as data, or a handle where the bytes hold something
+//! else, is a model error and stops.
 
 use std::ops::{Index, IndexMut, Range, RangeFrom, RangeFull, RangeTo};
 
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::hsd::gobj::GObjId;
+use crate::hsd::jobj::JObjId;
+
+/// A handle one word of the variables holds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Handle {
+    GObj(GObjId),
+    JObj(JObjId),
+}
 
 /// Where Fox's and Falco's blaster (`ftFox_FighterVars::x222C_blasterGObj`) is in `u`.
 pub const FOX_BLASTER: usize = 0;
+
+/// Whether a fighter of `kind` keeps that blaster in `u`: Fox and Falco (`Ft_Kind_Fox`,
+/// `Ft_Kind_Falco`).
+pub fn holds_blaster(kind: i32) -> bool {
+    matches!(kind, 1 | 22)
+}
 
 /// Where Sheik's held needles (`ftSeak_FighterVars::x4`) and chain (`x8`) are in `u`.
 pub const SEAK_NEEDLES: usize = 4;
 pub const SEAK_CHAIN: usize = 8;
 
-/// The words of `u` a fighter of `kind` keeps GObjs in: Fox's and Falco's blaster
-/// (`Ft_Kind_Fox`, `Ft_Kind_Falco`), Sheik's held needles and chain (`Ft_Kind_Seak`).
+/// The words of `u` a fighter of `kind` keeps GObjs in, which the importer types: Fox's and
+/// Falco's blaster, Sheik's held needles and chain (`Ft_Kind_Seak`).
 pub fn gobj_words(kind: i32) -> &'static [usize] {
     match kind {
-        1 | 22 => &[FOX_BLASTER],
+        _ if holds_blaster(kind) => &[FOX_BLASTER],
         7 => &[SEAK_NEEDLES, SEAK_CHAIN],
         _ => &[],
     }
@@ -36,92 +51,108 @@ pub type FighterVars = Vars<0xF8>;
 /// `Fighter_MotionVars`.
 pub type MotionVars = Vars<0xAC>;
 
-/// How many words of one union may hold a GObj handle at once.
-const SLOTS: usize = 2;
-
-/// A union of `N` bytes whose words at a few offsets may hold GObj handles.
+/// A union of `N` bytes whose words at some offsets may hold handles.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Vars<const N: usize> {
     bytes: [u8; N],
-    /// The words that hold a GObj, by their offsets: their bytes aren't the state there.
-    gobj: [Option<(usize, GObjId)>; SLOTS],
+    /// The words that hold handles, by offset: their bytes aren't the state there.
+    handles: Vec<(usize, Handle)>,
 }
 
 impl<const N: usize> Default for Vars<N> {
     fn default() -> Self {
         Vars {
             bytes: [0; N],
-            gobj: [None; SLOTS],
+            handles: Vec::new(),
         }
     }
 }
 
 impl<const N: usize> Vars<N> {
-    /// The union's bytes, as memory held them when imported (`gobj` names a handle's word).
+    /// The union's bytes, as memory held them when imported (the importer types handles).
     pub fn from_bytes(bytes: [u8; N]) -> Self {
         Vars {
             bytes,
-            gobj: [None; SLOTS],
+            handles: Vec::new(),
         }
+    }
+
+    /// The words that hold handles, by offset.
+    pub fn handles(&self) -> &[(usize, Handle)] {
+        &self.handles
+    }
+
+    fn handle(&self, off: usize) -> Option<Handle> {
+        self.handles
+            .iter()
+            .find(|&&(o, _)| o == off)
+            .map(|&(_, h)| h)
     }
 
     /// The GObj pointer at `off`: the handle stored there, or none for a null word.
     pub fn gobj_at(&self, off: usize) -> Option<GObjId> {
-        if let Some(&(_, g)) = self.gobj.iter().flatten().find(|(o, _)| *o == off) {
-            return Some(g);
+        match self.handle(off) {
+            Some(Handle::GObj(g)) => Some(g),
+            Some(h) => panic!("+{off:#x} holds {h:?}, not a GObj"),
+            None => {
+                self.read(off, off + 4);
+                let w = u32::from_be_bytes(self.bytes[off..off + 4].try_into().unwrap());
+                assert!(
+                    w == 0,
+                    "a GObj pointer at +{off:#x} holds {w:#010x}, not a handle"
+                );
+                None
+            }
         }
-        let w = u32::from_be_bytes(self.bytes[off..off + 4].try_into().unwrap());
-        assert!(
-            w == 0,
-            "a GObj pointer at +{off:#x} holds {w:#010x}, not a handle"
-        );
-        None
     }
 
     /// Stores a GObj pointer at `off` (null clears the word).
     pub fn set_gobj_at(&mut self, off: usize, g: Option<GObjId>) {
-        for s in &mut self.gobj {
-            if let Some((o, _)) = *s
-                && o.abs_diff(off) < 4
-            {
-                *s = None;
-            }
-        }
-        self.bytes[off..off + 4].fill(0);
-        if let Some(g) = g {
-            let Some(free) = self.gobj.iter_mut().find(|s| s.is_none()) else {
-                panic!(
-                    "a third GObj in a fighter's variables, at +{off:#x} beside {:?}",
-                    self.gobj
+        self.set_handle_at(off, g.map(Handle::GObj));
+    }
+
+    /// The joint pointer at `off`: the handle stored there, or none for a null word.
+    pub fn jobj_at(&self, off: usize) -> Option<JObjId> {
+        match self.handle(off) {
+            Some(Handle::JObj(j)) => Some(j),
+            Some(h) => panic!("+{off:#x} holds {h:?}, not a joint"),
+            None => {
+                self.read(off, off + 4);
+                let w = u32::from_be_bytes(self.bytes[off..off + 4].try_into().unwrap());
+                assert!(
+                    w == 0,
+                    "a joint pointer at +{off:#x} holds {w:#010x}, not a handle"
                 );
-            };
-            *free = Some((off, g));
+                None
+            }
         }
     }
 
-    /// The words that hold a handle.
-    pub fn gobj_slots(&self) -> impl Iterator<Item = (usize, GObjId)> + '_ {
-        self.gobj.iter().flatten().copied()
+    /// Stores a joint pointer at `off` (null clears the word).
+    pub fn set_jobj_at(&mut self, off: usize, j: Option<JObjId>) {
+        self.set_handle_at(off, j.map(Handle::JObj));
+    }
+
+    fn set_handle_at(&mut self, off: usize, h: Option<Handle>) {
+        self.write(off, off + 4);
+        self.bytes[off..off + 4].fill(0);
+        if let Some(h) = h {
+            let at = self.handles.partition_point(|&(o, _)| o < off);
+            self.handles.insert(at, (off, h));
+        }
     }
 
     fn read(&self, start: usize, end: usize) {
-        for &(o, _) in self.gobj.iter().flatten() {
+        for &(o, h) in &self.handles {
             assert!(
                 end <= o || start >= o + 4,
-                "reading a fighter's variables at {start:#x}..{end:#x} as bytes, where +{o:#x} holds a GObj"
+                "reading a fighter's variables at {start:#x}..{end:#x} as bytes, where +{o:#x} holds {h:?}"
             );
         }
     }
 
     fn write(&mut self, start: usize, end: usize) {
-        for s in &mut self.gobj {
-            if let Some((o, _)) = *s
-                && end > o
-                && start < o + 4
-            {
-                *s = None;
-            }
-        }
+        self.handles.retain(|&(o, _)| end <= o || start >= o + 4);
     }
 }
 
@@ -177,7 +208,7 @@ impl<const N: usize> Mirror for Vars<N> {
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let theirs: [u8; N] = m.bytes(at);
-        let skip = |i: usize| self.gobj_slots().any(|(o, _)| (o..o + 4).contains(&i));
+        let skip = |i: usize| self.handles.iter().any(|&(o, _)| (o..o + 4).contains(&i));
         let differ = (0..N).any(|i| !skip(i) && self.bytes[i] != theirs[i]);
         if differ {
             cx.mismatch(
@@ -186,13 +217,12 @@ impl<const N: usize> Mirror for Vars<N> {
                 format!("{theirs:02x?}"),
             );
         }
-        for (o, g) in self.gobj_slots() {
-            cx.compare_handle(
-                &format!("{path}+{o:#x}"),
-                "GObjId",
-                Some(g.0),
-                m.u32(at + o as u32),
-            );
+        for &(o, h) in &self.handles {
+            let (ty, v) = match h {
+                Handle::GObj(g) => ("GObjId", g.0),
+                Handle::JObj(j) => ("JObjId", j.0),
+            };
+            cx.compare_handle(&format!("{path}+{o:#x}"), ty, Some(v), m.u32(at + o as u32));
         }
     }
 }
@@ -204,6 +234,14 @@ impl<const N: usize> Vars<N> {
         let addr = m.u32(at + off as u32);
         if let Some(h) = cx.import_handle("GObjId", addr) {
             self.set_gobj_at(off, Some(GObjId(h)));
+        }
+    }
+
+    /// Types the word at `off` as a joint pointer, from a captured state.
+    pub fn import_jobj(&mut self, off: usize, m: &Mem, at: u32, cx: &mut dyn Cx) {
+        let addr = m.u32(at + off as u32);
+        if let Some(h) = cx.import_handle("JObjId", addr) {
+            self.set_jobj_at(off, Some(JObjId(h)));
         }
     }
 }

@@ -174,7 +174,7 @@ impl Running<'_> {
     #[doc(alias = "ftFx_SpecialLwHit_Phys")]
     pub fn fox_special_lw_reflect_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
-        self.ext_gobj(ext::FTCOLL_8007AEF8, gobj);
+        self.reflect_follow(gobj);
     }
 
     /// Their aerial physics.
@@ -183,7 +183,7 @@ impl Running<'_> {
     #[doc(alias = "ftFx_SpecialAirLwHit_Phys")]
     pub fn fox_special_air_lw_reflect_phys(&mut self, gobj: GObjId) {
         self.fox_special_air_lw_phys(gobj);
-        self.ext_gobj(ext::FTCOLL_8007AEF8, gobj);
+        self.reflect_follow(gobj);
     }
 
     /// Off the ground (`ft_80082708`), into an aerial state from the same frame.
@@ -313,16 +313,18 @@ impl Running<'_> {
     /// `ReflectDesc` (at `+0xB0`), reflecting into `ftFx_SpecialLwHit_Enter`.
     #[doc(alias = "ftFx_SpecialLw_CreateReflectHit")]
     pub fn fox_special_lw_create_reflect_hit(&mut self, gobj: GObjId) {
-        // The descriptor is a pointer into the fighter's attribute block, which a stand-in's
-        // log can't name.
-        self.ext(
-            ext::FTCOLL_CREATE_REFLECT_HIT,
-            &[
-                Val::GObj(Some(gobj)),
-                Val::None,
-                Val::Int(addr::SPECIAL_LW_HIT_ENTER as i32),
-            ],
-        );
+        let f = self.game.fighter_id(gobj);
+        let a = |o: usize| self.fox_attr_f32(f, o);
+        let d = crate::game::ft::co::guard::ReflectDesc {
+            bone: self.fox_attr_i32(f, 0xB0),
+            max_damage: self.fox_attr_i32(f, 0xB4),
+            offset: crate::vec::Vec3::new(a(0xB8), a(0xBC), a(0xC0)),
+            size: a(0xC4),
+            damage_mul: a(0xC8),
+            speed_mul: a(0xCC),
+            behavior: (self.fox_attr_i32(f, 0xD0) as u32 >> 24) as u8,
+        };
+        self.create_reflect_hit(gobj, &d, CodeRef(addr::SPECIAL_LW_HIT_ENTER));
     }
 
     /// The grounded loop, `ftFx_SpecialLwLoop_Enter`.
