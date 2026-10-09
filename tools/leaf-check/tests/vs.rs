@@ -31,7 +31,9 @@ use gekko_fp::{FpMode, set_fp_mode};
 use leaf_check::{MODES, Rand, hsd_reference};
 use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps, sym};
-use melee_capture::{Capture, DataMap, DiscIndex, MEM1, disc_index, find_archives_in};
+use melee_capture::{
+    Capture, DataMap, DiscIndex, MEM1, disc_index, find_archives_after, find_archives_in,
+};
 use melee_data::archive::Archives;
 use melee_data::disc::Disc;
 use melee_sim::game::gm::{input, pause};
@@ -511,9 +513,12 @@ fn check_calls_stubbed(
 fn import(
     cap: &Capture,
     data: &DataMap,
+    archives: &Archives,
     bank: Option<melee_data::archive::ArchiveId>,
 ) -> (melee_sim::game::state::Game, Maps, Vec<String>) {
-    let mut imp = Importer::new(cap, data);
+    // With the archives, so a texture's palette animation table is found (the costumes'
+    // eyes animate their palettes).
+    let mut imp = Importer::new(cap, data).with_archives(archives);
     imp.world();
     imp.stage();
     imp.ids();
@@ -598,7 +603,8 @@ fn check_runs(
                 set_fp_mode(mode);
                 // A state the importer can't take (a menu's animations copied into the heap,
                 // a boot state's stale pointers) is skipped and counted.
-                let imported = catch_unwind(AssertUnwindSafe(|| import(cap, &data, bank)));
+                let imported =
+                    catch_unwind(AssertUnwindSafe(|| import(cap, &data, &archives, bank)));
                 let Ok((mut game, maps, _)) = imported else {
                     if variant == 0 && mode == FpMode::Hardware {
                         skipped.push(path.file_name().unwrap().to_string_lossy().into_owned());
@@ -711,8 +717,13 @@ fn check_runs(
                     .events
                     .iter()
                     .any(|e| matches!(e, melee_sim::game::state::Event::Audio { .. }));
+                // A fighter that changed animation loaded another archive where its last
+                // one was (a respawn's).
+                let data_after = DataMap {
+                    loaded: find_archives_after(disc, &after, &mut archives, &data.loaded),
+                };
                 diffs.extend(
-                    compare(&after, &data, &game, maps)
+                    compare(&after, &data_after, &game, maps)
                         .into_iter()
                         .filter(|d| !before.contains(d))
                         .filter(|d| !(unported_audio && d.starts_with("audio: "))),
@@ -752,9 +763,9 @@ fn controller() -> u32 {
     sym("controller")
 }
 
-/// The unported code the match's frame reaches, stood in for on both sides: the fighter's
-/// rebirth (`ftCo_800D4FF4`).
-const FRAME_STUBS: [Stub; 1] = [nothing(0x800D_4FF4)];
+/// The unported code the match's frame reaches, stood in for on both sides: none now that
+/// the fighter's rebirth (`ftCo_800D4FF4`) is ported.
+const FRAME_STUBS: [Stub; 0] = [];
 
 /// [`check_fuzzed`] with [`FRAME_STUBS`].
 fn check_frame(
@@ -1139,7 +1150,7 @@ fn respawn() {
     check_calls_stubbed(
         "fn_8016CFE0",
         4,
-        &[nothing(0x800D_4FF4)],
+        &[],
         |f| {
             f.regs.gpr[3] = f.below(2);
             f.regs.gpr[4] = 0;
