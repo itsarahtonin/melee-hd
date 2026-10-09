@@ -3274,3 +3274,123 @@ gm_80167320	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15
 gm_801693BC	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the KO blast's kind (4 calls)
 gm_8016A1F8	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the single-player test at a KO (6 calls)
 pl_80040120	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): a taunt's stats (6 calls)
+ftMs_Init_OnItemDrop	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_Init_OnItemInvisible	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_Init_OnItemPickup	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_Init_OnItemVisible	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_Init_OnKnockbackEnter	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_Init_OnKnockbackExit	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirHi_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirHi_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirHi_Enter	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirHi_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirHi_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirLwHit_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirLwHit_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirLwHit_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirLwHit_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirLw_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirLw_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirLw_Enter	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirLw_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirLw_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirNEnd_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirNEnd_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirNEnd_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirNEnd_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirNLoop_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirNLoop_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirNLoop_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirNLoop_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirNStart_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirNStart_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirNStart_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirNStart_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirN_Enter	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirS1_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirS1_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirS1_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirS1_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialAirS_Enter	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialHi_80138884	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialHi_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialHi_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialHi_Enter	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialHi_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialHi_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLwHit_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLwHit_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLwHit_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLwHit_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLw_80138D38	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLw_80138DD0	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLw_80139080	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLw_801390E0	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLw_80139140	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLw_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLw_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLw_Enter	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLw_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialLw_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialNEnd_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialNEnd_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialNEnd_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialNEnd_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialNLoop_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialNLoop_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialNLoop_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialNLoop_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialNStart_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialNStart_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialNStart_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialNStart_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_801365A8	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_8013666C	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_80136730	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_80136A1C	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_80136A7C	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_80136DB4	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_80136E14	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_80136E74	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_80136EAC	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_801371FC	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_801372A8	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_80137354	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_801373B8	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialN_Enter	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS2_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS2_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS2_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS2_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS3_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS3_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS3_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS3_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS4_Anim	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS4_Coll	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS4_IASA	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS4_Phys	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_801376E8	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_80137748	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_80137940	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_801379D0	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_80137A68	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_80137A9C	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_80137CBC	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_80137D60	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_80137E0C	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_80137FF8	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_8013809C	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_80138148	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftMs_SpecialS_Enter	leaf-check marth: marth_functions runs it from real Marth states, its own saved calls and its unit's, and compares the whole state
+ftCommon_FallBasic	leaf-check marth: ftMs_SpecialAirNStart_Phys reaches it in clean comparisons
+ftCommon_CalcSelfAccel_DeaccelQuickAir	leaf-check marth: ftMs_SpecialAirHi_Phys reaches it before the slash rises, in clean comparisons; leaf-check fox: the Fire Fox bounce and the reflector reach it
+ftCommon_CalcSelfAccel_DriftSimple	leaf-check marth: Dolphin Slash's descent (ftMs_SpecialHi_Phys, ftMs_SpecialAirHi_Phys) reaches it in clean comparisons
+ft_80085204	leaf-check marth: Dancing Blade's last two swings in the air (ftMs_SpecialS3_Phys, ftMs_SpecialS4_Phys) reach it in clean comparisons
+ft_80085154	leaf-check marth: Dolphin Slash's rise (ftMs_SpecialHi_Phys, ftMs_SpecialAirHi_Phys) reaches it in clean comparisons
+ftColl_8007AEE0	leaf-check marth: Counter's stance physics (ftMs_SpecialLw_Phys, ftMs_SpecialAirLw_Phys) reach it in clean comparisons
+ftAction_80073118	leaf-check marth: the counterattack's script (ftMs_SpecialLw_80139140's state change) runs it in clean comparisons
+ftCo_8009E714	leaf-check marth: the counterattack's wind command (ftAction_80073118) reaches it in clean comparisons
+ftpickupitem_800942A0	melee-oracle diff, Fox vs Marth FD benchmark ticks 1-15355 in the hardware float mode (docs/oracle.md): the common states' item checks look over Fox's lasers and Illusion through it; compared every tick
+ftCo_800C2600	melee-oracle diff, Fox vs Marth FD benchmark ticks 1-15355 in the hardware float mode (docs/oracle.md): Marth's sword trail draws through it each display pass; the state compared every tick
+it_8026FC00	melee-oracle diff, Fox vs Marth BF benchmark ticks 1-13788 in the hardware float mode (docs/oracle.md): a laser tipping Marth in tick 3132; compared every tick
