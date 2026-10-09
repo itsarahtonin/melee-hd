@@ -118,10 +118,7 @@ impl Running<'_> {
         let g = reg(self.seak_attr_f32(f, attr::X68));
         let t = reg(self.seak_attr_f32(f, attr::X6C));
         Self::fall(&mut self.game.fighters[f.0], g, t);
-        self.seak_ext(
-            ext::FTCOMMON_CALC_SELF_ACCEL_DEACCEL_AIR,
-            &[Val::Fighter(f)],
-        );
+        Self::self_accel_deaccel_air(&mut self.game.fighters[f.0]);
     }
 
     /// `ftSk_SpecialLw_Coll`: off the ground, the aerial first half.

@@ -60,14 +60,6 @@ pub mod ext {
     pub const FTCOMMON_8007EFC8: u32 = 0x8007_EFC8;
     /// `ftNs_AttackHi4_YoyoCheckEnvColl`: whether the stage lies between two points.
     pub const FTNS_YOYO_CHECK_ENV_COLL: u32 = 0x8011_4FF8;
-    /// `ftCommon_ClampSelfVelX`.
-    pub const FTCOMMON_CLAMP_SELF_VEL_X: u32 = 0x8007_D440;
-    /// `ftCommon_FallBasic`.
-    pub const FTCOMMON_FALL_BASIC: u32 = 0x8007_D4B8;
-    /// `ftCommon_CalcSelfAccel_DeaccelAir`.
-    pub const FTCOMMON_CALC_SELF_ACCEL_DEACCEL_AIR: u32 = 0x8007_CEF4;
-    /// `ftCommon_8007DA24`.
-    pub const FTCOMMON_8007DA24: u32 = 0x8007_DA24;
     /// `ftZd_SpecialLw_8013B4D8`: the transformation's end callback, stored by address.
     pub const FTZD_SPECIAL_LW_8013B4D8: u32 = 0x8013_B4D8;
 }

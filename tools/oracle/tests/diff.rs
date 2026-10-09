@@ -34,16 +34,27 @@ fn diff(args: &[&str]) -> Option<String> {
     Some(text)
 }
 
+/// Words a new item never writes and keeps from the item its block held before, which
+/// melee-hd doesn't reproduce (see docs/oracle.md): Sheik's thrown needles' variables the
+/// flight doesn't set (the previous item's kind read them as another member), and, from an
+/// imported tick, unused hitboxes' joints (the import doesn't carry a freed item's over).
+const STALE_WORDS: &str = concat!(
+    "seak_needle_thrown.xDD4:,seak_needle_thrown.xDD8:,",
+    "seak_needle_thrown.xDDC:,seak_needle_thrown.xDE0:,",
+    "x5D4_hitboxes[0].hit.jobj:,x5D4_hitboxes[1].hit.jobj:,",
+    "x5D4_hitboxes[2].hit.jobj:,x5D4_hitboxes[3].hit.jobj:",
+);
+
 #[test]
 fn import_compares_back_clean() {
-    let Some(out) = diff(&["--from", "200"]) else {
+    let Some(out) = diff(&["--from", "200", "--ignore", STALE_WORDS]) else {
         return;
     };
     assert!(out.contains("trace tick 200 imported and compared back: 0 differences"));
-    // The match stops at the first process no port covers, named with the tick: past Sheik's
-    // aerial needles, at the fighters' hitboxes against her thrown needle.
+    // The match stops at the first process no port covers, named with the tick: Sheik turning
+    // into Zelda (`ftCommon_8007EFC8`).
     assert!(
-        out.contains("stopped in tick 293 (replay frame 169)"),
+        out.contains("stopped in tick 1223 (replay frame 1099)"),
         "{out}"
     );
     assert!(out.contains("isn't ported"), "{out}");
@@ -72,7 +83,7 @@ fn later_tick_differs() {
 
 #[test]
 fn start_reports_its_seam() {
-    let Some(out) = diff(&[]) else {
+    let Some(out) = diff(&["--ignore", STALE_WORDS]) else {
         return;
     };
     // Until the whole match is ported, it stops at a seam, before a difference.
