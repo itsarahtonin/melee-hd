@@ -507,10 +507,11 @@ impl Running<'_> {
         }
         let m = self.game.fighters[f.0].motion_id;
         if m == ms::CAPTURE_WAIT_HI || m == ms::CAPTURE_DAMAGE_HI {
-            unported_call("ftCo_800DC284 (hit while held high)");
+            self.enter_capture_damage(gobj, true);
         }
+        let m = self.game.fighters[f.0].motion_id;
         if m == ms::CAPTURE_WAIT_LW || m == ms::CAPTURE_DAMAGE_LW {
-            unported_call("ftCo_800DC3A4 (hit while held low)");
+            self.enter_capture_damage(gobj, false);
         }
         let c = self.common();
         let fp = &self.game.fighters[f.0];

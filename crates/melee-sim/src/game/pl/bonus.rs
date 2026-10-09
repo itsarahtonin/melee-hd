@@ -148,7 +148,7 @@ impl Running<'_> {
     }
 
     /// `pl_804D6470`'s word at `off`.
-    pub(super) fn bonus_param(&self, off: u32) -> u32 {
+    pub(crate) fn bonus_param(&self, off: u32) -> u32 {
         self.data.u32(self.pl_data().at(off))
     }
 

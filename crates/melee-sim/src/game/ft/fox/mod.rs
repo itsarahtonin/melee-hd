@@ -83,7 +83,6 @@ pub mod ext {
     pub const PL_800386D8: u32 = 0x8003_86D8;
     pub const PL_80040120: u32 = 0x8004_0120;
     pub const IT_GET_HOLD_KIND: u32 = 0x8026_B320;
-    pub const FT_PART_GET_ROT_Z: u32 = 0x8007_5F48;
     pub const GRCORNERIA_801E2D14: u32 = 0x801E_2D14;
     pub const GRCORNERIA_801E2C34: u32 = 0x801E_2C34;
     pub const GRCORNERIA_801E2B80: u32 = 0x801E_2B80;
