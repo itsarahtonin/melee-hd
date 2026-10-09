@@ -3219,7 +3219,7 @@ ftCommon_CalcSelfAccel_DeaccelAir	leaf-check sheik: sheik_functions reaches it t
 ftCommon_ClampSelfVelX	leaf-check sheik: sheik_functions reaches it through ftSk_SpecialAirHi_Phys from real Sheik states and compares the whole state
 ftCommon_FallBasic	leaf-check sheik: sheik_functions reaches it through ftSk_SpecialAirHi_Phys from real Sheik states and compares the whole state
 ftCommon_8007DA24	leaf-check sheik: sheik_functions reaches it through ftSk_SpecialHi_80113A30 from real Sheik states and compares the whole state
-it_802703E8	melee-oracle diff, Fox vs Sheik FD ticks 1-1222 (docs/oracle.md): every tick for each of Sheik's items with hurtboxes, the fighters' hitboxes tested against them (none lands)
+it_802703E8	melee-oracle diff, Fox vs Sheik FD ticks 1-11033 (docs/oracle.md): every tick for each of Sheik's items with hurtboxes, the fighters' hitboxes tested against them, landing from tick 8087
 pl_8003FFDC	leaf-check ftcommon coll_callbacks: the ledge catch's statistics with the call compared live
 mpLib_8005811C	melee-oracle diff, Fox vs Sheik FD ticks 1-1222 (docs/oracle.md): Sheik hanging from the ledge, each frame of the hang (Final Destination's ledges have no joint callback)
 pl_80038788	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): a point bonus set (1 call)
@@ -3291,3 +3291,6 @@ ftAnim_8006EED4	melee-oracle diff, Fox vs Sheik FD ticks 1-7659 (docs/oracle.md)
 ftAnim_8006F994	melee-oracle diff, Fox vs Sheik FD ticks 1-7659 (docs/oracle.md): the part's costume joint, for ftAnim_8006EED4
 ftAnim_8006F954	melee-oracle diff, Fox vs Sheik FD ticks 1-7659 (docs/oracle.md): the figatree bound to the part's subtree, for ftAnim_8006EED4
 ftAnim_8006F7C8	melee-oracle diff, Fox vs Sheik FD ticks 1-7659 (docs/oracle.md): the figatree, the fighter's own, bound to the part's subtree
+it_8026F9AC	melee-oracle diff, Fox vs Sheik FD ticks 1-11033 (docs/oracle.md): the damage log of each hit on Sheik's needles (a Fox laser's from tick 7660, the fighters' from 8087)
+it_8026B6C8	melee-oracle diff, Fox vs Sheik FD ticks 1-11033 (docs/oracle.md): whether a needle a hit lands on is an adventure enemy (none is)
+ftpickupitem_800942A0	melee-oracle diff, Fox vs Sheik FD ticks 1-11033 (docs/oracle.md): the items in a fighter's reach for A, Z and the air catch (Sheik's needles on the floor, from tick 7863)

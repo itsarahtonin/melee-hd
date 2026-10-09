@@ -925,7 +925,7 @@ impl Running<'_> {
     /// Plays a hitbox's sound by its kind and severity, `lbColl_80005BB0`: on `track` for the
     /// heaviest of kind 13, else on none.
     #[doc(alias = "lbColl_80005BB0")]
-    fn hit_kind_sound(&mut self, kind: i32, severity: i32, track: i32) -> i32 {
+    pub(crate) fn hit_kind_sound(&mut self, kind: i32, severity: i32, track: i32) -> i32 {
         let id = HIT_KIND_SFX[(kind * 3 + severity) as usize];
         let track = if kind == 13 && severity == 2 {
             track

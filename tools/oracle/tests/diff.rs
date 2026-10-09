@@ -78,11 +78,11 @@ fn start_reports_its_seam() {
         return;
     };
     // Until the whole match is ported, it stops at a seam, before a difference: past Sheik
-    // turning into Zelda and back, an item's hitbox on an item's hurtbox. Nothing read a stale
+    // turning into Zelda and back and items hitting items, an item's tip. Nothing read a stale
     // field on the way.
     assert!(!out.contains(" differs in "), "{out}");
     assert!(
-        out.contains("stopped in tick 7660 (replay frame 7536)"),
+        out.contains("stopped in tick 11034 (replay frame 10910)"),
         "{out}"
     );
     assert!(out.contains("isn't ported"), "{out}");
