@@ -60,6 +60,13 @@ impl Game {
         jobj::set_rotation_y(&mut self.objs.jobjs, j, v);
     }
 
+    /// `ftPartGetRotZ`, which reads the joint's y rotation.
+    #[doc(alias = "ftPartGetRotZ")]
+    pub fn part_rot_y(&self, f: FighterId, part_idx: i32) -> f32 {
+        let j = self.angle_joint(&self.fighters[f.0], part_idx, "get");
+        self.objs.jobjs[j].rotate.y
+    }
+
     /// `ftPartGetRotX`.
     #[doc(alias = "ftPartGetRotX")]
     pub fn part_rot_x(&self, f: FighterId, part_idx: i32) -> f32 {

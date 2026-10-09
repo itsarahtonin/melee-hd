@@ -66,6 +66,28 @@ impl Running<'_> {
         }
     }
 
+    /// The handle of the sound on one of the fighter's tracks (-1 for none).
+    pub(crate) fn track_handle(&self, f: FighterId, t: Track) -> i32 {
+        let fp = &self.game.fighters[f.0];
+        match t {
+            Track::Voice => fp.x2144,
+            Track::Voice2 => fp.x2148,
+            Track::Effect => fp.x214C,
+            Track::Effect2 => fp.x2150,
+            Track::Effect3 => fp.x2154,
+            Track::Effect4 => fp.x2158,
+            Track::Effect5 => fp.x215C,
+        }
+    }
+
+    /// Keys off one of the slot's tracks for both its fighters and forgets the handle.
+    pub(crate) fn fighter_key_off_tracks(&mut self, f: FighterId, t: Track) {
+        let base = t.base() + i32::from(self.game.fighters[f.0].player_idx) * 2;
+        self.sfx_play_track(SFX_KEY_OFF, 0, 0x40, base);
+        self.sfx_play_track(SFX_KEY_OFF, 0, 0x40, base + 1);
+        *self.track_slot(f, t) = -1;
+    }
+
     fn track(&self, f: FighterId, t: Track) -> i32 {
         let fp = &self.game.fighters[f.0];
         t.base() + i32::from(fp.player_idx) * 2 + i32::from(fp.is_sub_fighter)

@@ -282,16 +282,6 @@ impl Running<'_> {
         }
     }
 
-    /// `ftCo_DeadDown_Anim`: the bottom blast zone's countdown to respawning.
-    #[doc(alias = "ftCo_DeadDown_Anim")]
-    pub fn co_dead_down_anim(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter_mut(gobj);
-        fp.set_mv_i32(0, fp.mv_i32(0).wrapping_sub(1));
-        if fp.mv_i32(0) == 0 {
-            unported_call("ftCo_800BFD9C");
-        }
-    }
-
     /// `ftCo_Sleep_Anim`: a sleeping fighter (Zelda while Sheik plays) does nothing.
     #[doc(alias = "ftCo_Sleep_Anim")]
     #[doc(alias = "ftCo_DamageFall_Anim")]

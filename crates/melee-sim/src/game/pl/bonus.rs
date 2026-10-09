@@ -132,31 +132,6 @@ impl Running<'_> {
         }
     }
 
-    /// A ledge caught, `pl_80040048`: after a hit (a last attacker), knockback of at least
-    /// `pl_804D6470` x98 counts in the player's stats (`xCE8`), and at least xA0 with the
-    /// fighter's `x2227_b5` clear and at most one jump used is bonus 0x48; a sub-fighter's
-    /// doesn't count.
-    #[doc(alias = "pl_80040048")]
-    pub fn record_ledge_catch(&mut self, slot: i32, sub: i32) {
-        let gobj = self
-            .game
-            .player_entity_at(slot, sub)
-            .expect("a ledge catch without its fighter");
-        let attacker = self.game.ft_last_attacker(gobj);
-        if sub != 0 || attacker == 6 {
-            return;
-        }
-        let kb = reg(self.game.fighter(gobj).dmg.x18d8.kb_applied1);
-        if kb >= reg(self.bonus_param_f32(0x98)) {
-            let t = self.game.player_stale_moves(slot);
-            t.xCE8 = t.xCE8.wrapping_add(1);
-        }
-        let fp = self.game.fighter(gobj);
-        if kb >= reg(self.bonus_param_f32(0xA0)) && !fp.x2227_b5 && fp.x1968_jumpsUsed <= 1 {
-            self.count_bonus(slot, 0x48);
-        }
-    }
-
     /// A ledge another fighter holds, `pl_8003FFDC`: unless it's the player's own, bonus 0x46
     /// for the holder when the other last caught a different ledge (`ft_80087A98`).
     #[doc(alias = "pl_8003FFDC")]
@@ -193,7 +168,7 @@ impl Running<'_> {
     }
 
     /// `pl_804D6470`'s word at `off`.
-    pub(super) fn bonus_param(&self, off: u32) -> u32 {
+    pub(crate) fn bonus_param(&self, off: u32) -> u32 {
         self.data.u32(self.pl_data().at(off))
     }
 

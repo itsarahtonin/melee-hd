@@ -26,6 +26,9 @@ pub(super) const KIND_PIKACHU: i32 = 12;
 pub(super) const KIND_PICHU: i32 = 23;
 pub(super) const KIND_GAME_WATCH: i32 = 24;
 pub(super) const KIND_KIRBY: i32 = 4;
+/// `Ft_Kind_DrMario` and `Ft_Kind_Ganon`.
+const KIND_DRMARIO: i32 = 21;
+const KIND_GANON: i32 = 25;
 
 /// `Gr_Kind_Corneria`, `Gr_Kind_Venom`.
 const GR_KIND_CORNERIA: i32 = 0x0E;
@@ -254,9 +257,103 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DE9B8")]
     pub fn appeal_check(&mut self, gobj: GObjId) -> bool {
         if self.game.fighter(gobj).input.pressed_buttons & PAD_DPAD_UP != 0 {
-            unported_call("ftCo_800DEA28");
+            self.enter_appeal(gobj);
+            return true;
         }
         false
+    }
+
+    /// A taunt, `ftCo_800DEA28`: the character's own (Young Link's, Dr. Mario's and
+    /// Ganondorf's aren't ported) or the side taunt, and the stats' taunt records
+    /// (`pl_80040120`).
+    #[doc(alias = "ftCo_800DEA28")]
+    #[doc(alias = "pl_80040120")]
+    fn enter_appeal(&mut self, gobj: GObjId) {
+        match self.game.fighter(gobj).kind {
+            KIND_CLINK => unported_call("ftCl_Init_80149318 (Young Link's taunt)"),
+            KIND_DRMARIO => unported_call("ftDr_Init_80149910 (Dr. Mario's taunt)"),
+            KIND_GANON => unported_call("lb_800119DC (Ganondorf's taunt)"),
+            _ => self.enter_appeal_s(gobj),
+        }
+        let fp = self.game.fighter(gobj);
+        let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
+        if sub {
+            return;
+        }
+        let p = self.game.player_mut(slot);
+        if p.ext_u32(0xD4C) != 0 {
+            self.count_bonus(slot, 0x4A);
+        }
+        if self.game.player_mut(slot).ext_u32(0xD54) != 0 {
+            self.count_bonus(slot, 0x4D);
+        }
+        let (mine, theirs) = (self.bonus_param(0xB0), self.bonus_param(0xA4));
+        for i in 0..6 {
+            if !self.game.player_awake(i) {
+                continue;
+            }
+            if i == slot {
+                self.game.player_mut(slot).set_ext_u32(0xD50, mine);
+            } else {
+                self.game.player_mut(i).set_ext_u32(0xD4C, theirs);
+            }
+        }
+    }
+
+    /// The side taunt, `ftCo_800DEBD0` (Kirby's drops his copied power first, not ported).
+    #[doc(alias = "ftCo_800DEBD0")]
+    fn enter_appeal_s(&mut self, gobj: GObjId) {
+        if self.game.fighter(gobj).kind == KIND_KIRBY {
+            unported_call("ftKb_SpecialN_800F5D04 (Kirby's taunt)");
+        }
+        self.enter_facing_state(gobj, ms::APPEAL_SR, ms::APPEAL_SL);
+    }
+
+    /// Enters `right`, or `left` when facing left and the character has `left`'s animation,
+    /// `ftCo_800DEAE8`; not interruptible until its script says.
+    #[doc(alias = "ftCo_800DEAE8")]
+    fn enter_facing_state(&mut self, gobj: GObjId, right: i32, left: i32) {
+        let f = self.game.fighter_id(gobj);
+        let anim = Self::motion_state(&self.game.fighters[f.0], left).anim_id;
+        let fp = &mut self.game.fighters[f.0];
+        fp.allow_interrupt = false;
+        let msid = if fp.facing_dir == -1.0 && self.data.u32(self.anim_entry(f, anim).at(8)) != 0 {
+            left
+        } else {
+            right
+        };
+        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
+    }
+
+    /// `ftCo_AppealS_Anim`: waiting when the taunt ends.
+    #[doc(alias = "ftCo_AppealS_Anim")]
+    pub fn co_appeal_s_anim(&mut self, gobj: GObjId) {
+        if !self.anim_frames_remaining(gobj) {
+            self.enter_wait(gobj);
+        }
+    }
+
+    /// `ftCo_AppealS_IASA`: once interruptible, specials, grabs, attacks, a roll or a
+    /// shield.
+    #[doc(alias = "ftCo_AppealS_IASA")]
+    pub fn co_appeal_s_iasa(&mut self, gobj: GObjId) {
+        if !self.game.fighter(gobj).allow_interrupt {
+            return;
+        }
+        let _ = self.special_s_check(gobj)
+            || self.special_hi_check(gobj)
+            || self.special_n_check(gobj)
+            || self.special_lw_check(gobj)
+            || self.catch_check(gobj)
+            || self.attack_s4_check(gobj)
+            || self.attack_hi4_check(gobj)
+            || self.attack_lw4_check(gobj)
+            || self.attack_s3_check(gobj)
+            || self.attack_hi3_check(gobj)
+            || self.attack_lw3_check(gobj)
+            || self.attack1_check(gobj)
+            || self.escape_n_check(gobj)
+            || self.guard_check(gobj);
     }
 
     /// Whether the stage is Corneria or Venom, where Fox's and Falco's side taunt calls their

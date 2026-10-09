@@ -19,7 +19,7 @@ impl Running<'_> {
     /// A ledge hang's camera callback, `ftCo_Cliff_Cam`: the camera box, and in the air the
     /// ledge's joint told it is held (`mpLib_8005811C`) and the box marked on a ledge.
     #[doc(alias = "ftCo_Cliff_Cam")]
-    pub fn cliff_cam(&mut self, gobj: GObjId) {
+    pub fn co_cliff_cam(&mut self, gobj: GObjId) {
         self.update_camera_box(gobj);
         let fp = self.game.fighter(gobj);
         if fp.ground_or_air == GA_AIR {

@@ -1097,6 +1097,29 @@ impl Running<'_> {
         (point, pos, off)
     }
 
+    /// A fighter out of play, `gm_80167320`: back on the respawn platform for its next stock;
+    /// out of the match with no stock left, a single-player mode's ending and a slot that
+    /// leaves aren't ported.
+    #[doc(alias = "gm_80167320")]
+    #[doc(alias = "gm_8016A1F8")]
+    pub fn fighter_out_of_play(&mut self, slot: i32, sub: bool) {
+        if self.game.player_flags_bit1(slot) {
+            if !sub {
+                super::super::code::unported_call(
+                    "gm_80167320 for a leaving slot (Player_80031EBC)",
+                );
+            }
+            return;
+        }
+        if self.game.gm.spawn_flags & 0x40 != 0 && slot == 0 {
+            super::super::code::unported_call("fn_80169444 (a single-player mode's last stock)");
+        }
+        if (self.game.vs_is_stock() || self.game.vs_x4_2()) && self.game.player_stocks(slot) == 0 {
+            super::super::code::unported_call("gm_8016AC44 (a player out of stocks)");
+        }
+        self.respawn(slot, i32::from(sub));
+    }
+
     /// Brings a player back on the respawn platform, `fn_8016719C` (`sub` 1 for a partner).
     #[doc(alias = "fn_8016719C")]
     pub fn respawn(&mut self, slot: i32, sub: i32) {

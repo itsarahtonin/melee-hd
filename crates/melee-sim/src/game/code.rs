@@ -134,7 +134,6 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         0x800C_B528 => g.co_knee_bend_anim(gobj),
         0x800C_C388 => g.co_jump_aerial_anim(gobj),
         0x800C_CA00 => g.co_fall_anim(gobj),
-        0x800D_3E00 => g.co_dead_down_anim(gobj),
         // Physics.
         0x8008_A644 => g.co_wait_phys(gobj),
         0x800D_5F18 | 0x8008_D7B0 | 0x800C_B6AC | 0x8008_B940 | 0x8008_BB04 | 0x8008_BF84
@@ -155,7 +154,6 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         0x8008_AE10 | 0x8008_B638 | 0x8008_CD48 => g.ground_coll(gobj),
         // Camera.
         0x8007_61C8 => g.update_camera_box(gobj),
-        0x8008_1644 => g.cliff_cam(gobj),
         // Hitlag.
         0x8008_E4F0 => g.co_damage_hitlag(gobj),
         0x8008_E714 => g.co_damage_exit_hitlag(gobj),

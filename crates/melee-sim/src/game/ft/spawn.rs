@@ -715,7 +715,9 @@ fn clear_hit_records(fp: &mut Fighter) {
     r.x2074_vec.y = 0;
     r.x207C.x = 0.0;
     r.x207C.y = 6;
-    r.x10 = [0; 4];
+    // `x2084`'s bits only: the first byte's eight and the second's top five.
+    r.x10[0] = 0;
+    r.x10[1] &= 0x07;
     r.x2088 = 0;
     let d = &mut fp.dmg.x18d8;
     d.x0 = 0;

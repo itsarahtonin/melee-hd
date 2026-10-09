@@ -4,7 +4,6 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::Val;
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
@@ -353,10 +352,8 @@ impl Running<'_> {
             fp.cmd_vars[0] = 1;
             fp.facing_dir = mem(fp::fneg(reg(fp.facing_dir)));
         }
-        let rot_z = self
-            .ext(ext::FT_PART_GET_ROT_Z, &[Val::Fighter(f), Val::Int(0)])
-            .float();
-        let v = fp::fnmsubs(DEG_TO_RAD, fp::fdivs(fp::frsp(180.0), frames), rot_z);
+        let rot_y = reg(self.game.part_rot_y(f, 0));
+        let v = fp::fnmsubs(DEG_TO_RAD, fp::fdivs(fp::frsp(180.0), frames), rot_y);
         self.game.part_set_rot_y(f, 0, mem(v));
     }
 
