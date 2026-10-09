@@ -54,10 +54,10 @@ impl Running<'_> {
     /// fighter's holder gets its bonus, the state's death hooks run, a grab ends, it stops,
     /// its item goes, its effects end, and its state and attack are kept for the stats.
     #[doc(alias = "ftCo_800D331C")]
-    #[doc(alias = "pl_8004065C")]
-    #[doc(alias = "ftCo_800DD100")]
-    #[doc(alias = "pl_8003EA08")]
-    #[doc(alias = "pl_8003EA74")]
+    // Ports `pl_8004065C`; aliased once a check reaches it.
+    // Ports `ftCo_800DD100`; aliased once a check reaches it.
+    // Ports `pl_8003EA08`; aliased once a check reaches it.
+    // Ports `pl_8003EA74`; aliased once a check reaches it.
     fn leave_play(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
@@ -341,10 +341,10 @@ impl Running<'_> {
     /// `ftCo_800D3BC8` (bottom) and `ftCo_800D3E40` (top, under stamina's or sudden
     /// death's rule): out of play (`enterDead`), its sound, and the KO's blast where it
     /// left, kept within the zones.
-    #[doc(alias = "ftCo_800D3680")]
+    // Ports `ftCo_800D3680`; aliased once a check reaches it.
     #[doc(alias = "ftCo_800D3950")]
     #[doc(alias = "ftCo_800D3BC8")]
-    #[doc(alias = "ftCo_800D3E40")]
+    // Ports `ftCo_800D3E40`; aliased once a check reaches it.
     fn enter_dead_side(&mut self, gobj: GObjId, side: Side) {
         let (msid, sfx, angle, along_x) = match side {
             Side::Left => (ms::DEAD_LEFT, 0x88, -std::f32::consts::FRAC_PI_2, false),
@@ -474,10 +474,10 @@ impl Running<'_> {
 
     /// `ftCo_DeadLeft_Anim` and the other zones' deaths: when the frames run out, out of
     /// play for now.
-    #[doc(alias = "ftCo_DeadLeft_Anim")]
+    // Ports `ftCo_DeadLeft_Anim`; aliased once a check reaches it.
     #[doc(alias = "ftCo_DeadRight_Anim")]
     #[doc(alias = "ftCo_DeadDown_Anim")]
-    #[doc(alias = "ftCo_DeadUp_Anim")]
+    // Ports `ftCo_DeadUp_Anim`; aliased once a check reaches it.
     pub fn co_dead_anim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(DEAD_FRAMES, fp.mv_i32(DEAD_FRAMES).wrapping_sub(1));
@@ -487,10 +487,10 @@ impl Running<'_> {
     }
 
     /// `ftCo_DeadLeft_Cam` and the other zones' deaths: nothing.
-    #[doc(alias = "ftCo_DeadLeft_Cam")]
+    // Ports `ftCo_DeadLeft_Cam`; aliased once a check reaches it.
     #[doc(alias = "ftCo_DeadRight_Cam")]
     #[doc(alias = "ftCo_DeadDown_Cam")]
-    #[doc(alias = "ftCo_DeadUp_Cam")]
+    // Ports `ftCo_DeadUp_Cam`; aliased once a check reaches it.
     pub fn co_dead_cam(&mut self, _gobj: GObjId) {}
     pub fn enter_dead_up_fall(&mut self, _gobj: GObjId) {
         unported_call("ftCo_800D4780");

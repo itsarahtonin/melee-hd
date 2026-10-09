@@ -136,7 +136,7 @@ impl Running<'_> {
     }
 
     /// Nana keeps no lower than Popo on his platform, `fn_800D55B4`.
-    #[doc(alias = "fn_800D55B4")]
+    // Ports `fn_800D55B4`; aliased once a check reaches it.
     pub fn platform_follow_sub(&mut self, gobj: GObjId) {
         let slot = i32::from(self.game.fighter(gobj).player_idx);
         let main = self
@@ -169,7 +169,7 @@ impl Running<'_> {
     /// `ftCo_Rebirth_Phys` and `ftCo_RebirthWait_Phys`: the velocity that reaches the
     /// platform's stop in the frames left; Nana moves as Popo does.
     #[doc(alias = "ftCo_Rebirth_Phys")]
-    #[doc(alias = "ftCo_RebirthWait_Phys")]
+    // Ports `ftCo_RebirthWait_Phys`; aliased once a check reaches it.
     #[doc(alias = "ftCommon_8007F8B4")]
     pub fn co_rebirth_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
@@ -275,7 +275,7 @@ impl Running<'_> {
 
     /// `ftCo_RebirthWait_Anim`: when the wait's frames run out, invincible a while longer
     /// and falling.
-    #[doc(alias = "ftCo_RebirthWait_Anim")]
+    // Ports `ftCo_RebirthWait_Anim`; aliased once a check reaches it.
     pub fn co_rebirth_wait_anim(&mut self, gobj: GObjId) {
         self.wait_anim_tick(gobj, 0x24);
         let fp = self.game.fighter_mut(gobj);
@@ -303,7 +303,7 @@ impl Running<'_> {
     /// into a fall. Either way it stays invincible a while, and the stats note it.
     #[doc(alias = "ftCo_RebirthWait_IASA")]
     #[doc(alias = "pl_80040374")]
-    #[doc(alias = "ftCo_80091A2C")]
+    // Ports `ftCo_80091A2C`; aliased once a check reaches it.
     pub fn co_rebirth_wait_iasa(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
@@ -351,8 +351,8 @@ impl Running<'_> {
 
     /// `ftCo_RebirthWait_Coll`: the airborne pass with the grounded ECB; landing ends the
     /// wait (`fn_800D5A30`).
-    #[doc(alias = "ftCo_RebirthWait_Coll")]
-    #[doc(alias = "fn_800D5A30")]
+    // Ports `ftCo_RebirthWait_Coll`; aliased once a check reaches it.
+    // Ports `fn_800D5A30`; aliased once a check reaches it.
     pub fn co_rebirth_wait_coll(&mut self, gobj: GObjId) {
         self.air_coll_grounded_ecb_then(gobj, |g, gobj| {
             let t = g.common().i32(0x5D8);

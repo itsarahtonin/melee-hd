@@ -35,7 +35,7 @@ fn between_a1_d0(x: i32) -> bool {
 }
 
 /// `pl_8003D60C`: the item kinds whose KOs count as an explosion's.
-#[doc(alias = "pl_8003D60C")]
+// Ports `pl_8003D60C`; aliased once a check reaches it.
 fn explosive_kind(x: i32) -> bool {
     x == 0xA0 || (0xEA..0xEE).contains(&x) || x == 0xE1
 }
@@ -65,7 +65,7 @@ impl Running<'_> {
     /// keeps none), which died in state `motion` hit by attack `attack`.
     #[doc(alias = "pl_8003D644")]
     #[doc(alias = "pl_8003FED0")]
-    #[doc(alias = "pl_80041744")]
+    // Ports `pl_80041744`; aliased once a check reaches it.
     #[doc(alias = "pl_80041720")]
     #[doc(alias = "ft_80087858")]
     #[doc(alias = "ft_80087878")]
@@ -280,8 +280,8 @@ impl Running<'_> {
     /// (`xCE8`), and a stronger one with a jump or less used scores bonus 0x48 (Nana's don't
     /// count, nor a fighter no one hit).
     #[doc(alias = "pl_80040048")]
-    #[doc(alias = "ft_80087AA4")]
-    #[doc(alias = "ft_80087AB4")]
+    // Ports `ft_80087AA4`; aliased once a check reaches it.
+    // Ports `ft_80087AB4`; aliased once a check reaches it.
     pub fn record_ledge_catch(&mut self, slot: i32, sub: bool) {
         let gobj = self
             .game
@@ -337,7 +337,7 @@ impl Running<'_> {
     /// `fn_800415B0`: an instance already there counts one more KO (or with `self_ko`, is
     /// marked); a new one takes the oldest entry, whose counts score first (`fn_80041770`).
     #[doc(alias = "fn_800415B0")]
-    #[doc(alias = "fn_80041770")]
+    // Ports `fn_80041770`; aliased once a check reaches it.
     fn record_hit(&mut self, slot: i32, instance: u16, self_ko: bool) {
         if instance == 0 {
             return;

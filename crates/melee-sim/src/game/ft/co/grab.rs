@@ -642,7 +642,7 @@ impl Running<'_> {
 
     /// Hit while held, `ftCo_800DC284` (`ftCo_800DC3A4` low): the hold's flinch, its timer
     /// from 0.
-    #[doc(alias = "ftCo_800DC284")]
+    // Ports `ftCo_800DC284`; aliased once a check reaches it.
     #[doc(alias = "ftCo_800DC3A4")]
     pub fn enter_capture_damage(&mut self, gobj: GObjId, high: bool) {
         let msid = if high {
@@ -675,7 +675,7 @@ impl Running<'_> {
 
     /// `ftCo_CaptureDamageHi_Anim` (`ftCo_CaptureDamageLw_Anim`): the hold's frame; when
     /// the flinch ends, held still again.
-    #[doc(alias = "ftCo_CaptureDamageHi_Anim")]
+    // Ports `ftCo_CaptureDamageHi_Anim`; aliased once a check reaches it.
     #[doc(alias = "ftCo_CaptureDamageLw_Anim")]
     pub fn co_capture_damage_anim(&mut self, gobj: GObjId) {
         self.capture_tick(gobj);
@@ -690,15 +690,15 @@ impl Running<'_> {
     }
 
     /// `ftCo_CaptureDamageHi_Phys`: to the hold point.
-    #[doc(alias = "ftCo_CaptureDamageHi_Phys")]
+    // Ports `ftCo_CaptureDamageHi_Phys`; aliased once a check reaches it.
     pub fn co_capture_damage_hi_phys(&mut self, gobj: GObjId) {
         self.move_to_hold(gobj);
     }
 
     /// `ftCo_CaptureDamageHi_Coll`: touching down, the low flinch from the same frame
     /// (`fn_800DC384`).
-    #[doc(alias = "ftCo_CaptureDamageHi_Coll")]
-    #[doc(alias = "fn_800DC384")]
+    // Ports `ftCo_CaptureDamageHi_Coll`; aliased once a check reaches it.
+    // Ports `fn_800DC384`; aliased once a check reaches it.
     pub fn co_capture_damage_hi_coll(&mut self, gobj: GObjId) {
         if !self.game.fighter(gobj).x2226_b2 {
             self.air_coll_touch_then(gobj, |g, gobj| g.capture_damage_switch(gobj, false));
@@ -708,8 +708,8 @@ impl Running<'_> {
     /// The flinch switched high or low from the same frame, `fn_800DC404` (`fn_800DC624`
     /// high): the hooks, to the hold point; going high also runs the high collision and
     /// moves the model there.
-    #[doc(alias = "fn_800DC404")]
-    #[doc(alias = "fn_800DC624")]
+    // Ports `fn_800DC404`; aliased once a check reaches it.
+    // Ports `fn_800DC624`; aliased once a check reaches it.
     fn capture_damage_switch(&mut self, gobj: GObjId, high: bool) {
         let msid = if high {
             ms::CAPTURE_DAMAGE_HI
