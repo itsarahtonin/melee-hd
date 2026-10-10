@@ -3,7 +3,7 @@
 //! which [`code`](super::super::code) dispatches.
 
 use super::datfiles::GrJoint;
-use super::{GR_KIND_BATTLE, GR_KIND_LAST};
+use super::{GR_KIND_BATTLE, GR_KIND_LAST, GR_KIND_PSTADIUM};
 
 /// `StageCallbacks`: one stage object's functions, by map id.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -139,11 +139,59 @@ pub const BATTLE: StageData = StageData {
     joints: &[],
 };
 
+/// `grPs_StageCallbacks`. Map 0 has none; maps 7 and 8 are the water stage's windmill blades.
+pub const STADIUM_CALLBACKS: [StageCallbacks; 10] = [
+    cb(0, 0, 0, 0, 0),
+    cb(0x801D_1290, 0x801D_1388, 0x801D_1390, 0x801D_13C4, 0),
+    cb(
+        0x801D_13E0,
+        0x801D_1518,
+        0x801D_1520,
+        0x801D_156C,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x801D_1840, 0x801D_19D0, 0x801D_19D8, 0x801D_19F8, 0),
+    cb(0x801D_1648, 0x801D_16D4, 0x801D_16DC, 0x801D_16FC, 0),
+    cb(0x801D_1570, 0x801D_15FC, 0x801D_1604, 0x801D_1624, 0),
+    cb(0x801D_1720, 0x801D_17E0, 0x801D_17E8, 0x801D_1808, 0),
+    cb(0x801D_1DE4, 0x801D_1E10, 0x801D_1E18, 0x801D_1E1C, 0),
+    cb(0x801D_1DE4, 0x801D_1E10, 0x801D_1E18, 0x801D_1E1C, 0),
+    cb(0x801D_1A38, 0x801D_1B40, 0x801D_1B48, 0x801D_1D84, 0),
+];
+
+/// `grPs_803E1248`.
+pub const STADIUM_JOINTS: [GrJoint; 6] = [
+    GrJoint { x: 1, y: 3, z: 0 },
+    GrJoint { x: 2, y: 3, z: 0 },
+    GrJoint { x: 3, y: 4, z: 0 },
+    GrJoint { x: 4, y: 5, z: 0 },
+    GrJoint { x: 5, y: 6, z: 0 },
+    GrJoint { x: 7, y: 9, z: 0 },
+];
+
+/// `grPs_StageData`. Its archive is `"/GrPs"`, which the file system completes with the
+/// language's extension (`.usd` for English).
+pub const STADIUM: StageData = StageData {
+    grkind: GR_KIND_PSTADIUM,
+    callbacks: &STADIUM_CALLBACKS,
+    file: Some("/GrPs.usd"),
+    on_init: 0x801D_101C,
+    on_demo_init: 0x801D_1018,
+    on_load: 0x801D_10C8,
+    on_start: 0x801D_10CC,
+    callback4: 0x801D_10F0,
+    on_touch_line: 0x801D_50B8,
+    on_check_shadow_render: 0x801D_50C0,
+    flags2: 1,
+    joints: &STADIUM_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
         GR_KIND_LAST => &LAST,
         GR_KIND_BATTLE => &BATTLE,
+        GR_KIND_PSTADIUM => &STADIUM,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

@@ -640,8 +640,9 @@ pub fn light_anim_loops(game: &Game, data: &Archives, anim: Option<DataRef>) -> 
 }
 
 /// The light list the stage uses: the archive's for the object the callbacks mark, through
-/// `Ground_801C20E0`, or the defaults (`Ground_803E06C8`).
-fn light_list(game: &Game, data: &Archives) -> Option<DataRef> {
+/// `Ground_801C20E0` (each entry with the flags its light has once the edit is done), or the
+/// defaults (`Ground_803E06C8`).
+fn light_list(game: &Game, data: &Archives) -> Option<Vec<(DataRef, u16)>> {
     let main = datfiles::main_head(game);
     let callbacks = stage_data(game.stage_info.grkind).callbacks;
     let n = main.count(data);
@@ -652,8 +653,7 @@ fn light_list(game: &Game, data: &Archives) -> Option<DataRef> {
                 .entry(data, i)
                 .lights(data)
                 .expect("ground.c: lightset");
-            light_overrides(data, head, lights);
-            return Some(lights);
+            return Some(light_overrides(data, head, lights));
         }
     }
     None
@@ -732,24 +732,13 @@ fn overridden_lights(data: &Archives, head: MapHead, lights: DataRef) -> Vec<(Da
     out
 }
 
-/// Applies the archive's light overrides to a light list, `Ground_801C20E0`: the list is used
-/// as it is unless an override for one of its lights sets a flag, which would make the
-/// original edit the loaded list and descriptors (the stages ported have none).
+/// Applies the archive's light overrides to a light list, `Ground_801C20E0`: the list as it
+/// is unless an override for one of its lights sets a flag; then the original edits the loaded
+/// list and descriptors in place ([`overridden_lights`]), which here is the entries it leaves
+/// and their lights' flags.
 #[doc(alias = "Ground_801C20E0")]
-fn light_overrides(data: &Archives, head: MapHead, lights: DataRef) {
-    assert!(data.ptr(lights).is_some(), "ground.c: *lightset");
-    let (list, n) = head.light_overrides(data);
-    let mut at = lights;
-    while let Some(entry) = data.ptr(at) {
-        let desc = data.ptr(entry);
-        for i in 0..n.max(0) as u32 {
-            let o = list.expect("light overrides").at(8 * i);
-            if data.ptr(o) == desc && data.u8(o.at(4)) & 0xE0 != 0 {
-                unimplemented!("Ground_801C20E0's light overrides write into loaded data");
-            }
-        }
-        at = at.at(4);
-    }
+fn light_overrides(data: &Archives, head: MapHead, lights: DataRef) -> Vec<(DataRef, u16)> {
+    overridden_lights(data, head, lights)
 }
 
 /// Loads a light list (`LightList**`: entries of a descriptor and its animations) into a chain
@@ -779,11 +768,32 @@ pub fn load_light_list(game: &mut Game, data: &Archives, list: DataRef) -> Optio
 /// says, run once, and their process.
 #[doc(alias = "Ground_801C466C")]
 pub fn create_lights(game: &mut Game, data: &Archives) {
-    let Some(list) = light_list(game, data) else {
+    let Some(entries) = light_list(game, data) else {
         unimplemented!("the default lights (Ground_803E06C8) live in the executable");
     };
     let gobj = game.world.create(0xD, 3, 0);
-    let first = load_light_list(game, data, list).expect("ground.c: lobj");
+    // `lb_80011AC4` on the list as the overrides leave it.
+    let mut first = None;
+    let mut prev: Option<lobj::LObjId> = None;
+    for &(entry, flags) in &entries {
+        let desc = data.ptr(entry).expect("a light list entry without a light");
+        // `HSD_LObjLoadDesc` would load a chain of descriptors; the stages' have none.
+        assert!(
+            data.ptr(desc.at(4)).is_none(),
+            "a stage light's descriptor with a next"
+        );
+        let l = lobj::alloc(&mut game.objs.lobjs);
+        lobj::load_flags(&mut game.objs, data, l, desc, flags);
+        if let Some(anims) = data.ptr(entry.at(4)) {
+            lobj::add_anim_all(&mut game.objs, data, Some(l), data.ptr(anims));
+        }
+        match prev {
+            Some(p) => game.objs.lobjs[p].next = Some(l),
+            None => first = Some(l),
+        }
+        prev = Some(l);
+    }
+    let first = first.expect("ground.c: lobj");
     game.world.set_obj(gobj, OBJ_LIGHT, Obj::LObj(first));
     // Ground_801C4640 sets them up for rendering.
     game.world.setup_gx_link(gobj, CodeRef(0x801C_4640), 0, 0);
@@ -809,12 +819,12 @@ pub fn create_lights(game: &mut Game, data: &Archives) {
     for a in light_anims(game, first, u32::MAX) {
         aobj::set_rate(&mut game.objs.aobjs, Some(a), 1.0);
     }
-    let first_entry = data.ptr(list).expect("ground.c: a light");
+    let first_entry = entries[0].0;
     if data.ptr(first_entry.at(4)).is_some() {
-        let mut entry_at = list;
+        let mut k = 0;
         let mut cur = Some(first);
         while let Some(l) = cur {
-            let entry = data.ptr(entry_at);
+            let entry = entries.get(k).map(|e| e.0);
             let anim = entry
                 .and_then(|e| data.ptr(e.at(4)))
                 .and_then(|a| data.ptr(a));
@@ -832,7 +842,7 @@ pub fn create_lights(game: &mut Game, data: &Archives) {
                 }
             }
             cur = game.objs.lobjs[l].next;
-            entry_at = entry_at.at(4);
+            k += 1;
         }
     }
     lobj::anim_all(&mut game.objs, data, Some(first));

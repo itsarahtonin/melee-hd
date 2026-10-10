@@ -13,6 +13,7 @@ pub mod items;
 pub mod links;
 pub mod playback;
 pub mod sis;
+pub mod stadium;
 pub mod stage;
 pub mod vs;
 
@@ -450,6 +451,11 @@ impl DataMap {
             archive: l.id,
             offset,
         })
+    }
+
+    /// The loaded file named `file`'s archive.
+    pub fn archive_named(&self, file: &str) -> Option<melee_data::archive::ArchiveId> {
+        self.loaded.iter().find(|l| l.name == file).map(|l| l.id)
     }
 
     /// The address of a `DataRef`.

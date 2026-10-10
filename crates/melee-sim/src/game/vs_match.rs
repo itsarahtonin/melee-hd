@@ -318,6 +318,24 @@ impl Match {
                     .map(|name| data.add(archive(name)))
             },
         };
+        // Pokémon Stadium's transformation files, which it loads during the match: disc data
+        // the frontend loads with the match's archives, as the fighters' files are.
+        let stadium_files: Vec<(&str, ArchiveId)> = if super::gr::data::stage_data(
+            crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind)) as i32,
+        )
+        .grkind
+            == super::gr::GR_KIND_PSTADIUM
+        {
+            super::gr::stadium::FILES
+                .iter()
+                .map(|&name| (name, data.add(archive(name))))
+                .collect()
+        } else {
+            Vec::new()
+        };
+        for (i, &(_, id)) in stadium_files.iter().enumerate() {
+            game.gr.stadium.files[i] = Some(id);
+        }
         // The trophies' data the stage load reads in (`Toy_803124BC`), for its disc load's
         // timing.
         let ty = load(super::gm::TROPHY_DATA_FILE);
@@ -364,6 +382,7 @@ impl Match {
             // The stage table's paths start at the disc's root.
             names.push((name.trim_start_matches('/').to_owned(), id));
         }
+        names.extend(stadium_files.iter().map(|&(n, id)| (n.to_owned(), id)));
         let ft_files = &game.ft.data.files;
         names.extend(ft_files.archives.iter().cloned());
         for (name, file) in &ft_files.anim_files {

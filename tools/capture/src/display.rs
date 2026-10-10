@@ -197,7 +197,7 @@ impl Comparer<'_> {
 
 /// lbRefract's state (`lbl_804336D0`): users, image, image descriptors, texture chains,
 /// projection.
-const REFRACT: &str = "lbl_804336D0";
+pub(crate) const REFRACT: &str = "lbl_804336D0";
 /// An `HSD_ImageDesc`'s size.
 const IMAGE_DESC: u32 = 0x18;
 
