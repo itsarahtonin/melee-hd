@@ -38,6 +38,20 @@
 //!   STALL_BEATS=200 MONKEY_HOLD=... (the same CAPTURE_ variables, CAPTURE=$D/script1) \
 //!   ssbm-run "$SSBM_DISC" --mode e --matches 20 --monkey 20 --fields 9000 --port all --lockstep
 //! ```
+//!
+//! No replay has Zelda holding an item either, so `items1` is a debug VS match of two Zeldas on
+//! Final Destination (the first a CPU) with only the home-run bat and the beam sword spawning,
+//! the monkey playing the second, saving every call of the item hooks and the knockback hooks
+//! (`zeldaitem-funcs.txt`, with `done-nonzeldaitem.txt` every other function's address): the
+//! pickups, the held item hidden and shown again, and the drops:
+//!
+//! ```text
+//! MATCH_FIGHTERS=18 MATCH_STAGES=32 MATCH_PLAYERS=2 MATCH_TIME=480 UNLOCK_ALL=1 MATCH_ITEMS=11,12 \
+//!   MONKEY_B=2 STALL_BEATS=200 CAPTURE_INTERACTED=1 CAPTURE=$D/items1 CAPTURE_FROM=0 \
+//!   CAPTURE_NESTED=1 CAPTURE_EVERY=1 CAPTURE_FUNCS=@$D/zeldaitem-funcs.txt \
+//!   LOCKSTEP_DONE=$D/done-nonzeldaitem.txt \
+//!   ssbm-run "$SSBM_DISC" --mode e --matches 21 --monkey 21 --fields 9000 --port all --lockstep
+//! ```
 
 use std::collections::BTreeMap;
 
@@ -423,20 +437,7 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
 
 /// Functions no saved state can finish yet, with what stops them. One that compares clean
 /// fails the check until it's taken off.
-const BLOCKED: &[(&str, &str)] = &[
-    (
-        "ftZd_Init_OnItemPickup",
-        "no capture holds an item, and without one the reference faults",
-    ),
-    (
-        "ftZd_Init_OnItemInvisible",
-        "no capture holds an item, and without one the reference faults",
-    ),
-    (
-        "ftZd_Init_OnItemVisible",
-        "no capture holds an item, and without one the reference faults",
-    ),
-];
+const BLOCKED: &[(&str, &str)] = &[];
 
 /// Every one of Zelda's ported functions compares clean from some real state: its own saved
 /// calls or its unit's neighbours'.
