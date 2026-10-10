@@ -1703,13 +1703,14 @@ impl Running<'_> {
     }
 
     /// Whether the stage gives the line a hazard (`Ground_801C5700`, through the stage's
-    /// `on_touch_line`): Final Destination's and Battlefield's never do.
+    /// `on_touch_line`): Final Destination's, Battlefield's and Pokémon Stadium's never do.
     #[doc(alias = "Ground_801C5700")]
+    #[doc(alias = "grStadium_OnTouchLine")]
     fn line_hazard(&mut self, _line: i32) -> bool {
         match self.game.stage_info.on_touch_line {
             None => false,
-            // grLast_OnTouchLine, grBattle_OnTouchLine: `return NULL`.
-            Some(f) if f.0 == 0x8021_C740 || f.0 == 0x8021_A610 => false,
+            // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine: `return NULL`.
+            Some(f) if f.0 == 0x8021_C740 || f.0 == 0x8021_A610 || f.0 == 0x801D_50B8 => false,
             Some(f) => unported_call(&format!("a stage's on_touch_line {:#x}", f.0)),
         }
     }

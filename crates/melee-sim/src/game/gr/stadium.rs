@@ -1299,22 +1299,202 @@ pub fn text_names_or_count(r: &mut Running, gobj: GObjId) {
     }
 }
 
-/// The names and the clock, `grStadium_801D3460`.
+/// `grPs_8049F040`, the static buffer the names screen builds its string 5 in.
+const NAMES_STRING: u32 = 0x8049_F040;
+
+/// Appends a string to the dynamic text at (`x`, `y`): what `vsnprintf` makes of the format
+/// and arguments, as `HSD_SisLib_803A6B98` takes them.
+fn print(r: &mut Running, t: TextId, x: f32, y: f32, fmt: &[u8], args: &[FmtArg]) {
+    let s = crate::hsd::sis::printf(fmt, args);
+    r.game
+        .sis
+        .add_string(t, f64::from(x), f64::from(y), Some(&s));
+}
+
+use crate::hsd::sis::{FmtArg, SisPtr};
+
+/// The names and the clock, `grStadium_801D3460`: the static text's string 5 rebuilt in its
+/// buffer from string 6, the current stage's name (strings 8 to 12) and string 7, and the
+/// players' names placed for how many there are, over the time left (or "00:00 00" without a
+/// time limit).
 #[doc(alias = "grStadium_801D3460")]
-pub fn text_names(_r: &mut Running, _gobj: GObjId) {
-    super::super::code::unported_call("grStadium_801D3460");
+pub fn text_names(r: &mut Running, _gobj: GObjId) {
+    let (st, dy) = texts(r.game);
+    r.game.sis.clear_text(dy);
+    let gm = map_gobj(r.game, MAP_MAIN).expect("the transformations' controller");
+    let gp = ground_of(r.game, gm);
+    let kind = r.game.grounds[gp.0].u.stadium().kind;
+    let s = &mut r.game.sis;
+    s.set_table_entry(1, 5, SisPtr::Static(NAMES_STRING));
+    s.copy_table_string(r.data, 1, 5, 6);
+    let name = match kind {
+        3 => 9,
+        9 => 0xA,
+        6 => 0xB,
+        4 => 0xC,
+        _ => 8,
+    };
+    s.append_table_string(r.data, 1, 5, name);
+    s.append_table_string(r.data, 1, 5, 7);
+    s.reset_text(r.data, st, 5);
+    let jp = r.game.gm.unlocks.is_jp();
+    let t = r.game.sis.text_mut(dy);
+    t.default_kerning = 0;
+    t.x34 = if jp { [0.3125, 0.625] } else { [0.26, 0.625] };
+    t.text_color = [0xC0, 0xC0, 0xFF, 0xFF];
+    t.default_alignment = 1;
+    let mut names: Vec<&'static [u8]> = Vec::new();
+    for i in 0..4 {
+        if r.game.player_pkind(i) != crate::game::pl::player::PKIND_NONE
+            && let Some(n) = r.game.player_name(i)
+        {
+            names.push(n);
+        }
+    }
+    r.game.sis.text_mut(dy).default_fitting = 1;
+    let places: &[(f32, f32)] = match names.len() {
+        1 => &[(124.0, 70.0)],
+        2 => &[(62.0, 70.0), (186.0, 70.0)],
+        3 => &[(62.0, 60.0), (186.0, 60.0), (124.0, 80.0)],
+        4 => &[(62.0, 60.0), (186.0, 60.0), (62.0, 80.0), (186.0, 80.0)],
+        _ => &[],
+    };
+    for (&(x, y), n) in places.iter().zip(&names) {
+        // The name is the format.
+        print(r, dy, x, y, n, &[]);
+    }
+    let t = r.game.sis.text_mut(dy);
+    t.default_fitting = 0;
+    t.x34 = [0.625, 0.625];
+    let start = &r.game.vs.start;
+    if start.time_limit == 0 || !start.timer_enabled {
+        print(r, dy, 125.0, 120.0, b"00:00 00", &[]);
+        return;
+    }
+    let secs = r.game.vs_timer_seconds() as i32;
+    let cs = i32::from(r.game.vs_timer_centiseconds());
+    print(
+        r,
+        dy,
+        125.0,
+        120.0,
+        b"%02d:%02d %02d",
+        &[
+            FmtArg::Int(secs / 60),
+            FmtArg::Int(secs % 60),
+            FmtArg::Int(cs),
+        ],
+    );
 }
 
-/// A player's KO, `grStadium_801D3A0C`.
+/// A player's KO, `grStadium_801D3A0C`: the static text's string 3, and "Player N Defeated"
+/// for a human, "Computer Player Defeated" for the others.
 #[doc(alias = "grStadium_801D3A0C")]
-pub fn text_ko(_r: &mut Running, _gobj: GObjId) {
-    super::super::code::unported_call("grStadium_801D3A0C");
+pub fn text_ko(r: &mut Running, gobj: GObjId) {
+    let g = ground_of(r.game, gobj);
+    let (st, dy) = texts(r.game);
+    r.game.sis.clear_text(dy);
+    r.game.sis.reset_text(r.data, st, 3);
+    let v = r.game.grounds[g.0].u.stadium_display();
+    let (slot_type, player) = (v.slot_type, v.player);
+    let t = r.game.sis.text_mut(dy);
+    t.default_kerning = 1;
+    t.text_color = [0xC0, 0xC0, 0xFF, 0xFF];
+    t.default_alignment = 1;
+    if i32::from(slot_type) == crate::game::pl::player::PKIND_HUMAN {
+        t.x34 = [0.625, 1.5];
+        print(
+            r,
+            dy,
+            125.0,
+            56.0,
+            b"\x82o\x82\x8c\x82\x81\x82\x99\x82\x85\x82\x92 %d \x82c\x82\x85\x82\x86\x82\x85\x82\x81\x82\x94\x82\x85\x82\x84",
+            &[FmtArg::Int(i32::from(player) + 1)],
+        );
+    } else {
+        t.x34 = [0.42, 1.2];
+        print(r, dy, 125.0, 56.0, b"Computer Player Defeated", &[]);
+    }
 }
 
-/// The results, `grStadium_801D3BBC`.
+/// `grPs_803B7F8C`: the first line's height for one to four players left.
+const RESULT_TOPS: [u32; 4] = [0x50, 0x40, 0x30, 0x20];
+
+/// A color channel brightened by a quarter, at most 255 (the inline `grStadium_ScaleColor`).
+fn brighten(v: u8) -> u8 {
+    let mut s = fp::fmuls(1.25, fp::frsp(f64::from(v)));
+    if s > 255.0 {
+        s = 255.0;
+    }
+    fp::fctiwz(s) as u8
+}
+
+/// The players still in, `grStadium_801D3BBC`: the static text's string for how many (0xE to
+/// 0x11, or 3 for none or more than four), and their names, each a line in its player's
+/// color brightened.
 #[doc(alias = "grStadium_801D3BBC")]
-pub fn text_results(_r: &mut Running, _gobj: GObjId) {
-    super::super::code::unported_call("grStadium_801D3BBC");
+pub fn text_results(r: &mut Running, _gobj: GObjId) {
+    let (st, dy) = texts(r.game);
+    let in_play = |r: &mut Running, slot: i32| -> bool {
+        if r.game.player_pkind(slot) == crate::game::pl::player::PKIND_NONE
+            || r.game.player_asleep(slot)
+        {
+            return false;
+        }
+        let Some(f) = r.game.player_entity(slot) else {
+            return false;
+        };
+        let idx = i32::from(r.game.fighters[r.game.fighter_id(f).0].player_idx);
+        r.game.player_rank(idx) == 0
+    };
+    let mut n = 0;
+    for slot in 0..6 {
+        if in_play(r, slot) {
+            n += 1;
+        }
+    }
+    r.game.sis.clear_text(dy);
+    let index = match n {
+        1 => 0xE,
+        2 => 0xF,
+        3 => 0x10,
+        4 => 0x11,
+        _ => {
+            r.game.sis.reset_text(r.data, st, 3);
+            return;
+        }
+    };
+    r.game.sis.reset_text(r.data, st, index);
+    let jp = r.game.gm.unlocks.is_jp();
+    let t = r.game.sis.text_mut(dy);
+    t.default_kerning = 0;
+    t.default_alignment = 1;
+    t.default_fitting = 1;
+    if jp {
+        t.x34 = [1.0, 1.0];
+    } else {
+        t.x34 = [0.8, 1.0];
+        t.default_kerning = 1;
+    }
+    let top = RESULT_TOPS[n - 1] as i32;
+    let mut offset = 0;
+    for slot in 0..6 {
+        if !in_play(r, slot) {
+            continue;
+        }
+        let team = r.game.player_team(slot) as u8;
+        let teams = u8::from(r.game.vs_is_teams());
+        let pkind = r.game.player_pkind(slot) as u8;
+        let c = super::super::gm::vs::hud_color(super::super::gm::vs::player_color(
+            slot as u8, team, teams, pkind,
+        ));
+        r.game.sis.text_mut(dy).text_color = [brighten(c[0]), brighten(c[1]), brighten(c[2]), 0xFF];
+        if let Some(name) = r.game.player_name(slot) {
+            let y = mem(fp::frsp(f64::from(top + offset)));
+            print(r, dy, 125.0, y, b"%s", &[FmtArg::Str(name)]);
+        }
+        offset += 0x20;
+    }
 }
 
 // The transformations.

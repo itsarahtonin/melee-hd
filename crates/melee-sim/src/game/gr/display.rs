@@ -25,12 +25,16 @@ impl Running<'_> {
         self.game.world.first_in(P_LINK_FIGHTER)
     }
 
-    /// The stage's shadow check for a fighter at `pos` against a joint
-    /// (`stage_info.on_check_shadow_render`).
-    fn stage_receives_shadow(&mut self) -> bool {
+    /// The stage's shadow check for a fighter (at its position, `ftLib_GetPos`) against a
+    /// joint (`stage_info.on_check_shadow_render`).
+    fn stage_receives_shadow(&mut self, g: GObjId, j: JObjId) -> bool {
         match self.game.stage_info.on_check_shadow_render {
             // grLast's and grBattle's: every joint takes the shadows.
             Some(f) if f.0 == 0x8021_C748 || f.0 == 0x8021_A618 => true,
+            Some(f) if f.0 == 0x801D_50C0 => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::stadium::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
             Some(f) => code::unported_call(&format!("on_check_shadow_render {:#010x}", f.0)),
             None => panic!("stage_info.on_check_shadow_render is null"),
         }
@@ -99,7 +103,8 @@ impl Running<'_> {
         if flags & (trsp << TRSP_SHIFT) != 0 {
             let mut f = self.first_fighter();
             while let Some(g) = f {
-                let casts = camera::shadows(&self.game.camera.cam) || self.stage_receives_shadow();
+                let casts =
+                    camera::shadows(&self.game.camera.cam) || self.stage_receives_shadow(g, j);
                 self.game.fighter_mut(g).x20A4.x0_b4 = !casts;
                 f = self.game.world.gobj(g).next;
             }
