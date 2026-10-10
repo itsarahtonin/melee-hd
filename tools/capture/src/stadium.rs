@@ -148,6 +148,15 @@ pub(crate) fn import_statics(imp: &mut Importer) {
     for (i, name) in melee_sim::game::gr::stadium::FILES.iter().enumerate() {
         imp.game.gr.stadium.files[i] = imp.data.archive_named(name);
     }
+    // The transformation buffer's address, as map 2 holds it.
+    let info = sym("stage_info");
+    let map2 = imp.cap.u32(info + 0x180 + 8);
+    imp.game.gr.stadium.buffer_address =
+        if imp.cap.u32(info + 0x88) as i32 == melee_sim::game::gr::GR_KIND_PSTADIUM && map2 != 0 {
+            imp.cap.u32(imp.cap.u32(map2 + 0x2C) + 0xC4 + 8)
+        } else {
+            melee_sim::game::ft::data::MAIN_MEMORY
+        };
 }
 
 /// Compares the stage's statics.

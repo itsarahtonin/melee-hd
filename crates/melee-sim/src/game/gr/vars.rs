@@ -107,10 +107,10 @@ pub struct StadiumVars {
     pub bits: StadiumBits,
     /// `xC8`: the transformation file's size.
     pub size: u32,
-    /// `xCC`: whether it has the buffer the transformation files load into (lbDvd's preload
-    /// of entry 0x7D5, else a block of the heap). Only the original's pointer differs, and
-    /// nothing reads the bytes but the loader.
-    pub buffer: bool,
+    /// `xCC`: the address of the buffer the transformation files load into (lbDvd's preload
+    /// of entry 0x7D5, which the frontend gives: `vs_match::Settings::stadium_buffer`);
+    /// nothing reads its bytes but the loader.
+    pub buffer: u32,
     /// `xD0`: the transformation file's slot in the stage's archive table.
     pub archive: Option<u8>,
     /// `xD4`: the length of the dust's path (`lbl_803E1630`), once summed.
@@ -400,7 +400,7 @@ impl GroundVars {
                 GroundVars::Stadium(StadiumVars {
                     bits: StadiumBits::from_byte(m.u8(at)),
                     size: m.u32(at + 4),
-                    buffer: m.u32(at + 8) != 0,
+                    buffer: m.u32(at + 8),
                     archive: archive_slot(m.u32(at + 0xC)),
                     path_len: f(at + 0x10),
                     timer: m.u32(at + 0x14) as i32,
@@ -761,7 +761,7 @@ impl Mirror for GroundVars {
                 );
                 let theirs = (
                     m.u32(at + 4),
-                    m.u32(at + 8) != 0,
+                    m.u32(at + 8),
                     archive_slot(m.u32(at + 0xC)),
                     m.u32(at + 0x10),
                     m.u32(at + 0x14) as i32,

@@ -67,6 +67,9 @@ pub struct Globals {
     /// [`FILES`]' order: disc data the load takes rather than reads (an input, like the
     /// fighters' files).
     pub files: [Option<ArchiveId>; 4],
+    /// The transformation files' buffer's address (`vs_match::Settings::stadium_buffer`): an
+    /// input the match's preload decides.
+    pub buffer_address: u32,
 }
 
 /// A screen's user data: its image descriptor (`ImageDescWrapper` or `TextWrapper`), for the
@@ -316,9 +319,10 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
     anime::start_map(r.game, r.data, gobj, map_id, 0);
     {
         // `lbDvd_GetPreloadedArchive(0x7D5)`: the match's preload holds the buffer (else the
-        // original allocates one); either way there is one.
+        // original allocates one), at the address the frontend gives.
+        let address = r.game.gr.stadium.buffer_address;
         let v = r.game.grounds[g.0].u.stadium();
-        v.buffer = true;
+        v.buffer = address;
         v.bits.b1 = false;
         v.archive = None;
         v.path_len = 0.0;
@@ -849,8 +853,9 @@ fn zoom_keeps_player(r: &mut Running, gobj: GObjId) -> bool {
     !(x < reg(left) || x > reg(right) || y > reg(top) || y < reg(bottom))
 }
 
-/// `PSCameraIndependentMonitor`'s bounds (its data words): left, right, top, bottom.
-pub const MONITOR_BOUNDS: [u32; 4] = [0xC348_0000, 0x4348_0000, 0x4316_0000, 0xC2C8_0000];
+/// `PSCameraIndependentMonitor`'s bounds (its data words): left -120, right 120, top 80,
+/// bottom -20.
+pub const MONITOR_BOUNDS: [u32; 4] = [0xC2F0_0000, 0x42F0_0000, 0x42A0_0000, 0xC1A0_0000];
 
 /// Where the zoomed view copies from, around its player as the game camera sees them, kept on
 /// the camera's viewport; whether the player was inside it, `grStadium_801D32D0`.
@@ -1804,7 +1809,8 @@ pub fn start_load(r: &mut Running, idx: usize) {
     // `lbFile_800163D8`, then `lbFile_8001668C`, each write the disc file's length.
     let (_, size) = r.game.ft.data.files.entry(name);
     r.game.grounds[g.0].u.stadium().size = size;
-    r.disc_load(name, super::super::ft::data::MAIN_MEMORY);
+    let buffer = r.game.grounds[g.0].u.stadium().buffer;
+    r.disc_load(name, buffer);
     let slot = register_archive(r.game, r.data, archive);
     r.game.grounds[g.0].u.stadium().archive = Some(slot);
 }
