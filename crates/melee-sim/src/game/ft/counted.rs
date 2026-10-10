@@ -13,7 +13,7 @@ use core::ops::{Deref, DerefMut};
 use melee_data::archive::DataRef;
 
 use crate::game::mirror::{Cx, Mem, Mirror};
-use crate::game::structs::{BoneDynamicsDesc, Item_DynamicBones};
+use crate::game::structs::{BoneDynamicsDesc, HurtCapsule, Item_DynamicBones};
 use crate::hsd::tobj::TObjId;
 
 /// `CostumeTObjList`, 0x1c bytes.
@@ -146,3 +146,55 @@ counted_array!(
     Item_DynamicBones,
     24
 );
+
+/// An item's hurtboxes (`Item::xACC_itemHurtbox`, +0xACC), the first `xAC8_hurtboxNum` (the
+/// byte four before them) set up by its kind (`it_8027163C`). Those past the count keep the
+/// block's last item's words, which nothing reads; a joint pointer among them can name a block
+/// HSD has since handed to another object of the joint's size (`hsdAllocMemPiece` keeps one
+/// free list per size, which melee-sim's typed pools don't share), so they aren't compared.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+pub struct ItemHurtboxes(pub [HurtCapsule; 2]);
+
+impl ItemHurtboxes {
+    /// How many the count before the array sets up; one past the array was never set.
+    fn used(m: &Mem, at: u32) -> usize {
+        let n = m.u8(at - 4);
+        if n <= 2 { usize::from(n) } else { 0 }
+    }
+}
+
+impl Deref for ItemHurtboxes {
+    type Target = [HurtCapsule; 2];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for ItemHurtboxes {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Mirror for ItemHurtboxes {
+    const SIZE: u32 = 2 * HurtCapsule::SIZE;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let used = Self::used(m, at);
+        ItemHurtboxes(core::array::from_fn(|i| {
+            if i < used {
+                HurtCapsule::import(m, at + i as u32 * HurtCapsule::SIZE, cx)
+            } else {
+                HurtCapsule::default()
+            }
+        }))
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        for i in 0..Self::used(m, at) {
+            let at = at + i as u32 * HurtCapsule::SIZE;
+            self.0[i].compare(m, at, &format!("{path}[{i}]"), cx);
+        }
+    }
+}
