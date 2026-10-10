@@ -21,7 +21,7 @@ use crate::math::{self, sqrt_reg};
 use crate::mp::coll::{LEFT_WALL_HUG, RIGHT_WALL_HUG};
 
 /// `ftCo_DownBound_SfxIds`.
-const DOWN_BOUND_SFX: [i32; 4] = [9, 10, 11, 12];
+pub(super) const DOWN_BOUND_SFX: [i32; 4] = [9, 10, 11, 12];
 /// `FtPart_HipN`.
 const HIP_N: i32 = 4;
 /// `QuakeKind_Large`.
@@ -87,7 +87,7 @@ impl Running<'_> {
 
     /// The knockdown's impact sound by speed, `ftCo_80097630` (the second threshold twice).
     #[doc(alias = "ftCo_80097630")]
-    fn impact_sfx(&mut self, gobj: GObjId, ids: &[i32; 4], dist: f32) {
+    pub(super) fn impact_sfx(&mut self, gobj: GObjId, ids: &[i32; 4], dist: f32) {
         let c = self.common();
         let (a, b) = (c.f32(0x1F0), c.f32(0x1F4));
         let id = if dist >= a {
