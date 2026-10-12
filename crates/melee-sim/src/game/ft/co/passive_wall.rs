@@ -106,7 +106,7 @@ impl Running<'_> {
     /// A wall tech, `ftCo_800C1D38`: hugging a wall with the tech's input
     /// (`ftCo_800986B0`), a cling (`ftCommonData` x760 frames) then the tech, or a wall jump
     /// with a jump asked for (`ftCo_800C1E0C`).
-    // Ports `ftCo_800C1D38`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800C1D38")]
     pub fn passive_wall_check(&mut self, gobj: GObjId) -> bool {
         let flags = self.game.fighter(gobj).coll_data.env_flags;
         if flags & (RIGHT_WALL_HUG | LEFT_WALL_HUG) == 0 || !self.tech_input(gobj) {
@@ -129,7 +129,7 @@ impl Running<'_> {
 
     /// Whether a jump is asked for during a tech, `ftCo_800C1E0C`: the jump button within
     /// `ftCommonData` x250 frames (`x67E`), or the stick past the tap-jump threshold.
-    // Ports `ftCo_800C1E0C`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800C1E0C")]
     pub fn wall_jump_asked(&self, gobj: GObjId) -> bool {
         let c = self.common();
         let fp = self.game.fighter(gobj);
@@ -141,7 +141,7 @@ impl Running<'_> {
     /// the ECB meets it, the state still for `timer` frames (moving at once without one),
     /// the fighter set against the wall by its TransN, sounds, a rumble, a flash and
     /// intangibility (`ftCommonData` x764).
-    // Ports `ftCo_800C1E64`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800C1E64")]
     pub fn cling_to_wall(
         &mut self,
         gobj: GObjId,
@@ -214,7 +214,7 @@ impl Running<'_> {
     /// `ftCo_PassiveWall_Anim`: when the cling runs out, a sound and the push off (a wall
     /// jump's speed, lower for each one since landing, or the tech's), then the fall once
     /// the animation ends.
-    // Ports `ftCo_PassiveWall_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_PassiveWall_Anim")]
     pub fn co_passive_wall_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let timer = self.game.fighters[f.0].mv_i32(PW_TIMER);
@@ -256,7 +256,7 @@ impl Running<'_> {
 
     /// `ftCo_PassiveWall_IASA`: after the cling, the aerial actions; during it, a jump asked
     /// for is noted.
-    // Ports `ftCo_PassiveWall_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_PassiveWall_IASA")]
     pub fn co_passive_wall_iasa(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).mv_i32(PW_TIMER) == 0 {
             let _ = self.special_air_check(gobj)
@@ -275,7 +275,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_PassiveWall_Phys`: after the cling, gravity or a fast fall, and air friction.
-    // Ports `ftCo_PassiveWall_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_PassiveWall_Phys")]
     pub fn co_passive_wall_phys(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).mv_i32(PW_TIMER) != 0 {
             return;
@@ -297,7 +297,7 @@ impl Running<'_> {
 
     /// `ftCo_PassiveWall_Coll`: the filtered airborne pass (with the lower ECB during the
     /// cling), landing normally.
-    // Ports `ftCo_PassiveWall_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_PassiveWall_Coll")]
     pub fn co_passive_wall_coll(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).mv_i32(PW_TIMER) != 0 {
             self.air_coll_filtered_full_low(gobj, PLATFORM_FILTER, |g, gobj| g.land_normally(gobj));

@@ -1473,7 +1473,14 @@ ftCo_CliffCatch_Anim	leaf-check ftcommon: run as the fighter's held callback fro
 ftCo_CliffCatch_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
 ftCo_CliffCatch_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
 ftCo_CliffCatch_Coll	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
-ftWallJump_8008169C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftWallJump_8008169C	leaf-check passive_wall: wall_functions runs it from real wall techs' and wall jumps' states on Final Destination and Battlefield replays, its own saved calls and the other wall functions', and compares the whole state
+ftCo_800C1D38	leaf-check passive_wall: wall_functions runs it from real wall techs' and wall jumps' states on Final Destination and Battlefield replays, its own saved calls and the other wall functions', and compares the whole state
+ftCo_800C1E0C	leaf-check passive_wall: wall_functions runs it from real wall techs' and wall jumps' states on Final Destination and Battlefield replays, its own saved calls and the other wall functions', and compares the whole state
+ftCo_800C1E64	leaf-check passive_wall: wall_functions runs it from real wall techs' and wall jumps' states on Final Destination and Battlefield replays, its own saved calls and the other wall functions', and compares the whole state
+ftCo_PassiveWall_Anim	leaf-check passive_wall: wall_functions runs it from real wall techs' and wall jumps' states on Final Destination and Battlefield replays, its own saved calls and the other wall functions', and compares the whole state
+ftCo_PassiveWall_IASA	leaf-check passive_wall: wall_functions runs it from real wall techs' and wall jumps' states on Final Destination and Battlefield replays, its own saved calls and the other wall functions', and compares the whole state
+ftCo_PassiveWall_Phys	leaf-check passive_wall: wall_functions runs it from real wall techs' and wall jumps' states on Final Destination and Battlefield replays, its own saved calls and the other wall functions', and compares the whole state
+ftCo_PassiveWall_Coll	leaf-check passive_wall: wall_functions runs it from real wall techs' and wall jumps' states on Final Destination and Battlefield replays, its own saved calls and the other wall functions', and compares the whole state
 ft_80081A00	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
 ft_80081D0C	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
 ft_80081DD4	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
