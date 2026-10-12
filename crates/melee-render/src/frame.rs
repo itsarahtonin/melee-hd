@@ -125,7 +125,15 @@ impl Ctx<'_> {
     fn draw(&mut self, draws: &[Draw], i: usize) -> usize {
         match &draws[i] {
             Draw::Camera(c, view) => {
-                let v = self.game.objs.display.cameras[usize::from(*view)];
+                let mut v = self.game.objs.display.cameras[usize::from(*view)];
+                // Cameras that draw the whole screen (not a shadow's or a magnifier
+                // bubble's, which draw into textures); the render pass can't tell, since
+                // the frame stays in the shadows' offscreen pass, as the original's does.
+                if v.viewport == [0.0, 640.0, 0.0, 480.0]
+                    && let Some(aspect) = self.hsd.widescreen
+                {
+                    widen(&mut v, aspect);
+                }
                 self.camera_begin(&v);
                 if self.hsd.offscreen
                     && let Some((s, _)) = self
@@ -249,6 +257,25 @@ impl Ctx<'_> {
         gx.copy_disp(XFB_ADDR, GX_TRUE);
         gx.pix_mode_sync();
         gx.set_draw_done();
+    }
+}
+
+/// Widescreen: a camera drawing to the screen sees `aspect / (4/3)` times as wide, keeping
+/// its height, and the frame is shown stretched to `aspect`. The gameplay camera (the
+/// simulation's, which decides who is off screen) stays 4:3; only the view widens, and the 2D
+/// cameras' content (the HUD) keeps its shape and its place in the 4:3 middle.
+fn widen(v: &mut melee_sim::hsd::display::CameraView, aspect: f32) {
+    use melee_sim::hsd::cobj;
+    let k = aspect / (4.0 / 3.0);
+    match v.projection_type {
+        cobj::PERSPECTIVE => v.projection[1] *= k,
+        cobj::FRUSTUM | cobj::ORTHO => {
+            let [_, _, l, r] = v.projection;
+            let (c, h) = ((l + r) / 2.0, (r - l) / 2.0 * k);
+            v.projection[2] = c - h;
+            v.projection[3] = c + h;
+        }
+        _ => {}
     }
 }
 

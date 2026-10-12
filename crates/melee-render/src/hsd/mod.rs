@@ -49,6 +49,8 @@ pub struct Hsd {
     pub notes: BTreeMap<String, u32>,
     /// Print each display list called (for debugging).
     pub debug_dl: bool,
+    /// The aspect ratio the frame is shown at, when wider than 4:3 (see `frame::widen`).
+    pub widescreen: Option<f32>,
 }
 
 impl Hsd {

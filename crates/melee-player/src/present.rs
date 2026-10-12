@@ -9,6 +9,13 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
 
 static SIZE: Mutex<(u32, u32)> = Mutex::new((1280, 960));
+/// The aspect ratio frames are shown at: 4:3, or wider in widescreen.
+static ASPECT: Mutex<f32> = Mutex::new(4.0 / 3.0);
+
+/// The aspect ratio to show frames at.
+pub fn set_aspect(aspect: f32) {
+    *ASPECT.lock().unwrap() = aspect;
+}
 
 /// The window's first size.
 pub fn set_size(size: (u32, u32)) {
@@ -167,7 +174,7 @@ impl Blit {
         }
     }
 
-    /// Draws `frame` into `view` (`w` by `h`), letterboxed to 4:3.
+    /// Draws `frame` into `view` (`w` by `h`), letterboxed to the aspect ratio shown.
     fn draw(&self, gpu: &Gpu, frame: &wgpu::Texture, view: &wgpu::TextureView, w: u32, h: u32) {
         let device = &gpu.device;
         let fview = frame.create_view(&Default::default());
@@ -201,8 +208,9 @@ impl Blit {
                 ..Default::default()
             });
             let (sw, sh) = (w as f32, h as f32);
-            let scale = (sw / 4.0).min(sh / 3.0);
-            let (vw, vh) = (4.0 * scale, 3.0 * scale);
+            let aspect = *ASPECT.lock().unwrap();
+            let scale = (sw / aspect).min(sh);
+            let (vw, vh) = (aspect * scale, scale);
             pass.set_viewport((sw - vw) / 2.0, (sh - vh) / 2.0, vw, vh, 0.0, 1.0);
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, &group, &[]);

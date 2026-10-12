@@ -229,7 +229,7 @@ fn compare(args: &[String]) -> ExitCode {
     // to the log's first.
     let search = std::env::var("CHECK_SEARCH")
         .ok()
-        .map_or(4, |v| v.parse().expect("CHECK_SEARCH=N"));
+        .map_or(16, |v| v.parse().expect("CHECK_SEARCH=N"));
     let from = first.saturating_sub(search);
     let last = first + search + reference.len() as u32 - 1;
     let mut drawn: Vec<(u32, native::Drawn)> = Vec::new();
@@ -254,7 +254,12 @@ fn compare(args: &[String]) -> ExitCode {
         drawn[start].0
     );
     let mut failed = false;
-    for (k, (n, d)) in drawn.into_iter().skip(start).take(reference.len()).enumerate() {
+    for (k, (n, d)) in drawn
+        .into_iter()
+        .skip(start)
+        .take(reference.len())
+        .enumerate()
+    {
         let theirs = &reference[k];
         println!(
             "== frame {n} (replay frame {}) against the log's frame {k}",

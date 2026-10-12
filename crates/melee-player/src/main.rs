@@ -2,7 +2,7 @@
 //!
 //! ```text
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
-//!          [--replay FILE.slp] [--scale N] [--no-adapter] [--size WxH] [--ticks N]
+//!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--no-adapter] [--size WxH] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [...]     plays headless, timing each frame
 //! ```
 //!
@@ -55,6 +55,8 @@ struct Args {
     scale: u32,
     /// Saves the last frame the bench draws.
     shot: Option<String>,
+    /// Shows frames this wide (width over height), seeing more at the sides; 4:3 otherwise.
+    widescreen: Option<f32>,
 }
 
 /// A character's `CharacterKind` by name.
@@ -93,6 +95,7 @@ fn parse_args() -> Result<Args, String> {
         ticks: None,
         scale: 0,
         shot: None,
+        widescreen: None,
     };
     let mut it = std::env::args().skip(1);
     let size = |s: &str| -> Result<(u32, u32), String> {
@@ -128,6 +131,14 @@ fn parse_args() -> Result<Args, String> {
             "--ticks" => a.ticks = Some(value()?.parse().map_err(|_| "--ticks N")?),
             "--scale" => a.scale = value()?.parse().map_err(|_| "--scale N")?,
             "--shot" => a.shot = Some(value()?),
+            "--widescreen" => a.widescreen = Some(16.0 / 9.0),
+            "--aspect" => {
+                let v = value()?;
+                let (w, h) = v.split_once(':').ok_or("--aspect W:H")?;
+                let w: f32 = w.parse().map_err(|_| "--aspect W:H")?;
+                let h: f32 = h.parse().map_err(|_| "--aspect W:H")?;
+                a.widescreen = (w / h > 4.0 / 3.0 + 0.01).then_some(w / h);
+            }
             "-h" | "--help" => return Err(String::new()),
             other => return Err(format!("unknown argument {other}")),
         }
@@ -431,6 +442,8 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     let mut renderer = Gpu::new(r);
     let mut last = None;
     let mut frames = Frames::new();
+    frames.hsd.widescreen = args.widescreen;
+    present::set_aspect(args.widescreen.unwrap_or(4.0 / 3.0));
     let pads = [melee_sim::input::pad::PadStatus::default(); 4];
     let (mut sim, mut draw, mut n) = (Duration::ZERO, Duration::ZERO, 0u32);
     let mut worst = Duration::ZERO;
@@ -520,9 +533,12 @@ fn run() -> ExitCode {
         b.build().expect("an event loop")
     };
     let gpu = present::Gpu::new();
+    let mut frames = Frames::new();
+    frames.hsd.widescreen = args.widescreen;
+    present::set_aspect(args.widescreen.unwrap_or(4.0 / 3.0));
     let mut app = App {
         session,
-        frames: Frames::new(),
+        frames,
         gpu,
         renderer: None,
         shown: None,
