@@ -8,4 +8,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+cpal = "0.18"
+melee-data.workspace = true
 melee-sim.workspace = true
+ssbm-ax.workspace = true

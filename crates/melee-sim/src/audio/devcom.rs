@@ -13,6 +13,7 @@
 use melee_data::archive::{ArchiveId, Archives};
 
 use super::Audio;
+use super::mix::AramSource;
 use crate::game::handles::CodeRef;
 
 /// The relay buffers' size (`DEVCOM_BUF_SIZE`).
@@ -383,17 +384,22 @@ impl Audio {
             // Clearing ARAM, a relay buffer of zeros at a time.
             3 => {
                 let (size, done) = chunk(&c);
+                self.log_aram(c.dest, size, AramSource::Zero);
                 self.arq_post(b, 0, 0, relay, c.dest, size, done);
                 let n = self.devcom.node(dc);
                 n.dest += size;
                 n.size -= size;
             }
-            0xB => self.arq_post(b, 0, 0, c.src, c.dest, c.size, ArqDone::Aram(b)),
+            0xB => {
+                self.log_aram(c.dest, c.size, AramSource::Memory(c.src));
+                self.arq_post(b, 0, 0, c.src, c.dest, c.size, ArqDone::Aram(b));
+            }
             0x19 => self.arq_post(b, 0, 1, c.src, c.dest, c.size, ArqDone::Aram(b)),
             0x1A => self.arq_post(b, 0, 1, c.src, relay, c.size, ArqDone::Aram(b)),
             // ARAM to ARAM through the relay buffer.
             0x1B => {
                 let (size, done) = chunk(&c);
+                self.log_aram(c.dest, size, AramSource::Aram(c.src));
                 self.arq_post(b, 1, 1, c.src, relay, size, ArqDone::None);
                 self.arq_post(b, 0, 0, relay, c.dest, size, done);
                 let n = self.devcom.node(dc);
@@ -472,6 +478,11 @@ impl Audio {
                 } else {
                     ArqDone::DvdStd(b)
                 };
+                let from = AramSource::Disc {
+                    entrynum: c.file,
+                    offset: c.src,
+                };
+                self.log_aram(c.dest, size, from);
                 self.arq_post(
                     b,
                     0,
@@ -631,6 +642,13 @@ impl Audio {
         let mut h = [0u8; 0x20];
         h[..bytes.len()].copy_from_slice(bytes);
         self.synth.stream.hako[(off / 0x20) as usize] = h;
+    }
+
+    /// A write into ARAM, for the presentation's mix log when it records.
+    pub(crate) fn log_aram(&mut self, dest: u32, size: u32, from: AramSource) {
+        if let Some(log) = &mut self.mix {
+            log.aram(dest, size, from);
+        }
     }
 
     /// Runs a command's callback.

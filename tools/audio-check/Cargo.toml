@@ -1,0 +1,18 @@
+[package]
+name = "melee-audio-check"
+description = "Compares melee-audio's mix of a replay with ssbm-rs's recording of what the audio interface played"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+melee-audio = { path = "../../crates/melee-audio" }
+melee-capture = { path = "../capture" }
+melee-data.workspace = true
+melee-replay = { path = "../replay" }
+melee-sim.workspace = true
+ssbm-rt.workspace = true
+ssbm-slippi.workspace = true
+zstd = "0.13"

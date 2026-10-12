@@ -13,13 +13,17 @@ path = "src/main.rs"
 
 [dependencies]
 melee-audio = { path = "../melee-audio" }
+# The boot state from an ssbm-rs state trace (src/boot.rs), seeded as the oracle seeds it.
+melee-capture = { path = "../../tools/capture" }
 melee-data.workspace = true
 melee-input = { path = "../melee-input" }
 melee-render = { path = "../melee-render" }
 melee-replay = { path = "../../tools/replay" }
 melee-sim.workspace = true
 melee-gpu = { path = "../melee-gpu" }
+ssbm-rt.workspace = true
 ssbm-slippi.workspace = true
 pollster = "1"
 wgpu = "30"
 winit = "0.30"
+zstd = "0.13"

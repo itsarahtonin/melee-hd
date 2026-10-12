@@ -315,9 +315,10 @@ pub fn differences(a: &DrawSnap, b: &DrawSnap) -> Vec<String> {
         ));
         return out;
     }
-    let masks = used_bits(a);
+    // What either draw uses (fog on in one and off in the other shows).
+    let (ma, mb) = (used_bits(a), used_bits(b));
     for (x, y) in a.bp.iter().zip(&b.bp) {
-        let mask = masks(x.0);
+        let mask = ma(x.0) | mb(x.0);
         if x.1 & mask != y.1 & mask {
             out.push(format!(
                 "BP {:02X} {} {:06X} vs {:06X}",

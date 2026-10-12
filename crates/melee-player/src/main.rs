@@ -2,7 +2,7 @@
 //!
 //! ```text
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
-//!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--no-adapter] [--size WxH] [--ticks N]
+//!          [--replay FILE.slp] [--boot-trace TRACE] [--widescreen | --aspect W:H] [--scale N] [--no-adapter] [--size WxH] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [...]     plays headless, timing each frame
 //! ```
 //!
@@ -13,12 +13,18 @@
 //! C-stick, X/Z/C/S: A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). Escape
 //! quits.
 //!
+//! With `--boot-trace TRACE` (an ssbm-rs state trace with memory over the boot tick, see
+//! `docs/player.md`) the match starts from the boot state and plays its sound; without it the
+//! match runs silent.
+//!
 //! The loop keeps latency short: each tick reads the controllers just before it runs, and the
 //! frame it renders is drawn and presented at once, on a swap chain one frame deep (mailbox,
 //! or immediate where the display has no mailbox mode).
 
+mod boot;
 mod pipelines;
 mod present;
+mod sound;
 
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
@@ -58,6 +64,8 @@ struct Args {
     shot: Option<String>,
     /// Shows frames this wide (width over height), seeing more at the sides; 4:3 otherwise.
     widescreen: Option<f32>,
+    /// The state trace holding the boot state the match starts from, with sound.
+    boot_trace: Option<String>,
 }
 
 /// A character's `CharacterKind` by name.
@@ -97,6 +105,7 @@ fn parse_args() -> Result<Args, String> {
         scale: 0,
         shot: None,
         widescreen: None,
+        boot_trace: None,
     };
     let mut it = std::env::args().skip(1);
     let size = |s: &str| -> Result<(u32, u32), String> {
@@ -126,6 +135,7 @@ fn parse_args() -> Result<Args, String> {
             "--stocks" => a.stocks = value()?.parse().map_err(|_| "--stocks N")?,
             "--minutes" => a.minutes = value()?.parse().map_err(|_| "--minutes N")?,
             "--replay" => a.replay = Some(value()?),
+            "--boot-trace" => a.boot_trace = Some(value()?),
             "--no-adapter" => a.adapter = false,
             "--bench" => a.bench = Some(value()?.parse().map_err(|_| "--bench TICKS")?),
             "--size" | "--windowed" => a.size = size(&value()?)?,
@@ -153,8 +163,11 @@ fn parse_args() -> Result<Args, String> {
 /// The match and what drives it: the controllers, or a replay's recorded inputs.
 struct Session {
     m: Match,
+    /// The game's executable, whose static data the renderer reads (the default font).
+    dol: Vec<u8>,
     replay: Option<Replay>,
     ended: bool,
+    sound: Option<sound::Sound>,
 }
 
 impl Session {
@@ -168,7 +181,7 @@ impl Session {
                 .read_file(name)
                 .unwrap_or_else(|e| panic!("{name}: {e}")),
         };
-        let (settings, replay) = match &a.replay {
+        let (mut settings, replay) = match &a.replay {
             Some(path) => {
                 let bytes = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
                 let replay = Replay::parse(&bytes).map_err(|e| format!("{path}: {e}"))?;
@@ -199,14 +212,18 @@ impl Session {
                 (s, None)
             }
         };
-        let m = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            Match::start(&settings, &mut load)
+        let (m, sound) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let boot = a.boot_trace.as_deref();
+            let play = a.bench.is_none();
+            sound::start(&mut settings, replay.is_some(), boot, play, &mut load)
         }))
-        .map_err(|p| format!("the match couldn't start: {}", panic_text(&p)))?;
+        .map_err(|p| format!("the match couldn't start: {}", panic_text(&p)))??;
         Ok(Session {
             m,
+            dol: disc.dol().map_err(|e| format!("main.dol: {e}"))?,
             replay,
             ended: false,
+            sound,
         })
     }
 
@@ -219,6 +236,9 @@ impl Session {
             Some(r) => self.m.step_replay(&mut melee_replay::Device(r)),
             None => self.m.step(pads),
         };
+        if let Some(s) = &mut self.sound {
+            s.tick(&mut self.m);
+        }
         self.ended |= f.ended;
         f
     }
@@ -443,6 +463,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     let mut renderer = Gpu::new(r);
     let mut last = None;
     let mut frames = Frames::new();
+    frames.space.load_dol(&session.dol);
     frames.hsd.widescreen = args.widescreen;
     present::set_aspect(args.widescreen.unwrap_or(4.0 / 3.0));
     let pads = [melee_sim::input::pad::PadStatus::default(); 4];
@@ -512,7 +533,7 @@ fn run() -> ExitCode {
                 eprintln!("{e}");
             }
             eprintln!(
-                "usage: melee-hd [--p1 fox] [--p2 marth] [--stage fd|bf|ps] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--no-adapter] [--size WxH] [--bench TICKS]"
+                "usage: melee-hd [--p1 fox] [--p2 marth] [--stage fd|bf|ps] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--boot-trace TRACE] [--no-adapter] [--size WxH] [--bench TICKS]"
             );
             return ExitCode::from(2);
         }
@@ -536,6 +557,7 @@ fn run() -> ExitCode {
     };
     let gpu = present::Gpu::new();
     let mut frames = Frames::new();
+    frames.space.load_dol(&session.dol);
     frames.hsd.widescreen = args.widescreen;
     present::set_aspect(args.widescreen.unwrap_or(4.0 / 3.0));
     let mut app = App {
