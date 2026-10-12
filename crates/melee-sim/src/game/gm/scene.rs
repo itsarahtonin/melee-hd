@@ -153,10 +153,12 @@ impl Game {
 /// perf timer's read at the end lets time pass (`crate::audio::clock`).
 pub fn tick(r: &mut Running) -> bool {
     r.game.audio.tick_start(r.data);
+    crate::game::gr::stadium::take_load_end(r.game);
     queue_alarm_polls(r, 1);
     begin_tick(r);
     let ended = finish_tick(r, Resume::ButtonMaps);
     r.game.audio.tick_end(r.data);
+    crate::game::gr::stadium::take_load_end(r.game);
     queue_alarm_polls(r, 0);
     ended
 }

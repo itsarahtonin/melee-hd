@@ -3618,3 +3618,5 @@ grStadium_OnCheckShadowRender	melee-oracle diff: Pokemon Stadium replay Game_202
 HSD_SisLib_803A6478	melee-oracle diff: Pokemon Stadium replay Game_20260129T214824 (v5-mixed, --fp slippi), clean through tick 13820 (which of these each tick reaches is not yet confirmed)
 HSD_SisLib_803A6530	melee-oracle diff: Pokemon Stadium replay Game_20260129T214824 (v5-mixed, --fp slippi), clean through tick 13820 (which of these each tick reaches is not yet confirmed)
 HSD_SisLib_803A660C	melee-oracle diff: Pokemon Stadium replay Game_20260129T214824 (v5-mixed, --fp slippi), clean through tick 13820 (which of these each tick reaches is not yet confirmed)
+fn_801D4220	melee-oracle diff: the Fox-Marth Pokemon Stadium benchmark fox-marth-ps (v5-mixed, --fp hardware, clean through its 13674 ticks) loads its transformations through it from tick 3810, without the Slippi ruleset's synchronous loads
+grStadium_801D42B8	melee-oracle diff: the Fox-Marth Pokemon Stadium benchmark fox-marth-ps (v5-mixed, --fp hardware, clean through its 13674 ticks) loads its transformations through it from tick 3810, without the Slippi ruleset's synchronous loads

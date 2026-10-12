@@ -1771,7 +1771,8 @@ pub fn cycle(r: &mut Running, gobj: GObjId) {
 
 /// Frees a stage archive table entry, `grAnime_801C65B0`: an archive the stage loaded itself
 /// is freed with it, one it registered from a buffer (`unk8` 1) gives its `HSD_Archive` back
-/// to the heap; the entry is cleared. The Slippi ruleset's code there (`801C65C8`) leaves an
+/// to the heap (and its file's material marks, [`setup::mark_materials`], go with it); the
+/// entry is cleared. The Slippi ruleset's code there (`801C65C8`) leaves an
 /// empty entry alone, where the original would free its null archive.
 #[doc(alias = "grAnime_801C65B0")]
 pub fn free_archive(game: &mut Game, slot: Option<u8>) {
@@ -1783,7 +1784,15 @@ pub fn free_archive(game: &mut Game, slot: Option<u8>) {
         Some(a) if a.kind == 0 => {
             panic!("freeing a stage archive the stage loaded itself (lbArchive_80016EFC)")
         }
-        Some(_) => *e = None,
+        Some(a) => {
+            // The file's bytes stay in the buffer, its materials' marks with them, until the
+            // next transformation's read overwrites them; unregistered, nothing reads them.
+            let archive = a.archive;
+            *e = None;
+            game.objs
+                .rendermode_patches
+                .retain(|d, _| d.archive != archive);
+        }
     }
 }
 
@@ -1800,19 +1809,52 @@ pub fn start_load(r: &mut Running, idx: usize) {
         map_gobj(r.game, MAP_MAIN).expect("grpstadium.c: map_gobj"),
     );
     r.game.grounds[g.0].u.stadium().bits.b1 = true;
-    if !r.game.rules.slippi {
-        super::super::code::unported_call("lbFile_80016580: an asynchronous disc load");
-    }
     let name = FILES[idx];
     let archive = r.game.gr.stadium.files[idx]
         .unwrap_or_else(|| panic!("{name} wasn't loaded with the match"));
     // `lbFile_800163D8`, then `lbFile_8001668C`, each write the disc file's length.
-    let (_, size) = r.game.ft.data.files.entry(name);
+    let (entrynum, size) = r.game.ft.data.files.entry(name);
     r.game.grounds[g.0].u.stadium().size = size;
     let buffer = r.game.grounds[g.0].u.stadium().buffer;
+    if !r.game.rules.slippi {
+        // `lbFile_800164A4`: queued on the device commands, ending in `fn_801D4220`
+        // ([`take_load_end`]) on the timeline; only a timeline ends it.
+        assert!(
+            r.game.audio.clock.is_some(),
+            "a transformation's load without the timeline never ends"
+        );
+        let kind = if buffer >= 0x8000_0000 { 0x21 } else { 0x23 };
+        r.game.audio.devcom_request(
+            r.data,
+            entrynum,
+            0,
+            buffer,
+            size.next_multiple_of(32),
+            kind,
+            1,
+            Some(crate::audio::devcom::cb::STADIUM_LOADED),
+            0,
+        );
+        return;
+    }
     r.disc_load(name, buffer);
     let slot = register_archive(r.game, r.data, archive);
     r.game.grounds[g.0].u.stadium().archive = Some(slot);
+}
+
+/// The transformation file's load ending, `fn_801D4220`: the device command's callback, which
+/// the timeline runs in an interrupt, clears map 2's loading mark. The audio state notes the
+/// callback ([`crate::audio::devcom::DevCom::stadium_loaded`]) and the game takes it up before
+/// anything reads the mark: after the timeline's stretches around each tick, and when the
+/// cycle asks.
+#[doc(alias = "fn_801D4220")]
+pub fn take_load_end(game: &mut Game) {
+    if !std::mem::take(&mut game.audio.devcom.stadium_loaded) {
+        return;
+    }
+    let gm = map_gobj(game, MAP_MAIN).expect("the original's assertion failed: grpstadium.c:2410");
+    let g = ground_of(game, gm);
+    game.grounds[g.0].u.stadium().bits.b1 = false;
 }
 
 /// Registers a loaded transformation file in the stage's archive table's first free entry as
@@ -1839,12 +1881,33 @@ fn register_archive(game: &mut Game, data: &Archives, archive: ArchiveId) -> u8 
 /// Whether the transformation file has loaded (the inline `waitLoad`'s `grStadium_801D42B8`).
 /// The Slippi ruleset's code there (`801D4760`) asks whether the stage's archive table holds
 /// an archive at map 2's map id's entry, whose first word (the file's size) isn't zero.
+#[doc(alias = "grStadium_801D42B8")]
 fn load_done(r: &mut Running) -> bool {
-    assert!(
-        r.game.rules.slippi,
-        "grStadium_801D42B8: the asynchronous load isn't ported"
-    );
     let gm = map_gobj(r.game, MAP_MAIN).expect("grpstadium.c: map_gobj");
+    if !r.game.rules.slippi {
+        // The original's: once `fn_801D4220` cleared the mark, registers the buffer's archive
+        // (`grDatFiles_801C6478`, marking its materials).
+        take_load_end(r.game);
+        let g = ground_of(r.game, gm);
+        if r.game.grounds[g.0].u.stadium().bits.b1 {
+            return false;
+        }
+        let idx = match r.game.grounds[g.0].u.stadium().kind {
+            3 => 0,
+            4 => 1,
+            9 => 2,
+            6 => 3,
+            k => panic!("a transformation file for map {k}"),
+        };
+        let archive = r.game.gr.stadium.files[idx].expect("the transformation's file");
+        let slot = register_archive(r.game, r.data, archive);
+        let map_head = r.game.gr.archives[slot as usize]
+            .as_ref()
+            .and_then(|a| a.map_head);
+        setup::mark_materials(r.game, r.data, map_head);
+        r.game.grounds[g.0].u.stadium().archive = Some(slot);
+        return true;
+    }
     let map_id = r.game.grounds[ground_of(r.game, gm).0].map_id;
     // `grDatFiles_801C6330(gp->map_id)`: the entry whose `map_head` has a model for it.
     let slot = r.game.gr.archives.iter().position(|a| {
