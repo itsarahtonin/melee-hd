@@ -3550,3 +3550,14 @@ it_802C46C4	leaf-check zelda: zelda_functions runs it from real Zelda and Din's 
 itZeldadinfireexplode_UnkMotion0_Anim	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
 itZeldadinfireexplode_UnkMotion0_Phys	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
 itZeldaDinFireExplode_Logic66_EvtUnk	leaf-check zelda: zelda_functions runs it from real Zelda and Din's Fire states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnDeath	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_LoadSpecialAttrs	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnItemPickup	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnItemInvisible	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnItemVisible	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnItemDrop	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnKnockbackEnter	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnKnockbackExit	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnLoad	melee-oracle diff, Falco vs Sheik FD Game_20260129T170722 (docs/oracle.md): Falco's creation runs it; the fighter compared from the first tick
+ftColl_80077688	melee-oracle diff, Falco vs Sheik FD Game_20260129T170722 (docs/oracle.md): Falco's lasers and Sheik's needles hitting shields, from tick 136
+lbColl_80007DD8	melee-oracle diff, Falco vs Sheik FD Game_20260129T170722 (docs/oracle.md): the lasers that bounce off a shield (9 calls), their rebound compared

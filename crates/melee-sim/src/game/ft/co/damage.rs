@@ -301,7 +301,14 @@ impl Running<'_> {
             let c = self.common();
             let (t, window) = (reg(c.f32(0x210)), c.i32(0x214));
             let fp = self.game.fighter(gobj);
-            if abs(reg(fp.input.lstick[0].x)) >= t && i32::from(fp.active_timer.lstick.x) < window {
+            // UCF's tumble code replaces the window: a flick this frame, or last frame from
+            // inside the dead zone and fast enough.
+            let flicked = if self.game.rules.ucf {
+                self.ucf_tumble(gobj, t)
+            } else {
+                i32::from(fp.active_timer.lstick.x) < window
+            };
+            if abs(reg(fp.input.lstick[0].x)) >= t && flicked {
                 self.enter_fall(gobj);
                 return;
             }

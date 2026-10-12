@@ -24,6 +24,7 @@ pub mod data;
 pub mod draw;
 pub mod dynamics;
 pub mod effect;
+pub mod falco;
 pub mod fighter;
 pub mod fox;
 pub mod ftlib;
