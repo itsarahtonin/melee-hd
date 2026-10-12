@@ -17,6 +17,7 @@
 //! frame it renders is drawn and presented at once, on a swap chain one frame deep (mailbox,
 //! or immediate where the display has no mailbox mode).
 
+mod pipelines;
 mod present;
 
 use std::process::ExitCode;
@@ -351,7 +352,7 @@ impl App {
         let fifo = self.frames.frame(&m.game, &m.data, draws);
         let gpu = self
             .renderer
-            .get_or_insert_with(|| Gpu::new(self.gpu.renderer(self.scale)));
+            .get_or_insert_with(|| Gpu::new(pipelines::renderer(&self.gpu, self.scale)));
         let images = gpu.run(&self.frames.space, &m.data, &fifo, None);
         if let (Some(shown), Some(frame)) = (&mut self.shown, images.into_iter().last()) {
             shown.present(&self.gpu, &frame);
@@ -437,7 +438,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     };
     let gpu = present::Gpu::new();
     let mut target = present::Offscreen::new(&gpu, args.size.0, args.size.1);
-    let mut r = gpu.renderer(scale_for(args.scale, args.size));
+    let mut r = pipelines::renderer(&gpu, scale_for(args.scale, args.size));
     r.xfb_readback = args.shot.is_some();
     let mut renderer = Gpu::new(r);
     let mut last = None;
@@ -489,6 +490,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
         f.save_png(std::path::Path::new(path))
             .unwrap_or_else(|e| eprintln!("{path}: {e}"));
     }
+    pipelines::save(&renderer.renderer.borrow());
     let ms = |d: Duration| d.as_secs_f64() * 1000.0 / f64::from(n.max(1));
     println!(
         "a frame: GX stream {:.3} ms, renderer {:.3} ms, presenting (with the GPU's wait) {:.3} ms",
@@ -551,8 +553,13 @@ fn run() -> ExitCode {
         scale: scale_for(args.scale, args.size),
     };
     present::set_size(args.size);
+    // The pipelines the last runs needed, made before the first tick.
+    app.renderer = Some(Gpu::new(pipelines::renderer(&app.gpu, app.scale)));
     let r = event_loop.run_app(&mut app);
     app.inputs.close();
+    if let Some(g) = &app.renderer {
+        pipelines::save(&g.renderer.borrow());
+    }
     if let Err(e) = r {
         eprintln!("the window failed: {e}");
         return ExitCode::FAILURE;

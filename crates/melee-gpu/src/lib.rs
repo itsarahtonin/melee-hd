@@ -79,6 +79,39 @@ struct PipelineKey {
     depth_write: bool,
 }
 
+impl PipelineKey {
+    fn pack(&self) -> [u32; 8] {
+        let (has_blend, src, dst, sub) = match self.blend {
+            Some((s, d, sub)) => (1, s, d, u32::from(sub)),
+            None => (0, 0, 0, 0),
+        };
+        [
+            has_blend | sub << 1 | u32::from(self.const_alpha) << 2,
+            src,
+            dst,
+            u32::from(self.write_color),
+            u32::from(self.write_alpha),
+            self.depth_compare.map_or(8, |c| c & 7),
+            u32::from(self.depth_write),
+            0x4D47_5055, // a mark, so a stray list isn't taken for keys
+        ]
+    }
+
+    fn unpack(k: [u32; 8]) -> Option<PipelineKey> {
+        if k[7] != 0x4D47_5055 || k[1] > 7 || k[2] > 7 || k[5] > 8 {
+            return None;
+        }
+        Some(PipelineKey {
+            blend: (k[0] & 1 != 0).then_some((k[1], k[2], k[0] & 2 != 0)),
+            const_alpha: k[0] & 4 != 0,
+            write_color: k[3] != 0,
+            write_alpha: k[4] != 0,
+            depth_compare: (k[5] < 8).then_some(k[5]),
+            depth_write: k[6] != 0,
+        })
+    }
+}
+
 struct Command {
     pipeline: PipelineKey,
     uniform: u32,
@@ -228,6 +261,8 @@ pub struct Renderer {
     /// console's in each dimension, as are the frames copied out on the GPU. Copies to
     /// textures and readbacks come out at the console's size.
     scale: u32,
+    /// The driver's pipeline cache, where the device keeps one (`Features::PIPELINE_CACHE`).
+    cache: Option<wgpu::PipelineCache>,
 }
 
 /// The texture maps a draw's TEV and indirect stages read.
@@ -476,11 +511,53 @@ impl Renderer {
             gpu_xfb: None,
             draws_this_frame: 0,
             scale,
+            cache: None,
             unsupported: HashMap::new(),
         };
         // Texture 0: a 1x1 black texture for maps nothing samples.
         r.add_texture(1, 1, &[vec![0; 4]]);
         r
+    }
+
+    /// Uses the driver's pipeline cache from an earlier run (`data`, from
+    /// [`Renderer::pipeline_cache_data`]), where the device keeps one: pipelines it holds
+    /// compile without the driver's work. Call before drawing.
+    pub fn use_pipeline_cache(&mut self, data: Option<&[u8]>) {
+        if !self.device.features().contains(wgpu::Features::PIPELINE_CACHE) {
+            return;
+        }
+        // Safety: the data comes from `get_data` of a cache made on this kind of device;
+        // `fallback` has wgpu start afresh when it doesn't match the adapter.
+        self.cache = Some(unsafe {
+            self.device
+                .create_pipeline_cache(&wgpu::PipelineCacheDescriptor {
+                    label: Some("melee-gpu"),
+                    data,
+                    fallback: true,
+                })
+        });
+    }
+
+    /// The driver's pipeline cache's contents, to keep for the next run.
+    pub fn pipeline_cache_data(&self) -> Option<Vec<u8>> {
+        self.cache.as_ref().and_then(|c| c.get_data())
+    }
+
+    /// The pipelines made so far, by what they're made for, to make again at the next run's
+    /// start ([`Renderer::warm`]): a frame never waits for a pipeline it has needed before.
+    pub fn pipeline_keys(&self) -> Vec<[u32; 8]> {
+        let mut keys: Vec<[u32; 8]> = self.pipelines.keys().map(|k| k.pack()).collect();
+        keys.sort_unstable();
+        keys
+    }
+
+    /// Makes the pipelines `keys` name, as [`Renderer::pipeline_keys`] gave them.
+    pub fn warm(&mut self, keys: &[[u32; 8]]) {
+        for k in keys {
+            if let Some(key) = PipelineKey::unpack(*k) {
+                self.pipeline(key);
+            }
+        }
     }
 
     pub fn device(&self) -> &wgpu::Device {
@@ -928,7 +1005,7 @@ impl Renderer {
                     })],
                 }),
                 multiview_mask: None,
-                cache: None,
+                cache: self.cache.as_ref(),
             });
         self.pipelines.insert(key, pipeline);
     }
