@@ -147,6 +147,9 @@ impl Ctx<'_> {
                 1
             }
             Draw::Rendering(g) => {
+                if let Some(g) = *g {
+                    self.particles_rendering(g);
+                }
                 self.hsd.rendering = *g;
                 self.hsd.rendering_fighter = g.and_then(|g| {
                     let game = self.game;
@@ -190,6 +193,18 @@ impl Ctx<'_> {
             Draw::ShadowCopy(s) => {
                 self.shadow_copy(*s);
                 1
+            }
+            Draw::Particles { .. } => self.particles(draws, i),
+            Draw::Quad(_) => {
+                let quads: Vec<_> = draws[i..]
+                    .iter()
+                    .map_while(|d| match d {
+                        Draw::Quad(q) => Some(*q),
+                        _ => None,
+                    })
+                    .collect();
+                self.quads(&quads);
+                quads.len()
             }
             other => {
                 let name = format!("{other:?}");

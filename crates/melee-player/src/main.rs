@@ -2,7 +2,7 @@
 //!
 //! ```text
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
-//!          [--replay FILE.slp] [--scale N] [--no-adapter] [--windowed WxH]
+//!          [--replay FILE.slp] [--scale N] [--no-adapter] [--size WxH] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [...]     plays headless, timing each frame
 //! ```
 //!
@@ -50,6 +50,11 @@ struct Args {
     size: (u32, u32),
     /// Quit after this many ticks.
     ticks: Option<u64>,
+    /// The internal resolution, in multiples of the console's 640 by 480 (0: from the
+    /// window's size).
+    scale: u32,
+    /// Saves the last frame the bench draws.
+    shot: Option<String>,
 }
 
 /// A character's `CharacterKind` by name.
@@ -86,6 +91,8 @@ fn parse_args() -> Result<Args, String> {
         bench: None,
         size: (1280, 960),
         ticks: None,
+        scale: 0,
+        shot: None,
     };
     let mut it = std::env::args().skip(1);
     let size = |s: &str| -> Result<(u32, u32), String> {
@@ -119,6 +126,8 @@ fn parse_args() -> Result<Args, String> {
             "--bench" => a.bench = Some(value()?.parse().map_err(|_| "--bench TICKS")?),
             "--size" | "--windowed" => a.size = size(&value()?)?,
             "--ticks" => a.ticks = Some(value()?.parse().map_err(|_| "--ticks N")?),
+            "--scale" => a.scale = value()?.parse().map_err(|_| "--scale N")?,
+            "--shot" => a.shot = Some(value()?),
             "-h" | "--help" => return Err(String::new()),
             other => return Err(format!("unknown argument {other}")),
         }
@@ -284,6 +293,7 @@ struct App {
     quit: bool,
     ticks: u64,
     max_ticks: Option<u64>,
+    scale: u32,
 }
 
 impl App {
@@ -330,7 +340,7 @@ impl App {
         let fifo = self.frames.frame(&m.game, &m.data, draws);
         let gpu = self
             .renderer
-            .get_or_insert_with(|| Gpu::new(self.gpu.renderer()));
+            .get_or_insert_with(|| Gpu::new(self.gpu.renderer(self.scale)));
         let images = gpu.run(&self.frames.space, &m.data, &fifo, None);
         if let (Some(shown), Some(frame)) = (&mut self.shown, images.into_iter().last()) {
             shown.present(&self.gpu, &frame);
@@ -395,6 +405,15 @@ impl ApplicationHandler for App {
     }
 }
 
+/// The internal resolution's scale: as asked, or the smallest whose 480 lines cover the
+/// window's height.
+fn scale_for(asked: u32, size: (u32, u32)) -> u32 {
+    if asked != 0 {
+        return asked.clamp(1, 8);
+    }
+    size.1.div_ceil(480).clamp(1, 8)
+}
+
 /// Plays `ticks` ticks headless, drawing each frame and presenting it to an offscreen target
 /// of `size`, and reports the time a tick with its frame takes.
 fn bench(args: &Args, ticks: u32) -> ExitCode {
@@ -407,7 +426,10 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     };
     let gpu = present::Gpu::new();
     let mut target = present::Offscreen::new(&gpu, args.size.0, args.size.1);
-    let mut renderer = Gpu::new(gpu.renderer());
+    let mut r = gpu.renderer(scale_for(args.scale, args.size));
+    r.xfb_readback = args.shot.is_some();
+    let mut renderer = Gpu::new(r);
+    let mut last = None;
     let mut frames = Frames::new();
     let pads = [melee_sim::input::pad::PadStatus::default(); 4];
     let (mut sim, mut draw, mut n) = (Duration::ZERO, Duration::ZERO, 0u32);
@@ -425,6 +447,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
             let tb = Instant::now();
             if let Some(frame) = images.into_iter().last() {
                 target.present(&gpu, &frame);
+                last = Some(frame);
             }
             let t2 = Instant::now();
             parts[0] += ta - t1;
@@ -441,13 +464,18 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
         }
     }
     println!(
-        "{n} frames at {}x{}: simulation {:.3} ms a tick, drawing {:.3} ms a frame, worst tick+frame {:.3} ms",
+        "{n} frames at {}x{} (internal {}x): simulation {:.3} ms a tick, drawing {:.3} ms a frame, worst tick+frame {:.3} ms",
         args.size.0,
         args.size.1,
+        scale_for(args.scale, args.size),
         sim.as_secs_f64() * 1000.0 / f64::from(ticks.max(1)),
         draw.as_secs_f64() * 1000.0 / f64::from(n.max(1)),
         worst.as_secs_f64() * 1000.0
     );
+    if let (Some(path), Some(f)) = (&args.shot, &last) {
+        f.save_png(std::path::Path::new(path))
+            .unwrap_or_else(|e| eprintln!("{path}: {e}"));
+    }
     let ms = |d: Duration| d.as_secs_f64() * 1000.0 / f64::from(n.max(1));
     println!(
         "a frame: GX stream {:.3} ms, renderer {:.3} ms, presenting (with the GPU's wait) {:.3} ms",
@@ -504,6 +532,7 @@ fn run() -> ExitCode {
         quit: false,
         ticks: 0,
         max_ticks: args.ticks,
+        scale: scale_for(args.scale, args.size),
     };
     present::set_size(args.size);
     let r = event_loop.run_app(&mut app);

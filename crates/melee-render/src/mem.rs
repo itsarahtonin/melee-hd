@@ -26,6 +26,9 @@ pub enum Dynamic {
     RefractFrame,
     /// A magnifier bubble's copy of its fighter, by player.
     Magnifier(u8),
+    /// Data of the executable the GPU reads, by its address there (the particles' texture
+    /// coordinates).
+    Dol(u32),
 }
 
 #[derive(Default)]

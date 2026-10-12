@@ -18,7 +18,7 @@ melee-input = { path = "../melee-input" }
 melee-render = { path = "../melee-render" }
 melee-replay = { path = "../../tools/replay" }
 melee-sim.workspace = true
-ssbm-render.workspace = true
+melee-gpu = { path = "../melee-gpu" }
 ssbm-slippi.workspace = true
 pollster = "1"
 wgpu = "30"

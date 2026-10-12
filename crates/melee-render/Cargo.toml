@@ -12,4 +12,4 @@ gekko-fp = { package = "melee-gekko-fp", path = "../gekko-fp" }
 melee-data.workspace = true
 melee-sim.workspace = true
 ssbm-gx.workspace = true
-ssbm-render.workspace = true
+melee-gpu = { path = "../melee-gpu" }

@@ -4,6 +4,8 @@
 pub mod camera;
 pub mod draw;
 pub mod lobj;
+pub mod psdisp;
+pub mod quad;
 pub mod state;
 pub mod tev;
 pub mod texp;

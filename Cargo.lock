@@ -1263,6 +1263,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-gpu"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "png",
+ "pollster",
+ "rayon",
+ "ssbm-gx",
+ "wgpu",
+]
+
+[[package]]
 name = "melee-input"
 version = "0.1.0"
 dependencies = [
@@ -1291,12 +1303,12 @@ version = "0.1.0"
 dependencies = [
  "melee-audio",
  "melee-data",
+ "melee-gpu",
  "melee-input",
  "melee-render",
  "melee-replay",
  "melee-sim",
  "pollster",
- "ssbm-render",
  "ssbm-slippi",
  "wgpu",
  "winit",
@@ -1308,9 +1320,9 @@ version = "0.1.0"
 dependencies = [
  "melee-data",
  "melee-gekko-fp",
+ "melee-gpu",
  "melee-sim",
  "ssbm-gx",
- "ssbm-render",
 ]
 
 [[package]]
@@ -1318,12 +1330,12 @@ name = "melee-render-check"
 version = "0.1.0"
 dependencies = [
  "melee-data",
+ "melee-gpu",
  "melee-render",
  "melee-replay",
  "melee-sim",
  "png",
  "ssbm-gx",
- "ssbm-render",
  "ssbm-slippi",
 ]
 
@@ -2471,19 +2483,6 @@ source = "git+https://github.com/itsarahtonin/ssbm-rs?tag=melee-hd-base#a8c43c03
 dependencies = [
  "gekko-fp",
  "thiserror 2.0.21",
-]
-
-[[package]]
-name = "ssbm-render"
-version = "0.1.0"
-source = "git+https://github.com/itsarahtonin/ssbm-rs?tag=melee-hd-base#a8c43c0317f7c92405186c3976c3c98545e1e9b1"
-dependencies = [
- "bytemuck",
- "png",
- "pollster",
- "rayon",
- "ssbm-gx",
- "wgpu",
 ]
 
 [[package]]

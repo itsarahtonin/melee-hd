@@ -7,11 +7,11 @@ use std::cell::RefCell;
 
 use melee_data::archive::Archives;
 use ssbm_gx::{Draw, Memory, Produced, Sink, State};
-use ssbm_render::Renderer;
+use melee_gpu::Renderer;
 
 use crate::mem::Space;
 
-pub use ssbm_render::Frame;
+pub use melee_gpu::Frame;
 
 /// The GPU's side of a frame: the stream's state, the renderer, and the memory it reads.
 pub struct Gpu {
@@ -58,7 +58,27 @@ impl Memory for Host<'_> {
     }
 }
 
+/// Memory for a stream run without drawing: the GPU's state follows it, nothing draws.
+struct Quiet<'a> {
+    space: &'a Space,
+    data: &'a Archives,
+}
+
+impl Memory for Quiet<'_> {
+    fn read(&self, phys: u32, out: &mut [u8]) {
+        self.space.read(self.data, phys, out);
+    }
+}
+
 impl Gpu {
+    /// Runs a frame's stream through the GPU's state without drawing it: for frames nobody
+    /// looks at, which the frames after still depend on for the registers they set.
+    pub fn follow(&mut self, space: &Space, data: &Archives, fifo: &[u8]) {
+        let host = Quiet { space, data };
+        self.state.feed(&host, fifo, &mut self.produced, false);
+        self.produced.clear();
+    }
+
     pub fn new(mut renderer: Renderer) -> Gpu {
         let state = State::new();
         renderer.clear_efb(&state);

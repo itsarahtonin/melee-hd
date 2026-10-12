@@ -13,6 +13,6 @@ melee-render = { path = "../../crates/melee-render" }
 melee-replay = { path = "../replay" }
 melee-sim.workspace = true
 ssbm-gx.workspace = true
-ssbm-render.workspace = true
+melee-gpu = { path = "../../crates/melee-gpu" }
 ssbm-slippi.workspace = true
 png = "0.18"

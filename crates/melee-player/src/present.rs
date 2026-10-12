@@ -57,8 +57,9 @@ impl Gpu {
     }
 
     /// A renderer on this GPU, leaving its frames on the GPU.
-    pub fn renderer(&self) -> ssbm_render::Renderer {
-        let mut r = ssbm_render::Renderer::with_device(self.device.clone(), self.queue.clone());
+    pub fn renderer(&self, scale: u32) -> melee_gpu::Renderer {
+        let mut r =
+            melee_gpu::Renderer::with_device_scaled(self.device.clone(), self.queue.clone(), scale);
         r.xfb_on_gpu = true;
         r.xfb_readback = false;
         r
@@ -279,7 +280,7 @@ impl Shown {
     }
 
     /// Shows a frame now.
-    pub fn present(&mut self, gpu: &Gpu, frame: &ssbm_render::Frame) {
+    pub fn present(&mut self, gpu: &Gpu, frame: &melee_gpu::Frame) {
         let Some(texture) = &frame.texture else {
             return;
         };
@@ -333,7 +334,7 @@ impl Offscreen {
     }
 
     /// Draws a frame into the target and waits for the GPU to finish it.
-    pub fn present(&mut self, gpu: &Gpu, frame: &ssbm_render::Frame) {
+    pub fn present(&mut self, gpu: &Gpu, frame: &melee_gpu::Frame) {
         let Some(texture) = &frame.texture else {
             return;
         };

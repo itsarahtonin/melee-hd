@@ -127,7 +127,7 @@ fn run(args: &[String]) -> ExitCode {
             let mut best = (f64::MAX, 0u32, 0i32);
             native::play(&args[1], &args[2], from, to, |n, d| {
                 let (dist, matched) = native::distance(&d.events, &reference[0]);
-                let score = dist / matched.max(1) as f64;
+                let score = dist;
                 println!(
                     "frame {n} (replay frame {}): {matched} draws matched, {score:.3} apart",
                     d.replay_frame
@@ -224,10 +224,37 @@ fn compare(args: &[String]) -> ExitCode {
     let detail = std::env::var("CHECK_DIFFS")
         .ok()
         .map_or(20, |v| v.parse().expect("CHECK_DIFFS=N"));
-    let last = first + reference.len() as u32 - 1;
+    // The log's frames line up with native frames near FRAME: the two count frames from
+    // different starts. Draw a window around it and take the frame whose draws sit closest
+    // to the log's first.
+    let search = std::env::var("CHECK_SEARCH")
+        .ok()
+        .map_or(4, |v| v.parse().expect("CHECK_SEARCH=N"));
+    let from = first.saturating_sub(search);
+    let last = first + search + reference.len() as u32 - 1;
+    let mut drawn: Vec<(u32, native::Drawn)> = Vec::new();
+    native::play(&args[1], &args[2], from, last, |n, d| {
+        drawn.push((n, d));
+        true
+    });
+    let best = (0..drawn.len())
+        .filter(|&i| i + reference.len() <= drawn.len())
+        .map(|i| {
+            let (dist, matched) = native::distance(&drawn[i].1.events, &reference[0]);
+            (i, dist, matched)
+        })
+        .filter(|x| x.2 > 0)
+        .min_by(|a, b| a.1.total_cmp(&b.1));
+    let Some((start, apart, _)) = best else {
+        println!("no native frame lines up with the log's first");
+        return ExitCode::FAILURE;
+    };
+    println!(
+        "the log's first frame is native frame {} ({apart:.3} apart)",
+        drawn[start].0
+    );
     let mut failed = false;
-    native::play(&args[1], &args[2], first, last, |n, d| {
-        let k = (n - first) as usize;
+    for (k, (n, d)) in drawn.into_iter().skip(start).take(reference.len()).enumerate() {
         let theirs = &reference[k];
         println!(
             "== frame {n} (replay frame {}) against the log's frame {k}",
@@ -339,8 +366,7 @@ fn compare(args: &[String]) -> ExitCode {
                 failed = true;
             }
         }
-        true
-    });
+    }
     if failed {
         ExitCode::FAILURE
     } else {

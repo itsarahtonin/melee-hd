@@ -63,7 +63,7 @@ pub fn play(
     let mut m = Match::start(&settings, &mut load);
     let mut device = Device(&replay);
     let mut frames = Frames::new();
-    let renderer = ssbm_render::Renderer::new().expect("a GPU");
+    let renderer = melee_gpu::Renderer::new().expect("a GPU");
     let mut gpu = Gpu::new(renderer);
     let mut n = 0u32;
     loop {
@@ -85,8 +85,12 @@ pub fn play(
                 if !each(n, drawn) {
                     return;
                 }
-            } else {
+            } else if n + 2 >= from {
                 gpu.run(&frames.space, &m.data, &fifo, None);
+                frames.hsd.notes.clear();
+            } else {
+                // Not drawn: the GPU's registers follow the stream all the same.
+                gpu.follow(&frames.space, &m.data, &fifo);
                 frames.hsd.notes.clear();
             }
             n += 1;
@@ -101,31 +105,25 @@ pub fn play(
     }
 }
 
-/// How far two frames' draws are apart, for lining frames up: the summed screen distance of
-/// the vertices of draws whose primitive and count match, position by position.
+/// How far two frames' draws are apart, for lining frames up: the share of `b`'s draws that
+/// don't line up (by signature, as `compare` lines events up) with a draw of `a` whose
+/// vertices sit where theirs do, and how many lined up at all.
 pub fn distance(a: &[Event], b: &[Event]) -> (f64, usize) {
-    let (mut d, mut matched) = (0f64, 0usize);
-    fn draws(e: &[Event]) -> Vec<&crate::snap::DrawSnap> {
-        e.iter()
-            .filter_map(|x| match x {
-                Event::Draw(d) => Some(&**d),
-                _ => None,
-            })
-            .collect()
-    }
-    for (x, y) in draws(a).iter().zip(draws(b)) {
-        if (x.primitive, x.count) != (y.primitive, y.count) {
+    let mut exact = 0usize;
+    let mut matched = 0usize;
+    for (i, j) in crate::snap::align(a, b) {
+        let (Some(i), Some(j)) = (i, j) else { continue };
+        let (Event::Draw(x), Event::Draw(y)) = (&a[i], &b[j]) else {
             continue;
-        }
+        };
         matched += 1;
-        for (p, q) in x.verts.iter().zip(&y.verts) {
-            for k in 0..2 {
-                let e = f64::from(p.screen[k] - q.screen[k]).abs();
-                if e.is_finite() {
-                    d += e.min(100.0);
-                }
-            }
-        }
+        let same = x.verts.iter().zip(&y.verts).all(|(p, q)| {
+            (0..2).all(|k| {
+                let e = (p.screen[k] - q.screen[k]).abs();
+                e < 0.05 || !e.is_finite()
+            })
+        });
+        exact += usize::from(same);
     }
-    (d, matched)
+    (1.0 - exact as f64 / b.len().max(1) as f64, matched)
 }
