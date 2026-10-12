@@ -11,6 +11,7 @@
 //! ```text
 //! melee-render-check dump LOG.dff [FRAME]          the log's draws, one line each
 //! melee-render-check draw LOG.dff FRAME DRAW       one draw of the log in full
+//! melee-render-check play LOG.dff OUT_DIR          the log drawn by melee-gpu
 //! melee-render-check align DISC REPLAY.slp LOG.dff FROM TO
 //!     which native frame (FROM to TO) the log's first frame is, by its draws' geometry
 //! melee-render-check compare DISC REPLAY.slp LOG.dff REF_DIR FRAME [OUT_DIR]
@@ -36,6 +37,8 @@ const MEM_SIZE: usize = 0x0180_0000;
 struct LogPlayer {
     ram: RefCell<Vec<u8>>,
     recorder: Recorder,
+    /// Draws the log too, with melee-gpu (`play`).
+    renderer: Option<RefCell<melee_gpu::Renderer>>,
 }
 
 impl Memory for LogPlayer {
@@ -53,22 +56,39 @@ impl Memory for LogPlayer {
 
     fn draw(&self, state: &State, draw: &Draw<'_>) {
         self.recorder.draw(state, draw, self);
+        if let Some(r) = &self.renderer {
+            ssbm_gx::Sink::draw(&mut *r.borrow_mut(), state, draw, self);
+        }
     }
 
     fn copy(&self, state: &State, value: u32) {
         self.recorder.copy(state, value);
+        if let Some(r) = &self.renderer {
+            ssbm_gx::Sink::copy(&mut *r.borrow_mut(), state, value, self);
+        }
     }
 }
 
 /// Each frame's events of a FIFO log.
 fn play_log(path: &str) -> Vec<Vec<Event>> {
+    play_log_drawing(path, None).0
+}
+
+/// Each frame's events of a FIFO log, and with `out` the frames melee-gpu draws of it, saved
+/// there as frame_N.png.
+fn play_log_drawing(path: &str, out: Option<&std::path::Path>) -> (Vec<Vec<Event>>, usize) {
     let bytes = std::fs::read(path).unwrap_or_else(|e| panic!("{path}: {e}"));
     let log = File::read(&bytes).unwrap_or_else(|e| panic!("{path}: {e}"));
     let player = LogPlayer {
         ram: RefCell::new(vec![0; MEM_SIZE]),
         recorder: Recorder::default(),
+        renderer: out.map(|_| RefCell::new(crate::native::renderer())),
     };
     let mut state = State::load(&log.bp, &log.cp, &log.xf, &log.tmem);
+    if let Some(r) = &player.renderer {
+        r.borrow_mut().clear_efb(&state);
+    }
+    let mut saved = 0;
     let mut produced: Vec<Produced> = Vec::new();
     let mut frames = Vec::new();
     for frame in &log.frames {
@@ -91,8 +111,14 @@ fn play_log(path: &str) -> Vec<Vec<Event>> {
         state.feed(&player, &frame.fifo[at..], &mut produced, false);
         produced.clear();
         frames.push(std::mem::take(&mut *player.recorder.events.borrow_mut()));
+        if let (Some(r), Some(dir)) = (&player.renderer, out) {
+            for f in r.borrow_mut().take_frames() {
+                saved += 1;
+                let _ = f.save_png(&dir.join(format!("frame_{saved}.png")));
+            }
+        }
     }
-    frames
+    (frames, saved)
 }
 
 fn dump(events: &[Event]) {
@@ -118,6 +144,13 @@ fn run(args: &[String]) -> ExitCode {
             let n: usize = args[2].parse().expect("FRAME");
             let d: usize = args[3].parse().expect("DRAW");
             println!("{:#?}", frames[n][d]);
+            ExitCode::SUCCESS
+        }
+        Some("play") if args.len() >= 3 => {
+            let dir = std::path::PathBuf::from(&args[2]);
+            std::fs::create_dir_all(&dir).expect("making the output directory");
+            let (_, n) = play_log_drawing(&args[1], Some(&dir));
+            println!("{n} frames drawn into {}", dir.display());
             ExitCode::SUCCESS
         }
         Some("align") if args.len() >= 6 => {

@@ -90,6 +90,9 @@ pub struct DrawSnap {
     pub textures: Vec<Tex>,
     pub verts: Vec<Vert>,
     pub texgens: u32,
+    /// XF registers the draw's colors and coordinates depend on: the channels' count, colors
+    /// and controls, and the texture coordinate generators.
+    pub xf: Vec<(usize, u32)>,
     /// The vertex layout and the first fetched bytes, for debugging (read through `Debug`).
     #[allow(dead_code)]
     pub layout: String,
@@ -189,6 +192,10 @@ impl Recorder {
                 textures,
                 verts,
                 texgens: state.xf[xform::NUM_TEXGENS],
+                xf: (0x1009..0x1012)
+                    .chain(0x1040..0x1040 + (state.xf[xform::NUM_TEXGENS] as usize & 0xF))
+                    .map(|r| (r, state.xf[r]))
+                    .collect(),
                 layout: format!("{:?}", draw.layout),
                 head: draw.data[..draw.data.len().min(48)].to_vec(),
             })));
@@ -331,6 +338,18 @@ pub fn differences(a: &DrawSnap, b: &DrawSnap) -> Vec<String> {
     }
     if a.tev != b.tev {
         out.push(format!("TEV registers {:08X?} vs {:08X?}", a.tev, b.tev));
+    }
+    for (x, y) in a.xf.iter().zip(&b.xf) {
+        // A color channel's registers matter only with that many channels.
+        let chans = a.xf.first().map_or(0, |c| c.1);
+        let used = match x.0 {
+            0x100A | 0x100C | 0x100E | 0x1010 => chans >= 1,
+            0x100B | 0x100D | 0x100F | 0x1011 => chans >= 2,
+            _ => true,
+        };
+        if used && x.1 != y.1 {
+            out.push(format!("XF {:04X} {:08X} vs {:08X}", x.0, x.1, y.1));
+        }
     }
     if a.texgens != b.texgens {
         out.push(format!("texgens {} vs {}", a.texgens, b.texgens));

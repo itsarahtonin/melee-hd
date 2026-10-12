@@ -232,6 +232,10 @@ impl Ctx<'_> {
                 self.quads(&quads);
                 quads.len()
             }
+            Draw::Afterimage(f) => {
+                self.afterimage(*f);
+                1
+            }
             other => {
                 let name = format!("{other:?}");
                 let name = name.split(['(', ' ', '{']).next().unwrap_or("?").to_owned();

@@ -73,7 +73,7 @@ pub fn play(
     frames
         .space
         .load_dol(&disc.dol().unwrap_or_else(|e| panic!("main.dol: {e}")));
-    let renderer = melee_gpu::Renderer::new().expect("a GPU");
+    let renderer = renderer();
     let mut gpu = Gpu::new(renderer);
     let mut n = 0u32;
     loop {
@@ -136,4 +136,14 @@ pub fn distance(a: &[Event], b: &[Event]) -> (f64, usize) {
         exact += usize::from(same);
     }
     (1.0 - exact as f64 / b.len().max(1) as f64, matched)
+}
+
+/// A renderer for checks: `CHECK_DRAW_LIMIT=N` draws only each frame's first N draws, to find
+/// the draw where two frames' images part.
+pub fn renderer() -> melee_gpu::Renderer {
+    let mut r = melee_gpu::Renderer::new().expect("a GPU");
+    r.draw_limit = std::env::var("CHECK_DRAW_LIMIT")
+        .ok()
+        .map(|n| n.parse().expect("CHECK_DRAW_LIMIT=N"));
+    r
 }

@@ -1,6 +1,7 @@
 //! HSD's display side: what HAL's library sends GX as it draws the objects the simulation's
 //! display pass names (cameras, lights, fog, materials, textures, shapes, particles).
 
+pub mod afterimage;
 pub mod camera;
 pub mod draw;
 pub mod lobj;
