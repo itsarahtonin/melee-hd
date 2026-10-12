@@ -143,7 +143,6 @@ impl Gx {
     }
 
     /// `GXSetTevColorS10`: like [`Gx::set_tev_color`], with 11-bit signed components.
-    #[doc(alias = "GXSetTevColorS10")]
     pub fn set_tev_color_s10(&mut self, id: u32, color: ColorS10) {
         let c = |v: i16| (v as u32) & 0x7FF;
         let mut ra = 0u32;

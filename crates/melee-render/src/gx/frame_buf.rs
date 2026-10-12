@@ -79,7 +79,6 @@ pub const GX_MPAL_480_INT_DF: RenderModeObj = RenderModeObj {
 };
 
 /// `GXAdjustForOverscan`.
-#[doc(alias = "GXAdjustForOverscan")]
 pub fn adjust_for_overscan(rmin: &RenderModeObj, hor: u16, ver: u16) -> RenderModeObj {
     let hor2 = hor.wrapping_mul(2);
     let ver2 = ver.wrapping_mul(2);
@@ -363,7 +362,6 @@ impl Gx {
     }
 
     /// `GXReadBoundingBox`: reads PE registers, not the stream; always zeros here.
-    #[doc(alias = "GXReadBoundingBox")]
     pub fn read_bounding_box(&self) -> (u16, u16, u16, u16) {
         (0, 0, 0, 0)
     }

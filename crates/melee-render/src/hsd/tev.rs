@@ -409,7 +409,6 @@ pub fn index_to_tev_stage(idx: usize) -> u32 {
 }
 
 /// `HSD_TevStage2Index`.
-#[doc(alias = "HSD_TevStage2Index")]
 pub fn tev_stage_to_index(stage: u32) -> usize {
     assert!(stage < 16, "TEV stage {stage}");
     stage as usize

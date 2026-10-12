@@ -40,7 +40,6 @@ impl Gx {
     }
 
     /// `GXEnd`: only checks, in a debug build.
-    #[doc(alias = "GXEnd")]
     #[inline]
     pub fn end(&mut self) {}
 
@@ -64,7 +63,6 @@ impl Gx {
     }
 
     /// `GXGetLineWidth`: (width, texOffsets).
-    #[doc(alias = "GXGetLineWidth")]
     pub fn get_line_width(&self) -> (u8, u32) {
         let s = self.data.lp_size;
         (get_field(s, 8, 0) as u8, get_field(s, 3, 16))
@@ -79,7 +77,6 @@ impl Gx {
     }
 
     /// `GXGetPointSize`: (pointSize, texOffsets).
-    #[doc(alias = "GXGetPointSize")]
     pub fn get_point_size(&self) -> (u8, u32) {
         let s = self.data.lp_size;
         (get_field(s, 8, 8) as u8, get_field(s, 3, 19))
@@ -106,7 +103,7 @@ impl Gx {
         self.data.dirty_state |= 4;
     }
 
-    #[doc(alias = "GXGetCullMode")]
+    /// `GXGetCullMode`.
     pub fn get_cull_mode(&self) -> u32 {
         match get_field(self.data.gen_mode, 2, 14) {
             GX_CULL_FRONT => GX_CULL_BACK,

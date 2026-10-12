@@ -22,7 +22,6 @@ impl Gx {
 
     /// `GXFlush`: the dirty state, then 32 bytes of zeros (NOPs) that push the write-gather
     /// pipe out. `PPCSync` has no counterpart.
-    #[doc(alias = "GXFlush")]
     pub fn flush(&mut self) {
         if self.data.dirty_state != 0 {
             self.set_dirty_state();
@@ -33,14 +32,12 @@ impl Gx {
     }
 
     /// `GXResetWriteGatherPipe`: CPU registers only.
-    #[doc(alias = "GXResetWriteGatherPipe")]
     pub fn reset_write_gather_pipe(&mut self) {}
 
     /// `GXAbortFrame`: PI registers and a wait; nothing in the stream.
-    #[doc(alias = "GXAbortFrame")]
     pub fn abort_frame(&mut self) {}
 
-    #[doc(alias = "GXSetDrawSync")]
+    /// `GXSetDrawSync`.
     pub fn set_draw_sync(&mut self, token: u16) {
         let mut reg = u32::from(token) | 0x4800_0000;
         self.write_ras_reg(reg);
@@ -52,7 +49,6 @@ impl Gx {
     }
 
     /// `GXReadDrawSync`: reads a PE register, not the stream; always 0 here.
-    #[doc(alias = "GXReadDrawSync")]
     pub fn read_draw_sync(&self) -> u16 {
         0
     }
@@ -66,10 +62,9 @@ impl Gx {
     }
 
     /// `GXWaitDrawDone`: waits for the GPU's interrupt; nothing to do here.
-    #[doc(alias = "GXWaitDrawDone")]
     pub fn wait_draw_done(&mut self) {}
 
-    #[doc(alias = "GXDrawDone")]
+    /// `GXDrawDone`.
     pub fn draw_done(&mut self) {
         self.set_draw_done();
         self.wait_draw_done();
@@ -81,7 +76,7 @@ impl Gx {
         self.data.bp_sent = 0;
     }
 
-    #[doc(alias = "GXTexModeSync")]
+    /// `GXTexModeSync`.
     pub fn tex_mode_sync(&mut self) {
         self.write_ras_reg(0x6300_0000);
         self.data.bp_sent = 1;
@@ -121,7 +116,6 @@ impl Gx {
 }
 
 /// `GXCompressZ16`.
-#[doc(alias = "GXCompressZ16")]
 pub fn compress_z16(z24: u32, zfmt: u32) -> u32 {
     let z24n = !(z24 << 8);
     let temp = cntlzw(z24n) as i32;
@@ -141,7 +135,6 @@ pub fn compress_z16(z24: u32, zfmt: u32) -> u32 {
 }
 
 /// `GXDecompressZ16`.
-#[doc(alias = "GXDecompressZ16")]
 pub fn decompress_z16(z16: u32, zfmt: u32) -> u32 {
     let (exp, shift, mant) = match zfmt {
         GX_ZC_LINEAR => return (z16 << 8) & 0xFF_FF00,

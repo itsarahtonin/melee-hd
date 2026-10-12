@@ -449,7 +449,6 @@ fn copy(aram: &mut [u8], dest: u32, size: u32, src: &[u8]) {
 }
 
 /// `__AXDepopFade`: the studio's volume and delta for a bus's depop sum, which it fades.
-#[doc(alias = "__AXDepopFade")]
 fn depop_fade(sum: &mut i32) -> (i32, i16) {
     let frames = *sum / 160;
     if frames == 0 {

@@ -380,7 +380,6 @@ pub fn compile_material(objs: &Objects, m: MObjId, chain: &[TObjId]) -> TevDesc 
 
 /// `TObjSetupTevModulateShadow`: a stage multiplying the color by each shadow texture from
 /// the first of `chain`.
-#[doc(alias = "TObjSetupTevModulateShadow")]
 fn setup_tev_modulate_shadow(gx: &mut Gx, state: &mut TevState, objs: &Objects, chain: &[TObjId]) {
     let mut desc = HsdTevDesc {
         flags: 1,
@@ -425,7 +424,6 @@ fn setup_tev_modulate_shadow(gx: &mut Gx, state: &mut TevState, objs: &Objects, 
 
 /// `SetupEmbossBumpTev`: two stages adding the bump map's offset texture and subtracting it
 /// at the shifted coordinates.
-#[doc(alias = "SetupEmbossBumpTev")]
 fn setup_emboss_bump_tev(gx: &mut Gx, state: &mut TevState, objs: &Objects, t: TObjId) {
     let bump = &objs.tobjs[t];
     let mut desc = HsdTevDesc {

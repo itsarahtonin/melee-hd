@@ -144,7 +144,6 @@ fn prim_env(p: &Particle) -> (Color, Color) {
 }
 
 /// A particle's material and ambient colors as they fade, gray, `getColorMatAmb`.
-#[doc(alias = "getColorMatAmb")]
 fn mat_amb(p: &Particle) -> (Color, Color) {
     let gray = |v: u8, a: u8| Color::new(v, v, v, a);
     let mat = if p.mat_col_count != 0 {
@@ -170,7 +169,6 @@ fn mat_amb(p: &Particle) -> (Color, Color) {
 
 /// A trail's color: the primitive color, or white with the environment colors or
 /// lighting's (`getClrTrail`).
-#[doc(alias = "getClrTrail")]
 fn trail_color(p: &Particle, kind: u32) -> Color {
     if kind & PRIM_ENV != 0 {
         Color::new(0xFF, 0xFF, 0xFF, 0xFF)
@@ -950,8 +948,6 @@ impl<'a> Ctx<'a> {
     /// A particle as a quad facing the camera, turned by its rotation or along its motion on
     /// the screen, and stretched back along its motion for a trail, `psDispSub` and
     /// `psDispSubMakePolygon`.
-    #[doc(alias = "psDispSub")]
-    #[doc(alias = "psDispSubMakePolygon")]
     fn ps_sub(&mut self, d: &mut Disp, p: &Particle, kind: u32) {
         let objs = self.ps_objs();
         let pos = p.pos;
@@ -1075,7 +1071,6 @@ impl<'a> Ctx<'a> {
     /// A particle with an app-SRT as a quad in its view, turned by its rotation or along its
     /// motion on the screen, `psDispSubAppSRT` (the app-SRT brought up to date by the
     /// display pass).
-    #[doc(alias = "psDispSubAppSRT")]
     fn ps_app_srt(&mut self, d: &mut Disp, p: &Particle, kind: u32) {
         let objs = self.ps_objs();
         let (cur, prev, view) = Self::app_srt_points(self.ps_objs(), p, kind);
@@ -1201,7 +1196,6 @@ impl<'a> Ctx<'a> {
 
     /// A point particle with an app-SRT, or its trail as a line, in its view,
     /// `psDispSubAPPSRTPoint`.
-    #[doc(alias = "psDispSubAPPSRTPoint")]
     fn ps_app_srt_point(&mut self, d: &mut Disp, p: &Particle, kind: u32) {
         set_current_mtx(self.gx, d, GX_PNMTX1);
         let (cur, prev, _) = Self::app_srt_points(self.ps_objs(), p, kind);
@@ -1262,7 +1256,6 @@ impl<'a> Ctx<'a> {
 
     /// Point particles from `id` on, as many as batch, in batches of 16, `psDispSubPoint`;
     /// returns the last drawn.
-    #[doc(alias = "psDispSubPoint")]
     fn ps_point(&mut self, d: &mut Disp, id: ParticleId, kind: u32) -> ParticleId {
         let ps = &self.ps_objs().particles;
         let p = &ps[id];
@@ -1312,7 +1305,6 @@ impl<'a> Ctx<'a> {
 
     /// Point particles with trails from `id` on as lines, as many as batch, in batches of
     /// 16, `psDispSubPointTrail`; returns the last drawn.
-    #[doc(alias = "psDispSubPointTrail")]
     fn ps_point_trail(&mut self, d: &mut Disp, id: ParticleId, kind: u32) -> ParticleId {
         let objs = self.ps_objs();
         let ps = &objs.particles;

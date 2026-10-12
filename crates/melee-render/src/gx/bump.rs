@@ -35,7 +35,7 @@ impl Gx {
         self.data.bp_sent = 0;
     }
 
-    #[doc(alias = "GXSetIndTexMtx")]
+    /// `GXSetIndTexMtx`.
     pub fn set_ind_tex_mtx(&mut self, mtx_id: u32, offset: &[[f32; 3]; 2], scale_exp: i8) {
         let id = match mtx_id {
             GX_ITM_0..=GX_ITM_2 => mtx_id - 1,
@@ -93,7 +93,7 @@ impl Gx {
         self.data.bp_sent = 0;
     }
 
-    #[doc(alias = "GXSetIndTexOrder")]
+    /// `GXSetIndTexOrder`.
     pub fn set_ind_tex_order(&mut self, ind_stage: u32, tex_coord: u32, tex_map: u32) {
         let g = &mut self.data;
         if ind_stage < 4 {
@@ -128,7 +128,7 @@ impl Gx {
         );
     }
 
-    #[doc(alias = "GXSetTevIndWarp")]
+    /// `GXSetTevIndWarp`.
     pub fn set_tev_ind_warp(
         &mut self,
         tev_stage: u32,
@@ -152,7 +152,7 @@ impl Gx {
         );
     }
 
-    #[doc(alias = "GXSetTevIndTile")]
+    /// `GXSetTevIndTile`.
     #[allow(clippy::too_many_arguments)]
     pub fn set_tev_ind_tile(
         &mut self,
@@ -187,7 +187,7 @@ impl Gx {
         );
     }
 
-    #[doc(alias = "GXSetTevIndBumpST")]
+    /// `GXSetTevIndBumpST`.
     pub fn set_tev_ind_bump_st(&mut self, tev_stage: u32, ind_stage: u32, matrix_sel: u32) {
         // An invalid matrix leaves sm and tm uninitialized in the original; here they're off.
         let (sm, tm) = match matrix_sel {
@@ -225,14 +225,14 @@ impl Gx {
         );
     }
 
-    #[doc(alias = "GXSetTevIndBumpXYZ")]
+    /// `GXSetTevIndBumpXYZ`.
     pub fn set_tev_ind_bump_xyz(&mut self, tev_stage: u32, ind_stage: u32, matrix_sel: u32) {
         self.set_tev_indirect(
             tev_stage, ind_stage, GX_ITF_8, GX_ITB_STU, matrix_sel, GX_ITW_OFF, GX_ITW_OFF, 0, 0, 0,
         );
     }
 
-    #[doc(alias = "GXSetTevIndRepeat")]
+    /// `GXSetTevIndRepeat`.
     pub fn set_tev_ind_repeat(&mut self, tev_stage: u32) {
         self.set_tev_indirect(
             tev_stage,

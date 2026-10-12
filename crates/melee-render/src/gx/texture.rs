@@ -276,25 +276,23 @@ impl Gx {
     }
 
     /// `GXInitTexObjData`.
-    #[doc(alias = "GXInitTexObjData")]
     pub fn init_tex_obj_data(&self, obj: &mut TexObj, image_ptr: u32) {
         set_field(&mut obj.image3, 21, 0, (image_ptr >> 5) & 0x01FF_FFFF);
     }
 
-    #[doc(alias = "GXInitTexObjWrapMode")]
+    /// `GXInitTexObjWrapMode`.
     pub fn init_tex_obj_wrap_mode(&self, obj: &mut TexObj, sm: u32, tm: u32) {
         set_field(&mut obj.mode0, 2, 0, sm);
         set_field(&mut obj.mode0, 2, 2, tm);
     }
 
-    #[doc(alias = "GXInitTexObjTlut")]
+    /// `GXInitTexObjTlut`.
     pub fn init_tex_obj_tlut(&self, obj: &mut TexObj, tlut_name: u32) {
         obj.tlut_name = tlut_name;
     }
 
     /// `GXInitTexObjFilter` (not in this SDK's C; GXInitTexObjLOD's filter half, as later
     /// SDKs define it).
-    #[doc(alias = "GXInitTexObjFilter")]
     pub fn init_tex_obj_filter(&self, obj: &mut TexObj, min_filt: u32, mag_filt: u32) {
         set_field(&mut obj.mode0, 1, 4, u32::from(mag_filt == GX_LINEAR));
         set_field(
@@ -305,63 +303,62 @@ impl Gx {
         );
     }
 
-    #[doc(alias = "GXInitTexObjUserData")]
+    /// `GXInitTexObjUserData`.
     pub fn init_tex_obj_user_data(&self, obj: &mut TexObj, user_data: u32) {
         obj.user_data = user_data;
     }
 
-    #[doc(alias = "GXGetTexObjUserData")]
+    /// `GXGetTexObjUserData`.
     pub fn get_tex_obj_user_data(&self, obj: &TexObj) -> u32 {
         obj.user_data
     }
 
     /// `GXGetTexObjData`: the image's address, `image3`'s field back in bytes.
-    #[doc(alias = "GXGetTexObjData")]
     pub fn get_tex_obj_data(&self, to: &TexObj) -> u32 {
         get_field(to.image3, 21, 0) << 5
     }
 
-    #[doc(alias = "GXGetTexObjWidth")]
+    /// `GXGetTexObjWidth`.
     pub fn get_tex_obj_width(&self, to: &TexObj) -> u16 {
         (get_field(to.image0, 10, 0) + 1) as u16
     }
 
-    #[doc(alias = "GXGetTexObjHeight")]
+    /// `GXGetTexObjHeight`.
     pub fn get_tex_obj_height(&self, to: &TexObj) -> u16 {
         (get_field(to.image0, 10, 10) + 1) as u16
     }
 
-    #[doc(alias = "GXGetTexObjFmt")]
+    /// `GXGetTexObjFmt`.
     pub fn get_tex_obj_fmt(&self, to: &TexObj) -> u32 {
         to.fmt
     }
 
-    #[doc(alias = "GXGetTexObjWrapS")]
+    /// `GXGetTexObjWrapS`.
     pub fn get_tex_obj_wrap_s(&self, to: &TexObj) -> u32 {
         get_field(to.mode0, 2, 0)
     }
 
-    #[doc(alias = "GXGetTexObjWrapT")]
+    /// `GXGetTexObjWrapT`.
     pub fn get_tex_obj_wrap_t(&self, to: &TexObj) -> u32 {
         get_field(to.mode0, 2, 2)
     }
 
-    #[doc(alias = "GXGetTexObjMipMap")]
+    /// `GXGetTexObjMipMap`.
     pub fn get_tex_obj_mip_map(&self, to: &TexObj) -> u8 {
         u8::from(to.flags & 1 == 1)
     }
 
-    #[doc(alias = "GXGetTexObjMinFilt")]
+    /// `GXGetTexObjMinFilt`.
     pub fn get_tex_obj_min_filt(&self, to: &TexObj) -> u32 {
         u32::from(HW2GX_FILT_CONV[get_field(to.mode0, 3, 5) as usize])
     }
 
-    #[doc(alias = "GXGetTexObjMagFilt")]
+    /// `GXGetTexObjMagFilt`.
     pub fn get_tex_obj_mag_filt(&self, to: &TexObj) -> u32 {
         get_field(to.mode0, 1, 4)
     }
 
-    #[doc(alias = "GXGetTexObjTlut")]
+    /// `GXGetTexObjTlut`.
     pub fn get_tex_obj_tlut(&self, to: &TexObj) -> u32 {
         to.tlut_name
     }
@@ -432,17 +429,17 @@ impl Gx {
         t.num_entries = n_entries;
     }
 
-    #[doc(alias = "GXGetTlutObjData")]
+    /// `GXGetTlutObjData`.
     pub fn get_tlut_obj_data(&self, t: &TlutObj) -> u32 {
         get_field(t.load_tlut0, 21, 0) << 5
     }
 
-    #[doc(alias = "GXGetTlutObjFmt")]
+    /// `GXGetTlutObjFmt`.
     pub fn get_tlut_obj_fmt(&self, t: &TlutObj) -> u32 {
         get_field(t.tlut, 2, 10)
     }
 
-    #[doc(alias = "GXGetTlutObjNumEntries")]
+    /// `GXGetTlutObjNumEntries`.
     pub fn get_tlut_obj_num_entries(&self, t: &TlutObj) -> u16 {
         t.num_entries
     }
@@ -505,7 +502,7 @@ impl Gx {
         t.is_cached = 1;
     }
 
-    #[doc(alias = "GXInitTexPreLoadRegion")]
+    /// `GXInitTexPreLoadRegion`.
     pub fn init_tex_pre_load_region(
         &self,
         region: &mut TexRegion,
@@ -540,7 +537,7 @@ impl Gx {
         set_field(&mut t.load_tlut1, 8, 24, 0x65);
     }
 
-    #[doc(alias = "GXInvalidateTexRegion")]
+    /// `GXInvalidateTexRegion`.
     pub fn invalidate_tex_region(&mut self, region: &TexRegion) {
         let r = region;
         let wle = (get_field(r.image1, 3, 15) as i32 - 1).max(0);
@@ -594,7 +591,7 @@ impl Gx {
         self.data.tlut_region_callback.replace(f)
     }
 
-    #[doc(alias = "GXPreLoadEntireTexture")]
+    /// `GXPreLoadEntireTexture`.
     pub fn pre_load_entire_texture(&mut self, tex_obj: &TexObj, region: &TexRegion) {
         let t = tex_obj;
         let r = region;
@@ -667,7 +664,7 @@ impl Gx {
         self.flush_texture_state();
     }
 
-    #[doc(alias = "GXSetTexCoordScaleManually")]
+    /// `GXSetTexCoordScaleManually`.
     pub fn set_tex_coord_scale_manually(&mut self, coord: u32, enable: u8, ss: u16, ts: u16) {
         let g = &mut self.data;
         g.tcs_man_enab = (g.tcs_man_enab & !(1 << coord)) | (u32::from(enable) << coord);
@@ -682,12 +679,12 @@ impl Gx {
         }
     }
 
-    #[doc(alias = "GXSetTexCoordCylWrap")]
+    /// `GXSetTexCoordCylWrap`.
     pub fn set_tex_coord_cyl_wrap(&mut self, coord: u32, s_enable: u8, t_enable: u8) {
         self.set_tex_coord_su_bit(coord, 17, s_enable, t_enable);
     }
 
-    #[doc(alias = "GXSetTexCoordBias")]
+    /// `GXSetTexCoordBias`.
     pub fn set_tex_coord_bias(&mut self, coord: u32, s_enable: u8, t_enable: u8) {
         self.set_tex_coord_su_bit(coord, 16, s_enable, t_enable);
     }
@@ -762,7 +759,6 @@ impl Gx {
     }
 
     /// `__GXGetSUTexSize`: (width, height).
-    #[doc(alias = "__GXGetSUTexSize")]
     pub(crate) fn get_su_tex_size(&self, coord: u32) -> (u16, u16) {
         let c = coord as usize;
         (

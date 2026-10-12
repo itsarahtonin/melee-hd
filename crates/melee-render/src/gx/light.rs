@@ -36,24 +36,22 @@ impl Gx {
         lt_obj.k = [k0, k1, k2];
     }
 
-    #[doc(alias = "GXInitLightAttnA")]
+    /// `GXInitLightAttnA`.
     pub fn init_light_attn_a(&self, lt_obj: &mut LightObj, a0: f32, a1: f32, a2: f32) {
         lt_obj.a = [a0, a1, a2];
     }
 
     /// `GXGetLightAttnA`.
-    #[doc(alias = "GXGetLightAttnA")]
     pub fn get_light_attn_a(&self, lt_obj: &LightObj) -> [f32; 3] {
         lt_obj.a
     }
 
-    #[doc(alias = "GXInitLightAttnK")]
+    /// `GXInitLightAttnK`.
     pub fn init_light_attn_k(&self, lt_obj: &mut LightObj, k0: f32, k1: f32, k2: f32) {
         lt_obj.k = [k0, k1, k2];
     }
 
     /// `GXGetLightAttnK`.
-    #[doc(alias = "GXGetLightAttnK")]
     pub fn get_light_attn_k(&self, lt_obj: &LightObj) -> [f32; 3] {
         lt_obj.k
     }
@@ -154,7 +152,6 @@ impl Gx {
     }
 
     /// `GXGetLightPos`.
-    #[doc(alias = "GXGetLightPos")]
     pub fn get_light_pos(&self, lt_obj: &LightObj) -> [f32; 3] {
         lt_obj.lpos
     }
@@ -165,13 +162,11 @@ impl Gx {
     }
 
     /// `GXGetLightDir`.
-    #[doc(alias = "GXGetLightDir")]
     pub fn get_light_dir(&self, lt_obj: &LightObj) -> [f32; 3] {
         [-lt_obj.ldir[0], -lt_obj.ldir[1], -lt_obj.ldir[2]]
     }
 
     /// `GXInitSpecularDir`, with the inline `sqrtf`.
-    #[doc(alias = "GXInitSpecularDir")]
     pub fn init_specular_dir(&self, lt_obj: &mut LightObj, nx: f32, ny: f32, nz: f32) {
         let vx = fp::fneg(reg(nx));
         let vy = fp::fneg(reg(ny));
@@ -193,7 +188,7 @@ impl Gx {
         ];
     }
 
-    #[doc(alias = "GXInitSpecularDirHA")]
+    /// `GXInitSpecularDirHA`.
     #[allow(clippy::too_many_arguments)]
     pub fn init_specular_dir_ha(
         &self,
@@ -219,7 +214,6 @@ impl Gx {
     }
 
     /// `GXGetLightColor`.
-    #[doc(alias = "GXGetLightColor")]
     pub fn get_light_color(&self, lt_obj: &LightObj) -> Color {
         let [r, g, b, a] = lt_obj.color.to_be_bytes();
         Color { r, g, b, a }
@@ -247,7 +241,7 @@ impl Gx {
         self.data.bp_sent = 1;
     }
 
-    #[doc(alias = "GXLoadLightObjIndx")]
+    /// `GXLoadLightObjIndx`.
     pub fn load_light_obj_indx(&mut self, lt_obj_indx: u32, light: u32) {
         let idx = light_index(light);
         let addr = idx * 0x10 + 0x600;

@@ -89,7 +89,6 @@ impl Gx {
     }
 
     /// `GXSetVtxDescv`: the list ends at a `GX_VA_NULL` entry or the slice's end.
-    #[doc(alias = "GXSetVtxDescv")]
     pub fn set_vtx_descv(&mut self, list: &[VtxDescList]) {
         for d in list.iter().take_while(|d| d.attr != GX_VA_NULL) {
             self.set_vcd_attr(d.attr, d.ty);
@@ -123,7 +122,6 @@ impl Gx {
     }
 
     /// `GXGetVtxDesc`.
-    #[doc(alias = "GXGetVtxDesc")]
     pub fn get_vtx_desc(&self, attr: u32) -> u32 {
         let g = &self.data;
         match attr {
@@ -139,7 +137,6 @@ impl Gx {
     }
 
     /// `GXGetVtxDescv`: every attribute's type, then the `GX_VA_NULL` end.
-    #[doc(alias = "GXGetVtxDescv")]
     pub fn get_vtx_descv(&self) -> Vec<VtxDescList> {
         let mut v: Vec<_> = (0..GX_VA_MAX_ATTR)
             .map(|attr| VtxDescList {
@@ -246,7 +243,6 @@ impl Gx {
     }
 
     /// `GXSetVtxAttrFmtv`: the list ends at a `GX_VA_NULL` entry or the slice's end.
-    #[doc(alias = "GXSetVtxAttrFmtv")]
     pub fn set_vtx_attr_fmtv(&mut self, vtxfmt: u32, list: &[VtxAttrFmtList]) {
         for l in list.iter().take_while(|l| l.attr != GX_VA_NULL) {
             self.set_vat_attr(vtxfmt as usize, l.attr, l.cnt, l.ty, l.frac);
@@ -269,7 +265,6 @@ impl Gx {
     }
 
     /// `GXGetVtxAttrFmt`: the attribute's (count, type, frac).
-    #[doc(alias = "GXGetVtxAttrFmt")]
     pub fn get_vtx_attr_fmt(&self, fmt: u32, attr: u32) -> (u32, u32, u8) {
         let g = &self.data;
         let (va, vb, vc) = (
@@ -302,7 +297,6 @@ impl Gx {
     }
 
     /// `GXGetVtxAttrFmtv`: every attribute from `GX_VA_POS` on, then the `GX_VA_NULL` end.
-    #[doc(alias = "GXGetVtxAttrFmtv")]
     pub fn get_vtx_attr_fmtv(&self, fmt: u32) -> Vec<VtxAttrFmtList> {
         let mut v: Vec<_> = (GX_VA_POS..GX_VA_MAX_ATTR)
             .map(|attr| {
@@ -435,7 +429,6 @@ impl Gx {
 
     /// `GXSetTexCoordGen` (GXGeometry.h's inline): no normalization, the identity
     /// post-transform matrix.
-    #[doc(alias = "GXSetTexCoordGen")]
     pub fn set_tex_coord_gen(&mut self, dst_coord: u32, func: u32, src_param: u32, mtx: u32) {
         self.set_tex_coord_gen2(dst_coord, func, src_param, mtx, GX_FALSE, GX_PTIDENTITY);
     }

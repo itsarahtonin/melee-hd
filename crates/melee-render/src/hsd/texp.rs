@@ -622,7 +622,7 @@ impl TExpList {
         self.cnst_mut(e.node())
     }
 
-    #[doc(alias = "AssignColorReg")]
+    /// `AssignColorReg`.
     fn assign_color_reg(&mut self, t: usize, idx: usize, res: &mut Res) -> i32 {
         const A_IN: [u32; 4] = [GX_CC_A0, GX_CC_A1, GX_CC_A2, GX_CC_APREV];
         const C_IN: [u32; 4] = [GX_CC_C0, GX_CC_C1, GX_CC_C2, GX_CC_CPREV];

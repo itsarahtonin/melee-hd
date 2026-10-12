@@ -88,10 +88,9 @@ pub fn free_color_register(i0: i32, desc: &TevDesc, extra: &[u8]) -> i32 {
     (i0.max(0)..7).find(|&i| !used[i as usize]).unwrap_or(-1)
 }
 
-/// `lbGetFreeAlphaRegister`: as [`free_color_register`] but counting only the stages' alpha
-/// outputs (the original passes the constants and ignores them).
-#[doc(alias = "lbGetFreeAlphaRegister")]
-#[doc(alias = "lbGetFreeAlphaRegImpl")]
+/// `lbGetFreeAlphaRegister` (`lbGetFreeAlphaRegImpl`): as [`free_color_register`] but
+/// counting only the stages' alpha outputs (the original passes the constants and ignores
+/// them).
 pub fn free_alpha_register(i0: i32, desc: &TevDesc) -> i32 {
     let mut used = [false; 8];
     for s in &desc.stages {
@@ -113,13 +112,11 @@ pub fn kcsel(i: i32) -> u32 {
 }
 
 /// The alpha input reading register `i`, `lb_8000CD90` (`lb_803BA000`).
-#[doc(alias = "lb_8000CD90")]
 pub fn alpha_arg(i: i32) -> u32 {
     [6, 6, 6, 6, 1, 2, 3, 0][i as usize]
 }
 
 /// The konst alpha selection of konst register `i`, `lb_8000CDA8` (`lb_803BA020`).
-#[doc(alias = "lb_8000CDA8")]
 pub fn kasel(i: i32) -> u32 {
     [28, 29, 30, 31][i as usize]
 }
@@ -497,7 +494,6 @@ impl Ctx<'_> {
     /// chain for `frame`, its two coordinates (the normals' through texture matrix 0 and the
     /// positions' projected onto the screen copy), and one stage reading the screen copy
     /// offset by the indirect map, sent to GX directly (not through HAL's state cache).
-    #[doc(alias = "lbRefract_80022998")]
     fn refract_setup(&mut self, rendermode: u32, frame: usize) {
         const TEXTURE_MTX: [[f32; 4]; 3] = [
             [0.5, 0.0, 0.0, 0.5],

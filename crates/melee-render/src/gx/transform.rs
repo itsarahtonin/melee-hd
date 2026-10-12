@@ -91,7 +91,6 @@ impl Gx {
     }
 
     /// `GXSetProjectionv`: the type as a float, then the six values.
-    #[doc(alias = "GXSetProjectionv")]
     pub fn set_projectionv(&mut self, ptr: &[f32; 7]) {
         let g = &mut self.data;
         g.proj_type = melee_sim::ppc::cvt_fp2unsigned(reg(ptr[0]));
@@ -136,7 +135,7 @@ impl Gx {
         self.write_mtx_ps_4x3(mtx);
     }
 
-    #[doc(alias = "GXLoadPosMtxIndx")]
+    /// `GXLoadPosMtxIndx`.
     pub fn load_pos_mtx_indx(&mut self, mtx_indx: u16, id: u32) {
         let mut r = 0u32;
         set_field(&mut r, 12, 0, id * 4);
@@ -159,7 +158,7 @@ impl Gx {
         }
     }
 
-    #[doc(alias = "GXLoadNrmMtxImm3x3")]
+    /// `GXLoadNrmMtxImm3x3`.
     pub fn load_nrm_mtx_imm3x3(&mut self, mtx: &[[f32; 3]; 3], id: u32) {
         let addr = id * 3 + 0x400;
         self.write_u8(0x10);
@@ -171,7 +170,7 @@ impl Gx {
         }
     }
 
-    #[doc(alias = "GXLoadNrmMtxIndx3x3")]
+    /// `GXLoadNrmMtxIndx3x3`.
     pub fn load_nrm_mtx_indx3x3(&mut self, mtx_indx: u16, id: u32) {
         let mut r = 0u32;
         set_field(&mut r, 12, 0, id * 3 + 0x400);
@@ -205,7 +204,7 @@ impl Gx {
         }
     }
 
-    #[doc(alias = "GXLoadTexMtxIndx")]
+    /// `GXLoadTexMtxIndx`.
     pub fn load_tex_mtx_indx(&mut self, mtx_indx: u16, id: u32, ty: u32) {
         let offset = if id >= GX_PTTEXMTX0 {
             (id - GX_PTTEXMTX0) * 4 + 0x500
@@ -271,7 +270,6 @@ impl Gx {
     }
 
     /// `GXGetViewportv`: left, top, width, height, near, far.
-    #[doc(alias = "GXGetViewportv")]
     pub fn get_viewportv(&self) -> [f32; 6] {
         let g = &self.data;
         [g.vp_left, g.vp_top, g.vp_wd, g.vp_ht, g.vp_nearz, g.vp_farz]
@@ -294,7 +292,6 @@ impl Gx {
     }
 
     /// `GXGetScissor`: (left, top, width, height), with the original's offset of 340.
-    #[doc(alias = "GXGetScissor")]
     pub fn get_scissor(&self) -> (u32, u32, u32, u32) {
         let g = &self.data;
         let tp = g.su_scis0 & 0x7FF;
@@ -342,6 +339,5 @@ impl Gx {
     }
 
     /// `__GXSetRange` (GXStubs.c): empty in this SDK.
-    #[doc(alias = "__GXSetRange")]
     pub(crate) fn set_range(&mut self, _nearz: f32, _fg_side_x: f32) {}
 }

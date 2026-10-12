@@ -13,7 +13,6 @@ pub(super) struct Saved {
 impl Gx {
     /// `GXBeginDisplayList`: later writes build a display list, which `end_display_list`
     /// returns, instead of going to the FIFO. The list's buffer and size aren't modelled.
-    #[doc(alias = "GXBeginDisplayList")]
     pub fn begin_display_list(&mut self) {
         if self.data.dirty_state != 0 {
             self.set_dirty_state();
@@ -27,7 +26,6 @@ impl Gx {
     /// `GXEndDisplayList`: the list's bytes (the original returns their count). With
     /// `dlSaveContext` the state goes back to what it was at `begin_display_list`, but for
     /// `cpEnable`.
-    #[doc(alias = "GXEndDisplayList")]
     pub fn end_display_list(&mut self) -> Vec<u8> {
         if self.data.dirty_state != 0 {
             self.set_dirty_state();
