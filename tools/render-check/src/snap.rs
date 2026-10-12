@@ -68,6 +68,8 @@ pub struct Tex {
     pub hash: u64,
     pub tlut: Option<(u32, u64)>,
     pub address: u32,
+    /// The palette's first entries, for debugging (not compared).
+    pub tlut_head: Vec<u8>,
 }
 
 /// A transformed vertex: screen position, colors and texture coordinates.
@@ -133,11 +135,13 @@ impl Recorder {
             let image = Image::of(&state.bp, map);
             let mut data = vec![0; image.size() as usize];
             mem.read(image.address, &mut data);
+            let mut tlut_head = Vec::new();
             let tlut = texture::palette_entries(image.format).map(|entries| {
                 let reg = state.bp[texture::reg(texture::SETTLUT, map)];
                 let at = ((reg & 0x3FF) << 9) as usize;
                 let end = (at + 2 * entries as usize).min(state.tmem.len());
-                (reg >> 10 & 3, hash(&state.tmem[at..end]))
+                tlut_head = state.tmem[at..end.min(at + 32)].to_vec();
+                (reg & 0xFFF, hash(&state.tmem[at..end]))
             });
             textures.push(Tex {
                 map,
@@ -149,6 +153,7 @@ impl Recorder {
                 hash: hash(&data),
                 tlut,
                 address: image.address,
+                tlut_head,
             });
         }
         let xf_index = [state.xf[xform::MATINDEX_A], state.xf[xform::MATINDEX_A + 1]];

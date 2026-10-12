@@ -59,6 +59,14 @@ impl Disc {
         Ok(data)
     }
 
+    /// The game's executable (`main.dol`), as the disc holds it.
+    pub fn dol(&self) -> Result<Vec<u8>, DiscError> {
+        let mut partition = self
+            .reader
+            .open_partition_kind(PartitionKind::Data, &PartitionOptions::default())?;
+        Ok(partition.meta()?.raw_dol.to_vec())
+    }
+
     /// A file's entry number (`DVDConvertPathToEntrynum`): its index in the file system table.
     pub fn entrynum(&self, path: &str) -> Result<i32, DiscError> {
         let mut partition = self

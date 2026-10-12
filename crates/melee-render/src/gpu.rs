@@ -6,8 +6,8 @@
 use std::cell::RefCell;
 
 use melee_data::archive::Archives;
-use ssbm_gx::{Draw, Memory, Produced, Sink, State};
 use melee_gpu::Renderer;
+use ssbm_gx::{Draw, Memory, Produced, Sink, State};
 
 use crate::mem::Space;
 

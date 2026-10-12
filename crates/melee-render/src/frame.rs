@@ -190,8 +190,18 @@ impl Ctx<'_> {
                 n
             }
             Draw::Erase => {
-                let color = self.erase_color();
-                self.erase_screen(color);
+                // The game camera erases color; a magnifier bubble's camera (the only other
+                // that erases in a match) color and depth.
+                let full = self
+                    .hsd
+                    .camera
+                    .is_some_and(|v| v.viewport == [0.0, 640.0, 0.0, 480.0]);
+                let color = if full {
+                    self.erase_color()
+                } else {
+                    self.magnifier_erase_color()
+                };
+                self.erase_screen(color, !full);
                 1
             }
             Draw::Offscreen(b) => {
@@ -203,6 +213,14 @@ impl Ctx<'_> {
                 1
             }
             Draw::Particles { .. } => self.particles(draws, i),
+            Draw::MagnifierCopy(i) => {
+                self.magnifier_copy(*i);
+                1
+            }
+            Draw::SisText(d) => {
+                self.sis_text(d);
+                1
+            }
             Draw::Quad(_) => {
                 let quads: Vec<_> = draws[i..]
                     .iter()

@@ -40,6 +40,13 @@ pub fn play(
     to: u32,
     mut each: impl FnMut(u32, Drawn) -> bool,
 ) {
+    // The float mode the replay was recorded in: the console's for the benchmark matches
+    // (the default), Slippi Dolphin's for a Slippi replay (`CHECK_FP=slippi`).
+    let fp = match std::env::var("CHECK_FP").as_deref() {
+        Ok("slippi") => melee_sim::gekko_fp::FpMode::Slippi,
+        _ => melee_sim::gekko_fp::FpMode::Hardware,
+    };
+    melee_sim::gekko_fp::set_fp_mode(fp);
     let disc = Disc::open(disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
     let bytes = std::fs::read(replay_path).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let replay = Replay::parse(&bytes).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
@@ -63,6 +70,9 @@ pub fn play(
     let mut m = Match::start(&settings, &mut load);
     let mut device = Device(&replay);
     let mut frames = Frames::new();
+    frames
+        .space
+        .load_dol(&disc.dol().unwrap_or_else(|e| panic!("main.dol: {e}")));
     let renderer = melee_gpu::Renderer::new().expect("a GPU");
     let mut gpu = Gpu::new(renderer);
     let mut n = 0u32;

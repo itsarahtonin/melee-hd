@@ -26,6 +26,8 @@ pub enum Dynamic {
     RefractFrame,
     /// A magnifier bubble's copy of its fighter, by player.
     Magnifier(u8),
+    /// `HSD_EraseRect`'s depth image: 4 by 4 texels of 0xFF.
+    EraseDepth,
     /// Data of the executable the GPU reads, by its address there (the particles' texture
     /// coordinates).
     Dol(u32),
@@ -58,6 +60,11 @@ pub struct Space {
     /// length, and the vertex stride and the offsets of the two indices, as
     /// `PObjs::refract_patches` holds them.
     pub patches: Vec<Patch>,
+    /// The executable's sections at their physical addresses (`main.dol`, its static data
+    /// such as the default font's glyphs).
+    dol: Vec<(u32, Vec<u8>)>,
+    /// Bytes copies from the EFB wrote over loaded data, by address.
+    overlay: RefCell<Vec<(u32, Vec<u8>)>>,
 }
 
 impl Default for Space {
@@ -69,6 +76,8 @@ impl Default for Space {
                 ..Ranges::default()
             }),
             patches: Default::default(),
+            dol: Vec::new(),
+            overlay: RefCell::new(Vec::new()),
         }
     }
 }
@@ -112,8 +121,18 @@ impl Space {
         start
     }
 
-    /// Writes bytes the renderer copied back into an image the presentation made.
+    /// Writes bytes the renderer copied back: into an image the presentation made, or over
+    /// loaded data, which reads then see.
     pub fn write(&self, addr: u32, bytes: &[u8]) {
+        let addr = addr & 0x03FF_FFFF;
+        if addr < DYNAMIC_BASE {
+            let mut o = self.overlay.borrow_mut();
+            o.retain(|(a, b)| {
+                !(*a >= addr && *a as usize + b.len() <= addr as usize + bytes.len())
+            });
+            o.push((addr, bytes.to_vec()));
+            return;
+        }
         let mut ranges = self.ranges.borrow_mut();
         for d in &mut ranges.dynamic {
             if addr >= d.0 && addr < d.0 + d.1 {
@@ -121,6 +140,21 @@ impl Space {
                 let n = bytes.len().min(d.3.len() - at);
                 d.3[at..at + n].copy_from_slice(&bytes[..n]);
             }
+        }
+    }
+
+    /// Maps the executable's text and data sections (`main.dol`'s header: 18 file offsets,
+    /// load addresses and sizes) where the console loads them.
+    pub fn load_dol(&mut self, dol: &[u8]) {
+        let word = |at: usize| u32::from_be_bytes(dol[at..at + 4].try_into().unwrap());
+        self.dol.clear();
+        for i in 0..18 {
+            let (off, addr, size) = (word(4 * i) as usize, word(0x48 + 4 * i), word(0x90 + 4 * i));
+            if size == 0 || off + size as usize > dol.len() {
+                continue;
+            }
+            self.dol
+                .push((addr & 0x01FF_FFFF, dol[off..off + size as usize].to_vec()));
         }
     }
 
@@ -140,6 +174,16 @@ impl Space {
             }
             return;
         }
+        if phys < ARCHIVE_BASE {
+            for (start, bytes) in &self.dol {
+                if phys >= *start && ((phys - start) as usize) < bytes.len() {
+                    let at = (phys - start) as usize;
+                    let n = out.len().min(bytes.len() - at);
+                    out[..n].copy_from_slice(&bytes[at..at + n]);
+                }
+            }
+            return;
+        }
         let i = ranges.archives.partition_point(|a| a.0 <= phys);
         if i == 0 {
             return;
@@ -152,6 +196,13 @@ impl Space {
         let at = (phys - start) as usize;
         let n = out.len().min(bytes.len() - at);
         out[..n].copy_from_slice(&bytes[at..at + n]);
+        for (a, b) in self.overlay.borrow().iter() {
+            let (lo, hi) = (*a.max(&phys), (*a + b.len() as u32).min(phys + n as u32));
+            if lo < hi {
+                out[(lo - phys) as usize..(hi - phys) as usize]
+                    .copy_from_slice(&b[(lo - a) as usize..(hi - a) as usize]);
+            }
+        }
         // The game's rewrites of refracting shapes' display lists.
         for p in &self.patches {
             if p.list.archive != archive {

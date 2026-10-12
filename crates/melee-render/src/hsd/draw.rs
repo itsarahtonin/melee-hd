@@ -32,8 +32,6 @@ pub struct Ctx<'a> {
 const RENDER_SHADOW: u32 = 1 << 26;
 const RENDER_TOON: u32 = 1 << 12;
 const RENDER_SPECULAR: u32 = 1 << 3;
-const RENDER_XLU: u32 = 1 << 30;
-const RENDER_NO_ZUPDATE: u32 = 1 << 29;
 const TEX_BUMP: u32 = 1 << 24;
 const JOBJ_BILLBOARD_FIELD: u32 = 0xE00;
 const JOBJ_BILLBOARD: u32 = 0x200;
@@ -222,6 +220,7 @@ impl Ctx<'_> {
                     max_lod: 0.0,
                 })
             }
+            Some(ImageRef::Static(at)) => self.static_image(at),
             Some(other) => {
                 self.hsd.note(format!("image {other:?}"));
                 None
@@ -479,14 +478,25 @@ impl Ctx<'_> {
         }
     }
 
-    /// `HSD_MObjSetup` for HAL's material class (and the stage and item classes, whose color
-    /// overlays come on top): colors, textures, TEV and render mode.
+    /// `HSD_MObjSetup` for HAL's material class: colors, textures, TEV and render mode, with
+    /// `rendermode_extra` and the pixel-engine settings `pe_override` for callers that change
+    /// them.
     pub fn mobj_setup(
         &mut self,
         m: MObjId,
         rendermode_extra: u32,
         pe_override: Option<mobj::PeDesc>,
     ) {
+        let (_, rendermode) = self.mobj_setup_tev_part(m);
+        let pe = pe_override.or(self.game.objs.mobjs[m].pe);
+        self.mobj_setup_render_mode(rendermode | rendermode_extra, pe);
+    }
+
+    /// `HSD_MObjSetup` up to the material's TEV (`setup_tev`), which every class's setup
+    /// shares: the material's colors, its textures and their coordinates, then its compiled
+    /// and volatile stages. Returns the compiled stages (`mobj->tevdesc`, `mobj->texp`) and
+    /// the material's render mode.
+    pub fn mobj_setup_tev_part(&mut self, m: MObjId) -> (super::texp::TevDesc, u32) {
         self.hsd.tev.init_tev();
         let o = &self.game.objs.mobjs[m];
         let rendermode = o.rendermode;
@@ -504,9 +514,12 @@ impl Ctx<'_> {
         let chain = material_chain(self.objs(), m, rendermode);
         self.tobj_setup(&chain);
         self.tobj_setup_coord_gen(&chain);
-        self.setup_tev(m, &chain, rendermode);
-        let rendermode = rendermode | rendermode_extra;
-        let pe = pe_override.or(self.game.objs.mobjs[m].pe);
+        let desc = self.setup_tev(m, &chain, rendermode);
+        (desc, rendermode)
+    }
+
+    /// The end of `HSD_MObjSetup`: `HSD_SetupRenderModeWithCustomPE`.
+    pub fn mobj_setup_render_mode(&mut self, rendermode: u32, pe: Option<mobj::PeDesc>) {
         let objs = &self.game.objs;
         let mut lights = ChannelLights {
             state: &mut self.hsd.lights,
@@ -520,7 +533,7 @@ impl Ctx<'_> {
     }
 
     /// `MObjSetupTev`: the material's compiled stages, then the volatile ones.
-    fn setup_tev(&mut self, m: MObjId, chain: &[TObjId], rendermode: u32) {
+    fn setup_tev(&mut self, m: MObjId, chain: &[TObjId], rendermode: u32) -> super::texp::TevDesc {
         let objs = &self.game.objs;
         let desc = super::texp_make::compile_material(objs, m, chain);
         super::texp_make::mobj_setup_tev(
@@ -531,56 +544,7 @@ impl Ctx<'_> {
             chain,
             rendermode,
         );
-    }
-
-    /// The fighters' material setup, `ftMaterial_800BF2B8`, for the fighter being drawn.
-    fn fighter_mobj_setup(&mut self, m: MObjId) {
-        let Some(f) = self.hsd.fighter() else {
-            self.hsd.note("a fighter material outside a fighter".into());
-            return self.mobj_setup(m, 0, None);
-        };
-        let game = self.game;
-        let fp = &game.fighters[f.0];
-        if fp.x2226_b5 {
-            self.hsd.note("refraction (lbRefract_80022998)".into());
-            return self.mobj_setup(m, 0, None);
-        }
-        if !fp.x2223_b2 && (!fp.x2228_b0 || !fp.x2224_b0) && (fp.is_metal || fp.x2227_b3) {
-            self.hsd.note("a metal or swapped fighter material".into());
-        }
-        let mut extra = 0;
-        if fp.x61D != 0xFF {
-            extra |= RENDER_NO_ZUPDATE | RENDER_XLU;
-        }
-        let overlay = if fp.x408.x28_colanim != [0; 4] {
-            &fp.x408
-        } else {
-            &fp.x488
-        };
-        let rendermode = game.objs.mobjs[m].rendermode | extra;
-        let lit = overlay.x7C_flag2 && overlay.x7C_light_enable;
-        if lit && rendermode & RENDER_XLU == 0 && !fp.x2223_b2 {
-            self.hsd
-                .note("a fighter's light overlay (ftMaterial_800BF534)".into());
-        }
-        if fp.x2223_b2 && !fp.x2223_b3 {
-            extra |= RENDER_NO_ZUPDATE;
-        }
-        let pe = (fp.x2223_b3 && fp.x61D == 0xFF).then_some(mobj::PeDesc {
-            flags: (1 << 3) | (1 << 4) | (1 << 5),
-            ref0: 0,
-            ref1: 0,
-            dst_alpha: 0,
-            ty: 0,
-            src_factor: 4,
-            dst_factor: 5,
-            logic_op: 15,
-            z_comp: 3,
-            alpha_comp0: 7,
-            alpha_op: 0,
-            alpha_comp1: 7,
-        });
-        self.mobj_setup(m, extra, pe);
+        desc
     }
 
     /// `HSD_PObjDisp`: culling, the shape's matrices, then its display list.
@@ -877,10 +841,8 @@ impl Ctx<'_> {
             self.hsd.tobj_chain = material_chain(self.objs(), m, self.objs().mobjs[m].rendermode);
             match self.objs().mobjs[m].class {
                 MObjClass::Fighter => self.fighter_mobj_setup(m),
-                MObjClass::Ground | MObjClass::Item => {
-                    self.mobj_setup(m, 0, None);
-                    self.hsd.note_once("stage and item color overlays");
-                }
+                MObjClass::Ground => self.ground_mobj_setup(m),
+                MObjClass::Item => self.item_mobj_setup(m),
                 MObjClass::Hsd => self.mobj_setup(m, 0, None),
             }
         } else {

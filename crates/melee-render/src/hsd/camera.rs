@@ -68,8 +68,9 @@ impl Ctx<'_> {
         }
     }
 
-    /// `HSD_CObjEraseScreen` with color only, in `color` (`HSD_SetEraseColor`).
-    pub fn erase_screen(&mut self, color: Color) {
+    /// `HSD_CObjEraseScreen` for color, and depth when `depth`, in `color`
+    /// (`HSD_SetEraseColor`).
+    pub fn erase_screen(&mut self, color: Color, depth: bool) {
         let Some(v) = self.hsd.camera else { return };
         let z = (0.5 * f64::from(v.near + v.far)) as f32;
         let [p0, p1, p2, p3] = v.projection;
@@ -86,20 +87,55 @@ impl Ctx<'_> {
             }
             _ => (p0, p1, p2, p3),
         };
-        self.erase_rect(top, bottom, left, right, -z, color);
+        self.erase_rect(top, bottom, left, right, -z, color, depth);
     }
 
-    /// `HSD_EraseRect` with color only.
-    fn erase_rect(&mut self, top: f32, bottom: f32, left: f32, right: f32, z: f32, c: Color) {
+    /// `HSD_EraseRect` for color, and depth when `depth`.
+    #[allow(clippy::too_many_arguments)]
+    fn erase_rect(
+        &mut self,
+        top: f32,
+        bottom: f32,
+        left: f32,
+        right: f32,
+        z: f32,
+        c: Color,
+        depth: bool,
+    ) {
+        if depth {
+            let at = self.space.dynamic(crate::mem::Dynamic::EraseDepth, 32);
+            self.space.write(at, &[0xFF; 32]);
+            let mut tex = TexObj::default();
+            let gx = &mut *self.gx;
+            gx.init_tex_obj(
+                &mut tex, at, 4, 4, GX_TF_Z8, GX_REPEAT, GX_REPEAT, GX_DISABLE,
+            );
+            gx.load_tex_obj(&tex, GX_TEXMAP0);
+            gx.set_num_tex_gens(1);
+            gx.set_tex_coord_gen2(
+                GX_TEXCOORD0,
+                GX_TG_MTX2X4,
+                GX_TG_TEX0,
+                GX_IDENTITY,
+                GX_NONE as u8,
+                GX_PTIDENTITY,
+            );
+            gx.set_num_tev_stages(1);
+            gx.set_tev_order(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+            gx.set_tev_op(GX_TEVSTAGE0, GX_PASSCLR);
+            gx.set_z_texture(GX_ZT_REPLACE, GX_TF_Z8, 0);
+        } else {
+            let gx = &mut *self.gx;
+            gx.set_num_tex_gens(0);
+            gx.set_num_tev_stages(1);
+            gx.set_tev_order(GX_TEVSTAGE0, GX_TEXCOORD_NULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+            gx.set_tev_op(GX_TEVSTAGE0, GX_PASSCLR);
+        }
         let gx = &mut *self.gx;
-        gx.set_num_tex_gens(0);
-        gx.set_num_tev_stages(1);
-        gx.set_tev_order(GX_TEVSTAGE0, GX_TEXCOORD_NULL, GX_TEXMAP_NULL, GX_COLOR0A0);
-        gx.set_tev_op(GX_TEVSTAGE0, GX_PASSCLR);
         gx.set_cull_mode(GX_CULL_NONE);
         gx.set_alpha_compare(GX_ALWAYS, 0, GX_AOP_OR, GX_ALWAYS, 0);
         gx.set_z_comp_loc(GX_TRUE);
-        gx.set_z_mode(GX_ENABLE, GX_ALWAYS, GX_DISABLE);
+        gx.set_z_mode(GX_ENABLE, GX_ALWAYS, u8::from(depth));
         gx.set_blend_mode(GX_BM_LOGIC, GX_BL_ONE, GX_BL_ZERO, GX_LO_COPY);
         gx.set_color_update(GX_ENABLE);
         gx.set_alpha_update(GX_DISABLE);

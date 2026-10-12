@@ -148,7 +148,7 @@ pub enum Cnst {
 
 /// A constant's value as `HSD_TExpSetReg` reads it through its pointer and type.
 #[derive(Clone, Copy, Debug, PartialEq)]
-enum CnstValue {
+pub enum CnstValue {
     /// `HSD_TE_U8` through a `GXColor*`.
     Color(Color),
     /// `HSD_TE_U8`.
@@ -1017,22 +1017,39 @@ pub fn set_reg(gx: &mut Gx, state: &mut TevState, objs: &Objects, cnsts: &[CnstR
     send_reg(gx, state, &reg, changed);
 }
 
+/// `HSD_TExpSetReg` of a list of constants whose values are given (a material class's own
+/// constants, which point at values in its object or on the stack): `(value, comp, reg, idx)`.
+pub fn set_reg_values(gx: &mut Gx, state: &mut TevState, cnsts: &[(CnstValue, u8, u8, u8)]) {
+    let (reg, changed) = values_to_regs(cnsts.iter().copied());
+    send_reg(gx, state, &reg, changed);
+}
+
 /// The registers' values a description's constants give, and which registers they set:
 /// `HSD_TExpSetReg`'s reads.
 pub fn reg_values(objs: &Objects, cnsts: &[CnstReg]) -> ([Color; 8], u32) {
+    values_to_regs(
+        cnsts
+            .iter()
+            .filter(|c| c.reg < 8)
+            .map(|c| (c.val.value(objs), c.comp, c.reg, c.idx)),
+    )
+}
+
+/// `HSD_TExpSetReg`'s register values from its constants' values.
+fn values_to_regs(cnsts: impl Iterator<Item = (CnstValue, u8, u8, u8)>) -> ([Color; 8], u32) {
     // The original's registers are uninitialized stack; a channel no constant sets is unused.
     let mut reg = [Color::default(); 8];
     let mut changed = 0u32;
-    for c in cnsts {
-        if c.reg >= 8 {
+    for (value, comp, creg, idx) in cnsts {
+        if creg >= 8 {
             continue;
         }
-        let r = usize::from(c.reg);
-        changed |= 1 << c.reg;
-        let value = c.val.value(objs);
-        if c.comp == TE_RGB {
-            let CnstValue::Color(col) = value else {
-                panic!("an RGB constant {:?} that isn't a color", c.val);
+        let r = usize::from(creg);
+        changed |= 1 << creg;
+        if comp == TE_RGB {
+            let col = match value {
+                CnstValue::Color(col) => col,
+                v => panic!("an RGB constant {v:?} that isn't a color"),
             };
             reg[r] = Color { a: reg[r].a, ..col };
         } else {
@@ -1040,16 +1057,16 @@ pub fn reg_values(objs: &Objects, cnsts: &[CnstReg]) -> ([Color; 8], u32) {
                 CnstValue::U8(x) => x,
                 // `(int) (0xFF * f)` in single precision.
                 CnstValue::F32(f) => channel((255.0f32 * f) as i32),
-                CnstValue::Color(_) => panic!("a scalar constant {:?} that's a color", c.val),
+                CnstValue::Color(_) => panic!("a scalar constant that's a color"),
             };
             if r < 4 {
-                match c.idx {
+                match idx {
                     0 => reg[r].r = val,
                     1 => reg[r].g = val,
                     2 => reg[r].b = val,
                     _ => reg[r].a = val,
                 }
-            } else if c.idx == 3 {
+            } else if idx == 3 {
                 reg[r].a = val;
             } else {
                 reg[r].r = val;
