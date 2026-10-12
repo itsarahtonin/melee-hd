@@ -44,13 +44,16 @@ enum Packet {
     Forget(u32, u32),
 }
 
+/// What one copy to a texture wrote: each row's address and bytes.
+type CopyRows = Vec<(u32, Vec<u8>)>;
+
 /// Frames the render thread has finished, and what its copies to textures wrote to memory
 /// that the game thread hasn't taken yet, by which copy it was (counting from 0).
 #[derive(Default)]
 struct Done {
     frames: Mutex<u64>,
     cond: Condvar,
-    written: Mutex<Vec<(u64, Vec<(u32, Vec<u8>)>)>>,
+    written: Mutex<Vec<(u64, CopyRows)>>,
 }
 
 /// A `Renderer` on its own thread, as a sink for the game thread's GX stream.
@@ -337,7 +340,7 @@ fn run(mut renderer: Renderer, rx: &mpsc::Receiver<Vec<Packet>>, done: &Done) {
                         *done.frames.lock().unwrap() += 1;
                         done.cond.notify_all();
                     } else {
-                        let rows: Vec<(u32, Vec<u8>)> = renderer
+                        let rows: CopyRows = renderer
                             .take_written()
                             .into_iter()
                             .map(|w| (w.address, w.bytes))

@@ -47,12 +47,24 @@ impl Rng {
 /// BP 0x52's value for a copy to a texture of `format`, halved or not, with the intensity
 /// (YUV) flags or not.
 fn copy_value(format: u32, half: u32, yuv: bool) -> u32 {
-    let tp = if format < 8 { format * 2 } else { (format - 8) * 2 + 1 };
+    let tp = if format < 8 {
+        format * 2
+    } else {
+        (format - 8) * 2 + 1
+    };
     tp << 3 | half << 9 | if yuv { 1 << 15 | 1 << 16 } else { 0 } | 0x52 << 24
 }
 
 #[allow(clippy::too_many_arguments)]
-fn state(pixel_format: u32, left: u32, top: u32, wm1: u32, hm1: u32, addr: u32, stride: u32) -> State {
+fn state(
+    pixel_format: u32,
+    left: u32,
+    top: u32,
+    wm1: u32,
+    hm1: u32,
+    addr: u32,
+    stride: u32,
+) -> State {
     let mut s = State::new();
     s.bp[0x43] = pixel_format;
     s.bp[0x49] = left | top << 10;
@@ -67,7 +79,7 @@ fn state(pixel_format: u32, left: u32, top: u32, wm1: u32, hm1: u32, addr: u32, 
 fn texel_bits(format: u32, block: &[u8], i: usize) -> u32 {
     if format == 0 {
         let b = u32::from(block[i / 2]);
-        if i % 2 == 0 { b >> 4 } else { b & 0xF }
+        if i.is_multiple_of(2) { b >> 4 } else { b & 0xF }
     } else {
         u32::from(u16::from_be_bytes([block[2 * i], block[2 * i + 1]]))
     }
@@ -119,8 +131,15 @@ fn check_case(
     assert_eq!(f.address, e.address, "{label}");
     assert_eq!(f.stride, e.stride, "{label}");
     assert_eq!(f.rows as usize, e.rows.len(), "{label}");
-    assert!(e.rows.iter().all(|row| row.len() == f.row_bytes as usize), "{label}");
-    assert_eq!((r.width, r.height), ((wm1 >> half) + 1, (hm1 >> half) + 1), "{label}");
+    assert!(
+        e.rows.iter().all(|row| row.len() == f.row_bytes as usize),
+        "{label}"
+    );
+    assert_eq!(
+        (r.width, r.height),
+        ((wm1 >> half) + 1, (hm1 >> half) + 1),
+        "{label}"
+    );
     let c = Copied {
         id: 0,
         format: r.format,
@@ -148,7 +167,11 @@ fn check_case(
     let texels_per_block = (bw * bh) as usize;
     for (tb, ((at, row), want)) in got.iter().zip(&e.rows).enumerate() {
         let tb = tb as u32;
-        assert_eq!(*at, (e.address + tb * e.stride) & 0x01FF_FFFF, "{label} row {tb}");
+        assert_eq!(
+            *at,
+            (e.address + tb * e.stride) & 0x01FF_FFFF,
+            "{label} row {tb}"
+        );
         assert_eq!(row.len(), want.len(), "{label} row {tb}");
         stats.rows += 1;
         if row == want {
@@ -231,13 +254,26 @@ fn encode_texels_rewrites_the_encoders_bytes() {
                             let (left, top) = if trial == 2 {
                                 (EFB_WIDTH - ew, EFB_HEIGHT - eh)
                             } else {
-                                (rng.below(EFB_WIDTH - ew + 1), rng.below(EFB_HEIGHT - eh + 1))
+                                (
+                                    rng.below(EFB_WIDTH - ew + 1),
+                                    rng.below(EFB_HEIGHT - eh + 1),
+                                )
                             };
                             let addr = (0x0040_0000 + rng.below(0x0100_0000)) & !31;
                             let stride_pad = if trial == 1 { 32 * rng.below(4) } else { 0 };
                             check_case(
-                                &mut stats, &efb, format, yuv, pixel_format, half, left, top,
-                                wm1, hm1, addr, stride_pad,
+                                &mut stats,
+                                &efb,
+                                format,
+                                yuv,
+                                pixel_format,
+                                half,
+                                left,
+                                top,
+                                wm1,
+                                hm1,
+                                addr,
+                                stride_pad,
                             );
                         }
                     }
@@ -253,7 +289,17 @@ fn encode_texels_rewrites_the_encoders_bytes() {
             let top = rng.below(EFB_HEIGHT - hm1);
             let addr = rng.below(0x0200_0000) & !31;
             check_case(
-                &mut stats, &efb, format, yuv, pixel_format, half, left, top, wm1, hm1, addr,
+                &mut stats,
+                &efb,
+                format,
+                yuv,
+                pixel_format,
+                half,
+                left,
+                top,
+                wm1,
+                hm1,
+                addr,
                 32 * rng.below(3),
             );
         }
@@ -261,13 +307,19 @@ fn encode_texels_rewrites_the_encoders_bytes() {
         by_format.push(((format, yuv), stats));
     }
     for ((format, yuv), s) in &by_format {
-        assert_eq!(s.mismatches_inside, 0, "format {format} yuv {yuv}: texels inside differ");
+        assert_eq!(
+            s.mismatches_inside, 0,
+            "format {format} yuv {yuv}: texels inside differ"
+        );
         assert_eq!(
             s.past_nonzero_from_texels, 0,
             "format {format} yuv {yuv}: encode_texels wrote past the rectangle"
         );
         if *format == 5 {
-            assert!(s.opaque > 0 && s.translucent > 0, "both RGB5A3 forms exercised");
+            assert!(
+                s.opaque > 0 && s.translucent > 0,
+                "both RGB5A3 forms exercised"
+            );
         }
     }
 }
@@ -291,12 +343,24 @@ fn whole_block_copies_match_byte_for_byte() {
                     let efb = random_efb(&mut rng);
                     let mut stats = Stats::default();
                     check_case(
-                        &mut stats, &efb, format, yuv, pixel_format, half,
-                        rng.below(EFB_WIDTH - wm1), rng.below(EFB_HEIGHT - hm1), wm1, hm1,
-                        0x0080_0000, 0,
+                        &mut stats,
+                        &efb,
+                        format,
+                        yuv,
+                        pixel_format,
+                        half,
+                        rng.below(EFB_WIDTH - wm1),
+                        rng.below(EFB_HEIGHT - hm1),
+                        wm1,
+                        hm1,
+                        0x0080_0000,
+                        0,
                     );
                     assert_eq!(stats.texels_past, 0);
-                    assert_eq!(stats.whole_rows_equal, stats.rows, "format {format} {w}x{h}");
+                    assert_eq!(
+                        stats.whole_rows_equal, stats.rows,
+                        "format {format} {w}x{h}"
+                    );
                 }
             }
         }
@@ -325,7 +389,8 @@ fn footprint_is_what_the_encoder_writes() {
                             rng.below(1 << 24) << 5,
                             rng.below(1024) << 5,
                         );
-                        let value = tp << 3 | half << 9 | if yuv { 3 << 15 } else { 0 } | 0x52 << 24;
+                        let value =
+                            tp << 3 | half << 9 | if yuv { 3 << 15 } else { 0 } | 0x52 << 24;
                         let f = copy::footprint(&st, value);
                         let e = encode::encode(&st, value, &efb);
                         match (f, e) {

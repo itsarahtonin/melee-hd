@@ -35,7 +35,9 @@ pub fn renderer(gpu: &Gpu, scale: u32) -> melee_gpu::Renderer {
     let keys: Vec<[u32; 8]> = keys_path()
         .and_then(|p| std::fs::read(p).ok())
         .map(|b| {
-            b.chunks_exact(32)
+            b.as_chunks::<32>()
+                .0
+                .iter()
                 .map(|c| {
                     std::array::from_fn(|i| {
                         u32::from_le_bytes(c[4 * i..4 * i + 4].try_into().unwrap())

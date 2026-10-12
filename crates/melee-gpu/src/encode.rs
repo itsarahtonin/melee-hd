@@ -97,7 +97,7 @@ pub(crate) fn encode(state: &State, value: u32, efb: &[u8]) -> Option<Encoded> {
                     match format {
                         0 => {
                             let v = (x & 0xF0) as u8;
-                            dst[i / 2] |= if i % 2 == 0 { v } else { v >> 4 };
+                            dst[i / 2] |= if i.is_multiple_of(2) { v } else { v >> 4 };
                         }
                         1 | 8 => dst[i] = x as u8,
                         2 => dst[i] = ((a & 0xF0) | (x >> 4)) as u8,

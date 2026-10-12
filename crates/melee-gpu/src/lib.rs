@@ -155,7 +155,9 @@ impl Frame {
         let mut writer = encoder.write_header()?;
         let rgb: Vec<u8> = self
             .rgba
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .flat_map(|p| [p[0], p[1], p[2]])
             .collect();
         writer.write_image_data(&rgb)?;
@@ -290,12 +292,12 @@ fn sampled_image(state: &State, map: usize) -> Image {
 /// A fast hash of bytes, for telling textures apart.
 fn hash_bytes(bytes: &[u8]) -> u64 {
     let mut h: u64 = 0x9E37_79B9_7F4A_7C15 ^ bytes.len() as u64;
-    let mut chunks = bytes.chunks_exact(8);
-    for c in &mut chunks {
-        let v = u64::from_le_bytes(c.try_into().unwrap());
+    let (chunks, rest) = bytes.as_chunks::<8>();
+    for c in chunks {
+        let v = u64::from_le_bytes(*c);
         h = (h ^ v).wrapping_mul(0xFF51_AFD7_ED55_8CCD).rotate_left(29);
     }
-    for &b in chunks.remainder() {
+    for &b in rest {
         h = (h ^ u64::from(b)).wrapping_mul(0xC4CE_B9FE_1A85_EC53);
     }
     h ^ (h >> 33)
@@ -523,7 +525,11 @@ impl Renderer {
     /// [`Renderer::pipeline_cache_data`]), where the device keeps one: pipelines it holds
     /// compile without the driver's work. Call before drawing.
     pub fn use_pipeline_cache(&mut self, data: Option<&[u8]>) {
-        if !self.device.features().contains(wgpu::Features::PIPELINE_CACHE) {
+        if !self
+            .device
+            .features()
+            .contains(wgpu::Features::PIPELINE_CACHE)
+        {
             return;
         }
         // Safety: the data comes from `get_data` of a cache made on this kind of device;
@@ -1686,9 +1692,9 @@ impl Renderer {
             }
             let rect = [left, top, right, bottom];
             let (frame, t2) = if self.xfb_on_gpu {
-                let gpu = self
-                    .gpu_xfb
-                    .get_or_insert_with(|| xfb::GpuXfb::new(&self.device, &self.queue, &self.efb_view));
+                let gpu = self.gpu_xfb.get_or_insert_with(|| {
+                    xfb::GpuXfb::new(&self.device, &self.queue, &self.efb_view)
+                });
                 let (texture, width, height) =
                     gpu.copy(&self.device, &self.queue, state, value, rect, self.scale);
                 let t2 = std::time::Instant::now();

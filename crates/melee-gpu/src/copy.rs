@@ -144,7 +144,11 @@ pub(crate) fn encode_texels(c: &Copied, texels: &[u8]) -> Vec<(u32, Vec<u8>)> {
                         let i = (t * bw + s) as usize;
                         if c.format == 0 {
                             // I4: what decoded as c4(n) holds n in its top four bits.
-                            dst[i / 2] |= if i % 2 == 0 { (r & 0xF0) as u8 } else { (r >> 4) as u8 };
+                            dst[i / 2] |= if i.is_multiple_of(2) {
+                                (r & 0xF0) as u8
+                            } else {
+                                (r >> 4) as u8
+                            };
                         } else {
                             // RGB5A3: opaque texels decoded with alpha 255, the rest below it.
                             let v = if a == 255 {
