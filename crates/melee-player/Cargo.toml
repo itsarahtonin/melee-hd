@@ -16,4 +16,10 @@ melee-audio = { path = "../melee-audio" }
 melee-data.workspace = true
 melee-input = { path = "../melee-input" }
 melee-render = { path = "../melee-render" }
+melee-replay = { path = "../../tools/replay" }
 melee-sim.workspace = true
+ssbm-render.workspace = true
+ssbm-slippi.workspace = true
+pollster = "1"
+wgpu = "30"
+winit = "0.30"
