@@ -920,10 +920,9 @@ pub fn next_mode(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let p = param(r.game);
     let d = r.data;
-    let mode;
-    if r.game.grounds[g.0].u.stadium_display().count >= p.h(d, 0x50) {
+    let mode = if r.game.grounds[g.0].u.stadium_display().count >= p.h(d, 0x50) {
         r.game.grounds[g.0].u.stadium_display().count = 0;
-        mode = 14;
+        14
     } else {
         let (w48, w4a, w4c, w4e) = (
             i32::from(p.h(d, 0x48)),
@@ -932,7 +931,7 @@ pub fn next_mode(r: &mut Running, gobj: GObjId) {
             i32::from(p.h(d, 0x4E)),
         );
         let f = |v: i32| fp::frsp(f64::from(v));
-        mode = loop {
+        loop {
             let rand = f64::from(r.game.objs.rng.draw_f32());
             let mut val = fp::fmuls(
                 f(w48.wrapping_add(w4a).wrapping_add(w4c).wrapping_add(w4e)),
@@ -959,8 +958,8 @@ pub fn next_mode(r: &mut Running, gobj: GObjId) {
             if m != i32::from(v.mode) && m != i32::from(v.prev_mode) {
                 break m;
             }
-        };
-    }
+        }
+    };
     let v = r.game.grounds[g.0].u.stadium_display();
     v.count = v.count.wrapping_add(1);
     set_mode(r, gobj, mode, 0);

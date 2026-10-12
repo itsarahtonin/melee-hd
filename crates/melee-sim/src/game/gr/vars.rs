@@ -565,7 +565,7 @@ fn archive_slot(p: u32) -> Option<u8> {
     }
     let off = p.wrapping_sub(ARCHIVE_TABLE);
     assert!(
-        off < 4 * ARCHIVE_ENTRY && off % ARCHIVE_ENTRY == 0,
+        off < 4 * ARCHIVE_ENTRY && off.is_multiple_of(ARCHIVE_ENTRY),
         "{p:#x} isn't an entry of grDatFiles_8049EE10"
     );
     Some((off / ARCHIVE_ENTRY) as u8)
