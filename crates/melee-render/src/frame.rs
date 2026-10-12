@@ -1,0 +1,241 @@
+//! A frame's GX command stream: the scene loop's frame (`gm_801A4B60`'s render: the caches
+//! invalidated, `HSD_StartRender`, the display pass, `HSD_VICopyXFBAsync`) with each of the
+//! display pass's draws turned into what the original sends GX for it.
+
+use melee_data::archive::Archives;
+use melee_sim::game::state::Game;
+use melee_sim::hsd::display::Draw;
+
+use crate::gx::enums::*;
+use crate::gx::{Color, Gx};
+use crate::hsd::Hsd;
+use crate::hsd::draw::Ctx;
+use crate::mem::Space;
+
+/// The XFB the frame is copied to. Its address is the presentation's.
+pub const XFB_ADDR: u32 = 0x00F0_0000;
+
+/// What the frame's stream starts from and keeps from frame to frame: GX's state and HSD's.
+pub struct Frames {
+    pub gx: Gx,
+    pub hsd: Hsd,
+    pub space: Space,
+    /// How many rewritten display lists the address space knows.
+    patched: usize,
+    /// Frames built so far.
+    pub built: u32,
+}
+
+impl Default for Frames {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Frames {
+    /// GX as the game sets it up at boot: `GXInit`, then the video setup.
+    pub fn new() -> Frames {
+        let mut gx = Gx::new();
+        gx.init();
+        let mut hsd = Hsd::default();
+        // `HSD_GXInit`: every light slot loaded with a black light.
+        let mut light = crate::gx::LightObj::default();
+        gx.init_light_pos(&mut light, 1.0, 0.0, 0.0);
+        gx.init_light_dir(&mut light, 1.0, 0.0, 0.0);
+        gx.init_light_attn(&mut light, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+        gx.init_light_color(&mut light, Color::default());
+        for i in 0..8 {
+            gx.load_light_obj_imm(&light, 1 << i);
+        }
+        crate::hsd::state::States {
+            state: &mut hsd.state,
+            tev: &mut hsd.tev,
+        }
+        .invalidate(crate::hsd::state::STATE_ALL);
+        // The game's `main`: flush primitives of eight vertices after XF changes.
+        gx.set_misc(GX_MT_XF_FLUSH, 8);
+        Frames {
+            gx,
+            hsd,
+            space: Space::default(),
+            patched: usize::MAX,
+            built: 0,
+        }
+    }
+
+    /// The stream for one frame's draws, the copy to the XFB at its end.
+    pub fn frame(&mut self, game: &Game, data: &Archives, draws: &[Draw]) -> Vec<u8> {
+        let patches = &game.objs.pobjs.refract_patches;
+        if self.patched != patches.len() {
+            self.patched = patches.len();
+            self.space.patches = game
+                .objs
+                .pobjs
+                .pool
+                .iter()
+                .filter_map(|(_, p)| {
+                    let list = p.display?;
+                    let &(stride, pos, tex) = patches.get(&list)?;
+                    Some(crate::mem::Patch {
+                        list,
+                        len: u32::from(p.n_display) << 5,
+                        stride,
+                        pos,
+                        tex,
+                    })
+                })
+                .collect();
+            self.space.patches.sort_by_key(|p| (p.list, p.len));
+            self.space.patches.dedup();
+        }
+        self.built += 1;
+        self.hsd.debug_dl = std::env::var("MELEE_RENDER_DL")
+            .ok()
+            .and_then(|v| v.parse::<u32>().ok())
+            == Some(self.built - 1);
+        let mut ctx = Ctx {
+            gx: &mut self.gx,
+            hsd: &mut self.hsd,
+            game,
+            data,
+            space: &self.space,
+        };
+        ctx.gx.invalidate_vtx_cache();
+        ctx.gx.invalidate_tex_all();
+        ctx.start_render(false);
+        let mut i = 0;
+        while i < draws.len() {
+            i += ctx.draw(draws, i);
+        }
+        ctx.copy_xfb();
+        self.gx.take_fifo()
+    }
+}
+
+impl Ctx<'_> {
+    /// `HSD_StartRender`: the pixel format and field mode for the pass.
+    pub fn start_render(&mut self, offscreen: bool) {
+        self.hsd.offscreen = offscreen;
+        self.gx.set_pixel_fmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+        self.gx.set_field_mode(GX_FALSE, GX_FALSE);
+    }
+
+    /// Draws `draws[i]` (with the shapes after it of the same joint and pass); returns how
+    /// many it drew.
+    fn draw(&mut self, draws: &[Draw], i: usize) -> usize {
+        match &draws[i] {
+            Draw::Camera(c, view) => {
+                let v = self.game.objs.display.cameras[usize::from(*view)];
+                self.camera_begin(&v);
+                if self.hsd.offscreen
+                    && let Some((s, _)) = self
+                        .game
+                        .objs
+                        .shadows
+                        .iter()
+                        .find(|(_, s)| s.camera == Some(*c))
+                {
+                    self.shadow_start(melee_sim::hsd::shadow::ShadowId(s));
+                }
+                1
+            }
+            Draw::EndCamera => 1,
+            Draw::Lights(n) => {
+                let set = self.game.objs.display.light_sets[usize::from(*n)];
+                let objs = &self.game.objs;
+                self.hsd.lights.setup_init(self.gx, objs, &set);
+                1
+            }
+            Draw::Rendering(g) => {
+                self.hsd.rendering = *g;
+                self.hsd.rendering_fighter = g.and_then(|g| {
+                    let game = self.game;
+                    game.fighters
+                        .iter()
+                        .find(|(_, f)| f.gobj == Some(g))
+                        .map(|(i, _)| melee_sim::game::handles::FighterId(i))
+                });
+                1
+            }
+            Draw::Fog(f) => {
+                self.fog_set(*f);
+                1
+            }
+            Draw::Shape {
+                jobj,
+                trsp,
+                rendermode,
+                vmtx,
+                ..
+            } => {
+                let n = draws[i..]
+                    .iter()
+                    .position(|d| {
+                        !matches!(d, Draw::Shape { jobj: j, trsp: t, rendermode: r, vmtx: v, .. }
+                            if j == jobj && t == trsp && r == rendermode && v == vmtx)
+                    })
+                    .unwrap_or(draws.len() - i);
+                self.joint_shapes(&draws[i..i + n]);
+                n
+            }
+            Draw::Erase => {
+                let color = self.erase_color();
+                self.erase_screen(color);
+                1
+            }
+            Draw::Offscreen(b) => {
+                self.start_render(*b);
+                1
+            }
+            Draw::ShadowCopy(s) => {
+                self.shadow_copy(*s);
+                1
+            }
+            other => {
+                let name = format!("{other:?}");
+                let name = name.split(['(', ' ', '{']).next().unwrap_or("?").to_owned();
+                self.hsd.note(format!("draw {name}"));
+                1
+            }
+        }
+    }
+
+    /// The erase color of the camera drawing: the game camera's background color.
+    fn erase_color(&self) -> Color {
+        let cam = &self.game.camera.cam;
+        if cam.x398_b5 {
+            Color::new(0, 0, 0, 0xFF)
+        } else {
+            let c = &cam.background_color;
+            Color::new(c.r, c.g, c.b, 0xFF)
+        }
+    }
+
+    /// `HSD_VICopyXFBAsync` for the screen pass: the EFB copied to the XFB and cleared.
+    fn copy_xfb(&mut self) {
+        let gx = &mut *self.gx;
+        gx.set_copy_filter(GX_FALSE, &[[6, 6]; 12], GX_TRUE, &VFILTER);
+        gx.set_disp_copy_gamma(GX_GM_1_0);
+        self.hsd.state.set_color_update(gx, true);
+        self.hsd.state.set_alpha_update(gx, true);
+        self.hsd.state.set_z_mode(gx, true, GX_LEQUAL, true);
+        gx.set_copy_clear(Color::new(0, 0, 0, 0), 0x00FF_FFFF);
+        gx.set_copy_clamp(GX_CLAMP_TOP | GX_CLAMP_BOTTOM);
+        gx.set_disp_copy_src(
+            0,
+            0,
+            crate::hsd::camera::FB_WIDTH,
+            crate::hsd::camera::EFB_HEIGHT,
+        );
+        let lines = gx.set_disp_copy_y_scale(
+            f32::from(crate::hsd::camera::XFB_HEIGHT) / f32::from(crate::hsd::camera::EFB_HEIGHT),
+        );
+        gx.set_disp_copy_dst(crate::hsd::camera::FB_WIDTH, lines as u16);
+        gx.copy_disp(XFB_ADDR, GX_TRUE);
+        gx.pix_mode_sync();
+        gx.set_draw_done();
+    }
+}
+
+/// The render mode's vertical filter (`GXNtsc480IntDf`).
+const VFILTER: [u8; 7] = [8, 8, 10, 12, 10, 8, 8];

@@ -3,3 +3,9 @@
 //! draws them. Nothing here feeds back into the simulation.
 //!
 //! [`Draw`]: melee_sim::hsd::display::Draw
+
+pub mod frame;
+pub mod gpu;
+pub mod gx;
+pub mod hsd;
+pub mod mem;

@@ -303,6 +303,7 @@ pub fn step_tick(r: &mut Running, poll: PadData, reset_pressed: bool) -> (Tick, 
 /// The frame's display pass on the screen (`HSD_StartRender(HSD_RP_SCREEN)`), which counts
 /// the frame as rendered.
 pub fn render_screen(r: &mut Running) {
+    crate::hsd::display::start_frame(&mut r.game.objs);
     crate::hsd::display::set_offscreen(&mut r.game.objs, false);
     r.render_frame();
     let sc = &mut r.game.scene;

@@ -1,0 +1,18 @@
+[package]
+name = "melee-render-check"
+description = "Checks melee-render's frames against ssbm-rs's: the GPU state of each draw and the images"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+melee-data.workspace = true
+melee-render = { path = "../../crates/melee-render" }
+melee-replay = { path = "../replay" }
+melee-sim.workspace = true
+ssbm-gx.workspace = true
+ssbm-render.workspace = true
+ssbm-slippi.workspace = true
+png = "0.18"

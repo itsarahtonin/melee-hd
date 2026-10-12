@@ -175,6 +175,7 @@ impl Running<'_> {
             }
             crate::hsd::display::set_offscreen(&mut self.game.objs, true);
             self.game.world.rendering = Some(g);
+            crate::hsd::display::rendering(&mut self.game.objs, Some(g));
             let mut hooks = crate::game::code::ParticleHooks;
             shadow::start_render(&mut self.game.objs, self.data, &mut hooks, s);
             if draw_volume {
