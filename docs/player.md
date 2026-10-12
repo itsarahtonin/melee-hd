@@ -45,7 +45,26 @@ melee-render-check align "$SSBM_DISC" fox-fox-fd.slp f600.dff 560 600      # whi
 melee-render-check compare "$SSBM_DISC" fox-fox-fd.slp f600.dff f600 FRAME out/
 ```
 
-`compare` lines the two streams up event by event and reports each draw whose raster or TEV registers, TEV colors, sampled textures (by content), transformed vertices (screen positions, lit colors, texture coordinates) or copies differ, then compares the images with ssbm-rs's render tolerance: a PSNR of at least 38 dB, and at most 0.25% of the pixels off by more than 32 levels. It exits with failure when a frame is out of tolerance.
+`compare` lines the two streams up event by event and reports each draw whose raster or TEV registers (TEV stages and colors included), the transform unit's registers (channel colors and controls, viewport, projection, texture coordinate generation), sampled textures and palettes (by content), transformed vertices (screen positions, lit colors, texture coordinates) or copies differ, then compares the images with ssbm-rs's render tolerance: a PSNR of at least 38 dB, and at most 0.25% of the pixels off by more than 32 levels. It exits with failure when a frame is out of tolerance. The log's frame count drifts from the native one over a match (about 3 frames early on, 13 by frame 14,000), so `compare` takes the native frame within 16 either way whose draws share the most exact vertices with the log's (`CHECK_SEARCH` changes the range). `CHECK_FP=slippi` plays a Slippi replay in Slippi Dolphin's float mode; `CHECK_EVENT=N` prints one event of each side in full; `CHECK_DRAW_LIMIT=N` draws only the first N draws of each side, to find the draw where two images part; `melee-render-check play LOG.dff OUT/` draws a log alone.
+
+**Results.** The references are ssbm-rs runs (in ssbm-rs's `local/player/ref-*`) of three benchmark replays and a real Slippi replay, two consecutive frames from each of these log frames:
+
+| Match | Frames | Result |
+| --- | --- | --- |
+| Fox vs Fox, Final Destination | 140, 300, 600, 1000, 2600, 5000, 8000, 11000, 14000 | Identical (PSNR infinite) |
+| Fox vs Marth, Battlefield | 600, 2600, 6000, 11000 | Identical |
+| Fox vs Marth, Final Destination | 600, 6000 | Identical |
+| Fox vs Sheik and Zelda, Final Destination (Slippi replay) | 600, 1400, 6000 | Out of tolerance (PSNR 31.5 to 32.9 dB, 0.22% to 0.37% of the pixels off by 32): every differing pixel is in the two players' name plates, which Slippi's code draws and melee-sim doesn't (35 or 36 draws); the rest is identical |
+
+The differences left in the draws themselves don't change a pixel: a few vertices' specular colors (the second color channel) one to four levels apart, palette bytes past the entries a texture uses, the texture cache's layout registers (compared with `CHECK_ALL_BP`) for texture slots a draw doesn't sample, and an extra draw of zero area off screen in some frames.
+
+### Resolution, widescreen and pipelines
+
+**Resolution scaling.** melee-gpu is ssbm-render with one addition: an EFB `scale` times the console's 640 by 480. Draws rasterize at the scaled size; EFB copies to textures (shadows, the magnifier's bubbles) average each block back to the console's size, so the game's textures stay what it expects, and the copy to the XFB keeps the scaled size for the window. The dither pattern scales with it. `--scale N` sets it; by default it's the smallest whose 480 lines cover the window's height (3 for 1440p). At scale 1 the output is ssbm-render's, which is what the frame checks compare.
+
+**Decision: widescreen widens the drawn cameras, not the gameplay camera.** With `--widescreen` (16:9) or `--aspect W:H`, each camera whose viewport covers the whole screen sees `aspect / (4/3)` times as wide at the same height (a perspective camera's aspect ratio, an orthographic or frustum camera's left and right about their center), and the frame is shown at that aspect ratio. The game camera, which the simulation runs and which decides who is off screen, stays 4:3, as Slippi's widescreen code keeps it; only the rendered view sees more of the stage. The HUD's orthographic cameras widen the same way, so the HUD keeps its shape and its place in the 4:3 middle. Cameras that draw into textures (shadows, the magnifier's bubbles) are left alone. The render pass can't tell those apart by its offscreen flag, since the original leaves the frame in the shadows' offscreen pass, so the viewport decides.
+
+**Decision: pipelines are kept by what they're made for, after Aurora's design.** ssbm-render runs the TEV in one shader, so pipelines differ only in blending, color and alpha writes and the depth test. The player records every pipeline key it has needed in `%LOCALAPPDATA%\melee-hd\pipelines.bin` (`$XDG_CACHE_HOME/melee-hd` elsewhere) and makes them all before the first frame of the next run, with the driver's own pipeline cache (wgpu's `PipelineCache`, where the backend has one) kept beside it. A frame never waits on a pipeline the player has made before.
 
 ## Audio
 
@@ -72,3 +91,34 @@ melee-audio-check audio-fox-fox-fd.trc fox-fox-fd.slp audio-fox-fox-fd.wav --fp 
 `melee-audio-check` plays the replay natively from the trace's boot state, mixes it, and aligns the two streams: an exact match of 1024 samples if there is one, else cross-correlation. ssbm-rs's recording starts at power-on, and the native mix starts at the boot state, 4000 samples (25 frames) later. It then reports each window's SNR, largest difference and share of equal stereo samples, and the first sample that differs. On the Fox ditto on Final Destination (39.9 s compared) and Fox against Marth on Battlefield (59.9 s compared), the mix is sample-exact from the match's start to the recording's end, reverb and delay included: both effects processed sound in about 86% of the frames. The trace's game files that the fighters cache in ARAM (`PlFxAJ.dat`, `PlMsAJ.dat`) aren't sound and aren't in the device command queue's files, so the mixer skips them. On this machine mixing takes about 0.22 ms a tick.
 
 `melee-audio-check --out MIX.wav` writes the native mix.
+
+## Input
+
+`melee_input::Inputs::read` returns the four ports' `PADStatus` just before each tick. GameCube controllers on a Wii U adapter (or a copy, such as Mayflash's in Wii U mode) take their own ports. The adapter is read raw over USB with nusb, as Dolphin's GCAdapter reads it, not through SDL, which rescales the axes; on Windows it needs the WinUSB driver (Zadig installs it). A thread keeps the latest report and sends rumble, and each read turns the report into what `PADRead` returns, with the origin calibration the console's SI and PAD library do (ported from ssbm-rs's player). Standard gamepads (gilrs) and then the keyboard take the first ports left. The keyboard: arrows for the stick, IJKL for the C-stick, X, Z, C and S for A, B, X and Y, D for Z, Q and W for L and R, Enter for start, and left shift to halve the stick. `--no-adapter` leaves the adapter alone.
+
+## The player
+
+```sh
+melee-hd --p1 fox --p2 marth --stage bf [--stocks 4] [--minutes 8] [--widescreen | --aspect 21:9] [--scale N] [--size 1920x1440]
+melee-hd --replay fox-fox-fd.slp                       # a replay's match, its inputs played back
+melee-hd --boot-trace audio-fox-fox-fd.trc ...         # with sound (see Boot state)
+melee-hd --bench 1200 --size 2560x1440                 # headless, timing each frame
+```
+
+Characters and stages are what melee-sim has ported (`--help` lists them). The match runs at 60 ticks a second. The window keeps the frame's aspect ratio, letterboxed when resized.
+
+**Decision: the loop keeps one frame of latency.** Each tick reads the controllers immediately before it runs, and the frame it produces is turned into GX commands, drawn and presented at once; the swap chain is one frame deep and presents in mailbox mode where the display has it, else immediate (no vsync wait), else FIFO. The event loop sleeps until the next tick is due; after a stall of more than four ticks it drops the backlog instead of racing to catch up. Nothing waits on audio: the tick pushes its samples into the output's ring.
+
+`--bench` plays a match headless, draws every frame and presents it to an offscreen target of `--size`, and reports the time per tick for the simulation, the GX stream, the renderer and presenting.
+
+## Open issues
+
+- **Boot audio.** The boot's audio setup isn't ported in melee-sim, so sound needs `--boot-trace` (see Boot state).
+- **Name plates.** Slippi draws each player's display name under the damage counters; melee-sim doesn't run that code, so a Slippi replay's frames miss them. Every other draw of those frames matches.
+- **Refraction images.** Draws that sample the refraction copies (`ImageRef::Refract`, `ImageRef::RefractFrame`) aren't drawn exactly yet.
+- **Shape animations** aren't drawn; no checked frame uses one.
+- **The particle pass's boundaries** are inferred from the display commands (runs of `Draw::Particles`), and the magnifier bubble's erase color is an average of the colors the original reads; both match every checked frame.
+- **State cache resets** that stage, fighter and item draw callbacks make (`grDisplay`, `ftDrawCommon`, `itDraw`) are mirrored only where a checked frame needed them (the refraction callback's TEV reset).
+- **Speed.** ssbm-render builds each frame's draws on the CPU; at 1440p (internal scale 3) a frame takes 11.5 to 13 ms on average on the development machine (`--bench 1800`: GX stream 0.8 ms, renderer 8 to 10 ms, presenting 2 ms; the simulation 0.7 ms a tick), and the worst about 21 ms, so a frame now and then misses its 16.7 ms tick.
+- **No MSAA.**
+- **Unchecked ports.** The port ledger counts a presentation port as checked when the frame or audio checks run it (measured with coverage over the references). Eighteen ported functions no reference reaches yet (refraction's material setup and indirect texture matrices, a few TEV register and alpha register helpers, GX getters) carry no ledger alias, only their names in their doc comments, until one does. The GX SDK functions Melee doesn't link (ssbm-rs's symbol table lacks them) are named the same way.

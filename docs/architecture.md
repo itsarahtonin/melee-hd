@@ -28,7 +28,7 @@ Which voices are free depends on more than the driver: an effect plays on one or
 
 The schedule would still differ from ssbm-rs if a tick's ARAM loads ever ran past the next audio frame.
 
-The original's display traversal (`HSD_GObjRender` over the GX links, down through joints, display objects and shapes) changes game state as it draws. A joint's particle list spawns its particles the first time it is displayed, the particle system draws from the game's RNG, and setup computes joint and envelope matrices. So the display pass is simulation. melee-sim runs it where the original does, after a frame's engine ticks, and where the original issues GX commands it appends draw commands to the frame's output. The presentation layer turns those commands into GPU work, at any resolution or aspect ratio, but never decides what the pass runs.
+The original's display traversal (`HSD_GObjRender` over the GX links, down through joints, display objects and shapes) changes game state as it draws. A joint's particle list spawns its particles the first time it is displayed, the particle system draws from the game's RNG, and setup computes joint and envelope matrices. So the display pass is simulation. melee-sim runs it where the original does, after a frame's engine ticks, and where the original issues GX commands it appends draw commands to the frame's output. The presentation layer turns those commands into GPU work, at any resolution or aspect ratio, but never decides what the pass runs. [The player](player.md) describes that layer.
 
 ## Exactness
 
