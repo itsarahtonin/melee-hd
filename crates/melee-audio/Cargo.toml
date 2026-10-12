@@ -1,0 +1,11 @@
+[package]
+name = "melee-audio"
+description = "Mixes melee-sim's audio voices into samples, as the DSP's AX microcode does, and plays them"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+melee-sim.workspace = true

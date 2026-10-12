@@ -431,6 +431,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-audio"
+version = "0.1.0"
+dependencies = [
+ "melee-sim",
+]
+
+[[package]]
 name = "melee-bench"
 version = "0.1.0"
 dependencies = [
@@ -478,6 +485,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-input"
+version = "0.1.0"
+dependencies = [
+ "melee-sim",
+]
+
+[[package]]
 name = "melee-oracle"
 version = "0.1.0"
 dependencies = [
@@ -489,6 +503,25 @@ dependencies = [
  "ssbm-slippi",
  "ssbm-types",
  "zstd",
+]
+
+[[package]]
+name = "melee-player"
+version = "0.1.0"
+dependencies = [
+ "melee-audio",
+ "melee-data",
+ "melee-input",
+ "melee-render",
+ "melee-sim",
+]
+
+[[package]]
+name = "melee-render"
+version = "0.1.0"
+dependencies = [
+ "melee-data",
+ "melee-sim",
 ]
 
 [[package]]

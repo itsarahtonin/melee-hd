@@ -1,0 +1,11 @@
+[package]
+name = "melee-input"
+description = "Reads the keyboard, gamepads and the GameCube controller adapter into melee-sim's controller input"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+melee-sim.workspace = true

@@ -1,0 +1,12 @@
+[package]
+name = "melee-render"
+description = "Draws melee-sim's display pass with wgpu: HSD's material, shape and texture setup turned into GX state, drawn by ssbm-rs's renderer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+melee-data.workspace = true
+melee-sim.workspace = true
