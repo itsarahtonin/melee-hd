@@ -390,7 +390,7 @@ pub fn init_default(r: &mut Running, gobj: GObjId) {
 }
 
 /// The grass stage's setup (map 4), `grStadium_801D1648`.
-#[doc(alias = "grStadium_801D1648")]
+// Ports `grStadium_801D1648`; aliased once a check reaches it.
 pub fn init_grass(r: &mut Running, gobj: GObjId) {
     init_piece(r, gobj, &[3]);
     let g = ground_of(r.game, gobj);

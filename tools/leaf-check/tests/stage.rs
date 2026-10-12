@@ -659,6 +659,12 @@ type Step<'a> = (
 /// Imports a capture's state, runs `steps` on both sides (each step its ssbm-rs side, then
 /// ours), and requires the states to agree after each.
 fn on_state(path: &std::path::Path, steps: &[Step]) {
+    on_state_with(path, steps, false);
+}
+
+/// [`on_state`], with the text system and the HUD's globals imported and compared too when
+/// `hud` (Pokémon Stadium's screens write text).
+fn on_state_with(path: &std::path::Path, steps: &[Step], hud: bool) {
     let Some(env) = env() else { return };
     let cap = Capture::read(path);
     for mode in MODES {
@@ -671,6 +677,9 @@ fn on_state(path: &std::path::Path, steps: &[Step]) {
         imp.world();
         imp.stage();
         imp.ids();
+        if hud {
+            imp.hud();
+        }
         let Importer {
             mut game, mut maps, ..
         } = imp;
@@ -694,6 +703,9 @@ fn on_state(path: &std::path::Path, steps: &[Step]) {
             cmp.world();
             cmp.stage();
             cmp.ids();
+            if hud {
+                cmp.hud();
+            }
             if !cmp.diffs.is_empty() {
                 for d in cmp.diffs.iter().take(30) {
                     eprintln!("  {d}");
@@ -1525,4 +1537,70 @@ fn battle_empty_callbacks_and_demo() {
     steps.push(("grBattle_OnDemoInit", &demo_theirs, &demo_ours));
     steps.push(("grBattle_GObj0_Callback0", &main_theirs, &main_ours));
     on_state(&path, &steps);
+}
+
+/// Pokémon Stadium's entry points no full-match diff reaches (Ready outside sudden death, GAME!,
+/// whether the screen is zoomed on a player, the demo's init), from a capture of its
+/// transformation cycle (`local/calls/stage-more/ps1`).
+#[test]
+fn stadium_unreached_entries() {
+    use melee_sim::game::gr::stadium;
+    let dir = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| MORE_CALLS.to_owned());
+    let path = PathBuf::from(dir).join("ps1/grStadium_801D4548-call10.call");
+    if !path.exists() {
+        eprintln!("no capture {}: skipping", path.display());
+        return;
+    }
+    let zoomed = |slot: i32| {
+        (
+            move |ctx: &Ctx, _: &Maps| answer(fns::grStadium_801D4FF8(ctx, slot) as u32),
+            move |r: &mut Running, _: &Maps| {
+                assert_eq!(
+                    u32::from(stadium::zoomed_on(r.game, slot)),
+                    answered(),
+                    "grStadium_801D4FF8({slot})"
+                );
+            },
+        )
+    };
+    let z: Vec<_> = (0..6).map(zoomed).collect();
+    let mut steps: Vec<Step> = z
+        .iter()
+        .map(|(t, o)| {
+            (
+                "grStadium_801D4FF8",
+                t as &dyn Fn(&Ctx, &Maps),
+                o as &dyn Fn(&mut Running, &Maps),
+            )
+        })
+        .collect();
+    let demo_theirs = |ctx: &Ctx, _: &Maps| fns::grStadium_OnDemoInit(ctx, 0);
+    let demo_ours = |r: &mut Running, _: &Maps| stadium::on_demo_init(r);
+    let ready_theirs = |ctx: &Ctx, _: &Maps| fns::grStadium_801D410C(ctx);
+    let ready_ours = |r: &mut Running, _: &Maps| r.stadium_ready(false);
+    let game_theirs = |ctx: &Ctx, _: &Maps| fns::grStadium_801D40C8(ctx);
+    let game_ours = |r: &mut Running, _: &Maps| r.stadium_game();
+    steps.push(("grStadium_OnDemoInit", &demo_theirs, &demo_ours));
+    steps.push(("grStadium_801D410C", &ready_theirs, &ready_ours));
+    steps.push(("grStadium_801D40C8", &game_theirs, &game_ours));
+    // After GAME! the screen shows text, so ask again whether it's zoomed.
+    for (t, o) in &z {
+        steps.push(("grStadium_801D4FF8", t, o));
+    }
+    on_state_with(&path, &steps, true);
+    // The cycle's other captures, the screen in whatever mode each found it.
+    let zsteps: Vec<Step> = steps[..z.len()].to_vec();
+    let mut others: Vec<_> = std::fs::read_dir(path.parent().unwrap())
+        .unwrap()
+        .flatten()
+        .map(|f| f.path())
+        .filter(|p| {
+            p.file_name()
+                .is_some_and(|n| n.to_string_lossy().starts_with("grStadium_801D4548-"))
+        })
+        .collect();
+    others.sort();
+    for p in others {
+        on_state_with(&p, &zsteps, true);
+    }
 }
