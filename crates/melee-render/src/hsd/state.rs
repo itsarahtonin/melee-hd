@@ -396,7 +396,7 @@ impl States<'_> {
                 map: GX_TEXMAP_NULL,
                 color: GX_COLOR0A0,
                 conf: TevConf {
-                    mode: GX_PASSCLR,
+                    clr_op: GX_PASSCLR,
                     ..TevConf::default()
                 },
             };
