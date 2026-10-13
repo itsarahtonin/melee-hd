@@ -14,7 +14,7 @@ use super::handles::*;
 use super::mirror::{Cx, Mem, Mirror, code};
 use super::structs::*;
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
-use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
+use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
@@ -3280,7 +3280,9 @@ impl Mirror for CpuFighter {
             x44: cx
                 .import_handle("FighterId", m.u32(at + 0x44))
                 .map(FighterId),
-            x48: RawPtr(m.u32(at + 0x48)),
+            x48: cx
+                .import_handle("FighterId", m.u32(at + 0x48))
+                .map(FighterId),
             x4C: cx.import_handle("ItemId", m.u32(at + 0x4c)).map(ItemId),
             x50: cx.import_handle("ItemId", m.u32(at + 0x50)).map(ItemId),
             x54: Vec2::import(m, at + 0x54, cx),
@@ -3343,7 +3345,7 @@ impl Mirror for CpuFighter {
             x444: CpuInputRef444::import(m, at + 0x444, cx),
             x448: CpuInputRef448::import(m, at + 0x448, cx),
             command_duration: m.u32(at + 0x44c),
-            csP: RawPtr(m.u32(at + 0x450)),
+            csP: CpuCsP::import(m, at + 0x450, cx),
             buffer: core::array::from_fn(|i0| m.u8(at + 0x454 + i0 as u32 * 0x1) as i8),
             write_pos: CpuWritePos::import(m, at + 0x554, cx),
             x558: f32::from_bits(m.u32(at + 0x558)),
@@ -3489,13 +3491,12 @@ impl Mirror for CpuFighter {
             self.x44.map(|h| h.0),
             m.u32(at + 0x44),
         );
-        if self.x48.0 != m.u32(at + 0x48) {
-            cx.mismatch(
-                &format!("{path}.x48"),
-                format!("{:#x}", self.x48.0),
-                format!("{:#x}", m.u32(at + 0x48)),
-            );
-        }
+        cx.compare_handle(
+            &format!("{path}.x48"),
+            "FighterId",
+            self.x48.map(|h| h.0),
+            m.u32(at + 0x48),
+        );
         cx.compare_handle(
             &format!("{path}.x4C"),
             "ItemId",
@@ -3867,13 +3868,7 @@ impl Mirror for CpuFighter {
                 format!("{:?}", m.u32(at + 0x44c)),
             );
         }
-        if self.csP.0 != m.u32(at + 0x450) {
-            cx.mismatch(
-                &format!("{path}.csP"),
-                format!("{:#x}", self.csP.0),
-                format!("{:#x}", m.u32(at + 0x450)),
-            );
-        }
+        self.csP.compare(m, at + 0x450, &format!("{path}.csP"), cx);
         for i0 in 0..256 {
             if self.buffer[i0] != m.u8(at + 0x454 + i0 as u32 * 0x1) as i8 {
                 cx.mismatch(

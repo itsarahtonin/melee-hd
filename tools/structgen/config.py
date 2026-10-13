@@ -96,6 +96,8 @@ POINTERS = {
 FIELD_POINTERS = {
     # The stage's start hooks (`Ground_801C10B8`'s heap nodes).
     "StageInfo.x6A4": "Option<StartHookId>",
+    # A computer player's last target (`ftCo_800A4BEC`), a fighter.
+    "CpuFighter.x48": "Option<FighterId>",
     # The character's attributes, copied from its data (`PUSH_ATTRS`).
     "Fighter.dat_attrs": "Option<AttrsId>",
     "Fighter.dat_attrs_backup": "Option<AttrsId>",
@@ -175,6 +177,7 @@ SPLICE = {
     "CpuFighter": [
         ("x444", 0x444, 0x448, "CpuInputRef444"),
         ("x448", 0x448, 0x44C, "CpuInputRef448"),
+        ("csP", 0x450, 0x454, "CpuCsP"),
         ("write_pos", 0x554, 0x558, "CpuWritePos"),
     ],
     # A fighter's dynamic bone sets, set up to the count after them and stale past it; and the
@@ -200,7 +203,7 @@ SPLICE = {
 
 # Lines the generated mirrors use besides the handles.
 EXTRA_USES = [
-    "use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};",
+    "use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};",
     "use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};",
     "use crate::game::ft::dynamics::BoneSlot;",
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
@@ -260,7 +263,7 @@ RENAME_FIELDS = {}
 
 PRELUDE = """use melee_data::archive::DataRef;
 
-use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
+use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};

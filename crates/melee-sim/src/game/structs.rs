@@ -6,7 +6,7 @@
 use melee_data::archive::DataRef;
 
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
-use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
+use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
@@ -1606,7 +1606,7 @@ pub struct CpuFighter {
     /// +0x44
     pub x44: Option<FighterId>,
     /// +0x48
-    pub x48: RawPtr,
+    pub x48: Option<FighterId>,
     /// +0x4c
     pub x4C: Option<ItemId>,
     /// +0x50
@@ -1724,7 +1724,7 @@ pub struct CpuFighter {
     /// +0x44c
     pub command_duration: u32,
     /// +0x450
-    pub csP: RawPtr,
+    pub csP: CpuCsP,
     /// +0x454
     pub buffer: [i8; 256],
     /// +0x554
@@ -1772,7 +1772,7 @@ impl Default for CpuFighter {
             x3C: 0.0,
             x40: 0.0,
             x44: None,
-            x48: Default::default(),
+            x48: None,
             x4C: None,
             x50: None,
             x54: Default::default(),

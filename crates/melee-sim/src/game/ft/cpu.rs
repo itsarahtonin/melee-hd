@@ -17,9 +17,10 @@ use crate::vec::Vec3;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct SelfRef<const TARGET: u32, const FIELD: u32>(pub Option<u32>);
 
-/// `CpuFighter::x444` and `x448`, into `xFC`; `write_pos`, into `buffer`.
+/// `CpuFighter::x444` and `x448`, into `xFC`; `csP` and `write_pos`, into `buffer`.
 pub type CpuInputRef444 = SelfRef<0xFC, 0x444>;
 pub type CpuInputRef448 = SelfRef<0xFC, 0x448>;
+pub type CpuCsP = SelfRef<0x454, 0x450>;
 pub type CpuWritePos = SelfRef<0x454, 0x554>;
 
 impl<const TARGET: u32, const FIELD: u32> Mirror for SelfRef<TARGET, FIELD> {
@@ -148,17 +149,26 @@ impl Running<'_> {
         c.x568 = 2.0;
         c.x444 = SelfRef(Some(5 * INPUT_SIZE));
         c.x448 = SelfRef(Some(0));
-        if fp.kind == KIND_NANA {
-            super::super::code::unported_call("ftCo_800A589C");
-        }
+        // Nana's recorded inputs start where Popo stands, facing his way.
+        let (pos, facing) = if fp.kind == KIND_NANA {
+            let popo = self
+                .cpu_partner(f)
+                .expect("Nana's computer state without Popo (ftCo_800A589C)");
+            let p = &self.game.fighters[popo.0];
+            (p.cur_pos, p.facing_dir)
+        } else {
+            (Vec3::new(0.0, 0.0, 0.0), 1.0)
+        };
+        let fp = &mut self.game.fighters[f.0];
+        let c = &mut fp.cpu;
         for i in &mut c.xFC {
             i.x0 = 0;
             i.lstick.x = 0;
             i.lstick.y = 0;
             i.x4 = 0;
             i.x5 = 0;
-            i.cur_pos = Vec3::new(0.0, 0.0, 0.0);
-            i.facing_dir = 1.0;
+            i.cur_pos = pos;
+            i.facing_dir = facing;
         }
         let gravity = reg(fp.co_attrs.gravity);
         let v = fp::fmuls(
@@ -205,7 +215,7 @@ impl Running<'_> {
     #[doc(alias = "grInishie1_801FCAAC")]
     #[doc(alias = "grCorneria_801E2D90")]
     #[doc(alias = "grVenom_80206D10")]
-    fn excluded_floor(&self, line: i32) -> bool {
+    pub(super) fn excluded_floor(&self, line: i32) -> bool {
         if line == -1 {
             return false;
         }

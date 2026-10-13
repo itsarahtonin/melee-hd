@@ -38,14 +38,18 @@ pub const SEAK_CHAIN: usize = 8;
 /// `ftZelda_FighterVars::x222C`: Zelda's Din's Fire.
 pub const ZELDA_DIN_FIRE: usize = 0;
 
+/// `ftPopo_FighterVars::x222C` and `x2238`: the Ice Climbers' items.
+pub const ICE_CLIMBER_ITEMS: [usize; 2] = [0x0, 0xC];
+
 /// The words of `u` a fighter of `kind` keeps GObjs in, which the importer types: Fox's and
 /// Falco's blaster, Sheik's held needles and chain (`Ft_Kind_Seak`), Zelda's Din's Fire
-/// (`Ft_Kind_Zelda`).
+/// (`Ft_Kind_Zelda`), the Ice Climbers' items (`Ft_Kind_Popo`, `Ft_Kind_Nana`).
 pub fn gobj_words(kind: i32) -> &'static [usize] {
     match kind {
         _ if holds_blaster(kind) => &[FOX_BLASTER],
         7 => &[SEAK_NEEDLES, SEAK_CHAIN],
         19 => &[ZELDA_DIN_FIRE],
+        10 | 11 => &ICE_CLIMBER_ITEMS,
         _ => &[],
     }
 }

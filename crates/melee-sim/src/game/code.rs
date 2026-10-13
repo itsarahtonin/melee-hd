@@ -129,6 +129,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::zelda::run(g, gobj, addr) => {}
         addr if super::ft::falco::run(g, gobj, addr) => {}
         addr if super::ft::captain::run(g, gobj, addr) => {}
+        addr if super::ft::popo::run(g, gobj, addr) => {}
         addr if super::ft::co::dispatch::run(g, gobj, addr) => {}
         // Animation.
         0x8008_A494 => g.co_wait_anim(gobj),
@@ -330,6 +331,9 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::captain::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::popo::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::sfx::call(r, f, args) {

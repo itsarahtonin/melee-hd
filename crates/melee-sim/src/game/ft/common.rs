@@ -358,9 +358,34 @@ impl Running<'_> {
         }
     }
 
-    /// `ftCommon_8007DFD0` (a sub-fighter keeps off its leader), not ported yet.
-    fn nudge_sub(&mut self, _gobj: GObjId, _v: Vec3) {
-        unported_call("ftCommon_8007DFD0");
+    /// A second fighter's push, `ftCommon_8007DFD0`: Nana steps back in depth from Popo while
+    /// they stand on meeting floors overlapping, then takes the others' pushes.
+    #[doc(alias = "ftCommon_8007DFD0")]
+    fn nudge_sub(&mut self, gobj: GObjId, v: Vec3) {
+        let slot = i32::from(self.game.fighter(gobj).player_idx);
+        let leader = self
+            .game
+            .player_entity(slot)
+            .expect("a second fighter without its player's fighter");
+        let other = self.game.fighter(leader);
+        if !other.is_sleeping && other.ground_or_air == GA_GROUND {
+            let me = self.game.fighter(gobj);
+            if self.floors_meet(me.coll_data.floor.index, other.coll_data.floor.index) {
+                let p = Self::pending_pos(other);
+                let (mine, theirs) = (me.x2C4.clone(), other.x2C4.clone());
+                let d = fp::fsubs(
+                    fp::fmadds(reg(mine.x), reg(me.facing_dir), reg(v.x)),
+                    fp::fmadds(reg(other.facing_dir), reg(theirs.x), reg(p.x)),
+                );
+                let abs = if d < 0.0 { fp::fneg(d) } else { d };
+                if abs < fp::fadds(reg(mine.y), reg(theirs.y)) {
+                    let x45c = reg(self.common().f32(0x45C));
+                    let nv = &mut self.game.fighter_mut(gobj).xF8_playerNudgeVel;
+                    nv.y = mem(fp::fsubs(reg(nv.y), x45c));
+                }
+            }
+        }
+        self.nudge_from_others(gobj, v);
     }
 
     /// `ftCo_800C0A98`: a burial's timers.
