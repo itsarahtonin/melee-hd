@@ -46,6 +46,18 @@ impl Running<'_> {
             self.game.set_part_vis(gobj, model, v);
         }
     }
+
+    /// `ftPc_Init_OnKnockbackEnter`: the hurt textures, as Sheik's.
+    #[doc(alias = "ftPc_Init_OnKnockbackEnter")]
+    pub fn pc_on_knockback_enter(&mut self, gobj: GObjId) {
+        self.seak_on_knockback_enter(gobj);
+    }
+
+    /// `ftPc_Init_OnKnockbackExit`.
+    #[doc(alias = "ftPc_Init_OnKnockbackExit")]
+    pub fn pc_on_knockback_exit(&mut self, gobj: GObjId) {
+        self.seak_on_knockback_exit(gobj);
+    }
 }
 
 /// Runs one of Pichu's callbacks a fighter holds, if `addr` is one.
@@ -56,9 +68,8 @@ pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::ON_ITEM_VISIBLE => g.pk_on_item_visible(gobj),
         // `ftPc_Init_LoadSpecialAttrs`: Pikachu's.
         addr::LOAD_SPECIAL_ATTRS => g.pk_load_special_attrs(gobj),
-        // `ftPc_Init_OnKnockbackEnter`/`Exit`: the hurt textures, as Sheik's.
-        addr::ON_KNOCKBACK_ENTER => g.seak_on_knockback_enter(gobj),
-        addr::ON_KNOCKBACK_EXIT => g.seak_on_knockback_exit(gobj),
+        addr::ON_KNOCKBACK_ENTER => g.pc_on_knockback_enter(gobj),
+        addr::ON_KNOCKBACK_EXIT => g.pc_on_knockback_exit(gobj),
         _ => return false,
     }
     true
