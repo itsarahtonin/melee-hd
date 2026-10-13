@@ -86,6 +86,33 @@ pub struct Attr {
     pub indices: u32,
 }
 
+/// The last vertex format's attributes, kept while the registers that make them stay the same:
+/// draws in a row mostly share their format.
+#[derive(Clone, Default)]
+pub struct LayoutCache {
+    key: Option<[u32; 6]>,
+    attrs: Vec<Attr>,
+}
+
+impl LayoutCache {
+    /// [`layout`]`(cp, vat)`, made again only when its registers changed.
+    pub fn get(&mut self, cp: &[u32; 256], vat: usize) -> &[Attr] {
+        let key = [
+            cp[VCD_LO as usize],
+            cp[VCD_HI as usize],
+            cp[VAT_A as usize + vat],
+            cp[VAT_B as usize + vat],
+            cp[VAT_C as usize + vat],
+            vat as u32,
+        ];
+        if self.key != Some(key) {
+            self.attrs = layout(cp, vat);
+            self.key = Some(key);
+        }
+        &self.attrs
+    }
+}
+
 /// The attributes of a vertex in vertex format `vat`, in stream order.
 pub fn layout(cp: &[u32; 256], vat: usize) -> Vec<Attr> {
     let lo = cp[VCD_LO as usize];
@@ -172,6 +199,10 @@ pub fn stream_size(layout: &[Attr]) -> u32 {
 
 /// Reads `count` vertices from `data` (the stream after the draw's header) into `out`, each
 /// attribute as its bytes: an indexed one's from its array. Returns the stream bytes used.
+///
+/// Each indexed attribute's array is looked up once a draw: the stretch of it the draw's
+/// indices reach, where the host holds it in one piece ([`Memory::view`]), else each element
+/// is read on its own.
 pub fn fetch(
     cp: &[u32; 256],
     layout: &[Attr],
@@ -180,35 +211,88 @@ pub fn fetch(
     mem: &dyn Memory,
     out: &mut Vec<u8>,
 ) -> usize {
+    let vertex = stream_size(layout) as usize;
+    let index_at = |src: Source, at: usize| -> u32 {
+        if src == Source::Index8 {
+            u32::from(data[at])
+        } else {
+            u32::from(u16::from_be_bytes([data[at], data[at + 1]]))
+        }
+    };
+    // Each attribute's array as far as the draw's indices reach it.
+    let mut arrays: [Option<&[u8]>; MAX_ATTRS] = [None; MAX_ATTRS];
+    let mut offset = 0usize;
+    let mut size = 0usize;
+    for (i, attr) in layout.iter().enumerate() {
+        let width = attr.source.stream_size(attr.size, attr.indices) as usize;
+        size += attr.size as usize;
+        if matches!(attr.source, Source::Index8 | Source::Index16) && i < MAX_ATTRS {
+            let step = if attr.source == Source::Index8 { 1 } else { 2 };
+            let mut top = 0u32;
+            for v in 0..count as usize {
+                for k in 0..attr.indices as usize {
+                    top = top.max(index_at(attr.source, v * vertex + offset + k * step));
+                }
+            }
+            let base = cp[ARRAY_BASE as usize + attr.array] & 0x03FF_FFFF;
+            let stride = cp[ARRAY_STRIDE as usize + attr.array] & 0xFF;
+            let len = top * stride + attr.size;
+            arrays[i] = mem.view(base, len as usize);
+        }
+        offset += width;
+    }
+    out.reserve(count as usize * size);
     let mut at = 0;
     for _ in 0..count {
-        for attr in layout {
+        for (i, attr) in layout.iter().enumerate() {
             match attr.source {
                 Source::None => {}
                 Source::Direct => {
-                    out.extend_from_slice(&data[at..at + attr.size as usize]);
+                    push(out, &data[at..at + attr.size as usize]);
                     at += attr.size as usize;
                 }
                 Source::Index8 | Source::Index16 => {
                     let base = cp[ARRAY_BASE as usize + attr.array] & 0x03FF_FFFF;
                     let stride = cp[ARRAY_STRIDE as usize + attr.array] & 0xFF;
                     let part = attr.size / attr.indices;
+                    let array = arrays.get(i).copied().flatten();
                     for k in 0..attr.indices {
-                        let index = if attr.source == Source::Index8 {
-                            u32::from(data[at])
-                        } else {
-                            u32::from(u16::from_be_bytes([data[at], data[at + 1]]))
-                        };
+                        let index = index_at(attr.source, at);
                         at += if attr.source == Source::Index8 { 1 } else { 2 };
-                        let start = out.len();
-                        out.resize(start + part as usize, 0);
-                        mem.read(base + index * stride + k * part, &mut out[start..]);
+                        let off = index * stride + k * part;
+                        if let Some(array) = array {
+                            push(out, &array[off as usize..(off + part) as usize]);
+                        } else if let Some(bytes) = mem.view(base + off, part as usize) {
+                            push(out, bytes);
+                        } else {
+                            let start = out.len();
+                            out.resize(start + part as usize, 0);
+                            mem.read(base + off, &mut out[start..]);
+                        }
                     }
                 }
             }
         }
     }
     at
+}
+
+/// The most attributes a vertex has: the matrix indices, position, normal, two colors and
+/// eight texture coordinates.
+const MAX_ATTRS: usize = 32;
+
+/// Appends an attribute's bytes, the common sizes as moves rather than a copy call.
+fn push(out: &mut Vec<u8>, b: &[u8]) {
+    match b.len() {
+        1 => out.push(b[0]),
+        2 => out.extend_from_slice(&[b[0], b[1]]),
+        3 => out.extend_from_slice(&[b[0], b[1], b[2]]),
+        4 => out.extend_from_slice(&<[u8; 4]>::try_from(b).unwrap()),
+        6 => out.extend_from_slice(&<[u8; 6]>::try_from(b).unwrap()),
+        8 => out.extend_from_slice(&<[u8; 8]>::try_from(b).unwrap()),
+        12 => out.extend_from_slice(&<[u8; 12]>::try_from(b).unwrap()),
+        _ => out.extend_from_slice(b),
+    }
 }
 
 /// A vertex as the transform unit takes it (Dolphin's software renderer's InputVertexData):

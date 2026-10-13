@@ -59,6 +59,8 @@ struct Args {
     shot: Option<String>,
     /// Shows frames this wide (width over height), seeing more at the sides; 4:3 otherwise.
     widescreen: Option<f32>,
+    /// Keeps the renderer on the game's thread instead of threads of its own.
+    one_thread: bool,
 }
 
 /// A character's `CharacterKind` by name.
@@ -98,6 +100,7 @@ fn parse_args() -> Result<Args, String> {
         scale: 0,
         shot: None,
         widescreen: None,
+        one_thread: false,
     };
     let mut it = std::env::args().skip(1);
     let size = |s: &str| -> Result<(u32, u32), String> {
@@ -128,6 +131,7 @@ fn parse_args() -> Result<Args, String> {
             "--minutes" => a.minutes = value()?.parse().map_err(|_| "--minutes N")?,
             "--replay" => a.replay = Some(value()?),
             "--no-adapter" => a.adapter = false,
+            "--one-thread" => a.one_thread = true,
             "--bench" => a.bench = Some(value()?.parse().map_err(|_| "--bench TICKS")?),
             "--size" | "--windowed" => a.size = size(&value()?)?,
             "--ticks" => a.ticks = Some(value()?.parse().map_err(|_| "--ticks N")?),
@@ -316,6 +320,7 @@ struct App {
     ticks: u64,
     max_ticks: Option<u64>,
     scale: u32,
+    one_thread: bool,
 }
 
 impl App {
@@ -360,9 +365,9 @@ impl App {
     fn draw_frame(&mut self, draws: &[melee_sim::hsd::display::Draw]) {
         let m = &self.session.m;
         let fifo = self.frames.frame(&m.game, &m.data, draws);
-        let gpu = self
-            .renderer
-            .get_or_insert_with(|| Gpu::new(pipelines::renderer(&self.gpu, self.scale)));
+        let gpu = self.renderer.get_or_insert_with(|| {
+            gpu_for(pipelines::renderer(&self.gpu, self.scale), self.one_thread)
+        });
         let images = gpu.run(&self.frames.space, &m.data, &fifo, None);
         if let (Some(shown), Some(frame)) = (&mut self.shown, images.into_iter().last()) {
             shown.present(&self.gpu, &frame);
@@ -427,6 +432,16 @@ impl ApplicationHandler for App {
     }
 }
 
+/// The GPU's side of the frames: the renderer on threads of its own (each frame done before
+/// it's presented), or on this one with `--one-thread`.
+fn gpu_for(renderer: melee_gpu::Renderer, one_thread: bool) -> Gpu {
+    if one_thread {
+        Gpu::new(renderer)
+    } else {
+        Gpu::threaded(renderer)
+    }
+}
+
 /// The internal resolution's scale: as asked, or the smallest whose 480 lines cover the
 /// window's height.
 fn scale_for(asked: u32, size: (u32, u32)) -> u32 {
@@ -450,7 +465,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     let mut target = present::Offscreen::new(&gpu, args.size.0, args.size.1);
     let mut r = pipelines::renderer(&gpu, scale_for(args.scale, args.size));
     r.xfb_readback = args.shot.is_some();
-    let mut renderer = Gpu::new(r);
+    let mut renderer = gpu_for(r, args.one_thread);
     let mut last = None;
     let mut frames = Frames::new();
     frames.space.load_dol(&session.dol);
@@ -460,10 +475,16 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     let (mut sim, mut draw, mut n) = (Duration::ZERO, Duration::ZERO, 0u32);
     let mut worst = Duration::ZERO;
     let mut parts = [Duration::ZERO; 3];
+    // Each drawn frame's ticks and drawing (all the ticks of its round), and with its
+    // presenting.
+    let mut work: Vec<Duration> = Vec::with_capacity(ticks as usize);
+    let mut presented: Vec<Duration> = Vec::with_capacity(ticks as usize);
+    let mut round = Duration::ZERO;
     for _ in 0..ticks {
         let t0 = Instant::now();
         let f = session.tick(pads);
         let t1 = Instant::now();
+        round += t1 - t0;
         if !f.draws.is_empty() {
             let m = &session.m;
             let fifo = frames.frame(&m.game, &m.data, &f.draws);
@@ -480,6 +501,9 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
             parts[2] += t2 - tb;
             draw += t2 - t1;
             worst = worst.max(t2 - t0);
+            work.push(round + (tb - t1));
+            presented.push(round + (t2 - t1));
+            round = Duration::ZERO;
             n += 1;
         }
         sim += t1 - t0;
@@ -501,13 +525,27 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
         f.save_png(std::path::Path::new(path))
             .unwrap_or_else(|e| eprintln!("{path}: {e}"));
     }
-    pipelines::save(&renderer.renderer.borrow());
+    pipelines::save(&renderer.into_renderer());
     let ms = |d: Duration| d.as_secs_f64() * 1000.0 / f64::from(n.max(1));
     println!(
         "a frame: GX stream {:.3} ms, renderer {:.3} ms, presenting (with the GPU's wait) {:.3} ms",
         ms(parts[0]),
         ms(parts[1]),
         ms(parts[2])
+    );
+    let pct = |v: &mut Vec<Duration>, p: f64| {
+        v.sort();
+        let i = ((v.len() as f64 * p).ceil() as usize).clamp(1, v.len().max(1)) - 1;
+        v.get(i).map_or(0.0, |d| d.as_secs_f64() * 1000.0)
+    };
+    println!(
+        "a frame's ticks and drawing: p50 {:.3} ms, p99 {:.3} ms, max {:.3} ms; with presenting: p50 {:.3} ms, p99 {:.3} ms, max {:.3} ms",
+        pct(&mut work, 0.5),
+        pct(&mut work, 0.99),
+        pct(&mut work, 1.0),
+        pct(&mut presented, 0.5),
+        pct(&mut presented, 0.99),
+        pct(&mut presented, 1.0)
     );
     for (what, count) in &frames.hsd.notes {
         println!("not drawn exactly: {what} ({count})");
@@ -563,14 +601,18 @@ fn run() -> ExitCode {
         ticks: 0,
         max_ticks: args.ticks,
         scale: scale_for(args.scale, args.size),
+        one_thread: args.one_thread,
     };
     present::set_size(args.size);
     // The pipelines the last runs needed, made before the first tick.
-    app.renderer = Some(Gpu::new(pipelines::renderer(&app.gpu, app.scale)));
+    app.renderer = Some(gpu_for(
+        pipelines::renderer(&app.gpu, app.scale),
+        app.one_thread,
+    ));
     let r = event_loop.run_app(&mut app);
     app.inputs.close();
-    if let Some(g) = &app.renderer {
-        pipelines::save(&g.renderer.borrow());
+    if let Some(g) = app.renderer.take() {
+        pipelines::save(&g.into_renderer());
     }
     if let Err(e) = r {
         eprintln!("the window failed: {e}");

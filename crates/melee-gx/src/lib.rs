@@ -26,6 +26,11 @@ use texture::Image;
 /// draw with its vertices fetched, and each EFB copy, with the state as it stands for it.
 pub trait Memory {
     fn read(&self, phys: u32, out: &mut [u8]);
+    /// The `len` bytes at `phys` as they are, without copying, where the host holds them in
+    /// one piece; `None` sends the read through [`Memory::read`].
+    fn view(&self, _phys: u32, _len: usize) -> Option<&[u8]> {
+        None
+    }
     fn command(&self, _bytes: &[u8]) {}
     fn draws(&self) -> bool {
         false
@@ -239,6 +244,7 @@ pub struct State {
     depth: u32,
     tracking: std::cell::RefCell<Tracking>,
     fetched: Vec<u8>,
+    layouts: vertex::LayoutCache,
 }
 
 impl Default for State {
@@ -299,6 +305,7 @@ impl State {
             depth: 0,
             tracking: Default::default(),
             fetched: Vec::new(),
+            layouts: vertex::LayoutCache::default(),
         };
         // The hashes start as those of all-zero registers.
         for reg in 0..256 {
@@ -561,12 +568,21 @@ impl State {
                         break;
                     }
                     let (addr, size) = (be32(&rest[1..]), be32(&rest[5..]));
-                    let mut list = vec![0; size as usize];
-                    mem.read(addr & 0x03FF_FFFF, &mut list);
+                    // The list where the host holds it, else read out.
+                    let read;
+                    let list = match mem.view(addr & 0x03FF_FFFF, size as usize) {
+                        Some(list) => list,
+                        None => {
+                            let mut list = vec![0; size as usize];
+                            mem.read(addr & 0x03FF_FFFF, &mut list);
+                            read = list;
+                            &read
+                        }
+                    };
                     // A display list holds whole commands; the FIFO's parse state is untouched.
                     let saved = std::mem::take(&mut self.buf);
                     self.depth += 1;
-                    let used = self.run(mem, &list, out, digests);
+                    let used = self.run(mem, list, out, digests);
                     self.depth -= 1;
                     self.buf = saved;
                     assert!(
@@ -588,9 +604,11 @@ impl State {
                     }
                     let vat = usize::from(op & 7);
                     let count = u16::from_be_bytes([rest[1], rest[2]]);
-                    let layout = vertex::layout(&self.cp, vat);
-                    let len = 3 + (u32::from(count) * vertex::stream_size(&layout)) as usize;
+                    let mut layouts = std::mem::take(&mut self.layouts);
+                    let layout = layouts.get(&self.cp, vat);
+                    let len = 3 + (u32::from(count) * vertex::stream_size(layout)) as usize;
                     if rest.len() < len {
+                        self.layouts = layouts;
                         break;
                     }
                     let draws = mem.draws();
@@ -600,7 +618,7 @@ impl State {
                     if digests || draws {
                         vertex::fetch(
                             &self.cp,
-                            &layout,
+                            layout,
                             u32::from(count),
                             &rest[3..],
                             mem,
@@ -612,13 +630,14 @@ impl State {
                             primitive: op & 0xF8,
                             vat: op & 7,
                             count,
-                            layout: &layout,
+                            layout,
                             data: &bytes,
                         };
                         mem.draw(self, &draw);
                     }
                     let digest = digests.then(|| self.draw_digest(op, &bytes, mem));
                     self.fetched = bytes;
+                    self.layouts = layouts;
                     out.push(Produced {
                         event: Event::Draw {
                             primitive: op & 0xF8,
@@ -650,8 +669,9 @@ impl State {
         let index = value >> 16;
         let base = self.cp[vertex::ARRAY_BASE as usize + array] & 0x03FF_FFFF;
         let stride = self.cp[vertex::ARRAY_STRIDE as usize + array] & 0xFF;
-        let mut words = vec![0u8; 4 * count];
-        mem.read(base + index * stride, &mut words);
+        let mut words = [0u8; 4 * 16];
+        let words = &mut words[..4 * count];
+        mem.read(base + index * stride, words);
         for i in 0..count {
             self.write_xf(addr + i, be32(&words[4 * i..]));
         }

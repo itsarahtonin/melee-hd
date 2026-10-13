@@ -116,7 +116,28 @@ Characters and stages are what melee-sim has ported (`--help` lists them). The m
 
 **Decision: the loop keeps one frame of latency.** Each tick reads the controllers immediately before it runs, and the frame it produces is turned into GX commands, drawn and presented at once; the swap chain is one frame deep and presents in mailbox mode where the display has it, else immediate (no vsync wait), else FIFO. The event loop sleeps until the next tick is due; after a stall of more than four ticks it drops the backlog instead of racing to catch up. Nothing waits on audio: the tick pushes its samples into the output's ring.
 
-`--bench` plays a match headless, draws every frame and presents it to an offscreen target of `--size`, and reports the time per tick for the simulation, the GX stream, the renderer and presenting.
+`--bench` plays a match headless, draws every frame and presents it to an offscreen target of `--size`, and reports the time per tick for the simulation, the GX stream, the renderer and presenting, and the median, 99th percentile and worst of a frame's ticks and drawing (the simulation, the GX stream and the renderer), with and without presenting. `--one-thread` keeps the renderer on the game's thread.
+
+### Frame time
+
+**Decision: the renderer runs on threads of its own, a frame at a time.** The renderer's CPU work on a frame comes in three stages: running the GX stream (decoding commands and fetching each draw's vertices), decoding and transforming the vertices, and building the draws (the GPU's vertices and indices, textures, uniforms, pipelines) and handing them to wgpu. The game's thread runs the stream and sends each draw, with the state's changes since the last, to a transform thread, which sends the transformed draws on to a render thread (melee-gpu's `Threaded`, ssbm-render's design). The three work at once on the same frame, and the game's thread waits at the frame's copy to the XFB until the render thread has drawn it (`Threaded::spawn_synced`), so the frame is presented as soon as it's drawn, no frame later than before: the loop keeps its one frame of latency, and the frame costs about what its slowest stage does rather than all three. Draws go over in batches of 128, small enough for the stages to overlap within a frame. `CHECK_THREADED=1` runs `melee-render-check` the same way.
+
+The rest of the cuts change no output (every checked frame stays identical, at scale 1 and at 1440p, where a frame drawn by the old and the new renderer saves to the same PNG):
+
+- Each indexed vertex array is looked up once a draw, over the stretch the draw's indices reach, and read in place where the address space holds it in one piece (`Memory::view`); display lists run where they lie instead of being copied out.
+- A draw's vertices are transformed by a setup read once for the draw (`xform::Setup`: the projection, lights, channels and texture coordinate scales), and the binormals only when a texture coordinate reads them; a test checks it against the per-vertex steps on random states.
+- A draw's vertices are written once and its triangles name them through an index buffer, instead of three vertices a triangle; the vertex shader reads each vertex's words from a storage buffer with only the texture coordinates its draw generates (most draws one), so a frame's vertex data went from about 6.4 MB (144 bytes for each of a triangle's three vertices) to 0.9 MB.
+- Consecutive draws with the same state join into one draw call, and a pass sets its pipeline, bind groups and scissor only when they change.
+- The hashes of textures in loaded archives, which never change, are kept between frames, and a copy's footprint found unchanged is checked again only the next frame; the vertex format's layout is kept while its registers stay the same; the renderer's maps use a fast hash.
+
+**Results** at 1440p (internal scale 3), `--bench 1800` on the Fox–Marth Battlefield replay, the old renderer and the new run alternately twice each, with other agents' builds and checks keeping about six of the machine's eight cores busy throughout (so both are slower than on an idle machine):
+
+| | Ticks and drawing, median | 99th percentile | Renderer, mean | With presenting, 99th percentile |
+| --- | --- | --- | --- | --- |
+| Before | 11.8 ms | 14.4 to 15.2 ms | 9.8 ms | 17.0 to 17.7 ms |
+| After | 5.0 ms | 6.8 ms | 3.5 ms | 9.2 to 9.4 ms |
+
+The GX stream takes about 0.75 ms of that and the simulation about 0.7 ms a tick; presenting adds about 2.2 ms, most of it the GPU's own drawing at that scale. On the game's thread alone (`--one-thread`) the new renderer takes about 4.9 ms a frame (99th percentile 9.1 ms).
 
 ## Open issues
 
@@ -125,6 +146,6 @@ Characters and stages are what melee-sim has ported (`--help` lists them). The m
 - **Shape animations** aren't drawn; no checked frame uses one.
 - **The particle pass's boundaries** are inferred from the display commands (runs of `Draw::Particles`), and the magnifier bubble's erase color is an average of the colors the original reads; both match every checked frame.
 - **State cache resets** that stage, fighter and item draw callbacks make (`grDisplay`, `ftDrawCommon`, `itDraw`) are mirrored only where a checked frame needed them (the refraction callback's TEV reset).
-- **Speed.** ssbm-render builds each frame's draws on the CPU; at 1440p (internal scale 3) a frame takes 11.5 to 13 ms on average on the development machine (`--bench 1800`: GX stream 0.8 ms, renderer 8 to 10 ms, presenting 2 ms; the simulation 0.7 ms a tick), and the worst about 21 ms, so a frame now and then misses its 16.7 ms tick.
+- **Speed.** At 1440p a frame's ticks and drawing take 6.8 ms at the 99th percentile on a busy machine (see Frame time); the GPU's drawing at high scales is the larger part of presenting, which the CPU work doesn't overlap.
 - **No MSAA.**
 - **Unchecked ports.** The port ledger counts a presentation port as checked when the frame or audio checks run it (measured with coverage over the references). Eighteen ported functions no reference reaches yet (refraction's material setup and indirect texture matrices, a few TEV register and alpha register helpers, GX getters) carry no ledger alias, only their names in their doc comments, until one does. The GX SDK functions Melee doesn't link (ssbm-rs's symbol table lacks them) are named the same way.

@@ -82,6 +82,216 @@ fn mat34(xf: &[u32], at: usize, v: Vec3) -> Vec3 {
 /// Transforms vertex `v` by the XF's state, and scales its texture coordinates by the BP's.
 pub fn transform(xf: &[u32], bp: &[u32; 256], v: &Input) -> Output {
     let mut out = Output::default();
+    Setup::new(xf, bp).transform(v, &mut out);
+    out
+}
+
+/// A lighting channel's register and its lights, read once a draw.
+#[derive(Clone, Copy)]
+struct Channel {
+    control: u32,
+    /// Its lights, in order.
+    lights: [u8; 8],
+    count: usize,
+}
+
+impl Channel {
+    fn new(control: u32) -> Channel {
+        let mask = light_mask(control);
+        let mut c = Channel {
+            control,
+            lights: [0; 8],
+            count: 0,
+        };
+        for i in 0..8 {
+            if mask & (1 << i) != 0 {
+                c.lights[c.count] = i as u8;
+                c.count += 1;
+            }
+        }
+        c
+    }
+}
+
+/// What a draw's vertices all transform by: the XF's registers and lights and the BP's texture
+/// coordinate scales, read once for the draw. [`Setup::transform`] does per vertex what the
+/// transform unit's steps do, the same operations in the same order.
+pub struct Setup<'a> {
+    xf: &'a [u32],
+    projection: [f32; 6],
+    orthographic: bool,
+    lights: [Light; 8],
+    color: [Channel; 2],
+    alpha: [Channel; 2],
+    mat: [[u8; 4]; 2],
+    amb: [[u8; 4]; 2],
+    texgens: usize,
+    /// The texture coordinates' scales, `SU_SSIZE` and `SU_TSIZE` plus 1.
+    tex_scale: [[f32; 2]; 8],
+    /// Whether a texture coordinate reads the binormals, which are transformed only then.
+    binormals: bool,
+}
+
+impl<'a> Setup<'a> {
+    pub fn new(xf: &'a [u32], bp: &[u32; 256]) -> Setup<'a> {
+        let texgens = (xf[NUM_TEXGENS] & 0xF).min(8) as usize;
+        let binormals = (0..texgens).any(|n| {
+            let info = xf[TEXMTX_INFO + n];
+            match bits(info, 4, 3) {
+                1 => true,
+                2 | 3 => false,
+                _ => matches!(bits(info, 7, 5), 3 | 4),
+            }
+        });
+        Setup {
+            xf,
+            projection: std::array::from_fn(|i| f(xf, PROJECTION + i)),
+            orthographic: xf[PROJECTION + 6] != 0,
+            lights: std::array::from_fn(|i| Light::of(xf, i)),
+            color: std::array::from_fn(|ch| Channel::new(xf[COLOR_CHAN + ch])),
+            alpha: std::array::from_fn(|ch| Channel::new(xf[ALPHA_CHAN + ch])),
+            mat: std::array::from_fn(|ch| xf[MAT_COLOR + ch].to_be_bytes()),
+            amb: std::array::from_fn(|ch| xf[AMB_COLOR + ch].to_be_bytes()),
+            texgens,
+            tex_scale: std::array::from_fn(|n| {
+                [
+                    (bp[SU_SSIZE + 2 * n] & 0xFFFF) as f32 + 1.0,
+                    (bp[SU_SSIZE + 2 * n + 1] & 0xFFFF) as f32 + 1.0,
+                ]
+            }),
+            binormals,
+        }
+    }
+
+    /// Transforms vertex `v` into `out`, which holds zeros where nothing is written: its
+    /// binormals and tangents unless a texture coordinate reads them, and the texture
+    /// coordinates past the generators'.
+    pub fn transform(&self, v: &Input, out: &mut Output) {
+        let xf = self.xf;
+        out.mv = mat34(xf, POS_MATRICES + usize::from(v.pos_mtx) * 4, v.position);
+        let p = &self.projection;
+        let mv = out.mv;
+        out.clip = if !self.orthographic {
+            [
+                p[0] * mv[0] + p[1] * mv[2],
+                p[2] * mv[1] + p[3] * mv[2],
+                (p[4] * mv[2] + p[5]) * (1.0 - 1e-7),
+                -mv[2],
+            ]
+        } else {
+            [
+                p[0] * mv[0] + p[1],
+                p[2] * mv[1] + p[3],
+                p[4] * mv[2] + p[5],
+                1.0,
+            ]
+        };
+        let nm = NORMAL_MATRICES + usize::from(v.pos_mtx & 31) * 3;
+        let m: [f32; 9] = std::array::from_fn(|i| f(xf, nm + i));
+        for k in 0..if self.binormals { 3 } else { 1 } {
+            let n = v.normal[k];
+            out.normal[k] = [
+                m[0] * n[0] + m[1] * n[1] + m[2] * n[2],
+                m[3] * n[0] + m[4] * n[1] + m[5] * n[2],
+                m[6] * n[0] + m[7] * n[1] + m[8] * n[2],
+            ];
+        }
+        out.normal[0] = normalized(out.normal[0]);
+        self.colors(v, out);
+        self.tex_coords(v, out);
+    }
+
+    fn colors(&self, v: &Input, out: &mut Output) {
+        for ch in 0..2 {
+            let cc = self.color[ch].control;
+            let ac = self.alpha[ch].control;
+            let mat_reg = self.mat[ch];
+            let amb_reg = self.amb[ch];
+            let mut color = [0u8; 4];
+            let mat = if bits(cc, 0, 1) != 0 {
+                v.color[ch]
+            } else {
+                mat_reg
+            };
+            if bits(cc, 1, 1) != 0 {
+                let amb = if bits(cc, 6, 1) != 0 {
+                    v.color[ch]
+                } else {
+                    amb_reg
+                };
+                let mut light = [f32::from(amb[0]), f32::from(amb[1]), f32::from(amb[2])];
+                let c = &self.color[ch];
+                for &i in &c.lights[..c.count] {
+                    let l = &self.lights[usize::from(i)];
+                    let s = contribution(l, out, cc);
+                    for (v, &c) in light.iter_mut().zip(&l.color) {
+                        *v += f32::from(c) * s;
+                    }
+                }
+                for k in 0..3 {
+                    color[k] = lit(mat[k], light[k]);
+                }
+            } else {
+                color[..3].copy_from_slice(&mat[..3]);
+            }
+            let mat_a = if bits(ac, 0, 1) != 0 {
+                v.color[ch][3]
+            } else {
+                mat_reg[3]
+            };
+            color[3] = if bits(ac, 1, 1) != 0 {
+                let mut light = if bits(ac, 6, 1) != 0 {
+                    f32::from(v.color[ch][3])
+                } else {
+                    f32::from(amb_reg[3])
+                };
+                let a = &self.alpha[ch];
+                for &i in &a.lights[..a.count] {
+                    let l = &self.lights[usize::from(i)];
+                    light += f32::from(l.color[3]) * contribution(l, out, ac);
+                }
+                lit(mat_a, light)
+            } else {
+                mat_a
+            };
+            out.color[ch] = color;
+        }
+    }
+
+    fn tex_coords(&self, v: &Input, out: &mut Output) {
+        let xf = self.xf;
+        for n in 0..self.texgens {
+            let info = xf[TEXMTX_INFO + n];
+            match bits(info, 4, 3) {
+                1 => {
+                    let light = &self.lights[bits(info, 15, 3) as usize];
+                    let ldir = normalized(sub(light.pos, out.mv));
+                    let src = out.tex[bits(info, 12, 3) as usize];
+                    out.tex[n] = [
+                        src[0] + dot(ldir, out.normal[1]),
+                        src[1] + dot(ldir, out.normal[2]),
+                        src[2],
+                    ];
+                }
+                2 | 3 => {
+                    let c = out.color[bits(info, 4, 3) as usize - 2];
+                    out.tex[n] = [f32::from(c[0]) / 255.0, f32::from(c[1]) / 255.0, 1.0];
+                }
+                _ => out.tex[n] = regular(xf, info, n, v),
+            }
+        }
+        for n in 0..self.texgens {
+            out.tex[n][0] *= self.tex_scale[n][0];
+            out.tex[n][1] *= self.tex_scale[n][1];
+        }
+    }
+}
+
+/// The transform unit's steps reading the registers each vertex, kept to check [`Setup`]
+/// against.
+#[cfg(test)]
+fn transform_per_vertex(xf: &[u32], bp: &[u32; 256], v: &Input) -> Output {
+    let mut out = Output::default();
     position(xf, v, &mut out);
     let nm = NORMAL_MATRICES + usize::from(v.pos_mtx & 31) * 3;
     for k in 0..3 {
@@ -99,6 +309,7 @@ pub fn transform(xf: &[u32], bp: &[u32; 256], v: &Input) -> Output {
     out
 }
 
+#[cfg(test)]
 fn position(xf: &[u32], v: &Input, out: &mut Output) {
     out.mv = mat34(xf, POS_MATRICES + usize::from(v.pos_mtx) * 4, v.position);
     let p = |i| f(xf, PROJECTION + i);
@@ -217,6 +428,7 @@ fn lit(material: u8, light: f32) -> u8 {
     ((i32::from(material) * (l + (l >> 7))) >> 8) as u8
 }
 
+#[cfg(test)]
 fn colors(xf: &[u32], v: &Input, out: &mut Output) {
     for ch in 0..2 {
         let cc = xf[COLOR_CHAN + ch];
@@ -278,6 +490,7 @@ fn colors(xf: &[u32], v: &Input, out: &mut Output) {
     }
 }
 
+#[cfg(test)]
 fn tex_coords(xf: &[u32], bp: &[u32; 256], v: &Input, out: &mut Output) {
     let count = (xf[NUM_TEXGENS] & 0xF).min(8) as usize;
     for n in 0..count {
@@ -399,5 +612,76 @@ pub fn is_backface(xf: &[u32], v0: [f32; 4], v1: [f32; 4], v2: [f32; 4]) -> bool
         !backface
     } else {
         backface
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A small deterministic generator for the checks' states.
+    struct Rng(u64);
+
+    impl Rng {
+        fn next(&mut self) -> u32 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            (self.0 >> 16) as u32
+        }
+
+        fn float(&mut self) -> f32 {
+            (self.next() % 2000) as f32 / 500.0 - 2.0
+        }
+    }
+
+    /// The per-draw setup transforms exactly as the per-vertex steps do, over random XF and BP
+    /// states and vertices, lighting and texture coordinate generators included.
+    #[test]
+    fn setup_transforms_as_the_steps_do() {
+        let mut r = Rng(0x9E37_79B9_7F4A_7C15);
+        for _ in 0..400 {
+            let mut xf = vec![0u32; 0x1058];
+            for w in xf[..0x1000].iter_mut() {
+                *w = r.float().to_bits();
+            }
+            for l in 0..8 {
+                xf[LIGHTS + l * 16 + 3] = r.next();
+            }
+            for w in xf[0x1000..].iter_mut() {
+                *w = r.next();
+            }
+            xf[PROJECTION + 6] = r.next() & 1;
+            for i in 0..6 {
+                xf[PROJECTION + i] = r.float().to_bits();
+            }
+            xf[NUM_TEXGENS] = r.next() % 9;
+            let mut bp = [0u32; 256];
+            for w in bp.iter_mut() {
+                *w = r.next();
+            }
+            let setup = Setup::new(&xf, &bp);
+            for _ in 0..8 {
+                let v = Input {
+                    pos_mtx: (r.next() % 64) as u8,
+                    tex_mtx: std::array::from_fn(|_| (r.next() % 64) as u8),
+                    position: std::array::from_fn(|_| r.float()),
+                    normal: std::array::from_fn(|_| std::array::from_fn(|_| r.float())),
+                    color: std::array::from_fn(|_| r.next().to_be_bytes()),
+                    tex: std::array::from_fn(|_| std::array::from_fn(|_| r.float())),
+                };
+                let want = transform_per_vertex(&xf, &bp, &v);
+                let mut got = Output::default();
+                setup.transform(&v, &mut got);
+                let bits = |o: &Output| {
+                    let mut w: Vec<u32> = o.mv.iter().chain(&o.clip).map(|f| f.to_bits()).collect();
+                    w.extend(o.normal[0].iter().map(|f| f.to_bits()));
+                    w.extend(o.tex.iter().flatten().map(|f| f.to_bits()));
+                    w.extend(o.color.iter().map(|c| u32::from_be_bytes(*c)));
+                    w
+                };
+                assert_eq!(bits(&got), bits(&want));
+            }
+        }
     }
 }

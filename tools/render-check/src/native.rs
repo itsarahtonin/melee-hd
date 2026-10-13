@@ -73,8 +73,13 @@ pub fn play(
     frames
         .space
         .load_dol(&disc.dol().unwrap_or_else(|e| panic!("main.dol: {e}")));
+    // `CHECK_THREADED=1` draws on the renderer's own threads, as the player does.
     let renderer = renderer();
-    let mut gpu = Gpu::new(renderer);
+    let mut gpu = if std::env::var_os("CHECK_THREADED").is_some() {
+        Gpu::threaded(renderer)
+    } else {
+        Gpu::new(renderer)
+    };
     let mut n = 0u32;
     loop {
         let (mut f, render) = m.step_replay_tick(&mut device);
