@@ -1,8 +1,8 @@
 //! Presenting frames: the GPU the renderer draws on, a window's surface, and the blit of the
 //! XFB (the frame the renderer copied out) to it, letterboxed to the aspect ratio shown (the
 //! game's 73:60 unless asked otherwise, see [`Aspect`]). The swap chain is kept one frame
-//! deep, presenting each frame as soon as it's drawn: mailbox where the display has it, else
-//! immediate, else vsync.
+//! deep, presenting each frame as soon as it's drawn, in the mode [`Present`] picks: mailbox
+//! by default, where the display has it, else FIFO.
 
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};

@@ -6,6 +6,8 @@
 //!          [--no-adapter] [--size WxH] [--fullscreen] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [...]     plays headless, timing each frame
 //! melee-hd --launcher-shot FILE.png [--size WxH] draws the launcher to a PNG
+//! latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate]
+//!          [--added-delay FRAMES] [--audio-exclusive]
 //! ```
 //!
 //! The disc comes from `--disc` or `SSBM_DISC`. Characters and stages are melee-sim's
@@ -20,9 +22,11 @@
 //! widens the drawn cameras to a wider aspect, and `--aspect 4:3` stretches the picture to 4:3
 //! ([`present::Aspect`]).
 //!
-//! The loop keeps latency short: each tick reads the controllers just before it runs, and the
-//! frame it renders is drawn and presented at once, on a swap chain one frame deep (mailbox,
-//! or immediate where the display has no mailbox mode).
+//! The loop keeps latency as short as it can: each tick reads the controllers just before it
+//! runs, and the frame it renders is drawn and presented at once, on a swap chain one frame deep
+//! (mailbox by default, `--present` picks; [`present::Present`]). `--added-delay N` adds input
+//! latency back on purpose, `--latency-log FILE` measures it all ([`latency`]), and F3 shows
+//! the measures over the frame.
 
 mod latency;
 mod launcher;
