@@ -26,10 +26,12 @@ pub struct Match {
     pub seed: u32,
 }
 
+const CAPTAIN: u8 = 0x00;
 const FOX: u8 = 0x02;
 const MARTH: u8 = 0x09;
 const PEACH: u8 = 0x0C;
 const ICE_CLIMBERS: u8 = 0x0E;
+const GANONDORF: u8 = 0x19;
 const POKEMON_STADIUM: u16 = 0x03;
 const BATTLEFIELD: u16 = 0x1F;
 const FINAL_DESTINATION: u16 = 0x20;
@@ -38,7 +40,8 @@ const fn p(character: u8, costume: u8) -> Player {
     Player { character, costume }
 }
 
-/// The benchmark set: the performance goal's matches, and Fox–Fox for while only Fox is ported.
+/// The benchmark set: the performance goal's matches, Fox–Fox for while only Fox was ported, and
+/// matches for the oracle's coverage.
 pub const MATCHES: &[Match] = &[
     Match {
         name: "fox-fox-fd",
@@ -72,6 +75,13 @@ pub const MATCHES: &[Match] = &[
         stage: POKEMON_STADIUM,
         players: [p(ICE_CLIMBERS, 0), p(PEACH, 0)],
         seed: 0x1F0F_0005,
+    },
+    // For the oracle: no replay pairs Ganondorf with ported characters on a ported stage.
+    Match {
+        name: "ganon-captain-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(GANONDORF, 0), p(CAPTAIN, 0)],
+        seed: 0x1F0F_0006,
     },
 ];
 

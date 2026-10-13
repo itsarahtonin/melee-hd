@@ -112,6 +112,7 @@ On the whole match, against the final release build, an archive's pointer words 
 | `fox-marth-fd` | Final Destination | Fox vs Marth | `1F0F0003` | 15,241 | 4:14 | Fox out of stocks, Marth on 1 |
 | `fox-marth-ps` | Pokémon Stadium | Fox vs Marth | `1F0F0004` | 13,585 | 3:46 | Fox out of stocks, Marth on 1 |
 | `ics-peach-ps` | Pokémon Stadium | Ice Climbers vs Peach | `1F0F0005` | 12,655 | 3:31 | Ice Climbers out of stocks, Peach on 1 |
+| `ganon-captain-fd` | Final Destination | Ganondorf vs Captain Falcon | `1F0F0006` | 12,067 | 3:21 | Ganondorf out of stocks, Captain Falcon on 1 |
 
 Each is a VS match (4 stocks, 8 minutes, items off, pausing off; settings as a Slippi Dolphin VS match records them) with both players human, and the controllers both played. The Fox–Fox match is there for the first measurement, while only Fox is ported. Frames count from the first (`-123`) to the last. The matches live outside the repository, in ssbm-rs's `local/bench` on this machine: `NAME.ini` (the Gecko codes below), `NAME.slp` (the match), and the logs of making and checking it.
 
@@ -126,9 +127,9 @@ The floating point is the console's (ssbm-rs's `Hardware` mode, which mainline D
 - ssbm-rs's replay check: the match played back through Slippi's playback codes (a different boot path, the recorded inputs injected per frame), with `--fp hardware` (`NAME.check.log`).
 - The recorded controllers alone (`BENCH_PADS`), without the AI (`NAME.pads.log`). This is what Dolphin and melee-hd get.
 
-All five pass both: 95,826, 91,239, 92,122, 82,093 and 101,048 events compared, 0 divergences.
+All six pass both: 95,826, 91,239, 92,122, 82,093, 101,048 and 72,403 events compared, 0 divergences. `ganon-captain-fd` is there for the oracle (no replay paired Ganondorf with ported characters on a ported stage when it was made), not for the speed target.
 
-**Regenerating them.** Build ssbm-rs's runner from its branch `feat/bench-matches` (`cargo build --locked --release -p ssbm-run`; its `tools/run/src/bench.rs` has `BENCH_CODES`, `BENCH_AI`, `BENCH_PADS` and `BENCH_SLP`), then:
+**Regenerating them.** Build ssbm-rs's runner from its main branch (`3f9ac3a` and later; `cargo build --locked --release -p ssbm-run`; its `tools/run/src/bench.rs` has `BENCH_CODES`, `BENCH_AI`, `BENCH_PADS` and `BENCH_SLP`), then:
 
 ```sh
 SSBM_RUN=.../ssbm-run.exe SSBM_DISC=... JOBS=3 bash tools/bench/make-matches.sh /c/Projects/ssbm-rs-publication/local/bench
