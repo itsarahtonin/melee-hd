@@ -566,3 +566,79 @@ pub fn diff(args: &[&str]) -> ExitCode {
         }
     }
 }
+
+/// The main heap at the boot state and at the match's first tick, from a trace with memory:
+/// the heap layout (`lbHeap`'s arena and heaps, the OS heaps) and the fighters' addresses.
+pub fn trace_heap(trace_path: &str) -> ExitCode {
+    let mut reader = Reader::open(trace_path);
+    let mut image = Image::default();
+    let mut boot: Option<Vec<u8>> = None;
+    let show = |label: &str, mem: &[u8]| {
+        let w = |a: u32| {
+            let i = (a - 0x8000_0000) as usize;
+            u32::from_be_bytes(mem[i..i + 4].try_into().unwrap())
+        };
+        let lb = sym("lbHeap_80431FA0");
+        println!(
+            "{label}: lbHeap arena {:#010x}..{:#010x} aram {:#010x}..{:#010x}",
+            w(lb),
+            w(lb + 4),
+            w(lb + 8),
+            w(lb + 12)
+        );
+        for k in 0..6 {
+            let h = lb + 0x10 + 0x1C * k;
+            println!(
+                "  lbHeap {k}: id {} start {:#010x} size {:#x} type {} transient {} status {}",
+                w(h) as i32,
+                w(h + 8),
+                w(h + 12),
+                w(h + 16),
+                w(h + 20),
+                w(h + 24)
+            );
+        }
+        let heaps = w(sym("HeapArray"));
+        println!("  current_heap {}", w(sym("current_heap")) as i32);
+        for i in 0..6 {
+            let d = heaps + 12 * i;
+            let (size, free, used) = (w(d), w(d + 4), w(d + 8));
+            if size as i32 <= 0 {
+                continue;
+            }
+            let mut blocks = Vec::new();
+            let mut c = free;
+            while c != 0 && blocks.len() < 8 {
+                blocks.push(format!("{c:#010x}+{:#x}", w(c + 8)));
+                c = w(c + 4);
+            }
+            let mut n = 0;
+            let mut c = used;
+            while c != 0 {
+                n += 1;
+                c = w(c + 4);
+            }
+            println!(
+                "  OS heap {i}: size {size:#x}, {n} allocated, free {}",
+                blocks.join(" ")
+            );
+        }
+    };
+    while let Some(t) = reader.tick() {
+        let before = image.seen.then(|| image.mem1.clone());
+        image.apply(&t);
+        if image.seen && is_first_tick(&image) {
+            boot = before;
+            println!("first tick {}", t.number);
+            break;
+        }
+    }
+    let Some(boot) = boot else {
+        eprintln!("{trace_path}: no first tick with memory");
+        return ExitCode::FAILURE;
+    };
+    show("boot state", &boot);
+    show("first tick", &image.mem1);
+    println!("fighters {:x?}", fighter_addresses(&image));
+    ExitCode::SUCCESS
+}

@@ -38,6 +38,7 @@ fn run(args: Vec<String>) -> ExitCode {
         ["trace-info", trace] => trace_info(trace),
         ["trace-dump", trace, tick, addr, len] => trace_dump(trace, tick, addr, len),
         ["trace-world", trace, tick] => trace_world(trace, tick),
+        ["trace-heap", trace] => diff::trace_heap(trace),
         _ => {
             eprintln!("usage: melee-oracle compare ORIGINAL.slp OURS.slp");
             eprintln!("       melee-oracle trace-check TRACE REPLAY.slp");
@@ -50,6 +51,7 @@ fn run(args: Vec<String>) -> ExitCode {
             );
             eprintln!("       melee-oracle trace-info TRACE");
             eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");
+            eprintln!("       melee-oracle trace-heap TRACE");
             ExitCode::from(2)
         }
     }
