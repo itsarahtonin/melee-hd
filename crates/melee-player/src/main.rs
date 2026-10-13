@@ -24,6 +24,7 @@
 //! frame it renders is drawn and presented at once, on a swap chain one frame deep (mailbox,
 //! or immediate where the display has no mailbox mode).
 
+mod latency;
 mod launcher;
 mod pipelines;
 mod present;
@@ -58,6 +59,16 @@ struct Args {
     minutes: u32,
     replay: Option<String>,
     adapter: bool,
+    /// Writes each tick's latency measures to this CSV, with a summary at exit.
+    latency_log: Option<String>,
+    /// How frames reach the display.
+    present: present::Present,
+    /// Ticks each controller read is held back before the simulation sees it (0: none).
+    added_delay: u32,
+    /// Takes the audio device in exclusive mode (Windows).
+    audio_exclusive: bool,
+    /// Starts with the latency overlay shown (F3 toggles it).
+    latency_overlay: bool,
     bench: Option<u32>,
     size: (u32, u32),
     /// Quit after this many ticks.
@@ -89,6 +100,7 @@ fn usage() -> String {
         "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--size WxH] [--fullscreen] [--bench TICKS] [--launcher-shot FILE.png]\n\
          characters: {}\n\
          stages: {}\n\
+         latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive]\n\
          with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match",
         names(roster::CHARACTERS.iter().map(|c| c.keys[0]).collect()),
         names(roster::STAGES.iter().map(|s| s.keys[0]).collect()),
@@ -104,6 +116,11 @@ fn parse_args() -> Result<Args, String> {
         minutes: 8,
         replay: None,
         adapter: true,
+        latency_log: None,
+        present: present::Present::Mailbox,
+        added_delay: 0,
+        audio_exclusive: false,
+        latency_overlay: false,
         bench: None,
         size: (1280, 960),
         ticks: None,
@@ -156,6 +173,13 @@ fn parse_args() -> Result<Args, String> {
                 chosen = true;
             }
             "--no-adapter" => a.adapter = false,
+            "--latency-log" => a.latency_log = Some(value()?),
+            "--present" => a.present = present::Present::parse(&value()?)?,
+            "--added-delay" => {
+                a.added_delay = value()?.parse().map_err(|_| "--added-delay FRAMES")?
+            }
+            "--audio-exclusive" => a.audio_exclusive = true,
+            "--latency-overlay" => a.latency_overlay = true,
             "--one-thread" => a.one_thread = true,
             "--msaa" => {
                 a.msaa = match value()?.as_str() {
@@ -371,6 +395,13 @@ struct App {
     alt: bool,
     /// Why the match stopped, for the launcher to show.
     stopped: Option<String>,
+    /// The latency log, with `--latency-log`.
+    latency: Option<latency::Log>,
+    /// The input latency added back on purpose.
+    delay: melee_input::Delay,
+    /// The last second's latency, and the overlay showing it (F3), while it's on.
+    live: latency::Live,
+    overlay: Option<launcher::Painter>,
 }
 
 impl App {
@@ -390,9 +421,10 @@ impl App {
             self.next_tick = now;
         }
         while Instant::now() >= self.next_tick && !self.ended() {
+            let due = self.next_tick;
             self.next_tick += period;
             let start = Instant::now();
-            let pads = self.inputs.read();
+            let pads = self.delay.apply(self.inputs.read());
             let session = self.session.as_mut().expect("a match");
             let f =
                 match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| session.tick(pads)))
@@ -406,20 +438,41 @@ impl App {
                         return;
                     }
                 };
+            let simulated = start.elapsed();
+            let audio = session.sound.as_ref().and_then(sound::Sound::stats);
             self.stats.ticks += 1;
             self.ticks += 1;
             if self.max_ticks.is_some_and(|n| self.ticks >= n) {
                 session.ended = true;
             }
+            let mut frame = None;
             if !f.draws.is_empty() {
-                self.draw_frame(&f.draws);
+                frame = self.draw_frame(&f.draws, start);
                 self.stats.frame(start.elapsed());
             }
             self.session.as_mut().expect("a match").m.recycle(f);
+            let t = latency::Tick {
+                at: Some(start),
+                late: start.saturating_duration_since(due),
+                ages: self.inputs.ages,
+                adapter_reports: self.inputs.adapter.as_ref().map(|a| a.reports()),
+                sim: simulated,
+                frame,
+                audio,
+            };
+            self.live.tick(t);
+            if let Some(log) = &mut self.latency {
+                log.tick(t);
+            }
         }
     }
 
-    fn draw_frame(&mut self, draws: &[melee_sim::hsd::display::Draw]) {
+    /// Draws and presents a frame: when its stages finished, from `start`, its tick's start.
+    fn draw_frame(
+        &mut self,
+        draws: &[melee_sim::hsd::display::Draw],
+        start: Instant,
+    ) -> Option<latency::FrameTimes> {
         // The internal resolution follows the window's size unless `--scale` fixed it, and
         // the EFB's width the aspect: the renderer is made again for a new one.
         let scale = scale_for(self.args.scale, self.window_size, self.aspect);
@@ -439,9 +492,23 @@ impl App {
             )
         });
         let images = gpu.run(&self.frames.space, &m.data, &fifo, None);
-        if let (Some(shown), Some(frame)) = (&mut self.shown, images.into_iter().last()) {
-            shown.present(&self.gpu, &frame);
-        }
+        let rendered = start.elapsed();
+        let (shown, frame) = (self.shown.as_mut()?, images.into_iter().last()?);
+        let text = self.overlay.is_some().then(|| {
+            self.live
+                .text(&format!("{:?}", shown.present_mode()), self.delay.frames())
+        });
+        let (gpu, overlay) = (&self.gpu, &mut self.overlay);
+        let (acquire, presented) = shown.present(gpu, &frame, |view, w, h| {
+            if let (Some(p), Some(text)) = (overlay, text) {
+                latency::overlay(p, gpu, &text, view, w, h);
+            }
+        })?;
+        Some(latency::FrameTimes {
+            rendered,
+            acquire,
+            presented: presented.saturating_duration_since(start),
+        })
     }
 
     /// Saves the renderer's pipelines and lets it go; the next frame makes a new one.
@@ -460,6 +527,18 @@ impl App {
         if w > 0 && h > 0 {
             self.window_size = (w, h);
         }
+    }
+
+    /// Shows the latency overlay, or hides it.
+    fn toggle_overlay(&mut self) {
+        self.overlay = match (self.overlay.take(), &self.shown) {
+            (None, Some(s)) => {
+                let mut p = launcher::Painter::new(&self.gpu, s.format());
+                p.clear = false;
+                Some(p)
+            }
+            _ => None,
+        };
     }
 
     fn toggle_fullscreen(&mut self) {
@@ -483,6 +562,7 @@ impl App {
     fn start_match(&mut self) {
         let Some(l) = &mut self.launcher else { return };
         let aspect = l.form.aspect;
+        let (present, added_delay) = (l.form.present, l.form.added_delay);
         let c = &l.form.choice;
         let mut args = self.args.clone();
         args.players = c.ports();
@@ -508,6 +588,10 @@ impl App {
                     pipelines::renderer(&self.gpu, self.scale, self.msaa, aspect),
                     self.one_thread,
                 ));
+                if let Some(s) = &mut self.shown {
+                    s.set_present(&self.gpu, present);
+                }
+                self.delay = melee_input::Delay::new(added_delay);
                 // What the controllers did in the launcher doesn't reach the match.
                 self.inputs.read();
                 self.session = Some(session);
@@ -560,6 +644,9 @@ impl ApplicationHandler for App {
             }
             self.shown = Some(shown);
             self.next_tick = Instant::now();
+            if self.args.latency_overlay {
+                self.toggle_overlay();
+            }
         }
     }
 
@@ -578,6 +665,21 @@ impl ApplicationHandler for App {
             && (*code == KeyCode::F11 || (*code == KeyCode::Enter && self.alt))
         {
             self.toggle_fullscreen();
+            return;
+        }
+        // F3 shows or hides the latency overlay.
+        if let WindowEvent::KeyboardInput {
+            event:
+                KeyEvent {
+                    physical_key: PhysicalKey::Code(KeyCode::F3),
+                    state: ElementState::Pressed,
+                    repeat: false,
+                    ..
+                },
+            ..
+        } = &event
+        {
+            self.toggle_overlay();
             return;
         }
         let in_launcher = self.session.is_none();
@@ -814,6 +916,8 @@ fn run() -> ExitCode {
     if let Some(path) = &args.launcher_shot {
         let gpu = present::Gpu::new();
         let mut form = launcher::Form::new(args.stocks, args.minutes, args.fullscreen, args.aspect);
+        form.present = args.present;
+        form.added_delay = args.added_delay;
         return match launcher::shot(&gpu, &mut form, args.size, std::path::Path::new(path)) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
@@ -822,6 +926,10 @@ fn run() -> ExitCode {
             }
         };
     }
+    sound::set_output(melee_audio::OutputOptions {
+        exclusive: args.audio_exclusive,
+    });
+    present::set_present(args.present);
     if let Some(ticks) = args.bench {
         return bench(&args, ticks);
     }
@@ -850,9 +958,11 @@ fn run() -> ExitCode {
     }
     frames.hsd.widescreen = args.aspect.widescreen();
     present::set_aspect(args.aspect.shown);
-    let launcher = args.launch.then(|| Launcher {
-        form: launcher::Form::new(args.stocks, args.minutes, args.fullscreen, args.aspect),
-        window: None,
+    let launcher = args.launch.then(|| {
+        let mut form = launcher::Form::new(args.stocks, args.minutes, args.fullscreen, args.aspect);
+        form.present = args.present;
+        form.added_delay = args.added_delay;
+        Launcher { form, window: None }
     });
     let mut app = App {
         session,
@@ -877,8 +987,21 @@ fn run() -> ExitCode {
         window_size: args.size,
         alt: false,
         stopped: None,
+        latency: None,
+        delay: melee_input::Delay::new(args.added_delay),
+        live: latency::Live::default(),
+        overlay: None,
         args,
     };
+    if let Some(path) = &app.args.latency_log {
+        match latency::Log::create(path) {
+            Ok(log) => app.latency = Some(log),
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::FAILURE;
+            }
+        }
+    }
     present::set_size(app.args.size);
     // The pipelines the last runs needed, made before the first tick.
     if app.session.is_some() {
@@ -890,6 +1013,13 @@ fn run() -> ExitCode {
     let r = event_loop.run_app(&mut app);
     app.inputs.close();
     app.drop_renderer();
+    if let Some(mut log) = app.latency.take() {
+        if let Some(s) = &app.shown {
+            log.present_mode = format!("{:?}", s.present_mode());
+        }
+        log.added_delay = app.delay.frames();
+        log.finish();
+    }
     if let Err(e) = r {
         eprintln!("the window failed: {e}");
         return ExitCode::FAILURE;

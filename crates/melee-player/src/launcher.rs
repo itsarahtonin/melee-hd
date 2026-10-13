@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use melee_sim::game::roster::{self, CHARACTERS, STAGES};
 
-use crate::present::{Aspect, Gpu, Shown};
+use crate::present::{Aspect, Gpu, Present, Shown};
 
 /// A match the launcher picked.
 #[derive(Clone, Debug, PartialEq)]
@@ -51,6 +51,9 @@ pub struct Form {
     pub fullscreen: bool,
     /// The aspect ratio the match is shown at.
     pub aspect: Aspect,
+    /// How frames reach the display, and the input latency added back on purpose (ticks).
+    pub present: Present,
+    pub added_delay: u32,
 }
 
 impl Form {
@@ -67,6 +70,8 @@ impl Form {
             message: None,
             fullscreen,
             aspect,
+            present: Present::Mailbox,
+            added_delay: 0,
         }
     }
 
@@ -139,6 +144,24 @@ impl Form {
                             ui.label("");
                             ui.checkbox(&mut self.fullscreen, "Fullscreen");
                             ui.end_row();
+                            ui.label("Present");
+                            let present = &mut self.present;
+                            egui::ComboBox::from_id_salt("present")
+                                .selected_text(present.name())
+                                .width(200.0)
+                                .show_ui(ui, |ui| {
+                                    for (p, name) in Present::CHOICES {
+                                        ui.selectable_value(present, p, name);
+                                    }
+                                });
+                            ui.end_row();
+                            ui.label("Added delay");
+                            ui.add(
+                                egui::DragValue::new(&mut self.added_delay)
+                                    .range(0..=15)
+                                    .suffix(" frames"),
+                            );
+                            ui.end_row();
                         });
                 });
             });
@@ -163,6 +186,7 @@ impl Form {
             ui.weak("0 stocks: a timed match. 0 minutes: no time limit.");
             ui.weak("Enter starts. Escape in a match comes back here; Escape here quits.");
             ui.weak("F11 or Alt+Enter: fullscreen.");
+            ui.weak("Added delay holds the controllers back on purpose, for a CRT's feel.");
         });
         start
     }
@@ -175,6 +199,8 @@ const ZOOM: f32 = 1.5;
 pub struct Painter {
     pub ctx: egui::Context,
     renderer: egui_wgpu::Renderer,
+    /// Clears the target first (the launcher), or draws over it (the latency overlay).
+    pub clear: bool,
 }
 
 impl Painter {
@@ -191,7 +217,11 @@ impl Painter {
                 predictable_texture_filtering: false,
             },
         );
-        Painter { ctx, renderer }
+        Painter {
+            ctx,
+            renderer,
+            clear: true,
+        }
     }
 
     /// Runs the form over a frame's input: whether Start was pressed, and what to paint.
@@ -236,7 +266,11 @@ impl Painter {
                         depth_slice: None,
                         resolve_target: None,
                         ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                            load: if self.clear {
+                                wgpu::LoadOp::Clear(wgpu::Color::BLACK)
+                            } else {
+                                wgpu::LoadOp::Load
+                            },
                             store: wgpu::StoreOp::Store,
                         },
                     })],

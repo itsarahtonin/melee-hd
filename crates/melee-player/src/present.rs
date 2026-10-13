@@ -5,12 +5,15 @@
 //! immediate, else vsync.
 
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use melee_render::frame::GAME_ASPECT;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Fullscreen, Window};
 
 static SIZE: Mutex<(u32, u32)> = Mutex::new((1280, 960));
+/// How frames reach the display.
+static PRESENT: Mutex<Present> = Mutex::new(Present::Mailbox);
 /// The aspect ratio frames are shown at: the game's 73:60, wider in widescreen, or 4:3.
 static ASPECT: Mutex<f32> = Mutex::new(GAME_ASPECT);
 
@@ -107,6 +110,65 @@ impl Aspect {
             .find(|&s| (480.0 * s as f32 * self.shown).round() as u32 <= MAX_EFB_SIDE)
             .unwrap_or(1)
     }
+}
+
+/// How frames reach the display (`--present`): the swap chain's present mode, where the
+/// display has it.
+///
+/// Mailbox, the default, shows each frame at the display's next refresh without tearing and
+/// without waiting: a newer frame replaces one still waiting. FIFO waits its turn in a queue
+/// at each refresh (vsync), and Immediate shows it at once, tearing where the refresh is
+/// partway through the screen, which is the lowest latency.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Present {
+    Mailbox,
+    Fifo,
+    Immediate,
+}
+
+impl Present {
+    /// The launcher's choices, with their names.
+    pub const CHOICES: [(Present, &str); 3] = [
+        (Present::Mailbox, "Mailbox (no tearing)"),
+        (Present::Fifo, "FIFO (vsync)"),
+        (Present::Immediate, "Immediate (tears, lowest latency)"),
+    ];
+
+    pub fn parse(v: &str) -> Result<Present, String> {
+        match v {
+            "mailbox" => Ok(Present::Mailbox),
+            "fifo" | "vsync" => Ok(Present::Fifo),
+            "immediate" => Ok(Present::Immediate),
+            _ => Err(format!("--present mailbox|fifo|immediate, not {v}")),
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        Present::CHOICES
+            .iter()
+            .find(|(p, _)| *p == self)
+            .map_or("?", |(_, n)| n)
+    }
+
+    /// The present mode for this choice among the display's: the one asked for, else the
+    /// lowest-latency mode without tearing it has (mailbox, else FIFO, which every display
+    /// has).
+    pub fn mode(self, modes: &[wgpu::PresentMode]) -> wgpu::PresentMode {
+        let want = match self {
+            Present::Mailbox => wgpu::PresentMode::Mailbox,
+            Present::Fifo => wgpu::PresentMode::Fifo,
+            Present::Immediate => wgpu::PresentMode::Immediate,
+        };
+        [want, wgpu::PresentMode::Mailbox]
+            .into_iter()
+            .find(|m| modes.contains(m))
+            .unwrap_or(wgpu::PresentMode::Fifo)
+    }
+}
+
+/// How the next window presents.
+pub fn set_present(present: Present) {
+    *PRESENT.lock().unwrap() = present;
 }
 
 /// The aspect ratio to show frames at.
@@ -332,6 +394,8 @@ pub struct Shown {
     config: wgpu::SurfaceConfiguration,
     blit: Blit,
     fullscreen: bool,
+    /// The present modes the display has.
+    modes: Vec<wgpu::PresentMode>,
 }
 
 impl Shown {
@@ -355,10 +419,7 @@ impl Shown {
             .copied()
             .find(|f| !f.is_srgb())
             .unwrap_or(caps.formats[0]);
-        let present_mode = [wgpu::PresentMode::Mailbox, wgpu::PresentMode::Immediate]
-            .into_iter()
-            .find(|m| caps.present_modes.contains(m))
-            .unwrap_or(wgpu::PresentMode::AutoVsync);
+        let present_mode = PRESENT.lock().unwrap().mode(&caps.present_modes);
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format,
@@ -384,6 +445,17 @@ impl Shown {
             config,
             blit,
             fullscreen,
+            modes: caps.present_modes,
+        }
+    }
+
+    /// Presents as `present` asks from the next frame on.
+    pub fn set_present(&mut self, gpu: &Gpu, present: Present) {
+        let mode = present.mode(&self.modes);
+        if mode != self.config.present_mode {
+            eprintln!("present mode: {mode:?}");
+            self.config.present_mode = mode;
+            self.surface.configure(&gpu.device, &self.config);
         }
     }
 
@@ -433,24 +505,38 @@ impl Shown {
         gpu.queue.present(out);
     }
 
-    /// Shows a frame now.
-    pub fn present(&mut self, gpu: &Gpu, frame: &melee_gpu::Frame) {
-        let Some(texture) = &frame.texture else {
-            return;
-        };
+    /// The swap chain's present mode.
+    pub fn present_mode(&self) -> wgpu::PresentMode {
+        self.config.present_mode
+    }
+
+    /// Shows a frame now, with `over` drawn over it (given the image's view, width and
+    /// height): how long the swap chain's next image took to come, and when the present call
+    /// returned.
+    pub fn present(
+        &mut self,
+        gpu: &Gpu,
+        frame: &melee_gpu::Frame,
+        over: impl FnOnce(&wgpu::TextureView, u32, u32),
+    ) -> Option<(Duration, Instant)> {
+        let texture = frame.texture.as_ref()?;
+        let asked = Instant::now();
         let out = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(t)
             | wgpu::CurrentSurfaceTexture::Suboptimal(t) => t,
             _ => {
                 self.surface.configure(&gpu.device, &self.config);
-                return;
+                return None;
             }
         };
+        let acquire = asked.elapsed();
         let view = out.texture.create_view(&Default::default());
         self.blit
             .draw(gpu, texture, &view, self.config.width, self.config.height);
+        over(&view, self.config.width, self.config.height);
         self.window.pre_present_notify();
         gpu.queue.present(out);
+        Some((acquire, Instant::now()))
     }
 }
 
@@ -514,6 +600,22 @@ mod tests {
         assert!(Aspect::parse("1:1").is_err());
         assert!(Aspect::parse("16x9").is_err());
         assert!(Aspect::parse("16:0").is_err());
+    }
+
+    #[test]
+    fn present_choices_fall_back_to_a_mode_the_display_has() {
+        use wgpu::PresentMode::{Fifo, Immediate, Mailbox};
+        assert_eq!(Present::parse("immediate"), Ok(Present::Immediate));
+        assert_eq!(Present::parse("vsync"), Ok(Present::Fifo));
+        assert!(Present::parse("adaptive").is_err());
+        let all = [Fifo, Mailbox, Immediate];
+        assert_eq!(Present::Mailbox.mode(&all), Mailbox);
+        assert_eq!(Present::Immediate.mode(&all), Immediate);
+        assert_eq!(Present::Fifo.mode(&all), Fifo);
+        // No mailbox (Metal, some X11): FIFO, never tearing unasked.
+        assert_eq!(Present::Mailbox.mode(&[Fifo, Immediate]), Fifo);
+        assert_eq!(Present::Immediate.mode(&[Fifo, Mailbox]), Mailbox);
+        assert_eq!(Present::Immediate.mode(&[Fifo]), Fifo);
     }
 
     #[test]
