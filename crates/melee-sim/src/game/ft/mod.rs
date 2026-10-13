@@ -42,6 +42,8 @@ pub mod motion;
 mod motion_tables;
 pub mod parts;
 pub mod phys;
+pub mod pichu;
+pub mod pikachu;
 pub mod resolve;
 pub mod seak;
 pub mod second;

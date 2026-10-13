@@ -16,6 +16,9 @@ pub mod kusudama;
 pub mod luigifireball;
 pub mod mariocape;
 pub mod mariofireball;
+pub mod pikachuthunder;
+pub mod pikachutjoltair;
+pub mod pikachutjoltground;
 pub mod rshell;
 pub mod seakchain;
 pub mod seakneedleheld;
@@ -58,6 +61,9 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || mariofireball::run_event(r, gobj, addr)
         || mariocape::run_event(r, gobj, addr)
         || drmariopill::run_event(r, gobj, addr)
+        || pikachuthunder::run_event(r, gobj, addr)
+        || pikachutjoltground::run_event(r, gobj, addr)
+        || pikachutjoltair::run_event(r, gobj, addr)
 }
 
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
@@ -88,6 +94,9 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| mariofireball::run_pred(r, gobj, addr))
         .or_else(|| mariocape::run_pred(r, gobj, addr))
         .or_else(|| drmariopill::run_pred(r, gobj, addr))
+        .or_else(|| pikachuthunder::run_pred(r, gobj, addr))
+        .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
+        .or_else(|| pikachutjoltair::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -137,6 +146,14 @@ pub const ZELDA_DIN_FIRE_EXPLODE: i32 = 109;
 pub const FOX_BLASTER: i32 = 74;
 /// `It_Kind_Falco_Blaster`.
 pub const FALCO_BLASTER: i32 = 75;
+/// `It_Kind_Pikachu_Thunder` and `It_Kind_Pichu_Thunder`.
+pub const PIKACHU_THUNDER: i32 = 81;
+pub const PICHU_THUNDER: i32 = 82;
+/// `It_Kind_Pikachu_TJolt_Ground`, `_Air`, and Pichu's.
+pub const PIKACHU_TJOLT_GROUND: i32 = 89;
+pub const PIKACHU_TJOLT_AIR: i32 = 90;
+pub const PICHU_TJOLT_GROUND: i32 = 91;
+pub const PICHU_TJOLT_AIR: i32 = 92;
 /// `It_Kind_Seak_NeedleThrow`, `_NeedleHeld`, `_Vanish`, `_Chain`.
 pub const SEAK_NEEDLE_THROW: i32 = 79;
 pub const SEAK_NEEDLE_HELD: i32 = 80;

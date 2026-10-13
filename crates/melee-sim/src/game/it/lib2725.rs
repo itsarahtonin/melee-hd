@@ -249,6 +249,21 @@ pub fn spin(game: &mut Game, data: &Archives, gobj: GObjId) {
     });
 }
 
+/// The item's landing dust and sound at `offset` from it, `it_80272AC4`: no more counted
+/// hits.
+// Ports `it_80272AC4`; aliased once a check reaches it.
+pub fn landing_dust_at(r: &mut Running, gobj: GObjId, offset: Vec3) {
+    let p = item(r.game, gobj).pos;
+    let pos = Vec3::new(
+        mem(fp::fadds(reg(offset.x), reg(p.x))),
+        mem(fp::fadds(reg(offset.y), reg(p.y))),
+        mem(fp::fadds(reg(offset.z), reg(p.z))),
+    );
+    crate::game::ef::spawn(r, 0x40C, Some(gobj), &[crate::game::ef::Arg::Vec(pos)]);
+    super::item::play_sfx(r, gobj, 116, 127, 64);
+    uncount_hits(r.game, gobj);
+}
+
 /// Turns off the hit-counting flag, `it_80274C60`.
 #[doc(alias = "it_80274C60")]
 pub fn uncount_hits(game: &mut Game, gobj: GObjId) {

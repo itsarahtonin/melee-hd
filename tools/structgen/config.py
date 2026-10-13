@@ -36,6 +36,10 @@ ROOTS = [
     "itZeldaDinFireExplode_ItemVars",
     # Dr. Mario's pill.
     "itDrMarioPill_ItemVars",
+    # Pikachu's and Pichu's Thunder and Thunder Jolts.
+    "itPikachuthunder_ItemVars",
+    "itPikachutJoltGround_ItemVars",
+    "itPikachutJoltAir_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",
