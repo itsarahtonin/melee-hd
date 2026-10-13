@@ -17,6 +17,7 @@ use super::slippi::{self, CodeError};
 use super::state::{Event, Game, Rules, Running};
 use super::structs::StartMeleeData;
 use super::ucf;
+use crate::audio::clock::DiscSpeed;
 use crate::audio::dsp::DspModel;
 use crate::input::controller::{PadData, Requests};
 use crate::input::pad::PadStatus;
@@ -36,6 +37,11 @@ pub struct Settings {
     /// later sounds get: a recording keeps the one it was played with, as ssbm-rs's keep
     /// their sound flag.
     pub dsp: DspModel,
+    /// How fast the disc reads, which decides when the music stream's reads land between
+    /// audio frames and so which voices are free: a recording keeps the pace it was made at,
+    /// as ssbm-rs's runs read at Slippi's fast disc speed unless told `DISC_RATE`, and the
+    /// player reads at a drive's, as ssbm-rs's window does (`docs/engine.md`).
+    pub disc: DiscSpeed,
     /// UCF's pad buffer as the match starts (with `rules.ucf`).
     pub ucf: ucf::Pads,
     /// A Slippi replay drives the match through Slippi's playback codes
@@ -135,8 +141,10 @@ impl Settings {
             seed: 0,
             game_mode: gm::GM_VS,
             rules: Rules::default(),
-            // A player hears the match: the voices play through their samples.
+            // A player hears the match: the voices play through their samples, and the music
+            // needs a drive's pace to keep playing.
             dsp: DspModel::Samples,
+            disc: DiscSpeed::Drive,
             ucf: ucf::Pads::default(),
             playback: false,
             fighter_addresses: Vec::new(),
@@ -174,7 +182,8 @@ impl Settings {
     /// `StartMeleeData` as the game held it, 0x138 bytes) and random seed. A replay doesn't
     /// say how its sound played; this takes the sample-accurate model, as Slippi Dolphin
     /// recorded it and ssbm-rs plays replays unless told `AX=0`, so the two compare.
-    /// [`DspModel::Silent`] stays available by setting `dsp`.
+    /// [`DspModel::Silent`] stays available by setting `dsp`. The disc reads at Slippi's fast
+    /// disc speed, as ssbm-rs's traces of replays do; a drive's pace is `disc`.
     pub fn from_game_info(info: &[u8], seed: u32) -> Settings {
         assert_eq!(
             info.len(),
@@ -194,6 +203,7 @@ impl Settings {
             ucf: ucf::Pads::default(),
             playback: false,
             dsp: DspModel::Samples,
+            disc: DiscSpeed::Fast,
             fighter_addresses: Vec::new(),
             unlocks: super::gm::Unlocks::slippi(),
             boot_audio: true,
@@ -290,6 +300,8 @@ impl Match {
         game.it.db_menu.ItemSpawnsEnabled = 1;
         let mut data = Archives::default();
         boot(&mut game, &mut data);
+        // Before the boot's audio setup reads the disc, and over a seeded boot state's.
+        game.audio.disc = settings.disc;
         if settings.boot_audio && game.audio.clock.is_none() {
             super::boot::boot(&mut game, &mut data, settings, load);
         }

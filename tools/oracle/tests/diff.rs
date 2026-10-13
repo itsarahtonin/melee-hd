@@ -4,7 +4,8 @@
 //!
 //! The trace is ssbm-rs's, with memory (branch `feat/state-trace-memory`), kept out of the
 //! repository: `TRACE` (default below) of the Fox vs Sheik Final Destination replay `REPLAY`,
-//! made as `docs/oracle.md` says. The tests skip without the trace, the replay or `SSBM_DISC`.
+//! made as `docs/oracle.md` says, and a trace made at a drive's pace (`docs/player.md`). The
+//! tests skip without the trace, the replay or `SSBM_DISC`.
 
 use std::process::Command;
 
@@ -12,20 +13,32 @@ const TRACE: &str =
     "C:/Projects/ssbm-rs-publication/local/traces/v5-mixed/Game_20260129T133652.trc";
 const REPLAY: &str = "C:/Users/USER/Documents/Slippi/2026-01/Game_20260129T133652.slp";
 
+/// A trace ssbm-rs made reading the disc at a drive's pace (`DISC_RATE=3000000`), of the Fox
+/// vs Marth benchmark match on Final Destination, whose song stops at the fast disc speed
+/// (`docs/player.md`), with memory over its first 4,500 fields, and the replay.
+const DRIVE_TRACE: &str =
+    "C:/Projects/ssbm-rs-publication/local/player/audio-drive-fox-marth-fd.trc";
+const DRIVE_REPLAY: &str = "C:/Projects/ssbm-rs-publication/local/bench/fox-marth-fd.slp";
+
 /// The oracle's output for `args` after `diff TRACE REPLAY`, or none when what it needs isn't
 /// here.
 fn diff(args: &[&str]) -> Option<String> {
     let trace = std::env::var("TRACE").unwrap_or_else(|_| TRACE.into());
     let replay = std::env::var("REPLAY").unwrap_or_else(|_| REPLAY.into());
+    diff_of(&trace, &replay, args)
+}
+
+/// The oracle's output for `diff trace replay args`, or none when what it needs isn't here.
+fn diff_of(trace: &str, replay: &str, args: &[&str]) -> Option<String> {
     if std::env::var("SSBM_DISC").is_err()
-        || !std::path::Path::new(&trace).exists()
-        || !std::path::Path::new(&replay).exists()
+        || !std::path::Path::new(trace).exists()
+        || !std::path::Path::new(replay).exists()
     {
         eprintln!("no trace, replay or disc: skipping");
         return None;
     }
     let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
-        .args(["diff", &trace, &replay])
+        .args(["diff", trace, replay])
         .args(args)
         .output()
         .expect("melee-oracle runs");
@@ -106,4 +119,24 @@ fn boot_state_seeds() {
             "{d}"
         );
     }
+}
+
+#[test]
+fn drive_pace_from_the_boot() {
+    let Some(out) = diff_of(
+        DRIVE_TRACE,
+        DRIVE_REPLAY,
+        &["--fp", "hardware", "--disc-speed", "drive", "--boot-audio"],
+    ) else {
+        return;
+    };
+    // At a drive's pace melee-sim's boot leaves what ssbm-rs's does, its timeline included,
+    // and the match, its music playing on, compares to the trace's end.
+    assert!(
+        out.contains("the boot's audio setup against the boot state: 0 differences"),
+        "{out}"
+    );
+    assert!(out.contains("the trace ends after tick 4159"), "{out}");
+    assert!(out.contains("4159 ticks compared, no difference"), "{out}");
+    assert!(out.contains("no stale reads"), "{out}");
 }

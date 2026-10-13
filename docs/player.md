@@ -100,7 +100,16 @@ melee-audio-check audio-fox-fox-fd.trc fox-fox-fd.slp audio-fox-fox-fd.wav --fp 
 
 With `--port` (and `-` for the trace) `melee-audio-check` doesn't read the trace: the match starts as the player starts one, from melee-sim's boot, and the mix covers the boot's frames too. Against the same recordings it is sample-exact from the native mix's first sample (the AX library's first frame, which lines up with the recording's sample 320) to the end: 40.0 s of the Fox ditto and 60.0 s of Fox against Marth.
 
-`melee-audio-check --out MIX.wav` writes the native mix.
+`melee-audio-check --out MIX.wav` writes the native mix, and the check reports how often the music stream moved on to its next box and when it last did: a song that stopped stops moving.
+
+**Decision: the player reads the disc at a drive's pace, unlike the replay checks.** The disc's speed is a match setting (`Settings::disc`, [the engine notes](engine.md)): at Slippi's fast disc speed, which ssbm-rs's traces and recordings of replays use and so every replay check keeps, about half of all songs stop 1.8 s in, in ssbm-rs's runs as in melee-sim's, because the stream's start and its addresses reach the DSP in one audio frame. ssbm-rs's window reads at a drive's pace, 3 MB/s on top of each read's latency (its `1fb4da3`), and the player does the same, for its own matches and replays alike; `--disc-speed fast` takes the fast speed. `melee-audio-check --disc-speed drive` checks that pace against ssbm-rs's runs with `DISC_RATE=3000000`:
+
+```sh
+SLIPPI_PLAYER_NAMES=0 DISC_RATE=3000000 STATE_TRACE=local/player/audio-drive-fox-marth-fd.trc STATE_TRACE_MEMORY=1   AUDIO_OUT=local/player/audio-drive-fox-marth-fd.wav ssbm-run "$SSBM_DISC" --replay local/bench/fox-marth-fd.slp --fp hardware --port all --fields 4500
+melee-audio-check - fox-marth-fd.slp audio-drive-fox-marth-fd.wav --port --fp hardware --disc-speed drive --ticks 4200 --out mix.wav
+```
+
+On Fox against Marth on Final Destination, whose song stops at the fast speed (the stream last moves in tick 109; the mix is sample-exact with ssbm-rs's fast recording for 66.7 s, song gone in both), the drive's mix is sample-exact with ssbm-rs's recording at that pace from the native mix's first sample to the recording's end, 75.0 s from melee-sim's boot (72.1 s from the trace's boot state), and the song plays throughout: the stream moves to a new box 42 times, the last in tick 4187, and the mix is about half again as loud in every 10 s of the match's first minute. Fox against Marth on Battlefield, whose song plays at either speed, is sample-exact for 75.0 s at a drive's pace too. A match from the player's own settings behaves the same: Fox against Marth on Final Destination lost its song at tick 109 at the fast speed for every seed tried, and keeps it at a drive's pace.
 
 ## Input
 
@@ -110,7 +119,7 @@ With `--port` (and `-` for the trace) `melee-audio-check` doesn't read the trace
 
 ```sh
 melee-hd                                               # the launcher: pick the match in the window
-melee-hd --p1 fox --p2 marth --stage bf [--stocks 4] [--minutes 8] [--widescreen | --aspect 21:9] [--scale N] [--msaa 4] [--size 1920x1440] [--fullscreen]
+melee-hd --p1 fox --p2 marth --stage bf [--stocks 4] [--minutes 8] [--widescreen | --aspect 21:9] [--scale N] [--msaa 4] [--size 1920x1440] [--fullscreen] [--disc-speed drive|fast]
 melee-hd --replay fox-fox-fd.slp                       # a replay's match, its inputs played back
 melee-hd --bench 1200 --size 2560x1440                 # headless, timing each frame
 melee-hd --launcher-shot launcher.png [--size WxH]     # draws the launcher to a PNG, no window

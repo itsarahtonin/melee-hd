@@ -3,7 +3,7 @@
 //! ```text
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
 //!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread]
-//!          [--no-adapter] [--size WxH] [--fullscreen] [--ticks N]
+//!          [--no-adapter] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [...]     plays headless, timing each frame
 //! melee-hd --launcher-shot FILE.png [--size WxH] draws the launcher to a PNG
 //! ```
@@ -15,6 +15,10 @@
 //! gamepads and the keyboard play the first ports left (arrows: stick, IJKL: C-stick, X/Z/C/S:
 //! A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). F11 or Alt+Enter toggles
 //! borderless fullscreen. Escape quits, or from a match the launcher started, goes back to it.
+//!
+//! The disc reads at a drive's pace, as ssbm-rs's window reads it, which the music needs
+//! (`melee_sim::audio::clock::DiscSpeed`); `--disc-speed fast` reads at Slippi's fast disc
+//! speed, as the oracle's traces and the replay checks do.
 //!
 //! The loop keeps latency short: each tick reads the controllers just before it runs, and the
 //! frame it renders is drawn and presented at once, on a swap chain one frame deep (mailbox,
@@ -32,6 +36,7 @@ use melee_data::disc::Disc;
 use melee_input::{Inputs, Key};
 use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
+use melee_sim::audio::clock::DiscSpeed;
 use melee_sim::game::roster;
 use melee_sim::game::vs_match::{DiscFile, Match, Player, Settings};
 use melee_slippi::Replay;
@@ -75,13 +80,15 @@ struct Args {
     launcher_shot: Option<String>,
     /// Borderless fullscreen on the window's monitor.
     fullscreen: bool,
+    /// How fast the disc reads: a drive's pace unless `--disc-speed fast`.
+    disc_speed: DiscSpeed,
 }
 
 /// The command line's usage, with the characters and stages melee-sim has ported.
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--size WxH] [--fullscreen] [--bench TICKS] [--launcher-shot FILE.png]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS] [--launcher-shot FILE.png]\n\
          characters: {}\n\
          stages: {}\n\
          with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match",
@@ -110,6 +117,7 @@ fn parse_args() -> Result<Args, String> {
         launch: false,
         launcher_shot: None,
         fullscreen: false,
+        disc_speed: DiscSpeed::Drive,
     };
     // Whether the command line names a match.
     let mut chosen = false;
@@ -166,6 +174,9 @@ fn parse_args() -> Result<Args, String> {
             "--shot" => a.shot = Some(value()?),
             "--launcher-shot" => a.launcher_shot = Some(value()?),
             "--fullscreen" => a.fullscreen = true,
+            "--disc-speed" => {
+                a.disc_speed = DiscSpeed::parse(&value()?).ok_or("--disc-speed drive|fast")?
+            }
             "--widescreen" => a.widescreen = Some(16.0 / 9.0),
             "--aspect" => {
                 let v = value()?;
@@ -236,6 +247,11 @@ impl Session {
                     .map_or(0, |d| d.subsec_nanos());
                 (s, None)
             }
+        };
+        // The replay's match too reads at the player's pace, as ssbm-rs's window plays one.
+        let settings = Settings {
+            disc: a.disc_speed,
+            ..settings
         };
         let (m, sound) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             let play = a.bench.is_none();
