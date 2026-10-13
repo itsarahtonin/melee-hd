@@ -61,7 +61,13 @@ impl Ctx<'_> {
                 })
             }
             Some(ImageRef::Static(at)) => self.static_image(at),
-            _ => None,
+            Some(
+                ImageRef::Refract(_)
+                | ImageRef::RefractFrame
+                | ImageRef::Screen(_)
+                | ImageRef::Shadow(_),
+            )
+            | None => None,
         };
         let Some(img) = img else {
             self.hsd.note("a magnifier bubble without an image".into());
