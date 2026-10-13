@@ -25,6 +25,9 @@ use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::capture::Call;
 
+/// Capture sets (the name prefix) whose saved calls only the functions the filter names run.
+pub type ExtraSets = (&'static str, fn(&str) -> bool);
+
 /// A character's capture sets and function list.
 pub struct Character {
     /// The prefix of the check's environment variables: `{env}_CALLS` (the capture directory),
@@ -40,7 +43,7 @@ pub struct Character {
     pub skip: fn(&str) -> bool,
     /// More capture sets (the name prefix) whose saved calls only some functions' runs take,
     /// and which.
-    pub extra: Option<(&'static str, fn(&str) -> bool)>,
+    pub extra: Option<ExtraSets>,
 }
 
 impl Character {
