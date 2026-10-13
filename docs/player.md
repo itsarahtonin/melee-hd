@@ -105,7 +105,8 @@ With `--port` (and `-` for the trace) `melee-audio-check` doesn't read the trace
 **Decision: the player reads the disc at a drive's pace, unlike the replay checks.** The disc's speed is a match setting (`Settings::disc`, [the engine notes](engine.md)): at Slippi's fast disc speed, which ssbm-rs's traces and recordings of replays use and so every replay check keeps, about half of all songs stop 1.8 s in, in ssbm-rs's runs as in melee-sim's, because the stream's start and its addresses reach the DSP in one audio frame. ssbm-rs's window reads at a drive's pace, 3 MB/s on top of each read's latency (its `1fb4da3`), and the player does the same, for its own matches and replays alike; `--disc-speed fast` takes the fast speed. `melee-audio-check --disc-speed drive` checks that pace against ssbm-rs's runs with `DISC_RATE=3000000`:
 
 ```sh
-SLIPPI_PLAYER_NAMES=0 DISC_RATE=3000000 STATE_TRACE=local/player/audio-drive-fox-marth-fd.trc STATE_TRACE_MEMORY=1   AUDIO_OUT=local/player/audio-drive-fox-marth-fd.wav ssbm-run "$SSBM_DISC" --replay local/bench/fox-marth-fd.slp --fp hardware --port all --fields 4500
+SLIPPI_PLAYER_NAMES=0 DISC_RATE=3000000 STATE_TRACE=local/player/audio-drive-fox-marth-fd.trc STATE_TRACE_MEMORY=1 \
+  AUDIO_OUT=local/player/audio-drive-fox-marth-fd.wav ssbm-run "$SSBM_DISC" --replay local/bench/fox-marth-fd.slp --fp hardware --port all --fields 4500
 melee-audio-check - fox-marth-fd.slp audio-drive-fox-marth-fd.wav --port --fp hardware --disc-speed drive --ticks 4200 --out mix.wav
 ```
 

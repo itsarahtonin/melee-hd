@@ -1,11 +1,11 @@
 //! `melee-audio-check TRACE REPLAY.slp AUDIO.wav [--fp hardware|slippi] [--ticks N]
-//! [--window SECONDS] [--disc-speed fast|drive] [--out MIX.wav]`: plays a replay natively from the
-//! boot state in ssbm-rs's state trace (version 5, with memory over the boot tick), mixes its
-//! audio with melee-audio, and compares the samples with ssbm-rs's recording of the same run's
-//! audio interface (`AUDIO_OUT=AUDIO.wav ssbm-run ...`), which starts at power-on: the two
-//! streams are aligned first (an exact match of a stretch of samples, else cross-correlation),
-//! then compared window by window: SNR, the largest difference and the share of stereo samples
-//! that are equal.
+//! [--window SECONDS] [--disc-speed fast|drive] [--out MIX.wav]`: plays a replay natively from
+//! the boot state in ssbm-rs's state trace (version 5, with memory over the boot tick), mixes
+//! its audio with melee-audio, and compares the samples with ssbm-rs's recording of the same
+//! run's audio interface (`AUDIO_OUT=AUDIO.wav ssbm-run ...`), which starts at power-on: the
+//! two streams are aligned first (an exact match of a stretch of samples, else
+//! cross-correlation), then compared window by window: SNR, the largest difference and the
+//! share of stereo samples that are equal.
 //!
 //! With `--port` the trace isn't read (pass `-` for it): the match starts as the player
 //! starts one, from melee-sim's port of the boot's audio setup (`game::boot`), and the mix
