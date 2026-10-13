@@ -25,6 +25,7 @@
 //! directory below; set `FTCOMMON_CALLS` to use another. The Fox and Sheik captures of
 //! `fighter.rs` are run too.
 
+use melee_local_data::ssbm_rs_local;
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
@@ -34,17 +35,17 @@ use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::co::kind_callbacks as kinds;
 use melee_sim::game::handles::CodeRef;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/ftcommon";
-const FIGHTER_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/fighter-fd1";
+const CALLS: &str = "calls/ftcommon";
+const FIGHTER_CALLS: &str = "calls/fighter-fd1";
 
 /// The capture sets.
 fn dirs() -> Vec<String> {
-    let base = std::env::var("FTCOMMON_CALLS").unwrap_or_else(|_| CALLS.to_owned());
+    let base = std::env::var("FTCOMMON_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS));
     let mut v: Vec<String> = ["r4fd", "r4bf", "r2fd"]
         .iter()
         .map(|d| format!("{base}/{d}"))
         .collect();
-    v.push(std::env::var("FIGHTER_CALLS").unwrap_or_else(|_| FIGHTER_CALLS.to_owned()));
+    v.push(std::env::var("FIGHTER_CALLS").unwrap_or_else(|_| ssbm_rs_local(FIGHTER_CALLS)));
     v
 }
 

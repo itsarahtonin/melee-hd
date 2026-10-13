@@ -52,7 +52,7 @@ fn skipped(name: &str) -> bool {
 
 const GANON: Character = Character {
     env: "GANON",
-    calls: "C:/Projects/ssbm-rs-publication/local/calls/ganon",
+    calls: "calls/ganon",
     sets: "debug",
     funcs: "ganon-funcs.txt",
     skip: skipped,

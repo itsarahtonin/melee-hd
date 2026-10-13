@@ -3,6 +3,7 @@
 //! comparing every value read and the six blocks after each step, and the whole state (fighters
 //! included) at the end. Tests skip without the captures; `vs.rs` says how to make them.
 
+use melee_local_data::ssbm_rs_local;
 use std::path::PathBuf;
 
 use leaf_check::fp::{FpMode, set_fp_mode};
@@ -20,14 +21,14 @@ use melee_sim::vec::Vec3;
 use ssbm_rt::{Ctx, Handle};
 use ssbm_types::fns;
 
-const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/match";
+const DEFAULT_CALLS: &str = "calls/match";
 
 /// The states the sequences start from: the match's frame, as it plays.
 const BASE: &str = "fn_8016CFE0";
 
 fn bases() -> Vec<PathBuf> {
     let dir: PathBuf = std::env::var("MATCH_CALLS")
-        .unwrap_or_else(|_| DEFAULT_CALLS.into())
+        .unwrap_or_else(|_| ssbm_rs_local(DEFAULT_CALLS))
         .into();
     let mut found: Vec<PathBuf> = std::fs::read_dir(&dir)
         .into_iter()

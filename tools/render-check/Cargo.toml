@@ -15,3 +15,6 @@ melee-sim.workspace = true
 melee-gx = { path = "../../crates/melee-gx" }
 melee-gpu = { path = "../../crates/melee-gpu" }
 png = "0.18"
+
+[dev-dependencies]
+melee-local-data = { path = "../local-data" }

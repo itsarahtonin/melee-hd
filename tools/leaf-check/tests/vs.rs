@@ -22,6 +22,7 @@
 //! and again with `MATCH_TEAMS=1 MATCH_PLAYERS=4` into `dvs-teams`, with the names this file's
 //! tests use.
 
+use melee_local_data::ssbm_rs_local;
 use std::collections::HashSet;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::PathBuf;
@@ -45,11 +46,11 @@ use melee_sim::vec::Vec3;
 use ssbm_rt::{Ctx, Handle};
 use ssbm_types::fns;
 
-const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/match";
+const DEFAULT_CALLS: &str = "calls/match";
 
 fn calls_dir() -> PathBuf {
     std::env::var("MATCH_CALLS")
-        .unwrap_or_else(|_| DEFAULT_CALLS.into())
+        .unwrap_or_else(|_| ssbm_rs_local(DEFAULT_CALLS))
         .into()
 }
 

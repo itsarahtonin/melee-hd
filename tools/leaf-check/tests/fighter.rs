@@ -18,13 +18,14 @@ use leaf_check::calls::{
     Ret, check_calls, check_calls_with, gobj_arg, peek_u32, poke_bit, poke_f32, poke_u32,
     user_data_arg,
 };
+use melee_local_data::ssbm_rs_local;
 use melee_sim::game::code::run_proc;
 use melee_sim::game::handles::{CodeRef, FighterId};
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/fighter-fd1";
+const CALLS: &str = "calls/fighter-fd1";
 
 fn calls_dir() -> String {
-    std::env::var("FIGHTER_CALLS").unwrap_or_else(|_| CALLS.to_owned())
+    std::env::var("FIGHTER_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS))
 }
 
 /// Runs the process at `addr` on the call's GObj, through the process table.

@@ -1,0 +1,10 @@
+[package]
+name = "melee-local-data"
+description = "Where the checks and tools find data kept out of the repository (SSBM_RS_LOCAL, SLIPPI_REPLAYS) and the benchmark replays kept in it"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]

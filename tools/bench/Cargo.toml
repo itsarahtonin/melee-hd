@@ -10,6 +10,7 @@ publish.workspace = true
 [dependencies]
 melee-capture = { path = "../capture" }
 melee-data.workspace = true
+melee-local-data = { path = "../local-data" }
 melee-slippi = { path = "../../crates/melee-slippi" }
 melee-sim.workspace = true
 ssbm-slippi.workspace = true

@@ -15,3 +15,6 @@ melee-slippi = { path = "../../crates/melee-slippi" }
 melee-sim.workspace = true
 ssbm-rt.workspace = true
 zstd = "0.13"
+
+[dev-dependencies]
+melee-local-data = { path = "../local-data" }

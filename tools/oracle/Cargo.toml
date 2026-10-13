@@ -16,3 +16,6 @@ ssbm-rt.workspace = true
 ssbm-slippi.workspace = true
 ssbm-types.workspace = true
 zstd = "0.13"
+
+[dev-dependencies]
+melee-local-data = { path = "../local-data" }

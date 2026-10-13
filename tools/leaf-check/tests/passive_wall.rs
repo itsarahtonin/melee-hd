@@ -35,6 +35,7 @@
 //! without `CAPTURE_EVERY` and with the `walljump` lists, for `Game_20260807T225016`,
 //! `Game_20260129T170722` and `Game_20260605T222022`.
 
+use melee_local_data::ssbm_rs_local;
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
@@ -49,10 +50,10 @@ use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::capture::Call;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/wall";
+const CALLS: &str = "calls/wall";
 
 fn base() -> String {
-    std::env::var("WALL_CALLS").unwrap_or_else(|_| CALLS.to_owned())
+    std::env::var("WALL_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS))
 }
 
 /// The capture sets, one per run.

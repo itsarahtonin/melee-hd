@@ -43,7 +43,7 @@ use foxlike::Character;
 /// Fox's capture sets: the benchmark's ditto and two replays.
 const FOX: Character = Character {
     env: "FOX",
-    calls: "C:/Projects/ssbm-rs-publication/local/calls/fox",
+    calls: "calls/fox",
     sets: &["bench", "Game_20260129T133652", "Game_20260531T174953"],
     funcs: "fox-funcs.txt",
     // Fighter creation's (checked by `fighter_create`), and the blaster's queries, which are

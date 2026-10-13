@@ -27,23 +27,17 @@ use melee_sim::hsd::gobj::GObjId;
 use melee_sim::vec::Vec3;
 use ssbm_rt::Ctx;
 
-/// Where the captures are: `MATCH_CALLS` (the VS match's, made as `vs.rs` says) and
+/// Where the captures are (by default in `$SSBM_RS_LOCAL/calls`): `MATCH_CALLS` (the VS match's, made as `vs.rs` says) and
 /// `HUD_CALLS` (the HUD's, made the same way with the HUD's functions named; see `hud.rs`).
 pub fn calls_dirs() -> Vec<PathBuf> {
     let var = |name: &str, default: &str| -> PathBuf {
         std::env::var(name)
-            .unwrap_or_else(|_| default.into())
+            .unwrap_or_else(|_| melee_local_data::ssbm_rs_local(default))
             .into()
     };
     vec![
-        var(
-            "MATCH_CALLS",
-            "C:/Projects/ssbm-rs-publication/local/calls/match",
-        ),
-        var(
-            "HUD_CALLS",
-            "C:/Projects/ssbm-rs-publication/local/calls/hud",
-        ),
+        var("MATCH_CALLS", "calls/match"),
+        var("HUD_CALLS", "calls/hud"),
     ]
 }
 

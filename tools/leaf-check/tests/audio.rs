@@ -20,17 +20,18 @@
 //! The captures are game memory, so they live outside the repository: `$AUDIO_CALLS` is
 //! `AUDIO_CALLS` (default below), and tests skip without it. The game-side callers' calls
 //! (`lbAudioAx_*`, `ft_PlaySFX` and the other fighter sounds) are in `AUDIO_API_CALLS`
-//! (default `.../calls/audio/api`), captured the same way with those functions named instead.
+//! (default `$SSBM_RS_LOCAL/calls/audio/api`), captured the same way with those functions named instead.
 
 use leaf_check::calls::{Ret, check_calls};
+use melee_local_data::{slippi_replays, ssbm_rs_local};
 use melee_sim::audio::dsp::DspModel;
 use melee_sim::game::ft::sound::Track;
 use melee_sim::game::handles::FighterId;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/drv";
+const CALLS: &str = "calls/audio/drv";
 
 fn calls_dir() -> String {
-    std::env::var("AUDIO_CALLS").unwrap_or_else(|_| CALLS.to_owned())
+    std::env::var("AUDIO_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS))
 }
 
 fn r(call: &ssbm_rt::capture::Call, i: usize) -> u32 {
@@ -101,10 +102,10 @@ fn service_callback_stack() {
     });
 }
 
-const API_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/api";
+const API_CALLS: &str = "calls/audio/api";
 
 fn api_dir() -> String {
-    std::env::var("AUDIO_API_CALLS").unwrap_or_else(|_| API_CALLS.to_owned())
+    std::env::var("AUDIO_API_CALLS").unwrap_or_else(|_| ssbm_rs_local(API_CALLS))
 }
 
 /// The fighter in r3's slot (`Fighter*`, the GObj's user data).
@@ -181,7 +182,7 @@ fn fighter_stop_tracks() {
     }
 }
 
-const TIMELINE: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-fd1";
+const TIMELINE: &str = "calls/audio/timeline-fd1";
 
 /// The audio schedule over real play: from the audio state at a tick's end, replay every
 /// audio call game code made (ssbm-rs's runner logs them), with melee-sim's timeline deciding
@@ -202,7 +203,7 @@ fn timeline() {
     let num = |var: &str, default: u32| {
         std::env::var(var).map_or(default, |v| v.parse().expect("a tick number"))
     };
-    let dir = std::env::var("AUDIO_TIMELINE").unwrap_or_else(|_| TIMELINE.to_owned());
+    let dir = std::env::var("AUDIO_TIMELINE").unwrap_or_else(|_| ssbm_rs_local(TIMELINE));
     let (start, end) = (
         num("AUDIO_TIMELINE_START", 1500),
         num("AUDIO_TIMELINE_END", 11847),
@@ -214,7 +215,7 @@ fn timeline() {
 /// recorded the same way into `AUDIO_TIMELINE_4P`), whose ticks load the most animations.
 #[test]
 fn timeline_four_players() {
-    let dir = std::env::var("AUDIO_TIMELINE_4P").unwrap_or_else(|_| TIMELINE_4P.to_owned());
+    let dir = std::env::var("AUDIO_TIMELINE_4P").unwrap_or_else(|_| ssbm_rs_local(TIMELINE_4P));
     run_timeline(&dir, 1500, 11576, DspModel::Silent);
 }
 
@@ -222,7 +223,7 @@ fn timeline_four_players() {
 /// `AUDIO_TIMELINE_AX`): voices also end with their samples, and the music streams.
 #[test]
 fn timeline_samples() {
-    let dir = std::env::var("AUDIO_TIMELINE_AX").unwrap_or_else(|_| TIMELINE_AX.to_owned());
+    let dir = std::env::var("AUDIO_TIMELINE_AX").unwrap_or_else(|_| ssbm_rs_local(TIMELINE_AX));
     run_timeline(&dir, 1500, 11847, DspModel::Samples);
 }
 
@@ -231,15 +232,15 @@ fn timeline_samples() {
 /// waits inside the tick, and the second load's wait takes an audio frame.
 #[test]
 fn timeline_stadium() {
-    let dir = std::env::var("AUDIO_TIMELINE_PS").unwrap_or_else(|_| TIMELINE_PS.to_owned());
+    let dir = std::env::var("AUDIO_TIMELINE_PS").unwrap_or_else(|_| ssbm_rs_local(TIMELINE_PS));
     run_timeline(&dir, 1500, 12450, DspModel::Silent);
 }
 
-const TIMELINE_PS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-ps3";
+const TIMELINE_PS: &str = "calls/audio/timeline-ps3";
 
-const TIMELINE_AX: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-fd1-ax";
+const TIMELINE_AX: &str = "calls/audio/timeline-fd1-ax";
 
-const TIMELINE_4P: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline-bf4";
+const TIMELINE_4P: &str = "calls/audio/timeline-bf4";
 
 fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
     use melee_capture::{Capture, audio};
@@ -891,7 +892,7 @@ fn fighter_smash_voice() {
     );
 }
 
-const STREAM_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/stream";
+const STREAM_CALLS: &str = "calls/audio/stream";
 
 /// The music stream's start and its reads' callbacks, on every saved call: from the call's
 /// state on both sides, the whole audio state compared byte for byte after. The calls are in
@@ -902,7 +903,7 @@ fn check_stream(
     func: &str,
     ours: &dyn Fn(&mut melee_sim::audio::Audio, &ssbm_rt::capture::Call) -> Option<u32>,
 ) {
-    let dir = std::env::var("AUDIO_STREAM_CALLS").unwrap_or_else(|_| STREAM_CALLS.to_owned());
+    let dir = std::env::var("AUDIO_STREAM_CALLS").unwrap_or_else(|_| ssbm_rs_local(STREAM_CALLS));
     check_audio_only(&dir, func, ours);
 }
 
@@ -1004,14 +1005,14 @@ fn stream_callbacks() {
     });
 }
 
-const LB_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/lb";
+const LB_CALLS: &str = "calls/audio/lb";
 
 /// The audio library's tick and mix (`lbAudioAx_80027DF8` and the functions that set what it
 /// reads), on the saved calls in `AUDIO_LB_CALLS` (default above), captured as the driver's
 /// are with these functions named over the whole Final Destination match
 /// (`CAPTURE_EVERY=500`, `--fields 13000`).
 fn lb_dir() -> String {
-    std::env::var("AUDIO_LB_CALLS").unwrap_or_else(|_| LB_CALLS.to_owned())
+    std::env::var("AUDIO_LB_CALLS").unwrap_or_else(|_| ssbm_rs_local(LB_CALLS))
 }
 
 #[test]
@@ -1129,14 +1130,14 @@ fn lb_audio_entries() {
     );
 }
 
-const CROWD_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/crowd";
+const CROWD_CALLS: &str = "calls/audio/crowd";
 
 /// The crowd (`crowdsfx.c`), on the saved calls in `AUDIO_CROWD_CALLS` (default above),
 /// captured as the driver's are with its functions named over the Final Destination match
 /// (`CAPTURE_FROM=0 CAPTURE_EVERY=600 --fields 13000`), and in `AUDIO_CROWD_BF4_CALLS`
 /// (default beside it) its process over the four-player Battlefield match.
 fn crowd_dir() -> String {
-    std::env::var("AUDIO_CROWD_CALLS").unwrap_or_else(|_| CROWD_CALLS.to_owned())
+    std::env::var("AUDIO_CROWD_CALLS").unwrap_or_else(|_| ssbm_rs_local(CROWD_CALLS))
 }
 
 /// The replays the crowd's calls come from, with their directories: the Final Destination
@@ -1144,10 +1145,9 @@ fn crowd_dir() -> String {
 /// enough fighters can fall past the bottom at once). Slippi's codes hook the crowd's process
 /// to talk to the Slippi device, which the replay answers for (`SLIPPI_REPLAYS`).
 fn crowd_sets() -> Vec<(String, ssbm_slippi::Replay)> {
-    let slp = std::env::var("SLIPPI_REPLAYS")
-        .unwrap_or_else(|_| "C:/Users/USER/Documents/Slippi".into());
-    let bf4 =
-        std::env::var("AUDIO_CROWD_BF4_CALLS").unwrap_or_else(|_| format!("{CROWD_CALLS}-bf4"));
+    let slp = std::env::var("SLIPPI_REPLAYS").unwrap_or_else(|_| slippi_replays(""));
+    let bf4 = std::env::var("AUDIO_CROWD_BF4_CALLS")
+        .unwrap_or_else(|_| ssbm_rs_local(&format!("{CROWD_CALLS}-bf4")));
     [
         (crowd_dir(), "2026-01/Game_20260129T133652"),
         (bf4, "2026-05/Game_20260531T174251"),
@@ -1320,20 +1320,19 @@ fn crowd_varied() {
     });
 }
 
-const TIMELINE_ENTRY: &str =
-    "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline2-fd1-entry";
+const TIMELINE_ENTRY: &str = "calls/audio/timeline2-fd1-entry";
 
 /// [`timeline`] from tick 0's end (`AUDIO_START=0`, into `AUDIO_TIMELINE_ENTRY`): the VS
 /// scene's entry, its sound bank loads in the background, its files' loads, the fighters'
 /// setup and the music's start, then the match's first ticks.
 #[test]
 fn timeline_entry() {
-    let dir = std::env::var("AUDIO_TIMELINE_ENTRY").unwrap_or_else(|_| TIMELINE_ENTRY.to_owned());
+    let dir =
+        std::env::var("AUDIO_TIMELINE_ENTRY").unwrap_or_else(|_| ssbm_rs_local(TIMELINE_ENTRY));
     run_timeline(&dir, 0, 1500, DspModel::Silent);
 }
 
-const TIMELINE_ENTRY_MIXED: &str =
-    "C:/Projects/ssbm-rs-publication/local/calls/audio/timeline3-fd1-entry-mixed";
+const TIMELINE_ENTRY_MIXED: &str = "calls/audio/timeline3-fd1-entry-mixed";
 
 /// [`timeline_entry`] in the sample-accurate model (ssbm-rs's default, `AUDIO_START=0`
 /// without `AX`, into `AUDIO_TIMELINE_ENTRY_MIXED`): the same entry with the voices following
@@ -1341,18 +1340,18 @@ const TIMELINE_ENTRY_MIXED: &str =
 #[test]
 fn timeline_entry_mixed() {
     let dir = std::env::var("AUDIO_TIMELINE_ENTRY_MIXED")
-        .unwrap_or_else(|_| TIMELINE_ENTRY_MIXED.to_owned());
+        .unwrap_or_else(|_| ssbm_rs_local(TIMELINE_ENTRY_MIXED));
     run_timeline(&dir, 0, 1178, DspModel::Samples);
 }
 
-const BANK_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/audio/bank";
+const BANK_CALLS: &str = "calls/audio/bank";
 
 /// The sound banks' loading (`synth.c`) and the library's bank choice, on every call saved
 /// from boot to the match's start of the Final Destination and four-player Battlefield
 /// replays (`AUDIO_BANK_CALLS`, default above, a directory per replay; captured as the
 /// driver's are with these functions named, `CAPTURE_FROM=0 CAPTURE_EVERY=1 --fields 400`).
 fn bank_dirs() -> Vec<String> {
-    let root = std::env::var("AUDIO_BANK_CALLS").unwrap_or_else(|_| BANK_CALLS.to_owned());
+    let root = std::env::var("AUDIO_BANK_CALLS").unwrap_or_else(|_| ssbm_rs_local(BANK_CALLS));
     ["Game_20260129T133652", "Game_20260531T174251"]
         .iter()
         .map(|n| format!("{root}/{n}"))

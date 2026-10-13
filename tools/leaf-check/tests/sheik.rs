@@ -45,6 +45,7 @@
 //! `CAPTURE_EVERY=500`, `CAPTURE_FUNCS=it_802A24A0` and `LOCKSTEP_DONE` without it, for the links'
 //! render callback ([`link_render`]).
 
+use melee_local_data::ssbm_rs_local;
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
@@ -61,10 +62,10 @@ use melee_sim::game::state::Running;
 use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/sheik";
+const CALLS: &str = "calls/sheik";
 
 fn base() -> String {
-    std::env::var("SHEIK_CALLS").unwrap_or_else(|_| CALLS.to_owned())
+    std::env::var("SHEIK_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS))
 }
 
 /// The capture sets, one per run.

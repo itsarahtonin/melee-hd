@@ -8,6 +8,7 @@ use leaf_check::calls::{
     Ret, Stub, StubRet, check_calls_stubbed, peek_u32, poke_f32, poke_u32, user_data_arg,
 };
 use melee_capture::import::Maps;
+use melee_local_data::ssbm_rs_local;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::co::kind_callbacks as kinds;
 use melee_sim::game::handles::CodeRef;
@@ -15,11 +16,11 @@ use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::capture::Call;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/ftcommon";
+const CALLS: &str = "calls/ftcommon";
 
 /// The capture sets: Final Destination and Battlefield replays' fighter processes.
 fn dirs() -> Vec<String> {
-    let base = std::env::var("FTCOMMON_CALLS").unwrap_or_else(|_| CALLS.to_owned());
+    let base = std::env::var("FTCOMMON_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS));
     ["r2fd", "r4bf"]
         .iter()
         .map(|d| format!("{base}/{d}"))
