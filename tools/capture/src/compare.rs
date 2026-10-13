@@ -375,6 +375,9 @@ impl<'a> Comparer<'a> {
             Some(UserData::Effect(e)) => {
                 self.effect(&format!("{path} effect"), e, self.u32(t + 0x2C))
             }
+            Some(UserData::StadiumScreen(which)) => {
+                crate::stadium::compare_screen(self, path, which, t)
+            }
             None => {
                 // Kindless user data ours lacks.
                 let ud = self.u32(t + 0x2C);
@@ -1297,10 +1300,54 @@ impl<'a> Comparer<'a> {
                 )
             });
             self.check(&tp, "TEV", ours, theirs);
+            self.tobj_image(&tp, x.imagedesc, w(self, 0x58));
             self.aobj(&format!("{tp} aobj"), x.aobj, w(self, 0x64));
             to = x.next;
             tt = w(self, 8);
             i += 1;
+        }
+    }
+
+    /// A TObj's image descriptor: loaded data, a static one, refraction's, or a game's heap
+    /// copy (Pokémon Stadium's screens).
+    fn tobj_image(
+        &mut self,
+        path: &str,
+        ours: Option<melee_sim::hsd::tobj::ImageRef>,
+        theirs: u32,
+    ) {
+        use melee_sim::hsd::tobj::ImageRef;
+        let same = match ours {
+            None => theirs == 0,
+            Some(ImageRef::Data(d)) => {
+                self.compare_data(&format!("{path} image"), Some(d), theirs);
+                return;
+            }
+            Some(ImageRef::Static(a)) => a == theirs,
+            Some(ImageRef::RefractFrame) => theirs == sym("imagedesc0"),
+            Some(ImageRef::Refract(n)) => {
+                let base = self.u32(sym(crate::display::REFRACT) + 8);
+                base != 0 && theirs == base + 0x18 * u32::from(n)
+            }
+            Some(ImageRef::Screen(s)) => crate::stadium::screen_at(self.mem, theirs) == Some(s),
+            Some(ImageRef::Shadow(s)) => {
+                // The image of the texture of the shadow it pairs with, once that's paired (the
+                // shadow's own comparison pairs its texture with this TObj).
+                let addr = self
+                    .maps
+                    .shadows
+                    .iter()
+                    .find(|&(_, &v)| v == s)
+                    .map(|(&a, _)| a);
+                theirs != 0
+                    && addr.is_none_or(|a| {
+                        let tex = self.u32(a + 8);
+                        tex != 0 && self.u32(tex + 0x58) == theirs
+                    })
+            }
+        };
+        if !same {
+            self.diff(path, "image", format!("{ours:?}"), format!("{theirs:#x}"));
         }
     }
 
@@ -1438,6 +1485,7 @@ impl Cx for Comparer<'_> {
             // A stale item's pointer may be into nothing: it pairs with nothing.
             "CameraBoxId" if theirs != 0 => try_box_index(self.u32(sym("cm_804D645C")), theirs),
             "TObjId" => self.maps.tobjs.get(&theirs).map(|t| t.0),
+            "MObjId" => self.maps.mobjs.get(&theirs).map(|m| m.0),
             "QueuedId" => self.maps.queued.get(&theirs).map(|q| q.0),
             "GeneratorId" => self.maps.generators.get(&theirs).map(|g| g.0),
             "EffectId" => self.maps.effects.get(&theirs).map(|e| e.0),

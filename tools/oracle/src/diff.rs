@@ -179,6 +179,17 @@ fn fighter_addresses(image: &Image) -> Vec<u32> {
     out
 }
 
+/// Where the trace's match put Pokémon Stadium's transformation buffer (map 2's `xCC`), on
+/// that stage; 0x80000000 elsewhere.
+fn stadium_buffer(image: &Image) -> u32 {
+    let info = sym("stage_info");
+    let map2 = image.u32(info + 0x180 + 4 * 2);
+    if image.u32(info + 0x88) as i32 != melee_sim::game::gr::GR_KIND_PSTADIUM || map2 == 0 {
+        return melee_sim::game::ft::data::MAIN_MEMORY;
+    }
+    image.u32(image.u32(map2 + 0x2C) + 0xC4 + 8)
+}
+
 /// The trace tick that ran the VS scene's first tick: the first whose scene loop has counted
 /// one tick with the playback's frame count at the replay's first frame.
 fn is_first_tick(image: &Image) -> bool {
@@ -288,6 +299,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 return ExitCode::FAILURE;
             };
             settings.fighter_addresses = fighter_addresses(&image);
+            settings.stadium_buffer = stadium_buffer(&image);
             // The save data's unlocks and the unlock-all codes, as the boot state has them.
             settings.unlocks = melee_sim::game::gm::Unlocks::from_memory(&|a| {
                 let i = (a - 0x8000_0000) as usize;

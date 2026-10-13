@@ -590,6 +590,113 @@ impl Running<'_> {
         }
     }
 
+    /// Item `g`'s box `j` hits this fighter's shield, `ftColl_80077688`: the item remembers
+    /// the fighter; a hit harder than the item has dealt sets the item's rebound (its damage,
+    /// which way, and with its box's `x42_b3`, how it bounces off: straight away at the
+    /// common data's angle for a fighter with `x221B_b1`, else along `entry`, the direction
+    /// into the shield and its angle); the shield takes the damage, its owner noting who and
+    /// from where, and the spark shows.
+    #[doc(alias = "ftColl_80077688")]
+    fn item_hits_shield(&mut self, g: GObjId, j: usize, me: FighterId, entry: Option<(Vec3, f32)>) {
+        use super::super::it;
+        let mode = if it::item(self.game, g).x5D4_hitboxes[j].hit.x41_b6 {
+            2
+        } else {
+            1
+        };
+        self.item_add_victim(g, j, mode, victim(me), false);
+        let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
+        let (dmg, x42_b3, x42_b4, x34, element, pos) = (
+            whole_damage(reg(h.damage)),
+            h.x42_b3,
+            h.x42_b4,
+            h.x34,
+            h.element,
+            h.hurt_coll_pos,
+        );
+        if dmg > it::item(self.game, g).xC34_damageDealt {
+            let slow = super::super::it::item::common_data(self.game).f32(self.data, 0xD4);
+            let angle = self.common().f32(0x2D0);
+            let mf = &self.game.fighters[me.0];
+            let (b1, b2, fg, fx, unk1) = (
+                mf.x221B.x221B_b1,
+                mf.x221B.x221B_b2,
+                mf.gobj,
+                mf.cur_pos.x,
+                mf.shield_unk1,
+            );
+            let ip = it::item_mut(self.game, g);
+            ip.xC50 = dmg;
+            it::set_flag(&mut ip.xDCE_flag, 5, !b2 && x42_b3);
+            ip.xCF4_fighterGObjUnk = fg;
+            let vx = reg(ip.x40_vel.x);
+            let mag = if vx < 0.0 { fp::fneg(vx) } else { vx };
+            ip.xCB8_outDamageDirection = if mag < reg(slow) {
+                if reg(ip.pos.x) > reg(fx) { -1.0 } else { 1.0 }
+            } else if vx < 0.0 {
+                -1.0
+            } else {
+                1.0
+            };
+            if it::flag(ip.xDCE_flag, 5) {
+                let (normal, val) = entry.expect("lbColl_80007DD8's out values");
+                if b1 {
+                    let rad = mem(fp::fmuls(0.017_453_292_384_743_69, reg(angle)));
+                    ip.xC54 = 0.0;
+                    let c = crate::math::cos(rad);
+                    let s = crate::math::sin(rad);
+                    let x = if reg(normal.x) >= 0.0 {
+                        c
+                    } else {
+                        mem(fp::fneg(reg(c)))
+                    };
+                    ip.xC58 = Vec3::new(x, s, 0.0);
+                    it::set_flag(&mut ip.xDCE_flag, 4, true);
+                } else {
+                    ip.xC54 = val;
+                    ip.xC58 = normal;
+                }
+            }
+            if unk1 != 0.0 {
+                ip.xCC0 = unk1;
+            }
+        }
+        let owner = it::item(self.game, g).owner;
+        let owner_fp = owner
+            .filter(|_| super::super::it::item::is_fighter(self.game, owner))
+            .map(|o| self.game.fighter_id(o));
+        let (owner_player, owner_sub) = match owner_fp {
+            Some(f) => (
+                i32::from(self.game.fighters[f.0].player_idx),
+                Some(self.game.fighters[f.0].is_sub_fighter),
+            ),
+            None => (6, None),
+        };
+        let (ix, entity) = (it::item(self.game, g).pos.x, Some(g));
+        let mf = &mut self.game.fighters[me.0];
+        mf.x19A0_shieldDamageTaken = mf
+            .x19A0_shieldDamageTaken
+            .wrapping_add(dmg.wrapping_add(x34).max(0));
+        mf.x19BC_shieldDamageTaken3 = owner_player;
+        if let Some(sub) = owner_sub {
+            mf.x221F_b6 = sub;
+        }
+        if dmg > mf.x19A4 {
+            mf.x19A4 = dmg;
+            mf.specialn_facing_dir = if reg(mf.cur_pos.x) > reg(ix) {
+                -1.0
+            } else {
+                1.0
+            };
+            mf.x19B0 = element as i32;
+            mf.x19A8 = entity;
+        }
+        if mf.shield_unk1 != 0.0 && x42_b4 {
+            mf.x1964 = mf.shield_unk1;
+        }
+        self.spawn_effect(0x41C, pos, None);
+    }
+
     /// The fighter reflects item `g`'s box `j`, `ftColl_80077464`: the item remembers it;
     /// damage past the reflector's limit overpowers it (the item keeps the damage and which
     /// way, the reflector its excess); else the item turns the fighter's, taking its attack's
@@ -1228,7 +1335,29 @@ impl Running<'_> {
                 facing = false;
             }
             if facing && self.item_box_hits_bubble(g, j, me, Bubble::Shield, phantom) {
-                unported_call("ftColl_80077688 (an item hitting a shield)");
+                // `lbColl_80007DD8` only when the item bounces off (its box's `x42_b3` or the
+                // fighter's `x221B_b1`): the original's out values are otherwise its stack's,
+                // which nothing reads then.
+                let mf = &self.game.fighters[me.0];
+                let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
+                let entry = if !mf.x221B.x221B_b2 && (h.x42_b3 || mf.x221B.x221B_b1) {
+                    let mtx = self.own_matrix(me);
+                    let ip = it::item(self.game, g);
+                    let (hit, scl) = (ip.x5D4_hitboxes[j].hit.clone(), ip.scl);
+                    let bubble = self.game.fighters[me.0].shield_hit.clone();
+                    Some(hitcapsule::bubble_entry(
+                        &mut self.game.objs,
+                        self.data,
+                        &hit,
+                        &bubble,
+                        mtx.as_ref(),
+                        scl,
+                    ))
+                } else {
+                    None
+                };
+                self.item_hits_shield(g, j, me, entry);
+                return;
             }
         }
         if element == ELEMENT_INERT {
@@ -1703,13 +1832,14 @@ impl Running<'_> {
     }
 
     /// Whether the stage gives the line a hazard (`Ground_801C5700`, through the stage's
-    /// `on_touch_line`): Final Destination's and Battlefield's never do.
+    /// `on_touch_line`): Final Destination's, Battlefield's and Pokémon Stadium's never do.
     #[doc(alias = "Ground_801C5700")]
+    #[doc(alias = "grStadium_OnTouchLine")]
     fn line_hazard(&mut self, _line: i32) -> bool {
         match self.game.stage_info.on_touch_line {
             None => false,
-            // grLast_OnTouchLine, grBattle_OnTouchLine: `return NULL`.
-            Some(f) if f.0 == 0x8021_C740 || f.0 == 0x8021_A610 => false,
+            // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine: `return NULL`.
+            Some(f) if f.0 == 0x8021_C740 || f.0 == 0x8021_A610 || f.0 == 0x801D_50B8 => false,
             Some(f) => unported_call(&format!("a stage's on_touch_line {:#x}", f.0)),
         }
     }

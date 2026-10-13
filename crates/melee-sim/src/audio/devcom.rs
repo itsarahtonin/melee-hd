@@ -38,6 +38,8 @@ pub mod cb {
     pub const SFX_READDRESS: CodeRef = CodeRef(0x8038_8EB4);
     /// `lbDvd_80017E64`: a preloaded file is in, and the preload cache reads the next.
     pub const PRELOADED: CodeRef = CodeRef(0x8001_7E64);
+    /// `fn_801D4220`: Pokémon Stadium's transformation file has loaded.
+    pub const STADIUM_LOADED: CodeRef = CodeRef(0x801D_4220);
 }
 
 /// A file the preload cache (`lbDvd`) reads into main memory: its disc entry, where it goes,
@@ -152,6 +154,10 @@ pub struct DevCom {
     /// isn't ported: only the boot's first scene preloads through the queue, files its scene
     /// always preloads, `game::boot`).
     pub preloads: Vec<Preload>,
+    /// `fn_801D4220` ran: Pokémon Stadium's transformation file loaded, and the game clears
+    /// its mark (`game::gr::stadium::take_load_end`) before anything reads it. Not memory of
+    /// the original's.
+    pub stadium_loaded: bool,
 }
 
 /// `HSD_DevCom_804C6330_bufs`' address, and `pstHakoHeader`'s: memory destinations reads
@@ -697,7 +703,7 @@ impl Audio {
         _id: i32,
         args: u32,
         buf: Option<&[u8]>,
-        _cancel: bool,
+        cancel: bool,
     ) {
         match cb {
             cb::RESET_STREAM_COUNTERS => self.stream_reset_counters(),
@@ -706,6 +712,13 @@ impl Audio {
             cb::FIRST_HAKO_HEADER => self.stream_first_hako_header(data),
             cb::STREAM_HEADER => self.stream_header(data, buf.expect("the stream's header")),
             cb::FILE_LOADED => self.devcom.file_loaded = true,
+            cb::STADIUM_LOADED => {
+                assert!(
+                    !cancel,
+                    "the original's assertion failed: grpstadium.c:2409"
+                );
+                self.devcom.stadium_loaded = true;
+            }
             cb::SFX_HEADER => self.sfx_header_loaded(data),
             cb::SFX_SAMPLES => self.sfx_samples_loaded(data),
             cb::SFX_READDRESS => self.sfx_readdressed(),

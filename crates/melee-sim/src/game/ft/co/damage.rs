@@ -327,16 +327,6 @@ impl Running<'_> {
         self.air_coll_ledges_then(gobj, |g, gobj| g.tumble_land(gobj));
     }
 
-    /// A ceiling tech (`ftCo_800C23A0`), not ported yet.
-    pub fn passive_ceil_check(&mut self, _gobj: GObjId) -> bool {
-        unported_call("ftCo_800C23A0")
-    }
-
-    /// A bounce off a wall or ceiling (`ftCo_800C17CC`), not ported yet.
-    pub fn fly_reflect_check(&mut self, _gobj: GObjId) -> bool {
-        unported_call("ftCo_800C17CC")
-    }
-
     /// `doFlyRoll`: a tumble's roll follows its trajectory.
     pub(super) fn fly_roll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);

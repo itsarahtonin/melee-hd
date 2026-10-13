@@ -32,8 +32,8 @@ use melee_sim::game::playback::{CHARACTER_LEN, Playback};
 use melee_sim::game::slippi::placed;
 use melee_sim::game::structs::StartMeleeData;
 use melee_slippi::Device;
-use ssbm_slippi::Replay;
 use ssbm_rt::capture::Call;
+use ssbm_slippi::Replay;
 
 const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/replay";
 const REPLAYS: &str = "C:/Users/USER/Documents/Slippi";
@@ -53,15 +53,13 @@ fn replays() -> Vec<(String, Replay, melee_slippi::Replay)> {
         .filter_map(|(month, name)| {
             let bytes = std::fs::read(format!("{slippi}/{month}/{name}.slp")).ok()?;
             let dir = format!("{calls}/{name}");
-            std::path::Path::new(&dir)
-                .exists()
-                .then(|| {
-                    (
-                        dir,
-                        Replay::parse(&bytes).expect("a replay"),
-                        melee_slippi::Replay::parse(&bytes).expect("a replay"),
-                    )
-                })
+            std::path::Path::new(&dir).exists().then(|| {
+                (
+                    dir,
+                    Replay::parse(&bytes).expect("a replay"),
+                    melee_slippi::Replay::parse(&bytes).expect("a replay"),
+                )
+            })
         })
         .collect()
 }

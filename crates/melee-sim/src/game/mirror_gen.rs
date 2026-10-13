@@ -13,7 +13,7 @@ use super::gr::GroundVars;
 use super::handles::*;
 use super::mirror::{Cx, Mem, Mirror, code};
 use super::structs::*;
-use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones};
+use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
@@ -8186,9 +8186,7 @@ impl Mirror for Item {
             }),
             xAC4_ignoreItemID: m.u32(at + 0xac4),
             xAC8_hurtboxNum: m.u8(at + 0xac8),
-            xACC_itemHurtbox: core::array::from_fn(|i0| {
-                HurtCapsule::import(m, at + 0xacc + i0 as u32 * 0x44, cx)
-            }),
+            xACC_itemHurtbox: ItemHurtboxes::import(m, at + 0xacc, cx),
             xB54: lb_80014638_arg1_t::import(m, at + 0xb54, cx),
             xB68: m.u8(at + 0xb68),
             xB69: m.u8(at + 0xb69),
@@ -8614,14 +8612,8 @@ impl Mirror for Item {
                 format!("{:?}", m.u8(at + 0xac8)),
             );
         }
-        for i0 in 0..2 {
-            self.xACC_itemHurtbox[i0].compare(
-                m,
-                at + 0xacc + i0 as u32 * 0x44,
-                &format!("{}[{}]", format!("{path}.xACC_itemHurtbox"), i0),
-                cx,
-            );
-        }
+        self.xACC_itemHurtbox
+            .compare(m, at + 0xacc, &format!("{path}.xACC_itemHurtbox"), cx);
         self.xB54
             .compare(m, at + 0xb54, &format!("{path}.xB54"), cx);
         if self.xB68 != m.u8(at + 0xb68) {
