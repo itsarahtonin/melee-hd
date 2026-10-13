@@ -1127,7 +1127,15 @@ impl Running<'_> {
 
     /// The damage a hit counts in the players' statistics, `pl_8003EB30`.
     #[doc(alias = "pl_8003EB30")]
-    fn count_damage(&mut self, dmg: f64, slot: i32, sub: i32, vslot: i32, vsub: i32, kind: i32) {
+    pub(crate) fn count_damage(
+        &mut self,
+        dmg: f64,
+        slot: i32,
+        sub: i32,
+        vslot: i32,
+        vsub: i32,
+        kind: i32,
+    ) {
         if slot == 6 || slot == vslot {
             return;
         }
@@ -1835,11 +1843,19 @@ impl Running<'_> {
     /// `on_touch_line`): Final Destination's, Battlefield's and Pokémon Stadium's never do.
     #[doc(alias = "Ground_801C5700")]
     #[doc(alias = "grStadium_OnTouchLine")]
+    #[doc(alias = "grStory_801E36D0")]
     fn line_hazard(&mut self, _line: i32) -> bool {
         match self.game.stage_info.on_touch_line {
             None => false,
             // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine: `return NULL`.
-            Some(f) if f.0 == 0x8021_C740 || f.0 == 0x8021_A610 || f.0 == 0x801D_50B8 => false,
+            Some(f)
+                if f.0 == 0x8021_C740
+                    || f.0 == 0x8021_A610
+                    || f.0 == 0x801D_50B8
+                    || f.0 == 0x801E_36D0 =>
+            {
+                false
+            }
             Some(f) => unported_call(&format!("a stage's on_touch_line {:#x}", f.0)),
         }
     }

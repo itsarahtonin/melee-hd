@@ -30,6 +30,8 @@ pub enum VarsKind {
     Stadium,
     StadiumBits,
     StadiumPiece,
+    StoryShyGuys,
+    StoryRandall,
 }
 
 /// `union GroundVars`.
@@ -53,6 +55,29 @@ pub enum GroundVars {
     StadiumBits(StadiumBits),
     /// `grStadium_type9_GroundVars`: the rock and water stages (maps 6 and 9).
     StadiumPiece(StadiumPieceVars),
+    /// `ShyGuys`: Yoshi's Story's Shy Guys' controller (map 3).
+    StoryShyGuys(StoryShyGuysVars),
+    /// `Randall`: Yoshi's Story's cloud (map 2).
+    StoryRandall(StoryRandallVars),
+}
+
+/// `ShyGuys`: how many fly in the current flight, its height's index, and the wait.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+pub struct StoryShyGuysVars {
+    pub count: i8,
+    pub pattern: i8,
+    /// The two bytes past `pattern`, padding nothing writes.
+    pub pad: [u8; 2],
+    pub timer: i32,
+}
+
+/// `Randall`: the wait before the next puff, and the joint it puffs from.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+pub struct StoryRandallVars {
+    pub timer: i16,
+    /// The two bytes past `timer`, padding nothing writes.
+    pub pad: [u8; 2],
+    pub jobj: Option<crate::hsd::jobj::JObjId>,
 }
 
 /// The flags in the first byte of Pokémon Stadium's members (`xC4_b0`, `xC4_b1`).
@@ -412,6 +437,19 @@ impl GroundVars {
                     next: gobj(cx, at + 0x24),
                 })
             }
+            VarsKind::StoryShyGuys => GroundVars::StoryShyGuys(StoryShyGuysVars {
+                count: m.u8(at) as i8,
+                pattern: m.u8(at + 1) as i8,
+                pad: [m.u8(at + 2), m.u8(at + 3)],
+                timer: m.u32(at + 4) as i32,
+            }),
+            VarsKind::StoryRandall => GroundVars::StoryRandall(StoryRandallVars {
+                timer: m.u16(at) as i16,
+                pad: [m.u8(at + 2), m.u8(at + 3)],
+                jobj: cx
+                    .import_handle("JObjId", m.u32(at + 4))
+                    .map(crate::hsd::jobj::JObjId),
+            }),
             VarsKind::StadiumBits => GroundVars::StadiumBits(StadiumBits::from_byte(m.u8(at))),
             VarsKind::StadiumPiece => GroundVars::StadiumPiece(StadiumPieceVars {
                 bits: StadiumBits::from_byte(m.u8(at)),
@@ -516,6 +554,40 @@ impl GroundVars {
             other => {
                 panic!("a stage object's variables are {other:?}, not grStadium_type9_GroundVars")
             }
+        }
+    }
+
+    /// The variables as `ShyGuys`, likewise.
+    pub fn story_shyguys(&mut self) -> &mut StoryShyGuysVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::StoryShyGuys(StoryShyGuysVars {
+                count: b.0[0] as i8,
+                pattern: b.0[1] as i8,
+                pad: [b.0[2], b.0[3]],
+                timer: b.u32(4) as i32,
+            });
+        }
+        match self {
+            GroundVars::StoryShyGuys(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not ShyGuys"),
+        }
+    }
+
+    /// The variables as `Randall`, likewise.
+    pub fn story_randall(&mut self) -> &mut StoryRandallVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            b.null(4);
+            *self = GroundVars::StoryRandall(StoryRandallVars {
+                timer: u16::from_be_bytes([b.0[0], b.0[1]]) as i16,
+                pad: [b.0[2], b.0[3]],
+                jobj: None,
+            });
+        }
+        match self {
+            GroundVars::StoryRandall(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not Randall"),
         }
     }
 
@@ -794,6 +866,39 @@ impl Mirror for GroundVars {
                     "JObjId",
                     v.turning.map(|j| j.0),
                     m.u32(at + 0x10),
+                );
+            }
+            GroundVars::StoryShyGuys(v) => {
+                let ours = (v.count, v.pattern, v.pad, v.timer);
+                let theirs = (
+                    m.u8(at) as i8,
+                    m.u8(at + 1) as i8,
+                    [m.u8(at + 2), m.u8(at + 3)],
+                    m.u32(at + 4) as i32,
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.shyguys"),
+                        format!("{ours:?}"),
+                        format!("{theirs:?}"),
+                    );
+                }
+            }
+            GroundVars::StoryRandall(v) => {
+                let ours = (v.timer, v.pad);
+                let theirs = (m.u16(at) as i16, [m.u8(at + 2), m.u8(at + 3)]);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.randall"),
+                        format!("{ours:?}"),
+                        format!("{theirs:?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.randall.jobj"),
+                    "JObjId",
+                    v.jobj.map(|j| j.0),
+                    m.u32(at + 4),
                 );
             }
             GroundVars::BattleBg(v) => {

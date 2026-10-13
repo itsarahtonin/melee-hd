@@ -35,6 +35,10 @@ impl Running<'_> {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::stadium::check_shadow_render(self.game, self.data, pos, Some(j))
             }
+            Some(f) if f.0 == 0x801E_36D8 => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::story::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
             Some(f) => code::unported_call(&format!("on_check_shadow_render {:#010x}", f.0)),
             None => panic!("stage_info.on_check_shadow_render is null"),
         }

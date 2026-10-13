@@ -3,7 +3,7 @@
 //! which [`code`](super::super::code) dispatches.
 
 use super::datfiles::GrJoint;
-use super::{GR_KIND_BATTLE, GR_KIND_LAST, GR_KIND_PSTADIUM};
+use super::{GR_KIND_BATTLE, GR_KIND_LAST, GR_KIND_PSTADIUM, GR_KIND_STORY};
 
 /// `StageCallbacks`: one stage object's functions, by map id.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -186,12 +186,43 @@ pub const STADIUM: StageData = StageData {
     joints: &STADIUM_JOINTS,
 };
 
+/// `grSt_StageCallbacks`. Map 0 has none; map 2 is Randall, map 3 the Shy Guys.
+pub const STORY_CALLBACKS: [StageCallbacks; 4] = [
+    cb(0, 0, 0, 0, 0),
+    cb(0x801E_31C0, 0x801E_3224, 0x801E_322C, 0x801E_3230, 0),
+    cb(0x801E_3370, 0x801E_33D8, 0x801E_33E0, 0x801E_3414, 0),
+    cb(
+        0x801E_3234,
+        0x801E_332C,
+        0x801E_3334,
+        0x801E_336C,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grSt_StageData`.
+pub const STORY: StageData = StageData {
+    grkind: GR_KIND_STORY,
+    callbacks: &STORY_CALLBACKS,
+    file: Some("/GrSt.dat"),
+    on_init: 0x801E_3030,
+    on_demo_init: 0x801E_302C,
+    on_load: 0x801E_30A8,
+    on_start: 0x801E_30AC,
+    callback4: 0x801E_30D0,
+    on_touch_line: 0x801E_36D0,
+    on_check_shadow_render: 0x801E_36D8,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
         GR_KIND_LAST => &LAST,
         GR_KIND_BATTLE => &BATTLE,
         GR_KIND_PSTADIUM => &STADIUM,
+        GR_KIND_STORY => &STORY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

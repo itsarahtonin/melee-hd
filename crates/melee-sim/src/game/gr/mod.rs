@@ -17,6 +17,7 @@ pub mod material;
 pub mod setup;
 pub mod stadium;
 pub mod stage;
+pub mod story;
 pub mod vars;
 pub mod zako;
 
@@ -35,6 +36,8 @@ use crate::hsd::pool::Pool;
 
 /// `Gr_Kind_PStadium`, Pokémon Stadium.
 pub const GR_KIND_PSTADIUM: i32 = 16;
+/// `Gr_Kind_Story`, Yoshi's Story.
+pub const GR_KIND_STORY: i32 = 10;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Last`, Final Destination.
@@ -125,6 +128,8 @@ pub struct Globals {
     pub last_yakumono: Option<DataRef>,
     /// Battlefield's `yakumono_param` (its backgrounds' fade scripts).
     pub battle_yakumono: Option<DataRef>,
+    /// Yoshi's Story's `yakumono_param` (`grStory_YakumonoParam`).
+    pub story_yakumono: Option<DataRef>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -180,6 +185,8 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_PSTADIUM, 2) => VarsKind::Stadium,
         (GR_KIND_PSTADIUM, 3..=5) => VarsKind::StadiumBits,
         (GR_KIND_PSTADIUM, 6 | 9) => VarsKind::StadiumPiece,
+        (GR_KIND_STORY, 2) => VarsKind::StoryRandall,
+        (GR_KIND_STORY, 3) => VarsKind::StoryShyGuys,
         _ => VarsKind::Bytes,
     }
 }
