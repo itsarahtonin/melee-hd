@@ -3,21 +3,24 @@
 //! ```text
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
 //!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread]
-//!          [--no-adapter] [--size WxH] [--ticks N]
+//!          [--no-adapter] [--size WxH] [--fullscreen] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [...]     plays headless, timing each frame
+//! melee-hd --launcher-shot FILE.png [--size WxH] draws the launcher to a PNG
 //! ```
 //!
-//! The disc comes from `--disc` or `SSBM_DISC`. Characters: fox, falco, marth, sheik, zelda;
-//! stages: fd (Final Destination), bf (Battlefield), ps (Pokémon Stadium), as far as
-//! melee-sim has them ported. Controllers: GameCube controllers on a Wii U adapter play their
-//! own ports; gamepads and the keyboard play the first ports left (arrows: stick, IJKL:
-//! C-stick, X/Z/C/S: A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). Escape
-//! quits.
+//! The disc comes from `--disc` or `SSBM_DISC`. Characters and stages are melee-sim's
+//! `game::roster`, what it has ported (`--help` lists them). With no `--p1` to `--p4`, `--stage`
+//! or `--replay` (and no `--bench`), the window opens on the launcher, which picks the match
+//! ([`launcher`]). Controllers: GameCube controllers on a Wii U adapter play their own ports;
+//! gamepads and the keyboard play the first ports left (arrows: stick, IJKL: C-stick, X/Z/C/S:
+//! A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). F11 or Alt+Enter toggles
+//! borderless fullscreen. Escape quits, or from a match the launcher started, goes back to it.
 //!
 //! The loop keeps latency short: each tick reads the controllers just before it runs, and the
 //! frame it renders is drawn and presented at once, on a swap chain one frame deep (mailbox,
 //! or immediate where the display has no mailbox mode).
 
+mod launcher;
 mod pipelines;
 mod present;
 mod sound;
@@ -29,6 +32,7 @@ use melee_data::disc::Disc;
 use melee_input::{Inputs, Key};
 use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
+use melee_sim::game::roster;
 use melee_sim::game::vs_match::{DiscFile, Match, Player, Settings};
 use melee_slippi::Replay;
 use winit::application::ApplicationHandler;
@@ -41,6 +45,7 @@ use winit::window::WindowId;
 const TICK_RATE: f64 = 60.0;
 
 /// The command line.
+#[derive(Clone)]
 struct Args {
     disc: String,
     players: Vec<(u8, u8)>,
@@ -64,28 +69,25 @@ struct Args {
     one_thread: bool,
     /// Samples a pixel: 4 for MSAA, 1 as the console draws.
     msaa: u32,
+    /// No match on the command line: the launcher picks one.
+    launch: bool,
+    /// Draws the launcher to this PNG and quits.
+    launcher_shot: Option<String>,
+    /// Borderless fullscreen on the window's monitor.
+    fullscreen: bool,
 }
 
-/// A character's `CharacterKind` by name.
-fn character(name: &str) -> Option<u8> {
-    Some(match name {
-        "fox" => 2,
-        "marth" => 9,
-        "zelda" => 18,
-        "sheik" => 19,
-        "falco" => 20,
-        _ => return None,
-    })
-}
-
-/// A stage's `StKind` by name.
-fn stage(name: &str) -> Option<u16> {
-    Some(match name {
-        "fd" | "final-destination" => 32,
-        "bf" | "battlefield" => 31,
-        "ps" | "pokemon-stadium" => 3,
-        _ => return None,
-    })
+/// The command line's usage, with the characters and stages melee-sim has ported.
+fn usage() -> String {
+    let names = |keys: Vec<&str>| keys.join("|");
+    format!(
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--size WxH] [--fullscreen] [--bench TICKS] [--launcher-shot FILE.png]\n\
+         characters: {}\n\
+         stages: {}\n\
+         with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match",
+        names(roster::CHARACTERS.iter().map(|c| c.keys[0]).collect()),
+        names(roster::STAGES.iter().map(|s| s.keys[0]).collect()),
+    )
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -105,7 +107,12 @@ fn parse_args() -> Result<Args, String> {
         widescreen: None,
         one_thread: false,
         msaa: 1,
+        launch: false,
+        launcher_shot: None,
+        fullscreen: false,
     };
+    // Whether the command line names a match.
+    let mut chosen = false;
     let mut it = std::env::args().skip(1);
     let size = |s: &str| -> Result<(u32, u32), String> {
         let (w, h) = s.split_once('x').ok_or("a size is WxH")?;
@@ -121,7 +128,10 @@ fn parse_args() -> Result<Args, String> {
             "--p1" | "--p2" | "--p3" | "--p4" => {
                 let port = usize::from(arg.as_bytes()[3] - b'1');
                 let name = value()?;
-                let c = character(&name).ok_or(format!("unknown character {name}"))?;
+                let c = roster::character(&name)
+                    .ok_or(format!("unknown character {name}"))?
+                    .kind;
+                chosen = true;
                 if a.players.len() <= port {
                     a.players.resize(port + 1, (0xFF, 0));
                 }
@@ -129,11 +139,17 @@ fn parse_args() -> Result<Args, String> {
             }
             "--stage" => {
                 let name = value()?;
-                a.stage = stage(&name).ok_or(format!("unknown stage {name}"))?;
+                a.stage = roster::stage(&name)
+                    .ok_or(format!("unknown stage {name}"))?
+                    .kind;
+                chosen = true;
             }
             "--stocks" => a.stocks = value()?.parse().map_err(|_| "--stocks N")?,
             "--minutes" => a.minutes = value()?.parse().map_err(|_| "--minutes N")?,
-            "--replay" => a.replay = Some(value()?),
+            "--replay" => {
+                a.replay = Some(value()?);
+                chosen = true;
+            }
             "--no-adapter" => a.adapter = false,
             "--one-thread" => a.one_thread = true,
             "--msaa" => {
@@ -148,6 +164,8 @@ fn parse_args() -> Result<Args, String> {
             "--ticks" => a.ticks = Some(value()?.parse().map_err(|_| "--ticks N")?),
             "--scale" => a.scale = value()?.parse().map_err(|_| "--scale N")?,
             "--shot" => a.shot = Some(value()?),
+            "--launcher-shot" => a.launcher_shot = Some(value()?),
+            "--fullscreen" => a.fullscreen = true,
             "--widescreen" => a.widescreen = Some(16.0 / 9.0),
             "--aspect" => {
                 let v = value()?;
@@ -160,9 +178,10 @@ fn parse_args() -> Result<Args, String> {
             other => return Err(format!("unknown argument {other}")),
         }
     }
-    if a.disc.is_empty() {
+    if a.disc.is_empty() && a.launcher_shot.is_none() {
         return Err("no disc: pass --disc ISO or set SSBM_DISC".into());
     }
+    a.launch = !chosen && a.bench.is_none();
     Ok(a)
 }
 
@@ -318,8 +337,19 @@ impl Stats {
     }
 }
 
+/// The launcher, when the player started without a match: its form, and its egui state once
+/// the window exists.
+struct Launcher {
+    form: launcher::Form,
+    window: Option<launcher::Window>,
+}
+
 struct App {
-    session: Session,
+    /// The match playing; none while the launcher shows.
+    session: Option<Session>,
+    launcher: Option<Launcher>,
+    /// The command line, which the launcher's matches start from with its choices.
+    args: Args,
     frames: Frames,
     gpu: present::Gpu,
     renderer: Option<Gpu>,
@@ -333,9 +363,19 @@ struct App {
     scale: u32,
     one_thread: bool,
     msaa: u32,
+    /// The window's size, which the internal resolution follows.
+    window_size: (u32, u32),
+    /// Alt is held (Alt+Enter toggles fullscreen).
+    alt: bool,
+    /// Why the match stopped, for the launcher to show.
+    stopped: Option<String>,
 }
 
 impl App {
+    fn ended(&self) -> bool {
+        self.session.as_ref().is_none_or(|s| s.ended)
+    }
+
     /// Runs the ticks that are due: controllers read, tick, frame drawn and presented.
     fn run_due(&mut self) {
         let period = Duration::from_secs_f64(1.0 / TICK_RATE);
@@ -347,35 +387,46 @@ impl App {
         if now - self.next_tick > 4 * period {
             self.next_tick = now;
         }
-        while Instant::now() >= self.next_tick && !self.session.ended {
+        while Instant::now() >= self.next_tick && !self.ended() {
             self.next_tick += period;
             let start = Instant::now();
             let pads = self.inputs.read();
-            let f = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                self.session.tick(pads)
-            })) {
-                Ok(f) => f,
-                Err(p) => {
-                    eprintln!("the match stopped: {}", panic_text(&p));
-                    self.session.ended = true;
-                    return;
-                }
-            };
+            let session = self.session.as_mut().expect("a match");
+            let f =
+                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| session.tick(pads)))
+                {
+                    Ok(f) => f,
+                    Err(p) => {
+                        let text = format!("the match stopped: {}", panic_text(&p));
+                        eprintln!("{text}");
+                        session.ended = true;
+                        self.stopped = Some(text);
+                        return;
+                    }
+                };
             self.stats.ticks += 1;
             self.ticks += 1;
             if self.max_ticks.is_some_and(|n| self.ticks >= n) {
-                self.session.ended = true;
+                session.ended = true;
             }
             if !f.draws.is_empty() {
                 self.draw_frame(&f.draws);
                 self.stats.frame(start.elapsed());
             }
-            self.session.m.recycle(f);
+            self.session.as_mut().expect("a match").m.recycle(f);
         }
     }
 
     fn draw_frame(&mut self, draws: &[melee_sim::hsd::display::Draw]) {
-        let m = &self.session.m;
+        // The internal resolution follows the window's size unless `--scale` fixed it: the
+        // renderer is made again at the new scale.
+        let scale = scale_for(self.args.scale, self.window_size);
+        if scale != self.scale {
+            eprintln!("internal resolution: {scale}x");
+            self.scale = scale;
+            self.drop_renderer();
+        }
+        let m = &self.session.as_ref().expect("a match").m;
         let fifo = self.frames.frame(&m.game, &m.data, draws);
         let gpu = self.renderer.get_or_insert_with(|| {
             gpu_for(
@@ -388,27 +439,153 @@ impl App {
             shown.present(&self.gpu, &frame);
         }
     }
+
+    /// Saves the renderer's pipelines and lets it go; the next frame makes a new one.
+    fn drop_renderer(&mut self) {
+        if let Some(g) = self.renderer.take() {
+            pipelines::save(&g.into_renderer());
+        }
+    }
+
+    /// The window's new size: the surface follows it at once, and the internal resolution at
+    /// the next frame.
+    fn resized(&mut self, w: u32, h: u32) {
+        if let Some(s) = &mut self.shown {
+            s.resize(&self.gpu, w, h);
+        }
+        if w > 0 && h > 0 {
+            self.window_size = (w, h);
+        }
+    }
+
+    fn toggle_fullscreen(&mut self) {
+        if let Some(s) = &mut self.shown {
+            s.set_fullscreen(!s.fullscreen());
+            if let Some(l) = &mut self.launcher {
+                l.form.fullscreen = s.fullscreen();
+                s.window.request_redraw();
+            }
+        }
+    }
+
+    /// Starts the launcher's match in the window, or says why it can't.
+    fn start_match(&mut self) {
+        let Some(l) = &mut self.launcher else { return };
+        let c = &l.form.choice;
+        let mut args = self.args.clone();
+        args.players = c.ports();
+        args.stage = c.stage;
+        args.stocks = c.stocks;
+        args.minutes = c.minutes;
+        let names: Vec<&str> = c
+            .players
+            .iter()
+            .flatten()
+            .filter_map(|&k| roster::character_by_kind(k).map(|c| c.name))
+            .collect();
+        let stage = roster::stage_by_kind(c.stage).map_or("?", |s| s.name);
+        eprintln!("the launcher starts {} on {stage}", names.join(" vs "));
+        match Session::start(&args) {
+            Ok(session) => {
+                l.form.message = None;
+                self.frames = Frames::new();
+                self.frames.space.load_dol(&session.dol);
+                self.frames.hsd.widescreen = args.widescreen;
+                self.renderer = Some(gpu_for(
+                    pipelines::renderer(&self.gpu, self.scale, self.msaa),
+                    self.one_thread,
+                ));
+                // What the controllers did in the launcher doesn't reach the match.
+                self.inputs.read();
+                self.session = Some(session);
+                self.ticks = 0;
+                self.stats = Stats::default();
+                self.next_tick = Instant::now();
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                l.form.message = Some(e);
+            }
+        }
+    }
+
+    /// Leaves the match (its sound stops with it) for the launcher.
+    fn back_to_launcher(&mut self) {
+        eprintln!("back to the launcher");
+        self.session = None;
+        self.drop_renderer();
+        if let Some(l) = &mut self.launcher {
+            l.form.message = self.stopped.take();
+        }
+        if let Some(s) = &self.shown {
+            s.window.request_redraw();
+        }
+    }
+
+    /// Draws the launcher, starting its match if Start was pressed.
+    fn redraw_launcher(&mut self) {
+        let (Some(l), Some(shown)) = (&mut self.launcher, &mut self.shown) else {
+            return;
+        };
+        let Some(w) = &mut l.window else { return };
+        let start = w.redraw(&self.gpu, shown, &mut l.form);
+        if l.form.fullscreen != shown.fullscreen() {
+            shown.set_fullscreen(l.form.fullscreen);
+        }
+        if start {
+            self.start_match();
+        }
+    }
 }
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.shown.is_none() {
-            self.shown = Some(present::Shown::new(&self.gpu, event_loop));
+            let shown = present::Shown::new(&self.gpu, event_loop, self.args.fullscreen);
+            if let Some(l) = &mut self.launcher {
+                l.window = Some(launcher::Window::new(&self.gpu, &shown));
+            }
+            self.shown = Some(shown);
             self.next_tick = Instant::now();
         }
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
+        // F11 and Alt+Enter toggle fullscreen, in a match and in the launcher alike.
+        if let WindowEvent::KeyboardInput {
+            event:
+                KeyEvent {
+                    physical_key: PhysicalKey::Code(code),
+                    state: ElementState::Pressed,
+                    repeat: false,
+                    ..
+                },
+            ..
+        } = &event
+            && (*code == KeyCode::F11 || (*code == KeyCode::Enter && self.alt))
+        {
+            self.toggle_fullscreen();
+            return;
+        }
+        let in_launcher = self.session.is_none();
+        if in_launcher
+            && let (
+                Some(Launcher {
+                    window: Some(w), ..
+                }),
+                Some(shown),
+            ) = (&mut self.launcher, &self.shown)
+        {
+            w.event(shown, &event);
+        }
         match event {
             WindowEvent::CloseRequested => {
                 self.quit = true;
                 event_loop.exit();
             }
-            WindowEvent::Resized(size) => {
-                if let Some(s) = &mut self.shown {
-                    s.resize(&self.gpu, size.width, size.height);
-                }
-            }
+            WindowEvent::Resized(size) => self.resized(size.width, size.height),
+            WindowEvent::ModifiersChanged(m) => self.alt = m.state().alt_key(),
+            WindowEvent::RedrawRequested if in_launcher => self.redraw_launcher(),
             WindowEvent::KeyboardInput {
                 event:
                     KeyEvent {
@@ -419,13 +596,29 @@ impl ApplicationHandler for App {
                     },
                 ..
             } => {
-                if code == KeyCode::Escape {
-                    self.quit = true;
-                    event_loop.exit();
+                if code == KeyCode::Escape && state == ElementState::Pressed {
+                    if !in_launcher && self.launcher.is_some() {
+                        self.back_to_launcher();
+                        return;
+                    }
+                    let popup = self
+                        .launcher
+                        .as_ref()
+                        .and_then(|l| l.window.as_ref())
+                        .is_some_and(|w| w.popup_open());
+                    if !(in_launcher && popup) {
+                        self.quit = true;
+                        event_loop.exit();
+                    }
                     return;
                 }
-                if let Some(k) = key(code) {
-                    self.inputs.keyboard.set(k, state == ElementState::Pressed);
+                // The launcher's key presses aren't the keyboard controller's; releases
+                // always are, so no key stays held into a match.
+                let pressed = state == ElementState::Pressed;
+                if let Some(k) = key(code)
+                    && !(in_launcher && pressed)
+                {
+                    self.inputs.keyboard.set(k, pressed);
                 }
             }
             _ => {}
@@ -436,14 +629,36 @@ impl ApplicationHandler for App {
         if self.quit {
             return;
         }
-        self.run_due();
-        if self.session.ended {
+        if self.session.is_some() {
+            self.run_due();
+            if !self.ended() {
+                event_loop.set_control_flow(ControlFlow::WaitUntil(self.next_tick));
+                return;
+            }
             eprintln!("the match ended");
-            self.quit = true;
-            event_loop.exit();
-            return;
+            if self.launcher.is_none() {
+                self.quit = true;
+                event_loop.exit();
+                return;
+            }
+            self.back_to_launcher();
         }
-        event_loop.set_control_flow(ControlFlow::WaitUntil(self.next_tick));
+        // The launcher: woken by events, or when egui asked for its next frame.
+        let flow = match self.launcher.as_mut().and_then(|l| l.window.as_mut()) {
+            Some(w) => match w.repaint_at {
+                Some(t) if t <= Instant::now() => {
+                    w.repaint_at = None;
+                    if let Some(s) = &self.shown {
+                        s.window.request_redraw();
+                    }
+                    ControlFlow::Wait
+                }
+                Some(t) => ControlFlow::WaitUntil(t),
+                None => ControlFlow::Wait,
+            },
+            None => ControlFlow::Wait,
+        };
+        event_loop.set_control_flow(flow);
     }
 }
 
@@ -575,20 +790,33 @@ fn run() -> ExitCode {
             if !e.is_empty() {
                 eprintln!("{e}");
             }
-            eprintln!(
-                "usage: melee-hd [--p1 fox] [--p2 marth] [--stage fd|bf|ps] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--size WxH] [--bench TICKS]"
-            );
+            eprintln!("{}", usage());
             return ExitCode::from(2);
         }
     };
+    if let Some(path) = &args.launcher_shot {
+        let gpu = present::Gpu::new();
+        let mut form = launcher::Form::new(args.stocks, args.minutes, args.fullscreen);
+        return match launcher::shot(&gpu, &mut form, args.size, std::path::Path::new(path)) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("{path}: {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     if let Some(ticks) = args.bench {
         return bench(&args, ticks);
     }
-    let session = match Session::start(&args) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("{e}");
-            return ExitCode::FAILURE;
+    let session = if args.launch {
+        None
+    } else {
+        match Session::start(&args) {
+            Ok(s) => Some(s),
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::FAILURE;
+            }
         }
     };
     let event_loop = {
@@ -600,11 +828,18 @@ fn run() -> ExitCode {
     };
     let gpu = present::Gpu::new();
     let mut frames = Frames::new();
-    frames.space.load_dol(&session.dol);
+    if let Some(s) = &session {
+        frames.space.load_dol(&s.dol);
+    }
     frames.hsd.widescreen = args.widescreen;
     present::set_aspect(args.widescreen.unwrap_or(4.0 / 3.0));
+    let launcher = args.launch.then(|| Launcher {
+        form: launcher::Form::new(args.stocks, args.minutes, args.fullscreen),
+        window: None,
+    });
     let mut app = App {
         session,
+        launcher,
         frames,
         gpu,
         renderer: None,
@@ -618,18 +853,22 @@ fn run() -> ExitCode {
         scale: scale_for(args.scale, args.size),
         one_thread: args.one_thread,
         msaa: args.msaa,
+        window_size: args.size,
+        alt: false,
+        stopped: None,
+        args,
     };
-    present::set_size(args.size);
+    present::set_size(app.args.size);
     // The pipelines the last runs needed, made before the first tick.
-    app.renderer = Some(gpu_for(
-        pipelines::renderer(&app.gpu, app.scale, app.msaa),
-        app.one_thread,
-    ));
+    if app.session.is_some() {
+        app.renderer = Some(gpu_for(
+            pipelines::renderer(&app.gpu, app.scale, app.msaa),
+            app.one_thread,
+        ));
+    }
     let r = event_loop.run_app(&mut app);
     app.inputs.close();
-    if let Some(g) = app.renderer.take() {
-        pipelines::save(&g.into_renderer());
-    }
+    app.drop_renderer();
     if let Err(e) = r {
         eprintln!("the window failed: {e}");
         return ExitCode::FAILURE;
