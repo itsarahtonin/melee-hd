@@ -340,6 +340,9 @@ impl Running<'_> {
     pub fn run_grabbed_cb(&mut self, cb: CodeRef, victim: GObjId, grabber: GObjId) {
         match cb.0 {
             ON_GRABBED => self.enter_capture_pulled(victim, grabber),
+            super::super::captain::addr::CAPTURE_CAPTAIN => {
+                self.enter_capture_captain(victim, grabber)
+            }
             other => unported_call(&format!("grabbed callback {other:#010x}")),
         }
     }

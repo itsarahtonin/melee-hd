@@ -3561,3 +3561,95 @@ ftFc_Init_OnKnockbackExit	leaf-check falco: falco_functions runs it from real Fa
 ftFc_Init_OnLoad	melee-oracle diff, Falco vs Sheik FD Game_20260129T170722 (docs/oracle.md): Falco's creation runs it; the fighter compared from the first tick
 ftColl_80077688	melee-oracle diff, Falco vs Sheik FD Game_20260129T170722 (docs/oracle.md): Falco's lasers and Sheik's needles hitting shields, from tick 136
 lbColl_80007DD8	melee-oracle diff, Falco vs Sheik FD Game_20260129T170722 (docs/oracle.md): the lasers that bounce off a shield (9 calls), their rebound compared
+ftCa_Init_800E28C8	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirHi_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirHi_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirHi_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirHi_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirHi_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLwEndAir_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLwEndAir_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLwEndAir_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLwEnd_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLwEnd_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLwEnd_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLw_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLw_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLw_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLw_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirN_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirN_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirN_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirN_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirN_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirSStart_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirSStart_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirSStart_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirSStart_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirS_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirS_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirS_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirS_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirS_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiCatch_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiCatch_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiCatch_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiCatch_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow0_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow0_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow0_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow0_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow1_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow1_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow1_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_800E3EAC	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_800E400C	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLwEndAir_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLwEndAir_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLwEndAir_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLwEnd_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLwEnd_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLwEnd_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_800E49FC	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_800E5128	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_800E550C	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialN_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialN_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialN_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialN_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialN_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialSStart_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialSStart_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialSStart_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialSStart_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_OnDetect	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_RemoveGFX	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCo_8009CA0C	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCo_800DB464	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureCaptain_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureCaptain_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureCaptain_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureCaptain_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_Init_OnDeath	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_Init_LoadSpecialAttrs	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+doCatchAnim	leaf-check captain: ftCa_SpecialHiCatch_Anim's runs reach it (the catch's end into the throw), the whole state compared
+ftCommon_8007E5AC	leaf-check captain: the down special's grounded physics (ftCa_SpecialLw_Phys, ftCa_SpecialLwEnd_Phys, ftCa_SpecialLwEndAir_Phys) reach it, the whole state compared
+ftCommon_CalcSelfAccel_DeaccelQuick	leaf-check captain: the up special's physics (ftCa_SpecialHi_Phys, ftCa_SpecialAirHi_Phys, ftCa_SpecialHiThrow0_Phys) reach it, the whole state compared
+ftCommon_CalcSelfAccel_AccelToVel	leaf-check captain: the up special's physics reach it through ftCommon_CalcSelfAccel_DriftSimple_NoFriction, the whole state compared
+ftCommon_CalcSelfAccel_DriftSimple_NoFriction	leaf-check captain: the up special's physics reach it below the drift's limit, the whole state compared
+ftCa_Init_OnLoad	melee-oracle diff, Captain Falcon vs Sheik FD Game_20260524T181444 (docs/oracle.md): Captain Falcon's creation runs it; the fighter compared from the first tick
+ftColl_8007BE3C	melee-oracle diff, Captain Falcon vs Sheik FD Game_20260524T181444 (docs/oracle.md): a tip's damage held back through its hitlag lands in tick 9496

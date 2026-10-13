@@ -352,6 +352,8 @@ impl Running<'_> {
             0x8011_00EC => self.seak_on_load(gobj),
             0x8013_9334 => self.zelda_on_load(gobj),
             0x8014_9CC4 => self.falco_on_load(gobj),
+            0x800E_2AEC => self.ca_on_load(gobj),
+            0x8014_EE1C => self.gn_on_load(gobj),
             other => unported_call(&format!("fighter OnLoad {other:#010x}")),
         }
     }
@@ -366,6 +368,8 @@ impl Running<'_> {
             0x8011_0094 => self.seak_on_death(gobj),
             0x8013_92DC => self.zelda_on_death(gobj),
             0x8014_9ACC => self.falco_on_death(gobj),
+            0x800E_2888 => self.ca_on_death(gobj),
+            0x8014_EBFC => self.gn_on_death(gobj),
             other => unported_call(&format!("fighter OnDeath {other:#010x}")),
         }
     }
@@ -381,6 +385,7 @@ impl Running<'_> {
             0x8011_03C8 => self.seak_load_special_attrs(gobj),
             0x8013_9590 => self.zelda_load_special_attrs(gobj),
             0x8014_9D3C => self.falco_load_special_attrs(gobj),
+            0x800E_2B40 | 0x8014_EE40 => self.ca_load_special_attrs(gobj),
             other => unported_call(&format!("fighter LoadSpecialAttrs {other:#010x}")),
         }
     }

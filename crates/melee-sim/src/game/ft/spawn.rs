@@ -366,9 +366,7 @@ impl Running<'_> {
             ([114, 115], 0x215C),
         ] {
             for b in bases {
-                self.game
-                    .events
-                    .push(super::super::state::Event::SfxKeyOffTrack(track(b)));
+                self.sfx_play_track(crate::lb::audio::SFX_KEY_OFF, 0, 0x40, track(b));
             }
             let fp = &mut self.game.fighters[f.0];
             match field {
@@ -384,11 +382,9 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.x2160 = -1;
         let (a, b) = (fp.x2164, fp.x2168);
-        // `lbAudioAx_8002500C` and `lbAudioAx_80025038`.
-        self.game.audio(0x8002_500C, [a, 0, 0, 0]);
-        let fp = &mut self.game.fighters[f.0];
-        fp.x2164 = 0;
-        self.game.audio(0x8002_5038, [b, 0, 0, 0]);
+        self.lb_audio_crowd_a_less(a);
+        self.game.fighters[f.0].x2164 = 0;
+        self.lb_audio_crowd_b_less(b);
         let fp = &mut self.game.fighters[f.0];
         fp.x2168 = 0;
         fp.x2164 = 0;

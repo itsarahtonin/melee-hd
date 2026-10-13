@@ -2271,6 +2271,62 @@ impl Running<'_> {
         }
     }
 
+    /// A tip's damage, held back while its hitlag lasted, lands, `ftColl_8007BE3C`: taken
+    /// (or the armor's), recorded for whoever's hitbox it was, a fighter's or an item's, and
+    /// its effect spawned where it hit.
+    #[doc(alias = "ftColl_8007BE3C")]
+    pub(crate) fn delayed_tip_damage(&mut self, gobj: GObjId) {
+        let me = self.game.fighter_id(gobj);
+        let mut dmg = self.game.fighters[me.0].dmg.x1898;
+        let taken = self.take_damage_or_armor(me, &mut dmg);
+        self.game.fighters[me.0].dmg.x1898 = dmg;
+        if !taken {
+            return;
+        }
+        let source = self.game.fighters[me.0]
+            .dmg
+            .x1894
+            .expect("a tip without its source");
+        match self.game.world.gobjs[source.0].classifier {
+            4 => self.record_fighter_hit(source, gobj, reg(dmg)),
+            6 => self.record_item_hit(source, gobj, reg(dmg)),
+            _ => {}
+        }
+        let d = &self.game.fighters[me.0].dmg;
+        let (element, pos, severity, kb) = (d.x188c, d.x1880, d.x1890, d.x187c);
+        let effect = HIT_EFFECTS[element as usize];
+        let whole = cvt_fp2unsigned(reg(dmg));
+        self.hit_effect(me, effect, pos, severity as u32, whole, reg(kb));
+    }
+
+    /// The damage a hit deals the fighter, `ftColl_80076640` (inlined in the throw's hit):
+    /// armor (`x221C_b4`) takes it first, and what passes it is the damage; whether any did,
+    /// counted into the damage taken this frame.
+    fn take_damage_or_armor(&mut self, f: FighterId, dmg: &mut f32) -> bool {
+        let count = whole_damage(reg(*dmg));
+        let fp = &mut self.game.fighters[f.0];
+        if fp.x221C_b4 {
+            fp.dmg.x1834 = mem(fp::fsubs(reg(fp.dmg.x1834), reg(*dmg)));
+            if fp.dmg.x1834 < 0.0 {
+                *dmg = mem(fp::fneg(reg(fp.dmg.x1834)));
+                fp.x221C_b4 = false;
+            }
+        }
+        if fp.x221C_b4 {
+            return false;
+        }
+        // NaN passes, as the original's `!(dmg > 500.0)` does.
+        assert!(
+            reg(*dmg).partial_cmp(&500.0) != Some(std::cmp::Ordering::Greater),
+            "attack power over 500!! {dmg}"
+        );
+        fp.dmg.x1838_percentTemp = mem(fp::fadds(reg(fp.dmg.x1838_percentTemp), reg(*dmg)));
+        if count > fp.dmg.x183C_applied {
+            fp.dmg.x183C_applied = count;
+        }
+        true
+    }
+
     /// A hit's effect by its element (`spawnHitEffect`): the normal hit's spark by knockback
     /// (`ftColl_80078538`), others' own.
     fn hit_effect(
