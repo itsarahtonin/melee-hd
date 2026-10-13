@@ -64,6 +64,14 @@ melee-render-check compare "$SSBM_DISC" fox-fox-fd.slp f600.dff f600 FRAME out/
 
 The differences left in the draws themselves don't change a pixel: a few vertices' specular colors (the second color channel) one to four levels apart, palette bytes past the entries a texture uses, the texture cache's layout registers (compared with `CHECK_ALL_BP`) for texture slots a draw doesn't sample, and an extra draw of zero area off screen in some frames.
 
+**One command for the frames and the mix.** These frames and the Fox ditto's mix (see [Checking the mix](#checking-the-mix)) run as ignored tests, `tools/render-check/tests/documented.rs` and `tools/audio-check/tests/fox_ditto.rs`:
+
+```sh
+SSBM_DISC=... cargo test --release -p melee-render-check -p melee-audio-check -- --ignored --test-threads=4
+```
+
+It passes only if every result is what this page records: each benchmark frame's two images identical (PSNR infinite), the Fox vs Sheik frames' image measures exactly as they are with the name plates missing, the log's frame N lined up with native frame N - 3, nothing melee-render reports as not drawn exactly, and the Fox ditto's mix sample-exact over at least 39.8 s from the trace's boot state and 39.9 s from melee-sim's boot. `REFS` (ssbm-rs's `local/` by default) and `SLIPPI_FOX_SHEIK` (the Fox vs Sheik replay) say where the references are; a missing one fails the test instead of skipping it. With four test threads it takes about a minute and a half. The oracle can't catch a regression here: after the Pokémon Stadium merge a shadow's texture named its image as `ImageRef::Shadow`, which melee-render didn't draw, so the floor's draws sampled other textures in place of the shadows on every checked frame while every simulated value still compared equal. melee-render now lists each kind of image it meets, so a new kind doesn't build until it's drawn or noted.
+
 ### Resolution, widescreen and pipelines
 
 **Resolution scaling.** melee-gpu is ssbm-render ported, with one addition: an EFB `scale` times the console's 640 by 480. Draws rasterize at the scaled size; EFB copies to textures (shadows, the magnifier's bubbles) average each block back to the console's size, so the game's textures stay what it expects, and the copy to the XFB keeps the scaled size for the window. The dither pattern scales with it. `--scale N` sets it; by default it's the smallest whose 480 lines cover the window's height (3 for 1440p), and it follows the window as it's resized or made fullscreen. At scale 1 the output is ssbm-render's, which is what the frame checks compare.
@@ -153,6 +161,7 @@ The GX stream takes about 0.75 ms of that and the simulation about 0.7 ms a tick
 
 - **Name plates.** Slippi's playback draws each player's display name under the damage counters: its code set enables `Optional: Show Player Names` by default (a `C2` code at `0x8016E9B4`, after the VS scene's entry, `Playback/Show Player Names/InitInGame.asm`). The code makes a GObj of its own with a joint loaded from a HUD archive and a render callback, and the names' text, so it adds objects to the game's state; the oracle's traces leave it off (`SLIPPI_PLAYER_NAMES=0`) and melee-sim doesn't run it, so a Slippi replay's frames miss the plates. Every other draw of those frames matches. Drawing them without touching the simulation needs the presentation to draw HSD objects the simulation doesn't own (the plate's joint and its text), which melee-render can't yet: it draws only from the display pass's commands over the game's objects.
 - **Refraction images.** Draws that sample the refraction copies (`ImageRef::Refract`, `ImageRef::RefractFrame`) aren't drawn exactly yet.
+- **Stage copies.** Pokémon Stadium's screens (`Draw::ScreenCopy`, `ImageRef::Screen`) and the erase color that Stadium and Fountain of Dreams set (`Draw::EraseColor`) aren't drawn yet; no checked frame has them.
 - **Shape animations** aren't drawn; no checked frame uses one.
 - **The particle pass's boundaries** are inferred from the display commands (runs of `Draw::Particles`), and the magnifier bubble's erase color is an average of the colors the original reads; both match every checked frame.
 - **State cache resets** that stage, fighter and item draw callbacks make (`grDisplay`, `ftDrawCommon`, `itDraw`) are mirrored only where a checked frame needed them (the refraction callback's TEV reset).
