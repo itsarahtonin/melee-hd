@@ -7,6 +7,9 @@
 //! replay it ran: every frame's recorded fighter positions and percents must be in the trace,
 //! a tick apart. The comparison with melee-hd's own state builds on these traces; see
 //! `docs/oracle.md`.
+//!
+//! `melee-oracle rules REPLAY.slp...` prints the rules each replay's code list makes and the
+//! version of Slippi's code set they come from, or why melee-hd refuses it.
 
 mod boot;
 mod diff;
@@ -39,6 +42,7 @@ fn run(args: Vec<String>) -> ExitCode {
         ["trace-dump", trace, tick, addr, len] => trace_dump(trace, tick, addr, len),
         ["trace-world", trace, tick] => trace_world(trace, tick),
         ["trace-heap", trace] => diff::trace_heap(trace),
+        ["rules", ref replays @ ..] if !replays.is_empty() => rules(replays),
         _ => {
             eprintln!("usage: melee-oracle compare ORIGINAL.slp OURS.slp");
             eprintln!("       melee-oracle trace-check TRACE REPLAY.slp");
@@ -52,8 +56,32 @@ fn run(args: Vec<String>) -> ExitCode {
             eprintln!("       melee-oracle trace-info TRACE");
             eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");
             eprintln!("       melee-oracle trace-heap TRACE");
+            eprintln!("       melee-oracle rules REPLAY.slp...");
             ExitCode::from(2)
         }
+    }
+}
+
+/// Each replay's rules as `Settings::from_replay` reads them from its code list.
+fn rules(replays: &[&str]) -> ExitCode {
+    let mut refused = false;
+    for path in replays {
+        let bytes = read(path);
+        let r = replay::Replay::parse(&bytes).unwrap_or_else(|e| panic!("{path}: {e}"));
+        let v = r.version;
+        let start = melee_replay::start(&r);
+        match melee_sim::game::vs_match::Settings::from_replay(&start) {
+            Ok(s) => println!("{path}: Slippi {}.{}.{}: {:?}", v[0], v[1], v[2], s.rules),
+            Err(e) => {
+                refused = true;
+                println!("{path}: Slippi {}.{}.{}: refused: {e}", v[0], v[1], v[2]);
+            }
+        }
+    }
+    if refused {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
     }
 }
 
