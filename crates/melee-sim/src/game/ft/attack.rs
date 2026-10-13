@@ -1844,6 +1844,7 @@ impl Running<'_> {
     #[doc(alias = "Ground_801C5700")]
     #[doc(alias = "grStadium_OnTouchLine")]
     #[doc(alias = "grStory_801E36D0")]
+    #[doc(alias = "grOldPupupu_80211CA0")]
     fn line_hazard(&mut self, _line: i32) -> bool {
         match self.game.stage_info.on_touch_line {
             None => false,
@@ -1852,7 +1853,8 @@ impl Running<'_> {
                 if f.0 == 0x8021_C740
                     || f.0 == 0x8021_A610
                     || f.0 == 0x801D_50B8
-                    || f.0 == 0x801E_36D0 =>
+                    || f.0 == 0x801E_36D0
+                    || f.0 == 0x8021_1CA0 =>
             {
                 false
             }

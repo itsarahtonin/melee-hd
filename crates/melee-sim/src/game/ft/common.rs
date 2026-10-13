@@ -389,14 +389,51 @@ impl Running<'_> {
         false
     }
 
-    /// The stage's wind on the fighter, `ftColl_GetWindOffsetVec`. No stage that blows is
-    /// ported.
+    /// The stage's wind on the fighter, `ftColl_GetWindOffsetVec`: the sum of what each wind
+    /// device (`ft_80459A68`, one slot) answers for it, unless the fighter ignores wind
+    /// (`x2224_b4`).
     #[doc(alias = "ftColl_GetWindOffsetVec")]
     pub fn wind_offset(&mut self, gobj: GObjId) -> Vec3 {
-        if !self.game.fighter(gobj).x2224_b4 && self.game.ft.wind_sources != 0 {
-            unported_call("ftCo_800C0A28");
+        let mut out = Vec3::default();
+        if self.game.fighter(gobj).x2224_b4 {
+            return out;
         }
-        Vec3::default()
+        for i in 0..self.game.gr.devices.x6578 {
+            assert!(
+                i == 0,
+                "ftColl_GetWindOffsetVec: a wind device past ft_80459A68's one"
+            );
+            let d = &self.game.gr.devices;
+            let Some(ground) = d.device else { continue };
+            let (kind, cb) = (d.device_type, d.device_cb);
+            if !self.device_applies(gobj, kind) {
+                continue;
+            }
+            let wind = match cb.map(|c| c.0) {
+                Some(crate::game::gr::oldpupupu::WIND_PUSH) => {
+                    crate::game::gr::oldpupupu::wind_push(self, ground, gobj)
+                }
+                Some(other) => unported_call(&format!("a wind device's callback {other:#010x}")),
+                None => panic!("a wind device without a callback"),
+            };
+            if let Some(w) = wind {
+                out.x = mem(fp::fadds(reg(out.x), reg(w.x)));
+                out.y = mem(fp::fadds(reg(out.y), reg(w.y)));
+                out.z = mem(fp::fadds(reg(out.z), reg(w.z)));
+            }
+        }
+        out
+    }
+
+    /// Whether a device of type `kind` acts on the fighter, `ftCo_800C0A28`: burying ones
+    /// (2 and 3) not while it's buried or (for 2) in a barrel, struck by a hammer or out of
+    /// stamina; any other always.
+    #[doc(alias = "ftCo_800C0A28")]
+    pub fn device_applies(&self, _gobj: GObjId, kind: u32) -> bool {
+        match kind {
+            2 | 3 => unported_call("ftCo_800C0A28 (a burying device)"),
+            _ => true,
+        }
     }
 
     /// `ftColl_80076528`: a grounded fighter that was hit (`x2092` frames ago) slides along

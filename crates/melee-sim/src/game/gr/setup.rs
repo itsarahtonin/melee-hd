@@ -866,7 +866,7 @@ fn wobj_anims(game: &Game, w: crate::hsd::wobj::WObjId) -> Vec<aobj::AObjId> {
 
 /// A light chain's animations as `HSD_ForeachAnim` visits them: each light's, then its
 /// position's and interest's.
-fn light_anims(game: &Game, first: lobj::LObjId, _mask: u32) -> Vec<aobj::AObjId> {
+pub(crate) fn light_anims(game: &Game, first: lobj::LObjId, _mask: u32) -> Vec<aobj::AObjId> {
     let mut out = Vec::new();
     let mut cur = Some(first);
     while let Some(l) = cur {

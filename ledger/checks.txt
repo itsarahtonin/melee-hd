@@ -416,7 +416,7 @@ ftCo_JumpAerial_Phys	leaf-check fighter: proc_update reaches it in 2 saved Fight
 ftCo_Jump_Phys	leaf-check fighter: proc_update reaches it in 4 saved Fighter_procUpdate calls that compare clean
 ftColl_80076528	leaf-check fighter: proc_update reaches it in 21 saved Fighter_procUpdate calls that compare clean
 ftColl_8007AF28	leaf-check fighter: proc_update reaches it in 21 saved Fighter_procUpdate calls that compare clean
-ftColl_GetWindOffsetVec	leaf-check fighter: proc_update reaches it in 20 saved Fighter_procUpdate calls that compare clean
+ftColl_GetWindOffsetVec	leaf-check fighter: proc_update reaches it in 20 saved Fighter_procUpdate calls that compare clean; the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches its wind device from tick 1 (a run instrumented to log each port's first call)
 ftCommon_CalcSelfAccel_AccelToVelClampedFrom	leaf-check fighter: proc_update reaches it in 11 saved Fighter_procUpdate calls that compare clean
 ftCommon_CalcSelfAccel_Deaccel	leaf-check fighter: proc_update reaches it in 7 saved Fighter_procUpdate calls that compare clean
 ftCommon_CalcSelfAccel_Drift	leaf-check fighter: proc_update reaches it in 11 saved Fighter_procUpdate calls that compare clean
@@ -1980,7 +1980,7 @@ it_8026D258	leaf-check items: drop_at runs it from captured item states
 it_8026D324	leaf-check items: spawn_pick runs every captured call
 it_8026D3CC	leaf-check items: spawn_queries runs it from captured item states
 it_80272828	leaf-check items: spawn_queries runs it from captured item states
-ftLib_GetOpponentsDir	leaf-check items: spawn_point's it_8026B684 runs it on every captured call
+ftLib_GetOpponentsDir	leaf-check items: spawn_point's it_8026B684 runs it on every captured call; with the Slippi ruleset's WhispyBlowDirFix, the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) from tick 635 (a run instrumented to log each port's first call)
 Ground_801C2AD8	leaf-check items: spawn_setup (it_8026D018) reads the stage's counts through it
 Ground_801C2AE8	leaf-check items: spawn_setup (it_8026D018) scales the first countdown by it
 Stage_80224FDC	leaf-check items: spawn_point (it_8026CB3C) runs it on every captured call
@@ -3872,3 +3872,31 @@ itHeiho_UnkMotion2_Anim	melee-oracle diff: the Yoshi's Story replay Game_2026012
 itHeiho_UnkMotion2_Coll	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1953 (a run instrumented to log each port's first call)
 itHeiho_UnkMotion3_Anim	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1812 (a run instrumented to log each port's first call)
 it_2725_Logic9_Destroyed	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 789 (a run instrumented to log each port's first call)
+grOldPupupu_802108B4	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_802107E0	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_80210884	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_80210888	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 85 (a run instrumented to log each port's first call)
+stageGObj0_OnInit@8021099C	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_802109D8	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_80210A24	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80210B04	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_80210B58	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_80210BC0	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80210BE4	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 3792 (a run instrumented to log each port's first call)
+grOldPupupu_80210C34	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 3792 (a run instrumented to log each port's first call)
+grOldPupupu_80210C7C	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_80210D10	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80211110	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_8021119C	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+ftCo_800C06E8	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_8021128C	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 714 (a run instrumented to log each port's first call)
+fn_802112F4	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_802113E0	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80211C1C	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80211CA8	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 2 (a run instrumented to log each port's first call)
+ftCo_800C0A28	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80211CA0	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 74 (a run instrumented to log each port's first call)
+grOldPupupu_802109D0	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80210B50	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80211194	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80211C10	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)

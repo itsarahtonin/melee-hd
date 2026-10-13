@@ -263,6 +263,11 @@ impl Importer<'_> {
             bury_count: cap.u32(sym("ftDevice_BuryThingCount")) as i32,
             x6578: cap.u32(sym("ft_804D6578")) as i32,
             device: gobj_at(self, sym("ft_80459A68")),
+            device_type: cap.u32(sym("ft_80459A68") + 4),
+            device_cb: match cap.u32(sym("ft_80459A68") + 8) {
+                0 => None,
+                a => Some(melee_sim::game::handles::CodeRef(a)),
+            },
             bury: [
                 gobj_at(self, sym("ftDevice_BuryThings")),
                 gobj_at(self, sym("ftDevice_BuryThings") + 0xC),

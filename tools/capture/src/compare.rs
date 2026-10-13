@@ -425,10 +425,6 @@ impl<'a> Comparer<'a> {
             game.coll.floor_filter_gobj.map(|g| g.0),
             filter_gobj,
         );
-        let wind = self.u32(sym("ft_804D6578"));
-        self.check("ft", "wind sources", game.ft.wind_sources, wind);
-        let bury = self.u32(sym("ftDevice_BuryThingCount"));
-        self.check("ft", "bury things", game.ft.bury_things, bury);
         self.fighter_data_globals();
         for (name, offset) in [
             ("p_ftCommonData", 0),

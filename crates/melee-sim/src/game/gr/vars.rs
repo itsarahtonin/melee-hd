@@ -32,6 +32,8 @@ pub enum VarsKind {
     StadiumPiece,
     StoryShyGuys,
     StoryRandall,
+    OldPupupu,
+    OldPupupu2,
 }
 
 /// `union GroundVars`.
@@ -59,6 +61,54 @@ pub enum GroundVars {
     StoryShyGuys(StoryShyGuysVars),
     /// `Randall`: Yoshi's Story's cloud (map 2).
     StoryRandall(StoryRandallVars),
+    /// `grOldPupupu_GroundVars`: Dream Land's Whispy (map 7) and his face (map 1).
+    OldPupupu(OldPupupuVars),
+    /// `grOldPupupu_GroundVars2`: Dream Land's flights (map 8).
+    OldPupupu2(OldPupupu2Vars),
+}
+
+/// `grOldPupupu_GroundVars`: Whispy's place in his cycle (`xC4`), his state (`xC8`: idle,
+/// turning, blowing), a blink countdown or animation row (`xCC`), a timer (`xD0`), whether a
+/// state starts (`xD4`; the face: the side), the side he faces (`xD8`, 0 left), whom his wind
+/// pushes (`xDC`) and ticks alive (`xE0`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+pub struct OldPupupuVars {
+    pub xC4: i32,
+    pub xC8: i32,
+    pub xCC: i32,
+    pub xD0: i32,
+    pub xD4: i32,
+    pub xD8: i32,
+    pub xDC: i32,
+    pub xE0: i32,
+}
+
+/// `grOldPupupu_GroundVars2`: the wait before the next flight, and a short nothing writes.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+pub struct OldPupupu2Vars {
+    pub xC4: i16,
+    pub xC6: i16,
+}
+
+impl OldPupupuVars {
+    fn words(&self) -> [i32; 8] {
+        [
+            self.xC4, self.xC8, self.xCC, self.xD0, self.xD4, self.xD8, self.xDC, self.xE0,
+        ]
+    }
+
+    fn from_words(w: [i32; 8]) -> Self {
+        OldPupupuVars {
+            xC4: w[0],
+            xC8: w[1],
+            xCC: w[2],
+            xD0: w[3],
+            xD4: w[4],
+            xD8: w[5],
+            xDC: w[6],
+            xE0: w[7],
+        }
+    }
 }
 
 /// `ShyGuys`: how many fly in the current flight, its height's index, and the wait.
@@ -437,6 +487,15 @@ impl GroundVars {
                     next: gobj(cx, at + 0x24),
                 })
             }
+            VarsKind::OldPupupu => {
+                GroundVars::OldPupupu(OldPupupuVars::from_words(std::array::from_fn(|i| {
+                    m.u32(at + 4 * i as u32) as i32
+                })))
+            }
+            VarsKind::OldPupupu2 => GroundVars::OldPupupu2(OldPupupu2Vars {
+                xC4: m.u16(at) as i16,
+                xC6: m.u16(at + 2) as i16,
+            }),
             VarsKind::StoryShyGuys => GroundVars::StoryShyGuys(StoryShyGuysVars {
                 count: m.u8(at) as i8,
                 pattern: m.u8(at + 1) as i8,
@@ -588,6 +647,37 @@ impl GroundVars {
         match self {
             GroundVars::StoryRandall(v) => v,
             other => panic!("a stage object's variables are {other:?}, not Randall"),
+        }
+    }
+
+    /// The variables as `grOldPupupu_GroundVars`, likewise.
+    pub fn oldpupupu(&mut self) -> &mut OldPupupuVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::OldPupupu(OldPupupuVars::from_words(std::array::from_fn(|i| {
+                b.u32(4 * i) as i32
+            })));
+        }
+        match self {
+            GroundVars::OldPupupu(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grOldPupupu_GroundVars"),
+        }
+    }
+
+    /// The variables as `grOldPupupu_GroundVars2`, likewise.
+    pub fn oldpupupu2(&mut self) -> &mut OldPupupu2Vars {
+        if let GroundVars::Bytes(b) = self {
+            let h = |at: usize| u16::from_be_bytes([b[at], b[at + 1]]) as i16;
+            *self = GroundVars::OldPupupu2(OldPupupu2Vars {
+                xC4: h(0),
+                xC6: h(2),
+            });
+        }
+        match self {
+            GroundVars::OldPupupu2(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grOldPupupu_GroundVars2")
+            }
         }
     }
 
@@ -867,6 +957,27 @@ impl Mirror for GroundVars {
                     v.turning.map(|j| j.0),
                     m.u32(at + 0x10),
                 );
+            }
+            GroundVars::OldPupupu(v) => {
+                let theirs: [i32; 8] = std::array::from_fn(|i| m.u32(at + 4 * i as u32) as i32);
+                if v.words() != theirs {
+                    cx.mismatch(
+                        &format!("{path}.oldpupupu"),
+                        format!("{:?}", v.words()),
+                        format!("{theirs:?}"),
+                    );
+                }
+            }
+            GroundVars::OldPupupu2(v) => {
+                let ours = (v.xC4, v.xC6);
+                let theirs = (m.u16(at) as i16, m.u16(at + 2) as i16);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.oldpupupu2"),
+                        format!("{ours:?}"),
+                        format!("{theirs:?}"),
+                    );
+                }
             }
             GroundVars::StoryShyGuys(v) => {
                 let ours = (v.count, v.pattern, v.pad, v.timer);

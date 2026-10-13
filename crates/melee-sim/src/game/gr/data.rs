@@ -3,7 +3,7 @@
 //! which [`code`](super::super::code) dispatches.
 
 use super::datfiles::GrJoint;
-use super::{GR_KIND_BATTLE, GR_KIND_LAST, GR_KIND_PSTADIUM, GR_KIND_STORY};
+use super::{GR_KIND_BATTLE, GR_KIND_LAST, GR_KIND_OLDPUPUPU, GR_KIND_PSTADIUM, GR_KIND_STORY};
 
 /// `StageCallbacks`: one stage object's functions, by map id.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -216,6 +216,42 @@ pub const STORY: StageData = StageData {
     joints: &[],
 };
 
+/// `grOp_StageCallbacks`. Map 7 is Whispy, map 1 his face, map 8 the flights of map 2's clouds
+/// and stars, map 5 the stage.
+pub const OLDPUPUPU_CALLBACKS: [StageCallbacks; 9] = [
+    cb(0x8021_099C, 0x8021_09C8, 0x8021_09D0, 0x8021_09D4, 0),
+    cb(0x8021_09D8, 0x8021_0A1C, 0x8021_0A24, 0x8021_0B00, 0),
+    cb(0x8021_0BE4, 0x8021_0C2C, 0x8021_0C34, 0x8021_0C78, 0),
+    cb(0x8021_1110, 0x8021_118C, 0x8021_1194, 0x8021_1198, 0),
+    cb(0x8021_0B04, 0x8021_0B48, 0x8021_0B50, 0x8021_0B54, 0),
+    cb(
+        0x8021_0B58,
+        0x8021_0BB8,
+        0x8021_0BC0,
+        0x8021_0BE0,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8021_1C10, 0x8021_1C14, 0x8021_1C1C, 0x8021_1C9C, 0),
+    cb(0x8021_119C, 0x8021_1284, 0x8021_13E0, 0x8021_1C0C, 0),
+    cb(0x8021_0C7C, 0x8021_0D08, 0x8021_0D10, 0x8021_110C, 0),
+];
+
+/// `grOp_StageData`.
+pub const OLDPUPUPU: StageData = StageData {
+    grkind: GR_KIND_OLDPUPUPU,
+    callbacks: &OLDPUPUPU_CALLBACKS,
+    file: Some("/GrOp.dat"),
+    on_init: 0x8021_07E0,
+    on_demo_init: 0x8021_07DC,
+    on_load: 0x8021_0884,
+    on_start: 0x8021_0888,
+    callback4: 0x8021_08AC,
+    on_touch_line: 0x8021_1CA0,
+    on_check_shadow_render: 0x8021_1CA8,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -223,6 +259,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_BATTLE => &BATTLE,
         GR_KIND_PSTADIUM => &STADIUM,
         GR_KIND_STORY => &STORY,
+        GR_KIND_OLDPUPUPU => &OLDPUPUPU,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }
