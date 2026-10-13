@@ -81,6 +81,8 @@ pub struct Rules {
     pub offscreen_limits: bool,
     /// The Ice Climbers' freeze glitch fix.
     pub freeze_glitch_fix: bool,
+    /// Which version of Slippi's codes the rules come from, where versions differ.
+    pub codes: super::slippi::CodeSet,
 }
 
 /// What a GObj's HSD object is (`hsd_obj`, by its `obj_kind`).
