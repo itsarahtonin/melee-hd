@@ -41,6 +41,11 @@ ROOTS = [
     "itNesspkthundertrail_ItemVars",
     "itNessbat_ItemVars",
     "itNessYoyo_ItemVars",
+    # Samus's bomb, Charge Shot, missile and grapple beam.
+    "itSamusBomb_ItemVars",
+    "itSamusChargeshot_ItemVars",
+    "itSamusMissile_ItemVars",
+    "itSamusGrapple_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",
@@ -208,6 +213,8 @@ SPLICE = {
     # An item's dynamic bones and hurtboxes, likewise set up to a count.
     "Item": [
         ("xD4_dynamicBones", 0xD4, 0x374, "ItemDynamicBones"),
+        # Its ignore id, from its spawn's `x40`, which one spawn leaves a stack word.
+        ("xAC4_ignoreItemID", 0xAC4, 0xAC8, "IgnoreId"),
         ("xACC_itemHurtbox", 0xACC, 0xB54, "ItemHurtboxes"),
     ],
 }
@@ -218,7 +225,7 @@ EXTRA_USES = [
     "use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};",
     "use crate::game::ft::dynamics::BoneSlot;",
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
-    "use crate::game::it::ItemVars;",
+    "use crate::game::it::{IgnoreId, ItemVars};",
     "use crate::hsd::lobj::LObjId;",
     "use crate::hsd::shadow::ShadowId;",
     "use crate::lb::command::Script;",
@@ -281,7 +288,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::handles::*;
-use crate::game::it::{ItemVars, Var};
+use crate::game::it::{IgnoreId, ItemVars, Var};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;

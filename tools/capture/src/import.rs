@@ -150,6 +150,8 @@ pub const DANGLING_BOX: u32 = 0x1000_0000;
 
 /// Where the arena starts (`OSGetArenaLo` at boot): the executable's code and data lie below.
 const HEAP: u32 = 0x804E_EC00;
+/// `MAX_FT_PARTS`: the entries a fighter's parts table has room for.
+const MAX_PARTS: u32 = 140;
 
 pub struct Importer<'a> {
     pub cap: &'a Capture,
@@ -160,6 +162,7 @@ pub struct Importer<'a> {
     pub unhandled: Vec<String>,
     /// How many bones the fighter being imported has, for its parts table.
     parts_len: u32,
+    parts_kind: u32,
     /// The archives `data` maps, for finding what a heap copy was made from.
     archives: Option<&'a Archives>,
     /// Importing bytes that may be stale (an item's: a reused block keeps what its creation
@@ -207,6 +210,7 @@ impl<'a> Importer<'a> {
             maps: Maps::default(),
             unhandled: Vec::new(),
             parts_len: 0,
+            parts_kind: 0,
             archives: None,
             stale: false,
             ef_free: None,
@@ -844,6 +848,7 @@ impl Importer<'_> {
         let kind = self.u32(a + 4);
         let table = self.u32(self.u32(sym("ftPartsTable")) + 4 * kind);
         self.parts_len = self.u32(table + 8);
+        self.parts_kind = kind;
         let id = FighterId(self.game.fighters.alloc(Fighter::default()));
         self.maps.fighters.insert(a, id);
         self.game.ft.addresses.insert(id.0, a);
@@ -926,9 +931,16 @@ impl Importer<'_> {
             bytes: &cap.call.mem1,
             base: MEM1,
         };
-        let bones = (0..self.parts_len)
+        let mut bones: Vec<FighterBone> = (0..self.parts_len)
             .map(|i| FighterBone::import(&mem, a + i * FighterBone::SIZE, self))
             .collect();
+        // Samus's grapple beam puts its tip's model in the table's last entry, past her bones
+        // (`it_802B7C18`); the entries between hold whatever the block held.
+        let last = a + (MAX_PARTS - 1) * FighterBone::SIZE;
+        if self.parts_kind == 13 && self.is_jobj(self.u32(last)) {
+            bones.resize(MAX_PARTS as usize - 1, FighterBone::default());
+            bones.push(FighterBone::import(&mem, last, self));
+        }
         self.game.fighter_parts[id.0] = bones;
         id
     }

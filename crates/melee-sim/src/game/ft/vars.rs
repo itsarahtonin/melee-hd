@@ -46,6 +46,9 @@ pub const SEAK_CHAIN: usize = 8;
 pub const ZELDA_DIN_FIRE: usize = 0;
 /// `ftNess_FighterVars`: Ness's yo-yo, PK Flash, PK Thunder and bat.
 pub const NESS_ITEMS: [usize; 4] = [0x0, 0x14, 0x18, 0x1C];
+/// Samus's Charge Shot in her hand and her grapple beam (`ftSamus_FighterVars` `x222C`,
+/// `x223C`).
+pub const SAMUS_ITEMS: [usize; 2] = [0x0, 0x10];
 
 /// The words of `u` a fighter of `kind` keeps GObjs in, which the importer types: Fox's and
 /// Falco's blaster, Sheik's held needles and chain (`Ft_Kind_Seak`), Zelda's Din's Fire
@@ -56,6 +59,7 @@ pub fn gobj_words(kind: i32) -> &'static [usize] {
         7 => &[SEAK_NEEDLES, SEAK_CHAIN],
         19 => &[ZELDA_DIN_FIRE],
         8 => &NESS_ITEMS,
+        13 => &SAMUS_ITEMS,
         _ => &[],
     }
 }

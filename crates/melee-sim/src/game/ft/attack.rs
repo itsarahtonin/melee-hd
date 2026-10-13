@@ -1547,14 +1547,14 @@ impl Running<'_> {
                 }
             }
         };
-        if id == 0 {
+        if !id.is_set(&mut self.game.objs.stale_reads) {
             add(self.game, g);
             return;
         }
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(o) = cur {
             cur = self.game.world.gobjs[o.0].next;
-            if it::item(self.game, o).xAC4_ignoreItemID == id {
+            if self.same_ignore_id(o, id) {
                 add(self.game, o);
             }
         }
@@ -1575,17 +1575,24 @@ impl Running<'_> {
                 }
             }
         };
-        if id == 0 {
+        if !id.is_set(&mut self.game.objs.stale_reads) {
             add(self.game, g);
             return;
         }
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(o) = cur {
             cur = self.game.world.gobjs[o.0].next;
-            if it::item(self.game, o).xAC4_ignoreItemID == id {
+            if self.same_ignore_id(o, id) {
                 add(self.game, o);
             }
         }
+    }
+
+    /// Whether item `o` shares the ignore id `id` (stale ids read as stale reads, and match
+    /// nothing known).
+    fn same_ignore_id(&mut self, o: GObjId, id: super::super::it::IgnoreId) -> bool {
+        let theirs = super::super::it::item(self.game, o).xAC4_ignoreItemID;
+        theirs.read(&mut self.game.objs.stale_reads).is_some() && id.0.is_some() && theirs == id
     }
 
     /// The fighter takes item `g`'s box `j` on hurtbox `n`, `ftColl_80077C60`: the damage
@@ -2249,6 +2256,43 @@ impl Running<'_> {
             let v = self.common().f32(0x1A4);
             self.game.fighters[me.0].x1960_vibrateMult = v;
         }
+    }
+
+    /// A tip's damage, held back through its hitlag, `ftColl_8007BE3C`: it counts (or wears
+    /// the armor down, `ftColl_80076640`, which keeps what's left over in the tip), the
+    /// source's hit is recorded, and the tip's effect spawns.
+    #[doc(alias = "ftColl_8007BE3C")]
+    pub(crate) fn delayed_tip_damage(&mut self, gobj: GObjId) {
+        let me = self.game.fighter_id(gobj);
+        let fp = &mut self.game.fighters[me.0];
+        let count = whole_damage(reg(fp.dmg.x1898));
+        if fp.x221C_b4 {
+            fp.dmg.x1834 = mem(fp::fsubs(reg(fp.dmg.x1834), reg(fp.dmg.x1898)));
+            if fp.dmg.x1834 < 0.0 {
+                fp.dmg.x1898 = mem(fp::fneg(reg(fp.dmg.x1834)));
+                fp.x221C_b4 = false;
+            }
+        }
+        if fp.x221C_b4 {
+            return;
+        }
+        let dmg = reg(fp.dmg.x1898);
+        assert!(!(dmg > 500.0), "attack power over 500!! {dmg}");
+        fp.dmg.x1838_percentTemp = mem(fp::fadds(reg(fp.dmg.x1838_percentTemp), dmg));
+        if count > fp.dmg.x183C_applied {
+            fp.dmg.x183C_applied = count;
+        }
+        let source = fp.dmg.x1894.expect("a delayed tip without its source");
+        match self.game.world.gobjs[source.0].classifier {
+            4 => self.record_fighter_hit(source, gobj, dmg),
+            super::super::it::CLASS_ITEM => self.record_item_hit(source, gobj, dmg),
+            _ => {}
+        }
+        let d = &self.game.fighters[me.0].dmg;
+        let (effect, pos, severity, kb) =
+            (HIT_EFFECTS[d.x188c as usize], d.x1880, d.x1890, d.x187c);
+        let dmg = cvt_fp2unsigned(reg(d.x1898));
+        self.hit_effect(me, effect, pos, severity as u32, dmg, reg(kb));
     }
 
     /// A hit's effect by its element (`spawnHitEffect`): the normal hit's spark by knockback

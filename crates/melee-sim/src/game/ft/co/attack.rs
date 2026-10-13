@@ -849,7 +849,7 @@ impl Running<'_> {
         if (fp.kind == KIND_LINK || fp.kind == KIND_CLINK) && fp.u_i32(0xC) != 0 {
             return false;
         }
-        if fp.kind == KIND_SAMUS && fp.u_i32(0x10) != 0 {
+        if fp.kind == KIND_SAMUS && fp.u.gobj_at(0x10).is_some() {
             return false;
         }
         let window = fp.mv_i32(ATTACK_X0);

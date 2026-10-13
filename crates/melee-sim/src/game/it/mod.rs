@@ -22,6 +22,7 @@ pub mod lib279c;
 pub mod link;
 pub mod maplib;
 pub mod owner;
+pub mod release;
 pub mod spawn;
 pub mod tables;
 mod tables_gen;
@@ -122,6 +123,59 @@ pub struct Globals {
     pub damage_log: Vec<coll::DamageLogEntry>,
     /// Which of the checked item's hitboxes still check for clanks (`it_804D6D1C`).
     pub clank_boxes: [u8; 4],
+    /// Samus's grapple beam's lengths for her height, which its spawn writes over its
+    /// attributes in the character's loaded data (`it_802B75FC`).
+    pub grapple_lengths: kinds::samusgrapple::Lengths,
+}
+
+/// An item's ignore id (`Item::xAC4_ignoreItemID`): the items sharing one share their
+/// hitboxes' victims. It comes from the spawn's `x40`, which the grapple beam's spawn
+/// (`it_802B7C18`) never sets, leaving a stack word: that id is stale (None), the comparer
+/// leaves it out, and reading it counts a stale read.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct IgnoreId(pub Option<u32>);
+
+impl IgnoreId {
+    /// The id, a stale read counted when it was never set.
+    pub fn read(self, stale_reads: &mut u32) -> Option<u32> {
+        if self.0.is_none() {
+            *stale_reads += 1;
+        }
+        self.0
+    }
+
+    /// Whether the item has an id (a stale one counts, as the stack word it stands for was
+    /// nonzero where seen).
+    pub fn is_set(self, stale_reads: &mut u32) -> bool {
+        self.read(stale_reads) != Some(0)
+    }
+}
+
+impl crate::game::mirror::Mirror for IgnoreId {
+    const SIZE: u32 = 4;
+
+    fn import(
+        m: &crate::game::mirror::Mem,
+        at: u32,
+        _cx: &mut dyn crate::game::mirror::Cx,
+    ) -> Self {
+        IgnoreId(Some(m.u32(at)))
+    }
+
+    fn compare(
+        &self,
+        m: &crate::game::mirror::Mem,
+        at: u32,
+        path: &str,
+        cx: &mut dyn crate::game::mirror::Cx,
+    ) {
+        let theirs = m.u32(at);
+        if let Some(v) = self.0
+            && v != theirs
+        {
+            cx.mismatch(path, format!("{v:#x}"), format!("{theirs:#x}"));
+        }
+    }
 }
 
 /// An item GObj's `Item` (`gobj->user_data`).

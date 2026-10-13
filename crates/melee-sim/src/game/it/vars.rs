@@ -139,6 +139,10 @@ members! {
     NessPKThunderTrail, ness_pk_thunder_trail, itNesspkthundertrail_ItemVars, [NESS_PK_THUNDER1, NESS_PK_THUNDER2, NESS_PK_THUNDER3, NESS_PK_THUNDER4];
     NessBat, ness_bat, itNessbat_ItemVars, [NESS_BAT];
     NessYoyo, ness_yoyo, itNessYoyo_ItemVars, [NESS_YOYO];
+    SamusBomb, samus_bomb, itSamusBomb_ItemVars, [SAMUS_BOMB];
+    SamusChargeshot, samus_chargeshot, itSamusChargeshot_ItemVars, [SAMUS_CHARGE];
+    SamusMissile, samus_missile, itSamusMissile_ItemVars, [SAMUS_MISSILE];
+    SamusGrapple, samus_grapple, itSamusGrapple_ItemVars, [SAMUS_GBEAM];
 }
 
 impl Default for ItemVars {

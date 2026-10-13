@@ -103,6 +103,19 @@ pub fn init_coll(r: &mut Running, l: ItemLinkId, size: f32) {
     link_mut(r.game, l).coll_data = cd;
 }
 
+/// Sets up a link's collision at its position with a fixed square ECB of `size`, keeping the
+/// collision kind the init gives (the grapple beam's `samus_grapple_init_link`, which
+/// `it_802A24D0` is but for the kind).
+pub fn init_coll_fixed(r: &mut Running, l: ItemLinkId, size: f32) {
+    let k = link_mut(r.game, l);
+    k.coll_data.cur_pos = k.pos;
+    k.coll_data.last_pos = k.coll_data.cur_pos;
+    let mut cd = k.coll_data.clone();
+    with_stage_coll(r.game, r.data, |c| c.init(&mut cd));
+    cd.set_ecb_source_box(None, size, size, size, size);
+    link_mut(r.game, l).coll_data = cd;
+}
+
 /// The unit direction from `b` to `a` written to `dir`, and the distance (in a register),
 /// `it_802A3C98`.
 #[doc(alias = "it_802A3C98")]
@@ -184,6 +197,85 @@ pub fn orient(game: &mut Game, j: JObjId, pos: Vec3, dir: &mut Vec3) {
     jobjs[j].mtx = m;
     jobjs[j].flags |= jobj::USER_DEF_MTX | jobj::MTX_INDEP_PARENT | jobj::MTX_INDEP_SRT;
     jobj::set_mtx_dirty(jobjs, Some(j));
+}
+
+/// Points a joint along `dir` (normalized in place) at `pos`, scaled by `scale`,
+/// `it_802A6F80`: its own matrix, independent of its parent's.
+#[doc(alias = "it_802A6F80")]
+pub fn orient_scaled(game: &mut Game, j: JObjId, pos: Vec3, dir: &mut Vec3, scale: f32) {
+    dir.normalize();
+    let mut up = if f64::from(dir.y) > 0.9999 {
+        Vec3::new(-1.0, 0.0, 0.0)
+    } else if f64::from(dir.y) < fp::fneg(0.9999) {
+        Vec3::new(1.0, 0.0, 0.0)
+    } else {
+        Vec3::new(0.0, 1.0, 0.0)
+    };
+    let mut side = up.sdk_cross(*dir);
+    up = dir.sdk_cross(side);
+    side.normalize();
+    up.normalize();
+    let mut s = Mtx34::IDENTITY;
+    s.m[0][0] = scale;
+    s.m[1][1] = scale;
+    s.m[2][2] = scale;
+    let mut m = Mtx34::IDENTITY;
+    m.m[0][0] = side.x;
+    m.m[1][0] = side.y;
+    m.m[2][0] = side.z;
+    m.m[0][1] = up.x;
+    m.m[1][1] = up.y;
+    m.m[2][1] = up.z;
+    m.m[0][2] = dir.x;
+    m.m[1][2] = dir.y;
+    m.m[2][2] = dir.z;
+    m.m[0][3] = pos.x;
+    m.m[1][3] = pos.y;
+    m.m[2][3] = pos.z;
+    let m = m.concat(&s);
+    let jobjs = &mut game.objs.jobjs;
+    jobjs[j].mtx = m;
+    jobjs[j].flags |= jobj::USER_DEF_MTX | jobj::MTX_INDEP_PARENT | jobj::MTX_INDEP_SRT;
+    jobj::set_mtx_dirty(jobjs, Some(j));
+}
+
+/// Lines the links' models up from the first link out at the hand end, `it_802A7168`: each at
+/// its position, along the line from the next link out (or the hand's point `at`) to the one
+/// before (or itself), scaled by `scale`.
+#[doc(alias = "it_802A7168")]
+pub fn line_up_models(r: &mut Running, hand: ItemLinkId, at: Vec3, scale: f32) {
+    let mut l = Some(hand);
+    while let Some(k) = l {
+        if link(r.game, k).x2C_b0 {
+            break;
+        }
+        l = link(r.game, k).prev;
+    }
+    while let Some(k) = l {
+        let lk = link(r.game, k);
+        let from = match lk.next {
+            Some(n) if link(r.game, n).x2C_b0 => link(r.game, n).pos,
+            _ => at,
+        };
+        let to = match lk.prev {
+            Some(p) => link(r.game, p).pos,
+            None => lk.pos,
+        };
+        let pos = lk.pos;
+        let g = lk.gobj.expect("a link without its GObj");
+        let j = match r.game.world.gobj(g).obj {
+            Some(super::super::state::Obj::JObj(j)) => j,
+            ref o => panic!("a link GObj holding {o:?}"),
+        };
+        jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
+        let mut dir = Vec3::new(
+            mem(fp::fsubs(reg(to.x), reg(from.x))),
+            mem(fp::fsubs(reg(to.y), reg(from.y))),
+            mem(fp::fsubs(reg(to.z), reg(from.z))),
+        );
+        orient_scaled(r.game, j, pos, &mut dir, scale);
+        l = link(r.game, k).prev;
+    }
 }
 
 /// The touch flags the links' airborne passes report: floors and walls.

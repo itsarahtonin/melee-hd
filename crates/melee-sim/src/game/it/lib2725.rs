@@ -573,6 +573,25 @@ pub fn count_spawned(game: &mut Game) {
     game.it.spawned = game.it.spawned.wrapping_add(1);
 }
 
+/// A small blast, `it_80272B40`: its effect (0x40C), its sound, and its hits counted afresh.
+#[doc(alias = "it_80272B40")]
+pub fn blast_small(r: &mut Running, gobj: GObjId) {
+    blast_with(r, gobj, 0x40C);
+}
+
+/// A large blast, `it_80272A60`: its effect (0x40E), its sound, and its hits counted afresh.
+#[doc(alias = "it_80272A60")]
+pub fn blast_large(r: &mut Running, gobj: GObjId) {
+    blast_with(r, gobj, 0x40E);
+}
+
+fn blast_with(r: &mut Running, gobj: GObjId, gfx: i32) {
+    let pos = item(r.game, gobj).pos;
+    crate::game::ef::spawn(r, gfx, Some(gobj), &[crate::game::ef::Arg::Vec(pos)]);
+    super::item::play_sfx(r, gobj, 116, 127, 64);
+    uncount_hits(r.game, gobj);
+}
+
 /// The blast of an exploding item, `it_80272C08`: its effect (0x410), its sound, and its hits
 /// counted afresh.
 #[doc(alias = "it_80272C08")]

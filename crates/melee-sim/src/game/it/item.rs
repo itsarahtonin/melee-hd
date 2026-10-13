@@ -352,7 +352,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     ip.xD5C = 2;
     ip.xDCC_flag.b3 = true;
     ip.xDCC_flag.b4567 = 15;
-    ip.xAC4_ignoreItemID = spawn.x40 as u32;
+    ip.xAC4_ignoreItemID = super::IgnoreId(Some(spawn.x40 as u32));
     ip.destroy_type = 4;
     set_flag(&mut ip.xDCE_flag, 5, false);
     set_flag(&mut ip.xDCE_flag, 4, false);

@@ -353,6 +353,7 @@ impl Running<'_> {
             0x8013_9334 => self.zelda_on_load(gobj),
             0x8011_480C => self.ness_on_load(gobj),
             0x8013_C67C => self.purin_on_load(gobj),
+            0x8012_837C => self.samus_on_load(gobj),
             other => unported_call(&format!("fighter OnLoad {other:#010x}")),
         }
     }
@@ -368,6 +369,7 @@ impl Running<'_> {
             0x8013_92DC => self.zelda_on_death(gobj),
             0x8011_47C0 => self.ness_on_death(gobj),
             0x8013_C318 => self.purin_on_death(gobj),
+            0x8012_832C => self.samus_on_death(gobj),
             other => unported_call(&format!("fighter OnDeath {other:#010x}")),
         }
     }
@@ -384,6 +386,7 @@ impl Running<'_> {
             0x8013_9590 => self.zelda_load_special_attrs(gobj),
             0x8011_4B2C => self.ness_load_special_attrs(gobj),
             0x8013_C88C => self.purin_load_special_attrs(gobj),
+            0x8012_8684 => self.samus_load_special_attrs(gobj),
             other => unported_call(&format!("fighter LoadSpecialAttrs {other:#010x}")),
         }
     }

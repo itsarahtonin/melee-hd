@@ -345,16 +345,8 @@ pub fn hits_hurtbox(
     if hurt.state == HURT_INTANGIBLE {
         return false;
     }
-    if !hurt.skip_update_pos {
-        hurt.a_pos = world_position(objs, data, hurt.bone, Some(hurt.a_offset));
-        hurt.b_pos = world_position(objs, data, hurt.bone, Some(hurt.b_offset));
-        if mtx.is_some() {
-            hurt.b_pos.z = z;
-            hurt.a_pos.z = z;
-        }
-        hurt.skip_update_pos = true;
-    }
     if phantom {
+        update_hurt_ends(objs, data, hurt, mtx, z);
         let mid = |a: f32, b: f32| mem(fp::fmuls(0.5, fp::fadds(reg(a), reg(b))));
         hit.hurt_coll_pos = Vec3::new(
             mid(hurt.a_pos.x, hurt.b_pos.x),
@@ -364,6 +356,55 @@ pub fn hits_hurtbox(
         hit.coll_distance = 5.0;
         return true;
     }
+    touches_hurtbox(
+        objs,
+        data,
+        hit,
+        hurt,
+        mtx,
+        hit_owner_scale,
+        hurt_owner_scale,
+        z,
+    )
+}
+
+/// A hurtbox's ends brought up to date once a frame, pinned to `z` when its owner has a
+/// matrix of its own.
+fn update_hurt_ends(
+    objs: &mut Objects,
+    data: &Archives,
+    hurt: &mut HurtCapsule,
+    mtx: Option<&Mtx34>,
+    z: f32,
+) {
+    if !hurt.skip_update_pos {
+        hurt.a_pos = world_position(objs, data, hurt.bone, Some(hurt.a_offset));
+        hurt.b_pos = world_position(objs, data, hurt.bone, Some(hurt.b_offset));
+        if mtx.is_some() {
+            hurt.b_pos.z = z;
+            hurt.a_pos.z = z;
+        }
+        hurt.skip_update_pos = true;
+    }
+}
+
+/// Tests a box against a hurtbox whatever the hurtbox's state, `lbColl_80008248` (the
+/// capsules' test of [`hits_hurtbox`]): the hurtbox's ends brought up to date, the hurtbox's
+/// broad phase grown by three times its owner's scale. The box keeps where they met and by
+/// how much.
+#[doc(alias = "lbColl_80008248")]
+#[allow(clippy::too_many_arguments)]
+pub fn touches_hurtbox(
+    objs: &mut Objects,
+    data: &Archives,
+    hit: &mut HitCapsule,
+    hurt: &mut HurtCapsule,
+    mtx: Option<&Mtx34>,
+    hit_owner_scale: f32,
+    hurt_owner_scale: f32,
+    z: f32,
+) -> bool {
+    update_hurt_ends(objs, data, hurt, mtx, z);
     let m = bone_mtx(objs, data, hurt.bone, mtx);
     let met = hit_hurt(
         hit.x58,

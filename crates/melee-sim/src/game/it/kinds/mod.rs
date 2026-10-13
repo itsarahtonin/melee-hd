@@ -21,6 +21,10 @@ pub mod nesspkthunder;
 pub mod nesspkthundertrail;
 pub mod nessyoyo;
 pub mod rshell;
+pub mod samusbomb;
+pub mod samuschargeshot;
+pub mod samusgrapple;
+pub mod samusmissile;
 pub mod seakchain;
 pub mod seakneedleheld;
 pub mod seakneedlethrown;
@@ -66,6 +70,10 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || nesspkthunder::run_event(r, gobj, addr)
         || nesspkthundertrail::run_event(r, gobj, addr)
         || nessyoyo::run_event(r, gobj, addr)
+        || samusbomb::run_event(r, gobj, addr)
+        || samuschargeshot::run_event(r, gobj, addr)
+        || samusmissile::run_event(r, gobj, addr)
+        || samusgrapple::run_event(r, gobj, addr)
 }
 
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
@@ -100,6 +108,9 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| nesspkthunder::run_pred(r, gobj, addr))
         .or_else(|| nesspkthundertrail::run_pred(r, gobj, addr))
         .or_else(|| nessyoyo::run_pred(r, gobj, addr))
+        .or_else(|| samusbomb::run_pred(r, gobj, addr))
+        .or_else(|| samuschargeshot::run_pred(r, gobj, addr))
+        .or_else(|| samusmissile::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -168,6 +179,11 @@ pub const SEAK_NEEDLE_THROW: i32 = 79;
 pub const SEAK_NEEDLE_HELD: i32 = 80;
 pub const SEAK_VANISH: i32 = 85;
 pub const SEAK_CHAIN: i32 = 97;
+/// `It_Kind_Samus_Bomb`, `_Charge`, `_Missile` and `_GBeam`.
+pub const SAMUS_BOMB: i32 = 93;
+pub const SAMUS_CHARGE: i32 = 94;
+pub const SAMUS_MISSILE: i32 = 95;
+pub const SAMUS_GBEAM: i32 = 96;
 /// `It_Kind_Peach_Turnip`.
 pub const PEACH_TURNIP: i32 = 99;
 /// `It_Kind_Peach_Parasol`.

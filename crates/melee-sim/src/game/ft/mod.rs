@@ -40,6 +40,7 @@ pub mod parts;
 pub mod phys;
 pub mod purin;
 pub mod resolve;
+pub mod samus;
 pub mod seak;
 pub mod second;
 pub mod sound;

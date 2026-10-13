@@ -276,7 +276,9 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
         let ness = v.xF04.get();
         let idx = v.xEFC.get();
         let parent = if owner == ness { ness } else { None };
-        let t = super::nesspkthundertrail::spawn(r, parent, gobj, pos, idx, ignore as i32, facing);
+        // PK Thunder's own spawn sets its id; a stale one would pass on a stack word.
+        let ignore = ignore.read(&mut r.game.objs.stale_reads).unwrap_or(0) as i32;
+        let t = super::nesspkthundertrail::spawn(r, parent, gobj, pos, idx, ignore, facing);
         let v = item_mut(r.game, gobj).xDD4_itemVar.pk_thunder();
         v.xDD4[idx as usize].set(t);
         v.xEFC.update(|n| n.wrapping_add(1));

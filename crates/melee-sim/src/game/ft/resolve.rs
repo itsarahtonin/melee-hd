@@ -69,7 +69,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         fp.dmg.x189C_unk_num_frames = mem(fp::fsubs(reg(fp.dmg.x189C_unk_num_frames), 1.0));
         if reg(fp.dmg.x189C_unk_num_frames) <= 0.0 && reg(fp.dmg.kb_applied) == 0.0 {
             fp.dmg.x189C_unk_num_frames = 0.0;
-            unported_call("ftColl_8007BE3C (a delayed tip's damage)");
+            g.delayed_tip_damage(gobj);
         }
     }
     let fp = &g.game.fighters[f.0];

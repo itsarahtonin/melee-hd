@@ -210,3 +210,34 @@ pub fn show(game: &mut Game, gobj: GObjId) {
 pub fn parent_ecb_center(game: &Game, fighter: GObjId) -> crate::vec::Vec3 {
     super::owner::ecb_center(game, fighter)
 }
+
+/// The nearest target item ahead of `pos` on the side `facing_dir` looks toward (a target, a
+/// lock-on target, an enemy or kind 7, not grabbed, not held unless ownerless),
+/// `it_8026C258`.
+#[doc(alias = "it_8026C258")]
+pub fn nearest_target_item(game: &Game, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
+    let mut best = f64::from(f32::MAX);
+    let mut result = None;
+    let mut cur = game.world.first_in(super::P_LINK_ITEM);
+    while let Some(g) = cur {
+        cur = game.world.gobjs[g.0].next;
+        let ip = item(game, g);
+        let k = ip.hold_kind;
+        if !matches!(k, 4..=7)
+            || ip.grab_victim.is_some()
+            || (ip.xDC8_word.flags.x13 && ip.owner.is_some())
+            || (facing_dir == -1.0 && ip.pos.x > pos.x)
+            || (facing_dir == 1.0 && ip.pos.x < pos.x)
+        {
+            continue;
+        }
+        let dx = fp::fsubs(reg(pos.x), reg(ip.pos.x));
+        let dy = fp::fsubs(reg(pos.y), reg(ip.pos.y));
+        let d = fp::fmadds(dx, dx, fp::fmuls(dy, dy));
+        if d < best {
+            best = d;
+            result = Some(g);
+        }
+    }
+    result
+}

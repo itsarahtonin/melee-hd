@@ -396,6 +396,68 @@ impl Running<'_> {
         let (vel, friction) = (reg(fp.self_vel.x), reg(fp.co_attrs.aerial_friction));
         Self::accel_to_vel_clamped(fp, vel, accel, target, friction);
     }
+
+    /// The stick's share of `accel_max` and `target_max` once it passes `threshold`, else 0.
+    fn stick_share(fp: &Fighter, threshold: f64, accel_max: f64, target_max: f64) -> (f64, f64) {
+        let x = reg(fp.input.lstick[0].x);
+        if abs(x) >= threshold {
+            (fp::fmuls(x, accel_max), fp::fmuls(x, target_max))
+        } else {
+            (0.0, 0.0)
+        }
+    }
+
+    /// Air drift toward the stick's share of `target_max` with no braking past it,
+    /// `ftCommon_CalcSelfAccel_DriftSimple_NoFriction` (through
+    /// `ftCommon_CalcSelfAccel_AccelToVel`).
+    #[doc(alias = "ftCommon_CalcSelfAccel_DriftSimple_NoFriction")]
+    #[doc(alias = "ftCommon_CalcSelfAccel_AccelToVel")]
+    pub fn drift_simple_no_friction(
+        fp: &mut Fighter,
+        threshold: f64,
+        accel_max: f64,
+        target_max: f64,
+    ) {
+        let (accel, target) = Self::stick_share(fp, threshold, accel_max, target_max);
+        let vel = reg(fp.self_vel.x);
+        fp.x74_self_accel.x = mem(toward_target(vel, accel, target));
+    }
+
+    /// Ground speed toward the stick's share of `target_max`, `accel_max` at a time, once the
+    /// stick passes `threshold`, `ftCommon_CalcGroundAccel_AccelToLStickX` (through
+    /// `ftCommon_CalcGroundAccel_AccelToVel`).
+    #[doc(alias = "ftCommon_CalcGroundAccel_AccelToLStickX")]
+    #[doc(alias = "ftCommon_CalcGroundAccel_AccelToVel")]
+    pub fn ground_accel_to_stick(
+        fp: &mut Fighter,
+        threshold: f64,
+        accel_max: f64,
+        target_max: f64,
+    ) {
+        let (accel, target) = Self::stick_share(fp, threshold, accel_max, target_max);
+        let vel = reg(fp.gr_vel);
+        fp.xE4_ground_accel_1 = mem(toward_target(vel, accel, target));
+    }
+}
+
+/// The acceleration toward `target` from `vel`: all of the way at a zero target, else `accel`
+/// cut short of overshooting it (`ftCommon_CalcGroundAccel_AccelToVel`'s and
+/// `ftCommon_CalcSelfAccel_AccelToVel`'s rule).
+fn toward_target(vel: f64, accel: f64, target: f64) -> f64 {
+    if target == 0.0 {
+        return fp::fneg(vel);
+    }
+    if fp::fmuls(vel, accel) < 0.0 {
+        return accel;
+    }
+    if accel > 0.0 {
+        if fp::fadds(vel, accel) > target {
+            return fp::fsubs(target, vel);
+        }
+    } else if fp::fadds(vel, accel) < target {
+        return fp::fsubs(target, vel);
+    }
+    accel
 }
 
 /// `ftCommon_8007F76C`, which states keep as a callback.

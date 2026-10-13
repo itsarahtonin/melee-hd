@@ -12,7 +12,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
-use crate::game::it::{ItemVars, Var};
+use crate::game::it::{IgnoreId, ItemVars, Var};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -3764,7 +3764,7 @@ pub struct Item {
     /// +0x5d4
     pub x5D4_hitboxes: [ItemHitbox; 4],
     /// +0xac4
-    pub xAC4_ignoreItemID: u32,
+    pub xAC4_ignoreItemID: IgnoreId,
     /// +0xac8
     pub xAC8_hurtboxNum: u8,
     /// +0xacc
@@ -4076,7 +4076,7 @@ impl Default for Item {
             x5CC_currentAnimFrame: 0.0,
             x5D0_animFrameSpeed: 0.0,
             x5D4_hitboxes: core::array::from_fn(|_| Default::default()),
-            xAC4_ignoreItemID: 0,
+            xAC4_ignoreItemID: Default::default(),
             xAC8_hurtboxNum: 0,
             xACC_itemHurtbox: Default::default(),
             xB54: Default::default(),
@@ -7911,6 +7911,210 @@ impl itNessYoyo_ItemVars {
         self.x10.mark_stale();
         self.pad_14.iter_mut().for_each(|v| v.mark_stale());
         self.x18.mark_stale();
+    }
+}
+
+/// `itSamusBomb_ItemVars`, 0x8 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itSamusBomb_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub owner: Var<Option<GObjId>>,
+}
+
+impl Default for itSamusBomb_ItemVars {
+    fn default() -> Self {
+        itSamusBomb_ItemVars {
+            x0: Var::new(Default::default()),
+            owner: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itSamusBomb_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.owner.mark_stale();
+    }
+}
+
+/// `itSamusChargeshot_ItemVars`, 0xa0 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itSamusChargeshot_ItemVars {
+    /// +0x0
+    pub xDD4_pad: Var<u32>,
+    /// +0x4
+    pub xDD8: Var<f32>,
+    /// +0x8
+    pub xDDC: Var<f32>,
+    /// +0xc
+    pub xDE0: Var<f32>,
+    /// +0x10
+    pub xDE4: Var<f32>,
+    /// +0x14
+    pub xDE8: Var<i32>,
+    /// +0x18
+    pub xDEC: Var<i32>,
+    /// +0x1c
+    pub xDF0: Var<i32>,
+    /// +0x20
+    pub xDF4: Var<i32>,
+    /// +0x24
+    pub xDF8: Var<i32>,
+    /// +0x28
+    pub xDFC: Var<i32>,
+    /// +0x2c
+    pub xE00: Var<Option<GObjId>>,
+    /// +0x30
+    pub xE04: Var<f32>,
+    /// +0x34
+    pub pad1: [Var<u32>; 9],
+    /// +0x58
+    pub xE2C: Var<f32>,
+    /// +0x5c
+    pub xE30: Var<f32>,
+    /// +0x60
+    pub xE34: Var<f32>,
+    /// +0x64
+    pub padding: [Var<u32>; 15],
+}
+
+impl Default for itSamusChargeshot_ItemVars {
+    fn default() -> Self {
+        itSamusChargeshot_ItemVars {
+            xDD4_pad: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+            xDE0: Var::new(Default::default()),
+            xDE4: Var::new(Default::default()),
+            xDE8: Var::new(Default::default()),
+            xDEC: Var::new(Default::default()),
+            xDF0: Var::new(Default::default()),
+            xDF4: Var::new(Default::default()),
+            xDF8: Var::new(Default::default()),
+            xDFC: Var::new(Default::default()),
+            xE00: Var::new(Default::default()),
+            xE04: Var::new(Default::default()),
+            pad1: core::array::from_fn(|_| Var::new(Default::default())),
+            xE2C: Var::new(Default::default()),
+            xE30: Var::new(Default::default()),
+            xE34: Var::new(Default::default()),
+            padding: core::array::from_fn(|_| Var::new(Default::default())),
+        }
+    }
+}
+
+impl itSamusChargeshot_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4_pad.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+        self.xDE0.mark_stale();
+        self.xDE4.mark_stale();
+        self.xDE8.mark_stale();
+        self.xDEC.mark_stale();
+        self.xDF0.mark_stale();
+        self.xDF4.mark_stale();
+        self.xDF8.mark_stale();
+        self.xDFC.mark_stale();
+        self.xE00.mark_stale();
+        self.xE04.mark_stale();
+        self.pad1.iter_mut().for_each(|v| v.mark_stale());
+        self.xE2C.mark_stale();
+        self.xE30.mark_stale();
+        self.xE34.mark_stale();
+        self.padding.iter_mut().for_each(|v| v.mark_stale());
+    }
+}
+
+/// `itSamusMissile_ItemVars`, 0x14 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itSamusMissile_ItemVars {
+    /// +0x0
+    pub is_smash_missile: Var<i32>,
+    /// +0x4
+    pub x4: Var<i32>,
+    /// +0x8
+    pub x8: Var<f32>,
+    /// +0xc
+    pub owner: Var<Option<GObjId>>,
+    /// +0x10
+    pub x10: Var<Option<GObjId>>,
+}
+
+impl Default for itSamusMissile_ItemVars {
+    fn default() -> Self {
+        itSamusMissile_ItemVars {
+            is_smash_missile: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            owner: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itSamusMissile_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.is_smash_missile.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.owner.mark_stale();
+        self.x10.mark_stale();
+    }
+}
+
+/// `itSamusGrapple_ItemVars`, 0x18 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itSamusGrapple_ItemVars {
+    /// +0x0
+    pub x0: Var<Option<ItemLinkId>>,
+    /// +0x4
+    pub x4: Var<Option<ItemLinkId>>,
+    /// +0x8
+    pub x8: Var<Option<GObjId>>,
+    /// +0xc
+    pub xC: Var<Option<JObjId>>,
+    /// +0x10
+    pub unk_10: Var<Option<CodeRef>>,
+    /// +0x14
+    pub x14: Var<u8>,
+    /// +0x15
+    pub x15: Var<u8>,
+    /// +0x16
+    pub x16: Var<u8>,
+}
+
+impl Default for itSamusGrapple_ItemVars {
+    fn default() -> Self {
+        itSamusGrapple_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            unk_10: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+            x15: Var::new(Default::default()),
+            x16: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itSamusGrapple_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.unk_10.mark_stale();
+        self.x14.mark_stale();
+        self.x15.mark_stale();
+        self.x16.mark_stale();
     }
 }
 
