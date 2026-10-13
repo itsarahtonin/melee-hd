@@ -8,6 +8,8 @@
 //! fighter's attribute block, read at the decomp's offsets.
 
 pub mod init;
+pub mod special_lw;
+pub mod special_n;
 
 use super::super::code::Val;
 use super::super::handles::FighterId;
@@ -60,6 +62,31 @@ pub mod addr {
     pub const PP_LOAD_SPECIAL_ATTRS: u32 = 0x8011_F0A4;
     pub const PP_ON_KNOCKBACK_ENTER: u32 = 0x8011_F0E4;
     pub const PP_ON_KNOCKBACK_EXIT: u32 = 0x8011_F128;
+    pub const PP_REMOVE_ITEMS: u32 = 0x8011_F060;
+    // Ice Shot.
+    pub const PP_SPECIAL_N_ENTER: u32 = 0x8011_F1F8;
+    pub const PP_SPECIAL_AIR_N_ENTER: u32 = 0x8011_F26C;
+    pub const PP_SPECIAL_N_ANIM: u32 = 0x8011_F318;
+    pub const PP_SPECIAL_AIR_N_ANIM: u32 = 0x8011_F354;
+    pub const PP_SPECIAL_N_IASA: u32 = 0x8011_F390;
+    pub const PP_SPECIAL_AIR_N_IASA: u32 = 0x8011_F394;
+    pub const PP_SPECIAL_N_PHYS: u32 = 0x8011_F398;
+    pub const PP_SPECIAL_AIR_N_PHYS: u32 = 0x8011_F3B8;
+    pub const PP_SPECIAL_N_COLL: u32 = 0x8011_F3D8;
+    pub const PP_SPECIAL_AIR_N_COLL: u32 = 0x8011_F454;
+    pub const PP_SPECIAL_N_ICE: u32 = 0x8011_F500;
+    // Blizzard.
+    pub const PP_SPECIAL_LW_ENTER: u32 = 0x8012_2904;
+    pub const PP_SPECIAL_AIR_LW_ENTER: u32 = 0x8012_2988;
+    pub const PP_SPECIAL_LW_ANIM: u32 = 0x8012_2A0C;
+    pub const PP_SPECIAL_AIR_LW_ANIM: u32 = 0x8012_2A8C;
+    pub const PP_SPECIAL_LW_IASA: u32 = 0x8012_2B0C;
+    pub const PP_SPECIAL_AIR_LW_IASA: u32 = 0x8012_2B10;
+    pub const PP_SPECIAL_LW_PHYS: u32 = 0x8012_2B14;
+    pub const PP_SPECIAL_AIR_LW_PHYS: u32 = 0x8012_2B34;
+    pub const PP_SPECIAL_LW_COLL: u32 = 0x8012_2C18;
+    pub const PP_SPECIAL_AIR_LW_COLL: u32 = 0x8012_2D04;
+    pub const PP_SPECIAL_LW_BLOW: u32 = 0x8012_2D2C;
     pub const NN_ON_LOAD: u32 = 0x8012_2EDC;
     pub const NN_ON_DEATH: u32 = 0x8012_2F28;
     pub const NN_LOAD_SPECIAL_ATTRS: u32 = 0x8012_2FCC;
@@ -79,7 +106,7 @@ impl Running<'_> {
 /// Runs one of the Ice Climbers' callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr`
 /// is one.
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
-    init::run(g, gobj, addr)
+    init::run(g, gobj, addr) || special_n::run(g, gobj, addr) || special_lw::run(g, gobj, addr)
 }
 
 /// The Ice Climbers' functions other code calls by address (`code::call`).

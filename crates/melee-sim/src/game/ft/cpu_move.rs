@@ -80,7 +80,7 @@ impl Running<'_> {
     /// commands are written in, each with as many argument bytes as its range says (one past
     /// `CpuCmd_OneArgEnd`'s range checks the argument, as the original does).
     #[doc(alias = "ftCo_800B4880")]
-    fn cpu_data_script(&mut self, f: FighterId, idx: u32) {
+    pub(super) fn cpu_data_script(&mut self, f: FighterId, idx: u32) {
         let data = self.common_ptr(CPU_DATA);
         let scripts = self.data.ptr(data).expect("the computer players' scripts");
         let mut at = self
@@ -596,6 +596,135 @@ impl Running<'_> {
         } else {
             self.cpu_neutral_stick(f);
         }
+        self.cpu_cmd(f, cmd::DONE);
+    }
+
+    /// Whether the fighter faces its target, or stands within 1 of it, or has none,
+    /// `ftCo_800A2C08`.
+    #[doc(alias = "ftCo_800A2C08")]
+    pub(super) fn cpu_target_ahead(&self, f: FighterId) -> bool {
+        let fpp = &self.game.fighters[f.0];
+        let Some(t) = fpp.cpu.x44 else { return true };
+        let dx = fp::fsubs(reg(self.game.fighters[t.0].cur_pos.x), reg(fpp.cur_pos.x));
+        if abs(dx) < 1.0 {
+            return true;
+        }
+        fp::fmuls(dx, reg(fpp.facing_dir)) >= 0.0
+    }
+
+    /// Back to the fighter's usual behavior (`ftCo_CpuReturnToPreviousBehavior`).
+    pub(super) fn cpu_back_to_usual(&mut self, f: FighterId) {
+        let c = &mut self.game.fighters[f.0].cpu;
+        c.x18 = c.x1C;
+        self.cpu_cmd(f, cmd::DONE);
+    }
+
+    /// Standing at the destination, `ftCo_800ACD5C` (behavior 10): an approach allowed, it
+    /// may close in on its target; a new standing in the results is taunted with a tap up
+    /// (outside training); kinds that wait do; off its destination, it goes back to walking;
+    /// it turns to face its target, and above level 5 the charging characters charge.
+    #[doc(alias = "ftCo_800ACD5C")]
+    pub(super) fn cpu_stand(&mut self, f: FighterId) {
+        let c = &self.game.fighters[f.0].cpu;
+        if c.xF9_b1 && c.x44.is_some() && c.xF8_b6 {
+            unported_call("ftCo_800BA674");
+        }
+        // `GM_TRAINING`.
+        if c.x88 > 0 && self.game.gr.game_mode != 28 {
+            self.cpu_neutral_stick(f);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_cmd(f, cmd::PRESS_UP);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_cmd(f, cmd::RELEASE_UP);
+            self.cpu_cmd(f, cmd::DONE);
+            let slot = i32::from(self.game.fighters[f.0].player_idx);
+            self.game.fighters[f.0].cpu.x88 = 0;
+            let standing = self.cpu_standing(slot);
+            self.game.fighters[f.0].cpu.x8C = standing as i32;
+            return;
+        }
+        let fpp = &self.game.fighters[f.0];
+        if fpp.cpu.kind == 11 && fpp.item_gobj.is_none() {
+            self.cpu_data_script(f, 38);
+            return;
+        }
+        if !self.cpu_at_destination(f, 1.0) {
+            self.cpu_back_to_usual(f);
+            return;
+        }
+        let fpp = &self.game.fighters[f.0];
+        if matches!(fpp.kind, 19 | 7) && fpp.cpu.xF8_b5 {
+            self.cpu_data_script(f, 38);
+            self.game.fighters[f.0].cpu.xF8_b5 = false;
+            return;
+        }
+        if !self.cpu_target_ahead(f) {
+            self.cpu_turn_around(f);
+            return;
+        }
+        let fpp = &self.game.fighters[f.0];
+        if fpp.cpu.level < 5 {
+            self.cpu_finish_neutral(f);
+            return;
+        }
+        // Ft_Kind_Donkey, Ft_Kind_Samus, Ft_Kind_Mewtwo, Ft_Kind_Kirby.
+        if matches!(fpp.kind, 3 | 13 | 16 | 4) {
+            unported_call("ftCo_800ACD5C for a character that charges");
+        }
+        self.cpu_finish_neutral(f);
+    }
+
+    /// DI in hitstun, `ftCo_800AC5A0` (behavior 18): out of hitstun it goes back to its usual
+    /// behavior; else, more often the higher its level, it pushes the stick along its
+    /// knockback's angle (turned a quarter: up for a knockback right), or holds it neutral;
+    /// it shields to tech when its coin flip said so (`xFA_b1`).
+    ///
+    /// With no knockback the original pushes the stick by two registers it never set: r5 for
+    /// x (its caller's) and r30 for y (its caller's `Fighter*`, so the low byte of Nana's
+    /// address). Slippi's NanaDeterminism code clears r30, and 3.19's r5 too; 3.16's leaves r5
+    /// as the caller left it. Such a frame stops the port (`DI with no knockback`) until the
+    /// value ssbm-rs's ports leave there agrees with the original's.
+    #[doc(alias = "ftCo_800AC5A0")]
+    pub(super) fn cpu_di(&mut self, f: FighterId) {
+        let fpp = &self.game.fighters[f.0];
+        if !fpp.x221A_b3 {
+            let c = &mut self.game.fighters[f.0].cpu;
+            c.x18 = c.x1C;
+            self.cpu_cmd(f, cmd::RELEASE_R);
+            self.cpu_cmd(f, cmd::DONE);
+            return;
+        }
+        let c = &fpp.cpu;
+        let push = c.x7C % 120 > 120 - c.level.wrapping_mul(12);
+        if push {
+            let (kx, ky) = (reg(fpp.x8c_kb_vel.x), reg(fpp.x8c_kb_vel.y));
+            let mag = math::sqrt_reg(fp::fmadds(kx, kx, fp::fmuls(ky, ky)));
+            if nearly_zero(mag) {
+                unported_call("ftCo_800AC5A0: DI with no knockback (its stick registers unset)");
+            }
+            let inv = fp::fdivs(1.0, mag);
+            let (x, y) = (fp::fmuls(kx, inv), fp::fmuls(ky, inv));
+            let (sx, sy) = if kx > 0.0 {
+                (
+                    fp::fctiwz(fp::fmuls(127.0, x)),
+                    fp::fctiwz(fp::fmuls(127.0, fp::fneg(y))),
+                )
+            } else {
+                (
+                    fp::fctiwz(fp::fmuls(127.0, fp::fneg(x))),
+                    fp::fctiwz(fp::fmuls(127.0, y)),
+                )
+            };
+            // The original's swapped commands: x gets the turned y, y the x.
+            self.cpu_cmd1(f, cmd::SET_LSTICK_X, sy as u8);
+            self.cpu_cmd1(f, cmd::SET_LSTICK_Y, sx as u8);
+        } else {
+            self.cpu_neutral_stick(f);
+        }
+        if self.game.fighters[f.0].cpu.xFA_b1 {
+            self.cpu_cmd(f, cmd::PRESS_R);
+        }
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
         self.cpu_cmd(f, cmd::DONE);
     }
 

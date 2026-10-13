@@ -115,8 +115,49 @@ impl Running<'_> {
     }
 }
 
+impl Running<'_> {
+    /// Drops what the specials hold when hit or KO'd, `ftPp_Init_8011F060` (the death and
+    /// damage hooks a special sets): the ice, the Blizzard's effects, the string, and the
+    /// Squall Hammer's bent waist and hold.
+    #[doc(alias = "ftPp_Init_8011F060")]
+    pub fn popo_remove_items(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        if let Some(item) = self.ic_item(gobj) {
+            super::super::super::it::kinds::climbersice::remove(self, item);
+            self.popo_forget_item(gobj, item);
+        }
+        // `ftPp_SpecialHi_80122898`: the Blizzard's effects.
+        if self.game.fighters[f.0].u[var::X2230] & 0x80 != 0 {
+            crate::game::ef::eflib::destroy_all(self, gobj);
+            let fp = &mut self.game.fighters[f.0];
+            fp.u[var::X2230] &= 0x7F;
+            fp.death2_cb = None;
+            fp.take_dmg_cb = None;
+            self.game.part_set_rot_x(f, 0, 0.0);
+        }
+        // `ftPp_SpecialS_80121164`: the string.
+        if self.game.fighters[f.0].u.gobj_at(var::ITEM2).is_some() {
+            super::super::super::code::unported_call("ftPp_SpecialS_80121164 with a string out");
+        }
+        // `ftPp_SpecialS_8011F68C`.
+        self.game.part_set_rot_x(f, 0, 0.0);
+        let fp = &mut self.game.fighters[f.0];
+        if fp.x2219_b7 {
+            fp.x221A_b1 = true;
+        }
+        if let Some(other) = fp.x1A5C.take() {
+            let o = self.game.fighter_mut(other);
+            if o.x2219_b7 {
+                o.x221A_b1 = true;
+            }
+            o.x1A5C = None;
+        }
+    }
+}
+
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
+        addr::PP_REMOVE_ITEMS => g.popo_remove_items(gobj),
         addr::PP_ON_ITEM_INVISIBLE => g.popo_on_item_invisible(gobj),
         addr::PP_ON_ITEM_VISIBLE => g.popo_on_item_visible(gobj),
         addr::PP_ON_KNOCKBACK_ENTER => g.popo_on_knockback_enter(gobj),

@@ -16971,6 +16971,83 @@ impl Mirror for itZeldaDinFireExplode_ItemVars {
     }
 }
 
+impl Mirror for itClimbersIce_ItemVars {
+    const SIZE: u32 = 0xc;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itClimbersIce_ItemVars {
+            x0: Var::new(cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId)),
+            x4: Var::new(f32::from_bits(m.u32(at + 0x4))),
+            x8_b0: Var::new(m.bits(at, 64, 1) != 0),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0.live(&format!("{path}.x0"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x0"),
+                "GObjId",
+                (*self.x0.peek()).map(|h| h.0),
+                m.u32(at + 0x0),
+            );
+        }
+        if self.x4.live(&format!("{path}.x4"), cx) {
+            if (*self.x4.peek()).to_bits() != m.u32(at + 0x4) {
+                cx.mismatch(
+                    &format!("{path}.x4"),
+                    format!("{:?}", (*self.x4.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x4))),
+                );
+            }
+        }
+        if self.x8_b0.live(&format!("{path}.x8_b0"), cx) {
+            if (*self.x8_b0.peek() as u32) != m.bits(at, 64, 1) {
+                cx.mismatch(
+                    &format!("{path}.x8_b0"),
+                    format!("{:?}", self.x8_b0.peek()),
+                    format!("{:?}", m.bits(at, 64, 1)),
+                );
+            }
+        }
+    }
+}
+
+impl Mirror for itClimbersBlizzard_ItemVars {
+    const SIZE: u32 = 0x8;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itClimbersBlizzard_ItemVars {
+            x0: Var::new(f32::from_bits(m.u32(at + 0x0))),
+            flag0: Var::new(m.bits(at, 32, 1) != 0),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0.live(&format!("{path}.x0"), cx) {
+            if (*self.x0.peek()).to_bits() != m.u32(at + 0x0) {
+                cx.mismatch(
+                    &format!("{path}.x0"),
+                    format!("{:?}", (*self.x0.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x0))),
+                );
+            }
+        }
+        if self.flag0.live(&format!("{path}.flag0"), cx) {
+            if (*self.flag0.peek() as u32) != m.bits(at, 32, 1) {
+                cx.mismatch(
+                    &format!("{path}.flag0"),
+                    format!("{:?}", self.flag0.peek()),
+                    format!("{:?}", m.bits(at, 32, 1)),
+                );
+            }
+        }
+    }
+}
+
 impl Mirror for IfDamageFlags {
     const SIZE: u32 = 0x1;
 

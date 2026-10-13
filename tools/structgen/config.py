@@ -34,6 +34,9 @@ ROOTS = [
     # Zelda's Din's Fire and its explosion.
     "itZeldaDinFire_ItemVars",
     "itZeldaDinFireExplode_ItemVars",
+    # The Ice Climbers' ice and Blizzard.
+    "itClimbersIce_ItemVars",
+    "itClimbersBlizzard_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",

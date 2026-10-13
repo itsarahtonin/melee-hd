@@ -7701,6 +7701,62 @@ impl itZeldaDinFireExplode_ItemVars {
     }
 }
 
+/// `itClimbersIce_ItemVars`, 0xc bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itClimbersIce_ItemVars {
+    /// +0x0
+    pub x0: Var<Option<GObjId>>,
+    /// +0x4
+    pub x4: Var<f32>,
+    /// +0x8 (bits 0..+1)
+    pub x8_b0: Var<bool>,
+}
+
+impl Default for itClimbersIce_ItemVars {
+    fn default() -> Self {
+        itClimbersIce_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8_b0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itClimbersIce_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8_b0.mark_stale();
+    }
+}
+
+/// `itClimbersBlizzard_ItemVars`, 0x8 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itClimbersBlizzard_ItemVars {
+    /// +0x0
+    pub x0: Var<f32>,
+    /// +0x4 (bits 0..+1)
+    pub flag0: Var<bool>,
+}
+
+impl Default for itClimbersBlizzard_ItemVars {
+    fn default() -> Self {
+        itClimbersBlizzard_ItemVars {
+            x0: Var::new(Default::default()),
+            flag0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itClimbersBlizzard_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.flag0.mark_stale();
+    }
+}
+
 /// `IfDamageFlags`, 0x1 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IfDamageFlags {

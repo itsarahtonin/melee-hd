@@ -584,15 +584,15 @@ impl Running<'_> {
                 self.cpu_cmd(f, cmd::DONE);
             }
             1 => self.cpu_walk(f),
-            2 => unported_call("ftCo_800B658C"),
+            2 => self.cpu_attack_behavior(f),
             3 => unported_call("ftCo_800B9020"),
             4 => unported_call("ftCo_800A8DE4"),
             5 => unported_call("ftCo_800AC7D4"),
             6 => unported_call("ftCo_800ACB44"),
             7 => unported_call("ftCo_800BA9A0"),
             8 => unported_call("ftCo_800B7180"),
-            9 => unported_call("ftCo_800B683C"),
-            10 => unported_call("ftCo_800ACD5C"),
+            9 => self.cpu_hold(f),
+            10 => self.cpu_stand(f),
             11 => unported_call("ftCo_800AD42C"),
             12 => unported_call("ftCo_800AD54C"),
             13 => {
@@ -618,7 +618,7 @@ impl Running<'_> {
             15 => unported_call("ftCo_800ABBA8"),
             16 => unported_call("ftCo_800AC30C"),
             17 => unported_call("ftCo_800AC434"),
-            18 => unported_call("ftCo_800AC5A0"),
+            18 => self.cpu_di(f),
             19 => {
                 let ms = self.game.fighters[f.0].motion_id;
                 if ms != 0x131 && ms != 0x132 {

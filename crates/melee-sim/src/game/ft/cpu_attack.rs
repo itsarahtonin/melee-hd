@@ -12,6 +12,12 @@ use super::super::state::Running;
 use super::common::GA_AIR;
 use crate::fpu::{mem, reg};
 use crate::math;
+use crate::vec::Vec3;
+
+/// C's `ABS` on a single difference.
+fn abs(x: f64) -> f64 {
+    if x < 0.0 { fp::fneg(x) } else { x }
+}
 
 /// `ftLoadCommonData::x58`: the computer players' data.
 const CPU_DATA: u32 = 0x58;
@@ -436,6 +442,100 @@ impl Running<'_> {
         panic!("the original's assertion failed: ftcpuattack.c:250");
     }
 
+    /// Whether the fighter is mid-attack, `ftCo_800B630C`: in a common attack or an item's
+    /// swing or shot (`ftCo_800A5A90`), or in one of its character's own states.
+    #[doc(alias = "ftCo_800B630C")]
+    #[doc(alias = "ftCo_800A5A90")]
+    fn cpu_attacking(&self, f: FighterId) -> bool {
+        let fpp = &self.game.fighters[f.0];
+        let ms = fpp.motion_id;
+        // `ftCo_MS_Attack11` to `ftCo_MS_AttackAirLw`; `ftCo_MS_SwordSwing1` to
+        // `ftCo_MS_StarRodSwingDash`, `ftCo_MS_LGunShoot` to `ftCo_MS_ItemScopeAirEndEmpty`.
+        if (44..=69).contains(&ms) || (120..=139).contains(&ms) || (148..=173).contains(&ms) {
+            return true;
+        }
+        // Ft_Kind_Donkey, Ft_Kind_Kirby, Ft_Kind_Peach have states past the common ones
+        // that aren't attacks.
+        if matches!(fpp.kind, 3 | 4 | 9) {
+            unported_call("ftCo_800B630C for Donkey Kong, Kirby or Peach");
+        }
+        ms >= 341
+    }
+
+    /// The pause before an attack by level and a random draw (`ftCo_800B63D8`).
+    #[doc(alias = "ftCo_800B63D8")]
+    fn cpu_attack_delay(&mut self, f: FighterId) {
+        let r = reg(self.game.objs.rng.draw_f32());
+        let (scale, add) = match self.game.fighters[f.0].cpu.level {
+            0 => (40, 5),
+            1 => (35, 5),
+            2 => (30, 5),
+            3 => (25, 5),
+            4 => (25, 0),
+            5 => (20, 0),
+            6 => (15, 0),
+            7 => (10, 0),
+            8 => (5, 0),
+            _ => return,
+        };
+        let wait = fp::fctiwz(fp::fmuls(fp::frsp(f64::from(scale)), r)).wrapping_add(add);
+        self.cpu_cmd1(f, super::cpu_script::cmd::WAIT_FOR, wait as u8);
+    }
+
+    /// Forgets the target and goes back to the usual behavior
+    /// (`ftCo_CpuClearTargetAndFinish`).
+    fn cpu_drop_target(&mut self, f: FighterId) {
+        let c = &mut self.game.fighters[f.0].cpu;
+        c.x44 = None;
+        c.x18 = c.x1C;
+        self.cpu_cmd(f, super::cpu_script::cmd::DONE);
+    }
+
+    /// Attacking, `ftCo_800B658C` (behavior 2): with a target, after a possible jump at it,
+    /// the character's own follow-ups, then (not mid-attack) the chosen command (choosing one
+    /// if none, facing the target first on the ground) after a pause.
+    #[doc(alias = "ftCo_800B658C")]
+    pub(super) fn cpu_attack_behavior(&mut self, f: FighterId) {
+        let Some(target) = self.game.fighters[f.0].cpu.x44 else {
+            self.cpu_drop_target(f);
+            return;
+        };
+        let fpp = &self.game.fighters[f.0];
+        if fpp.cpu.xF8_b6 && fpp.ground_or_air == super::common::GA_GROUND {
+            let r = reg(self.game.objs.rng.draw_f32());
+            let level = fp::frsp(f64::from(self.game.fighters[f.0].cpu.level));
+            if r < fp::fmuls(0.050_000_000_745_058_06, level) {
+                self.game.fighters[f.0].cpu.xF8_b6 = false;
+                let _ = target;
+                unported_call("ftCo_800BA2E8");
+            }
+        }
+        // Ness, Yoshi, Samus, Donkey Kong and Zelda have follow-ups.
+        if matches!(self.game.fighters[f.0].kind, 8 | 14 | 13 | 3 | 19) {
+            unported_call("ftCo_800B658C for a character with follow-ups");
+        }
+        if self.cpu_attacking(f) {
+            self.cpu_cmd(f, super::cpu_script::cmd::DONE);
+            self.game.fighters[f.0].cpu.xA4 = 0;
+            return;
+        }
+        if self.game.fighters[f.0].cpu.xA4 == 0 {
+            if self.game.fighters[f.0].ground_or_air == super::common::GA_GROUND
+                && !self.cpu_target_ahead(f)
+            {
+                unported_call("ftCo_800A0098");
+            }
+            if !self.cpu_attack(f) {
+                self.cpu_drop_target(f);
+                return;
+            }
+        }
+        self.cpu_attack_delay(f);
+        let cmd = self.game.fighters[f.0].cpu.xA4;
+        self.cpu_data_script(f, cmd as u32);
+        self.game.fighters[f.0].cpu.xA4 = 0;
+    }
+
     /// Whether the fighter jumps at its target, `ftCo_800B732C`: 1 at a target on a ledge
     /// steeply above it and in clear view; else, if it may (`xF9_b3`), by the character's
     /// rules. On the ground only.
@@ -465,5 +565,169 @@ impl Running<'_> {
             return 0;
         }
         unported_call("ftCo_800B732C past xF9_b3");
+    }
+
+    /// Holding a grabbed fighter, `ftCo_800B683C` (behavior 9): with no victim it drops
+    /// the target. Donkey Kong carrying one walks to the nearer end of its island and throws
+    /// there; Kirby with a swallowed Kirby spits, else with a swallowed fighter crouches;
+    /// Popo, Fox and Captain Falcon above level 4 and Mario below 5 sometimes run their own
+    /// throw scripts first. Holding, it pummels (Bowser's koopa klaw bites), more rarely
+    /// each time, else near an end throws off it, else throws a random way.
+    #[doc(alias = "ftCo_800B683C")]
+    pub(super) fn cpu_hold(&mut self, f: FighterId) {
+        use super::cpu_script::cmd as c;
+        let Some(victim) = self.game.fighters[f.0].victim_gobj else {
+            self.cpu_drop_target(f);
+            return;
+        };
+        let fpp = &self.game.fighters[f.0];
+        let (kind, ms) = (fpp.kind, fpp.motion_id);
+        let mut klaw = false;
+        let chance = |g: &mut Self, f: FighterId| -> bool {
+            let level = g.game.fighters[f.0].cpu.level;
+            reg(g.game.objs.rng.draw_f32()) < fp::fmuls(reg(0.05), fp::frsp(f64::from(level)))
+        };
+        match kind {
+            // Ft_Kind_Donkey's cargo states.
+            3 if (0x15F..=0x164).contains(&ms) => {
+                let pos = self.game.fighters[f.0].cur_pos;
+                let geo = self.game.geometry.as_mut().expect("no collision geometry");
+                let Some(island) = geo.island_below(pos, -10.0) else {
+                    self.cpu_cmd(f, c::DONE);
+                    return;
+                };
+                let (mut left, mut right) = (Vec3::default(), Vec3::default());
+                geo.island_ends(island, Some(&mut left), Some(&mut right));
+                let x = reg(pos.x);
+                let to_right = abs(fp::fsubs(x, reg(right.x)));
+                let to_left = abs(fp::fsubs(x, reg(left.x)));
+                let (dist, dir) = if to_right < to_left {
+                    (to_right, 0x7F)
+                } else {
+                    (to_left, 0x81)
+                };
+                if dist > 10.0 {
+                    self.cpu_cmd1(f, c::SET_LSTICK_Y, 0);
+                    self.cpu_cmd1(f, c::SET_LSTICK_X, dir);
+                    self.cpu_cmd(f, c::DONE);
+                } else {
+                    // `ftCo_CpuPressAWithLstickX`.
+                    self.cpu_cmd1(f, c::SET_LSTICK_Y, 0);
+                    self.cpu_cmd1(f, c::SET_LSTICK_X, 0);
+                    self.cpu_cmd1(f, c::WAIT_FOR, 1);
+                    self.cpu_cmd1(f, c::SET_LSTICK_Y, 0);
+                    self.cpu_cmd1(f, c::SET_LSTICK_X, dir);
+                    self.cpu_cmd(f, c::PRESS_A);
+                    self.cpu_cmd1(f, c::WAIT_FOR, 1);
+                    self.cpu_cmd1(f, c::SET_LSTICK_X, 0);
+                    self.cpu_cmd1(f, c::SET_LSTICK_Y, 0);
+                    self.cpu_cmd(f, c::RELEASE_A);
+                    self.cpu_cmd(f, c::DONE);
+                }
+                return;
+            }
+            // Ft_Kind_Koopa, Ft_Kind_GKoops in the koopa klaw.
+            5 | 31 if ms == 0x15E => klaw = true,
+            // Ft_Kind_Kirby with a swallowed fighter.
+            4 if (0x164..=0x17E).contains(&ms) => {
+                if self.game.fighter(victim).kind == 4 {
+                    self.cpu_cmd1(f, c::SET_LSTICK_Y, 0);
+                    self.cpu_cmd1(f, c::SET_LSTICK_X, 0);
+                    self.cpu_cmd1(f, c::WAIT_FOR, 1);
+                    self.cpu_cmd(f, c::PRESS_A);
+                    self.cpu_cmd1(f, c::WAIT_FOR, 1);
+                    self.cpu_cmd(f, c::RELEASE_A);
+                    self.cpu_cmd(f, c::DONE);
+                } else {
+                    self.cpu_neutral_stick(f);
+                    self.cpu_cmd1(f, c::WAIT_FOR, 1);
+                    self.cpu_cmd1(f, c::SET_LSTICK_Y, 0x81);
+                    self.cpu_cmd1(f, c::WAIT_FOR, 1);
+                    self.cpu_cmd1(f, c::SET_LSTICK_Y, 0);
+                    self.cpu_cmd(f, c::DONE);
+                }
+                return;
+            }
+            // Ft_Kind_Popo, Ft_Kind_Fox, Ft_Kind_Captain above level 4.
+            10 | 1 | 2 => {
+                let cpu = &self.game.fighters[f.0].cpu;
+                if cpu.x94 == 0 && cpu.level > 4 && chance(self, f) {
+                    let script = match kind {
+                        10 => 0x3B,
+                        1 => 0x3D,
+                        _ if reg(self.game.fighter(victim).dmg.x1830_percent) < 100.0 => 0x39,
+                        _ => 0x3A,
+                    };
+                    self.cpu_data_script(f, script);
+                    return;
+                }
+            }
+            // Ft_Kind_Mario below level 5.
+            0 => {
+                let cpu = &self.game.fighters[f.0].cpu;
+                if cpu.x94 == 0 && cpu.level < 5 && chance(self, f) {
+                    self.cpu_data_script(f, 0x35);
+                    return;
+                }
+            }
+            _ => {}
+        }
+        if !self.cpu_is_grabbing(f) {
+            // `ftCo_800A0C8C`.
+            self.cpu_cmd(f, c::DONE);
+            return;
+        }
+        let r = reg(self.game.objs.rng.draw_f32());
+        let x94 = self.game.fighters[f.0].cpu.x94;
+        if fp::frsp(fp::fmul(r, fp::fadd(1.0, f64::from(x94)))) < 0.5 {
+            self.cpu_data_script(f, if klaw { 0x11 } else { 2 });
+            let cpu = &mut self.game.fighters[f.0].cpu;
+            cpu.x94 = cpu.x94.wrapping_add(1);
+            return;
+        }
+        let pos = self.game.fighters[f.0].cur_pos;
+        let geo = self.game.geometry.as_mut().expect("no collision geometry");
+        if let Some(island) = geo.island_below(pos, -10.0) {
+            let (mut left, mut right) = (Vec3::default(), Vec3::default());
+            geo.island_ends(island, Some(&mut left), Some(&mut right));
+            let x = reg(pos.x);
+            let to_right = abs(fp::fsubs(x, reg(right.x)));
+            let to_left = abs(fp::fsubs(x, reg(left.x)));
+            let flick = if to_right > to_left {
+                (to_left < 30.0).then_some((0xB0, 0x81))
+            } else {
+                (to_right < 30.0).then_some((0x50, 0x7F))
+            };
+            if let Some((half, full)) = flick {
+                // `ftCo_CpuFlickLstickX`.
+                self.cpu_neutral_stick(f);
+                self.cpu_cmd1(f, c::WAIT_FOR, 1);
+                self.cpu_cmd1(f, c::SET_LSTICK_X, half);
+                self.cpu_cmd1(f, c::WAIT_FOR, 1);
+                self.cpu_cmd1(f, c::SET_LSTICK_X, full);
+                self.cpu_cmd1(f, c::WAIT_FOR, 1);
+                self.cpu_cmd1(f, c::SET_LSTICK_X, 0);
+                self.cpu_cmd(f, c::DONE);
+                return;
+            }
+        }
+        let r = reg(self.game.objs.rng.draw_f32());
+        self.cpu_neutral_stick(f);
+        self.cpu_cmd1(f, c::WAIT_FOR, 1);
+        let (which, half, full) = if r < 0.25 {
+            (c::SET_LSTICK_Y, 0x50, 0x7F)
+        } else if r < 0.5 {
+            (c::SET_LSTICK_Y, 0xB0, 0x81)
+        } else if r < 0.75 {
+            (c::LSTICK_X_FORWARD, 0x50, 0x7F)
+        } else {
+            (c::LSTICK_X_FORWARD, 0xB0, 0x81)
+        };
+        self.cpu_cmd1(f, which, half);
+        self.cpu_cmd1(f, c::WAIT_FOR, 1);
+        self.cpu_cmd1(f, which, full);
+        self.cpu_cmd1(f, c::WAIT_FOR, 1);
+        self.cpu_neutral_stick(f);
+        self.cpu_cmd(f, c::DONE);
     }
 }

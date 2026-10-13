@@ -295,10 +295,10 @@ impl Running<'_> {
             c.x88 -= 1;
         }
         // `gm_8016C75C`: the player's standing.
-        let standing = self.standing_x20(slot);
+        let standing = self.cpu_standing(slot);
         if self.game.fighters[f.0].cpu.x8C != standing as i32 {
             self.game.fighters[f.0].cpu.x88 = 0x12C;
-            let again = self.standing_x20(slot);
+            let again = self.cpu_standing(slot);
             self.game.fighters[f.0].cpu.x8C = again as i32;
         }
         let c = &self.game.fighters[f.0].cpu;
@@ -632,7 +632,7 @@ impl Running<'_> {
     /// The player's standing word (`MatchPlayerData::x20`) in the results as they stand,
     /// `gm_8016C75C`: the results brought up to date once a tick.
     #[doc(alias = "gm_8016C75C")]
-    fn standing_x20(&mut self, slot: i32) -> u32 {
+    pub(super) fn cpu_standing(&mut self, slot: i32) -> u32 {
         let tick = self.game.scene_ticks();
         if self.game.vs.state.x24C.x0 != tick {
             self.game.vs.state.x24C.x0 = tick;
