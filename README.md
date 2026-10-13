@@ -1,28 +1,29 @@
 # melee-hd
 
-melee-hd is a native, idiomatic Rust rewrite of Super Smash Bros. Melee NTSC 1.02 (GALE01 revision 2), whose game simulation is checked bit for bit, tick by tick, against a port verified against the original and against real Slippi replays.
+melee-hd is a native Rust rewrite of Super Smash Bros. Melee NTSC 1.02 (GALE01 revision 2), with a game simulation checked bit for bit, tick by tick, against ssbm-rs and real Slippi replays.
 
-It is the second stage of a two-part project. The first, [ssbm-rs](https://github.com/itsarahtonin/ssbm-rs), is a faithful port: it keeps the GameCube's memory layout and checks its Rust functions call by call against the original machine code. melee-hd starts over from the [Melee decompilation](https://github.com/doldecomp/melee) and ssbm-rs, rewrites the game into plain Rust data structures, and uses ssbm-rs (at its [`melee-hd-base`](https://github.com/itsarahtonin/ssbm-rs/releases/tag/melee-hd-base) tag) as the oracle it is checked against.
+It's a personal project, and the next stage of [ssbm-rs](https://github.com/itsarahtonin/ssbm-rs). ssbm-rs is a faithful port: it keeps the GameCube's memory layout and checks its Rust functions call by call against the original machine code. melee-hd starts over from the [Melee decompilation](https://github.com/doldecomp/melee) and ssbm-rs, rewrites the game into plain Rust data structures, and uses ssbm-rs (at its [`melee-hd-base`](https://github.com/itsarahtonin/ssbm-rs/releases/tag/melee-hd-base) tag) as the reference it is checked against. No ssbm-rs code runs in the player.
 
-melee-hd is early. It plays VS matches between a handful of characters on the six tournament stages, on Windows, from your own disc. It is not yet the whole game.
+melee-hd is early: VS matches between a handful of characters on the six tournament stages, on Windows, from your own disc.
 
-## Why another Melee port
+## How it differs
 
-There are already good ways to play Melee natively. [melee-pc](https://github.com/999sian/melee-pc) builds the decompilation's C source on the Aurora compatibility layer with a WebGPU renderer; its README describes every mode booting and playing, builds for Linux, Windows and Android with more platforms in progress, and online play with rollback, which it marks as partial. [YAMPP](https://github.com/sonsegajp/YAMPP) and [melee-unlocked](https://github.com/Hero88go/melee-unlocked) are also native ports built from the decompilation, and [nikhilunni/melee](https://github.com/nikhilunni/melee) is a Rust port checked against the original running in Dolphin. If you want to play the whole game natively today, start there.
+Several native Melee ports exist, each taking its own approach, and you may well want one of them instead: [melee-pc](https://github.com/999sian/melee-pc), [YAMPP](https://github.com/sonsegajp/YAMPP) and [melee-unlocked](https://github.com/Hero88go/melee-unlocked) build on the decompilation's C source, and [nikhilunni/melee](https://github.com/nikhilunni/melee) is another Rust port. melee-hd's approach has its own trade-offs.
 
-melee-hd aims at something narrower, as a foundation:
+What it's built around:
 
-- **Bit-exact, and checked.** The simulation is compared with ssbm-rs's after every engine tick over whole matches: every field the comparison covers, floats by bit pattern. It plays real Slippi replays in Slippi Dolphin's floating point, and CPU-played benchmark matches in the console's. A difference is a bug, or a known divergence listed and explained per replay; there are no blanket exceptions.
-- **Idiomatic Rust, built for rollback.** The original C isn't compiled or wrapped. Each function is rewritten into Rust whose state is plain data: arenas with index handles, and no references, closures or trait objects. A rollback snapshot is a `clone`, a restore is `clone_from`, and a restore and the ticks replayed after it allocate nothing.
-- **A reusable simulation.** `melee-sim` steps the game as a function of its state and the controllers, with no rendering, audio output, clocks or disc timing inside a tick. The player, the checking tools and the benchmark are frontends to it, and netplay and bots can be too.
-- **A low-latency player.** The player reads the controllers just before each tick and presents the frame it produces at once, with one frame of latency. Its renderer draws at any resolution and aspect ratio while the gameplay camera stays 4:3, so off-screen rules don't change.
-- **No game data in the repository.** The game's data comes from your own disc image when you play; there are no models, textures, sounds or music here.
+- **Checked against a reference.** After every engine tick of whole matches, the simulation's state is compared with ssbm-rs's, floats by bit pattern. A difference is a bug, or a known divergence listed and explained per replay.
+- **Plain-data state.** The original C is rewritten rather than compiled, into state made of arenas and index handles with no references, closures or trait objects. A rollback snapshot is a `clone`, and a restore and the ticks replayed after it allocate nothing.
+- **A separate simulation crate.** `melee-sim` steps the game from its state and the controllers alone, with no rendering, audio output, clocks or disc timing inside a tick. The player and the checking tools are frontends to it.
+- **A low-latency player.** It reads the controllers just before each tick and presents the frame at once.
 
-| | What it is | Relation to melee-hd |
-| --- | --- | --- |
-| [doldecomp/melee](https://github.com/doldecomp/melee) | A matching C decompilation of the game | Names, structure and intent for every port |
-| [ssbm-rs](https://github.com/itsarahtonin/ssbm-rs) | A faithful Rust port in the original memory layout, verified against the machine code | What each function computes, and the oracle melee-hd is checked against; no ssbm-rs code runs in the player |
-| melee-hd | A native rewrite in idiomatic Rust | This repository |
+What that costs:
+
+- **Far less content.** Seven characters and six stages, VS matches only, no menus.
+- **Slow going.** Nothing lands until it compares clean against ssbm-rs, and the checks depend on ssbm-rs and data made with it.
+- **Windows only, so far.** macOS and Linux are goals, not yet tested, and there are no release builds.
+
+Like ssbm-rs, it contains no game data: the game's models, textures, sounds and music come from your own disc image when you play.
 
 ## Status
 
@@ -35,7 +36,7 @@ melee-hd aims at something narrower, as a foundation:
 | Functions | 5,143 of the 19,827 in ssbm-rs's symbol table ported and checked, 197 replaced by native subsystems, 2 dead ([port ledger](docs/port-ledger.md)) |
 | Speed | The simulation runs a match about 16.7 times as fast as headless Dolphin on one core; a snapshot is about 0.8 MB, cloned in about 0.1 ms ([performance](docs/performance.md)) |
 
-What's missing: the other characters and stages, menus and every mode other than VS, items spawning during a match (matches play with items off), netplay, and testing on macOS and Linux. There are no release builds yet. [The oracle](docs/oracle.md) lists each comparison, and [the player](docs/player.md) its open issues.
+Not yet: the other characters and stages, menus and every mode other than VS, items spawning during a match (matches play with items off), and netplay. [The oracle](docs/oracle.md) lists each comparison, and [the player](docs/player.md) its open issues.
 
 ## Build and play
 
@@ -72,11 +73,11 @@ Four levels, from the whole game down ([the oracle](docs/oracle.md)):
 
 Presentation is checked the same way: `melee-render-check` compares frames with ssbm-rs's draw by draw, and `melee-audio-check` compares the mix sample by sample. Each check is mutation-tested as it is written: a port broken on purpose must fail it.
 
-The disc-backed checks need `SSBM_DISC`. Many also need traces, captures and replays made with ssbm-rs, which contain game memory and stay out of the repository; without them those checks skip.
+The disc-backed checks need `SSBM_DISC`. Many also need traces and captures made with ssbm-rs, which contain game memory and stay out of the repository; without them those checks skip. The five benchmark matches are in the repository, so with ssbm-rs and your own disc you can make their traces and run the benchmark diffs yourself.
 
 ## Roadmap
 
-The core game comes first: a complete, exact and fast simulation with a player around it, solid enough to build on.
+The core game comes first: a complete and exact simulation with a player around it, solid enough to build on.
 
 1. **The rest of the cast and stages,** each checked over whole matches the way the current ones are.
 2. **The whole game:** items, the boot, menus, settings and the single-player modes, with the Vanilla and Slippi rulesets.
@@ -84,7 +85,7 @@ The core game comes first: a complete, exact and fast simulation with a player a
 4. **Speed targets:** at least 20 times Dolphin's speed per core, and a rollback (restore and 8 ticks) under 4 ms on the worst match ([performance](docs/performance.md)).
 5. **Rollback netplay.** Either integrated with Slippi, with the Slippi team's permission, or a bespoke implementation if not. Until then, melee-hd won't connect to Slippi's matchmaking servers.
 
-Training tools, mods and other add-ons aren't planned yet; they come after the core game is an excellent foundation.
+Training tools, mods and other add-ons aren't planned yet; they'd come after the core game.
 
 ## Contributing
 
