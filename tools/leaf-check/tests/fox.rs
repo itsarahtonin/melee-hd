@@ -22,7 +22,7 @@
 //! its own saved state on both sides, in both float modes, so the captures hold. Add
 //! `--fp hardware` when capturing a benchmark match again.
 //!
-//! then, with the branch `feat/state-trace`'s runner (which saves calls that touch hardware
+//! then, with ssbm-rs's runner (`main`, which saves calls that touch hardware
 //! with `CAPTURE_INTERACTED=1`: the states' entries load animations), the Fox against Sheik
 //! replay on Final Destination and the four-player one with two Foxes:
 //!

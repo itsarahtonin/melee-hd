@@ -6,7 +6,7 @@
 //! states: other transparency passes and render modes, dirty joints, the camera's links.
 //!
 //! The captures are game memory, kept out of the repository in `DISPLAY_CALLS` (default
-//! below), one directory per replay. ssbm-rs's runner (branch `feat/state-trace-memory`)
+//! below), one directory per replay. ssbm-rs's runner (`main`)
 //! makes them, with `done.txt` listing every function address but the captured ones:
 //!
 //! ```text

@@ -8,8 +8,8 @@
 //! driver, which the runner doesn't save) run from other functions' captured states.
 //!
 //! The captures are game memory, kept out of the repository in `MATCH_CALLS` (default below),
-//! one directory per run; the tests skip without them. ssbm-rs's runner (branch
-//! `feat/state-trace`, `cargo build --release -p ssbm-run`) makes them in the debug VS mode's
+//! one directory per run; the tests skip without them. ssbm-rs's runner (`main`,
+//! `cargo build --release -p ssbm-run`) makes them in the debug VS mode's
 //! random matches, whose code Slippi's playback codes don't patch:
 //!
 //! ```text

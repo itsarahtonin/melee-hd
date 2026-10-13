@@ -1,6 +1,6 @@
 //! The fighter's per-frame processes, checked on real calls ssbm-rs saved from a Fox vs Sheik
 //! replay on Final Destination (`leaf_check::calls`). Regenerate the calls with ssbm-rs's
-//! runner (branch feat/state-trace), with `done.txt` listing every function address except
+//! runner (`main`), with `done.txt` listing every function address except
 //! the processes so only they are checked:
 //!
 //! ```text

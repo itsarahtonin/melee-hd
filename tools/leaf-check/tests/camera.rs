@@ -5,7 +5,7 @@
 //!
 //! The captures are game memory, so they live outside the repository, in `CAMERA_CALLS`
 //! (default `$SSBM_RS_LOCAL/calls/camera`), one directory per replay;
-//! the tests skip without them. ssbm-rs's runner (branch `feat/state-trace`) makes them, with
+//! the tests skip without them. ssbm-rs's runner (`main`) makes them, with
 //! `LOCKSTEP_DONE` listing every function outside the camera's unit so only it is checked:
 //!
 //! ```text

@@ -5,7 +5,7 @@ How a function gets from ssbm-rs into melee-hd. Every port follows these rules, 
 ## Sources
 
 - **What to compute:** ssbm-rs's port of the function at `melee-hd-base` (`crates/game/src/tu/<unit>.rs` in ssbm-rs). Its generated code spells out what the C leaves to the compiler: which multiply-adds MWCC fused, where values round to single precision, evaluation order, inline copies (`inl_*`), and which functions were transliterated from machine code.
-- **Why:** the decomp's C (`C:\Projects\melee\src`) for names, structure and intent.
+- **Why:** the decomp's C ([doldecomp/melee](https://github.com/doldecomp/melee)'s `src`) for names, structure and intent.
 - **When those disagree or ssbm-rs transliterated the machine code:** the assembly listing (`build/GALE01/asm/...` in the decomp build) decides.
 - Never port from nikhilunni/melee's source. Its documentation is fine to read.
 

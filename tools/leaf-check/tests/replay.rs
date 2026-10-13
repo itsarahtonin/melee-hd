@@ -7,8 +7,8 @@
 //! positions, costumes, stocks.
 //!
 //! The captures are game memory, kept out of the repository in `REPLAY_CALLS` (default
-//! below), one directory per replay, named for it. ssbm-rs's runner (branch
-//! `feat/state-trace-memory`) makes them, with `done.txt` listing every function address but
+//! below), one directory per replay, named for it. ssbm-rs's runner
+//! (`main`) makes them, with `done.txt` listing every function address but
 //! the captured ones:
 //!
 //! ```text
