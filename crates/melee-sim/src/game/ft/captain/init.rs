@@ -43,14 +43,14 @@ impl Running<'_> {
     }
 
     /// Ganondorf entering knockback, `ftGn_Init_OnKnockbackEnter`: his hurt model parts.
-    // Ports `ftGn_Init_OnKnockbackEnter`; aliased once a check reaches it.
+    #[doc(alias = "ftGn_Init_OnKnockbackEnter")]
     pub fn gn_on_knockback_enter(&mut self, gobj: GObjId) {
         self.apply_part_anim(gobj, 3, 3, 0.0);
         self.apply_part_anim(gobj, 4, 3, 0.0);
     }
 
     /// Ganondorf leaving knockback, `ftGn_Init_OnKnockbackExit`.
-    // Ports `ftGn_Init_OnKnockbackExit`; aliased once a check reaches it.
+    #[doc(alias = "ftGn_Init_OnKnockbackExit")]
     pub fn gn_on_knockback_exit(&mut self, gobj: GObjId) {
         self.apply_part_anim(gobj, 3, 2, 0.0);
         self.apply_part_anim(gobj, 4, 2, 0.0);
