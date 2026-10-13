@@ -10,9 +10,11 @@ pub mod effects;
 pub mod hud;
 pub mod import;
 pub mod items;
+pub mod izumi;
 pub mod links;
 pub mod playback;
 pub mod sis;
+pub mod stadium;
 pub mod stage;
 pub mod vs;
 
@@ -220,13 +222,16 @@ pub fn find_archives_named(
     before: &[Loaded],
     named: &[(String, ArchiveId)],
 ) -> Vec<Loaded> {
-    let mut found = scan(index, mem1, archives, &|name, file| {
+    let known = |name: &str, file: u32| {
         before
             .iter()
             .find(|l| l.name == name && (l.file == file || l.file == 0))
             .map(|l| l.id)
             .or_else(|| named.iter().find(|(n, _)| n == name).map(|&(_, id)| id))
-    });
+    };
+    let mut found = scan(index, mem1, archives, &known);
+    let headerless = headerless_stage_files(index, mem1, archives, &found, &known);
+    found.extend(headerless);
     found.extend(before.iter().filter(|l| l.file == 0).cloned());
     found
 }
@@ -453,6 +458,11 @@ impl DataMap {
             archive: l.id,
             offset,
         })
+    }
+
+    /// The loaded file named `file`'s archive.
+    pub fn archive_named(&self, file: &str) -> Option<melee_data::archive::ArchiveId> {
+        self.loaded.iter().find(|l| l.name == file).map(|l| l.id)
     }
 
     /// The address of a `DataRef`.

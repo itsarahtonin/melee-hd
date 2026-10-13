@@ -12,6 +12,7 @@ pub mod gshell;
 pub mod hammer;
 pub mod hammerhead;
 pub mod heart;
+pub mod heiho;
 pub mod kusudama;
 pub mod luigifireball;
 pub mod mariocape;
@@ -64,6 +65,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || pikachuthunder::run_event(r, gobj, addr)
         || pikachutjoltground::run_event(r, gobj, addr)
         || pikachutjoltair::run_event(r, gobj, addr)
+        || heiho::run_event(r, gobj, addr)
+        || super::zako::run_event(r, gobj, addr)
 }
 
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
@@ -97,6 +100,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| pikachuthunder::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltair::run_pred(r, gobj, addr))
+        .or_else(|| heiho::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -173,5 +177,7 @@ pub const PKIND_START: i32 = 161;
 pub const PKIND_TERMINATE: i32 = 191;
 /// `It_Kind_Old_Kuri`: the first stage item, and the last group of tables.
 pub const OLD_KURI: i32 = 208;
+/// `It_Kind_Heiho`, Yoshi's Story's Shy Guys.
+pub const HEIHO: i32 = 210;
 /// `It_Kind_Arwing_Laser`.
 pub const ARWING_LASER: i32 = 234;

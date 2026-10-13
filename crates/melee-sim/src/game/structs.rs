@@ -5,7 +5,7 @@
 
 use melee_data::archive::DataRef;
 
-use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones};
+use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
@@ -3768,7 +3768,7 @@ pub struct Item {
     /// +0xac8
     pub xAC8_hurtboxNum: u8,
     /// +0xacc
-    pub xACC_itemHurtbox: [HurtCapsule; 2],
+    pub xACC_itemHurtbox: ItemHurtboxes,
     /// +0xb54
     pub xB54: lb_80014638_arg1_t,
     /// +0xb68
@@ -4078,7 +4078,7 @@ impl Default for Item {
             x5D4_hitboxes: core::array::from_fn(|_| Default::default()),
             xAC4_ignoreItemID: 0,
             xAC8_hurtboxNum: 0,
-            xACC_itemHurtbox: core::array::from_fn(|_| Default::default()),
+            xACC_itemHurtbox: Default::default(),
             xB54: Default::default(),
             xB68: 0,
             xB69: 0,

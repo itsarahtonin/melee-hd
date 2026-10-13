@@ -146,11 +146,11 @@ impl Running<'_> {
         // `Fighter_Create_Inline2`.
         let fp = &self.game.fighters[f.0];
         if !fp.no_normal_motion {
-            let tree = self.load_anim_second(f, 0x23);
+            let tree = self.second_figatree(f, 0x23);
             self.game.fighters[f.0].x2EC = figatree_frames(self.data, tree);
             if !self.game.fighters[f.0].is_sandbag {
                 for (anim, slot) in [(7, 0), (8, 1), (9, 2), (0x25, 3)] {
-                    let tree = self.load_anim_second(f, anim);
+                    let tree = self.second_figatree(f, anim);
                     let frames = figatree_frames(self.data, tree);
                     let fp = &mut self.game.fighters[f.0];
                     match slot {

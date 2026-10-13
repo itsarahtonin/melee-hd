@@ -60,12 +60,17 @@ const ENVELOPE_MAX: usize = 10;
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub enum Draw {
     /// A camera starts drawing: its viewport, scissor, projection and view
-    /// (`HSD_CObjSetCurrent`).
-    Camera(CObjId),
+    /// (`HSD_CObjSetCurrent`), as [`Display::cameras`] holds them at this index (a camera can
+    /// draw more than once a frame, moved in between).
+    Camera(CObjId, u16),
     /// The current camera's drawing ends (`HSD_CObjEndCurrent`).
     EndCamera,
-    /// The active lights (`HSD_LObjSetupInit`; [`lobj::LObjs::active`]) light what follows.
-    Lights,
+    /// The lights `HSD_LObjSetupInit` gave GX slots light what follows, as
+    /// [`Display::light_sets`] holds them at this index.
+    Lights(u16),
+    /// The GObj whose render callback draws what follows (`HSD_GObj_804D7814`), whose user
+    /// data materials read as they set up (a fighter's, a stage object's, an item's).
+    Rendering(Option<super::gobj::GObjId>),
     /// Fog for what follows, or none (`HSD_FogSet`).
     Fog(Option<FogId>),
     /// A shape of a display object of a joint, its matrices set up, in transparency pass
@@ -101,6 +106,21 @@ pub enum Draw {
     SisText(Box<super::sis::TextDraw>),
     /// The render copied into a player's magnifier bubble (`lb_800122C8`).
     MagnifierCopy(u8),
+    /// The render copied into Fountain of Dreams' reflection image, the frame cleared after it
+    /// (`lb_800122C8`).
+    ReflectionCopy,
+    /// The point size and its texture offset for later point draws (`HSD_StateSetPointSize`).
+    PointSize(u8, u8),
+    /// The erase color for later erases (`HSD_SetEraseColor`).
+    EraseColor([u8; 4]),
+    /// The render from (`x`, `y`) copied into one of Pokémon Stadium's screens' images, the
+    /// frame cleared after it with `clear` (`lb_800122C8`).
+    ScreenCopy {
+        screen: u8,
+        x: u16,
+        y: u16,
+        clear: bool,
+    },
     /// A flat-colored quad in the current camera's view at depth 0 (`hsd_80391A04`'s debug
     /// drawing: the background flash's).
     Quad(Quad),
@@ -121,10 +141,52 @@ pub struct Quad {
     pub color: [u8; 4],
 }
 
+/// A camera as [`Draw::Camera`] draws with it: what `HSD_CObjSetCurrent` sends GX.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct CameraView {
+    /// `xmin`, `xmax`, `ymin`, `ymax`.
+    pub viewport: [f32; 4],
+    /// `left`, `right`, `top`, `bottom`.
+    pub scissor: [u16; 4],
+    pub projection_type: u8,
+    pub projection: [f32; 4],
+    pub near: f32,
+    pub far: f32,
+    pub view_mtx: Mtx34,
+}
+
+/// A light with a GX slot, as `HSD_LObjSetupInit` left it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ActiveLight {
+    pub lobj: LObjId,
+    pub id: u32,
+    pub spec_id: u32,
+    pub shininess: f32,
+    /// A specular light's position or direction in view space.
+    pub lvec: crate::vec::Vec3,
+}
+
+/// The lights of a [`Draw::Lights`]: the active table, the light masks and the view they
+/// were set up for.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct LightSet {
+    pub active: [Option<ActiveLight>; lobj::MAX_GXLIGHT],
+    pub nb_active: i32,
+    pub mask_diffuse: u32,
+    pub mask_specular: u32,
+    pub mask_attnfunc: u32,
+    pub mask_alpha: u32,
+    pub view_mtx: Mtx34,
+}
+
 /// The display pass's output for the frame.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct Display {
     pub draws: Vec<Draw>,
+    /// The cameras [`Draw::Camera`]s name, and the light setups [`Draw::Lights`] name, for
+    /// the frame: the presentation reads them, and the screen pass starts them afresh.
+    pub cameras: Vec<CameraView>,
+    pub light_sets: Vec<LightSet>,
     /// The render pass (`current_render_pass`): offscreen, into a texture, or the screen.
     pub offscreen: bool,
     /// The fighter whose trees draw, for its materials.
@@ -154,9 +216,33 @@ pub fn camera_begin(objs: &mut Objects, data: &Archives, c: Option<CObjId>) -> b
         return false;
     };
     objs.cobjs.current = Some(c);
-    objs.display.draws.push(Draw::Camera(c));
     super::cobj::setup_viewing_mtx(objs, data, c);
+    let o = &objs.cobjs[c];
+    let view = CameraView {
+        viewport: o.viewport,
+        scissor: o.scissor,
+        projection_type: o.projection_type,
+        projection: o.projection,
+        near: o.near,
+        far: o.far,
+        view_mtx: o.view_mtx,
+    };
+    let d = &mut objs.display;
+    d.draws.push(Draw::Camera(c, d.cameras.len() as u16));
+    d.cameras.push(view);
     true
+}
+
+/// Starts the frame's draws: the screen pass forgets the last frame's cameras and lights.
+pub fn start_frame(objs: &mut Objects) {
+    objs.display.cameras.clear();
+    objs.display.light_sets.clear();
+}
+
+/// The GObj whose render callback draws what follows, for the presentation
+/// ([`Draw::Rendering`]).
+pub fn rendering(objs: &mut Objects, g: Option<super::gobj::GObjId>) {
+    objs.display.draws.push(Draw::Rendering(g));
 }
 
 /// `HSD_CObjEndCurrent`: draws the depth-sorted lists, which Melee never fills.
@@ -591,6 +677,36 @@ fn lobj_setup_specular_init(objs: &mut Objects) {
 /// GX object state (its color, specular position and shininess) as it would load.
 #[doc(alias = "HSD_LObjSetupInit")]
 pub fn lobj_setup_init(objs: &mut Objects, data: &Archives, c: CObjId) {
+    setup_lights(objs, data, c);
+    let l = &objs.lobjs;
+    let mut set = LightSet {
+        nb_active: l.nb_active,
+        mask_diffuse: l.lightmask_diffuse,
+        mask_specular: l.lightmask_specular,
+        mask_attnfunc: l.lightmask_attnfunc,
+        mask_alpha: l.lightmask_alpha,
+        view_mtx: objs.cobjs[c].view_mtx,
+        ..LightSet::default()
+    };
+    for (slot, a) in set.active.iter_mut().zip(&l.active) {
+        *slot = a.map(|lobj| {
+            let o = &l[lobj];
+            ActiveLight {
+                lobj,
+                id: o.id,
+                spec_id: o.spec_id,
+                shininess: o.shininess,
+                lvec: o.lvec,
+            }
+        });
+    }
+    let d = &mut objs.display;
+    d.draws.push(Draw::Lights(d.light_sets.len() as u16));
+    d.light_sets.push(set);
+}
+
+/// [`lobj_setup_init`]'s light setup.
+fn setup_lights(objs: &mut Objects, data: &Archives, c: CObjId) {
     let vmtx = objs.cobjs[c].view_mtx;
     let l = &mut objs.lobjs;
     l.lightmask_diffuse = 0;
@@ -623,10 +739,22 @@ pub fn lobj_setup_init(objs: &mut Objects, data: &Archives, c: CObjId) {
         lobj::set_active(&mut objs.lobjs, l);
         idx = lobj::nb_active(&objs.lobjs);
         objs.lobjs[l].spec_id = 0;
+        // `setup_infinite_lightobj`, `setup_point_lightobj` and `setup_spot_lightobj` load
+        // their GX objects from the light's position (a spot's also from its vector), which
+        // reading brings a path-animated position into world space (`HSD_WObjGetPosition`).
         match ty {
-            lobj::POINT => objs.lobjs[l].hw_color = objs.lobjs[l].color,
+            lobj::INFINITE => {
+                lobj::position(objs, data, Some(l));
+            }
+            lobj::POINT => {
+                objs.lobjs[l].hw_color = objs.lobjs[l].color;
+                lobj::position(objs, data, Some(l));
+            }
+            lobj::SPOT => {
+                lobj::position(objs, data, Some(l));
+                lobj::light_vector(objs, data, Some(l));
+            }
             lobj::AMBIENT => continue,
-            // Infinite and spot lights only set their GX objects.
             _ => {}
         }
         if reflect & lobj::DIFFUSE != 0 {
@@ -752,5 +880,4 @@ pub fn lobj_callback(objs: &mut Objects, data: &Archives, l: Option<LObjId>) {
         .current
         .expect("HSD_LObjSetupInit: no current camera");
     lobj_setup_init(objs, data, c);
-    objs.display.draws.push(Draw::Lights);
 }

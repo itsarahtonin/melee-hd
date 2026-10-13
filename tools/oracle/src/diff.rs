@@ -35,11 +35,11 @@ use melee_capture::{
 };
 use melee_data::archive::{ArchiveId, Archives};
 use melee_data::disc::Disc;
-use melee_replay::Device;
 use melee_sim::game::code::{Val, stubs};
 use melee_sim::game::playback::FIRST_FRAME;
 use melee_sim::game::vs_match::{Match, Settings};
-use ssbm_slippi::replay::Replay;
+use melee_slippi::Device;
+use melee_slippi::Replay;
 
 use crate::trace::{Image, Reader};
 
@@ -179,6 +179,17 @@ fn fighter_addresses(image: &Image) -> Vec<u32> {
     out
 }
 
+/// Where the trace's match put Pokémon Stadium's transformation buffer (map 2's `xCC`), on
+/// that stage; 0x80000000 elsewhere.
+fn stadium_buffer(image: &Image) -> u32 {
+    let info = sym("stage_info");
+    let map2 = image.u32(info + 0x180 + 4 * 2);
+    if image.u32(info + 0x88) as i32 != melee_sim::game::gr::GR_KIND_PSTADIUM || map2 == 0 {
+        return melee_sim::game::ft::data::MAIN_MEMORY;
+    }
+    image.u32(image.u32(map2 + 0x2C) + 0xC4 + 8)
+}
+
 /// The trace tick that ran the VS scene's first tick: the first whose scene loop has counted
 /// one tick with the playback's frame count at the replay's first frame.
 fn is_first_tick(image: &Image) -> bool {
@@ -187,7 +198,7 @@ fn is_first_tick(image: &Image) -> bool {
 
 pub fn diff(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut against, mut pos) = (None, u32::MAX, None, Vec::new());
-    let (mut boot_diff, mut all) = (false, false);
+    let (mut boot_diff, mut all, mut boot_audio) = (false, false, false);
     let mut ignore: Vec<String> = Vec::new();
     // A replay doesn't say how its floats were computed: Slippi's Dolphin recorded it, and
     // ssbm-run plays replays that way unless told `--fp hardware` (the benchmark matches).
@@ -199,6 +210,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
             "--ticks" => limit = it.next().and_then(|t| t.parse().ok()).expect("--ticks N"),
             "--against" => against = it.next().and_then(|t| t.parse::<u32>().ok()),
             "--boot-diff" => boot_diff = true,
+            "--boot-audio" => boot_audio = true,
             "--all" => all = true,
             "--fp" => {
                 fp_mode = match it.next().copied() {
@@ -237,7 +249,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     let disc = Disc::open(&disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
     let bytes = std::fs::read(replay_path).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let replay = Replay::parse(&bytes).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
-    let mut settings = Settings::from_replay(&melee_replay::start(&replay))
+    let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
         .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let index = melee_capture::disc_index(&disc);
     let mut reader = Reader::open(trace_path);
@@ -287,11 +299,30 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 return ExitCode::FAILURE;
             };
             settings.fighter_addresses = fighter_addresses(&image);
+            settings.stadium_buffer = stadium_buffer(&image);
             // The save data's unlocks and the unlock-all codes, as the boot state has them.
             settings.unlocks = melee_sim::game::gm::Unlocks::from_memory(&|a| {
                 let i = (a - 0x8000_0000) as usize;
                 u32::from_be_bytes(boot[i..i + 4].try_into().unwrap())
             });
+            if boot_audio {
+                let mut load = |name: &str| melee_sim::game::vs_match::DiscFile {
+                    entrynum: disc
+                        .entrynum(name)
+                        .unwrap_or_else(|e| panic!("{name}: {e}")),
+                    bytes: disc
+                        .read_file(name)
+                        .unwrap_or_else(|e| panic!("{name}: {e}")),
+                };
+                let d = crate::boot::audio_differences(&boot, boot_tb, &settings, &mut load);
+                println!(
+                    "the boot's audio setup against the boot state: {} differences",
+                    d.len()
+                );
+                for line in &d {
+                    println!("  {line}");
+                }
+            }
             let started = catch_unwind(AssertUnwindSafe(|| {
                 let mut load = |name: &str| melee_sim::game::vs_match::DiscFile {
                     entrynum: disc
@@ -304,7 +335,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 let mut fresh = None;
                 let started = catch_unwind(AssertUnwindSafe(|| {
                     Match::start_from(&settings, &mut load, &mut |g, data| {
-                        crate::boot::seed(g, data, &boot, boot_tb);
+                        crate::boot::seed(g, data, &boot, boot_tb, !boot_audio);
                         fresh = Some(g.clone());
                     })
                 }));

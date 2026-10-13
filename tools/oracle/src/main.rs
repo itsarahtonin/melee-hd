@@ -65,9 +65,9 @@ fn rules(replays: &[&str]) -> ExitCode {
     let mut refused = false;
     for path in replays {
         let bytes = read(path);
-        let r = replay::Replay::parse(&bytes).unwrap_or_else(|e| panic!("{path}: {e}"));
+        let r = melee_slippi::Replay::parse(&bytes).unwrap_or_else(|e| panic!("{path}: {e}"));
         let v = r.version;
-        let start = melee_replay::start(&r);
+        let start = melee_slippi::start(&r);
         match melee_sim::game::vs_match::Settings::from_replay(&start) {
             Ok(s) => println!("{path}: Slippi {}.{}.{}: {:?}", v[0], v[1], v[2], s.rules),
             Err(e) => {

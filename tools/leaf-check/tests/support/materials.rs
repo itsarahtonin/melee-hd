@@ -255,6 +255,8 @@ impl View<'_> {
             Some(ImageRef::Static(a)) => format!("S{a:#x}"),
             Some(ImageRef::Refract(i)) => format!("R{i}"),
             Some(ImageRef::RefractFrame) => "RF".into(),
+            Some(ImageRef::Screen(i)) => format!("P{i}"),
+            Some(ImageRef::Shadow(sh)) => format!("H{sh:?}"),
         };
         let tlut_at = |r: Option<DataRef>| r.map_or(0, |r| self.addr(r));
         let tluttbl: String = match o.tluttbl {

@@ -115,6 +115,9 @@ pub struct Driver {
     pub bank_table: u32,
     pub streams: i32,
     pub stream_table: u32,
+    /// The boot's read of the sound bank is in flight (`AXDriver_804D77EC` 0): the disc's
+    /// interrupt ends it rather than the device command queue's read.
+    pub reading_bank: bool,
 }
 
 impl Default for Driver {
@@ -140,6 +143,7 @@ impl Default for Driver {
             bank_table: 0,
             streams: 0,
             stream_table: 0,
+            reading_bank: false,
         }
     }
 }
@@ -216,7 +220,7 @@ impl Audio {
     }
 
     /// `AXDriverLink` onto the active list (`free` false) or the free list.
-    fn driver_link(&mut self, v: u8, free: bool) {
+    pub(super) fn driver_link(&mut self, v: u8, free: bool) {
         let head = if free {
             self.driver.free
         } else {

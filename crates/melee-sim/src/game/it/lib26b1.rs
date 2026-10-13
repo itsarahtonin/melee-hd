@@ -13,6 +13,20 @@ use crate::game::state::{Game, Running};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
+/// How many items of `kind` are out, `it_8026B3C0`.
+#[doc(alias = "it_8026B3C0")]
+pub fn count_kind(game: &Game, kind: i32) -> i32 {
+    let mut n = 0;
+    let mut cur = game.world.first_in(super::P_LINK_ITEM);
+    while let Some(g) = cur {
+        if item(game, g).kind == kind {
+            n += 1;
+        }
+        cur = game.world.gobjs[g.0].next;
+    }
+    n
+}
+
 /// Whether the item is heavy (a crate), `itIsHeavy`.
 #[doc(alias = "itIsHeavy")]
 pub fn is_heavy(game: &Game, data: &Archives, gobj: GObjId) -> bool {

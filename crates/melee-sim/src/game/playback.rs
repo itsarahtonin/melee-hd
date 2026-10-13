@@ -16,6 +16,10 @@
 //!   back into the pad library's queue, where UCF reads them.
 //! - **Pad library** (`HSD_PadRenewRawStatus`, `HSD_PadRenewMasterStatus`): every engine tick
 //!   renews the master statuses from the newest poll, whether or not one arrived.
+//! - **Boot**: the codes boot into a playback scene of their own, whose one tick asks the device
+//!   for the replay's game; what it does to audio (the replay's banks wanted and loading, its
+//!   start sound, the channels resumed) runs with the boot's audio setup
+//!   ([`Running::playback_scene_audio`], `game::boot`).
 //!
 //! Other codes in the set don't change the simulation: the debug menu and scene transitions that
 //! boot into the match, the recording codes (which send the replay being made over EXI), the
@@ -448,5 +452,47 @@ impl Running<'_> {
         cb.ext.h.x = cb.target_ext.h.x;
         cb.ext.h.y = cb.target_ext.h.y;
         super::camera::snap(self);
+    }
+}
+
+/// The `CharacterKind` the playback scene's helper answers for no character
+/// (`0x8000569C`).
+const NO_CHARACTER: i8 = 33;
+
+impl Running<'_> {
+    /// Slippi's playback scene, the boot's first scene in a replay run: its one tick asks the
+    /// Slippi device for the replay's game (`start`), preloads its files, and then, on the
+    /// audio side, wants the bank of each player's character and the stage's in place of
+    /// whatever the boot's scenes wanted (`lbAudioAx_80026F2C(0x1C)`, then the codes'
+    /// helpers at `0x800056A0` and `0x800056A8`), starts loading them in the background
+    /// (`lbAudioAx_80027168`), plays its start sound (`lbAudioAx_80024030(1)`; the codes'
+    /// word that would skip it is 0) and resumes the channels (`lbAudioAx_80024F6C`), before
+    /// it changes to the VS scene. The time it spends with the device and the preload is
+    /// ssbm-rs's clock's ([`crate::audio::boot::BootTimes::PLAYBACK_CALLS`]).
+    pub fn playback_scene_audio(&mut self, start: &super::structs::StartMeleeData) {
+        use crate::lb::audio::{character_slot, ground_kind, ground_slot};
+        let data = self.data;
+        let audio = &mut self.game.audio;
+        audio.with_clock(data, |c, f| {
+            c.catch_up(crate::audio::boot::BootTimes::PLAYBACK_CALLS, f)
+        });
+        audio.lb.unwant_banks(0x1C);
+        let want = |audio: &mut crate::audio::Audio, slot: usize| {
+            if slot != 55 {
+                audio.lb.bank_want[slot] = 1;
+            }
+        };
+        for p in &start.players {
+            if p.ckind != NO_CHARACTER {
+                want(audio, character_slot(p.ckind as u8 as usize));
+            }
+        }
+        want(
+            audio,
+            ground_slot(ground_kind(i32::from(start.rules.stkind))),
+        );
+        audio.lb_start_bank_loads(data);
+        self.lb_audio_call(1);
+        self.game.audio.lb_resume_channels();
     }
 }

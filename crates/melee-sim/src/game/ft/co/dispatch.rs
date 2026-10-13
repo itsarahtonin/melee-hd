@@ -98,6 +98,30 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800C_2348 => {
             g.co_passive_wall_coll(gobj);
         }
+        // ftCo_FlyReflect_Anim, _IASA, _Phys, _Coll (the wall's and the ceiling's)
+        0x800C_1B2C => {
+            g.co_fly_reflect_anim(gobj);
+        }
+        0x800C_1B64 => {
+            g.co_fly_reflect_iasa(gobj);
+        }
+        0x800C_1B84 => {
+            g.co_fly_reflect_phys(gobj);
+        }
+        0x800C_1BA4 => {
+            g.co_fly_reflect_coll(gobj);
+        }
+        // ftCo_PassiveCeil_Anim, _IASA (empty), _Phys, _Coll
+        0x800C_252C => {
+            g.co_passive_ceil_anim(gobj);
+        }
+        0x800C_25AC => {}
+        0x800C_25B0 => {
+            g.co_passive_ceil_phys(gobj);
+        }
+        0x800C_25D0 => {
+            g.co_passive_ceil_coll(gobj);
+        }
         // ftCo_Cliff_Cam
         0x8008_1644 => {
             g.co_cliff_cam(gobj);

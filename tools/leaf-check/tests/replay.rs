@@ -25,13 +25,13 @@
 use leaf_check::calls::{
     Ret, Setup, check_calls_in, gobj_arg, peek_u32, poke_bit, poke_f32, poke_u32, user_data_arg,
 };
-use melee_replay::Device;
 use melee_sim::game::code::{run_fighter_cb, run_proc};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::playback::{CHARACTER_LEN, Playback};
 use melee_sim::game::slippi::placed;
 use melee_sim::game::structs::StartMeleeData;
+use melee_slippi::Device;
 use ssbm_rt::capture::Call;
 use ssbm_slippi::Replay;
 
@@ -43,8 +43,9 @@ const CAPTURED: [(&str, &str); 2] = [
     ("2026-05", "Game_20260531T174953"),
 ];
 
-/// Each captured replay's directory and parsed replay, where both are here.
-fn replays() -> Vec<(String, Replay)> {
+/// Each captured replay's directory and the replay as ssbm-rs's runner and melee-sim's
+/// playback parse it, where both are here.
+fn replays() -> Vec<(String, Replay, melee_slippi::Replay)> {
     let calls = std::env::var("REPLAY_CALLS").unwrap_or_else(|_| CALLS.into());
     let slippi = std::env::var("SLIPPI_REPLAYS").unwrap_or_else(|_| REPLAYS.into());
     CAPTURED
@@ -52,9 +53,13 @@ fn replays() -> Vec<(String, Replay)> {
         .filter_map(|(month, name)| {
             let bytes = std::fs::read(format!("{slippi}/{month}/{name}.slp")).ok()?;
             let dir = format!("{calls}/{name}");
-            std::path::Path::new(&dir)
-                .exists()
-                .then(|| (dir, Replay::parse(&bytes).expect("a replay")))
+            std::path::Path::new(&dir).exists().then(|| {
+                (
+                    dir,
+                    Replay::parse(&bytes).expect("a replay"),
+                    melee_slippi::Replay::parse(&bytes).expect("a replay"),
+                )
+            })
         })
         .collect()
 }
@@ -91,7 +96,7 @@ fn pick<T: Copy>(values: &[T], n: usize) -> T {
 /// number changed, in several passes over the captures.
 #[test]
 fn recorded_inputs() {
-    for (dir, replay) in replays() {
+    for (dir, replay, _) in replays() {
         for pass in 0..PASSES {
             check_calls_in(
                 &dir,
@@ -179,7 +184,7 @@ const PASSES: usize = 6;
 /// changed, in several passes over the captures.
 #[test]
 fn ucf_sdi() {
-    for (dir, replay) in replays() {
+    for (dir, replay, _) in replays() {
         for pass in 0..2 * PASSES {
             check_calls_in(
                 &dir,
@@ -244,7 +249,7 @@ fn ucf_sdi() {
 /// limit or inside them, with its off-screen count, percent, `x221F_b1` and action changed.
 #[test]
 fn offscreen_limits() {
-    for (dir, replay) in replays() {
+    for (dir, replay, _) in replays() {
         check_calls_in(
             &dir,
             "Fighter_procAnim",
@@ -306,7 +311,7 @@ impl Cx for NoPointers {
 #[test]
 fn costumes() {
     use melee_sim::game::playback::costume_count;
-    for (dir, replay) in replays() {
+    for (dir, replay, _) in replays() {
         for pass in 0..4 * PASSES {
             check_calls_in(
                 &dir,
@@ -355,7 +360,7 @@ const FRAME_STUBS: [(u32, Option<u32>); 1] = [(0x800D_4FF4, None)];
 /// fn_8016CFE0 run from the button maps' states (which come just before it in a tick), with
 /// the frame counted from `index` (none: as captured) and read.
 fn check_frames(index: impl Fn(&Replay) -> Option<i32>) {
-    for (dir, replay) in replays() {
+    for (dir, replay, ours) in replays() {
         let at = index(&replay);
         check_calls_in(
             &dir,
@@ -373,7 +378,7 @@ fn check_frames(index: impl Fn(&Replay) -> Option<i32>) {
                 gx: false,
             },
             &|g, _, _| {
-                let answers = Playback::answers(g.game, &mut Device(&replay));
+                let answers = Playback::answers(g.game, &mut Device(&ours));
                 g.game.playback.as_mut().unwrap().answers = Some(answers);
                 g.vs_frame();
                 Ret::Nothing
@@ -402,7 +407,7 @@ fn replay_end() {
 /// asks it says whether the replay's answer was read.
 #[test]
 fn stock_steals() {
-    for (dir, replay) in replays() {
+    for (dir, replay, ours) in replays() {
         for pass in 0..PASSES {
             check_calls_in(
                 &dir,
@@ -433,7 +438,7 @@ fn stock_steals() {
                     gx: false,
                 },
                 &|g, _, _| {
-                    let answers = Playback::answers(g.game, &mut Device(&replay));
+                    let answers = Playback::answers(g.game, &mut Device(&ours));
                     g.game.playback.as_mut().unwrap().answers = Some(answers);
                     g.share_stocks();
                     Ret::Nothing
@@ -447,7 +452,7 @@ fn stock_steals() {
 /// placed it, with the frame's seed flag and seed changed.
 #[test]
 fn seed_restore() {
-    for (dir, replay) in replays() {
+    for (dir, replay, _) in replays() {
         check_calls_in(
             &dir,
             "Fighter_procInput",
@@ -479,7 +484,7 @@ fn seed_restore() {
 #[test]
 fn settings_from_game_start() {
     use melee_sim::game::vs_match::Settings;
-    for (dir, replay) in replays() {
+    for (dir, _, ours) in replays() {
         let calls = leaf_check::calls::saved_calls(&dir, "fn_8016DCC0");
         let Some(path) = calls.first() else {
             eprintln!("no capture of fn_8016DCC0 in {dir}: skipping");
@@ -490,7 +495,7 @@ fn settings_from_game_start() {
             bytes: &cap.call.mem1,
             base: 0x8000_0000,
         };
-        let s = Settings::from_replay(&melee_replay::start(&replay)).expect("known codes");
+        let s = Settings::from_replay(&melee_slippi::start(&ours)).expect("known codes");
         let ours = format!("{:?}", s.start);
         let theirs = format!(
             "{:?}",

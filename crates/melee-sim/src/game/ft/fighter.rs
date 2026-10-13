@@ -648,7 +648,7 @@ pub fn proc_grab_coll(g: &mut Running, gobj: GObjId) {
         return;
     }
     // `ftColl_8007BA0C`.
-    if !g.game.fighter(gobj).x2219_b1 && g.game.ft.bury_things != 0 {
+    if !g.game.fighter(gobj).x2219_b1 && g.game.gr.devices.bury_count != 0 {
         unported_call("ftCo_800C0A28");
     }
     if !g.game.fighter(gobj).x221E_b6 {

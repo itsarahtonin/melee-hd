@@ -1,10 +1,12 @@
-//! Slippi replays as a melee-sim match's input: what the Slippi EXI device answers Slippi's
-//! playback codes (Slippi Dolphin's `EXI_DeviceSlippi`, as ssbm-rs's `ssbm_slippi::Device`
-//! reproduces it), so `vs_match::Match` plays a replay as a replay run of the original does.
+//! What the Slippi EXI device answers Slippi's playback codes from a replay (Slippi Dolphin's
+//! `EXI_DeviceSlippi`, as ssbm-rs's `ssbm_slippi::Device` reproduces it), so
+//! `vs_match::Match` plays a replay as a replay run of the original does.
 
 use melee_sim::game::playback::{CharacterFrame, Frame, Source};
 use melee_sim::game::vs_match::ReplayStart;
-use ssbm_slippi::replay::{PlayerFrame, Replay};
+
+use crate::denylist::DENYLIST;
+use crate::replay::{PlayerFrame, Replay};
 
 /// The game info the device sends at the replay's start (`prepareGameInfo`): the game start's
 /// `StartMeleeData`, a player who started as Sheik made Sheik, and the replay's code list
@@ -25,8 +27,36 @@ pub fn start(r: &Replay) -> ReplayStart {
         info: header.iter().flat_map(|w| w.to_be_bytes()).collect(),
         seed: r.random_seed,
         nametags: r.nametags,
-        codes: ssbm_slippi::gecko::playback_list(&r.gecko_codes),
+        codes: playback_codes(&r.gecko_codes),
     }
+}
+
+/// The replay's Gecko code list without the codes playback leaves out, as
+/// `CEXISlippi::prepareGeckoList` builds it: every code whose injection address is on the
+/// denylist is dropped, and the list ends with the terminator.
+pub fn playback_codes(source: &[u8]) -> Vec<u8> {
+    let word = |at: usize| {
+        u32::from_be_bytes([source[at], source[at + 1], source[at + 2], source[at + 3]])
+    };
+    let mut out = Vec::new();
+    let mut at = 0;
+    while at + 8 <= source.len() {
+        let kind = source[at] & 0xFE;
+        let address = (word(at) & 0x01FF_FFFF) | 0x8000_0000;
+        let len = match kind {
+            0xC0 | 0xC2 => 8 + 8 * word(at + 4) as usize,
+            0x08 => 16,
+            0x06 => 8 + ((word(at + 4) as usize + 7) & !7),
+            _ => 8,
+        };
+        let end = (at + len).min(source.len());
+        if DENYLIST.binary_search(&address).is_err() {
+            out.extend_from_slice(&source[at..end]);
+        }
+        at += len;
+    }
+    out.extend_from_slice(&[0xFF, 0, 0, 0, 0, 0, 0, 0]);
+    out
 }
 
 /// The device's answers from a replay.
@@ -81,5 +111,31 @@ fn character(p: &PlayerFrame) -> CharacterFrame {
         percent: p.percent,
         raw_cstick_x: p.cstick_x_raw,
         raw_cstick_y: p.cstick_y_raw,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn list(lines: &[(u32, u32)]) -> Vec<u8> {
+        lines
+            .iter()
+            .flat_map(|&(a, d)| a.to_be_bytes().into_iter().chain(d.to_be_bytes()))
+            .collect()
+    }
+
+    #[test]
+    fn playback_leaves_out_denied_codes_whole() {
+        // A denied C2 code (Slippi's 0x8016E9AC injection) of two lines between two writes.
+        let source = list(&[
+            (0x0400_1000, 1),
+            (0xC216_E9AC, 2),
+            (0x6000_0000, 0x6000_0000),
+            (0x6000_0000, 0),
+            (0x0400_2000, 2),
+        ]);
+        let expected = list(&[(0x0400_1000, 1), (0x0400_2000, 2), (0xFF00_0000, 0)]);
+        assert_eq!(playback_codes(&source), expected);
     }
 }

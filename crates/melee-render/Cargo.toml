@@ -1,0 +1,15 @@
+[package]
+name = "melee-render"
+description = "Draws melee-sim's display pass with wgpu: HSD's material, shape and texture setup turned into GX state, drawn by melee-gpu"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+gekko-fp = { package = "melee-gekko-fp", path = "../gekko-fp" }
+melee-data.workspace = true
+melee-sim.workspace = true
+melee-gx = { path = "../melee-gx" }
+melee-gpu = { path = "../melee-gpu" }

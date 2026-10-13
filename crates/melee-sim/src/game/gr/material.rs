@@ -67,6 +67,31 @@ pub fn run_ground_overlay(game: &mut Game, data: &Archives, gobj: GObjId) {
     }
 }
 
+/// Sets render-mode bits on a joint's own display objects' materials, `grMaterial_801C87D0`.
+#[doc(alias = "grMaterial_801C87D0")]
+pub fn set_own_flags(game: &mut Game, j: JObjId, flags: u32) {
+    let objs = &mut game.objs;
+    let mut d = jobj::get_dobj(&objs.jobjs, Some(j));
+    while let Some(dobj) = d {
+        let m = objs.dobjs[dobj].mobj;
+        crate::hsd::mobj::set_flags(&mut objs.mobjs, m, flags);
+        d = objs.dobjs[dobj].next;
+    }
+}
+
+/// Sets render-mode bits on a joint tree's materials, `grMaterial_801C8858`: the joint's own,
+/// then each child tree's.
+#[doc(alias = "grMaterial_801C8858")]
+pub fn set_tree_flags(game: &mut Game, j: Option<JObjId>, flags: u32) {
+    let Some(j) = j else { return };
+    set_own_flags(game, j, flags);
+    let mut c = game.objs.jobjs[j].child;
+    while let Some(child) = c {
+        set_tree_flags(game, Some(child), flags);
+        c = game.objs.jobjs[child].next;
+    }
+}
+
 /// Gives a joint's own display objects' materials the stage class (`gr_mobj`), unless the
 /// joint holds a spline or particles.
 fn own_materials_to_stage_class(game: &mut Game, j: JObjId) {

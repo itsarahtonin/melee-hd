@@ -197,14 +197,17 @@ SPLICE = {
     # An image's pixels: the magnifier's copies render into buffers from the heap, which only
     # the presentation reads.
     "HSD_ImageDesc": ("image_ptr", 0, 4, "TexBuffer"),
-    # An item's dynamic bones, likewise set up to a count.
-    "Item": ("xD4_dynamicBones", 0xD4, 0x374, "ItemDynamicBones"),
+    # An item's dynamic bones and hurtboxes, likewise set up to a count.
+    "Item": [
+        ("xD4_dynamicBones", 0xD4, 0x374, "ItemDynamicBones"),
+        ("xACC_itemHurtbox", 0xACC, 0xB54, "ItemHurtboxes"),
+    ],
 }
 
 # Lines the generated mirrors use besides the handles.
 EXTRA_USES = [
     "use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};",
-    "use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones};",
+    "use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};",
     "use crate::game::ft::dynamics::BoneSlot;",
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
     "use crate::game::it::ItemVars;",
@@ -264,7 +267,7 @@ RENAME_FIELDS = {}
 PRELUDE = """use melee_data::archive::DataRef;
 
 use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
-use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones};
+use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;

@@ -303,35 +303,6 @@ impl Running<'_> {
         let (entrynum, len) = self.game.ft.data.files.entry(name);
         self.game.audio.load_file(self.data, entrynum, dest, len);
     }
-
-    /// Loads animation `anim` of the fighter into its second buffer unless it's there, and
-    /// returns its figatree, `ftData_80085E50`.
-    #[doc(alias = "ftData_80085E50")]
-    pub fn load_anim_second(&mut self, f: FighterId, anim: i32) -> Option<DataRef> {
-        if anim as u32 >= self.game.fighters[f.0].x58C {
-            return None;
-        }
-        let entry = self.anim_entry(f, anim);
-        let aram = self.anim_aram(&self.game.fighters[f.0], entry);
-        if aram != self.game.fighters[f.0].x5A8 {
-            let tree = if aram != 0 {
-                let kind = self.game.fighters[f.0].kind;
-                if kind == super::motion::KIND_NANA {
-                    super::super::code::unported_call("ftData_80086060");
-                }
-                if aram >= 0x8000_0000 {
-                    super::super::code::unported_call("ftData_80085E50 from main memory");
-                }
-                Some(self.anim_tree(kind, entry))
-            } else {
-                None
-            };
-            let fp = &mut self.game.fighters[f.0];
-            fp.x598 = tree;
-            fp.x5A8 = aram;
-        }
-        self.game.fighters[f.0].x598
-    }
 }
 
 impl Game {

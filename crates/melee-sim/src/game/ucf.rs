@@ -196,6 +196,42 @@ impl Running<'_> {
         }
     }
 
+    /// UCF's tumble wiggle (`ftCo_DamageFall_IASA+0xCC`, in place of the stick's timer against
+    /// `ftCommonData` x214): with the stick past the wiggle threshold `t`, a fresh push (timer 0)
+    /// leaves the tumble and an old one (past 1) doesn't; on the push's second frame (timer 1)
+    /// it leaves only if the stick was inside the threshold the frame before and the raw stick
+    /// travelled more than 75 along x since two frames ago.
+    ///
+    /// The Gecko code at `0x800908F4`.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn ucf_tumble(&self, gobj: GObjId, t: f64) -> bool {
+        let fp = self.game.fighter(gobj);
+        match fp.active_timer.lstick.x {
+            0 => true,
+            1 => {
+                // NaN goes on to the travel, as the code's unordered compare does.
+                !(fp::fabs(reg(fp.input.lstick[1].x)) >= t)
+                    && self.game.ucf.0[usize::from(fp.pad_port)].travel().0 > 5625
+            }
+            _ => false,
+        }
+    }
+
+    /// UCF's shield SDI (`ftCo_80093240+0x54`, past the stick's timer against `ftCommonData`
+    /// x4B4): a stick held too long still shield-SDIs if it wasn't held before (sticky
+    /// timer of 1 or less), was inside the threshold `min` on x the frame before, and the raw
+    /// stick travelled more than 62 along x since two frames ago.
+    ///
+    /// The Gecko code at `0x80093294`.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn ucf_shield_sdi(&self, gobj: GObjId, min: f64) -> bool {
+        let fp = self.game.fighter(gobj);
+        // The code compares the last frame's x itself, not its magnitude; NaN goes on.
+        fp.active_sticky.lstick.x <= 1
+            && !(reg(fp.input.lstick[1].x) >= min)
+            && self.game.ucf.0[usize::from(fp.pad_port)].travel().0 > 3844
+    }
+
     /// UCF's SDI (`ftCo_Damage_OnEveryHitlag+0x5C`): with the stick held past the SDI window
     /// on its y axis, a flick still counts if the stick left the dead zone this frame and the
     /// raw stick travelled more than 62 since two frames ago, unless both axes were already
@@ -214,46 +250,5 @@ impl Running<'_> {
         }
         let (tx, ty) = self.game.ucf.0[usize::from(fp.pad_port)].travel();
         tx.wrapping_add(ty) > 3844
-    }
-
-    /// UCF's tumble (`ftCo_DamageFall_IASA+0x94`), in place of the stick window for drifting
-    /// out of tumble: the stick's x left the dead zone this frame, or it left it last frame,
-    /// was inside it the frame before (`|x| < min`), and the raw stick's x travelled more than
-    /// 75 since two frames ago.
-    ///
-    /// The Gecko code at `0x800908F4`.
-    pub fn ucf_tumble(&self, gobj: GObjId, min: f64) -> bool {
-        let fp = self.game.fighter(gobj);
-        match fp.active_timer.lstick.x {
-            0 => true,
-            1 => {
-                let x = reg(fp.input.lstick[1].x);
-                let before = if x < 0.0 { fp::fneg(x) } else { x };
-                if before >= min {
-                    return false;
-                }
-                let (tx, _) = self.game.ucf.0[usize::from(fp.pad_port)].travel();
-                tx > 5625
-            }
-            _ => false,
-        }
-    }
-
-    /// UCF's shield SDI (`ftCo_80093240+0x54`): with the stick held past the SDI window, a
-    /// flick still counts if the stick's x left the dead zone at most a frame ago, its x last
-    /// frame was below the dead zone's edge (signed, as the code compares it) and the raw
-    /// stick's x travelled more than 62 since two frames ago.
-    ///
-    /// The Gecko code at `0x80093294`.
-    pub fn ucf_shield_sdi(&self, gobj: GObjId, min: f64) -> bool {
-        let fp = self.game.fighter(gobj);
-        if fp.active_sticky.lstick.x > 1 {
-            return false;
-        }
-        if reg(fp.input.lstick[1].x) >= min {
-            return false;
-        }
-        let (tx, _) = self.game.ucf.0[usize::from(fp.pad_port)].travel();
-        tx > 3844
     }
 }

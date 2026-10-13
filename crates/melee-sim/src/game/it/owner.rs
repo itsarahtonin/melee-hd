@@ -224,6 +224,11 @@ pub fn opponents_dir(game: &mut Game, data: &Archives, pos: Vec3, gobj: Option<G
             continue;
         }
         let v = camera_bone_pos(game, data, g);
+        // The Slippi ruleset's WhispyBlowDirFix (`8008653C`): a fighter in a dead or sleeping
+        // state (motion 11 or below) counts for neither side.
+        if game.rules.slippi && fighter(game, g).motion_id <= 11 {
+            continue;
+        }
         result = result.wrapping_add(if fp::fsubs(reg(v.x), reg(pos.x)) < 0.0 {
             -1
         } else {

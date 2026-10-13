@@ -88,6 +88,16 @@ impl<T> Pool<T> {
         self.peak
     }
 
+    /// The live slots and their objects, in slot order, for readers outside the simulation
+    /// (the presentation).
+    pub fn iter(&self) -> impl Iterator<Item = (u32, &T)> + '_ {
+        self.slots
+            .iter()
+            .enumerate()
+            .filter(|&(i, _)| !self.free.contains(&(i as u32)))
+            .map(|(i, t)| (i as u32, t))
+    }
+
     /// Copies `other` into `self`, reusing `self`'s storage: a rollback restore that doesn't
     /// allocate once capacities have grown.
     pub fn restore_from(&mut self, other: &Pool<T>)

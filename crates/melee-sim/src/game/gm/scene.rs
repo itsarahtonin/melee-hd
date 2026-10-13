@@ -153,10 +153,12 @@ impl Game {
 /// perf timer's read at the end lets time pass (`crate::audio::clock`).
 pub fn tick(r: &mut Running) -> bool {
     r.game.audio.tick_start(r.data);
+    crate::game::gr::stadium::take_load_end(r.game);
     queue_alarm_polls(r, 1);
     begin_tick(r);
     let ended = finish_tick(r, Resume::ButtonMaps);
     r.game.audio.tick_end(r.data);
+    crate::game::gr::stadium::take_load_end(r.game);
     queue_alarm_polls(r, 0);
     ended
 }
@@ -303,6 +305,7 @@ pub fn step_tick(r: &mut Running, poll: PadData, reset_pressed: bool) -> (Tick, 
 /// The frame's display pass on the screen (`HSD_StartRender(HSD_RP_SCREEN)`), which counts
 /// the frame as rendered.
 pub fn render_screen(r: &mut Running) {
+    crate::hsd::display::start_frame(&mut r.game.objs);
     crate::hsd::display::set_offscreen(&mut r.game.objs, false);
     r.render_frame();
     let sc = &mut r.game.scene;

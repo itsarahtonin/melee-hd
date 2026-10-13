@@ -8,6 +8,10 @@ use gekko_fp as fp;
 use crate::fpu::{mem, reg};
 use crate::game::state::{Event, Running};
 
+mod boot;
+
+pub use boot::{AUX_DELAY, AUX_REVERB_STD, SoundBank};
+
 /// The id that plays nothing, and the one that keys a track off instead of playing.
 pub const SFX_NONE: i32 = 0x83D60;
 pub const SFX_KEY_OFF: i32 = 0x83D61;
@@ -454,77 +458,10 @@ impl Running<'_> {
         }
     }
 
-    /// The channels' volumes from the settings, `fn_80024654`: the stream's, then channels
-    /// 2-3 (effects), 4-7, 8 and 1 (the announcer), and the music channels' aux B send, each
-    /// handed to the synth when it changed (`fn_80024654(0)`; the scene setups' `(1)`, which
-    /// hands them all, isn't ported).
-    #[doc(alias = "fn_80024654")]
+    /// The channels' volumes from the settings, each handed to the synth when it changed
+    /// (`fn_80024654(0)`, [`crate::audio::Audio::lb_volumes`]).
     pub fn lb_audio_volumes(&mut self) {
-        let a = &mut self.game.audio;
-        let lb = &mut a.lb;
-        lb.stream_volume = mem(fp::fmuls(over_127(lb.music), reg(lb.music_scale)));
-        if lb.sent_stream != lb.stream_volume {
-            let v = lb.stream_volume;
-            a.synth_stream_set_volume(v);
-            a.lb.sent_stream = v;
-        }
-        let lb = &mut a.lb;
-        let master = over_127(lb.master);
-        let fx = fp::fmuls(reg(0.88), fp::frsp(f64::from(lb.fx * 2)));
-        lb.scale_23_base = lb.fx_scale;
-        lb.scale_23 = mem(fp::fmuls(reg(lb.fx_scale), master));
-        lb.volume_23 = byte(fp::fmuls(reg(lb.scale_23), fx));
-        if lb.sent_23 != lb.volume_23 {
-            let v = lb.volume_23;
-            a.synth_update_all_volume(v, 4, 2);
-            a.synth_update_all_volume(v, 4, 3);
-            a.lb.sent_23 = v;
-        }
-        let lb = &mut a.lb;
-        lb.scale_47 = mem(fp::fmuls(master, fp::fmuls(reg(lb.fx_scale), reg(lb.duck))));
-        lb.volume_47 = byte(fp::fmuls(reg(lb.scale_47), fx));
-        if lb.sent_47 != lb.volume_47 {
-            let v = lb.volume_47;
-            for ch in 4..8 {
-                a.synth_update_all_volume(v, 4, ch);
-            }
-            a.lb.sent_47 = v;
-        }
-        let lb = &mut a.lb;
-        lb.scale_8 = mem(fp::fmuls(reg(lb.fx_scale), reg(lb.duck)));
-        lb.volume_8 = byte(fp::fmuls(reg(lb.scale_8), fx));
-        if lb.sent_8 != lb.volume_8 {
-            let v = lb.volume_8;
-            a.synth_update_all_volume(v, 4, 8);
-            a.lb.sent_8 = v;
-        }
-        let lb = &mut a.lb;
-        lb.scale_1 = mem(fp::fmuls(
-            master,
-            fp::fmuls(
-                reg(lb.crowd_duck),
-                fp::fmuls(reg(lb.voice_scale), reg(lb.voice_duck)),
-            ),
-        ));
-        lb.volume_1 = byte(fp::fmuls(
-            reg(lb.scale_1),
-            fp::frsp(f64::from(lb.voice * 2)),
-        ));
-        if lb.sent_1 != lb.volume_1 {
-            let v = lb.volume_1;
-            a.synth_update_all_volume(v, 4, 1);
-            a.lb.sent_1 = v;
-        }
-        let lb = &mut a.lb;
-        lb.send_wanted = lb.send;
-        if lb.sent_send != lb.send_wanted {
-            let send = lb.send as u8 as i8;
-            a.sfx_set_mix_group(5, 1, 0x20);
-            a.sfx_set_mix_group(6, 1, 0x20);
-            a.sfx_set_mix_group(8, 1, send);
-            a.sfx_set_mix_group(7, 1, send);
-            a.lb.sent_send = a.lb.send_wanted;
-        }
+        self.game.audio.lb_volumes(false);
     }
 
     /// Queues a sound to play when the queue next empties at once (`lbAudioAx_80024DC4`):
@@ -1286,6 +1223,24 @@ fn group_mask(flags: u32) -> u64 {
     mask
 }
 
+/// `lbl_803BB3C0`'s first column: each character's own bank slot (55 for none), which
+/// Slippi's playback scene preloads.
+const CHARACTER_SLOT: [u8; 33] = [
+    0x06, 0x08, 0x0B, 0x1D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x18, 0x0D, 0x19,
+    0x1A, 0x1C, 0x1B, 0x1B, 0x0A, 0x07, 0x09, 0x1F, 0x17, 0x1E, 0x20, 0x37, 0x37, 0x0C, 0x20, 0x37,
+    0x0D,
+];
+
+/// A character's own bank slot, 55 for none (`lbl_803BB3C0[ckind]`'s first byte).
+pub fn character_slot(ckind: usize) -> usize {
+    usize::from(CHARACTER_SLOT[ckind])
+}
+
+/// A ground kind's bank slot, 55 for none (`s32_arr_803BB6B0[gkind][0]`).
+pub fn ground_slot(gkind: usize) -> usize {
+    usize::from(GROUND_BANK[gkind])
+}
+
 /// `lbAudioAx_80026E84`: a character's banks.
 #[doc(alias = "lbAudioAx_80026E84")]
 pub fn character_banks(ckind: i32) -> u64 {
@@ -1529,5 +1484,79 @@ impl crate::game::state::Running<'_> {
             lb.want_banks(0xC, result);
         }
         result != 0
+    }
+}
+
+impl crate::audio::Audio {
+    /// The channels' volumes from the settings, `fn_80024654`: the stream's, then channels
+    /// 2-3 (effects), 4-7, 8 and 1 (the announcer), and the music channels' aux B send, each
+    /// handed to the synth when it changed, or all of them with `all` (`fn_80024654(1)`).
+    #[doc(alias = "fn_80024654")]
+    pub fn lb_volumes(&mut self, all: bool) {
+        let a = self;
+        let lb = &mut a.lb;
+        lb.stream_volume = mem(fp::fmuls(over_127(lb.music), reg(lb.music_scale)));
+        if all || lb.sent_stream != lb.stream_volume {
+            let v = lb.stream_volume;
+            a.synth_stream_set_volume(v);
+            a.lb.sent_stream = v;
+        }
+        let lb = &mut a.lb;
+        let master = over_127(lb.master);
+        let fx = fp::fmuls(reg(0.88), fp::frsp(f64::from(lb.fx * 2)));
+        lb.scale_23_base = lb.fx_scale;
+        lb.scale_23 = mem(fp::fmuls(reg(lb.fx_scale), master));
+        lb.volume_23 = byte(fp::fmuls(reg(lb.scale_23), fx));
+        if all || lb.sent_23 != lb.volume_23 {
+            let v = lb.volume_23;
+            a.synth_update_all_volume(v, 4, 2);
+            a.synth_update_all_volume(v, 4, 3);
+            a.lb.sent_23 = v;
+        }
+        let lb = &mut a.lb;
+        lb.scale_47 = mem(fp::fmuls(master, fp::fmuls(reg(lb.fx_scale), reg(lb.duck))));
+        lb.volume_47 = byte(fp::fmuls(reg(lb.scale_47), fx));
+        if all || lb.sent_47 != lb.volume_47 {
+            let v = lb.volume_47;
+            for ch in 4..8 {
+                a.synth_update_all_volume(v, 4, ch);
+            }
+            a.lb.sent_47 = v;
+        }
+        let lb = &mut a.lb;
+        lb.scale_8 = mem(fp::fmuls(reg(lb.fx_scale), reg(lb.duck)));
+        lb.volume_8 = byte(fp::fmuls(reg(lb.scale_8), fx));
+        if all || lb.sent_8 != lb.volume_8 {
+            let v = lb.volume_8;
+            a.synth_update_all_volume(v, 4, 8);
+            a.lb.sent_8 = v;
+        }
+        let lb = &mut a.lb;
+        lb.scale_1 = mem(fp::fmuls(
+            master,
+            fp::fmuls(
+                reg(lb.crowd_duck),
+                fp::fmuls(reg(lb.voice_scale), reg(lb.voice_duck)),
+            ),
+        ));
+        lb.volume_1 = byte(fp::fmuls(
+            reg(lb.scale_1),
+            fp::frsp(f64::from(lb.voice * 2)),
+        ));
+        if all || lb.sent_1 != lb.volume_1 {
+            let v = lb.volume_1;
+            a.synth_update_all_volume(v, 4, 1);
+            a.lb.sent_1 = v;
+        }
+        let lb = &mut a.lb;
+        lb.send_wanted = lb.send;
+        if all || lb.sent_send != lb.send_wanted {
+            let send = lb.send as u8 as i8;
+            a.sfx_set_mix_group(5, 1, 0x20);
+            a.sfx_set_mix_group(6, 1, 0x20);
+            a.sfx_set_mix_group(8, 1, send);
+            a.sfx_set_mix_group(7, 1, send);
+            a.lb.sent_send = a.lb.send_wanted;
+        }
     }
 }

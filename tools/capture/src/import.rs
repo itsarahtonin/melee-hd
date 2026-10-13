@@ -443,6 +443,21 @@ impl<'a> Importer<'a> {
                 }
                 6 if ud != 0 => Some(UserData::Item(self.item(ud))),
                 8 if ud != 0 => Some(UserData::Effect(self.effect(ud))),
+                // Pokémon Stadium's screens: kind 3 too, freed with `HSD_Free`.
+                3 if ud != 0
+                    && release == crate::stadium::HSD_FREE
+                    && crate::stadium::screen_of_render(self.u32(g + 0x1C)).is_some() =>
+                {
+                    let which = crate::stadium::screen_of_render(self.u32(g + 0x1C)).unwrap();
+                    Some(crate::stadium::import_screen(self, which, ud))
+                }
+                // Fountain of Dreams' reflection camera: kind 3, freed with `HSD_Free`.
+                3 if ud != 0
+                    && release == crate::stadium::HSD_FREE
+                    && crate::izumi::is_reflection(self.u32(g + 0x1C)) =>
+                {
+                    Some(crate::izumi::import_reflection(self, ud))
+                }
                 3 if ud != 0 => Some(UserData::Ground(self.ground(ud))),
                 bgflash::USER_DATA_KIND if ud != 0 && release == bgflash::FREE => {
                     let mem = Mem {
@@ -710,8 +725,6 @@ impl Importer<'_> {
         let (coll, filter_gobj) = crate::read_coll_statics(&cap.call.mem1);
         self.game.coll = coll;
         self.game.coll.floor_filter_gobj = self.import_handle("GObjId", filter_gobj).map(GObjId);
-        self.game.ft.wind_sources = self.u32(sym("ft_804D6578"));
-        self.game.ft.bury_things = self.u32(sym("ftDevice_BuryThingCount"));
         self.game.vs = VsSceneController::import(&mem, VS_CONTROLLER, self);
         self.gm_and_pads();
     }
@@ -970,6 +983,14 @@ impl Importer<'_> {
         } else {
             ShadowImage::default()
         };
+        // The texture's image is the shadow's own, which the shadow keeps.
+        if let Some(t) = texture
+            && desc != 0
+        {
+            self.game.objs.tobjs[t].imagedesc = Some(ImageRef::Shadow(id));
+            let note = format!("TObj image in the heap {desc:#x}");
+            self.unhandled.retain(|u| *u != note);
+        }
         self.game.objs.shadows[id.0] = Shadow {
             objects,
             camera,
@@ -1413,6 +1434,9 @@ impl Importer<'_> {
             p => match self.data.get(p) {
                 Some(d) => Some(ImageRef::Data(d)),
                 None if p == sym("imagedesc0") => Some(ImageRef::RefractFrame),
+                None if crate::stadium::screen_at(&self.cap.call.mem1, p).is_some() => {
+                    crate::stadium::screen_at(&self.cap.call.mem1, p).map(ImageRef::Screen)
+                }
                 None if (0x8000_0000..0x804F_0000).contains(&p) => Some(ImageRef::Static(p)),
                 // lbRefract's heap array of indirect maps' descriptors, 0x18 bytes each.
                 None if self.refract_map(p).is_some() => self.refract_map(p).map(ImageRef::Refract),
@@ -1752,6 +1776,7 @@ impl Cx for Importer<'_> {
             "JObjId" if !self.stale => self.jobj(addr).0,
             "DObjId" => self.dobj(addr).0,
             "TObjId" => self.tobj(addr).0,
+            "MObjId" => self.mobj(addr).0,
             "FighterId" if self.live_fighters.contains(&addr) => self.fighter(addr).0,
             "FighterId" => self.dangling(kind, addr),
             "ItemId" if self.live_items.contains(&addr) || self.maps.items.contains_key(&addr) => {

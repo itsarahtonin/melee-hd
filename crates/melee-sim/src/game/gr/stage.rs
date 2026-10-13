@@ -251,24 +251,35 @@ impl super::super::state::Running<'_> {
     }
 }
 
-/// `Gr_Kind_Corneria`, `Gr_Kind_Venom` and `Gr_Kind_PStadium`.
+/// `Gr_Kind_Corneria` and `Gr_Kind_Venom`.
 const GR_KIND_CORNERIA: i32 = 0x0E;
 const GR_KIND_VENOM: i32 = 0x0F;
-const GR_KIND_PSTADIUM: i32 = 0x10;
+use super::GR_KIND_PSTADIUM;
 
 impl super::super::state::Running<'_> {
-    /// Pokémon Stadium's big screen shows `cmd` (`grStadium_801D2528` on its display object);
+    /// Pokémon Stadium's big screen shows `mode` (`grStadium_801D2528` on its display object);
     /// any other stage has none.
-    fn stadium_screen(&mut self, cmd: i32) {
+    fn stadium_screen(&mut self, mode: i32) {
         if self.game.stage_info.grkind == GR_KIND_PSTADIUM {
-            super::super::code::unported_call(&format!("grStadium_801D2528({cmd})"));
+            let g = super::ground::map_gobj(self.game, super::stadium::MAP_DISPLAY)
+                .expect("Pokémon Stadium's display");
+            super::stadium::show(self, g, mode, 0);
         }
     }
 
-    /// A player's entrance on Pokémon Stadium's screen, `grStadium_801D3B4C`.
-    // Ports `grStadium_801D3B4C`; aliased once a check reaches it.
-    pub fn stadium_entrance(&mut self, _slot: i32, _slot_type: i32) {
-        self.stadium_screen(9);
+    /// A player's KO on Pokémon Stadium's screen, `grStadium_801D3B4C`: the player and its
+    /// slot type, then the KO's mode.
+    #[doc(alias = "grStadium_801D3B4C")]
+    pub fn stadium_entrance(&mut self, slot: i32, slot_type: i32) {
+        if self.game.stage_info.grkind == GR_KIND_PSTADIUM {
+            let g = super::ground::map_gobj(self.game, super::stadium::MAP_DISPLAY)
+                .expect("Pokémon Stadium's display");
+            let gp = super::ground::ground_of(self.game, g);
+            let v = self.game.grounds[gp.0].u.stadium_display();
+            v.player = slot as i16;
+            v.slot_type = slot_type as i16;
+            super::stadium::show(self, g, 9, 0);
+        }
     }
 
     /// `grStadium_801D4150`: the screen as the HUD comes on.
@@ -279,7 +290,7 @@ impl super::super::state::Running<'_> {
 
     /// `grStadium_801D4084` and `grStadium_801D410C`: the screen for Ready.
     #[doc(alias = "grStadium_801D4084")]
-    // Ports `grStadium_801D410C`; aliased once a check reaches it.
+    #[doc(alias = "grStadium_801D410C")]
     pub fn stadium_ready(&mut self, sudden_death: bool) {
         self.stadium_screen(if sudden_death { 0xA } else { 0xD });
     }
@@ -291,17 +302,21 @@ impl super::super::state::Running<'_> {
     }
 
     /// `grStadium_801D40C8`: the screen for GAME!.
-    // Ports `grStadium_801D40C8`; aliased once a check reaches it.
+    #[doc(alias = "grStadium_801D40C8")]
     pub fn stadium_game(&mut self) {
         self.stadium_screen(0xC);
     }
 
-    /// The stage's end of the match, `Ground_801C1158`: Pokémon Stadium's screen, or
-    /// Corneria's and Venom's Arwings; nothing elsewhere.
-    // Ports `Ground_801C1158`; aliased once a check reaches it.
+    /// The stage's end of the match, `Ground_801C1158`: Pokémon Stadium's screen's names or
+    /// count, or Corneria's and Venom's Arwings; nothing elsewhere.
+    #[doc(alias = "Ground_801C1158")]
     pub fn stage_match_end(&mut self) {
         match self.game.stage_info.grkind {
-            GR_KIND_PSTADIUM => super::super::code::unported_call("grStadium_801D39A0"),
+            GR_KIND_PSTADIUM => {
+                let g = super::ground::map_gobj(self.game, super::stadium::MAP_DISPLAY)
+                    .expect("Pokémon Stadium's display");
+                super::stadium::text_names_or_count(self, g);
+            }
             GR_KIND_CORNERIA | GR_KIND_VENOM => {
                 super::super::code::unported_call("grCorneria_801E2A6C")
             }

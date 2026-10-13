@@ -121,10 +121,7 @@ fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId) {
             hit: hi,
         },
     );
-    // `it_8027B408`: an enemy's damage counts in the attacker's owner's statistics.
-    if is_enemy(r.game, me) {
-        code::unported_call("it_8027B408 (an item's hit on an enemy, in the statistics)");
-    }
+    enemy_damage_by_item(r, g, me, fp::frsp(f64::from(dmg)));
     if victim_kind == super::kinds::PKIND_RANDOM {
         code::unported_call("it_802706D0's hit on a Pokémon's hurtbox");
     }
@@ -249,6 +246,59 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
     }
 }
 
+/// An item's hit on an enemy counts in its owner's statistics as damage dealt to no player,
+/// when a fighter owns it, `it_8027B408`.
+#[doc(alias = "it_8027B408")]
+pub fn enemy_damage_by_item(r: &mut Running, attacker: GObjId, me: GObjId, dmg: f64) {
+    if !is_enemy(r.game, me) {
+        return;
+    }
+    let ip = item(r.game, attacker);
+    let (owner, kind) = (ip.owner, i32::from(ip.xD90[3]));
+    if let Some(o) = owner.filter(|&o| is_fighter(r.game, Some(o))) {
+        let fp = r.game.fighter(o);
+        let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
+        r.count_damage(dmg, slot, sub, 6, 0, kind);
+    }
+}
+
+/// A fighter's hit on an enemy, in its player's statistics, `it_8027B4A4`.
+#[doc(alias = "it_8027B4A4")]
+pub fn enemy_hit_by_fighter(r: &mut Running, fg: GObjId, me: GObjId) {
+    if !is_enemy(r.game, me) {
+        return;
+    }
+    let id = r.game.fighter(fg).x2070[3];
+    r.record_enemy_hit(fg, id, crate::game::pl::trick::AttackRecord::Fighter(fg));
+}
+
+/// An item's hit on an enemy, in its owner's statistics when a fighter owns it,
+/// `it_8027B508`.
+#[doc(alias = "it_8027B508")]
+pub fn enemy_hit_by_item(r: &mut Running, attacker: GObjId, me: GObjId) {
+    if !is_enemy(r.game, me) {
+        return;
+    }
+    let owner = item(r.game, attacker).owner;
+    if let Some(o) = owner.filter(|&o| is_fighter(r.game, Some(o))) {
+        let id = item(r.game, attacker).xD90[3];
+        r.record_enemy_hit(o, id, crate::game::pl::trick::AttackRecord::Item(attacker));
+    }
+}
+
+/// A fighter's hit on an enemy counts in its player's statistics as damage dealt to no
+/// player, `it_8027B378`.
+#[doc(alias = "it_8027B378")]
+pub fn enemy_hit_stats(r: &mut Running, fg: GObjId, me: GObjId, dmg: f64) {
+    if !is_enemy(r.game, me) {
+        return;
+    }
+    let fp = r.game.fighter(fg);
+    let kind = i32::from(fp.x2070[3]);
+    let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
+    r.count_damage(dmg, slot, sub, 6, 0, kind);
+}
+
 /// Fighter `fg`'s box `hi` lands on the item's hurtbox `n` (`it_802703E8`): the box
 /// remembers it (`ftColl_80076808`), the fighter keeps the damage (`dmg.x1914`), the item adds
 /// it, the hit is logged, and the hit's sound plays.
@@ -274,10 +324,7 @@ fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId) {
             hit: hi,
         },
     );
-    // `it_8027B378`: an enemy's damage counts in the fighter's statistics.
-    if is_enemy(r.game, me) {
-        code::unported_call("it_8027B378 (a fighter's hit on an enemy, in the statistics)");
-    }
+    enemy_hit_stats(r, fg, me, fp::frsp(f64::from(dmg)));
     if item(r.game, me).kind == super::kinds::PKIND_RANDOM {
         code::unported_call("it_802703E8's hit on a Pokémon's hurtbox");
     }
@@ -557,9 +604,31 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
         if !flag(me.xDCF_flag, 1) {
             let pos = hit.hurt_coll_pos;
             if me.hold_kind == 4 || me.hold_kind == 6 {
+                // An enemy's: the hit's own effect by element. The effects but the spark and
+                // 1005 are handed the item, which they don't read.
+                use crate::game::ef::Arg;
+                let facing = me.facing_dir;
                 match HIT_EFFECT_IDS[hit.element as usize] {
-                    -1 | 0 => {}
-                    _ => code::unported_call("it_80270E30's effect on an enemy"),
+                    1000 => {
+                        crate::game::ef::spawn(
+                            r,
+                            1000,
+                            Some(gobj),
+                            &[Arg::Vec(pos), Arg::Float(hit.damage)],
+                        );
+                    }
+                    id @ (1001 | 1002 | 1004 | 1046 | 1145) => {
+                        crate::game::ef::spawn(r, id, Some(gobj), &[Arg::Vec(pos)]);
+                    }
+                    1005 => {
+                        crate::game::ef::spawn(
+                            r,
+                            1005,
+                            Some(gobj),
+                            &[Arg::Vec(pos), Arg::Float(facing)],
+                        );
+                    }
+                    _ => {}
                 }
             } else {
                 let arg = crate::game::ef::Arg::Float(hit.damage);
@@ -586,10 +655,7 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
             ip.xCEC_fighterGObj = Some(e.source);
             ip.xCF0_itemGObj = None;
             ip.xCCC_incDamageDirection = dir;
-            // `it_8027B4A4`: an enemy's hit counts in the fighter's statistics.
-            if is_enemy(r.game, gobj) {
-                code::unported_call("it_8027B4A4 (an enemy hit, in the statistics)");
-            }
+            enemy_hit_by_fighter(r, e.source, gobj);
         }
         2 => {
             let owner = item(r.game, e.source).owner;
@@ -616,10 +682,7 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
             ip.xCB4 = kind;
             ip.xCE0 = pos;
             ip.xCCC_incDamageDirection = dir;
-            // `it_8027B508`: an enemy's hit counts in the attacker's owner's statistics.
-            if is_enemy(r.game, gobj) {
-                code::unported_call("it_8027B508 (an enemy hit, in the statistics)");
-            }
+            enemy_hit_by_item(r, e.source, gobj);
         }
         _ => {}
     }
