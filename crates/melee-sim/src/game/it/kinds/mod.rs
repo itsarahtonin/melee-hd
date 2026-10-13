@@ -4,6 +4,7 @@ pub mod bat;
 pub mod bombhei;
 pub mod capsule;
 pub mod crate_box;
+pub mod drmariopill;
 pub mod foxblaster;
 pub mod foxillusion;
 pub mod foxlaser;
@@ -12,6 +13,9 @@ pub mod hammer;
 pub mod hammerhead;
 pub mod heart;
 pub mod kusudama;
+pub mod luigifireball;
+pub mod mariocape;
+pub mod mariofireball;
 pub mod rshell;
 pub mod seakchain;
 pub mod seakneedleheld;
@@ -50,6 +54,10 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || seakchain::run_event(r, gobj, addr)
         || zeldadinfire::run_event(r, gobj, addr)
         || zeldadinfireexplode::run_event(r, gobj, addr)
+        || luigifireball::run_event(r, gobj, addr)
+        || mariofireball::run_event(r, gobj, addr)
+        || mariocape::run_event(r, gobj, addr)
+        || drmariopill::run_event(r, gobj, addr)
 }
 
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
@@ -76,6 +84,10 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| seakchain::run_pred(r, gobj, addr))
         .or_else(|| zeldadinfire::run_pred(r, gobj, addr))
         .or_else(|| zeldadinfireexplode::run_pred(r, gobj, addr))
+        .or_else(|| luigifireball::run_pred(r, gobj, addr))
+        .or_else(|| mariofireball::run_pred(r, gobj, addr))
+        .or_else(|| mariocape::run_pred(r, gobj, addr))
+        .or_else(|| drmariopill::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -105,6 +117,8 @@ pub const KURIBOH: i32 = 43;
 pub const OCTAROCK_STONE: i32 = 47;
 /// `It_Kind_Mario_Fire`: the first character item.
 pub const MARIO_FIRE: i32 = 48;
+/// `It_Kind_DrMario_Vitamin`.
+pub const DRMARIO_VITAMIN: i32 = 49;
 /// `It_Kind_Fox_Laser`.
 pub const FOX_LASER: i32 = 54;
 /// `It_Kind_Falco_Laser`.

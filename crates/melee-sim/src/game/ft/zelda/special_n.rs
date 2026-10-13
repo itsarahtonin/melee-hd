@@ -92,7 +92,7 @@ impl Running<'_> {
             speed_mul: a(0xA0),
             behavior: (self.zelda_attr_i32(f, 0xA4) as u32 >> 24) as u8,
         };
-        self.create_reflect_hit(gobj, &d, CodeRef(addr::N_8013ADB0));
+        self.create_reflect_hit(gobj, &d, Some(CodeRef(addr::N_8013ADB0)));
     }
 
     /// The reflector on when the script says (`cmd_vars[0]` 1 becomes 2), off while it's 0.

@@ -724,19 +724,19 @@ impl Running<'_> {
             speed_mul: c.f32(0x2B0),
             behavior: 1,
         };
-        self.create_reflect_hit(gobj, &d, on_reflect);
+        self.create_reflect_hit(gobj, &d, Some(on_reflect));
     }
 
     /// The fighter's reflector from a descriptor, its reflections calling `cb`,
     /// `ftColl_CreateReflectHit`.
     // Ports `ftColl_CreateReflectHit`; aliased once a check reaches it.
-    pub fn create_reflect_hit(&mut self, gobj: GObjId, d: &ReflectDesc, cb: CodeRef) {
+    pub fn create_reflect_hit(&mut self, gobj: GObjId, d: &ReflectDesc, cb: Option<CodeRef>) {
         let f = self.game.fighter_id(gobj);
         let joint = self.bones(f)[d.bone as usize].joint;
         let fp = &mut self.game.fighters[f.0];
         fp.reflecting = true;
         fp.x2218_b4 = false;
-        fp.reflect_hit_cb = Some(cb);
+        fp.reflect_hit_cb = cb;
         fp.ReflectAttr.x1A30_maxDamage = d.max_damage;
         fp.ReflectAttr.x1A34_damageMul = d.damage_mul;
         fp.ReflectAttr.x1A38_speedMul = d.speed_mul;

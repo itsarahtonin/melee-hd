@@ -133,6 +133,7 @@ members! {
     SeakChain, seak_chain, itSeakChain_ItemVars, [SEAK_CHAIN];
     ZeldaDinFire, zelda_din_fire, itZeldaDinFire_ItemVars, [ZELDA_DIN_FIRE];
     ZeldaDinFireExplode, zelda_din_fire_explode, itZeldaDinFireExplode_ItemVars, [ZELDA_DIN_FIRE_EXPLODE];
+    DrMarioPill, drmario_pill, itDrMarioPill_ItemVars, [DRMARIO_VITAMIN];
 }
 
 impl Default for ItemVars {

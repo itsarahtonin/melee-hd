@@ -16984,6 +16984,59 @@ impl Mirror for itZeldaDinFireExplode_ItemVars {
     }
 }
 
+impl Mirror for itDrMarioPill_ItemVars {
+    const SIZE: u32 = 0x10;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itDrMarioPill_ItemVars {
+            x0: Var::new(f32::from_bits(m.u32(at + 0x0))),
+            x4: Var::new(cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId)),
+            x8: Var::new(f32::from_bits(m.u32(at + 0x8))),
+            xC: Var::new(f32::from_bits(m.u32(at + 0xc))),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0.live(&format!("{path}.x0"), cx) {
+            if (*self.x0.peek()).to_bits() != m.u32(at + 0x0) {
+                cx.mismatch(
+                    &format!("{path}.x0"),
+                    format!("{:?}", (*self.x0.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x0))),
+                );
+            }
+        }
+        if self.x4.live(&format!("{path}.x4"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x4"),
+                "GObjId",
+                (*self.x4.peek()).map(|h| h.0),
+                m.u32(at + 0x4),
+            );
+        }
+        if self.x8.live(&format!("{path}.x8"), cx) {
+            if (*self.x8.peek()).to_bits() != m.u32(at + 0x8) {
+                cx.mismatch(
+                    &format!("{path}.x8"),
+                    format!("{:?}", (*self.x8.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x8))),
+                );
+            }
+        }
+        if self.xC.live(&format!("{path}.xC"), cx) {
+            if (*self.xC.peek()).to_bits() != m.u32(at + 0xc) {
+                cx.mismatch(
+                    &format!("{path}.xC"),
+                    format!("{:?}", (*self.xC.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0xc))),
+                );
+            }
+        }
+    }
+}
+
 impl Mirror for IfDamageFlags {
     const SIZE: u32 = 0x1;
 

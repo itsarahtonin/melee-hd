@@ -157,6 +157,18 @@ pub fn held_special_item(game: &Game, gobj: GObjId) -> Option<GObjId> {
     fighter(game, gobj).x1984_heldItemSpec
 }
 
+/// The fighter lets go of its held special item, `ftLib_ClearHeldSpecialItem` (with
+/// `ftCommon_8007E82C`).
+// Ports `ftLib_ClearHeldSpecialItem`; aliased once a check reaches it.
+// Ports `ftCommon_8007E82C`; aliased once a check reaches it.
+pub fn clear_held_special_item(game: &mut Game, gobj: GObjId) {
+    let f = fighter_of(game, gobj);
+    let fp = &mut game.fighters[f.0];
+    if fp.x1984_heldItemSpec.is_some() {
+        fp.x1984_heldItemSpec = None;
+    }
+}
+
 /// Whether the fighter holds `item` (in hand, or as `x1978`), `ftLib_IsHoldingItem`.
 #[doc(alias = "ftLib_IsHoldingItem")]
 pub fn is_holding(game: &Game, gobj: GObjId, item: GObjId) -> bool {
@@ -168,10 +180,8 @@ pub fn is_holding(game: &Game, gobj: GObjId, item: GObjId) -> bool {
 /// or a held item (`ftLib_ReleaseItem`), whichever the item is (`Item_8026A848`'s choice).
 pub fn release(r: &mut Running, gobj: GObjId, fighter_gobj: GObjId, special: bool) {
     if special {
-        if held_special_item(r.game, fighter_gobj) == Some(gobj)
-            && fighter(r.game, fighter_gobj).x1984_heldItemSpec.is_some()
-        {
-            code::unported_call("ftCommon_8007E82C (ftLib_ClearHeldSpecialItem)");
+        if held_special_item(r.game, fighter_gobj) == Some(gobj) {
+            clear_held_special_item(r.game, fighter_gobj);
         }
     } else if is_holding(r.game, fighter_gobj, gobj) {
         let fp = fighter(r.game, fighter_gobj);

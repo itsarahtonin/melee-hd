@@ -822,6 +822,11 @@ pub fn add_anims(
 /// Gives the model a state's animations from the start, `Item_80268D34`.
 #[doc(alias = "Item_80268D34")]
 pub fn set_state_anims(r: &mut Running, gobj: GObjId, desc: DataRef) {
+    set_state_anims_at(r, gobj, desc, 0.0);
+}
+
+/// [`set_state_anims`] with the animations requested from `frame`.
+pub fn set_state_anims_at(r: &mut Running, gobj: GObjId, desc: DataRef, frame: f32) {
     let data = r.data;
     let j = jobj_of(r.game, gobj);
     let i = item_of(r.game, gobj);
@@ -846,7 +851,7 @@ pub fn set_state_anims(r: &mut Running, gobj: GObjId, desc: DataRef) {
     );
     let speed = r.game.items[i.0].x5D0_animFrameSpeed;
     crate::lb::anim::set_framerate(&mut r.game.objs, j, speed);
-    jobj::req_anim_all(&mut r.game.objs, j, 0.0);
+    jobj::req_anim_all(&mut r.game.objs, j, frame);
 }
 
 /// Restarts the model's animation at `frame`, `Item_80268DD4`.

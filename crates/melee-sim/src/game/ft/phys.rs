@@ -298,6 +298,66 @@ impl Running<'_> {
         }
     }
 
+    /// Keeps the ground speed within `max` either way, `ftCommon_ClampGroundVel`.
+    #[doc(alias = "ftCommon_ClampGroundVel")]
+    pub fn clamp_ground_vel(fp: &mut Fighter, max: f64) {
+        let v = reg(fp.gr_vel);
+        if v < fp::fneg(max) {
+            fp.gr_vel = mem(fp::fneg(max));
+        } else if v > max {
+            fp.gr_vel = mem(max);
+        }
+    }
+
+    /// Caps the rising speed at `max`, `ftCommon_ClampFallSpeed`.
+    // Ports `ftCommon_ClampFallSpeed`; aliased once a check reaches it.
+    pub fn clamp_fall_speed(fp: &mut Fighter, max: f64) {
+        if reg(fp.self_vel.y) > max {
+            fp.self_vel.y = mem(max);
+        }
+    }
+
+    /// Rises by `accel`, up to `max`, `ftCommon_Ascend`.
+    // Ports `ftCommon_Ascend`; aliased once a check reaches it.
+    pub fn ascend(fp: &mut Fighter, accel: f64, max: f64) {
+        fp.self_vel.y = mem(fp::fadds(reg(fp.self_vel.y), accel));
+        if reg(fp.self_vel.y) > max {
+            fp.self_vel.y = mem(max);
+        }
+    }
+
+    /// Ground acceleration toward the stick's share of `target_max`, `accel_max` at a time,
+    /// once the stick passes `threshold`, else toward a stop,
+    /// `ftCommon_CalcGroundAccel_AccelToLStickX`.
+    #[doc(alias = "ftCommon_CalcGroundAccel_AccelToLStickX")]
+    pub fn ground_accel_to_lstick_x(
+        fp: &mut Fighter,
+        threshold: f64,
+        accel_max: f64,
+        target_max: f64,
+    ) {
+        let x = reg(fp.input.lstick[0].x);
+        let (mut accel, target) = if abs(x) >= threshold {
+            (fp::fmuls(x, accel_max), fp::fmuls(x, target_max))
+        } else {
+            (0.0, 0.0)
+        };
+        // `ftCommon_CalcGroundAccel_AccelToVel`, inline, without friction.
+        let gr = reg(fp.gr_vel);
+        if !(target != 0.0) {
+            accel = fp::fneg(gr);
+        } else if !(fp::fmuls(gr, accel) < 0.0) {
+            if accel > 0.0 {
+                if fp::fadds(gr, accel) > target {
+                    accel = fp::fsubs(target, gr);
+                }
+            } else if fp::fadds(gr, accel) < target {
+                accel = fp::fsubs(target, gr);
+            }
+        }
+        fp.xE4_ground_accel_1 = mem(accel);
+    }
+
     /// The character's own gravity, `ftCommon_FallBasic`.
     #[doc(alias = "ftCommon_FallBasic")]
     pub fn fall_basic(fp: &mut Fighter) {

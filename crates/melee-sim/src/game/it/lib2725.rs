@@ -26,6 +26,11 @@ pub fn set_rotation_x(game: &mut Game, j: JObjId, x: f32) {
     jobj::set_angle(&mut game.objs.jobjs, j, |q| q.x = x);
 }
 
+/// Sets a joint's z rotation (`HSD_JObjSetRotationZ`).
+pub fn set_rotation_z(game: &mut Game, j: JObjId, z: f32) {
+    jobj::set_angle(&mut game.objs.jobjs, j, |q| q.z = z);
+}
+
 /// Sets a joint's z scale (`HSD_JObjSetScaleZ`).
 pub fn set_scale_z(game: &mut Game, j: JObjId, z: f32) {
     jobj::set_srt(&mut game.objs.jobjs, j, |o| o.scale.z = z);
@@ -652,4 +657,21 @@ pub fn hide_tree(game: &mut Game, j: Option<JObjId>) {
 #[doc(alias = "it_80272A18")]
 pub fn show_tree(game: &mut Game, j: Option<JObjId>) {
     jobj::clear_flags_all(&mut game.objs.jobjs, j, jobj::HIDDEN);
+}
+
+/// The item scaled by its owner's size (`ftLib_GetScale`), its model, hitboxes and ranges
+/// with it, `it_80274594`.
+// Ports `it_80274594`; aliased once a check reaches it.
+pub fn scale_by_owner(r: &mut Running, gobj: GObjId) {
+    let owner = item(r.game, gobj).owner.expect("an item without an owner");
+    let scale = super::owner::fighter(r.game, owner).x34_scale.y;
+    let ip = item_mut(r.game, gobj);
+    ip.scl = mem(fp::fmuls(reg(ip.scl), reg(scale)));
+    let scl = ip.scl;
+    let j = super::jobj_of(r.game, gobj).expect("an item without a model");
+    set_uniform_scale(r.game, j, scl);
+    let x3c = item(r.game, gobj).x3C;
+    super::hitbox::set_hit_scale(r.game, gobj, x3c);
+    scale_ranges(r.game, gobj);
+    scale_boxes(r.game, gobj);
 }

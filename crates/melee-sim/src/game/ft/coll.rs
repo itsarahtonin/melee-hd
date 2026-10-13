@@ -826,6 +826,14 @@ impl Running<'_> {
         }
     }
 
+    /// The grounded pass with the ECB `b`, `ft_80082888`: whether it stayed on the ground.
+    #[doc(alias = "ft_80082888")]
+    pub fn ground_coll_box(&mut self, gobj: GObjId, b: &ftCollisionBox) -> bool {
+        let f = self.game.fighter_id(gobj);
+        let b = facing_box(b, self.game.fighters[f.0].facing_dir);
+        self.fighter_coll(f, |_| {}, |c, cd| c.ground_frame_box(cd, &b, 0))
+    }
+
     /// The grounded pass with the ECB `b`, `cb` off the ground, `ft_800846B0`.
     #[doc(alias = "ft_800846B0")]
     pub fn ground_coll_box_then(&mut self, gobj: GObjId, b: &ftCollisionBox, cb: Cb) {

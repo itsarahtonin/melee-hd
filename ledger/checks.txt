@@ -3659,3 +3659,57 @@ ftGn_Init_OnDeath	melee-oracle diff, Ganondorf vs Captain Falcon FD (local/bench
 ftGn_Init_LoadSpecialAttrs	melee-oracle diff, Ganondorf vs Captain Falcon FD (local/bench/ganon-captain-fd.slp) all 12,173 traced ticks in hardware float mode, and the Slippi 3.16 replay hf-ganon-captain-fd-4923c7b4 all 9,890 ticks, with no stand-ins (docs/oracle.md): each of Ganondorf's spawns runs it
 ftGn_Init_OnKnockbackEnter	leaf-check ganon: ganon_functions runs it from real Ganondorf states (debug VS dittos), its own saved calls and its unit's, and compares the whole state
 ftGn_Init_OnKnockbackExit	leaf-check ganon: ganon_functions runs it from real Ganondorf states (debug VS dittos), its own saved calls and its unit's, and compares the whole state
+ftCommon_CalcGroundAccel_AccelToLStickX	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's states' play runs it 372 times
+ftCommon_ClampGroundVel	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's states' play runs it 5 times
+ftLg_Init_LoadSpecialAttrs	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 4 times
+ftLg_Init_OnDeath	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 4 times
+ftLg_Init_OnLoad	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 1 time
+ftLg_SpecialAirHi_Anim	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 78 times
+ftLg_SpecialAirHi_Coll	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 80 times
+ftLg_SpecialAirHi_Enter	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 3 times
+ftLg_SpecialAirHi_IASA	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 77 times
+ftLg_SpecialAirHi_Phys	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 80 times
+ftLg_SpecialAirLw_Anim	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 18 times
+ftLg_SpecialAirLw_Coll	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 23 times
+ftLg_SpecialAirLw_Enter	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 2 times
+ftLg_SpecialAirLw_Phys	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 23 times
+ftLg_SpecialAirN_Anim	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 92 times
+ftLg_SpecialAirN_Coll	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 92 times
+ftLg_SpecialAirN_Enter	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 2 times
+ftLg_SpecialAirN_IASA	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 90 times
+ftLg_SpecialAirS2_Anim	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 339 times
+ftLg_SpecialAirS2_Coll	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 341 times
+ftLg_SpecialAirS2_Phys	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 341 times
+ftLg_SpecialAirSEnd_Anim	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 210 times
+ftLg_SpecialAirSEnd_Coll	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 210 times
+ftLg_SpecialAirSEnd_Enter	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 7 times
+ftLg_SpecialAirSEnd_Phys	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 210 times
+ftLg_SpecialAirSHold_Anim	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 62 times
+ftLg_SpecialAirSHold_Coll	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 62 times
+ftLg_SpecialAirSHold_Enter	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 9 times
+ftLg_SpecialAirSHold_IASA	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 71 times
+ftLg_SpecialAirSLaunch_Enter	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 9 times
+ftLg_SpecialAirSStart_Anim	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 153 times
+ftLg_SpecialAirSStart_Coll	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 153 times
+ftLg_SpecialAirSStart_Phys	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 153 times
+ftLg_SpecialAirS_Anim	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 36 times
+ftLg_SpecialAirS_Coll	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 36 times
+ftLg_SpecialAirS_Enter	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 9 times
+ftLg_SpecialLw_Anim	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 377 times
+ftLg_SpecialLw_Coll	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 382 times
+ftLg_SpecialLw_Enter	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 3 times
+ftLg_SpecialLw_Phys	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 372 times
+ftLg_SpecialN_Anim	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 46 times
+ftLg_SpecialN_Coll	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 46 times
+ftLg_SpecialN_Enter	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 1 time
+ftLg_SpecialN_FireSpawn	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 138 times
+ftLg_SpecialN_IASA	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 45 times
+ftLg_SpecialSEnd_Enter	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 1 time
+ftLg_SpecialSFly_Enter	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 9 times
+ftLg_SpecialS_SetGFX	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 62 times
+ftLg_SpecialS_SetVars	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's play runs it 9 times
+ft_80082888	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's states' play runs it 382 times
+itLuigifireball_UnkMotion0_Coll	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's fireballs' play runs it 69 times
+itLuigifireball_UnkMotion0_Phys	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's fireballs' play runs it 69 times
+it_802C01AC	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's fireballs' play runs it 3 times
+it_802C027C	melee-oracle diff, Luigi vs Sheik BF Game_20260524T175654 all 17,336 traced ticks in Slippi float mode, with no stand-ins (docs/oracle.md): Luigi's fireballs' play runs it 3 times

@@ -34,6 +34,8 @@ ROOTS = [
     # Zelda's Din's Fire and its explosion.
     "itZeldaDinFire_ItemVars",
     "itZeldaDinFireExplode_ItemVars",
+    # Dr. Mario's pill.
+    "itDrMarioPill_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",

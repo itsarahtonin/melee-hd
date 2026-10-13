@@ -37,15 +37,19 @@ pub const SEAK_NEEDLES: usize = 4;
 pub const SEAK_CHAIN: usize = 8;
 /// `ftZelda_FighterVars::x222C`: Zelda's Din's Fire.
 pub const ZELDA_DIN_FIRE: usize = 0;
+/// `ftMario_FighterVars::x223C_capeGObj` and `x2240`: Mario's and Dr. Mario's cape.
+pub const MARIO_CAPE: usize = 0x10;
+pub const MARIO_X2240: usize = 0x14;
 
 /// The words of `u` a fighter of `kind` keeps GObjs in, which the importer types: Fox's and
 /// Falco's blaster, Sheik's held needles and chain (`Ft_Kind_Seak`), Zelda's Din's Fire
-/// (`Ft_Kind_Zelda`).
+/// (`Ft_Kind_Zelda`), Mario's and Dr. Mario's cape (`Ft_Kind_Mario`, `Ft_Kind_DrMario`).
 pub fn gobj_words(kind: i32) -> &'static [usize] {
     match kind {
         _ if holds_blaster(kind) => &[FOX_BLASTER],
         7 => &[SEAK_NEEDLES, SEAK_CHAIN],
         19 => &[ZELDA_DIN_FIRE],
+        0 | 21 => &[MARIO_CAPE, MARIO_X2240],
         _ => &[],
     }
 }

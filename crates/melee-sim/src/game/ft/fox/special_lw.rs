@@ -323,7 +323,7 @@ impl Running<'_> {
             speed_mul: a(0xCC),
             behavior: (self.fox_attr_i32(f, 0xD0) as u32 >> 24) as u8,
         };
-        self.create_reflect_hit(gobj, &d, CodeRef(addr::SPECIAL_LW_HIT_ENTER));
+        self.create_reflect_hit(gobj, &d, Some(CodeRef(addr::SPECIAL_LW_HIT_ENTER)));
     }
 
     /// The grounded loop, `ftFx_SpecialLwLoop_Enter`.
