@@ -2,6 +2,7 @@
 //! scenes' button maps, and the VS match.
 
 pub mod input;
+pub mod names;
 pub mod pause;
 pub mod results;
 pub mod scene;
@@ -116,7 +117,14 @@ pub struct Unlocks {
     pub all_characters_code: bool,
     /// `gm_80164600` patched likewise (at `0x80164658`).
     pub all_stages_code: bool,
+    /// The game preferences' saved language (`GamePrefs::saved_language`, at the card data's
+    /// `0x1CC6`): [`LANG_JP`] or [`LANG_US`], which picks the strings some screens show.
+    pub language: u8,
 }
+
+/// `LANG_JP` and `LANG_US`.
+pub const LANG_JP: u8 = 0;
+pub const LANG_US: u8 = 1;
 
 /// `gmMainLib_804D3EE0`, the memory card's data, and `li r3, 1`.
 const CARD_DATA: u32 = 0x804D_3EE0;
@@ -133,6 +141,7 @@ impl Unlocks {
             stages: 0xFFFF,
             all_characters_code: true,
             all_stages_code: true,
+            language: LANG_US,
         }
     }
 
@@ -146,6 +155,7 @@ impl Unlocks {
             stages: masks as u16,
             all_characters_code: word(0x8016_4B14) == LI_R3_1,
             all_stages_code: word(0x8016_4658) == LI_R3_1,
+            language: (word(card + 0x1CC4) >> 8) as u8,
         }
     }
     /// Whether every unlockable character is unlocked, `gm_80164ABC`.
@@ -158,6 +168,18 @@ impl Unlocks {
     // Ports `gm_80164600`; aliased once a check reaches it.
     pub fn all_stages(&self) -> bool {
         self.all_stages_code || (0..UNLOCKABLE).all(|i| self.stages & (1 << i) != 0)
+    }
+
+    /// Whether the saved language is Japanese, `lbLang_IsSavedLanguageJP`.
+    #[doc(alias = "lbLang_IsSavedLanguageJP")]
+    pub fn is_jp(&self) -> bool {
+        self.language == LANG_JP
+    }
+
+    /// Whether the saved language is English, `lbLang_IsSavedLanguageUS`.
+    #[doc(alias = "lbLang_IsSavedLanguageUS")]
+    pub fn is_us(&self) -> bool {
+        self.language == LANG_US
     }
 }
 

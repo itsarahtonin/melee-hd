@@ -356,7 +356,7 @@ impl SisLib {
         match p {
             SisPtr::Data(d) => data.u8(d),
             SisPtr::Arena(a) => self.byte(a),
-            SisPtr::Static(a) => panic!("reading the static string at {a:#x} isn't ported"),
+            SisPtr::Static(_) => self.sis_byte(data, p),
         }
     }
 

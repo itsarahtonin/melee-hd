@@ -15,11 +15,15 @@ pub mod ground;
 pub mod last;
 pub mod material;
 pub mod setup;
+pub mod stadium;
 pub mod stage;
 pub mod vars;
 pub mod zako;
 
-pub use vars::{BattleBgVars, GroundVars, LastVars, MapVars, VarsKind};
+pub use vars::{
+    BattleBgVars, GroundVars, LastVars, MapVars, StadiumBits, StadiumDisplayVars, StadiumPieceVars,
+    StadiumVars, VarsKind,
+};
 
 use melee_data::archive::{ArchiveId, DataRef};
 
@@ -29,6 +33,8 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 use crate::hsd::pool::Pool;
 
+/// `Gr_Kind_PStadium`, Pokémon Stadium.
+pub const GR_KIND_PSTADIUM: i32 = 16;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Last`, Final Destination.
@@ -140,6 +146,8 @@ pub struct Globals {
     /// The wind sources that sway jointed parts (`lb_804D63A8`'s pool): stages and blasts add
     /// them.
     pub winds: crate::lb::wind::Winds,
+    /// Pokémon Stadium's state besides its objects'.
+    pub stadium: stadium::Globals,
     /// Whether wind blows (`lb_804D63B4`): 1 when it starts, 2 while it lasts, -1 when it
     /// stops, 0 otherwise.
     pub wind_level: i32,
@@ -168,6 +176,10 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_LAST, 3) => VarsKind::Map,
         (GR_KIND_LAST, 7) => VarsKind::Last,
         (GR_KIND_BATTLE, 3) => VarsKind::BattleBg,
+        (GR_KIND_PSTADIUM, 1) => VarsKind::StadiumDisplay,
+        (GR_KIND_PSTADIUM, 2) => VarsKind::Stadium,
+        (GR_KIND_PSTADIUM, 3..=5) => VarsKind::StadiumBits,
+        (GR_KIND_PSTADIUM, 6 | 9) => VarsKind::StadiumPiece,
         _ => VarsKind::Bytes,
     }
 }

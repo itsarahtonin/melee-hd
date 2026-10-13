@@ -33,6 +33,21 @@ pub fn jobj_of(game: &Game, gobj: GObjId) -> Option<JObjId> {
     }
 }
 
+impl Game {
+    /// The stage's collision geometry, which a stage's code only reaches once it's loaded.
+    pub fn geometry_mut(&mut self) -> &mut super::Geometry {
+        self.geometry.as_mut().expect("no collision geometry")
+    }
+}
+
+impl Running<'_> {
+    /// A stage sound at full volume, centered, `Ground_801C53EC`.
+    #[doc(alias = "Ground_801C53EC")]
+    pub fn stage_sound(&mut self, id: i32) {
+        self.sfx_play(id, 0x7F, 0x40);
+    }
+}
+
 /// `mpColl_804D64AC += 1`: the collision geometry's update counter, which the stage code bumps
 /// too.
 pub fn bump_generation(game: &mut Game) {

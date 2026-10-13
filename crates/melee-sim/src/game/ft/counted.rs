@@ -13,7 +13,7 @@ use core::ops::{Deref, DerefMut};
 use melee_data::archive::DataRef;
 
 use crate::game::mirror::{Cx, Mem, Mirror};
-use crate::game::structs::{BoneDynamicsDesc, Item_DynamicBones};
+use crate::game::structs::{BoneDynamicsDesc, HurtCapsule, Item_DynamicBones};
 use crate::hsd::tobj::TObjId;
 
 /// `CostumeTObjList`, 0x1c bytes.
@@ -146,3 +146,88 @@ counted_array!(
     Item_DynamicBones,
     24
 );
+
+/// An item's hurtboxes (`Item::xACC_itemHurtbox`, +0xACC), the first `xAC8_hurtboxNum` (the
+/// byte four before them) set up by its kind (`it_8027163C`). Those past the count keep the
+/// block's last item's words; a joint pointer among them can name a block HSD has since handed
+/// to another object of the joint's size (`hsdAllocMemPiece` keeps one free list per size,
+/// which melee-sim's typed pools don't share), so they aren't compared, and their joint isn't
+/// imported. Their other words are imported: the block keeps them for the next item made in it
+/// (`Pool::alloc_stale`), whose kind can count a hurtbox before its positions are computed.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+pub struct ItemHurtboxes(pub [HurtCapsule; 2]);
+
+impl ItemHurtboxes {
+    /// How many the count before the array sets up; one past the array was never set.
+    fn used(m: &Mem, at: u32) -> usize {
+        let n = m.u8(at - 4);
+        if n <= 2 { usize::from(n) } else { 0 }
+    }
+}
+
+impl Deref for ItemHurtboxes {
+    type Target = [HurtCapsule; 2];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for ItemHurtboxes {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Mirror for ItemHurtboxes {
+    const SIZE: u32 = 2 * HurtCapsule::SIZE;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let used = Self::used(m, at);
+        ItemHurtboxes(core::array::from_fn(|i| {
+            let at = at + i as u32 * HurtCapsule::SIZE;
+            if i < used {
+                HurtCapsule::import(m, at, cx)
+            } else {
+                HurtCapsule::import(m, at, &mut NoHandles(cx))
+            }
+        }))
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        for i in 0..Self::used(m, at) {
+            let at = at + i as u32 * HurtCapsule::SIZE;
+            self.0[i].compare(m, at, &format!("{path}[{i}]"), cx);
+        }
+    }
+}
+
+/// Imports through `cx` but for handles, which import as none: words past a count, whose
+/// pointers may name blocks reused since by other kinds of objects.
+struct NoHandles<'c>(&'c mut dyn Cx);
+
+impl Cx for NoHandles<'_> {
+    fn import_handle(&mut self, _kind: &'static str, _addr: u32) -> Option<u32> {
+        None
+    }
+
+    fn import_data(&mut self, addr: u32) -> Option<DataRef> {
+        self.0.import_data(addr)
+    }
+
+    fn compare_handle(&mut self, path: &str, kind: &'static str, ours: Option<u32>, theirs: u32) {
+        self.0.compare_handle(path, kind, ours, theirs);
+    }
+
+    fn compare_data(&mut self, path: &str, ours: Option<DataRef>, theirs: u32) {
+        self.0.compare_data(path, ours, theirs);
+    }
+
+    fn mismatch(&mut self, path: &str, ours: String, theirs: String) {
+        self.0.mismatch(path, ours, theirs);
+    }
+
+    fn stale_read(&mut self, path: &str) {
+        self.0.stale_read(path);
+    }
+}

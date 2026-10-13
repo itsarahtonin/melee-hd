@@ -172,7 +172,18 @@ pub struct SisLib {
     /// saves the pointer, a place in loaded data, so a stack's cursor record holds its index
     /// here instead ([`SisLib::cursor_records`]).
     pub saved_cursors: Vec<SisPtr>,
+    /// Font tables' entries game code pointed elsewhere (`HSD_SisLib_804D1124[font][index] =
+    /// p`, a write into the table's loaded data): font, index and the new string. A font's
+    /// table loaded afresh forgets them.
+    pub table_overrides: Vec<(u8, u32, SisPtr)>,
+    /// The strings in the executable's data that game code builds ([`STATIC_STRINGS`]):
+    /// their buffers' bytes, from each buffer's start. Static data outlives scenes.
+    pub statics: Vec<(u32, Vec<u8>)>,
 }
+
+/// The executable's string buffers game code writes SIS strings into: their addresses and
+/// sizes (Pokémon Stadium's screen text, `grPs_8049F040`).
+pub const STATIC_STRINGS: [(u32, u32); 1] = [(0x8049_F040, 0x100)];
 
 /// `HSD_SisLib_8040C4B8`, a canvas camera's descriptor (made orthographic after loading).
 pub const CANVAS_CAMERA: StaticDesc = StaticDesc {
@@ -222,6 +233,166 @@ impl SisLib {
         self.font_archives = [None; FONTS];
         self.font_tables = [None; FONTS];
         self.saved_cursors.clear();
+        self.table_overrides.clear();
+    }
+
+    /// The byte of a static string buffer at `a`.
+    fn static_byte(&self, a: u32) -> u8 {
+        let (base, bytes) = self
+            .statics
+            .iter()
+            .find(|(base, b)| a.wrapping_sub(*base) < b.len() as u32)
+            .unwrap_or_else(|| panic!("reading the static string at {a:#x}, which no port models"));
+        bytes[(a - base) as usize]
+    }
+
+    /// A byte of a string anywhere.
+    pub fn sis_byte(&self, data: &Archives, p: SisPtr) -> u8 {
+        match p {
+            SisPtr::Arena(a) => self.byte(a),
+            SisPtr::Data(d) => data.u8(d),
+            SisPtr::Static(a) => self.static_byte(a),
+        }
+    }
+
+    /// Writes a byte of a string: in the arena or a static buffer (the original would write
+    /// loaded data too, which no game code does).
+    fn set_sis_byte(&mut self, p: SisPtr, v: u8) {
+        match p {
+            SisPtr::Arena(a) => self.set_byte(a, v),
+            SisPtr::Static(a) => {
+                let entry = match self.statics.iter().position(|(base, _)| {
+                    STATIC_STRINGS
+                        .iter()
+                        .any(|&(b, n)| b == *base && a.wrapping_sub(b) < n)
+                }) {
+                    Some(i) => i,
+                    None => {
+                        let &(b, n) = STATIC_STRINGS
+                            .iter()
+                            .find(|&&(b, n)| a.wrapping_sub(b) < n)
+                            .unwrap_or_else(|| {
+                                panic!("writing the static string at {a:#x}, which no port models")
+                            });
+                        // The buffers are zeroed static data until written.
+                        self.statics.push((b, vec![0; n as usize]));
+                        self.statics.len() - 1
+                    }
+                };
+                let (base, bytes) = &mut self.statics[entry];
+                bytes[(a - *base) as usize] = v;
+            }
+            SisPtr::Data(d) => panic!("writing a string in loaded data ({d:?}) isn't ported"),
+        }
+    }
+
+    /// Font `font`'s table's entry `index` (`HSD_SisLib_804D1124[font][index]`), if the font
+    /// is loaded.
+    pub fn table_entry(&self, data: &Archives, font: usize, index: i32) -> Option<SisPtr> {
+        if let Some(&(_, _, p)) = self
+            .table_overrides
+            .iter()
+            .find(|&&(f, i, _)| usize::from(f) == font && i == index as u32)
+        {
+            return Some(p);
+        }
+        let table = self.font_tables[font]?;
+        data.ptr(table.at(4 * index as u32)).map(SisPtr::Data)
+    }
+
+    /// Points font `font`'s table's entry `index` at `p`.
+    pub fn set_table_entry(&mut self, font: usize, index: i32, p: SisPtr) {
+        self.table_overrides
+            .retain(|&(f, i, _)| !(usize::from(f) == font && i == index as u32));
+        self.table_overrides.push((font as u8, index as u32, p));
+    }
+
+    /// Copies a SIS string, opcodes and their arguments as they come, with its terminator,
+    /// `HSD_SisLib_803A6478`; where the copy's terminator went.
+    #[doc(alias = "HSD_SisLib_803A6478")]
+    pub fn copy_string(&mut self, data: &Archives, dst: SisPtr, src: SisPtr) -> SisPtr {
+        let step = |p: SisPtr, n: u32| match p {
+            SisPtr::Arena(a) => SisPtr::Arena(a + n),
+            SisPtr::Data(d) => SisPtr::Data(d.at(n)),
+            SisPtr::Static(a) => SisPtr::Static(a + n),
+        };
+        let (mut d, mut s) = (dst, src);
+        let copy = |this: &mut Self, d: &mut SisPtr, s: &mut SisPtr| -> u8 {
+            let v = this.sis_byte(data, *s);
+            this.set_sis_byte(*d, v);
+            *d = step(*d, 1);
+            *s = step(*s, 1);
+            v
+        };
+        loop {
+            let c = self.sis_byte(data, s);
+            if c == 0 {
+                break;
+            }
+            if c >= 0x20 {
+                copy(self, &mut d, &mut s);
+                copy(self, &mut d, &mut s);
+                continue;
+            }
+            let op = copy(self, &mut d, &mut s);
+            let extra = match op {
+                6..=10 | 14 => 4,
+                12 => 3,
+                5 => 2,
+                _ => 0,
+            };
+            for _ in 0..extra {
+                copy(self, &mut d, &mut s);
+            }
+        }
+        self.set_sis_byte(d, 0);
+        d
+    }
+
+    /// Copies font `font`'s string `src` over its string `dst`, `HSD_SisLib_803A6530`.
+    #[doc(alias = "HSD_SisLib_803A6530")]
+    pub fn copy_table_string(&mut self, data: &Archives, font: usize, dst: i32, src: i32) {
+        let d = self
+            .table_entry(data, font, dst)
+            .expect("a string table entry");
+        let s = self
+            .table_entry(data, font, src)
+            .expect("a string table entry");
+        self.copy_string(data, d, s);
+    }
+
+    /// Appends font `font`'s string `src` to its string `dst`, `HSD_SisLib_803A660C`.
+    #[doc(alias = "HSD_SisLib_803A660C")]
+    pub fn append_table_string(&mut self, data: &Archives, font: usize, dst: i32, src: i32) {
+        let mut d = self
+            .table_entry(data, font, dst)
+            .expect("a string table entry");
+        let s = self
+            .table_entry(data, font, src)
+            .expect("a string table entry");
+        let step = |p: SisPtr, n: u32| match p {
+            SisPtr::Arena(a) => SisPtr::Arena(a + n),
+            SisPtr::Data(x) => SisPtr::Data(x.at(n)),
+            SisPtr::Static(a) => SisPtr::Static(a + n),
+        };
+        loop {
+            let c = self.sis_byte(data, d);
+            if c == 0 {
+                break;
+            }
+            let n = if c >= 0x20 {
+                2
+            } else {
+                match c {
+                    6..=10 | 14 => 5,
+                    12 => 4,
+                    5 => 3,
+                    _ => 1,
+                }
+            };
+            d = step(d, n);
+        }
+        self.copy_string(data, d, s);
     }
 
     fn block(&self, b: u32) -> Block {
@@ -404,9 +575,9 @@ impl SisLib {
     #[doc(alias = "HSD_SisLib_803A6368")]
     pub fn reset_text(&mut self, data: &Archives, t: TextId, index: i32) {
         let font = usize::from(self.text(t).font);
-        if let Some(table) = self.font_tables[font] {
-            let e = data.ptr(table.at(4 * index as u32));
-            self.text_mut(t).sis_buffer = e.map(SisPtr::Data);
+        if self.font_tables[font].is_some() {
+            let e = self.table_entry(data, font, index);
+            self.text_mut(t).sis_buffer = e;
         }
         let tx = self.text_mut(t);
         tx.x60 = Some(None);
@@ -451,7 +622,7 @@ impl SisLib {
             match p {
                 SisPtr::Arena(a) => self.byte(a + off),
                 SisPtr::Data(d) => data.u8(d.at(off)),
-                SisPtr::Static(a) => panic!("reading the static string at {a:#x} isn't ported"),
+                SisPtr::Static(a) => self.static_byte(a + off),
             }
         };
         let mut index = index;
@@ -858,6 +1029,63 @@ pub fn encode(out: &mut [u8], s: &[u8]) -> usize {
     }
     out[o] = 0;
     o
+}
+
+/// An argument [`printf`] formats.
+#[derive(Clone, Copy, Debug)]
+pub enum FmtArg<'a> {
+    Int(i32),
+    Str(&'a [u8]),
+}
+
+/// A C format the game hands `vsnprintf`, as MSL prints it: `%d` with a zero flag and a
+/// width, `%s` and `%%`; anything else isn't ported.
+pub fn printf(fmt: &[u8], args: &[FmtArg]) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut args = args.iter();
+    let mut i = 0;
+    while i < fmt.len() && fmt[i] != 0 {
+        let c = fmt[i];
+        i += 1;
+        if c != b'%' {
+            out.push(c);
+            continue;
+        }
+        let zero = fmt.get(i) == Some(&b'0');
+        if zero {
+            i += 1;
+        }
+        let mut width = 0usize;
+        while let Some(d) = fmt.get(i).filter(|d| d.is_ascii_digit()) {
+            width = width * 10 + usize::from(d - b'0');
+            i += 1;
+        }
+        let conv = fmt.get(i).copied();
+        i += 1;
+        let body: Vec<u8> = match (conv, args.next()) {
+            (Some(b'%'), _) => {
+                out.push(b'%');
+                continue;
+            }
+            (Some(b'd'), Some(FmtArg::Int(v))) => v.to_string().into_bytes(),
+            (Some(b's'), Some(FmtArg::Str(s))) => s.to_vec(),
+            (conv, arg) => panic!("the format {conv:?} with {arg:?} isn't ported"),
+        };
+        let pad = width.saturating_sub(body.len());
+        if zero && conv == Some(b'd') {
+            let (sign, digits) = match body.split_first() {
+                Some((b'-', rest)) => (Some(b'-'), rest),
+                _ => (None, &body[..]),
+            };
+            out.extend(sign);
+            out.extend(std::iter::repeat_n(b'0', pad));
+            out.extend_from_slice(digits);
+        } else {
+            out.extend(std::iter::repeat_n(b' ', pad));
+            out.extend_from_slice(&body);
+        }
+    }
+    out
 }
 
 /// A C format the game hands `vsnprintf` with integer arguments, as it prints them: `%d`

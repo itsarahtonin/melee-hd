@@ -66,6 +66,7 @@ pub fn alloc(objs: &mut Objects) -> ShadowId {
     let s = ShadowId(objs.shadows.alloc(Shadow::default()));
     let camera = cobj::alloc(objs);
     let texture = make_texture(objs);
+    objs.tobjs[texture].imagedesc = Some(tobj::ImageRef::Shadow(s));
     objs.shadows[s.0] = Shadow {
         objects: Vec::new(),
         camera: Some(camera),

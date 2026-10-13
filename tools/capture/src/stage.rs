@@ -242,6 +242,7 @@ impl Importer<'_> {
         self.game.gr.last_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRBATTLE_YAKUMONO);
         self.game.gr.battle_yakumono = self.data_or_unhandled(yaku);
+        crate::stadium::import_statics(self);
         self.game.gr.battle_demo = self.u8_at(sym("isDemoFight")) != 0;
         self.game.gr.game_mode = self.u8_at(sym("state_machine"));
         let points = sym("grLib_8049EF58");
@@ -335,7 +336,7 @@ impl Importer<'_> {
             .map(melee_sim::hsd::gobj::GObjId)
     }
 
-    fn data_or_unhandled(&mut self, a: u32) -> Option<DataRef> {
+    pub(crate) fn data_or_unhandled(&mut self, a: u32) -> Option<DataRef> {
         if a == 0 {
             return None;
         }
@@ -751,6 +752,7 @@ impl Comparer<'_> {
             game.gr.battle_yakumono,
             (yaku != 0).then(|| self.data.get(yaku)).flatten(),
         );
+        crate::stadium::compare_statics(self);
         self.check(
             "isDemoFight",
             "demo",

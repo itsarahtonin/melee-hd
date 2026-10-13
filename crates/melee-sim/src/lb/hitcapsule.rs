@@ -458,6 +458,30 @@ pub fn hits_bubble(
     })
 }
 
+/// Where a hitbox's path entered a bubble, `lbColl_80007DD8`: the direction from the bubble's
+/// center to the entry and its angle against the path ([`crate::lb::collision::sphere_entry`]
+/// with the hitbox's radius as the reach beyond the bubble's).
+#[doc(alias = "lbColl_80007DD8")]
+pub fn bubble_entry(
+    objs: &mut Objects,
+    data: &Archives,
+    hit: &HitCapsule,
+    bubble: &HitResult,
+    mtx: Option<&Mtx34>,
+    hit_owner_scale: f32,
+) -> (Vec3, f32) {
+    let m = bone_mtx(objs, data, bubble.bone, mtx);
+    let e = crate::lb::collision::sphere_entry(
+        bubble.pos,
+        &m,
+        hit.x58,
+        hit.x4C,
+        bubble.size,
+        hit_radius(hit, hit_owner_scale),
+    );
+    (e.normal, e.angle)
+}
+
 /// A hitbox's shape for [`crate::lb::collision::hitboxes_touch`].
 pub fn shape(hit: &HitCapsule) -> HitShape {
     HitShape {

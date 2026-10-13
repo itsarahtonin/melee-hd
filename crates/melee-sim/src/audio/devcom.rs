@@ -36,6 +36,8 @@ pub mod cb {
     pub const SFX_HEADER: CodeRef = CodeRef(0x8038_87DC);
     pub const SFX_SAMPLES: CodeRef = CodeRef(0x8038_83B4);
     pub const SFX_READDRESS: CodeRef = CodeRef(0x8038_8EB4);
+    /// `fn_801D4220`: Pokémon Stadium's transformation file has loaded.
+    pub const STADIUM_LOADED: CodeRef = CodeRef(0x801D_4220);
 }
 
 /// `HSD_DevCom`, a queued command.
@@ -136,6 +138,10 @@ pub struct DevCom {
     /// `lbFile`'s `cancel` (0x804D63C8), which a synchronous file load clears and its
     /// callback sets.
     pub file_loaded: bool,
+    /// `fn_801D4220` ran: Pokémon Stadium's transformation file loaded, and the game clears
+    /// its mark (`game::gr::stadium::take_load_end`) before anything reads it. Not memory of
+    /// the original's.
+    pub stadium_loaded: bool,
 }
 
 /// `HSD_DevCom_804C6330_bufs`' address, and `pstHakoHeader`'s: memory destinations reads
@@ -659,7 +665,7 @@ impl Audio {
         _id: i32,
         args: u32,
         buf: Option<&[u8]>,
-        _cancel: bool,
+        cancel: bool,
     ) {
         match cb {
             cb::RESET_STREAM_COUNTERS => self.stream_reset_counters(),
@@ -668,6 +674,13 @@ impl Audio {
             cb::FIRST_HAKO_HEADER => self.stream_first_hako_header(data),
             cb::STREAM_HEADER => self.stream_header(data, buf.expect("the stream's header")),
             cb::FILE_LOADED => self.devcom.file_loaded = true,
+            cb::STADIUM_LOADED => {
+                assert!(
+                    !cancel,
+                    "the original's assertion failed: grpstadium.c:2409"
+                );
+                self.devcom.stadium_loaded = true;
+            }
             cb::SFX_HEADER => self.sfx_header_loaded(data),
             cb::SFX_SAMPLES => self.sfx_samples_loaded(data),
             cb::SFX_READDRESS => self.sfx_readdressed(),

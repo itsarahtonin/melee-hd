@@ -106,6 +106,16 @@ pub enum Draw {
     SisText(Box<super::sis::TextDraw>),
     /// The render copied into a player's magnifier bubble (`lb_800122C8`).
     MagnifierCopy(u8),
+    /// The erase color for later erases (`HSD_SetEraseColor`).
+    EraseColor([u8; 4]),
+    /// The render from (`x`, `y`) copied into one of Pokémon Stadium's screens' images, the
+    /// frame cleared after it with `clear` (`lb_800122C8`).
+    ScreenCopy {
+        screen: u8,
+        x: u16,
+        y: u16,
+        clear: bool,
+    },
     /// A flat-colored quad in the current camera's view at depth 0 (`hsd_80391A04`'s debug
     /// drawing: the background flash's).
     Quad(Quad),
