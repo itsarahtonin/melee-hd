@@ -148,12 +148,12 @@ impl Running<'_> {
         }
     }
 
-    /// The fighter's per-kind drawing, `ftData_UnkMtxFunc0`: Kirby's and Jigglypuff's,
-    /// which no port covers yet.
+    /// The fighter's per-kind drawing, `ftData_UnkMtxFunc0`: Kirby's (not ported) and
+    /// Jigglypuff's hat.
     fn kind_draw(&mut self, f: FighterId) {
         match self.game.fighters[f.0].kind {
             4 => code::unported_call("ftKb_UnkMtxFunc0"),
-            15 => code::unported_call("ftPr_Init_UnkMtxFunc0"),
+            15 => self.purin_draw_hat(f),
             _ => {}
         }
     }

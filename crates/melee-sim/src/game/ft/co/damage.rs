@@ -301,9 +301,17 @@ impl Running<'_> {
             let c = self.common();
             let (t, window) = (reg(c.f32(0x210)), c.i32(0x214));
             let fp = self.game.fighter(gobj);
-            if abs(reg(fp.input.lstick[0].x)) >= t && i32::from(fp.active_timer.lstick.x) < window {
-                self.enter_fall(gobj);
-                return;
+            if abs(reg(fp.input.lstick[0].x)) >= t {
+                // UCF's tumble code takes the flick's age check over.
+                let fresh = if self.game.rules.ucf {
+                    self.ucf_tumble(gobj, t)
+                } else {
+                    i32::from(fp.active_timer.lstick.x) < window
+                };
+                if fresh {
+                    self.enter_fall(gobj);
+                    return;
+                }
             }
         }
         // `ftCo_800C5DDC` and `ftCo_800C5CD4`: the hammer's.

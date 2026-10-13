@@ -196,6 +196,25 @@ impl Running<'_> {
         }
     }
 
+    /// UCF's tumble (`ftCo_DamageFall_IASA+0xC4`, where the sideways flick out of tumble
+    /// checks its age against `ftCommonData` x214): whether the flick counts. One a frame old
+    /// still counts if the stick wasn't past `threshold` the frame before and the raw stick
+    /// travelled more than 75 along x since two frames ago; any other counts only fresh (the
+    /// code compares the age with 1 where the game reads x214, which is 1).
+    ///
+    /// The Gecko code at `0x800908F4`.
+    pub fn ucf_tumble(&self, gobj: GObjId, threshold: f64) -> bool {
+        let fp = self.game.fighter(gobj);
+        let age = i32::from(fp.active_timer.lstick.x);
+        if age != 1 {
+            return age < 1;
+        }
+        if fp::fabs(reg(fp.input.lstick[1].x)) >= threshold {
+            return false;
+        }
+        self.game.ucf.0[usize::from(fp.pad_port)].travel().0 > 5625
+    }
+
     /// UCF's SDI (`ftCo_Damage_OnEveryHitlag+0x5C`): with the stick held past the SDI window
     /// on its y axis, a flick still counts if the stick left the dead zone this frame and the
     /// raw stick travelled more than 62 since two frames ago, unless both axes were already
