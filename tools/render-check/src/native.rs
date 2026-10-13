@@ -3,12 +3,12 @@
 use std::collections::HashMap;
 
 use melee_data::disc::Disc;
+use melee_gx::{Draw, Memory, State};
 use melee_render::frame::Frames;
 use melee_render::gpu::{Frame, Gpu, Observer};
-use melee_replay::Device;
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
-use ssbm_gx::{Draw, Memory, State};
-use ssbm_slippi::replay::Replay;
+use melee_slippi::Device;
+use melee_slippi::Replay;
 
 use crate::snap::{Event, Recorder};
 
@@ -50,7 +50,7 @@ pub fn play(
     let disc = Disc::open(disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
     let bytes = std::fs::read(replay_path).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let replay = Replay::parse(&bytes).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
-    let settings = Settings::from_replay(&melee_replay::start(&replay))
+    let settings = Settings::from_replay(&melee_slippi::start(&replay))
         .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let mut cache: HashMap<String, (i32, Vec<u8>)> = HashMap::new();
     let mut load = |name: &str| {
@@ -73,8 +73,13 @@ pub fn play(
     frames
         .space
         .load_dol(&disc.dol().unwrap_or_else(|e| panic!("main.dol: {e}")));
+    // `CHECK_THREADED=1` draws on the renderer's own threads, as the player does.
     let renderer = renderer();
-    let mut gpu = Gpu::new(renderer);
+    let mut gpu = if std::env::var_os("CHECK_THREADED").is_some() {
+        Gpu::threaded(renderer)
+    } else {
+        Gpu::new(renderer)
+    };
     let mut n = 0u32;
     loop {
         let (mut f, render) = m.step_replay_tick(&mut device);

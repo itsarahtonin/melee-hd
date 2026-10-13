@@ -146,20 +146,24 @@ pub enum Wait {
     SfxQueueRoom,
     /// No sound bank load queued (`HSD_SynthSFXWaitForLoadCompletion`).
     SfxLoadsDone,
+    /// The boot's read of the sound bank (`AXDriver_8038DA70`'s spin).
+    BankRead,
 }
 
-/// Time a stretch of the audio code took at the hardware, and what it started: the disc reads
-/// (each by the time into the stretch its command went out) and ARAM transfers, which finish
-/// at once and interrupt.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+/// Time a stretch of the audio code took at the hardware, and what it started: a disc read (by
+/// the time into the stretch its command went out; a second one can't start before it ends)
+/// and ARAM transfers, which finish at once and interrupt.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct HwLog {
     pub spent: u64,
-    pub reads: Vec<u64>,
+    pub read: Option<u64>,
     pub aram: u32,
 }
 
 /// A disc read's command, and an ARAM transfer's request.
 const DISC_ISSUE: u64 = 24;
+/// A hardware register's read (ssbm-rs's read step).
+const REG_READ: u64 = 8;
 const ARQ_POST: u64 = 56;
 
 impl HwLog {
@@ -173,7 +177,13 @@ impl HwLog {
     /// A disc read's command goes out.
     pub fn disc_read(&mut self) {
         self.spent += DISC_ISSUE;
-        self.reads.push(self.spent);
+        assert!(self.read.is_none(), "two disc reads in flight");
+        self.read = Some(self.spent);
+    }
+
+    /// A hardware register is read.
+    pub fn reg_read(&mut self) {
+        self.spent += REG_READ;
     }
 
     /// An ARAM transfer is posted (and done).
@@ -308,7 +318,7 @@ impl Clock {
 
     /// Schedules a handler's disc reads and raises its ARAM transfers' interrupts.
     fn apply(&mut self, start: u64, log: &HwLog) {
-        for &r in &log.reads {
+        if let Some(r) = log.read {
             assert!(self.disc_timeout.is_none(), "two disc reads in flight");
             self.schedule(start + r + DISC_LATENCY, EventKind::DiscDone);
             self.disc_timeout =
@@ -321,7 +331,7 @@ impl Clock {
     /// enabled.
     fn game_code(&mut self, f: &mut dyn Frames) {
         let log = f.take_log();
-        if log.spent != 0 || !log.reads.is_empty() || log.aram != 0 {
+        if log.spent != 0 || log.read.is_some() || log.aram != 0 {
             let start = self.now;
             self.apply(start, &log);
             self.now = start + log.spent;
@@ -460,6 +470,19 @@ impl Clock {
             self.service(f);
         }
         self.now = self.now.max(tb);
+    }
+
+    /// The boot's first engine tick starts at `at`, where ssbm-rs's clock has the boot's first
+    /// scene start its loop and take the tick: the pad samples queued by then are flushed to
+    /// the newest (the loop's prologue), and the tick takes it.
+    pub fn first_tick(&mut self, at: u64, f: &mut dyn Frames) {
+        self.catch_up(at - TICK_READ, f);
+        self.pads = self.pads.min(1);
+        assert!(self.pads == 1, "the first tick before a pad sample");
+        self.pads = 0;
+        self.ticks_left = 0;
+        self.scene_start = 0;
+        self.read(TICK_READ, f);
     }
 
     /// The perf timer's read at the end of a tick.

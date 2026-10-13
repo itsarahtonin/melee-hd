@@ -4,8 +4,8 @@
 //! Copies to the XFB: the EFB through the copy filter (anti-aliasing and deflicker), gamma, and
 //! YUV 4:2:2, then back to RGB as the video interface shows it.
 
+use melee_gx::State;
 use rayon::prelude::*;
-use ssbm_gx::State;
 
 use crate::{EFB_WIDTH, Frame, bits};
 

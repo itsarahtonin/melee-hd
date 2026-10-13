@@ -64,8 +64,9 @@ pub fn differences(game: &Game, mem: &[u8]) -> Vec<String> {
 }
 
 /// Seeds `game`, a new match's state, with the boot state in `mem` at time base `tb`, adding
-/// the sound bank the boot loaded to `archives`.
-pub fn seed(game: &mut Game, archives: &mut Archives, mem: &[u8], tb: u64) {
+/// the sound bank the boot loaded to `archives`. Without `audio` the audio library is left to
+/// the match's start, which runs the boot's audio setup (`game::boot`).
+pub fn seed(game: &mut Game, archives: &mut Archives, mem: &[u8], tb: u64, audio: bool) {
     let cap = capture(mem);
     let map = DataMap { loaded: Vec::new() };
     let mut imp = Importer::new(&cap, &map);
@@ -99,7 +100,64 @@ pub fn seed(game: &mut Game, archives: &mut Archives, mem: &[u8], tb: u64) {
         u32::from_be_bytes(mem[i..i + 4].try_into().expect("a word"))
     };
     game.objs.rng.seed = word(word(melee_capture::import::sym("HSD_RandSeedPtr")));
+    if !audio {
+        return;
+    }
     let bank = melee_capture::audio::find_bank(mem, archives);
     game.audio = melee_capture::audio::import(mem, bank);
     game.audio.clock = Some(melee_capture::audio::import_clock(mem, tb));
+}
+
+/// What differs between the boot's audio setup as melee-sim runs it (`game::boot`) for the
+/// match `settings` describe and the boot state in `mem` at time base `tb`: the audio
+/// library's state as the capture comparison renders it, and the timeline.
+pub fn audio_differences(
+    mem: &[u8],
+    tb: u64,
+    settings: &melee_sim::game::vs_match::Settings,
+    load: &mut dyn FnMut(&str) -> melee_sim::game::vs_match::DiscFile,
+) -> Vec<String> {
+    let mut game = Game::default();
+    let mut data = Archives::default();
+    melee_sim::game::boot::boot(&mut game, &mut data, settings, load);
+    let mut out = Vec::new();
+    melee_capture::audio::compare(mem, &game.audio, &mut out);
+    let theirs = melee_capture::audio::import_clock(mem, tb);
+    let ours = game.audio.clock.as_ref().expect("the boot's timeline");
+    let events = |c: &melee_sim::audio::clock::Clock| {
+        let mut e: Vec<_> = c
+            .events
+            .iter()
+            .map(|e| (e.at, format!("{:?}", e.kind)))
+            .collect();
+        e.sort();
+        e
+    };
+    let mut check = |what: &str, a: String, b: String| {
+        if a != b {
+            out.push(format!("timeline {what}: ours {a}, the boot state's {b}"));
+        }
+    };
+    check("time base", ours.now.to_string(), theirs.now.to_string());
+    check(
+        "events",
+        format!("{:?}", events(ours)),
+        format!("{:?}", events(&theirs)),
+    );
+    check(
+        "pad samples",
+        ours.pads.to_string(),
+        theirs.pads.to_string(),
+    );
+    check(
+        "DSP ready",
+        ours.dsp_ready.to_string(),
+        theirs.dsp_ready.to_string(),
+    );
+    check(
+        "disc timeout",
+        ours.disc_timeout.is_some().to_string(),
+        theirs.disc_timeout.is_some().to_string(),
+    );
+    out
 }

@@ -36,8 +36,20 @@ pub mod cb {
     pub const SFX_HEADER: CodeRef = CodeRef(0x8038_87DC);
     pub const SFX_SAMPLES: CodeRef = CodeRef(0x8038_83B4);
     pub const SFX_READDRESS: CodeRef = CodeRef(0x8038_8EB4);
+    /// `lbDvd_80017E64`: a preloaded file is in, and the preload cache reads the next.
+    pub const PRELOADED: CodeRef = CodeRef(0x8001_7E64);
     /// `fn_801D4220`: Pokémon Stadium's transformation file has loaded.
     pub const STADIUM_LOADED: CodeRef = CodeRef(0x801D_4220);
+}
+
+/// A file the preload cache (`lbDvd`) reads into main memory: its disc entry, where it goes,
+/// its size rounded up to 32 bytes, and its entry in the cache.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Preload {
+    pub entrynum: i32,
+    pub dest: u32,
+    pub size: u32,
+    pub index: u32,
 }
 
 /// `HSD_DevCom`, a queued command.
@@ -138,6 +150,10 @@ pub struct DevCom {
     /// `lbFile`'s `cancel` (0x804D63C8), which a synchronous file load clears and its
     /// callback sets.
     pub file_loaded: bool,
+    /// The preload cache's reads still to come, in the order it picks them (the cache itself
+    /// isn't ported: only the boot's first scene preloads through the queue, files its scene
+    /// always preloads, `game::boot`).
+    pub preloads: Vec<Preload>,
     /// `fn_801D4220` ran: Pokémon Stadium's transformation file loaded, and the game clears
     /// its mark (`game::gr::stadium::take_load_end`) before anything reads it. Not memory of
     /// the original's.
@@ -319,6 +335,28 @@ impl Audio {
         id
     }
 
+    /// The preload cache's next read (`lbDvd_80017CC4`, `lbDvd_CachePreloadedFile`): its
+    /// file to its place in the preload heap through `lbFile_800164A4`, at priority 2, calling
+    /// back when it's in.
+    #[doc(alias = "lbDvd_CachePreloadedFile")]
+    pub fn preload_next(&mut self, data: &Archives) {
+        if self.devcom.preloads.is_empty() {
+            return;
+        }
+        let p = self.devcom.preloads.remove(0);
+        self.devcom_request(
+            data,
+            p.entrynum,
+            0,
+            p.dest,
+            p.size,
+            0x21,
+            2,
+            Some(cb::PRELOADED),
+            p.index,
+        );
+    }
+
     /// `HSD_DevComDVDWakeUp`: starts the first waiting disc command, if no read is in
     /// flight.
     #[doc(alias = "HSD_DevComDVDWakeUp")]
@@ -458,11 +496,11 @@ impl Audio {
             0x22 => {
                 // `HSD_DevComDVDCallback`: the relay buffer to the callback.
                 let n = c.size.min(BUF_SIZE) as usize;
-                let b = bytes(self);
-                let buf = b[at..(at + n).min(b.len())].to_vec();
+                let b = data.get(self.devcom.file(c.file)).data();
+                let buf = &b[at..(at + n).min(b.len())];
                 let cb = c.callback.expect("a relay buffer read without a callback");
                 if self.devcom.error == 0 {
-                    self.devcom_callback(data, cb, c.id, c.args, Some(&buf), c.cancel != 0);
+                    self.devcom_callback(data, cb, c.id, c.args, Some(buf), c.cancel != 0);
                 }
                 self.devcom.unlink(dc);
                 self.devcom.release(dc);
@@ -684,6 +722,7 @@ impl Audio {
             cb::SFX_HEADER => self.sfx_header_loaded(data),
             cb::SFX_SAMPLES => self.sfx_samples_loaded(data),
             cb::SFX_READDRESS => self.sfx_readdressed(),
+            cb::PRELOADED => self.preload_next(data),
             other => panic!("device command callback {:#010x} isn't ported", other.0),
         }
     }

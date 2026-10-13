@@ -10,9 +10,8 @@ publish.workspace = true
 [dependencies]
 melee-data.workspace = true
 melee-render = { path = "../../crates/melee-render" }
-melee-replay = { path = "../replay" }
+melee-slippi = { path = "../../crates/melee-slippi" }
 melee-sim.workspace = true
-ssbm-gx.workspace = true
+melee-gx = { path = "../../crates/melee-gx" }
 melee-gpu = { path = "../../crates/melee-gpu" }
-ssbm-slippi.workspace = true
 png = "0.18"

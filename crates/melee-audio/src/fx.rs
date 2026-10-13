@@ -1,8 +1,9 @@
 //! The aux effects HAL's driver registers (`AXDriverSetupAux`): the AXFX library's standard
 //! reverb (`dolphin/axfx/reverb_std.c`) and delay (`delay.c`), which process a frame's aux
 //! buses on the CPU and hand them back to the DSP. Melee sets up the reverb on aux A and the
-//! delay on aux B at boot (`lbAudioAx_8002838C`); their state, delay lines included, starts
-//! from the boot state's memory.
+//! delay on aux B at boot (`lbAudioAx_8002838C`): [`Effect::melee_aux`] makes them as that
+//! setup does (`AXFXReverbStdInit`, `AXFXDelayInit`), or their state comes from a boot state's
+//! memory.
 //!
 //! The reverb's float math follows the original's instructions through `gekko_fp`, in the
 //! simulation's float mode, as ssbm-rs runs them.
@@ -42,6 +43,24 @@ struct DelayLine {
 }
 
 impl DelayLine {
+    /// `DLcreate(max_length)` then `DLsetdelay(lag)`: an empty line of `max_length` samples
+    /// whose output trails its input by `lag`.
+    fn new(max_length: usize, lag: usize) -> DelayLine {
+        let length = 4 * max_length;
+        // `DLcreate` sets a delay of half the line, then puts both points back at 0.
+        let mut out_point = -4 * lag as isize;
+        while out_point < 0 {
+            out_point += length as isize;
+        }
+        DelayLine {
+            in_point: 0,
+            out_point: out_point as usize,
+            length,
+            inputs: vec![0; max_length],
+            last_output: 0.0,
+        }
+    }
+
     fn from_memory(m: &BootMemory, at: u32) -> DelayLine {
         let length = m.u32(at + 8) as usize;
         DelayLine {
@@ -87,7 +106,62 @@ pub struct ReverbStd {
     temp_disable_fx: bool,
 }
 
+/// `AXFX_REVERBSTD`'s parameters.
+#[derive(Clone, Copy, Debug)]
+pub struct ReverbStdParams {
+    pub coloration: f32,
+    pub time: f32,
+    pub mix: f32,
+    pub damping: f32,
+    pub pre_delay: f32,
+}
+
+impl ReverbStdParams {
+    /// `HSD_AudioSFXGetDefaultAuxParam`'s, with the 1.88 s time `lbAudioAx_8002838C` sets.
+    pub const MELEE: ReverbStdParams = ReverbStdParams {
+        coloration: 0.5,
+        time: 1.88,
+        mix: 1.0,
+        damping: 0.64,
+        pre_delay: 0.002,
+    };
+}
+
 impl ReverbStd {
+    /// `AXFXReverbStdInit` (`ReverbSTDCreate`): two comb filters and two all-pass filters per
+    /// bus, each line two samples longer than its delay, the combs' feedback for `time`
+    /// (`powf`, the game's own), and a pre-delay line per bus when there is one.
+    #[doc(alias = "AXFXReverbStdInit")]
+    #[doc(alias = "ReverbSTDCreate")]
+    pub fn new(p: &ReverbStdParams) -> ReverbStd {
+        const LENS: [usize; 4] = [0x6FD, 0x7CF, 0x1B1, 0x95];
+        let line = |len: usize| DelayLine::new(len + 2, len);
+        let comb = |len: usize| {
+            let x = (len as i32 * -3) as f32 / (32000.0f32 * p.time);
+            f64::from(melee_sim::math::pow(10.0, x))
+        };
+        let damping = p.damping.max(0.05);
+        let damping = 1.0f32 - (0.05f32 + 0.8f32 * damping);
+        let pre_delay_time = if p.pre_delay != 0.0 {
+            (32000.0f32 * p.pre_delay) as usize
+        } else {
+            0
+        };
+        ReverbStd {
+            ap: std::array::from_fn(|i| line(LENS[2 + i % 2])),
+            c: std::array::from_fn(|i| line(LENS[i % 2])),
+            all_pass_coeff: f64::from(p.coloration),
+            comb_coef: std::array::from_fn(|i| comb(LENS[i % 2])),
+            lp_lastout: [0.0; 3],
+            level: f64::from(p.mix),
+            damping: f64::from(damping),
+            pre_delay_time,
+            pre_delay_line: std::array::from_fn(|_| vec![0; pre_delay_time]),
+            pre_delay_ptr: [0; 3],
+            temp_disable_fx: false,
+        }
+    }
+
     /// The reverb at `at` (an `AXFX_REVERBSTD`) in the boot state's memory.
     pub fn from_memory(m: &BootMemory, at: u32) -> ReverbStd {
         let line = |i: u32| DelayLine::from_memory(m, at + 0x14 * i);
@@ -214,7 +288,40 @@ pub struct Delay {
     lines: [Vec<i32>; 3],
 }
 
+/// `AXFX_DELAY`'s parameters: each bus's delay in milliseconds and its feedback and output
+/// in percent.
+#[derive(Clone, Copy, Debug)]
+pub struct DelayParams {
+    pub delay: [u32; 3],
+    pub feedback: [u32; 3],
+    pub output: [u32; 3],
+}
+
+impl DelayParams {
+    /// `HSD_AudioSFXGetDefaultAuxParam`'s, which `lbAudioAx_8002838C` keeps.
+    pub const MELEE: DelayParams = DelayParams {
+        delay: [0x104, 0x136, 6],
+        feedback: [0x18, 0x18, 0],
+        output: [0x23, 0x23, 0],
+    };
+}
+
 impl Delay {
+    /// `AXFXDelayInit` (`AXFXDelaySettings`): each bus's line in whole frames, empty.
+    #[doc(alias = "AXFXDelayInit")]
+    #[doc(alias = "AXFXDelaySettings")]
+    pub fn new(p: &DelayParams) -> Delay {
+        let size: [u32; 3] =
+            std::array::from_fn(|k| (((p.delay[k] - 5) << 5) + 0x9F) / SAMPLES as u32);
+        Delay {
+            size,
+            pos: [0; 3],
+            feedback: std::array::from_fn(|k| (p.feedback[k] << 7) / 100),
+            output: std::array::from_fn(|k| (p.output[k] << 7) / 100),
+            lines: std::array::from_fn(|k| vec![0; size[k] as usize * SAMPLES]),
+        }
+    }
+
     /// The delay at `at` (an `AXFX_DELAY`) in the boot state's memory.
     pub fn from_memory(m: &BootMemory, at: u32) -> Delay {
         let w = |i: u32| m.u32(at + 4 * i);
@@ -261,6 +368,19 @@ pub enum Effect {
 }
 
 impl Effect {
+    /// The effect `lbAudioAx_8002838C` sets up on a bus, by the type `AXDriverSetupAux`
+    /// recorded for it (`AXDRIVER_AUX_REVERB_STD`, `AXDRIVER_AUX_DELAY`), new.
+    pub fn melee_aux(kind: u32) -> Option<Effect> {
+        match kind {
+            2 => Some(Effect::ReverbStd(Box::new(ReverbStd::new(
+                &ReverbStdParams::MELEE,
+            )))),
+            4 => Some(Effect::Delay(Box::new(Delay::new(&DelayParams::MELEE)))),
+            0 => None,
+            other => Some(Effect::Unknown(other)),
+        }
+    }
+
     /// The effect `callback` (with `context`) is, from the boot state's memory.
     pub fn from_memory(m: &BootMemory, callback: u32, context: u32) -> Effect {
         if callback == (m.sym)("AXFXReverbStdCallback") {
@@ -278,5 +398,48 @@ impl Effect {
             Effect::Delay(d) => d.process(bufs),
             Effect::Unknown(_) => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The reverb `lbAudioAx_8002838C` makes, against ssbm-rs's boot state (its memory at the
+    /// end of the boot's first tick, `AXDriver_804C5E00`).
+    #[test]
+    fn melee_reverb_as_the_boot_makes_it() {
+        let r = ReverbStd::new(&ReverbStdParams::MELEE);
+        let bits = |v: f64| fp::stfs(v);
+        assert_eq!(
+            r.comb_coef.map(bits),
+            [
+                0x3F50_7664,
+                0x3F4B_7EF7,
+                0x3F50_7664,
+                0x3F4B_7EF7,
+                0x3F50_7664,
+                0x3F4B_7EF7
+            ]
+        );
+        assert_eq!(bits(r.damping), 0x3EE0_4188);
+        assert_eq!(r.pre_delay_time, 64);
+        let lines: Vec<(usize, usize)> =
+            r.ap.iter()
+                .chain(&r.c)
+                .map(|l| (l.out_point, l.length))
+                .collect();
+        assert_eq!(lines[0], (8, 1740));
+        assert_eq!(lines[1], (8, 604));
+        assert_eq!(lines[6], (8, 7164));
+        assert_eq!(lines[7], (8, 8004));
+    }
+
+    #[test]
+    fn melee_delay_as_the_boot_makes_it() {
+        let d = Delay::new(&DelayParams::MELEE);
+        assert_eq!(d.size, [51, 61, 1]);
+        assert_eq!(d.feedback, [30, 30, 0]);
+        assert_eq!(d.output, [44, 44, 0]);
     }
 }

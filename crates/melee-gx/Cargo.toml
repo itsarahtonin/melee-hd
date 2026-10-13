@@ -1,0 +1,10 @@
+[package]
+name = "melee-gx"
+description = "The GameCube GPU's command stream and register state, for the player's GX SDK port and renderer (melee-hd's own, ported from ssbm-rs's ssbm-gx at melee-hd-base)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]

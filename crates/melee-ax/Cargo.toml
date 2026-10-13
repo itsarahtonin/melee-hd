@@ -1,0 +1,10 @@
+[package]
+name = "melee-ax"
+description = "The DSP's AX microcode, mixing the game's sound as Dolphin's DSP HLE does (melee-hd's own, ported from ssbm-rs's ssbm-ax at melee-hd-base)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]

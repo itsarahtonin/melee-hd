@@ -14,8 +14,8 @@
 //! it to be zero from encode_texels, and counts (and prints) how many of them differ from what
 //! the encoder writes, rather than hiding the difference.
 
-use ssbm_gx::State;
-use ssbm_gx::texture::decode;
+use melee_gx::State;
+use melee_gx::texture::decode;
 
 use crate::copy::{self, Copied};
 use crate::encode;

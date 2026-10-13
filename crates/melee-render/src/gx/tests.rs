@@ -1,16 +1,16 @@
-//! The SDK's streams through ssbm-gx's parser, and register values worked out by hand from
+//! The SDK's streams through melee-gx's parser, and register values worked out by hand from
 //! the C.
 
 use super::enums::*;
 use super::*;
-use ssbm_gx::{Event, Produced, State};
+use melee_gx::{Event, Produced, State};
 use std::collections::HashMap;
 
 /// Memory for the parser: display lists at their physical addresses, zeros elsewhere.
 #[derive(Default)]
 struct Mem(HashMap<u32, Vec<u8>>);
 
-impl ssbm_gx::Memory for Mem {
+impl melee_gx::Memory for Mem {
     fn read(&self, phys: u32, out: &mut [u8]) {
         out.fill(0);
         if let Some(bytes) = self.0.get(&phys) {

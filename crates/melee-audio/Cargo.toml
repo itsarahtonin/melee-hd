@@ -11,4 +11,4 @@ publish.workspace = true
 cpal = "0.18"
 melee-data.workspace = true
 melee-sim.workspace = true
-ssbm-ax.workspace = true
+melee-ax = { path = "../melee-ax" }

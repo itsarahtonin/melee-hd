@@ -158,6 +158,41 @@ impl Space {
         }
     }
 
+    /// The `len` bytes at a physical address in a loaded archive, where nothing lies over
+    /// them (no copy from the EFB, no rewritten display list): what [`Space::read`] would
+    /// copy out, without copying.
+    pub fn view<'a>(&self, data: &'a Archives, phys: u32, len: usize) -> Option<&'a [u8]> {
+        let phys = phys & 0x03FF_FFFF;
+        if !(ARCHIVE_BASE..DYNAMIC_BASE).contains(&phys) {
+            return None;
+        }
+        let (start, end, archive) = {
+            let ranges = self.ranges.borrow();
+            let i = ranges.archives.partition_point(|a| a.0 <= phys);
+            *ranges.archives.get(i.checked_sub(1)?)?
+        };
+        let hi = phys as u64 + len as u64;
+        if hi > u64::from(end) {
+            return None;
+        }
+        let bytes = data.get(archive).data();
+        let at = (phys - start) as usize;
+        let out = bytes.get(at..at + len)?;
+        let over =
+            |a: u32, n: usize| u64::from(a) < hi && u64::from(a) + n as u64 > u64::from(phys);
+        if self.overlay.borrow().iter().any(|(a, b)| over(*a, b.len())) {
+            return None;
+        }
+        if self
+            .patches
+            .iter()
+            .any(|p| p.list.archive == archive && over(start + p.list.offset, p.len as usize))
+        {
+            return None;
+        }
+        Some(out)
+    }
+
     /// Reads what the GPU reads at a physical address: an archive's bytes (with the game's
     /// rewrites applied) or an image the presentation made; zeros elsewhere.
     pub fn read(&self, data: &Archives, phys: u32, out: &mut [u8]) {

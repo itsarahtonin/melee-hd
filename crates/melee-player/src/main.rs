@@ -2,7 +2,8 @@
 //!
 //! ```text
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
-//!          [--replay FILE.slp] [--boot-trace TRACE] [--widescreen | --aspect W:H] [--scale N] [--no-adapter] [--size WxH] [--ticks N]
+//!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread]
+//!          [--no-adapter] [--size WxH] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [...]     plays headless, timing each frame
 //! ```
 //!
@@ -13,15 +14,10 @@
 //! C-stick, X/Z/C/S: A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). Escape
 //! quits.
 //!
-//! With `--boot-trace TRACE` (an ssbm-rs state trace with memory over the boot tick, see
-//! `docs/player.md`) the match starts from the boot state and plays its sound; without it the
-//! match runs silent.
-//!
 //! The loop keeps latency short: each tick reads the controllers just before it runs, and the
 //! frame it renders is drawn and presented at once, on a swap chain one frame deep (mailbox,
 //! or immediate where the display has no mailbox mode).
 
-mod boot;
 mod pipelines;
 mod present;
 mod sound;
@@ -34,7 +30,7 @@ use melee_input::{Inputs, Key};
 use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
 use melee_sim::game::vs_match::{DiscFile, Match, Player, Settings};
-use ssbm_slippi::replay::Replay;
+use melee_slippi::Replay;
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
@@ -64,8 +60,10 @@ struct Args {
     shot: Option<String>,
     /// Shows frames this wide (width over height), seeing more at the sides; 4:3 otherwise.
     widescreen: Option<f32>,
-    /// The state trace holding the boot state the match starts from, with sound.
-    boot_trace: Option<String>,
+    /// Keeps the renderer on the game's thread instead of threads of its own.
+    one_thread: bool,
+    /// Samples a pixel: 4 for MSAA, 1 as the console draws.
+    msaa: u32,
 }
 
 /// A character's `CharacterKind` by name.
@@ -105,7 +103,8 @@ fn parse_args() -> Result<Args, String> {
         scale: 0,
         shot: None,
         widescreen: None,
-        boot_trace: None,
+        one_thread: false,
+        msaa: 1,
     };
     let mut it = std::env::args().skip(1);
     let size = |s: &str| -> Result<(u32, u32), String> {
@@ -135,8 +134,15 @@ fn parse_args() -> Result<Args, String> {
             "--stocks" => a.stocks = value()?.parse().map_err(|_| "--stocks N")?,
             "--minutes" => a.minutes = value()?.parse().map_err(|_| "--minutes N")?,
             "--replay" => a.replay = Some(value()?),
-            "--boot-trace" => a.boot_trace = Some(value()?),
             "--no-adapter" => a.adapter = false,
+            "--one-thread" => a.one_thread = true,
+            "--msaa" => {
+                a.msaa = match value()?.as_str() {
+                    "1" | "off" => 1,
+                    "4" => 4,
+                    _ => return Err("--msaa 4 (or 1, off)".into()),
+                }
+            }
             "--bench" => a.bench = Some(value()?.parse().map_err(|_| "--bench TICKS")?),
             "--size" | "--windowed" => a.size = size(&value()?)?,
             "--ticks" => a.ticks = Some(value()?.parse().map_err(|_| "--ticks N")?),
@@ -181,11 +187,11 @@ impl Session {
                 .read_file(name)
                 .unwrap_or_else(|e| panic!("{name}: {e}")),
         };
-        let (mut settings, replay) = match &a.replay {
+        let (settings, replay) = match &a.replay {
             Some(path) => {
                 let bytes = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
                 let replay = Replay::parse(&bytes).map_err(|e| format!("{path}: {e}"))?;
-                let s = Settings::from_replay(&melee_replay::start(&replay))
+                let s = Settings::from_replay(&melee_slippi::start(&replay))
                     .map_err(|e| format!("{path}: {e}"))?;
                 (s, Some(replay))
             }
@@ -213,9 +219,8 @@ impl Session {
             }
         };
         let (m, sound) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let boot = a.boot_trace.as_deref();
             let play = a.bench.is_none();
-            sound::start(&mut settings, replay.is_some(), boot, play, &mut load)
+            sound::start(&settings, play, &mut load)
         }))
         .map_err(|p| format!("the match couldn't start: {}", panic_text(&p)))??;
         Ok(Session {
@@ -233,7 +238,7 @@ impl Session {
         pads: [melee_sim::input::pad::PadStatus; 4],
     ) -> melee_sim::game::vs_match::Frame {
         let f = match &self.replay {
-            Some(r) => self.m.step_replay(&mut melee_replay::Device(r)),
+            Some(r) => self.m.step_replay(&mut melee_slippi::Device(r)),
             None => self.m.step(pads),
         };
         if let Some(s) = &mut self.sound {
@@ -326,6 +331,8 @@ struct App {
     ticks: u64,
     max_ticks: Option<u64>,
     scale: u32,
+    one_thread: bool,
+    msaa: u32,
 }
 
 impl App {
@@ -370,9 +377,12 @@ impl App {
     fn draw_frame(&mut self, draws: &[melee_sim::hsd::display::Draw]) {
         let m = &self.session.m;
         let fifo = self.frames.frame(&m.game, &m.data, draws);
-        let gpu = self
-            .renderer
-            .get_or_insert_with(|| Gpu::new(pipelines::renderer(&self.gpu, self.scale)));
+        let gpu = self.renderer.get_or_insert_with(|| {
+            gpu_for(
+                pipelines::renderer(&self.gpu, self.scale, self.msaa),
+                self.one_thread,
+            )
+        });
         let images = gpu.run(&self.frames.space, &m.data, &fifo, None);
         if let (Some(shown), Some(frame)) = (&mut self.shown, images.into_iter().last()) {
             shown.present(&self.gpu, &frame);
@@ -437,6 +447,16 @@ impl ApplicationHandler for App {
     }
 }
 
+/// The GPU's side of the frames: the renderer on threads of its own (each frame done before
+/// it's presented), or on this one with `--one-thread`.
+fn gpu_for(renderer: melee_gpu::Renderer, one_thread: bool) -> Gpu {
+    if one_thread {
+        Gpu::new(renderer)
+    } else {
+        Gpu::threaded(renderer)
+    }
+}
+
 /// The internal resolution's scale: as asked, or the smallest whose 480 lines cover the
 /// window's height.
 fn scale_for(asked: u32, size: (u32, u32)) -> u32 {
@@ -458,9 +478,9 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     };
     let gpu = present::Gpu::new();
     let mut target = present::Offscreen::new(&gpu, args.size.0, args.size.1);
-    let mut r = pipelines::renderer(&gpu, scale_for(args.scale, args.size));
+    let mut r = pipelines::renderer(&gpu, scale_for(args.scale, args.size), args.msaa);
     r.xfb_readback = args.shot.is_some();
-    let mut renderer = Gpu::new(r);
+    let mut renderer = gpu_for(r, args.one_thread);
     let mut last = None;
     let mut frames = Frames::new();
     frames.space.load_dol(&session.dol);
@@ -470,10 +490,16 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     let (mut sim, mut draw, mut n) = (Duration::ZERO, Duration::ZERO, 0u32);
     let mut worst = Duration::ZERO;
     let mut parts = [Duration::ZERO; 3];
+    // Each drawn frame's ticks and drawing (all the ticks of its round), and with its
+    // presenting.
+    let mut work: Vec<Duration> = Vec::with_capacity(ticks as usize);
+    let mut presented: Vec<Duration> = Vec::with_capacity(ticks as usize);
+    let mut round = Duration::ZERO;
     for _ in 0..ticks {
         let t0 = Instant::now();
         let f = session.tick(pads);
         let t1 = Instant::now();
+        round += t1 - t0;
         if !f.draws.is_empty() {
             let m = &session.m;
             let fifo = frames.frame(&m.game, &m.data, &f.draws);
@@ -490,6 +516,9 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
             parts[2] += t2 - tb;
             draw += t2 - t1;
             worst = worst.max(t2 - t0);
+            work.push(round + (tb - t1));
+            presented.push(round + (t2 - t1));
+            round = Duration::ZERO;
             n += 1;
         }
         sim += t1 - t0;
@@ -511,13 +540,27 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
         f.save_png(std::path::Path::new(path))
             .unwrap_or_else(|e| eprintln!("{path}: {e}"));
     }
-    pipelines::save(&renderer.renderer.borrow());
+    pipelines::save(&renderer.into_renderer());
     let ms = |d: Duration| d.as_secs_f64() * 1000.0 / f64::from(n.max(1));
     println!(
         "a frame: GX stream {:.3} ms, renderer {:.3} ms, presenting (with the GPU's wait) {:.3} ms",
         ms(parts[0]),
         ms(parts[1]),
         ms(parts[2])
+    );
+    let pct = |v: &mut Vec<Duration>, p: f64| {
+        v.sort();
+        let i = ((v.len() as f64 * p).ceil() as usize).clamp(1, v.len().max(1)) - 1;
+        v.get(i).map_or(0.0, |d| d.as_secs_f64() * 1000.0)
+    };
+    println!(
+        "a frame's ticks and drawing: p50 {:.3} ms, p99 {:.3} ms, max {:.3} ms; with presenting: p50 {:.3} ms, p99 {:.3} ms, max {:.3} ms",
+        pct(&mut work, 0.5),
+        pct(&mut work, 0.99),
+        pct(&mut work, 1.0),
+        pct(&mut presented, 0.5),
+        pct(&mut presented, 0.99),
+        pct(&mut presented, 1.0)
     );
     for (what, count) in &frames.hsd.notes {
         println!("not drawn exactly: {what} ({count})");
@@ -533,7 +576,7 @@ fn run() -> ExitCode {
                 eprintln!("{e}");
             }
             eprintln!(
-                "usage: melee-hd [--p1 fox] [--p2 marth] [--stage fd|bf|ps] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--boot-trace TRACE] [--no-adapter] [--size WxH] [--bench TICKS]"
+                "usage: melee-hd [--p1 fox] [--p2 marth] [--stage fd|bf|ps] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--size WxH] [--bench TICKS]"
             );
             return ExitCode::from(2);
         }
@@ -573,14 +616,19 @@ fn run() -> ExitCode {
         ticks: 0,
         max_ticks: args.ticks,
         scale: scale_for(args.scale, args.size),
+        one_thread: args.one_thread,
+        msaa: args.msaa,
     };
     present::set_size(args.size);
     // The pipelines the last runs needed, made before the first tick.
-    app.renderer = Some(Gpu::new(pipelines::renderer(&app.gpu, app.scale)));
+    app.renderer = Some(gpu_for(
+        pipelines::renderer(&app.gpu, app.scale, app.msaa),
+        app.one_thread,
+    ));
     let r = event_loop.run_app(&mut app);
     app.inputs.close();
-    if let Some(g) = &app.renderer {
-        pipelines::save(&g.renderer.borrow());
+    if let Some(g) = app.renderer.take() {
+        pipelines::save(&g.into_renderer());
     }
     if let Err(e) = r {
         eprintln!("the window failed: {e}");
