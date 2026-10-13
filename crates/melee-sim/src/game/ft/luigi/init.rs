@@ -43,8 +43,8 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_ITEM_INVISIBLE => g.fox_on_item_invisible(gobj),
         addr::ON_ITEM_VISIBLE => g.fox_on_item_visible(gobj),
-        addr::ON_KNOCKBACK_ENTER => g.seak_on_knockback_enter(gobj),
-        addr::ON_KNOCKBACK_EXIT => g.seak_on_knockback_exit(gobj),
+        addr::ON_KNOCKBACK_ENTER => g.lg_on_knockback_enter(gobj),
+        addr::ON_KNOCKBACK_EXIT => g.lg_on_knockback_exit(gobj),
         _ => return false,
     }
     true

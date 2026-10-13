@@ -70,7 +70,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 }
 
 /// Throws a fireball for `parent` from `pos`, `it_8029B6F8`.
-// Ports `it_8029B6F8`; aliased once a check reaches it.
+#[doc(alias = "it_8029B6F8")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, kind: i32, facing_dir: f32) {
     let mut spawn = SpawnItem {
         kind,
@@ -100,7 +100,7 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, kind: i32, facing_dir: 
 
 /// The fireball's start, `it_8029B7C0`: its speed at its angle, ahead, its lifetime, its
 /// first state.
-// Ports `it_8029B7C0`; aliased once a check reaches it.
+#[doc(alias = "it_8029B7C0")]
 fn setup(r: &mut Running, gobj: GObjId) {
     let speed = reg(attr_f32(r, gobj, attr::SPEED));
     let angle = attr_f32(r, gobj, attr::ANGLE);
@@ -116,7 +116,7 @@ fn setup(r: &mut Running, gobj: GObjId) {
 }
 
 /// `itMariofireball_UnkMotion0_Phys`: gravity (`Item_ApplyFallingPhysics`).
-// Ports `itMariofireball_UnkMotion0_Phys`; aliased once a check reaches it.
+#[doc(alias = "itMariofireball_UnkMotion0_Phys")]
 fn physics(r: &mut Running, gobj: GObjId) {
     let a = attr_of(item(r.game, gobj));
     let accel = a.f32(r.data, data::attr::FALL_SPEED);
@@ -128,7 +128,7 @@ fn physics(r: &mut Running, gobj: GObjId) {
 
 /// `itMariofireball_UnkMotion0_Coll`: it stays in the air; when it meets the stage it
 /// bounces, and ends if the bounce leaves it slower than its attributes allow, else flashes.
-// Ports `itMariofireball_UnkMotion0_Coll`; aliased once a check reaches it.
+#[doc(alias = "itMariofireball_UnkMotion0_Coll")]
 fn collide(r: &mut Running, gobj: GObjId) -> bool {
     ground::air_stay(r, gobj);
     if !maplib::reflect_velocity(r.game, r.data, gobj) {

@@ -18,7 +18,7 @@ const CYCLONE: Tornado = Tornado {
 
 impl Running<'_> {
     /// `ftLg_SpecialLw_UpdateRot` (the spin's damage hook): the model upright again.
-    // Ports `ftLg_SpecialLw_UpdateRot`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialLw_UpdateRot")]
     pub fn lg_special_lw_update_rot(&mut self, gobj: GObjId) {
         self.plumber_lw_update_rot(gobj);
     }
@@ -79,7 +79,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_LW_ENTER => g.lg_special_air_lw_enter(gobj),
         addr::SPECIAL_LW_ANIM => g.lg_special_lw_anim(gobj),
         addr::SPECIAL_AIR_LW_ANIM => g.lg_special_air_lw_anim(gobj),
-        addr::SPECIAL_LW_IASA | addr::SPECIAL_AIR_LW_IASA => {}
+        addr::SPECIAL_LW_IASA | addr::SPECIAL_AIR_LW_IASA => g.lg_nothing(gobj),
         addr::SPECIAL_LW_PHYS => g.lg_special_lw_phys(gobj),
         addr::SPECIAL_AIR_LW_PHYS => g.lg_special_air_lw_phys(gobj),
         addr::SPECIAL_LW_COLL => g.lg_special_lw_coll(gobj),

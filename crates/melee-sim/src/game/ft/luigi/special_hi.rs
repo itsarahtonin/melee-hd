@@ -15,7 +15,7 @@ const SUPER_JUMP: SuperJump = SuperJump {
 
 impl Running<'_> {
     /// `ftLg_SpecialHi_Enter`.
-    // Ports `ftLg_SpecialHi_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialHi_Enter")]
     pub fn lg_special_hi_enter(&mut self, gobj: GObjId) {
         self.plumber_hi_enter(gobj, &SUPER_JUMP);
     }
@@ -27,7 +27,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialHi_Anim`.
-    // Ports `ftLg_SpecialHi_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialHi_Anim")]
     pub fn lg_special_hi_anim(&mut self, gobj: GObjId) {
         self.plumber_hi_anim(gobj, &SUPER_JUMP);
     }
@@ -39,7 +39,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialHi_IASA`.
-    // Ports `ftLg_SpecialHi_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialHi_IASA")]
     pub fn lg_special_hi_iasa(&mut self, gobj: GObjId) {
         self.plumber_hi_iasa(gobj, &SUPER_JUMP);
     }
@@ -51,7 +51,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialHi_Phys`.
-    // Ports `ftLg_SpecialHi_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialHi_Phys")]
     pub fn lg_special_hi_phys(&mut self, gobj: GObjId) {
         self.plumber_hi_phys(gobj);
     }
@@ -63,13 +63,13 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialHi_CheckLanding`.
-    // Ports `ftLg_SpecialHi_CheckLanding`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialHi_CheckLanding")]
     pub fn lg_special_hi_check_landing(&mut self, gobj: GObjId) {
         self.plumber_hi_check_landing(gobj, &SUPER_JUMP);
     }
 
     /// `ftLg_SpecialHi_Coll`.
-    // Ports `ftLg_SpecialHi_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialHi_Coll")]
     pub fn lg_special_hi_coll(&mut self, gobj: GObjId) {
         self.plumber_hi_coll(gobj, &SUPER_JUMP);
     }

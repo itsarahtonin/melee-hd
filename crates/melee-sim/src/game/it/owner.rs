@@ -159,8 +159,8 @@ pub fn held_special_item(game: &Game, gobj: GObjId) -> Option<GObjId> {
 
 /// The fighter lets go of its held special item, `ftLib_ClearHeldSpecialItem` (with
 /// `ftCommon_8007E82C`).
-// Ports `ftLib_ClearHeldSpecialItem`; aliased once a check reaches it.
-// Ports `ftCommon_8007E82C`; aliased once a check reaches it.
+#[doc(alias = "ftLib_ClearHeldSpecialItem")]
+#[doc(alias = "ftCommon_8007E82C")]
 pub fn clear_held_special_item(game: &mut Game, gobj: GObjId) {
     let f = fighter_of(game, gobj);
     let fp = &mut game.fighters[f.0];

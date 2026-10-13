@@ -34,7 +34,7 @@ impl Running<'_> {
 
     /// `ftMr_SpecialS_CreateCape` (the swing's accessory callback): once per swing, the cape
     /// in the right thumb (`FtPart_RThumbNb`) as the held item, with its hooks.
-    // Ports `ftMr_SpecialS_CreateCape`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialS_CreateCape")]
     pub fn mr_special_s_create_cape(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[2] != 0 {
@@ -55,7 +55,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialS_Reset`: hitlag ends for the cape, which is gone, and its hit hooks.
-    // Ports `ftMr_SpecialS_Reset`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialS_Reset")]
     pub fn mr_special_s_reset(&mut self, gobj: GObjId) {
         self.mr_special_s_exit_hitlag(gobj);
         let fp = self.game.fighter_mut(gobj);
@@ -65,7 +65,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialS_RemoveCape`: the cape destroyed, if out.
-    // Ports `ftMr_SpecialS_RemoveCape`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialS_RemoveCape")]
     pub fn mr_special_s_remove_cape(&mut self, gobj: GObjId) {
         if let Some(cape) = self.game.fighter(gobj).u.gobj_at(MARIO_CAPE) {
             mariocape::remove(self, cape);
@@ -74,7 +74,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialS_EnterHitlag`: the cape pauses.
-    // Ports `ftMr_SpecialS_EnterHitlag`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialS_EnterHitlag")]
     pub fn mr_special_s_enter_hitlag(&mut self, gobj: GObjId) {
         if let Some(cape) = self.game.fighter(gobj).u.gobj_at(MARIO_CAPE) {
             mariocape::hitlag_start(self, cape);
@@ -82,7 +82,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialS_ExitHitlag`: the cape goes on.
-    // Ports `ftMr_SpecialS_ExitHitlag`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialS_ExitHitlag")]
     pub fn mr_special_s_exit_hitlag(&mut self, gobj: GObjId) {
         if let Some(cape) = self.game.fighter(gobj).u.gobj_at(MARIO_CAPE) {
             mariocape::hitlag_end(self, cape);
@@ -90,7 +90,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialS_CheckItemCapeRemove`: whether the fighter has left the swing.
-    // Ports `ftMr_SpecialS_CheckItemCapeRemove`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialS_CheckItemCapeRemove")]
     pub fn mr_special_s_check_item_cape_remove(&self, gobj: GObjId) -> bool {
         let m = self.game.fighter(gobj).motion_id;
         !(ms::SPECIAL_S..=ms::SPECIAL_AIR_S).contains(&m)
@@ -109,14 +109,14 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialS_Enter`: no vertical speed.
-    // Ports `ftMr_SpecialS_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialS_Enter")]
     pub fn mr_special_s_enter(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).self_vel.y = 0.0;
         self.mr_special_s_start(gobj, ms::SPECIAL_S);
     }
 
     /// `ftMr_SpecialAirS_Enter`: the air speed cut by `specials.vel_x_decay`.
-    // Ports `ftMr_SpecialAirS_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirS_Enter")]
     pub fn mr_special_air_s_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let decay = reg(self.char_attr_f32(f, attr::SPECIALS_VEL_X_DECAY));
@@ -126,7 +126,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialS_Anim`: waiting when the swing ends.
-    // Ports `ftMr_SpecialS_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialS_Anim")]
     pub fn mr_special_s_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_wait(gobj);
@@ -134,7 +134,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialAirS_Anim`: a fall when the swing ends.
-    // Ports `ftMr_SpecialAirS_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirS_Anim")]
     pub fn mr_special_air_s_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_fall(gobj);
@@ -187,7 +187,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialS_Phys`: when the script says, the wind; friction; the reflection.
-    // Ports `ftMr_SpecialS_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialS_Phys")]
     pub fn mr_special_s_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.cmd_vars[0] == 1 {
@@ -202,7 +202,7 @@ impl Running<'_> {
     /// time airborne) and a stronger wind; then falling at `specials.grav`, or the
     /// character's gravity before the script's first word; air friction `specials.vel.x`; the
     /// reflection.
-    // Ports `ftMr_SpecialAirS_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirS_Phys")]
     pub fn mr_special_air_s_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let lift = self.char_attr_f32(f, attr::SPECIALS_VEL_Y);
@@ -231,7 +231,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialS_Coll`: off a ledge, the aerial swing.
-    // Ports `ftMr_SpecialS_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialS_Coll")]
     pub fn mr_special_s_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_slide(gobj) {
             self.mr_special_s_ground_to_air(gobj);
@@ -239,7 +239,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialAirS_Coll`: landing, the grounded swing.
-    // Ports `ftMr_SpecialAirS_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirS_Coll")]
     pub fn mr_special_air_s_coll(&mut self, gobj: GObjId) {
         if self.air_coll_land(gobj) {
             self.mr_special_air_s_air_to_ground(gobj);
@@ -257,7 +257,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialS_GroundToAir`: the aerial swing from the same frame (its wind spent).
-    // Ports `ftMr_SpecialS_GroundToAir`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialS_GroundToAir")]
     pub fn mr_special_s_ground_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_S, COLL_FLAGS);
         let fp = self.game.fighter_mut(gobj);
@@ -269,7 +269,7 @@ impl Running<'_> {
 
     /// `ftMr_SpecialAirS_AirToGround`: the grounded swing from the same frame, the lift ready
     /// again.
-    // Ports `ftMr_SpecialAirS_AirToGround`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirS_AirToGround")]
     pub fn mr_special_air_s_air_to_ground(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).set_u_i32(u::IS_CAPE_BOOST, 0);
         self.fox_air_to_ground(gobj, ms::SPECIAL_S, COLL_FLAGS);
@@ -277,8 +277,8 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialS_IASA` and `ftMr_SpecialAirS_IASA`: nothing.
-    // Ports `ftMr_SpecialS_IASA`; aliased once a check reaches it.
-    // Ports `ftMr_SpecialAirS_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialS_IASA")]
+    #[doc(alias = "ftMr_SpecialAirS_IASA")]
     pub fn mr_special_s_iasa(&mut self, _gobj: GObjId) {}
 }
 
@@ -290,6 +290,8 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_S_ENTER_HITLAG => g.mr_special_s_enter_hitlag(gobj),
         addr::SPECIAL_S_EXIT_HITLAG => g.mr_special_s_exit_hitlag(gobj),
         addr::SPECIAL_S_ENTER => g.mr_special_s_enter(gobj),
+        addr::SPECIAL_S_GROUND_TO_AIR => g.mr_special_s_ground_to_air(gobj),
+        addr::SPECIAL_AIR_S_AIR_TO_GROUND => g.mr_special_air_s_air_to_ground(gobj),
         addr::SPECIAL_AIR_S_ENTER => g.mr_special_air_s_enter(gobj),
         addr::SPECIAL_S_ANIM => g.mr_special_s_anim(gobj),
         addr::SPECIAL_AIR_S_ANIM => g.mr_special_air_s_anim(gobj),

@@ -58,7 +58,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialS_Enter`: the ground speed cut by `greenmissile_traction`, the wind-up.
-    // Ports `ftLg_SpecialS_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialS_Enter")]
     pub fn lg_special_s_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let t = reg(self.lg_attr_f32(f, attr::GREENMISSILE_TRACTION));
@@ -83,7 +83,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialS_OnGiveDamage`: the flight stops (falling speed kept) and ends.
-    // Ports `ftLg_SpecialS_OnGiveDamage`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialS_OnGiveDamage")]
     pub fn lg_special_s_on_give_damage(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.self_vel.x = 0.0;
@@ -94,7 +94,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSStart_Anim`.
-    // Ports `ftLg_SpecialSStart_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSStart_Anim")]
     pub fn lg_special_s_start_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.lg_special_s_hold_enter(gobj);
@@ -110,7 +110,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSStart_Phys`: friction `greenmissile_unk2`.
-    // Ports `ftLg_SpecialSStart_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSStart_Phys")]
     pub fn lg_special_s_start_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let friction = reg(self.lg_attr_f32(f, attr::GREENMISSILE_UNK2));
@@ -134,7 +134,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSStart_Coll`.
-    // Ports `ftLg_SpecialSStart_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSStart_Coll")]
     pub fn lg_special_s_start_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_off_ledges(gobj) {
             self.lg_special_s_start_ground_to_air(gobj);
@@ -142,7 +142,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSStart_GroundToAir`.
-    // Ports `ftLg_SpecialSStart_GroundToAir`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSStart_GroundToAir")]
     pub fn lg_special_s_start_ground_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_S_START, START_FLAGS);
     }
@@ -156,7 +156,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialAirSStart_AirToGround`.
-    // Ports `ftLg_SpecialAirSStart_AirToGround`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialAirSStart_AirToGround")]
     pub fn lg_special_air_s_start_air_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_S_START, START_FLAGS);
     }
@@ -177,7 +177,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSHold_Anim`.
-    // Ports `ftLg_SpecialSHold_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSHold_Anim")]
     pub fn lg_special_s_hold_anim(&mut self, gobj: GObjId) {
         if self.lg_special_s_hold_tick(gobj) {
             self.lg_special_s_launch_enter(gobj);
@@ -193,7 +193,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSHold_IASA`: B let go, the launch.
-    // Ports `ftLg_SpecialSHold_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSHold_IASA")]
     pub fn lg_special_s_hold_iasa(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).input.held_buttons[0] & PAD_B == 0 {
             self.lg_special_s_launch_enter(gobj);
@@ -209,7 +209,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSHold_Coll`.
-    // Ports `ftLg_SpecialSHold_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSHold_Coll")]
     pub fn lg_special_s_hold_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_off_ledges(gobj) {
             self.lg_special_s_hold_ground_to_air(gobj);
@@ -217,7 +217,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSHold_GroundToAir`.
-    // Ports `ftLg_SpecialSHold_GroundToAir`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSHold_GroundToAir")]
     pub fn lg_special_s_hold_ground_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_S_HOLD, HOLD_FLAGS);
     }
@@ -231,13 +231,13 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialAirSHold_AirToGround`.
-    // Ports `ftLg_SpecialAirSHold_AirToGround`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialAirSHold_AirToGround")]
     pub fn lg_special_air_s_hold_air_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_S_HOLD, HOLD_FLAGS);
     }
 
     /// `ftLg_SpecialSHold_Enter`: the charge, with its effect callback.
-    // Ports `ftLg_SpecialSHold_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSHold_Enter")]
     pub fn lg_special_s_hold_enter(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, ms::SPECIAL_S_HOLD, 0x200, 0.0, 1.0, 0.0, None);
         self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::SPECIAL_S_SET_GFX));
@@ -271,7 +271,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialS_Anim`: the launch's damage, then airborne into the flight.
-    // Ports `ftLg_SpecialS_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialS_Anim")]
     pub fn lg_special_s_anim(&mut self, gobj: GObjId) {
         self.lg_special_s_launch_tick(gobj, true);
     }
@@ -283,7 +283,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialS_Coll`.
-    // Ports `ftLg_SpecialS_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialS_Coll")]
     pub fn lg_special_s_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_off_ledges(gobj) {
             self.lg_special_s_launch_ground_to_air(gobj);
@@ -291,7 +291,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSLaunch_GroundToAir`.
-    // Ports `ftLg_SpecialSLaunch_GroundToAir`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSLaunch_GroundToAir")]
     pub fn lg_special_s_launch_ground_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_S, LAUNCH_FLAGS);
     }
@@ -305,7 +305,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialAirSLaunch_AirToGround`.
-    // Ports `ftLg_SpecialAirSLaunch_AirToGround`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialAirSLaunch_AirToGround")]
     pub fn lg_special_air_s_launch_air_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_S, LAUNCH_FLAGS);
     }
@@ -326,7 +326,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSLaunch_Enter`: the misfire if it's one, else the launch.
-    // Ports `ftLg_SpecialSLaunch_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSLaunch_Enter")]
     pub fn lg_special_s_launch_enter(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).mv_i32(mv::S_IS_MISFIRE) != 0 {
             self.lg_special_s_misfire_enter(gobj);
@@ -348,19 +348,19 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSMisfire_Anim`: as the launch's.
-    // Ports `ftLg_SpecialSMisfire_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSMisfire_Anim")]
     pub fn lg_special_s_misfire_anim(&mut self, gobj: GObjId) {
         self.lg_special_s_launch_tick(gobj, true);
     }
 
     /// `ftLg_SpecialAirSMisfire_Anim`.
-    // Ports `ftLg_SpecialAirSMisfire_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialAirSMisfire_Anim")]
     pub fn lg_special_air_s_misfire_anim(&mut self, gobj: GObjId) {
         self.lg_special_s_launch_tick(gobj, false);
     }
 
     /// `ftLg_SpecialSMisfire_Coll`.
-    // Ports `ftLg_SpecialSMisfire_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSMisfire_Coll")]
     pub fn lg_special_s_misfire_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_off_ledges(gobj) {
             self.lg_special_s_misfire_ground_to_air(gobj);
@@ -368,13 +368,13 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSMisfire_GroundToAir`.
-    // Ports `ftLg_SpecialSMisfire_GroundToAir`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSMisfire_GroundToAir")]
     pub fn lg_special_s_misfire_ground_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_S_MISFIRE, LAUNCH_FLAGS);
     }
 
     /// `ftLg_SpecialAirSMisfire_Coll`.
-    // Ports `ftLg_SpecialAirSMisfire_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialAirSMisfire_Coll")]
     pub fn lg_special_air_s_misfire_coll(&mut self, gobj: GObjId) {
         if self.air_coll_land(gobj) {
             self.lg_special_air_s_misfire_air_to_ground(gobj);
@@ -382,20 +382,20 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialAirSMisfire_AirToGround`.
-    // Ports `ftLg_SpecialAirSMisfire_AirToGround`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialAirSMisfire_AirToGround")]
     pub fn lg_special_air_s_misfire_air_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_S_MISFIRE, LAUNCH_FLAGS);
     }
 
     /// `ftLg_SpecialSMisfire_Enter`.
-    // Ports `ftLg_SpecialSMisfire_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSMisfire_Enter")]
     pub fn lg_special_s_misfire_enter(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, ms::SPECIAL_S_MISFIRE, 0, 0.0, 1.0, 0.0, None);
         self.lg_special_s_launch_setup(gobj);
     }
 
     /// `ftLg_SpecialAirSMisfire_Enter`.
-    // Ports `ftLg_SpecialAirSMisfire_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialAirSMisfire_Enter")]
     pub fn lg_special_air_s_misfire_enter(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, ms::SPECIAL_AIR_S_MISFIRE, 0, 0.0, 1.0, 0.0, None);
         self.lg_special_s_launch_setup(gobj);
@@ -480,7 +480,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSEnd_Anim`.
-    // Ports `ftLg_SpecialSEnd_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSEnd_Anim")]
     pub fn lg_special_s_end_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_wait(gobj);
@@ -496,7 +496,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSEnd_Phys`: friction `greenmissile_x_decel`.
-    // Ports `ftLg_SpecialSEnd_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSEnd_Phys")]
     pub fn lg_special_s_end_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let decel = reg(self.lg_attr_f32(f, attr::GREENMISSILE_X_DECEL));
@@ -518,7 +518,7 @@ impl Running<'_> {
     }
 
     /// `ftLg_SpecialSEnd_Coll`: off a ledge, a fall.
-    // Ports `ftLg_SpecialSEnd_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftLg_SpecialSEnd_Coll")]
     pub fn lg_special_s_end_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_off_ledges(gobj) {
             self.enter_fall(gobj);
@@ -560,6 +560,23 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_S_SET_GFX => g.lg_special_s_set_gfx(gobj),
+        addr::SPECIAL_S_START_GROUND_TO_AIR => g.lg_special_s_start_ground_to_air(gobj),
+        addr::SPECIAL_AIR_S_START_AIR_TO_GROUND => g.lg_special_air_s_start_air_to_ground(gobj),
+        addr::SPECIAL_S_HOLD_GROUND_TO_AIR => g.lg_special_s_hold_ground_to_air(gobj),
+        addr::SPECIAL_AIR_S_HOLD_AIR_TO_GROUND => g.lg_special_air_s_hold_air_to_ground(gobj),
+        addr::SPECIAL_S_HOLD_ENTER => g.lg_special_s_hold_enter(gobj),
+        addr::SPECIAL_AIR_S_HOLD_ENTER => g.lg_special_air_s_hold_enter(gobj),
+        addr::SPECIAL_S_LAUNCH_GROUND_TO_AIR => g.lg_special_s_launch_ground_to_air(gobj),
+        addr::SPECIAL_AIR_S_LAUNCH_AIR_TO_GROUND => g.lg_special_air_s_launch_air_to_ground(gobj),
+        addr::SPECIAL_S_LAUNCH_ENTER => g.lg_special_s_launch_enter(gobj),
+        addr::SPECIAL_AIR_S_LAUNCH_ENTER => g.lg_special_air_s_launch_enter(gobj),
+        addr::SPECIAL_S_MISFIRE_GROUND_TO_AIR => g.lg_special_s_misfire_ground_to_air(gobj),
+        addr::SPECIAL_AIR_S_MISFIRE_AIR_TO_GROUND => g.lg_special_air_s_misfire_air_to_ground(gobj),
+        addr::SPECIAL_S_MISFIRE_ENTER => g.lg_special_s_misfire_enter(gobj),
+        addr::SPECIAL_AIR_S_MISFIRE_ENTER => g.lg_special_air_s_misfire_enter(gobj),
+        addr::SPECIAL_S_FLY_ENTER => g.lg_special_s_fly_enter(gobj),
+        addr::SPECIAL_S_END_ENTER => g.lg_special_s_end_enter(gobj),
+        addr::SPECIAL_AIR_S_END_ENTER => g.lg_special_air_s_end_enter(gobj),
         addr::SPECIAL_S_SET_VARS => g.lg_special_s_set_vars(gobj),
         addr::SPECIAL_S_ENTER => g.lg_special_s_enter(gobj),
         addr::SPECIAL_AIR_S_ENTER => g.lg_special_air_s_enter(gobj),
@@ -578,7 +595,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | addr::SPECIAL_S2_PHYS
         | addr::SPECIAL_S2_COLL
         | addr::SPECIAL_S_END_IASA
-        | addr::SPECIAL_AIR_S_END_IASA => {}
+        | addr::SPECIAL_AIR_S_END_IASA => g.lg_nothing(gobj),
         addr::SPECIAL_S_START_PHYS => g.lg_special_s_start_phys(gobj),
         addr::SPECIAL_AIR_S_START_PHYS => g.lg_special_air_s_start_phys(gobj),
         addr::SPECIAL_S_START_COLL => g.lg_special_s_start_coll(gobj),
@@ -587,8 +604,8 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_S_HOLD_ANIM => g.lg_special_air_s_hold_anim(gobj),
         addr::SPECIAL_S_HOLD_IASA => g.lg_special_s_hold_iasa(gobj),
         addr::SPECIAL_AIR_S_HOLD_IASA => g.lg_special_air_s_hold_iasa(gobj),
-        addr::SPECIAL_S_HOLD_PHYS | addr::SPECIAL_S_PHYS => g.ground_friction(gobj),
-        addr::SPECIAL_AIR_S_HOLD_PHYS | addr::SPECIAL_AIR_S_PHYS => g.air_physics_no_drift(gobj),
+        addr::SPECIAL_S_HOLD_PHYS | addr::SPECIAL_S_PHYS => g.lg_ground_friction(gobj),
+        addr::SPECIAL_AIR_S_HOLD_PHYS | addr::SPECIAL_AIR_S_PHYS => g.lg_air_physics_no_drift(gobj),
         addr::SPECIAL_S_HOLD_COLL => g.lg_special_s_hold_coll(gobj),
         addr::SPECIAL_AIR_S_HOLD_COLL => g.lg_special_air_s_hold_coll(gobj),
         addr::SPECIAL_S_ANIM => g.lg_special_s_anim(gobj),
@@ -597,7 +614,9 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_S_COLL => g.lg_special_air_s_coll(gobj),
         addr::SPECIAL_S_MISFIRE_ANIM => g.lg_special_s_misfire_anim(gobj),
         addr::SPECIAL_AIR_S_MISFIRE_ANIM => g.lg_special_air_s_misfire_anim(gobj),
-        addr::SPECIAL_S_MISFIRE_PHYS | addr::SPECIAL_AIR_S_MISFIRE_PHYS => g.ground_friction(gobj),
+        addr::SPECIAL_S_MISFIRE_PHYS | addr::SPECIAL_AIR_S_MISFIRE_PHYS => {
+            g.lg_ground_friction(gobj)
+        }
         addr::SPECIAL_S_MISFIRE_COLL => g.lg_special_s_misfire_coll(gobj),
         addr::SPECIAL_AIR_S_MISFIRE_COLL => g.lg_special_air_s_misfire_coll(gobj),
         addr::SPECIAL_AIR_S2_ANIM => g.lg_special_air_s2_anim(gobj),

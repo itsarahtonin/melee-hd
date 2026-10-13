@@ -55,6 +55,10 @@ pub mod addr {
     pub const ON_KNOCKBACK_EXIT: u32 = 0x800E_0C68;
     // The neutral special.
     pub const SPECIAL_N_ENTER: u32 = 0x800E_0DA8;
+    pub const SPECIAL_N_GROUND_TO_AIR: u32 = 0x800E_1178;
+    pub const SPECIAL_AIR_N_AIR_TO_GROUND: u32 = 0x800E_11E0;
+    pub const SPECIAL_S_GROUND_TO_AIR: u32 = 0x800E_18B8;
+    pub const SPECIAL_AIR_S_AIR_TO_GROUND: u32 = 0x800E_198C;
     pub const SPECIAL_N_ANIM: u32 = 0x800E_0E18;
     pub const SPECIAL_N_IASA: u32 = 0x800E_0E54;
     pub const SPECIAL_N_PHYS: u32 = 0x800E_0E84;

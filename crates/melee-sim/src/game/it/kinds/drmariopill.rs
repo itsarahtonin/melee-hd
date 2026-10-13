@@ -106,7 +106,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 
 /// The item's model in its state `state`'s pose at `frame`, `it_80273670`: the pose's
 /// animations added and run once, then removed (the pill's color is its frame).
-// Ports `it_80273670`; aliased once a check reaches it.
+#[doc(alias = "it_80273670")]
 pub fn set_pose(r: &mut Running, gobj: GObjId, state: i32, frame: f32) {
     let data = r.data;
     let descs = article(item(r.game, gobj))
@@ -156,7 +156,7 @@ fn first_frame(r: &mut Running, gobj: GObjId) {
 
 /// Throws a pill of color combination `color` for `parent` from `pos`,
 /// `itDrMarioPill_Spawn`.
-// Ports `itDrMarioPill_Spawn`; aliased once a check reaches it.
+#[doc(alias = "itDrMarioPill_Spawn")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, color: i32, kind: i32, facing_dir: f32) {
     let mut spawn = spawn_fields(r, parent, pos, kind, facing_dir);
     let Some(gobj) = spawn_air(r, &mut spawn) else {
@@ -171,7 +171,7 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, color: i32, kind: i32, 
 
 /// The thrown pill's start, `itDrMarioPill_802C0B5C`: its speed at its angle, ahead, its
 /// lifetime, its first state.
-// Ports `itDrMarioPill_802C0B5C`; aliased once a check reaches it.
+#[doc(alias = "itDrMarioPill_802C0B5C")]
 fn setup(r: &mut Running, gobj: GObjId) {
     let speed = reg(attr_f32(r, gobj, attr::SPEED));
     let angle = attr_f32(r, gobj, attr::ANGLE);
@@ -247,7 +247,7 @@ pub fn appeal_spawn(
 }
 
 /// `itDrMarioPill_UnkMotion0_Anim`: its lifetime.
-// Ports `itDrMarioPill_UnkMotion0_Anim`; aliased once a check reaches it.
+#[doc(alias = "itDrMarioPill_UnkMotion0_Anim")]
 fn motion0_anim(r: &mut Running, gobj: GObjId) -> bool {
     lib26b1::disable_pickup(r.game, gobj);
     let ip = item_mut(r.game, gobj);
@@ -256,7 +256,7 @@ fn motion0_anim(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// `itDrMarioPill_UnkMotion0_Phys`: gravity (`Item_ApplyFallingPhysics`).
-// Ports `itDrMarioPill_UnkMotion0_Phys`; aliased once a check reaches it.
+#[doc(alias = "itDrMarioPill_UnkMotion0_Phys")]
 fn motion0_phys(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     let a = attr_of(item(r.game, gobj));
@@ -269,7 +269,7 @@ fn motion0_phys(r: &mut Running, gobj: GObjId) {
 
 /// `itDrmariopill_UnkMotion0_Coll`: it stays in the air; when it meets the stage it bounces,
 /// and ends if the bounce leaves it slower than its attributes allow, else with a sound.
-// Ports `itDrmariopill_UnkMotion0_Coll`; aliased once a check reaches it.
+#[doc(alias = "itDrmariopill_UnkMotion0_Coll")]
 fn motion0_coll(r: &mut Running, gobj: GObjId) -> bool {
     ground::air_stay(r, gobj);
     lib26b1::disable_pickup(r.game, gobj);

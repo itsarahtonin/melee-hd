@@ -24,52 +24,57 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialLw_Enter`: from the ground the spin starts in its aerial state too.
-    // Ports `ftMr_SpecialLw_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialLw_Enter")]
     pub fn mr_special_lw_enter(&mut self, gobj: GObjId) {
         self.plumber_lw_enter(gobj, &TORNADO, true);
     }
 
     /// `ftMr_SpecialAirLw_Enter`.
-    // Ports `ftMr_SpecialAirLw_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirLw_Enter")]
     pub fn mr_special_air_lw_enter(&mut self, gobj: GObjId) {
         self.plumber_lw_enter(gobj, &TORNADO, false);
     }
 
     /// `ftMr_SpecialLw_Anim`.
-    // Ports `ftMr_SpecialLw_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialLw_Anim")]
     pub fn mr_special_lw_anim(&mut self, gobj: GObjId) {
         self.plumber_lw_anim(gobj);
     }
 
     /// `ftMr_SpecialAirLw_Anim`.
-    // Ports `ftMr_SpecialAirLw_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirLw_Anim")]
     pub fn mr_special_air_lw_anim(&mut self, gobj: GObjId) {
         self.plumber_air_lw_anim(gobj, &TORNADO);
     }
 
     /// `ftMr_SpecialLw_Phys`.
-    // Ports `ftMr_SpecialLw_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialLw_Phys")]
     pub fn mr_special_lw_phys(&mut self, gobj: GObjId) {
         self.plumber_lw_phys(gobj, &TORNADO);
     }
 
     /// `ftMr_SpecialAirLw_Phys`.
-    // Ports `ftMr_SpecialAirLw_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirLw_Phys")]
     pub fn mr_special_air_lw_phys(&mut self, gobj: GObjId) {
         self.plumber_air_lw_phys(gobj, &TORNADO);
     }
 
     /// `ftMr_SpecialLw_Coll`.
-    // Ports `ftMr_SpecialLw_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialLw_Coll")]
     pub fn mr_special_lw_coll(&mut self, gobj: GObjId) {
         self.plumber_lw_coll(gobj, &TORNADO);
     }
 
     /// `ftMr_SpecialAirLw_Coll`.
-    // Ports `ftMr_SpecialAirLw_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirLw_Coll")]
     pub fn mr_special_air_lw_coll(&mut self, gobj: GObjId) {
         self.plumber_air_lw_coll(gobj, &TORNADO);
     }
+
+    /// `ftMr_SpecialLw_IASA` and `ftMr_SpecialAirLw_IASA`: nothing.
+    #[doc(alias = "ftMr_SpecialLw_IASA")]
+    #[doc(alias = "ftMr_SpecialAirLw_IASA")]
+    pub fn mr_special_lw_iasa(&mut self, _gobj: GObjId) {}
 }
 
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
@@ -79,7 +84,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_LW_ENTER => g.mr_special_air_lw_enter(gobj),
         addr::SPECIAL_LW_ANIM => g.mr_special_lw_anim(gobj),
         addr::SPECIAL_AIR_LW_ANIM => g.mr_special_air_lw_anim(gobj),
-        addr::SPECIAL_LW_IASA | addr::SPECIAL_AIR_LW_IASA => {}
+        addr::SPECIAL_LW_IASA | addr::SPECIAL_AIR_LW_IASA => g.mr_special_lw_iasa(gobj),
         addr::SPECIAL_LW_PHYS => g.mr_special_lw_phys(gobj),
         addr::SPECIAL_AIR_LW_PHYS => g.mr_special_air_lw_phys(gobj),
         addr::SPECIAL_LW_COLL => g.mr_special_lw_coll(gobj),

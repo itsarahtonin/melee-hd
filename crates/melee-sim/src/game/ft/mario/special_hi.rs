@@ -15,67 +15,67 @@ const SUPER_JUMP: SuperJump = SuperJump {
 
 impl Running<'_> {
     /// `ftMr_SpecialHi_Enter`.
-    // Ports `ftMr_SpecialHi_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialHi_Enter")]
     pub fn mr_special_hi_enter(&mut self, gobj: GObjId) {
         self.plumber_hi_enter(gobj, &SUPER_JUMP);
     }
 
     /// `ftMr_SpecialAirHi_Enter`.
-    // Ports `ftMr_SpecialAirHi_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirHi_Enter")]
     pub fn mr_special_air_hi_enter(&mut self, gobj: GObjId) {
         self.plumber_air_hi_enter(gobj, &SUPER_JUMP);
     }
 
     /// `ftMr_SpecialHi_Anim`.
-    // Ports `ftMr_SpecialHi_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialHi_Anim")]
     pub fn mr_special_hi_anim(&mut self, gobj: GObjId) {
         self.plumber_hi_anim(gobj, &SUPER_JUMP);
     }
 
     /// `ftMr_SpecialAirHi_Anim`.
-    // Ports `ftMr_SpecialAirHi_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirHi_Anim")]
     pub fn mr_special_air_hi_anim(&mut self, gobj: GObjId) {
         self.plumber_hi_anim(gobj, &SUPER_JUMP);
     }
 
     /// `ftMr_SpecialHi_IASA`.
-    // Ports `ftMr_SpecialHi_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialHi_IASA")]
     pub fn mr_special_hi_iasa(&mut self, gobj: GObjId) {
         self.plumber_hi_iasa(gobj, &SUPER_JUMP);
     }
 
     /// `ftMr_SpecialAirHi_IASA`.
-    // Ports `ftMr_SpecialAirHi_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirHi_IASA")]
     pub fn mr_special_air_hi_iasa(&mut self, gobj: GObjId) {
         self.plumber_hi_iasa(gobj, &SUPER_JUMP);
     }
 
     /// `ftMr_SpecialHi_Phys`.
-    // Ports `ftMr_SpecialHi_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialHi_Phys")]
     pub fn mr_special_hi_phys(&mut self, gobj: GObjId) {
         self.plumber_hi_phys(gobj);
     }
 
     /// `ftMr_SpecialAirHi_Phys`.
-    // Ports `ftMr_SpecialAirHi_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirHi_Phys")]
     pub fn mr_special_air_hi_phys(&mut self, gobj: GObjId) {
         self.plumber_air_hi_phys(gobj, &SUPER_JUMP);
     }
 
     /// `ftMr_SpecialHi_CheckLanding`.
-    // Ports `ftMr_SpecialHi_CheckLanding`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialHi_CheckLanding")]
     pub fn mr_special_hi_check_landing(&mut self, gobj: GObjId) {
         self.plumber_hi_check_landing(gobj, &SUPER_JUMP);
     }
 
     /// `ftMr_SpecialHi_Coll`.
-    // Ports `ftMr_SpecialHi_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialHi_Coll")]
     pub fn mr_special_hi_coll(&mut self, gobj: GObjId) {
         self.plumber_hi_coll(gobj, &SUPER_JUMP);
     }
 
     /// `ftMr_SpecialAirHi_Coll`.
-    // Ports `ftMr_SpecialAirHi_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirHi_Coll")]
     pub fn mr_special_air_hi_coll(&mut self, gobj: GObjId) {
         self.plumber_hi_coll(gobj, &SUPER_JUMP);
     }

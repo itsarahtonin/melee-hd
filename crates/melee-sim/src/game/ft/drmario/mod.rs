@@ -27,6 +27,9 @@ pub mod addr {
     pub const LOAD_SPECIAL_ATTRS: u32 = 0x8014_9724;
     pub const ON_KNOCKBACK_ENTER: u32 = 0x8014_9744;
     pub const ON_KNOCKBACK_EXIT: u32 = 0x8014_9788;
+    pub const REMOVE_APPEAL_PILL: u32 = 0x8014_97CC;
+    pub const FORGET_APPEAL_PILL: u32 = 0x8014_98A0;
+    pub const APPEAL_ENTER: u32 = 0x8014_9910;
     pub const APPEAL_S_ANIM: u32 = 0x8014_9954;
     pub const APPEAL_S_IASA: u32 = 0x8014_9A6C;
     pub const APPEAL_S_PHYS: u32 = 0x8014_9A8C;
@@ -36,7 +39,7 @@ pub mod addr {
 impl Running<'_> {
     /// Dr. Mario's creation, `ftDr_Init_OnLoad`: Mario's attribute layout, and his pill and
     /// sheet registered with the items.
-    // Ports `ftDr_Init_OnLoad`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_Init_OnLoad")]
     pub fn dr_on_load(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.mr_on_load_for_drmario(f);
@@ -53,7 +56,7 @@ impl Running<'_> {
 
     /// Dr. Mario's spawn, `ftDr_Init_OnDeath`: his first model variant, the Tornado's rise and
     /// the sheet's boost ready, no sheet or taunt pill.
-    // Ports `ftDr_Init_OnDeath`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_Init_OnDeath")]
     pub fn dr_on_death(&mut self, gobj: GObjId) {
         self.game.set_part_vis(gobj, 0, 0);
         let fp = self.game.fighter_mut(gobj);
@@ -64,19 +67,19 @@ impl Running<'_> {
     }
 
     /// `ftDr_Init_LoadSpecialAttrs`: Mario's.
-    // Ports `ftDr_Init_LoadSpecialAttrs`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_Init_LoadSpecialAttrs")]
     pub fn dr_load_special_attrs(&mut self, gobj: GObjId) {
         self.mr_load_special_attrs(gobj);
     }
 
     /// `ftDr_Init_80149540` (the taunt's hit hook): the taunt's pill goes.
-    // Ports `ftDr_Init_80149540`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_Init_80149540")]
     pub fn dr_on_take_damage(&mut self, gobj: GObjId) {
         self.dr_remove_appeal_pill(gobj);
     }
 
     /// `ftDr_Init_801497CC`: the taunt's pill destroyed, if out, and the hit hooks cleared.
-    // Ports `ftDr_Init_801497CC`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_Init_801497CC")]
     pub fn dr_remove_appeal_pill(&mut self, gobj: GObjId) {
         if let Some(pill) = self.game.fighter(gobj).u.gobj_at(MARIO_X2240) {
             drmariopill::remove(self, pill);
@@ -89,7 +92,7 @@ impl Running<'_> {
 
     /// Whether the taunt is over for its pill, `ftDr_Init_80149844`: out of the side taunt, or
     /// without the pill.
-    // Ports `ftDr_Init_80149844`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_Init_80149844")]
     pub fn dr_appeal_pill_done(&self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
         if fp.motion_id != ms::APPEAL_SR && fp.motion_id != ms::APPEAL_SL {
@@ -99,7 +102,7 @@ impl Running<'_> {
     }
 
     /// `ftDr_Init_801498A0`: the fighter forgets the taunt's pill, and the hit hooks.
-    // Ports `ftDr_Init_801498A0`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_Init_801498A0")]
     pub fn dr_forget_appeal_pill(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.u.gobj_at(MARIO_X2240).is_some() {
@@ -110,14 +113,14 @@ impl Running<'_> {
     }
 
     /// `ftDr_Init_801498EC`: the taunt script's second variable (whether the pill shows).
-    // Ports `ftDr_Init_801498EC`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_Init_801498EC")]
     pub fn dr_appeal_cmd_var1(&self, gobj: GObjId) -> u32 {
         self.game.fighter(gobj).cmd_vars[1]
     }
 
     /// Dr. Mario's taunt, `ftDr_Init_80149910`: the side taunt (Mario's states), its pill to
     /// come.
-    // Ports `ftDr_Init_80149910`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_Init_80149910")]
     pub fn dr_appeal_enter(&mut self, gobj: GObjId) {
         self.enter_facing_state(gobj, ms::APPEAL_SR, ms::APPEAL_SL);
         let fp = self.game.fighter_mut(gobj);
@@ -127,7 +130,7 @@ impl Running<'_> {
 
     /// `ftDr_AppealS_Anim`: on the script's word the pill (a random color, at his top joint),
     /// on its second word it goes; when the taunt ends, it goes and he waits.
-    // Ports `ftDr_AppealS_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_AppealS_Anim")]
     pub fn dr_appeal_s_anim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if fp.cmd_vars[0] == 1 && fp.u.gobj_at(MARIO_X2240).is_none() {
@@ -153,21 +156,33 @@ impl Running<'_> {
     }
 
     /// `ftDr_AppealS_IASA`: the side taunt's.
-    // Ports `ftDr_AppealS_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_AppealS_IASA")]
     pub fn dr_appeal_s_iasa(&mut self, gobj: GObjId) {
         self.co_appeal_s_iasa(gobj);
     }
 
     /// `ftDr_AppealS_Phys`: friction.
-    // Ports `ftDr_AppealS_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_AppealS_Phys")]
     pub fn dr_appeal_s_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
     }
 
     /// `ftDr_AppealS_Coll`: the ground's, stopping at ledges.
-    // Ports `ftDr_AppealS_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftDr_AppealS_Coll")]
     pub fn dr_appeal_s_coll(&mut self, gobj: GObjId) {
         self.ground_coll_teeter(gobj);
+    }
+
+    /// `ftDr_Init_OnKnockbackEnter`: the hurt textures, as Sheik's.
+    #[doc(alias = "ftDr_Init_OnKnockbackEnter")]
+    pub fn dr_on_knockback_enter(&mut self, gobj: GObjId) {
+        self.seak_on_knockback_enter(gobj);
+    }
+
+    /// `ftDr_Init_OnKnockbackExit`: the hurt textures, as Sheik's.
+    #[doc(alias = "ftDr_Init_OnKnockbackExit")]
+    pub fn dr_on_knockback_exit(&mut self, gobj: GObjId) {
+        self.seak_on_knockback_exit(gobj);
     }
 }
 
@@ -177,8 +192,11 @@ pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::ON_TAKE_DAMAGE => g.dr_on_take_damage(gobj),
         addr::ON_ITEM_INVISIBLE => g.fox_on_item_invisible(gobj),
         addr::ON_ITEM_VISIBLE => g.fox_on_item_visible(gobj),
-        addr::ON_KNOCKBACK_ENTER => g.seak_on_knockback_enter(gobj),
-        addr::ON_KNOCKBACK_EXIT => g.seak_on_knockback_exit(gobj),
+        addr::ON_KNOCKBACK_ENTER => g.dr_on_knockback_enter(gobj),
+        addr::ON_KNOCKBACK_EXIT => g.dr_on_knockback_exit(gobj),
+        addr::REMOVE_APPEAL_PILL => g.dr_remove_appeal_pill(gobj),
+        addr::FORGET_APPEAL_PILL => g.dr_forget_appeal_pill(gobj),
+        addr::APPEAL_ENTER => g.dr_appeal_enter(gobj),
         addr::APPEAL_S_ANIM => g.dr_appeal_s_anim(gobj),
         addr::APPEAL_S_IASA => g.dr_appeal_s_iasa(gobj),
         addr::APPEAL_S_PHYS => g.dr_appeal_s_phys(gobj),

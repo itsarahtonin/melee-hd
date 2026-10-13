@@ -19,7 +19,7 @@ const COLL_FLAGS: u32 = 0x5000;
 impl Running<'_> {
     /// `ftMr_SpecialN_VitaminRandom`: a pill color combination (0 to 8) other than the current
     /// and the last (`HSD_Randi` over those left), which becomes the current.
-    // Ports `ftMr_SpecialN_VitaminRandom`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialN_VitaminRandom")]
     pub fn mr_special_n_vitamin_random(&mut self, gobj: GObjId) -> i32 {
         let fp = self.game.fighter(gobj);
         let (curr, prev) = (fp.u_i32(u::VITAMIN_CURR), fp.u_i32(u::VITAMIN_PREV));
@@ -48,19 +48,19 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialN_Enter`.
-    // Ports `ftMr_SpecialN_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialN_Enter")]
     pub fn mr_special_n_enter(&mut self, gobj: GObjId) {
         self.mr_special_n_start(gobj, ms::SPECIAL_N);
     }
 
     /// `ftMr_SpecialAirN_Enter`.
-    // Ports `ftMr_SpecialAirN_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirN_Enter")]
     pub fn mr_special_air_n_enter(&mut self, gobj: GObjId) {
         self.mr_special_n_start(gobj, ms::SPECIAL_AIR_N);
     }
 
     /// `ftMr_SpecialN_Anim`: waiting when the throw ends.
-    // Ports `ftMr_SpecialN_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialN_Anim")]
     pub fn mr_special_n_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_wait(gobj);
@@ -68,7 +68,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialAirN_Anim`: a fall when the throw ends.
-    // Ports `ftMr_SpecialAirN_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirN_Anim")]
     pub fn mr_special_air_n_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_fall(gobj);
@@ -76,7 +76,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialN_IASA`: once the script allows, what waiting allows.
-    // Ports `ftMr_SpecialN_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialN_IASA")]
     pub fn mr_special_n_iasa(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).cmd_vars[0] != 0 {
             self.co_wait_iasa(gobj);
@@ -84,7 +84,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialAirN_IASA`: once the script allows, what falling allows.
-    // Ports `ftMr_SpecialAirN_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirN_IASA")]
     pub fn mr_special_air_n_iasa(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).cmd_vars[0] != 0 {
             self.co_fall_iasa(gobj);
@@ -92,19 +92,19 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialN_Phys`: friction.
-    // Ports `ftMr_SpecialN_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialN_Phys")]
     pub fn mr_special_n_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
     }
 
     /// `ftMr_SpecialAirN_Phys`: the air's physics.
-    // Ports `ftMr_SpecialAirN_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirN_Phys")]
     pub fn mr_special_air_n_phys(&mut self, gobj: GObjId) {
         self.air_physics(gobj);
     }
 
     /// `ftMr_SpecialN_Coll`.
-    // Ports `ftMr_SpecialN_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialN_Coll")]
     pub fn mr_special_n_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_off_ledges(gobj) {
             self.mr_special_n_ground_to_air(gobj);
@@ -112,7 +112,7 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialAirN_Coll`.
-    // Ports `ftMr_SpecialAirN_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirN_Coll")]
     pub fn mr_special_air_n_coll(&mut self, gobj: GObjId) {
         if self.air_coll_land(gobj) {
             self.mr_special_air_n_air_to_ground(gobj);
@@ -120,14 +120,14 @@ impl Running<'_> {
     }
 
     /// `ftMr_SpecialN_GroundToAir`: the aerial throw from the same frame.
-    // Ports `ftMr_SpecialN_GroundToAir`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialN_GroundToAir")]
     pub fn mr_special_n_ground_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_N, COLL_FLAGS);
         self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::SPECIAL_N_ITEM_FIRE_SPAWN));
     }
 
     /// `ftMr_SpecialAirN_AirToGround`: the grounded throw from the same frame.
-    // Ports `ftMr_SpecialAirN_AirToGround`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialAirN_AirToGround")]
     pub fn mr_special_air_n_air_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_N, COLL_FLAGS);
         self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::SPECIAL_N_ITEM_FIRE_SPAWN));
@@ -135,7 +135,7 @@ impl Running<'_> {
 
     /// `ftMr_SpecialN_ItemFireSpawn`: when the script raises the throw flag, from the hand
     /// (`FtPart_L1stNb`), Mario's fireball and its flash, or Dr. Mario's pill.
-    // Ports `ftMr_SpecialN_ItemFireSpawn`; aliased once a check reaches it.
+    #[doc(alias = "ftMr_SpecialN_ItemFireSpawn")]
     pub fn mr_special_n_item_fire_spawn(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if !fp.throw_flag(0) {
@@ -166,6 +166,8 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_N_ENTER => g.mr_special_n_enter(gobj),
+        addr::SPECIAL_N_GROUND_TO_AIR => g.mr_special_n_ground_to_air(gobj),
+        addr::SPECIAL_AIR_N_AIR_TO_GROUND => g.mr_special_air_n_air_to_ground(gobj),
         addr::SPECIAL_AIR_N_ENTER => g.mr_special_air_n_enter(gobj),
         addr::SPECIAL_N_ANIM => g.mr_special_n_anim(gobj),
         addr::SPECIAL_AIR_N_ANIM => g.mr_special_air_n_anim(gobj),

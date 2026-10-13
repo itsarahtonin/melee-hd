@@ -7,6 +7,7 @@
 //! (`ftLuigiAttributes`) in the fighter's attribute block, all read at the decomp's offsets.
 
 pub mod init;
+pub mod shared;
 pub mod special_hi;
 pub mod special_lw;
 pub mod special_n;
@@ -120,6 +121,23 @@ pub mod addr {
     pub const SPECIAL_AIR_S_END_PHYS: u32 = 0x8014_3E3C;
     pub const SPECIAL_S_END_COLL: u32 = 0x8014_3E8C;
     pub const SPECIAL_AIR_S_END_COLL: u32 = 0x8014_3EC8;
+    pub const SPECIAL_S_START_GROUND_TO_AIR: u32 = 0x8014_2DD8;
+    pub const SPECIAL_AIR_S_START_AIR_TO_GROUND: u32 = 0x8014_2E38;
+    pub const SPECIAL_S_HOLD_GROUND_TO_AIR: u32 = 0x8014_30F0;
+    pub const SPECIAL_AIR_S_HOLD_AIR_TO_GROUND: u32 = 0x8014_3150;
+    pub const SPECIAL_S_HOLD_ENTER: u32 = 0x8014_31B0;
+    pub const SPECIAL_AIR_S_HOLD_ENTER: u32 = 0x8014_3204;
+    pub const SPECIAL_S_LAUNCH_GROUND_TO_AIR: u32 = 0x8014_3468;
+    pub const SPECIAL_AIR_S_LAUNCH_AIR_TO_GROUND: u32 = 0x8014_34C8;
+    pub const SPECIAL_S_LAUNCH_ENTER: u32 = 0x8014_3528;
+    pub const SPECIAL_AIR_S_LAUNCH_ENTER: u32 = 0x8014_3600;
+    pub const SPECIAL_S_MISFIRE_GROUND_TO_AIR: u32 = 0x8014_38E8;
+    pub const SPECIAL_AIR_S_MISFIRE_AIR_TO_GROUND: u32 = 0x8014_3948;
+    pub const SPECIAL_S_MISFIRE_ENTER: u32 = 0x8014_39A8;
+    pub const SPECIAL_AIR_S_MISFIRE_ENTER: u32 = 0x8014_3A60;
+    pub const SPECIAL_S_FLY_ENTER: u32 = 0x8014_3C60;
+    pub const SPECIAL_S_END_ENTER: u32 = 0x8014_3F18;
+    pub const SPECIAL_AIR_S_END_ENTER: u32 = 0x8014_3F70;
     // The up special.
     pub const SPECIAL_HI_ENTER: u32 = 0x8014_3FC8;
     pub const SPECIAL_AIR_HI_ENTER: u32 = 0x8014_4024;

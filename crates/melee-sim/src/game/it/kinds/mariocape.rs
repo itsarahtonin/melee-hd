@@ -34,7 +34,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// Pulls a cape of `kind` for `parent` at `pos`, in its hand at bone `part`, `it_802B2560`.
-// Ports `it_802B2560`; aliased once a check reaches it.
+#[doc(alias = "it_802B2560")]
 pub fn spawn(
     r: &mut Running,
     parent: GObjId,
@@ -66,7 +66,7 @@ pub fn spawn(
 }
 
 /// `itMarioCape_Logic41_Destroyed`: the owner lets go of it.
-// Ports `itMarioCape_Logic41_Destroyed`; aliased once a check reaches it.
+#[doc(alias = "itMarioCape_Logic41_Destroyed")]
 fn destroyed(r: &mut Running, gobj: GObjId) {
     if let Some(owner) = item(r.game, gobj).owner {
         r.mr_special_s_reset(owner);
@@ -74,7 +74,7 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
 }
 
 /// Takes the cape away, `it_802B2674`: the owner lets go of it, and it goes.
-// Ports `it_802B2674`; aliased once a check reaches it.
+#[doc(alias = "it_802B2674")]
 pub fn remove(r: &mut Running, gobj: GObjId) {
     if let Some(owner) = item(r.game, gobj).owner {
         r.mr_special_s_reset(owner);
@@ -83,13 +83,13 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 }
 
 /// The cape pauses in its owner's hitlag, `it_802B26C0`.
-// Ports `it_802B26C0`; aliased once a check reaches it.
+#[doc(alias = "it_802B26C0")]
 pub fn hitlag_start(r: &mut Running, gobj: GObjId) {
     super::seakchain::hitlag_start(r, gobj);
 }
 
 /// The cape goes on after hitlag, `it_802B26E0`.
-// Ports `it_802B26E0`; aliased once a check reaches it.
+#[doc(alias = "it_802B26E0")]
 pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
     super::seakchain::hitlag_end(r, gobj);
 }
@@ -98,7 +98,7 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
 /// its owner. The state it picks reads `ftLib_GetGroundAir` on the cape's own GObj: the word at
 /// the fighter's `ground_or_air` offset (`+0xE0`) is, in an item, its first dynamic bone set's
 /// count, which the cape (with no dynamic bones) leaves as its block held it (docs/engine.md).
-// Ports `it_2725_Logic41_PickedUp`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic41_PickedUp")]
 fn picked_up(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.xDB0_itcmd_var1 = 0;
@@ -116,7 +116,7 @@ fn picked_up(r: &mut Running, gobj: GObjId) {
 
 /// `itMariocape_UnkMotion1_Anim`: its two flashes when its script says (on its bones 16 and
 /// 6); gone once the owner has left the swing (or there's no owner), letting go of it.
-// Ports `itMariocape_UnkMotion1_Anim`; aliased once a check reaches it.
+#[doc(alias = "itMariocape_UnkMotion1_Anim")]
 fn animate_cape(r: &mut Running, gobj: GObjId) -> bool {
     let bone = |r: &Running, i: usize| {
         let t = item(r.game, gobj)
