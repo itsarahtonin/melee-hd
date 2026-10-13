@@ -7,6 +7,7 @@ pub mod compare;
 pub mod corpus;
 pub mod display;
 pub mod effects;
+pub mod heap;
 pub mod hud;
 pub mod import;
 pub mod items;
