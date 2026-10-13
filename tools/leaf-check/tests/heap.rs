@@ -32,6 +32,9 @@ enum Op {
     ClassFree(usize),
 }
 
+/// The pools the runs allocate from. Not the particles', generators' and effects': their
+/// comparisons check those pools' counts against melee-sim's own pools, which these
+/// runs leave alone.
 const KINDS: [Kind; 11] = [
     Kind::GObj,
     Kind::GObjProc,
@@ -39,10 +42,10 @@ const KINDS: [Kind; 11] = [
     Kind::FObj,
     Kind::RObj,
     Kind::IdEntry,
-    Kind::Effect,
+    Kind::Mtx,
     Kind::Item,
-    Kind::Particle,
-    Kind::Generator,
+    Kind::SList,
+    Kind::Vec,
     Kind::Fighter,
 ];
 

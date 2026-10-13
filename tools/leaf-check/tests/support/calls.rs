@@ -668,6 +668,9 @@ impl<'a> Check<'a> {
                     cmp.stage();
                     cmp.ids();
                     cmp.match_state();
+                    if self.heap {
+                        cmp.heap();
+                    }
                     let state_diffs: Vec<String> = std::mem::take(&mut cmp.diffs)
                         .into_iter()
                         .filter(|d| !before.contains(d))
