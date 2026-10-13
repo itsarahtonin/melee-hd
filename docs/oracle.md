@@ -71,7 +71,8 @@ The fighter mirrors come from `tools/structgen`, which generates each game struc
 | UCF 0.84 | Dashback (`800C9A44`) | `ftCo_Turn_IASA` | Ported, checked by `diff` on v5-mixed from tick 5000 (Fox's dashback in tick 5075) |
 | UCF 0.84 | Shield SDI (`80093294`) | `ftCo_80093240` | Ported, checked by `diff` on the Falco vs Sheik replay (Falco's shield SDI in tick 1193) |
 | UCF 0.84 | Tumble (`800908F4`) | `ftCo_DamageFall_IASA` | Ported, checked by `diff` on the Falco vs Sheik replay (Falco drifting out of tumble in tick 3278) |
-| UCF 0.84 | DBOOC SquatRv Fix (`800D65EC`), Shield Drop Extended (`8009A0B8`) | `ftCo_SquatRv_CheckInput`, `ftCo_8009A080` | Waits for its host's port, which reads `Game::ucf` |
+| UCF 0.84 | Shield Drop Extended (`8009A0B8`) | `ftCo_8009A080` | Ported, checked by `diff` on the Luigi vs Ganondorf Battlefield replay (Luigi's shield drop in tick 1388) |
+| UCF 0.84 | DBOOC SquatRv Fix (`800D65EC`) | `ftCo_SquatRv_CheckInput` | Waits for its host's port, which reads `Game::ucf` |
 | Neutral spawns | `8016E510` | `fn_8016E2BC` | Ported, checked |
 | Off-screen limits | BrawlOffscreenDamage (`8006A880`) | `Fighter_procAnim` | Ported, checked |
 | Determinism | Init Stage Data (`801C154C`), FD background (`8021AAE4`, both versions) | `Ground_GetStageGObj`, `grLast_8021AAB0` | Ported, checked (3.16's on the Ganondorf vs Captain Falcon replay below) |
