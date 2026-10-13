@@ -32,13 +32,13 @@ const HIT: i32 = 3;
 impl Running<'_> {
     /// `ftPk_SpecialLw_CheckProperty`: whether the fighter is in a state that ignores the
     /// bolt (the 4 bits at `x2071` among 1, 2 and 4 to 13).
-    // Ports `ftPk_SpecialLw_CheckProperty`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_CheckProperty")]
     pub fn pk_special_lw_check_property(&self, gobj: GObjId) -> bool {
         matches!(self.game.fighter(gobj).x2070[1] >> 4, 1 | 2 | 4..=13)
     }
 
     /// `ftPk_SpecialLw_80127608`: the bolt reached the ground: a small quake and a rumble.
-    // Ports `ftPk_SpecialLw_80127608`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_80127608")]
     pub fn pk_special_lw_bolt_landed(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let pos = self.game.fighters[f.0].cur_pos;
@@ -47,20 +47,20 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialLw_SetState_Unk0`: the bolt is gone without reaching him.
-    // Ports `ftPk_SpecialLw_SetState_Unk0`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_SetState_Unk0")]
     pub fn pk_special_lw_set_hit(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).set_mv_i32(mv::LW_STATE, HIT);
     }
 
     /// `ftPk_SpecialLw_SetState_Unk1` (the loop's `take_dmg_cb`): hit, he stops waiting.
-    // Ports `ftPk_SpecialLw_SetState_Unk1`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_SetState_Unk1")]
     pub fn pk_special_lw_clear_hit(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).set_mv_i32(mv::LW_STATE, 0);
     }
 
     /// `ftPk_SpecialLw_8012765C`: whether the bolt's tip reached him: within `xC4` sideways,
     /// and below `xC8` from `xBC` above him; then the bolt hits.
-    // Ports `ftPk_SpecialLw_8012765C`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_8012765C")]
     pub fn pk_special_lw_bolt_reached(&mut self, gobj: GObjId) -> bool {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
@@ -89,7 +89,7 @@ impl Running<'_> {
 
     /// `ftPk_SpecialLw_SpawnEffect` (the accessory callback): when the script raises the
     /// throw flag and no bolt is out, the cloud's effect and the bolt, `xD0` above him.
-    // Ports `ftPk_SpecialLw_SpawnEffect`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_SpawnEffect")]
     pub fn pk_special_lw_spawn_effect(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
@@ -129,13 +129,13 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialLw_Enter`.
-    // Ports `ftPk_SpecialLw_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_Enter")]
     pub fn pk_special_lw_enter(&mut self, gobj: GObjId) {
         self.pk_special_lw_start(gobj, ms::SPECIAL_LW_START);
     }
 
     /// `ftPk_SpecialAirLw_Enter`.
-    // Ports `ftPk_SpecialAirLw_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialAirLw_Enter")]
     pub fn pk_special_air_lw_enter(&mut self, gobj: GObjId) {
         self.pk_special_lw_start(gobj, ms::SPECIAL_AIR_LW_START);
     }
@@ -148,13 +148,13 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialLw_ChangeMotion_Unk00`.
-    // Ports `ftPk_SpecialLw_ChangeMotion_Unk00`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_ChangeMotion_Unk00")]
     pub fn pk_special_lw_start_air_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_LW_START, START_FLAGS);
     }
 
     /// `ftPk_SpecialLw_ChangeMotion_Unk01`.
-    // Ports `ftPk_SpecialLw_ChangeMotion_Unk01`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_ChangeMotion_Unk01")]
     pub fn pk_special_lw_start_ground_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_LW_START, START_FLAGS);
         let f = self.game.fighter_id(gobj);
@@ -162,14 +162,14 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialLw_ChangeMotion_Unk02`.
-    // Ports `ftPk_SpecialLw_ChangeMotion_Unk02`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_ChangeMotion_Unk02")]
     pub fn pk_special_lw_loop0_air_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_LW_LOOP0, LOOP0_FLAGS);
         self.pk_special_lw_loop_cbs(gobj);
     }
 
     /// `ftPk_SpecialLw_ChangeMotion_Unk03`.
-    // Ports `ftPk_SpecialLw_ChangeMotion_Unk03`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_ChangeMotion_Unk03")]
     pub fn pk_special_lw_loop0_ground_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_LW_LOOP0, LOOP0_FLAGS);
         self.pk_special_lw_loop_cbs(gobj);
@@ -178,13 +178,13 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialLw_ChangeMotion_Unk04`.
-    // Ports `ftPk_SpecialLw_ChangeMotion_Unk04`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_ChangeMotion_Unk04")]
     pub fn pk_special_lw_loop1_air_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_LW_LOOP1, LOOP1_FLAGS);
     }
 
     /// `ftPk_SpecialLw_ChangeMotion_Unk05`.
-    // Ports `ftPk_SpecialLw_ChangeMotion_Unk05`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_ChangeMotion_Unk05")]
     pub fn pk_special_lw_loop1_ground_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_LW_LOOP1, LOOP1_FLAGS);
         let f = self.game.fighter_id(gobj);
@@ -192,13 +192,13 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialLw_ChangeMotion_Unk06`.
-    // Ports `ftPk_SpecialLw_ChangeMotion_Unk06`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_ChangeMotion_Unk06")]
     pub fn pk_special_lw_end_air_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_LW_END, END_FLAGS);
     }
 
     /// `ftPk_SpecialLw_ChangeMotion_Unk07`.
-    // Ports `ftPk_SpecialLw_ChangeMotion_Unk07`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLw_ChangeMotion_Unk07")]
     pub fn pk_special_lw_end_ground_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_LW_END, END_FLAGS);
         let f = self.game.fighter_id(gobj);
@@ -216,13 +216,13 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialLwStart_Anim`.
-    // Ports `ftPk_SpecialLwStart_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLwStart_Anim")]
     pub fn pk_special_lw_start_anim(&mut self, gobj: GObjId) {
         self.pk_special_lw_start_tick(gobj, ms::SPECIAL_LW_LOOP0);
     }
 
     /// `ftPk_SpecialAirLwStart_Anim`.
-    // Ports `ftPk_SpecialAirLwStart_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialAirLwStart_Anim")]
     pub fn pk_special_air_lw_start_anim(&mut self, gobj: GObjId) {
         self.pk_special_lw_start_tick(gobj, ms::SPECIAL_AIR_LW_LOOP0);
     }
@@ -252,13 +252,13 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialLwLoop0_Anim`.
-    // Ports `ftPk_SpecialLwLoop0_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLwLoop0_Anim")]
     pub fn pk_special_lw_loop0_anim(&mut self, gobj: GObjId) {
         self.pk_special_lw_loop0_tick(gobj, ms::SPECIAL_LW_END, ms::SPECIAL_LW_LOOP1, false);
     }
 
     /// `ftPk_SpecialAirLwLoop0_Anim`.
-    // Ports `ftPk_SpecialAirLwLoop0_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialAirLwLoop0_Anim")]
     pub fn pk_special_air_lw_loop0_anim(&mut self, gobj: GObjId) {
         self.pk_special_lw_loop0_tick(gobj, ms::SPECIAL_AIR_LW_END, ms::SPECIAL_AIR_LW_LOOP1, true);
     }
@@ -272,19 +272,19 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialLwLoop1_Anim`.
-    // Ports `ftPk_SpecialLwLoop1_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLwLoop1_Anim")]
     pub fn pk_special_lw_loop1_anim(&mut self, gobj: GObjId) {
         self.pk_special_lw_loop1_tick(gobj, ms::SPECIAL_LW_END);
     }
 
     /// `ftPk_SpecialAirLwLoop1_Anim`.
-    // Ports `ftPk_SpecialAirLwLoop1_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialAirLwLoop1_Anim")]
     pub fn pk_special_air_lw_loop1_anim(&mut self, gobj: GObjId) {
         self.pk_special_lw_loop1_tick(gobj, ms::SPECIAL_AIR_LW_END);
     }
 
     /// `ftPk_SpecialLwEnd_Anim`.
-    // Ports `ftPk_SpecialLwEnd_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialLwEnd_Anim")]
     pub fn pk_special_lw_end_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_wait(gobj);
@@ -292,15 +292,63 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialAirLwEnd_Anim`.
-    // Ports `ftPk_SpecialAirLwEnd_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialAirLwEnd_Anim")]
     pub fn pk_special_air_lw_end_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_fall(gobj);
         }
     }
 
+    /// `ftPk_SpecialLwStart_Coll`: off a ledge, the aerial state from the same frame.
+    #[doc(alias = "ftPk_SpecialLwStart_Coll")]
+    pub fn pk_special_lw_start_coll(&mut self, gobj: GObjId) {
+        self.ground_coll_fall_off_then(gobj, |g, gobj| g.pk_special_lw_start_ground_to_air(gobj));
+    }
+
+    /// `ftPk_SpecialAirLwStart_Coll`: landing, the grounded state from the same frame.
+    #[doc(alias = "ftPk_SpecialAirLwStart_Coll")]
+    pub fn pk_special_air_lw_start_coll(&mut self, gobj: GObjId) {
+        self.air_coll_then(gobj, |g, gobj| g.pk_special_lw_start_air_to_ground(gobj));
+    }
+
+    /// `ftPk_SpecialLwLoop0_Coll`: off a ledge, the aerial state from the same frame.
+    #[doc(alias = "ftPk_SpecialLwLoop0_Coll")]
+    pub fn pk_special_lw_loop0_coll(&mut self, gobj: GObjId) {
+        self.ground_coll_fall_off_then(gobj, |g, gobj| g.pk_special_lw_loop0_ground_to_air(gobj));
+    }
+
+    /// `ftPk_SpecialAirLwLoop0_Coll`: landing, the grounded state from the same frame.
+    #[doc(alias = "ftPk_SpecialAirLwLoop0_Coll")]
+    pub fn pk_special_air_lw_loop0_coll(&mut self, gobj: GObjId) {
+        self.air_coll_then(gobj, |g, gobj| g.pk_special_lw_loop0_air_to_ground(gobj));
+    }
+
+    /// `ftPk_SpecialLwLoop1_Coll`: off a ledge, the aerial state from the same frame.
+    #[doc(alias = "ftPk_SpecialLwLoop1_Coll")]
+    pub fn pk_special_lw_loop1_coll(&mut self, gobj: GObjId) {
+        self.ground_coll_fall_off_then(gobj, |g, gobj| g.pk_special_lw_loop1_ground_to_air(gobj));
+    }
+
+    /// `ftPk_SpecialAirLwLoop1_Coll`: landing, the grounded state from the same frame.
+    #[doc(alias = "ftPk_SpecialAirLwLoop1_Coll")]
+    pub fn pk_special_air_lw_loop1_coll(&mut self, gobj: GObjId) {
+        self.air_coll_then(gobj, |g, gobj| g.pk_special_lw_loop1_air_to_ground(gobj));
+    }
+
+    /// `ftPk_SpecialLwEnd_Coll`: off a ledge, the aerial state from the same frame.
+    #[doc(alias = "ftPk_SpecialLwEnd_Coll")]
+    pub fn pk_special_lw_end_coll(&mut self, gobj: GObjId) {
+        self.ground_coll_fall_off_then(gobj, |g, gobj| g.pk_special_lw_end_ground_to_air(gobj));
+    }
+
+    /// `ftPk_SpecialAirLwEnd_Coll`: landing, the grounded state from the same frame.
+    #[doc(alias = "ftPk_SpecialAirLwEnd_Coll")]
+    pub fn pk_special_air_lw_end_coll(&mut self, gobj: GObjId) {
+        self.air_coll_then(gobj, |g, gobj| g.pk_special_lw_end_air_to_ground(gobj));
+    }
+
     /// `ftPk_SpecialAirLwLoop1_Phys`: falling at `xB8`, with quick air friction.
-    // Ports `ftPk_SpecialAirLwLoop1_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialAirLwLoop1_Phys")]
     pub fn pk_special_air_lw_loop1_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let g = reg(self.pk_attr_f32(f, attr::XB8));
@@ -312,10 +360,6 @@ impl Running<'_> {
 }
 
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
-    use super::super::coll::Cb;
-    let air_to_ground = |g: &mut Running, gobj: GObjId, cb: Cb| g.air_coll_then(gobj, cb);
-    let ground_to_air =
-        |g: &mut Running, gobj: GObjId, cb: Cb| g.ground_coll_fall_off_then(gobj, cb);
     match a {
         addr::SPECIAL_LW_SET_HIT => g.pk_special_lw_set_hit(gobj),
         addr::SPECIAL_LW_BOLT_LANDED => g.pk_special_lw_bolt_landed(gobj),
@@ -342,35 +386,19 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_LW_START_PHYS
         | addr::SPECIAL_LW_LOOP0_PHYS
         | addr::SPECIAL_LW_LOOP1_PHYS
-        | addr::SPECIAL_LW_END_PHYS => g.ground_friction(gobj),
+        | addr::SPECIAL_LW_END_PHYS => g.pk_ground_friction(gobj),
         addr::SPECIAL_AIR_LW_START_PHYS
         | addr::SPECIAL_AIR_LW_LOOP0_PHYS
-        | addr::SPECIAL_AIR_LW_END_PHYS => g.air_physics_no_drift(gobj),
+        | addr::SPECIAL_AIR_LW_END_PHYS => g.pk_air_physics_no_drift(gobj),
         addr::SPECIAL_AIR_LW_LOOP1_PHYS => g.pk_special_air_lw_loop1_phys(gobj),
-        addr::SPECIAL_LW_START_COLL => {
-            ground_to_air(g, gobj, |g, gobj| g.pk_special_lw_start_ground_to_air(gobj))
-        }
-        addr::SPECIAL_AIR_LW_START_COLL => {
-            air_to_ground(g, gobj, |g, gobj| g.pk_special_lw_start_air_to_ground(gobj))
-        }
-        addr::SPECIAL_LW_LOOP0_COLL => {
-            ground_to_air(g, gobj, |g, gobj| g.pk_special_lw_loop0_ground_to_air(gobj))
-        }
-        addr::SPECIAL_AIR_LW_LOOP0_COLL => {
-            air_to_ground(g, gobj, |g, gobj| g.pk_special_lw_loop0_air_to_ground(gobj))
-        }
-        addr::SPECIAL_LW_LOOP1_COLL => {
-            ground_to_air(g, gobj, |g, gobj| g.pk_special_lw_loop1_ground_to_air(gobj))
-        }
-        addr::SPECIAL_AIR_LW_LOOP1_COLL => {
-            air_to_ground(g, gobj, |g, gobj| g.pk_special_lw_loop1_air_to_ground(gobj))
-        }
-        addr::SPECIAL_LW_END_COLL => {
-            ground_to_air(g, gobj, |g, gobj| g.pk_special_lw_end_ground_to_air(gobj))
-        }
-        addr::SPECIAL_AIR_LW_END_COLL => {
-            air_to_ground(g, gobj, |g, gobj| g.pk_special_lw_end_air_to_ground(gobj))
-        }
+        addr::SPECIAL_LW_START_COLL => g.pk_special_lw_start_coll(gobj),
+        addr::SPECIAL_AIR_LW_START_COLL => g.pk_special_air_lw_start_coll(gobj),
+        addr::SPECIAL_LW_LOOP0_COLL => g.pk_special_lw_loop0_coll(gobj),
+        addr::SPECIAL_AIR_LW_LOOP0_COLL => g.pk_special_air_lw_loop0_coll(gobj),
+        addr::SPECIAL_LW_LOOP1_COLL => g.pk_special_lw_loop1_coll(gobj),
+        addr::SPECIAL_AIR_LW_LOOP1_COLL => g.pk_special_air_lw_loop1_coll(gobj),
+        addr::SPECIAL_LW_END_COLL => g.pk_special_lw_end_coll(gobj),
+        addr::SPECIAL_AIR_LW_END_COLL => g.pk_special_air_lw_end_coll(gobj),
         _ => return false,
     }
     true

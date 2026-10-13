@@ -57,7 +57,7 @@ impl Running<'_> {
 
     /// `ftPk_SpecialHi_UpdateVel` (the zip's `x21F8`): the speeds and the zip's stick turn
     /// toward the facing.
-    // Ports `ftPk_SpecialHi_UpdateVel`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialHi_UpdateVel")]
     pub fn pk_special_hi_update_vel(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         let facing = reg(fp.facing_dir);
@@ -137,7 +137,7 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialHi_ChangeMotion_Unk00`: the aerial wind-up from the same frame.
-    // Ports `ftPk_SpecialHi_ChangeMotion_Unk00`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialHi_ChangeMotion_Unk00")]
     pub fn pk_special_hi_start0_ground_to_air(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne_jumped(f);
@@ -154,7 +154,7 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialHi_ChangeMotion_Unk01`: the grounded wind-up from the same frame.
-    // Ports `ftPk_SpecialHi_ChangeMotion_Unk01`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialHi_ChangeMotion_Unk01")]
     pub fn pk_special_air_hi_start0_air_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_HI_START0, START0_FLAGS);
     }
@@ -301,7 +301,7 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialHi_ChangeMotion_Unk02`: the zip goes on in the air.
-    // Ports `ftPk_SpecialHi_ChangeMotion_Unk02`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialHi_ChangeMotion_Unk02")]
     pub fn pk_special_hi_start1_ground_to_air(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne_jumped(f);
@@ -600,7 +600,7 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialHi_ChangeMotion_Unk04`: the aerial end from the same frame.
-    // Ports `ftPk_SpecialHi_ChangeMotion_Unk04`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialHi_ChangeMotion_Unk04")]
     pub fn pk_special_hi_end_ground_to_air(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne_jumped(f);
@@ -683,15 +683,15 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | addr::SPECIAL_HI_START1_IASA
         | addr::SPECIAL_AIR_HI_START1_IASA
         | addr::SPECIAL_HI_END_IASA
-        | addr::SPECIAL_AIR_HI_END_IASA => {}
-        addr::SPECIAL_HI_START0_PHYS => g.ground_friction(gobj),
+        | addr::SPECIAL_AIR_HI_END_IASA => g.pk_nothing(gobj),
+        addr::SPECIAL_HI_START0_PHYS => g.pk_ground_friction(gobj),
         addr::SPECIAL_AIR_HI_START0_PHYS => g.pk_special_air_hi_start0_phys(gobj),
         addr::SPECIAL_HI_START0_COLL => g.pk_special_hi_start0_coll(gobj),
         addr::SPECIAL_AIR_HI_START0_COLL => g.pk_special_air_hi_start0_coll(gobj),
         addr::SPECIAL_HI_START1_ANIM => g.pk_special_hi_start1_anim(gobj),
         addr::SPECIAL_AIR_HI_START1_ANIM => g.pk_special_air_hi_start1_anim(gobj),
-        addr::SPECIAL_HI_START1_PHYS => g.self_movement_from_ground(gobj),
-        addr::SPECIAL_AIR_HI_START1_PHYS => g.pk_special_hi_air_zip_pose(gobj),
+        addr::SPECIAL_HI_START1_PHYS => g.pk_special_hi_start1_phys(gobj),
+        addr::SPECIAL_AIR_HI_START1_PHYS => g.pk_special_air_hi_start1_phys(gobj),
         addr::SPECIAL_HI_START1_COLL => g.pk_special_hi_start1_coll(gobj),
         addr::SPECIAL_AIR_HI_START1_COLL => g.pk_special_air_hi_start1_coll(gobj),
         addr::SPECIAL_HI_END_ANIM => g.pk_special_hi_end_anim(gobj),

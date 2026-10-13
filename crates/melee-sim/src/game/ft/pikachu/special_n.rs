@@ -29,7 +29,7 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialN_Enter`.
-    // Ports `ftPk_SpecialN_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialN_Enter")]
     pub fn pk_special_n_enter(&mut self, gobj: GObjId) {
         self.pk_special_n_start(gobj, ms::SPECIAL_N);
     }
@@ -143,7 +143,7 @@ impl Running<'_> {
     }
 
     /// `ftPk_SpecialN_SpawnEffect0`: the Skull Bash's charge spark (effect 0x4BE).
-    // Ports `ftPk_SpecialN_SpawnEffect0`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_SpecialN_SpawnEffect0")]
     pub fn pk_special_n_spawn_effect0(&mut self, gobj: GObjId) {
         self.pk_special_n_spark(gobj, 0x4BE);
     }
@@ -179,9 +179,9 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_N_ENTER => g.pk_special_air_n_enter(gobj),
         addr::SPECIAL_N_ANIM => g.pk_special_n_anim(gobj),
         addr::SPECIAL_AIR_N_ANIM => g.pk_special_air_n_anim(gobj),
-        addr::SPECIAL_N_IASA | addr::SPECIAL_AIR_N_IASA => {}
-        addr::SPECIAL_N_PHYS => g.ground_friction(gobj),
-        addr::SPECIAL_AIR_N_PHYS => g.air_physics(gobj),
+        addr::SPECIAL_N_IASA | addr::SPECIAL_AIR_N_IASA => g.pk_nothing(gobj),
+        addr::SPECIAL_N_PHYS => g.pk_ground_friction(gobj),
+        addr::SPECIAL_AIR_N_PHYS => g.pk_special_air_n_phys(gobj),
         addr::SPECIAL_N_COLL => g.pk_special_n_coll(gobj),
         addr::SPECIAL_AIR_N_COLL => g.pk_special_air_n_coll(gobj),
         addr::SPECIAL_N_SPAWN_EFFECT0 => g.pk_special_n_spawn_effect0(gobj),

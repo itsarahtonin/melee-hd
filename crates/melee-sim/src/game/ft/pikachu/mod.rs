@@ -7,6 +7,7 @@
 //! fighter's attribute block, both read at the decomp's offsets.
 
 pub mod init;
+pub mod shared;
 pub mod special_hi;
 pub mod special_lw;
 pub mod special_n;
