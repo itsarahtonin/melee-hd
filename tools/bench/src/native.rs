@@ -24,10 +24,10 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use melee_data::disc::Disc;
-use melee_replay::Device;
 use melee_sim::game::state::Game;
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
 use melee_sim::gekko_fp::{self, FpMode, set_fp_mode};
+use melee_slippi::Device;
 use ssbm_slippi::replay::Replay;
 
 use crate::sync::{FIRST_FRAME, Fighter, post_frames, replay_last_frame, same};
@@ -67,7 +67,8 @@ impl Files {
 /// A benchmark match: its replay, the settings it starts from and its frames' fighters.
 struct Bench {
     name: String,
-    replay: Replay,
+    /// The replay as melee-sim plays it.
+    replay: melee_slippi::Replay,
     settings: Settings,
     want: BTreeMap<i32, [Option<Fighter>; 8]>,
     last: i32,
@@ -78,8 +79,10 @@ impl Bench {
     fn open(dir: &Path, name: &str) -> Result<Bench, String> {
         let path = dir.join(format!("{name}.slp"));
         let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-        let replay = Replay::parse(&bytes).map_err(|e| format!("{}: {e}", path.display()))?;
-        let mut settings = Settings::from_replay(&melee_replay::start(&replay))
+        let original = Replay::parse(&bytes).map_err(|e| format!("{}: {e}", path.display()))?;
+        let replay =
+            melee_slippi::Replay::parse(&bytes).map_err(|e| format!("{}: {e}", path.display()))?;
+        let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
             .map_err(|e| format!("the replay's codes: {e}"))?;
         let trace = dir.join(format!("{name}.start.trace"));
         settings.fighter_addresses = crate::sync::fighter_addresses(&trace).ok_or_else(|| {
@@ -88,8 +91,8 @@ impl Bench {
                 trace.display()
             )
         })?;
-        let want = post_frames(&replay);
-        let last = replay_last_frame(&replay);
+        let want = post_frames(&original);
+        let last = replay_last_frame(&original);
         Ok(Bench {
             name: name.to_owned(),
             replay,

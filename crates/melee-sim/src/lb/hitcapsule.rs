@@ -12,7 +12,7 @@ use crate::game::structs::{HitCapsule, HitResult, HurtCapsule};
 use crate::hsd::Objects;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
-use crate::lb::collision::{HitShape, hit_hurt};
+use crate::lb::collision::{HitShape, SphereEntry, hit_hurt, sphere_entry};
 use crate::lb::joint::world_position;
 use crate::mtx::Mtx34;
 use crate::vec::Vec3;
@@ -499,9 +499,9 @@ pub fn hits_bubble(
     })
 }
 
-/// Where a hitbox's path entered a bubble, `lbColl_80007DD8`: the direction from the bubble's
-/// center to the entry and its angle against the path ([`crate::lb::collision::sphere_entry`]
-/// with the hitbox's radius as the reach beyond the bubble's).
+/// Where a hitbox's path this frame enters a bubble, `lbColl_80007DD8`: the direction from the
+/// bubble's center toward the entry and its angle to the path ([`sphere_entry`]), measured
+/// through the bubble's bone after `mtx` when the owner has a matrix of its own.
 #[doc(alias = "lbColl_80007DD8")]
 pub fn bubble_entry(
     objs: &mut Objects,
@@ -510,17 +510,16 @@ pub fn bubble_entry(
     bubble: &HitResult,
     mtx: Option<&Mtx34>,
     hit_owner_scale: f32,
-) -> (Vec3, f32) {
+) -> SphereEntry {
     let m = bone_mtx(objs, data, bubble.bone, mtx);
-    let e = crate::lb::collision::sphere_entry(
+    sphere_entry(
         bubble.pos,
         &m,
         hit.x58,
         hit.x4C,
         bubble.size,
         hit_radius(hit, hit_owner_scale),
-    );
-    (e.normal, e.angle)
+    )
 }
 
 /// A hitbox's shape for [`crate::lb::collision::hitboxes_touch`].

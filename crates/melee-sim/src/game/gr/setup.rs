@@ -563,6 +563,40 @@ pub fn stage_gobj(r: &mut Running, map_id: i32) -> Option<GObjId> {
     Some(gobj)
 }
 
+/// Creates a stage object from a joint descriptor, `Ground_801C1A20`: as
+/// [`stage_gobj`] makes one, but its model from `joint` (its points of interest filled for
+/// `map_id`, -1 for none), no set-apart joints, and no place in `stage_info.map_gobjs`.
+#[doc(alias = "Ground_801C1A20")]
+pub fn stage_gobj_from_joint(r: &mut Running, joint: DataRef, map_id: i32) -> Option<GObjId> {
+    let (game, data) = (&mut *r.game, r.data);
+    let gobj = game.world.create(3, 5, 0);
+    let g = new_ground(game, gobj);
+    {
+        let gp = &mut game.grounds[g.0];
+        gp.map_id = map_id;
+        gp.gobj = Some(gobj);
+        gp.x10_flags.b0 = false;
+        gp.x10_flags.b1 = false;
+        gp.x10_flags.b2 = true;
+        gp.x8_callback = None;
+        gp.xC_callback = None;
+        gp.x1C_callback = None;
+        gp.x10_flags.b5 = false;
+        gp.x18 = None;
+        gp.x10_flags.b3 = false;
+        gp.x20 = [-1; 8];
+    }
+    material::reset_overlay(game, gobj);
+    let model = jobj::load_joint(&mut game.objs, data, Some(joint));
+    fill_points(game, data, map_id, model, Some(joint));
+    let sj = scale_joint(game, scale(game));
+    jobj::add_next(&mut game.objs.jobjs, model, Some(sj));
+    game.world.set_obj(gobj, OBJ_JOBJ, Obj::JObj(sj));
+    game.world.setup_proc(gobj, CodeRef(0x801C_1CD0), 1);
+    game.world.setup_proc(gobj, CodeRef(0x801C_1D38), 4);
+    Some(gobj)
+}
+
 /// Creates a stage object and sets it up from its callbacks (each stage's copy of
 /// `grLast_8021A7F4`): its render callback, destroy callback, setup and process.
 pub fn create_from_callbacks(r: &mut Running, map_id: i32, cb: &StageCallbacks) -> Option<GObjId> {
@@ -866,7 +900,7 @@ fn wobj_anims(game: &Game, w: crate::hsd::wobj::WObjId) -> Vec<aobj::AObjId> {
 
 /// A light chain's animations as `HSD_ForeachAnim` visits them: each light's, then its
 /// position's and interest's.
-fn light_anims(game: &Game, first: lobj::LObjId, _mask: u32) -> Vec<aobj::AObjId> {
+pub(crate) fn light_anims(game: &Game, first: lobj::LObjId, _mask: u32) -> Vec<aobj::AObjId> {
     let mut out = Vec::new();
     let mut cur = Some(first);
     while let Some(l) = cur {

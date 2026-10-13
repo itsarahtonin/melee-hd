@@ -27,6 +27,7 @@ pub mod spawn;
 pub mod tables;
 mod tables_gen;
 pub mod vars;
+pub mod zako;
 
 pub use vars::{ItemVars, Var, VarsKind, vars_kind};
 

@@ -464,6 +464,13 @@ impl<'a> Importer<'a> {
                     let which = crate::stadium::screen_of_render(self.u32(g + 0x1C)).unwrap();
                     Some(crate::stadium::import_screen(self, which, ud))
                 }
+                // Fountain of Dreams' reflection camera: kind 3, freed with `HSD_Free`.
+                3 if ud != 0
+                    && release == crate::stadium::HSD_FREE
+                    && crate::izumi::is_reflection(self.u32(g + 0x1C)) =>
+                {
+                    Some(crate::izumi::import_reflection(self, ud))
+                }
                 3 if ud != 0 => Some(UserData::Ground(self.ground(ud))),
                 bgflash::USER_DATA_KIND if ud != 0 && release == bgflash::FREE => {
                     let mem = Mem {
@@ -731,8 +738,6 @@ impl Importer<'_> {
         let (coll, filter_gobj) = crate::read_coll_statics(&cap.call.mem1);
         self.game.coll = coll;
         self.game.coll.floor_filter_gobj = self.import_handle("GObjId", filter_gobj).map(GObjId);
-        self.game.ft.wind_sources = self.u32(sym("ft_804D6578"));
-        self.game.ft.bury_things = self.u32(sym("ftDevice_BuryThingCount"));
         self.game.vs = VsSceneController::import(&mem, VS_CONTROLLER, self);
         self.gm_and_pads();
     }

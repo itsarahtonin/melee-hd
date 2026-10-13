@@ -13,6 +13,9 @@ const MARS_ATTRS_SIZE: usize = 0x98;
 /// `ftSeakAttributes`.
 const SEAK_ATTRS_SIZE: usize = 0x74;
 
+/// `ftCaptain_DatAttrs`.
+const CAPTAIN_ATTRS_SIZE: usize = 0x8C;
+
 /// `ftZelda_DatAttrs`.
 const ZELDA_ATTRS_SIZE: usize = 0xA8;
 
@@ -189,6 +192,53 @@ impl Running<'_> {
         self.game.set_part_vis(gobj, 1, 0);
         let fp = self.game.fighter_mut(gobj);
         fp.u[..4].copy_from_slice(&[0; 4]);
+    }
+
+    /// Captain Falcon's creation, `ftCa_Init_OnLoad`: he can wall jump and has his
+    /// attributes.
+    #[doc(alias = "ftCa_Init_OnLoad")]
+    pub fn ca_on_load(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.game.fighters[f.0].can_walljump = true;
+        self.push_attrs(f, CAPTAIN_ATTRS_SIZE);
+    }
+
+    /// Ganondorf's creation, `ftGn_Init_OnLoad` (`ftCa_Init_OnLoadForGanon`): Captain
+    /// Falcon's attribute layout, pushed; he can't wall jump.
+    // Ports `ftGn_Init_OnLoad` and `ftCa_Init_OnLoadForGanon`; aliased once a check reaches them.
+    pub fn gn_on_load(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.push_attrs(f, CAPTAIN_ATTRS_SIZE);
+    }
+
+    /// Captain Falcon's spawn, `ftCa_Init_OnDeath`: his first model variant, the side
+    /// special's effects not out.
+    #[doc(alias = "ftCa_Init_OnDeath")]
+    pub fn ca_on_death(&mut self, gobj: GObjId) {
+        self.game.set_part_vis(gobj, 0, 0);
+        let fp = self.game.fighter_mut(gobj);
+        fp.set_u_i32(4, 0);
+        fp.set_u_i32(0, 0);
+    }
+
+    /// Ganondorf's spawn, `ftGn_Init_OnDeath`: his first model variant, his second model
+    /// hidden, the side special's effects not out.
+    // Ports `ftGn_Init_OnDeath`; aliased once a check reaches it.
+    pub fn gn_on_death(&mut self, gobj: GObjId) {
+        self.game.set_part_vis(gobj, 0, 0);
+        self.game.set_part_vis(gobj, 1, -1);
+        let fp = self.game.fighter_mut(gobj);
+        fp.set_u_i32(4, 0);
+        fp.set_u_i32(0, 0);
+    }
+
+    /// `ftCa_Init_LoadSpecialAttrs`, and Ganondorf's (`ftGn_Init_LoadSpecialAttrs`), which
+    /// calls it.
+    #[doc(alias = "ftCa_Init_LoadSpecialAttrs")]
+    // Also ports `ftGn_Init_LoadSpecialAttrs`; aliased once a check reaches it.
+    pub fn ca_load_special_attrs(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.copy_attrs(f, CAPTAIN_ATTRS_SIZE);
     }
 
     /// `ftZd_Init_LoadSpecialAttrs`.

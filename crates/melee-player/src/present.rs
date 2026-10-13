@@ -6,7 +6,7 @@
 use std::sync::{Arc, Mutex};
 
 use winit::event_loop::ActiveEventLoop;
-use winit::window::Window;
+use winit::window::{Fullscreen, Window};
 
 static SIZE: Mutex<(u32, u32)> = Mutex::new((1280, 960));
 /// The aspect ratio frames are shown at: 4:3, or wider in widescreen.
@@ -64,10 +64,15 @@ impl Gpu {
         }
     }
 
-    /// A renderer on this GPU, leaving its frames on the GPU.
-    pub fn renderer(&self, scale: u32) -> melee_gpu::Renderer {
-        let mut r =
-            melee_gpu::Renderer::with_device_scaled(self.device.clone(), self.queue.clone(), scale);
+    /// A renderer on this GPU, leaving its frames on the GPU, with `samples` samples a pixel
+    /// (1, or 4 for MSAA).
+    pub fn renderer(&self, scale: u32, samples: u32) -> melee_gpu::Renderer {
+        let mut r = melee_gpu::Renderer::with_device_msaa(
+            self.device.clone(),
+            self.queue.clone(),
+            scale,
+            samples,
+        );
         r.xfb_on_gpu = true;
         r.xfb_readback = false;
         r
@@ -227,14 +232,17 @@ pub struct Shown {
     surface: wgpu::Surface<'static>,
     config: wgpu::SurfaceConfiguration,
     blit: Blit,
+    fullscreen: bool,
 }
 
 impl Shown {
-    pub fn new(gpu: &Gpu, event_loop: &ActiveEventLoop) -> Shown {
+    /// The window, borderless fullscreen on its monitor when `fullscreen`.
+    pub fn new(gpu: &Gpu, event_loop: &ActiveEventLoop, fullscreen: bool) -> Shown {
         let (w, h) = *SIZE.lock().unwrap();
         let attrs = Window::default_attributes()
             .with_title("melee-hd")
-            .with_inner_size(winit::dpi::PhysicalSize::new(w, h));
+            .with_inner_size(winit::dpi::PhysicalSize::new(w, h))
+            .with_fullscreen(fullscreen.then_some(Fullscreen::Borderless(None)));
         let window = Arc::new(event_loop.create_window(attrs).expect("a window"));
         let surface = gpu
             .instance
@@ -276,6 +284,7 @@ impl Shown {
             surface,
             config,
             blit,
+            fullscreen,
         }
     }
 
@@ -286,6 +295,43 @@ impl Shown {
         self.config.width = w;
         self.config.height = h;
         self.surface.configure(&gpu.device, &self.config);
+    }
+
+    /// The swap chain's format.
+    pub fn format(&self) -> wgpu::TextureFormat {
+        self.config.format
+    }
+
+    /// Whether the window is fullscreen.
+    pub fn fullscreen(&self) -> bool {
+        self.fullscreen
+    }
+
+    /// Makes the window borderless fullscreen on the monitor it's on, or a window again. The
+    /// surface follows the resize the window then gets.
+    pub fn set_fullscreen(&mut self, on: bool) {
+        if on != self.fullscreen {
+            self.fullscreen = on;
+            self.window
+                .set_fullscreen(on.then(|| Fullscreen::Borderless(self.window.current_monitor())));
+        }
+    }
+
+    /// Draws into the window's next image with `draw` (given its view, width and height) and
+    /// shows it.
+    pub fn paint(&mut self, gpu: &Gpu, draw: impl FnOnce(&wgpu::TextureView, u32, u32)) {
+        let out = match self.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(t)
+            | wgpu::CurrentSurfaceTexture::Suboptimal(t) => t,
+            _ => {
+                self.surface.configure(&gpu.device, &self.config);
+                return;
+            }
+        };
+        let view = out.texture.create_view(&Default::default());
+        draw(&view, self.config.width, self.config.height);
+        self.window.pre_present_notify();
+        gpu.queue.present(out);
     }
 
     /// Shows a frame now.

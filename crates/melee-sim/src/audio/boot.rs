@@ -1,0 +1,275 @@
+//! The audio library's setup at boot: `main`'s `lbAudioAx_8002838C` brings up the AX library,
+//! the synth, the driver and the device command queue (`HSD_AudioInitMultiPStream`), sets up
+//! the aux effects and the three sound banks' room in ARAM; the save data's reset then loads the
+//! sound bank (`smash2.sem`) and the boot's banks (`lbAudioAx_80028690`, in `lb::audio`).
+//!
+//! Everything here runs on ssbm-rs's timeline ([`super::clock`]), which starts at the audio
+//! setup: the boot's code before it (the OS, video, disc and pad libraries, HSD's setup) and
+//! between the audio library's calls isn't simulated, so where it takes time the timeline is
+//! moved to where ssbm-rs's clock has that code end ([`BootTimes`]).
+
+use melee_data::archive::{ArchiveId, Archives};
+
+use super::Audio;
+use super::ax::{Ax, PB_WORDS, VOICES as AX_VOICES, Voice};
+use super::clock::{AUDIO_FRAME, Clock, EventKind, FIELD};
+use super::heap::{Cell, Heap};
+
+/// `HSD_OSInit`'s audio heap: the arena's start after the boot's allocations (the frame
+/// buffers, the GX FIFO, the OS heap table), and `iparam_audio_heap_size`.
+pub const HEAP_START: u32 = 0x8065_FB20;
+pub const HEAP_SIZE: u32 = 0x8_0000;
+
+/// ARAM below this is the DSP's, reserved by `ARInit`; allocations start there.
+const ARAM_USER_BASE: u32 = 0x4000;
+
+/// `__AXPB`, `__AXITD`, `__AXUpdates`: the DSP's parameter blocks, the ITD buffers and the
+/// update buffers, whose addresses each voice's block carries.
+const AX_PB: u32 = 0x804B_09E0;
+const AX_ITD: u32 = 0x804B_39E0;
+const AX_UPDATES: u32 = 0x804B_49E0;
+/// The blocks' sizes in those arrays.
+const PB_BYTES: u32 = 2 * PB_WORDS as u32;
+const ITD_BYTES: u32 = 0x40;
+const UPDATES_BYTES: u32 = 0x100;
+
+/// `OS_BUS_CLOCK / 400`: the DSP cycles in an audio frame.
+const MAX_DSP_CYCLES: u32 = 162_000_000 / 400;
+
+/// The pad sampling alarm's period (`HSD_PadInit`'s, a 60th of a second).
+pub const PAD_ALARM_PERIOD: u64 = 675_000;
+
+/// When the boot's unsimulated code ends on ssbm-rs's clock, measured from its runs (its
+/// `AUDIO_TIMELINE` log of a replay's boot; the boot doesn't depend on the replay).
+pub struct BootTimes;
+
+impl BootTimes {
+    /// `HSD_AudioInitMultiPStream`'s start, after the OS, video, disc, pad and HSD setup.
+    pub const INIT: u64 = 1_360_670;
+    /// `__AXOutInit` starts the audio DMA: the AX library's setup, the DSP's included, took
+    /// this long.
+    pub const DMA_START: u64 = 1_360_710;
+    /// The aux effects' setup, after `HSD_AudioInitMultiPStream`'s return.
+    pub const AUX: u64 = 1_360_790;
+    /// `lbAudioAx_80028690`'s start, after the rest of `main`'s setup up to the save data's
+    /// reset.
+    pub const RESET: u64 = 1_360_814;
+    /// The first scene's preparation (`preloadState`) starts its preload. The boot's first
+    /// reads straddle the first tick's start (ssbm-rs's order of calls puts the second
+    /// file's request before it and the third's after), which puts this between 5,402,160 and
+    /// 5,422,440; here it is just after the retrace that starts field 8, which the boot's
+    /// frame setup waits for. Nothing the boot leaves depends on where in that window it is.
+    pub const PRELOAD: u64 = 5_405_432;
+    /// The first engine tick's game code, after `main` has handed over to the scene manager
+    /// and the first scene has set up.
+    pub const FIRST_TICK: u64 = 5_442_771;
+    /// Where, in that tick, Slippi's playback scene makes its audio calls, after it has asked
+    /// the Slippi device for the replay's game and preloaded its files.
+    pub const PLAYBACK_CALLS: u64 = 6_081_107;
+}
+
+/// ARAM's allocator (`ARInit`'s stack): each allocation goes after the last.
+pub struct Aram {
+    next: u32,
+}
+
+impl Aram {
+    /// `ARInit`.
+    #[doc(alias = "ARInit")]
+    pub fn new() -> Aram {
+        Aram {
+            next: ARAM_USER_BASE,
+        }
+    }
+
+    /// `ARAlloc`.
+    #[doc(alias = "ARAlloc")]
+    pub fn alloc(&mut self, len: u32) -> u32 {
+        let at = self.next;
+        self.next += len;
+        at
+    }
+}
+
+impl Default for Aram {
+    fn default() -> Self {
+        Aram::new()
+    }
+}
+
+impl Ax {
+    /// `AXInit`'s state: the voice stacks emptied (`__AXAllocInit`, `__AXInitVoiceStacks`), every voice set to its
+    /// defaults with its block's addresses and pushed on the free stack (`__AXVPBInit`), no
+    /// aux callbacks (`__AXAuxInit`), the command list's mode and position (`__AXClInit`), and
+    /// the first command list built with no user callback (`__AXOutInit`). The DSP's setup and
+    /// the audio DMA's start are the timeline's.
+    #[doc(alias = "AXInit")]
+    #[doc(alias = "__AXAllocInit")]
+    #[doc(alias = "__AXVPBInit")]
+    #[doc(alias = "__AXAuxInit")]
+    #[doc(alias = "__AXClInit")]
+    #[doc(alias = "__AXOutInit")]
+    pub fn init(&mut self) {
+        self.callback_stack = None;
+        self.stack_head = [None; super::ax::PRIORITY_STACKS];
+        self.stack_tail = [None; super::ax::PRIORITY_STACKS];
+        self.max_dsp_cycles = MAX_DSP_CYCLES;
+        self.rec_dsp_cycles = 0;
+        for i in 0..AX_VOICES {
+            let pb = AX_PB + PB_BYTES * i as u32;
+            let next = if i == AX_VOICES - 1 { 0 } else { pb + PB_BYTES };
+            // `__AXSetPBDefault`.
+            let mut v = Voice {
+                sync: 0xA4,
+                ..Voice::default()
+            };
+            for block in [&mut v.pb, &mut self.dsp[i]] {
+                *block = super::ax::Pb::default();
+                block.next = next;
+                block.curr = pb;
+                block.itd.buffer = AX_ITD + ITD_BYTES * i as u32;
+                block.update.data = AX_UPDATES + UPDATES_BYTES * i as u32;
+            }
+            self.voices[i] = v;
+            // `__AXPushFreeStack`, which sets the priority the loop gave back to 0.
+            self.voices[i].next = self.stack_head[0];
+            self.voices[i].priority = 0;
+            self.stack_head[0] = Some(i as u8);
+        }
+        self.aux_a = false;
+        self.aux_b = false;
+        self.mode = 0;
+        self.list_position = 0;
+        self.out_frame = 0;
+        self.next_frame();
+        self.user_callback = None;
+    }
+}
+
+impl Audio {
+    /// `HSD_AudioInitMultiPStream`, on a timeline started here: the driver's voices on its
+    /// free list, the synth (`HSD_SynthInit`, with the AX library) and its callbacks into the
+    /// driver, and both aux buses off. `bank_size` is the ARAM the sound banks get.
+    #[doc(alias = "HSD_AudioInitMultiPStream")]
+    pub fn init_multi_pstream(&mut self, data: &Archives, aram: &mut Aram, bank_size: u32) {
+        // What the game's data holds before any code runs: the driver's flags leave the
+        // streams' second send alone, the synth's sample rate conversion block has a ratio
+        // of 1, and the device command queue's ids start at 4.
+        self.driver.aux_flags = 2;
+        self.synth.src_ratio = 0x1_0000;
+        self.devcom.next_id = 4;
+        self.heap = Heap {
+            size: HEAP_SIZE as i32,
+            free: vec![Cell {
+                at: HEAP_START,
+                size: HEAP_SIZE,
+            }],
+            allocated: Vec::new(),
+        };
+        let now = BootTimes::INIT;
+        let mut clock = Clock {
+            now,
+            alarm_period: PAD_ALARM_PERIOD,
+            dsp_ready: true,
+            ..Clock::default()
+        };
+        clock.schedule((now / FIELD + 1) * FIELD, EventKind::Field);
+        clock.schedule(
+            (now / PAD_ALARM_PERIOD + 1) * PAD_ALARM_PERIOD,
+            EventKind::PadAlarm,
+        );
+        self.clock = Some(clock);
+        for v in 0..super::driver::VOICES as u8 {
+            self.driver.voices[usize::from(v)].flags &= !super::driver::STATE_MASK;
+            self.driver_link(v, true);
+        }
+        self.synth_init(data, aram, bank_size);
+        self.synth.master_clock = Some(super::driver::MASTER_CLOCK);
+        self.synth.inactivated = Some(super::driver::KILL_CALLBACK);
+        self.synth.pause = Some(super::driver::PAUSE_CALLBACK);
+        self.driver_setup_aux(0, 0);
+        self.driver_setup_aux(1, 0);
+    }
+
+    /// `HSD_SynthInit`: the AX library, the silence the music stream's last box loops to
+    /// (cleared in ARAM), the sound banks' and the stream's room in ARAM, the synth's frame
+    /// callback, its channels at full volume, and the console's sound mode.
+    #[doc(alias = "HSD_SynthInit")]
+    fn synth_init(&mut self, data: &Archives, aram: &mut Aram, bank_size: u32) {
+        self.ax.init();
+        if let Some(log) = &mut self.mix {
+            log.next_list(&self.ax);
+        }
+        self.with_clock(data, |c, f| {
+            c.catch_up(BootTimes::DMA_START, f);
+            c.schedule(c.now + AUDIO_FRAME, EventKind::AudioDma);
+        });
+        let silence = aram.alloc(0x500);
+        self.devcom_request(data, 0, 0, silence, 0x500, 3, 0, None, 0);
+        self.synth.stream.silence = silence * 2;
+        let banks = &mut self.synth.banks;
+        banks.head[0] = aram.alloc(bank_size) as i32;
+        self.ax.user_callback = Some(super::SYNTH_CALLBACK);
+        self.synth.master = 1.0;
+        self.synth.channels.fill(super::synth::Channel {
+            volume: 1.0,
+            target: 1.0,
+            frames: 0,
+        });
+        let banks = &mut self.synth.banks;
+        banks.aram_end = banks.head[0] as u32 + bank_size;
+        self.synth.stream.base = aram.alloc(0x3_0000);
+        // `OSGetSoundMode`: the console's setting, stereo in ssbm-rs's.
+        self.synth.sound_mode = 1;
+    }
+
+    /// `AXDriverSetupAux`'s simulated part: the aux effect type the driver records for the
+    /// channel's bus, and whether the AX library has a callback for it, which the command
+    /// list's cost counts. The effect itself is the presentation's (`melee-audio`).
+    #[doc(alias = "AXDriverSetupAux")]
+    #[doc(alias = "HSD_AudioSFXSetupAux")]
+    pub fn driver_setup_aux(&mut self, channel: u32, kind: u32) {
+        let shift = if channel == 0 { 8 } else { 12 };
+        let flags = &mut self.driver.aux_flags;
+        let old = *flags >> shift & 0xF;
+        *flags &= !(old << shift);
+        *flags |= kind << shift;
+        let on = kind != 0;
+        if channel == 0 {
+            self.ax.aux_a = on;
+        } else {
+            self.ax.aux_b = on;
+        }
+    }
+
+    /// `AXDriver_8038DA70`: the sound bank (`smash2.sem`, `len` bytes, its archive `bank`)
+    /// read whole into a block of the audio heap, the game spinning on `lb_800195D0` until
+    /// the read's callback; its tables then point into it.
+    #[doc(alias = "AXDriver_8038DA70")]
+    pub fn driver_load_bank(&mut self, data: &Archives, bank: ArchiveId, len: u32) {
+        let base = self
+            .heap
+            .alloc(len.next_multiple_of(32))
+            .expect("audio heap overflow.");
+        let _ = base;
+        // `DVDReadAsyncPrio`: one read straight into the block, done after the disc's latency;
+        // its callback (`fn_8038DA5C`) ends the spin.
+        self.hw.disc_read();
+        self.driver.reading_bank = true;
+        self.with_clock(data, |c, f| c.wait_until(f, super::clock::Wait::BankRead));
+        let file = data.get(bank).data();
+        let word = |at: usize| u32::from_be_bytes(file[at..at + 4].try_into().unwrap());
+        let d = &mut self.driver;
+        d.bank = Some(bank);
+        // The file's tables in order: the effects' (not kept), the sounds' command streams
+        // (relocated), the banks' and the streams'.
+        let mut at = 4 + 4 * word(0) as usize;
+        let n = word(at) as usize;
+        at += 4 + 4 * n;
+        d.banks = word(at) as i32;
+        d.bank_table = (at + 4) as u32;
+        at += 4 + 4 * d.banks as usize;
+        d.streams = word(at) as i32;
+        d.stream_table = (at + 4) as u32;
+    }
+}

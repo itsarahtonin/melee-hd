@@ -203,7 +203,7 @@ impl Running<'_> {
     #[doc(alias = "ftColl_80076640")]
     #[doc(alias = "ftColl_80078710")]
     #[doc(alias = "ftCommon_8007EE0C")]
-    fn throw_hit(&mut self, gobj: GObjId, victim: GObjId, place: bool) {
+    pub(crate) fn throw_hit(&mut self, gobj: GObjId, victim: GObjId, place: bool) {
         let (holder, held) = if self.game.fighter(gobj).x221B.x221B_b7 {
             (victim, gobj)
         } else {
@@ -395,7 +395,7 @@ impl Running<'_> {
     /// straight, its translation kept, and constrained to the thrower's TransN2.
     #[doc(alias = "ftCo_800DB368")]
     #[doc(alias = "ftParts_JObjSetRotation")]
-    fn attach_to_thrower(&mut self, thrower: GObjId, gobj: GObjId) {
+    pub(crate) fn attach_to_thrower(&mut self, thrower: GObjId, gobj: GObjId) {
         let target = self.part_joint(thrower, TRANS_N2).expect("TransN2");
         if self.game.fighter(gobj).x2226_b2 {
             return;
@@ -498,7 +498,7 @@ impl Running<'_> {
     /// tumble upward), facing back when the angle sends it behind, its thrower remembered
     /// for its thrown hitbox on its next action (`fn_800DE798`), and DI.
     #[doc(alias = "ftCo_800DE7C0")]
-    fn thrown_launch(&mut self, gobj: GObjId, thrower: Option<GObjId>, upward: bool) {
+    pub(crate) fn thrown_launch(&mut self, gobj: GObjId, thrower: Option<GObjId>, upward: bool) {
         if let Some(t) = thrower {
             let fp = self.game.fighter_mut(gobj);
             fp.x21EC = Some(CodeRef(THROWN_ON_CHANGE));

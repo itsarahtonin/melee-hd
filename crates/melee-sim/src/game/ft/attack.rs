@@ -590,113 +590,6 @@ impl Running<'_> {
         }
     }
 
-    /// Item `g`'s box `j` hits this fighter's shield, `ftColl_80077688`: the item remembers
-    /// the fighter; a hit harder than the item has dealt sets the item's rebound (its damage,
-    /// which way, and with its box's `x42_b3`, how it bounces off: straight away at the
-    /// common data's angle for a fighter with `x221B_b1`, else along `entry`, the direction
-    /// into the shield and its angle); the shield takes the damage, its owner noting who and
-    /// from where, and the spark shows.
-    #[doc(alias = "ftColl_80077688")]
-    fn item_hits_shield(&mut self, g: GObjId, j: usize, me: FighterId, entry: Option<(Vec3, f32)>) {
-        use super::super::it;
-        let mode = if it::item(self.game, g).x5D4_hitboxes[j].hit.x41_b6 {
-            2
-        } else {
-            1
-        };
-        self.item_add_victim(g, j, mode, victim(me), false);
-        let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
-        let (dmg, x42_b3, x42_b4, x34, element, pos) = (
-            whole_damage(reg(h.damage)),
-            h.x42_b3,
-            h.x42_b4,
-            h.x34,
-            h.element,
-            h.hurt_coll_pos,
-        );
-        if dmg > it::item(self.game, g).xC34_damageDealt {
-            let slow = super::super::it::item::common_data(self.game).f32(self.data, 0xD4);
-            let angle = self.common().f32(0x2D0);
-            let mf = &self.game.fighters[me.0];
-            let (b1, b2, fg, fx, unk1) = (
-                mf.x221B.x221B_b1,
-                mf.x221B.x221B_b2,
-                mf.gobj,
-                mf.cur_pos.x,
-                mf.shield_unk1,
-            );
-            let ip = it::item_mut(self.game, g);
-            ip.xC50 = dmg;
-            it::set_flag(&mut ip.xDCE_flag, 5, !b2 && x42_b3);
-            ip.xCF4_fighterGObjUnk = fg;
-            let vx = reg(ip.x40_vel.x);
-            let mag = if vx < 0.0 { fp::fneg(vx) } else { vx };
-            ip.xCB8_outDamageDirection = if mag < reg(slow) {
-                if reg(ip.pos.x) > reg(fx) { -1.0 } else { 1.0 }
-            } else if vx < 0.0 {
-                -1.0
-            } else {
-                1.0
-            };
-            if it::flag(ip.xDCE_flag, 5) {
-                let (normal, val) = entry.expect("lbColl_80007DD8's out values");
-                if b1 {
-                    let rad = mem(fp::fmuls(0.017_453_292_384_743_69, reg(angle)));
-                    ip.xC54 = 0.0;
-                    let c = crate::math::cos(rad);
-                    let s = crate::math::sin(rad);
-                    let x = if reg(normal.x) >= 0.0 {
-                        c
-                    } else {
-                        mem(fp::fneg(reg(c)))
-                    };
-                    ip.xC58 = Vec3::new(x, s, 0.0);
-                    it::set_flag(&mut ip.xDCE_flag, 4, true);
-                } else {
-                    ip.xC54 = val;
-                    ip.xC58 = normal;
-                }
-            }
-            if unk1 != 0.0 {
-                ip.xCC0 = unk1;
-            }
-        }
-        let owner = it::item(self.game, g).owner;
-        let owner_fp = owner
-            .filter(|_| super::super::it::item::is_fighter(self.game, owner))
-            .map(|o| self.game.fighter_id(o));
-        let (owner_player, owner_sub) = match owner_fp {
-            Some(f) => (
-                i32::from(self.game.fighters[f.0].player_idx),
-                Some(self.game.fighters[f.0].is_sub_fighter),
-            ),
-            None => (6, None),
-        };
-        let (ix, entity) = (it::item(self.game, g).pos.x, Some(g));
-        let mf = &mut self.game.fighters[me.0];
-        mf.x19A0_shieldDamageTaken = mf
-            .x19A0_shieldDamageTaken
-            .wrapping_add(dmg.wrapping_add(x34).max(0));
-        mf.x19BC_shieldDamageTaken3 = owner_player;
-        if let Some(sub) = owner_sub {
-            mf.x221F_b6 = sub;
-        }
-        if dmg > mf.x19A4 {
-            mf.x19A4 = dmg;
-            mf.specialn_facing_dir = if reg(mf.cur_pos.x) > reg(ix) {
-                -1.0
-            } else {
-                1.0
-            };
-            mf.x19B0 = element as i32;
-            mf.x19A8 = entity;
-        }
-        if mf.shield_unk1 != 0.0 && x42_b4 {
-            mf.x1964 = mf.shield_unk1;
-        }
-        self.spawn_effect(0x41C, pos, None);
-    }
-
     /// The fighter reflects item `g`'s box `j`, `ftColl_80077464`: the item remembers it;
     /// damage past the reflector's limit overpowers it (the item keeps the damage and which
     /// way, the reflector its excess); else the item turns the fighter's, taking its attack's
@@ -1127,7 +1020,15 @@ impl Running<'_> {
 
     /// The damage a hit counts in the players' statistics, `pl_8003EB30`.
     #[doc(alias = "pl_8003EB30")]
-    fn count_damage(&mut self, dmg: f64, slot: i32, sub: i32, vslot: i32, vsub: i32, kind: i32) {
+    pub(crate) fn count_damage(
+        &mut self,
+        dmg: f64,
+        slot: i32,
+        sub: i32,
+        vslot: i32,
+        vsub: i32,
+        kind: i32,
+    ) {
         if slot == 6 || slot == vslot {
             return;
         }
@@ -1335,28 +1236,17 @@ impl Running<'_> {
                 facing = false;
             }
             if facing && self.item_box_hits_bubble(g, j, me, Bubble::Shield, phantom) {
-                // `lbColl_80007DD8` only when the item bounces off (its box's `x42_b3` or the
-                // fighter's `x221B_b1`): the original's out values are otherwise its stack's,
-                // which nothing reads then.
+                // Where the box entered the shield, wanted only by a box that bounces off it
+                // or a shield that deflects; the original leaves its stack slots unset
+                // otherwise, and `item_shield_hit` reads them only in those cases.
                 let mf = &self.game.fighters[me.0];
-                let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
-                let entry = if !mf.x221B.x221B_b2 && (h.x42_b3 || mf.x221B.x221B_b1) {
-                    let mtx = self.own_matrix(me);
-                    let ip = it::item(self.game, g);
-                    let (hit, scl) = (ip.x5D4_hitboxes[j].hit.clone(), ip.scl);
-                    let bubble = self.game.fighters[me.0].shield_hit.clone();
-                    Some(hitcapsule::bubble_entry(
-                        &mut self.game.objs,
-                        self.data,
-                        &hit,
-                        &bubble,
-                        mtx.as_ref(),
-                        scl,
-                    ))
+                let bounce = it::item(self.game, g).x5D4_hitboxes[j].hit.x42_b3;
+                let entry = if !mf.x221B.x221B_b2 && (bounce || mf.x221B.x221B_b1) {
+                    Some(self.item_box_shield_entry(g, j, me))
                 } else {
                     None
                 };
-                self.item_hits_shield(g, j, me, entry);
+                self.item_shield_hit(g, j, me, entry);
                 return;
             }
         }
@@ -1462,6 +1352,145 @@ impl Running<'_> {
         h.hurt_coll_pos = hit.hurt_coll_pos;
         h.coll_distance = hit.coll_distance;
         touch
+    }
+
+    /// Where the item's box `j` entered the fighter's shield (`lbColl_80007DD8`).
+    fn item_box_shield_entry(
+        &mut self,
+        g: GObjId,
+        j: usize,
+        me: FighterId,
+    ) -> crate::lb::collision::SphereEntry {
+        let mtx = self.own_matrix(me);
+        let ip = super::super::it::item(self.game, g);
+        let hit = ip.x5D4_hitboxes[j].hit.clone();
+        let scale = ip.scl;
+        let bubble = self.game.fighters[me.0].shield_hit.clone();
+        hitcapsule::bubble_entry(
+            &mut self.game.objs,
+            self.data,
+            &hit,
+            &bubble,
+            mtx.as_ref(),
+            scale,
+        )
+    }
+
+    /// Item `g`'s box `j` hits this fighter's shield, `ftColl_80077688`: the item remembers
+    /// the fighter (as a reflected or blocked hit), and a hit past the most damage it dealt
+    /// becomes that, with which way it came, whether it bounces off and, if so, its rebound:
+    /// along the shield's normal where it entered, or the common data's angle when the shield
+    /// deflects. The shield takes the damage, notes who dealt it and the strongest hit's
+    /// direction, element and source, and the hit's spark plays where it touched. `entry` is
+    /// where the box entered the shield, which the caller works out only when the rebound
+    /// needs it.
+    #[doc(alias = "ftColl_80077688")]
+    fn item_shield_hit(
+        &mut self,
+        g: GObjId,
+        j: usize,
+        me: FighterId,
+        entry: Option<crate::lb::collision::SphereEntry>,
+    ) {
+        use super::super::it;
+        let mode = if it::item(self.game, g).x5D4_hitboxes[j].hit.x41_b6 {
+            2
+        } else {
+            1
+        };
+        self.item_add_victim(g, j, mode, victim(me), false);
+        let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
+        let (dmg, x34, element, x42_b3, x42_b4, pos) = (
+            whole_damage(reg(h.damage)),
+            h.x34,
+            h.element,
+            h.x42_b3,
+            h.x42_b4,
+            h.hurt_coll_pos,
+        );
+        if dmg > it::item(self.game, g).xC34_damageDealt {
+            let slow = reg(it::item::common_data(self.game).f32(self.data, IT_SLOW_FOR_ITEM));
+            let angle = self.common().f32(0x2D0);
+            let mf = &self.game.fighters[me.0];
+            let (deflects, deflect_off, mx, mg, unk1) = (
+                mf.x221B.x221B_b1,
+                mf.x221B.x221B_b2,
+                mf.cur_pos.x,
+                mf.gobj,
+                mf.shield_unk1,
+            );
+            let ip = it::item_mut(self.game, g);
+            ip.xC50 = dmg;
+            it::set_flag(&mut ip.xDCE_flag, 5, !deflect_off && x42_b3);
+            ip.xCF4_fighterGObjUnk = mg;
+            let vx = reg(ip.x40_vel.x);
+            let speed = if vx < 0.0 { fp::fneg(vx) } else { vx };
+            ip.xCB8_outDamageDirection = if speed < slow {
+                if reg(ip.pos.x) > reg(mx) { -1.0 } else { 1.0 }
+            } else if vx < 0.0 {
+                -1.0
+            } else {
+                1.0
+            };
+            if it::flag(ip.xDCE_flag, 5) {
+                let entry = entry.expect("a bouncing item without where it entered the shield");
+                if deflects {
+                    let a = mem(fp::fmuls(0.017_453_292_384_743_69, reg(angle)));
+                    ip.xC54 = 0.0;
+                    let c = reg(crate::math::cos(a));
+                    let s = crate::math::sin(a);
+                    let x = if entry.normal.x >= 0.0 {
+                        c
+                    } else {
+                        fp::fneg(c)
+                    };
+                    ip.xC58 = Vec3::new(mem(x), s, 0.0);
+                    it::set_flag(&mut ip.xDCE_flag, 4, true);
+                } else {
+                    ip.xC54 = entry.angle;
+                    ip.xC58 = entry.normal;
+                }
+            }
+            if unk1 != 0.0 {
+                ip.xCC0 = unk1;
+            }
+        }
+        let owner = it::item(self.game, g).owner;
+        let owner_fighter = if it::item::is_fighter(self.game, owner) {
+            let of = self.game.fighter(owner.expect("a fighter owner"));
+            Some((of.player_idx, of.is_sub_fighter))
+        } else {
+            None
+        };
+        let (ix, entity) = {
+            let ip = it::item(self.game, g);
+            (ip.pos.x, ip.entity)
+        };
+        let mf = &mut self.game.fighters[me.0];
+        mf.x19A0_shieldDamageTaken = mf
+            .x19A0_shieldDamageTaken
+            .wrapping_add(dmg.wrapping_add(x34).max(0));
+        match owner_fighter {
+            Some((player, sub)) => {
+                mf.x19BC_shieldDamageTaken3 = i32::from(player);
+                mf.x221F_b6 = sub;
+            }
+            None => mf.x19BC_shieldDamageTaken3 = 6,
+        }
+        if dmg > mf.x19A4 {
+            mf.x19A4 = dmg;
+            mf.specialn_facing_dir = if reg(mf.cur_pos.x) > reg(ix) {
+                -1.0
+            } else {
+                1.0
+            };
+            mf.x19B0 = element as i32;
+            mf.x19A8 = entity;
+        }
+        if mf.shield_unk1 != 0.0 && x42_b4 {
+            mf.x1964 = mf.shield_unk1;
+        }
+        self.spawn_effect(0x41C, pos, None);
     }
 
     /// Whether the item's box `j` touches the fighter's hurtbox `n` (`lbColl_8000805C`).
@@ -1842,11 +1871,23 @@ impl Running<'_> {
     /// `on_touch_line`): Final Destination's, Battlefield's and Pokémon Stadium's never do.
     #[doc(alias = "Ground_801C5700")]
     #[doc(alias = "grStadium_OnTouchLine")]
+    #[doc(alias = "grStory_801E36D0")]
+    #[doc(alias = "grOldPupupu_80211CA0")]
+    #[doc(alias = "grIzumi_801CD278")]
     fn line_hazard(&mut self, _line: i32) -> bool {
         match self.game.stage_info.on_touch_line {
             None => false,
             // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine: `return NULL`.
-            Some(f) if f.0 == 0x8021_C740 || f.0 == 0x8021_A610 || f.0 == 0x801D_50B8 => false,
+            Some(f)
+                if f.0 == 0x8021_C740
+                    || f.0 == 0x8021_A610
+                    || f.0 == 0x801D_50B8
+                    || f.0 == 0x801E_36D0
+                    || f.0 == 0x8021_1CA0
+                    || f.0 == 0x801C_D278 =>
+            {
+                false
+            }
             Some(f) => unported_call(&format!("a stage's on_touch_line {:#x}", f.0)),
         }
     }
@@ -2258,41 +2299,60 @@ impl Running<'_> {
         }
     }
 
-    /// A tip's damage, held back through its hitlag, `ftColl_8007BE3C`: it counts (or wears
-    /// the armor down, `ftColl_80076640`, which keeps what's left over in the tip), the
-    /// source's hit is recorded, and the tip's effect spawns.
+    /// A tip's damage, held back while its hitlag lasted, lands, `ftColl_8007BE3C`: taken
+    /// (or the armor's), recorded for whoever's hitbox it was, a fighter's or an item's, and
+    /// its effect spawned where it hit.
     #[doc(alias = "ftColl_8007BE3C")]
     pub(crate) fn delayed_tip_damage(&mut self, gobj: GObjId) {
         let me = self.game.fighter_id(gobj);
-        let fp = &mut self.game.fighters[me.0];
-        let count = whole_damage(reg(fp.dmg.x1898));
+        let mut dmg = self.game.fighters[me.0].dmg.x1898;
+        let taken = self.take_damage_or_armor(me, &mut dmg);
+        self.game.fighters[me.0].dmg.x1898 = dmg;
+        if !taken {
+            return;
+        }
+        let source = self.game.fighters[me.0]
+            .dmg
+            .x1894
+            .expect("a tip without its source");
+        match self.game.world.gobjs[source.0].classifier {
+            4 => self.record_fighter_hit(source, gobj, reg(dmg)),
+            6 => self.record_item_hit(source, gobj, reg(dmg)),
+            _ => {}
+        }
+        let d = &self.game.fighters[me.0].dmg;
+        let (element, pos, severity, kb) = (d.x188c, d.x1880, d.x1890, d.x187c);
+        let effect = HIT_EFFECTS[element as usize];
+        let whole = cvt_fp2unsigned(reg(dmg));
+        self.hit_effect(me, effect, pos, severity as u32, whole, reg(kb));
+    }
+
+    /// The damage a hit deals the fighter, `ftColl_80076640` (inlined in the throw's hit):
+    /// armor (`x221C_b4`) takes it first, and what passes it is the damage; whether any did,
+    /// counted into the damage taken this frame.
+    fn take_damage_or_armor(&mut self, f: FighterId, dmg: &mut f32) -> bool {
+        let count = whole_damage(reg(*dmg));
+        let fp = &mut self.game.fighters[f.0];
         if fp.x221C_b4 {
-            fp.dmg.x1834 = mem(fp::fsubs(reg(fp.dmg.x1834), reg(fp.dmg.x1898)));
+            fp.dmg.x1834 = mem(fp::fsubs(reg(fp.dmg.x1834), reg(*dmg)));
             if fp.dmg.x1834 < 0.0 {
-                fp.dmg.x1898 = mem(fp::fneg(reg(fp.dmg.x1834)));
+                *dmg = mem(fp::fneg(reg(fp.dmg.x1834)));
                 fp.x221C_b4 = false;
             }
         }
         if fp.x221C_b4 {
-            return;
+            return false;
         }
-        let dmg = reg(fp.dmg.x1898);
-        assert!(!(dmg > 500.0), "attack power over 500!! {dmg}");
-        fp.dmg.x1838_percentTemp = mem(fp::fadds(reg(fp.dmg.x1838_percentTemp), dmg));
+        // NaN passes, as the original's `!(dmg > 500.0)` does.
+        assert!(
+            reg(*dmg).partial_cmp(&500.0) != Some(std::cmp::Ordering::Greater),
+            "attack power over 500!! {dmg}"
+        );
+        fp.dmg.x1838_percentTemp = mem(fp::fadds(reg(fp.dmg.x1838_percentTemp), reg(*dmg)));
         if count > fp.dmg.x183C_applied {
             fp.dmg.x183C_applied = count;
         }
-        let source = fp.dmg.x1894.expect("a delayed tip without its source");
-        match self.game.world.gobjs[source.0].classifier {
-            4 => self.record_fighter_hit(source, gobj, dmg),
-            super::super::it::CLASS_ITEM => self.record_item_hit(source, gobj, dmg),
-            _ => {}
-        }
-        let d = &self.game.fighters[me.0].dmg;
-        let (effect, pos, severity, kb) =
-            (HIT_EFFECTS[d.x188c as usize], d.x1880, d.x1890, d.x187c);
-        let dmg = cvt_fp2unsigned(reg(d.x1898));
-        self.hit_effect(me, effect, pos, severity as u32, dmg, reg(kb));
+        true
     }
 
     /// A hit's effect by its element (`spawnHitEffect`): the normal hit's spark by knockback

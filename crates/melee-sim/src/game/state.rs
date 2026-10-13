@@ -55,6 +55,9 @@ pub enum UserData {
     /// One of Pokémon Stadium's screens (user data kind 3, freed with `HSD_Free`): its index in
     /// [`super::gr::stadium::Globals::screens`].
     StadiumScreen(u8),
+    /// Fountain of Dreams' reflection camera's (user data kind 3, freed with `HSD_Free`):
+    /// [`super::gr::izumi::Globals::reflection`].
+    IzumiReflection,
 }
 
 /// The GObj object kinds as Melee's `HSD_GObj_80391260` numbers them, after the game's own

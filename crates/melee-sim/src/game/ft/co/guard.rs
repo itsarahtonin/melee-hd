@@ -639,17 +639,17 @@ impl Running<'_> {
         if !(abs(x) >= min) {
             return;
         }
-        // UCF's shield SDI code lets an older smash count too.
-        let fresh = i32::from(fp.active_timer.lstick.x) < window
-            || self.game.rules.ucf && self.ucf_shield_sdi(gobj, min);
-        let fp = self.game.fighter_mut(gobj);
-        if fresh {
-            let s = fp::fmuls(x4c0, fp::fmuls(x, scale));
-            let (nx, ny) = (fp.coll_data.floor.normal.x, fp.coll_data.floor.normal.y);
-            fp.cur_pos.x = mem(fp::fmadds(reg(ny), s, reg(fp.cur_pos.x)));
-            fp.cur_pos.y = mem(fp::fmadds(fp::fneg(reg(nx)), s, reg(fp.cur_pos.y)));
-            fp.active_timer.lstick.x = 254;
+        // UCF's shield SDI lets a fast flick count past the window.
+        let held = i32::from(fp.active_timer.lstick.x) >= window;
+        if held && !(self.game.rules.ucf && self.ucf_shield_sdi(gobj, min)) {
+            return;
         }
+        let fp = self.game.fighter_mut(gobj);
+        let s = fp::fmuls(x4c0, fp::fmuls(x, scale));
+        let (nx, ny) = (fp.coll_data.floor.normal.x, fp.coll_data.floor.normal.y);
+        fp.cur_pos.x = mem(fp::fmadds(reg(ny), s, reg(fp.cur_pos.x)));
+        fp.cur_pos.y = mem(fp::fmadds(fp::fneg(reg(nx)), s, reg(fp.cur_pos.y)));
+        fp.active_timer.lstick.x = 254;
     }
 
     /// The shield stun's post-hitlag hook, `ftCo_800932DC`: a nudge along the floor.

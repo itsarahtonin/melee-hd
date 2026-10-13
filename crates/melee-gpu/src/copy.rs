@@ -5,10 +5,10 @@
 //! what the texture decoder would make of what the copy encoder writes, so frames come out as
 //! from a copy read back and encoded into memory, without waiting on the GPU for it.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bytemuck::{Pod, Zeroable};
-use ssbm_gx::{Memory, State};
+use melee_gx::{Memory, State};
 
 use crate::{bits, hash_bytes};
 
@@ -170,7 +170,7 @@ pub(crate) fn encode_texels(c: &Copied, texels: &[u8]) -> Vec<(u32, Vec<u8>)> {
 /// The game never sees what a copy writes (the renderer keeps it), so memory that later hashes
 /// differently was written over by the game, and on hardware the copy would be gone.
 #[derive(Default)]
-pub(crate) struct Footprints(HashMap<u32, (Footprint, u64)>);
+pub(crate) struct Footprints(HashMap<u32, (Footprint, u64)>, HashSet<u32>);
 
 fn hash_footprint(f: &Footprint, mem: &dyn Memory) -> u64 {
     let mut h = 0;
@@ -187,14 +187,25 @@ impl Footprints {
     /// Notes a copy to `f`, with the memory under it as it stands.
     pub fn record(&mut self, f: Footprint, mem: &dyn Memory) {
         let hash = hash_footprint(&f, mem);
+        self.1.remove(&f.address);
         self.0.insert(f.address, (f, hash));
+    }
+
+    /// Forgets which copies were found unchanged: the game's memory may have changed since
+    /// (between frames; within one, only copies write it).
+    pub fn new_frame(&mut self) {
+        self.1.clear();
     }
 
     /// Forgets the copy at `address` if the game has written its memory since, returning its
     /// span.
     pub fn take_if_overwritten(&mut self, address: u32, mem: &dyn Memory) -> Option<(u32, u32)> {
         let (f, hash) = self.0.get(&address)?;
+        if self.1.contains(&address) {
+            return None;
+        }
         if hash_footprint(f, mem) == *hash {
+            self.1.insert(address);
             return None;
         }
         let span = f.span();

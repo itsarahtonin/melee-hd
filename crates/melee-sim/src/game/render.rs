@@ -307,7 +307,9 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         0x8003_01D0 => r.render_game_camera(gobj),
         0x801C_5DB0 => r.render_stage_object(gobj, pass),
         c if super::gr::stadium::run_render(r, gobj, c, pass) => {}
+        c if super::gr::izumi::run_render(r, gobj, c, pass) => {}
         0x8008_0E18 => r.render_fighter(gobj, pass),
+        0x8008_0C28 => r.draw_magnified(gobj, pass),
         0x8026_EECC => r.render_item(gobj, pass),
         super::it::link::RENDER => r.render_link(gobj, pass),
         super::it::kinds::foxillusion::RENDER => r.render_fox_illusion(gobj, pass),

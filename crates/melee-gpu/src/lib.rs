@@ -3,7 +3,7 @@
 // Ported from ssbm-rs's ssbm-render at the melee-hd-base tag.
 
 //! Draws the GameCube GPU's command stream with wgpu. Each draw's vertices go through the
-//! transform unit on the CPU (ssbm-gx), as Dolphin's software renderer does; the GPU rasterizes
+//! transform unit on the CPU (`melee_gx`), as Dolphin's software renderer does; the GPU rasterizes
 //! them into an EFB-sized target and runs the TEV per pixel in integers (gx.wgsl), sampling
 //! textures decoded on the CPU by hand. Copies to the XFB come back as frames, through the
 //! XFB's YUV encoding as Dolphin's software renderer makes it.
@@ -19,10 +19,12 @@ pub use thread::Threaded;
 
 use std::collections::HashMap;
 
+use rustc_hash::{FxHashMap, FxHashSet};
+
 use bytemuck::{Pod, Zeroable};
-use ssbm_gx::texture::{self, Image};
-use ssbm_gx::xform::{self, Output, Viewport};
-use ssbm_gx::{Draw, Memory, Sink, State, vertex};
+use melee_gx::texture::{self, Image};
+use melee_gx::xform::{self, Output, Viewport};
+use melee_gx::{Draw, Memory, Sink, State, vertex};
 
 pub const EFB_WIDTH: u32 = 640;
 pub const EFB_HEIGHT: u32 = 528;
@@ -38,13 +40,35 @@ fn sext(v: u32, width: u32) -> i32 {
     ((v << (32 - width)) as i32) >> (32 - width)
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Pod, Zeroable)]
+/// A vertex as the GPU gets it: its position, its colors (RGBA) and its first `texgens`
+/// texture coordinates, written as words to the vertex buffer (gx.wgsl's `vdata`).
+#[derive(Clone, Copy)]
 struct GpuVertex {
     pos: [f32; 4],
-    c0: [f32; 4],
-    c1: [f32; 4],
+    c0: [u8; 4],
+    c1: [u8; 4],
     tex: [[f32; 3]; 8],
+}
+
+impl GpuVertex {
+    fn zeroed() -> GpuVertex {
+        GpuVertex {
+            pos: [0.0; 4],
+            c0: [0; 4],
+            c1: [0; 4],
+            tex: [[0.0; 3]; 8],
+        }
+    }
+
+    /// Its words, with `texgens` texture coordinates.
+    fn write(&self, texgens: usize, out: &mut Vec<u32>) {
+        out.extend(self.pos.map(f32::to_bits));
+        out.push(u32::from_le_bytes(self.c0));
+        out.push(u32::from_le_bytes(self.c1));
+        for t in &self.tex[..texgens] {
+            out.extend(t.map(f32::to_bits));
+        }
+    }
 }
 
 #[repr(C)]
@@ -116,6 +140,8 @@ struct Command {
     pipeline: PipelineKey,
     uniform: u32,
     textures: [u32; 8],
+    /// The vertices' texture coordinates (the draw call's instance).
+    texgens: u32,
     first: u32,
     count: u32,
     scissor: [u32; 4],
@@ -174,6 +200,13 @@ struct Profile {
     flush: std::time::Duration,
     readback: std::time::Duration,
     xfb: std::time::Duration,
+    /// Vertices drawn and the texture coordinates they carry, and the words, indices and
+    /// draw calls flushed.
+    vertices: u64,
+    words: u64,
+    indices: u64,
+    calls: u64,
+    texgens: u64,
     frames: u32,
 }
 
@@ -184,14 +217,20 @@ impl Profile {
             return;
         }
         let ms = |d: std::time::Duration| d.as_secs_f64() * 1000.0 / f64::from(self.frames);
+        let n = u64::from(self.frames);
         eprintln!(
-            "render per frame: draws {:.2} ms (transform {:.2}, textures {:.2}), flush {:.2}, readback {:.2}, xfb {:.2}",
+            "render per frame: draws {:.2} ms (transform {:.2}, textures {:.2}), flush {:.2}, readback {:.2}, xfb {:.2}; {} vertices ({:.1} texture coordinates each) in {} words, {} indices, {} draw calls",
             ms(self.draw),
             ms(self.xform),
             ms(self.texture),
             ms(self.flush),
             ms(self.readback),
-            ms(self.xfb)
+            ms(self.xfb),
+            self.vertices / n,
+            self.texgens as f64 / self.vertices.max(1) as f64,
+            self.words / n,
+            self.indices / n,
+            self.calls / n
         );
         *self = Profile::default();
     }
@@ -205,35 +244,47 @@ pub struct Renderer {
     queue: wgpu::Queue,
     efb: wgpu::Texture,
     efb_view: wgpu::TextureView,
+    /// The multisampled EFB the draws go to, with `samples` above 1, resolved into `efb`.
+    efb_msaa: Option<wgpu::TextureView>,
+    samples: u32,
     depth_view: wgpu::TextureView,
     module: wgpu::ShaderModule,
     layout: wgpu::PipelineLayout,
     uniform_layout: wgpu::BindGroupLayout,
     texture_layout: wgpu::BindGroupLayout,
-    pipelines: HashMap<PipelineKey, wgpu::RenderPipeline>,
-    vertices: Vec<GpuVertex>,
+    pipelines: FxHashMap<PipelineKey, wgpu::RenderPipeline>,
+    /// The vertices' words (`GpuVertex::write`).
+    vertices: Vec<u32>,
+    /// The vertices' order, three to a triangle, each its first word: a draw's vertices are
+    /// written once and its triangles name them.
+    indices: Vec<u32>,
     uniforms: Vec<u8>,
     commands: Vec<Command>,
-    vertex_buffer: Option<wgpu::Buffer>,
+    vertex_buffer: Option<(wgpu::Buffer, wgpu::BindGroup)>,
+    vertex_layout: wgpu::BindGroupLayout,
+    index_buffer: Option<wgpu::Buffer>,
     uniform_buffer: Option<(wgpu::Buffer, wgpu::BindGroup)>,
     textures: Vec<Option<TexEntry>>,
-    texture_ids: HashMap<TexKey, u32>,
-    bind_groups: HashMap<[u32; 8], wgpu::BindGroup>,
+    texture_ids: FxHashMap<TexKey, u32>,
+    bind_groups: FxHashMap<[u32; 8], wgpu::BindGroup>,
     /// Hashes of memory ranges this frame, so a texture's bytes hash once a frame.
-    hashes: HashMap<(u32, u32), u64>,
+    hashes: FxHashMap<(u32, u32), u64>,
+    /// Hashes of ranges whose bytes never change (the host's own, in one piece, with no copy
+    /// laid over them), kept from frame to frame.
+    stable_hashes: FxHashMap<(u32, u32), u64>,
     /// What copies from the EFB to textures wrote, by address: memory as the GPU then reads it.
     copies: Vec<(u32, Vec<u8>)>,
     /// What copies wrote since the host last took it (`Sink::take_written`).
     written: Vec<(u32, Vec<u8>)>,
     /// Copies from the EFB kept on the GPU instead, by the address they copied to.
     copier: copy::Copier,
-    gpu_copies: HashMap<u32, copy::Copied>,
+    gpu_copies: FxHashMap<u32, copy::Copied>,
     /// Where copies went, to forget those the game writes over (copy::Footprints), when this
     /// renderer reads the game's memory itself (`track_copies`); a threaded one is told.
     footprints: copy::Footprints,
     pub(crate) track_copies: bool,
     /// Copy addresses sampled another way than copied, whose copies are encoded into memory.
-    on_cpu: std::collections::HashSet<u32>,
+    on_cpu: FxHashSet<u32>,
     normals: vertex::NormalCache,
     inputs: Vec<vertex::Input>,
     outs: Vec<Output>,
@@ -265,6 +316,11 @@ pub struct Renderer {
     scale: u32,
     /// The driver's pipeline cache, where the device keeps one (`Features::PIPELINE_CACHE`).
     cache: Option<wgpu::PipelineCache>,
+}
+
+/// The texture coordinates the transform unit generates for a draw.
+fn texgens(state: &State) -> usize {
+    (state.xf[xform::NUM_TEXGENS] & 0xF).min(8) as usize
 }
 
 /// The texture maps a draw's TEV and indirect stages read.
@@ -375,7 +431,7 @@ impl Renderer {
 
     pub fn with_adapter(adapter: &wgpu::Adapter) -> Result<Self, String> {
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-            label: Some("ssbm-render"),
+            label: Some("melee-gpu"),
             required_features: wgpu::Features::DUAL_SOURCE_BLENDING,
             required_limits: wgpu::Limits::default(),
             ..Default::default()
@@ -390,7 +446,20 @@ impl Renderer {
 
     /// A renderer whose EFB is `scale` times the console's in each dimension.
     pub fn with_device_scaled(device: wgpu::Device, queue: wgpu::Queue, scale: u32) -> Self {
+        Self::with_device_msaa(device, queue, scale, 1)
+    }
+
+    /// A renderer whose EFB is `scale` times the console's in each dimension, drawn with
+    /// `samples` samples a pixel (1 or 4): the draws go to a multisampled EFB, resolved into
+    /// the EFB that copies, readbacks and frames read at the end of each pass.
+    pub fn with_device_msaa(
+        device: wgpu::Device,
+        queue: wgpu::Queue,
+        scale: u32,
+        samples: u32,
+    ) -> Self {
         let scale = scale.clamp(1, 8);
+        let samples = if samples >= 4 { 4 } else { 1 };
         let size = wgpu::Extent3d {
             width: EFB_WIDTH * scale,
             height: EFB_HEIGHT * scale,
@@ -408,11 +477,25 @@ impl Renderer {
                 | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
+        let efb_msaa = (samples > 1).then(|| {
+            device
+                .create_texture(&wgpu::TextureDescriptor {
+                    label: Some("efb, multisampled"),
+                    size,
+                    mip_level_count: 1,
+                    sample_count: samples,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: COLOR_FORMAT,
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                    view_formats: &[],
+                })
+                .create_view(&Default::default())
+        });
         let depth = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("efb depth"),
             size,
             mip_level_count: 1,
-            sample_count: 1,
+            sample_count: samples,
             dimension: wgpu::TextureDimension::D2,
             format: DEPTH_FORMAT,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
@@ -462,15 +545,34 @@ impl Renderer {
             label: Some("textures"),
             entries: &texture_entries,
         });
+        let vertex_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("vertices"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
         let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("gx"),
-            bind_group_layouts: &[Some(&uniform_layout), Some(&texture_layout)],
+            bind_group_layouts: &[
+                Some(&uniform_layout),
+                Some(&texture_layout),
+                Some(&vertex_layout),
+            ],
             immediate_size: 0,
         });
         let efb_view = efb.create_view(&Default::default());
         let copier = copy::Copier::new(&device, &efb_view);
         let mut r = Renderer {
             efb_view,
+            efb_msaa,
+            samples,
             depth_view: depth.create_view(&Default::default()),
             efb,
             device,
@@ -479,20 +581,24 @@ impl Renderer {
             layout,
             uniform_layout,
             texture_layout,
-            pipelines: HashMap::new(),
+            pipelines: FxHashMap::default(),
             vertices: Vec::new(),
+            indices: Vec::new(),
             uniforms: Vec::new(),
             commands: Vec::new(),
             vertex_buffer: None,
+            vertex_layout,
+            index_buffer: None,
             uniform_buffer: None,
             textures: Vec::new(),
-            texture_ids: HashMap::new(),
-            bind_groups: HashMap::new(),
-            hashes: HashMap::new(),
+            texture_ids: FxHashMap::default(),
+            bind_groups: FxHashMap::default(),
+            hashes: FxHashMap::default(),
+            stable_hashes: FxHashMap::default(),
             copies: Vec::new(),
             written: Vec::new(),
             copier,
-            gpu_copies: HashMap::new(),
+            gpu_copies: FxHashMap::default(),
             footprints: copy::Footprints::default(),
             track_copies: true,
             on_cpu: Default::default(),
@@ -679,6 +785,16 @@ impl Renderer {
         buf
     }
 
+    /// Whether a copy from the EFB this renderer encoded into memory lies over any of the
+    /// range.
+    fn copied_over(&self, address: u32, len: u32) -> bool {
+        let (start, end) = (u64::from(address), u64::from(address) + u64::from(len));
+        self.copies.iter().any(|(at, bytes)| {
+            let (cs, ce) = (u64::from(*at), u64::from(*at) + bytes.len() as u64);
+            start.max(cs) < end.min(ce)
+        })
+    }
+
     fn hash_memory(&mut self, mem: &dyn Memory, address: u32, len: u32) -> u64 {
         if let Some(&h) = self.hashes.get(&(address, len)) {
             return h;
@@ -724,7 +840,18 @@ impl Renderer {
             self.note("EFB copy read back to sample it another way");
             self.materialize(image.address);
         }
-        let mut hash = self.hash_memory(mem, image.address, size);
+        // Bytes the host holds as they are and no copy lies over never change: their hash
+        // is kept.
+        let stable = mem
+            .view(image.address, size as usize)
+            .filter(|_| !self.copied_over(image.address, size));
+        let mut hash = match stable {
+            Some(bytes) => *self
+                .stable_hashes
+                .entry((image.address, size))
+                .or_insert_with(|| hash_bytes(bytes)),
+            None => self.hash_memory(mem, image.address, size),
+        };
         let tlut = state.tmem.get(tlut_offset..).unwrap_or(&[]);
         if let Some(entries) = texture::palette_entries(image.format) {
             let len = (entries as usize * 2).min(tlut.len());
@@ -747,9 +874,16 @@ impl Renderer {
             entry.last_used = self.frame;
             return (id, entry.levels);
         }
-        let data = self.read_memory(mem, image.address, size);
+        let read;
+        let data = match stable {
+            Some(bytes) => bytes,
+            None => {
+                read = self.read_memory(mem, image.address, size);
+                &read
+            }
+        };
         let levels = texture::decode(
-            &data,
+            data,
             image.width,
             image.height,
             image.levels,
@@ -835,6 +969,23 @@ impl Renderer {
         u
     }
 
+    /// Queues a draw call; one that follows the last with the same state and the vertices
+    /// right after its own joins it, as one call draws the same.
+    fn push_command(&mut self, c: Command) {
+        if let Some(last) = self.commands.last_mut()
+            && last.pipeline == c.pipeline
+            && last.uniform == c.uniform
+            && last.textures == c.textures
+            && last.texgens == c.texgens
+            && last.scissor == c.scissor
+            && last.first + last.count == c.first
+        {
+            last.count += c.count;
+            return;
+        }
+        self.commands.push(c);
+    }
+
     fn push_uniforms(&mut self, u: &Uniforms) -> u32 {
         let mut u = *u;
         // The shader's pixel coordinates are in scaled pixels.
@@ -895,18 +1046,10 @@ impl Renderer {
         let w = o.clip[3];
         let x = snap(screen[0] - off.0) / (EFB_WIDTH as f32 / 2.0) - 1.0;
         let y = 1.0 - snap(screen[1] - off.1) / (EFB_HEIGHT as f32 / 2.0);
-        let c = |c: [u8; 4]| {
-            [
-                f32::from(c[0]),
-                f32::from(c[1]),
-                f32::from(c[2]),
-                f32::from(c[3]),
-            ]
-        };
         GpuVertex {
             pos: [x * w, y * w, o.clip[2] + w, w],
-            c0: c(o.color[0]),
-            c1: c(o.color[1]),
+            c0: o.color[0],
+            c1: o.color[1],
             tex: o.tex,
         }
     }
@@ -968,11 +1111,6 @@ impl Renderer {
         if key.write_alpha {
             mask |= wgpu::ColorWrites::ALPHA;
         }
-        let attrs = wgpu::vertex_attr_array![
-            0 => Float32x4, 1 => Float32x4, 2 => Float32x4,
-            3 => Float32x3, 4 => Float32x3, 5 => Float32x3, 6 => Float32x3,
-            7 => Float32x3, 8 => Float32x3, 9 => Float32x3, 10 => Float32x3
-        ];
         let pipeline = self
             .device
             .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -982,11 +1120,7 @@ impl Renderer {
                     module: &self.module,
                     entry_point: Some("vs_main"),
                     compilation_options: Default::default(),
-                    buffers: &[Some(wgpu::VertexBufferLayout {
-                        array_stride: std::mem::size_of::<GpuVertex>() as u64,
-                        step_mode: wgpu::VertexStepMode::Vertex,
-                        attributes: &attrs,
-                    })],
+                    buffers: &[],
                 },
                 primitive: wgpu::PrimitiveState::default(),
                 depth_stencil: Some(wgpu::DepthStencilState {
@@ -999,7 +1133,10 @@ impl Renderer {
                     stencil: Default::default(),
                     bias: Default::default(),
                 }),
-                multisample: Default::default(),
+                multisample: wgpu::MultisampleState {
+                    count: self.samples,
+                    ..Default::default()
+                },
                 fragment: Some(wgpu::FragmentState {
                     module: &self.module,
                     entry_point: Some("fs_main"),
@@ -1051,7 +1188,7 @@ impl Renderer {
         if w == 0 || h == 0 {
             return;
         }
-        let first = self.vertices.len() as u32;
+        let first = self.indices.len() as u32;
         let corner = |px: u32, py: u32| {
             let nx = px as f32 / (EFB_WIDTH as f32 / 2.0) - 1.0;
             let ny = 1.0 - py as f32 / (EFB_HEIGHT as f32 / 2.0);
@@ -1066,13 +1203,14 @@ impl Renderer {
             corner(x + w, y + h),
             corner(x, y + h),
         );
-        self.vertices.extend_from_slice(&[a, b, c, a, c, d]);
+        self.push_in_order(&[a, b, c, a, c, d], 0);
         let u = Self::uniforms_of(state, [1; 8], mode);
         let uniform = self.push_uniforms(&u);
         self.pipeline(key);
         self.bind_group([0; 8]);
-        self.commands.push(Command {
+        self.push_command(Command {
             pipeline: key,
+            texgens: 0,
             uniform,
             textures: [0; 8],
             first,
@@ -1086,18 +1224,32 @@ impl Renderer {
         if self.commands.is_empty() {
             return;
         }
+        if let Some(p) = &mut self.profile {
+            p.words += self.vertices.len() as u64;
+            p.indices += self.indices.len() as u64;
+            p.calls += self.commands.len() as u64;
+        }
         let vbytes: &[u8] = bytemuck::cast_slice(&self.vertices);
         if self
             .vertex_buffer
             .as_ref()
-            .is_none_or(|b| b.size() < vbytes.len() as u64)
+            .is_none_or(|(b, _)| b.size() < vbytes.len() as u64)
         {
-            self.vertex_buffer = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+            let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("vertices"),
                 size: (vbytes.len() as u64).next_power_of_two(),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
-            }));
+            });
+            let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: None,
+                layout: &self.vertex_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buffer.as_entire_binding(),
+                }],
+            });
+            self.vertex_buffer = Some((buffer, group));
         }
         if self
             .uniform_buffer
@@ -1124,18 +1276,33 @@ impl Renderer {
             });
             self.uniform_buffer = Some((buffer, group));
         }
-        let vbuf = self.vertex_buffer.as_ref().unwrap();
+        let ibytes: &[u8] = bytemuck::cast_slice(&self.indices);
+        if self
+            .index_buffer
+            .as_ref()
+            .is_none_or(|b| b.size() < ibytes.len() as u64)
+        {
+            self.index_buffer = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("indices"),
+                size: (ibytes.len() as u64).next_power_of_two(),
+                usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            }));
+        }
+        let (vbuf, vgroup) = self.vertex_buffer.as_ref().unwrap();
+        let ibuf = self.index_buffer.as_ref().unwrap();
         let (ubuf, ugroup) = self.uniform_buffer.as_ref().unwrap();
         self.queue.write_buffer(vbuf, 0, vbytes);
+        self.queue.write_buffer(ibuf, 0, ibytes);
         self.queue.write_buffer(ubuf, 0, &self.uniforms);
         let mut encoder = self.device.create_command_encoder(&Default::default());
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("efb"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &self.efb_view,
+                    view: self.efb_msaa.as_ref().unwrap_or(&self.efb_view),
                     depth_slice: None,
-                    resolve_target: None,
+                    resolve_target: self.efb_msaa.as_ref().map(|_| &self.efb_view),
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Load,
                         store: wgpu::StoreOp::Store,
@@ -1151,23 +1318,38 @@ impl Renderer {
                 }),
                 ..Default::default()
             });
-            pass.set_vertex_buffer(0, vbuf.slice(..));
+            pass.set_bind_group(2, vgroup, &[]);
+            pass.set_index_buffer(ibuf.slice(..), wgpu::IndexFormat::Uint32);
+            // Each state set only when it changes.
             let mut last: Option<PipelineKey> = None;
+            let mut uniform = None;
+            let mut textures = None;
+            let mut scissor = None;
             for c in &self.commands {
                 if last != Some(c.pipeline) {
                     pass.set_pipeline(&self.pipelines[&c.pipeline]);
                     last = Some(c.pipeline);
                 }
-                pass.set_bind_group(0, ugroup, &[c.uniform]);
-                pass.set_bind_group(1, &self.bind_groups[&c.textures], &[]);
-                let [x, y, w, h] = c.scissor;
-                let s = self.scale;
-                pass.set_scissor_rect(x * s, y * s, w * s, h * s);
-                pass.draw(c.first..c.first + c.count, 0..1);
+                if uniform != Some(c.uniform) {
+                    pass.set_bind_group(0, ugroup, &[c.uniform]);
+                    uniform = Some(c.uniform);
+                }
+                if textures != Some(c.textures) {
+                    pass.set_bind_group(1, &self.bind_groups[&c.textures], &[]);
+                    textures = Some(c.textures);
+                }
+                if scissor != Some(c.scissor) {
+                    let [x, y, w, h] = c.scissor;
+                    let s = self.scale;
+                    pass.set_scissor_rect(x * s, y * s, w * s, h * s);
+                    scissor = Some(c.scissor);
+                }
+                pass.draw_indexed(c.first..c.first + c.count, 0, c.texgens..c.texgens + 1);
             }
         }
         self.queue.submit([encoder.finish()]);
         self.vertices.clear();
+        self.indices.clear();
         self.uniforms.clear();
         self.commands.clear();
     }
@@ -1402,11 +1584,11 @@ impl Sink for Renderer {
         self.copy_timed(state, value, mem);
     }
 
-    fn take_written(&mut self) -> Vec<ssbm_gx::Written> {
+    fn take_written(&mut self) -> Vec<melee_gx::Written> {
         let written = std::mem::take(&mut self.written);
         written
             .into_iter()
-            .map(|(address, bytes)| ssbm_gx::Written {
+            .map(|(address, bytes)| melee_gx::Written {
                 address,
                 bytes,
                 before: None,
@@ -1440,12 +1622,13 @@ pub(crate) fn prepare(
     if scissor[2] == 0 || scissor[3] == 0 {
         return false;
     }
+    // Every vertex through the draw's transform setup, into zeroed outputs.
+    let setup = xform::Setup::new(&state.xf, &state.bp);
     outs.clear();
-    outs.extend(
-        inputs
-            .iter()
-            .map(|v| xform::transform(&state.xf, &state.bp, v)),
-    );
+    outs.resize(inputs.len(), Output::default());
+    for (v, o) in inputs.iter().zip(outs.iter_mut()) {
+        setup.transform(v, o);
+    }
     true
 }
 
@@ -1498,8 +1681,21 @@ impl Renderer {
         let mut screens = std::mem::take(&mut self.screens);
         screens.clear();
         screens.extend(outs.iter().map(|o| vp.screen(o.clip)));
-        let first = self.vertices.len() as u32;
+        let first = self.indices.len() as u32;
         let cull = bits(state.bp[0x00], 14, 2);
+        // A triangle primitive's vertices, written once for its triangles to name.
+        let base = self.vertices.len() as u32;
+        let tg = texgens(state);
+        let words = 6 + 3 * tg as u32;
+        if let Some(p) = &mut self.profile {
+            p.vertices += outs.len() as u64;
+            p.texgens += texgens(state) as u64 * outs.len() as u64;
+        }
+        if draw.primitive < 0xA8 {
+            for (o, &s) in outs.iter().zip(screens.iter()) {
+                Self::gpu_vertex(o, s, off).write(tg, &mut self.vertices);
+            }
+        }
         let tri = |r: &mut Self, a: usize, b: usize, c: usize| {
             let backface = xform::is_backface(&state.xf, outs[a].clip, outs[b].clip, outs[c].clip);
             let culled = if backface {
@@ -1508,9 +1704,7 @@ impl Renderer {
                 cull == 1 || cull == 3
             };
             if !culled {
-                for i in [a, b, c] {
-                    r.vertices.push(Self::gpu_vertex(&outs[i], screens[i], off));
-                }
+                r.indices.extend([a, b, c].map(|i| base + words * i as u32));
             }
         };
         let n = count;
@@ -1563,12 +1757,13 @@ impl Renderer {
                 }
             }
         }
-        let count = self.vertices.len() as u32 - first;
+        let count = self.indices.len() as u32 - first;
         if self.trace && self.frame == 0 {
             trace_draw(state, draw, count, scissor, &outs[0], screens[0], mem);
         }
         self.screens = screens;
         if count == 0 {
+            self.vertices.truncate(base as usize);
             return;
         }
 
@@ -1602,8 +1797,9 @@ impl Renderer {
             let u = Self::uniforms_of(state, levels, [3, 0, 0, 0]);
             let uniform = self.push_uniforms(&u);
             self.pipeline(key);
-            self.commands.push(Command {
+            self.push_command(Command {
                 pipeline: key,
+                texgens: tg as u32,
                 uniform,
                 textures: ids,
                 first,
@@ -1634,8 +1830,9 @@ impl Renderer {
             let u = Self::uniforms_of(state, levels, [MODE_DEPTH_ONLY, 0, 0, 0]);
             let uniform = self.push_uniforms(&u);
             self.pipeline(depth_key);
-            self.commands.push(Command {
+            self.push_command(Command {
                 pipeline: depth_key,
+                texgens: tg as u32,
                 uniform,
                 textures: ids,
                 first,
@@ -1650,8 +1847,9 @@ impl Renderer {
             let u = Self::uniforms_of(state, levels, [MODE_DRAW, 0, 0, 0]);
             let uniform = self.push_uniforms(&u);
             self.pipeline(color_key);
-            self.commands.push(Command {
+            self.push_command(Command {
                 pipeline: color_key,
+                texgens: tg as u32,
                 uniform,
                 textures: ids,
                 first,
@@ -1662,8 +1860,9 @@ impl Renderer {
             let u = Self::uniforms_of(state, levels, [MODE_DRAW, 0, 0, 0]);
             let uniform = self.push_uniforms(&u);
             self.pipeline(key);
-            self.commands.push(Command {
+            self.push_command(Command {
                 pipeline: key,
+                texgens: tg as u32,
                 uniform,
                 textures: ids,
                 first,
@@ -1689,6 +1888,7 @@ impl Renderer {
                 for (start, end) in self.footprints.take_overwritten(mem) {
                     self.forget(start, end);
                 }
+                self.footprints.new_frame();
             }
             let rect = [left, top, right, bottom];
             let (frame, t2) = if self.xfb_on_gpu {
@@ -1831,7 +2031,7 @@ impl Renderer {
             at(b, sb, -1.0),
             at(a, sa, -1.0),
         );
-        self.vertices.extend_from_slice(&[b1, b0, a0, a0, a1, b1]);
+        self.push_in_order(&[b1, b0, a0, a0, a1, b1], texgens(state));
     }
 
     /// A point: a square its size wide.
@@ -1842,7 +2042,15 @@ impl Renderer {
             self.note("point texture offsets");
         }
         let (ll, lr, ur, ul) = (at(-1.0, -1.0), at(1.0, -1.0), at(1.0, 1.0), at(-1.0, 1.0));
-        self.vertices.extend_from_slice(&[ll, ul, lr, ur, lr, ul]);
+        self.push_in_order(&[ll, ul, lr, ur, lr, ul], texgens(state));
+    }
+
+    /// Vertices drawn in the order given, with `texgens` texture coordinates.
+    fn push_in_order(&mut self, vs: &[GpuVertex], texgens: usize) {
+        for v in vs {
+            self.indices.push(self.vertices.len() as u32);
+            v.write(texgens, &mut self.vertices);
+        }
     }
 }
 

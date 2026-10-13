@@ -609,7 +609,8 @@ impl Running<'_> {
         );
         let table = self.data.ptr(x8.at(4)).expect("ftData_x8_x8::xC");
         let costume = u32::from(fp.costume_id);
-        // Null for a character without texture animations (Samus), whose count is 0.
+        // A character without texture animations (Samus, Captain Falcon) has none for any
+        // costume: the list is null, and so is what the fighter keeps.
         let indices = self
             .data
             .ptr(table.at(4 * costume))
@@ -618,7 +619,7 @@ impl Running<'_> {
         self.game.fighters[f.0].tobj_list.n_costume_tobjs = n;
         self.game.fighters[f.0].tobj_list.x5D0 = indices;
         for i in 0..n {
-            let indices = indices.expect("texture animations without their indices");
+            let indices = indices.expect("texture animations without their list");
             let index = i32::from(self.data.u16(indices.at(2 * i)));
             let t = self.nth_tobj(list, count, index);
             self.game.fighters[f.0].tobj_list.costume_tobjs[i as usize] = Some(t);

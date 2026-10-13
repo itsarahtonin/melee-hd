@@ -49,6 +49,11 @@ pub struct Settings {
     /// music choice reads it (`gm_80164ABC`), and on some stages that decides whether it
     /// draws from the random seed (see engine.md). Slippi Dolphin runs the codes.
     pub unlocks: super::gm::Unlocks,
+    /// Whether the match's start runs the boot's audio setup (`game::boot`) when what the
+    /// boot leaves brought no audio timeline: the sound bank and the boot's banks loaded, and
+    /// the timeline the audio frames run on. Without it the match runs without one: sounds
+    /// start nothing and the match's bank loads go to the frontend as events.
+    pub boot_audio: bool,
     /// Where the match's preload put the buffer Pokémon Stadium's transformation files load
     /// into (lbDvd's preload of entry 0x7D5): the preload cache, outside the simulation,
     /// places it; the stage keeps its address and its loads write there (a device command's
@@ -136,6 +141,7 @@ impl Settings {
             playback: false,
             fighter_addresses: Vec::new(),
             unlocks: super::gm::Unlocks::slippi(),
+            boot_audio: true,
             stadium_buffer: super::ft::data::MAIN_MEMORY,
         }
     }
@@ -190,6 +196,7 @@ impl Settings {
             dsp: DspModel::Samples,
             fighter_addresses: Vec::new(),
             unlocks: super::gm::Unlocks::slippi(),
+            boot_audio: true,
             stadium_buffer: super::ft::data::MAIN_MEMORY,
         }
     }
@@ -283,6 +290,9 @@ impl Match {
         game.it.db_menu.ItemSpawnsEnabled = 1;
         let mut data = Archives::default();
         boot(&mut game, &mut data);
+        if settings.boot_audio && game.audio.clock.is_none() {
+            super::boot::boot(&mut game, &mut data, settings, load);
+        }
         // After the boot's state, which may bring its own audio library.
         game.audio.dsp = settings.dsp;
         if game.audio.clock.is_some() {
@@ -290,8 +300,10 @@ impl Match {
             // to read.
             for name in crate::lb::audio::SSM_NAMES {
                 let file = load(&format!("audio/us/{name}"));
-                let id = data.add(Archive::raw(&file.bytes));
-                game.audio.devcom.files.push((file.entrynum, id));
+                if !game.audio.devcom.files.iter().any(|f| f.0 == file.entrynum) {
+                    let id = data.add(Archive::raw(&file.bytes));
+                    game.audio.devcom.files.push((file.entrynum, id));
+                }
             }
         }
         // `lb_80014534`: the rumble scripts, then the match's own files in the order its

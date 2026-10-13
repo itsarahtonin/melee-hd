@@ -28,18 +28,23 @@ struct State {
 @group(1) @binding(6) var tex6: texture_2d<u32>;
 @group(1) @binding(7) var tex7: texture_2d<u32>;
 
-struct Vertex {
-    @location(0) pos: vec4<f32>,
-    @location(1) c0: vec4<f32>,
-    @location(2) c1: vec4<f32>,
-    @location(3) t0: vec3<f32>,
-    @location(4) t1: vec3<f32>,
-    @location(5) t2: vec3<f32>,
-    @location(6) t3: vec3<f32>,
-    @location(7) t4: vec3<f32>,
-    @location(8) t5: vec3<f32>,
-    @location(9) t6: vec3<f32>,
-    @location(10) t7: vec3<f32>,
+// The draws' vertices, each as words: its position (four floats), its two colors (RGBA8, red
+// in the low byte) and its texture coordinates (three floats each), as many as its draw has.
+// A draw's index names a vertex's first word, and its instance is its texture coordinates'
+// count.
+@group(2) @binding(0) var<storage, read> vdata: array<u32>;
+
+fn vertex_color(w: u32) -> vec4<f32> {
+    return vec4<f32>(f32(w & 0xFFu), f32((w >> 8u) & 0xFFu), f32((w >> 16u) & 0xFFu), f32(w >> 24u));
+}
+
+// Texture coordinate `k` of the vertex at word `at` with `n` of them, 0 past them.
+fn vertex_tex(at: u32, k: u32, n: u32) -> vec3<f32> {
+    if k >= n {
+        return vec3<f32>(0.0);
+    }
+    let b = at + 6u + 3u * k;
+    return bitcast<vec3<f32>>(vec3<u32>(vdata[b], vdata[b + 1u], vdata[b + 2u]));
 }
 
 struct Varyings {
@@ -58,19 +63,19 @@ struct Varyings {
 }
 
 @vertex
-fn vs_main(v: Vertex) -> Varyings {
+fn vs_main(@builtin(vertex_index) at: u32, @builtin(instance_index) n: u32) -> Varyings {
     var o: Varyings;
-    o.pos = v.pos;
-    o.c0 = v.c0;
-    o.c1 = v.c1;
-    o.t0 = v.t0;
-    o.t1 = v.t1;
-    o.t2 = v.t2;
-    o.t3 = v.t3;
-    o.t4 = v.t4;
-    o.t5 = v.t5;
-    o.t6 = v.t6;
-    o.t7 = v.t7;
+    o.pos = bitcast<vec4<f32>>(vec4<u32>(vdata[at], vdata[at + 1u], vdata[at + 2u], vdata[at + 3u]));
+    o.c0 = vertex_color(vdata[at + 4u]);
+    o.c1 = vertex_color(vdata[at + 5u]);
+    o.t0 = vertex_tex(at, 0u, n);
+    o.t1 = vertex_tex(at, 1u, n);
+    o.t2 = vertex_tex(at, 2u, n);
+    o.t3 = vertex_tex(at, 3u, n);
+    o.t4 = vertex_tex(at, 4u, n);
+    o.t5 = vertex_tex(at, 5u, n);
+    o.t6 = vertex_tex(at, 6u, n);
+    o.t7 = vertex_tex(at, 7u, n);
     return o;
 }
 

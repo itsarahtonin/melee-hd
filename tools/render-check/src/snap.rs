@@ -4,9 +4,9 @@
 
 use std::cell::RefCell;
 
-use ssbm_gx::texture::{self, Image};
-use ssbm_gx::xform::{self, Viewport};
-use ssbm_gx::{Draw, Memory, State, tev, vertex};
+use melee_gx::texture::{self, Image};
+use melee_gx::xform::{self, Viewport};
+use melee_gx::{Draw, Memory, State, tev, vertex};
 
 /// BP registers a draw's output depends on, other than textures' addresses: the generation
 /// mode, indirect matrices and stages, scissor, line and point sizes, TEV orders, texture
@@ -122,7 +122,7 @@ pub struct Recorder {
 }
 
 fn hash(bytes: &[u8]) -> u64 {
-    ssbm_gx::fnv(0xCBF2_9CE4_8422_2325, bytes)
+    melee_gx::fnv(0xCBF2_9CE4_8422_2325, bytes)
 }
 
 impl Recorder {

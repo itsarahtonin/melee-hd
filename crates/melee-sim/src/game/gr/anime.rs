@@ -438,14 +438,17 @@ pub fn add_tree_anims(
 }
 
 /// Registers a model's spline joints in HSD's ID table by their own address,
-/// `grMaterial_801C8B68` with `arg1` 0.
+/// `grMaterial_801C8B68` with `arg1` 0 (Yoshi's Story's Shy Guys' paths are such joints).
+///
+/// Nothing can read those entries: the table is looked up by descriptor (an animation's
+/// `obj_id`, a constraint's or instance's joint), and a joint's address is a block of the
+/// joints' `HSD_ObjAlloc` pool, never a descriptor in a loaded archive. Releasing the joint
+/// doesn't remove its entry either (`JObjRelease` removes its descriptor's), so the entry
+/// changes nothing the game reads, and the state leaves it out; the comparer counts only the
+/// entries keyed by descriptors. The walk stays to the original's shape.
 #[doc(alias = "grMaterial_801C8B68")]
 pub fn register_splines(objs: &Objects, j: Option<JObjId>) {
     let Some(j) = j else { return };
-    assert!(
-        objs.jobjs[j].flags & jobj::SPLINE == 0,
-        "grMaterial_801C8B68: a spline joint keyed by its address in HSD's ID table isn't modeled"
-    );
     if objs.jobjs[j].flags & jobj::INSTANCE == 0 {
         let mut c = objs.jobjs[j].child;
         while let Some(ch) = c {

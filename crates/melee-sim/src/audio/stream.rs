@@ -123,13 +123,13 @@ impl Audio {
 
     /// `AXAcquireVoice(0x1D, dropcallback, 0)`, with drop callbacks reaching the synth.
     fn stream_acquire(&mut self) -> Option<super::ax::VoiceId> {
-        let mut dropped = Vec::new();
+        let mut dropped = super::Dropped::default();
         let v = self
             .ax
             .acquire_voice(0x1D, Some(DROP_CALLBACK), 0, &mut |_, cb, v| {
-                dropped.push((cb, v))
+                dropped.push(cb, v)
             });
-        for (_, v) in dropped {
+        for &(_, v) in dropped.list() {
             self.synth_drop(v);
         }
         v

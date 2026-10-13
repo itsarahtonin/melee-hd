@@ -4,7 +4,7 @@
 //! Copies from the EFB to textures: the copied rectangle in a texture format's tiled layout,
 //! as the copy writes it to memory.
 
-use ssbm_gx::State;
+use melee_gx::State;
 
 use crate::{EFB_HEIGHT, EFB_WIDTH, bits};
 

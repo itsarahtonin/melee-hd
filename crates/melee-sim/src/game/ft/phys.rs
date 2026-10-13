@@ -237,6 +237,43 @@ impl Running<'_> {
         past
     }
 
+    /// Air friction against the horizontal velocity, the stronger `oob`
+    /// (`ftCommonData::aerial_friction_oob`) past `max_vel`; whether it was,
+    /// `ftCommon_CalcSelfAccel_DeaccelQuick`.
+    #[doc(alias = "ftCommon_CalcSelfAccel_DeaccelQuick")]
+    pub fn deaccel_quick(fp: &mut Fighter, oob: f64, max_vel: f64) -> bool {
+        let past = abs(reg(fp.self_vel.x)) > max_vel;
+        let friction = if past {
+            oob
+        } else {
+            reg(fp.co_attrs.aerial_friction)
+        };
+        Self::self_accel_deaccel(fp, friction);
+        past
+    }
+
+    /// Acceleration toward `target_vel`, `accel` at a time and never past it; back to
+    /// still for a target of 0, `ftCommon_CalcSelfAccel_AccelToVel`.
+    #[doc(alias = "ftCommon_CalcSelfAccel_AccelToVel")]
+    pub fn accel_to_vel(fp: &mut Fighter, accel: f64, target_vel: f64) {
+        let vel = reg(fp.self_vel.x);
+        fp.x74_self_accel.x = mem(toward_target(vel, accel, target_vel));
+    }
+
+    /// Air drift toward the stick's share of `target_max`, `accel_max` at a time, once the
+    /// stick passes `threshold`, without friction otherwise,
+    /// `ftCommon_CalcSelfAccel_DriftSimple_NoFriction`.
+    #[doc(alias = "ftCommon_CalcSelfAccel_DriftSimple_NoFriction")]
+    pub fn drift_simple_no_friction(
+        fp: &mut Fighter,
+        threshold: f64,
+        accel_max: f64,
+        target_max: f64,
+    ) {
+        let (accel, target) = Self::stick_share(fp, threshold, accel_max, target_max);
+        Self::accel_to_vel(fp, accel, target);
+    }
+
     /// Keeps the horizontal speed within `max` either way, `ftCommon_ClampSelfVelX`.
     #[doc(alias = "ftCommon_ClampSelfVelX")]
     pub fn clamp_self_vel_x(fp: &mut Fighter, max: f64) {
@@ -405,22 +442,6 @@ impl Running<'_> {
         } else {
             (0.0, 0.0)
         }
-    }
-
-    /// Air drift toward the stick's share of `target_max` with no braking past it,
-    /// `ftCommon_CalcSelfAccel_DriftSimple_NoFriction` (through
-    /// `ftCommon_CalcSelfAccel_AccelToVel`).
-    #[doc(alias = "ftCommon_CalcSelfAccel_DriftSimple_NoFriction")]
-    #[doc(alias = "ftCommon_CalcSelfAccel_AccelToVel")]
-    pub fn drift_simple_no_friction(
-        fp: &mut Fighter,
-        threshold: f64,
-        accel_max: f64,
-        target_max: f64,
-    ) {
-        let (accel, target) = Self::stick_share(fp, threshold, accel_max, target_max);
-        let vel = reg(fp.self_vel.x);
-        fp.x74_self_accel.x = mem(toward_target(vel, accel, target));
     }
 
     /// Ground speed toward the stick's share of `target_max`, `accel_max` at a time, once the

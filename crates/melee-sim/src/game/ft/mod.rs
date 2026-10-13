@@ -11,6 +11,7 @@ pub mod anim;
 pub mod attack;
 pub mod bind;
 pub mod camera;
+pub mod captain;
 pub mod co;
 pub mod colanim;
 pub mod coll;
@@ -24,6 +25,7 @@ pub mod data;
 pub mod draw;
 pub mod dynamics;
 pub mod effect;
+pub mod falco;
 pub mod fighter;
 pub mod fox;
 pub mod ftlib;
@@ -62,10 +64,6 @@ pub struct Globals {
     /// `PlCo.dat`'s `ftLoadCommonData`, which `Fighter_LoadCommonData` copies into
     /// `p_ftCommonData`, `ftPartsTable` and the other common pointers.
     pub load_common: Option<DataRef>,
-    /// How many stage hazards blow fighters around (`ft_804D6578`'s count); none is ported.
-    pub wind_sources: u32,
-    /// How many stage devices can bury fighters (`ftDevice_BuryThingCount`); none is ported.
-    pub bury_things: u32,
     /// Each character's animation file once the game has copied it to ARAM
     /// (`ftData_Table_Unk0`), by kind.
     pub anim_files: Vec<Option<AnimFile>>,

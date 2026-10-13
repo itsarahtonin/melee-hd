@@ -10,6 +10,7 @@
 //! which the comparer reports ([`Cx::stale_read`]). The bytes past a member shorter than the
 //! union aren't compared.
 
+use super::kinds::heiho::HeihoVars;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::structs::*;
 use crate::vec::Vec3;
@@ -143,6 +144,7 @@ members! {
     SamusChargeshot, samus_chargeshot, itSamusChargeshot_ItemVars, [SAMUS_CHARGE];
     SamusMissile, samus_missile, itSamusMissile_ItemVars, [SAMUS_MISSILE];
     SamusGrapple, samus_grapple, itSamusGrapple_ItemVars, [SAMUS_GBEAM];
+    Heiho, heiho, HeihoVars, [HEIHO];
 }
 
 impl Default for ItemVars {

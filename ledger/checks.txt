@@ -416,7 +416,7 @@ ftCo_JumpAerial_Phys	leaf-check fighter: proc_update reaches it in 2 saved Fight
 ftCo_Jump_Phys	leaf-check fighter: proc_update reaches it in 4 saved Fighter_procUpdate calls that compare clean
 ftColl_80076528	leaf-check fighter: proc_update reaches it in 21 saved Fighter_procUpdate calls that compare clean
 ftColl_8007AF28	leaf-check fighter: proc_update reaches it in 21 saved Fighter_procUpdate calls that compare clean
-ftColl_GetWindOffsetVec	leaf-check fighter: proc_update reaches it in 20 saved Fighter_procUpdate calls that compare clean
+ftColl_GetWindOffsetVec	leaf-check fighter: proc_update reaches it in 20 saved Fighter_procUpdate calls that compare clean; the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches its wind device from tick 1 (a run instrumented to log each port's first call)
 ftCommon_CalcSelfAccel_AccelToVelClampedFrom	leaf-check fighter: proc_update reaches it in 11 saved Fighter_procUpdate calls that compare clean
 ftCommon_CalcSelfAccel_Deaccel	leaf-check fighter: proc_update reaches it in 7 saved Fighter_procUpdate calls that compare clean
 ftCommon_CalcSelfAccel_Drift	leaf-check fighter: proc_update reaches it in 11 saved Fighter_procUpdate calls that compare clean
@@ -1980,7 +1980,7 @@ it_8026D258	leaf-check items: drop_at runs it from captured item states
 it_8026D324	leaf-check items: spawn_pick runs every captured call
 it_8026D3CC	leaf-check items: spawn_queries runs it from captured item states
 it_80272828	leaf-check items: spawn_queries runs it from captured item states
-ftLib_GetOpponentsDir	leaf-check items: spawn_point's it_8026B684 runs it on every captured call
+ftLib_GetOpponentsDir	leaf-check items: spawn_point's it_8026B684 runs it on every captured call; with the Slippi ruleset's WhispyBlowDirFix, the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) from tick 635 (a run instrumented to log each port's first call)
 Ground_801C2AD8	leaf-check items: spawn_setup (it_8026D018) reads the stage's counts through it
 Ground_801C2AE8	leaf-check items: spawn_setup (it_8026D018) scales the first countdown by it
 Stage_80224FDC	leaf-check items: spawn_point (it_8026CB3C) runs it on every captured call
@@ -3743,6 +3743,30 @@ __AXProcessAux	melee-audio-check: runs every audio frame of the Fox-Fox and Fox-
 HandleReverb	melee-audio-check: runs every audio frame of the Fox-Fox and Fox-Marth mixes, which are compared sample by sample with ssbm-rs's audio output
 AXFXReverbStdCallback	melee-audio-check: runs every audio frame of the Fox-Fox and Fox-Marth mixes, which are compared sample by sample with ssbm-rs's audio output
 AXFXDelayCallback	melee-audio-check: runs every audio frame of the Fox-Fox and Fox-Marth mixes, which are compared sample by sample with ssbm-rs's audio output
+lbDvd_CachePreloadedFile	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+fn_80023254	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+fn_800244F4	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+lbAudioAx_80024F6C	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+lbAudioAx_8002838C	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+lbAudioAx_80028690	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+gm_801603B0	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+ARAlloc	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+ARInit	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+AXInit	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+__AXAllocInit	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+__AXAuxInit	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+__AXClInit	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+__AXOutInit	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+__AXVPBInit	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+HSD_SynthInit	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+AXDriver_8038DA70	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+AXDriverSetupAux	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+HSD_AudioSFXSetupAux	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+HSD_AudioInitMultiPStream	melee-oracle diff --boot-audio: the boot's audio state as game::boot leaves it compared byte for byte with ssbm-rs's boot state on nine traced replays (timeline included), and whole matches from it compared tick by tick
+ReverbSTDCreate	melee-audio-check --port: the mix from melee-sim's boot on sample-exact against ssbm-rs's recordings; melee-audio's fx tests compare the effects' parameters with ssbm-rs's boot state
+AXFXReverbStdInit	melee-audio-check --port: the mix from melee-sim's boot on sample-exact against ssbm-rs's recordings; melee-audio's fx tests compare the effects' parameters with ssbm-rs's boot state
+AXFXDelaySettings	melee-audio-check --port: the mix from melee-sim's boot on sample-exact against ssbm-rs's recordings; melee-audio's fx tests compare the effects' parameters with ssbm-rs's boot state
+AXFXDelayInit	melee-audio-check --port: the mix from melee-sim's boot on sample-exact against ssbm-rs's recordings; melee-audio's fx tests compare the effects' parameters with ssbm-rs's boot state
 lbColl_80007DD8	melee-oracle diff: the Pokemon Stadium replay Game_20260129T214824 (v5-mixed, --fp slippi, clean through tick 13820) reaches it from tick 916 (a run instrumented to log each port's first call)
 lbLang_IsSavedLanguageJP	melee-oracle diff: the Pokemon Stadium replay Game_20260129T214824 (v5-mixed, --fp slippi, clean through tick 13820) reaches it from tick 124; the Fox-Marth Pokemon Stadium benchmark fox-marth-ps (v5-mixed, --fp hardware, clean through its 13674 ticks) from tick 124 (a run instrumented to log each port's first call)
 lbLang_IsSavedLanguageUS	melee-oracle diff: the Pokemon Stadium replay Game_20260129T214824 (v5-mixed, --fp slippi, clean through tick 13820) reaches it from tick 124; the Fox-Marth Pokemon Stadium benchmark fox-marth-ps (v5-mixed, --fp hardware, clean through its 13674 ticks) from tick 124 (a run instrumented to log each port's first call)
@@ -4097,11 +4121,11 @@ ft_80082888	melee-oracle diff, Jigglypuff vs Sheik on Final Destination (Game_20
 ft_80082978	melee-oracle diff, Jigglypuff vs Sheik on Final Destination (Game_20260524T180613, v5-mixed, all 17,575 traced ticks) in Slippi float mode with no stand-ins (docs/oracle.md): first called in tick 3312
 lbColl_80008248	melee-oracle diff, Samus vs Fox on Final Destination (local/bench/oracle-chars2/samus-fox-fd.slp, all 14,995 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 159
 ftColl_HurtboxInit	melee-oracle diff, Samus vs Fox on Final Destination (local/bench/oracle-chars2/samus-fox-fd.slp, all 14,995 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 302
-ftColl_8007BE3C	melee-oracle diff, Samus vs Fox on Pokemon Stadium (local/bench/oracle-chars2/samus-fox-ps.slp, all 14,096 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 5998
+ftColl_8007BE3C	melee-oracle diff, Samus vs Fox on Pokemon Stadium (local/bench/oracle-chars2/samus-fox-ps.slp, all 14,096 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 5998; melee-oracle diff, Captain Falcon vs Sheik FD Game_20260524T181444 (docs/oracle.md): a tip's damage held back through its hitlag lands in tick 9496
 ftCommon_CalcGroundAccel_AccelToVel	melee-oracle diff, Samus vs Marth on Battlefield (local/bench/oracle-chars2/samus-marth-bf.slp, all 14,276 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 548
 ftCommon_CalcGroundAccel_AccelToLStickX	melee-oracle diff, Samus vs Marth on Battlefield (local/bench/oracle-chars2/samus-marth-bf.slp, all 14,276 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 548
-ftCommon_CalcSelfAccel_AccelToVel	melee-oracle diff, Samus vs Fox on Final Destination (local/bench/oracle-chars2/samus-fox-fd.slp, all 14,995 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 293
-ftCommon_CalcSelfAccel_DriftSimple_NoFriction	melee-oracle diff, Samus vs Fox on Final Destination (local/bench/oracle-chars2/samus-fox-fd.slp, all 14,995 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 293
+ftCommon_CalcSelfAccel_AccelToVel	melee-oracle diff, Samus vs Fox on Final Destination (local/bench/oracle-chars2/samus-fox-fd.slp, all 14,995 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 293; leaf-check captain: the up special's physics reach it through ftCommon_CalcSelfAccel_DriftSimple_NoFriction, the whole state compared
+ftCommon_CalcSelfAccel_DriftSimple_NoFriction	melee-oracle diff, Samus vs Fox on Final Destination (local/bench/oracle-chars2/samus-fox-fd.slp, all 14,995 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 293; leaf-check captain: the up special's physics reach it below the drift's limit, the whole state compared
 ftLib_FindNearestOpponentInDir	melee-oracle diff, Samus vs Fox on Final Destination (local/bench/oracle-chars2/samus-fox-fd.slp, all 14,995 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 5938
 ftCo_80099390	melee-oracle diff, Samus vs Fox on Final Destination (local/bench/oracle-chars2/samus-fox-fd.slp, all 14,995 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 4625
 ftCo_80099564	melee-oracle diff, Samus vs Fox on Final Destination (local/bench/oracle-chars2/samus-fox-fd.slp, all 14,995 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 4626
@@ -4281,3 +4305,221 @@ it_802BABB8	leaf-check samus: samus_functions runs it from real Samus states, it
 it_802BAC3C	melee-oracle diff, Samus vs Fox on Final Destination (local/bench/oracle-chars2/samus-fox-fd.slp, all 14,995 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 4124
 it_802BAC80	melee-oracle diff, Samus vs Fox on Final Destination (local/bench/oracle-chars2/samus-fox-fd.slp, all 14,995 traced ticks) in hardware float mode with no stand-ins (docs/oracle.md): first called in tick 4105
 it_802BACC4	leaf-check samus: samus_functions runs it from real Samus states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnDeath	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_LoadSpecialAttrs	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnItemPickup	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnItemInvisible	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnItemVisible	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnItemDrop	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnKnockbackEnter	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnKnockbackExit	leaf-check falco: falco_functions runs it from real Falco states, its own saved calls and its unit's, and compares the whole state
+ftFc_Init_OnLoad	melee-oracle diff, Falco vs Sheik FD Game_20260129T170722 (docs/oracle.md): Falco's creation runs it; the fighter compared from the first tick
+ftColl_80077688	melee-oracle diff, Falco vs Sheik FD Game_20260129T170722 (docs/oracle.md): Falco's lasers and Sheik's needles hitting shields, from tick 136
+lbColl_80007DD8	melee-oracle diff, Falco vs Sheik FD Game_20260129T170722 (docs/oracle.md): the lasers that bounce off a shield (9 calls), their rebound compared
+ftCa_Init_800E28C8	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirHi_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirHi_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirHi_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirHi_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirHi_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLwEndAir_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLwEndAir_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLwEndAir_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLwEnd_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLwEnd_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLwEnd_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLw_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLw_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLw_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirLw_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirN_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirN_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirN_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirN_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirN_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirSStart_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirSStart_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirSStart_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirSStart_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirS_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirS_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirS_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirS_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialAirS_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiCatch_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiCatch_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiCatch_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiCatch_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow0_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow0_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow0_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow0_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow1_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow1_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHiThrow1_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_800E3EAC	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_800E400C	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialHi_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLwEndAir_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLwEndAir_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLwEndAir_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLwEnd_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLwEnd_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLwEnd_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_800E49FC	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_800E5128	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_800E550C	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialLw_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialN_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialN_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialN_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialN_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialN_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialSStart_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialSStart_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialSStart_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialSStart_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_Enter	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_OnDetect	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_SpecialS_RemoveGFX	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCo_8009CA0C	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCo_800DB464	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureCaptain_Anim	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureCaptain_Coll	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureCaptain_IASA	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureCaptain_Phys	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_Init_OnDeath	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+ftCa_Init_LoadSpecialAttrs	leaf-check captain: captain_functions runs it from real Captain Falcon states, its own saved calls and its unit's, and compares the whole state
+doCatchAnim	leaf-check captain: ftCa_SpecialHiCatch_Anim's runs reach it (the catch's end into the throw), the whole state compared
+ftCommon_8007E5AC	leaf-check captain: the down special's grounded physics (ftCa_SpecialLw_Phys, ftCa_SpecialLwEnd_Phys, ftCa_SpecialLwEndAir_Phys) reach it, the whole state compared
+ftCommon_CalcSelfAccel_DeaccelQuick	leaf-check captain: the up special's physics (ftCa_SpecialHi_Phys, ftCa_SpecialAirHi_Phys, ftCa_SpecialHiThrow0_Phys) reach it, the whole state compared
+ftCa_Init_OnLoad	melee-oracle diff, Captain Falcon vs Sheik FD Game_20260524T181444 (docs/oracle.md): Captain Falcon's creation runs it; the fighter compared from the first tick
+ftGn_Init_OnKnockbackEnter	leaf-check ganon: ganon_functions runs it from real Ganondorf states (debug VS dittos), its own saved calls and its unit's, and compares the whole state
+ftGn_Init_OnKnockbackExit	leaf-check ganon: ganon_functions runs it from real Ganondorf states (debug VS dittos), its own saved calls and its unit's, and compares the whole state
+gm_8016B6E8	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1952 (a run instrumented to log each port's first call)
+gm_8016F2F8	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1952 (a run instrumented to log each port's first call)
+grMaterial_801C87D0	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grMaterial_801C8858	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grStory_801E3030	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grStory_801E30D8	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grStory_801E31C0	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grStory_801E3234	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grStory_801E3334	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grStory_801E3370	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grStory_801E33E0	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grStory_801E3418	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grStory_801E366C	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grStory_801E36D0	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 72 (a run instrumented to log each port's first call)
+grStory_801E36D8	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 2 (a run instrumented to log each port's first call)
+grStory_UnkStage0_OnLoad	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grStory_UnkStage0_OnStart	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 85 (a run instrumented to log each port's first call)
+grZakoGenerator_801CAC14	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 789 (a run instrumented to log each port's first call)
+grZakoGenerator_801CACB8	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1952 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion0_Phys	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion1_Anim	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 122 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion1_Coll	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion1_Phys	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 122 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion2_Phys	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1958 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion3_Coll	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1804 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion3_Phys	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1812 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion4_Anim	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1825 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion4_Coll	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1824 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion4_Phys	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1825 (a run instrumented to log each port's first call)
+it_8026B3C0	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+it_80275228	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+it_80275240	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+it_8027B378	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1803 (a run instrumented to log each port's first call)
+it_8027B408	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1952 (a run instrumented to log each port's first call)
+it_8027B4A4	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1803 (a run instrumented to log each port's first call)
+it_8027B508	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1952 (a run instrumented to log each port's first call)
+it_8027B5B0	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+it_8027B730	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+it_8027B798	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1803 (a run instrumented to log each port's first call)
+it_8027CE18	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1952 (a run instrumented to log each port's first call)
+it_8027CE44	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1952 (a run instrumented to log each port's first call)
+it_802D8618	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+it_802D8688	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+it_802D8894	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+it_802D8918	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+it_802D8EC8	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1803 (a run instrumented to log each port's first call)
+it_802D9168	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1824 (a run instrumented to log each port's first call)
+it_802D96B0	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+it_802D9714	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 122 (a run instrumented to log each port's first call)
+it_802D98AC	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+it_802D98C4	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+lbTime_8000AF24	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1952 (a run instrumented to log each port's first call)
+pl_800384DC	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1803 (a run instrumented to log each port's first call)
+pl_8004049C	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1952 (a run instrumented to log each port's first call)
+grStory_801E322C	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion0_Anim	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 122 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion0_Coll	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 121 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion2_Anim	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1958 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion2_Coll	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1953 (a run instrumented to log each port's first call)
+itHeiho_UnkMotion3_Anim	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 1812 (a run instrumented to log each port's first call)
+it_2725_Logic9_Destroyed	melee-oracle diff: the Yoshi's Story replay Game_20260129T133446 (v5-mixed, --fp slippi, clean through its 7245 ticks) reaches it from tick 789 (a run instrumented to log each port's first call)
+grOldPupupu_802108B4	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_802107E0	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_80210884	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_80210888	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 85 (a run instrumented to log each port's first call)
+stageGObj0_OnInit@8021099C	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_802109D8	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_80210A24	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80210B04	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_80210B58	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_80210BC0	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80210BE4	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 3792 (a run instrumented to log each port's first call)
+grOldPupupu_80210C34	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 3792 (a run instrumented to log each port's first call)
+grOldPupupu_80210C7C	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_80210D10	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80211110	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_8021119C	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+ftCo_800C06E8	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grOldPupupu_8021128C	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 714 (a run instrumented to log each port's first call)
+fn_802112F4	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_802113E0	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80211C1C	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80211CA8	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 2 (a run instrumented to log each port's first call)
+ftCo_800C0A28	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80211CA0	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 74 (a run instrumented to log each port's first call)
+grOldPupupu_802109D0	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80210B50	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80211194	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grOldPupupu_80211C10	melee-oracle diff: the Dream Land replay Game_20260129T130802 (v5-mixed, --fp slippi, clean through its 13851 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CBCE8	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CBB88	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grAnime_801C8780	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_OnLoad	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_OnStart	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it from tick 85 (a run instrumented to log each port's first call)
+grIzumi_801CBDD4	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CBE10	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CBE64	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CD090	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CCB18	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CCB90	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it from tick 2 (a run instrumented to log each port's first call)
+grIzumi_801CD220	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it from tick 2 (a run instrumented to log each port's first call)
+grIzumi_801CC0D4	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grIzumi_801CC33C	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CC358	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CCA64	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CCBDC	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CCD98	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CCEA0	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it from tick 2 (a run instrumented to log each port's first call)
+ftDrawCommon_80081140	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it from tick 2 (a run instrumented to log each port's first call)
+ftDrawCommon_80081118	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it from tick 2 (a run instrumented to log each port's first call)
+grIzumi_801CD280	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it from tick 2 (a run instrumented to log each port's first call)
+Ground_801C1A20	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it in the match's start (a run instrumented to log each port's first call)
+grIzumi_801CD278	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it from tick 76 (a run instrumented to log each port's first call)
+grIzumi_801CBE08	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grIzumi_801CBE5C	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)
+grIzumi_801CCB10	melee-oracle diff: the Fountain of Dreams replay Game_20260129T214216 (v5-mixed, --fp slippi, clean through its 9707 ticks) reaches it from tick 1 (a run instrumented to log each port's first call)

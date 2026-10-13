@@ -4,6 +4,7 @@
 //! state code ports line by line and the oracle compares state with ssbm-rs's memory directly;
 //! `mirror` is that comparison.
 
+pub mod boot;
 pub mod camera;
 pub mod code;
 pub mod ef;
@@ -18,6 +19,7 @@ mod mirror_gen;
 pub mod pl;
 pub mod playback;
 pub mod render;
+pub mod roster;
 pub mod sfx;
 pub mod slippi;
 pub mod state;
