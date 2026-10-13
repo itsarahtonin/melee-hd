@@ -12,11 +12,14 @@ pub mod display;
 pub mod dynamic_attr;
 pub mod grlib;
 pub mod ground;
+pub mod izumi;
 pub mod last;
 pub mod material;
+pub mod oldpupupu;
 pub mod setup;
 pub mod stadium;
 pub mod stage;
+pub mod story;
 pub mod vars;
 pub mod zako;
 
@@ -35,6 +38,12 @@ use crate::hsd::pool::Pool;
 
 /// `Gr_Kind_PStadium`, Pokémon Stadium.
 pub const GR_KIND_PSTADIUM: i32 = 16;
+/// `Gr_Kind_Story`, Yoshi's Story.
+pub const GR_KIND_STORY: i32 = 10;
+/// `Gr_Kind_Izumi`, Fountain of Dreams.
+pub const GR_KIND_IZUMI: i32 = 12;
+/// `Gr_Kind_OldPupupu`, Dream Land (N64).
+pub const GR_KIND_OLDPUPUPU: i32 = 28;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Last`, Final Destination.
@@ -125,6 +134,14 @@ pub struct Globals {
     pub last_yakumono: Option<DataRef>,
     /// Battlefield's `yakumono_param` (its backgrounds' fade scripts).
     pub battle_yakumono: Option<DataRef>,
+    /// Yoshi's Story's `yakumono_param` (`grStory_YakumonoParam`).
+    pub story_yakumono: Option<DataRef>,
+    /// Fountain of Dreams' `yakumono_param` (`grIzumi_YakumonoParam`).
+    pub izumi_yakumono: Option<DataRef>,
+    /// Fountain of Dreams' state besides its objects'.
+    pub izumi: izumi::Globals,
+    /// Dream Land's `yakumono_param` (`grOldpupupu_YakumonoParam`).
+    pub oldpupupu_yakumono: Option<DataRef>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -162,8 +179,11 @@ pub struct FtDevices {
     pub bury_count: i32,
     /// `ft_804D6578.x0`.
     pub x6578: i32,
-    /// `ft_80459A68[0].ground`.
+    /// `ft_80459A68[0]`: the wind device (`ground`), its type and the callback the fighters'
+    /// wind polls (`active_cb`).
     pub device: Option<GObjId>,
+    pub device_type: u32,
+    pub device_cb: Option<CodeRef>,
     /// `ftDevice_BuryThings[i].x0`.
     pub bury: [Option<GObjId>; 2],
     /// `ft_80459A8C[0].ground`.
@@ -180,6 +200,13 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_PSTADIUM, 2) => VarsKind::Stadium,
         (GR_KIND_PSTADIUM, 3..=5) => VarsKind::StadiumBits,
         (GR_KIND_PSTADIUM, 6 | 9) => VarsKind::StadiumPiece,
+        (GR_KIND_IZUMI, 2) => VarsKind::Izumi2,
+        (GR_KIND_IZUMI, 3) => VarsKind::Izumi,
+        (GR_KIND_IZUMI, 4) => VarsKind::Izumi3,
+        (GR_KIND_OLDPUPUPU, 1 | 7) => VarsKind::OldPupupu,
+        (GR_KIND_OLDPUPUPU, 8) => VarsKind::OldPupupu2,
+        (GR_KIND_STORY, 2) => VarsKind::StoryRandall,
+        (GR_KIND_STORY, 3) => VarsKind::StoryShyGuys,
         _ => VarsKind::Bytes,
     }
 }

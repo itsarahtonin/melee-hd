@@ -194,6 +194,7 @@ A state imported from a single captured call has no timeline, and no audio frame
 - `Ground_801C0800` writes the stage's `ALDYakuAll` scripts into the random stage item's states in the items' data: `game::gr::Globals::yaku_scripts` records them for the items' port.
 - `ftData_80085A14` writes each animation's ARAM address into the character's animation table when the animation file reaches ARAM; `Running::anim_aram` works the address out from the file's and the animation's offset instead.
 - `lbRefract_PObjLoad`, the fighters' shape loader, copies each vertex's position-matrix index over its last texture-matrix index in a refracting shape's display list. Only the display pass reads display lists, so `PObjs::refract_patches` records the rewrite for it.
+- Fountain of Dreams' reflection camera (`grIzumi_801CCD98`) clears its archive's `GrdIzumi_cd_wt_GrdIzumiDummy1_1_image_desc` and makes it an 80x60 image in a preloaded buffer (`lb_800121FC`), which the water's texture shows: `gr::izumi::Reflection` keeps the descriptor as the stage wrote it, and the comparer checks it in memory.
 - `Ground_801C20E0` edits a stage's light list in place when its light overrides set flags: it drops the lights no override names and sets the others' flags. The edit leaves the list the same when it runs again, so the fighters' light (`gr::setup::load_fighter_lights`) loads the list as the edit leaves it, computed from the archive.
 
 

@@ -106,6 +106,11 @@ pub enum Draw {
     SisText(Box<super::sis::TextDraw>),
     /// The render copied into a player's magnifier bubble (`lb_800122C8`).
     MagnifierCopy(u8),
+    /// The render copied into Fountain of Dreams' reflection image, the frame cleared after it
+    /// (`lb_800122C8`).
+    ReflectionCopy,
+    /// The point size and its texture offset for later point draws (`HSD_StateSetPointSize`).
+    PointSize(u8, u8),
     /// The erase color for later erases (`HSD_SetEraseColor`).
     EraseColor([u8; 4]),
     /// The render from (`x`, `y`) copied into one of Pokémon Stadium's screens' images, the
@@ -734,10 +739,22 @@ fn setup_lights(objs: &mut Objects, data: &Archives, c: CObjId) {
         lobj::set_active(&mut objs.lobjs, l);
         idx = lobj::nb_active(&objs.lobjs);
         objs.lobjs[l].spec_id = 0;
+        // `setup_infinite_lightobj`, `setup_point_lightobj` and `setup_spot_lightobj` load
+        // their GX objects from the light's position (a spot's also from its vector), which
+        // reading brings a path-animated position into world space (`HSD_WObjGetPosition`).
         match ty {
-            lobj::POINT => objs.lobjs[l].hw_color = objs.lobjs[l].color,
+            lobj::INFINITE => {
+                lobj::position(objs, data, Some(l));
+            }
+            lobj::POINT => {
+                objs.lobjs[l].hw_color = objs.lobjs[l].color;
+                lobj::position(objs, data, Some(l));
+            }
+            lobj::SPOT => {
+                lobj::position(objs, data, Some(l));
+                lobj::light_vector(objs, data, Some(l));
+            }
             lobj::AMBIENT => continue,
-            // Infinite and spot lights only set their GX objects.
             _ => {}
         }
         if reflect & lobj::DIFFUSE != 0 {

@@ -48,6 +48,9 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if last::run(game, gobj, addr) => {}
         addr if super::gr::battle::run(game, gobj, addr) => {}
         addr if super::gr::stadium::run(game, gobj, addr) => {}
+        addr if super::gr::story::run(game, gobj, addr) => {}
+        addr if super::gr::oldpupupu::run(game, gobj, addr) => {}
+        addr if super::gr::izumi::run(game, gobj, addr) => {}
         0x8006_A1BC => fighter::proc_hitlag(game, gobj),
         0x8006_A360 => fighter::proc_anim(game, gobj),
         0x8006_ABA0 => fighter::proc_cpu(game, gobj),
@@ -100,6 +103,9 @@ pub fn run_event(game: &mut Running, f: u32) {
         0x8021_A7C4 => last::on_load(game),
         0x8021_A7C8 => last::on_start(game),
         f if super::gr::stadium::run_event(game, f) => {}
+        f if super::gr::story::run_event(game, f) => {}
+        f if super::gr::oldpupupu::run_event(game, f) => {}
+        f if super::gr::izumi::run_event(game, f) => {}
         super::gm::vs::ON_FRAME => game.vs_on_frame(),
         // db_RunEveryFrame: returns at once below the debug ROM's level.
         super::gm::vs::DB_RUN_EVERY_FRAME => game.game.assert_retail(),

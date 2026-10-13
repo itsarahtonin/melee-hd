@@ -378,6 +378,7 @@ impl<'a> Comparer<'a> {
             Some(UserData::StadiumScreen(which)) => {
                 crate::stadium::compare_screen(self, path, which, t)
             }
+            Some(UserData::IzumiReflection) => crate::izumi::compare_reflection(self, path, t),
             None => {
                 // Kindless user data ours lacks.
                 let ud = self.u32(t + 0x2C);
@@ -425,10 +426,6 @@ impl<'a> Comparer<'a> {
             game.coll.floor_filter_gobj.map(|g| g.0),
             filter_gobj,
         );
-        let wind = self.u32(sym("ft_804D6578"));
-        self.check("ft", "wind sources", game.ft.wind_sources, wind);
-        let bury = self.u32(sym("ftDevice_BuryThingCount"));
-        self.check("ft", "bury things", game.ft.bury_things, bury);
         self.fighter_data_globals();
         for (name, offset) in [
             ("p_ftCommonData", 0),

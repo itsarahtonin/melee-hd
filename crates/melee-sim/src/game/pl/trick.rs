@@ -201,6 +201,36 @@ impl Running<'_> {
         self.take_attack_record(attacker, victim, record, rec, behind, prev_source);
     }
 
+    /// A hit on an enemy in the attacker's statistics, `pl_800384DC`: attack `id` (handed as an
+    /// `int`, so the record's other bytes read 0) counts a hit, and a hit beating its best, as
+    /// on a player; the fighter's record is marked landed (`x2084_b7`). `record` is the
+    /// attack's record: the fighter's own, or its item's.
+    #[doc(alias = "pl_800384DC")]
+    pub fn record_enemy_hit(&mut self, gobj: GObjId, id: u8, record: AttackRecord) {
+        let ev = [0, 0, 0, id];
+        if id != 0 && id < 100 {
+            let fp = self.game.fighter(gobj);
+            let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
+            let rec = self.attack_record(record);
+            let s = &mut self.game.player_stale_moves(slot).total_attack_count_struct;
+            count_stats(&mut s.hits, ev);
+            if rec.x10_b0 {
+                s.hits.x1A8 = s.hits.x1A8.wrapping_add(1);
+            }
+            if id == 99 {
+                // `pl_8003FE40`.
+                self.count_bonus(slot, 75);
+            }
+            let s = &mut self.game.player_stale_moves(slot).total_attack_count_struct;
+            let best = s.attacks.by_attack_counts[usize::from(id)];
+            if !rec.x10_b7 && best > word_at(&s.x358, 4 + 4 * usize::from(id)) {
+                count_stats_bytes(&mut s.x358, ev, rec.x10_b0);
+                self.count_best_hit(slot, sub, i32::from(id));
+            }
+        }
+        self.mark_record_landed(AttackRecord::Fighter(gobj));
+    }
+
     /// The attacker's statistics for a hit with attack `ev` (`pl_80038144`'s body).
     #[allow(clippy::too_many_arguments)]
     fn count_hit_stats(

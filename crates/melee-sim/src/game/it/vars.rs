@@ -10,6 +10,7 @@
 //! which the comparer reports ([`Cx::stale_read`]). The bytes past a member shorter than the
 //! union aren't compared.
 
+use super::kinds::heiho::HeihoVars;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::structs::*;
 use crate::vec::Vec3;
@@ -133,6 +134,7 @@ members! {
     SeakChain, seak_chain, itSeakChain_ItemVars, [SEAK_CHAIN];
     ZeldaDinFire, zelda_din_fire, itZeldaDinFire_ItemVars, [ZELDA_DIN_FIRE];
     ZeldaDinFireExplode, zelda_din_fire_explode, itZeldaDinFireExplode_ItemVars, [ZELDA_DIN_FIRE_EXPLODE];
+    Heiho, heiho, HeihoVars, [HEIHO];
 }
 
 impl Default for ItemVars {

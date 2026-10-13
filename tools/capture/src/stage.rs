@@ -23,6 +23,10 @@ use crate::{Capture, MEM1};
 /// one of several statics of that name.
 pub const GRLAST_YAKUMONO: u32 = 0x804D_6AD0;
 
+/// The static `yakumono_param`s of grstory.c, groldpupupu.c and grizumi.c.
+pub const GRSTORY_YAKUMONO: u32 = 0x804D_69B8;
+pub const GROLDPUPUPU_YAKUMONO: u32 = 0x804D_6A98;
+pub const GRIZUMI_YAKUMONO: u32 = 0x804D_6968;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -243,6 +247,12 @@ impl Importer<'_> {
         let yaku = cap.u32(GRBATTLE_YAKUMONO);
         self.game.gr.battle_yakumono = self.data_or_unhandled(yaku);
         crate::stadium::import_statics(self);
+        let yaku = cap.u32(GRSTORY_YAKUMONO);
+        self.game.gr.story_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GROLDPUPUPU_YAKUMONO);
+        self.game.gr.oldpupupu_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRIZUMI_YAKUMONO);
+        self.game.gr.izumi_yakumono = self.data_or_unhandled(yaku);
         self.game.gr.battle_demo = self.u8_at(sym("isDemoFight")) != 0;
         self.game.gr.game_mode = self.u8_at(sym("state_machine"));
         let points = sym("grLib_8049EF58");
@@ -263,6 +273,11 @@ impl Importer<'_> {
             bury_count: cap.u32(sym("ftDevice_BuryThingCount")) as i32,
             x6578: cap.u32(sym("ft_804D6578")) as i32,
             device: gobj_at(self, sym("ft_80459A68")),
+            device_type: cap.u32(sym("ft_80459A68") + 4),
+            device_cb: match cap.u32(sym("ft_80459A68") + 8) {
+                0 => None,
+                a => Some(melee_sim::game::handles::CodeRef(a)),
+            },
             bury: [
                 gobj_at(self, sym("ftDevice_BuryThings")),
                 gobj_at(self, sym("ftDevice_BuryThings") + 0xC),
@@ -753,6 +768,31 @@ impl Comparer<'_> {
             (yaku != 0).then(|| self.data.get(yaku)).flatten(),
         );
         crate::stadium::compare_statics(self);
+        for (name, at, ours) in [
+            (
+                "grStory yakumono_param",
+                GRSTORY_YAKUMONO,
+                game.gr.story_yakumono,
+            ),
+            (
+                "grOldPupupu yakumono_param",
+                GROLDPUPUPU_YAKUMONO,
+                game.gr.oldpupupu_yakumono,
+            ),
+            (
+                "grIzumi yakumono_param",
+                GRIZUMI_YAKUMONO,
+                game.gr.izumi_yakumono,
+            ),
+        ] {
+            let yaku = self.u32(at);
+            self.check(
+                name,
+                "data",
+                ours,
+                (yaku != 0).then(|| self.data.get(yaku)).flatten(),
+            );
+        }
         self.check(
             "isDemoFight",
             "demo",
