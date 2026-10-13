@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 
-use crate::present::Gpu;
+use crate::present::{Aspect, Gpu};
 
 /// Where the player keeps its caches: `%LOCALAPPDATA%\melee-hd` on Windows,
 /// `$XDG_CACHE_HOME/melee-hd` or `~/.cache/melee-hd` elsewhere.
@@ -27,9 +27,10 @@ fn driver_path() -> Option<PathBuf> {
     dir().map(|d| d.join("driver-pipelines.bin"))
 }
 
-/// A renderer at `scale` and `samples` samples a pixel, with the cached pipelines made.
-pub fn renderer(gpu: &Gpu, scale: u32, samples: u32) -> melee_gpu::Renderer {
-    let mut r = gpu.renderer(scale, samples);
+/// A renderer at `scale`, `samples` samples a pixel and an EFB as wide as `aspect` shows it,
+/// with the cached pipelines made.
+pub fn renderer(gpu: &Gpu, scale: u32, samples: u32, aspect: Aspect) -> melee_gpu::Renderer {
+    let mut r = gpu.renderer(scale, samples, aspect);
     let driver = driver_path().and_then(|p| std::fs::read(p).ok());
     r.use_pipeline_cache(driver.as_deref());
     let keys: Vec<[u32; 8]> = keys_path()

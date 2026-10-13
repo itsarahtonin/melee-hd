@@ -16,6 +16,10 @@
 //! A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). F11 or Alt+Enter toggles
 //! borderless fullscreen. Escape quits, or from a match the launcher started, goes back to it.
 //!
+//! Frames are shown at the game's 73:60, pillarboxed; `--widescreen` (16:9) or `--aspect W:H`
+//! widens the drawn cameras to a wider aspect, and `--aspect 4:3` stretches the picture to 4:3
+//! ([`present::Aspect`]).
+//!
 //! The loop keeps latency short: each tick reads the controllers just before it runs, and the
 //! frame it renders is drawn and presented at once, on a swap chain one frame deep (mailbox,
 //! or immediate where the display has no mailbox mode).
@@ -63,8 +67,9 @@ struct Args {
     scale: u32,
     /// Saves the last frame the bench draws.
     shot: Option<String>,
-    /// Shows frames this wide (width over height), seeing more at the sides; 4:3 otherwise.
-    widescreen: Option<f32>,
+    /// The aspect ratio frames are shown at: the game's 73:60, wider (seeing more at the
+    /// sides), or 4:3 stretched.
+    aspect: present::Aspect,
     /// Keeps the renderer on the game's thread instead of threads of its own.
     one_thread: bool,
     /// Samples a pixel: 4 for MSAA, 1 as the console draws.
@@ -104,7 +109,7 @@ fn parse_args() -> Result<Args, String> {
         ticks: None,
         scale: 0,
         shot: None,
-        widescreen: None,
+        aspect: present::Aspect::GAME,
         one_thread: false,
         msaa: 1,
         launch: false,
@@ -166,14 +171,8 @@ fn parse_args() -> Result<Args, String> {
             "--shot" => a.shot = Some(value()?),
             "--launcher-shot" => a.launcher_shot = Some(value()?),
             "--fullscreen" => a.fullscreen = true,
-            "--widescreen" => a.widescreen = Some(16.0 / 9.0),
-            "--aspect" => {
-                let v = value()?;
-                let (w, h) = v.split_once(':').ok_or("--aspect W:H")?;
-                let w: f32 = w.parse().map_err(|_| "--aspect W:H")?;
-                let h: f32 = h.parse().map_err(|_| "--aspect W:H")?;
-                a.widescreen = (w / h > 4.0 / 3.0 + 0.01).then_some(w / h);
-            }
+            "--widescreen" => a.aspect = present::Aspect::wide(16.0 / 9.0),
+            "--aspect" => a.aspect = present::Aspect::parse(&value()?)?,
             "-h" | "--help" => return Err(String::new()),
             other => return Err(format!("unknown argument {other}")),
         }
@@ -361,6 +360,9 @@ struct App {
     ticks: u64,
     max_ticks: Option<u64>,
     scale: u32,
+    /// How frames are shown, and the renderer's EFB width for it at `scale`.
+    aspect: present::Aspect,
+    efb_width: u32,
     one_thread: bool,
     msaa: u32,
     /// The window's size, which the internal resolution follows.
@@ -418,19 +420,21 @@ impl App {
     }
 
     fn draw_frame(&mut self, draws: &[melee_sim::hsd::display::Draw]) {
-        // The internal resolution follows the window's size unless `--scale` fixed it: the
-        // renderer is made again at the new scale.
-        let scale = scale_for(self.args.scale, self.window_size);
-        if scale != self.scale {
-            eprintln!("internal resolution: {scale}x");
+        // The internal resolution follows the window's size unless `--scale` fixed it, and
+        // the EFB's width the aspect: the renderer is made again for a new one.
+        let scale = scale_for(self.args.scale, self.window_size, self.aspect);
+        let width = self.aspect.efb_width(scale);
+        if (scale, width) != (self.scale, self.efb_width) {
+            eprintln!("internal resolution: {scale}x ({width}x{})", 480 * scale);
             self.scale = scale;
+            self.efb_width = width;
             self.drop_renderer();
         }
         let m = &self.session.as_ref().expect("a match").m;
         let fifo = self.frames.frame(&m.game, &m.data, draws);
         let gpu = self.renderer.get_or_insert_with(|| {
             gpu_for(
-                pipelines::renderer(&self.gpu, self.scale, self.msaa),
+                pipelines::renderer(&self.gpu, self.scale, self.msaa, self.aspect),
                 self.one_thread,
             )
         });
@@ -468,9 +472,17 @@ impl App {
         }
     }
 
+    /// Shows frames at `aspect` from the next frame on.
+    fn set_aspect(&mut self, aspect: present::Aspect) {
+        self.aspect = aspect;
+        self.frames.hsd.widescreen = aspect.widescreen();
+        present::set_aspect(aspect.shown);
+    }
+
     /// Starts the launcher's match in the window, or says why it can't.
     fn start_match(&mut self) {
         let Some(l) = &mut self.launcher else { return };
+        let aspect = l.form.aspect;
         let c = &l.form.choice;
         let mut args = self.args.clone();
         args.players = c.ports();
@@ -490,9 +502,10 @@ impl App {
                 l.form.message = None;
                 self.frames = Frames::new();
                 self.frames.space.load_dol(&session.dol);
-                self.frames.hsd.widescreen = args.widescreen;
+                self.set_aspect(aspect);
+                self.efb_width = aspect.efb_width(self.scale);
                 self.renderer = Some(gpu_for(
-                    pipelines::renderer(&self.gpu, self.scale, self.msaa),
+                    pipelines::renderer(&self.gpu, self.scale, self.msaa, aspect),
                     self.one_thread,
                 ));
                 // What the controllers did in the launcher doesn't reach the match.
@@ -673,12 +686,14 @@ fn gpu_for(renderer: melee_gpu::Renderer, one_thread: bool) -> Gpu {
 }
 
 /// The internal resolution's scale: as asked, or the smallest whose 480 lines cover the
-/// window's height.
-fn scale_for(asked: u32, size: (u32, u32)) -> u32 {
-    if asked != 0 {
-        return asked.clamp(1, 8);
-    }
-    size.1.div_ceil(480).clamp(1, 8)
+/// window's height, at most what the aspect's EFB width allows.
+fn scale_for(asked: u32, size: (u32, u32), aspect: present::Aspect) -> u32 {
+    let scale = if asked != 0 {
+        asked
+    } else {
+        size.1.div_ceil(480)
+    };
+    scale.clamp(1, aspect.max_scale())
 }
 
 /// Plays `ticks` ticks headless, drawing each frame and presenting it to an offscreen target
@@ -693,14 +708,15 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     };
     let gpu = present::Gpu::new();
     let mut target = present::Offscreen::new(&gpu, args.size.0, args.size.1);
-    let mut r = pipelines::renderer(&gpu, scale_for(args.scale, args.size), args.msaa);
+    let scale = scale_for(args.scale, args.size, args.aspect);
+    let mut r = pipelines::renderer(&gpu, scale, args.msaa, args.aspect);
     r.xfb_readback = args.shot.is_some();
     let mut renderer = gpu_for(r, args.one_thread);
     let mut last = None;
     let mut frames = Frames::new();
     frames.space.load_dol(&session.dol);
-    frames.hsd.widescreen = args.widescreen;
-    present::set_aspect(args.widescreen.unwrap_or(4.0 / 3.0));
+    frames.hsd.widescreen = args.aspect.widescreen();
+    present::set_aspect(args.aspect.shown);
     let pads = [melee_sim::input::pad::PadStatus::default(); 4];
     let (mut sim, mut draw, mut n) = (Duration::ZERO, Duration::ZERO, 0u32);
     let mut worst = Duration::ZERO;
@@ -743,10 +759,11 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
         }
     }
     println!(
-        "{n} frames at {}x{} (internal {}x): simulation {:.3} ms a tick, drawing {:.3} ms a frame, worst tick+frame {:.3} ms",
+        "{n} frames at {}x{} (internal {scale}x, EFB {}x{}): simulation {:.3} ms a tick, drawing {:.3} ms a frame, worst tick+frame {:.3} ms",
         args.size.0,
         args.size.1,
-        scale_for(args.scale, args.size),
+        args.aspect.efb_width(scale),
+        480 * scale,
         sim.as_secs_f64() * 1000.0 / f64::from(ticks.max(1)),
         draw.as_secs_f64() * 1000.0 / f64::from(n.max(1)),
         worst.as_secs_f64() * 1000.0
@@ -796,7 +813,7 @@ fn run() -> ExitCode {
     };
     if let Some(path) = &args.launcher_shot {
         let gpu = present::Gpu::new();
-        let mut form = launcher::Form::new(args.stocks, args.minutes, args.fullscreen);
+        let mut form = launcher::Form::new(args.stocks, args.minutes, args.fullscreen, args.aspect);
         return match launcher::shot(&gpu, &mut form, args.size, std::path::Path::new(path)) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
@@ -831,10 +848,10 @@ fn run() -> ExitCode {
     if let Some(s) = &session {
         frames.space.load_dol(&s.dol);
     }
-    frames.hsd.widescreen = args.widescreen;
-    present::set_aspect(args.widescreen.unwrap_or(4.0 / 3.0));
+    frames.hsd.widescreen = args.aspect.widescreen();
+    present::set_aspect(args.aspect.shown);
     let launcher = args.launch.then(|| Launcher {
-        form: launcher::Form::new(args.stocks, args.minutes, args.fullscreen),
+        form: launcher::Form::new(args.stocks, args.minutes, args.fullscreen, args.aspect),
         window: None,
     });
     let mut app = App {
@@ -850,7 +867,11 @@ fn run() -> ExitCode {
         quit: false,
         ticks: 0,
         max_ticks: args.ticks,
-        scale: scale_for(args.scale, args.size),
+        scale: scale_for(args.scale, args.size, args.aspect),
+        aspect: args.aspect,
+        efb_width: args
+            .aspect
+            .efb_width(scale_for(args.scale, args.size, args.aspect)),
         one_thread: args.one_thread,
         msaa: args.msaa,
         window_size: args.size,
@@ -862,7 +883,7 @@ fn run() -> ExitCode {
     // The pipelines the last runs needed, made before the first tick.
     if app.session.is_some() {
         app.renderer = Some(gpu_for(
-            pipelines::renderer(&app.gpu, app.scale, app.msaa),
+            pipelines::renderer(&app.gpu, app.scale, app.msaa, app.aspect),
             app.one_thread,
         ));
     }

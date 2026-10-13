@@ -1,5 +1,6 @@
 //! The launcher: started with no match on its command line, the player's window shows a small
-//! form (a character or none for each port, a stage, stocks and minutes) drawn with egui on the
+//! form (a character or none for each port, a stage, stocks and minutes, the aspect ratio and
+//! fullscreen) drawn with egui on the
 //! player's own GPU device and window, and Start plays that match in the same window. Escape in
 //! the match comes back here; Escape here quits. A tool for manual testing, and the seed of the
 //! menus to come.
@@ -9,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use melee_sim::game::roster::{self, CHARACTERS, STAGES};
 
-use crate::present::{Gpu, Shown};
+use crate::present::{Aspect, Gpu, Shown};
 
 /// A match the launcher picked.
 #[derive(Clone, Debug, PartialEq)]
@@ -48,11 +49,13 @@ pub struct Form {
     pub message: Option<String>,
     /// Whether the window is to be fullscreen (the player follows the box, and the box F11).
     pub fullscreen: bool,
+    /// The aspect ratio the match is shown at.
+    pub aspect: Aspect,
 }
 
 impl Form {
     /// Fox against Fox on Final Destination, as the command line's defaults are.
-    pub fn new(stocks: i8, minutes: u32, fullscreen: bool) -> Form {
+    pub fn new(stocks: i8, minutes: u32, fullscreen: bool, aspect: Aspect) -> Form {
         let fox = roster::character("fox").map(|c| c.kind);
         Form {
             choice: Choice {
@@ -63,6 +66,7 @@ impl Form {
             },
             message: None,
             fullscreen,
+            aspect,
         }
     }
 
@@ -114,6 +118,23 @@ impl Form {
                             ui.end_row();
                             ui.label("Minutes");
                             ui.add(egui::DragValue::new(&mut c.minutes).range(0..=99));
+                            ui.end_row();
+                            ui.label("Aspect");
+                            let aspect = &mut self.aspect;
+                            egui::ComboBox::from_id_salt("aspect")
+                                .selected_text(aspect.name())
+                                .width(200.0)
+                                .show_ui(ui, |ui| {
+                                    // The command line's, when it isn't one of the choices.
+                                    let mut choices: Vec<Aspect> =
+                                        Aspect::CHOICES.iter().map(|(a, _)| *a).collect();
+                                    if !choices.contains(aspect) {
+                                        choices.push(*aspect);
+                                    }
+                                    for a in choices {
+                                        ui.selectable_value(aspect, a, a.name());
+                                    }
+                                });
                             ui.end_row();
                             ui.label("");
                             ui.checkbox(&mut self.fullscreen, "Fullscreen");
@@ -406,7 +427,7 @@ mod tests {
     #[test]
     fn enter_starts_a_match_of_two_or_more() {
         let ctx = egui::Context::default();
-        let mut form = Form::new(4, 8, false);
+        let mut form = Form::new(4, 8, false, Aspect::GAME);
         assert!(!frame(&ctx, &mut form, vec![]));
         assert!(frame(&ctx, &mut form, enter()));
         form.choice.players = [None, roster::character("marth").map(|c| c.kind), None, None];

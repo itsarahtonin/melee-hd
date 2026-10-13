@@ -1,16 +1,113 @@
 //! Presenting frames: the GPU the renderer draws on, a window's surface, and the blit of the
-//! XFB (the frame the renderer copied out) to it, letterboxed to 4:3. The swap chain is kept
-//! one frame deep, presenting each frame as soon as it's drawn: mailbox where the display has
-//! it, else immediate, else vsync.
+//! XFB (the frame the renderer copied out) to it, letterboxed to the aspect ratio shown (the
+//! game's 73:60 unless asked otherwise, see [`Aspect`]). The swap chain is kept one frame
+//! deep, presenting each frame as soon as it's drawn: mailbox where the display has it, else
+//! immediate, else vsync.
 
 use std::sync::{Arc, Mutex};
 
+use melee_render::frame::GAME_ASPECT;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Fullscreen, Window};
 
 static SIZE: Mutex<(u32, u32)> = Mutex::new((1280, 960));
-/// The aspect ratio frames are shown at: 4:3, or wider in widescreen.
-static ASPECT: Mutex<f32> = Mutex::new(4.0 / 3.0);
+/// The aspect ratio frames are shown at: the game's 73:60, wider in widescreen, or 4:3.
+static ASPECT: Mutex<f32> = Mutex::new(GAME_ASPECT);
+
+/// The largest EFB side the renderer makes (wgpu's default limit on a texture's side).
+const MAX_EFB_SIDE: u32 = 8192;
+
+/// How frames are shown: the aspect ratio, and whether the drawn cameras widen to it.
+///
+/// The game's 640 by 480 picture is made for 73:60 ([`GAME_ASPECT`]), and that's how it's shown
+/// by default, pillarboxed, with the proportions the game's cameras give it. Wider aspects
+/// widen each full-screen camera to the shown aspect (`melee_render::frame::widen`), so the
+/// frame keeps those proportions and sees more at the sides. 4:3 shows the 73:60 picture
+/// stretched to 4:3, as the player did before and as Dolphin's "Force 4:3" does.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Aspect {
+    /// Width over height of the frame shown.
+    pub shown: f32,
+    /// The drawn cameras widen to `shown`; otherwise the 73:60 picture is shown at it.
+    pub widen: bool,
+}
+
+impl Aspect {
+    /// The game's own 73:60.
+    pub const GAME: Aspect = Aspect {
+        shown: GAME_ASPECT,
+        widen: false,
+    };
+    /// The 73:60 picture stretched to 4:3.
+    pub const STRETCHED: Aspect = Aspect {
+        shown: 4.0 / 3.0,
+        widen: false,
+    };
+
+    /// The cameras widened to `shown`.
+    pub const fn wide(shown: f32) -> Aspect {
+        Aspect { shown, widen: true }
+    }
+
+    /// The launcher's choices, with their names.
+    pub const CHOICES: [(Aspect, &str); 5] = [
+        (Aspect::GAME, "73:60 (the game's)"),
+        (Aspect::wide(16.0 / 9.0), "16:9 (widescreen)"),
+        (Aspect::wide(16.0 / 10.0), "16:10 (widescreen)"),
+        (Aspect::wide(21.0 / 9.0), "21:9 (widescreen)"),
+        (Aspect::STRETCHED, "4:3 (stretched)"),
+    ];
+
+    /// `--aspect W:H`: 4:3 is the stretched picture, 73:60 the game's, anything wider widens
+    /// the cameras to it.
+    pub fn parse(v: &str) -> Result<Aspect, String> {
+        let bad = || format!("--aspect W:H (73:60, 4:3 or wider), not {v}");
+        let (w, h) = v.split_once(':').ok_or_else(bad)?;
+        let w: f32 = w.parse().map_err(|_| bad())?;
+        let h: f32 = h.parse().map_err(|_| bad())?;
+        let r = w / h;
+        if !(r.is_finite() && r > 0.0) {
+            return Err(bad());
+        }
+        Ok(if (r - 4.0 / 3.0).abs() < 0.001 {
+            Aspect::STRETCHED
+        } else if (r - GAME_ASPECT).abs() < 0.001 {
+            Aspect::GAME
+        } else if r > GAME_ASPECT {
+            Aspect::wide(r)
+        } else {
+            return Err(format!("--aspect {v} is narrower than the game's 73:60"));
+        })
+    }
+
+    /// What the renderer's `Hsd::widescreen` takes: the aspect the cameras widen to.
+    pub fn widescreen(self) -> Option<f32> {
+        self.widen.then_some(self.shown)
+    }
+
+    /// The name the launcher shows.
+    pub fn name(self) -> String {
+        Aspect::CHOICES
+            .iter()
+            .find(|(a, _)| *a == self)
+            .map_or_else(|| format!("{:.3}:1", self.shown), |(_, n)| (*n).to_owned())
+    }
+
+    /// The EFB's width at `scale` (480 times `scale` lines for the picture): as many pixels
+    /// as the frame is shown wide, so they're square, and even, for the XFB's pairs.
+    pub fn efb_width(self, scale: u32) -> u32 {
+        let w = (480.0 * scale as f32 * self.shown / 2.0).round() as u32 * 2;
+        w.clamp(2, MAX_EFB_SIDE)
+    }
+
+    /// The largest scale whose EFB fits the renderer's limit (8 at most).
+    pub fn max_scale(self) -> u32 {
+        (1..=8u32)
+            .rev()
+            .find(|&s| (480.0 * s as f32 * self.shown).round() as u32 <= MAX_EFB_SIDE)
+            .unwrap_or(1)
+    }
+}
 
 /// The aspect ratio to show frames at.
 pub fn set_aspect(aspect: f32) {
@@ -65,12 +162,14 @@ impl Gpu {
     }
 
     /// A renderer on this GPU, leaving its frames on the GPU, with `samples` samples a pixel
-    /// (1, or 4 for MSAA).
-    pub fn renderer(&self, scale: u32, samples: u32) -> melee_gpu::Renderer {
-        let mut r = melee_gpu::Renderer::with_device_msaa(
+    /// (1, or 4 for MSAA), its EFB `scale` times the console's tall and as wide as `aspect`
+    /// shows it with square pixels.
+    pub fn renderer(&self, scale: u32, samples: u32, aspect: Aspect) -> melee_gpu::Renderer {
+        let mut r = melee_gpu::Renderer::with_device_efb(
             self.device.clone(),
             self.queue.clone(),
             scale,
+            aspect.efb_width(scale),
             samples,
         );
         r.xfb_on_gpu = true;
@@ -396,5 +495,36 @@ impl Offscreen {
         let view = self.texture.create_view(&Default::default());
         self.blit.draw(gpu, texture, &view, self.width, self.height);
         let _ = gpu.device.poll(wgpu::PollType::wait_indefinitely());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn aspects_parse_to_the_game_s_stretched_or_widened() {
+        assert_eq!(Aspect::parse("73:60"), Ok(Aspect::GAME));
+        assert_eq!(Aspect::parse("4:3"), Ok(Aspect::STRETCHED));
+        assert_eq!(Aspect::parse("16:9"), Ok(Aspect::wide(16.0 / 9.0)));
+        assert_eq!(Aspect::parse("21:9"), Ok(Aspect::wide(21.0 / 9.0)));
+        assert_eq!(Aspect::GAME.widescreen(), None);
+        assert_eq!(Aspect::STRETCHED.widescreen(), None);
+        assert_eq!(Aspect::wide(16.0 / 9.0).widescreen(), Some(16.0 / 9.0));
+        assert!(Aspect::parse("1:1").is_err());
+        assert!(Aspect::parse("16x9").is_err());
+        assert!(Aspect::parse("16:0").is_err());
+    }
+
+    #[test]
+    fn the_efb_is_as_wide_as_the_frame_is_shown() {
+        assert_eq!(Aspect::STRETCHED.efb_width(1), 640);
+        assert_eq!(Aspect::STRETCHED.efb_width(3), 1920);
+        assert_eq!(Aspect::GAME.efb_width(1), 584);
+        assert_eq!(Aspect::GAME.efb_width(3), 1752);
+        assert_eq!(Aspect::wide(16.0 / 9.0).efb_width(3), 2560);
+        assert_eq!(Aspect::wide(16.0 / 9.0).efb_width(1), 854);
+        assert_eq!(Aspect::wide(21.0 / 9.0).max_scale(), 7);
+        assert_eq!(Aspect::GAME.max_scale(), 8);
     }
 }

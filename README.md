@@ -13,7 +13,7 @@ Ported and checked bit for bit against ssbm-rs: the RNG and math routines; the S
 - **A simulation crate.** A tick is a pure function of the state and the controllers, with no rendering, audio, clocks or disc timing inside it, and its state is plain data that clones cheaply for rollback.
 - **Bit-exact with the console.** Float math follows the original instruction sequences where it fused, estimated or used paired singles. Slippi replays play back exactly.
 - **Rulesets.** Vanilla (the console as it is) and Slippi (Vanilla plus the gameplay codes Slippi's online play runs), recorded in replays.
-- **A modern player.** Low input latency, resolution scaling, widescreen with a 4:3 gameplay camera, and precompiled pipelines.
+- **A modern player.** Low input latency, resolution scaling, the game's 73:60 picture or widescreen with the original gameplay camera, and precompiled pipelines.
 - **Later:** rollback netplay designed to be compatible with Slippi Dolphin, training tools, mods.
 
 [Architecture](docs/architecture.md) explains the design, [the oracle](docs/oracle.md) how it is checked, and [the player](docs/player.md) how it's presented.
