@@ -27,9 +27,9 @@ fn driver_path() -> Option<PathBuf> {
     dir().map(|d| d.join("driver-pipelines.bin"))
 }
 
-/// A renderer at `scale` with the cached pipelines made.
-pub fn renderer(gpu: &Gpu, scale: u32) -> melee_gpu::Renderer {
-    let mut r = gpu.renderer(scale);
+/// A renderer at `scale` and `samples` samples a pixel, with the cached pipelines made.
+pub fn renderer(gpu: &Gpu, scale: u32, samples: u32) -> melee_gpu::Renderer {
+    let mut r = gpu.renderer(scale, samples);
     let driver = driver_path().and_then(|p| std::fs::read(p).ok());
     r.use_pipeline_cache(driver.as_deref());
     let keys: Vec<[u32; 8]> = keys_path()

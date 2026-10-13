@@ -64,10 +64,15 @@ impl Gpu {
         }
     }
 
-    /// A renderer on this GPU, leaving its frames on the GPU.
-    pub fn renderer(&self, scale: u32) -> melee_gpu::Renderer {
-        let mut r =
-            melee_gpu::Renderer::with_device_scaled(self.device.clone(), self.queue.clone(), scale);
+    /// A renderer on this GPU, leaving its frames on the GPU, with `samples` samples a pixel
+    /// (1, or 4 for MSAA).
+    pub fn renderer(&self, scale: u32, samples: u32) -> melee_gpu::Renderer {
+        let mut r = melee_gpu::Renderer::with_device_msaa(
+            self.device.clone(),
+            self.queue.clone(),
+            scale,
+            samples,
+        );
         r.xfb_on_gpu = true;
         r.xfb_readback = false;
         r

@@ -244,6 +244,9 @@ pub struct Renderer {
     queue: wgpu::Queue,
     efb: wgpu::Texture,
     efb_view: wgpu::TextureView,
+    /// The multisampled EFB the draws go to, with `samples` above 1, resolved into `efb`.
+    efb_msaa: Option<wgpu::TextureView>,
+    samples: u32,
     depth_view: wgpu::TextureView,
     module: wgpu::ShaderModule,
     layout: wgpu::PipelineLayout,
@@ -443,7 +446,20 @@ impl Renderer {
 
     /// A renderer whose EFB is `scale` times the console's in each dimension.
     pub fn with_device_scaled(device: wgpu::Device, queue: wgpu::Queue, scale: u32) -> Self {
+        Self::with_device_msaa(device, queue, scale, 1)
+    }
+
+    /// A renderer whose EFB is `scale` times the console's in each dimension, drawn with
+    /// `samples` samples a pixel (1 or 4): the draws go to a multisampled EFB, resolved into
+    /// the EFB that copies, readbacks and frames read at the end of each pass.
+    pub fn with_device_msaa(
+        device: wgpu::Device,
+        queue: wgpu::Queue,
+        scale: u32,
+        samples: u32,
+    ) -> Self {
         let scale = scale.clamp(1, 8);
+        let samples = if samples >= 4 { 4 } else { 1 };
         let size = wgpu::Extent3d {
             width: EFB_WIDTH * scale,
             height: EFB_HEIGHT * scale,
@@ -461,11 +477,25 @@ impl Renderer {
                 | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
+        let efb_msaa = (samples > 1).then(|| {
+            device
+                .create_texture(&wgpu::TextureDescriptor {
+                    label: Some("efb, multisampled"),
+                    size,
+                    mip_level_count: 1,
+                    sample_count: samples,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: COLOR_FORMAT,
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                    view_formats: &[],
+                })
+                .create_view(&Default::default())
+        });
         let depth = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("efb depth"),
             size,
             mip_level_count: 1,
-            sample_count: 1,
+            sample_count: samples,
             dimension: wgpu::TextureDimension::D2,
             format: DEPTH_FORMAT,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
@@ -541,6 +571,8 @@ impl Renderer {
         let copier = copy::Copier::new(&device, &efb_view);
         let mut r = Renderer {
             efb_view,
+            efb_msaa,
+            samples,
             depth_view: depth.create_view(&Default::default()),
             efb,
             device,
@@ -1101,7 +1133,10 @@ impl Renderer {
                     stencil: Default::default(),
                     bias: Default::default(),
                 }),
-                multisample: Default::default(),
+                multisample: wgpu::MultisampleState {
+                    count: self.samples,
+                    ..Default::default()
+                },
                 fragment: Some(wgpu::FragmentState {
                     module: &self.module,
                     entry_point: Some("fs_main"),
@@ -1265,9 +1300,9 @@ impl Renderer {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("efb"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &self.efb_view,
+                    view: self.efb_msaa.as_ref().unwrap_or(&self.efb_view),
                     depth_slice: None,
-                    resolve_target: None,
+                    resolve_target: self.efb_msaa.as_ref().map(|_| &self.efb_view),
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Load,
                         store: wgpu::StoreOp::Store,

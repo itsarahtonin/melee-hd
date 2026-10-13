@@ -118,7 +118,9 @@ impl Gpu {
         state.track_changes();
         Gpu {
             state,
-            renderer: RefCell::new(Backend::Threaded(Box::new(Threaded::spawn_synced(renderer)))),
+            renderer: RefCell::new(Backend::Threaded(Box::new(Threaded::spawn_synced(
+                renderer,
+            )))),
             produced: Vec::new(),
         }
     }

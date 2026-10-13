@@ -2,7 +2,8 @@
 //!
 //! ```text
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
-//!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--no-adapter] [--size WxH] [--ticks N]
+//!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread]
+//!          [--no-adapter] [--size WxH] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [...]     plays headless, timing each frame
 //! ```
 //!
@@ -61,6 +62,8 @@ struct Args {
     widescreen: Option<f32>,
     /// Keeps the renderer on the game's thread instead of threads of its own.
     one_thread: bool,
+    /// Samples a pixel: 4 for MSAA, 1 as the console draws.
+    msaa: u32,
 }
 
 /// A character's `CharacterKind` by name.
@@ -101,6 +104,7 @@ fn parse_args() -> Result<Args, String> {
         shot: None,
         widescreen: None,
         one_thread: false,
+        msaa: 1,
     };
     let mut it = std::env::args().skip(1);
     let size = |s: &str| -> Result<(u32, u32), String> {
@@ -132,6 +136,13 @@ fn parse_args() -> Result<Args, String> {
             "--replay" => a.replay = Some(value()?),
             "--no-adapter" => a.adapter = false,
             "--one-thread" => a.one_thread = true,
+            "--msaa" => {
+                a.msaa = match value()?.as_str() {
+                    "1" | "off" => 1,
+                    "4" => 4,
+                    _ => return Err("--msaa 4 (or 1, off)".into()),
+                }
+            }
             "--bench" => a.bench = Some(value()?.parse().map_err(|_| "--bench TICKS")?),
             "--size" | "--windowed" => a.size = size(&value()?)?,
             "--ticks" => a.ticks = Some(value()?.parse().map_err(|_| "--ticks N")?),
@@ -321,6 +332,7 @@ struct App {
     max_ticks: Option<u64>,
     scale: u32,
     one_thread: bool,
+    msaa: u32,
 }
 
 impl App {
@@ -366,7 +378,10 @@ impl App {
         let m = &self.session.m;
         let fifo = self.frames.frame(&m.game, &m.data, draws);
         let gpu = self.renderer.get_or_insert_with(|| {
-            gpu_for(pipelines::renderer(&self.gpu, self.scale), self.one_thread)
+            gpu_for(
+                pipelines::renderer(&self.gpu, self.scale, self.msaa),
+                self.one_thread,
+            )
         });
         let images = gpu.run(&self.frames.space, &m.data, &fifo, None);
         if let (Some(shown), Some(frame)) = (&mut self.shown, images.into_iter().last()) {
@@ -463,7 +478,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     };
     let gpu = present::Gpu::new();
     let mut target = present::Offscreen::new(&gpu, args.size.0, args.size.1);
-    let mut r = pipelines::renderer(&gpu, scale_for(args.scale, args.size));
+    let mut r = pipelines::renderer(&gpu, scale_for(args.scale, args.size), args.msaa);
     r.xfb_readback = args.shot.is_some();
     let mut renderer = gpu_for(r, args.one_thread);
     let mut last = None;
@@ -561,7 +576,7 @@ fn run() -> ExitCode {
                 eprintln!("{e}");
             }
             eprintln!(
-                "usage: melee-hd [--p1 fox] [--p2 marth] [--stage fd|bf|ps] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--no-adapter] [--size WxH] [--bench TICKS]"
+                "usage: melee-hd [--p1 fox] [--p2 marth] [--stage fd|bf|ps] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--size WxH] [--bench TICKS]"
             );
             return ExitCode::from(2);
         }
@@ -602,11 +617,12 @@ fn run() -> ExitCode {
         max_ticks: args.ticks,
         scale: scale_for(args.scale, args.size),
         one_thread: args.one_thread,
+        msaa: args.msaa,
     };
     present::set_size(args.size);
     // The pipelines the last runs needed, made before the first tick.
     app.renderer = Some(gpu_for(
-        pipelines::renderer(&app.gpu, app.scale),
+        pipelines::renderer(&app.gpu, app.scale, app.msaa),
         app.one_thread,
     ));
     let r = event_loop.run_app(&mut app);

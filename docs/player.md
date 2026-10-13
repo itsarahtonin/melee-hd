@@ -68,6 +68,8 @@ The differences left in the draws themselves don't change a pixel: a few vertice
 
 **Resolution scaling.** melee-gpu is ssbm-render ported, with one addition: an EFB `scale` times the console's 640 by 480. Draws rasterize at the scaled size; EFB copies to textures (shadows, the magnifier's bubbles) average each block back to the console's size, so the game's textures stay what it expects, and the copy to the XFB keeps the scaled size for the window. The dither pattern scales with it. `--scale N` sets it; by default it's the smallest whose 480 lines cover the window's height (3 for 1440p). At scale 1 the output is ssbm-render's, which is what the frame checks compare.
 
+**MSAA.** `--msaa 4` draws with four samples a pixel: the draws go to a multisampled EFB (color and depth), resolved at the end of each pass into the EFB that copies to textures, readbacks and copies to the XFB read, so the game's textures and frames still come from one image. The TEV runs once a pixel, as before; triangles' edges are what it smooths. Off by default, where the output is unchanged. At 1440p it adds next to nothing to a frame (the GPU's work, inside presenting).
+
 **Decision: widescreen widens the drawn cameras, not the gameplay camera.** With `--widescreen` (16:9) or `--aspect W:H`, each camera whose viewport covers the whole screen sees `aspect / (4/3)` times as wide at the same height (a perspective camera's aspect ratio, an orthographic or frustum camera's left and right about their center), and the frame is shown at that aspect ratio. The game camera, which the simulation runs and which decides who is off screen, stays 4:3, as Slippi's widescreen code keeps it; only the rendered view sees more of the stage. The HUD's orthographic cameras widen the same way, so the HUD keeps its shape and its place in the 4:3 middle. Cameras that draw into textures (shadows, the magnifier's bubbles) are left alone. The render pass can't tell those apart by its offscreen flag, since the original leaves the frame in the shadows' offscreen pass, so the viewport decides.
 
 **Decision: pipelines are kept by what they're made for, after Aurora's design.** melee-gpu runs the TEV in one shader, so pipelines differ only in blending, color and alpha writes and the depth test. The player records every pipeline key it has needed in `%LOCALAPPDATA%\melee-hd\pipelines.bin` (`$XDG_CACHE_HOME/melee-hd` elsewhere) and makes them all before the first frame of the next run, with the driver's own pipeline cache (wgpu's `PipelineCache`, where the backend has one) kept beside it. A frame never waits on a pipeline the player has made before.
@@ -107,7 +109,7 @@ With `--port` (and `-` for the trace) `melee-audio-check` doesn't read the trace
 ## The player
 
 ```sh
-melee-hd --p1 fox --p2 marth --stage bf [--stocks 4] [--minutes 8] [--widescreen | --aspect 21:9] [--scale N] [--size 1920x1440]
+melee-hd --p1 fox --p2 marth --stage bf [--stocks 4] [--minutes 8] [--widescreen | --aspect 21:9] [--scale N] [--msaa 4] [--size 1920x1440]
 melee-hd --replay fox-fox-fd.slp                       # a replay's match, its inputs played back
 melee-hd --bench 1200 --size 2560x1440                 # headless, timing each frame
 ```
@@ -147,5 +149,4 @@ The GX stream takes about 0.75 ms of that and the simulation about 0.7 ms a tick
 - **The particle pass's boundaries** are inferred from the display commands (runs of `Draw::Particles`), and the magnifier bubble's erase color is an average of the colors the original reads; both match every checked frame.
 - **State cache resets** that stage, fighter and item draw callbacks make (`grDisplay`, `ftDrawCommon`, `itDraw`) are mirrored only where a checked frame needed them (the refraction callback's TEV reset).
 - **Speed.** At 1440p a frame's ticks and drawing take 6.8 ms at the 99th percentile on a busy machine (see Frame time); the GPU's drawing at high scales is the larger part of presenting, which the CPU work doesn't overlap.
-- **No MSAA.**
 - **Unchecked ports.** The port ledger counts a presentation port as checked when the frame or audio checks run it (measured with coverage over the references). Eighteen ported functions no reference reaches yet (refraction's material setup and indirect texture matrices, a few TEV register and alpha register helpers, GX getters) carry no ledger alias, only their names in their doc comments, until one does. The GX SDK functions Melee doesn't link (ssbm-rs's symbol table lacks them) are named the same way.
