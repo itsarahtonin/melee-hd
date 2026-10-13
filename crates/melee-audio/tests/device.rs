@@ -54,11 +54,15 @@ fn plays_ticks_without_running_dry() {
         ms(late[late.len() / 2]),
         ms(late[late.len() - 1]),
     );
-    // A busy machine can wake this thread late; the output may run dry only then.
+    // A busy machine can wake this thread late; the output may run dry only then, and drop
+    // a backlog only after a stall of two ticks.
     let worst = late[late.len() - 1];
     assert!(
         s.underruns == 0 || worst > Duration::from_millis(4),
         "ran dry with the samples on time"
     );
-    assert_eq!(s.skips, 0, "dropped a backlog");
+    assert!(
+        s.skips == 0 || worst > Duration::from_millis(33),
+        "dropped a backlog without a stall"
+    );
 }

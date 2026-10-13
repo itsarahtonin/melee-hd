@@ -25,6 +25,7 @@ use windows::Win32::System::Com::{
     CLSCTX_ALL, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx, CoTaskMemFree,
     CoUninitialize,
 };
+use windows::Win32::System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency};
 use windows::Win32::System::Threading::{
     AvRevertMmThreadCharacteristics, AvSetMmThreadCharacteristicsW, CreateEventW,
     WaitForSingleObject,
@@ -500,6 +501,8 @@ impl Device {
             let mmcss = AvSetMmThreadCharacteristicsW(w!("Pro Audio"), &mut task).ok();
             let mut resampler = Resampler::new(ring, self.format.rate);
             let freq = self.clock.GetFrequency().map_err(err("the clock's rate"))?;
+            let mut qpc = 0;
+            let _ = QueryPerformanceFrequency(&mut qpc);
             let rate = f64::from(self.format.rate);
             // Silence first: a period exclusive, the queue shared.
             let first = if self.exclusive {
@@ -533,11 +536,18 @@ impl Device {
                 if frames == 0 {
                     continue;
                 }
-                // When the first sample written now is heard: what the device still holds,
-                // and the engine's latency.
-                let mut position = 0;
-                if self.clock.GetPosition(&mut position, None).is_ok() && freq > 0 {
-                    let held = written as f64 / rate - position as f64 / freq as f64;
+                // When the first sample written now is heard: what the device still holds
+                // (less what it played since it took the position, which moves a period at a
+                // time), and the engine's latency.
+                let (mut position, mut at) = (0, 0);
+                if self.clock.GetPosition(&mut position, Some(&mut at)).is_ok() && freq > 0 {
+                    let mut now = 0;
+                    let since = if QueryPerformanceCounter(&mut now).is_ok() && qpc > 0 {
+                        (now as f64 / qpc as f64 - at as f64 / 1e7).max(0.0)
+                    } else {
+                        0.0
+                    };
+                    let held = written as f64 / rate - position as f64 / freq as f64 - since;
                     let d = Duration::from_secs_f64(held.max(0.0)) + self.stream_latency;
                     resampler.ring.meters.device(d);
                 }
