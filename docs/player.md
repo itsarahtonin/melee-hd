@@ -66,7 +66,7 @@ The differences left in the draws themselves don't change a pixel: a few vertice
 
 ### Resolution, widescreen and pipelines
 
-**Resolution scaling.** melee-gpu is ssbm-render ported, with one addition: an EFB `scale` times the console's 640 by 480. Draws rasterize at the scaled size; EFB copies to textures (shadows, the magnifier's bubbles) average each block back to the console's size, so the game's textures stay what it expects, and the copy to the XFB keeps the scaled size for the window. The dither pattern scales with it. `--scale N` sets it; by default it's the smallest whose 480 lines cover the window's height (3 for 1440p). At scale 1 the output is ssbm-render's, which is what the frame checks compare.
+**Resolution scaling.** melee-gpu is ssbm-render ported, with one addition: an EFB `scale` times the console's 640 by 480. Draws rasterize at the scaled size; EFB copies to textures (shadows, the magnifier's bubbles) average each block back to the console's size, so the game's textures stay what it expects, and the copy to the XFB keeps the scaled size for the window. The dither pattern scales with it. `--scale N` sets it; by default it's the smallest whose 480 lines cover the window's height (3 for 1440p), and it follows the window as it's resized or made fullscreen. At scale 1 the output is ssbm-render's, which is what the frame checks compare.
 
 **MSAA.** `--msaa 4` draws with four samples a pixel: the draws go to a multisampled EFB (color and depth), resolved at the end of each pass into the EFB that copies to textures, readbacks and copies to the XFB read, so the game's textures and frames still come from one image. The TEV runs once a pixel, as before; triangles' edges are what it smooths. Off by default, where the output is unchanged. At 1440p it adds next to nothing to a frame (the GPU's work, inside presenting).
 
@@ -109,12 +109,20 @@ With `--port` (and `-` for the trace) `melee-audio-check` doesn't read the trace
 ## The player
 
 ```sh
-melee-hd --p1 fox --p2 marth --stage bf [--stocks 4] [--minutes 8] [--widescreen | --aspect 21:9] [--scale N] [--msaa 4] [--size 1920x1440]
+melee-hd                                               # the launcher: pick the match in the window
+melee-hd --p1 fox --p2 marth --stage bf [--stocks 4] [--minutes 8] [--widescreen | --aspect 21:9] [--scale N] [--msaa 4] [--size 1920x1440] [--fullscreen]
 melee-hd --replay fox-fox-fd.slp                       # a replay's match, its inputs played back
 melee-hd --bench 1200 --size 2560x1440                 # headless, timing each frame
+melee-hd --launcher-shot launcher.png [--size WxH]     # draws the launcher to a PNG, no window
 ```
 
-Characters and stages are what melee-sim has ported (`--help` lists them). The match runs at 60 ticks a second. The window keeps the frame's aspect ratio, letterboxed when resized.
+Characters and stages are what melee-sim has ported: its `game::roster` lists them (the characters by `CharacterKind`, the stages by `StKind`, with their command-line names), a new port adds its line there, and the command line, `--help` and the launcher all read that list. `--help` prints the names. The match runs at 60 ticks a second.
+
+**The launcher.** With no `--p1` to `--p4`, `--stage` or `--replay` (and no `--bench`), the window opens on a small form: a character or none for each port (at least two players), the stage, stocks (0 for a timed match) and minutes (0 for no time limit), and a fullscreen box. Start (or Enter) plays the match in the same window; Escape in the match, or the match's end, comes back to the form, and Escape on the form quits. The other options (`--stocks`, `--minutes`, `--widescreen`, `--scale`, `--msaa`, `--fullscreen` and the rest) still apply, the first two as the form's starting values. A match the command line names plays as before, and Escape quits it. A repeated character takes the next costume, as the command line's default Fox ditto does.
+
+**Fullscreen.** F11 or Alt+Enter toggles borderless fullscreen on the window's current monitor (winit's `Fullscreen::Borderless`), in a match or on the launcher; `--fullscreen` starts that way, and the launcher's box does the same. The window keeps the frame's aspect ratio, letterboxed or pillarboxed, whether resized or fullscreen, and without `--scale` the internal resolution follows the window's size: at the next frame after a resize the renderer is made again at the smallest scale whose 480 lines cover the new height (5 on a 2160-line display), its pipelines made from the cache.
+
+**Decision: the launcher is egui, drawn on the player's own device and window.** egui 0.36 (`egui-wgpu` for wgpu 30, `egui-winit` for winit 0.30) draws the form with the window's swap chain format into the surface the frames use, and takes the window's events through egui-winit; nothing is drawn with it while a match plays, so a match's frames and audio are what they were (the frame and audio checks don't run the player and are unchanged). It's a tool for manual testing, plain on purpose, and the seed of the menus and settings screen to come. `--launcher-shot` draws the same form offscreen, for looking at it without a window.
 
 **Decision: the loop keeps one frame of latency.** Each tick reads the controllers immediately before it runs, and the frame it produces is turned into GX commands, drawn and presented at once; the swap chain is one frame deep and presents in mailbox mode where the display has it, else immediate (no vsync wait), else FIFO. The event loop sleeps until the next tick is due; after a stall of more than four ticks it drops the backlog instead of racing to catch up. Nothing waits on audio: the tick pushes its samples into the output's ring.
 
