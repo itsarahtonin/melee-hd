@@ -377,10 +377,13 @@ impl GpuXfb {
         state: &State,
         value: u32,
         rect: [u32; 4],
-        scale: u32,
+        (scale, efb_width): (u32, u32),
     ) -> (wgpu::Texture, u32, u32) {
-        // A scaled EFB copies out a scaled frame: the copy's rectangle in scaled pixels.
-        let [left, top, right, bottom] = rect.map(|v| v * scale);
+        // A scaled EFB copies out a scaled frame: the copy's rectangle in scaled pixels, the
+        // EFB `scale` times the console's tall and `efb_width` wide for its 640.
+        let x = |v: u32| (u64::from(v) * u64::from(efb_width) / u64::from(crate::EFB_WIDTH)) as u32;
+        let [left, right] = [x(rect[0]), x(rect[2])];
+        let [top, bottom] = [rect[1] * scale, rect[3] * scale];
         let (width, height) = (right - left, bottom - top);
         let gamma_rcp = 1.0 / [1.0f32, 1.7, 2.2, 1.0][bits(value, 7, 2) as usize];
         let (lo, hi) = (state.bp[0x53], state.bp[0x54]);
