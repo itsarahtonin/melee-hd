@@ -8,7 +8,7 @@ melee-hd is early: VS matches between a handful of characters on the six tournam
 
 ## How it differs
 
-Several native Melee ports exist, each taking its own approach, and you may well want one of them instead: [melee-pc](https://github.com/999sian/melee-pc), [YAMPP](https://github.com/sonsegajp/YAMPP) and [melee-unlocked](https://github.com/Hero88go/melee-unlocked) build on the decompilation's C source, and [nikhilunni/melee](https://github.com/nikhilunni/melee) is another Rust port. melee-hd's approach has its own trade-offs.
+Several native Melee ports exist, each taking its own approach, and you may well want one of them instead: [melee-pc](https://github.com/999sian/melee-pc), [YAMPP](https://github.com/sonsegajp/YAMPP) and [melee-unlocked](https://github.com/Hero88go/melee-unlocked) build on the decompilation's C source, and [nikhilunni/melee](https://github.com/nikhilunni/melee) is another Rust port. melee-hd takes a different approach.
 
 What it's built around:
 
@@ -17,11 +17,7 @@ What it's built around:
 - **A separate simulation crate.** `melee-sim` steps the game from its state and the controllers alone, with no rendering, audio output, clocks or disc timing inside a tick. The player and the checking tools are frontends to it.
 - **A low-latency player.** It reads the controllers just before each tick and presents the frame at once.
 
-What that costs:
-
-- **Far less content.** Seven characters and six stages, VS matches only, no menus.
-- **Slow going.** Nothing lands until it compares clean against ssbm-rs, and the checks depend on ssbm-rs and data made with it.
-- **Windows only, so far.** macOS and Linux are goals, not yet tested, and there are no release builds.
+The trade-off is that it's a slow work in progress, all the slower for being helmed by a solo developer working within hobbyist limits.
 
 Like ssbm-rs, it contains no game data: the game's models, textures, sounds and music come from your own disc image when you play.
 
@@ -36,7 +32,7 @@ Like ssbm-rs, it contains no game data: the game's models, textures, sounds and 
 | Functions | 5,143 of the 19,827 in ssbm-rs's symbol table ported and checked, 197 replaced by native subsystems, 2 dead ([port ledger](docs/port-ledger.md)) |
 | Speed | The simulation runs a match about 16.7 times as fast as headless Dolphin on one core; a snapshot is about 0.8 MB, cloned in about 0.1 ms ([performance](docs/performance.md)) |
 
-Not yet: the other characters and stages, menus and every mode other than VS, items spawning during a match (matches play with items off), and netplay. [The oracle](docs/oracle.md) lists each comparison, and [the player](docs/player.md) its open issues.
+Not yet: the other characters and stages, menus and every mode other than VS, items spawning during a match (matches play with items off), netplay, testing on macOS and Linux, and release builds. [The oracle](docs/oracle.md) lists each comparison, and [the player](docs/player.md) its open issues.
 
 ## Build and play
 
