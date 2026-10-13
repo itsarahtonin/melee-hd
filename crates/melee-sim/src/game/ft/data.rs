@@ -298,6 +298,10 @@ impl Running<'_> {
     /// timeline (a state imported from a single call). The `HSD_Archive`'s address for a load
     /// into main memory, else 0.
     pub fn disc_load(&mut self, name: &str, dest: u32) -> u32 {
+        // Neither timed nor modeled (a state imported from a single call): nothing to do.
+        if self.game.audio.clock.is_none() && crate::hsd::heap::with(|_| ()).is_none() {
+            return 0;
+        }
         let (entrynum, len) = self.game.ft.data.files.entry(name);
         // `lbArchive`'s loads into the scene's heap: the file's bytes, then its archive.
         let archive = if dest == MAIN_MEMORY {
