@@ -4,6 +4,7 @@ description = "Checks melee-sim's leaf functions against ssbm-rs's verified port
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 

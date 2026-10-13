@@ -4,7 +4,6 @@ description = "Where the checks and tools find data kept out of the repository (
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish.workspace = true
-
-[dependencies]
