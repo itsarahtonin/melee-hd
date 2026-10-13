@@ -622,6 +622,7 @@ impl Running<'_> {
 
     /// The shield stun's hitlag hook, `ftCo_80093240`: smash DI along the floor.
     #[doc(alias = "ftCo_80093240")]
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn guard_set_off_hitlag(&mut self, gobj: GObjId) {
         let c = self.common();
         let (min, window, scale, x4c0) = (
@@ -635,13 +636,20 @@ impl Running<'_> {
             return;
         }
         let x = reg(fp.input.lstick[0].x);
-        if abs(x) >= min && i32::from(fp.active_timer.lstick.x) < window {
-            let s = fp::fmuls(x4c0, fp::fmuls(x, scale));
-            let (nx, ny) = (fp.coll_data.floor.normal.x, fp.coll_data.floor.normal.y);
-            fp.cur_pos.x = mem(fp::fmadds(reg(ny), s, reg(fp.cur_pos.x)));
-            fp.cur_pos.y = mem(fp::fmadds(fp::fneg(reg(nx)), s, reg(fp.cur_pos.y)));
-            fp.active_timer.lstick.x = 254;
+        if !(abs(x) >= min) {
+            return;
         }
+        // UCF's shield SDI lets a fast flick count past the window.
+        let held = i32::from(fp.active_timer.lstick.x) >= window;
+        if held && !(self.game.rules.ucf && self.ucf_shield_sdi(gobj, min)) {
+            return;
+        }
+        let fp = self.game.fighter_mut(gobj);
+        let s = fp::fmuls(x4c0, fp::fmuls(x, scale));
+        let (nx, ny) = (fp.coll_data.floor.normal.x, fp.coll_data.floor.normal.y);
+        fp.cur_pos.x = mem(fp::fmadds(reg(ny), s, reg(fp.cur_pos.x)));
+        fp.cur_pos.y = mem(fp::fmadds(fp::fneg(reg(nx)), s, reg(fp.cur_pos.y)));
+        fp.active_timer.lstick.x = 254;
     }
 
     /// The shield stun's post-hitlag hook, `ftCo_800932DC`: a nudge along the floor.

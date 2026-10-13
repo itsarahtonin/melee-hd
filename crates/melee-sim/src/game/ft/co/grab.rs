@@ -501,7 +501,7 @@ impl Running<'_> {
 
     /// A held heavy item falls, `ftCo_8009750C`: not ported.
     #[doc(alias = "ftCo_8009750C")]
-    fn drop_heavy_item(&mut self, gobj: GObjId) {
+    pub(crate) fn drop_heavy_item(&mut self, gobj: GObjId) {
         if let Some(item) = self.game.fighter(gobj).item_gobj
             && super::super::super::it::lib26b1::is_heavy(self.game, self.data, item)
         {
@@ -511,7 +511,7 @@ impl Running<'_> {
 
     /// The fighter lets go of whomever it holds, `ftCo_800DD168`: not ported with someone held.
     #[doc(alias = "ftCo_800DD168")]
-    fn release_victim(&mut self, gobj: GObjId) {
+    pub(crate) fn release_victim(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).victim_gobj.is_some() {
             unported_call("ftCo_800DD168 (a grab let go of)");
         }
