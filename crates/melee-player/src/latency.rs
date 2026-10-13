@@ -254,7 +254,7 @@ impl Live {
             _ => String::new(),
         };
         format!(
-            "input age {}{rate}\ntick to present {}\naudio queue {} ({underruns} underruns)\n{present_mode}, added delay {added_delay}",
+            "input age {}{rate}\ntick to present {}\naudio queue {}, underruns {underruns}\n{present_mode}, added delay {added_delay}",
             show(input),
             show(presented),
             show(audio),
@@ -287,10 +287,13 @@ pub fn overlay(
                     .fill(egui::Color32::from_black_alpha(190))
                     .inner_margin(6.0)
                     .show(ui, |ui| {
-                        ui.label(
-                            egui::RichText::new(text)
-                                .monospace()
-                                .color(egui::Color32::WHITE),
+                        ui.add(
+                            egui::Label::new(
+                                egui::RichText::new(text)
+                                    .monospace()
+                                    .color(egui::Color32::WHITE),
+                            )
+                            .extend(),
                         )
                     });
             });
