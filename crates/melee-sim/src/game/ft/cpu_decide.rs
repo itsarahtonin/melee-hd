@@ -41,7 +41,7 @@ impl Running<'_> {
 
     /// Whether two fighters are on the same side, `ftCo_IsAlly`: the same player, else the
     /// same team in a team match or outside free-for-all.
-    #[doc(alias = "ftCo_IsAlly")]
+    // Ports `ftCo_IsAlly`; aliased once a check reaches it.
     pub(super) fn cpu_is_ally(&self, a: FighterId, b: FighterId) -> bool {
         let (fa, fb) = (&self.game.fighters[a.0], &self.game.fighters[b.0]);
         if fa.player_idx == fb.player_idx {
@@ -59,7 +59,7 @@ impl Running<'_> {
     /// Whether a fighter can't be targeted, `ftCo_800A1C44`: it's out of the match
     /// (`x2219_b1`), held up (`x2164`), entering without its ride (`x2168` with no
     /// `x2338.x`) or asleep.
-    #[doc(alias = "ftCo_800A1C44")]
+    // Ports `ftCo_800A1C44`; aliased once a check reaches it.
     pub(super) fn cpu_untargetable(&self, f: FighterId) -> bool {
         let fp = &self.game.fighters[f.0];
         fp.x2219_b1 || fp.x2164 != 0 || (fp.x2168 != 0 && fp.x2338.x == 0) || fp.is_sleeping
@@ -68,7 +68,7 @@ impl Running<'_> {
     /// Whether a fighter is invisible to computer players for now, `ftCo_800A0F00`: under a
     /// cloaking item's color animation (`ft_80087A18`), always or, flickering, half the time
     /// by its own frame count.
-    #[doc(alias = "ftCo_800A0F00")]
+    // Ports `ftCo_800A0F00`; aliased once a check reaches it.
     fn cpu_cloaked(&self, f: FighterId) -> bool {
         // `ft_80087A18`: only with a powered-up color animation (`x2226_b4`).
         if self.game.fighters[f.0].x2226_b4 {
@@ -78,7 +78,7 @@ impl Running<'_> {
     }
 
     /// The distance between two fighters, `ftCo_800A1AB4`.
-    #[doc(alias = "ftCo_800A1AB4")]
+    // Ports `ftCo_800A1AB4`; aliased once a check reaches it.
     pub(super) fn cpu_distance(&self, a: FighterId, b: FighterId) -> f64 {
         let (pa, pb) = (
             self.game.fighters[a.0].cur_pos,
@@ -92,7 +92,7 @@ impl Running<'_> {
     /// The fighter's target, `ftCo_800A4BEC`: its last one while that one lasts (`xF9_b0`),
     /// else the nearest enemy in reach that isn't out of the match, invisible or dead; a new
     /// target gets a fresh timer.
-    #[doc(alias = "ftCo_800A4BEC")]
+    // Ports `ftCo_800A4BEC`; aliased once a check reaches it.
     pub(super) fn cpu_find_target(&mut self, f: FighterId) -> Option<FighterId> {
         let me = self.game.fighters[f.0].gobj;
         let mut closest: Option<(FighterId, f64)> = None;
@@ -149,7 +149,7 @@ impl Running<'_> {
     }
 
     /// Whether an item heals, `ftCo_800A5908`: a heart, a tomato or food.
-    #[doc(alias = "ftCo_800A5908")]
+    // Ports `ftCo_800A5908`; aliased once a check reaches it.
     fn cpu_item_heals(&self, item: ItemId) -> bool {
         // `It_Kind_Heart`, `_Tomato`, `_Foods`.
         matches!(self.game.items[item.0].kind, 8 | 9 | 0x12)
@@ -159,7 +159,7 @@ impl Running<'_> {
     /// `ftCo_800A5F4C`: grabbable, in reach and worth at least its threshold (`x2C`). The
     /// original measures each candidate's distance with an inline `sqrtf` whose zero test
     /// reads a register its caller left (`f29`), so a candidate stops the port.
-    #[doc(alias = "ftCo_800A5F4C")]
+    // Ports `ftCo_800A5F4C`; aliased once a check reaches it.
     fn cpu_common_item_target(&mut self, f: FighterId, kind: i32) -> Option<ItemId> {
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(g) = cur {
@@ -183,7 +183,7 @@ impl Running<'_> {
     /// The enemy item the fighter goes for, `ftCo_800A648C`: Goombas, Redeads and the other
     /// stage enemies in reach. Its distance test reads a caller's register as
     /// [`Running::cpu_common_item_target`]'s does, so a candidate stops the port.
-    #[doc(alias = "ftCo_800A648C")]
+    // Ports `ftCo_800A648C`; aliased once a check reaches it.
     fn cpu_enemy_item_target(&mut self, f: FighterId) -> Option<ItemId> {
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(g) = cur {
@@ -209,7 +209,7 @@ impl Running<'_> {
     /// Nana making her way back to Popo, `ftCo_800B0760`: she targets the nearest enemy and
     /// the items in reach, acts toward her destination (or recovers, `xFB_b0`), and picks a
     /// behavior.
-    #[doc(alias = "ftCo_800B0760")]
+    // Ports `ftCo_800B0760`; aliased once a check reaches it.
     pub(super) fn nana_regroup(&mut self, f: FighterId) {
         let c = &mut self.game.fighters[f.0].cpu;
         c.xF8_b0 = true;
@@ -260,7 +260,7 @@ impl Running<'_> {
     ///
     /// The original never sets the DI switch's flag in the case it means to take it, using
     /// what r31 held in its caller; `di_switch` is that register's truth.
-    #[doc(alias = "ftCo_800ADE48")]
+    // Ports `ftCo_800ADE48`; aliased once a check reaches it.
     pub(super) fn cpu_choose_behavior(&mut self, f: FighterId, di_switch: bool) -> bool {
         // The destination: kept if over ground in reach, else reset.
         let c = &self.game.fighters[f.0].cpu;
@@ -457,7 +457,7 @@ impl Running<'_> {
 
     /// Sets the fighter's destination and how near it must get, unless a destination timer
     /// runs (`ftCo_800A1F3C`), then lets the stage move it (`ftCo_800A1CC4`).
-    #[doc(alias = "ftCo_800A1F3C")]
+    // Ports `ftCo_800A1F3C`; aliased once a check reaches it.
     fn cpu_set_destination(&mut self, f: FighterId, x: f32, y: f32, reach: f32) {
         let c = &mut self.game.fighters[f.0].cpu;
         if c.x60 == 0 {
@@ -470,7 +470,7 @@ impl Running<'_> {
 
     /// The stage's routes for computer players (`ftCo_800A1CC4` with `ftCo_803C6594`, by
     /// stage kind): only Great Bay and the Temple have any.
-    #[doc(alias = "ftCo_800A1CC4")]
+    // Ports `ftCo_800A1CC4`; aliased once a check reaches it.
     fn cpu_stage_route(&mut self, f: FighterId) {
         // Gr_Kind_GreatBay, Gr_Kind_Shrine.
         if matches!(self.game.stage_info.grkind, 6 | 7) {
@@ -482,7 +482,7 @@ impl Running<'_> {
     /// Whether an island is unsafe to stand on, `ftCo_800A2718`: a live bob-omb or shell on
     /// it, or the stage's own hazard (Mushroom Kingdom's moving islands; Zebes' and Onett's
     /// checks aren't ported).
-    #[doc(alias = "ftCo_800A2718")]
+    // Ports `ftCo_800A2718`; aliased once a check reaches it.
     fn cpu_island_unsafe(&self, island: Option<crate::mp::IslandId>) -> bool {
         let Some(island) = island else { return false };
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
@@ -514,7 +514,7 @@ impl Running<'_> {
     /// ground when he's in the air, at his feet when on the ground, unless his island is
     /// unsafe; off a ledge's edge when they're on different islands. Its reach is its own
     /// plus half his size.
-    #[doc(alias = "ftCo_800A7AAC")]
+    // Ports `ftCo_800A7AAC`; aliased once a check reaches it.
     pub(super) fn cpu_toward_partner(&mut self, f: FighterId) {
         let Some(partner) = self.cpu_partner(f) else {
             return;
@@ -631,7 +631,7 @@ impl Running<'_> {
 
     /// The player's standing word (`MatchPlayerData::x20`) in the results as they stand,
     /// `gm_8016C75C`: the results brought up to date once a tick.
-    #[doc(alias = "gm_8016C75C")]
+    // Ports `gm_8016C75C`; aliased once a check reaches it.
     pub(super) fn cpu_standing(&mut self, slot: i32) -> u32 {
         let tick = self.game.scene_ticks();
         if self.game.vs.state.x24C.x0 != tick {
@@ -643,7 +643,7 @@ impl Running<'_> {
 
     /// Whether the fighter holds someone, `ftCo_IsGrabbing`: its catch wait, Donkey Kong's
     /// carry, Bowser's Koopa Klaw hold, Kirby's inhale.
-    #[doc(alias = "ftCo_IsGrabbing")]
+    // Ports `ftCo_IsGrabbing`; aliased once a check reaches it.
     pub(super) fn cpu_is_grabbing(&self, f: FighterId) -> bool {
         let fp = &self.game.fighters[f.0];
         // `ftCo_MS_CatchWait`.
@@ -660,7 +660,7 @@ impl Running<'_> {
     /// over a floor computer players don't count; in the air falling steeply (not past
     /// Peach's Castle's and Fourside's floors), outside its stage's reach, with neither a
     /// floor nor a wall in reach along its fall.
-    #[doc(alias = "ftCo_800A2C80")]
+    // Ports `ftCo_800A2C80`; aliased once a check reaches it.
     fn cpu_falling_away(&mut self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         if fpp.cpu.xFA_b6 {
@@ -729,7 +729,7 @@ impl Running<'_> {
 
     /// Whether the fighter shields now, `ftCo_800A5ACC`: if it may (`xF9_b6`), more often the
     /// higher its level.
-    #[doc(alias = "ftCo_800A5ACC")]
+    // Ports `ftCo_800A5ACC`; aliased once a check reaches it.
     fn cpu_shield_chance(&self, f: FighterId) -> bool {
         let c = &self.game.fighters[f.0].cpu;
         if !c.xF9_b6 {
@@ -752,7 +752,7 @@ impl Running<'_> {
     /// Whether the fighter picks up the item it goes for, `ftCo_800A3710`: if it may
     /// (`xF9_b7`), the item is still grabbable (else it forgets it), and both stand on the
     /// same ground with the fighter's hands free.
-    #[doc(alias = "ftCo_800A3710")]
+    // Ports `ftCo_800A3710`; aliased once a check reaches it.
     fn cpu_item_pickup(&mut self, f: FighterId) -> bool {
         let c = &self.game.fighters[f.0].cpu;
         if !c.xF9_b7 {
@@ -765,7 +765,7 @@ impl Running<'_> {
     /// Whether the fighter has reached its destination, `ftCo_800A3554`: on the ground on
     /// the destination's island, within its reach (`x38`) plus `margin`. A destination timer
     /// still running then moves it to the next destination instead.
-    #[doc(alias = "ftCo_800A3554")]
+    // Ports `ftCo_800A3554`; aliased once a check reaches it.
     pub(super) fn cpu_at_destination(&mut self, f: FighterId, margin: f32) -> bool {
         let fpp = &self.game.fighters[f.0];
         if fpp.ground_or_air == GA_AIR {

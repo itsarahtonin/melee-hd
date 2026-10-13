@@ -17,10 +17,10 @@ use crate::math;
 
 /// A computer player's stick axis as a float (`convertStickAxis`): 127 a full push one
 /// way, 128 the other.
-#[doc(alias = "ftCo_GetCpuLStickX")]
-#[doc(alias = "ftCo_GetCpuLStickY")]
-#[doc(alias = "ftCo_GetCpuCStickX")]
-#[doc(alias = "ftCo_GetCpuCStickY")]
+// Ports `ftCo_GetCpuLStickX`; aliased once a check reaches it.
+// Ports `ftCo_GetCpuLStickY`; aliased once a check reaches it.
+// Ports `ftCo_GetCpuCStickX`; aliased once a check reaches it.
+// Ports `ftCo_GetCpuCStickY`; aliased once a check reaches it.
 fn cpu_axis(v: i8) -> f64 {
     let x = gekko_fp::frsp(f64::from(v));
     let r = if v > 0 {
@@ -38,8 +38,8 @@ fn cpu_axis(v: i8) -> f64 {
 }
 
 /// A computer player's trigger as a float, at most 1.
-#[doc(alias = "ftCo_GetCpuLTrigger")]
-#[doc(alias = "ftCo_GetCpuRTrigger")]
+// Ports `ftCo_GetCpuLTrigger`; aliased once a check reaches it.
+// Ports `ftCo_GetCpuRTrigger`; aliased once a check reaches it.
 fn cpu_trigger(v: u8) -> f64 {
     let r = gekko_fp::frsp(gekko_fp::fdiv(f64::from(v), 255.0));
     if r > 1.0 { 1.0 } else { r }

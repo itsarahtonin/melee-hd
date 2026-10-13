@@ -153,7 +153,7 @@ fn child(r: &Running, gobj: GObjId) -> Option<crate::hsd::jobj::JObjId> {
 
 /// Makes the ice at `pos` by its parent, `it_802C1590`: forming (state 0) at its full size,
 /// its owner kept, with the forming effect, not to be picked up.
-#[doc(alias = "it_802C1590")]
+// Ports `it_802C1590`; aliased once a check reaches it.
 pub fn spawn(
     r: &mut Running,
     parent: GObjId,
@@ -205,7 +205,7 @@ pub fn spawn(
 
 /// Throws the ice, `it_802C16F8`: forward at its speed, its lifetime set, its model turned
 /// along its motion, with the throw's effect, sliding (state 2).
-#[doc(alias = "it_802C16F8")]
+// Ports `it_802C16F8`; aliased once a check reaches it.
 pub fn throw(r: &mut Running, gobj: GObjId) {
     let speed = attr_f32(r, gobj, attr::SPEED);
     let lifetime = attr_f32(r, gobj, attr::LIFETIME);
@@ -226,14 +226,14 @@ pub fn throw(r: &mut Running, gobj: GObjId) {
 }
 
 /// Takes the ice away, `it_802C17DC` (`Item_8026A8EC`).
-#[doc(alias = "it_802C17DC")]
+// Ports `it_802C17DC`; aliased once a check reaches it.
 pub fn remove(r: &mut Running, gobj: GObjId) {
     super::super::item::destroy(r, gobj);
 }
 
 /// The ice's end, `it_2725_Logic90_Destroyed`: its owner forgets it
 /// (`ftPp_Init_8011F16C`).
-#[doc(alias = "it_2725_Logic90_Destroyed")]
+// Ports `it_2725_Logic90_Destroyed`; aliased once a check reaches it.
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let kind = ip.kind;
@@ -273,13 +273,13 @@ fn effect(r: &mut Running, gobj: GObjId, ice: i32, kirby: i32) {
 }
 
 /// The sliding effect, then state 2, `it_802C1AE4`.
-#[doc(alias = "it_802C1AE4")]
+// Ports `it_802C1AE4`; aliased once a check reaches it.
 fn slide_effect(r: &mut Running, gobj: GObjId) {
     effect(r, gobj, 0x4EB, 0x4B0);
 }
 
 /// Shrinks the ice once thrown away, `itClimbersice_UnkMotion0_Anim`: done once small.
-#[doc(alias = "itClimbersice_UnkMotion0_Anim")]
+// Ports `itClimbersice_UnkMotion0_Anim`; aliased once a check reaches it.
 fn shrink(r: &mut Running, gobj: GObjId) -> bool {
     let shrink = attr_f32(r, gobj, attr::SHRINK);
     let j = child(r, gobj);
@@ -296,20 +296,20 @@ fn shrink(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Lets go of the ice before its throw, `it_802C1A58`: it falls (state 1).
-#[doc(alias = "it_802C1A58")]
+// Ports `it_802C1A58`; aliased once a check reaches it.
 fn drop(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 1, change::ANIM_UPDATE);
 }
 
 /// Stops the ice, `it_802C1950`: no velocity, state 0.
-#[doc(alias = "it_802C1950")]
+// Ports `it_802C1950`; aliased once a check reaches it.
 fn stop(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
 /// The slide falling off a floor, `fn_802C1D44`: state 3, its effects gone.
-#[doc(alias = "fn_802C1D44")]
+// Ports `fn_802C1D44`; aliased once a check reaches it.
 fn slide_fall(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 3, change::ANIM_UPDATE);
     crate::game::ef::eflib::destroy_all(r, gobj);
@@ -328,7 +328,7 @@ fn tick_lifetime(r: &mut Running, gobj: GObjId) -> bool {
 /// The slide on a floor, `it_802C1854`: the floor's slope speeds it down and slows it up;
 /// slow enough, it stops (pickup back on, `xDCD_b3`, state 0, its effects gone). True once
 /// it stops.
-#[doc(alias = "it_802C1854")]
+// Ports `it_802C1854`; aliased once a check reaches it.
 fn slide(r: &mut Running, gobj: GObjId) -> bool {
     let slope = reg(attr_f32(r, gobj, attr::SLOPE));
     let down = reg(attr_f32(r, gobj, attr::SLOPE_DOWN));
@@ -398,7 +398,7 @@ fn wall_bounce(r: &mut Running, gobj: GObjId) -> bool {
 
 /// A shield hit, `it_2725_Logic90_HitShield`: slow enough, it bounces back slowed at a cost
 /// to its lifetime, breaking once too little is left; faster, it breaks.
-#[doc(alias = "it_2725_Logic90_HitShield")]
+// Ports `it_2725_Logic90_HitShield`; aliased once a check reaches it.
 fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
     let max = reg(attr_f32(r, gobj, attr::BOUNCE_SPEED));
     let min_life = reg(attr_f32(r, gobj, attr::BOUNCE_MIN_LIFE));

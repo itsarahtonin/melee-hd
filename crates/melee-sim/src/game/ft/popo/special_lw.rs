@@ -61,13 +61,13 @@ impl Running<'_> {
     }
 
     /// Blizzard on the ground, `ftPp_SpecialLw_Enter`.
-    #[doc(alias = "ftPp_SpecialLw_Enter")]
+    // Ports `ftPp_SpecialLw_Enter`; aliased once a check reaches it.
     pub fn popo_special_lw_enter(&mut self, gobj: GObjId) {
         self.popo_special_lw_start(gobj, MS_SPECIAL_LW);
     }
 
     /// Blizzard in the air, `ftPp_SpecialAirLw_Enter`.
-    #[doc(alias = "ftPp_SpecialAirLw_Enter")]
+    // Ports `ftPp_SpecialAirLw_Enter`; aliased once a check reaches it.
     pub fn popo_special_air_lw_enter(&mut self, gobj: GObjId) {
         self.popo_special_lw_start(gobj, MS_SPECIAL_AIR_LW);
     }
@@ -88,7 +88,7 @@ impl Running<'_> {
 
     /// The ground Blizzard's animation, `ftPp_SpecialLw_Anim`: at its end the wind stops and
     /// the fighter waits.
-    #[doc(alias = "ftPp_SpecialLw_Anim")]
+    // Ports `ftPp_SpecialLw_Anim`; aliased once a check reaches it.
     fn popo_special_lw_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.popo_blizzard_stop(gobj);
@@ -97,7 +97,7 @@ impl Running<'_> {
     }
 
     /// The air Blizzard's animation, `ftPp_SpecialAirLw_Anim`: at its end it falls.
-    #[doc(alias = "ftPp_SpecialAirLw_Anim")]
+    // Ports `ftPp_SpecialAirLw_Anim`; aliased once a check reaches it.
     fn popo_special_air_lw_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.popo_blizzard_stop(gobj);
@@ -127,7 +127,7 @@ impl Running<'_> {
     }
 
     /// Landing in the air Blizzard, `fn_80122B54`: the ground one from the same frame.
-    #[doc(alias = "fn_80122B54")]
+    // Ports `fn_80122B54`; aliased once a check reaches it.
     fn popo_special_lw_land(&mut self, gobj: GObjId) {
         self.land(gobj);
         let frame = self.game.fighter(gobj).cur_anim_frame;
@@ -139,7 +139,7 @@ impl Running<'_> {
 
     /// The ground Blizzard's collision, `ftPp_SpecialLw_Coll`: off a ledge it carries on in
     /// the air, upright; else it leans.
-    #[doc(alias = "ftPp_SpecialLw_Coll")]
+    // Ports `ftPp_SpecialLw_Coll`; aliased once a check reaches it.
     fn popo_special_lw_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if !self.ground_coll_off_ledges(gobj) {
@@ -158,7 +158,7 @@ impl Running<'_> {
 
     /// Blows the wind, `fn_80122D2C`: while blowing, a puff from the hand every few frames;
     /// the script starts the wind (its effect, the hooks, the voice) or stops it.
-    #[doc(alias = "fn_80122D2C")]
+    // Ports `fn_80122D2C`; aliased once a check reaches it.
     pub fn popo_special_lw_blow(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].mv[mv::BLOWING] & 0x80 != 0 {

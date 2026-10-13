@@ -38,7 +38,7 @@ impl Running<'_> {
     }
 
     /// Forgets the special's item if it's `item`, with its hooks, `ftPp_Init_8011F16C`.
-    #[doc(alias = "ftPp_Init_8011F16C")]
+    // Ports `ftPp_Init_8011F16C`; aliased once a check reaches it.
     pub fn popo_forget_item(&mut self, gobj: GObjId, item: GObjId) {
         if self.ic_item(gobj) != Some(item) {
             return;
@@ -50,7 +50,7 @@ impl Running<'_> {
     }
 
     /// Takes the special's ice away, `ftPp_Init_8011F190`.
-    #[doc(alias = "ftPp_Init_8011F190")]
+    // Ports `ftPp_Init_8011F190`; aliased once a check reaches it.
     fn popo_remove_ice(&mut self, gobj: GObjId) {
         if let Some(item) = self.ic_item(gobj) {
             climbersice::remove(self, item);
@@ -68,7 +68,7 @@ impl Running<'_> {
     }
 
     /// Ice Shot on the ground, `ftPp_SpecialN_Enter`.
-    #[doc(alias = "ftPp_SpecialN_Enter")]
+    // Ports `ftPp_SpecialN_Enter`; aliased once a check reaches it.
     pub fn popo_special_n_enter(&mut self, gobj: GObjId) {
         self.popo_special_n_start(gobj);
         self.change_motion_state(gobj, MS_SPECIAL_N, 0, 0.0, 1.0, 0.0, None);
@@ -77,7 +77,7 @@ impl Running<'_> {
     }
 
     /// Ice Shot in the air, `ftPp_SpecialAirN_Enter`: the first since landing hops.
-    #[doc(alias = "ftPp_SpecialAirN_Enter")]
+    // Ports `ftPp_SpecialAirN_Enter`; aliased once a check reaches it.
     pub fn popo_special_air_n_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.popo_special_n_start(gobj);
@@ -98,7 +98,7 @@ impl Running<'_> {
     /// Forms and throws the ice as the script says (`cmd_vars[0]`), `ftPp_SpecialN_8011F500`:
     /// 1 forms it by the hand (offset forward and up, lower after an air shot), 2 throws it,
     /// with the voice.
-    #[doc(alias = "ftPp_SpecialN_8011F500")]
+    // Ports `ftPp_SpecialN_8011F500`; aliased once a check reaches it.
     pub fn popo_special_n_ice(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         match self.game.fighters[f.0].cmd_vars[0] {
@@ -145,7 +145,7 @@ impl Running<'_> {
     }
 
     /// The ground shot's animation, `ftPp_SpecialN_Anim`: waits once it ends.
-    #[doc(alias = "ftPp_SpecialN_Anim")]
+    // Ports `ftPp_SpecialN_Anim`; aliased once a check reaches it.
     fn popo_special_n_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_wait(gobj);
@@ -153,7 +153,7 @@ impl Running<'_> {
     }
 
     /// The air shot's animation, `ftPp_SpecialAirN_Anim`: falls once it ends.
-    #[doc(alias = "ftPp_SpecialAirN_Anim")]
+    // Ports `ftPp_SpecialAirN_Anim`; aliased once a check reaches it.
     fn popo_special_air_n_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_fall(gobj);
@@ -162,7 +162,7 @@ impl Running<'_> {
 
     /// The ground shot's collision, `ftPp_SpecialN_Coll`: off a ledge, the ice goes and the
     /// shot falls.
-    #[doc(alias = "ftPp_SpecialN_Coll")]
+    // Ports `ftPp_SpecialN_Coll`; aliased once a check reaches it.
     fn popo_special_n_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_off_ledges(gobj) {
             self.popo_remove_ice(gobj);
@@ -172,7 +172,7 @@ impl Running<'_> {
 
     /// The air shot's collision, `ftPp_SpecialAirN_Coll`: landing, the ice goes, the air
     /// shot's hop is back and the landing is a special fall's.
-    #[doc(alias = "ftPp_SpecialAirN_Coll")]
+    // Ports `ftPp_SpecialAirN_Coll`; aliased once a check reaches it.
     fn popo_special_air_n_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.air_coll_land(gobj) {

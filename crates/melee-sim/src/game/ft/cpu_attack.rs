@@ -45,7 +45,7 @@ mod cmd {
 
 impl Running<'_> {
     /// Whether the fighter's target hangs from (1) or holds (2) a ledge, `ftCo_800A3200`.
-    #[doc(alias = "ftCo_800A3200")]
+    // Ports `ftCo_800A3200`; aliased once a check reaches it.
     pub(super) fn cpu_on_ledge(&self, f: FighterId) -> i32 {
         match self.game.fighters[f.0].motion_id {
             // `ftCo_MS_CliffCatch`, `ftCo_MS_CliffWait`.
@@ -56,7 +56,7 @@ impl Running<'_> {
     }
 
     /// Whether the fighter lies on the ground face up (1) or down (2), `ftCo_800A3134`.
-    #[doc(alias = "ftCo_800A3134")]
+    // Ports `ftCo_800A3134`; aliased once a check reaches it.
     pub(super) fn cpu_lying(&self, f: FighterId) -> i32 {
         match self.game.fighters[f.0].motion_id {
             191 | 183 => 1,
@@ -92,7 +92,7 @@ impl Running<'_> {
 
     /// Whether the fighter uses a ranged attack (a projectile), `ftCo_800B9CBC`: only with a
     /// target, if it may (`xF9_b5`), once its delay (`x34`) runs out.
-    #[doc(alias = "ftCo_800B9CBC")]
+    // Ports `ftCo_800B9CBC`; aliased once a check reaches it.
     pub(super) fn cpu_ranged_attack(&mut self, f: FighterId) -> bool {
         let c = &mut self.game.fighters[f.0].cpu;
         c.xA4 = 0;
@@ -108,7 +108,7 @@ impl Running<'_> {
 
     /// Whether the fighter's skill keeps it from attacking now, `ftCo_800B885C`: below level
     /// 5, for a stretch of each period of its script count, longer the lower its level.
-    #[doc(alias = "ftCo_800B885C")]
+    // Ports `ftCo_800B885C`; aliased once a check reaches it.
     fn cpu_holds_back(&self, f: FighterId) -> bool {
         let c = &self.game.fighters[f.0].cpu;
         let (period, limit) = match c.level {
@@ -125,7 +125,7 @@ impl Running<'_> {
     /// The character's own rules on attacks for this decision, `ftCo_800B77E8`: an out-of-
     /// action or untargetable fighter rules out every attack; the characters with ranged
     /// attacks check their reach. Only the characters without are ported.
-    #[doc(alias = "ftCo_800B77E8")]
+    // Ports `ftCo_800B77E8`; aliased once a check reaches it.
     fn cpu_character_rules(&mut self, f: FighterId) {
         if self.game.fighters[f.0].cpu.kind == 7 || self.cpu_untargetable(f) {
             self.cpu_rule_out(f, cmd::ANY_ATTACK);
@@ -141,7 +141,7 @@ impl Running<'_> {
     /// Whether the fighter attacks in the air now, `ftCo_800B89CC`: always against a target
     /// on a ledge; else if it may (`xF9_b4`), at level 4 and up (Bowser only over ground),
     /// not past Kongo Jungle's middle.
-    #[doc(alias = "ftCo_800B89CC")]
+    // Ports `ftCo_800B89CC`; aliased once a check reaches it.
     fn cpu_air_attack_ok(&self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         // Gr_Kind_Kongo.
@@ -168,7 +168,7 @@ impl Running<'_> {
     /// or bigger, the down smash), from the air, against a target lying down or on a ledge,
     /// with a weapon, a smash, an edge guard, a ground attack or a special on an enemy item.
     /// The chosen command goes in `xA4`.
-    #[doc(alias = "ftCo_800B8A9C")]
+    // Ports `ftCo_800B8A9C`; aliased once a check reaches it.
     pub(super) fn cpu_attack(&mut self, f: FighterId) -> bool {
         if !self.game.fighters[f.0].cpu.xF9_b2 {
             return false;
@@ -266,7 +266,7 @@ impl Running<'_> {
     /// entry's frames (falling under gravity to terminal speed in the air, the target's hurt
     /// box around it), joins the candidates when its period comes up (or it's one the
     /// decision restricts to); one is drawn by weight. Its reach goes in `x6C` and `x74`.
-    #[doc(alias = "ftCo_800B4AB0")]
+    // Ports `ftCo_800B4AB0`; aliased once a check reaches it.
     fn cpu_pick_attack(&mut self, f: FighterId, target: FighterId, list: Option<DataRef>) -> i32 {
         let c = &mut self.game.fighters[f.0].cpu;
         c.x74.y = 0.0;
@@ -444,8 +444,8 @@ impl Running<'_> {
 
     /// Whether the fighter is mid-attack, `ftCo_800B630C`: in a common attack or an item's
     /// swing or shot (`ftCo_800A5A90`), or in one of its character's own states.
-    #[doc(alias = "ftCo_800B630C")]
-    #[doc(alias = "ftCo_800A5A90")]
+    // Ports `ftCo_800B630C`; aliased once a check reaches it.
+    // Ports `ftCo_800A5A90`; aliased once a check reaches it.
     fn cpu_attacking(&self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         let ms = fpp.motion_id;
@@ -463,7 +463,7 @@ impl Running<'_> {
     }
 
     /// The pause before an attack by level and a random draw (`ftCo_800B63D8`).
-    #[doc(alias = "ftCo_800B63D8")]
+    // Ports `ftCo_800B63D8`; aliased once a check reaches it.
     fn cpu_attack_delay(&mut self, f: FighterId) {
         let r = reg(self.game.objs.rng.draw_f32());
         let (scale, add) = match self.game.fighters[f.0].cpu.level {
@@ -494,7 +494,7 @@ impl Running<'_> {
     /// Attacking, `ftCo_800B658C` (behavior 2): with a target, after a possible jump at it,
     /// the character's own follow-ups, then (not mid-attack) the chosen command (choosing one
     /// if none, facing the target first on the ground) after a pause.
-    #[doc(alias = "ftCo_800B658C")]
+    // Ports `ftCo_800B658C`; aliased once a check reaches it.
     pub(super) fn cpu_attack_behavior(&mut self, f: FighterId) {
         let Some(target) = self.game.fighters[f.0].cpu.x44 else {
             self.cpu_drop_target(f);
@@ -539,7 +539,7 @@ impl Running<'_> {
     /// Whether the fighter jumps at its target, `ftCo_800B732C`: 1 at a target on a ledge
     /// steeply above it and in clear view; else, if it may (`xF9_b3`), by the character's
     /// rules. On the ground only.
-    #[doc(alias = "ftCo_800B732C")]
+    // Ports `ftCo_800B732C`; aliased once a check reaches it.
     pub(super) fn cpu_jump_attack(&mut self, f: FighterId) -> i32 {
         let fpp = &self.game.fighters[f.0];
         let Some(t) = fpp.cpu.x44 else { return 0 };
@@ -573,7 +573,7 @@ impl Running<'_> {
     /// Popo, Fox and Captain Falcon above level 4 and Mario below 5 sometimes run their own
     /// throw scripts first. Holding, it pummels (Bowser's koopa klaw bites), more rarely
     /// each time, else near an end throws off it, else throws a random way.
-    #[doc(alias = "ftCo_800B683C")]
+    // Ports `ftCo_800B683C`; aliased once a check reaches it.
     pub(super) fn cpu_hold(&mut self, f: FighterId) {
         use super::cpu_script::cmd as c;
         let Some(victim) = self.game.fighters[f.0].victim_gobj else {

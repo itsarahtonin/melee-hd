@@ -96,7 +96,7 @@ fn scaled(m: i32, f: f32) -> i32 {
 impl Running<'_> {
     /// Runs the fighter's script for the frame, `ftCo_800B3E04`: once the running command's
     /// wait is over, the commands from the read position until one waits or the script ends.
-    #[doc(alias = "ftCo_800B3E04")]
+    // Ports `ftCo_800B3E04`; aliased once a check reaches it.
     pub fn cpu_run_script(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
         let Some(start) = fp.cpu.csP.0 else { return };
@@ -293,13 +293,13 @@ impl Running<'_> {
     }
 
     /// Starts writing the fighter's script from the buffer's start, `ftCo_800B462C`.
-    #[doc(alias = "ftCo_800B462C")]
+    // Ports `ftCo_800B462C`; aliased once a check reaches it.
     pub fn cpu_script_reset(&mut self, f: FighterId) {
         self.game.fighters[f.0].cpu.write_pos.0 = Some(0);
     }
 
     /// Writes a byte of the script, `ftCo_800B463C`.
-    #[doc(alias = "ftCo_800B463C")]
+    // Ports `ftCo_800B463C`; aliased once a check reaches it.
     pub fn cpu_cmd(&mut self, f: FighterId, c: u8) {
         let d = &mut self.game.fighters[f.0].cpu;
         let at = d
@@ -315,7 +315,7 @@ impl Running<'_> {
     }
 
     /// A command with its argument, `ftCo_800B46B8`.
-    #[doc(alias = "ftCo_800B46B8")]
+    // Ports `ftCo_800B46B8`; aliased once a check reaches it.
     pub fn cpu_cmd1(&mut self, f: FighterId, c: u8, a: u8) {
         self.cpu_cmd(f, c);
         self.cpu_cmd(f, a);
@@ -330,7 +330,7 @@ impl Running<'_> {
     }
 
     /// Ends the script written and starts it running, `ftCo_800B49F4`.
-    #[doc(alias = "ftCo_800B49F4")]
+    // Ports `ftCo_800B49F4`; aliased once a check reaches it.
     pub fn cpu_script_start(&mut self, f: FighterId) {
         self.cpu_cmd(f, cmd::DONE);
         let d = &mut self.game.fighters[f.0].cpu;

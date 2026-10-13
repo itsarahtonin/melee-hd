@@ -124,7 +124,7 @@ impl Running<'_> {
 
     /// The fighter whose animation buffer Nana may copy from rather than read ARAM,
     /// `ftData_80086060`: outside demos, her player's current fighter (Popo).
-    #[doc(alias = "ftData_80086060")]
+    // Ports `ftData_80086060`; aliased once a check reaches it.
     pub(super) fn anim_share_source(&self, f: FighterId) -> Option<FighterId> {
         let fp = &self.game.fighters[f.0];
         let slot = i32::from(fp.player_idx);

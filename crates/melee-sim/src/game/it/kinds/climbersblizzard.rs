@@ -80,7 +80,7 @@ fn tick_lifetime(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Blows a puff from `parent` at `pos`, `itClimbersBlizzard_Spawn`: at its full size, sent
 /// off (`itClimbersBlizzard_802C2248`), not to be picked up.
-#[doc(alias = "itClimbersBlizzard_Spawn")]
+// Ports `itClimbersBlizzard_Spawn`; aliased once a check reaches it.
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind: super::ICE_CLIMBER_BLIZZARD,
@@ -115,8 +115,8 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Opt
 /// Sends the puff off, `itClimbersBlizzard_802C2248`: at a random angle in its spread
 /// (mirrored facing left), measured from straight down, at its speed, with its lifetime;
 /// then its state (`itClimbersBlizzard_802C2358`).
-#[doc(alias = "itClimbersBlizzard_802C2248")]
-#[doc(alias = "itClimbersBlizzard_802C2358")]
+// Ports `itClimbersBlizzard_802C2248`; aliased once a check reaches it.
+// Ports `itClimbersBlizzard_802C2358`; aliased once a check reaches it.
 fn launch(r: &mut Running, gobj: GObjId) {
     let rand = reg(r.game.objs.rng.draw_f32());
     let (min, max) = (

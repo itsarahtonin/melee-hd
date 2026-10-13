@@ -2461,7 +2461,7 @@ impl Running<'_> {
 
     /// No attacker on the fighter's last hit, `ftColl_800788D4` (`ftColl_8007861C` with no
     /// attacker, attack 0 and kind -10, and no record).
-    #[doc(alias = "ftColl_800788D4")]
+    // Ports `ftColl_800788D4`; aliased once a check reaches it.
     pub(crate) fn clear_attacker(&mut self, gobj: GObjId) {
         let me = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[me.0];

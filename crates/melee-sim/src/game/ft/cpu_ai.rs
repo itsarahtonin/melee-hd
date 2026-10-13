@@ -69,7 +69,7 @@ const INPUTS: u32 = 30;
 impl Running<'_> {
     /// The other fighter of the same player (Nana's Popo, Popo's Nana), `ftCo_800A589C`: the
     /// first in the fighters' list, or none if that one is asleep or there is none.
-    #[doc(alias = "ftCo_800A589C")]
+    // Ports `ftCo_800A589C`; aliased once a check reaches it.
     pub fn cpu_partner(&self, f: FighterId) -> Option<FighterId> {
         let fp = &self.game.fighters[f.0];
         let mut cur = self.game.world.first_in(P_LINK_FIGHTER);
@@ -95,7 +95,7 @@ impl Running<'_> {
     /// A computer-controlled fighter's frame, `ftCo_800B3900`: it reads the stage, decides by
     /// its kind, writes a new script when the last one is done, runs its script, and Nana
     /// replays Popo's inputs while she follows him; its frame count goes up.
-    #[doc(alias = "ftCo_800B3900")]
+    // Ports `ftCo_800B3900`; aliased once a check reaches it.
     pub fn cpu_frame(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.cpu_read_stage(f);
@@ -125,7 +125,7 @@ impl Running<'_> {
     /// ground inside the blast zones, how long it has stood still, its target's timer, its
     /// destination carried along with moving floors, its recovery scales and whether it's
     /// under Corneria's ceiling.
-    #[doc(alias = "ftCo_800B33B0")]
+    // Ports `ftCo_800B33B0`; aliased once a check reaches it.
     fn cpu_read_stage(&mut self, f: FighterId) {
         let timer = self.game.fighters[f.0].cpu.x7C;
         if timer % 300 == 0 {
@@ -245,7 +245,7 @@ impl Running<'_> {
 
     /// The stage's wind on a point, `grLib_801C9E60`: Rainbow Cruise's, Big Blue's and Icicle
     /// Mountain's stages move it; elsewhere none.
-    #[doc(alias = "grLib_801C9E60")]
+    // Ports `grLib_801C9E60`; aliased once a check reaches it.
     fn stage_wind(&self) -> Option<crate::vec::Vec3> {
         match self.game.stage_info.grkind {
             // Gr_Kind_RCruise, Gr_Kind_BigBlue, Gr_Kind_Icemt.
@@ -255,7 +255,7 @@ impl Running<'_> {
     }
 
     /// Whether a floor is Corneria's ceilinged one (joint 4), `grCorneria_801E2E50`.
-    #[doc(alias = "grCorneria_801E2E50")]
+    // Ports `grCorneria_801E2E50`; aliased once a check reaches it.
     fn corneria_ceiling_floor(&self, line: i32) -> bool {
         // Gr_Kind_Corneria.
         self.game.stage_info.grkind == 14
@@ -271,7 +271,7 @@ impl Running<'_> {
 
     /// Every 600 frames, how far the fighter reaches (`x56C`) by its kind and a random draw,
     /// `ftCo_800A0CB0`.
-    #[doc(alias = "ftCo_800A0CB0")]
+    // Ports `ftCo_800A0CB0`; aliased once a check reaches it.
     fn cpu_reach_scale(&mut self, f: FighterId) {
         if self.game.fighters[f.0].cpu.x7C % 600 != 0 {
             return;
@@ -289,7 +289,7 @@ impl Running<'_> {
     }
 
     /// The fighter's decision by its computer kind, `ftCo_800B2AFC`: only Nana's is ported.
-    #[doc(alias = "ftCo_800B2AFC")]
+    // Ports `ftCo_800B2AFC`; aliased once a check reaches it.
     fn cpu_decide(&mut self, f: FighterId) {
         match self.game.fighters[f.0].cpu.kind {
             CPU_KIND_NANA => self.nana_decide(f),
@@ -300,7 +300,7 @@ impl Running<'_> {
     /// Nana's decision, `ftCo_800B101C`: with Popo gone she acts alone; else she records his
     /// inputs, takes her level from his percent, and either follows him (until he's out of
     /// reach or doing his up special) or makes her way back to him.
-    #[doc(alias = "ftCo_800B101C")]
+    // Ports `ftCo_800B101C`; aliased once a check reaches it.
     fn nana_decide(&mut self, f: FighterId) {
         let c = &mut self.game.fighters[f.0].cpu;
         c.xF9_b2 = true;
@@ -369,7 +369,7 @@ impl Running<'_> {
     /// Whether Nana starts following Popo again, `ftCo_800B0E98`: both on the ground, she
     /// isn't recovering (`xFB_b0`) or in her up special, she can act or stands waiting, they
     /// move alike (within his walk speed's midpoint) and she's within 25 of him.
-    #[doc(alias = "ftCo_800B0E98")]
+    // Ports `ftCo_800B0E98`; aliased once a check reaches it.
     fn nana_can_follow(&mut self, f: FighterId, popo: FighterId) -> bool {
         if !self.nana_keeps_up(f, popo) {
             return false;
@@ -417,7 +417,7 @@ impl Running<'_> {
     /// a parasol, nor while she carries a crate, barrel, capsule or barrel cannon, nor when he
     /// stands above her while she falls; she follows on the ground (`x2225_b3`) or when she
     /// crouches or lands.
-    #[doc(alias = "ftCo_800B0CA8")]
+    // Ports `ftCo_800B0CA8`; aliased once a check reaches it.
     fn nana_keeps_up(&self, f: FighterId, popo: FighterId) -> bool {
         let (me, other) = (&self.game.fighters[f.0], &self.game.fighters[popo.0]);
         let ms = other.motion_id;
@@ -471,7 +471,7 @@ impl Running<'_> {
 
     /// Records Popo's controller and position into Nana's input history, `ftCo_800B0918`:
     /// both of its positions step on (the write one five ahead of the read one), wrapping.
-    #[doc(alias = "ftCo_800B0918")]
+    // Ports `ftCo_800B0918`; aliased once a check reaches it.
     pub fn nana_record_input(&mut self, popo: FighterId, nana: FighterId) {
         let step = |p: Option<u32>| {
             let at = p.expect("Nana's input history without a position") + INPUT_SIZE;
@@ -513,7 +513,7 @@ impl Running<'_> {
     /// While Nana follows Popo, his recorded inputs from five frames back become hers,
     /// `ftCo_800B0AF4`, and on the ground she drifts toward where he stood then, facing his
     /// way; she goes into her down special when he's in his.
-    #[doc(alias = "ftCo_800B0AF4")]
+    // Ports `ftCo_800B0AF4`; aliased once a check reaches it.
     fn nana_follow_inputs(&mut self, f: FighterId) {
         let Some(popo) = self.cpu_partner(f) else {
             return;
@@ -566,7 +566,7 @@ impl Running<'_> {
 
     /// A new script once the last is done, `ftCo_800B2790`, by what the fighter is doing
     /// (`x18`).
-    #[doc(alias = "ftCo_800B2790")]
+    // Ports `ftCo_800B2790`; aliased once a check reaches it.
     fn cpu_behave(&mut self, f: FighterId) {
         let c = &self.game.fighters[f.0].cpu;
         if c.csP.0.is_some() || c.command_duration != 0 {
@@ -640,7 +640,7 @@ impl Running<'_> {
     /// Lets go of a charging special when it's charged, `ftCo_800ADC28`: Donkey Kong's Giant
     /// Punch, Samus's Charge Shot, Mewtwo's Shadow Ball and Kirby's copies of them; not while
     /// it's taking a hit (`x18` 10).
-    #[doc(alias = "ftCo_800ADC28")]
+    // Ports `ftCo_800ADC28`; aliased once a check reaches it.
     fn cpu_charge_release(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
         if fpp.cpu.x18 == 10 {

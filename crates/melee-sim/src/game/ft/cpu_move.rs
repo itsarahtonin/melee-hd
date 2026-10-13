@@ -79,7 +79,7 @@ impl Running<'_> {
     /// Runs one of the computer players' scripts from `PlCo.dat`, `ftCo_800B4880`: its
     /// commands are written in, each with as many argument bytes as its range says (one past
     /// `CpuCmd_OneArgEnd`'s range checks the argument, as the original does).
-    #[doc(alias = "ftCo_800B4880")]
+    // Ports `ftCo_800B4880`; aliased once a check reaches it.
     pub(super) fn cpu_data_script(&mut self, f: FighterId, idx: u32) {
         let data = self.common_ptr(CPU_DATA);
         let scripts = self.data.ptr(data).expect("the computer players' scripts");
@@ -110,7 +110,7 @@ impl Running<'_> {
 
     /// The nearest enemy just entering (respawning or riding in, `x221D_b6` or `x2168` with
     /// no ride) and in reach, `ftCo_800A5CE0`; none for a fighter that can't target.
-    #[doc(alias = "ftCo_800A5CE0")]
+    // Ports `ftCo_800A5CE0`; aliased once a check reaches it.
     fn cpu_entering_enemy(&self, f: FighterId) -> Option<FighterId> {
         if self.cpu_untargetable(f) {
             return None;
@@ -151,7 +151,7 @@ impl Running<'_> {
 
     /// Leaves the respawn platform, `ftCo_800A08F0`: a crouch's flick down, after a wait
     /// by level (none for Nana).
-    #[doc(alias = "ftCo_800A08F0")]
+    // Ports `ftCo_800A08F0`; aliased once a check reaches it.
     fn cpu_leave_platform(&mut self, f: FighterId) {
         self.cpu_neutral_stick(f);
         let fpp = &self.game.fighters[f.0];
@@ -187,7 +187,7 @@ impl Running<'_> {
     /// Walking toward the destination, `ftCo_800ABA34` (behavior 1): kinds that taunt or
     /// wait do so; Zelda and Sheik transform on their coin flip; off the respawn platform
     /// once no enemy is entering; else moving in the air or on the ground.
-    #[doc(alias = "ftCo_800ABA34")]
+    // Ports `ftCo_800ABA34`; aliased once a check reaches it.
     pub(super) fn cpu_walk(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
         match fpp.cpu.kind {
@@ -227,7 +227,7 @@ impl Running<'_> {
     /// destination not steeply below, touching a wall it faces, or its fall from last frame
     /// crossing no floor with the destination above its feet. Under Corneria's ceiling,
     /// whenever it barely rises.
-    #[doc(alias = "ftCo_800A3234")]
+    // Ports `ftCo_800A3234`; aliased once a check reaches it.
     fn cpu_falling_short(&mut self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         let c = &fpp.cpu;
@@ -272,7 +272,7 @@ impl Running<'_> {
 
     /// A recovery toward the destination by character, `ftCo_800A96B8`; the default (and
     /// Nana's) is up and toward it, then the up special.
-    #[doc(alias = "ftCo_800A96B8")]
+    // Ports `ftCo_800A96B8`; aliased once a check reaches it.
     fn cpu_recover(&mut self, f: FighterId) {
         match self.game.fighters[f.0].kind {
             12 | 23 | 1 | 22 | 14 | 8 | 17 | 19 | 13 => {
@@ -294,7 +294,7 @@ impl Running<'_> {
     /// dodges on the Temple and Fourside, and recovers when small or on Icicle Mountain and
     /// Rainbow Cruise; under a ceiling it drifts back; else it steers toward the destination
     /// by where its fall (under gravity to terminal speed) will bring it when level with it.
-    #[doc(alias = "ftCo_800A9CB4")]
+    // Ports `ftCo_800A9CB4`; aliased once a check reaches it.
     fn cpu_air_move(&mut self, f: FighterId) {
         if self.game.fighters[f.0].x2168 != 0 {
             self.cpu_finish_neutral(f);
@@ -428,7 +428,7 @@ impl Running<'_> {
     }
 
     /// Whether the fighter stands within `5 * scale` of the edge it faces, `ftCo_800A28D0`.
-    #[doc(alias = "ftCo_800A28D0")]
+    // Ports `ftCo_800A28D0`; aliased once a check reaches it.
     fn cpu_near_edge(&self, f: FighterId, scale: f64) -> bool {
         let fpp = &self.game.fighters[f.0];
         if fpp.ground_or_air == GA_AIR {
@@ -448,7 +448,7 @@ impl Running<'_> {
     }
 
     /// Whether the fighter faces its destination, `ftCo_800A2BD4`.
-    #[doc(alias = "ftCo_800A2BD4")]
+    // Ports `ftCo_800A2BD4`; aliased once a check reaches it.
     fn cpu_facing_destination(&self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         fp::fmuls(
@@ -461,7 +461,7 @@ impl Running<'_> {
     /// the edge; with an approach allowed (`xF9_b1`) it may close in on its target; then, if
     /// its destination is on its island, it walks or runs there; else it heads off toward it
     /// (jumping, dropping or turning by the angle and what's in between).
-    #[doc(alias = "ftCo_800AB224")]
+    // Ports `ftCo_800AB224`; aliased once a check reaches it.
     fn cpu_ground_move(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
         if fpp.cpu.xFA_b6 {
@@ -521,7 +521,7 @@ impl Running<'_> {
     /// Walks or runs to a destination on the fighter's island, `ftCo_800AA42C`: off a teeter
     /// first, turning to face it, at full speed while far (running if it runs, else a dash
     /// start), slowing in on it, standing once within reach.
-    #[doc(alias = "ftCo_800AA42C")]
+    // Ports `ftCo_800AA42C`; aliased once a check reaches it.
     fn cpu_walk_to(&mut self, f: FighterId) {
         let (stick, clamp) = self.cpu_walk_speed(f);
         let fpp = &self.game.fighters[f.0];
@@ -601,7 +601,7 @@ impl Running<'_> {
 
     /// Whether the fighter faces its target, or stands within 1 of it, or has none,
     /// `ftCo_800A2C08`.
-    #[doc(alias = "ftCo_800A2C08")]
+    // Ports `ftCo_800A2C08`; aliased once a check reaches it.
     pub(super) fn cpu_target_ahead(&self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         let Some(t) = fpp.cpu.x44 else { return true };
@@ -634,7 +634,7 @@ impl Running<'_> {
     /// face up, stick neutral; face down, a computer of kind 0 or 15 or with no target
     /// near gets up, else above a chance by level it attacks getting up, else rolls away
     /// from the target.
-    #[doc(alias = "ftCo_800AC7D4")]
+    // Ports `ftCo_800AC7D4`; aliased once a check reaches it.
     pub(super) fn cpu_get_up(&mut self, f: FighterId) {
         match self.cpu_lying(f) {
             0 => {
@@ -656,7 +656,8 @@ impl Running<'_> {
             self.cpu_hold_up(f);
             return;
         };
-        if !(self.cpu_distance(f, target) < 15.0) {
+        let near = self.cpu_distance(f, target) < 15.0;
+        if !near {
             self.cpu_hold_up(f);
             return;
         }
@@ -689,7 +690,7 @@ impl Running<'_> {
     /// may close in on its target; a new standing in the results is taunted with a tap up
     /// (outside training); kinds that wait do; off its destination, it goes back to walking;
     /// it turns to face its target, and above level 5 the charging characters charge.
-    #[doc(alias = "ftCo_800ACD5C")]
+    // Ports `ftCo_800ACD5C`; aliased once a check reaches it.
     pub(super) fn cpu_stand(&mut self, f: FighterId) {
         let c = &self.game.fighters[f.0].cpu;
         if c.xF9_b1 && c.x44.is_some() && c.xF8_b6 {
@@ -750,7 +751,7 @@ impl Running<'_> {
     /// address). Slippi's NanaDeterminism code clears r30, and 3.19's r5 too; 3.16's leaves r5
     /// as the caller left it. Such a frame stops the port (`DI with no knockback`) until the
     /// value ssbm-rs's ports leave there agrees with the original's.
-    #[doc(alias = "ftCo_800AC5A0")]
+    // Ports `ftCo_800AC5A0`; aliased once a check reaches it.
     pub(super) fn cpu_di(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
         if !fpp.x221A_b3 {
@@ -796,7 +797,7 @@ impl Running<'_> {
 
     /// How fast the fighter walks (`ftCo_800AA320`): the stick's step and clamp by level;
     /// Nana's are fixed.
-    #[doc(alias = "ftCo_800AA320")]
+    // Ports `ftCo_800AA320`; aliased once a check reaches it.
     fn cpu_walk_speed(&self, f: FighterId) -> (i32, i32) {
         let fpp = &self.game.fighters[f.0];
         if fpp.kind == super::popo::KIND_NANA {

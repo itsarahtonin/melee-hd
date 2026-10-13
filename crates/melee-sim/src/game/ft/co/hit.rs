@@ -713,7 +713,7 @@ impl Running<'_> {
     /// `ftCommonData`'s description (`x380`, `lbColl_80008D30`) with no attacker
     /// (`ftColl_800788D4`), from its `TransN2` joint, its knockback and damage taken, then
     /// hitstun.
-    #[doc(alias = "ftCo_800DE2F0")]
+    // Ports `ftCo_800DE2F0`; aliased once a check reaches it.
     fn holder_knocked_back(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let desc = self.common().at(0x380);

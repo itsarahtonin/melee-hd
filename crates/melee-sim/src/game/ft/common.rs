@@ -360,7 +360,7 @@ impl Running<'_> {
 
     /// A second fighter's push, `ftCommon_8007DFD0`: Nana steps back in depth from Popo while
     /// they stand on meeting floors overlapping, then takes the others' pushes.
-    #[doc(alias = "ftCommon_8007DFD0")]
+    // Ports `ftCommon_8007DFD0`; aliased once a check reaches it.
     fn nudge_sub(&mut self, gobj: GObjId, v: Vec3) {
         let slot = i32::from(self.game.fighter(gobj).player_idx);
         let leader = self

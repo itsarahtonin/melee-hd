@@ -344,7 +344,7 @@ impl Running<'_> {
     /// out): unless asleep already, with `puff` the vanishing puff where it stands at its
     /// size (`ftData::x0->x168`), then it lets go of everything (`ftCo_800D331C`), takes
     /// the out-of-play flags and sleeps.
-    #[doc(alias = "ftCo_800D4F24")]
+    // Ports `ftCo_800D4F24`; aliased once a check reaches it.
     pub fn remove_with_partner(&mut self, gobj: GObjId, puff: bool) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].is_sleeping {
