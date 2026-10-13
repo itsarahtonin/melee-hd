@@ -587,7 +587,7 @@ impl Running<'_> {
             2 => self.cpu_attack_behavior(f),
             3 => unported_call("ftCo_800B9020"),
             4 => unported_call("ftCo_800A8DE4"),
-            5 => unported_call("ftCo_800AC7D4"),
+            5 => self.cpu_get_up(f),
             6 => unported_call("ftCo_800ACB44"),
             7 => unported_call("ftCo_800BA9A0"),
             8 => unported_call("ftCo_800B7180"),

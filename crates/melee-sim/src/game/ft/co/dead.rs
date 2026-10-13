@@ -330,11 +330,40 @@ impl Running<'_> {
     pub fn out_of_play(&mut self, gobj: GObjId) {
         self.sleep(gobj);
         if self.game.fighter(gobj).x2222_b5 {
-            unported_call("ftCo_800BFD9C for Popo");
+            let slot = i32::from(self.game.fighter(gobj).player_idx);
+            if let Some(nana) = self.game.player_entity_at(slot, 1) {
+                self.remove_with_partner(nana, true);
+            }
         }
         let fp = self.game.fighter(gobj);
         let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
         self.fighter_out_of_play(slot, sub);
+    }
+
+    /// A fighter taken out of play with its partner, `ftCo_800D4F24` (Nana when Popo is
+    /// out): unless asleep already, with `puff` the vanishing puff where it stands at its
+    /// size (`ftData::x0->x168`), then it lets go of everything (`ftCo_800D331C`), takes
+    /// the out-of-play flags and sleeps.
+    #[doc(alias = "ftCo_800D4F24")]
+    pub fn remove_with_partner(&mut self, gobj: GObjId, puff: bool) {
+        let f = self.game.fighter_id(gobj);
+        if self.game.fighters[f.0].is_sleeping {
+            return;
+        }
+        if puff {
+            let fp = &self.game.fighters[f.0];
+            let ft_data = fp.ft_data.expect("a fighter without data");
+            let attrs = self.data.ptr(ft_data).expect("ftData's attributes");
+            let size = mem(fp::fmuls(
+                reg(self.data.f32(attrs.at(0x168))),
+                reg(fp.x34_scale.y),
+            ));
+            let pos = fp.cur_pos;
+            super::super::super::ef::spawn(self, 0x43F, None, &[Arg::Vec(pos), Arg::Float(size)]);
+        }
+        self.leave_play(gobj);
+        self.set_dead_flags(gobj);
+        self.sleep(gobj);
     }
 
     /// The last attacker's KO noted for a fighter leaving play, `pl_8003DF44`: unless no one,

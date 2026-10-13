@@ -612,6 +612,72 @@ impl Running<'_> {
         fp::fmuls(dx, reg(fpp.facing_dir)) >= 0.0
     }
 
+    /// `ftCo_CpuHoldUpForOneFrame`.
+    fn cpu_hold_up(&mut self, f: FighterId) {
+        self.cpu_cmd1(f, cmd::SET_LSTICK_X, 0);
+        self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 127);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        self.cpu_finish_neutral_y(f);
+    }
+
+    /// `ftCo_CpuRetapA`.
+    pub(super) fn cpu_retap_a(&mut self, f: FighterId) {
+        self.cpu_cmd(f, cmd::RELEASE_A);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        self.cpu_cmd(f, cmd::PRESS_A);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        self.cpu_cmd(f, cmd::RELEASE_A);
+        self.cpu_cmd(f, cmd::DONE);
+    }
+
+    /// Getting up, `ftCo_800AC7D4` (behavior 5): not lying, back to the usual behavior;
+    /// face up, stick neutral; face down, a computer of kind 0 or 15 or with no target
+    /// near gets up, else above a chance by level it attacks getting up, else rolls away
+    /// from the target.
+    #[doc(alias = "ftCo_800AC7D4")]
+    pub(super) fn cpu_get_up(&mut self, f: FighterId) {
+        match self.cpu_lying(f) {
+            0 => {
+                self.cpu_back_to_usual(f);
+                return;
+            }
+            1 => {
+                self.cpu_finish_neutral(f);
+                return;
+            }
+            _ => {}
+        }
+        let kind = self.game.fighters[f.0].cpu.kind;
+        if kind == 15 || kind == 0 {
+            self.cpu_hold_up(f);
+            return;
+        }
+        let Some(target) = self.cpu_find_target(f) else {
+            self.cpu_hold_up(f);
+            return;
+        };
+        if !(self.cpu_distance(f, target) < 15.0) {
+            self.cpu_hold_up(f);
+            return;
+        }
+        let level = self.game.fighters[f.0].cpu.level;
+        if reg(self.game.objs.rng.draw_f32()) < fp::fmuls(reg(0.1), fp::frsp(f64::from(level))) {
+            self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
+            self.cpu_cmd1(f, cmd::SET_LSTICK_X, 0);
+            self.cpu_retap_a(f);
+            return;
+        }
+        let dx = fp::fsubs(
+            reg(self.game.fighters[target.0].cur_pos.x),
+            reg(self.game.fighters[f.0].cur_pos.x),
+        );
+        self.cpu_cmd1(f, cmd::SET_LSTICK_X, if dx < 0.0 { 80 } else { 176 });
+        self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 10);
+        self.cpu_cmd1(f, cmd::SET_LSTICK_X, 0);
+        self.cpu_cmd(f, cmd::DONE);
+    }
+
     /// Back to the fighter's usual behavior (`ftCo_CpuReturnToPreviousBehavior`).
     pub(super) fn cpu_back_to_usual(&mut self, f: FighterId) {
         let c = &mut self.game.fighters[f.0].cpu;
