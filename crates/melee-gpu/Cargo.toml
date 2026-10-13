@@ -1,6 +1,6 @@
 [package]
 name = "melee-gpu"
-description = "Draws the GameCube GPU's command stream with wgpu: ssbm-rs's renderer (ssbm-render at melee-hd-base), with the player's resolution scaling and widescreen"
+description = "Draws the GameCube GPU's command stream with wgpu: ported from ssbm-rs's renderer (ssbm-render at melee-hd-base), with the player's resolution scaling and widescreen"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,7 +8,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
-ssbm-gx.workspace = true
+melee-gx = { path = "../melee-gx" }
 wgpu = "30"
 pollster = "1"
 bytemuck = { version = "1", features = ["derive"] }

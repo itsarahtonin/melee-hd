@@ -1,8 +1,7 @@
-//! The boot state a match starts from when the player has one: what the boot and the menus
-//! leave in the original's memory (the audio library's banks, voices and timeline among it),
-//! which a match started from its settings alone lacks (`docs/engine.md`). Until the boot is
-//! ported, it comes from an ssbm-rs state trace with memory (`STATE_TRACE_MEMORY`, version
-//! 5), seeded as the oracle seeds it (`tools/oracle/src/boot.rs`).
+//! The boot state the replay's match starts from: what the boot and the menus left in
+//! ssbm-rs's memory (the audio library's banks, voices and timeline among it), from its state
+//! trace with memory (`STATE_TRACE_MEMORY`, version 5), seeded as the oracle seeds it
+//! (`tools/oracle/src/boot.rs`), so the mix compares with ssbm-rs's recording of the same run.
 
 use melee_data::archive::Archives;
 use melee_sim::game::playback::FIRST_FRAME;
@@ -10,11 +9,11 @@ use melee_sim::game::state::Game;
 use melee_sim::game::vs_match::Settings;
 
 #[allow(dead_code)]
-#[path = "../../../tools/oracle/src/trace.rs"]
+#[path = "../../oracle/src/trace.rs"]
 mod trace;
 
 #[allow(dead_code)]
-#[path = "../../../tools/oracle/src/boot.rs"]
+#[path = "../../oracle/src/boot.rs"]
 mod seeding;
 
 use melee_capture::import::sym;

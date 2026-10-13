@@ -1,6 +1,6 @@
 [package]
-name = "melee-replay"
-description = "Slippi replays as melee-sim match input: the settings and frames Slippi's playback hands the game"
+name = "melee-slippi"
+description = "Slippi replays as melee-sim match input: the .slp format, and what Slippi's EXI device answers Slippi's playback codes"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,4 +9,4 @@ publish.workspace = true
 
 [dependencies]
 melee-sim.workspace = true
-ssbm-slippi.workspace = true
+thiserror = "2"

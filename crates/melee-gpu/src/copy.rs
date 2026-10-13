@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 
 use bytemuck::{Pod, Zeroable};
-use ssbm_gx::{Memory, State};
+use melee_gx::{Memory, State};
 
 use crate::{bits, hash_bytes};
 

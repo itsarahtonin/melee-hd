@@ -1,5 +1,5 @@
 //! The DSP's side of each audio frame: the frame's parameter blocks, studio and command list
-//! in a small stand-in for main memory, run through ssbm-rs's AX microcode (`ssbm_ax`) over
+//! in a small stand-in for main memory, run through the AX microcode (`melee_ax`) over
 //! an ARAM image the mixer keeps from the simulation's log, and the aux effects the CPU runs
 //! on the buses the DSP hands back.
 
@@ -136,7 +136,7 @@ struct Bus<'a> {
     aram: &'a [u8],
 }
 
-impl ssbm_ax::Bus for Bus<'_> {
+impl melee_ax::Bus for Bus<'_> {
     fn read(&self, addr: u32, out: &mut [u8]) {
         self.mem.read(addr, out);
     }
@@ -178,7 +178,7 @@ impl Stats {
 
 /// Mixes the simulation's audio frames into samples.
 pub struct Mixer {
-    ax: ssbm_ax::Ax,
+    ax: melee_ax::Ax,
     aram: Vec<u8>,
     mem: Mem,
     /// The DSP's blocks as the last frame's mix left them.
@@ -204,7 +204,7 @@ impl Default for Mixer {
 impl Mixer {
     pub fn new() -> Mixer {
         Mixer {
-            ax: ssbm_ax::Ax::new(ssbm_ax::CRC_EARLY, Some(ssbm_ax::coefs::table())),
+            ax: melee_ax::Ax::new(melee_ax::CRC_EARLY, Some(melee_ax::coefs::table())),
             aram: vec![0; ARAM_SIZE],
             mem: Mem {
                 pb_base: 0,

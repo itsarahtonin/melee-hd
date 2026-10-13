@@ -1,5 +1,5 @@
-//! Draws a frame's GX stream with ssbm-rs's renderer (ssbm-render), whose frames match
-//! Dolphin's software renderer within tolerance: ssbm-gx runs the stream and hands each draw
+//! Draws a frame's GX stream with melee-gpu (ported from ssbm-rs's renderer), whose frames match
+//! Dolphin's software renderer within tolerance: `melee_gx` runs the stream and hands each draw
 //! and EFB copy, with the GPU's state, to the renderer, which reads textures, vertex arrays
 //! and display lists through the address space ([`Space`]).
 
@@ -7,7 +7,7 @@ use std::cell::RefCell;
 
 use melee_data::archive::Archives;
 use melee_gpu::Renderer;
-use ssbm_gx::{Draw, Memory, Produced, Sink, State};
+use melee_gx::{Draw, Memory, Produced, Sink, State};
 
 use crate::mem::Space;
 

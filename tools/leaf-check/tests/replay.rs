@@ -25,15 +25,15 @@
 use leaf_check::calls::{
     Ret, Setup, check_calls_in, gobj_arg, peek_u32, poke_bit, poke_f32, poke_u32, user_data_arg,
 };
-use melee_replay::Device;
 use melee_sim::game::code::{run_fighter_cb, run_proc};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::playback::{CHARACTER_LEN, Playback};
 use melee_sim::game::slippi::placed;
 use melee_sim::game::structs::StartMeleeData;
+use melee_slippi::Device;
+use melee_slippi::Replay;
 use ssbm_rt::capture::Call;
-use ssbm_slippi::Replay;
 
 const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/replay";
 const REPLAYS: &str = "C:/Users/USER/Documents/Slippi";
@@ -490,7 +490,7 @@ fn settings_from_game_start() {
             bytes: &cap.call.mem1,
             base: 0x8000_0000,
         };
-        let s = Settings::from_replay(&melee_replay::start(&replay)).expect("known codes");
+        let s = Settings::from_replay(&melee_slippi::start(&replay)).expect("known codes");
         let ours = format!("{:?}", s.start);
         let theirs = format!(
             "{:?}",

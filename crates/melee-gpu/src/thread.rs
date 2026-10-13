@@ -9,9 +9,9 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Condvar, Mutex, mpsc};
 
-use ssbm_gx::{Delta, Draw, Memory, Sink, State, vertex};
+use melee_gx::{Delta, Draw, Memory, Sink, State, vertex};
 
-use ssbm_gx::xform::Output;
+use melee_gx::xform::Output;
 
 use crate::{Renderer, bits, copy, hash_bytes, prepare, sampled_image, texture_maps};
 
@@ -171,7 +171,7 @@ impl Sink for Threaded {
     /// memory as its copy found it: the game runs on, up to `AHEAD` frames, before the bytes
     /// land, and what it wrote meanwhile stays (`Written::before`). A copy whose memory this
     /// thread didn't keep, one kept on the GPU, writes nothing.
-    fn take_written(&mut self) -> Vec<ssbm_gx::Written> {
+    fn take_written(&mut self) -> Vec<melee_gx::Written> {
         let done = std::mem::take(&mut *self.done.written.lock().unwrap());
         let mut out = Vec::new();
         for (copy, rows) in done {
@@ -186,7 +186,7 @@ impl Sink for Threaded {
                 let Some(old) = before.get(from..from + bytes.len()) else {
                     continue;
                 };
-                out.push(ssbm_gx::Written {
+                out.push(melee_gx::Written {
                     address: at,
                     bytes,
                     before: Some(old.to_vec()),

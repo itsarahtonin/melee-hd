@@ -4,7 +4,7 @@
 //! [`Gx`] holds the SDK's shadow state ([`GxData`], `__GXData_struct`) and the command stream it
 //! writes: each FIFO write (`GX_WRITE_U8`, `GX_WRITE_RAS_REG`, `GX_WRITE_XF_REG`, the CP writes)
 //! pushes its bytes, big-endian, onto [`Gx::fifo`], in the order the SDK writes them, for
-//! `ssbm-gx` to parse. Writes to memory-mapped registers that bypass the FIFO (`__cpReg`,
+//! `melee_gx` to parse. Writes to memory-mapped registers that bypass the FIFO (`__cpReg`,
 //! `__peReg`, `__piReg`, `__memReg`, VI) aren't GPU state the stream carries and are skipped,
 //! each where it happens. Debug-only code (asserts, `__GXinBegin`, the verifier, `GXSave.c`)
 //! isn't ported.

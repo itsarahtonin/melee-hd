@@ -1117,8 +1117,8 @@ dependencies = [
  "gekko-fp",
  "melee-capture",
  "melee-data",
- "melee-replay",
  "melee-sim",
+ "melee-slippi",
  "ssbm-disc",
  "ssbm-game",
  "ssbm-rt",
@@ -1291,9 +1291,9 @@ name = "melee-audio"
 version = "0.1.0"
 dependencies = [
  "cpal",
+ "melee-ax",
  "melee-data",
  "melee-sim",
- "ssbm-ax",
 ]
 
 [[package]]
@@ -1303,12 +1303,15 @@ dependencies = [
  "melee-audio",
  "melee-capture",
  "melee-data",
- "melee-replay",
  "melee-sim",
+ "melee-slippi",
  "ssbm-rt",
- "ssbm-slippi",
  "zstd",
 ]
+
+[[package]]
+name = "melee-ax"
+version = "0.1.0"
 
 [[package]]
 name = "melee-bench"
@@ -1316,8 +1319,8 @@ version = "0.1.0"
 dependencies = [
  "melee-capture",
  "melee-data",
- "melee-replay",
  "melee-sim",
+ "melee-slippi",
  "ssbm-slippi",
  "zstd",
 ]
@@ -1362,12 +1365,16 @@ name = "melee-gpu"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "melee-gx",
  "png",
  "pollster",
  "rayon",
- "ssbm-gx",
  "wgpu",
 ]
+
+[[package]]
+name = "melee-gx"
+version = "0.1.0"
 
 [[package]]
 name = "melee-input"
@@ -1384,8 +1391,8 @@ version = "0.1.0"
 dependencies = [
  "melee-capture",
  "melee-data",
- "melee-replay",
  "melee-sim",
+ "melee-slippi",
  "ssbm-rt",
  "ssbm-slippi",
  "ssbm-types",
@@ -1397,19 +1404,15 @@ name = "melee-player"
 version = "0.1.0"
 dependencies = [
  "melee-audio",
- "melee-capture",
  "melee-data",
  "melee-gpu",
  "melee-input",
  "melee-render",
- "melee-replay",
  "melee-sim",
+ "melee-slippi",
  "pollster",
- "ssbm-rt",
- "ssbm-slippi",
  "wgpu",
  "winit",
- "zstd",
 ]
 
 [[package]]
@@ -1419,8 +1422,8 @@ dependencies = [
  "melee-data",
  "melee-gekko-fp",
  "melee-gpu",
+ "melee-gx",
  "melee-sim",
- "ssbm-gx",
 ]
 
 [[package]]
@@ -1429,20 +1432,11 @@ version = "0.1.0"
 dependencies = [
  "melee-data",
  "melee-gpu",
+ "melee-gx",
  "melee-render",
- "melee-replay",
  "melee-sim",
+ "melee-slippi",
  "png",
- "ssbm-gx",
- "ssbm-slippi",
-]
-
-[[package]]
-name = "melee-replay"
-version = "0.1.0"
-dependencies = [
- "melee-sim",
- "ssbm-slippi",
 ]
 
 [[package]]
@@ -1455,14 +1449,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-slippi"
+version = "0.1.0"
+dependencies = [
+ "melee-sim",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "melee-vs-run"
 version = "0.1.0"
 dependencies = [
  "melee-capture",
  "melee-data",
- "melee-replay",
  "melee-sim",
- "ssbm-slippi",
+ "melee-slippi",
 ]
 
 [[package]]
@@ -2613,11 +2614,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ssbm-ax"
-version = "0.1.0"
-source = "git+https://github.com/itsarahtonin/ssbm-rs?tag=melee-hd-base#a8c43c0317f7c92405186c3976c3c98545e1e9b1"
-
-[[package]]
 name = "ssbm-disc"
 version = "0.1.0"
 source = "git+https://github.com/itsarahtonin/ssbm-rs?tag=melee-hd-base#a8c43c0317f7c92405186c3976c3c98545e1e9b1"
@@ -2637,11 +2633,6 @@ dependencies = [
  "ssbm-rt",
  "ssbm-types",
 ]
-
-[[package]]
-name = "ssbm-gx"
-version = "0.1.0"
-source = "git+https://github.com/itsarahtonin/ssbm-rs?tag=melee-hd-base#a8c43c0317f7c92405186c3976c3c98545e1e9b1"
 
 [[package]]
 name = "ssbm-mem"

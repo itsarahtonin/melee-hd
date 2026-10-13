@@ -2,7 +2,7 @@
 //!
 //! ```text
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
-//!          [--replay FILE.slp] [--boot-trace TRACE] [--widescreen | --aspect W:H] [--scale N] [--no-adapter] [--size WxH] [--ticks N]
+//!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--no-adapter] [--size WxH] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [...]     plays headless, timing each frame
 //! ```
 //!
@@ -13,15 +13,10 @@
 //! C-stick, X/Z/C/S: A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). Escape
 //! quits.
 //!
-//! With `--boot-trace TRACE` (an ssbm-rs state trace with memory over the boot tick, see
-//! `docs/player.md`) the match starts from the boot state and plays its sound; without it the
-//! match runs silent.
-//!
 //! The loop keeps latency short: each tick reads the controllers just before it runs, and the
 //! frame it renders is drawn and presented at once, on a swap chain one frame deep (mailbox,
 //! or immediate where the display has no mailbox mode).
 
-mod boot;
 mod pipelines;
 mod present;
 mod sound;
@@ -34,7 +29,7 @@ use melee_input::{Inputs, Key};
 use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
 use melee_sim::game::vs_match::{DiscFile, Match, Player, Settings};
-use ssbm_slippi::replay::Replay;
+use melee_slippi::Replay;
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
@@ -64,8 +59,6 @@ struct Args {
     shot: Option<String>,
     /// Shows frames this wide (width over height), seeing more at the sides; 4:3 otherwise.
     widescreen: Option<f32>,
-    /// The state trace holding the boot state the match starts from, with sound.
-    boot_trace: Option<String>,
 }
 
 /// A character's `CharacterKind` by name.
@@ -105,7 +98,6 @@ fn parse_args() -> Result<Args, String> {
         scale: 0,
         shot: None,
         widescreen: None,
-        boot_trace: None,
     };
     let mut it = std::env::args().skip(1);
     let size = |s: &str| -> Result<(u32, u32), String> {
@@ -135,7 +127,6 @@ fn parse_args() -> Result<Args, String> {
             "--stocks" => a.stocks = value()?.parse().map_err(|_| "--stocks N")?,
             "--minutes" => a.minutes = value()?.parse().map_err(|_| "--minutes N")?,
             "--replay" => a.replay = Some(value()?),
-            "--boot-trace" => a.boot_trace = Some(value()?),
             "--no-adapter" => a.adapter = false,
             "--bench" => a.bench = Some(value()?.parse().map_err(|_| "--bench TICKS")?),
             "--size" | "--windowed" => a.size = size(&value()?)?,
@@ -181,11 +172,11 @@ impl Session {
                 .read_file(name)
                 .unwrap_or_else(|e| panic!("{name}: {e}")),
         };
-        let (mut settings, replay) = match &a.replay {
+        let (settings, replay) = match &a.replay {
             Some(path) => {
                 let bytes = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
                 let replay = Replay::parse(&bytes).map_err(|e| format!("{path}: {e}"))?;
-                let s = Settings::from_replay(&melee_replay::start(&replay))
+                let s = Settings::from_replay(&melee_slippi::start(&replay))
                     .map_err(|e| format!("{path}: {e}"))?;
                 (s, Some(replay))
             }
@@ -213,9 +204,8 @@ impl Session {
             }
         };
         let (m, sound) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let boot = a.boot_trace.as_deref();
             let play = a.bench.is_none();
-            sound::start(&mut settings, replay.is_some(), boot, play, &mut load)
+            sound::start(&settings, play, &mut load)
         }))
         .map_err(|p| format!("the match couldn't start: {}", panic_text(&p)))??;
         Ok(Session {
@@ -233,7 +223,7 @@ impl Session {
         pads: [melee_sim::input::pad::PadStatus; 4],
     ) -> melee_sim::game::vs_match::Frame {
         let f = match &self.replay {
-            Some(r) => self.m.step_replay(&mut melee_replay::Device(r)),
+            Some(r) => self.m.step_replay(&mut melee_slippi::Device(r)),
             None => self.m.step(pads),
         };
         if let Some(s) = &mut self.sound {
@@ -533,7 +523,7 @@ fn run() -> ExitCode {
                 eprintln!("{e}");
             }
             eprintln!(
-                "usage: melee-hd [--p1 fox] [--p2 marth] [--stage fd|bf|ps] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--boot-trace TRACE] [--no-adapter] [--size WxH] [--bench TICKS]"
+                "usage: melee-hd [--p1 fox] [--p2 marth] [--stage fd|bf|ps] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--no-adapter] [--size WxH] [--bench TICKS]"
             );
             return ExitCode::from(2);
         }

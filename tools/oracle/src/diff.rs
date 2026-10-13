@@ -35,11 +35,11 @@ use melee_capture::{
 };
 use melee_data::archive::{ArchiveId, Archives};
 use melee_data::disc::Disc;
-use melee_replay::Device;
 use melee_sim::game::code::{Val, stubs};
 use melee_sim::game::playback::FIRST_FRAME;
 use melee_sim::game::vs_match::{Match, Settings};
-use ssbm_slippi::replay::Replay;
+use melee_slippi::Device;
+use melee_slippi::Replay;
 
 use crate::trace::{Image, Reader};
 
@@ -237,7 +237,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     let disc = Disc::open(&disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
     let bytes = std::fs::read(replay_path).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let replay = Replay::parse(&bytes).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
-    let mut settings = Settings::from_replay(&melee_replay::start(&replay))
+    let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
         .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let index = melee_capture::disc_index(&disc);
     let mut reader = Reader::open(trace_path);

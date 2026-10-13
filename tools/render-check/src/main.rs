@@ -2,7 +2,7 @@
 //!
 //! ssbm-rs records the GPU command stream of frames of a run as a Dolphin FIFO log
 //! (`GX_DFF=FILE GX_DFF_FRAMES=START,COUNT ssbm-run ...`; see docs/player.md). This tool
-//! plays such a log through ssbm-gx, and plays the same replay natively in melee-sim, drawing
+//! plays such a log through melee-gx, and plays the same replay natively in melee-sim, drawing
 //! its display pass through melee-render, then compares the two streams draw by draw (each
 //! draw's transformed vertices, raster and TEV state and sampled textures) and the frames as
 //! images, within ssbm-rs's render tolerance (PSNR of at least 38 dB, at most 0.25% of the
@@ -25,8 +25,8 @@ mod snap;
 use std::cell::RefCell;
 use std::process::ExitCode;
 
-use ssbm_gx::dff::File;
-use ssbm_gx::{Draw, Memory, Produced, State};
+use melee_gx::dff::File;
+use melee_gx::{Draw, Memory, Produced, State};
 
 use snap::{Event, Recorder};
 
@@ -57,14 +57,14 @@ impl Memory for LogPlayer {
     fn draw(&self, state: &State, draw: &Draw<'_>) {
         self.recorder.draw(state, draw, self);
         if let Some(r) = &self.renderer {
-            ssbm_gx::Sink::draw(&mut *r.borrow_mut(), state, draw, self);
+            melee_gx::Sink::draw(&mut *r.borrow_mut(), state, draw, self);
         }
     }
 
     fn copy(&self, state: &State, value: u32) {
         self.recorder.copy(state, value);
         if let Some(r) = &self.renderer {
-            ssbm_gx::Sink::copy(&mut *r.borrow_mut(), state, value, self);
+            melee_gx::Sink::copy(&mut *r.borrow_mut(), state, value, self);
         }
     }
 }

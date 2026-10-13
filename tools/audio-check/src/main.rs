@@ -16,9 +16,8 @@ use melee_audio::Mixer;
 use melee_data::disc::Disc;
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
 use melee_sim::gekko_fp::{FpMode, set_fp_mode};
-use ssbm_slippi::replay::Replay;
+use melee_slippi::Replay;
 
-#[path = "../../../crates/melee-player/src/boot.rs"]
 mod boot;
 
 /// The mixer's rate.
@@ -186,7 +185,7 @@ fn run(args: &[String]) -> Result<bool, String> {
     let disc = Disc::open(&disc_path).map_err(|e| format!("{disc_path}: {e}"))?;
     let bytes = std::fs::read(replay_path).map_err(|e| format!("{replay_path}: {e}"))?;
     let replay = Replay::parse(&bytes).map_err(|e| format!("{replay_path}: {e}"))?;
-    let mut settings = Settings::from_replay(&melee_replay::start(&replay))
+    let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
         .map_err(|e| format!("{replay_path}: {e}"))?;
     let theirs = read_wav(wav_path)?;
     let boot = boot::Boot::from_trace(trace_path)?;
@@ -228,7 +227,7 @@ fn run(args: &[String]) -> Result<bool, String> {
     let (mut sim, mut mixing, mut ran) = (Duration::ZERO, Duration::ZERO, 0u32);
     for _ in 0..ticks {
         let t0 = Instant::now();
-        let f = m.step_replay(&mut melee_replay::Device(&replay));
+        let f = m.step_replay(&mut melee_slippi::Device(&replay));
         let ended = f.ended;
         m.recycle(f);
         let t1 = Instant::now();

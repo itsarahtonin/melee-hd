@@ -3,7 +3,7 @@
 // Ported from ssbm-rs's ssbm-render at the melee-hd-base tag.
 
 //! Draws the GameCube GPU's command stream with wgpu. Each draw's vertices go through the
-//! transform unit on the CPU (ssbm-gx), as Dolphin's software renderer does; the GPU rasterizes
+//! transform unit on the CPU (`melee_gx`), as Dolphin's software renderer does; the GPU rasterizes
 //! them into an EFB-sized target and runs the TEV per pixel in integers (gx.wgsl), sampling
 //! textures decoded on the CPU by hand. Copies to the XFB come back as frames, through the
 //! XFB's YUV encoding as Dolphin's software renderer makes it.
@@ -20,9 +20,9 @@ pub use thread::Threaded;
 use std::collections::HashMap;
 
 use bytemuck::{Pod, Zeroable};
-use ssbm_gx::texture::{self, Image};
-use ssbm_gx::xform::{self, Output, Viewport};
-use ssbm_gx::{Draw, Memory, Sink, State, vertex};
+use melee_gx::texture::{self, Image};
+use melee_gx::xform::{self, Output, Viewport};
+use melee_gx::{Draw, Memory, Sink, State, vertex};
 
 pub const EFB_WIDTH: u32 = 640;
 pub const EFB_HEIGHT: u32 = 528;
@@ -375,7 +375,7 @@ impl Renderer {
 
     pub fn with_adapter(adapter: &wgpu::Adapter) -> Result<Self, String> {
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-            label: Some("ssbm-render"),
+            label: Some("melee-gpu"),
             required_features: wgpu::Features::DUAL_SOURCE_BLENDING,
             required_limits: wgpu::Limits::default(),
             ..Default::default()
@@ -1402,11 +1402,11 @@ impl Sink for Renderer {
         self.copy_timed(state, value, mem);
     }
 
-    fn take_written(&mut self) -> Vec<ssbm_gx::Written> {
+    fn take_written(&mut self) -> Vec<melee_gx::Written> {
         let written = std::mem::take(&mut self.written);
         written
             .into_iter()
-            .map(|(address, bytes)| ssbm_gx::Written {
+            .map(|(address, bytes)| melee_gx::Written {
                 address,
                 bytes,
                 before: None,

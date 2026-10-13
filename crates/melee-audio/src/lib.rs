@@ -4,7 +4,7 @@
 //!
 //! [`Mixer`] turns on the simulation's mix log (`melee_sim::audio::mix`) and, from the frames
 //! it records and the game's sound files, mixes each audio frame as the console's DSP does
-//! (ssbm-rs's AX microcode, `ssbm_ax`): 160 stereo samples at 32 kHz, as the audio interface
+//! (the AX microcode, `melee_ax`, ported from ssbm-rs's): 160 stereo samples at 32 kHz, as the audio interface
 //! plays them. [`Output`] plays them on the default device.
 
 pub mod fx;

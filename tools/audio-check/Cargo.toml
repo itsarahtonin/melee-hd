@@ -11,8 +11,7 @@ publish.workspace = true
 melee-audio = { path = "../../crates/melee-audio" }
 melee-capture = { path = "../capture" }
 melee-data.workspace = true
-melee-replay = { path = "../replay" }
+melee-slippi = { path = "../../crates/melee-slippi" }
 melee-sim.workspace = true
 ssbm-rt.workspace = true
-ssbm-slippi.workspace = true
 zstd = "0.13"

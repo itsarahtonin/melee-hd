@@ -20,12 +20,12 @@ use melee_capture::import::Importer;
 use melee_capture::{Capture, DataMap, disc_index, find_archives_in};
 use melee_data::archive::Archives;
 use melee_data::disc::Disc;
-use melee_replay::Device;
 use melee_sim::game::gm::scene::{self, Resume};
 use melee_sim::game::playback::Playback;
 use melee_sim::game::state::Running;
 use melee_sim::game::vs_match::{Match, Settings};
-use ssbm_slippi::replay::Replay;
+use melee_slippi::Device;
+use melee_slippi::Replay;
 
 fn panic_text(p: &Box<dyn std::any::Any + Send>) -> String {
     p.downcast_ref::<String>()
@@ -52,7 +52,7 @@ fn run(args: Vec<String>) -> ExitCode {
     let disc = Disc::open(disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
     let bytes = std::fs::read(replay_path).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let replay = Replay::parse(&bytes).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
-    let settings = Settings::from_replay(&melee_replay::start(&replay))
+    let settings = Settings::from_replay(&melee_slippi::start(&replay))
         .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     println!(
         "replay: stage {}, {} frames, seed {:#010x}",
