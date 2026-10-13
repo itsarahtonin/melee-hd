@@ -9,6 +9,8 @@ use super::Objects;
 use super::pool::Pool;
 use super::spline;
 use crate::fpu::{copy, mem, reg};
+use crate::hsd::heap::Kind;
+use crate::hsd::pool::kind as pool_kind;
 use crate::ppc::slw_i;
 use crate::vec::Vec3;
 
@@ -106,7 +108,7 @@ pub struct FObj {
 }
 
 /// The FObj pool (`fobj_alloc_data`).
-pub type FObjs = Pool<FObj>;
+pub type FObjs = Pool<FObj, { pool_kind(Kind::FObj) }>;
 
 impl FObj {
     fn set_state(&mut self, state: u32) -> u32 {

@@ -8,6 +8,8 @@ use super::Objects;
 use super::generator::GeneratorId;
 use super::particle::ParticleId;
 use super::pool::Pool;
+use crate::hsd::heap::Kind;
+use crate::hsd::pool::kind as pool_kind;
 use crate::mtx::Mtx34;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -48,7 +50,7 @@ pub struct AppSrt {
 /// The app-SRT pool (`HSD_PSAppSrt_804D10B0`) and its counts.
 #[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct AppSrts {
-    pub pool: Pool<AppSrt>,
+    pub pool: Pool<AppSrt, { pool_kind(Kind::AppSrt) }>,
     /// Live app-SRTs (`hsd_804D78DE`) and the most at once (`hsd_804D78D8`).
     pub live: u16,
     pub peak: u16,

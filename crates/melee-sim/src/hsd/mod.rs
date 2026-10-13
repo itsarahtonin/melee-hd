@@ -28,6 +28,8 @@ pub mod robj;
 pub mod shadow;
 pub mod sis;
 pub mod spline;
+pub mod texp;
+pub mod texp_heap;
 pub mod tobj;
 pub mod wobj;
 

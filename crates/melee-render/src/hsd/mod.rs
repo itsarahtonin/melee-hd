@@ -16,7 +16,6 @@ pub mod texp;
 pub mod texp_make;
 #[cfg(test)]
 mod texp_tests;
-pub mod texpdag;
 
 use std::collections::BTreeMap;
 

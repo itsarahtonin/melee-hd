@@ -206,6 +206,12 @@ pub struct TObj {
     /// `GXTexCoordID`.
     pub coord: u32,
     pub tev: Option<TObjTev>,
+    /// Where the original's allocators put its palette and TEV stage, and its animation's
+    /// table of palettes and the palettes' copies (`docs/engine.md`).
+    pub tlut_addr: u32,
+    pub tev_addr: u32,
+    pub tluttbl_addr: u32,
+    pub tluttbl_tluts: Vec<u32>,
 }
 
 /// The TObj pool and `tobj_head`.
@@ -243,7 +249,11 @@ impl TObjs {
 /// TObjs' identities are compared (the shadow list, [`assign_resources`]), which a pool keeps.
 #[doc(alias = "HSD_TObjAlloc")]
 pub fn alloc(tobjs: &mut TObjs) -> TObjId {
-    TObjId(tobjs.pool.alloc(TObj::default()))
+    let t = tobjs.pool.alloc(TObj::default());
+    tobjs
+        .pool
+        .set_addr(t, super::heap::class_alloc(super::heap::Class::TObj));
+    TObjId(t)
 }
 
 /// Returns a TObj to the pool without releasing what it holds (its AObj stays allocated),
@@ -251,6 +261,7 @@ pub fn alloc(tobjs: &mut TObjs) -> TObjId {
 #[doc(alias = "HSD_TObjFree")]
 pub fn free(tobjs: &mut TObjs, t: Option<TObjId>) {
     if let Some(t) = t {
+        super::heap::class_free(super::heap::Class::TObj, tobjs.pool.addr(t.0));
         tobjs.pool.free(t.0);
     }
 }
@@ -259,7 +270,31 @@ pub fn free(tobjs: &mut TObjs, t: Option<TObjId>) {
 #[doc(alias = "TObjRelease")]
 fn release(objs: &mut Objects, t: TObjId) {
     jobj::remove_aobj(objs, objs.tobjs[t].aobj);
+    let o = &objs.tobjs[t];
+    if o.tlut.is_some() {
+        super::heap::piece_free(o.tlut_addr, TLUT_SIZE);
+    }
+    if o.tev.is_some() {
+        super::heap::piece_free(o.tev_addr, TEV_SIZE);
+    }
+    free_tluttbl(&objs.tobjs[t]);
 }
+
+/// Frees a TObj's animation's palette copies, then their table.
+fn free_tluttbl(o: &TObj) {
+    if let Some(table) = o.tluttbl {
+        assert_eq!(o.tluttbl_tluts.len(), usize::from(table.len));
+        for &p in &o.tluttbl_tluts {
+            super::heap::piece_free(p, TLUT_SIZE);
+        }
+        super::heap::mem_free(o.tluttbl_addr);
+    }
+}
+
+/// `sizeof(HSD_Tlut)` and `sizeof(HSD_TObjTev)`, the pieces a TObj's palette and TEV stage
+/// take.
+const TLUT_SIZE: u32 = 0x10;
+const TEV_SIZE: u32 = 0x20;
 
 /// Frees a chain of TObjs, first first, `HSD_TObjRemoveAll`.
 #[doc(alias = "HSD_TObjRemoveAll")]
@@ -268,6 +303,7 @@ pub fn remove_all(objs: &mut Objects, t: Option<TObjId>) {
     while let Some(t) = cur {
         cur = objs.tobjs[t].next;
         release(objs, t);
+        super::heap::class_free(super::heap::Class::TObj, objs.tobjs.pool.addr(t.0));
         objs.tobjs.pool.free(t.0);
     }
 }
@@ -316,10 +352,16 @@ pub fn load_desc(tobjs: &mut TObjs, data: &Archives, desc: Option<DataRef>) -> O
     o.imagedesc = data.ptr(td.at(0x4C)).map(ImageRef::Data);
     o.tlut = data.ptr(td.at(0x50));
     o.lod = data.ptr(td.at(0x54));
+    if o.tlut.is_some() {
+        o.tlut_addr = super::heap::piece_alloc(TLUT_SIZE);
+    }
     o.aobj = None;
     o.flags |= MTX_DIRTY;
     o.tlut_no = 0xFF;
     o.tev = TObjTev::load(data, data.ptr(td.at(0x58)));
+    if o.tev.is_some() {
+        o.tev_addr = super::heap::piece_alloc(TEV_SIZE);
+    }
     Some(t)
 }
 
@@ -375,6 +417,7 @@ pub fn add_anim(objs: &mut Objects, data: &Archives, t: Option<TObjId>, texanim:
         jobj::remove_aobj(objs, Some(a));
     }
     let a = jobj::load_aobj(objs, data, data.ptr(ta.at(8)));
+    free_tluttbl(&objs.tobjs[t]);
     let o = &mut objs.tobjs[t];
     o.aobj = a;
     o.imagetbl = data.ptr(ta.at(0xC));
@@ -384,6 +427,16 @@ pub fn add_anim(objs: &mut Objects, data: &Archives, t: Option<TObjId>, texanim:
         table: data.ptr(ta.at(0x10)).expect("a TexAnim's palettes"),
         len,
     });
+    if len != 0 {
+        // The table, a null-ended list of the palettes' copies, then each copy.
+        o.tluttbl_addr = super::heap::mem_alloc((u32::from(len) + 1) * 4);
+        o.tluttbl_tluts.clear();
+        for _ in 0..len {
+            o.tluttbl_tluts.push(super::heap::piece_alloc(TLUT_SIZE));
+        }
+    } else {
+        o.tluttbl_tluts.clear();
+    }
     o.tlut_no = 0xFF;
 }
 

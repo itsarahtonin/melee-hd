@@ -45,6 +45,13 @@ pub struct Settings {
     /// order (`ft::Globals::address_seed`), where the frontend knows them: the oracle takes
     /// them from ssbm-rs's trace. Empty, the fighters' addresses are 0.
     pub fighter_addresses: Vec<u32>,
+    /// How the scene's heap is laid out, for the allocator model (`hsd::heap`), which gives
+    /// objects the addresses the original's allocators give them; none leaves it off.
+    pub heap: Option<crate::hsd::heap::Layout>,
+    /// What Slippi's playback codes allocate in the scene's heap for the replay's code list
+    /// (`Playback/Core/RestoreGameInfo.asm`): the list, and the backup of the instructions
+    /// its codes replace.
+    pub playback_heap: Option<playback::CodeListHeap>,
     /// What the save data has unlocked, and whether the unlock-all codes run: the stage's
     /// music choice reads it (`gm_80164ABC`), and on some stages that decides whether it
     /// draws from the random seed (see engine.md). Slippi Dolphin runs the codes.
@@ -140,6 +147,8 @@ impl Settings {
             ucf: ucf::Pads::default(),
             playback: false,
             fighter_addresses: Vec::new(),
+            heap: None,
+            playback_heap: None,
             unlocks: super::gm::Unlocks::slippi(),
             boot_audio: true,
             stadium_buffer: super::ft::data::MAIN_MEMORY,
@@ -167,6 +176,8 @@ impl Settings {
         s.rules = Rules::from_codes(&codes)?;
         s.ucf = ucf::Pads::from_codes(&codes).unwrap_or_default();
         s.playback = true;
+        s.heap = Some(crate::hsd::heap::Layout::slippi_playback());
+        s.playback_heap = Some(playback::CodeListHeap::of(&r.codes));
         Ok(s)
     }
 
@@ -195,6 +206,8 @@ impl Settings {
             playback: false,
             dsp: DspModel::Samples,
             fighter_addresses: Vec::new(),
+            heap: None,
+            playback_heap: None,
             unlocks: super::gm::Unlocks::slippi(),
             boot_audio: true,
             stadium_buffer: super::ft::data::MAIN_MEMORY,
@@ -278,6 +291,7 @@ impl Match {
         if settings.playback {
             game.playback = Some(Playback {
                 start_seed: settings.seed,
+                code_list_heap: settings.playback_heap,
                 ..Playback::default()
             });
             game.pads.playback = true;
@@ -427,6 +441,7 @@ impl Match {
             archive: rumble,
             offset,
         });
+        let lent = crate::hsd::heap::Lent::take(&mut m.game.objs.heap);
         let mut r = m.running();
         // The boot's last scene ends (its tick's end is where the boot state was taken), then
         // the VS mode's step before the match's scene (`gmVsMelee_EnterVs`, which a replay's
@@ -435,8 +450,13 @@ impl Match {
             r.game.audio.end_scene_loop(r.data);
         }
         r.load_announcer();
+        // The scene's heap, made anew (`lbHeap_80015900`, `HSD_CreateMainHeap`).
+        if let Some(layout) = &settings.heap {
+            crate::hsd::heap::start_scene_lent(layout);
+        }
         // `preloadState`: the scene's text arena (0x4800 bytes for a match).
         r.game.sis.init(0x4800);
+        crate::hsd::heap::with(|h| h.mem_alloc(0x4800));
         init_scene(&mut r);
         r.game.gm.on_frame = Some(CodeRef(vs::ON_FRAME));
         r.vs_on_enter(&settings.start, files);
@@ -458,6 +478,7 @@ impl Match {
         if r.game.audio.clock.is_some() {
             r.game.audio.start_scene_loop(r.data);
         }
+        lent.give_back(&mut m.game.objs.heap);
         // The song the stage started, for the device command queue to read: its first reads
         // finish in the scene's first ticks.
         let stem = m.game.audio.lb.stem;
@@ -511,6 +532,13 @@ impl Match {
     /// [`Match::step_replay`] up to the frame's display pass, where ssbm-rs's state traces
     /// sample the original: whether the pass is due, which [`Match::render`] runs.
     pub fn step_replay_tick(&mut self, source: &mut dyn playback::Source) -> (Frame, bool) {
+        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let out = self.step_replay_tick_lent(source);
+        lent.give_back(&mut self.game.objs.heap);
+        out
+    }
+
+    fn step_replay_tick_lent(&mut self, source: &mut dyn playback::Source) -> (Frame, bool) {
         let answers = Playback::answers(&self.game, source);
         self.game
             .playback
@@ -534,7 +562,9 @@ impl Match {
 
     /// The frame's display pass after [`Match::step_replay_tick`]: its draw commands.
     pub fn render(&mut self) -> Vec<crate::hsd::display::Draw> {
+        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
         scene::render_screen(&mut self.running());
+        lent.give_back(&mut self.game.objs.heap);
         std::mem::take(&mut self.game.objs.display.draws)
     }
 
@@ -554,7 +584,9 @@ impl Match {
 
     /// One frame: the controllers' poll queued, then one engine tick.
     pub fn step(&mut self, pads: PadData) -> Frame {
+        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
         let t = scene::step(&mut self.running(), pads, false);
+        lent.give_back(&mut self.game.objs.heap);
         Frame {
             events: std::mem::take(&mut self.game.events),
             pads: t.pads,
@@ -578,12 +610,25 @@ pub fn init_scene(r: &mut Running) {
             gekko_fp::frsp(60.0),
         )));
     g.world = crate::hsd::gobj::World::new();
+    // `HSD_GObjInit`'s lists: the process links' heads and tails, the render links' heads and
+    // tails, the process priorities' heads, the processes by link and priority, and the
+    // functions' table.
+    crate::hsd::heap::with(|h| {
+        for size in [0x100, 0x100, 0x104, 0x104, 0x64, 0x1900, 0x14] {
+            h.mem_alloc(size);
+        }
+    });
     let g = &mut *r.game;
     g.setup_scene_text(r.data);
     let gobj = g.world.create(14, 0, 0);
     g.world.setup_proc(gobj, CodeRef(vs::SCENE_PROC), 0);
     g.gm.scene_gobj = Some(gobj);
     g.reset_controller_map();
+    // Slippi's `Common/AllocSceneBuffer.asm` (at `gm_801A4BD4+0xE0`, in its playback set):
+    // a buffer for the scene, the last scene's freed with that scene's heap.
+    if g.playback.is_some() {
+        crate::hsd::heap::with(|h| h.mem_alloc(0x80));
+    }
     g.lb_reset_sound_objects();
 }
 

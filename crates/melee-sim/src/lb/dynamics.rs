@@ -99,7 +99,12 @@ impl Game {
     /// Allocates the links and the wind sources and empties them, `lb_8000FCDC`.
     #[doc(alias = "lb_8000FCDC")]
     pub fn alloc_dynamics(&mut self) {
-        // A fresh block from the scene's heap: what the reset leaves is zero (engine.md).
+        // A fresh block from the scene's heap: what the reset leaves is zero (engine.md). The
+        // links' block, then the wind sources'.
+        crate::hsd::heap::with(|h| {
+            h.mem_alloc(0xBE00);
+            h.mem_alloc(0x1C0);
+        });
         self.fighter_dynamics = Pool::default();
         for k in 0..LINKS {
             let id = self.fighter_dynamics.alloc(DynamicsData::default());

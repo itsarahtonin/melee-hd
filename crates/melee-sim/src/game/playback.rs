@@ -54,6 +54,47 @@ pub const SEED_PROC: u32 = 0x8016_E748 + 0x4B0;
 pub const RECORD_FRAME_START_PROC: u32 = 0x8016_E74C + 0x6E0;
 pub const RECORD_ITEMS_PROC: u32 = 0x8016_E74C + 0x788;
 
+/// What Slippi's playback codes allocate in the scene's heap for the replay's code list
+/// (`Playback/Core/RestoreGameInfo.asm`): a buffer for the list as the device sends it, and
+/// one for the instructions its codes replace (which `CleanDynamicGeckos.asm` puts back), 4
+/// bytes and then 8 more for each code that replaces some, besides what it replaces.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CodeListHeap {
+    pub list: u32,
+    pub backup: u32,
+}
+
+impl CodeListHeap {
+    /// The buffers for `codes`, walked as the codes' `ProcessCodeList` walks a list: a `C0`
+    /// or `C2` code takes its lines, a `06` its bytes rounded to 8, an `08` 16 bytes and
+    /// anything else 8, up to the `F0000000 00000000` that ends it; a `C2` and an `04`
+    /// replace 4 bytes, an `06` its length.
+    pub fn of(codes: &[u8]) -> CodeListHeap {
+        let word = |at: usize| u32::from_be_bytes(codes[at..at + 4].try_into().unwrap());
+        let (mut at, mut backup) = (0, 4u32);
+        while at + 8 <= codes.len() {
+            let (w0, w1) = (word(at), word(at + 4));
+            let (len, replaced) = match (w0 >> 24) & 0xFE {
+                0xC0 => (8 + w1 * 8, 0),
+                0xC2 => (8 + w1 * 8, 4),
+                0x04 => (8, 4),
+                0x06 => (8 + (w1.wrapping_add(7) & !7), w1),
+                0x08 => (16, 0),
+                _ if w0.rotate_left(4) & 0x0FFF_FFFF == 0xF && w1 == 0 => break,
+                _ => (8, 0),
+            };
+            if replaced != 0 {
+                backup += 8 + replaced;
+            }
+            at += len as usize;
+        }
+        CodeListHeap {
+            list: codes.len() as u32,
+            backup,
+        }
+    }
+}
+
 /// What a pre-frame update recorded for one character, as the frame response carries it.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct CharacterFrame {
@@ -195,6 +236,8 @@ pub struct Playback {
     pub frame: Frame,
     /// What the frontend answered for this tick, while it runs.
     pub answers: Option<Answers>,
+    /// What the codes allocate for the replay's code list, for the allocator model.
+    pub code_list_heap: Option<CodeListHeap>,
 }
 
 impl Playback {
@@ -369,13 +412,39 @@ impl Running<'_> {
     ///
     /// The Gecko codes at `0x8016E748` and `0x8016E74C`.
     pub fn playback_start(&mut self, seed: u32) {
+        use crate::hsd::heap;
         let g = &mut *self.game;
+        let codes = g.playback.as_ref().and_then(|p| p.code_list_heap);
+        // The game info's buffer, the device transfer's and the codes' state block, then the
+        // replay's code list and the backup of what its codes replace.
+        heap::with(|h| {
+            for size in [0x7AC, 0x221, 0x40] {
+                h.mem_alloc(size);
+            }
+            if let Some(c) = codes {
+                h.mem_alloc(c.list);
+                h.mem_alloc(c.backup);
+            }
+        });
         g.objs.rng.seed = seed;
-        for (proc, priority) in [
+        for (i, (proc, priority)) in [
             (SEED_PROC, 0),
             (RECORD_FRAME_START_PROC, 0),
             (RECORD_ITEMS_PROC, 15),
-        ] {
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if i == 1 {
+                // `Recording/SendGameInfo.asm`'s buffers: two it keeps, and the message it
+                // sends and frees.
+                heap::with(|h| {
+                    h.mem_alloc(5);
+                    h.mem_alloc(0x794);
+                    let message = h.mem_alloc(0x205);
+                    h.mem_free(message);
+                });
+            }
             let gobj = g.world.create(4, 7, 0);
             g.world.setup_proc(gobj, CodeRef(proc), priority);
         }

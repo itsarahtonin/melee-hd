@@ -50,6 +50,8 @@ impl Zako {
 /// 0x20 on, and one free; scanning on from slot 0.
 #[doc(alias = "grZakoGenerator_801CA67C")]
 pub fn new_slots(game: &mut Game) -> Vec<Slot> {
+    // The slots' block (`grZakoGenerator_Data`), which the scene's heap keeps.
+    crate::hsd::heap::mem_alloc(0x3CC);
     let mut slots: Vec<Slot> = (0..80)
         .map(|i| Slot {
             point: i + 0x20,

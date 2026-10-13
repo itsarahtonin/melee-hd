@@ -72,7 +72,26 @@ pub fn class_info(class: Class) -> u32 {
         Class::LObj => "hsdLObj",
         Class::WObj => "hsdWObj",
         Class::Fog => "hsdFog",
+        Class::FtJObj => "ftJObj",
+        Class::FtIntpJObj => "ftIntpJObj",
+        Class::FtPObj => "ftPObj",
+        Class::FtMObj => "ftMObj",
+        Class::GrMObj => "grMaterial_803E0A20",
+        Class::ItMObj => "it_mobj",
+        // `lbrefract.c`'s static `dobj_info` and `pobj_info`.
+        Class::RfDObj => return 0x803B_B218,
+        Class::RfPObj => return 0x803B_B25C,
     })
+}
+
+/// The class whose `HSD_ClassInfo` is at `info`, if the model follows it; HAL's own when
+/// it isn't one of them.
+pub fn class_of(info: u32, base: Class) -> Class {
+    Class::ALL
+        .iter()
+        .copied()
+        .find(|&c| class_info(c) == info)
+        .unwrap_or(base)
 }
 
 /// A free list linked through each object's first word, head first; reversed into the
@@ -92,13 +111,14 @@ fn free_list(m: &[u8], mut p: u32, limit: u32) -> Vec<u32> {
 }
 
 /// An OS heap's cells, by address, with their sizes.
-fn cells(m: &[u8], mut c: u32) -> std::collections::BTreeMap<u32, u32> {
-    let mut map = std::collections::BTreeMap::new();
+fn cells(m: &[u8], mut c: u32) -> Vec<(u32, u32)> {
+    let mut v = Vec::new();
     while c != 0 {
-        map.insert(c, w(m, c + 8));
+        v.push((c, w(m, c + 8)));
         c = w(m, c + 4);
     }
-    map
+    v.sort_unstable();
+    v
 }
 
 /// The main heap's allocators as memory holds them.
@@ -143,35 +163,30 @@ pub fn read(m: &[u8]) -> Heap {
             let d = alloc_data(k);
             let flags = w(m, d);
             let free = w(m, d + 12);
-            (
-                k,
-                ObjAlloc {
-                    num_limit_flag: flags & 0x8000_0000 != 0,
-                    heap_limit_flag: flags & 0x4000_0000 != 0,
-                    free: free_list(m, w(m, d + 4), free),
-                    used: w(m, d + 8),
-                    peak: w(m, d + 16),
-                    num_limit: w(m, d + 20),
-                    heap_limit_size: w(m, d + 24),
-                    heap_limit_num: w(m, d + 28),
-                    size: w(m, d + 32),
-                    align: w(m, d + 36),
-                },
-            )
+            ObjAlloc {
+                num_limit_flag: flags & 0x8000_0000 != 0,
+                heap_limit_flag: flags & 0x4000_0000 != 0,
+                free: free_list(m, w(m, d + 4), free),
+                used: w(m, d + 8),
+                peak: w(m, d + 16),
+                num_limit: w(m, d + 20),
+                heap_limit_size: w(m, d + 24),
+                heap_limit_num: w(m, d + 28),
+                size: w(m, d + 32),
+                align: w(m, d + 36),
+            }
         })
         .collect();
     let classes = Class::ALL
         .iter()
         .map(|&c| {
             let a = class_info(c);
-            (
-                c,
-                ClassInfo {
-                    obj_size: u32::from(h(m, a + 0x10)),
-                    nb_exist: w(m, a + 0x20),
-                    nb_peak: w(m, a + 0x24),
-                },
-            )
+            ClassInfo {
+                obj_size: u32::from(h(m, a + 0x10)),
+                nb_exist: w(m, a + 0x20),
+                nb_peak: w(m, a + 0x24),
+                initialized: w(m, a + 4) & 1 != 0,
+            }
         })
         .collect();
     Heap {
@@ -211,14 +226,14 @@ impl Comparer<'_> {
                 .os
                 .free
                 .iter()
-                .filter(|c| theirs.os.free.get(c.0) != Some(c.1))
+                .filter(|c| !theirs.os.free.contains(c))
                 .take(4)
                 .collect();
             let t: Vec<_> = theirs
                 .os
                 .free
                 .iter()
-                .filter(|c| ours.os.free.get(c.0) != Some(c.1))
+                .filter(|c| !ours.os.free.contains(c))
                 .take(4)
                 .collect();
             self.diff(
@@ -233,14 +248,14 @@ impl Comparer<'_> {
                 .os
                 .allocated
                 .iter()
-                .filter(|c| theirs.os.allocated.get(c.0) != Some(c.1))
+                .filter(|c| theirs.os.allocated.binary_search(c).is_err())
                 .take(6)
                 .collect();
             let t: Vec<_> = theirs
                 .os
                 .allocated
                 .iter()
-                .filter(|c| ours.os.allocated.get(c.0) != Some(c.1))
+                .filter(|c| ours.os.allocated.binary_search(c).is_err())
                 .take(6)
                 .collect();
             self.diff(
@@ -280,8 +295,7 @@ impl Comparer<'_> {
                 );
             }
         }
-        for (k, o) in &ours.allocs {
-            let t = &theirs.allocs[k];
+        for ((k, o), t) in Kind::ALL.iter().zip(&ours.allocs).zip(&theirs.allocs) {
             if o != t {
                 self.diff(
                     &format!("{p} pool {k:?}"),
@@ -305,13 +319,8 @@ impl Comparer<'_> {
                 );
             }
         }
-        for (c, o) in &ours.classes {
-            self.check(
-                &format!("{p} class {c:?}"),
-                "size and counts",
-                *o,
-                theirs.classes[c],
-            );
+        for ((c, o), t) in Class::ALL.iter().zip(&ours.classes).zip(&theirs.classes) {
+            self.check(&format!("{p} class {c:?}"), "size and counts", *o, *t);
         }
     }
 }

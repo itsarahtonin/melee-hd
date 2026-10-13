@@ -118,7 +118,9 @@ pub fn update(objs: &mut Objects, data: &Archives, w: WObjId, ty: u8, value: Val
 /// A new WObj, `HSD_WObjAlloc`.
 #[doc(alias = "HSD_WObjAlloc")]
 pub fn alloc(wobjs: &mut WObjs) -> WObjId {
-    WObjId(wobjs.alloc(WObj::default()))
+    let w = wobjs.alloc(WObj::default());
+    wobjs.set_addr(w, super::heap::class_alloc(super::heap::Class::WObj));
+    WObjId(w)
 }
 
 /// Sets a WObj up from a descriptor, its position and RObjs, `HSD_WObjInit` (`WObjLoad`
@@ -260,5 +262,6 @@ pub fn unref(objs: &mut Objects, w: Option<WObjId>) {
 pub fn delete(objs: &mut Objects, w: WObjId) {
     robj::remove_all(objs, objs.wobjs[w.0].robj);
     jobj::remove_aobj(objs, objs.wobjs[w.0].aobj);
+    super::heap::class_free(super::heap::Class::WObj, objs.wobjs.addr(w.0));
     objs.wobjs.free(w.0);
 }

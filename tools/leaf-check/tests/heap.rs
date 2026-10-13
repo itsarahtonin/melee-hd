@@ -30,6 +30,8 @@ enum Op {
     ObjFree(usize),
     ClassAlloc(Class),
     ClassFree(usize),
+    /// A live class object becomes one of the classes sharing its root (`hsdChangeClass`).
+    ChangeClass(usize, usize),
 }
 
 /// The pools the runs allocate from. Not the particles', generators' and effects': their
@@ -61,8 +63,8 @@ fn ops(seed: u32, mix: u32) -> Vec<Op> {
                 0 => r.below(2),
                 1 => 2 + r.below(2),
                 2 => 4 + r.below(2),
-                3 => 6 + r.below(2),
-                _ => r.below(8),
+                3 => 6 + r.below(3),
+                _ => r.below(9),
             };
             let pick = r.below(1 << 16) as usize;
             match k {
@@ -73,7 +75,8 @@ fn ops(seed: u32, mix: u32) -> Vec<Op> {
                 4 => Op::ObjAlloc(KINDS[r.below(11) as usize]),
                 5 => Op::ObjFree(pick),
                 6 => Op::ClassAlloc(Class::ALL[r.below(9) as usize]),
-                _ => Op::ClassFree(pick),
+                7 => Op::ClassFree(pick),
+                _ => Op::ChangeClass(pick, r.below(4) as usize),
             }
         })
         .collect()
@@ -131,6 +134,13 @@ fn ours(r: &mut melee_sim::game::state::Running, a: &Args) -> Vec<Out> {
                 let (p, c) = live.class_objs.remove(pick % live.class_objs.len());
                 h.class_free(c, p);
             }
+            Op::ChangeClass(pick, sel) if !live.class_objs.is_empty() => {
+                let i = pick % live.class_objs.len();
+                let c = live.class_objs[i].1;
+                let to = sharing_root(c, sel);
+                h.change_class(c, to);
+                live.class_objs[i].1 = to;
+            }
             _ => {}
         }
     }
@@ -185,10 +195,28 @@ fn theirs(ctx: &Ctx, call: &ssbm_rt::capture::Call) -> (u32, u32) {
                 ctx.write_u32(p, class_info(c));
                 fns::_hsdClassDestroy(ctx, handle(ctx, p));
             }
+            Op::ChangeClass(pick, sel) if !live.class_objs.is_empty() => {
+                let i = pick % live.class_objs.len();
+                let (p, c) = live.class_objs[i];
+                let to = sharing_root(c, sel);
+                ctx.write_u32(p, class_info(c));
+                fns::hsdChangeClass(ctx, handle(ctx, p), handle(ctx, class_info(to)));
+                live.class_objs[i].1 = to;
+            }
             _ => {}
         }
     }
     (0, 0)
+}
+
+/// One of the classes sharing `c`'s root, by `sel`.
+fn sharing_root(c: Class, sel: usize) -> Class {
+    let family: Vec<Class> = Class::ALL
+        .iter()
+        .copied()
+        .filter(|k| k.root() == c.root())
+        .collect();
+    family[sel % family.len()]
 }
 
 fn check(dirs: &'static [&'static str], base: &'static str, mix: u32) {

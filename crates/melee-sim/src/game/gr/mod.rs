@@ -72,6 +72,8 @@ pub struct StageArchive {
     pub map_head: Option<DataRef>,
     /// How it was loaded (`unk8`): 0 by the stage's own load, 1 by `grDatFiles_801C6478`.
     pub kind: u32,
+    /// The `HSD_Archive`'s address in the scene's heap, from the allocator model (0 without).
+    pub addr: u32,
 }
 
 /// A start hook (`Ground_801C10B8`'s node): a process `Ground_801C0FB8` calls with a stage

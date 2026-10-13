@@ -67,6 +67,9 @@ impl Running<'_> {
                 .fighter_dobj_lists
                 .alloc(vec![None; MAX_SECOND_DOBJS]),
         );
+        // The original's list comes from a pool of its own (`fighter_x2040_alloc_data`).
+        let addr = crate::hsd::heap::obj_alloc(crate::hsd::heap::Kind::FighterX2040);
+        self.game.fighter_dobj_lists.set_addr(list.0, addr);
         self.game.fighters[f.0].x203C.data = Some(list);
         pobj::set_default_class(&mut self.game.objs.pobjs, PObjClass::Fighter);
         let fp = &self.game.fighters[f.0];
@@ -131,7 +134,11 @@ impl Running<'_> {
                     );
                     self.game.fighter_dobj_lists[list.0][count] = Some(c);
                     if let Some(m) = self.game.objs.dobjs[c].mobj {
-                        self.game.objs.mobjs[m].class = MObjClass::Fighter;
+                        crate::hsd::mobj::change_class(
+                            &mut self.game.objs.mobjs,
+                            m,
+                            MObjClass::Fighter,
+                        );
                     }
                     cur = self.game.objs.dobjs[c].next;
                     count += 1;

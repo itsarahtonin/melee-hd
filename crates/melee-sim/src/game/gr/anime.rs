@@ -441,14 +441,19 @@ pub fn add_tree_anims(
 /// `grMaterial_801C8B68` with `arg1` 0 (Yoshi's Story's Shy Guys' paths are such joints).
 ///
 /// Nothing can read those entries: the table is looked up by descriptor (an animation's
-/// `obj_id`, a constraint's or instance's joint), and a joint's address is a block of the
-/// joints' `HSD_ObjAlloc` pool, never a descriptor in a loaded archive. Releasing the joint
-/// doesn't remove its entry either (`JObjRelease` removes its descriptor's), so the entry
-/// changes nothing the game reads, and the state leaves it out; the comparer counts only the
-/// entries keyed by descriptors. The walk stays to the original's shape.
+/// `obj_id`, a constraint's or instance's joint), and a joint's address is a memory piece,
+/// never a descriptor in a loaded archive. Releasing the joint doesn't remove its entry either
+/// (`JObjRelease` removes its descriptor's). But each takes an entry from the ID table's pool,
+/// so the table keeps them under the joint's address as the allocator model gives it
+/// ([`crate::hsd::id::address_key`]); the comparer counts only the entries keyed by
+/// descriptors.
 #[doc(alias = "grMaterial_801C8B68")]
-pub fn register_splines(objs: &Objects, j: Option<JObjId>) {
+pub fn register_splines(objs: &mut Objects, j: Option<JObjId>) {
     let Some(j) = j else { return };
+    if objs.jobjs[j].flags & jobj::SPLINE != 0 {
+        let key = crate::hsd::id::address_key(objs.jobjs.pool.addr(j.0));
+        objs.ids.insert(key, j);
+    }
     if objs.jobjs[j].flags & jobj::INSTANCE == 0 {
         let mut c = objs.jobjs[j].child;
         while let Some(ch) = c {
@@ -556,7 +561,8 @@ pub fn start(
     let Some(j) = nth_joint(game, gobj, part) else {
         return;
     };
-    register_splines(&game.objs, Some(root_of(&game.objs, j)));
+    let root = root_of(&game.objs, j);
+    register_splines(&mut game.objs, Some(root));
     start_part(
         game,
         data,
@@ -616,7 +622,7 @@ pub fn start_map(game: &mut Game, data: &Archives, gobj: GObjId, map_id: i32, an
     if joint.is_some() {
         reset_tree_srt(&mut game.objs, data, j, joint);
     }
-    register_splines(&game.objs, j);
+    register_splines(&mut game.objs, j);
     jobj::remove_anim_all(&mut game.objs, j);
     let pick = |which: u32| {
         entry

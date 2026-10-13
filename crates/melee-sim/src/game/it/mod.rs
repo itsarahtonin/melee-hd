@@ -38,8 +38,10 @@ use super::structs::{
     HSD_ObjAllocUnk, Item, Item_FtTrack, ItemLink, PokemonSelectionState, db_ItemAndPokemonMenu_t,
 };
 use crate::hsd::gobj::GObjId;
+use crate::hsd::heap::Kind;
 use crate::hsd::jobj::JObjId;
 use crate::hsd::pool::Pool;
+use crate::hsd::pool::kind as pool_kind;
 
 /// The user data kind of items (`GObj_InitUserData(gobj, 6, ...)`).
 pub const USER_DATA_ITEM: u8 = 6;
@@ -76,10 +78,10 @@ impl Default for BoneTable {
 #[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct Globals {
     /// The items' joint tables (`item_dynamic_bones_alloc_data`).
-    pub bone_tables: Pool<BoneTable>,
+    pub bone_tables: Pool<BoneTable, { pool_kind(Kind::ItemDynamicBones) }>,
     /// The links of items made of links (`item_link_alloc_data`), each the user data of a GObj
     /// of class 7: see [`link`].
-    pub links: Pool<ItemLink>,
+    pub links: Pool<ItemLink, { pool_kind(Kind::ItemLink) }>,
     /// How many items of each hold kind are out, and the limits (`Item_804A0C64`).
     pub counts: HSD_ObjAllocUnk,
     /// Items made so far (`it_804D6D10`), which numbers each new item (`Item::x1C`).

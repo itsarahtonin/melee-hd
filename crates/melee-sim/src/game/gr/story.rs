@@ -58,8 +58,8 @@ pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
 /// Creates one of the stage's objects and sets it up, `grStory_801E30D8`.
 #[doc(alias = "grStory_801E30D8")]
-pub fn create(r: &mut Running, map_id: i32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, callbacks(map_id))
+pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
+    setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
 }
 
 /// The stage's objects' setup functions and processes, by map id (`grSt_StageCallbacks`).
@@ -78,10 +78,10 @@ pub fn on_init(r: &mut Running) {
     r.game.gr.story_yakumono = r.game.stage_info.yakumono_param;
     r.game.stage_info.unk8C.b4 = false;
     r.game.stage_info.unk8C.b5 = true;
-    create(r, 0);
-    create(r, 1);
-    create(r, 3);
-    create(r, 2);
+    create(r, 0, setup::SETUP_FRAME);
+    create(r, 1, setup::SETUP_FRAME);
+    create(r, 3, setup::SETUP_FRAME);
+    create(r, 2, setup::SETUP_FRAME);
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
 }

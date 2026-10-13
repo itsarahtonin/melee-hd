@@ -79,10 +79,16 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 // it (no VS match makes maps 5 to 10).
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
+/// Where the reflections', the platforms' and the stars' calls put their scale joints'
+/// descriptors on the stack (`setup::SETUP_FRAME`).
+const REFLECTIONS_FRAME: u32 = 0x804E_E970;
+const PLATFORM_FRAME: u32 = 0x804E_E918;
+const STARS_FRAME: u32 = 0x804E_E988;
+
 /// Creates one of the stage's objects and sets it up, `grIzumi_801CBCE8`.
 #[doc(alias = "grIzumi_801CBCE8")]
-pub fn create(r: &mut Running, map_id: i32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, callbacks(map_id))
+pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
+    setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
 }
 
 /// The stage's objects' setup functions and processes, by map id (`grIz_StageCallbacks`).
@@ -101,9 +107,9 @@ pub fn on_init(r: &mut Running) {
     r.game.gr.izumi_yakumono = r.game.stage_info.yakumono_param;
     r.game.stage_info.unk8C.b4 = false;
     r.game.stage_info.unk8C.b5 = true;
-    create(r, 0);
-    create(r, 1);
-    create(r, MAP_FOUNTAIN);
+    create(r, 0, setup::SETUP_FRAME);
+    create(r, 1, setup::SETUP_FRAME);
+    create(r, MAP_FOUNTAIN, setup::SETUP_FRAME);
     check_archive(r.game, r.data, 3);
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
@@ -205,7 +211,7 @@ pub fn init_fountain(r: &mut Running, gobj: GObjId) {
     let s = reg(scale(r.game));
     let m = |v: i32| mem(fp::fmuls(fp::frsp(f64::from(v)), s));
     grlib::generator_at(r.game, r.data, 0x7536, 0x1E, Vec3::new(m(0), m(1), m(-27)));
-    let refl = create(r, MAP_REFLECTIONS);
+    let refl = create(r, MAP_REFLECTIONS, REFLECTIONS_FRAME);
     r.game.grounds[g.0].u.izumi().xCC = refl;
     let rg = ground_of(r.game, refl.expect("grizumi.c: the reflections"));
     r.game.grounds[rg.0].x18 = Some(camera);
@@ -267,7 +273,7 @@ pub fn create_stars(r: &mut Running) {
         .public("GrdIzumiStar_TopN_joint")
         .map(|offset| DataRef { archive, offset });
     let Some(joint) = joint else { return };
-    let Some(sub) = setup::stage_gobj_from_joint(r, joint, -1) else {
+    let Some(sub) = setup::stage_gobj_from_joint(r, joint, -1, STARS_FRAME) else {
         return;
     };
     let g = ground_of(r.game, sub);
@@ -542,7 +548,7 @@ pub fn create_platform(
     line: i32,
     column: Option<JObjId>,
 ) -> GObjId {
-    let gobj = create(r, MAP_PLATFORM).expect("grizumi.c: oioi...");
+    let gobj = create(r, MAP_PLATFORM, PLATFORM_FRAME).expect("grizumi.c: oioi...");
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj).expect("grizumi.c: oioi...");
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate = pos);
@@ -581,8 +587,10 @@ pub struct Reflection {
     /// The archive's `GrdIzumi_cd_wt_GrdIzumiDummy1_1_image_desc`.
     pub image: Option<DataRef>,
     /// What the stage wrote over that descriptor: an 80x60 image of format 4 in the preloaded
-    /// buffer 2001 (`lb_800121FC`).
+    /// buffer 2001, or with nothing preloaded, a buffer of the scene's heap (`lb_800121FC`).
     pub desc: crate::game::structs::HSD_ImageDesc,
+    /// Where the original's heap put this user data (`docs/engine.md`).
+    pub addr: u32,
 }
 
 /// The stage's state besides its objects'.
@@ -622,6 +630,7 @@ pub fn create_reflection(r: &mut Running) -> GObjId {
     r.game
         .world
         .setup_gx_link_max(gobj, CodeRef(RENDER_REFLECTION), 2, true);
+    let addr = crate::hsd::heap::mem_alloc(0x34);
     r.game
         .world
         .init_user_data(gobj, 3, UserData::IzumiReflection);
@@ -636,10 +645,14 @@ pub fn create_reflection(r: &mut Running) -> GObjId {
         image.is_some(),
         "not found mirror image desc! (GrdIzumi_cd_wt_GrdIzumiDummy1_1_image_desc)"
     );
+    // `lb_800121FC`'s buffer: the preload cache holds none in the match a replay's playback
+    // boots into, so the scene's heap gives it.
+    crate::hsd::heap::mem_alloc(crate::hsd::heap::tex_buffer_size(80, 60, 4).next_multiple_of(32));
     r.game.gr.izumi.reflection = Some(Reflection {
         texture_matrix: None,
         image,
         desc: super::stadium::screen_image(80, 60, 4),
+        addr,
     });
     gobj
 }

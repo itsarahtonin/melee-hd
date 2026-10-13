@@ -159,6 +159,8 @@ impl Running<'_> {
         let bones = vec![FighterBone::default(); n as usize];
         let parts = PartsId(self.game.fighter_parts.alloc(bones));
         let list = DObjListId(self.game.fighter_dobj_lists.alloc(vec![None; MAX_DOBJS]));
+        let addr = crate::hsd::heap::obj_alloc(crate::hsd::heap::Kind::FighterDObjList);
+        self.game.fighter_dobj_lists.set_addr(list.0, addr);
         let fp = &mut self.game.fighters[f.0];
         fp.parts = Some(parts);
         fp.dobj_list.data = Some(list);
@@ -218,7 +220,11 @@ impl Running<'_> {
                 );
                 self.game.fighter_dobj_lists[list][count] = Some(dobj);
                 if let Some(m) = self.game.objs.dobjs[dobj].mobj {
-                    self.game.objs.mobjs[m].class = MObjClass::Fighter;
+                    crate::hsd::mobj::change_class(
+                        &mut self.game.objs.mobjs,
+                        m,
+                        MObjClass::Fighter,
+                    );
                 }
                 d = self.game.objs.dobjs[dobj].next;
                 own += 1;

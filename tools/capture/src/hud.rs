@@ -193,6 +193,10 @@ impl Importer<'_> {
             shown: core::array::from_fn(|i| m.b(NAMETAG_SHOWN + i as u32)),
             text: self.import_handle("TextId", m.w(NAMETAG_TEXT)).map(TextId),
             canvas: m.w(NAMETAG_CANVAS) as i32,
+            user_data_addrs: core::array::from_fn(|i| match m.w(NAMETAG_GOBJS + 4 * i as u32) {
+                0 => 0,
+                g => m.w(g + 0x2C),
+            }),
         };
         let hazard = Hazard {
             gobj: self.gobj_at(m.w(HAZARD)),

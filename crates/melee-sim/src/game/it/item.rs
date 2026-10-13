@@ -440,7 +440,7 @@ pub fn make_model(r: &mut Running, gobj: GObjId) {
     let j = match joint {
         Some(_) => jobj::load_joint(&mut r.game.objs, r.data, joint).expect("a loaded joint"),
         None => {
-            let j = jobj::alloc(&mut r.game.objs.jobjs);
+            let j = jobj::alloc(&mut r.game.objs);
             r.game.objs.jobjs[j].mtx = crate::mtx::Mtx34::IDENTITY;
             r.game.objs.jobjs[j].scl = None;
             j
@@ -482,7 +482,11 @@ pub fn set_material_class(game: &mut Game, gobj: GObjId) {
         let mut d = jobj::get_dobj(&game.objs.jobjs, Some(j));
         while let Some(dobj) = d {
             if let Some(m) = game.objs.dobjs[dobj].mobj {
-                game.objs.mobjs[m].class = crate::hsd::mobj::MObjClass::Item;
+                crate::hsd::mobj::change_class(
+                    &mut game.objs.mobjs,
+                    m,
+                    crate::hsd::mobj::MObjClass::Item,
+                );
             }
             d = game.objs.dobjs[dobj].next;
         }

@@ -189,7 +189,7 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
     v.phase = 0;
     v.b26 = false;
     v.b27 = true;
-    set_phase(r, gobj, 1);
+    set_phase(r, gobj, 1, SETUP_PIECES_FRAME);
     let gp = &mut r.game.grounds[g.0];
     gp.x11_flags.b012 = 1;
     gp.u.map().b1 = false;
@@ -214,7 +214,7 @@ pub fn proc_main(r: &mut Running, gobj: GObjId) {
         if r.game.grounds[g.0].u.map().b26 {
             let next = next_phase(r, gobj);
             if next != 0 {
-                set_phase(r, gobj, next);
+                set_phase(r, gobj, next, CYCLE_PIECES_FRAME);
             }
         }
     }
@@ -361,8 +361,8 @@ fn pieces_anim(r: &mut Running, gobj: GObjId, n: i32) {
 }
 
 /// Creates piece `i` under the main object and starts its opening and first scene.
-fn create_piece(r: &mut Running, gobj: GObjId, i: usize) -> GObjId {
-    let piece = create(r, PIECES[i][0].into()).expect("grlast.c: lv_gobj");
+fn create_piece(r: &mut Running, gobj: GObjId, i: usize, frame: u32) -> GObjId {
+    let piece = create(r, PIECES[i][0].into(), frame).expect("grlast.c: lv_gobj");
     r.game.world.gx_relink_before(piece, gobj);
     if PIECES[i][2] != -1 {
         let (part, anim) = (PIECES[i][2].into(), PIECES[i][3].into());
@@ -373,7 +373,7 @@ fn create_piece(r: &mut Running, gobj: GObjId, i: usize) -> GObjId {
 
 /// Enters phase `phase`, `grLast_8021B920`: each scene's animations, pieces and colors.
 #[doc(alias = "grLast_8021B920")]
-pub fn set_phase(r: &mut Running, gobj: GObjId, phase: i32) {
+pub fn set_phase(r: &mut Running, gobj: GObjId, phase: i32, frame: u32) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.map();
     v.xC8 = 0.0;
@@ -382,7 +382,7 @@ pub fn set_phase(r: &mut Running, gobj: GObjId, phase: i32) {
         1 => {
             for i in 0..5 {
                 if r.game.grounds[g.0].u.map().lv_gobj[i].is_none() {
-                    let piece = create_piece(r, gobj, i);
+                    let piece = create_piece(r, gobj, i, frame);
                     r.game.grounds[g.0].u.map().lv_gobj[i] = Some(piece);
                     piece_anim(r, piece, i, 0);
                 }
@@ -446,7 +446,7 @@ pub fn set_phase(r: &mut Running, gobj: GObjId, phase: i32) {
                 let piece = r.game.grounds[g.0].u.map().lv_gobj[i].take();
                 setup::destroy(r, piece);
             }
-            let piece = create_piece(r, gobj, 5);
+            let piece = create_piece(r, gobj, 5, frame);
             r.game.grounds[g.0].u.map().lv_gobj[5] = Some(piece);
             piece_anim(r, piece, 5, 0);
             piece_script(r, piece, 4);
@@ -464,7 +464,7 @@ pub fn set_phase(r: &mut Running, gobj: GObjId, phase: i32) {
         }
         17 => {
             for i in 0..5 {
-                let piece = create_piece(r, gobj, i);
+                let piece = create_piece(r, gobj, i, frame);
                 r.game.grounds[g.0].u.map().lv_gobj[i] = Some(piece);
                 piece_anim(r, piece, i, 0);
                 piece_script(r, piece, 0xC);
@@ -716,7 +716,7 @@ pub fn on_init(r: &mut Running) {
     r.game.stage_info.unk8C.b4 = true;
     r.game.stage_info.unk8C.b5 = true;
     for map_id in 0..4 {
-        create(r, map_id);
+        create(r, map_id, setup::SETUP_FRAME);
     }
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
@@ -740,9 +740,15 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
     &LAST_CALLBACKS[map_id as usize]
 }
 
+/// Where the background pieces' calls put their scale joints' descriptors on the stack
+/// (`setup::SETUP_FRAME`): the cycle's first phase starts from the setup's frame, the later
+/// ones from its process's.
+const SETUP_PIECES_FRAME: u32 = 0x804E_E948;
+pub const CYCLE_PIECES_FRAME: u32 = 0x804E_E9A8;
+
 /// Creates one of the stage's objects and sets it up, `grLast_8021A7F4`: its render callback,
 /// destroy callback, setup and process.
 #[doc(alias = "grLast_8021A7F4")]
-pub fn create(r: &mut Running, map_id: i32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, callbacks(map_id))
+pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
+    setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
 }
