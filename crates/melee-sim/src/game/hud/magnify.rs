@@ -300,10 +300,12 @@ impl Running<'_> {
             }
             self.game.objs.display.draws.push(Draw::Erase);
             self.game.world.rendering = Some(fg);
+            display::rendering(&mut self.game.objs, Some(fg));
             for pass in 0..3 {
                 self.draw_magnified(fg, pass);
             }
             self.game.world.rendering = None;
+            display::rendering(&mut self.game.objs, None);
             self.game
                 .objs
                 .display

@@ -13,6 +13,7 @@ pub mod devcom;
 pub mod driver;
 pub mod dsp;
 pub mod heap;
+pub mod mix;
 pub mod stream;
 pub mod synth;
 
@@ -45,6 +46,11 @@ pub struct Audio {
     /// When audio frames run; none where the state came without a timeline (a single
     /// captured call), and no frame runs then.
     pub clock: Option<clock::Clock>,
+    /// Presentation output, not state: when the presentation turns it on, each frame's mix
+    /// and each ARAM write is recorded here for it to mix (`mix::MixLog`). A clone starts
+    /// without it and a restore leaves it alone.
+    #[clone_from(keep)]
+    pub mix: Option<mix::MixLog>,
 }
 
 impl Audio {
@@ -54,9 +60,13 @@ impl Audio {
     /// cost. The aux effects' processing and the DSP's mix are presentation.
     #[doc(alias = "__AXOutNewFrame")]
     pub fn ax_frame(&mut self, data: &Archives) {
+        let pre = self.mix.is_some().then(|| mix::PreSync::of(&self.ax));
         self.ax.sync_pbs(0);
         // `__AXGetCommandListAddress`: the list the DSP is handed, and the next one.
         self.ax.list_position ^= 1;
+        if let (Some(log), Some(pre)) = (&mut self.mix, &pre) {
+            log.push_frame(&self.ax, pre);
+        }
         // The DSP runs the command list as the mail hands it over.
         if self.dsp == dsp::DspModel::Samples {
             self.ax.dsp_frame();
@@ -68,6 +78,9 @@ impl Audio {
             Some(o) => panic!("AX user callback {:#010x} isn't ported", o.0),
         }
         self.ax.next_frame();
+        if let Some(log) = &mut self.mix {
+            log.next_list(&self.ax);
+        }
         self.ax.out_frame = (self.ax.out_frame + 1) & 1;
     }
 

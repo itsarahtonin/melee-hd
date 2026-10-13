@@ -20,6 +20,10 @@ ssbm-game = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-b
 ssbm-rt = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
 ssbm-disc = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
 ssbm-types = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
+# The player's presentation reuses Stage 1's GPU command model, renderer and AX mixer.
+ssbm-gx = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
+ssbm-render = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
+ssbm-ax = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
 
 # The release build optimized as one program, for timing and shipping: about 8% faster than
 # release on the native benchmark (docs/performance.md), and slower to build, so checks and

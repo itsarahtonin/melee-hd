@@ -49,8 +49,10 @@ impl Running<'_> {
                         while let Some(c) = cur {
                             if let Some(cb) = self.game.world.gobj(c).render {
                                 let saved = self.game.world.rendering.replace(c);
+                                display::rendering(&mut self.game.objs, Some(c));
                                 code::run_render(self, c, cb, pass);
                                 self.game.world.rendering = saved;
+                                display::rendering(&mut self.game.objs, saved);
                             }
                             cur = self.game.world.gobj(c).next_gx;
                         }

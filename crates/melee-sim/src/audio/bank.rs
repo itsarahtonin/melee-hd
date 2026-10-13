@@ -245,6 +245,12 @@ impl Audio {
                 aram: base_aram as u32,
                 size: b.load_buf[1],
             });
+            // The whole group for the mix log, which may have missed its first reads.
+            let from = super::mix::AramSource::Disc {
+                entrynum: load.entrynum,
+                offset: (header + 0x10).next_multiple_of(32),
+            };
+            self.log_aram(base_aram as u32, b.load_buf[1], from);
             let shift = (base_aram as u32).wrapping_mul(2);
             let mut entry = b.block + NODE;
             let mut cursor = b.block + (dnw & !3);

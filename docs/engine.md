@@ -143,7 +143,7 @@ That bug never reached the silent Final Destination and Battlefield timelines th
 
 The VS scene's pause menu holds the music and the match's channels through `lbAudioAx_80024E84`, and its start and end reset the library's mix.
 
-**The aux effects** (reverb and the like, set up by `HSD_AudioSFXSetupAux`) are presentation. Their state lives in a heap of their own, and only the aux callbacks read it. Those callbacks touch only the mix buffers, so the game reads nothing they write. The driver's aux flags are state.
+**The aux effects** (reverb and the like, set up by `HSD_AudioSFXSetupAux`) are presentation. Their state lives in a heap of their own, and only the aux callbacks read it. Those callbacks touch only the mix buffers, so the game reads nothing they write. The driver's aux flags are state. `melee-audio` mixes the voices and runs the effects from the mix log (`audio::mix`), presentation output that records what the DSP mixes each frame and every write into ARAM when the presentation turns it on (`docs/player.md`).
 
 **Where game logic reads audio.** Almost every audio call game code makes is fire-and-forget: handles are stored only to stop, pan or bend their sounds later. Game code calls the driver directly in one place only, the reset path's `HSD_DevComIsBusy`. Three paths make the game depend on *when a sound ends*, which is what makes voice lifetimes, the clock and the DSP model simulation:
 
