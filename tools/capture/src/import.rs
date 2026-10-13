@@ -451,6 +451,13 @@ impl<'a> Importer<'a> {
                     let which = crate::stadium::screen_of_render(self.u32(g + 0x1C)).unwrap();
                     Some(crate::stadium::import_screen(self, which, ud))
                 }
+                // Fountain of Dreams' reflection camera: kind 3, freed with `HSD_Free`.
+                3 if ud != 0
+                    && release == crate::stadium::HSD_FREE
+                    && crate::izumi::is_reflection(self.u32(g + 0x1C)) =>
+                {
+                    Some(crate::izumi::import_reflection(self, ud))
+                }
                 3 if ud != 0 => Some(UserData::Ground(self.ground(ud))),
                 bgflash::USER_DATA_KIND if ud != 0 && release == bgflash::FREE => {
                     let mem = Mem {

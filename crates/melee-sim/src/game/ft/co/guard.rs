@@ -622,6 +622,7 @@ impl Running<'_> {
 
     /// The shield stun's hitlag hook, `ftCo_80093240`: smash DI along the floor.
     #[doc(alias = "ftCo_80093240")]
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn guard_set_off_hitlag(&mut self, gobj: GObjId) {
         let c = self.common();
         let (min, window, scale, x4c0) = (
@@ -635,7 +636,13 @@ impl Running<'_> {
             return;
         }
         let x = reg(fp.input.lstick[0].x);
-        if abs(x) >= min && i32::from(fp.active_timer.lstick.x) < window {
+        // NaN fails the original's `cror` test too.
+        if !(abs(x) >= min) {
+            return;
+        }
+        let fresh = i32::from(fp.active_timer.lstick.x) < window;
+        if fresh || self.game.rules.ucf && self.ucf_shield_sdi(gobj, min) {
+            let fp = self.game.fighter_mut(gobj);
             let s = fp::fmuls(x4c0, fp::fmuls(x, scale));
             let (nx, ny) = (fp.coll_data.floor.normal.x, fp.coll_data.floor.normal.y);
             fp.cur_pos.x = mem(fp::fmadds(reg(ny), s, reg(fp.cur_pos.x)));

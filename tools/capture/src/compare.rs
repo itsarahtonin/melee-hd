@@ -378,6 +378,7 @@ impl<'a> Comparer<'a> {
             Some(UserData::StadiumScreen(which)) => {
                 crate::stadium::compare_screen(self, path, which, t)
             }
+            Some(UserData::IzumiReflection) => crate::izumi::compare_reflection(self, path, t),
             None => {
                 // Kindless user data ours lacks.
                 let ud = self.u32(t + 0x2C);

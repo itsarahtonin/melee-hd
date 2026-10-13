@@ -3,7 +3,9 @@
 //! which [`code`](super::super::code) dispatches.
 
 use super::datfiles::GrJoint;
-use super::{GR_KIND_BATTLE, GR_KIND_LAST, GR_KIND_OLDPUPUPU, GR_KIND_PSTADIUM, GR_KIND_STORY};
+use super::{
+    GR_KIND_BATTLE, GR_KIND_IZUMI, GR_KIND_LAST, GR_KIND_OLDPUPUPU, GR_KIND_PSTADIUM, GR_KIND_STORY,
+};
 
 /// `StageCallbacks`: one stage object's functions, by map id.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -252,6 +254,50 @@ pub const OLDPUPUPU: StageData = StageData {
     joints: &[],
 };
 
+/// `grIz_StageCallbacks`. Map 3 is the fountain, map 4 its platforms, map 2 their reflections.
+pub const IZUMI_CALLBACKS: [StageCallbacks; 11] = [
+    cb(0x801C_BDD4, 0x801C_BE00, 0x801C_BE08, 0x801C_BE0C, 0),
+    cb(0x801C_BE10, 0x801C_BE54, 0x801C_BE5C, 0x801C_BE60, 0),
+    cb(0x801C_CA64, 0x801C_CB08, 0x801C_CB10, 0x801C_CB14, 0),
+    cb(
+        0x801C_BE64,
+        0x801C_C0CC,
+        0x801C_C0D4,
+        0x801C_C338,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x801C_C33C, 0x801C_C350, 0x801C_C358, 0x801C_CA10, 0),
+    cb(0x801C_CA14, 0x801C_CA54, 0x801C_CA5C, 0x801C_CA60, 0),
+    cb(0x801C_CA14, 0x801C_CA54, 0x801C_CA5C, 0x801C_CA60, 0),
+    cb(0x801C_CA14, 0x801C_CA54, 0x801C_CA5C, 0x801C_CA60, 0),
+    cb(0x801C_CA14, 0x801C_CA54, 0x801C_CA5C, 0x801C_CA60, 0),
+    cb(0x801C_CA14, 0x801C_CA54, 0x801C_CA5C, 0x801C_CA60, 0),
+    cb(0x801C_CA14, 0x801C_CA54, 0x801C_CA5C, 0x801C_CA60, 0),
+];
+
+/// `grIz_803E0D60`: the platforms' collision joints, which the stage binds itself.
+pub const IZUMI_JOINTS: [GrJoint; 3] = [
+    GrJoint { x: 0, y: 3, z: 1 },
+    GrJoint { x: 1, y: 3, z: 2 },
+    GrJoint { x: 2, y: 3, z: 3 },
+];
+
+/// `grIz_StageData`.
+pub const IZUMI: StageData = StageData {
+    grkind: GR_KIND_IZUMI,
+    callbacks: &IZUMI_CALLBACKS,
+    file: Some("/GrIz.dat"),
+    on_init: 0x801C_BB88,
+    on_demo_init: 0x801C_BB84,
+    on_load: 0x801C_BC0C,
+    on_start: 0x801C_BCBC,
+    callback4: 0x801C_BCE0,
+    on_touch_line: 0x801C_D278,
+    on_check_shadow_render: 0x801C_D280,
+    flags2: 1,
+    joints: &IZUMI_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -260,6 +306,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_PSTADIUM => &STADIUM,
         GR_KIND_STORY => &STORY,
         GR_KIND_OLDPUPUPU => &OLDPUPUPU,
+        GR_KIND_IZUMI => &IZUMI,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

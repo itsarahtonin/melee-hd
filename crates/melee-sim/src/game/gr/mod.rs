@@ -12,6 +12,7 @@ pub mod display;
 pub mod dynamic_attr;
 pub mod grlib;
 pub mod ground;
+pub mod izumi;
 pub mod last;
 pub mod material;
 pub mod oldpupupu;
@@ -39,6 +40,8 @@ use crate::hsd::pool::Pool;
 pub const GR_KIND_PSTADIUM: i32 = 16;
 /// `Gr_Kind_Story`, Yoshi's Story.
 pub const GR_KIND_STORY: i32 = 10;
+/// `Gr_Kind_Izumi`, Fountain of Dreams.
+pub const GR_KIND_IZUMI: i32 = 12;
 /// `Gr_Kind_OldPupupu`, Dream Land (N64).
 pub const GR_KIND_OLDPUPUPU: i32 = 28;
 /// `Gr_Kind_Battle`, Battlefield.
@@ -133,6 +136,10 @@ pub struct Globals {
     pub battle_yakumono: Option<DataRef>,
     /// Yoshi's Story's `yakumono_param` (`grStory_YakumonoParam`).
     pub story_yakumono: Option<DataRef>,
+    /// Fountain of Dreams' `yakumono_param` (`grIzumi_YakumonoParam`).
+    pub izumi_yakumono: Option<DataRef>,
+    /// Fountain of Dreams' state besides its objects'.
+    pub izumi: izumi::Globals,
     /// Dream Land's `yakumono_param` (`grOldpupupu_YakumonoParam`).
     pub oldpupupu_yakumono: Option<DataRef>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
@@ -193,6 +200,9 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_PSTADIUM, 2) => VarsKind::Stadium,
         (GR_KIND_PSTADIUM, 3..=5) => VarsKind::StadiumBits,
         (GR_KIND_PSTADIUM, 6 | 9) => VarsKind::StadiumPiece,
+        (GR_KIND_IZUMI, 2) => VarsKind::Izumi2,
+        (GR_KIND_IZUMI, 3) => VarsKind::Izumi,
+        (GR_KIND_IZUMI, 4) => VarsKind::Izumi3,
         (GR_KIND_OLDPUPUPU, 1 | 7) => VarsKind::OldPupupu,
         (GR_KIND_OLDPUPUPU, 8) => VarsKind::OldPupupu2,
         (GR_KIND_STORY, 2) => VarsKind::StoryRandall,

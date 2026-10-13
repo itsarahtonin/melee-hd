@@ -217,6 +217,21 @@ impl Running<'_> {
         }
     }
 
+    /// UCF's shield SDI (`ftCo_80093240+0x54`, past the stick's timer against `ftCommonData`
+    /// x4B4): a stick held too long still shield-SDIs if it wasn't held before (sticky
+    /// timer of 1 or less), was inside the threshold `min` on x the frame before, and the raw
+    /// stick travelled more than 62 along x since two frames ago.
+    ///
+    /// The Gecko code at `0x80093294`.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn ucf_shield_sdi(&self, gobj: GObjId, min: f64) -> bool {
+        let fp = self.game.fighter(gobj);
+        // The code compares the last frame's x itself, not its magnitude; NaN goes on.
+        fp.active_sticky.lstick.x <= 1
+            && !(reg(fp.input.lstick[1].x) >= min)
+            && self.game.ucf.0[usize::from(fp.pad_port)].travel().0 > 3844
+    }
+
     /// UCF's SDI (`ftCo_Damage_OnEveryHitlag+0x5C`): with the stick held past the SDI window
     /// on its y axis, a flick still counts if the stick left the dead zone this frame and the
     /// raw stick travelled more than 62 since two frames ago, unless both axes were already
