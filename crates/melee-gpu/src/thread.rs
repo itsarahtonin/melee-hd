@@ -286,7 +286,17 @@ impl Sink for Threaded {
             self.frames += 1;
             let mut done = self.done.frames.lock().unwrap();
             while *done + self.ahead < self.frames {
-                done = self.done.cond.wait(done).unwrap();
+                // A render thread that stopped (it panicked) never finishes the frame.
+                assert!(
+                    !self.render.as_ref().is_some_and(|t| t.is_finished()),
+                    "the render thread stopped"
+                );
+                done = self
+                    .done
+                    .cond
+                    .wait_timeout(done, std::time::Duration::from_millis(100))
+                    .unwrap()
+                    .0;
             }
         }
     }

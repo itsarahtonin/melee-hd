@@ -143,7 +143,7 @@ The GX stream takes about 0.75 ms of that and the simulation about 0.7 ms a tick
 
 ## Open issues
 
-- **Name plates.** Slippi draws each player's display name under the damage counters; melee-sim doesn't run that code, so a Slippi replay's frames miss them. Every other draw of those frames matches.
+- **Name plates.** Slippi's playback draws each player's display name under the damage counters: its code set enables `Optional: Show Player Names` by default (a `C2` code at `0x8016E9B4`, after the VS scene's entry, `Playback/Show Player Names/InitInGame.asm`). The code makes a GObj of its own with a joint loaded from a HUD archive and a render callback, and the names' text, so it adds objects to the game's state; the oracle's traces leave it off (`SLIPPI_PLAYER_NAMES=0`) and melee-sim doesn't run it, so a Slippi replay's frames miss the plates. Every other draw of those frames matches. Drawing them without touching the simulation needs the presentation to draw HSD objects the simulation doesn't own (the plate's joint and its text), which melee-render can't yet: it draws only from the display pass's commands over the game's objects.
 - **Refraction images.** Draws that sample the refraction copies (`ImageRef::Refract`, `ImageRef::RefractFrame`) aren't drawn exactly yet.
 - **Shape animations** aren't drawn; no checked frame uses one.
 - **The particle pass's boundaries** are inferred from the display commands (runs of `Draw::Particles`), and the magnifier bubble's erase color is an average of the colors the original reads; both match every checked frame.
