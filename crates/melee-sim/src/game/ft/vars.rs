@@ -12,6 +12,9 @@
 
 use std::ops::{Index, IndexMut, Range, RangeFrom, RangeFull, RangeTo};
 
+use melee_data::archive::DataRef;
+
+use crate::game::handles::DObjListId;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -21,6 +24,10 @@ use crate::hsd::jobj::JObjId;
 pub enum Handle {
     GObj(GObjId),
     JObj(JObjId),
+    /// A DObj list (Jigglypuff's hat's, `ftPurin_FighterVars::x2240.data`).
+    DObjList(DObjListId),
+    /// A pointer into loaded data (her hat's visibility lookups, `x2248.xC`).
+    Data(DataRef),
 }
 
 /// Where Fox's and Falco's blaster (`ftFox_FighterVars::x222C_blasterGObj`) is in `u`.
@@ -146,6 +153,49 @@ impl<const N: usize> Vars<N> {
         self.set_handle_at(off, j.map(Handle::JObj));
     }
 
+    /// The DObj list pointer at `off`: the handle stored there, or none for a null word.
+    pub fn dobj_list_at(&self, off: usize) -> Option<DObjListId> {
+        match self.handle(off) {
+            Some(Handle::DObjList(l)) => Some(l),
+            Some(h) => panic!("+{off:#x} holds {h:?}, not a DObj list"),
+            None => {
+                self.null_at(off, "a DObj list");
+                None
+            }
+        }
+    }
+
+    /// Stores a DObj list pointer at `off` (null clears the word).
+    pub fn set_dobj_list_at(&mut self, off: usize, l: Option<DObjListId>) {
+        self.set_handle_at(off, l.map(Handle::DObjList));
+    }
+
+    /// The loaded-data pointer at `off`: the handle stored there, or none for a null word.
+    pub fn data_at(&self, off: usize) -> Option<DataRef> {
+        match self.handle(off) {
+            Some(Handle::Data(d)) => Some(d),
+            Some(h) => panic!("+{off:#x} holds {h:?}, not loaded data"),
+            None => {
+                self.null_at(off, "a data");
+                None
+            }
+        }
+    }
+
+    /// Stores a loaded-data pointer at `off` (null clears the word).
+    pub fn set_data_at(&mut self, off: usize, d: Option<DataRef>) {
+        self.set_handle_at(off, d.map(Handle::Data));
+    }
+
+    fn null_at(&self, off: usize, what: &str) {
+        self.read(off, off + 4);
+        let w = u32::from_be_bytes(self.bytes[off..off + 4].try_into().unwrap());
+        assert!(
+            w == 0,
+            "{what} pointer at +{off:#x} holds {w:#010x}, not a handle"
+        );
+    }
+
     fn set_handle_at(&mut self, off: usize, h: Option<Handle>) {
         self.write(off, off + 4);
         self.bytes[off..off + 4].fill(0);
@@ -246,11 +296,18 @@ impl<const N: usize> Mirror for Vars<N> {
             );
         }
         for &(o, h) in &self.handles {
+            let path = format!("{path}+{o:#x}");
+            let theirs = m.u32(at + o as u32);
             let (ty, v) = match h {
                 Handle::GObj(g) => ("GObjId", g.0),
                 Handle::JObj(j) => ("JObjId", j.0),
+                Handle::DObjList(l) => ("DObjListId", l.0),
+                Handle::Data(d) => {
+                    cx.compare_data(&path, Some(d), theirs);
+                    continue;
+                }
             };
-            cx.compare_handle(&format!("{path}+{o:#x}"), ty, Some(v), m.u32(at + o as u32));
+            cx.compare_handle(&path, ty, Some(v), theirs);
         }
     }
 }
@@ -262,6 +319,24 @@ impl<const N: usize> Vars<N> {
         let addr = m.u32(at + off as u32);
         if let Some(h) = cx.import_handle("GObjId", addr) {
             self.set_gobj_at(off, Some(GObjId(h)));
+        }
+    }
+
+    /// Types the word at `off` as a DObj list pointer, from a captured state.
+    pub fn import_dobj_list(&mut self, off: usize, m: &Mem, at: u32, cx: &mut dyn Cx) {
+        let addr = m.u32(at + off as u32);
+        if let Some(h) = cx.import_handle("DObjListId", addr) {
+            self.set_dobj_list_at(off, Some(DObjListId(h)));
+        }
+    }
+
+    /// Types the word at `off` as a pointer into loaded data, from a captured state.
+    pub fn import_data(&mut self, off: usize, m: &Mem, at: u32, cx: &mut dyn Cx) {
+        let addr = m.u32(at + off as u32);
+        if addr != 0
+            && let Some(d) = cx.import_data(addr)
+        {
+            self.set_data_at(off, Some(d));
         }
     }
 

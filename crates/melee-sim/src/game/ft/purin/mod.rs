@@ -9,6 +9,7 @@
 //!
 //! Other code reaches Jigglypuff's through [`call`] and [`run`] by the original's addresses.
 
+pub mod hat;
 pub mod init;
 pub mod special_hi;
 pub mod special_lw;

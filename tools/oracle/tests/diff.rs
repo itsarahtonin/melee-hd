@@ -40,15 +40,10 @@ fn import_compares_back_clean() {
         return;
     };
     assert!(out.contains("trace tick 200 imported and compared back: 0 differences"));
-    // Taken up from an import, play reaches a new item's unused hitboxes in tick 609, whose
-    // joints the item never writes: its block keeps them from the freed item it held before,
-    // which the import doesn't carry over (docs/oracle.md).
-    assert!(
-        out.contains("tick 609 (replay frame 485) differs in 2 places"),
-        "{out}"
-    );
-    assert!(out.contains("x5D4_hitboxes[2].hit.jobj"), "{out}");
-    assert!(out.contains("x5D4_hitboxes[3].hit.jobj"), "{out}");
+    // Taken up from an import, play runs to the trace's end: a new item's unused hitboxes'
+    // joints, which it keeps from the item its block held, import as the live joints they
+    // point to (docs/oracle.md).
+    assert!(out.contains("11728 ticks compared, no difference"), "{out}");
 }
 
 #[test]

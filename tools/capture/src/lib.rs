@@ -43,6 +43,7 @@ impl Capture {
         Capture { call }
     }
 
+    #[track_caller]
     pub fn u32(&self, addr: u32) -> u32 {
         let i = addr.wrapping_sub(MEM1) as usize;
         u32::from_be_bytes(self.call.mem1[i..i + 4].try_into().unwrap())

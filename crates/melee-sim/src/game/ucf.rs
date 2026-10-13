@@ -196,6 +196,24 @@ impl Running<'_> {
         }
     }
 
+    /// UCF's shield SDI (`ftCo_80093240+0x54`, where shield stun's smash DI checks the
+    /// stick's age against `ftCommonData` x4B4): an older smash still counts if the stick
+    /// wasn't held past it for more than a frame (`active_sticky`), wasn't past `threshold`
+    /// the frame before (signed, as the code compares it), and the raw stick travelled more
+    /// than 62 along x since two frames ago.
+    ///
+    /// The Gecko code at `0x80093294`.
+    pub fn ucf_shield_sdi(&self, gobj: GObjId, threshold: f64) -> bool {
+        let fp = self.game.fighter(gobj);
+        if fp.active_sticky.lstick.x > 1 {
+            return false;
+        }
+        if reg(fp.input.lstick[1].x) >= threshold {
+            return false;
+        }
+        self.game.ucf.0[usize::from(fp.pad_port)].travel().0 > 3844
+    }
+
     /// UCF's tumble (`ftCo_DamageFall_IASA+0xC4`, where the sideways flick out of tumble
     /// checks its age against `ftCommonData` x214): whether the flick counts. One a frame old
     /// still counts if the stick wasn't past `threshold` the frame before and the raw stick

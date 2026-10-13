@@ -417,7 +417,7 @@ impl Running<'_> {
 
     /// The grounded pass with the ECB `b` (mirrored facing left), `ft_80082888`: whether the
     /// fighter stays on the ground.
-    // Ports `ft_80082888`; aliased once a check reaches it.
+    #[doc(alias = "ft_80082888")]
     pub fn ground_coll_box(&mut self, gobj: GObjId, b: &ftCollisionBox) -> bool {
         let f = self.game.fighter_id(gobj);
         let b = facing_box(b, self.game.fighters[f.0].facing_dir);
@@ -425,7 +425,7 @@ impl Running<'_> {
     }
 
     /// [`Self::ground_coll_box`] with mpcoll's pass flags 2 (`mpColl_8004B3F0`), `ft_80082978`.
-    // Ports `ft_80082978`; aliased once a check reaches it.
+    #[doc(alias = "ft_80082978")]
     pub fn ground_coll_box_ledges(&mut self, gobj: GObjId, b: &ftCollisionBox) -> bool {
         let f = self.game.fighter_id(gobj);
         let b = facing_box(b, self.game.fighters[f.0].facing_dir);

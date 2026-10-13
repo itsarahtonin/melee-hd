@@ -25,19 +25,19 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialLw_Enter`.
-    // Ports `ftPr_SpecialLw_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialLw_Enter")]
     pub fn purin_special_lw_enter(&mut self, gobj: GObjId) {
         self.purin_rest_start(gobj, ms::SPECIAL_LW_L, ms::SPECIAL_LW_R);
     }
 
     /// `ftPr_SpecialAirLw_Enter`.
-    // Ports `ftPr_SpecialAirLw_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialAirLw_Enter")]
     pub fn purin_special_air_lw_enter(&mut self, gobj: GObjId) {
         self.purin_rest_start(gobj, ms::SPECIAL_AIR_LW_L, ms::SPECIAL_AIR_LW_R);
     }
 
     /// `ftPr_SpecialLw_Anim`.
-    // Ports `ftPr_SpecialLw_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialLw_Anim")]
     pub fn purin_special_lw_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_wait(gobj);
@@ -45,7 +45,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialAirLw_Anim`.
-    // Ports `ftPr_SpecialAirLw_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialAirLw_Anim")]
     pub fn purin_special_air_lw_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_fall(gobj);
@@ -53,7 +53,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialLw_Coll`.
-    // Ports `ftPr_SpecialLw_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialLw_Coll")]
     pub fn purin_special_lw_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_slide(gobj) {
             self.purin_special_lw_to_air(gobj);
@@ -61,7 +61,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialAirLw_Coll`.
-    // Ports `ftPr_SpecialAirLw_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialAirLw_Coll")]
     pub fn purin_special_air_lw_coll(&mut self, gobj: GObjId) {
         if self.air_coll_land(gobj) {
             self.purin_special_air_lw_to_ground(gobj);
@@ -69,7 +69,7 @@ impl Running<'_> {
     }
 
     /// Off the ground asleep, `ftPr_SpecialLw_8013D104`.
-    // Ports `ftPr_SpecialLw_8013D104`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialLw_8013D104")]
     pub fn purin_special_lw_to_air(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);
@@ -77,7 +77,7 @@ impl Running<'_> {
     }
 
     /// Landing asleep, `ftPr_SpecialLw_8013D19C`.
-    // Ports `ftPr_SpecialLw_8013D19C`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialLw_8013D19C")]
     pub fn purin_special_air_lw_to_ground(&mut self, gobj: GObjId) {
         self.land(gobj);
         self.purin_rest_switch(gobj, ms::SPECIAL_LW_L, ms::SPECIAL_LW_R);

@@ -1,15 +1,12 @@
 //! Jigglypuff's character callbacks (`ftpurin.c`): creation, spawn and attributes, the item
 //! hooks, the knockback hooks and Sing's effect.
 
-use super::super::super::code::{Val, unported_call};
+use super::super::super::code::Val;
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::state::Running;
 use super::super::fox::ext;
-use super::{PART_WAIST_N, addr, attr, u};
+use super::{PART_WAIST_N, addr, attr};
 use crate::hsd::gobj::GObjId;
-
-/// `ftPr_Init_803D05B4`: the hats' joints by costume (none for the first).
-const HAS_HAT: [bool; 5] = [false, true, true, true, true];
 
 impl Running<'_> {
     /// Jigglypuff's creation, `ftPr_Init_OnLoad`: her attributes, which are also her
@@ -22,35 +19,6 @@ impl Running<'_> {
         fp.can_multijump = true;
         fp.x2D0 = fp.dat_attrs;
         self.purin_load_hat(gobj);
-    }
-
-    /// The costume's hat, `ftPr_Init_8013C360`: none for the first costume.
-    #[doc(alias = "ftPr_Init_8013C360")]
-    pub fn purin_load_hat(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter_mut(gobj);
-        if HAS_HAT[usize::from(fp.costume_id)] {
-            unported_call("ftPr_Init_8013C360 (a costume's hat)");
-        }
-        fp.u.set_jobj_at(u::HAT, None);
-    }
-
-    /// A model group shown or hidden on her hat too, `ftPr_Init_UnkIntBoolFunc0` (a model
-    /// event of `ftParts_800750C8`): nothing without a hat.
-    #[doc(alias = "ftPr_Init_UnkIntBoolFunc0")]
-    pub fn purin_hat_vis(&mut self, f: super::super::super::handles::FighterId) {
-        if self.game.fighters[f.0].u.jobj_at(u::HAT).is_some() {
-            unported_call("ftPr_Init_UnkIntBoolFunc0 (a costume's hat)");
-        }
-    }
-
-    /// Her hat drawn on her left leg's matrix, `ftPr_Init_UnkMtxFunc0` (her per-kind drawing):
-    /// nothing without a hat or with it hidden (`x2225_b2`).
-    #[doc(alias = "ftPr_Init_UnkMtxFunc0")]
-    pub fn purin_draw_hat(&mut self, f: super::super::super::handles::FighterId) {
-        let fp = &self.game.fighters[f.0];
-        if fp.u.jobj_at(u::HAT).is_some() && fp.x2225_b2 {
-            unported_call("ftPr_Init_UnkMtxFunc0 (a costume's hat)");
-        }
     }
 
     /// Jigglypuff's spawn, `ftPr_Init_OnDeath`: her first model variant.
@@ -99,7 +67,7 @@ impl Running<'_> {
 
     /// Hiding the held item, `ftPr_Init_OnItemInvisible`: the hand lets go of its pose,
     /// unless the item is heavy.
-    // Ports `ftPr_Init_OnItemInvisible`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_Init_OnItemInvisible")]
     pub fn purin_on_item_invisible(&mut self, gobj: GObjId) {
         let Some(item) = self.game.fighter(gobj).item_gobj else {
             return;
@@ -110,7 +78,7 @@ impl Running<'_> {
     }
 
     /// Showing the held item again, `ftPr_Init_OnItemVisible`.
-    // Ports `ftPr_Init_OnItemVisible`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_Init_OnItemVisible")]
     pub fn purin_on_item_visible(&mut self, gobj: GObjId) {
         let Some(item) = self.game.fighter(gobj).item_gobj else {
             return;

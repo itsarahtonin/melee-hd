@@ -192,7 +192,7 @@ impl Running<'_> {
 
     /// The roll's end, `ftPr_SpecialS_8013D658` (her death and damage hooks while rolling): the
     /// model's scale back, `TopN` facing her way, and the way the stick turned her taken.
-    // Ports `ftPr_SpecialS_8013D658`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialS_8013D658")]
     pub fn purin_roll_restore(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let kept = self.purin_kept_scale(f);
@@ -209,7 +209,7 @@ impl Running<'_> {
     /// Her hit landing while rolling, `ftPr_SpecialS_8013D764` (the dealt-damage hook): from
     /// a roll, a turn or their airborne states, the charge spent and a bounce up and back
     /// (`ftPr_MS_SpecialNHit`), with a sound.
-    // Ports `ftPr_SpecialS_8013D764`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialS_8013D764")]
     pub fn purin_roll_hit(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.set_mvi(f, mv::N_HIT_TOGGLE, 0);
@@ -256,7 +256,7 @@ impl Running<'_> {
     }
 
     /// A turn's end, `ftPr_SpecialS_8013D8B0` (`x21EC`): a new attack.
-    // Ports `ftPr_SpecialS_8013D8B0`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialS_8013D8B0")]
     pub fn purin_roll_new_attack(&mut self, gobj: GObjId) {
         self.renew_attack_record(gobj);
         self.renew_attack_instance(gobj);
@@ -264,7 +264,7 @@ impl Running<'_> {
 
     /// The roll's hitbox, `ftPr_SpecialS_8013D8E4`: off below the speed that hurts, else on
     /// with damage from her speed.
-    // Ports `ftPr_SpecialS_8013D8E4`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialS_8013D8E4")]
     pub fn purin_roll_hitbox(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let (min, base, mul) = (
@@ -297,7 +297,7 @@ impl Running<'_> {
 
     /// The roll's end, `ftPr_SpecialS_8013DA24`: her way taken, the hitboxes off, the end
     /// state on the ground or in the air with her speed cut, and the roll's look undone.
-    // Ports `ftPr_SpecialS_8013DA24`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialS_8013DA24")]
     pub fn purin_roll_end(&mut self, gobj: GObjId, air: bool, flags: u32, start: f32) {
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].facing_dir = dir(self, f);
@@ -339,7 +339,7 @@ impl Running<'_> {
 
     /// The roll's variables at its start, `ftPr_SpecialS_8013DC64`: the model's scale kept,
     /// the charge's frames and start, and the hit hooks.
-    // Ports `ftPr_SpecialS_8013DC64`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialS_8013DC64")]
     pub fn purin_roll_init(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let root = self.root_jobj(gobj);
@@ -368,7 +368,7 @@ impl Running<'_> {
 
     /// The roll's sound each time the roll angle comes round, `ftPr_SpecialS_8013DD54`
     /// (`back` for the turns, which roll the other way).
-    // Ports `ftPr_SpecialS_8013DD54`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialS_8013DD54")]
     pub fn purin_roll_tick(&mut self, gobj: GObjId, back: bool) {
         let f = self.game.fighter_id(gobj);
         self.purin_wrap_roll(f);
@@ -398,7 +398,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialN_Enter`.
-    // Ports `ftPr_SpecialN_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialN_Enter")]
     pub fn purin_special_n_enter(&mut self, gobj: GObjId) {
         self.purin_rollout_start(gobj, ms::SPECIAL_N_START_R, ms::SPECIAL_N_START_L);
         let f = self.game.fighter_id(gobj);
@@ -410,7 +410,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialAirN_Enter`.
-    // Ports `ftPr_SpecialAirN_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialAirN_Enter")]
     pub fn purin_special_air_n_enter(&mut self, gobj: GObjId) {
         self.purin_rollout_start(gobj, ms::SPECIAL_AIR_N_START_R, ms::SPECIAL_AIR_N_START_L);
         let f = self.game.fighter_id(gobj);
@@ -550,7 +550,7 @@ impl Running<'_> {
 
     /// A turn's frame on the ground, `ftPr_SpecialNTurn_Anim`: the roll spun back, dust every
     /// few frames; once its frames run out, the turn ends the roll the other way.
-    // Ports `ftPr_SpecialNTurn_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNTurn_Anim")]
     pub fn purin_special_n_turn_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.purin_roll_tick(gobj, true);
@@ -631,7 +631,7 @@ impl Running<'_> {
 
     /// `ftPr_SpecialAirNStartTurn_Anim`: a turn in the air; once its frames run out, the roll
     /// ends the other way.
-    // Ports `ftPr_SpecialAirNStartTurn_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialAirNStartTurn_Anim")]
     pub fn purin_special_air_n_start_turn_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.purin_roll_tick(gobj, true);
@@ -652,7 +652,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialNHit_Anim`: bounced off what she hit, still spinning.
-    // Ports `ftPr_SpecialNHit_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNHit_Anim")]
     pub fn purin_special_n_hit_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.purin_squash(gobj, &SQUASH_Z);
@@ -697,7 +697,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialNRelease_IASA`: the stick pushed back turns the roll.
-    // Ports `ftPr_SpecialNRelease_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNRelease_IASA")]
     pub fn purin_special_n_release_iasa(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let deadzone = self.pr_f(f, attr::N_TURN_STICK);
@@ -725,7 +725,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialNStart_Phys` (and the charge's): held in place.
-    // Ports `ftPr_SpecialNStart_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNStart_Phys")]
     pub fn purin_special_n_start_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.xE4_ground_accel_1 = 0.0;
@@ -738,7 +738,7 @@ impl Running<'_> {
 
     /// `ftPr_SpecialNRelease_Phys`: the roll's speed from the charge, more downhill and less
     /// uphill, within the two caps; the charge runs down, ending the roll.
-    // Ports `ftPr_SpecialNRelease_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNRelease_Phys")]
     pub fn purin_special_n_release_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let (mul, end, slope_mul, cap, cap2, decay) = (
@@ -803,7 +803,7 @@ impl Running<'_> {
 
     /// `ftPr_SpecialNTurn_Phys`: slowing by the turn's rate on the floor's friction, more on
     /// slopes; once it rolls back fast enough, the roll goes on the new way with a new attack.
-    // Ports `ftPr_SpecialNTurn_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNTurn_Phys")]
     pub fn purin_special_n_turn_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let (accel, slope_mul, done) = (
@@ -849,7 +849,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialNEnd_Phys`: her ground friction.
-    // Ports `ftPr_SpecialNEnd_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNEnd_Phys")]
     pub fn purin_special_n_end_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         let friction = reg(fp.co_attrs.ground_friction);
@@ -893,7 +893,7 @@ impl Running<'_> {
 
     /// `ftPr_SpecialAirNChargeRelease_Phys`: the roll's speed in the air from the charge,
     /// slowed; the charge runs down, ending the roll.
-    // Ports `ftPr_SpecialAirNChargeRelease_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialAirNChargeRelease_Phys")]
     pub fn purin_special_air_n_charge_release_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let (mul, end, decay) = (
@@ -920,7 +920,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialAirNStartTurn_Phys`.
-    // Ports `ftPr_SpecialAirNStartTurn_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialAirNStartTurn_Phys")]
     pub fn purin_special_air_n_start_turn_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.purin_air_slow(f);
@@ -930,7 +930,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialNHit_Phys`: drifting once falling fast enough.
-    // Ports `ftPr_SpecialNHit_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNHit_Phys")]
     pub fn purin_special_n_hit_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let t = self.pr_f(f, attr::N_AIR_TERMINAL);
@@ -955,7 +955,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialNStart_Coll`: off the ground, the air's start.
-    // Ports `ftPr_SpecialNStart_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNStart_Coll")]
     pub fn purin_special_n_start_coll(&mut self, gobj: GObjId) {
         if self.ground_coll_off_ledges(gobj) {
             return;
@@ -1022,7 +1022,7 @@ impl Running<'_> {
 
     /// `ftPr_SpecialNRelease_Coll`: rolling on with her roll's ECB; a wall bounces her back,
     /// and off the ground she rolls on in the air.
-    // Ports `ftPr_SpecialNRelease_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNRelease_Coll")]
     pub fn purin_special_n_release_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let coll = self.ground_coll_box(gobj, &roll_box());
@@ -1062,7 +1062,7 @@ impl Running<'_> {
 
     /// `ftPr_SpecialNTurn_Coll`: turning with her roll's ECB (pushed off ledges while fast);
     /// off the ground, the air's turn.
-    // Ports `ftPr_SpecialNTurn_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNTurn_Coll")]
     pub fn purin_special_n_turn_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let slow = self.pr_f(f, attr::N_TURN_SLOW);
@@ -1090,7 +1090,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialNEnd_Coll`: off the ground, the air's end.
-    // Ports `ftPr_SpecialNEnd_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNEnd_Coll")]
     pub fn purin_special_n_end_coll(&mut self, gobj: GObjId) {
         if self.ground_coll_off_ledges(gobj) {
             return;
@@ -1102,7 +1102,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialAirNStart_Coll`: landing, the ground's start.
-    // Ports `ftPr_SpecialAirNStart_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialAirNStart_Coll")]
     pub fn purin_special_air_n_start_coll(&mut self, gobj: GObjId) {
         if !self.air_coll_land(gobj) {
             return;
@@ -1136,7 +1136,7 @@ impl Running<'_> {
     /// `ftPr_SpecialAirNChargeRelease_Coll`: rolling through the air with her roll's ECB; a
     /// wall bounces her back; the floor bounces her up, or once the bounce is low enough she
     /// rolls on along it (the stick can turn her on a bounce); else a ledge she catches.
-    // Ports `ftPr_SpecialAirNChargeRelease_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialAirNChargeRelease_Coll")]
     pub fn purin_special_air_n_charge_release_coll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let way = if reg(dir(self, f)) == 1.0 { 1 } else { -1 };
@@ -1225,7 +1225,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialAirNStartTurn_Coll`: landing mid-turn, the ground's turn at her speed.
-    // Ports `ftPr_SpecialAirNStartTurn_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialAirNStartTurn_Coll")]
     pub fn purin_special_air_n_start_turn_coll(&mut self, gobj: GObjId) {
         if !self.air_coll_box(gobj, &roll_box()) {
             return;
@@ -1250,7 +1250,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialAirNEnd_Coll`: landing, the ground's end.
-    // Ports `ftPr_SpecialAirNEnd_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialAirNEnd_Coll")]
     pub fn purin_special_air_n_end_coll(&mut self, gobj: GObjId) {
         if !self.air_coll_land(gobj) {
             return;
@@ -1262,7 +1262,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialNHit_Coll`: landing from the hit's bounce, with her landing lag.
-    // Ports `ftPr_SpecialNHit_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialNHit_Coll")]
     pub fn purin_special_n_hit_coll(&mut self, gobj: GObjId) {
         if !self.air_coll_box(gobj, &roll_box()) {
             return;
@@ -1280,7 +1280,7 @@ impl Running<'_> {
 
     /// Turned around mid-roll by another's turn, `ftPr_SpecialN_8014222C` (`x21F8`): `TopN`
     /// faces her way and the roll's speeds and angles mirror.
-    // Ports `ftPr_SpecialN_8014222C`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialN_8014222C")]
     pub fn purin_roll_mirror(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.purin_top_facing(f);

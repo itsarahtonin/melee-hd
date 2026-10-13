@@ -36,7 +36,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialHi_Enter`.
-    // Ports `ftPr_SpecialHi_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialHi_Enter")]
     pub fn purin_special_hi_enter(&mut self, gobj: GObjId) {
         self.purin_sing_start(gobj, ms::SPECIAL_HI_L, ms::SPECIAL_HI_R);
     }
@@ -60,7 +60,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialHi_Anim`.
-    // Ports `ftPr_SpecialHi_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialHi_Anim")]
     pub fn purin_special_hi_anim(&mut self, gobj: GObjId) {
         self.purin_sing_sleep(gobj);
         if !self.anim_frames_remaining(gobj) {
@@ -78,7 +78,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialHi_Coll`.
-    // Ports `ftPr_SpecialHi_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialHi_Coll")]
     pub fn purin_special_hi_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_slide(gobj) {
             self.purin_special_hi_to_air(gobj);
@@ -96,7 +96,7 @@ impl Running<'_> {
     }
 
     /// Off the ground mid-song, `ftPr_SpecialHi_8013CD34`.
-    // Ports `ftPr_SpecialHi_8013CD34`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialHi_8013CD34")]
     pub fn purin_special_hi_to_air(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);
@@ -104,7 +104,7 @@ impl Running<'_> {
     }
 
     /// Landing mid-song, `ftPr_SpecialHi_8013CDD8`.
-    // Ports `ftPr_SpecialHi_8013CDD8`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialHi_8013CDD8")]
     pub fn purin_special_air_hi_to_ground(&mut self, gobj: GObjId) {
         self.land(gobj);
         self.purin_sing_switch(gobj, ms::SPECIAL_HI_L, ms::SPECIAL_HI_R);
@@ -119,7 +119,7 @@ impl Running<'_> {
     }
 
     /// Rest's accessory, `ftPr_SpecialHi_8013CE7C`: none.
-    // Ports `ftPr_SpecialHi_8013CE7C`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialHi_8013CE7C")]
     pub fn purin_clear_accessory(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).accessory4_cb = None;
     }

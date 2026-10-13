@@ -115,6 +115,8 @@ pub struct Maps {
     /// with whatever lives there now.
     pub dangling_gobjs: HashMap<u32, u32>,
     pub dangling_jobjs: HashMap<u32, u32>,
+    /// Lights likewise: an active light's table entry left after the light was freed.
+    pub dangling_lobjs: HashMap<u32, u32>,
     /// Fighters and items likewise: a word that was never set, such as a human player's
     /// CPU block (`CpuFighter`, which only a CPU player's process fills), where the heap block
     /// held other objects' bytes.
@@ -284,6 +286,7 @@ impl<'a> Importer<'a> {
         u16::from_be_bytes(self.cap.call.mem1[i..i + 2].try_into().unwrap())
     }
 
+    #[track_caller]
     fn u32(&self, a: u32) -> u32 {
         self.cap.u32(a)
     }
@@ -868,6 +871,30 @@ impl Importer<'_> {
         for &off in melee_sim::game::ft::vars::gobj_words(f.kind) {
             f.u.import_gobj(off, &mem, a + 0x222C, self);
         }
+        // Jigglypuff's hat (`ftPurin_FighterVars`): its model, its DObj list (as many DObjs as
+        // the model has, `ftParts_80075650`) and its variants' lookups. Before her hat loads,
+        // the block's words are whatever it held, which stay bytes.
+        let hat = self.u32(a + 0x222C + 0x10);
+        let hat_dobjs = (f.kind == 15).then(|| self.count_tree_dobjs(hat)).flatten();
+        if let Some(n) = hat_dobjs {
+            let u = a + 0x222C;
+            f.u.import_jobj(0x10, &mem, u, self);
+            let data = self.u32(u + 0x18);
+            if data & 3 == 0 && (HEAP..MEM1 + 0x0180_0000 - 4 * n).contains(&data) {
+                f.u.import_dobj_list(0x18, &mem, u, self);
+                let l = f.u.dobj_list_at(0x18).expect("the hat's DObj list");
+                let dobjs = (0..n)
+                    .map(|i| {
+                        let d = self.u32(data + 4 * i);
+                        (d != 0).then(|| self.dobj(d))
+                    })
+                    .collect();
+                self.game.fighter_dobj_lists[l.0] = dobjs;
+            }
+            for k in 0..5 {
+                f.u.import_data(0x28 + 4 * k, &mem, u, self);
+            }
+        }
         // The state's variables' handles where the states that read them keep them: a grab's
         // hold joint (`mv` 0x18) while pulling, holding or pummeling (`ft::co::grab`), Fox's
         // and Falco's Illusion's ghost (0x44) in their side special (`ft::fox::special_s`),
@@ -929,8 +956,44 @@ impl Importer<'_> {
         id
     }
 
-    /// A fighter model's DObj list, its entries filled in once the fighter's import knows
-    /// their count ([`Importer::fighter`]).
+    /// How many DObjs a joint tree holds, depth first and not into instances (the walk
+    /// `ftParts_80075650` lists them in).
+    fn count_tree_dobjs(&self, root: u32) -> Option<u32> {
+        let ok = |a: u32| a & 3 == 0 && (HEAP..MEM1 + 0x0180_0000 - 0x20).contains(&a);
+        let joint = |a: u32| (ok(a) && self.is_jobj(a)).then_some(a);
+        let mut n = 0;
+        let mut j = joint(root)?;
+        loop {
+            let mut d = self.u32(j + 0x18);
+            while d != 0 {
+                if !ok(d) || n > 0x100 {
+                    return None;
+                }
+                n += 1;
+                d = self.u32(d + 4);
+            }
+            let (child, next) = (self.u32(j + 0x10), self.u32(j + 8));
+            j = if self.u32(j + 0x14) & (1 << 12) == 0 && child != 0 {
+                joint(child)?
+            } else if next != 0 {
+                joint(next)?
+            } else {
+                let mut up = j;
+                loop {
+                    let p = self.u32(up + 0xC);
+                    if p == 0 {
+                        return Some(n);
+                    }
+                    let p = joint(p)?;
+                    if self.u32(p + 8) != 0 {
+                        break joint(self.u32(p + 8))?;
+                    }
+                    up = p;
+                }
+            };
+        }
+    }
+
     fn fighter_dobj_list(&mut self, a: u32) -> DObjListId {
         if let Some(&l) = self.maps.fighter_dobj_lists.get(&a) {
             return l;

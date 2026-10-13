@@ -345,16 +345,10 @@ impl Running<'_> {
     }
 
     /// Shows (`show`) or hides a model group, `ftParts_800750C8`: group 2 (the low-poly
-    /// models) covers lookups 2 (on the second DObj list) and 3. Kirby's model events no port
-    /// covers yet.
+    /// models) covers lookups 2 (on the second DObj list) and 3, each followed by the kind's
+    /// model event (Jigglypuff's hat; Kirby's no port covers yet).
     #[doc(alias = "ftParts_800750C8")]
     pub fn set_parts_vis(&mut self, f: FighterId, group: usize, show: bool) {
-        match self.game.fighters[f.0].kind {
-            4 => crate::game::code::unported_call("ftKb_UnkIntBoolFunc0"),
-            // `ftPr_Init_UnkIntBoolFunc0`: the same for her hat's model, if she wears one.
-            15 => self.purin_hat_vis(f),
-            _ => {}
-        }
         let (main, second) = {
             let fp = &self.game.fighters[f.0];
             (fp.dobj_list.data, fp.x203C.data)
@@ -369,6 +363,12 @@ impl Running<'_> {
                 self.show_parts_vis(f, idx, list);
             } else {
                 self.hide_parts_vis(f, idx, list);
+            }
+            // The kind's model event (`ftData_UnkIntBoolFunc0`) after each lookup.
+            match self.game.fighters[f.0].kind {
+                4 => crate::game::code::unported_call("ftKb_UnkIntBoolFunc0"),
+                15 => self.purin_hat_vis(f, idx, show),
+                _ => {}
             }
         }
     }

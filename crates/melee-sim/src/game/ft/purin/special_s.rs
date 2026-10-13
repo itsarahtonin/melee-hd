@@ -28,7 +28,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialS_Enter`.
-    // Ports `ftPr_SpecialS_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialS_Enter")]
     pub fn purin_special_s_enter(&mut self, gobj: GObjId) {
         self.purin_pound_start(gobj, ms::SPECIAL_S);
     }
@@ -40,7 +40,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialS_Anim`.
-    // Ports `ftPr_SpecialS_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialS_Anim")]
     pub fn purin_special_s_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_wait(gobj);
@@ -111,7 +111,7 @@ impl Running<'_> {
     }
 
     /// `ftPr_SpecialS_Coll`.
-    // Ports `ftPr_SpecialS_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialS_Coll")]
     pub fn purin_special_s_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_slide(gobj) {
             self.purin_special_s_to_air(gobj);
@@ -127,13 +127,13 @@ impl Running<'_> {
     }
 
     /// Off the ground mid-punch, `ftPr_SpecialS_8013D590`.
-    // Ports `ftPr_SpecialS_8013D590`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialS_8013D590")]
     pub fn purin_special_s_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_S, KEEP);
     }
 
     /// Landing mid-lunge, `ftPr_SpecialS_8013D5F0`: the drift kept within the air's.
-    // Ports `ftPr_SpecialS_8013D5F0`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_SpecialS_8013D5F0")]
     pub fn purin_special_air_s_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_S, KEEP);
         let f = self.game.fighter_id(gobj);
