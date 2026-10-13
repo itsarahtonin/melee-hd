@@ -225,15 +225,15 @@ impl Audio {
 
     /// Runs `f` on the AX library with drop callbacks reaching the synth.
     fn ax_acquire(&mut self, priority: u32) -> Option<VoiceId> {
-        let mut dropped = Vec::new();
+        let mut dropped = super::Dropped::default();
         let v = self
             .ax
             .acquire_voice(priority, Some(DROP_CALLBACK), 0, &mut |_, cb, v| {
-                dropped.push((cb, v));
+                dropped.push(cb, v);
             });
         // The stolen voice's callback runs before the voice is pushed back on: its effect on
         // the AX stacks (none: dropcallback only queues voices) doesn't depend on the order.
-        for (cb, v) in dropped {
+        for &(cb, v) in dropped.list() {
             drop_callback(self, cb, v);
         }
         v
@@ -747,6 +747,9 @@ impl Audio {
     /// which the game doesn't play).
     #[doc(alias = "HSD_SynthStreamSetVolume")]
     pub fn synth_stream_set_volume(&mut self, volume: f32) {
+        // `AISetStreamVolLeft` and `Right` each read the audio interface's register.
+        self.hw.reg_read();
+        self.hw.reg_read();
         self.synth.master = volume;
         self.synth.fading |= 0xFFFF;
         for i in 0..NODES {

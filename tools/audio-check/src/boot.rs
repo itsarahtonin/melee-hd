@@ -87,7 +87,7 @@ impl Boot {
 
     /// Seeds a new match's state with the boot state (`Match::start_from`'s `boot`).
     pub fn seed(&self, game: &mut Game, data: &mut Archives) {
-        seeding::seed(game, data, &self.mem1, self.tb);
+        seeding::seed(game, data, &self.mem1, self.tb, true);
     }
 
     /// The boot state's memory, for the mixer.

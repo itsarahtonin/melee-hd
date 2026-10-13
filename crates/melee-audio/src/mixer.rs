@@ -221,9 +221,11 @@ impl Mixer {
         }
     }
 
-    /// Turns the simulation's mix log on and starts from its audio state (the boot state's):
-    /// the sound banks it has in ARAM and, from the boot state's memory when there is one, the
-    /// AX library's mix state (depop sums, surround buffer, aux buffers and effects).
+    /// Turns the simulation's mix log on and starts from its audio state: the sound banks it
+    /// has in ARAM and, from a boot state's memory when there is one, the AX library's mix
+    /// state (depop sums, surround buffer, aux buffers and effects). Started before the boot's
+    /// audio setup runs (`game::boot`), the mixer sees the whole boot instead: its ARAM
+    /// writes, its frames, and the effects the driver sets up.
     pub fn start(&mut self, audio: &mut Audio, boot: Option<&BootMemory>) {
         audio.mix = Some(MixLog::default());
         self.boot_groups = audio.synth.banks.groups.iter().flatten().copied().collect();
@@ -282,6 +284,13 @@ impl Mixer {
         let Some(mut log) = audio.mix.take() else {
             return;
         };
+        // Without a boot state's memory, the effects the driver set up start new, as its
+        // setup made them.
+        for (k, shift) in [8, 12].into_iter().enumerate() {
+            if self.effects[k].is_none() {
+                self.effects[k] = Effect::melee_aux(audio.driver.aux_flags >> shift & 0xF);
+            }
+        }
         for g in std::mem::take(&mut self.boot_groups) {
             self.place_group(audio, data, &g);
         }

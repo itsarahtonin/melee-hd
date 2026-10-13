@@ -1,5 +1,6 @@
-//! The match's sound: each tick's audio frames are mixed (`melee_audio::Mixer`) and queued on
-//! the output device. A match runs silent when it has no audio timeline (`docs/player.md`).
+//! The match's sound: the match starts with the boot's audio setup (melee-sim's `game::boot`),
+//! which the mixer sees from its first frame; each tick's audio frames are then mixed
+//! (`melee_audio::Mixer`) and queued on the output device.
 
 use melee_audio::{Mixer, Output};
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
@@ -30,15 +31,14 @@ pub fn start(
     load: &mut dyn FnMut(&str) -> DiscFile,
 ) -> Result<(Match, Option<Sound>), String> {
     let mut mixer = Mixer::new();
-    let mut timeline = false;
-    let m = Match::start_from(settings, load, &mut |game, _| {
-        timeline = game.audio.clock.is_some();
-        if timeline {
-            mixer.start(&mut game.audio, None);
-        }
+    // The mix log turned on before the boot's audio setup runs, so the mixer sees its ARAM
+    // writes and frames.
+    let mut m = Match::start_from(settings, load, &mut |game, _| {
+        mixer.start(&mut game.audio, None);
     });
-    if !timeline {
+    if m.game.audio.clock.is_none() {
         eprintln!("no audio timeline: the match runs silent");
+        m.game.audio.mix = None;
         return Ok((m, None));
     }
     let output = if play {

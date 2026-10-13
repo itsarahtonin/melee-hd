@@ -7,6 +7,10 @@
 //! compared window by window: SNR, the largest difference and the share of stereo samples
 //! that are equal.
 //!
+//! With `--port` the trace isn't read (pass `-` for it): the match starts as the player
+//! starts one, from melee-sim's port of the boot's audio setup (`game::boot`), and the mix
+//! covers the boot's frames too.
+//!
 //! The disc comes from `SSBM_DISC`. `--out` writes the native mix as a WAV file.
 
 use std::process::ExitCode;
@@ -155,7 +159,7 @@ impl Window {
 
 fn run(args: &[String]) -> Result<bool, String> {
     let mut pos = Vec::new();
-    let (mut ticks, mut window, mut out) = (2000u32, 1.0f64, None);
+    let (mut ticks, mut window, mut out, mut port) = (2000u32, 1.0f64, None, false);
     let mut fp_mode = FpMode::Slippi;
     let mut it = args.iter();
     while let Some(a) = it.next() {
@@ -164,6 +168,7 @@ fn run(args: &[String]) -> Result<bool, String> {
             "--ticks" => ticks = value()?.parse().map_err(|_| "--ticks N")?,
             "--window" => window = value()?.parse().map_err(|_| "--window SECONDS")?,
             "--out" => out = Some(value()?.clone()),
+            "--port" => port = true,
             "--fp" => {
                 fp_mode = match value()?.as_str() {
                     "hardware" => FpMode::Hardware,
@@ -176,7 +181,7 @@ fn run(args: &[String]) -> Result<bool, String> {
     }
     let [trace_path, replay_path, wav_path] = pos[..] else {
         return Err(
-            "usage: melee-audio-check TRACE REPLAY.slp AUDIO.wav [--fp hardware|slippi] [--ticks N] [--window SECONDS] [--out MIX.wav]"
+            "usage: melee-audio-check TRACE|- REPLAY.slp AUDIO.wav [--port] [--fp hardware|slippi] [--ticks N] [--window SECONDS] [--out MIX.wav]"
                 .into(),
         );
     };
@@ -188,13 +193,19 @@ fn run(args: &[String]) -> Result<bool, String> {
     let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
         .map_err(|e| format!("{replay_path}: {e}"))?;
     let theirs = read_wav(wav_path)?;
-    let boot = boot::Boot::from_trace(trace_path)?;
-    boot.apply(&mut settings);
-    println!(
-        "boot state: trace tick {}, the match's first tick {}",
-        boot.first_tick - 1,
-        boot.first_tick
-    );
+    let boot = if port {
+        println!("the boot's audio setup: melee-sim's");
+        None
+    } else {
+        let boot = boot::Boot::from_trace(trace_path)?;
+        boot.apply(&mut settings);
+        println!(
+            "boot state: trace tick {}, the match's first tick {}",
+            boot.first_tick - 1,
+            boot.first_tick
+        );
+        Some(boot)
+    };
     let mut load = |name: &str| DiscFile {
         entrynum: disc
             .entrynum(name)
@@ -204,9 +215,12 @@ fn run(args: &[String]) -> Result<bool, String> {
             .unwrap_or_else(|e| panic!("{name}: {e}")),
     };
     let mut mixer = Mixer::new();
-    let mut m = Match::start_from(&settings, &mut load, &mut |g, data| {
-        boot.seed(g, data);
-        mixer.start(&mut g.audio, Some(&boot.memory()));
+    let mut m = Match::start_from(&settings, &mut load, &mut |g, data| match &boot {
+        Some(boot) => {
+            boot.seed(g, data);
+            mixer.start(&mut g.audio, Some(&boot.memory()));
+        }
+        None => mixer.start(&mut g.audio, None),
     });
     for (bus, e) in ["A", "B"].iter().zip(mixer.effects()) {
         let name = match e {
