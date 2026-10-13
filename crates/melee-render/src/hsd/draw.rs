@@ -205,13 +205,12 @@ impl Ctx<'_> {
                     max_lod: data.f32(d.at(0x14)),
                 })
             }
-            None => {
+            Some(ImageRef::Shadow(s)) => {
                 // A shadow's texture keeps its image in the shadow.
-                let (i, s) = objs.shadows.iter().find(|(_, s)| s.texture == Some(t))?;
-                let img = s.image;
+                let img = objs.shadows[s.0].image;
                 let size = crate::gx::get_tex_buffer_size(img.width, img.height, img.format, 0, 0);
                 Some(Image {
-                    ptr: self.space.dynamic(Dynamic::Shadow(i), size),
+                    ptr: self.space.dynamic(Dynamic::Shadow(s.0), size),
                     width: img.width,
                     height: img.height,
                     format: img.format,
@@ -221,10 +220,12 @@ impl Ctx<'_> {
                 })
             }
             Some(ImageRef::Static(at)) => self.static_image(at),
-            Some(other) => {
+            // Listed one by one, so a new kind of image fails to build here until it's drawn.
+            Some(other @ (ImageRef::Refract(_) | ImageRef::RefractFrame | ImageRef::Screen(_))) => {
                 self.hsd.note(format!("image {other:?}"));
                 None
             }
+            None => None,
         }
     }
 

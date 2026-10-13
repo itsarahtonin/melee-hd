@@ -389,10 +389,13 @@ fn compare(args: &[String]) -> ExitCode {
                             save_rgba(&o.join(format!("diff_{n}.png")), w, h, &diff);
                         }
                     }
-                    Some((w, h, _)) => println!(
-                        "  image: {}x{} against the reference's {w}x{h}",
-                        img.width, img.height
-                    ),
+                    Some((w, h, _)) => {
+                        failed = true;
+                        println!(
+                            "  image: {}x{} against the reference's {w}x{h}",
+                            img.width, img.height
+                        );
+                    }
                     None => {
                         failed = true;
                         println!("  no reference image {}", reference_png.display());
