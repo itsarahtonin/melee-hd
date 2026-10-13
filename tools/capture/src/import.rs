@@ -98,6 +98,7 @@ pub struct Maps {
     pub fighters: HashMap<u32, FighterId>,
     pub items: HashMap<u32, ItemId>,
     pub item_links: HashMap<u32, melee_sim::game::handles::ItemLinkId>,
+    pub sound_objs: HashMap<u32, melee_sim::game::handles::SoundObjId>,
     pub effects: HashMap<u32, melee_sim::game::handles::EffectId>,
     pub bone_tables: HashMap<u32, BoneTableId>,
     pub grounds: HashMap<u32, GroundId>,
@@ -443,6 +444,11 @@ impl<'a> Importer<'a> {
                 }
                 6 if ud != 0 => Some(UserData::Item(self.item(ud))),
                 8 if ud != 0 => Some(UserData::Effect(self.effect(ud))),
+                melee_sim::lb::sound_obj::USER_DATA_KIND
+                    if ud != 0 && release == melee_sim::lb::sound_obj::FREE =>
+                {
+                    Some(UserData::Sound(self.sound_obj(ud)))
+                }
                 // Pokémon Stadium's screens: kind 3 too, freed with `HSD_Free`.
                 3 if ud != 0
                     && release == crate::stadium::HSD_FREE
@@ -1763,7 +1769,9 @@ impl Cx for Importer<'_> {
             return Some(self.dangling(kind, addr));
         }
         Some(match kind {
-            "JObjId" if !self.stale => self.jobj(addr).0,
+            // A live joint a stale word points to (an item's variables hold another GObj's
+            // joint, as the yo-yo holds its tip link's) is that joint, met first here.
+            "JObjId" if !self.stale || self.is_jobj(addr) => self.jobj(addr).0,
             "DObjId" => self.dobj(addr).0,
             "TObjId" => self.tobj(addr).0,
             "MObjId" => self.mobj(addr).0,

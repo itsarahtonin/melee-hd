@@ -704,17 +704,7 @@ impl Running<'_> {
         );
         let j = self.bone_joint(gobj, PART_L3RD_NA);
         let hand = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
-        let flags = self
-            .seak_ext(
-                super::ext::FTNS_YOYO_CHECK_ENV_COLL,
-                &[
-                    Val::GObj(Some(gobj)),
-                    Val::Vec(mid),
-                    Val::Vec(hand),
-                    Val::Float(0.5),
-                ],
-            )
-            .int();
+        let flags = self.ness_yoyo_check_env_coll(gobj, mid, hand, 0.5);
         if flags != 0 {
             self.seak_special_s_to_end(gobj);
         }

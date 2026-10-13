@@ -185,3 +185,38 @@ pub fn orient(game: &mut Game, j: JObjId, pos: Vec3, dir: &mut Vec3) {
     jobjs[j].flags |= jobj::USER_DEF_MTX | jobj::MTX_INDEP_PARENT | jobj::MTX_INDEP_SRT;
     jobj::set_mtx_dirty(jobjs, Some(j));
 }
+
+/// The touch flags the links' airborne passes report: floors and walls.
+const FLOOR_AND_WALLS: i32 = 0x8000 | 0x10000 | 0x3F | 0xFC0;
+
+/// Runs the airborne pass (`mpColl_800471F8`) on a link's collision data, from where its last
+/// pass left it to its position, which takes where the pass leaves it.
+fn coll_air_pass(r: &mut Running, l: ItemLinkId) -> i32 {
+    let k = link_mut(r.game, l);
+    k.coll_data.cur_pos = k.pos;
+    let mut cd = k.coll_data.clone();
+    let hit = with_stage_coll(r.game, r.data, |c| c.air_frame(&mut cd, 6, 0));
+    let k = link_mut(r.game, l);
+    k.coll_data = cd;
+    k.x2C_b1 = hit;
+    k.pos = k.coll_data.cur_pos;
+    k.coll_data.env_flags & FLOOR_AND_WALLS
+}
+
+/// A link's airborne pass from its last to its position, `it_802A3D90`: the floors and walls it
+/// touched.
+#[doc(alias = "it_802A3D90")]
+pub fn coll_air(r: &mut Running, l: ItemLinkId) -> i32 {
+    let k = link_mut(r.game, l);
+    k.coll_data.last_pos = k.coll_data.cur_pos;
+    coll_air_pass(r, l)
+}
+
+/// [`coll_air`] from `y` instead of its last height, `it_802A42F4`.
+#[doc(alias = "it_802A42F4")]
+pub fn coll_air_from(r: &mut Running, l: ItemLinkId, y: f32) -> i32 {
+    let k = link_mut(r.game, l);
+    k.coll_data.last_pos = k.coll_data.cur_pos;
+    k.coll_data.last_pos.y = y;
+    coll_air_pass(r, l)
+}

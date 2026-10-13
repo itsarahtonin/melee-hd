@@ -164,15 +164,15 @@ impl Running<'_> {
     #[doc(alias = "ft_80088C5C")]
     pub fn stop_fighter_sounds(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.game.lb_stop_owned_sound_objects(gobj);
+        self.lb_stop_owned_sound_objects(gobj);
         let last = self.game.fighters[f.0].x2160;
         if last != -1 {
-            self.game.lb_stop_owned_sound_object(gobj, last);
+            self.lb_stop_owned_sound_object(gobj, last);
             self.game.fighters[f.0].x2160 = -1;
         }
         for t in TRACKS {
             let h = self.track_handle(f, t);
-            if h != -1 && self.game.lb_stop_owned_sound_object(gobj, h) {
+            if h != -1 && self.lb_stop_owned_sound_object(gobj, h) {
                 self.fighter_stop_track(f, t);
             }
         }

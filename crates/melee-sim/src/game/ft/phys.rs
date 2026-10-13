@@ -135,13 +135,17 @@ impl Running<'_> {
         }
     }
 
-    /// Air drift from the stick, `ftCommon_CalcSelfAccel_Drift` and
-    /// `ftCommon_CalcSelfAccel_DriftFrom`.
+    /// Air drift from the stick, `ftCommon_CalcSelfAccel_Drift`.
     #[doc(alias = "ftCommon_CalcSelfAccel_Drift")]
-    #[doc(alias = "ftCommon_CalcSelfAccel_DriftFrom")]
     pub fn air_drift(&mut self, gobj: GObjId) {
+        let vel = reg(self.game.fighter(gobj).self_vel.x);
+        self.air_drift_from(gobj, vel);
+    }
+
+    /// Air drift from the stick as if moving at `vel`, `ftCommon_CalcSelfAccel_DriftFrom`.
+    #[doc(alias = "ftCommon_CalcSelfAccel_DriftFrom")]
+    pub fn air_drift_from(&mut self, gobj: GObjId, vel: f64) {
         let fp = self.game.fighter_mut(gobj);
-        let vel = reg(fp.self_vel.x);
         let lsx = reg(fp.input.lstick[0].x);
         let a = &fp.co_attrs;
         let scaling = fp::fmuls(lsx, reg(a.air_drift_stick_mul));

@@ -1707,16 +1707,16 @@ pub fn stop_sfx2(r: &mut Running, gobj: GObjId) {
 /// three slots (a slot a sound object held is stopped there, the others by handle).
 #[doc(alias = "Item_8026B0B4")]
 pub fn stop_all_sfx(r: &mut Running, gobj: GObjId) {
-    r.game.lb_stop_owned_sound_objects(gobj);
+    r.lb_stop_owned_sound_objects(gobj);
     let xd6c = super::item(r.game, gobj).xD6C;
     if xd6c != NO_SFX {
-        r.game.lb_stop_owned_sound_object(gobj, xd6c);
+        r.lb_stop_owned_sound_object(gobj, xd6c);
         item_mut(r.game, gobj).xD6C = NO_SFX;
     }
     for second in [false, true] {
         let ip = super::item(r.game, gobj);
         let h = if second { ip.sfx_unk2 } else { ip.sfx_unk1 };
-        if h != NO_SFX && r.game.lb_stop_owned_sound_object(gobj, h) {
+        if h != NO_SFX && r.lb_stop_owned_sound_object(gobj, h) {
             r.sfx_stop(h);
             let ip = item_mut(r.game, gobj);
             if second {

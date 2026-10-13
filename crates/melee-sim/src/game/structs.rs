@@ -7519,16 +7519,6 @@ pub struct ItemLink {
     pub x2C_b1: bool,
     /// +0x2c (bits 2..+1)
     pub x2C_b2: bool,
-    /// +0x2c (bits 3..+1)
-    pub x2C_b3: bool,
-    /// +0x2c (bits 4..+1)
-    pub x2C_b4: bool,
-    /// +0x2c (bits 5..+1)
-    pub x2C_b5: bool,
-    /// +0x2c (bits 6..+1)
-    pub x2C_b6: bool,
-    /// +0x2c (bits 7..+1)
-    pub x2C_b7: bool,
     /// +0x30
     pub coll_data: CollData,
     /// +0x1cc
@@ -7550,11 +7540,6 @@ impl Default for ItemLink {
             x2C_b0: false,
             x2C_b1: false,
             x2C_b2: false,
-            x2C_b3: false,
-            x2C_b4: false,
-            x2C_b5: false,
-            x2C_b6: false,
-            x2C_b7: false,
             coll_data: Default::default(),
             x1CC: 0,
             gobj: None,
@@ -7698,6 +7683,234 @@ impl itZeldaDinFireExplode_ItemVars {
         self.xDD8.mark_stale();
         self.xDDC.mark_stale();
         self.xDE0.mark_stale();
+    }
+}
+
+/// `itPKFlush_ItemVars`, 0x14 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itPKFlush_ItemVars {
+    /// +0x0
+    pub xDD4_PKFlash: Var<i32>,
+    /// +0x4
+    pub xDD8_PKFlash: Var<f32>,
+    /// +0x8
+    pub xDDC_PKFlash: Var<i32>,
+    /// +0xc
+    pub xDE0_PKFlash_Owner: Var<Option<GObjId>>,
+    /// +0x10
+    pub xDE4_PKFlash: Var<i32>,
+}
+
+impl Default for itPKFlush_ItemVars {
+    fn default() -> Self {
+        itPKFlush_ItemVars {
+            xDD4_PKFlash: Var::new(Default::default()),
+            xDD8_PKFlash: Var::new(Default::default()),
+            xDDC_PKFlash: Var::new(Default::default()),
+            xDE0_PKFlash_Owner: Var::new(Default::default()),
+            xDE4_PKFlash: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itPKFlush_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4_PKFlash.mark_stale();
+        self.xDD8_PKFlash.mark_stale();
+        self.xDDC_PKFlash.mark_stale();
+        self.xDE0_PKFlash_Owner.mark_stale();
+        self.xDE4_PKFlash.mark_stale();
+    }
+}
+
+/// `itPKFlushExplode_ItemVars`, 0xc bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itPKFlushExplode_ItemVars {
+    /// +0x0
+    pub xDD4: Var<f32>,
+    /// +0x4
+    pub xDD8: Var<f32>,
+    /// +0x8
+    pub xDDC: Var<Option<GObjId>>,
+}
+
+impl Default for itPKFlushExplode_ItemVars {
+    fn default() -> Self {
+        itPKFlushExplode_ItemVars {
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itPKFlushExplode_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+    }
+}
+
+/// `itPKThunder_ItemVars`, 0x138 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itPKThunder_ItemVars {
+    /// +0x0
+    pub xDD4: [Var<Option<GObjId>>; 6],
+    /// +0x18
+    pub positions: [Var<Vec3>; 16],
+    /// +0xd8
+    pub angles: [Var<f32>; 16],
+    /// +0x118
+    pub xEEC: Var<f32>,
+    /// +0x11c
+    pub xEF0: Var<i32>,
+    /// +0x120
+    pub xEF4: Var<Option<GObjId>>,
+    /// +0x124
+    pub xEF8: Var<i32>,
+    /// +0x128
+    pub xEFC: Var<i32>,
+    /// +0x12c
+    pub xF00: Var<i32>,
+    /// +0x130
+    pub xF04: Var<Option<GObjId>>,
+    /// +0x134
+    pub xF08: Var<Option<GObjId>>,
+}
+
+impl Default for itPKThunder_ItemVars {
+    fn default() -> Self {
+        itPKThunder_ItemVars {
+            xDD4: core::array::from_fn(|_| Var::new(Default::default())),
+            positions: core::array::from_fn(|_| Var::new(Default::default())),
+            angles: core::array::from_fn(|_| Var::new(Default::default())),
+            xEEC: Var::new(Default::default()),
+            xEF0: Var::new(Default::default()),
+            xEF4: Var::new(Default::default()),
+            xEF8: Var::new(Default::default()),
+            xEFC: Var::new(Default::default()),
+            xF00: Var::new(Default::default()),
+            xF04: Var::new(Default::default()),
+            xF08: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itPKThunder_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.iter_mut().for_each(|v| v.mark_stale());
+        self.positions.iter_mut().for_each(|v| v.mark_stale());
+        self.angles.iter_mut().for_each(|v| v.mark_stale());
+        self.xEEC.mark_stale();
+        self.xEF0.mark_stale();
+        self.xEF4.mark_stale();
+        self.xEF8.mark_stale();
+        self.xEFC.mark_stale();
+        self.xF00.mark_stale();
+        self.xF04.mark_stale();
+        self.xF08.mark_stale();
+    }
+}
+
+/// `itNesspkthundertrail_ItemVars`, 0xc bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itNesspkthundertrail_ItemVars {
+    /// +0x0
+    pub x0: Var<Option<GObjId>>,
+    /// +0x4
+    pub x4: Var<i32>,
+    /// +0x8
+    pub x8: Var<i32>,
+}
+
+impl Default for itNesspkthundertrail_ItemVars {
+    fn default() -> Self {
+        itNesspkthundertrail_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itNesspkthundertrail_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+    }
+}
+
+/// `itNessbat_ItemVars`, 0x4 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itNessbat_ItemVars {
+    /// +0x0
+    pub x0: Var<Option<GObjId>>,
+}
+
+impl Default for itNessbat_ItemVars {
+    fn default() -> Self {
+        itNessbat_ItemVars {
+            x0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itNessbat_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+    }
+}
+
+/// `itNessYoyo_ItemVars`, 0x1c bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itNessYoyo_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub x4: Var<f32>,
+    /// +0x8
+    pub x8: Var<Option<ItemLinkId>>,
+    /// +0xc
+    pub xC: Var<Option<ItemLinkId>>,
+    /// +0x10
+    pub x10: Var<Option<GObjId>>,
+    /// +0x14
+    pub pad_14: [Var<i8>; 4],
+    /// +0x18
+    pub x18: Var<Option<JObjId>>,
+}
+
+impl Default for itNessYoyo_ItemVars {
+    fn default() -> Self {
+        itNessYoyo_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+            pad_14: core::array::from_fn(|_| Var::new(Default::default())),
+            x18: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itNessYoyo_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.x10.mark_stale();
+        self.pad_14.iter_mut().for_each(|v| v.mark_stale());
+        self.x18.mark_stale();
     }
 }
 

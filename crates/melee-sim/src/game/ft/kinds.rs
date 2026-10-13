@@ -27,7 +27,7 @@ const IT_KIND_FOX_ILLUSION: i32 = 56;
 
 impl Running<'_> {
     /// The character's attributes (`ftData::ext_attr`), `size` bytes of them.
-    fn ext_attrs(&self, f: FighterId, size: usize) -> Vec<u8> {
+    pub(crate) fn ext_attrs(&self, f: FighterId, size: usize) -> Vec<u8> {
         let d = self.game.fighters[f.0]
             .ft_data
             .expect("a fighter without data");
@@ -38,7 +38,7 @@ impl Running<'_> {
 
     /// Copies the character's attributes into the fighter's backup block and makes that its
     /// attributes (`PUSH_ATTRS`).
-    fn push_attrs(&mut self, f: FighterId, size: usize) {
+    pub(crate) fn push_attrs(&mut self, f: FighterId, size: usize) {
         let src = self.ext_attrs(f, size);
         let backup = self.game.fighters[f.0]
             .dat_attrs_backup
@@ -48,7 +48,7 @@ impl Running<'_> {
     }
 
     /// Copies the character's attributes over the fighter's (`COPY_ATTRS`).
-    fn copy_attrs(&mut self, f: FighterId, size: usize) {
+    pub(crate) fn copy_attrs(&mut self, f: FighterId, size: usize) {
         let src = self.ext_attrs(f, size);
         let attrs: AttrsId = self.game.fighters[f.0]
             .dat_attrs

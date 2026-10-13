@@ -738,6 +738,20 @@ impl Running<'_> {
         fp.reflect_hit.offset = d.offset;
     }
 
+    /// The fighter's absorbing bubble from a descriptor, `ftColl_CreateAbsorbHit`: on the
+    /// parts table's joint `bone`.
+    #[doc(alias = "ftColl_CreateAbsorbHit")]
+    pub fn create_absorb_hit(&mut self, gobj: GObjId, bone: i32, offset: Vec3, size: f32) {
+        let f = self.game.fighter_id(gobj);
+        let joint = self.bones(f)[bone as usize].joint;
+        let fp = &mut self.game.fighters[f.0];
+        fp.x2218_b6 = true;
+        fp.x2218_b7 = false;
+        fp.absorb_hit.bone = joint;
+        fp.absorb_hit.size = size;
+        fp.absorb_hit.offset = offset;
+    }
+
     /// The fighter's effects removed, `ftCommon_8007DB24`.
     #[doc(alias = "ftCommon_8007DB24")]
     pub fn destroy_effects(&mut self, gobj: GObjId) {

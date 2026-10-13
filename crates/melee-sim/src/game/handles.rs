@@ -16,6 +16,11 @@ pub struct ItemId(pub u32);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ItemLinkId(pub u32);
 
+/// A sound object's slot (`lbAudioAx_UserData`, the user data of the audio library's sound
+/// objects, from `lbl_80433710`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct SoundObjId(pub u32);
+
 /// A function pointer: the original function's address, which the game dispatches on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct CodeRef(pub u32);

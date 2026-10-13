@@ -13,6 +13,7 @@ pub mod items;
 pub mod links;
 pub mod playback;
 pub mod sis;
+pub mod sound;
 pub mod stadium;
 pub mod stage;
 pub mod vs;

@@ -158,7 +158,12 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
             run_fighter_cb(g, gobj, cb);
         }
     } else if reg(fp.AbsorbAttr.x1A40_absorbHitDirection) != 0.0 {
-        unported_call("ftData_OnAbsorb (an absorbed item)");
+        // `ftData_OnAbsorb`: Ness's and Mr. Game & Watch's.
+        match fp.kind {
+            super::ness::KIND_NESS => g.ness_on_absorb(gobj),
+            24 => unported_call("ftGw_Init_OnAbsorb"),
+            _ => {}
+        }
     } else if fp.unk_gobj.is_some()
         && let Some(cb) = fp.hurtbox_detect_cb
     {

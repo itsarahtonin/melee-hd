@@ -31,6 +31,8 @@ pub enum UserData {
     ItemLink(super::handles::ItemLinkId),
     /// A stage object (user data kind 3).
     Ground(GroundId),
+    /// A sound object (user data kind 23, [`crate::lb::sound_obj`]).
+    Sound(super::handles::SoundObjId),
     /// An effect (user data kind 8).
     Effect(super::handles::EffectId),
     /// User data of a kind no port models yet (a sound's, an effect's), by its address in a
@@ -248,6 +250,8 @@ pub struct Game {
     pub rumble_data: Option<melee_data::archive::DataRef>,
     /// The text system (SisLib).
     pub sis: crate::hsd::sis::SisLib,
+    /// The audio library's sound objects (`lbl_80433710`).
+    pub sound_objs: crate::lb::sound_obj::SoundObjs,
 }
 
 /// The game as the scheduler's host for one call: the state and the game data it reads.
@@ -273,6 +277,7 @@ impl Host<GameKinds> for Running<'_> {
             // `it_802A2474`: the link goes back to `item_link_alloc_data`.
             UserData::ItemLink(l) => super::it::link::free(self.game, l),
             UserData::Effect(e) => super::ef::remove_user_data(self.game, e),
+            UserData::Sound(s) => crate::lb::sound_obj::free(self.game, s),
             UserData::Text(t) => self.game.sis.free_text(t),
             UserData::SisCamera(g) => self.game.sis.forget_camera(g),
             // `mn_8022EB04`: the heap byte goes back.

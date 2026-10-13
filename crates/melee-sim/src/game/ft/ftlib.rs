@@ -197,6 +197,29 @@ impl Game {
     pub fn ft_80087bac(&mut self, gobj: GObjId, arg: i32) {
         self.fighter_mut(gobj).x2228_b5 = arg & 1 != 0;
     }
+
+    /// The fighter's stick, `ftLib_GetLStick`.
+    #[doc(alias = "ftLib_GetLStick")]
+    pub fn ft_lstick(&self, gobj: GObjId) -> (f32, f32) {
+        let s = &self.fighter(gobj).input.lstick[0];
+        (s.x, s.y)
+    }
+
+    // Ports `ftLib_GetFacingDir`; aliased once a check reaches it.
+    pub fn ft_facing_dir(&self, gobj: GObjId) -> f32 {
+        self.fighter(gobj).facing_dir
+    }
+
+    #[doc(alias = "ftLib_GetMotionId")]
+    pub fn ft_motion_id(&self, gobj: GObjId) -> i32 {
+        self.fighter(gobj).motion_id
+    }
+
+    /// The fighter's height scale, `ftLib_GetScale`.
+    #[doc(alias = "ftLib_GetScale")]
+    pub fn ft_scale(&self, gobj: GObjId) -> f32 {
+        self.fighter(gobj).x34_scale.y
+    }
 }
 
 impl Running<'_> {

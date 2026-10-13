@@ -203,3 +203,10 @@ pub fn show(game: &mut Game, gobj: GObjId) {
     let j = super::jobj_of(game, gobj);
     super::lib2725::show_tree(game, j);
 }
+
+/// Where an item from `fighter` starts, `it_8026BB68`: the fighter's ECB center
+/// (`ftLib_GetECBCenter`).
+#[doc(alias = "it_8026BB68")]
+pub fn parent_ecb_center(game: &Game, fighter: GObjId) -> crate::vec::Vec3 {
+    super::owner::ecb_center(game, fighter)
+}

@@ -329,7 +329,7 @@ impl Running<'_> {
     /// `ftCo_CatchCut_Anim` (`ftCo_CaptureCut_Anim`): falling or waiting once its frames run
     /// out.
     // Ports `ftCo_CatchCut_Anim`; aliased once a check reaches it.
-    // Ports `ftCo_CaptureCut_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_CaptureCut_Anim")]
     pub fn co_catch_cut_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.fall_or_wait(gobj);
@@ -900,7 +900,7 @@ impl Running<'_> {
     }
 
     /// Breaking free on the ground, `ftCo_CaptureCut_Enter`: the grab ends, pushed back.
-    // Ports `ftCo_CaptureCut_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_CaptureCut_Enter")]
     pub fn enter_capture_cut(&mut self, gobj: GObjId) {
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
         self.grab_release(grabber, gobj);
@@ -917,7 +917,7 @@ impl Running<'_> {
 
     /// `ftCo_CaptureCut_Phys`: its friction (`ftCommonData` x36C of the ground's) on the
     /// ground, else falling and drifting.
-    // Ports `ftCo_CaptureCut_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_CaptureCut_Phys")]
     pub fn co_capture_cut_phys(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).ground_or_air == GA_GROUND {
             let mul = reg(self.common().f32(0x36C));
@@ -932,9 +932,9 @@ impl Running<'_> {
 
     /// `ftCo_CaptureCut_Coll`: on the ground, airborne off a ledge (`fn_800DC8D8`); in the
     /// air, landing (`fn_800DC8FC`).
-    // Ports `ftCo_CaptureCut_Coll`; aliased once a check reaches it.
-    // Ports `fn_800DC8D8`; aliased once a check reaches it.
-    // Ports `fn_800DC8FC`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_CaptureCut_Coll")]
+    #[doc(alias = "fn_800DC8D8")]
+    #[doc(alias = "fn_800DC8FC")]
     pub fn co_capture_cut_coll(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).ground_or_air == GA_GROUND {
             self.ground_coll_then(gobj, |g, gobj| {
@@ -942,7 +942,7 @@ impl Running<'_> {
                 g.go_airborne(f);
             });
         } else {
-            unported_call("ft_80083910 from ftCo_CaptureCut_Coll (its registers)");
+            self.air_coll_grounded_ecb_ledges_then(gobj, |g, gobj| g.land(gobj));
         }
     }
 
@@ -1007,7 +1007,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_CatchPull_IASA")]
     // Ports `ftCo_CatchAttack_IASA`; aliased once a check reaches it.
     // Ports `ftCo_CatchCut_IASA`; aliased once a check reaches it.
-    // Ports `ftCo_CaptureCut_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_CaptureCut_IASA")]
     pub fn co_grab_nothing(&mut self, _gobj: GObjId) {}
 
     /// `ftCo_CapturePulledHi_Phys` and `ftCo_CaptureWaitHi_Phys`: to the hold point.

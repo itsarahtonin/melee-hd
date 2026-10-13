@@ -133,6 +133,12 @@ members! {
     SeakChain, seak_chain, itSeakChain_ItemVars, [SEAK_CHAIN];
     ZeldaDinFire, zelda_din_fire, itZeldaDinFire_ItemVars, [ZELDA_DIN_FIRE];
     ZeldaDinFireExplode, zelda_din_fire_explode, itZeldaDinFireExplode_ItemVars, [ZELDA_DIN_FIRE_EXPLODE];
+    PKFlush, pk_flush, itPKFlush_ItemVars, [NESS_PK_FLUSH];
+    PKFlushExplode, pk_flush_explode, itPKFlushExplode_ItemVars, [NESS_PK_FLUSH_EXPLODE];
+    PKThunder, pk_thunder, itPKThunder_ItemVars, [NESS_PK_THUNDER];
+    NessPKThunderTrail, ness_pk_thunder_trail, itNesspkthundertrail_ItemVars, [NESS_PK_THUNDER1, NESS_PK_THUNDER2, NESS_PK_THUNDER3, NESS_PK_THUNDER4];
+    NessBat, ness_bat, itNessbat_ItemVars, [NESS_BAT];
+    NessYoyo, ness_yoyo, itNessYoyo_ItemVars, [NESS_YOYO];
 }
 
 impl Default for ItemVars {

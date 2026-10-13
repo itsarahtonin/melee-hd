@@ -16611,11 +16611,6 @@ impl Mirror for ItemLink {
             x2C_b0: m.bits(at, 352, 1) != 0,
             x2C_b1: m.bits(at, 353, 1) != 0,
             x2C_b2: m.bits(at, 354, 1) != 0,
-            x2C_b3: m.bits(at, 355, 1) != 0,
-            x2C_b4: m.bits(at, 356, 1) != 0,
-            x2C_b5: m.bits(at, 357, 1) != 0,
-            x2C_b6: m.bits(at, 358, 1) != 0,
-            x2C_b7: m.bits(at, 359, 1) != 0,
             coll_data: CollData::import(m, at + 0x30, cx),
             x1CC: m.u32(at + 0x1cc) as i32,
             gobj: cx.import_handle("GObjId", m.u32(at + 0x1d0)).map(GObjId),
@@ -16659,41 +16654,6 @@ impl Mirror for ItemLink {
                 &format!("{path}.x2C_b2"),
                 format!("{:?}", self.x2C_b2),
                 format!("{:?}", m.bits(at, 354, 1)),
-            );
-        }
-        if (self.x2C_b3 as u32) != m.bits(at, 355, 1) {
-            cx.mismatch(
-                &format!("{path}.x2C_b3"),
-                format!("{:?}", self.x2C_b3),
-                format!("{:?}", m.bits(at, 355, 1)),
-            );
-        }
-        if (self.x2C_b4 as u32) != m.bits(at, 356, 1) {
-            cx.mismatch(
-                &format!("{path}.x2C_b4"),
-                format!("{:?}", self.x2C_b4),
-                format!("{:?}", m.bits(at, 356, 1)),
-            );
-        }
-        if (self.x2C_b5 as u32) != m.bits(at, 357, 1) {
-            cx.mismatch(
-                &format!("{path}.x2C_b5"),
-                format!("{:?}", self.x2C_b5),
-                format!("{:?}", m.bits(at, 357, 1)),
-            );
-        }
-        if (self.x2C_b6 as u32) != m.bits(at, 358, 1) {
-            cx.mismatch(
-                &format!("{path}.x2C_b6"),
-                format!("{:?}", self.x2C_b6),
-                format!("{:?}", m.bits(at, 358, 1)),
-            );
-        }
-        if (self.x2C_b7 as u32) != m.bits(at, 359, 1) {
-            cx.mismatch(
-                &format!("{path}.x2C_b7"),
-                format!("{:?}", self.x2C_b7),
-                format!("{:?}", m.bits(at, 359, 1)),
             );
         }
         self.coll_data
@@ -16972,6 +16932,401 @@ impl Mirror for itZeldaDinFireExplode_ItemVars {
                     format!("{:?}", m.u32(at + 0xc) as i32),
                 );
             }
+        }
+    }
+}
+
+impl Mirror for itPKFlush_ItemVars {
+    const SIZE: u32 = 0x14;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itPKFlush_ItemVars {
+            xDD4_PKFlash: Var::new(m.u32(at + 0x0) as i32),
+            xDD8_PKFlash: Var::new(f32::from_bits(m.u32(at + 0x4))),
+            xDDC_PKFlash: Var::new(m.u32(at + 0x8) as i32),
+            xDE0_PKFlash_Owner: Var::new(cx.import_handle("GObjId", m.u32(at + 0xc)).map(GObjId)),
+            xDE4_PKFlash: Var::new(m.u32(at + 0x10) as i32),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.xDD4_PKFlash.live(&format!("{path}.xDD4_PKFlash"), cx) {
+            if (*self.xDD4_PKFlash.peek()) != m.u32(at + 0x0) as i32 {
+                cx.mismatch(
+                    &format!("{path}.xDD4_PKFlash"),
+                    format!("{:?}", (*self.xDD4_PKFlash.peek())),
+                    format!("{:?}", m.u32(at + 0x0) as i32),
+                );
+            }
+        }
+        if self.xDD8_PKFlash.live(&format!("{path}.xDD8_PKFlash"), cx) {
+            if (*self.xDD8_PKFlash.peek()).to_bits() != m.u32(at + 0x4) {
+                cx.mismatch(
+                    &format!("{path}.xDD8_PKFlash"),
+                    format!("{:?}", (*self.xDD8_PKFlash.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x4))),
+                );
+            }
+        }
+        if self.xDDC_PKFlash.live(&format!("{path}.xDDC_PKFlash"), cx) {
+            if (*self.xDDC_PKFlash.peek()) != m.u32(at + 0x8) as i32 {
+                cx.mismatch(
+                    &format!("{path}.xDDC_PKFlash"),
+                    format!("{:?}", (*self.xDDC_PKFlash.peek())),
+                    format!("{:?}", m.u32(at + 0x8) as i32),
+                );
+            }
+        }
+        if self
+            .xDE0_PKFlash_Owner
+            .live(&format!("{path}.xDE0_PKFlash_Owner"), cx)
+        {
+            cx.compare_handle(
+                &format!("{path}.xDE0_PKFlash_Owner"),
+                "GObjId",
+                (*self.xDE0_PKFlash_Owner.peek()).map(|h| h.0),
+                m.u32(at + 0xc),
+            );
+        }
+        if self.xDE4_PKFlash.live(&format!("{path}.xDE4_PKFlash"), cx) {
+            if (*self.xDE4_PKFlash.peek()) != m.u32(at + 0x10) as i32 {
+                cx.mismatch(
+                    &format!("{path}.xDE4_PKFlash"),
+                    format!("{:?}", (*self.xDE4_PKFlash.peek())),
+                    format!("{:?}", m.u32(at + 0x10) as i32),
+                );
+            }
+        }
+    }
+}
+
+impl Mirror for itPKFlushExplode_ItemVars {
+    const SIZE: u32 = 0xc;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itPKFlushExplode_ItemVars {
+            xDD4: Var::new(f32::from_bits(m.u32(at + 0x0))),
+            xDD8: Var::new(f32::from_bits(m.u32(at + 0x4))),
+            xDDC: Var::new(cx.import_handle("GObjId", m.u32(at + 0x8)).map(GObjId)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.xDD4.live(&format!("{path}.xDD4"), cx) {
+            if (*self.xDD4.peek()).to_bits() != m.u32(at + 0x0) {
+                cx.mismatch(
+                    &format!("{path}.xDD4"),
+                    format!("{:?}", (*self.xDD4.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x0))),
+                );
+            }
+        }
+        if self.xDD8.live(&format!("{path}.xDD8"), cx) {
+            if (*self.xDD8.peek()).to_bits() != m.u32(at + 0x4) {
+                cx.mismatch(
+                    &format!("{path}.xDD8"),
+                    format!("{:?}", (*self.xDD8.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x4))),
+                );
+            }
+        }
+        if self.xDDC.live(&format!("{path}.xDDC"), cx) {
+            cx.compare_handle(
+                &format!("{path}.xDDC"),
+                "GObjId",
+                (*self.xDDC.peek()).map(|h| h.0),
+                m.u32(at + 0x8),
+            );
+        }
+    }
+}
+
+impl Mirror for itPKThunder_ItemVars {
+    const SIZE: u32 = 0x138;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itPKThunder_ItemVars {
+            xDD4: core::array::from_fn(|i0| {
+                Var::new(
+                    cx.import_handle("GObjId", m.u32(at + 0x0 + i0 as u32 * 0x4))
+                        .map(GObjId),
+                )
+            }),
+            positions: core::array::from_fn(|i0| {
+                Var::new(Vec3::import(m, at + 0x18 + i0 as u32 * 0xc, cx))
+            }),
+            angles: core::array::from_fn(|i0| {
+                Var::new(f32::from_bits(m.u32(at + 0xd8 + i0 as u32 * 0x4)))
+            }),
+            xEEC: Var::new(f32::from_bits(m.u32(at + 0x118))),
+            xEF0: Var::new(m.u32(at + 0x11c) as i32),
+            xEF4: Var::new(cx.import_handle("GObjId", m.u32(at + 0x120)).map(GObjId)),
+            xEF8: Var::new(m.u32(at + 0x124) as i32),
+            xEFC: Var::new(m.u32(at + 0x128) as i32),
+            xF00: Var::new(m.u32(at + 0x12c) as i32),
+            xF04: Var::new(cx.import_handle("GObjId", m.u32(at + 0x130)).map(GObjId)),
+            xF08: Var::new(cx.import_handle("GObjId", m.u32(at + 0x134)).map(GObjId)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        for i0 in 0..6 {
+            if self.xDD4[i0].live(&format!("{}[{}]", format!("{path}.xDD4"), i0), cx) {
+                cx.compare_handle(
+                    &format!("{}[{}]", format!("{path}.xDD4"), i0),
+                    "GObjId",
+                    (*self.xDD4[i0].peek()).map(|h| h.0),
+                    m.u32(at + 0x0 + i0 as u32 * 0x4),
+                );
+            }
+        }
+        for i0 in 0..16 {
+            self.positions[i0].compare(
+                m,
+                at + 0x18 + i0 as u32 * 0xc,
+                &format!("{}[{}]", format!("{path}.positions"), i0),
+                cx,
+            );
+        }
+        for i0 in 0..16 {
+            if self.angles[i0].live(&format!("{}[{}]", format!("{path}.angles"), i0), cx) {
+                if (*self.angles[i0].peek()).to_bits() != m.u32(at + 0xd8 + i0 as u32 * 0x4) {
+                    cx.mismatch(
+                        &format!("{}[{}]", format!("{path}.angles"), i0),
+                        format!("{:?}", (*self.angles[i0].peek())),
+                        format!("{:?}", f32::from_bits(m.u32(at + 0xd8 + i0 as u32 * 0x4))),
+                    );
+                }
+            }
+        }
+        if self.xEEC.live(&format!("{path}.xEEC"), cx) {
+            if (*self.xEEC.peek()).to_bits() != m.u32(at + 0x118) {
+                cx.mismatch(
+                    &format!("{path}.xEEC"),
+                    format!("{:?}", (*self.xEEC.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x118))),
+                );
+            }
+        }
+        if self.xEF0.live(&format!("{path}.xEF0"), cx) {
+            if (*self.xEF0.peek()) != m.u32(at + 0x11c) as i32 {
+                cx.mismatch(
+                    &format!("{path}.xEF0"),
+                    format!("{:?}", (*self.xEF0.peek())),
+                    format!("{:?}", m.u32(at + 0x11c) as i32),
+                );
+            }
+        }
+        if self.xEF4.live(&format!("{path}.xEF4"), cx) {
+            cx.compare_handle(
+                &format!("{path}.xEF4"),
+                "GObjId",
+                (*self.xEF4.peek()).map(|h| h.0),
+                m.u32(at + 0x120),
+            );
+        }
+        if self.xEF8.live(&format!("{path}.xEF8"), cx) {
+            if (*self.xEF8.peek()) != m.u32(at + 0x124) as i32 {
+                cx.mismatch(
+                    &format!("{path}.xEF8"),
+                    format!("{:?}", (*self.xEF8.peek())),
+                    format!("{:?}", m.u32(at + 0x124) as i32),
+                );
+            }
+        }
+        if self.xEFC.live(&format!("{path}.xEFC"), cx) {
+            if (*self.xEFC.peek()) != m.u32(at + 0x128) as i32 {
+                cx.mismatch(
+                    &format!("{path}.xEFC"),
+                    format!("{:?}", (*self.xEFC.peek())),
+                    format!("{:?}", m.u32(at + 0x128) as i32),
+                );
+            }
+        }
+        if self.xF00.live(&format!("{path}.xF00"), cx) {
+            if (*self.xF00.peek()) != m.u32(at + 0x12c) as i32 {
+                cx.mismatch(
+                    &format!("{path}.xF00"),
+                    format!("{:?}", (*self.xF00.peek())),
+                    format!("{:?}", m.u32(at + 0x12c) as i32),
+                );
+            }
+        }
+        if self.xF04.live(&format!("{path}.xF04"), cx) {
+            cx.compare_handle(
+                &format!("{path}.xF04"),
+                "GObjId",
+                (*self.xF04.peek()).map(|h| h.0),
+                m.u32(at + 0x130),
+            );
+        }
+        if self.xF08.live(&format!("{path}.xF08"), cx) {
+            cx.compare_handle(
+                &format!("{path}.xF08"),
+                "GObjId",
+                (*self.xF08.peek()).map(|h| h.0),
+                m.u32(at + 0x134),
+            );
+        }
+    }
+}
+
+impl Mirror for itNesspkthundertrail_ItemVars {
+    const SIZE: u32 = 0xc;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itNesspkthundertrail_ItemVars {
+            x0: Var::new(cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId)),
+            x4: Var::new(m.u32(at + 0x4) as i32),
+            x8: Var::new(m.u32(at + 0x8) as i32),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0.live(&format!("{path}.x0"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x0"),
+                "GObjId",
+                (*self.x0.peek()).map(|h| h.0),
+                m.u32(at + 0x0),
+            );
+        }
+        if self.x4.live(&format!("{path}.x4"), cx) {
+            if (*self.x4.peek()) != m.u32(at + 0x4) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x4"),
+                    format!("{:?}", (*self.x4.peek())),
+                    format!("{:?}", m.u32(at + 0x4) as i32),
+                );
+            }
+        }
+        if self.x8.live(&format!("{path}.x8"), cx) {
+            if (*self.x8.peek()) != m.u32(at + 0x8) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x8"),
+                    format!("{:?}", (*self.x8.peek())),
+                    format!("{:?}", m.u32(at + 0x8) as i32),
+                );
+            }
+        }
+    }
+}
+
+impl Mirror for itNessbat_ItemVars {
+    const SIZE: u32 = 0x4;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itNessbat_ItemVars {
+            x0: Var::new(cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0.live(&format!("{path}.x0"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x0"),
+                "GObjId",
+                (*self.x0.peek()).map(|h| h.0),
+                m.u32(at + 0x0),
+            );
+        }
+    }
+}
+
+impl Mirror for itNessYoyo_ItemVars {
+    const SIZE: u32 = 0x1c;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itNessYoyo_ItemVars {
+            x0: Var::new(m.u32(at + 0x0) as i32),
+            x4: Var::new(f32::from_bits(m.u32(at + 0x4))),
+            x8: Var::new(
+                cx.import_handle("ItemLinkId", m.u32(at + 0x8))
+                    .map(ItemLinkId),
+            ),
+            xC: Var::new(
+                cx.import_handle("ItemLinkId", m.u32(at + 0xc))
+                    .map(ItemLinkId),
+            ),
+            x10: Var::new(cx.import_handle("GObjId", m.u32(at + 0x10)).map(GObjId)),
+            pad_14: core::array::from_fn(|i0| Var::new(m.u8(at + 0x14 + i0 as u32 * 0x1) as i8)),
+            x18: Var::new(cx.import_handle("JObjId", m.u32(at + 0x18)).map(JObjId)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0.live(&format!("{path}.x0"), cx) {
+            if (*self.x0.peek()) != m.u32(at + 0x0) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x0"),
+                    format!("{:?}", (*self.x0.peek())),
+                    format!("{:?}", m.u32(at + 0x0) as i32),
+                );
+            }
+        }
+        if self.x4.live(&format!("{path}.x4"), cx) {
+            if (*self.x4.peek()).to_bits() != m.u32(at + 0x4) {
+                cx.mismatch(
+                    &format!("{path}.x4"),
+                    format!("{:?}", (*self.x4.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x4))),
+                );
+            }
+        }
+        if self.x8.live(&format!("{path}.x8"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x8"),
+                "ItemLinkId",
+                (*self.x8.peek()).map(|h| h.0),
+                m.u32(at + 0x8),
+            );
+        }
+        if self.xC.live(&format!("{path}.xC"), cx) {
+            cx.compare_handle(
+                &format!("{path}.xC"),
+                "ItemLinkId",
+                (*self.xC.peek()).map(|h| h.0),
+                m.u32(at + 0xc),
+            );
+        }
+        if self.x10.live(&format!("{path}.x10"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x10"),
+                "GObjId",
+                (*self.x10.peek()).map(|h| h.0),
+                m.u32(at + 0x10),
+            );
+        }
+        for i0 in 0..4 {
+            if self.pad_14[i0].live(&format!("{}[{}]", format!("{path}.pad_14"), i0), cx) {
+                if (*self.pad_14[i0].peek()) != m.u8(at + 0x14 + i0 as u32 * 0x1) as i8 {
+                    cx.mismatch(
+                        &format!("{}[{}]", format!("{path}.pad_14"), i0),
+                        format!("{:?}", (*self.pad_14[i0].peek())),
+                        format!("{:?}", m.u8(at + 0x14 + i0 as u32 * 0x1) as i8),
+                    );
+                }
+            }
+        }
+        if self.x18.live(&format!("{path}.x18"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x18"),
+                "JObjId",
+                (*self.x18.peek()).map(|h| h.0),
+                m.u32(at + 0x18),
+            );
         }
     }
 }

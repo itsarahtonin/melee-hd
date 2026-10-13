@@ -10,7 +10,6 @@ pub mod trick;
 
 use melee_data::archive::DataRef;
 
-use super::code::unported_call;
 use super::state::Running;
 use super::structs::plActionStats;
 use gekko_fp as fp;
@@ -34,7 +33,8 @@ impl Running<'_> {
         self.data.ptr(base).expect("plLoadCommonData's data")
     }
 
-    /// `pl_800411C4`: the frame's counters end; repeated inputs count toward a bonus.
+    /// `pl_800411C4`: the frame's counters end; repeated inputs count toward a bonus, and an
+    /// entry for another player marked with a count of one gives that player bonus 0x4C.
     #[doc(alias = "pl_800411C4")]
     pub fn pl_800411c4(&mut self, slot: i32, sub: i32) {
         if sub == 1 {
@@ -43,8 +43,9 @@ impl Running<'_> {
         self.pl_8004138c(slot, sub);
         for i in 0..6 {
             let e = &self.game.player_unk6a8(slot).x10[i];
+            // Bonus 0x4C goes to the player the entry is for.
             if e.x12_b0 && e.x4 == 1 {
-                unported_call("pl_80038824 from pl_800411C4");
+                self.count_bonus(i as i32, 0x4C);
             }
             let e = &mut self.game.player_unk6a8(slot).x10[i];
             e.x0 = 0.0;
@@ -84,7 +85,7 @@ impl Running<'_> {
             let avg = fp::fdivs(fp::fsubs(total, best), total);
             let bar = crate::fpu::reg(self.data.f32(self.pl_data().at(0xD4)));
             if avg >= bar {
-                unported_call("pl_80038788");
+                self.set_point(slot, 0x58, 1);
             }
         }
     }

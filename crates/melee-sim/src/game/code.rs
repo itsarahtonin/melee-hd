@@ -39,6 +39,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::playback::RECORD_FRAME_START_PROC | super::playback::RECORD_ITEMS_PROC => {}
         super::gm::vs::PROC => game.vs_proc(),
         crate::lb::bgflash::PROC => game.game.bgflash.proc(),
+        crate::lb::sound_obj::PROC => game.sound_object_proc(gobj),
         crate::lb::bgflash::OVERLAY_PROC => game.bg_flash_proc(),
         // fn_801A4BD0: the scene GObj's first process, empty.
         super::gm::vs::SCENE_PROC => {}
@@ -121,6 +122,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::seak::run(g, gobj, addr) => {}
         addr if super::ft::mars::run(g, gobj, addr) => {}
         addr if super::ft::zelda::run(g, gobj, addr) => {}
+        addr if super::ft::ness::run(g, gobj, addr) => {}
         addr if super::ft::co::dispatch::run(g, gobj, addr) => {}
         // Animation.
         0x8008_A494 => g.co_wait_anim(gobj),
@@ -316,6 +318,9 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::zelda::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::ness::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::sfx::call(r, f, args) {

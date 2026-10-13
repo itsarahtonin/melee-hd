@@ -359,6 +359,7 @@ impl<'a> Comparer<'a> {
             Some(UserData::Ground(g)) => self.ground(path, g, self.u32(t + 0x2C)),
             Some(UserData::Item(i)) => self.item(path, i, self.u32(t + 0x2C)),
             Some(UserData::ItemLink(l)) => self.item_link(path, l, self.u32(t + 0x2C)),
+            Some(UserData::Sound(s)) => self.sound_obj(path, s, self.u32(t + 0x2C)),
             Some(UserData::Raw(a)) => self.check(path, "user data", a.0, self.u32(t + 0x2C)),
             Some(UserData::BgFlash) => {
                 let (ud, release) = (self.u32(t + 0x2C), self.u32(t + 0x30));

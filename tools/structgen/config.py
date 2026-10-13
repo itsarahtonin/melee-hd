@@ -34,6 +34,13 @@ ROOTS = [
     # Zelda's Din's Fire and its explosion.
     "itZeldaDinFire_ItemVars",
     "itZeldaDinFireExplode_ItemVars",
+    # Ness's PK Flash and its blast, PK Thunder's ball and trails, the bat and the yo-yo.
+    "itPKFlush_ItemVars",
+    "itPKFlushExplode_ItemVars",
+    "itPKThunder_ItemVars",
+    "itNesspkthundertrail_ItemVars",
+    "itNessbat_ItemVars",
+    "itNessYoyo_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",
@@ -153,6 +160,13 @@ FIELD_DATA = {
     "ifMagnify.model_desc",
     # The costume's texture-animation indices, in the character's data (`ftData::x8->x8.xC`).
     "CostumeTObjList.x5D0",
+}
+
+# Fields no code reads or writes, by struct: left out like padding, so they hold whatever the
+# block held and nothing compares them. An item link's last five flag bits are such (the
+# decomp's `itCharItems.h`); a link block new from the heap mid-capture keeps the heap's bits.
+UNUSED = {
+    "ItemLink": {"x2C_b3", "x2C_b4", "x2C_b5", "x2C_b6", "x2C_b7"},
 }
 
 # Runs of fields replaced by one field of a hand-written type: struct name to (field name,

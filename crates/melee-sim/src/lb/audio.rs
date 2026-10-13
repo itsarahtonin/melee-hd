@@ -887,51 +887,6 @@ const KIRBY_SFX: [(i32, i32); 75] = [
 /// `fn_80026C04`: the library's callback when one of its background bank loads is in.
 pub const BANK_LOADED: crate::game::handles::CodeRef = crate::game::handles::CodeRef(0x8002_6C04);
 
-/// `HSD_GOBJ_PLINK_AUDIO_AX`: the p_link the library's sound objects live on.
-pub const P_LINK_SOUND_OBJECTS: u8 = 62;
-
-impl crate::game::state::Game {
-    /// The library's sound objects for a new scene, `lbAudioAx_8002835C`
-    /// (`HSD_ObjAllocInit` of their pool): a scene's start has none.
-    ///
-    /// A sound object is a GObj on [`P_LINK_SOUND_OBJECTS`] that follows one sound's pan and
-    /// volume for its owner (`lbAudioAx_800263E8`). Only the fighter script's positional
-    /// sound command (`ftAction_80072320`) makes them, and it isn't ported, so the port has
-    /// none and the pool holds nothing to model.
-    #[doc(alias = "lbAudioAx_8002835C")]
-    pub fn lb_reset_sound_objects(&mut self) {
-        self.assert_no_sound_objects();
-    }
-
-    /// Keys off and frees the sound objects `target` owns, `lbAudioAx_80026510`; whether
-    /// there were any. There are none (see
-    /// [`lb_reset_sound_objects`](Self::lb_reset_sound_objects)).
-    #[doc(alias = "lbAudioAx_80026510")]
-    pub fn lb_stop_owned_sound_objects(&mut self, _target: crate::hsd::gobj::GObjId) -> bool {
-        self.assert_no_sound_objects();
-        false
-    }
-
-    /// Keys off and frees `target`'s sound object playing `voice`, `lbAudioAx_800265C4`;
-    /// whether there was one. There are none.
-    #[doc(alias = "lbAudioAx_800265C4")]
-    pub fn lb_stop_owned_sound_object(
-        &mut self,
-        _target: crate::hsd::gobj::GObjId,
-        _voice: i32,
-    ) -> bool {
-        self.assert_no_sound_objects();
-        false
-    }
-
-    fn assert_no_sound_objects(&self) {
-        assert!(
-            self.world.first_in(P_LINK_SOUND_OBJECTS).is_none(),
-            "a sound object (lbAudioAx_800263E8), which nothing in the port makes"
-        );
-    }
-}
-
 /// `hps_files`: the music files, by song.
 pub const HPS_NAMES: [&str; 98] = [
     "1p_qk.hps",
