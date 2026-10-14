@@ -3,9 +3,31 @@
 //! in ssbm-rs's trace of the match's start.
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use ssbm_slippi::replay::{Replay, event};
+
+/// A benchmark match's replay: `DIR/NAME.slp` when `dir` has it, else the repository's
+/// `data/bench/NAME.slp`.
+pub fn replay_path(dir: &Path, name: &str) -> PathBuf {
+    let path = dir.join(format!("{name}.slp"));
+    if path.exists() {
+        path
+    } else {
+        melee_local_data::bench_replay(name)
+    }
+}
+
+/// ssbm-rs's state trace of a benchmark match's start (`make-matches.sh` writes it):
+/// `DIR/NAME.start.trace` when `dir` has it, else `$SSBM_RS_LOCAL/bench/NAME.start.trace`.
+pub fn start_trace_path(dir: &Path, name: &str) -> PathBuf {
+    let path = dir.join(format!("{name}.start.trace"));
+    if path.exists() {
+        path
+    } else {
+        melee_local_data::ssbm_rs_local(&format!("bench/{name}.start.trace")).into()
+    }
+}
 
 /// The match's first frame.
 pub const FIRST_FRAME: i32 = -123;

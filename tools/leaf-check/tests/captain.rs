@@ -44,7 +44,7 @@ fn skipped(name: &str) -> bool {
 
 const CAPTAIN: Character = Character {
     env: "CAPTAIN",
-    calls: "C:/Projects/ssbm-rs-publication/local/calls/captain",
+    calls: "calls/captain",
     sets: "",
     funcs: "captain-funcs.txt",
     skip: skipped,

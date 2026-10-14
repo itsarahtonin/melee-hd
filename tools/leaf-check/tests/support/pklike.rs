@@ -33,7 +33,8 @@ pub struct Character {
     /// The prefix of the check's environment variables: `{env}_CALLS` (the capture directory),
     /// `{env}_SRC` (one source function only) and `{env}_TRACE` (name what each call runs).
     pub env: &'static str,
-    /// The capture directory by default; every directory in it whose name starts with
+    /// The capture directory by default, in ssbm-rs's local data (`$SSBM_RS_LOCAL`); every
+    /// directory in it whose name starts with
     /// `sets` is a capture set.
     pub calls: &'static str,
     pub sets: &'static str,
@@ -52,7 +53,8 @@ impl Character {
     }
 
     fn base(&self) -> String {
-        self.var("CALLS").unwrap_or_else(|| self.calls.to_owned())
+        self.var("CALLS")
+            .unwrap_or_else(|| melee_local_data::ssbm_rs_local(self.calls))
     }
 
     fn wanted(&self, name: &str) -> bool {

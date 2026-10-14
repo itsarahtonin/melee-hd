@@ -35,7 +35,7 @@ fn skipped(name: &str) -> bool {
 
 const PICHU: Character = Character {
     env: "PICHU",
-    calls: "C:/Projects/ssbm-rs-publication/local/calls/pichu",
+    calls: "calls/pichu",
     sets: "hf",
     funcs: "pichu-funcs.txt",
     skip: skipped,

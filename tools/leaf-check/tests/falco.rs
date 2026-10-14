@@ -30,7 +30,7 @@ use foxlike::Character;
 /// Falco's capture sets.
 const FALCO: Character = Character {
     env: "FALCO",
-    calls: "C:/Projects/ssbm-rs-publication/local/calls/falco",
+    calls: "calls/falco",
     sets: &["Game_20260129T170722"],
     funcs: "falco-funcs.txt",
     // Fox's creation and spawn, which Falco never runs; Falco's creation, which the replay

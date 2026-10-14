@@ -54,10 +54,10 @@ use melee_sim::game::ft::fox::ext as fox_ext;
 use melee_sim::game::state::Running;
 use ssbm_rt::capture::Call;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/ness";
+const CALLS: &str = "calls/ness";
 
 fn base() -> String {
-    std::env::var("NESS_CALLS").unwrap_or_else(|_| CALLS.to_owned())
+    std::env::var("NESS_CALLS").unwrap_or_else(|_| melee_local_data::ssbm_rs_local(CALLS))
 }
 
 /// The capture sets, one per run.

@@ -16,6 +16,7 @@
 //! `STAGE_CALLS` names the directory (default below); tests skip when it has no capture of
 //! their function.
 
+use melee_local_data::ssbm_rs_local;
 use std::path::PathBuf;
 
 use leaf_check::fp::{FpMode, set_fp_mode};
@@ -30,11 +31,11 @@ use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::Ctx;
 
-const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/stage";
+const DEFAULT_CALLS: &str = "calls/stage";
 
 fn calls_dir() -> PathBuf {
     std::env::var("STAGE_CALLS")
-        .unwrap_or_else(|_| DEFAULT_CALLS.into())
+        .unwrap_or_else(|_| ssbm_rs_local(DEFAULT_CALLS))
         .into()
 }
 
@@ -448,7 +449,7 @@ use melee_sim::game::gr::{last, setup};
 /// Captures from the other tournament stages (Pokémon Stadium, Yoshi's Story, Fountain of Dreams,
 /// Dream Land) and Final Destination's quake, one directory each: see
 /// `local/calls/stage-more/capture.sh` in ssbm-rs's tree for how they were made.
-const MORE_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/stage-more";
+const MORE_CALLS: &str = "calls/stage-more";
 
 /// Every capture of [`MORE_CALLS`] imports and compares with its own memory with no difference:
 /// the stages' objects, their archives (Pokémon Stadium's transformation files among them) and
@@ -456,7 +457,7 @@ const MORE_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/stage-more
 #[test]
 fn tournament_stage_imports_round_trip() {
     let Some(env) = env() else { return };
-    let dir = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| MORE_CALLS.to_owned());
+    let dir = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| ssbm_rs_local(MORE_CALLS));
     let Ok(dirs) = std::fs::read_dir(&dir) else {
         eprintln!("no captures in {dir}: skipping");
         return;
@@ -1550,7 +1551,7 @@ fn battle_empty_callbacks_and_demo() {
 #[test]
 fn stadium_unreached_entries() {
     use melee_sim::game::gr::stadium;
-    let dir = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| MORE_CALLS.to_owned());
+    let dir = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| ssbm_rs_local(MORE_CALLS));
     let path = PathBuf::from(dir).join("ps1/grStadium_801D4548-call10.call");
     if !path.exists() {
         eprintln!("no capture {}: skipping", path.display());

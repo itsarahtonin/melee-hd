@@ -6,25 +6,29 @@
 //! SSBM_DISC=... cargo test --release -p melee-render-check -p melee-audio-check -- --ignored
 //! ```
 //!
-//! The recording is `REFS/player/audio-fox-fox-fd.wav` with its trace `.trc`, and the replay
-//! `REFS/bench/fox-fox-fd.slp` (`REFS` defaults to ssbm-rs's `local/`). These fail without
-//! their data: they are a check to run on purpose.
+//! The recording is `REFS/player/audio-fox-fox-fd.wav` with its trace `.trc` (`REFS` defaults
+//! to ssbm-rs's `local/`, `$SSBM_RS_LOCAL`), and the replay the repository's
+//! `data/bench/fox-fox-fd.slp`. These fail without their data: they are a check to run on
+//! purpose.
 
 use std::path::PathBuf;
 use std::process::Command;
-
-const REFS: &str = "C:/Projects/ssbm-rs-publication/local";
 
 /// Runs the check (from the trace's boot state, or with `port` from melee-sim's boot) and
 /// checks it's sample-exact over at least `seconds`.
 fn check(port: bool, seconds: f64) {
     std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc");
-    let refs = std::env::var_os("REFS").map_or_else(|| REFS.into(), PathBuf::from);
+    let refs = std::env::var_os("REFS")
+        .map_or_else(|| melee_local_data::ssbm_rs_local("").into(), PathBuf::from);
     let trace = refs.join("player/audio-fox-fox-fd.trc");
     let wav = refs.join("player/audio-fox-fox-fd.wav");
-    let replay = refs.join("bench/fox-fox-fd.slp");
+    let replay = melee_local_data::bench_replay("fox-fox-fd");
     for p in [&trace, &wav, &replay] {
-        assert!(p.exists(), "{} is missing", p.display());
+        assert!(
+            p.exists(),
+            "{} is missing (set SSBM_RS_LOCAL or REFS)",
+            p.display()
+        );
     }
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_melee-audio-check"));
     if port {

@@ -2,13 +2,12 @@
 //! here parses to the same game start, code list and frames, and playback's code list (the
 //! replay's codes without the ones playback leaves out) is the same.
 //!
-//! The replays are the benchmark matches in ssbm-rs's `local/bench` and Slippi replays under
-//! `SLIPPI_REPLAYS` (Sarah's replay folder by default); the test passes with none of them.
+//! The replays are the benchmark matches in the repository's `data/bench` (`BENCH_DIR`
+//! overrides) and Slippi replays under `SLIPPI_REPLAYS`, a folder a month (the author's, not
+//! public, when the checks were run); the test passes with none of them.
 
 use std::path::{Path, PathBuf};
 
-const BENCH: &str = "C:/Projects/ssbm-rs-publication/local/bench";
-const REPLAYS: &str = "C:/Users/USER/Documents/Slippi";
 /// Slippi replays checked per month folder, to keep the test quick.
 const PER_FOLDER: usize = 8;
 
@@ -26,9 +25,11 @@ fn slp_files(dir: &Path, limit: usize) -> Vec<PathBuf> {
 }
 
 fn replays() -> Vec<PathBuf> {
-    let bench = std::env::var("BENCH_DIR").unwrap_or_else(|_| BENCH.into());
-    let slippi = std::env::var("SLIPPI_REPLAYS").unwrap_or_else(|_| REPLAYS.into());
-    let mut out = slp_files(Path::new(&bench), usize::MAX);
+    let bench =
+        std::env::var_os("BENCH_DIR").map_or_else(melee_local_data::bench_dir, PathBuf::from);
+    let slippi =
+        std::env::var("SLIPPI_REPLAYS").unwrap_or_else(|_| melee_local_data::slippi_replays(""));
+    let mut out = slp_files(&bench, usize::MAX);
     if let Ok(months) = std::fs::read_dir(&slippi) {
         let mut months: Vec<PathBuf> = months.filter_map(|e| e.ok().map(|e| e.path())).collect();
         months.sort();

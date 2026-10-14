@@ -4,6 +4,7 @@
 //! (`tools/oracle/src/boot.rs`), so the mix compares with ssbm-rs's recording of the same run.
 
 use melee_data::archive::Archives;
+use melee_sim::audio::clock::DiscSpeed;
 use melee_sim::game::playback::FIRST_FRAME;
 use melee_sim::game::state::Game;
 use melee_sim::game::vs_match::Settings;
@@ -86,8 +87,8 @@ impl Boot {
     }
 
     /// Seeds a new match's state with the boot state (`Match::start_from`'s `boot`).
-    pub fn seed(&self, game: &mut Game, data: &mut Archives) {
-        seeding::seed(game, data, &self.mem1, self.tb, true);
+    pub fn seed(&self, game: &mut Game, data: &mut Archives, disc: DiscSpeed) {
+        seeding::seed(game, data, &self.mem1, self.tb, true, disc);
     }
 
     /// The boot state's memory, for the mixer.

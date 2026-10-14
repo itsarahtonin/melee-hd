@@ -41,10 +41,10 @@ use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::capture::Call;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/samus";
+const CALLS: &str = "calls/samus";
 
 fn base() -> String {
-    std::env::var("SAMUS_CALLS").unwrap_or_else(|_| CALLS.to_owned())
+    std::env::var("SAMUS_CALLS").unwrap_or_else(|_| melee_local_data::ssbm_rs_local(CALLS))
 }
 
 /// The capture sets, one per run.

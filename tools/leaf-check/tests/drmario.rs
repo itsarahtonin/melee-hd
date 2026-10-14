@@ -35,7 +35,7 @@ fn skipped(name: &str) -> bool {
 
 const DRMARIO: Character = Character {
     env: "DRMARIO",
-    calls: "C:/Projects/ssbm-rs-publication/local/calls/drmario",
+    calls: "calls/drmario",
     sets: "hf",
     funcs: "drmario-funcs.txt",
     skip: skipped,

@@ -22,6 +22,7 @@
 //!   ssbm-run "$SSBM_DISC" --mode e --matches 3 --monkey 1 --fields 7000 --port all --lockstep
 //! ```
 
+use melee_local_data::ssbm_rs_local;
 use std::cell::RefCell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::Path;
@@ -46,10 +47,10 @@ use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::Ctx;
 use ssbm_rt::capture::Call;
 
-const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/fighter-create/fm1";
+const DEFAULT_CALLS: &str = "calls/fighter-create/fm1";
 
 fn calls_dir() -> String {
-    std::env::var("FIGHTER_PROC_CALLS").unwrap_or_else(|_| DEFAULT_CALLS.into())
+    std::env::var("FIGHTER_PROC_CALLS").unwrap_or_else(|_| ssbm_rs_local(DEFAULT_CALLS))
 }
 
 thread_local! {

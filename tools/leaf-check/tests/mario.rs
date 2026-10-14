@@ -37,7 +37,7 @@ fn skipped(name: &str) -> bool {
 
 const MARIO: Character = Character {
     env: "MARIO",
-    calls: "C:/Projects/ssbm-rs-publication/local/calls/mario",
+    calls: "calls/mario",
     sets: "hf",
     funcs: "mario-funcs.txt",
     skip: skipped,

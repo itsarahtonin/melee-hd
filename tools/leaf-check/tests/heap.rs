@@ -15,9 +15,10 @@ use ssbm_types::fns;
 
 const RESULTS: u32 = SCRATCH + 0x8000;
 
-/// The debug VS match's captures and a Slippi replay's.
-const VANILLA: &[&str] = &["C:/Projects/ssbm-rs-publication/local/calls/match"];
-const SLIPPI: &[&str] = &["C:/Projects/ssbm-rs-publication/local/calls/replay"];
+/// The debug VS match's captures and a Slippi replay's, in ssbm-rs's local data
+/// (`$SSBM_RS_LOCAL`).
+const VANILLA: &[&str] = &["calls/match"];
+const SLIPPI: &[&str] = &["calls/replay"];
 
 /// One step of a random run.
 #[derive(Clone, Copy, Debug)]
@@ -219,7 +220,12 @@ fn sharing_root(c: Class, sel: usize) -> Class {
     family[sel % family.len()]
 }
 
-fn check(dirs: &'static [&'static str], base: &'static str, mix: u32) {
+fn check(dirs: &[&str], base: &'static str, mix: u32) {
+    let dirs: Vec<String> = dirs
+        .iter()
+        .map(|d| melee_local_data::ssbm_rs_local(d))
+        .collect();
+    let dirs: Vec<&str> = dirs.iter().map(String::as_str).collect();
     let perturb = move |f: &mut calls::Fuzz| {
         f.regs.gpr[20] = f.below(u64::from(u32::MAX));
         f.regs.gpr[21] = if mix == 9 { f.below(5) } else { mix };
@@ -228,7 +234,7 @@ fn check(dirs: &'static [&'static str], base: &'static str, mix: u32) {
         perturb_all: true,
         variants: 6,
         heap: true,
-        dirs,
+        dirs: &dirs,
         perturb: &perturb,
         ..Check::new(base, &ours)
     }

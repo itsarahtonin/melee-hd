@@ -8,19 +8,20 @@
 //! ```
 //!
 //! The references are ssbm-rs's FIFO logs and gxplay's frames of them, `REFS/player/ref-MATCH/fN.dff`
-//! and `fN/` (`REFS` defaults to ssbm-rs's `local/`), the benchmark replays in `REFS/bench/`,
-//! and the Slippi replay of Fox vs Sheik `SLIPPI_FOX_SHEIK`. Unlike the tests that skip without
-//! their data, these fail without it: they are a check to run on purpose.
+//! and `fN/` (`REFS` defaults to ssbm-rs's `local/`, `$SSBM_RS_LOCAL`), the benchmark replays
+//! in the repository's `data/bench/`, and the Slippi replay of Fox vs Sheik `SLIPPI_FOX_SHEIK`
+//! (default below, in `$SLIPPI_REPLAYS`; the author's, not public). Unlike the tests that skip
+//! without their data, these fail without it: they are a check to run on purpose.
 
 use std::path::PathBuf;
 use std::process::Command;
 
-const REFS: &str = "C:/Projects/ssbm-rs-publication/local";
-const SLIPPI_FOX_SHEIK: &str =
-    "C:/Users/USER/Documents/Slippi/2026-01/Game_20260129T133652.slp";
+use melee_local_data::{slippi_replays, ssbm_rs_local};
+
+const SLIPPI_FOX_SHEIK: &str = "2026-01/Game_20260129T133652.slp";
 
 fn refs() -> PathBuf {
-    std::env::var_os("REFS").map_or_else(|| REFS.into(), PathBuf::from)
+    std::env::var_os("REFS").map_or_else(|| ssbm_rs_local("").into(), PathBuf::from)
 }
 
 /// What a documented frame's two images must be.
@@ -38,7 +39,11 @@ fn check(game: &str, replay: PathBuf, slippi: bool, frame: u32, expect: Expect) 
     let log = dir.join(format!("f{frame}.dff"));
     let images = dir.join(format!("f{frame}"));
     for p in [&replay, &log, &images] {
-        assert!(p.exists(), "{} is missing", p.display());
+        assert!(
+            p.exists(),
+            "{} is missing (set SSBM_RS_LOCAL or REFS, and SLIPPI_REPLAYS)",
+            p.display()
+        );
     }
     let native = frame - 3;
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_melee-render-check"));
@@ -98,15 +103,15 @@ fn check(game: &str, replay: PathBuf, slippi: bool, frame: u32, expect: Expect) 
 }
 
 fn bench(game: &str, frame: u32) {
-    let replay = refs().join("bench").join(format!("{game}.slp"));
+    let replay = melee_local_data::bench_replay(game);
     check(game, replay, false, frame, Expect::Identical);
 }
 
 /// Fox vs Sheik's frames: identical but for the name plates Slippi's playback draws and
 /// melee-sim doesn't (docs/player.md's open issues), as recorded here.
 fn fox_sheik(frame: u32, images: [&'static str; 2]) {
-    let replay =
-        std::env::var_os("SLIPPI_FOX_SHEIK").map_or_else(|| SLIPPI_FOX_SHEIK.into(), PathBuf::from);
+    let replay = std::env::var_os("SLIPPI_FOX_SHEIK")
+        .map_or_else(|| slippi_replays(SLIPPI_FOX_SHEIK).into(), PathBuf::from);
     check("fox-sheik-fd", replay, true, frame, Expect::Images(images));
 }
 

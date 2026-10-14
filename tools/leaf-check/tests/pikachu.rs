@@ -47,7 +47,7 @@ fn skipped(name: &str) -> bool {
 
 const PIKACHU: Character = Character {
     env: "PIKACHU",
-    calls: "C:/Projects/ssbm-rs-publication/local/calls/pikachu",
+    calls: "calls/pikachu",
     sets: "hf",
     funcs: "pikachu-funcs.txt",
     skip: skipped,

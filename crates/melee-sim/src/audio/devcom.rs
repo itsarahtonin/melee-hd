@@ -5,10 +5,11 @@
 //! (`lbFile`), such as Pokémon Stadium's transformations during a match.
 //!
 //! The disc and ARAM are platform: a read completes on the timeline after the disc's latency
-//! (`super::clock`), and an ARAM transfer at once, raising the ARAM interrupt, as ssbm-rs's
-//! hardware does. What a read puts in main memory that game code reads (the stream's box
-//! headers, a bank's header) comes from the file's bytes; music and samples bound for ARAM are
-//! the mix's, and a game file's bytes reach whoever loaded it through [`Archives`].
+//! and, at a drive's pace, its bytes' transfer time (`super::clock`), and an ARAM transfer at
+//! once, raising the ARAM interrupt, as ssbm-rs's hardware does. What a read puts in main
+//! memory that game code reads (the stream's box headers, a bank's header) comes from the
+//! file's bytes; music and samples bound for ARAM are the mix's, and a game file's bytes reach
+//! whoever loaded it through [`Archives`].
 
 use melee_data::archive::{ArchiveId, Archives};
 
@@ -154,6 +155,9 @@ pub struct DevCom {
     /// isn't ported: only the boot's first scene preloads through the queue, files its scene
     /// always preloads, `game::boot`).
     pub preloads: Vec<Preload>,
+    /// The preloaded files whose reads have ended (their callbacks have run), which the boot's
+    /// first scenes wait for. Not memory of the original's.
+    pub preloaded: u32,
     /// `fn_801D4220` ran: Pokémon Stadium's transformation file loaded, and the game clears
     /// its mark (`game::gr::stadium::take_load_end`) before anything reads it. Not memory of
     /// the original's.
@@ -380,13 +384,13 @@ impl Audio {
                 return;
             }
             if c.kind == 0x21 {
-                self.hw.disc_read();
+                self.hw.disc_read(c.size.min(MEM_CHUNK), self.disc);
                 self.devcom.dvd_busy = 1;
                 return;
             }
             if let Some(b) = self.devcom.relay_buf() {
                 self.devcom.dvd_buf = b;
-                self.hw.disc_read();
+                self.hw.disc_read(c.size.min(BUF_SIZE), self.disc);
                 self.devcom.dvd_busy = 1;
                 return;
             }
@@ -722,7 +726,10 @@ impl Audio {
             cb::SFX_HEADER => self.sfx_header_loaded(data),
             cb::SFX_SAMPLES => self.sfx_samples_loaded(data),
             cb::SFX_READDRESS => self.sfx_readdressed(),
-            cb::PRELOADED => self.preload_next(data),
+            cb::PRELOADED => {
+                self.devcom.preloaded += 1;
+                self.preload_next(data)
+            }
             other => panic!("device command callback {:#010x} isn't ported", other.0),
         }
     }
