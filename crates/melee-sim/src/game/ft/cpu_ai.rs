@@ -479,7 +479,7 @@ impl Running<'_> {
             None => Leftover::Word(0),
             Some(item) => {
                 let it = super::super::it::item_of(self.game, item);
-                match self.game.items.addr(it.0 as u32) {
+                match self.game.items.addr(it.0) {
                     0 => Leftover::Unknown("ftCo_800B0CA8 (an item's address, unmodeled)"),
                     a => Leftover::Word(a),
                 }
