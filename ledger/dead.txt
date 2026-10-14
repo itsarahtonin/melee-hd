@@ -2,3 +2,12 @@
 # One per line: NAME<TAB>evidence
 SPEC0_MakeStatus	MakeStatus starts as SPEC2_MakeStatus; PADSetSpec runs from gmMain_8015FD24 with 5 and from PADInit only when __PADSpec, the disc's bi2.bin pad spec (0 on NTSC 1.02), is nonzero.
 SPEC1_MakeStatus	MakeStatus starts as SPEC2_MakeStatus; PADSetSpec runs from gmMain_8015FD24 with 5 and from PADInit only when __PADSpec, the disc's bi2.bin pad spec (0 on NTSC 1.02), is nonzero.
+ftPp_SpecialHiThrow2_Anim	The callback of Popo's state 349 (ftPp_MS_SpecialHiThrow2, the ground pull), which no code enters: the up special changes only to 347, 348 and 350 to 356 (ftpopospecialhi.c; its pull, ftPp_SpecialHi_8012280C, and the pull's ledge change, ftPp_SpecialHi_801227AC, both to the air pull, 354), Nana's to 361, 362 and 365 (ftnanaspecialhi.c), and no other code enters the Ice Climbers' own states.
+ftPp_SpecialHiThrow2_IASA	The callback of Popo's state 349, which no code enters (see ftPp_SpecialHiThrow2_Anim).
+ftPp_SpecialHiThrow2_Phys	The callback of Popo's state 349, which no code enters (see ftPp_SpecialHiThrow2_Anim).
+ftPp_SpecialHiThrow2_Coll	The callback of Popo's state 349, which no code enters (see ftPp_SpecialHiThrow2_Anim).
+ftPp_SpecialHi_801227AC	Called only from ftPp_SpecialHiThrow2_Coll, the callback of Popo's state 349, which no code enters (see ftPp_SpecialHiThrow2_Anim).
+ftPp_SpecialHi_3_Anim	The callback of the Ice Climbers' state 364 (ftPp_MS_SpecialHi_3), which no code enters: the up special changes only to 347, 348 and 350 to 356, Nana's part to 361, 362 and 365 (ftpopospecialhi.c, ftnanaspecialhi.c), and no other code enters the Ice Climbers' own states.
+ftPp_SpecialHi_3_IASA	The callback of the Ice Climbers' state 364, which no code enters (see ftPp_SpecialHi_3_Anim).
+ftPp_SpecialHi_3_Phys	The callback of the Ice Climbers' state 364, which no code enters (see ftPp_SpecialHi_3_Anim).
+ftPp_SpecialHi_3_Coll	The callback of the Ice Climbers' state 364, which no code enters (see ftPp_SpecialHi_3_Anim).

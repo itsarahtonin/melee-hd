@@ -8,6 +8,8 @@
 //! fighter's attribute block, read at the decomp's offsets.
 
 pub mod init;
+pub mod nana_special_hi;
+pub mod special_hi;
 pub mod special_lw;
 pub mod special_n;
 
@@ -45,6 +47,10 @@ pub mod var {
     pub const X2234: usize = 0x8;
     /// `x2238`: another item.
     pub const ITEM2: usize = 0xC;
+    /// `x223C`, and `x2240`: the point Nana's hand puts the string's end at while she's
+    /// thrown.
+    pub const X223C: usize = 0x10;
+    pub const HAND_POINT: usize = 0x14;
     pub const X224C: usize = 0x20;
     pub const X2250: usize = 0x24;
 }
@@ -87,6 +93,59 @@ pub mod addr {
     pub const PP_SPECIAL_LW_COLL: u32 = 0x8012_2C18;
     pub const PP_SPECIAL_AIR_LW_COLL: u32 = 0x8012_2D04;
     pub const PP_SPECIAL_LW_BLOW: u32 = 0x8012_2D2C;
+    // Belay, Popo's.
+    pub const PP_SPECIAL_HI_ENTER: u32 = 0x8012_11B4;
+    pub const PP_SPECIAL_AIR_HI_ENTER: u32 = 0x8012_122C;
+    pub const PP_SPECIAL_HI_START_0_ANIM: u32 = 0x8012_12C4;
+    pub const PP_SPECIAL_AIR_HI_START_0_ANIM: u32 = 0x8012_13CC;
+    pub const PP_SPECIAL_HI_START_0_IASA: u32 = 0x8012_14D4;
+    pub const PP_SPECIAL_AIR_HI_START_0_IASA: u32 = 0x8012_1558;
+    pub const PP_SPECIAL_HI_START_0_PHYS: u32 = 0x8012_15DC;
+    pub const PP_SPECIAL_AIR_HI_START_0_PHYS: u32 = 0x8012_1680;
+    pub const PP_SPECIAL_HI_START_0_COLL: u32 = 0x8012_1740;
+    pub const PP_SPECIAL_AIR_HI_START_0_COLL: u32 = 0x8012_177C;
+    pub const PP_SPECIAL_HI_THROW_0_ANIM: u32 = 0x8012_1944;
+    pub const PP_SPECIAL_AIR_HI_THROW_0_ANIM: u32 = 0x8012_19F4;
+    pub const PP_SPECIAL_HI_THROW_0_IASA: u32 = 0x8012_1AC8;
+    pub const PP_SPECIAL_AIR_HI_THROW_0_IASA: u32 = 0x8012_1ACC;
+    pub const PP_SPECIAL_HI_THROW_0_PHYS: u32 = 0x8012_1AD0;
+    pub const PP_SPECIAL_AIR_HI_THROW_0_PHYS: u32 = 0x8012_1B74;
+    pub const PP_SPECIAL_HI_THROW_0_COLL: u32 = 0x8012_1C34;
+    pub const PP_SPECIAL_AIR_HI_THROW_0_COLL: u32 = 0x8012_1C70;
+    pub const PP_SPECIAL_HI_START_1_ANIM: u32 = 0x8012_1E10;
+    pub const PP_SPECIAL_AIR_HI_START_1_ANIM: u32 = 0x8012_1E4C;
+    pub const PP_SPECIAL_HI_START_1_IASA: u32 = 0x8012_1EB0;
+    pub const PP_SPECIAL_AIR_HI_START_1_IASA: u32 = 0x8012_1EB4;
+    pub const PP_SPECIAL_HI_START_1_PHYS: u32 = 0x8012_1EB8;
+    pub const PP_SPECIAL_AIR_HI_START_1_PHYS: u32 = 0x8012_1ED8;
+    pub const PP_SPECIAL_HI_START_1_COLL: u32 = 0x8012_1F2C;
+    pub const PP_SPECIAL_AIR_HI_START_1_COLL: u32 = 0x8012_1F68;
+    pub const PP_SPECIAL_HI_THROW_1_ANIM: u32 = 0x8012_2110;
+    pub const PP_SPECIAL_AIR_HI_THROW_1_ANIM: u32 = 0x8012_214C;
+    pub const PP_SPECIAL_HI_THROW_1_IASA: u32 = 0x8012_21AC;
+    pub const PP_SPECIAL_AIR_HI_THROW_1_IASA: u32 = 0x8012_21B0;
+    pub const PP_SPECIAL_HI_THROW_1_PHYS: u32 = 0x8012_21B4;
+    pub const PP_SPECIAL_AIR_HI_THROW_1_PHYS: u32 = 0x8012_21D4;
+    pub const PP_SPECIAL_HI_THROW_1_COLL: u32 = 0x8012_2228;
+    pub const PP_SPECIAL_AIR_HI_THROW_1_COLL: u32 = 0x8012_2264;
+    pub const PP_SPECIAL_AIR_HI_THROW2_ANIM: u32 = 0x8012_2410;
+    pub const PP_SPECIAL_AIR_HI_THROW2_IASA: u32 = 0x8012_2490;
+    pub const PP_SPECIAL_AIR_HI_THROW2_PHYS: u32 = 0x8012_2538;
+    pub const PP_SPECIAL_AIR_HI_THROW2_COLL: u32 = 0x8012_26A0;
+    // Belay, Nana's.
+    pub const NN_SPECIAL_HI_HAND: u32 = 0x8012_3218;
+    pub const NN_SPECIAL_HI_0_ANIM: u32 = 0x8012_3348;
+    pub const NN_SPECIAL_HI_0_IASA: u32 = 0x8012_3388;
+    pub const NN_SPECIAL_HI_0_PHYS: u32 = 0x8012_3390;
+    pub const NN_SPECIAL_HI_0_COLL: u32 = 0x8012_33F0;
+    pub const NN_SPECIAL_HI_1_ANIM: u32 = 0x8012_3448;
+    pub const NN_SPECIAL_HI_4_ANIM: u32 = 0x8012_3484;
+    pub const NN_SPECIAL_HI_1_IASA: u32 = 0x8012_34E4;
+    pub const NN_SPECIAL_HI_4_IASA: u32 = 0x8012_34E8;
+    pub const NN_SPECIAL_HI_1_PHYS: u32 = 0x8012_34EC;
+    pub const NN_SPECIAL_HI_4_PHYS: u32 = 0x8012_350C;
+    pub const NN_SPECIAL_HI_1_COLL: u32 = 0x8012_35BC;
+    pub const NN_SPECIAL_HI_4_COLL: u32 = 0x8012_35F8;
     pub const NN_ON_LOAD: u32 = 0x8012_2EDC;
     pub const NN_ON_DEATH: u32 = 0x8012_2F28;
     pub const NN_LOAD_SPECIAL_ATTRS: u32 = 0x8012_2FCC;
@@ -106,7 +165,11 @@ impl Running<'_> {
 /// Runs one of the Ice Climbers' callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr`
 /// is one.
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
-    init::run(g, gobj, addr) || special_n::run(g, gobj, addr) || special_lw::run(g, gobj, addr)
+    init::run(g, gobj, addr)
+        || special_n::run(g, gobj, addr)
+        || special_hi::run(g, gobj, addr)
+        || nana_special_hi::run(g, gobj, addr)
+        || special_lw::run(g, gobj, addr)
 }
 
 /// The Ice Climbers' functions other code calls by address (`code::call`).

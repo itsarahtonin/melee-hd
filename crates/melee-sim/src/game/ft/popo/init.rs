@@ -136,9 +136,7 @@ impl Running<'_> {
             self.game.part_set_rot_x(f, 0, 0.0);
         }
         // `ftPp_SpecialS_80121164`: the string.
-        if self.game.fighters[f.0].u.gobj_at(var::ITEM2).is_some() {
-            super::super::super::code::unported_call("ftPp_SpecialS_80121164 with a string out");
-        }
+        self.popo_remove_string(gobj);
         // `ftPp_SpecialS_8011F68C`.
         self.game.part_set_rot_x(f, 0, 0.0);
         let fp = &mut self.game.fighters[f.0];
