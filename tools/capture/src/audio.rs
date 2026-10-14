@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use melee_data::archive::{Archive, ArchiveId, Archives};
 use melee_sim::audio::Audio;
 use melee_sim::audio::ax::{self, PB_WORDS, Pb, VOICES as AX_VOICES};
-use melee_sim::audio::clock::{AUDIO_FRAME, Clock};
+use melee_sim::audio::clock::{AUDIO_FRAME, Clock, DiscSpeed};
 use melee_sim::audio::devcom::{ArqRequest, Command, DevCom};
 use melee_sim::audio::driver::VOICES as SM_VOICES;
 use melee_sim::audio::synth::{self, NODES, Sfx, SfxVoice};
@@ -928,8 +928,15 @@ fn compare_devcom(m: &Mem, d: &DevCom, diffs: &mut Vec<String>) {
 
 /// The timeline at a captured call inside a tick: the time base from the registers, the
 /// next audio frame from the last one's start (`__AXLocalProfile.axFrameStart`), the pad
-/// alarm and the pad queue from memory.
+/// alarm and the pad queue from memory. A disc read in flight finishes at Slippi's fast disc
+/// speed ([`import_clock_at`] takes another).
 pub fn import_clock(mem1: &[u8], tb: u64) -> Clock {
+    import_clock_at(mem1, tb, DiscSpeed::Fast)
+}
+
+/// [`import_clock`] for a run whose disc read at `disc`: a read in flight also takes its
+/// bytes' transfer time, the device command's chunk of them.
+pub fn import_clock_at(mem1: &[u8], tb: u64, disc: DiscSpeed) -> Clock {
     let m = Mem(mem1);
     let offset = m.u64(SYSTEM_TIME_OFFSET);
     let last_frame = m.u64(sym("__AXLocalProfile"));
@@ -949,8 +956,14 @@ pub fn import_clock(mem1: &[u8], tb: u64) -> Clock {
     // the driver noted the time.
     if m.u8(sym("HSD_DevCom_804D77F5")) != 0 {
         let issued = m.u64(sym("LastReadIssued")).wrapping_sub(offset);
+        let dc = devcom_node(&m, m.u32(sym("dvdDC")));
+        let chunk = if dc.kind == 0x21 {
+            0x8_0000
+        } else {
+            melee_sim::audio::devcom::BUF_SIZE
+        };
         c.schedule(
-            issued + 16 + melee_sim::audio::clock::DISC_LATENCY,
+            issued + 16 + melee_sim::audio::clock::DISC_LATENCY + disc.transfer(dc.size.min(chunk)),
             melee_sim::audio::clock::EventKind::DiscDone,
         );
         c.disc_timeout = Some(c.schedule(

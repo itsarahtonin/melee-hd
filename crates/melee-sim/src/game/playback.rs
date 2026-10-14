@@ -467,14 +467,23 @@ impl Running<'_> {
     /// helpers at `0x800056A0` and `0x800056A8`), starts loading them in the background
     /// (`lbAudioAx_80027168`), plays its start sound (`lbAudioAx_80024030(1)`; the codes'
     /// word that would skip it is 0) and resumes the channels (`lbAudioAx_80024F6C`), before
-    /// it changes to the VS scene. The time it spends with the device and the preload is
-    /// ssbm-rs's clock's ([`crate::audio::boot::BootTimes::PLAYBACK_CALLS`]).
+    /// it changes to the VS scene. Its audio calls wait for the next retrace and the preload
+    /// cache's last file ([`crate::audio::boot::BootTimes::PLAYBACK_AFTER_PRELOADS`]).
     pub fn playback_scene_audio(&mut self, start: &super::structs::StartMeleeData) {
         use crate::lb::audio::{character_slot, ground_kind, ground_slot};
         let data = self.data;
         let audio = &mut self.game.audio;
         audio.with_clock(data, |c, f| {
-            c.catch_up(crate::audio::boot::BootTimes::PLAYBACK_CALLS, f)
+            use crate::audio::clock::Wait;
+            c.wait_for_retrace(f);
+            let all = Wait::Preloaded(super::boot::PRELOADS.len() as u32);
+            if !f.done(all) {
+                c.wait_until(f, all);
+                c.catch_up(
+                    c.now + crate::audio::boot::BootTimes::PLAYBACK_AFTER_PRELOADS,
+                    f,
+                );
+            }
         });
         audio.lb.unwant_banks(0x1C);
         let want = |audio: &mut crate::audio::Audio, slot: usize| {

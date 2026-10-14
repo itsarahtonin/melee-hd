@@ -35,6 +35,7 @@ use melee_capture::{
 };
 use melee_data::archive::{ArchiveId, Archives};
 use melee_data::disc::Disc;
+use melee_sim::audio::clock::DiscSpeed;
 use melee_sim::game::code::{Val, stubs};
 use melee_sim::game::playback::FIRST_FRAME;
 use melee_sim::game::vs_match::{Match, Settings};
@@ -203,6 +204,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     // A replay doesn't say how its floats were computed: Slippi's Dolphin recorded it, and
     // ssbm-run plays replays that way unless told `--fp hardware` (the benchmark matches).
     let mut fp_mode = FpMode::Slippi;
+    let mut disc_speed = DiscSpeed::Fast;
     let mut it = args.iter();
     while let Some(&a) = it.next() {
         match a {
@@ -211,6 +213,13 @@ pub fn diff(args: &[&str]) -> ExitCode {
             "--against" => against = it.next().and_then(|t| t.parse::<u32>().ok()),
             "--boot-diff" => boot_diff = true,
             "--boot-audio" => boot_audio = true,
+            // A trace ssbm-rs made with `DISC_RATE=3000000` read the disc at a drive's pace.
+            "--disc-speed" => {
+                disc_speed = it
+                    .next()
+                    .and_then(|s| DiscSpeed::parse(s))
+                    .expect("--disc-speed fast|drive")
+            }
             "--all" => all = true,
             "--fp" => {
                 fp_mode = match it.next().copied() {
@@ -240,7 +249,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     }
     let [trace_path, replay_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N] [--fp hardware|slippi]"
+            "usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|drive]"
         );
         return ExitCode::from(2);
     };
@@ -251,6 +260,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     let replay = Replay::parse(&bytes).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
         .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
+    settings.disc = disc_speed;
     let index = melee_capture::disc_index(&disc);
     let mut reader = Reader::open(trace_path);
     let version = reader.version;
@@ -335,7 +345,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 let mut fresh = None;
                 let started = catch_unwind(AssertUnwindSafe(|| {
                     Match::start_from(&settings, &mut load, &mut |g, data| {
-                        crate::boot::seed(g, data, &boot, boot_tb, !boot_audio);
+                        crate::boot::seed(g, data, &boot, boot_tb, !boot_audio, settings.disc);
                         fresh = Some(g.clone());
                     })
                 }));
@@ -407,11 +417,15 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 imp.audio(bank);
                 // Memory doesn't say which DSP model ran: the replay's settings do.
                 imp.game.audio.dsp = settings.dsp;
+                imp.game.audio.disc = settings.disc;
                 imp.match_state();
                 imp.display();
                 if let Some(tb) = image.tb {
-                    imp.game.audio.clock =
-                        Some(melee_capture::audio::import_clock(&image.mem1, tb));
+                    imp.game.audio.clock = Some(melee_capture::audio::import_clock_at(
+                        &image.mem1,
+                        tb,
+                        settings.disc,
+                    ));
                 }
                 (imp.game, imp.maps, imp.unhandled)
             }));

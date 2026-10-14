@@ -42,6 +42,8 @@ pub struct Audio {
     pub hw: HwLog,
     /// Which of ssbm-rs's DSP models the voices follow.
     pub dsp: dsp::DspModel,
+    /// How fast the disc reads (a match setting, `vs_match::Settings::disc`).
+    pub disc: clock::DiscSpeed,
     /// The game's audio library's state (`melee/lb/lbaudio_ax.c`).
     pub lb: crate::lb::audio::LbAudio,
     /// When audio frames run; none where the state came without a timeline (a single
@@ -219,6 +221,7 @@ impl clock::Frames for Running<'_> {
             clock::Wait::SfxQueueRoom => b.load_count < 6,
             clock::Wait::SfxLoadsDone => b.load_count == 0,
             clock::Wait::BankRead => !self.audio.driver.reading_bank,
+            clock::Wait::Preloaded(n) => self.audio.devcom.preloaded >= n,
         }
     }
 }
