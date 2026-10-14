@@ -50,11 +50,20 @@ pub const FIGHTER_ATTRS_SIZE: u32 = 0x424;
 
 /// A symbol's address in the game.
 pub fn sym(name: &str) -> u32 {
-    ssbm_types::symbols::SYMBOLS
-        .iter()
-        .find(|s| s.2 == name)
+    // By name, the first of a name as the table lists them, from a map made once: the
+    // checks look symbols up in their inner loops.
+    static BY_NAME: std::sync::OnceLock<std::collections::HashMap<&str, u32>> =
+        std::sync::OnceLock::new();
+    let by_name = BY_NAME.get_or_init(|| {
+        let mut m = std::collections::HashMap::new();
+        for s in ssbm_types::symbols::SYMBOLS {
+            m.entry(s.2).or_insert(s.0);
+        }
+        m
+    });
+    *by_name
+        .get(name)
         .unwrap_or_else(|| panic!("no symbol {name}"))
-        .0
 }
 
 /// The fighter data's globals' addresses: `gFtDataList`, `CostumeListsForeachCharacter`,
