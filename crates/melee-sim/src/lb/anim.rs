@@ -212,6 +212,7 @@ pub fn blend_from_desc(
         };
     }
     jobjs[out].rotate = q1.slerp(q2, mem(t_inv));
+    jobjs[out].stale_w = false;
     jobj::set_flags(jobjs, Some(out), USE_QUATERNION);
     jobj::set_flags(jobjs, Some(out), MTX_DIRTY);
 }
