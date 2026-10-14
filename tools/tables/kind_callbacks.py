@@ -26,6 +26,10 @@ TABLES = [
     "ftData_SpecialAirLw",
     "ftData_OnKnockbackEnter",
     "ftData_OnKnockbackExit",
+    "ftData_OnItemPickupExt",
+    "ftData_OnItemInvisible",
+    "ftData_OnItemVisible",
+    "ftData_OnItemDropExt",
 ]
 
 KINDS = 33

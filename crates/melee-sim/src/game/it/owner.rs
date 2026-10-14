@@ -184,9 +184,10 @@ pub fn release(r: &mut Running, gobj: GObjId, fighter_gobj: GObjId, special: boo
             clear_held_special_item(r.game, fighter_gobj);
         }
     } else if is_holding(r.game, fighter_gobj, gobj) {
+        // `ftLib_ReleaseItem`.
         let fp = fighter(r.game, fighter_gobj);
         if fp.item_gobj.is_some() || fp.x1978.is_some() {
-            code::unported_call("ftCommon_8007E6DC (ftLib_ReleaseItem)");
+            r.release_item(fighter_gobj, gobj, true);
         }
     }
 }

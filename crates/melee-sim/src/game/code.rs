@@ -385,7 +385,37 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
     if let Some(v) = super::sfx::call(r, f, args) {
         return v;
     }
+    if let Some(v) = held_item_call(r, f, args) {
+        return v;
+    }
     unported("function", f)
+}
+
+/// The held item's accessors and the hands' hold poses, which the characters' item hooks and
+/// the common states reach by address.
+fn held_item_call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
+    use super::it::lib26b1;
+    let gobj = |i: usize| args[i].gobj().expect("a null GObj");
+    Some(match f {
+        // `ftAnim_80070FB4`, `ftAnim_80070C48`, `ftAnim_80070CC4`.
+        0x8007_0FB4 => {
+            r.set_part_anim_pose(gobj(0), args[1].int(), args[2].int());
+            Val::None
+        }
+        0x8007_0C48 => {
+            r.show_part_anim_pose(gobj(0), args[1].int());
+            Val::None
+        }
+        0x8007_0CC4 => {
+            r.end_part_anim(gobj(0), args[1].int());
+            Val::None
+        }
+        // `itGetKind`, `it_8026B30C`, `itGetHoldKind`.
+        0x8026_B300 => Val::Int(lib26b1::kind(r.game, gobj(0))),
+        0x8026_B30C => Val::Int(lib26b1::use_kind(r.game, r.data, gobj(0))),
+        0x8026_B320 => Val::Int(lib26b1::hold_kind(r.game, r.data, gobj(0))),
+        _ => return None,
+    })
 }
 
 /// A ported function stood in for in a check (feature `stubs`), as [`call`] stands in for an

@@ -434,8 +434,12 @@ impl Running<'_> {
         if fp.kind == KIND_LUIGI && val[3] == 113 {
             val = 0x0024_0063u32.to_be_bytes();
         }
-        if val[3] == 98 && fp.item_gobj.is_some() {
-            unported_call("it_8026B6C8");
+        // Throwing an adventure enemy counts as its own move.
+        if val[3] == 98
+            && let Some(item) = fp.item_gobj
+            && crate::game::it::coll::is_enemy(self.game, item)
+        {
+            val = 0x0044_003Du32.to_be_bytes();
         }
         self.game.fighters[f.0].x2070 = val;
         self.reset_attack_record(f);
@@ -553,8 +557,8 @@ impl Running<'_> {
             }
             // `ft_8007C114`.
             if self.game.fighters[f.0].x2219_b4 {
-                if self.game.fighters[f.0].item_gobj.is_some() {
-                    unported_call("itGetKind");
+                if self.holds_hammer(gobj) {
+                    unported_call("ftCo_800C555C (the hammer)");
                 }
                 self.game.fighters[f.0].x2219_b4 = false;
             }
@@ -581,9 +585,9 @@ impl Running<'_> {
         }
         if flags & SKIP_PARASOL == 0 {
             self.game.fighters[f.0].x2221_b4 = false;
-            // `ftGetParasolStatus`: -1 without an item.
-            if self.game.fighters[f.0].item_gobj.is_some() {
-                unported_call("ftGetParasolStatus");
+            let status = self.parasol_status(gobj);
+            if status != -1 && status != 6 {
+                unported_call("ftCommon_8007E83C (closing a held parasol)");
             }
         }
         self.end_part_anims(f);

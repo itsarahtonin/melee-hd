@@ -37,7 +37,7 @@ const EF_LIB_RESUME_ALL: CodeRef = CodeRef(0x8005_BAC4);
 
 impl Running<'_> {
     /// Whether the character has an animation for state `msid` (`ftData_80085FD4(..)->x8`).
-    fn has_anim(&self, gobj: GObjId, msid: i32) -> bool {
+    pub(super) fn has_anim(&self, gobj: GObjId, msid: i32) -> bool {
         let f = self.game.fighter_id(gobj);
         let entry = self.anim_entry(f, msid);
         self.data.u32(entry.at(8)) != 0
@@ -623,12 +623,35 @@ impl Running<'_> {
         true
     }
 
-    /// `checkItemThrow` of `ftCo_AttackS4.c`: a held item thrown or swung instead.
-    fn smash_item_check(&mut self, gobj: GObjId, _dir: f32) -> bool {
-        if self.game.fighter(gobj).item_gobj.is_some() {
-            unported_call("checkItemThrow with an item");
+    /// `checkItemThrow` of `ftCo_AttackS4.c`: a held item smash-thrown the stick's way (with a
+    /// shoulder held, an item A only throws, a used-up shooter, or a C-stick flick), or swung
+    /// (swings aren't ported).
+    #[doc(alias = "checkItemThrow")]
+    fn smash_item_check(&mut self, gobj: GObjId, dir: f32) -> bool {
+        let Some(item) = self.game.fighter(gobj).item_gobj else {
+            return false;
+        };
+        let shoulder = self.game.fighter(gobj).input.held_buttons[0] & PAD_LR != 0;
+        let kind = self.item_a_kind(gobj);
+        if shoulder
+            || kind == 0
+            || (kind == 3 && crate::game::it::lib26b1::is_empty_shooter(self.game, item))
+            || self.cstick_side_flick_usable(gobj)
+        {
+            let facing = reg(self.game.fighter(gobj).facing_dir);
+            let msid = if fp::fmuls(reg(dir), facing) >= 0.0 {
+                ms::LIGHT_THROW_F4
+            } else {
+                ms::LIGHT_THROW_B4
+            };
+            self.enter_item_throw(gobj, msid);
+            return true;
         }
-        false
+        match self.item_a_kind(gobj) {
+            2 => unported_call("ftCo_Attack_800CCF58 (a smash swing)"),
+            3 => unported_call("ftCo_Attack_800CDD14 (a smash shot)"),
+            _ => false,
+        }
     }
 
     /// `decideFighter` of `ftCo_AttackS4.c`: Ness, Peach and Game & Watch have their own;

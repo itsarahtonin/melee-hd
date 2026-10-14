@@ -27,14 +27,102 @@ pub const FIGHTER_P_LINK: u8 = 8;
 const PI: f64 = std::f64::consts::PI;
 
 impl Running<'_> {
-    /// The held item taken in hand again, `ftpickupitem_80094818`: the character's pickup
-    /// hook (`ftData_OnItemPickupExt`) and the player's item record (`pl_8003E17C`). Nothing
-    /// without an item; holding one isn't ported.
+    /// The held item taken in hand, `ftpickupitem_80094818`: a second item (`x1978`) only
+    /// counts in the player's statistics (`pl_8003E17C`); the held one also runs the
+    /// character's pickup hook (`ftData_OnItemPickupExt`, its hand closing on it when `flag`).
     #[doc(alias = "ftpickupitem_80094818")]
-    pub fn retake_held_item(&mut self, gobj: GObjId, _flag: bool) {
+    pub fn retake_held_item(&mut self, gobj: GObjId, flag: bool) {
         let fp = self.game.fighter(gobj);
-        if fp.x1978.is_some() || fp.item_gobj.is_some() {
-            unported_call("ftpickupitem_80094818 with an item held");
+        let (slot, sub, kind) = (
+            i32::from(fp.player_idx),
+            i32::from(fp.is_sub_fighter),
+            fp.kind,
+        );
+        if let Some(second) = fp.x1978 {
+            self.item_pickup_stat(slot, sub, second);
+        } else if let Some(item) = fp.item_gobj {
+            let hook = super::co::kind_callbacks::ON_ITEM_PICKUP_EXT[kind as usize];
+            if hook != 0 {
+                crate::game::code::call(
+                    self,
+                    hook,
+                    &[
+                        crate::game::code::Val::GObj(Some(gobj)),
+                        crate::game::code::Val::Int(i32::from(flag)),
+                    ],
+                );
+            }
+            self.item_pickup_stat(slot, sub, item);
+        }
+    }
+
+    /// The fighter lets go of `item`, `ftCommon_8007E6DC`: a second item is just forgotten;
+    /// the held one runs the character's drop hook (`ftData_OnItemDropExt`, the hand opening
+    /// when `flag`) and clears who last hit the player with an item (`pl_8003EA08`).
+    #[doc(alias = "ftCommon_8007E6DC")]
+    #[doc(alias = "pl_8003EA08")]
+    pub fn release_item(&mut self, gobj: GObjId, item: GObjId, flag: bool) {
+        let fp = self.game.fighter_mut(gobj);
+        if fp.x1978 == Some(item) {
+            fp.x1978 = None;
+            return;
+        }
+        if self.holds_hammer(gobj) {
+            unported_call("ftCo_800C5500 (letting go of the hammer)");
+        }
+        let fp = self.game.fighter(gobj);
+        let (kind, slot, sub) = (fp.kind, i32::from(fp.player_idx), fp.is_sub_fighter);
+        let hook = super::co::kind_callbacks::ON_ITEM_DROP_EXT[kind as usize];
+        if hook != 0 {
+            crate::game::code::call(
+                self,
+                hook,
+                &[
+                    crate::game::code::Val::GObj(Some(gobj)),
+                    crate::game::code::Val::Int(i32::from(flag)),
+                ],
+            );
+        }
+        if !sub {
+            self.game.player_mut(slot).set_ext_u32(0xD6C, 6);
+        }
+        self.game.fighter_mut(gobj).item_gobj = None;
+    }
+
+    /// The player's statistics for an item taken in hand, `pl_8003E17C`: a common item (or
+    /// the few kinds that count as one) that's been thrown counts as picked up, and, if no
+    /// player has touched it yet, as a fresh one.
+    #[doc(alias = "pl_8003E17C")]
+    pub fn item_pickup_stat(&mut self, slot: i32, _sub: i32, item: GObjId) {
+        use crate::game::it::kinds::{L_GUN_RAY, S_SCOPE_BEAM, STARROD_STAR, LIPSTICK_SPORE, EGG};
+        let ip = crate::game::it::item(self.game, item);
+        let kind = ip.kind;
+        let kind2 = if (0..L_GUN_RAY).contains(&kind) {
+            kind
+        } else {
+            match kind {
+                205 => L_GUN_RAY,
+                225 => STARROD_STAR,
+                226 => LIPSTICK_SPORE,
+                40 => S_SCOPE_BEAM,
+                _ => -1,
+            }
+        };
+        // `it_8026B7E8`, `it_8026B774`.
+        let thrown = ip.xDC8_word.flags.x1;
+        let touched = ip.xDC8_word.flags.xF;
+        let by = |p: i32| i32::from(touched) & (1 << p) != 0;
+        if kind2 != -1
+            && (kind2 == L_GUN_RAY || kind2 == EGG || kind2 == S_SCOPE_BEAM || thrown)
+        {
+            let t = self.game.player_stale_moves(slot);
+            if !by(slot) {
+                t.x674[kind2 as usize] = t.x674[kind2 as usize].wrapping_add(1);
+            }
+            if (0..6).any(by) {
+                return;
+            }
+            t.x710[kind2 as usize] = t.x710[kind2 as usize].wrapping_add(1);
         }
     }
 

@@ -39,6 +39,13 @@ pub fn use_kind(game: &Game, data: &Archives, gobj: GObjId) -> i32 {
     i32::from(attr_of(item(game, gobj)).x0_78(data))
 }
 
+/// Whether the item, of kind 16, 21 to 23 or 25, has no uses left (`xD4C`), `it_8026B594`.
+#[doc(alias = "it_8026B594")]
+pub fn is_empty_shooter(game: &Game, gobj: GObjId) -> bool {
+    let ip = item(game, gobj);
+    matches!(ip.kind, 16 | 21 | 22 | 23 | 25) && ip.xD4C <= 0
+}
+
 /// The item's kind, `itGetKind`.
 #[doc(alias = "itGetKind")]
 pub fn kind(game: &Game, gobj: GObjId) -> i32 {

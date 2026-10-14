@@ -371,3 +371,151 @@ pub static ON_KNOCKBACK_EXIT: [u32; 33] = [
     0x8014f948, // 31: ftGk_Init_OnKnockbackExit
     0x8014fba0, // 32: ftSb_Init_OnKnockbackExit
 ];
+
+/// `ftData_OnItemPickupExt`, at 0x803c188c: each kind's callback's address, 0 for none.
+pub static ON_ITEM_PICKUP_EXT: [u32; 33] = [
+    0x800e0a20, // 0: ftMr_Init_OnItemPickup
+    0x800e55a8, // 1: ftFx_Init_OnItemPickup
+    0x800e28e8, // 2: ftCa_Init_OnItemPickup
+    0x8010d7a8, // 3: ftDk_Init_OnItemPickup
+    0x800ee914, // 4: ftKb_Init_OnItemPickup
+    0x80132b3c, // 5: ftKp_Init_OnItemPickup
+    0x800eafa4, // 6: ftLk_Init_OnItemPickupExt
+    0x80110204, // 7: ftSk_Init_OnItemPickup
+    0x80114968, // 8: ftNs_Init_OnItemPickup
+    0x8011b740, // 9: ftPe_Init_OnItemPickup
+    0x8011ed38, // 10: ftPp_Init_OnItemPickup
+    0x8011ed38, // 11: ftPp_Init_OnItemPickup
+    0x801244b8, // 12: ftPk_Init_OnItemPickup
+    0x80128464, // 13: ftSs_Init_OnItemPickup
+    0x8012bacc, // 14: ftYs_Init_OnItemPickup
+    0x8013c6ec, // 15: ftPr_Init_OnItemPickup
+    0x80144ee0, // 16: ftMt_Init_OnItemPickup
+    0x80142388, // 17: ftLg_Init_OnItemPickup
+    0x801362b0, // 18: ftMs_Init_OnItemPickup
+    0x801393cc, // 19: ftZd_Init_OnItemPickup
+    0x80148dc0, // 20: ftCl_Init_OnItemPickupExt
+    0x80149560, // 21: ftDr_Init_OnItemPickup
+    0x80149b00, // 22: ftFc_Init_OnItemPickup
+    0x80149fe4, // 23: ftPc_Init_OnItemPickup
+    0x8014a5b8, // 24: ftGw_Init_OnItemPickup
+    0x8014ec58, // 25: ftGn_Init_OnItemPickup
+    0x8014ef60, // 26: ftFe_Init_OnItemPickup
+    0x00000000, // 27: -
+    0x00000000, // 28: -
+    0x8014f218, // 29: ftBo_Init_OnItemPickup
+    0x8014f460, // 30: ftGl_Init_OnItemPickup
+    0x8014f720, // 31: ftGk_Init_OnItemPickup
+    0x00000000, // 32: -
+];
+
+/// `ftData_OnItemInvisible`, at 0x803c1910: each kind's callback's address, 0 for none.
+pub static ON_ITEM_INVISIBLE: [u32; 33] = [
+    0x800e0b00, // 0: ftMr_Init_OnItemInvisible
+    0x800e5688, // 1: ftFx_Init_OnItemInvisible
+    0x800e29c8, // 2: ftCa_Init_OnItemInvisible
+    0x8010d888, // 3: ftDk_Init_OnItemInvisible
+    0x800ee9dc, // 4: ftKb_Init_OnItemInvisible
+    0x80132c1c, // 5: ftKp_Init_OnItemInvisible
+    0x800eb018, // 6: ftLk_Init_OnItemInvisible
+    0x801102e4, // 7: ftSk_Init_OnItemInvisible
+    0x80114a48, // 8: ftNs_Init_OnItemInvisible
+    0x8011b820, // 9: ftPe_Init_OnItemInvisible
+    0x8011ee18, // 10: ftPp_Init_OnItemInvisible
+    0x8011ee18, // 11: ftPp_Init_OnItemInvisible
+    0x80124598, // 12: ftPk_Init_OnItemInvisible
+    0x80128544, // 13: ftSs_Init_OnItemInvisible
+    0x8012bbac, // 14: ftYs_Init_OnItemInvisible
+    0x8013c798, // 15: ftPr_Init_OnItemInvisible
+    0x80144f50, // 16: ftMt_Init_OnItemInvisible
+    0x80142468, // 17: ftLg_Init_OnItemInvisible
+    0x80136390, // 18: ftMs_Init_OnItemInvisible
+    0x801394ac, // 19: ftZd_Init_OnItemInvisible
+    0x80148e34, // 20: ftCl_Init_OnItemInvisible
+    0x80149640, // 21: ftDr_Init_OnItemInvisible
+    0x80149be0, // 22: ftFc_Init_OnItemInvisible
+    0x8014a0c4, // 23: ftPc_Init_OnItemInvisible
+    0x8014a698, // 24: ftGw_Init_OnItemInvisible
+    0x8014ed38, // 25: ftGn_Init_OnItemInvisible
+    0x8014f040, // 26: ftFe_Init_OnItemInvisible
+    0x00000000, // 27: -
+    0x00000000, // 28: -
+    0x8014f2f8, // 29: ftBo_Init_OnItemInvisible
+    0x8014f540, // 30: ftGl_Init_OnItemInvisible
+    0x8014f800, // 31: ftGk_Init_OnItemInvisible
+    0x00000000, // 32: -
+];
+
+/// `ftData_OnItemVisible`, at 0x803c1994: each kind's callback's address, 0 for none.
+pub static ON_ITEM_VISIBLE: [u32; 33] = [
+    0x800e0b48, // 0: ftMr_Init_OnItemVisible
+    0x800e56d0, // 1: ftFx_Init_OnItemVisible
+    0x800e2a10, // 2: ftCa_Init_OnItemVisible
+    0x8010d8d0, // 3: ftDk_Init_OnItemVisible
+    0x800eea24, // 4: ftKb_Init_OnItemVisible
+    0x80132c64, // 5: ftKp_Init_OnItemVisible
+    0x800eb060, // 6: ftLk_Init_OnItemVisible
+    0x8011032c, // 7: ftSk_Init_OnItemVisible
+    0x80114a90, // 8: ftNs_Init_OnItemVisible
+    0x8011b868, // 9: ftPe_Init_OnItemVisible
+    0x8011ee60, // 10: ftPp_Init_OnItemVisible
+    0x8011ee60, // 11: ftPp_Init_OnItemVisible
+    0x801245e0, // 12: ftPk_Init_OnItemVisible
+    0x8012858c, // 13: ftSs_Init_OnItemVisible
+    0x8012bbf4, // 14: ftYs_Init_OnItemVisible
+    0x8013c7e8, // 15: ftPr_Init_OnItemVisible
+    0x80144f54, // 16: ftMt_Init_OnItemVisible
+    0x801424b0, // 17: ftLg_Init_OnItemVisible
+    0x801363d8, // 18: ftMs_Init_OnItemVisible
+    0x801394f4, // 19: ftZd_Init_OnItemVisible
+    0x80148e7c, // 20: ftCl_Init_OnItemVisible
+    0x80149688, // 21: ftDr_Init_OnItemVisible
+    0x80149c28, // 22: ftFc_Init_OnItemVisible
+    0x8014a10c, // 23: ftPc_Init_OnItemVisible
+    0x8014a6e0, // 24: ftGw_Init_OnItemVisible
+    0x8014ed80, // 25: ftGn_Init_OnItemVisible
+    0x8014f088, // 26: ftFe_Init_OnItemVisible
+    0x00000000, // 27: -
+    0x00000000, // 28: -
+    0x8014f340, // 29: ftBo_Init_OnItemVisible
+    0x8014f588, // 30: ftGl_Init_OnItemVisible
+    0x8014f848, // 31: ftGk_Init_OnItemVisible
+    0x00000000, // 32: -
+];
+
+/// `ftData_OnItemDropExt`, at 0x803c1a18: each kind's callback's address, 0 for none.
+pub static ON_ITEM_DROP_EXT: [u32; 33] = [
+    0x800e0b90, // 0: ftMr_Init_OnItemDrop
+    0x800e5718, // 1: ftFx_Init_OnItemDrop
+    0x800e2a58, // 2: ftCa_Init_OnItemDrop
+    0x8010d918, // 3: ftDk_Init_OnItemDrop
+    0x800eea6c, // 4: ftKb_Init_OnItemDrop
+    0x80132cac, // 5: ftKp_Init_OnItemDrop
+    0x800eb0a8, // 6: ftLk_Init_OnItemDropExt
+    0x80110374, // 7: ftSk_Init_OnItemDrop
+    0x80114ad8, // 8: ftNs_Init_OnItemDrop
+    0x8011b8b0, // 9: ftPe_Init_OnItemDrop
+    0x8011eea8, // 10: ftPp_Init_OnItemDrop
+    0x8011eea8, // 11: ftPp_Init_OnItemDrop
+    0x80124628, // 12: ftPk_Init_OnItemDrop
+    0x801285d4, // 13: ftSs_Init_OnItemDrop
+    0x8012bc3c, // 14: ftYs_Init_OnItemDrop
+    0x8013c838, // 15: ftPr_Init_OnItemDrop
+    0x80144f4c, // 16: ftMt_Init_OnItemDrop
+    0x801424f8, // 17: ftLg_Init_OnItemDrop
+    0x80136420, // 18: ftMs_Init_OnItemDrop
+    0x8013953c, // 19: ftZd_Init_OnItemDrop
+    0x80148ec4, // 20: ftCl_Init_OnItemDropExt
+    0x801496d0, // 21: ftDr_Init_OnItemDrop
+    0x80149c70, // 22: ftFc_Init_OnItemDrop
+    0x8014a154, // 23: ftPc_Init_OnItemDrop
+    0x8014a728, // 24: ftGw_Init_OnItemDrop
+    0x8014edc8, // 25: ftGn_Init_OnItemDrop
+    0x8014f0d0, // 26: ftFe_Init_OnItemDrop
+    0x00000000, // 27: -
+    0x00000000, // 28: -
+    0x8014f388, // 29: ftBo_Init_OnItemDrop
+    0x8014f5d0, // 30: ftGl_Init_OnItemDrop
+    0x8014f890, // 31: ftGk_Init_OnItemDrop
+    0x00000000, // 32: -
+];

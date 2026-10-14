@@ -77,14 +77,10 @@ impl Running<'_> {
         self.fall_lean_blend(gobj);
     }
 
-    /// Throwing the held item in the air, `ftCo_80095328` (item throws aren't ported yet;
-    /// without an item there's nothing to throw).
-    #[doc(alias = "ftCo_80095328")]
+    /// Throwing the held item in the air ([`Self::item_throw_air`]), for callers that don't
+    /// ask whether the state changed.
     pub fn item_throw_air_check(&mut self, gobj: GObjId) -> bool {
-        if self.game.fighter(gobj).item_gobj.is_some() {
-            unported_call("ftCo_80095328 with an item");
-        }
-        false
+        self.item_throw_air(gobj).is_some()
     }
 
     /// A C-stick flick in any direction this frame, `ftCo_800DF478`.
@@ -341,7 +337,7 @@ impl Running<'_> {
             KIND_PEACH => {
                 fp.set_u_i32(0x14, 0);
                 if allow_interrupt == 1 {
-                    self.call_kind_fn(FT_PE_8011D598, gobj);
+                    self.peach_parasol_put_away(gobj);
                 }
             }
             KIND_MARS | KIND_EMBLEM => fp.set_u_i32(0x0, 0),
@@ -660,7 +656,18 @@ impl Running<'_> {
     #[doc(alias = "ftCo_EscapeAir_IASA")]
     pub fn co_escape_air_iasa(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).mv_i32(ESCAPE_AIR_TIMER) != 0 {
-            if self.item_throw_air_check(gobj) {
+            // The throw's variables overwrite the dodge's speed, which a throw that changed
+            // the state puts back.
+            let fp = self.game.fighter(gobj);
+            let vel = crate::vec::Vec3::new(
+                fp.mv_f32(ESCAPE_AIR_VEL),
+                fp.mv_f32(ESCAPE_AIR_VEL + 4),
+                fp.mv_f32(ESCAPE_AIR_VEL + 8),
+            );
+            if let Some(changed) = self.item_throw_air(gobj) {
+                if changed {
+                    self.game.fighter_mut(gobj).self_vel = vel;
+                }
                 return;
             }
             self.air_z_check(gobj);
@@ -700,8 +707,6 @@ impl Running<'_> {
     }
 }
 
-/// `ftPe_8011D598`: Peach's landing resets her float (the character's port).
-const FT_PE_8011D598: u32 = 0x8011_D598;
 
 #[allow(dead_code)]
 const _PAD: u32 = PAD_LR;

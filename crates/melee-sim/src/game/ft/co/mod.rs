@@ -25,6 +25,7 @@ pub mod grab;
 pub mod ground;
 pub mod guard;
 pub mod hit;
+pub mod item_throw;
 pub mod ids;
 pub mod jump;
 pub mod kind_callbacks;
@@ -91,6 +92,15 @@ impl Fighter {
     /// `x2210.throw_flags_b(bit)`.
     pub fn throw_flag(&self, bit: u32) -> bool {
         self.x2210[0] & (0x80 >> bit) != 0
+    }
+
+    /// `ftCheckThrowB{bit}`: whether the flag is set, clearing it.
+    pub fn take_throw_flag(&mut self, bit: u32) -> bool {
+        let set = self.throw_flag(bit);
+        if set {
+            self.set_throw_flag(bit, false);
+        }
+        set
     }
 
     pub fn set_throw_flag(&mut self, bit: u32, v: bool) {

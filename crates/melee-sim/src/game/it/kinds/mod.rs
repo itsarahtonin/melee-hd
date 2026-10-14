@@ -27,6 +27,8 @@ pub mod nesspkflashexplode;
 pub mod nesspkthunder;
 pub mod nesspkthundertrail;
 pub mod nessyoyo;
+pub mod peachparasol;
+pub mod peachturnip;
 pub mod pikachuthunder;
 pub mod pikachutjoltair;
 pub mod pikachutjoltground;
@@ -89,6 +91,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || luigifireball::run_event(r, gobj, addr)
         || mariofireball::run_event(r, gobj, addr)
         || mariocape::run_event(r, gobj, addr)
+        || peachparasol::run_event(r, gobj, addr)
+        || peachturnip::run_event(r, gobj, addr)
         || drmariopill::run_event(r, gobj, addr)
         || pikachuthunder::run_event(r, gobj, addr)
         || pikachutjoltground::run_event(r, gobj, addr)
@@ -137,6 +141,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| luigifireball::run_pred(r, gobj, addr))
         .or_else(|| mariofireball::run_pred(r, gobj, addr))
         .or_else(|| mariocape::run_pred(r, gobj, addr))
+        .or_else(|| peachparasol::run_pred(r, gobj, addr))
+        .or_else(|| peachturnip::run_pred(r, gobj, addr))
         .or_else(|| drmariopill::run_pred(r, gobj, addr))
         .or_else(|| pikachuthunder::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
@@ -165,6 +171,10 @@ pub const FOODS: i32 = 18;
 pub const M_BALL: i32 = 34;
 /// `It_Kind_L_Gun_Ray`: the first kind past the common items.
 pub const L_GUN_RAY: i32 = 35;
+/// `It_Kind_StarRod_Star`, `It_Kind_LipStick_Spore` and `It_Kind_S_Scope_Beam`.
+pub const STARROD_STAR: i32 = 36;
+pub const LIPSTICK_SPORE: i32 = 37;
+pub const S_SCOPE_BEAM: i32 = 38;
 /// `It_Kind_Kuriboh`: the first enemy, and the first kind of the second group of tables.
 pub const KURIBOH: i32 = 43;
 /// `It_Kind_Octarock_Stone`.
