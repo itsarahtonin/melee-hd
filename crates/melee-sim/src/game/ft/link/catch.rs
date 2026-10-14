@@ -20,6 +20,7 @@ const PART_R_THUMB_NB: i32 = 49;
 /// and put away, the dash grab's likewise, and the hookshot's item kind.
 const GRAB: [usize; 4] = [0x84, 0x88, 0x8C, 0x90];
 const DASH: [usize; 4] = [0x94, 0x98, 0x9C, 0xA0];
+const AIR: [usize; 4] = [0xA4, 0xA8, 0xAC, 0xB0];
 const HOOKSHOT_KIND: usize = 0xBC;
 /// The shot's and the draw-in's sounds, Young Link's and Link's.
 const SFX_SHOT: [i32; 2] = [0x111B9, 0x27149];
@@ -84,6 +85,62 @@ impl Running<'_> {
             let facing = reg(self.game.fighters[f.0].facing_dir);
             let vel = Vec3::new(mem(fp::fmuls(reg(speed), facing)), 0.0, 0.0);
             linkhookshot::shoot(self, hs, vel);
+            self.play_sfx(gobj, SFX_SHOT[clink], 0x7F, 0x40);
+        } else if frame == at(self, draw_in) {
+            linkhookshot::to_retract(self, hs);
+            self.play_sfx(gobj, SFX_IN[clink], 0x7F, 0x40);
+        } else if frame == at(self, end) {
+            linkhookshot::put_away(self, hs);
+        }
+        false
+    }
+
+    /// His air grab's hookshot, the Link part of `ftCo_AirCatch_Anim` (his attributes' `xA4`
+    /// to `xB0`): on its frame the hookshot comes out (none, and he falls helpless); then on
+    /// their frames it's shot with his own motion (unless the stage is in the way, then it's
+    /// put away and he falls helpless), drawn in, and put away. True when he stopped.
+    pub fn link_air_catch_tether(&mut self, gobj: GObjId) -> bool {
+        let f = self.game.fighter_id(gobj);
+        let kind = self.game.fighters[f.0].kind;
+        let [out, shoot, draw_in, end] = AIR;
+        let at = |r: &Running, off| fp::frsp(f64::from(r.link_attr_i32(f, off)));
+        let fp_ = &mut self.game.fighters[f.0];
+        let frame = mem(fp::frsp(fp::fadd(reg(fp_.mv_f32(MV_FRAME)), 1.0)));
+        fp_.set_mv_f32(MV_FRAME, reg(frame));
+        let frame = reg(frame);
+        let clink = usize::from(kind != KIND_CLINK);
+        if frame == at(self, out) {
+            let thumb = self.part_joint(gobj, PART_R_THUMB_NB);
+            let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, thumb, None);
+            let facing = self.game.fighters[f.0].facing_dir;
+            let item_kind = self.link_attr_i32(f, HOOKSHOT_KIND);
+            let hs = linkhookshot::spawn(self, gobj, pos, facing, item_kind);
+            self.game.fighters[f.0].u.set_gobj_at(u::HOOKSHOT, hs);
+            if hs.is_none() {
+                self.enter_fall_special_basic(gobj);
+            } else {
+                self.link_hookshot_hooks(gobj);
+            }
+            return false;
+        }
+        if !(frame > at(self, out)) || !(frame <= at(self, end)) {
+            return false;
+        }
+        let hs = self.game.fighters[f.0]
+            .u
+            .gobj_at(u::HOOKSHOT)
+            .expect("a hookshot's frames without the hookshot");
+        if frame == at(self, shoot) {
+            if self.link_tether_blocked(gobj) {
+                linkhookshot::put_away(self, hs);
+                self.enter_fall_special_basic(gobj);
+                return true;
+            }
+            let speed = linkhookshot::shot_speed(self, hs);
+            let fp_ = &self.game.fighters[f.0];
+            let x = mem(fp::fmuls(reg(speed), reg(fp_.facing_dir)));
+            let x = mem(fp::fadds(reg(x), reg(fp_.pos_delta.x)));
+            linkhookshot::shoot(self, hs, Vec3::new(x, 0.0, 0.0));
             self.play_sfx(gobj, SFX_SHOT[clink], 0x7F, 0x40);
         } else if frame == at(self, draw_in) {
             linkhookshot::to_retract(self, hs);

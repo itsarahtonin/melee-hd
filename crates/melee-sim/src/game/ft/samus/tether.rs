@@ -229,7 +229,10 @@ impl Running<'_> {
             KIND_SAMUS => {
                 self.change_motion_state(gobj, ms::AIR_CATCH, 0, 0.0, 1.0, 0.0, None);
             }
-            _ => crate::game::code::unported_call("ftCo_800C3BE8 for Link"),
+            _ => {
+                let msid = super::super::link::ms::AIR_CATCH;
+                self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
+            }
         }
         self.game.fighter_mut(gobj).x1A6A = 0x1FF;
     }
@@ -250,7 +253,10 @@ impl Running<'_> {
                     None,
                 );
             }
-            _ => crate::game::code::unported_call("ftCo_800C3CC0 for Link"),
+            _ => {
+                let msid = super::super::link::ms::AIR_CATCH_HIT;
+                self.change_motion_state(gobj, msid, KEEP_FAST_FALL, 0.0, 1.0, 0.0, None);
+            }
         }
         let fp = self.game.fighter_mut(gobj);
         let drift = reg(fp.co_attrs.air_drift_max);
@@ -303,10 +309,18 @@ impl Running<'_> {
 
     /// The tether's end in a ledge jump's rise, `ftCo_8009B390`: the quick or slow second
     /// part, rising at her ledge jump's speed times her attributes' `xCC`.
-    #[doc(alias = "ftCo_8009B390")]
     pub fn samus_tether_landing(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let mul = reg(self.samus_attr_f32(f, attr::TETHER_LANDING_LAG));
+        let mul = self.samus_attr_f32(f, attr::TETHER_LANDING_LAG);
+        self.tether_landing(gobj, mul);
+    }
+
+    /// A tether's end in a ledge jump's rise, `ftCo_8009B390`: the quick or slow second part,
+    /// rising at the fighter's ledge jump speed times `mul`.
+    #[doc(alias = "ftCo_8009B390")]
+    pub fn tether_landing(&mut self, gobj: GObjId, mul: f32) {
+        let f = self.game.fighter_id(gobj);
+        let mul = reg(mul);
         let quick = self.game.fighters[f.0].motion_id == CO_CLIFF_JUMP_QUICK1;
         let msid = if quick {
             CO_CLIFF_JUMP_QUICK2
@@ -331,7 +345,13 @@ impl Running<'_> {
     pub fn co_air_catch_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].kind != KIND_SAMUS {
-            crate::game::code::unported_call("ftCo_AirCatch_Anim for Link");
+            if self.link_air_catch_tether(gobj) {
+                return;
+            }
+            if !self.anim_frames_remaining(gobj) {
+                self.enter_fall_special_basic(gobj);
+            }
+            return;
         }
         let at = |r: &Running, off| fp::frsp(f64::from(r.samus_attr_i32(f, off)));
         let fp = &mut self.game.fighters[f.0];

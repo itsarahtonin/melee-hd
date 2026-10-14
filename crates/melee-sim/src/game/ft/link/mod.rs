@@ -138,6 +138,8 @@ pub mod addr {
 
 /// Link's action states (`ftLk_MS_*`).
 pub mod ms {
+    pub const AIR_CATCH: i32 = 360;
+    pub const AIR_CATCH_HIT: i32 = 361;
     pub const SPECIAL_N_START: i32 = 344;
     pub const SPECIAL_N_LOOP: i32 = 345;
     pub const SPECIAL_N_END: i32 = 346;

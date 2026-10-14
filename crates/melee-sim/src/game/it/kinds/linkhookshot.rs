@@ -116,6 +116,16 @@ const RIGHT_WALL_MASK: i32 = 0xFC0;
 const WALL_MASK: i32 = LEFT_WALL_MASK | RIGHT_WALL_MASK;
 const CEILING_MASK: i32 = 0x6000;
 const FLOOR_MASK: i32 = 0x18000;
+/// The latch's sparks and hit spark.
+const GFX_LATCH: i32 = 0x41C;
+const GFX_LATCH_HIT: i32 = 0x3F1;
+/// `HSD_PAD_A`.
+const PAD_A: u32 = 0x100;
+/// His hang's frames left (`mv.lk.specialn.x0.y`), and his attributes' hang length (an
+/// integer) and landing lag after the pull.
+const MV_HANG: usize = 0x4;
+const LK_HANG: usize = 0xB8;
+const LK_PULL_LAG: usize = 0xB4;
 /// The links' landing clinks, Young Link's and Link's.
 const SFX_CLINK_CLINK: i32 = 0x111BF;
 const SFX_CLINK: i32 = 0x2714F;
@@ -177,9 +187,9 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         FALLING => falling(r, gobj),
         RETRACT => retract(r, gobj),
         RETRACT_CAUGHT => retract_caught(r, gobj),
-        LATCHED => unported_call("it_802A3630 (Link's hookshot latched)"),
-        PULL => unported_call("it_802A3828 (Link's hookshot pulling him up)"),
-        HANG => unported_call("it_802A39FC (Link's hookshot hanging)"),
+        LATCHED => latched(r, gobj),
+        PULL => pull(r, gobj),
+        HANG => hang(r, gobj),
         _ => return false,
     }
     true
@@ -588,17 +598,33 @@ fn shot(r: &mut Running, gobj: GObjId) {
     match lead(r, gobj, t, at, owner) {
         1 => {
             if r.game.fighter(owner).motion_id == MS_AIR_CATCH {
-                unported_call("it_802A2EE4's latch on a wall (ftCo_800C3CC0, it_802A793C)");
+                r.enter_air_catch_hit(owner);
+                to_latch(r, gobj);
+                let tip_link = tip(r, gobj);
+                let at = lk(r.game, tip_link).pos;
+                let g = lk(r.game, tip_link).gobj.expect("a link without its GObj");
+                crate::game::ef::spawn(r, GFX_LATCH, Some(g), &[crate::game::ef::Arg::Vec(at)]);
+                let facing = r.game.fighter(owner).facing_dir;
+                crate::game::ef::spawn(
+                    r,
+                    GFX_LATCH_HIT,
+                    Some(g),
+                    &[
+                        crate::game::ef::Arg::Vec(at),
+                        crate::game::ef::Arg::Float(facing),
+                    ],
+                );
+                return;
             }
             let bounce = Attrs::of(r, gobj).f(r, attr::BOUNCE);
             let k = link_mut(r.game, t);
             k.vel.x = mem(fp::fmuls(reg(k.vel.x), fp::fneg(reg(bounce))));
             to_bounce(r, gobj);
-            r.game.fighter_mut(owner).x1A68 = 0;
+            r.game.fighter_mut(owner).x1A6A = 0;
         }
         2 => {
             to_fall(r, gobj);
-            r.game.fighter_mut(owner).x1A68 = 0;
+            r.game.fighter_mut(owner).x1A6A = 0;
         }
         _ => {}
     }
@@ -1224,4 +1250,390 @@ pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     if v.x8.get() == other {
         v.x8.set(None);
     }
+}
+
+/// Whether the stage cuts the line from the hand's point `pos` or from him to the tip
+/// (`itGrappleCheckCollision`).
+fn cut(r: &mut Running, t: ItemLinkId, f: GObjId, pos: Vec3) -> bool {
+    let tp = lk(r.game, t).pos;
+    let fpos = r.game.fighter(f).cur_pos;
+    let g = r.game.geometry.as_mut().expect("no collision geometry");
+    g.check_all_remap(-1, -1, pos.x, pos.y, tp.x, tp.y)
+        .is_some()
+        || g.check_all_remap(-1, -1, fpos.x, fpos.y, tp.x, tp.y)
+            .is_some()
+}
+
+/// Latched on a wall (state 6), `it_802A3630`: if the stage cuts the hookshot he tumbles and
+/// it's put away; the links pay out from the tip riding its line (`it_802A5AE0`), and all out
+/// he hangs; on the ground it's drawn in; A pulls him up.
+#[doc(alias = "it_802A3630")]
+fn latched(r: &mut Running, gobj: GObjId) {
+    let f = owner_of(r, gobj);
+    let h = hand(r, gobj);
+    let pos = ahead_of(r, h);
+    let t = tip(r, gobj);
+    if cut(r, t, f, pos) {
+        r.enter_damage_fall(f);
+        put_away(r, gobj);
+        return;
+    }
+    let scale = r.game.fighter(f).x34_scale.y;
+    if pay_out(r, gobj, t, pos) {
+        to_hang(r, gobj);
+        line_up(r, gobj, pos, scale);
+        return;
+    }
+    line_up_hanging(r, gobj, pos, scale);
+    if r.game.fighter(f).ground_or_air != crate::game::ft::common::GA_AIR {
+        to_retract(r, gobj);
+        return;
+    }
+    if r.game.fighter(f).input.pressed_buttons & PAD_A != 0 {
+        to_pull(r, gobj);
+    }
+}
+
+/// Pulling him up (state 7), `it_802A3828`: the links wind in at `x40`, he keeps his place on
+/// the hookshot (`it_802A5FE0`); all in, he catches the ledge if one is in reach and free,
+/// else stops and rises into a ledge jump's end (`ftCo_8009B390`, his attributes' `xB4`), and
+/// it's put away; on the ground it's drawn in.
+#[doc(alias = "it_802A3828")]
+fn pull(r: &mut Running, gobj: GObjId) {
+    let f = owner_of(r, gobj);
+    let h = hand(r, gobj);
+    let mut pos = ahead_of(r, h);
+    let fp_ = r.game.fighter(f);
+    let dx = mem(fp::fsubs(reg(fp_.cur_pos.x), reg(pos.x)));
+    let dy = mem(fp::fsubs(reg(fp_.cur_pos.y), reg(pos.y)));
+    let t = tip(r, gobj);
+    let speed = Attrs::of(r, gobj).f(r, attr::RETRACT);
+    let done = climb(r, gobj, h, t, &mut pos, speed);
+    let fp_ = r.game.fighter_mut(f);
+    fp_.cur_pos.x = mem(fp::fadds(reg(pos.x), reg(dx)));
+    fp_.cur_pos.y = mem(fp::fadds(reg(pos.y), reg(dy)));
+    if done {
+        if r.ledge_in_reach(f) && !r.ledge_taken(f) {
+            r.enter_cliff_catch(f);
+        } else {
+            r.game.fighter_mut(f).self_vel.x = 0.0;
+            let ff = r.game.fighter_id(f);
+            let lag = r.link_attr_f32(ff, LK_PULL_LAG);
+            r.tether_landing(f, lag);
+        }
+        put_away(r, gobj);
+        return;
+    }
+    let scale = r.game.fighter(f).x34_scale.y;
+    line_up_hanging(r, gobj, pos, scale);
+    if r.game.fighter(f).ground_or_air != crate::game::ft::common::GA_AIR {
+        to_retract(r, gobj);
+    }
+}
+
+/// Hanging (state 8), `it_802A39FC`: if the stage cuts the hookshot he tumbles and it's put
+/// away; the links hold him to it (`it_802A6474`), which moves him; on the ground it's drawn
+/// in; A pulls him up; when his hang runs out he tumbles and it's put away.
+#[doc(alias = "it_802A39FC")]
+fn hang(r: &mut Running, gobj: GObjId) {
+    let f = owner_of(r, gobj);
+    let h = hand(r, gobj);
+    let mut pos = ahead_of(r, h);
+    let t = tip(r, gobj);
+    if cut(r, t, f, pos) {
+        r.enter_damage_fall(f);
+        put_away(r, gobj);
+        return;
+    }
+    let fp_ = r.game.fighter(f);
+    let ox = mem(fp::fsubs(reg(fp_.cur_pos.x), reg(pos.x)));
+    let oy = mem(fp::fsubs(reg(fp_.cur_pos.y), reg(pos.y)));
+    let saved = fp_.cur_pos;
+    hold_on(r, gobj, h, t, &mut pos);
+    let fp_ = r.game.fighter_mut(f);
+    fp_.cur_pos.x = mem(fp::fadds(reg(pos.x), reg(ox)));
+    fp_.cur_pos.y = mem(fp::fadds(reg(pos.y), reg(oy)));
+    let vx = mem(fp::fadds(
+        reg(fp_.self_vel.x),
+        fp::fsubs(reg(fp_.cur_pos.x), reg(saved.x)),
+    ));
+    fp_.self_vel.x = vx;
+    fp_.pos_delta.x = vx;
+    let vy = mem(fp::fadds(
+        reg(fp_.self_vel.y),
+        fp::fsubs(reg(fp_.cur_pos.y), reg(saved.y)),
+    ));
+    fp_.self_vel.y = vy;
+    fp_.pos_delta.y = vy;
+    let scale = fp_.x34_scale.y;
+    line_up_hanging(r, gobj, pos, scale);
+    let fp_ = r.game.fighter_mut(f);
+    if fp_.ground_or_air != crate::game::ft::common::GA_AIR {
+        to_retract(r, gobj);
+        return;
+    }
+    if fp_.input.pressed_buttons & PAD_A != 0 {
+        to_pull(r, gobj);
+        return;
+    }
+    let left = fp_.mv_f32(MV_HANG);
+    fp_.set_mv_f32(MV_HANG, fp::fsubs(reg(left), 1.0));
+    if left <= 0.0 {
+        r.enter_damage_fall(f);
+        put_away(r, gobj);
+    }
+}
+
+/// The tip rides the line it's on (`it_802A4454`'s inline copy).
+fn ride(r: &mut Running, l: ItemLinkId) {
+    super::samusgrapple::ride_line(r, l);
+}
+
+/// Paying out from the latched tip, `it_802A5AE0`: the tip rides its line; each link out from
+/// it falls, meets the stage and stays within a link's length of the one before; the next
+/// comes out from `pos`. True when every link is out.
+#[doc(alias = "it_802A5AE0")]
+fn pay_out(r: &mut Running, gobj: GObjId, t: ItemLinkId, pos: Vec3) -> bool {
+    let a = Attrs::of(r, gobj);
+    let (width, gravity) = (a.f(r, attr::LINK), a.f(r, attr::GRAVITY));
+    ride(r, t);
+    let mut cur = t;
+    let mut l1 = lk(r.game, t).next;
+    let mut v = Vec3::ZERO;
+    while let Some(k1) = l1 {
+        let pc = lk(r.game, cur).pos;
+        if lk(r.game, k1).x2C_b0 {
+            {
+                let k = link_mut(r.game, k1);
+                k.vel.y = mem(fp::fsubs(reg(k.vel.y), reg(gravity)));
+            }
+            link::apply_vel(r.game, k1);
+            link_coll(r, k1, width, None);
+            let pc = lk(r.game, cur).pos;
+            let len = direction(lk(r.game, k1).pos, pc, &mut v);
+            if len > reg(width) {
+                link_mut(r.game, k1).pos = along(pc, v, width);
+            }
+        } else {
+            let len = direction(pos, pc, &mut v);
+            if len > reg(width) {
+                link_mut(r.game, k1).pos = along(pc, v, width);
+                link_mut(r.game, k1).x2C_b0 = true;
+                link::place_coll(r.game, k1);
+            } else {
+                return false;
+            }
+        }
+        cur = k1;
+        l1 = lk(r.game, k1).next;
+    }
+    true
+}
+
+/// Climbing, `it_802A5FE0`: the tip rides its line; the links within `speed` of `pos` go in
+/// and the rest hang from it (`it_802A49B0`), the tip kept where it was; then from the tip
+/// toward the hand each link out stays within a link's length, and `pos` within one of the
+/// last. True when no link is left out past the tip.
+#[doc(alias = "it_802A5FE0")]
+fn climb(
+    r: &mut Running,
+    gobj: GObjId,
+    h: ItemLinkId,
+    t: ItemLinkId,
+    pos: &mut Vec3,
+    speed: f32,
+) -> bool {
+    let width = Attrs::of(r, gobj).f(r, attr::LINK);
+    ride(r, t);
+    let mut l0 = h;
+    let mut l1 = lk(r.game, l0).prev;
+    let saved = lk(r.game, t).pos;
+    while let Some(p) = l1 {
+        if lk(r.game, l0).x2C_b0 {
+            break;
+        }
+        l0 = p;
+        l1 = lk(r.game, l0).prev;
+    }
+    sag(r, gobj, l0, *pos, width);
+    link_mut(r.game, t).pos = saved;
+    let mut v = Vec3::ZERO;
+    let mut len = direction(lk(r.game, l0).pos, *pos, &mut v);
+    while let Some(p) = l1 {
+        if !(reg(speed) > len) {
+            break;
+        }
+        link_mut(r.game, l0).x2C_b0 = false;
+        len = direction(lk(r.game, p).pos, *pos, &mut v);
+        l0 = p;
+        l1 = lk(r.game, p).prev;
+    }
+    let left = fp::fsubs(len, reg(speed));
+    let dist = if left > reg(width) { width } else { mem(left) };
+    hang_from(r, gobj, l0, *pos, dist);
+    link_mut(r.game, t).pos = saved;
+    let mut count = 0;
+    let mut l2 = t;
+    let mut l1 = lk(r.game, t).next;
+    while let Some(k1) = l1 {
+        if !lk(r.game, k1).x2C_b0 {
+            break;
+        }
+        count += 1;
+        let p2 = lk(r.game, l2).pos;
+        let len = direction(lk(r.game, k1).pos, p2, &mut v);
+        if len > reg(width) {
+            link_mut(r.game, k1).pos = along(p2, v, width);
+        }
+        l2 = k1;
+        l1 = lk(r.game, k1).next;
+    }
+    let p2 = lk(r.game, l2).pos;
+    let len = direction(*pos, p2, &mut v);
+    if len > reg(width) {
+        *pos = along(p2, v, width);
+    }
+    count == 0
+}
+
+/// Holding on, `it_802A6474`: the tip rides its line; the links out sag from the hand's point
+/// with gravity (`it_802A4758`), the tip kept where it was; then from the tip toward the hand
+/// each link stays within a link's length until one is already within it, and `pos` within one
+/// of the last.
+#[doc(alias = "it_802A6474")]
+fn hold_on(r: &mut Running, gobj: GObjId, h: ItemLinkId, t: ItemLinkId, pos: &mut Vec3) {
+    let width = Attrs::of(r, gobj).f(r, attr::LINK);
+    ride(r, t);
+    let mut cur = h;
+    let mut prev = lk(r.game, h).prev;
+    let saved = lk(r.game, t).pos;
+    while let Some(p) = prev {
+        if lk(r.game, cur).x2C_b0 {
+            break;
+        }
+        cur = p;
+        prev = lk(r.game, p).prev;
+    }
+    sag_moving(r, gobj, cur, *pos, width);
+    let mut cur = t;
+    let mut slack = false;
+    link_mut(r.game, t).pos = saved;
+    let mut next = lk(r.game, t).next;
+    let mut v = Vec3::ZERO;
+    while let Some(n) = next {
+        if !lk(r.game, n).x2C_b0 {
+            break;
+        }
+        if !slack {
+            let pc = lk(r.game, cur).pos;
+            let len = direction(lk(r.game, n).pos, pc, &mut v);
+            if len > reg(width) {
+                link_mut(r.game, n).pos = along(pc, v, width);
+            } else {
+                slack = true;
+            }
+        }
+        cur = n;
+        next = lk(r.game, n).next;
+    }
+    let pc = lk(r.game, cur).pos;
+    let len = direction(*pos, pc, &mut v);
+    if len > reg(width) {
+        *pos = along(pc, v, width);
+    }
+}
+
+/// The string sagging from `at` with gravity and its collision moving, `it_802A4758`: as
+/// [`sag`] without meeting the stage.
+#[doc(alias = "it_802A4758")]
+fn sag_moving(r: &mut Running, gobj: GObjId, mut l0: ItemLinkId, at: Vec3, dist: f32) {
+    let a = Attrs::of(r, gobj);
+    let (width, gravity) = (a.f(r, attr::LINK), a.f(r, attr::GRAVITY));
+    let mut v = Vec3::ZERO;
+    direction(lk(r.game, l0).pos, at, &mut v);
+    link_mut(r.game, l0).pos = along(at, v, dist);
+    let mut l1 = lk(r.game, l0).prev;
+    while let Some(k1) = l1 {
+        {
+            let k = link_mut(r.game, k1);
+            k.vel.y = mem(fp::fsubs(reg(k.vel.y), reg(gravity)));
+        }
+        link::apply_vel(r.game, k1);
+        link::move_coll(r.game, k1);
+        let p0 = lk(r.game, l0).pos;
+        let len = direction(lk(r.game, k1).pos, p0, &mut v);
+        if len > reg(width) {
+            link_mut(r.game, k1).pos = along(p0, v, width);
+        }
+        l0 = k1;
+        l1 = lk(r.game, k1).prev;
+    }
+}
+
+/// The links' models lined up while he hangs from the hookshot, `it_802A7384`: from the link at
+/// the hand toward the tip, each along the line from the next link out (or `at`) to the one
+/// before, the tip's facing his way.
+#[doc(alias = "it_802A7384")]
+fn line_up_hanging(r: &mut Running, gobj: GObjId, at: Vec3, scale: f32) {
+    let owner = owner_of(r, gobj);
+    let mut l = hand(r, gobj);
+    while !lk(r.game, l).x2C_b0 {
+        l = lk(r.game, l).prev.expect("no link out");
+    }
+    let model = |r: &Running, l: ItemLinkId| {
+        model_of(r, lk(r.game, l).gobj.expect("a link without its GObj")).expect("a link's model")
+    };
+    while let Some(p) = lk(r.game, l).prev {
+        let k = lk(r.game, l);
+        let from = match k.next {
+            Some(n) if lk(r.game, n).x2C_b0 => lk(r.game, n).pos,
+            _ => at,
+        };
+        let to = lk(r.game, p).pos;
+        let cur = k.pos;
+        let j = model(r, l);
+        jobj::set_translate(&mut r.game.objs.jobjs, j, cur);
+        let mut dir = Vec3::new(
+            mem(fp::fsubs(reg(to.x), reg(from.x))),
+            mem(fp::fsubs(reg(to.y), reg(from.y))),
+            mem(fp::fsubs(reg(to.z), reg(from.z))),
+        );
+        link::orient_scaled(r.game, j, cur, &mut dir, scale);
+        l = p;
+    }
+    let cur = lk(r.game, l).pos;
+    let j = model(r, l);
+    jobj::set_translate(&mut r.game.objs.jobjs, j, cur);
+    let x = if f64::from(r.game.fighter(owner).facing_dir) > 0.0 {
+        1.0
+    } else {
+        -1.0
+    };
+    let mut dir = Vec3::new(x, 0.0, 0.0);
+    link::orient_scaled(r.game, j, cur, &mut dir, scale);
+}
+
+/// Latched (state 6), `it_802A793C`.
+#[doc(alias = "it_802A793C")]
+fn to_latch(r: &mut Running, gobj: GObjId) {
+    change_state(r, gobj, 6, change::ANIM_UPDATE);
+    scale_to_owner(r, gobj);
+}
+
+/// Pulling him up (state 7), `it_802A79A0`.
+#[doc(alias = "it_802A79A0")]
+fn to_pull(r: &mut Running, gobj: GObjId) {
+    change_state(r, gobj, 7, change::ANIM_UPDATE);
+    scale_to_owner(r, gobj);
+}
+
+/// Hanging (state 8), `it_802A7A04`: his hang's length from his attributes' `xB8`.
+#[doc(alias = "it_802A7A04")]
+fn to_hang(r: &mut Running, gobj: GObjId) {
+    let f = owner_of(r, gobj);
+    change_state(r, gobj, 8, change::ANIM_UPDATE);
+    scale_to_owner(r, gobj);
+    let ff = r.game.fighter_id(f);
+    let len = fp::frsp(f64::from(r.link_attr_i32(ff, LK_HANG)));
+    r.game.fighter_mut(f).set_mv_f32(MV_HANG, len);
 }
