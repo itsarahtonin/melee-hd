@@ -1462,6 +1462,16 @@ impl Importer<'_> {
                 .push("TObj palette (an HSD_Tlut copy)".into());
         }
         let tluttbl = self.tlut_table(a);
+        // The table's block and its palettes' copies, which the TObj frees.
+        let tluttbl_addr = self.u32(a + 0x6C);
+        let tluttbl_tluts: Vec<u32> = if tluttbl_addr == 0 {
+            Vec::new()
+        } else {
+            (0..)
+                .map(|i| self.u32(tluttbl_addr + 4 * i))
+                .take_while(|&t| t != 0)
+                .collect()
+        };
         let ao = self.u32(a + 0x64);
         let aobj = (ao != 0).then(|| self.aobj(ao));
         let tev = match self.u32(a + 0xA8) {
@@ -1520,6 +1530,8 @@ impl Importer<'_> {
             tev,
             tlut_addr: self.u32(a + 0x5C),
             tev_addr: self.u32(a + 0xA8),
+            tluttbl_addr,
+            tluttbl_tluts,
             ..Default::default()
         };
         self.game.objs.tobjs[id] = o;
