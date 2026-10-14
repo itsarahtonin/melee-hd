@@ -34,6 +34,10 @@ pub const SHAPESET_ADDITIVE: u16 = 1 << 1;
 pub struct Envelope {
     pub jobj: Option<JObjId>,
     pub weight: f32,
+    /// Where the original's allocators put it, and the list node holding its chain
+    /// (`docs/engine.md`).
+    pub addr: u32,
+    pub node: u32,
 }
 
 /// `HSD_ShapeSet`: the shapes a morphing shape blends, in the archive, and its blend state.
@@ -50,6 +54,9 @@ pub struct ShapeSet {
     /// The blend: one weight per shape when additive, else one position between shapes.
     pub blend: Vec<f32>,
     pub aobj: Option<super::aobj::AObjId>,
+    /// Where the original's allocators put it and its weights (`docs/engine.md`).
+    pub addr: u32,
+    pub blend_addr: u32,
 }
 
 /// What a shape is bound to, the original's union `u`, by its type.
@@ -71,6 +78,8 @@ pub struct PObj {
     pub n_display: u16,
     pub display: Option<DataRef>,
     pub u: Binding,
+    /// Its class: HAL's, or the fighters' `ftPObj`.
+    pub class: super::heap::Class,
 }
 
 impl PObj {
@@ -194,6 +203,10 @@ pub fn load_desc(pobjs: &mut PObjs, data: &Archives, desc: Option<DataRef>) -> O
         data.ptr(desc).is_none(),
         "PObjDesc {desc:?} names a class, which isn't supported"
     );
+    let class = match pobjs.default_class {
+        PObjClass::Hsd => super::heap::Class::PObj,
+        PObjClass::Fighter => super::heap::Class::FtPObj,
+    };
     let blank = || PObj {
         next: None,
         verts: None,
@@ -201,8 +214,10 @@ pub fn load_desc(pobjs: &mut PObjs, data: &Archives, desc: Option<DataRef>) -> O
         n_display: 0,
         display: None,
         u: Binding::Skin(None),
+        class,
     };
     let p = PObjId(pobjs.pool.alloc(blank()));
+    pobjs.pool.set_addr(p.0, super::heap::class_alloc(class));
     let next = load_desc(pobjs, data, data.ptr(desc.at(4)));
     let flags = data.u16(desc.at(0xC));
     let at = desc.at(0x14);
@@ -219,6 +234,7 @@ pub fn load_desc(pobjs: &mut PObjs, data: &Archives, desc: Option<DataRef>) -> O
         n_display: data.u16(desc.at(0xE)),
         display: data.ptr(desc.at(0x10)),
         u,
+        class,
     };
     if pobjs.default_class == PObjClass::Fighter
         && let Some(patch) = refract_load(&pobjs[p], data)
@@ -282,6 +298,12 @@ fn refract_load(p: &PObj, data: &Archives) -> Option<(u8, u8, u8)> {
 fn load_shape_set(data: &Archives, d: DataRef) -> ShapeSet {
     let flags = data.u16(d);
     let nb_shape = data.u16(d.at(2));
+    let addr = super::heap::piece_alloc(0x24);
+    let blend_addr = if flags & SHAPESET_ADDITIVE != 0 {
+        super::heap::mem_alloc(u32::from(nb_shape) * 4)
+    } else {
+        0
+    };
     ShapeSet {
         flags,
         nb_shape,
@@ -300,6 +322,8 @@ fn load_shape_set(data: &Archives, d: DataRef) -> ShapeSet {
             }
         ],
         aobj: None,
+        addr,
+        blend_addr,
     }
 }
 
@@ -323,14 +347,22 @@ fn load_envelopes(pobjs: &mut PObjs, data: &Archives, list: Option<DataRef>) -> 
             n += 1;
             e = e.at(8);
         }
+        assert!(n != 0, "an envelope with no joints");
         let mut env = pobjs.take_set(n);
         let mut e = edesc;
         while data.ptr(e).is_some() {
             env.push(Envelope {
                 jobj: None,
                 weight: copy(data.f32(e.at(4))),
+                addr: super::heap::piece_alloc(0xC),
+                node: 0,
             });
             e = e.at(8);
+        }
+        // `HSD_SListAlloc`: the node that holds the chain, after its envelopes.
+        let node = super::heap::obj_alloc(super::heap::Kind::SList);
+        for e in &mut env {
+            e.node = node;
         }
         out.push(env);
         slot = slot.at(4);
@@ -344,15 +376,30 @@ pub fn remove(objs: &mut Objects, p: Option<PObjId>) {
     let Some(p) = p else { return };
     let u = std::mem::replace(&mut objs.pobjs[p].u, Binding::Skin(None));
     match u {
-        Binding::ShapeSet(set) => super::jobj::remove_aobj(objs, set.aobj),
+        Binding::ShapeSet(set) => {
+            if set.flags & SHAPESET_ADDITIVE != 0 {
+                super::heap::mem_free(set.blend_addr);
+            }
+            super::jobj::remove_aobj(objs, set.aobj);
+            super::heap::piece_free(set.addr, 0x24);
+        }
         Binding::Envelopes(envs) => {
-            for e in envs.iter().flatten() {
-                jobj::unref_this(objs, e.jobj);
+            // `HSD_EnvelopeListFree`: each chain's envelopes, then its node.
+            for set in &envs {
+                for e in set {
+                    jobj::unref_this(objs, e.jobj);
+                    super::heap::piece_free(e.addr, 0xC);
+                }
+                if let Some(e) = set.first() {
+                    super::heap::obj_free(super::heap::Kind::SList, e.node);
+                }
             }
             objs.pobjs.give_back(envs);
         }
         Binding::Skin(j) => jobj::unref_this(objs, j),
     }
+    let class = objs.pobjs[p].class;
+    super::heap::class_free(class, objs.pobjs.pool.addr(p.0));
     objs.pobjs.pool.free(p.0);
 }
 

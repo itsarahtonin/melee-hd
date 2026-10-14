@@ -440,7 +440,7 @@ pub fn make_model(r: &mut Running, gobj: GObjId) {
     let j = match joint {
         Some(_) => jobj::load_joint(&mut r.game.objs, r.data, joint).expect("a loaded joint"),
         None => {
-            let j = jobj::alloc(&mut r.game.objs.jobjs);
+            let j = jobj::alloc(&mut r.game.objs);
             r.game.objs.jobjs[j].mtx = crate::mtx::Mtx34::IDENTITY;
             r.game.objs.jobjs[j].scl = None;
             j
@@ -482,7 +482,11 @@ pub fn set_material_class(game: &mut Game, gobj: GObjId) {
         let mut d = jobj::get_dobj(&game.objs.jobjs, Some(j));
         while let Some(dobj) = d {
             if let Some(m) = game.objs.dobjs[dobj].mobj {
-                game.objs.mobjs[m].class = crate::hsd::mobj::MObjClass::Item;
+                crate::hsd::mobj::change_class(
+                    &mut game.objs.mobjs,
+                    m,
+                    crate::hsd::mobj::MObjClass::Item,
+                );
             }
             d = game.objs.dobjs[dobj].next;
         }
@@ -822,6 +826,11 @@ pub fn add_anims(
 /// Gives the model a state's animations from the start, `Item_80268D34`.
 #[doc(alias = "Item_80268D34")]
 pub fn set_state_anims(r: &mut Running, gobj: GObjId, desc: DataRef) {
+    set_state_anims_at(r, gobj, desc, 0.0);
+}
+
+/// [`set_state_anims`] with the animations requested from `frame`.
+pub fn set_state_anims_at(r: &mut Running, gobj: GObjId, desc: DataRef, frame: f32) {
     let data = r.data;
     let j = jobj_of(r.game, gobj);
     let i = item_of(r.game, gobj);
@@ -846,7 +855,7 @@ pub fn set_state_anims(r: &mut Running, gobj: GObjId, desc: DataRef) {
     );
     let speed = r.game.items[i.0].x5D0_animFrameSpeed;
     crate::lb::anim::set_framerate(&mut r.game.objs, j, speed);
-    jobj::req_anim_all(&mut r.game.objs, j, 0.0);
+    jobj::req_anim_all(&mut r.game.objs, j, frame);
 }
 
 /// Restarts the model's animation at `frame`, `Item_80268DD4`.

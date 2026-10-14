@@ -14,6 +14,7 @@ use melee_data::archive::{Archive, Archives};
 use super::state::{Game, Running};
 use super::vs_match::{DiscFile, Settings};
 use crate::audio::boot::BootTimes;
+use crate::audio::clock::Wait;
 use crate::audio::devcom::Preload;
 use crate::lb::audio::{SSM_NAMES, SoundBank};
 
@@ -25,7 +26,7 @@ const SOUND_BANK: &str = "audio/us/smash2.sem";
 /// cache reads them: their entries in GALE01 revision 2's file table, where the preload heap
 /// puts them (each after the last and its archive's header), their sizes rounded up to 32
 /// bytes, and their entries in the cache.
-const PRELOADS: [Preload; 5] = [
+pub const PRELOADS: [Preload; 5] = [
     Preload {
         entrynum: 0x1EC,
         dest: 0x806D_FB20,
@@ -73,6 +74,7 @@ pub fn boot(
     };
     let audio = &mut game.audio;
     audio.dsp = settings.dsp;
+    audio.disc = settings.disc;
     // The bank files the device command queue reads.
     for name in SSM_NAMES {
         let file = load(&format!("audio/us/{name}"));
@@ -84,14 +86,23 @@ pub fn boot(
     audio.lb_boot(data);
     audio.lb_reset(data, &bank);
     // The first scene's preparation: its preload reads its files one after another, each
-    // read's callback starting the next.
-    audio.with_clock(data, |c, f| c.catch_up(BootTimes::PRELOAD, f));
+    // read's callback starting the next, and the scene waits for the first before its loop
+    // ticks.
     audio.devcom.preloads = PRELOADS.to_vec();
     audio.preload_next(data);
-    audio.with_clock(data, |c, f| c.first_tick(BootTimes::FIRST_TICK, f));
+    audio.with_clock(data, |c, f| {
+        c.wait_until(f, Wait::Preloaded(1));
+        c.first_tick(c.now + BootTimes::FIRST_TICK_AFTER_PRELOAD, f);
+    });
     let mut r = Running { game, data };
     if settings.playback {
         r.playback_scene_audio(&settings.start);
     }
     r.game.audio.tick_end(r.data);
+    // The pad library's queue keeps its newest polls, overwriting the oldest: at a drive's pace
+    // the playback scene's wait for its preloads queues more than it holds.
+    let qnum = u32::from(r.game.pads.lib.qnum);
+    if let Some(c) = &mut r.game.audio.clock {
+        c.pads = c.pads.min(qnum);
+    }
 }

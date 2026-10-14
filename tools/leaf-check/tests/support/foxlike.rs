@@ -16,8 +16,8 @@
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
-    Report, Ret, Stub, StubRet, check_calls_stubbed, gobj_arg, poke_f32, poke_u32, saved_calls,
-    user_data_arg,
+    Prepare, Report, Ret, Stub, StubRet, Variant, check_calls_stubbed, check_variants, gobj_arg,
+    poke_f32, poke_u32, saved_calls, user_data_arg,
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
@@ -31,7 +31,7 @@ pub struct Character {
     /// The prefix of the check's environment variables: `{env}_CALLS` (the capture directory),
     /// `{env}_SRC` (one source function only) and `{env}_TRACE` (name what each call runs).
     pub env: &'static str,
-    /// The capture directory by default.
+    /// The capture directory by default, in ssbm-rs's local data (`$SSBM_RS_LOCAL`).
     pub calls: &'static str,
     /// The capture sets in it, one per run.
     pub sets: &'static [&'static str],
@@ -48,7 +48,8 @@ impl Character {
     }
 
     fn base(&self) -> String {
-        self.var("CALLS").unwrap_or_else(|| self.calls.to_owned())
+        self.var("CALLS")
+            .unwrap_or_else(|| melee_local_data::ssbm_rs_local(self.calls))
     }
 
     fn src(&self) -> Option<String> {
@@ -362,8 +363,9 @@ fn tally(reports: &[Report], into: &mut BTreeMap<u32, usize>) {
 }
 
 /// Every saved call of each function, run as it was saved, with the stand-ins answering no
-/// and yes.
+/// and yes (both read and imported once: [`check_variants`]).
 fn as_saved(c: &Character, counts: &mut BTreeMap<u32, usize>) {
+    let (no, yes) = (stubs(false), stubs(true));
     for (_, name) in c.functions() {
         if c.skipped(&name) || c.src().is_some_and(|o| o != name) {
             continue;
@@ -372,15 +374,16 @@ fn as_saved(c: &Character, counts: &mut BTreeMap<u32, usize>) {
             if saved_calls(&dir, &name).is_empty() {
                 continue;
             }
-            for yes in [false, true] {
-                let reports = check_calls_stubbed(
-                    &dir,
-                    &name,
-                    0,
-                    &stubs(yes),
-                    &|call, i| arguments(call, &name, i, true),
-                    &run,
-                );
+            let prepare = |call: &mut Call, i: usize| arguments(call, &name, i, true);
+            let variants: Vec<Variant> = [&no, &yes]
+                .into_iter()
+                .map(|stubs| Variant {
+                    prepare: &prepare,
+                    ours: &run,
+                    stubs,
+                })
+                .collect();
+            for reports in check_variants(&dir, &name, &variants) {
                 tally(&reports, counts);
             }
         }
@@ -440,37 +443,52 @@ fn from_neighbours(c: &Character, counts: &mut BTreeMap<u32, usize>) {
             continue;
         }
         let rounds = targets.len().div_ceil(total).max(1);
-        for round in 0..rounds {
-            let mut offset = round * total;
-            for (src, dir, n) in &runs {
-                for yes in [false, true] {
-                    let targets = &targets;
-                    let shift = offset + usize::from(yes) * targets.len() / 2;
-                    let reports = check_calls_stubbed(
-                        dir,
-                        src,
-                        0,
-                        &stubs(yes),
-                        &|call, i| {
-                            let (a, n) = &targets[(shift + i) % targets.len()];
-                            call.addr = *a;
-                            if c.trace() {
-                                eprintln!("{src} #{i} (yes {yes}) runs {n}");
-                            }
-                            vary(call, shift + i);
-                            arguments(call, n, i, false);
-                            let fp = user_data_arg(call);
-                            if NEED_BLASTER.contains(&n.as_str())
-                                && leaf_check::calls::peek_u32(call, fp + 0x222C) == 0
-                            {
-                                call.addr = leaf_check::sym("ftFx_SpecialNEnd_IASA");
-                            }
-                        },
-                        &run,
-                    );
-                    tally(&reports, counts);
-                }
-                offset += n;
+        // Each set of saved calls runs every round's targets, with the stand-ins answering no
+        // and yes, in one pass ([`check_variants`]): run `r`'s calls start `offset` targets
+        // further on, `offset` counting the calls of the runs before.
+        let (no, yes) = (stubs(false), stubs(true));
+        let targets = &targets;
+        for (j, (src, dir, _)) in runs.iter().enumerate() {
+            let before: usize = runs[..j].iter().map(|r| r.2).sum();
+            let shifts: Vec<(usize, bool)> = (0..rounds)
+                .flat_map(|round| {
+                    [false, true].map(|y| {
+                        let shift = round * total + before + usize::from(y) * targets.len() / 2;
+                        (shift, y)
+                    })
+                })
+                .collect();
+            let prepares: Vec<Box<Prepare>> = shifts
+                .iter()
+                .map(|&(shift, y)| -> Box<Prepare> {
+                    Box::new(move |call: &mut Call, i: usize| {
+                        let (a, n) = &targets[(shift + i) % targets.len()];
+                        call.addr = *a;
+                        if c.trace() {
+                            eprintln!("{src} #{i} (yes {y}) runs {n}");
+                        }
+                        vary(call, shift + i);
+                        arguments(call, n, i, false);
+                        let fp = user_data_arg(call);
+                        if NEED_BLASTER.contains(&n.as_str())
+                            && leaf_check::calls::peek_u32(call, fp + 0x222C) == 0
+                        {
+                            call.addr = leaf_check::sym("ftFx_SpecialNEnd_IASA");
+                        }
+                    })
+                })
+                .collect();
+            let variants: Vec<Variant> = shifts
+                .iter()
+                .zip(&prepares)
+                .map(|(&(_, y), prepare)| Variant {
+                    prepare: &**prepare,
+                    ours: &run,
+                    stubs: if y { &yes } else { &no },
+                })
+                .collect();
+            for reports in check_variants(dir, src, &variants) {
+                tally(&reports, counts);
             }
         }
     }

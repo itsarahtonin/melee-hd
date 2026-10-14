@@ -7,16 +7,17 @@ use melee_capture::import::Importer;
 use melee_capture::{Capture, DataMap, find_archives};
 use melee_data::archive::Archives;
 use melee_data::disc::Disc;
+use melee_local_data::ssbm_rs_local;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/fid";
+const CALLS: &str = "calls/fid";
 
 /// With no port run on our side, the differences are exactly what the call changed: they must
 /// be there (the comparison sees changes) and our unchanged state must round-trip first.
 #[test]
 fn captured_call_changes_are_seen() {
     let Some(ctx) = reference() else { return };
-    let path = std::path::Path::new(CALLS).join("Fighter_procAnim-call1.call");
-    if !path.exists() {
+    let path = std::path::Path::new(&ssbm_rs_local(CALLS)).join("Fighter_procAnim-call1.call");
+    if !melee_capture::pack::exists(&path) {
         return;
     }
     let cap = Capture::read(&path);

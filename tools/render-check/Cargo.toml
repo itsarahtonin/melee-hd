@@ -4,6 +4,7 @@ description = "Checks melee-render's frames against ssbm-rs's: the GPU state of 
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
@@ -15,3 +16,6 @@ melee-sim.workspace = true
 melee-gx = { path = "../../crates/melee-gx" }
 melee-gpu = { path = "../../crates/melee-gpu" }
 png = "0.18"
+
+[dev-dependencies]
+melee-local-data = { path = "../local-data" }

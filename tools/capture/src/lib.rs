@@ -7,11 +7,13 @@ pub mod compare;
 pub mod corpus;
 pub mod display;
 pub mod effects;
+pub mod heap;
 pub mod hud;
 pub mod import;
 pub mod items;
 pub mod izumi;
 pub mod links;
+pub mod pack;
 pub mod playback;
 pub mod sis;
 pub mod sound;
@@ -35,7 +37,12 @@ pub struct Capture {
 }
 
 impl Capture {
+    /// The call saved at `path` (`DIR/NAME.call`): from `DIR`'s pack when it holds it
+    /// ([`pack`]), from the file otherwise.
     pub fn read(path: &Path) -> Self {
+        if let Some(call) = pack::read(path) {
+            return Capture { call };
+        }
         let packed = std::fs::read(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
         let bytes =
             zstd::decode_all(&packed[..]).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
@@ -69,6 +76,9 @@ pub struct Loaded {
 /// own).
 pub struct DiscIndex {
     by_header: HashMap<[u32; 3], Vec<(String, Vec<u8>)>>,
+    /// A bit for each of `by_header`'s headers by [`header_bit`], to pass over the places in
+    /// memory no file starts at without a lookup.
+    header_bits: Box<[u64]>,
     /// The animation files' sub-archives by file name: each one's offset and size in the
     /// file.
     anim_files: HashMap<String, Vec<(u32, u32)>>,
@@ -76,7 +86,22 @@ pub struct DiscIndex {
     anim_bytes: HashMap<String, Vec<u8>>,
 }
 
+/// The bits of [`DiscIndex::header_bits`].
+const HEADER_BITS: u32 = 20;
+
+/// A header's bit in [`DiscIndex::header_bits`].
+fn header_bit(h: [u32; 3]) -> usize {
+    let x = u64::from(h[0]) ^ u64::from(h[1]).rotate_left(21) ^ u64::from(h[2]).rotate_left(42);
+    (x.wrapping_mul(0x9E37_79B9_7F4A_7C15) >> (64 - HEADER_BITS)) as usize
+}
+
 impl DiscIndex {
+    /// Whether some file on the disc may start with `header`.
+    fn may_start(&self, header: [u32; 3]) -> bool {
+        let b = header_bit(header);
+        self.header_bits[b / 64] & (1 << (b % 64)) != 0
+    }
+
     /// The animation file named `name` (`PlFxAJ.dat`), whole.
     pub fn anim_file(&self, name: &str) -> Option<&[u8]> {
         self.anim_bytes.get(name).map(Vec::as_slice)
@@ -146,8 +171,14 @@ pub fn disc_index(disc: &Disc) -> DiscIndex {
             .or_default()
             .push((name.clone(), bytes));
     }
+    let mut header_bits = vec![0u64; (1 << HEADER_BITS) / 64].into_boxed_slice();
+    for &h in by_header.keys() {
+        let b = header_bit(h);
+        header_bits[b / 64] |= 1 << (b % 64);
+    }
     DiscIndex {
         by_header,
+        header_bits,
         anim_files,
         anim_bytes,
     }
@@ -272,16 +303,20 @@ fn scan(
     let mut at = 0;
     while at + 0x20 <= mem1.len() {
         let header = [word(at), word(at + 4), word(at + 8)];
-        let Some(candidates) = by_header.get(&header) else {
+        let Some(candidates) = index
+            .may_start(header)
+            .then(|| by_header.get(&header))
+            .flatten()
+        else {
             at += 32;
             continue;
         };
         // The best-agreeing candidate (costume files share sizes), if it agrees on most words:
         // the game writes into some loaded data (a fighter's action table caches where each
         // animation was loaded).
-        match best_match(candidates, mem1, at) {
+        let file = MEM1 + at as u32;
+        match best_match(candidates, mem1, at, &|name| known(name, file).is_some()) {
             Some((name, bytes)) => {
-                let file = MEM1 + at as u32;
                 let id = known(name, file)
                     .unwrap_or_else(|| archives.add(Archive::parse(bytes).unwrap()));
                 let archive = archives.get(id);
@@ -305,18 +340,21 @@ fn scan(
 
 /// The best-agreeing candidate for a file at `at` (costume files share sizes), if it agrees on
 /// most words: the game writes into some loaded data (a fighter's action table caches where
-/// each animation was loaded).
+/// each animation was loaded). Between candidates that agree as well, one `prefer` names wins:
+/// files can hold the same bytes (Luigi's animation file repeats some of Mario's), and the
+/// copy is the one the game loaded.
 fn best_match<'c>(
     candidates: &'c [(String, Vec<u8>)],
     mem1: &[u8],
     at: usize,
+    prefer: &dyn Fn(&str) -> bool,
 ) -> Option<&'c (String, Vec<u8>)> {
     candidates
         .iter()
         .filter(|(_, bytes)| at + bytes.len() <= mem1.len())
         .map(|c| (agreement(&mem1[at..at + c.1.len()], &c.1), c))
         .filter(|((same, total), _)| same * 10 >= total * 7)
-        .max_by_key(|((same, _), _)| *same)
+        .max_by_key(|((same, _), c)| (*same, prefer(&c.0)))
         .map(|(_, c)| c)
 }
 
@@ -358,7 +396,7 @@ fn headerless_stage_files(
             continue;
         };
         let at = (data - 0x20 - MEM1) as usize;
-        if let Some((name, bytes)) = best_match(candidates, mem1, at) {
+        if let Some((name, bytes)) = best_match(candidates, mem1, at, &|_| false) {
             let id = known(name, data - 0x20)
                 .unwrap_or_else(|| archives.add(Archive::parse(bytes).unwrap()));
             let archive = archives.get(id);

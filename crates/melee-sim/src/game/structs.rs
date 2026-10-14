@@ -6,7 +6,7 @@
 use melee_data::archive::DataRef;
 
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
-use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
+use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
@@ -1606,7 +1606,7 @@ pub struct CpuFighter {
     /// +0x44
     pub x44: Option<FighterId>,
     /// +0x48
-    pub x48: RawPtr,
+    pub x48: Option<FighterId>,
     /// +0x4c
     pub x4C: Option<ItemId>,
     /// +0x50
@@ -1724,7 +1724,7 @@ pub struct CpuFighter {
     /// +0x44c
     pub command_duration: u32,
     /// +0x450
-    pub csP: RawPtr,
+    pub csP: CpuCsP,
     /// +0x454
     pub buffer: [i8; 256],
     /// +0x554
@@ -1772,7 +1772,7 @@ impl Default for CpuFighter {
             x3C: 0.0,
             x40: 0.0,
             x44: None,
-            x48: Default::default(),
+            x48: None,
             x4C: None,
             x50: None,
             x54: Default::default(),
@@ -8115,6 +8115,246 @@ impl itSamusGrapple_ItemVars {
         self.x14.mark_stale();
         self.x15.mark_stale();
         self.x16.mark_stale();
+    }
+}
+
+/// `itDrMarioPill_ItemVars`, 0x10 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itDrMarioPill_ItemVars {
+    /// +0x0
+    pub x0: Var<f32>,
+    /// +0x4
+    pub x4: Var<Option<GObjId>>,
+    /// +0x8
+    pub x8: Var<f32>,
+    /// +0xc
+    pub xC: Var<f32>,
+}
+
+impl Default for itDrMarioPill_ItemVars {
+    fn default() -> Self {
+        itDrMarioPill_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itDrMarioPill_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+    }
+}
+
+/// `itPikachuthunder_ItemVars`, 0x3c bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itPikachuthunder_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub x4: Var<i32>,
+    /// +0x8
+    pub x8: Var<i32>,
+    /// +0xc
+    pub xC: Var<f32>,
+    /// +0x10
+    pub x10: Var<f32>,
+    /// +0x14
+    pub x14: Var<f32>,
+    /// +0x18
+    pub x18: Var<f32>,
+    /// +0x1c
+    pub x1C: Var<Vec3>,
+    /// +0x28
+    pub x28: Var<Vec3>,
+    /// +0x34
+    pub x34: Var<Option<GObjId>>,
+    /// +0x38
+    pub x38: Var<Option<GObjId>>,
+}
+
+impl Default for itPikachuthunder_ItemVars {
+    fn default() -> Self {
+        itPikachuthunder_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+            x18: Var::new(Default::default()),
+            x1C: Var::new(Default::default()),
+            x28: Var::new(Default::default()),
+            x34: Var::new(Default::default()),
+            x38: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itPikachuthunder_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.x10.mark_stale();
+        self.x14.mark_stale();
+        self.x18.mark_stale();
+        self.x1C.mark_stale();
+        self.x28.mark_stale();
+        self.x34.mark_stale();
+        self.x38.mark_stale();
+    }
+}
+
+/// `itPikachutJoltGround_ItemVars`, 0x38 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itPikachutJoltGround_ItemVars {
+    /// +0x0
+    pub xDD4: Var<f32>,
+    /// +0x4
+    pub xDD8: Var<Option<GObjId>>,
+    /// +0x8
+    pub xDDC: Var<Option<GObjId>>,
+    /// +0xc
+    pub xDE0: Var<i32>,
+    /// +0x10
+    pub xDE4: Var<i32>,
+    /// +0x14
+    pub xDE8: Var<Vec3>,
+    /// +0x20
+    pub xDF4: Var<Vec3>,
+    /// +0x2c
+    pub xE00: Var<Vec3>,
+}
+
+impl Default for itPikachutJoltGround_ItemVars {
+    fn default() -> Self {
+        itPikachutJoltGround_ItemVars {
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+            xDE0: Var::new(Default::default()),
+            xDE4: Var::new(Default::default()),
+            xDE8: Var::new(Default::default()),
+            xDF4: Var::new(Default::default()),
+            xE00: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itPikachutJoltGround_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+        self.xDE0.mark_stale();
+        self.xDE4.mark_stale();
+        self.xDE8.mark_stale();
+        self.xDF4.mark_stale();
+        self.xE00.mark_stale();
+    }
+}
+
+/// `itPikachutJoltAir_ItemVars`, 0x24 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itPikachutJoltAir_ItemVars {
+    /// +0x0
+    pub xDD4: Var<Option<GObjId>>,
+    /// +0x4
+    pub xDD8: Var<Option<GObjId>>,
+    /// +0x8
+    pub pad_8: [Var<u8>; 12],
+    /// +0x14
+    pub xDE8: Var<Vec3>,
+    /// +0x20
+    pub xDF4: Var<i32>,
+}
+
+impl Default for itPikachutJoltAir_ItemVars {
+    fn default() -> Self {
+        itPikachutJoltAir_ItemVars {
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            pad_8: core::array::from_fn(|_| Var::new(Default::default())),
+            xDE8: Var::new(Default::default()),
+            xDF4: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itPikachutJoltAir_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.pad_8.iter_mut().for_each(|v| v.mark_stale());
+        self.xDE8.mark_stale();
+        self.xDF4.mark_stale();
+    }
+}
+
+/// `itClimbersIce_ItemVars`, 0xc bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itClimbersIce_ItemVars {
+    /// +0x0
+    pub x0: Var<Option<GObjId>>,
+    /// +0x4
+    pub x4: Var<f32>,
+    /// +0x8 (bits 0..+1)
+    pub x8_b0: Var<bool>,
+}
+
+impl Default for itClimbersIce_ItemVars {
+    fn default() -> Self {
+        itClimbersIce_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8_b0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itClimbersIce_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8_b0.mark_stale();
+    }
+}
+
+/// `itClimbersBlizzard_ItemVars`, 0x8 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itClimbersBlizzard_ItemVars {
+    /// +0x0
+    pub x0: Var<f32>,
+    /// +0x4 (bits 0..+1)
+    pub flag0: Var<bool>,
+}
+
+impl Default for itClimbersBlizzard_ItemVars {
+    fn default() -> Self {
+        itClimbersBlizzard_ItemVars {
+            x0: Var::new(Default::default()),
+            flag0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itClimbersBlizzard_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.flag0.mark_stale();
     }
 }
 

@@ -11,6 +11,8 @@
 use std::fmt::Debug;
 
 use super::pool::Pool;
+use crate::hsd::heap::Kind;
+use crate::hsd::pool::kind as pool_kind;
 
 /// Process links, `p_link_max + 1` (the default 63, which Melee keeps).
 pub const P_LINKS: usize = 64;
@@ -139,8 +141,8 @@ impl Place {
 /// (`tools/capture`); game code goes through the methods.
 #[derive(melee_derive::CloneFrom, Debug)]
 pub struct World<K: Kinds> {
-    pub gobjs: Pool<GObj<K>>,
-    pub procs: Pool<Proc<K>>,
+    pub gobjs: Pool<GObj<K>, { pool_kind(Kind::GObj) }>,
+    pub procs: Pool<Proc<K>, { pool_kind(Kind::GObjProc) }>,
     pub plink_head: [Option<GObjId>; P_LINKS],
     pub plink_tail: [Option<GObjId>; P_LINKS],
     pub gx_head: [Option<GObjId>; GX_LINKS + 1],

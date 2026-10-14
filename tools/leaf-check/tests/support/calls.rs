@@ -27,36 +27,34 @@ use melee_sim::hsd::gobj::GObjId;
 use melee_sim::vec::Vec3;
 use ssbm_rt::Ctx;
 
-/// Where the captures are: `MATCH_CALLS` (the VS match's, made as `vs.rs` says) and
+/// Where the captures are (by default in `$SSBM_RS_LOCAL/calls`): `MATCH_CALLS` (the VS match's, made as `vs.rs` says) and
 /// `HUD_CALLS` (the HUD's, made the same way with the HUD's functions named; see `hud.rs`).
 pub fn calls_dirs() -> Vec<PathBuf> {
     let var = |name: &str, default: &str| -> PathBuf {
         std::env::var(name)
-            .unwrap_or_else(|_| default.into())
+            .unwrap_or_else(|_| melee_local_data::ssbm_rs_local(default))
             .into()
     };
     vec![
-        var(
-            "MATCH_CALLS",
-            "C:/Projects/ssbm-rs-publication/local/calls/match",
-        ),
-        var(
-            "HUD_CALLS",
-            "C:/Projects/ssbm-rs-publication/local/calls/hud",
-        ),
+        var("MATCH_CALLS", "calls/match"),
+        var("HUD_CALLS", "calls/hud"),
     ]
 }
 
 /// The saved real calls of `func` in the captures' directories.
 pub fn calls(func: &str) -> Vec<PathBuf> {
+    calls_in(&calls_dirs(), func)
+}
+
+/// The saved real calls of `func` in the runs under `dirs`.
+pub fn calls_in(dirs: &[PathBuf], func: &str) -> Vec<PathBuf> {
     let prefix = format!("{func}-call");
-    let mut found: Vec<PathBuf> = calls_dirs()
+    let mut found: Vec<PathBuf> = dirs
         .iter()
         .flat_map(|dir| std::fs::read_dir(dir).into_iter().flatten().flatten())
         .map(|e| e.path())
         .filter(|p| p.is_dir())
-        .flat_map(|d| std::fs::read_dir(d).into_iter().flatten().flatten())
-        .map(|e| e.path())
+        .flat_map(melee_capture::pack::entries)
         .filter(|p| {
             let name = p.file_name().unwrap().to_string_lossy();
             name.starts_with(&prefix) && name.ends_with(".call")
@@ -64,7 +62,7 @@ pub fn calls(func: &str) -> Vec<PathBuf> {
         .collect();
     found.sort();
     if found.is_empty() {
-        eprintln!("no captures of {func} in {:?}", calls_dirs());
+        eprintln!("no captures of {func} (in a run's calls.pack or .call files) under {dirs:?}");
     }
     found
 }
@@ -423,11 +421,24 @@ fn stub_call_diffs(maps: &Maps) -> Vec<String> {
 
 /// Imports a capture's whole state.
 pub fn import(cap: &Capture, data: &DataMap, archives: &Archives) -> (Game, Maps, Vec<String>) {
+    import_with(cap, data, archives, false)
+}
+
+/// [`import`], with the main heap's allocators if `heap`.
+pub fn import_with(
+    cap: &Capture,
+    data: &DataMap,
+    archives: &Archives,
+    heap: bool,
+) -> (Game, Maps, Vec<String>) {
     let mut imp = Importer::new(cap, data).with_archives(archives);
     imp.world();
     imp.stage();
     imp.ids();
     imp.match_state();
+    if heap {
+        imp.heap();
+    }
     let Importer {
         game,
         maps,
@@ -444,6 +455,7 @@ pub fn compare(mem: &[u8], data: &DataMap, game: &Game, maps: Maps) -> Vec<Strin
     cmp.stage();
     cmp.ids();
     cmp.match_state();
+    cmp.heap();
     cmp.diffs
 }
 
@@ -468,6 +480,10 @@ pub struct Check<'a> {
     pub round_trip: &'a [&'a str],
     /// At most this many captures.
     pub max_captures: usize,
+    /// Model the main heap's allocators from the capture, and compare them.
+    pub heap: bool,
+    /// Where the captures are, if not [`calls_dirs`].
+    pub dirs: &'a [&'a str],
 }
 
 impl<'a> Check<'a> {
@@ -481,8 +497,10 @@ impl<'a> Check<'a> {
             theirs: None,
             stubs: &[],
             natives: &[],
-            round_trip: &["hud"],
+            round_trip: &["hud", "heap"],
             max_captures: usize::MAX,
+            heap: false,
+            dirs: &[],
         }
     }
 
@@ -500,7 +518,14 @@ impl<'a> Check<'a> {
 
     pub fn run(&self) {
         let func = self.base;
-        let paths = calls(func);
+        let paths = if self.dirs.is_empty() {
+            calls(func)
+        } else {
+            calls_in(
+                &self.dirs.iter().map(PathBuf::from).collect::<Vec<_>>(),
+                func,
+            )
+        };
         if paths.is_empty() {
             return;
         }
@@ -551,7 +576,9 @@ impl<'a> Check<'a> {
                 };
                 for mode in MODES {
                     set_fp_mode(mode);
-                    let imported = catch_unwind(AssertUnwindSafe(|| import(cap, &data, &archives)));
+                    let imported = catch_unwind(AssertUnwindSafe(|| {
+                        import_with(cap, &data, &archives, self.heap)
+                    }));
                     let Ok((mut game, maps, _)) = imported else {
                         if variant == 0 && mode == FpMode::Hardware {
                             skipped.push(path.file_name().unwrap().to_string_lossy().into_owned());
@@ -634,6 +661,9 @@ impl<'a> Check<'a> {
                     cmp.stage();
                     cmp.ids();
                     cmp.match_state();
+                    if self.heap {
+                        cmp.heap();
+                    }
                     let state_diffs: Vec<String> = std::mem::take(&mut cmp.diffs)
                         .into_iter()
                         .filter(|d| !before.contains(d))

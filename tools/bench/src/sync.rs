@@ -3,9 +3,31 @@
 //! in ssbm-rs's trace of the match's start.
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use ssbm_slippi::replay::{Replay, event};
+
+/// A benchmark match's replay: `DIR/NAME.slp` when `dir` has it, else the repository's
+/// `data/bench/NAME.slp`.
+pub fn replay_path(dir: &Path, name: &str) -> PathBuf {
+    let path = dir.join(format!("{name}.slp"));
+    if path.exists() {
+        path
+    } else {
+        melee_local_data::bench_replay(name)
+    }
+}
+
+/// ssbm-rs's state trace of a benchmark match's start (`make-matches.sh` writes it):
+/// `DIR/NAME.start.trace` when `dir` has it, else `$SSBM_RS_LOCAL/bench/NAME.start.trace`.
+pub fn start_trace_path(dir: &Path, name: &str) -> PathBuf {
+    let path = dir.join(format!("{name}.start.trace"));
+    if path.exists() {
+        path
+    } else {
+        melee_local_data::ssbm_rs_local(&format!("bench/{name}.start.trace")).into()
+    }
+}
 
 /// The match's first frame.
 pub const FIRST_FRAME: i32 = -123;
@@ -60,10 +82,9 @@ pub fn post_frames(replay: &Replay) -> BTreeMap<i32, [Option<Fighter>; 8]> {
     out
 }
 
-/// A fighter in an ssbm-rs state trace: its address, player and whether it's a follower.
+/// A fighter in an ssbm-rs state trace: its address and whether it's a follower.
 pub struct TracedFighter {
     pub address: u32,
-    pub player: u8,
     pub follower: bool,
 }
 
@@ -97,11 +118,10 @@ pub fn traced_fighters(path: &Path) -> Option<Vec<TracedFighter>> {
             let len = u32le(&mut z)? as usize;
             let mut bytes = vec![0u8; len];
             z.read_exact(&mut bytes).ok()?;
-            // Fighter::player_idx at +0xC; is_sub_fighter, fp+0x221F bit 4.
+            // is_sub_fighter, fp+0x221F bit 4.
             if kind[0] == 4 && bytes.len() > 0x221F {
                 out.push(TracedFighter {
                     address,
-                    player: bytes[0xC],
                     follower: bytes[0x221F] & 0x08 != 0,
                 });
             }
@@ -110,12 +130,4 @@ pub fn traced_fighters(path: &Path) -> Option<Vec<TracedFighter>> {
             return Some(out);
         }
     }
-}
-
-/// The fighters' addresses in creation order (`vs_match::Settings::fighter_addresses`): each
-/// player's leader, then its follower, as the oracle takes them from a trace.
-pub fn fighter_addresses(path: &Path) -> Option<Vec<u32>> {
-    let mut f = traced_fighters(path)?;
-    f.sort_by_key(|t| (t.player, t.follower));
-    Some(f.into_iter().map(|t| t.address).collect())
 }

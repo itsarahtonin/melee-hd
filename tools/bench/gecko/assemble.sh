@@ -1,10 +1,10 @@
 #!/bin/bash
 # Assembles the boot codes into src/gecko_words.rs: each code's instruction words, with the
 # word where its match data starts. Needs powerpc-eabi-as and powerpc-eabi-objcopy (the decomp's
-# build/binutils has them): BINUTILS=/c/Projects/melee/build/binutils bash tools/bench/gecko/assemble.sh
+# build/binutils has them): BINUTILS=$DECOMP/build/binutils bash tools/bench/gecko/assemble.sh
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
-bin=${BINUTILS:-/c/Projects/melee/build/binutils}
+bin=${BINUTILS:?"BINUTILS names the decomp's build/binutils"}
 tmp=$(mktemp -d)
 out="$here/../src/gecko_words.rs"
 {

@@ -8,8 +8,8 @@
 //! driver, which the runner doesn't save) run from other functions' captured states.
 //!
 //! The captures are game memory, kept out of the repository in `MATCH_CALLS` (default below),
-//! one directory per run; the tests skip without them. ssbm-rs's runner (branch
-//! `feat/state-trace`, `cargo build --release -p ssbm-run`) makes them in the debug VS mode's
+//! one directory per run; the tests skip without them. ssbm-rs's runner (`main`,
+//! `cargo build --release -p ssbm-run`) makes them in the debug VS mode's
 //! random matches, whose code Slippi's playback codes don't patch:
 //!
 //! ```text
@@ -22,6 +22,7 @@
 //! and again with `MATCH_TEAMS=1 MATCH_PLAYERS=4` into `dvs-teams`, with the names this file's
 //! tests use.
 
+use melee_local_data::ssbm_rs_local;
 use std::collections::HashSet;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::PathBuf;
@@ -45,11 +46,11 @@ use melee_sim::vec::Vec3;
 use ssbm_rt::{Ctx, Handle};
 use ssbm_types::fns;
 
-const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/match";
+const DEFAULT_CALLS: &str = "calls/match";
 
 fn calls_dir() -> PathBuf {
     std::env::var("MATCH_CALLS")
-        .unwrap_or_else(|_| DEFAULT_CALLS.into())
+        .unwrap_or_else(|_| ssbm_rs_local(DEFAULT_CALLS))
         .into()
 }
 
@@ -63,8 +64,7 @@ fn calls(func: &str) -> Vec<PathBuf> {
         .flatten()
         .map(|e| e.path())
         .filter(|p| p.is_dir())
-        .flat_map(|d| std::fs::read_dir(d).into_iter().flatten().flatten())
-        .map(|e| e.path())
+        .flat_map(melee_capture::pack::entries)
         .filter(|p| {
             let name = p.file_name().unwrap().to_string_lossy();
             name.starts_with(&prefix) && name.ends_with(".call")

@@ -12,6 +12,7 @@ pub mod fobj;
 pub mod fog;
 pub mod generator;
 pub mod gobj;
+pub mod heap;
 pub mod id;
 pub mod jobj;
 pub mod list;
@@ -27,6 +28,8 @@ pub mod robj;
 pub mod shadow;
 pub mod sis;
 pub mod spline;
+pub mod texp;
+pub mod texp_heap;
 pub mod tobj;
 pub mod wobj;
 
@@ -68,6 +71,8 @@ pub struct Objects {
     pub rendermode_patches: std::collections::HashMap<DataRef, u32>,
     /// The random number generator's state (`HSD_Rand`'s seed).
     pub rng: crate::rng::Rng,
+    /// The main heap's allocators, modelled once a state brings them in.
+    pub heap: heap::Heap,
     /// Reads of values the original never set that the port couldn't resolve exactly (see
     /// `docs/engine.md`). The oracle reports any.
     pub stale_reads: u32,

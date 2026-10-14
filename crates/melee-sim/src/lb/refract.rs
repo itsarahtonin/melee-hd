@@ -77,9 +77,17 @@ impl Game {
             .map(|offset| DataRef { archive, offset })
             .expect("LbRf.dat's lbRefData");
         let n = data.u8(table);
+        // The screen copy's image (320 by 240 in RGB565), the textures' list and their image
+        // descriptors, then each entry's 32 by 32 IA8 indirect map ahead of its textures.
+        crate::hsd::heap::with(|h| {
+            h.mem_alloc(0x2_5800);
+            h.mem_alloc(u32::from(n) * 4);
+            h.mem_alloc(u32::from(n) * 0x18);
+        });
         let tobjs = &mut self.objs.tobjs;
         let chains = (0..n)
             .map(|i| {
+                crate::hsd::heap::mem_alloc(0x800);
                 let map = Desc {
                     id: 1,
                     src: 1,

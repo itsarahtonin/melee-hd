@@ -16,25 +16,25 @@
 //! `STAGE_CALLS` names the directory (default below); tests skip when it has no capture of
 //! their function.
 
+use melee_local_data::ssbm_rs_local;
 use std::path::PathBuf;
 
 use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{MODES, reference, run_capture};
 use melee_capture::compare::Comparer;
 use melee_capture::import::Importer;
-use melee_capture::{Capture, DataMap, DiscIndex, disc_index, find_archives_in};
+use melee_capture::{Capture, DataMap, DiscIndex, find_archives_in};
 use melee_data::archive::Archives;
-use melee_data::disc::Disc;
 use melee_sim::game::gr::ground;
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::Ctx;
 
-const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/stage";
+const DEFAULT_CALLS: &str = "calls/stage";
 
 fn calls_dir() -> PathBuf {
     std::env::var("STAGE_CALLS")
-        .unwrap_or_else(|_| DEFAULT_CALLS.into())
+        .unwrap_or_else(|_| ssbm_rs_local(DEFAULT_CALLS))
         .into()
 }
 
@@ -45,13 +45,10 @@ fn captures(func: &str) -> Vec<PathBuf> {
         return out;
     };
     for d in dirs.flatten() {
-        let Ok(files) = std::fs::read_dir(d.path()) else {
-            continue;
-        };
-        for f in files.flatten() {
-            let name = f.file_name().to_string_lossy().into_owned();
+        for f in melee_capture::pack::entries(d.path()) {
+            let name = f.file_name().unwrap().to_string_lossy().into_owned();
             if name.starts_with(&format!("{func}-call")) && name.ends_with(".call") {
-                out.push(f.path());
+                out.push(f);
             }
         }
     }
@@ -61,15 +58,15 @@ fn captures(func: &str) -> Vec<PathBuf> {
 
 struct Env {
     ctx: Ctx,
-    index: DiscIndex,
+    /// The disc's archives, indexed once for every check.
+    index: &'static DiscIndex,
 }
 
 fn env() -> Option<Env> {
     let ctx = reference()?;
-    let disc = Disc::open(std::env::var("SSBM_DISC").unwrap()).unwrap();
     Some(Env {
         ctx,
-        index: disc_index(&disc),
+        index: leaf_check::disc_index()?,
     })
 }
 
@@ -90,17 +87,26 @@ fn check(func: &str, ours: &Ours) {
     let mut blocked = Vec::new();
     'captures: for path in &files {
         let cap = Capture::read(path);
+        // The state, imported once (in the first mode, as each mode's run did) for both modes'
+        // runs, each from its own copy.
+        set_fp_mode(MODES[0]);
+        let mut archives = Archives::default();
+        let data = DataMap {
+            loaded: find_archives_in(env.index, &cap.call.mem1, &mut archives),
+        };
+        let mut imp = Importer::new(&cap, &data);
+        imp.world();
+        imp.stage();
+        imp.ids();
+        let Importer {
+            game: imported,
+            maps: imported_maps,
+            ..
+        } = imp;
         for mode in MODES {
             set_fp_mode(mode);
-            let mut archives = Archives::default();
-            let data = DataMap {
-                loaded: find_archives_in(&env.index, &cap.call.mem1, &mut archives),
-            };
-            let mut imp = Importer::new(&cap, &data);
-            imp.world();
-            imp.stage();
-            imp.ids();
-            let Importer { mut game, maps, .. } = imp;
+            let mut game = imported.clone();
+            let maps = imported_maps.clone();
             let ran = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 ours(
                     &mut Running {
@@ -272,7 +278,7 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
     set_fp_mode(FpMode::Slippi);
     let mut archives = Archives::default();
     let data = DataMap {
-        loaded: find_archives_in(&env.index, &cap.call.mem1, &mut archives),
+        loaded: find_archives_in(env.index, &cap.call.mem1, &mut archives),
     };
     let mut imp = Importer::new(&cap, &data);
     imp.world();
@@ -448,7 +454,7 @@ use melee_sim::game::gr::{last, setup};
 /// Captures from the other tournament stages (Pokémon Stadium, Yoshi's Story, Fountain of Dreams,
 /// Dream Land) and Final Destination's quake, one directory each: see
 /// `local/calls/stage-more/capture.sh` in ssbm-rs's tree for how they were made.
-const MORE_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/stage-more";
+const MORE_CALLS: &str = "calls/stage-more";
 
 /// Every capture of [`MORE_CALLS`] imports and compares with its own memory with no difference:
 /// the stages' objects, their archives (Pokémon Stadium's transformation files among them) and
@@ -456,25 +462,19 @@ const MORE_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/stage-more
 #[test]
 fn tournament_stage_imports_round_trip() {
     let Some(env) = env() else { return };
-    let dir = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| MORE_CALLS.to_owned());
+    let dir = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| ssbm_rs_local(MORE_CALLS));
     let Ok(dirs) = std::fs::read_dir(&dir) else {
         eprintln!("no captures in {dir}: skipping");
         return;
     };
     let (mut n, mut failed) = (0, Vec::new());
     for d in dirs.flatten().filter(|d| d.path().is_dir()) {
-        let mut files: Vec<_> = std::fs::read_dir(d.path())
-            .unwrap()
-            .flatten()
-            .map(|f| f.path())
-            .filter(|p| p.extension().is_some_and(|e| e == "call"))
-            .collect();
-        files.sort();
+        let files = melee_capture::pack::call_files(d.path());
         for path in files {
             let cap = Capture::read(&path);
             let mut archives = Archives::default();
             let data = DataMap {
-                loaded: find_archives_in(&env.index, &cap.call.mem1, &mut archives),
+                loaded: find_archives_in(env.index, &cap.call.mem1, &mut archives),
             };
             let mut imp = Importer::new(&cap, &data);
             imp.world();
@@ -589,7 +589,7 @@ fn ground_lights() {
 #[test]
 fn ground_stage_gobj() {
     check("Ground_GetStageGObj", &|r, cap, _| {
-        setup::stage_gobj(r, int_arg(cap, 0) as i32);
+        setup::stage_gobj(r, int_arg(cap, 0) as i32, setup::SETUP_FRAME);
     });
 }
 
@@ -620,7 +620,7 @@ fn last_on_start() {
 #[test]
 fn last_create() {
     check("grLast_8021A7F4", &|r, cap, _| {
-        last::create(r, int_arg(cap, 0) as i32);
+        last::create(r, int_arg(cap, 0) as i32, setup::SETUP_FRAME);
     });
 }
 
@@ -632,7 +632,12 @@ fn last_init_main() {
 #[test]
 fn last_set_phase() {
     check("grLast_8021B920", &|r, cap, maps| {
-        last::set_phase(r, gobj_arg(cap, maps), int_arg(cap, 1) as i32)
+        last::set_phase(
+            r,
+            gobj_arg(cap, maps),
+            int_arg(cap, 1) as i32,
+            last::CYCLE_PIECES_FRAME,
+        )
     });
 }
 
@@ -671,7 +676,7 @@ fn on_state_with(path: &std::path::Path, steps: &[Step], hud: bool) {
         set_fp_mode(mode);
         let mut archives = Archives::default();
         let data = DataMap {
-            loaded: find_archives_in(&env.index, &cap.call.mem1, &mut archives),
+            loaded: find_archives_in(env.index, &cap.call.mem1, &mut archives),
         };
         let mut imp = Importer::new(&cap, &data);
         imp.world();
@@ -930,7 +935,7 @@ fn ground_destroy_and_create() {
                 "grLast_8021A7F4(9)",
                 &|ctx, _| invoke(ctx, 0x8021_A7F4, &[9], &[]),
                 &|r, _| {
-                    last::create(r, 9);
+                    last::create(r, 9, last::CYCLE_PIECES_FRAME);
                 },
             ),
             ("destroy map 9", &t[9], &o[9]),
@@ -1194,7 +1199,7 @@ fn battle_on_start() {
 #[test]
 fn battle_create() {
     check("grBattle_80219D84", &|r, cap, _| {
-        battle::create(r, int_arg(cap, 0) as i32);
+        battle::create(r, int_arg(cap, 0) as i32, setup::SETUP_FRAME);
     });
 }
 
@@ -1545,9 +1550,9 @@ fn battle_empty_callbacks_and_demo() {
 #[test]
 fn stadium_unreached_entries() {
     use melee_sim::game::gr::stadium;
-    let dir = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| MORE_CALLS.to_owned());
+    let dir = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| ssbm_rs_local(MORE_CALLS));
     let path = PathBuf::from(dir).join("ps1/grStadium_801D4548-call10.call");
-    if !path.exists() {
+    if !melee_capture::pack::exists(&path) {
         eprintln!("no capture {}: skipping", path.display());
         return;
     }
@@ -1590,10 +1595,8 @@ fn stadium_unreached_entries() {
     on_state_with(&path, &steps, true);
     // The cycle's other captures, the screen in whatever mode each found it.
     let zsteps: Vec<Step> = steps[..z.len()].to_vec();
-    let mut others: Vec<_> = std::fs::read_dir(path.parent().unwrap())
-        .unwrap()
-        .flatten()
-        .map(|f| f.path())
+    let mut others: Vec<_> = melee_capture::pack::entries(path.parent().unwrap())
+        .into_iter()
         .filter(|p| {
             p.file_name()
                 .is_some_and(|n| n.to_string_lossy().starts_with("grStadium_801D4548-"))

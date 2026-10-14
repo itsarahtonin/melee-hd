@@ -76,6 +76,8 @@ impl std::ops::IndexMut<FogId> for Fogs {
 #[doc(alias = "HSD_FogLoadDesc")]
 pub fn load_desc(fogs: &mut Fogs, data: &Archives, desc: DataRef) -> FogId {
     let f = FogId(fogs.fogs.alloc(Fog::default()));
+    let addr = super::heap::class_alloc(super::heap::Class::Fog);
+    fogs.fogs.set_addr(f.0, addr);
     init(fogs, data, Some(f), desc);
     if let Some(adj) = data.ptr(desc.at(4)) {
         fogs[f].fog_adj = Some(adj_load_desc(fogs, data, adj));
@@ -213,5 +215,6 @@ pub fn delete(objs: &mut Objects, f: FogId) {
         fogs.adjs.free(a.0);
     }
     jobj::remove_aobj(objs, objs.fogs[f].aobj);
+    super::heap::class_free(super::heap::Class::Fog, objs.fogs.fogs.addr(f.0));
     objs.fogs.fogs.free(f.0);
 }

@@ -7,8 +7,8 @@
 //! positions, costumes, stocks.
 //!
 //! The captures are game memory, kept out of the repository in `REPLAY_CALLS` (default
-//! below), one directory per replay, named for it. ssbm-rs's runner (branch
-//! `feat/state-trace-memory`) makes them, with `done.txt` listing every function address but
+//! below), one directory per replay, named for it. ssbm-rs's runner
+//! (`main`) makes them, with `done.txt` listing every function address but
 //! the captured ones:
 //!
 //! ```text
@@ -20,11 +20,12 @@
 //! ```
 //!
 //! for the Fox vs Sheik Final Destination replay `Game_20260129T133652` and the four-player
-//! team one `Game_20260531T174953`, both in `SLIPPI_REPLAYS` (default below).
+//! team one `Game_20260531T174953`, both in `SLIPPI_REPLAYS`, by month.
 
 use leaf_check::calls::{
     Ret, Setup, check_calls_in, gobj_arg, peek_u32, poke_bit, poke_f32, poke_u32, user_data_arg,
 };
+use melee_local_data::{slippi_replays, ssbm_rs_local};
 use melee_sim::game::code::{run_fighter_cb, run_proc};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
@@ -35,8 +36,7 @@ use melee_slippi::Device;
 use ssbm_rt::capture::Call;
 use ssbm_slippi::Replay;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/replay";
-const REPLAYS: &str = "C:/Users/USER/Documents/Slippi";
+const CALLS: &str = "calls/replay";
 /// The captured replays, by the month folder they're in.
 const CAPTURED: [(&str, &str); 2] = [
     ("2026-01", "Game_20260129T133652"),
@@ -46,8 +46,8 @@ const CAPTURED: [(&str, &str); 2] = [
 /// Each captured replay's directory and the replay as ssbm-rs's runner and melee-sim's
 /// playback parse it, where both are here.
 fn replays() -> Vec<(String, Replay, melee_slippi::Replay)> {
-    let calls = std::env::var("REPLAY_CALLS").unwrap_or_else(|_| CALLS.into());
-    let slippi = std::env::var("SLIPPI_REPLAYS").unwrap_or_else(|_| REPLAYS.into());
+    let calls = std::env::var("REPLAY_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS));
+    let slippi = std::env::var("SLIPPI_REPLAYS").unwrap_or_else(|_| slippi_replays(""));
     CAPTURED
         .iter()
         .filter_map(|(month, name)| {

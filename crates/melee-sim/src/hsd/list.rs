@@ -1,6 +1,8 @@
 //! HAL's singly linked lists (`sysdolphin/baselib/list.c`), with nodes from a pool.
 
 use super::pool::Pool;
+use crate::hsd::heap::Kind;
+use crate::hsd::pool::kind as pool_kind;
 
 /// A list node's slot.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -14,7 +16,7 @@ pub struct SList<T> {
 }
 
 /// The node pool (`slist_alloc_data`).
-pub type SLists<T> = Pool<SList<T>>;
+pub type SLists<T> = Pool<SList<T>, { pool_kind(Kind::SList) }>;
 
 /// A node holding `data`, `HSD_SListAlloc`.
 #[doc(alias = "HSD_SListAlloc")]

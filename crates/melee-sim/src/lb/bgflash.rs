@@ -73,6 +73,8 @@ pub struct BgFlash {
     pub table: Option<DataRef>,
     /// `flash_scale`: what the animations' colors are scaled by.
     pub scale: f32,
+    /// Where the original's pool put the user data (`docs/engine.md`).
+    pub user_addr: u32,
 }
 
 /// A color channel's byte as the fade's float holds it (`stb` of `fctiwz`).
@@ -266,6 +268,7 @@ impl Game {
     #[doc(alias = "lbBgFlash_Free")]
     pub fn bg_flash_free(&mut self) {
         self.bgflash.user = None;
+        crate::hsd::heap::obj_free(crate::hsd::heap::Kind::BgFlash, self.bgflash.user_addr);
     }
 }
 
@@ -306,6 +309,10 @@ impl Running<'_> {
             x0: alpha,
             ..BgFlashUserData::default()
         });
+        g.bgflash.user_addr = crate::hsd::heap::obj_alloc(crate::hsd::heap::Kind::BgFlash);
+        // `lbArchive_LoadSymbols("LbBf.dat", ...)`.
+        self.disc_load("LbBf.dat", crate::game::ft::data::MAIN_MEMORY);
+        let g = &mut *self.game;
         let offset = self
             .data
             .get(lb_bf)

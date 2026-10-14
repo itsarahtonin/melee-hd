@@ -18,9 +18,11 @@ use crate::hsd::Objects;
 use crate::hsd::cobj::CObjId;
 use crate::hsd::fog::FogId;
 use crate::hsd::gobj::{GObjId, Host, Kinds, World};
+use crate::hsd::heap::Kind;
 use crate::hsd::jobj::JObjId;
 use crate::hsd::lobj::LObjId;
 use crate::hsd::pool::Pool;
+use crate::hsd::pool::kind as pool_kind;
 
 /// What a GObj's user data is (`user_data`, by its `user_data_kind`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -89,6 +91,8 @@ pub struct Rules {
     pub offscreen_limits: bool,
     /// The Ice Climbers' freeze glitch fix.
     pub freeze_glitch_fix: bool,
+    /// Which version of Slippi's codes the rules come from, where versions differ.
+    pub codes: super::slippi::CodeSet,
 }
 
 /// What a GObj's HSD object is (`hsd_obj`, by its `obj_kind`).
@@ -172,9 +176,9 @@ pub enum Event {
 pub struct Game {
     pub world: World<GameKinds>,
     pub objs: Objects,
-    pub fighters: Pool<Fighter>,
+    pub fighters: Pool<Fighter, { pool_kind(Kind::Fighter) }>,
     /// The items (`Item`, the item GObjs' user data, from `item_alloc_data`).
-    pub items: Pool<Item>,
+    pub items: Pool<Item, { pool_kind(Kind::Item) }>,
     /// The item code's other globals.
     pub it: super::it::Globals,
     /// The effects: efLib's and efAsync's globals and pools.
@@ -199,17 +203,17 @@ pub struct Game {
     pub controller_map: ControllerMap,
     pub rules: Rules,
     /// Fighters' parts tables (`Fighter::parts`), one entry per bone of the character.
-    pub fighter_parts: Pool<Vec<FighterBone>>,
+    pub fighter_parts: Pool<Vec<FighterBone>, { pool_kind(Kind::FighterParts) }>,
     /// Fighters' copies of their character's attributes (`Fighter::dat_attrs`): the
     /// `fighter_dat_attrs_alloc_data` block's big-endian bytes, whose layout each character
     /// defines.
-    pub fighter_attrs: Pool<Vec<u8>>,
+    pub fighter_attrs: Pool<Vec<u8>, { pool_kind(Kind::FighterAttrs) }>,
     /// Fighters' lists of their models' DObjs (`DObjList::data`): the main model's (up to
     /// 124) and the second model's (up to 32), the first `count` of each meaningful.
     pub fighter_dobj_lists: Pool<Vec<Option<crate::hsd::dobj::DObjId>>>,
     /// Fighters' animation buffers (`fighter_x59C_alloc_data`). What a buffer holds is the
     /// archive of the animation loaded into it, which the fighter names (`x590`, `x598`).
-    pub fighter_anim_bufs: Pool<()>,
+    pub fighter_anim_bufs: Pool<(), { pool_kind(Kind::FighterX59C) }>,
     /// The links of fighters' dynamic bone chains (`BoneDynamicsDesc::dyn_desc`), each a
     /// joint's physics state.
     pub fighter_dynamics: Pool<DynamicsData>,
@@ -275,7 +279,10 @@ impl Host<GameKinds> for Running<'_> {
     fn remove_user_data(&mut self, _gobj: GObjId, _kind: u8, data: UserData) {
         match data {
             // `mem_free`: the block goes back to the heap.
-            UserData::Ground(g) => self.game.grounds.free(g.0),
+            UserData::Ground(g) => {
+                crate::hsd::heap::mem_free(self.game.grounds.addr(g.0));
+                self.game.grounds.free(g.0);
+            }
             UserData::Item(i) => super::it::item::free_user_data(self.game, i),
             // `it_802A2474`: the link goes back to `item_link_alloc_data`.
             UserData::ItemLink(l) => super::it::link::free(self.game, l),
@@ -284,8 +291,20 @@ impl Host<GameKinds> for Running<'_> {
             UserData::Text(t) => self.game.sis.free_text(t),
             UserData::SisCamera(g) => self.game.sis.forget_camera(g),
             // `mn_8022EB04`: the heap byte goes back.
-            UserData::NameTagSlot(_) => {}
+            UserData::NameTagSlot(slot) => {
+                let addr = self.game.hud.nametags.user_data_addrs[usize::from(slot)];
+                crate::hsd::heap::mem_free(addr);
+            }
             UserData::BgFlash => self.game.bg_flash_free(),
+            // `HSD_Free`.
+            UserData::StadiumScreen(which) => {
+                let s = self.game.gr.stadium.screens[usize::from(which)].as_ref();
+                crate::hsd::heap::mem_free(s.map_or(0, |s| s.addr));
+            }
+            UserData::IzumiReflection => {
+                let r = self.game.gr.izumi.reflection.as_ref();
+                crate::hsd::heap::mem_free(r.map_or(0, |r| r.addr));
+            }
             // `ifMagnify_802FC3BC` does nothing.
             UserData::MagnifyPlayer(_) => {}
             UserData::StockIcons(_) | UserData::ArrowSlot(_) => {

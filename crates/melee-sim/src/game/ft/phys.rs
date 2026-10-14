@@ -285,6 +285,34 @@ impl Running<'_> {
         }
     }
 
+    /// Keeps the ground speed within `max` either way, `ftCommon_ClampGroundVel`.
+    #[doc(alias = "ftCommon_ClampGroundVel")]
+    pub fn clamp_ground_vel(fp: &mut Fighter, max: f64) {
+        let v = reg(fp.gr_vel);
+        if v < fp::fneg(max) {
+            fp.gr_vel = mem(fp::fneg(max));
+        } else if v > max {
+            fp.gr_vel = mem(max);
+        }
+    }
+
+    /// Caps the rising speed at `max`, `ftCommon_ClampFallSpeed`.
+    // Ports `ftCommon_ClampFallSpeed`; aliased once a check reaches it.
+    pub fn clamp_fall_speed(fp: &mut Fighter, max: f64) {
+        if reg(fp.self_vel.y) > max {
+            fp.self_vel.y = mem(max);
+        }
+    }
+
+    /// Rises by `accel`, up to `max`, `ftCommon_Ascend`.
+    // Ports `ftCommon_Ascend`; aliased once a check reaches it.
+    pub fn ascend(fp: &mut Fighter, accel: f64, max: f64) {
+        fp.self_vel.y = mem(fp::fadds(reg(fp.self_vel.y), accel));
+        if reg(fp.self_vel.y) > max {
+            fp.self_vel.y = mem(max);
+        }
+    }
+
     /// The character's own gravity, `ftCommon_FallBasic`.
     #[doc(alias = "ftCommon_FallBasic")]
     pub fn fall_basic(fp: &mut Fighter) {

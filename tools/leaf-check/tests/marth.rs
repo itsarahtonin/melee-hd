@@ -44,11 +44,12 @@
 //! whose players the debug mode makes computers or humans at random
 //! (`CAPTURE_FUNCS=@$D/marth-funcs-missing2.txt`): its items give the item hooks their calls.
 
+use melee_local_data::ssbm_rs_local;
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
-    Report, Ret, Stub, StubRet, check_calls_stubbed, gobj_arg, peek_u32, poke_bit, poke_f32,
-    poke_u32, saved_calls, user_data_arg,
+    Prepare, Report, Ret, Stub, StubRet, Variant, check_variants, gobj_arg, peek_u32, poke_bit,
+    poke_f32, poke_u32, saved_calls, user_data_arg,
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
@@ -57,10 +58,10 @@ use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use ssbm_rt::capture::Call;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/marth";
+const CALLS: &str = "calls/marth";
 
 fn base() -> String {
-    std::env::var("MARTH_CALLS").unwrap_or_else(|_| CALLS.to_owned())
+    std::env::var("MARTH_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS))
 }
 
 /// The capture sets, one per run.
@@ -221,6 +222,7 @@ fn tally(reports: &[Report], into: &mut BTreeMap<u32, usize>) {
 /// Every saved call of each of Marth's functions, run as it was saved, with the stand-ins
 /// answering no and yes.
 fn as_saved(counts: &mut BTreeMap<u32, usize>) {
+    let (no, yes) = (stubs(false), stubs(true));
     for (_, name) in functions() {
         if SKIP.contains(&name.as_str()) || std::env::var("MARTH_SRC").is_ok_and(|o| o != name) {
             continue;
@@ -229,9 +231,16 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
             if saved_calls(&dir, &name).is_empty() {
                 continue;
             }
-            for yes in [false, true] {
-                let reports =
-                    check_calls_stubbed(&dir, &name, 0, &stubs(yes), &|_, _| {}, &run_marth);
+            let prepare = |_: &mut Call, _: usize| {};
+            let variants: Vec<Variant> = [&no, &yes]
+                .into_iter()
+                .map(|stubs| Variant {
+                    prepare: &prepare,
+                    ours: &run_marth,
+                    stubs,
+                })
+                .collect();
+            for reports in check_variants(&dir, &name, &variants) {
                 tally(&reports, counts);
             }
         }
@@ -283,41 +292,56 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
             continue;
         }
         let rounds = (2 * targets.len()).div_ceil(total).max(1);
-        for round in 0..rounds {
-            let mut offset = round * total;
-            for (src, dir, n) in &runs {
-                for yes in [false, true] {
-                    let targets = &targets;
-                    let shift = offset + usize::from(yes) * targets.len() / 2;
-                    let reports = check_calls_stubbed(
-                        dir,
-                        src,
-                        0,
-                        &stubs(yes),
-                        &|call, i| {
-                            let (a, n) = &targets[(shift + i) % targets.len()];
-                            call.addr = *a;
-                            if std::env::var_os("MARTH_TRACE").is_some() {
-                                eprintln!("{src} #{i} (yes {yes}) runs {n}");
-                            }
-                            vary(call, shift + i);
-                            let fp = user_data_arg(call);
-                            let msid = peek_u32(call, fp + 0x10);
-                            if let Some((_, from, ground)) = SWITCHES.iter().find(|s| s.0 == n)
-                                && !from.contains(&msid)
-                            {
-                                poke_u32(call, fp + 0x10, from[(shift + i) % from.len()]);
-                                poke_u32(call, fp + 0xE0, u32::from(!ground));
-                            }
-                            if ITEM_HOOKS.contains(&n.as_str()) {
-                                call.regs.gpr[4] = ((shift + i) % 2) as u32;
-                            }
-                        },
-                        &run_marth,
-                    );
-                    tally(&reports, counts);
-                }
-                offset += n;
+        // Each set of saved calls runs every round's targets, with the stand-ins answering no
+        // and yes, in one pass ([`check_variants`]): run `r`'s calls start `offset` targets
+        // further on, `offset` counting the calls of the runs before.
+        let (no, yes_stubs) = (stubs(false), stubs(true));
+        let targets = &targets;
+        for (j, (src, dir, _)) in runs.iter().enumerate() {
+            let before: usize = runs[..j].iter().map(|r| r.2).sum();
+            let shifts: Vec<(usize, bool)> = (0..rounds)
+                .flat_map(|round| {
+                    [false, true].map(|yes| {
+                        let shift = round * total + before + usize::from(yes) * targets.len() / 2;
+                        (shift, yes)
+                    })
+                })
+                .collect();
+            let prepares: Vec<Box<Prepare>> = shifts
+                .iter()
+                .map(|&(shift, yes)| -> Box<Prepare> {
+                    Box::new(move |call: &mut Call, i: usize| {
+                        let (a, n) = &targets[(shift + i) % targets.len()];
+                        call.addr = *a;
+                        if std::env::var_os("MARTH_TRACE").is_some() {
+                            eprintln!("{src} #{i} (yes {yes}) runs {n}");
+                        }
+                        vary(call, shift + i);
+                        let fp = user_data_arg(call);
+                        let msid = peek_u32(call, fp + 0x10);
+                        if let Some((_, from, ground)) = SWITCHES.iter().find(|s| s.0 == n)
+                            && !from.contains(&msid)
+                        {
+                            poke_u32(call, fp + 0x10, from[(shift + i) % from.len()]);
+                            poke_u32(call, fp + 0xE0, u32::from(!ground));
+                        }
+                        if ITEM_HOOKS.contains(&n.as_str()) {
+                            call.regs.gpr[4] = ((shift + i) % 2) as u32;
+                        }
+                    })
+                })
+                .collect();
+            let variants: Vec<Variant> = shifts
+                .iter()
+                .zip(&prepares)
+                .map(|(&(_, yes), prepare)| Variant {
+                    prepare: &**prepare,
+                    ours: &run_marth,
+                    stubs: if yes { &yes_stubs } else { &no },
+                })
+                .collect();
+            for reports in check_variants(dir, src, &variants) {
+                tally(&reports, counts);
             }
         }
     }

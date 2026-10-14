@@ -13,6 +13,7 @@ use super::Objects;
 use super::aobj::{self, AObjId};
 use super::dobj::{self, DObjId};
 use super::fobj::{self, Value};
+use super::heap;
 use super::particle;
 use super::pool::Pool;
 use super::robj::{self, RObjId, inv_length};
@@ -124,6 +125,11 @@ pub struct JObj {
     pub robj: Option<RObjId>,
     /// The joint descriptor it was loaded from, its ID table key.
     pub id: Option<DataRef>,
+    /// Its class (`hsdJObj`, or the fighters' `ftJObj` and `ftIntpJObj`), and where the
+    /// original's allocators put its `scl` and `envelopemtx` (`docs/engine.md`).
+    pub class: heap::Class,
+    pub scl_addr: u32,
+    pub envelopemtx_addr: u32,
 }
 
 impl Default for JObj {
@@ -147,6 +153,9 @@ impl Default for JObj {
             aobj: None,
             robj: None,
             id: None,
+            class: heap::Class::JObj,
+            scl_addr: 0,
+            envelopemtx_addr: 0,
         }
     }
 }
@@ -323,6 +332,13 @@ pub fn make_matrix(objs: &mut Objects, data: &Archives, j: JObjId) {
     let jobjs = &mut objs.jobjs;
     let parent_scl = parent.and_then(|p| jobjs[p].scl);
     let o = &mut jobjs[j];
+    // The original keeps `scl` in a block of its own, made when first needed and freed when
+    // a classically scaled joint's parent has none.
+    if o.scl.is_none() && (parent_scl.is_some() || o.flags & CLASSICAL_SCALE == 0) {
+        o.scl_addr = heap::obj_alloc(heap::Kind::Vec);
+    } else if o.scl.is_some() && parent_scl.is_none() && o.flags & CLASSICAL_SCALE != 0 {
+        heap::obj_free(heap::Kind::Vec, o.scl_addr);
+    }
     if o.flags & CLASSICAL_SCALE != 0 {
         o.scl = parent_scl;
     } else {
@@ -868,7 +884,7 @@ fn load_sub(
         data.ptr(joint).is_none(),
         "joint {joint:?} names a class, which isn't supported"
     );
-    let j = alloc(&mut objs.jobjs);
+    let j = alloc(objs);
     load(objs, data, j, joint, parent);
     Some(j)
 }
@@ -922,6 +938,7 @@ fn load(objs: &mut Objects, data: &Archives, j: JObjId, joint: DataRef, parent: 
             *v = data.f32(m.at(4 * i as u32));
         }
         o.envelopemtx = Some(e);
+        o.envelopemtx_addr = heap::obj_alloc(heap::Kind::Mtx);
     }
     objs.ids.insert(joint, j);
     objs.jobjs[j].id = Some(joint);
@@ -1061,6 +1078,14 @@ fn delete(objs: &mut Objects, j: JObjId) {
     {
         objs.ids.remove(id);
     }
+    let o = &objs.jobjs[j];
+    if o.scl.is_some() {
+        heap::obj_free(heap::Kind::Vec, o.scl_addr);
+    }
+    if o.envelopemtx.is_some() {
+        heap::obj_free(heap::Kind::Mtx, o.envelopemtx_addr);
+    }
+    heap::class_free(o.class, objs.jobjs.pool.addr(j.0));
     objs.jobjs.pool.free(j.0);
 }
 
@@ -1352,10 +1377,19 @@ pub fn clear_flags_all(jobjs: &mut JObjs, j: Option<JObjId>, flags: u32) {
     }
 }
 
-/// A new joint, `HSD_JObjAlloc`.
+/// A new joint of the default class, `HSD_JObjAlloc`.
 #[doc(alias = "HSD_JObjAlloc")]
-pub fn alloc(jobjs: &mut JObjs) -> JObjId {
-    JObjId(jobjs.pool.alloc(JObj::default()))
+pub fn alloc(objs: &mut Objects) -> JObjId {
+    let class = match objs.jobj.default_class {
+        JObjClass::Hsd => heap::Class::JObj,
+        JObjClass::FighterIntp => heap::Class::FtIntpJObj,
+    };
+    let j = objs.jobjs.pool.alloc(JObj {
+        class,
+        ..JObj::default()
+    });
+    objs.jobjs.pool.set_addr(j, heap::class_alloc(class));
+    JObjId(j)
 }
 
 /// Makes a joint current, referencing it, `HSD_JObjSetCurrent`.

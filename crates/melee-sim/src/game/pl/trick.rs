@@ -201,6 +201,51 @@ impl Running<'_> {
         self.take_attack_record(attacker, victim, record, rec, behind, prev_source);
     }
 
+    /// A hit with no attacker, attack or record (`pl_80038144` with nulls): the hit's event
+    /// and instance cleared, then the last hit's record (`fn_80037F00` with no record) as
+    /// none, which leaves its top three flags.
+    pub fn record_no_attack(&mut self, victim: GObjId, prev_source: i32) {
+        let slot = i32::from(self.game.fighter(victim).player_idx);
+        let edge = self.magnify_edge(slot);
+        let fp = self.game.fighter_mut(victim);
+        fp.dmg.x18d4 = [0; 4];
+        fp.dmg.x18ec_instancehitby = 0;
+        let prev_kb = if fp.x221C_b6 {
+            reg(fp.dmg.x18d8.kb_applied1)
+        } else {
+            0.0
+        };
+        let _ = prev_kb;
+        let d = &mut fp.dmg.x18d8;
+        d.x0 = 0;
+        d.x4 = 0;
+        d.kb_applied1 = 0.0;
+        d.xC = 6;
+        d.x10_b0 = false;
+        d.x11_b3 = false;
+        d.x10_b1 = false;
+        d.x10_b2 = false;
+        d.x10_b3 = false;
+        d.x10_b4 = false;
+        d.x10_b5 = false;
+        d.x10_b6 = false;
+        d.x10_b7 = false;
+        d.x11_b0 = false;
+        d.x11_b1 = false;
+        d.x11_b2 = false;
+        d.x11_b4 = false;
+        d.x4 = fp::fctiwz(reg(fp.dmg.x1830_percent));
+        fp.dmg.x18d8.x11_b0 = false;
+        if edge != 0 {
+            fp.dmg.x18d8.x11_b1 = true;
+        }
+        if fp.motion_id == MS_X11_B2 {
+            fp.dmg.x18d8.x11_b2 = true;
+        }
+        // No strong-hit mark: the record's x10_b0 was just cleared.
+        let _ = prev_source;
+    }
+
     /// A hit on an enemy in the attacker's statistics, `pl_800384DC`: attack `id` (handed as an
     /// `int`, so the record's other bytes read 0) counts a hit, and a hit beating its best, as
     /// on a player; the fighter's record is marked landed (`x2084_b7`). `record` is the

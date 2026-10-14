@@ -35,6 +35,7 @@ use melee_capture::{
 };
 use melee_data::archive::{ArchiveId, Archives};
 use melee_data::disc::Disc;
+use melee_sim::audio::clock::DiscSpeed;
 use melee_sim::game::code::{Val, stubs};
 use melee_sim::game::playback::FIRST_FRAME;
 use melee_sim::game::vs_match::{Match, Settings};
@@ -122,7 +123,15 @@ fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> (Vec<String>, V
     cmp.audio();
     cmp.match_state();
     cmp.display();
+    if COMPARE_HEAP.with(|c| c.get()) {
+        cmp.heap();
+    }
     (cmp.diffs, cmp.stale_reads)
+}
+
+thread_local! {
+    /// Whether the comparison takes in the allocator model (`--heap`).
+    static COMPARE_HEAP: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 /// The stale reads a run met: the first tick of each, in order.
@@ -200,9 +209,12 @@ pub fn diff(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut against, mut pos) = (None, u32::MAX, None, Vec::new());
     let (mut boot_diff, mut all, mut boot_audio) = (false, false, false);
     let mut ignore: Vec<String> = Vec::new();
+    // `--heap-log FILE`: the allocator model's operations, from the match's start, into FILE.
+    let mut heap_log: Option<String> = None;
     // A replay doesn't say how its floats were computed: Slippi's Dolphin recorded it, and
     // ssbm-run plays replays that way unless told `--fp hardware` (the benchmark matches).
     let mut fp_mode = FpMode::Slippi;
+    let mut disc_speed = DiscSpeed::Fast;
     let mut it = args.iter();
     while let Some(&a) = it.next() {
         match a {
@@ -211,7 +223,16 @@ pub fn diff(args: &[&str]) -> ExitCode {
             "--against" => against = it.next().and_then(|t| t.parse::<u32>().ok()),
             "--boot-diff" => boot_diff = true,
             "--boot-audio" => boot_audio = true,
+            // A trace ssbm-rs made with `DISC_RATE=3000000` read the disc at a drive's pace.
+            "--disc-speed" => {
+                disc_speed = it
+                    .next()
+                    .and_then(|s| DiscSpeed::parse(s))
+                    .expect("--disc-speed fast|drive")
+            }
             "--all" => all = true,
+            "--heap" => COMPARE_HEAP.with(|c| c.set(true)),
+            "--heap-log" => heap_log = it.next().map(|f| f.to_string()),
             "--fp" => {
                 fp_mode = match it.next().copied() {
                     Some("hardware") => FpMode::Hardware,
@@ -240,7 +261,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     }
     let [trace_path, replay_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N] [--fp hardware|slippi]"
+            "usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|drive]"
         );
         return ExitCode::from(2);
     };
@@ -251,6 +272,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     let replay = Replay::parse(&bytes).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
         .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
+    settings.disc = disc_speed;
     let index = melee_capture::disc_index(&disc);
     let mut reader = Reader::open(trace_path);
     let version = reader.version;
@@ -298,7 +320,9 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 );
                 return ExitCode::FAILURE;
             };
-            settings.fighter_addresses = fighter_addresses(&image);
+            // The fighters' addresses come from the allocator model (`hsd::heap`); the trace's
+            // check them as the match starts, and the comparison every tick after.
+            let traced = fighter_addresses(&image);
             settings.stadium_buffer = stadium_buffer(&image);
             // The save data's unlocks and the unlock-all codes, as the boot state has them.
             settings.unlocks = melee_sim::game::gm::Unlocks::from_memory(&|a| {
@@ -333,9 +357,12 @@ pub fn diff(args: &[&str]) -> ExitCode {
                         .unwrap_or_else(|e| panic!("{name}: {e}")),
                 };
                 let mut fresh = None;
+                if heap_log.is_some() {
+                    melee_sim::hsd::heap::start_log();
+                }
                 let started = catch_unwind(AssertUnwindSafe(|| {
                     Match::start_from(&settings, &mut load, &mut |g, data| {
-                        crate::boot::seed(g, data, &boot, boot_tb, !boot_audio);
+                        crate::boot::seed(g, data, &boot, boot_tb, !boot_audio, settings.disc);
                         fresh = Some(g.clone());
                     })
                 }));
@@ -369,6 +396,28 @@ pub fn diff(args: &[&str]) -> ExitCode {
                     return ExitCode::FAILURE;
                 }
             };
+            let modelled: Vec<u32> = m.game.ft.addresses.values().copied().collect();
+            if modelled != traced {
+                println!(
+                    "the fighters' addresses differ: the allocator model's {modelled:x?}, the trace's {traced:x?}"
+                );
+                if let Some(path) = &heap_log {
+                    let log = melee_sim::hsd::heap::take_log();
+                    std::fs::write(
+                        path,
+                        log.join(
+                            "
+",
+                        ) + "
+",
+                    )
+                    .unwrap_or_else(|e| panic!("{path}: {e}"));
+                }
+                return ExitCode::FAILURE;
+            }
+            println!(
+                "the fighters' addresses, the allocator model's and the trace's: {modelled:x?}"
+            );
             // The match's first tick runs below, compared with trace tick `t`.
             let files = Files {
                 index: &index,
@@ -407,11 +456,15 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 imp.audio(bank);
                 // Memory doesn't say which DSP model ran: the replay's settings do.
                 imp.game.audio.dsp = settings.dsp;
+                imp.game.audio.disc = settings.disc;
                 imp.match_state();
                 imp.display();
                 if let Some(tb) = image.tb {
-                    imp.game.audio.clock =
-                        Some(melee_capture::audio::import_clock(&image.mem1, tb));
+                    imp.game.audio.clock = Some(melee_capture::audio::import_clock_at(
+                        &image.mem1,
+                        tb,
+                        settings.disc,
+                    ));
                 }
                 (imp.game, imp.maps, imp.unhandled)
             }));
@@ -513,6 +566,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
             break None;
         };
         tick = t;
+        melee_sim::hsd::heap::log_mark(&format!("== tick {t}"));
         // The trace samples each tick before the frame's display pass, which runs before the
         // next tick.
         let stepped = catch_unwind(AssertUnwindSafe(|| {
@@ -542,6 +596,18 @@ pub fn diff(args: &[&str]) -> ExitCode {
             break None;
         }
     };
+    if let Some(path) = &heap_log {
+        let log = melee_sim::hsd::heap::take_log();
+        std::fs::write(
+            path,
+            log.join(
+                "
+",
+            ) + "
+",
+        )
+        .unwrap_or_else(|e| panic!("{path}: {e}"));
+    }
     let at = format!("tick {tick}{}", frame_of(tick, first));
     stale.report(&|t| format!("tick {t}{}", frame_of(t, first)));
     match stop {
@@ -565,4 +631,97 @@ pub fn diff(args: &[&str]) -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// The main heap at the boot state and at the match's first tick, from a trace with memory:
+/// the heap layout (`lbHeap`'s arena and heaps, the OS heaps) and the fighters' addresses.
+pub fn trace_heap(trace_path: &str) -> ExitCode {
+    let mut reader = Reader::open(trace_path);
+    let mut image = Image::default();
+    let mut boot: Option<Vec<u8>> = None;
+    let show = |label: &str, mem: &[u8]| {
+        let w = |a: u32| {
+            let i = (a - 0x8000_0000) as usize;
+            u32::from_be_bytes(mem[i..i + 4].try_into().unwrap())
+        };
+        let lb = sym("lbHeap_80431FA0");
+        println!(
+            "{label}: lbHeap arena {:#010x}..{:#010x} aram {:#010x}..{:#010x}",
+            w(lb),
+            w(lb + 4),
+            w(lb + 8),
+            w(lb + 12)
+        );
+        for k in 0..6 {
+            let h = lb + 0x10 + 0x1C * k;
+            println!(
+                "  lbHeap {k}: id {} start {:#010x} size {:#x} type {} transient {} status {}",
+                w(h) as i32,
+                w(h + 8),
+                w(h + 12),
+                w(h + 16),
+                w(h + 20),
+                w(h + 24)
+            );
+        }
+        let heaps = w(sym("HeapArray"));
+        println!("  current_heap {}", w(sym("current_heap")) as i32);
+        for i in 0..6 {
+            let d = heaps + 12 * i;
+            let (size, free, used) = (w(d), w(d + 4), w(d + 8));
+            if size as i32 <= 0 {
+                continue;
+            }
+            let mut blocks = Vec::new();
+            let mut c = free;
+            while c != 0 && blocks.len() < 8 {
+                blocks.push(format!("{c:#010x}+{:#x}", w(c + 8)));
+                c = w(c + 4);
+            }
+            let mut n = 0;
+            let mut c = used;
+            while c != 0 {
+                n += 1;
+                c = w(c + 4);
+            }
+            println!(
+                "  OS heap {i}: size {size:#x}, {n} allocated, free {}",
+                blocks.join(" ")
+            );
+        }
+    };
+    while let Some(t) = reader.tick() {
+        let before = image.seen.then(|| image.mem1.clone());
+        image.apply(&t);
+        if image.seen && is_first_tick(&image) {
+            boot = before;
+            println!("first tick {}", t.number);
+            break;
+        }
+    }
+    let Some(boot) = boot else {
+        eprintln!("{trace_path}: no first tick with memory");
+        return ExitCode::FAILURE;
+    };
+    show("boot state", &boot);
+    show("first tick", &image.mem1);
+    let h = melee_capture::heap::read(&image.mem1);
+    for (k, a) in melee_sim::hsd::heap::Kind::ALL.iter().zip(&h.allocs) {
+        println!(
+            "  pool {k:?}: size {:#x} align {} used {} peak {} free {}",
+            a.size,
+            a.align + 1,
+            a.used,
+            a.peak,
+            a.free.len()
+        );
+    }
+    for (c, i) in melee_sim::hsd::heap::Class::ALL.iter().zip(&h.classes) {
+        println!(
+            "  class {c:?}: size {:#x} exist {} peak {}",
+            i.obj_size, i.nb_exist, i.nb_peak
+        );
+    }
+    println!("fighters {:x?}", fighter_addresses(&image));
+    ExitCode::SUCCESS
 }

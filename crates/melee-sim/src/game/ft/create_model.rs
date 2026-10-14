@@ -67,6 +67,9 @@ impl Running<'_> {
                 .fighter_dobj_lists
                 .alloc(vec![None; MAX_SECOND_DOBJS]),
         );
+        // The original's list comes from a pool of its own (`fighter_x2040_alloc_data`).
+        let addr = crate::hsd::heap::obj_alloc(crate::hsd::heap::Kind::FighterX2040);
+        self.game.fighter_dobj_lists.set_addr(list.0, addr);
         self.game.fighters[f.0].x203C.data = Some(list);
         pobj::set_default_class(&mut self.game.objs.pobjs, PObjClass::Fighter);
         let fp = &self.game.fighters[f.0];
@@ -131,7 +134,11 @@ impl Running<'_> {
                     );
                     self.game.fighter_dobj_lists[list.0][count] = Some(c);
                     if let Some(m) = self.game.objs.dobjs[c].mobj {
-                        self.game.objs.mobjs[m].class = MObjClass::Fighter;
+                        crate::hsd::mobj::change_class(
+                            &mut self.game.objs.mobjs,
+                            m,
+                            MObjClass::Fighter,
+                        );
                     }
                     cur = self.game.objs.dobjs[c].next;
                     count += 1;
@@ -358,6 +365,13 @@ impl Running<'_> {
             0x8014_9CC4 => self.falco_on_load(gobj),
             0x800E_2AEC => self.ca_on_load(gobj),
             0x8014_EE1C => self.gn_on_load(gobj),
+            0x8014_2324 => self.lg_on_load(gobj),
+            0x800E_0960 => self.mr_on_load(gobj),
+            0x8014_94E4 => self.dr_on_load(gobj),
+            0x8012_43E4 => self.pk_on_load(gobj),
+            0x8014_9E34 => self.pc_on_load(gobj),
+            0x8011_EF3C => self.popo_on_load(gobj),
+            0x8012_2EDC => self.nana_on_load(gobj),
             other => unported_call(&format!("fighter OnLoad {other:#010x}")),
         }
     }
@@ -378,6 +392,13 @@ impl Running<'_> {
             0x8014_9ACC => self.falco_on_death(gobj),
             0x800E_2888 => self.ca_on_death(gobj),
             0x8014_EBFC => self.gn_on_death(gobj),
+            0x8014_22E8 => self.lg_on_death(gobj),
+            0x800E_08CC => self.mr_on_death(gobj),
+            0x8014_949C => self.dr_on_death(gobj),
+            0x8012_4474 => self.pk_on_death(gobj),
+            0x8014_9EAC => self.pc_on_death(gobj),
+            0x8011_EFE8 => self.popo_on_death(gobj),
+            0x8012_2F28 => self.nana_on_death(gobj),
             other => unported_call(&format!("fighter OnDeath {other:#010x}")),
         }
     }
@@ -398,6 +419,11 @@ impl Running<'_> {
             0x8011_B904 => self.peach_load_special_attrs(gobj),
             0x8014_9D3C => self.falco_load_special_attrs(gobj),
             0x800E_2B40 | 0x8014_EE40 => self.ca_load_special_attrs(gobj),
+            0x8014_254C => self.lg_load_special_attrs(gobj),
+            0x800E_0BE4 => self.mr_load_special_attrs(gobj),
+            0x8014_9724 => self.dr_load_special_attrs(gobj),
+            0x8012_4704 | 0x8014_A1A8 => self.pk_load_special_attrs(gobj),
+            0x8011_F0A4 | 0x8012_2FCC => self.popo_load_special_attrs(gobj),
             other => unported_call(&format!("fighter LoadSpecialAttrs {other:#010x}")),
         }
     }

@@ -4,6 +4,7 @@ description = "melee-sim's derives: Clone with a clone_from that reuses the targ
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 

@@ -177,6 +177,7 @@ impl Running<'_> {
             43 => self.cmd_x2225_b2(gobj, f, w),
             46 => self.cmd_smash_charge(gobj, f, w),
             47 => self.cmd_vibrate(gobj, f, w),
+            41 => self.cmd_self_damage(gobj, f, w),
             40 => {
                 // `ftAction_80072B94`: a part's dynamics toggled.
                 let frame = self.game.fighters[f.0].cur_anim_frame;
@@ -623,6 +624,13 @@ impl Running<'_> {
     /// Stops one kind of the controller's rumble.
     fn cmd_stop_rumble(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.stop_rumble(f, bits(w, 6, 26) as i32);
+    }
+
+    /// The fighter hurts itself (Pichu's electric moves), `ftAction_80072BF4`
+    /// (`Fighter_TakeDamage_8006CC7C`).
+    #[doc(alias = "ftAction_80072BF4")]
+    fn cmd_self_damage(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
+        self.take_damage(f, sfloat(sbits(w, 6, 26)));
     }
 
     /// A held sword's trail or flash (`ftCommon_8007EEC8`, `ftCommon_8007EF5C`; with one, not ported).

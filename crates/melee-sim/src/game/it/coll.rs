@@ -56,7 +56,7 @@ fn log_damage(game: &mut Game, e: DamageLogEntry) {
 /// statistics, `it_8026B6C8`: Goombas to Octoroks, Old Goombas to the Arwings, but Whispy's
 /// apples and the Kyasarin's egg.
 #[doc(alias = "it_8026B6C8")]
-fn is_enemy(game: &Game, gobj: GObjId) -> bool {
+pub(crate) fn is_enemy(game: &Game, gobj: GObjId) -> bool {
     use super::kinds::{ARWING_LASER, KURIBOH, OCTAROCK_STONE, OLD_KURI};
     /// `It_Kind_Kyasarin_Egg`, `It_Kind_WhispyApple`.
     const KYASARIN_EGG: i32 = 236;

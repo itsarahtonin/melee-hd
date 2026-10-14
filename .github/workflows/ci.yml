@@ -1,0 +1,54 @@
+# Builds and checks melee-hd on Linux, Windows and macOS without a disc or any local data:
+# the checks that need them (SSBM_DISC, SSBM_RS_LOCAL, SLIPPI_REPLAYS) skip, the rest run.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # cpal reads ALSA, gilrs reads udev.
+      - name: Linux packages
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libasound2-dev libudev-dev
+
+      # rust-toolchain.toml picks the toolchain, with rustfmt and clippy.
+      - name: Toolchain
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --locked --release --workspace --all-targets -- -D warnings
+
+      - name: Build the player
+        run: cargo build --locked --release -p melee-player
+
+      # The ledger reads ssbm-rs's symbol table from the git dependency, not the disc; the
+      # regenerated files must match the committed ones.
+      - name: Port ledger
+        shell: bash
+        run: |
+          cargo run --locked --release -p ledger -- --check
+          git diff --exit-code docs/port-ledger.md docs/port-ledger.csv
+
+      - name: Tests
+        run: cargo test --locked --release --workspace

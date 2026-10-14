@@ -68,6 +68,7 @@ impl Islands {
 
     /// A new island at the end of the arena (`HSD_MemAlloc`).
     fn alloc(&mut self) -> IslandId {
+        crate::hsd::heap::mem_alloc(0x2C);
         self.arena.push(Island::default());
         IslandId(self.arena.len() as u32 - 1)
     }

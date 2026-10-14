@@ -23,7 +23,9 @@ use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
 use super::super::camera;
+use super::super::code;
 use super::super::handles::{CameraBoxId, CodeRef};
+use super::super::slippi::CodeSet;
 use super::super::state::{Game, OBJ_CAMERA, Obj, Running, UserData};
 use super::super::structs::HSD_ImageDesc;
 use super::data::{STADIUM_CALLBACKS, StageCallbacks};
@@ -85,6 +87,20 @@ pub struct Screen {
     pub flag: bool,
     pub copy_x: u16,
     pub copy_y: u16,
+    /// Where the original's heap put this user data (`docs/engine.md`).
+    pub addr: u32,
+}
+
+/// A screen's user data from the scene's heap (its block's size), then its image's buffer
+/// (`lb_800121FC`): the preload cache holds none of the screens' in the match a replay's
+/// playback boots into, so the heap gives each.
+fn alloc_screen(size: u32, desc: &HSD_ImageDesc) -> u32 {
+    let addr = crate::hsd::heap::mem_alloc(size);
+    let (w, h) = (u32::from(desc.width), u32::from(desc.height));
+    crate::hsd::heap::mem_alloc(
+        crate::hsd::heap::tex_buffer_size(w, h, desc.format as u32).next_multiple_of(32),
+    );
+    addr
 }
 
 /// The fields of `grPStadium_YakumonoParam` the code reads, by offset.
@@ -194,10 +210,16 @@ pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
     true
 }
 
+/// Where the default stage's, the pieces' and a transformation's calls put their scale
+/// joints' descriptors on the stack (`setup::SETUP_FRAME`).
+const DEFAULT_FRAME: u32 = 0x804E_E9B0;
+const PIECES_FRAME: u32 = 0x804E_E910;
+const NEXT_FRAME: u32 = 0x804E_E960;
+
 /// Creates one of the stage's objects and sets it up, `grStadium_801D10F8`.
 #[doc(alias = "grStadium_801D10F8")]
-pub fn create(r: &mut Running, map_id: i32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, callbacks(map_id))
+pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
+    setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
 }
 
 /// The stage's objects' setup functions and processes, by map id (`grPs_StageCallbacks`).
@@ -213,9 +235,9 @@ pub fn on_init(r: &mut Running) {
     r.game.gr.stadium.yakumono = r.game.stage_info.yakumono_param;
     r.game.stage_info.unk8C.b4 = false;
     r.game.stage_info.unk8C.b5 = true;
-    create(r, 0);
-    create(r, MAP_DISPLAY);
-    create(r, MAP_MAIN);
+    create(r, 0, setup::SETUP_FRAME);
+    create(r, MAP_DISPLAY, setup::SETUP_FRAME);
+    create(r, MAP_MAIN, setup::SETUP_FRAME);
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
     let g = r.game.geometry_mut();
@@ -312,15 +334,22 @@ pub fn start_main(r: &mut Running, gobj: GObjId) {
 /// lines the transformations' edges add switched off, and its start hook.
 #[doc(alias = "grStadium_801D13E0")]
 pub fn init_main(r: &mut Running, gobj: GObjId) {
+    // Slippi 3.16's codes run the transformations another way from here on (`801D14C8`, then
+    // the cycle's `801D45EC` and its branches; docs/oracle.md); only 3.19's are ported.
+    if r.game.rules.slippi && r.game.rules.codes == CodeSet::V3_16 {
+        code::unported_call("Pokémon Stadium under Slippi 3.16's transformation codes");
+    }
     let g = ground_of(r.game, gobj);
     let map_id = r.game.grounds[g.0].map_id;
     let j = jobj_of(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, map_id);
     anime::start_map(r.game, r.data, gobj, map_id, 0);
     {
-        // `lbDvd_GetPreloadedArchive(0x7D5)`: the match's preload holds the buffer (else the
-        // original allocates one), at the address the frontend gives.
-        let address = r.game.gr.stadium.buffer_address;
+        // `lbDvd_GetPreloadedArchive(0x7D5)`: the preload cache holds none in the match a
+        // replay's playback boots into, so the scene's heap gives the buffer (the allocator
+        // model's address); without the model, the address the frontend gives.
+        let address = crate::hsd::heap::with(|h| h.mem_alloc(0x5_0000))
+            .unwrap_or(r.game.gr.stadium.buffer_address);
         let v = r.game.grounds[g.0].u.stadium();
         v.buffer = address;
         v.bits.b1 = false;
@@ -331,7 +360,7 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
         v.prev = -1;
         v.prev2 = -1;
     }
-    let default = create(r, MAP_DEFAULT);
+    let default = create(r, MAP_DEFAULT, DEFAULT_FRAME);
     let p = param(r.game);
     let (lo, hi) = (p.i(r.data, 0), p.i(r.data, 4));
     let timer = if hi > lo {
@@ -461,8 +490,8 @@ pub fn destroy_fire(r: &mut Running, gobj: GObjId) {
 pub fn init_water(r: &mut Running, gobj: GObjId) {
     init_piece(r, gobj, &[7]);
     let g = ground_of(r.game, gobj);
-    let a = create(r, 7);
-    let b = create(r, 8);
+    let a = create(r, 7, PIECES_FRAME);
+    let b = create(r, 8, PIECES_FRAME);
     r.game.grounds[g.0].u.stadium_piece().blades = [a, b];
     r.game.geometry_mut().disable_joint(0);
     r.game.grounds[g.0].u.stadium_piece().bits = Default::default();
@@ -1020,11 +1049,15 @@ pub fn create_text_camera(r: &mut Running) -> GObjId {
         .world
         .setup_gx_link_max(gobj, CodeRef(0x801D_2ED0), 1, false);
     r.game.world.gobj_mut(gobj).gxlink_prios = 2;
+    let desc = screen_image(0xFA, 0xA0, 4);
+    // `TextWrapper`.
+    let addr = alloc_screen(0x20, &desc);
     r.game
         .world
         .init_user_data(gobj, 3, UserData::StadiumScreen(SCREEN_TEXT));
     r.game.gr.stadium.screens[SCREEN_TEXT as usize] = Some(Screen {
-        desc: screen_image(0xFA, 0xA0, 4),
+        desc,
+        addr,
         ..Default::default()
     });
     let archive = super::datfiles::main_archive(r.game).archive;
@@ -1054,12 +1087,16 @@ pub fn create_feed(r: &mut Running) -> GObjId {
     r.game
         .world
         .setup_gx_link_max(gobj, CodeRef(0x801D_2FD0), 3, false);
+    let desc = screen_image(0x280, 0x196, 4);
+    // 0x1C bytes, two short of an `ImageDescWrapper`.
+    let addr = alloc_screen(0x1C, &desc);
     r.game
         .world
         .init_user_data(gobj, 3, UserData::StadiumScreen(SCREEN_FEED));
     r.game.gr.stadium.screens[SCREEN_FEED as usize] = Some(Screen {
-        desc: screen_image(0x280, 0x196, 4),
+        desc,
         flag: true,
+        addr,
         ..Default::default()
     });
     gobj
@@ -1073,12 +1110,16 @@ pub fn create_zoom(r: &mut Running) -> GObjId {
     r.game
         .world
         .setup_gx_link_max(gobj, CodeRef(0x801D_3084), 3, false);
+    let desc = screen_image(0x7C, 0x50, 4);
+    // `ImageDescWrapper`.
+    let addr = alloc_screen(0x20, &desc);
     r.game
         .world
         .init_user_data(gobj, 3, UserData::StadiumScreen(SCREEN_ZOOM));
     r.game.gr.stadium.screens[SCREEN_ZOOM as usize] = Some(Screen {
-        desc: screen_image(0x7C, 0x50, 4),
+        desc,
         flag: false,
+        addr,
         ..Default::default()
     });
     gobj
@@ -1673,7 +1714,7 @@ pub fn cycle(r: &mut Running, gobj: GObjId) {
                 if t > p.i(d, 0x18) {
                     anime::set_rate(r.game, cur, 0, 7, 0.0, true);
                     let kind = i32::from(r.game.grounds[g.0].u.stadium().kind);
-                    let new = create(r, kind).expect("the next stage");
+                    let new = create(r, kind, NEXT_FRAME).expect("the next stage");
                     let nj = jobj_of(r.game, new).expect("HSD_JObjSetScaleY: jobj");
                     jobj::set_srt(&mut r.game.objs.jobjs, nj, |o| o.scale.y = mem(min));
                     jobj::set_srt(&mut r.game.objs.jobjs, nj, |o| o.translate.y = -10.0);
@@ -1787,6 +1828,7 @@ pub fn free_archive(game: &mut Game, slot: Option<u8>) {
             // The file's bytes stay in the buffer, its materials' marks with them, until the
             // next transformation's read overwrites them; unregistered, nothing reads them.
             let archive = a.archive;
+            crate::hsd::heap::mem_free(a.addr);
             *e = None;
             game.objs
                 .rendermode_patches
@@ -1857,8 +1899,10 @@ pub fn take_load_end(game: &mut Game) {
 }
 
 /// Registers a loaded transformation file in the stage's archive table's first free entry as
-/// loaded from a buffer (`unk8` 1), `grDatFiles_801C6478` without marking its materials.
+/// loaded from a buffer (`unk8` 1), `grDatFiles_801C6478` without marking its materials: its
+/// `HSD_Archive` comes from the scene's heap (`lbHeap_80015BD0`).
 fn register_archive(game: &mut Game, data: &Archives, archive: ArchiveId) -> u8 {
+    let addr = crate::hsd::heap::mem_alloc(0x44);
     let slot = game
         .gr
         .archives
@@ -1873,6 +1917,7 @@ fn register_archive(game: &mut Game, data: &Archives, archive: ArchiveId) -> u8 
         archive,
         map_head,
         kind: 1,
+        addr,
     });
     slot as u8
 }

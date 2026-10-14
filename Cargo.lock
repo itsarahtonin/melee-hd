@@ -1322,6 +1322,7 @@ dependencies = [
  "gekko-fp",
  "melee-capture",
  "melee-data",
+ "melee-local-data",
  "melee-sim",
  "melee-slippi",
  "ssbm-disc",
@@ -1515,6 +1516,7 @@ dependencies = [
  "melee-audio",
  "melee-capture",
  "melee-data",
+ "melee-local-data",
  "melee-sim",
  "melee-slippi",
  "ssbm-rt",
@@ -1531,6 +1533,7 @@ version = "0.1.0"
 dependencies = [
  "melee-capture",
  "melee-data",
+ "melee-local-data",
  "melee-sim",
  "melee-slippi",
  "ssbm-slippi",
@@ -1599,11 +1602,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-local-data"
+version = "0.1.0"
+
+[[package]]
 name = "melee-oracle"
 version = "0.1.0"
 dependencies = [
  "melee-capture",
  "melee-data",
+ "melee-local-data",
  "melee-sim",
  "melee-slippi",
  "ssbm-rt",
@@ -1650,6 +1658,7 @@ dependencies = [
  "melee-data",
  "melee-gpu",
  "melee-gx",
+ "melee-local-data",
  "melee-render",
  "melee-sim",
  "melee-slippi",

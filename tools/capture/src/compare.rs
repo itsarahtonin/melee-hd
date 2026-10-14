@@ -805,7 +805,9 @@ impl<'a> Comparer<'a> {
                     .map(|v| vec![v.x.to_bits(), v.y.to_bits(), v.z.to_bits()]),
                 (scl != 0).then(|| floats(self, scl, 3)),
             );
-            self.check(&path, "id", j.id, self.data_ref(self.u32(t + 0x84)));
+            // A stack descriptor's key is a stack address in memory, which isn't data.
+            let id = j.id.filter(|&k| melee_sim::hsd::id::is_data_key(k));
+            self.check(&path, "id", id, self.data_ref(self.u32(t + 0x84)));
             let u = self.u32(t + 0x18);
             match j.u {
                 Contents::Spline(s) => self.check(&path, "contents", s, self.data_ref(u)),
@@ -941,7 +943,11 @@ impl<'a> Comparer<'a> {
         self.check(
             path,
             "bound joint",
-            jo.map(|j| self.game.objs.jobjs[j].id),
+            jo.map(|j| {
+                self.game.objs.jobjs[j]
+                    .id
+                    .filter(|&k| melee_sim::hsd::id::is_data_key(k))
+            }),
             (self.u32(t + 0x18) != 0).then(|| self.data_ref(self.u32(self.u32(t + 0x18) + 0x84))),
         );
     }

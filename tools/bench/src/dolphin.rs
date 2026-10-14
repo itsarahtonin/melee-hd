@@ -1,8 +1,8 @@
 //! Dolphin's speed on the benchmark matches, the baseline of the performance goal.
 //!
 //! `melee-bench dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]` plays each match
-//! (`DIR/MATCH.slp`, made as `docs/performance.md` says) in a portable mainline Dolphin
-//! (`DOLPHIN`, default `C:\Projects\dolphin-dev\Dolphin-x64`) on the disc `SSBM_DISC`, `N` times
+//! (`DIR/MATCH.slp`, or the repository's `data/bench/MATCH.slp`; made as `docs/performance.md`
+//! says) in a portable mainline Dolphin (the folder `DOLPHIN` names) on the disc `SSBM_DISC`, `N` times
 //! (default 5), and reports the median of the emulated frames per second over the match's
 //! frames, with the machine. Dolphin runs headless and unseen: batch mode, the Null video
 //! backend, no audio output, unlimited speed, the CPU on the emulation thread (one core), on a
@@ -243,8 +243,7 @@ impl RunResult {
 impl Env {
     fn new(dir: PathBuf) -> Env {
         let dolphin = PathBuf::from(
-            std::env::var("DOLPHIN")
-                .unwrap_or_else(|_| r"C:\Projects\dolphin-dev\Dolphin-x64".into()),
+            std::env::var("DOLPHIN").expect("DOLPHIN names the portable Dolphin build's folder"),
         );
         let disc = std::env::var("SSBM_DISC").expect("SSBM_DISC");
         let user = dir.join("dolphin-user");
@@ -257,7 +256,7 @@ impl Env {
     }
 
     fn replay(&self, name: &str) -> Replay {
-        let path = self.dir.join(format!("{name}.slp"));
+        let path = crate::sync::replay_path(&self.dir, name);
         let bytes = std::fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
         Replay::parse(&bytes).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
     }
@@ -326,7 +325,7 @@ impl Env {
 
     /// For a match where a fighter runs CPU code (Nana), the byte the CPU's DI took as its stick
     /// when the match was recorded: the low byte of that fighter's address in ssbm-rs, from the
-    /// start of its state trace (`DIR/NAME.start.trace`, which `make-matches.sh` writes). None
+    /// start of its state trace (`crate::sync::start_trace_path`, which `make-matches.sh` writes). None
     /// for a match without one.
     fn cpu_stick_byte(&self, name: &str) -> Option<u8> {
         let has_follower = self
@@ -337,7 +336,7 @@ impl Env {
         if !has_follower {
             return None;
         }
-        let path = self.dir.join(format!("{name}.start.trace"));
+        let path = crate::sync::start_trace_path(&self.dir, name);
         let address = follower_address(&path).unwrap_or_else(|| {
             panic!(
                 "{name} has a fighter running CPU code: its DI patch needs ssbm-rs's state trace \

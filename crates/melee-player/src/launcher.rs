@@ -19,8 +19,8 @@ pub struct Choice {
     pub players: [Option<u8>; 4],
     /// `StKind`.
     pub stage: u16,
-    pub stocks: i8,
-    pub minutes: u32,
+    pub stocks: u8,
+    pub minutes: u8,
 }
 
 impl Choice {
@@ -58,7 +58,7 @@ pub struct Form {
 
 impl Form {
     /// Fox against Fox on Final Destination, as the command line's defaults are.
-    pub fn new(stocks: i8, minutes: u32, fullscreen: bool, aspect: Aspect) -> Form {
+    pub fn new(stocks: u8, minutes: u8, fullscreen: bool, aspect: Aspect) -> Form {
         let fox = roster::character("fox").map(|c| c.kind);
         Form {
             choice: Choice {

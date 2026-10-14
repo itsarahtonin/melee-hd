@@ -15,6 +15,8 @@ use super::fobj::Value;
 use super::jobj::{self, JObjId};
 use super::pool::Pool;
 use crate::fpu::{copy, mem, reg};
+use crate::hsd::heap::Kind;
+use crate::hsd::pool::kind as pool_kind;
 use crate::math::sqrt_reg;
 use crate::mtx::Mtx34;
 use crate::vec::Vec3;
@@ -123,13 +125,13 @@ pub struct Rvalue {
 /// The RObj pool (`robj_alloc_data`).
 #[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct RObjs {
-    pub pool: Pool<RObj>,
+    pub pool: Pool<RObj, { pool_kind(Kind::RObj) }>,
 }
 
 /// The Rvalue pool (`rvalue_alloc_data`).
 #[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct Rvalues {
-    pub pool: Pool<Rvalue>,
+    pub pool: Pool<Rvalue, { pool_kind(Kind::Rvalue) }>,
 }
 
 impl Index<RObjId> for RObjs {

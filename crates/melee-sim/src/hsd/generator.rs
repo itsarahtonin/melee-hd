@@ -14,6 +14,8 @@ use super::list::{self, SListId, SLists};
 use super::particle::{self, FLT_MIN, GeneratorHook, HALF_PI_F, Hooks, PAUSED, Spawn, UserFunc};
 use super::pool::Pool;
 use crate::fpu::{copy, mem, reg};
+use crate::hsd::heap::Kind;
+use crate::hsd::pool::kind as pool_kind;
 use crate::math;
 use crate::mtx::Mtx34;
 use crate::vec::Vec3;
@@ -75,7 +77,7 @@ pub struct Generator {
 /// The generator pool (`hsd_804D0F90`) and generator.c's globals.
 #[derive(melee_derive::CloneFrom, Debug)]
 pub struct Generators {
-    pub pool: Pool<Generator>,
+    pub pool: Pool<Generator, { pool_kind(Kind::Generator) }>,
     /// The generator list (`hsd_804D78FC`).
     pub head: Option<GeneratorId>,
     /// The one before the generator being handled (`hsd_804D78F8`); new generators go in

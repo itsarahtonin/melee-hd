@@ -41,7 +41,7 @@ pub enum Ret {
 }
 
 /// How a set of saved calls went.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Report {
     pub compared: usize,
     /// The calls that compared clean, with the function they ran (a prepare may change it).
@@ -51,21 +51,16 @@ pub struct Report {
     pub failed: Vec<String>,
 }
 
-/// The saved calls of `func` in `dir`, or none when the directory isn't there.
+/// The saved calls of `func` in `dir` (files or its pack's), sorted, or none when the
+/// directory isn't there.
 pub fn saved_calls(dir: &str, func: &str) -> Vec<PathBuf> {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return Vec::new();
-    };
     let prefix = format!("{func}-call");
-    let mut v: Vec<PathBuf> = entries
-        .filter_map(|e| e.ok().map(|e| e.path()))
-        .filter(|p| {
-            p.file_name()
-                .and_then(|n| n.to_str())
-                .is_some_and(|n| n.starts_with(&prefix) && n.ends_with(".call"))
-        })
-        .collect();
-    v.sort();
+    let mut v = melee_capture::pack::call_files(dir);
+    v.retain(|p| {
+        p.file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.starts_with(&prefix))
+    });
     v
 }
 
@@ -176,51 +171,94 @@ fn run_checks(
         return Vec::new();
     };
     if paths.is_empty() {
-        eprintln!("no saved calls of {func} in {dir}: skipping");
+        eprintln!(
+            "no saved calls of {func}: skipping ({})",
+            melee_capture::pack::holdings(dir)
+        );
         return Vec::new();
     }
     let mut reports = Vec::new();
     for mode in MODES {
         let report = run_calls(&paths, index, mode, stubs, prepare, setup, ours);
-        let mut skipped: std::collections::BTreeMap<&str, usize> = Default::default();
-        for (_, why) in &report.skipped {
-            *skipped.entry(why.as_str()).or_default() += 1;
+        if let Err(e) = summarize(func, mode, paths.len(), &report, min_compared) {
+            panic!("{e}");
         }
-        eprintln!(
-            "{func} ({mode:?}): {} of {} calls compared clean, {} skipped",
-            report.compared,
-            paths.len(),
-            report.skipped.len()
-        );
-        for (why, n) in &skipped {
-            eprintln!("  skipped x{n}: {why}");
-        }
-        for f in &report.failed {
-            eprintln!("{f}");
-        }
-        // CALLS_CLEAN=DIR lists the clean calls per function, to see what they reach
-        // (`reach`).
-        if let Ok(out) = std::env::var("CALLS_CLEAN") {
-            let list: Vec<String> = report
-                .clean
-                .iter()
-                .map(|(p, addr)| format!("{}@{addr:x}", p.display()))
-                .collect();
-            let _ = std::fs::write(format!("{out}/{func}-{mode:?}.txt"), list.join("\n"));
-        }
-        assert!(
-            report.failed.is_empty(),
-            "{func} ({mode:?}): {} saved calls differ",
-            report.failed.len()
-        );
-        assert!(
-            report.compared >= min_compared,
-            "{func} ({mode:?}): only {} saved calls compared, expected at least {min_compared}",
-            report.compared
-        );
         reports.push(report);
     }
     reports
+}
+
+/// Prints how a float mode's run of `calls` saved calls of `func` went, and says why the check
+/// fails, if it does: any call differed, or fewer than `min_compared` compared.
+pub fn summarize(
+    func: &str,
+    mode: FpMode,
+    calls: usize,
+    report: &Report,
+    min_compared: usize,
+) -> Result<(), String> {
+    let mut skipped: std::collections::BTreeMap<&str, usize> = Default::default();
+    for (_, why) in &report.skipped {
+        *skipped.entry(why.as_str()).or_default() += 1;
+    }
+    eprintln!(
+        "{func} ({mode:?}): {} of {calls} calls compared clean, {} skipped",
+        report.compared,
+        report.skipped.len()
+    );
+    for (why, n) in &skipped {
+        eprintln!("  skipped x{n}: {why}");
+    }
+    for f in &report.failed {
+        eprintln!("{f}");
+    }
+    // CALLS_CLEAN=DIR lists the clean calls per function, to see what they reach
+    // (`reach`).
+    if let Ok(out) = std::env::var("CALLS_CLEAN") {
+        let mut clean = report.clean.clone();
+        clean.sort();
+        let list: Vec<String> = clean
+            .iter()
+            .map(|(p, addr)| format!("{}@{addr:x}", p.display()))
+            .collect();
+        let _ = std::fs::write(format!("{out}/{func}-{mode:?}.txt"), list.join("\n"));
+    }
+    if !report.failed.is_empty() {
+        return Err(format!(
+            "{func} ({mode:?}): {} saved calls differ",
+            report.failed.len()
+        ));
+    }
+    if report.compared < min_compared {
+        return Err(format!(
+            "{func} ({mode:?}): only {} saved calls compared, expected at least {min_compared}",
+            report.compared
+        ));
+    }
+    Ok(())
+}
+
+/// A worker's reference, with `setup`'s device and stand-ins and the logged stand-ins
+/// `stubs` (on our side too, for this thread).
+fn worker_reference(setup: &Setup, stubs: &[Stub]) -> ssbm_rt::Ctx {
+    let ctx = reference().expect("SSBM_DISC");
+    if setup.gx {
+        ctx.set_mmio(Box::new(NullHardware));
+    }
+    if let Some(r) = setup.replay {
+        let _ = ssbm_slippi::install(&ctx, r.clone());
+    }
+    STUBS.with(|s| *s.borrow_mut() = setup.stubs.to_vec());
+    melee_sim::game::code::stubs::clear();
+    for &(addr, ret) in setup.stubs {
+        ctx.register(addr, their_stub);
+        let v = ret.map_or(melee_sim::game::code::Val::None, |v| {
+            melee_sim::game::code::Val::Int(v as i32)
+        });
+        melee_sim::game::code::stubs::set(addr, v);
+    }
+    install_logged_stubs(&ctx, stubs);
+    ctx
 }
 
 /// Runs the calls at `paths` on worker threads (each with its own reference) in `mode`.
@@ -242,23 +280,7 @@ pub fn run_calls(
                 .stack_size(256 << 20)
                 .spawn_scoped(s, || {
                     set_fp_mode(mode);
-                    let ctx = reference().expect("SSBM_DISC");
-                    if setup.gx {
-                        ctx.set_mmio(Box::new(NullHardware));
-                    }
-                    if let Some(r) = setup.replay {
-                        let _ = ssbm_slippi::install(&ctx, r.clone());
-                    }
-                    STUBS.with(|s| *s.borrow_mut() = setup.stubs.to_vec());
-                    melee_sim::game::code::stubs::clear();
-                    for &(addr, ret) in setup.stubs {
-                        ctx.register(addr, their_stub);
-                        let v = ret.map_or(melee_sim::game::code::Val::None, |v| {
-                            melee_sim::game::code::Val::Int(v as i32)
-                        });
-                        melee_sim::game::code::stubs::set(addr, v);
-                    }
-                    install_logged_stubs(&ctx, stubs);
+                    let ctx = worker_reference(setup, stubs);
                     loop {
                         let i = next.fetch_add(1, Ordering::Relaxed);
                         let Some(path) = paths.get(i) else { break };
@@ -280,6 +302,228 @@ pub fn run_calls(
         }
     });
     report.into_inner().unwrap()
+}
+
+/// One check of a set of saved calls: how each call is changed first, what our side runs, and
+/// the stand-ins logged on both sides ([`check_calls_stubbed`]'s `stubs`). The variants run
+/// together must stand in for the same functions; what the stand-ins return may differ.
+pub struct Variant<'a> {
+    pub prepare: &'a Prepare<'a>,
+    pub ours: &'a Ours<'a>,
+    pub stubs: &'a [Stub],
+}
+
+/// How many distinct prepared states of a call a worker keeps imported, for the variants
+/// that come after.
+const IMPORTS_KEPT: usize = 2;
+
+/// The checks `variants` on every saved call at `paths`, in both float modes, as
+/// [`run_calls`] would run each variant in each mode: each variant's reports, a mode at a
+/// time. Each call is read once for all of them, and
+/// imported (with the import's round trip checked) once for every variant that prepares it
+/// into the same state: all its memory and registers the same, whatever function it calls.
+pub fn run_variants(
+    paths: &[PathBuf],
+    index: &DiscIndex,
+    setup: &Setup,
+    variants: &[Variant],
+) -> Vec<Vec<Report>> {
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+    quiet_unported_panics();
+    let Some(first) = variants.first() else {
+        return Vec::new();
+    };
+    for v in variants {
+        assert!(
+            v.stubs
+                .iter()
+                .map(|s| s.0)
+                .eq(first.stubs.iter().map(|s| s.0)),
+            "variants run together stand in for the same functions"
+        );
+    }
+    let next = AtomicUsize::new(0);
+    let reports: Mutex<Vec<Vec<Report>>> = Mutex::new(
+        variants
+            .iter()
+            .map(|_| MODES.iter().map(|_| Report::default()).collect())
+            .collect(),
+    );
+    let workers = crate::workers().min(paths.len());
+    std::thread::scope(|s| {
+        for _ in 0..workers {
+            std::thread::Builder::new()
+                .stack_size(256 << 20)
+                .spawn_scoped(s, || {
+                    let ctx = worker_reference(setup, first.stubs);
+                    let mut installed = first.stubs;
+                    loop {
+                        let i = next.fetch_add(1, Ordering::Relaxed);
+                        let Some(path) = paths.get(i) else { break };
+                        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+                        let record = |v: usize, m: usize, outcome: Outcome| {
+                            let mut r = reports.lock().unwrap();
+                            let r = &mut r[v][m];
+                            match outcome {
+                                Outcome::Clean(addr) => {
+                                    r.compared += 1;
+                                    r.clean.push((path.clone(), addr));
+                                }
+                                Outcome::Skipped(why) => r.skipped.push((name.clone(), why)),
+                                Outcome::Failed(why) => r.failed.push(format!("{name}: {why}")),
+                            }
+                        };
+                        // A panic outside the runs (reading, preparing or importing the call)
+                        // fails the check, as it fails [`run_calls`].
+                        let panicked = |p: Box<dyn std::any::Any + Send>| {
+                            Outcome::Failed(format!("panicked: {}", panic_text(&*p)))
+                        };
+                        let cap = match catch_unwind(|| Capture::read(path)) {
+                            Ok(cap) => cap,
+                            Err(p) => {
+                                let why = panic_text(&*p);
+                                for v in 0..variants.len() {
+                                    for m in 0..MODES.len() {
+                                        record(v, m, panicked(Box::new(why.clone())));
+                                    }
+                                }
+                                continue;
+                            }
+                        };
+                        let mut kept: Vec<(Capture, Result<Imported, String>)> = Vec::new();
+                        for (v, variant) in variants.iter().enumerate() {
+                            let mut call = Capture {
+                                call: Call {
+                                    mem1: cap.call.mem1.clone(),
+                                    locked: cap.call.locked.clone(),
+                                    regs: cap.call.regs.clone(),
+                                    ..cap.call
+                                },
+                            };
+                            let prepared = catch_unwind(AssertUnwindSafe(|| {
+                                (variant.prepare)(&mut call.call, i)
+                            }));
+                            if let Err(p) = prepared {
+                                let why = panic_text(&*p);
+                                for m in 0..MODES.len() {
+                                    record(v, m, panicked(Box::new(why.clone())));
+                                }
+                                continue;
+                            }
+                            let at = kept
+                                .iter()
+                                .position(|(k, _)| same_state(&k.call, &call.call));
+                            let at = match at {
+                                Some(at) => at,
+                                None => {
+                                    let imported =
+                                        catch_unwind(AssertUnwindSafe(|| import(&call, index)))
+                                            .unwrap_or_else(|p| {
+                                                Err(format!("panicked: {}", panic_text(&*p)))
+                                            });
+                                    if kept.len() == IMPORTS_KEPT {
+                                        drop(kept.remove(0));
+                                    }
+                                    kept.push((
+                                        Capture {
+                                            call: Call {
+                                                mem1: call.call.mem1.clone(),
+                                                locked: call.call.locked.clone(),
+                                                regs: call.call.regs.clone(),
+                                                ..call.call
+                                            },
+                                        },
+                                        imported,
+                                    ));
+                                    kept.len() - 1
+                                }
+                            };
+                            // The same functions stand in, so changing what they return is
+                            // setting the worker up as it would be for this variant alone.
+                            if !std::ptr::eq(installed, variant.stubs) {
+                                install_logged_stubs(&ctx, variant.stubs);
+                                installed = variant.stubs;
+                            }
+                            for (m, &mode) in MODES.iter().enumerate() {
+                                set_fp_mode(mode);
+                                let outcome = match &kept[at].1 {
+                                    Ok(imported) => {
+                                        let imported = imported.clone();
+                                        catch_unwind(AssertUnwindSafe(|| {
+                                            run_imported(
+                                                &ctx,
+                                                &call.call,
+                                                imported,
+                                                index,
+                                                variant.ours,
+                                                !variant.stubs.is_empty(),
+                                            )
+                                        }))
+                                        .unwrap_or_else(panicked)
+                                    }
+                                    Err(why) => Outcome::Failed(why.clone()),
+                                };
+                                record(v, m, outcome);
+                            }
+                        }
+                    }
+                })
+                .unwrap();
+        }
+    });
+    reports.into_inner().unwrap()
+}
+
+/// [`run_variants`] on the saved calls of `func` in `dir`: no reports when there are none,
+/// or no `SSBM_DISC`. Each variant's reports, a mode at a time, read as
+/// [`check_calls_stubbed`]'s with [`summarize`].
+pub fn run_variants_in(dir: &str, func: &str, variants: &[Variant]) -> Vec<Vec<Report>> {
+    let paths = saved_calls(dir, func);
+    let Some(index) = disc_index() else {
+        eprintln!("SSBM_DISC is unset: skipping {func}'s saved calls");
+        return variants.iter().map(|_| Vec::new()).collect();
+    };
+    if paths.is_empty() {
+        eprintln!(
+            "no saved calls of {func}: skipping ({})",
+            melee_capture::pack::holdings(dir)
+        );
+        return variants.iter().map(|_| Vec::new()).collect();
+    }
+    run_variants(&paths, index, &Setup::default(), variants)
+}
+
+/// [`check_calls_stubbed`] for each of `variants` (with no minimum compared), run together
+/// ([`run_variants_in`]): fails as the first of them to fail would, and returns each one's
+/// reports.
+pub fn check_variants(dir: &str, func: &str, variants: &[Variant]) -> Vec<Vec<Report>> {
+    let reports = run_variants_in(dir, func, variants);
+    let calls = saved_calls(dir, func).len();
+    for r in &reports {
+        for (r, mode) in r.iter().zip(MODES) {
+            if let Err(e) = summarize(func, mode, calls, r, 0) {
+                panic!("{e}");
+            }
+        }
+    }
+    reports
+}
+
+/// Whether two prepared calls start from the same state: the same memory and registers (the
+/// function called may differ).
+fn same_state(a: &Call, b: &Call) -> bool {
+    // The rest of the call as it's saved, bit for bit.
+    let head = |c: &Call| {
+        Call {
+            addr: 0,
+            mem1: Vec::new(),
+            locked: Vec::new(),
+            regs: c.regs.clone(),
+            ..*c
+        }
+        .to_bytes()
+    };
+    a.mem1 == b.mem1 && a.locked == b.locked && head(a) == head(b)
 }
 
 enum Outcome {
@@ -306,15 +550,45 @@ fn run_one(
     ours: &Ours,
     logged: bool,
 ) -> Outcome {
-    use std::panic::{AssertUnwindSafe, catch_unwind};
     let mut cap = Capture::read(path);
     prepare(&mut cap.call, i);
+    match import(&cap, index) {
+        Ok(imported) => run_imported(ctx, &cap.call, imported, index, ours, logged),
+        Err(why) => Outcome::Failed(why),
+    }
+}
+
+/// A saved call's state imported into melee-sim, checked against its memory: what every run
+/// from the same state starts from.
+struct Imported {
+    data: DataMap,
+    archives: Archives,
+    game: melee_sim::game::state::Game,
+    maps: Maps,
+}
+
+impl Clone for Imported {
+    fn clone(&self) -> Self {
+        Imported {
+            data: DataMap {
+                loaded: self.data.loaded.clone(),
+            },
+            archives: self.archives.clone(),
+            game: self.game.clone(),
+            maps: self.maps.clone(),
+        }
+    }
+}
+
+/// Imports a (prepared) saved call's state, or says why its import doesn't come back as the
+/// memory it came from.
+fn import(cap: &Capture, index: &DiscIndex) -> Result<Imported, String> {
     let mut archives = Archives::default();
     let data = DataMap {
         loaded: find_archives_in(index, &cap.call.mem1, &mut archives),
     };
     let bank = melee_capture::audio::find_bank(&cap.call.mem1, &mut archives);
-    let mut imp = Importer::new(&cap, &data).with_archives(&archives);
+    let mut imp = Importer::new(cap, &data).with_archives(&archives);
     imp.world();
     imp.stage();
     imp.ids();
@@ -325,7 +599,7 @@ fn run_one(
     // The item code's globals: what a fighter's items count and track.
     imp.items();
     imp.display();
-    let Importer { mut game, maps, .. } = imp;
+    let Importer { game, maps, .. } = imp;
     // The imported state must be memory before anything runs, or differences afterwards
     // wouldn't be the call's.
     let mut before = Comparer::new(&cap.call.mem1, &data, &game, maps.clone());
@@ -337,15 +611,39 @@ fn run_one(
     before.items();
     before.display();
     if !before.diffs.is_empty() {
-        return Outcome::Failed(format!(
+        return Err(format!(
             "the import doesn't round-trip: {}",
             before.diffs[..before.diffs.len().min(10)].join("; ")
         ));
     }
+    Ok(Imported {
+        data,
+        archives,
+        game,
+        maps,
+    })
+}
+
+/// Runs a (prepared) saved call on both sides, ours from its imported state, and compares.
+fn run_imported(
+    ctx: &ssbm_rt::Ctx,
+    call: &Call,
+    imported: Imported,
+    index: &DiscIndex,
+    ours: &Ours,
+    logged: bool,
+) -> Outcome {
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+    let Imported {
+        data,
+        mut archives,
+        mut game,
+        maps,
+    } = imported;
     CALLED.with(|c| c.borrow_mut().clear());
     THEIR_CALLS.with(|c| c.borrow_mut().clear());
     let _ = melee_sim::game::code::stubs::take();
-    let after = match catch_unwind(AssertUnwindSafe(|| run_capture(ctx, &cap.call))) {
+    let after = match catch_unwind(AssertUnwindSafe(|| run_capture(ctx, call))) {
         Ok(after) => after,
         Err(p) => {
             let why = p
@@ -361,7 +659,7 @@ fn run_one(
             game: &mut game,
             data: &archives,
         };
-        ours(&mut running, &maps, &cap.call)
+        ours(&mut running, &maps, call)
     }));
     let ret = match run {
         Ok(ret) => ret,
@@ -416,7 +714,7 @@ fn run_one(
         _ => {}
     }
     if cmp.diffs.is_empty() {
-        Outcome::Clean(cap.call.addr)
+        Outcome::Clean(call.addr)
     } else {
         Outcome::Failed(format!(
             "{} differences:\n    {}",

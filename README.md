@@ -25,11 +25,11 @@ Like ssbm-rs, it contains no game data: the game's models, textures, sounds and 
 
 | | |
 | --- | --- |
-| Characters | Fox, Falco, Marth, Sheik and Zelda, Captain Falcon, each checked over whole matches; Ganondorf, checked function by function until a replay with him can be compared |
+| Characters | Fox, Falco, Marth, Sheik and Zelda, Captain Falcon, Ganondorf, Ness, Jigglypuff, Samus, Luigi, Mario, Dr. Mario, Pikachu and Pichu, each checked over whole matches |
 | Stages | Final Destination, Battlefield, Pokémon Stadium (transformations included), Yoshi's Story, Dream Land, Fountain of Dreams |
-| Whole matches compared | 11 matches, 138,383 ticks, every checked field equal after every tick: four CPU-played benchmark matches (Fox ditto; Fox against Marth on three stages) and seven real Slippi replays |
+| Whole matches compared | 30 matches, 391,764 ticks, every checked field equal after every tick, the original allocator's heap included: eleven CPU-played benchmark matches (Fox ditto; Fox against Marth on three stages; Ganondorf against Captain Falcon; three each for Ness and Samus) and nineteen real Slippi replays (Slippi 3.19's, and ranked 3.16 replays) |
 | Player | A VS match in a window, with a launcher for picking characters, stage, stocks and time. Frames are identical to ssbm-rs's on every checked frame except Slippi's name plates; the audio mix is sample-exact with ssbm-rs's on the matches checked |
-| Functions | 5,143 of the 19,827 in ssbm-rs's symbol table ported and checked, 197 replaced by native subsystems, 2 dead ([port ledger](docs/port-ledger.md)) |
+| Functions | 6,006 of the 19,827 in ssbm-rs's symbol table ported and checked, 197 replaced by native subsystems, 2 dead ([port ledger](docs/port-ledger.md)) |
 | Speed | The simulation runs a match about 16.7 times as fast as headless Dolphin on one core; a snapshot is about 0.8 MB, cloned in about 0.1 ms ([performance](docs/performance.md)) |
 
 Not yet: the other characters and stages, menus and every mode other than VS, items spawning during a match (matches play with items off), netplay, testing on macOS and Linux, and release builds. [The oracle](docs/oracle.md) lists each comparison, and [the player](docs/player.md) its open issues.
@@ -69,7 +69,7 @@ Four levels, from the whole game down ([the oracle](docs/oracle.md)):
 
 Presentation is checked the same way: `melee-render-check` compares frames with ssbm-rs's draw by draw, and `melee-audio-check` compares the mix sample by sample. Each check is mutation-tested as it is written: a port broken on purpose must fail it.
 
-The disc-backed checks need `SSBM_DISC`. Many also need traces and captures made with ssbm-rs, which contain game memory and stay out of the repository; without them those checks skip. The five benchmark matches are in the repository, so with ssbm-rs and your own disc you can make their traces and run the benchmark diffs yourself.
+The disc-backed checks need `SSBM_DISC`. Many also need traces and captures made with ssbm-rs, which contain game memory and stay out of the repository; without them those checks skip. The six benchmark matches' replays, inputs the CPU AI played in ssbm-rs, are in the repository (`data/bench`), so with ssbm-rs and your own disc you can make their traces and run the benchmark diffs yourself.
 
 ## Roadmap
 
@@ -85,10 +85,10 @@ Training tools, mods and other add-ons aren't planned yet; they'd come after the
 
 ## Contributing
 
-[The porting guide](docs/porting.md) describes how a function gets from ssbm-rs into melee-hd and how it is checked; [the architecture](docs/architecture.md) and [the engine notes](docs/engine.md) explain the design, and [AGENTS.md](AGENTS.md) holds the repository's rules. Two rules matter most: never commit disc images, extracted files, captures or replays, and never port from nikhilunni/melee's source, which has no license.
+[The porting guide](docs/porting.md) describes how a function gets from ssbm-rs into melee-hd and how it is checked; [the architecture](docs/architecture.md) and [the engine notes](docs/engine.md) explain the design, and [AGENTS.md](AGENTS.md) holds the repository's rules. Two rules matter most: never commit disc images, extracted files, captures or replays (the benchmark matches' replays are the one exception), and never port from nikhilunni/melee's source, which has no license.
 
 ## License and legal
 
 melee-hd's code is offered under GPL-3.0-or-later; see [LICENSE](LICENSE). Parts are ported from or follow Dolphin (GPL-2.0-or-later), as their file headers say.
 
-melee-hd is ported from ssbm-rs and the Melee decompilation. The decompilation has no stated license for the original game code, and porting it does not establish ownership of that code. Super Smash Bros. Melee and its assets belong to Nintendo and HAL Laboratory. This is an unofficial project, not affiliated with or endorsed by them. The repository contains no disc image, extracted assets, captured memory or replays; you need your own copy of the game. The project's license grants no rights to the game's assets and does not resolve the original code's licensing.
+melee-hd is ported from ssbm-rs and the Melee decompilation. The decompilation has no stated license for the original game code, and porting it does not establish ownership of that code. Super Smash Bros. Melee and its assets belong to Nintendo and HAL Laboratory. This is an unofficial project, not affiliated with or endorsed by them. The repository contains no disc image, extracted assets or captured memory, and no replays beyond the benchmark matches' CPU-played inputs; you need your own copy of the game. The project's license grants no rights to the game's assets and does not resolve the original code's licensing.

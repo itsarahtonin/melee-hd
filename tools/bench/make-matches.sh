@@ -9,13 +9,13 @@
 #
 #   SSBM_RUN=.../ssbm-run.exe SSBM_DISC=... bash tools/bench/make-matches.sh DIR [NAME...]
 #
-# SSBM_RUN is ssbm-rs's runner with BENCH_CODES (ssbm-rs branch feat/bench-matches). Each match
+# SSBM_RUN is ssbm-rs's runner with BENCH_CODES (ssbm-rs main 3f9ac3a and later). Each match
 # takes ssbm-rs ten to twenty minutes per run on one core; JOBS (default 1) runs that many
 # matches at once.
 set -u
 dir=$1
 shift
-names=${*:-fox-fox-fd fox-marth-bf fox-marth-fd fox-marth-ps ics-peach-ps}
+names=${*:-fox-fox-fd fox-marth-bf fox-marth-fd fox-marth-ps ics-peach-ps ganon-captain-fd}
 here=$(cd "$(dirname "$0")" && pwd)
 bench=${MELEE_BENCH:-$here/../../target/release/melee-bench}
 run=${SSBM_RUN:?SSBM_RUN=path to ssbm-run with BENCH_CODES}

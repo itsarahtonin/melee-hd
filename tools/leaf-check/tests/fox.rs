@@ -22,7 +22,7 @@
 //! its own saved state on both sides, in both float modes, so the captures hold. Add
 //! `--fp hardware` when capturing a benchmark match again.
 //!
-//! then, with the branch `feat/state-trace`'s runner (which saves calls that touch hardware
+//! then, with ssbm-rs's runner (`main`, which saves calls that touch hardware
 //! with `CAPTURE_INTERACTED=1`: the states' entries load animations), the Fox against Sheik
 //! replay on Final Destination and the four-player one with two Foxes:
 //!
@@ -43,7 +43,7 @@ use foxlike::Character;
 /// Fox's capture sets: the benchmark's ditto and two replays.
 const FOX: Character = Character {
     env: "FOX",
-    calls: "C:/Projects/ssbm-rs-publication/local/calls/fox",
+    calls: "calls/fox",
     sets: &["bench", "Game_20260129T133652", "Game_20260531T174953"],
     funcs: "fox-funcs.txt",
     // Fighter creation's (checked by `fighter_create`), and the blaster's queries, which are

@@ -169,7 +169,11 @@ pub fn anim_all(objs: &mut Objects, data: &Archives, d: Option<DObjId>) {
 /// `HSD_DObjAlloc`.
 #[doc(alias = "HSD_DObjAlloc")]
 pub fn alloc(dobjs: &mut DObjs) -> DObjId {
-    DObjId(dobjs.pool.alloc(DObj::default()))
+    let d = dobjs.pool.alloc(DObj::default());
+    dobjs
+        .pool
+        .set_addr(d, super::heap::class_alloc(super::heap::Class::DObj));
+    DObjId(d)
 }
 
 /// Builds a DObj list, its materials and its shapes from their descriptors, each DObj before
@@ -219,6 +223,7 @@ pub fn remove_all(objs: &mut Objects, d: Option<DObjId>) {
     while let Some(d) = cur {
         cur = objs.dobjs[d].next;
         release(objs, d);
+        super::heap::class_free(super::heap::Class::DObj, objs.dobjs.pool.addr(d.0));
         objs.dobjs.pool.free(d.0);
     }
 }

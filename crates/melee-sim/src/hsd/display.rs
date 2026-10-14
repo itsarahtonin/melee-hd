@@ -466,15 +466,17 @@ pub struct FighterMaterial {
     pub x2223_b2: bool,
     /// Its color overlay lights it (`x7C_flag2` and `x7C_light_enable`).
     pub overlay_light: bool,
-    /// Its own light, and the fighters' lights (`lobj0`).
+    /// Its own light, and the fighters' lights (`lobj0`, and `lobj1`, the first ambient).
     pub light: Option<LObjId>,
     pub lights: Option<LObjId>,
+    pub ambient: Option<LObjId>,
 }
 
 /// A fighter's material setup, `ftMaterial_800BF2B8`: a refracted fighter's refraction
 /// texture; otherwise HAL's setup (the metal and other shared materials no port covers yet),
 /// and when the overlay lights the fighter but the material leaves alpha to the lights
-/// (translucent, or `x2223_b2`), the fighter's light set up with alpha (`ftCo_8009F75C`).
+/// (translucent, or `x2223_b2`), the fighter's light set up without alpha, then with it
+/// (`ftMaterial_800BF534`'s `ftCo_8009F75C(fp, false)`, then `ftCo_8009F75C(fp, true)`).
 #[doc(alias = "ftMaterial_800BF2B8")]
 fn fighter_material(objs: &mut Objects, data: &Archives, m: MObjId) {
     let fm = objs
@@ -495,14 +497,19 @@ fn fighter_material(objs: &mut Objects, data: &Archives, m: MObjId) {
     setup_channel_mode(objs, m);
     let texp = fm.overlay_light && rendermode & RENDER_XLU == 0 && !fm.x2223_b2;
     if !texp && fm.overlay_light {
-        // `ftCo_8009F75C(fp, true)`.
-        lobj::set_flags(&mut objs.lobjs, fm.light, 1 << 4);
-        lobj::replace_current(objs, fm.lights);
-        lobj::add_current(objs, fm.light);
         let c = objs
             .cobjs
             .current
             .expect("HSD_LObjSetupInit: no current camera");
+        // `ftCo_8009F75C(fp, false)`.
+        lobj::clear_flags(&mut objs.lobjs, fm.light, 1 << 4);
+        lobj::set_current_all(objs, fm.ambient);
+        lobj::add_current(objs, fm.light);
+        lobj_setup_init(objs, data, c);
+        // `ftCo_8009F75C(fp, true)`.
+        lobj::set_flags(&mut objs.lobjs, fm.light, 1 << 4);
+        lobj::replace_current(objs, fm.lights);
+        lobj::add_current(objs, fm.light);
         lobj_setup_init(objs, data, c);
     }
 }

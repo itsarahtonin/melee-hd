@@ -227,10 +227,20 @@ impl Running<'_> {
         false
     }
 
-    /// Dropping through a platform with a shoulder held, `ftCo_8009A080`.
+    /// Dropping through a platform with a shoulder held, `ftCo_8009A080`. Under the Slippi
+    /// ruleset, UCF's Shield Drop Extended (`8009A0B8`) also takes a stick short of the drop
+    /// line once the pad buffer has counted more than one frame of a downward flick.
     #[doc(alias = "ftCo_8009A080")]
     pub fn pass_check_shield(&mut self, gobj: GObjId) -> bool {
-        if self.game.fighter(gobj).input.held_buttons[0] & PAD_LR != 0 && self.pass_input(gobj) {
+        let fp = self.game.fighter(gobj);
+        if fp.input.held_buttons[0] & PAD_LR == 0 {
+            return false;
+        }
+        let c = self.common();
+        let (t, window) = (fp::fneg(reg(c.f32(0x464))), reg(c.f32(0x468)));
+        let down = reg(fp.input.lstick[0].y) <= t
+            || (self.game.rules.ucf && self.game.ucf.0[usize::from(fp.pad_port)].flicked > 1);
+        if down && f64::from(fp.active_timer.lstick.y) < window && self.on_platform(gobj) {
             self.enter_pass(gobj);
             return true;
         }

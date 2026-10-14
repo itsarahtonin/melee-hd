@@ -4,6 +4,7 @@ description = "Reads the keyboard, gamepads and the GameCube controller adapter 
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 

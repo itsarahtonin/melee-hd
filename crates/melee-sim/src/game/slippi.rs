@@ -19,6 +19,14 @@
 //!   transformations kept off the random seed, Stadium's monitor independent of the camera,
 //!   Whispy's blow direction, Nana's inputs and the star KO's physics.
 //! - **The Ice Climbers' freeze glitch fix** (`External/FreezeGlitchFix`).
+//!
+//! Two versions of the set are known ([`CodeSet`]): Slippi 3.19's, and 3.16's, which 3.17 keeps
+//! word for word. They differ only in some determinism fixes: Final Destination's background
+//! (3.16 skips the scene's timer, 3.19 runs it with the random seed kept), Nana's DI (3.19 also
+//! clears the stick X register) and Pokémon Stadium's transformations (3.16 starts loading the
+//! next one ahead with the game's own asynchronous load, 3.19 loads it when it's due,
+//! synchronously). A replay's version is what its codes say: each code is known in the versions
+//! that ship it, and a list must be all of one version.
 
 // NaN takes the original's branches, which negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -26,13 +34,40 @@
 use super::state::Rules;
 
 /// One code of the ruleset: its type, where it injects, its first line's second word (its
-/// length for `C2`), and the FNV-1a hash of its words with its data and final branch zeroed.
+/// length for `C2`), the FNV-1a hash of its words with its data and final branch zeroed, and
+/// the versions of the set that ship it ([`V3_19`], [`V3_16`]).
 struct Known {
     kind: u8,
     addr: u32,
     first: u32,
     hash: u64,
     rule: Rule,
+    sets: u8,
+}
+
+/// The versions of Slippi's online code set melee-hd knows, as [`Known::sets`] bits.
+const V3_19: u8 = 1;
+const V3_16: u8 = 2;
+const BOTH: u8 = V3_19 | V3_16;
+
+/// Which version of Slippi's online code set a match runs, where the versions differ
+/// (`game::slippi`'s documentation lists how).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum CodeSet {
+    /// Slippi 3.19's (and a match with no Slippi codes).
+    #[default]
+    V3_19,
+    /// Slippi 3.16's and 3.17's, which are the same.
+    V3_16,
+}
+
+impl CodeSet {
+    fn bit(self) -> u8 {
+        match self {
+            CodeSet::V3_19 => V3_19,
+            CodeSet::V3_16 => V3_16,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -52,10 +87,16 @@ const fn code(kind: u8, addr: u32, first: u32, hash: u64, rule: Rule) -> Known {
         first,
         hash,
         rule,
+        sets: BOTH,
     }
 }
 
-/// The codes, as Slippi 3.19's online code set has them.
+/// A code only some versions ship.
+const fn only(sets: u8, k: Known) -> Known {
+    Known { sets, ..k }
+}
+
+/// The codes, as Slippi 3.19's and 3.16's online code sets have them.
 const KNOWN: &[Known] = &[
     code(
         0xC2,
@@ -121,40 +162,55 @@ const KNOWN: &[Known] = &[
         0x0DBD_5729_4D66_DA2B,
         Rule::Determinism,
     ),
-    code(
-        0xC2,
-        0x8021_AAE4,
-        0x06,
-        0x1A00_BD3E_6CCE_6332,
-        Rule::Determinism,
+    only(
+        V3_19,
+        code(
+            0xC2,
+            0x8021_AAE4,
+            0x06,
+            0x1A00_BD3E_6CCE_6332,
+            Rule::Determinism,
+        ),
     ),
-    code(
-        0xC2,
-        0x801C_65C8,
-        0x10,
-        0xA75D_04E5_73A8_88E1,
-        Rule::Determinism,
+    only(
+        V3_19,
+        code(
+            0xC2,
+            0x801C_65C8,
+            0x10,
+            0xA75D_04E5_73A8_88E1,
+            Rule::Determinism,
+        ),
     ),
-    code(
-        0xC2,
-        0x801D_4760,
-        0x0A,
-        0x6040_350C_9D48_D384,
-        Rule::Determinism,
+    only(
+        V3_19,
+        code(
+            0xC2,
+            0x801D_4760,
+            0x0A,
+            0x6040_350C_9D48_D384,
+            Rule::Determinism,
+        ),
     ),
-    code(
-        0xC2,
-        0x801D_457C,
-        0x07,
-        0x1C04_7DB3_06D1_437E,
-        Rule::Determinism,
+    only(
+        V3_19,
+        code(
+            0xC2,
+            0x801D_457C,
+            0x07,
+            0x1C04_7DB3_06D1_437E,
+            Rule::Determinism,
+        ),
     ),
-    code(
-        0xC2,
-        0x8001_65AC,
-        0x24,
-        0xDBC3_A5B6_BFB4_BCCE,
-        Rule::Determinism,
+    only(
+        V3_19,
+        code(
+            0xC2,
+            0x8001_65AC,
+            0x24,
+            0xDBC3_A5B6_BFB4_BCCE,
+            Rule::Determinism,
+        ),
     ),
     code(
         0xC2,
@@ -163,12 +219,15 @@ const KNOWN: &[Known] = &[
         0xB985_C71C_63D5_601A,
         Rule::Determinism,
     ),
-    code(
-        0xC2,
-        0x800A_C5B8,
-        0x02,
-        0xB6F1_25FA_806B_2F5A,
-        Rule::Determinism,
+    only(
+        V3_19,
+        code(
+            0xC2,
+            0x800A_C5B8,
+            0x02,
+            0xB6F1_25FA_806B_2F5A,
+            Rule::Determinism,
+        ),
     ),
     code(
         0xC2,
@@ -197,6 +256,102 @@ const KNOWN: &[Known] = &[
         0x3D,
         0xA172_2F3A_96B2_D217,
         Rule::PreventWobbling,
+    ),
+    // Slippi 3.16's own determinism fixes. Final Destination's background: the scene's timer
+    // (`bl grLast_8021B2E8`) skipped.
+    only(
+        V3_16,
+        code(
+            0x04,
+            0x8021_AAE4,
+            0x6000_0000,
+            0xCBF2_9CE4_8422_2325,
+            Rule::Determinism,
+        ),
+    ),
+    // Nana's DI: only her stick Y's register cleared.
+    only(
+        V3_16,
+        code(
+            0xC2,
+            0x800A_C5B8,
+            0x02,
+            0x7422_189B_7843_9B72,
+            Rule::Determinism,
+        ),
+    ),
+    // Pokémon Stadium's transformations: the next one is picked and its file loaded ahead
+    // (`grStadium_801D4548`, `grStadium_801D13E0`, `grStadium_801D4F0C`), with the game's own
+    // asynchronous load.
+    only(
+        V3_16,
+        code(
+            0x04,
+            0x801D_460C,
+            0x809F_00EC,
+            0xCBF2_9CE4_8422_2325,
+            Rule::Determinism,
+        ),
+    ),
+    only(
+        V3_16,
+        code(
+            0xC2,
+            0x801D_14C8,
+            0x02,
+            0x130F_0CDE_529E_E978,
+            Rule::Determinism,
+        ),
+    ),
+    only(
+        V3_16,
+        code(
+            0xC2,
+            0x801D_45EC,
+            0x19,
+            0x48A7_FB94_CC24_A8DF,
+            Rule::Determinism,
+        ),
+    ),
+    only(
+        V3_16,
+        code(
+            0xC2,
+            0x801D_4F14,
+            0x02,
+            0xE944_EDA1_3D19_74F5,
+            Rule::Determinism,
+        ),
+    ),
+    only(
+        V3_16,
+        code(
+            0x04,
+            0x801D_4610,
+            0x4800_004C,
+            0xCBF2_9CE4_8422_2325,
+            Rule::Determinism,
+        ),
+    ),
+    only(
+        V3_16,
+        code(
+            0x04,
+            0x801D_4724,
+            0x4800_003C,
+            0xCBF2_9CE4_8422_2325,
+            Rule::Determinism,
+        ),
+    ),
+    only(
+        V3_16,
+        code(
+            0xC2,
+            0x801D_4578,
+            0x03,
+            0xB8D4_1399_1919_88CB,
+            Rule::Determinism,
+        ),
     ),
 ];
 
@@ -287,6 +442,8 @@ pub enum CodeError {
     Changed { addr: u32 },
     /// Some of a rule's codes without the rest.
     Partial { rule: &'static str },
+    /// Codes of different versions of the set.
+    Mixed,
 }
 
 impl std::fmt::Display for CodeError {
@@ -302,6 +459,7 @@ impl std::fmt::Display for CodeError {
                 )
             }
             CodeError::Partial { rule } => write!(f, "only some of {rule}'s codes"),
+            CodeError::Mixed => write!(f, "codes of different Slippi versions"),
         }
     }
 }
@@ -318,6 +476,7 @@ impl Rules {
             prevent_wobbling: true,
             offscreen_limits: true,
             freeze_glitch_fix: true,
+            codes: CodeSet::V3_19,
         }
     }
 
@@ -331,14 +490,14 @@ impl Rules {
             return Ok(Rules::default());
         }
         let mut seen = Vec::new();
+        let mut sets = BOTH;
         for c in codes {
-            let k = KNOWN
-                .iter()
-                .find(|k| k.addr == c.addr && k.kind == c.kind)
-                .ok_or(CodeError::Unknown {
+            if !KNOWN.iter().any(|k| k.addr == c.addr && k.kind == c.kind) {
+                return Err(CodeError::Unknown {
                     kind: c.kind,
                     addr: c.addr,
-                })?;
+                });
+            }
             let data = data_words(c.addr);
             let last = if c.kind == 0xC2 {
                 c.words.len().checked_sub(1)
@@ -352,12 +511,29 @@ impl Rules {
                     w
                 }
             });
-            if c.first != k.first || fnv(words) != k.hash {
-                return Err(CodeError::Changed { addr: c.addr });
+            let hash = fnv(words);
+            let k = KNOWN
+                .iter()
+                .find(|k| {
+                    k.addr == c.addr && k.kind == c.kind && k.first == c.first && k.hash == hash
+                })
+                .ok_or(CodeError::Changed { addr: c.addr })?;
+            sets &= k.sets;
+            if sets == 0 {
+                return Err(CodeError::Mixed);
             }
             seen.push(k.rule);
         }
-        let mut rules = Rules::default();
+        // A list of only the codes both versions share runs as 3.19's.
+        let set = if sets & V3_19 != 0 {
+            CodeSet::V3_19
+        } else {
+            CodeSet::V3_16
+        };
+        let mut rules = Rules {
+            codes: set,
+            ..Rules::default()
+        };
         for (rule, name, flag) in [
             (Rule::Ucf, "UCF 0.84", &mut rules.ucf),
             (
@@ -386,7 +562,10 @@ impl Rules {
                 &mut rules.freeze_glitch_fix,
             ),
         ] {
-            let all = KNOWN.iter().filter(|k| k.rule == rule).count();
+            let all = KNOWN
+                .iter()
+                .filter(|k| k.rule == rule && k.sets & set.bit() != 0)
+                .count();
             let have = seen.iter().filter(|&&r| r == rule).count();
             match have {
                 0 => {}
@@ -414,8 +593,12 @@ impl Rules {
     /// the word at an address): each known code found at its site, its instructions where its
     /// branch leads.
     pub fn from_memory(read: &dyn Fn(u32) -> u32) -> Result<Rules, CodeError> {
-        let mut codes = Vec::new();
+        let mut codes: Vec<Code> = Vec::new();
         for k in KNOWN {
+            // A site several versions patch the same way is read once.
+            if codes.iter().any(|c| c.addr == k.addr && c.kind == k.kind) {
+                continue;
+            }
             let at = read(k.addr);
             match k.kind {
                 0x04 if at == k.first => codes.push(Code {

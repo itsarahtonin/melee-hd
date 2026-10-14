@@ -2,15 +2,15 @@
 //! operations a compile turns into stages, the order with the fewest registers, and the
 //! rewrites that fold pass-through and mergeable operations into their users.
 
-use super::texp::{
+use super::gx::*;
+use super::{
     Arg, Exp, MAX_NUM, Res, TE_0, TE_1, TE_A, TE_RGB, TExpList, TY_CNST, TY_IMM, TY_KONST, TY_RAS,
     TY_TEV, TY_TEX, TY_ZERO, is_through_alpha, is_through_color,
 };
-use crate::gx::enums::*;
 
 /// `HSD_TExpDag`: an operation and the operations it reads.
 #[derive(Clone, Copy, Debug, Default)]
-pub(super) struct Dag {
+pub struct Dag {
     /// The operation (`tev`), by its expression.
     pub tev: usize,
     pub idx: u8,
@@ -79,26 +79,29 @@ impl TExpList {
     /// Lists the operations `root` reads, nearest first, with their dependencies,
     /// `HSD_TExpMakeDag`. Returns how many there are.
     #[doc(alias = "HSD_TExpMakeDag")]
-    pub(super) fn make_dag(&self, root: Exp, list: &mut Vec<Dag>) -> usize {
+    pub fn make_dag(&self, root: Exp, list: &mut Vec<Dag>) -> usize {
         assert_eq!(self.get_type(root), TY_TEV);
-        let mut base = vec![root.node()];
+        let mut base = [0usize; MAX_NUM];
+        base[0] = root.node();
+        let mut num = 1;
         let mut j = 0;
-        while j < base.len() {
-            assert!(j < MAX_NUM);
+        while j < num {
             let t = *self.tev(base[j]);
             for ins in [&t.c_in, &t.a_in] {
                 for a in ins {
-                    if a.ty == TY_TEV && !base.contains(&a.exp.node()) {
-                        base.push(a.exp.node());
+                    if a.ty == TY_TEV && !base[..num].contains(&a.exp.node()) {
+                        assert!(num < MAX_NUM);
+                        base[num] = a.exp.node();
+                        num += 1;
                     }
                 }
             }
             j += 1;
         }
-        let num = base.len();
-        assert!(num <= MAX_NUM);
-        let mut dist = vec![-1; num];
-        self.calc_distance(&base, &mut dist, base[0], 0);
+        let base = &mut base[..num];
+        let mut dist = [-1; MAX_NUM];
+        let dist = &mut dist[..num];
+        self.calc_distance(base, dist, base[0], 0);
         // The original's sort: one pass from each index, swapping neighbors out of order.
         for idx in 0..num {
             for j in idx + 1..num {
@@ -245,13 +248,7 @@ impl TExpList {
     /// Orders the operations (`result`, users first) and points their inputs at the registers
     /// their sources write, `HSD_TExpSchedule`.
     #[doc(alias = "HSD_TExpSchedule")]
-    pub(super) fn schedule(
-        &mut self,
-        num: usize,
-        list: &[Dag],
-        result: &mut [usize],
-        res: &mut Res,
-    ) {
+    pub fn schedule(&mut self, num: usize, list: &[Dag], result: &mut [usize], res: &mut Res) {
         const C_IN: [u32; 4] = [GX_CC_C0, GX_CC_C1, GX_CC_C2, GX_CC_CPREV];
         const A_IN: [u32; 4] = [GX_CC_A0, GX_CC_A1, GX_CC_A2, GX_CC_APREV];
         const ARGS: [u32; 4] = [GX_CA_A0, GX_CA_A1, GX_CA_A2, GX_CA_APREV];
@@ -881,7 +878,7 @@ impl TExpList {
 
     /// `HSD_TExpSimplify`.
     #[doc(alias = "HSD_TExpSimplify")]
-    pub(super) fn simplify(&mut self, e: Exp) -> bool {
+    pub fn simplify(&mut self, e: Exp) -> bool {
         if self.get_type(e) != TY_TEV {
             return false;
         }
@@ -902,7 +899,7 @@ impl TExpList {
     /// Reads constants and immediates straight from sources that pass them through,
     /// `HSD_TExpSimplify2`.
     #[doc(alias = "HSD_TExpSimplify2")]
-    pub(super) fn simplify2(&mut self, t: usize) {
+    pub fn simplify2(&mut self, t: usize) {
         for i in 0..4 {
             let a = self.tev(t).c_in[i];
             if a.ty != TY_TEV || a.sel != TE_RGB {

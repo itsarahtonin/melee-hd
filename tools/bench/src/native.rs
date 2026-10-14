@@ -1,12 +1,13 @@
 //! melee-hd's own speed on the benchmark matches, against Dolphin's (`dolphin.rs`), and rollback
 //! snapshots of a real match's states.
 //!
-//! `melee-bench native [--dir DIR] [--runs N] [MATCH...]` plays each match (`DIR/MATCH.slp`)
-//! natively and headless on one core: from the replay's start through `vs_match`'s replay path
+//! `melee-bench native [--dir DIR] [--runs N] [MATCH...]` plays each match (`DIR/MATCH.slp`,
+//! by default the repository's `data/bench`) natively and headless on one core: from the replay's start through `vs_match`'s replay path
 //! (Slippi's playback codes, `Match::step_replay`), with the display pass, in the console's
 //! floating point (`FpMode::Hardware`, as the matches were made). The match's files are read
-//! from the disc `SSBM_DISC` before the clock starts; the fighters' addresses come from the
-//! match's start trace (`DIR/MATCH.start.trace`), as the oracle takes them. Each run is timed
+//! from the disc `SSBM_DISC` before the clock starts; the allocator model (`hsd::heap`) gives
+//! the fighters their addresses, as Slippi's playback lays the heap out (`MELEE_BENCH_HEAP=off`
+//! leaves the model off, to time what it costs). Each run is timed
 //! from the match's first tick to its last replay frame, and every frame's fighters (action
 //! state, position, facing, percent and stocks) are checked against the replay's post-frame
 //! updates afterwards. It reports the median frames per second over `N` runs (default 5) in
@@ -77,20 +78,17 @@ struct Bench {
 impl Bench {
     /// The match, or why melee-hd can't start it.
     fn open(dir: &Path, name: &str) -> Result<Bench, String> {
-        let path = dir.join(format!("{name}.slp"));
+        let path = crate::sync::replay_path(dir, name);
         let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
         let original = Replay::parse(&bytes).map_err(|e| format!("{}: {e}", path.display()))?;
         let replay =
             melee_slippi::Replay::parse(&bytes).map_err(|e| format!("{}: {e}", path.display()))?;
         let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
             .map_err(|e| format!("the replay's codes: {e}"))?;
-        let trace = dir.join(format!("{name}.start.trace"));
-        settings.fighter_addresses = crate::sync::fighter_addresses(&trace).ok_or_else(|| {
-            format!(
-                "the fighters' addresses come from ssbm-rs's trace of the match's start, {}                  (make-matches.sh writes it)",
-                trace.display()
-            )
-        })?;
+        if std::env::var("MELEE_BENCH_HEAP").is_ok_and(|v| v == "off") {
+            settings.heap = None;
+            settings.playback_heap = None;
+        }
         let want = post_frames(&original);
         let last = replay_last_frame(&original);
         Ok(Bench {
@@ -245,7 +243,7 @@ fn args_dir(args: &[String]) -> (PathBuf, usize, Vec<String>, Option<u64>) {
             _ => names.push(a.clone()),
         }
     }
-    let dir = PathBuf::from(dir.expect("--dir DIR (or BENCH_DIR)"));
+    let dir = dir.map_or_else(melee_local_data::bench_dir, PathBuf::from);
     (dir, runs, names, every)
 }
 
@@ -590,8 +588,6 @@ pub fn alloc_sites(args: &[String]) {
 mod tests {
     use super::*;
 
-    /// Where the benchmark matches are on this machine (`BENCH_DIR` overrides).
-    const BENCH_DIR: &str = "C:/Projects/ssbm-rs-publication/local/bench";
     /// The Fox-Fox match's stretch the check replays: from a state kept at the first tick to
     /// the last, where melee-hd's ports still run it in sync.
     const FROM: u64 = 1000;
@@ -602,11 +598,14 @@ mod tests {
     /// played again, counting allocations: the restore and each tick make none.
     #[test]
     fn ticks_and_restores_dont_allocate() {
-        let dir = PathBuf::from(std::env::var("BENCH_DIR").unwrap_or_else(|_| BENCH_DIR.into()));
-        if std::env::var("SSBM_DISC").is_err() || !dir.join("fox-fox-fd.slp").exists() {
+        // The match is the repository's (`BENCH_DIR` overrides); its start trace is ssbm-rs's.
+        let dir =
+            std::env::var_os("BENCH_DIR").map_or_else(melee_local_data::bench_dir, PathBuf::from);
+        let trace = crate::sync::start_trace_path(&dir, "fox-fox-fd");
+        if std::env::var("SSBM_DISC").is_err() || !trace.exists() {
             eprintln!(
-                "no SSBM_DISC or no benchmark matches in {}: skipping",
-                dir.display()
+                "no SSBM_DISC or no start trace of the Fox-Fox match ({}): skipping",
+                trace.display()
             );
             return;
         }

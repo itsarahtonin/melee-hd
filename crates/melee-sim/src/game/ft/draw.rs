@@ -122,6 +122,7 @@ impl Running<'_> {
             overlay_light: o.x7C_flag2 && o.x7C_light_enable,
             light: fp.x588,
             lights: self.game.ft.lobj0,
+            ambient: self.game.ft.lobj1,
         }
     }
 

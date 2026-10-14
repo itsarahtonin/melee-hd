@@ -24,6 +24,7 @@
 //! queue flush, a stale joint tree's animation data), which are kept elsewhere. `EFFECT_CALLS` names the directory, by default below; the tests
 //! skip without it.
 
+use melee_local_data::ssbm_rs_local;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::PathBuf;
 
@@ -40,11 +41,11 @@ use melee_sim::hsd::jobj::JObjId;
 use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
 
-const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/effects";
+const DEFAULT_CALLS: &str = "calls/effects";
 
 fn calls_root() -> PathBuf {
     std::env::var("EFFECT_CALLS")
-        .unwrap_or_else(|_| DEFAULT_CALLS.into())
+        .unwrap_or_else(|_| ssbm_rs_local(DEFAULT_CALLS))
         .into()
 }
 
@@ -52,10 +53,11 @@ fn calls_root() -> PathBuf {
 /// The four-player debug matches' captures (`EFFECT_DVS_CALLS`, by default below): one
 /// directory per match, with the characters no replay covers. See `dvs.sh` beside
 /// [`DEFAULT_CALLS`] for how they were made.
-const DEFAULT_DVS_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/effects-dvs";
+const DEFAULT_DVS_CALLS: &str = "calls/effects-dvs";
 
 fn dirs() -> Vec<String> {
-    let dvs = std::env::var("EFFECT_DVS_CALLS").unwrap_or_else(|_| DEFAULT_DVS_CALLS.into());
+    let dvs =
+        std::env::var("EFFECT_DVS_CALLS").unwrap_or_else(|_| ssbm_rs_local(DEFAULT_DVS_CALLS));
     let mut v: Vec<String> = [calls_root(), PathBuf::from(dvs)]
         .iter()
         .filter_map(|root| std::fs::read_dir(root).ok())
@@ -969,9 +971,7 @@ fn queue_clear_calls() {
 
 /// Battlefield's captured states, whose backgrounds have generators from the stage's bank.
 fn stage_dir() -> String {
-    std::env::var("STAGE_CALLS")
-        .unwrap_or_else(|_| "C:/Projects/ssbm-rs-publication/local/calls/stage".into())
-        + "/bf1"
+    std::env::var("STAGE_CALLS").unwrap_or_else(|_| ssbm_rs_local("calls/stage")) + "/bf1"
 }
 
 /// The first generator in a call's state, and the joint it follows.
@@ -1142,14 +1142,7 @@ fn param_calls() {
 fn screen_captures() {
     let Some(index) = disc_index() else { return };
     for d in dirs() {
-        let Ok(entries) = std::fs::read_dir(&d) else {
-            continue;
-        };
-        for e in entries.flatten() {
-            let path = e.path();
-            if path.extension().is_none_or(|x| x != "call") {
-                continue;
-            }
+        for path in melee_capture::pack::call_files(&d) {
             let cap = Capture::read(&path);
             let ok = catch_unwind(AssertUnwindSafe(|| {
                 let mut archives = Archives::default();

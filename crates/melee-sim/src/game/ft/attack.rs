@@ -2072,9 +2072,24 @@ impl Running<'_> {
         defense: f32,
         weight: f32,
     ) -> f64 {
+        let h = self.logged_capsule(hit).clone();
+        self.knockback_of(me, &h, count, ratio, attack, defense, weight)
+    }
+
+    /// [`Running::knockback`] of a hit capsule held anywhere (one on the stack too).
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn knockback_of(
+        &self,
+        me: FighterId,
+        h: &super::super::structs::HitCapsule,
+        count: u32,
+        ratio: f32,
+        attack: f32,
+        defense: f32,
+        weight: f32,
+    ) -> f64 {
         let c = self.common();
         let fp = &self.game.fighters[me.0];
-        let h = self.logged_capsule(hit);
         let f = |o: u32| reg(c.f32(o));
         let w = fp::fmuls(reg(weight), f(0xF4));
         let weight_term = fp::fsubs(f(0xF8), fp::fdivs(fp::fmuls(w, f(0xF8)), fp::fadds(1.0, w)));
@@ -2449,6 +2464,21 @@ impl Running<'_> {
         fp.dmg.x18D0 = akind;
         let _ = grounded;
         self.record_attack(attacker, gobj, x2070, record, instance, prev);
+    }
+
+    /// No attacker on the fighter's last hit, `ftColl_800788D4` (`ftColl_8007861C` with no
+    /// attacker, attack 0 and kind -10, and no record).
+    // Ports `ftColl_800788D4`; aliased once a check reaches it.
+    pub(crate) fn clear_attacker(&mut self, gobj: GObjId) {
+        let me = self.game.fighter_id(gobj);
+        let fp = &mut self.game.fighters[me.0];
+        let prev = fp.dmg.x18c4_source_ply;
+        fp.dmg.x18C0 = 0;
+        fp.dmg.x18C8 = -1;
+        fp.dmg.x18c4_source_ply = 6;
+        fp.dmg.x18CC = 0;
+        fp.dmg.x18D0 = -10;
+        self.record_no_attack(gobj, prev);
     }
 
     /// The lipstick flower's damage this frame, `ftColl_8007BBCC`: the logged hits of the
