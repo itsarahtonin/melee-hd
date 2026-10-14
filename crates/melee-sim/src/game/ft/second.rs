@@ -13,8 +13,6 @@ use crate::hsd::aobj;
 use crate::hsd::jobj;
 use crate::lb::figatree::{TRACK_SIZE, bind_tracks};
 
-/// `Ft_Kind_Nana`.
-const KIND_NANA: i32 = 11;
 /// The object types `HSD_ForeachAnim` reaches here: all but materials and textures.
 const ANIM_MASK: u32 = 0xFB7F;
 
@@ -32,16 +30,20 @@ impl Running<'_> {
         let aram = self.anim_aram(fp, entry);
         if aram != fp.x5A8 {
             let tree = if aram != 0 {
-                if fp.kind == KIND_NANA {
-                    unported_call("ftData_80086060");
+                // Nana copies the archive from Popo's animation buffer when it holds it
+                // (untimed).
+                let kind = self.anim_entry_kind(fp.kind, entry);
+                let shared = self
+                    .anim_share_source(f)
+                    .is_some_and(|p| self.game.fighters[p.0].x5A4 == aram);
+                if !shared {
+                    if aram >= 0x8000_0000 {
+                        unported_call("ftData_80085E50 from main memory");
+                    }
+                    // `lbArq_80014BD0`'s copy out of ARAM takes time on ssbm-rs's timeline.
+                    let len = (self.data.u32(entry.at(8)) + 31) & !31;
+                    self.game.audio.aram_load(self.data, len);
                 }
-                if aram >= 0x8000_0000 {
-                    unported_call("ftData_80085E50 from main memory");
-                }
-                // `lbArq_80014BD0`'s copy out of ARAM takes time on ssbm-rs's timeline.
-                let kind = fp.kind;
-                let len = (self.data.u32(entry.at(8)) + 31) & !31;
-                self.game.audio.aram_load(self.data, len);
                 Some(self.anim_tree(kind, entry))
             } else {
                 None

@@ -53,6 +53,7 @@ pub(crate) fn import_reflection(imp: &mut Importer, ud: u32) -> UserData {
         texture_matrix,
         image,
         desc,
+        addr: ud,
     });
     UserData::IzumiReflection
 }

@@ -3,6 +3,8 @@
 pub mod bat;
 pub mod bombhei;
 pub mod capsule;
+pub mod climbersblizzard;
+pub mod climbersice;
 pub mod crate_box;
 pub mod drmariopill;
 pub mod foxblaster;
@@ -49,6 +51,8 @@ use crate::hsd::gobj::GObjId;
 /// Runs a kind's callback of the event kind (`HSD_GObjEvent`), if `addr` is one.
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     foxlaser::run_event(r, gobj, addr)
+        || climbersice::run_event(r, gobj, addr)
+        || climbersblizzard::run_event(r, gobj, addr)
         || foxblaster::run_event(r, gobj, addr)
         || foxillusion::run_event(r, gobj, addr)
         || capsule::run_event(r, gobj, addr)
@@ -96,6 +100,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     foxlaser::run_pred(r, gobj, addr)
+        .or_else(|| climbersice::run_pred(r, gobj, addr))
+        .or_else(|| climbersblizzard::run_pred(r, gobj, addr))
         .or_else(|| foxblaster::run_pred(r, gobj, addr))
         .or_else(|| foxillusion::run_pred(r, gobj, addr))
         .or_else(|| capsule::run_pred(r, gobj, addr))
@@ -174,6 +180,9 @@ pub const FALCO_LASER: i32 = 55;
 /// `It_Kind_Fox_Illusion` and `It_Kind_Falco_Phantasm`.
 pub const FOX_ILLUSION: i32 = 56;
 pub const FALCO_PHANTASM: i32 = 57;
+/// `It_Kind_IceClimber_Ice` and `It_Kind_IceClimber_Blizzard`.
+pub const ICE_CLIMBER_ICE: i32 = 106;
+pub const ICE_CLIMBER_BLIZZARD: i32 = 107;
 /// `It_Kind_Link_Bomb`.
 pub const LINK_BOMB: i32 = 58;
 /// `It_Kind_CLink_Bomb`.

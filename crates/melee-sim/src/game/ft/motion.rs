@@ -8,6 +8,7 @@ use melee_data::archive::DataRef;
 
 use super::super::code::{run_fighter_cb, unported_call};
 use super::super::handles::FighterId;
+use super::super::pl::player::PKIND_DEMO;
 use super::super::state::Running;
 use super::super::structs::Fighter;
 use super::anim::x594_bit;
@@ -20,6 +21,7 @@ use crate::hsd::jobj::{self, USE_QUATERNION};
 /// `FighterKind`s the state change treats apart.
 const KIND_PEACH: i32 = 9;
 pub(super) const KIND_NANA: i32 = 11;
+const KIND_POPO: i32 = 10;
 const KIND_LUIGI: i32 = 17;
 
 /// The state change's flags (`MotionFlags`), each keeping one effect of the last state.
@@ -71,29 +73,68 @@ impl Running<'_> {
     }
 
     /// Animation `anim`'s entry in the fighter's animation table (`x24`), `ftData_80085FD4`.
-    /// Nana outside demos shares Popo's animations where hers are missing; not ported.
+    /// Nana outside demos takes Popo's entry (`gFtDataList[Ft_Kind_Popo]->xC`) where hers
+    /// has no animation in ARAM.
     #[doc(alias = "ftData_80085FD4")]
     pub(super) fn anim_entry(&self, f: FighterId, anim: i32) -> DataRef {
         let fp = &self.game.fighters[f.0];
-        if fp.kind == KIND_NANA {
-            unported_call("ftData_80085FD4 for Nana");
-        }
-        fp.x24
+        let own = fp
+            .x24
             .expect("a fighter without animations")
-            .at(ANIM_ENTRY_SIZE * anim as u32)
+            .at(ANIM_ENTRY_SIZE * anim as u32);
+        if fp.kind == KIND_NANA
+            && self.game.player_pkind(i32::from(fp.player_idx)) != PKIND_DEMO
+            && self.anim_aram(fp, own) == 0
+        {
+            let popo =
+                self.game.ft.data.data_list[KIND_POPO as usize].expect("Popo's data isn't loaded");
+            return self
+                .data
+                .ptr(popo.at(0xC))
+                .expect("Popo's ftData::xC")
+                .at(ANIM_ENTRY_SIZE * anim as u32);
+        }
+        own
     }
 
-    /// Where an animation of the fighter is in ARAM (`Fighter_WaitAnimData::x14`): the
+    /// The kind whose animation table `entry` is in: the fighter's, or Popo's for an entry
+    /// Nana took from his ([`Running::anim_entry`]).
+    pub(super) fn anim_entry_kind(&self, kind: i32, entry: DataRef) -> i32 {
+        let popo = self.game.ft.data.data_list[KIND_POPO as usize].map(|d| d.archive);
+        if kind == KIND_NANA && popo == Some(entry.archive) {
+            KIND_POPO
+        } else {
+            kind
+        }
+    }
+
+    /// Where an animation of the fighter is in ARAM (`Fighter_WaitAnimData::x14`): its
     /// character's animation file plus the animation's offset in it, as `ftData_80085A14`
     /// wrote it when the file was copied there; for an entry with no data, the file's word.
     pub(super) fn anim_aram(&self, fp: &Fighter, entry: DataRef) -> u32 {
         if self.data.u32(entry.at(8)) == 0 {
             return self.data.u32(entry.at(0x14));
         }
-        let file = self.game.ft.anim_files[fp.kind as usize]
+        let kind = self.anim_entry_kind(fp.kind, entry);
+        let file = self.game.ft.anim_files[kind as usize]
             .as_ref()
             .expect("the character's animation file isn't in ARAM");
         file.aram.wrapping_add(self.data.u32(entry.at(4)))
+    }
+
+    /// The fighter whose animation buffer Nana may copy from rather than read ARAM,
+    /// `ftData_80086060`: outside demos, her player's current fighter (Popo).
+    // Ports `ftData_80086060`; aliased once a check reaches it.
+    pub(super) fn anim_share_source(&self, f: FighterId) -> Option<FighterId> {
+        let fp = &self.game.fighters[f.0];
+        let slot = i32::from(fp.player_idx);
+        if fp.kind == KIND_NANA && self.game.player_pkind(slot) != PKIND_DEMO {
+            return self
+                .game
+                .player_entity_at(slot, 0)
+                .map(|g| self.game.fighter_id(g));
+        }
+        None
     }
 
     /// Loads animation `anim` of fighter `src` into the fighter's animation buffer unless it's
@@ -110,18 +151,21 @@ impl Running<'_> {
             return;
         }
         let tree = if aram != 0 {
-            // `ftData_80086060`: only Nana copies from another fighter's buffer.
-            if self.game.fighters[f.0].kind == KIND_NANA {
-                unported_call("ftData_80086060");
+            // Nana copies the archive from Popo's buffer when it holds it (`memcpy` and
+            // `lbArchiveRelocate`, untimed).
+            let shared = self
+                .anim_share_source(f)
+                .is_some_and(|p| self.game.fighters[p.0].x5A4 == aram);
+            if !shared {
+                if aram >= 0x8000_0000 {
+                    unported_call("ftData_80085CD8 from main memory");
+                }
+                // `lbArq_80014BD0` copies the archive from ARAM, which takes time on
+                // ssbm-rs's timeline; `HSD_ArchiveParse` relocates it.
+                let len = (self.data.u32(entry.at(8)) + 31) & !31;
+                self.game.audio.aram_load(self.data, len);
             }
-            if aram >= 0x8000_0000 {
-                unported_call("ftData_80085CD8 from main memory");
-            }
-            // `lbArq_80014BD0` copies the archive from ARAM, which takes time on ssbm-rs's
-            // timeline; `HSD_ArchiveParse` relocates it.
-            let len = (self.data.u32(entry.at(8)) + 31) & !31;
-            self.game.audio.aram_load(self.data, len);
-            let kind = self.game.fighters[src.0].kind;
+            let kind = self.anim_entry_kind(self.game.fighters[src.0].kind, entry);
             Some(self.anim_tree(kind, entry))
         } else {
             None

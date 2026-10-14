@@ -131,10 +131,15 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 #[doc(alias = "grOldPupupu_80211C10")]
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
+/// Where Dream Land's setup and the spawn's call put their scale joints' descriptors on the
+/// stack (its setup's frame is deeper than other stages', `setup::SETUP_FRAME`).
+const SETUP_FRAME: u32 = 0x804E_E9F0;
+const SPAWN_FRAME: u32 = 0x804E_E9A0;
+
 /// Creates one of the stage's objects and sets it up, `grOldPupupu_802108B4`.
 #[doc(alias = "grOldPupupu_802108B4")]
-pub fn create(r: &mut Running, map_id: i32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, callbacks(map_id))
+pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
+    setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
 }
 
 /// The stage's objects' setup functions and processes, by map id (`grOp_StageCallbacks`).
@@ -150,7 +155,7 @@ pub fn on_init(r: &mut Running) {
     r.game.stage_info.unk8C.b4 = false;
     r.game.stage_info.unk8C.b5 = true;
     for map_id in [0, 3, 7, 5, 4, 6, 1, 8] {
-        create(r, map_id);
+        create(r, map_id, SETUP_FRAME);
     }
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
@@ -339,7 +344,7 @@ pub fn proc_flights(r: &mut Running, gobj: GObjId) {
     );
     let z = fp::fmuls(fp::fneg(150.0), direction);
     for i in 0..count {
-        if let Some(spawn) = create(r, 2) {
+        if let Some(spawn) = create(r, 2, SPAWN_FRAME) {
             let j = jobj_of(r.game, spawn).expect("groldpupupu.c: jobj");
             jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
                 o.translate.x = mem(fp::fmuls(direction, x))

@@ -60,10 +60,9 @@ pub fn post_frames(replay: &Replay) -> BTreeMap<i32, [Option<Fighter>; 8]> {
     out
 }
 
-/// A fighter in an ssbm-rs state trace: its address, player and whether it's a follower.
+/// A fighter in an ssbm-rs state trace: its address and whether it's a follower.
 pub struct TracedFighter {
     pub address: u32,
-    pub player: u8,
     pub follower: bool,
 }
 
@@ -97,11 +96,10 @@ pub fn traced_fighters(path: &Path) -> Option<Vec<TracedFighter>> {
             let len = u32le(&mut z)? as usize;
             let mut bytes = vec![0u8; len];
             z.read_exact(&mut bytes).ok()?;
-            // Fighter::player_idx at +0xC; is_sub_fighter, fp+0x221F bit 4.
+            // is_sub_fighter, fp+0x221F bit 4.
             if kind[0] == 4 && bytes.len() > 0x221F {
                 out.push(TracedFighter {
                     address,
-                    player: bytes[0xC],
                     follower: bytes[0x221F] & 0x08 != 0,
                 });
             }
@@ -110,12 +108,4 @@ pub fn traced_fighters(path: &Path) -> Option<Vec<TracedFighter>> {
             return Some(out);
         }
     }
-}
-
-/// The fighters' addresses in creation order (`vs_match::Settings::fighter_addresses`): each
-/// player's leader, then its follower, as the oracle takes them from a trace.
-pub fn fighter_addresses(path: &Path) -> Option<Vec<u32>> {
-    let mut f = traced_fighters(path)?;
-    f.sort_by_key(|t| (t.player, t.follower));
-    Some(f.into_iter().map(|t| t.address).collect())
 }

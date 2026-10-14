@@ -1042,11 +1042,12 @@ impl Importer<'_> {
         }
         let id = ShadowId(self.game.objs.shadows.alloc(Shadow::default()));
         self.maps.shadows.insert(a, id);
-        let mut objects = Vec::new();
+        let (mut objects, mut object_nodes) = (Vec::new(), Vec::new());
         let mut node = self.u32(a);
         while node != 0 {
             let j = self.u32(node + 4);
             objects.push(self.jobj(j));
+            object_nodes.push(node);
             node = self.u32(node);
         }
         let cam = self.u32(a + 4);
@@ -1083,6 +1084,9 @@ impl Importer<'_> {
             active: self.u32(a + 0x1C) != 0,
             intensity: self.u8(a + 0x20),
             image,
+            object_nodes,
+            imagedesc_addr: desc,
+            image_addr: if desc != 0 { self.u32(desc) } else { 0 },
         };
         id
     }
@@ -1111,7 +1115,8 @@ impl Importer<'_> {
         if !Self::is_jobj(self, a) {
             return JObjId(self.dangling("JObjId", a));
         }
-        let id = jobj::alloc(&mut self.game.objs.jobjs);
+        let id = jobj::alloc(&mut self.game.objs);
+        self.game.objs.jobjs.pool.set_addr(id.0, a);
         self.maps.jobjs.insert(a, id);
         let flags = self.u32(a + 0x14);
         let link = |s: &mut Self, at: u32| {
@@ -1168,6 +1173,9 @@ impl Importer<'_> {
             aobj,
             robj,
             id: self.data(self.u32(a + 0x84)),
+            class: crate::heap::class_of(self.u32(a), melee_sim::hsd::heap::Class::JObj),
+            scl_addr: scl,
+            envelopemtx_addr: env,
         };
         self.game.objs.jobjs[id] = j;
         id
@@ -1391,6 +1399,7 @@ impl Importer<'_> {
             view_mtx: self.mtx(a + 0x54),
             aobj,
             inv_view_mtx: (pm != 0).then(|| self.mtx(pm)),
+            inv_view_mtx_addr: pm,
         };
         id
     }
@@ -1489,7 +1498,13 @@ impl Importer<'_> {
             mat,
             pe,
             aobj,
+            heap: melee_sim::hsd::mobj::MObjHeap {
+                mat: self.u32(a + 0xC),
+                pe: self.u32(a + 0x10),
+                ..Default::default()
+            },
         };
+        self.game.objs.mobjs.pool.set_addr(id.0, a);
         id
     }
 
@@ -1533,6 +1548,16 @@ impl Importer<'_> {
                 .push("TObj palette (an HSD_Tlut copy)".into());
         }
         let tluttbl = self.tlut_table(a);
+        // The table's block and its palettes' copies, which the TObj frees.
+        let tluttbl_addr = self.u32(a + 0x6C);
+        let tluttbl_tluts: Vec<u32> = if tluttbl_addr == 0 {
+            Vec::new()
+        } else {
+            (0..)
+                .map(|i| self.u32(tluttbl_addr + 4 * i))
+                .take_while(|&t| t != 0)
+                .collect()
+        };
         let ao = self.u32(a + 0x64);
         let aobj = (ao != 0).then(|| self.aobj(ao));
         let tev = match self.u32(a + 0xA8) {
@@ -1589,8 +1614,13 @@ impl Importer<'_> {
             mtx: self.mtx(a + 0x74),
             coord: self.u32(a + 0xA4),
             tev,
+            tlut_addr: self.u32(a + 0x5C),
+            tev_addr: self.u32(a + 0xA8),
+            tluttbl_addr,
+            tluttbl_tluts,
         };
         self.game.objs.tobjs[id] = o;
+        self.game.objs.tobjs.pool.set_addr(id.0, a);
         id
     }
 
@@ -1598,6 +1628,7 @@ impl Importer<'_> {
         if let Some(&x) = self.maps.pobjs.get(&a) {
             return x;
         }
+        let class = crate::heap::class_of(self.u32(a), melee_sim::hsd::heap::Class::PObj);
         let id = PObjId(self.game.objs.pobjs.pool.alloc(PObj {
             next: None,
             verts: None,
@@ -1605,7 +1636,9 @@ impl Importer<'_> {
             n_display: 0,
             display: None,
             u: Binding::Skin(None),
+            class,
         }));
+        self.game.objs.pobjs.pool.set_addr(id.0, a);
         self.maps.pobjs.insert(a, id);
         let n = self.u32(a + 4);
         let next = (n != 0).then(|| self.pobj(n));
@@ -1624,6 +1657,8 @@ impl Importer<'_> {
                         env.push(Envelope {
                             jobj,
                             weight: self.f32(e + 8),
+                            addr: e,
+                            node: list,
                         });
                         e = self.u32(e);
                     }
@@ -1635,7 +1670,8 @@ impl Importer<'_> {
             pobj::SHAPEANIM => {
                 let set_flags = self.u16(u);
                 let nb_shape = self.u16(u + 2);
-                let blend = if set_flags & pobj::SHAPESET_ADDITIVE != 0 {
+                let additive = set_flags & pobj::SHAPESET_ADDITIVE != 0;
+                let blend = if additive {
                     let bp = self.u32(u + 0x1C);
                     (0..u32::from(nb_shape))
                         .map(|i| self.f32(bp + 4 * i))
@@ -1655,6 +1691,8 @@ impl Importer<'_> {
                     normal_idx_list: self.data(self.u32(u + 0x18)),
                     blend,
                     aobj: (ao != 0).then(|| self.aobj(ao)),
+                    addr: u,
+                    blend_addr: if additive { self.u32(u + 0x1C) } else { 0 },
                 })
             }
             _ => Binding::Skin((u != 0).then(|| self.jobj(u))),
@@ -1666,6 +1704,7 @@ impl Importer<'_> {
             n_display: self.u16(a + 0xE),
             display: self.data(self.u32(a + 0x10)),
             u: binding,
+            class,
         };
         id
     }
@@ -1757,7 +1796,7 @@ impl Importer<'_> {
                 id
             }
             _ => {
-                let id = jobj::alloc(&mut self.game.objs.jobjs).0;
+                let id = jobj::alloc(&mut self.game.objs).0;
                 self.maps.dangling_jobjs.insert(id, addr);
                 id
             }

@@ -89,7 +89,7 @@ pub(crate) fn import_screen(imp: &mut Importer, which: u8, ud: u32) -> UserData 
             ..Default::default()
         }
     };
-    imp.game.gr.stadium.screens[which as usize] = Some(screen);
+    imp.game.gr.stadium.screens[which as usize] = Some(Screen { addr: ud, ..screen });
     UserData::StadiumScreen(which)
 }
 

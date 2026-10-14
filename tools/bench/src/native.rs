@@ -5,8 +5,9 @@
 //! natively and headless on one core: from the replay's start through `vs_match`'s replay path
 //! (Slippi's playback codes, `Match::step_replay`), with the display pass, in the console's
 //! floating point (`FpMode::Hardware`, as the matches were made). The match's files are read
-//! from the disc `SSBM_DISC` before the clock starts; the fighters' addresses come from the
-//! match's start trace (`DIR/MATCH.start.trace`), as the oracle takes them. Each run is timed
+//! from the disc `SSBM_DISC` before the clock starts; the allocator model (`hsd::heap`) gives
+//! the fighters their addresses, as Slippi's playback lays the heap out (`MELEE_BENCH_HEAP=off`
+//! leaves the model off, to time what it costs). Each run is timed
 //! from the match's first tick to its last replay frame, and every frame's fighters (action
 //! state, position, facing, percent and stocks) are checked against the replay's post-frame
 //! updates afterwards. It reports the median frames per second over `N` runs (default 5) in
@@ -84,13 +85,10 @@ impl Bench {
             melee_slippi::Replay::parse(&bytes).map_err(|e| format!("{}: {e}", path.display()))?;
         let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
             .map_err(|e| format!("the replay's codes: {e}"))?;
-        let trace = dir.join(format!("{name}.start.trace"));
-        settings.fighter_addresses = crate::sync::fighter_addresses(&trace).ok_or_else(|| {
-            format!(
-                "the fighters' addresses come from ssbm-rs's trace of the match's start, {}                  (make-matches.sh writes it)",
-                trace.display()
-            )
-        })?;
+        if std::env::var("MELEE_BENCH_HEAP").is_ok_and(|v| v == "off") {
+            settings.heap = None;
+            settings.playback_heap = None;
+        }
         let want = post_frames(&original);
         let last = replay_last_frame(&original);
         Ok(Bench {

@@ -73,6 +73,8 @@ pub struct NameTags {
     /// `un_804D6D78` and `un_804D6D7C`: the names' text and its canvas.
     pub text: Option<TextId>,
     pub canvas: i32,
+    /// Where the original's heap put each marker's user data, a byte holding its slot.
+    pub user_data_addrs: [u32; 6],
 }
 
 impl Game {
@@ -295,6 +297,8 @@ impl Running<'_> {
             &mut crate::game::code::ParticleHooks,
             Some(j),
         );
+        // `NameTag_Create`'s user data, a byte of the heap.
+        g.hud.nametags.user_data_addrs[slot as usize] = crate::hsd::heap::mem_alloc(1);
         g.world
             .init_user_data(o, 0, UserData::NameTagSlot(slot as u8));
         g.world.setup_proc(o, CodeRef(PROC), 17);
@@ -363,6 +367,8 @@ impl Running<'_> {
         g.world.gobj_mut(o).gxlink_prios = 0x200;
         let canvas = self.add_canvas(2, Some(o), 14, 15, 0, 9, 6, 0);
         self.game.hud.nametags.canvas = canvas;
+        // `HSD_SisLib_803A62A0`'s `lbArchive_LoadArchive`.
+        self.disc_load("SdIntro.dat", crate::game::ft::data::MAIN_MEMORY);
         self.load_font(2, sd_intro, "SIS_IntroData");
         let t = self.create_text_buffer(2, canvas);
         self.game.hud.nametags.text = Some(t);

@@ -321,6 +321,8 @@ pub fn init(state: &mut CameraState, n: i32) {
     c.x39A_b2 = false;
     c.gobj = None;
     let n = n.max(0) as u32;
+    // The boxes' array, a block of the scene's heap.
+    crate::hsd::heap::mem_alloc(n * 0x6C);
     let b = &mut state.boxes;
     b.boxes = vec![CmSubject::default(); n as usize];
     for i in 0..n.saturating_sub(1) {

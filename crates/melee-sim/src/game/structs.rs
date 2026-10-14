@@ -6,7 +6,7 @@
 use melee_data::archive::DataRef;
 
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
-use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
+use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
@@ -1606,7 +1606,7 @@ pub struct CpuFighter {
     /// +0x44
     pub x44: Option<FighterId>,
     /// +0x48
-    pub x48: RawPtr,
+    pub x48: Option<FighterId>,
     /// +0x4c
     pub x4C: Option<ItemId>,
     /// +0x50
@@ -1724,7 +1724,7 @@ pub struct CpuFighter {
     /// +0x44c
     pub command_duration: u32,
     /// +0x450
-    pub csP: RawPtr,
+    pub csP: CpuCsP,
     /// +0x454
     pub buffer: [i8; 256],
     /// +0x554
@@ -1772,7 +1772,7 @@ impl Default for CpuFighter {
             x3C: 0.0,
             x40: 0.0,
             x44: None,
-            x48: Default::default(),
+            x48: None,
             x4C: None,
             x50: None,
             x54: Default::default(),
@@ -8299,6 +8299,62 @@ impl itPikachutJoltAir_ItemVars {
         self.pad_8.iter_mut().for_each(|v| v.mark_stale());
         self.xDE8.mark_stale();
         self.xDF4.mark_stale();
+    }
+}
+
+/// `itClimbersIce_ItemVars`, 0xc bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itClimbersIce_ItemVars {
+    /// +0x0
+    pub x0: Var<Option<GObjId>>,
+    /// +0x4
+    pub x4: Var<f32>,
+    /// +0x8 (bits 0..+1)
+    pub x8_b0: Var<bool>,
+}
+
+impl Default for itClimbersIce_ItemVars {
+    fn default() -> Self {
+        itClimbersIce_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8_b0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itClimbersIce_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8_b0.mark_stale();
+    }
+}
+
+/// `itClimbersBlizzard_ItemVars`, 0x8 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itClimbersBlizzard_ItemVars {
+    /// +0x0
+    pub x0: Var<f32>,
+    /// +0x4 (bits 0..+1)
+    pub flag0: Var<bool>,
+}
+
+impl Default for itClimbersBlizzard_ItemVars {
+    fn default() -> Self {
+        itClimbersBlizzard_ItemVars {
+            x0: Var::new(Default::default()),
+            flag0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itClimbersBlizzard_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.flag0.mark_stale();
     }
 }
 

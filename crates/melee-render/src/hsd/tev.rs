@@ -2,6 +2,8 @@
 //! (`sysdolphin/baselib/tev.c`). The unit's statics are [`TevState`], which the caller owns.
 //! `ChanUpdateFunc` (channel animation) and the allocator data aren't ported.
 
+pub use melee_sim::hsd::texp::tev::{HsdTevDesc, TevConf, index_to_tev_stage};
+
 use crate::gx::enums::*;
 use crate::gx::{Color, ColorS10, Gx};
 
@@ -10,46 +12,6 @@ pub const STATE_COLOR_CHANNEL: u32 = 0x4;
 pub const STATE_TEV_STAGE: u32 = 0x8;
 pub const STATE_TEV_REGISTER: u32 = 0x10;
 pub const STATE_TEX_COORD_GEN: u32 = 0x20;
-
-/// `HSD_TevConf`: a stage's operations and inputs.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct TevConf {
-    pub clr_op: u32,
-    pub clr_a: u32,
-    pub clr_b: u32,
-    pub clr_c: u32,
-    pub clr_d: u32,
-    pub clr_scale: u32,
-    pub clr_bias: u32,
-    pub clr_clamp: u8,
-    pub clr_out_reg: u32,
-    pub alpha_op: u32,
-    pub alpha_a: u32,
-    pub alpha_b: u32,
-    pub alpha_c: u32,
-    pub alpha_d: u32,
-    pub alpha_scale: u32,
-    pub alpha_bias: u32,
-    pub alpha_clamp: u8,
-    pub alpha_out_reg: u32,
-    pub mode: u32,
-    pub ras_swap: u32,
-    pub tex_swap: u32,
-    pub kcsel: u32,
-    pub kasel: u32,
-}
-
-/// `HSD_TevDesc`: one stage. With `flags` 0 the stage is a `GXSetTevOp` mode, read from
-/// `conf.clr_op` (the union's `tevop.tevmode`).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct HsdTevDesc {
-    pub flags: u32,
-    pub stage: u32,
-    pub coord: u32,
-    pub map: u32,
-    pub color: u32,
-    pub conf: TevConf,
-}
 
 /// `HSD_Chan`: a color channel's settings. The list it's linked in is a slice here; its
 /// animation isn't kept.
@@ -399,13 +361,6 @@ pub fn channel_to_num(chan: u32) -> i32 {
         0xFF => 0,
         c => panic!("channel {c}"),
     }
-}
-
-/// `HSD_Index2TevStage`.
-#[doc(alias = "HSD_Index2TevStage")]
-pub fn index_to_tev_stage(idx: usize) -> u32 {
-    assert!(idx < 16, "TEV stage index {idx}");
-    idx as u32
 }
 
 /// `HSD_TevStage2Index`.

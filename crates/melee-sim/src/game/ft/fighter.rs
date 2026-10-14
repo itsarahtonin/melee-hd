@@ -523,7 +523,7 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
 pub fn proc_cpu(g: &mut Running, gobj: GObjId) {
     let fp = g.game.fighter(gobj);
     if !fp.is_sleeping && g.is_cpu_controlled(fp) {
-        unported_call("ftCo_800B3900");
+        g.cpu_frame(gobj);
     }
 }
 

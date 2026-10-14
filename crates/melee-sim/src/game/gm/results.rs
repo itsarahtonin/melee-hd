@@ -58,7 +58,7 @@ impl Game {
     /// Fills in the results as they stand, `gm_80166378`: each player's slot, character,
     /// stocks, KOs, falls and statistics, then the scores, the ranks and the teams'.
     #[doc(alias = "gm_80166378")]
-    fn compile_results(&mut self) {
+    pub(crate) fn compile_results(&mut self) {
         let mut r = std::mem::take(&mut self.vs.state.x24C);
         for p in &mut r.player_standings {
             *p = Default::default();

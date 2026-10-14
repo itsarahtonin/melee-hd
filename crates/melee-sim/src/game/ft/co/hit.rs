@@ -470,6 +470,75 @@ impl Running<'_> {
         }
     }
 
+    /// Wobbling prevention's count (Slippi's `External/PreventWobbling` code at `0x8008F090`):
+    /// a held victim (`CapturePulledHi` to `CaptureDamageLw`) hit by a new attack of the
+    /// Ice Climber holding it (`x2222_b5`) or of an item that Ice Climber owns counts it
+    /// (`mv` 0x44, the attack's instance at 0x46); outside teams, the fourth sets it free:
+    /// the holder lets go (the victim breaking free while the last instance counted isn't
+    /// 0, the register the code hands `ftCo_800DA698` unset), and the holder's partner, if
+    /// awake and not tumbling, lets go too, on the ground, or in the air jumps out of the
+    /// hold (`ftCo_MS_CaptureJump`). True when it set the victim free.
+    fn wobble_count(&mut self, gobj: GObjId) -> bool {
+        let f = self.game.fighter_id(gobj);
+        let fp = &self.game.fighters[f.0];
+        if !(223..=228).contains(&fp.motion_id) {
+            return false;
+        }
+        let Some(holder) = fp.victim_gobj else {
+            return false;
+        };
+        if !self.game.fighter(holder).x2222_b5 {
+            return false;
+        }
+        let source = fp.dmg.x1868_source;
+        let instance = if source == Some(holder) {
+            self.game.fighter(holder).x2074.x2088
+        } else {
+            let Some(src) = source.filter(|&s| crate::game::it::is_item(self.game, Some(s))) else {
+                return false;
+            };
+            let ip = crate::game::it::item(self.game, src);
+            if ip.owner != Some(holder) {
+                return false;
+            }
+            ip.xDA8_short
+        };
+        let fp = &mut self.game.fighters[f.0];
+        let last = u16::from_be_bytes([fp.mv[0x46], fp.mv[0x47]]);
+        if instance == last {
+            return false;
+        }
+        fp.mv[0x46..0x48].copy_from_slice(&instance.to_be_bytes());
+        fp.mv[0x44] = fp.mv[0x44].wrapping_add(1);
+        if self.game.vs_is_teams() || self.game.fighters[f.0].mv[0x44] <= 3 {
+            return false;
+        }
+        self.enter_catch_cut(holder, last != 0);
+        let slot = i32::from(self.game.fighter(holder).player_idx);
+        let Some(partner) = self.game.player_entity_at(slot, 1) else {
+            return true;
+        };
+        let p = self.game.fighter(partner);
+        if p.x221F_b1 || p.x2219_b5 || p.x2070[1] >> 4 == 13 {
+            return true;
+        }
+        if p.ground_or_air == GA_GROUND {
+            self.enter_catch_cut(partner, false);
+        } else {
+            let pf = self.game.fighter_id(partner);
+            self.go_airborne(pf);
+            let c = self.common();
+            let (x374, x378) = (c.f32(0x374), c.f32(0x378));
+            let fp = &mut self.game.fighters[pf.0];
+            fp.self_vel.x = mem(fp::fmuls(reg(x374), fp::fneg(reg(fp.facing_dir))));
+            fp.self_vel.y = x378;
+            fp.set_mv_f32(0, 0.0);
+            // `ftCo_MS_CaptureJump`.
+            self.change_motion_state(partner, 230, 0, 0.0, 1.0, 0.0, None);
+        }
+        true
+    }
+
     /// A hit's reaction, `ftCo_8008E908`: off a ledge, its regrab cooldown; a sleep hit
     /// puts the fighter to sleep (not ported); else hitstun.
     #[doc(alias = "ftCo_8008E908")]
@@ -496,26 +565,22 @@ impl Running<'_> {
 
     /// [`Self::damage_no_reaction`], `wobble_site` at the copy wobbling prevention hooks
     /// (the Gecko code at `0x8008F090`, in a held fighter's hit): with the rule, a victim
-    /// held (`CapturePulledHi` to `CaptureDamageLw`) by Popo counts the hit (not ported).
+    /// held (`CapturePulledHi` to `CaptureDamageLw`) by Popo counts the hit
+    /// ([`Self::wobble_count`]), and on the fourth it breaks free, skipping the hold's
+    /// flinch.
     fn damage_no_reaction_at(&mut self, gobj: GObjId, wobble_site: bool) {
         let f = self.game.fighter_id(gobj);
         self.stamina_out(gobj);
-        if wobble_site && self.game.rules.prevent_wobbling {
-            let fp = &self.game.fighters[f.0];
-            if (223..=228).contains(&fp.motion_id)
-                && let Some(holder) = fp.victim_gobj
-                && self.game.fighter(holder).x2222_b5
-            {
-                unported_call("wobbling prevention's count of Popo's hits");
+        let broke_free = wobble_site && self.game.rules.prevent_wobbling && self.wobble_count(gobj);
+        if !broke_free {
+            let m = self.game.fighters[f.0].motion_id;
+            if m == ms::CAPTURE_WAIT_HI || m == ms::CAPTURE_DAMAGE_HI {
+                self.enter_capture_damage(gobj, true);
             }
-        }
-        let m = self.game.fighters[f.0].motion_id;
-        if m == ms::CAPTURE_WAIT_HI || m == ms::CAPTURE_DAMAGE_HI {
-            self.enter_capture_damage(gobj, true);
-        }
-        let m = self.game.fighters[f.0].motion_id;
-        if m == ms::CAPTURE_WAIT_LW || m == ms::CAPTURE_DAMAGE_LW {
-            self.enter_capture_damage(gobj, false);
+            let m = self.game.fighters[f.0].motion_id;
+            if m == ms::CAPTURE_WAIT_LW || m == ms::CAPTURE_DAMAGE_LW {
+                self.enter_capture_damage(gobj, false);
+            }
         }
         let c = self.common();
         let fp = &self.game.fighters[f.0];
@@ -656,7 +721,7 @@ impl Running<'_> {
     /// frame to break free.
     fn held_fast(&self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        fp.x221C_b0 || reg(fp.dmg.x1838_percentTemp) < reg(self.common().f32(0x3C0))
+        fp.x221C_b0 || reg(fp.dmg.x1838_percentTemp) < fp::frsp(f64::from(self.common().i32(0x3C0)))
     }
 
     /// A held fighter's hit, `ftCo_8008EC90` with `x221B_b5` clear. Held fast and not
@@ -711,8 +776,57 @@ impl Running<'_> {
             self.game.fighters[of.0].x1828 = 1;
         } else {
             self.damage_hooks(other);
-            unported_call("ftCo_800DE2F0 (a holder knocked back by its victim's escape)");
+            self.holder_knocked_back(other);
         }
+    }
+
+    /// The holder knocked back by its victim's escape, `ftCo_800DE2F0`: a hit from
+    /// `ftCommonData`'s description (`x380`, `lbColl_80008D30`) with no attacker
+    /// (`ftColl_800788D4`), from its `TransN2` joint, its knockback and damage taken, then
+    /// hitstun.
+    // Ports `ftCo_800DE2F0`; aliased once a check reaches it.
+    fn holder_knocked_back(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let desc = self.common().at(0x380);
+        let d = |o: u32| self.data.u32(desc.at(o));
+        let hit = super::super::super::structs::HitCapsule {
+            state: d(0) as i32,
+            damage: mem(fp::frsp(f64::from(d(4)))),
+            kb_angle: d(8) as i32,
+            x24: d(0xC),
+            x28: d(0x10),
+            x2C: d(0x14),
+            element: d(0x18),
+            sfx_severity: d(0x1C) as i32,
+            sfx_kind: d(0x20) as i32,
+            unk_count: d(4),
+            ..Default::default()
+        };
+        self.clear_attacker(gobj);
+        let j = self.part_joint(gobj, 52);
+        let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
+        let fp = &self.game.fighters[f.0];
+        let defense = self.game.player_defense_ratio(i32::from(fp.player_idx));
+        let ratio = self.game.vs_damage_ratio();
+        let kb = self.knockback_of(
+            f,
+            &hit,
+            hit.unk_count,
+            ratio,
+            1.0,
+            defense,
+            fp.co_attrs.weight,
+        );
+        let fp = &mut self.game.fighters[f.0];
+        fp.dmg.kb_applied = mem(kb);
+        fp.dmg.x1848_kb_angle = hit.kb_angle;
+        fp.dmg.facing_dir_1 = fp.facing_dir;
+        fp.dmg.x184c_damaged_hurtbox = 1;
+        fp.dmg.x1854_collpos = pos;
+        fp.dmg.x1860_element = hit.element;
+        self.take_damage_coins(f, reg(hit.damage));
+        self.calc_knockback(f);
+        self.damage_reaction(gobj, 0.0);
     }
 
     /// A holder's hit, `ftCo_8008EC90` with `x221B_b5` set. Too light to react, it keeps

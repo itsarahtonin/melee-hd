@@ -294,14 +294,25 @@ impl Running<'_> {
 
     /// A fighter file's synchronous disc load (`lbFile_8001668C`), where the original loads
     /// it, on the audio timeline that times it: `dest` its ARAM address, or [`MAIN_MEMORY`]
-    /// for main memory, whose heap isn't modeled. Nothing without a timeline (a state
-    /// imported from a single call).
-    pub fn disc_load(&mut self, name: &str, dest: u32) {
-        if self.game.audio.clock.is_none() {
-            return;
+    /// for main memory, where the allocator model gives it its blocks. Not timed without a
+    /// timeline (a state imported from a single call). The `HSD_Archive`'s address for a load
+    /// into main memory, else 0.
+    pub fn disc_load(&mut self, name: &str, dest: u32) -> u32 {
+        // Neither timed nor modeled (a state imported from a single call): nothing to do.
+        if self.game.audio.clock.is_none() && crate::hsd::heap::with(|_| ()).is_none() {
+            return 0;
         }
         let (entrynum, len) = self.game.ft.data.files.entry(name);
-        self.game.audio.load_file(self.data, entrynum, dest, len);
+        // `lbArchive`'s loads into the scene's heap: the file's bytes, then its archive.
+        let archive = if dest == MAIN_MEMORY {
+            crate::hsd::heap::with(|h| h.archive_alloc(len).1).unwrap_or(0)
+        } else {
+            0
+        };
+        if self.game.audio.clock.is_some() {
+            self.game.audio.load_file(self.data, entrynum, dest, len);
+        }
+        archive
     }
 }
 

@@ -15,6 +15,36 @@ use crate::fpu::{copy, mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::math;
 
+/// A computer player's stick axis as a float (`convertStickAxis`): 127 a full push one
+/// way, 128 the other.
+// Ports `ftCo_GetCpuLStickX`; aliased once a check reaches it.
+// Ports `ftCo_GetCpuLStickY`; aliased once a check reaches it.
+// Ports `ftCo_GetCpuCStickX`; aliased once a check reaches it.
+// Ports `ftCo_GetCpuCStickY`; aliased once a check reaches it.
+fn cpu_axis(v: i8) -> f64 {
+    let x = gekko_fp::frsp(f64::from(v));
+    let r = if v > 0 {
+        gekko_fp::fdivs(x, 127.0)
+    } else {
+        gekko_fp::fdivs(x, 128.0)
+    };
+    if r > 1.0 {
+        1.0
+    } else if r < gekko_fp::fneg(1.0) {
+        gekko_fp::fneg(1.0)
+    } else {
+        r
+    }
+}
+
+/// A computer player's trigger as a float, at most 1.
+// Ports `ftCo_GetCpuLTrigger`; aliased once a check reaches it.
+// Ports `ftCo_GetCpuRTrigger`; aliased once a check reaches it.
+fn cpu_trigger(v: u8) -> f64 {
+    let r = gekko_fp::frsp(gekko_fp::fdiv(f64::from(v), 255.0));
+    if r > 1.0 { 1.0 } else { r }
+}
+
 /// `HSD_PAD_A`, `HSD_PAD_B`, `HSD_PAD_XY`, `HSD_PAD_L`|`HSD_PAD_R`, `HSD_PAD_Z`,
 /// `HSD_PAD_LR` (any shoulder) and the D-pad's up and down.
 const PAD_A: u32 = 1 << 8;
@@ -128,21 +158,34 @@ impl Running<'_> {
             i.triggers[1] = copy(i.triggers[0]);
             i.held_buttons[1] = i.held_buttons[0];
         }
-        if cpu {
-            unported_call("ftCo_GetCpuLStickX");
-        }
         let i = &mut fp.input;
-        i.lstick[0].x = copy(pad.nml_stick_x);
-        i.lstick[0].y = copy(pad.nml_stick_y);
-        if db_level < DB_DEBUG_ROM && !one_player {
-            i.cstick[0].x = copy(pad.nml_sub_stick_x);
-            i.cstick[0].y = copy(pad.nml_sub_stick_y);
+        if cpu {
+            // `ftCo_GetCpuLStickX` and its siblings: the computer player's controller.
+            let c = &fp.cpu;
+            i.lstick[0].x = mem(cpu_axis(c.lstick.x));
+            i.lstick[0].y = mem(cpu_axis(c.lstick.y));
+            if db_level < DB_DEBUG_ROM && !one_player {
+                i.cstick[0].x = mem(cpu_axis(c.cstick.x));
+                i.cstick[0].y = mem(cpu_axis(c.cstick.y));
+            } else {
+                i.cstick[0].x = 0.0;
+                i.cstick[0].y = 0.0;
+            }
+            let (l, r) = (cpu_trigger(c.ltrigger), cpu_trigger(c.rtrigger));
+            i.triggers[0] = mem(if l > r { l } else { r });
         } else {
-            i.cstick[0].x = 0.0;
-            i.cstick[0].y = 0.0;
+            i.lstick[0].x = copy(pad.nml_stick_x);
+            i.lstick[0].y = copy(pad.nml_stick_y);
+            if db_level < DB_DEBUG_ROM && !one_player {
+                i.cstick[0].x = copy(pad.nml_sub_stick_x);
+                i.cstick[0].y = copy(pad.nml_sub_stick_y);
+            } else {
+                i.cstick[0].x = 0.0;
+                i.cstick[0].y = 0.0;
+            }
+            let (r, l) = (reg(pad.nml_analog_r), reg(pad.nml_analog_l));
+            i.triggers[0] = mem(if l > r { l } else { r });
         }
-        let (r, l) = (reg(pad.nml_analog_r), reg(pad.nml_analog_l));
-        i.triggers[0] = mem(if l > r { l } else { r });
         if abs(reg(i.lstick[0].x)) <= dz_x {
             i.lstick[0].x = 0.0;
         }
@@ -158,10 +201,12 @@ impl Running<'_> {
         if reg(i.triggers[0]) <= dz_trigger {
             i.triggers[0] = 0.0;
         }
-        i.held_buttons[0] = pad.button;
+        // `ftCo_GetCpuButtons`.
+        i.held_buttons[0] = if cpu { fp.cpu.buttons } else { pad.button };
+        let i = &mut fp.input;
         if single_button {
             i.triggers[0] = 0.0;
-            i.held_buttons[0] &= PAD_A;
+            i.held_buttons[0] &= if cpu { PAD_A | PAD_XY } else { PAD_A };
         } else {
             if i.held_buttons[0] & PAD_L_R != 0 {
                 i.held_buttons[0] |= PAD_LR;

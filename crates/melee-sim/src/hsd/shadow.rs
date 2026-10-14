@@ -12,6 +12,8 @@ use super::jobj::{self, JObjId};
 use super::mobj;
 use super::pool::Pool;
 use super::tobj::{self, TObjId};
+use crate::hsd::heap::Kind;
+use crate::hsd::pool::kind as pool_kind;
 use crate::mtx::Mtx34;
 use crate::vec::Vec3;
 
@@ -35,6 +37,11 @@ pub struct Shadow {
     /// Its texture's image (`texture->imagedesc`): format, size, and whether its buffer is
     /// allocated (`image_ptr`).
     pub image: ShadowImage,
+    /// Where the original's allocators put the list nodes holding `objects` (in their order),
+    /// the texture's image descriptor and its buffer (`docs/engine.md`).
+    pub object_nodes: Vec<u32>,
+    pub imagedesc_addr: u32,
+    pub image_addr: u32,
 }
 
 /// A shadow texture's `HSD_ImageDesc`.
@@ -47,7 +54,7 @@ pub struct ShadowImage {
 }
 
 /// The shadow pool.
-pub type Shadows = Pool<Shadow>;
+pub type Shadows = Pool<Shadow, { pool_kind(Kind::Shadow) }>;
 
 /// A shadow's texture (the inline `makeShadowTObj`).
 fn make_texture(objs: &mut Objects) -> TObjId {
@@ -66,6 +73,8 @@ pub fn alloc(objs: &mut Objects) -> ShadowId {
     let s = ShadowId(objs.shadows.alloc(Shadow::default()));
     let camera = cobj::alloc(objs);
     let texture = make_texture(objs);
+    // `HSD_ImageDescAlloc`.
+    let imagedesc_addr = super::heap::piece_alloc(0x18);
     objs.tobjs[texture].imagedesc = Some(tobj::ImageRef::Shadow(s));
     objs.shadows[s.0] = Shadow {
         objects: Vec::new(),
@@ -83,6 +92,9 @@ pub fn alloc(objs: &mut Objects) -> ShadowId {
             height: 256,
             allocated: false,
         },
+        object_nodes: Vec::new(),
+        imagedesc_addr,
+        image_addr: 0,
     };
     cobj::set_viewportfx4(&mut objs.cobjs, Some(camera), [0.0, 256.0, 0.0, 256.0]);
     cobj::set_scissor(&mut objs.cobjs, Some(camera), [0, 256, 0, 256]);
@@ -96,6 +108,12 @@ pub fn set_size(objs: &mut Objects, s: ShadowId, width: u16, height: u16) {
     let sh = &mut objs.shadows[s.0];
     let img = &mut sh.image;
     if !img.allocated || img.width != width || img.height != height {
+        if img.allocated {
+            super::heap::mem_free(sh.image_addr);
+        }
+        let size = super::heap::tex_buffer_size(u32::from(width), u32::from(height), 0);
+        sh.image_addr = super::heap::mem_alloc(size);
+        let img = &mut sh.image;
         img.allocated = true;
         img.width = width;
         img.height = height;
@@ -115,6 +133,9 @@ pub fn add_object(objs: &mut Objects, s: Option<ShadowId>, j: Option<JObjId>) {
         return;
     }
     objs.shadows[s.0].objects.insert(0, j);
+    // `HSD_SListAllocAndPrepend`.
+    let node = super::heap::obj_alloc(Kind::SList);
+    objs.shadows[s.0].object_nodes.insert(0, node);
     jobj::ref_(&mut objs.jobjs, Some(j));
 }
 
@@ -150,12 +171,16 @@ pub fn delete_object(objs: &mut Objects, s: Option<ShadowId>, j: Option<JObjId>)
             if let Some(i) = objs.shadows[s.0].objects.iter().position(|&o| o == j) {
                 jobj::unref(objs, Some(j));
                 objs.shadows[s.0].objects.remove(i);
+                let node = objs.shadows[s.0].object_nodes.remove(i);
+                super::heap::obj_free(Kind::SList, node);
             }
         }
         None => {
             while let Some(&o) = objs.shadows[s.0].objects.first() {
                 jobj::unref(objs, Some(o));
                 objs.shadows[s.0].objects.remove(0);
+                let node = objs.shadows[s.0].object_nodes.remove(0);
+                super::heap::obj_free(Kind::SList, node);
             }
         }
     }

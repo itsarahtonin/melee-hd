@@ -12,7 +12,9 @@ use super::super::state::{Game, OBJ_CAMERA, Obj};
 use crate::fpu::reg;
 use crate::hsd::cobj::{self, CObjId, StaticDesc};
 use crate::hsd::gobj::GObjId;
+use crate::hsd::heap::Kind;
 use crate::hsd::pool::Pool;
+use crate::hsd::pool::kind as pool_kind;
 use crate::vec::Vec3;
 
 /// The pool's size.
@@ -115,7 +117,7 @@ pub struct DevTexts {
     /// `devtext_gobj`: the GObj that draws the screens.
     pub gobj: Option<GObjId>,
     /// `un_804A2688`: the debug menus' pool, once a scene has set it up.
-    pub menus: Option<Pool<DebugMenu>>,
+    pub menus: Option<Pool<DebugMenu, { pool_kind(Kind::DebugMenu) }>>,
 }
 
 /// What drawing a screen asks of the presentation layer, its floats as the registers

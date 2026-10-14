@@ -152,6 +152,40 @@ pub struct MObj {
     pub mat: Option<Material>,
     pub pe: Option<PeDesc>,
     pub aobj: Option<AObjId>,
+    /// Where the original's allocators put its parts (`docs/engine.md`).
+    pub heap: MObjHeap,
+}
+
+/// Where an MObj's parts are in the original: its material and pixel engine settings, and the
+/// pieces its compiled TEV keeps (the stages, last made first, and the constants the stages
+/// read, in their list's order).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MObjHeap {
+    pub mat: u32,
+    pub pe: u32,
+    pub tevdesc: [u32; 16],
+    pub n_tevdesc: u8,
+    pub cnsts: [u32; 16],
+    pub n_cnsts: u8,
+}
+
+impl MObjClass {
+    /// The allocator model's class (`docs/engine.md`).
+    pub fn heap(self) -> super::heap::Class {
+        match self {
+            MObjClass::Hsd => super::heap::Class::MObj,
+            MObjClass::Ground => super::heap::Class::GrMObj,
+            MObjClass::Item => super::heap::Class::ItMObj,
+            MObjClass::Fighter => super::heap::Class::FtMObj,
+        }
+    }
+}
+
+/// Gives a material another class, `hsdChangeClass`.
+#[doc(alias = "hsdChangeClass")]
+pub fn change_class(mobjs: &mut MObjs, m: MObjId, class: MObjClass) {
+    super::heap::change_class(mobjs[m].class.heap(), class.heap());
+    mobjs[m].class = class;
 }
 
 impl MObj {
@@ -170,6 +204,9 @@ pub struct MObjs {
     pub toon: Option<TObjId>,
     /// Shadow textures put after shadowed materials' textures (`tobj_shadows`).
     pub shadows: Option<TObjId>,
+    /// Room the TEV compiles keep (`hsd::texp_heap`).
+    #[clone_from(keep)]
+    pub texp_scratch: super::texp_heap::Scratch,
 }
 
 impl Index<MObjId> for MObjs {
@@ -300,8 +337,17 @@ pub fn anim(objs: &mut Objects, data: &Archives, m: Option<MObjId>) {
 /// `hsdAllocMemPiece`, as a TObj's do (see `tobj::alloc`).
 #[doc(alias = "HSD_MObjAlloc")]
 pub fn alloc(mobjs: &mut MObjs) -> MObjId {
-    MObjId(mobjs.pool.alloc(MObj::default()))
+    let m = mobjs.pool.alloc(MObj::default());
+    mobjs
+        .pool
+        .set_addr(m, super::heap::class_alloc(super::heap::Class::MObj));
+    MObjId(m)
 }
+
+/// `sizeof(HSD_Material)` and `sizeof(HSD_PEDesc)`, the pieces an MObj's material and pixel
+/// engine settings take.
+const MATERIAL_SIZE: u32 = 0x14;
+const PE_SIZE: u32 = 0xC;
 
 /// Builds an MObj and its textures from a descriptor and assigns the textures' resources,
 /// `HSD_MObjLoadDesc`.
@@ -325,8 +371,10 @@ pub fn load_desc(objs: &mut Objects, data: &Archives, desc: Option<DataRef>) -> 
     o.rendermode = data.u32(d.at(4)) | patched | RENDER_TOON;
     o.tobj = tobj;
     o.mat = Some(mat);
+    o.heap.mat = super::heap::piece_alloc(MATERIAL_SIZE);
     if let Some(pe) = data.ptr(d.at(0x14)) {
         o.pe = Some(PeDesc::read(data, pe));
+        o.heap.pe = super::heap::piece_alloc(PE_SIZE);
     }
     o.aobj = None;
     compile_tev(objs, Some(m));
@@ -391,7 +439,10 @@ pub fn compile_tev(objs: &mut Objects, m: Option<MObjId>) {
     let (mobjs, tobjs) = (&objs.mobjs, &mut objs.tobjs);
     let (first, tail) = borrow_chain(mobjs, tobjs, m, mobjs[m].rendermode);
     tobj::assign_resources(tobjs, first);
-    return_chain(tobjs, tail);
+    if super::heap::with(|_| ()).is_some() {
+        super::texp_heap::compile(objs, m, first);
+    }
+    return_chain(&mut objs.tobjs, tail);
 }
 
 /// The state `HSD_MObjSetup` changes as the display pass sets a material up: its textures,
@@ -452,7 +503,19 @@ pub fn tobj(mobjs: &MObjs, m: Option<MObjId>) -> Option<TObjId> {
 pub fn remove(objs: &mut Objects, m: Option<MObjId>) {
     let Some(m) = m else { return };
     jobj::remove_aobj(objs, objs.mobjs[m].aobj);
+    let h = objs.mobjs[m].heap;
+    if objs.mobjs[m].mat.is_some() {
+        super::heap::piece_free(h.mat, MATERIAL_SIZE);
+    }
     tobj::remove_all(objs, objs.mobjs[m].tobj);
+    // `HSD_TExpFreeTevDesc` and `HSD_TExpFreeList`: the stages from the last made, then the
+    // constants in their list's order.
+    super::texp_heap::free_kept(objs, m);
+    if objs.mobjs[m].pe.is_some() {
+        super::heap::piece_free(h.pe, PE_SIZE);
+    }
+    let class = objs.mobjs[m].class.heap();
+    super::heap::class_free(class, objs.mobjs.pool.addr(m.0));
     objs.mobjs.pool.free(m.0);
 }
 
