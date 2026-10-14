@@ -9,9 +9,9 @@
 //! the fighters their addresses, as Slippi's playback lays the heap out (`MELEE_BENCH_HEAP=off`
 //! leaves the model off, to time what it costs). Each run is timed
 //! from the match's first tick to its last replay frame, and every frame's fighters (action
-//! state, position, facing, percent and stocks) are checked against the replay's post-frame
-//! updates afterwards. It reports the median frames per second over `N` runs (default 5) in
-//! `melee-bench dolphin`'s table. A run that stops before the match's last frame (code no port
+//! state, position, facing, percent and stocks), sampled before its display pass, are checked
+//! against the replay's post-frame updates afterwards. It reports the median frames per second
+//! over `N` runs (default 5) in `melee-bench dolphin`'s table. A run that stops before the match's last frame (code no port
 //! covers yet) is no result: the table says how far it got.
 //!
 //! `melee-bench snapshot-match [--dir DIR] [--every TICKS] [MATCH]` plays the match (default
@@ -185,13 +185,22 @@ fn run_once(b: &Bench, files: &mut Files) -> Run {
     let mut stopped = None;
     let t = Instant::now();
     loop {
-        match catch_unwind(AssertUnwindSafe(|| m.step_replay(&mut device))) {
-            Ok(f) => {
+        // Sampled before the frame's display pass, where Slippi's post-frame updates read the
+        // fighters: the pass moves a fighter KO'd toward the screen (`ftDrawCommon_80080E18`).
+        let step = catch_unwind(AssertUnwindSafe(|| {
+            let (mut f, render) = m.step_replay_tick(&mut device);
+            let now = frame(&m);
+            if samples.last().is_none_or(|s| s.0 != now) {
+                samples.push((now, fighters(&m.game)));
+            }
+            if render {
+                f.draws = m.render();
+            }
+            (f, now)
+        }));
+        match step {
+            Ok((f, now)) => {
                 ticks += 1;
-                let now = frame(&m);
-                if samples.last().is_none_or(|s| s.0 != now) {
-                    samples.push((now, fighters(&m.game)));
-                }
                 let ended = f.ended;
                 m.recycle(f);
                 if now >= b.last {
