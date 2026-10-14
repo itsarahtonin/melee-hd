@@ -29,6 +29,8 @@ pub mod nesspkthundertrail;
 pub mod nessyoyo;
 pub mod peachexplode;
 pub mod peachparasol;
+pub mod peachtoad;
+pub mod peachtoadspore;
 pub mod peachturnip;
 pub mod pikachuthunder;
 pub mod pikachutjoltair;
@@ -95,6 +97,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || peachexplode::run_event(r, gobj, addr)
         || peachparasol::run_event(r, gobj, addr)
         || peachturnip::run_event(r, gobj, addr)
+        || peachtoad::run_event(r, gobj, addr)
+        || peachtoadspore::run_event(r, gobj, addr)
         || drmariopill::run_event(r, gobj, addr)
         || pikachuthunder::run_event(r, gobj, addr)
         || pikachutjoltground::run_event(r, gobj, addr)
@@ -146,6 +150,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| peachexplode::run_pred(r, gobj, addr))
         .or_else(|| peachparasol::run_pred(r, gobj, addr))
         .or_else(|| peachturnip::run_pred(r, gobj, addr))
+        .or_else(|| peachtoad::run_pred(r, gobj, addr))
+        .or_else(|| peachtoadspore::run_pred(r, gobj, addr))
         .or_else(|| drmariopill::run_pred(r, gobj, addr))
         .or_else(|| pikachuthunder::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
