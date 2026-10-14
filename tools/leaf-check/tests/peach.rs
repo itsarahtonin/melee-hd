@@ -8,9 +8,8 @@
 //! states of the same moves.
 //!
 //! The helpers that take more than the GObj, or return what the check can't compare, run only
-//! inside the callers that call them ([`HELPERS`]). What isn't ported yet (the neutral
-//! special, Toad and its spores, picking an item up from the ground, heavy items' throws, the
-//! parasol's tumble) isn't run ([`unported`]). The crowd and the player
+//! inside the callers that call them ([`HELPERS`]). What isn't ported yet (picking an item up
+//! from the ground, heavy items' throws, the parasol's tumble) isn't run ([`unported`]). The crowd and the player
 //! library's statistics stand in on both sides ([`stubs`]).
 //!
 //! The captures are game memory, kept out of the repository in `PEACH_CALLS` (default below),
@@ -25,6 +24,13 @@
 //!   CAPTURE_FUNCS=@$D/peach-funcs.txt LOCKSTEP_DONE=$D/done-nonpeach.txt \
 //!   ssbm-run "$SSBM_DISC" --replay Game_20260129T133041.slp --fields 100000 --port all --lockstep
 //! ```
+//!
+//! That replay's one Toad meets no attack, so Toad's counter and its spores come from a ranked
+//! Slippi 3.16 replay of Peach against Jigglypuff on Battlefield (`erickfm/melee-ranked-replays`'
+//! `PEACH_diamond-diamond_a5`, `diamond-diamond-0d59ba0a849753b895df8410`: four counters, 13
+//! spores), captured the same way with `CAPTURE_EVERY=10` into `hf-peach-puff-bf-0d59ba0a`, with
+//! `toad-funcs.txt` (the three Toad units' lines of `peach-funcs.txt`) for `CAPTURE_FUNCS` and
+//! `done-nontoad.txt` (every other function) for `LOCKSTEP_DONE`.
 
 use std::collections::BTreeMap;
 
@@ -36,7 +42,9 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
-use melee_sim::game::it::kinds::{peachexplode, peachparasol, peachturnip};
+use melee_sim::game::it::kinds::{
+    peachexplode, peachparasol, peachtoad, peachtoadspore, peachturnip,
+};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::capture::Call;
@@ -110,9 +118,8 @@ const STARTS: [u32; 20] = [
     0x802B_E214, // itpeachtoadspore
 ];
 
-/// The units not ported yet: the parasol's tumble, the neutral special (but Toad's hooks on
-/// her hit), Toad and its spores.
-const UNPORTED_UNITS: [usize; 4] = [5, 14, 18, 19];
+/// The units not ported yet: the parasol's tumble.
+const UNPORTED_UNITS: [usize; 1] = [5];
 
 /// Which unit a function is in, by its address.
 fn unit(addr: u32) -> usize {
@@ -158,10 +165,9 @@ const UNPORTED: &[&str] = &[
     "ftCo_80096498",
 ];
 
-/// Whether a function isn't ported (Toad's hooks on her hit are, in an unported unit).
+/// Whether a function isn't ported.
 fn unported(name: &str, addr: u32) -> bool {
-    let toad_hooks = matches!(name, "ftPe_SpecialN_OnDeath2" | "ftPe_SpecialN_DoDeath2");
-    (UNPORTED_UNITS.contains(&unit(addr)) && !toad_hooks) || UNPORTED.contains(&name)
+    UNPORTED_UNITS.contains(&unit(addr)) || UNPORTED.contains(&name)
 }
 
 /// Helpers that take what the check can't give, or return what it can't compare (a fighter
@@ -178,6 +184,9 @@ const HELPERS: &[&str] = &[
     "it_802BDA64",
     "it_802BD158",
     "spawnVeg",
+    "it_802BDE18",
+    "it_802BE214",
+    "it_802BE2E8",
 ];
 
 /// Functions not run here: fighter creation's and death's (the oracle checks them), and the
@@ -212,6 +221,8 @@ const TAKES_MORE: &[&str] = &[
     "itPeachParasol_Logic60_EvtUnk",
     "itPeachTurnip_Logic56_EvtUnk",
     "itPeachExplode_Logic55_EvtUnk",
+    "itPeachToad_Logic91_EvtUnk",
+    "itPeachToadSpore_Logic92_EvtUnk",
     "it_802BD248",
 ];
 
@@ -341,6 +352,31 @@ fn run_peach(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             item(g);
             peachturnip::evt_unk(g, gobj, other());
         }
+        "ftPe_SpecialN_IsActive" => return b(g.peach_toad_done(gobj)),
+        "it_802BDF40" => {
+            item(g);
+            peachtoad::remove(g, gobj);
+        }
+        "it_802BDFA0" => {
+            item(g);
+            peachtoad::hitlag_start(g, gobj);
+        }
+        "it_802BDFC0" => {
+            item(g);
+            peachtoad::hitlag_end(g, gobj);
+        }
+        "it_802BE100" => {
+            item(g);
+            peachtoad::hit(g, gobj);
+        }
+        "itPeachToad_Logic91_EvtUnk" => {
+            item(g);
+            peachtoad::evt_unk(g, gobj, other());
+        }
+        "itPeachToadSpore_Logic92_EvtUnk" => {
+            item(g);
+            peachtoadspore::evt_unk(g, gobj, other());
+        }
         _ => return run_callback(g, gobj, a),
     }
     Ret::Nothing
@@ -412,6 +448,10 @@ fn vary(call: &mut Call, i: usize) {
     for k in 0..4u32 {
         poke_u32(call, fp + 0x2200 + 4 * k, (i as u32 >> k) & 1);
     }
+    // Whether her air Toad has lifted her this jump (`specialairn_used`), Peach's only.
+    if peek_u32(call, fp + 0x4) == 9 {
+        poke_u32(call, fp + 0x2240, (i as u32 / 11) & 1);
+    }
     // The script's timer (`cmd_timer`), a fraction of a frame past its last command at times,
     // which places a throw's release between frames.
     poke_f32(call, fp + 0x2214, [0.0, -0.25, -0.5, -0.75][(i / 7) % 4]);
@@ -431,6 +471,8 @@ const FORGETS: &[&str] = &[
     "itPeachParasol_Logic60_EvtUnk",
     "itPeachTurnip_Logic56_EvtUnk",
     "itPeachExplode_Logic55_EvtUnk",
+    "itPeachToad_Logic91_EvtUnk",
+    "itPeachToadSpore_Logic92_EvtUnk",
 ];
 
 /// Clean comparisons by function run.

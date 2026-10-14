@@ -112,7 +112,6 @@ impl Running<'_> {
     /// The counter's spore (`onHitAccessory4`, with `doHitAccessory4`): released from her
     /// hand, a little above it and on the stage's plane.
     #[doc(alias = "onHitAccessory4")]
-    #[doc(alias = "doHitAccessory4")]
     pub fn peach_toad_on_hit_accessory4(&mut self, gobj: GObjId) {
         let hand = self.bone_joint(gobj, PART_TOAD);
         let mut pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, hand, None);
