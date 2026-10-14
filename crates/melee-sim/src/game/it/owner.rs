@@ -7,7 +7,6 @@ use gekko_fp as fp;
 use melee_data::archive::Archives;
 
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::handles::FighterId;
 use crate::game::state::{Game, Running, UserData};
 use crate::game::structs::{_itECB, Fighter};

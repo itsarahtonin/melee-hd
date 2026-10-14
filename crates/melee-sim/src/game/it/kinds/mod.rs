@@ -27,6 +27,7 @@ pub mod nesspkflashexplode;
 pub mod nesspkthunder;
 pub mod nesspkthundertrail;
 pub mod nessyoyo;
+pub mod peachexplode;
 pub mod peachparasol;
 pub mod peachturnip;
 pub mod pikachuthunder;
@@ -91,6 +92,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || luigifireball::run_event(r, gobj, addr)
         || mariofireball::run_event(r, gobj, addr)
         || mariocape::run_event(r, gobj, addr)
+        || peachexplode::run_event(r, gobj, addr)
         || peachparasol::run_event(r, gobj, addr)
         || peachturnip::run_event(r, gobj, addr)
         || drmariopill::run_event(r, gobj, addr)
@@ -141,6 +143,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| luigifireball::run_pred(r, gobj, addr))
         .or_else(|| mariofireball::run_pred(r, gobj, addr))
         .or_else(|| mariocape::run_pred(r, gobj, addr))
+        .or_else(|| peachexplode::run_pred(r, gobj, addr))
         .or_else(|| peachparasol::run_pred(r, gobj, addr))
         .or_else(|| peachturnip::run_pred(r, gobj, addr))
         .or_else(|| drmariopill::run_pred(r, gobj, addr))

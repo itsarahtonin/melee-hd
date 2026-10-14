@@ -8,9 +8,9 @@
 //! states of the same moves.
 //!
 //! The helpers that take more than the GObj, or return what the check can't compare, run only
-//! inside the callers that call them ([`HELPERS`]). What isn't ported yet (the side and
-//! neutral specials, Toad and the explosion, picking an item up from the ground, heavy items'
-//! throws, the parasol's tumble) isn't run ([`unported`]). The crowd and the player
+//! inside the callers that call them ([`HELPERS`]). What isn't ported yet (the neutral
+//! special, Toad and its spores, picking an item up from the ground, heavy items' throws, the
+//! parasol's tumble) isn't run ([`unported`]). The crowd and the player
 //! library's statistics stand in on both sides ([`stubs`]).
 //!
 //! The captures are game memory, kept out of the repository in `PEACH_CALLS` (default below),
@@ -36,7 +36,7 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
-use melee_sim::game::it::kinds::{peachparasol, peachturnip};
+use melee_sim::game::it::kinds::{peachexplode, peachparasol, peachturnip};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::capture::Call;
@@ -110,9 +110,9 @@ const STARTS: [u32; 20] = [
     0x802B_E214, // itpeachtoadspore
 ];
 
-/// The units not ported yet: the parasol's tumble, the side and neutral specials (but Toad's
-/// hooks on her hit), the explosion, Toad and its spores.
-const UNPORTED_UNITS: [usize; 6] = [5, 11, 14, 15, 18, 19];
+/// The units not ported yet: the parasol's tumble, the neutral special (but Toad's hooks on
+/// her hit), Toad and its spores.
+const UNPORTED_UNITS: [usize; 4] = [5, 14, 18, 19];
 
 /// Which unit a function is in, by its address.
 fn unit(addr: u32) -> usize {
@@ -176,6 +176,7 @@ const HELPERS: &[&str] = &[
     "ftCo_ItemParasolGetFallMotionId",
     "it_802BD4AC",
     "it_802BDA64",
+    "it_802BD158",
     "spawnVeg",
 ];
 
@@ -210,6 +211,8 @@ const TAKES_MORE: &[&str] = &[
     "it_802BDDB4",
     "itPeachParasol_Logic60_EvtUnk",
     "itPeachTurnip_Logic56_EvtUnk",
+    "itPeachExplode_Logic55_EvtUnk",
+    "it_802BD248",
 ];
 
 /// Runs the function `call.addr` on its GObj, with the arguments it was saved with for those
@@ -269,6 +272,18 @@ fn run_peach(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftPe_SpecialLw_UnsetVeg" => g.peach_unset_veg(gobj),
         "ftPe_SpecialLw_8011CFA0" => g.peach_drop_veg(gobj),
         "ftPe_8011D598" => g.peach_parasol_put_away(gobj),
+        "enterAirJump" => g.peach_special_air_s_jump_enter(gobj),
+        "enterEndSmash" => g.peach_special_s_end_smash(gobj),
+        "enterAirEndSmash" => g.peach_special_air_s_end_smash(gobj),
+        "it_802BD248" => {
+            item(g);
+            let owner = other().unwrap_or_else(|| panic!("{SKIP}an explosion without its owner"));
+            peachexplode::setup(g, gobj, owner, call.regs.gpr[5] != 0);
+        }
+        "itPeachExplode_Logic55_EvtUnk" => {
+            item(g);
+            peachexplode::evt_unk(g, gobj, other());
+        }
         "ftPe_Init_OnItemInvisible" => g.peach_on_item_invisible(gobj),
         "ftPe_Init_OnItemVisible" => g.peach_on_item_visible(gobj),
         // `ftCo_Escape_IASA`'s whole body.
@@ -415,6 +430,7 @@ const NULL_R4: &[&str] = &["ftCo_80095328", "ftCo_80095744"];
 const FORGETS: &[&str] = &[
     "itPeachParasol_Logic60_EvtUnk",
     "itPeachTurnip_Logic56_EvtUnk",
+    "itPeachExplode_Logic55_EvtUnk",
 ];
 
 /// Clean comparisons by function run.
