@@ -895,12 +895,30 @@ fn load_sub(
 #[doc(alias = "JObjLoad")]
 #[doc(alias = "ftParts_IntpJObjLoad")]
 fn load(objs: &mut Objects, data: &Archives, j: JObjId, joint: DataRef, parent: Option<JObjId>) {
+    load_as(objs, data, j, joint, parent, joint, true);
+}
+
+/// `JObjLoad` from a copy of `joint` whose child and next are null when `links` is false,
+/// filed in the ID table under `key` (the copy's address).
+fn load_as(
+    objs: &mut Objects,
+    data: &Archives,
+    j: JObjId,
+    joint: DataRef,
+    parent: Option<JObjId>,
+    key: DataRef,
+    links: bool,
+) {
     let flags = data.u32(joint.at(4));
-    if flags & INSTANCE == 0 {
+    if flags & INSTANCE == 0 && links {
         let child = load_sub(objs, data, data.ptr(joint.at(8)), Some(j));
         objs.jobjs[j].child = child;
     }
-    let next = load_sub(objs, data, data.ptr(joint.at(0xC)), parent);
+    let next = if links {
+        load_sub(objs, data, data.ptr(joint.at(0xC)), parent)
+    } else {
+        None
+    };
     let o = &mut objs.jobjs[j];
     o.next = next;
     o.parent = parent;
@@ -940,8 +958,31 @@ fn load(objs: &mut Objects, data: &Archives, j: JObjId, joint: DataRef, parent: 
         o.envelopemtx = Some(e);
         o.envelopemtx_addr = heap::obj_alloc(heap::Kind::Mtx);
     }
-    objs.ids.insert(joint, j);
-    objs.jobjs[j].id = Some(joint);
+    objs.ids.insert(key, j);
+    objs.jobjs[j].id = Some(key);
+}
+
+/// Loads a joint alone from a copy of its descriptor the caller made on its stack with its
+/// child and next cleared (`HSD_JObjLoadJoint` on the copy), the ID table keying it by the
+/// copy's address `key` ([`super::id::stack_key`]).
+pub fn load_joint_copy(
+    objs: &mut Objects,
+    data: &Archives,
+    joint: DataRef,
+    key: DataRef,
+) -> JObjId {
+    assert!(
+        data.ptr(joint).is_none(),
+        "joint {joint:?} names a class, which isn't supported"
+    );
+    let j = alloc(objs);
+    load_as(objs, data, j, joint, None, key, false);
+    if objs.jobjs[j].flags & INSTANCE == 0 {
+        resolve_refs(objs, data, Some(j), Some(joint));
+    } else {
+        panic!("an instance joint loaded from a copy without its child");
+    }
+    j
 }
 
 /// Loads a joint tree and resolves its references, `HSD_JObjLoadJoint`.

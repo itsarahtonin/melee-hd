@@ -100,7 +100,7 @@ impl Running<'_> {
         let x5f0 = self.common().u32(0x5F0) as u16;
         self.game.fighters[f.0].x209A = x5f0;
         match self.game.fighters[f.0].kind {
-            KIND_LINK => unported_call("ftLk_AttackAir_800EB3BC"),
+            KIND_LINK => self.link_shield_absorb(gobj),
             KIND_CLINK => unported_call("ftCl_Init_8014919C"),
             _ => {}
         }

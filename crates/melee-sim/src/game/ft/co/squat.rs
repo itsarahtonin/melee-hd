@@ -119,7 +119,7 @@ impl Running<'_> {
             self.game.fighter_mut(gobj).x209A = x5f0 as u16;
         }
         match self.game.fighter(gobj).kind {
-            KIND_LINK => unported_call("ftLk_AttackAir_800EB3BC"),
+            KIND_LINK => self.link_shield_absorb(gobj),
             KIND_CLINK => unported_call("ftCl_Init_8014919C"),
             _ => {}
         }

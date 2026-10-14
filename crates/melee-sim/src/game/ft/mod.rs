@@ -42,6 +42,7 @@ pub mod input;
 mod kind_tables;
 pub mod kinds;
 pub mod light;
+pub mod link;
 pub mod luigi;
 pub mod mario;
 pub mod mars;

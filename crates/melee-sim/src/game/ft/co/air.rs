@@ -109,7 +109,7 @@ impl Running<'_> {
         }
         // `decideFighter`.
         match self.game.fighter(gobj).kind {
-            KIND_LINK | KIND_CLINK => unported_call("ftLk_AttackAir_Enter"),
+            KIND_LINK | KIND_CLINK => self.link_attack_air_enter(gobj),
             KIND_GAME_WATCH => unported_call("ftGw_AttackAirN_DecideAction"),
             _ => self.enter_attack_air_from_stick(gobj),
         }
