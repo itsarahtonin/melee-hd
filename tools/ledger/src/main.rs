@@ -71,8 +71,11 @@ fn rust_files(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
-    for e in entries.flatten() {
-        let p = e.path();
+    // In name order: directories list in different orders on different file systems, and
+    // which file comes first decides some of the ledger's lines.
+    let mut paths: Vec<_> = entries.flatten().map(|e| e.path()).collect();
+    paths.sort();
+    for p in paths {
         if p.is_dir() {
             if p.file_name().is_some_and(|n| n != "target") {
                 rust_files(&p, out);
