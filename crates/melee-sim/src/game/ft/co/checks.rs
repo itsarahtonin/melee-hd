@@ -654,11 +654,10 @@ impl Running<'_> {
             && fp.input.pressed_buttons & PAD_A != 0
             && !fp.x2224_b1
             && u32::from(fp.x683) >= window
+            && let Some(it) = self.item_in_reach(gobj, 1)
         {
-            if let Some(it) = self.item_in_reach(gobj, 1) {
-                self.catch_item_in_air(gobj, it);
-                return true;
-            }
+            self.catch_item_in_air(gobj, it);
+            return true;
         }
         false
     }

@@ -1,6 +1,9 @@
 //! The common grabs' Link parts (`ftCo_0D8E.c`): his grab and dash grab shooting the hookshot
 //! on their frames, and the hookshot put away.
 
+// The original's comparisons are kept as written: a NaN fails them.
+#![allow(clippy::neg_cmp_op_on_partial_ord)]
+
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;

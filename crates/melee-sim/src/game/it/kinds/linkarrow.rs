@@ -631,7 +631,7 @@ pub fn wobble(r: &mut Running, gobj: GObjId) {
             reg(WOBBLE[k as usize]),
         );
         let rad = fp::fmuls(reg(DEG_TO_RAD), deg);
-        if k % 2 == 0 {
+        if k.is_multiple_of(2) {
             mem(fp::fadds(reg(a94), rad))
         } else {
             mem(fp::fsubs(reg(a94), rad))
