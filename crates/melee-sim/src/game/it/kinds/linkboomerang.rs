@@ -852,8 +852,7 @@ fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// `it_802A23CC`: forgets `other`, its thrower among them.
-// Ports `it_802A23CC`; aliased once a check reaches it (nothing dispatches the items'
-// `evt_unk` yet).
+#[doc(alias = "it_802A23CC")]
 pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
     let v = vars(r.game, gobj);

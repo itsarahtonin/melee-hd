@@ -207,8 +207,7 @@ fn gone(_: &mut Running, _: GObjId) -> bool {
 fn still(_: &mut Running, _: GObjId) {}
 
 /// `itLinkBow_Logic100_EvtUnk`: forgets `other`.
-// Ports `itLinkBow_Logic100_EvtUnk`; aliased once a check reaches it (nothing dispatches the
-// items' `evt_unk` yet).
+#[doc(alias = "itLinkBow_Logic100_EvtUnk")]
 pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

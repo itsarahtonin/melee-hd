@@ -5151,3 +5151,303 @@ itPeachExplode_Logic55_DmgDealt	leaf-check peach: peach_functions runs it from r
 it_802BD248	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
 itPeachexplode_UnkMotion1_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
 itPeachExplode_Logic55_EvtUnk	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+calcAnglePos	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+doColl@800EBE64	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+fn_800D6F58	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+fn_800D8EC8	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+fn_800D9228	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+fn_800D949C	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+fn_8029E21C	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+fn_802A2E4C	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+fn_802A3110	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+fn_802A33A0	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftCo_800CED30	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftCo_800D94D8	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftCo_AttackS42_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftCo_AttackS42_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftCo_AttackS42_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftCommon_8007F578	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftCommon_8007F5CC	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftLk_800EAF38	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_800EAF58	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_800EB334	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_AttackAir_800EB3BC	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_AttackAir_Enter	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_AttackAir_SetupParts	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_Init_BoomerangExists	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_Init_LoadSpecialAttrs	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's creation and spawns run it
+ftLk_Init_OnDeath	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's creation and spawns run it
+ftLk_Init_OnItemDrop	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_Init_OnItemDropExt	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_Init_OnItemInvisible	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_Init_OnItemPickup	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_Init_OnItemPickupExt	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_Init_OnItemVisible	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_Init_OnKnockbackEnter	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_Init_OnKnockbackExit	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_Init_OnLoad	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's creation and spawns run it
+ftLk_SepcialS_Get2219b5	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirHi_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirHi_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirHi_Enter	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirHi_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirLw_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirLw_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirLw_Enter	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirLw_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirNEnd_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirNEnd_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirNEnd_IASA	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirNEnd_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirNLoop_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirNLoop_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirNLoop_IASA	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirNLoop_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirNStart_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirNStart_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirNStart_IASA	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirNStart_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirN_Enter	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirS1Empty_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirS1Empty_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirS1Empty_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirS1_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirS1_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirS1_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirS2_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirS2_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirS2_IASA	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirS2_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialAirS_Enter	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialHi_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialHi_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialHi_Enter	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialHi_GetFv4	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialHi_GetPosWithAdjustedY	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+ftLk_SpecialHi_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialHi_ProcessPartLThumbNb	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialLw_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialLw_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialLw_Enter	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialLw_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialNEnd_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialNEnd_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialNEnd_IASA	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialNEnd_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialNLoop_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialNLoop_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialNLoop_IASA	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialNLoop_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialNStart_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialNStart_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialNStart_IASA	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialNStart_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialN_Enter	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialN_GetIndex	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialN_IsActiveAnd2071b6	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialN_ProcessFv10	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialN_ProcessFv14	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialN_UnsetArrow	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialN_UnsetFv14	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS1Empty_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS1Empty_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS1Empty_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS1_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS1_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS1_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS2_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS2_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS2_Enter	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS2_IASA	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS2_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS_Enter	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS_Is2071b0_1to13	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS_Is2071b0_5to13	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS_RemoveBoomerang0	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftLk_SpecialS_RemoveBoomerang1	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+ftParts_80075304	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftParts_800753D4	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftpickupitem_8009447C	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftpickupitem_80094694	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftpickupitem_800948A8	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftpickupitem_80094B6C	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftpickupitem_80094D90	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftpickupitem_80094DF8	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftpickupitem_Anim	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftpickupitem_Coll	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftpickupitem_IASA	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+ftpickupitem_Phys	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+itLinkArrow_802A81C4	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkArrow_802A850C	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+itLinkArrow_Logic98_Clanked	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkArrow_Logic98_Destroyed	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkArrow_Logic98_DmgDealt	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkArrow_Logic98_EvtUnk	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkArrow_Logic98_HitShield	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkArrow_Logic98_PickedUp	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkArrow_Logic98_Reflected	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkBomb_Logic16_DmgReceived	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkBomb_Logic16_EnteredAir	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkBomb_Logic16_HitShield	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkBomb_Logic16_Reflected	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkBomb_Logic16_ShieldBounced	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkBoomerang_Logic18_Absorbed	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkBoomerang_Logic18_Destroyed	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkBow_Logic100_Destroyed	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkBow_Logic100_EvtUnk	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkBow_Logic100_PickedUp	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkHookshot_Logic20_PickedUp	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion0_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion0_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion0_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion1_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion1_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion1_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion2_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion2_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion2_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion3_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion3_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion3_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion4_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion4_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkarrow_UnkMotion4_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion0_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion0_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion1_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion1_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion1_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion2_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion2_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion2_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion3_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion3_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion3_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion4_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion4_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion4_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion5_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion5_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion5_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion6_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion6_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbomb_UnkMotion6_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkboomerang_UnkMotion0_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkboomerang_UnkMotion1_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkboomerang_UnkMotion1_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkboomerang_UnkMotion1_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkboomerang_UnkMotion2_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkboomerang_UnkMotion2_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkboomerang_UnkMotion2_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkboomerang_UnkMotion3_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkboomerang_UnkMotion3_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbow_UnkMotion5_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbow_UnkMotion5_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbow_UnkMotion5_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbow_UnkMotion6_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbow_UnkMotion6_Coll	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkbow_UnkMotion6_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkhookshot_UnkMotion0_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkhookshot_UnkMotion1_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkhookshot_UnkMotion2_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkhookshot_UnkMotion3_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkhookshot_UnkMotion4_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkhookshot_UnkMotion5_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkhookshot_UnkMotion6_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkhookshot_UnkMotion7_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkhookshot_UnkMotion8_Anim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+itLinkhookshot_UnkMotion8_Phys	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_8026B7BC	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+it_8026EA20	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+it_802754A4	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+it_8029D968	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_8029D9A4	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_8029DB5C	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_8029DD58	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_8029DEB0	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_8029E5D0	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_8029EC34	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_8029F18C	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_8029F69C	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_8029F960	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_8029FD84	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_8029FDBC	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_8029FDDC	leaf-check link item_render: every capture, in each pass, the trees sometimes dirty, the whole state compared (the item's own drawing; its trails' leaves no state)
+it_8029FE64	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A013C	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A0534	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A07B4	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A0810	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A0930	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A0C34	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A0E70	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A0F84	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A0F88	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A10E4	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A13EC	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A15EC	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A1948	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A19E0	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A1F08	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A1FA8	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A20E8	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A2288	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A2320	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A23CC	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A2418	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A2568	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A2B10	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A2BA4	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A2EE4	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A3254	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A3500	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A3630	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A3828	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A39FC	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A3E50	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A40D0	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A44CC	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A4758	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A49B0	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A4BFC	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A5320	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A5770	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A5AE0	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A5E28	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A5FE0	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A6474	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A678C	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A6944	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A6A78	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A7384	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A76EC	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A7764	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A77DC	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A7840	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A78B8	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A793C	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A79A0	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A7A04	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A7AAC	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A7AF0	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A7B34	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A7D40	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A7D8C	leaf-check link item_render: every capture, in each pass, the trees sometimes dirty, the whole state compared (the item's own drawing; its trails' leaves no state)
+it_802A7E40	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A8330	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A8398	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A83E0	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A8A7C	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802A8C7C	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802A9458	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802AF1A4	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+it_802AF304	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+it_802AF32C	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons
+lwOnAnim	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+lwOnHit	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+on21EC	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+onAccessory4@800EBA4C	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+onAccessory4@800EC210	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+pl_8003E854	melee-oracle diff, Link vs Fox and vs Marth FD hf-link-fox-fd-037e45f5 and hf-link-marth-fd-51a2bdce (docs/oracle.md), all 13,009 and 14,814 traced ticks in Slippi float mode with no stand-ins: Link's states and items reach it
+spawnBomb	leaf-check link: link_functions runs it from real states of Link's two Final Destination replays, its own saved calls and its unit's, and compares the whole state
+updateBomb	leaf-check link: link_functions reaches it from the callbacks it serves in clean comparisons

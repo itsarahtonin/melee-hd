@@ -960,9 +960,8 @@ fn bounce_back(r: &mut Running, gobj: GObjId, t: ItemLinkId, at: Vec3, owner: GO
 
 /// Falling from the hand, `it_802A5770`: the last link out falls within a link's length of
 /// `at`, the links toward the tip after it (the middle one with its landing clink), and the
-/// tip slows across.
+/// tip slows across (its inlined copy, `it_802A5770_inline`, too).
 #[doc(alias = "it_802A5770")]
-#[doc(alias = "it_802A5770_inline")]
 fn fall_from_hand(r: &mut Running, gobj: GObjId, h: ItemLinkId, at: Vec3, owner: GObjId) {
     let a = Attrs::of(r, gobj);
     let (width, gravity, friction) = (

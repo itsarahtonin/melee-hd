@@ -186,7 +186,7 @@ impl Running<'_> {
     }
 
     /// `ftLk_800EAF38`: the boomerang's catch undone (`ftLk_SpecialS_RemoveBoomerang1`).
-    // Ports `ftLk_800EAF38`; aliased once a check reaches it.
+    #[doc(alias = "ftLk_800EAF38")]
     pub fn link_remove_boomerang_cb(&mut self, gobj: GObjId) {
         self.link_remove_boomerang1(gobj);
     }

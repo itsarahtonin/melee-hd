@@ -617,11 +617,10 @@ fn shield_place(r: &mut Running, gobj: GObjId, f: GObjId) {
     ip.pos.z = 0.0;
 }
 
-/// `itLinkarrow_UnkMotion4_Anim`: wobbling for its frames; once its life is out it blinks
-/// (the effect and the blink the first frame), hidden, gone 300 frames later.
-#[doc(alias = "itLinkarrow_UnkMotion4_Anim")]
+/// A wobble frame, `itLinkArrow_802A81C4` (which the anim inlines): turned about its heading by
+/// a random swing for frames 6 to 0 left, toward each side in turn.
 #[doc(alias = "itLinkArrow_802A81C4")]
-fn anim4(r: &mut Running, gobj: GObjId) -> bool {
+pub fn wobble(r: &mut Running, gobj: GObjId) {
     let k = vars(r.game, gobj).x9C.get();
     let a94 = vars(r.game, gobj).x94.get();
     let z = if k <= 6 {
@@ -643,6 +642,13 @@ fn anim4(r: &mut Running, gobj: GObjId) -> bool {
     let j = model(r, gobj);
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, z);
     vars(r.game, gobj).x9C.update(|v| v.wrapping_sub(1));
+}
+
+/// `itLinkarrow_UnkMotion4_Anim`: wobbling for its frames; once its life is out it blinks
+/// (the effect and the blink the first frame), hidden, gone 300 frames later.
+#[doc(alias = "itLinkarrow_UnkMotion4_Anim")]
+fn anim4(r: &mut Running, gobj: GObjId) -> bool {
+    wobble(r, gobj);
     if life_out(r, gobj) {
         if vars(r.game, gobj).xF0.get() == 0 {
             super::super::effect::spawn_simple(r, gobj, GFX_BLINK);
@@ -789,8 +795,7 @@ fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// `itLinkArrow_Logic98_EvtUnk`: forgets `other`.
-// Ports `itLinkArrow_Logic98_EvtUnk`; aliased once a check reaches it (nothing dispatches the
-// items' `evt_unk` yet).
+#[doc(alias = "itLinkArrow_Logic98_EvtUnk")]
 pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

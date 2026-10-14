@@ -531,8 +531,7 @@ fn entered_air(r: &mut Running, gobj: GObjId) {
 }
 
 /// `it_8029FD84`: forgets `other`, its puller among them.
-// Ports `it_8029FD84`; aliased once a check reaches it (nothing dispatches the items'
-// `evt_unk` yet).
+#[doc(alias = "it_8029FD84")]
 pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     let v = vars(r.game, gobj);
     if v.x10.get() == other {
