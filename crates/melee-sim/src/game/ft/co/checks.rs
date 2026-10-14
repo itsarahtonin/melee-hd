@@ -202,7 +202,7 @@ impl Running<'_> {
     }
 
     /// What A does with the held item, `it_8026B30C` (the items' port).
-    pub(super) fn item_a_kind(&mut self, gobj: GObjId) -> i32 {
+    pub(crate) fn item_a_kind(&mut self, gobj: GObjId) -> i32 {
         let item = self.game.fighter(gobj).item_gobj;
         code::call(self, IT_8026B30C, &[Val::GObj(item)]).int()
     }

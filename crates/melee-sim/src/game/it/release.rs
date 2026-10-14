@@ -27,6 +27,83 @@ const HALF_PI: f64 = std::f64::consts::FRAC_PI_2;
 #[doc(alias = "it_80273B50")]
 pub fn let_go_model(r: &mut Running, gobj: GObjId, vel: Vec3) {
     let data = r.data;
+    let (owner, attach, root) = let_go_start(r, gobj, vel);
+    let ip = item(r.game, gobj);
+    let heavy = lib26b1::is_heavy(r.game, data, gobj);
+    let offset = if (heavy && ip.hold_kind != 4 && ip.hold_kind != 6) || ip.hold_kind == 8 {
+        let j = lib2725::bone(r.game, data, gobj, attach).expect("the item's attach bone");
+        let t = r.game.objs.jobjs[j].translate;
+        Vec3::new(
+            mem(fp::fneg(reg(t.x))),
+            mem(fp::fneg(reg(t.y))),
+            mem(fp::fneg(reg(t.z))),
+        )
+    } else {
+        Vec3::new(0.0, 0.0, 0.0)
+    };
+    // `getOwnerJointPosition`.
+    let owner = owner.expect("a held item without a holder");
+    let part = item(r.game, gobj).xDC4;
+    let hand = r.bone_joint(owner, part as i32);
+    let at = crate::lb::joint::world_position(&mut r.game.objs, data, hand, Some(offset));
+    let ip = item_mut(r.game, gobj);
+    ip.pos.x = at.x;
+    ip.pos.y = at.y;
+    ip.pos.z = 0.0;
+    let pos = ip.pos;
+    let j = root.expect("an item without a model");
+    jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
+}
+
+/// The item's model leaves the hand at `vel` from `pos`, `it_80273748`: as
+/// [`let_go_model`], placed at `pos` (moved by the attach bone's offset in the hand for a
+/// heavy item held two-handed, or a held special item).
+#[doc(alias = "it_80273748")]
+pub fn let_go_model_at(r: &mut Running, gobj: GObjId, pos: Vec3, vel: Vec3) {
+    let data = r.data;
+    let (owner, attach, root) = let_go_start(r, gobj, vel);
+    let ip = item(r.game, gobj);
+    let heavy = lib26b1::is_heavy(r.game, data, gobj);
+    let offset = if (heavy && ip.hold_kind != 4 && ip.hold_kind != 6) || ip.hold_kind == 8 {
+        let j = lib2725::bone(r.game, data, gobj, attach).expect("the item's attach bone");
+        let t = r.game.objs.jobjs[j].translate;
+        let back = Vec3::new(
+            mem(fp::fneg(reg(t.x))),
+            mem(fp::fneg(reg(t.y))),
+            mem(fp::fneg(reg(t.z))),
+        );
+        let owner = owner.expect("a held item without a holder");
+        let part = item(r.game, gobj).xDC4;
+        let hand = r.bone_joint(owner, part as i32);
+        let a = crate::lb::joint::world_position(&mut r.game.objs, data, hand, Some(back));
+        let b = crate::lb::joint::world_position(&mut r.game.objs, data, hand, None);
+        Vec3::new(
+            mem(fp::fsubs(reg(a.x), reg(b.x))),
+            mem(fp::fsubs(reg(a.y), reg(b.y))),
+            0.0,
+        )
+    } else {
+        Vec3::new(0.0, 0.0, 0.0)
+    };
+    let ip = item_mut(r.game, gobj);
+    ip.pos.x = mem(fp::fadds(reg(pos.x), reg(offset.x)));
+    ip.pos.y = mem(fp::fadds(reg(pos.y), reg(offset.y)));
+    ip.pos.z = 0.0;
+    let pos = ip.pos;
+    let j = root.expect("an item without a model");
+    jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
+}
+
+/// What [`let_go_model`] and [`let_go_model_at`] share: the attach bone's constraints gone
+/// (`it_80275070`), pickable unless a stage item, the blink ended, the model reset to its
+/// descriptors and scale, the spin set from its angle, and the flight at `vel` times its
+/// throw speed, facing its way. Returns the holder, the attach bone and the model's root.
+fn let_go_start(
+    r: &mut Running,
+    gobj: GObjId,
+    vel: Vec3,
+) -> (Option<GObjId>, i32, Option<jobj::JObjId>) {
+    let data = r.data;
     let ip = item(r.game, gobj);
     let mut owner = ip.owner;
     let attach = super::item::article(ip).model(data).bone_attach_id(data);
@@ -66,31 +143,7 @@ pub fn let_go_model(r: &mut Running, gobj: GObjId, vel: Vec3) {
         let j = root.expect("an item without a model");
         jobj::set_rotation_y(&mut r.game.objs.jobjs, j, yaw);
     }
-    let ip = item(r.game, gobj);
-    let heavy = lib26b1::is_heavy(r.game, data, gobj);
-    let offset = if (heavy && ip.hold_kind != 4 && ip.hold_kind != 6) || ip.hold_kind == 8 {
-        let j = lib2725::bone(r.game, data, gobj, attach).expect("the item's attach bone");
-        let t = r.game.objs.jobjs[j].translate;
-        Vec3::new(
-            mem(fp::fneg(reg(t.x))),
-            mem(fp::fneg(reg(t.y))),
-            mem(fp::fneg(reg(t.z))),
-        )
-    } else {
-        Vec3::new(0.0, 0.0, 0.0)
-    };
-    // `getOwnerJointPosition`.
-    let owner = owner.expect("a held item without a holder");
-    let part = item(r.game, gobj).xDC4;
-    let hand = r.bone_joint(owner, part as i32);
-    let at = crate::lb::joint::world_position(&mut r.game.objs, data, hand, Some(offset));
-    let ip = item_mut(r.game, gobj);
-    ip.pos.x = at.x;
-    ip.pos.y = at.y;
-    ip.pos.z = 0.0;
-    let pos = ip.pos;
-    let j = root.expect("an item without a model");
-    jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
+    (owner, attach, root)
 }
 
 /// Thrown into the air by `thrower`, `it_80273F34`: not held, counted as thrown, its
@@ -201,3 +254,92 @@ pub fn is_stage_item(game: &crate::game::state::Game, gobj: GObjId) -> bool {
 /// `It_Kind_Kyasarin_Egg` and `It_Kind_WhispyApple`.
 const KYASARIN_EGG: i32 = 241;
 const WHISPY_APPLE: i32 = 230;
+
+/// Thrown into the air by its holder, `it_80274198` and `it_802741F4` (the same code): an
+/// item held for another (`xDC8` bit 0) goes back to that owner when `give_back`, else is
+/// thrown by it.
+#[doc(alias = "it_80274198")]
+#[doc(alias = "it_802741F4")]
+pub fn thrown_by_holder(r: &mut Running, gobj: GObjId, give_back: bool) {
+    let ip = item_mut(r.game, gobj);
+    let mut thrower = ip.owner;
+    if ip.xDC8_word.flags.x0 {
+        if give_back {
+            thrower = ip.x51C;
+            ip.owner = thrower;
+            ip.x51C = None;
+        } else {
+            thrower = ip.x51C;
+        }
+    }
+    thrown(r, gobj, thrower);
+}
+
+/// The drop sound (`xD78`) unless the item is silenced (`xDCD` bit 2), `it_802731A4`.
+#[doc(alias = "it_802731A4")]
+pub fn drop_sfx(r: &mut Running, gobj: GObjId) {
+    let ip = item(r.game, gobj);
+    if !ip.xDCD_flag.x0.b2 {
+        let sfx = ip.xD78;
+        super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
+    }
+}
+
+/// The throw sound (`xD74`) unless the item is silenced (`xDCD` bit 2), `it_802731E0`.
+#[doc(alias = "it_802731E0")]
+pub fn throw_sfx(r: &mut Running, gobj: GObjId) {
+    let ip = item(r.game, gobj);
+    if !ip.xDCD_flag.x0.b2 {
+        let sfx = ip.xD74;
+        super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
+    }
+}
+
+/// Dropped from the hand, `Item_8026ABD8`: its drop sound, let go at `vel` (`it_80273B50`),
+/// the kind's `dropped` callback, thrown by its holder, its hits counted anew, and a stage
+/// item forgets its owner.
+#[doc(alias = "Item_8026ABD8")]
+pub fn drop(r: &mut Running, gobj: GObjId, vel: Vec3, speed: f32) {
+    item_mut(r.game, gobj).xC44 = speed;
+    drop_sfx(r, gobj);
+    let_go_model(r, gobj, vel);
+    if let Some(cb) = super::item::logic(r.game, gobj).dropped {
+        super::item::call(r, gobj, cb);
+    }
+    thrown_by_holder(r, gobj, true);
+    hitbox::set_hit_ids2(r.game, gobj);
+    if is_stage_item(r.game, gobj) {
+        lib2725::drop_owner(r.game, gobj);
+    }
+}
+
+/// Dropped from `pos` at `vel`, `Item_8026AC74` (a light throw's drop).
+#[doc(alias = "Item_8026AC74")]
+pub fn drop_at(r: &mut Running, gobj: GObjId, pos: Vec3, vel: Vec3, speed: f32) {
+    item_mut(r.game, gobj).xC44 = speed;
+    drop_sfx(r, gobj);
+    let_go_model_at(r, gobj, pos, vel);
+    if let Some(cb) = super::item::logic(r.game, gobj).dropped {
+        super::item::call(r, gobj, cb);
+    }
+    thrown_by_holder(r, gobj, true);
+    hitbox::set_hit_ids2(r.game, gobj);
+    if is_stage_item(r.game, gobj) {
+        lib2725::drop_owner(r.game, gobj);
+    }
+}
+
+/// Thrown from `pos` at `vel`, `Item_8026AD20`: its throw sound, the kind's `thrown`
+/// callback, thrown by its holder and its hits counted anew. (The original's last argument,
+/// whether it was a smash throw, goes unread.)
+#[doc(alias = "Item_8026AD20")]
+pub fn throw_at(r: &mut Running, gobj: GObjId, pos: Vec3, vel: Vec3, speed: f32) {
+    throw_sfx(r, gobj);
+    item_mut(r.game, gobj).xC44 = speed;
+    let_go_model_at(r, gobj, pos, vel);
+    if let Some(cb) = super::item::logic(r.game, gobj).thrown {
+        super::item::call(r, gobj, cb);
+    }
+    thrown_by_holder(r, gobj, true);
+    hitbox::set_hit_ids2(r.game, gobj);
+}

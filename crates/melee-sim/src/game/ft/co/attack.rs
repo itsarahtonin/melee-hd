@@ -638,7 +638,7 @@ impl Running<'_> {
         fp.facing_dir = dir;
         match fp.kind {
             KIND_NESS => self.ness_attack_s4_enter(gobj),
-            KIND_PEACH => unported_call("ftPe_AttackS4_Enter"),
+            KIND_PEACH => self.peach_attack_s4_enter(gobj),
             KIND_GAME_WATCH => unported_call("ftGw_AttackS4_Enter"),
             KIND_PIKACHU | KIND_PICHU => {
                 self.enter_attack_s4(gobj, angle);

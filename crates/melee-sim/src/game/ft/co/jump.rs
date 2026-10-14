@@ -3,6 +3,7 @@
 use gekko_fp as fp;
 
 use super::super::super::code::unported_call;
+use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::coll::PLATFORM_FILTER;
 use super::super::sound::Track;
@@ -11,6 +12,9 @@ use super::checks::{KIND_MEWTWO, KIND_NESS, KIND_PEACH, KIND_YOSHI, abs};
 use super::ids::ms;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
+
+/// `ftCo_JumpAerial_Phys_Cb`.
+const JUMP_AERIAL_PHYS_CB: u32 = 0x800C_C6C8;
 
 /// `ftCo_JumpInput`.
 pub const JUMP_INPUT_LSTICK: i32 = 1;
@@ -327,11 +331,33 @@ impl Running<'_> {
         match self.game.fighter(gobj).kind {
             KIND_NESS => self.ness_jump_aerial_enter(gobj),
             KIND_YOSHI => unported_call("ftYs_JumpAerial_Enter"),
-            KIND_PEACH => unported_call("ftPe_JumpAerial_Enter"),
+            KIND_PEACH => self.peach_jump_aerial_enter(gobj),
             KIND_MEWTWO => unported_call("ftMt_JumpAerial_Enter"),
             _ => self.enter_jump_aerial_basic(gobj),
         }
         true
+    }
+
+    /// Peach's double jump, `ftPe_JumpAerial_Enter`: the stick's sideways speed, no rise of
+    /// its own (her animation lifts her), and the common double jump's physics.
+    #[doc(alias = "ftPe_JumpAerial_Enter")]
+    pub fn peach_jump_aerial_enter(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.go_airborne(f);
+        let back = fp::fneg(reg(self.common().f32(0x78)));
+        let fp = self.game.fighter_mut(gobj);
+        fp.cmd_vars[0] = 1;
+        let msid = if fp::fmuls(reg(fp.input.lstick[0].x), reg(fp.facing_dir)) > back {
+            ms::JUMP_AERIAL_F
+        } else {
+            ms::JUMP_AERIAL_B
+        };
+        let vx = mem(fp::fmuls(
+            reg(fp.input.lstick[0].x),
+            reg(fp.co_attrs.air_jump_h_multiplier),
+        ));
+        self.enter_jump_aerial(gobj, msid, [vx, 0.0, 0.0], true);
+        self.game.fighter_mut(gobj).phys_cb = Some(CodeRef(JUMP_AERIAL_PHYS_CB));
     }
 
     /// The double jump's common part, `ftCo_800CBAC4`: its state, velocity and sounds.
@@ -475,24 +501,6 @@ impl Running<'_> {
                 None => {}
                 Some(_) => unported_call("ftGetParasolStatus"),
             }
-        }
-        false
-    }
-
-    /// Peach's float, `ftPe_8011BA54`.
-    #[doc(alias = "ftPe_8011BA54")]
-    pub fn peach_float_start_check(&mut self, gobj: GObjId) -> bool {
-        if self.game.fighter(gobj).kind == KIND_PEACH {
-            unported_call("ftPe_8011BA54");
-        }
-        false
-    }
-
-    /// Peach floating on, `ftPe_8011BAD8`.
-    #[doc(alias = "ftPe_8011BAD8")]
-    pub fn peach_float_continue_check(&mut self, gobj: GObjId) -> bool {
-        if self.game.fighter(gobj).kind == KIND_PEACH {
-            unported_call("ftPe_8011BAD8");
         }
         false
     }

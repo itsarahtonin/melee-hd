@@ -8118,6 +8118,48 @@ impl itSamusGrapple_ItemVars {
     }
 }
 
+/// `itPeachTurnip_ItemVars`, 0x18 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itPeachTurnip_ItemVars {
+    /// +0x0
+    pub xDD4: Var<[u8; 1]>,
+    /// +0x4
+    pub xDD8: Var<i32>,
+    /// +0x8
+    pub xDDC_damage: Var<i32>,
+    /// +0xc
+    pub xDE0_scl: Var<f32>,
+    /// +0x10
+    pub xDE4_owner: Var<Option<GObjId>>,
+    /// +0x14
+    pub xDE8_scl: Var<f32>,
+}
+
+impl Default for itPeachTurnip_ItemVars {
+    fn default() -> Self {
+        itPeachTurnip_ItemVars {
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC_damage: Var::new(Default::default()),
+            xDE0_scl: Var::new(Default::default()),
+            xDE4_owner: Var::new(Default::default()),
+            xDE8_scl: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itPeachTurnip_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC_damage.mark_stale();
+        self.xDE0_scl.mark_stale();
+        self.xDE4_owner.mark_stale();
+        self.xDE8_scl.mark_stale();
+    }
+}
+
 /// `IfDamageFlags`, 0x1 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IfDamageFlags {

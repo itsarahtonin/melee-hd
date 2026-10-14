@@ -144,6 +144,7 @@ members! {
     SamusChargeshot, samus_chargeshot, itSamusChargeshot_ItemVars, [SAMUS_CHARGE];
     SamusMissile, samus_missile, itSamusMissile_ItemVars, [SAMUS_MISSILE];
     SamusGrapple, samus_grapple, itSamusGrapple_ItemVars, [SAMUS_GBEAM];
+    PeachTurnip, peach_turnip, itPeachTurnip_ItemVars, [PEACH_TURNIP];
     Heiho, heiho, HeihoVars, [HEIHO];
 }
 
