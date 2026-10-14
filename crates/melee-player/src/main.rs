@@ -4,7 +4,8 @@
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
 //!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread]
 //!          [--no-adapter] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--ticks N]
-//! melee-hd --bench TICKS [--size WxH] [...]     plays headless, timing each frame
+//! melee-hd --bench TICKS [--size WxH] [--resize-at TICK:WxH] [...]
+//!                                               plays headless, timing each frame
 //! melee-hd --launcher-shot FILE.png [--size WxH] draws the launcher to a PNG
 //! latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate]
 //!          [--added-delay FRAMES] [--audio-exclusive]
@@ -87,6 +88,9 @@ struct Args {
     scale: u32,
     /// Saves the last frame the bench draws.
     shot: Option<String>,
+    /// The bench's display changes size before these ticks, as a window resized or made
+    /// fullscreen does.
+    resize_at: Vec<(u32, (u32, u32))>,
     /// The aspect ratio frames are shown at: the game's 73:60, wider (seeing more at the
     /// sides), or 4:3 stretched.
     aspect: present::Aspect,
@@ -108,7 +112,7 @@ struct Args {
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS] [--launcher-shot FILE.png]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--launcher-shot FILE.png]\n\
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive]\n\
@@ -137,6 +141,7 @@ fn parse_args() -> Result<Args, String> {
         ticks: None,
         scale: 0,
         shot: None,
+        resize_at: Vec::new(),
         aspect: present::Aspect::GAME,
         one_thread: false,
         msaa: 1,
@@ -205,6 +210,12 @@ fn parse_args() -> Result<Args, String> {
             "--ticks" => a.ticks = Some(value()?.parse().map_err(|_| "--ticks N")?),
             "--scale" => a.scale = value()?.parse().map_err(|_| "--scale N")?,
             "--shot" => a.shot = Some(value()?),
+            "--resize-at" => {
+                let v = value()?;
+                let (tick, s) = v.split_once(':').ok_or("--resize-at TICK:WxH")?;
+                let tick = tick.parse().map_err(|_| "--resize-at TICK:WxH")?;
+                a.resize_at.push((tick, size(s)?));
+            }
             "--launcher-shot" => a.launcher_shot = Some(value()?),
             "--fullscreen" => a.fullscreen = true,
             "--disc-speed" => {
@@ -501,7 +512,9 @@ impl App {
             eprintln!("internal resolution: {scale}x ({width}x{})", 480 * scale);
             self.scale = scale;
             self.efb_width = width;
-            self.drop_renderer();
+            if let Some(old) = self.renderer.take() {
+                self.renderer = Some(remake(old, &self.gpu, scale, self.msaa, self.aspect, false));
+            }
         }
         let m = &self.session.as_ref().expect("a match").m;
         let fifo = self.frames.frame(&m.game, &m.data, draws);
@@ -531,7 +544,7 @@ impl App {
         })
     }
 
-    /// Saves the renderer's pipelines and lets it go; the next frame makes a new one.
+    /// Saves the renderer's pipelines and lets it go, with the match.
     fn drop_renderer(&mut self) {
         if let Some(g) = self.renderer.take() {
             pipelines::save(&g.into_renderer());
@@ -807,6 +820,27 @@ fn gpu_for(renderer: melee_gpu::Renderer, one_thread: bool) -> Gpu {
     }
 }
 
+/// The renderer made again at `scale` (the window's size changed, or the aspect), reading back
+/// each frame when `readback`. The GPU's state carries over from the old one (`Gpu::carry`),
+/// whose pipelines are saved, for the new one to make from the cache, and whose textures are
+/// let go before the new one makes its own.
+fn remake(
+    old: Gpu,
+    gpu: &present::Gpu,
+    scale: u32,
+    msaa: u32,
+    aspect: present::Aspect,
+    readback: bool,
+) -> Gpu {
+    old.carry(|r| {
+        pipelines::save(&r);
+        drop(r);
+        let mut r = pipelines::renderer(gpu, scale, msaa, aspect);
+        r.xfb_readback = readback;
+        r
+    })
+}
+
 /// The internal resolution's scale: as asked, or the smallest whose 480 lines cover the
 /// window's height, at most what the aspect's EFB width allows.
 fn scale_for(asked: u32, size: (u32, u32), aspect: present::Aspect) -> u32 {
@@ -830,7 +864,8 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     };
     let gpu = present::Gpu::new();
     let mut target = present::Offscreen::new(&gpu, args.size.0, args.size.1);
-    let scale = scale_for(args.scale, args.size, args.aspect);
+    let mut size = args.size;
+    let mut scale = scale_for(args.scale, size, args.aspect);
     let mut r = pipelines::renderer(&gpu, scale, args.msaa, args.aspect);
     r.xfb_readback = args.shot.is_some();
     let mut renderer = gpu_for(r, args.one_thread);
@@ -848,7 +883,29 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     let mut work: Vec<Duration> = Vec::with_capacity(ticks as usize);
     let mut presented: Vec<Duration> = Vec::with_capacity(ticks as usize);
     let mut round = Duration::ZERO;
-    for _ in 0..ticks {
+    for tick in 0..ticks {
+        // A resize: the display's new size at once, the renderer's at the frame after, as the
+        // window's.
+        for &(_, to) in args.resize_at.iter().filter(|(at, _)| *at == tick) {
+            size = to;
+            target = present::Offscreen::new(&gpu, size.0, size.1);
+            let s = scale_for(args.scale, size, args.aspect);
+            if s != scale {
+                scale = s;
+                eprintln!(
+                    "tick {tick}: {}x{}, internal resolution {scale}x",
+                    size.0, size.1
+                );
+                renderer = remake(
+                    renderer,
+                    &gpu,
+                    scale,
+                    args.msaa,
+                    args.aspect,
+                    args.shot.is_some(),
+                );
+            }
+        }
         let t0 = Instant::now();
         let f = session.tick(pads);
         let t1 = Instant::now();
@@ -882,8 +939,8 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     }
     println!(
         "{n} frames at {}x{} (internal {scale}x, EFB {}x{}): simulation {:.3} ms a tick, drawing {:.3} ms a frame, worst tick+frame {:.3} ms",
-        args.size.0,
-        args.size.1,
+        size.0,
+        size.1,
         args.aspect.efb_width(scale),
         480 * scale,
         sim.as_secs_f64() * 1000.0 / f64::from(ticks.max(1)),

@@ -100,28 +100,53 @@ impl Gpu {
         self.produced.clear();
     }
 
-    pub fn new(mut renderer: Renderer) -> Gpu {
-        let state = State::new();
-        renderer.clear_efb(&state);
-        Gpu {
-            state,
-            renderer: RefCell::new(Backend::Here(Box::new(renderer))),
-            produced: Vec::new(),
-        }
+    pub fn new(renderer: Renderer) -> Gpu {
+        Gpu::here(renderer, State::new(), Vec::new())
     }
 
     /// The renderer on threads of its own (`melee_gpu::Threaded::spawn_synced`): the same
     /// frames, the work on a frame split across three threads.
-    pub fn threaded(mut renderer: Renderer) -> Gpu {
-        let mut state = State::new();
+    pub fn threaded(renderer: Renderer) -> Gpu {
+        Gpu::on_threads(renderer, State::new(), Vec::new())
+    }
+
+    fn here(mut renderer: Renderer, state: State, produced: Vec<Produced>) -> Gpu {
         renderer.clear_efb(&state);
+        Gpu {
+            state,
+            renderer: RefCell::new(Backend::Here(Box::new(renderer))),
+            produced,
+        }
+    }
+
+    fn on_threads(mut renderer: Renderer, mut state: State, produced: Vec<Produced>) -> Gpu {
+        renderer.clear_efb(&state);
+        // The threads' copies of the state start empty: the first delta holds all of it.
         state.track_changes();
         Gpu {
             state,
             renderer: RefCell::new(Backend::Threaded(Box::new(Threaded::spawn_synced(
                 renderer,
             )))),
-            produced: Vec::new(),
+            produced,
+        }
+    }
+
+    /// The same stream on another renderer (one of another size): `make` gets the old
+    /// renderer, its threads stopped, and returns the new one, which runs where the old one
+    /// did. The GPU's registers and texture memory carry over, as the stream set them: the
+    /// stream sets much of its state once (`GXInit`, at the first frame) or only when it
+    /// changes (HSD's state cache), so a renderer starting from a fresh state draws the
+    /// frames after with the wrong state, such as color writes off.
+    pub fn carry(self, make: impl FnOnce(Renderer) -> Renderer) -> Gpu {
+        let Gpu {
+            state,
+            renderer,
+            produced,
+        } = self;
+        match renderer.into_inner() {
+            Backend::Here(r) => Gpu::here(make(*r), state, produced),
+            Backend::Threaded(t) => Gpu::on_threads(make(t.into_renderer()), state, produced),
         }
     }
 
