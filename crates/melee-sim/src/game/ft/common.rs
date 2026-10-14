@@ -256,8 +256,9 @@ impl Running<'_> {
         if fp.x209C == 0 {
             fp.x2224_b1 = true;
         }
-        if found.is_some() {
-            unported_call("fn_800D6F58 (catching an item in the air)");
+        if let Some(it) = found {
+            self.catch_item_in_air(gobj, it);
+            self.game.fighter_mut(gobj).x209C = 0;
         }
     }
 

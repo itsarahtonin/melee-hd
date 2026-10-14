@@ -648,9 +648,11 @@ impl Running<'_> {
             && fp.input.pressed_buttons & PAD_A != 0
             && !fp.x2224_b1
             && u32::from(fp.x683) >= window
-            && self.item_in_reach(gobj, 1).is_some()
         {
-            unported_call("fn_800D6F58 (catching an item in the air)");
+            if let Some(it) = self.item_in_reach(gobj, 1) {
+                self.catch_item_in_air(gobj, it);
+                return true;
+            }
         }
         false
     }

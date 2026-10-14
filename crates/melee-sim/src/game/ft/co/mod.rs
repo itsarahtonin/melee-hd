@@ -26,6 +26,7 @@ pub mod ground;
 pub mod guard;
 pub mod hit;
 pub mod ids;
+pub mod item_catch;
 pub mod item_throw;
 pub mod jump;
 pub mod kind_callbacks;
