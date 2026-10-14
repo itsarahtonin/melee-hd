@@ -156,9 +156,10 @@ ssbm-rs's runner saves each call as a file of its own (`NAME-callN.call`, a whol
 ```sh
 cargo run --release -p melee-capture --bin pack-calls -- -r "$SSBM_RS_LOCAL/calls"   # every directory under it
 cargo run --release -p melee-capture --bin pack-calls -- --verify DIR               # check a pack against the files left
+cargo run --release -p melee-capture --bin pack-calls -- --unpack DIR               # the pack's calls back out as .call files
 ```
 
-`Capture::read` takes a call from its directory's pack when the pack holds it and from its file otherwise, and the checks list a directory's calls from both, so a call's path is `DIR/NAME.call` either way and new captures can stay files until the directory is packed again: packing a directory that has a pack keeps the pack's calls whose files are gone and adds the new files. Once a directory's pack is verified, its `.call` files can go. Each block is decompressed once per process and shared, so reading a call is copying its pages.
+`Capture::read` takes a call from its directory's pack when the pack holds it and from its file otherwise, and the checks list a directory's calls from both, so a call's path is `DIR/NAME.call` either way and new captures can stay files until the directory is packed again: packing a directory that has a pack keeps the pack's calls whose files are gone and adds the new files. Once a directory's pack is verified, its `.call` files can go: `--unpack` writes them back as ssbm-rs's runner wrote them (zstd level 3), and on Marth's `fox-marth-fd` set the rebuilt files came out byte-identical to the originals, compressed bytes included, and packed again into the same pack. Each block is decompressed once per process and shared, so reading a call is copying its pages.
 
 ### leaf-check's speed
 

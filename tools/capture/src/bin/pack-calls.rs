@@ -7,6 +7,10 @@
 //! directory whose files are all in its pack is only checked against it; `--verify` only
 //! checks, `--force` packs again anyway, and `--to DIR` writes the packs there instead, to try
 //! settings. The `.call` files stay.
+//!
+//! `--unpack` does the reverse: it writes each call of each directory's pack back out as
+//! `DIR/NAME.call`, compressed as ssbm-rs's runner writes them (`zstd::encode_all` of
+//! `Call::to_bytes` at level 3), and leaves any file already there alone.
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -22,6 +26,7 @@ struct Options {
     block: usize,
     verify_only: bool,
     force: bool,
+    unpack: bool,
     /// Where to write packs instead of in their directories (to try settings).
     to: Option<PathBuf>,
     dirs: Vec<PathBuf>,
@@ -70,6 +75,7 @@ fn options() -> Options {
         block: 64,
         verify_only: false,
         force: false,
+        unpack: false,
         to: None,
         dirs: Vec::new(),
     };
@@ -86,6 +92,7 @@ fn options() -> Options {
             "--block" => o.block = num("--block").max(1),
             "--verify" => o.verify_only = true,
             "--force" => o.force = true,
+            "--unpack" => o.unpack = true,
             "--to" => o.to = Some(PathBuf::from(args.next().expect("--to takes a directory"))),
             "-r" => {
                 let root = args.next().expect("-r takes a directory");
@@ -269,6 +276,39 @@ fn pack_dir(o: &Options, dir: &Path) -> Result<String, String> {
     ))
 }
 
+/// The ssbm-rs runner's compression level for a saved call.
+const CALL_LEVEL: i32 = 3;
+
+/// Writes each call of `dir`'s pack that has no file as `DIR/NAME.call`.
+fn unpack_dir(dir: &Path) -> Result<String, String> {
+    let t = Instant::now();
+    let path = dir.join(FILE_NAME);
+    let pack = Pack::open(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let (mut written, mut kept) = (0, 0);
+    for name in pack.names() {
+        let out = dir.join(name);
+        if out.exists() {
+            kept += 1;
+            continue;
+        }
+        let call = pack
+            .call(name)
+            .ok_or_else(|| format!("{}/{name}: not in the pack", dir.display()))?;
+        let packed = zstd::encode_all(&call.to_bytes()[..], CALL_LEVEL)
+            .map_err(|e| format!("{}: {e}", out.display()))?;
+        // Written whole before it takes the call's name, so a stopped run leaves no torn file.
+        let tmp = dir.join(format!("{name}.tmp"));
+        std::fs::write(&tmp, &packed).map_err(|e| format!("{}: {e}", tmp.display()))?;
+        std::fs::rename(&tmp, &out).map_err(|e| format!("{}: {e}", out.display()))?;
+        written += 1;
+    }
+    Ok(format!(
+        "{}: {written} calls written, {kept} files already there: {:.0}s",
+        dir.display(),
+        t.elapsed().as_secs_f64()
+    ))
+}
+
 fn main() {
     let o = options();
     let next = AtomicUsize::new(0);
@@ -279,7 +319,12 @@ fn main() {
                 loop {
                     let i = next.fetch_add(1, Ordering::Relaxed);
                     let Some(dir) = o.dirs.get(i) else { break };
-                    match pack_dir(&o, dir) {
+                    let done = if o.unpack {
+                        unpack_dir(dir)
+                    } else {
+                        pack_dir(&o, dir)
+                    };
+                    match done {
                         Ok(line) => println!("{line}"),
                         Err(e) => {
                             println!("FAILED {e}");
@@ -298,5 +343,9 @@ fn main() {
         }
         std::process::exit(1);
     }
-    println!("{} directories packed and verified", o.dirs.len());
+    if o.unpack {
+        println!("{} directories unpacked", o.dirs.len());
+    } else {
+        println!("{} directories packed and verified", o.dirs.len());
+    }
 }

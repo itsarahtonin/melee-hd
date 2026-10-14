@@ -428,3 +428,68 @@ pub fn call_file_bytes(path: &Path) -> io::Result<Vec<u8>> {
     std::fs::File::open(path)?.read_to_end(&mut packed)?;
     zstd::decode_all(&packed[..])
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A saved call with `mem1` and `locked` and registers made from `seed`, as its file holds
+    /// it (`Call::to_bytes`' layout).
+    fn call(seed: u32, mem1: &[u8], locked: &[u8]) -> Call {
+        let mut b = Vec::new();
+        let words = |b: &mut Vec<u8>, v: &[u32]| v.iter().for_each(|w| b.extend(w.to_le_bytes()));
+        b.extend(b"SSBMCALL");
+        words(&mut b, &[1, 0x8000_6000 + seed, 0, 1, 0x8000_7000, seed]);
+        b.extend(1.5f64.to_bits().to_le_bytes());
+        words(&mut b, &(0..32).map(|i| i * seed).collect::<Vec<_>>());
+        for i in 0..64u64 {
+            b.extend((i as f64 * 0.25).to_bits().to_le_bytes());
+        }
+        words(&mut b, &[seed, 2, 3, 4, 5, 6]);
+        words(&mut b, &[7; 8]);
+        b.extend(u64::from(seed).to_le_bytes());
+        words(&mut b, &[1, 912, seed]);
+        words(&mut b, &[mem1.len() as u32, locked.len() as u32]);
+        b.extend(mem1);
+        b.extend(locked);
+        Call::from_bytes(&b).expect("a saved call")
+    }
+
+    /// Calls that share pages, have pages of zeros and a short last page come back from a pack
+    /// byte for byte, under their names.
+    #[test]
+    fn calls_read_back() {
+        let page = |k: u8| -> Vec<u8> { (0..PAGE).map(|i| (i as u8).wrapping_mul(k)).collect() };
+        let mut a = [page(3), page(5), vec![0; PAGE], page(3)].concat();
+        a.extend(&page(9)[..100]);
+        let mut b = a.clone();
+        b[PAGE + 7] ^= 0x40;
+        let calls = [
+            ("f-call1.call", call(1, &a, &page(7)[..0x40])),
+            ("f-call2.call", call(2, &b, &page(7)[..0x40])),
+            ("g-call1.call", call(3, &vec![0; 3 * PAGE], &[])),
+        ];
+        let mut w = Writer::new(2, 3);
+        for (name, c) in &calls {
+            w.add(name, c);
+        }
+        assert_eq!(w.pages(), 5, "each distinct page once, no page of zeros");
+        let mut file = Vec::new();
+        w.finish(&mut file).unwrap();
+        let dir = std::env::temp_dir().join(format!("melee-capture-pack-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join(FILE_NAME);
+        std::fs::write(&path, &file).unwrap();
+        let pack = Pack::open(&path).unwrap();
+        assert_eq!(
+            pack.names().collect::<Vec<_>>(),
+            calls.iter().map(|c| c.0).collect::<Vec<_>>()
+        );
+        for (name, c) in &calls {
+            assert_eq!(pack.call(name).unwrap().to_bytes(), c.to_bytes(), "{name}");
+        }
+        assert!(pack.call("h-call1.call").is_none());
+        drop(pack);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+}
