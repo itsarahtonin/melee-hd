@@ -102,7 +102,7 @@ impl Running<'_> {
     }
 
     /// The other Ice Climber (`Player_GetEntityAtIndex(slot, which)`).
-    fn ic_partner(&self, gobj: GObjId, which: i32) -> Option<GObjId> {
+    pub(super) fn ic_partner(&self, gobj: GObjId, which: i32) -> Option<GObjId> {
         let slot = i32::from(self.game.fighter(gobj).player_idx);
         self.game.player_entity_at(slot, which)
     }
@@ -198,7 +198,7 @@ impl Running<'_> {
     }
 
     /// Takes the string away, `ftPp_SpecialS_80121164`.
-    // Ports `ftPp_SpecialS_80121164`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialS_80121164")]
     pub fn popo_remove_string(&mut self, gobj: GObjId) {
         if let Some(s) = self.popo_string(gobj) {
             climbersstring::remove(self, s);

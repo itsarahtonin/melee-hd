@@ -9,9 +9,11 @@
 
 pub mod init;
 pub mod nana_special_hi;
+pub mod nana_special_s;
 pub mod special_hi;
 pub mod special_lw;
 pub mod special_n;
+pub mod special_s;
 
 use super::super::code::Val;
 use super::super::handles::FighterId;
@@ -81,6 +83,35 @@ pub mod addr {
     pub const PP_SPECIAL_N_COLL: u32 = 0x8011_F3D8;
     pub const PP_SPECIAL_AIR_N_COLL: u32 = 0x8011_F454;
     pub const PP_SPECIAL_N_ICE: u32 = 0x8011_F500;
+    // Squall Hammer, Popo's.
+    pub const PP_SPECIAL_S_ENTER: u32 = 0x8011_F99C;
+    pub const PP_SPECIAL_AIR_S_ENTER: u32 = 0x8011_FB08;
+    pub const PP_SPECIAL_S1_ANIM: u32 = 0x8011_FC78;
+    pub const PP_SPECIAL_S2_ANIM: u32 = 0x8011_FCD0;
+    pub const PP_SPECIAL_AIR_S1_ANIM: u32 = 0x8011_FD9C;
+    pub const PP_SPECIAL_AIR_S2_ANIM: u32 = 0x8011_FE48;
+    pub const PP_SPECIAL_S1_IASA: u32 = 0x8011_FF40;
+    pub const PP_SPECIAL_S2_IASA: u32 = 0x8011_FF90;
+    pub const PP_SPECIAL_AIR_S1_IASA: u32 = 0x8011_FFE0;
+    pub const PP_SPECIAL_AIR_S2_IASA: u32 = 0x8012_0030;
+    pub const PP_SPECIAL_S1_PHYS: u32 = 0x8012_0080;
+    pub const PP_SPECIAL_S2_PHYS: u32 = 0x8012_0230;
+    pub const PP_SPECIAL_AIR_S1_PHYS: u32 = 0x8012_03E0;
+    pub const PP_SPECIAL_AIR_S2_PHYS: u32 = 0x8012_0520;
+    pub const PP_SPECIAL_S1_COLL: u32 = 0x8012_0660;
+    pub const PP_SPECIAL_S2_COLL: u32 = 0x8012_0854;
+    pub const PP_SPECIAL_AIR_S1_COLL: u32 = 0x8012_0A48;
+    pub const PP_SPECIAL_AIR_S2_COLL: u32 = 0x8012_0C58;
+    // Squall Hammer, Nana's.
+    pub const NN_SPECIAL_S_RELEASE: u32 = 0x8012_2FAC;
+    pub const NN_SPECIAL_S_0_ANIM: u32 = 0x8012_3CA4;
+    pub const NN_SPECIAL_S_1_ANIM: u32 = 0x8012_3D68;
+    pub const NN_SPECIAL_S_0_IASA: u32 = 0x8012_3E58;
+    pub const NN_SPECIAL_S_1_IASA: u32 = 0x8012_3E5C;
+    pub const NN_SPECIAL_S_0_PHYS: u32 = 0x8012_3E60;
+    pub const NN_SPECIAL_S_1_PHYS: u32 = 0x8012_3EFC;
+    pub const NN_SPECIAL_S_0_COLL: u32 = 0x8012_3F98;
+    pub const NN_SPECIAL_S_1_COLL: u32 = 0x8012_41A0;
     // Blizzard.
     pub const PP_SPECIAL_LW_ENTER: u32 = 0x8012_2904;
     pub const PP_SPECIAL_AIR_LW_ENTER: u32 = 0x8012_2988;
@@ -160,6 +191,11 @@ impl Running<'_> {
         let b = &self.game.fighter_attrs[a.0];
         f32::from_bits(u32::from_be_bytes(b[off..off + 4].try_into().unwrap()))
     }
+
+    /// An `int` of the fighter's `ftIceClimberAttributes`, `off` bytes in.
+    pub(crate) fn ic_attr_i32(&self, f: FighterId, off: usize) -> i32 {
+        self.ic_attr_f32(f, off).to_bits() as i32
+    }
 }
 
 /// Runs one of the Ice Climbers' callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr`
@@ -170,6 +206,8 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || special_hi::run(g, gobj, addr)
         || nana_special_hi::run(g, gobj, addr)
         || special_lw::run(g, gobj, addr)
+        || special_s::run(g, gobj, addr)
+        || nana_special_s::run(g, gobj, addr)
 }
 
 /// The Ice Climbers' functions other code calls by address (`code::call`).

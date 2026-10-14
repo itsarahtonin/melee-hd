@@ -81,6 +81,21 @@ impl Running<'_> {
         fp.self_vel.z = 0.0;
     }
 
+    /// The ground speed and its acceleration as velocities along the floor, without the
+    /// floor's friction, `ftCommon_SetSelfMovementFromGroundedMovement_NoFriction`.
+    #[doc(alias = "ftCommon_SetSelfMovementFromGroundedMovement_NoFriction")]
+    pub fn self_movement_from_ground_no_friction(fp: &mut Fighter) {
+        let n = fp.coll_data.floor.normal;
+        let a = reg(fp.xE4_ground_accel_1);
+        fp.x74_self_accel.x = mem(fp::fmuls(reg(n.y), a));
+        fp.x74_self_accel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), a));
+        fp.x74_self_accel.z = 0.0;
+        let g = reg(fp.gr_vel);
+        fp.self_vel.x = mem(fp::fmuls(reg(n.y), g));
+        fp.self_vel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), g));
+        fp.self_vel.z = 0.0;
+    }
+
     /// Gravity or a fast fall, then air drift, `ft_80084DB0`.
     #[doc(alias = "ft_80084DB0")]
     pub fn air_physics(&mut self, gobj: GObjId) {
@@ -476,7 +491,6 @@ impl Running<'_> {
     /// stick passes `threshold`, `ftCommon_CalcGroundAccel_AccelToLStickX` (through
     /// `ftCommon_CalcGroundAccel_AccelToVel`).
     #[doc(alias = "ftCommon_CalcGroundAccel_AccelToLStickX")]
-    #[doc(alias = "ftCommon_CalcGroundAccel_AccelToVel")]
     pub fn ground_accel_to_stick(
         fp: &mut Fighter,
         threshold: f64,
@@ -484,8 +498,15 @@ impl Running<'_> {
         target_max: f64,
     ) {
         let (accel, target) = Self::stick_share(fp, threshold, accel_max, target_max);
+        Self::ground_accel_to_vel(fp, accel, target);
+    }
+
+    /// Ground acceleration toward `target_vel`, `accel` at a time and never past it; back to
+    /// still for a target of 0, `ftCommon_CalcGroundAccel_AccelToVel`.
+    #[doc(alias = "ftCommon_CalcGroundAccel_AccelToVel")]
+    pub fn ground_accel_to_vel(fp: &mut Fighter, accel: f64, target_vel: f64) {
         let vel = reg(fp.gr_vel);
-        fp.xE4_ground_accel_1 = mem(toward_target(vel, accel, target));
+        fp.xE4_ground_accel_1 = mem(toward_target(vel, accel, target_vel));
     }
 }
 
