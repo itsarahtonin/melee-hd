@@ -222,6 +222,11 @@ impl Adapter {
         self.shared.lock().unwrap().reports
     }
 
+    /// When the latest report arrived, while the adapter is open: [`Adapter::ports`] reads it.
+    pub fn report_time(&self) -> Option<Instant> {
+        self.shared.lock().unwrap().report.map(|(_, t)| t)
+    }
+
     /// Turns the motors on or off, for ports with a controller that has one.
     pub fn rumble(&self, on: [bool; 4]) {
         self.shared.lock().unwrap().rumble = on;

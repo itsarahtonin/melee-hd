@@ -15,6 +15,12 @@ use crate::mem::Space;
 /// The XFB the frame is copied to. Its address is the presentation's.
 pub const XFB_ADDR: u32 = 0x00F0_0000;
 
+/// The aspect ratio the game's 640 by 480 picture is made for: 73:60 (584 square pixels by
+/// 480), the width the console's picture fills on a 4:3 screen and Slippi Dolphin's "73:60"
+/// option. The game camera's perspective aspect, 1.2173333 (`lb_80013B14`), is the same
+/// within 0.06%: 584.32 pixels by 480.
+pub const GAME_ASPECT: f32 = 73.0 / 60.0;
+
 /// What the frame's stream starts from and keeps from frame to frame: GX's state and HSD's.
 pub struct Frames {
     pub gx: Gx,
@@ -293,13 +299,14 @@ impl Ctx<'_> {
     }
 }
 
-/// Widescreen: a camera drawing to the screen sees `aspect / (4/3)` times as wide, keeping
-/// its height, and the frame is shown stretched to `aspect`. The gameplay camera (the
-/// simulation's, which decides who is off screen) stays 4:3; only the view widens, and the 2D
-/// cameras' content (the HUD) keeps its shape and its place in the 4:3 middle.
+/// Widescreen: a camera drawing to the screen sees `aspect / GAME_ASPECT` times as wide,
+/// keeping its height, so the frame, shown at `aspect`, keeps the proportions it has at the
+/// game's 73:60. The gameplay camera (the simulation's, which decides who is off screen) stays
+/// as it is; only the view widens, and the 2D cameras' content (the HUD) keeps its shape and
+/// its place in the 73:60 middle.
 fn widen(v: &mut melee_sim::hsd::display::CameraView, aspect: f32) {
     use melee_sim::hsd::cobj;
-    let k = aspect / (4.0 / 3.0);
+    let k = aspect / GAME_ASPECT;
     match v.projection_type {
         cobj::PERSPECTIVE => v.projection[1] *= k,
         cobj::FRUSTUM | cobj::ORTHO => {

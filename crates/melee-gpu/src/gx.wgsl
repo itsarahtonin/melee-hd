@@ -401,9 +401,10 @@ fn indirect_lookup(i: u32, iref: u32, ntex: u32, dx: array<vec2<f32>, 8>, dy: ar
 @fragment
 fn fs_main(in: Varyings) -> Out {
     var out: Out;
-    // In the console's EFB pixels, whatever the scale (`mode.w`).
-    let ex = i32(in.pos.x) / i32(max(st.mode.w, 1u));
-    let ey = i32(in.pos.y) / i32(max(st.mode.w, 1u));
+    // In the console's EFB pixels, whatever the scale (`mode.w`: the vertical scale, and above
+    // it the EFB's width for the console's 640).
+    let ex = i32(in.pos.x) * 640 / i32(max(st.mode.w >> 4u, 1u));
+    let ey = i32(in.pos.y) / i32(max(st.mode.w & 15u, 1u));
     // Screen z from the GPU's, then as the EFB holds it.
     let screen_z = st.depth.y + st.depth.x * (in.pos.z - 1.0);
     var z = i32(clamp(screen_z, 0.0, 16777215.0));
