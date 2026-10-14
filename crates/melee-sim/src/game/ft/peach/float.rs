@@ -180,6 +180,8 @@ impl Running<'_> {
     /// An aerial out of the float, `ftPe_8011BE80`: A or a C-stick flick while it lasts; a
     /// neutral or forward aerial with a swing item swings it (`ftCo_800CDDA0`).
     #[doc(alias = "ftPe_8011BE80")]
+    // NaN takes the original's branch, which the negated comparison spells out.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn peach_float_attack_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
         if fp.input.pressed_buttons & PAD_A == 0 && !self.cstick_flick(gobj) {

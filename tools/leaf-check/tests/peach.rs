@@ -401,7 +401,7 @@ fn vary(call: &mut Call, i: usize) {
     let (cx, cy) = sticks[(i / 3 + 1) % sticks.len()];
     poke_f32(call, fp + 0x638, cx);
     poke_f32(call, fp + 0x63C, cy);
-    if i % 2 == 0 {
+    if i.is_multiple_of(2) {
         poke_f32(call, fp + 0x640, 0.0);
         poke_f32(call, fp + 0x644, 0.0);
     }

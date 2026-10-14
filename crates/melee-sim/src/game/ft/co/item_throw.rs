@@ -77,9 +77,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80095328")]
     pub fn item_throw_air(&mut self, gobj: GObjId) -> Option<bool> {
         let fp = self.game.fighter(gobj);
-        if fp.item_gobj.is_none() {
-            return None;
-        }
+        fp.item_gobj?;
         let (x, y, sx, sy, angle);
         if self.item_cstick_throw_input(gobj) {
             let fp = self.game.fighter(gobj);
