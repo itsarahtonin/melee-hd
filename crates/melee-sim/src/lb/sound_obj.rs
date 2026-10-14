@@ -14,7 +14,8 @@ use crate::game::handles::{CodeRef, SoundObjId};
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::state::{Event, Game, Running, UserData};
 use crate::hsd::gobj::{self, GObjId};
-use crate::hsd::pool::Pool;
+use crate::hsd::heap::Kind;
+use crate::hsd::pool::{Pool, kind as pool_kind};
 
 /// `HSD_GOBJ_CLASS_SOUND`, which is also the user data's kind and the process's priority.
 pub const CLASS: u16 = 23;
@@ -70,8 +71,9 @@ pub struct SoundObj {
     pub x44: bool,
 }
 
-/// The sound objects' pool.
-pub type SoundObjs = Pool<SoundObj>;
+/// The sound objects' pool (`lbl_80433710`, the allocator model's
+/// [`Kind::AudioUserData`](crate::hsd::heap::Kind::AudioUserData)).
+pub type SoundObjs = Pool<SoundObj, { pool_kind(Kind::AudioUserData) }>;
 
 impl Mirror for SoundObj {
     const SIZE: u32 = 0x48;
