@@ -155,7 +155,10 @@ class Gen:
             splices = [splices]
         out = []
         done = set()
+        unused = config.UNUSED.get(rec_name(rid), set())
         for f in r["fields"]:
+            if f["name"] in unused:
+                continue
             off = f["offset_bits"] // 8
             splice = next((sp for sp in splices if sp[1] <= off < sp[2]), None)
             if splice:

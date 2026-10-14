@@ -107,7 +107,12 @@ impl Running<'_> {
         // `HSD_ObjAlloc` hands the block back uncleared; a fresh heap's is zero (see
         // `docs/engine.md`).
         let f = FighterId(self.game.fighters.alloc(Fighter::default()));
-        let address = self.game.ft.address_seed.pop_front().unwrap_or(0);
+        // The allocator model's address (`hsd::heap`), else one the frontend seeded, else 0.
+        let seeded = self.game.ft.address_seed.pop_front();
+        let address = match self.game.fighters.addr(f.0) {
+            0 => seeded.unwrap_or(0),
+            a => a,
+        };
         self.game.ft.addresses.insert(f.0, address);
         let attrs = AttrsId(self.game.fighter_attrs.alloc(vec![0; FIGHTER_ATTRS_SIZE]));
         self.game.fighters[f.0].dat_attrs_backup = Some(attrs);
@@ -330,7 +335,8 @@ impl Running<'_> {
 
     /// Loads the fighter's costume model as its GObj's joint tree,
     /// `Fighter_UnkUpdateCostumeJoint_800686E4`: shapes of the fighters' class, the root of
-    /// the fighters' joint class (`ftParts_80073758`, which melee-sim's joints don't need).
+    /// the fighters' joint class (`ftParts_80073758`, whose methods melee-sim's joints don't
+    /// need, but whose count the allocator model keeps).
     #[doc(alias = "Fighter_UnkUpdateCostumeJoint_800686E4")]
     #[doc(alias = "ftParts_80073758")]
     #[doc(alias = "ftPartsPObjSetDefaultClass")]
@@ -344,6 +350,10 @@ impl Running<'_> {
         let j = jobj::load_joint(&mut self.game.objs, self.data, joint);
         pobj::set_default_class(&mut self.game.objs.pobjs, PObjClass::Hsd);
         let j = j.expect("a costume without a model");
+        // `hsdChangeClass(jobj, &ftJObj)`.
+        let jobjs = &mut self.game.objs.jobjs;
+        crate::hsd::heap::change_class(jobjs[j].class, crate::hsd::heap::Class::FtJObj);
+        jobjs[j].class = crate::hsd::heap::Class::FtJObj;
         self.game
             .world
             .set_obj(gobj, OBJ_JOBJ, super::super::state::Obj::JObj(j));

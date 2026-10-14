@@ -30,7 +30,7 @@ const IT_KIND_FOX_ILLUSION: i32 = 56;
 
 impl Running<'_> {
     /// The character's attributes (`ftData::ext_attr`), `size` bytes of them.
-    fn ext_attrs(&self, f: FighterId, size: usize) -> Vec<u8> {
+    pub(crate) fn ext_attrs(&self, f: FighterId, size: usize) -> Vec<u8> {
         let d = self.game.fighters[f.0]
             .ft_data
             .expect("a fighter without data");
@@ -41,7 +41,7 @@ impl Running<'_> {
 
     /// Copies the character's attributes into the fighter's backup block and makes that its
     /// attributes (`PUSH_ATTRS`).
-    fn push_attrs(&mut self, f: FighterId, size: usize) {
+    pub(crate) fn push_attrs(&mut self, f: FighterId, size: usize) {
         let src = self.ext_attrs(f, size);
         let backup = self.game.fighters[f.0]
             .dat_attrs_backup
@@ -51,7 +51,7 @@ impl Running<'_> {
     }
 
     /// Copies the character's attributes over the fighter's (`COPY_ATTRS`).
-    fn copy_attrs(&mut self, f: FighterId, size: usize) {
+    pub(crate) fn copy_attrs(&mut self, f: FighterId, size: usize) {
         let src = self.ext_attrs(f, size);
         let attrs: AttrsId = self.game.fighters[f.0]
             .dat_attrs
@@ -205,7 +205,8 @@ impl Running<'_> {
 
     /// Ganondorf's creation, `ftGn_Init_OnLoad` (`ftCa_Init_OnLoadForGanon`): Captain
     /// Falcon's attribute layout, pushed; he can't wall jump.
-    // Ports `ftGn_Init_OnLoad` and `ftCa_Init_OnLoadForGanon`; aliased once a check reaches them.
+    #[doc(alias = "ftGn_Init_OnLoad")]
+    #[doc(alias = "ftCa_Init_OnLoadForGanon")]
     pub fn gn_on_load(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.push_attrs(f, CAPTAIN_ATTRS_SIZE);
@@ -223,7 +224,7 @@ impl Running<'_> {
 
     /// Ganondorf's spawn, `ftGn_Init_OnDeath`: his first model variant, his second model
     /// hidden, the side special's effects not out.
-    // Ports `ftGn_Init_OnDeath`; aliased once a check reaches it.
+    #[doc(alias = "ftGn_Init_OnDeath")]
     pub fn gn_on_death(&mut self, gobj: GObjId) {
         self.game.set_part_vis(gobj, 0, 0);
         self.game.set_part_vis(gobj, 1, -1);
@@ -235,7 +236,7 @@ impl Running<'_> {
     /// `ftCa_Init_LoadSpecialAttrs`, and Ganondorf's (`ftGn_Init_LoadSpecialAttrs`), which
     /// calls it.
     #[doc(alias = "ftCa_Init_LoadSpecialAttrs")]
-    // Also ports `ftGn_Init_LoadSpecialAttrs`; aliased once a check reaches it.
+    #[doc(alias = "ftGn_Init_LoadSpecialAttrs")]
     pub fn ca_load_special_attrs(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.copy_attrs(f, CAPTAIN_ATTRS_SIZE);

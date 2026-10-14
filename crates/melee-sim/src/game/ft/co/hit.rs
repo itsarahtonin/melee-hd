@@ -219,12 +219,13 @@ impl Running<'_> {
     }
 
     /// The color animation a damaging hit starts, `ftCo_8008DA4C`: the element's (fire,
-    /// electric, ice and darkness by knockback level) or the plain hit's. Its result is
-    /// unset when the hit dealt no damage; a caller reading it then stops.
+    /// electric, ice and darkness by knockback level) or the plain hit's. A hit that dealt no
+    /// damage starts none, and the C leaves the result unset: the machine code returns the
+    /// link register it saved (its caller's return address), never zero, so it reads as true.
     #[doc(alias = "ftCo_8008DA4C")]
-    fn damage_color_anim(&mut self, gobj: GObjId, element: u32, level: i32) -> Option<bool> {
+    fn damage_color_anim(&mut self, gobj: GObjId, element: u32, level: i32) -> bool {
         if self.game.fighter(gobj).dmg.x1838_percentTemp == 0.0 {
-            return None;
+            return true;
         }
         let id = match element {
             ELEMENT_FIRE => level + 11,
@@ -233,7 +234,7 @@ impl Running<'_> {
             ELEMENT_DARK => level + 35,
             _ => 4,
         };
-        Some(self.start_color_anim(gobj, id, 0))
+        self.start_color_anim(gobj, id, 0)
     }
 
     /// Hitstun's entry, `ftCo_8008DCE0`: the knockback's level, angle and velocity (along
@@ -469,6 +470,75 @@ impl Running<'_> {
         }
     }
 
+    /// Wobbling prevention's count (Slippi's `External/PreventWobbling` code at `0x8008F090`):
+    /// a held victim (`CapturePulledHi` to `CaptureDamageLw`) hit by a new attack of the
+    /// Ice Climber holding it (`x2222_b5`) or of an item that Ice Climber owns counts it
+    /// (`mv` 0x44, the attack's instance at 0x46); outside teams, the fourth sets it free:
+    /// the holder lets go (the victim breaking free while the last instance counted isn't
+    /// 0, the register the code hands `ftCo_800DA698` unset), and the holder's partner, if
+    /// awake and not tumbling, lets go too, on the ground, or in the air jumps out of the
+    /// hold (`ftCo_MS_CaptureJump`). True when it set the victim free.
+    fn wobble_count(&mut self, gobj: GObjId) -> bool {
+        let f = self.game.fighter_id(gobj);
+        let fp = &self.game.fighters[f.0];
+        if !(223..=228).contains(&fp.motion_id) {
+            return false;
+        }
+        let Some(holder) = fp.victim_gobj else {
+            return false;
+        };
+        if !self.game.fighter(holder).x2222_b5 {
+            return false;
+        }
+        let source = fp.dmg.x1868_source;
+        let instance = if source == Some(holder) {
+            self.game.fighter(holder).x2074.x2088
+        } else {
+            let Some(src) = source.filter(|&s| crate::game::it::is_item(self.game, Some(s))) else {
+                return false;
+            };
+            let ip = crate::game::it::item(self.game, src);
+            if ip.owner != Some(holder) {
+                return false;
+            }
+            ip.xDA8_short
+        };
+        let fp = &mut self.game.fighters[f.0];
+        let last = u16::from_be_bytes([fp.mv[0x46], fp.mv[0x47]]);
+        if instance == last {
+            return false;
+        }
+        fp.mv[0x46..0x48].copy_from_slice(&instance.to_be_bytes());
+        fp.mv[0x44] = fp.mv[0x44].wrapping_add(1);
+        if self.game.vs_is_teams() || self.game.fighters[f.0].mv[0x44] <= 3 {
+            return false;
+        }
+        self.enter_catch_cut(holder, last != 0);
+        let slot = i32::from(self.game.fighter(holder).player_idx);
+        let Some(partner) = self.game.player_entity_at(slot, 1) else {
+            return true;
+        };
+        let p = self.game.fighter(partner);
+        if p.x221F_b1 || p.x2219_b5 || p.x2070[1] >> 4 == 13 {
+            return true;
+        }
+        if p.ground_or_air == GA_GROUND {
+            self.enter_catch_cut(partner, false);
+        } else {
+            let pf = self.game.fighter_id(partner);
+            self.go_airborne(pf);
+            let c = self.common();
+            let (x374, x378) = (c.f32(0x374), c.f32(0x378));
+            let fp = &mut self.game.fighters[pf.0];
+            fp.self_vel.x = mem(fp::fmuls(reg(x374), fp::fneg(reg(fp.facing_dir))));
+            fp.self_vel.y = x378;
+            fp.set_mv_f32(0, 0.0);
+            // `ftCo_MS_CaptureJump`.
+            self.change_motion_state(partner, 230, 0, 0.0, 1.0, 0.0, None);
+        }
+        true
+    }
+
     /// A hit's reaction, `ftCo_8008E908`: off a ledge, its regrab cooldown; a sleep hit
     /// puts the fighter to sleep (not ported); else hitstun.
     #[doc(alias = "ftCo_8008E908")]
@@ -495,26 +565,22 @@ impl Running<'_> {
 
     /// [`Self::damage_no_reaction`], `wobble_site` at the copy wobbling prevention hooks
     /// (the Gecko code at `0x8008F090`, in a held fighter's hit): with the rule, a victim
-    /// held (`CapturePulledHi` to `CaptureDamageLw`) by Popo counts the hit (not ported).
+    /// held (`CapturePulledHi` to `CaptureDamageLw`) by Popo counts the hit
+    /// ([`Self::wobble_count`]), and on the fourth it breaks free, skipping the hold's
+    /// flinch.
     fn damage_no_reaction_at(&mut self, gobj: GObjId, wobble_site: bool) {
         let f = self.game.fighter_id(gobj);
         self.stamina_out(gobj);
-        if wobble_site && self.game.rules.prevent_wobbling {
-            let fp = &self.game.fighters[f.0];
-            if (223..=228).contains(&fp.motion_id)
-                && let Some(holder) = fp.victim_gobj
-                && self.game.fighter(holder).x2222_b5
-            {
-                unported_call("wobbling prevention's count of Popo's hits");
+        let broke_free = wobble_site && self.game.rules.prevent_wobbling && self.wobble_count(gobj);
+        if !broke_free {
+            let m = self.game.fighters[f.0].motion_id;
+            if m == ms::CAPTURE_WAIT_HI || m == ms::CAPTURE_DAMAGE_HI {
+                self.enter_capture_damage(gobj, true);
             }
-        }
-        let m = self.game.fighters[f.0].motion_id;
-        if m == ms::CAPTURE_WAIT_HI || m == ms::CAPTURE_DAMAGE_HI {
-            self.enter_capture_damage(gobj, true);
-        }
-        let m = self.game.fighters[f.0].motion_id;
-        if m == ms::CAPTURE_WAIT_LW || m == ms::CAPTURE_DAMAGE_LW {
-            self.enter_capture_damage(gobj, false);
+            let m = self.game.fighters[f.0].motion_id;
+            if m == ms::CAPTURE_WAIT_LW || m == ms::CAPTURE_DAMAGE_LW {
+                self.enter_capture_damage(gobj, false);
+            }
         }
         let c = self.common();
         let fp = &self.game.fighters[f.0];
@@ -529,18 +595,18 @@ impl Running<'_> {
             3
         };
         let element = fp.dmg.x1860_element;
-        match self.damage_color_anim(gobj, element, level) {
-            None => unported_call("ftCo_8008DA4C's unset result (a hit with no damage)"),
-            Some(true) => self.color_anim_update(gobj),
-            Some(false) => {}
+        if self.damage_color_anim(gobj, element, level) {
+            self.color_anim_update(gobj);
         }
         self.forget_attacker_grounded(f);
     }
 
     /// The reaction a hit with knockback picks, `ftCo_8008EC90`: none when the fighter
-    /// takes no reaction; else binding, screw, a knockdown's hit, burying, a frozen
-    /// fighter's hit and the lead pipe's capture in turn, else hitstun. A cape's, a grab's
-    /// victim's or holder's and a heavy item holder's stop at their seams.
+    /// takes no reaction; else a cape turns it around ([`Self::cape_hit`]); else binding,
+    /// screw, a knockdown's hit, burying, a frozen fighter's hit and the lead pipe's capture
+    /// in turn, else hitstun. A cape that can't turn the fighter alone keeps its facing for
+    /// the reaction and turns it afterwards. A grab's victim's or holder's and a heavy item
+    /// holder's stop at their seams.
     #[doc(alias = "ftCo_8008EC90")]
     pub fn damage_pick_reaction(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
@@ -549,18 +615,34 @@ impl Running<'_> {
             self.damage_no_reaction(gobj);
             return;
         }
+        let mut cape = None;
         if fp.dmg.x1860_element == ELEMENT_CAPE {
-            unported_call("ftCo_800C3538 (a cape's hit)");
+            if self.cape_hit(gobj) {
+                return;
+            }
+            cape = Some(self.game.fighters[f.0].facing_dir);
         }
+        self.damage_pick_reaction_after_cape(gobj, cape);
+        if cape.is_some() {
+            self.cape_turn(gobj);
+        }
+    }
+
+    /// [`Self::damage_pick_reaction`] past the cape: `cape` is the fighter's facing when a
+    /// cape's hit turns it afterwards, which the reaction keeps and which lets a held
+    /// fighter's grab break.
+    fn damage_pick_reaction_after_cape(&mut self, gobj: GObjId, cape: Option<f32>) {
+        let f = self.game.fighter_id(gobj);
+        let facing = cape.unwrap_or(0.0);
         if self.bind_check(gobj) || self.screw_check(gobj) {
             return;
         }
         let fp = &self.game.fighters[f.0];
         if let Some(other) = fp.victim_gobj {
             if fp.x221B.x221B_b5 {
-                self.holder_hit(gobj, other);
+                self.holder_hit(gobj, other, facing);
             } else {
-                self.held_hit(gobj, other);
+                self.held_hit(gobj, other, cape.is_some(), facing);
             }
             return;
         }
@@ -578,26 +660,80 @@ impl Running<'_> {
         }
         if !self.leadead_check(gobj) {
             self.damage_hooks(gobj);
-            self.damage_reaction(gobj, 0.0);
+            self.damage_reaction(gobj, facing);
         }
+    }
+
+    /// A cape's hit, `ftCo_800C3538`: it turns the fighter around ([`Self::cape_turn`]) and
+    /// takes the place of a reaction, unless the fighter can't be turned (`x2222_b2`) or the
+    /// hit's attack kind (`x2071_b0_3`) is 9, 10 or 11.
+    #[doc(alias = "ftCo_800C3538")]
+    fn cape_hit(&mut self, gobj: GObjId) -> bool {
+        let fp = self.game.fighter(gobj);
+        if fp.x2222_b2 || matches!(fp.x2070[1] >> 4, 9..=11) {
+            return false;
+        }
+        self.cape_turn(gobj);
+        true
+    }
+
+    /// Turned around by a cape, `ftCo_800C3598`: the turn's spin starts (`inlineA0`:
+    /// `ftCommonData` x648 frames, the longest kept in `dmg.x1954`, and hitlag), and the
+    /// fighter is pushed along the hit's angle by `ftCommonData` x64C in the air, or by x650
+    /// along the floor on the ground.
+    #[doc(alias = "ftCo_800C3598")]
+    fn cape_turn(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let c = self.common();
+        let (frames, air_mag, ground_mag) = (c.i32(0x648), c.f32(0x64C), c.f32(0x650));
+        let fp = &mut self.game.fighters[f.0];
+        fp.dmg.x18F4 = frames;
+        let turn = fp::frsp(f64::from(fp.dmg.x18F4));
+        if turn > reg(fp.dmg.x1954) {
+            fp.dmg.x1954 = mem(turn);
+        }
+        fp.x2220_b4 = true;
+        self.start_hitlag(gobj);
+        let fp = &self.game.fighters[f.0];
+        let air = fp.ground_or_air == GA_AIR;
+        let mag = reg(if air { air_mag } else { ground_mag });
+        let kb = reg(fp.dmg.kb_applied);
+        let angle = self.damage_angle(f, kb);
+        let x = fp::fmuls(mag, reg(math::cos(mem(angle))));
+        let y = fp::fmuls(mag, reg(math::sin(mem(angle))));
+        let fp = &self.game.fighters[f.0];
+        let facing = reg(fp.dmg.facing_dir_1);
+        if air {
+            self.damage_vel(f, fp::fmuls(x, facing), y);
+            self.game.fighters[f.0].xF0_ground_kb_vel = 0.0;
+        } else {
+            let fp = &mut self.game.fighters[f.0];
+            fp.xF0_ground_kb_vel = mem(fp::fmuls(x, facing));
+            let v = reg(fp.xF0_ground_kb_vel);
+            let n = fp.coll_data.floor.normal;
+            let (vx, vy) = (fp::fmuls(reg(n.y), v), fp::fmuls(fp::fneg(reg(n.x)), v));
+            self.damage_vel(f, vx, vy);
+        }
+        self.forget_attacker_grounded(f);
     }
 
     /// `ftCo_8008EC90`'s `inlineB1`: held fast, or with too little damage taken this
     /// frame to break free.
     fn held_fast(&self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        fp.x221C_b0 || reg(fp.dmg.x1838_percentTemp) < reg(self.common().f32(0x3C0))
+        fp.x221C_b0 || reg(fp.dmg.x1838_percentTemp) < fp::frsp(f64::from(self.common().i32(0x3C0)))
     }
 
-    /// A held fighter's hit, `ftCo_8008EC90` with `x221B_b5` clear. Held fast, it stays
-    /// held: with its holder hit too and too lightly to react, both share the hit's
-    /// hitlag, else the holder throws it off (`ftCo_800DE854`, not ported); not hit, the
-    /// holder shares the hitlag. Else the grab breaks, and it takes hitstun, its holder
-    /// too when the holder isn't hit itself (`ftCo_800DE2F0`, not ported).
-    fn held_hit(&mut self, gobj: GObjId, other: GObjId) {
+    /// A held fighter's hit, `ftCo_8008EC90` with `x221B_b5` clear. Held fast and not
+    /// turned by a cape, it stays held: with its holder hit too and too lightly to react,
+    /// both share the hit's hitlag, else the holder throws it off (`ftCo_800DE854`, not
+    /// ported); not hit, the holder shares the hitlag. Else the grab breaks, and it takes
+    /// hitstun facing `facing`, its holder too when the holder isn't hit itself
+    /// (`ftCo_800DE2F0`, not ported).
+    fn held_hit(&mut self, gobj: GObjId, other: GObjId, cape: bool, facing: f32) {
         let ff = self.game.fighter_id(gobj);
         let of = self.game.fighter_id(other);
-        if self.held_fast(gobj) {
+        if !cape && self.held_fast(gobj) {
             if self.game.fighters[of.0].dmg.kb_applied != 0.0 {
                 if self.hit_too_light(of) {
                     self.damage_no_reaction(gobj);
@@ -635,20 +771,69 @@ impl Running<'_> {
         }
         self.grab_break(other, gobj);
         self.damage_hooks(gobj);
-        self.damage_reaction(gobj, 0.0);
+        self.damage_reaction(gobj, facing);
         if self.game.fighters[of.0].dmg.kb_applied != 0.0 {
             self.game.fighters[of.0].x1828 = 1;
         } else {
             self.damage_hooks(other);
-            unported_call("ftCo_800DE2F0 (a holder knocked back by its victim's escape)");
+            self.holder_knocked_back(other);
         }
+    }
+
+    /// The holder knocked back by its victim's escape, `ftCo_800DE2F0`: a hit from
+    /// `ftCommonData`'s description (`x380`, `lbColl_80008D30`) with no attacker
+    /// (`ftColl_800788D4`), from its `TransN2` joint, its knockback and damage taken, then
+    /// hitstun.
+    // Ports `ftCo_800DE2F0`; aliased once a check reaches it.
+    fn holder_knocked_back(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let desc = self.common().at(0x380);
+        let d = |o: u32| self.data.u32(desc.at(o));
+        let hit = super::super::super::structs::HitCapsule {
+            state: d(0) as i32,
+            damage: mem(fp::frsp(f64::from(d(4)))),
+            kb_angle: d(8) as i32,
+            x24: d(0xC),
+            x28: d(0x10),
+            x2C: d(0x14),
+            element: d(0x18),
+            sfx_severity: d(0x1C) as i32,
+            sfx_kind: d(0x20) as i32,
+            unk_count: d(4),
+            ..Default::default()
+        };
+        self.clear_attacker(gobj);
+        let j = self.part_joint(gobj, 52);
+        let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
+        let fp = &self.game.fighters[f.0];
+        let defense = self.game.player_defense_ratio(i32::from(fp.player_idx));
+        let ratio = self.game.vs_damage_ratio();
+        let kb = self.knockback_of(
+            f,
+            &hit,
+            hit.unk_count,
+            ratio,
+            1.0,
+            defense,
+            fp.co_attrs.weight,
+        );
+        let fp = &mut self.game.fighters[f.0];
+        fp.dmg.kb_applied = mem(kb);
+        fp.dmg.x1848_kb_angle = hit.kb_angle;
+        fp.dmg.facing_dir_1 = fp.facing_dir;
+        fp.dmg.x184c_damaged_hurtbox = 1;
+        fp.dmg.x1854_collpos = pos;
+        fp.dmg.x1860_element = hit.element;
+        self.take_damage_coins(f, reg(hit.damage));
+        self.calc_knockback(f);
+        self.damage_reaction(gobj, 0.0);
     }
 
     /// A holder's hit, `ftCo_8008EC90` with `x221B_b5` set. Too light to react, it keeps
     /// holding: with its victim hit too and held fast, both share the hit's hitlag and
     /// the victim keeps its state; else it lets go and takes hitstun, and an unhit victim
     /// is knocked away by the holder's grab hitbox (`ftCo_800DCFD4`, not ported).
-    fn holder_hit(&mut self, gobj: GObjId, other: GObjId) {
+    fn holder_hit(&mut self, gobj: GObjId, other: GObjId, facing: f32) {
         let ff = self.game.fighter_id(gobj);
         let of = self.game.fighter_id(other);
         let other_hit = self.game.fighters[of.0].dmg.kb_applied != 0.0;
@@ -670,7 +855,7 @@ impl Running<'_> {
                 }
                 self.grab_break(gobj, other);
                 self.damage_hooks(gobj);
-                self.damage_reaction(gobj, 0.0);
+                self.damage_reaction(gobj, facing);
                 self.game.fighters[of.0].x1828 = 1;
                 return;
             }
@@ -685,7 +870,7 @@ impl Running<'_> {
             }
             self.grab_break(gobj, other);
             self.damage_hooks(gobj);
-            self.damage_reaction(gobj, 0.0);
+            self.damage_reaction(gobj, facing);
             self.game.fighters[of.0].x1828 = 1;
             return;
         }

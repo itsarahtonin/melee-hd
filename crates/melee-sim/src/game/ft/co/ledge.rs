@@ -22,7 +22,7 @@ pub(super) const CLIFF_X8: usize = 0x8;
 
 impl Running<'_> {
     /// Spawns an effect for the fighter on its effect queue (`x60C`), `efAsync_Spawn`.
-    pub(super) fn fighter_effect(
+    pub(crate) fn fighter_effect(
         &mut self,
         gobj: GObjId,
         kind: ef::SpawnKind,

@@ -338,10 +338,12 @@ impl Copier {
         target: &wgpu::TextureView,
         request: &Request,
         scale: u32,
+        width: u32,
     ) {
         let mut params = request.params;
-        // The EFB's scale: each texel reads the block of scaled pixels at it.
-        params.pad[0] = scale;
+        // The EFB's scale and its width for the console's 640: each texel reads the block of
+        // scaled pixels at it.
+        params.pad = [scale, width];
         queue.write_buffer(&self.params, 0, bytemuck::bytes_of(&params));
         let mut encoder = device.create_command_encoder(&Default::default());
         {

@@ -162,6 +162,7 @@ impl Importer<'_> {
         for i in 0..4 {
             let at = table + 0xC * i as u32;
             let archive = self.cap.u32(at);
+            let archive_addr = archive;
             self.game.gr.archives[i] = match archive {
                 0 => None,
                 _ => {
@@ -176,6 +177,7 @@ impl Importer<'_> {
                         archive,
                         map_head,
                         kind: self.cap.u32(at + 8),
+                        addr: archive_addr,
                     })
                 }
             };
@@ -687,6 +689,14 @@ impl Comparer<'_> {
                     Some(a.archive),
                     id,
                 );
+                if game.objs.heap.active {
+                    self.check(
+                        &format!("stage archive {i}"),
+                        "HSD_Archive address",
+                        a.addr,
+                        self.u32(at),
+                    );
+                }
             }
         }
         for (&desc, &bits) in &game.objs.rendermode_patches {
@@ -957,7 +967,15 @@ impl Comparer<'_> {
                 e = self.u32(e);
             }
         }
-        self.check("ID table", "entries", self.game.objs.ids.len(), theirs);
+        // Stack descriptors' keys aren't data, and memory's aren't counted either.
+        let ours = self
+            .game
+            .objs
+            .ids
+            .iter()
+            .filter(|&(k, _)| melee_sim::hsd::id::is_data_key(k))
+            .count();
+        self.check("ID table", "entries", ours, theirs);
     }
 
     fn start_hooks(&mut self, o: Option<StartHookId>, t: u32) {

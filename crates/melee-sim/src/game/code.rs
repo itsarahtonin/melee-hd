@@ -39,6 +39,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::playback::RECORD_FRAME_START_PROC | super::playback::RECORD_ITEMS_PROC => {}
         super::gm::vs::PROC => game.vs_proc(),
         crate::lb::bgflash::PROC => game.game.bgflash.proc(),
+        crate::lb::sound_obj::PROC => game.sound_object_proc(gobj),
         crate::lb::bgflash::OVERLAY_PROC => game.bg_flash_proc(),
         // fn_801A4BD0: the scene GObj's first process, empty.
         super::gm::vs::SCENE_PROC => {}
@@ -127,8 +128,26 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::seak::run(g, gobj, addr) => {}
         addr if super::ft::mars::run(g, gobj, addr) => {}
         addr if super::ft::zelda::run(g, gobj, addr) => {}
+        addr if super::ft::ness::run(g, gobj, addr) => {}
+        addr if super::ft::purin::run(g, gobj, addr) => {}
+        addr if super::ft::samus::run(g, gobj, addr) => {}
+        super::it::kinds::samusgrapple::FT_DEATH => {
+            super::it::kinds::samusgrapple::ft_death(g, gobj)
+        }
+        super::it::kinds::samusgrapple::FT_FRAME => {
+            super::it::kinds::samusgrapple::ft_frame(g, gobj)
+        }
+        super::it::kinds::samusgrapple::FT_LINE_UP => {
+            super::it::kinds::samusgrapple::ft_line_up(g, gobj)
+        }
         addr if super::ft::falco::run(g, gobj, addr) => {}
         addr if super::ft::captain::run(g, gobj, addr) => {}
+        addr if super::ft::luigi::run(g, gobj, addr) => {}
+        addr if super::ft::mario::run(g, gobj, addr) => {}
+        addr if super::ft::drmario::run(g, gobj, addr) => {}
+        addr if super::ft::pikachu::run(g, gobj, addr) => {}
+        addr if super::ft::pichu::run(g, gobj, addr) => {}
+        addr if super::ft::popo::run(g, gobj, addr) => {}
         addr if super::ft::co::dispatch::run(g, gobj, addr) => {}
         // Animation.
         0x8008_A494 => g.co_wait_anim(gobj),
@@ -326,10 +345,37 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
     if let Some(v) = super::ft::zelda::call(r, f, args) {
         return v;
     }
+    if let Some(v) = super::ft::purin::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::samus::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::ness::call(r, f, args) {
+        return v;
+    }
     if let Some(v) = super::ft::falco::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::ft::captain::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::luigi::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::mario::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::drmario::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::pikachu::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::pichu::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::popo::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::sfx::call(r, f, args) {

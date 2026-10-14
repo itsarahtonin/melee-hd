@@ -3,7 +3,7 @@
 //! and refraction's state, imported into melee-sim and compared back.
 
 use melee_sim::hsd::list::{self, SListId};
-use melee_sim::hsd::lobj::MAX_GXLIGHT;
+use melee_sim::hsd::lobj::{LObjId, MAX_GXLIGHT};
 
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::structs::BgFlashData;
@@ -43,7 +43,25 @@ impl Importer<'_> {
         let active = sym("active_lights");
         for i in 0..MAX_GXLIGHT {
             let l = self.cap.u32(active + 4 * i as u32);
-            self.game.objs.lobjs.active[i] = (l != 0).then(|| self.lobj(l));
+            self.game.objs.lobjs.active[i] = match l {
+                0 => None,
+                // A light freed while it was active stays in the table until the next clear
+                // (a light GObj's release, `HSD_LObjRemoveAll`, drops only current lights'
+                // entries); its block may hold another object by now. It gets a slot of its
+                // own, which compares by address.
+                l if !self.maps.lobjs.contains_key(&l) && self.cap.u32(l) != sym("hsdLObj") => {
+                    let id = match self.maps.dangling_lobjs.iter().find(|e| *e.1 == l) {
+                        Some((&id, _)) => LObjId(id),
+                        None => {
+                            let id = LObjId(self.game.objs.lobjs.pool.alloc(Default::default()));
+                            self.maps.dangling_lobjs.insert(id.0, l);
+                            id
+                        }
+                    };
+                    Some(id)
+                }
+                l => Some(self.lobj(l)),
+            };
         }
         self.game.objs.lobjs.nb_active = self.cap.u32(sym("nb_active_lights")) as i32;
         let [d, s, a, al] = MASKS.map(|m| self.cap.u32(sym(m)));
@@ -128,6 +146,9 @@ impl Comparer<'_> {
             let o = self.game.objs.lobjs.active[k];
             let path = format!("display active light {k}");
             match o {
+                Some(l) if self.maps.dangling_lobjs.contains_key(&l.0) => {
+                    self.check(&path, "freed light", self.maps.dangling_lobjs[&l.0], t);
+                }
                 Some(l) if t != 0 => self.lobjs(&path, Some(l), t),
                 _ => self.check(&path, "set", o.is_some(), t != 0),
             }

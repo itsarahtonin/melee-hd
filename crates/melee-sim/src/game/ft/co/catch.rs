@@ -7,7 +7,7 @@ use super::super::super::code::unported_call;
 use super::super::super::handles::{CodeRef, FighterId};
 use super::super::super::state::Running;
 use super::super::super::structs::Fighter;
-use super::checks::{KIND_CLINK, KIND_LINK, KIND_SAMUS};
+use super::checks::{KIND_CLINK, KIND_LINK};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 
@@ -40,22 +40,22 @@ impl Running<'_> {
         fp.x2194 = Some(CodeRef(ON_GRAB_ITEM));
     }
 
-    /// Link's hookshot (`fn_800D8EC8`, `fn_800D9228`) and Samus's grapple (`fn_800D9558`,
-    /// `fn_800D9930`) on their grabs: not ported; no one else has one.
-    fn catch_tether(&mut self, gobj: GObjId) -> bool {
+    /// Link's hookshot (`fn_800D8EC8`, `fn_800D9228`, not ported) and Samus's grapple beam
+    /// (`fn_800D9558`, `fn_800D9930`) on their grab and dash grab: whether it ended the grab.
+    fn catch_tether(&mut self, gobj: GObjId, dash: bool) -> bool {
         let kind = self.game.fighter(gobj).kind;
-        if kind == KIND_LINK || kind == KIND_CLINK || kind == KIND_SAMUS {
-            unported_call("fn_800D8EC8 and its kin (a tether grab)");
+        if kind == KIND_LINK || kind == KIND_CLINK {
+            unported_call("fn_800D8EC8 and fn_800D9228 (Link's hookshot grab)");
         }
-        false
+        self.samus_catch_tether(gobj, dash)
     }
 
     /// `ftCo_Catch_Anim` and `ftCo_CatchDash_Anim`: the tether's, then back to waiting when
     /// the animation ends.
     #[doc(alias = "ftCo_Catch_Anim")]
     #[doc(alias = "ftCo_CatchDash_Anim")]
-    pub fn co_catch_anim(&mut self, gobj: GObjId) {
-        if self.catch_tether(gobj) {
+    pub fn co_catch_anim(&mut self, gobj: GObjId, dash: bool) {
+        if self.catch_tether(gobj, dash) {
             return;
         }
         if !self.anim_frames_remaining(gobj) {
@@ -96,9 +96,10 @@ impl Running<'_> {
     // Ports `fn_800D8E30`; aliased once a check reaches it.
     fn catch_off_ground(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
-        if kind == KIND_LINK || kind == KIND_CLINK || kind == KIND_SAMUS {
-            unported_call("fn_800D949C and fn_800D9C64 (a tether put away)");
+        if kind == KIND_LINK || kind == KIND_CLINK {
+            unported_call("fn_800D949C (Link's hookshot put away)");
         }
+        self.samus_catch_off_ground(gobj);
         self.enter_fall(gobj);
     }
 }

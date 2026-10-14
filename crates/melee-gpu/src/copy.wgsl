@@ -10,9 +10,10 @@ struct Params {
     format: u32,
     yuv: u32,
     six: u32,
-    // How many scaled pixels a side an EFB pixel is.
+    // How many scaled pixels tall an EFB pixel is, and the scaled EFB's width for the
+    // console's 640.
     scale: u32,
-    pad1: u32,
+    width: u32,
 }
 
 @group(0) @binding(0) var efb: texture_2d<f32>;
@@ -33,14 +34,19 @@ fn pixel(i: u32) -> vec4<u32> {
         return vec4<u32>(0u);
     }
     let s = max(p.scale, 1u);
-    let at = vec2<u32>(i % EFB_WIDTH, i / EFB_WIDTH) * s;
+    let w = max(p.width, 1u);
+    // The scaled pixels from the column's start to the next column's.
+    let ex = i % EFB_WIDTH;
+    let left = ex * w / EFB_WIDTH;
+    let n = max((ex + 1u) * w / EFB_WIDTH, left + 1u) - left;
+    let at = vec2<u32>(left, i / EFB_WIDTH * s);
     var sum = vec4<f32>(0.0);
     for (var y = 0u; y < s; y++) {
-        for (var x = 0u; x < s; x++) {
+        for (var x = 0u; x < n; x++) {
             sum += textureLoad(efb, at + vec2<u32>(x, y), 0);
         }
     }
-    let c = vec4<u32>(round(sum / f32(s * s) * 255.0));
+    let c = vec4<u32>(round(sum / f32(n * s) * 255.0));
     return vec4<u32>(c.rgb, select(255u, c.a, p.six != 0u));
 }
 

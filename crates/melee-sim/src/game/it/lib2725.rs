@@ -26,6 +26,11 @@ pub fn set_rotation_x(game: &mut Game, j: JObjId, x: f32) {
     jobj::set_angle(&mut game.objs.jobjs, j, |q| q.x = x);
 }
 
+/// Sets a joint's z rotation (`HSD_JObjSetRotationZ`).
+pub fn set_rotation_z(game: &mut Game, j: JObjId, z: f32) {
+    jobj::set_angle(&mut game.objs.jobjs, j, |q| q.z = z);
+}
+
 /// Sets a joint's z scale (`HSD_JObjSetScaleZ`).
 pub fn set_scale_z(game: &mut Game, j: JObjId, z: f32) {
     jobj::set_srt(&mut game.objs.jobjs, j, |o| o.scale.z = z);
@@ -242,6 +247,21 @@ pub fn spin(game: &mut Game, data: &Archives, gobj: GObjId) {
         };
         *r = mem(fp::fadds(reg(*r), s));
     });
+}
+
+/// The item's landing dust and sound at `offset` from it, `it_80272AC4`: no more counted
+/// hits.
+// Ports `it_80272AC4`; aliased once a check reaches it.
+pub fn landing_dust_at(r: &mut Running, gobj: GObjId, offset: Vec3) {
+    let p = item(r.game, gobj).pos;
+    let pos = Vec3::new(
+        mem(fp::fadds(reg(offset.x), reg(p.x))),
+        mem(fp::fadds(reg(offset.y), reg(p.y))),
+        mem(fp::fadds(reg(offset.z), reg(p.z))),
+    );
+    crate::game::ef::spawn(r, 0x40C, Some(gobj), &[crate::game::ef::Arg::Vec(pos)]);
+    super::item::play_sfx(r, gobj, 116, 127, 64);
+    uncount_hits(r.game, gobj);
 }
 
 /// Turns off the hit-counting flag, `it_80274C60`.
@@ -573,6 +593,25 @@ pub fn count_spawned(game: &mut Game) {
     game.it.spawned = game.it.spawned.wrapping_add(1);
 }
 
+/// A small blast, `it_80272B40`: its effect (0x40C), its sound, and its hits counted afresh.
+#[doc(alias = "it_80272B40")]
+pub fn blast_small(r: &mut Running, gobj: GObjId) {
+    blast_with(r, gobj, 0x40C);
+}
+
+/// A large blast, `it_80272A60`: its effect (0x40E), its sound, and its hits counted afresh.
+#[doc(alias = "it_80272A60")]
+pub fn blast_large(r: &mut Running, gobj: GObjId) {
+    blast_with(r, gobj, 0x40E);
+}
+
+fn blast_with(r: &mut Running, gobj: GObjId, gfx: i32) {
+    let pos = item(r.game, gobj).pos;
+    crate::game::ef::spawn(r, gfx, Some(gobj), &[crate::game::ef::Arg::Vec(pos)]);
+    super::item::play_sfx(r, gobj, 116, 127, 64);
+    uncount_hits(r.game, gobj);
+}
+
 /// The blast of an exploding item, `it_80272C08`: its effect (0x410), its sound, and its hits
 /// counted afresh.
 #[doc(alias = "it_80272C08")]
@@ -652,4 +691,21 @@ pub fn hide_tree(game: &mut Game, j: Option<JObjId>) {
 #[doc(alias = "it_80272A18")]
 pub fn show_tree(game: &mut Game, j: Option<JObjId>) {
     jobj::clear_flags_all(&mut game.objs.jobjs, j, jobj::HIDDEN);
+}
+
+/// The item scaled by its owner's size (`ftLib_GetScale`), its model, hitboxes and ranges
+/// with it, `it_80274594`.
+// Ports `it_80274594`; aliased once a check reaches it.
+pub fn scale_by_owner(r: &mut Running, gobj: GObjId) {
+    let owner = item(r.game, gobj).owner.expect("an item without an owner");
+    let scale = super::owner::fighter(r.game, owner).x34_scale.y;
+    let ip = item_mut(r.game, gobj);
+    ip.scl = mem(fp::fmuls(reg(ip.scl), reg(scale)));
+    let scl = ip.scl;
+    let j = super::jobj_of(r.game, gobj).expect("an item without a model");
+    set_uniform_scale(r.game, j, scl);
+    let x3c = item(r.game, gobj).x3C;
+    super::hitbox::set_hit_scale(r.game, gobj, x3c);
+    scale_ranges(r.game, gobj);
+    scale_boxes(r.game, gobj);
 }

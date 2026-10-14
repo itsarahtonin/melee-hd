@@ -131,6 +131,8 @@ impl Attr {
 
 /// `ItemAttr` field offsets.
 pub mod attr {
+    /// `x4_throw_speed_mul`.
+    pub const THROW_SPEED_MUL: u32 = 0x4;
     pub const SPIN_SPEED: u32 = 0xC;
     pub const FALL_SPEED: u32 = 0x10;
     pub const FALL_SPEED_MAX: u32 = 0x14;

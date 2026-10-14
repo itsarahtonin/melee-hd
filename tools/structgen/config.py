@@ -34,6 +34,27 @@ ROOTS = [
     # Zelda's Din's Fire and its explosion.
     "itZeldaDinFire_ItemVars",
     "itZeldaDinFireExplode_ItemVars",
+    # Ness's PK Flash and its blast, PK Thunder's ball and trails, the bat and the yo-yo.
+    "itPKFlush_ItemVars",
+    "itPKFlushExplode_ItemVars",
+    "itPKThunder_ItemVars",
+    "itNesspkthundertrail_ItemVars",
+    "itNessbat_ItemVars",
+    "itNessYoyo_ItemVars",
+    # Samus's bomb, Charge Shot, missile and grapple beam.
+    "itSamusBomb_ItemVars",
+    "itSamusChargeshot_ItemVars",
+    "itSamusMissile_ItemVars",
+    "itSamusGrapple_ItemVars",
+    # Dr. Mario's pill.
+    "itDrMarioPill_ItemVars",
+    # Pikachu's and Pichu's Thunder and Thunder Jolts.
+    "itPikachuthunder_ItemVars",
+    "itPikachutJoltGround_ItemVars",
+    "itPikachutJoltAir_ItemVars",
+    # The Ice Climbers' ice and Blizzard.
+    "itClimbersIce_ItemVars",
+    "itClimbersBlizzard_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",
@@ -96,6 +117,8 @@ POINTERS = {
 FIELD_POINTERS = {
     # The stage's start hooks (`Ground_801C10B8`'s heap nodes).
     "StageInfo.x6A4": "Option<StartHookId>",
+    # A computer player's last target (`ftCo_800A4BEC`), a fighter.
+    "CpuFighter.x48": "Option<FighterId>",
     # The character's attributes, copied from its data (`PUSH_ATTRS`).
     "Fighter.dat_attrs": "Option<AttrsId>",
     "Fighter.dat_attrs_backup": "Option<AttrsId>",
@@ -155,6 +178,13 @@ FIELD_DATA = {
     "CostumeTObjList.x5D0",
 }
 
+# Fields no code reads or writes, by struct: left out like padding, so they hold whatever the
+# block held and nothing compares them. An item link's last five flag bits are such (the
+# decomp's `itCharItems.h`); a link block new from the heap mid-capture keeps the heap's bits.
+UNUSED = {
+    "ItemLink": {"x2C_b3", "x2C_b4", "x2C_b5", "x2C_b6", "x2C_b7"},
+}
+
 # Runs of fields replaced by one field of a hand-written type: struct name to (field name,
 # first offset, end offset, Rust type), or a list of such runs. Command scripts' interpreter
 # state is one: the original casts a color overlay to a CommandInfo, and their return stack
@@ -175,6 +205,7 @@ SPLICE = {
     "CpuFighter": [
         ("x444", 0x444, 0x448, "CpuInputRef444"),
         ("x448", 0x448, 0x44C, "CpuInputRef448"),
+        ("csP", 0x450, 0x454, "CpuCsP"),
         ("write_pos", 0x554, 0x558, "CpuWritePos"),
     ],
     # A fighter's dynamic bone sets, set up to the count after them and stale past it; and the
@@ -194,17 +225,19 @@ SPLICE = {
     # An item's dynamic bones and hurtboxes, likewise set up to a count.
     "Item": [
         ("xD4_dynamicBones", 0xD4, 0x374, "ItemDynamicBones"),
+        # Its ignore id, from its spawn's `x40`, which one spawn leaves a stack word.
+        ("xAC4_ignoreItemID", 0xAC4, 0xAC8, "IgnoreId"),
         ("xACC_itemHurtbox", 0xACC, 0xB54, "ItemHurtboxes"),
     ],
 }
 
 # Lines the generated mirrors use besides the handles.
 EXTRA_USES = [
-    "use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};",
+    "use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};",
     "use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};",
     "use crate::game::ft::dynamics::BoneSlot;",
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
-    "use crate::game::it::ItemVars;",
+    "use crate::game::it::{IgnoreId, ItemVars};",
     "use crate::hsd::lobj::LObjId;",
     "use crate::hsd::shadow::ShadowId;",
     "use crate::lb::command::Script;",
@@ -260,14 +293,14 @@ RENAME_FIELDS = {}
 
 PRELUDE = """use melee_data::archive::DataRef;
 
-use crate::game::ft::cpu::{CpuInputRef444, CpuInputRef448, CpuWritePos};
+use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::handles::*;
-use crate::game::it::{ItemVars, Var};
+use crate::game::it::{IgnoreId, ItemVars, Var};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;

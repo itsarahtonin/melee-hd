@@ -376,6 +376,7 @@ pub fn delete(objs: &mut Objects, l: LObjId) {
     let (p, i) = (objs.lobjs[l].position, objs.lobjs[l].interest);
     wobj::unref(objs, p);
     wobj::unref(objs, i);
+    super::heap::class_free(super::heap::Class::LObj, objs.lobjs.pool.addr(l.0));
     objs.lobjs.pool.free(l.0);
 }
 
@@ -598,7 +599,11 @@ pub fn load(objs: &mut Objects, data: &Archives, l: LObjId, desc: DataRef) {
 
 /// A new, empty light (`HSD_LObjLoadDesc`'s allocation).
 pub fn alloc(lobjs: &mut LObjs) -> LObjId {
-    LObjId(lobjs.pool.alloc(LObj::default()))
+    let l = lobjs.pool.alloc(LObj::default());
+    lobjs
+        .pool
+        .set_addr(l, super::heap::class_alloc(super::heap::Class::LObj));
+    LObjId(l)
 }
 
 /// [`load`], with the descriptor's flags as the game has edited them in the loaded data.
@@ -660,7 +665,7 @@ pub struct StaticLightDesc {
 /// A light loaded from a descriptor in the executable's data, `HSD_LObjLoadDesc` and
 /// `LObjLoad` on it.
 pub fn load_static(objs: &mut Objects, desc: &StaticLightDesc) -> LObjId {
-    let l = LObjId(objs.lobjs.pool.alloc(LObj::default()));
+    let l = alloc(&mut objs.lobjs);
     set_color(&mut objs.lobjs, l, desc.color);
     set_flags(&mut objs.lobjs, Some(l), u32::from(desc.flags));
     match desc.flags & TYPE_MASK {
@@ -684,7 +689,7 @@ pub fn load_desc(objs: &mut Objects, data: &Archives, desc: Option<DataRef>) -> 
     let mut cur = desc;
     while let Some(desc) = cur {
         assert!(data.ptr(desc).is_none(), "LightDesc {desc:?} names a class");
-        let l = LObjId(objs.lobjs.pool.alloc(LObj::default()));
+        let l = alloc(&mut objs.lobjs);
         load(objs, data, l, desc);
         match prev {
             Some(p) => objs.lobjs[p].next = Some(l),

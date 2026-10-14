@@ -7,6 +7,7 @@ pub mod compare;
 pub mod corpus;
 pub mod display;
 pub mod effects;
+pub mod heap;
 pub mod hud;
 pub mod import;
 pub mod items;
@@ -15,6 +16,7 @@ pub mod links;
 pub mod pack;
 pub mod playback;
 pub mod sis;
+pub mod sound;
 pub mod stadium;
 pub mod stage;
 pub mod vs;
@@ -49,6 +51,7 @@ impl Capture {
         Capture { call }
     }
 
+    #[track_caller]
     pub fn u32(&self, addr: u32) -> u32 {
         let i = addr.wrapping_sub(MEM1) as usize;
         u32::from_be_bytes(self.call.mem1[i..i + 4].try_into().unwrap())
@@ -311,9 +314,9 @@ fn scan(
         // The best-agreeing candidate (costume files share sizes), if it agrees on most words:
         // the game writes into some loaded data (a fighter's action table caches where each
         // animation was loaded).
-        match best_match(candidates, mem1, at) {
+        let file = MEM1 + at as u32;
+        match best_match(candidates, mem1, at, &|name| known(name, file).is_some()) {
             Some((name, bytes)) => {
-                let file = MEM1 + at as u32;
                 let id = known(name, file)
                     .unwrap_or_else(|| archives.add(Archive::parse(bytes).unwrap()));
                 let archive = archives.get(id);
@@ -337,18 +340,21 @@ fn scan(
 
 /// The best-agreeing candidate for a file at `at` (costume files share sizes), if it agrees on
 /// most words: the game writes into some loaded data (a fighter's action table caches where
-/// each animation was loaded).
+/// each animation was loaded). Between candidates that agree as well, one `prefer` names wins:
+/// files can hold the same bytes (Luigi's animation file repeats some of Mario's), and the
+/// copy is the one the game loaded.
 fn best_match<'c>(
     candidates: &'c [(String, Vec<u8>)],
     mem1: &[u8],
     at: usize,
+    prefer: &dyn Fn(&str) -> bool,
 ) -> Option<&'c (String, Vec<u8>)> {
     candidates
         .iter()
         .filter(|(_, bytes)| at + bytes.len() <= mem1.len())
         .map(|c| (agreement(&mem1[at..at + c.1.len()], &c.1), c))
         .filter(|((same, total), _)| same * 10 >= total * 7)
-        .max_by_key(|((same, _), _)| *same)
+        .max_by_key(|((same, _), c)| (*same, prefer(&c.0)))
         .map(|(_, c)| c)
 }
 
@@ -390,7 +396,7 @@ fn headerless_stage_files(
             continue;
         };
         let at = (data - 0x20 - MEM1) as usize;
-        if let Some((name, bytes)) = best_match(candidates, mem1, at) {
+        if let Some((name, bytes)) = best_match(candidates, mem1, at, &|_| false) {
             let id = known(name, data - 0x20)
                 .unwrap_or_else(|| archives.add(Archive::parse(bytes).unwrap()));
             let archive = archives.get(id);

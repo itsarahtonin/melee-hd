@@ -53,15 +53,65 @@ const TICK_READ: u64 = 16;
 /// Time an ARAM load takes per 4 KB chunk (eight register reads).
 pub const ARAM_CHUNK: u64 = 64;
 /// A disc read's time from its command to its interrupt, ssbm-rs's `DVD_LATENCY` (Slippi's
-/// fast disc speed; a drive's transfer time isn't modeled).
+/// fast disc speed), before the transfer time a [`DiscSpeed`] adds.
 pub const DISC_LATENCY: u64 = 20_250;
+/// Time base ticks a second.
+pub const TB_HZ: u64 = 40_500_000;
+/// A GameCube drive's average read rate, in bytes a second: the pace ssbm-rs's window reads
+/// at.
+pub const DRIVE_RATE: u32 = 3_000_000;
 /// The disc driver's timeout for a read (`DVDLowRead`'s alarm: 10 s of the time base).
-pub const DISC_TIMEOUT: u64 = 10 * 40_500_000;
+pub const DISC_TIMEOUT: u64 = 10 * TB_HZ;
 /// Where the audio interrupt's handler runs the user callback, where the disc interrupt's
 /// handler runs the disc driver's callback, and the ARAM interrupt's handler its own.
 const AI_CALLBACK: u64 = 64;
 const DI_CALLBACK: u64 = 32;
+/// From the disc interrupt's handler's end to an event that came due while it ran (an audio
+/// DMA block's end, measured at a drive's pace, where the boot's bank loads' interrupts meet
+/// one).
+const DI_TAIL: u64 = 8;
 const ARAM_CALLBACK: u64 = 8;
+
+/// How fast the disc reads: a match setting, since when reads finish decides when the music
+/// stream's commands reach the DSP and so which voices are free (see `docs/engine.md`).
+///
+/// HSD starts a song with `AXSetVoiceAddr`, which carries its loop flag, and sets the stream's
+/// addresses five reads later (0x20 bytes, then four of 0x4000). At the fast disc's latency
+/// alone those often fall within one 5 ms audio frame, so the SDK's `__AXSyncPBs` copies only
+/// the addresses to the DSP, the stale loop flag stops the voice at the end of its first
+/// buffer, and the song goes silent about 1.8 s in. A drive's pace keeps them frames apart: any
+/// rate under about 13 MB/s does.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum DiscSpeed {
+    /// Each read finishes [`DISC_LATENCY`] after its command, as ssbm-rs's runs read unless told
+    /// otherwise (Slippi's fast disc speed): what the oracle's traces and the replay checks
+    /// were made with.
+    #[default]
+    Fast,
+    /// A drive's pace, as ssbm-rs's window reads (`Hw::set_disc_rate`, and `DISC_RATE=3000000`
+    /// in any run): reads also move their bytes at [`DRIVE_RATE`], after the latency. What the
+    /// player reads at.
+    Drive,
+}
+
+impl DiscSpeed {
+    /// Time base ticks a read of `len` bytes takes to transfer, on top of its latency.
+    pub fn transfer(self, len: u32) -> u64 {
+        match self {
+            DiscSpeed::Fast => 0,
+            DiscSpeed::Drive => u64::from(len) * TB_HZ / u64::from(DRIVE_RATE),
+        }
+    }
+
+    /// The speed a command line names: `fast` or `drive`.
+    pub fn parse(name: &str) -> Option<DiscSpeed> {
+        match name {
+            "fast" => Some(DiscSpeed::Fast),
+            "drive" => Some(DiscSpeed::Drive),
+            _ => None,
+        }
+    }
+}
 
 /// What happens at a time on the timeline.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -148,15 +198,19 @@ pub enum Wait {
     SfxLoadsDone,
     /// The boot's read of the sound bank (`AXDriver_8038DA70`'s spin).
     BankRead,
+    /// This many of the first scene's preloaded files are in (their callbacks have run).
+    Preloaded(u32),
 }
 
 /// Time a stretch of the audio code took at the hardware, and what it started: a disc read (by
-/// the time into the stretch its command went out; a second one can't start before it ends)
-/// and ARAM transfers, which finish at once and interrupt.
+/// the time into the stretch its command went out, and the time its bytes take to transfer
+/// after the latency; a second one can't start before it ends) and ARAM transfers, which
+/// finish at once and interrupt.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct HwLog {
     pub spent: u64,
     pub read: Option<u64>,
+    pub transfer: u64,
     pub aram: u32,
 }
 
@@ -174,11 +228,12 @@ impl HwLog {
         }
     }
 
-    /// A disc read's command goes out.
-    pub fn disc_read(&mut self) {
+    /// A disc read's command goes out, for `len` bytes at `speed`.
+    pub fn disc_read(&mut self, len: u32, speed: DiscSpeed) {
         self.spent += DISC_ISSUE;
         assert!(self.read.is_none(), "two disc reads in flight");
         self.read = Some(self.spent);
+        self.transfer = speed.transfer(len);
     }
 
     /// A hardware register is read.
@@ -252,9 +307,16 @@ impl Clock {
     /// Runs what is due now: events, then the interrupts they raised (the audio interrupt
     /// before the retrace), until nothing is.
     fn service(&mut self, f: &mut dyn Frames) {
+        // An event that came due while the disc interrupt's handler ran happens `DI_TAIL`
+        // after the handler.
+        let mut after_disc = false;
         loop {
+            let tail = std::mem::take(&mut after_disc);
             if let Some(i) = self.next_event().filter(|&i| self.events[i].at <= self.now) {
                 let e = self.events.swap_remove(i);
+                if tail {
+                    self.now += DI_TAIL;
+                }
                 match e.kind {
                     EventKind::Field => {
                         self.vi_pending = true;
@@ -306,6 +368,7 @@ impl Clock {
                 let log = f.disc_done(DI_CALLBACK);
                 self.apply(start, &log);
                 self.now = start + log.spent;
+                after_disc = true;
             } else if self.vi_pending {
                 self.vi_pending = false;
                 self.now += VI_HANDLER;
@@ -320,7 +383,7 @@ impl Clock {
     fn apply(&mut self, start: u64, log: &HwLog) {
         if let Some(r) = log.read {
             assert!(self.disc_timeout.is_none(), "two disc reads in flight");
-            self.schedule(start + r + DISC_LATENCY, EventKind::DiscDone);
+            self.schedule(start + r + DISC_LATENCY + log.transfer, EventKind::DiscDone);
             self.disc_timeout =
                 Some(self.schedule(start + r + DISC_TIMEOUT, EventKind::DiscTimeout));
         }
@@ -449,6 +512,18 @@ impl Clock {
         }
     }
 
+    /// `VIWaitForRetrace`: time passes, its interrupts taken, until the next retrace's handler
+    /// has run.
+    pub fn wait_for_retrace(&mut self, f: &mut dyn Frames) {
+        self.game_code(f);
+        self.woken = false;
+        while !self.woken {
+            let next = self.next_at();
+            self.now = self.now.max(next);
+            self.service(f);
+        }
+    }
+
     /// The audio frames of a stretch of code the model doesn't cover (a scene's entry), at
     /// the times their driver callbacks ran: their interrupts were taken `AI_CALLBACK` before.
     /// They replace the DMA's schedule until the scene's loop starts, which takes it up from
@@ -496,9 +571,20 @@ impl Clock {
 mod tests {
     use super::*;
 
-    /// Handlers that take no time, and game code that issues one disc read.
+    /// Handlers that take no time, and game code that issues one disc read of 0x4000 bytes at
+    /// `speed`.
     struct Stub {
         read: bool,
+        speed: DiscSpeed,
+    }
+
+    impl Stub {
+        fn new(read: bool) -> Stub {
+            Stub {
+                read,
+                speed: DiscSpeed::Fast,
+            }
+        }
     }
 
     impl Frames for Stub {
@@ -514,7 +600,7 @@ mod tests {
         fn take_log(&mut self) -> HwLog {
             let mut log = HwLog::default();
             if std::mem::take(&mut self.read) {
-                log.disc_read();
+                log.disc_read(0x4000, self.speed);
             }
             log
         }
@@ -532,7 +618,7 @@ mod tests {
     #[test]
     fn disc_interrupt_takes_back_the_timeout() {
         let mut c = Clock::new(0, AUDIO_FRAME, 675_000, 675_000);
-        let mut f = Stub { read: true };
+        let mut f = Stub::new(true);
         c.tick_end(&mut f);
         assert!(c.disc_timeout.is_some());
         assert!(kinds(&c).contains(&EventKind::DiscTimeout));
@@ -546,11 +632,26 @@ mod tests {
     }
 
     #[test]
+    fn a_drive_reads_at_its_pace() {
+        // 0x4000 bytes at 3 MB/s: 5.46 ms, longer than an audio frame.
+        for (speed, transfer) in [(DiscSpeed::Fast, 0), (DiscSpeed::Drive, 221_184)] {
+            let mut c = Clock::new(0, AUDIO_FRAME, 675_000, 675_000);
+            c.tick_end(&mut Stub { read: true, speed });
+            let done = c.events.iter().find(|e| e.kind == EventKind::DiscDone);
+            assert_eq!(
+                done.map(|e| e.at),
+                Some(DISC_ISSUE + DISC_LATENCY + transfer)
+            );
+        }
+        assert!(DiscSpeed::Drive.transfer(0x4000) > AUDIO_FRAME);
+    }
+
+    #[test]
     fn cancelled_events_stop_no_wait() {
         let mut c = Clock::new(0, AUDIO_FRAME, 675_000, 675_000);
         let seq = c.schedule(5_000, EventKind::DspResume);
         c.cancel(seq);
-        c.wait(WAIT_STEP, &mut Stub { read: false });
+        c.wait(WAIT_STEP, &mut Stub::new(false));
         assert_eq!(c.now, WAIT_STEP);
     }
 

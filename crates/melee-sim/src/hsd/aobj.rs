@@ -13,6 +13,8 @@ use super::fobj::{self, FObjId, FObjs, Update, again};
 use super::jobj::JObjId;
 use super::pool::Pool;
 use crate::fpu::{copy, mem, reg};
+use crate::hsd::heap::Kind;
+use crate::hsd::pool::kind as pool_kind;
 use crate::math;
 
 /// An AObj's slot.
@@ -50,7 +52,7 @@ pub struct AObj {
 #[doc(alias = "HSD_AObjGetAllocData")]
 #[derive(melee_derive::CloneFrom, Debug, Default)]
 pub struct AObjs {
-    pub pool: Pool<AObj>,
+    pub pool: Pool<AObj, { pool_kind(Kind::AObj) }>,
     /// AObjs that were stopped after being interpreted, since `init_end_callback`
     /// (`HSD_AObj_804D762C`).
     pub stopped: i32,

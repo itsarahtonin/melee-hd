@@ -267,6 +267,17 @@ impl Game {
     }
 
     /// Clears a player's per-frame counters, `pl_80040DDC`.
+    /// Counts damage healed toward the slot's statistics (`xC68`), `pl_80040B8C`: not for a
+    /// sub-fighter.
+    #[doc(alias = "pl_80040B8C")]
+    pub fn add_healed(&mut self, slot: i32, sub: i32, amount: i32) {
+        if sub != 0 {
+            return;
+        }
+        let t = self.player_stale_moves(slot);
+        t.xC68 = t.xC68.wrapping_add(amount);
+    }
+
     #[doc(alias = "pl_80040DDC")]
     pub fn reset_frame_counters(&mut self, slot: i32) {
         let t = self.player_unk6a8(slot);

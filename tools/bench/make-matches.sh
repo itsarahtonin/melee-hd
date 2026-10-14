@@ -15,7 +15,7 @@
 set -u
 dir=$1
 shift
-names=${*:-fox-fox-fd fox-marth-bf fox-marth-fd fox-marth-ps ics-peach-ps}
+names=${*:-fox-fox-fd fox-marth-bf fox-marth-fd fox-marth-ps ics-peach-ps ganon-captain-fd}
 here=$(cd "$(dirname "$0")" && pwd)
 bench=${MELEE_BENCH:-$here/../../target/release/melee-bench}
 run=${SSBM_RUN:?SSBM_RUN=path to ssbm-run with BENCH_CODES}

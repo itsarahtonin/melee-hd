@@ -325,7 +325,7 @@ impl Running<'_> {
             return true;
         }
         match self.game.fighter(gobj).kind {
-            KIND_NESS => unported_call("ftNs_JumpAerial_Enter"),
+            KIND_NESS => self.ness_jump_aerial_enter(gobj),
             KIND_YOSHI => unported_call("ftYs_JumpAerial_Enter"),
             KIND_PEACH => unported_call("ftPe_JumpAerial_Enter"),
             KIND_MEWTWO => unported_call("ftMt_JumpAerial_Enter"),
@@ -453,7 +453,9 @@ impl Running<'_> {
         if fp.input.held_buttons[0] & super::PAD_LR != 0
             && fp.input.pressed_buttons & super::PAD_A != 0
         {
-            unported_call("ftCo_800C3BE8");
+            self.enter_air_catch(gobj);
+            self.game.fighter_mut(gobj).used_tether = true;
+            return true;
         }
         false
     }

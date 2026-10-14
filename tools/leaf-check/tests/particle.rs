@@ -954,7 +954,7 @@ fn setup<'c>(ctx: &'c Ctx, plan: &Plan, rand: &mut Rand) -> Sides<'c> {
     // never frees them.
     for _ in 0..6 {
         let t = fns::HSD_JObjAlloc(ctx).addr();
-        let o = jobj::alloc(&mut s.objs.jobjs);
+        let o = jobj::alloc(&mut s.objs);
         ctx.write_u16(t + 4, 100);
         s.objs.jobjs[o].ref_count = 100;
         let rot = [

@@ -40,7 +40,9 @@ const MAX_DSP_CYCLES: u32 = 162_000_000 / 400;
 pub const PAD_ALARM_PERIOD: u64 = 675_000;
 
 /// When the boot's unsimulated code ends on ssbm-rs's clock, measured from its runs (its
-/// `AUDIO_TIMELINE` log of a replay's boot; the boot doesn't depend on the replay).
+/// `AUDIO_TIMELINE` log of a replay's boot, at Slippi's fast disc speed and at a drive's pace;
+/// the boot doesn't depend on the replay). Up to the save data's reset no disc read has
+/// ended, so those times hold at any disc speed; after it, the boot's times follow its reads.
 pub struct BootTimes;
 
 impl BootTimes {
@@ -54,18 +56,20 @@ impl BootTimes {
     /// `lbAudioAx_80028690`'s start, after the rest of `main`'s setup up to the save data's
     /// reset.
     pub const RESET: u64 = 1_360_814;
-    /// The first scene's preparation (`preloadState`) starts its preload. The boot's first
-    /// reads straddle the first tick's start (ssbm-rs's order of calls puts the second
-    /// file's request before it and the third's after), which puts this between 5,402,160 and
-    /// 5,422,440; here it is just after the retrace that starts field 8, which the boot's
-    /// frame setup waits for. Nothing the boot leaves depends on where in that window it is.
-    pub const PRELOAD: u64 = 5_405_432;
-    /// The first engine tick's game code, after `main` has handed over to the scene manager
-    /// and the first scene has set up.
-    pub const FIRST_TICK: u64 = 5_442_771;
-    /// Where, in that tick, Slippi's playback scene makes its audio calls, after it has asked
-    /// the Slippi device for the replay's game and preloaded its files.
-    pub const PLAYBACK_CALLS: u64 = 6_081_107;
+    /// The first scene's preparation (`preloadState`) starts its preload as the boot's bank
+    /// loads end, and the scene waits for its first file: its loop's first engine tick starts
+    /// this long after that read's interrupt is handled. At Slippi's fast disc speed the
+    /// boot's first reads straddle the first tick's start (ssbm-rs's order of calls puts the
+    /// second file's request before it and the third's after), so the preload starts between
+    /// 5,402,160 and 5,422,440 and the tick at 5,442,771; at a drive's pace the tick starts
+    /// 48,515,331 into the boot, the same time after the first file's read.
+    pub const FIRST_TICK_AFTER_PRELOAD: u64 = 10_149;
+    /// In that tick, Slippi's playback scene asks the Slippi device for the replay's game,
+    /// waits for the next retrace and then until the preload cache has read every file, and
+    /// makes its audio calls this long after the last read's interrupt, if it waited for it
+    /// (at a drive's pace; at the fast disc speed the files are in by the retrace, and the
+    /// calls come just after it, 6,081,107 into the boot).
+    pub const PLAYBACK_AFTER_PRELOADS: u64 = 24;
 }
 
 /// ARAM's allocator (`ARInit`'s stack): each allocation goes after the last.
@@ -252,9 +256,9 @@ impl Audio {
             .alloc(len.next_multiple_of(32))
             .expect("audio heap overflow.");
         let _ = base;
-        // `DVDReadAsyncPrio`: one read straight into the block, done after the disc's latency;
-        // its callback (`fn_8038DA5C`) ends the spin.
-        self.hw.disc_read();
+        // `DVDReadAsyncPrio`: one read straight into the block, done after the disc's latency
+        // (and its transfer); its callback (`fn_8038DA5C`) ends the spin.
+        self.hw.disc_read(len.next_multiple_of(32), self.disc);
         self.driver.reading_bank = true;
         self.with_clock(data, |c, f| c.wait_until(f, super::clock::Wait::BankRead));
         let file = data.get(bank).data();

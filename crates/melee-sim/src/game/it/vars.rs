@@ -134,7 +134,23 @@ members! {
     SeakChain, seak_chain, itSeakChain_ItemVars, [SEAK_CHAIN];
     ZeldaDinFire, zelda_din_fire, itZeldaDinFire_ItemVars, [ZELDA_DIN_FIRE];
     ZeldaDinFireExplode, zelda_din_fire_explode, itZeldaDinFireExplode_ItemVars, [ZELDA_DIN_FIRE_EXPLODE];
+    PKFlush, pk_flush, itPKFlush_ItemVars, [NESS_PK_FLUSH];
+    PKFlushExplode, pk_flush_explode, itPKFlushExplode_ItemVars, [NESS_PK_FLUSH_EXPLODE];
+    PKThunder, pk_thunder, itPKThunder_ItemVars, [NESS_PK_THUNDER];
+    NessPKThunderTrail, ness_pk_thunder_trail, itNesspkthundertrail_ItemVars, [NESS_PK_THUNDER1, NESS_PK_THUNDER2, NESS_PK_THUNDER3, NESS_PK_THUNDER4];
+    NessBat, ness_bat, itNessbat_ItemVars, [NESS_BAT];
+    NessYoyo, ness_yoyo, itNessYoyo_ItemVars, [NESS_YOYO];
+    SamusBomb, samus_bomb, itSamusBomb_ItemVars, [SAMUS_BOMB];
+    SamusChargeshot, samus_chargeshot, itSamusChargeshot_ItemVars, [SAMUS_CHARGE];
+    SamusMissile, samus_missile, itSamusMissile_ItemVars, [SAMUS_MISSILE];
+    SamusGrapple, samus_grapple, itSamusGrapple_ItemVars, [SAMUS_GBEAM];
+    DrMarioPill, drmario_pill, itDrMarioPill_ItemVars, [DRMARIO_VITAMIN];
+    PikachuThunder, pikachu_thunder, itPikachuthunder_ItemVars, [PIKACHU_THUNDER, PICHU_THUNDER];
+    PikachuJoltGround, pikachu_jolt_ground, itPikachutJoltGround_ItemVars, [PIKACHU_TJOLT_GROUND, PICHU_TJOLT_GROUND];
+    PikachuJoltAir, pikachu_jolt_air, itPikachutJoltAir_ItemVars, [PIKACHU_TJOLT_AIR, PICHU_TJOLT_AIR];
     Heiho, heiho, HeihoVars, [HEIHO];
+    ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE];
+    ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];
 }
 
 impl Default for ItemVars {

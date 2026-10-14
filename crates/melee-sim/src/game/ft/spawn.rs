@@ -305,6 +305,39 @@ impl Running<'_> {
         fp.smash_attrs.x2138_smashSinceHitbox = -1.0;
     }
 
+    /// The multi-jumps' rises (`Fighter_x2D0_t::x14`, `x28` of them) scaled by the fighter's
+    /// height (`Fighter_804D6524` x28), `ftCo_800D0CBC`.
+    #[doc(alias = "ftCo_800D0CBC")]
+    pub fn scale_multi_jumps(&mut self, f: FighterId) {
+        let fp = &self.game.fighters[f.0];
+        let attrs = fp.x2D0.expect("multi-jumps without their attributes");
+        let word = |s: &Self, off: usize| {
+            let b = &s.game.fighter_attrs[attrs.0][off..off + 4];
+            u32::from_be_bytes([b[0], b[1], b[2], b[3]])
+        };
+        let count = word(self, 0x28) as i32;
+        let mut scale = 1.0;
+        let scale_y = reg(fp.x34_scale.y);
+        if scale != scale_y {
+            let p = super::common_ptr(self.game, self.data, super::SCALE_PARAMS)
+                .expect("no fighter scale parameters");
+            let k = reg(self.data.f32(p.at(0x28)));
+            scale = fp::fmuls(scale, super::super::it::owner::y_scaled(1.0, scale_y, k));
+        }
+        if fp.x197C.is_some() {
+            unported_call("ftCo_800D0CBC with a bunny hood");
+        }
+        if fp.is_metal {
+            unported_call("ftCo_800D0CBC on a metal fighter");
+        }
+        for i in 0..count.max(0) as usize {
+            let off = 0x14 + 4 * i;
+            let v = mem(fp::fmuls(reg(f32::from_bits(word(self, off))), scale));
+            self.game.fighter_attrs[attrs.0][off..off + 4]
+                .copy_from_slice(&v.to_bits().to_be_bytes());
+        }
+    }
+
     /// The fighter's attributes from its character's data, in its model's scale and changed
     /// by its items and rules, then its character's own, `ftCo_800D105C`.
     #[doc(alias = "ftCo_800D105C")]
@@ -329,11 +362,10 @@ impl Running<'_> {
             a.weight = mem(fp::fmuls(reg(a.weight), w));
         }
         self.load_special_attrs(gobj);
-        let fp = &self.game.fighters[f.0];
-        if fp.x2D0.is_some() {
-            unported_call("ftCo_800D0CBC");
+        if self.game.fighters[f.0].x2D0.is_some() {
+            self.scale_multi_jumps(f);
         }
-        if fp.x2222_b0 {
+        if self.game.fighters[f.0].x2222_b0 {
             unported_call("ftCo_800D105C with Donkey Kong's attributes");
         }
     }

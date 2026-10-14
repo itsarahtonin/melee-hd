@@ -609,8 +609,8 @@ impl Running<'_> {
         );
         let table = self.data.ptr(x8.at(4)).expect("ftData_x8_x8::xC");
         let costume = u32::from(fp.costume_id);
-        // A character without texture animations (Captain Falcon) has none for any costume:
-        // the list is null, and so is what the fighter keeps.
+        // A character without texture animations (Samus, Captain Falcon) has none for any
+        // costume: the list is null, and so is what the fighter keeps.
         let indices = self
             .data
             .ptr(table.at(4 * costume))

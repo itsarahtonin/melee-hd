@@ -2,8 +2,18 @@
 //! which the mixer sees from its first frame; each tick's audio frames are then mixed
 //! (`melee_audio::Mixer`) and queued on the output device.
 
-use melee_audio::{Mixer, Output};
+use std::sync::Mutex;
+
+use melee_audio::{Mixer, Output, OutputOptions, OutputStats};
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
+
+/// How the output device is opened (`--audio-exclusive`).
+static OPTIONS: Mutex<OutputOptions> = Mutex::new(OutputOptions { exclusive: false });
+
+/// Opens the matches' output devices this way from now on.
+pub fn set_output(options: OutputOptions) {
+    *OPTIONS.lock().unwrap() = options;
+}
 
 /// Mixes each tick's audio frames and plays them.
 pub struct Sound {
@@ -21,6 +31,11 @@ impl Sound {
         if let Some(out) = &self.output {
             out.push(&self.samples);
         }
+    }
+
+    /// What the output device has measured, while it plays.
+    pub fn stats(&self) -> Option<OutputStats> {
+        self.output.as_ref().map(Output::stats)
     }
 }
 
@@ -42,15 +57,9 @@ pub fn start(
         return Ok((m, None));
     }
     let output = if play {
-        match Output::open() {
+        match Output::open_with(*OPTIONS.lock().unwrap()) {
             Ok(o) => {
-                eprintln!(
-                    "sound: {} Hz, {}",
-                    o.rate,
-                    o.buffer.map_or("the device's buffer".into(), |n| format!(
-                        "{n}-sample buffers"
-                    ))
-                );
+                eprintln!("sound: {} Hz, {}", o.rate, o.describe);
                 Some(o)
             }
             Err(e) => {

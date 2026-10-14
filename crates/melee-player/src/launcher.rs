@@ -1,5 +1,6 @@
 //! The launcher: started with no match on its command line, the player's window shows a small
-//! form (a character or none for each port, a stage, stocks and minutes) drawn with egui on the
+//! form (a character or none for each port, a stage, stocks and minutes, the aspect ratio and
+//! fullscreen) drawn with egui on the
 //! player's own GPU device and window, and Start plays that match in the same window. Escape in
 //! the match comes back here; Escape here quits. A tool for manual testing, and the seed of the
 //! menus to come.
@@ -9,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use melee_sim::game::roster::{self, CHARACTERS, STAGES};
 
-use crate::present::{Gpu, Shown};
+use crate::present::{Aspect, Gpu, Present, Shown};
 
 /// A match the launcher picked.
 #[derive(Clone, Debug, PartialEq)]
@@ -48,11 +49,16 @@ pub struct Form {
     pub message: Option<String>,
     /// Whether the window is to be fullscreen (the player follows the box, and the box F11).
     pub fullscreen: bool,
+    /// The aspect ratio the match is shown at.
+    pub aspect: Aspect,
+    /// How frames reach the display, and the input latency added back on purpose (ticks).
+    pub present: Present,
+    pub added_delay: u32,
 }
 
 impl Form {
     /// Fox against Fox on Final Destination, as the command line's defaults are.
-    pub fn new(stocks: i8, minutes: u32, fullscreen: bool) -> Form {
+    pub fn new(stocks: i8, minutes: u32, fullscreen: bool, aspect: Aspect) -> Form {
         let fox = roster::character("fox").map(|c| c.kind);
         Form {
             choice: Choice {
@@ -63,6 +69,9 @@ impl Form {
             },
             message: None,
             fullscreen,
+            aspect,
+            present: Present::Mailbox,
+            added_delay: 0,
         }
     }
 
@@ -115,8 +124,43 @@ impl Form {
                             ui.label("Minutes");
                             ui.add(egui::DragValue::new(&mut c.minutes).range(0..=99));
                             ui.end_row();
+                            ui.label("Aspect");
+                            let aspect = &mut self.aspect;
+                            egui::ComboBox::from_id_salt("aspect")
+                                .selected_text(aspect.name())
+                                .width(200.0)
+                                .show_ui(ui, |ui| {
+                                    // The command line's, when it isn't one of the choices.
+                                    let mut choices: Vec<Aspect> =
+                                        Aspect::CHOICES.iter().map(|(a, _)| *a).collect();
+                                    if !choices.contains(aspect) {
+                                        choices.push(*aspect);
+                                    }
+                                    for a in choices {
+                                        ui.selectable_value(aspect, a, a.name());
+                                    }
+                                });
+                            ui.end_row();
                             ui.label("");
                             ui.checkbox(&mut self.fullscreen, "Fullscreen");
+                            ui.end_row();
+                            ui.label("Present");
+                            let present = &mut self.present;
+                            egui::ComboBox::from_id_salt("present")
+                                .selected_text(present.name())
+                                .width(200.0)
+                                .show_ui(ui, |ui| {
+                                    for (p, name) in Present::CHOICES {
+                                        ui.selectable_value(present, p, name);
+                                    }
+                                });
+                            ui.end_row();
+                            ui.label("Added delay");
+                            ui.add(
+                                egui::DragValue::new(&mut self.added_delay)
+                                    .range(0..=15)
+                                    .suffix(" frames"),
+                            );
                             ui.end_row();
                         });
                 });
@@ -142,6 +186,7 @@ impl Form {
             ui.weak("0 stocks: a timed match. 0 minutes: no time limit.");
             ui.weak("Enter starts. Escape in a match comes back here; Escape here quits.");
             ui.weak("F11 or Alt+Enter: fullscreen.");
+            ui.weak("Added delay holds the controllers back on purpose, for a CRT's feel.");
         });
         start
     }
@@ -154,6 +199,8 @@ const ZOOM: f32 = 1.5;
 pub struct Painter {
     pub ctx: egui::Context,
     renderer: egui_wgpu::Renderer,
+    /// Clears the target first (the launcher), or draws over it (the latency overlay).
+    pub clear: bool,
 }
 
 impl Painter {
@@ -170,7 +217,11 @@ impl Painter {
                 predictable_texture_filtering: false,
             },
         );
-        Painter { ctx, renderer }
+        Painter {
+            ctx,
+            renderer,
+            clear: true,
+        }
     }
 
     /// Runs the form over a frame's input: whether Start was pressed, and what to paint.
@@ -215,7 +266,11 @@ impl Painter {
                         depth_slice: None,
                         resolve_target: None,
                         ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                            load: if self.clear {
+                                wgpu::LoadOp::Clear(wgpu::Color::BLACK)
+                            } else {
+                                wgpu::LoadOp::Load
+                            },
                             store: wgpu::StoreOp::Store,
                         },
                     })],
@@ -406,7 +461,7 @@ mod tests {
     #[test]
     fn enter_starts_a_match_of_two_or_more() {
         let ctx = egui::Context::default();
-        let mut form = Form::new(4, 8, false);
+        let mut form = Form::new(4, 8, false, Aspect::GAME);
         assert!(!frame(&ctx, &mut form, vec![]));
         assert!(frame(&ctx, &mut form, enter()));
         form.choice.players = [None, roster::character("marth").map(|c| c.kind), None, None];

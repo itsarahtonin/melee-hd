@@ -159,6 +159,8 @@ impl Running<'_> {
         let bones = vec![FighterBone::default(); n as usize];
         let parts = PartsId(self.game.fighter_parts.alloc(bones));
         let list = DObjListId(self.game.fighter_dobj_lists.alloc(vec![None; MAX_DOBJS]));
+        let addr = crate::hsd::heap::obj_alloc(crate::hsd::heap::Kind::FighterDObjList);
+        self.game.fighter_dobj_lists.set_addr(list.0, addr);
         let fp = &mut self.game.fighters[f.0];
         fp.parts = Some(parts);
         fp.dobj_list.data = Some(list);
@@ -218,7 +220,11 @@ impl Running<'_> {
                 );
                 self.game.fighter_dobj_lists[list][count] = Some(dobj);
                 if let Some(m) = self.game.objs.dobjs[dobj].mobj {
-                    self.game.objs.mobjs[m].class = MObjClass::Fighter;
+                    crate::hsd::mobj::change_class(
+                        &mut self.game.objs.mobjs,
+                        m,
+                        MObjClass::Fighter,
+                    );
                 }
                 d = self.game.objs.dobjs[dobj].next;
                 own += 1;
@@ -345,15 +351,10 @@ impl Running<'_> {
     }
 
     /// Shows (`show`) or hides a model group, `ftParts_800750C8`: group 2 (the low-poly
-    /// models) covers lookups 2 (on the second DObj list) and 3. Kirby's and Jigglypuff's
-    /// model events no port covers yet.
+    /// models) covers lookups 2 (on the second DObj list) and 3, each followed by the kind's
+    /// model event (Jigglypuff's hat; Kirby's no port covers yet).
     #[doc(alias = "ftParts_800750C8")]
     pub fn set_parts_vis(&mut self, f: FighterId, group: usize, show: bool) {
-        match self.game.fighters[f.0].kind {
-            4 => crate::game::code::unported_call("ftKb_UnkIntBoolFunc0"),
-            15 => crate::game::code::unported_call("ftPr_Init_UnkIntBoolFunc0"),
-            _ => {}
-        }
         let (main, second) = {
             let fp = &self.game.fighters[f.0];
             (fp.dobj_list.data, fp.x203C.data)
@@ -368,6 +369,12 @@ impl Running<'_> {
                 self.show_parts_vis(f, idx, list);
             } else {
                 self.hide_parts_vis(f, idx, list);
+            }
+            // The kind's model event (`ftData_UnkIntBoolFunc0`) after each lookup.
+            match self.game.fighters[f.0].kind {
+                4 => crate::game::code::unported_call("ftKb_UnkIntBoolFunc0"),
+                15 => self.purin_hat_vis(f, idx, show),
+                _ => {}
             }
         }
     }

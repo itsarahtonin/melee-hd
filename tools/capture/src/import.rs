@@ -107,6 +107,7 @@ pub struct Maps {
     pub fighters: HashMap<u32, FighterId>,
     pub items: HashMap<u32, ItemId>,
     pub item_links: HashMap<u32, melee_sim::game::handles::ItemLinkId>,
+    pub sound_objs: HashMap<u32, melee_sim::game::handles::SoundObjId>,
     pub effects: HashMap<u32, melee_sim::game::handles::EffectId>,
     pub bone_tables: HashMap<u32, BoneTableId>,
     pub grounds: HashMap<u32, GroundId>,
@@ -123,6 +124,8 @@ pub struct Maps {
     /// with whatever lives there now.
     pub dangling_gobjs: HashMap<u32, u32>,
     pub dangling_jobjs: HashMap<u32, u32>,
+    /// Lights likewise: an active light's table entry left after the light was freed.
+    pub dangling_lobjs: HashMap<u32, u32>,
     /// Fighters and items likewise: a word that was never set, such as a human player's
     /// CPU block (`CpuFighter`, which only a CPU player's process fills), where the heap block
     /// held other objects' bytes.
@@ -156,6 +159,8 @@ pub const DANGLING_BOX: u32 = 0x1000_0000;
 
 /// Where the arena starts (`OSGetArenaLo` at boot): the executable's code and data lie below.
 const HEAP: u32 = 0x804E_EC00;
+/// `MAX_FT_PARTS`: the entries a fighter's parts table has room for.
+const MAX_PARTS: u32 = 140;
 
 pub struct Importer<'a> {
     pub cap: &'a Capture,
@@ -166,6 +171,7 @@ pub struct Importer<'a> {
     pub unhandled: Vec<String>,
     /// How many bones the fighter being imported has, for its parts table.
     parts_len: u32,
+    parts_kind: u32,
     /// The archives `data` maps, for finding what a heap copy was made from.
     archives: Option<&'a Archives>,
     /// Importing bytes that may be stale (an item's: a reused block keeps what its creation
@@ -213,6 +219,7 @@ impl<'a> Importer<'a> {
             maps: Maps::default(),
             unhandled: Vec::new(),
             parts_len: 0,
+            parts_kind: 0,
             archives: None,
             stale: false,
             ef_free: None,
@@ -292,6 +299,7 @@ impl<'a> Importer<'a> {
         u16::from_be_bytes(self.cap.call.mem1[i..i + 2].try_into().unwrap())
     }
 
+    #[track_caller]
     fn u32(&self, a: u32) -> u32 {
         self.cap.u32(a)
     }
@@ -452,6 +460,11 @@ impl<'a> Importer<'a> {
                 }
                 6 if ud != 0 => Some(UserData::Item(self.item(ud))),
                 8 if ud != 0 => Some(UserData::Effect(self.effect(ud))),
+                melee_sim::lb::sound_obj::USER_DATA_KIND
+                    if ud != 0 && release == melee_sim::lb::sound_obj::FREE =>
+                {
+                    Some(UserData::Sound(self.sound_obj(ud)))
+                }
                 // Pokémon Stadium's screens: kind 3 too, freed with `HSD_Free`.
                 3 if ud != 0
                     && release == crate::stadium::HSD_FREE
@@ -849,6 +862,7 @@ impl Importer<'_> {
         let kind = self.u32(a + 4);
         let table = self.u32(self.u32(sym("ftPartsTable")) + 4 * kind);
         self.parts_len = self.u32(table + 8);
+        self.parts_kind = kind;
         let id = FighterId(self.game.fighters.alloc(Fighter::default()));
         self.maps.fighters.insert(a, id);
         self.game.ft.addresses.insert(id.0, a);
@@ -876,10 +890,34 @@ impl Importer<'_> {
         for &off in melee_sim::game::ft::vars::gobj_words(f.kind) {
             f.u.import_gobj(off, &mem, a + 0x222C, self);
         }
+        // Jigglypuff's hat (`ftPurin_FighterVars`): its model, its DObj list (as many DObjs as
+        // the model has, `ftParts_80075650`) and its variants' lookups. Before her hat loads,
+        // the block's words are whatever it held, which stay bytes.
+        let hat = self.u32(a + 0x222C + 0x10);
+        let hat_dobjs = (f.kind == 15).then(|| self.count_tree_dobjs(hat)).flatten();
+        if let Some(n) = hat_dobjs {
+            let u = a + 0x222C;
+            f.u.import_jobj(0x10, &mem, u, self);
+            let data = self.u32(u + 0x18);
+            if data & 3 == 0 && (HEAP..MEM1 + 0x0180_0000 - 4 * n).contains(&data) {
+                f.u.import_dobj_list(0x18, &mem, u, self);
+                let l = f.u.dobj_list_at(0x18).expect("the hat's DObj list");
+                let dobjs = (0..n)
+                    .map(|i| {
+                        let d = self.u32(data + 4 * i);
+                        (d != 0).then(|| self.dobj(d))
+                    })
+                    .collect();
+                self.game.fighter_dobj_lists[l.0] = dobjs;
+            }
+            for k in 0..5 {
+                f.u.import_data(0x28 + 4 * k, &mem, u, self);
+            }
+        }
         // The state's variables' handles where the states that read them keep them: a grab's
         // hold joint (`mv` 0x18) while pulling, holding or pummeling (`ft::co::grab`), Fox's
         // and Falco's Illusion's ghost (0x44) in their side special (`ft::fox::special_s`),
-        // and a thrown fighter's thrower (0xC) until its next state takes it (`x21EC`,
+        // Pikachu's Thunder bolt (below), and a thrown fighter's thrower (0xC) until its next state takes it (`x21EC`,
         // `fn_800DE798`).
         let mv = a + 0x2340;
         if matches!(f.motion_id, 213 | 215 | 216 | 217) {
@@ -887,6 +925,11 @@ impl Importer<'_> {
         }
         if melee_sim::game::ft::vars::holds_blaster(f.kind) && (347..=352).contains(&f.motion_id) {
             f.mv.import_gobj(0x44, &mem, mv, self);
+        }
+        // Pikachu's and Pichu's Thunder bolt (0) in their down special
+        // (`ft::pikachu::special_lw`).
+        if matches!(f.kind, 12 | 23) && (359..=366).contains(&f.motion_id) {
+            f.mv.import_gobj(0x0, &mem, mv, self);
         }
         if f.x21EC == Some(melee_sim::game::handles::CodeRef(0x800D_E798)) {
             f.mv.import_gobj(0xC, &mem, mv, self);
@@ -907,9 +950,16 @@ impl Importer<'_> {
             bytes: &cap.call.mem1,
             base: MEM1,
         };
-        let bones = (0..self.parts_len)
+        let mut bones: Vec<FighterBone> = (0..self.parts_len)
             .map(|i| FighterBone::import(&mem, a + i * FighterBone::SIZE, self))
             .collect();
+        // Samus's grapple beam puts its tip's model in the table's last entry, past her bones
+        // (`it_802B7C18`); the entries between hold whatever the block held.
+        let last = a + (MAX_PARTS - 1) * FighterBone::SIZE;
+        if self.parts_kind == 13 && self.is_jobj(self.u32(last)) {
+            bones.resize(MAX_PARTS as usize - 1, FighterBone::default());
+            bones.push(FighterBone::import(&mem, last, self));
+        }
         self.game.fighter_parts[id.0] = bones;
         id
     }
@@ -937,8 +987,44 @@ impl Importer<'_> {
         id
     }
 
-    /// A fighter model's DObj list, its entries filled in once the fighter's import knows
-    /// their count ([`Importer::fighter`]).
+    /// How many DObjs a joint tree holds, depth first and not into instances (the walk
+    /// `ftParts_80075650` lists them in).
+    fn count_tree_dobjs(&self, root: u32) -> Option<u32> {
+        let ok = |a: u32| a & 3 == 0 && (HEAP..MEM1 + 0x0180_0000 - 0x20).contains(&a);
+        let joint = |a: u32| (ok(a) && self.is_jobj(a)).then_some(a);
+        let mut n = 0;
+        let mut j = joint(root)?;
+        loop {
+            let mut d = self.u32(j + 0x18);
+            while d != 0 {
+                if !ok(d) || n > 0x100 {
+                    return None;
+                }
+                n += 1;
+                d = self.u32(d + 4);
+            }
+            let (child, next) = (self.u32(j + 0x10), self.u32(j + 8));
+            j = if self.u32(j + 0x14) & (1 << 12) == 0 && child != 0 {
+                joint(child)?
+            } else if next != 0 {
+                joint(next)?
+            } else {
+                let mut up = j;
+                loop {
+                    let p = self.u32(up + 0xC);
+                    if p == 0 {
+                        return Some(n);
+                    }
+                    let p = joint(p)?;
+                    if self.u32(p + 8) != 0 {
+                        break joint(self.u32(p + 8))?;
+                    }
+                    up = p;
+                }
+            };
+        }
+    }
+
     fn fighter_dobj_list(&mut self, a: u32) -> DObjListId {
         if let Some(&l) = self.maps.fighter_dobj_lists.get(&a) {
             return l;
@@ -965,11 +1051,12 @@ impl Importer<'_> {
         }
         let id = ShadowId(self.game.objs.shadows.alloc(Shadow::default()));
         self.maps.shadows.insert(a, id);
-        let mut objects = Vec::new();
+        let (mut objects, mut object_nodes) = (Vec::new(), Vec::new());
         let mut node = self.u32(a);
         while node != 0 {
             let j = self.u32(node + 4);
             objects.push(self.jobj(j));
+            object_nodes.push(node);
             node = self.u32(node);
         }
         let cam = self.u32(a + 4);
@@ -1006,6 +1093,9 @@ impl Importer<'_> {
             active: self.u32(a + 0x1C) != 0,
             intensity: self.u8(a + 0x20),
             image,
+            object_nodes,
+            imagedesc_addr: desc,
+            image_addr: if desc != 0 { self.u32(desc) } else { 0 },
         };
         id
     }
@@ -1034,7 +1124,8 @@ impl Importer<'_> {
         if !Self::is_jobj(self, a) {
             return JObjId(self.dangling("JObjId", a));
         }
-        let id = jobj::alloc(&mut self.game.objs.jobjs);
+        let id = jobj::alloc(&mut self.game.objs);
+        self.game.objs.jobjs.pool.set_addr(id.0, a);
         self.maps.jobjs.insert(a, id);
         let flags = self.u32(a + 0x14);
         let link = |s: &mut Self, at: u32| {
@@ -1091,6 +1182,9 @@ impl Importer<'_> {
             aobj,
             robj,
             id: self.data(self.u32(a + 0x84)),
+            class: crate::heap::class_of(self.u32(a), melee_sim::hsd::heap::Class::JObj),
+            scl_addr: scl,
+            envelopemtx_addr: env,
         };
         self.game.objs.jobjs[id] = j;
         id
@@ -1314,6 +1408,7 @@ impl Importer<'_> {
             view_mtx: self.mtx(a + 0x54),
             aobj,
             inv_view_mtx: (pm != 0).then(|| self.mtx(pm)),
+            inv_view_mtx_addr: pm,
         };
         id
     }
@@ -1412,7 +1507,13 @@ impl Importer<'_> {
             mat,
             pe,
             aobj,
+            heap: melee_sim::hsd::mobj::MObjHeap {
+                mat: self.u32(a + 0xC),
+                pe: self.u32(a + 0x10),
+                ..Default::default()
+            },
         };
+        self.game.objs.mobjs.pool.set_addr(id.0, a);
         id
     }
 
@@ -1456,6 +1557,16 @@ impl Importer<'_> {
                 .push("TObj palette (an HSD_Tlut copy)".into());
         }
         let tluttbl = self.tlut_table(a);
+        // The table's block and its palettes' copies, which the TObj frees.
+        let tluttbl_addr = self.u32(a + 0x6C);
+        let tluttbl_tluts: Vec<u32> = if tluttbl_addr == 0 {
+            Vec::new()
+        } else {
+            (0..)
+                .map(|i| self.u32(tluttbl_addr + 4 * i))
+                .take_while(|&t| t != 0)
+                .collect()
+        };
         let ao = self.u32(a + 0x64);
         let aobj = (ao != 0).then(|| self.aobj(ao));
         let tev = match self.u32(a + 0xA8) {
@@ -1512,8 +1623,13 @@ impl Importer<'_> {
             mtx: self.mtx(a + 0x74),
             coord: self.u32(a + 0xA4),
             tev,
+            tlut_addr: self.u32(a + 0x5C),
+            tev_addr: self.u32(a + 0xA8),
+            tluttbl_addr,
+            tluttbl_tluts,
         };
         self.game.objs.tobjs[id] = o;
+        self.game.objs.tobjs.pool.set_addr(id.0, a);
         id
     }
 
@@ -1521,6 +1637,7 @@ impl Importer<'_> {
         if let Some(&x) = self.maps.pobjs.get(&a) {
             return x;
         }
+        let class = crate::heap::class_of(self.u32(a), melee_sim::hsd::heap::Class::PObj);
         let id = PObjId(self.game.objs.pobjs.pool.alloc(PObj {
             next: None,
             verts: None,
@@ -1528,7 +1645,9 @@ impl Importer<'_> {
             n_display: 0,
             display: None,
             u: Binding::Skin(None),
+            class,
         }));
+        self.game.objs.pobjs.pool.set_addr(id.0, a);
         self.maps.pobjs.insert(a, id);
         let n = self.u32(a + 4);
         let next = (n != 0).then(|| self.pobj(n));
@@ -1547,6 +1666,8 @@ impl Importer<'_> {
                         env.push(Envelope {
                             jobj,
                             weight: self.f32(e + 8),
+                            addr: e,
+                            node: list,
                         });
                         e = self.u32(e);
                     }
@@ -1558,7 +1679,8 @@ impl Importer<'_> {
             pobj::SHAPEANIM => {
                 let set_flags = self.u16(u);
                 let nb_shape = self.u16(u + 2);
-                let blend = if set_flags & pobj::SHAPESET_ADDITIVE != 0 {
+                let additive = set_flags & pobj::SHAPESET_ADDITIVE != 0;
+                let blend = if additive {
                     let bp = self.u32(u + 0x1C);
                     (0..u32::from(nb_shape))
                         .map(|i| self.f32(bp + 4 * i))
@@ -1578,6 +1700,8 @@ impl Importer<'_> {
                     normal_idx_list: self.data(self.u32(u + 0x18)),
                     blend,
                     aobj: (ao != 0).then(|| self.aobj(ao)),
+                    addr: u,
+                    blend_addr: if additive { self.u32(u + 0x1C) } else { 0 },
                 })
             }
             _ => Binding::Skin((u != 0).then(|| self.jobj(u))),
@@ -1589,6 +1713,7 @@ impl Importer<'_> {
             n_display: self.u16(a + 0xE),
             display: self.data(self.u32(a + 0x10)),
             u: binding,
+            class,
         };
         id
     }
@@ -1680,7 +1805,7 @@ impl Importer<'_> {
                 id
             }
             _ => {
-                let id = jobj::alloc(&mut self.game.objs.jobjs).0;
+                let id = jobj::alloc(&mut self.game.objs).0;
                 self.maps.dangling_jobjs.insert(id, addr);
                 id
             }
@@ -1777,7 +1902,9 @@ impl Cx for Importer<'_> {
             return Some(self.dangling(kind, addr));
         }
         Some(match kind {
-            "JObjId" if !self.stale => self.jobj(addr).0,
+            // A live joint a stale word points to (an item's variables hold another GObj's
+            // joint, as the yo-yo holds its tip link's) is that joint, met first here.
+            "JObjId" if !self.stale || self.is_jobj(addr) => self.jobj(addr).0,
             "DObjId" => self.dobj(addr).0,
             "TObjId" => self.tobj(addr).0,
             "MObjId" => self.mobj(addr).0,

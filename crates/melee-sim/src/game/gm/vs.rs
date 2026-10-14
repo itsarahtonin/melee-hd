@@ -1709,12 +1709,9 @@ impl Running<'_> {
             code::call(self, f.0, &[Val::Int(0)]);
             super::super::camera::snap(self);
         }
-        // `NameTag` setup's `SdIntro.dat`, then the coin counter's `IfCoGet.dat`; `IfAll`
-        // stays loaded from before the match.
-        self.disc_load("SdIntro.dat", MAIN_MEMORY);
-        self.disc_load("IfCoGet.dat", MAIN_MEMORY);
+        // `IfAll` stays loaded from before the match; the HUD's setup loads `SdIntro.dat` and
+        // `IfCoGet.dat`.
         self.create_hud(files.hud);
-        self.disc_load("LbBf.dat", MAIN_MEMORY);
         self.bg_flash_init(0xFF, files.lb_bf);
         if let Some(f) = d.rules.on_match_start {
             code::call(self, f.0, &[]);

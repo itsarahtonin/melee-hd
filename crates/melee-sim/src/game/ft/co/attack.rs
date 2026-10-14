@@ -637,7 +637,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.facing_dir = dir;
         match fp.kind {
-            KIND_NESS => unported_call("ftNs_AttackS4_Enter"),
+            KIND_NESS => self.ness_attack_s4_enter(gobj),
             KIND_PEACH => unported_call("ftPe_AttackS4_Enter"),
             KIND_GAME_WATCH => unported_call("ftGw_AttackS4_Enter"),
             KIND_PIKACHU | KIND_PICHU => {
@@ -756,7 +756,8 @@ impl Running<'_> {
             return;
         }
         if self.game.fighter(gobj).kind == KIND_NESS {
-            unported_call("ftNs_AttackHi4_Enter");
+            self.ness_attack_hi4_enter(gobj);
+            return;
         }
         self.enter_attack(gobj, ms::ATTACK_HI4);
     }
@@ -781,7 +782,8 @@ impl Running<'_> {
             return true;
         }
         if self.game.fighter(gobj).kind == KIND_NESS {
-            unported_call("ftNs_AttackLw4_Enter");
+            self.ness_attack_lw4_enter(gobj);
+            return true;
         }
         self.enter_attack(gobj, ms::ATTACK_LW4);
         true
@@ -847,7 +849,7 @@ impl Running<'_> {
         if (fp.kind == KIND_LINK || fp.kind == KIND_CLINK) && fp.u_i32(0xC) != 0 {
             return false;
         }
-        if fp.kind == KIND_SAMUS && fp.u_i32(0x10) != 0 {
+        if fp.kind == KIND_SAMUS && fp.u.gobj_at(0x10).is_some() {
             return false;
         }
         let window = fp.mv_i32(ATTACK_X0);

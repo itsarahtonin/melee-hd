@@ -94,6 +94,7 @@ pub fn reset_devices(game: &mut Game) {
 #[doc(alias = "Ground_801C0378")]
 pub fn prepare(game: &mut Game) {
     reset_devices(game);
+    crate::hsd::heap::mem_alloc(64);
     game.gr.coll_off = Some([0; 64]);
 }
 
@@ -268,6 +269,9 @@ pub fn add_start_hook(game: &mut Game, gobj: GObjId, func: CodeRef) {
         gobj: Some(gobj),
         func,
     });
+    game.gr
+        .start_hooks
+        .set_addr(id, crate::hsd::heap::mem_alloc(0xC));
     game.stage_info.x6A4 = Some(StartHookId(id));
 }
 
@@ -470,11 +474,24 @@ pub fn set_apart(game: &mut Game, j: JObjId) {
     crate::lb::joint::set_mobj_flags(&mut game.objs, j, 1 << 26);
 }
 
+/// Where `Ground_GetStageGObj` keeps the descriptor of a stage object's scale joint on the
+/// stack ([`scale_joint`]) when a stage's setup makes its objects, through the stage's own
+/// create function: the stack address is the joint's ID table key. Other callers have deeper
+/// frames, given at their calls.
+pub const SETUP_FRAME: u32 = 0x804E_EA00;
+/// How much lower the descriptor of the scale joint of an object past the archive's maps
+/// sits (the inline's second copy in `Ground_GetStageGObj`).
+const EMPTY_MAP_SLOT: u32 = 0x44;
+
 /// The joint a stage object's model hangs under, scaling it by the stage's scale (the inline
 /// `get_jobj_inline`, which loads it from a descriptor on its stack). The original also puts
-/// the joint in HSD's ID table under that stack address, which nothing can look up.
-fn scale_joint(game: &mut Game, s: f32) -> JObjId {
-    let j = jobj::alloc(&mut game.objs.jobjs);
+/// the joint in HSD's ID table under that stack address (`frame`), which nothing can look up
+/// but which takes an entry ([`crate::hsd::id::stack_key`]).
+fn scale_joint(game: &mut Game, s: f32, frame: u32) -> JObjId {
+    let j = jobj::alloc(&mut game.objs);
+    let key = crate::hsd::id::stack_key(frame);
+    game.objs.ids.insert(key, j);
+    game.objs.jobjs[j].id = Some(key);
     let o = &mut game.objs.jobjs[j];
     o.rotate.x = 0.0;
     o.rotate.y = 0.0;
@@ -486,6 +503,9 @@ fn scale_joint(game: &mut Game, s: f32) -> JObjId {
     j
 }
 
+/// `sizeof(Ground)`, the block a stage object's user data takes from the scene's heap.
+pub const GROUND_SIZE: u32 = 0x204;
+
 /// A new stage object's user data (`alloc_user_data_ground`), attached to its GObj.
 ///
 /// The original leaves the block uncleared; Slippi's playback codes zero it (a determinism
@@ -493,6 +513,8 @@ fn scale_joint(game: &mut Game, s: f32) -> JObjId {
 /// here (see [`super::vars`]).
 fn new_ground(game: &mut Game, gobj: GObjId) -> GroundId {
     let id = GroundId(game.grounds.alloc(Ground::default()));
+    game.grounds
+        .set_addr(id.0, crate::hsd::heap::mem_alloc(GROUND_SIZE));
     game.world
         .init_user_data(gobj, USER_DATA_GROUND, UserData::Ground(id));
     id
@@ -500,9 +522,10 @@ fn new_ground(game: &mut Game, gobj: GObjId) -> GroundId {
 
 /// Creates a stage object for map `map_id`, `Ground_GetStageGObj`: its user data, its model
 /// from the stage's archive (or an empty joint for a map past the archive's) under a joint
-/// that scales it, its two processes, and its place in `stage_info.map_gobjs`.
+/// that scales it, its two processes, and its place in `stage_info.map_gobjs`. `frame` is
+/// where its call puts the scale joint's descriptor on the stack ([`SETUP_FRAME`]).
 #[doc(alias = "Ground_GetStageGObj")]
-pub fn stage_gobj(r: &mut Running, map_id: i32) -> Option<GObjId> {
+pub fn stage_gobj(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
     let (game, data) = (&mut *r.game, r.data);
     let gobj = game.world.create(3, 5, 0);
     let g = new_ground(game, gobj);
@@ -532,7 +555,7 @@ pub fn stage_gobj(r: &mut Running, map_id: i32) -> Option<GObjId> {
         let joint = entry.joint(data);
         let model = jobj::load_joint(&mut game.objs, data, joint);
         fill_points(game, data, map_id, model, joint);
-        let sj = scale_joint(game, scale(game));
+        let sj = scale_joint(game, scale(game), frame);
         jobj::add_next(&mut game.objs.jobjs, model, Some(sj));
         let cb = &stage_data(game.stage_info.grkind).callbacks[map_id as usize];
         if cb.flags & StageCallbacks::CAMERA != 0 && entry.camera(data).is_some() {
@@ -548,10 +571,10 @@ pub fn stage_gobj(r: &mut Running, map_id: i32) -> Option<GObjId> {
         }
         sj
     } else {
-        let model = jobj::alloc(&mut game.objs.jobjs);
+        let model = jobj::alloc(&mut game.objs);
         game.objs.jobjs[model].mtx = Mtx34::IDENTITY;
         game.objs.jobjs[model].scl = None;
-        let sj = scale_joint(game, scale(game));
+        let sj = scale_joint(game, scale(game), frame - EMPTY_MAP_SLOT);
         jobj::add_next(&mut game.objs.jobjs, Some(model), Some(sj));
         game.world.set_obj(gobj, OBJ_JOBJ, Obj::JObj(sj));
         sj
@@ -566,8 +589,14 @@ pub fn stage_gobj(r: &mut Running, map_id: i32) -> Option<GObjId> {
 /// Creates a stage object from a joint descriptor, `Ground_801C1A20`: as
 /// [`stage_gobj`] makes one, but its model from `joint` (its points of interest filled for
 /// `map_id`, -1 for none), no set-apart joints, and no place in `stage_info.map_gobjs`.
+/// `frame` is where its call puts the scale joint's descriptor on the stack.
 #[doc(alias = "Ground_801C1A20")]
-pub fn stage_gobj_from_joint(r: &mut Running, joint: DataRef, map_id: i32) -> Option<GObjId> {
+pub fn stage_gobj_from_joint(
+    r: &mut Running,
+    joint: DataRef,
+    map_id: i32,
+    frame: u32,
+) -> Option<GObjId> {
     let (game, data) = (&mut *r.game, r.data);
     let gobj = game.world.create(3, 5, 0);
     let g = new_ground(game, gobj);
@@ -589,7 +618,7 @@ pub fn stage_gobj_from_joint(r: &mut Running, joint: DataRef, map_id: i32) -> Op
     material::reset_overlay(game, gobj);
     let model = jobj::load_joint(&mut game.objs, data, Some(joint));
     fill_points(game, data, map_id, model, Some(joint));
-    let sj = scale_joint(game, scale(game));
+    let sj = scale_joint(game, scale(game), frame);
     jobj::add_next(&mut game.objs.jobjs, model, Some(sj));
     game.world.set_obj(gobj, OBJ_JOBJ, Obj::JObj(sj));
     game.world.setup_proc(gobj, CodeRef(0x801C_1CD0), 1);
@@ -599,8 +628,13 @@ pub fn stage_gobj_from_joint(r: &mut Running, joint: DataRef, map_id: i32) -> Op
 
 /// Creates a stage object and sets it up from its callbacks (each stage's copy of
 /// `grLast_8021A7F4`): its render callback, destroy callback, setup and process.
-pub fn create_from_callbacks(r: &mut Running, map_id: i32, cb: &StageCallbacks) -> Option<GObjId> {
-    let gobj = stage_gobj(r, map_id)?;
+pub fn create_from_callbacks(
+    r: &mut Running,
+    map_id: i32,
+    cb: &StageCallbacks,
+    frame: u32,
+) -> Option<GObjId> {
+    let gobj = stage_gobj(r, map_id, frame)?;
     let g = ground_of(r.game, gobj);
     let gp = &mut r.game.grounds[g.0];
     gp.x8_callback = None;
@@ -1013,6 +1047,7 @@ pub fn start(r: &mut Running, grkind: i32) {
         let hook = r.game.gr.start_hooks[h.0].clone();
         cur = hook.next;
         super::super::code::run_proc(r, hook.gobj.expect("a start hook's GObj"), hook.func);
+        crate::hsd::heap::mem_free(r.game.gr.start_hooks.addr(h.0));
         r.game.gr.start_hooks.free(h.0);
     }
     r.game.stage_info.x6A4 = None;
@@ -1140,7 +1175,7 @@ pub fn load_dat(r: &mut Running, file: Option<(&str, ArchiveId)>, _from_disc: bo
         unimplemented!("a stage without an archive (grDatFiles_803E0848's defaults)");
     };
     // `lbArchive_800171CC`: the preload holds no stage archive in a match, so it loads.
-    r.disc_load(name, super::super::ft::data::MAIN_MEMORY);
+    let addr = r.disc_load(name, super::super::ft::data::MAIN_MEMORY);
     let data = r.data;
     let a = data.get(archive);
     let public = |n: &str| a.public(n).map(|offset| DataRef { archive, offset });
@@ -1149,6 +1184,7 @@ pub fn load_dat(r: &mut Running, file: Option<(&str, ArchiveId)>, _from_disc: bo
         archive,
         map_head,
         kind: 0,
+        addr,
     });
     let i = &mut r.game.stage_info;
     i.coll_data = public("coll_data");

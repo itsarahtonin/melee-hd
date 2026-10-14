@@ -102,7 +102,7 @@ fn own_materials_to_stage_class(game: &mut Game, j: JObjId) {
     let mut d = jobj::get_dobj(&objs.jobjs, Some(j));
     while let Some(dobj) = d {
         if let Some(m) = objs.dobjs[dobj].mobj {
-            objs.mobjs[m].class = MObjClass::Ground;
+            crate::hsd::mobj::change_class(&mut objs.mobjs, m, MObjClass::Ground);
         }
         d = objs.dobjs[dobj].next;
     }

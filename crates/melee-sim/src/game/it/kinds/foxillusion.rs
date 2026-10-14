@@ -100,7 +100,6 @@ pub fn spawn(
 /// not to be picked up, its state by whether the owner is in the air, sized as the owner
 /// (`it_80274594`), no ghost yet.
 #[doc(alias = "it_8029CFF0")]
-#[doc(alias = "it_80274594")]
 fn setup(r: &mut Running, gobj: GObjId) {
     let art = article(item(r.game, gobj));
     let attrs = art
@@ -120,20 +119,7 @@ fn setup(r: &mut Running, gobj: GObjId) {
     let air = super::super::owner::fighter(r.game, owner).ground_or_air == 1;
     let flags = super::super::item::change::ANIM_UPDATE;
     change_state(r, gobj, if air { 1 } else { 0 }, flags);
-    // `it_80274594`: the item scaled by the owner's size (`ftLib_GetScale`).
-    let scale = super::super::owner::fighter(r.game, owner).x34_scale.y;
-    let ip = item_mut(r.game, gobj);
-    ip.scl = crate::fpu::mem(gekko_fp::fmuls(
-        crate::fpu::reg(ip.scl),
-        crate::fpu::reg(scale),
-    ));
-    let scl = ip.scl;
-    let j = jobj_of(r.game, gobj).expect("an afterimage without a model");
-    lib2725::set_uniform_scale(r.game, j, scl);
-    let x3c = item(r.game, gobj).x3C;
-    super::super::hitbox::set_hit_scale(r.game, gobj, x3c);
-    lib2725::scale_ranges(r.game, gobj);
-    lib2725::scale_boxes(r.game, gobj);
+    lib2725::scale_by_owner(r, gobj);
     item_mut(r.game, gobj)
         .xDD4_itemVar
         .fox_illusion()

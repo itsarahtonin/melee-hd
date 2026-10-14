@@ -24,8 +24,10 @@ use super::handles::FighterId;
 use super::state::{Game, Running};
 use crate::hsd::generator::GeneratorId;
 use crate::hsd::gobj::GObjId;
+use crate::hsd::heap::Kind;
 use crate::hsd::jobj::JObjId;
 use crate::hsd::pool::Pool;
+use crate::hsd::pool::kind as pool_kind;
 use crate::vec::Vec3;
 
 pub use alt::spawn_alt;
@@ -282,9 +284,9 @@ pub const FILES: [Option<(&str, &str)>; 51] = {
 #[derive(melee_derive::CloneFrom, Debug)]
 pub struct Globals {
     /// The effects (`efLib_AllocData`).
-    pub effects: Pool<Effect>,
+    pub effects: Pool<Effect, { pool_kind(Kind::Effect) }>,
     /// Deferred spawns (`efAsync_AllocData`).
-    pub queued: Pool<Queued>,
+    pub queued: Pool<Queued, { pool_kind(Kind::EffectQueued) }>,
     /// Counted effects alive (`efLib_EffectCount`).
     pub count: u32,
     /// `efLib_LoadKind`: [`LOAD_COUNTED`] or [`LOAD_UNCOUNTED`].

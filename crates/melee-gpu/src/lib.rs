@@ -314,6 +314,10 @@ pub struct Renderer {
     /// console's in each dimension, as are the frames copied out on the GPU. Copies to
     /// textures and readbacks come out at the console's size.
     scale: u32,
+    /// The EFB's width in pixels for the console's 640: `640 * scale`, as square as the
+    /// console's, or another width, which draws the same picture into narrower or wider pixels
+    /// for showing at another aspect ratio with square pixels.
+    width: u32,
     /// The driver's pipeline cache, where the device keeps one (`Features::PIPELINE_CACHE`).
     cache: Option<wgpu::PipelineCache>,
 }
@@ -459,9 +463,25 @@ impl Renderer {
         samples: u32,
     ) -> Self {
         let scale = scale.clamp(1, 8);
+        Self::with_device_efb(device, queue, scale, EFB_WIDTH * scale, samples)
+    }
+
+    /// A renderer whose EFB is `scale` times the console's tall and `width` pixels wide for
+    /// the console's 640, drawn with `samples` samples a pixel (see
+    /// [`Renderer::with_device_msaa`]). The frames copied out on the GPU are `width` wide;
+    /// copies to textures and readbacks still come out at the console's size.
+    pub fn with_device_efb(
+        device: wgpu::Device,
+        queue: wgpu::Queue,
+        scale: u32,
+        width: u32,
+        samples: u32,
+    ) -> Self {
+        let scale = scale.clamp(1, 8);
+        let width = width.max(1);
         let samples = if samples >= 4 { 4 } else { 1 };
         let size = wgpu::Extent3d {
-            width: EFB_WIDTH * scale,
+            width,
             height: EFB_HEIGHT * scale,
             depth_or_array_layers: 1,
         };
@@ -619,6 +639,7 @@ impl Renderer {
             gpu_xfb: None,
             draws_this_frame: 0,
             scale,
+            width,
             cache: None,
             unsupported: HashMap::new(),
         };
@@ -988,8 +1009,9 @@ impl Renderer {
 
     fn push_uniforms(&mut self, u: &Uniforms) -> u32 {
         let mut u = *u;
-        // The shader's pixel coordinates are in scaled pixels.
-        u.mode[3] = self.scale;
+        // The shader's pixel coordinates are in scaled pixels: the vertical scale, and the
+        // EFB's width for the console's 640.
+        u.mode[3] = self.scale | (self.width << 4);
         let bytes = bytemuck::bytes_of(&u);
         // The same state as the last draw's shares its uniforms.
         if self.uniforms.len() >= UNIFORM_STRIDE {
@@ -1341,7 +1363,8 @@ impl Renderer {
                 if scissor != Some(c.scissor) {
                     let [x, y, w, h] = c.scissor;
                     let s = self.scale;
-                    pass.set_scissor_rect(x * s, y * s, w * s, h * s);
+                    let (left, right) = (self.px_x(x), self.px_x(x + w));
+                    pass.set_scissor_rect(left, y * s, right - left, h * s);
                     scissor = Some(c.scissor);
                 }
                 pass.draw_indexed(c.first..c.first + c.count, 0, c.texgens..c.texgens + 1);
@@ -1354,9 +1377,14 @@ impl Renderer {
         self.commands.clear();
     }
 
+    /// The EFB pixel column where the console's column `x` starts.
+    fn px_x(&self, x: u32) -> u32 {
+        (u64::from(x) * u64::from(self.width) / u64::from(EFB_WIDTH)) as u32
+    }
+
     /// The EFB's color, read back: RGBA rows of 640.
     fn read_efb(&mut self) -> Vec<u8> {
-        let (width, height) = (EFB_WIDTH * self.scale, EFB_HEIGHT * self.scale);
+        let (width, height) = (self.width, EFB_HEIGHT * self.scale);
         let row = width * 4;
         let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("efb readback"),
@@ -1394,7 +1422,7 @@ impl Renderer {
             .expect("GPU readback");
         let data = slice.get_mapped_range().expect("mapped readback").to_vec();
         buffer.unmap();
-        if self.scale == 1 {
+        if self.scale == 1 && self.width == EFB_WIDTH {
             return data;
         }
         // At the console's size: each pixel the scaled block's middle sample.
@@ -1403,7 +1431,8 @@ impl Renderer {
         let mut out = vec![0u8; w * h * 4];
         for y in 0..h {
             for x in 0..w {
-                let at = ((y * s + s / 2) * w * s + x * s + s / 2) * 4;
+                let px = (self.px_x(x as u32) + self.px_x(x as u32 + 1)) as usize / 2;
+                let at = ((y * s + s / 2) * self.width as usize + px) * 4;
                 out[(y * w + x) * 4..][..4].copy_from_slice(&data[at..at + 4]);
             }
         }
@@ -1458,8 +1487,14 @@ impl Renderer {
         };
         let entry = self.textures[id as usize].as_mut().expect("copy texture");
         entry.last_used = self.frame;
-        self.copier
-            .copy(&self.device, &self.queue, &entry.view, r, self.scale);
+        self.copier.copy(
+            &self.device,
+            &self.queue,
+            &entry.view,
+            r,
+            self.scale,
+            self.width,
+        );
         // What earlier copies read back left in memory there is gone.
         let f = r.footprint;
         let before = self.copies.len();
@@ -1895,8 +1930,14 @@ impl Renderer {
                 let gpu = self.gpu_xfb.get_or_insert_with(|| {
                     xfb::GpuXfb::new(&self.device, &self.queue, &self.efb_view)
                 });
-                let (texture, width, height) =
-                    gpu.copy(&self.device, &self.queue, state, value, rect, self.scale);
+                let (texture, width, height) = gpu.copy(
+                    &self.device,
+                    &self.queue,
+                    state,
+                    value,
+                    rect,
+                    (self.scale, self.width),
+                );
                 let t2 = std::time::Instant::now();
                 let rgba = if self.xfb_readback {
                     self.read_texture(&texture, width, height)

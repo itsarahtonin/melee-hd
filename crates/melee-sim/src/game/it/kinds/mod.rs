@@ -3,7 +3,10 @@
 pub mod bat;
 pub mod bombhei;
 pub mod capsule;
+pub mod climbersblizzard;
+pub mod climbersice;
 pub mod crate_box;
+pub mod drmariopill;
 pub mod foxblaster;
 pub mod foxillusion;
 pub mod foxlaser;
@@ -13,7 +16,25 @@ pub mod hammerhead;
 pub mod heart;
 pub mod heiho;
 pub mod kusudama;
+pub mod luigifireball;
+pub mod mariocape;
+pub mod mariofireball;
+pub mod nessbat;
+pub mod nesspkfire;
+pub mod nesspkfirepillar;
+pub mod nesspkflash;
+pub mod nesspkflashexplode;
+pub mod nesspkthunder;
+pub mod nesspkthundertrail;
+pub mod nessyoyo;
+pub mod pikachuthunder;
+pub mod pikachutjoltair;
+pub mod pikachutjoltground;
 pub mod rshell;
+pub mod samusbomb;
+pub mod samuschargeshot;
+pub mod samusgrapple;
+pub mod samusmissile;
 pub mod seakchain;
 pub mod seakneedleheld;
 pub mod seakneedlethrown;
@@ -30,6 +51,8 @@ use crate::hsd::gobj::GObjId;
 /// Runs a kind's callback of the event kind (`HSD_GObjEvent`), if `addr` is one.
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     foxlaser::run_event(r, gobj, addr)
+        || climbersice::run_event(r, gobj, addr)
+        || climbersblizzard::run_event(r, gobj, addr)
         || foxblaster::run_event(r, gobj, addr)
         || foxillusion::run_event(r, gobj, addr)
         || capsule::run_event(r, gobj, addr)
@@ -51,6 +74,25 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || seakchain::run_event(r, gobj, addr)
         || zeldadinfire::run_event(r, gobj, addr)
         || zeldadinfireexplode::run_event(r, gobj, addr)
+        || nessbat::run_event(r, gobj, addr)
+        || nesspkfire::run_event(r, gobj, addr)
+        || nesspkfirepillar::run_event(r, gobj, addr)
+        || nesspkflash::run_event(r, gobj, addr)
+        || nesspkflashexplode::run_event(r, gobj, addr)
+        || nesspkthunder::run_event(r, gobj, addr)
+        || nesspkthundertrail::run_event(r, gobj, addr)
+        || nessyoyo::run_event(r, gobj, addr)
+        || samusbomb::run_event(r, gobj, addr)
+        || samuschargeshot::run_event(r, gobj, addr)
+        || samusmissile::run_event(r, gobj, addr)
+        || samusgrapple::run_event(r, gobj, addr)
+        || luigifireball::run_event(r, gobj, addr)
+        || mariofireball::run_event(r, gobj, addr)
+        || mariocape::run_event(r, gobj, addr)
+        || drmariopill::run_event(r, gobj, addr)
+        || pikachuthunder::run_event(r, gobj, addr)
+        || pikachutjoltground::run_event(r, gobj, addr)
+        || pikachutjoltair::run_event(r, gobj, addr)
         || heiho::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
 }
@@ -58,6 +100,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     foxlaser::run_pred(r, gobj, addr)
+        .or_else(|| climbersice::run_pred(r, gobj, addr))
+        .or_else(|| climbersblizzard::run_pred(r, gobj, addr))
         .or_else(|| foxblaster::run_pred(r, gobj, addr))
         .or_else(|| foxillusion::run_pred(r, gobj, addr))
         .or_else(|| capsule::run_pred(r, gobj, addr))
@@ -79,6 +123,24 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| seakchain::run_pred(r, gobj, addr))
         .or_else(|| zeldadinfire::run_pred(r, gobj, addr))
         .or_else(|| zeldadinfireexplode::run_pred(r, gobj, addr))
+        .or_else(|| nessbat::run_pred(r, gobj, addr))
+        .or_else(|| nesspkfire::run_pred(r, gobj, addr))
+        .or_else(|| nesspkfirepillar::run_pred(r, gobj, addr))
+        .or_else(|| nesspkflash::run_pred(r, gobj, addr))
+        .or_else(|| nesspkflashexplode::run_pred(r, gobj, addr))
+        .or_else(|| nesspkthunder::run_pred(r, gobj, addr))
+        .or_else(|| nesspkthundertrail::run_pred(r, gobj, addr))
+        .or_else(|| nessyoyo::run_pred(r, gobj, addr))
+        .or_else(|| samusbomb::run_pred(r, gobj, addr))
+        .or_else(|| samuschargeshot::run_pred(r, gobj, addr))
+        .or_else(|| samusmissile::run_pred(r, gobj, addr))
+        .or_else(|| luigifireball::run_pred(r, gobj, addr))
+        .or_else(|| mariofireball::run_pred(r, gobj, addr))
+        .or_else(|| mariocape::run_pred(r, gobj, addr))
+        .or_else(|| drmariopill::run_pred(r, gobj, addr))
+        .or_else(|| pikachuthunder::run_pred(r, gobj, addr))
+        .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
+        .or_else(|| pikachutjoltair::run_pred(r, gobj, addr))
         .or_else(|| heiho::run_pred(r, gobj, addr))
 }
 
@@ -109,6 +171,8 @@ pub const KURIBOH: i32 = 43;
 pub const OCTAROCK_STONE: i32 = 47;
 /// `It_Kind_Mario_Fire`: the first character item.
 pub const MARIO_FIRE: i32 = 48;
+/// `It_Kind_DrMario_Vitamin`.
+pub const DRMARIO_VITAMIN: i32 = 49;
 /// `It_Kind_Fox_Laser`.
 pub const FOX_LASER: i32 = 54;
 /// `It_Kind_Falco_Laser`.
@@ -116,6 +180,9 @@ pub const FALCO_LASER: i32 = 55;
 /// `It_Kind_Fox_Illusion` and `It_Kind_Falco_Phantasm`.
 pub const FOX_ILLUSION: i32 = 56;
 pub const FALCO_PHANTASM: i32 = 57;
+/// `It_Kind_IceClimber_Ice` and `It_Kind_IceClimber_Blizzard`.
+pub const ICE_CLIMBER_ICE: i32 = 106;
+pub const ICE_CLIMBER_BLIZZARD: i32 = 107;
 /// `It_Kind_Link_Bomb`.
 pub const LINK_BOMB: i32 = 58;
 /// `It_Kind_CLink_Bomb`.
@@ -123,15 +190,44 @@ pub const CLINK_BOMB: i32 = 59;
 /// `It_Kind_Zelda_DinFire` and `_DinFire_Explode`.
 pub const ZELDA_DIN_FIRE: i32 = 108;
 pub const ZELDA_DIN_FIRE_EXPLODE: i32 = 109;
+/// Ness's: `It_Kind_Ness_PKFire`, `_PKFire_Flame`, `_PKFlush`, `_PKThunder` and its four
+/// trails, `_PKFlush_Explode`, `_Bat` and `_Yoyo`.
+pub const NESS_PK_FIRE: i32 = 66;
+pub const NESS_PK_FIRE_FLAME: i32 = 67;
+pub const NESS_PK_FLUSH: i32 = 68;
+pub const NESS_PK_THUNDER: i32 = 69;
+pub const NESS_PK_THUNDER1: i32 = 70;
+pub const NESS_PK_THUNDER2: i32 = 71;
+pub const NESS_PK_THUNDER3: i32 = 72;
+pub const NESS_PK_THUNDER4: i32 = 73;
+pub const NESS_PK_FLUSH_EXPLODE: i32 = 78;
+pub const NESS_BAT: i32 = 101;
+pub const NESS_YOYO: i32 = 102;
+/// Kirby's copies of PK Flash: `It_Kind_Kirby_NessPKFlush` and `_Explode`.
+pub const KIRBY_NESS_PK_FLUSH: i32 = 145;
+pub const KIRBY_NESS_PK_FLUSH_EXPLODE: i32 = 146;
 /// `It_Kind_Fox_Blaster`.
 pub const FOX_BLASTER: i32 = 74;
 /// `It_Kind_Falco_Blaster`.
 pub const FALCO_BLASTER: i32 = 75;
+/// `It_Kind_Pikachu_Thunder` and `It_Kind_Pichu_Thunder`.
+pub const PIKACHU_THUNDER: i32 = 81;
+pub const PICHU_THUNDER: i32 = 82;
+/// `It_Kind_Pikachu_TJolt_Ground`, `_Air`, and Pichu's.
+pub const PIKACHU_TJOLT_GROUND: i32 = 89;
+pub const PIKACHU_TJOLT_AIR: i32 = 90;
+pub const PICHU_TJOLT_GROUND: i32 = 91;
+pub const PICHU_TJOLT_AIR: i32 = 92;
 /// `It_Kind_Seak_NeedleThrow`, `_NeedleHeld`, `_Vanish`, `_Chain`.
 pub const SEAK_NEEDLE_THROW: i32 = 79;
 pub const SEAK_NEEDLE_HELD: i32 = 80;
 pub const SEAK_VANISH: i32 = 85;
 pub const SEAK_CHAIN: i32 = 97;
+/// `It_Kind_Samus_Bomb`, `_Charge`, `_Missile` and `_GBeam`.
+pub const SAMUS_BOMB: i32 = 93;
+pub const SAMUS_CHARGE: i32 = 94;
+pub const SAMUS_MISSILE: i32 = 95;
+pub const SAMUS_GBEAM: i32 = 96;
 /// `It_Kind_Peach_Turnip`.
 pub const PEACH_TURNIP: i32 = 99;
 /// `It_Kind_Peach_Parasol`.

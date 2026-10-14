@@ -55,7 +55,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800992A8")]
     pub fn enter_escape(&mut self, gobj: GObjId, msid: i32, item_window: i32) {
         match self.game.fighter(gobj).kind {
-            KIND_SAMUS => unported_call("ftCo_80099390"),
+            KIND_SAMUS => self.samus_enter_roll(gobj, msid, item_window),
             KIND_YOSHI => unported_call("ftCo_80099438"),
             _ => self.enter_escape_common(gobj, msid, item_window),
         }

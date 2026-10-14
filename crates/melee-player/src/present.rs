@@ -1,16 +1,175 @@
 //! Presenting frames: the GPU the renderer draws on, a window's surface, and the blit of the
-//! XFB (the frame the renderer copied out) to it, letterboxed to 4:3. The swap chain is kept
-//! one frame deep, presenting each frame as soon as it's drawn: mailbox where the display has
-//! it, else immediate, else vsync.
+//! XFB (the frame the renderer copied out) to it, letterboxed to the aspect ratio shown (the
+//! game's 73:60 unless asked otherwise, see [`Aspect`]). The swap chain is kept one frame
+//! deep, presenting each frame as soon as it's drawn, in the mode [`Present`] picks: mailbox
+//! by default, where the display has it, else FIFO.
 
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
+use melee_render::frame::GAME_ASPECT;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Fullscreen, Window};
 
 static SIZE: Mutex<(u32, u32)> = Mutex::new((1280, 960));
-/// The aspect ratio frames are shown at: 4:3, or wider in widescreen.
-static ASPECT: Mutex<f32> = Mutex::new(4.0 / 3.0);
+/// How frames reach the display.
+static PRESENT: Mutex<Present> = Mutex::new(Present::Mailbox);
+/// The aspect ratio frames are shown at: the game's 73:60, wider in widescreen, or 4:3.
+static ASPECT: Mutex<f32> = Mutex::new(GAME_ASPECT);
+
+/// The largest EFB side the renderer makes (wgpu's default limit on a texture's side).
+const MAX_EFB_SIDE: u32 = 8192;
+
+/// How frames are shown: the aspect ratio, and whether the drawn cameras widen to it.
+///
+/// The game's 640 by 480 picture is made for 73:60 ([`GAME_ASPECT`]), and that's how it's shown
+/// by default, pillarboxed, with the proportions the game's cameras give it. Wider aspects
+/// widen each full-screen camera to the shown aspect (`melee_render::frame::widen`), so the
+/// frame keeps those proportions and sees more at the sides. 4:3 shows the 73:60 picture
+/// stretched to 4:3, as the player did before and as Dolphin's "Force 4:3" does.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Aspect {
+    /// Width over height of the frame shown.
+    pub shown: f32,
+    /// The drawn cameras widen to `shown`; otherwise the 73:60 picture is shown at it.
+    pub widen: bool,
+}
+
+impl Aspect {
+    /// The game's own 73:60.
+    pub const GAME: Aspect = Aspect {
+        shown: GAME_ASPECT,
+        widen: false,
+    };
+    /// The 73:60 picture stretched to 4:3.
+    pub const STRETCHED: Aspect = Aspect {
+        shown: 4.0 / 3.0,
+        widen: false,
+    };
+
+    /// The cameras widened to `shown`.
+    pub const fn wide(shown: f32) -> Aspect {
+        Aspect { shown, widen: true }
+    }
+
+    /// The launcher's choices, with their names.
+    pub const CHOICES: [(Aspect, &str); 5] = [
+        (Aspect::GAME, "73:60 (the game's)"),
+        (Aspect::wide(16.0 / 9.0), "16:9 (widescreen)"),
+        (Aspect::wide(16.0 / 10.0), "16:10 (widescreen)"),
+        (Aspect::wide(21.0 / 9.0), "21:9 (widescreen)"),
+        (Aspect::STRETCHED, "4:3 (stretched)"),
+    ];
+
+    /// `--aspect W:H`: 4:3 is the stretched picture, 73:60 the game's, anything wider widens
+    /// the cameras to it.
+    pub fn parse(v: &str) -> Result<Aspect, String> {
+        let bad = || format!("--aspect W:H (73:60, 4:3 or wider), not {v}");
+        let (w, h) = v.split_once(':').ok_or_else(bad)?;
+        let w: f32 = w.parse().map_err(|_| bad())?;
+        let h: f32 = h.parse().map_err(|_| bad())?;
+        let r = w / h;
+        if !(r.is_finite() && r > 0.0) {
+            return Err(bad());
+        }
+        Ok(if (r - 4.0 / 3.0).abs() < 0.001 {
+            Aspect::STRETCHED
+        } else if (r - GAME_ASPECT).abs() < 0.001 {
+            Aspect::GAME
+        } else if r > GAME_ASPECT {
+            Aspect::wide(r)
+        } else {
+            return Err(format!("--aspect {v} is narrower than the game's 73:60"));
+        })
+    }
+
+    /// What the renderer's `Hsd::widescreen` takes: the aspect the cameras widen to.
+    pub fn widescreen(self) -> Option<f32> {
+        self.widen.then_some(self.shown)
+    }
+
+    /// The name the launcher shows.
+    pub fn name(self) -> String {
+        Aspect::CHOICES
+            .iter()
+            .find(|(a, _)| *a == self)
+            .map_or_else(|| format!("{:.3}:1", self.shown), |(_, n)| (*n).to_owned())
+    }
+
+    /// The EFB's width at `scale` (480 times `scale` lines for the picture): as many pixels
+    /// as the frame is shown wide, so they're square, and even, for the XFB's pairs.
+    pub fn efb_width(self, scale: u32) -> u32 {
+        let w = (480.0 * scale as f32 * self.shown / 2.0).round() as u32 * 2;
+        w.clamp(2, MAX_EFB_SIDE)
+    }
+
+    /// The largest scale whose EFB fits the renderer's limit (8 at most).
+    pub fn max_scale(self) -> u32 {
+        (1..=8u32)
+            .rev()
+            .find(|&s| (480.0 * s as f32 * self.shown).round() as u32 <= MAX_EFB_SIDE)
+            .unwrap_or(1)
+    }
+}
+
+/// How frames reach the display (`--present`): the swap chain's present mode, where the
+/// display has it.
+///
+/// Mailbox, the default, shows each frame at the display's next refresh without tearing and
+/// without waiting: a newer frame replaces one still waiting. FIFO waits its turn in a queue
+/// at each refresh (vsync), and Immediate shows it at once, tearing where the refresh is
+/// partway through the screen, which is the lowest latency.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Present {
+    Mailbox,
+    Fifo,
+    Immediate,
+}
+
+impl Present {
+    /// The launcher's choices, with their names.
+    pub const CHOICES: [(Present, &str); 3] = [
+        (Present::Mailbox, "Mailbox (no tearing)"),
+        (Present::Fifo, "FIFO (vsync)"),
+        (Present::Immediate, "Immediate (tears, lowest latency)"),
+    ];
+
+    pub fn parse(v: &str) -> Result<Present, String> {
+        match v {
+            "mailbox" => Ok(Present::Mailbox),
+            "fifo" | "vsync" => Ok(Present::Fifo),
+            "immediate" => Ok(Present::Immediate),
+            _ => Err(format!("--present mailbox|fifo|immediate, not {v}")),
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        Present::CHOICES
+            .iter()
+            .find(|(p, _)| *p == self)
+            .map_or("?", |(_, n)| n)
+    }
+
+    /// The present mode for this choice among the display's: the one asked for, else the
+    /// lowest-latency mode without tearing it has (mailbox, else FIFO, which every display
+    /// has).
+    pub fn mode(self, modes: &[wgpu::PresentMode]) -> wgpu::PresentMode {
+        let want = match self {
+            Present::Mailbox => wgpu::PresentMode::Mailbox,
+            Present::Fifo => wgpu::PresentMode::Fifo,
+            Present::Immediate => wgpu::PresentMode::Immediate,
+        };
+        [want, wgpu::PresentMode::Mailbox]
+            .into_iter()
+            .find(|m| modes.contains(m))
+            .unwrap_or(wgpu::PresentMode::Fifo)
+    }
+}
+
+/// How the next window presents.
+pub fn set_present(present: Present) {
+    *PRESENT.lock().unwrap() = present;
+}
 
 /// The aspect ratio to show frames at.
 pub fn set_aspect(aspect: f32) {
@@ -65,12 +224,14 @@ impl Gpu {
     }
 
     /// A renderer on this GPU, leaving its frames on the GPU, with `samples` samples a pixel
-    /// (1, or 4 for MSAA).
-    pub fn renderer(&self, scale: u32, samples: u32) -> melee_gpu::Renderer {
-        let mut r = melee_gpu::Renderer::with_device_msaa(
+    /// (1, or 4 for MSAA), its EFB `scale` times the console's tall and as wide as `aspect`
+    /// shows it with square pixels.
+    pub fn renderer(&self, scale: u32, samples: u32, aspect: Aspect) -> melee_gpu::Renderer {
+        let mut r = melee_gpu::Renderer::with_device_efb(
             self.device.clone(),
             self.queue.clone(),
             scale,
+            aspect.efb_width(scale),
             samples,
         );
         r.xfb_on_gpu = true;
@@ -233,6 +394,8 @@ pub struct Shown {
     config: wgpu::SurfaceConfiguration,
     blit: Blit,
     fullscreen: bool,
+    /// The present modes the display has.
+    modes: Vec<wgpu::PresentMode>,
 }
 
 impl Shown {
@@ -256,10 +419,7 @@ impl Shown {
             .copied()
             .find(|f| !f.is_srgb())
             .unwrap_or(caps.formats[0]);
-        let present_mode = [wgpu::PresentMode::Mailbox, wgpu::PresentMode::Immediate]
-            .into_iter()
-            .find(|m| caps.present_modes.contains(m))
-            .unwrap_or(wgpu::PresentMode::AutoVsync);
+        let present_mode = PRESENT.lock().unwrap().mode(&caps.present_modes);
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format,
@@ -285,6 +445,17 @@ impl Shown {
             config,
             blit,
             fullscreen,
+            modes: caps.present_modes,
+        }
+    }
+
+    /// Presents as `present` asks from the next frame on.
+    pub fn set_present(&mut self, gpu: &Gpu, present: Present) {
+        let mode = present.mode(&self.modes);
+        if mode != self.config.present_mode {
+            eprintln!("present mode: {mode:?}");
+            self.config.present_mode = mode;
+            self.surface.configure(&gpu.device, &self.config);
         }
     }
 
@@ -334,24 +505,38 @@ impl Shown {
         gpu.queue.present(out);
     }
 
-    /// Shows a frame now.
-    pub fn present(&mut self, gpu: &Gpu, frame: &melee_gpu::Frame) {
-        let Some(texture) = &frame.texture else {
-            return;
-        };
+    /// The swap chain's present mode.
+    pub fn present_mode(&self) -> wgpu::PresentMode {
+        self.config.present_mode
+    }
+
+    /// Shows a frame now, with `over` drawn over it (given the image's view, width and
+    /// height): how long the swap chain's next image took to come, and when the present call
+    /// returned.
+    pub fn present(
+        &mut self,
+        gpu: &Gpu,
+        frame: &melee_gpu::Frame,
+        over: impl FnOnce(&wgpu::TextureView, u32, u32),
+    ) -> Option<(Duration, Instant)> {
+        let texture = frame.texture.as_ref()?;
+        let asked = Instant::now();
         let out = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(t)
             | wgpu::CurrentSurfaceTexture::Suboptimal(t) => t,
             _ => {
                 self.surface.configure(&gpu.device, &self.config);
-                return;
+                return None;
             }
         };
+        let acquire = asked.elapsed();
         let view = out.texture.create_view(&Default::default());
         self.blit
             .draw(gpu, texture, &view, self.config.width, self.config.height);
+        over(&view, self.config.width, self.config.height);
         self.window.pre_present_notify();
         gpu.queue.present(out);
+        Some((acquire, Instant::now()))
     }
 }
 
@@ -396,5 +581,52 @@ impl Offscreen {
         let view = self.texture.create_view(&Default::default());
         self.blit.draw(gpu, texture, &view, self.width, self.height);
         let _ = gpu.device.poll(wgpu::PollType::wait_indefinitely());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn aspects_parse_to_the_game_s_stretched_or_widened() {
+        assert_eq!(Aspect::parse("73:60"), Ok(Aspect::GAME));
+        assert_eq!(Aspect::parse("4:3"), Ok(Aspect::STRETCHED));
+        assert_eq!(Aspect::parse("16:9"), Ok(Aspect::wide(16.0 / 9.0)));
+        assert_eq!(Aspect::parse("21:9"), Ok(Aspect::wide(21.0 / 9.0)));
+        assert_eq!(Aspect::GAME.widescreen(), None);
+        assert_eq!(Aspect::STRETCHED.widescreen(), None);
+        assert_eq!(Aspect::wide(16.0 / 9.0).widescreen(), Some(16.0 / 9.0));
+        assert!(Aspect::parse("1:1").is_err());
+        assert!(Aspect::parse("16x9").is_err());
+        assert!(Aspect::parse("16:0").is_err());
+    }
+
+    #[test]
+    fn present_choices_fall_back_to_a_mode_the_display_has() {
+        use wgpu::PresentMode::{Fifo, Immediate, Mailbox};
+        assert_eq!(Present::parse("immediate"), Ok(Present::Immediate));
+        assert_eq!(Present::parse("vsync"), Ok(Present::Fifo));
+        assert!(Present::parse("adaptive").is_err());
+        let all = [Fifo, Mailbox, Immediate];
+        assert_eq!(Present::Mailbox.mode(&all), Mailbox);
+        assert_eq!(Present::Immediate.mode(&all), Immediate);
+        assert_eq!(Present::Fifo.mode(&all), Fifo);
+        // No mailbox (Metal, some X11): FIFO, never tearing unasked.
+        assert_eq!(Present::Mailbox.mode(&[Fifo, Immediate]), Fifo);
+        assert_eq!(Present::Immediate.mode(&[Fifo, Mailbox]), Mailbox);
+        assert_eq!(Present::Immediate.mode(&[Fifo]), Fifo);
+    }
+
+    #[test]
+    fn the_efb_is_as_wide_as_the_frame_is_shown() {
+        assert_eq!(Aspect::STRETCHED.efb_width(1), 640);
+        assert_eq!(Aspect::STRETCHED.efb_width(3), 1920);
+        assert_eq!(Aspect::GAME.efb_width(1), 584);
+        assert_eq!(Aspect::GAME.efb_width(3), 1752);
+        assert_eq!(Aspect::wide(16.0 / 9.0).efb_width(3), 2560);
+        assert_eq!(Aspect::wide(16.0 / 9.0).efb_width(1), 854);
+        assert_eq!(Aspect::wide(21.0 / 9.0).max_scale(), 7);
+        assert_eq!(Aspect::GAME.max_scale(), 8);
     }
 }

@@ -176,7 +176,16 @@ impl Running<'_> {
             let Some(ImageRef::Data(src)) = g.magnify.player[0].idesc.0 else {
                 panic!("the first bubble's image isn't the model's");
             };
-            // The copy's pixels: a buffer `HSD_MemAlloc` gives (`GXGetTexBufferSize`).
+            // The copy's pixels: a buffer `HSD_MemAlloc` gives (`GXGetTexBufferSize`), which
+            // the scene's heap keeps until the scene ends.
+            crate::hsd::heap::mem_alloc(
+                crate::hsd::heap::tex_buffer_size(
+                    u32::from(data.u16(src.at(4))),
+                    u32::from(data.u16(src.at(6))),
+                    data.u32(src.at(8)),
+                )
+                .next_multiple_of(32),
+            );
             g.magnify.image_descs[i - 1] = HSD_ImageDesc {
                 image_ptr: TexBuffer(true),
                 width: data.u16(src.at(4)),

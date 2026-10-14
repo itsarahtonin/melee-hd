@@ -336,6 +336,8 @@ impl Running<'_> {
         let s = &mut self.game.hud.coins;
         s.state.x0_b0 = true;
         s.state.x0_b1 = false;
+        self.disc_load("IfCoGet.dat", crate::game::ft::data::MAIN_MEMORY);
+        let s = &mut self.game.hud.coins;
         s.archive = Some(if_coget);
         let at = self
             .data

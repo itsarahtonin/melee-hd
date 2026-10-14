@@ -22,6 +22,8 @@ use super::generator::{self, GeneratorId};
 use super::jobj::{self, JObjId};
 use super::pool::Pool;
 use crate::fpu::{copy, mem, reg};
+use crate::hsd::heap::Kind;
+use crate::hsd::pool::kind as pool_kind;
 use crate::math;
 use crate::vec::Vec3;
 
@@ -282,7 +284,7 @@ impl CmdList {
 /// The particle pool (`hsd_804D0F60`) and particle.c's globals.
 #[derive(melee_derive::CloneFrom, Debug)]
 pub struct Particles {
-    pub pool: Pool<Particle>,
+    pub pool: Pool<Particle, { pool_kind(Kind::Particle) }>,
     /// Each link's particles (`hsd_804D0908`).
     pub links: [Option<ParticleId>; LINKS],
     /// Live particles (`hsd_804D78E2`) and the most at once (`numPeakParticles`).
@@ -1093,7 +1095,7 @@ fn drag_point_jobj(objs: &mut Objects, data: &Archives, pp: ParticleId) {
     }
     let idx = ((kind & POINT_JOBJ_INDEX) >> 12) as usize;
     if objs.particles.point_jobjs[idx].is_none() {
-        let j = jobj::alloc(&mut objs.jobjs);
+        let j = jobj::alloc(objs);
         set_point_jobj(objs, idx as i32 + 1, Some(j));
         jobj::unref(objs, Some(j));
     }

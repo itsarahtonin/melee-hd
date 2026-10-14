@@ -78,6 +78,8 @@ pub struct CObj {
     /// The inverse view matrix (the original's `proj_mtx`, from `HSD_MtxAlloc`), allocated on
     /// first use.
     pub inv_view_mtx: Option<Mtx34>,
+    /// Where the original's pool put `inv_view_mtx` (`proj_mtx`, `docs/engine.md`).
+    pub inv_view_mtx_addr: u32,
 }
 
 impl CObj {
@@ -113,6 +115,8 @@ impl IndexMut<CObjId> for CObjs {
 #[doc(alias = "CObjInit")]
 pub fn alloc(objs: &mut Objects) -> CObjId {
     let c = CObjId(objs.cobjs.pool.alloc(CObj::default()));
+    let addr = super::heap::class_alloc(super::heap::Class::CObj);
+    objs.cobjs.pool.set_addr(c.0, addr);
     set_mtx_dirty(&mut objs.cobjs, c);
     objs.cobjs[c].eyepos = Some(wobj::alloc(&mut objs.wobjs));
     objs.cobjs[c].interest = Some(wobj::alloc(&mut objs.wobjs));
@@ -239,7 +243,11 @@ pub fn delete(objs: &mut Objects, c: CObjId) {
     let (eye, interest) = (objs.cobjs[c].eyepos, objs.cobjs[c].interest);
     wobj::unref(objs, eye);
     wobj::unref(objs, interest);
+    if objs.cobjs[c].inv_view_mtx.is_some() {
+        super::heap::obj_free(super::heap::Kind::Mtx, objs.cobjs[c].inv_view_mtx_addr);
+    }
     objs.cobjs[c].inv_view_mtx = None;
+    super::heap::class_free(super::heap::Class::CObj, objs.cobjs.pool.addr(c.0));
     objs.cobjs.pool.free(c.0);
 }
 
@@ -389,6 +397,9 @@ pub fn viewing_mtx_copy(objs: &mut Objects, data: &Archives, c: CObjId) -> Mtx34
 pub fn inv_viewing_mtx_direct(cobjs: &mut CObjs, c: CObjId) -> Option<Mtx34> {
     let o = &mut cobjs[c];
     if o.flags & INV_VIEW_DIRTY != 0 {
+        if o.inv_view_mtx.is_none() {
+            o.inv_view_mtx_addr = super::heap::obj_alloc(super::heap::Kind::Mtx);
+        }
         let inv = o.inv_view_mtx.get_or_insert_with(Mtx34::default);
         if let Some(m) = o.view_mtx.inverse() {
             *inv = m;

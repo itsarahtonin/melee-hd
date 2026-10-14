@@ -140,6 +140,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let w = self.cmd_word(f, 0);
         match index {
+            2 => self.cmd_hitbox_damage(gobj, f, w),
             3 => self.cmd_hitbox_scale(gobj, f, w),
             4 => self.cmd_hitbox_flags(gobj, f, w),
             5 => self.cmd_clear_hitbox(gobj, f, w),
@@ -176,6 +177,7 @@ impl Running<'_> {
             43 => self.cmd_x2225_b2(gobj, f, w),
             46 => self.cmd_smash_charge(gobj, f, w),
             47 => self.cmd_vibrate(gobj, f, w),
+            41 => self.cmd_self_damage(gobj, f, w),
             40 => {
                 // `ftAction_80072B94`: a part's dynamics toggled.
                 let frame = self.game.fighters[f.0].cur_anim_frame;
@@ -186,6 +188,7 @@ impl Running<'_> {
             1 => return self.cmd_create_hitbox(gobj, f),
             7 => return self.sound_command(f, None),
             28 => return self.cmd_random_sfx(gobj, f),
+            29 => return self.cmd_positional_sound(gobj, f),
             24 => return self.cmd_throw_hitbox(gobj, f),
             44 => return self.cmd_floor_sound(gobj, f),
             45 => return self.cmd_footstep(gobj, f),
@@ -389,6 +392,14 @@ impl Running<'_> {
         if a.x2138_smashSinceHitbox == -1.0 {
             a.x2138_smashSinceHitbox = 0.0;
         }
+    }
+
+    /// A hitbox's damage, `ftAction_8007162C` (`ftColl_8007ABD0`).
+    #[doc(alias = "ftAction_8007162C")]
+    fn cmd_hitbox_damage(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
+        let id = bits(w, 6, 3);
+        assert!(id < 4, "hitbox {id} of a command");
+        self.hitbox_damage(f, id as usize, false, bits(w, 9, 23));
     }
 
     /// A hitbox's size.
@@ -613,6 +624,13 @@ impl Running<'_> {
     /// Stops one kind of the controller's rumble.
     fn cmd_stop_rumble(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.stop_rumble(f, bits(w, 6, 26) as i32);
+    }
+
+    /// The fighter hurts itself (Pichu's electric moves), `ftAction_80072BF4`
+    /// (`Fighter_TakeDamage_8006CC7C`).
+    #[doc(alias = "ftAction_80072BF4")]
+    fn cmd_self_damage(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
+        self.take_damage(f, sfloat(sbits(w, 6, 26)));
     }
 
     /// A held sword's trail or flash (`ftCommon_8007EEC8`, `ftCommon_8007EF5C`; with one, not ported).
@@ -848,6 +866,68 @@ impl Running<'_> {
         };
         self.cmd_script(f, which).skip(len);
         self.play_sound_words(f, words);
+    }
+
+    /// The positional sound command, `ftAction_80072320`: a sound object
+    /// ([`crate::lb::sound_obj`]) for the fighter, its behavior, pan direction, pans and frame
+    /// count from the command, on the track its kind names (none for kind 0), keeping its voice
+    /// where that track's sounds go. A fighter whose voice is muted (`x2225_b6`) makes the
+    /// voice tracks' only as Mr. Game & Watch or Samus. Four words.
+    #[doc(alias = "ftAction_80072320")]
+    fn cmd_positional_sound(&mut self, gobj: GObjId, f: FighterId) {
+        let w: [u32; 4] = std::array::from_fn(|i| self.cmd_word(f, i as u32));
+        let behavior = bits(w[0], 6, 10) as i32;
+        let kind = bits(w[0], 16, 8);
+        let direction = match bits(w[0], 24, 8) {
+            0 => 0.0,
+            1 => 1.0,
+            2 => -1.0,
+            3 => self.game.fighters[f.0].facing_dir,
+            // The original passes what f31 holds.
+            other => panic!("ftAction_80072320: pan direction {other}"),
+        };
+        let sfx = self.fighter_sfx(f, w[1] as i32);
+        let end_frame = bits(w[2], 16, 16) as i32;
+        let (pan_left, pan_right) = (bits(w[3], 16, 8) as i32, bits(w[3], 24, 8) as i32);
+        self.cmd_skip(f, 4);
+        let fp = &self.game.fighters[f.0];
+        let slot = i32::from(fp.player_idx) + i32::from(fp.is_sub_fighter);
+        let voice_ok = !fp.x2225_b6 || fp.kind == 0x18 || fp.kind == 0x0D;
+        let base = match kind {
+            0 => 0,
+            1 => 0x36,
+            2 if voice_ok => 0x1E,
+            3 => 0x42,
+            4 => 0x4E,
+            5 => 0x5A,
+            6 if voice_ok => 0x2A,
+            _ => return,
+        };
+        let params = crate::lb::sound_obj::SoundParams {
+            owner: gobj,
+            behavior,
+            sfx_id: sfx,
+            start_vol: 0x7F,
+            end_vol: 0x7F,
+            pan_left,
+            pan_right,
+            end_frame,
+            direction,
+            track: if kind == 0 { 0 } else { base + slot },
+            voice: -1,
+        };
+        let o = self.lb_create_sound_object(&params);
+        let voice = crate::lb::sound_obj::voice_of(self.game, o);
+        let fp = &mut self.game.fighters[f.0];
+        match kind {
+            0 => fp.x2160 = voice,
+            1 => fp.x214C = voice,
+            2 => fp.x2144 = voice,
+            3 => fp.x2150 = voice,
+            4 => fp.x2154 = voice,
+            5 => fp.x2158 = voice,
+            _ => fp.x2148 = voice,
+        }
     }
 
     /// The sound command of the action's script (`ftAction_80071B50`).

@@ -56,7 +56,7 @@ fn log_damage(game: &mut Game, e: DamageLogEntry) {
 /// statistics, `it_8026B6C8`: Goombas to Octoroks, Old Goombas to the Arwings, but Whispy's
 /// apples and the Kyasarin's egg.
 #[doc(alias = "it_8026B6C8")]
-fn is_enemy(game: &Game, gobj: GObjId) -> bool {
+pub(crate) fn is_enemy(game: &Game, gobj: GObjId) -> bool {
     use super::kinds::{ARWING_LASER, KURIBOH, OCTAROCK_STONE, OLD_KURI};
     /// `It_Kind_Kyasarin_Egg`, `It_Kind_WhispyApple`.
     const KYASARIN_EGG: i32 = 236;
@@ -133,12 +133,15 @@ fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId) {
 #[doc(alias = "it_8026FCF8")]
 pub fn share_group_victims(game: &mut Game, gobj: GObjId, idx: usize) {
     let id = item(game, gobj).xAC4_ignoreItemID;
-    if id != 0 {
+    if id.is_set(&mut game.objs.stale_reads) {
+        let id = id.0;
         let group = item(game, gobj).x5D4_hitboxes[idx].hit.x4;
         let mut cur = game.world.first_in(super::P_LINK_ITEM);
         while let Some(g) = cur {
+            let theirs = item(game, g).xAC4_ignoreItemID;
+            let same = theirs.read(&mut game.objs.stale_reads).is_some() && theirs.0 == id;
             let other = item(game, g);
-            if other.xAC4_ignoreItemID == id {
+            if same {
                 let src = (0..4).find(|&i| {
                     let h = &other.x5D4_hitboxes[i].hit;
                     !(g == gobj && i == idx) && h.state != hitcapsule::DISABLED && h.x4 == group

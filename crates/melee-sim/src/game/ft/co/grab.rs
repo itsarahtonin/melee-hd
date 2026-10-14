@@ -10,6 +10,7 @@ use gekko_fp as fp;
 use super::super::super::code::{run_fighter_cb, unported_call};
 use super::super::super::ef;
 use super::super::super::handles::CodeRef;
+use super::super::super::it::kinds::samusgrapple;
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::motion::flags::UPDATE_CMD;
@@ -70,10 +71,25 @@ impl Running<'_> {
             ms::CATCH_DASH_PULL
         };
         let kind = self.game.fighter(gobj).kind;
-        if kind == KIND_LINK || kind == KIND_CLINK || kind == KIND_SAMUS {
-            unported_call("fn_800D9CE8 (a tether's grab)");
-        }
-        let j = self.hold_bone_joint(gobj);
+        let j = match kind {
+            KIND_LINK | KIND_CLINK => unported_call("fn_800D9CE8 (Link's hookshot grab)"),
+            // The beam winds in fast, and she holds at its tip.
+            KIND_SAMUS => {
+                let beam = self
+                    .game
+                    .fighter(gobj)
+                    .u
+                    .gobj_at(0x10)
+                    .expect("the grapple beam");
+                samusgrapple::to_retract_fast(self, beam);
+                super::super::super::it::item_mut(self.game, beam)
+                    .xDD4_itemVar
+                    .samus_grapple()
+                    .xC
+                    .get()
+            }
+            _ => self.hold_bone_joint(gobj),
+        };
         let fp = self.game.fighter_mut(gobj);
         fp.mv.set_jobj_at(HOLD_JOINT, j);
         fp.x2210 = [0; 4];
@@ -87,8 +103,26 @@ impl Running<'_> {
     #[doc(alias = "ftCo_CatchPull_Anim")]
     pub fn co_catch_pull_anim(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
-        if kind == KIND_LINK || kind == KIND_CLINK || kind == KIND_SAMUS {
-            unported_call("ftCo_CatchPull_Anim (a tether's pull)");
+        if kind == KIND_LINK || kind == KIND_CLINK {
+            unported_call("ftCo_CatchPull_Anim (Link's hookshot pull)");
+        }
+        if kind == KIND_SAMUS {
+            // Holding once the beam is all in.
+            let go = match self.game.fighter(gobj).u.gobj_at(0x10) {
+                None => true,
+                Some(beam) => {
+                    super::super::super::it::item_mut(self.game, beam)
+                        .xDD4_itemVar
+                        .samus_grapple()
+                        .x14
+                        .get()
+                        != 0
+                }
+            };
+            if go {
+                self.enter_catch_wait(gobj);
+            }
+            return;
         }
         let mut go = !self.anim_frames_remaining(gobj);
         if !go {
@@ -226,8 +260,11 @@ impl Running<'_> {
         } else {
             self.throw_check(gobj)
         };
-        if acted && matches!(kind, KIND_LINK | KIND_CLINK | KIND_SAMUS) {
-            unported_call("it_802A7AAC, it_802BAC3C (a tether reeled in)");
+        if acted && matches!(kind, KIND_LINK | KIND_CLINK) {
+            unported_call("it_802A7AAC (Link's hookshot reeled in)");
+        }
+        if acted && kind == KIND_SAMUS {
+            samusgrapple::ft_death(self, gobj);
         }
     }
 
@@ -329,7 +366,7 @@ impl Running<'_> {
     /// `ftCo_CatchCut_Anim` (`ftCo_CaptureCut_Anim`): falling or waiting once its frames run
     /// out.
     // Ports `ftCo_CatchCut_Anim`; aliased once a check reaches it.
-    // Ports `ftCo_CaptureCut_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_CaptureCut_Anim")]
     pub fn co_catch_cut_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.fall_or_wait(gobj);
@@ -759,8 +796,11 @@ impl Running<'_> {
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
         match self.game.fighter(grabber).kind {
             KIND_YOSHI => unported_call("ftCo_800DB368 (held by Yoshi)"),
-            KIND_LINK | KIND_CLINK | KIND_SAMUS => {
-                unported_call("it_802A7840, it_802BAA94 (a tether's end)")
+            KIND_LINK | KIND_CLINK => unported_call("it_802A7840 (Link's hookshot's end)"),
+            KIND_SAMUS => {
+                if let Some(beam) = self.game.fighter(grabber).u.gobj_at(0x10) {
+                    samusgrapple::to_retract_fast(self, beam);
+                }
             }
             _ => {}
         }
@@ -900,7 +940,7 @@ impl Running<'_> {
     }
 
     /// Breaking free on the ground, `ftCo_CaptureCut_Enter`: the grab ends, pushed back.
-    // Ports `ftCo_CaptureCut_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_CaptureCut_Enter")]
     pub fn enter_capture_cut(&mut self, gobj: GObjId) {
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
         self.grab_release(grabber, gobj);
@@ -917,7 +957,7 @@ impl Running<'_> {
 
     /// `ftCo_CaptureCut_Phys`: its friction (`ftCommonData` x36C of the ground's) on the
     /// ground, else falling and drifting.
-    // Ports `ftCo_CaptureCut_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_CaptureCut_Phys")]
     pub fn co_capture_cut_phys(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).ground_or_air == GA_GROUND {
             let mul = reg(self.common().f32(0x36C));
@@ -932,9 +972,9 @@ impl Running<'_> {
 
     /// `ftCo_CaptureCut_Coll`: on the ground, airborne off a ledge (`fn_800DC8D8`); in the
     /// air, landing (`fn_800DC8FC`).
-    // Ports `ftCo_CaptureCut_Coll`; aliased once a check reaches it.
-    // Ports `fn_800DC8D8`; aliased once a check reaches it.
-    // Ports `fn_800DC8FC`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_CaptureCut_Coll")]
+    #[doc(alias = "fn_800DC8D8")]
+    #[doc(alias = "fn_800DC8FC")]
     pub fn co_capture_cut_coll(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).ground_or_air == GA_GROUND {
             self.ground_coll_then(gobj, |g, gobj| {
@@ -942,7 +982,7 @@ impl Running<'_> {
                 g.go_airborne(f);
             });
         } else {
-            unported_call("ft_80083910 from ftCo_CaptureCut_Coll (its registers)");
+            self.air_coll_grounded_ecb_ledges_then(gobj, |g, gobj| g.land(gobj));
         }
     }
 
@@ -1007,7 +1047,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_CatchPull_IASA")]
     // Ports `ftCo_CatchAttack_IASA`; aliased once a check reaches it.
     // Ports `ftCo_CatchCut_IASA`; aliased once a check reaches it.
-    // Ports `ftCo_CaptureCut_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_CaptureCut_IASA")]
     pub fn co_grab_nothing(&mut self, _gobj: GObjId) {}
 
     /// `ftCo_CapturePulledHi_Phys` and `ftCo_CaptureWaitHi_Phys`: to the hold point.

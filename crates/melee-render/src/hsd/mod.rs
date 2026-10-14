@@ -16,7 +16,6 @@ pub mod texp;
 pub mod texp_make;
 #[cfg(test)]
 mod texp_tests;
-pub mod texpdag;
 
 use std::collections::BTreeMap;
 
@@ -53,7 +52,8 @@ pub struct Hsd {
     pub notes: BTreeMap<String, u32>,
     /// Print each display list called (for debugging).
     pub debug_dl: bool,
-    /// The aspect ratio the frame is shown at, when wider than 4:3 (see `frame::widen`).
+    /// The aspect ratio the frame is shown at, when wider than the game's 73:60
+    /// (`frame::GAME_ASPECT`; see `frame::widen`).
     pub widescreen: Option<f32>,
 }
 

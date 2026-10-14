@@ -99,10 +99,15 @@ fn name_of(addr: u32) -> String {
 /// Runs the callback each fighter holds at `field` (an offset into `Fighter`) from every saved
 /// call of `func`, on both sides; returns the clean comparisons by callback.
 fn check_held(func: &str, field: u32, min: usize) -> BTreeMap<u32, usize> {
+    let dirs = dirs();
+    if !dirs.iter().any(|d| std::path::Path::new(d).exists()) {
+        eprintln!("no captures in {dirs:?}: skipping (see this file's docs to make them)");
+        return BTreeMap::new();
+    }
     let stubs = stubs();
     let mut counts = BTreeMap::new();
     let mut total = 0;
-    for dir in dirs() {
+    for dir in dirs {
         let reports = check_calls_stubbed(
             &dir,
             func,

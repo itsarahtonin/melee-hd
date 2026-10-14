@@ -242,7 +242,7 @@ impl Running<'_> {
             return false;
         }
         // `fn_800D952C`: Samus's grapple out.
-        if fp.kind == KIND_SAMUS && fp.u_i32(0x10) != 0 {
+        if fp.kind == KIND_SAMUS && fp.u.gobj_at(0x10).is_some() {
             return false;
         }
         if fp.input.held_buttons[0] & PAD_LR != 0 && fp.input.pressed_buttons & PAD_A != 0 {
@@ -263,16 +263,30 @@ impl Running<'_> {
         false
     }
 
-    /// A taunt, `ftCo_800DEA28`: the character's own (Young Link's, Dr. Mario's and
-    /// Ganondorf's aren't ported) or the side taunt, and the stats' taunt records
-    /// (`pl_80040120`).
+    /// A taunt, `ftCo_800DEA28`: the character's own (Young Link's isn't ported) or the side
+    /// taunt, and the stats' taunt records (`pl_80040120`). Ganondorf's
+    /// blows a wind from his top joint, then enters the side taunt twice: his case falls
+    /// through to the default's.
     #[doc(alias = "ftCo_800DEA28")]
     #[doc(alias = "pl_80040120")]
     fn enter_appeal(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).kind {
             KIND_CLINK => unported_call("ftCl_Init_80149318 (Young Link's taunt)"),
-            KIND_DRMARIO => unported_call("ftDr_Init_80149910 (Dr. Mario's taunt)"),
-            KIND_GANON => unported_call("lb_800119DC (Ganondorf's taunt)"),
+            KIND_DRMARIO => self.dr_appeal_enter(gobj),
+            KIND_GANON => {
+                let j = self.bone_joint(gobj, 0);
+                let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
+                crate::lb::wind::blast(
+                    &mut self.game.gr.winds,
+                    pos,
+                    80,
+                    1.0,
+                    0.003,
+                    std::f32::consts::FRAC_PI_3,
+                );
+                self.enter_appeal_s(gobj);
+                self.enter_appeal_s(gobj);
+            }
             _ => self.enter_appeal_s(gobj),
         }
         let fp = self.game.fighter(gobj);
@@ -312,7 +326,7 @@ impl Running<'_> {
     /// Enters `right`, or `left` when facing left and the character has `left`'s animation,
     /// `ftCo_800DEAE8`; not interruptible until its script says.
     #[doc(alias = "ftCo_800DEAE8")]
-    fn enter_facing_state(&mut self, gobj: GObjId, right: i32, left: i32) {
+    pub(crate) fn enter_facing_state(&mut self, gobj: GObjId, right: i32, left: i32) {
         let f = self.game.fighter_id(gobj);
         let anim = Self::motion_state(&self.game.fighters[f.0], left).anim_id;
         let fp = &mut self.game.fighters[f.0];

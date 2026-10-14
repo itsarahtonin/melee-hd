@@ -31,6 +31,11 @@ pub const CHARACTERS: &[Character] = &[
         keys: &["falcon", "captain-falcon", "cf"],
     },
     Character {
+        kind: 22,
+        name: "Dr. Mario",
+        keys: &["drmario", "dr-mario", "doc"],
+    },
+    Character {
         kind: 20,
         name: "Falco",
         keys: &["falco"],
@@ -46,9 +51,44 @@ pub const CHARACTERS: &[Character] = &[
         keys: &["ganondorf", "ganon"],
     },
     Character {
+        kind: 15,
+        name: "Jigglypuff",
+        keys: &["jigglypuff", "puff", "jiggs"],
+    },
+    Character {
+        kind: 7,
+        name: "Luigi",
+        keys: &["luigi"],
+    },
+    Character {
+        kind: 8,
+        name: "Mario",
+        keys: &["mario"],
+    },
+    Character {
         kind: 9,
         name: "Marth",
         keys: &["marth"],
+    },
+    Character {
+        kind: 11,
+        name: "Ness",
+        keys: &["ness"],
+    },
+    Character {
+        kind: 24,
+        name: "Pichu",
+        keys: &["pichu"],
+    },
+    Character {
+        kind: 13,
+        name: "Pikachu",
+        keys: &["pikachu", "pika"],
+    },
+    Character {
+        kind: 16,
+        name: "Samus",
+        keys: &["samus"],
     },
     Character {
         kind: 19,

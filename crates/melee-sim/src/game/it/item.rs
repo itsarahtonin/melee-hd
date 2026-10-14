@@ -352,7 +352,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     ip.xD5C = 2;
     ip.xDCC_flag.b3 = true;
     ip.xDCC_flag.b4567 = 15;
-    ip.xAC4_ignoreItemID = spawn.x40 as u32;
+    ip.xAC4_ignoreItemID = super::IgnoreId(Some(spawn.x40 as u32));
     ip.destroy_type = 4;
     set_flag(&mut ip.xDCE_flag, 5, false);
     set_flag(&mut ip.xDCE_flag, 4, false);
@@ -440,7 +440,7 @@ pub fn make_model(r: &mut Running, gobj: GObjId) {
     let j = match joint {
         Some(_) => jobj::load_joint(&mut r.game.objs, r.data, joint).expect("a loaded joint"),
         None => {
-            let j = jobj::alloc(&mut r.game.objs.jobjs);
+            let j = jobj::alloc(&mut r.game.objs);
             r.game.objs.jobjs[j].mtx = crate::mtx::Mtx34::IDENTITY;
             r.game.objs.jobjs[j].scl = None;
             j
@@ -482,7 +482,11 @@ pub fn set_material_class(game: &mut Game, gobj: GObjId) {
         let mut d = jobj::get_dobj(&game.objs.jobjs, Some(j));
         while let Some(dobj) = d {
             if let Some(m) = game.objs.dobjs[dobj].mobj {
-                game.objs.mobjs[m].class = crate::hsd::mobj::MObjClass::Item;
+                crate::hsd::mobj::change_class(
+                    &mut game.objs.mobjs,
+                    m,
+                    crate::hsd::mobj::MObjClass::Item,
+                );
             }
             d = game.objs.dobjs[dobj].next;
         }
@@ -822,6 +826,11 @@ pub fn add_anims(
 /// Gives the model a state's animations from the start, `Item_80268D34`.
 #[doc(alias = "Item_80268D34")]
 pub fn set_state_anims(r: &mut Running, gobj: GObjId, desc: DataRef) {
+    set_state_anims_at(r, gobj, desc, 0.0);
+}
+
+/// [`set_state_anims`] with the animations requested from `frame`.
+pub fn set_state_anims_at(r: &mut Running, gobj: GObjId, desc: DataRef, frame: f32) {
     let data = r.data;
     let j = jobj_of(r.game, gobj);
     let i = item_of(r.game, gobj);
@@ -846,7 +855,7 @@ pub fn set_state_anims(r: &mut Running, gobj: GObjId, desc: DataRef) {
     );
     let speed = r.game.items[i.0].x5D0_animFrameSpeed;
     crate::lb::anim::set_framerate(&mut r.game.objs, j, speed);
-    jobj::req_anim_all(&mut r.game.objs, j, 0.0);
+    jobj::req_anim_all(&mut r.game.objs, j, frame);
 }
 
 /// Restarts the model's animation at `frame`, `Item_80268DD4`.
@@ -1707,16 +1716,16 @@ pub fn stop_sfx2(r: &mut Running, gobj: GObjId) {
 /// three slots (a slot a sound object held is stopped there, the others by handle).
 #[doc(alias = "Item_8026B0B4")]
 pub fn stop_all_sfx(r: &mut Running, gobj: GObjId) {
-    r.game.lb_stop_owned_sound_objects(gobj);
+    r.lb_stop_owned_sound_objects(gobj);
     let xd6c = super::item(r.game, gobj).xD6C;
     if xd6c != NO_SFX {
-        r.game.lb_stop_owned_sound_object(gobj, xd6c);
+        r.lb_stop_owned_sound_object(gobj, xd6c);
         item_mut(r.game, gobj).xD6C = NO_SFX;
     }
     for second in [false, true] {
         let ip = super::item(r.game, gobj);
         let h = if second { ip.sfx_unk2 } else { ip.sfx_unk1 };
-        if h != NO_SFX && r.game.lb_stop_owned_sound_object(gobj, h) {
+        if h != NO_SFX && r.lb_stop_owned_sound_object(gobj, h) {
             r.sfx_stop(h);
             let ip = item_mut(r.game, gobj);
             if second {

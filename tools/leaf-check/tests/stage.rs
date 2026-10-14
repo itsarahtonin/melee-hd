@@ -589,7 +589,7 @@ fn ground_lights() {
 #[test]
 fn ground_stage_gobj() {
     check("Ground_GetStageGObj", &|r, cap, _| {
-        setup::stage_gobj(r, int_arg(cap, 0) as i32);
+        setup::stage_gobj(r, int_arg(cap, 0) as i32, setup::SETUP_FRAME);
     });
 }
 
@@ -620,7 +620,7 @@ fn last_on_start() {
 #[test]
 fn last_create() {
     check("grLast_8021A7F4", &|r, cap, _| {
-        last::create(r, int_arg(cap, 0) as i32);
+        last::create(r, int_arg(cap, 0) as i32, setup::SETUP_FRAME);
     });
 }
 
@@ -632,7 +632,12 @@ fn last_init_main() {
 #[test]
 fn last_set_phase() {
     check("grLast_8021B920", &|r, cap, maps| {
-        last::set_phase(r, gobj_arg(cap, maps), int_arg(cap, 1) as i32)
+        last::set_phase(
+            r,
+            gobj_arg(cap, maps),
+            int_arg(cap, 1) as i32,
+            last::CYCLE_PIECES_FRAME,
+        )
     });
 }
 
@@ -930,7 +935,7 @@ fn ground_destroy_and_create() {
                 "grLast_8021A7F4(9)",
                 &|ctx, _| invoke(ctx, 0x8021_A7F4, &[9], &[]),
                 &|r, _| {
-                    last::create(r, 9);
+                    last::create(r, 9, last::CYCLE_PIECES_FRAME);
                 },
             ),
             ("destroy map 9", &t[9], &o[9]),
@@ -1194,7 +1199,7 @@ fn battle_on_start() {
 #[test]
 fn battle_create() {
     check("grBattle_80219D84", &|r, cap, _| {
-        battle::create(r, int_arg(cap, 0) as i32);
+        battle::create(r, int_arg(cap, 0) as i32, setup::SETUP_FRAME);
     });
 }
 

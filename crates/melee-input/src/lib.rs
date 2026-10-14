@@ -1,15 +1,19 @@
 //! Reads the player's controllers into the simulation's controller input: the keyboard,
 //! standard gamepads (gilrs), and the GameCube controller adapter (raw over USB, `adapter`).
 //! The player reads them right before each tick ([`Inputs::read`]) and hands the four ports to
-//! the match; nothing here reads the simulation.
+//! the match; nothing here reads the simulation. [`Delay`] holds the reads back a set number of
+//! ticks, for players who want latency added back.
 
 pub mod adapter;
+mod delay;
 
 use std::sync::Arc;
+use std::time::{Duration, Instant, SystemTime};
 
 use melee_sim::input::pad::{ERR_NO_CONTROLLER, PadStatus};
 
 pub use adapter::Adapter;
+pub use delay::Delay;
 
 // PADStatus buttons.
 const LEFT: u16 = 0x0001;
@@ -58,6 +62,8 @@ pub enum Key {
 pub struct Keyboard {
     held: Vec<Key>,
     tapped: Vec<Key>,
+    /// When the newest press or release since the last read arrived, for its age.
+    changed: Option<Instant>,
 }
 
 impl Keyboard {
@@ -66,9 +72,11 @@ impl Keyboard {
             if !self.held.contains(&key) {
                 self.held.push(key);
                 self.tapped.push(key);
+                self.changed = Some(Instant::now());
             }
-        } else {
+        } else if self.held.contains(&key) {
             self.held.retain(|&k| k != key);
+            self.changed = Some(Instant::now());
         }
     }
 
@@ -170,6 +178,17 @@ fn gamepad(gp: &gilrs::Gamepad, tapped: &[gilrs::Button], pad: &mut PadStatus) {
     }
 }
 
+/// How old each source's newest input was when [`Inputs::read`] last read it: the time from
+/// its arrival in the player (the adapter's report coming off USB, the window's key event, the
+/// gamepad library's event) to the read. The keyboard and gamepads have an age only for a read
+/// that took in a new event; the adapter's report is always the latest one.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct InputAges {
+    pub adapter: Option<Duration>,
+    pub keyboard: Option<Duration>,
+    pub gamepad: Option<Duration>,
+}
+
 /// Every controller the player reads, assigned to ports: GameCube controllers on an adapter
 /// play their own ports; gamepads and the keyboard play the first ports left, the keyboard
 /// with the first gamepad.
@@ -177,6 +196,8 @@ pub struct Inputs {
     pub keyboard: Keyboard,
     gilrs: Option<gilrs::Gilrs>,
     pub adapter: Option<Arc<Adapter>>,
+    /// The inputs' ages at the last read.
+    pub ages: InputAges,
 }
 
 impl Inputs {
@@ -193,6 +214,7 @@ impl Inputs {
             keyboard: Keyboard::default(),
             gilrs,
             adapter: adapter.then(Adapter::start),
+            ages: InputAges::default(),
         }
     }
 
@@ -205,6 +227,20 @@ impl Inputs {
         };
         let mut out = [none; 4];
         let mut taken = [false; 4];
+        let now = Instant::now();
+        self.ages = InputAges {
+            adapter: self
+                .adapter
+                .as_ref()
+                .and_then(|a| a.report_time())
+                .map(|t| now.saturating_duration_since(t)),
+            keyboard: self
+                .keyboard
+                .changed
+                .take()
+                .map(|t| now.saturating_duration_since(t)),
+            gamepad: None,
+        };
         if let Some(a) = &self.adapter {
             for (i, p) in a.ports().into_iter().enumerate() {
                 if let Some(p) = p {
@@ -217,11 +253,15 @@ impl Inputs {
         let mut first = true;
         if let Some(g) = &mut self.gilrs {
             let mut tapped = Vec::new();
+            let mut newest: Option<SystemTime> = None;
             while let Some(e) = g.next_event() {
                 if let gilrs::EventType::ButtonPressed(b, _) = e.event {
                     tapped.push((e.id, b));
                 }
+                newest = newest.max(Some(e.time));
             }
+            self.ages.gamepad =
+                newest.map(|t| SystemTime::now().duration_since(t).unwrap_or_default());
             let ids: Vec<_> = g.gamepads().map(|(id, _)| id).collect();
             for id in ids {
                 let Some(port) = free.next() else { break };

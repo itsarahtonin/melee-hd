@@ -57,10 +57,14 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "grBattle_BG_Callback3")]
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
+/// Where a new background's call puts its scale joint's descriptor on the stack
+/// (`setup::SETUP_FRAME`).
+const BG_FRAME: u32 = 0x804E_E9F0;
+
 /// Creates one of the stage's objects and sets it up, `grBattle_80219D84`.
 #[doc(alias = "grBattle_80219D84")]
-pub fn create(r: &mut Running, map_id: i32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, callbacks(map_id))
+pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
+    setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
 }
 
 /// The stage's objects' setup functions and processes, by map id (`grNBa_StageCallbacks`).
@@ -78,16 +82,16 @@ pub fn on_init(r: &mut Running) {
     r.game.gr.battle_yakumono = r.game.stage_info.yakumono_param;
     r.game.stage_info.unk8C.b4 = true;
     r.game.stage_info.unk8C.b5 = true;
-    create(r, 0);
+    create(r, 0, setup::SETUP_FRAME);
     // `gm_8016B3D8`: Classic, Adventure and All-Star.
     let single = (3..=5).contains(&r.game.gr.game_mode);
     if single || r.game.gr.stkind == 273 || r.game.gr.stkind == 245 {
-        create(r, 5);
+        create(r, 5, setup::SETUP_FRAME);
     } else {
-        create(r, 3);
-        create(r, 1);
+        create(r, 3, setup::SETUP_FRAME);
+        create(r, 1, setup::SETUP_FRAME);
     }
-    create(r, 6);
+    create(r, 6, setup::SETUP_FRAME);
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
     grlib::measure_start_points(r.game, r.data);
@@ -224,7 +228,7 @@ pub fn proc_sky(r: &mut Running, gobj: GObjId) {
             let old = map_gobj(r.game, prev).expect("grbattle.c: bg_gobj");
             let fade_out = r.data.ptr(yaku.at(4));
             material::start_script(r.game, r.data, old, fade_out, 0);
-            let new = create(r, curr).expect("grbattle.c: bg_gobj");
+            let new = create(r, curr, BG_FRAME).expect("grbattle.c: bg_gobj");
             let fade_in = r.data.ptr(yaku);
             material::start_script(r.game, r.data, new, fade_in, 0);
             r.game.grounds[g.0].u.battle_bg().state = DONE;

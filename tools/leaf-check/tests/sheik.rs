@@ -5,8 +5,8 @@
 //! state variables changed, so callbacks no capture reached (and branches few did) run from
 //! real states of the same moves.
 //!
-//! What Sheik's code reaches in other parts of the port (the yo-yo's stage check, Fox's
-//! animation helpers) stands in on both sides ([`stubs`]); each check runs twice, with the
+//! What Sheik's code reaches in other parts of the port (Fox's animation helpers, an item's
+//! hold kind) stands in on both sides ([`stubs`]); each check runs twice, with the
 //! stand-ins that answer a question answering no, then yes, and the calls each side made to
 //! them are compared with their arguments.
 //!
@@ -55,7 +55,6 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::fox::ext as fox_ext;
-use melee_sim::game::ft::seak::ext;
 use melee_sim::game::handles::{CodeRef, FighterId};
 use melee_sim::game::it::kinds::{seakchain, seakneedleheld, seakneedlethrown, seakvanish};
 use melee_sim::game::state::Running;
@@ -85,7 +84,6 @@ fn dirs() -> Vec<String> {
 /// The code other parts of the port own, standing in on both sides: the stand-ins that answer
 /// a question answer `yes`.
 fn stubs(yes: bool) -> Vec<Stub> {
-    let b = StubRet::Int(i32::from(yes));
     let mut v: Vec<Stub> = [
         fox_ext::FTANIM_80070FB4,
         fox_ext::FTANIM_80070C48,
@@ -94,7 +92,6 @@ fn stubs(yes: bool) -> Vec<Stub> {
     .iter()
     .map(|&a| (a, StubRet::Nothing))
     .collect();
-    v.push((ext::FTNS_YOYO_CHECK_ENV_COLL, b));
     // An item's hold kind: the one-handed pose, or none.
     v.push((
         fox_ext::IT_GET_HOLD_KIND,

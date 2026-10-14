@@ -89,7 +89,7 @@ impl Running<'_> {
         self.enter_thrown(victim, victim_msid, mem(speed));
         match kind {
             KIND_KIRBY if msid == ms::THROW_HI => unported_call("ftCo_800DD398 (Kirby's up throw)"),
-            KIND_SAMUS => unported_call("ftSs_Init_CreateThrowGrappleBeam"),
+            KIND_SAMUS => self.samus_throw_beam(gobj, msid, mem(speed)),
             _ => {}
         }
         let frames = self.common().i32(0x348);
@@ -590,7 +590,7 @@ impl Running<'_> {
 
 /// Removes a joint's joint constraints, `lb_8000C390`.
 #[doc(alias = "lb_8000C390")]
-fn unconstrain(objs: &mut crate::hsd::Objects, j: crate::hsd::jobj::JObjId) {
+pub(crate) fn unconstrain(objs: &mut crate::hsd::Objects, j: crate::hsd::jobj::JObjId) {
     let mut cur = objs.jobjs[j].robj;
     loop {
         cur = robj::get_by_type(&objs.robjs, cur, 0x1000_0000, 0);

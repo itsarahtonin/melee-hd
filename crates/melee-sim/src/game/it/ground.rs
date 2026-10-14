@@ -33,6 +33,14 @@ pub fn stage_crossing(game: &mut Game, from: Vec3, to: Vec3) -> Option<Vec3> {
         .map(|hit| hit.pos)
 }
 
+/// [`stage_crossing`] with the crossed surface's normal, which the original writes to its
+/// third vector (`it_8026E9A4`).
+pub fn stage_crossing_normal(game: &mut Game, from: Vec3, to: Vec3) -> Option<(Vec3, Vec3)> {
+    let g = game.geometry.as_mut().expect("no collision geometry");
+    g.check_all_remap(-1, -1, from.x, from.y, to.x, to.y)
+        .map(|hit| (hit.pos, hit.normal))
+}
+
 /// A callback a collision check runs (`HSD_GObjEvent`).
 pub type Event = fn(&mut Running, GObjId);
 

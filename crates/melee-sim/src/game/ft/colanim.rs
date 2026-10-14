@@ -83,7 +83,8 @@ impl Running<'_> {
                     self.start_color_anim(gobj, 86, 0);
                 }
             }
-            3 | 4 | 13 | 16 | 24 => unported_call("ftData_UnkMotionStates4"),
+            13 => self.samus_charged_glow(gobj),
+            3 | 4 | 16 | 24 => unported_call("ftData_UnkMotionStates4"),
             _ => {}
         }
         let fp = self.game.fighter(gobj);
