@@ -205,14 +205,6 @@ impl Running<'_> {
         }
     }
 
-    /// `ftCo_800D94D8`: the hookshot put away (`it_802A2B10`) and forgotten.
-    // Ports `ftCo_800D94D8`; aliased once a check reaches it.
-    pub fn link_hookshot_put_away(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).u.gobj_at(u::HOOKSHOT).is_some() {
-            unported_call("it_802A2B10 (Link's hookshot put away)");
-        }
-    }
-
     /// `ftLk_SpecialN_ProcessFv10`.
     fn link_process_arrow(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).u.gobj_at(u::ARROW).is_some() {

@@ -10,7 +10,7 @@ use gekko_fp as fp;
 use super::super::super::code::{run_fighter_cb, unported_call};
 use super::super::super::ef;
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::samusgrapple;
+use super::super::super::it::kinds::{linkhookshot, samusgrapple};
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::motion::flags::UPDATE_CMD;
@@ -77,7 +77,21 @@ impl Running<'_> {
         };
         let kind = self.game.fighter(gobj).kind;
         let j = match kind {
-            KIND_LINK | KIND_CLINK => unported_call("fn_800D9CE8 (Link's hookshot grab)"),
+            // The hookshot winds in, and he holds at its tip.
+            KIND_LINK | KIND_CLINK => {
+                let hs = self
+                    .game
+                    .fighter(gobj)
+                    .u
+                    .gobj_at(0xC)
+                    .expect("the hookshot");
+                linkhookshot::to_retract_caught(self, hs);
+                super::super::super::it::item_mut(self.game, hs)
+                    .xDD4_itemVar
+                    .link_hookshot()
+                    .xC
+                    .get()
+            }
             // The beam winds in fast, and she holds at its tip.
             KIND_SAMUS => {
                 let beam = self
@@ -109,7 +123,22 @@ impl Running<'_> {
     pub fn co_catch_pull_anim(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
         if kind == KIND_LINK || kind == KIND_CLINK {
-            unported_call("ftCo_CatchPull_Anim (Link's hookshot pull)");
+            // Holding once the hookshot is all in.
+            let go = match self.game.fighter(gobj).u.gobj_at(0xC) {
+                None => true,
+                Some(hs) => {
+                    super::super::super::it::item_mut(self.game, hs)
+                        .xDD4_itemVar
+                        .link_hookshot()
+                        .x14
+                        .get()
+                        != 0
+                }
+            };
+            if go {
+                self.enter_catch_wait(gobj);
+            }
+            return;
         }
         if kind == KIND_SAMUS {
             // Holding once the beam is all in.
@@ -266,7 +295,7 @@ impl Running<'_> {
             self.throw_check(gobj)
         };
         if acted && matches!(kind, KIND_LINK | KIND_CLINK) {
-            unported_call("it_802A7AAC (Link's hookshot reeled in)");
+            linkhookshot::ft_death(self, gobj);
         }
         if acted && kind == KIND_SAMUS {
             samusgrapple::ft_death(self, gobj);
@@ -898,7 +927,11 @@ impl Running<'_> {
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
         match self.game.fighter(grabber).kind {
             KIND_YOSHI => unported_call("ftCo_800DB368 (held by Yoshi)"),
-            KIND_LINK | KIND_CLINK => unported_call("it_802A7840 (Link's hookshot's end)"),
+            KIND_LINK | KIND_CLINK => {
+                if let Some(hs) = self.game.fighter(grabber).u.gobj_at(0xC) {
+                    linkhookshot::to_retract_caught(self, hs);
+                }
+            }
             KIND_SAMUS => {
                 if let Some(beam) = self.game.fighter(grabber).u.gobj_at(0x10) {
                     samusgrapple::to_retract_fast(self, beam);

@@ -4,6 +4,7 @@
 //! imported into a `Game` and compared with memory.
 
 use melee_sim::game::handles::{BoneTableId, ItemId};
+use melee_sim::game::it::kinds::linkhookshot::Lengths as HookshotLengths;
 use melee_sim::game::it::kinds::samusgrapple::Lengths as GrappleLengths;
 use melee_sim::game::it::spawn::{PickTable, Spawner, Tables};
 use melee_sim::game::it::{BoneTable, CHAR_ARTICLES, ItemVars, vars_kind};
@@ -17,6 +18,8 @@ use crate::MEM1;
 /// Samus's grapple beam's article's slot among the character items' (`It_Kind_Samus_GBeam`
 /// less `It_Kind_Kuriboh`).
 const GRAPPLE_ARTICLE: usize = 96 - 43;
+/// Link's hookshot's article (`It_Kind_Link_HShot`).
+const HOOKSHOT_ARTICLE: usize = 62 - 43;
 use crate::compare::Comparer;
 use crate::import::{Importer, sym};
 
@@ -245,6 +248,27 @@ impl Importer<'_> {
                 };
             }
         }
+        // Link's hookshot's lengths, which its spawn writes over its attributes.
+        self.game.it.hookshot_lengths = Default::default();
+        let hookshot = self
+            .game
+            .it
+            .char_articles
+            .get(HOOKSHOT_ARTICLE)
+            .copied()
+            .flatten();
+        if let Some(article) = hookshot {
+            let special = cap.u32(self.data.addr(article) + 4);
+            if let Some(attrs) = self.import_data(special) {
+                self.game.it.hookshot_lengths = HookshotLengths {
+                    attrs: Some(attrs),
+                    n: cap.u32(special + 0x2C) as i32,
+                    words: core::array::from_fn(|i| {
+                        f32::from_bits(cap.u32(special + 0x30 + 4 * i as u32))
+                    }),
+                };
+            }
+        }
         self.game.it.db_bubbles = cap.u32(sym("db_ShowItemCollisionBubbles")) as i32;
         self.game.it.db_menu =
             db_ItemAndPokemonMenu_t::import(&m, sym("db_ItemAndPokemonMenu"), self);
@@ -362,6 +386,15 @@ impl Comparer<'_> {
                 .collect();
             let theirs: Vec<u32> = (0..10).map(|i| self.u32(at + 0x34 + 4 * i)).collect();
             self.check("items", "grapple beam lengths", ours, theirs);
+        }
+        if let Some(attrs) = g.hookshot_lengths.attrs {
+            let at = self.data.addr(attrs);
+            let l = &g.hookshot_lengths;
+            let ours: Vec<u32> = core::iter::once(l.n as u32)
+                .chain(l.words.iter().map(|w| w.to_bits()))
+                .collect();
+            let theirs: Vec<u32> = (0..8).map(|i| self.u32(at + 0x2C + 4 * i)).collect();
+            self.check("items", "hookshot lengths", ours, theirs);
         }
         g.db_menu.compare(
             &m,

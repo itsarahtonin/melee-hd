@@ -7,7 +7,6 @@ use super::super::super::code::unported_call;
 use super::super::super::handles::{CodeRef, FighterId};
 use super::super::super::state::Running;
 use super::super::super::structs::Fighter;
-use super::checks::{KIND_CLINK, KIND_LINK};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 
@@ -40,12 +39,11 @@ impl Running<'_> {
         fp.x2194 = Some(CodeRef(ON_GRAB_ITEM));
     }
 
-    /// Link's hookshot (`fn_800D8EC8`, `fn_800D9228`, not ported) and Samus's grapple beam
+    /// Link's hookshot (`fn_800D8EC8`, `fn_800D9228`) and Samus's grapple beam
     /// (`fn_800D9558`, `fn_800D9930`) on their grab and dash grab: whether it ended the grab.
     fn catch_tether(&mut self, gobj: GObjId, dash: bool) -> bool {
-        let kind = self.game.fighter(gobj).kind;
-        if kind == KIND_LINK || kind == KIND_CLINK {
-            unported_call("fn_800D8EC8 and fn_800D9228 (Link's hookshot grab)");
+        if self.link_catch_tether(gobj, dash) {
+            return true;
         }
         self.samus_catch_tether(gobj, dash)
     }
@@ -95,10 +93,7 @@ impl Running<'_> {
     /// `fn_800D9C64`), then falling.
     // Ports `fn_800D8E30`; aliased once a check reaches it.
     fn catch_off_ground(&mut self, gobj: GObjId) {
-        let kind = self.game.fighter(gobj).kind;
-        if kind == KIND_LINK || kind == KIND_CLINK {
-            unported_call("fn_800D949C (Link's hookshot put away)");
-        }
+        self.link_catch_off_ground(gobj);
         self.samus_catch_off_ground(gobj);
         self.enter_fall(gobj);
     }

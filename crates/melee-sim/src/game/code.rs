@@ -142,6 +142,15 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         super::it::kinds::samusgrapple::FT_LINE_UP => {
             super::it::kinds::samusgrapple::ft_line_up(g, gobj)
         }
+        super::it::kinds::linkhookshot::FT_DEATH => {
+            super::it::kinds::linkhookshot::ft_death(g, gobj)
+        }
+        super::it::kinds::linkhookshot::FT_FRAME => {
+            super::it::kinds::linkhookshot::ft_frame(g, gobj)
+        }
+        super::it::kinds::linkhookshot::FT_LINE_UP => {
+            super::it::kinds::linkhookshot::ft_line_up(g, gobj)
+        }
         addr if super::ft::falco::run(g, gobj, addr) => {}
         addr if super::ft::captain::run(g, gobj, addr) => {}
         addr if super::ft::luigi::run(g, gobj, addr) => {}

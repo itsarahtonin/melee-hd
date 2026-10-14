@@ -151,6 +151,7 @@ members! {
     PeachTurnip, peach_turnip, itPeachTurnip_ItemVars, [PEACH_TURNIP];
     LinkBomb, link_bomb, itLinkBomb_ItemVars, [LINK_BOMB, CLINK_BOMB];
     LinkBoomerang, link_boomerang, itLinkBoomerang_ItemVars, [LINK_BOOMERANG, CLINK_BOOMERANG];
+    LinkHookshot, link_hookshot, itLinkHookshot_ItemVars, [LINK_HSHOT, CLINK_HSHOT];
     Heiho, heiho, HeihoVars, [HEIHO];
     ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE];
     ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];

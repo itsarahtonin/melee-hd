@@ -18,6 +18,7 @@ pub mod heiho;
 pub mod kusudama;
 pub mod linkbomb;
 pub mod linkboomerang;
+pub mod linkhookshot;
 pub mod luigifireball;
 pub mod mariocape;
 pub mod mariofireball;
@@ -99,6 +100,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || peachturnip::run_event(r, gobj, addr)
         || linkbomb::run_event(r, gobj, addr)
         || linkboomerang::run_event(r, gobj, addr)
+        || linkhookshot::run_event(r, gobj, addr)
         || drmariopill::run_event(r, gobj, addr)
         || pikachuthunder::run_event(r, gobj, addr)
         || pikachutjoltground::run_event(r, gobj, addr)
@@ -152,6 +154,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| peachturnip::run_pred(r, gobj, addr))
         .or_else(|| linkbomb::run_pred(r, gobj, addr))
         .or_else(|| linkboomerang::run_pred(r, gobj, addr))
+        .or_else(|| linkhookshot::run_pred(r, gobj, addr))
         .or_else(|| drmariopill::run_pred(r, gobj, addr))
         .or_else(|| pikachuthunder::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))

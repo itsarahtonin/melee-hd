@@ -8540,6 +8540,124 @@ impl itLinkBoomerang_ItemVars {
     }
 }
 
+/// `itLinkHookshot_ItemVars`, 0x64 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itLinkHookshot_ItemVars {
+    /// +0x0
+    pub x0: Var<Option<ItemLinkId>>,
+    /// +0x4
+    pub x4: Var<Option<ItemLinkId>>,
+    /// +0x8
+    pub x8: Var<Option<GObjId>>,
+    /// +0xc
+    pub xC: Var<Option<JObjId>>,
+    /// +0x10
+    pub x10: Var<Option<CodeRef>>,
+    /// +0x14
+    pub x14: Var<u8>,
+    /// +0x18
+    pub x18: Var<f32>,
+    /// +0x1c
+    pub x1C: Var<f32>,
+    /// +0x20
+    pub x20: Var<f32>,
+    /// +0x24
+    pub x24: Var<f32>,
+    /// +0x28
+    pub x28: Var<f32>,
+    /// +0x2c
+    pub x2C: Var<f32>,
+    /// +0x30
+    pub x30: Var<f32>,
+    /// +0x34
+    pub x34: Var<f32>,
+    /// +0x38
+    pub x38: Var<f32>,
+    /// +0x3c
+    pub x3C: Var<f32>,
+    /// +0x40
+    pub x40: Var<f32>,
+    /// +0x44
+    pub x44: Var<f32>,
+    /// +0x48
+    pub x48: Var<f32>,
+    /// +0x4c
+    pub x4C: Var<f32>,
+    /// +0x50
+    pub x50: Var<f32>,
+    /// +0x54
+    pub x54: Var<f32>,
+    /// +0x58
+    pub x58: Var<f32>,
+    /// +0x5c
+    pub x5C: Var<f32>,
+    /// +0x60
+    pub x60: Var<f32>,
+}
+
+impl Default for itLinkHookshot_ItemVars {
+    fn default() -> Self {
+        itLinkHookshot_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+            x18: Var::new(Default::default()),
+            x1C: Var::new(Default::default()),
+            x20: Var::new(Default::default()),
+            x24: Var::new(Default::default()),
+            x28: Var::new(Default::default()),
+            x2C: Var::new(Default::default()),
+            x30: Var::new(Default::default()),
+            x34: Var::new(Default::default()),
+            x38: Var::new(Default::default()),
+            x3C: Var::new(Default::default()),
+            x40: Var::new(Default::default()),
+            x44: Var::new(Default::default()),
+            x48: Var::new(Default::default()),
+            x4C: Var::new(Default::default()),
+            x50: Var::new(Default::default()),
+            x54: Var::new(Default::default()),
+            x58: Var::new(Default::default()),
+            x5C: Var::new(Default::default()),
+            x60: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itLinkHookshot_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.x10.mark_stale();
+        self.x14.mark_stale();
+        self.x18.mark_stale();
+        self.x1C.mark_stale();
+        self.x20.mark_stale();
+        self.x24.mark_stale();
+        self.x28.mark_stale();
+        self.x2C.mark_stale();
+        self.x30.mark_stale();
+        self.x34.mark_stale();
+        self.x38.mark_stale();
+        self.x3C.mark_stale();
+        self.x40.mark_stale();
+        self.x44.mark_stale();
+        self.x48.mark_stale();
+        self.x4C.mark_stale();
+        self.x50.mark_stale();
+        self.x54.mark_stale();
+        self.x58.mark_stale();
+        self.x5C.mark_stale();
+        self.x60.mark_stale();
+    }
+}
+
 /// `IfDamageFlags`, 0x1 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IfDamageFlags {

@@ -12,6 +12,7 @@
 
 pub mod attack_air;
 pub mod attack_s42;
+pub mod catch;
 pub mod init;
 pub mod special_hi;
 pub mod special_lw;
