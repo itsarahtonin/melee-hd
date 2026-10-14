@@ -288,10 +288,10 @@ impl Running<'_> {
         }
     }
 
-    /// UCF 0.84's tumble wiggle: a fresh push (timer 0) leaves the tumble and an old one (past
-    /// 1) doesn't; on the push's second frame (timer 1) it leaves only if the stick was inside
-    /// the threshold the frame before and the raw stick travelled more than 75 along x since two
-    /// frames ago.
+    /// UCF 0.84's tumble wiggle: a fresh push (timer 0) leaves the tumble and an old one (timer
+    /// past 1) doesn't; on the push's second frame (timer 1) it leaves only if the stick was
+    /// inside the threshold the frame before and the raw stick travelled more than 75 along x
+    /// since two frames ago.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     fn ucf084_tumble(&self, gobj: GObjId, t: f64) -> bool {
         let fp = self.game.fighter(gobj);

@@ -122,6 +122,7 @@ Of the 3,605 dataset replays in ssbm-rs's `local/replays/hf/`, 982 carry UCF 0.8
 
 - Roy against Falco on Battlefield (`hf-roy-falco-bf-3fc44471`, `roy-dd-a3`, 3.16) compares all its 10,789 ticks with no difference and no stale read. 0.8's dashback runs 25 times there, its shield drop 20 times and its tumble flick on the push's second frame once.
 - Peach against Fox on Battlefield (`hf-peach-fox-bf-03dd468e`, `peach-dd-a1`, 3.14) compares its first 7,934 ticks with no difference and no stale read. It runs the dashback 10 times, the shield drop 5 times and the tumble flick once. In tick 7935 it stops at `fn_800D6F58` (catching an item in the air), which isn't ported.
+- Peach against Fox on Dream Land (`hf-peach-fox-dl-126152b3`, `peach-dd-a1`, 3.14) compares all its 8,749 ticks with no difference and no stale read. Whispy never picks his direction there while a fighter is dead or asleep, so it doesn't tell 3.14's set from 3.16's: given WhispyBlowDirFix, it compares the same.
 
 Each code broken on purpose fails the diff: the dashback's travel threshold raised from 75 to 150, or its earlier poll taken one poll back instead of two, fails Roy's replay in tick 1523 (Falco's first dashback); the tumble's flick on the push's second frame switched off fails it in tick 5796, and Peach's in tick 7802; the shield drop switched off fails Roy's in tick 1431. Raising the shield drop's timer floor from 3 to 6 changes nothing there, since all its 20 shield drops come with the stick held sideways longer than that.
 
