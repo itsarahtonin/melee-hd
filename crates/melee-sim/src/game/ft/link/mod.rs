@@ -11,6 +11,7 @@
 //! Other code reaches Link's through [`call`] and [`run`] by the original's addresses.
 
 pub mod attack_air;
+pub mod attack_s42;
 pub mod init;
 pub mod special_hi;
 pub mod special_lw;
@@ -44,6 +45,11 @@ pub mod addr {
     pub const ON_KNOCKBACK_ENTER: u32 = 0x800E_B2AC;
     pub const ON_KNOCKBACK_EXIT: u32 = 0x800E_B2F0;
     pub const ABSORB_CB: u32 = 0x800E_B334;
+
+    pub const ATTACK_S42_ANIM: u32 = 0x800C_EDE0;
+    pub const ATTACK_S42_IASA: u32 = 0x800C_EE00;
+    pub const ATTACK_S42_PHYS: u32 = 0x800C_EE30;
+    pub const ATTACK_S42_COLL: u32 = 0x800C_EE50;
 
     pub const ATTACK_AIR_SHIELD: u32 = 0x800E_B3BC;
     pub const ATTACK_AIR_ENTER: u32 = 0x800E_B42C;
@@ -103,6 +109,7 @@ pub mod addr {
 
 /// Link's action states (`ftLk_MS_*`).
 pub mod ms {
+    pub const ATTACK_S42: i32 = 341;
     pub const SPECIAL_S1: i32 = 350;
     pub const SPECIAL_S2: i32 = 351;
     pub const SPECIAL_S1_EMPTY: i32 = 352;
@@ -189,6 +196,7 @@ impl Running<'_> {
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     init::run(g, gobj, a)
         || attack_air::run(g, gobj, a)
+        || attack_s42::run(g, gobj, a)
         || special_hi::run(g, gobj, a)
         || special_lw::run(g, gobj, a)
         || special_s::run(g, gobj, a)

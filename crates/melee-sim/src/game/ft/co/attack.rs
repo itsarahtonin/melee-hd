@@ -732,9 +732,9 @@ impl Running<'_> {
     pub fn smash_combo_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
         if fp.cmd_vars[0] != 0 && fp.input.pressed_buttons & PAD_A != 0 {
-            // `ftCo_800CED30`.
             if fp.kind == KIND_LINK || fp.kind == KIND_CLINK {
-                unported_call("ftCo_800CED30");
+                self.link_attack_s42_enter(gobj);
+                return true;
             }
             panic!("ftattacks4combo.c:54: don't have smash42 motion!!!");
         }
