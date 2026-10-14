@@ -88,9 +88,24 @@ pub struct LoadedFiles {
     /// Each file's disc entry number and size, for the disc loads the audio timeline times.
     #[clone_from(if_changed)]
     pub entries: Vec<(String, i32, u32)>,
+    /// The files the preload cache holds as the match starts, which a load finds there
+    /// rather than reading them into the scene's heap (`heap::Layout::from_menus`).
+    #[clone_from(if_changed)]
+    pub preloaded: Vec<String>,
+    /// The buffers the stage's preload asked for that the preload cache holds (by their
+    /// preload entry, `lbDvd_80017740`'s), which the stage takes from there rather than from
+    /// the scene's heap.
+    #[clone_from(if_changed)]
+    pub preloaded_buffers: Vec<i32>,
 }
 
 impl LoadedFiles {
+    /// Whether the preload cache holds the buffer of preload entry `entry`
+    /// (`lbDvd_GetPreloadedArchive`).
+    pub fn buffer_preloaded(&self, entry: i32) -> bool {
+        self.preloaded_buffers.contains(&entry)
+    }
+
     /// The loaded archive named `name`.
     pub fn archive(&self, name: &str) -> ArchiveId {
         self.archives
@@ -295,11 +310,17 @@ impl Running<'_> {
     /// A fighter file's synchronous disc load (`lbFile_8001668C`), where the original loads
     /// it, on the audio timeline that times it: `dest` its ARAM address, or [`MAIN_MEMORY`]
     /// for main memory, where the allocator model gives it its blocks. Not timed without a
-    /// timeline (a state imported from a single call). The `HSD_Archive`'s address for a load
-    /// into main memory, else 0.
+    /// timeline (a state imported from a single call). A file the preload cache holds
+    /// ([`LoadedFiles::preloaded`]) is neither read nor allocated. The `HSD_Archive`'s address
+    /// for a load into main memory, else 0.
     pub fn disc_load(&mut self, name: &str, dest: u32) -> u32 {
         // Neither timed nor modeled (a state imported from a single call): nothing to do.
         if self.game.audio.clock.is_none() && crate::hsd::heap::with(|_| ()).is_none() {
+            return 0;
+        }
+        // A file the preload cache holds: neither read nor in the scene's heap; its archive
+        // lives in the cache's heap, where the model doesn't follow it.
+        if self.game.ft.data.files.preloaded.iter().any(|n| n == name) {
             return 0;
         }
         let (entrynum, len) = self.game.ft.data.files.entry(name);

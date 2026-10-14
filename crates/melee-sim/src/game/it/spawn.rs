@@ -248,6 +248,14 @@ pub fn build(table: &mut PickTable, counts: &[i32; 35], mask: u64, first: i32, w
     };
     let n = on(mask).count();
     table.size = n as u8;
+    // The kinds' and the weights' arrays, 4 bytes an entry (`HSD_MemAlloc` of nothing
+    // allocates nothing).
+    if n > 0 {
+        crate::hsd::heap::with(|h| {
+            h.mem_alloc(4 * n as u32);
+            h.mem_alloc(4 * n as u32);
+        });
+    }
     let mut kinds = Vec::with_capacity(n);
     let mut weights = Vec::with_capacity(n);
     let mut cumulative = 0i32;
@@ -279,6 +287,11 @@ pub fn build_monsters(game: &mut Game, data: &Archives) {
     let t = &mut game.it.spawn.monsters;
     t.total = sum as u16;
     t.size = 4;
+    // The kinds' and the weights' arrays.
+    crate::hsd::heap::with(|h| {
+        h.mem_alloc(4 * 4);
+        h.mem_alloc(4 * 4);
+    });
     let mut cumulative = 0u32;
     let mut weights = Vec::with_capacity(4);
     for &x in &w {

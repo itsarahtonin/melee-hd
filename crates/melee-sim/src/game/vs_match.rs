@@ -135,10 +135,10 @@ impl Settings {
     /// `prefs`: the VS mode's start data with what the character select screen sets for each
     /// player (character, kind, costume, team and CPU level) and the stage select's stage.
     ///
-    /// With an Ice Climber among the players the allocator model is on, laid out as Slippi's
-    /// playback lays out the heap (`Layout::slippi_playback`, the layout every checked match
-    /// uses): Nana's computer DI reads her `Fighter*`'s address, which the model gives
-    /// (docs/engine.md, docs/player.md). Without one it stays off, which costs nothing.
+    /// With an Ice Climber among the players the allocator model is on, laid out as a
+    /// console's VS match from the menus lays out the heap (`Layout::vanilla_vs`): Nana's
+    /// computer DI reads her `Fighter*`'s address, which the model gives (docs/engine.md,
+    /// docs/player.md). Without one it stays off, which costs nothing.
     pub fn vs_with(
         stage: u16,
         players: &[Player],
@@ -172,7 +172,7 @@ impl Settings {
             heap: players
                 .iter()
                 .any(|p| p.character == CKIND_ICE_CLIMBERS)
-                .then(crate::hsd::heap::Layout::slippi_playback),
+                .then(crate::hsd::heap::Layout::vanilla_vs),
             playback_heap: None,
             unlocks: super::gm::Unlocks::slippi(),
             boot_audio: true,
@@ -425,6 +425,11 @@ impl Match {
                 ));
             }
         }
+        if settings.heap.is_some_and(|l| l.from_menus) {
+            let (files, buffers) = preloaded_files(&settings.start);
+            game.ft.data.files.preloaded = files;
+            game.ft.data.files.preloaded_buffers = buffers;
+        }
         let mut names: Vec<(String, ArchiveId)> = [
             ("LbRb.dat", rumble),
             ("LbRf.dat", files.lb_rf),
@@ -611,6 +616,22 @@ impl Match {
         }
     }
 
+    /// [`Match::step`] up to the frame's display pass, where ssbm-rs's state traces sample the
+    /// original: the tick's frame without draws, and whether the pass is due, which
+    /// [`Match::render`] runs.
+    pub fn step_tick(&mut self, pads: PadData) -> (Frame, bool) {
+        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let (t, render) = scene::step_tick(&mut self.running(), pads, false);
+        lent.give_back(&mut self.game.objs.heap);
+        let out = Frame {
+            events: std::mem::take(&mut self.game.events),
+            pads: t.pads,
+            ended: t.ended,
+            draws: Vec::new(),
+        };
+        (out, render)
+    }
+
     /// One frame: the controllers' poll queued, then one engine tick.
     pub fn step(&mut self, pads: PadData) -> Frame {
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
@@ -659,6 +680,63 @@ pub fn init_scene(r: &mut Running) {
         crate::hsd::heap::with(|h| h.mem_alloc(0x80));
     }
     g.lb_reset_sound_objects();
+}
+
+/// The files and buffers the VS mode's character and stage selects leave in the preload cache
+/// for a match (`lbDvd_80017960` from the game cache they fill): the stage's archive and the
+/// buffers its stage asks for (`Ground_801C06B8`: Fountain of Dreams' reflection, Pokémon
+/// Stadium's screens and transformation buffer, by preload entry), and for each playing
+/// slot's characters (`Player_80031CB0`, `ftData_800855C8`) their data file, the costume's
+/// file, their effect file and their animation file.
+pub fn preloaded_files(start: &StartMeleeData) -> (Vec<String>, Vec<i32>) {
+    use super::ft::data::kind_tables;
+    let mut out: Vec<String> = Vec::new();
+    let mut add = |name: &str| {
+        if !out.iter().any(|n| n == name) {
+            out.push(name.to_owned());
+        }
+    };
+    let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind)) as i32;
+    if let Some(name) = super::gr::data::stage_data(grkind).file {
+        add(name);
+    }
+    // `grIzumi_801CD2D4` and `grStadium_801D511C`.
+    let buffers = match grkind {
+        super::gr::GR_KIND_IZUMI => vec![2001],
+        super::gr::GR_KIND_PSTADIUM => vec![0x7D2, 0x7D3, 0x7D4, 0x7D5],
+        _ => Vec::new(),
+    };
+    for p in &start.players {
+        if i32::from(p.slot_type) == super::pl::player::PKIND_NONE {
+            continue;
+        }
+        let m = super::pl::player::mapping(i32::from(p.ckind));
+        for kind in [m.internal_id, m.extra_internal_id] {
+            if kind < 0 {
+                continue;
+            }
+            let t = kind_tables(i32::from(kind));
+            if let Some(name) = t.dat_file {
+                add(name);
+            }
+            let c = usize::from(p.color);
+            let c = if c >= usize::from(t.costume_count) {
+                0
+            } else {
+                c
+            };
+            if let Some(name) = t.costumes[c].file {
+                add(name);
+            }
+            if let Some(Some((name, _))) = super::ef::FILES.get(usize::from(t.effect_file)) {
+                add(name);
+            }
+            if let Some(name) = t.anim_file {
+                add(name);
+            }
+        }
+    }
+    (out, buffers)
 }
 
 /// Where the fighters' animation files start in ARAM (the ARAM heap's start, where the debug
@@ -773,7 +851,7 @@ mod tests {
         assert_eq!(Settings::vs(32, &[fox, player(9, 1)], 4, 8).heap, None);
         assert_eq!(
             Settings::vs(32, &[fox, ics], 4, 8).heap,
-            Some(crate::hsd::heap::Layout::slippi_playback())
+            Some(crate::hsd::heap::Layout::vanilla_vs())
         );
     }
 }

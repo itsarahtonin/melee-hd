@@ -92,14 +92,16 @@ pub struct Screen {
 }
 
 /// A screen's user data from the scene's heap (its block's size), then its image's buffer
-/// (`lb_800121FC`): the preload cache holds none of the screens' in the match a replay's
-/// playback boots into, so the heap gives each.
-fn alloc_screen(size: u32, desc: &HSD_ImageDesc) -> u32 {
+/// (`lb_800121FC`): preload entry `entry` where the preload cache holds it (a match the VS mode
+/// starts from its menus), else the scene's heap's (the match a replay's playback boots into).
+fn alloc_screen(r: &Running, size: u32, desc: &HSD_ImageDesc, entry: i32) -> u32 {
     let addr = crate::hsd::heap::mem_alloc(size);
-    let (w, h) = (u32::from(desc.width), u32::from(desc.height));
-    crate::hsd::heap::mem_alloc(
-        crate::hsd::heap::tex_buffer_size(w, h, desc.format as u32).next_multiple_of(32),
-    );
+    if !r.game.ft.data.files.buffer_preloaded(entry) {
+        let (w, h) = (u32::from(desc.width), u32::from(desc.height));
+        crate::hsd::heap::mem_alloc(
+            crate::hsd::heap::tex_buffer_size(w, h, desc.format as u32).next_multiple_of(32),
+        );
+    }
     addr
 }
 
@@ -345,11 +347,17 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
     setup::init_map_coll(r.game, r.data, j, map_id);
     anime::start_map(r.game, r.data, gobj, map_id, 0);
     {
-        // `lbDvd_GetPreloadedArchive(0x7D5)`: the preload cache holds none in the match a
-        // replay's playback boots into, so the scene's heap gives the buffer (the allocator
-        // model's address); without the model, the address the frontend gives.
-        let address = crate::hsd::heap::with(|h| h.mem_alloc(0x5_0000))
-            .unwrap_or(r.game.gr.stadium.buffer_address);
+        // `lbDvd_GetPreloadedArchive(0x7D5)`: the preload cache's buffer where it holds one
+        // (a match the VS mode starts from its menus), placed outside the simulation, so the
+        // address the frontend gives; in the match a replay's playback boots into it holds
+        // none, and the scene's heap gives the buffer (the allocator model's address, or
+        // without the model the frontend's).
+        let address = if r.game.ft.data.files.buffer_preloaded(0x7D5) {
+            r.game.gr.stadium.buffer_address
+        } else {
+            crate::hsd::heap::with(|h| h.mem_alloc(0x5_0000))
+                .unwrap_or(r.game.gr.stadium.buffer_address)
+        };
         let v = r.game.grounds[g.0].u.stadium();
         v.buffer = address;
         v.bits.b1 = false;
@@ -1051,7 +1059,7 @@ pub fn create_text_camera(r: &mut Running) -> GObjId {
     r.game.world.gobj_mut(gobj).gxlink_prios = 2;
     let desc = screen_image(0xFA, 0xA0, 4);
     // `TextWrapper`.
-    let addr = alloc_screen(0x20, &desc);
+    let addr = alloc_screen(r, 0x20, &desc, 0x7D2);
     r.game
         .world
         .init_user_data(gobj, 3, UserData::StadiumScreen(SCREEN_TEXT));
@@ -1089,7 +1097,7 @@ pub fn create_feed(r: &mut Running) -> GObjId {
         .setup_gx_link_max(gobj, CodeRef(0x801D_2FD0), 3, false);
     let desc = screen_image(0x280, 0x196, 4);
     // 0x1C bytes, two short of an `ImageDescWrapper`.
-    let addr = alloc_screen(0x1C, &desc);
+    let addr = alloc_screen(r, 0x1C, &desc, 0x7D3);
     r.game
         .world
         .init_user_data(gobj, 3, UserData::StadiumScreen(SCREEN_FEED));
@@ -1112,7 +1120,7 @@ pub fn create_zoom(r: &mut Running) -> GObjId {
         .setup_gx_link_max(gobj, CodeRef(0x801D_3084), 3, false);
     let desc = screen_image(0x7C, 0x50, 4);
     // `ImageDescWrapper`.
-    let addr = alloc_screen(0x20, &desc);
+    let addr = alloc_screen(r, 0x20, &desc, 0x7D4);
     r.game
         .world
         .init_user_data(gobj, 3, UserData::StadiumScreen(SCREEN_ZOOM));
