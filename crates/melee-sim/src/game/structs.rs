@@ -12,7 +12,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
-use crate::game::it::{IgnoreId, ItemVars, TurnipFlag, Var};
+use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -8397,6 +8397,56 @@ impl itPeachTurnip_ItemVars {
         self.xDE0_scl.mark_stale();
         self.xDE4_owner.mark_stale();
         self.xDE8_scl.mark_stale();
+    }
+}
+
+/// `itLinkBomb_ItemVars`, 0x14 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itLinkBomb_ItemVars {
+    /// +0x0
+    pub x0: Var<LinkBombFlags>,
+    /// +0x1
+    pub x1: Var<u8>,
+    /// +0x2
+    pub x2: Var<u8>,
+    /// +0x3
+    pub x3: Var<u8>,
+    /// +0x4
+    pub x4: Var<f32>,
+    /// +0x8
+    pub x8: Var<f32>,
+    /// +0xc
+    pub xC: Var<f32>,
+    /// +0x10
+    pub x10: Var<Option<GObjId>>,
+}
+
+impl Default for itLinkBomb_ItemVars {
+    fn default() -> Self {
+        itLinkBomb_ItemVars {
+            x0: Var::new(Default::default()),
+            x1: Var::new(Default::default()),
+            x2: Var::new(Default::default()),
+            x3: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itLinkBomb_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x1.mark_stale();
+        self.x2.mark_stale();
+        self.x3.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.x10.mark_stale();
     }
 }
 

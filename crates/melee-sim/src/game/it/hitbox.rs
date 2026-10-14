@@ -95,6 +95,12 @@ pub fn let_own_items_hit(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).xDCD_flag.x0.b7 = true;
 }
 
+/// Sets `xDCE`'s third flag, `it_802754A4`.
+#[doc(alias = "it_802754A4")]
+pub fn set_xdce_b2(game: &mut Game, gobj: GObjId) {
+    set_flag(&mut item_mut(game, gobj).xDCE_flag, 2, true);
+}
+
 /// Sets `xDCE`'s hit flags, `it_802754D4`.
 #[doc(alias = "it_802754D4")]
 pub fn set_hit_ids2(game: &mut Game, gobj: GObjId) {

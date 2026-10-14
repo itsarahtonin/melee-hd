@@ -243,7 +243,7 @@ pub fn check_burst(r: &mut Running, gobj: GObjId) {
     match ip.kind {
         6 => code::unported_call("it_8027D730"),
         19 => code::unported_call("it_8028FE90"),
-        58 | 59 => code::unported_call("it_8029D968"),
+        58 | 59 => super::kinds::linkbomb::set_off(r, gobj),
         177 => code::unported_call("it_802D09D0"),
         _ => {
             item_mut(r.game, gobj).destroy_type = 0;

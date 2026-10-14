@@ -16,6 +16,7 @@ pub mod hammerhead;
 pub mod heart;
 pub mod heiho;
 pub mod kusudama;
+pub mod linkbomb;
 pub mod luigifireball;
 pub mod mariocape;
 pub mod mariofireball;
@@ -95,6 +96,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || peachexplode::run_event(r, gobj, addr)
         || peachparasol::run_event(r, gobj, addr)
         || peachturnip::run_event(r, gobj, addr)
+        || linkbomb::run_event(r, gobj, addr)
         || drmariopill::run_event(r, gobj, addr)
         || pikachuthunder::run_event(r, gobj, addr)
         || pikachutjoltground::run_event(r, gobj, addr)
@@ -146,6 +148,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| peachexplode::run_pred(r, gobj, addr))
         .or_else(|| peachparasol::run_pred(r, gobj, addr))
         .or_else(|| peachturnip::run_pred(r, gobj, addr))
+        .or_else(|| linkbomb::run_pred(r, gobj, addr))
         .or_else(|| drmariopill::run_pred(r, gobj, addr))
         .or_else(|| pikachuthunder::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))

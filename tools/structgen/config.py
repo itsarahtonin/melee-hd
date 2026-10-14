@@ -57,6 +57,8 @@ ROOTS = [
     "itClimbersBlizzard_ItemVars",
     # Peach's vegetables.
     "itPeachTurnip_ItemVars",
+    # Link's bomb.
+    "itLinkBomb_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",
@@ -204,6 +206,8 @@ SPLICE = {
     "BoneDynamicsDesc": ("bone_id", 0, 4, "BoneSlot"),
     # Peach's turnip's flag byte, of which only the top bit is the turnip's.
     "itPeachTurnip_ItemVars": ("xDD4", 0, 1, "TurnipFlag"),
+    # Link's bomb's flag byte, of which the bomb uses the top three bits.
+    "itLinkBomb_ItemVars": ("x0", 0, 1, "LinkBombFlags"),
     # Pointers a computer player's state keeps into itself: offsets from the fields they point
     # into, which don't depend on where the fighter is.
     "CpuFighter": [
@@ -241,7 +245,7 @@ EXTRA_USES = [
     "use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};",
     "use crate::game::ft::dynamics::BoneSlot;",
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
-    "use crate::game::it::{IgnoreId, ItemVars, TurnipFlag};",
+    "use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};",
     "use crate::hsd::lobj::LObjId;",
     "use crate::hsd::shadow::ShadowId;",
     "use crate::lb::command::Script;",
@@ -304,7 +308,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::handles::*;
-use crate::game::it::{IgnoreId, ItemVars, TurnipFlag, Var};
+use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;

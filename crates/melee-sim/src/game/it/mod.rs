@@ -29,7 +29,7 @@ mod tables_gen;
 pub mod vars;
 pub mod zako;
 
-pub use vars::{ItemVars, TurnipFlag, Var, VarsKind, vars_kind};
+pub use vars::{ItemVars, LinkBombFlags, TurnipFlag, Var, VarsKind, vars_kind};
 
 use melee_data::archive::DataRef;
 

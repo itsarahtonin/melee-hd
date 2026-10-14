@@ -13,6 +13,7 @@
 pub mod attack_air;
 pub mod init;
 pub mod special_hi;
+pub mod special_lw;
 
 use super::super::code::Val;
 use super::super::handles::FighterId;
@@ -49,6 +50,16 @@ pub mod addr {
     pub const ATTACK_AIR_LW_ON_ANIM: u32 = 0x800E_B528;
     pub const ATTACK_AIR_SETUP_PARTS: u32 = 0x800E_B618;
 
+    pub const SPECIAL_LW_ENTER: u32 = 0x800E_B65C;
+    pub const SPECIAL_AIR_LW_ENTER: u32 = 0x800E_B6DC;
+    pub const SPAWN_BOMB: u32 = 0x800E_B7C8;
+    pub const SPECIAL_LW_ANIM: u32 = 0x800E_B8A4;
+    pub const SPECIAL_AIR_LW_ANIM: u32 = 0x800E_B8E0;
+    pub const SPECIAL_LW_PHYS: u32 = 0x800E_B91C;
+    pub const SPECIAL_AIR_LW_PHYS: u32 = 0x800E_B93C;
+    pub const SPECIAL_LW_COLL: u32 = 0x800E_B95C;
+    pub const SPECIAL_AIR_LW_COLL: u32 = 0x800E_B9D4;
+
     pub const SPECIAL_HI_ON_ACCESSORY4: u32 = 0x800E_BA4C;
     pub const SPECIAL_HI_ENTER: u32 = 0x800E_BB1C;
     pub const SPECIAL_AIR_HI_ENTER: u32 = 0x800E_BB80;
@@ -65,6 +76,8 @@ pub mod addr {
 
 /// Link's action states (`ftLk_MS_*`).
 pub mod ms {
+    pub const SPECIAL_LW: i32 = 358;
+    pub const SPECIAL_AIR_LW: i32 = 359;
     pub const SPECIAL_HI: i32 = 356;
     pub const SPECIAL_AIR_HI: i32 = 357;
 }
@@ -136,7 +149,10 @@ impl Running<'_> {
 /// Runs one of Link's callbacks a fighter holds (`void (*)(HSD_GObj*)`: action states'
 /// callbacks, hooks), if `addr` is one.
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
-    init::run(g, gobj, a) || attack_air::run(g, gobj, a) || special_hi::run(g, gobj, a)
+    init::run(g, gobj, a)
+        || attack_air::run(g, gobj, a)
+        || special_hi::run(g, gobj, a)
+        || special_lw::run(g, gobj, a)
 }
 
 /// Link's functions other code calls by address (`code::call`): the item hooks and every

@@ -149,6 +149,7 @@ members! {
     PikachuJoltGround, pikachu_jolt_ground, itPikachutJoltGround_ItemVars, [PIKACHU_TJOLT_GROUND, PICHU_TJOLT_GROUND];
     PikachuJoltAir, pikachu_jolt_air, itPikachutJoltAir_ItemVars, [PIKACHU_TJOLT_AIR, PICHU_TJOLT_AIR];
     PeachTurnip, peach_turnip, itPeachTurnip_ItemVars, [PEACH_TURNIP];
+    LinkBomb, link_bomb, itLinkBomb_ItemVars, [LINK_BOMB, CLINK_BOMB];
     Heiho, heiho, HeihoVars, [HEIHO];
     ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE];
     ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];
@@ -329,6 +330,52 @@ impl Var<Vec3> {
                     format!("{:?}", f32::from_bits(theirs)),
                 );
             }
+        }
+    }
+}
+
+/// Link's bomb's flag byte (`itLinkBomb_ItemVars::x0`, an `UnkFlagStruct`): its top bit says
+/// its fuse's last stretch has begun, the next whether it rolls (`it_8029F18C`), the third
+/// whether a hit has knocked it away. Its spawn (`it_8029DD58`) writes the first and third
+/// bits alone, and the rolling bit only when it starts rolling, so the rest keep what the
+/// block's last item left, which melee-hd doesn't model: the comparer checks the first and third
+/// bits, and the rolling bit once written (docs/engine.md).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct LinkBombFlags {
+    /// The top bit (`b0`).
+    pub fuse_end: bool,
+    /// The second bit (`b1`), once this bomb wrote it.
+    pub rolling: Option<bool>,
+    /// The third bit (`b2`).
+    pub knocked: bool,
+}
+
+impl Mirror for LinkBombFlags {
+    const SIZE: u32 = 1;
+
+    fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
+        let b = m.bytes::<1>(at)[0];
+        LinkBombFlags {
+            fuse_end: b & 0x80 != 0,
+            rolling: Some(b & 0x40 != 0),
+            knocked: b & 0x20 != 0,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let b = m.bytes::<1>(at)[0];
+        let theirs = (b & 0x80 != 0, b & 0x20 != 0);
+        if (self.fuse_end, self.knocked) != theirs {
+            cx.mismatch(
+                path,
+                format!("{:?}", (self.fuse_end, self.knocked)),
+                format!("{theirs:?}"),
+            );
+        }
+        if let Some(r) = self.rolling
+            && r != (b & 0x40 != 0)
+        {
+            cx.mismatch(&format!("{path}.b1"), format!("{r}"), format!("{}", !r));
         }
     }
 }
