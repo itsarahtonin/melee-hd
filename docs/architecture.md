@@ -42,4 +42,4 @@ A Slippi replay records the codes it ran, and its rules are the ones those codes
 
 ## Netplay
 
-Netplay is designed to play against Slippi Dolphin users, behind two traits: a `Matchmaker` (Slippi, own server, direct IP, LAN) and a wire protocol (Slippi-compatible or native). Two melee-hd clients negotiate the native protocol; Slippi mode is used only against Slippi Dolphin. The Slippi ruleset stays the online default either way.
+Netplay isn't built yet. It will be rollback over the simulation's snapshots, behind two traits: a `Matchmaker` (own server, direct IP, LAN, and Slippi's if the Slippi team agrees) and a wire protocol. Whether it is integrated with Slippi, with the Slippi team's permission, or a bespoke implementation is open; until then melee-hd doesn't connect to Slippi's matchmaking servers. The Slippi ruleset stays the online default either way.
