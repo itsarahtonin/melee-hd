@@ -204,6 +204,7 @@ pub(crate) struct GpuXfb {
     encode: wgpu::RenderPipeline,
     decode: wgpu::RenderPipeline,
     decode_layout: wgpu::BindGroupLayout,
+    encode_layout: wgpu::BindGroupLayout,
     encode_params: wgpu::Buffer,
     decode_params: wgpu::Buffer,
     encode_group: wgpu::BindGroup,
@@ -248,6 +249,28 @@ fn texture_entry(sample_type: wgpu::TextureSampleType) -> wgpu::BindGroupLayoutE
         },
         count: None,
     }
+}
+
+fn encode_group(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    efb: &wgpu::TextureView,
+    params: &wgpu::Buffer,
+) -> wgpu::BindGroup {
+    device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("xfb encode"),
+        layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(efb),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: params.as_entire_binding(),
+            },
+        ],
+    })
 }
 
 fn pipeline(
@@ -331,20 +354,7 @@ impl GpuXfb {
         };
         let encode_params = buffer(std::mem::size_of::<EncodeParams>());
         let decode_params = buffer(std::mem::size_of::<DecodeParams>());
-        let encode_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("xfb encode"),
-            layout: &encode_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(efb),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: encode_params.as_entire_binding(),
-                },
-            ],
-        });
+        let encode_group = encode_group(device, &encode_layout, efb, &encode_params);
         Self {
             encode: pipeline(
                 device,
@@ -361,11 +371,17 @@ impl GpuXfb {
                 wgpu::TextureFormat::Rgba8Unorm,
             ),
             decode_layout,
+            encode_layout,
             encode_params,
             decode_params,
             encode_group,
             g_yu: g_yu_buffer,
         }
+    }
+
+    /// Copies from `efb` from now on (the EFB made again at another size).
+    pub fn set_efb(&mut self, device: &wgpu::Device, efb: &wgpu::TextureView) {
+        self.encode_group = encode_group(device, &self.encode_layout, efb, &self.encode_params);
     }
 
     /// Copies `rect` (left, top, right, bottom) of the EFB to the XFB as BP 0x52 value `value`

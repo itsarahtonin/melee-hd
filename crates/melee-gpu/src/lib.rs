@@ -322,6 +322,66 @@ pub struct Renderer {
     cache: Option<wgpu::PipelineCache>,
 }
 
+/// The EFB's targets at a scale and width: what a resize makes again.
+struct EfbTargets {
+    efb: wgpu::Texture,
+    efb_view: wgpu::TextureView,
+    efb_msaa: Option<wgpu::TextureView>,
+    depth_view: wgpu::TextureView,
+}
+
+impl EfbTargets {
+    fn new(device: &wgpu::Device, scale: u32, width: u32, samples: u32) -> EfbTargets {
+        let size = wgpu::Extent3d {
+            width,
+            height: EFB_HEIGHT * scale,
+            depth_or_array_layers: 1,
+        };
+        let efb = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("efb"),
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: COLOR_FORMAT,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                | wgpu::TextureUsages::COPY_SRC
+                | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let efb_msaa = (samples > 1).then(|| {
+            device
+                .create_texture(&wgpu::TextureDescriptor {
+                    label: Some("efb, multisampled"),
+                    size,
+                    mip_level_count: 1,
+                    sample_count: samples,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: COLOR_FORMAT,
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                    view_formats: &[],
+                })
+                .create_view(&Default::default())
+        });
+        let depth = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("efb depth"),
+            size,
+            mip_level_count: 1,
+            sample_count: samples,
+            dimension: wgpu::TextureDimension::D2,
+            format: DEPTH_FORMAT,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+        EfbTargets {
+            efb_view: efb.create_view(&Default::default()),
+            efb,
+            efb_msaa,
+            depth_view: depth.create_view(&Default::default()),
+        }
+    }
+}
+
 /// The texture coordinates the transform unit generates for a draw.
 fn texgens(state: &State) -> usize {
     (state.xf[xform::NUM_TEXGENS] & 0xF).min(8) as usize
@@ -480,47 +540,7 @@ impl Renderer {
         let scale = scale.clamp(1, 8);
         let width = width.max(1);
         let samples = if samples >= 4 { 4 } else { 1 };
-        let size = wgpu::Extent3d {
-            width,
-            height: EFB_HEIGHT * scale,
-            depth_or_array_layers: 1,
-        };
-        let efb = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("efb"),
-            size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: COLOR_FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                | wgpu::TextureUsages::COPY_SRC
-                | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[],
-        });
-        let efb_msaa = (samples > 1).then(|| {
-            device
-                .create_texture(&wgpu::TextureDescriptor {
-                    label: Some("efb, multisampled"),
-                    size,
-                    mip_level_count: 1,
-                    sample_count: samples,
-                    dimension: wgpu::TextureDimension::D2,
-                    format: COLOR_FORMAT,
-                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                    view_formats: &[],
-                })
-                .create_view(&Default::default())
-        });
-        let depth = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("efb depth"),
-            size,
-            mip_level_count: 1,
-            sample_count: samples,
-            dimension: wgpu::TextureDimension::D2,
-            format: DEPTH_FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
-            view_formats: &[],
-        });
+        let targets = EfbTargets::new(&device, scale, width, samples);
         // Without wgpu's guards against endless loops, which keep FXC (D3D12) from unrolling the
         // loops that write arrays by index.
         let mut checks = wgpu::ShaderRuntimeChecks::checked();
@@ -587,14 +607,13 @@ impl Renderer {
             ],
             immediate_size: 0,
         });
-        let efb_view = efb.create_view(&Default::default());
-        let copier = copy::Copier::new(&device, &efb_view);
+        let copier = copy::Copier::new(&device, &targets.efb_view);
         let mut r = Renderer {
-            efb_view,
-            efb_msaa,
+            efb_view: targets.efb_view,
+            efb_msaa: targets.efb_msaa,
             samples,
-            depth_view: depth.create_view(&Default::default()),
-            efb,
+            depth_view: targets.depth_view,
+            efb: targets.efb,
             device,
             queue,
             module,
@@ -1582,6 +1601,43 @@ impl Renderer {
     /// The FIFO player's clear before a log's first frame: all of the EFB.
     pub fn clear_efb(&mut self, state: &State) {
         self.clear(state, [0, 0, EFB_WIDTH, EFB_HEIGHT]);
+    }
+
+    /// Makes the EFB `scale` times the console's tall and `width` wide for its 640, between
+    /// frames, as [`Renderer::with_device_efb`] would make it: a resized window's. Only what
+    /// the EFB's size decides is made again: the EFB, its depth and multisampled targets, and
+    /// the bind groups of the copies that read it (to textures and to the XFB, whose frames
+    /// are made at each copy's size). The copies made from the old EFB are dropped, as their
+    /// texels are its pixels averaged, with what they wrote to memory and the bind groups
+    /// naming them, so the next copies are made from the new EFB as a new renderer's would be.
+    /// Textures, pipelines (the sample count stays), samplers and buffers are kept. Clear the
+    /// new EFB ([`Renderer::clear_efb`]) before drawing to it.
+    pub fn resize_efb(&mut self, scale: u32, width: u32) {
+        let (scale, width) = (scale.clamp(1, 8), width.max(1));
+        if (scale, width) == (self.scale, self.width) {
+            return;
+        }
+        self.flush();
+        let t = EfbTargets::new(&self.device, scale, width, self.samples);
+        self.copier.set_efb(&self.device, &t.efb_view);
+        if let Some(x) = &mut self.gpu_xfb {
+            x.set_efb(&self.device, &t.efb_view);
+        }
+        (self.efb, self.efb_view, self.efb_msaa, self.depth_view) =
+            (t.efb, t.efb_view, t.efb_msaa, t.depth_view);
+        (self.scale, self.width) = (scale, width);
+        for (_, c) in self.gpu_copies.drain() {
+            self.textures[c.id as usize] = None;
+        }
+        let textures = &self.textures;
+        self.texture_ids
+            .retain(|_, id| textures[*id as usize].is_some());
+        self.bind_groups
+            .retain(|ids, _| ids.iter().all(|&id| textures[id as usize].is_some()));
+        self.copies.clear();
+        self.on_cpu.clear();
+        self.footprints = copy::Footprints::default();
+        self.hashes.clear();
     }
 
     /// Drops textures unused for a while.

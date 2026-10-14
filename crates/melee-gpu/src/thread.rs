@@ -46,6 +46,8 @@ enum Packet {
     Copy(u32),
     /// Memory copies went to that the game has written over since (copy::Footprints).
     Forget(u32, u32),
+    /// The EFB made again at a scale and width, and cleared (`Renderer::resize_efb`).
+    Resize(u32, u32),
 }
 
 /// What one copy to a texture wrote: each row's address and bytes.
@@ -159,6 +161,16 @@ impl Threaded {
             .expect("the render thread")
             .join()
             .expect("the render thread")
+    }
+
+    /// Makes the renderer's EFB `scale` times the console's tall and `width` wide, between
+    /// frames, and clears it with `state` (`Renderer::resize_efb`): on the render thread, in
+    /// its turn after what was sent before. The copies made from the old EFB go with it, so
+    /// this thread forgets where they went.
+    pub fn resize_efb(&mut self, state: &State, scale: u32, width: u32) {
+        self.changes(state);
+        self.batch.push(Packet::Resize(scale, width));
+        self.footprints = copy::Footprints::default();
     }
 
     fn changes(&mut self, state: &State) {
@@ -408,6 +420,10 @@ fn run(mut renderer: Renderer, rx: &mpsc::Receiver<Vec<Packet>>, done: &Done) ->
                     renderer.draw_prepared(&state, &draw, outs.as_deref(), &memory);
                 }
                 Packet::Forget(start, end) => renderer.forget(start, end),
+                Packet::Resize(scale, width) => {
+                    renderer.resize_efb(scale, width);
+                    renderer.clear_efb(&state);
+                }
                 Packet::Copy(value) => {
                     renderer.copy(&state, value, &memory);
                     if bits(value, 14, 1) != 0 {

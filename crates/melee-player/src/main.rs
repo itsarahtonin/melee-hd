@@ -505,15 +505,15 @@ impl App {
         start: Instant,
     ) -> Option<latency::FrameTimes> {
         // The internal resolution follows the window's size unless `--scale` fixed it, and
-        // the EFB's width the aspect: the renderer is made again for a new one.
+        // the EFB's width the aspect: the renderer's EFB is made again at a new one, in place.
         let scale = scale_for(self.args.scale, self.window_size, self.aspect);
         let width = self.aspect.efb_width(scale);
         if (scale, width) != (self.scale, self.efb_width) {
             eprintln!("internal resolution: {scale}x ({width}x{})", 480 * scale);
             self.scale = scale;
             self.efb_width = width;
-            if let Some(old) = self.renderer.take() {
-                self.renderer = Some(remake(old, &self.gpu, scale, self.msaa, self.aspect, false));
+            if let Some(g) = &mut self.renderer {
+                g.resize_efb(scale, width);
             }
         }
         let m = &self.session.as_ref().expect("a match").m;
@@ -820,27 +820,6 @@ fn gpu_for(renderer: melee_gpu::Renderer, one_thread: bool) -> Gpu {
     }
 }
 
-/// The renderer made again at `scale` (the window's size changed, or the aspect), reading back
-/// each frame when `readback`. The GPU's state carries over from the old one (`Gpu::carry`),
-/// whose pipelines are saved, for the new one to make from the cache, and whose textures are
-/// let go before the new one makes its own.
-fn remake(
-    old: Gpu,
-    gpu: &present::Gpu,
-    scale: u32,
-    msaa: u32,
-    aspect: present::Aspect,
-    readback: bool,
-) -> Gpu {
-    old.carry(|r| {
-        pipelines::save(&r);
-        drop(r);
-        let mut r = pipelines::renderer(gpu, scale, msaa, aspect);
-        r.xfb_readback = readback;
-        r
-    })
-}
-
 /// The internal resolution's scale: as asked, or the smallest whose 480 lines cover the
 /// window's height, at most what the aspect's EFB width allows.
 fn scale_for(asked: u32, size: (u32, u32), aspect: present::Aspect) -> u32 {
@@ -883,6 +862,13 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     let mut work: Vec<Duration> = Vec::with_capacity(ticks as usize);
     let mut presented: Vec<Duration> = Vec::with_capacity(ticks as usize);
     let mut round = Duration::ZERO;
+    // The last resize's tick and how long the renderer took to follow it, until the frame
+    // after is drawn.
+    let mut resized: Option<(u32, Duration)> = None;
+    // The last frame's tick and drawing with its presenting, and the resize whose frame was
+    // the frame before, to say what the frame after it took.
+    let mut previous = Duration::ZERO;
+    let mut after_resize: Option<u32> = None;
     for tick in 0..ticks {
         // A resize: the display's new size at once, the renderer's at the frame after, as the
         // window's.
@@ -896,14 +882,9 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
                     "tick {tick}: {}x{}, internal resolution {scale}x",
                     size.0, size.1
                 );
-                renderer = remake(
-                    renderer,
-                    &gpu,
-                    scale,
-                    args.msaa,
-                    args.aspect,
-                    args.shot.is_some(),
-                );
+                let t = Instant::now();
+                renderer.resize_efb(scale, args.aspect.efb_width(scale));
+                resized = Some((tick, t.elapsed()));
             }
         }
         let t0 = Instant::now();
@@ -928,6 +909,27 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
             worst = worst.max(t2 - t0);
             work.push(round + (tb - t1));
             presented.push(round + (t2 - t1));
+            let ms = |d: Duration| d.as_secs_f64() * 1000.0;
+            if let Some(at) = after_resize.take() {
+                eprintln!(
+                    "tick {at}: the frame after the resize's took {:.3} ms",
+                    ms(t2 - t0)
+                );
+            }
+            if let Some((at, took)) = resized.take() {
+                eprintln!(
+                    "tick {at}: the resize's frame took {:.3} ms (the frame before {:.3} ms): the renderer following it {:.3} ms, then the tick {:.3} ms, the GX stream {:.3} ms, the renderer {:.3} ms, presenting {:.3} ms",
+                    ms(took + (t2 - t0)),
+                    ms(previous),
+                    ms(took),
+                    ms(t1 - t0),
+                    ms(ta - t1),
+                    ms(tb - ta),
+                    ms(t2 - tb)
+                );
+                after_resize = Some(at);
+            }
+            previous = t2 - t0;
             round = Duration::ZERO;
             n += 1;
         }

@@ -1,7 +1,7 @@
-//! A renderer made again mid-match, as a window's resize or a fullscreen toggle makes it, draws
-//! what a renderer made at that size from the match's start draws. Plays a benchmark replay
-//! headless (`--bench` with `--resize-at`) and compares the last frames pixel for pixel. Skips
-//! without `SSBM_DISC`.
+//! A renderer whose EFB is made again mid-match at another scale, as a window's resize or a
+//! fullscreen toggle makes it, draws what a renderer made at that scale from the match's start
+//! draws. Plays a benchmark replay headless (`--bench` with `--resize-at`) and compares the last
+//! frames pixel for pixel. Skips without `SSBM_DISC`.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -93,5 +93,17 @@ fn a_renderer_made_again_and_smaller_draws_as_one_made_at_the_start() {
         "1460x1200",
         &["250:3840x2160", "320:1280x960"],
         &["--one-thread"],
+    );
+}
+
+/// With MSAA, whose multisampled EFB is made again beside the EFB: 2x to 5x at tick 250.
+#[test]
+fn a_multisampled_efb_made_larger_mid_match_draws_as_one_made_at_the_start() {
+    same_as_from_the_start(
+        "msaa",
+        252,
+        "1280x960",
+        &["250:2880x2160"],
+        &["--msaa", "4"],
     );
 }

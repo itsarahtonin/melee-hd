@@ -238,8 +238,31 @@ pub(crate) struct Copied {
 
 pub(crate) struct Copier {
     pipeline: wgpu::RenderPipeline,
+    layout: wgpu::BindGroupLayout,
     group: wgpu::BindGroup,
     params: wgpu::Buffer,
+}
+
+fn copier_group(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    efb: &wgpu::TextureView,
+    params: &wgpu::Buffer,
+) -> wgpu::BindGroup {
+    device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("efb copy"),
+        layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(efb),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: params.as_entire_binding(),
+            },
+        ],
+    })
 }
 
 impl Copier {
@@ -279,20 +302,7 @@ impl Copier {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("efb copy"),
-            layout: &layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(efb),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: params.as_entire_binding(),
-                },
-            ],
-        });
+        let group = copier_group(device, &layout, efb, &params);
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("efb copy"),
             bind_group_layouts: &[Some(&layout)],
@@ -325,9 +335,15 @@ impl Copier {
         });
         Self {
             pipeline,
+            layout,
             group,
             params,
         }
+    }
+
+    /// Copies from `efb` from now on (the EFB made again at another size).
+    pub fn set_efb(&mut self, device: &wgpu::Device, efb: &wgpu::TextureView) {
+        self.group = copier_group(device, &self.layout, efb, &self.params);
     }
 
     /// Makes the copy into `target`, after everything already submitted.
