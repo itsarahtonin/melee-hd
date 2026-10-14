@@ -204,6 +204,8 @@ pub(crate) mod mv {
     pub const S_SMASH: usize = 0x0;
     /// `specialhi.kind`: the item kind the parasol makes.
     pub const HI_KIND: usize = 0x0;
+    /// `specialn.facing_dir`: her facing, as an integer.
+    pub const N_FACING_DIR: usize = 0x0;
 }
 
 /// `ftPe_DatAttrs`' offsets (0xC0 bytes).
@@ -241,6 +243,17 @@ pub(crate) mod attr {
     pub const HI_X84: usize = 0x84;
     pub const HI_X88: usize = 0x88;
     pub const HI_X8C: usize = 0x8C;
+    /// Toad's: her air speed's divisor, air friction, the air lift, gravity and terminal
+    /// speed, the bubble's push, and the bubble (`AbsorbDesc`: bone, offset, radius).
+    pub const N_AIR_VEL_X_DIV: usize = 0x94;
+    pub const N_X98: usize = 0x98;
+    pub const N_AIR_VEL_Y: usize = 0x9C;
+    pub const N_XA0: usize = 0xA0;
+    pub const N_XA4: usize = 0xA4;
+    pub const N_XA8: usize = 0xA8;
+    pub const N_BUBBLE_BONE: usize = 0xAC;
+    pub const N_BUBBLE_OFFSET: usize = 0xB0;
+    pub const N_BUBBLE_SIZE: usize = 0xBC;
 }
 
 /// `It_Kind_Peach_Explode`, `_Turnip`, `_Parasol`, `_Toad` and `_ToadSpore`.
