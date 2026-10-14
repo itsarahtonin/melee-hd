@@ -122,7 +122,7 @@ impl Running<'_> {
     }
 
     /// Roy's creation, `ftMs_Init_OnLoadForRoy`: Marth's attribute layout, pushed.
-    // Ports `ftMs_Init_OnLoadForRoy`; aliased once a check reaches it.
+    #[doc(alias = "ftMs_Init_OnLoadForRoy")]
     pub fn mars_on_load_for_roy(&mut self, f: FighterId) {
         self.push_attrs(f, MARS_ATTRS_SIZE);
     }

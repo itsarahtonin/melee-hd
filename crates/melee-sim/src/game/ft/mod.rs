@@ -31,6 +31,7 @@ pub mod draw;
 pub mod drmario;
 pub mod dynamics;
 pub mod effect;
+pub mod emblem;
 pub mod falco;
 pub mod fighter;
 pub mod fox;

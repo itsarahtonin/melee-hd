@@ -369,6 +369,7 @@ impl Running<'_> {
             0x8014_94E4 => self.dr_on_load(gobj),
             0x8012_43E4 => self.pk_on_load(gobj),
             0x8014_9E34 => self.pc_on_load(gobj),
+            0x8014_F124 => self.fe_on_load(gobj),
             0x8011_EF3C => self.popo_on_load(gobj),
             0x8012_2EDC => self.nana_on_load(gobj),
             other => unported_call(&format!("fighter OnLoad {other:#010x}")),
@@ -395,6 +396,7 @@ impl Running<'_> {
             0x8014_949C => self.dr_on_death(gobj),
             0x8012_4474 => self.pk_on_death(gobj),
             0x8014_9EAC => self.pc_on_death(gobj),
+            0x8014_EEF8 => self.fe_on_death(gobj),
             0x8011_EFE8 => self.popo_on_death(gobj),
             0x8012_2F28 => self.nana_on_death(gobj),
             other => unported_call(&format!("fighter OnDeath {other:#010x}")),
@@ -420,6 +422,7 @@ impl Running<'_> {
             0x800E_0BE4 => self.mr_load_special_attrs(gobj),
             0x8014_9724 => self.dr_load_special_attrs(gobj),
             0x8012_4704 | 0x8014_A1A8 => self.pk_load_special_attrs(gobj),
+            0x8014_F148 => self.fe_load_special_attrs(gobj),
             0x8011_F0A4 | 0x8012_2FCC => self.popo_load_special_attrs(gobj),
             other => unported_call(&format!("fighter LoadSpecialAttrs {other:#010x}")),
         }

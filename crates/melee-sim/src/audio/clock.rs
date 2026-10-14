@@ -486,10 +486,17 @@ impl Clock {
         self.scene_start = 2;
     }
 
-    /// Time a tick's ARAM loads take (`ARAM_CHUNK` per 4 KB).
+    /// Time a tick's ARAM load takes (`ARAM_CHUNK` per 4 KB), with interrupts taken between
+    /// its chunks. In ssbm-rs the load's request and each chunk's ARAM interrupt handler run
+    /// with interrupts off, and an event that came due meanwhile runs when a handler returns:
+    /// the request takes 56 ticks, each chunk's handler 64 and the last one's 8, so on this
+    /// timeline (whose audio frames start 8 ticks after ssbm-rs runs their events) the
+    /// chunks end every `ARAM_CHUNK` from the load's start.
     pub fn aram_load(&mut self, len: u32, f: &mut dyn Frames) {
         self.game_code(f);
-        self.read(ARAM_CHUNK * u64::from(len.div_ceil(0x1000)), f);
+        for _ in 0..len.div_ceil(0x1000) {
+            self.read(ARAM_CHUNK, f);
+        }
     }
 
     /// The game waiting inside a tick for its file load: `lbFile`'s loop, a wait point each
