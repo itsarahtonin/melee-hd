@@ -75,6 +75,50 @@ pub const MATCHES: &[Match] = &[
     },
 ];
 
+const NESS: u8 = 0x0B;
+const SAMUS: u8 = 0x10;
+
+/// Matches the CPU AI plays for the oracle (`docs/oracle.md`), not timed: characters no replay
+/// the ruleset knows has, against ported ones on ported stages.
+pub const ORACLE_MATCHES: &[Match] = &[
+    Match {
+        name: "ness-fox-bf",
+        stage: BATTLEFIELD,
+        players: [p(NESS, 0), p(FOX, 0)],
+        seed: 0x1F0F_0101,
+    },
+    Match {
+        name: "ness-marth-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(NESS, 0), p(MARTH, 0)],
+        seed: 0x1F0F_0102,
+    },
+    Match {
+        name: "ness-fox-ps",
+        stage: POKEMON_STADIUM,
+        players: [p(NESS, 0), p(FOX, 1)],
+        seed: 0x1F0F_0103,
+    },
+    Match {
+        name: "samus-fox-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(SAMUS, 0), p(FOX, 0)],
+        seed: 0x1F0F_0104,
+    },
+    Match {
+        name: "samus-marth-bf",
+        stage: BATTLEFIELD,
+        players: [p(SAMUS, 0), p(MARTH, 0)],
+        seed: 0x1F0F_0105,
+    },
+    Match {
+        name: "samus-fox-ps",
+        stage: POKEMON_STADIUM,
+        players: [p(SAMUS, 0), p(FOX, 1)],
+        seed: 0x1F0F_0106,
+    },
+];
+
 /// Settings as a Slippi Dolphin VS match records them (stock mode, 4 stocks, 8 minutes, items
 /// off, pausing off, two players in slots 1 and 2, the rest empty), from a recorded replay.
 const RULES: [u8; 0x60] = {

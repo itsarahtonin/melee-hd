@@ -10,7 +10,6 @@ use super::item::{attr_of, common_data};
 use super::kinds::*;
 use super::{item, item_mut};
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::ft::coll::ObjCollHooks;
 use crate::game::gr::StageColl;
 use crate::game::state::{Game, Running};
@@ -688,10 +687,26 @@ pub fn reflect_velocity(game: &mut Game, data: &Archives, gobj: GObjId) -> bool 
     true
 }
 
-/// The bounce's dust (`it_80278800`, effect 0x405) at the side of the box that hit, unless
-/// the item makes none (`it_80277C40`, which waits for the effects' port).
-pub fn bounce_effect(r: &mut Running, gobj: GObjId, _touched: i32) {
+/// The bounce's dust (effect 0x405, queued) at the side of the box that hit (the bottom over
+/// the top over the left over the right), unless the item makes none, `it_80277C40`.
+#[doc(alias = "it_80277C40")]
+pub fn bounce_effect(r: &mut Running, gobj: GObjId, touched: i32) {
+    let ecb = &item(r.game, gobj).x378_itemColl.ecb;
+    let mut at = Vec3::new(0.0, 0.0, 0.0);
+    let sides = [
+        (8, &ecb.right),
+        (4, &ecb.left),
+        (2, &ecb.top),
+        (1, &ecb.bottom),
+    ]
+    .map(|(bit, v)| (bit, (v.x, v.y)));
+    for (bit, side) in sides {
+        if touched & bit != 0 {
+            (at.x, at.y) = side;
+        }
+    }
     if !flag(item(r.game, gobj).xDCF_flag, 0) {
-        code::unported_call("it_80278800 (an item's bounce effect)");
+        let zero = Vec3::new(0.0, 0.0, 0.0);
+        super::effect::spawn(r, gobj, 0x405, 0, at, zero, false);
     }
 }

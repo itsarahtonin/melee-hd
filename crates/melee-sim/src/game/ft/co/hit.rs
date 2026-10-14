@@ -219,12 +219,13 @@ impl Running<'_> {
     }
 
     /// The color animation a damaging hit starts, `ftCo_8008DA4C`: the element's (fire,
-    /// electric, ice and darkness by knockback level) or the plain hit's. Its result is
-    /// unset when the hit dealt no damage; a caller reading it then stops.
+    /// electric, ice and darkness by knockback level) or the plain hit's. A hit that dealt no
+    /// damage starts none, and the C leaves the result unset: the machine code returns the
+    /// link register it saved (its caller's return address), never zero, so it reads as true.
     #[doc(alias = "ftCo_8008DA4C")]
-    fn damage_color_anim(&mut self, gobj: GObjId, element: u32, level: i32) -> Option<bool> {
+    fn damage_color_anim(&mut self, gobj: GObjId, element: u32, level: i32) -> bool {
         if self.game.fighter(gobj).dmg.x1838_percentTemp == 0.0 {
-            return None;
+            return true;
         }
         let id = match element {
             ELEMENT_FIRE => level + 11,
@@ -233,7 +234,7 @@ impl Running<'_> {
             ELEMENT_DARK => level + 35,
             _ => 4,
         };
-        Some(self.start_color_anim(gobj, id, 0))
+        self.start_color_anim(gobj, id, 0)
     }
 
     /// Hitstun's entry, `ftCo_8008DCE0`: the knockback's level, angle and velocity (along
@@ -529,10 +530,8 @@ impl Running<'_> {
             3
         };
         let element = fp.dmg.x1860_element;
-        match self.damage_color_anim(gobj, element, level) {
-            None => unported_call("ftCo_8008DA4C's unset result (a hit with no damage)"),
-            Some(true) => self.color_anim_update(gobj),
-            Some(false) => {}
+        if self.damage_color_anim(gobj, element, level) {
+            self.color_anim_update(gobj);
         }
         self.forget_attacker_grounded(f);
     }

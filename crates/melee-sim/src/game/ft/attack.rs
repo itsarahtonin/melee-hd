@@ -1576,14 +1576,14 @@ impl Running<'_> {
                 }
             }
         };
-        if id == 0 {
+        if !id.is_set(&mut self.game.objs.stale_reads) {
             add(self.game, g);
             return;
         }
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(o) = cur {
             cur = self.game.world.gobjs[o.0].next;
-            if it::item(self.game, o).xAC4_ignoreItemID == id {
+            if self.same_ignore_id(o, id) {
                 add(self.game, o);
             }
         }
@@ -1604,17 +1604,24 @@ impl Running<'_> {
                 }
             }
         };
-        if id == 0 {
+        if !id.is_set(&mut self.game.objs.stale_reads) {
             add(self.game, g);
             return;
         }
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(o) = cur {
             cur = self.game.world.gobjs[o.0].next;
-            if it::item(self.game, o).xAC4_ignoreItemID == id {
+            if self.same_ignore_id(o, id) {
                 add(self.game, o);
             }
         }
+    }
+
+    /// Whether item `o` shares the ignore id `id` (stale ids read as stale reads, and match
+    /// nothing known).
+    fn same_ignore_id(&mut self, o: GObjId, id: super::super::it::IgnoreId) -> bool {
+        let theirs = super::super::it::item(self.game, o).xAC4_ignoreItemID;
+        theirs.read(&mut self.game.objs.stale_reads).is_some() && id.0.is_some() && theirs == id
     }
 
     /// The fighter takes item `g`'s box `j` on hurtbox `n`, `ftColl_80077C60`: the damage

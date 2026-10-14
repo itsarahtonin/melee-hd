@@ -242,7 +242,7 @@ impl Running<'_> {
             return false;
         }
         // `fn_800D952C`: Samus's grapple out.
-        if fp.kind == KIND_SAMUS && fp.u_i32(0x10) != 0 {
+        if fp.kind == KIND_SAMUS && fp.u.gobj_at(0x10).is_some() {
             return false;
         }
         if fp.input.held_buttons[0] & PAD_LR != 0 && fp.input.pressed_buttons & PAD_A != 0 {

@@ -6,7 +6,7 @@
 //! (median of 5 runs of 200 each), and how many allocations each makes.
 //!
 //! `melee-bench codes DIR`: writes the Gecko codes that boot into each benchmark match
-//! (`matches.rs`).
+//! (`matches.rs`); `oracle-codes DIR` the same for the oracle's CPU matches.
 //!
 //! `melee-bench dolphin ...`: Dolphin's speed on the benchmark matches (`dolphin.rs`).
 //!
@@ -147,8 +147,13 @@ fn snapshot(paths: &[String]) {
 
 /// Writes each benchmark match's Gecko codes as `DIR/NAME.ini`.
 fn codes(dir: &str) {
+    write_codes(dir, matches::MATCHES);
+}
+
+/// Writes `list`'s Gecko codes as `DIR/NAME.ini`.
+fn write_codes(dir: &str, list: &[matches::Match]) {
     std::fs::create_dir_all(dir).unwrap_or_else(|e| panic!("{dir}: {e}"));
-    for m in matches::MATCHES {
+    for m in list {
         let path = std::path::Path::new(dir).join(format!("{}.ini", m.name));
         std::fs::write(&path, m.ini()).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
         println!("{}", path.display());
@@ -160,6 +165,7 @@ fn main() {
     match args.first().map(String::as_str) {
         Some("snapshot") => snapshot(&args[1..]),
         Some("codes") if args.len() == 2 => codes(&args[1]),
+        Some("oracle-codes") if args.len() == 2 => write_codes(&args[1], matches::ORACLE_MATCHES),
         #[cfg(windows)]
         Some("dolphin") => dolphin::main(&args[1..]),
         Some("native") => native::main(&args[1..]),
@@ -178,7 +184,7 @@ fn main() {
             }
         }
         _ => eprintln!(
-            "melee-bench snapshot CALL... | codes DIR | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]              | native [--dir DIR] [--runs N] [MATCH...] | snapshot-match [--dir DIR] [--every TICKS] [MATCH] \
+            "melee-bench snapshot CALL... | codes DIR | oracle-codes DIR | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]              | native [--dir DIR] [--runs N] [MATCH...] | snapshot-match [--dir DIR] [--every TICKS] [MATCH] \
              | alloc-sites [--dir DIR] [--from TICK] [--ticks N] [MATCH]"
         ),
     }

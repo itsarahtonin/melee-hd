@@ -53,7 +53,7 @@ impl Running<'_> {
 
     /// A player's point bonus set (`pl_80038788`, `setPointValue`).
     #[doc(alias = "pl_80038788")]
-    fn set_point(&mut self, slot: i32, kind: usize, v: u32) {
+    pub(crate) fn set_point(&mut self, slot: i32, kind: usize, v: u32) {
         assert_ne!(
             slot, NO_SLOT,
             "the original's assertion failed: player != Gm_Player_Other"

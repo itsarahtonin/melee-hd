@@ -13,7 +13,19 @@ pub mod hammerhead;
 pub mod heart;
 pub mod heiho;
 pub mod kusudama;
+pub mod nessbat;
+pub mod nesspkfire;
+pub mod nesspkfirepillar;
+pub mod nesspkflash;
+pub mod nesspkflashexplode;
+pub mod nesspkthunder;
+pub mod nesspkthundertrail;
+pub mod nessyoyo;
 pub mod rshell;
+pub mod samusbomb;
+pub mod samuschargeshot;
+pub mod samusgrapple;
+pub mod samusmissile;
 pub mod seakchain;
 pub mod seakneedleheld;
 pub mod seakneedlethrown;
@@ -51,6 +63,18 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || seakchain::run_event(r, gobj, addr)
         || zeldadinfire::run_event(r, gobj, addr)
         || zeldadinfireexplode::run_event(r, gobj, addr)
+        || nessbat::run_event(r, gobj, addr)
+        || nesspkfire::run_event(r, gobj, addr)
+        || nesspkfirepillar::run_event(r, gobj, addr)
+        || nesspkflash::run_event(r, gobj, addr)
+        || nesspkflashexplode::run_event(r, gobj, addr)
+        || nesspkthunder::run_event(r, gobj, addr)
+        || nesspkthundertrail::run_event(r, gobj, addr)
+        || nessyoyo::run_event(r, gobj, addr)
+        || samusbomb::run_event(r, gobj, addr)
+        || samuschargeshot::run_event(r, gobj, addr)
+        || samusmissile::run_event(r, gobj, addr)
+        || samusgrapple::run_event(r, gobj, addr)
         || heiho::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
 }
@@ -79,6 +103,17 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| seakchain::run_pred(r, gobj, addr))
         .or_else(|| zeldadinfire::run_pred(r, gobj, addr))
         .or_else(|| zeldadinfireexplode::run_pred(r, gobj, addr))
+        .or_else(|| nessbat::run_pred(r, gobj, addr))
+        .or_else(|| nesspkfire::run_pred(r, gobj, addr))
+        .or_else(|| nesspkfirepillar::run_pred(r, gobj, addr))
+        .or_else(|| nesspkflash::run_pred(r, gobj, addr))
+        .or_else(|| nesspkflashexplode::run_pred(r, gobj, addr))
+        .or_else(|| nesspkthunder::run_pred(r, gobj, addr))
+        .or_else(|| nesspkthundertrail::run_pred(r, gobj, addr))
+        .or_else(|| nessyoyo::run_pred(r, gobj, addr))
+        .or_else(|| samusbomb::run_pred(r, gobj, addr))
+        .or_else(|| samuschargeshot::run_pred(r, gobj, addr))
+        .or_else(|| samusmissile::run_pred(r, gobj, addr))
         .or_else(|| heiho::run_pred(r, gobj, addr))
 }
 
@@ -123,6 +158,22 @@ pub const CLINK_BOMB: i32 = 59;
 /// `It_Kind_Zelda_DinFire` and `_DinFire_Explode`.
 pub const ZELDA_DIN_FIRE: i32 = 108;
 pub const ZELDA_DIN_FIRE_EXPLODE: i32 = 109;
+/// Ness's: `It_Kind_Ness_PKFire`, `_PKFire_Flame`, `_PKFlush`, `_PKThunder` and its four
+/// trails, `_PKFlush_Explode`, `_Bat` and `_Yoyo`.
+pub const NESS_PK_FIRE: i32 = 66;
+pub const NESS_PK_FIRE_FLAME: i32 = 67;
+pub const NESS_PK_FLUSH: i32 = 68;
+pub const NESS_PK_THUNDER: i32 = 69;
+pub const NESS_PK_THUNDER1: i32 = 70;
+pub const NESS_PK_THUNDER2: i32 = 71;
+pub const NESS_PK_THUNDER3: i32 = 72;
+pub const NESS_PK_THUNDER4: i32 = 73;
+pub const NESS_PK_FLUSH_EXPLODE: i32 = 78;
+pub const NESS_BAT: i32 = 101;
+pub const NESS_YOYO: i32 = 102;
+/// Kirby's copies of PK Flash: `It_Kind_Kirby_NessPKFlush` and `_Explode`.
+pub const KIRBY_NESS_PK_FLUSH: i32 = 145;
+pub const KIRBY_NESS_PK_FLUSH_EXPLODE: i32 = 146;
 /// `It_Kind_Fox_Blaster`.
 pub const FOX_BLASTER: i32 = 74;
 /// `It_Kind_Falco_Blaster`.
@@ -132,6 +183,11 @@ pub const SEAK_NEEDLE_THROW: i32 = 79;
 pub const SEAK_NEEDLE_HELD: i32 = 80;
 pub const SEAK_VANISH: i32 = 85;
 pub const SEAK_CHAIN: i32 = 97;
+/// `It_Kind_Samus_Bomb`, `_Charge`, `_Missile` and `_GBeam`.
+pub const SAMUS_BOMB: i32 = 93;
+pub const SAMUS_CHARGE: i32 = 94;
+pub const SAMUS_MISSILE: i32 = 95;
+pub const SAMUS_GBEAM: i32 = 96;
 /// `It_Kind_Peach_Turnip`.
 pub const PEACH_TURNIP: i32 = 99;
 /// `It_Kind_Peach_Parasol`.

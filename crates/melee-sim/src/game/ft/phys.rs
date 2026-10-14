@@ -135,13 +135,17 @@ impl Running<'_> {
         }
     }
 
-    /// Air drift from the stick, `ftCommon_CalcSelfAccel_Drift` and
-    /// `ftCommon_CalcSelfAccel_DriftFrom`.
+    /// Air drift from the stick, `ftCommon_CalcSelfAccel_Drift`.
     #[doc(alias = "ftCommon_CalcSelfAccel_Drift")]
-    #[doc(alias = "ftCommon_CalcSelfAccel_DriftFrom")]
     pub fn air_drift(&mut self, gobj: GObjId) {
+        let vel = reg(self.game.fighter(gobj).self_vel.x);
+        self.air_drift_from(gobj, vel);
+    }
+
+    /// Air drift from the stick as if moving at `vel`, `ftCommon_CalcSelfAccel_DriftFrom`.
+    #[doc(alias = "ftCommon_CalcSelfAccel_DriftFrom")]
+    pub fn air_drift_from(&mut self, gobj: GObjId, vel: f64) {
         let fp = self.game.fighter_mut(gobj);
-        let vel = reg(fp.self_vel.x);
         let lsx = reg(fp.input.lstick[0].x);
         let a = &fp.co_attrs;
         let scaling = fp::fmuls(lsx, reg(a.air_drift_stick_mul));
@@ -252,20 +256,8 @@ impl Running<'_> {
     /// still for a target of 0, `ftCommon_CalcSelfAccel_AccelToVel`.
     #[doc(alias = "ftCommon_CalcSelfAccel_AccelToVel")]
     pub fn accel_to_vel(fp: &mut Fighter, accel: f64, target_vel: f64) {
-        let v = reg(fp.self_vel.x);
-        let mut accel = accel;
-        if !(target_vel != 0.0) {
-            accel = fp::fneg(v);
-        } else if !(fp::fmuls(v, accel) < 0.0) {
-            if accel > 0.0 {
-                if fp::fadds(v, accel) > target_vel {
-                    accel = fp::fsubs(target_vel, v);
-                }
-            } else if fp::fadds(v, accel) < target_vel {
-                accel = fp::fsubs(target_vel, v);
-            }
-        }
-        fp.x74_self_accel.x = mem(accel);
+        let vel = reg(fp.self_vel.x);
+        fp.x74_self_accel.x = mem(toward_target(vel, accel, target_vel));
     }
 
     /// Air drift toward the stick's share of `target_max`, `accel_max` at a time, once the
@@ -278,12 +270,7 @@ impl Running<'_> {
         accel_max: f64,
         target_max: f64,
     ) {
-        let x = reg(fp.input.lstick[0].x);
-        let (accel, target) = if abs(x) >= threshold {
-            (fp::fmuls(x, accel_max), fp::fmuls(x, target_max))
-        } else {
-            (0.0, 0.0)
-        };
+        let (accel, target) = Self::stick_share(fp, threshold, accel_max, target_max);
         Self::accel_to_vel(fp, accel, target);
     }
 
@@ -446,6 +433,52 @@ impl Running<'_> {
         let (vel, friction) = (reg(fp.self_vel.x), reg(fp.co_attrs.aerial_friction));
         Self::accel_to_vel_clamped(fp, vel, accel, target, friction);
     }
+
+    /// The stick's share of `accel_max` and `target_max` once it passes `threshold`, else 0.
+    fn stick_share(fp: &Fighter, threshold: f64, accel_max: f64, target_max: f64) -> (f64, f64) {
+        let x = reg(fp.input.lstick[0].x);
+        if abs(x) >= threshold {
+            (fp::fmuls(x, accel_max), fp::fmuls(x, target_max))
+        } else {
+            (0.0, 0.0)
+        }
+    }
+
+    /// Ground speed toward the stick's share of `target_max`, `accel_max` at a time, once the
+    /// stick passes `threshold`, `ftCommon_CalcGroundAccel_AccelToLStickX` (through
+    /// `ftCommon_CalcGroundAccel_AccelToVel`).
+    #[doc(alias = "ftCommon_CalcGroundAccel_AccelToLStickX")]
+    #[doc(alias = "ftCommon_CalcGroundAccel_AccelToVel")]
+    pub fn ground_accel_to_stick(
+        fp: &mut Fighter,
+        threshold: f64,
+        accel_max: f64,
+        target_max: f64,
+    ) {
+        let (accel, target) = Self::stick_share(fp, threshold, accel_max, target_max);
+        let vel = reg(fp.gr_vel);
+        fp.xE4_ground_accel_1 = mem(toward_target(vel, accel, target));
+    }
+}
+
+/// The acceleration toward `target` from `vel`: all of the way at a zero target, else `accel`
+/// cut short of overshooting it (`ftCommon_CalcGroundAccel_AccelToVel`'s and
+/// `ftCommon_CalcSelfAccel_AccelToVel`'s rule).
+fn toward_target(vel: f64, accel: f64, target: f64) -> f64 {
+    if target == 0.0 {
+        return fp::fneg(vel);
+    }
+    if fp::fmuls(vel, accel) < 0.0 {
+        return accel;
+    }
+    if accel > 0.0 {
+        if fp::fadds(vel, accel) > target {
+            return fp::fsubs(target, vel);
+        }
+    } else if fp::fadds(vel, accel) < target {
+        return fp::fsubs(target, vel);
+    }
+    accel
 }
 
 /// `ftCommon_8007F76C`, which states keep as a callback.

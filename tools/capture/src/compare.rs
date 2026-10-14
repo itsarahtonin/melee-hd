@@ -359,6 +359,7 @@ impl<'a> Comparer<'a> {
             Some(UserData::Ground(g)) => self.ground(path, g, self.u32(t + 0x2C)),
             Some(UserData::Item(i)) => self.item(path, i, self.u32(t + 0x2C)),
             Some(UserData::ItemLink(l)) => self.item_link(path, l, self.u32(t + 0x2C)),
+            Some(UserData::Sound(s)) => self.sound_obj(path, s, self.u32(t + 0x2C)),
             Some(UserData::Raw(a)) => self.check(path, "user data", a.0, self.u32(t + 0x2C)),
             Some(UserData::BgFlash) => {
                 let (ud, release) = (self.u32(t + 0x2C), self.u32(t + 0x30));
@@ -600,7 +601,13 @@ impl<'a> Comparer<'a> {
         if let Some(p) = fighter.parts
             && tp != 0
         {
+            // Past the character's bones only Samus's beam tip's last entry is written.
+            let table = self.u32(self.u32(sym("ftPartsTable")) + 4 * fighter.kind as u32);
+            let n = self.u32(table + 8) as usize;
             for (i, bone) in self.game.fighter_parts[p.0].iter().enumerate() {
+                if i >= n && i != 139 {
+                    continue;
+                }
                 let at = tp + i as u32 * FighterBone::SIZE;
                 bone.compare(&mem, at, &format!("{path}.parts[{i}]"), self);
             }

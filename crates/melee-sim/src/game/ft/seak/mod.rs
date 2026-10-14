@@ -17,7 +17,7 @@ pub mod special_lw;
 pub mod special_n;
 pub mod special_s;
 
-use super::super::code::{self, Val};
+use super::super::code::Val;
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
@@ -51,13 +51,6 @@ pub mod ms {
     pub const SPECIAL_LW2: i32 = 362;
     pub const SPECIAL_AIR_LW: i32 = 363;
     pub const SPECIAL_AIR_LW2: i32 = 364;
-}
-
-/// The functions other parts of the port own that Sheik's code calls, by address: each
-/// answers `code::call` once its part is ported.
-pub mod ext {
-    /// `ftNs_AttackHi4_YoyoCheckEnvColl`: whether the stage lies between two points.
-    pub const FTNS_YOYO_CHECK_ENV_COLL: u32 = 0x8011_4FF8;
 }
 
 /// Sheik's functions other code reaches by address.
@@ -239,11 +232,6 @@ impl Running<'_> {
 
     fn set_seak_chain(&mut self, gobj: GObjId, g: Option<GObjId>) {
         self.game.fighter_mut(gobj).u.set_gobj_at(u::CHAIN, g);
-    }
-
-    /// Calls a function another part of the port owns ([`ext`]).
-    pub(crate) fn seak_ext(&mut self, f: u32, args: &[Val]) -> Val {
-        code::call(self, f, args)
     }
 }
 

@@ -126,7 +126,7 @@ impl Running<'_> {
     }
 
     /// Draws a tree with the fighter's materials.
-    fn draw_fighter_tree(
+    pub(crate) fn draw_fighter_tree(
         &mut self,
         f: FighterId,
         j: Option<JObjId>,
@@ -148,12 +148,13 @@ impl Running<'_> {
         }
     }
 
-    /// The fighter's per-kind drawing, `ftData_UnkMtxFunc0`: Kirby's and Jigglypuff's,
-    /// which no port covers yet.
-    fn kind_draw(&mut self, f: FighterId) {
+    /// The fighter's per-kind drawing, `ftData_UnkMtxFunc0`: Kirby's (not ported) and
+    /// Jigglypuff's hat.
+    fn kind_draw(&mut self, g: GObjId, vmtx: Option<Mtx34>, pass: i32) {
+        let f = self.game.fighter_id(g);
         match self.game.fighters[f.0].kind {
             4 => code::unported_call("ftKb_UnkMtxFunc0"),
-            15 => code::unported_call("ftPr_Init_UnkMtxFunc0"),
+            15 => self.purin_draw_hat(g, vmtx, pass),
             _ => {}
         }
     }
@@ -191,7 +192,7 @@ impl Running<'_> {
             let vmtx = self.shake_view(f);
             let root = self.fighter_root(g);
             self.draw_fighter_tree(f, root, vmtx, pass);
-            self.kind_draw(f);
+            self.kind_draw(g, vmtx, pass);
             self.fighter_light_reset(f);
         }
         if let Some(a) = self.game.fighters[f.0].x20A0_accessory {
@@ -251,7 +252,7 @@ impl Running<'_> {
             let vmtx = self.shake_view(f);
             let root = self.fighter_root(g);
             self.draw_fighter_tree(f, root, vmtx, pass);
-            self.kind_draw(f);
+            self.kind_draw(g, vmtx, pass);
             // `ftCo_800C8AF0` stops refraction only for `x2226_b5`, which doesn't draw here.
             self.fighter_light_reset(f);
         }

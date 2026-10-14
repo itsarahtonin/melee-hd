@@ -802,9 +802,8 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
             g.co_air_catch_hit_coll(gobj);
         }
         // ftCo_Catch_Anim, ftCo_CatchDash_Anim
-        0x800D_8CC8 | 0x800D_8D24 => {
-            g.co_catch_anim(gobj);
-        }
+        0x800D_8CC8 => g.co_catch_anim(gobj, false),
+        0x800D_8D24 => g.co_catch_anim(gobj, true),
         // ftCo_Catch_IASA, ftCo_CatchDash_IASA
         0x800D_8D80 | 0x800D_8D84 => {
             g.co_no_iasa(gobj);

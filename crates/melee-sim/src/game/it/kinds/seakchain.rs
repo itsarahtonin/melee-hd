@@ -395,6 +395,13 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
 /// links rises by `rise`. The surfaces met.
 #[doc(alias = "it_802BB938")]
 pub fn link_coll(r: &mut Running, l: ItemLinkId, clank: bool, rise: f64) -> i32 {
+    link_coll_clank(r, l, clank, rise).0
+}
+
+/// [`link_coll`], and whether `clank` decided anything: only a link newly meeting the stage
+/// and not still sounding (`x2C_b1`, `x2C_b2`) looks at it.
+fn link_coll_clank(r: &mut Running, l: ItemLinkId, clank: bool, rise: f64) -> (i32, bool) {
+    let mut consulted = false;
     let next = lk(r.game, l).next;
     let from = match next {
         Some(n) if lk(r.game, n).x2C_b0 => lk(r.game, n).pos,
@@ -408,6 +415,7 @@ pub fn link_coll(r: &mut Running, l: ItemLinkId, clank: bool, rise: f64) -> i32 
     link_mut(r.game, l).coll_data = cd;
     if hit {
         let k = lk(r.game, l);
+        consulted = !k.x2C_b1 && !k.x2C_b2;
         if !k.x2C_b1 && clank && !k.x2C_b2 {
             r.sfx_play(SFX_CLANK, 0x7F, 0x40);
             // 0xF, truncated to the bit.
@@ -433,7 +441,7 @@ pub fn link_coll(r: &mut Running, l: ItemLinkId, clank: bool, rise: f64) -> i32 
         k.coll_data.cur_pos.y = mem(fp::fadds(reg(k.coll_data.cur_pos.y), rise));
     }
     k.pos = k.coll_data.cur_pos;
-    env & (FLOOR_MASK | WALLS_CEILING_MASK)
+    (env & (FLOOR_MASK | WALLS_CEILING_MASK), consulted)
 }
 
 /// [`link_coll`] out of line, `it_802BBAEC`.
@@ -609,7 +617,9 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
     }
     let last = fp::fctiwz(fp::fmsubs(0.5, fp::frsp(f64::from(n)), 1.0)) as usize;
     let v = item_mut(r.game, gobj).xDD4_itemVar.seak_chain();
-    let coll_clank = v.x18.get() != 0;
+    // A new chain's first swing finds `x18` as its block's last item left it: it counts as
+    // read only where a link's clank sound looks at it (`link_coll_clank`).
+    let coll_clank = *v.x18.peek() != 0;
     let parent_gobj = v.parent_gobj.get().expect("a chain without its fighter");
     // The history moves down a step.
     for i in 0..last {
@@ -744,7 +754,12 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
         apply_vel(r.game, i);
         let env = if counter > mode {
             if counter % 5 == 0 {
-                link_coll_call(r, i, coll_clank, len)
+                // `it_802BBAEC`, out of line.
+                let (env, consulted) = link_coll_clank(r, i, coll_clank, len);
+                if consulted {
+                    item_mut(r.game, gobj).xDD4_itemVar.seak_chain().x18.get();
+                }
+                env
             } else {
                 link_coll_call(r, i, false, len)
             }
