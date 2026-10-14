@@ -4,8 +4,10 @@
 //! stick, C-stick, buttons, trigger and input timers changed so the checks' branches run.
 //! What other parts of the port own stands in on both sides, as in `ftcommon.rs`.
 
+use leaf_check::MODES;
 use leaf_check::calls::{
-    Ret, Stub, StubRet, check_calls_stubbed, peek_u32, poke_f32, poke_u32, user_data_arg,
+    Ours, Prepare, Report, Ret, Stub, StubRet, Variant, peek_u32, poke_f32, poke_u32,
+    run_variants_in, saved_calls, summarize, user_data_arg,
 };
 use melee_capture::import::Maps;
 use melee_local_data::ssbm_rs_local;
@@ -181,61 +183,93 @@ fn b(v: bool) -> Ret {
 
 /// Runs each case from every saved call of its process: none may differ.
 fn run(cases: Vec<Case>) {
-    // One test's cases at a time: each loads a reference per worker, and six tests at once
-    // run the machine out of memory.
-    static ONE_AT_A_TIME: std::sync::Mutex<()> = std::sync::Mutex::new(());
-    let _turn = ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
     let stubs = stubs();
     let mut none = Vec::new();
     let mut failed = Vec::new();
     let only = std::env::var("FTCOMMON_CASE").ok();
-    for c in &cases {
-        if only
-            .as_deref()
-            .is_some_and(|o| !o.split(',').any(|n| n == c.name))
-        {
-            continue;
+    let chosen: Vec<&Case> = cases
+        .iter()
+        .filter(|c| {
+            only.as_deref()
+                .is_none_or(|o| o.split(',').any(|n| n == c.name))
+        })
+        .collect();
+    let prepares: Vec<Box<Prepare>> = chosen
+        .iter()
+        .map(|&c| -> Box<Prepare> {
+            let target = leaf_check::sym(c.name);
+            Box::new(move |call: &mut Call, i: usize| {
+                let fp = user_data_arg(call);
+                // The GObj stays in r31 for our side when r3 changes.
+                call.regs.gpr[31] = call.regs.gpr[3];
+                vary_input(call, i, fp);
+                (c.prep)(call, i, fp);
+                if c.fighter_arg {
+                    call.regs.gpr[3] = fp;
+                }
+                // A dormant fighter (the other of Zelda and Sheik) runs nothing.
+                call.addr = if peek_u32(call, fp + 0x10) == SLEEP {
+                    leaf_check::sym("ftCo_Sleep_IASA")
+                } else {
+                    target
+                };
+            })
+        })
+        .collect();
+    let ours: Vec<Box<Ours>> = chosen
+        .iter()
+        .map(|&c| -> Box<Ours> {
+            Box::new(move |g: &mut Running, maps: &Maps, call: &Call| {
+                let gobj = *maps
+                    .gobjs
+                    .get(&call.regs.gpr[31])
+                    .expect("r31 isn't a GObj");
+                if g.game.fighter(gobj).motion_id == SLEEP as i32 {
+                    return Ret::Nothing;
+                }
+                (c.run)(g, gobj, maps, call)
+            })
+        })
+        .collect();
+    // Every case run from a process's calls runs with the others from it: each call is read
+    // and imported once for all of them.
+    let dirs = dirs();
+    let mut reports: Vec<Vec<Vec<Report>>> = vec![vec![Vec::new(); dirs.len()]; chosen.len()];
+    for (d, dir) in dirs.iter().enumerate() {
+        let mut froms: Vec<&str> = chosen.iter().map(|c| c.from).collect();
+        froms.sort();
+        froms.dedup();
+        for from in froms {
+            let these: Vec<usize> = (0..chosen.len())
+                .filter(|&k| chosen[k].from == from)
+                .collect();
+            let variants: Vec<Variant> = these
+                .iter()
+                .map(|&k| Variant {
+                    prepare: &*prepares[k],
+                    ours: &*ours[k],
+                    stubs: &stubs,
+                })
+                .collect();
+            for (&k, r) in these.iter().zip(run_variants_in(dir, from, &variants)) {
+                reports[k][d] = r;
+            }
         }
-        let target = leaf_check::sym(c.name);
+    }
+    for (k, c) in chosen.iter().enumerate() {
         let mut clean = 0;
-        for dir in dirs() {
-            let reports = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                check_calls_stubbed(
-                    &dir,
-                    c.from,
-                    0,
-                    &stubs,
-                    &|call, i| {
-                        let fp = user_data_arg(call);
-                        // The GObj stays in r31 for our side when r3 changes.
-                        call.regs.gpr[31] = call.regs.gpr[3];
-                        vary_input(call, i, fp);
-                        (c.prep)(call, i, fp);
-                        if c.fighter_arg {
-                            call.regs.gpr[3] = fp;
-                        }
-                        // A dormant fighter (the other of Zelda and Sheik) runs nothing.
-                        call.addr = if peek_u32(call, fp + 0x10) == SLEEP {
-                            leaf_check::sym("ftCo_Sleep_IASA")
-                        } else {
-                            target
-                        };
-                    },
-                    &|g, maps, call| {
-                        let gobj = *maps
-                            .gobjs
-                            .get(&call.regs.gpr[31])
-                            .expect("r31 isn't a GObj");
-                        if g.game.fighter(gobj).motion_id == SLEEP as i32 {
-                            return Ret::Nothing;
-                        }
-                        (c.run)(g, gobj, maps, call)
-                    },
-                )
-            }));
-            match reports {
-                Ok(reports) => clean += reports.iter().map(|r| r.compared).sum::<usize>(),
-                Err(_) => failed.push(c.name),
+        for (d, dir) in dirs.iter().enumerate() {
+            let calls = saved_calls(dir, c.from).len();
+            let passed = reports[k][d]
+                .iter()
+                .zip(MODES)
+                .try_for_each(|(r, mode)| summarize(c.from, mode, calls, r, 0));
+            match passed {
+                Ok(()) => clean += reports[k][d].iter().map(|r| r.compared).sum::<usize>(),
+                Err(e) => {
+                    eprintln!("{e}");
+                    failed.push(c.name);
+                }
             }
         }
         eprintln!("{}: {clean} clean", c.name);
