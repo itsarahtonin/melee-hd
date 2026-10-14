@@ -32,9 +32,8 @@ use leaf_check::{MODES, reference};
 use melee_capture::compare::Comparer;
 use melee_capture::corpus::Corpus;
 use melee_capture::import::{Importer, Maps};
-use melee_capture::{Capture, DataMap, DiscIndex, MEM1, disc_index, find_archives_in};
+use melee_capture::{Capture, DataMap, DiscIndex, MEM1, find_archives_in};
 use melee_data::archive::{Archives, DataRef};
-use melee_data::disc::Disc;
 use melee_sim::game::handles::ItemId;
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Running};
@@ -122,15 +121,15 @@ impl Source {
 
 struct Env {
     ctx: Ctx,
-    index: DiscIndex,
+    /// The disc's archives, indexed once for every check.
+    index: &'static DiscIndex,
 }
 
 fn env() -> Option<Env> {
     let ctx = reference()?;
-    let disc = Disc::open(std::env::var("SSBM_DISC").unwrap()).unwrap();
     Some(Env {
         ctx,
-        index: disc_index(&disc),
+        index: leaf_check::disc_index()?,
     })
 }
 
@@ -300,20 +299,29 @@ fn check_calls(source: &str, func: &str, prep: &Prep<'_>, ours: &Ours) {
             continue;
         }
         let name = source.name();
+        // The state, imported once (in the first mode, as each mode's run did) for both modes'
+        // runs, each from its own copy.
+        set_fp_mode(MODES[0]);
+        let mut archives = Archives::default();
+        let data = DataMap {
+            loaded: find_archives_in(env.index, &cap.call.mem1, &mut archives),
+        };
+        let bank = melee_capture::audio::find_bank(&cap.call.mem1, &mut archives);
+        let mut imp = Importer::new(&cap, &data);
+        imp.world();
+        imp.stage();
+        imp.ids();
+        imp.items();
+        imp.audio(bank);
+        let Importer {
+            game: imported,
+            maps: imported_maps,
+            ..
+        } = imp;
         for mode in MODES {
             set_fp_mode(mode);
-            let mut archives = Archives::default();
-            let data = DataMap {
-                loaded: find_archives_in(&env.index, &cap.call.mem1, &mut archives),
-            };
-            let bank = melee_capture::audio::find_bank(&cap.call.mem1, &mut archives);
-            let mut imp = Importer::new(&cap, &data);
-            imp.world();
-            imp.stage();
-            imp.ids();
-            imp.items();
-            imp.audio(bank);
-            let Importer { mut game, maps, .. } = imp;
+            let mut game = imported.clone();
+            let maps = imported_maps.clone();
             let args = Args {
                 cap: &cap,
                 maps: &maps,

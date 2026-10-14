@@ -23,9 +23,8 @@ use leaf_check::fp::{FpMode, set_fp_mode};
 use leaf_check::{MODES, reference, run_capture};
 use melee_capture::compare::Comparer;
 use melee_capture::import::Importer;
-use melee_capture::{Capture, DataMap, DiscIndex, disc_index, find_archives_in};
+use melee_capture::{Capture, DataMap, DiscIndex, find_archives_in};
 use melee_data::archive::Archives;
-use melee_data::disc::Disc;
 use melee_sim::game::gr::ground;
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -59,15 +58,15 @@ fn captures(func: &str) -> Vec<PathBuf> {
 
 struct Env {
     ctx: Ctx,
-    index: DiscIndex,
+    /// The disc's archives, indexed once for every check.
+    index: &'static DiscIndex,
 }
 
 fn env() -> Option<Env> {
     let ctx = reference()?;
-    let disc = Disc::open(std::env::var("SSBM_DISC").unwrap()).unwrap();
     Some(Env {
         ctx,
-        index: disc_index(&disc),
+        index: leaf_check::disc_index()?,
     })
 }
 
@@ -92,7 +91,7 @@ fn check(func: &str, ours: &Ours) {
             set_fp_mode(mode);
             let mut archives = Archives::default();
             let data = DataMap {
-                loaded: find_archives_in(&env.index, &cap.call.mem1, &mut archives),
+                loaded: find_archives_in(env.index, &cap.call.mem1, &mut archives),
             };
             let mut imp = Importer::new(&cap, &data);
             imp.world();
@@ -270,7 +269,7 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
     set_fp_mode(FpMode::Slippi);
     let mut archives = Archives::default();
     let data = DataMap {
-        loaded: find_archives_in(&env.index, &cap.call.mem1, &mut archives),
+        loaded: find_archives_in(env.index, &cap.call.mem1, &mut archives),
     };
     let mut imp = Importer::new(&cap, &data);
     imp.world();
@@ -466,7 +465,7 @@ fn tournament_stage_imports_round_trip() {
             let cap = Capture::read(&path);
             let mut archives = Archives::default();
             let data = DataMap {
-                loaded: find_archives_in(&env.index, &cap.call.mem1, &mut archives),
+                loaded: find_archives_in(env.index, &cap.call.mem1, &mut archives),
             };
             let mut imp = Importer::new(&cap, &data);
             imp.world();
@@ -663,7 +662,7 @@ fn on_state_with(path: &std::path::Path, steps: &[Step], hud: bool) {
         set_fp_mode(mode);
         let mut archives = Archives::default();
         let data = DataMap {
-            loaded: find_archives_in(&env.index, &cap.call.mem1, &mut archives),
+            loaded: find_archives_in(env.index, &cap.call.mem1, &mut archives),
         };
         let mut imp = Importer::new(&cap, &data);
         imp.world();
