@@ -572,15 +572,47 @@ impl Running<'_> {
         self.hide_models(f);
     }
 
-    /// Shows or hides the held item (`ftCommon_8007F5CC`; with an item, not ported).
+    /// Shows or hides the held item.
     #[doc(alias = "ftAction_80071F34")]
-    fn cmd_item_visible(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
+    fn cmd_item_visible(&mut self, gobj: GObjId, _f: FighterId, w: u32) {
         let v = bits(w, 6, 26) & 1 != 0;
-        let fp = &self.game.fighters[f.0];
+        self.set_item_visible(gobj, v);
+    }
+
+    /// Shows or hides the held item, `ftCommon_8007F5CC`: a change runs the character's item
+    /// hook ([`Self::item_invisible_hook`], or `ftData_OnItemVisible`).
+    #[doc(alias = "ftCommon_8007F5CC")]
+    pub fn set_item_visible(&mut self, gobj: GObjId, v: bool) {
+        let fp = self.game.fighter(gobj);
         if fp.item_gobj.is_some() && fp.x221E_b3 != v {
-            unported_call("ftCommon_8007F5CC with an item");
+            if v {
+                let cb = super::co::kind_callbacks::ON_ITEM_VISIBLE[fp.kind as usize];
+                if cb != 0 {
+                    super::super::code::run_fighter_cb(
+                        self,
+                        gobj,
+                        crate::game::handles::CodeRef(cb),
+                    );
+                }
+            } else {
+                self.item_invisible_hook(gobj);
+            }
         }
-        self.game.fighters[f.0].x221E_b3 = v;
+        self.game.fighter_mut(gobj).x221E_b3 = v;
+    }
+
+    /// The character's hook for hiding a held item (`ftData_OnItemInvisible`), if it holds one,
+    /// `ftCommon_8007F578`.
+    #[doc(alias = "ftCommon_8007F578")]
+    pub fn item_invisible_hook(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter(gobj);
+        if fp.item_gobj.is_none() {
+            return;
+        }
+        let cb = super::co::kind_callbacks::ON_ITEM_INVISIBLE[fp.kind as usize];
+        if cb != 0 {
+            super::super::code::run_fighter_cb(self, gobj, crate::game::handles::CodeRef(cb));
+        }
     }
 
     /// The character's articles' visibility (`x221E_b4`).

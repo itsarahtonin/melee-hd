@@ -683,8 +683,8 @@ impl Running<'_> {
         }
         if flags & SKIP_ITEM_VIS == 0 {
             self.game.fighters[f.0].x221E_b3 = true;
-        } else if !self.game.fighters[f.0].x221E_b3 && self.game.fighters[f.0].item_gobj.is_some() {
-            unported_call("ftCommon_8007F578");
+        } else if !self.game.fighters[f.0].x221E_b3 {
+            self.item_invisible_hook(gobj);
         }
         {
             let fp = &mut self.game.fighters[f.0];
