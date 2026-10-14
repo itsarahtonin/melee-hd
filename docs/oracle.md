@@ -159,3 +159,35 @@ cargo run --release -p melee-capture --bin pack-calls -- --verify DIR           
 ```
 
 `Capture::read` takes a call from its directory's pack when the pack holds it and from its file otherwise, and the checks list a directory's calls from both, so a call's path is `DIR/NAME.call` either way and new captures can stay files until the directory is packed again: packing a directory that has a pack keeps the pack's calls whose files are gone and adds the new files. Once a directory's pack is verified, its `.call` files can go. Each block is decompressed once per process and shared, so reading a call is copying its pages.
+
+### leaf-check's speed
+
+A captured-state check spends almost all its time around the call, not in it: running the function on both sides took about 12 ms of a call's 355 ms in `ftcommon_entries`. The rest was reading the call (58 ms of zstd), finding the loaded archives in memory and importing the state (100 ms), comparing the import with memory (79 ms), and after the run finding the archives again and comparing the whole state (107 ms), each again for every float mode and every case run from the same call. Looking symbols up by name in a 35,000-entry list inside the comparison's loops took most of the comparing. Now symbols come from a map made once, the archive scan skips places no disc file starts at, calls come from packs, and a test that runs several checks from the same calls (`ftcommon_entries`' cases, the characters' stand-ins answering no and yes and their neighbours' rounds) runs them as variants of one pass (`calls::run_variants`): each call is read once and imported, its round trip checked, once for every check and mode that prepares it into the same state, bit for bit. The checks, the calls and the comparisons are the same: each binary's output, every count in it, came out identical before and after.
+
+Each binary was timed before (reading `.call` files) and after (reading the packs) back to back, alternating which ran first, with `--test-threads=4` and the default `LEAF_CHECK_WORKERS=2`, on the machine in [performance](performance.md) while other builds kept it 20 to 90% busy (2026-10-14):
+
+| Test binary | Before (wall / CPU) | After (wall / CPU) | Speed-up (wall) | Peak commit before / after |
+| --- | --- | --- | --- | --- |
+| ftcommon_entries | 84.3 min / 162.1 min | 7.3 min / 45.7 min | 11.6x | 0.6 / 2.4 GB |
+| items | 28.3 min / 76.9 min | 9.4 min / 23.3 min | 3.0x | 1.8 / 1.0 GB |
+| sheik | 12.9 min / 22.8 min | 2.5 min / 4.4 min | 5.2x | 0.7 / 1.6 GB |
+| effects | 10.2 min / 40.1 min | 3.7 min / 13.6 min | 2.8x | 1.1 / 2.2 GB |
+| zelda | 8.5 min / 13.6 min | 90 s / 2.4 min | 5.7x | 0.5 / 1.3 GB |
+| fox | 6.3 min / 9.5 min | 66 s / 100 s | 5.7x | 0.5 / 1.0 GB |
+| camera | 5.3 min / 15.0 min | 80 s / 3.7 min | 4.0x | 0.7 / 1.5 GB |
+| passive_wall | 5.2 min / 9.6 min | 85 s / 2.5 min | 3.7x | 0.6 / 1.1 GB |
+| marth | 5.0 min / 7.5 min | 53 s / 78 s | 5.7x | 0.5 / 1.0 GB |
+| captain | 4.8 min / 7.6 min | 54 s / 82 s | 5.4x | 0.6 / 1.0 GB |
+| fighter | 4.8 min / 27.7 min | 95 s / 9.3 min | 3.0x | 1.1 / 1.7 GB |
+| audio | 4.5 min / 19.6 min | 58 s / 3.9 min | 4.7x | 8.0 / 9.7 GB |
+| falco | 3.9 min / 6.2 min | 42 s / 67 s | 5.6x | 0.5 / 0.9 GB |
+| vs | 3.5 min / 9.4 min | 45 s / 2.0 min | 4.7x | 1.1 / 1.4 GB |
+| ganon | 3.3 min / 5.2 min | 34 s / 51 s | 5.9x | 0.5 / 0.9 GB |
+| display | 3.0 min / 17.5 min | 64 s / 5.9 min | 2.8x | 1.1 / 3.0 GB |
+| stage | 3.0 min / 7.2 min | 23 s / 53 s | 7.7x | 2.0 / 1.0 GB |
+| ftcommon | 98 s / 11.4 min | 39 s / 4.0 min | 2.5x | 1.1 / 3.2 GB |
+| fighter_procs | 80 s / 8.6 min | 28 s / 2.8 min | 2.9x | 1.1 / 1.6 GB |
+| 35 others | 11.9 min | 4.6 min | 2.6x | at most 1.6 GB |
+| **All 54, one after another** | **211.8 min / 495.7 min** | **41.7 min / 137.5 min** | **5.1x** | |
+
+Run the suite as `cargo test --release -p leaf-check -- --test-threads=4`: cargo runs the binaries one at a time, each with up to four tests at once and `LEAF_CHECK_WORKERS` threads (2 by default, each with its own reference) for each test's saved calls. Memory, not cores, bounds it: most binaries peak under 3.5 GB of commit, `audio` near 10 GB (its crowd checks hold whole matches' audio state), and a pack's decompressed pages stay for the process (a few hundred MB per capture set). Leave about 12 GB of commit free for it. `ftcommon_entries` no longer queues its six tests behind a lock, so more test threads and workers help it until the cores run out.
