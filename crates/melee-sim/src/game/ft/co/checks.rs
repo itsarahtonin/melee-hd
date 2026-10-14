@@ -390,8 +390,14 @@ impl Running<'_> {
         if self.game.fighter(gobj).x1978.is_some() {
             return false;
         }
-        if self.item_in_reach(gobj, 3).is_some() {
-            unported_call("ftpickupitem_80094694 (picking an item up)");
+        if let Some(it) = self.item_in_reach(gobj, 3) {
+            let msid = if super::super::super::it::lib26b1::is_heavy(self.game, self.data, it) {
+                super::item_get::MS_HEAVY_GET
+            } else {
+                super::item_get::MS_LIGHT_GET
+            };
+            self.enter_item_get(gobj, msid, false);
+            return true;
         }
         false
     }
