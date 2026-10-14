@@ -1532,7 +1532,6 @@ impl Importer<'_> {
             tev_addr: self.u32(a + 0xA8),
             tluttbl_addr,
             tluttbl_tluts,
-            ..Default::default()
         };
         self.game.objs.tobjs[id] = o;
         self.game.objs.tobjs.pool.set_addr(id.0, a);
