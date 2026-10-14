@@ -36,7 +36,7 @@ The original's float behavior matters only where it differs from IEEE single and
 
 ## Rulesets
 
-Vanilla is NTSC 1.02 as the console runs it. Slippi adds the codes Slippi tags as affecting gameplay: UCF 0.84, neutral spawns, fixed-limit off-screen damage, the camera-independent Pokémon Stadium transition, wobbling prevention, the Ice Climbers' freeze glitch fix, and the online determinism fixes. Lag-reduction codes are not gameplay, and the player's own loop replaces them.
+Vanilla is NTSC 1.02 as the console runs it. Slippi adds the codes Slippi tags as affecting gameplay: UCF (0.84, or 0.8 in older replays), neutral spawns, fixed-limit off-screen damage, the camera-independent Pokémon Stadium transition, wobbling prevention, the Ice Climbers' freeze glitch fix, and the online determinism fixes. Lag-reduction codes are not gameplay, and the player's own loop replaces them.
 
 A Slippi replay records the codes it ran, and its rules are the ones those codes make: melee-sim recognizes each code by where it injects and the instructions it runs, and refuses a replay with a gameplay code it doesn't know. Playing a replay back is not a ruleset: it is what Slippi's playback codes do to a match (`game::playback`), with the replay's settings and frames as inputs.
 

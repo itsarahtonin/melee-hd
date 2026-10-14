@@ -336,9 +336,10 @@ pub fn start_main(r: &mut Running, gobj: GObjId) {
 /// lines the transformations' edges add switched off, and its start hook.
 #[doc(alias = "grStadium_801D13E0")]
 pub fn init_main(r: &mut Running, gobj: GObjId) {
-    // Slippi 3.16's codes run the transformations another way from here on (`801D14C8`, then
-    // the cycle's `801D45EC` and its branches; docs/oracle.md); only 3.19's are ported.
-    if r.game.rules.slippi && r.game.rules.codes == CodeSet::V3_16 {
+    // Slippi 3.16's (and 3.14's) codes run the transformations another way from here on
+    // (`801D14C8`, then the cycle's `801D45EC` and its branches; docs/oracle.md); only 3.19's
+    // are ported.
+    if r.game.rules.slippi && r.game.rules.codes != CodeSet::V3_19 {
         code::unported_call("Pokémon Stadium under Slippi 3.16's transformation codes");
     }
     let g = ground_of(r.game, gobj);

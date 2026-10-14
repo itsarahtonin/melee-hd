@@ -81,8 +81,8 @@ pub struct Rules {
     /// and Final Destination's background cycle keeps the random seed it draws from to itself
     /// (`grLast_8021AAB0`).
     pub slippi: bool,
-    /// UCF 0.84 (`game::ucf`).
-    pub ucf: bool,
+    /// Which UCF (`game::ucf`).
+    pub ucf: super::ucf::Ucf,
     /// Neutral spawn points.
     pub neutral_spawn: bool,
     /// Wobbling prevention.

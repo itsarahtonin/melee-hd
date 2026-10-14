@@ -1,6 +1,7 @@
 //! Crouching and dropping through platforms (`ftCo_Squat.c`, `ftCo_SquatWait.c`,
 //! `ftCo_SquatRv.c`, `ftCo_Pass.c`).
 
+use crate::game::ucf::Ucf;
 use gekko_fp as fp;
 
 use super::super::super::code::unported_call;
@@ -239,7 +240,8 @@ impl Running<'_> {
         let c = self.common();
         let (t, window) = (fp::fneg(reg(c.f32(0x464))), reg(c.f32(0x468)));
         let down = reg(fp.input.lstick[0].y) <= t
-            || (self.game.rules.ucf && self.game.ucf.0[usize::from(fp.pad_port)].flicked > 1);
+            || (self.game.rules.ucf == Ucf::V0_84
+                && self.game.ucf.0[usize::from(fp.pad_port)].flicked > 1);
         if down && f64::from(fp.active_timer.lstick.y) < window && self.on_platform(gobj) {
             self.enter_pass(gobj);
             return true;
