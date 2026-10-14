@@ -16,6 +16,13 @@ use crate::math;
 /// `ftLoadCommonData::x58`: the computer players' data, whose first word is its scripts.
 const CPU_DATA: u32 = 0x58;
 
+/// `Gr_Kind_Shrine` (Hyrule Temple) and `Gr_Kind_Icemt` (Icicle Mountain).
+const GR_KIND_SHRINE: i32 = 7;
+const GR_KIND_ICEMT: i32 = 0x16;
+
+/// `LINE_FLAG_PLATFORM`: a floor a fighter can drop through.
+const LINE_FLAG_PLATFORM: u32 = 1 << 8;
+
 /// C's `ABS` on a single difference.
 fn abs(x: f64) -> f64 {
     if x < 0.0 { fp::fneg(x) } else { x }
@@ -153,7 +160,7 @@ impl Running<'_> {
 
     /// Leaves the respawn platform, `ftCo_800A08F0`: a crouch's flick down, after a wait
     /// by level (none for Nana).
-    // Ports `ftCo_800A08F0`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A08F0")]
     fn cpu_leave_platform(&mut self, f: FighterId) {
         self.cpu_neutral_stick(f);
         let fpp = &self.game.fighters[f.0];
@@ -430,7 +437,7 @@ impl Running<'_> {
     }
 
     /// Whether the fighter stands within `5 * scale` of the edge it faces, `ftCo_800A28D0`.
-    // Ports `ftCo_800A28D0`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A28D0")]
     fn cpu_near_edge(&self, f: FighterId, scale: f64) -> bool {
         let fpp = &self.game.fighters[f.0];
         if fpp.ground_or_air == GA_AIR {
@@ -516,8 +523,173 @@ impl Running<'_> {
         } else {
             super::co::guard::stick_angle(dy, dx)
         };
-        let _ = angle;
-        unported_call("ftCo_800AB224 off the fighter's island");
+        if angle > 0.6108652334660292 {
+            // Steeply up (over 35 degrees): under a ceiling it turns at the edge, jumps toward
+            // Hyrule Temple's openings or walks on; on Icicle Mountain, or facing the
+            // destination, it jumps; else it turns back unless nearly straight up.
+            let fpp = &self.game.fighters[f.0];
+            let (cx, cy, dest_y) = (
+                fpp.coll_data.cur_pos.x,
+                fpp.coll_data.cur_pos.y,
+                fpp.cpu.x54.y,
+            );
+            let ceiling = self
+                .game
+                .geometry
+                .as_mut()
+                .expect("no collision geometry")
+                .check_ceiling(cx, cy, cx, dest_y, -1, -1)
+                .is_some();
+            if ceiling {
+                if self.cpu_near_edge(f, 1.0) {
+                    self.cpu_turn_around(f);
+                } else if self.cpu_shrine_opening(f) {
+                    self.cpu_jump_off_piece(f);
+                } else {
+                    self.cpu_walk_forward(f);
+                }
+            } else if self.game.stage_info.grkind == GR_KIND_ICEMT {
+                self.cpu_jump_off_piece(f);
+            } else if !self.cpu_facing_destination(f) {
+                if angle < 1.3089969288557768 {
+                    self.cpu_turn_around(f);
+                } else {
+                    self.cpu_walk_forward(f);
+                }
+            } else {
+                self.cpu_jump_off_piece(f);
+            }
+        } else if angle > fp::fneg(0.7853981573134661) {
+            if !self.cpu_facing_destination(f) {
+                self.cpu_turn_around(f);
+            } else {
+                self.cpu_head_off_level(f);
+            }
+        } else {
+            self.cpu_head_off_down(f);
+        }
+    }
+
+    /// The stick toward the fighter's facing at its walk speed (`ftCo_800AA320`'s step and
+    /// clamp), done.
+    fn cpu_walk_forward_cmds(&mut self, f: FighterId) {
+        let (stick, clamp) = self.cpu_walk_speed(f);
+        self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
+        self.cpu_cmd2(f, cmd::LSTICK_FORWARD_CLAMPED, stick as u8, clamp as u8);
+        self.cpu_cmd(f, cmd::DONE);
+    }
+
+    /// Walks on the way it faces, `ftCo_800AABC8`: off a teeter first (forward, as
+    /// `ftCo_CpuTurnAwayFromLedge` does).
+    // Ports `ftCo_800AABC8`; aliased once a check reaches it.
+    fn cpu_walk_forward(&mut self, f: FighterId) {
+        if matches!(self.game.fighters[f.0].motion_id, 245 | 246) {
+            self.cpu_turn_away_from_ledge(f);
+        } else {
+            self.cpu_walk_forward_cmds(f);
+        }
+    }
+
+    /// Whether the fighter meets a wall (`inlineC0`: any left or right wall flag).
+    fn cpu_against_wall(&self, f: FighterId) -> bool {
+        self.game.fighters[f.0].coll_data.env_flags & 0xFFF != 0
+    }
+
+    /// Whether the fighter stands on a platform (`LINE_FLAG_PLATFORM` on its floor).
+    fn cpu_on_platform(&self, f: FighterId) -> bool {
+        let line = self.game.fighters[f.0].coll_data.floor.index;
+        line != -1
+            && self
+                .game
+                .geometry
+                .as_ref()
+                .expect("no collision geometry")
+                .line_surface(line)
+                & LINE_FLAG_PLATFORM
+                != 0
+    }
+
+    /// Heading off the island level or slightly up or down, `ftCo_800AA844`: off a teeter
+    /// first; at the edge, through a platform when `x2168` says and there's floor below
+    /// (`ftCo_800A0FB0`), else a jump unless the destination is below and near and no wall's
+    /// in the way, when it walks off; away from the edge a jump at a wall, else walking on.
+    #[doc(alias = "ftCo_800AA844")]
+    fn cpu_head_off_level(&mut self, f: FighterId) {
+        if matches!(self.game.fighters[f.0].motion_id, 245 | 246) {
+            self.cpu_turn_away_from_ledge(f);
+            return;
+        }
+        if self.cpu_near_edge(f, 1.0) {
+            let drop = self.game.fighters[f.0].x2168 != 0 && self.cpu_on_platform(f) && {
+                let pos = self.game.fighters[f.0].cur_pos;
+                let ay = mem(fp::fsubs(reg(pos.y), 10.0));
+                let by = mem(fp::fsubs(reg(pos.y), 1000.0));
+                let hit = self
+                    .game
+                    .geometry
+                    .as_mut()
+                    .expect("no collision geometry")
+                    .check_floor(pos.x, ay, pos.x, by, 0.0, -1, -1, -1, None);
+                hit.is_some_and(|h| !self.excluded_floor(h.line))
+            };
+            let fpp = &self.game.fighters[f.0];
+            if drop {
+                self.cpu_leave_platform(f);
+            } else if fpp.cpu.x54.y > fpp.cur_pos.y
+                || abs(fp::fsubs(reg(fpp.cpu.x54.x), reg(fpp.cur_pos.x))) > 40.0
+                || self.cpu_against_wall(f)
+            {
+                self.cpu_jump_off_piece(f);
+            } else {
+                self.cpu_walk_forward_cmds(f);
+            }
+        } else if self.cpu_against_wall(f) {
+            self.cpu_jump_off_piece(f);
+        } else {
+            self.cpu_walk_forward_cmds(f);
+        }
+    }
+
+    /// Heading off the island steeply down, `ftCo_800AACD0`: off a teeter first; through a
+    /// platform; turning back when the destination is past the island's ends the other way;
+    /// a jump at a wall (but on Icicle Mountain); else walking on.
+    #[doc(alias = "ftCo_800AACD0")]
+    fn cpu_head_off_down(&mut self, f: FighterId) {
+        if matches!(self.game.fighters[f.0].motion_id, 245 | 246) {
+            self.cpu_turn_away_from_ledge(f);
+            return;
+        }
+        if self.cpu_on_platform(f) {
+            self.cpu_leave_platform(f);
+            return;
+        }
+        let line = self.game.fighters[f.0].coll_data.floor.index;
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        if let Some(island) = geo.island_of_line(line) {
+            let (mut l, mut r) = (crate::vec::Vec3::default(), crate::vec::Vec3::default());
+            geo.island_ends(island, Some(&mut l), Some(&mut r));
+            let x = self.game.fighters[f.0].cpu.x54.x;
+            if (x < l.x || x > r.x) && !self.cpu_facing_destination(f) {
+                self.cpu_turn_around(f);
+                return;
+            }
+        }
+        if self.game.stage_info.grkind != GR_KIND_ICEMT && self.cpu_against_wall(f) {
+            self.cpu_jump_off_piece(f);
+            return;
+        }
+        self.cpu_walk_forward_cmds(f);
+    }
+
+    /// Whether a computer player under a ceiling on Hyrule Temple heads for an opening above,
+    /// `ftCo_800AAF48`: never while its destination's timer runs (`x60`) or on another stage.
+    /// Hyrule Temple's search isn't ported.
+    // Ports `ftCo_800AAF48`; aliased once a check reaches it.
+    fn cpu_shrine_opening(&mut self, f: FighterId) -> bool {
+        if self.game.fighters[f.0].cpu.x60 != 0 || self.game.stage_info.grkind != GR_KIND_SHRINE {
+            return false;
+        }
+        unported_call("ftCo_800AAF48 on Hyrule Temple");
     }
 
     /// Walks or runs to a destination on the fighter's island, `ftCo_800AA42C`: off a teeter
@@ -612,6 +784,35 @@ impl Running<'_> {
             return true;
         }
         fp::fmuls(dx, reg(fpp.facing_dir)) >= 0.0
+    }
+
+    /// Mashing out of a hold (behavior 16), `ftCo_800AC30C`: once out of the held states
+    /// (`inlineG0`: 224, 227, 266 to 270) back to the usual behavior; else every third frame
+    /// (`x7C`), with a chance by level, the stick flips side to side.
+    #[doc(alias = "ftCo_800AC30C")]
+    pub(super) fn cpu_mash(&mut self, f: FighterId) {
+        let ms = self.game.fighters[f.0].motion_id;
+        if !(ms == 224 || ms == 227 || (266..=270).contains(&ms)) {
+            let c = &mut self.game.fighters[f.0].cpu;
+            c.x18 = c.x1C;
+            self.cpu_cmd(f, cmd::DONE);
+            return;
+        }
+        let c = &self.game.fighters[f.0].cpu;
+        if c.x7C % 3 != 0 {
+            return;
+        }
+        let chance = fp::fmuls(reg(0.1), fp::frsp(f64::from(c.level)));
+        if chance < reg(self.game.objs.rng.draw_f32()) {
+            return;
+        }
+        let x = if self.game.fighters[f.0].cpu.lstick.x < 0 {
+            127
+        } else {
+            -127i8 as u8
+        };
+        self.cpu_cmd1(f, cmd::SET_LSTICK_X, x);
+        self.cpu_cmd(f, cmd::DONE);
     }
 
     /// `ftCo_CpuHoldUpForOneFrame`.

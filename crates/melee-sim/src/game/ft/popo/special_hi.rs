@@ -469,7 +469,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms, 0, frame, 1.0, 0.0, None);
     }
 
-    // Ports `ftPp_SpecialHi_80122098`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialHi_80122098")]
     fn popo_go_lone_ground(&mut self, gobj: GObjId) {
         self.popo_go_lone(gobj, MS_START_1);
     }
@@ -575,8 +575,8 @@ impl Running<'_> {
     fn popo_special_hi_no_iasa(&mut self, _gobj: GObjId) {}
 
     /// The ground hop's interrupts, which do nothing.
-    // Ports `ftPp_SpecialHiStart_1_IASA` and `ftPp_SpecialHiThrow_1_IASA`; aliased once a check
-    // reaches them.
+    #[doc(alias = "ftPp_SpecialHiStart_1_IASA")]
+    #[doc(alias = "ftPp_SpecialHiThrow_1_IASA")]
     fn popo_special_hi_lone_no_iasa(&mut self, _gobj: GObjId) {}
 
     #[doc(alias = "ftPp_SpecialHiStart_0_Coll")]
@@ -613,20 +613,20 @@ impl Running<'_> {
         self.popo_air_coll(gobj, Self::popo_land_throw_0);
     }
 
-    // Ports `ftPp_SpecialHiStart_1_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialHiStart_1_Anim")]
     fn popo_special_hi_start_1_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.popo_to_throw_1(gobj);
         }
     }
 
-    // Ports `ftPp_SpecialHiStart_1_Phys`; aliased once a check reaches it.
-    // Ports `ftPp_SpecialHiThrow_1_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialHiStart_1_Phys")]
+    #[doc(alias = "ftPp_SpecialHiThrow_1_Phys")]
     fn popo_special_hi_phys_1(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
     }
 
-    // Ports `ftPp_SpecialHiStart_1_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialHiStart_1_Coll")]
     fn popo_special_hi_start_1_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_slide(gobj) {
             self.popo_to_air_start_1_from(gobj);
@@ -638,7 +638,7 @@ impl Running<'_> {
         self.popo_air_coll(gobj, Self::popo_land_start_1);
     }
 
-    // Ports `ftPp_SpecialHiThrow_1_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialHiThrow_1_Anim")]
     fn popo_special_hi_throw_1_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_wait(gobj);
@@ -652,7 +652,7 @@ impl Running<'_> {
         }
     }
 
-    // Ports `ftPp_SpecialHiThrow_1_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialHiThrow_1_Coll")]
     fn popo_special_hi_throw_1_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_slide(gobj) {
             self.popo_to_air_throw_1_from(gobj);
@@ -723,7 +723,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, MS_AIR_THROW_0, 0, 0.0, 1.0, 0.0, None);
     }
 
-    // Ports `ftPp_SpecialHi_80122348`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialHi_80122348")]
     fn popo_to_throw_1(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, MS_THROW_1, 0, 0.0, 1.0, 0.0, None);
     }
