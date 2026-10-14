@@ -8,7 +8,7 @@
 
 use melee_data::archive::{Archive, ArchiveId, Archives};
 
-use super::gm::{self, scene, vs};
+use super::gm::{self, scene, vs, vs_mode};
 use super::handles::CodeRef;
 use super::hud;
 use super::mirror::{Cx, Mem, Mirror};
@@ -105,44 +105,50 @@ pub struct Player {
 }
 
 impl Settings {
-    /// An ordinary VS match: stock or timed, on `stage` (`StKind`), up to four players, the
-    /// rules the VS menus default to otherwise.
-    pub fn vs(stage: u16, players: &[Player], stocks: i8, time_limit: u32) -> Settings {
-        assert!(players.len() <= 4, "a VS match has up to four players");
-        let mut start = StartMeleeData::default();
-        let r = &mut start.rules;
-        r.match_kind = if stocks > 0 { 1 } else { 0 };
-        r.timer_enabled = time_limit != 0;
-        r.time_limit = time_limit;
-        r.is_stock = stocks > 0;
-        r.is_vs = true;
-        r.x4_0 = true;
-        r.stkind = stage;
-        r.item_freq = -1;
-        r.sd_penalty = -1;
-        r.x2C = 1.0;
-        r.x30 = 1.0;
-        r.game_speed = 1.0;
-        for (i, p) in start.players.iter_mut().enumerate() {
-            p.slot_type = 3;
-            p.spawn_pos = -1;
-            p.attack_ratio = 1.0;
-            p.defense_ratio = 1.0;
-            p.model_scale = 1.0;
-            p.cpu_kind = 4;
-            p.nametag = 0x78;
-            p.team = i as u8;
+    /// An ordinary VS match: stock (`stocks` above 0) or timed, with a time limit of
+    /// `minutes` (0 for none), on `stage` (`StKind`), up to four players, and otherwise the VS
+    /// menus' rules of a new save with the item switch off. [`Settings::vs_with`] takes any
+    /// menu rules.
+    pub fn vs(stage: u16, players: &[Player], stocks: u8, minutes: u8) -> Settings {
+        let mut rules = vs_mode::GameRules {
+            stock_count: stocks,
+            ..Default::default()
+        };
+        if stocks > 0 {
+            rules.mode = 1;
+            rules.stock_time_limit = minutes;
+        } else {
+            rules.mode = 0;
+            rules.time_limit = minutes;
         }
+        let prefs = vs_mode::GamePrefs {
+            item_freq: 0xFF,
+            ..Default::default()
+        };
+        Settings::vs_with(stage, players, &rules, &prefs)
+    }
+
+    /// A VS match as the VS mode starts it (`gmVsMelee_EnterVs`) from the menus' `rules` and
+    /// `prefs`: the VS mode's start data with what the character select screen sets for each
+    /// player (character, kind, costume, team and CPU level) and the stage select's stage.
+    pub fn vs_with(
+        stage: u16,
+        players: &[Player],
+        rules: &vs_mode::GameRules,
+        prefs: &vs_mode::GamePrefs,
+    ) -> Settings {
+        assert!(players.len() <= 4, "a VS match has up to four players");
+        let mut vs = vs_mode::start_defaults();
+        vs.rules.stkind = stage;
         for p in players {
-            let d = &mut start.players[usize::from(p.port)];
+            let d = &mut vs.players[usize::from(p.port)];
             d.ckind = p.character as i8;
             d.slot_type = p.kind;
-            d.stocks = stocks;
             d.color = p.costume;
-            d.slot = p.port + 1;
             d.team = p.team;
             d.cpu_level = p.cpu_level;
         }
+        let start = vs_mode::enter_vs(&mut vs, rules, prefs);
         Settings {
             start,
             seed: 0,

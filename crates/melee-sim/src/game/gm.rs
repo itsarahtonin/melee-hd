@@ -7,6 +7,7 @@ pub mod pause;
 pub mod results;
 pub mod scene;
 pub mod vs;
+pub mod vs_mode;
 
 use super::handles::CodeRef;
 use super::state::Game;
