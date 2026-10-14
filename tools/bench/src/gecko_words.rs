@@ -53,8 +53,10 @@ pub const INFO: &[u32] = &[
 pub const INFO_DATA: usize = 32;
 
 /// `di.s`.
+#[cfg(windows)]
 pub const DI: &[u32] = &[
     0x2C000000, 0x41820018, 0x3BC00000, 0x3D80800A, 0x618CC744, 0x7D8903A6, 0x4E800420,
 ];
 /// The word of `DI` whose immediate is patched in (`patch`).
+#[cfg(windows)]
 pub const DI_PATCH: usize = 2;

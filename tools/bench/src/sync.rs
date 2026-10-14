@@ -20,6 +20,7 @@ pub fn replay_path(dir: &Path, name: &str) -> PathBuf {
 
 /// ssbm-rs's state trace of a benchmark match's start (`make-matches.sh` writes it):
 /// `DIR/NAME.start.trace` when `dir` has it, else `$SSBM_RS_LOCAL/bench/NAME.start.trace`.
+#[cfg_attr(not(windows), allow(dead_code))]
 pub fn start_trace_path(dir: &Path, name: &str) -> PathBuf {
     let path = dir.join(format!("{name}.start.trace"));
     if path.exists() {
@@ -83,6 +84,7 @@ pub fn post_frames(replay: &Replay) -> BTreeMap<i32, [Option<Fighter>; 8]> {
 }
 
 /// A fighter in an ssbm-rs state trace: its address and whether it's a follower.
+#[cfg(windows)]
 pub struct TracedFighter {
     pub address: u32,
     pub follower: bool,
@@ -91,6 +93,7 @@ pub struct TracedFighter {
 /// The fighters of the first tick that has any, in an ssbm-rs state trace (`STATE_TRACE`):
 /// magic, version, then zstd frames of ticks, each a number, a region count and regions (kind,
 /// address, owning GObj, length, bytes; header integers little-endian). Kind 4 is a `Fighter`.
+#[cfg(windows)]
 pub fn traced_fighters(path: &Path) -> Option<Vec<TracedFighter>> {
     use std::io::Read;
     let file = std::fs::File::open(path).ok()?;
