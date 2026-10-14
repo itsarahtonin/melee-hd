@@ -264,9 +264,8 @@ impl Running<'_> {
             fp.x221C_b6 = false;
             fp.x2098 = combo as u16;
             self.knockback_exit(gobj);
-            if self.game.fighter(gobj).item_gobj.is_some() {
-                // `ftCo_800C5240`, whether it holds the hammer.
-                unported_call("itGetKind");
+            if self.holding_hammer(gobj) {
+                unported_call("ftCo_800C554C (the hammer)");
             }
         }
     }

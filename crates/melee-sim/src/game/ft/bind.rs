@@ -306,7 +306,7 @@ impl Running<'_> {
     /// the costume's tree from `joint`, `ftAnim_8006F994`. The original runs off its end (and
     /// returns what a register holds) when no part has the joint.
     #[doc(alias = "ftAnim_8006F994")]
-    fn part_joint_desc(
+    pub(super) fn part_joint_desc(
         &self,
         f: FighterId,
         j: Option<JObjId>,

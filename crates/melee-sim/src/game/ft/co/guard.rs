@@ -889,8 +889,8 @@ impl Running<'_> {
         fp.set_mv_f32(GUARD_X10, 0.0);
     }
 
-    /// Throwing the held item out of the shield with A, `ftCo_8009515C` (item throws aren't
-    /// ported yet); its dash-throw window (`mv` x20) counts down.
+    /// Throwing the held item out of the shield with A, `ftCo_8009515C`: a dash throw within
+    /// its window (`mv` x20), else the ground throw; the window counts down.
     #[doc(alias = "ftCo_8009515C")]
     pub fn guard_item_throw_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter_mut(gobj);
@@ -898,7 +898,7 @@ impl Running<'_> {
             if fp.mv_i32(GUARD_X20) != 0 {
                 self.enter_item_throw(gobj, ms::LIGHT_THROW_DASH);
             } else {
-                unported_call("ftCo_80095A30");
+                self.item_throw_ground(gobj);
             }
             return true;
         }

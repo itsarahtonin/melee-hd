@@ -49,6 +49,7 @@ pub mod motion;
 mod motion_tables;
 pub mod ness;
 pub mod parts;
+pub mod peach;
 pub mod phys;
 pub mod pichu;
 pub mod pikachu;

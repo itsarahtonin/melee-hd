@@ -202,23 +202,17 @@ impl Running<'_> {
     }
 
     /// What A does with the held item, `it_8026B30C` (the items' port).
-    pub(super) fn item_a_kind(&mut self, gobj: GObjId) -> i32 {
+    pub(crate) fn item_a_kind(&mut self, gobj: GObjId) -> i32 {
         let item = self.game.fighter(gobj).item_gobj;
         code::call(self, IT_8026B30C, &[Val::GObj(item)]).int()
-    }
-
-    /// Throwing the held item, `ftCo_800957F4` (not ported yet).
-    pub(super) fn enter_item_throw(&mut self, _gobj: GObjId, _msid: i32) {
-        unported_call("ftCo_800957F4")
     }
 
     /// A grab, `ftCo_Catch_CheckInput`: the held item thrown first, else a shoulder and A
     /// (unless Link's hookshot or Samus's grapple is out).
     #[doc(alias = "ftCo_Catch_CheckInput")]
     pub fn catch_check(&mut self, gobj: GObjId) -> bool {
-        // `ftCo_800951D0`.
-        if self.game.fighter(gobj).item_gobj.is_some() && self.item_throw_input(gobj) {
-            unported_call("ftCo_80095A30");
+        if self.item_throw_ground_check(gobj) {
+            return true;
         }
         self.grab_input(gobj, ms::CATCH)
     }
@@ -226,9 +220,7 @@ impl Running<'_> {
     /// A dash grab, `ftCo_800D8A38`: as [`Self::catch_check`], throwing an item at a dash.
     #[doc(alias = "ftCo_800D8A38")]
     pub fn catch_dash_check(&mut self, gobj: GObjId) -> bool {
-        // `ftCo_80095254`.
-        if self.game.fighter(gobj).item_gobj.is_some() && self.item_throw_input(gobj) {
-            self.enter_item_throw(gobj, ms::LIGHT_THROW_DASH);
+        if self.item_throw_dash_check(gobj) {
             return true;
         }
         self.grab_input(gobj, ms::CATCH_DASH)

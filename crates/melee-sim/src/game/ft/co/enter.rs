@@ -30,6 +30,9 @@ const KIND_CRAZY_HAND: i32 = 28;
 const KIND_LINK: i32 = 6;
 const KIND_CLINK: i32 = 20;
 
+/// `ftCo_MS_DeadUpFall`, whose animation slot holds the waiting-with-an-item animation.
+const ANIM_WAIT_ITEM: i32 = 6;
+
 impl Running<'_> {
     /// Sets the rate of the fighter's animation, `ftAnim_SetAnimRate`: on its joints and blend
     /// skeleton (`ftAnim_8006F0FC`), or while the state is frozen, for when it thaws.
@@ -62,9 +65,9 @@ impl Running<'_> {
     }
 
     /// Waiting, blending into it over `blend` frames, `ft_8008A348`: a stamina loss lies
-    /// down instead; holding the hammer isn't ported, nor landing from the air.
+    /// down instead (holding the hammer isn't ported); Peach puts her parasol away, and an
+    /// item in one hand plays the character's waiting-with-an-item animation.
     #[doc(alias = "ft_8008A348")]
-    #[doc(alias = "ftCo_800C5240")]
     #[doc(alias = "ftCommon_8007EFC0")]
     pub fn enter_wait_blend(&mut self, gobj: GObjId, blend: f32) {
         let f = self.game.fighter_id(gobj);
@@ -73,16 +76,27 @@ impl Running<'_> {
             self.enter_down_spot(gobj);
             return;
         }
-        // `ftCo_800C5240`: whether the item held is the hammer.
-        if fp.item_gobj.is_some() {
-            unported_call("itGetKind");
+        if self.holding_hammer(gobj) {
+            unported_call("ftCo_800C4ED8 (the hammer)");
         }
+        let fp = &self.game.fighters[f.0];
         if fp.ground_or_air != GA_GROUND {
             self.land(gobj);
         }
+        let fp = &self.game.fighters[f.0];
+        if fp.kind == crate::game::ft::peach::KIND_PEACH
+            && let Some(item) = fp.item_gobj
+            && crate::game::it::lib26b1::kind(self.game, item)
+                == crate::game::it::kinds::peachparasol::KIND
+        {
+            crate::game::it::kinds::peachparasol::remove(self, item);
+        }
         self.change_motion_state(gobj, MS_WAIT, 0, 0.0, 1.0, blend, None);
-        // `ftCo_8008A698`: holding an item not held in both hands plays `ftCo_MS_DeadUpFall`'s
-        // animation instead; no item gets here.
+        // `ftCo_8008A698`: an item in one hand plays the animation in `ftCo_MS_DeadUpFall`'s
+        // slot, the character's waiting with an item.
+        if self.holding_one_handed(gobj) && self.has_anim(gobj, ANIM_WAIT_ITEM) {
+            self.play_anim(gobj, ANIM_WAIT_ITEM);
+        }
         let x5f0 = self.common().u32(0x5F0) as u16;
         self.game.fighters[f.0].x209A = x5f0;
         match self.game.fighters[f.0].kind {
@@ -108,8 +122,8 @@ impl Running<'_> {
             self.enter_damage_fall(gobj);
             return;
         }
-        if fp.item_gobj.is_some() {
-            unported_call("itGetKind");
+        if self.holding_hammer(gobj) {
+            unported_call("ftCo_800C5D34 (the hammer)");
         }
         self.change_motion_state(gobj, MS_FALL, 1, 0.0, 1.0, 0.0, None);
         self.clamp_air_drift(f);

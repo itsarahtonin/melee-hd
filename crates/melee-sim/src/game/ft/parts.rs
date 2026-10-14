@@ -446,6 +446,12 @@ impl Game {
         fp.x221D_b2 = true;
     }
 
+    /// The model variant chosen, `ftParts_80074A74`.
+    #[doc(alias = "ftParts_80074A74")]
+    pub fn part_vis(&self, gobj: GObjId, model: usize) -> i32 {
+        i32::from(self.fighter(gobj).x5F4_arr[model].prev)
+    }
+
     /// Chooses no model variant, `ftParts_80074ACC`.
     #[doc(alias = "ftParts_80074ACC")]
     pub fn clear_part_vis(&mut self, gobj: GObjId) {

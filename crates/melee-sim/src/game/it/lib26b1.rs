@@ -34,9 +34,69 @@ pub fn is_heavy(game: &Game, data: &Archives, gobj: GObjId) -> bool {
 }
 
 /// How a fighter uses the item (its attributes' `x0_78`), `it_8026B30C`.
-// Ports `it_8026B30C`; aliased once a check reaches it.
+#[doc(alias = "it_8026B30C")]
 pub fn use_kind(game: &Game, data: &Archives, gobj: GObjId) -> i32 {
     i32::from(attr_of(item(game, gobj)).x0_78(data))
+}
+
+/// Whether the item, of kind 16, 21 to 23 or 25, has no uses left (`xD4C`), `it_8026B594`.
+// Ports `it_8026B594`; aliased once a check reaches it.
+pub fn is_empty_shooter(game: &Game, gobj: GObjId) -> bool {
+    let ip = item(game, gobj);
+    matches!(ip.kind, 16 | 21 | 22 | 23 | 25) && ip.xD4C <= 0
+}
+
+/// The item's kind, `itGetKind`.
+#[doc(alias = "itGetKind")]
+pub fn kind(game: &Game, gobj: GObjId) -> i32 {
+    item(game, gobj).kind
+}
+
+/// How a fighter's hand holds the item, `itGetHoldKind`.
+#[doc(alias = "itGetHoldKind")]
+pub fn hold_kind(game: &Game, data: &Archives, gobj: GObjId) -> i32 {
+    i32::from(attr_of(item(game, gobj)).hold_kind(data))
+}
+
+/// The item's damage multiplier, `itGetDamageMultiplier`.
+#[doc(alias = "itGetDamageMultiplier")]
+pub fn damage_mul(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
+    attr_of(item(game, gobj)).f32(data, super::data::attr::DAMAGE_MUL)
+}
+
+/// Where fighters reach for the item, `it_8026B344`: its position plus its grab offset
+/// (`xBCC_unk`) the way it faces.
+// Ports `it_8026B344`; aliased once a check reaches it.
+pub fn grab_pos(game: &Game, gobj: GObjId) -> Vec3 {
+    let ip = item(game, gobj);
+    Vec3::new(
+        mem(fp::fmadds(
+            reg(ip.facing_dir),
+            reg(ip.xBCC_unk.x),
+            reg(ip.pos.x),
+        )),
+        mem(fp::fadds(reg(ip.pos.y), reg(ip.xBCC_unk.y))),
+        ip.pos.z,
+    )
+}
+
+/// How far from its grab point fighters reach it, `itGetGrabRangeX` and `itGetGrabRangeY`.
+// Ports `itGetGrabRangeX` and `itGetGrabRangeY`; aliased once a check reaches them.
+pub fn grab_range(game: &Game, gobj: GObjId) -> (f32, f32) {
+    let r = &item(game, gobj).xBD4_grabRange;
+    (r.x, r.y)
+}
+
+/// Lets the item make its throw and drop sounds, `it_8026BCF4`.
+#[doc(alias = "it_8026BCF4")]
+pub fn unsilence(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDCD_flag.x0.b2 = false;
+}
+
+/// Silences the item's throw and drop sounds, `it_8026BD0C`.
+#[doc(alias = "it_8026BD0C")]
+pub fn silence(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDCD_flag.x0.b2 = true;
 }
 
 /// Scales the item to `mul` times its attributes' scale, `it_8026BAE8`.

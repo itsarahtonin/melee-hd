@@ -4944,3 +4944,210 @@ ftCo_800A0098	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): Nana
 ftCo_800B3900	leaf-check nana: every saved call, against the machine code; the r5 its calls leave reaches the DI
 ftCo_800B0CA8	leaf-check nana: Nana's decision calls it in the saved frames; the r5 it leaves (Popo's state, else no item's 0) is her DI's stick with no knockback
 ftCo_800AC5A0	leaf-check nana: her DI with the stick neutral, and pushing it with no knockback, under 3.16's NanaDeterminism code
+pl_8003E17C	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+pl_8003E978	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+fn_8003E998	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+pl_8003EA08	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+ftAnim_80070C48	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+ftAnim_80070CC4	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+ftAnim_80070FB4	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+ftAction_80072894	melee-oracle diff, Peach vs Sheik BF Game_20260129T133041 (docs/oracle.md), its first 12,376 ticks in Slippi float mode with no stand-ins: Peach's states and items reach it
+ftParts_80074A74	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+ftCommon_8007E6DC	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+ftCommon_8007E83C	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+ftGetParasolStatus	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+ft_80087988	leaf-check peach: peach_functions reaches it from the parasol's fall states in clean comparisons
+checkItemThrow	melee-oracle diff, Peach vs Sheik BF Game_20260129T133041 (docs/oracle.md), its first 12,376 ticks in Slippi float mode with no stand-ins: Peach's states and items reach it
+ftCo_800951D0	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_80095254	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_80095700	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+ftCo_80095744	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_800957F4	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_80095A30	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_80095D5C	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+ftCo_ItemThrow_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_80095EFC	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemThrow_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemThrow_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_LightThrowDash_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_LightThrowAir_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_LightThrowDashDrop_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_LightThrow_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_80096250	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_LightThrowAir_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_80096374	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_JumpAerial_Enter	melee-oracle diff, Peach vs Sheik BF Game_20260129T133041 (docs/oracle.md), its first 12,376 ticks in Slippi float mode with no stand-ins: Peach's states and items reach it
+ft_800CEF08	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_800CEFE0	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemParasolOpen_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemParasolOpen_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemParasolOpen_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemParasolOpen_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_800CF280	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemParasolFall_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemParasolFall_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemParasolFall_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemParasolFall_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_800CF3C8	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemParasolFallSpecial_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemParasolFallSpecial_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemParasolFallSpecial_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_ItemParasolFallSpecial_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftCo_800DF50C	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+ftPe_Init_OnDeath	melee-oracle diff, Peach vs Sheik BF Game_20260129T133041 (docs/oracle.md), its first 12,376 ticks in Slippi float mode with no stand-ins: Peach's creation and spawns run it
+ftPe_Init_OnLoad	melee-oracle diff, Peach vs Sheik BF Game_20260129T133041 (docs/oracle.md), its first 12,376 ticks in Slippi float mode with no stand-ins: Peach's creation and spawns run it
+ftPe_Init_OnDeath2	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_Init_OnItemPickup	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_Init_OnItemInvisible	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_Init_OnItemVisible	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_Init_OnItemDrop	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_Init_LoadSpecialAttrs	melee-oracle diff, Peach vs Sheik BF Game_20260129T133041 (docs/oracle.md), its first 12,376 ticks in Slippi float mode with no stand-ins: Peach's creation and spawns run it
+ftPe_Init_8011B93C	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_Init_OnKnockbackEnter	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_Init_OnKnockbackExit	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_Float_CheckContinueInput	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+ftPe_8011BB6C	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_Float_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_Float_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_Float_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_Float_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_UpdateFloatDir	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_FloatFall_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_FloatFall_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_FloatFall_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_FloatFall_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_8011BE80	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_8011BF34	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_FloatAttackAir_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_FloatAttackAir_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_FloatAttackAir_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_FloatAttackAir_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_AttackS4_Enter	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_AttackS4_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_AttackS4_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_AttackS4_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_AttackS4_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+pickVeg	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialLw_UnsetVeg	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialLw_8011CFA0	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+spawnVeg	melee-oracle diff, Peach vs Sheik BF Game_20260129T133041 (docs/oracle.md), its first 12,376 ticks in Slippi float mode with no stand-ins: Peach's states and items reach it
+ftPe_SpecialLw_Enter	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirLw_Enter	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+handleAirColl	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+handleColl	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialLw_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirLw_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialLw_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirLw_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialLw_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirLw_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHi_8011D424	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_8011D518	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_8011D598	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHi_8011D620	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHi_8011D650	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHi_NotActive	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHi_Enter	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirHi_Enter	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHiStart_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirHiStart_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHiStart_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirHiStart_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHiStart_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirHiStart_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHi_8011DD8C	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHiStart_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirHiStart_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHiEnd_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirHiEnd_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHiEnd_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirHiEnd_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHiEnd_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirHiEnd_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHi_8011E064	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialHiEnd_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirHiEnd_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialN_DoDeath2	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialN_OnDeath2	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+Item_8026ABD8	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+Item_8026AD20	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+itGetKind	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+it_8026B30C	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+itGetHoldKind	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+itGetDamageMultiplier	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+it_8026BCF4	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+it_8026BD0C	melee-oracle diff, Peach vs Sheik BF Game_20260129T133041 (docs/oracle.md), its first 12,376 ticks in Slippi float mode with no stand-ins: Peach's states and items reach it
+it_802731A4	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+it_802731E0	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+it_80273748	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+it_80274198	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+it_802741F4	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+it_802BD32C	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BD45C	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachTurnip_Logic56_Destroyed	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BD4AC	melee-oracle diff, Peach vs Sheik BF Game_20260129T133041 (docs/oracle.md), its first 12,376 ticks in Slippi float mode with no stand-ins: Peach's states and items reach it
+itPeachTurnip_Logic56_PickedUp	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachturnip_UnkMotion4_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachturnip_UnkMotion4_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachturnip_UnkMotion1_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachturnip_UnkMotion1_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachTurnip_Logic56_Thrown	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachturnip_UnkMotion3_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachturnip_UnkMotion3_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachturnip_UnkMotion3_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachTurnip_Logic56_Dropped	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachTurnip_Logic56_DmgDealt	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachTurnip_Logic56_Clanked	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachTurnip_Logic56_Reflected	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachTurnip_Logic56_HitShield	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachTurnip_Logic56_ShieldBounced	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachTurnip_Logic56_EvtUnk	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BDA40	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BDA64	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+itPeachParasol_Logic60_Destroyed	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BDB94	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BDBF8	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BDC18	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BDC38	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachParasol_Logic60_PickedUp	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachparasol_UnkMotion2_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BDD3C	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BDD40	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BDDB4	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachParasol_Logic60_EvtUnk	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+reset	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialS_Enter	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirS_Enter	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+doAirEnd0	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialSStart_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirSStart_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialSStart_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirSStart_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialSStart_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirSStart_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialSStart_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirSStart_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+enterAirStart	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+enterStart	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirSJump_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirSJump_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirSJump_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirSJump_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+enterAirJump	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialSEnd_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirSEnd_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialSEnd_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirSEnd_IASA	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialSEnd_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirSEnd_Phys	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialSEnd_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+ftPe_SpecialAirSEnd_Coll	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+enterAirEnd	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+enterEnd	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+enterEndSmash	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+enterAirEndSmash	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BD158	leaf-check peach: peach_functions reaches it from the callbacks it serves in clean comparisons
+itPeachExplode_Logic55_DmgDealt	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+it_802BD248	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachexplode_UnkMotion1_Anim	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state
+itPeachExplode_Logic55_EvtUnk	leaf-check peach: peach_functions runs it from real states of Peach's Battlefield replay, its own saved calls and its unit's, and compares the whole state

@@ -695,7 +695,7 @@ pub fn show_tree(game: &mut Game, j: Option<JObjId>) {
 
 /// The item scaled by its owner's size (`ftLib_GetScale`), its model, hitboxes and ranges
 /// with it, `it_80274594`.
-// Ports `it_80274594`; aliased once a check reaches it.
+#[doc(alias = "it_80274594")]
 pub fn scale_by_owner(r: &mut Running, gobj: GObjId) {
     let owner = item(r.game, gobj).owner.expect("an item without an owner");
     let scale = super::owner::fighter(r.game, owner).x34_scale.y;

@@ -476,7 +476,6 @@ impl Running<'_> {
     /// stick passes `threshold`, `ftCommon_CalcGroundAccel_AccelToLStickX` (through
     /// `ftCommon_CalcGroundAccel_AccelToVel`).
     #[doc(alias = "ftCommon_CalcGroundAccel_AccelToLStickX")]
-    #[doc(alias = "ftCommon_CalcGroundAccel_AccelToVel")]
     pub fn ground_accel_to_stick(
         fp: &mut Fighter,
         threshold: f64,
@@ -488,6 +487,30 @@ impl Running<'_> {
         fp.xE4_ground_accel_1 = mem(toward_target(vel, accel, target));
     }
 }
+
+impl Running<'_> {
+    /// The ground acceleration toward `target` (`accel` cut short of overshooting it, all of
+    /// the way at a zero target), `ftCommon_CalcGroundAccel_AccelToVel` (whose friction goes
+    /// unread).
+    #[doc(alias = "ftCommon_CalcGroundAccel_AccelToVel")]
+    pub fn ground_accel_to_vel(fp: &mut Fighter, accel: f64, target: f64) {
+        let vel = reg(fp.gr_vel);
+        fp.xE4_ground_accel_1 = mem(toward_target(vel, accel, target));
+    }
+
+    /// `ftCommon_8007F7B4`: the ground speed and horizontal velocity turned away from the way
+    /// the fighter faces.
+    // Ports `ftCommon_8007F7B4`; aliased once a check reaches it.
+    pub fn speed_away_from_facing(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        let back = fp::fneg(reg(fp.facing_dir));
+        fp.gr_vel = mem(fp::fmuls(back, abs(reg(fp.gr_vel))));
+        fp.self_vel.x = mem(fp::fmuls(back, abs(reg(fp.self_vel.x))));
+    }
+}
+
+/// `ftCommon_8007F7B4`, which states keep as a callback.
+pub const SPEED_AWAY_FROM_FACING: u32 = 0x8007_F7B4;
 
 /// The acceleration toward `target` from `vel`: all of the way at a zero target, else `accel`
 /// cut short of overshooting it (`ftCommon_CalcGroundAccel_AccelToVel`'s and

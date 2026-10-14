@@ -7,6 +7,33 @@ use crate::hsd::gobj::GObjId;
 /// Runs the common state callback at `cb`, if one is ported here.
 pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
     match cb {
+        // The parasol's states.
+        0x800C_F0B8 => g.co_item_parasol_open_anim(gobj),
+        0x800C_F118 => g.co_item_parasol_open_iasa(gobj),
+        0x800C_F1A0 | 0x800C_F380 | 0x800C_F494 => g.co_item_parasol_phys(gobj),
+        0x800C_F258 | 0x800C_F3A0 => g.co_item_parasol_coll(gobj),
+        0x800C_F2B8 | 0x800C_F424 => g.co_item_parasol_fall_anim(gobj),
+        0x800C_F2BC => g.co_item_parasol_fall_iasa(gobj),
+        0x800C_F428 => g.co_item_parasol_fall_special_iasa(gobj),
+        0x800C_F4B4 => g.co_item_parasol_fall_special_coll(gobj),
+        // ftCo_ItemThrow_Anim
+        0x8009_5E80 => g.co_item_throw_anim(gobj),
+        // ftCo_80095EFC, the throws' accessory
+        0x8009_5EFC => g.item_throw_hand(gobj),
+        // ftCo_ItemThrow_IASA
+        0x8009_6120 => g.co_item_throw_iasa(gobj),
+        // ftCo_ItemThrow_Phys
+        0x8009_6124 => g.co_item_throw_phys(gobj),
+        // ftCo_LightThrowDash_Phys
+        0x8009_6144 => g.co_light_throw_dash_phys(gobj),
+        // ftCo_LightThrowAir_Phys
+        0x8009_61B0 => g.co_light_throw_air_phys(gobj),
+        // ftCo_LightThrowDashDrop_Coll
+        0x8009_6208 => g.co_light_throw_dash_drop_coll(gobj),
+        // ftCo_LightThrow_Coll
+        0x8009_6228 => g.co_light_throw_coll(gobj),
+        // ftCo_LightThrowAir_Coll
+        0x8009_634C => g.co_light_throw_air_coll(gobj),
         // ftCo_CaptureDamageHi_Anim, ftCo_CaptureDamageLw_Anim
         0x800D_C2E4 | 0x800D_C468 => {
             g.co_capture_damage_anim(gobj);

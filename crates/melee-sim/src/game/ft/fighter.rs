@@ -218,7 +218,18 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
     if fp.x2221_b4 && fp.x2104 != 0 {
         fp.x2104 -= 1;
         if fp.x2104 == 0 {
-            unported_call("ftCo_80095744");
+            fp.x2221_b4 = false;
+            let item = fp.item_gobj;
+            let parasol = item.is_some_and(|i| {
+                crate::game::it::lib26b1::kind(g.game, i)
+                    == crate::game::it::kinds::peachparasol::KIND
+            });
+            if parasol {
+                g.game.fighters[f.0].x2221_b5 = true;
+                g.enter_fall_special_basic(gobj);
+            } else {
+                g.item_drop_from_hand(gobj);
+            }
         }
     }
     // Off-screen damage.
@@ -262,10 +273,10 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
             g.stop_rumble(f, 2);
         }
     }
-    let fp = &mut g.game.fighters[f.0];
-    if fp.item_gobj.is_some() {
-        unported_call("itGetKind");
+    if g.holding_hammer(gobj) {
+        unported_call("ftCo_800C511C (the hammer)");
     }
+    let fp = &mut g.game.fighters[f.0];
     if fp.dmg.x18fa_model_shift_frames != 0 {
         fp.dmg.x18fa_model_shift_frames = fp.dmg.x18fa_model_shift_frames.wrapping_sub(1);
         fp.dmg.x18FC = fp.dmg.x18FC.wrapping_add(1);

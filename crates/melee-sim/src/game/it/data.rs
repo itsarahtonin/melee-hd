@@ -80,6 +80,11 @@ impl Attr {
         (data.u8(self.0) >> 3) & 0xF
     }
 
+    /// `x0_hold_kind`: how a fighter's hand holds the item.
+    pub fn hold_kind(self, data: &Archives) -> u8 {
+        data.u8(self.0) & 7
+    }
+
     /// `x1_1`: the axis the item spins about.
     pub fn x1_1(self, data: &Archives) -> u8 {
         data.u8(self.0.at(1)) >> 6

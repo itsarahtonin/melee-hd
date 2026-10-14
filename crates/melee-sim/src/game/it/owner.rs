@@ -7,7 +7,6 @@ use gekko_fp as fp;
 use melee_data::archive::Archives;
 
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::handles::FighterId;
 use crate::game::state::{Game, Running, UserData};
 use crate::game::structs::{_itECB, Fighter};
@@ -184,9 +183,10 @@ pub fn release(r: &mut Running, gobj: GObjId, fighter_gobj: GObjId, special: boo
             clear_held_special_item(r.game, fighter_gobj);
         }
     } else if is_holding(r.game, fighter_gobj, gobj) {
+        // `ftLib_ReleaseItem`.
         let fp = fighter(r.game, fighter_gobj);
         if fp.item_gobj.is_some() || fp.x1978.is_some() {
-            code::unported_call("ftCommon_8007E6DC (ftLib_ReleaseItem)");
+            r.release_item(fighter_gobj, gobj, true);
         }
     }
 }

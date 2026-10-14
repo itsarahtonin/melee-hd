@@ -429,6 +429,66 @@ impl Running<'_> {
         }
     }
 
+    /// The pose part animation set `slot` takes when shown (-1 none), `ftAnim_80070FB4`: a
+    /// hand's hold pose for an item.
+    #[doc(alias = "ftAnim_80070FB4")]
+    pub fn set_part_anim_pose(&mut self, gobj: GObjId, slot: i32, anim: i32) {
+        self.game.fighter_mut(gobj).x8B0[slot as usize].x10 = anim as i8;
+    }
+
+    /// Plays set `slot`'s pose at once, if it has one, `ftAnim_80070C48`.
+    #[doc(alias = "ftAnim_80070C48")]
+    pub fn show_part_anim_pose(&mut self, gobj: GObjId, slot: i32) {
+        let anim = self.game.fighter(gobj).x8B0[slot as usize].x10;
+        if anim != -1 {
+            self.apply_part_anim(gobj, slot, i32::from(anim), 0.0);
+        }
+    }
+
+    /// Ends set `slot`'s part animation, `ftAnim_80070CC4`: its parts stop playing it, and
+    /// they go back to the action's animation (`ftAnim_8006EED4`) or, with none, to the
+    /// costume's pose (`ftAnim_8006FA58`).
+    #[doc(alias = "ftAnim_80070CC4")]
+    pub fn end_part_anim(&mut self, gobj: GObjId, slot: i32) {
+        let f = self.game.fighter_id(gobj);
+        let fp = &self.game.fighters[f.0];
+        let anim = fp.x8B0[slot as usize].x11;
+        if anim == -1 {
+            return;
+        }
+        let kind = fp.kind;
+        let ft_data = fp.ft_data.expect("a fighter without data");
+        let list = self.data.ptr(ft_data.at(0x1C)).expect("ftData x1C");
+        let set = self
+            .data
+            .ptr(list.at(4 * slot as u32))
+            .expect("ftData x1C entry");
+        let start = i32::from(self.data.u16(set));
+        let anims = self.data.ptr(set.at(8)).expect("the set's animations");
+        let parts = fp.parts.expect("a fighter without parts");
+        let mut stack = super::bind::DataStack::<MAX_ANIM_JOINT_DEPTH>::new();
+        let (mut i, mut cur) = (start, self.data.ptr(anims.at(4 * anim as u32)));
+        while let Some(a) = cur {
+            while self.part_mask(kind, i) != 0 {
+                i += 1;
+            }
+            self.game.fighter_parts[parts.0][i as usize].x8[0] &= !0x04;
+            i += 1;
+            cur = next_anim_joint(self.data, a, &mut stack);
+        }
+        let fp = &mut self.game.fighters[f.0];
+        fp.x8B0[slot as usize].x11 = -1;
+        if fp.x590.is_some() {
+            let (frame, speed) = (fp.cur_anim_frame, fp.frame_speed_mul);
+            self.restart_part_anim(f, start, frame, speed);
+            return;
+        }
+        let j = self.bone(f, start).joint;
+        let costume = self.game.fighters[f.0].x108_costume_joint;
+        let desc = self.part_joint_desc(f, j, costume);
+        self.reset_parts(f, start, desc, false);
+    }
+
     /// Blends each of the five part animations (`x8B0`) in progress, `ftAnim_800707B0`.
     #[doc(alias = "ftAnim_800707B0")]
     pub fn blend_part_anims(&mut self, gobj: GObjId) {

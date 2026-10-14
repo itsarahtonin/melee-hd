@@ -274,9 +274,8 @@ impl Running<'_> {
         if self.game.fighters[f.0].ground_or_air == GA_GROUND {
             self.go_airborne(f);
         }
-        if self.game.fighters[f.0].item_gobj.is_some() {
-            // `ftGetParasolStatus`.
-            unported_call("ftGetParasolStatus with an item");
+        if self.parasol_status(gobj) != -1 {
+            unported_call("ftCo_800CF4DC (tumbling under a parasol)");
         }
         self.change_motion_state(gobj, ms::DAMAGE_FALL, 0x18001, 0.0, 1.0, 0.0, None);
         self.clamp_air_drift(f);

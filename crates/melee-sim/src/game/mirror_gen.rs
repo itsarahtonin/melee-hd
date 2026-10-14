@@ -19,7 +19,7 @@ use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::it::Var;
-use crate::game::it::{IgnoreId, ItemVars};
+use crate::game::it::{IgnoreId, ItemVars, TurnipFlag};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -18066,6 +18066,75 @@ impl Mirror for itClimbersBlizzard_ItemVars {
                     &format!("{path}.flag0"),
                     format!("{:?}", self.flag0.peek()),
                     format!("{:?}", m.bits(at, 32, 1)),
+                );
+            }
+        }
+    }
+}
+
+impl Mirror for itPeachTurnip_ItemVars {
+    const SIZE: u32 = 0x18;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itPeachTurnip_ItemVars {
+            xDD4: Var::new(TurnipFlag::import(m, at + 0x0, cx)),
+            xDD8: Var::new(m.u32(at + 0x4) as i32),
+            xDDC_damage: Var::new(m.u32(at + 0x8) as i32),
+            xDE0_scl: Var::new(f32::from_bits(m.u32(at + 0xc))),
+            xDE4_owner: Var::new(cx.import_handle("GObjId", m.u32(at + 0x10)).map(GObjId)),
+            xDE8_scl: Var::new(f32::from_bits(m.u32(at + 0x14))),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.xDD4.live(&format!("{path}.xDD4"), cx) {
+            self.xDD4
+                .peek()
+                .compare(m, at + 0x0, &format!("{path}.xDD4"), cx);
+        }
+        if self.xDD8.live(&format!("{path}.xDD8"), cx) {
+            if (*self.xDD8.peek()) != m.u32(at + 0x4) as i32 {
+                cx.mismatch(
+                    &format!("{path}.xDD8"),
+                    format!("{:?}", (*self.xDD8.peek())),
+                    format!("{:?}", m.u32(at + 0x4) as i32),
+                );
+            }
+        }
+        if self.xDDC_damage.live(&format!("{path}.xDDC_damage"), cx) {
+            if (*self.xDDC_damage.peek()) != m.u32(at + 0x8) as i32 {
+                cx.mismatch(
+                    &format!("{path}.xDDC_damage"),
+                    format!("{:?}", (*self.xDDC_damage.peek())),
+                    format!("{:?}", m.u32(at + 0x8) as i32),
+                );
+            }
+        }
+        if self.xDE0_scl.live(&format!("{path}.xDE0_scl"), cx) {
+            if (*self.xDE0_scl.peek()).to_bits() != m.u32(at + 0xc) {
+                cx.mismatch(
+                    &format!("{path}.xDE0_scl"),
+                    format!("{:?}", (*self.xDE0_scl.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0xc))),
+                );
+            }
+        }
+        if self.xDE4_owner.live(&format!("{path}.xDE4_owner"), cx) {
+            cx.compare_handle(
+                &format!("{path}.xDE4_owner"),
+                "GObjId",
+                (*self.xDE4_owner.peek()).map(|h| h.0),
+                m.u32(at + 0x10),
+            );
+        }
+        if self.xDE8_scl.live(&format!("{path}.xDE8_scl"), cx) {
+            if (*self.xDE8_scl.peek()).to_bits() != m.u32(at + 0x14) {
+                cx.mismatch(
+                    &format!("{path}.xDE8_scl"),
+                    format!("{:?}", (*self.xDE8_scl.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x14))),
                 );
             }
         }

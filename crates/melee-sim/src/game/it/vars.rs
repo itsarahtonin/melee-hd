@@ -148,6 +148,7 @@ members! {
     PikachuThunder, pikachu_thunder, itPikachuthunder_ItemVars, [PIKACHU_THUNDER, PICHU_THUNDER];
     PikachuJoltGround, pikachu_jolt_ground, itPikachutJoltGround_ItemVars, [PIKACHU_TJOLT_GROUND, PICHU_TJOLT_GROUND];
     PikachuJoltAir, pikachu_jolt_air, itPikachutJoltAir_ItemVars, [PIKACHU_TJOLT_AIR, PICHU_TJOLT_AIR];
+    PeachTurnip, peach_turnip, itPeachTurnip_ItemVars, [PEACH_TURNIP];
     Heiho, heiho, HeihoVars, [HEIHO];
     ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE];
     ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];
@@ -194,6 +195,33 @@ pub struct Var<T> {
 }
 
 const ALL: u8 = 0b111;
+
+/// Peach's turnip's flag byte (`itPeachTurnip_ItemVars::xDD4`, an `UnkFlagStruct`), of which
+/// the turnip reads and writes only the top bit, "picked up before": the other seven keep what
+/// the block held, which melee-hd doesn't model, so the comparer checks the top bit alone
+/// (docs/engine.md).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct TurnipFlag {
+    /// The top bit.
+    pub picked_up: bool,
+}
+
+impl Mirror for TurnipFlag {
+    const SIZE: u32 = 1;
+
+    fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
+        TurnipFlag {
+            picked_up: m.bytes::<1>(at)[0] & 0x80 != 0,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let theirs = m.bytes::<1>(at)[0] & 0x80 != 0;
+        if self.picked_up != theirs {
+            cx.mismatch(path, format!("{}", self.picked_up), format!("{theirs}"));
+        }
+    }
+}
 
 impl<T: Copy> Var<T> {
     /// A live field holding `v`.

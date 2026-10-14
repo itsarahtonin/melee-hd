@@ -180,8 +180,8 @@ class Gen:
             off = f["offset_bits"] // 8
             bits = f" (bits {f['offset_bits'] % 8}..+{f['bits']})" if "bits" in f else ""
             if "splice" in f:
-                assert not self.is_tracked(rid), f"a splice in tracked {name}"
-                t = f["splice"]
+                # In a tracked struct the spliced type is one tracked field.
+                t = f"Var<{f['splice']}>" if self.is_tracked(rid) else f["splice"]
             elif self.is_tracked(rid):
                 t = self.tracked_ty(rid, f)
             else:
@@ -195,7 +195,7 @@ class Gen:
         out.append(f"        {name} {{")
         for f in self.fields(rid):
             if "splice" in f:
-                d = "Default::default()"
+                d = "Var::new(Default::default())" if self.is_tracked(rid) else "Default::default()"
             elif self.is_tracked(rid):
                 d = self.tracked_default(rid, f)
             else:
@@ -212,7 +212,7 @@ class Gen:
             out.append("    pub fn mark_stale(&mut self) {")
             for f in self.fields(rid):
                 fname = field_name(f["name"])
-                t = f["type"]
+                t = f.get("type", {"k": "splice"})
                 if "bits" not in f and t["k"] == "arr":
                     assert t["of"]["k"] != "arr", f"a nested array in tracked {name}"
                     out.append(f"        self.{fname}.iter_mut().for_each(|v| v.mark_stale());")
@@ -459,6 +459,10 @@ class Gen:
             cmp.append(f"        if self.{fname}.live(&{path}, cx) {{")
             cmp.extend("            " + s for s in stmts)
             cmp.append("        }")
+        if "splice" in f:
+            imp.append(f"            {fname}: Var::new({f['splice']}::import(m, {at}, cx)),")
+            guarded([f"self.{fname}.peek().compare(m, {at}, &{path}, cx);"])
+            return
         if "bits" in f:
             bt = bit_type(f["bits"])
             read = f"m.bits(at, {f['offset_bits']}, {f['bits']})"
