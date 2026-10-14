@@ -27,3 +27,12 @@ egui = { version = "0.36", default-features = false, features = ["default_fonts"
 egui-wgpu = { version = "0.36", default-features = false }
 egui-winit = { version = "0.36", default-features = false }
 png = "0.18"
+# The disc picker and the error boxes; Common Controls 6 for their own button labels, which
+# build.rs's manifest asks for.
+rfd = { version = "0.17", features = ["common-controls-v6"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_Console"] }
+
+[target.'cfg(windows)'.build-dependencies]
+embed-manifest = "1.5"
