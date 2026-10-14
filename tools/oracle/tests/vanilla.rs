@@ -16,6 +16,9 @@ use melee_sim::game::gm::vs_mode::{GamePrefs, GameRules};
 use melee_sim::game::vs_match::{DiscFile, Match, Player, Settings};
 
 const TRACE: &str = "traces/vanilla/menus-ics-fox-fod.trc";
+/// The same run with the item switch set to none first (VS mode, Custom Rules, Item Switch),
+/// as the player's own matches have it (`Settings::vs`).
+const TRACE_NO_ITEMS: &str = "traces/vanilla/menus-ics-fox-fod-noitems.trc";
 
 /// Fountain of Dreams' and Pokémon Stadium's `StKind`s.
 const FOUNTAIN: u16 = 2;
@@ -81,8 +84,8 @@ fn fighters_get_the_consoles_addresses() {
 
 /// `melee-oracle vs-heap` on the trace: its exit status and output, or none when the trace or
 /// the disc isn't here.
-fn vs_heap(args: &[&str]) -> Option<(bool, String)> {
-    let trace = ssbm_rs_local(TRACE);
+fn vs_heap(trace: &str, args: &[&str]) -> Option<(bool, String)> {
+    let trace = ssbm_rs_local(trace);
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
         eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
         return None;
@@ -104,7 +107,7 @@ fn vs_heap(args: &[&str]) -> Option<(bool, String)> {
 /// memory after each of the trace's 304 ticks of play.
 #[test]
 fn allocator_model_follows_the_trace() {
-    let Some((ok, out)) = vs_heap(&[]) else {
+    let Some((ok, out)) = vs_heap(TRACE, &[]) else {
         return;
     };
     assert!(ok, "{out}");
@@ -121,9 +124,30 @@ fn allocator_model_follows_the_trace() {
 /// The check fails on a heap laid out 32 bytes off.
 #[test]
 fn a_shifted_heap_fails_the_check() {
-    let Some((ok, out)) = vs_heap(&["--shift-heap", "20"]) else {
+    let Some((ok, out)) = vs_heap(TRACE, &["--shift-heap", "20"]) else {
         return;
     };
+    assert!(!ok, "{out}");
+    assert!(out.contains("the fighters' addresses differ"), "{out}");
+}
+
+/// With the item switch at none the random items' tables aren't made, so the fighters sit six
+/// blocks lower; the model follows the trace's 313 ticks, and a model with the items on fails.
+#[test]
+fn allocator_model_follows_the_trace_without_items() {
+    let Some((ok, out)) = vs_heap(TRACE_NO_ITEMS, &["--item-freq", "none"]) else {
+        return;
+    };
+    assert!(ok, "{out}");
+    assert!(
+        out.contains("the allocator model's and the trace's: [80c7dc20, 80caf520, 80ce0e20]"),
+        "{out}"
+    );
+    assert!(
+        out.contains("313 ticks compared, to the trace's end"),
+        "{out}"
+    );
+    let (ok, out) = vs_heap(TRACE_NO_ITEMS, &[]).unwrap();
     assert!(!ok, "{out}");
     assert!(out.contains("the fighters' addresses differ"), "{out}");
 }

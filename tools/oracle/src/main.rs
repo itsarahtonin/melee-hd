@@ -59,7 +59,7 @@ fn run(args: Vec<String>) -> ExitCode {
             eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");
             eprintln!("       melee-oracle trace-heap TRACE");
             eprintln!(
-                "       melee-oracle vs-heap TRACE --stage STKIND --player PORT:CKIND... [--ticks N]"
+                "       melee-oracle vs-heap TRACE --stage STKIND --player PORT:CKIND... [--item-freq F] [--ticks N]"
             );
             eprintln!("       melee-oracle rules REPLAY.slp...");
             ExitCode::from(2)

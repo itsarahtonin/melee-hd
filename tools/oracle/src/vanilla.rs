@@ -25,6 +25,7 @@ fn is_first_tick(image: &Image) -> bool {
 
 pub fn vs_heap(args: &[&str]) -> ExitCode {
     let (mut stage, mut players, mut ticks, mut shift) = (None, Vec::new(), 0u32, 0u32);
+    let mut prefs = GamePrefs::default();
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
@@ -44,6 +45,15 @@ pub fn vs_heap(args: &[&str]) -> ExitCode {
                 });
             }
             "--ticks" => ticks = it.next().and_then(|t| t.parse().ok()).expect("--ticks N"),
+            // The item switch's frequency as the menus set it (0 to 4, or `none`), else a new
+            // save's (medium).
+            "--item-freq" => {
+                prefs.item_freq = match it.next().copied() {
+                    Some("none") => 0xFF,
+                    Some(f) => f.parse().expect("--item-freq 0-4|none"),
+                    None => panic!("--item-freq 0-4|none"),
+                }
+            }
             // Moves the model's main heap by this many bytes, to see the check fail.
             "--shift-heap" => {
                 shift = it
@@ -56,16 +66,11 @@ pub fn vs_heap(args: &[&str]) -> ExitCode {
     }
     let (&[trace_path], Some(stage)) = (&pos[..], stage) else {
         eprintln!(
-            "usage: melee-oracle vs-heap TRACE --stage STKIND --player PORT:CKIND... [--ticks N]"
+            "usage: melee-oracle vs-heap TRACE --stage STKIND --player PORT:CKIND... [--item-freq F] [--ticks N]"
         );
         return ExitCode::from(2);
     };
-    let mut settings = Settings::vs_with(
-        stage,
-        &players,
-        &GameRules::default(),
-        &GamePrefs::default(),
-    );
+    let mut settings = Settings::vs_with(stage, &players, &GameRules::default(), &prefs);
     let Some(layout) = settings.heap.as_mut() else {
         eprintln!("the match runs without the allocator model (no Ice Climber)");
         return ExitCode::FAILURE;
