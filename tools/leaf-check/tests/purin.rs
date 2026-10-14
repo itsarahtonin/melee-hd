@@ -41,8 +41,8 @@
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
-    Report, Ret, SKIP, Stub, StubRet, check_calls_stubbed, gobj_arg, peek_u32, poke_f32, poke_u32,
-    saved_calls, user_data_arg,
+    Prepare, Report, Ret, SKIP, Stub, StubRet, Variant, check_variants, gobj_arg, peek_u32,
+    poke_f32, poke_u32, saved_calls, user_data_arg,
 };
 use melee_capture::import::Maps;
 use melee_sim::game::ft::fox::ext as fox_ext;
@@ -250,6 +250,7 @@ fn wanted(name: &str) -> bool {
 /// Every saved call of each of Jigglypuff's functions, run as it was saved, with the stand-ins
 /// answering no and yes.
 fn as_saved(counts: &mut BTreeMap<u32, usize>) {
+    let (no, yes) = (stubs(false), stubs(true));
     for (addr, name) in functions() {
         if skipped(&name, addr) || !wanted(&name) {
             continue;
@@ -258,9 +259,16 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
             if saved_calls(&dir, &name).is_empty() {
                 continue;
             }
-            for yes in [false, true] {
-                let reports =
-                    check_calls_stubbed(&dir, &name, 0, &stubs(yes), &|_, _| {}, &run_purin);
+            let prepare = |_: &mut Call, _: usize| {};
+            let variants: Vec<Variant> = [&no, &yes]
+                .into_iter()
+                .map(|stubs| Variant {
+                    prepare: &prepare,
+                    ours: &run_purin,
+                    stubs,
+                })
+                .collect();
+            for reports in check_variants(&dir, &name, &variants) {
                 tally(&reports, counts);
             }
         }
@@ -297,30 +305,45 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
             continue;
         }
         let rounds = targets.len().div_ceil(total).max(1);
-        for round in 0..rounds {
-            let mut offset = round * total;
-            for (src, dir, n) in &runs {
-                for yes in [false, true] {
-                    let targets = &targets;
-                    let shift = offset + usize::from(yes) * targets.len() / 2;
-                    let reports = check_calls_stubbed(
-                        dir,
-                        src,
-                        0,
-                        &stubs(yes),
-                        &|call, i| {
-                            let (a, n) = &targets[(shift + i) % targets.len()];
-                            call.addr = *a;
-                            if std::env::var_os("PURIN_TRACE").is_some() {
-                                eprintln!("{src} #{i} (yes {yes}) runs {n}");
-                            }
-                            vary(call, shift + i);
-                        },
-                        &run_purin,
-                    );
-                    tally(&reports, counts);
-                }
-                offset += n;
+        // Each set of saved calls runs every round's targets, with the stand-ins answering no
+        // and yes, in one pass ([`check_variants`]): run `r`'s calls start `offset` targets
+        // further on, `offset` counting the calls of the runs before.
+        let (no, yes_stubs) = (stubs(false), stubs(true));
+        let targets = &targets;
+        for (j, (src, dir, _)) in runs.iter().enumerate() {
+            let before: usize = runs[..j].iter().map(|r| r.2).sum();
+            let shifts: Vec<(usize, bool)> = (0..rounds)
+                .flat_map(|round| {
+                    [false, true].map(|yes| {
+                        let shift = round * total + before + usize::from(yes) * targets.len() / 2;
+                        (shift, yes)
+                    })
+                })
+                .collect();
+            let prepares: Vec<Box<Prepare>> = shifts
+                .iter()
+                .map(|&(shift, yes)| -> Box<Prepare> {
+                    Box::new(move |call: &mut Call, i: usize| {
+                        let (a, n) = &targets[(shift + i) % targets.len()];
+                        call.addr = *a;
+                        if std::env::var_os("PURIN_TRACE").is_some() {
+                            eprintln!("{src} #{i} (yes {yes}) runs {n}");
+                        }
+                        vary(call, shift + i);
+                    })
+                })
+                .collect();
+            let variants: Vec<Variant> = shifts
+                .iter()
+                .zip(&prepares)
+                .map(|(&(_, yes), prepare)| Variant {
+                    prepare: &**prepare,
+                    ours: &run_purin,
+                    stubs: if yes { &yes_stubs } else { &no },
+                })
+                .collect();
+            for reports in check_variants(dir, src, &variants) {
+                tally(&reports, counts);
             }
         }
     }
