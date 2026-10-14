@@ -94,7 +94,7 @@ impl Running<'_> {
     /// player has touched it yet, as a fresh one.
     #[doc(alias = "pl_8003E17C")]
     pub fn item_pickup_stat(&mut self, slot: i32, _sub: i32, item: GObjId) {
-        use crate::game::it::kinds::{L_GUN_RAY, S_SCOPE_BEAM, STARROD_STAR, LIPSTICK_SPORE, EGG};
+        use crate::game::it::kinds::{EGG, L_GUN_RAY, LIPSTICK_SPORE, S_SCOPE_BEAM, STARROD_STAR};
         let ip = crate::game::it::item(self.game, item);
         let kind = ip.kind;
         let kind2 = if (0..L_GUN_RAY).contains(&kind) {
@@ -112,9 +112,7 @@ impl Running<'_> {
         let thrown = ip.xDC8_word.flags.x1;
         let touched = ip.xDC8_word.flags.xF;
         let by = |p: i32| i32::from(touched) & (1 << p) != 0;
-        if kind2 != -1
-            && (kind2 == L_GUN_RAY || kind2 == EGG || kind2 == S_SCOPE_BEAM || thrown)
-        {
+        if kind2 != -1 && (kind2 == L_GUN_RAY || kind2 == EGG || kind2 == S_SCOPE_BEAM || thrown) {
             let t = self.game.player_stale_moves(slot);
             if !by(slot) {
                 t.x674[kind2 as usize] = t.x674[kind2 as usize].wrapping_add(1);

@@ -143,7 +143,9 @@ impl Running<'_> {
         {
             if hold && keep {
                 let (x418, x41c) = (self.common().i32(0x418), self.common().i32(0x41C));
-                let gobj = self.game.fighters[f.0].gobj.expect("a fighter without a GObj");
+                let gobj = self.game.fighters[f.0]
+                    .gobj
+                    .expect("a fighter without a GObj");
                 let drop = self.game.objs.rng.below(x418) < dmg || {
                     let item = self.game.fighters[f.0].item_gobj.expect("an item");
                     self.item_a_kind(gobj) == 3

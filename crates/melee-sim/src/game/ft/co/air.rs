@@ -707,6 +707,5 @@ impl Running<'_> {
     }
 }
 
-
 #[allow(dead_code)]
 const _PAD: u32 = PAD_LR;

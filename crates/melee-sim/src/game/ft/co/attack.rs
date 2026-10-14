@@ -861,14 +861,12 @@ impl Running<'_> {
     /// (`fn_800D8E94`, `fn_800D952C`), a shoulder within the grab window grabs; the window
     /// counts down.
     #[doc(alias = "ftCo_800D8AE0")]
-    #[doc(alias = "ftCo_800952DC")]
     pub fn attack_dash_catch_check(&mut self, gobj: GObjId) -> bool {
-        let fp = self.game.fighter(gobj);
-        let shoulder = fp.input.held_buttons[0] & PAD_LR != 0;
-        if fp.item_gobj.is_some() && shoulder {
-            self.enter_item_throw(gobj, ms::LIGHT_THROW_DASH);
+        if self.item_throw_dash_held_check(gobj) {
             return true;
         }
+        let fp = self.game.fighter(gobj);
+        let shoulder = fp.input.held_buttons[0] & PAD_LR != 0;
         if (fp.kind == KIND_LINK || fp.kind == KIND_CLINK) && fp.u_i32(0xC) != 0 {
             return false;
         }

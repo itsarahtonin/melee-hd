@@ -159,6 +159,10 @@ impl Running<'_> {
         self.change_motion_state(gobj, msid, MF_KEEP_GFX, start, 1.0, 0.0, None);
     }
 
+    /// `ftPe_FloatFall_IASA`: nothing.
+    #[doc(alias = "ftPe_FloatFall_IASA")]
+    pub fn peach_float_fall_iasa(&mut self, _gobj: GObjId) {}
+
     /// `ftPe_FloatFall_Anim`: the fall after a double jump once it ends.
     #[doc(alias = "ftPe_FloatFall_Anim")]
     pub fn peach_float_fall_anim(&mut self, gobj: GObjId) {
@@ -280,8 +284,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::FLOAT_PHYS => g.peach_float_phys(gobj),
         addr::FLOAT_COLL | addr::FLOAT_FALL_COLL => g.peach_float_coll(gobj),
         addr::FLOAT_FALL_ANIM => g.peach_float_fall_anim(gobj),
-        // `ftPe_FloatFall_IASA`: nothing.
-        addr::FLOAT_FALL_IASA => {}
+        addr::FLOAT_FALL_IASA => g.peach_float_fall_iasa(gobj),
         addr::FLOAT_FALL_PHYS => g.peach_float_fall_phys(gobj),
         addr::FLOAT_ATTACK_AIR_ANIM => g.peach_float_attack_anim(gobj),
         addr::FLOAT_ATTACK_AIR_IASA => g.peach_float_attack_iasa(gobj),

@@ -7,8 +7,8 @@ use gekko_fp as fp;
 use super::super::super::it::{lib26b1, lib2725, release};
 use super::super::super::state::Running;
 use super::super::motion::flags::*;
-use super::ids::ms;
 use super::PAD_LR;
+use super::ids::ms;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::math;
@@ -218,9 +218,7 @@ impl Running<'_> {
             } else {
                 ms::LIGHT_THROW_B4
             }
-        } else if y >= reg(c.f32(cd::XCC))
-            && sy < fp::fadds(reg(c.f32(cd::XD0)), jump_startup)
-        {
+        } else if y >= reg(c.f32(cd::XCC)) && sy < fp::fadds(reg(c.f32(cd::XD0)), jump_startup) {
             ms::LIGHT_THROW_HI4
         } else if y <= reg(c.f32(cd::XD4)) && sy < reg(c.f32(cd::XD8)) {
             ms::LIGHT_THROW_LW4
@@ -228,7 +226,11 @@ impl Running<'_> {
             let radians = reg(c.f32(cd::X20_RADIANS));
             let sideways = abs(x) >= reg(c.f32(cd::X98)) && {
                 let a = self.lstick_angle(gobj);
-                let a = if a < 0.0 { fp::fneg(self.lstick_angle(gobj)) } else { a };
+                let a = if a < 0.0 {
+                    fp::fneg(self.lstick_angle(gobj))
+                } else {
+                    a
+                };
                 a <= radians
             };
             if sideways {
@@ -263,10 +265,7 @@ impl Running<'_> {
         let cmd = fp.cmd_vars[0];
         let mut vel = 1.0;
         if cmd != 0 {
-            vel = fp::fmuls(
-                f64::from(0.01f32),
-                fp::frsp(f64::from((cmd >> 12) & 0x3FF)),
-            );
+            vel = fp::fmuls(f64::from(0.01f32), fp::frsp(f64::from((cmd >> 12) & 0x3FF)));
         }
         let entry = table.at(12 * (fp.motion_id - ms::LIGHT_THROW_F) as u32);
         let mul = reg(fp.co_attrs.item_throw_velocity_multiplier);
@@ -276,10 +275,7 @@ impl Running<'_> {
             let a = if int_angle == 361 {
                 reg(self.data.f32(entry.at(4)))
             } else {
-                fp::fmuls(
-                    f64::from(0.017453292f32),
-                    fp::frsp(f64::from(int_angle)),
-                )
+                fp::fmuls(f64::from(0.017453292f32), fp::frsp(f64::from(int_angle)))
             };
             self.game.fighters[f.0].cmd_vars[0] = 0;
             a
@@ -288,7 +284,10 @@ impl Running<'_> {
         };
         let facing = reg(self.game.fighters[f.0].mv_f32(MV_FACING_DIR));
         Vec3::new(
-            mem(fp::fmuls(facing, fp::fmuls(vel, reg(math::cos(mem(angle)))))),
+            mem(fp::fmuls(
+                facing,
+                fp::fmuls(vel, reg(math::cos(mem(angle)))),
+            )),
             mem(fp::fmuls(vel, reg(math::sin(mem(angle))))),
             0.0,
         )
@@ -321,7 +320,8 @@ impl Running<'_> {
             let ip = super::super::super::it::item(self.game, item);
             let model = super::super::super::it::item::article(ip).model(self.data);
             let attach = model.bone_attach_id(self.data);
-            let j = lib2725::bone(self.game, self.data, item, attach).expect("the item's attach bone");
+            let j =
+                lib2725::bone(self.game, self.data, item, attach).expect("the item's attach bone");
             crate::lb::joint::world_position(&mut self.game.objs, self.data, Some(j), None)
         };
         if !self.game.fighters[f.0].take_throw_flag(3) {
@@ -487,6 +487,17 @@ impl Running<'_> {
     pub fn item_throw_ground_check(&mut self, gobj: GObjId) -> bool {
         if self.game.fighter(gobj).item_gobj.is_some() && self.item_throw_input(gobj) {
             self.item_throw_ground(gobj);
+            return true;
+        }
+        false
+    }
+
+    /// Whether a shoulder throws the held item out of a dash, `ftCo_800952DC`.
+    #[doc(alias = "ftCo_800952DC")]
+    pub fn item_throw_dash_held_check(&mut self, gobj: GObjId) -> bool {
+        let fp = self.game.fighter(gobj);
+        if fp.item_gobj.is_some() && fp.input.held_buttons[0] & PAD_LR != 0 {
+            self.enter_item_throw(gobj, ms::LIGHT_THROW_DASH);
             return true;
         }
         false

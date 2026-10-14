@@ -150,7 +150,11 @@ pub fn spawn(
         let life = f32::from_bits(attr_word(r, gobj, 0));
         lib2725::set_lifetime(r.game, r.data, gobj, life);
         let face = pick_face(r, gobj);
-        item_mut(r.game, gobj).xDD4_itemVar.peach_turnip().xDD8.set(face);
+        item_mut(r.game, gobj)
+            .xDD4_itemVar
+            .peach_turnip()
+            .xDD8
+            .set(face);
         let damage = attr_word(r, gobj, 8 + 8 * face as u32 + 4) as i32;
         let ip = item_mut(r.game, gobj);
         let owner = ip.owner;
@@ -180,7 +184,11 @@ pub fn spawn(
 
 /// The vegetable's face, its model posed at its face's frame (`it_80273670`).
 fn show_face(r: &mut Running, gobj: GObjId) {
-    let face = item_mut(r.game, gobj).xDD4_itemVar.peach_turnip().xDD8.get();
+    let face = item_mut(r.game, gobj)
+        .xDD4_itemVar
+        .peach_turnip()
+        .xDD8
+        .get();
     let frame = mem(fp::frsp(f64::from(face)));
     super::drmariopill::set_pose(r, gobj, 0, frame);
 }
@@ -190,7 +198,13 @@ fn show_face(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itPeachTurnip_Logic56_PickedUp")]
 fn picked_up(r: &mut Running, gobj: GObjId) {
     show_face(r, gobj);
-    let again = item_mut(r.game, gobj).xDD4_itemVar.peach_turnip().xDD4.get()[0] & 0x80 != 0;
+    let again = item_mut(r.game, gobj)
+        .xDD4_itemVar
+        .peach_turnip()
+        .xDD4
+        .get()[0]
+        & 0x80
+        != 0;
     if again {
         change_state(r, gobj, 4, change::ANIM_UPDATE);
     } else {

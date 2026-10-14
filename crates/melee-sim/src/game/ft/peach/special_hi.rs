@@ -118,7 +118,9 @@ impl Running<'_> {
             return false;
         }
         if msid == MS_LANDING_FALL_SPECIAL {
-            let item = fp.item_gobj.expect("a helpless landing with the parasol, no item");
+            let item = fp
+                .item_gobj
+                .expect("a helpless landing with the parasol, no item");
             if !peachparasol::is_open(self, item) {
                 return false;
             }
