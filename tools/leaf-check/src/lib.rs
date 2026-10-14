@@ -456,11 +456,29 @@ pub fn stage_anim_roots(a: &melee_data::archive::Archive) -> (Vec<u32>, Vec<u32>
     (anim, matanim)
 }
 
+/// Whether the reference runs the original's machine code for every function instead of
+/// ssbm-rs's ports ([`run_as_machine_code`]).
+static MACHINE_CODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Makes every captured call in this process run the original's machine code in ssbm-rs's
+/// interpreter (`ssbm_ppc`), its ports set aside: for a check whose reference must be the console itself, where ssbm-rs's
+/// ports at the tag leave a register otherwise (Nana's DI, `docs/engine.md`). A test binary
+/// sets it once, for all its tests.
+pub fn run_as_machine_code() {
+    MACHINE_CODE.store(true, std::sync::atomic::Ordering::Relaxed);
+}
+
 /// Runs a captured call in the reference from the state it was saved in, and returns main
 /// memory afterwards.
 pub fn run_capture(ctx: &Ctx, call: &ssbm_rt::capture::Call) -> Vec<u8> {
     call.load(ctx);
     register_patched(ctx);
+    if MACHINE_CODE.load(std::sync::atomic::Ordering::Relaxed) {
+        if !ctx.has_backend() {
+            ctx.set_backend(Box::new(ssbm_ppc::Interpreter::default()));
+        }
+        ctx.set_all_modes(ssbm_rt::Mode::Original);
+    }
     ctx.invoke(call.addr);
     let mut out = vec![0; call.mem1.len()];
     let _ = ctx.mem.read_bytes(0x8000_0000, &mut out);

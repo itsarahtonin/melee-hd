@@ -1327,6 +1327,7 @@ dependencies = [
  "melee-slippi",
  "ssbm-disc",
  "ssbm-game",
+ "ssbm-ppc",
  "ssbm-rt",
  "ssbm-slippi",
  "ssbm-types",
@@ -2934,6 +2935,15 @@ source = "git+https://github.com/itsarahtonin/ssbm-rs?tag=melee-hd-base#a8c43c03
 dependencies = [
  "gekko-fp",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "ssbm-ppc"
+version = "0.1.0"
+source = "git+https://github.com/itsarahtonin/ssbm-rs?tag=melee-hd-base#a8c43c0317f7c92405186c3976c3c98545e1e9b1"
+dependencies = [
+ "gekko-fp",
+ "ssbm-rt",
 ]
 
 [[package]]

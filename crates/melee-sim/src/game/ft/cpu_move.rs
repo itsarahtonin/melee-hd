@@ -8,7 +8,7 @@ use super::super::code::unported_call;
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
-use super::cpu_ai::P_LINK_FIGHTER;
+use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use super::cpu_script::cmd;
 use crate::fpu::{mem, reg};
 use crate::math;
@@ -749,12 +749,11 @@ impl Running<'_> {
     /// it shields to tech when its coin flip said so (`xFA_b1`).
     ///
     /// With no knockback the original pushes the stick by two registers it never set: r5 for
-    /// x (its caller's) and r30 for y (its caller's `Fighter*`, so the low byte of Nana's
-    /// address). Slippi's NanaDeterminism code clears r30, and 3.19's r5 too; 3.16's leaves r5
-    /// as the caller left it. Such a frame stops the port (`DI with no knockback`) until the
-    /// value ssbm-rs's ports leave there agrees with the original's.
-    // Ports `ftCo_800AC5A0`; aliased once a check reaches it.
-    pub(super) fn cpu_di(&mut self, f: FighterId) {
+    /// x (what the computer player's frame left there, `r5`) and r30 for y (its caller's
+    /// `Fighter*`, so the low byte of the fighter's address). Slippi's NanaDeterminism code
+    /// clears r30, and 3.19's r5 too; 3.16's leaves r5 as the frame left it (docs/engine.md).
+    #[doc(alias = "ftCo_800AC5A0")]
+    pub(super) fn cpu_di(&mut self, f: FighterId, r5: Leftover) {
         let fpp = &self.game.fighters[f.0];
         if !fpp.x221A_b3 {
             let c = &mut self.game.fighters[f.0].cpu;
@@ -769,7 +768,10 @@ impl Running<'_> {
             let (kx, ky) = (reg(fpp.x8c_kb_vel.x), reg(fpp.x8c_kb_vel.y));
             let mag = math::sqrt_reg(fp::fmadds(kx, kx, fp::fmuls(ky, ky)));
             if nearly_zero(mag) {
-                unported_call("ftCo_800AC5A0: DI with no knockback (its stick registers unset)");
+                let (x, y) = self.di_leftover_stick(f, r5);
+                self.cpu_cmd1(f, cmd::SET_LSTICK_X, x);
+                self.cpu_cmd1(f, cmd::SET_LSTICK_Y, y);
+                return self.cpu_di_end(f);
             }
             let inv = fp::fdivs(1.0, mag);
             let (x, y) = (fp::fmuls(kx, inv), fp::fmuls(ky, inv));
@@ -790,11 +792,46 @@ impl Running<'_> {
         } else {
             self.cpu_neutral_stick(f);
         }
+        self.cpu_di_end(f);
+    }
+
+    /// The DI's last commands: shielding to tech when its coin flip said so, a frame's wait.
+    fn cpu_di_end(&mut self, f: FighterId) {
         if self.game.fighters[f.0].cpu.xFA_b1 {
             self.cpu_cmd(f, cmd::PRESS_R);
         }
         self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
         self.cpu_cmd(f, cmd::DONE);
+    }
+
+    /// The stick the DI pushes with no knockback, from the low bytes of r5 and r30: what the
+    /// frame left in r5, and the fighter's own address in r30, unless Slippi's NanaDeterminism
+    /// code cleared them (r30 in both versions, r5 in 3.19's).
+    fn di_leftover_stick(&self, f: FighterId, r5: Leftover) -> (u8, u8) {
+        let rules = &self.game.rules;
+        let (r5, r30) = if rules.slippi {
+            let r5 = if rules.codes == super::super::slippi::CodeSet::V3_19 {
+                Leftover::Word(0)
+            } else {
+                r5
+            };
+            (r5, Leftover::Word(0))
+        } else {
+            let addr = self.game.ft.addresses.get(&f.0).copied().unwrap_or(0);
+            let r30 = if addr == 0 {
+                Leftover::Unknown("ftCo_800B2790 (the fighter's address, unmodeled)")
+            } else {
+                Leftover::Word(addr)
+            };
+            (r5, r30)
+        };
+        let byte = |v: Leftover| match v {
+            Leftover::Word(w) => w as u8,
+            Leftover::Unknown(from) => unported_call(&format!(
+                "ftCo_800AC5A0: DI with no knockback reads what {from} left"
+            )),
+        };
+        (byte(r5), byte(r30))
     }
 
     /// How fast the fighter walks (`ftCo_800AA320`): the stick's step and clamp by level;
