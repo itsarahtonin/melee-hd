@@ -14,14 +14,6 @@ impl Running<'_> {
         self.anim_update(gobj);
     }
 
-    /// `ftCo_AttackS42_IASA`: the waiting state's interrupts once the script allows them.
-    #[doc(alias = "ftCo_AttackS42_IASA")]
-    pub fn link_attack_s42_iasa(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).allow_interrupt {
-            self.co_wait_iasa(gobj);
-        }
-    }
-
     /// `ftCo_AttackS42_Anim`, `ftCo_AttackS42_Phys` and `ftCo_AttackS42_Coll`: the first
     /// swing's.
     #[doc(alias = "ftCo_AttackS42_Anim")]
@@ -38,7 +30,7 @@ impl Running<'_> {
 
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::ATTACK_S42_IASA => g.link_attack_s42_iasa(gobj),
+        addr::ATTACK_S42_IASA => g.co_attack_iasa(gobj),
         addr::ATTACK_S42_ANIM | addr::ATTACK_S42_PHYS | addr::ATTACK_S42_COLL => {
             g.link_attack_s42_cb(gobj, a)
         }

@@ -547,11 +547,11 @@ pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Opti
     Some(beam)
 }
 
-/// The beam's scale from its owner's, `it_802A2428` (the hookshot's unit): it reads its owner
-/// as an item, whose `scl` is a fighter's height (`x34_scale.y`, at the same offset), times
-/// its own attributes' scale.
+/// The beam's (or Link's hookshot's) scale from its owner's, `it_802A2428` (the hookshot's
+/// unit): it reads its owner as an item, whose `scl` is a fighter's height (`x34_scale.y`, at
+/// the same offset), times its own attributes' scale.
 #[doc(alias = "it_802A2428")]
-fn stop_anim(r: &mut Running, gobj: GObjId) {
+pub(super) fn stop_anim(r: &mut Running, gobj: GObjId) {
     let owner = owner_of(r, gobj);
     let height = reg(r.game.fighter(owner).x34_scale.y);
     let a = super::super::item::attr_of(item(r.game, gobj));
@@ -560,7 +560,7 @@ fn stop_anim(r: &mut Running, gobj: GObjId) {
         reg(a.f32(r.data, super::super::data::attr::SCALE)),
     ));
     item_mut(r.game, gobj).scl = s;
-    let j = jobj_of(r.game, gobj).expect("a grapple beam without a model");
+    let j = jobj_of(r.game, gobj).expect("a tether without a model");
     super::super::lib2725::set_uniform_scale(r.game, j, s);
 }
 

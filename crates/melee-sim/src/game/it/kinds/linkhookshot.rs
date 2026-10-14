@@ -492,25 +492,8 @@ pub fn spawn(
     }
     bones[PART_TIP].joint = tip_model;
     pick_up(r, hs, owner, thumb);
-    scale_to_owner(r, hs);
+    super::samusgrapple::stop_anim(r, hs);
     Some(hs)
-}
-
-/// The hookshot's scale from its owner's, `it_802A2428`: it reads its owner as an item, whose
-/// `scl` is a fighter's height (`x34_scale.y`, at the same offset), times its own attributes'
-/// scale.
-#[doc(alias = "it_802A2428")]
-fn scale_to_owner(r: &mut Running, gobj: GObjId) {
-    let owner = owner_of(r, gobj);
-    let height = reg(r.game.fighter(owner).x34_scale.y);
-    let a = super::super::item::attr_of(item(r.game, gobj));
-    let s = mem(fp::fmuls(
-        height,
-        reg(a.f32(r.data, super::super::data::attr::SCALE)),
-    ));
-    item_mut(r.game, gobj).scl = s;
-    let j = jobj_of(r.game, gobj);
-    super::super::lib2725::set_uniform_scale(r.game, j.expect("a hookshot without a model"), s);
 }
 
 /// Every state's animation, `itLinkhookshot_UnkMotion8_Anim`: the model's spinning part turns
@@ -1073,7 +1056,7 @@ fn line_up(r: &mut Running, gobj: GObjId, at: Vec3, scale: f32) {
 #[doc(alias = "itLinkHookshot_Logic20_PickedUp")]
 fn picked_up(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 0, change::ANIM_UPDATE);
-    scale_to_owner(r, gobj);
+    super::samusgrapple::stop_anim(r, gobj);
 }
 
 /// Falling, `it_802A76EC` (state 3): his grab boxes off.
@@ -1085,7 +1068,7 @@ fn to_fall(r: &mut Running, gobj: GObjId) {
         .get()
         .expect("a hookshot without its fighter");
     r.fighter_clear_hitboxes(f);
-    scale_to_owner(r, gobj);
+    super::samusgrapple::stop_anim(r, gobj);
 }
 
 /// Bouncing back, `it_802A7764` (state 2): his grab boxes off.
@@ -1097,14 +1080,14 @@ fn to_bounce(r: &mut Running, gobj: GObjId) {
         .get()
         .expect("a hookshot without its fighter");
     r.fighter_clear_hitboxes(f);
-    scale_to_owner(r, gobj);
+    super::samusgrapple::stop_anim(r, gobj);
 }
 
 /// Drawn back in, `it_802A77DC` (state 4).
 #[doc(alias = "it_802A77DC")]
 pub fn to_retract(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 4, change::ANIM_UPDATE);
-    scale_to_owner(r, gobj);
+    super::samusgrapple::stop_anim(r, gobj);
 }
 
 /// Drawn back in after a catch, `it_802A7840` (state 5): his grab boxes off.
@@ -1116,7 +1099,7 @@ pub fn to_retract_caught(r: &mut Running, gobj: GObjId) {
         .get()
         .expect("a hookshot without its fighter");
     r.fighter_clear_hitboxes(f);
-    scale_to_owner(r, gobj);
+    super::samusgrapple::stop_anim(r, gobj);
 }
 
 /// Shot, `it_802A78B8` (state 1): the tip at `vel`.
@@ -1125,7 +1108,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId, vel: Vec3) {
     let t = tip(r, gobj);
     link_mut(r.game, t).vel = vel;
     change_state(r, gobj, 1, change::ANIM_UPDATE);
-    scale_to_owner(r, gobj);
+    super::samusgrapple::stop_anim(r, gobj);
 }
 
 /// The fighter's death hook, `it_802A7AAC`: the hookshot put away, or his hooks cleared.
@@ -1242,8 +1225,7 @@ fn hang_from(r: &mut Running, gobj: GObjId, mut l0: ItemLinkId, at: Vec3, dist: 
 }
 
 /// `it_802A7D40`: forgets `other`, its fighter among them.
-// Ports `it_802A7D40`; aliased once a check reaches it (nothing dispatches the items'
-// `evt_unk` yet).
+#[doc(alias = "it_802A7D40")]
 pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     super::super::lib26b1::forget(r.game, gobj, other);
     let v = vars(r, gobj);
@@ -1617,14 +1599,14 @@ fn line_up_hanging(r: &mut Running, gobj: GObjId, at: Vec3, scale: f32) {
 #[doc(alias = "it_802A793C")]
 fn to_latch(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 6, change::ANIM_UPDATE);
-    scale_to_owner(r, gobj);
+    super::samusgrapple::stop_anim(r, gobj);
 }
 
 /// Pulling him up (state 7), `it_802A79A0`.
 #[doc(alias = "it_802A79A0")]
 fn to_pull(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 7, change::ANIM_UPDATE);
-    scale_to_owner(r, gobj);
+    super::samusgrapple::stop_anim(r, gobj);
 }
 
 /// Hanging (state 8), `it_802A7A04`: his hang's length from his attributes' `xB8`.
@@ -1632,7 +1614,7 @@ fn to_pull(r: &mut Running, gobj: GObjId) {
 fn to_hang(r: &mut Running, gobj: GObjId) {
     let f = owner_of(r, gobj);
     change_state(r, gobj, 8, change::ANIM_UPDATE);
-    scale_to_owner(r, gobj);
+    super::samusgrapple::stop_anim(r, gobj);
     let ff = r.game.fighter_id(f);
     let len = fp::frsp(f64::from(r.link_attr_i32(ff, LK_HANG)));
     r.game.fighter_mut(f).set_mv_f32(MV_HANG, len);
