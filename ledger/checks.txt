@@ -4922,3 +4922,11 @@ gmVsMelee_EnterVs	melee-oracle vs_rules: Settings::vs_with's start data against 
 # The Ice Climbers' ranked replay against Fox on Final Destination: melee-oracle diff of local/traces/v5-mixed/hf-ics-fox-fd-c93e2e19-rf.trc (ssbm-rs main's ports, which follow registers through calls) with --heap (docs/oracle.md). Each line names the tick that first reaches it; every tick after compares clean up to the diff's stop.
 ftCo_800DC920	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): a thrown Fox comes loose from an Ice Climber's model in tick 4712, through the collision pass in the air
 Fighter_UnkSetFlag_8006CFBC	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): ftCo_800DC920 runs it for both fighters in tick 4712
+ftCo_800A8DE4	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): Nana's recovery (behavior 4) picks the ledge ahead from tick 5634
+ftCo_800A3908	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): ftCo_800A8DE4 aims for the stage's right end through it from tick 5634
+ftCo_800A49B4	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): ftCo_800A3908 measures the distance to the ledge it aims for in tick 5634
+ftCo_800A9904	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): Nana's recovery in the air from tick 5634: toward the ledge, drifting back, and her jump
+ftCo_800A3498	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): ftCo_800A9904 asks it every frame of Nana's recovery from tick 5634
+ftCo_800ACB44	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): Nana catching, hanging from and leaving a ledge (behavior 6) from tick 5637
+ftCo_800A0AF4	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): ftCo_800ACB44 picks Nana's way up from the ledge with it
+ftCo_800A0098	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): Nana turns toward her attack's target before attacking in tick 6277

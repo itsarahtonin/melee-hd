@@ -458,7 +458,7 @@ impl Running<'_> {
     /// Sets the fighter's destination and how near it must get, unless a destination timer
     /// runs (`ftCo_800A1F3C`), then lets the stage move it (`ftCo_800A1CC4`).
     // Ports `ftCo_800A1F3C`; aliased once a check reaches it.
-    fn cpu_set_destination(&mut self, f: FighterId, x: f32, y: f32, reach: f32) {
+    pub(super) fn cpu_set_destination(&mut self, f: FighterId, x: f32, y: f32, reach: f32) {
         let c = &mut self.game.fighters[f.0].cpu;
         if c.x60 == 0 {
             c.x54.x = x;

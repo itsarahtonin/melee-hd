@@ -256,7 +256,7 @@ impl Running<'_> {
 
     /// Whether a floor is Corneria's ceilinged one (joint 4), `grCorneria_801E2E50`.
     // Ports `grCorneria_801E2E50`; aliased once a check reaches it.
-    fn corneria_ceiling_floor(&self, line: i32) -> bool {
+    pub(super) fn corneria_ceiling_floor(&self, line: i32) -> bool {
         // Gr_Kind_Corneria.
         self.game.stage_info.grkind == 14
             && line != -1
@@ -586,9 +586,9 @@ impl Running<'_> {
             1 => self.cpu_walk(f),
             2 => self.cpu_attack_behavior(f),
             3 => unported_call("ftCo_800B9020"),
-            4 => unported_call("ftCo_800A8DE4"),
+            4 => self.cpu_recover_behavior(f),
             5 => self.cpu_get_up(f),
-            6 => unported_call("ftCo_800ACB44"),
+            6 => self.cpu_ledge_behavior(f),
             7 => unported_call("ftCo_800BA9A0"),
             8 => unported_call("ftCo_800B7180"),
             9 => self.cpu_hold(f),

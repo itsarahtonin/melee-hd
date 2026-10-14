@@ -41,7 +41,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_CpuFinishWithNeutralY`.
-    fn cpu_finish_neutral_y(&mut self, f: FighterId) {
+    pub(super) fn cpu_finish_neutral_y(&mut self, f: FighterId) {
         self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
         self.cpu_cmd(f, cmd::DONE);
     }
@@ -53,8 +53,10 @@ impl Running<'_> {
         self.cpu_cmd(f, cmd::RELEASE_R);
     }
 
-    /// Turns around with a flick back (`ftCo_CpuTurnAround`).
-    fn cpu_turn_around(&mut self, f: FighterId) {
+    /// Turns around with a flick back (`ftCo_CpuTurnAround`, and `ftCo_800A0098`, which
+    /// writes the same commands).
+    #[doc(alias = "ftCo_800A0098")]
+    pub(super) fn cpu_turn_around(&mut self, f: FighterId) {
         self.cpu_neutral_stick(f);
         self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
         self.cpu_cmd1(f, cmd::LSTICK_X_FORWARD, 176);
@@ -273,7 +275,7 @@ impl Running<'_> {
     /// A recovery toward the destination by character, `ftCo_800A96B8`; the default (and
     /// Nana's) is up and toward it, then the up special.
     // Ports `ftCo_800A96B8`; aliased once a check reaches it.
-    fn cpu_recover(&mut self, f: FighterId) {
+    pub(super) fn cpu_recover(&mut self, f: FighterId) {
         match self.game.fighters[f.0].kind {
             12 | 23 | 1 | 22 | 14 | 8 | 17 | 19 | 13 => {
                 unported_call("ftCo_800A96B8 for a character with its own recovery")
