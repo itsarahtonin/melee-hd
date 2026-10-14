@@ -275,6 +275,14 @@ impl Running<'_> {
         fp.dmg.x1948 = frames;
     }
 
+    /// One fighter's collision state copied to another's, `ft_800849EC` (`mpCopyCollData`
+    /// without the ECBs' first copy).
+    #[doc(alias = "ft_800849EC")]
+    pub fn copy_coll_data(&mut self, from: FighterId, to: FighterId) {
+        let cd = self.game.fighters[from.0].coll_data.clone();
+        self.game.fighters[to.0].coll_data.copy_from(&cd, 2);
+    }
+
     /// The fighter's facing as mpcoll takes it (`ftGetFacingDirInt`).
     fn facing_int(&self, f: FighterId) -> i32 {
         if self.game.fighters[f.0].facing_dir < 0.0 {

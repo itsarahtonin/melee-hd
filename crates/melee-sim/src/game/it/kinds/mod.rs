@@ -5,6 +5,7 @@ pub mod bombhei;
 pub mod capsule;
 pub mod climbersblizzard;
 pub mod climbersice;
+pub mod climbersstring;
 pub mod crate_box;
 pub mod drmariopill;
 pub mod foxblaster;
@@ -34,6 +35,8 @@ pub mod nesspkthundertrail;
 pub mod nessyoyo;
 pub mod peachexplode;
 pub mod peachparasol;
+pub mod peachtoad;
+pub mod peachtoadspore;
 pub mod peachturnip;
 pub mod pikachuthunder;
 pub mod pikachutjoltair;
@@ -61,6 +64,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     foxlaser::run_event(r, gobj, addr)
         || climbersice::run_event(r, gobj, addr)
         || climbersblizzard::run_event(r, gobj, addr)
+        || climbersstring::run_event(r, gobj, addr)
         || foxblaster::run_event(r, gobj, addr)
         || foxillusion::run_event(r, gobj, addr)
         || capsule::run_event(r, gobj, addr)
@@ -105,6 +109,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || linkhookshot::run_event(r, gobj, addr)
         || linkarrow::run_event(r, gobj, addr)
         || linkbow::run_event(r, gobj, addr)
+        || peachtoad::run_event(r, gobj, addr)
+        || peachtoadspore::run_event(r, gobj, addr)
         || drmariopill::run_event(r, gobj, addr)
         || pikachuthunder::run_event(r, gobj, addr)
         || pikachutjoltground::run_event(r, gobj, addr)
@@ -118,6 +124,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     foxlaser::run_pred(r, gobj, addr)
         .or_else(|| climbersice::run_pred(r, gobj, addr))
         .or_else(|| climbersblizzard::run_pred(r, gobj, addr))
+        .or_else(|| climbersstring::run_pred(r, gobj, addr))
         .or_else(|| foxblaster::run_pred(r, gobj, addr))
         .or_else(|| foxillusion::run_pred(r, gobj, addr))
         .or_else(|| capsule::run_pred(r, gobj, addr))
@@ -161,6 +168,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| linkhookshot::run_pred(r, gobj, addr))
         .or_else(|| linkarrow::run_pred(r, gobj, addr))
         .or_else(|| linkbow::run_pred(r, gobj, addr))
+        .or_else(|| peachtoad::run_pred(r, gobj, addr))
+        .or_else(|| peachtoadspore::run_pred(r, gobj, addr))
         .or_else(|| drmariopill::run_pred(r, gobj, addr))
         .or_else(|| pikachuthunder::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
@@ -211,6 +220,8 @@ pub const FALCO_PHANTASM: i32 = 57;
 /// `It_Kind_IceClimber_Ice` and `It_Kind_IceClimber_Blizzard`.
 pub const ICE_CLIMBER_ICE: i32 = 106;
 pub const ICE_CLIMBER_BLIZZARD: i32 = 107;
+/// `It_Kind_IceClimber_GumStrings`, the up special's string.
+pub const ICE_CLIMBER_STRING: i32 = 113;
 /// `It_Kind_Link_Bomb`.
 pub const LINK_BOMB: i32 = 58;
 /// `It_Kind_CLink_Bomb`.

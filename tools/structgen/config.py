@@ -52,9 +52,10 @@ ROOTS = [
     "itPikachuthunder_ItemVars",
     "itPikachutJoltGround_ItemVars",
     "itPikachutJoltAir_ItemVars",
-    # The Ice Climbers' ice and Blizzard.
+    # The Ice Climbers' ice, Blizzard and up special's string.
     "itClimbersIce_ItemVars",
     "itClimbersBlizzard_ItemVars",
+    "itClimbersString_ItemVars",
     # Peach's vegetables.
     "itPeachTurnip_ItemVars",
     # Link's bomb, boomerang and hookshot.

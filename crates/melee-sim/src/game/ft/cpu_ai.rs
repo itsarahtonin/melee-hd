@@ -578,7 +578,9 @@ impl Running<'_> {
         {
             let facing = self.game.fighters[popo.0].facing_dir;
             self.game.fighters[f.0].facing_dir = mem(fp::fneg(reg(facing)));
-            unported_call("ftPp_SpecialLw_Enter");
+            let gobj = self.game.fighters[f.0].gobj.expect("Nana without a GObj");
+            self.popo_special_lw_enter(gobj);
+            return;
         }
         let fpp = &mut self.game.fighters[f.0];
         let at = fpp
@@ -665,7 +667,7 @@ impl Running<'_> {
             }
             14 => unported_call("ftCo_800AD7FC"),
             15 => unported_call("ftCo_800ABBA8"),
-            16 => unported_call("ftCo_800AC30C"),
+            16 => self.cpu_mash(f),
             17 => unported_call("ftCo_800AC434"),
             18 => self.cpu_di(f, r5),
             19 => {

@@ -157,6 +157,7 @@ members! {
     Heiho, heiho, HeihoVars, [HEIHO];
     ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE];
     ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];
+    ClimbersString, climbers_string, itClimbersString_ItemVars, [ICE_CLIMBER_STRING];
 }
 
 impl Default for ItemVars {

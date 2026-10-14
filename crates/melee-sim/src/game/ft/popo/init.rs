@@ -119,7 +119,7 @@ impl Running<'_> {
     /// Drops what the specials hold when hit or KO'd, `ftPp_Init_8011F060` (the death and
     /// damage hooks a special sets): the ice, the Blizzard's effects, the string, and the
     /// Squall Hammer's bent waist and hold.
-    // Ports `ftPp_Init_8011F060`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_Init_8011F060")]
     pub fn popo_remove_items(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if let Some(item) = self.ic_item(gobj) {
@@ -136,22 +136,8 @@ impl Running<'_> {
             self.game.part_set_rot_x(f, 0, 0.0);
         }
         // `ftPp_SpecialS_80121164`: the string.
-        if self.game.fighters[f.0].u.gobj_at(var::ITEM2).is_some() {
-            super::super::super::code::unported_call("ftPp_SpecialS_80121164 with a string out");
-        }
-        // `ftPp_SpecialS_8011F68C`.
-        self.game.part_set_rot_x(f, 0, 0.0);
-        let fp = &mut self.game.fighters[f.0];
-        if fp.x2219_b7 {
-            fp.x221A_b1 = true;
-        }
-        if let Some(other) = fp.x1A5C.take() {
-            let o = self.game.fighter_mut(other);
-            if o.x2219_b7 {
-                o.x221A_b1 = true;
-            }
-            o.x1A5C = None;
-        }
+        self.popo_remove_string(gobj);
+        self.popo_special_s_release(gobj);
     }
 }
 

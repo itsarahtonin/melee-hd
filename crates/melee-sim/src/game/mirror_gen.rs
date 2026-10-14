@@ -18072,6 +18072,84 @@ impl Mirror for itClimbersBlizzard_ItemVars {
     }
 }
 
+impl Mirror for itClimbersString_ItemVars {
+    const SIZE: u32 = 0x18;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itClimbersString_ItemVars {
+            x0: Var::new(f32::from_bits(m.u32(at + 0x0))),
+            x4: Var::new(
+                cx.import_handle("ItemLinkId", m.u32(at + 0x4))
+                    .map(ItemLinkId),
+            ),
+            x8: Var::new(
+                cx.import_handle("ItemLinkId", m.u32(at + 0x8))
+                    .map(ItemLinkId),
+            ),
+            xC: Var::new(cx.import_handle("GObjId", m.u32(at + 0xc)).map(GObjId)),
+            pad_10: core::array::from_fn(|i0| Var::new(m.u8(at + 0x10 + i0 as u32 * 0x1))),
+            x14: Var::new(cx.import_handle("JObjId", m.u32(at + 0x14)).map(JObjId)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0.live(&format!("{path}.x0"), cx) {
+            if (*self.x0.peek()).to_bits() != m.u32(at + 0x0) {
+                cx.mismatch(
+                    &format!("{path}.x0"),
+                    format!("{:?}", (*self.x0.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x0))),
+                );
+            }
+        }
+        if self.x4.live(&format!("{path}.x4"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x4"),
+                "ItemLinkId",
+                (*self.x4.peek()).map(|h| h.0),
+                m.u32(at + 0x4),
+            );
+        }
+        if self.x8.live(&format!("{path}.x8"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x8"),
+                "ItemLinkId",
+                (*self.x8.peek()).map(|h| h.0),
+                m.u32(at + 0x8),
+            );
+        }
+        if self.xC.live(&format!("{path}.xC"), cx) {
+            cx.compare_handle(
+                &format!("{path}.xC"),
+                "GObjId",
+                (*self.xC.peek()).map(|h| h.0),
+                m.u32(at + 0xc),
+            );
+        }
+        for i0 in 0..4 {
+            if self.pad_10[i0].live(&format!("{}[{}]", format!("{path}.pad_10"), i0), cx) {
+                if (*self.pad_10[i0].peek()) != m.u8(at + 0x10 + i0 as u32 * 0x1) {
+                    cx.mismatch(
+                        &format!("{}[{}]", format!("{path}.pad_10"), i0),
+                        format!("{:?}", (*self.pad_10[i0].peek())),
+                        format!("{:?}", m.u8(at + 0x10 + i0 as u32 * 0x1)),
+                    );
+                }
+            }
+        }
+        if self.x14.live(&format!("{path}.x14"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x14"),
+                "JObjId",
+                (*self.x14.peek()).map(|h| h.0),
+                m.u32(at + 0x14),
+            );
+        }
+    }
+}
+
 impl Mirror for itPeachTurnip_ItemVars {
     const SIZE: u32 = 0x18;
 

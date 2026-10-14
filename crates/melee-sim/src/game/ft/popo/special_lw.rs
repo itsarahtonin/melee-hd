@@ -61,7 +61,7 @@ impl Running<'_> {
     }
 
     /// Blizzard on the ground, `ftPp_SpecialLw_Enter`.
-    // Ports `ftPp_SpecialLw_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialLw_Enter")]
     pub fn popo_special_lw_enter(&mut self, gobj: GObjId) {
         self.popo_special_lw_start(gobj, MS_SPECIAL_LW);
     }
