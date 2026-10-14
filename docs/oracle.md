@@ -122,3 +122,14 @@ cargo test --release -p melee-render-check -p melee-audio-check -- --ignored
 ```
 
 Run filtered leaf-check tests (`--test NAME`) in a command of their own: with several packages, cargo applies a `--test` filter to all of them and skips the rest.
+
+### Capture packs
+
+ssbm-rs's runner saves each call as a file of its own (`NAME-callN.call`, a whole memory snapshot compressed), but the calls of one run share nearly all their memory. `pack-calls` puts a directory's calls into one `calls.pack` beside them, holding each distinct 4 KiB page once (compressed 64 pages to a block) with each call's name, registers and pages, and keeps the pack only when every call reads back from it byte for byte. ssbm-rs's `local/calls`, 21,042 calls in 168 directories, went from 114.4 GiB to 3.5 GiB this way.
+
+```sh
+cargo run --release -p melee-capture --bin pack-calls -- -r "$SSBM_RS_LOCAL/calls"   # every directory under it
+cargo run --release -p melee-capture --bin pack-calls -- --verify DIR               # check a pack against the files left
+```
+
+`Capture::read` takes a call from its directory's pack when the pack holds it and from its file otherwise, and the checks list a directory's calls from both, so a call's path is `DIR/NAME.call` either way and new captures can stay files until the directory is packed again: packing a directory that has a pack keeps the pack's calls whose files are gone and adds the new files. Once a directory's pack is verified, its `.call` files can go. Each block is decompressed once per process and shared, so reading a call is copying its pages.
