@@ -16,6 +16,7 @@ pub mod catch;
 pub mod init;
 pub mod special_hi;
 pub mod special_lw;
+pub mod special_n;
 pub mod special_s;
 
 use super::super::code::Val;
@@ -57,6 +58,33 @@ pub mod addr {
     pub const ATTACK_AIR_LW_ON_HIT: u32 = 0x800E_B484;
     pub const ATTACK_AIR_LW_ON_ANIM: u32 = 0x800E_B528;
     pub const ATTACK_AIR_SETUP_PARTS: u32 = 0x800E_B618;
+
+    pub const SPECIAL_N_ENTER: u32 = 0x800E_CDAC;
+    pub const SPECIAL_AIR_N_ENTER: u32 = 0x800E_CF78;
+    pub const SPECIAL_N_START_ANIM: u32 = 0x800E_D15C;
+    pub const SPECIAL_N_LOOP_ANIM: u32 = 0x800E_D480;
+    pub const SPECIAL_N_END_ANIM: u32 = 0x800E_D5B4;
+    pub const SPECIAL_AIR_N_START_ANIM: u32 = 0x800E_D72C;
+    pub const SPECIAL_AIR_N_LOOP_ANIM: u32 = 0x800E_DA58;
+    pub const SPECIAL_AIR_N_END_ANIM: u32 = 0x800E_DB8C;
+    pub const SPECIAL_N_START_IASA: u32 = 0x800E_DD88;
+    pub const SPECIAL_N_LOOP_IASA: u32 = 0x800E_DE30;
+    pub const SPECIAL_N_END_IASA: u32 = 0x800E_DEAC;
+    pub const SPECIAL_AIR_N_START_IASA: u32 = 0x800E_DEB0;
+    pub const SPECIAL_AIR_N_LOOP_IASA: u32 = 0x800E_DF58;
+    pub const SPECIAL_AIR_N_END_IASA: u32 = 0x800E_DFD4;
+    pub const SPECIAL_N_START_PHYS: u32 = 0x800E_DFD8;
+    pub const SPECIAL_N_LOOP_PHYS: u32 = 0x800E_DFF8;
+    pub const SPECIAL_N_END_PHYS: u32 = 0x800E_E018;
+    pub const SPECIAL_AIR_N_START_PHYS: u32 = 0x800E_E038;
+    pub const SPECIAL_AIR_N_LOOP_PHYS: u32 = 0x800E_E058;
+    pub const SPECIAL_AIR_N_END_PHYS: u32 = 0x800E_E078;
+    pub const SPECIAL_N_START_COLL: u32 = 0x800E_E098;
+    pub const SPECIAL_N_LOOP_COLL: u32 = 0x800E_E120;
+    pub const SPECIAL_N_END_COLL: u32 = 0x800E_E1A8;
+    pub const SPECIAL_AIR_N_START_COLL: u32 = 0x800E_E2E0;
+    pub const SPECIAL_AIR_N_LOOP_COLL: u32 = 0x800E_E368;
+    pub const SPECIAL_AIR_N_END_COLL: u32 = 0x800E_E3F0;
 
     pub const SPECIAL_S_ON_CHANGE: u32 = 0x800E_BF2C;
     pub const SPECIAL_S_HOOK: u32 = 0x800E_C210;
@@ -110,6 +138,12 @@ pub mod addr {
 
 /// Link's action states (`ftLk_MS_*`).
 pub mod ms {
+    pub const SPECIAL_N_START: i32 = 344;
+    pub const SPECIAL_N_LOOP: i32 = 345;
+    pub const SPECIAL_N_END: i32 = 346;
+    pub const SPECIAL_AIR_N_START: i32 = 347;
+    pub const SPECIAL_AIR_N_LOOP: i32 = 348;
+    pub const SPECIAL_AIR_N_END: i32 = 349;
     pub const ATTACK_S42: i32 = 341;
     pub const SPECIAL_S1: i32 = 350;
     pub const SPECIAL_S2: i32 = 351;
@@ -147,6 +181,9 @@ pub(crate) mod mv {
 /// `ftLk_DatAttrs`' offsets (0xDC bytes).
 pub(crate) mod attr {
     pub const SIZE: usize = 0xDC;
+    pub const X0: usize = 0x0;
+    pub const SPECIAL_N_ANIM_RATE: usize = 0x4;
+    pub const X8: usize = 0x8;
     pub const XC: usize = 0xC;
     pub const X10: usize = 0x10;
     pub const X14: usize = 0x14;
@@ -201,6 +238,7 @@ pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         || special_hi::run(g, gobj, a)
         || special_lw::run(g, gobj, a)
         || special_s::run(g, gobj, a)
+        || special_n::run(g, gobj, a)
 }
 
 /// Link's functions other code calls by address (`code::call`): the item hooks and every

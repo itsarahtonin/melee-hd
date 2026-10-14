@@ -61,6 +61,8 @@ ROOTS = [
     "itLinkBomb_ItemVars",
     "itLinkBoomerang_ItemVars",
     "itLinkHookshot_ItemVars",
+    "itLinkArrow_ItemVars",
+    "itLinkBow_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",

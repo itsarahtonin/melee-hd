@@ -16,8 +16,10 @@ pub mod hammerhead;
 pub mod heart;
 pub mod heiho;
 pub mod kusudama;
+pub mod linkarrow;
 pub mod linkbomb;
 pub mod linkboomerang;
+pub mod linkbow;
 pub mod linkhookshot;
 pub mod luigifireball;
 pub mod mariocape;
@@ -101,6 +103,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || linkbomb::run_event(r, gobj, addr)
         || linkboomerang::run_event(r, gobj, addr)
         || linkhookshot::run_event(r, gobj, addr)
+        || linkarrow::run_event(r, gobj, addr)
+        || linkbow::run_event(r, gobj, addr)
         || drmariopill::run_event(r, gobj, addr)
         || pikachuthunder::run_event(r, gobj, addr)
         || pikachutjoltground::run_event(r, gobj, addr)
@@ -155,6 +159,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| linkbomb::run_pred(r, gobj, addr))
         .or_else(|| linkboomerang::run_pred(r, gobj, addr))
         .or_else(|| linkhookshot::run_pred(r, gobj, addr))
+        .or_else(|| linkarrow::run_pred(r, gobj, addr))
+        .or_else(|| linkbow::run_pred(r, gobj, addr))
         .or_else(|| drmariopill::run_pred(r, gobj, addr))
         .or_else(|| pikachuthunder::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
@@ -215,6 +221,11 @@ pub const LINK_BOOMERANG: i32 = 60;
 pub const CLINK_BOOMERANG: i32 = 61;
 pub const LINK_HSHOT: i32 = 62;
 pub const CLINK_HSHOT: i32 = 63;
+/// `It_Kind_Link_Arrow`, `It_Kind_CLink_Arrow`, `It_Kind_Link_Bow` and `It_Kind_CLink_Bow`.
+pub const LINK_ARROW: i32 = 64;
+pub const CLINK_ARROW: i32 = 65;
+pub const LINK_BOW: i32 = 76;
+pub const CLINK_BOW: i32 = 77;
 /// `It_Kind_Zelda_DinFire` and `_DinFire_Explode`.
 pub const ZELDA_DIN_FIRE: i32 = 108;
 pub const ZELDA_DIN_FIRE_EXPLODE: i32 = 109;

@@ -205,20 +205,6 @@ impl Running<'_> {
         }
     }
 
-    /// `ftLk_SpecialN_ProcessFv10`.
-    fn link_process_arrow(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).u.gobj_at(u::ARROW).is_some() {
-            unported_call("ftLk_SpecialN_ProcessFv10");
-        }
-    }
-
-    /// `ftLk_SpecialN_ProcessFv14`.
-    fn link_process_bow(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).u.gobj_at(u::BOW).is_some() {
-            unported_call("ftLk_SpecialN_ProcessFv14");
-        }
-    }
-
     /// Picking up an item, `ftLk_Init_OnItemPickupExt`: his sheathed sword's and shield's
     /// models swapped (the second only for a heavy item), then `ftLk_Init_OnItemPickup`
     /// (`Fighter_OnItemPickup(gobj, flag, 1, 1)`).

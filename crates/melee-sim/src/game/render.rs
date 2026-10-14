@@ -314,6 +314,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         super::it::link::RENDER => r.render_link(gobj, pass),
         super::it::kinds::foxillusion::RENDER => r.render_fox_illusion(gobj, pass),
         super::it::kinds::linkboomerang::RENDER => r.render_link_boomerang(gobj, pass),
+        super::it::kinds::linkarrow::RENDER => r.render_link_arrow(gobj, pass),
         crate::lb::bgflash::RENDER => r.render_bg_flash(),
         crate::hsd::sis::TEXT_RENDER => r.render_text(gobj, pass),
         super::hud::magnify::CAMERA_RENDER => r.render_magnifier(gobj),

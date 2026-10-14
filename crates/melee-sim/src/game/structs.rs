@@ -8658,6 +8658,198 @@ impl itLinkHookshot_ItemVars {
     }
 }
 
+/// `itLinkArrow_ItemVars`, 0xf4 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itLinkArrow_ItemVars {
+    /// +0x0
+    pub x0: Var<f32>,
+    /// +0x4
+    pub x4: Var<f32>,
+    /// +0x8
+    pub x8: Var<f32>,
+    /// +0xc
+    pub xC: Var<f32>,
+    /// +0x10
+    pub x10: Var<f32>,
+    /// +0x14
+    pub x14: Var<f32>,
+    /// +0x18
+    pub x18: Var<Vec3>,
+    /// +0x24
+    pub x24: Var<Vec3>,
+    /// +0x30
+    pub x30: Var<Vec3>,
+    /// +0x3c
+    pub x3C: Var<Vec3>,
+    /// +0x48
+    pub x48: Var<Vec3>,
+    /// +0x54
+    pub x54: Var<Quat>,
+    /// +0x64
+    pub x64: Var<Quat>,
+    /// +0x74
+    pub x74: Var<Quat>,
+    /// +0x84
+    pub x84: Var<Quat>,
+    /// +0x94
+    pub x94: Var<f32>,
+    /// +0x98
+    pub x98: Var<f32>,
+    /// +0x9c
+    pub x9C: Var<u32>,
+    /// +0xa0
+    pub xA0: Var<i32>,
+    /// +0xa4
+    pub xA4: Var<u32>,
+    /// +0xa8
+    pub xA8: Var<f32>,
+    /// +0xac
+    pub xAC: Var<f32>,
+    /// +0xb0
+    pub xB0: Var<i32>,
+    /// +0xb4
+    pub xB4: [Var<Option<JObjId>>; 3],
+    /// +0xc0
+    pub xC0: Var<f32>,
+    /// +0xc4
+    pub xC4: Var<Option<GObjId>>,
+    /// +0xc8
+    pub xC8: Var<f32>,
+    /// +0xcc
+    pub xCC: Var<f32>,
+    /// +0xd0
+    pub xD0: Var<RawPtr>,
+    /// +0xd4
+    pub xD4: Var<f32>,
+    /// +0xd8
+    pub xD8: Var<f32>,
+    /// +0xdc
+    pub xDC: Var<f32>,
+    /// +0xe0
+    pub xE0: Var<Option<GObjId>>,
+    /// +0xe4
+    pub xE4: Var<i32>,
+    /// +0xe8
+    pub xE8: Var<f32>,
+    /// +0xec
+    pub xEC: Var<f32>,
+    /// +0xf0
+    pub xF0: Var<i32>,
+}
+
+impl Default for itLinkArrow_ItemVars {
+    fn default() -> Self {
+        itLinkArrow_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+            x18: Var::new(Default::default()),
+            x24: Var::new(Default::default()),
+            x30: Var::new(Default::default()),
+            x3C: Var::new(Default::default()),
+            x48: Var::new(Default::default()),
+            x54: Var::new(Default::default()),
+            x64: Var::new(Default::default()),
+            x74: Var::new(Default::default()),
+            x84: Var::new(Default::default()),
+            x94: Var::new(Default::default()),
+            x98: Var::new(Default::default()),
+            x9C: Var::new(Default::default()),
+            xA0: Var::new(Default::default()),
+            xA4: Var::new(Default::default()),
+            xA8: Var::new(Default::default()),
+            xAC: Var::new(Default::default()),
+            xB0: Var::new(Default::default()),
+            xB4: core::array::from_fn(|_| Var::new(Default::default())),
+            xC0: Var::new(Default::default()),
+            xC4: Var::new(Default::default()),
+            xC8: Var::new(Default::default()),
+            xCC: Var::new(Default::default()),
+            xD0: Var::new(Default::default()),
+            xD4: Var::new(Default::default()),
+            xD8: Var::new(Default::default()),
+            xDC: Var::new(Default::default()),
+            xE0: Var::new(Default::default()),
+            xE4: Var::new(Default::default()),
+            xE8: Var::new(Default::default()),
+            xEC: Var::new(Default::default()),
+            xF0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itLinkArrow_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.x10.mark_stale();
+        self.x14.mark_stale();
+        self.x18.mark_stale();
+        self.x24.mark_stale();
+        self.x30.mark_stale();
+        self.x3C.mark_stale();
+        self.x48.mark_stale();
+        self.x54.mark_stale();
+        self.x64.mark_stale();
+        self.x74.mark_stale();
+        self.x84.mark_stale();
+        self.x94.mark_stale();
+        self.x98.mark_stale();
+        self.x9C.mark_stale();
+        self.xA0.mark_stale();
+        self.xA4.mark_stale();
+        self.xA8.mark_stale();
+        self.xAC.mark_stale();
+        self.xB0.mark_stale();
+        self.xB4.iter_mut().for_each(|v| v.mark_stale());
+        self.xC0.mark_stale();
+        self.xC4.mark_stale();
+        self.xC8.mark_stale();
+        self.xCC.mark_stale();
+        self.xD0.mark_stale();
+        self.xD4.mark_stale();
+        self.xD8.mark_stale();
+        self.xDC.mark_stale();
+        self.xE0.mark_stale();
+        self.xE4.mark_stale();
+        self.xE8.mark_stale();
+        self.xEC.mark_stale();
+        self.xF0.mark_stale();
+    }
+}
+
+/// `itLinkBow_ItemVars`, 0x8 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itLinkBow_ItemVars {
+    /// +0x0
+    pub x0: Var<f32>,
+    /// +0x4
+    pub x4: Var<Option<GObjId>>,
+}
+
+impl Default for itLinkBow_ItemVars {
+    fn default() -> Self {
+        itLinkBow_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itLinkBow_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+    }
+}
+
 /// `IfDamageFlags`, 0x1 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IfDamageFlags {
