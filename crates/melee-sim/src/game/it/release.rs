@@ -299,7 +299,7 @@ pub fn drop(r: &mut Running, gobj: GObjId, vel: Vec3, speed: f32) {
 }
 
 /// Dropped from `pos` at `vel`, `Item_8026AC74` (a light throw's drop).
-#[doc(alias = "Item_8026AC74")]
+// Ports `Item_8026AC74`; aliased once a check reaches it.
 pub fn drop_at(r: &mut Running, gobj: GObjId, pos: Vec3, vel: Vec3, speed: f32) {
     item_mut(r.game, gobj).xC44 = speed;
     drop_sfx(r, gobj);

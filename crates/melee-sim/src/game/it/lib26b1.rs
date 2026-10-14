@@ -40,7 +40,7 @@ pub fn use_kind(game: &Game, data: &Archives, gobj: GObjId) -> i32 {
 }
 
 /// Whether the item, of kind 16, 21 to 23 or 25, has no uses left (`xD4C`), `it_8026B594`.
-#[doc(alias = "it_8026B594")]
+// Ports `it_8026B594`; aliased once a check reaches it.
 pub fn is_empty_shooter(game: &Game, gobj: GObjId) -> bool {
     let ip = item(game, gobj);
     matches!(ip.kind, 16 | 21 | 22 | 23 | 25) && ip.xD4C <= 0
@@ -66,7 +66,7 @@ pub fn damage_mul(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
 
 /// Where fighters reach for the item, `it_8026B344`: its position plus its grab offset
 /// (`xBCC_unk`) the way it faces.
-#[doc(alias = "it_8026B344")]
+// Ports `it_8026B344`; aliased once a check reaches it.
 pub fn grab_pos(game: &Game, gobj: GObjId) -> Vec3 {
     let ip = item(game, gobj);
     Vec3::new(
@@ -81,8 +81,7 @@ pub fn grab_pos(game: &Game, gobj: GObjId) -> Vec3 {
 }
 
 /// How far from its grab point fighters reach it, `itGetGrabRangeX` and `itGetGrabRangeY`.
-#[doc(alias = "itGetGrabRangeX")]
-#[doc(alias = "itGetGrabRangeY")]
+// Ports `itGetGrabRangeX` and `itGetGrabRangeY`; aliased once a check reaches them.
 pub fn grab_range(game: &Game, gobj: GObjId) -> (f32, f32) {
     let r = &item(game, gobj).xBD4_grabRange;
     (r.x, r.y)

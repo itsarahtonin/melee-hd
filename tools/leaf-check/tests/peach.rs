@@ -200,8 +200,6 @@ fn name_of(addr: u32) -> String {
 /// function's registers aren't their arguments).
 const TAKES_MORE: &[&str] = &[
     "ftpickupitem_80094818",
-    "ftCo_80095328",
-    "ftCo_80095744",
     "ftCo_800957F4",
     "ftCo_800CEFE0",
     "ftPe_8011BB6C",
@@ -399,11 +397,18 @@ fn vary(call: &mut Call, i: usize) {
     for k in 0..4u32 {
         poke_u32(call, fp + 0x2200 + 4 * k, (i as u32 >> k) & 1);
     }
+    // The script's timer (`cmd_timer`), a fraction of a frame past its last command at times,
+    // which places a throw's release between frames.
+    poke_f32(call, fp + 0x2214, [0.0, -0.25, -0.5, -0.75][(i / 7) % 4]);
     // The script's throw flags (`x2210`): 0, 3 and 4.
     for (bit, on) in [(0, i % 3 == 1), (3, i % 4 == 2), (4, i % 5 == 3)] {
         poke_bit(call, fp + 0x2210, bit, on);
     }
 }
+
+/// Functions taking a pointer to a flag they set (`bool*`), run from their neighbours'
+/// captures with it null.
+const NULL_R4: &[&str] = &["ftCo_80095328", "ftCo_80095744"];
 
 /// The items' callbacks that forget a GObj (`EvtUnk`, which nothing dispatches yet): run from
 /// the other callbacks' captures, told to forget the item's owner.
@@ -506,6 +511,9 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
                         }
                         if fighter_unit(u) {
                             vary(call, shift + i);
+                            if NULL_R4.contains(&n.as_str()) {
+                                call.regs.gpr[4] = 0;
+                            }
                         } else if FORGETS.contains(&n.as_str()) {
                             // What the item forgets: its owner.
                             call.regs.gpr[4] = peek_u32(call, user_data_arg(call) + 0x518);
