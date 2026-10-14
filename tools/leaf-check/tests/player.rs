@@ -36,8 +36,7 @@ fn bases() -> Vec<PathBuf> {
         .flatten()
         .map(|e| e.path())
         .filter(|p| p.is_dir())
-        .flat_map(|d| std::fs::read_dir(d).into_iter().flatten().flatten())
-        .map(|e| e.path())
+        .flat_map(melee_capture::pack::entries)
         .filter(|p| {
             let n = p.file_name().unwrap().to_string_lossy();
             n.starts_with(&format!("{BASE}-call")) && n.ends_with(".call")

@@ -12,6 +12,7 @@ pub mod import;
 pub mod items;
 pub mod izumi;
 pub mod links;
+pub mod pack;
 pub mod playback;
 pub mod sis;
 pub mod stadium;
@@ -34,7 +35,12 @@ pub struct Capture {
 }
 
 impl Capture {
+    /// The call saved at `path` (`DIR/NAME.call`): from `DIR`'s pack when it holds it
+    /// ([`pack`]), from the file otherwise.
     pub fn read(path: &Path) -> Self {
+        if let Some(call) = pack::read(path) {
+            return Capture { call };
+        }
         let packed = std::fs::read(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
         let bytes =
             zstd::decode_all(&packed[..]).unwrap_or_else(|e| panic!("{}: {e}", path.display()));

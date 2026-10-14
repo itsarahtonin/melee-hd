@@ -1142,14 +1142,7 @@ fn param_calls() {
 fn screen_captures() {
     let Some(index) = disc_index() else { return };
     for d in dirs() {
-        let Ok(entries) = std::fs::read_dir(&d) else {
-            continue;
-        };
-        for e in entries.flatten() {
-            let path = e.path();
-            if path.extension().is_none_or(|x| x != "call") {
-                continue;
-            }
+        for path in melee_capture::pack::call_files(&d) {
             let cap = Capture::read(&path);
             let ok = catch_unwind(AssertUnwindSafe(|| {
                 let mut archives = Archives::default();

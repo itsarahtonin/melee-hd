@@ -51,21 +51,16 @@ pub struct Report {
     pub failed: Vec<String>,
 }
 
-/// The saved calls of `func` in `dir`, or none when the directory isn't there.
+/// The saved calls of `func` in `dir` (files or its pack's), sorted, or none when the
+/// directory isn't there.
 pub fn saved_calls(dir: &str, func: &str) -> Vec<PathBuf> {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return Vec::new();
-    };
     let prefix = format!("{func}-call");
-    let mut v: Vec<PathBuf> = entries
-        .filter_map(|e| e.ok().map(|e| e.path()))
-        .filter(|p| {
-            p.file_name()
-                .and_then(|n| n.to_str())
-                .is_some_and(|n| n.starts_with(&prefix) && n.ends_with(".call"))
-        })
-        .collect();
-    v.sort();
+    let mut v = melee_capture::pack::call_files(dir);
+    v.retain(|p| {
+        p.file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.starts_with(&prefix))
+    });
     v
 }
 

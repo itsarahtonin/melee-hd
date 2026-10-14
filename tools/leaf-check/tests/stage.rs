@@ -46,13 +46,10 @@ fn captures(func: &str) -> Vec<PathBuf> {
         return out;
     };
     for d in dirs.flatten() {
-        let Ok(files) = std::fs::read_dir(d.path()) else {
-            continue;
-        };
-        for f in files.flatten() {
-            let name = f.file_name().to_string_lossy().into_owned();
+        for f in melee_capture::pack::entries(d.path()) {
+            let name = f.file_name().unwrap().to_string_lossy().into_owned();
             if name.starts_with(&format!("{func}-call")) && name.ends_with(".call") {
-                out.push(f.path());
+                out.push(f);
             }
         }
     }
@@ -464,13 +461,7 @@ fn tournament_stage_imports_round_trip() {
     };
     let (mut n, mut failed) = (0, Vec::new());
     for d in dirs.flatten().filter(|d| d.path().is_dir()) {
-        let mut files: Vec<_> = std::fs::read_dir(d.path())
-            .unwrap()
-            .flatten()
-            .map(|f| f.path())
-            .filter(|p| p.extension().is_some_and(|e| e == "call"))
-            .collect();
-        files.sort();
+        let files = melee_capture::pack::call_files(d.path());
         for path in files {
             let cap = Capture::read(&path);
             let mut archives = Archives::default();
@@ -1548,7 +1539,7 @@ fn stadium_unreached_entries() {
     use melee_sim::game::gr::stadium;
     let dir = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| ssbm_rs_local(MORE_CALLS));
     let path = PathBuf::from(dir).join("ps1/grStadium_801D4548-call10.call");
-    if !path.exists() {
+    if !melee_capture::pack::exists(&path) {
         eprintln!("no capture {}: skipping", path.display());
         return;
     }
@@ -1591,10 +1582,8 @@ fn stadium_unreached_entries() {
     on_state_with(&path, &steps, true);
     // The cycle's other captures, the screen in whatever mode each found it.
     let zsteps: Vec<Step> = steps[..z.len()].to_vec();
-    let mut others: Vec<_> = std::fs::read_dir(path.parent().unwrap())
-        .unwrap()
-        .flatten()
-        .map(|f| f.path())
+    let mut others: Vec<_> = melee_capture::pack::entries(path.parent().unwrap())
+        .into_iter()
         .filter(|p| {
             p.file_name()
                 .is_some_and(|n| n.to_string_lossy().starts_with("grStadium_801D4548-"))

@@ -59,13 +59,10 @@ fn captures(func: &str) -> Vec<Source> {
         return out;
     };
     for d in dirs.flatten() {
-        let Ok(files) = std::fs::read_dir(d.path()) else {
-            continue;
-        };
-        for f in files.flatten() {
-            let name = f.file_name().to_string_lossy().into_owned();
+        for f in melee_capture::pack::entries(d.path()) {
+            let name = f.file_name().unwrap().to_string_lossy().into_owned();
             if name.starts_with(&format!("{func}-call")) && name.ends_with(".call") {
-                out.push(Source::File(f.path()));
+                out.push(Source::File(f));
             }
         }
     }

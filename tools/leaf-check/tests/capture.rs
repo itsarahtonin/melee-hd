@@ -17,7 +17,7 @@ const CALLS: &str = "calls/fid";
 fn captured_call_changes_are_seen() {
     let Some(ctx) = reference() else { return };
     let path = std::path::Path::new(&ssbm_rs_local(CALLS)).join("Fighter_procAnim-call1.call");
-    if !path.exists() {
+    if !melee_capture::pack::exists(&path) {
         return;
     }
     let cap = Capture::read(&path);

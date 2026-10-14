@@ -64,8 +64,7 @@ fn calls(func: &str) -> Vec<PathBuf> {
         .flatten()
         .map(|e| e.path())
         .filter(|p| p.is_dir())
-        .flat_map(|d| std::fs::read_dir(d).into_iter().flatten().flatten())
-        .map(|e| e.path())
+        .flat_map(melee_capture::pack::entries)
         .filter(|p| {
             let name = p.file_name().unwrap().to_string_lossy();
             name.starts_with(&prefix) && name.ends_with(".call")
