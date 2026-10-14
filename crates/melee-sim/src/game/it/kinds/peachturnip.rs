@@ -4,7 +4,7 @@
 
 use super::super::data::{attr, common};
 use super::super::item::{animate, article, attr_of, change, change_state, common_data, destroy};
-use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
+use super::super::{TurnipFlag, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -160,9 +160,7 @@ pub fn spawn(
         let owner = ip.owner;
         let v = ip.xDD4_itemVar.peach_turnip();
         v.xDDC_damage.set(damage);
-        // Only the top bit is the turnip's; the rest of the byte keeps what the block held.
-        let b = *v.xDD4.peek();
-        v.xDD4.set([b[0] & !0x80]);
+        v.xDD4.set(TurnipFlag { picked_up: false });
         v.xDE4_owner.set(owner);
         lib26b1::silence(r.game, gobj);
     }
@@ -202,9 +200,8 @@ fn picked_up(r: &mut Running, gobj: GObjId) {
         .xDD4_itemVar
         .peach_turnip()
         .xDD4
-        .get()[0]
-        & 0x80
-        != 0;
+        .get()
+        .picked_up;
     if again {
         change_state(r, gobj, 4, change::ANIM_UPDATE);
     } else {
@@ -215,7 +212,7 @@ fn picked_up(r: &mut Running, gobj: GObjId) {
         .xDD4_itemVar
         .peach_turnip()
         .xDD4
-        .update(|b| [b[0] | 0x80]);
+        .set(TurnipFlag { picked_up: true });
     animate(r, gobj);
 }
 

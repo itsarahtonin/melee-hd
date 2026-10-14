@@ -19,7 +19,7 @@ use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::it::Var;
-use crate::game::it::{IgnoreId, ItemVars};
+use crate::game::it::{IgnoreId, ItemVars, TurnipFlag};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -18078,7 +18078,7 @@ impl Mirror for itPeachTurnip_ItemVars {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         itPeachTurnip_ItemVars {
-            xDD4: Var::new(m.bytes(at + 0x0)),
+            xDD4: Var::new(TurnipFlag::import(m, at + 0x0, cx)),
             xDD8: Var::new(m.u32(at + 0x4) as i32),
             xDDC_damage: Var::new(m.u32(at + 0x8) as i32),
             xDE0_scl: Var::new(f32::from_bits(m.u32(at + 0xc))),
@@ -18090,13 +18090,9 @@ impl Mirror for itPeachTurnip_ItemVars {
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
         if self.xDD4.live(&format!("{path}.xDD4"), cx) {
-            if (*self.xDD4.peek()) != m.bytes::<1>(at + 0x0) {
-                cx.mismatch(
-                    &format!("{path}.xDD4"),
-                    format!("{:02x?}", (*self.xDD4.peek())),
-                    format!("{:02x?}", m.bytes::<1>(at + 0x0)),
-                );
-            }
+            self.xDD4
+                .peek()
+                .compare(m, at + 0x0, &format!("{path}.xDD4"), cx);
         }
         if self.xDD8.live(&format!("{path}.xDD8"), cx) {
             if (*self.xDD8.peek()) != m.u32(at + 0x4) as i32 {

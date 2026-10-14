@@ -12,7 +12,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
-use crate::game::it::{IgnoreId, ItemVars, Var};
+use crate::game::it::{IgnoreId, ItemVars, TurnipFlag, Var};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -8362,7 +8362,7 @@ impl itClimbersBlizzard_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itPeachTurnip_ItemVars {
     /// +0x0
-    pub xDD4: Var<[u8; 1]>,
+    pub xDD4: Var<TurnipFlag>,
     /// +0x4
     pub xDD8: Var<i32>,
     /// +0x8
