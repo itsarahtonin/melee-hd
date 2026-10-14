@@ -557,7 +557,7 @@ impl Running<'_> {
             }
             // `ft_8007C114`.
             if self.game.fighters[f.0].x2219_b4 {
-                if self.holds_hammer(gobj) {
+                if self.holding_hammer(gobj) {
                     unported_call("ftCo_800C555C (the hammer)");
                 }
                 self.game.fighters[f.0].x2219_b4 = false;
@@ -587,7 +587,7 @@ impl Running<'_> {
             self.game.fighters[f.0].x2221_b4 = false;
             let status = self.parasol_status(gobj);
             if status != -1 && status != 6 {
-                unported_call("ftCommon_8007E83C (closing a held parasol)");
+                self.parasol_step(gobj, 6, 0.0);
             }
         }
         self.end_part_anims(f);

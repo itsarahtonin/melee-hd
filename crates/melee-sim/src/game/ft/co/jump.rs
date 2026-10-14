@@ -486,21 +486,4 @@ impl Running<'_> {
         false
     }
 
-    /// Opening the parasol, `ftCo_800CEE70`.
-    #[doc(alias = "ftCo_800CEE70")]
-    pub fn parasol_check(&mut self, gobj: GObjId) -> bool {
-        let fp = self.game.fighter(gobj);
-        if fp.x2221_b5 {
-            return false;
-        }
-        let t = self.common().f32(0x594);
-        let fp = self.game.fighter(gobj);
-        if (fp.x2221_b7 || fp.input.lstick[0].y >= t) && fp.self_vel.y <= 0.0 {
-            // A parasol held closed opens.
-            if self.parasol_status(gobj) == 6 {
-                unported_call("ft_800CEF08 (opening a held parasol)");
-            }
-        }
-        false
-    }
 }

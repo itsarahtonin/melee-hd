@@ -159,56 +159,6 @@ impl Running<'_> {
         changed
     }
 
-    /// Which part of a parasol's opening and closing the held parasol is in, or -1 when the
-    /// fighter holds none, `ftGetParasolStatus`: the common parasol's states 7 to 10, 5, 6
-    /// and 4 give 0 to 6; Peach's opening (1) gives 4, open or closed (0, 2) 6.
-    #[doc(alias = "ftGetParasolStatus")]
-    pub fn parasol_status(&self, gobj: GObjId) -> i32 {
-        /// `It_Kind_Parasol`, `It_Kind_Peach_Parasol`.
-        const PARASOL: i32 = 25;
-        const PEACH_PARASOL: i32 = 103;
-        let Some(item) = self.game.fighter(gobj).item_gobj else {
-            return -1;
-        };
-        let (kind, msid) = (lib26b1::kind(self.game, item), self.item_msid(item));
-        if kind == PARASOL {
-            match msid {
-                7 => return 0,
-                8 => return 1,
-                9 => return 2,
-                10 => return 3,
-                5 => return 4,
-                6 => return 5,
-                4 => return 6,
-                _ => {}
-            }
-        }
-        if kind == PEACH_PARASOL {
-            match msid {
-                1 => return 4,
-                0 | 2 => return 6,
-                _ => {}
-            }
-        }
-        -1
-    }
-
-    /// Whether the fighter holds the hammer, `ftCo_800C5240`.
-    #[doc(alias = "ftCo_800C5240")]
-    pub fn holds_hammer(&self, gobj: GObjId) -> bool {
-        /// `It_Kind_Hammer`.
-        const HAMMER: i32 = 28;
-        self.game
-            .fighter(gobj)
-            .item_gobj
-            .is_some_and(|item| lib26b1::kind(self.game, item) == HAMMER)
-    }
-
-    /// `itGetMotionId`.
-    fn item_msid(&self, item: GObjId) -> i32 {
-        super::super::super::it::item(self.game, item).msid
-    }
-
     /// The throw's animation speed: a smash throw's (`ftCommonData` x400), over the item's
     /// damage multiplier (`getAnimSpeed`).
     fn item_throw_anim_speed(&self, gobj: GObjId, msid: i32) -> f64 {

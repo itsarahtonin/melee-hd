@@ -67,7 +67,7 @@ impl Running<'_> {
             fp.x1978 = None;
             return;
         }
-        if self.holds_hammer(gobj) {
+        if self.holding_hammer(gobj) {
             unported_call("ftCo_800C5500 (letting go of the hammer)");
         }
         let fp = self.game.fighter(gobj);

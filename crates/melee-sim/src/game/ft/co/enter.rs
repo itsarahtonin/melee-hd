@@ -76,7 +76,7 @@ impl Running<'_> {
             self.enter_down_spot(gobj);
             return;
         }
-        if self.holds_hammer(gobj) {
+        if self.holding_hammer(gobj) {
             unported_call("ftCo_800C4ED8 (the hammer)");
         }
         let fp = &self.game.fighters[f.0];
@@ -122,7 +122,7 @@ impl Running<'_> {
             self.enter_damage_fall(gobj);
             return;
         }
-        if self.holds_hammer(gobj) {
+        if self.holding_hammer(gobj) {
             unported_call("ftCo_800C5D34 (the hammer)");
         }
         self.change_motion_state(gobj, MS_FALL, 1, 0.0, 1.0, 0.0, None);

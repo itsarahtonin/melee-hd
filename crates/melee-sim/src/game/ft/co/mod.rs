@@ -31,6 +31,7 @@ pub mod jump;
 pub mod kind_callbacks;
 pub mod ledge;
 pub mod multijump;
+pub mod parasol;
 pub mod passive_ceil;
 pub mod passive_wall;
 pub mod phys;

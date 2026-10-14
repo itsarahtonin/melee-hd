@@ -273,7 +273,7 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
             g.stop_rumble(f, 2);
         }
     }
-    if g.holds_hammer(gobj) {
+    if g.holding_hammer(gobj) {
         unported_call("ftCo_800C511C (the hammer)");
     }
     let fp = &mut g.game.fighters[f.0];

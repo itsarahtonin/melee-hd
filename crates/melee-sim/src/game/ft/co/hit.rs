@@ -124,12 +124,13 @@ impl Running<'_> {
         kb == 0.0 || (fp.allow_sdi && fp.x221A_b3 && kb < fp::fadds(reg(fp.dmg.x18A8), x140))
     }
 
-    /// A hit drops what the fighter holds, `Fighter_8006CDA4`, by chance against `dmg`.
-    /// Dropping isn't ported: holding a light item that could fall, or a second fighter,
-    /// stops there.
+    /// A hit drops what the fighter holds, `Fighter_8006CDA4`: a light item (and a second one)
+    /// by chance against the hit's damage (`ftCommonData` x418), or a used-up shooter one time
+    /// in x41C; a held fighter (not ported) by the same chance.
     #[doc(alias = "Fighter_8006CDA4")]
     fn drop_items_on_hit(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
+        let dmg = fp::fctiwz(reg(fp.dmg.x1838_percentTemp));
         let hold = fp
             .item_gobj
             .is_some_and(|i| !lib26b1::is_heavy(self.game, self.data, i));
@@ -141,9 +142,24 @@ impl Running<'_> {
             && !fp.x2226_b2
         {
             if hold && keep {
-                unported_call("Fighter_8006CDA4 (a held item dropped by a hit)");
+                let (x418, x41c) = (self.common().i32(0x418), self.common().i32(0x41C));
+                let gobj = self.game.fighters[f.0].gobj.expect("a fighter without a GObj");
+                let drop = self.game.objs.rng.below(x418) < dmg || {
+                    let item = self.game.fighters[f.0].item_gobj.expect("an item");
+                    self.item_a_kind(gobj) == 3
+                        && lib26b1::is_empty_shooter(self.game, item)
+                        && self.game.objs.rng.below(x41c) == 0
+                };
+                if drop {
+                    let zero = crate::vec::Vec3::new(0.0, 0.0, 0.0);
+                    if let Some(second) = self.game.fighters[f.0].x1978 {
+                        crate::game::it::release::drop(self, second, zero, 1.0);
+                    }
+                    let item = self.game.fighters[f.0].item_gobj.expect("an item");
+                    crate::game::it::release::drop(self, item, zero, 1.0);
+                }
             }
-            if fp.x197C.is_some() {
+            if self.game.fighters[f.0].x197C.is_some() {
                 unported_call("Fighter_8006CDA4 (a held fighter dropped by a hit)");
             }
         }

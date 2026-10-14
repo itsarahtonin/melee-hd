@@ -166,6 +166,7 @@ impl Running<'_> {
             27 => self.cmd_fighter_visible(gobj, f, w),
             30 => self.cmd_texture_anim(gobj, f, w),
             31 => self.cmd_part_anim(gobj, w, true),
+            32 => self.cmd_parasol(gobj, w),
             33 => self.cmd_rumble(gobj, f, w),
             34 => self.cmd_stop_rumble(gobj, f, w),
             35 => self.cmd_sword(gobj, f, w),
@@ -199,6 +200,15 @@ impl Running<'_> {
             },
         }
         self.cmd_skip(f, 1);
+    }
+
+    /// The held parasol's step, `ftAction_80072894`: the step (13 bits from bit 6) and its
+    /// animation's length (the next 13 bits).
+    #[doc(alias = "ftAction_80072894")]
+    fn cmd_parasol(&mut self, gobj: GObjId, w: u32) {
+        let step = bits(w, 6, 13) as i32;
+        let div = mem(fp::frsp(f64::from(bits(w, 19, 13))));
+        self.parasol_step(gobj, step, div);
     }
 
     /// The hitbox command, `ftAction_8007121C`: hitbox `id` of a group, on a bone, with its

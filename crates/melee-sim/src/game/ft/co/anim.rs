@@ -264,7 +264,7 @@ impl Running<'_> {
             fp.x221C_b6 = false;
             fp.x2098 = combo as u16;
             self.knockback_exit(gobj);
-            if self.holds_hammer(gobj) {
+            if self.holding_hammer(gobj) {
                 unported_call("ftCo_800C554C (the hammer)");
             }
         }
