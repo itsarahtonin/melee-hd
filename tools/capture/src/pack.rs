@@ -249,6 +249,32 @@ pub fn call_files(dir: impl AsRef<Path>) -> Vec<PathBuf> {
     v
 }
 
+/// What `dir` holds for the checks, to say why one found no saved calls: whether it's there,
+/// and its pack's and `.call` files' calls.
+pub fn holdings(dir: impl AsRef<Path>) -> String {
+    let dir = dir.as_ref();
+    if !dir.is_dir() {
+        return format!("{} isn't there", dir.display());
+    }
+    let files = std::fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().is_some_and(|x| x == "call"))
+        .count();
+    match in_dir(dir) {
+        Some(pack) => format!(
+            "{} holds a {FILE_NAME} of {} calls and {files} .call files",
+            dir.display(),
+            pack.len()
+        ),
+        None => format!(
+            "{} holds no {FILE_NAME} and {files} .call files",
+            dir.display()
+        ),
+    }
+}
+
 /// Whether the call saved at `path` is there, as a file or in its directory's pack.
 pub fn exists(path: &Path) -> bool {
     path.is_file()

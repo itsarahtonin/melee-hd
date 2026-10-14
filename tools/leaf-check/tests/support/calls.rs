@@ -62,7 +62,7 @@ pub fn calls_in(dirs: &[PathBuf], func: &str) -> Vec<PathBuf> {
         .collect();
     found.sort();
     if found.is_empty() {
-        eprintln!("no captures of {func} in {dirs:?}");
+        eprintln!("no captures of {func} (in a run's calls.pack or .call files) under {dirs:?}");
     }
     found
 }

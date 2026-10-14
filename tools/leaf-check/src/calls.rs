@@ -171,7 +171,10 @@ fn run_checks(
         return Vec::new();
     };
     if paths.is_empty() {
-        eprintln!("no saved calls of {func} in {dir}: skipping");
+        eprintln!(
+            "no saved calls of {func}: skipping ({})",
+            melee_capture::pack::holdings(dir)
+        );
         return Vec::new();
     }
     let mut reports = Vec::new();
@@ -481,7 +484,10 @@ pub fn run_variants_in(dir: &str, func: &str, variants: &[Variant]) -> Vec<Vec<R
         return variants.iter().map(|_| Vec::new()).collect();
     };
     if paths.is_empty() {
-        eprintln!("no saved calls of {func} in {dir}: skipping");
+        eprintln!(
+            "no saved calls of {func}: skipping ({})",
+            melee_capture::pack::holdings(dir)
+        );
         return variants.iter().map(|_| Vec::new()).collect();
     }
     run_variants(&paths, index, &Setup::default(), variants)
