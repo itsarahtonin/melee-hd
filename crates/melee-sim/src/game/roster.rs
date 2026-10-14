@@ -56,6 +56,11 @@ pub const CHARACTERS: &[Character] = &[
         keys: &["jigglypuff", "puff", "jiggs"],
     },
     Character {
+        kind: 6,
+        name: "Link",
+        keys: &["link"],
+    },
+    Character {
         kind: 7,
         name: "Luigi",
         keys: &["luigi"],

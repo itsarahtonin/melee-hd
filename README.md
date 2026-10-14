@@ -25,9 +25,9 @@ Like ssbm-rs, it contains no game data: the game's models, textures, sounds and 
 
 | | |
 | --- | --- |
-| Characters | Fox, Falco, Marth and Roy, Sheik and Zelda, Captain Falcon, Ganondorf, Ness, Jigglypuff, Samus, Luigi, Mario, Dr. Mario, Pikachu and Pichu, each checked over whole matches |
+| Characters | Fox, Falco, Marth and Roy, Sheik and Zelda, Captain Falcon, Ganondorf, Ness, Jigglypuff, Samus, Luigi, Mario, Dr. Mario, Link, Pikachu and Pichu, each checked over whole matches |
 | Stages | Final Destination, Battlefield, Pokémon Stadium (transformations included), Yoshi's Story, Dream Land, Fountain of Dreams |
-| Whole matches compared | 30 matches, 391,764 ticks, every checked field equal after every tick, the original allocator's heap included: eleven CPU-played benchmark matches (Fox ditto; Fox against Marth on three stages; Ganondorf against Captain Falcon; three each for Ness and Samus) and nineteen real Slippi replays (Slippi 3.19's, and ranked 3.16 replays) |
+| Whole matches compared | 32 matches, 419,587 ticks, every checked field equal after every tick, the original allocator's heap included: eleven CPU-played benchmark matches (Fox ditto; Fox against Marth on three stages; Ganondorf against Captain Falcon; three each for Ness and Samus) and twenty-one real Slippi replays (Slippi 3.19's, and ranked 3.16 and 3.17 replays) |
 | Player | A VS match in a window, with a launcher for picking characters, stage, stocks and time. Frames are identical to ssbm-rs's on every checked frame except Slippi's name plates; the audio mix is sample-exact with ssbm-rs's on the matches checked |
 | Functions | 6,029 of the 19,827 in ssbm-rs's symbol table ported and checked, 197 replaced by native subsystems, 2 dead ([port ledger](docs/port-ledger.md)) |
 | Speed | The simulation runs a match about 16.7 times as fast as headless Dolphin on one core; a snapshot is about 0.8 MB, cloned in about 0.1 ms ([performance](docs/performance.md)) |
