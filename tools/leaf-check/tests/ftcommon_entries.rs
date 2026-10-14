@@ -181,6 +181,13 @@ fn b(v: bool) -> Ret {
 
 /// Runs each case from every saved call of its process: none may differ.
 fn run(cases: Vec<Case>) {
+    if !dirs().iter().any(|d| std::path::Path::new(d).exists()) {
+        eprintln!(
+            "no captures in {:?}: skipping (see ftcommon.rs's docs to make them)",
+            dirs()
+        );
+        return;
+    }
     // One test's cases at a time: each loads a reference per worker, and six tests at once
     // run the machine out of memory.
     static ONE_AT_A_TIME: std::sync::Mutex<()> = std::sync::Mutex::new(());
