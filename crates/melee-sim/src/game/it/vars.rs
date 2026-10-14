@@ -144,6 +144,10 @@ members! {
     SamusChargeshot, samus_chargeshot, itSamusChargeshot_ItemVars, [SAMUS_CHARGE];
     SamusMissile, samus_missile, itSamusMissile_ItemVars, [SAMUS_MISSILE];
     SamusGrapple, samus_grapple, itSamusGrapple_ItemVars, [SAMUS_GBEAM];
+    DrMarioPill, drmario_pill, itDrMarioPill_ItemVars, [DRMARIO_VITAMIN];
+    PikachuThunder, pikachu_thunder, itPikachuthunder_ItemVars, [PIKACHU_THUNDER, PICHU_THUNDER];
+    PikachuJoltGround, pikachu_jolt_ground, itPikachutJoltGround_ItemVars, [PIKACHU_TJOLT_GROUND, PICHU_TJOLT_GROUND];
+    PikachuJoltAir, pikachu_jolt_air, itPikachutJoltAir_ItemVars, [PIKACHU_TJOLT_AIR, PICHU_TJOLT_AIR];
     Heiho, heiho, HeihoVars, [HEIHO];
 }
 

@@ -78,7 +78,7 @@ impl Running<'_> {
             speed_mul: a(0x1C),
             behavior: (self.ness_attr_i32(f, attr::BASEBALL_BAT + 0x20) as u32 >> 24) as u8,
         };
-        self.create_reflect_hit(gobj, &d, CodeRef(addr::ATTACK_S4_ON_REFLECT));
+        self.create_reflect_hit(gobj, &d, Some(CodeRef(addr::ATTACK_S4_ON_REFLECT)));
     }
 
     /// `ftNs_AttackS4_Anim`: the reflector on while the script's flag is up and off after; at

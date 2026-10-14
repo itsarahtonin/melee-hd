@@ -8,6 +8,7 @@
 //! phase 1. Map 7 sways in its `Last_GroundVars`.
 
 use super::super::camera;
+use super::super::slippi::CodeSet;
 use super::super::state::{Game, Running};
 use super::super::structs::_GXColor;
 use super::anime;
@@ -199,16 +200,20 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
 /// The main object's process, `grLast_8021AAB0`: once the match runs, the scene's timers and
 /// color blends, and the next scene when it's due; then the collision follows the model.
 ///
-/// Slippi's playback codes save and restore the random seed around [`advance`] (a determinism
-/// fix: the closing scene's random colors draw from it), which the Slippi ruleset does too.
+/// Slippi's determinism fix (`8021AAE4`) keeps the closing scene's random colors off the
+/// random seed: 3.19's codes save and restore the seed around [`advance`], 3.16's skip it, so
+/// the scene never moves on from its first phase.
 #[doc(alias = "grLast_8021AAB0")]
 pub fn proc_main(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.map();
     if !v.b1 && !v.b0 {
-        let seed = r.game.objs.rng;
-        advance(r, gobj);
-        if r.game.rules.slippi {
+        let rules = &r.game.rules;
+        if !rules.slippi {
+            advance(r, gobj);
+        } else if rules.codes == CodeSet::V3_19 {
+            let seed = r.game.objs.rng;
+            advance(r, gobj);
             r.game.objs.rng = seed;
         }
         if r.game.grounds[g.0].u.map().b26 {

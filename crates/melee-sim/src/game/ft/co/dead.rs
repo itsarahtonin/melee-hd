@@ -26,6 +26,10 @@ const DEAD_STEP: usize = 0x8;
 const DEAD_ALONG: usize = 0xC;
 const DEAD_VIEW_POS: usize = 0x10;
 const DEAD_VIEW_VEL: usize = 0x1C;
+/// Under Slippi's FreezeDeadUpFallPhysics, the slide's vertical and depth speed (over the
+/// approach's step and progress).
+const DEAD_SLIDE_VEL_Y: usize = 0x8;
+const DEAD_SLIDE_VEL_Z: usize = 0xC;
 
 /// `fn_800D4DD4`, the screen KO's accessory, by address.
 pub const DEAD_UP_FALL_ACCESSORY: u32 = 0x800D_4DD4;
@@ -667,6 +671,14 @@ impl Running<'_> {
                 fp.self_vel.z = c.f32(0x55C);
                 fp.set_mv_i32(DEAD_FRAMES, c.i32(0x530));
                 fp.set_mv_i32(DEAD_PHASE, 3);
+                if self.game.rules.slippi {
+                    // Slippi's FreezeDeadUpFallPhysics (`800D4C1C`): the slide's speed is
+                    // kept in the state's variables, not the fighter's.
+                    let fp = &mut self.game.fighters[f.0];
+                    fp.set_mv_f32(DEAD_SLIDE_VEL_Y, reg(c.f32(0x550)));
+                    fp.set_mv_f32(DEAD_SLIDE_VEL_Z, reg(c.f32(0x55C)));
+                    fp.self_vel = crate::vec::Vec3::new(0.0, 0.0, 0.0);
+                }
             }
             3 => {
                 self.stop_dead(gobj);
@@ -713,10 +725,36 @@ impl Running<'_> {
             }
             3 => {
                 let (g, term) = (reg(c.f32(0x554)), reg(c.f32(0x558)));
-                Self::fall(&mut self.game.fighters[f.0], g, term);
-                let vel = self.game.fighters[f.0].self_vel;
-                let v = self.dead_vec(gobj, DEAD_VIEW_VEL) + vel;
-                self.set_dead_vec(gobj, DEAD_VIEW_VEL, v);
+                let v = if self.game.rules.slippi {
+                    // Slippi's FreezeDeadUpFallPhysics (`800D4D68`): the fall acts on the
+                    // speed the state keeps, without `ftCommon_Fall`.
+                    let fp = &mut self.game.fighters[f.0];
+                    let mut vy = fp::fsub(reg(fp.mv_f32(DEAD_SLIDE_VEL_Y)), g);
+                    let floor = fp::fneg(term);
+                    // `bgt`: a NaN takes the floor too.
+                    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+                    if !(vy > floor) {
+                        vy = floor;
+                    }
+                    fp.set_mv_f32(DEAD_SLIDE_VEL_Y, vy);
+                    let y = fp::fadds(
+                        reg(fp.mv_f32(DEAD_VIEW_VEL + 4)),
+                        reg(fp.mv_f32(DEAD_SLIDE_VEL_Y)),
+                    );
+                    fp.set_mv_f32(DEAD_VIEW_VEL + 4, y);
+                    let z = fp::fadds(
+                        reg(fp.mv_f32(DEAD_SLIDE_VEL_Z)),
+                        reg(fp.mv_f32(DEAD_VIEW_VEL + 8)),
+                    );
+                    fp.set_mv_f32(DEAD_VIEW_VEL + 8, z);
+                    self.dead_vec(gobj, DEAD_VIEW_VEL)
+                } else {
+                    Self::fall(&mut self.game.fighters[f.0], g, term);
+                    let vel = self.game.fighters[f.0].self_vel;
+                    let v = self.dead_vec(gobj, DEAD_VIEW_VEL) + vel;
+                    self.set_dead_vec(gobj, DEAD_VIEW_VEL, v);
+                    v
+                };
                 if self.game.fighters[f.0].x2222_b6 && !self.x100_rot_changed(f) {
                     return;
                 }
@@ -751,7 +789,11 @@ impl Running<'_> {
         let m = crate::hsd::cobj::inv_viewing_mtx(&mut self.game.objs, self.data, c)
             .expect("the camera's inverse view matrix");
         let pos = m.transform(self.dead_vec(gobj, DEAD_VIEW_POS));
-        self.game.fighter_mut(gobj).cur_pos = pos;
+        // Slippi's FreezeDeadUpFallPhysics (`80080E80`) places only the model, leaving the
+        // fighter's position where it was.
+        if !self.game.rules.slippi {
+            self.game.fighter_mut(gobj).cur_pos = pos;
+        }
         let j = self.root_jobj(gobj);
         crate::hsd::jobj::set_translate(&mut self.game.objs.jobjs, j, pos);
     }

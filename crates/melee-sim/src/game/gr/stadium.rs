@@ -23,7 +23,9 @@ use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
 use super::super::camera;
+use super::super::code;
 use super::super::handles::{CameraBoxId, CodeRef};
+use super::super::slippi::CodeSet;
 use super::super::state::{Game, OBJ_CAMERA, Obj, Running, UserData};
 use super::super::structs::HSD_ImageDesc;
 use super::data::{STADIUM_CALLBACKS, StageCallbacks};
@@ -312,6 +314,11 @@ pub fn start_main(r: &mut Running, gobj: GObjId) {
 /// lines the transformations' edges add switched off, and its start hook.
 #[doc(alias = "grStadium_801D13E0")]
 pub fn init_main(r: &mut Running, gobj: GObjId) {
+    // Slippi 3.16's codes run the transformations another way from here on (`801D14C8`, then
+    // the cycle's `801D45EC` and its branches; docs/oracle.md); only 3.19's are ported.
+    if r.game.rules.slippi && r.game.rules.codes == CodeSet::V3_16 {
+        code::unported_call("Pokémon Stadium under Slippi 3.16's transformation codes");
+    }
     let g = ground_of(r.game, gobj);
     let map_id = r.game.grounds[g.0].map_id;
     let j = jobj_of(r.game, gobj);

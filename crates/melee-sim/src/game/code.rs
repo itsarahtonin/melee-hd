@@ -142,6 +142,11 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         }
         addr if super::ft::falco::run(g, gobj, addr) => {}
         addr if super::ft::captain::run(g, gobj, addr) => {}
+        addr if super::ft::luigi::run(g, gobj, addr) => {}
+        addr if super::ft::mario::run(g, gobj, addr) => {}
+        addr if super::ft::drmario::run(g, gobj, addr) => {}
+        addr if super::ft::pikachu::run(g, gobj, addr) => {}
+        addr if super::ft::pichu::run(g, gobj, addr) => {}
         addr if super::ft::co::dispatch::run(g, gobj, addr) => {}
         // Animation.
         0x8008_A494 => g.co_wait_anim(gobj),
@@ -352,6 +357,21 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::captain::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::luigi::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::mario::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::drmario::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::pikachu::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::pichu::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::sfx::call(r, f, args) {

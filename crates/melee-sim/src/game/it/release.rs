@@ -34,7 +34,7 @@ pub fn let_go_model(r: &mut Running, gobj: GObjId, vel: Vec3) {
     if let Some(j) = lib2725::bone(r.game, data, gobj, attach) {
         crate::game::ft::co::throw::unconstrain(&mut r.game.objs, j);
     }
-    if !is_stage_item(r.game, gobj) {
+    if !super::coll::is_enemy(r.game, gobj) {
         lib26b1::enable_pickup(r.game, gobj);
     }
     hitbox::end_blink(r.game, gobj);
@@ -125,7 +125,7 @@ pub fn thrown(r: &mut Running, gobj: GObjId, thrower: Option<GObjId>) {
     maplib::enter_air(item_mut(r.game, gobj));
     let pos = item(r.game, gobj).pos;
     jobj::set_translate(&mut r.game.objs.jobjs, root, pos);
-    if is_stage_item(r.game, gobj) {
+    if super::coll::is_enemy(r.game, gobj) {
         unported_call("it_8027B4A4 and it_8027B378 (a stage item's throw in its thrower's stats)");
     }
 }
@@ -186,18 +186,3 @@ pub fn let_go(r: &mut Running, gobj: GObjId, vel: Vec3) {
     }
     thrown(r, gobj, thrower);
 }
-
-/// Whether the item is a stage's (an enemy or a stage item, but for the Kyasarin's egg and
-/// Whispy's apple), `it_8026B6C8`.
-#[doc(alias = "it_8026B6C8")]
-pub fn is_stage_item(game: &crate::game::state::Game, gobj: GObjId) -> bool {
-    use super::kinds::{ARWING_LASER, KURIBOH, OCTAROCK_STONE, OLD_KURI};
-    let k = item(game, gobj).kind;
-    ((KURIBOH..OCTAROCK_STONE).contains(&k) || (OLD_KURI..ARWING_LASER).contains(&k))
-        && k != KYASARIN_EGG
-        && k != WHISPY_APPLE
-}
-
-/// `It_Kind_Kyasarin_Egg` and `It_Kind_WhispyApple`.
-const KYASARIN_EGG: i32 = 241;
-const WHISPY_APPLE: i32 = 230;
