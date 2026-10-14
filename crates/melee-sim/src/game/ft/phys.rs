@@ -511,15 +511,6 @@ impl Running<'_> {
 }
 
 impl Running<'_> {
-    /// The ground acceleration toward `target` (`accel` cut short of overshooting it, all of
-    /// the way at a zero target), `ftCommon_CalcGroundAccel_AccelToVel` (whose friction goes
-    /// unread).
-    #[doc(alias = "ftCommon_CalcGroundAccel_AccelToVel")]
-    pub fn ground_accel_to_vel(fp: &mut Fighter, accel: f64, target: f64) {
-        let vel = reg(fp.gr_vel);
-        fp.xE4_ground_accel_1 = mem(toward_target(vel, accel, target));
-    }
-
     /// `ftCommon_8007F7B4`: the ground speed and horizontal velocity turned away from the way
     /// the fighter faces.
     // Ports `ftCommon_8007F7B4`; aliased once a check reaches it.
