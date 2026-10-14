@@ -52,7 +52,7 @@ enum Stop {
     Differ(Vec<String>),
 }
 
-fn panic_text(p: &Box<dyn std::any::Any + Send>) -> String {
+pub(crate) fn panic_text(p: &Box<dyn std::any::Any + Send>) -> String {
     let text = p
         .downcast_ref::<String>()
         .cloned()
@@ -174,7 +174,7 @@ impl StaleReads {
 
 /// The fighters' addresses in the trace, in the order the match created them: each player
 /// slot's fighters, the first and then the second.
-fn fighter_addresses(image: &Image) -> Vec<u32> {
+pub(crate) fn fighter_addresses(image: &Image) -> Vec<u32> {
     let mut out = Vec::new();
     for slot in 0..6 {
         let player = sym("player_slots") + 0xE90 * slot;
