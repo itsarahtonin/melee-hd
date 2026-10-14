@@ -27,6 +27,7 @@
 //! and again with `MATCH_STAGES=31,32 MATCH_PLAYERS=4 MATCH_TEAMS=1 MATCH_TIME=20
 //! --fields 6000` into `start4`.
 
+use melee_local_data::ssbm_rs_local;
 use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -49,13 +50,13 @@ use melee_sim::game::pl::player::mapping;
 use melee_sim::game::state::{Game, Running};
 use ssbm_rt::Ctx;
 
-const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/fighter-create";
+const DEFAULT_CALLS: &str = "calls/fighter-create";
 
 /// The saved states before fighter creation (`fn_8016DEEC`'s calls) in the captures'
 /// directories.
 fn captures() -> Vec<PathBuf> {
     let dir: PathBuf = std::env::var("FIGHTER_CREATE_CALLS")
-        .unwrap_or_else(|_| DEFAULT_CALLS.into())
+        .unwrap_or_else(|_| ssbm_rs_local(DEFAULT_CALLS))
         .into();
     let mut found: Vec<PathBuf> = std::fs::read_dir(&dir)
         .into_iter()

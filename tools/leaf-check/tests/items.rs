@@ -23,6 +23,7 @@
 //!
 //! The runner's mutated and mismatching saves aren't used and can be deleted.
 
+use melee_local_data::ssbm_rs_local;
 use std::path::PathBuf;
 use std::sync::{Condvar, Mutex, OnceLock};
 
@@ -43,11 +44,11 @@ use melee_sim::hsd::jobj::JObjId;
 use melee_sim::vec::Vec3;
 use ssbm_rt::Ctx;
 
-const DEFAULT_CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/items";
+const DEFAULT_CALLS: &str = "calls/items";
 
 fn calls_dir() -> PathBuf {
     std::env::var("ITEM_CALLS")
-        .unwrap_or_else(|_| DEFAULT_CALLS.into())
+        .unwrap_or_else(|_| ssbm_rs_local(DEFAULT_CALLS))
         .into()
 }
 

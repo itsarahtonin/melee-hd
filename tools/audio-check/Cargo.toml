@@ -4,6 +4,7 @@ description = "Compares melee-audio's mix of a replay with ssbm-rs's recording o
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
@@ -15,3 +16,6 @@ melee-slippi = { path = "../../crates/melee-slippi" }
 melee-sim.workspace = true
 ssbm-rt.workspace = true
 zstd = "0.13"
+
+[dev-dependencies]
+melee-local-data = { path = "../local-data" }

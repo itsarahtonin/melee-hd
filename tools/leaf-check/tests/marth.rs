@@ -44,6 +44,7 @@
 //! whose players the debug mode makes computers or humans at random
 //! (`CAPTURE_FUNCS=@$D/marth-funcs-missing2.txt`): its items give the item hooks their calls.
 
+use melee_local_data::ssbm_rs_local;
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
@@ -57,10 +58,10 @@ use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use ssbm_rt::capture::Call;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/marth";
+const CALLS: &str = "calls/marth";
 
 fn base() -> String {
-    std::env::var("MARTH_CALLS").unwrap_or_else(|_| CALLS.to_owned())
+    std::env::var("MARTH_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS))
 }
 
 /// The capture sets, one per run.

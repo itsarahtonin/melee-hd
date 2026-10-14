@@ -6,7 +6,7 @@
 //! states: other transparency passes and render modes, dirty joints, the camera's links.
 //!
 //! The captures are game memory, kept out of the repository in `DISPLAY_CALLS` (default
-//! below), one directory per replay. ssbm-rs's runner (branch `feat/state-trace-memory`)
+//! below), one directory per replay. ssbm-rs's runner (`main`)
 //! makes them, with `done.txt` listing every function address but the captured ones:
 //!
 //! ```text
@@ -20,16 +20,17 @@
 //! for the Fox vs Sheik Final Destination replay `Game_20260129T133652`.
 
 use leaf_check::calls::{Ret, Setup, check_calls_in, gobj_arg, peek_u32, poke_u32};
+use melee_local_data::ssbm_rs_local;
 use melee_sim::game::code::ParticleHooks;
 use melee_sim::hsd::display;
 use melee_sim::mtx::Mtx34;
 use ssbm_rt::capture::Call;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/display";
+const CALLS: &str = "calls/display";
 const CAPTURED: [&str; 1] = ["Game_20260129T133652"];
 
 fn dirs() -> Vec<String> {
-    let calls = std::env::var("DISPLAY_CALLS").unwrap_or_else(|_| CALLS.into());
+    let calls = std::env::var("DISPLAY_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS));
     CAPTURED
         .iter()
         .map(|name| format!("{calls}/{name}"))
@@ -46,7 +47,10 @@ fn each(
 ) {
     let dirs = dirs();
     if dirs.is_empty() {
-        eprintln!("no display calls in {CALLS}: skipping (see this file's docs to make them)");
+        eprintln!(
+            "no display calls in {}: skipping (see this file's docs to make them)",
+            ssbm_rs_local(CALLS)
+        );
     }
     for d in dirs {
         let setup = Setup {
@@ -593,8 +597,7 @@ fn refract_camera() {
 /// their app-SRTs' display frames moved on so the update runs.
 #[test]
 fn particle_render() {
-    let root = std::env::var("EFFECT_CALLS")
-        .unwrap_or_else(|_| "C:/Projects/ssbm-rs-publication/local/calls/effects".into());
+    let root = std::env::var("EFFECT_CALLS").unwrap_or_else(|_| ssbm_rs_local("calls/effects"));
     let Ok(entries) = std::fs::read_dir(&root) else {
         return;
     };
@@ -639,12 +642,12 @@ fn particle_render() {
     }
 }
 
-const CALLS2: &str = "C:/Projects/ssbm-rs-publication/local/calls/display2";
+const CALLS2: &str = "calls/display2";
 
 /// The second capture set's directories (`DISPLAY2_CALLS`): the game camera's, stages',
 /// fighters', the magnifier's and the text's render callbacks.
 fn dirs2() -> Vec<String> {
-    let calls = std::env::var("DISPLAY2_CALLS").unwrap_or_else(|_| CALLS2.into());
+    let calls = std::env::var("DISPLAY2_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS2));
     CAPTURED
         .iter()
         .map(|name| format!("{calls}/{name}"))

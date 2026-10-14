@@ -3,6 +3,11 @@
 //!
 //! The ports run in ssbm-rs's runtime with the disc's `main.dol` loaded, so they find the
 //! constants and tables the original code reads. Tests need `SSBM_DISC` and skip without it.
+//!
+//! Most checks also read captures ssbm-rs's runner made, kept out of the repository in
+//! ssbm-rs's `local/` folder, which `SSBM_RS_LOCAL` names: each test's default capture
+//! directory is a path in it (its own variable overrides it), and a test skips when its
+//! captures aren't there. Replays beyond the benchmark matches come from `SLIPPI_REPLAYS`.
 
 pub mod calls;
 

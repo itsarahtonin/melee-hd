@@ -4,6 +4,7 @@ description = "Plays a VS match in a window: melee-sim stepped at 60 ticks a sec
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 

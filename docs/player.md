@@ -40,20 +40,20 @@ These are additions to `melee-sim`'s output only; no simulated value depends on 
 ssbm-rs records a run's GPU command stream as a Dolphin FIFO log, and its `gxplay` draws the log with ssbm-render:
 
 ```sh
-GX_DFF=f600.dff GX_DFF_FRAMES=600,2 ssbm-run "$SSBM_DISC" --replay fox-fox-fd.slp --fp hardware --port all --fields 640
+GX_DFF=f600.dff GX_DFF_FRAMES=600,2 ssbm-run "$SSBM_DISC" --replay data/bench/fox-fox-fd.slp --fp hardware --port all --fields 640
 gxplay f600.dff f600
 ```
 
 `melee-render-check` plays the same replay natively, draws its frames through melee-render, and compares:
 
 ```sh
-melee-render-check align "$SSBM_DISC" fox-fox-fd.slp f600.dff 560 600      # which native frame the log starts at
-melee-render-check compare "$SSBM_DISC" fox-fox-fd.slp f600.dff f600 FRAME out/
+melee-render-check align "$SSBM_DISC" data/bench/fox-fox-fd.slp f600.dff 560 600      # which native frame the log starts at
+melee-render-check compare "$SSBM_DISC" data/bench/fox-fox-fd.slp f600.dff f600 FRAME out/
 ```
 
 `compare` lines the two streams up event by event and reports each draw whose raster or TEV registers (TEV stages and colors included), the transform unit's registers (channel colors and controls, viewport, projection, texture coordinate generation), sampled textures and palettes (by content), transformed vertices (screen positions, lit colors, texture coordinates) or copies differ, then compares the images with ssbm-rs's render tolerance: a PSNR of at least 38 dB, and at most 0.25% of the pixels off by more than 32 levels. It exits with failure when a frame is out of tolerance. The native match runs on the timeline the boot's audio setup starts (see [The boot](#audio)), so its scene loop renders on the same rounds as ssbm-rs's, and a log's frame N is native frame N - 3 from the first checked frame to the last (without the timeline, rounds that tick twice and render once came at other times, and the two drifted apart by 13 frames over a match). `compare` takes the native frame within 16 either way whose draws share the most exact vertices with the log's (`CHECK_SEARCH` changes the range). `CHECK_FP=slippi` plays a Slippi replay in Slippi Dolphin's float mode; `CHECK_EVENT=N` prints one event of each side in full; `CHECK_DRAW_LIMIT=N` draws only the first N draws of each side, to find the draw where two images part; `melee-render-check play LOG.dff OUT/` draws a log alone.
 
-**Results.** The references are ssbm-rs runs (in ssbm-rs's `local/player/ref-*`) of three benchmark replays and a real Slippi replay, two consecutive frames from each of these log frames:
+**Results.** The references are ssbm-rs runs (in ssbm-rs's `local/player/ref-*`, `$SSBM_RS_LOCAL/player`) of three benchmark replays and a real Slippi replay, two consecutive frames from each of these log frames:
 
 | Match | Frames | Result |
 | --- | --- | --- |
@@ -67,10 +67,10 @@ The differences left in the draws themselves don't change a pixel: a few vertice
 **One command for the frames and the mix.** These frames and the Fox ditto's mix (see [Checking the mix](#checking-the-mix)) run as ignored tests, `tools/render-check/tests/documented.rs` and `tools/audio-check/tests/fox_ditto.rs`:
 
 ```sh
-SSBM_DISC=... cargo test --release -p melee-render-check -p melee-audio-check -- --ignored --test-threads=4
+SSBM_DISC=... SSBM_RS_LOCAL=... SLIPPI_REPLAYS=... cargo test --release -p melee-render-check -p melee-audio-check -- --ignored --test-threads=4
 ```
 
-It passes only if every result is what this page records: each benchmark frame's two images identical (PSNR infinite), the Fox vs Sheik frames' image measures exactly as they are with the name plates missing, the log's frame N lined up with native frame N - 3, nothing melee-render reports as not drawn exactly, and the Fox ditto's mix sample-exact over at least 39.8 s from the trace's boot state and 39.9 s from melee-sim's boot. `REFS` (ssbm-rs's `local/` by default) and `SLIPPI_FOX_SHEIK` (the Fox vs Sheik replay) say where the references are; a missing one fails the test instead of skipping it. With four test threads it takes about a minute and a half. The oracle can't catch a regression here: after the Pokémon Stadium merge a shadow's texture named its image as `ImageRef::Shadow`, which melee-render didn't draw, so the floor's draws sampled other textures in place of the shadows: every checked frame went out of tolerance, and in the player a floor turned black or noisy at every scale, while every simulated value still compared equal. melee-render now lists each kind of image it meets, so a new kind doesn't build until it's drawn or noted.
+It passes only if every result is what this page records: each benchmark frame's two images identical (PSNR infinite), the Fox vs Sheik frames' image measures exactly as they are with the name plates missing, the log's frame N lined up with native frame N - 3, nothing melee-render reports as not drawn exactly, and the Fox ditto's mix sample-exact over at least 39.8 s from the trace's boot state and 39.9 s from melee-sim's boot. `REFS` (ssbm-rs's `local/`, `$SSBM_RS_LOCAL`, by default) and `SLIPPI_FOX_SHEIK` (the Fox vs Sheik replay, in `$SLIPPI_REPLAYS` by default) say where the references are, and the benchmark replays are the repository's; a missing one fails the test instead of skipping it. With four test threads it takes about a minute and a half. The oracle can't catch a regression here: after the Pokémon Stadium merge a shadow's texture named its image as `ImageRef::Shadow`, which melee-render didn't draw, so the floor's draws sampled other textures in place of the shadows: every checked frame went out of tolerance, and in the player a floor turned black or noisy at every scale, while every simulated value still compared equal. melee-render now lists each kind of image it meets, so a new kind doesn't build until it's drawn or noted.
 
 ### Resolution, aspect ratio and pipelines
 
@@ -106,8 +106,8 @@ ssbm-rs records what its audio interface plays (`AUDIO_OUT`) and the boot state 
 
 ```sh
 SLIPPI_PLAYER_NAMES=0 STATE_TRACE=audio-fox-fox-fd.trc STATE_TRACE_MEMORY=0..600 AUDIO_OUT=audio-fox-fox-fd.wav \
-  ssbm-run "$SSBM_DISC" --replay fox-fox-fd.slp --fp hardware --port all --fields 2400
-melee-audio-check audio-fox-fox-fd.trc fox-fox-fd.slp audio-fox-fox-fd.wav --fp hardware --ticks 2500
+  ssbm-run "$SSBM_DISC" --replay data/bench/fox-fox-fd.slp --fp hardware --port all --fields 2400
+melee-audio-check audio-fox-fox-fd.trc data/bench/fox-fox-fd.slp audio-fox-fox-fd.wav --fp hardware --ticks 2500
 ```
 
 `melee-audio-check` plays the replay natively from the trace's boot state (`tools/audio-check/src/boot.rs` reuses `tools/oracle`'s trace reader and seeding), mixes it, and aligns the two streams: an exact match of 1024 samples if there is one, else cross-correlation. ssbm-rs's recording starts at power-on, and the native mix starts at the boot state, 4000 samples (25 frames) later. It then reports each window's SNR, largest difference and share of equal stereo samples, and the first sample that differs. On the Fox ditto on Final Destination (39.9 s compared) and Fox against Marth on Battlefield (59.9 s compared), the mix is sample-exact from the match's start to the recording's end, reverb and delay included: both effects processed sound in about 86% of the frames. The trace's game files that the fighters cache in ARAM (`PlFxAJ.dat`, `PlMsAJ.dat`) aren't sound and aren't in the device command queue's files, so the mixer skips them. On this machine mixing takes about 0.22 ms a tick.
@@ -135,7 +135,7 @@ On Fox against Marth on Final Destination, whose song stops at the fast speed (t
 ```sh
 melee-hd                                               # the launcher: pick the match in the window
 melee-hd --p1 fox --p2 marth --stage bf [--stocks 4] [--minutes 8] [--widescreen | --aspect 21:9 | --aspect 4:3] [--scale N] [--msaa 4] [--size 1920x1440] [--fullscreen] [--disc-speed drive|fast]
-melee-hd --replay fox-fox-fd.slp                       # a replay's match, its inputs played back
+melee-hd --replay data/bench/fox-fox-fd.slp            # a replay's match, its inputs played back
 melee-hd --bench 1200 --size 2560x1440                 # headless, timing each frame
 melee-hd --launcher-shot launcher.png [--size WxH]     # draws the launcher to a PNG, no window
 melee-hd ... [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay N] [--audio-exclusive]

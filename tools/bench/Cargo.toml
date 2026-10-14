@@ -4,12 +4,14 @@ description = "melee-hd's performance measurements (docs/performance.md)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
 melee-capture = { path = "../capture" }
 melee-data.workspace = true
+melee-local-data = { path = "../local-data" }
 melee-slippi = { path = "../../crates/melee-slippi" }
 melee-sim.workspace = true
 ssbm-slippi.workspace = true

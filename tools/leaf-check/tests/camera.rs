@@ -4,8 +4,8 @@
 //! the call returned or wrote outside it (a stack local, a result register) are compared.
 //!
 //! The captures are game memory, so they live outside the repository, in `CAMERA_CALLS`
-//! (default `C:/Projects/ssbm-rs-publication/local/calls/camera`), one directory per replay;
-//! the tests skip without them. ssbm-rs's runner (branch `feat/state-trace`) makes them, with
+//! (default `$SSBM_RS_LOCAL/calls/camera`), one directory per replay;
+//! the tests skip without them. ssbm-rs's runner (`main`) makes them, with
 //! `LOCKSTEP_DONE` listing every function outside the camera's unit so only it is checked:
 //!
 //! ```text
@@ -20,6 +20,7 @@
 //! makes as it starts. The special modes and the calls no replay makes are run from the VS
 //! states (`check_calls`).
 
+use melee_local_data::ssbm_rs_local;
 use std::collections::HashSet;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::PathBuf;
@@ -43,7 +44,7 @@ use ssbm_types::fns;
 
 fn calls_dir() -> PathBuf {
     std::env::var("CAMERA_CALLS")
-        .unwrap_or_else(|_| "C:/Projects/ssbm-rs-publication/local/calls/camera".into())
+        .unwrap_or_else(|_| ssbm_rs_local("calls/camera"))
         .into()
 }
 

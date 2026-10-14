@@ -4,6 +4,7 @@ description = "Slippi replays as melee-sim match input: the .slp format, and wha
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 

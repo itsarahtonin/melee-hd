@@ -6,7 +6,7 @@ Read [README.md](README.md), [architecture](docs/architecture.md), [the oracle](
 
 melee-hd rewrites Melee in idiomatic Rust with a simulation that stays bit-exact with ssbm-rs at its `melee-hd-base` tag. Gameplay changes exist only as explicit rulesets or toggles.
 
-- Never commit disc images, extracted assets, captures, replays, or cards. Keep them under ignored `local/` or outside the checkout.
+- Never commit disc images, extracted assets, captures, replays, or cards. Keep them under ignored `local/` or outside the checkout. The one exception is the benchmark matches' replays in `data/bench`, inputs the CPU AI played in ssbm-rs.
 - Choose a base deliberately and use a dedicated branch or worktree. Preserve work in a local commit before handing it back.
 - Local implementation authorization does not authorize pushes, PRs, publication, settings, or history rewrites. Obtain explicit scoped authorization for those actions.
 - Do not add assistant authorship or co-author trailers.
@@ -30,11 +30,11 @@ Port from the decompilation and from ssbm-rs; ssbm-rs's ports at the tag decide 
 
 ## Verification
 
-Run appropriate checks and state what was tested. Disc-backed checks need `SSBM_DISC`. A change to the simulation is verified by [the oracle](docs/oracle.md), not by unit tests alone.
+Run appropriate checks and state what was tested. Disc-backed checks need `SSBM_DISC`; the captured-state checks also need ssbm-rs's local data (`SSBM_RS_LOCAL`), and some replays (`SLIPPI_REPLAYS`), as [the oracle](docs/oracle.md#running-the-checks) lists. A change to the simulation is verified by [the oracle](docs/oracle.md), not by unit tests alone.
 
 ## Commands
 
 - Build: `cargo build --locked --release`.
-- Check leaf functions against ssbm-rs: `SSBM_DISC=... cargo test --locked --release -p leaf-check`.
+- Check leaf functions against ssbm-rs: `SSBM_DISC=... SSBM_RS_LOCAL=... cargo test --locked --release -p leaf-check`.
 - Regenerate the port ledger (`docs/port-ledger.md`): `cargo run --release -p ledger -- --check`. Mark a port with `#[doc(alias = "NAME")]` on its Rust item; list replaced and dead functions, and system-level checks, in `ledger/`.
 - Compare a recording with a replay: `target/release/melee-oracle compare ORIGINAL.slp OURS.slp` (`.exe` on Windows).

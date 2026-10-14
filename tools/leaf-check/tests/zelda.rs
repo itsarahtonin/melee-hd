@@ -53,6 +53,7 @@
 //!   ssbm-run "$SSBM_DISC" --mode e --matches 21 --monkey 21 --fields 9000 --port all --lockstep
 //! ```
 
+use melee_local_data::ssbm_rs_local;
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
@@ -69,10 +70,10 @@ use melee_sim::hsd::gobj::GObjId;
 use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
 
-const CALLS: &str = "C:/Projects/ssbm-rs-publication/local/calls/zelda";
+const CALLS: &str = "calls/zelda";
 
 fn base() -> String {
-    std::env::var("ZELDA_CALLS").unwrap_or_else(|_| CALLS.to_owned())
+    std::env::var("ZELDA_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS))
 }
 
 /// The capture sets, one per run.

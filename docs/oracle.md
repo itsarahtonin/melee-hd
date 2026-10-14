@@ -37,11 +37,11 @@ Samus's oracle matches are CPU matches the same way (`ORACLE_MATCHES`: Samus aga
 
 The Pokémon Stadium Slippi replay with Ness (`Game_20260129T214824`, traced like the Fox vs Sheik replay), which stopped at his `ftNs_AttackHi4_YoyoCheckEnvColl` in tick 13,821 before his port, compares every one of its 14,212 traced ticks with no difference and no stale read in Slippi's float mode.
 
-Falco runs Fox's code with his own attributes, sounds and Phantasm. A Slippi replay of Falco against Sheik on Final Destination (`Game_20260129T170722`, Sarah's folder, with Falco's wall jumps) is traced the same way into `local/traces/v5-mixed/Game_20260129T170722.trc` (replay check clean). In Slippi's float mode with no stand-in, it compares every one of the trace's 8,026 ticks with no difference and no stale read, to the match's end: Falco's creation, lasers, Phantasm, Firebird and reflector, his lasers and Sheik's needles hitting shields (`ftColl_80077688`) and bouncing off them (`lbColl_80007DD8`), and UCF's shield SDI and tumble codes.
+Falco runs Fox's code with his own attributes, sounds and Phantasm. A Slippi replay of Falco against Sheik on Final Destination (`Game_20260129T170722`, the author's replays, with Falco's wall jumps) is traced the same way into `local/traces/v5-mixed/Game_20260129T170722.trc` (replay check clean). In Slippi's float mode with no stand-in, it compares every one of the trace's 8,026 ticks with no difference and no stale read, to the match's end: Falco's creation, lasers, Phantasm, Firebird and reflector, his lasers and Sheik's needles hitting shields (`ftColl_80077688`) and bouncing off them (`lbColl_80007DD8`), and UCF's shield SDI and tumble codes.
 
-Captain Falcon is checked the same way on a Slippi replay of him against Sheik on Final Destination (`Game_20260524T181444`, Sarah's folder), traced into `local/traces/v5-mixed/Game_20260524T181444.trc` (replay check clean). In Slippi's float mode with no stand-in, it compares every one of the trace's 15,772 ticks with no difference and no stale read: his creation (his costumes have no texture animations, so the list the fighter keeps is null), Raptor Boost, the aerial Falcon Dive and Falcon Kick, a tip's damage held back through its hitlag (`ftColl_8007BE3C`, tick 9496), and his respawn in tick 4874 keying off the scream still playing on his voice track (`ft_80088A50`, which before only handed the frontend the key-offs). His Battlefield replay against Sheik (`Game_20260524T181118`, traced the same way; its replay check shows only the known file's off-screen flag) compares all 11,989 ticks with no difference and no stale read.
+Captain Falcon is checked the same way on a Slippi replay of him against Sheik on Final Destination (`Game_20260524T181444`, the author's replays), traced into `local/traces/v5-mixed/Game_20260524T181444.trc` (replay check clean). In Slippi's float mode with no stand-in, it compares every one of the trace's 15,772 ticks with no difference and no stale read: his creation (his costumes have no texture animations, so the list the fighter keeps is null), Raptor Boost, the aerial Falcon Dive and Falcon Kick, a tip's damage held back through its hitlag (`ftColl_8007BE3C`, tick 9496), and his respawn in tick 4874 keying off the scream still playing on his voice track (`ft_80088A50`, which before only handed the frontend the key-offs). His Battlefield replay against Sheik (`Game_20260524T181118`, traced the same way; its replay check shows only the known file's off-screen flag) compares all 11,989 ticks with no difference and no stale read.
 
-Ganondorf runs Captain Falcon's code with his own effects, the Warlock Punch's wind and his knockback hooks. No replay compares him yet: Sarah's replays with him are four-player matches on Pokémon Stadium and Yoshi's Story, and the ranked replays of the `erickfm/melee-ranked-replays` dataset were recorded by Slippi 3.16 and 3.17, whose code list differs from 3.19's (Final Destination's background fix is a single nop at `8021AAE4`, and Nana's determinism code at `800AC5B8` and others changed), so melee-hd refuses them (`game::slippi`) and their captured states don't import. ssbm-rs plays them with no divergence but in the pre-frame seed field it records every 4,000 frames. leaf-check's `ganon` test checks his code from debug VS matches instead.
+Ganondorf runs Captain Falcon's code with his own effects, the Warlock Punch's wind and his knockback hooks. No replay compares him yet: the author's replays with him are four-player matches on Pokémon Stadium and Yoshi's Story, and the ranked replays of the `erickfm/melee-ranked-replays` dataset were recorded by Slippi 3.16 and 3.17, whose code list differs from 3.19's (Final Destination's background fix is a single nop at `8021AAE4`, and Nana's determinism code at `800AC5B8` and others changed), so melee-hd refuses them (`game::slippi`) and their captured states don't import. ssbm-rs plays them with no divergence but in the pre-frame seed field it records every 4,000 frames. leaf-check's `ganon` test checks his code from debug VS matches instead.
 
 **Boot state.** A match that starts from the replay's settings can't hold what the boot and the menus left in the original's memory. Until they are ported, `diff` seeds it from the trace tick before the match's scene (the boot state; it needs a version 5 trace, for the time base and the audio heap), field by field from this list and never as a bulk copy (`tools/oracle/src/boot.rs`, `SEEDED`):
 
@@ -99,3 +99,34 @@ These ports are checked in leaf-check's `replay` tests against ssbm-rs's ports m
 - Floats compare by bit pattern. One ULP is a divergence.
 - External events (a disc read completing, a camera snapshot) are inputs, recorded and replayed like controllers, never compared as state.
 - A known difference must be explained and listed per replay, as ssbm-rs's known-divergence files are; a blanket exception is never accepted.
+
+## Running the checks
+
+The checks read three things that aren't in the repository, each named by an environment variable with no default. A check whose data isn't there skips with a message naming the variable or path (`cargo test -- --nocapture` shows it), so without them `cargo test` runs only the checks that need nothing; the `--ignored` frame and mix checks fail instead, since they are run on purpose.
+
+| Variable | What | Read by |
+| --- | --- | --- |
+| `SSBM_DISC` | The NTSC 1.02 disc image (GALE01, revision 2) | Every disc-backed check, `melee-oracle`, `melee-bench`, the player |
+| `SSBM_RS_LOCAL` | ssbm-rs's `local/` folder, where its runner writes captures (`calls/`), state traces (`traces/`), references (`player/`) and the benchmark matches' start traces (`bench/NAME.start.trace`) | leaf-check's captured-state checks, `melee-oracle`'s `diff` test, the frame and mix checks (`REFS` overrides), `melee-bench native` |
+| `SLIPPI_REPLAYS` | A folder of Slippi replays, a folder a month as Slippi Launcher keeps them (the author's, not public) | leaf-check's `replay`, `slippi` and `audio` crowd checks, `melee-oracle`'s `diff` test, the Fox vs Sheik frames |
+
+Each test's own variable (`FOX_CALLS`, `MATCH_CALLS`, `TRACE`, `REPLAY`, `BENCH_DIR` and the others its header names) still overrides its default. The benchmark matches' replays are in the repository, in `data/bench` ([performance](performance.md)). The data itself is made with ssbm-rs's runner (its `main` branch has every recorder these pages name) as each check's header and this page say.
+
+The checks run before each change lands:
+
+```sh
+export SSBM_DISC=/path/to/GALE01.iso SSBM_RS_LOCAL=/path/to/ssbm-rs/local SLIPPI_REPLAYS=/path/to/Slippi
+cargo fmt --all --check
+cargo clippy --release --all-targets
+cargo run --release -p ledger -- --check
+for m in fox-fox-fd fox-marth-fd fox-marth-bf fox-marth-ps; do
+  target/release/melee-oracle diff "$SSBM_RS_LOCAL/traces/v5-mixed/$m.trc" data/bench/$m.slp --fp hardware
+done
+target/release/melee-oracle diff "$SSBM_RS_LOCAL/traces/v5-mixed/Game_20260129T170722.trc" \
+  "$SLIPPI_REPLAYS/2026-01/Game_20260129T170722.slp" --fp slippi   # and the other Slippi replays above
+cargo test --release -p melee-sim -p melee-oracle -p melee-render -p melee-gpu -p melee-audio -p melee-input -p melee-player
+cargo test --release -p leaf-check
+cargo test --release -p melee-render-check -p melee-audio-check -- --ignored
+```
+
+Run filtered leaf-check tests (`--test NAME`) in a command of their own: with several packages, cargo applies a `--test` filter to all of them and skips the rest.

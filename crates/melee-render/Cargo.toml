@@ -4,6 +4,7 @@ description = "Draws melee-sim's display pass with wgpu: HSD's material, shape a
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 

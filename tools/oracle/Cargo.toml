@@ -4,6 +4,7 @@ description = "Checks melee-hd's simulation against ssbm-rs and Slippi replays"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
@@ -16,3 +17,6 @@ ssbm-rt.workspace = true
 ssbm-slippi.workspace = true
 ssbm-types.workspace = true
 zstd = "0.13"
+
+[dev-dependencies]
+melee-local-data = { path = "../local-data" }
