@@ -213,9 +213,9 @@ impl Running<'_> {
     /// Jumping off a stage piece that doesn't count as ground, `ftCo_800A0148`: nothing above
     /// the top blast zone; a double jump after a while when `x2168` says so; else a jump,
     /// toward the destination when it's more than 30 away.
-    // Ports `ftCo_800A0148`; aliased once a check reaches it.
-    // Ports `ftCo_800A1CA8`; aliased once a check reaches it.
-    fn cpu_jump_off_piece(&mut self, f: FighterId) {
+    #[doc(alias = "ftCo_800A0148")]
+    #[doc(alias = "ftCo_800A1CA8")]
+    pub(super) fn cpu_jump_off_piece(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
         let top = reg(stage::blast_top(self.game));
         if fp::fadds(reg(fpp.cur_pos.y), reg(fpp.cpu.x558)) > top {

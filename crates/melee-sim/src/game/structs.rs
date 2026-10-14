@@ -8358,6 +8358,48 @@ impl itClimbersBlizzard_ItemVars {
     }
 }
 
+/// `itClimbersString_ItemVars`, 0x18 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itClimbersString_ItemVars {
+    /// +0x0
+    pub x0: Var<f32>,
+    /// +0x4
+    pub x4: Var<Option<ItemLinkId>>,
+    /// +0x8
+    pub x8: Var<Option<ItemLinkId>>,
+    /// +0xc
+    pub xC: Var<Option<GObjId>>,
+    /// +0x10
+    pub pad_10: [Var<u8>; 4],
+    /// +0x14
+    pub x14: Var<Option<JObjId>>,
+}
+
+impl Default for itClimbersString_ItemVars {
+    fn default() -> Self {
+        itClimbersString_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            pad_10: core::array::from_fn(|_| Var::new(Default::default())),
+            x14: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itClimbersString_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.pad_10.iter_mut().for_each(|v| v.mark_stale());
+        self.x14.mark_stale();
+    }
+}
+
 /// `itPeachTurnip_ItemVars`, 0x18 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct itPeachTurnip_ItemVars {
