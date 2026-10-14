@@ -213,13 +213,6 @@ impl Running<'_> {
         }
     }
 
-    /// `ftLk_SpecialS_RemoveBoomerang1`.
-    fn link_remove_boomerang1(&mut self, gobj: GObjId) {
-        if self.link_boomerang_exists(gobj) {
-            unported_call("ftLk_SpecialS_RemoveBoomerang1");
-        }
-    }
-
     /// `ftLk_SpecialN_ProcessFv10`.
     fn link_process_arrow(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).u.gobj_at(u::ARROW).is_some() {

@@ -57,8 +57,9 @@ ROOTS = [
     "itClimbersBlizzard_ItemVars",
     # Peach's vegetables.
     "itPeachTurnip_ItemVars",
-    # Link's bomb.
+    # Link's bomb, boomerang and hookshot.
     "itLinkBomb_ItemVars",
+    "itLinkBoomerang_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",

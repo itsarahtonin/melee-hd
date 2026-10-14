@@ -17,6 +17,7 @@ pub mod heart;
 pub mod heiho;
 pub mod kusudama;
 pub mod linkbomb;
+pub mod linkboomerang;
 pub mod luigifireball;
 pub mod mariocape;
 pub mod mariofireball;
@@ -97,6 +98,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || peachparasol::run_event(r, gobj, addr)
         || peachturnip::run_event(r, gobj, addr)
         || linkbomb::run_event(r, gobj, addr)
+        || linkboomerang::run_event(r, gobj, addr)
         || drmariopill::run_event(r, gobj, addr)
         || pikachuthunder::run_event(r, gobj, addr)
         || pikachutjoltground::run_event(r, gobj, addr)
@@ -149,6 +151,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| peachparasol::run_pred(r, gobj, addr))
         .or_else(|| peachturnip::run_pred(r, gobj, addr))
         .or_else(|| linkbomb::run_pred(r, gobj, addr))
+        .or_else(|| linkboomerang::run_pred(r, gobj, addr))
         .or_else(|| drmariopill::run_pred(r, gobj, addr))
         .or_else(|| pikachuthunder::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
@@ -203,6 +206,12 @@ pub const ICE_CLIMBER_BLIZZARD: i32 = 107;
 pub const LINK_BOMB: i32 = 58;
 /// `It_Kind_CLink_Bomb`.
 pub const CLINK_BOMB: i32 = 59;
+/// `It_Kind_Link_Boomerang`, `It_Kind_CLink_Boomerang`, `It_Kind_Link_HShot` and
+/// `It_Kind_CLink_HShot`.
+pub const LINK_BOOMERANG: i32 = 60;
+pub const CLINK_BOOMERANG: i32 = 61;
+pub const LINK_HSHOT: i32 = 62;
+pub const CLINK_HSHOT: i32 = 63;
 /// `It_Kind_Zelda_DinFire` and `_DinFire_Explode`.
 pub const ZELDA_DIN_FIRE: i32 = 108;
 pub const ZELDA_DIN_FIRE_EXPLODE: i32 = 109;

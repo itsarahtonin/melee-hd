@@ -8450,6 +8450,96 @@ impl itLinkBomb_ItemVars {
     }
 }
 
+/// `itLinkBoomerang_ItemVars`, 0x1c8 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itLinkBoomerang_ItemVars {
+    /// +0x0
+    pub xDD4: Var<i32>,
+    /// +0x4
+    pub xDD8: Var<i32>,
+    /// +0x8
+    pub xDDC: [Var<i32>; 2],
+    /// +0x10
+    pub xDE4: Var<i32>,
+    /// +0x14
+    pub xDE8: Var<i32>,
+    /// +0x18
+    pub xDEC: Var<i32>,
+    /// +0x1c
+    pub xDF0: [Var<Vec3>; 16],
+    /// +0xdc
+    pub xEB0: [Var<Vec3>; 16],
+    /// +0x19c
+    pub xF70: Var<f32>,
+    /// +0x1a0
+    pub xF74: Var<f32>,
+    /// +0x1a4
+    pub xF78: Var<f32>,
+    /// +0x1a8
+    pub xF7C: Var<f32>,
+    /// +0x1ac
+    pub xF80: Var<f32>,
+    /// +0x1b0
+    pub xF84: Var<f32>,
+    /// +0x1b4
+    pub xF88: Var<f32>,
+    /// +0x1b8
+    pub xF8C: Var<f32>,
+    /// +0x1bc
+    pub xF90: [Var<Option<JObjId>>; 2],
+    /// +0x1c4
+    pub xF98: Var<Option<GObjId>>,
+}
+
+impl Default for itLinkBoomerang_ItemVars {
+    fn default() -> Self {
+        itLinkBoomerang_ItemVars {
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: core::array::from_fn(|_| Var::new(Default::default())),
+            xDE4: Var::new(Default::default()),
+            xDE8: Var::new(Default::default()),
+            xDEC: Var::new(Default::default()),
+            xDF0: core::array::from_fn(|_| Var::new(Default::default())),
+            xEB0: core::array::from_fn(|_| Var::new(Default::default())),
+            xF70: Var::new(Default::default()),
+            xF74: Var::new(Default::default()),
+            xF78: Var::new(Default::default()),
+            xF7C: Var::new(Default::default()),
+            xF80: Var::new(Default::default()),
+            xF84: Var::new(Default::default()),
+            xF88: Var::new(Default::default()),
+            xF8C: Var::new(Default::default()),
+            xF90: core::array::from_fn(|_| Var::new(Default::default())),
+            xF98: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itLinkBoomerang_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.iter_mut().for_each(|v| v.mark_stale());
+        self.xDE4.mark_stale();
+        self.xDE8.mark_stale();
+        self.xDEC.mark_stale();
+        self.xDF0.iter_mut().for_each(|v| v.mark_stale());
+        self.xEB0.iter_mut().for_each(|v| v.mark_stale());
+        self.xF70.mark_stale();
+        self.xF74.mark_stale();
+        self.xF78.mark_stale();
+        self.xF7C.mark_stale();
+        self.xF80.mark_stale();
+        self.xF84.mark_stale();
+        self.xF88.mark_stale();
+        self.xF8C.mark_stale();
+        self.xF90.iter_mut().for_each(|v| v.mark_stale());
+        self.xF98.mark_stale();
+    }
+}
+
 /// `IfDamageFlags`, 0x1 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IfDamageFlags {
