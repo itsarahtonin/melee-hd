@@ -101,7 +101,11 @@ impl Running<'_> {
                 );
                 self.game.fighter_dobj_lists[list.0][n] = Some(dd);
                 if let Some(m) = self.game.objs.dobjs[dd].mobj {
-                    self.game.objs.mobjs[m].class = crate::hsd::mobj::MObjClass::Fighter;
+                    crate::hsd::mobj::change_class(
+                        &mut self.game.objs.mobjs,
+                        m,
+                        crate::hsd::mobj::MObjClass::Fighter,
+                    );
                 }
                 d = self.game.objs.dobjs[dd].next;
                 n += 1;
