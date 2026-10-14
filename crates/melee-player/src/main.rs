@@ -64,8 +64,8 @@ struct Args {
     disc: String,
     players: Vec<(u8, u8)>,
     stage: u16,
-    stocks: i8,
-    minutes: u32,
+    stocks: u8,
+    minutes: u8,
     replay: Option<String>,
     adapter: bool,
     /// Writes each tick's latency measures to this CSV, with a summary at exit.
@@ -267,7 +267,7 @@ impl Session {
                         team: i as u8,
                     })
                     .collect();
-                let mut s = Settings::vs(a.stage, &players, a.stocks, a.minutes * 60);
+                let mut s = Settings::vs(a.stage, &players, a.stocks, a.minutes);
                 // A seed from the clock: presentation-side, set once before the match.
                 s.seed = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
