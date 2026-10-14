@@ -87,17 +87,26 @@ fn check(func: &str, ours: &Ours) {
     let mut blocked = Vec::new();
     'captures: for path in &files {
         let cap = Capture::read(path);
+        // The state, imported once (in the first mode, as each mode's run did) for both modes'
+        // runs, each from its own copy.
+        set_fp_mode(MODES[0]);
+        let mut archives = Archives::default();
+        let data = DataMap {
+            loaded: find_archives_in(env.index, &cap.call.mem1, &mut archives),
+        };
+        let mut imp = Importer::new(&cap, &data);
+        imp.world();
+        imp.stage();
+        imp.ids();
+        let Importer {
+            game: imported,
+            maps: imported_maps,
+            ..
+        } = imp;
         for mode in MODES {
             set_fp_mode(mode);
-            let mut archives = Archives::default();
-            let data = DataMap {
-                loaded: find_archives_in(env.index, &cap.call.mem1, &mut archives),
-            };
-            let mut imp = Importer::new(&cap, &data);
-            imp.world();
-            imp.stage();
-            imp.ids();
-            let Importer { mut game, maps, .. } = imp;
+            let mut game = imported.clone();
+            let maps = imported_maps.clone();
             let ran = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 ours(
                     &mut Running {
