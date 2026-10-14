@@ -523,7 +523,8 @@ impl Running<'_> {
             if self.game.fighters[f.0].ground_or_air == super::common::GA_GROUND
                 && !self.cpu_target_ahead(f)
             {
-                unported_call("ftCo_800A0098");
+                self.cpu_turn_around(f);
+                return;
             }
             if !self.cpu_attack(f) {
                 self.cpu_drop_target(f);

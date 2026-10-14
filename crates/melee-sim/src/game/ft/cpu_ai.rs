@@ -66,6 +66,19 @@ const MS_COUNT: i32 = 341;
 const INPUT_SIZE: u32 = 0x1C;
 const INPUTS: u32 = 30;
 
+/// What a register holds when code reads it without its caller passing it: the stale-register
+/// rule for the CPU AI (docs/engine.md). The computer player's frame follows one such value,
+/// r5, which Nana's DI takes as her stick's x when her knockback is zero (`ftCo_800AC5A0`):
+/// each function on the way returns the r5 it leaves, as the original's machine code leaves
+/// it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Leftover {
+    /// The register's word.
+    Word(u32),
+    /// A word melee-hd doesn't follow, named by the function that left it: reading it stops.
+    Unknown(&'static str),
+}
+
 impl Running<'_> {
     /// The other fighter of the same player (Nana's Popo, Popo's Nana), `ftCo_800A589C`: the
     /// first in the fighters' list, or none if that one is asleep or there is none.
@@ -95,12 +108,12 @@ impl Running<'_> {
     /// A computer-controlled fighter's frame, `ftCo_800B3900`: it reads the stage, decides by
     /// its kind, writes a new script when the last one is done, runs its script, and Nana
     /// replays Popo's inputs while she follows him; its frame count goes up.
-    // Ports `ftCo_800B3900`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B3900")]
     pub fn cpu_frame(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.cpu_read_stage(f);
-        self.cpu_decide(f);
-        self.cpu_behave(f);
+        let r5 = self.cpu_decide(f);
+        self.cpu_behave(f, r5);
         self.cpu_run_script(f);
         self.nana_follow_inputs(f);
         let c = &mut self.game.fighters[f.0].cpu;
@@ -256,7 +269,7 @@ impl Running<'_> {
 
     /// Whether a floor is Corneria's ceilinged one (joint 4), `grCorneria_801E2E50`.
     // Ports `grCorneria_801E2E50`; aliased once a check reaches it.
-    fn corneria_ceiling_floor(&self, line: i32) -> bool {
+    pub(super) fn corneria_ceiling_floor(&self, line: i32) -> bool {
         // Gr_Kind_Corneria.
         self.game.stage_info.grkind == 14
             && line != -1
@@ -289,8 +302,9 @@ impl Running<'_> {
     }
 
     /// The fighter's decision by its computer kind, `ftCo_800B2AFC`: only Nana's is ported.
+    /// It returns the r5 the decision leaves, which `ftCo_800B2AFC` passes on unchanged.
     // Ports `ftCo_800B2AFC`; aliased once a check reaches it.
-    fn cpu_decide(&mut self, f: FighterId) {
+    fn cpu_decide(&mut self, f: FighterId) -> Leftover {
         match self.game.fighters[f.0].cpu.kind {
             CPU_KIND_NANA => self.nana_decide(f),
             k => unported_call(&format!("ftCo_800B2AFC for computer kind {k}")),
@@ -299,9 +313,10 @@ impl Running<'_> {
 
     /// Nana's decision, `ftCo_800B101C`: with Popo gone she acts alone; else she records his
     /// inputs, takes her level from his percent, and either follows him (until he's out of
-    /// reach or doing his up special) or makes her way back to him.
+    /// reach or doing his up special) or makes her way back to him. It returns the r5 its
+    /// last call leaves: on her way back, always [`Running::nana_keeps_up`]'s.
     // Ports `ftCo_800B101C`; aliased once a check reaches it.
-    fn nana_decide(&mut self, f: FighterId) {
+    fn nana_decide(&mut self, f: FighterId) -> Leftover {
         let c = &mut self.game.fighters[f.0].cpu;
         c.xF9_b2 = true;
         c.xF9_b4 = true;
@@ -309,6 +324,7 @@ impl Running<'_> {
             unported_call("ftCo_800AEFB8");
         };
         self.nana_record_input(popo, f);
+        let r5;
         let level = fp::fdivs(reg(self.game.fighters[popo.0].dmg.x1830_percent), 20.0);
         let level = if fp::fctiwz(level) > 9 {
             9
@@ -318,7 +334,12 @@ impl Running<'_> {
         self.game.fighters[f.0].cpu.level = level;
         if self.game.fighters[f.0].cpu.xFA_b7 {
             self.cpu_toward_partner(f);
-            if self.nana_lost_popo(f, popo) {
+            // What `ftCo_800A7AAC` leaves (or passes on from `ftCo_800B0918`, Popo's x) depends
+            // on the stack and the collision code's registers, which aren't followed: the
+            // partner search leaves a fighter's address, the floor checks their own words.
+            let (lost, left) = self.nana_lost_popo(f, popo, Leftover::Unknown("ftCo_800A7AAC"));
+            r5 = left;
+            if lost {
                 let c = &mut self.game.fighters[f.0].cpu;
                 c.xFA_b7 = false;
                 c.x18 = c.x1C;
@@ -331,7 +352,9 @@ impl Running<'_> {
         } else {
             // `ftCo_CpuUpdateNanaFollow`.
             self.nana_regroup(f);
-            if self.nana_can_follow(f, popo) {
+            let (follow, left) = self.nana_can_follow(f, popo);
+            r5 = left;
+            if follow {
                 let c = &mut self.game.fighters[f.0].cpu;
                 c.x18 = 0;
                 c.xFA_b7 = true;
@@ -343,16 +366,17 @@ impl Running<'_> {
         if fpp.ground_or_air == GA_GROUND {
             fpp.cpu.xFB_b0 = false;
         }
+        r5
     }
 
     /// Whether Nana stops following Popo (`ftCo_800B101C_inline0`): when she's in her up
     /// special (which marks her `xFB_b0`), more than 25 from him, or not where she can keep
-    /// up with him ([`Running::nana_keeps_up`]).
-    fn nana_lost_popo(&mut self, f: FighterId, popo: FighterId) -> bool {
+    /// up with him ([`Running::nana_keeps_up`]); with the r5 left, `r5` unless that check ran.
+    fn nana_lost_popo(&mut self, f: FighterId, popo: FighterId, r5: Leftover) -> (bool, Leftover) {
         let ms = self.game.fighters[f.0].motion_id;
         if (MS_PP_SPECIAL_HI_0..=MS_PP_SPECIAL_HI_5).contains(&ms) {
             self.game.fighters[f.0].cpu.xFB_b0 = true;
-            return true;
+            return (true, r5);
         }
         let (me, other) = (
             self.game.fighters[f.0].cur_pos,
@@ -361,17 +385,25 @@ impl Running<'_> {
         let dx = fp::fsubs(reg(me.x), reg(other.x));
         let dy = fp::fsubs(reg(other.y), reg(me.y));
         if fp::fmadds(dx, dx, fp::fmuls(dy, dy)) > fp::fmul(25.0, 25.0) {
-            return true;
+            return (true, r5);
         }
-        !self.nana_keeps_up(f, popo)
+        let (keeps_up, r5) = self.nana_keeps_up(f, popo);
+        (!keeps_up, r5)
     }
 
     /// Whether Nana starts following Popo again, `ftCo_800B0E98`: both on the ground, she
     /// isn't recovering (`xFB_b0`) or in her up special, she can act or stands waiting, they
-    /// move alike (within his walk speed's midpoint) and she's within 25 of him.
+    /// move alike (within his walk speed's midpoint) and she's within 25 of him. The r5 it
+    /// leaves is [`Running::nana_keeps_up`]'s, which it calls first.
     // Ports `ftCo_800B0E98`; aliased once a check reaches it.
-    fn nana_can_follow(&mut self, f: FighterId, popo: FighterId) -> bool {
-        if !self.nana_keeps_up(f, popo) {
+    fn nana_can_follow(&mut self, f: FighterId, popo: FighterId) -> (bool, Leftover) {
+        let (keeps_up, r5) = self.nana_keeps_up(f, popo);
+        (self.nana_can_follow_from(f, popo, keeps_up), r5)
+    }
+
+    /// [`Running::nana_can_follow`] once [`Running::nana_keeps_up`] has answered.
+    fn nana_can_follow_from(&mut self, f: FighterId, popo: FighterId, keeps_up: bool) -> bool {
+        if !keeps_up {
             return false;
         }
         let (me, other) = (&self.game.fighters[f.0], &self.game.fighters[popo.0]);
@@ -417,32 +449,47 @@ impl Running<'_> {
     /// a parasol, nor while she carries a crate, barrel, capsule or barrel cannon, nor when he
     /// stands above her while she falls; she follows on the ground (`x2225_b3`) or when she
     /// crouches or lands.
-    // Ports `ftCo_800B0CA8`; aliased once a check reaches it.
-    fn nana_keeps_up(&self, f: FighterId, popo: FighterId) -> bool {
+    ///
+    /// It leaves r5 holding Popo's state while it checks his states; then Nana's held item:
+    /// none (0), or the item's `Item*`, its address in the original's heap, which the
+    /// allocator model gives ([the allocators](docs/engine.md)).
+    #[doc(alias = "ftCo_800B0CA8")]
+    fn nana_keeps_up(&self, f: FighterId, popo: FighterId) -> (bool, Leftover) {
         let (me, other) = (&self.game.fighters[f.0], &self.game.fighters[popo.0]);
         let ms = other.motion_id;
+        let r5 = Leftover::Word(ms as u32);
         // `ftCo_800A3200`: ledge catch or hang.
         if matches!(ms, MS_CLIFF_CATCH | MS_CLIFF_WAIT) {
-            return false;
+            return (false, r5);
         }
         if matches!(ms, MS_CAPTURE_WAIT_HI | MS_CAPTURE_WAIT_LW)
             || (MS_SHOULDERED_WAIT..=MS_SHOULDERED_TURN).contains(&ms)
             || matches!(ms, MS_OTTOTTO | MS_OTTOTTO_WAIT)
         {
-            return false;
+            return (false, r5);
         }
         if (MS_CAPTURE_KIRBY..=MS_CAPTURE_WAIT_KIRBY).contains(&ms)
             || (MS_REBIRTH..=MS_REBIRTH_WAIT).contains(&ms)
             || (MS_WARP_STAR_JUMP..=MS_WARP_STAR_FALL).contains(&ms)
             || (MS_ITEM_PARASOL_FALL..=MS_ITEM_PARASOL_DAMAGE_FALL).contains(&ms)
         {
-            return false;
+            return (false, r5);
         }
+        let r5 = match me.item_gobj {
+            None => Leftover::Word(0),
+            Some(item) => {
+                let it = super::super::it::item_of(self.game, item);
+                match self.game.items.addr(it.0) {
+                    0 => Leftover::Unknown("ftCo_800B0CA8 (an item's address, unmodeled)"),
+                    a => Leftover::Word(a),
+                }
+            }
+        };
         if let Some(item) = me.item_gobj {
             let kind = self.game.items[super::super::it::item_of(self.game, item).0].kind;
             // `It_Kind_Box`, `_Taru`, `_Kusudama`, `_TaruCann`.
             if matches!(kind, 1 | 2 | 4 | 5) {
-                return false;
+                return (false, r5);
             }
         }
         if other.ground_or_air == GA_GROUND
@@ -450,12 +497,12 @@ impl Running<'_> {
             && other.cur_pos.y > me.cur_pos.y
             && me.pos_delta.y < 0.0
         {
-            return false;
+            return (false, r5);
         }
         if me.x2225_b3 {
-            return true;
+            return (true, r5);
         }
-        matches!(
+        let landing = matches!(
             me.motion_id,
             MS_SQUAT
                 | MS_SQUAT_WAIT
@@ -466,7 +513,8 @@ impl Running<'_> {
                 | MS_LANDING_AIR_B
                 | MS_LANDING_AIR_HI
                 | MS_LANDING_AIR_LW
-        )
+        );
+        (landing, r5)
     }
 
     /// Records Popo's controller and position into Nana's input history, `ftCo_800B0918`:
@@ -565,9 +613,10 @@ impl Running<'_> {
     }
 
     /// A new script once the last is done, `ftCo_800B2790`, by what the fighter is doing
-    /// (`x18`).
+    /// (`x18`). `r5` is what its caller left in that register, which the DI reads
+    /// ([`Leftover`]); nothing before the DI's call writes it for the characters ported.
     // Ports `ftCo_800B2790`; aliased once a check reaches it.
-    fn cpu_behave(&mut self, f: FighterId) {
+    fn cpu_behave(&mut self, f: FighterId, r5: Leftover) {
         let c = &self.game.fighters[f.0].cpu;
         if c.csP.0.is_some() || c.command_duration != 0 {
             return;
@@ -586,9 +635,9 @@ impl Running<'_> {
             1 => self.cpu_walk(f),
             2 => self.cpu_attack_behavior(f),
             3 => unported_call("ftCo_800B9020"),
-            4 => unported_call("ftCo_800A8DE4"),
+            4 => self.cpu_recover_behavior(f),
             5 => self.cpu_get_up(f),
-            6 => unported_call("ftCo_800ACB44"),
+            6 => self.cpu_ledge_behavior(f),
             7 => unported_call("ftCo_800BA9A0"),
             8 => unported_call("ftCo_800B7180"),
             9 => self.cpu_hold(f),
@@ -618,7 +667,7 @@ impl Running<'_> {
             15 => unported_call("ftCo_800ABBA8"),
             16 => unported_call("ftCo_800AC30C"),
             17 => unported_call("ftCo_800AC434"),
-            18 => self.cpu_di(f),
+            18 => self.cpu_di(f, r5),
             19 => {
                 let ms = self.game.fighters[f.0].motion_id;
                 if ms != 0x131 && ms != 0x132 {
@@ -639,7 +688,8 @@ impl Running<'_> {
 
     /// Lets go of a charging special when it's charged, `ftCo_800ADC28`: Donkey Kong's Giant
     /// Punch, Samus's Charge Shot, Mewtwo's Shadow Ball and Kirby's copies of them; not while
-    /// it's taking a hit (`x18` 10).
+    /// it's taking a hit (`x18` 10). Releasing one leaves r5 1 (its last command's argument);
+    /// for the characters ported it writes nothing.
     // Ports `ftCo_800ADC28`; aliased once a check reaches it.
     fn cpu_charge_release(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];

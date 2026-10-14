@@ -16,6 +16,7 @@ melee-slippi = { path = "../../crates/melee-slippi" }
 melee-sim = { workspace = true, features = ["stubs"] }
 ssbm-disc.workspace = true
 ssbm-game.workspace = true
+ssbm-ppc.workspace = true
 ssbm-rt.workspace = true
 ssbm-slippi.workspace = true
 ssbm-types.workspace = true

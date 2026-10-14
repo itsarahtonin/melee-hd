@@ -4929,3 +4929,18 @@ ftFe_Init_OnItemVisible	leaf-check roy: roy_functions runs it from real Roy stat
 ftFe_Init_OnItemDrop	leaf-check roy: roy_functions runs it from real Roy states (ranked Slippi 3.16 replays and, for the item hooks, a debug VS ditto), its own saved calls and its unit's, and compares the whole state
 ftFe_Init_OnKnockbackEnter	leaf-check roy: roy_functions runs it from real Roy states (ranked Slippi 3.16 replays and, for the item hooks, a debug VS ditto), its own saved calls and its unit's, and compares the whole state
 ftFe_Init_OnKnockbackExit	leaf-check roy: roy_functions runs it from real Roy states (ranked Slippi 3.16 replays and, for the item hooks, a debug VS ditto), its own saved calls and its unit's, and compares the whole state
+# The Ice Climbers' ranked replay against Fox on Final Destination: melee-oracle diff of local/traces/v5-mixed/hf-ics-fox-fd-c93e2e19-rf.trc (ssbm-rs main's ports, which follow registers through calls) with --heap (docs/oracle.md). Each line names the tick that first reaches it; every tick after compares clean up to the diff's stop.
+ftCo_800DC920	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): a thrown Fox comes loose from an Ice Climber's model in tick 4712, through the collision pass in the air
+Fighter_UnkSetFlag_8006CFBC	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): ftCo_800DC920 runs it for both fighters in tick 4712
+ftCo_800A8DE4	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): Nana's recovery (behavior 4) picks the ledge ahead from tick 5634
+ftCo_800A3908	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): ftCo_800A8DE4 aims for the stage's right end through it from tick 5634
+ftCo_800A49B4	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): ftCo_800A3908 measures the distance to the ledge it aims for in tick 5634
+ftCo_800A9904	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): Nana's recovery in the air from tick 5634: toward the ledge, drifting back, and her jump
+ftCo_800A3498	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): ftCo_800A9904 asks it every frame of Nana's recovery from tick 5634
+ftCo_800ACB44	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): Nana catching, hanging from and leaving a ledge (behavior 6) from tick 5637
+ftCo_800A0AF4	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): ftCo_800ACB44 picks Nana's way up from the ledge with it
+ftCo_800A0098	melee-oracle diff, ICs vs Fox FD (hf-ics-fox-fd-c93e2e19-rf): Nana turns toward her attack's target before attacking in tick 6277
+# Nana's computer-player frame against the original's machine code: tools/leaf-check/tests/nana.rs runs ftCo_800B3900 from saved calls of the Ice Climbers' Final Destination replay in ssbm-rs's interpreter and melee-sim, as saved and with her DI pushing with no knockback (and Popo hanging from a ledge), and compares the whole state.
+ftCo_800B3900	leaf-check nana: every saved call, against the machine code; the r5 its calls leave reaches the DI
+ftCo_800B0CA8	leaf-check nana: Nana's decision calls it in the saved frames; the r5 it leaves (Popo's state, else no item's 0) is her DI's stick with no knockback
+ftCo_800AC5A0	leaf-check nana: her DI with the stick neutral, and pushing it with no knockback, under 3.16's NanaDeterminism code

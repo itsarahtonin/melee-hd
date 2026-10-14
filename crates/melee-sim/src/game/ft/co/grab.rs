@@ -21,6 +21,7 @@ use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::lb::joint::world_position;
+use crate::vec::Vec3;
 
 /// `ftCommon_MotionVars_capturedamage`'s `x18`: the grabber's hold point, which the victim
 /// follows.
@@ -36,6 +37,10 @@ const JUMP_FRAMES: usize = 0x0;
 
 /// `FtPart_XRotN`.
 const X_ROT_N: i32 = 2;
+
+/// `ftKb_MS_SpecialNCapture0` and `ftKb_MS_SpecialAirNCapture0`: Kirby swallowing.
+const KB_SPECIAL_N_CAPTURE_0: i32 = 0x164;
+const KB_SPECIAL_AIR_N_CAPTURE_0: i32 = 0x176;
 
 /// The callbacks the grab's states store.
 const PULL_FOLLOW: u32 = 0x800D_A190;
@@ -395,9 +400,12 @@ impl Running<'_> {
 
     /// The grab's end for both, `ftCo_800DC920`: each forgets the other (a frozen partner
     /// thaws, `Fighter_UnkSetFlag_8006CFBC`). A victim the grab made part of the grabber's
-    /// model (Yoshi's egg, Kirby's swallow) isn't ported.
-    // Ports `ftCo_800DC920`; aliased once a check reaches it.
-    // Ports `Fighter_UnkSetFlag_8006CFBC`; aliased once a check reaches it.
+    /// model (a thrown fighter, Yoshi's egg) comes loose at its throw offset from where its
+    /// model hung: onto a floor connected to the grabber's when one is at or below that point
+    /// and close enough, else through a collision pass from the grabber's middle. Kirby's
+    /// swallow isn't ported.
+    #[doc(alias = "ftCo_800DC920")]
+    #[doc(alias = "Fighter_UnkSetFlag_8006CFBC")]
     pub fn grab_release(&mut self, a: GObjId, b: GObjId) {
         for g in [a, b] {
             let fp = self.game.fighter_mut(g);
@@ -416,13 +424,107 @@ impl Running<'_> {
         fp.x221B.x221B_b5 = false;
         fp.x221B.x221B_b7 = false;
         if self.game.fighter(held).x2226_b2 {
-            unported_call("ftCo_800DC920 (a victim inside the grabber's model)");
+            self.release_from_model(holder, held);
         }
         let fp = self.game.fighter_mut(held);
         fp.x1A5C = None;
         fp.victim_gobj = None;
         fp.x221B.x221B_b5 = false;
         fp.x221B.x221B_b7 = false;
+    }
+
+    /// [`Self::grab_release`]'s part for a victim inside its grabber's model (`x2226_b2`).
+    fn release_from_model(&mut self, holder: GObjId, held: GObjId) {
+        let hp = self.game.fighter(holder);
+        if hp.kind == super::checks::KIND_KIRBY
+            && matches!(
+                hp.motion_id,
+                KB_SPECIAL_N_CAPTURE_0 | KB_SPECIAL_AIR_N_CAPTURE_0
+            )
+        {
+            unported_call("ftCo_800DC920 for Kirby's swallow");
+        }
+        let xj = self.part_joint(held, X_ROT_N).expect("no XRotN");
+        let mut pos = world_position(&mut self.game.objs, self.data, Some(xj), None);
+        let fp = self.game.fighter(held);
+        pos.x = mem(fp::fmadds(
+            reg(fp.facing_dir),
+            fp::fmuls(reg(fp.x1A70.z), reg(fp.x34_scale.y)),
+            reg(pos.x),
+        ));
+        pos.y = mem(fp::fmadds(reg(fp.x1A70.y), reg(fp.x34_scale.y), reg(pos.y)));
+        pos.z = 0.0;
+        super::throw::unconstrain(&mut self.game.objs, xj);
+        let fp = self.game.fighter_mut(held);
+        fp.x2226_b2 = false;
+        let x2174 = fp.x2174;
+        jobj::set_translate(&mut self.game.objs.jobjs, xj, x2174);
+
+        let h = self.game.fighter_id(held);
+        let floor = self.game.fighter(holder).coll_data.floor.index;
+        let geo = self.game.geometry.as_mut().expect("no collision geometry");
+        if geo.line_live(floor) {
+            let line = geo.floor_below(pos, -1, -1);
+            if line != -1 && geo.lines_connected(line, floor) {
+                self.game.fighters[h.0].coll_data.floor.index = line;
+                let geo = self.game.geometry.as_ref().expect("no collision geometry");
+                // The floor spans pos's x, so the probe finds it; a miss would leave the
+                // offset a stack word the original then compares.
+                let Some(probe) = geo.probe_floor(line, pos) else {
+                    unported_call("ftCo_800DC920: a floor probe that misses (its offset unset)");
+                };
+                if probe.offset >= self.common().f32(0x3BC) {
+                    let fp = &mut self.game.fighters[h.0];
+                    fp.cur_pos =
+                        Vec3::new(pos.x, mem(fp::fadds(reg(pos.y), reg(probe.offset))), pos.z);
+                    let cur = fp.cur_pos;
+                    fp.coll_data.set_position(cur);
+                    return;
+                }
+            }
+        }
+
+        let hp = self.game.fighter(holder);
+        let mid = fp::fmuls(
+            0.5,
+            fp::fadds(reg(hp.coll_data.ecb.top.y), reg(hp.coll_data.ecb.bottom.y)),
+        );
+        let last = Vec3::new(
+            mem(fp::fadds(reg(hp.cur_pos.x), 0.0)),
+            mem(fp::fadds(reg(hp.cur_pos.y), mid)),
+            mem(fp::fadds(reg(hp.cur_pos.z), 0.0)),
+        );
+        let root = self.root_jobj(held);
+        jobj::set_translate(&mut self.game.objs.jobjs, root, pos);
+        let grounded = self.game.fighters[h.0].ground_or_air == GA_GROUND;
+        if !grounded {
+            super::super::fighter::unlock_ecb(&mut self.game.fighters[h.0]);
+        }
+        // The pass puts the fighter where it ends; the original moves it only after landing
+        // or leaving the ground, which read where it was.
+        let before = self.game.fighters[h.0].cur_pos;
+        let hit = self.fighter_coll_placed(h, last, pos, |c, cd| {
+            if grounded {
+                c.air_frame(cd, 5, 0)
+            } else {
+                c.air_frame(cd, 6, 1)
+            }
+        });
+        self.game.fighters[h.0].cur_pos = before;
+        if hit {
+            if self.game.fighters[h.0].ground_or_air != GA_GROUND {
+                self.land(held);
+            }
+            let fp = &mut self.game.fighters[h.0];
+            fp.cur_pos = fp.coll_data.cur_pos;
+        } else {
+            if self.game.fighters[h.0].ground_or_air != GA_AIR {
+                self.go_airborne(h);
+            }
+            self.game.fighters[h.0].cur_pos = pos;
+        }
+        let cur = self.game.fighters[h.0].cur_pos;
+        jobj::set_translate(&mut self.game.objs.jobjs, root, cur);
     }
 
     /// The victim's offset from the grabber's hold point, `fn_800DAC78`.

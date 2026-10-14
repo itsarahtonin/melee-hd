@@ -90,6 +90,9 @@ pub struct ReplayStart {
     pub codes: Vec<u8>,
 }
 
+/// The Ice Climbers' `CharacterKind`.
+const CKIND_ICE_CLIMBERS: u8 = 14;
+
 /// A player in [`Settings::vs`].
 #[derive(Clone, Copy, Debug)]
 pub struct Player {
@@ -131,6 +134,11 @@ impl Settings {
     /// A VS match as the VS mode starts it (`gmVsMelee_EnterVs`) from the menus' `rules` and
     /// `prefs`: the VS mode's start data with what the character select screen sets for each
     /// player (character, kind, costume, team and CPU level) and the stage select's stage.
+    ///
+    /// With an Ice Climber among the players the allocator model is on, laid out as Slippi's
+    /// playback lays out the heap (`Layout::slippi_playback`, the layout every checked match
+    /// uses): Nana's computer DI reads her `Fighter*`'s address, which the model gives
+    /// (docs/engine.md, docs/player.md). Without one it stays off, which costs nothing.
     pub fn vs_with(
         stage: u16,
         players: &[Player],
@@ -161,7 +169,10 @@ impl Settings {
             ucf: ucf::Pads::default(),
             playback: false,
             fighter_addresses: Vec::new(),
-            heap: None,
+            heap: players
+                .iter()
+                .any(|p| p.character == CKIND_ICE_CLIMBERS)
+                .then(crate::hsd::heap::Layout::slippi_playback),
             playback_heap: None,
             unlocks: super::gm::Unlocks::slippi(),
             boot_audio: true,
@@ -737,5 +748,32 @@ pub fn load_fighter_files(
         }
         aram += (bytes.len() as u32).next_multiple_of(32);
         files.anim_files.push((name.to_owned(), file));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Player, Settings};
+
+    fn player(character: u8, port: u8) -> Player {
+        Player {
+            character,
+            costume: 0,
+            port,
+            kind: 0,
+            cpu_level: 0,
+            team: port,
+        }
+    }
+
+    #[test]
+    fn ice_climbers_turn_on_the_allocator_model() {
+        let fox = player(2, 0);
+        let ics = player(14, 1);
+        assert_eq!(Settings::vs(32, &[fox, player(9, 1)], 4, 8).heap, None);
+        assert_eq!(
+            Settings::vs(32, &[fox, ics], 4, 8).heap,
+            Some(crate::hsd::heap::Layout::slippi_playback())
+        );
     }
 }
