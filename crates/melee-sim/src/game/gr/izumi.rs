@@ -645,9 +645,14 @@ pub fn create_reflection(r: &mut Running) -> GObjId {
         image.is_some(),
         "not found mirror image desc! (GrdIzumi_cd_wt_GrdIzumiDummy1_1_image_desc)"
     );
-    // `lb_800121FC`'s buffer: the preload cache holds none in the match a replay's playback
-    // boots into, so the scene's heap gives it.
-    crate::hsd::heap::mem_alloc(crate::hsd::heap::tex_buffer_size(80, 60, 4).next_multiple_of(32));
+    // `lb_800121FC`'s buffer: preload entry 2001 where the preload cache holds it (a match the
+    // VS mode starts from its menus), else the scene's heap's (the match a replay's playback
+    // boots into).
+    if !r.game.ft.data.files.buffer_preloaded(2001) {
+        crate::hsd::heap::mem_alloc(
+            crate::hsd::heap::tex_buffer_size(80, 60, 4).next_multiple_of(32),
+        );
+    }
     r.game.gr.izumi.reflection = Some(Reflection {
         texture_matrix: None,
         image,

@@ -14,6 +14,7 @@
 mod boot;
 mod diff;
 mod trace;
+mod vanilla;
 
 use std::collections::HashMap;
 use std::process::ExitCode;
@@ -42,6 +43,7 @@ fn run(args: Vec<String>) -> ExitCode {
         ["trace-dump", trace, tick, addr, len] => trace_dump(trace, tick, addr, len),
         ["trace-world", trace, tick] => trace_world(trace, tick),
         ["trace-heap", trace] => diff::trace_heap(trace),
+        ["vs-heap", ref rest @ ..] => vanilla::vs_heap(rest),
         ["rules", ref replays @ ..] if !replays.is_empty() => rules(replays),
         _ => {
             eprintln!("usage: melee-oracle compare ORIGINAL.slp OURS.slp");
@@ -56,6 +58,9 @@ fn run(args: Vec<String>) -> ExitCode {
             eprintln!("       melee-oracle trace-info TRACE");
             eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");
             eprintln!("       melee-oracle trace-heap TRACE");
+            eprintln!(
+                "       melee-oracle vs-heap TRACE --stage STKIND --player PORT:CKIND... [--item-freq F] [--ticks N]"
+            );
             eprintln!("       melee-oracle rules REPLAY.slp...");
             ExitCode::from(2)
         }

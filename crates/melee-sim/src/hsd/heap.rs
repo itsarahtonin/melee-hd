@@ -402,29 +402,57 @@ pub struct ClassInfo {
     pub initialized: bool,
 }
 
-/// What decides a scene's heap: the main heap's bounds, which the boot's codes move, and the
-/// codes that change what the game allocates.
+/// What decides a scene's heap: the main heap's bounds, which the boot and the scene's
+/// preload move, the codes that change what the game allocates, and whether the menus'
+/// preload holds the match's files.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Layout {
     /// The main heap's range (`lbHeap`'s `Hsd` heap: the arena after the audio heap and the
-    /// preload cache's persistent heaps, up to the arena's top).
+    /// preload cache's persistent heaps, up to the arena's top or the persistent heap there).
     pub lo: u32,
     pub hi: u32,
+    /// The main heap's index among the OS heaps (`HeapArray`): after the audio heap, and
+    /// under Slippi after its bootloader's heap too.
+    pub index: i32,
     /// The fighters' pool's object size: `sizeof(Fighter)`, or what Slippi's recording codes
     /// lengthen it to (`Recording/ExtendPlayerBlock.asm`).
     pub fighter_size: u32,
+    /// Whether the match follows the VS mode's menus, whose character and stage selects leave
+    /// two things the debug VS mode Slippi's playback boots into doesn't: the match's stage
+    /// and fighters' files in the preload cache (`lbDvd_80017960`; the VS mode's scenes keep
+    /// the cache's heaps, `lbDvdPreload_3`), so loading them reads nothing and takes nothing
+    /// from the scene's heap, and the fog class's size, which their fog set
+    /// (`hsdInitClassInfo`; a scene's start forgets the class but keeps it).
+    pub from_menus: bool,
 }
 
 /// The arena's top, below the frame buffers and the GX FIFO.
 pub const ARENA_HI: u32 = 0x817F_8AC0;
-/// The arena's bottom after `OSInitAlloc` made room for six heaps (Slippi's bootloader raises
-/// the console's count, `Bootloader/AddHeap.asm`), before the boot's codes take any.
-pub const ARENA_LO_SIX_HEAPS: u32 = 0x8065_CC60;
+/// The arena's bottom as `HSD_OSInit` finds it, past the game's data, the frame buffers and
+/// the GX FIFO (`OSInitAlloc`'s start in ssbm-rs, on a console's own boot and Slippi's).
+pub const ARENA_LO: u32 = 0x8065_CC00;
+/// `OSInitAlloc`'s descriptor of each heap (`HeapDesc`), which it takes from the arena.
+pub const HEAP_DESC_SIZE: u32 = 0xC;
+/// The heaps `OSInitAlloc` makes room for on a console (`iparam_heap_max_num`).
+pub const CONSOLE_HEAPS: u32 = 4;
+/// The heaps Slippi's bootloader raises that to (`Bootloader/AddHeap.asm`).
+pub const SLIPPI_HEAPS: u32 = 6;
+/// The arena's bottom after `OSInitAlloc` made room for `heaps` heaps (rounded up to 32
+/// bytes, as `HSD_OSInit` takes it).
+pub const fn arena_lo(heaps: u32) -> u32 {
+    (ARENA_LO + heaps * HEAP_DESC_SIZE).next_multiple_of(32)
+}
+/// The arena's bottom after `OSInitAlloc` made room for Slippi's six heaps, before the boot's
+/// codes take any.
+pub const ARENA_LO_SIX_HEAPS: u32 = arena_lo(SLIPPI_HEAPS);
 /// The audio heap the boot makes first (`iparam_audio_heap_size`).
 pub const AUDIO_HEAP_SIZE: u32 = 0x8_0000;
 /// The preload cache's persistent heaps below the main heap (`lbHeap_803BA380`'s `Seq` and
 /// `Stay`).
 pub const PERSISTENT_HEAPS: u32 = 0x800 + 0x4F_8800;
+/// The preload cache's heap at the arena's top (`lbHeap_803BA380`'s `AllM`), which the scenes
+/// that keep it (`lbDvdPreload_3`, the VS mode's) take from the main heap's top.
+pub const ALL_M_SIZE: u32 = 0x64_B400;
 /// The room Slippi's bootloader takes for itself beyond its code list (`Bootloader/main.asm`).
 pub const BOOTLOADER_ROOM: u32 = 0xC0;
 /// The length of the code list Slippi Dolphin's playback runs (its playback set without
@@ -435,7 +463,8 @@ pub const SLIPPI_FIGHTER_SIZE: u32 = 0x2600;
 
 impl Layout {
     /// The heap with Slippi's bootloader having loaded a code list of `code_list` bytes
-    /// (rounded to 32) and the recording codes running.
+    /// (rounded to 32) and the recording codes running, in the debug VS mode's scene, which
+    /// lets the `AllM` heap go (`lbDvdPreload_2`).
     pub fn slippi(code_list: u32) -> Layout {
         let lo = ARENA_LO_SIX_HEAPS
             + BOOTLOADER_ROOM
@@ -445,13 +474,32 @@ impl Layout {
         Layout {
             lo,
             hi: ARENA_HI,
+            // The bootloader's heap, the audio heap, then the scene's.
+            index: 2,
             fighter_size: SLIPPI_FIGHTER_SIZE,
+            from_menus: false,
         }
     }
 
     /// The heap as Slippi Dolphin plays a replay back (Show Player Names off).
     pub fn slippi_playback() -> Layout {
         Layout::slippi(PLAYBACK_CODE_LIST)
+    }
+
+    /// The heap of a VS match a console without Slippi's codes starts from the menus (the
+    /// VS mode's match scene, `gm_Mode_Vs_States`): the console's four heaps, no code list,
+    /// `Fighter` at its own size, the `AllM` heap kept at the arena's top, and what the
+    /// menus leave ([`Layout::from_menus`]). ssbm-rs's runs through the menus give the
+    /// fighters the same addresses whichever way they reach the match (`docs/engine.md`).
+    pub fn vanilla_vs() -> Layout {
+        Layout {
+            lo: arena_lo(CONSOLE_HEAPS) + AUDIO_HEAP_SIZE + PERSISTENT_HEAPS,
+            hi: ARENA_HI - ALL_M_SIZE,
+            // The audio heap, then the scene's.
+            index: 1,
+            fighter_size: FIGHTER_SIZE,
+            from_menus: true,
+        }
     }
 }
 
@@ -471,9 +519,6 @@ pub struct Heap {
 
 /// `HSD_MemoryEntry`'s size.
 const ENTRY_SIZE: u32 = 0x14;
-/// The main heap's index among the OS heaps (`HeapArray`): the bootloader's, the audio
-/// heap, then the scene's.
-const MAIN_HEAP_INDEX: i32 = 2;
 
 impl Heap {
     /// A scene's heap as `HSD_CreateMainHeap` makes it: empty, with no memory pieces, the
@@ -494,11 +539,15 @@ impl Heap {
         let classes = Class::ALL
             .iter()
             .map(|&c| ClassInfo {
-                obj_size: if c.from_boot() { c.obj_size() } else { 0 },
+                obj_size: if c.from_boot() || (layout.from_menus && c == Class::Fog) {
+                    c.obj_size()
+                } else {
+                    0
+                },
                 ..ClassInfo::default()
             })
             .collect();
-        let os = OsHeap::new(MAIN_HEAP_INDEX, layout.lo, layout.hi);
+        let os = OsHeap::new(layout.index, layout.lo, layout.hi);
         Heap {
             active: true,
             obj_heap: ObjHeap {
@@ -928,4 +977,37 @@ fn log(line: impl FnOnce() -> String) {
             v.push(line());
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The main heaps ssbm-rs's runs make for the match's scene (`OSCreateHeap` from
+    /// `HSD_CreateMainHeap`, ssbm-run's `CALLS`): a VS match started from the menus on a
+    /// console without Slippi's codes, and a replay's playback.
+    #[test]
+    fn layouts_are_the_heaps_ssbm_rs_makes() {
+        let v = Layout::vanilla_vs();
+        assert_eq!((v.lo, v.hi, v.index), (0x80BD_5C40, 0x811A_D6C0, 1));
+        assert_eq!((v.fighter_size, v.from_menus), (0x23EC, true));
+        let p = Layout::slippi_playback();
+        assert_eq!((p.lo, p.hi, p.index), (0x80BD_8B20, ARENA_HI, 2));
+        assert_eq!((p.fighter_size, p.from_menus), (0x2600, false));
+        // `OSInitAlloc` from 0x8065CC00: four heaps' descriptors, or Slippi's six.
+        assert_eq!(arena_lo(CONSOLE_HEAPS), 0x8065_CC40);
+        assert_eq!(ARENA_LO_SIX_HEAPS, 0x8065_CC60);
+    }
+
+    /// The menus leave the fog class's size set; the debug VS mode's boot doesn't.
+    #[test]
+    fn the_menus_leave_the_fog_class_sized() {
+        let fog = Class::ALL.iter().position(|&c| c == Class::Fog).unwrap();
+        let v = Heap::start_scene(&Layout::vanilla_vs());
+        assert_eq!(v.classes[fog].obj_size, 0x20);
+        assert!(!v.classes[fog].initialized);
+        let p = Heap::start_scene(&Layout::slippi_playback());
+        assert_eq!(p.classes[fog].obj_size, 0);
+        assert_eq!((v.os.index, p.os.index), (1, 2));
+    }
 }
