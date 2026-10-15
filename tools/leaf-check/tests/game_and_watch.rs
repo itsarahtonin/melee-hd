@@ -340,7 +340,7 @@ fn takes_gobj(call: &Call) -> bool {
 /// run: A, B or a shoulder held or pressed, the stick pushed every way, the script's
 /// variables and throw flags, Judgement's and Chef's last two numbers, Judgement's lift, the
 /// bucket's fill and damage, and the state's variables (Chef's sausages and loop, Oil Panic's
-/// release and turn frames).
+/// release and turn frames, and every third run a turn).
 fn vary(call: &mut Call, i: usize) {
     if !takes_gobj(call) {
         return;
@@ -389,6 +389,13 @@ fn vary(call: &mut Call, i: usize) {
     // The state's variables: Chef's loop let go and sausages, Oil Panic's release and turn.
     poke_u32(call, fp + 0x2340, (i / 2 % 2) as u32);
     poke_u32(call, fp + 0x2344, [0u32, 1, 3, 5][i / 6 % 4]);
+    // Every third run the stick back past the dead zone with no turn frames left, so Oil
+    // Panic turns and starts its turn frames.
+    if i % 3 == 0 {
+        let facing = f32::from_bits(peek_u32(call, fp + 0x2C));
+        poke_f32(call, fp + 0x620, if facing > 0.0 { -0.9 } else { 0.9 });
+        poke_u32(call, fp + 0x2344, 0);
+    }
 }
 
 /// An item's owner's state changed so the items' branches that read it run: the torch's
