@@ -18,8 +18,8 @@ use crate::MEM1;
 /// Samus's grapple beam's article's slot among the character items' (`It_Kind_Samus_GBeam`
 /// less `It_Kind_Kuriboh`).
 const GRAPPLE_ARTICLE: usize = 96 - 43;
-/// Link's hookshot's article (`It_Kind_Link_HShot`).
-const HOOKSHOT_ARTICLE: usize = 62 - 43;
+/// Link's and Young Link's hookshots' articles (`It_Kind_Link_HShot`, `It_Kind_CLink_HShot`).
+const HOOKSHOT_ARTICLES: [usize; 2] = [62 - 43, 63 - 43];
 use crate::compare::Comparer;
 use crate::import::{Importer, sym};
 
@@ -248,15 +248,12 @@ impl Importer<'_> {
                 };
             }
         }
-        // Link's hookshot's lengths, which its spawn writes over its attributes.
+        // Link's (or Young Link's) hookshot's lengths, which its spawn writes over its
+        // attributes. melee-sim keeps one article's: a match with both isn't ported.
         self.game.it.hookshot_lengths = Default::default();
-        let hookshot = self
-            .game
-            .it
-            .char_articles
-            .get(HOOKSHOT_ARTICLE)
-            .copied()
-            .flatten();
+        let hookshot = HOOKSHOT_ARTICLES
+            .iter()
+            .find_map(|&a| self.game.it.char_articles.get(a).copied().flatten());
         if let Some(article) = hookshot {
             let special = cap.u32(self.data.addr(article) + 4);
             if let Some(attrs) = self.import_data(special) {

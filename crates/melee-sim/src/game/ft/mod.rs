@@ -12,6 +12,7 @@ pub mod attack;
 pub mod bind;
 pub mod camera;
 pub mod captain;
+pub mod clink;
 pub mod co;
 pub mod colanim;
 pub mod coll;

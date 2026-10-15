@@ -18,6 +18,11 @@ impl Running<'_> {
     /// ([`addr::ABSORB_CB`]).
     #[doc(alias = "ftLk_AttackAir_800EB3BC")]
     pub fn link_shield_absorb(&mut self, gobj: GObjId) {
+        self.shield_absorb_with(gobj, addr::ABSORB_CB);
+    }
+
+    /// The shield's absorb box, Link's or Young Link's, whose hits run `cb`.
+    pub(in super::super) fn shield_absorb_with(&mut self, gobj: GObjId, cb: u32) {
         if self.game.fighter(gobj).x5F4_arr[2].prev != 0 {
             return;
         }
@@ -31,7 +36,7 @@ impl Running<'_> {
         let radius = self.link_attr_f32(f, attr::XC4 + 0x10);
         let joint = self.bone_joint(gobj, bone);
         let fp = &mut self.game.fighters[f.0];
-        set_shield_hit(fp, CodeRef(addr::ABSORB_CB), joint, radius, pos);
+        set_shield_hit(fp, CodeRef(cb), joint, radius, pos);
         fp.x221B.x221B_b3 = true;
         fp.x221B.x221B_b4 = true;
         fp.x221B.x221B_b2 = true;

@@ -255,7 +255,7 @@ impl Running<'_> {
         false
     }
 
-    /// A taunt, `ftCo_800DEA28`: the character's own (Young Link's isn't ported) or the side
+    /// A taunt, `ftCo_800DEA28`: the character's own (Young Link's, Dr. Mario's) or the side
     /// taunt, and the stats' taunt records (`pl_80040120`). Ganondorf's
     /// blows a wind from his top joint, then enters the side taunt twice: his case falls
     /// through to the default's.
@@ -263,7 +263,7 @@ impl Running<'_> {
     #[doc(alias = "pl_80040120")]
     fn enter_appeal(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).kind {
-            KIND_CLINK => unported_call("ftCl_Init_80149318 (Young Link's taunt)"),
+            KIND_CLINK => self.clink_appeal_enter(gobj),
             KIND_DRMARIO => self.dr_appeal_enter(gobj),
             KIND_GANON => {
                 let j = self.bone_joint(gobj, 0);
