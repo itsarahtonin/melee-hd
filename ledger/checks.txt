@@ -5690,3 +5690,189 @@ itClinkmilk_UnkMotion1_Phys	leaf-check young_link: young_link_functions runs it 
 it_2725_Logic80_PickedUp	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
 it_802C8B28	leaf-check young_link: young_link_functions reaches it from the taunt's callback it serves (ftCl_AppealS_Anim) in clean comparisons; melee-oracle diff hf-ylink-sheik-fod-d89ff958 (docs/oracle.md), all 16,010 ticks, runs his taunt's milk
 it_802C8C34	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+
+# Yoshi: leaf-check yoshi runs his code, his items' and the common code's Yoshi parts from ssbm-rs's saved calls of six ranked replays (local/calls/yoshi), as saved and from their groups' neighbours with the controls and script variables changed; yoshi_shield_stun runs the shield stun's entries against the original's machine code; his creation is the oracle's.
+fn_8012CF7C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012D0A0	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012D128	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012D1AC	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012D230	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012D298	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012D2F8	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012D360	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012D3C0	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012D428	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012D488	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012D4F0	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012E110	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012E3B4	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012E44C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012E644	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012EC7C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012EDE8	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012EFC0	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8012EFF4	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+fn_8013295C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_80099438	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_80099644	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_80099954	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BBB8C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BBC88	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BBCC0	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BBED4	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BC388	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BC3AC	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BC3D0	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BC438	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800C0C88	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (ftCo_800BC3D0 (a burying hit on the egg)) in clean comparisons
+ftCo_800DE2CC	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (ftYs_SpecialN2_0_Anim (the victim let go into its egg)) in clean comparisons
+ftCo_CaptureYoshi_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureYoshi_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureYoshi_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureYoshi_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_Fall_Enter_YoshiEgg	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_YoshiEgg_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_YoshiEgg_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_YoshiEgg_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_YoshiEgg_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_GuardDamage_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_GuardHold_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_GuardHold_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_GuardOff_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_GuardOff_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_GuardOn_0_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_GuardOn_0_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_GuardOn_1_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Init_8012B6E8	melee-oracle diff, Yoshi vs Falco FD and BF, Sheik BF and Captain Falcon FoD hf-yoshi-falco-fd-1394844d, hf-yoshi-falco-bf-3a068da7, hf-yoshi-sheik-bf-1a63c5bc, hf-yoshi-captain-fod-43843c48, hf-yoshi-falco-bf-22f665d4 and hf-yoshi-falco-bf-86016647 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Yoshi's creation runs it (the egg shield's texture length)
+ftYs_Init_8012B804	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (ftYs_Init_8012B8A4, ftYs_Init_8012B918) in clean comparisons
+ftYs_Init_8012B8A4	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Init_8012B918	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Init_8012BA8C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Init_8012BAC0	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (fn_800DB6C8 (the victim held in his mouth)) in clean comparisons
+ftYs_Init_8012BDA0	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Init_8012BE3C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Init_8012BECC	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Init_LoadSpecialAttrs	melee-oracle diff, Yoshi vs Falco FD and BF, Sheik BF and Captain Falcon FoD hf-yoshi-falco-fd-1394844d, hf-yoshi-falco-bf-3a068da7, hf-yoshi-sheik-bf-1a63c5bc, hf-yoshi-captain-fod-43843c48, hf-yoshi-falco-bf-22f665d4 and hf-yoshi-falco-bf-86016647 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Yoshi's creation and spawns run it
+ftYs_Init_OnDeath	melee-oracle diff, Yoshi vs Falco FD and BF, Sheik BF and Captain Falcon FoD hf-yoshi-falco-fd-1394844d, hf-yoshi-falco-bf-3a068da7, hf-yoshi-sheik-bf-1a63c5bc, hf-yoshi-captain-fod-43843c48, hf-yoshi-falco-bf-22f665d4 and hf-yoshi-falco-bf-86016647 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Yoshi's creation and spawns run it
+ftYs_Init_OnKnockbackEnter	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Init_OnKnockbackExit	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Init_OnLoad	melee-oracle diff, Yoshi vs Falco FD and BF, Sheik BF and Captain Falcon FoD hf-yoshi-falco-fd-1394844d, hf-yoshi-falco-bf-3a068da7, hf-yoshi-sheik-bf-1a63c5bc, hf-yoshi-captain-fod-43843c48, hf-yoshi-falco-bf-22f665d4 and hf-yoshi-falco-bf-86016647 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Yoshi's creation runs it
+ftYs_JumpAerial_Anim_Cb	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_JumpAerial_Enter	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Shield_8012C1D4	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Shield_8012C49C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Shield_8012C600	leaf-check yoshi_shield_stun: yoshi_shield_stun runs it from Yoshi's saved shield hits against the original's machine code, as saved, a powershield's and not, and with the light press changed, and compares the whole state
+ftYs_Shield_8012C850	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Shield_8012C914	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Shield_8012CACC	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_Shield_8012CC1C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirHi_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirHi_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirHi_Enter	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirLw_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirLw_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirLw_Enter	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirLw_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirN1_0_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirN1_1_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirN1_2_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirN2_0_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirN2_1_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirN_Enter	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSEnd_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSEnd_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSEnd_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSEnd_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLanding_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLanding_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLanding_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLanding_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_0_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_0_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_0_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_0_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_1_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_1_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_1_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_1_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_2_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_2_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_2_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_2_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_3_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_3_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_3_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSLoop_3_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSStart_0_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSStart_0_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSStart_0_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSStart_0_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSStart_1_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSStart_1_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSStart_1_IASA	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirSStart_1_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialAirS_Enter	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialHi_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialHi_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialHi_Enter	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialLwLanding_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialLwLanding_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialLw_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialLw_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialLw_Enter	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialLw_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN1_0_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN1_1_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN1_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN2_0_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN2_1_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_8012CD40	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_8012CD88	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (ftCo_YoshiEgg_Anim (the egg broken out of)) in clean comparisons
+ftYs_SpecialN_8012CDB4	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_8012CDD4	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (ftYs_SpecialN2_0_Anim (the egg laid)) in clean comparisons
+ftYs_SpecialN_Enter	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_GetBoneIndex	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_GetDatAttr18	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_GetDatAttr1C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_GetDatAttr20	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_GetDatAttr24	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_GetExtAttr28	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_GetExtAttr2C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_GetExtAttr34	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_GetExtAttr38	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_GetFacingDir	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialN_SetupItemVel	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (ftYs_SpecialN2_0_Anim (the egg laid)) in clean comparisons
+ftYs_SpecialS_8012DF00	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialS_8012DF18	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialS_8012DF8C	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (fn_8012E110 (the egg thrown)) in clean comparisons
+ftYs_SpecialS_8012E270	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialS_8012EA04	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialS_8012EAD8	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialS_8012EB48	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialS_8012F0DC	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialS_8012F35C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+ftYs_SpecialS_Enter	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+itYoshiEggThrow_Logic43_PickedUp	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+itYoshieggthrow_UnkMotion1_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+itYoshieggthrow_UnkMotion1_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+itYoshieggthrow_UnkMotion1_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+itYoshistar_UnkMotion0_Anim	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+itYoshistar_UnkMotion0_Coll	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+itYoshistar_UnkMotion0_Phys	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+it_2725_Logic43_Clanked	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+it_80272BA4	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (the stars' hit callbacks) in clean comparisons
+it_802B2890	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+it_802B28C8	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (fn_8012E110 (the egg thrown)) in clean comparisons
+it_802B2A10	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (fn_8012E110 (the egg made in his hand)) in clean comparisons
+it_802B2B08	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (fn_8012E110 (the egg thrown)) in clean comparisons
+it_802B2C04	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+it_802B2C38	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (the thrown egg's callbacks (it breaking)) in clean comparisons
+it_802B2E5C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+it_802B2E7C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+it_802B2F88	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+it_802B2FA8	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+it_802B2FC8	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (fn_8012E644 (the ground pound landing)) in clean comparisons
+it_802B312C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+it_802B314C	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state
+it_802B322C	leaf-check yoshi: yoshi_functions reaches it from the callers it serves (fn_8012E644 (the ground pound landing)) in clean comparisons
+it_802B3348	leaf-check yoshi: yoshi_functions runs it from real states of Yoshi's six replays, its own saved calls and its group's, and compares the whole state

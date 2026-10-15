@@ -72,7 +72,7 @@ fn vars(game: &mut Game, gobj: GObjId) -> &mut itYoshiEggLay_ItemVars {
 
 /// Lays the egg, `it_802F2F34` (its first argument, Yoshi, unused): at `pos` (on the plane),
 /// its speed, facing, damage factor, behavior and lifetime, falling.
-#[doc(alias = "it_802F2F34")]
+// Ports `it_802F2F34`; aliased once a check reaches it.
 pub fn spawn(r: &mut Running, laid: &Laid) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind: laid.kind,
@@ -98,7 +98,7 @@ pub fn spawn(r: &mut Running, laid: &Laid) -> Option<GObjId> {
 }
 
 /// Falling, `it_802F3020`: no pickup, its falling state, `xDCE` bit 7 clear.
-#[doc(alias = "it_802F3020")]
+// Ports `it_802F3020`; aliased once a check reaches it.
 fn fall(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
@@ -120,13 +120,13 @@ fn tick(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// `it_27CF_UnkMotion1_Anim`.
-#[doc(alias = "it_27CF_UnkMotion1_Anim")]
+// Ports `it_27CF_UnkMotion1_Anim`; aliased once a check reaches it.
 fn fall_anim(r: &mut Running, gobj: GObjId) -> bool {
     tick(r, gobj)
 }
 
 /// `it_27CF_UnkMotion1_Phys`: gravity.
-#[doc(alias = "it_27CF_UnkMotion1_Phys")]
+// Ports `it_27CF_UnkMotion1_Phys`; aliased once a check reaches it.
 fn fall_phys(r: &mut Running, gobj: GObjId) {
     let a = attr_of(item(r.game, gobj));
     let accel = a.f32(r.data, data::attr::FALL_SPEED);
@@ -135,34 +135,34 @@ fn fall_phys(r: &mut Running, gobj: GObjId) {
 }
 
 /// `it_27CF_UnkMotion1_Coll`: sitting once it lands.
-#[doc(alias = "it_27CF_UnkMotion1_Coll")]
+// Ports `it_27CF_UnkMotion1_Coll`; aliased once a check reaches it.
 fn fall_coll(r: &mut Running, gobj: GObjId) -> bool {
     ground::fall(r, gobj, land);
     false
 }
 
 /// Landed, `it_802F317C`: still, sitting.
-#[doc(alias = "it_802F317C")]
+// Ports `it_802F317C`; aliased once a check reaches it.
 fn land(r: &mut Running, gobj: GObjId) {
     lib2725::clear_velocity(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
 /// `it_27CF_UnkMotion0_Anim`.
-#[doc(alias = "it_27CF_UnkMotion0_Anim")]
+// Ports `it_27CF_UnkMotion0_Anim`; aliased once a check reaches it.
 fn sit_anim(r: &mut Running, gobj: GObjId) -> bool {
     tick(r, gobj)
 }
 
 /// `it_27CF_UnkMotion0_Coll`: falling again once off the ground.
-#[doc(alias = "it_27CF_UnkMotion0_Coll")]
+// Ports `it_27CF_UnkMotion0_Coll`; aliased once a check reaches it.
 fn sit_coll(r: &mut Running, gobj: GObjId) -> bool {
     ground::ground_or_fall(r, gobj, fall);
     false
 }
 
 /// Broken, `it_802F3290`: still, 40 frames left, hidden, blinking, its broken state.
-#[doc(alias = "it_802F3290")]
+// Ports `it_802F3290`; aliased once a check reaches it.
 fn crack(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let ip = item_mut(r.game, gobj);
@@ -174,7 +174,7 @@ fn crack(r: &mut Running, gobj: GObjId) {
 }
 
 /// `it_27CF_UnkMotion2_Anim`: gone once its last frames are up.
-#[doc(alias = "it_27CF_UnkMotion2_Anim")]
+// Ports `it_27CF_UnkMotion2_Anim`; aliased once a check reaches it.
 fn break_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
@@ -182,7 +182,7 @@ fn break_anim(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// A hit shortens its life by the damage times its factor, `it_27CF_Logic114_DmgReceived`.
-#[doc(alias = "it_27CF_Logic114_DmgReceived")]
+// Ports `it_27CF_Logic114_DmgReceived`; aliased once a check reaches it.
 fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     let mul = vars(r.game, gobj).x0.get();
     let ip = item_mut(r.game, gobj);
@@ -195,7 +195,7 @@ fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Forgets a GObj, `it_27CF_Logic114_EvtUnk`.
-#[doc(alias = "it_27CF_Logic114_EvtUnk")]
+// Ports `it_27CF_Logic114_EvtUnk`; aliased once a check reaches it.
 pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

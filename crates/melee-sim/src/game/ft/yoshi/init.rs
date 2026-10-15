@@ -175,25 +175,25 @@ impl Running<'_> {
     }
 
     /// Picking up an item, `ftYs_Init_OnItemPickup` (as Fox's).
-    #[doc(alias = "ftYs_Init_OnItemPickup")]
+    // Ports `ftYs_Init_OnItemPickup`; aliased once a check reaches it.
     pub fn ys_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_pickup(gobj, flag);
     }
 
     /// Hiding the held item, `ftYs_Init_OnItemInvisible` (as Fox's).
-    #[doc(alias = "ftYs_Init_OnItemInvisible")]
+    // Ports `ftYs_Init_OnItemInvisible`; aliased once a check reaches it.
     pub fn ys_on_item_invisible(&mut self, gobj: GObjId) {
         self.fox_on_item_invisible(gobj);
     }
 
     /// Showing the held item again, `ftYs_Init_OnItemVisible` (as Fox's).
-    #[doc(alias = "ftYs_Init_OnItemVisible")]
+    // Ports `ftYs_Init_OnItemVisible`; aliased once a check reaches it.
     pub fn ys_on_item_visible(&mut self, gobj: GObjId) {
         self.fox_on_item_visible(gobj);
     }
 
     /// Dropping the item, `ftYs_Init_OnItemDrop` (as Fox's).
-    #[doc(alias = "ftYs_Init_OnItemDrop")]
+    // Ports `ftYs_Init_OnItemDrop`; aliased once a check reaches it.
     pub fn ys_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_drop(gobj, flag);
     }

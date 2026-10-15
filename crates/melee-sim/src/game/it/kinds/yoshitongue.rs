@@ -41,7 +41,7 @@ pub fn run_event(_r: &mut Running, _gobj: GObjId, addr: u32) -> bool {
 
 /// Caught by `owner`'s tongue, `it_802F2BFC`: its victim the catcher, its source the
 /// catcher's player, the tongue's state on the tongue's tip, in the air, blinking, still.
-#[doc(alias = "it_802F2BFC")]
+// Ports `it_802F2BFC`; aliased once a check reaches it.
 pub fn catch(r: &mut Running, gobj: GObjId, owner: GObjId) {
     let slot = i32::from(r.game.fighter(owner).player_idx);
     let ip = item_mut(r.game, gobj);
@@ -71,17 +71,17 @@ pub fn catch(r: &mut Running, gobj: GObjId, owner: GObjId) {
 }
 
 /// `it_2F2B_UnkMotion0_Anim`.
-#[doc(alias = "it_2F2B_UnkMotion0_Anim")]
+// Ports `it_2F2B_UnkMotion0_Anim`; aliased once a check reaches it.
 fn anim() -> bool {
     false
 }
 
 /// `it_2F2B_UnkMotion0_Phys`.
-#[doc(alias = "it_2F2B_UnkMotion0_Phys")]
+// Ports `it_2F2B_UnkMotion0_Phys`; aliased once a check reaches it.
 fn phys() {}
 
 /// `it_2F2B_UnkMotion0_Coll`.
-#[doc(alias = "it_2F2B_UnkMotion0_Coll")]
+// Ports `it_2F2B_UnkMotion0_Coll`; aliased once a check reaches it.
 fn coll() -> bool {
     false
 }
@@ -89,7 +89,7 @@ fn coll() -> bool {
 /// Let go by the tongue, `it_802F2CE0`: off the tongue at its tip's place, the catch counted
 /// as the catcher's hit on an enemy, its destruction kind cleared when `clear`, its victims
 /// forgotten, knocked out as an enemy is and gone.
-#[doc(alias = "it_802F2CE0")]
+// Ports `it_802F2CE0`; aliased once a check reaches it.
 pub fn release(r: &mut Running, gobj: GObjId, clear: bool) {
     let bone = article(super::super::item(r.game, gobj))
         .model(r.data)
