@@ -57,7 +57,7 @@ impl Running<'_> {
     /// Picks the ledge to recover to once per recovery (`xFA_b2`), `ftCo_800A8DE4`: the one
     /// ahead within reach of its fall, else the one behind, else the nearest one ahead.
     #[doc(alias = "ftCo_800A8DE4")]
-    fn cpu_pick_ledge(&mut self, f: FighterId) {
+    pub(super) fn cpu_pick_ledge(&mut self, f: FighterId) {
         let c = &mut self.game.fighters[f.0].cpu;
         if c.xFA_b2 {
             return;
