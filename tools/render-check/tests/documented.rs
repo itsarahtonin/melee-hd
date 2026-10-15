@@ -1,133 +1,41 @@
-//! The frames docs/player.md documents, each checked against ssbm-rs's reference as the
-//! document records it: `melee-render-check compare` on each, its alignment (the log's frame N
-//! is native frame N - 3) and its two images. Ignored by default, since it needs ssbm-rs's
-//! references and the disc and takes minutes; run it with
+//! The frames docs/player.md documents, the standard set: each checked against ssbm-rs's
+//! reference as the document records it (`melee-render-check compare` on each, its alignment
+//! and its two images), and a few drawn at higher scales and in widescreen against their own
+//! 1x frame (`scaled`). Ignored by default, since it needs ssbm-rs's references and the disc
+//! and takes minutes; run it, with the Fox ditto's mix, as the pre-push frames+audio step:
 //!
 //! ```sh
-//! SSBM_DISC=... cargo test --release -p melee-render-check -p melee-audio-check -- --ignored
+//! SSBM_DISC=... SSBM_RS_LOCAL=... SLIPPI_REPLAYS=... \
+//!     cargo test --release -p melee-render-check -p melee-audio-check -- --ignored
 //! ```
 //!
-//! The references are ssbm-rs's FIFO logs and gxplay's frames of them, `REFS/player/ref-MATCH/fN.dff`
-//! and `fN/` (`REFS` defaults to ssbm-rs's `local/`, `$SSBM_RS_LOCAL`), the benchmark replays
-//! in the repository's `data/bench/`, and the Slippi replay of Fox vs Sheik `SLIPPI_FOX_SHEIK`
-//! (default below, in `$SLIPPI_REPLAYS`; the author's, not public). Unlike the tests that skip
-//! without their data, these fail without it: they are a check to run on purpose.
+//! More frames of the same matches are in the opt-in sweep (`tests/sweep.rs`). See
+//! `common` for where the references come from.
 
-use std::path::PathBuf;
-use std::process::Command;
+mod common;
 
-use melee_local_data::{slippi_replays, ssbm_rs_local};
+use common::{
+    Expect, FOUR_FD, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL,
+    FOX_SHEIK_FD, FOX_SHEIK_YS, Game, Group, SHEIK_FOX_FOD, compare, scaled, why,
+};
 
-const SLIPPI_FOX_SHEIK: &str = "2026-01/Game_20260129T133652.slp";
-
-fn refs() -> PathBuf {
-    std::env::var_os("REFS").map_or_else(|| ssbm_rs_local("").into(), PathBuf::from)
+fn identical(game: &Game, frame: u32) {
+    compare(game, frame, Group::Standard, Expect::Identical);
 }
 
-/// What a documented frame's two images must be.
-enum Expect {
-    /// Identical to ssbm-rs's: PSNR infinite.
-    Identical,
-    /// The images' lines exactly as recorded (a frame with a known difference).
-    Images([&'static str; 2]),
-}
-
-/// Runs `compare` on the log of `game`'s frame `frame` and checks the result.
-fn check(game: &str, replay: PathBuf, slippi: bool, frame: u32, expect: Expect) {
-    let disc = std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc");
-    let dir = refs().join("player").join(format!("ref-{game}"));
-    let log = dir.join(format!("f{frame}.dff"));
-    let images = dir.join(format!("f{frame}"));
-    for p in [&replay, &log, &images] {
-        assert!(
-            p.exists(),
-            "{} is missing (set SSBM_RS_LOCAL or REFS, and SLIPPI_REPLAYS)",
-            p.display()
-        );
-    }
-    let native = frame - 3;
-    let mut cmd = Command::new(env!("CARGO_BIN_EXE_melee-render-check"));
-    cmd.arg("compare")
-        .arg(&disc)
-        .arg(&replay)
-        .arg(&log)
-        .arg(&images)
-        .arg(native.to_string());
-    if slippi {
-        cmd.env("CHECK_FP", "slippi");
-    } else {
-        cmd.env_remove("CHECK_FP");
-    }
-    for v in ["CHECK_SEARCH", "CHECK_DRAW_LIMIT", "CHECK_THREADED"] {
-        cmd.env_remove(v);
-    }
-    let out = cmd.output().expect("melee-render-check runs");
-    let text = String::from_utf8_lossy(&out.stdout);
-    let lines: Vec<&str> = text.lines().collect();
-    let aligned = format!("the log's first frame is native frame {native} (");
-    assert!(
-        lines.iter().any(|l| l.starts_with(&aligned)),
-        "{game} f{frame}: the log doesn't start at native frame {native}\n{text}{}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    let notes: Vec<&str> = lines
-        .iter()
-        .filter(|l| l.trim_start().starts_with("not drawn exactly"))
-        .copied()
-        .collect();
-    assert!(
-        notes.is_empty(),
-        "{game} f{frame}: melee-render left things undrawn: {notes:#?}\n{text}"
-    );
-    let found: Vec<&str> = lines
-        .iter()
-        .filter(|l| l.starts_with("  image:") || l.starts_with("  no "))
-        .map(|l| l.trim())
-        .collect();
-    match expect {
-        Expect::Identical => {
-            assert!(
-                found.len() == 2
-                    && found
-                        .iter()
-                        .all(|l| l.starts_with("image: PSNR inf dB,")
-                            && l.ends_with("within tolerance")),
-                "{game} f{frame}: not identical: {found:#?}\n{text}"
-            );
-            assert!(out.status.success(), "{game} f{frame}: failed\n{text}");
-        }
-        Expect::Images(want) => {
-            assert_eq!(found, want, "{game} f{frame}\n{text}");
-        }
-    }
-}
-
-fn bench(game: &str, frame: u32) {
-    let replay = melee_local_data::bench_replay(game);
-    check(game, replay, false, frame, Expect::Identical);
-}
-
-/// Fox vs Sheik's frames: identical but for the name plates Slippi's playback draws and
-/// melee-sim doesn't (docs/player.md's open issues), as recorded here.
-fn fox_sheik(frame: u32, images: [&'static str; 2]) {
-    let replay = std::env::var_os("SLIPPI_FOX_SHEIK")
-        .map_or_else(|| slippi_replays(SLIPPI_FOX_SHEIK).into(), PathBuf::from);
-    check("fox-sheik-fd", replay, true, frame, Expect::Images(images));
-}
-
-macro_rules! bench_frames {
-    ($game:literal: $($name:ident $frame:literal),* $(,)?) => {
+macro_rules! frames {
+    ($game:expr; $($name:ident $frame:literal),* $(,)?) => {
         $(
             #[test]
             #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
             fn $name() {
-                bench($game, $frame);
+                identical(&$game, $frame);
             }
         )*
     };
 }
 
-bench_frames!("fox-fox-fd":
+frames!(FOX_FOX_FD;
     fox_fox_fd_140 140,
     fox_fox_fd_300 300,
     fox_fox_fd_600 600,
@@ -138,16 +46,34 @@ bench_frames!("fox-fox-fd":
     fox_fox_fd_11000 11000,
     fox_fox_fd_14000 14000,
 );
-bench_frames!("fox-marth-bf":
+frames!(FOX_MARTH_BF;
     fox_marth_bf_600 600,
     fox_marth_bf_2600 2600,
     fox_marth_bf_6000 6000,
     fox_marth_bf_11000 11000,
 );
-bench_frames!("fox-marth-fd":
+frames!(FOX_MARTH_FD;
     fox_marth_fd_600 600,
     fox_marth_fd_6000 6000,
 );
+
+/// Slippi's name plates, which its playback draws and melee-sim doesn't (docs/player.md's
+/// open issues).
+const NAME_PLATES: &str = "Slippi's name plates, which melee-sim doesn't draw";
+
+/// Fox vs Sheik's frames: identical but for the name plates, as recorded here.
+fn fox_sheik(frame: u32, images: [&'static str; 2]) {
+    compare(
+        &FOX_SHEIK_FD,
+        frame,
+        Group::Standard,
+        Expect::Known {
+            images,
+            notes: &[],
+            why: NAME_PLATES,
+        },
+    );
+}
 
 #[test]
 #[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
@@ -183,4 +109,134 @@ fn fox_sheik_fd_6000() {
             "image: PSNR 31.52 dB, 0.610% off by 8, 0.220% off by 32: OUT OF TOLERANCE",
         ],
     );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
+fn sheik_fox_fod_600() {
+    compare(
+        &SHEIK_FOX_FOD,
+        600,
+        Group::Standard,
+        Expect::Known {
+            images: [
+                "image: PSNR 40.87 dB, 1.314% off by 8, 0.093% off by 32: within tolerance",
+                "image: PSNR 41.01 dB, 1.250% off by 8, 0.090% off by 32: within tolerance",
+            ],
+            notes: &[
+                "not drawn exactly: draw PointSize (12)",
+                "not drawn exactly: draw PointSize (12)",
+            ],
+            why: why::STARS,
+        },
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
+fn fox_sheik_ys_600() {
+    compare(
+        &FOX_SHEIK_YS,
+        600,
+        Group::Standard,
+        Expect::Known {
+            images: [
+                "image: PSNR 33.38 dB, 0.268% off by 8, 0.267% off by 32: OUT OF TOLERANCE",
+                "image: PSNR 33.76 dB, 0.257% off by 8, 0.256% off by 32: OUT OF TOLERANCE",
+            ],
+            notes: &[],
+            why: why::YS_PLATFORM,
+        },
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
+fn fox_sheik_dl_600() {
+    compare(
+        &FOX_SHEIK_DL,
+        600,
+        Group::Standard,
+        Expect::Known {
+            images: [
+                "image: PSNR 90.53 dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
+                "image: PSNR 64.60 dB, 0.005% off by 8, 0.002% off by 32: within tolerance",
+            ],
+            notes: &[],
+            why: why::SHADOWS,
+        },
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
+fn four_fd_600() {
+    compare(
+        &FOUR_FD,
+        600,
+        Group::Standard,
+        Expect::Known {
+            images: [
+                "image: PSNR inf dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
+                "image: PSNR 59.49 dB, 0.001% off by 8, 0.001% off by 32: within tolerance",
+            ],
+            notes: &[],
+            why: why::PALETTE,
+        },
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn fox_marth_ps_600() {
+    compare(
+        &FOX_MARTH_PS,
+        600,
+        Group::Standard,
+        Expect::Known {
+            images: [
+                "image: PSNR 15.21 dB, 15.388% off by 8, 12.116% off by 32: OUT OF TOLERANCE",
+                "image: PSNR 15.28 dB, 15.705% off by 8, 12.210% off by 32: OUT OF TOLERANCE",
+            ],
+            notes: &[],
+            why: why::STADIUM_FLOOR,
+        },
+    );
+}
+
+/// Pokémon Stadium transformed: the fire stage.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn fox_marth_ps_6000_fire() {
+    compare(
+        &FOX_MARTH_PS,
+        6000,
+        Group::Standard,
+        Expect::Known {
+            images: [
+                "image: PSNR 22.11 dB, 0.872% off by 8, 0.867% off by 32: OUT OF TOLERANCE",
+                "image: PSNR 39.33 dB, 0.663% off by 8, 0.510% off by 32: OUT OF TOLERANCE",
+            ],
+            notes: &[],
+            why: why::BUBBLE,
+        },
+    );
+}
+
+#[test]
+#[ignore = "needs the replay and the disc; run with --ignored"]
+fn scaled_sheik_fox_fod_600() {
+    scaled(&SHEIK_FOX_FOD, 600, Group::Standard);
+}
+
+#[test]
+#[ignore = "needs the disc; run with --ignored"]
+fn scaled_fox_marth_ps_600() {
+    scaled(&FOX_MARTH_PS, 600, Group::Standard);
+}
+
+#[test]
+#[ignore = "needs the disc; run with --ignored"]
+fn scaled_fox_marth_bf_600() {
+    scaled(&FOX_MARTH_BF, 600, Group::Standard);
 }
