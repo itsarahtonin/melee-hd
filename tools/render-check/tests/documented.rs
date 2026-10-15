@@ -114,22 +114,7 @@ fn fox_sheik_fd_6000() {
 #[test]
 #[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
 fn sheik_fox_fod_600() {
-    compare(
-        &SHEIK_FOX_FOD,
-        600,
-        Group::Standard,
-        Expect::Known {
-            images: [
-                "image: PSNR 41.07 dB, 1.134% off by 8, 0.093% off by 32: within tolerance",
-                "image: PSNR 41.20 dB, 1.091% off by 8, 0.090% off by 32: within tolerance",
-            ],
-            notes: &[
-                "not drawn exactly: draw PointSize (12)",
-                "not drawn exactly: draw PointSize (12)",
-            ],
-            why: why::STARS,
-        },
-    );
+    compare(&SHEIK_FOX_FOD, 600, Group::Standard, Expect::Identical);
 }
 
 #[test]

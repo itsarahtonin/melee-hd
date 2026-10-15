@@ -196,6 +196,12 @@ impl Ctx<'_> {
                 self.fog_set(*f);
                 1
             }
+            Draw::PointSize(size, tex_offsets) => {
+                self.hsd
+                    .state
+                    .set_point_size(self.gx, *size, u32::from(*tex_offsets));
+                1
+            }
             Draw::Shape {
                 jobj,
                 trsp,

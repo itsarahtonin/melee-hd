@@ -416,16 +416,14 @@ pub const FOUR_FD: Game = Game {
 
 /// The known differences docs/player.md's open issues list, as the dashboard names them.
 pub mod why {
-    /// Fountain of Dreams' stars are drawn as points whose size melee-render doesn't set.
-    pub const STARS: &str = "Fountain of Dreams' stars: point size not drawn";
     /// A fighter's second lit vertex color, a few levels off on some draws.
     pub const VERTEX_COLORS: &str =
         "a fighter's second lit vertex color a few levels off; a few pixels";
     /// A fighter texture's palette, different past the entries the frame's draws show.
     pub const PALETTE: &str = "a fighter texture's palette contents; a few pixels";
-    /// Fountain of Dreams' water, a few levels greener than ssbm-rs's once the reflection shows:
-    /// its draw lacks the stage the original compiled before the stage changed the texture.
-    pub const WATER: &str = "Fountain of Dreams' water a few levels greener (a TEV stage compiled at load missing), and the stars' point size";
+    /// Particles Fountain of Dreams' reflection camera draws, placed elsewhere than ssbm-rs's.
+    pub const REFLECTION_PARTICLES: &str =
+        "Fountain of Dreams' reflection: some particles it draws placed elsewhere";
     /// Pokémon Stadium's screen showing the stage's feed where ssbm-rs's is dark.
     pub const SCREEN: &str = "Pokémon Stadium's screen shows the feed where ssbm-rs's is dark";
     /// Fountain of Dreams' reflection, an 80 by 60 copy drawn at the scale and averaged back,
