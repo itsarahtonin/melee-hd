@@ -11,7 +11,7 @@ use crate::mtx::{Axis, Mtx34};
 use crate::pairs::{load1, load2, moved, splat, store, store_paired};
 
 /// `Vec3` in the original: three floats.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,

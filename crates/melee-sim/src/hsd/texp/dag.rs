@@ -9,7 +9,7 @@ use super::{
 };
 
 /// `HSD_TExpDag`: an operation and the operations it reads.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, melee_derive::StateEq)]
 pub struct Dag {
     /// The operation (`tev`), by its expression.
     pub tev: usize,

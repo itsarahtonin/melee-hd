@@ -5,7 +5,7 @@
 
 /// A character a match can have, by its `CharacterKind` (the game's external ID, as
 /// [`Player::character`](super::vs_match::Player::character) takes it).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Character {
     pub kind: u8,
     pub name: &'static str,
@@ -15,7 +15,7 @@ pub struct Character {
 
 /// A stage a match can be on, by its `StKind` (the game's external ID, as
 /// [`Settings::vs`](super::vs_match::Settings::vs) takes it).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Stage {
     pub kind: u16,
     pub name: &'static str,

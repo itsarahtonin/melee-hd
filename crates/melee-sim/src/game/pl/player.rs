@@ -25,7 +25,7 @@ pub const CKIND_MARIO: i32 = 8;
 /// A character's fighters (`ftMapping`): its fighter kind, its second fighter's (the Ice
 /// Climbers' Nana, Zelda's Sheik and Sheik's Zelda), and whether the second is a
 /// transformation rather than a partner (nonzero).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct FtMapping {
     pub internal_id: i8,
     pub extra_internal_id: i8,

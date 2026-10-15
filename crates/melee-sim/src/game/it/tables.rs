@@ -9,7 +9,7 @@ use super::kinds::{KURIBOH, OLD_KURI, PKIND_START};
 use crate::game::handles::{CodeRef, ItemLogicRef, ItemStatesRef};
 
 /// `ItemLogicTable`: an item kind's states and the callbacks the item code calls on events.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct ItemLogic {
     /// Its state table's address (`ItemStateTable*`).
     pub states: u32,
@@ -30,7 +30,7 @@ pub struct ItemLogic {
 }
 
 /// `ItemStateTable`: one state's animation and its per-frame callbacks.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct ItemState {
     pub anim_id: i32,
     pub animated: Option<CodeRef>,

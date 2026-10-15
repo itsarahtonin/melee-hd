@@ -102,7 +102,7 @@ fn update_app_srt(objs: &mut Objects, s: super::appsrt::AppSrtId, vmtx: &Mtx34, 
 }
 
 /// psdisp.c's state.
-#[derive(melee_derive::CloneFrom, Debug)]
+#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct Globals {
     /// The display frame, 1 to 255 (`psFrameNum`).
     pub frame: u8,
@@ -204,7 +204,7 @@ pub fn sort(
 
 /// The links a display pass draws and where each starts, in link order (at most [`LINKS`],
 /// held inline).
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, melee_derive::StateEq)]
 pub struct DrawnLinks {
     n: usize,
     links: [(usize, Option<ParticleId>); LINKS],

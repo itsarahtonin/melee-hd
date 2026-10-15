@@ -93,14 +93,14 @@ pub trait Kinds: Clone + Debug + 'static {
     type UserData: Copy + Debug + PartialEq;
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,
 }
 
 /// `CollVtx`.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Vertex {
     /// The position in the data, unscaled: where a moving joint's transform starts.
     pub base: Vec2,
@@ -110,7 +110,7 @@ pub struct Vertex {
 }
 
 /// A line: the data's `MapLine` and the loaded `CollLine` flags.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Line {
     pub v0: u16,
     pub v1: u16,
@@ -129,14 +129,14 @@ pub struct Line {
 }
 
 /// `MapLineRange`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct LineRange {
     pub start: i16,
     pub count: i16,
 }
 
 /// `MapJoint`, the data's description of a joint.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct JointDesc {
     pub ranges: [LineRange; 5],
     pub left: f32,
@@ -148,7 +148,7 @@ pub struct JointDesc {
 }
 
 /// `CollJoint`.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Joint<K: Kinds> {
     /// The next joint in the search list.
     pub next: Option<u16>,
@@ -170,7 +170,7 @@ pub struct Joint<K: Kinds> {
 }
 
 /// `mpCollisionBox`.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Bounds {
     pub top: f32,
     pub bottom: f32,
@@ -179,7 +179,7 @@ pub struct Bounds {
 }
 
 /// The loaded geometry: everything `mplib.c` and `mpisland.c` keep in their globals.
-#[derive(melee_derive::CloneFrom, Debug)]
+#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct Geometry<K: Kinds> {
     pub vertices: Vec<Vertex>,
     pub lines: Vec<Line>,

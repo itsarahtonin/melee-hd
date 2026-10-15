@@ -20,7 +20,7 @@ use super::tobj::{self, Color, ImageRef, TOBJ_ANIM, TObjId, TObjs};
 use crate::fpu::{copy, mem, reg};
 
 /// An MObj's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct MObjId(pub u32);
 
 /// The material-animation flag of `HSD_*ReqAnimByFlags` (`MOBJ_ANIM`).
@@ -49,7 +49,7 @@ const A_PE_DSTALPHA: u8 = 13;
 
 /// Which class an MObj belongs to: `hsdMObj` or one the game derives from it, whose methods
 /// replace HAL's (fighters' `ftMObj`, stages' `gr_mobj`, items' `it_mobj`).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum MObjClass {
     #[default]
     Hsd,
@@ -64,7 +64,7 @@ pub enum MObjClass {
 }
 
 /// `HSD_Material`.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Material {
     pub ambient: Color,
     pub diffuse: Color,
@@ -105,7 +105,7 @@ impl Material {
 }
 
 /// `HSD_PEDesc`: pixel-engine settings.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct PeDesc {
     pub flags: u8,
     pub ref0: u8,
@@ -142,7 +142,7 @@ impl PeDesc {
 }
 
 /// `HSD_MObj`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct MObj {
     pub class: MObjClass,
     pub rendermode: u32,
@@ -162,7 +162,7 @@ pub struct MObj {
 /// Where an MObj's parts are in the original: its material and pixel engine settings, and the
 /// pieces its compiled TEV keeps (the stages, last made first, and the constants the stages
 /// read, in their list's order).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct MObjHeap {
     pub mat: u32,
     pub pe: u32,
@@ -198,7 +198,7 @@ impl MObj {
 }
 
 /// The MObj pool and mobj.c's globals.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct MObjs {
     pub pool: Pool<MObj>,
     /// The MObj the display pass is drawing (`current_mobj`).

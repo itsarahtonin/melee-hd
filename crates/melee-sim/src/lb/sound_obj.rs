@@ -46,7 +46,7 @@ const BEHAVIORS: [u32; 10] = [
 const SFX_COUNT: i32 = 0x83D60;
 
 /// A sound object's user data (`lbAudioAx_UserData`, 0x48 bytes, from `lbl_80433710`).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct SoundObj {
     pub gobj: Option<GObjId>,
     pub owner: Option<GObjId>,
@@ -209,7 +209,7 @@ impl Game {
 }
 
 /// What a sound object is made with (`SoundParams`).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct SoundParams {
     pub owner: GObjId,
     pub behavior: i32,

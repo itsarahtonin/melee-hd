@@ -25,7 +25,7 @@ use crate::hsd::pool::Pool;
 use crate::hsd::pool::kind as pool_kind;
 
 /// What a GObj's user data is (`user_data`, by its `user_data_kind`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum UserData {
     Fighter(FighterId),
     Item(ItemId),
@@ -74,7 +74,7 @@ pub const USER_DATA_GROUND: u8 = 3;
 
 /// Gameplay toggles (`docs/architecture.md`, rulesets): the Slippi ruleset's codes, each rule
 /// on or off ([`Rules::from_codes`] reads them from a replay; `game::slippi` lists them).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Rules {
     /// The online determinism fixes (`Common` and `Online/Core`): among those the ported code
     /// reaches, the stage objects' user data is zeroed when allocated (`Ground_GetStageGObj`),
@@ -96,7 +96,7 @@ pub struct Rules {
 }
 
 /// What a GObj's HSD object is (`hsd_obj`, by its `obj_kind`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Obj {
     JObj(JObjId),
     CObj(CObjId),
@@ -106,7 +106,7 @@ pub enum Obj {
 }
 
 /// The game's types for the scheduler.
-#[derive(melee_derive::CloneFrom, Debug)]
+#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct GameKinds;
 
 impl Kinds for GameKinds {
@@ -118,7 +118,7 @@ impl Kinds for GameKinds {
 
 /// What the simulation hands the presentation: sounds and controller rumble, which the
 /// original passes to the audio and pad drivers mid-tick.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub enum Event {
     /// `HSD_AudioSFXKeyOffTrack`: the sound on a track stops.
     SfxKeyOffTrack(i32),
@@ -172,7 +172,7 @@ pub enum Event {
 }
 
 /// Everything a tick reads and writes.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct Game {
     pub world: World<GameKinds>,
     pub objs: Objects,

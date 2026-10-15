@@ -40,7 +40,7 @@ pub const MIN_SPLIT: u32 = 64;
 /// (header included), as the cells in memory hold them, both sorted by address. Allocated
 /// blocks are a set: the original's allocated list keeps them newest first, an order only
 /// `OSCheckHeap`'s walk sees.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct OsHeap {
     /// The heap's index in `HeapArray`.
     pub index: i32,
@@ -121,7 +121,7 @@ impl OsHeap {
 /// pieces it has made and how many are free, its free list (last in, first out: the list's
 /// head is the vector's end), the next larger class that exists, and where the entry itself
 /// lives.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct MemEntry {
     pub addr: u32,
     pub size: u32,
@@ -133,7 +133,7 @@ pub struct MemEntry {
 
 /// HAL's memory pieces (`class.c`'s `memory_list`): the size classes by index (pieces of
 /// `32 * (index + 1)` bytes) and where the array of them lives.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct MemPieces {
     /// `memory_list`'s address, 0 before the first piece.
     pub array: u32,
@@ -142,7 +142,7 @@ pub struct MemPieces {
 }
 
 /// `HSD_ObjAllocData`: one object type's pool.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct ObjAlloc {
     pub num_limit_flag: bool,
     pub heap_limit_flag: bool,
@@ -174,7 +174,7 @@ impl ObjAlloc {
 
 /// `obj_heap`: a range objects are carved from in order instead of the main heap. Melee
 /// gives it no range (`top` 0), so pools grow from the main heap.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct ObjHeap {
     pub top: u32,
     pub curr: u32,
@@ -183,7 +183,7 @@ pub struct ObjHeap {
 }
 
 /// The pools `HSD_ObjAlloc` serves, by their allocation data.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, melee_derive::StateEq)]
 pub enum Kind {
     GObj,
     GObjProc,
@@ -310,7 +310,9 @@ pub const FIGHTER_SIZE: u32 = 0x23EC;
 
 /// The HSD classes, whose objects are memory pieces of their class's size, and the game's
 /// classes derived from them, which keep counts of their own.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, melee_derive::StateEq,
+)]
 pub enum Class {
     #[default]
     JObj,
@@ -394,7 +396,7 @@ impl Class {
 
 /// A class's size and counts (`HSD_ClassInfoHead`'s `obj_size`, `nb_exist`, `nb_peak`), and
 /// whether it's initialized (its `flags`' first bit), which each scene's start clears.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct ClassInfo {
     pub obj_size: u32,
     pub nb_exist: u32,
@@ -405,7 +407,7 @@ pub struct ClassInfo {
 /// What decides a scene's heap: the main heap's bounds, which the boot and the scene's
 /// preload move, the codes that change what the game allocates, and whether the menus'
 /// preload holds the match's files.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Layout {
     /// The main heap's range (`lbHeap`'s `Hsd` heap: the arena after the audio heap and the
     /// preload cache's persistent heaps, up to the arena's top or the persistent heap there).
@@ -505,7 +507,7 @@ impl Layout {
 
 /// The allocators of the scene's main heap. Until a scene starts (`active`), nothing is
 /// modelled and objects' addresses are unknown.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Heap {
     pub active: bool,
     /// Whether the heap's memory is fresh, zero as the boot left it: not after the menus,

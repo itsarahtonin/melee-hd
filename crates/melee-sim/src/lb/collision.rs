@@ -17,7 +17,7 @@ use crate::mtx::Mtx34;
 use crate::vec::Vec3;
 
 /// A vector held in registers, each component as `lfs` leaves it.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 struct R {
     x: f64,
     y: f64,
@@ -138,7 +138,7 @@ fn sqrt_spilled(x: f64) -> f64 {
 }
 
 /// Where a segment passes a sphere: the point on the segment closest to the center.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct SegmentSphere {
     pub closest: Vec3,
     /// Whether that point is within the two radii's sum of the center.
@@ -180,7 +180,7 @@ pub fn segment_sphere(
 }
 
 /// The point on a segment closest to another point.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct SegmentPoint {
     /// The squared distance between them.
     pub distance_sq: f32,
@@ -218,7 +218,7 @@ pub fn closest_on_segment_xy(start: Vec3, end: Vec3, p: Vec3) -> SegmentPoint {
 }
 
 /// The closest points between two segments.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct ClosestPoints {
     pub on_first: Vec3,
     pub on_second: Vec3,
@@ -456,7 +456,7 @@ fn capsules_xy_reg(
 }
 
 /// A hitbox's capsule against a hurtbox's or shield's.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct HitHurt {
     /// The closest point on the hitbox's segment.
     pub hit_closest: Vec3,
@@ -602,7 +602,7 @@ pub fn hit_hurt(
 }
 
 /// Where a segment enters a sphere, seen from its center.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct SphereEntry {
     /// The angle in the XY plane between `normal` and the segment's direction; π for a
     /// segment of zero length.
@@ -696,7 +696,7 @@ pub fn sphere_entry(
 }
 
 /// A hitbox's shape: the parts of `HitCapsule` the collision tests read and write.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct HitShape {
     /// `scale`: the radius, before the owner's scale.
     pub radius: f32,
@@ -738,7 +738,7 @@ pub fn hitboxes_touch(a: &mut HitShape, b: &mut HitShape, a_scale: f32, b_scale:
 
 /// A circle swept in the XY plane: the parts of `Fighter_x1614_t` (a fighter's coin pickup
 /// bubbles, and a coin's) the collision tests read and write.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct SweptCircle {
     /// `x0`: the radius, before the owner's scale.
     pub radius: f32,

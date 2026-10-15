@@ -7,11 +7,11 @@ use super::super::state::Game;
 use super::StageArchive;
 
 /// A `map_head` (`UnkStageDat`).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct MapHead(pub DataRef);
 
 /// A `map_head`'s entry for one map id (`UnkStageDat_x8_t`, 0x34 bytes).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct MapEntry(pub DataRef);
 
 impl MapHead {
@@ -85,7 +85,7 @@ impl MapEntry {
 
 /// A `GrJoint`: a collision joint (`x`), the map id it belongs to (`y`), and the model joint
 /// it follows (`z`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct GrJoint {
     pub x: i16,
     pub y: i16,

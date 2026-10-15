@@ -297,7 +297,7 @@ fn unported(what: &str, addr: u32) -> ! {
 /// What an original function takes or returns in its registers, for [`call`]: an integer, a
 /// float as a register holds it, a GObj, a fighter (a `Fighter*`), a joint, or a vector or
 /// float passed or returned by pointer.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub enum Val {
     None,
     Int(i32),

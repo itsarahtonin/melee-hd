@@ -17,15 +17,15 @@ use crate::mtx::{Mtx34, Mtx44};
 use gekko_fp as fp;
 
 /// A fog's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct FogId(pub u32);
 
 /// A range adjustment's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct FogAdjId(pub u32);
 
 /// `HSD_Fog`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Fog {
     pub ref_count: RefCount,
     /// `GXFogType`.
@@ -44,7 +44,7 @@ pub struct Fog {
 
 /// `HSD_FogAdj`: the range adjustment's center and width in screen pixels and the projection
 /// it is computed for. Its `aobj` is never set.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct FogAdj {
     pub ref_count: RefCount,
     pub center: i16,
@@ -53,7 +53,7 @@ pub struct FogAdj {
 }
 
 /// The fog and range-adjustment pools.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct Fogs {
     pub fogs: Pool<Fog>,
     pub adjs: Pool<FogAdj>,

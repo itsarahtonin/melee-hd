@@ -82,7 +82,7 @@ fn abs(v: f64) -> f64 {
 
 /// Where a windowed check keeps its flag: a point bonus's count (`x904[kind]`), or a word
 /// of the records.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 pub(super) enum Flag {
     Bonus(i32),
     Record(usize),

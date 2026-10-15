@@ -219,6 +219,31 @@ Refused codes (75 replays, 17 with the Ice Climbers), by injection address and t
 
 **Leaf functions.** `leaf-check` loads the disc's `main.dol` into ssbm-rs's runtime, registers every port, and calls them one at a time, so melee-sim's functions are compared with ssbm-rs's input by input, in both float modes. Inputs are special values, random bit patterns and values spread over each function's useful range. Changing one bit of a constant makes the checks fail.
 
+## Sync test
+
+`melee-oracle sync-test REPLAY.slp [--rollback N] [--fp hardware|slippi] [--ticks N]` checks that melee-hd is rollback-ready ([the architecture](architecture.md#netplay-and-other-features)): restoring an earlier state and playing the ticks since again must reproduce the straight run bit for bit. It plays the replay from its settings, as `melee-bench native` does (its own boot, no trace), and keeps the state before each tick in a ring of snapshots (`clone_from` into the ring's storage). After each tick a second match restores the snapshot from N ticks before (`clone_from`, as a rollback restores) and plays those N ticks again with the same inputs, display passes included. Its whole state must then equal the straight run's, and each replayed tick's output (sounds, rumble, draw commands) the straight run's for that tick. The first difference stops the run with the tick, the replay frame and the field's path, for example `the state after tick 300, restored from before tick 294 and played again, differs from the straight run's at game.objs.jobjs.pool.slots[101].rotate.x: 0.16551262 (0x3e297c24) != 0.16551447 (0x3e297ca0)`. N is 1 by default, which plays every tick twice from the same state; Slippi's rollback window is 7 or 8 ticks. A tick stopping at unported code stops the run like `diff`, with the number of ticks checked before it.
+
+**What it compares.** `melee_sim::state_eq::StateEq`, which every type in the state derives (`melee_derive::StateEq`): the whole `Game`, field by field, floats by bit pattern. Every pool slot is compared, freed ones too, since a freed slot's contents are what `alloc_stale` hands out next; vectors are compared by length and elements, maps by their entries in any order. That takes in the allocator model (`hsd::heap`, which a step borrows from the state and gives back), the random seed, the audio driver, synth, AX voices, DSP and timeline, the effects, items and stage objects, the display pass's statics, the pad library and playback's state. Only fields marked `#[clone_from(keep)]` are left out: spare storage a restore leaves as the target had it, namely the mix log (`Audio::mix`, presentation output), the TEV compile's scratch lists (`MObjs::texp_scratch`) and freed shapes' envelope lists kept for reuse (`PObjs::spare_lists`, `spare_sets`). Anything the simulation read from outside the snapshot would show up as a difference, since the replayed ticks would find what the straight run left there. Outside `Game` a tick reads only:
+
+- the archives (`Match::data`), loaded data a tick borrows shared (`Running`), so it can't change them;
+- the float mode and the multiply-add path (`gekko_fp`), per-thread settings fixed for a match;
+- the memo tables of `HSD_MtxSRT`, `sinf` and `cosf` ([performance](performance.md#speed-work)), keyed by every bit of their inputs and the float mode, which return what the call would compute;
+- its inputs: the controllers, or a replay's frames (`melee_slippi::Device` holds nothing of its own).
+
+The allocator's operation log (`--heap-log`) and the `stubs` feature's stand-ins are thread-locals only the checks set, and the simulation never reads the log.
+
+`--perturb TICK` flips the lowest bit of the first fighter's x in the restored state before the rollback that ends at that tick, which the run must catch: a check of the check. (The random seed wouldn't do: Slippi's playback restores it every tick.) `tools/oracle/tests/sync.rs` runs the first 1,800 ticks of the Fox ditto benchmark match with `--rollback 7`, and again with that perturbation, in the normal test suite: a few seconds, with only `SSBM_DISC`.
+
+**Results (2026-10-15).** With `--rollback 7`, every tick of these compared with no difference, to the match's end:
+
+- five of the six benchmark matches (`data/bench`, `--fp hardware`); Ice Climbers–Peach stops at Nana's unported `ftCo_800ABBA8` in tick 1647, with no difference in the 1,641 ticks checked before it;
+- the six CPU oracle matches for Ness and Samus (`local/bench/oracle-chars2`, `--fp hardware`);
+- 47 Slippi replays (`--fp slippi`): Sarah's Fox vs Sheik on Final Destination, Yoshi's Story, Dream Land and Fountain of Dreams, the Ness Pokémon Stadium replay, Jigglypuff's two, Falco's, Captain Falcon's two, Luigi's, Peach's and the four-player Final Destination match, and the ranked replays the oracle traces: Mario, Dr. Mario (two, one on a frozen Pokémon Stadium), Pikachu, Pichu, Luigi against Ganondorf, Ganondorf against Captain Falcon (two), Roy (four, UCF 0.8 among them), the Ice Climbers (three, UCF 0.8 and a frozen Stadium among them), Young Link (five), Peach (seven: her item pulls, Toad, a 3.14 replay among them), Yoshi (two), Link (two) and Link against Young Link, Samus against Dr. Mario and Marth against Peach on Fountain of Dreams.
+
+That covers every character on main and every tournament stage. With `--rollback 1` the Fox ditto and Fox–Marth Final Destination matches compare clean too. A rollback of 7 costs eight ticks per tick: a whole match takes about a minute.
+
+What it turned up: fields marked `#[clone_from(if_changed)]` (rarely changing containers, among them the text system's blocks, texts, canvases and buffers) were restored only when they compared unequal with `PartialEq`, which takes 0.0 and -0.0 for equal, so a restore could leave a text's position or size holding the other zero's sign. They now compare bit for bit (`StateEq`), and a unit test restores 0.0 over -0.0. No replay had reached it. Nothing else differed: the state holds everything a tick reads.
+
 ## Rules
 
 - Floats compare by bit pattern. One ULP is a divergence.
@@ -249,6 +274,7 @@ for m in fox-fox-fd fox-marth-fd fox-marth-bf fox-marth-ps ganon-captain-fd; do
 done
 target/release/melee-oracle diff "$SSBM_RS_LOCAL/traces/v5-mixed/Game_20260129T170722.trc" \
   "$SLIPPI_REPLAYS/2026-01/Game_20260129T170722.slp" --fp slippi   # and the other Slippi replays above
+target/release/melee-oracle sync-test data/bench/fox-marth-ps.slp --fp hardware --rollback 7   # for changes that touch the state's shape
 cargo test --release -p melee-sim -p melee-oracle -p melee-render -p melee-gpu -p melee-audio -p melee-input -p melee-player
 cargo test --release -p leaf-check
 cargo test --release -p melee-render-check -p melee-audio-check -- --ignored

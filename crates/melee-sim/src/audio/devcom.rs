@@ -45,7 +45,7 @@ pub mod cb {
 
 /// A file the preload cache (`lbDvd`) reads into main memory: its disc entry, where it goes,
 /// its size rounded up to 32 bytes, and its entry in the cache.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Preload {
     pub entrynum: i32,
     pub dest: u32,
@@ -54,7 +54,7 @@ pub struct Preload {
 }
 
 /// `HSD_DevCom`, a queued command.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Command {
     pub next: Option<u16>,
     /// `dcReq`: the request's id; its low two bits are the queue.
@@ -74,7 +74,7 @@ pub struct Command {
 }
 
 /// `ARQRequest`, one of the queue's four ARAM requests (`devComARQR`), as last posted.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct ArqRequest {
     pub next: u32,
     pub owner: u32,
@@ -87,7 +87,7 @@ pub struct ArqRequest {
 }
 
 /// What a finished ARAM transfer calls back (the request's callback).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum ArqDone {
     /// `HSD_DevComDVDStdCallback`: one chunk of a disc-to-ARAM read.
     DvdStd(u8),
@@ -116,7 +116,7 @@ impl ArqDone {
 }
 
 /// The queue's state.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct DevCom {
     /// The command nodes, allocated sixteen at a time from the audio heap and never freed.
     pub nodes: Vec<Command>,

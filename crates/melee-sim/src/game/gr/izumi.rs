@@ -29,7 +29,7 @@ pub const MAP_REFLECTIONS: i32 = 2;
 pub const MAP_PLATFORM: i32 = 4;
 
 /// The fields of `grIzumi_YakumonoParam` the code reads, by offset.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 struct Param(DataRef);
 
 impl Param {
@@ -581,7 +581,7 @@ pub fn create_platform(
 /// The reflection camera's user data (`IzumiReflection`, from the heap): the texture matrix its
 /// render leaves for the water (none until it first renders: the block comes uncleared), and
 /// the stage archive's image descriptor it renders into, which it rewrites.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Reflection {
     pub texture_matrix: Option<crate::mtx::Mtx34>,
     /// The archive's `GrdIzumi_cd_wt_GrdIzumiDummy1_1_image_desc`.
@@ -594,7 +594,7 @@ pub struct Reflection {
 }
 
 /// The stage's state besides its objects'.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct Globals {
     /// The reflection camera's user data, once made.
     pub reflection: Option<Reflection>,

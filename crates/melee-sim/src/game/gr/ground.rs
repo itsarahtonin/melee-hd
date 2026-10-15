@@ -84,7 +84,7 @@ pub fn set_fog_enabled(game: &mut Game, on: bool) {
 }
 
 /// Which of the stage parameters' colors (`GroundParam::xB8` through `xD8`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum ParamColor {
     B8,
     BC,

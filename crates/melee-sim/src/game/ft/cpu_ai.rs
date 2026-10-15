@@ -71,7 +71,7 @@ const INPUTS: u32 = 30;
 /// r5, which Nana's DI takes as her stick's x when her knockback is zero (`ftCo_800AC5A0`):
 /// each function on the way returns the r5 it leaves, as the original's machine code leaves
 /// it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub(super) enum Leftover {
     /// The register's word.
     Word(u32),

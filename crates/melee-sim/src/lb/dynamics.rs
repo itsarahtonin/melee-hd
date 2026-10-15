@@ -24,7 +24,7 @@ use crate::vec::Vec3;
 pub const LINKS: u32 = 0x140;
 
 /// A sphere a chain swings around (`Fighter_x1670_t`, `lb_Collider`): its radius and center.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct Collider {
     pub radius: f32,
     pub center: Vec3,
@@ -33,7 +33,7 @@ pub struct Collider {
 /// Where segment `(x0, y0)`–`(x2, y2)` crosses the line `y = level`, `lb_800103D8`, going
 /// down: the point, or `Stale` when the segment is level and above the line (the original
 /// says it crosses and leaves the point as the stack held it).
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub enum Crossing {
     None,
     At(Vec3),

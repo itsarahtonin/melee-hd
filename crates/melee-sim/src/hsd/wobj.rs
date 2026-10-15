@@ -16,7 +16,7 @@ use crate::fpu::copy;
 use crate::vec::Vec3;
 
 /// A WObj's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct WObjId(pub u32);
 
 /// The position is a point on the animation's path, in its joint's frame: it is transformed
@@ -26,7 +26,7 @@ pub const PATH_RELATIVE: u32 = 1;
 pub const DIRTY: u32 = 2;
 
 /// `HSD_WObj`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct WObj {
     pub ref_count: RefCount,
     pub flags: u32,

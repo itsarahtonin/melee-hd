@@ -19,7 +19,7 @@ use crate::hsd::gobj::GObjId;
 pub const SIZE: usize = 0x140;
 
 /// Which member of the union an object uses.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum VarsKind {
     /// None the ported code reads as a type.
     Bytes,
@@ -40,7 +40,7 @@ pub enum VarsKind {
 }
 
 /// `union GroundVars`.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub enum GroundVars {
     /// The union's big-endian bytes, as the original keeps them, for objects no port reads as
     /// a type.
@@ -78,7 +78,7 @@ pub enum GroundVars {
 
 /// `GroundVars_izumi`: the water's texture (`xC4`), the reflection camera (`xC8`), the
 /// platforms' reflections (`xCC`) and the platforms' joints (`xD0`, `xD4`).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct IzumiVars {
     pub xC4: Option<crate::hsd::tobj::TObjId>,
     pub xC8: Option<GObjId>,
@@ -88,7 +88,7 @@ pub struct IzumiVars {
 }
 
 /// `GroundVars_izumi2`: the two reflections' joints.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Izumi2Vars {
     pub xC4: Option<crate::hsd::jobj::JObjId>,
     pub xC8: Option<crate::hsd::jobj::JObjId>,
@@ -97,7 +97,7 @@ pub struct Izumi2Vars {
 /// `GroundVars_izumi3`: a platform's state (`xC4`), timer (`xC6`) and collision joint (`xC8`),
 /// its column's joint (`xCC`), its height (`xD0`), the height it moves to (`xD4`), its
 /// column's full height (`xD8`) and its home height (`xDC`).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Izumi3Vars {
     pub xC4: i16,
     pub xC6: i16,
@@ -114,7 +114,7 @@ pub struct Izumi3Vars {
 /// turning, blowing), a blink countdown or animation row (`xCC`), a timer (`xD0`), whether a
 /// state starts (`xD4`; the face: the side), the side he faces (`xD8`, 0 left), whom his wind
 /// pushes (`xDC`) and ticks alive (`xE0`).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct OldPupupuVars {
     pub xC4: i32,
     pub xC8: i32,
@@ -127,7 +127,7 @@ pub struct OldPupupuVars {
 }
 
 /// `grOldPupupu_GroundVars2`: the wait before the next flight, and a short nothing writes.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct OldPupupu2Vars {
     pub xC4: i16,
     pub xC6: i16,
@@ -155,7 +155,7 @@ impl OldPupupuVars {
 }
 
 /// `ShyGuys`: how many fly in the current flight, its height's index, and the wait.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct StoryShyGuysVars {
     pub count: i8,
     pub pattern: i8,
@@ -165,7 +165,7 @@ pub struct StoryShyGuysVars {
 }
 
 /// `Randall`: the wait before the next puff, and the joint it puffs from.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct StoryRandallVars {
     pub timer: i16,
     /// The two bytes past `timer`, padding nothing writes.
@@ -174,7 +174,7 @@ pub struct StoryRandallVars {
 }
 
 /// The flags in the first byte of Pokémon Stadium's members (`xC4_b0`, `xC4_b1`).
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, melee_derive::StateEq)]
 pub struct StadiumBits {
     pub b0: bool,
     pub b1: bool,
@@ -182,7 +182,7 @@ pub struct StadiumBits {
 
 /// `grStadium_Display`, the big screen: what it shows, the three images it shows them with,
 /// and the camera subject that frames the stage while a transformation is announced.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct StadiumDisplayVars {
     pub bits: StadiumBits,
     /// `xC8`: the screen's texture, whose image the display switches.
@@ -219,7 +219,7 @@ pub struct StadiumDisplayVars {
 }
 
 /// `grStadium_GroundVars` on map 2: the transformations' cycle.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct StadiumVars {
     /// `xC4_b0`: waiting for the match to start; `xC4_b1`: a transformation file loading.
     pub bits: StadiumBits,
@@ -252,7 +252,7 @@ pub struct StadiumVars {
 }
 
 /// `grStadium_type9_GroundVars`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct StadiumPieceVars {
     pub bits: StadiumBits,
     /// `xC8`: its particle generator.
@@ -276,7 +276,7 @@ impl StadiumBits {
 }
 
 /// `grNBa_BG_Vars`: Battlefield's sky.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct BattleBgVars {
     pub state: i32,
     /// The background showing and the one fading out, by map id.
@@ -293,7 +293,7 @@ impl Default for GroundVars {
 
 /// `Map_GroundVars`: the generic member a stage's main object uses (Final Destination's
 /// background cycle keeps its state here).
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct MapVars {
     pub b0: bool,
     pub b1: bool,
@@ -326,7 +326,7 @@ pub struct MapVars {
 }
 
 /// `Last_GroundVars`: Final Destination's swaying background object.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct LastVars {
     pub xC4: f32,
     pub xC8: f32,

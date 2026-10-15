@@ -25,7 +25,7 @@ use crate::quat::Quat;
 use crate::vec::Vec3;
 
 /// A JObj's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct JObjId(pub u32);
 
 pub const SKELETON: u32 = 1 << 0;
@@ -83,7 +83,7 @@ pub mod channel {
 }
 
 /// What a joint holds, the original's union `u`, as its flags say at load.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub enum Contents {
     DObjs(Option<DObjId>),
     /// A particle list in the joint's archive.
@@ -98,7 +98,7 @@ impl Default for Contents {
 }
 
 /// `HSD_JObj`.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct JObj {
     /// `HSD_Obj`'s reference counts: by owners (`u16::MAX` for none) and by individual
     /// references (constraints, instances, the current joint).
@@ -176,7 +176,7 @@ impl JObj {
 }
 
 /// The JObj pool.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct JObjs {
     pub pool: Pool<JObj>,
 }
@@ -195,7 +195,7 @@ impl IndexMut<JObjId> for JObjs {
 }
 
 /// jobj.c's globals.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct Globals {
     /// `current_jobj`.
     pub current: Option<JObjId>,
@@ -212,7 +212,7 @@ pub struct Globals {
 }
 
 /// A JObj class whose loader differs from HAL's.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum JObjClass {
     #[default]
     Hsd,

@@ -41,16 +41,16 @@ pub const CAMERA_RENDER: u32 = 0x8039_10D8;
 const GLYPHS: usize = 287;
 
 /// A text: the offset of its `HSD_Text` in the arena.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, melee_derive::StateEq)]
 pub struct TextId(pub u32);
 
 /// A canvas (`sislib_UnkAlloc3`): the offset of its block's data.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, melee_derive::StateEq)]
 pub struct CanvasId(pub u32);
 
 /// A block's header (`SisBlock`), kept where the original writes it: `data` is always the
 /// header's offset plus [`HEADER`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Block {
     pub next: Option<u32>,
     pub size: u32,
@@ -58,7 +58,7 @@ pub struct Block {
 
 /// Where a text's string pointer points: into a font's loaded table, the arena, or another
 /// unit's static buffer.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum SisPtr {
     Data(DataRef),
     Arena(u32),
@@ -69,7 +69,7 @@ pub enum SisPtr {
 }
 
 /// A text's growable string (`SisBuffer`): offsets into the arena.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Buffer {
     /// The string's terminator.
     pub end: u32,
@@ -81,7 +81,7 @@ pub struct Buffer {
 
 /// A canvas (`sislib_UnkAlloc3`): the GObj links and priorities its texts' GObjs take, and
 /// its camera's GObj if it has its own.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Canvas {
     pub next: Option<CanvasId>,
     pub gobj: Option<crate::hsd::gobj::GObjId>,
@@ -95,7 +95,7 @@ pub struct Canvas {
 
 /// `HSD_Text`. The fields `HSD_SisLib_803A5ACC` leaves as the heap held them are `None` until
 /// something writes them (`HSD_SisLib_803A6368` writes all but `x88` and `x9F`).
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Text {
     pub pos: Vec3,
     pub box_size: [f32; 2],
@@ -141,7 +141,7 @@ pub struct Text {
 }
 
 /// The text system's state.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct SisLib {
     /// The arena's size (`HSD_SisLib_804D7968`); no arena before the first scene's setup.
     pub size: u32,
@@ -1032,7 +1032,7 @@ pub fn encode(out: &mut [u8], s: &[u8]) -> usize {
 }
 
 /// An argument [`printf`] formats.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub enum FmtArg<'a> {
     Int(i32),
     Str(&'a [u8]),

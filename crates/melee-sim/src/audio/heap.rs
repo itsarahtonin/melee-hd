@@ -6,7 +6,7 @@
 //! left, each cell a 32-byte header before its memory.
 
 /// A cell: its address (its header's) and size, header included.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Cell {
     pub at: u32,
     pub size: u32,
@@ -14,7 +14,7 @@ pub struct Cell {
 
 /// The heap's descriptor (`HeapDesc`): its size and its free and allocated cells, each list in
 /// its order.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Heap {
     pub size: i32,
     /// In address order.

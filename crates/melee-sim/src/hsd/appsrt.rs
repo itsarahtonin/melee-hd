@@ -15,7 +15,7 @@ use crate::quat::Quat;
 use crate::vec::Vec3;
 
 /// An app-SRT's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct AppSrtId(pub u32);
 
 /// `PS_APPSTATUS_ONCE`: the display pass computes the matrix once, then holds it.
@@ -25,7 +25,7 @@ pub const STILL: u8 = 2;
 
 /// `HSD_psAppSRT`. `next` stays null and `freefunc`, which nothing in the game sets, stays
 /// null, so neither is kept.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct AppSrt {
     /// The generator whose joint moves it, if any.
     pub gp: Option<GeneratorId>,
@@ -48,7 +48,7 @@ pub struct AppSrt {
 }
 
 /// The app-SRT pool (`HSD_PSAppSrt_804D10B0`) and its counts.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct AppSrts {
     pub pool: Pool<AppSrt, { pool_kind(Kind::AppSrt) }>,
     /// Live app-SRTs (`hsd_804D78DE`) and the most at once (`hsd_804D78D8`).

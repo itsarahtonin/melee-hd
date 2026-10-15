@@ -13,7 +13,7 @@ use crate::hsd::gobj::GObjId;
 
 /// Where an attack's record (`ft_800898B4_t`) lives: a fighter's (`Fighter::x2074`) or an
 /// item's (`Item::xD94`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum AttackRecord {
     Fighter(GObjId),
     Item(GObjId),

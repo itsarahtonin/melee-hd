@@ -59,7 +59,7 @@ const ALL: u8 = V3_19 | V3_16 | V3_14;
 
 /// Which version of Slippi's online code set a match runs, where the versions differ
 /// (`game::slippi`'s documentation lists how).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum CodeSet {
     /// Slippi 3.19's (and a match with no Slippi codes).
     #[default]
@@ -83,7 +83,7 @@ impl CodeSet {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 enum Rule {
     Ucf084,
     Ucf08,
@@ -428,7 +428,7 @@ fn fnv(words: impl Iterator<Item = u32>) -> u64 {
 }
 
 /// One code of a list, as a code handler reads it.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Code {
     pub kind: u8,
     pub addr: u32,
@@ -480,7 +480,7 @@ pub fn parse_codes(raw: &[u8]) -> Vec<Code> {
 }
 
 /// What [`Rules::from_codes`] can't play.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum CodeError {
     /// A code no rule covers.
     Unknown { kind: u8, addr: u32 },

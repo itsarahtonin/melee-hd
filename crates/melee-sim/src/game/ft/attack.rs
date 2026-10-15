@@ -71,7 +71,7 @@ const HIT_KIND_SFX: [i32; 42] = [
 ];
 
 /// The fighter's bubbles an item's hitbox can meet.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 enum Bubble {
     Shield,
     Reflect,
@@ -83,7 +83,7 @@ const LOG_LEN: usize = 20;
 
 /// The hitbox a logged hit came from (`DmgLogEntry::xC`): one of a fighter's (`x0` 1) or of
 /// an item's (2), by its GObj.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum LoggedHit {
     Fighter {
         fighter: FighterId,
@@ -102,7 +102,7 @@ pub enum LoggedHit {
 
 /// A logged hit (`DmgLogEntry`): a fighter's or an item's. The stage's stop at their seams
 /// before they would log.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct LogEntry {
     /// The attacker's character (`kind`) and GObj, the thrown fighter's thrower for a thrown
     /// fighter's hitbox.
@@ -119,7 +119,7 @@ pub struct LogEntry {
 }
 
 /// The attack collision's scratch: the damage logs and the clank flags.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct HitLogs {
     pub hits: Vec<LogEntry>,
     pub tips: Vec<LogEntry>,
