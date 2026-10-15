@@ -1512,8 +1512,17 @@ impl Importer<'_> {
                 pe: self.u32(a + 0x10),
                 ..Default::default()
             },
+            tev: None,
         };
         self.game.objs.mobjs.pool.set_addr(id.0, a);
+        let cap = self.cap;
+        let u32 = |x: u32| cap.u32(x);
+        let u8 = |x: u32| cap.call.mem1[(x - MEM1) as usize];
+        let mem = crate::tev::Mem { u32: &u32, u8: &u8 };
+        match crate::tev::read(&mem, id, a, &mut |t| Some(self.tobj(t))) {
+            Ok(tev) => self.game.objs.mobjs[id].tev = tev,
+            Err(e) => self.unhandled.push(e),
+        }
         id
     }
 

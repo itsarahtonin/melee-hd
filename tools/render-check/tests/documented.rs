@@ -15,8 +15,8 @@
 mod common;
 
 use common::{
-    Expect, FOUR_FD, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL,
-    FOX_SHEIK_FD, FOX_SHEIK_YS, Game, Group, SHEIK_FOX_FOD, compare, scaled, why,
+    Capture, Expect, FOUR_FD, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL,
+    FOX_SHEIK_FD, FOX_SHEIK_YS, Game, Group, SHEIK_FOX_FOD, compare, compare_in, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -114,22 +114,7 @@ fn fox_sheik_fd_6000() {
 #[test]
 #[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
 fn sheik_fox_fod_600() {
-    compare(
-        &SHEIK_FOX_FOD,
-        600,
-        Group::Standard,
-        Expect::Known {
-            images: [
-                "image: PSNR 41.07 dB, 1.134% off by 8, 0.093% off by 32: within tolerance",
-                "image: PSNR 41.20 dB, 1.091% off by 8, 0.090% off by 32: within tolerance",
-            ],
-            notes: &[
-                "not drawn exactly: draw PointSize (12)",
-                "not drawn exactly: draw PointSize (12)",
-            ],
-            why: why::STARS,
-        },
-    );
+    compare(&SHEIK_FOX_FOD, 600, Group::Standard, Expect::Identical);
 }
 
 #[test]
@@ -180,22 +165,17 @@ fn fox_marth_ps_600() {
     compare(&FOX_MARTH_PS, 600, Group::Standard, Expect::Identical);
 }
 
-/// Pokémon Stadium transformed: the fire stage.
+/// Pokémon Stadium transformed: the fire stage, with Fox's magnifier bubble from the first
+/// logged frame, whose copy comes from the frame before (so the capture ran ssbm-rs's renderer).
 #[test]
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn fox_marth_ps_6000_fire() {
-    compare(
+    compare_in(
         &FOX_MARTH_PS,
         6000,
         Group::Standard,
-        Expect::Known {
-            images: [
-                "image: PSNR 22.11 dB, 0.872% off by 8, 0.867% off by 32: OUT OF TOLERANCE",
-                "image: PSNR 39.33 dB, 0.663% off by 8, 0.510% off by 32: OUT OF TOLERANCE",
-            ],
-            notes: &[],
-            why: why::BUBBLE,
-        },
+        Expect::Identical,
+        Capture::Rendered,
     );
 }
 

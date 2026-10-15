@@ -1219,7 +1219,20 @@ impl<'a> Comparer<'a> {
         });
         self.check(path, "material", ours, theirs);
         self.aobj(&format!("{path} aobj"), m.aobj, self.u32(t + 0x14));
+        let ours = crate::tev::as_compiled(&m.tev);
         self.tobj_chain(path, m.tobj, self.u32(t + 8));
+        // After the chain, whose textures the stages and constants name, has paired.
+        let mem = self.mem;
+        let u32 = |x: u32| u32::from_be_bytes(mem[(x - MEM1) as usize..][..4].try_into().unwrap());
+        let u8 = |x: u32| mem[(x - MEM1) as usize];
+        let r = crate::tev::Mem { u32: &u32, u8: &u8 };
+        let tobjs = &self.maps.tobjs;
+        let theirs = crate::tev::read(&r, o.unwrap(), t, &mut |a| tobjs.get(&a).copied())
+            .map(|d| crate::tev::as_compiled(&d));
+        match theirs {
+            Ok(theirs) => self.check(path, "compiled TEV", ours, theirs),
+            Err(e) => self.diffs.push(format!("{path}: compiled TEV: {e}")),
+        }
     }
 
     /// A chain of TObjs, `to` ours and `tt` theirs.

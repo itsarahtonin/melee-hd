@@ -12,8 +12,8 @@
 mod common;
 
 use common::{
-    Expect, FOUR_FD, FOX_FOX_FD, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_YS, Game,
-    Group, SHEIK_FOX_FOD, compare, scaled, scaled_known, why,
+    Capture, Expect, FOUR_FD, FOX_FOX_FD, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_YS,
+    Game, Group, SHEIK_FOX_FOD, compare, compare_in, scaled, scaled_known, why,
 };
 
 /// A frame with a known difference, as recorded.
@@ -30,21 +30,9 @@ fn known(game: &Game, frame: u32, images: [&'static str; 2], why: &'static str) 
     );
 }
 
-/// A Fountain of Dreams frame, whose stars melee-render notes it doesn't draw exactly.
+/// A Fountain of Dreams frame, whose reflection draws some particles elsewhere.
 fn fod(frame: u32, images: [&'static str; 2]) {
-    compare(
-        &SHEIK_FOX_FOD,
-        frame,
-        Group::Sweep,
-        Expect::Known {
-            images,
-            notes: &[
-                "not drawn exactly: draw PointSize (12)",
-                "not drawn exactly: draw PointSize (12)",
-            ],
-            why: why::WATER,
-        },
-    );
+    known(&SHEIK_FOX_FOD, frame, images, why::REFLECTION_PARTICLES);
 }
 
 #[test]
@@ -53,8 +41,8 @@ fn sheik_fox_fod_2600() {
     fod(
         2600,
         [
-            "image: PSNR 32.29 dB, 22.079% off by 8, 0.025% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 32.37 dB, 21.997% off by 8, 0.031% off by 32: OUT OF TOLERANCE",
+            "image: PSNR 59.43 dB, 0.027% off by 8, 0.001% off by 32: within tolerance",
+            "image: PSNR 65.13 dB, 0.011% off by 8, 0.000% off by 32: within tolerance",
         ],
     );
 }
@@ -65,8 +53,8 @@ fn sheik_fox_fod_6000() {
     fod(
         6000,
         [
-            "image: PSNR 33.28 dB, 13.616% off by 8, 0.212% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 33.81 dB, 13.425% off by 8, 0.164% off by 32: OUT OF TOLERANCE",
+            "image: PSNR 40.63 dB, 1.603% off by 8, 0.248% off by 32: within tolerance",
+            "image: PSNR 55.10 dB, 0.033% off by 8, 0.009% off by 32: within tolerance",
         ],
     );
 }
@@ -77,8 +65,8 @@ fn sheik_fox_fod_9000() {
     fod(
         9000,
         [
-            "image: PSNR 31.97 dB, 26.978% off by 8, 0.041% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 32.08 dB, 26.749% off by 8, 0.044% off by 32: OUT OF TOLERANCE",
+            "image: PSNR 50.01 dB, 0.047% off by 8, 0.022% off by 32: within tolerance",
+            "image: PSNR 49.31 dB, 0.089% off by 8, 0.024% off by 32: within tolerance",
         ],
     );
 }
@@ -109,17 +97,16 @@ fn fox_sheik_dl_6000() {
     );
 }
 
+/// A magnifier bubble from the first logged frame, so the capture ran ssbm-rs's renderer.
 #[test]
 #[ignore = "the sweep: needs ssbm-rs's references and the disc; run with --ignored"]
 fn fox_sheik_dl_12000() {
-    known(
+    compare_in(
         &FOX_SHEIK_DL,
         12000,
-        [
-            "image: PSNR 29.58 dB, 0.847% off by 8, 0.793% off by 32: OUT OF TOLERANCE",
-            "image: PSNR inf dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
-        ],
-        why::BUBBLE,
+        Group::Sweep,
+        Expect::Identical,
+        Capture::Rendered,
     );
 }
 
@@ -129,17 +116,24 @@ fn fox_marth_ps_2600() {
     compare(&FOX_MARTH_PS, 2600, Group::Sweep, Expect::Identical);
 }
 
+/// Pokémon Stadium's screen shows a feed copied before the first logged frame, so the
+/// capture ran ssbm-rs's renderer.
 #[test]
 #[ignore = "the sweep: needs ssbm-rs's references and the disc; run with --ignored"]
 fn fox_marth_ps_9000() {
-    known(
+    compare_in(
         &FOX_MARTH_PS,
         9000,
-        [
-            "image: PSNR 25.16 dB, 8.878% off by 8, 4.244% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 39.80 dB, 0.852% off by 8, 0.306% off by 32: OUT OF TOLERANCE",
-        ],
-        why::SCREEN,
+        Group::Sweep,
+        Expect::Known {
+            images: [
+                "image: PSNR 70.76 dB, 0.006% off by 8, 0.000% off by 32: within tolerance",
+                "image: PSNR 84.12 dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
+            ],
+            notes: &[],
+            why: why::SCREEN,
+        },
+        Capture::Rendered,
     );
 }
 
@@ -202,9 +196,9 @@ fn scaled_sheik_fox_fod_6000() {
         Group::Sweep,
         [
             "scaled 1x GPU XFB: PSNR inf dB, 0.000% off by 8, 0.000% off by 32, worst block 0.00 levels at (0, 0): within tolerance",
-            "scaled 2x: PSNR 30.64 dB, 16.307% off by 8, 2.162% off by 32, worst block 40.29 levels at (48, 448): OUT OF TOLERANCE",
-            "scaled 3x: PSNR 31.16 dB, 16.535% off by 8, 1.827% off by 32, worst block 28.57 levels at (128, 464): within tolerance",
-            "scaled 3x 16:9: PSNR 39.39 dB, 2.709% off by 8, 0.098% off by 32, worst block 12.14 levels at (80, 464): within tolerance",
+            "scaled 2x: PSNR 30.05 dB, 17.002% off by 8, 2.401% off by 32, worst block 49.23 levels at (48, 448): OUT OF TOLERANCE",
+            "scaled 3x: PSNR 30.69 dB, 17.230% off by 8, 2.062% off by 32, worst block 32.35 levels at (0, 448): OUT OF TOLERANCE",
+            "scaled 3x 16:9: PSNR 37.06 dB, 3.297% off by 8, 0.260% off by 32, worst block 13.93 levels at (288, 416): within tolerance",
         ],
         why::REFLECTION_SCALE,
     );
