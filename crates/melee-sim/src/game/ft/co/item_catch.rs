@@ -5,6 +5,7 @@ use super::super::super::code::unported_call;
 use super::super::super::ef::{self, SpawnKind};
 use super::super::super::it::{item, lib26b1};
 use super::super::super::state::{Running, UserData};
+use crate::fpu::reg;
 use crate::hsd::gobj::GObjId;
 
 /// `It_Kind_WStar`, which the fighter rides from its top joint.
@@ -15,6 +16,7 @@ const GFX_CATCH: i32 = 0x422;
 const BONUS_CATCH: usize = 0x9A;
 const BONUS_DOSEI: usize = 0xB6;
 const IT_KIND_DOSEI: i32 = 7;
+const IT_KIND_BOMBHEI: i32 = 6;
 
 impl Running<'_> {
     /// Catches `it` in the air, `fn_800D6F58`: into the hand (or the other hand's slot when
@@ -76,28 +78,41 @@ impl Running<'_> {
 
     /// Counts a caught item, `pl_8003E854`: when the slot's fighter didn't throw it and it was
     /// thrown (`it_8026B7BC`), the catch bonus (Mr. Saturn's too), and for the main fighter,
-    /// the thrower's slot.
+    /// the thrower's slot; a Bob-omb whose fuse hasn't run past `pl_804D6470` x180 joins the
+    /// player's last five (`pl_800419AC`); and the main fighter's `xCA8` clears.
     #[doc(alias = "pl_8003E854")]
     #[doc(alias = "it_8026B7BC")]
     pub fn count_item_caught(&mut self, slot: i32, sub: i32, it: GObjId) {
         let me = self.game.player_entity_at(slot, sub);
         let ip = item(self.game, it);
         let owner = ip.owner;
-        if me == owner || !ip.xDC8_word.flags.x14 {
+        if me != owner && ip.xDC8_word.flags.x14 {
+            self.count_bonus(slot, BONUS_CATCH);
+            if lib26b1::kind(self.game, it) == IT_KIND_DOSEI {
+                self.set_point(slot, BONUS_DOSEI, 1);
+            }
+            let is_fighter = owner.is_some_and(|o| {
+                matches!(
+                    self.game.world.gobj(o).user_data,
+                    Some(UserData::Fighter(_))
+                )
+            });
+            if let Some(o) = owner.filter(|_| sub == 0 && is_fighter)
+                && !self.game.fighter(o).is_sub_fighter
+            {
+                let thrower = u32::from(self.game.fighter(o).player_idx);
+                self.game.players[slot as usize].set_ext_u32(0xD6C, thrower);
+            }
+        }
+        if lib26b1::kind(self.game, it) == IT_KIND_BOMBHEI
+            && reg(lib26b1::fuse_left(self.game, it)) <= reg(self.bonus_param_f32(0x180))
+        {
+            let spawn = lib26b1::spawn_number(self.game, it) as u16;
+            self.bombhei_thrown(slot, sub, spawn);
+        }
+        if sub != 0 {
             return;
         }
-        self.count_bonus(slot, BONUS_CATCH);
-        if lib26b1::kind(self.game, it) == IT_KIND_DOSEI {
-            self.set_point(slot, BONUS_DOSEI, 1);
-        }
-        let Some(o) = owner else { return };
-        let is_fighter = matches!(
-            self.game.world.gobj(o).user_data,
-            Some(UserData::Fighter(_))
-        );
-        if sub == 0 && is_fighter && !self.game.fighter(o).is_sub_fighter {
-            let thrower = u32::from(self.game.fighter(o).player_idx);
-            self.game.players[slot as usize].set_ext_u32(0xD6C, thrower);
-        }
+        self.game.player_stale_moves(slot).xCA8 = 0;
     }
 }

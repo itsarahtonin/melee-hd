@@ -2289,7 +2289,9 @@ impl Running<'_> {
                     ip.xDA8_short,
                 );
                 if kind == IT_KIND_BOMBHEI {
-                    unported_call("pl_80041B08 (a Bob-omb's hit counted)");
+                    let spawn = ip.x1C as u16;
+                    let slot = i32::from(self.game.fighters[me.0].player_idx);
+                    self.game.count_bombhei_hit(slot, spawn);
                 }
                 if super::super::it::item::is_fighter(self.game, owner) {
                     self.attack_landed(

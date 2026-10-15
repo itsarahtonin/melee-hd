@@ -8,6 +8,7 @@ pub mod climbersice;
 pub mod climbersstring;
 pub mod clinkmilk;
 pub mod crate_box;
+pub mod dosei;
 pub mod drmariopill;
 pub mod foxblaster;
 pub mod foxillusion;
@@ -75,6 +76,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || taru::run_event(r, gobj, addr)
         || crate_box::run_event(r, gobj, addr)
         || bombhei::run_event(r, gobj, addr)
+        || dosei::run_event(r, gobj, addr)
         || rshell::run_event(r, gobj, addr)
         || gshell::run_event(r, gobj, addr)
         || hammerhead::run_event(r, gobj, addr)
@@ -136,6 +138,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| taru::run_pred(r, gobj, addr))
         .or_else(|| crate_box::run_pred(r, gobj, addr))
         .or_else(|| bombhei::run_pred(r, gobj, addr))
+        .or_else(|| dosei::run_pred(r, gobj, addr))
         .or_else(|| rshell::run_pred(r, gobj, addr))
         .or_else(|| gshell::run_pred(r, gobj, addr))
         .or_else(|| hammerhead::run_pred(r, gobj, addr))
@@ -188,6 +191,8 @@ pub const EGG: i32 = 3;
 pub const KUSUDAMA: i32 = 4;
 pub const TARU_CANN: i32 = 5;
 pub const BOMBHEI: i32 = 6;
+/// `It_Kind_Dosei`, Mr. Saturn.
+pub const DOSEI: i32 = 7;
 pub const HEART: i32 = 8;
 pub const TOMATO: i32 = 9;
 pub const BAT: i32 = 11;

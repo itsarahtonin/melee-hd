@@ -675,11 +675,47 @@ impl Running<'_> {
         self.take_damage(f, sfloat(sbits(w, 6, 26)));
     }
 
-    /// A held sword's trail or flash (`ftCommon_8007EEC8`, `ftCommon_8007EF5C`; with one, not ported).
-    fn cmd_sword(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
-        if self.game.fighters[f.0].item_gobj.is_some() {
-            unported_call("ftAction_800729D4 with an item");
+    /// A held Beam Sword's blade grown to a length over some frames, or eased back,
+    /// `ftAction_800729D4`.
+    #[doc(alias = "ftAction_800729D4")]
+    fn cmd_sword(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
+        let (frames, length) = (bits(w, 8, 10) as i32, bits(w, 18, 14) as i32);
+        match bits(w, 6, 2) {
+            0 => self.sword_grow(f, frames, length),
+            1 => self.sword_shrink(f, frames),
+            _ => {}
         }
+    }
+
+    /// The held Beam Sword's blade grows to `length` / 256 over `frames`,
+    /// `ftCommon_8007EEC8`.
+    #[doc(alias = "ftCommon_8007EEC8")]
+    pub fn sword_grow(&mut self, f: FighterId, frames: i32, length: i32) {
+        if let Some(item) = self.held_sword(f) {
+            let mul = fp::frsp(fp::fdiv(1.0, 256.0));
+            let to = fp::fmuls(fp::frsp(f64::from(length)), mul);
+            crate::game::it::kinds::sword::grow(self.game, item, frames, mem(to));
+        }
+    }
+
+    /// The held Beam Sword's blade eases back over `frames`, `ftCommon_8007EF5C`.
+    #[doc(alias = "ftCommon_8007EF5C")]
+    pub fn sword_shrink(&mut self, f: FighterId, frames: i32) {
+        if let Some(item) = self.held_sword(f) {
+            crate::game::it::kinds::sword::shrink(self.game, item, frames);
+        }
+    }
+
+    /// The fighter's held item, if it's a Beam Sword.
+    fn held_sword(&self, f: FighterId) -> Option<GObjId> {
+        let item = self.game.fighters[f.0].item_gobj?;
+        let is_item = matches!(
+            self.game.world.gobj(item).user_data,
+            Some(crate::game::state::UserData::Item(_))
+        );
+        (is_item
+            && crate::game::it::lib26b1::kind(self.game, item) == crate::game::it::kinds::SWORD)
+            .then_some(item)
     }
 
     /// Starts a color animation.

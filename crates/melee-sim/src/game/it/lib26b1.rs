@@ -112,6 +112,24 @@ pub fn set_scale(game: &mut Game, data: &Archives, gobj: GObjId, mul: f32) {
     super::lib2725::set_uniform_scale(game, j, scale);
 }
 
+/// The item's spawn number (`x1C`), `it_8026B7CC`.
+#[doc(alias = "it_8026B7CC")]
+pub fn spawn_number(game: &Game, gobj: GObjId) -> i32 {
+    item(game, gobj).x1C
+}
+
+/// What's left of a lit fuse, or -1: a Bob-omb's (`xDEC`) unless it's exploding (state 11),
+/// Link's bomb's life unless it's exploding (state 5), `it_8026B960`.
+#[doc(alias = "it_8026B960")]
+pub fn fuse_left(game: &mut Game, gobj: GObjId) -> f32 {
+    let ip = super::item_mut(game, gobj);
+    match ip.kind {
+        super::kinds::BOMBHEI if ip.msid != 0xB => ip.xDD4_itemVar.bombhei().xDEC.get(),
+        super::kinds::LINK_BOMB if ip.msid != 5 => ip.xD44_lifeTimer,
+        _ => -1.0,
+    }
+}
+
 /// Lets fighters pick the item up, `it_8026B390`.
 #[doc(alias = "it_8026B390")]
 pub fn enable_pickup(game: &mut Game, gobj: GObjId) {
