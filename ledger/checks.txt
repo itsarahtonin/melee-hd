@@ -2961,7 +2961,7 @@ ftCo_800DE7C0	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) tick
 ftCo_800DF7F4	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the throw check's forward or back flick (18 calls)
 ftCo_800DF844	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the throw check's up flick (18 calls)
 ftCo_800DF878	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the throw check's down flick (18 calls)
-ftMt_SpecialN_Shoot	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the forward throw's release (33 calls)
+ftMt_SpecialN_Shoot	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays (his forward throws against Pikachu on Fountain of Dreams), its own saved calls and its group's, and compares the whole state; melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp): the forward throw of a fighter not Mewtwo returns at once (33 calls)
 fn_801656A8	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): a player's tie-break (14 calls)
 fn_8016588C	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): a player's score (14 calls)
 fn_80165AC0	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the players' ranks by score (7 calls)
@@ -6020,3 +6020,195 @@ ftCo_Furafura_IASA	leaf-check common_stops: common_stop_functions runs it from i
 ftCo_Furafura_Phys	leaf-check common_stops: common_stop_functions runs it from its saved calls in Peach's ranked replays against Sheik on Battlefield (hf-peach-sheik-bf-266c777a) and Marth on Fountain of Dreams (1a4f1bff), and from the family's states with the controls, mash timer and animation frame changed, and compares the whole state; melee-oracle diff, Marth vs Peach FoD hf-marth-peach-fod-1a4f1bff (docs/oracle.md), all 19,499 ticks in Slippi float mode with no stand-ins: Peach's shield drained to breaking in tick 12,229, her flight, fall, landing, getting up and dizziness; and Peach vs Sheik BF hf-peach-sheik-bf-266c777a, 6,683 ticks: Sheik's shield broken by a hit in tick 658
 ftCo_Furafura_Coll	leaf-check common_stops: common_stop_functions runs it from its saved calls in Peach's ranked replays against Sheik on Battlefield (hf-peach-sheik-bf-266c777a) and Marth on Fountain of Dreams (1a4f1bff), and from the family's states with the controls, mash timer and animation frame changed, and compares the whole state; melee-oracle diff, Marth vs Peach FoD hf-marth-peach-fod-1a4f1bff (docs/oracle.md), all 19,499 ticks in Slippi float mode with no stand-ins: Peach's shield drained to breaking in tick 12,229, her flight, fall, landing, getting up and dizziness; and Peach vs Sheik BF hf-peach-sheik-bf-266c777a, 6,683 ticks: Sheik's shield broken by a hit in tick 658
 gm_GetMatchEndPlayerScore	melee-oracle diff, the author's four-player teams replays Game_20260807T220230 and Game_20260531T174953 (docs/oracle.md), in Slippi float mode: a stock taken from a teammate brings the results up to date (the VS state's results compared every tick)
+
+# Mewtwo: leaf-check mewtwo runs his code, his items', Confusion's and Disable's victims' and the common code's Mewtwo parts from ssbm-rs's saved calls of his ranked replays (local/calls/mewtwo), as saved and from their groups' neighbours with the controls and script variables changed; his creation is the oracle's.
+fn_802C5E18	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BCF18	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BD000	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BD0E8	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BFFAC	leaf-check mewtwo: mewtwo_functions reaches it from the callers it serves (ftMt_SpecialN_OnTakeDamage, ftMt_SpecialN_OnDeath (the charge lost)) in clean comparisons
+ftCo_800C4550	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_DamageBind_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_DamageBind_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_DamageBind_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_DamageBind_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownMewtwoAir_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownMewtwoAir_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownMewtwoAir_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownMewtwoAir_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownMewtwo_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownMewtwo_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownMewtwo_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownMewtwo_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_Init_LoadSpecialAttrs	melee-oracle diff, Mewtwo's ranked replays hf-mewtwo-marth-ps-3605b444, hf-mewtwo-fox-ps-eef2a498, hf-mewtwo-fox-bf-c0c596d7, hf-mewtwo-ganon-bf-6c208982, hf-mewtwo-falco-fd-1690697d and hf-mewtwo-pikachu-fod-aaf066d1 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Mewtwo's creation and spawns run it
+ftMt_Init_OnDeath	melee-oracle diff, Mewtwo's ranked replays hf-mewtwo-marth-ps-3605b444, hf-mewtwo-fox-ps-eef2a498, hf-mewtwo-fox-bf-c0c596d7, hf-mewtwo-ganon-bf-6c208982, hf-mewtwo-falco-fd-1690697d and hf-mewtwo-pikachu-fod-aaf066d1 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Mewtwo's creation and spawns run it
+ftMt_Init_OnDeath2	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_Init_OnKnockbackEnter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_Init_OnKnockbackExit	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_Init_OnLoad	melee-oracle diff, Mewtwo's ranked replays hf-mewtwo-marth-ps-3605b444, hf-mewtwo-fox-ps-eef2a498, hf-mewtwo-fox-bf-c0c596d7, hf-mewtwo-ganon-bf-6c208982, hf-mewtwo-falco-fd-1690697d and hf-mewtwo-pikachu-fod-aaf066d1 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Mewtwo's creation runs it
+ftMt_Init_OnTakeDamage	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_Init_UnkMotionStates4	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_JumpAerial_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHiLost_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHiLost_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHiLost_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHiLost_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHiLost_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHiStart_AirToGround	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHiStart_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHiStart_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHiStart_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHiStart_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHiStart_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHi_AirToGround	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHi_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHi_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHi_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHi_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirHi_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirLw_AirToGround	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirLw_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirLw_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirLw_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirLw_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirLw_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNCancel_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNCancel_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNCancel_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNCancel_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNEnd_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNEnd_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNEnd_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNEnd_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNLoopFull_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNLoopFull_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNLoopFull_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNLoopFull_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNLoop_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNLoop_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNLoop_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNLoop_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNStart_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNStart_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNStart_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirNStart_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirN_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirS_AirToGround	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirS_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirS_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirS_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirS_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialAirS_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHiLost_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHiLost_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHiLost_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHiLost_GroundToAir	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHiLost_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHiLost_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHiStart_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHiStart_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHiStart_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHiStart_GroundToAir	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHiStart_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHiStart_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHi_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHi_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHi_CreateGFX	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHi_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHi_GroundToAir	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHi_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHi_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHi_SetEndGFX	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialHi_SetStartGFX	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialLw_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialLw_ClearDisableGObj	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialLw_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialLw_CreateDisable	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialLw_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialLw_GroundToAir	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialLw_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialLw_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialLw_RemoveDisable	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNCancel_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNCancel_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNCancel_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNCancel_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNEnd_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNEnd_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNEnd_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNEnd_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNLoopFull_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNLoopFull_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNLoopFull_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNLoopFull_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNLoop_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNLoop_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNLoop_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNLoop_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNStart_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNStart_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNStart_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialNStart_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialN_CheckShadowBallCancel	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialN_CheckShadowBallRemove	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialN_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialN_GetChargeLevel	leaf-check mewtwo: mewtwo_functions reaches it from the callers it serves (itMewtwoshadowball_UnkMotion0_Anim (the ball in his hands)) in clean comparisons
+ftMt_SpecialN_OnDeath	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialN_OnTakeDamage	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialN_PlayChargeSFX	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialN_ReleaseShadowBall	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialN_SetNULL	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialS_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialS_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialS_Enter	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialS_GroundToAir	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialS_IASA	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialS_OnReflect	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialS_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialS_ReflectThink	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+ftMt_SpecialS_SetFlags	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoDisable_Logic67_Absorbed	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoDisable_Logic67_Clanked	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoDisable_Logic67_Destroy	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoDisable_Logic67_Destroyed	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoDisable_Logic67_DmgDealt	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoDisable_Logic67_EvtUnk	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoDisable_Logic67_HitShield	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoDisable_Logic67_Reflected	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoDisable_Logic67_ShieldBounced	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoDisable_Logic67_SpawnMewtwoDisable	leaf-check mewtwo: mewtwo_functions reaches it from the callers it serves (ftMt_SpecialLw_CreateDisable (Disable sent)) in clean comparisons
+itMewtwoShadowball_Logic101_Absorbed	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoShadowball_Logic101_Clanked	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoShadowball_Logic101_DmgDealt	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoShadowball_Logic101_EvtUnk	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoShadowball_Logic101_HitShield	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwodisable_UnkMotion0_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwodisable_UnkMotion0_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwodisable_UnkMotion0_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoshadowball_UnkMotion0_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoshadowball_UnkMotion0_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoshadowball_UnkMotion0_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoshadowball_UnkMotion17_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoshadowball_UnkMotion17_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoshadowball_UnkMotion17_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoshadowball_UnkMotion8_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoshadowball_UnkMotion8_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoshadowball_UnkMotion8_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoshadowball_UnkMotion9_Anim	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoshadowball_UnkMotion9_Coll	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+itMewtwoshadowball_UnkMotion9_Phys	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+it_2725_Logic101_Destroyed	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+it_2725_Logic101_PickedUp	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+it_2725_Logic101_Reflected	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+it_2725_Logic101_ShieldBounced	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+it_802755C0	leaf-check mewtwo: mewtwo_functions reaches it from the callers it serves (it_802C4BB8 (Disable's hitboxes scaled)) in clean comparisons
+it_802C4B38	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+it_802C4BB8	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+it_802C4D10	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+it_802C4F50	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+it_802C5000	leaf-check mewtwo: mewtwo_functions reaches it from the callers it serves (ftMt_SpecialNStart_Anim, ftMt_SpecialNLoop_Anim (the ball made in his hands)) in clean comparisons
+it_802C519C	leaf-check mewtwo: mewtwo_functions reaches it from the callers it serves (ftMt_SpecialN_Shoot (the forward throw's ball)) in clean comparisons
+it_802C53F0	leaf-check mewtwo: mewtwo_functions reaches it from the callers it serves (ftMt_SpecialN_ReleaseShadowBall (the ball fired)) in clean comparisons
+it_802C573C	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+it_802C5B18	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
+it_802C5E5C	leaf-check mewtwo: mewtwo_functions runs it from real states of Mewtwo's replays, its own saved calls and its group's, and compares the whole state
