@@ -382,6 +382,22 @@ mod tests {
         assert_eq!(m1.state_diff(&m3).unwrap().path(), "[1]");
     }
 
+    #[derive(melee_derive::CloneFrom, melee_derive::StateEq)]
+    struct Restored {
+        #[clone_from(if_changed)]
+        v: Vec<f32>,
+    }
+
+    /// A field restored only when it changed is compared bit for bit: `PartialEq` takes -0.0
+    /// for 0.0, and the restore would leave the target's sign.
+    #[test]
+    fn if_changed_restores_bits() {
+        let snapshot = Restored { v: vec![0.0] };
+        let mut target = Restored { v: vec![-0.0] };
+        target.clone_from(&snapshot);
+        assert_eq!(target.state_diff(&snapshot), None);
+    }
+
     fn c_like() -> Outer<u8> {
         Outer {
             e: E::C,

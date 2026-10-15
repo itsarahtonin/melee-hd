@@ -9,10 +9,11 @@
 //! except those marked `#[clone_from(keep)]` (spare storage, not state) or
 //! `#[state_eq(skip)]`.
 //!
-//! A field marked `#[clone_from(if_changed)]` is copied only when it differs, as a whole: for
-//! containers whose own `clone_from` builds anew (maps, vectors of tuples holding strings) and
-//! that rarely change. A field marked `#[clone_from(keep)]` isn't state but spare storage: a
-//! clone starts it empty (`Default`), and `clone_from` leaves the target's.
+//! A field marked `#[clone_from(if_changed)]` is copied only when it differs bit for bit
+//! (`melee_sim::state_eq::StateEq`), as a whole: for containers whose own `clone_from` builds
+//! anew (maps, vectors of tuples holding strings) and that rarely change. A field marked
+//! `#[clone_from(keep)]` isn't state but spare storage: a clone starts it empty (`Default`),
+//! and `clone_from` leaves the target's.
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as Tokens;
@@ -132,8 +133,9 @@ fn fields(ctor: Tokens, f: &Fields, ours: Tokens, theirs: Tokens) -> (Tokens, To
                 if option(field, "keep") {
                     quote!()
                 } else if option(field, "if_changed") {
+                    // Bit for bit: `PartialEq` would take 0.0 for -0.0 and leave the target's.
                     quote! {
-                        if #ours #n != #theirs #n {
+                        if ::melee_sim::state_eq::StateEq::state_diff(&#ours #n, &#theirs #n).is_some() {
                             #ours #n = ::core::clone::Clone::clone(&#theirs #n);
                         }
                     }
