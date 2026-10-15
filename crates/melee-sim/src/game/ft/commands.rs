@@ -251,7 +251,7 @@ impl Running<'_> {
             bone
         };
         let j = self.bone_joint(gobj, bone);
-        self.game.fighters[f.0].x914[id].jobj = j;
+        self.game.fighters[f.0].x914[id].jobj.set(j);
         self.hitbox_damage(f, id, false, bits(w[0], 22, 10));
         let fixed = |v: f64| mem(fp::fmuls(reg(FIXED), v));
         let h = &mut self.game.fighters[f.0].x914[id];

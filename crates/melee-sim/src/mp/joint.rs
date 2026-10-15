@@ -14,7 +14,7 @@ use crate::vec::Vec3;
 
 /// The model joint a collision joint follows, as `mpLib_80055E9C` reads it: hidden
 /// (`JOBJ_HIDDEN`), or shown with its world matrix after `HSD_JObjSetupMatrix`.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub enum JointPose {
     Hidden,
     Visible(Mtx34),

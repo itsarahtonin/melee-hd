@@ -22,7 +22,7 @@ pub const ARCHIVE_HEADER: u32 = 0x20;
 pub const LAYERS: usize = 16;
 
 /// One load: `len` bytes from the buffer's start hold `archive`'s file relocated there.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Layer {
     pub archive: ArchiveId,
     /// At most [`SIZE`].
@@ -36,7 +36,7 @@ impl Layer {
 }
 
 /// What the buffer held before the loads it keeps.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Fill {
     /// A fresh heap's zeros.
     #[default]
@@ -47,7 +47,7 @@ pub enum Fill {
 
 /// A fighter's animation buffer's contents as plain data: the loads that still show, newest
 /// first, each longer than the one after it, over what the buffer held before them.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct AnimBuf {
     layers: [Layer; LAYERS],
     count: u8,

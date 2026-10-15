@@ -10,7 +10,7 @@ use melee_data::archive::DataRef;
 
 /// Which of the fighter's overlays: `x408` (most), `x488` (those `Fighter_804D653C` marks)
 /// and `x508` (Spycloak's).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Overlay {
     X408,
     X488,
@@ -68,6 +68,12 @@ impl Running<'_> {
         }
     }
 
+    /// The `x488` overlay cleared, `ftCo_800BFFAC`.
+    #[doc(alias = "ftCo_800BFFAC")]
+    pub fn clear_color_anim_x488(&mut self, gobj: GObjId) {
+        clear(self.overlay(gobj, Overlay::X488));
+    }
+
     /// `ftCo_800C0134`.
     #[doc(alias = "ftCo_800C0134")]
     #[doc(alias = "ftSk_Init_UnkMotionStates4")]
@@ -86,8 +92,9 @@ impl Running<'_> {
             13 => self.samus_charged_glow(gobj),
             // `ftDk_Init_UnkMotionStates4`: Donkey Kong's charged punch glows.
             3 => self.dk_charged_glow(gobj),
+            16 => self.mt_charged_glow(gobj),
             24 => self.gw_unk_motion_states4(gobj),
-            4 | 16 => unported_call("ftData_UnkMotionStates4"),
+            4 => unported_call("ftData_UnkMotionStates4"),
             _ => {}
         }
         let fp = self.game.fighter(gobj);

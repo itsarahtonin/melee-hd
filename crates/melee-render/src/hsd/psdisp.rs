@@ -478,16 +478,29 @@ fn set_current_mtx(gx: &mut Gx, d: &mut Disp, id: u32) {
 /// The pass (`sw`) of the particle callback whose draws start at `draws[i]`. The draws
 /// don't say; but a camera runs its links' callbacks pass by pass, so the callback runs for
 /// passes 0, 1 and 2 in turn, drawing nothing in pass 0. So the pass is 1 plus the runs of
-/// the same GObj's draws since the camera started or since its pass 0.
+/// the same GObj's draws since the camera started or since its pass 0. The app-SRTs a
+/// callback brings up to date (`Draw::AppSrt`) come between its GObj and its links.
 fn particle_pass(draws: &[Draw], i: usize) -> Option<u32> {
-    let Some(Draw::Rendering(Some(g))) = i.checked_sub(1).map(|j| &draws[j]) else {
+    let skip_srts = |j: usize| {
+        (0..=j)
+            .rev()
+            .find(|&k| !matches!(draws[k], Draw::AppSrt { .. }))
+    };
+    let start = skip_srts(i.checked_sub(1)?)?;
+    let Draw::Rendering(Some(g)) = &draws[start] else {
         return None;
     };
+    let particles_after = |j: usize| {
+        draws[j + 1..]
+            .iter()
+            .find(|d| !matches!(d, Draw::AppSrt { .. }))
+            .is_some_and(|d| matches!(d, Draw::Particles { .. }))
+    };
     let mut sw = 1;
-    for j in (0..i - 1).rev() {
+    for j in (0..start).rev() {
         match &draws[j] {
             Draw::Rendering(Some(h)) if h == g => {
-                if matches!(draws.get(j + 1), Some(Draw::Particles { .. })) {
+                if particles_after(j) {
                     sw += 1;
                 } else {
                     break;
@@ -1058,14 +1071,26 @@ impl<'a> Ctx<'a> {
         gx.end();
     }
 
+    /// A particle's app-SRT's view matrix and screen scales, as the display pass last named
+    /// them (`Draw::AppSrt`).
+    fn app_srt_view(&mut self, p: &Particle) -> (Mtx34, [f32; 2]) {
+        let s = p.appsrt.expect("an app-SRT");
+        if let Some(&v) = self.hsd.app_srts.get(&s) {
+            return v;
+        }
+        self.hsd
+            .note_once("an app-SRT drawn before its view was named");
+        let o = &self.ps_objs().app_srts[s];
+        (o.view, o.view_scale)
+    }
+
     /// A particle's position and its position a frame ago through its app-SRT's view.
-    fn app_srt_points(objs: &'a Objects, p: &Particle, kind: u32) -> (Vec3, Vec3, &'a Mtx34) {
-        let o = &objs.app_srts[p.appsrt.expect("an app-SRT")];
-        let m = &o.view.m;
+    fn app_srt_points(objs: &Objects, view: &Mtx34, p: &Particle, kind: u32) -> (Vec3, Vec3) {
+        let m = &view.m;
         let apply = |v: Vec3| Vec3::new(row(m, 0, v), row(m, 1, v), row(m, 2, v));
         let cur = apply(p.pos);
         let prev = apply(last_pos(objs, p, kind));
-        (cur, prev, &o.view)
+        (cur, prev)
     }
 
     /// A particle with an app-SRT as a quad in its view, turned by its rotation or along its
@@ -1073,11 +1098,11 @@ impl<'a> Ctx<'a> {
     /// display pass).
     fn ps_app_srt(&mut self, d: &mut Disp, p: &Particle, kind: u32) {
         let objs = self.ps_objs();
-        let (cur, prev, view) = Self::app_srt_points(self.ps_objs(), p, kind);
+        let (view, view_scale) = self.app_srt_view(p);
+        let (cur, prev) = Self::app_srt_points(objs, &view, p, kind);
         let m = &view.m;
-        let o = &objs.app_srts[p.appsrt.expect("an app-SRT")];
-        let xe = mul(o.view_scale[0], p.size);
-        let ye = mul(o.view_scale[1], p.size);
+        let xe = mul(view_scale[0], p.size);
+        let ye = mul(view_scale[1], p.size);
         let (mut ax, mut ay, mut bx, mut by) = (xe, ye, xe, -ye);
         let angle = if kind & (TRAIL | DIR_VEC) != 0 {
             let pj = &d.prj;
@@ -1198,7 +1223,8 @@ impl<'a> Ctx<'a> {
     /// `psDispSubAPPSRTPoint`.
     fn ps_app_srt_point(&mut self, d: &mut Disp, p: &Particle, kind: u32) {
         set_current_mtx(self.gx, d, GX_PNMTX1);
-        let (cur, prev, _) = Self::app_srt_points(self.ps_objs(), p, kind);
+        let (view, _) = self.app_srt_view(p);
+        let (cur, prev) = Self::app_srt_points(self.ps_objs(), &view, p, kind);
         let w = width(p.size);
         let gx = &mut *self.gx;
         let tex = kind & DISP_TEXTURE != 0;

@@ -357,6 +357,10 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
             let d = r.game.stock_icons_render(gobj, pass);
             r.render_hud(d);
         }
+        0x802F_9548 => {
+            let d = r.game.target_icons_render(gobj, pass);
+            r.render_hud(d);
+        }
         super::hud::devtext::DRAW_ALL => r.render_devtext(pass),
         _ => return false,
     }

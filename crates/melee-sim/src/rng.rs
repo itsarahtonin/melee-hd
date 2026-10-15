@@ -1,7 +1,7 @@
 //! The game's random numbers: HSD's linear congruential generator (`sysdolphin/baselib/random.c`).
 
 /// The generator's state, `seed` in the original.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Rng {
     pub seed: u32,
 }

@@ -17,7 +17,7 @@ pub const SFX_NONE: i32 = 0x83D60;
 pub const SFX_KEY_OFF: i32 = 0x83D61;
 
 /// The game's audio library's own state.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct LbAudio {
     /// `lbl_80433984`: each sound bank's load state (-1 not loaded, 1 loaded in the
     /// background, 2 loaded).

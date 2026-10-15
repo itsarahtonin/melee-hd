@@ -17,7 +17,7 @@ use crate::game::structs::{BoneDynamicsDesc, HurtCapsule, Item_DynamicBones};
 use crate::hsd::tobj::TObjId;
 
 /// `CostumeTObjList`, 0x1c bytes.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct CostumeTObjList {
     /// +0x0
     pub n_costume_tobjs: u32,
@@ -79,7 +79,7 @@ impl Mirror for CostumeTObjList {
 macro_rules! counted_array {
     ($(#[$doc:meta])* $name:ident, $elem:ty, $n:literal) => {
         $(#[$doc])*
-        #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+        #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
         pub struct $name(pub [$elem; $n]);
 
         impl $name {
@@ -154,7 +154,7 @@ counted_array!(
 /// which melee-sim's typed pools don't share), so they aren't compared, and their joint isn't
 /// imported. Their other words are imported: the block keeps them for the next item made in it
 /// (`Pool::alloc_stale`), whose kind can count a hurtbox before its positions are computed.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct ItemHurtboxes(pub [HurtCapsule; 2]);
 
 impl ItemHurtboxes {

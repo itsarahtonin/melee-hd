@@ -8,7 +8,7 @@ use gekko_fp as fp;
 use super::super::handles::FighterId;
 use super::super::state::{Game, Running};
 use super::super::structs::{Fighter, FighterBone};
-use super::parts::TRANS_N;
+use super::parts::{HIP_N, TRANS_N};
 use crate::fpu::{mem, reg};
 use crate::hsd::aobj;
 use crate::hsd::gobj::GObjId;
@@ -574,13 +574,28 @@ impl Running<'_> {
         }
     }
 
-    /// `ftAnim_8006DF0C`: with `x2221_b2`, the hip's offset point brought into the model's
-    /// space for the character's bone (not ported); nothing otherwise.
+    /// `ftAnim_8006DF0C`: with `x2221_b2` (Mewtwo), the hip's offset point (`ftCommonData`
+    /// x808) brought into the top joint's space (`HSD_MtxInverse`) becomes the translation of
+    /// the character's bone (`ft_data->x8->x10`); nothing otherwise.
     #[doc(alias = "ftAnim_8006DF0C")]
     fn hip_to_root(&mut self, f: FighterId) {
-        if self.game.fighters[f.0].x2221_b2 {
-            super::super::code::unported_call("ftAnim_8006DF0C with x2221_b2");
+        let fp = &self.game.fighters[f.0];
+        if !fp.x2221_b2 {
+            return;
         }
+        let top = self.bone(f, 0).joint;
+        let bone = self.data.u8(self.ft_data_x8(fp).at(0x10));
+        let target = self.bone(f, i32::from(bone)).joint;
+        let hip = self.bone(f, self.bone_index(fp, HIP_N)).joint;
+        let c = self.common();
+        let offset = Vec3::new(c.f32(0x808), c.f32(0x80C), c.f32(0x810));
+        let v = crate::lb::joint::world_position(&mut self.game.objs, self.data, hip, Some(offset));
+        let top = top.expect("the original's assertion failed: jobj");
+        jobj::setup_matrix(&mut self.game.objs, self.data, Some(top));
+        let inv = self.game.objs.jobjs[top].mtx.hsd_inverse();
+        let v = inv.transform(v);
+        let target = target.expect("the original's assertion failed: jobj");
+        jobj::set_translate(&mut self.game.objs.jobjs, target, v);
     }
 }
 

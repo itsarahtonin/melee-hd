@@ -31,7 +31,7 @@ pub fn clear_damage_log(game: &mut Game) {
 /// An entry of the damage log (`DamageLogEntry`): what hit (1 a fighter, 2 an item), the
 /// attacker's GObj and its hitbox. The original also keeps the hurtbox hit, which nothing
 /// reads.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, melee_derive::StateEq)]
 pub struct DamageLogEntry {
     pub kind: i32,
     pub source: GObjId,
@@ -704,7 +704,7 @@ pub fn update_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize)
     let hit = &item(game, gobj).x5D4_hitboxes[idx].hit;
     match hit.state {
         hitcapsule::ENABLED => {
-            let (j, off) = (hit.jobj, hit.b_offset);
+            let (j, off) = (hit.jobj.get("it_8027129C"), hit.b_offset);
             let p = crate::lb::joint::world_position(&mut game.objs, data, j, Some(off));
             let ip = item_mut(game, gobj);
             let hit = &mut ip.x5D4_hitboxes[idx].hit;
@@ -714,7 +714,7 @@ pub fn update_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize)
             set_flag(&mut ip.xDAA, 2, true);
         }
         hitcapsule::UNK2 | hitcapsule::UNK3 => {
-            let (j, off) = (hit.jobj, hit.b_offset);
+            let (j, off) = (hit.jobj.get("it_8027129C"), hit.b_offset);
             let ip = item_mut(game, gobj);
             let hit = &mut ip.x5D4_hitboxes[idx].hit;
             if hit.state == hitcapsule::UNK2 {

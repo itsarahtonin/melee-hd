@@ -53,7 +53,7 @@ pub const MAX_NUM: usize = 32;
 
 /// An `HSD_TExp*`: nothing (`HSD_TEXP_ZERO`), the stage's texture (`HSD_TEXP_TEX`) or
 /// rasterized color (`HSD_TEXP_RAS`), or an expression of the list.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Exp {
     #[default]
     Zero,
@@ -73,7 +73,7 @@ impl Exp {
 }
 
 /// `HSD_TEArg`: one of a stage's four inputs.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Arg {
     pub ty: u8,
     pub sel: u8,
@@ -99,7 +99,7 @@ impl Arg {
 }
 
 /// `HSD_TETev`: one TEV operation.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Tev {
     pub c_ref: i32,
     pub c_dst: u8,
@@ -124,7 +124,7 @@ pub struct Tev {
 }
 
 /// A value a constant reads at setup (`HSD_TECnst::val`), with the type it has there.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub enum Cnst {
     /// `&mobj->mat->diffuse`, a `GXColor`.
     MatDiffuse(MObjId),
@@ -150,7 +150,7 @@ pub enum Cnst {
 }
 
 /// `HSD_TECnst`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct CnstNode {
     pub val: Cnst,
     pub comp: u8,
@@ -160,7 +160,7 @@ pub struct CnstNode {
 }
 
 /// An `HSD_TExp`. A compile's few dozen are kept inline.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum Node {
     Tev(Tev),
@@ -169,12 +169,12 @@ pub enum Node {
 
 /// `HSD_TExpRes`: the registers a compile has handed out. `reg[0..4]` are the konst colors,
 /// `reg[4..8]` the TEV registers (the last being `GX_TEVPREV`).
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, melee_derive::StateEq)]
 pub struct Res {
     pub reg: [ResReg; 8],
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, melee_derive::StateEq)]
 pub struct ResReg {
     pub color: u8,
     pub alpha: u8,
@@ -182,21 +182,21 @@ pub struct ResReg {
 
 /// A material's expression list (`HSD_TExp** list`): the expressions in the order they were
 /// made. The original's list runs newest first.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, melee_derive::StateEq)]
 pub struct TExpList {
     pub nodes: Vec<Node>,
 }
 
 /// A compiled stage, `HSD_TExpTevDesc`: the stage's description and the texture whose map
 /// and coordinates [`setup_tev`] reads.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct TevStage {
     pub desc: HsdTevDesc,
     pub tobj: Option<TObjId>,
 }
 
 /// A constant left in the list after a compile, with the register it was given.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct CnstReg {
     pub val: Cnst,
     pub comp: u8,
@@ -207,7 +207,7 @@ pub struct CnstReg {
 /// A material's compiled TEV: the stages (`mobj->tevdesc`), in the order the original's list
 /// has them (the last stage first), and the constants left in its expression list
 /// (`mobj->texp`), newest first as the list has them.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct TevDesc {
     pub stages: Vec<TevStage>,
     pub cnsts: Vec<CnstReg>,

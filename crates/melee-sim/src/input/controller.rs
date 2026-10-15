@@ -37,7 +37,7 @@ const VERTICAL: u32 = BUTTON_DOWN | BUTTON_UP;
 const HORIZONTAL: u32 = BUTTON_LEFT | BUTTON_RIGHT;
 
 /// `HSD_PadStatus`: one controller as the game reads it.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Status {
     pub button: u32,
     pub last_button: u32,
@@ -174,7 +174,7 @@ impl Status {
 }
 
 /// What `HSD_PadFlushQueue` does with the polls not yet read.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Flush {
     /// Fold every queued poll's buttons into the newest, so no press is lost.
     Merge,
@@ -187,7 +187,7 @@ pub enum Flush {
 }
 
 /// `PadLibData` without its rumble state, which is [`Controllers::rumble`].
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct PadLib {
     pub qnum: u8,
     pub qread: u8,
@@ -447,7 +447,7 @@ pub fn clamp_stick(x: i8, y: i8, shift: u8, min: i8, max: i8) -> (i8, i8) {
 }
 
 /// What a poll asks of the hardware.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Requests {
     /// The ports to reset (`PADReset`'s mask, bit 31 for port 0): those that reported no
     /// controller.
@@ -459,7 +459,7 @@ pub struct Requests {
 /// The pad library: the raw queue, rumble and the master, copy and game statuses
 /// (`HSD_PadLibData`, `HSD_Rumble_804C22E0`, `HSD_PadMasterStatus`, `HSD_PadCopyStatus`,
 /// `HSD_PadGameStatus`).
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Controllers {
     /// Slippi's playback codes patch the library (`HSD_PadRenewRawStatus+0x8C`,
     /// `HSD_PadRenewMasterStatus+0x38`): a poll goes to the queue's read position, and the

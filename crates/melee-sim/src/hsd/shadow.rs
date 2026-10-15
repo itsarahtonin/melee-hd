@@ -18,11 +18,11 @@ use crate::mtx::Mtx34;
 use crate::vec::Vec3;
 
 /// A shadow's slot (`HSD_Shadow`, from `shadow_alloc_data`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct ShadowId(pub u32);
 
 /// `HSD_Shadow`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Shadow {
     /// The joints it casts from, most recently added first (`objects`).
     pub objects: Vec<JObjId>,
@@ -45,7 +45,7 @@ pub struct Shadow {
 }
 
 /// A shadow texture's `HSD_ImageDesc`.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct ShadowImage {
     pub format: u32,
     pub width: u16,
@@ -288,7 +288,7 @@ pub fn set_viewing_rect(
 }
 
 /// `HSD_ViewingRect`: a rectangle grown around points as an eye at `origin` sees them.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct ViewingRect {
     pub origin: Vec3,
     pub eye_v: Vec3,

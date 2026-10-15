@@ -5,11 +5,11 @@ use crate::hsd::heap::Kind;
 use crate::hsd::pool::kind as pool_kind;
 
 /// A list node's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct SListId(pub u32);
 
 /// `HSD_SList`.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct SList<T> {
     pub next: Option<SListId>,
     pub data: T,

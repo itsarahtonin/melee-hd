@@ -61,9 +61,13 @@ fn set_col(m: &mut Mtx34, c: usize, v: melee_sim::vec::Vec3) {
     m.m[2][c] = v.z;
 }
 
-/// `HSD_MtxColMag`.
+/// `HSD_MtxColMag`: `sqrtf` of the squares' single-precision sum, `x² + y²` first (not
+/// `PSVECMag`'s paired-single estimate, which can differ in the last bits).
 fn col_mag(m: &Mtx34, c: usize) -> f32 {
-    col(m, c).sdk_length()
+    use crate::gx::{mem, reg};
+    use gekko_fp as fp;
+    let sq = |r: usize| fp::fmuls(reg(m.m[r][c]), reg(m.m[r][c]));
+    melee_sim::math::sqrt(mem(fp::fadds(fp::fadds(sq(1), sq(0)), sq(2))))
 }
 
 /// `HSD_JObjMakePositionMtx`: the joint's matrix in view space, turned toward the camera for
@@ -261,41 +265,34 @@ impl Ctx<'_> {
                 }
                 self.gx.load_tex_mtx_imm(&r, mtxid, GX_MTX3X4);
             }
-            tobj::COORD_HILIGHT => {
-                let light = melee_sim::hsd::lobj::current_by_type(&objs.lobjs, 1);
-                let vmtx = self.hsd.view_mtx();
-                match light {
-                    Some(l) => {
-                        let lo = &objs.lobjs[l];
-                        let p = lo.position.map(|w| objs.wobjs[w.0].pos).unwrap_or_default();
-                        let i = lo.interest.map(|w| objs.wobjs[w.0].pos).unwrap_or_default();
-                        let mut ldir = vmtx.rotate(i.sdk_sub(p).sdk_normalize());
-                        ldir.z += -1.0;
-                        let h = ldir.sdk_normalize();
-                        let half = [h.x * -0.5, h.y * -0.5, h.z * -0.5];
-                        let r = [
-                            [
-                                m.m[0][0] * half[0],
-                                m.m[0][0] * half[1],
-                                m.m[0][0] * half[2],
-                                m.m[0][0] * 0.5 + m.m[0][3],
-                            ],
-                            [
-                                m.m[1][0] * half[0],
-                                m.m[1][0] * half[1],
-                                m.m[1][0] * half[2],
-                                m.m[1][0] * 0.5 + m.m[1][3],
-                            ],
-                            [0.0, 0.0, 0.0, 1.0],
-                        ];
-                        self.gx.load_tex_mtx_imm(&r, mtxid, GX_MTX3X4);
-                    }
-                    None => {
-                        let zero = [[0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0; 4]];
-                        self.gx.load_tex_mtx_imm(&zero, mtxid, GX_MTX3X4);
-                    }
+            tobj::COORD_HILIGHT => match self.hsd.hilight {
+                Some(v) => {
+                    let mut ldir = self.hsd.view_mtx().rotate(v);
+                    ldir.z += -1.0;
+                    let h = ldir.sdk_normalize();
+                    let half = [h.x * -0.5, h.y * -0.5, h.z * -0.5];
+                    let r = [
+                        [
+                            m.m[0][0] * half[0],
+                            m.m[0][0] * half[1],
+                            m.m[0][0] * half[2],
+                            m.m[0][0] * 0.5 + m.m[0][3],
+                        ],
+                        [
+                            m.m[1][0] * half[0],
+                            m.m[1][0] * half[1],
+                            m.m[1][0] * half[2],
+                            m.m[1][0] * 0.5 + m.m[1][3],
+                        ],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ];
+                    self.gx.load_tex_mtx_imm(&r, mtxid, GX_MTX3X4);
                 }
-            }
+                None => {
+                    let zero = [[0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0; 4]];
+                    self.gx.load_tex_mtx_imm(&zero, mtxid, GX_MTX3X4);
+                }
+            },
             tobj::COORD_SHADOW => {
                 let inv = self.hsd.inv_view_mtx();
                 let r = m.concat(&inv);
@@ -582,7 +579,7 @@ impl Ctx<'_> {
         self.hsd.state.set_cull_mode(self.gx, cull);
         match po.ty() {
             pobj::SKIN => match po.u {
-                Binding::Skin(Some(s)) => self.setup_shared_vtx_mtx(j, s, vmtx, pmtx, rendermode),
+                Binding::Skin(Some(s)) => self.setup_shared_vtx_mtx(j, s, vmtx, pmtx),
                 _ => self.setup_rigid_mtx(j, pmtx, rendermode),
             },
             pobj::SHAPEANIM => self.setup_rigid_mtx(j, pmtx, rendermode),
@@ -612,7 +609,11 @@ impl Ctx<'_> {
                 .copied()
                 .filter(|&r| r >= display.offset && r < display.offset + b.len() as u32)
                 .collect();
-            eprintln!("DL {display:?} n {n_display} relocs {relocs:x?} {:02x?}", b);
+            let names: Vec<&str> = a.publics().map(|p| p.0).take(3).collect();
+            eprintln!(
+                "DL {display:?} {names:?} n {n_display} relocs {relocs:x?} {:02x?}",
+                b
+            );
         }
         self.gx.call_display_list(addr, u32::from(n_display) << 5);
     }
@@ -652,39 +653,26 @@ impl Ctx<'_> {
         }
     }
 
-    /// `SetupSharedVtxModelMtx`.
-    fn setup_shared_vtx_mtx(
-        &mut self,
-        j: JObjId,
-        s: JObjId,
-        vmtx: &Mtx34,
-        pmtx: &Mtx34,
-        rendermode: u32,
-    ) {
-        let (normal, proj) = self.setup_flags(j, rendermode);
+    /// `SetupSharedVtxModelMtx`. Both joints always set up (the matrix marks never match),
+    /// and their flags (`SETUP_JOINT0`, `SETUP_JOINT1`) share their values with
+    /// `SETUP_NORMAL` and `SETUP_REFLECTION`, so the setup always makes the normal matrices
+    /// and loads them as texture matrices, whatever `GetSetupFlags` adds.
+    fn setup_shared_vtx_mtx(&mut self, j: JObjId, s: JObjId, vmtx: &Mtx34, pmtx: &Mtx34) {
         let lighting = self.objs().jobjs[j].flags & jobj::LIGHTING != 0;
         self.gx.set_current_mtx(GX_PNMTX0);
         self.gx.load_pos_mtx_imm(&mtx(pmtx), GX_PNMTX0);
-        if normal {
-            let n0 = pmtx.hsd_inverse_transpose();
-            if lighting {
-                self.gx.load_nrm_mtx_imm(&mtx(&n0), GX_PNMTX0);
-            }
-            if proj {
-                self.gx.load_tex_mtx_imm(&n0.m, GX_TEXMTX0, GX_MTX3X4);
-            }
+        let n0 = pmtx.hsd_inverse_transpose();
+        if lighting {
+            self.gx.load_nrm_mtx_imm(&mtx(&n0), GX_PNMTX0);
         }
+        self.gx.load_tex_mtx_imm(&n0.m, GX_TEXMTX0, GX_MTX3X4);
         let m = vmtx.concat(&self.objs().jobjs[s].mtx);
         self.gx.load_pos_mtx_imm(&mtx(&m), GX_PNMTX1);
-        if normal {
-            let n1 = m.hsd_inverse_transpose();
-            if lighting {
-                self.gx.load_nrm_mtx_imm(&mtx(&n1), GX_PNMTX1);
-            }
-            if proj {
-                self.gx.load_tex_mtx_imm(&n1.m, GX_TEXMTX1, GX_MTX3X4);
-            }
+        let n1 = m.hsd_inverse_transpose();
+        if lighting {
+            self.gx.load_nrm_mtx_imm(&mtx(&n1), GX_PNMTX1);
         }
+        self.gx.load_tex_mtx_imm(&n1.m, GX_TEXMTX1, GX_MTX3X4);
     }
 
     /// `SetupEnvelopeModelMtx`.
@@ -812,6 +800,16 @@ impl Ctx<'_> {
         self.hsd.prev_vtxdesc = None;
     }
 
+    /// `HSD_JObjDispSub`'s `HSD_LObjSetupSpecularInit` for a specular joint
+    /// ([`Draw::SpecularInit`]), with the joint's position matrix in the view `vmtx` (the
+    /// current camera's by default).
+    pub fn specular_init(&mut self, j: JObjId, vmtx: Option<&Mtx34>) {
+        let vmtx = vmtx.copied().unwrap_or_else(|| self.hsd.view_mtx());
+        let pmtx = position_mtx(self.objs(), j, &vmtx);
+        let objs = &self.game.objs;
+        self.hsd.lights.setup_specular_init(self.gx, objs, &pmtx);
+    }
+
     /// Draws a run of [`Draw::Shape`]s of one joint and pass, `HSD_JObjDispSub` for the
     /// display objects the pass drew, each through `HSD_DObjDisp`.
     pub fn joint_shapes(&mut self, run: &[Draw]) {
@@ -828,10 +826,6 @@ impl Ctx<'_> {
         let (j, rendermode) = (*j, *rendermode);
         let vmtx = vmtx.unwrap_or_else(|| self.hsd.view_mtx());
         let pmtx = position_mtx(self.objs(), j, &vmtx);
-        if rendermode & RENDER_SHADOW == 0 && self.objs().jobjs[j].flags & jobj::SPECULAR != 0 {
-            let objs = &self.game.objs;
-            self.hsd.lights.setup_specular_init(self.gx, objs, &pmtx);
-        }
         let mut i = 0;
         while i < run.len() {
             let Draw::Shape { dobj: d, .. } = run[i] else {

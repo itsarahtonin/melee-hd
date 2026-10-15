@@ -23,6 +23,9 @@ impl Observer for Watch<'_> {
     fn copy(&self, state: &State, value: u32) {
         self.0.copy(state, value);
     }
+    fn command(&self, bytes: &[u8]) {
+        self.0.command(bytes);
+    }
 }
 
 /// A frame drawn: the replay frame it ends, its GX events and the image.
@@ -158,10 +161,17 @@ impl Drawer {
     }
 }
 
-/// Whether frame `n` is drawn for a frame `at` wanted: it is `at`, or one of the two frames
-/// before, whose copies `at` may sample.
+/// Frames drawn before a frame that's wanted: their copies are what it may sample. Two
+/// cover the shadows' and the magnifier's copies, made the frame before; Pokémon Stadium's
+/// screens show a copy of the screen from the frame before, which shows the copy from the
+/// frame before that, each smaller, so a frame of its feed needs four (fewer left a few of
+/// the feed's pixels different at frame 9000, `fox_marth_ps_9000`), and eight leave margin.
+const WARM_UP: u32 = 8;
+
+/// Whether frame `n` is drawn for a frame `at` wanted: it is `at` or one of the
+/// [`WARM_UP`] frames before.
 fn drawn_for(n: u32, at: u32) -> bool {
-    n <= at && n + 2 >= at
+    n <= at && n + WARM_UP >= at
 }
 
 /// The replay's match, drawing each frame from `from` on to `to` (match frames, counted from

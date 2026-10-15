@@ -21,11 +21,10 @@ use crate::vec::Vec3;
 
 /// `FtPart_XRotN`.
 const X_ROT_N: i32 = 2;
-/// `Ft_Kind_Kirby`, `Ft_Kind_Koopa`, `Ft_Kind_Samus`, `Ft_Kind_Mewtwo`, `Ft_Kind_GKoopa`.
+/// `Ft_Kind_Kirby`, `Ft_Kind_Koopa`, `Ft_Kind_Samus`, `Ft_Kind_GKoopa`.
 const KIND_KIRBY: i32 = 4;
 const KIND_KOOPA: i32 = 5;
 const KIND_SAMUS: i32 = 13;
-const KIND_MEWTWO: i32 = 16;
 const KIND_GKOOPA: i32 = 31;
 
 /// `ftCommon_MotionVars_fighterthrow`: frozen at the release, released, and the victim (a
@@ -145,11 +144,8 @@ impl Running<'_> {
     /// `ftCo_ThrowF_Anim`: Mewtwo's shadow ball, the throw's progress, then carrying the
     /// victim for a fighter with cargo attributes (`x2222_b0`), else falling or waiting.
     #[doc(alias = "ftCo_ThrowF_Anim")]
-    #[doc(alias = "ftMt_SpecialN_Shoot")]
     pub fn co_throw_f_anim(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).kind == KIND_MEWTWO {
-            unported_call("ftMt_SpecialN_Shoot");
-        }
+        self.mt_n_shoot(gobj);
         self.throw_progress(gobj);
         if !self.anim_frames_remaining(gobj) {
             if self.game.fighter(gobj).x2222_b0 {

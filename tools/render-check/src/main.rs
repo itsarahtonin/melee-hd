@@ -63,6 +63,10 @@ impl Memory for LogPlayer {
         true
     }
 
+    fn command(&self, bytes: &[u8]) {
+        self.recorder.command(bytes);
+    }
+
     fn draw(&self, state: &State, draw: &Draw<'_>) {
         self.recorder.draw(state, draw, self);
         if let Some(r) = &self.renderer {
@@ -410,6 +414,34 @@ fn compare(args: &[String]) -> ExitCode {
                 for x in diffs {
                     println!("     {x}");
                 }
+            }
+        }
+        if let Some(dir) = std::env::var_os("CHECK_COMMANDS_OUT") {
+            let dir = std::path::PathBuf::from(dir);
+            let _ = std::fs::create_dir_all(&dir);
+            for (name, events) in [("ours", &d.events), ("log", theirs)] {
+                let text: String = events
+                    .iter()
+                    .enumerate()
+                    .map(|(i, e)| {
+                        let (summary, commands) = match e {
+                            Event::Draw(x) => (
+                                snap::summary(x),
+                                x.commands.join(
+                                    "
+  ",
+                                ),
+                            ),
+                            Event::Copy(c) => (format!("COPY {:08X}", c.value), String::new()),
+                        };
+                        format!(
+                            "{i} {summary}
+  {commands}
+"
+                        )
+                    })
+                    .collect();
+                let _ = std::fs::write(dir.join(format!("{name}_{k}.txt")), text);
             }
         }
         if let Ok(k) = std::env::var("CHECK_EVENT") {

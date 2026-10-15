@@ -24,7 +24,7 @@ pub const SIZE: usize = 0x1F8;
 macro_rules! members {
     ($($variant:ident, $accessor:ident, $ty:ident, [$($kind:ident),+];)*) => {
         /// Which member of the union an item uses.
-        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
         pub enum VarsKind {
             /// None the ported code reads as a type.
             Bytes,
@@ -42,7 +42,7 @@ macro_rules! members {
 
         /// `union Item_ItemVars`, as big as the original's.
         #[allow(clippy::large_enum_variant)]
-        #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+        #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
         pub enum ItemVars {
             /// The union's big-endian bytes, as the original keeps them, for items no port
             /// reads as a type.
@@ -158,6 +158,8 @@ members! {
     LinkBow, link_bow, itLinkBow_ItemVars, [LINK_BOW, CLINK_BOW];
     CLinkMilk, clink_milk, itCLinkMilk_ItemVars, [CLINK_MILK];
     YoshiEggLay, yoshi_egg_lay, itYoshiEggLay_ItemVars, [YOSHI_EGG_LAY];
+    MewtwoShadowball, mewtwo_shadowball, itMewtwoShadowball_ItemVars, [MEWTWO_SHADOWBALL];
+    MDisable, mdisable, itMDisable_ItemVars, [MEWTWO_DISABLE];
     KoopaFlame, koopa_flame, itKoopaFlame_ItemVars, [KOOPA_FLAME, KIRBY_KOOPA_FLAME];
     Heiho, heiho, HeihoVars, [HEIHO];
     GameWatch, game_watch, GameWatchVars, [GAME_WATCH_GREENHOUSE, GAME_WATCH_MANHOLE, GAME_WATCH_FIRE, GAME_WATCH_PARACHUTE, GAME_WATCH_TURTLE, GAME_WATCH_BREATH, GAME_WATCH_JUDGE, GAME_WATCH_PANIC, GAME_WATCH_CHEF];
@@ -198,7 +200,7 @@ impl Cx for Stale {
 /// item, for each of a vector's components), and whether code read it while stale. Code reads
 /// it with [`get`](Var::get) and writes it with [`set`](Var::set); the comparer leaves a stale
 /// field out and reports a stale read ([`Cx::stale_read`]).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Var<T> {
     v: T,
     /// A bit for each stale component: one for a vector's three, all three for anything else.
@@ -213,7 +215,7 @@ const ALL: u8 = 0b111;
 /// the turnip reads and writes only the top bit, "picked up before": the other seven keep what
 /// the block held, which melee-hd doesn't model, so the comparer checks the top bit alone
 /// (docs/engine.md).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct TurnipFlag {
     /// The top bit.
     pub picked_up: bool,
@@ -352,7 +354,7 @@ impl Var<Vec3> {
 /// bits alone, and the rolling bit only when it starts rolling, so the rest keep what the
 /// block's last item left, which melee-hd doesn't model: the comparer checks the first and third
 /// bits, and the rolling bit once written (docs/engine.md).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct LinkBombFlags {
     /// The top bit (`b0`).
     pub fuse_end: bool,

@@ -25,7 +25,7 @@ use crate::vec::Vec3;
 use gekko_fp as fp;
 
 /// An LObj's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct LObjId(pub u32);
 
 /// The light types under `TYPE_MASK`.
@@ -46,7 +46,7 @@ pub const RAW_PARAM: u16 = 1 << 6;
 pub const MAX_GXLIGHT: usize = 9;
 
 /// `HSD_LObj`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct LObj {
     pub ref_count: RefCount,
     pub flags: u16,
@@ -125,7 +125,7 @@ fn update(objs: &mut Objects, l: LObjId, ty: u8, value: Value) {
 
 /// The LObj pool, the current lights (`current_lights`, with its own list nodes), the active
 /// table (`active_lights`, `nb_active_lights`) and the light masks.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct LObjs {
     pub pool: Pool<LObj>,
     pub current: Option<SListId>,
@@ -655,7 +655,7 @@ pub fn load_flags(objs: &mut Objects, data: &Archives, l: LObjId, desc: DataRef,
 
 /// An `HSD_LightDesc` in the executable's data rather than a loaded archive: its flags, color
 /// and position. Only ambient and infinite lights are met there.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct StaticLightDesc {
     pub flags: u16,
     pub color: [u8; 4],

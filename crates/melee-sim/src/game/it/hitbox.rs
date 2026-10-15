@@ -50,6 +50,14 @@ pub fn scale_hitbox(game: &mut Game, gobj: GObjId, idx: usize, mult: f64) {
     }
 }
 
+/// Scales every hitbox that's on, `it_802755C0`.
+#[doc(alias = "it_802755C0")]
+pub fn scale_hitboxes(game: &mut Game, gobj: GObjId, mult: f64) {
+    for i in 0..4 {
+        scale_hitbox(game, gobj, i, mult);
+    }
+}
+
 /// Marks the item blinking, `it_802756D0`.
 #[doc(alias = "it_802756D0")]
 pub fn start_blink(game: &mut Game, gobj: GObjId) {

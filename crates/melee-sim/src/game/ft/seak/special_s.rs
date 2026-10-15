@@ -88,7 +88,7 @@ fn set_u_vec(fp: &mut Fighter, off: usize, v: Vec3) {
 /// Moves a hitbox to `pos`, off any joint, `ftColl_8007B8A8`.
 #[doc(alias = "ftColl_8007B8A8")]
 pub fn hit_at(hit: &mut HitCapsule, pos: Vec3) {
-    hit.jobj = None;
+    hit.jobj.set(None);
     hit.b_offset = pos;
 }
 

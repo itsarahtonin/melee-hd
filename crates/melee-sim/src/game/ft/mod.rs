@@ -51,6 +51,7 @@ pub mod link;
 pub mod luigi;
 pub mod mario;
 pub mod mars;
+pub mod mewtwo;
 pub mod motion;
 mod motion_tables;
 pub mod ness;
@@ -80,7 +81,7 @@ use super::structs::Fighter;
 use crate::hsd::gobj::GObjId;
 
 /// The fighter code's globals that point into game data or hold settings.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct Globals {
     /// `PlCo.dat`'s `ftLoadCommonData`, which `Fighter_LoadCommonData` copies into
     /// `p_ftCommonData`, `ftPartsTable` and the other common pointers.
@@ -127,7 +128,7 @@ pub const KIRBY_COSTUME_KINDS: [usize; 5] = [3, 15, 16, 22, 24];
 
 /// Kirby's copies of other characters' costumes: a count per kind (`ft_80459B88`), and for
 /// each kind Kirby copies a hat from, six models and material animations.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct KirbyCostumes {
     pub counts: [i32; data::KIND_COUNT],
     pub models: [[(Option<DataRef>, Option<DataRef>); 6]; 5],
@@ -153,7 +154,7 @@ impl KirbyCostumes {
 
 /// A character's animation file in ARAM: one archive per animation, which a fighter copies
 /// into its animation buffer when it starts that animation (`ftData_80085CD8`).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct AnimFile {
     /// Where in ARAM the game put it. Fighters keep which animation they last loaded as its
     /// ARAM address (`Fighter::x5A4`).
@@ -299,7 +300,7 @@ impl PartsTable<'_> {
 
 /// An action state as the game's tables list it (`MotionState`): its animation, flags, move
 /// id and callbacks.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct MotionState {
     pub anim_id: i32,
     pub flags: u32,

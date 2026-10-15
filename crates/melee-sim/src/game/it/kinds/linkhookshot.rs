@@ -89,7 +89,7 @@ mod attr {
 
 /// The hookshot's lengths for his height and grab, which its spawn writes over its
 /// attributes' `x2C` to `x48` in the character's loaded data, and the attributes they're in.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Lengths {
     pub attrs: Option<DataRef>,
     pub n: i32,
@@ -147,7 +147,7 @@ const KIND_CLINK: i32 = 20;
 
 /// The hookshot's attributes (`itLinkHookshotAttributes`), the derived values read from the
 /// state where its spawn wrote them.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 struct Attrs(DataRef);
 
 impl Attrs {

@@ -71,7 +71,7 @@ const HIT_KIND_SFX: [i32; 42] = [
 ];
 
 /// The fighter's bubbles an item's hitbox can meet.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 enum Bubble {
     Shield,
     Reflect,
@@ -83,7 +83,7 @@ const LOG_LEN: usize = 20;
 
 /// The hitbox a logged hit came from (`DmgLogEntry::xC`): one of a fighter's (`x0` 1) or of
 /// an item's (2), by its GObj.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum LoggedHit {
     Fighter {
         fighter: FighterId,
@@ -102,7 +102,7 @@ pub enum LoggedHit {
 
 /// A logged hit (`DmgLogEntry`): a fighter's or an item's. The stage's stop at their seams
 /// before they would log.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct LogEntry {
     /// The attacker's character (`kind`) and GObj, the thrown fighter's thrower for a thrown
     /// fighter's hitbox.
@@ -119,7 +119,7 @@ pub struct LogEntry {
 }
 
 /// The attack collision's scratch: the damage logs and the clank flags.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct HitLogs {
     pub hits: Vec<LogEntry>,
     pub tips: Vec<LogEntry>,
@@ -596,6 +596,27 @@ impl Running<'_> {
     /// record and the reflector's damage and speed factors. Either way the reflector notes
     /// which way the hit came from.
     #[doc(alias = "ftColl_80077464")]
+    /// The fighter's absorb bubble takes item box `j`, `ftColl_8007925C`'s absorb branch: the
+    /// item remembers the fighter, learns it was absorbed and which way, and an absorbable box
+    /// adds its damage to the fighter's absorbed total.
+    fn absorb_item(&mut self, g: GObjId, j: usize, me: FighterId) {
+        use super::super::it;
+        self.item_add_victim(g, j, 6, victim(me), false);
+        let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
+        let (damage, absorbable) = (whole_damage(reg(h.damage)), h.x42_b0);
+        let fp = &self.game.fighters[me.0];
+        let (fx, fg) = (fp.cur_pos.x, fp.gobj);
+        let ip = it::item_mut(self.game, g);
+        ip.xC90_absorbGObj = fg;
+        let dir = if reg(fx) > reg(ip.pos.x) { -1.0 } else { 1.0 };
+        let fp = &mut self.game.fighters[me.0];
+        fp.AbsorbAttr.x1A40_absorbHitDirection = dir;
+        if absorbable {
+            fp.AbsorbAttr.x1A44_damageTaken = fp.AbsorbAttr.x1A44_damageTaken.wrapping_add(damage);
+            fp.AbsorbAttr.x1A48_hitsTaken = fp.AbsorbAttr.x1A48_hitsTaken.wrapping_add(1);
+        }
+    }
+
     fn reflect_item(&mut self, g: GObjId, j: usize, me: FighterId) {
         use super::super::it;
         self.item_add_victim(g, j, 7, victim(me), false);
@@ -1186,23 +1207,7 @@ impl Running<'_> {
                 && (h.x42_b0 || (mf.x2218_b7 && h.x41_b7))
                 && self.item_box_hits_bubble(g, j, me, Bubble::Absorb, false)
             {
-                // Absorbed: the item knows by whom, and the fighter which way it came, and
-                // for an absorbable box its damage and one more hit.
-                self.item_add_victim(g, j, 6, victim(me), false);
-                let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
-                let (dmg, counts) = (whole_damage(reg(h.damage)), h.x42_b0);
-                let fp = &self.game.fighters[me.0];
-                let (fg, fx) = (fp.gobj, fp.cur_pos.x);
-                let ip = it::item_mut(self.game, g);
-                ip.xC90_absorbGObj = fg;
-                let dir = if fx > ip.pos.x { -1.0 } else { 1.0 };
-                let fp = &mut self.game.fighters[me.0];
-                fp.AbsorbAttr.x1A40_absorbHitDirection = dir;
-                if counts {
-                    let a = &mut fp.AbsorbAttr;
-                    a.x1A44_damageTaken = a.x1A44_damageTaken.wrapping_add(dmg);
-                    a.x1A48_hitsTaken = a.x1A48_hitsTaken.wrapping_add(1);
-                }
+                self.absorb_item(g, j, me);
                 return;
             }
         }
@@ -2349,7 +2354,15 @@ impl Running<'_> {
             .dmg
             .x1894
             .expect("a tip without its source");
-        match self.game.world.gobjs[source.0].classifier {
+        // A source freed since the hit (a pill that vanished as it hit) keeps the free list's
+        // link in its first word, so its classifier reads as the link's high half (0x80xx, or 0
+        // at the list's end): neither a fighter's nor an item's (`HSD_ObjFree`).
+        let classifier = if self.game.world.gobjs.is_free(source.0) {
+            0
+        } else {
+            self.game.world.gobjs[source.0].classifier
+        };
+        match classifier {
             4 => self.record_fighter_hit(source, gobj, reg(dmg)),
             6 => self.record_item_hit(source, gobj, reg(dmg)),
             _ => {}

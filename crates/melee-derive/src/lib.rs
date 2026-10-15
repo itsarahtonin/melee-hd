@@ -4,10 +4,16 @@
 //! replaces the whole value. An enum copies field by field when both values are the same
 //! variant, and replaces the value otherwise.
 //!
-//! A field marked `#[clone_from(if_changed)]` is copied only when it differs, as a whole: for
-//! containers whose own `clone_from` builds anew (maps, vectors of tuples holding strings) and
-//! that rarely change. A field marked `#[clone_from(keep)]` isn't state but spare storage: a
-//! clone starts it empty (`Default`), and `clone_from` leaves the target's.
+//! `#[derive(StateEq)]`: `melee_sim::state_eq::StateEq`, a bitwise comparison that names the
+//! first field path where two values differ, for the sync test. It compares every field
+//! except those marked `#[clone_from(keep)]` (spare storage, not state) or
+//! `#[state_eq(skip)]`.
+//!
+//! A field marked `#[clone_from(if_changed)]` is copied only when it differs bit for bit
+//! (`melee_sim::state_eq::StateEq`), as a whole: for containers whose own `clone_from` builds
+//! anew (maps, vectors of tuples holding strings) and that rarely change. A field marked
+//! `#[clone_from(keep)]` isn't state but spare storage: a clone starts it empty (`Default`),
+//! and `clone_from` leaves the target's.
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as Tokens;
@@ -127,8 +133,9 @@ fn fields(ctor: Tokens, f: &Fields, ours: Tokens, theirs: Tokens) -> (Tokens, To
                 if option(field, "keep") {
                     quote!()
                 } else if option(field, "if_changed") {
+                    // Bit for bit: `PartialEq` would take 0.0 for -0.0 and leave the target's.
                     quote! {
-                        if #ours #n != #theirs #n {
+                        if ::melee_sim::state_eq::StateEq::state_diff(&#ours #n, &#theirs #n).is_some() {
                             #ours #n = ::core::clone::Clone::clone(&#theirs #n);
                         }
                     }
@@ -153,5 +160,168 @@ fn fields(ctor: Tokens, f: &Fields, ours: Tokens, theirs: Tokens) -> (Tokens, To
 fn option(field: &syn::Field, name: &str) -> bool {
     field.attrs.iter().any(|a| {
         a.path().is_ident("clone_from") && a.parse_args::<syn::Ident>().is_ok_and(|i| i == name)
+    })
+}
+
+#[proc_macro_derive(StateEq, attributes(clone_from, state_eq))]
+pub fn derive_state_eq(input: TokenStream) -> TokenStream {
+    let DeriveInput {
+        ident,
+        generics,
+        data,
+        ..
+    } = parse_macro_input!(input as DeriveInput);
+    let name = &ident;
+    let trait_path = quote!(::melee_sim::state_eq::StateEq);
+    let diff = quote!(::melee_sim::state_eq::Diff);
+    let params: Vec<String> = generics
+        .type_params()
+        .map(|p| p.ident.to_string())
+        .collect();
+    // Each compared field's type that names a type parameter must compare too.
+    let mut bounds: Vec<syn::Type> = Vec::new();
+    let mut bound = |ty: &syn::Type| {
+        if mentions(quote!(#ty), &params) && !bounds.contains(ty) {
+            bounds.push(ty.clone());
+        }
+    };
+    let body = match &data {
+        Data::Struct(s) => {
+            let checks = s.fields.iter().enumerate().filter(|(_, f)| compared(f)).map(|(i, f)| {
+                bound(&f.ty);
+                let (access, label) = match &f.ident {
+                    Some(n) => (quote!(#n), n.to_string()),
+                    None => {
+                        let i = Index::from(i);
+                        (quote!(#i), i.index.to_string())
+                    }
+                };
+                quote! {
+                    if let ::core::option::Option::Some(d) = #trait_path::state_diff(&self.#access, &other.#access) {
+                        return ::core::option::Option::Some(d.field(#label));
+                    }
+                }
+            });
+            quote! { #(#checks)* ::core::option::Option::None }
+        }
+        Data::Enum(e) => {
+            let mut arms = Vec::new();
+            let mut names = Vec::new();
+            for v in &e.variants {
+                let vname = &v.ident;
+                let label = vname.to_string();
+                let path = quote!(#name::#vname);
+                match &v.fields {
+                    Fields::Named(f) => {
+                        let all: Vec<_> =
+                            f.named.iter().map(|f| f.ident.clone().unwrap()).collect();
+                        let ours: Vec<_> =
+                            all.iter().map(|n| format_ident!("ours_{}", n)).collect();
+                        let theirs: Vec<_> =
+                            all.iter().map(|n| format_ident!("theirs_{}", n)).collect();
+                        let checks = f.named.iter().zip(ours.iter().zip(&theirs)).filter(|(f, _)| compared(f)).map(|(f, (o, t))| {
+                            bound(&f.ty);
+                            let fl = f.ident.as_ref().unwrap().to_string();
+                            quote! {
+                                if let ::core::option::Option::Some(d) = #trait_path::state_diff(#o, #t) {
+                                    return ::core::option::Option::Some(d.field(#fl).variant(#label));
+                                }
+                            }
+                        });
+                        arms.push(quote! {
+                            (#path { #(#all: #ours),* }, #path { #(#all: #theirs),* }) => {
+                                #(#checks)*
+                                ::core::option::Option::None
+                            }
+                        });
+                        names.push(quote!(#path { .. } => #label));
+                    }
+                    Fields::Unnamed(f) => {
+                        let ours: Vec<_> = (0..f.unnamed.len())
+                            .map(|i| format_ident!("ours_{}", i))
+                            .collect();
+                        let theirs: Vec<_> = (0..f.unnamed.len())
+                            .map(|i| format_ident!("theirs_{}", i))
+                            .collect();
+                        let checks = f.unnamed.iter().enumerate().zip(ours.iter().zip(&theirs)).filter(|((_, f), _)| compared(f)).map(|((i, f), (o, t))| {
+                            bound(&f.ty);
+                            let fl = i.to_string();
+                            quote! {
+                                if let ::core::option::Option::Some(d) = #trait_path::state_diff(#o, #t) {
+                                    return ::core::option::Option::Some(d.field(#fl).variant(#label));
+                                }
+                            }
+                        });
+                        arms.push(quote! {
+                            (#path ( #(#ours),* ), #path ( #(#theirs),* )) => {
+                                #(#checks)*
+                                ::core::option::Option::None
+                            }
+                        });
+                        names.push(quote!(#path ( .. ) => #label));
+                    }
+                    Fields::Unit => {
+                        arms.push(quote!((#path, #path) => ::core::option::Option::None,));
+                        names.push(quote!(#path => #label));
+                    }
+                }
+            }
+            let mismatch = if e.variants.len() > 1 {
+                quote! {
+                    (ours, theirs) => {
+                        let variant = |v: &Self| -> &'static str { match v { #(#names,)* } };
+                        ::core::option::Option::Some(#diff::new(::std::format!(
+                            "variant {} != {}", variant(ours), variant(theirs)
+                        )))
+                    }
+                }
+            } else {
+                quote!()
+            };
+            quote! {
+                #[allow(unreachable_patterns, unused_variables)]
+                match (self, other) {
+                    #(#arms)*
+                    #mismatch
+                }
+            }
+        }
+        Data::Union(_) => {
+            return syn::Error::new_spanned(name, "StateEq doesn't derive for unions")
+                .to_compile_error()
+                .into();
+        }
+    };
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let mut where_clause = where_clause.cloned().unwrap_or_else(|| parse_quote!(where));
+    for ty in &bounds {
+        where_clause.predicates.push(parse_quote!(#ty: #trait_path));
+    }
+    quote! {
+        impl #impl_generics #trait_path for #name #ty_generics #where_clause {
+            #[inline]
+            fn state_diff(&self, other: &Self) -> ::core::option::Option<#diff> {
+                #body
+            }
+        }
+    }
+    .into()
+}
+
+/// Whether the sync test compares a field: not spare storage (`#[clone_from(keep)]`) nor
+/// marked `#[state_eq(skip)]`.
+fn compared(field: &syn::Field) -> bool {
+    !option(field, "keep")
+        && !field.attrs.iter().any(|a| {
+            a.path().is_ident("state_eq") && a.parse_args::<syn::Ident>().is_ok_and(|i| i == "skip")
+        })
+}
+
+/// Whether `tokens` name one of `params`.
+fn mentions(tokens: Tokens, params: &[String]) -> bool {
+    tokens.into_iter().any(|t| match t {
+        proc_macro2::TokenTree::Ident(i) => params.iter().any(|p| i == p),
+        proc_macro2::TokenTree::Group(g) => mentions(g.stream(), params),
+        _ => false,
     })
 }

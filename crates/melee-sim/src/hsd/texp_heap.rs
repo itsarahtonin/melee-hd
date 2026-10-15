@@ -16,7 +16,7 @@ pub const TEVDESC_SIZE: u32 = 0x78;
 
 /// Room a compile keeps from one material to the next: no state, so a restore keeps the
 /// target's and a snapshot starts without.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, melee_derive::StateEq)]
 pub struct Scratch {
     pub list: TExpList,
     pub dag: Vec<Dag>,

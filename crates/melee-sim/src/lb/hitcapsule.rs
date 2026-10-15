@@ -19,7 +19,7 @@ use crate::vec::Vec3;
 
 /// What a hitbox remembers hitting (`HitVictim::victim`): the user data of the fighter or item
 /// it hit, which the original keeps as a pointer.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Victim {
     #[default]
     None,
@@ -68,7 +68,7 @@ impl Mirror for Victim {
 /// the top bit), or on a thrown fighter's hitbox its thrower (`owner`, a GObj pointer). A box
 /// that held a thrower and has the bit cleared keeps the pointer's other bits
 /// (`ClearedThrower`): no longer a pointer, which nothing may read as one.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum HitOwner {
     Bits([u8; 4]),
     Thrower(GObjId),
@@ -160,6 +160,61 @@ impl Mirror for HitOwner {
                     cx.mismatch(path, format!("{b:02x?}"), format!("{theirs:02x?}"));
                 }
             }
+        }
+    }
+}
+
+/// `HitCapsule::jobj`, the joint a hitbox follows. An item's block comes uncleared
+/// (`Pool::alloc_stale`) and item creation leaves its hitboxes' joints alone, so a new item's
+/// hitbox holds the joint word of the block's last item, a pointer to a freed joint whose block
+/// the original may have handed to another object since, until the item's script makes the box
+/// (`it_802790C0`). Nothing reads it before then: the joint is read only while the box is on,
+/// and only the script turns a new item's box on, writing the joint as it does
+/// (docs/engine.md). So the word is unknown (`None`) from the item's creation until written,
+/// the comparer leaves it out while unknown, and reading it then stops. Fighters' hitboxes and
+/// imported ones are always known.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct HitJObj(Option<Option<JObjId>>);
+
+impl Default for HitJObj {
+    fn default() -> Self {
+        HitJObj(Some(None))
+    }
+}
+
+impl HitJObj {
+    /// The joint; `who` names the reader, for the stop when the item never wrote it.
+    pub fn get(self, who: &str) -> Option<JObjId> {
+        self.0
+            .unwrap_or_else(|| panic!("{who}: a hitbox's joint read before its item wrote it"))
+    }
+
+    /// Writes the joint.
+    pub fn set(&mut self, j: Option<JObjId>) {
+        self.0 = Some(j);
+    }
+
+    /// Marks the joint unknown, as a new item finds it.
+    pub fn mark_unknown(&mut self) {
+        self.0 = None;
+    }
+
+    /// The joint as the comparer sees it: `None` while unknown.
+    pub fn peek(self) -> Option<Option<JObjId>> {
+        self.0
+    }
+}
+
+impl Mirror for HitJObj {
+    const SIZE: u32 = 4;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        HitJObj(Some(cx.import_handle("JObjId", m.u32(at)).map(JObjId)))
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        if let Some(j) = self.0 {
+            cx.compare_handle(path, "JObjId", j.map(|h| h.0), m.u32(at));
         }
     }
 }

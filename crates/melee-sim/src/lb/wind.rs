@@ -8,7 +8,7 @@ use crate::fpu::{mem, reg};
 use crate::vec::Vec3;
 
 /// A wind source (`struct lb_80011A50_t`).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Wind {
     /// 1 for a box's push, 2 for a blast's.
     pub kind: u8,
@@ -35,7 +35,7 @@ pub struct Wind {
 }
 
 /// The pool of wind sources and its two lists, by index.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Winds {
     pub entries: [Wind; 8],
     pub next: [Option<u8>; 8],

@@ -128,7 +128,7 @@ fn walk(
 }
 
 /// What granime's walks do to each animation they visit.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub enum AnimOp {
     /// `fn_801C6EE4`: loop between the frames `grAnime_801C775C` set.
     LoopBetween,

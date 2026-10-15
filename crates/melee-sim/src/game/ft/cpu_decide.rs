@@ -89,6 +89,42 @@ impl Running<'_> {
         reg(math::sqrt(mem(fp::fmadds(dx, dx, fp::fmuls(dy, dy)))))
     }
 
+    /// The nearest other fighter, ally or not, in reach of the blast zones (padded by `f`'s
+    /// half size) that isn't asleep, out of stamina, invisible or dead, `ftCo_800A4A40` (the
+    /// grapple beam's homing): the first such on the fighters' list, then any strictly nearer.
+    #[doc(alias = "ftCo_800A4A40")]
+    pub fn nearest_fighter(&self, f: FighterId) -> Option<FighterId> {
+        let me = self.game.fighters[f.0].gobj;
+        let mut closest: Option<(FighterId, f64)> = None;
+        let mut cur = self.game.world.first_in(P_LINK_FIGHTER);
+        while let Some(g) = cur {
+            cur = self.game.world.gobjs[g.0].next;
+            if me == Some(g) {
+                continue;
+            }
+            let o = self.game.fighter_id(g);
+            let pos = self.game.fighters[o.0].cur_pos;
+            if self.cpu_out_of_bounds(f, pos.x, pos.y) {
+                continue;
+            }
+            let other = &self.game.fighters[o.0];
+            if other.is_sleeping
+                || other.stamina_dead
+                || self.cpu_cloaked(o)
+                || self.game.ft_is_dead(g)
+            {
+                continue;
+            }
+            let d = self.cpu_distance(f, o);
+            match closest {
+                None => closest = Some((o, d)),
+                Some((_, best)) if best > d => closest = Some((o, d)),
+                _ => {}
+            }
+        }
+        closest.map(|(o, _)| o)
+    }
+
     /// The fighter's target, `ftCo_800A4BEC`: its last one while that one lasts (`xF9_b0`),
     /// else the nearest enemy in reach that isn't out of the match, invisible or dead; a new
     /// target gets a fresh timer.

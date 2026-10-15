@@ -135,8 +135,9 @@ impl Running<'_> {
 
     /// A stage object's render callback, `grDisplay_801C5DB0`: in its own camera layer, and
     /// through the camera it names (or, for an object that follows the game camera, only
-    /// while that camera draws); the stage's fog off unless it keeps it, the object's tree
-    /// (shadow by shadow if it receives them), and the stage's fog back on.
+    /// while that camera draws); the stage's fog off unless it keeps it, HAL's state caches
+    /// out of date, the object's tree (shadow by shadow if it receives them), and the stage's
+    /// fog back on.
     #[doc(alias = "grDisplay_801C5DB0")]
     pub fn render_stage_object(&mut self, gobj: GObjId, pass: i32) {
         let gid = ground_of(self.game, gobj);
@@ -183,6 +184,7 @@ impl Running<'_> {
         if !keeps_fog {
             display::fog_set(&mut self.game.objs, None);
         }
+        display::state_invalidate(&mut self.game.objs, u32::MAX);
         if shadowed {
             let j = jobj_of(self.game, gobj);
             self.stage_disp_all(j, None, display::pass_trsp(pass));

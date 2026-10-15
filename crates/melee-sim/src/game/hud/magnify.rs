@@ -60,7 +60,7 @@ const CAMERA_DESC: cobj::StaticDesc = cobj::StaticDesc {
 
 /// A bubble's texture's image (`ifMagnifyPlayer::idesc`): the model's own, in `IfAll.dat`,
 /// for the first player, and the magnifier's copies (`image_descs`, static) for the others.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct MagnifyImage(pub Option<ImageRef>);
 
 impl Mirror for MagnifyImage {
@@ -90,7 +90,7 @@ impl Mirror for MagnifyImage {
 /// An image's pixels (`HSD_ImageDesc::image_ptr`) in the magnifier's copies: a buffer from the
 /// heap the bubbles render into, which only the presentation reads, so only whether there is
 /// one is state (see engine.md).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct TexBuffer(pub bool);
 
 impl Mirror for TexBuffer {

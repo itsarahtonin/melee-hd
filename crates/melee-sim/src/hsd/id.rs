@@ -42,7 +42,7 @@ pub fn is_data_key(k: DataRef) -> bool {
 
 /// `HSD_IDTable`: values of type `V` by key, each with where the original's allocator put its
 /// entry (`docs/engine.md`).
-#[derive(melee_derive::CloneFrom, Debug)]
+#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct IdTable<K, V> {
     map: HashMap<K, (V, u32)>,
 }

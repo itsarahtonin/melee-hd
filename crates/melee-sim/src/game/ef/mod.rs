@@ -38,7 +38,7 @@ pub use sync::{spawn, spawn_with};
 pub use super::handles::EffectId;
 
 /// A deferred spawn's slot (`EF_QueuedEffect*`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct QueuedId(pub u32);
 
 /// The GObj class of effects (`HSD_GOBJ_CLASS_EFFECT`).
@@ -69,7 +69,7 @@ pub const MAX_COUNTED: u32 = 64;
 
 /// What an effect's update runs each frame after its animation (`EF_UpdateFn`), by the
 /// original function.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub enum Update {
     SetOffsetYFromParamY,
     SetScaleFromParamX,
@@ -154,7 +154,7 @@ impl Update {
 /// each spawn sets what its update reads before the update runs, and nothing else reads them,
 /// so the slot's leftover words are no state: a new effect starts them at zero, and the oracle
 /// compares the parts its update reads (`x2A` and `x2B`, which nothing reads, aren't kept).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Effect {
     /// The next effect of a spawn that made several (`next`).
     pub next: Option<EffectId>,
@@ -177,7 +177,7 @@ pub struct Effect {
 }
 
 /// How a deferred spawn finds where to spawn (`EF_SpawnKind`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum SpawnKind {
     /// On the joint.
     Attach = 0,
@@ -219,7 +219,7 @@ impl SpawnKind {
 
 /// `EF_QueuedEffect`: a spawn `efAsync_Spawn` deferred. Its words the kind doesn't use are
 /// never read.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Queued {
     pub next: Option<QueuedId>,
     pub kind: u8,
@@ -232,7 +232,7 @@ pub struct Queued {
 
 /// `EF_ParamEntry` in `efLib_ParamTable`: a GObj's stored alpha and effect id, which
 /// `efLib_Cb_ApplyStoredAlpha` applies to its effects.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct ParamEntry {
     pub gobj: Option<GObjId>,
     pub gfx_id: u16,
@@ -281,7 +281,7 @@ pub const FILES: [Option<(&str, &str)>; 51] = {
 };
 
 /// efLib's and efAsync's globals.
-#[derive(melee_derive::CloneFrom, Debug)]
+#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct Globals {
     /// The effects (`efLib_AllocData`).
     pub effects: Pool<Effect, { pool_kind(Kind::Effect) }>,
@@ -341,7 +341,7 @@ impl Game {
 }
 
 /// What a spawn returns (`efSync_Spawn`'s `void*`): an effect, a generator, or nothing.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Spawned {
     None,
     Effect(EffectId),
@@ -377,7 +377,7 @@ impl Spawned {
 /// One of a spawn's variadic arguments: a joint, a vector or a float (pointers, given as the
 /// pointee, which the spawn reads once), a word (a color), or a deferred spawn's `params`,
 /// which the spawn reads as a vector or as the float its first word is.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub enum Arg {
     JObj(Option<JObjId>),
     Vec(Vec3),
@@ -387,7 +387,7 @@ pub enum Arg {
 }
 
 /// What a spawn reads its next variadic argument as.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum ArgKind {
     JObj,
     Vec,

@@ -21,7 +21,7 @@ pub fn spawn_simple(r: &mut Running, gobj: GObjId, ef_id: i32) {
 }
 
 /// How the router hands an effect id over (the blocks of `it_80278800`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 enum Route {
     /// On the bone.
     Attach,

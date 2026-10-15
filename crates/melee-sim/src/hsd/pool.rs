@@ -13,7 +13,7 @@
 use super::heap;
 
 /// A pool's slots. A slot stays in place when freed; `T` holds its last contents until reused.
-#[derive(melee_derive::CloneFrom, Debug)]
+#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct Pool<T, const K: u8 = 0> {
     slots: Vec<T>,
     free: Vec<u32>,

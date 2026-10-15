@@ -537,6 +537,18 @@ pub fn make_stompable(game: &mut Game, gobj: GObjId) {
     }
 }
 
+/// The new item's physics and collision run once, as if a frame passed, `it_802750F8`. They
+/// can free the item (a Blizzard puff spawned into the stage); the original then sets the
+/// flag in the freed block, which the block's next item keeps (`Pool::alloc_stale`).
+#[doc(alias = "it_802750F8")]
+pub fn first_frame(r: &mut Running, gobj: GObjId) {
+    let id = super::item_of(r.game, gobj);
+    r.game.items[id.0].xDCC_flag.b3 = false;
+    super::item::proc_phys(r, gobj);
+    super::item::proc_coll(r, gobj);
+    r.game.items[id.0].xDCC_flag.b3 = true;
+}
+
 /// Turns hitbox `idx` on where its joint is now, `it_80272674`.
 #[doc(alias = "it_80272674")]
 pub fn start_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize) {

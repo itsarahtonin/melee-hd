@@ -58,7 +58,7 @@ pub const RECORD_ITEMS_PROC: u32 = 0x8016_E74C + 0x788;
 /// (`Playback/Core/RestoreGameInfo.asm`): a buffer for the list as the device sends it, and
 /// one for the instructions its codes replace (which `CleanDynamicGeckos.asm` puts back), 4
 /// bytes and then 8 more for each code that replaces some, besides what it replaces.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct CodeListHeap {
     pub list: u32,
     pub backup: u32,
@@ -96,7 +96,7 @@ impl CodeListHeap {
 }
 
 /// What a pre-frame update recorded for one character, as the frame response carries it.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct CharacterFrame {
     pub seed: u32,
     pub stick_x: f32,
@@ -146,7 +146,7 @@ impl CharacterFrame {
 }
 
 /// A frame response as playback keeps it: the bytes the codes read words and bytes from.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Frame {
     pub bytes: [u8; FRAME_LEN],
 }
@@ -172,7 +172,7 @@ pub trait Source {
 /// What a tick of a replay's match may ask the device, answered before it runs: the frame it
 /// reads if it reads one, and which ports have a player at the frame it ends up counted at
 /// (the one it reads, or the last if it reads none).
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Answers {
     pub index: i32,
     pub frame: Frame,
@@ -226,7 +226,7 @@ impl Frame {
 
 /// Playback's state in a match (`lbl_804D6660`'s buffers and the frame number the codes keep
 /// in `mnCharSel_804D6CF4`'s word).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Playback {
     /// The replay's random seed, which the match's start restores.
     pub start_seed: u32,

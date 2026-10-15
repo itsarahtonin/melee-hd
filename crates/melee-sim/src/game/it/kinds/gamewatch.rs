@@ -17,7 +17,7 @@ use crate::vec::Vec3;
 
 /// The variables of his items but the trampoline: the attributes' pointer `it_8027CE64`
 /// keeps (`gamewatch.attr`) and the sausage's index (`gamewatchchef.x4`).
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct GameWatchVars {
     /// +0x0
     pub attr: Var<Option<DataRef>>,
@@ -69,7 +69,7 @@ impl Mirror for GameWatchVars {
 
 /// The trampoline's variables: the attributes' pointer and its fighter
 /// (`gamewatchrescue.xDD8`).
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct GameWatchRescueVars {
     /// +0x0
     pub attr: Var<Option<DataRef>>,
