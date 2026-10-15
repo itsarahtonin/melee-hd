@@ -116,17 +116,24 @@ fn fox_marth_ps_2600() {
     compare(&FOX_MARTH_PS, 2600, Group::Sweep, Expect::Identical);
 }
 
+/// Pokémon Stadium's screen shows a feed copied before the first logged frame, so the
+/// capture ran ssbm-rs's renderer.
 #[test]
 #[ignore = "the sweep: needs ssbm-rs's references and the disc; run with --ignored"]
 fn fox_marth_ps_9000() {
-    known(
+    compare_in(
         &FOX_MARTH_PS,
         9000,
-        [
-            "image: PSNR 25.16 dB, 8.878% off by 8, 4.244% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 39.80 dB, 0.852% off by 8, 0.306% off by 32: OUT OF TOLERANCE",
-        ],
-        why::SCREEN,
+        Group::Sweep,
+        Expect::Known {
+            images: [
+                "image: PSNR 70.76 dB, 0.006% off by 8, 0.000% off by 32: within tolerance",
+                "image: PSNR 84.12 dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
+            ],
+            notes: &[],
+            why: why::SCREEN,
+        },
+        Capture::Rendered,
     );
 }
 

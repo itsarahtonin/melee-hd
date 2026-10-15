@@ -424,8 +424,8 @@ pub mod why {
     /// Particles Fountain of Dreams' reflection camera draws, placed elsewhere than ssbm-rs's.
     pub const REFLECTION_PARTICLES: &str =
         "Fountain of Dreams' reflection: some particles it draws placed elsewhere";
-    /// Pokémon Stadium's screen showing the stage's feed where ssbm-rs's is dark.
-    pub const SCREEN: &str = "Pokémon Stadium's screen shows the feed where ssbm-rs's is dark";
+    /// A few pixels of Pokémon Stadium's screen's feed.
+    pub const SCREEN: &str = "a few pixels of Pokémon Stadium's screen's feed";
     /// Fountain of Dreams' reflection, an 80 by 60 copy drawn at the scale and averaged back,
     /// magnified over the water: its blocks legitimately differ between scales.
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
