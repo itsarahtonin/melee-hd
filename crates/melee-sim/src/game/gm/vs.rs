@@ -1069,7 +1069,8 @@ impl Running<'_> {
             g.player_lose_stock(donor);
             let n = g.player_stocks(i);
             g.set_player_stocks(i, n + 1);
-            panic!("gm_GetMatchEndPlayerScore (the results' scoring) isn't ported");
+            g.match_end_score(i);
+            self.respawn(i, 0);
         }
     }
 
@@ -1115,9 +1116,23 @@ impl Running<'_> {
             super::super::code::unported_call("fn_80169444 (a single-player mode's last stock)");
         }
         if (self.game.vs_is_stock() || self.game.vs_x4_2()) && self.game.player_stocks(slot) == 0 {
-            super::super::code::unported_call("gm_8016AC44 (a player out of stocks)");
+            let (ckind, costume) = (self.game.player_ckind(slot), self.game.player_costume(slot));
+            self.out_of_stocks(ckind as i8, costume as i8);
+            return;
         }
         self.respawn(slot, i32::from(sub));
+    }
+
+    /// A player out of stocks, `gm_8016AC44`: with a challenger's record in the rules
+    /// (`x58`), the character and costume come off the record's list (`lbl_8046B668`, not
+    /// ported); a VS match's rules have none, and it does nothing.
+    #[doc(alias = "gm_8016AC44")]
+    fn out_of_stocks(&mut self, ckind: i8, costume: i8) {
+        if self.game.vs_has_x58() {
+            super::super::code::unported_call(&format!(
+                "gm_8016AC44 with a challenger's record (character {ckind}, costume {costume})"
+            ));
+        }
     }
 
     /// Brings a player back on the respawn platform, `fn_8016719C` (`sub` 1 for a partner).

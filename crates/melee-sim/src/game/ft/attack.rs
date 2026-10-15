@@ -2041,7 +2041,7 @@ impl Running<'_> {
 
     /// The knockback a fighter's hitbox deals this fighter, `ftColl_80079C70`.
     #[doc(alias = "ftColl_80079C70")]
-    fn fighter_knockback(
+    pub(crate) fn fighter_knockback(
         &self,
         me: FighterId,
         attacker: FighterId,

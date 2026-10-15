@@ -91,6 +91,10 @@ pub enum Draw {
     },
     /// The current camera's viewport erased to the erase color (`HSD_CObjEraseScreen`).
     Erase,
+    /// The magnifier camera's viewport erased, color and depth, for player `n`'s bubble
+    /// (`HSD_CObjEraseScreen(cobj, 1, 0, 1)`), in the color `ifMagnify_802FBBDC` blends from
+    /// the stage's colors by where the fighter is, which the presentation works out.
+    MagnifierErase(u8),
     /// The screen copied into refraction's source texture (`lbRefract_80022560`).
     RefractCopy,
     /// The render copied into a shadow's texture (`HSD_ShadowEndRender`).

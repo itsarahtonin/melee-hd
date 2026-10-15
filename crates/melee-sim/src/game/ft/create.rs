@@ -132,7 +132,7 @@ impl Running<'_> {
         );
         let costume = i32::from(self.game.fighters[f.0].costume_id);
         if let Some(file) = self.game.load_costume(self.data, kind, costume) {
-            self.disc_load(file, super::data::MAIN_MEMORY);
+            self.disc_load(&file, super::data::MAIN_MEMORY);
         }
         self.load_costume_joint(gobj);
         self.init_anim_buffers(f);

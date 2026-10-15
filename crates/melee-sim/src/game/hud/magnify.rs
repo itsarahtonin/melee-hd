@@ -307,7 +307,11 @@ impl Running<'_> {
             if !display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
                 continue;
             }
-            self.game.objs.display.draws.push(Draw::Erase);
+            self.game
+                .objs
+                .display
+                .draws
+                .push(Draw::MagnifierErase(i as u8));
             self.game.world.rendering = Some(fg);
             display::rendering(&mut self.game.objs, Some(fg));
             for pass in 0..3 {

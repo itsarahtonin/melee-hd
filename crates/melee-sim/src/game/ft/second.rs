@@ -9,6 +9,7 @@ use super::super::handles::FighterId;
 use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::Running;
 use super::anim::bone_flag;
+use super::anim_buf::{ARCHIVE_HEADER, SIZE};
 use super::parts::{TOP_N, TRANS_N};
 use crate::hsd::aobj;
 use crate::hsd::jobj;
@@ -16,9 +17,6 @@ use crate::lb::figatree::{TRACK_SIZE, bind_tracks};
 
 /// The object types `HSD_ForeachAnim` reaches here: all but materials and textures.
 const ANIM_MASK: u32 = 0xFB7F;
-
-/// The size of a fighter's animation buffer (`fighter_x59C_alloc_data`).
-const ANIM_BUF_SIZE: u32 = 0x8000;
 
 /// The second animation's figatree (`Fighter::x598`), a pointer into one of the fighter's two
 /// animation buffers: the second (`x5A0`), or the main one (`x59C`) when Nana copied the
@@ -36,11 +34,8 @@ pub struct SecondTree {
 /// (`x59C`) points to, if it's there.
 fn main_buffer_offset(m: &Mem, at: u32, addr: u32) -> Option<u32> {
     let off = addr.wrapping_sub(m.u32(at + 4));
-    (addr != 0 && off < ANIM_BUF_SIZE).then_some(off)
+    (addr != 0 && off < SIZE).then_some(off)
 }
-
-/// An archive's header before its data, at the start of the buffer it's loaded into.
-const ARCHIVE_HEADER: u32 = 0x20;
 
 impl Mirror for SecondTree {
     const SIZE: u32 = 4;
@@ -117,17 +112,22 @@ impl Running<'_> {
                 let shared = self
                     .anim_share_source(f)
                     .is_some_and(|p| self.game.fighters[p.0].x5A4 == aram);
-                if !shared {
+                let size = self.data.u32(entry.at(8));
+                let tree = self.anim_tree(kind, entry);
+                let fp = &self.game.fighters[f.0];
+                if shared {
+                    // `memcpy` copies the file's own size, into the main buffer.
+                    self.anim_buf_load(fp.x59C, tree.archive, size);
+                    self.overwrite_main_buffer(f, tree.archive);
+                } else {
                     if aram >= 0x8000_0000 {
                         unported_call("ftData_80085E50 from main memory");
                     }
-                    // `lbArq_80014BD0`'s copy out of ARAM takes time on ssbm-rs's timeline.
-                    let len = (self.data.u32(entry.at(8)) + 31) & !31;
+                    // `lbArq_80014BD0`'s copy out of ARAM, rounded up to 32 bytes, takes time
+                    // on ssbm-rs's timeline.
+                    let len = (size + 31) & !31;
+                    self.anim_buf_load(fp.x5A0, tree.archive, len);
                     self.game.audio.aram_load(self.data, len);
-                }
-                let tree = self.anim_tree(kind, entry);
-                if shared {
-                    self.overwrite_main_buffer(f, tree.archive);
                 }
                 SecondTree {
                     tree: Some(tree),
@@ -170,18 +170,20 @@ impl Running<'_> {
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
         let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
         let depth = self.bone(f, part).xC_u[0];
+        let buf = if fp.x598.in_main { fp.x59C } else { fp.x5A0 };
         let mut i = 0;
+        // As in `ftAnim_8006F7C8`, past the node list's end the skip reads on in the buffer.
         while i < part {
             let m = self.part_mask(kind, i);
             if m == 0 || m & flags != 0 {
-                track = track.at(data.u8(node) as i8 as u32 * TRACK_SIZE);
+                track = track.at(self.anim_buf_u8(buf, node) as i8 as u32 * TRACK_SIZE);
                 node = node.at(1);
             }
             i += 1;
         }
         let mut b = i;
         loop {
-            let frames = data.u8(node) as i8;
+            let frames = self.anim_buf_u8(buf, node) as i8;
             if frames == -1 {
                 break;
             }

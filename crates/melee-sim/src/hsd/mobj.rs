@@ -2,9 +2,9 @@
 //! with its render mode, colors, pixel-engine settings, chain of textures and the animation
 //! of its colors.
 //!
-//! What the display pass does with an MObj (TEV expressions and stages, material colors and
-//! render modes in GX) isn't ported yet; [`compile_tev`] and [`setup`] port the state those
-//! functions change.
+//! What the display pass does with an MObj (material colors and render modes in GX) is the
+//! presentation's; [`compile_tev`] and [`setup`] port the state those functions change, the
+//! material's compiled TEV among it.
 
 use std::ops::{Index, IndexMut};
 
@@ -141,8 +141,7 @@ impl PeDesc {
     }
 }
 
-/// `HSD_MObj`. Its compiled TEV (`tevdesc`, `texp`) is the display pass's, made from this
-/// state, and isn't kept.
+/// `HSD_MObj`.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
 pub struct MObj {
     pub class: MObjClass,
@@ -152,6 +151,10 @@ pub struct MObj {
     pub mat: Option<Material>,
     pub pe: Option<PeDesc>,
     pub aobj: Option<AObjId>,
+    /// Its compiled TEV (`tevdesc`, `texp`), as its last [`compile_tev`] made it from its
+    /// textures then; `HSD_MObjSetup` draws with it whatever its textures have become since.
+    /// Only the display pass reads it. Null until compiled.
+    pub tev: Option<super::texp::TevDesc>,
     /// Where the original's allocators put its parts (`docs/engine.md`).
     pub heap: MObjHeap,
 }
@@ -431,8 +434,9 @@ fn return_chain(tobjs: &mut TObjs, tail: Option<Tail>) {
 /// Assigns the textures' resources for the material's TEV, with the toon and shadow
 /// textures it uses, `HSD_MObjCompileTev`.
 ///
-/// The original then builds the material's TEV expressions and compiles them into stages
-/// (`MObjMakeTExp`, `HSD_TExpCompile`), which only the display pass reads.
+/// It then builds the material's TEV expressions and compiles them into stages
+/// (`MObjMakeTExp`, `HSD_TExpCompile`), kept in [`MObj::tev`], which only the display pass
+/// reads.
 #[doc(alias = "HSD_MObjCompileTev")]
 pub fn compile_tev(objs: &mut Objects, m: Option<MObjId>) {
     let Some(m) = m else { return };
@@ -442,6 +446,9 @@ pub fn compile_tev(objs: &mut Objects, m: Option<MObjId>) {
     if super::heap::with(|_| ()).is_some() {
         super::texp_heap::compile(objs, m, first);
     }
+    let chain: Vec<TObjId> = objs.tobjs.chain(first).collect();
+    let tev = super::texp::make::compile_material(objs, m, &chain);
+    objs.mobjs[m].tev = Some(tev);
     return_chain(&mut objs.tobjs, tail);
 }
 

@@ -84,7 +84,13 @@ pub enum ArchiveError {
 /// A parsed archive.
 #[derive(Clone, Debug)]
 pub struct Archive {
+    /// The file's header (`HSD_ArchiveHeader`), as on disc.
+    header: [u8; HEADER],
     data: Box<[u8]>,
+    /// The file's bytes after the data block (its tables and symbol names), then the bytes
+    /// that followed it where it was read from ([`Archive::parse_in`]): what a buffer the
+    /// file is copied into holds past the data.
+    tail: Box<[u8]>,
     /// Offsets of the words that hold pointers, sorted.
     relocs: Box<[u32]>,
     /// The aligned ones again, one bit per word of the data, for reading a pointer without a
@@ -117,6 +123,12 @@ impl Archive {
     /// Parses a DAT file, `HSD_ArchiveParse`.
     #[doc(alias = "HSD_ArchiveParse")]
     pub fn parse(file: &[u8]) -> Result<Archive, ArchiveError> {
+        Archive::parse_in(file, &[])
+    }
+
+    /// Parses a DAT file that `after` followed where it was read from (another file's next
+    /// bytes), keeping those bytes as what a copy longer than the file brings along.
+    pub fn parse_in(file: &[u8], after: &[u8]) -> Result<Archive, ArchiveError> {
         let header = be32(file, 0)?;
         if header as usize != file.len() {
             return Err(ArchiveError::SizeMismatch {
@@ -156,6 +168,8 @@ impl Archive {
         };
         relocs.sort_unstable();
         Ok(Archive {
+            header: file[..HEADER].try_into().unwrap(),
+            tail: [&file[data_end..], after].concat().into(),
             pointer_words: pointer_words(&relocs, data.len()),
             data: data.into(),
             relocs: relocs.into(),
@@ -168,7 +182,9 @@ impl Archive {
     /// block with no relocations or symbols.
     pub fn raw(file: &[u8]) -> Archive {
         Archive {
+            header: [0; HEADER],
             data: file.into(),
+            tail: Box::default(),
             relocs: Box::default(),
             pointer_words: Box::default(),
             publics: Box::default(),
@@ -179,6 +195,17 @@ impl Archive {
     /// The data block.
     pub fn data(&self) -> &[u8] {
         &self.data
+    }
+
+    /// The byte at `offset` of the file as it was read, header first, before relocation:
+    /// none past the bytes read with it.
+    pub fn file_byte(&self, offset: u32) -> Option<u8> {
+        let o = offset as usize;
+        match o.checked_sub(HEADER) {
+            None => Some(self.header[o]),
+            Some(d) if d < self.data.len() => Some(self.data[d]),
+            Some(d) => self.tail.get(d - self.data.len()).copied(),
+        }
     }
 
     /// The offset of a public symbol's data, `HSD_ArchiveGetPublicAddress`.

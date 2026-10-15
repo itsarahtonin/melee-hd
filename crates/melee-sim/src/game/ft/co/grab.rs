@@ -37,6 +37,8 @@ const JUMP_FRAMES: usize = 0x0;
 
 /// `FtPart_XRotN`.
 const X_ROT_N: i32 = 2;
+/// `ftCo_800DB464`, a held fighter following its holder.
+const HELD_FOLLOW: u32 = 0x800D_B464;
 
 /// `ftKb_MS_SpecialNCapture0` and `ftKb_MS_SpecialAirNCapture0`: Kirby swallowing.
 const KB_SPECIAL_N_CAPTURE_0: i32 = 0x164;
@@ -66,10 +68,10 @@ impl Running<'_> {
     pub fn catch_landed(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.gr_vel = 0.0;
-        let frame = fp.cur_anim_frame;
+        let mut frame = fp.cur_anim_frame;
         let next = if fp.motion_id == ms::CATCH {
             if fp.kind == KIND_YOSHI {
-                unported_call("fn_800D9CE8 (Yoshi's tongue)");
+                frame = self.ys_catch_pull_frame(gobj, frame);
             }
             ms::CATCH_PULL
         } else {
@@ -926,7 +928,7 @@ impl Running<'_> {
         self.capture_wait_state(gobj, msid);
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
         match self.game.fighter(grabber).kind {
-            KIND_YOSHI => unported_call("ftCo_800DB368 (held by Yoshi)"),
+            KIND_YOSHI => self.attach_to_thrower(grabber, gobj),
             KIND_LINK | KIND_CLINK => {
                 if let Some(hs) = self.game.fighter(grabber).u.gobj_at(0xC) {
                     linkhookshot::to_retract_caught(self, hs);
@@ -943,15 +945,38 @@ impl Running<'_> {
         self.start_rumble(f, 3, 0);
     }
 
-    /// Held by Yoshi, the victim turns invisible with a hurtbox of its own (`fn_800DB790`,
-    /// `fn_800DBAE4`): not ported.
+    /// Held in Yoshi's mouth, the victim turns invisible and follows his hold, with one
+    /// ungrabbable hurtbox on its XRotN sized by his `x120` over its model scale
+    /// (`fn_800DB790`, `fn_800DBAE4`, `fn_800DBBF8`, `fn_800DB5D8`).
     #[doc(alias = "fn_800DB790")]
     #[doc(alias = "fn_800DBAE4")]
     fn capture_yoshi_check(&mut self, gobj: GObjId) {
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
-        if self.game.fighter(grabber).kind == KIND_YOSHI {
-            unported_call("fn_800DB790 (held in Yoshi's mouth)");
+        if self.game.fighter(grabber).kind != KIND_YOSHI {
+            return;
         }
+        let f = self.game.fighter_id(gobj);
+        let fp = &mut self.game.fighters[f.0];
+        fp.invisible = true;
+        fp.accessory1_cb = Some(CodeRef(HELD_FOLLOW));
+        self.set_hurtbox_state(f, crate::lb::hitcapsule::HURT_INTANGIBLE);
+        let fp = &self.game.fighters[f.0];
+        let bone_idx = self.bone_index(fp, X_ROT_N);
+        let bone = self.bone(f, bone_idx).joint;
+        let model = Running::model_scale(fp);
+        let gf = self.game.fighter_id(grabber);
+        let scale = mem(fp::fdivs(reg(self.ys_attr_x120(gf)), model));
+        let fp = &mut self.game.fighters[f.0];
+        let h = &mut fp.hurt_capsules[0];
+        h.capsule.bone_idx = bone_idx;
+        h.height = 1;
+        h.is_grabbable = 0;
+        h.capsule.state = crate::lb::hitcapsule::HURT_ENABLED;
+        h.capsule.bone = bone;
+        h.capsule.a_offset = crate::vec::Vec3::default();
+        h.capsule.b_offset = crate::vec::Vec3::default();
+        h.capsule.scale = scale;
+        fp.x221A_b6 = true;
     }
 
     /// `ftCo_CaptureWaitHi_Anim` (`ftCo_CaptureWaitLw_Anim`): the hold counts down, faster

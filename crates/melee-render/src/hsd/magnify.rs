@@ -3,11 +3,16 @@
 //! model's own image; the others into the copies' buffers (`ifMagnify::image_descs`), which
 //! only the presentation reads.
 
+use gekko_fp as fp;
 use melee_data::archive::DataRef;
+use melee_sim::game::gr::stage;
+use melee_sim::game::state::UserData;
+use melee_sim::game::structs::_GXColor;
 use melee_sim::hsd::tobj::ImageRef;
 
 use super::draw::{Ctx, Image};
 use crate::gx::enums::*;
+use crate::gx::{Color, mem, reg};
 use crate::mem::Dynamic;
 
 /// `ifMagnify`'s address and its image descriptors' place in it (`image_descs`).
@@ -15,16 +20,112 @@ const MAGNIFY: u32 = 0x804A_1DE0;
 const IMAGE_DESCS: u32 = 0x74;
 const IMAGE_DESC_SIZE: u32 = 0x18;
 
+/// Which of the stage's nine colors are a bubble's four corners, by the fighter's row (above
+/// the camera limits, their top half, their bottom half, below) and column (left of them,
+/// their left half, their right half, right), `ifMagnify_803F984C`.
+const CORNERS: [[u8; 4]; 16] = [
+    [0, 0, 0, 0],
+    [0, 1, 0, 1],
+    [1, 2, 1, 2],
+    [2, 2, 2, 2],
+    [0, 0, 3, 3],
+    [0, 1, 3, 4],
+    [1, 2, 4, 5],
+    [2, 2, 5, 5],
+    [3, 3, 6, 6],
+    [3, 4, 6, 7],
+    [4, 5, 7, 8],
+    [5, 5, 8, 8],
+    [6, 6, 6, 6],
+    [6, 7, 6, 7],
+    [7, 8, 7, 8],
+    [8, 8, 8, 8],
+];
+
 impl Ctx<'_> {
-    /// A bubble's background: the magnifier blends it from its four corner colors by where
-    /// the fighter is (`ifMagnify_GetCornerColors`); this takes their average.
-    pub fn magnifier_erase_color(&self) -> crate::gx::Color {
-        let m = &self.game.magnify;
-        let cs = [&m.x4, &m.x8, &m.xC, &m.x10];
-        let avg = |f: &dyn Fn(&melee_sim::game::structs::_GXColor) -> u8| {
-            (cs.iter().map(|c| u32::from(f(c))).sum::<u32>() / 4) as u8
+    /// Player `slot`'s bubble's background, as `ifMagnify_802FBBDC` sets it: four of the
+    /// stage's nine colors (`GroundParam::xB8` through `xD8`, a three by three grid around the
+    /// camera limits), picked by which half of the limits the fighter's camera bone is in or
+    /// which side it's past (`ifMagnify_GetCornerColors`), blended by how far into that half
+    /// it is.
+    pub fn magnifier_erase_color(&self, slot: u8) -> Option<Color> {
+        let game = self.game;
+        let param = game.gr.param.as_ref()?;
+        let player = game.players.get(usize::from(slot))?;
+        let fg = player.player_entity[usize::from(player.transformed[0])]?;
+        let Some(UserData::Fighter(f)) = game.world.gobj(fg).user_data else {
+            return None;
         };
-        crate::gx::Color::new(avg(&|c| c.r), avg(&|c| c.g), avg(&|c| c.b), avg(&|c| c.a))
+        let pos = game.camera.boxes[game.fighters[f.0].x890_cameraBox?].bone_pos;
+        let [l, r, t, b] = stage::cam_bounds_of(&game.stage_info);
+        let (x, y) = (pos.x, pos.y);
+        let (lr, tb) = (fp::fadds(reg(l), reg(r)), fp::fadds(reg(t), reg(b)));
+        let x_mid = mem(fp::fmuls(0.5, lr));
+        let y_mid = mem(fp::fmuls(0.5, tb));
+        let x_blend = if x < l || x > r {
+            0.0
+        } else if x < x_mid {
+            let d = fp::fdivs(fp::fsubs(reg(x), reg(l)), fp::fmsubs(0.5, lr, reg(l)));
+            fp::fsubs(1.0, d)
+        } else {
+            let d = fp::fdivs(fp::fnmsubs(0.5, lr, reg(x)), fp::fnmsubs(0.5, lr, reg(r)));
+            fp::fsubs(1.0, d)
+        };
+        let x_inv = fp::fsubs(1.0, x_blend);
+        let y_blend = if y > t || y < b {
+            0.0
+        } else if y > y_mid {
+            let d = fp::fdivs(fp::fsubs(reg(t), reg(y)), fp::fnmsubs(0.5, tb, reg(t)));
+            fp::fsubs(1.0, d)
+        } else {
+            let d = fp::fdivs(fp::fmsubs(0.5, tb, reg(y)), fp::fmsubs(0.5, tb, reg(b)));
+            fp::fsubs(1.0, d)
+        };
+        let y_inv = fp::fsubs(1.0, y_blend);
+
+        let row = if y > t {
+            0
+        } else if y < b {
+            3
+        } else if y > y_mid {
+            1
+        } else {
+            2
+        };
+        let col = if x < l {
+            0
+        } else if x > r {
+            3
+        } else if x < x_mid {
+            1
+        } else {
+            2
+        };
+        let grid = [
+            &param.xB8, &param.xBC, &param.xC0, &param.xC4, &param.xC8, &param.xCC, &param.xD0,
+            &param.xD4, &param.xD8,
+        ];
+        let c = CORNERS[row * 4 + col].map(|k| grid[usize::from(k)]);
+
+        // The original takes the blends back from their inverses before mixing.
+        let y_blend = fp::fsubs(1.0, y_inv);
+        let x_blend = fp::fsubs(1.0, x_inv);
+        let mix0 = fp::fmuls(x_inv, y_blend);
+        let mix1 = fp::fmuls(x_blend, y_blend);
+        let mix2 = fp::fmuls(x_blend, y_inv);
+        let mix3 = fp::fmuls(x_inv, y_inv);
+        let blend = |ch: fn(&_GXColor) -> u8| {
+            let v = |i: usize| f64::from(ch(c[i]));
+            let s = fp::fmadds(v(0), mix1, fp::fmuls(v(1), mix0));
+            let s = fp::fmadds(v(3), mix3, fp::fmadds(v(2), mix2, s));
+            fp::fctiwz(s) as u8
+        };
+        Some(Color::new(
+            blend(|c| c.r),
+            blend(|c| c.g),
+            blend(|c| c.b),
+            blend(|c| c.a),
+        ))
     }
 
     /// An image in the executable's data or statics: a magnifier bubble's copy.

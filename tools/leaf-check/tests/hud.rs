@@ -618,14 +618,14 @@ fn init_debug_menus() {
 
 // The HUD.
 
-use calls::{Ret, Stub};
+use calls::Stub;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::hud::Draw as HudDraw;
 use melee_sim::hsd::gobj::GObjId;
 
-/// The unit the HUD reaches that no port covers yet, stood in for on both sides: the
-/// results' scoring.
-const HUD_STUBS: [Stub; 1] = [(0x8016_C658, Ret::Int(7))];
+/// Units the HUD reaches that no port covers yet, stood in for on both sides: none since the
+/// results' scoring (`gm_GetMatchEndPlayerScore`) was ported.
+const HUD_STUBS: [Stub; 0] = [];
 
 fn hud_stubs() -> Vec<Stub> {
     HUD_STUBS.to_vec()

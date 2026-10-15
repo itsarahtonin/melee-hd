@@ -10973,6 +10973,17 @@ pub static STATES_IT_803F9470: [ItemState; 1] = [
     },
 ];
 
+/// `it_803F9480`.
+pub static STATES_IT_803F9480: [ItemState; 1] = [
+    // 0: it_2F2B_UnkMotion0_Anim, it_2F2B_UnkMotion0_Phys, it_2F2B_UnkMotion0_Coll
+    ItemState {
+        anim_id: -1,
+        animated: Some(CodeRef(0x802f2ccc)),
+        physics_updated: Some(CodeRef(0x802f2cd4)),
+        collided: Some(CodeRef(0x802f2cd8)),
+    },
+];
+
 /// `it_803F94A0`.
 pub static STATES_IT_803F94A0: [ItemState; 3] = [
     // 0: it_27CF_UnkMotion0_Anim, it_27CF_UnkMotion0_Phys, it_27CF_UnkMotion0_Coll
@@ -10999,7 +11010,7 @@ pub static STATES_IT_803F94A0: [ItemState; 3] = [
 ];
 
 /// Every state table, by its address.
-pub static STATE_TABLES: [(u32, &[ItemState]); 173] = [
+pub static STATE_TABLES: [(u32, &[ItemState]); 174] = [
     (0x803f5468, &STATES_IT_803F5468),
     (0x803f54d8, &STATES_IT_803F54D8),
     (0x803f55d0, &STATES_IT_803F55D0),
@@ -11172,5 +11183,6 @@ pub static STATE_TABLES: [(u32, &[ItemState]); 173] = [
     (0x803f93a8, &STATES_IT_803F93A8),
     (0x803f93c8, &STATES_IT_803F93C8),
     (0x803f9470, &STATES_IT_803F9470),
+    (0x803f9480, &STATES_IT_803F9480),
     (0x803f94a0, &STATES_IT_803F94A0),
 ];

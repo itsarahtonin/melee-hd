@@ -204,8 +204,12 @@ pub fn interpret(objs: &mut Objects, data: &Archives, a: Option<AObjId>, mut upd
     } else {
         fobj::interpret_all(objs, data, first, rate, again(&mut update));
     }
+    // `f1`: the end frame the compare below loads, or past the end the rate and whatever
+    // the channels' stop leaves; a looping AObj leaves what its channels did.
     let o = &objs.aobjs[a];
-    if o.flags & LOOP == 0 && reg(o.end_frame) <= reg(o.curr_frame) {
+    let ended = o.flags & LOOP == 0 && reg(o.end_frame) <= reg(o.curr_frame);
+    objs.aobj_f1 = (o.flags & LOOP == 0 && !ended).then_some(o.end_frame);
+    if ended {
         // HSD_AObjStopAnim, inlined.
         let (first, rate) = (o.fobj, o.framerate);
         fobj::stop_anim_all(objs, data, first, rate, update);

@@ -191,6 +191,8 @@ pub fn read(m: &[u8]) -> Heap {
         .collect();
     Heap {
         active: true,
+        // What a captured heap's free memory holds isn't known.
+        fresh: false,
         os,
         pieces: MemPieces { array, list },
         obj_heap,

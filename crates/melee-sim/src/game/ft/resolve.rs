@@ -38,6 +38,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
     let (full, regen, broken) = (c.f32(0x260), c.f32(0x27C), c.f32(0x280));
     let (wear_mul, wear_add, light_lo, light_hi) =
         (c.f32(0x284), c.f32(0x288), c.f32(0x2DC), c.f32(0x2E0));
+    let mut shield_broke = false;
     let fp = &mut g.game.fighters[f.0];
     if !fp.x221A_b7 && !(reg(fp.shield_health) >= reg(full)) {
         fp.shield_health = mem(fp::fadds(reg(fp.shield_health), reg(regen)));
@@ -60,7 +61,9 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         fp.shield_health = mem(fp::fsubs(reg(fp.shield_health), wear));
         if !(reg(fp.shield_health) >= 0.0) {
             fp.shield_health = broken;
-            unported_call("a shield broken by its damage (pl_8003E058, ftCo_80098B20)");
+            shield_broke = true;
+            let (by, slot) = (fp.x19BC_shieldDamageTaken3, i32::from(fp.player_idx));
+            g.record_shield_broken_by(by, slot);
         }
     }
     // A tip's damage, held back while its hitlag lasted, lands.
@@ -128,7 +131,10 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         strength = fp.dmg.x1840;
         tip = true;
     } else if fp.x19A4 != 0 {
-        if let Some(cb) = fp.shield_hit_cb {
+        if shield_broke {
+            g.enter_shield_break(gobj);
+            g.fighter_play_sfx(f, 0x82, 0x7F, 0x40);
+        } else if let Some(cb) = fp.shield_hit_cb {
             run_fighter_cb(g, gobj, cb);
         }
         strength = g.game.fighters[f.0].x19A4;
@@ -152,7 +158,8 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
     } else if fp.dmg.x1924 != 0 {
         strength = fp.dmg.x1924;
     } else if fp.ReflectAttr.x1A3C_damageOver != 0 {
-        unported_call("ftCo_80098C9C (a reflector overpowered)");
+        // A reflector overpowered breaks like a shield (`ftCo_80098C9C`).
+        g.enter_shield_break(gobj);
     } else if reg(fp.ReflectAttr.x1A2C_reflectHitDirection) != 0.0 {
         if let Some(cb) = fp.reflect_hit_cb {
             run_fighter_cb(g, gobj, cb);

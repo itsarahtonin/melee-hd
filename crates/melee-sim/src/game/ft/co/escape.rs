@@ -1,6 +1,5 @@
 //! Rolls and spot dodges (`ftCo_Escape.c`).
 
-use super::super::super::code::unported_call;
 use super::super::super::state::Running;
 use super::PAD_LR;
 use super::checks::{KIND_SAMUS, KIND_YOSHI, abs};
@@ -63,7 +62,7 @@ impl Running<'_> {
     pub fn enter_escape(&mut self, gobj: GObjId, msid: i32, item_window: i32) {
         match self.game.fighter(gobj).kind {
             KIND_SAMUS => self.samus_enter_roll(gobj, msid, item_window),
-            KIND_YOSHI => unported_call("ftCo_80099438"),
+            KIND_YOSHI => self.ys_enter_roll(gobj, msid, item_window),
             _ => self.enter_escape_common(gobj, msid, item_window),
         }
         let f = self.game.fighter_id(gobj);
@@ -152,9 +151,10 @@ impl Running<'_> {
             return false;
         }
         if self.game.fighter(gobj).kind == KIND_YOSHI {
-            unported_call("ftCo_80099954");
+            self.ys_enter_escape_n(gobj);
+        } else {
+            self.enter_escape_n_common(gobj);
         }
-        self.enter_escape_n_common(gobj);
         let f = self.game.fighter_id(gobj);
         self.start_rumble(f, 23, 0);
         true

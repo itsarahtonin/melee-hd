@@ -36,6 +36,18 @@ fn clamp_score(v: i32) -> i32 {
 }
 
 impl Game {
+    /// The player's score in the results as they stand, `gm_GetMatchEndPlayerScore`: the
+    /// results brought up to date once a tick.
+    #[doc(alias = "gm_GetMatchEndPlayerScore")]
+    pub fn match_end_score(&mut self, slot: i32) -> i32 {
+        let tick = self.scene_ticks();
+        if self.vs.state.x24C.x0 != tick {
+            self.vs.state.x24C.x0 = tick;
+            self.compile_results();
+        }
+        self.vs.state.x24C.player_standings[slot as usize].score
+    }
+
     /// The player's rank in the results as they stand (0 the best), its team's in teams,
     /// `Player_80033BB8` (`gm_8016C5C0`): the results brought up to date once a tick.
     #[doc(alias = "Player_80033BB8")]

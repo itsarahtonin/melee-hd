@@ -78,6 +78,8 @@ impl Running<'_> {
             return;
         }
         let root = self.root_jobj(gobj);
+        // `lfs f1, @422`: the register the frame below falls back on starts at 0.
+        self.game.objs.aobj_f1 = Some(0.0);
         if self.game.fighters[f.0].x8A4_animBlendFrames == 0.0 {
             jobj::clear_flags_all(&mut self.game.objs.jobjs, Some(root), USE_QUATERNION);
             if x594_bit(&self.game.fighters[f.0], 0) {
@@ -134,15 +136,32 @@ impl Running<'_> {
                         ));
                     }
                 }
-                // No part has an animation: the original compares a register it left from
-                // earlier. Counted; the frame counter is left as it was.
-                None => self.game.objs.stale_reads += 1,
+                // No part has an animation: the original compares the register `f1` the
+                // walk left (docs/engine.md), and taking the branch loads `x898` into it.
+                None => match self.game.objs.aobj_f1 {
+                    Some(v) => {
+                        let fp = &mut self.game.fighters[f.0];
+                        if v < fp.cur_anim_frame {
+                            let old = fp.x898_unk;
+                            fp.x898_unk = mem(fp::fadds(
+                                reg(old),
+                                fp::fadds(reg(fp.cur_anim_frame), reg(fp.frame_speed_mul)),
+                            ));
+                            self.game.objs.aobj_f1 = Some(old);
+                        }
+                    }
+                    None => self.game.objs.stale_reads += 1,
+                },
             }
         }
         match self.anim_frame(gobj) {
             Some(frame) => self.game.fighters[f.0].cur_anim_frame = frame,
-            // As above: the original stores a stale register. Counted, frame unchanged.
-            None => self.game.objs.stale_reads += 1,
+            // As above: the original stores the register `f1` as it stands; unknown, it's
+            // counted and the frame left as it was.
+            None => match self.game.objs.aobj_f1 {
+                Some(v) => self.game.fighters[f.0].cur_anim_frame = v,
+                None => self.game.objs.stale_reads += 1,
+            },
         }
     }
 

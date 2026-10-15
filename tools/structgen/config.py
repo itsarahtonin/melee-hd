@@ -66,6 +66,8 @@ ROOTS = [
     "itLinkBow_ItemVars",
     # Young Link's milk.
     "itCLinkMilk_ItemVars",
+    # Yoshi's egg an item becomes.
+    "itYoshiEggLay_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",

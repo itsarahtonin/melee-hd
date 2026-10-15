@@ -5,7 +5,6 @@
 use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, DataRef};
 
-use super::super::code::{self, Val};
 use super::super::gr::setup::load_light_list;
 use super::super::handles::CodeRef;
 use super::super::state::{Game, OBJ_CAMERA, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, UserData};
@@ -24,9 +23,6 @@ pub const ARROW_PROC: u32 = 0x802F_DA78;
 pub const ARROW_RENDER: u32 = 0x802F_DA4C;
 pub const SCORE_PROC: u32 = 0x802F_F218;
 pub const SCORE_TEXT_RENDER: u32 = 0x802F_F360;
-
-/// `gm_GetMatchEndPlayerScore`, the results' scoring (the match results' port's).
-const GM_MATCH_END_PLAYER_SCORE: u32 = 0x8016_C658;
 
 /// The hazard sign's statics (`un_804D6D80` to `un_804D6D8C`).
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
@@ -484,9 +480,7 @@ impl Running<'_> {
 
     /// A player's score, capped at 9999 (`inl_getScore`).
     fn score(&mut self, slot: i32) -> i32 {
-        code::call(self, GM_MATCH_END_PLAYER_SCORE, &[Val::Int(slot)])
-            .int()
-            .min(0x270F)
+        self.game.match_end_score(slot).min(0x270F)
     }
 
     /// A score's process, `fn_802FF218`: "-" while hidden, else the score when it changes.

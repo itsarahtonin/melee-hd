@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use melee_data::archive::{Archives, DataRef};
 use melee_sim::game::camera::CameraBoxes;
 use melee_sim::game::ft::AnimFile;
+use melee_sim::game::ft::anim_buf::{AnimBuf, Fill};
 use melee_sim::game::handles::{
     AnimBufId, AttrsId, BoneTableId, CameraBoxId, DObjListId, DynamicsId, FighterId, GroundId,
     ItemId, PartsId, StartHookId,
@@ -1034,12 +1035,14 @@ impl Importer<'_> {
         id
     }
 
-    /// A fighter's animation buffer.
+    /// A fighter's animation buffer, at `a`. Which loads left its bytes isn't known.
     fn fighter_anim_buf(&mut self, a: u32) -> AnimBufId {
         if let Some(&b) = self.maps.fighter_anim_bufs.get(&a) {
             return b;
         }
-        let id = AnimBufId(self.game.fighter_anim_bufs.alloc(()));
+        let bufs = &mut self.game.fighter_anim_bufs;
+        let id = AnimBufId(bufs.alloc(AnimBuf::new(Fill::Unknown)));
+        bufs.set_addr(id.0, a);
         self.maps.fighter_anim_bufs.insert(a, id);
         id
     }
@@ -1512,8 +1515,17 @@ impl Importer<'_> {
                 pe: self.u32(a + 0x10),
                 ..Default::default()
             },
+            tev: None,
         };
         self.game.objs.mobjs.pool.set_addr(id.0, a);
+        let cap = self.cap;
+        let u32 = |x: u32| cap.u32(x);
+        let u8 = |x: u32| cap.call.mem1[(x - MEM1) as usize];
+        let mem = crate::tev::Mem { u32: &u32, u8: &u8 };
+        match crate::tev::read(&mem, id, a, &mut |t| Some(self.tobj(t))) {
+            Ok(tev) => self.game.objs.mobjs[id].tev = tev,
+            Err(e) => self.unhandled.push(e),
+        }
         id
     }
 

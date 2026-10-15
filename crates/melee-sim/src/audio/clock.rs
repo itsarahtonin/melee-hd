@@ -3,10 +3,9 @@
 //! The original runs the driver's frame in the audio interrupt, every 5 ms of audio. ssbm-rs
 //! keeps virtual time: it moves only at wait points (the scene loop's waits, a thread sleep)
 //! and by a few time base ticks at each time base or hardware register read, and interrupts
-//! are taken there. In play, every audio frame is taken at a wait point between ticks (the
-//! only reads inside a tick are the perf timer's and fighters' ARAM animation loads, too few
-//! to reach the next frame), so which ticks a frame falls between follows from a handful of
-//! clocks this module runs:
+//! are taken there. In play, audio frames are taken at wait points between ticks, or inside a
+//! tick at the few reads there (the perf timer's, and fighters' ARAM animation loads, chunk by
+//! chunk), so where a frame falls follows from a handful of clocks this module runs:
 //!
 //! - video fields every 675,675 time base ticks (60000/1001 Hz), whose retrace interrupt wakes
 //!   the scene loop from its wait for a free frame buffer;
@@ -25,8 +24,7 @@
 //! leaves the OS's queue, and a stopped audio DMA raises no more interrupts. Each disc read
 //! sets the disc driver's timeout alarm, which the read's interrupt cancels; ssbm-rs before
 //! its `ab3cd01` left such events queued, where they cut a wait short (see
-//! `docs/engine.md`). One thing this doesn't model: an audio frame due inside a tick would run
-//! there.
+//! `docs/engine.md`).
 
 /// Time base ticks per video field.
 pub const FIELD: u64 = 675_675;
@@ -491,11 +489,22 @@ impl Clock {
     /// with interrupts off, and an event that came due meanwhile runs when a handler returns:
     /// the request takes 56 ticks, each chunk's handler 64 and the last one's 8, so on this
     /// timeline (whose audio frames start 8 ticks after ssbm-rs runs their events) the
-    /// chunks end every `ARAM_CHUNK` from the load's start.
+    /// chunks end every `ARAM_CHUNK` from the load's start. The last handler returns as the
+    /// load ends, and an audio DMA event due by then runs there too, its frame starting after
+    /// the audio handler's register read: here a frame due up to `REG_READ` past the load's
+    /// end starts there, before the game's code goes on.
     pub fn aram_load(&mut self, len: u32, f: &mut dyn Frames) {
         self.game_code(f);
         for _ in 0..len.div_ceil(0x1000) {
             self.read(ARAM_CHUNK, f);
+        }
+        let end = self.now + REG_READ;
+        if self
+            .events
+            .iter()
+            .any(|e| e.kind == EventKind::AudioDma && e.at <= end)
+        {
+            self.read(REG_READ, f);
         }
     }
 
@@ -651,6 +660,24 @@ mod tests {
             );
         }
         assert!(DiscSpeed::Drive.transfer(0x4000) > AUDIO_FRAME);
+    }
+
+    #[test]
+    fn a_frame_due_as_an_aram_load_ends_runs_before_the_game_goes_on() {
+        // A load of two chunks ends at 128. A frame due within the audio handler's register
+        // read after that (136 on this timeline) starts at 136, as ssbm-rs takes its event
+        // when the last chunk's handler returns; one due later waits for the game's code.
+        for (due, ran) in [(129, true), (136, true), (137, false)] {
+            let mut c = Clock::new(0, due, 675_000, 675_000);
+            c.aram_load(0x2000, &mut Stub::new(false));
+            assert_eq!(
+                kinds(&c).contains(&EventKind::DspResume),
+                ran,
+                "due at {due}"
+            );
+            let end = if ran { 136 + AI_HANDLER } else { 128 };
+            assert_eq!(c.now, end, "due at {due}");
+        }
     }
 
     #[test]
