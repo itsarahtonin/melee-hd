@@ -280,6 +280,8 @@ cargo test --release -p leaf-check
 cargo test --release -p melee-render-check -p melee-audio-check -- --ignored
 ```
 
+`cargo test` also runs `path-guard`, which fails on personal paths or names, build output (`dist/`, `target/`) or files over 5 MiB among the tracked files, by the rules the git hooks share (`.githooks/path-guard.conf`, see [AGENTS.md](../AGENTS.md#git-hooks)); CI runs it first, on its own.
+
 Run filtered leaf-check tests (`--test NAME`) in a command of their own: with several packages, cargo applies a `--test` filter to all of them and skips the rest.
 
 ### Capture packs

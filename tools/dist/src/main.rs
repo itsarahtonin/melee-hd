@@ -9,6 +9,10 @@
 //! lets a running program be renamed but not replaced, and deleted by a later run once it has
 //! closed. `--shortcut` makes a shortcut to the copy on the desktop (Windows), or in
 //! `--shortcut-dir`.
+//!
+//! The build remaps the home folder, the repository and the target folder in the source paths
+//! rustc embeds (`--remap-path-prefix`, added to the rustflags in effect), so the copy carries no
+//! user name or local path.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -171,7 +175,51 @@ fn shortcut(_exe: &Path, _dir: Option<&Path>) -> Result<String, String> {
     Err("--shortcut makes a Windows shortcut; on this system, start dist/melee-hd from your desktop's launcher".into())
 }
 
+/// rustc flags that keep the build machine's paths out of the program: rustc writes the source
+/// path of every panic location into it, dependencies' too, so the home folder (with CARGO_HOME's
+/// registry and git checkouts, and rustup's toolchains), the repository and the target folder map
+/// to neutral names. The last matching prefix wins, so the narrower ones come later. Cargo's
+/// `trim-paths` would do this, but it isn't stable on this toolchain.
+fn remap_flags(target: &Path) -> Vec<String> {
+    let var = |name: &str| {
+        std::env::var_os(name)
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+    };
+    let home = var(if cfg!(windows) { "USERPROFILE" } else { "HOME" });
+    let under_home = |dir: &str| home.as_ref().map(|h| h.join(dir));
+    let maps = [
+        (home.clone(), "~"),
+        (
+            var("RUSTUP_HOME").or_else(|| under_home(".rustup")),
+            "/rustup",
+        ),
+        (var("CARGO_HOME").or_else(|| under_home(".cargo")), "/cargo"),
+        (Some(root().to_owned()), "/melee-hd"),
+        (Some(target.to_owned()), "/target"),
+    ];
+    maps.into_iter()
+        .filter_map(|(from, to)| Some(format!("--remap-path-prefix={}={to}", from?.display())))
+        .collect()
+}
+
+/// The rustflags in effect (CARGO_ENCODED_RUSTFLAGS, else RUSTFLAGS) with `extra` added, encoded
+/// for CARGO_ENCODED_RUSTFLAGS, which takes paths with spaces.
+fn encoded_rustflags(extra: &[String]) -> String {
+    let mut flags: Vec<String> = match std::env::var("CARGO_ENCODED_RUSTFLAGS") {
+        Ok(f) if !f.is_empty() => f.split('\x1f').map(str::to_owned).collect(),
+        _ => std::env::var("RUSTFLAGS")
+            .unwrap_or_default()
+            .split_whitespace()
+            .map(str::to_owned)
+            .collect(),
+    };
+    flags.extend_from_slice(extra);
+    flags.join("\x1f")
+}
+
 fn run(a: &Args) -> Result<(), String> {
+    let target = target_dir()?;
     let mut build = vec![
         "build",
         "--locked",
@@ -188,12 +236,17 @@ fn run(a: &Args) -> Result<(), String> {
     let status = Command::new(&cargo)
         .args(&build)
         .current_dir(root())
+        .env(
+            "CARGO_ENCODED_RUSTFLAGS",
+            encoded_rustflags(&remap_flags(&target)),
+        )
+        .env_remove("RUSTFLAGS")
         .status()
         .map_err(|e| format!("{cargo}: {e}"))?;
     if !status.success() {
         return Err("the build failed".into());
     }
-    let built = target_dir()?.join("dist").join(format!("melee-hd{EXE}"));
+    let built = target.join("dist").join(format!("melee-hd{EXE}"));
     let exe = install(&built, &a.out)?;
     println!("{}", exe.display());
     if let Some(dir) = &a.shortcut {
@@ -235,6 +288,14 @@ mod tests {
             Some("C:\\melee-hd\\target \"x\" \u{e9}")
         );
         assert_eq!(json_string(json, "workspace_root"), None);
+    }
+
+    #[test]
+    fn remaps_the_target_folder_last() {
+        let flags = remap_flags(Path::new("T"));
+        assert_eq!(flags.last().unwrap(), "--remap-path-prefix=T=/target");
+        let repo = format!("--remap-path-prefix={}=/melee-hd", root().display());
+        assert!(flags.contains(&repo));
     }
 
     #[test]
