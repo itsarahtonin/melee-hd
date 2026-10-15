@@ -6,7 +6,11 @@
 //! `REFS/player/ref-GAME/fN.dff` and `fN/` (`REFS` defaults to ssbm-rs's `local/`,
 //! `$SSBM_RS_LOCAL`), made as docs/player.md describes (Slippi's name plates off unless the
 //! check says otherwise); the replays are the repository's benchmark matches and Slippi
-//! replays in `$SLIPPI_REPLAYS` (the author's, not public). Unlike the tests that skip without
+//! replays in `$SLIPPI_REPLAYS` (the author's, not public). A frame whose first logged frame
+//! samples a copy made before the log starts (a magnifier bubble's) takes a capture made with
+//! ssbm-rs's renderer running, `ref-GAME/rendered/` ([`Capture::Rendered`]): without one, ssbm-rs's
+//! copies never reach memory, and the log starts with the texture's old contents. Unlike the
+//! tests that skip without
 //! their data, these fail without it: they are a check to run on purpose.
 //!
 //! Each check writes what it measured to `RENDER_CHECK_RESULTS` (by default
@@ -151,10 +155,29 @@ fn status(
     let _ = std::fs::write(dir.join(format!("{id}.status")), text);
 }
 
+/// How a reference log was captured.
+#[derive(Clone, Copy, PartialEq)]
+pub enum Capture {
+    /// ssbm-rs run without its renderer (`ref-GAME/`): its EFB copies leave memory as it
+    /// was, so a copy made before the log starts isn't in the log's memory.
+    Headless,
+    /// ssbm-rs run with its renderer (`GX_RENDER=-`, `ref-GAME/rendered/`), whose copies
+    /// write memory as the console's GPU does.
+    Rendered,
+}
+
 /// Runs `compare` on the log of the game's frame `frame` (log frame N is native frame N - 3)
 /// and checks the result.
 pub fn compare(game: &Game, frame: u32, group: Group, expect: Expect) {
-    let dir = refs().join("player").join(format!("ref-{}", game.name));
+    compare_in(game, frame, group, expect, Capture::Headless);
+}
+
+/// [`compare`] against a log captured as `capture` says.
+pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture: Capture) {
+    let mut dir = refs().join("player").join(format!("ref-{}", game.name));
+    if capture == Capture::Rendered {
+        dir = dir.join("rendered");
+    }
     let log = dir.join(format!("f{frame}.dff"));
     let images = dir.join(format!("f{frame}"));
     let replay = game.replay.path();
@@ -398,10 +421,6 @@ pub mod why {
     /// A fighter's second lit vertex color, a few levels off on some draws.
     pub const VERTEX_COLORS: &str =
         "a fighter's second lit vertex color a few levels off; a few pixels";
-    /// A magnifier bubble's background, the average of its corner colors rather than the
-    /// blend the original makes by where the fighter is.
-    pub const BUBBLE: &str =
-        "a magnifier bubble's background: the corner colors' average, not the original's blend";
     /// A fighter texture's palette, different past the entries the frame's draws show.
     pub const PALETTE: &str = "a fighter texture's palette contents; a few pixels";
     /// Fountain of Dreams' water, a few levels greener than ssbm-rs's once the reflection shows.

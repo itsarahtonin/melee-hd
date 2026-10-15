@@ -12,8 +12,8 @@
 mod common;
 
 use common::{
-    Expect, FOUR_FD, FOX_FOX_FD, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_YS, Game,
-    Group, SHEIK_FOX_FOD, compare, scaled, scaled_known, why,
+    Capture, Expect, FOUR_FD, FOX_FOX_FD, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_YS,
+    Game, Group, SHEIK_FOX_FOD, compare, compare_in, scaled, scaled_known, why,
 };
 
 /// A frame with a known difference, as recorded.
@@ -109,17 +109,16 @@ fn fox_sheik_dl_6000() {
     );
 }
 
+/// A magnifier bubble from the first logged frame, so the capture ran ssbm-rs's renderer.
 #[test]
 #[ignore = "the sweep: needs ssbm-rs's references and the disc; run with --ignored"]
 fn fox_sheik_dl_12000() {
-    known(
+    compare_in(
         &FOX_SHEIK_DL,
         12000,
-        [
-            "image: PSNR 29.58 dB, 0.847% off by 8, 0.793% off by 32: OUT OF TOLERANCE",
-            "image: PSNR inf dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
-        ],
-        why::BUBBLE,
+        Group::Sweep,
+        Expect::Identical,
+        Capture::Rendered,
     );
 }
 

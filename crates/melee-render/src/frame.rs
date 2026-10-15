@@ -220,18 +220,27 @@ impl Ctx<'_> {
             Draw::Erase => {
                 // The game camera erases color in its background color; a camera whose erase
                 // color the display pass set (Fountain of Dreams' reflection, Pokémon
-                // Stadium's text) color in that color; a magnifier bubble's camera color and
-                // depth.
+                // Stadium's text) color in that color.
                 let full = self
                     .hsd
                     .camera
                     .is_some_and(|v| v.viewport == [0.0, 640.0, 0.0, 480.0]);
-                let (color, depth) = match self.hsd.erase_color.take() {
-                    _ if full => (self.erase_color(), false),
-                    Some(c) => (c, false),
-                    None => (self.magnifier_erase_color(), true),
+                let color = match self.hsd.erase_color.take() {
+                    _ if full => self.erase_color(),
+                    Some(c) => c,
+                    None => {
+                        self.hsd.note_once("an erase without an erase color");
+                        Color::new(0, 0, 0, 0xFF)
+                    }
                 };
-                self.erase_screen(color, depth);
+                self.erase_screen(color, false);
+                1
+            }
+            Draw::MagnifierErase(slot) => {
+                match self.magnifier_erase_color(*slot) {
+                    Some(c) => self.erase_screen(c, true),
+                    None => self.hsd.note_once("a magnifier bubble without a fighter"),
+                }
                 1
             }
             Draw::Offscreen(b) => {
