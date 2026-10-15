@@ -207,7 +207,7 @@ pub struct CnstReg {
 /// A material's compiled TEV: the stages (`mobj->tevdesc`), in the order the original's list
 /// has them (the last stage first), and the constants left in its expression list
 /// (`mobj->texp`), newest first as the list has them.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
 pub struct TevDesc {
     pub stages: Vec<TevStage>,
     pub cnsts: Vec<CnstReg>,

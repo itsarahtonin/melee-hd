@@ -19,6 +19,7 @@ pub mod sis;
 pub mod sound;
 pub mod stadium;
 pub mod stage;
+pub mod tev;
 pub mod vs;
 
 use std::collections::HashMap;

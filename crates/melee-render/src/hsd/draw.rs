@@ -546,10 +546,17 @@ impl Ctx<'_> {
         .setup_render_mode(self.gx, rendermode, pe.as_ref(), &mut lights);
     }
 
-    /// `MObjSetupTev`: the material's compiled stages, then the volatile ones.
+    /// `MObjSetupTev`: the material's compiled stages (`mobj->tevdesc`, as its last compile
+    /// made them from its textures then), then the volatile ones from its textures now.
     fn setup_tev(&mut self, m: MObjId, chain: &[TObjId], rendermode: u32) -> super::texp::TevDesc {
         let objs = &self.game.objs;
-        let desc = super::texp_make::compile_material(objs, m, chain);
+        let desc = match &objs.mobjs[m].tev {
+            Some(d) => d.clone(),
+            None => {
+                self.hsd.note_once("a material never compiled");
+                super::texp_make::compile_material(objs, m, chain)
+            }
+        };
         super::texp_make::mobj_setup_tev(
             self.gx,
             &mut self.hsd.tev,
