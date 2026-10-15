@@ -346,43 +346,65 @@ impl Running<'_> {
     /// A sword's afterimage follows it, `ftCo_800C2FD8`: while one is on (`x2100` not -1),
     /// each frame records where the sword's joint is and which way its blade points (its
     /// matrix's first axis), in a ring of three for the trail's drawing, with the trail's two
-    /// widths from the character's sword attributes. A held sword item's isn't ported.
+    /// widths from the character's sword attributes. A held Beam Sword's trail (`x2101_bits_8`)
+    /// follows its bone 5 and its blade (the matrix's second axis), with the widths its length
+    /// gives; with nothing in hand the trail ends.
     #[doc(alias = "ftCo_800C2FD8")]
     fn afterimage(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
         if fp.x2100 == -1 {
             return;
         }
-        if fp.x2101_bits_8 {
-            unported_call("ftCo_800C2FD8 (a held item's afterimage)");
-        }
-        // The sword's attributes in the character's (Link's and Young Link's at x64, Marth's
-        // and Roy's at x78); any other character's are whatever the stack held.
-        let base = match fp.kind {
-            KIND_LINK | KIND_CLINK => 0x64,
-            KIND_MARS | KIND_EMBLEM => 0x78,
-            k => panic!("ftCo_800C2FD8: character {k} has no sword attributes to read"),
-        };
-        let attrs = &self.game.fighter_attrs[fp.dat_attrs.expect("a fighter without attributes").0];
-        let word = |o: usize| u32::from_be_bytes(attrs[base + o..base + o + 4].try_into().unwrap());
-        let (bone, width0, width1) = (
-            word(0x14),
-            f32::from_bits(word(0x18)),
-            f32::from_bits(word(0x1C)),
-        );
-        let parts = fp.parts.expect("a fighter without parts");
-        let joint = self.game.fighter_parts[parts.0][bone as usize].joint;
         let at = usize::from(fp.x2101_bits_0to6);
-        let fp = &mut self.game.fighters[f.0];
-        fp.x20F8 = width0;
-        fp.x20FC = width1;
+        let (joint, axis) = if fp.x2101_bits_8 {
+            let Some(item) = fp.item_gobj else {
+                self.game.fighters[f.0].x2100 = -1;
+                return;
+            };
+            let kind = crate::game::it::lib26b1::kind(self.game, item);
+            assert!(
+                kind == crate::game::it::kinds::SWORD,
+                "ftCo_800C2FD8: no afterimage item!"
+            );
+            let (w0, w1) = crate::game::it::kinds::sword::trail_widths(self.game, item);
+            let fp = &mut self.game.fighters[f.0];
+            fp.x20F8 = w0;
+            fp.x20FC = w1;
+            (
+                crate::game::it::kinds::sword::trail_joint(self.game, self.data, item),
+                1,
+            )
+        } else {
+            // The sword's attributes in the character's (Link's and Young Link's at x64,
+            // Marth's and Roy's at x78); any other character's are whatever the stack held.
+            let base = match fp.kind {
+                KIND_LINK | KIND_CLINK => 0x64,
+                KIND_MARS | KIND_EMBLEM => 0x78,
+                k => panic!("ftCo_800C2FD8: character {k} has no sword attributes to read"),
+            };
+            let attrs =
+                &self.game.fighter_attrs[fp.dat_attrs.expect("a fighter without attributes").0];
+            let word =
+                |o: usize| u32::from_be_bytes(attrs[base + o..base + o + 4].try_into().unwrap());
+            let (bone, width0, width1) = (
+                word(0x14),
+                f32::from_bits(word(0x18)),
+                f32::from_bits(word(0x1C)),
+            );
+            let parts = fp.parts.expect("a fighter without parts");
+            let joint = self.game.fighter_parts[parts.0][bone as usize].joint;
+            let fp = &mut self.game.fighters[f.0];
+            fp.x20F8 = width0;
+            fp.x20FC = width1;
+            (joint, 0)
+        };
         let pos = world_position(&mut self.game.objs, self.data, joint, None);
         let m = self.game.objs.jobjs[joint.expect("the sword's joint")]
             .mtx
             .m;
         let fp = &mut self.game.fighters[f.0];
         fp.x20B0[at].x0 = pos;
-        fp.x20B0[at].xC = crate::vec::Vec3::new(m[0][0], m[1][0], m[2][0]);
+        fp.x20B0[at].xC = crate::vec::Vec3::new(m[0][axis], m[1][axis], m[2][axis]);
         fp.x2101_bits_0to6 = if at == 2 { 0 } else { at as u8 + 1 };
         if fp.x2100 < 3 {
             fp.x2100 += 1;

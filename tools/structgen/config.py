@@ -97,6 +97,7 @@ ROOTS = [
     "itGShell_ItemVars",
     "itRShell_ItemVars",
     "itSword_ItemVars",
+    "itDosei_ItemVars",
     "PokemonSelectionState",
     # The background flash (`lbbgflash.c`, `lb_0219.c`).
     "BgFlashData",

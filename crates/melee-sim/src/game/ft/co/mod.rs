@@ -40,6 +40,7 @@ pub mod passive_wall;
 pub mod phys;
 pub mod rebirth;
 pub mod squat;
+pub mod swing;
 pub mod throw;
 pub mod yoshi_egg;
 

@@ -167,12 +167,40 @@ impl Running<'_> {
         }
     }
 
+    /// A Bob-omb the player threw or caught joins its last five (`x8D8`, a ring) by its spawn
+    /// number, unless it's there already, `pl_800419AC`: the one it pushes out, if it never
+    /// hit, counts in the bonuses (`fn_80041BC8`).
+    #[doc(alias = "pl_800419AC")]
+    pub fn bombhei_thrown(&mut self, slot: i32, _sub: i32, spawn: u16) {
+        let t = &self.game.player_stale_moves(slot).x8D8;
+        if t.x4.iter().any(|e| e.x4_b1 && u32::from(spawn) == e.x0) {
+            return;
+        }
+        let at = t.x0 as usize;
+        let (hit, used) = (t.x4[at].x4_b0, t.x4[at].x4_b1);
+        self.count_missed_bombhei(slot, hit, used);
+        let t = &mut self.game.player_stale_moves(slot).x8D8;
+        let e = &mut t.x4[at];
+        e.x0 = u32::from(spawn);
+        e.x4_b0 = false;
+        e.x4_b1 = true;
+        t.x0 = if t.x0 == 4 { 0 } else { t.x0.wrapping_add(1) };
+    }
+
+    /// A Bob-omb of the player's that never hit counts in the bonuses (0xC8), `fn_80041BC8`.
+    #[doc(alias = "fn_80041BC8")]
+    pub fn count_missed_bombhei(&mut self, slot: i32, hit: bool, used: bool) {
+        if used && !hit {
+            self.count_bonus(slot, 0xC8);
+        }
+    }
+
     /// `pl_804D6470`'s word at `off`.
     pub(crate) fn bonus_param(&self, off: u32) -> u32 {
         self.data.u32(self.pl_data().at(off))
     }
 
-    pub(super) fn bonus_param_f32(&self, off: u32) -> f32 {
+    pub(crate) fn bonus_param_f32(&self, off: u32) -> f32 {
         self.data.f32(self.pl_data().at(off))
     }
 

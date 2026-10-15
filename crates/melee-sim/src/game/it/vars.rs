@@ -126,6 +126,7 @@ members! {
     Taru, taru, itTaru_ItemVars, [TARU];
     Kusudama, kusudama, itKusudama_ItemVars, [KUSUDAMA];
     BombHei, bombhei, itBombHei_ItemVars, [BOMBHEI];
+    Dosei, dosei, itDosei_ItemVars, [DOSEI];
     GShell, gshell, itGShell_ItemVars, [G_SHELL];
     RShell, rshell, itRShell_ItemVars, [R_SHELL];
     Sword, sword, itSword_ItemVars, [SWORD];

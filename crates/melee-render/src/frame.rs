@@ -185,6 +185,13 @@ impl Ctx<'_> {
                 });
                 1
             }
+            Draw::Shadows { start, len } => {
+                let start = usize::from(*start);
+                let named = &self.game.objs.display.shadow_tobjs[start..start + usize::from(*len)];
+                self.hsd.shadows.clear();
+                self.hsd.shadows.extend_from_slice(named);
+                1
+            }
             Draw::Fog(f) => {
                 self.fog_set(*f);
                 1

@@ -361,7 +361,15 @@ fn setup_with_volatile_stages() {
 
     let mut gx = Gx::new();
     let mut state = TevState::new();
-    mobj_setup_tev(&mut gx, &mut state, &objs, &d, &chain, RENDER_DIFFUSE);
+    mobj_setup_tev(
+        &mut gx,
+        &mut state,
+        &objs,
+        &super::Assigned::default(),
+        &d,
+        &chain,
+        RENDER_DIFFUSE,
+    );
     // Two compiled stages, two emboss stages, one shadow stage.
     assert_eq!(state.num_tev_stages(), 5);
     assert_eq!(gx.data.texmap_id[..5], [2, NULL, 4, 4, 3]);

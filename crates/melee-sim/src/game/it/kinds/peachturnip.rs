@@ -169,11 +169,11 @@ pub fn spawn(
         lib2725::scale_by_owner(r, gobj);
         let ip = item_mut(r.game, gobj);
         let scl = ip.scl;
+        // The union's word at 0x14 for a Bob-omb, at 0xC for Mr. Saturn and a turnip.
         match ip.kind {
+            BOMBHEI => ip.xDD4_itemVar.bombhei().xDE8.set(scl),
+            DOSEI => ip.xDD4_itemVar.dosei().xDE0.set(scl),
             KIND => ip.xDD4_itemVar.peach_turnip().xDE0_scl.set(scl),
-            BOMBHEI | DOSEI => crate::game::code::unported_call(
-                "it_802BD4AC's scale for a Bob-omb or Mr. Saturn (their variables)",
-            ),
             _ => {}
         }
     }

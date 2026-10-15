@@ -8,10 +8,11 @@ use super::super::item::{article, attr_of, change, change_state, common_data};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
 use crate::game::state::{Game, Running};
-use crate::game::structs::itSword_ItemVars;
+use crate::game::structs::{SpawnItem, itSword_ItemVars};
 use crate::hsd::gobj::GObjId;
-use crate::hsd::jobj;
+use crate::hsd::jobj::{self, JObjId};
 use crate::vec::Vec3;
+use melee_data::archive::{Archives, DataRef};
 
 pub const SPAWNED: u32 = 0x8028_5338;
 pub const LANDED: u32 = 0x8028_5424;
@@ -37,6 +38,8 @@ pub const REFLECTED: u32 = 0x8028_5FE0;
 pub const CLANKED: u32 = 0x8028_6000;
 pub const HIT_SHIELD: u32 = 0x8028_6024;
 pub const SHIELD_BOUNCED: u32 = 0x8028_6048;
+/// The Home-Run Bat's render callback (`it_803F1418`'s entry for kind 11), in this unit.
+pub const BAT_RENDER: u32 = 0x8028_4E10;
 
 /// Runs one of the sword's predicates, if `addr` is one.
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
@@ -476,4 +479,73 @@ pub fn bounce(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itSword_Logic12_ShieldBounced")]
 pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     lib2725::bounce_off_shield(r.game, gobj)
+}
+
+/// Drops a sword at `pos` (on the stage's plane), landed, `itSword_Spawn`.
+#[doc(alias = "itSword_Spawn")]
+pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
+    // `Item_InitSpawnPosition` on the plane.
+    let at = Vec3::new(pos.x, pos.y, 0.0);
+    let mut spawn = SpawnItem {
+        kind: super::SWORD,
+        pos: at,
+        prev_pos: at,
+        ..Default::default()
+    };
+    // `Item_InitSpawnCommonFields`, with a first collision.
+    spawn.facing_dir = -1.0;
+    spawn.x3C_damage = 0;
+    spawn.vel = Vec3::new(0.0, 0.0, 0.0);
+    spawn.x0_parent_gobj = None;
+    spawn.x4_parent_gobj2 = None;
+    spawn.x44_flag[0] |= 0x80;
+    spawn.x40 = 0;
+    let gobj = super::super::item::spawn_ground(r, &mut spawn)?;
+    landed(r, gobj);
+    Some(gobj)
+}
+
+impl Running<'_> {
+    /// The Home-Run Bat's render callback (`it_80284E10`, though it's in the sword's unit):
+    /// the common one (`it_8026EECC`). Nothing ported makes a bat in a match (only the item
+    /// switch's drops do, `it_8026BE84`), so no check reaches it; aliased once one does.
+    pub fn render_bat(&mut self, gobj: GObjId, pass: i32) {
+        self.render_item(gobj, pass);
+    }
+}
+
+/// The trail's two widths for a fighter swinging it, `it_802852B8`: from the hilt, and the
+/// blade's length (`10.03 × 0.3 × x4C × x10 × x28`, bone 6's scale).
+#[doc(alias = "it_802852B8")]
+pub fn trail_widths(game: &mut Game, gobj: GObjId) -> (f32, f32) {
+    let v = vars(game, gobj);
+    let f1 = fp::fmuls(
+        f64::from(0.3_f32),
+        fp::fmuls(
+            reg(v.x28.get()),
+            fp::fmuls(reg(v.x4C.get()), reg(v.x10.get())),
+        ),
+    );
+    (0.0, mem(fp::fmuls(f64::from(10.03_f32), f1)))
+}
+
+/// The trail's look (`itSword_UnkBytes`, at its attributes' `x1C`), `it_80285300`.
+#[doc(alias = "it_80285300")]
+pub fn trail_params(game: &Game, data: &Archives, gobj: GObjId) -> DataRef {
+    article(item(game, gobj))
+        .special(data)
+        .expect("a sword without attributes")
+        .at(0x1C)
+}
+
+/// The joint the trail follows, bone 5, `it_80285314`.
+#[doc(alias = "it_80285314")]
+pub fn trail_joint(game: &Game, data: &Archives, gobj: GObjId) -> Option<JObjId> {
+    lib2725::bone(game, data, gobj, 5)
+}
+
+/// Forgets a GObj it points to, `itSword_Logic12_EvtUnk` (`it_8026B894`).
+#[doc(alias = "itSword_Logic12_EvtUnk")]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+    lib26b1::forget(r.game, gobj, other);
 }

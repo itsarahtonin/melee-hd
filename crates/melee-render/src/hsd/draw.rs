@@ -156,11 +156,17 @@ pub fn position_mtx(objs: &Objects, j: JObjId, vmtx: &Mtx34) -> Mtx34 {
 }
 
 /// The texture chain a material draws with: the toon texture first for a toon material, the
-/// shadow textures after its own for a shadowed one (`HSD_MObjSetup`).
-pub fn material_chain(objs: &Objects, m: MObjId, rendermode: u32) -> Vec<TObjId> {
+/// shadow textures (`shadows`, as the display pass had them at the draw) after its own for a
+/// shadowed one (`HSD_MObjSetup`).
+pub fn material_chain(
+    objs: &Objects,
+    m: MObjId,
+    rendermode: u32,
+    shadows: &[TObjId],
+) -> Vec<TObjId> {
     let mut chain: Vec<TObjId> = objs.tobjs.chain(objs.mobjs[m].tobj).collect();
     if rendermode & RENDER_SHADOW != 0 {
-        chain.extend(objs.tobjs.chain(objs.mobjs.shadows));
+        chain.extend_from_slice(shadows);
     }
     if rendermode & RENDER_TOON != 0
         && let Some(toon) = objs.mobjs.toon
@@ -242,6 +248,7 @@ impl Ctx<'_> {
             return;
         }
         let m = o.mtx;
+        let mtxid = self.hsd.assigned.get(objs, t).mtxid;
         match coord {
             tobj::COORD_REFLECTION => {
                 let mut r = [[0f32; 4]; 3];
@@ -252,7 +259,7 @@ impl Ctx<'_> {
                     row[2] = 0.0;
                     row[3] = 0.5 * src[0] + 0.5 * src[1] + src[2] + src[3];
                 }
-                self.gx.load_tex_mtx_imm(&r, o.mtxid, GX_MTX3X4);
+                self.gx.load_tex_mtx_imm(&r, mtxid, GX_MTX3X4);
             }
             tobj::COORD_HILIGHT => {
                 let light = melee_sim::hsd::lobj::current_by_type(&objs.lobjs, 1);
@@ -281,24 +288,24 @@ impl Ctx<'_> {
                             ],
                             [0.0, 0.0, 0.0, 1.0],
                         ];
-                        self.gx.load_tex_mtx_imm(&r, o.mtxid, GX_MTX3X4);
+                        self.gx.load_tex_mtx_imm(&r, mtxid, GX_MTX3X4);
                     }
                     None => {
                         let zero = [[0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0; 4]];
-                        self.gx.load_tex_mtx_imm(&zero, o.mtxid, GX_MTX3X4);
+                        self.gx.load_tex_mtx_imm(&zero, mtxid, GX_MTX3X4);
                     }
                 }
             }
             tobj::COORD_SHADOW => {
                 let inv = self.hsd.inv_view_mtx();
                 let r = m.concat(&inv);
-                self.gx.load_tex_mtx_imm(&r.m, o.mtxid, GX_MTX3X4);
+                self.gx.load_tex_mtx_imm(&r.m, mtxid, GX_MTX3X4);
             }
             _ => {
                 if o.flags & TEX_BUMP != 0 {
-                    self.gx.load_tex_mtx_imm(&m.m[..2], o.mtxid, GX_MTX2X4);
+                    self.gx.load_tex_mtx_imm(&m.m[..2], mtxid, GX_MTX2X4);
                 } else {
-                    self.gx.load_tex_mtx_imm(&m.m, o.mtxid, GX_MTX3X4);
+                    self.gx.load_tex_mtx_imm(&m.m, mtxid, GX_MTX3X4);
                 }
             }
         }
@@ -308,9 +315,10 @@ impl Ctx<'_> {
     /// between textures whose entry counts match (as the original's comparison does).
     pub fn tobj_setup(&mut self, chain: &[TObjId]) {
         if chain.is_empty() {
+            self.hsd.assigned = Default::default();
             return;
         }
-        let num = super::assigned_coords(self.objs(), chain);
+        let num = self.hsd.assigned.assign(&self.game.objs, chain);
         if num > 0 {
             self.hsd
                 .tev
@@ -319,8 +327,8 @@ impl Ctx<'_> {
         let mut tluts: Vec<(u16, u32)> = Vec::new();
         let (mut tlut_name, mut big_tlut_name) = (GX_TLUT0, GX_BIGTLUT0);
         for &t in chain {
-            let o = &self.game.objs.tobjs[t];
-            if o.id == tobj::GX_TEXMAP_NULL {
+            let id = self.hsd.assigned.get(&self.game.objs, t).id;
+            if id == tobj::GX_TEXMAP_NULL {
                 continue;
             }
             self.tobj_setup_mtx(t);
@@ -415,7 +423,7 @@ impl Ctx<'_> {
                 edge_lod,
                 aniso,
             );
-            self.gx.load_tex_obj(&texobj, o.id);
+            self.gx.load_tex_obj(&texobj, id);
         }
     }
 
@@ -423,7 +431,8 @@ impl Ctx<'_> {
     pub fn tobj_setup_coord_gen(&mut self, chain: &[TObjId]) {
         for &t in chain {
             let o = &self.game.objs.tobjs[t];
-            if o.id == tobj::GX_TEXMAP_NULL {
+            let r = self.hsd.assigned.get(&self.game.objs, t);
+            if r.id == tobj::GX_TEXMAP_NULL {
                 continue;
             }
             let coord = o.flags & tobj::COORD_MASK;
@@ -432,16 +441,15 @@ impl Ctx<'_> {
                 // `setupTextureCoordGenBump`.
                 let mask = self.hsd.lights.set.mask_diffuse;
                 let i = (0..8).find(|i| mask & (1 << i) != 0).unwrap_or(0);
-                let o = &self.game.objs.tobjs[t];
                 self.gx.set_tex_coord_gen(
-                    o.coord + 1,
+                    r.coord + 1,
                     GX_TG_BUMP0 + i,
-                    tobj::texcoord_to_texgen_src(o.coord),
+                    tobj::texcoord_to_texgen_src(r.coord),
                     GX_IDENTITY,
                 );
             } else if coord == tobj::COORD_TOON {
                 self.gx
-                    .set_tex_coord_gen(o.coord, GX_TG_SRTG, o.src, GX_IDENTITY);
+                    .set_tex_coord_gen(r.coord, GX_TG_SRTG, o.src, GX_IDENTITY);
             } else {
                 self.coord_gen(t);
             }
@@ -451,34 +459,35 @@ impl Ctx<'_> {
     /// `setupTextureCoordGen`.
     fn coord_gen(&mut self, t: TObjId) {
         let o = &self.game.objs.tobjs[t];
+        let r = self.hsd.assigned.get(&self.game.objs, t);
         match o.flags & tobj::COORD_MASK {
             tobj::COORD_SHADOW => self.gx.set_tex_coord_gen2(
-                o.coord,
+                r.coord,
                 GX_TG_MTX3X4,
                 GX_TG_POS,
                 GX_PNMTX0,
                 GX_DISABLE,
-                o.mtxid,
+                r.mtxid,
             ),
             tobj::COORD_REFLECTION | tobj::COORD_HILIGHT => self.gx.set_tex_coord_gen2(
-                o.coord,
+                r.coord,
                 GX_TG_MTX3X4,
                 GX_TG_NRM,
                 GX_TEXMTX0,
                 GX_ENABLE,
-                o.mtxid,
+                r.mtxid,
             ),
             _ if o.flags & TEX_BUMP != 0 => {
                 self.gx
-                    .set_tex_coord_gen(o.coord, GX_TG_MTX2X4, o.src, o.mtxid)
+                    .set_tex_coord_gen(r.coord, GX_TG_MTX2X4, o.src, r.mtxid)
             }
             _ => self.gx.set_tex_coord_gen2(
-                o.coord,
+                r.coord,
                 GX_TG_MTX2X4,
                 o.src,
                 GX_IDENTITY,
                 GX_DISABLE,
-                o.mtxid,
+                r.mtxid,
             ),
         }
     }
@@ -516,7 +525,7 @@ impl Ctx<'_> {
         if rendermode & RENDER_SPECULAR != 0 {
             self.hsd.state.set_material_shininess(mat.shininess);
         }
-        let chain = material_chain(self.objs(), m, rendermode);
+        let chain = material_chain(self.objs(), m, rendermode, &self.hsd.shadows);
         self.tobj_setup(&chain);
         self.tobj_setup_coord_gen(&chain);
         let desc = self.setup_tev(m, &chain, rendermode);
@@ -545,6 +554,7 @@ impl Ctx<'_> {
             self.gx,
             &mut self.hsd.tev,
             objs,
+            &self.hsd.assigned,
             &desc,
             chain,
             rendermode,
@@ -843,7 +853,12 @@ impl Ctx<'_> {
         if rendermode & RENDER_SHADOW == 0
             && let Some(m) = m
         {
-            self.hsd.tobj_chain = material_chain(self.objs(), m, self.objs().mobjs[m].rendermode);
+            self.hsd.tobj_chain = material_chain(
+                self.objs(),
+                m,
+                self.objs().mobjs[m].rendermode,
+                &self.hsd.shadows,
+            );
             match self.objs().mobjs[m].class {
                 MObjClass::Fighter => self.fighter_mobj_setup(m),
                 MObjClass::Ground => self.ground_mobj_setup(m),
