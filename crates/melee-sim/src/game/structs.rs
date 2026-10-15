@@ -8938,6 +8938,76 @@ impl itYoshiEggLay_ItemVars {
     }
 }
 
+/// `itKoopaFlame_ItemVars`, 0x4c bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itKoopaFlame_ItemVars {
+    /// +0x0
+    pub x0_pos: Var<Vec3>,
+    /// +0xc
+    pub xC_direction: Var<Vec3>,
+    /// +0x18
+    pub x18_vel: Var<Vec3>,
+    /// +0x24
+    pub x24_angle: Var<f32>,
+    /// +0x28
+    pub x28_speed: Var<f32>,
+    /// +0x2c
+    pub x2C_lifetime: Var<f32>,
+    /// +0x30
+    pub x30: Var<i32>,
+    /// +0x34
+    pub x34_base_scale: Var<f32>,
+    /// +0x38
+    pub x38_base_speed: Var<f32>,
+    /// +0x3c
+    pub x3C_scale: Var<f32>,
+    /// +0x40
+    pub x40_frame_counter: Var<i32>,
+    /// +0x44
+    pub x44_spawned: Var<i32>,
+    /// +0x48
+    pub x48_gfx: Var<i32>,
+}
+
+impl Default for itKoopaFlame_ItemVars {
+    fn default() -> Self {
+        itKoopaFlame_ItemVars {
+            x0_pos: Var::new(Default::default()),
+            xC_direction: Var::new(Default::default()),
+            x18_vel: Var::new(Default::default()),
+            x24_angle: Var::new(Default::default()),
+            x28_speed: Var::new(Default::default()),
+            x2C_lifetime: Var::new(Default::default()),
+            x30: Var::new(Default::default()),
+            x34_base_scale: Var::new(Default::default()),
+            x38_base_speed: Var::new(Default::default()),
+            x3C_scale: Var::new(Default::default()),
+            x40_frame_counter: Var::new(Default::default()),
+            x44_spawned: Var::new(Default::default()),
+            x48_gfx: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itKoopaFlame_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0_pos.mark_stale();
+        self.xC_direction.mark_stale();
+        self.x18_vel.mark_stale();
+        self.x24_angle.mark_stale();
+        self.x28_speed.mark_stale();
+        self.x2C_lifetime.mark_stale();
+        self.x30.mark_stale();
+        self.x34_base_scale.mark_stale();
+        self.x38_base_speed.mark_stale();
+        self.x3C_scale.mark_stale();
+        self.x40_frame_counter.mark_stale();
+        self.x44_spawned.mark_stale();
+        self.x48_gfx.mark_stale();
+    }
+}
+
 /// `IfDamageFlags`, 0x1 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IfDamageFlags {

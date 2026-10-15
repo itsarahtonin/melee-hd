@@ -19184,6 +19184,138 @@ impl Mirror for itYoshiEggLay_ItemVars {
     }
 }
 
+impl Mirror for itKoopaFlame_ItemVars {
+    const SIZE: u32 = 0x4c;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itKoopaFlame_ItemVars {
+            x0_pos: Var::new(Vec3::import(m, at + 0x0, cx)),
+            xC_direction: Var::new(Vec3::import(m, at + 0xc, cx)),
+            x18_vel: Var::new(Vec3::import(m, at + 0x18, cx)),
+            x24_angle: Var::new(f32::from_bits(m.u32(at + 0x24))),
+            x28_speed: Var::new(f32::from_bits(m.u32(at + 0x28))),
+            x2C_lifetime: Var::new(f32::from_bits(m.u32(at + 0x2c))),
+            x30: Var::new(m.u32(at + 0x30) as i32),
+            x34_base_scale: Var::new(f32::from_bits(m.u32(at + 0x34))),
+            x38_base_speed: Var::new(f32::from_bits(m.u32(at + 0x38))),
+            x3C_scale: Var::new(f32::from_bits(m.u32(at + 0x3c))),
+            x40_frame_counter: Var::new(m.u32(at + 0x40) as i32),
+            x44_spawned: Var::new(m.u32(at + 0x44) as i32),
+            x48_gfx: Var::new(m.u32(at + 0x48) as i32),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        self.x0_pos
+            .compare(m, at + 0x0, &format!("{path}.x0_pos"), cx);
+        self.xC_direction
+            .compare(m, at + 0xc, &format!("{path}.xC_direction"), cx);
+        self.x18_vel
+            .compare(m, at + 0x18, &format!("{path}.x18_vel"), cx);
+        if self.x24_angle.live(&format!("{path}.x24_angle"), cx) {
+            if (*self.x24_angle.peek()).to_bits() != m.u32(at + 0x24) {
+                cx.mismatch(
+                    &format!("{path}.x24_angle"),
+                    format!("{:?}", (*self.x24_angle.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x24))),
+                );
+            }
+        }
+        if self.x28_speed.live(&format!("{path}.x28_speed"), cx) {
+            if (*self.x28_speed.peek()).to_bits() != m.u32(at + 0x28) {
+                cx.mismatch(
+                    &format!("{path}.x28_speed"),
+                    format!("{:?}", (*self.x28_speed.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x28))),
+                );
+            }
+        }
+        if self.x2C_lifetime.live(&format!("{path}.x2C_lifetime"), cx) {
+            if (*self.x2C_lifetime.peek()).to_bits() != m.u32(at + 0x2c) {
+                cx.mismatch(
+                    &format!("{path}.x2C_lifetime"),
+                    format!("{:?}", (*self.x2C_lifetime.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x2c))),
+                );
+            }
+        }
+        if self.x30.live(&format!("{path}.x30"), cx) {
+            if (*self.x30.peek()) != m.u32(at + 0x30) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x30"),
+                    format!("{:?}", (*self.x30.peek())),
+                    format!("{:?}", m.u32(at + 0x30) as i32),
+                );
+            }
+        }
+        if self
+            .x34_base_scale
+            .live(&format!("{path}.x34_base_scale"), cx)
+        {
+            if (*self.x34_base_scale.peek()).to_bits() != m.u32(at + 0x34) {
+                cx.mismatch(
+                    &format!("{path}.x34_base_scale"),
+                    format!("{:?}", (*self.x34_base_scale.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x34))),
+                );
+            }
+        }
+        if self
+            .x38_base_speed
+            .live(&format!("{path}.x38_base_speed"), cx)
+        {
+            if (*self.x38_base_speed.peek()).to_bits() != m.u32(at + 0x38) {
+                cx.mismatch(
+                    &format!("{path}.x38_base_speed"),
+                    format!("{:?}", (*self.x38_base_speed.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x38))),
+                );
+            }
+        }
+        if self.x3C_scale.live(&format!("{path}.x3C_scale"), cx) {
+            if (*self.x3C_scale.peek()).to_bits() != m.u32(at + 0x3c) {
+                cx.mismatch(
+                    &format!("{path}.x3C_scale"),
+                    format!("{:?}", (*self.x3C_scale.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x3c))),
+                );
+            }
+        }
+        if self
+            .x40_frame_counter
+            .live(&format!("{path}.x40_frame_counter"), cx)
+        {
+            if (*self.x40_frame_counter.peek()) != m.u32(at + 0x40) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x40_frame_counter"),
+                    format!("{:?}", (*self.x40_frame_counter.peek())),
+                    format!("{:?}", m.u32(at + 0x40) as i32),
+                );
+            }
+        }
+        if self.x44_spawned.live(&format!("{path}.x44_spawned"), cx) {
+            if (*self.x44_spawned.peek()) != m.u32(at + 0x44) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x44_spawned"),
+                    format!("{:?}", (*self.x44_spawned.peek())),
+                    format!("{:?}", m.u32(at + 0x44) as i32),
+                );
+            }
+        }
+        if self.x48_gfx.live(&format!("{path}.x48_gfx"), cx) {
+            if (*self.x48_gfx.peek()) != m.u32(at + 0x48) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x48_gfx"),
+                    format!("{:?}", (*self.x48_gfx.peek())),
+                    format!("{:?}", m.u32(at + 0x48) as i32),
+                );
+            }
+        }
+    }
+}
+
 impl Mirror for IfDamageFlags {
     const SIZE: u32 = 0x1;
 

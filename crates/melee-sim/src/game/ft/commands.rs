@@ -1150,7 +1150,7 @@ impl Running<'_> {
     }
 
     /// Sets the state of the hurtbox on bone `bone`, `ftColl_8007B128`.
-    fn set_bone_hurtbox_state(&mut self, f: FighterId, bone: i32, state: i32) {
+    pub(crate) fn set_bone_hurtbox_state(&mut self, f: FighterId, bone: i32, state: i32) {
         let fp = &mut self.game.fighters[f.0];
         for i in 0..fp.hurt_capsules_len as usize {
             if fp.hurt_capsules[i].capsule.bone_idx == bone {

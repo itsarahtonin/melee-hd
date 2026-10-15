@@ -18,6 +18,7 @@ pub mod hammer;
 pub mod hammerhead;
 pub mod heart;
 pub mod heiho;
+pub mod koopaflame;
 pub mod kusudama;
 pub mod linkarrow;
 pub mod linkbomb;
@@ -128,6 +129,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || pikachutjoltground::run_event(r, gobj, addr)
         || pikachutjoltair::run_event(r, gobj, addr)
         || heiho::run_event(r, gobj, addr)
+        || koopaflame::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
 }
 
@@ -193,6 +195,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltair::run_pred(r, gobj, addr))
         .or_else(|| heiho::run_pred(r, gobj, addr))
+        .or_else(|| koopaflame::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -306,6 +309,9 @@ pub const SAMUS_MISSILE: i32 = 95;
 pub const SAMUS_GBEAM: i32 = 96;
 /// `It_Kind_Peach_Turnip`.
 pub const PEACH_TURNIP: i32 = 99;
+/// `It_Kind_Koopa_Flame` and Kirby's copy, `It_Kind_Kirby_KoopaFlame`.
+pub const KOOPA_FLAME: i32 = 100;
+pub const KIRBY_KOOPA_FLAME: i32 = 154;
 /// `It_Kind_Peach_Parasol`.
 pub const PEACH_PARASOL: i32 = 103;
 /// `It_Kind_Unk4`.

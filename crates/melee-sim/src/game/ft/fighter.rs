@@ -284,10 +284,13 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
             fp.dmg.x18FC = 0;
         }
     }
-    // `ftData_UnkMotionStates3`: Kirby's, Bowser's and Giga Bowser's.
-    if matches!(fp.kind, 4 | 5 | 31) {
-        unported_call("ftData_UnkMotionStates3");
+    // `ftData_UnkMotionStates3`: Kirby's, Bowser's (his flame's refill) and Giga Bowser's.
+    match fp.kind {
+        super::koopa::KIND_KOOPA => g.kp_unk_motion_states3(gobj),
+        4 | 31 => unported_call("ftData_UnkMotionStates3"),
+        _ => {}
     }
+    let fp = &mut g.game.fighters[f.0];
     if let Some(cb) = fp.x21CC {
         run_fighter_cb(g, gobj, cb);
     }
