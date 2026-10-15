@@ -78,6 +78,9 @@ pub enum Draw {
     Shadows { start: u16, len: u8 },
     /// Fog for what follows, or none (`HSD_FogSet`).
     Fog(Option<FogId>),
+    /// HAL's state caches out of date for the parts `mask` names (`HSD_StateInvalidate`), as
+    /// a render callback makes them before it draws, so the next draws send their state again.
+    Invalidate(u32),
     /// A shape of a display object of a joint, its matrices set up, in transparency pass
     /// `trsp` with `rendermode`. `vmtx` is the view matrix when it isn't the current
     /// camera's (inside an instance joint).
@@ -89,6 +92,11 @@ pub enum Draw {
         rendermode: u32,
         vmtx: Option<Mtx34>,
     },
+    /// A specular joint's half vectors toward it for each specular light
+    /// (`HSD_LObjSetupSpecularInit`), as `HSD_JObjDispSub` makes them for every pass it draws
+    /// the joint in, whether or not any of its shapes draw in that pass: the last joint's
+    /// vectors stay in the lights for what follows. `vmtx` as for [`Draw::Shape`].
+    SpecularInit { jobj: JObjId, vmtx: Option<Mtx34> },
     /// The current camera's viewport erased to the erase color (`HSD_CObjEraseScreen`).
     Erase,
     /// The magnifier camera's viewport erased, color and depth, for player `n`'s bubble
@@ -106,6 +114,15 @@ pub enum Draw {
     ShadowVolume(super::shadow::ShadowId),
     /// Debug text: a screen's rectangles and glyphs (`DevText_Draw`).
     Text(Box<crate::game::hud::devtext::Draw>),
+    /// An app-SRT's view matrix and screen scales, as drawing a particle of it in the current
+    /// camera brings them up to date (`psDispSubAppSRT`, `psDispSubAPPSRTPoint`) for the
+    /// particles drawn after: each camera that draws them in a display frame makes them
+    /// again, so the frame's last are only the last camera's.
+    AppSrt {
+        srt: super::appsrt::AppSrtId,
+        view: Mtx34,
+        scale: [f32; 2],
+    },
     /// A particle link, from its first particle as the last sort left it (`psDispParticles`).
     Particles {
         link: usize,
@@ -120,6 +137,11 @@ pub enum Draw {
     ReflectionCopy,
     /// The point size and its texture offset for later point draws (`HSD_StateSetPointSize`).
     PointSize(u8, u8),
+    /// The light vector highlight textures take for what follows, or none without an infinite
+    /// light: the first current infinite light's (`HSD_LObjGetCurrentByType`,
+    /// `HSD_LObjGetLightVector`) as a material with one sets up (`TObjSetupMtx`). Render
+    /// callbacks change the current lights between draws, so the frame's last list isn't it.
+    Hilight(Option<crate::vec::Vec3>),
     /// The erase color for later erases (`HSD_SetEraseColor`).
     EraseColor([u8; 4]),
     /// The render from (`x`, `y`) copied into one of Pokémon Stadium's screens' images, the
@@ -200,6 +222,8 @@ pub struct Display {
     /// named this frame.
     pub shadow_tobjs: Vec<TObjId>,
     pub shadows_named: Option<(u16, u8)>,
+    /// The highlight light vector last named this frame ([`Draw::Hilight`]).
+    pub hilight_named: Option<Option<crate::vec::Vec3>>,
     /// The render pass (`current_render_pass`): offscreen, into a texture, or the screen.
     pub offscreen: bool,
     /// The fighter whose trees draw, for its materials.
@@ -252,6 +276,7 @@ pub fn start_frame(objs: &mut Objects) {
     objs.display.light_sets.clear();
     objs.display.shadow_tobjs.clear();
     objs.display.shadows_named = None;
+    objs.display.hilight_named = None;
 }
 
 /// Names the shadow textures a shadowed material is about to take ([`Draw::Shadows`]), when
@@ -288,6 +313,13 @@ pub fn rendering(objs: &mut Objects, g: Option<super::gobj::GObjId>) {
 #[doc(alias = "HSD_CObjEndCurrent")]
 pub fn camera_end(objs: &mut Objects) {
     objs.display.draws.push(Draw::EndCamera);
+}
+
+/// `HSD_StateInvalidate`: HAL's state caches out of date for the parts `mask` names
+/// (`HSD_STATE_*`; -1 for all), for the presentation ([`Draw::Invalidate`]).
+#[doc(alias = "HSD_StateInvalidate")]
+pub fn state_invalidate(objs: &mut Objects, mask: u32) {
+    objs.display.draws.push(Draw::Invalidate(mask));
 }
 
 /// `HSD_FogSet`: fog for what follows, or none. Fog needs a current camera.
@@ -429,6 +461,9 @@ pub fn jobj_disp_sub(
     jobj::set_current(objs, Some(j));
     if rendermode & RENDER_SHADOW == 0 && objs.jobjs[j].flags & jobj::SPECULAR != 0 {
         lobj_setup_specular_init(objs);
+        objs.display
+            .draws
+            .push(Draw::SpecularInit { jobj: j, vmtx });
     }
     let dtrsp = trsp << DOBJ_TRSP_SHIFT;
     let mut d = match objs.jobjs[j].u {
@@ -587,9 +622,14 @@ fn texture_matrix(objs: &mut Objects, data: &Archives, t: TObjId) {
             super::cobj::inv_viewing_mtx_direct(&mut objs.cobjs, c);
         }
         tobj::COORD_HILIGHT => {
-            if let Some(l) = lobj::current_by_type(&objs.lobjs, lobj::INFINITE) {
+            let vector = lobj::current_by_type(&objs.lobjs, lobj::INFINITE).and_then(|l| {
                 assert!(objs.cobjs.current.is_some(), "cobj");
-                lobj::light_vector(objs, data, Some(l));
+                lobj::light_vector(objs, data, Some(l))
+            });
+            let d = &mut objs.display;
+            if d.hilight_named != Some(vector) {
+                d.hilight_named = Some(vector);
+                d.draws.push(Draw::Hilight(vector));
             }
         }
         _ => {}
