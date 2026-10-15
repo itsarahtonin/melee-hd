@@ -159,6 +159,7 @@ pub fn run_proc(r: &mut super::state::Running, gobj: GObjId, proc: u32) -> bool 
         stock::PROC_ICONS => r.stock_proc(gobj),
         stock::PROC_TALLY => r.stock_tally_proc(gobj),
         stock::PROC_TALLY_2 => r.stock_tally_proc_2(gobj),
+        stock::PROC_TARGETS => r.target_icons_proc(gobj),
         nametag::PROC => r.nametag_proc(gobj),
         small::HAZARD_PROC => r.hazard_proc(gobj),
         small::COIN_PROC => r.coin_proc(gobj),

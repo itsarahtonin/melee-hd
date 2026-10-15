@@ -25,6 +25,9 @@ pub const RENDER_ICONS: u32 = 0x802F_94E0;
 /// The tallies' processes (single-player modes').
 pub const PROC_TALLY: u32 = 0x802F_A6C4;
 pub const PROC_TALLY_2: u32 = 0x802F_AC34;
+/// The target icons' process and render callback.
+pub const PROC_TARGETS: u32 = 0x802F_916C;
+pub const RENDER_TARGETS: u32 = 0x802F_9548;
 
 /// The icon joint's first material's first texture.
 fn icon_tobj(objs: &Objects, j: JObjId) -> Option<crate::hsd::tobj::TObjId> {
@@ -63,6 +66,14 @@ impl Game {
         let hidden = self.hud.status.players[usize::from(p)]
             .flags
             .hide_all_digits;
+        (!hidden).then_some(Draw::JObjs(gobj, pass))
+    }
+
+    /// The target icons' render callback, `fn_802F9548`: drawn unless player 1's digits are
+    /// hidden.
+    #[doc(alias = "fn_802F9548")]
+    pub fn target_icons_render(&self, gobj: GObjId, pass: i32) -> Option<Draw> {
+        let hidden = self.hud.status.players[0].flags.hide_all_digits;
         (!hidden).then_some(Draw::JObjs(gobj, pass))
     }
 
@@ -545,6 +556,67 @@ impl Running<'_> {
         self.game.hud.stock_1acc.x0 = 0;
     }
 
+    /// One of the sixteen target icons a rule (`gm_8016B1A8`) shows, `ifStock_802FA118`: the
+    /// scene's first model, hidden off screen, its icon joint shown on its texture's frame 57;
+    /// the first runs the icons' process.
+    #[doc(alias = "ifStock_802FA118")]
+    pub fn create_target_icon(&mut self, i: i32) -> GObjId {
+        let data = self.data;
+        let g = &mut *self.game;
+        let o = g.world.create(14, 15, 0);
+        let models = g.hud.stock.x0.expect("the icons' models");
+        let model = data.ptr(models).expect("the targets' model");
+        let root = jobj::load_joint(&mut g.objs, data, data.ptr(model)).expect("a model");
+        g.world.set_obj(o, OBJ_JOBJ, Obj::JObj(root));
+        g.world.setup_gx_link(o, CodeRef(RENDER_TARGETS), 11, 0);
+        super::super::gm::vs::add_model_anim(&mut g.objs, data, Some(root), model, 0);
+        let icon = super::super::gm::pause::tree_nodes(&g.objs.jobjs, Some(root), &[1])[0]
+            .expect("the target icon's joint");
+        if i == 0 {
+            g.world.setup_proc(o, CodeRef(PROC_TARGETS), 17);
+        }
+        jobj::set_srt(&mut g.objs.jobjs, root, |j| j.translate.z = 10000.0);
+        jobj::set_flags_all(&mut g.objs.jobjs, Some(root), HIDDEN);
+        jobj::clear_flags(&mut g.objs.jobjs, Some(icon), HIDDEN);
+        jobj::req_anim_all(&mut g.objs, Some(root), 0.0);
+        set_icon_frame(&mut g.objs, icon, 57.0);
+        jobj::anim_all(&mut g.objs, data, &mut code::ParticleHooks, Some(root));
+        o
+    }
+
+    /// The target icons' process, `fn_802F916C`: of the stage's targets (`Ground_801C1DE4`),
+    /// those left in rows of five from the screen's top left, the rest off screen.
+    #[doc(alias = "fn_802F916C")]
+    #[doc(alias = "Ground_801C1DE4")]
+    pub fn target_icons_proc(&mut self, _gobj: GObjId) {
+        let g = &mut *self.game;
+        let (left, total) = (i32::from(g.stage_info.x6D4), i32::from(g.stage_info.x6D2));
+        let mut counter = 0;
+        let (mut x, mut y) = (reg(-21.0), reg(11.0));
+        for i in 0..16 {
+            if i >= total {
+                break;
+            }
+            let o = g.hud.stock_1a8c[i as usize].expect("a target icon");
+            let Some(Obj::JObj(j)) = g.world.gobj(o).obj else {
+                panic!("a target icon without its model");
+            };
+            if i >= left {
+                jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 10000.0);
+            } else {
+                jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 0.0);
+                jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.x = mem(x));
+                jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.y = mem(y));
+                counter += 1;
+                x = fp::fadds(x, reg(2.45));
+                if counter % 5 == 0 {
+                    x = reg(-21.0);
+                    y = fp::fsubs(y, reg(2.45));
+                }
+            }
+        }
+    }
+
     /// The icons' models from `IfAll.dat`'s `Stc_scemdls`, the tallies' processes, and the
     /// single-player icons none of a VS match needs, `ifStock_802FAEC4`.
     #[doc(alias = "ifStock_802FAEC4")]
@@ -580,9 +652,14 @@ impl Running<'_> {
         } else if g.gm.spawn_flags & 0x40 != 0 {
             code::unported_call("ifStock_802FA5BC");
         }
-        if g.vs_x9_is_1() {
-            code::unported_call("ifStock_802FA118");
+        for i in 0..16 {
+            self.game.hud.stock_1a8c[i] = None;
+            if self.game.vs_x9_is_1() {
+                let o = self.create_target_icon(i as i32);
+                self.game.hud.stock_1a8c[i] = Some(o);
+            }
         }
+        let g = &mut *self.game;
         if (super::super::gm::GM_10MAN_VS..=super::super::gm::GM_CRUEL_VS).contains(&g.game_mode) {
             code::unported_call("the multi-man counter of ifStock_802FAEC4");
         }
