@@ -398,12 +398,19 @@ pub struct Shown {
     modes: Vec<wgpu::PresentMode>,
 }
 
+/// The window's icon (icon/window.rgba, 64 by 64 RGBA pixels, which icon/make.py draws).
+fn window_icon() -> winit::window::Icon {
+    const RGBA: &[u8] = include_bytes!("../icon/window.rgba");
+    winit::window::Icon::from_rgba(RGBA.to_vec(), 64, 64).expect("the window icon")
+}
+
 impl Shown {
     /// The window, borderless fullscreen on its monitor when `fullscreen`.
     pub fn new(gpu: &Gpu, event_loop: &ActiveEventLoop, fullscreen: bool) -> Shown {
         let (w, h) = *SIZE.lock().unwrap();
         let attrs = Window::default_attributes()
             .with_title("melee-hd")
+            .with_window_icon(Some(window_icon()))
             .with_inner_size(winit::dpi::PhysicalSize::new(w, h))
             .with_fullscreen(fullscreen.then_some(Fullscreen::Borderless(None)));
         let window = Arc::new(event_loop.create_window(attrs).expect("a window"));
