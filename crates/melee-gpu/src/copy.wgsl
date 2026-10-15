@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // A copy from the EFB to a texture, kept on the GPU: each texel as the texture decoder would
-// read back what the copy encoder (encode.rs) writes, for the formats copied this way.
+// read back what the copy encoder (encode.rs) writes, for the formats copied this way (I4,
+// RGB565 and RGB5A3).
 
 struct Params {
     left: u32,
@@ -81,6 +82,10 @@ fn c5(v: u32) -> u32 {
     return (v << 3u | v >> 2u) & 0xFFu;
 }
 
+fn c6(v: u32) -> u32 {
+    return (v << 2u | v >> 4u) & 0xFFu;
+}
+
 @fragment
 fn fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<u32> {
     let c = texel(u32(pos.x), u32(pos.y));
@@ -92,6 +97,10 @@ fn fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<u32> {
         }
         let i = c4(x >> 4u);
         return vec4<u32>(i, i, i, i);
+    }
+    if p.format == 4u {
+        // RGB565: opaque, 5:6:5.
+        return vec4<u32>(c5(c.r >> 3u), c6(c.g >> 2u), c5(c.b >> 3u), 255u);
     }
     // RGB5A3: opaque as 5:5:5, otherwise 4:4:4 with three bits of alpha.
     if c.a >> 5u == 7u {

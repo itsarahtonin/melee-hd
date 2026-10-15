@@ -19,3 +19,11 @@ png = "0.18"
 
 [dev-dependencies]
 melee-local-data = { path = "../local-data" }
+
+[features]
+# The opt-in sweep, tests/sweep.rs.
+sweep = []
+
+[[test]]
+name = "sweep"
+required-features = ["sweep"]

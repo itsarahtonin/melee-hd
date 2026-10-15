@@ -75,7 +75,7 @@ fn state(
 }
 
 /// Texel `i` of a block (in the encoder's order) of `format`: its nibble (I4) or halfword
-/// (RGB5A3).
+/// (RGB565, RGB5A3).
 fn texel_bits(format: u32, block: &[u8], i: usize) -> u32 {
     if format == 0 {
         let b = u32::from(block[i / 2]);
@@ -169,7 +169,7 @@ fn check_case(
         let tb = tb as u32;
         assert_eq!(
             *at,
-            (e.address + tb * e.stride) & 0x01FF_FFFF,
+            (e.address + tb * e.stride) & crate::PHYS_MASK,
             "{label} row {tb}"
         );
         assert_eq!(row.len(), want.len(), "{label} row {tb}");
@@ -235,7 +235,7 @@ fn encode_texels_rewrites_the_encoders_bytes() {
         (640, 528),
         (639, 527),
     ];
-    let formats: &[(u32, bool)] = &[(0, false), (0, true), (5, false)];
+    let formats: &[(u32, bool)] = &[(0, false), (0, true), (4, false), (5, false)];
     let mut by_format: Vec<((u32, bool), Stats)> = Vec::new();
     for &(format, yuv) in formats {
         let mut stats = Stats::default();
@@ -328,7 +328,7 @@ fn encode_texels_rewrites_the_encoders_bytes() {
 #[test]
 fn whole_block_copies_match_byte_for_byte() {
     let mut rng = Rng(0x0BAD_CAFE_F00D_0002);
-    for &(format, yuv) in &[(0u32, false), (0, true), (5, false)] {
+    for &(format, yuv) in &[(0u32, false), (0, true), (4, false), (5, false)] {
         let (bw, bh) = if format == 0 { (8, 8) } else { (4, 4) };
         for pixel_format in 0..2 {
             for half in 0..2 {
