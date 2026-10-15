@@ -120,8 +120,8 @@ const LINK_P_LINK: u8 = 0xA;
 /// `FtPart_RThumbNb`, where the hookshot comes from, and part `0x8B`, which follows its tip.
 const PART_R_THUMB_NB: i32 = 49;
 const PART_TIP: usize = 0x8B;
-/// `it_804D6D48`: how far ahead of the thumb's joint the hookshot starts, which every spawn
-/// sets to 6 before anything reads it.
+/// `it_804D6D48`: how far ahead of the thumb's joint the hookshot starts, one global for Link's
+/// and Young Link's, which every spawn sets to 6 before anything reads it.
 const AHEAD: f32 = 6.0;
 /// `Collide_*` masks.
 const LEFT_WALL_MASK: i32 = 0x3F;
