@@ -2,10 +2,11 @@
 //! tilt) loaded into a buffer of its own (`ftData_80085E50`) and bound to the blend skeleton
 //! (`ftanim.c`), and blends toward a joint description's pose.
 
-use melee_data::archive::DataRef;
+use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::code::unported_call;
 use super::super::handles::FighterId;
+use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::Running;
 use super::anim::bone_flag;
 use super::parts::{TOP_N, TRANS_N};
@@ -15,6 +16,86 @@ use crate::lb::figatree::{TRACK_SIZE, bind_tracks};
 
 /// The object types `HSD_ForeachAnim` reaches here: all but materials and textures.
 const ANIM_MASK: u32 = 0xFB7F;
+
+/// The size of a fighter's animation buffer (`fighter_x59C_alloc_data`).
+const ANIM_BUF_SIZE: u32 = 0x8000;
+
+/// The second animation's figatree (`Fighter::x598`), a pointer into one of the fighter's two
+/// animation buffers: the second (`x5A0`), or the main one (`x59C`) when Nana copied the
+/// archive from Popo's buffer, which `ftData_80085E50` copies into her main buffer. There the
+/// next main animation overwrites it, and the pointer, unchanged, then points into that
+/// animation's archive at the same offset (docs/engine.md).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct SecondTree {
+    pub tree: Option<DataRef>,
+    /// Whether the figatree is in the main buffer.
+    pub in_main: bool,
+}
+
+/// Where `addr` is in the fighter's main animation buffer, which the word after `x598`
+/// (`x59C`) points to, if it's there.
+fn main_buffer_offset(m: &Mem, at: u32, addr: u32) -> Option<u32> {
+    let off = addr.wrapping_sub(m.u32(at + 4));
+    (addr != 0 && off < ANIM_BUF_SIZE).then_some(off)
+}
+
+/// An archive's header before its data, at the start of the buffer it's loaded into.
+const ARCHIVE_HEADER: u32 = 0x20;
+
+impl Mirror for SecondTree {
+    const SIZE: u32 = 4;
+
+    /// A figatree in the main buffer is taken as the offset it's at in the archive the action's
+    /// figatree (`x590`) names, which may be past that archive's data once a main animation
+    /// overwrote the copy.
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let w = m.u32(at);
+        if let Some(off) = main_buffer_offset(m, at, w)
+            && let Some(main) = cx.import_data(m.u32(at - 8))
+        {
+            return SecondTree {
+                tree: Some(DataRef {
+                    archive: main.archive,
+                    offset: off.wrapping_sub(ARCHIVE_HEADER),
+                }),
+                in_main: true,
+            };
+        }
+        SecondTree {
+            tree: cx.import_data(w),
+            in_main: false,
+        }
+    }
+
+    /// One in the main buffer compares by its offset there (the action's figatree, compared
+    /// by itself, names the archive the buffer holds).
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let theirs = m.u32(at);
+        match (self.in_main, self.tree) {
+            (true, Some(t)) => {
+                let ours = t.offset.wrapping_add(ARCHIVE_HEADER);
+                if main_buffer_offset(m, at, theirs) != Some(ours) {
+                    cx.mismatch(
+                        path,
+                        format!("{t:?} in the main buffer at {ours:#x}"),
+                        format!("{theirs:#x}"),
+                    );
+                }
+            }
+            _ => {
+                if self.tree.is_some() && main_buffer_offset(m, at, theirs).is_some() {
+                    cx.mismatch(
+                        path,
+                        format!("{:?} in the second buffer", self.tree),
+                        format!("{theirs:#x} in the main buffer"),
+                    );
+                } else {
+                    cx.compare_data(path, self.tree, theirs);
+                }
+            }
+        }
+    }
+}
 
 impl Running<'_> {
     /// Loads animation `msid`'s figatree into the fighter's second buffer unless it's there
@@ -29,9 +110,9 @@ impl Running<'_> {
         let entry = self.anim_entry(f, msid);
         let aram = self.anim_aram(fp, entry);
         if aram != fp.x5A8 {
-            let tree = if aram != 0 {
+            let second = if aram != 0 {
                 // Nana copies the archive from Popo's animation buffer when it holds it
-                // (untimed).
+                // (untimed), into her main buffer.
                 let kind = self.anim_entry_kind(fp.kind, entry);
                 let shared = self
                     .anim_share_source(f)
@@ -44,15 +125,37 @@ impl Running<'_> {
                     let len = (self.data.u32(entry.at(8)) + 31) & !31;
                     self.game.audio.aram_load(self.data, len);
                 }
-                Some(self.anim_tree(kind, entry))
+                let tree = self.anim_tree(kind, entry);
+                if shared {
+                    self.overwrite_main_buffer(f, tree.archive);
+                }
+                SecondTree {
+                    tree: Some(tree),
+                    in_main: shared,
+                }
             } else {
-                None
+                SecondTree::default()
             };
             let fp = &mut self.game.fighters[f.0];
-            fp.x598 = tree;
+            fp.x598 = second;
             fp.x5A8 = aram;
         }
-        self.game.fighters[f.0].x598
+        self.game.fighters[f.0].x598.tree
+    }
+
+    /// The fighter's main animation buffer now holds `archive`: the figatrees that point into
+    /// it, the action's (`x590`) and a second one copied there, point into `archive` at the
+    /// same offsets.
+    pub(super) fn overwrite_main_buffer(&mut self, f: FighterId, archive: ArchiveId) {
+        let fp = &mut self.game.fighters[f.0];
+        if let Some(t) = &mut fp.x590 {
+            t.archive = archive;
+        }
+        if fp.x598.in_main
+            && let Some(t) = &mut fp.x598.tree
+        {
+            t.archive = archive;
+        }
     }
 
     /// Binds a figatree to the blend skeleton from part `part` on, `ftAnim_80070A10`: the

@@ -203,8 +203,10 @@ impl Running<'_> {
         }
     }
 
-    /// Every chain's physics on or off: Kirby's never, Jigglypuff's first only.
-    fn set_dynamics(&mut self, f: FighterId, on: bool) {
+    /// Every chain's physics on or off: Kirby's never, Jigglypuff's first only,
+    /// `ftCo_8009E140`.
+    #[doc(alias = "ftCo_8009E140")]
+    pub fn set_dynamics(&mut self, f: FighterId, on: bool) {
         match self.game.fighters[f.0].kind {
             KIND_KIRBY => {}
             KIND_PURIN => self.set_bone_dynamics(f, 0, on, BoneSlot::Id(0)),
