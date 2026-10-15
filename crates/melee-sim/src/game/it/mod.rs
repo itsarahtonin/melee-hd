@@ -129,9 +129,10 @@ pub struct Globals {
     /// Samus's grapple beam's lengths for her height, which its spawn writes over its
     /// attributes in the character's loaded data (`it_802B75FC`).
     pub grapple_lengths: kinds::samusgrapple::Lengths,
-    /// Link's hookshot's lengths for his height and grab, which its spawn writes over its
-    /// attributes in the character's loaded data (`it_802A2568`).
-    pub hookshot_lengths: kinds::linkhookshot::Lengths,
+    /// Link's and Young Link's hookshots' lengths for the height and grab of the last of each
+    /// character to shoot one, which its spawn writes over its attributes in that character's
+    /// loaded data (`it_802A2568`), entries in `linkhookshot::KINDS`' order.
+    pub hookshot_lengths: [kinds::linkhookshot::Lengths; 2],
 }
 
 /// An item's ignore id (`Item::xAC4_ignoreItemID`): the items sharing one share their

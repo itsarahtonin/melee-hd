@@ -9,8 +9,9 @@
 //! models up after his animation (`it_802A7B34`).
 //!
 //! The spawn writes its lengths for his height, and whether it's the air grab's, into its
-//! attributes in the character's loaded data (`x2C` to `x48`); they're state
-//! ([`Globals::hookshot_lengths`](super::super::Globals::hookshot_lengths)).
+//! attributes in the character's loaded data (`x2C` to `x48`): Link's in his archive, Young
+//! Link's in his, each shared by every fighter of that character. They're state, one entry per
+//! character ([`Globals::hookshot_lengths`](super::super::Globals::hookshot_lengths)).
 
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -96,6 +97,18 @@ pub struct Lengths {
     pub words: [f32; 7],
 }
 
+/// The hookshots' item kinds, Link's and Young Link's: each has its own article, its
+/// attributes in its character's archive, and its own [`Lengths`] (in this order).
+pub const KINDS: [i32; 2] = [super::LINK_HSHOT, super::CLINK_HSHOT];
+
+/// The hookshot of `kind`'s entry in [`Globals::hookshot_lengths`](super::super::Globals::hookshot_lengths).
+pub fn lengths_slot(kind: i32) -> usize {
+    KINDS
+        .iter()
+        .position(|&k| k == kind)
+        .expect("not a hookshot's kind")
+}
+
 /// `ftCo_MS_Catch`, `ftCo_MS_CatchDash` and Link's air grab and its hit: the states the
 /// hookshot lives through.
 const MS_CATCH: i32 = 0xD4;
@@ -146,17 +159,27 @@ impl Attrs {
         )
     }
 
+    /// The lengths a spawn wrote over these attributes, if one has.
+    fn written(self, r: &Running) -> Option<Lengths> {
+        r.game
+            .it
+            .hookshot_lengths
+            .iter()
+            .find(|l| l.attrs == Some(self.0))
+            .copied()
+    }
+
     fn f(self, r: &Running, off: u32) -> f32 {
-        let l = &r.game.it.hookshot_lengths;
-        if l.attrs == Some(self.0) && (attr::LINK..=attr::FRICTION).contains(&off) {
+        if let Some(l) = self.written(r)
+            && (attr::LINK..=attr::FRICTION).contains(&off)
+        {
             return l.words[((off - attr::LINK) / 4) as usize];
         }
         r.data.f32(self.0.at(off))
     }
 
     fn n(self, r: &Running) -> i32 {
-        let l = &r.game.it.hookshot_lengths;
-        if l.attrs == Some(self.0) {
+        if let Some(l) = self.written(r) {
             return l.n;
         }
         r.data.u32(self.0.at(attr::N)) as i32
@@ -312,7 +335,7 @@ fn model_of(r: &Running, g: GObjId) -> Option<JObjId> {
 }
 
 /// The hookshot's links for a fighter of height `scale`, `it_802A2568`: first its lengths,
-/// which it writes over the attributes (the ground's or the air's share, `air`); then the
+/// which it writes over its kind's attributes (the ground's or the air's share, `air`); then the
 /// links, each a GObj with its model (the two link joints in turn, the tip its own), all at
 /// the joint `hand_joint`. Returns the tip's model.
 #[doc(alias = "it_802A2568")]
@@ -349,7 +372,8 @@ fn make_links(
         fp::fmuls(count, reg(link_len))
     };
     let n = fp::fctiwz(fp::fdivs(fp::fmuls(total, share), reg(link_len)));
-    r.game.it.hookshot_lengths = Lengths {
+    let slot = lengths_slot(item(r.game, gobj).kind);
+    r.game.it.hookshot_lengths[slot] = Lengths {
         attrs: Some(a.0),
         n,
         words: w,
