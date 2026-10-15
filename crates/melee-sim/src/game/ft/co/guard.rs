@@ -311,7 +311,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800923B4")]
     pub fn enter_guard_on(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).kind {
-            KIND_YOSHI => unported_call("ftYs_Init_8012BECC"),
+            KIND_YOSHI => self.ys_enter_guard_on(gobj),
             KIND_MARS => {
                 self.enter_guard_on_common(gobj);
                 self.mars_sheathe(gobj);
@@ -472,9 +472,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800928CC")]
     pub fn enter_guard(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_YOSHI {
-            unported_call("ftYs_Shield_8012C1D4");
+            self.ys_enter_guard(gobj);
+        } else {
+            self.enter_guard_common(gobj);
         }
-        self.enter_guard_common(gobj);
     }
 
     /// `ftCo_80092908`.
@@ -504,9 +505,10 @@ impl Running<'_> {
         let (slot, health) = (i32::from(fp.player_idx), fp.shield_health);
         self.record_shield_drop(slot, health);
         if self.game.fighter(gobj).kind == KIND_YOSHI {
-            unported_call("ftYs_Shield_8012C49C");
+            self.ys_enter_guard_off(gobj);
+        } else {
+            self.enter_guard_off_common(gobj);
         }
-        self.enter_guard_off_common(gobj);
     }
 
     /// `ftCo_80092C54`.
@@ -555,9 +557,10 @@ impl Running<'_> {
     pub fn on_shield_hit(&mut self, gobj: GObjId) {
         let power = self.game.fighter(gobj).x19B0 == 10;
         if self.game.fighter(gobj).kind == KIND_YOSHI {
-            unported_call("ftYs_Shield_8012C600");
+            self.ys_on_shield_hit(gobj, power);
+        } else {
+            self.enter_guard_set_off(gobj, power);
         }
-        self.enter_guard_set_off(gobj, power);
         if power {
             unported_call("ftCo_800C36DC");
         }
@@ -782,9 +785,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80093850")]
     pub fn enter_guard_reflect_late(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_YOSHI {
-            unported_call("ftYs_Shield_8012C850");
+            self.ys_enter_guard_reflect_late(gobj);
+        } else {
+            self.enter_guard_reflect_late_common(gobj);
         }
-        self.enter_guard_reflect_late_common(gobj);
     }
 
     /// `ftCo_8009388C`.
@@ -819,7 +823,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800939B4")]
     pub fn enter_guard_reflect(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).kind {
-            KIND_YOSHI => unported_call("ftYs_Shield_8012C914"),
+            KIND_YOSHI => self.ys_enter_guard_reflect(gobj),
             KIND_MARS => {
                 self.enter_guard_reflect_common(gobj);
                 self.mars_sheathe(gobj);

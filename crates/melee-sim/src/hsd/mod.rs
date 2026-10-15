@@ -76,4 +76,9 @@ pub struct Objects {
     /// Reads of values the original never set that the port couldn't resolve exactly (see
     /// `docs/engine.md`). The oracle reports any.
     pub stale_reads: u32,
+    /// What the last `HSD_AObjInterpretAnim` that ran left in its float register `f1`: its
+    /// AObj's end frame when it doesn't loop and hasn't reached it, unknown otherwise. A
+    /// register, not state: the fighter's animation step reads it where the original reads a
+    /// frame no part gave (`ftAnim_8006E9B4`, docs/engine.md).
+    pub aobj_f1: Option<f32>,
 }

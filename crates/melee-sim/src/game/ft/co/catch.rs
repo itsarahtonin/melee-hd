@@ -339,6 +339,7 @@ impl Running<'_> {
             super::super::captain::addr::CAPTURE_CAPTAIN => {
                 self.enter_capture_captain(victim, grabber)
             }
+            0x800B_BB8C => self.enter_capture_yoshi(victim, grabber),
             other => unported_call(&format!("grabbed callback {other:#010x}")),
         }
     }

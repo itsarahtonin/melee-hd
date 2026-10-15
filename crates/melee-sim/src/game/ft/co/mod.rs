@@ -41,6 +41,7 @@ pub mod phys;
 pub mod rebirth;
 pub mod squat;
 pub mod throw;
+pub mod yoshi_egg;
 
 use super::super::structs::Fighter;
 use crate::fpu::mem;

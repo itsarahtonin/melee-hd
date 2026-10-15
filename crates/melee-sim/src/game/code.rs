@@ -134,6 +134,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::peach::run(g, gobj, addr) => {}
         addr if super::ft::link::run(g, gobj, addr) => {}
         addr if super::ft::clink::run(g, gobj, addr) => {}
+        addr if super::ft::yoshi::run(g, gobj, addr) => {}
         super::it::kinds::samusgrapple::FT_DEATH => {
             super::it::kinds::samusgrapple::ft_death(g, gobj)
         }
@@ -162,6 +163,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::emblem::run(g, gobj, addr) => {}
         addr if super::ft::popo::run(g, gobj, addr) => {}
         addr if super::ft::co::dispatch::run(g, gobj, addr) => {}
+        addr if super::ft::co::yoshi_egg::run(g, gobj, addr) => {}
         addr if super::ft::co::item_get::run(g, gobj, addr) => {}
         // Animation.
         0x8008_A494 => g.co_wait_anim(gobj),
@@ -373,6 +375,9 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::clink::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::yoshi::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::ft::ness::call(r, f, args) {

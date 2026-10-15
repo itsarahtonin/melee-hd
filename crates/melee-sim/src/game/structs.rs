@@ -8916,6 +8916,28 @@ impl itCLinkMilk_ItemVars {
     }
 }
 
+/// `itYoshiEggLay_ItemVars`, 0x4 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itYoshiEggLay_ItemVars {
+    /// +0x0
+    pub x0: Var<f32>,
+}
+
+impl Default for itYoshiEggLay_ItemVars {
+    fn default() -> Self {
+        itYoshiEggLay_ItemVars {
+            x0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itYoshiEggLay_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+    }
+}
+
 /// `IfDamageFlags`, 0x1 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct IfDamageFlags {

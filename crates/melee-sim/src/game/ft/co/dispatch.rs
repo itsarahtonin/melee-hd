@@ -723,6 +723,8 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800C_C388 => {
             g.co_jump_aerial_anim(gobj);
         }
+        // ftYs_JumpAerial_Anim_Cb
+        0x800C_C3C4 => g.ys_jump_aerial_anim_cb(gobj),
         // ftCo_JumpAerial_IASA, ftCo_ItemScrewAir_IASA, ftCo_JumpAerialF1_IASA
         0x800C_C4F8 | 0x800D_2F34 | 0x800D_7614 => {
             g.co_jump_aerial_iasa(gobj);

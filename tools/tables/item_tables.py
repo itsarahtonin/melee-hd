@@ -21,6 +21,10 @@ GROUPS = [
     ("STAGE", 208, "it_803F4CA8", "it_803F4D20"),
 ]
 
+# State tables code sets itself rather than through a logic table: Yoshi's tongue holding an item
+# (`it_802F2BFC`).
+EXTRA_STATES = ["it_803F9480"]
+
 CALLBACKS = [
     "spawned", "destroyed", "picked_up", "dropped", "thrown", "dmg_dealt", "dmg_received",
     "entered_air", "reflected", "clanked", "absorbed", "shield_bounced", "hit_shield", "evt_unk",
@@ -96,6 +100,8 @@ def main():
             out.append('    },')
         out.append('];')
         out.append('')
+    for name in EXTRA_STATES:
+        state_tables.add(by_name[name][0])
     entries = []
     for addr in sorted(state_tables):
         # A table can start inside a symbol's object (several kinds share its later states).

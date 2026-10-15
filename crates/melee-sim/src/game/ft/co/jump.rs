@@ -15,6 +15,8 @@ use crate::hsd::gobj::GObjId;
 
 /// `ftCo_JumpAerial_Phys_Cb`.
 const JUMP_AERIAL_PHYS_CB: u32 = 0x800C_C6C8;
+/// `ftYs_JumpAerial_Anim_Cb`.
+pub(crate) const YS_JUMP_AERIAL_ANIM_CB: u32 = 0x800C_C3C4;
 
 /// `ftCo_JumpInput`.
 pub const JUMP_INPUT_LSTICK: i32 = 1;
@@ -330,7 +332,7 @@ impl Running<'_> {
         }
         match self.game.fighter(gobj).kind {
             KIND_NESS => self.ness_jump_aerial_enter(gobj),
-            KIND_YOSHI => unported_call("ftYs_JumpAerial_Enter"),
+            KIND_YOSHI => self.ys_jump_aerial_enter(gobj),
             KIND_PEACH => self.peach_jump_aerial_enter(gobj),
             KIND_MEWTWO => unported_call("ftMt_JumpAerial_Enter"),
             _ => self.enter_jump_aerial_basic(gobj),
@@ -358,6 +360,46 @@ impl Running<'_> {
         ));
         self.enter_jump_aerial(gobj, msid, [vx, 0.0, 0.0], true);
         self.game.fighter_mut(gobj).phys_cb = Some(CodeRef(JUMP_AERIAL_PHYS_CB));
+    }
+
+    /// Yoshi's double jump, `ftYs_JumpAerial_Enter`: the stick's sideways speed, no rise of
+    /// its own (his animation lifts him), the common double jump's physics, his own animation
+    /// callback, his armor (`x8` of his attributes) and, with the stick pulled back past `x4`,
+    /// his turn around over `x0` frames.
+    #[doc(alias = "ftYs_JumpAerial_Enter")]
+    pub fn ys_jump_aerial_enter(&mut self, gobj: GObjId) {
+        use super::super::yoshi::attr;
+        let f = self.game.fighter_id(gobj);
+        self.go_airborne(f);
+        let fp = self.game.fighter_mut(gobj);
+        fp.cmd_vars[0] = 1;
+        let vx = mem(fp::fmuls(
+            reg(fp.input.lstick[0].x),
+            reg(fp.co_attrs.air_jump_h_multiplier),
+        ));
+        self.enter_jump_aerial(gobj, ms::JUMP_AERIAL_F, [vx, 0.0, 0.0], true);
+        let (frames, back, armor) = (
+            self.ys_attr_i32(f, attr::X0),
+            self.ys_attr_f32(f, attr::X4),
+            self.ys_attr_f32(f, attr::X8),
+        );
+        let fp = self.game.fighter_mut(gobj);
+        fp.phys_cb = Some(CodeRef(JUMP_AERIAL_PHYS_CB));
+        fp.anim_cb = Some(CodeRef(YS_JUMP_AERIAL_ANIM_CB));
+        fp.dmg.armor1 = armor;
+        let pulled = fp::fmuls(reg(fp.input.lstick[0].x), reg(fp.facing_dir)) < fp::fneg(reg(back));
+        fp.set_mv_i32(0, if pulled { frames } else { 0 });
+        self.jump_turn(gobj, frames);
+    }
+
+    /// Yoshi's double jump's animation callback, `ftYs_JumpAerial_Anim_Cb`: the common one's
+    /// fall at its end, then his turn around.
+    #[doc(alias = "ftYs_JumpAerial_Anim_Cb")]
+    pub fn ys_jump_aerial_anim_cb(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let frames = self.ys_attr_i32(f, super::super::yoshi::attr::X0);
+        self.co_jump_aerial_anim(gobj);
+        self.jump_turn(gobj, frames);
     }
 
     /// The double jump's common part, `ftCo_800CBAC4`: its state, velocity and sounds.

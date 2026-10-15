@@ -200,6 +200,7 @@ impl Running<'_> {
     /// thrower's model, is placed where it was held (at its throw offset with `place`).
     #[doc(alias = "ftCo_800DDDE4")]
     #[doc(alias = "ftCo_800DE2A8")]
+    #[doc(alias = "ftCo_800DE2CC")]
     #[doc(alias = "ftColl_80076640")]
     #[doc(alias = "ftColl_80078710")]
     #[doc(alias = "ftCommon_8007EE0C")]
