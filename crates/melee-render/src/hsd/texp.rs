@@ -152,13 +152,20 @@ fn send_reg(gx: &mut Gx, state: &mut TevState, reg: &[Color; 8], changed: u32) {
 /// Sends a compiled description to GX: its constants' current values, then each stage with its
 /// texture's current map and coordinates, `HSD_TExpSetupTev`.
 #[doc(alias = "HSD_TExpSetupTev")]
-pub fn setup_tev(gx: &mut Gx, state: &mut TevState, objs: &Objects, desc: &TevDesc) {
+pub fn setup_tev(
+    gx: &mut Gx,
+    state: &mut TevState,
+    objs: &Objects,
+    res: &super::Assigned,
+    desc: &TevDesc,
+) {
     set_reg(gx, state, objs, &desc.cnsts);
     for s in &desc.stages {
         let mut d = s.desc;
         if let Some(t) = s.tobj {
-            d.map = objs.tobjs[t].id;
-            d.coord = objs.tobjs[t].coord;
+            let r = res.get(objs, t);
+            d.map = r.id;
+            d.coord = r.coord;
         }
         // The original counts the stage without using the number it's given.
         state.assign_tev();

@@ -395,13 +395,9 @@ pub const FOUR_FD: Game = Game {
 pub mod why {
     /// Fountain of Dreams' stars are drawn as points whose size melee-render doesn't set.
     pub const STARS: &str = "Fountain of Dreams' stars: point size not drawn";
-    /// Stage draws melee-render gives the fighters' shadow textures and the original doesn't.
-    pub const SHADOWS: &str = "extra shadow textures on stage draws";
-    /// Yoshi's Story's left platform, whose top melee-render draws white.
-    pub const YS_PLATFORM: &str =
-        "extra shadow textures on stage draws: Yoshi's Story's left platform's top drawn white";
-    /// Pokémon Stadium's floor: a texture missing, extra shadow textures, palette contents.
-    pub const STADIUM_FLOOR: &str = "Pokémon Stadium's floor: a white band across the Poké Ball (missing texture, extra shadow textures, palette contents)";
+    /// A fighter's second lit vertex color, a few levels off on some draws.
+    pub const VERTEX_COLORS: &str =
+        "a fighter's second lit vertex color a few levels off; a few pixels";
     /// A magnifier bubble's background, the average of its corner colors rather than the
     /// blend the original makes by where the fighter is.
     pub const BUBBLE: &str =
@@ -410,8 +406,8 @@ pub mod why {
     pub const PALETTE: &str = "a fighter texture's palette contents; a few pixels";
     /// Fountain of Dreams' water, a few levels greener than ssbm-rs's once the reflection shows.
     pub const WATER: &str = "Fountain of Dreams' water a few levels greener (the reflection copy), and the stars' point size";
-    /// Pokémon Stadium's screen showing the stage's feed where ssbm-rs's is dark, with the floor.
-    pub const SCREEN: &str = "Pokémon Stadium's screen shows the feed where ssbm-rs's is dark, and the floor's white band";
+    /// Pokémon Stadium's screen showing the stage's feed where ssbm-rs's is dark.
+    pub const SCREEN: &str = "Pokémon Stadium's screen shows the feed where ssbm-rs's is dark";
     /// Fountain of Dreams' reflection, an 80 by 60 copy drawn at the scale and averaged back,
     /// magnified over the water: its blocks legitimately differ between scales.
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
