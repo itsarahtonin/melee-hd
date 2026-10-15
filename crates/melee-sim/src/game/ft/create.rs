@@ -120,7 +120,7 @@ impl Running<'_> {
             .world
             .init_user_data(gobj, USER_DATA_FIGHTER, UserData::Fighter(f));
         if let Some(file) = self.game.load_fighter_data(self.data, info.kind) {
-            self.disc_load(&file, super::data::MAIN_MEMORY);
+            self.disc_load(file, super::data::MAIN_MEMORY);
         }
         self.init_load(gobj, info);
         let kind = self.game.fighters[f.0].kind;
