@@ -34,8 +34,8 @@
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
-    Prepare, Report, Ret, SKIP, Stub, StubRet, Variant, check_variants, gobj_arg, poke_bit,
-    poke_f32, poke_u32, saved_calls, user_data_arg,
+    Prepare, Report, Ret, SKIP, Stub, StubRet, Variant, check_variants, gobj_arg, peek_u32,
+    poke_bit, poke_f32, poke_u32, saved_calls, user_data_arg,
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
@@ -205,6 +205,13 @@ const WITH_FRAME: &[(&str, f64)] = &[
     ("ftGw_SpecialLw_UpdateAction", 5.0),
     ("ftGw_SpecialAirLw_UpdateAction", 5.0),
 ];
+
+/// Common functions that take a callback and also run from one of his groups' captures,
+/// with the callback his code passes: the rapid jab's loop (`ftCo_800D6C60`), from his jabs'
+/// states, with his end (`ftGw_Attack100End_Enter`), so the loop's mark meets the A presses
+/// the changed states hold.
+const EXTRA_TARGETS: &[(&str, u32, u32)] =
+    &[("ftCo_800D6C60", 0x8014_BDB0, addr::ATTACK100_END_ENTER)];
 
 /// Runs the function `call.addr` on its GObj, with the arguments it was saved with for those
 /// that take more ([`TAKES_MORE`]); a call on the wrong kind of GObj stops as skipped.
@@ -384,6 +391,28 @@ fn vary(call: &mut Call, i: usize) {
     poke_u32(call, fp + 0x2344, [0u32, 1, 3, 5][i / 6 % 4]);
 }
 
+/// An item's owner's state changed so the items' branches that read it run: the torch's
+/// owner charging his forward smash (`smash_attrs.state`, `SmashState_Charging`) every other
+/// run.
+fn vary_item(call: &mut Call, i: usize) {
+    if !takes_gobj(call) {
+        return;
+    }
+    let owner = peek_u32(call, user_data_arg(call) + 0x518);
+    let in_mem = |a: u32| (0x8000_0000..0x817F_0000).contains(&a);
+    if !in_mem(owner) || !in_mem(peek_u32(call, owner + 0x2C)) {
+        return;
+    }
+    let fp = peek_u32(call, owner + 0x2C);
+    // Only a fighter's: its GObj's classifier is `HSD_GOBJ_CLASS_FIGHTER`.
+    if peek_u32(call, owner) >> 16 != 4 {
+        return;
+    }
+    if i % 2 == 1 {
+        poke_u32(call, fp + 0x2114, 2);
+    }
+}
+
 /// Clean comparisons by function run.
 fn tally(reports: &[Report], into: &mut BTreeMap<u32, usize>) {
     for r in reports {
@@ -438,6 +467,12 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
                         || WITH_FRAME.iter().any(|w| w.0 == n.as_str()))
             })
             .cloned()
+            .chain(
+                EXTRA_TARGETS
+                    .iter()
+                    .filter(|e| group_of(e.1) == u)
+                    .map(|e| (leaf_check::sym(e.0), e.0.to_owned())),
+            )
             .collect();
         if targets.is_empty() {
             continue;
@@ -477,6 +512,12 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
                         }
                         if fighter_group(u) {
                             vary(call, shift + i);
+                        } else {
+                            vary_item(call, shift + i);
+                        }
+                        if let Some(&(_, _, r4)) = EXTRA_TARGETS.iter().find(|e| e.0 == n.as_str())
+                        {
+                            call.regs.gpr[4] = r4;
                         }
                         if let Some(&(_, frame)) = WITH_FRAME.iter().find(|w| w.0 == n.as_str()) {
                             call.regs.fpr[1].ps0 = frame;

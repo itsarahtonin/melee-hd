@@ -205,7 +205,8 @@ impl Game {
         (s.x, s.y)
     }
 
-    // Ports `ftLib_GetFacingDir`; aliased once a check reaches it.
+    /// The fighter's facing, `ftLib_GetFacingDir`.
+    #[doc(alias = "ftLib_GetFacingDir")]
     pub fn ft_facing_dir(&self, gobj: GObjId) -> f32 {
         self.fighter(gobj).facing_dir
     }
