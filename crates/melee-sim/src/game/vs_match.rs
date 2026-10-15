@@ -725,8 +725,8 @@ pub fn preloaded_files(start: &StartMeleeData) -> (Vec<String>, Vec<i32>) {
             } else {
                 c
             };
-            if let Some(name) = t.costumes[c].file {
-                add(name);
+            if let Some(name) = t.costumes[c].disc_file() {
+                add(&name);
             }
             if let Some(Some((name, _))) = super::ef::FILES.get(usize::from(t.effect_file)) {
                 add(name);
@@ -793,7 +793,7 @@ pub fn load_fighter_files(
             add(
                 files,
                 data,
-                t.costumes[c].file.expect("a costume without a file"),
+                &t.costumes[c].disc_file().expect("a costume without a file"),
             );
             let name = t.anim_file.expect("a fighter kind without animations");
             if !anims.contains(&name) {

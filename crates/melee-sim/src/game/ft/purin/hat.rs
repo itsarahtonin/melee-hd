@@ -54,9 +54,9 @@ impl Running<'_> {
             Some(j) => Some(j),
             None => {
                 let file = super::super::data::kind_tables(fp.kind).costumes[costume]
-                    .file
+                    .disc_file()
                     .expect("a costume without a file");
-                let archive = self.game.ft.data.files.archive(file);
+                let archive = self.game.ft.data.files.archive(&file);
                 let j = self
                     .data
                     .get(archive)

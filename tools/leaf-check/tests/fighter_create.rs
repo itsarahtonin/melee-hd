@@ -238,15 +238,16 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode, first_init: bool
                 continue;
             }
             let t = kind_tables(i32::from(kind));
-            let mut files: Vec<&str> = vec![t.dat_file.unwrap()];
+            let mut files: Vec<std::borrow::Cow<str>> = vec![t.dat_file.unwrap().into()];
             let c = game.player_costume(s) as usize;
             let c = if c >= usize::from(t.costume_count) {
                 0
             } else {
                 c
             };
-            files.push(t.costumes[c].file.unwrap());
-            for f in files {
+            files.push(t.costumes[c].disc_file().unwrap());
+            for f in &files {
+                let f: &str = f;
                 if !named.iter().any(|(n, _)| n == f) {
                     let id = archives.add(Archive::parse(&disc_bytes(f)).unwrap());
                     named.push((f.to_owned(), id));
