@@ -8939,7 +8939,7 @@ impl itYoshiEggLay_ItemVars {
 }
 
 /// `itKoopaFlame_ItemVars`, 0x4c bytes.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itKoopaFlame_ItemVars {
     /// +0x0
     pub x0_pos: Var<Vec3>,

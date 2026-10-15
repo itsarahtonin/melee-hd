@@ -173,7 +173,7 @@ impl Mirror for HitOwner {
 /// (docs/engine.md). So the word is unknown (`None`) from the item's creation until written,
 /// the comparer leaves it out while unknown, and reading it then stops. Fighters' hitboxes and
 /// imported ones are always known.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct HitJObj(Option<Option<JObjId>>);
 
 impl Default for HitJObj {
