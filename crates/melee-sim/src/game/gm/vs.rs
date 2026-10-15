@@ -1069,7 +1069,8 @@ impl Running<'_> {
             g.player_lose_stock(donor);
             let n = g.player_stocks(i);
             g.set_player_stocks(i, n + 1);
-            panic!("gm_GetMatchEndPlayerScore (the results' scoring) isn't ported");
+            g.match_end_score(i);
+            self.respawn(i, 0);
         }
     }
 
