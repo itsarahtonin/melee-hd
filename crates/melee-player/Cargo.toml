@@ -36,3 +36,4 @@ windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Storage
 
 [target.'cfg(windows)'.build-dependencies]
 embed-manifest = "1.5"
+winresource = "0.1.31"
