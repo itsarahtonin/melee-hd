@@ -1,0 +1,9 @@
+[package]
+name = "dist"
+description = "Builds the player to play (the dist profile) and copies it to dist/, with a desktop shortcut on Windows if asked"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish.workspace = true

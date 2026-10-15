@@ -6,10 +6,17 @@ use super::PAD_LR;
 use super::checks::{KIND_SAMUS, KIND_YOSHI, abs};
 use super::ids::ms;
 use crate::fpu::reg;
+use crate::game::ucf::Ucf;
 use crate::hsd::gobj::GObjId;
+use gekko_fp as fp;
 
-/// The stick's lowest y for UCF's shield drop (the code's first data word).
+/// The stick's lowest y for UCF's shield drop (0.84's first data word, 0.8's fifth).
 const UCF_DROP_Y: f32 = -0.8;
+
+/// UCF 0.8's shield drop's constants: the scale that turns a stick axis into whole units and
+/// the bias subtracted before rounding them.
+const UCF08_UNITS: f32 = 80.0;
+const UCF08_BIAS: u32 = 0x3727_0000;
 
 /// `ftCommon_MotionVars_escape` (and `itemthrow4`'s timer, which shares its first word).
 const ESCAPE_X0: usize = 0x0;
@@ -136,7 +143,12 @@ impl Running<'_> {
     /// false when UCF's shield drop takes the input instead.
     #[doc(alias = "ftCo_80099894")]
     pub fn enter_escape_n(&mut self, gobj: GObjId) -> bool {
-        if self.game.rules.ucf && self.ucf_shield_drop(gobj) {
+        let drop = match self.game.rules.ucf {
+            Ucf::Off => false,
+            Ucf::V0_8 => self.ucf08_shield_drop(gobj),
+            Ucf::V0_84 => self.ucf084_shield_drop(gobj),
+        };
+        if drop {
             return false;
         }
         if self.game.fighter(gobj).kind == KIND_YOSHI {
@@ -154,7 +166,7 @@ impl Running<'_> {
     /// each, more than 80 apart in all), the code returns past its caller's success, so the
     /// spot dodge check says no and the platform drop after it can run.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
-    fn ucf_shield_drop(&self, gobj: GObjId) -> bool {
+    fn ucf084_shield_drop(&self, gobj: GObjId) -> bool {
         let c = self.common();
         let (y_min, window) = (reg(c.f32(0x314)), c.i32(0x320));
         let fp = self.game.fighter(gobj);
@@ -172,6 +184,28 @@ impl Running<'_> {
         };
         let d = sq(fp.input.lstick[0].y).wrapping_add(sq(fp.input.lstick[0].x));
         d > 6400
+    }
+
+    /// UCF 0.8's shield drop (the code at `0x800998A4`, returning past its caller's success as
+    /// 0.84's does): with the C-stick above the spot dodge's threshold, the stick far from the
+    /// centre (each axis in raw units plus 2, back over 80, a squared length of 1 or more), its
+    /// horizontal timer past 3 and the stick down no further than -0.8, on any floor.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    fn ucf08_shield_drop(&self, gobj: GObjId) -> bool {
+        let y_min = reg(self.common().f32(0x314));
+        let fp = self.game.fighter(gobj);
+        // Each axis as the code rounds it: |v| * 80 - bias, rounded toward zero, plus 2, over 80,
+        // each step in single precision.
+        let axis = |v: f32| {
+            let scaled = fp::fmuls(fp::fabs(reg(v)), reg(UCF08_UNITS));
+            let u = fp::fctiwz(fp::fsubs(scaled, fp::lfs(UCF08_BIAS)));
+            fp::fdivs(fp::frsp(f64::from(u.wrapping_add(2))), reg(UCF08_UNITS))
+        };
+        let (x, y) = (axis(fp.input.lstick[0].x), axis(fp.input.lstick[0].y));
+        reg(fp.input.cstick[0].y) > y_min
+            && !(fp::fadds(fp::fmuls(y, y), fp::fmuls(x, x)) < 1.0)
+            && fp.active_timer.lstick.x > 3
+            && reg(UCF_DROP_Y) < reg(fp.input.lstick[0].y)
     }
 
     /// `ftCo_800998EC`: the spot dodge's state.

@@ -2,8 +2,9 @@
 //! form (a character or none for each port, a stage, stocks and minutes, the aspect ratio and
 //! fullscreen) drawn with egui on the
 //! player's own GPU device and window, and Start plays that match in the same window. Escape in
-//! the match comes back here; Escape here quits. A tool for manual testing, and the seed of the
-//! menus to come.
+//! the match comes back here; Escape here quits. It opens with the choices last started from it,
+//! which the settings folder keeps (`settings`), except those the command line gives. A tool for
+//! manual testing, and the seed of the menus to come.
 
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -42,6 +43,17 @@ impl Choice {
     }
 }
 
+/// The form's choices the command line gave, which win over the last match's.
+#[derive(Clone, Copy, Default)]
+pub struct Given {
+    pub stocks: bool,
+    pub minutes: bool,
+    pub aspect: bool,
+    pub fullscreen: bool,
+    pub present: bool,
+    pub added_delay: bool,
+}
+
 /// The form and what it last had to say.
 pub struct Form {
     pub choice: Choice,
@@ -72,6 +84,94 @@ impl Form {
             aspect,
             present: Present::Mailbox,
             added_delay: 0,
+        }
+    }
+
+    /// The choices as the settings folder keeps them, one `key = value` a line.
+    pub fn save(&self) -> String {
+        let c = &self.choice;
+        let mut text = String::new();
+        for (i, p) in c.players.iter().enumerate() {
+            let name = p
+                .and_then(roster::character_by_kind)
+                .map_or("none", |c| c.keys[0]);
+            text += &format!("p{} = {name}\n", i + 1);
+        }
+        if let Some(s) = roster::stage_by_kind(c.stage) {
+            text += &format!("stage = {}\n", s.keys[0]);
+        }
+        let aspect = match self.aspect {
+            a if a.widen => format!("{}:1", a.shown),
+            Aspect::STRETCHED => "4:3".to_owned(),
+            _ => "73:60".to_owned(),
+        };
+        let present = match self.present {
+            Present::Mailbox => "mailbox",
+            Present::Fifo => "fifo",
+            Present::Immediate => "immediate",
+        };
+        text += &format!(
+            "stocks = {}\nminutes = {}\naspect = {aspect}\nfullscreen = {}\npresent = {present}\nadded-delay = {}\n",
+            c.stocks, c.minutes, self.fullscreen, self.added_delay
+        );
+        text
+    }
+
+    /// Takes back the choices [`Form::save`] kept, except those the command line gave; a line
+    /// missing or unreadable leaves its choice as it is.
+    pub fn restore(&mut self, text: &str, given: &Given) {
+        let c = &mut self.choice;
+        for line in text.lines() {
+            let Some((key, v)) = line.split_once('=') else {
+                continue;
+            };
+            let v = v.trim();
+            match key.trim() {
+                k @ ("p1" | "p2" | "p3" | "p4") => {
+                    let port = usize::from(k.as_bytes()[1] - b'1');
+                    if v == "none" {
+                        c.players[port] = None;
+                    } else if let Some(ch) = roster::character(v) {
+                        c.players[port] = Some(ch.kind);
+                    }
+                }
+                "stage" => {
+                    if let Some(s) = roster::stage(v) {
+                        c.stage = s.kind;
+                    }
+                }
+                "stocks" if !given.stocks => {
+                    if let Some(n) = v.parse().ok().filter(|n| *n <= 99) {
+                        c.stocks = n;
+                    }
+                }
+                "minutes" if !given.minutes => {
+                    if let Some(n) = v.parse().ok().filter(|n| *n <= 99) {
+                        c.minutes = n;
+                    }
+                }
+                "aspect" if !given.aspect => {
+                    if let Ok(a) = Aspect::parse(v) {
+                        self.aspect = a;
+                    }
+                }
+                "fullscreen" if !given.fullscreen => {
+                    if let Ok(f) = v.parse() {
+                        self.fullscreen = f;
+                    }
+                }
+                "present" if !given.present => {
+                    if let Ok(p) = Present::parse(v) {
+                        self.present = p;
+                    }
+                }
+                "added-delay" if !given.added_delay => {
+                    if let Some(n) = v.parse().ok().filter(|n| *n <= 15) {
+                        self.added_delay = n;
+                    }
+                }
+                _ => {}
+            }
         }
     }
 
@@ -480,5 +580,68 @@ mod tests {
         };
         assert_eq!(c.player_count(), 3);
         assert_eq!(c.ports(), vec![(fox, 0), (0xFF, 0), (marth, 0), (fox, 1)]);
+    }
+
+    fn picked() -> Form {
+        let mut form = Form::new(3, 0, true, Aspect::wide(16.0 / 9.0));
+        form.choice.players = [
+            None,
+            roster::character("marth").map(|c| c.kind),
+            None,
+            roster::character("fox").map(|c| c.kind),
+        ];
+        form.choice.stage = STAGES.last().unwrap().kind;
+        form.present = Present::Immediate;
+        form.added_delay = 2;
+        form
+    }
+
+    fn same(a: &Form, b: &Form) -> bool {
+        (
+            a.choice.clone(),
+            a.aspect,
+            a.fullscreen,
+            a.present,
+            a.added_delay,
+        ) == (
+            b.choice.clone(),
+            b.aspect,
+            b.fullscreen,
+            b.present,
+            b.added_delay,
+        )
+    }
+
+    #[test]
+    fn the_last_match_comes_back() {
+        for aspect in Aspect::CHOICES.map(|(a, _)| a) {
+            let mut was = picked();
+            was.aspect = aspect;
+            let mut form = Form::new(4, 8, false, Aspect::GAME);
+            form.restore(&was.save(), &Given::default());
+            assert!(same(&form, &was), "{}", was.save());
+        }
+    }
+
+    #[test]
+    fn the_command_line_wins_over_the_last_match() {
+        let mut form = Form::new(5, 7, false, Aspect::STRETCHED);
+        let given = Given {
+            stocks: true,
+            aspect: true,
+            ..Given::default()
+        };
+        form.restore(&picked().save(), &given);
+        assert_eq!((form.choice.stocks, form.choice.minutes), (5, 0));
+        assert_eq!(form.aspect, Aspect::STRETCHED);
+        assert_eq!(form.choice.players, picked().choice.players);
+    }
+
+    #[test]
+    fn an_unreadable_last_match_changes_nothing() {
+        let mut form = Form::new(4, 8, false, Aspect::GAME);
+        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\n";
+        form.restore(text, &Given::default());
+        assert!(same(&form, &Form::new(4, 8, false, Aspect::GAME)));
     }
 }

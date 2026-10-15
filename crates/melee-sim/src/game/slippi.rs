@@ -6,10 +6,13 @@
 //!
 //! The codes, by the rule each belongs to:
 //!
-//! - **UCF 0.84** (`External/UCF 0.84/UCF`): dashback, the shield drop and its extension, the
-//!   down-smash out of crouch fix, shield SDI, SDI, tumble, and the pad buffer with 1.0
-//!   cardinals the others read. Its pad buffer keeps state in the code's own words, which the
-//!   code list carries as the game left them when the replay started.
+//! - **UCF**, in one of two versions (`game::ucf`). UCF 0.84 (`External/UCF 0.84/UCF`):
+//!   dashback, the shield drop and its extension, the down-smash out of crouch fix, shield SDI,
+//!   SDI, tumble, and the pad buffer with 1.0 cardinals the others read. Its pad buffer keeps
+//!   state in the code's own words, which the code list carries as the game left them when the
+//!   replay started. UCF 0.8 (`External/UCF 0.8/Logic`): dashback, shield drop and tumble, at
+//!   0.84's places. Slippi 3.14 and 3.15 replays carry 0.8, 3.17 and 3.19 replays 0.84, and 3.16
+//!   replays either.
 //! - **Neutral spawns** (`External/NeutralSpawn`).
 //! - **Wobbling prevention** (`External/PreventWobbling`).
 //! - **Off-screen damage from the stage's limits** (`Online/Core/BrawlOffscreenDamage`), not the
@@ -20,22 +23,24 @@
 //!   Whispy's blow direction, Nana's inputs and the star KO's physics.
 //! - **The Ice Climbers' freeze glitch fix** (`External/FreezeGlitchFix`).
 //!
-//! Two versions of the set are known ([`CodeSet`]): Slippi 3.19's, and 3.16's, which 3.17 keeps
-//! word for word. They differ only in some determinism fixes: Final Destination's background
+//! Three versions of the set are known ([`CodeSet`]): Slippi 3.19's; 3.16's, which 3.17 keeps
+//! word for word and 3.15 already has; and 3.14's, 3.16's without WhispyBlowDirFix. 3.19's and
+//! 3.16's differ only in some determinism fixes: Final Destination's background
 //! (3.16 skips the scene's timer, 3.19 runs it with the random seed kept), Nana's DI (3.19 also
 //! clears the stick X register) and Pokémon Stadium's transformations (3.16 starts loading the
 //! next one ahead with the game's own asynchronous load, 3.19 loads it when it's due,
 //! synchronously). A replay's version is what its codes say: each code is known in the versions
-//! that ship it, and a list must be all of one version.
+//! that ship it, and a list must be all of one version. Either UCF goes with any version.
 
 // NaN takes the original's branches, which negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use super::state::Rules;
+use super::ucf::Ucf;
 
 /// One code of the ruleset: its type, where it injects, its first line's second word (its
 /// length for `C2`), the FNV-1a hash of its words with its data and final branch zeroed, and
-/// the versions of the set that ship it ([`V3_19`], [`V3_16`]).
+/// the versions of the set that ship it ([`V3_19`], [`V3_16`], [`V3_14`]).
 struct Known {
     kind: u8,
     addr: u32,
@@ -48,7 +53,8 @@ struct Known {
 /// The versions of Slippi's online code set melee-hd knows, as [`Known::sets`] bits.
 const V3_19: u8 = 1;
 const V3_16: u8 = 2;
-const BOTH: u8 = V3_19 | V3_16;
+const V3_14: u8 = 4;
+const ALL: u8 = V3_19 | V3_16 | V3_14;
 
 /// Which version of Slippi's online code set a match runs, where the versions differ
 /// (`game::slippi`'s documentation lists how).
@@ -57,22 +63,29 @@ pub enum CodeSet {
     /// Slippi 3.19's (and a match with no Slippi codes).
     #[default]
     V3_19,
-    /// Slippi 3.16's and 3.17's, which are the same.
+    /// Slippi 3.16's and 3.17's, which are the same, and 3.15's, which has them too.
     V3_16,
+    /// Slippi 3.14's: 3.16's without WhispyBlowDirFix.
+    V3_14,
 }
 
 impl CodeSet {
+    /// The versions in the order a list that fits several plays as.
+    const ALL: [CodeSet; 3] = [CodeSet::V3_19, CodeSet::V3_16, CodeSet::V3_14];
+
     fn bit(self) -> u8 {
         match self {
             CodeSet::V3_19 => V3_19,
             CodeSet::V3_16 => V3_16,
+            CodeSet::V3_14 => V3_14,
         }
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Rule {
-    Ucf,
+    Ucf084,
+    Ucf08,
     NeutralSpawn,
     PreventWobbling,
     OffscreenLimits,
@@ -87,7 +100,7 @@ const fn code(kind: u8, addr: u32, first: u32, hash: u64, rule: Rule) -> Known {
         first,
         hash,
         rule,
-        sets: BOTH,
+        sets: ALL,
     }
 }
 
@@ -96,7 +109,7 @@ const fn only(sets: u8, k: Known) -> Known {
     Known { sets, ..k }
 }
 
-/// The codes, as Slippi 3.19's and 3.16's online code sets have them.
+/// The codes, as Slippi 3.19's, 3.16's and 3.14's online code sets have them.
 const KNOWN: &[Known] = &[
     code(
         0xC2,
@@ -105,14 +118,18 @@ const KNOWN: &[Known] = &[
         0xE8ED_8114_E454_548D,
         Rule::NeutralSpawn,
     ),
-    code(0xC2, 0x800D_65EC, 0x10, 0x071D_D73A_9A8C_21CF, Rule::Ucf),
-    code(0xC2, 0x800C_9A44, 0x20, 0xF571_8894_9314_2D79, Rule::Ucf),
-    code(0xC2, 0x8006_B460, 0x54, 0xDD9B_FDB3_0B6D_6308, Rule::Ucf),
-    code(0xC2, 0x8008_E54C, 0x1D, 0xFFBA_596D_3FAB_D386, Rule::Ucf),
-    code(0xC2, 0x8009_A0B8, 0x0A, 0x6FFA_7A17_2601_81B7, Rule::Ucf),
-    code(0xC2, 0x8009_98A4, 0x19, 0x657D_47BA_9BCF_1BAF, Rule::Ucf),
-    code(0xC2, 0x8009_3294, 0x14, 0xC48A_A2D2_63A5_C13D, Rule::Ucf),
-    code(0xC2, 0x8009_08F4, 0x13, 0xE43E_58DD_5EE2_94C0, Rule::Ucf),
+    code(0xC2, 0x800D_65EC, 0x10, 0x071D_D73A_9A8C_21CF, Rule::Ucf084),
+    code(0xC2, 0x800C_9A44, 0x20, 0xF571_8894_9314_2D79, Rule::Ucf084),
+    code(0xC2, 0x8006_B460, 0x54, 0xDD9B_FDB3_0B6D_6308, Rule::Ucf084),
+    code(0xC2, 0x8008_E54C, 0x1D, 0xFFBA_596D_3FAB_D386, Rule::Ucf084),
+    code(0xC2, 0x8009_A0B8, 0x0A, 0x6FFA_7A17_2601_81B7, Rule::Ucf084),
+    code(0xC2, 0x8009_98A4, 0x19, 0x657D_47BA_9BCF_1BAF, Rule::Ucf084),
+    code(0xC2, 0x8009_3294, 0x14, 0xC48A_A2D2_63A5_C13D, Rule::Ucf084),
+    code(0xC2, 0x8009_08F4, 0x13, 0xE43E_58DD_5EE2_94C0, Rule::Ucf084),
+    // UCF 0.8's, at three of the same places.
+    code(0xC2, 0x800C_9A44, 0x2B, 0xCE5A_DF3B_0467_DC82, Rule::Ucf08),
+    code(0xC2, 0x8009_98A4, 0x26, 0x475D_DFA4_0170_CB97, Rule::Ucf08),
+    code(0xC2, 0x8009_08F4, 0x17, 0xD960_D3F5_316E_6C65, Rule::Ucf08),
     code(
         0x04,
         0x8012_39A8,
@@ -212,12 +229,16 @@ const KNOWN: &[Known] = &[
             Rule::Determinism,
         ),
     ),
-    code(
-        0xC2,
-        0x8008_653C,
-        0x06,
-        0xB985_C71C_63D5_601A,
-        Rule::Determinism,
+    // WhispyBlowDirFix, which 3.14 doesn't have.
+    only(
+        V3_19 | V3_16,
+        code(
+            0xC2,
+            0x8008_653C,
+            0x06,
+            0xB985_C71C_63D5_601A,
+            Rule::Determinism,
+        ),
     ),
     only(
         V3_19,
@@ -260,7 +281,7 @@ const KNOWN: &[Known] = &[
     // Slippi 3.16's own determinism fixes. Final Destination's background: the scene's timer
     // (`bl grLast_8021B2E8`) skipped.
     only(
-        V3_16,
+        V3_16 | V3_14,
         code(
             0x04,
             0x8021_AAE4,
@@ -271,7 +292,7 @@ const KNOWN: &[Known] = &[
     ),
     // Nana's DI: only her stick Y's register cleared.
     only(
-        V3_16,
+        V3_16 | V3_14,
         code(
             0xC2,
             0x800A_C5B8,
@@ -284,7 +305,7 @@ const KNOWN: &[Known] = &[
     // (`grStadium_801D4548`, `grStadium_801D13E0`, `grStadium_801D4F0C`), with the game's own
     // asynchronous load.
     only(
-        V3_16,
+        V3_16 | V3_14,
         code(
             0x04,
             0x801D_460C,
@@ -294,7 +315,7 @@ const KNOWN: &[Known] = &[
         ),
     ),
     only(
-        V3_16,
+        V3_16 | V3_14,
         code(
             0xC2,
             0x801D_14C8,
@@ -304,7 +325,7 @@ const KNOWN: &[Known] = &[
         ),
     ),
     only(
-        V3_16,
+        V3_16 | V3_14,
         code(
             0xC2,
             0x801D_45EC,
@@ -314,7 +335,7 @@ const KNOWN: &[Known] = &[
         ),
     ),
     only(
-        V3_16,
+        V3_16 | V3_14,
         code(
             0xC2,
             0x801D_4F14,
@@ -324,7 +345,7 @@ const KNOWN: &[Known] = &[
         ),
     ),
     only(
-        V3_16,
+        V3_16 | V3_14,
         code(
             0x04,
             0x801D_4610,
@@ -334,7 +355,7 @@ const KNOWN: &[Known] = &[
         ),
     ),
     only(
-        V3_16,
+        V3_16 | V3_14,
         code(
             0x04,
             0x801D_4724,
@@ -344,7 +365,7 @@ const KNOWN: &[Known] = &[
         ),
     ),
     only(
-        V3_16,
+        V3_16 | V3_14,
         code(
             0xC2,
             0x801D_4578,
@@ -359,15 +380,37 @@ const KNOWN: &[Known] = &[
 /// stick histories, from the word after its first.
 pub const UCF_PAD_BUFFER: u32 = 0x8006_B460;
 
-/// The words of a code that are data it keeps, by injection address: left out of its hash.
-fn data_words(addr: u32) -> std::ops::Range<usize> {
-    match addr {
-        // The scratch double the stick distance check converts through.
-        0x800D_65EC | 0x8009_98A4 => 4..6,
+/// The words of a code that are data it keeps, by injection address and length: left out of
+/// its hash.
+fn data_words(addr: u32, first: u32) -> std::ops::Range<usize> {
+    match (addr, first) {
+        // UCF 0.84's: the scratch double the stick distance check converts through.
+        (0x800D_65EC, 0x10) | (0x8009_98A4, 0x19) => 4..6,
         // The pad buffer.
-        UCF_PAD_BUFFER => 1..13,
+        (UCF_PAD_BUFFER, _) => 1..13,
         _ => 0..0,
     }
+}
+
+/// Whether `c` is the code `k`: its place, type and length, and its instructions.
+fn matches(k: &Known, c: &Code) -> bool {
+    if k.addr != c.addr || k.kind != c.kind || k.first != c.first {
+        return false;
+    }
+    let data = data_words(c.addr, c.first);
+    let last = if c.kind == 0xC2 {
+        c.words.len().checked_sub(1)
+    } else {
+        None
+    };
+    let words = c.words.iter().enumerate().map(|(i, &w)| {
+        if data.contains(&i) || Some(i) == last {
+            0
+        } else {
+            w
+        }
+    });
+    fnv(words) == k.hash
 }
 
 fn fnv(words: impl Iterator<Item = u32>) -> u64 {
@@ -442,7 +485,7 @@ pub enum CodeError {
     Changed { addr: u32 },
     /// Some of a rule's codes without the rest.
     Partial { rule: &'static str },
-    /// Codes of different versions of the set.
+    /// Codes of different versions of the set, or of UCF.
     Mixed,
 }
 
@@ -471,7 +514,7 @@ impl Rules {
     pub fn slippi_online() -> Rules {
         Rules {
             slippi: true,
-            ucf: true,
+            ucf: Ucf::V0_84,
             neutral_spawn: true,
             prevent_wobbling: true,
             offscreen_limits: true,
@@ -490,7 +533,7 @@ impl Rules {
             return Ok(Rules::default());
         }
         let mut seen = Vec::new();
-        let mut sets = BOTH;
+        let mut sets = ALL;
         for c in codes {
             if !KNOWN.iter().any(|k| k.addr == c.addr && k.kind == c.kind) {
                 return Err(CodeError::Unknown {
@@ -498,25 +541,9 @@ impl Rules {
                     addr: c.addr,
                 });
             }
-            let data = data_words(c.addr);
-            let last = if c.kind == 0xC2 {
-                c.words.len().checked_sub(1)
-            } else {
-                None
-            };
-            let words = c.words.iter().enumerate().map(|(i, &w)| {
-                if data.contains(&i) || Some(i) == last {
-                    0
-                } else {
-                    w
-                }
-            });
-            let hash = fnv(words);
             let k = KNOWN
                 .iter()
-                .find(|k| {
-                    k.addr == c.addr && k.kind == c.kind && k.first == c.first && k.hash == hash
-                })
+                .find(|k| matches(k, c))
                 .ok_or(CodeError::Changed { addr: c.addr })?;
             sets &= k.sets;
             if sets == 0 {
@@ -524,18 +551,30 @@ impl Rules {
             }
             seen.push(k.rule);
         }
-        // A list of only the codes both versions share runs as 3.19's.
-        let set = if sets & V3_19 != 0 {
-            CodeSet::V3_19
-        } else {
-            CodeSet::V3_16
-        };
+        // The first version the codes fit, whole: a list of only the codes all share plays as
+        // 3.19's, and 3.14's lacks one of 3.16's.
+        let mut first = None;
+        for set in CodeSet::ALL.into_iter().filter(|s| sets & s.bit() != 0) {
+            match Rules::from_rules(&seen, set) {
+                Ok(rules) => return Ok(rules),
+                Err(e) => {
+                    first.get_or_insert(e);
+                }
+            }
+        }
+        Err(first.expect("a code list fits some version"))
+    }
+
+    /// The rules `seen` (one per code) make in version `set`, each rule needing all its codes.
+    fn from_rules(seen: &[Rule], set: CodeSet) -> Result<Rules, CodeError> {
         let mut rules = Rules {
             codes: set,
             ..Rules::default()
         };
+        let (mut ucf084, mut ucf08) = (false, false);
         for (rule, name, flag) in [
-            (Rule::Ucf, "UCF 0.84", &mut rules.ucf),
+            (Rule::Ucf084, "UCF 0.84", &mut ucf084),
+            (Rule::Ucf08, "UCF 0.8", &mut ucf08),
             (
                 Rule::NeutralSpawn,
                 "neutral spawns",
@@ -573,6 +612,12 @@ impl Rules {
                 _ => return Err(CodeError::Partial { rule: name }),
             }
         }
+        rules.ucf = match (ucf084, ucf08) {
+            (false, false) => Ucf::Off,
+            (true, false) => Ucf::V0_84,
+            (false, true) => Ucf::V0_8,
+            (true, true) => return Err(CodeError::Mixed),
+        };
         Ok(rules)
     }
 }
@@ -591,7 +636,8 @@ pub fn placed(site: u32, word: u32) -> Option<u32> {
 impl Rules {
     /// The rules whose codes a running game has applied, read from its memory (`read` gives
     /// the word at an address): each known code found at its site, its instructions where its
-    /// branch leads.
+    /// branch leads. A site with codes of several lengths takes the one its instructions
+    /// match, or the first if none does.
     pub fn from_memory(read: &dyn Fn(u32) -> u32) -> Result<Rules, CodeError> {
         let mut codes: Vec<Code> = Vec::new();
         for k in KNOWN {
@@ -600,26 +646,29 @@ impl Rules {
                 continue;
             }
             let at = read(k.addr);
-            match k.kind {
-                0x04 if at == k.first => codes.push(Code {
+            let found = |k: &Known| match k.kind {
+                0x04 if at == k.first => Some(Code {
                     kind: k.kind,
                     addr: k.addr,
                     first: k.first,
                     words: Vec::new(),
                 }),
-                0xC2 => {
-                    if let Some(body) = placed(k.addr, at) {
-                        let n = 2 * k.first;
-                        codes.push(Code {
-                            kind: k.kind,
-                            addr: k.addr,
-                            first: k.first,
-                            words: (0..n).map(|i| read(body + 4 * i)).collect(),
-                        });
-                    }
-                }
-                _ => {}
-            }
+                0xC2 => placed(k.addr, at).map(|body| Code {
+                    kind: k.kind,
+                    addr: k.addr,
+                    first: k.first,
+                    words: (0..2 * k.first).map(|i| read(body + 4 * i)).collect(),
+                }),
+                _ => None,
+            };
+            let Some(first) = found(k) else { continue };
+            let code = KNOWN
+                .iter()
+                .filter(|o| o.addr == k.addr && o.kind == k.kind)
+                .filter_map(|o| found(o).filter(|c| matches(o, c)))
+                .next()
+                .unwrap_or(first);
+            codes.push(code);
         }
         Rules::from_codes(&codes)
     }

@@ -2,6 +2,7 @@
 //! `ftCo_Dash.c`, `ftCo_Run.c`, `ftCo_RunBrake.c`, `ftCo_Turn.c`, `ftCo_TurnRun.c`,
 //! `ftwaitanim.c`).
 
+use crate::game::ucf::Ucf;
 use gekko_fp as fp;
 
 use super::super::super::state::Running;
@@ -860,7 +861,7 @@ impl Running<'_> {
             }
         };
         flip(self);
-        if self.game.rules.ucf && self.game.fighter(gobj).mv_i32(TURN_HAS_TURNED) == 0 {
+        if self.game.rules.ucf != Ucf::Off && self.game.fighter(gobj).mv_i32(TURN_HAS_TURNED) == 0 {
             self.ucf_dashback(gobj);
         }
         if self.special_s_check(gobj)

@@ -11,7 +11,8 @@
 //!          [--added-delay FRAMES] [--audio-exclusive]
 //! ```
 //!
-//! The disc comes from `--disc` or `SSBM_DISC`. Characters and stages are melee-sim's
+//! The disc comes from `--disc`, else `SSBM_DISC`, else the settings folder, where the disc
+//! picker keeps the one it asks for the first time ([`settings`]). Characters and stages are melee-sim's
 //! `game::roster`, what it has ported (`--help` lists them). With no `--p1` to `--p4`, `--stage`
 //! or `--replay` (and no `--bench`), the window opens on the launcher, which picks the match
 //! ([`launcher`]). Controllers: GameCube controllers on a Wii U adapter play their own ports;
@@ -32,11 +33,19 @@
 //! (mailbox by default, `--present` picks; [`present::Present`]). `--added-delay N` adds input
 //! latency back on purpose, `--latency-log FILE` measures it all ([`latency`]), and F3 shows
 //! the measures over the frame.
+//!
+//! The release build on Windows opens no console window; started from a terminal it prints to
+//! the terminal, and double-clicked it logs to the settings folder ([`console`]).
 
+// No console window for the release build on Windows (`console` attaches to a terminal's).
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
+mod console;
 mod latency;
 mod launcher;
 mod pipelines;
 mod present;
+mod settings;
 mod sound;
 
 use std::process::ExitCode;
@@ -106,6 +115,8 @@ struct Args {
     fullscreen: bool,
     /// How fast the disc reads: a drive's pace unless `--disc-speed fast`.
     disc_speed: DiscSpeed,
+    /// The launcher's choices the command line gave, which win over the last match's.
+    given: launcher::Given,
 }
 
 /// The command line's usage, with the characters and stages melee-sim has ported.
@@ -116,7 +127,8 @@ fn usage() -> String {
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive]\n\
-         with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match",
+         with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match\n\
+         the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
         names(roster::CHARACTERS.iter().map(|c| c.keys[0]).collect()),
         names(roster::STAGES.iter().map(|s| s.keys[0]).collect()),
     )
@@ -149,6 +161,7 @@ fn parse_args() -> Result<Args, String> {
         launcher_shot: None,
         fullscreen: false,
         disc_speed: DiscSpeed::Drive,
+        given: launcher::Given::default(),
     };
     // Whether the command line names a match.
     let mut chosen = false;
@@ -183,17 +196,27 @@ fn parse_args() -> Result<Args, String> {
                     .kind;
                 chosen = true;
             }
-            "--stocks" => a.stocks = value()?.parse().map_err(|_| "--stocks N")?,
-            "--minutes" => a.minutes = value()?.parse().map_err(|_| "--minutes N")?,
+            "--stocks" => {
+                a.stocks = value()?.parse().map_err(|_| "--stocks N")?;
+                a.given.stocks = true;
+            }
+            "--minutes" => {
+                a.minutes = value()?.parse().map_err(|_| "--minutes N")?;
+                a.given.minutes = true;
+            }
             "--replay" => {
                 a.replay = Some(value()?);
                 chosen = true;
             }
             "--no-adapter" => a.adapter = false,
             "--latency-log" => a.latency_log = Some(value()?),
-            "--present" => a.present = present::Present::parse(&value()?)?,
+            "--present" => {
+                a.present = present::Present::parse(&value()?)?;
+                a.given.present = true;
+            }
             "--added-delay" => {
-                a.added_delay = value()?.parse().map_err(|_| "--added-delay FRAMES")?
+                a.added_delay = value()?.parse().map_err(|_| "--added-delay FRAMES")?;
+                a.given.added_delay = true;
             }
             "--audio-exclusive" => a.audio_exclusive = true,
             "--latency-overlay" => a.latency_overlay = true,
@@ -217,18 +240,24 @@ fn parse_args() -> Result<Args, String> {
                 a.resize_at.push((tick, size(s)?));
             }
             "--launcher-shot" => a.launcher_shot = Some(value()?),
-            "--fullscreen" => a.fullscreen = true,
+            "--fullscreen" => {
+                a.fullscreen = true;
+                a.given.fullscreen = true;
+            }
             "--disc-speed" => {
                 a.disc_speed = DiscSpeed::parse(&value()?).ok_or("--disc-speed drive|fast")?
             }
-            "--widescreen" => a.aspect = present::Aspect::wide(16.0 / 9.0),
-            "--aspect" => a.aspect = present::Aspect::parse(&value()?)?,
+            "--widescreen" => {
+                a.aspect = present::Aspect::wide(16.0 / 9.0);
+                a.given.aspect = true;
+            }
+            "--aspect" => {
+                a.aspect = present::Aspect::parse(&value()?)?;
+                a.given.aspect = true;
+            }
             "-h" | "--help" => return Err(String::new()),
             other => return Err(format!("unknown argument {other}")),
         }
-    }
-    if a.disc.is_empty() && a.launcher_shot.is_none() {
-        return Err("no disc: pass --disc ISO or set SSBM_DISC".into());
     }
     a.launch = !chosen && a.bench.is_none();
     Ok(a)
@@ -246,7 +275,7 @@ struct Session {
 
 impl Session {
     fn start(a: &Args) -> Result<Session, String> {
-        let disc = Disc::open(&a.disc).map_err(|e| format!("{}: {e}", a.disc))?;
+        let disc = Disc::open(&a.disc).map_err(|e| format!("{}: {}", a.disc, settings::why(&e)))?;
         let mut load = |name: &str| DiscFile {
             entrynum: disc
                 .entrynum(name)
@@ -596,6 +625,7 @@ impl App {
         let Some(l) = &mut self.launcher else { return };
         let aspect = l.form.aspect;
         let (present, added_delay) = (l.form.present, l.form.added_delay);
+        settings::write(settings::LAST_MATCH, &l.form.save());
         let c = &l.form.choice;
         let mut args = self.args.clone();
         args.players = c.ports();
@@ -981,17 +1011,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     ExitCode::SUCCESS
 }
 
-fn run() -> ExitCode {
-    let args = match parse_args() {
-        Ok(a) => a,
-        Err(e) => {
-            if !e.is_empty() {
-                eprintln!("{e}");
-            }
-            eprintln!("{}", usage());
-            return ExitCode::from(2);
-        }
-    };
+fn run(args: Args) -> ExitCode {
     if let Some(path) = &args.launcher_shot {
         let gpu = present::Gpu::new();
         let mut form = launcher::Form::new(args.stocks, args.minutes, args.fullscreen, args.aspect);
@@ -1000,7 +1020,7 @@ fn run() -> ExitCode {
         return match launcher::shot(&gpu, &mut form, args.size, std::path::Path::new(path)) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
-                eprintln!("{path}: {e}");
+                console::fatal(&format!("{path}: {e}"));
                 ExitCode::FAILURE
             }
         };
@@ -1018,7 +1038,7 @@ fn run() -> ExitCode {
         match Session::start(&args) {
             Ok(s) => Some(s),
             Err(e) => {
-                eprintln!("{e}");
+                console::fatal(&e);
                 return ExitCode::FAILURE;
             }
         }
@@ -1041,6 +1061,9 @@ fn run() -> ExitCode {
         let mut form = launcher::Form::new(args.stocks, args.minutes, args.fullscreen, args.aspect);
         form.present = args.present;
         form.added_delay = args.added_delay;
+        if let Some(text) = settings::read(settings::LAST_MATCH) {
+            form.restore(&text, &args.given);
+        }
         Launcher { form, window: None }
     });
     let mut app = App {
@@ -1076,7 +1099,7 @@ fn run() -> ExitCode {
         match latency::Log::create(path) {
             Ok(log) => app.latency = Some(log),
             Err(e) => {
-                eprintln!("{e}");
+                console::fatal(&e);
                 return ExitCode::FAILURE;
             }
         }
@@ -1100,19 +1123,42 @@ fn run() -> ExitCode {
         log.finish();
     }
     if let Err(e) = r {
-        eprintln!("the window failed: {e}");
+        console::fatal(&format!("the window failed: {e}"));
         return ExitCode::FAILURE;
     }
     ExitCode::SUCCESS
 }
 
 fn main() -> ExitCode {
+    console::attach();
+    let mut args = match parse_args() {
+        Ok(a) => a,
+        Err(e) => {
+            let usage = usage();
+            console::fatal(&if e.is_empty() {
+                usage
+            } else {
+                format!("{e}\n{usage}")
+            });
+            return ExitCode::from(2);
+        }
+    };
+    // The disc picker on the main thread, where macOS wants its dialogs.
+    if args.disc.is_empty() && args.launcher_shot.is_none() {
+        match settings::disc() {
+            Some(disc) => args.disc = disc,
+            None => return ExitCode::SUCCESS,
+        }
+    }
     // The simulation recurses as the original does (joint trees): a deep stack. The window
     // must live on the main thread on some systems, so the main thread gets the stack by
     // running everything on a thread that is itself the event loop's only user.
     let child = std::thread::Builder::new()
         .stack_size(512 << 20)
-        .spawn(run)
+        .spawn(move || run(args))
         .expect("the player's thread");
-    child.join().unwrap_or(ExitCode::FAILURE)
+    child.join().unwrap_or_else(|p| {
+        console::fatal(&format!("melee-hd stopped: {}", panic_text(&p)));
+        ExitCode::FAILURE
+    })
 }
