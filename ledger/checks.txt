@@ -5640,3 +5640,33 @@ ftCo_800A28D0	melee-oracle diff: Nana's computer player heading off her island c
 ftCo_800AA844	melee-oracle diff: Nana's computer player heading off her island level (hf-ics-captain-fd-16db3989-rf, hf-ics-marth-fod-a918794d-rf)
 ftCo_800AACD0	melee-oracle diff: Nana's computer player heading off her island downward (hf-ics-fox-bf-b2652aab-rf, hf-ics-captain-fd-16db3989-rf, hf-ics-marth-fod-a918794d-rf, hf-ics-fox-dl-a7365e16-rf)
 ftCo_800AC30C	melee-oracle diff: Nana's computer player mashing out of a hold (hf-ics-marth-fod-a918794d-rf from tick 498)
+ftCl_AppealS_Anim	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_AppealS_Coll	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_AppealS_IASA	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_AppealS_Phys	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_80149114	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_8014919C	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_8014920C	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_80149268	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_801492C4	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_801492F4	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_80149318	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_LoadSpecialAttrs	melee-oracle diff, Young Link vs Sheik FD, Marth BF and Fox DL hf-ylink-sheik-fd-bd2c97c0, hf-ylink-marth-bf-91d55df5 and hf-ylink-fox-dl-25f1c7b3 (docs/oracle.md), all 14,991, 13,255 and 11,089 traced ticks in Slippi float mode with no stand-ins: Young Link's creation and spawns run it
+ftCl_Init_OnDeath	melee-oracle diff, Young Link vs Sheik FD, Marth BF and Fox DL hf-ylink-sheik-fd-bd2c97c0, hf-ylink-marth-bf-91d55df5 and hf-ylink-fox-dl-25f1c7b3 (docs/oracle.md), all 14,991, 13,255 and 11,089 traced ticks in Slippi float mode with no stand-ins: Young Link's creation and spawns run it
+ftCl_Init_OnItemDrop	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_OnItemDropExt	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_OnItemInvisible	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_OnItemPickup	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_OnItemPickupExt	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_OnItemVisible	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_OnKnockbackEnter	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_OnKnockbackExit	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+ftCl_Init_OnLoad	melee-oracle diff, Young Link vs Sheik FD, Marth BF and Fox DL hf-ylink-sheik-fd-bd2c97c0, hf-ylink-marth-bf-91d55df5 and hf-ylink-fox-dl-25f1c7b3 (docs/oracle.md), all 14,991, 13,255 and 11,089 traced ticks in Slippi float mode with no stand-ins: Young Link's creation and spawns run it
+ftLk_Init_OnLoadForCLink	melee-oracle diff, Young Link vs Sheik FD, Marth BF and Fox DL hf-ylink-sheik-fd-bd2c97c0, hf-ylink-marth-bf-91d55df5 and hf-ylink-fox-dl-25f1c7b3 (docs/oracle.md), all 14,991, 13,255 and 11,089 traced ticks in Slippi float mode with no stand-ins: Young Link's creation and spawns run it
+itCLinkMilk_Logic80_EvtUnk	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+itClinkmilk_UnkMotion1_Anim	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+itClinkmilk_UnkMotion1_Coll	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+itClinkmilk_UnkMotion1_Phys	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+it_2725_Logic80_PickedUp	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
+it_802C8B28	leaf-check young_link: young_link_functions reaches it from the taunt's callback it serves (ftCl_AppealS_Anim) in clean comparisons; melee-oracle diff hf-ylink-sheik-fod-d89ff958 (docs/oracle.md), all 16,010 ticks, runs his taunt's milk
+it_802C8C34	leaf-check young_link: young_link_functions runs it from real states of Young Link's four replays, its own saved calls and its unit's, and compares the whole state
