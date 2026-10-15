@@ -230,7 +230,7 @@ impl Running<'_> {
     fn grab_input(&mut self, gobj: GObjId, msid: i32) -> bool {
         let fp = self.game.fighter(gobj);
         // `fn_800D8E94`: Link's hookshot out.
-        if (fp.kind == KIND_LINK || fp.kind == KIND_CLINK) && fp.u_i32(0xC) != 0 {
+        if (fp.kind == KIND_LINK || fp.kind == KIND_CLINK) && fp.u.gobj_at(0xC).is_some() {
             return false;
         }
         // `fn_800D952C`: Samus's grapple out.
