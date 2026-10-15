@@ -1,8 +1,10 @@
 //! What `compare` and `scaled` measured, kept for the dashboard: with `CHECK_RESULTS=DIR`
 //! (and `CHECK_ID=NAME`, the check's name), each run writes `DIR/NAME.tsv`, a line per image
-//! compared, and each comparison's three images at full size. The tests add `DIR/NAME.status`:
-//! the stage, what the check expects and whether it passed. `melee-render-check dashboard DIR
-//! OUT_DIR` makes a page of them, `OUT_DIR/index.html`, with the images in `OUT_DIR/img/`.
+//! compared, and each comparison's images at full size. The tests add `DIR/NAME.status`: the
+//! stage, what the check expects and whether it passed. `melee-render-check dashboard DIR
+//! OUT_DIR` makes a page of them, `OUT_DIR/index.html`, with the images in `OUT_DIR/img/`: for
+//! a comparison against ssbm-rs, the two frames and their difference pixel by pixel; for a
+//! scaled check, the two frames and a heatmap of the blocks the check measures.
 
 use std::collections::HashMap;
 use std::fmt::Write as _;
@@ -59,12 +61,13 @@ impl Results {
         self.dir.join(format!("{}.{ext}", self.id))
     }
 
-    /// Records a measure and the three images compared, at full size and losslessly (quickly
+    /// Records a measure and the images compared, at full size and losslessly (quickly
     /// compressed; the dashboard compresses them harder): `ours`, `theirs` (ssbm-rs's frame,
-    /// or for a scaled check melee-render's own frame it's held against) and their difference
-    /// (RGBA, gray: four times each pixel's largest channel difference, as ssbm-rs's ladder
-    /// shows it).
-    pub fn record(&self, m: &Measure<'_>, ours: Rgb<'_>, theirs: Rgb<'_>, diff: &[u8]) {
+    /// or for a scaled check melee-render's own frame it's held against) and, if given, their
+    /// difference (RGBA, gray: four times each pixel's largest channel difference, as
+    /// ssbm-rs's ladder shows it). A scaled check gives none: the dashboard draws the blocks it
+    /// measures from the two frames.
+    pub fn record(&self, m: &Measure<'_>, ours: Rgb<'_>, theirs: Rgb<'_>, diff: Option<&[u8]>) {
         let line = format!(
             "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
             m.kind, m.what, m.native, m.psnr, m.off8, m.off32, m.within, m.block
@@ -86,9 +89,11 @@ impl Results {
             rgb,
             theirs.pixels,
         );
-        let gray: Vec<u8> = diff.iter().step_by(4).copied().collect();
-        let (w, h) = (ours.width, ours.height);
-        save(&name("diff"), w, h, png::ColorType::Grayscale, &gray);
+        if let Some(diff) = diff {
+            let gray: Vec<u8> = diff.iter().step_by(4).copied().collect();
+            let (w, h) = (ours.width, ours.height);
+            save(&name("diff"), w, h, png::ColorType::Grayscale, &gray);
+        }
     }
 }
 
@@ -127,20 +132,21 @@ pub const MAX_BYTES: u64 = 60_000_000;
 const _: () = assert!(MAX_FILES < 255 && MAX_BYTES < 64_000_000);
 
 /// A measure's three images: the source (`theirs` as recorded), ours, and the difference, as
-/// the page's viewer numbers them.
+/// the page's viewer numbers them. A scaled check's third is the heatmap of its blocks, drawn
+/// from the first two ([`heatmap`]), named `heat`.
 const KINDS: [(&str, &str); 3] = [("theirs", "ref"), ("ours", "ours"), ("diff", "diff")];
 
 /// The page's name for one of a measure's images: `img/` holds `CHECK-FRAME-KIND.png`, KIND
-/// `ref`, `ours` or `diff`.
+/// `ref`, `ours`, `diff` or `heat`.
 pub fn image_name(id: &str, what: &str, kind: &str) -> String {
     format!("{id}-{}-{kind}.png", tag(what))
 }
 
-/// An image decoded, as gray when every pixel is, else as RGB.
+/// An image decoded: gray when every pixel is, else RGB; or RGBA (a heatmap).
 struct Image {
     width: u32,
     height: u32,
-    gray: bool,
+    color: png::ColorType,
     pixels: Vec<u8>,
 }
 
@@ -155,38 +161,46 @@ impl Image {
         let channels = info.color_type.samples();
         let buf = &buf[..info.buffer_size()];
         let (width, height) = (info.width, info.height);
-        if channels <= 2 {
-            let pixels = buf.chunks_exact(channels).map(|p| p[0]).collect();
-            return Some(Image {
+        let image = |color, pixels| {
+            Some(Image {
                 width,
                 height,
-                gray: true,
+                color,
                 pixels,
-            });
+            })
+        };
+        if channels <= 2 {
+            let pixels = buf.chunks_exact(channels).map(|p| p[0]).collect();
+            return image(png::ColorType::Grayscale, pixels);
         }
         let px = buf.chunks_exact(channels);
         if px.clone().all(|p| p[0] == p[1] && p[1] == p[2]) {
             let pixels = px.map(|p| p[0]).collect();
-            return Some(Image {
-                width,
-                height,
-                gray: true,
-                pixels,
-            });
+            return image(png::ColorType::Grayscale, pixels);
         }
         let pixels = px.flat_map(|p| [p[0], p[1], p[2]]).collect();
-        Some(Image {
-            width,
-            height,
-            gray: false,
-            pixels,
-        })
+        image(png::ColorType::Rgb, pixels)
+    }
+
+    /// The image's pixels as RGB.
+    fn rgb(&self) -> Vec<u8> {
+        match self.color {
+            png::ColorType::Grayscale => self.pixels.iter().flat_map(|&v| [v, v, v]).collect(),
+            png::ColorType::Rgba => self
+                .pixels
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .flat_map(|p| [p[0], p[1], p[2]])
+                .collect(),
+            _ => self.pixels.clone(),
+        }
     }
 
     /// What tells two images apart: the same for the same pixels, however they were stored.
     fn key(&self) -> (u64, u32, u32) {
         let mut h = std::hash::DefaultHasher::new();
-        self.gray.hash(&mut h);
+        (self.color as u8).hash(&mut h);
         self.pixels.hash(&mut h);
         (h.finish(), self.width, self.height)
     }
@@ -198,11 +212,7 @@ impl Image {
         for filter in [png::Filter::Adaptive, png::Filter::MinEntropy] {
             let mut buf = Vec::new();
             let mut enc = png::Encoder::new(&mut buf, self.width, self.height);
-            enc.set_color(if self.gray {
-                png::ColorType::Grayscale
-            } else {
-                png::ColorType::Rgb
-            });
+            enc.set_color(self.color);
             enc.set_depth(png::BitDepth::Eight);
             enc.set_compression(png::Compression::High);
             enc.set_filter(filter);
@@ -217,6 +227,114 @@ impl Image {
             }
         }
         best.unwrap_or_default()
+    }
+}
+
+/// The heatmap's ramp from no difference to the scaled checks' block limit, evenly spaced:
+/// matplotlib's inferno up to nine tenths, near black for the few levels normal detail makes
+/// (edges, mip levels and dither at a higher resolution average out over a block), through
+/// purple and red to orange and yellow as a block nears the limit.
+pub const HEAT_RAMP: [[u8; 3]; 10] = [
+    [0x00, 0x00, 0x04],
+    [0x16, 0x0b, 0x39],
+    [0x42, 0x0a, 0x68],
+    [0x6a, 0x17, 0x6e],
+    [0x93, 0x26, 0x67],
+    [0xbc, 0x37, 0x54],
+    [0xdd, 0x51, 0x3a],
+    [0xf3, 0x78, 0x19],
+    [0xfc, 0xa5, 0x0a],
+    [0xf6, 0xd7, 0x46],
+];
+/// A block past the limit: a color the ramp never reaches.
+pub const HEAT_OVER: [u8; 3] = [0x00, 0xe5, 0xff];
+
+/// A block's color in the heatmap, `mean` levels against a limit of `limit`.
+pub fn heat_color(mean: f64, limit: f64) -> [u8; 3] {
+    if mean > limit {
+        return HEAT_OVER;
+    }
+    let t = (mean / limit).clamp(0.0, 1.0) * (HEAT_RAMP.len() - 1) as f64;
+    let i = (t.floor() as usize).min(HEAT_RAMP.len() - 2);
+    let f = t - i as f64;
+    let (a, b) = (HEAT_RAMP[i], HEAT_RAMP[i + 1]);
+    std::array::from_fn(|k| {
+        (f64::from(a[k]) + (f64::from(b[k]) - f64::from(a[k])) * f).round() as u8
+    })
+}
+
+/// A scaled check's blocks, as [`crate::block_means`] measures them.
+#[derive(Debug, Clone, PartialEq)]
+struct Blocks {
+    side: u32,
+    cols: u32,
+    rows: u32,
+    means: Vec<f64>,
+}
+
+/// The heatmap of what a scaled check measures, at the frames' size: each block
+/// ([`crate::block_side`] pixels square, [`crate::block_means`]) filled with its color on the
+/// ramp ([`heat_color`] against [`crate::SCALED_BLOCK`]), the pixels past the last whole block
+/// (which the check doesn't measure) transparent. `None` if the frames' sizes differ.
+fn heatmap(ours: &Image, theirs: &Image) -> Option<(Image, Blocks)> {
+    let (w, h) = (ours.width, ours.height);
+    if (theirs.width, theirs.height) != (w, h) {
+        return None;
+    }
+    let side = crate::block_side(h).max(1);
+    let means = crate::block_means(&ours.rgb(), &theirs.rgb(), w, side);
+    let (cols, rows) = (w / side, h / side);
+    let mut pixels = vec![0u8; (w * h * 4) as usize];
+    for y in 0..rows * side {
+        for x in 0..cols * side {
+            let [r, g, b] = heat_color(
+                means[(y / side * cols + x / side) as usize],
+                crate::SCALED_BLOCK,
+            );
+            let at = ((y * w + x) * 4) as usize;
+            pixels[at..at + 4].copy_from_slice(&[r, g, b, 255]);
+        }
+    }
+    let image = Image {
+        width: w,
+        height: h,
+        color: png::ColorType::Rgba,
+        pixels,
+    };
+    Some((
+        image,
+        Blocks {
+            side,
+            cols,
+            rows,
+            means,
+        },
+    ))
+}
+
+/// Where one of the page's images comes from: a recorded image, or a scaled check's heatmap,
+/// drawn from its two frames.
+enum Source {
+    File(PathBuf),
+    Heat { ours: PathBuf, theirs: PathBuf },
+}
+
+impl Source {
+    fn image(&self) -> Option<(Image, Option<Blocks>)> {
+        match self {
+            Source::File(p) => Some((Image::load(p)?, None)),
+            Source::Heat { ours, theirs } => {
+                let (image, blocks) = heatmap(&Image::load(ours)?, &Image::load(theirs)?)?;
+                Some((image, Some(blocks)))
+            }
+        }
+    }
+
+    fn describe(&self) -> String {
+        match self {
+            Source::File(p) => p.display().to_string(),
+            Source::Heat { ours, .. } => format!("the heatmap of {}", ours.display()),
+        }
     }
 }
 
@@ -288,8 +406,11 @@ struct Row {
     /// Of the check's first frame: a compare check's log frame 0; a scaled check's views are
     /// all of one frame.
     first: bool,
-    /// The page's images (indices into the unique images), source, ours and difference.
+    /// The page's images (indices into the unique images), source, ours and difference (a
+    /// scaled check's heatmap).
     images: [Option<usize>; 3],
+    /// A scaled check's blocks, for the viewer's readout.
+    blocks: Option<Blocks>,
     /// Whether the page shows the images (within the budget).
     shown: bool,
 }
@@ -302,7 +423,7 @@ struct Check {
 
 /// One image the page shows, written once however many measures show it.
 struct Unique {
-    source: PathBuf,
+    source: Source,
     name: String,
     width: u32,
     height: u32,
@@ -407,6 +528,7 @@ fn read_checks(dir: &Path) -> Result<Vec<Check>, String> {
                 block: num(f.get(7).copied().unwrap_or("")),
                 first: f[0] != "compare" || f[1] == "0",
                 images: [None; 3],
+                blocks: None,
                 shown: false,
             });
         }
@@ -428,8 +550,26 @@ fn page(checks: &[Check], uniques: &[Unique], images: &str) -> String {
                     _ => "null".to_owned(),
                 };
                 let size = r.images.iter().flatten().next().map(|&u| &uniques[u]);
+                // Each block's mean in tenths of a level, row by row.
+                let blocks = match &r.blocks {
+                    Some(b) if r.shown && r.images[2].is_some() => {
+                        let tenths: Vec<String> = b
+                            .means
+                            .iter()
+                            .map(|m| format!("{}", (m * 10.0).round() as i64))
+                            .collect();
+                        format!(
+                            ",\"blocks\":{{\"side\":{},\"cols\":{},\"rows\":{},\"tenths\":[{}]}}",
+                            b.side,
+                            b.cols,
+                            b.rows,
+                            tenths.join(",")
+                        )
+                    }
+                    _ => String::new(),
+                };
                 format!(
-                    "{{\"kind\":{},\"what\":{},\"native\":{},\"psnr\":{},\"off8\":{},\"off32\":{},\"within\":{},\"block\":{},\"first\":{},\"w\":{},\"h\":{},\"ref\":{},\"ours\":{},\"diff\":{}}}",
+                    "{{\"kind\":{},\"what\":{},\"native\":{},\"psnr\":{},\"off8\":{},\"off32\":{},\"within\":{},\"block\":{},\"first\":{},\"w\":{},\"h\":{},\"ref\":{},\"ours\":{},\"diff\":{}{blocks}}}",
                     json_str(&r.kind),
                     json_str(&r.what),
                     r.native,
@@ -464,19 +604,24 @@ fn page(checks: &[Check], uniques: &[Unique], images: &str) -> String {
         .ok()
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
         .unwrap_or_default();
+    let hex = |c: [u8; 3]| json_str(&format!("#{:02x}{:02x}{:02x}", c[0], c[1], c[2]));
+    let ramp: Vec<String> = HEAT_RAMP.iter().map(|&c| hex(c)).collect();
     let data = format!(
-        "{{\"commit\":{},\"generated\":{},\"tolerance\":{{\"psnr\":38,\"off32\":0.25}},\"scaled\":{{\"psnr\":{},\"block\":{}}},\"images\":{images},\"checks\":[{}]}}",
+        "{{\"commit\":{},\"generated\":{},\"tolerance\":{{\"psnr\":38,\"off32\":0.25}},\"scaled\":{{\"psnr\":{},\"block\":{},\"ramp\":[{}],\"over\":{}}},\"images\":{images},\"checks\":[{}]}}",
         json_str(&generated),
         json_str(&now()),
         crate::SCALED_PSNR,
         crate::SCALED_BLOCK,
+        ramp.join(","),
+        hex(HEAT_OVER),
         out.join(",")
     );
     include_str!("dashboard.html").replace("/*DATA*/null", &data)
 }
 
 /// The dashboard of the results in `dir`: `out/index.html`, and each measure's three images
-/// at full size in `out/img/` (an image several measures show written once), all of them if
+/// at full size in `out/img/` (a scaled check's third its heatmap, [`heatmap`]; an image
+/// several measures show written once), all of them if
 /// they fit the budget ([`MAX_FILES`], [`MAX_BYTES`]), else as many as fit: the frames at the
 /// console's size first (each check's first frame before its others), then the larger ones.
 pub fn dashboard(dir: &Path, out: &Path) -> Result<Summary, String> {
@@ -494,37 +639,54 @@ pub fn dashboard(dir: &Path, out: &Path) -> Result<Summary, String> {
     let mut wanted = Vec::new();
     for (ci, c) in checks.iter().enumerate() {
         for (ri, r) in c.rows.iter().enumerate() {
-            for (k, (stored, _)) in KINDS.iter().enumerate() {
-                let p = dir.join(format!("{}~{}~{stored}.png", c.id, tag(&r.what)));
+            let stored = |kind: &str| dir.join(format!("{}~{}~{kind}.png", c.id, tag(&r.what)));
+            for (k, (kind, name)) in KINDS.iter().enumerate() {
+                if k == 2 && r.kind == "scaled" {
+                    // The heatmap of what the check measures, in place of the pixels'
+                    // difference: drawn at a higher resolution, the frame differs pixel by
+                    // pixel in detail the check tolerates.
+                    let (ours, theirs) = (stored("ours"), stored("theirs"));
+                    if ours.exists() && theirs.exists() {
+                        wanted.push((ci, ri, k, "heat", Source::Heat { ours, theirs }));
+                    }
+                    continue;
+                }
+                let p = stored(kind);
                 if p.exists() {
-                    wanted.push((ci, ri, k, p));
+                    wanted.push((ci, ri, k, *name, Source::File(p)));
                 }
             }
         }
     }
-    let keys = par_map(&wanted, |w| Image::load(&w.3).map(|i| i.key()));
+    let keys = par_map(&wanted, |w| w.4.image().map(|(i, b)| (i.key(), b)));
     let mut uniques: Vec<Unique> = Vec::new();
     let mut seen: HashMap<(u64, u32, u32), usize> = HashMap::new();
-    for ((ci, ri, k, path), key) in wanted.into_iter().zip(keys) {
-        let Some(key) = key else {
+    for ((ci, ri, k, name, source), key) in wanted.into_iter().zip(keys) {
+        let Some((key, blocks)) = key else {
             continue;
         };
         let u = *seen.entry(key).or_insert_with(|| {
             let c = &checks[ci];
             uniques.push(Unique {
-                source: path,
-                name: image_name(&c.id, &c.rows[ri].what, KINDS[k].1),
+                source,
+                name: image_name(&c.id, &c.rows[ri].what, name),
                 width: key.1,
                 height: key.2,
                 bytes: 0,
             });
             uniques.len() - 1
         });
-        checks[ci].rows[ri].images[k] = Some(u);
+        let row = &mut checks[ci].rows[ri];
+        row.images[k] = Some(u);
+        if blocks.is_some() {
+            row.blocks = blocks;
+        }
     }
     let sizes = par_map(&uniques, |u| -> Result<u64, String> {
-        let img =
-            Image::load(&u.source).ok_or_else(|| format!("{}: unreadable", u.source.display()))?;
+        let (img, _) = u
+            .source
+            .image()
+            .ok_or_else(|| format!("{}: unreadable", u.source.describe()))?;
         let bytes = img.encode();
         let path = img_dir.join(&u.name);
         std::fs::write(&path, &bytes).map_err(|e| format!("{}: {e}", path.display()))?;
@@ -714,8 +876,13 @@ mod tests {
             block: f64::NAN,
             within: true,
         };
-        r.record(&m("0", f64::INFINITY), rgb(&a), rgb(&a), &diff(&a, &a));
-        r.record(&m("1", 40.0), rgb(&b), rgb(&a), &diff(&b, &a));
+        r.record(
+            &m("0", f64::INFINITY),
+            rgb(&a),
+            rgb(&a),
+            Some(&diff(&a, &a)),
+        );
+        r.record(&m("1", 40.0), rgb(&b), rgb(&a), Some(&diff(&b, &a)));
         std::fs::write(dir.join("x-f00600.status"), "stage\tFD\nresult\tpass\n").unwrap();
         let s = dashboard(&dir, &out).unwrap();
         assert_eq!((s.checks, s.measures, s.recorded, s.shown), (1, 2, 2, 2));
@@ -743,6 +910,117 @@ mod tests {
         // Lossless: the images decode to what was recorded.
         let back = Image::load(&out.join("img/x-f00600-1-ours.png")).unwrap();
         assert_eq!((back.width, back.height, back.pixels), (w, h, b));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn heat_ramp() {
+        let limit = crate::SCALED_BLOCK;
+        assert_eq!(heat_color(0.0, limit), HEAT_RAMP[0]);
+        assert_eq!(heat_color(limit, limit), HEAT_RAMP[9]);
+        assert_eq!(heat_color(limit + 0.01, limit), HEAT_OVER);
+        // Halfway up, halfway between the fifth and sixth stops.
+        let mid = heat_color(limit / 2.0, limit);
+        let (a, b) = (HEAT_RAMP[4], HEAT_RAMP[5]);
+        for k in 0..3 {
+            let want = (f64::from(a[k]) + f64::from(b[k])) / 2.0;
+            assert!((f64::from(mid[k]) - want).abs() <= 0.5);
+        }
+        assert!(!HEAT_RAMP.contains(&HEAT_OVER));
+    }
+
+    /// Two frames 20 by 96 (blocks of 3, six a row and two columns past them), one block 40
+    /// levels redder and one 10 bluer.
+    fn heat_frames() -> (Vec<u8>, Vec<u8>) {
+        let (w, h) = (20usize, 96usize);
+        let theirs: Vec<u8> = (0..w * h * 3).map(|i| (i * 13 % 180 + 15) as u8).collect();
+        let mut ours = theirs.clone();
+        for y in 3..6 {
+            for x in 6..9 {
+                ours[(y * w + x) * 3] += 40;
+            }
+        }
+        for y in 30..33 {
+            for x in 15..18 {
+                ours[(y * w + x) * 3 + 2] -= 10;
+            }
+        }
+        (ours, theirs)
+    }
+
+    #[test]
+    fn heatmap_blocks() {
+        let (ours, theirs) = heat_frames();
+        let rgb = |pixels: Vec<u8>| Image {
+            width: 20,
+            height: 96,
+            color: png::ColorType::Rgb,
+            pixels,
+        };
+        let (img, blocks) = heatmap(&rgb(ours.clone()), &rgb(theirs.clone())).unwrap();
+        assert_eq!((blocks.side, blocks.cols, blocks.rows), (3, 6, 32));
+        // What the check measures: its worst block is the heatmap's largest.
+        let (worst, bx, by) = crate::worst_block(&ours, &theirs, 20, 3);
+        assert_eq!((worst, bx, by), (40.0, 6, 3));
+        assert_eq!(blocks.means.len(), 6 * 32);
+        assert_eq!(blocks.means[6 + 2], 40.0);
+        assert_eq!(blocks.means[10 * 6 + 5], 10.0);
+        assert_eq!(blocks.means.iter().filter(|&&m| m != 0.0).count(), 2);
+        let px = |x: usize, y: usize| -> [u8; 4] {
+            let at = (y * 20 + x) * 4;
+            img.pixels[at..at + 4].try_into().unwrap()
+        };
+        let [r, g, b] = HEAT_OVER;
+        assert_eq!(px(7, 4), [r, g, b, 255]);
+        let [r, g, b] = heat_color(10.0, crate::SCALED_BLOCK);
+        assert_eq!(px(17, 32), [r, g, b, 255]);
+        let [r, g, b] = HEAT_RAMP[0];
+        assert_eq!(px(0, 0), [r, g, b, 255]);
+        // Past the last whole block, not measured.
+        assert_eq!(px(18, 0)[3], 0);
+        assert_eq!(px(19, 95)[3], 0);
+    }
+
+    /// A scaled check's third image is the heatmap of its blocks, its readout in the data.
+    #[test]
+    fn scaled_heatmap_page() {
+        let base = std::env::temp_dir().join(format!("render-check-heat-{}", std::process::id()));
+        let (dir, out) = (base.join("results"), base.join("site"));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&dir).unwrap();
+        let (ours, theirs) = heat_frames();
+        let r = Results {
+            dir: dir.clone(),
+            id: "x-f00600-scaled".to_owned(),
+        };
+        let m = Measure {
+            kind: "scaled",
+            what: "2x",
+            native: 600,
+            psnr: 30.0,
+            off8: 0.0,
+            off32: 0.0,
+            block: 40.0,
+            within: false,
+        };
+        let rgb = |pixels| Rgb {
+            width: 20,
+            height: 96,
+            pixels,
+        };
+        r.record(&m, rgb(&ours), rgb(&theirs), None);
+        let s = dashboard(&dir, &out).unwrap();
+        assert_eq!((s.measures, s.shown, s.files), (1, 1, 4));
+        assert!(out.join("img/x-f00600-scaled-2x-heat.png").exists());
+        assert!(!out.join("img/x-f00600-scaled-2x-diff.png").exists());
+        let back = Image::load(&out.join("img/x-f00600-scaled-2x-heat.png")).unwrap();
+        assert_eq!((back.width, back.height), (20, 96));
+        let html = std::fs::read_to_string(out.join("index.html")).unwrap();
+        assert!(html.contains("\"diff\":\"img/x-f00600-scaled-2x-heat.png\""));
+        assert!(html.contains(
+            "\"blocks\":{\"side\":3,\"cols\":6,\"rows\":32,\"tenths\":[0,0,0,0,0,0,0,0,400,"
+        ));
+        assert!(html.contains("\"over\":\"#00e5ff\""));
         let _ = std::fs::remove_dir_all(&base);
     }
 }

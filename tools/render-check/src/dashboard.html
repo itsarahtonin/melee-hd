@@ -55,6 +55,16 @@ figure button { all: unset; cursor: zoom-in; display: block; border-radius: 4px;
 figure button:focus-visible { outline: 2px solid var(--hl); outline-offset: 2px; }
 figure img { display: block; width: 100%; height: auto; border-radius: 4px; background: var(--idle); }
 figure .ph { aspect-ratio: 4 / 3; border-radius: 4px; background: var(--idle); }
+.stack { position: relative; display: block; }
+.stack img.heat { position: absolute; inset: 0; background: none; }
+img.heat { opacity: .8; image-rendering: pixelated; }
+.heatkey { display: grid; gap: 4px; font-size: 12px; color: var(--muted); max-width: 520px; }
+.hk-bar, .hk-ticks { display: grid; grid-template-columns: 8fr 1fr; }
+.hk-bar { height: 12px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.hk-bar > span + span { border-left: 2px solid var(--fg); }
+.hk-ticks { font-size: 11px; }
+.hk-ticks > span:first-child { display: flex; justify-content: space-between; }
+.hk-ticks > span + span { padding-left: 6px; white-space: nowrap; }
 figcaption { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 .g { color: var(--muted); }
 .zoom { position: fixed; inset: 0; z-index: 10; background: var(--bg); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px;
@@ -77,6 +87,8 @@ figcaption { font-size: 11px; color: var(--muted); text-transform: uppercase; le
 .zlayer img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; -webkit-user-drag: none; pointer-events: none; }
 .zlayer.px img { image-rendering: pixelated; }
 .zlayer img.off { visibility: hidden; }
+.zkey { margin-bottom: 6px; }
+.zkey[hidden] { display: none; }
 .ztag { position: absolute; left: 8px; top: 8px; font: 500 12px ui-monospace, "Cascadia Mono", Menlo, monospace; background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; pointer-events: none; }
 .hint { font-size: 12px; color: var(--muted); }
 .hint .touch { display: none; }
@@ -86,7 +98,7 @@ figcaption { font-size: 11px; color: var(--muted); text-transform: uppercase; le
   <header>
     <h1>Render Check Coverage</h1>
     <div class="sub" id="sub"></div>
-    <div class="note">melee-render's frames from the last run of <span class="mono">melee-render-check</span>'s tests: against ssbm-rs's frames (which match Dolphin's software renderer) draw by draw and as images, and at higher scales and in widescreen against melee-render's own 1x frame. A <span class="known">known</span> result is out of tolerance for a documented reason and must stay exactly as recorded; any change fails the test. Click an image to open it at full size: switch between the source, melee-render's frame and their difference, and zoom in.</div>
+    <div class="note">melee-render's frames from the last run of <span class="mono">melee-render-check</span>'s tests: against ssbm-rs's frames (which match Dolphin's software renderer) draw by draw and as images, and at higher scales and in widescreen against melee-render's own 1x frame. A <span class="known">known</span> result is out of tolerance for a documented reason and must stay exactly as recorded; any change fails the test. Click an image to open it at full size: switch between the source, melee-render's frame and their difference, and zoom in. For a scaled check the third image is what the check measures, each 16 by 16 block's mean difference as a heatmap over the 1x frame, as pixel by pixel a frame drawn at a higher resolution differs in detail the check tolerates (edges, mip levels, dither).</div>
   </header>
   <div class="stats" id="stats"></div>
   <section>
@@ -112,7 +124,7 @@ figcaption { font-size: 11px; color: var(--muted); text-transform: uppercase; le
     <div class="zlayer" id="zlayer"><img alt="" data-k="0"><img alt="" data-k="1"><img alt="" data-k="2"></div>
     <span class="ztag" id="ztag"></span>
   </div>
-  <div class="hint"><span class="keys">1, 2, 3 pick the image and space flips the first two · wheel zooms at the pointer, drag pans · 0 fits, + and − zoom, z steps through the sizes · ← → step entries · Esc closes</span><span class="touch">Tap 1, 2, 3 to switch · pinch to zoom, drag to pan, double-tap to zoom in or fit</span></div>
+  <div class="hint"><div class="zkey" id="zkey" hidden></div><span class="keys">1, 2, 3 pick the image and space flips the first two · wheel zooms at the pointer, drag pans · 0 fits, + and − zoom, z steps through the sizes · ← → step entries · Esc closes</span><span class="touch">Tap 1, 2, 3 to switch · pinch to zoom, drag to pan, double-tap to zoom in or fit</span></div>
 </div>
 <script>
 const D = /*DATA*/null;
@@ -135,7 +147,7 @@ $("stats").innerHTML = [
   stat("Fail", count("fail"), "a regression, or a result not yet recorded"),
   stat("Worst passing", finite.length ? `${Math.min(...finite).toFixed(1)} dB` : "inf", "PSNR against ssbm-rs (inf = identical)"),
 ].join("");
-$("tol").innerHTML = `<span>Against ssbm-rs: PSNR at least <b class="num">${D.tolerance.psnr} dB</b>, at most <b class="num">${D.tolerance.off32}%</b> of pixels off by more than 32 levels.</span><span>Scaled (2x, 3x box-downsampled; 16:9's middle against 73:60): at least <b class="num">${D.scaled.psnr} dB</b>, and no 16 by 16 block of the 1x picture off by more than <b class="num">${D.scaled.block}</b> levels on average in a channel.</span>`;
+$("tol").innerHTML = `<span>Against ssbm-rs: PSNR at least <b class="num">${D.tolerance.psnr} dB</b>, at most <b class="num">${D.tolerance.off32}%</b> of pixels off by more than 32 levels.</span><span>Scaled (2x, 3x box-downsampled; 16:9's middle against 73:60): at least <b class="num">${D.scaled.psnr} dB</b>, and no 16 by 16 block of the 1x picture off by more than <b class="num">${D.scaled.block}</b> levels on average in a channel (its third image is that block difference).</span>`;
 
 const rows = [];
 for (const s of stages) {
@@ -151,9 +163,15 @@ let sel = rows.findIndex((r) => hasImages(r) && res(r.c) !== "pass");
 if (sel < 0) sel = rows.findIndex((r) => hasImages(r));
 if (sel < 0) sel = rows.findIndex((r) => r.m);
 const what = (m) => m.kind === "compare" ? `1x vs ssbm-rs, log frame ${m.what}` : `${m.what} vs 1x`;
+// A scaled check's third image is the heatmap of the blocks it measures, drawn over the source.
+const heat = (m) => m.kind === "scaled";
+const HEAT_LABEL = `block difference, the check's measure; limit ${D.scaled.block}`;
+const heatKey = () => `<div class="heatkey"><span>Block difference, the check's measure: each 16 × 16 block's mean difference in its furthest channel, in levels; limit ${D.scaled.block}</span>
+  <span class="hk-bar" aria-hidden="true"><span style="background:linear-gradient(to right, ${D.scaled.ramp.join(", ")})"></span><span style="background:${D.scaled.over}"></span></span>
+  <span class="hk-ticks num"><span><span>0</span><span>${D.scaled.block / 2}</span><span>limit ${D.scaled.block}</span></span><span>&gt; ${D.scaled.block}</span></span></div>`;
 // Each image's [button label, caption], source first.
 function labels(m) {
-  const diff = ["Diff ×4", "difference ×4 (brighter is further)"];
+  const diff = heat(m) ? ["Blocks", HEAT_LABEL] : ["Diff ×4", "difference ×4 (brighter is further)"];
   if (m.kind === "compare") return [["ssbm-rs", "ssbm-rs"], ["melee-render", "melee-render"], diff];
   if (m.what === "1x GPU XFB") return [["CPU XFB", "melee-render 1x, XFB copied on the CPU"], ["GPU XFB", "melee-render 1x, XFB copied on the GPU"], diff];
   if (m.what === "3x 16:9") return [["3x 73:60", "melee-render at 3x, 73:60"], ["3x 16:9", "melee-render at 3x 16:9, its middle"], diff];
@@ -179,16 +197,20 @@ function renderPanel() {
   if (!r || !r.m) { $("panel").innerHTML = `<div class="g">Nothing measured.</div>`; return; }
   const c = r.c, m = r.m, L = labels(m), S = srcs(m);
   const ratio = m.w && m.h ? `${m.w} / ${m.h}` : "4 / 3";
+  const pic = (k, cls) => `<img${cls ? ` class="${cls}"` : ""} alt="${esc(L[k][1])}" src="${esc(S[k])}" width="${m.w}" height="${m.h}" style="aspect-ratio:${ratio}">`;
+  // The heatmap over the source, so the blocks are where they are in the frame.
+  const inner = (k) => k === 2 && heat(m) && S[0] ? `<span class="stack">${pic(0)}${pic(2, "heat")}</span>` : pic(k);
   const fig = (k) => `<figure>${S[k]
-    ? `<button data-k="${k}" aria-label="Open ${esc(L[k][1])} in the viewer"><img alt="${esc(L[k][1])}" src="${esc(S[k])}" width="${m.w}" height="${m.h}" style="aspect-ratio:${ratio}"></button>`
+    ? `<button data-k="${k}" aria-label="Open ${esc(L[k][1])} in the viewer">${inner(k)}</button>`
     : `<div class="ph" style="aspect-ratio:${ratio}"></div>`}<figcaption>${k + 1} · ${esc(L[k][1])}</figcaption></figure>`;
   const notes = [];
   if (!hasImages(r)) notes.push(r.m.w ? "Its images were left out to fit the published page's budget (250 files, 60 MB): the frames at the console's size go in first, then as many larger ones as fit." : "No images were recorded for this measure.");
-  else if (m.psnr === null) notes.push("Identical: the difference is black.");
+  else if (m.psnr === null) notes.push(heat(m) ? "Identical: every block is 0." : "Identical: the difference is black.");
   $("panel").innerHTML = `<div class="head"><span><b>${esc(c.stage)}</b> · ${esc(c.match)} · frame ${esc(c.frame)} (native ${m.native})</span>
     <span class="num">${esc(measured(m))}</span>
     <span class="why">${esc(c.expect)}${c.why ? ": " + esc(c.why) : ""}${c.detail ? " · " + esc(c.detail) : ""}${c.seconds ? ` · ${Number(c.seconds).toFixed(1)} s` : ""}</span></div>
     <div class="trip">${fig(0)}${fig(1)}${fig(2)}</div>
+    ${heat(m) && S[2] ? heatKey() : ""}
     ${notes.map((n) => `<div class="g">${esc(n)}</div>`).join("")}
     ${m.w ? `<div class="g num">${m.w} × ${m.h} pixels, lossless</div>` : ""}`;
 }
@@ -246,10 +268,18 @@ let pointer = null;
 function showTag() {
   const r = rows[sel];
   if (!r || !r.m) return;
-  let t = `${Z.k + 1} · ${labels(r.m)[Z.k][0]} · ${Z.fit ? "fit, " : ""}${Math.round(Z.s * 100)}%`;
+  const m = r.m, L = labels(m)[Z.k];
+  let t = `${Z.k + 1} · ${Z.k === 2 && heat(m) ? L[1] : L[0]} · ${Z.fit ? "fit, " : ""}${Math.round(Z.s * 100)}%`;
   if (pointer) {
     const x = Math.floor((pointer.x - Z.tx) / Z.s), y = Math.floor((pointer.y - Z.ty) / Z.s);
-    if (x >= 0 && y >= 0 && x < Z.w && y < Z.h) t += ` · x ${x}, y ${y}`;
+    if (x >= 0 && y >= 0 && x < Z.w && y < Z.h) {
+      t += ` · x ${x}, y ${y}`;
+      const B = m.blocks;
+      if (B) {
+        const bx = Math.floor(x / B.side), by = Math.floor(y / B.side);
+        t += bx < B.cols && by < B.rows ? ` · block ${(B.tenths[by * B.cols + bx] / 10).toFixed(1)} levels` : " · outside the blocks";
+      }
+    }
   }
   $("ztag").textContent = t;
 }
@@ -257,7 +287,11 @@ function show(k) {
   const S = srcs(rows[sel].m);
   if (!S[k]) return;
   Z.k = k;
-  imgs.forEach((im, i) => im.classList.toggle("off", i !== k));
+  // The heatmap shows over the source.
+  const over = k === 2 && heat(rows[sel].m);
+  imgs.forEach((im, i) => im.classList.toggle("off", i !== k && !(over && i === 0 && S[0])));
+  imgs[2].classList.toggle("heat", over);
+  $("zkey").hidden = !over;
   for (const b of $("zviews").children) b.setAttribute("aria-pressed", String(Number(b.dataset.k) === k));
   showTag();
 }
@@ -304,6 +338,7 @@ function step(d) {
   select(j);
   load();
 }
+$("zkey").innerHTML = heatKey();
 $("zscale").innerHTML = SCALES.map(([v, l]) => `<button data-s="${v}">${l}</button>`).join("");
 $("zscale").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-s]");
