@@ -201,7 +201,10 @@ pub fn find_archives_in(index: &DiscIndex, mem1: &[u8], archives: &mut Archives)
             continue;
         };
         for &(off, size) in subs {
-            let archive = Archive::parse(&file[off as usize..(off + size) as usize]).unwrap();
+            let (off, end) = (off as usize, (off + size) as usize);
+            // What a fighter's buffer takes along past it (`lbArq_80014BD0` rounds up).
+            let after = &file[end..end.next_multiple_of(32).min(file.len())];
+            let archive = Archive::parse_in(&file[off..end], after).unwrap();
             let publics = archive.publics().map(|(n, o)| (n.to_owned(), o)).collect();
             let id = archives.add(archive);
             let sub = format!("{name}@{off:#x}");

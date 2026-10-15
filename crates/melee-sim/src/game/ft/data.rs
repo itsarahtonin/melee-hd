@@ -12,6 +12,7 @@ use super::super::handles::{AnimBufId, FighterId};
 use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::{Game, Running};
 use super::AnimFile;
+use super::anim_buf::{AnimBuf, Fill};
 use super::kind_tables::KINDS;
 
 /// How many fighter kinds there are (`Ft_Kind_Max`).
@@ -305,8 +306,16 @@ impl Running<'_> {
     /// kind's animation file in ARAM unless it's there, `ftData_80085B10`.
     #[doc(alias = "ftData_80085B10")]
     pub fn init_anim_buffers(&mut self, f: FighterId) {
-        let a = AnimBufId(self.game.fighter_anim_bufs.alloc(()));
-        let b = AnimBufId(self.game.fighter_anim_bufs.alloc(()));
+        // A block the pool gives again keeps what its last fighter's loads left; a new one
+        // holds a fresh heap's zeros, or after the menus an earlier scene's bytes.
+        let fill = if crate::hsd::heap::with(|h| h.fresh).unwrap_or(false) {
+            Fill::Zero
+        } else {
+            Fill::Unknown
+        };
+        let bufs = &mut self.game.fighter_anim_bufs;
+        let a = AnimBufId(bufs.alloc_stale(AnimBuf::new(fill)));
+        let b = AnimBufId(bufs.alloc_stale(AnimBuf::new(fill)));
         let fp = &mut self.game.fighters[f.0];
         fp.x59C = Some(a);
         fp.x5A0 = Some(b);

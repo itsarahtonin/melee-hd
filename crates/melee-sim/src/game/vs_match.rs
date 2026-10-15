@@ -819,7 +819,10 @@ pub fn load_fighter_files(
             if size < 0x20 || off + size > bytes.len() {
                 break;
             }
-            let a = Archive::parse(&bytes[off..off + size])
+            // The copy into a fighter's buffer takes the size rounded up to 32 bytes
+            // (`lbArq_80014BD0`), so the file's next bytes come along.
+            let after = &bytes[off + size..(off + size).next_multiple_of(32).min(bytes.len())];
+            let a = Archive::parse_in(&bytes[off..off + size], after)
                 .unwrap_or_else(|e| panic!("{name}@{off:#x}: {e:?}"));
             file.anims.push((off as u32, data.add(a)));
             off = (off + size).next_multiple_of(32);

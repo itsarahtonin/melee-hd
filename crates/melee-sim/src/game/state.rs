@@ -211,9 +211,10 @@ pub struct Game {
     /// Fighters' lists of their models' DObjs (`DObjList::data`): the main model's (up to
     /// 124) and the second model's (up to 32), the first `count` of each meaningful.
     pub fighter_dobj_lists: Pool<Vec<Option<crate::hsd::dobj::DObjId>>>,
-    /// Fighters' animation buffers (`fighter_x59C_alloc_data`). What a buffer holds is the
-    /// archive of the animation loaded into it, which the fighter names (`x590`, `x598`).
-    pub fighter_anim_bufs: Pool<(), { pool_kind(Kind::FighterX59C) }>,
+    /// Fighters' animation buffers (`fighter_x59C_alloc_data`): the archives loaded into
+    /// each, the last of which the fighter names (`x590`, `x598`), and what longer ones
+    /// before it left past its end.
+    pub fighter_anim_bufs: Pool<ft::anim_buf::AnimBuf, { pool_kind(Kind::FighterX59C) }>,
     /// The links of fighters' dynamic bone chains (`BoneDynamicsDesc::dyn_desc`), each a
     /// joint's physics state.
     pub fighter_dynamics: Pool<DynamicsData>,

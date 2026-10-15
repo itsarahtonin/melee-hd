@@ -156,17 +156,23 @@ impl Running<'_> {
             let shared = self
                 .anim_share_source(f)
                 .is_some_and(|p| self.game.fighters[p.0].x5A4 == aram);
-            if !shared {
+            let size = self.data.u32(entry.at(8));
+            let len = if shared {
+                // `memcpy` copies the file's own size.
+                size
+            } else {
                 if aram >= 0x8000_0000 {
                     unported_call("ftData_80085CD8 from main memory");
                 }
-                // `lbArq_80014BD0` copies the archive from ARAM, which takes time on
-                // ssbm-rs's timeline; `HSD_ArchiveParse` relocates it.
-                let len = (self.data.u32(entry.at(8)) + 31) & !31;
+                // `lbArq_80014BD0` copies the archive from ARAM, rounded up to 32 bytes, which
+                // takes time on ssbm-rs's timeline; `HSD_ArchiveParse` relocates it.
+                let len = (size + 31) & !31;
                 self.game.audio.aram_load(self.data, len);
-            }
+                len
+            };
             let kind = self.anim_entry_kind(self.game.fighters[src.0].kind, entry);
             let tree = self.anim_tree(kind, entry);
+            self.anim_buf_load(self.game.fighters[f.0].x59C, tree.archive, len);
             self.overwrite_main_buffer(f, tree.archive);
             Some(tree)
         } else {

@@ -5,7 +5,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use melee_data::archive::DataRef;
+use melee_data::archive::{Archives, DataRef};
 use melee_sim::game::handles::{BoneTableId, EffectId, FighterId};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::{Game, Obj, UserData};
@@ -35,6 +35,9 @@ pub struct Comparer<'a> {
     pub diffs: Vec<String>,
     /// The fields code read while they were stale (`Cx::stale_read`).
     pub stale_reads: Vec<String>,
+    /// The archives, where the caller has them: fighters' animation buffers then compare
+    /// byte for byte where we know what they hold.
+    pub archives: Option<&'a Archives>,
 }
 
 impl<'a> Comparer<'a> {
@@ -93,6 +96,7 @@ impl<'a> Comparer<'a> {
             stale,
             diffs: Vec::new(),
             stale_reads: Vec::new(),
+            archives: None,
         }
     }
 
@@ -1438,6 +1442,35 @@ impl<'a> Comparer<'a> {
     }
 }
 
+impl Comparer<'_> {
+    /// A fighter's animation buffer, ours `slot` and theirs at `addr`: every byte we know.
+    fn anim_buf(&mut self, path: &str, slot: u32, addr: u32) {
+        let Some(archives) = self.archives else {
+            return;
+        };
+        if !self.seen.insert(("anim buf", addr)) {
+            return;
+        }
+        let ours = self.game.fighter_anim_bufs[slot].render(archives, addr);
+        let at = (addr - MEM1) as usize;
+        let theirs = &self.mem[at..at + ours.len()];
+        let differ = ours
+            .iter()
+            .zip(theirs)
+            .enumerate()
+            .filter(|(_, (o, t))| o.is_some_and(|o| o != **t));
+        let (count, first) = differ.fold((0, None), |(n, f), (i, (o, t))| {
+            (n + 1, f.or(Some((i, o.unwrap(), *t))))
+        });
+        if let Some((i, o, t)) = first {
+            self.diffs.push(format!(
+                "{path} contents: {count} bytes differ, first at {i:#x}: ours {o:#04x}, theirs {t:#04x} (loads {:?})",
+                self.game.fighter_anim_bufs[slot].layers()
+            ));
+        }
+    }
+}
+
 impl Cx for Comparer<'_> {
     fn import_handle(&mut self, _: &'static str, _: u32) -> Option<u32> {
         unreachable!("the comparer only compares")
@@ -1486,7 +1519,12 @@ impl Cx for Comparer<'_> {
             }
             "ItemLogicRef" | "ItemStatesRef" => (theirs != 0).then_some(theirs),
             "DObjListId" => self.maps.fighter_dobj_lists.get(&theirs).map(|l| l.0),
-            "AnimBufId" => self.maps.fighter_anim_bufs.get(&theirs).map(|b| b.0),
+            "AnimBufId" => {
+                if let (Some(o), true) = (ours, theirs != 0) {
+                    self.anim_buf(path, o, theirs);
+                }
+                self.maps.fighter_anim_bufs.get(&theirs).map(|b| b.0)
+            }
             "LObjId" => self.maps.lobjs.get(&theirs).map(|l| l.0),
             "ShadowId" => self.maps.shadows.get(&theirs).map(|s| s.0),
             "DObjId" => self.maps.dobjs.get(&theirs).map(|d| d.0),

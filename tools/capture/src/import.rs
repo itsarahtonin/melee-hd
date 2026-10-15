@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use melee_data::archive::{Archives, DataRef};
 use melee_sim::game::camera::CameraBoxes;
 use melee_sim::game::ft::AnimFile;
+use melee_sim::game::ft::anim_buf::{AnimBuf, Fill};
 use melee_sim::game::handles::{
     AnimBufId, AttrsId, BoneTableId, CameraBoxId, DObjListId, DynamicsId, FighterId, GroundId,
     ItemId, PartsId, StartHookId,
@@ -1034,12 +1035,14 @@ impl Importer<'_> {
         id
     }
 
-    /// A fighter's animation buffer.
+    /// A fighter's animation buffer, at `a`. Which loads left its bytes isn't known.
     fn fighter_anim_buf(&mut self, a: u32) -> AnimBufId {
         if let Some(&b) = self.maps.fighter_anim_bufs.get(&a) {
             return b;
         }
-        let id = AnimBufId(self.game.fighter_anim_bufs.alloc(()));
+        let bufs = &mut self.game.fighter_anim_bufs;
+        let id = AnimBufId(bufs.alloc(AnimBuf::new(Fill::Unknown)));
+        bufs.set_addr(id.0, a);
         self.maps.fighter_anim_bufs.insert(a, id);
         id
     }
