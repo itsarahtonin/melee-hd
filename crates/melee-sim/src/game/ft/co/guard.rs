@@ -104,7 +104,7 @@ pub fn stick_angle(y: f64, x: f64) -> f64 {
 
 impl Running<'_> {
     /// The shield's joint, `parts[ftData::x8->x11]`.
-    fn shield_joint(&self, gobj: GObjId) -> Option<JObjId> {
+    pub(super) fn shield_joint(&self, gobj: GObjId) -> Option<JObjId> {
         let f = self.game.fighter_id(gobj);
         let x8 = self.ft_data_x8(&self.game.fighters[f.0]);
         let part = self.data.u8(x8.at(0x11));
@@ -365,7 +365,10 @@ impl Running<'_> {
             fp.x221B.x221B_b0 = false;
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
             self.record_shield_break(slot, sub);
-            unported_call("ftCo_80098B20");
+            self.enter_shield_break(gobj);
+            let f = self.game.fighter_id(gobj);
+            self.fighter_play_sfx(f, 129, 127, 64);
+            return true;
         }
         let x10 = reg(fp.mv_f32(GUARD_X10));
         if x10 > 0.0 {
@@ -549,17 +552,17 @@ impl Running<'_> {
         let _ = self.escape_n_check_any(gobj) || self.jump_check_cstick(gobj);
     }
 
-    /// A hit on the shield, `ftCo_80092E50` (the collision's callback): the shield's stun,
-    /// a powershield's when it was one (Yoshi has his own).
+    /// A hit on the shield, `ftCo_80092E50` (the collision's callback): the shield's stun
+    /// (Yoshi has his own), and a cape's hit (element 10, `x19B0`) turns the fighter around.
     #[doc(alias = "ftCo_80092E50")]
     pub fn on_shield_hit(&mut self, gobj: GObjId) {
-        let power = self.game.fighter(gobj).x19B0 == 10;
+        let cape = self.game.fighter(gobj).x19B0 == 10;
         if self.game.fighter(gobj).kind == KIND_YOSHI {
             unported_call("ftYs_Shield_8012C600");
         }
-        self.enter_guard_set_off(gobj, power);
-        if power {
-            unported_call("ftCo_800C36DC");
+        self.enter_guard_set_off(gobj, cape);
+        if cape {
+            self.shield_cape_turn(gobj);
         }
     }
 
@@ -583,9 +586,9 @@ impl Running<'_> {
     }
 
     /// The shield's stun from a hit, `ftCo_80092F2C`: the animation stretched over its frames,
-    /// pushing the fighter back unless it was a powershield.
+    /// pushing the fighter back unless a cape's hit turns it around instead (`cape`).
     #[doc(alias = "ftCo_80092F2C")]
-    pub fn enter_guard_set_off(&mut self, gobj: GObjId, power: bool) {
+    pub fn enter_guard_set_off(&mut self, gobj: GObjId, cape: bool) {
         self.change_motion_state(gobj, ms::GUARD_SET_OFF, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.hitlag_cb = Some(GUARD_SET_OFF_HITLAG);
@@ -600,7 +603,7 @@ impl Running<'_> {
         let root = self.root_jobj(gobj);
         let end = reg(crate::lb::anim::end_frame(&self.game.objs, Some(root)));
         self.set_anim_rate(gobj, mem(fp::fdivs(fp::fadds(reg(0.1f32), end), len)));
-        if !power {
+        if !cape {
             let c = self.common();
             let (x294, x298, x2bc) = (reg(c.f32(0x294)), reg(c.f32(0x298)), reg(c.f32(0x2BC)));
             let fp = self.game.fighter_mut(gobj);

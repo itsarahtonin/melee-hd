@@ -111,6 +111,20 @@ impl Running<'_> {
         self.count_bonus(slot, 0x40);
     }
 
+    /// A shield broken by an attack, `pl_8003E058`: bonus 0x3F for its player, and 0x3E for
+    /// the attacker's (`by`, the fighter's `x19BC`) unless none or a teammate's.
+    #[doc(alias = "pl_8003E058")]
+    pub fn record_shield_broken_by(&mut self, by: i32, slot: i32) {
+        self.count_bonus(slot, 0x3F);
+        if by == 6 {
+            return;
+        }
+        if self.game.vs_is_teams() && self.game.player_team(by) == self.game.player_team(slot) {
+            return;
+        }
+        self.count_bonus(by, 0x3E);
+    }
+
     /// A shield dropped at no more than `x84` health, bonus 0x41, `pl_8003E114`.
     // Ports `pl_8003E114`; aliased once a check reaches it.
     pub fn record_shield_drop(&mut self, slot: i32, health: f32) {

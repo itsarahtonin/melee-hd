@@ -26,6 +26,9 @@ use crate::hsd::gobj::GObjId;
 use crate::math::{self, sqrt_reg};
 use crate::vec::Vec3;
 
+/// `FtPart_XRotN`.
+const X_ROT_N: i32 = 2;
+
 /// `ftCommon_MotionVars_damage`.
 const DAMAGE_X0: usize = 0x0;
 const DAMAGE_X4: usize = 0x4;
@@ -706,15 +709,8 @@ impl Running<'_> {
     fn cape_turn(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let c = self.common();
-        let (frames, air_mag, ground_mag) = (c.i32(0x648), c.f32(0x64C), c.f32(0x650));
-        let fp = &mut self.game.fighters[f.0];
-        fp.dmg.x18F4 = frames;
-        let turn = fp::frsp(f64::from(fp.dmg.x18F4));
-        if turn > reg(fp.dmg.x1954) {
-            fp.dmg.x1954 = mem(turn);
-        }
-        fp.x2220_b4 = true;
-        self.start_hitlag(gobj);
+        let (air_mag, ground_mag) = (c.f32(0x64C), c.f32(0x650));
+        self.turn_spin_start(gobj);
         let fp = &self.game.fighters[f.0];
         let air = fp.ground_or_air == GA_AIR;
         let mag = reg(if air { air_mag } else { ground_mag });
@@ -738,6 +734,37 @@ impl Running<'_> {
         self.forget_attacker_grounded(f);
     }
 
+    /// A cape's turn starts (`ftCo_0C35.c`'s `inlineA0`): the spin over `ftCommonData` x648
+    /// frames (the longest kept in `dmg.x1954`), and hitlag.
+    fn turn_spin_start(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let frames = self.common().i32(0x648);
+        let fp = &mut self.game.fighters[f.0];
+        fp.dmg.x18F4 = frames;
+        let turn = fp::frsp(f64::from(fp.dmg.x18F4));
+        if turn > reg(fp.dmg.x1954) {
+            fp.dmg.x1954 = mem(turn);
+        }
+        fp.x2220_b4 = true;
+        self.start_hitlag(gobj);
+    }
+
+    /// A shield turned around by a cape, `ftCo_800C36DC`: the turn's spin starts, and the
+    /// fighter slides along its floor by `ftCommonData` x654 away from the way it faced as its
+    /// special started (`specialn_facing_dir`, where the cape's hit left it).
+    #[doc(alias = "ftCo_800C36DC")]
+    pub fn shield_cape_turn(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.turn_spin_start(gobj);
+        let push = reg(self.common().f32(0x654));
+        let fp = &mut self.game.fighters[f.0];
+        fp.xF0_ground_kb_vel = mem(fp::fmuls(push, fp::fneg(reg(fp.specialn_facing_dir))));
+        let v = reg(fp.xF0_ground_kb_vel);
+        let n = fp.coll_data.floor.normal;
+        let (vx, vy) = (fp::fmuls(reg(n.y), v), fp::fmuls(fp::fneg(reg(n.x)), v));
+        self.damage_vel(f, vx, vy);
+    }
+
     /// `ftCo_8008EC90`'s `inlineB1`: held fast, or with too little damage taken this
     /// frame to break free.
     fn held_fast(&self, gobj: GObjId) -> bool {
@@ -747,9 +774,9 @@ impl Running<'_> {
 
     /// A held fighter's hit, `ftCo_8008EC90` with `x221B_b5` clear. Held fast and not
     /// turned by a cape, it stays held: with its holder hit too and too lightly to react,
-    /// both share the hit's hitlag, else the holder throws it off (`ftCo_800DE854`, not
-    /// ported); not hit, the holder shares the hitlag. Else the grab breaks, and it takes
-    /// hitstun facing `facing`, its holder too when the holder isn't hit itself
+    /// both share the hit's hitlag, else the holder throws it off ([`Self::thrown_off`]) and
+    /// it takes hitstun; not hit, the holder shares the hitlag. Else the grab breaks, and it
+    /// takes hitstun facing `facing`, its holder too when the holder isn't hit itself
     /// (`ftCo_800DE2F0`, not ported).
     fn held_hit(&mut self, gobj: GObjId, other: GObjId, cape: bool, facing: f32) {
         let ff = self.game.fighter_id(gobj);
@@ -768,7 +795,12 @@ impl Running<'_> {
                     self.game.fighters[of.0].x1828 = 3;
                     return;
                 }
-                unported_call("ftCo_800DE854 (thrown off by a hit holder)");
+                self.thrown_off(gobj);
+                self.grab_break(other, gobj);
+                self.damage_hooks(gobj);
+                self.damage_reaction(gobj, facing);
+                self.game.fighters[of.0].x1828 = 1;
+                return;
             }
             let applied = self.game.fighters[ff.0].dmg.x183C_applied;
             if applied != 0 {
@@ -852,8 +884,9 @@ impl Running<'_> {
 
     /// A holder's hit, `ftCo_8008EC90` with `x221B_b5` set. Too light to react, it keeps
     /// holding: with its victim hit too and held fast, both share the hit's hitlag and
-    /// the victim keeps its state; else it lets go and takes hitstun, and an unhit victim
-    /// is knocked away by the holder's grab hitbox (`ftCo_800DCFD4`, not ported).
+    /// the victim keeps its state; else it lets go and takes hitstun, a victim held fast and
+    /// hit too thrown off ([`Self::thrown_off`]), an unhit one knocked away
+    /// ([`Self::knocked_away`]).
     fn holder_hit(&mut self, gobj: GObjId, other: GObjId, facing: f32) {
         let ff = self.game.fighter_id(gobj);
         let of = self.game.fighter_id(other);
@@ -887,7 +920,7 @@ impl Running<'_> {
         }
         if other_hit {
             if self.held_fast(other) {
-                unported_call("ftCo_800DE854 (thrown off by a hit holder)");
+                self.thrown_off(other);
             }
             self.grab_break(gobj, other);
             self.damage_hooks(gobj);
@@ -896,7 +929,96 @@ impl Running<'_> {
             return;
         }
         self.damage_hooks(other);
-        unported_call("ftCo_800DCFD4 (a victim knocked away as its holder is hit)");
+        self.knocked_away(other);
+        self.grab_break(gobj, other);
+        self.damage_hooks(gobj);
+        self.damage_reaction(gobj, facing);
+    }
+
+    /// The held fighter's hit from its holder's second throw hitbox (`xDF4[1]`) as the grab
+    /// breaks, at its `XRotN` joint, facing away from the holder: the knockback
+    /// (`ftColl_80079C70`), the damage taken and the hit recorded. `ftCo_800DE854` and
+    /// `ftCo_800DCFD4` share it; the second records the attack before taking the damage.
+    fn hit_by_holder(&mut self, gobj: GObjId, record: bool) {
+        let f = self.game.fighter_id(gobj);
+        let holder = self.game.fighters[f.0]
+            .victim_gobj
+            .expect("a held fighter without its holder");
+        let h = self.game.fighter_id(holder);
+        let hit = self.game.fighters[h.0].xDF4[1].clone();
+        let j = self.part_joint(gobj, X_ROT_N);
+        let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
+        let kb = self.fighter_knockback(
+            f,
+            h,
+            super::super::attack::LoggedHit::Throw {
+                fighter: h,
+                index: 1,
+            },
+            hit.unk_count,
+        );
+        let facing = self.game.fighters[h.0].facing_dir;
+        let fp = &mut self.game.fighters[f.0];
+        fp.dmg.kb_applied = mem(kb);
+        fp.dmg.x1848_kb_angle = hit.kb_angle;
+        fp.dmg.facing_dir_1 = mem(fp::fneg(reg(facing)));
+        fp.dmg.x184c_damaged_hurtbox = 1;
+        fp.dmg.x1854_collpos = pos;
+        fp.dmg.x1860_element = hit.element;
+        if record {
+            // `ftColl_80078710`, the facing word's address as the keep flag.
+            self.thrower_attack_landed(holder, gobj);
+        }
+        self.take_damage_coins(f, reg(hit.damage));
+        if !record {
+            self.record_fighter_hit(holder, gobj, reg(hit.damage));
+        }
+    }
+
+    /// The holder's attack on its victim recorded, `ftColl_80078710` (whose third argument,
+    /// an address, keeps the last attacker's player).
+    fn thrower_attack_landed(&mut self, holder: GObjId, gobj: GObjId) {
+        let hp = self.game.fighter(holder);
+        let (akind, x2070, instance) = (hp.kind, u32::from_be_bytes(hp.x2070), hp.x2074.x2088);
+        self.attack_landed(
+            Some(holder),
+            gobj,
+            1,
+            akind,
+            x2070,
+            super::super::super::pl::trick::AttackRecord::Fighter(holder),
+            instance,
+            true,
+            false,
+        );
+    }
+
+    /// A held fighter thrown off as its holder is hit, `ftCo_800DE854`: hit by the holder's
+    /// second throw hitbox ([`Self::hit_by_holder`]), recorded after the damage.
+    #[doc(alias = "ftCo_800DE854")]
+    pub fn thrown_off(&mut self, gobj: GObjId) {
+        self.hit_by_holder(gobj, false);
+    }
+
+    /// A held fighter knocked away as its holder is hit, `ftCo_800DCFD4`: out of its
+    /// invincibility, airborne, the hit recorded, then hit by the holder's second throw
+    /// hitbox ([`Self::hit_by_holder`]), its knockback worked out and hitstun.
+    #[doc(alias = "ftCo_800DCFD4")]
+    pub fn knocked_away(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        if self.game.fighters[f.0].x1988 != 0 {
+            self.set_hit_status(gobj, 0);
+        }
+        self.go_airborne(f);
+        let holder = self.game.fighters[f.0]
+            .victim_gobj
+            .expect("a held fighter without its holder");
+        let h = self.game.fighter_id(holder);
+        let damage = reg(self.game.fighters[h.0].xDF4[1].damage);
+        self.record_fighter_hit(holder, gobj, damage);
+        self.hit_by_holder(gobj, true);
+        self.calc_knockback(f);
+        self.damage_reaction(gobj, 0.0);
     }
 
     /// The grab broken, `ftCo_800DCE34`: both let go (`ftCo_800DC920`), and `b`'s model
