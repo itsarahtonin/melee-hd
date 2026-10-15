@@ -116,6 +116,7 @@ impl Files<'_> {
 /// and the fields code read while they were stale.
 fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> (Vec<String>, Vec<String>) {
     let mut cmp = Comparer::new(mem, data, &m.game, maps);
+    cmp.archives = Some(&m.data);
     cmp.world();
     cmp.stage();
     cmp.ids();

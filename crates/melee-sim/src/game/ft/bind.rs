@@ -351,19 +351,21 @@ impl Running<'_> {
         let kind = self.game.fighters[f.0].kind;
         let bits = (x594_word(self.game.fighters[f.0].x594) >> 9) & 0x1FFF;
         let depth = self.bone(f, part).xC_u[0];
+        let buf = self.game.fighters[f.0].x59C;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
         let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
         let mut i = 0;
+        // The skip doesn't stop at the node list's end: past it, it reads on in the buffer.
         while i < part {
             let m = self.part_mask(kind, i);
             if m == 0 || m & bits != 0 {
-                track = track.at(data.u8(node) as i8 as u32 * TRACK_SIZE);
+                track = track.at(self.anim_buf_u8(buf, node) as i8 as u32 * TRACK_SIZE);
                 node = node.at(1);
             }
             i += 1;
         }
         loop {
-            let frames = data.u8(node) as i8;
+            let frames = self.anim_buf_u8(buf, node) as i8;
             if frames == -1 {
                 break;
             }
@@ -402,19 +404,21 @@ impl Running<'_> {
         let (bits, from) = ((word >> 9) & 0x1FFF, (word & 0x3F) as i32);
         let to = fp.kind;
         let depth = self.bone(f, part).xC_u[0];
+        let buf = fp.x59C;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
         let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
         let mut i = 0;
+        // As in `ftAnim_8006F7C8`, past the node list's end the skip reads on in the buffer.
         while i < part {
             let m = self.part_mask(from, i);
             if m == 0 || m & bits != 0 {
-                track = track.at(data.u8(node) as i8 as u32 * TRACK_SIZE);
+                track = track.at(self.anim_buf_u8(buf, node) as i8 as u32 * TRACK_SIZE);
                 node = node.at(1);
             }
             i += 1;
         }
         loop {
-            let frames = data.u8(node) as i8;
+            let frames = self.anim_buf_u8(buf, node) as i8;
             if frames == -1 {
                 break;
             }

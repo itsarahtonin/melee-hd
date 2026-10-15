@@ -508,6 +508,9 @@ impl Layout {
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
 pub struct Heap {
     pub active: bool,
+    /// Whether the heap's memory is fresh, zero as the boot left it: not after the menus,
+    /// whose scenes leave their bytes in it.
+    pub fresh: bool,
     pub os: OsHeap,
     pub pieces: MemPieces,
     pub obj_heap: ObjHeap,
@@ -550,6 +553,7 @@ impl Heap {
         let os = OsHeap::new(layout.index, layout.lo, layout.hi);
         Heap {
             active: true,
+            fresh: !layout.from_menus,
             obj_heap: ObjHeap {
                 top: 0,
                 curr: 0,

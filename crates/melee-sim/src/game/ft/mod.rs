@@ -8,6 +8,7 @@
 
 pub mod action;
 pub mod anim;
+pub mod anim_buf;
 pub mod attack;
 pub mod bind;
 pub mod camera;
