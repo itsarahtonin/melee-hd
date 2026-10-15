@@ -319,6 +319,17 @@ impl Game {
         }
     }
 
+    /// A Bob-omb's hit on the player, by its spawn number (`Item::x1C`): the Bob-omb's entry
+    /// among the five the player last threw (`x8D8`) is marked as having hit, `pl_80041B08`.
+    #[doc(alias = "pl_80041B08")]
+    pub fn count_bombhei_hit(&mut self, slot: i32, spawn: u16) {
+        for e in &mut self.player_stale_moves(slot).x8D8.x4 {
+            if u32::from(spawn) == e.x0 {
+                e.x4_b0 = true;
+            }
+        }
+    }
+
     /// Clears a player's bonus counts (`x904`), `fn_80038FB8`.
     #[doc(alias = "fn_80038FB8")]
     pub fn reset_bonus_counts(&mut self, slot: i32) {
