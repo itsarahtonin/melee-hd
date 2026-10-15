@@ -157,6 +157,7 @@ members! {
     LinkBow, link_bow, itLinkBow_ItemVars, [LINK_BOW, CLINK_BOW];
     CLinkMilk, clink_milk, itCLinkMilk_ItemVars, [CLINK_MILK];
     YoshiEggLay, yoshi_egg_lay, itYoshiEggLay_ItemVars, [YOSHI_EGG_LAY];
+    KoopaFlame, koopa_flame, itKoopaFlame_ItemVars, [KOOPA_FLAME, KIRBY_KOOPA_FLAME];
     Heiho, heiho, HeihoVars, [HEIHO];
     ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE];
     ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];

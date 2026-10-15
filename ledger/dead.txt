@@ -15,3 +15,11 @@ ftDk_SpecialLwEnd1_Anim	The callback of Donkey Kong's state 386 (ftDk_MS_Special
 ftDk_SpecialLwEnd1_IASA	The callback of Donkey Kong's state 386, which no code enters (see ftDk_SpecialLwEnd1_Anim).
 ftDk_SpecialLwEnd1_Phys	The callback of Donkey Kong's state 386, which no code enters (see ftDk_SpecialLwEnd1_Anim).
 ftDk_SpecialLwEnd1_Coll	The callback of Donkey Kong's state 386, which no code enters (see ftDk_SpecialLwEnd1_Anim).
+ftCo_CaptureKoopa_Anim	The callback of the common state 278 (ftCo_MS_CaptureKoopa), which no code enters: Koopa Klaw's catch (ftCo_800BC7E0, ftCo_800BC8D4) puts its victim straight into 279 or 284 (ftCo_800BC9C8, ftCo_800BCAF4), and nothing else names 278 or 283.
+ftCo_CaptureKoopa_IASA	The callback of the common state 278 (ftCo_MS_CaptureKoopa), which no code enters (see ftCo_CaptureKoopa_Anim).
+ftCo_CaptureKoopa_Phys	The callback of the common state 278 (ftCo_MS_CaptureKoopa), which no code enters (see ftCo_CaptureKoopa_Anim).
+ftCo_CaptureKoopa_Coll	The callback of the common state 278 (ftCo_MS_CaptureKoopa), which no code enters (see ftCo_CaptureKoopa_Anim).
+ftCo_CaptureKoopaAir_Anim	The callback of the common state 283 (ftCo_MS_CaptureKoopaAir), which no code enters (see ftCo_CaptureKoopa_Anim).
+ftCo_CaptureKoopaAir_IASA	The callback of the common state 283 (ftCo_MS_CaptureKoopaAir), which no code enters (see ftCo_CaptureKoopa_Anim).
+ftCo_CaptureKoopaAir_Phys	The callback of the common state 283 (ftCo_MS_CaptureKoopaAir), which no code enters (see ftCo_CaptureKoopa_Anim).
+ftCo_CaptureKoopaAir_Coll	The callback of the common state 283 (ftCo_MS_CaptureKoopaAir), which no code enters (see ftCo_CaptureKoopa_Anim).

@@ -44,6 +44,7 @@ pub mod ik;
 pub mod input;
 mod kind_tables;
 pub mod kinds;
+pub mod koopa;
 pub mod light;
 pub mod link;
 pub mod luigi;

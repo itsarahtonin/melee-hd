@@ -68,6 +68,8 @@ ROOTS = [
     "itCLinkMilk_ItemVars",
     # Yoshi's egg an item becomes.
     "itYoshiEggLay_ItemVars",
+    # Bowser's flame.
+    "itKoopaFlame_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",
