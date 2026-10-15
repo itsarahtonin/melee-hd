@@ -1069,7 +1069,8 @@ impl Running<'_> {
     fn bury_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
         if fp.dmg.x1860_element == ELEMENT_GROUND && fp.ground_or_air == GA_GROUND && !fp.x2227_b6 {
-            unported_call("ftCo_800C0D0C (buried by a hit)");
+            self.enter_bury(gobj);
+            return true;
         }
         false
     }

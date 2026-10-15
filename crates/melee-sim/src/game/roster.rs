@@ -26,9 +26,19 @@ pub struct Stage {
 /// The ported characters, by name.
 pub const CHARACTERS: &[Character] = &[
     Character {
+        kind: 5,
+        name: "Bowser",
+        keys: &["bowser", "koopa"],
+    },
+    Character {
         kind: 0,
         name: "Captain Falcon",
         keys: &["falcon", "captain-falcon", "cf"],
+    },
+    Character {
+        kind: 1,
+        name: "Donkey Kong",
+        keys: &["donkey-kong", "dk", "donkey"],
     },
     Character {
         kind: 22,
@@ -54,6 +64,11 @@ pub const CHARACTERS: &[Character] = &[
         kind: 15,
         name: "Jigglypuff",
         keys: &["jigglypuff", "puff", "jiggs"],
+    },
+    Character {
+        kind: 14,
+        name: "Ice Climbers",
+        keys: &["ice-climbers", "ics"],
     },
     Character {
         kind: 6,

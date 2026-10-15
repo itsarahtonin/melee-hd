@@ -240,7 +240,7 @@ impl Running<'_> {
         // `inlineI3`.
         if self.cpu_should_act(f) {
             if self.game.fighters[f.0].cpu.xFB_b0 {
-                unported_call("ftCo_800A8DE4");
+                self.cpu_pick_ledge(f);
             } else {
                 self.cpu_toward_partner(f);
             }
@@ -385,7 +385,7 @@ impl Running<'_> {
         }
         let x18 = self.game.fighters[f.0].cpu.x18;
         let fpp = &self.game.fighters[f.0];
-        // A crouch at level 5 and up.
+        // Tumbling (`ftCo_MS_DamageFall`) at level 5 and up.
         if x18 == 0xF {
             return true;
         }
@@ -483,7 +483,7 @@ impl Running<'_> {
     /// it, or the stage's own hazard (Mushroom Kingdom's moving islands; Zebes' and Onett's
     /// checks aren't ported).
     // Ports `ftCo_800A2718`; aliased once a check reaches it.
-    fn cpu_island_unsafe(&self, island: Option<crate::mp::IslandId>) -> bool {
+    pub(super) fn cpu_island_unsafe(&self, island: Option<crate::mp::IslandId>) -> bool {
         let Some(island) = island else { return false };
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
         let mut cur = self.game.world.first_in(P_LINK_ITEM);

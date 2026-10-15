@@ -158,6 +158,7 @@ members! {
     LinkBow, link_bow, itLinkBow_ItemVars, [LINK_BOW, CLINK_BOW];
     CLinkMilk, clink_milk, itCLinkMilk_ItemVars, [CLINK_MILK];
     YoshiEggLay, yoshi_egg_lay, itYoshiEggLay_ItemVars, [YOSHI_EGG_LAY];
+    KoopaFlame, koopa_flame, itKoopaFlame_ItemVars, [KOOPA_FLAME, KIRBY_KOOPA_FLAME];
     Heiho, heiho, HeihoVars, [HEIHO];
     GameWatch, game_watch, GameWatchVars, [GAME_WATCH_GREENHOUSE, GAME_WATCH_MANHOLE, GAME_WATCH_FIRE, GAME_WATCH_PARACHUTE, GAME_WATCH_TURTLE, GAME_WATCH_BREATH, GAME_WATCH_JUDGE, GAME_WATCH_PANIC, GAME_WATCH_CHEF];
     GameWatchRescue, game_watch_rescue, GameWatchRescueVars, [GAME_WATCH_RESCUE];

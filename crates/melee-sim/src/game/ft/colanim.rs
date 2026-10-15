@@ -84,8 +84,10 @@ impl Running<'_> {
                 }
             }
             13 => self.samus_charged_glow(gobj),
+            // `ftDk_Init_UnkMotionStates4`: Donkey Kong's charged punch glows.
+            3 => self.dk_charged_glow(gobj),
             24 => self.gw_unk_motion_states4(gobj),
-            3 | 4 | 16 => unported_call("ftData_UnkMotionStates4"),
+            4 | 16 => unported_call("ftData_UnkMotionStates4"),
             _ => {}
         }
         let fp = self.game.fighter(gobj);

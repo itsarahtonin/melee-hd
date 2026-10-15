@@ -417,6 +417,15 @@ impl Running<'_> {
         self.ground_anim_speed(gobj, friction, facing);
     }
 
+    /// `ft_800850B4`: [`Self::ground_anim_speed`] with the ground friction, along the throw's
+    /// facing (`facing_dir1`).
+    #[doc(alias = "ft_800850B4")]
+    pub fn ground_anim_speed_thrown(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter(gobj);
+        let (friction, facing) = (reg(fp.co_attrs.ground_friction), reg(fp.facing_dir1));
+        self.ground_anim_speed(gobj, friction, facing);
+    }
+
     /// `ft_800851C0`: the animation's TransN rise as the vertical velocity.
     // Ports `ft_800851C0`; aliased once a check reaches it.
     pub fn air_anim_rise(&mut self, gobj: GObjId) {

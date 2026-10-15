@@ -15,11 +15,14 @@
   --bg: #15171b; --panel: #1d2026; --fg: #e7e8ea; --muted: #9aa0a9; --line: #30343b;
   --ok: #4fae6c; --warn: #d6a443; --bad: #ef4b4b; --idle: #3a3e45; --hl: #5aa2ff; color-scheme: dark }
 * { box-sizing: border-box; }
+html, body { overflow-x: hidden; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+body.locked { overflow: hidden; }
 .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 16px 40px; display: grid; gap: 22px; }
+.wrap > * { min-width: 0; }
 .num, .mono { font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
 h1 { font-size: 22px; font-weight: 600; margin: 0; }
-.sub { color: var(--muted); font-size: 13px; }
+.sub { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .note { font-size: 12px; color: var(--muted); max-width: 80ch; }
 h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
 .stats { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
@@ -28,33 +31,74 @@ h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacin
 .stat .v { font-size: 22px; font-weight: 500; }
 .stat .d { font-size: 12px; color: var(--muted); }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
-.frames { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 18px; align-items: start; }
-@media (max-width: 900px) { .frames { grid-template-columns: minmax(0, 1fr); } }
+.frames { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 1100px) { .frames { grid-template-columns: minmax(0, 1fr); } }
 .list { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; max-height: 720px; overflow: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 12px; }
-th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); }
+th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1; }
 td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
-td.r, th.r { text-align: right; }
-tr.stage td { background: color-mix(in srgb, var(--fg) 5%, transparent); font-weight: 600; cursor: default; }
+td.r, th.r { text-align: right; white-space: nowrap; }
+tr.stage td { background: color-mix(in srgb, var(--fg) 5%, var(--panel)); font-weight: 600; cursor: default; }
 tbody tr.m { cursor: pointer; }
-tr.sel td { background: color-mix(in srgb, var(--hl) 12%, transparent); }
+tr.sel td { background: color-mix(in srgb, var(--hl) 12%, var(--panel)); }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
 .pill { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
 .pass { color: var(--ok); } .known { color: var(--warn); } .fail { color: var(--bad); } .idle { color: var(--muted); }
-.viewer { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; position: sticky; top: 12px; }
-.viewer .head { display: grid; gap: 2px; font-size: 13px; }
-.viewer .why { font-size: 12px; color: var(--muted); }
-.trip { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
-figure { margin: 0; display: grid; gap: 4px; }
-figure img { display: block; width: 100%; height: auto; border-radius: 4px; background: var(--idle); image-rendering: auto; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; position: sticky; top: 12px; scroll-margin-top: 12px; }
+@media (max-width: 1100px) { .panel { position: static; } }
+.panel .head { display: grid; gap: 2px; font-size: 13px; }
+.panel .why { font-size: 12px; color: var(--muted); }
+.trip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 560px) { .trip { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 4px; align-content: start; }
+figure button { all: unset; cursor: zoom-in; display: block; border-radius: 4px; }
+figure button:focus-visible { outline: 2px solid var(--hl); outline-offset: 2px; }
+figure img { display: block; width: 100%; height: auto; border-radius: 4px; background: var(--idle); }
+figure .ph { aspect-ratio: 4 / 3; border-radius: 4px; background: var(--idle); }
+.stack { position: relative; display: block; }
+.stack img.heat { position: absolute; inset: 0; background: none; }
+img.heat { opacity: .8; image-rendering: pixelated; }
+.heatkey { display: grid; gap: 4px; font-size: 12px; color: var(--muted); max-width: 520px; }
+.hk-bar, .hk-ticks { display: grid; grid-template-columns: 8fr 1fr; }
+.hk-bar { height: 12px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.hk-bar > span + span { border-left: 2px solid var(--fg); }
+.hk-ticks { font-size: 11px; }
+.hk-ticks > span:first-child { display: flex; justify-content: space-between; }
+.hk-ticks > span + span { padding-left: 6px; white-space: nowrap; }
 figcaption { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 .g { color: var(--muted); }
+.zoom { position: fixed; inset: 0; z-index: 10; background: var(--bg); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px)); }
+.zoom[hidden] { display: none; }
+.zbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; min-width: 0; }
+.zinfo { display: grid; min-width: 0; flex: 1 1 260px; }
+.zname { font-weight: 600; font-size: 13px; overflow-wrap: anywhere; }
+.zmeta { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.zctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btns { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.btns button { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--panel); color: var(--muted); border: 0; padding: 7px 10px; cursor: pointer; white-space: nowrap; }
+.btns button + button { border-left: 1px solid var(--line); }
+.btns button[aria-pressed=true] { background: var(--fg); color: var(--bg); }
+.btns button:disabled { opacity: .4; cursor: default; }
+.close { font: 13px system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+.zstage { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.zstage.drag { cursor: grabbing; }
+.zlayer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.zlayer img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; -webkit-user-drag: none; pointer-events: none; }
+.zlayer.px img { image-rendering: pixelated; }
+.zlayer img.off { visibility: hidden; }
+.zkey { margin-bottom: 6px; }
+.zkey[hidden] { display: none; }
+.ztag { position: absolute; left: 8px; top: 8px; font: 500 12px ui-monospace, "Cascadia Mono", Menlo, monospace; background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; pointer-events: none; }
+.hint { font-size: 12px; color: var(--muted); }
+.hint .touch { display: none; }
+@media (pointer: coarse) { .hint .keys { display: none; } .hint .touch { display: inline; } }
 </style>
 <div class="wrap">
   <header>
     <h1>Render Check Coverage</h1>
     <div class="sub" id="sub"></div>
-    <div class="note">melee-render's frames from the last run of <span class="mono">melee-render-check</span>'s tests: against ssbm-rs's frames (which match Dolphin's software renderer) draw by draw and as images, and at higher scales and in widescreen against melee-render's own 1x frame. A <span class="known">known</span> result is out of tolerance for a documented reason and must stay exactly as recorded; any change fails the test.</div>
+    <div class="note">melee-render's frames from the last run of <span class="mono">melee-render-check</span>'s tests: against ssbm-rs's frames (which match Dolphin's software renderer) draw by draw and as images, and at higher scales and in widescreen against melee-render's own 1x frame. A <span class="known">known</span> result is out of tolerance for a documented reason and must stay exactly as recorded; any change fails the test. Click an image to open it at full size: switch between the source, melee-render's frame and their difference, and zoom in. For a scaled check the third image is what the check measures, each 16 by 16 block's mean difference as a heatmap over the 1x frame, as pixel by pixel a frame drawn at a higher resolution differs in detail the check tolerates (edges, mip levels, dither).</div>
   </header>
   <div class="stats" id="stats"></div>
   <section>
@@ -62,22 +106,39 @@ figcaption { font-size: 11px; color: var(--muted); text-transform: uppercase; le
     <div class="legend" id="tol"></div>
     <div class="frames">
       <div class="list"><table><thead><tr><th>Check</th><th>Image</th><th class="r">PSNR</th><th class="r">&gt;8</th><th class="r">&gt;32</th><th class="r">Block</th><th>Result</th></tr></thead><tbody id="rows"></tbody></table></div>
-      <div class="viewer" id="viewer"></div>
+      <div class="panel" id="panel"></div>
     </div>
   </section>
+</div>
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Frame viewer">
+  <div class="zbar">
+    <div class="zinfo"><span class="zname" id="zname"></span><span class="zmeta num" id="zmeta"></span></div>
+    <div class="zctl">
+      <span class="btns" id="zviews"></span>
+      <span class="btns" id="zscale"></span>
+      <span class="btns"><button id="zprev" aria-label="Previous entry" title="Previous entry (←)">‹ Prev</button><button id="znext" aria-label="Next entry" title="Next entry (→)">Next ›</button></span>
+      <button class="close" id="zclose">Close</button>
+    </div>
+  </div>
+  <div class="zstage" id="zstage">
+    <div class="zlayer" id="zlayer"><img alt="" data-k="0"><img alt="" data-k="1"><img alt="" data-k="2"></div>
+    <span class="ztag" id="ztag"></span>
+  </div>
+  <div class="hint"><div class="zkey" id="zkey" hidden></div><span class="keys">1, 2, 3 pick the image and space flips the first two · wheel zooms at the pointer, drag pans · 0 fits, + and − zoom, z steps through the sizes · ← → step entries · Esc closes</span><span class="touch">Tap 1, 2, 3 to switch · pinch to zoom, drag to pan, double-tap to zoom in or fit</span></div>
 </div>
 <script>
 const D = /*DATA*/null;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const fmt = (v, d) => v === null ? "inf" : Number(v).toFixed(d);
-$("sub").innerHTML = `<span class="mono">${esc(D.commit)}</span> · generated ${esc(D.generated)}`;
+const mb = (b) => `${(b / 1e6).toFixed(1)} MB`;
+const img = D.images || { files: 0, bytes: 0, all: true };
+$("sub").innerHTML = `<span class="mono">${esc(D.commit)}</span> · generated ${esc(D.generated)} · ${img.files} files, ${mb(img.bytes)}${img.all ? "" : " · some images left out to fit the budget"}`;
 const checks = D.checks;
 const res = (c) => c.result || "idle";
-const count = (r, g) => checks.filter((c) => res(c) === r && (!g || c.group === g)).length;
+const count = (r) => checks.filter((c) => res(c) === r).length;
 const finite = checks.flatMap((c) => c.measures.filter((m) => m.kind === "compare" && m.psnr !== null && res(c) === "pass").map((m) => m.psnr));
 const stages = [...new Set(checks.map((c) => c.stage || "Other"))];
-const secs = (g) => checks.filter((c) => c.group === g).reduce((s, c) => s + (Number(c.seconds) || 0), 0);
 const stat = (k, v, d) => `<div class="stat"><span class="k">${k}</span><span class="v num">${v}</span><span class="d">${d}</span></div>`;
 $("stats").innerHTML = [
   stat("Checks", checks.length, `${stages.length} stages · ${checks.filter((c) => c.group === "standard").length} standard, ${checks.filter((c) => c.group === "sweep").length} sweep`),
@@ -86,7 +147,8 @@ $("stats").innerHTML = [
   stat("Fail", count("fail"), "a regression, or a result not yet recorded"),
   stat("Worst passing", finite.length ? `${Math.min(...finite).toFixed(1)} dB` : "inf", "PSNR against ssbm-rs (inf = identical)"),
 ].join("");
-$("tol").innerHTML = `<span>Against ssbm-rs: PSNR at least <b class="num">${D.tolerance.psnr} dB</b>, at most <b class="num">${D.tolerance.off32}%</b> of pixels off by more than 32 levels.</span><span>Scaled (2x, 3x box-downsampled; 16:9's middle against 73:60): at least <b class="num">${D.scaled.psnr} dB</b>, and no 16 by 16 block of the 1x picture off by more than <b class="num">${D.scaled.block}</b> levels on average in a channel.</span>`;
+$("tol").innerHTML = `<span>Against ssbm-rs: PSNR at least <b class="num">${D.tolerance.psnr} dB</b>, at most <b class="num">${D.tolerance.off32}%</b> of pixels off by more than 32 levels.</span><span>Scaled (2x, 3x box-downsampled; 16:9's middle against 73:60): at least <b class="num">${D.scaled.psnr} dB</b>, and no 16 by 16 block of the 1x picture off by more than <b class="num">${D.scaled.block}</b> levels on average in a channel (its third image is that block difference).</span>`;
+
 const rows = [];
 for (const s of stages) {
   rows.push({ stage: s });
@@ -95,10 +157,31 @@ for (const s of stages) {
     for (const m of c.measures) rows.push({ c, m });
   }
 }
-let sel = rows.findIndex((r) => r.m && res(r.c) !== "pass" && r.m.ours) ;
+const hasImages = (r) => r && r.m && (r.m.ref || r.m.ours || r.m.diff);
+const nav = rows.map((r, i) => hasImages(r) ? i : -1).filter((i) => i >= 0);
+let sel = rows.findIndex((r) => hasImages(r) && res(r.c) !== "pass");
+if (sel < 0) sel = rows.findIndex((r) => hasImages(r));
 if (sel < 0) sel = rows.findIndex((r) => r.m);
 const what = (m) => m.kind === "compare" ? `1x vs ssbm-rs, log frame ${m.what}` : `${m.what} vs 1x`;
-function render() {
+// A scaled check's third image is the heatmap of the blocks it measures, drawn over the source.
+const heat = (m) => m.kind === "scaled";
+const HEAT_LABEL = `block difference, the check's measure; limit ${D.scaled.block}`;
+const heatKey = () => `<div class="heatkey"><span>Block difference, the check's measure: each 16 × 16 block's mean difference in its furthest channel, in levels; limit ${D.scaled.block}</span>
+  <span class="hk-bar" aria-hidden="true"><span style="background:linear-gradient(to right, ${D.scaled.ramp.join(", ")})"></span><span style="background:${D.scaled.over}"></span></span>
+  <span class="hk-ticks num"><span><span>0</span><span>${D.scaled.block / 2}</span><span>limit ${D.scaled.block}</span></span><span>&gt; ${D.scaled.block}</span></span></div>`;
+// Each image's [button label, caption], source first.
+function labels(m) {
+  const diff = heat(m) ? ["Blocks", HEAT_LABEL] : ["Diff ×4", "difference ×4 (brighter is further)"];
+  if (m.kind === "compare") return [["ssbm-rs", "ssbm-rs"], ["melee-render", "melee-render"], diff];
+  if (m.what === "1x GPU XFB") return [["CPU XFB", "melee-render 1x, XFB copied on the CPU"], ["GPU XFB", "melee-render 1x, XFB copied on the GPU"], diff];
+  if (m.what === "3x 16:9") return [["3x 73:60", "melee-render at 3x, 73:60"], ["3x 16:9", "melee-render at 3x 16:9, its middle"], diff];
+  return [["1x", "melee-render at 1x"], [m.what, `melee-render at ${m.what}, box-downsampled to 1x`], diff];
+}
+const srcs = (m) => [m.ref, m.ours, m.diff];
+const title = (r) => `${r.c.stage} · ${r.c.match} · frame ${r.c.frame}`;
+const measured = (m) => `${what(m)}: ${fmt(m.psnr, 2)} dB, ${fmt(m.off32, 3)}% off by 32${m.block === null ? "" : `, worst block ${fmt(m.block, 1)} levels`}`;
+
+function renderRows() {
   $("rows").innerHTML = rows.map((r, i) => {
     if (r.stage) return `<tr class="stage"><td colspan="7">${esc(r.stage)}</td></tr>`;
     const c = r.c, m = r.m, cls = res(c);
@@ -108,24 +191,251 @@ function render() {
     return `<tr class="m${i === sel ? " sel" : ""}" data-i="${i}"><td>${label}</td><td><i class="dot" style="background:${dot}"></i>${esc(what(m))}</td>
       <td class="r num">${fmt(m.psnr, 2)}</td><td class="r num">${fmt(m.off8, 3)}%</td><td class="r num">${fmt(m.off32, 3)}%</td><td class="r num">${m.block === null ? "" : fmt(m.block, 1)}</td><td><span class="pill ${cls}">${cls}</span></td></tr>`;
   }).join("");
+}
+function renderPanel() {
   const r = rows[sel];
-  if (!r || !r.m) { $("viewer").innerHTML = `<div class="g">Nothing measured.</div>`; return; }
-  const c = r.c, m = r.m;
-  const img = (src, cap) => src ? `<figure><img alt="${esc(cap)}" src="${src}"><figcaption>${esc(cap)}</figcaption></figure>` : "";
-  const theirs = m.kind === "compare" ? "ssbm-rs" : "melee-render at 1x";
-  const ours = m.kind === "compare" ? "melee-render" : `melee-render at ${m.what}, brought to 1x`;
-  $("viewer").innerHTML = `<div class="head"><span><b>${esc(c.stage)}</b> · ${esc(c.match)} · frame ${esc(c.frame)} (native ${m.native})</span>
-    <span class="num">${esc(what(m))}: ${fmt(m.psnr, 2)} dB, ${fmt(m.off32, 3)}% off by 32${m.block === null ? "" : `, worst block ${fmt(m.block, 1)} levels`}</span>
+  if (!r || !r.m) { $("panel").innerHTML = `<div class="g">Nothing measured.</div>`; return; }
+  const c = r.c, m = r.m, L = labels(m), S = srcs(m);
+  const ratio = m.w && m.h ? `${m.w} / ${m.h}` : "4 / 3";
+  const pic = (k, cls) => `<img${cls ? ` class="${cls}"` : ""} alt="${esc(L[k][1])}" src="${esc(S[k])}" width="${m.w}" height="${m.h}" style="aspect-ratio:${ratio}">`;
+  // The heatmap over the source, so the blocks are where they are in the frame.
+  const inner = (k) => k === 2 && heat(m) && S[0] ? `<span class="stack">${pic(0)}${pic(2, "heat")}</span>` : pic(k);
+  const fig = (k) => `<figure>${S[k]
+    ? `<button data-k="${k}" aria-label="Open ${esc(L[k][1])} in the viewer">${inner(k)}</button>`
+    : `<div class="ph" style="aspect-ratio:${ratio}"></div>`}<figcaption>${k + 1} · ${esc(L[k][1])}</figcaption></figure>`;
+  const notes = [];
+  if (!hasImages(r)) notes.push(r.m.w ? "Its images were left out to fit the published page's budget (250 files, 60 MB): the frames at the console's size go in first, then as many larger ones as fit." : "No images were recorded for this measure.");
+  else if (m.psnr === null) notes.push(heat(m) ? "Identical: every block is 0." : "Identical: the difference is black.");
+  $("panel").innerHTML = `<div class="head"><span><b>${esc(c.stage)}</b> · ${esc(c.match)} · frame ${esc(c.frame)} (native ${m.native})</span>
+    <span class="num">${esc(measured(m))}</span>
     <span class="why">${esc(c.expect)}${c.why ? ": " + esc(c.why) : ""}${c.detail ? " · " + esc(c.detail) : ""}${c.seconds ? ` · ${Number(c.seconds).toFixed(1)} s` : ""}</span></div>
-    <div class="trip">${img(m.ours, ours)}${img(m.theirs, theirs)}${img(m.diff, "difference (brighter is further)")}
-    ${!m.ours ? `<div class="g">Thumbnails are kept for each check's first frame only.</div>` : ""}${m.ours && !m.theirs ? `<div class="g">Identical: the reference and the difference are left out.</div>` : ""}</div>`;
+    <div class="trip">${fig(0)}${fig(1)}${fig(2)}</div>
+    ${heat(m) && S[2] ? heatKey() : ""}
+    ${notes.map((n) => `<div class="g">${esc(n)}</div>`).join("")}
+    ${m.w ? `<div class="g num">${m.w} × ${m.h} pixels, lossless</div>` : ""}`;
+}
+function select(i) {
+  sel = i;
+  renderRows();
+  renderPanel();
 }
 $("rows").addEventListener("click", (e) => {
   const tr = e.target.closest("tr.m");
   if (!tr) return;
-  sel = Number(tr.dataset.i);
-  render();
+  select(Number(tr.dataset.i));
+  if (matchMedia("(max-width: 1100px)").matches) $("panel").scrollIntoView({ behavior: "smooth", block: "start" });
 });
-render();
+$("panel").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-k]");
+  if (b) openViewer(Number(b.dataset.k));
+});
+select(sel);
+
+// The viewer: one entry's three images stacked at the same place and size, one shown, so
+// switching keeps the view and the differences stand out.
+const Z = { open: false, k: 0, s: 1, tx: 0, ty: 0, fit: true, w: 0, h: 0, back: null };
+const stage = $("zstage"), layer = $("zlayer"), imgs = [...layer.querySelectorAll("img")];
+const SCALES = [["fit", "Fit"], [1, "1:1"], [2, "2×"], [4, "4×"]];
+const MAX = 16;
+const rect = () => stage.getBoundingClientRect();
+const fitScale = () => { const b = rect(); return Math.min(b.width / Z.w, b.height / Z.h) || 1; };
+const minScale = () => Math.min(fitScale(), 1) / 2;
+function apply() {
+  const b = rect(), w = Z.w * Z.s, h = Z.h * Z.s;
+  Z.tx = w <= b.width ? (b.width - w) / 2 : Math.min(0, Math.max(b.width - w, Z.tx));
+  Z.ty = h <= b.height ? (b.height - h) / 2 : Math.min(0, Math.max(b.height - h, Z.ty));
+  layer.style.width = `${w}px`;
+  layer.style.height = `${h}px`;
+  layer.style.transform = `translate(${Z.tx}px, ${Z.ty}px)`;
+  layer.classList.toggle("px", Z.s >= 1);
+  for (const b of $("zscale").children) {
+    const v = b.dataset.s;
+    b.setAttribute("aria-pressed", String(v === "fit" ? Z.fit : !Z.fit && Math.abs(Z.s - Number(v)) < 1e-6));
+  }
+  showTag();
+}
+function fit() { Z.fit = true; Z.s = fitScale(); apply(); }
+function zoomTo(s, cx, cy) {
+  const b = rect();
+  if (cx === undefined) { cx = b.width / 2; cy = b.height / 2; }
+  s = Math.min(MAX, Math.max(minScale(), s));
+  const px = (cx - Z.tx) / Z.s, py = (cy - Z.ty) / Z.s;
+  Z.s = s; Z.fit = false;
+  Z.tx = cx - px * s; Z.ty = cy - py * s;
+  apply();
+}
+let pointer = null;
+function showTag() {
+  const r = rows[sel];
+  if (!r || !r.m) return;
+  const m = r.m, L = labels(m)[Z.k];
+  let t = `${Z.k + 1} · ${Z.k === 2 && heat(m) ? L[1] : L[0]} · ${Z.fit ? "fit, " : ""}${Math.round(Z.s * 100)}%`;
+  if (pointer) {
+    const x = Math.floor((pointer.x - Z.tx) / Z.s), y = Math.floor((pointer.y - Z.ty) / Z.s);
+    if (x >= 0 && y >= 0 && x < Z.w && y < Z.h) {
+      t += ` · x ${x}, y ${y}`;
+      const B = m.blocks;
+      if (B) {
+        const bx = Math.floor(x / B.side), by = Math.floor(y / B.side);
+        t += bx < B.cols && by < B.rows ? ` · block ${(B.tenths[by * B.cols + bx] / 10).toFixed(1)} levels` : " · outside the blocks";
+      }
+    }
+  }
+  $("ztag").textContent = t;
+}
+function show(k) {
+  const S = srcs(rows[sel].m);
+  if (!S[k]) return;
+  Z.k = k;
+  // The heatmap shows over the source.
+  const over = k === 2 && heat(rows[sel].m);
+  imgs.forEach((im, i) => im.classList.toggle("off", i !== k && !(over && i === 0 && S[0])));
+  imgs[2].classList.toggle("heat", over);
+  $("zkey").hidden = !over;
+  for (const b of $("zviews").children) b.setAttribute("aria-pressed", String(Number(b.dataset.k) === k));
+  showTag();
+}
+function load() {
+  const r = rows[sel], m = r.m, L = labels(m), S = srcs(m);
+  const same = m.w === Z.w && m.h === Z.h;
+  Z.w = m.w || 640; Z.h = m.h || 480;
+  imgs.forEach((im, i) => { if (S[i]) { if (im.getAttribute("src") !== S[i]) im.src = S[i]; } else im.removeAttribute("src"); im.alt = L[i][1]; });
+  $("zname").textContent = title(r);
+  $("zmeta").textContent = `${measured(m)} · native frame ${m.native} · ${m.w} × ${m.h}`;
+  $("zviews").innerHTML = L.map(([s], i) => `<button data-k="${i}" ${S[i] ? "" : "disabled"} title="${esc(L[i][1])} (${i + 1})">${i + 1} · ${esc(s)}</button>`).join("");
+  const at = nav.indexOf(sel);
+  $("zprev").disabled = at <= 0;
+  $("znext").disabled = at < 0 || at >= nav.length - 1;
+  if (!S[Z.k]) Z.k = S.findIndex(Boolean);
+  show(Z.k);
+  if (!same || Z.fit) fit(); else apply();
+  // The neighbours' images, so stepping is quick.
+  for (const j of [nav[at - 1], nav[at + 1]]) if (j !== undefined) for (const s of srcs(rows[j].m)) if (s) new Image().src = s;
+}
+function openViewer(k) {
+  if (!hasImages(rows[sel])) return;
+  Z.back = document.activeElement;
+  Z.open = true; Z.k = k; Z.fit = true;
+  $("zoom").hidden = false;
+  document.body.classList.add("locked");
+  Z.w = 0;
+  load();
+  show(k);
+  $("zclose").focus();
+}
+function closeViewer() {
+  Z.open = false;
+  $("zoom").hidden = true;
+  document.body.classList.remove("locked");
+  const tr = document.querySelector("tr.sel");
+  if (tr) tr.scrollIntoView({ block: "nearest" });
+  if (Z.back && Z.back.isConnected) Z.back.focus();
+  else { const b = $("panel").querySelector(`button[data-k="${Z.k}"]`); if (b) b.focus(); }
+}
+function step(d) {
+  const at = nav.indexOf(sel), j = nav[at + d];
+  if (j === undefined) return;
+  select(j);
+  load();
+}
+$("zkey").innerHTML = heatKey();
+$("zscale").innerHTML = SCALES.map(([v, l]) => `<button data-s="${v}">${l}</button>`).join("");
+$("zscale").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-s]");
+  if (!b) return;
+  if (b.dataset.s === "fit") fit(); else zoomTo(Number(b.dataset.s));
+});
+$("zviews").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (b) show(Number(b.dataset.k)); });
+$("zprev").addEventListener("click", () => step(-1));
+$("znext").addEventListener("click", () => step(1));
+$("zclose").addEventListener("click", closeViewer);
+addEventListener("resize", () => { if (Z.open) { if (Z.fit) fit(); else apply(); } });
+document.addEventListener("keydown", (e) => {
+  if (!Z.open || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key;
+  if (k === "Escape") closeViewer();
+  else if (k >= "1" && k <= "3") show(Number(k) - 1);
+  else if (k === " ") show(Z.k === 0 ? 1 : 0);
+  else if (k === "ArrowLeft") step(-1);
+  else if (k === "ArrowRight") step(1);
+  else if (k === "0" || k === "f") fit();
+  else if (k === "+" || k === "=") zoomTo(Z.s * 1.5);
+  else if (k === "-" || k === "_") zoomTo(Z.s / 1.5);
+  else if (k === "z") {
+    const order = ["fit", 1, 2, 4], at = Z.fit ? 0 : order.indexOf(Z.s);
+    const next = order[(at + 1) % order.length];
+    if (next === "fit") fit(); else zoomTo(next);
+  } else if (k === "Tab") {
+    // Keep focus in the viewer.
+    const f = [...$("zoom").querySelectorAll("button:not(:disabled)")];
+    const i = f.indexOf(document.activeElement);
+    f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+  } else return;
+  e.preventDefault();
+});
+stage.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const b = rect(), unit = e.deltaMode === 1 ? 0.05 : e.deltaMode === 2 ? 1 : 0.0015;
+  zoomTo(Z.s * Math.exp(-e.deltaY * unit), e.clientX - b.left, e.clientY - b.top);
+}, { passive: false });
+// Panning with one pointer, pinching with two; a double tap or double click zooms in or fits.
+const down = new Map();
+let gesture = null, lastTap = null, lastType = "mouse";
+const local = (e) => { const b = rect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
+function startGesture() {
+  const p = [...down.values()];
+  if (p.length === 1) gesture = { kind: "pan", x: p[0].x, y: p[0].y, tx: Z.tx, ty: Z.ty, moved: 0 };
+  else if (p.length >= 2) {
+    const mx = (p[0].x + p[1].x) / 2, my = (p[0].y + p[1].y) / 2;
+    gesture = { kind: "pinch", d: Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) || 1, s: Z.s, px: (mx - Z.tx) / Z.s, py: (my - Z.ty) / Z.s, moved: 99 };
+  } else gesture = null;
+}
+function toggleZoom(at) {
+  if (Z.fit) zoomTo(Math.max(2, Math.ceil(fitScale()) * 2), at.x, at.y); else fit();
+}
+stage.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) return;
+  lastType = e.pointerType;
+  try { stage.setPointerCapture(e.pointerId); } catch { /* not a pointer the browser tracks */ }
+  down.set(e.pointerId, local(e));
+  stage.classList.add("drag");
+  startGesture();
+});
+stage.addEventListener("pointermove", (e) => {
+  pointer = local(e);
+  if (!down.has(e.pointerId)) { showTag(); return; }
+  down.set(e.pointerId, pointer);
+  const p = [...down.values()];
+  if (gesture && gesture.kind === "pan" && p.length === 1) {
+    gesture.moved = Math.max(gesture.moved, Math.hypot(p[0].x - gesture.x, p[0].y - gesture.y));
+    Z.tx = gesture.tx + p[0].x - gesture.x;
+    Z.ty = gesture.ty + p[0].y - gesture.y;
+    Z.fit = false;
+    apply();
+  } else if (gesture && gesture.kind === "pinch" && p.length >= 2) {
+    const mx = (p[0].x + p[1].x) / 2, my = (p[0].y + p[1].y) / 2;
+    const s = Math.min(MAX, Math.max(minScale(), gesture.s * Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) / gesture.d));
+    Z.s = s; Z.fit = false;
+    Z.tx = mx - gesture.px * s; Z.ty = my - gesture.py * s;
+    apply();
+  }
+});
+function up(e) {
+  if (!down.has(e.pointerId)) return;
+  const at = down.get(e.pointerId);
+  down.delete(e.pointerId);
+  const tap = gesture && gesture.kind === "pan" && gesture.moved < 8 && e.type === "pointerup";
+  if (tap && e.pointerType !== "mouse") {
+    const now = performance.now();
+    if (lastTap && now - lastTap.t < 320 && Math.hypot(at.x - lastTap.x, at.y - lastTap.y) < 30) { toggleZoom(at); lastTap = null; }
+    else lastTap = { t: now, x: at.x, y: at.y };
+  }
+  if (!down.size) stage.classList.remove("drag");
+  startGesture();
+}
+stage.addEventListener("pointerup", up);
+stage.addEventListener("pointercancel", up);
+stage.addEventListener("pointerleave", () => { if (!down.size) { pointer = null; showTag(); } });
+stage.addEventListener("dblclick", (e) => { if (lastType === "mouse") toggleZoom(local(e)); });
 </script>
 </html>
