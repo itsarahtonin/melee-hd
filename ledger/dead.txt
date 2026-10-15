@@ -11,3 +11,11 @@ ftPp_SpecialHi_3_Anim	The callback of the Ice Climbers' state 364 (ftPp_MS_Speci
 ftPp_SpecialHi_3_IASA	The callback of the Ice Climbers' state 364, which no code enters (see ftPp_SpecialHi_3_Anim).
 ftPp_SpecialHi_3_Phys	The callback of the Ice Climbers' state 364, which no code enters (see ftPp_SpecialHi_3_Anim).
 ftPp_SpecialHi_3_Coll	The callback of the Ice Climbers' state 364, which no code enters (see ftPp_SpecialHi_3_Anim).
+ftCo_CaptureKoopa_Anim	The callback of the common state 278 (ftCo_MS_CaptureKoopa), which no code enters: Koopa Klaw's catch (ftCo_800BC7E0, ftCo_800BC8D4) puts its victim straight into 279 or 284 (ftCo_800BC9C8, ftCo_800BCAF4), and nothing else names 278 or 283.
+ftCo_CaptureKoopa_IASA	The callback of the common state 278 (ftCo_MS_CaptureKoopa), which no code enters (see ftCo_CaptureKoopa_Anim).
+ftCo_CaptureKoopa_Phys	The callback of the common state 278 (ftCo_MS_CaptureKoopa), which no code enters (see ftCo_CaptureKoopa_Anim).
+ftCo_CaptureKoopa_Coll	The callback of the common state 278 (ftCo_MS_CaptureKoopa), which no code enters (see ftCo_CaptureKoopa_Anim).
+ftCo_CaptureKoopaAir_Anim	The callback of the common state 283 (ftCo_MS_CaptureKoopaAir), which no code enters (see ftCo_CaptureKoopa_Anim).
+ftCo_CaptureKoopaAir_IASA	The callback of the common state 283 (ftCo_MS_CaptureKoopaAir), which no code enters (see ftCo_CaptureKoopa_Anim).
+ftCo_CaptureKoopaAir_Phys	The callback of the common state 283 (ftCo_MS_CaptureKoopaAir), which no code enters (see ftCo_CaptureKoopa_Anim).
+ftCo_CaptureKoopaAir_Coll	The callback of the common state 283 (ftCo_MS_CaptureKoopaAir), which no code enters (see ftCo_CaptureKoopa_Anim).
