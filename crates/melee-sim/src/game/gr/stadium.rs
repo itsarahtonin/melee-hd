@@ -23,7 +23,6 @@ use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
 use super::super::camera;
-use super::super::code;
 use super::super::handles::{CameraBoxId, CodeRef};
 use super::super::slippi::CodeSet;
 use super::super::state::{Game, OBJ_CAMERA, Obj, Running, UserData};
@@ -336,12 +335,6 @@ pub fn start_main(r: &mut Running, gobj: GObjId) {
 /// lines the transformations' edges add switched off, and its start hook.
 #[doc(alias = "grStadium_801D13E0")]
 pub fn init_main(r: &mut Running, gobj: GObjId) {
-    // Slippi 3.16's (and 3.14's) codes run the transformations another way from here on
-    // (`801D14C8`, then the cycle's `801D45EC` and its branches; docs/oracle.md); only 3.19's
-    // are ported.
-    if r.game.rules.slippi && r.game.rules.codes != CodeSet::V3_19 {
-        code::unported_call("Pokémon Stadium under Slippi 3.16's transformation codes");
-    }
     let g = ground_of(r.game, gobj);
     let map_id = r.game.grounds[g.0].map_id;
     let j = jobj_of(r.game, gobj);
@@ -379,10 +372,15 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
     } else {
         hi
     };
+    let frozen = frozen(r.game);
     let v = r.game.grounds[g.0].u.stadium();
     v.current = default;
     v.next = None;
     v.timer = timer;
+    // Slippi 3.16's code there (`801D14C8`): no transformation file is out yet.
+    if frozen {
+        v.loading = 0;
+    }
     r.game.grounds[g.0].x11_flags.b012 = 1;
     let geo = r.game.geometry_mut();
     geo.disable_line(0x55);
@@ -1613,6 +1611,11 @@ pub fn dust(r: &mut Running, gobj: GObjId) {
 pub fn cycle(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let s = reg(scale(r.game));
+    // Slippi 3.16's code at `801D4578` (online play's frozen stage) jumps to the end: no
+    // transformation ever comes, and its other codes for the cycle never run.
+    if frozen(r.game) {
+        return;
+    }
     if super::super::gm::is_training(r.game) {
         return;
     }
@@ -1816,6 +1819,13 @@ pub fn cycle(r: &mut Running, gobj: GObjId) {
         }
         _ => {}
     }
+}
+
+/// Whether the replay's codes freeze the stage: Slippi 3.16's set (and 3.14's, which ships the
+/// same Stadium codes) jumps over the whole transformation cycle (`801D4578`), as online play
+/// does; 3.19's set leaves the cycle running.
+fn frozen(game: &Game) -> bool {
+    game.rules.slippi && game.rules.codes != CodeSet::V3_19
 }
 
 /// Frees a stage archive table entry, `grAnime_801C65B0`: an archive the stage loaded itself

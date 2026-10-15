@@ -244,6 +244,8 @@ pub struct StadiumVars {
     /// `xE4`: the current stage's object; `xE8` the next one's while it rises.
     pub current: Option<GObjId>,
     pub next: Option<GObjId>,
+    /// `xF0`: Slippi 3.16's codes' mark of a transformation file out (`801D14C8` clears it).
+    pub loading: u8,
 }
 
 /// `grStadium_type9_GroundVars`.
@@ -528,6 +530,7 @@ impl GroundVars {
                     prev2: h(0x1E),
                     current: gobj(cx, at + 0x20),
                     next: gobj(cx, at + 0x24),
+                    loading: m.u8(at + 0x2C),
                 })
             }
             VarsKind::Izumi => {
@@ -656,6 +659,7 @@ impl GroundVars {
                 kind: h(0x1A),
                 prev: h(0x1C),
                 prev2: h(0x1E),
+                loading: b.0[0x2C],
                 ..Default::default()
             });
         }
@@ -1059,6 +1063,7 @@ impl Mirror for GroundVars {
                     v.path_len.to_bits(),
                     v.timer,
                     [v.state, v.kind, v.prev, v.prev2],
+                    v.loading,
                 );
                 let theirs = (
                     m.u32(at + 4),
@@ -1067,6 +1072,7 @@ impl Mirror for GroundVars {
                     m.u32(at + 0x10),
                     m.u32(at + 0x14) as i32,
                     std::array::from_fn(|i| m.u16(at + 0x18 + 2 * i as u32) as i16),
+                    m.u8(at + 0x2C),
                 );
                 if ours != theirs {
                     cx.mismatch(&path, format!("{ours:?}"), format!("{theirs:?}"));
