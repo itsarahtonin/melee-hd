@@ -7,6 +7,12 @@ use crate::hsd::gobj::GObjId;
 /// Runs the common state callback at `cb`, if one is ported here.
 pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
     match cb {
+        // The Beam Sword's swings (`ftCo_SwordSwing_*`) and their hit hook.
+        0x800C_D390 => g.co_swing_anim(gobj),
+        0x800C_D3B0 => g.co_swing_iasa(gobj),
+        0x800C_D3D0 => g.co_swing_phys(gobj),
+        0x800C_D3F0 => g.co_swing_coll(gobj),
+        super::swing::TAKE_DMG => g.swing_item_back(gobj),
         // The parasol's states.
         0x800C_F0B8 => g.co_item_parasol_open_anim(gobj),
         0x800C_F118 => g.co_item_parasol_open_iasa(gobj),

@@ -94,15 +94,33 @@ impl Ctx<'_> {
         );
         gx.set_cull_mode(GX_CULL_NONE);
 
-        // `ftCo_800C2600_get_params`: the sword attributes in the character's (Link's and
-        // Young Link's at x64, Marth's and Roy's at x78).
-        let base = match fp.kind {
-            KIND_LINK | KIND_CLINK => 0x64,
-            KIND_MARS | KIND_EMBLEM => 0x78,
-            k => panic!("ftCo_800C2600: character {k} has no sword attributes"),
+        // `ftCo_800C2600_get_params`: a held Beam Sword's (`it_80285300`), or the sword
+        // attributes in the character's (Link's and Young Link's at x64, Marth's and Roy's at
+        // x78).
+        let held;
+        let b: &[u8] = if fp.x2101_bits_8 {
+            let item = fp
+                .item_gobj
+                .expect("a held item's afterimage without an item");
+            let kind = melee_sim::game::it::item(game, item).kind;
+            assert!(
+                kind == melee_sim::game::it::kinds::SWORD,
+                "ftCo_800C2600: no afterimage item!"
+            );
+            let at = melee_sim::game::it::kinds::sword::trail_params(game, self.data, item);
+            held = (0..0x14u32)
+                .map(|i| self.data.u8(at.at(i)))
+                .collect::<Vec<u8>>();
+            &held
+        } else {
+            let base = match fp.kind {
+                KIND_LINK | KIND_CLINK => 0x64,
+                KIND_MARS | KIND_EMBLEM => 0x78,
+                k => panic!("ftCo_800C2600: character {k} has no sword attributes"),
+            };
+            let attrs = &game.fighter_attrs[fp.dat_attrs.expect("a fighter without attributes").0];
+            &attrs[base..base + 0x14]
         };
-        let attrs = &game.fighter_attrs[fp.dat_attrs.expect("a fighter without attributes").0];
-        let b = &attrs[base..base + 0x14];
         let word =
             |o: usize| f32::from_bits(u32::from_be_bytes([b[o], b[o + 1], b[o + 2], b[o + 3]]));
         let p = Params {

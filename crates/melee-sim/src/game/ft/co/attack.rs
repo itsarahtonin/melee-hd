@@ -43,8 +43,8 @@ impl Running<'_> {
         self.data.u32(entry.at(8)) != 0
     }
 
-    /// What A does with an item in the hand first: thrown, dropped, or swung (`it_8026B30C`
-    /// 2 and 3, swings not ported); `throw` and `drop` are the states.
+    /// What A does with an item in the hand first: thrown, dropped, or swung or shot
+    /// (`it_8026B30C` 2 and 3, shots not ported); `throw` and `drop` are the states.
     fn item_a_check(&mut self, gobj: GObjId, throw: i32, drop: Option<i32>) -> bool {
         if self.game.fighter(gobj).item_gobj.is_none() {
             return false;
@@ -60,7 +60,10 @@ impl Running<'_> {
             return true;
         }
         match self.item_a_kind(gobj) {
-            2 => unported_call("ftCo_Attack_800CCF58"),
+            2 => {
+                self.enter_swing(gobj, 0);
+                true
+            }
             3 => unported_call("ftCo_Attack_800CDD14"),
             _ => false,
         }
@@ -424,7 +427,10 @@ impl Running<'_> {
                 return true;
             }
             match self.item_a_kind(gobj) {
-                2 => unported_call("ftCo_Attack_800CCF58"),
+                2 => {
+                    self.enter_swing(gobj, 1);
+                    return true;
+                }
                 3 => unported_call("ftCo_Attack_800CDD14"),
                 _ => {}
             }
@@ -625,7 +631,7 @@ impl Running<'_> {
 
     /// `checkItemThrow` of `ftCo_AttackS4.c`: a held item smash-thrown the stick's way (with a
     /// shoulder held, an item A only throws, a used-up shooter, or a C-stick flick), or swung
-    /// (swings aren't ported).
+    /// the stick's way (shots aren't ported).
     #[doc(alias = "checkItemThrow")]
     fn smash_item_check(&mut self, gobj: GObjId, dir: f32) -> bool {
         let Some(item) = self.game.fighter(gobj).item_gobj else {
@@ -648,7 +654,11 @@ impl Running<'_> {
             return true;
         }
         match self.item_a_kind(gobj) {
-            2 => unported_call("ftCo_Attack_800CCF58 (a smash swing)"),
+            2 => {
+                self.game.fighter_mut(gobj).facing_dir = dir;
+                self.enter_swing(gobj, 2);
+                true
+            }
             3 => unported_call("ftCo_Attack_800CDD14 (a smash shot)"),
             _ => false,
         }
@@ -827,7 +837,8 @@ impl Running<'_> {
                 return true;
             }
             if self.item_a_kind(gobj) == 2 {
-                unported_call("ftCo_Attack_800CCF58");
+                self.enter_swing(gobj, 4);
+                return true;
             }
         }
         if self.game.fighter(gobj).kind == KIND_KIRBY {
