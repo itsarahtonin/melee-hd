@@ -666,7 +666,7 @@ impl Running<'_> {
                 }
             }
             14 => unported_call("ftCo_800AD7FC"),
-            15 => unported_call("ftCo_800ABBA8"),
+            15 => self.cpu_tumble(f),
             16 => self.cpu_mash(f),
             17 => unported_call("ftCo_800AC434"),
             18 => self.cpu_di(f, r5),

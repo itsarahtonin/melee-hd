@@ -27,6 +27,7 @@ const CPU_DATA: u32 = 0x58;
 mod table {
     pub const GROUND: u32 = 0x4;
     pub const AIR: u32 = 0x8;
+    pub const SHIELD: u32 = 0x10;
     pub const EDGE_GUARD: u32 = 0x1C;
 }
 
@@ -88,6 +89,13 @@ impl Running<'_> {
         let data = self.common_ptr(CPU_DATA);
         let tables = self.data.ptr(data.at(which))?;
         self.data.ptr(tables.at(4 * kind as u32))
+    }
+
+    /// Whether a fighter is raising or holding its shield, `ftCo_800B9F6C`.
+    #[doc(alias = "ftCo_800B9F6C")]
+    fn cpu_shielding(&self, f: FighterId) -> bool {
+        // `ftCo_MS_GuardOn`, `ftCo_MS_Guard`.
+        matches!(self.game.fighters[f.0].motion_id, 178 | 179)
     }
 
     /// Whether the fighter uses a ranged attack (a projectile), `ftCo_800B9CBC`: only with a
@@ -226,8 +234,11 @@ impl Running<'_> {
             if self.game.fighters[f.0].item_gobj.is_some() {
                 unported_call("ftCo_800B8A9C with an item held (ftCo_800A59E4)");
             }
-            if self.game.fighters[f.0].cpu.level > 5 {
-                unported_call("ftCo_800B9F6C");
+            if self.game.fighters[f.0].cpu.level > 5 && self.cpu_shielding(target) {
+                let r = self.cpu_pick_attack(f, target, self.cpu_table(table::SHIELD, kind));
+                if r != 0 {
+                    break 'done r;
+                }
             }
             // An edge guard on a target over no floor.
             let tp = self.game.fighters[target.0].cur_pos;
