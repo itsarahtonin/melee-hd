@@ -22,6 +22,9 @@ pub const PKIND_NONE: i32 = 3;
 /// `CKind_Mario`, the character a reset slot holds.
 pub const CKIND_MARIO: i32 = 8;
 
+/// `CKind_Kirby`.
+pub const CKIND_KIRBY: i32 = 4;
+
 /// A character's fighters (`ftMapping`): its fighter kind, its second fighter's (the Ice
 /// Climbers' Nana, Zelda's Sheik and Sheik's Zelda), and whether the second is a
 /// transformation rather than a partner (nonzero).

@@ -1174,7 +1174,7 @@ impl Running<'_> {
     }
 
     /// Sets a costume texture's animation to `frame` and steps it, `ftAnim_800704F0`
-    /// (`ftAnim_80070458`); Kirby's copied ability follows (not ported).
+    /// (`ftAnim_80070458`); Kirby's copy's costume follows.
     #[doc(alias = "ftAnim_800704F0")]
     #[doc(alias = "ftAnim_80070458")]
     pub(crate) fn texture_anim(&mut self, gobj: GObjId, i: i32, frame: f32) {
@@ -1191,7 +1191,7 @@ impl Running<'_> {
         aobj::req_anim(&mut objs.aobjs, &mut objs.fobjs, a, frame);
         tobj::anim(objs, self.data, Some(t));
         if self.game.fighters[f.0].kind == 4 {
-            unported_call("ftKb_Init_UnkCallbackPairs0_1");
+            self.kb_hat_texture_anim(gobj, i, frame);
         }
         self.game.fighters[f.0].x221E_b7 = true;
     }

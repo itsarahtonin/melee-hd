@@ -3,10 +3,8 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
 use super::super::super::ef;
 use super::super::super::state::Running;
-use super::checks::KIND_KIRBY;
 use super::ids::ms;
 use super::jump::{FT_800881D8, FT_800887CC, FT_80088328, FT_80088770};
 use crate::fpu::{mem, reg};
@@ -46,14 +44,6 @@ impl Running<'_> {
             None,
             &[ef::Arg::Vec(pos)],
         );
-    }
-
-    /// Kirby's effect where he hits a wall or ceiling, `ftKb_SpecialN_800F1F1C`.
-    #[doc(alias = "ftKb_SpecialN_800F1F1C")]
-    pub fn kirby_bump_effect(&mut self, gobj: GObjId, _pos: Vec3) {
-        if self.game.fighter(gobj).kind == KIND_KIRBY {
-            unported_call("ftKb_SpecialN_800F1F1C's effect");
-        }
     }
 
     /// Teetering at an edge, `ftCo_8009A410`.

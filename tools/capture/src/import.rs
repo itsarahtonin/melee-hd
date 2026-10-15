@@ -84,7 +84,7 @@ pub const LOBJ0: u32 = 0x804D_6568;
 pub const LOBJ1: u32 = 0x804D_656C;
 pub const METAL_MOBJ: u32 = 0x804D_6580;
 pub const CLEAR_MOBJ: u32 = 0x804D_6588;
-pub const KIRBY_COUNTS: u32 = 0x8045_9B88;
+pub const KIRBY_COPIES: u32 = 0x8045_9B88;
 pub const KIRBY_TABLES: u32 = 0x803C_9FC8;
 pub const PURIN_HATS: u32 = 0x8045_A1E0;
 
@@ -643,7 +643,7 @@ impl<'a> Importer<'a> {
             }
             self.game.ft.data.demo_anims[kind as usize] = self.u32(DEMO_ANIMS + 8 * kind);
             self.game.ft.data.ref_counts[kind as usize] = self.u32(REF_COUNTS + 4 * kind) as i32;
-            self.game.ft.kirby.counts[kind as usize] = self.u32(KIRBY_COUNTS + 4 * kind) as i32;
+            self.game.ft.kirby.copies[kind as usize] = self.data(self.u32(KIRBY_COPIES + 4 * kind));
         }
         for s in 0..6 {
             let at = SLOT_WORDS + 8 * s;

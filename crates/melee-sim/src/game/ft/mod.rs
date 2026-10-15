@@ -41,6 +41,7 @@ pub mod fighter;
 pub mod fox;
 pub mod ftlib;
 pub mod gamewatch;
+pub mod kirby;
 pub mod ik;
 pub mod input;
 mod kind_tables;
@@ -126,18 +127,19 @@ pub struct Globals {
 /// The fighter kinds whose costumes Kirby can copy (`ftKb_Init_803C9FC8`'s entries).
 pub const KIRBY_COSTUME_KINDS: [usize; 5] = [3, 15, 16, 22, 24];
 
-/// Kirby's copies of other characters' costumes: a count per kind (`ft_80459B88`), and for
-/// each kind Kirby copies a hat from, six models and material animations.
+/// Kirby's copies of other characters: each kind's copy data (`ft_80459B88`,
+/// `ftDataKirbyCopy*` in its `PlKbCp*.dat`), and for each kind whose copy dresses him in his
+/// own costume's colors, six models and material animations (`ftKb_Init_803C9FC8`).
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct KirbyCostumes {
-    pub counts: [i32; data::KIND_COUNT],
+    pub copies: [Option<DataRef>; data::KIND_COUNT],
     pub models: [[(Option<DataRef>, Option<DataRef>); 6]; 5],
 }
 
 impl Default for KirbyCostumes {
     fn default() -> Self {
         KirbyCostumes {
-            counts: [0; data::KIND_COUNT],
+            copies: [None; data::KIND_COUNT],
             models: [[(None, None); 6]; 5],
         }
     }
@@ -147,7 +149,7 @@ impl KirbyCostumes {
     /// `ftKb_Init_800EE528`.
     #[doc(alias = "ftKb_Init_800EE528")]
     pub fn reset(&mut self) {
-        self.counts = [0; data::KIND_COUNT];
+        self.copies = [None; data::KIND_COUNT];
         self.models.fill([(None, None); 6]);
     }
 }

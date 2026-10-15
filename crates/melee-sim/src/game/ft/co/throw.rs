@@ -5,7 +5,6 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::common::GA_AIR;
@@ -87,7 +86,10 @@ impl Running<'_> {
         self.game.fighter_mut(gobj).x1A6A = 0x1FF;
         self.enter_thrown(victim, victim_msid, mem(speed));
         match kind {
-            KIND_KIRBY if msid == ms::THROW_HI => unported_call("ftCo_800DD398 (Kirby's up throw)"),
+            KIND_KIRBY if msid == ms::THROW_HI => {
+                self.game.fighter_mut(gobj).x2219_b2 = true;
+                self.game.fighter_mut(victim).x2219_b2 = true;
+            }
             KIND_SAMUS => self.samus_throw_beam(gobj, msid, mem(speed)),
             _ => {}
         }
@@ -136,7 +138,11 @@ impl Running<'_> {
             }
             let fp = self.game.fighter(gobj);
             if fp.kind == KIND_KIRBY && fp.motion_id == ms::THROW_HI {
-                unported_call("ftCo_800DD724 (Kirby's up throw)");
+                let victim = fp.victim_gobj;
+                self.game.fighter_mut(gobj).x2219_b2 = false;
+                if let Some(v) = victim {
+                    self.game.fighter_mut(v).x2219_b2 = false;
+                }
             }
         }
     }
@@ -178,16 +184,29 @@ impl Running<'_> {
     }
 
     /// The throws' collision (`ftCo_ThrowF_Coll` and the rest): on the ground, off a ledge
-    /// both let go and fall (`fn_800DD684`). In the air (`ft_80083CE4`, which reads its
-    /// caller's registers) it isn't ported.
+    /// both let go and fall (`fn_800DD684`). In the air (Kirby's throws), frozen it lands on
+    /// any floor it touches (`fn_800DD568`), before its release on any floor but a platform
+    /// (`ft_80083CE4`, `fn_800DD5EC`), and after it only touches.
     #[doc(alias = "ftCo_ThrowF_Coll")]
     #[doc(alias = "ftCo_ThrowB_Coll")]
     // Ports `ftCo_ThrowHi_Coll`; aliased once a check reaches it.
     #[doc(alias = "ftCo_ThrowLw_Coll")]
     // Ports `fn_800DD684`; aliased once a check reaches it.
     pub fn co_throw_coll(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).ground_or_air == GA_AIR {
-            unported_call("ftCo_Throw*_Coll in the air (ft_80083CE4)");
+        let fp = self.game.fighter(gobj);
+        if fp.ground_or_air == GA_AIR {
+            if fp.mv_i32(THROW_FROZEN) != 0 {
+                if self.air_coll_touch(gobj) {
+                    self.throw_land_frozen(gobj);
+                }
+            } else if fp.mv_i32(THROW_RELEASED) == 0 {
+                if self.air_coll_throw(gobj) {
+                    self.throw_land(gobj);
+                }
+            } else {
+                self.air_coll_touch(gobj);
+            }
+            return;
         }
         self.ground_coll_then(gobj, |g, gobj| {
             if let Some(victim) = g.game.fighter(gobj).victim_gobj {
@@ -469,10 +488,14 @@ impl Running<'_> {
             fp.grab_timer = mem(fp::fsubs(reg(fp.grab_timer), reg(dec)));
             let _ = self.grab_mash(gobj, mash);
             if self.game.fighter(gobj).grab_timer <= 0.0 {
-                unported_call("ftCo_800DE5A4 (a mash out of a throw)");
+                if self.game.fighter(gobj).mv_i32(THROWN_JUMP) != 0 || self.capture_jump_held(gobj)
+                {
+                    self.enter_capture_jump(gobj);
+                } else {
+                    self.enter_capture_cut(gobj);
+                }
             }
         }
-        let _ = THROWN_JUMP;
     }
 
     /// The hip follows its animation part way, `ftCommon_8007E3EC`: while its matrix is
@@ -549,18 +572,62 @@ impl Running<'_> {
         }
     }
 
-    /// `ftCo_ThrowHi_Cam`: Kirby's up throw follows its own camera (not ported).
-    // Ports `ftCo_ThrowHi_Cam`; aliased once a check reaches it.
+    /// Landing frozen in an aerial throw, `fn_800DD568`: its animation on again, the throw
+    /// released, the victim unfrozen, on the ground.
+    #[doc(alias = "fn_800DD568")]
+    pub fn throw_land_frozen(&mut self, gobj: GObjId) {
+        self.set_anim_rate(gobj, 1.0);
+        self.anim_update(gobj);
+        self.throw_land_common(gobj, false);
+    }
+
+    /// Landing before an aerial throw's freeze, `fn_800DD5EC`: its animation run on to the
+    /// script's freeze, then as [`Self::throw_land_frozen`].
+    #[doc(alias = "fn_800DD5EC")]
+    pub fn throw_land(&mut self, gobj: GObjId) {
+        while self.game.fighter(gobj).cmd_vars[0] == 0 {
+            self.anim_update(gobj);
+        }
+        self.throw_land_common(gobj, true);
+    }
+
+    fn throw_land_common(&mut self, gobj: GObjId, rate: bool) {
+        if let Some(cb) = self.game.fighter(gobj).anim_cb {
+            super::super::super::code::run_fighter_cb(self, gobj, cb);
+        }
+        if rate {
+            self.set_anim_rate(gobj, 1.0);
+        }
+        let fp = self.game.fighter_mut(gobj);
+        fp.set_mv_i32(THROW_FROZEN, 0);
+        fp.set_mv_i32(THROW_RELEASED, 1);
+        if let Some(v) = fp.victim_gobj {
+            self.thrown_unfreeze(v);
+        }
+        self.land(gobj);
+    }
+
+    /// The thrown fighter's animation on again, `ftCo_800DE974`.
+    #[doc(alias = "ftCo_800DE974")]
+    pub fn thrown_unfreeze(&mut self, gobj: GObjId) {
+        self.game.fighter_mut(gobj).set_mv_i32(THROWN_FROZEN, 0);
+        self.set_anim_rate(gobj, 1.0);
+        self.anim_update(gobj);
+    }
+
+    /// `ftCo_ThrowHi_Cam`: during Kirby's up throw, only the camera bone's point follows.
+    #[doc(alias = "ftCo_ThrowHi_Cam")]
     pub fn co_throw_hi_cam(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if fp.kind == KIND_KIRBY && fp.motion_id == ms::THROW_HI {
-            unported_call("ftCamera_800762F4");
+            self.update_camera_bone(gobj);
+        } else {
+            self.update_camera_box(gobj);
         }
-        self.update_camera_box(gobj);
     }
 
-    /// `ftCo_ThrownHi_Cam`: Kirby's up throw's victim follows its own camera (not ported).
-    // Ports `ftCo_ThrownHi_Cam`; aliased once a check reaches it.
+    /// `ftCo_ThrownHi_Cam`: thrown up by Kirby, only the camera bone's point follows.
+    #[doc(alias = "ftCo_ThrownHi_Cam")]
     pub fn co_thrown_hi_cam(&mut self, gobj: GObjId) {
         let t = self
             .game
@@ -569,9 +636,10 @@ impl Running<'_> {
             .expect("thrown by no one");
         let tf = self.game.fighter(t);
         if tf.kind == KIND_KIRBY && tf.motion_id == ms::THROW_HI {
-            unported_call("ftCamera_800762F4");
+            self.update_camera_bone(gobj);
+        } else {
+            self.update_camera_box(gobj);
         }
-        self.update_camera_box(gobj);
     }
 
     /// The thrown states' empty callbacks.

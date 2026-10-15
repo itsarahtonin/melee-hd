@@ -11,6 +11,7 @@ pub mod air;
 pub mod anim;
 pub mod attack;
 pub mod bury;
+pub mod capture_kirby;
 pub mod capture_koopa;
 pub mod capture_mewtwo;
 pub mod cargo;

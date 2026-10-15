@@ -1104,7 +1104,7 @@ impl Running<'_> {
 
     /// Whether the stick is up for a jump, `fn_800DC044`.
     // Ports `fn_800DC044`; aliased once a check reaches it.
-    fn capture_jump_held(&self, gobj: GObjId) -> bool {
+    pub(crate) fn capture_jump_held(&self, gobj: GObjId) -> bool {
         let t = reg(self.common().f32(0x70));
         reg(self.game.fighter(gobj).input.lstick[0].y) >= t
     }
