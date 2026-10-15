@@ -26,3 +26,6 @@
 *.slpp
 # The benchmark matches are replays made by the CPU AI in ssbm-rs, kept in the repository.
 !/data/bench/*.slp
+
+# The player built to play (`cargo run -p dist`).
+/dist/

@@ -42,11 +42,12 @@ You need:
 - Your own disc image of Melee NTSC 1.02 (game ID GALE01, revision 2): ISO, RVZ, CISO or GCZ. Other revisions are refused.
 
 ```sh
-cargo build --locked --release -p melee-player
-target/release/melee-hd --disc path/to/melee.iso
+cargo run --locked -p dist                  # builds dist/melee-hd.exe; add -- --shortcut for a desktop shortcut
 ```
 
-(`melee-hd.exe` on Windows.) `SSBM_DISC` can name the disc instead of `--disc`. With no match on the command line the player opens on its launcher; Escape returns to it from a match, and quits from the launcher. A match can also be named directly:
+Double-click `dist/melee-hd.exe` (or the shortcut) to play. The first time, it asks for your disc image and remembers it; after that it opens straight on its launcher, with the match you last started from it. Escape returns to the launcher from a match, and quits from the launcher. On Windows it opens no console window; its log is `%APPDATA%\melee-hd\melee-hd.log`. [The player](docs/player.md#playing-it) has the details.
+
+From a terminal, `cargo build --locked --release -p melee-player` builds `target/release/melee-hd` (`melee-hd.exe` on Windows), which prints to the terminal. `--disc path/to/melee.iso` or `SSBM_DISC` names the disc for that run instead of the remembered one. A match can also be named directly:
 
 ```sh
 melee-hd --p1 fox --p2 marth --stage bf --stocks 4 --minutes 8
