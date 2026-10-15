@@ -749,7 +749,7 @@ impl Running<'_> {
             if xe8 == 0.0 {
                 self.enter_fall(gobj);
             } else {
-                self.enter_fall_special(gobj, 1, 0, 1, 1.0, xe8, 0.0, false);
+                self.enter_fall_special(gobj, 1, 0, 1, 1.0, xe8, 0.0, true);
             }
         }
     }
@@ -945,7 +945,8 @@ impl Running<'_> {
         let x10 = self.ys_mvf(gobj, mv::X10);
         let gr = reg(self.game.fighters[f.0].gr_vel);
         let reversed = if x10 > 0.0 { gr < 0.0 } else { gr > 0.0 };
-        if !reversed || !(abs(gr) > fp::fmuls(reg(0.7f32), abs(x10))) {
+        let past = abs(gr) > fp::fmuls(reg(0.7f32), abs(x10));
+        if !reversed || !past {
             return;
         }
         self.game.fighters[f.0].x21EC = Some(CodeRef(addr::S_8012EFC0));
