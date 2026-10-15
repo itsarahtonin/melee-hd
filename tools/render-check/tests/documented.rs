@@ -120,8 +120,8 @@ fn sheik_fox_fod_600() {
         Group::Standard,
         Expect::Known {
             images: [
-                "image: PSNR 40.87 dB, 1.314% off by 8, 0.093% off by 32: within tolerance",
-                "image: PSNR 41.01 dB, 1.250% off by 8, 0.090% off by 32: within tolerance",
+                "image: PSNR 41.07 dB, 1.134% off by 8, 0.093% off by 32: within tolerance",
+                "image: PSNR 41.20 dB, 1.091% off by 8, 0.090% off by 32: within tolerance",
             ],
             notes: &[
                 "not drawn exactly: draw PointSize (12)",
@@ -135,19 +135,7 @@ fn sheik_fox_fod_600() {
 #[test]
 #[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
 fn fox_sheik_ys_600() {
-    compare(
-        &FOX_SHEIK_YS,
-        600,
-        Group::Standard,
-        Expect::Known {
-            images: [
-                "image: PSNR 33.38 dB, 0.268% off by 8, 0.267% off by 32: OUT OF TOLERANCE",
-                "image: PSNR 33.76 dB, 0.257% off by 8, 0.256% off by 32: OUT OF TOLERANCE",
-            ],
-            notes: &[],
-            why: why::YS_PLATFORM,
-        },
-    );
+    compare(&FOX_SHEIK_YS, 600, Group::Standard, Expect::Identical);
 }
 
 #[test]
@@ -163,7 +151,7 @@ fn fox_sheik_dl_600() {
                 "image: PSNR 64.60 dB, 0.005% off by 8, 0.002% off by 32: within tolerance",
             ],
             notes: &[],
-            why: why::SHADOWS,
+            why: why::VERTEX_COLORS,
         },
     );
 }
@@ -189,19 +177,7 @@ fn four_fd_600() {
 #[test]
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn fox_marth_ps_600() {
-    compare(
-        &FOX_MARTH_PS,
-        600,
-        Group::Standard,
-        Expect::Known {
-            images: [
-                "image: PSNR 15.21 dB, 15.388% off by 8, 12.116% off by 32: OUT OF TOLERANCE",
-                "image: PSNR 15.28 dB, 15.705% off by 8, 12.210% off by 32: OUT OF TOLERANCE",
-            ],
-            notes: &[],
-            why: why::STADIUM_FLOOR,
-        },
-    );
+    compare(&FOX_MARTH_PS, 600, Group::Standard, Expect::Identical);
 }
 
 /// Pokémon Stadium transformed: the fire stage.

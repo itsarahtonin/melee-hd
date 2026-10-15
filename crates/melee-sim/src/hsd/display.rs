@@ -71,6 +71,11 @@ pub enum Draw {
     /// The GObj whose render callback draws what follows (`HSD_GObj_804D7814`), whose user
     /// data materials read as they set up (a fighter's, a stage object's, an item's).
     Rendering(Option<super::gobj::GObjId>),
+    /// The shadow textures shadowed materials take after their own for what follows
+    /// (`tobj_shadows`), as [`Display::shadow_tobjs`] holds them from `start`: the stage
+    /// switches each fighter's shadow joint by joint (`grDisplay_801C5B90`), so the list can
+    /// change between draws.
+    Shadows { start: u16, len: u8 },
     /// Fog for what follows, or none (`HSD_FogSet`).
     Fog(Option<FogId>),
     /// A shape of a display object of a joint, its matrices set up, in transparency pass
@@ -187,6 +192,10 @@ pub struct Display {
     /// the frame: the presentation reads them, and the screen pass starts them afresh.
     pub cameras: Vec<CameraView>,
     pub light_sets: Vec<LightSet>,
+    /// The shadow texture lists [`Draw::Shadows`] name, one after another, and the last one
+    /// named this frame.
+    pub shadow_tobjs: Vec<TObjId>,
+    pub shadows_named: Option<(u16, u8)>,
     /// The render pass (`current_render_pass`): offscreen, into a texture, or the screen.
     pub offscreen: bool,
     /// The fighter whose trees draw, for its materials.
@@ -237,6 +246,32 @@ pub fn camera_begin(objs: &mut Objects, data: &Archives, c: Option<CObjId>) -> b
 pub fn start_frame(objs: &mut Objects) {
     objs.display.cameras.clear();
     objs.display.light_sets.clear();
+    objs.display.shadow_tobjs.clear();
+    objs.display.shadows_named = None;
+}
+
+/// Names the shadow textures a shadowed material is about to take ([`Draw::Shadows`]), when
+/// they differ from the last named this frame.
+fn name_shadows(objs: &mut Objects) {
+    let d = &mut objs.display;
+    let current = || objs.tobjs.chain(objs.mobjs.shadows);
+    if let Some((start, len)) = d.shadows_named {
+        let (start, len) = (usize::from(start), usize::from(len));
+        if current().eq(d.shadow_tobjs[start..start + len].iter().copied()) {
+            return;
+        }
+    }
+    let start = d.shadow_tobjs.len();
+    d.shadow_tobjs.extend(current());
+    let named = (
+        u16::try_from(start).expect("too many shadow lists"),
+        u8::try_from(d.shadow_tobjs.len() - start).expect("too many shadows"),
+    );
+    d.shadows_named = Some(named);
+    d.draws.push(Draw::Shadows {
+        start: named.0,
+        len: named.1,
+    });
 }
 
 /// The GObj whose render callback draws what follows, for the presentation
@@ -439,6 +474,9 @@ pub fn dobj_disp(
 /// A material's display setup by its class (`setup`): HAL's, or the classes no port
 /// covers yet.
 fn material_setup(objs: &mut Objects, data: &Archives, m: MObjId) {
+    if objs.mobjs[m].rendermode & mobj::RENDER_SHADOW != 0 {
+        name_shadows(objs);
+    }
     match objs.mobjs[m].class {
         // The stages' (`fn_801C8EF8`) and items' (`fn_80277D8C`) setups differ from HAL's
         // only in the TEV stages and blending they add for their color overlays, which are

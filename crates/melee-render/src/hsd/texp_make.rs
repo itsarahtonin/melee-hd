@@ -6,6 +6,7 @@ use melee_sim::hsd::Objects;
 pub use melee_sim::hsd::texp::make::*;
 use melee_sim::hsd::tobj::{COORD_MASK, COORD_SHADOW, GX_TEXMAP_NULL, TObjId};
 
+use super::Assigned;
 use super::tev::{HsdTevDesc, TevConf, TevState, setup_tev_stage};
 use super::texp::{TevDesc, setup_tev};
 use crate::gx::Gx;
@@ -13,7 +14,13 @@ use crate::gx::enums::*;
 
 /// `TObjSetupTevModulateShadow`: a stage multiplying the color by each shadow texture from
 /// the first of `chain`.
-fn setup_tev_modulate_shadow(gx: &mut Gx, state: &mut TevState, objs: &Objects, chain: &[TObjId]) {
+fn setup_tev_modulate_shadow(
+    gx: &mut Gx,
+    state: &mut TevState,
+    objs: &Objects,
+    res: &Assigned,
+    chain: &[TObjId],
+) {
     let mut desc = HsdTevDesc {
         flags: 1,
         stage: u32::MAX,
@@ -48,17 +55,24 @@ fn setup_tev_modulate_shadow(gx: &mut Gx, state: &mut TevState, objs: &Objects, 
         if shadow.flags & COORD_MASK != COORD_SHADOW {
             break;
         }
+        let r = res.get(objs, t);
         desc.stage = state.assign_tev();
-        desc.coord = shadow.coord;
-        desc.map = shadow.id;
+        desc.coord = r.coord;
+        desc.map = r.id;
         setup_tev_stage(gx, &desc);
     }
 }
 
 /// `SetupEmbossBumpTev`: two stages adding the bump map's offset texture and subtracting it
 /// at the shifted coordinates.
-fn setup_emboss_bump_tev(gx: &mut Gx, state: &mut TevState, objs: &Objects, t: TObjId) {
-    let bump = &objs.tobjs[t];
+fn setup_emboss_bump_tev(
+    gx: &mut Gx,
+    state: &mut TevState,
+    objs: &Objects,
+    res: &Assigned,
+    t: TObjId,
+) {
+    let bump = res.get(objs, t);
     let mut desc = HsdTevDesc {
         flags: 1,
         stage: state.assign_tev(),
@@ -105,35 +119,38 @@ pub fn setup_volatile_tev(
     gx: &mut Gx,
     state: &mut TevState,
     objs: &Objects,
+    res: &Assigned,
     chain: &[TObjId],
     _rendermode: u32,
 ) {
     for (i, &t) in chain.iter().enumerate() {
         let tobj = &objs.tobjs[t];
-        if tobj.id == GX_TEXMAP_NULL {
+        if res.get(objs, t).id == GX_TEXMAP_NULL {
             continue;
         }
         if tobj.flags & BUMP != 0 {
-            setup_emboss_bump_tev(gx, state, objs, t);
+            setup_emboss_bump_tev(gx, state, objs, res, t);
         }
         if tobj.flags & LIGHTMAP_SHADOW != 0 {
-            setup_tev_modulate_shadow(gx, state, objs, &chain[i..]);
+            setup_tev_modulate_shadow(gx, state, objs, res, &chain[i..]);
             break;
         }
     }
 }
 
 /// A material's TEV as it's drawn: its compiled stages, then its chain's volatile ones,
-/// `MObjSetupTev` (the `setup_tev` method of every class on the disc).
+/// `MObjSetupTev` (the `setup_tev` method of every class on the disc). `res` holds the
+/// chain's resources as its setup assigned them.
 #[doc(alias = "MObjSetupTev")]
 pub fn mobj_setup_tev(
     gx: &mut Gx,
     state: &mut TevState,
     objs: &Objects,
+    res: &Assigned,
     desc: &TevDesc,
     chain: &[TObjId],
     rendermode: u32,
 ) {
-    setup_tev(gx, state, objs, desc);
-    setup_volatile_tev(gx, state, objs, chain, rendermode);
+    setup_tev(gx, state, objs, res, desc);
+    setup_volatile_tev(gx, state, objs, res, chain, rendermode);
 }

@@ -53,8 +53,8 @@ fn sheik_fox_fod_2600() {
     fod(
         2600,
         [
-            "image: PSNR 32.22 dB, 22.338% off by 8, 0.029% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 32.30 dB, 22.247% off by 8, 0.035% off by 32: OUT OF TOLERANCE",
+            "image: PSNR 32.29 dB, 22.079% off by 8, 0.025% off by 32: OUT OF TOLERANCE",
+            "image: PSNR 32.37 dB, 21.997% off by 8, 0.031% off by 32: OUT OF TOLERANCE",
         ],
     );
 }
@@ -65,8 +65,8 @@ fn sheik_fox_fod_6000() {
     fod(
         6000,
         [
-            "image: PSNR 33.28 dB, 13.622% off by 8, 0.212% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 33.81 dB, 13.430% off by 8, 0.164% off by 32: OUT OF TOLERANCE",
+            "image: PSNR 33.28 dB, 13.616% off by 8, 0.212% off by 32: OUT OF TOLERANCE",
+            "image: PSNR 33.81 dB, 13.425% off by 8, 0.164% off by 32: OUT OF TOLERANCE",
         ],
     );
 }
@@ -77,8 +77,8 @@ fn sheik_fox_fod_9000() {
     fod(
         9000,
         [
-            "image: PSNR 31.95 dB, 27.059% off by 8, 0.042% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 32.06 dB, 26.828% off by 8, 0.044% off by 32: OUT OF TOLERANCE",
+            "image: PSNR 31.97 dB, 26.978% off by 8, 0.041% off by 32: OUT OF TOLERANCE",
+            "image: PSNR 32.08 dB, 26.749% off by 8, 0.044% off by 32: OUT OF TOLERANCE",
         ],
     );
 }
@@ -92,15 +92,7 @@ fn fox_sheik_ys_3000() {
 #[test]
 #[ignore = "the sweep: needs ssbm-rs's references and the disc; run with --ignored"]
 fn fox_sheik_ys_6000() {
-    known(
-        &FOX_SHEIK_YS,
-        6000,
-        [
-            "image: PSNR 32.03 dB, 2.015% off by 8, 0.520% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 36.51 dB, 1.761% off by 8, 0.352% off by 32: OUT OF TOLERANCE",
-        ],
-        why::YS_PLATFORM,
-    );
+    compare(&FOX_SHEIK_YS, 6000, Group::Sweep, Expect::Identical);
 }
 
 #[test]
@@ -110,10 +102,10 @@ fn fox_sheik_dl_6000() {
         &FOX_SHEIK_DL,
         6000,
         [
-            "image: PSNR 38.62 dB, 1.368% off by 8, 0.513% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 38.84 dB, 1.348% off by 8, 0.496% off by 32: OUT OF TOLERANCE",
+            "image: PSNR 94.99 dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
+            "image: PSNR inf dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
         ],
-        why::SHADOWS,
+        why::VERTEX_COLORS,
     );
 }
 
@@ -134,15 +126,7 @@ fn fox_sheik_dl_12000() {
 #[test]
 #[ignore = "the sweep: needs ssbm-rs's references and the disc; run with --ignored"]
 fn fox_marth_ps_2600() {
-    known(
-        &FOX_MARTH_PS,
-        2600,
-        [
-            "image: PSNR 32.97 dB, 0.176% off by 8, 0.156% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 33.28 dB, 0.165% off by 8, 0.142% off by 32: OUT OF TOLERANCE",
-        ],
-        why::SHADOWS,
-    );
+    compare(&FOX_MARTH_PS, 2600, Group::Sweep, Expect::Identical);
 }
 
 #[test]
@@ -152,8 +136,8 @@ fn fox_marth_ps_9000() {
         &FOX_MARTH_PS,
         9000,
         [
-            "image: PSNR 17.89 dB, 13.987% off by 8, 8.697% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 18.99 dB, 6.631% off by 8, 5.247% off by 32: OUT OF TOLERANCE",
+            "image: PSNR 25.16 dB, 8.878% off by 8, 4.244% off by 32: OUT OF TOLERANCE",
+            "image: PSNR 39.80 dB, 0.852% off by 8, 0.306% off by 32: OUT OF TOLERANCE",
         ],
         why::SCREEN,
     );
@@ -163,15 +147,7 @@ fn fox_marth_ps_9000() {
 #[test]
 #[ignore = "the sweep: needs ssbm-rs's references and the disc; run with --ignored"]
 fn fox_marth_ps_11000_water() {
-    known(
-        &FOX_MARTH_PS,
-        11000,
-        [
-            "image: PSNR 35.58 dB, 0.852% off by 8, 0.600% off by 32: OUT OF TOLERANCE",
-            "image: PSNR 35.78 dB, 0.874% off by 8, 0.613% off by 32: OUT OF TOLERANCE",
-        ],
-        why::SHADOWS,
-    );
+    compare(&FOX_MARTH_PS, 11000, Group::Sweep, Expect::Identical);
 }
 
 #[test]
@@ -226,8 +202,8 @@ fn scaled_sheik_fox_fod_6000() {
         Group::Sweep,
         [
             "scaled 1x GPU XFB: PSNR inf dB, 0.000% off by 8, 0.000% off by 32, worst block 0.00 levels at (0, 0): within tolerance",
-            "scaled 2x: PSNR 30.65 dB, 16.307% off by 8, 2.160% off by 32, worst block 40.29 levels at (48, 448): OUT OF TOLERANCE",
-            "scaled 3x: PSNR 31.16 dB, 16.535% off by 8, 1.824% off by 32, worst block 28.57 levels at (128, 464): within tolerance",
+            "scaled 2x: PSNR 30.64 dB, 16.307% off by 8, 2.162% off by 32, worst block 40.29 levels at (48, 448): OUT OF TOLERANCE",
+            "scaled 3x: PSNR 31.16 dB, 16.535% off by 8, 1.827% off by 32, worst block 28.57 levels at (128, 464): within tolerance",
             "scaled 3x 16:9: PSNR 39.39 dB, 2.709% off by 8, 0.098% off by 32, worst block 12.14 levels at (80, 464): within tolerance",
         ],
         why::REFLECTION_SCALE,
