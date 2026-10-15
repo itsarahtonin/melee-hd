@@ -106,7 +106,8 @@ impl Running<'_> {
     /// `decideAttack11`: Game & Watch's own jab.
     fn decide_attack11(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_GAME_WATCH {
-            unported_call("ftGw_Attack11_Enter");
+            self.gw_attack11_enter(gobj);
+            return;
         }
         self.enter_attack11(gobj);
     }
@@ -208,21 +209,27 @@ impl Running<'_> {
         false
     }
 
-    /// The rapid jab's start, `fn_800D6AC4` (`fn_800D6B8C`, `ftCo_800D6B00`): an item in
-    /// reach is picked up instead; Mr. Game & Watch's own isn't ported.
+    /// The rapid jab's start, `fn_800D6AC4` (`fn_800D6B8C`): Mr. Game & Watch's own.
     #[doc(alias = "fn_800D6AC4")]
     #[doc(alias = "fn_800D6B8C")]
-    #[doc(alias = "ftCo_800D6B00")]
     pub fn enter_attack100(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_GAME_WATCH {
-            unported_call("ftGw_Attack100Start_Enter");
+            self.gw_attack100_start_enter(gobj);
+            return;
         }
+        self.attack100_start(gobj, ms::ATTACK100_START);
+    }
+
+    /// The rapid jab's start in state `msid`, `ftCo_800D6B00`: an item in reach is picked up
+    /// instead.
+    #[doc(alias = "ftCo_800D6B00")]
+    pub fn attack100_start(&mut self, gobj: GObjId, msid: i32) {
         if self.pick_up_item_check(gobj) {
             return;
         }
         let fp = self.game.fighter_mut(gobj);
         fp.x2210 = [0; 4];
-        self.change_motion_state(gobj, ms::ATTACK100_START, 0, 0.0, 1.0, 0.0, None);
+        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(ATTACK100_X0, 0);
@@ -242,6 +249,14 @@ impl Running<'_> {
     /// unless A came again (then an item in reach is picked up, or the loop goes on).
     #[doc(alias = "ftCo_Attack100Loop_Anim")]
     pub fn co_attack100_loop_anim(&mut self, gobj: GObjId) {
+        self.attack100_loop(gobj, |r, g| {
+            r.change_motion_state(g, ms::ATTACK100_END, 0, 0.0, 1.0, 0.0, None)
+        });
+    }
+
+    /// The rapid jab's loop with its end `end`, `ftCo_800D6C60` (the common loop inlines it).
+    #[doc(alias = "ftCo_800D6C60")]
+    pub fn attack100_loop(&mut self, gobj: GObjId, end: fn(&mut Self, GObjId)) {
         let fp = self.game.fighter(gobj);
         if fp.cur_anim_frame >= 0.0 && fp.cur_anim_frame < fp.frame_speed_mul {
             self.game.fighter_mut(gobj).set_mv_i32(ATTACK100_X0, 1);
@@ -255,7 +270,7 @@ impl Running<'_> {
             return;
         }
         if fp.mv_i32(ATTACK100_X0) != 0 && fp.mv_i32(ATTACK100_X4) == 0 {
-            self.change_motion_state(gobj, ms::ATTACK100_END, 0, 0.0, 1.0, 0.0, None);
+            end(self, gobj);
         } else if !self.pick_up_item_check(gobj) {
             self.game.fighter_mut(gobj).set_mv_i32(ATTACK100_X4, 0);
         }
@@ -514,7 +529,8 @@ impl Running<'_> {
     /// `decideFighter` of `ftCo_AttackLw3.c`: Game & Watch's own.
     fn decide_attack_lw3(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_GAME_WATCH {
-            unported_call("ftGw_AttackLw3_Enter");
+            self.gw_attack_lw3_enter(gobj);
+            return;
         }
         // `doEnter`.
         if self.pick_up_item_check(gobj) {
@@ -672,7 +688,7 @@ impl Running<'_> {
         match fp.kind {
             KIND_NESS => self.ness_attack_s4_enter(gobj),
             KIND_PEACH => self.peach_attack_s4_enter(gobj),
-            KIND_GAME_WATCH => unported_call("ftGw_AttackS4_Enter"),
+            KIND_GAME_WATCH => self.gw_attack_s4_enter(gobj),
             KIND_PIKACHU | KIND_PICHU => {
                 self.enter_attack_s4(gobj, angle);
                 // `Fighter_SetEffectHitlagCallbacks`.

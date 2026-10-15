@@ -70,7 +70,8 @@ pub const YOSHI_EGG: usize = 0xC;
 /// (`Ft_Kind_Zelda`), Ness's items (`Ft_Kind_Ness`), Samus's (`Ft_Kind_Samus`), Mario's and
 /// Dr. Mario's cape (`Ft_Kind_Mario`, `Ft_Kind_DrMario`), the Ice Climbers' items
 /// (`Ft_Kind_Popo`, `Ft_Kind_Nana`), Peach's (`Ft_Kind_Peach`), Link's and Young Link's
-/// (`Ft_Kind_Link`, `Ft_Kind_CLink`), Yoshi's egg (`Ft_Kind_Yoshi`).
+/// (`Ft_Kind_Link`, `Ft_Kind_CLink`), Yoshi's egg (`Ft_Kind_Yoshi`), Mr. Game & Watch's
+/// items (`Ft_Kind_GameWatch`).
 pub fn gobj_words(kind: i32) -> &'static [usize] {
     match kind {
         _ if holds_blaster(kind) => &[FOX_BLASTER],
@@ -83,6 +84,7 @@ pub fn gobj_words(kind: i32) -> &'static [usize] {
         9 => &PEACH_ITEMS,
         6 | 20 => &LINK_ITEMS,
         14 => &[YOSHI_EGG],
+        24 => &super::gamewatch::u::ITEMS,
         _ => &[],
     }
 }

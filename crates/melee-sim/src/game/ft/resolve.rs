@@ -168,7 +168,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         // `ftData_OnAbsorb`: Ness's and Mr. Game & Watch's.
         match fp.kind {
             super::ness::KIND_NESS => g.ness_on_absorb(gobj),
-            24 => unported_call("ftGw_Init_OnAbsorb"),
+            super::gamewatch::KIND_GAME_WATCH => g.gw_on_absorb(gobj),
             _ => {}
         }
     } else if fp.unk_gobj.is_some()

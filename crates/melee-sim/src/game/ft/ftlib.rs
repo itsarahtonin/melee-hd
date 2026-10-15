@@ -210,6 +210,19 @@ impl Game {
         self.fighter(gobj).facing_dir
     }
 
+    /// Whether the fighter is charging a smash, `ftLib_IsChargingSmash`.
+    #[doc(alias = "ftLib_IsChargingSmash")]
+    pub fn ft_is_charging_smash(&self, gobj: GObjId) -> bool {
+        // `SmashState_Charging`.
+        self.fighter(gobj).smash_attrs.state == 2
+    }
+
+    /// Whether the fighter is on the ground or in the air, `ftLib_GetGroundAir`.
+    #[doc(alias = "ftLib_GetGroundAir")]
+    pub fn ft_ground_air(&self, gobj: GObjId) -> i32 {
+        self.fighter(gobj).ground_or_air
+    }
+
     #[doc(alias = "ftLib_GetMotionId")]
     pub fn ft_motion_id(&self, gobj: GObjId) -> i32 {
         self.fighter(gobj).motion_id

@@ -10,6 +10,7 @@
 //! which the comparer reports ([`Cx::stale_read`]). The bytes past a member shorter than the
 //! union aren't compared.
 
+use super::kinds::gamewatch::{GameWatchRescueVars, GameWatchVars};
 use super::kinds::heiho::HeihoVars;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::structs::*;
@@ -158,6 +159,8 @@ members! {
     CLinkMilk, clink_milk, itCLinkMilk_ItemVars, [CLINK_MILK];
     YoshiEggLay, yoshi_egg_lay, itYoshiEggLay_ItemVars, [YOSHI_EGG_LAY];
     Heiho, heiho, HeihoVars, [HEIHO];
+    GameWatch, game_watch, GameWatchVars, [GAME_WATCH_GREENHOUSE, GAME_WATCH_MANHOLE, GAME_WATCH_FIRE, GAME_WATCH_PARACHUTE, GAME_WATCH_TURTLE, GAME_WATCH_BREATH, GAME_WATCH_JUDGE, GAME_WATCH_PANIC, GAME_WATCH_CHEF];
+    GameWatchRescue, game_watch_rescue, GameWatchRescueVars, [GAME_WATCH_RESCUE];
     ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE];
     ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];
     ClimbersString, climbers_string, itClimbersString_ItemVars, [ICE_CLIMBER_STRING];

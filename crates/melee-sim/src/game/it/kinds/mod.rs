@@ -10,9 +10,21 @@ pub mod clinkmilk;
 pub mod crate_box;
 pub mod dosei;
 pub mod drmariopill;
+pub mod foods;
 pub mod foxblaster;
 pub mod foxillusion;
 pub mod foxlaser;
+pub mod gamewatch;
+pub mod gamewatchbreath;
+pub mod gamewatchchef;
+pub mod gamewatchfire;
+pub mod gamewatchgreenhouse;
+pub mod gamewatchjudge;
+pub mod gamewatchmanhole;
+pub mod gamewatchpanic;
+pub mod gamewatchparachute;
+pub mod gamewatchrescue;
+pub mod gamewatchturtle;
 pub mod gshell;
 pub mod hammer;
 pub mod hammerhead;
@@ -128,6 +140,16 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || pikachutjoltground::run_event(r, gobj, addr)
         || pikachutjoltair::run_event(r, gobj, addr)
         || heiho::run_event(r, gobj, addr)
+        || gamewatchgreenhouse::run_event(r, gobj, addr)
+        || gamewatchmanhole::run_event(r, gobj, addr)
+        || gamewatchfire::run_event(r, gobj, addr)
+        || gamewatchparachute::run_event(r, gobj, addr)
+        || gamewatchturtle::run_event(r, gobj, addr)
+        || gamewatchbreath::run_event(r, gobj, addr)
+        || gamewatchjudge::run_event(r, gobj, addr)
+        || gamewatchpanic::run_event(r, gobj, addr)
+        || gamewatchchef::run_event(r, gobj, addr)
+        || gamewatchrescue::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
 }
 
@@ -193,6 +215,16 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltair::run_pred(r, gobj, addr))
         .or_else(|| heiho::run_pred(r, gobj, addr))
+        .or_else(|| gamewatchgreenhouse::run_pred(r, gobj, addr))
+        .or_else(|| gamewatchmanhole::run_pred(r, gobj, addr))
+        .or_else(|| gamewatchfire::run_pred(r, gobj, addr))
+        .or_else(|| gamewatchparachute::run_pred(r, gobj, addr))
+        .or_else(|| gamewatchturtle::run_pred(r, gobj, addr))
+        .or_else(|| gamewatchbreath::run_pred(r, gobj, addr))
+        .or_else(|| gamewatchjudge::run_pred(r, gobj, addr))
+        .or_else(|| gamewatchpanic::run_pred(r, gobj, addr))
+        .or_else(|| gamewatchchef::run_pred(r, gobj, addr))
+        .or_else(|| gamewatchrescue::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -257,6 +289,18 @@ pub const LINK_ARROW: i32 = 64;
 pub const CLINK_ARROW: i32 = 65;
 pub const LINK_BOW: i32 = 76;
 pub const CLINK_BOW: i32 = 77;
+/// Mr. Game & Watch's: `It_Kind_GameWatch_Greenhouse`, `_Manhole`, `_Fire`, `_Parachute`,
+/// `_Turtle`, `_Breath`, `_Judge`, `_Panic`, `_Chef` and `_Rescue`.
+pub const GAME_WATCH_GREENHOUSE: i32 = 114;
+pub const GAME_WATCH_MANHOLE: i32 = 115;
+pub const GAME_WATCH_FIRE: i32 = 116;
+pub const GAME_WATCH_PARACHUTE: i32 = 117;
+pub const GAME_WATCH_TURTLE: i32 = 118;
+pub const GAME_WATCH_BREATH: i32 = 119;
+pub const GAME_WATCH_JUDGE: i32 = 120;
+pub const GAME_WATCH_PANIC: i32 = 121;
+pub const GAME_WATCH_CHEF: i32 = 122;
+pub const GAME_WATCH_RESCUE: i32 = 124;
 /// `It_Kind_CLink_Milk`, Young Link's taunt's milk.
 pub const CLINK_MILK: i32 = 123;
 /// `It_Kind_Yoshi_EggThrow`, `_EggLay` and `_Star`, Yoshi's eggs and his ground pound's stars.

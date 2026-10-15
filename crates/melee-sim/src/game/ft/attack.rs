@@ -1186,7 +1186,24 @@ impl Running<'_> {
                 && (h.x42_b0 || (mf.x2218_b7 && h.x41_b7))
                 && self.item_box_hits_bubble(g, j, me, Bubble::Absorb, false)
             {
-                unported_call("it_8026FAC4 from ftColl_8007925C (a fighter absorbing an item)");
+                // Absorbed: the item knows by whom, and the fighter which way it came, and
+                // for an absorbable box its damage and one more hit.
+                self.item_add_victim(g, j, 6, victim(me), false);
+                let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
+                let (dmg, counts) = (whole_damage(reg(h.damage)), h.x42_b0);
+                let fp = &self.game.fighters[me.0];
+                let (fg, fx) = (fp.gobj, fp.cur_pos.x);
+                let ip = it::item_mut(self.game, g);
+                ip.xC90_absorbGObj = fg;
+                let dir = if fx > ip.pos.x { -1.0 } else { 1.0 };
+                let fp = &mut self.game.fighters[me.0];
+                fp.AbsorbAttr.x1A40_absorbHitDirection = dir;
+                if counts {
+                    let a = &mut fp.AbsorbAttr;
+                    a.x1A44_damageTaken = a.x1A44_damageTaken.wrapping_add(dmg);
+                    a.x1A48_hitsTaken = a.x1A48_hitsTaken.wrapping_add(1);
+                }
+                return;
             }
         }
         if !self.game.fighters[me.0].x221B.x221B_b5 && !phantom && clanks != 0 {

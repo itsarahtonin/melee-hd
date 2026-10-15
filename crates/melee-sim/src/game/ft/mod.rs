@@ -39,6 +39,7 @@ pub mod falco;
 pub mod fighter;
 pub mod fox;
 pub mod ftlib;
+pub mod gamewatch;
 pub mod ik;
 pub mod input;
 mod kind_tables;
