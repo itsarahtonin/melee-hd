@@ -13,7 +13,7 @@ use crate::math;
 use crate::vec::Vec3;
 
 /// A surface a segment crosses: where, which line, its surface flags and unit normal.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Hit {
     pub pos: Vec3,
     pub line: i32,
@@ -289,7 +289,7 @@ pub fn line_intersection_v(
 }
 
 /// Which kind of surface a search looks for, with what differs between them.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, melee_derive::StateEq)]
 enum Surface {
     Floor,
     Ceiling,

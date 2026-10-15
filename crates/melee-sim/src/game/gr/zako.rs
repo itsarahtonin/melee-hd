@@ -15,7 +15,7 @@ use crate::fpu::reg;
 use crate::hsd::gobj::GObjId;
 
 /// A spawn slot (`grZakoGenerator_Entry`).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Slot {
     /// The point of interest it spawns at, or -1 for a free slot.
     pub point: i16,
@@ -28,7 +28,7 @@ pub struct Slot {
 }
 
 /// The spawner's globals (`lbl_8049F030`).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Zako {
     /// The stage's enemy table (`grZakoGenerator_SpawnDesc` entries), if it has one.
     pub spawns: Option<DataRef>,

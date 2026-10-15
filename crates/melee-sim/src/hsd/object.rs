@@ -3,7 +3,7 @@
 
 /// `HSD_Obj::ref_count`. A new object holds 0, which counts its first owner; each further
 /// owner adds one. `NOREF` (0xFFFF) marks an object destroyed on every release.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct RefCount(pub u16);
 
 /// `HSD_OBJ_NOREF`.

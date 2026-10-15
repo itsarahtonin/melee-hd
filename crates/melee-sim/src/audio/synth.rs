@@ -22,7 +22,7 @@ pub const GROUPS: usize = 0x100;
 pub const NODES: usize = 0x40;
 
 /// `HSD_SynthSFXNode`.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Node {
     /// `x0`: the effect's id while it plays, -1 on the second voice of a pair, 0 when free.
     pub id: i32,
@@ -73,7 +73,7 @@ impl Node {
 
 /// One voice of a loaded effect (`foo`'s per-voice block): where its samples are in ARAM and
 /// how to decode them.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct SfxVoice {
     pub addr: Addr,
     pub adpcm: Adpcm,
@@ -81,7 +81,7 @@ pub struct SfxVoice {
 }
 
 /// A loaded effect (`foo`, in `hsd_SynthSFXDataHash`).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Sfx {
     pub id: i32,
     pub voice_count: i32,
@@ -91,7 +91,7 @@ pub struct Sfx {
 }
 
 /// A channel's master volume (`voicelist_1784`): current, target and fade frames left.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Channel {
     pub volume: f32,
     pub target: f32,
@@ -99,7 +99,7 @@ pub struct Channel {
 }
 
 /// The stream player's globals (`HSD_Synth_804D7760` and on, `pstHakoHeader`).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Stream {
     /// `HSD_Synth_804D7760`: the stream's node id.
     pub node: i32,
@@ -122,7 +122,7 @@ pub struct Stream {
 }
 
 /// The synth's state.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Synth {
     pub nodes: [Node; NODES],
     /// `hsd_SynthSFXDataHash`: the loaded effects by id modulo 32, in list order.

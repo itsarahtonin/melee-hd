@@ -28,7 +28,7 @@ pub const GM_CRUEL_VS: u8 = 38;
 pub const GM_EVENT: u8 = 43;
 
 /// The game-mode layer's globals besides the scene loop's and the match's.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Globals {
     /// The debug level (`DbLevel`): 0 on a retail disc, where the debug menus, pause frame
     /// stepping and debug buttons never run. Their paths aren't ported.
@@ -107,7 +107,7 @@ pub fn is_training(game: &Game) -> bool {
 /// unlocked whatever it says (Slippi Dolphin's unlock-all codes, which patch `gm_80164ABC`'s
 /// and `gm_80164600`'s answers to 1): an input to a match, which reads it but never writes it
 /// (see engine.md).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Unlocks {
     /// The unlockable characters, a bit each by unlock index (`save_data.unlocked_characters`,
     /// at the card data's `0x1868`).

@@ -60,7 +60,7 @@ pub const CHAR_ARTICLES: usize = (kinds::PKIND_START - kinds::KURIBOH) as usize;
 /// An item's table of its model's joints in depth-first order (`DynamicBoneTable`). The
 /// original's block comes uncleared from `HSD_ObjAlloc` and only the model's joints are
 /// written, so `len` says how many entries mean anything; the rest are never read.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct BoneTable {
     pub bones: [Option<JObjId>; BONE_TABLE_LEN],
     pub len: u8,
@@ -76,7 +76,7 @@ impl Default for BoneTable {
 }
 
 /// The item code's globals.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct Globals {
     /// The items' joint tables (`item_dynamic_bones_alloc_data`).
     pub bone_tables: Pool<BoneTable, { pool_kind(Kind::ItemDynamicBones) }>,
@@ -139,7 +139,7 @@ pub struct Globals {
 /// hitboxes' victims. It comes from the spawn's `x40`, which the grapple beam's spawn
 /// (`it_802B7C18`) never sets, leaving a stack word: that id is stale (None), the comparer
 /// leaves it out, and reading it counts a stale read.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct IgnoreId(pub Option<u32>);
 
 impl IgnoreId {

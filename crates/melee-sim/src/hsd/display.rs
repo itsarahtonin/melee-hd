@@ -57,7 +57,7 @@ const ENVELOPE_MAX: usize = 10;
 /// What the presentation layer draws, in the order the original issues the GX commands each
 /// stands for. Objects are named by handle: the presentation reads their state as the pass
 /// left it.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub enum Draw {
     /// A camera starts drawing: its viewport, scissor, projection and view
     /// (`HSD_CObjSetCurrent`), as [`Display::cameras`] holds them at this index (a camera can
@@ -141,7 +141,7 @@ pub enum Draw {
 }
 
 /// A quad of [`Draw::Quad`]: two corners and its color.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Quad {
     pub x0: f32,
     pub y0: f32,
@@ -151,7 +151,7 @@ pub struct Quad {
 }
 
 /// A camera as [`Draw::Camera`] draws with it: what `HSD_CObjSetCurrent` sends GX.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct CameraView {
     /// `xmin`, `xmax`, `ymin`, `ymax`.
     pub viewport: [f32; 4],
@@ -165,7 +165,7 @@ pub struct CameraView {
 }
 
 /// A light with a GX slot, as `HSD_LObjSetupInit` left it.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct ActiveLight {
     pub lobj: LObjId,
     pub id: u32,
@@ -177,7 +177,7 @@ pub struct ActiveLight {
 
 /// The lights of a [`Draw::Lights`]: the active table, the light masks and the view they
 /// were set up for.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct LightSet {
     pub active: [Option<ActiveLight>; lobj::MAX_GXLIGHT],
     pub nb_active: i32,
@@ -189,7 +189,7 @@ pub struct LightSet {
 }
 
 /// The display pass's output for the frame.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Display {
     pub draws: Vec<Draw>,
     /// The cameras [`Draw::Camera`]s name, and the light setups [`Draw::Lights`] name, for
@@ -496,7 +496,7 @@ fn material_setup(objs: &mut Objects, data: &Archives, m: MObjId) {
 
 /// What a fighter's material setup reads of the fighter that draws (the GObj being drawn,
 /// `HSD_GObj_804D7814`), set by the fighter's render callback while its trees draw.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct FighterMaterial {
     /// The fighter draws refracted (`x2226_b5`): refraction's chain for its vibration frame.
     pub refract: Option<TObjId>,

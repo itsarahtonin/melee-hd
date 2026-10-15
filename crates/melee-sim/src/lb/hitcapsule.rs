@@ -19,7 +19,7 @@ use crate::vec::Vec3;
 
 /// What a hitbox remembers hitting (`HitVictim::victim`): the user data of the fighter or item
 /// it hit, which the original keeps as a pointer.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Victim {
     #[default]
     None,
@@ -68,7 +68,7 @@ impl Mirror for Victim {
 /// the top bit), or on a thrown fighter's hitbox its thrower (`owner`, a GObj pointer). A box
 /// that held a thrower and has the bit cleared keeps the pointer's other bits
 /// (`ClearedThrower`): no longer a pointer, which nothing may read as one.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum HitOwner {
     Bits([u8; 4]),
     Thrower(GObjId),

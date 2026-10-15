@@ -7,7 +7,7 @@ use crate::hsd::Objects;
 use crate::hsd::cobj::{self, CObjId, StaticDesc};
 
 /// Where a camera descriptor is: in loaded data or in the executable's.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub enum CObjDesc<'a> {
     Data(DataRef),
     Static(&'a StaticDesc),

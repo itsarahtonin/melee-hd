@@ -10,7 +10,7 @@ use crate::vec::Vec3;
 
 /// A surface found under (or beside) a point: its line, the distance to it along the
 /// surface's axis, its surface flags and its unit normal.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Probe {
     pub line: i32,
     /// For floors and ceilings the surface's height less the point's (with a 0.0001 margin
@@ -77,7 +77,7 @@ pub fn remap(
 }
 
 /// Where a walk along the floor ended, from `mpLib_80056C54`.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct FloorWalk {
     /// Whether it went the whole distance.
     pub reached: bool,

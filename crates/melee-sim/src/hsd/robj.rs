@@ -22,11 +22,11 @@ use crate::mtx::Mtx34;
 use crate::vec::Vec3;
 
 /// An RObj's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct RObjId(pub u32);
 
 /// An Rvalue's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct RvalueId(pub u32);
 
 /// The reference type, in the flags' bits 28 to 30.
@@ -43,7 +43,7 @@ pub const ACTIVE: u32 = 0x8000_0000;
 const TYPE_ROBJ: u8 = 1;
 
 /// What an RObj refers to: the original's union, by the type it was loaded as.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub enum Ref {
     /// A constraint's target joint, set when references resolve.
     #[default]
@@ -58,7 +58,7 @@ pub enum Ref {
 }
 
 /// `HSD_Exp`: an expression over other joints' values.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Exp {
     /// The bytecode, or none for a C expression (the original's `dummy_func`, 0).
     pub bytecode: Option<DataRef>,
@@ -69,7 +69,7 @@ pub struct Exp {
 }
 
 /// `HSD_RObj`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct RObj {
     pub next: Option<RObjId>,
     pub flags: u32,
@@ -115,7 +115,7 @@ impl RObj {
 }
 
 /// `HSD_Rvalue`: one joint an expression reads, and which of its values.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Rvalue {
     pub next: Option<RvalueId>,
     pub flags: u32,
@@ -123,13 +123,13 @@ pub struct Rvalue {
 }
 
 /// The RObj pool (`robj_alloc_data`).
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct RObjs {
     pub pool: Pool<RObj, { pool_kind(Kind::RObj) }>,
 }
 
 /// The Rvalue pool (`rvalue_alloc_data`).
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct Rvalues {
     pub pool: Pool<Rvalue, { pool_kind(Kind::Rvalue) }>,
 }

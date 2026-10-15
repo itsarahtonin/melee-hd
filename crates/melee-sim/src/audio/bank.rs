@@ -14,7 +14,7 @@ use crate::game::handles::CodeRef;
 
 /// A queued load (`HSD_Synth_804C2A60`): the bank file, the bank it goes in, and the callback
 /// with its argument when its samples are in.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct SfxLoad {
     pub entrynum: i32,
     pub bank: i32,
@@ -25,7 +25,7 @@ pub struct SfxLoad {
 /// A loaded effect group's node in its bank's list (the head of its block in the audio
 /// heap): its block's address, the file, its first effect id and effect count, and its
 /// samples' place and size in ARAM.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct SfxGroup {
     pub block: u32,
     pub entrynum: i32,
@@ -36,7 +36,7 @@ pub struct SfxGroup {
 }
 
 /// The banks' state.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Banks {
     /// `HSD_Synth_804C2A60` and its count (`HSD_Synth_804D772C`): the queued loads, the first
     /// running; entries past the count keep what they held.

@@ -1,7 +1,7 @@
 //! The TEV stage descriptions a compile makes (`HSD_TevDesc`, `tev.c`).
 
 /// `HSD_TevConf`: a stage's operations and inputs.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct TevConf {
     pub clr_op: u32,
     pub clr_a: u32,
@@ -30,7 +30,7 @@ pub struct TevConf {
 
 /// `HSD_TevDesc`: one stage. With `flags` 0 the stage is a `GXSetTevOp` mode, read from
 /// `conf.clr_op` (the union's `tevop.tevmode`).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct HsdTevDesc {
     pub flags: u32,
     pub stage: u32,

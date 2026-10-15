@@ -18,7 +18,7 @@ use crate::hsd::pool::kind as pool_kind;
 use crate::math;
 
 /// An AObj's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct AObjId(pub u32);
 
 /// The last frame looped back to the rewind frame (or held at the end frame).
@@ -33,7 +33,7 @@ pub const LOOP: u32 = 1 << 29;
 pub const NO_ANIM: u32 = 1 << 30;
 
 /// `HSD_AObj`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct AObj {
     pub flags: u32,
     pub curr_frame: f32,
@@ -50,7 +50,7 @@ pub struct AObj {
 /// one is `HSD_AObjInitAllocData`.
 #[doc(alias = "HSD_AObjInitAllocData")]
 #[doc(alias = "HSD_AObjGetAllocData")]
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct AObjs {
     pub pool: Pool<AObj, { pool_kind(Kind::AObj) }>,
     /// AObjs that were stopped after being interpreted, since `init_end_callback`

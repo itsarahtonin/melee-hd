@@ -24,7 +24,7 @@ use crate::vec::Vec3;
 pub type Update<'a> = Option<&'a mut dyn FnMut(&mut Objects, u8, Value)>;
 
 /// A value handed to an update function (`HSD_ObjData`).
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub enum Value {
     Float(f32),
     /// No value: `FObjUpdateAnim` has no case for the interpolation (0, a channel whose data
@@ -68,7 +68,7 @@ pub(crate) fn again<'r>(update: &'r mut Update<'_>) -> Update<'r> {
 }
 
 /// An FObj's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct FObjId(pub u32);
 
 /// Interpolation opcodes (`HSD_A_OP_*`).
@@ -80,7 +80,7 @@ const OP_SLP: u8 = 5;
 const OP_KEY: u8 = 6;
 
 /// `HSD_FObj`.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct FObj {
     pub next: Option<FObjId>,
     /// The archive holding the keyframe data.

@@ -25,11 +25,11 @@ pub const PROC_PRIORITIES: usize = 25;
 pub const GX_LINK_NONE: u8 = 0xFF;
 
 /// A GObj: a slot in the scheduler's pool, compared as the original compared addresses.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord, melee_derive::StateEq)]
 pub struct GObjId(pub u32);
 
 /// A process (`HSD_GObjProc`).
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord, melee_derive::StateEq)]
 pub struct ProcId(pub u32);
 
 /// The game's types for what GObjs carry: plain tokens, never closures.
@@ -45,7 +45,7 @@ pub trait Kinds: Clone + Debug + 'static {
 }
 
 /// `HSD_GObj`.
-#[derive(melee_derive::CloneFrom, Debug)]
+#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct GObj<K: Kinds> {
     pub classifier: u16,
     pub p_link: u8,
@@ -67,7 +67,7 @@ pub struct GObj<K: Kinds> {
 }
 
 /// `HSD_GObjProc`.
-#[derive(melee_derive::CloneFrom, Debug)]
+#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct Proc<K: Kinds> {
     /// The owner's next older process.
     pub child: Option<ProcId>,
@@ -86,7 +86,7 @@ pub struct Proc<K: Kinds> {
 
 /// `HSD_GObj_DelayedProcInfo`: changes requested for the running process's GObj, applied when
 /// the process returns.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, melee_derive::StateEq)]
 pub struct Delayed {
     pub in_delayed_proc: bool,
     pub remove_gobj: bool,
@@ -105,7 +105,7 @@ impl Delayed {
 }
 
 /// Where `create` puts a GObj among others of its process link.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Place {
     /// After the last with priority no higher, searching from the tail (`GObj_Create`).
     FromTail,
@@ -139,7 +139,7 @@ impl Place {
 
 /// The scheduler's state. Its fields are public so a captured game's state can be rebuilt
 /// (`tools/capture`); game code goes through the methods.
-#[derive(melee_derive::CloneFrom, Debug)]
+#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct World<K: Kinds> {
     pub gobjs: Pool<GObj<K>, { pool_kind(Kind::GObj) }>,
     pub procs: Pool<Proc<K>, { pool_kind(Kind::GObjProc) }>,

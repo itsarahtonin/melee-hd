@@ -38,7 +38,7 @@ use melee_data::archive::DataRef;
 /// Every HSD object, pooled as the original's allocators pool them, and the HSD globals that
 /// refer to them. Animation update functions get all of it, as the original's could reach any
 /// object.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct Objects {
     pub fobjs: fobj::FObjs,
     pub aobjs: aobj::AObjs,

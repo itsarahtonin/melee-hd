@@ -52,7 +52,7 @@ const CKIND_BOY: i32 = 0x1B;
 const CKIND_GIRL: i32 = 0x1C;
 
 /// The blast zone a fighter left by.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 enum Side {
     Left,
     Right,

@@ -10,7 +10,7 @@ use crate::mtx::Mtx34;
 use crate::vec::Vec3;
 
 /// `Quaternion` in the original: x, y, z, then w.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Quat {
     pub x: f32,
     pub y: f32,

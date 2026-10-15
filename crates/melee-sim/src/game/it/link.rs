@@ -34,7 +34,7 @@ pub const RENDER: u32 = 0x802A_24A0;
 /// Link's hookshot sets its links up without the reset, so a hookshot link in a block new from
 /// the heap keeps the heap's bytes there, which melee-hd doesn't model: `None` until written
 /// (or imported), and the comparer checks it only then (docs/engine.md).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct LinkX20(pub Option<Vec3>);
 
 impl Mirror for LinkX20 {

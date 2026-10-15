@@ -28,7 +28,7 @@ use crate::math;
 use crate::vec::Vec3;
 
 /// A particle's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct ParticleId(pub u32);
 
 /// Gravity pulls the velocity down each frame.
@@ -66,7 +66,7 @@ pub const BANKS: usize = 65;
 pub const POINT_JOBJS: usize = 8;
 
 /// `GXColor`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Rgba {
     pub r: u8,
     pub g: u8,
@@ -76,19 +76,19 @@ pub struct Rgba {
 
 /// The game's user functions for a generator's particles (`HSD_PSUserFunc`): a token the
 /// game's [`Hooks`] dispatch on.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct UserFunc(pub u32);
 
 /// A particle's user data array (`userdata`), a token for [`Hooks::write_user_data`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct UserData(pub u32);
 
 /// A particle callback from the game's table (`psCallback`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct Callback(pub u32);
 
 /// The function the game runs on every new generator (`hsd_804D7900`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct GeneratorHook(pub u32);
 
 /// The game's functions the particle system calls, by token. Each runs with the whole object
@@ -136,7 +136,7 @@ pub trait Hooks {
 }
 
 /// `HSD_Particle`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Particle {
     pub next: Option<ParticleId>,
     pub kind: u32,
@@ -201,7 +201,7 @@ pub struct Particle {
 
 /// An effect bank: command lists (`ptclref_804D0E5C`, `psCmdListArray`) and texture groups
 /// (`psTexGroupArray`) in loaded data.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Bank {
     /// The command bank, which its offsets are relative to.
     pub cmd: DataRef,
@@ -250,7 +250,7 @@ impl Bank {
 }
 
 /// `HSD_PSCmdList` in a loaded bank.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct CmdList(pub DataRef);
 
 impl CmdList {
@@ -282,7 +282,7 @@ impl CmdList {
 }
 
 /// The particle pool (`hsd_804D0F60`) and particle.c's globals.
-#[derive(melee_derive::CloneFrom, Debug)]
+#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct Particles {
     pub pool: Pool<Particle, { pool_kind(Kind::Particle) }>,
     /// Each link's particles (`hsd_804D0908`).
@@ -396,7 +396,7 @@ pub fn init(objs: &mut Objects) {
 }
 
 /// What `psGenerateParticle0` takes for a new particle.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct Spawn {
     pub link_no: u8,
     pub bank: u8,

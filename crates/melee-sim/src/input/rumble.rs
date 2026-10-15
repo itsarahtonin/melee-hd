@@ -8,7 +8,7 @@
 use melee_data::archive::{Archives, DataRef};
 
 /// A port's motor state, as the original's status values number them.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Motor {
     /// Braked (`PAD_MOTOR_STOP_HARD`).
     #[default]
@@ -31,7 +31,7 @@ impl Motor {
 }
 
 /// The game's static rumble scripts.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Table {
     /// `mnVibration_804D4FF0`: the rumble menu's one-frame pulse when a port turns rumble on.
     Vibration,
@@ -46,7 +46,7 @@ impl Table {
 }
 
 /// Where a script's next command is: the original's `HSD_Rumble*`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Script {
     /// In loaded game data (`LbRb.dat`'s `lbRumbleData`).
     Data(DataRef),
@@ -79,12 +79,12 @@ impl Script {
 }
 
 /// A node's slot among the library's nodes, which plays the part of its address.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct NodeId(pub u16);
 
 /// `HSD_PadRumbleListData`: one script running on a port. A freed node keeps its last
 /// contents until reused, as the original's do.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Node {
     pub next: Option<NodeId>,
     pub id: u32,
@@ -164,7 +164,7 @@ impl Node {
 }
 
 /// `HSD_RumbleData`: one port's rumble.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Port {
     /// The state last sent to the motor.
     pub last_status: Motor,
@@ -177,7 +177,7 @@ pub struct Port {
 
 /// The rumble library: `PadLibData`'s `rumble_info`, the nodes it hands out
 /// (`gmMain_8046B1F8` in Melee) and the ports (`HSD_Rumble_804C22E0`).
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Rumble {
     /// The most scripts one port may run.
     pub max_list: u16,

@@ -6,7 +6,7 @@ use melee_data::archive::{Archives, DataRef};
 use crate::game::structs::{_itECB, Vec2};
 
 /// An `Article`: what an item kind's data holds.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Article(pub DataRef);
 
 impl Article {
@@ -45,7 +45,7 @@ impl Article {
 }
 
 /// An `ItemModelDesc`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct ModelDesc(pub DataRef);
 
 impl ModelDesc {
@@ -67,7 +67,7 @@ impl ModelDesc {
 }
 
 /// An `ItemAttr`: an item kind's common attributes.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Attr(pub DataRef);
 
 impl Attr {
@@ -166,7 +166,7 @@ pub mod attr {
 }
 
 /// `ItCo.dat`'s `ItemCommonData` (`it_804D6D28`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Common(pub DataRef);
 
 impl Common {

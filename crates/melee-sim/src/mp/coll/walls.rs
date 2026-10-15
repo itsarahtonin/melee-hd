@@ -21,7 +21,7 @@ use crate::vec::Vec3;
 type Walk<K> = fn(&Geometry<K>, i32) -> i32;
 
 /// Which wall a function deals with.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, melee_derive::StateEq)]
 enum Side {
     /// Right walls, met by the ECB's left point.
     Right,
@@ -30,7 +30,7 @@ enum Side {
 }
 
 /// Where a wall check runs: which of its segments skip the floor's or ceiling's own end walls.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, melee_derive::StateEq)]
 enum Flavour {
     Air,
     /// Skips the floor's end walls on the bottom point's segments.

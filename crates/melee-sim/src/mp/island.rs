@@ -13,11 +13,11 @@ use crate::fpu::{copy, reg};
 use crate::vec::Vec3;
 
 /// An island: its slot in the arena.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct IslandId(pub u32);
 
 /// An island (`mp_UnkStruct0`).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Island {
     pub next: Option<IslandId>,
     /// The vertices at its two ends (`x4`, `x6`).
@@ -36,7 +36,7 @@ pub struct Island {
 }
 
 /// The island lists (`mpIsland_80458E88`).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Islands {
     /// Every island ever allocated, in allocation order.
     pub arena: Vec<Island>,

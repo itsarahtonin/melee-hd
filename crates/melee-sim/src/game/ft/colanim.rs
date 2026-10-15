@@ -10,7 +10,7 @@ use melee_data::archive::DataRef;
 
 /// Which of the fighter's overlays: `x408` (most), `x488` (those `Fighter_804D653C` marks)
 /// and `x508` (Spycloak's).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Overlay {
     X408,
     X488,

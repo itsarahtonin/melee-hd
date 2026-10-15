@@ -31,7 +31,7 @@ pub fn clear_damage_log(game: &mut Game) {
 /// An entry of the damage log (`DamageLogEntry`): what hit (1 a fighter, 2 an item), the
 /// attacker's GObj and its hitbox. The original also keeps the hurtbox hit, which nothing
 /// reads.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, melee_derive::StateEq)]
 pub struct DamageLogEntry {
     pub kind: i32,
     pub source: GObjId,

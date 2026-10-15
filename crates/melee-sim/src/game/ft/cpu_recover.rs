@@ -18,7 +18,7 @@ const WALL_MASK: i32 = 0xFFF;
 const KIND_LUIGI: i32 = 17;
 
 /// Which end of an island a ledge target sits at.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, melee_derive::StateEq)]
 enum Edge {
     /// The left end (`x8`), approached from the left: `ftCo_800A4038`.
     Left,

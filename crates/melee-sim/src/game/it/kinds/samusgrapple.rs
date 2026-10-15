@@ -110,7 +110,7 @@ mod attr {
 
 /// The beam's lengths for her height, which its spawn writes over its attributes' `x34` to
 /// `x58` in the character's loaded data, and the attributes they're in.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Lengths {
     pub attrs: Option<DataRef>,
     pub n: i32,
@@ -173,7 +173,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// The beam's attributes (`itSamusGrappleAttributes`), the derived lengths read from the
 /// state where its spawn wrote them.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 pub struct Attrs(DataRef);
 
 impl Attrs {

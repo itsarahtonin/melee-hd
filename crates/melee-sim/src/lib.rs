@@ -9,6 +9,9 @@
 /// its mode (`gekko_fp::set_fp_mode`) to run the simulation in the console's or Slippi's.
 pub use gekko_fp;
 
+// `melee_derive::StateEq` names its trait through the crate's name, here too.
+extern crate self as melee_sim;
+
 pub mod audio;
 mod fpu;
 pub mod game;
@@ -23,4 +26,5 @@ mod pairs;
 pub mod ppc;
 pub mod quat;
 pub mod rng;
+pub mod state_eq;
 pub mod vec;

@@ -16,7 +16,7 @@ use crate::game::mirror::{Cx, Mem, Mirror};
 
 /// A return-stack slot: loops push the address after the loop command and a count, calls
 /// push a return address.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Slot {
     /// An address in a script.
     Data(DataRef),
@@ -42,7 +42,7 @@ impl Slot {
 }
 
 /// The interpreter's state, `CommandInfo`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Script {
     /// The timer, as raw bits: a float in a `CommandInfo`, an integer in a `ColorOverlay`.
     pub timer: u32,

@@ -25,7 +25,7 @@ use crate::mtx::{Mtx34, Mtx44};
 use crate::vec::Vec3;
 
 /// A CObj's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct CObjId(pub u32);
 
 /// The camera keeps an up vector rather than a roll.
@@ -55,7 +55,7 @@ pub const NO_LEFT_VECTOR: Vec3 = Vec3::new(1.0, 0.0, 0.0);
 const DEG_TO_RAD: f32 = 0.017_453_292;
 
 /// `HSD_CObj`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct CObj {
     pub ref_count: RefCount,
     pub flags: u32,
@@ -90,7 +90,7 @@ impl CObj {
 
 /// The CObj pool and the camera being drawn (`current`, set by the display pass's
 /// `HSD_CObjSetCurrent`).
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct CObjs {
     pub pool: Pool<CObj>,
     pub current: Option<CObjId>,
@@ -166,7 +166,7 @@ pub fn init(objs: &mut Objects, data: &Archives, c: Option<CObjId>, desc: Option
 
 /// A camera descriptor in the executable's data (an `HSD_CObjDesc` whose WObj descriptors
 /// hold a position and no references), as `HSD_CObjInit` reads one.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct StaticDesc {
     pub flags: u16,
     pub projection_type: u16,

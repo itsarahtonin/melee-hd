@@ -75,7 +75,7 @@ mod addr {
 /// The match's live standings (`gm_16F1.c`'s `lbl_8046DBC8`, `lbl_804D65A8` and
 /// `lbl_804D65B0`): each player's rank, the lowest rank, and whether the first ranking has
 /// been taken and who led or trailed in it.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Ranks {
     /// `lbl_8046DBC8.x0`, `x1`: the first ranking with a leader was taken.
     pub taken: u8,
@@ -1627,7 +1627,7 @@ impl Game {
 }
 
 /// The archives the match's own setup loads, in the order the original loads them.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct MatchArchives {
     /// `LbRf.dat`, the refraction textures' table.
     pub lb_rf: melee_data::archive::ArchiveId,

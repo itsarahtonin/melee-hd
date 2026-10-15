@@ -8,7 +8,7 @@ use super::{
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct StageCallbacks {
     pub on_init: u32,
     /// `callback1`, a predicate nothing calls.
@@ -29,7 +29,7 @@ impl StageCallbacks {
 }
 
 /// `StageData`.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct StageData {
     pub grkind: i32,
     pub callbacks: &'static [StageCallbacks],

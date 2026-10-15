@@ -25,7 +25,7 @@ pub const SCORE_PROC: u32 = 0x802F_F218;
 pub const SCORE_TEXT_RENDER: u32 = 0x802F_F360;
 
 /// The hazard sign's statics (`un_804D6D80` to `un_804D6D8C`).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Hazard {
     pub gobj: Option<GObjId>,
     /// Frames the sign has left.
@@ -36,7 +36,7 @@ pub struct Hazard {
 }
 
 /// The coin counter's statics.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Coins {
     pub state: un_803F9E08_t,
     /// `un_804D6DA0` (`IfCoGet.dat`) and `un_804D6DA4` (its `ScInfCgt_scene_data`).

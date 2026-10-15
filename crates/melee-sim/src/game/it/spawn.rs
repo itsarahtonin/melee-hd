@@ -17,7 +17,7 @@ use crate::vec::Vec3;
 
 /// `ItemPickTable`: kinds and their cumulative weights, for a weighted draw. The arrays are
 /// `HSD_MemAlloc` blocks; `None` is a null pointer.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct PickTable {
     /// How many kinds the draw picks from.
     pub size: u8,
@@ -30,7 +30,7 @@ pub struct PickTable {
 }
 
 /// `RandomItemSpawner` (`it_804A0E30`): the process's countdown and table.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Spawner {
     /// Ticks until the next item (`x0`).
     pub timer: i32,
@@ -42,7 +42,7 @@ pub struct Spawner {
 
 /// The spawn tables: the process's, the one without the containers (`it_804A0E50`) and the
 /// Pokémon-like monsters' (`it_804A0E60`).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Tables {
     pub spawner: Spawner,
     pub no_containers: PickTable,

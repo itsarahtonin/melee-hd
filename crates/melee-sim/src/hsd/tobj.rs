@@ -23,7 +23,7 @@ use crate::quat::Quat;
 use crate::vec::Vec3;
 
 /// A TObj's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct TObjId(pub u32);
 
 /// The texture-animation flag of `HSD_*ReqAnimByFlags` (`TOBJ_ANIM`).
@@ -74,7 +74,7 @@ const A_TS_BLEND: u8 = 24;
 const FLT_EPSILON: f32 = f32::from_bits(0x2EDB_E6FF);
 
 /// `GXColor`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
@@ -96,7 +96,7 @@ impl Color {
 /// An image descriptor a TObj shows (`HSD_ImageDesc*`): one in loaded game data, or one in the
 /// game executable's own data (`HSD_MObjSetToonTextureImage`'s callers pass a static one), by
 /// address. Images the game makes at run time (EFB copies) will be further variants.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum ImageRef {
     Data(DataRef),
     Static(u32),
@@ -117,14 +117,14 @@ pub enum ImageRef {
 /// The original copies each palette descriptor into an `HSD_Tlut`; the copies differ from the
 /// descriptors only in `tlut_name`, which `HSD_TObjSetup` writes before every read, so a TObj
 /// refers to the descriptors instead (as it does for `tlut`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct TlutTable {
     pub table: DataRef,
     pub len: u16,
 }
 
 /// `HSD_TObjTev`: a TEV stage that colors the texture with constant and register colors.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct TObjTev {
     pub color_op: u8,
     pub alpha_op: u8,
@@ -171,7 +171,7 @@ impl TObjTev {
 }
 
 /// `HSD_TObj`. Its `HSD_Obj` reference counts are never used for TObjs, so they aren't kept.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct TObj {
     pub next: Option<TObjId>,
     /// `GXTexMapID`, reassigned by [`assign_resources`].
@@ -215,7 +215,7 @@ pub struct TObj {
 }
 
 /// The TObj pool and `tobj_head`.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct TObjs {
     pub pool: Pool<TObj>,
     /// The chain the display pass last set up (`tobj_head`).

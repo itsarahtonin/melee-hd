@@ -14,7 +14,7 @@ use crate::vec::Vec3;
 /// `FIELD` points into the field at `TARGET`, as a byte offset from that field's start, or
 /// none for a null pointer. Unlike the address, the offset doesn't depend on where the
 /// fighter is.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct SelfRef<const TARGET: u32, const FIELD: u32>(pub Option<u32>);
 
 /// `CpuFighter::x444` and `x448`, into `xFC`; `csP` and `write_pos`, into `buffer`.

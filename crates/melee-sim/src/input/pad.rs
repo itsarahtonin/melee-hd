@@ -7,7 +7,7 @@
 //! hardware reported: a [`Sample`], the controller's raw origin and its SI type.
 
 /// `PADStatus`: one controller's state as the SDK reports it.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct PadStatus {
     pub button: u16,
     pub stick_x: i8,
@@ -120,7 +120,7 @@ fn clamp_u8(var: u8, org: u8) -> u8 {
 }
 
 /// What a port reported to one poll: the cases `PADRead` tells apart.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Sample {
     /// No controller, or one that stopped answering (`PAD_ERR_NO_CONTROLLER`).
     Disconnected,
@@ -135,7 +135,7 @@ pub enum Sample {
 }
 
 /// One port's result from a poll.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Read {
     pub status: PadStatus,
     /// The controller asked for its origin to be read again: the input layer reads it and
@@ -194,7 +194,7 @@ pub fn update_origin(raw: &PadStatus, si_type: u32) -> PadStatus {
 }
 
 /// One stick's octagon in `ClampRegion`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct StickRegion {
     /// The dead zone's radius on each axis.
     pub min: i8,

@@ -79,7 +79,7 @@ const ARAM_CALLBACK: u64 = 8;
 /// the addresses to the DSP, the stale loop flag stops the voice at the end of its first
 /// buffer, and the song goes silent about 1.8 s in. A drive's pace keeps them frames apart: any
 /// rate under about 13 MB/s does.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum DiscSpeed {
     /// Each read finishes [`DISC_LATENCY`] after its command, as ssbm-rs's runs read unless told
     /// otherwise (Slippi's fast disc speed): what the oracle's traces and the replay checks
@@ -112,7 +112,7 @@ impl DiscSpeed {
 }
 
 /// What happens at a time on the timeline.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum EventKind {
     /// A video field starts (its retrace interrupt).
     Field,
@@ -128,7 +128,7 @@ pub enum EventKind {
     DiscTimeout,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Event {
     pub at: u64,
     /// The order events due at the same time run in: the order they were scheduled.
@@ -137,7 +137,7 @@ pub struct Event {
 }
 
 /// The timeline's state.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Clock {
     /// The time base.
     pub now: u64,
@@ -186,7 +186,7 @@ pub trait Frames {
 }
 
 /// What the game waits for in a loop with a wait point each spin.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Wait {
     /// Its file load's callback (`lbFile`'s `cancel`).
     FileLoaded,
@@ -204,7 +204,7 @@ pub enum Wait {
 /// the time into the stretch its command went out, and the time its bytes take to transfer
 /// after the latency; a second one can't start before it ends) and ARAM transfers, which
 /// finish at once and interrupt.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct HwLog {
     pub spent: u64,
     pub read: Option<u64>,

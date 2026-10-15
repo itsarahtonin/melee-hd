@@ -16,7 +16,7 @@ pub const CHKIND_NONE: i8 = 0x21;
 pub const NO_NAMETAG: u8 = 120;
 
 /// The VS menus' rules as the save holds them (`GameRules`).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, melee_derive::StateEq)]
 pub struct GameRules {
     /// Time (0), stock (1), coin (2) or bonus (3).
     pub mode: u8,
@@ -55,7 +55,7 @@ impl Default for GameRules {
 }
 
 /// The game's preferences as the save holds them (`GamePrefs`).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, melee_derive::StateEq)]
 pub struct GamePrefs {
     /// The item switch's frequency; `0xFF` for none.
     pub item_freq: u8,

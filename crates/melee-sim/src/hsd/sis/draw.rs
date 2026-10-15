@@ -314,7 +314,7 @@ const ALIGNMENT: u8 = 4;
 const CURSOR: u8 = 5;
 
 /// What a text draws: its background, if it has one, and its glyphs.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct TextDraw {
     pub text: TextId,
     /// Left, top, right, bottom (top and bottom down the screen), and the color.
@@ -326,7 +326,7 @@ pub struct TextDraw {
 
 /// A glyph's quad: its code (below 0x4000 the default font's, else the text's font's), its
 /// corners (top and bottom down the screen), texture coordinates and color.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Glyph {
     pub code: u16,
     pub rect: [f32; 4],

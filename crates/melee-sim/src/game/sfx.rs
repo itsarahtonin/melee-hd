@@ -17,7 +17,7 @@ use crate::hsd::gobj::GObjId;
 use crate::lb::audio::SFX_NONE;
 
 /// `crowdsfx`: the crowd's state.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Crowd {
     /// `crowdsfx_ptr` points at the state: the match set the crowd up.
     pub set_up: bool,

@@ -5,14 +5,14 @@ use crate::fpu::copy;
 
 /// One set of a terrain's sound effects: four sounds, then three more numbers the fighter
 /// code reads with them.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct SoundSet {
     pub sounds: [i32; 4],
     pub info: [i32; 3],
 }
 
 /// A terrain's properties (`mpLib_803BF248_t_x4`).
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct TerrainSounds {
     pub friction: f32,
     pub sets: [SoundSet; 3],

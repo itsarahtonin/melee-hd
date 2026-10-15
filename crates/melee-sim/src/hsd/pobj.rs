@@ -14,7 +14,7 @@ use super::pool::Pool;
 use crate::fpu::copy;
 
 /// A PObj's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct PObjId(pub u32);
 
 /// The shape type, in the flags' bits 12 and 13 (`pobj_type`).
@@ -30,7 +30,7 @@ pub const ENVELOPE: u16 = 2 << 12;
 pub const SHAPESET_ADDITIVE: u16 = 1 << 1;
 
 /// One joint's weight in an envelope (`HSD_Envelope`).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Envelope {
     pub jobj: Option<JObjId>,
     pub weight: f32,
@@ -41,7 +41,7 @@ pub struct Envelope {
 }
 
 /// `HSD_ShapeSet`: the shapes a morphing shape blends, in the archive, and its blend state.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct ShapeSet {
     pub flags: u16,
     pub nb_shape: u16,
@@ -60,7 +60,7 @@ pub struct ShapeSet {
 }
 
 /// What a shape is bound to, the original's union `u`, by its type.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub enum Binding {
     Skin(Option<JObjId>),
     ShapeSet(ShapeSet),
@@ -70,7 +70,7 @@ pub enum Binding {
 }
 
 /// `HSD_PObj`.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct PObj {
     pub next: Option<PObjId>,
     pub verts: Option<DataRef>,
@@ -89,7 +89,7 @@ impl PObj {
 }
 
 /// The PObj pool.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct PObjs {
     pub pool: Pool<PObj>,
     /// The class new shapes load as (`HSD_PObjSetDefaultClass`).
@@ -156,7 +156,7 @@ impl PObjs {
 }
 
 /// A PObj class: HAL's, or one the game derives from it whose loader differs.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum PObjClass {
     #[default]
     Hsd,
