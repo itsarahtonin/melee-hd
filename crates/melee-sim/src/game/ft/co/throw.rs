@@ -160,10 +160,14 @@ impl Running<'_> {
         }
     }
 
-    /// `ftCo_ThrowB_Anim`, `ftCo_ThrowHi_Anim`, `ftCo_ThrowLw_Anim`: Fox's and Falco's blaster
-    /// (`ftFx_Throw_Anim`), the throw's progress, then falling or waiting.
+    /// `ftCo_ThrowB_Anim`, `ftCo_ThrowHi_Anim`, `ftCo_ThrowLw_Anim` (and the cargo throws' that
+    /// call them): Fox's and Falco's blaster (`ftFx_Throw_Anim`), the throw's progress, then
+    /// falling or waiting.
     #[doc(alias = "ftCo_ThrowB_Anim")]
-    // Ports `ftCo_ThrowHi_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_ThrowHi_Anim")]
+    #[doc(alias = "ftCo_CargoThrowB_Anim")]
+    #[doc(alias = "ftCo_CargoThrowHi_Anim")]
+    #[doc(alias = "ftCo_CargoThrowLw_Anim")]
     #[doc(alias = "ftCo_ThrowLw_Anim")]
     pub fn co_throw_anim(&mut self, gobj: GObjId) {
         self.fox_throw_anim(gobj);
@@ -575,6 +579,10 @@ impl Running<'_> {
 
     /// The thrown states' empty callbacks.
     #[doc(alias = "ftCo_ThrowF_IASA")]
+    #[doc(alias = "ftCo_CargoThrowF_IASA")]
+    #[doc(alias = "ftCo_CargoThrowB_IASA")]
+    #[doc(alias = "ftCo_CargoThrowHi_IASA")]
+    #[doc(alias = "ftCo_CargoThrowLw_IASA")]
     #[doc(alias = "ftCo_ThrowB_IASA")]
     // Ports `ftCo_ThrowHi_IASA`; aliased once a check reaches it.
     #[doc(alias = "ftCo_ThrowLw_IASA")]

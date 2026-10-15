@@ -110,7 +110,7 @@ impl Running<'_> {
     /// `ftDk_SpecialAirS_Coll`: landing, the grounded headbutt from the same frame
     /// (`doGroundTransition`).
     #[doc(alias = "ftDk_SpecialAirS_Coll")]
-    #[doc(alias = "doGroundTransition")]
+    // Ports `doGroundTransition`; aliased once a check reaches it.
     pub fn dk_special_air_s_coll(&mut self, gobj: GObjId) {
         if self.air_coll_land(gobj) {
             self.fox_air_to_ground(gobj, ms::SPECIAL_S, COLL_FLAGS);

@@ -176,17 +176,6 @@ fn name_of(addr: u32) -> String {
         .map_or_else(|| format!("{addr:#x}"), |s| s.2.to_owned())
 }
 
-/// A function's `()` as the check's return.
-trait IntoRet {
-    fn into_ret(self) -> Ret;
-}
-
-impl IntoRet for () {
-    fn into_ret(self) -> Ret {
-        Ret::Nothing
-    }
-}
-
 /// Runs the function `call.addr` as its signature takes it, its arguments from the saved
 /// registers.
 fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
@@ -198,6 +187,29 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     let r4 = call.regs.gpr[4] as i32;
     let f1 = call.regs.fpr[1].ps0;
     let b = |v: bool| Ret::Int(u32::from(v));
+    // The attribute copy and the state changes other code calls directly.
+    let entry: Option<fn(&mut Running, GObjId)> = match name.as_str() {
+        "ftDk_Init_LoadSpecialAttrs" => Some(|g, o| g.dk_load_special_attrs(o)),
+        "ftCo_8009B518" => Some(|g, o| g.enter_cargo_wait(o)),
+        "ftCo_8009B56C" => Some(|g, o| g.enter_cargo_start(o)),
+        "ftCo_8009B860" => Some(|g, o| g.enter_cargo_turn(o)),
+        "ftCo_8009BB64" => Some(|g, o| g.enter_cargo_jump(o)),
+        "ftCo_8009BC58" => Some(|g, o| g.enter_cargo_fall(o)),
+        "ftCo_8009BD4C" => Some(|g, o| g.enter_cargo_landing(o)),
+        "ftCo_8009C540" => Some(|g, o| g.enter_cargo_pass(o)),
+        "ftCo_8009C170" => Some(|g, o| g.cargo_throw_to_air(o)),
+        "ftCo_8009C45C" => Some(|g, o| g.cargo_throw_to_ground(o)),
+        "ftCo_8009C744" => Some(|g, o| g.shouldered_break_free(o)),
+        "ftCo_800C0D0C" => Some(|g, o| g.enter_bury(o)),
+        "ftCo_800C124C" => Some(|g, o| g.enter_bury_wait(o)),
+        "ftCo_800C13BC" => Some(|g, o| g.enter_bury_jump(o)),
+        "ftCo_Jump_Phys_Inner" => Some(|g, o| g.co_cargo_jump_phys(o)),
+        _ => None,
+    };
+    if let Some(f) = entry {
+        f(g, gobj);
+        return Ret::Nothing;
+    }
     match name.as_str() {
         "ftCo_8009B4D0" => b(g.cargo_wait_check(gobj)),
         "ftCo_8009B67C" => b(g.cargo_walk_check(gobj)),
@@ -226,22 +238,6 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             g.enter_shouldered_start(gobj, r4);
             Ret::Nothing
         }
-        "ftDk_Init_LoadSpecialAttrs" => g.dk_load_special_attrs(gobj).into_ret(),
-        // The state changes other code calls directly.
-        "ftCo_8009B518" => g.enter_cargo_wait(gobj).into_ret(),
-        "ftCo_8009B56C" => g.enter_cargo_start(gobj).into_ret(),
-        "ftCo_8009B860" => g.enter_cargo_turn(gobj).into_ret(),
-        "ftCo_8009BB64" => g.enter_cargo_jump(gobj).into_ret(),
-        "ftCo_8009BC58" => g.enter_cargo_fall(gobj).into_ret(),
-        "ftCo_8009BD4C" => g.enter_cargo_landing(gobj).into_ret(),
-        "ftCo_8009C540" => g.enter_cargo_pass(gobj).into_ret(),
-        "ftCo_8009C170" => g.cargo_throw_to_air(gobj).into_ret(),
-        "ftCo_8009C45C" => g.cargo_throw_to_ground(gobj).into_ret(),
-        "ftCo_8009C744" => g.shouldered_break_free(gobj).into_ret(),
-        "ftCo_800C0D0C" => g.enter_bury(gobj).into_ret(),
-        "ftCo_800C124C" => g.enter_bury_wait(gobj).into_ret(),
-        "ftCo_800C13BC" => g.enter_bury_jump(gobj).into_ret(),
-        "ftCo_Jump_Phys_Inner" => g.co_cargo_jump_phys(gobj).into_ret(),
         // The rest take the GObj alone: state callbacks, accessories, hooks, and the state
         // changes other code calls by address.
         _ => {
@@ -254,10 +250,12 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
 /// The fighter's controls and script and state variables changed so the callbacks' branches
 /// run: the buttons (A, B, the shoulders), the stick pushed every way, the script's flags and
 /// throw flags, the mash timer, and the state's and the character's variables.
-fn vary(call: &mut Call, i: usize) {
+///
+/// `i` counts the runs and `visit` counts a target's runs, so each target sees every button.
+fn vary(call: &mut Call, i: usize, visit: usize) {
     let fp = user_data_arg(call);
-    let held = [0u32, 0x200, 0x100, 0x0][i % 4];
-    let pressed = [0x200u32, 0, 0x100, 0x8000_0000, 0][i % 5];
+    let held = [0u32, 0x200, 0x100, 0x0][(i + visit) % 4];
+    let pressed = [0x200u32, 0, 0x100, 0x8000_0000, 0][(i + visit) % 5];
     poke_u32(call, fp + 0x65C, held);
     poke_u32(call, fp + 0x668, pressed);
     let sticks = [
@@ -283,8 +281,9 @@ fn vary(call: &mut Call, i: usize) {
     match unit(call.addr) {
         // The Giant Punch's swings stored.
         0 => poke_u32(call, fp + 0x222C, [0, 4, 10][w(0) as usize % 3]),
-        // Another slap asked for.
-        1 => poke_u32(call, mv, w(0) % 2),
+        // Another slap asked for: not yet when A or B is pressed (so the press's flag shows),
+        // else already.
+        1 => poke_u32(call, mv, u32::from(pressed & 0x300 == 0)),
         // The punch: a cancel asked for, the lunge's and the effect's phases, the swings let go
         // with, the stored swings.
         3 => {
@@ -381,8 +380,8 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
         if total == 0 {
             continue;
         }
-        // Enough rounds that every target runs from several states.
-        let rounds = (3 * targets.len()).div_ceil(total).max(1);
+        // Enough rounds that every target runs from at least five states.
+        let rounds = (5 * targets.len()).div_ceil(total).max(1);
         let targets = &targets;
         for (j, (src, dir, _)) in runs.iter().enumerate() {
             let before: usize = runs[..j].iter().map(|r| r.2).sum();
@@ -396,7 +395,7 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
                         if trace() {
                             eprintln!("{src} #{i} runs {n}");
                         }
-                        vary(call, shift + i);
+                        vary(call, shift + i, (shift + i) / targets.len());
                     })
                 })
                 .collect();

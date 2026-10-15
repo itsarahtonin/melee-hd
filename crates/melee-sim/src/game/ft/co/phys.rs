@@ -232,6 +232,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_ThrowB_Phys")]
     #[doc(alias = "ftCo_ThrowHi_Phys")]
     #[doc(alias = "ftCo_ThrowLw_Phys")]
+    #[doc(alias = "ftCo_CargoThrowF_Phys")]
+    #[doc(alias = "ftCo_CargoThrowB_Phys")]
+    #[doc(alias = "ftCo_CargoThrowHi_Phys")]
+    #[doc(alias = "ftCo_CargoThrowLw_Phys")]
     pub fn co_throw_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.ground_or_air == GA_AIR {

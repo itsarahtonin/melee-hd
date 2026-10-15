@@ -66,7 +66,6 @@ impl Running<'_> {
     /// (`ftCommonData` x5F4 to x60C), the box sinking from the ECB's to the hip over x5F4
     /// frames on the floor it stands on, and the bury effect at its feet.
     #[doc(alias = "ftCo_800C0D0C")]
-    #[doc(alias = "ftCo_ReleaseItemAndVictim")]
     pub fn enter_bury(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         // `ftCo_ReleaseItemAndVictim`.
