@@ -129,6 +129,9 @@ impl Ctx<'_> {
     /// Draws `draws[i]` (with the shapes after it of the same joint and pass); returns how
     /// many it drew.
     fn draw(&mut self, draws: &[Draw], i: usize) -> usize {
+        if self.hsd.debug_dl {
+            eprintln!("CMD {i} {:?}", draws[i]);
+        }
         match &draws[i] {
             Draw::Camera(c, view) => {
                 let mut v = self.game.objs.display.cameras[usize::from(*view)];
@@ -190,6 +193,22 @@ impl Ctx<'_> {
                 let named = &self.game.objs.display.shadow_tobjs[start..start + usize::from(*len)];
                 self.hsd.shadows.clear();
                 self.hsd.shadows.extend_from_slice(named);
+                1
+            }
+            Draw::AppSrt { srt, view, scale } => {
+                self.hsd.app_srts.insert(*srt, (*view, *scale));
+                1
+            }
+            Draw::SpecularInit { jobj, vmtx } => {
+                self.specular_init(*jobj, vmtx.as_ref());
+                1
+            }
+            Draw::Invalidate(mask) => {
+                self.invalidate(*mask);
+                1
+            }
+            Draw::Hilight(v) => {
+                self.hsd.hilight = *v;
                 1
             }
             Draw::Fog(f) => {

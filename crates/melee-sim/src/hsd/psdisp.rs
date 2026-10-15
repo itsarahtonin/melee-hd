@@ -62,7 +62,8 @@ pub fn setup_app_srts(
     }
 }
 
-/// An app-SRT brought up to date for view `vmtx` in display frame `frame`.
+/// An app-SRT brought up to date for view `vmtx` in display frame `frame`, and named for the
+/// presentation ([`super::display::Draw::AppSrt`]).
 fn update_app_srt(objs: &mut Objects, s: super::appsrt::AppSrtId, vmtx: &Mtx34, frame: u8) {
     use gekko_fp as fp;
     let o = &mut objs.app_srts[s];
@@ -98,6 +99,12 @@ fn update_app_srt(objs: &mut Objects, s: super::appsrt::AppSrtId, vmtx: &Mtx34, 
             o.view.m[2][3] = d.m[2][3];
         }
         o.frame_num = frame;
+        let (view, scale) = (o.view, o.view_scale);
+        objs.display.draws.push(super::display::Draw::AppSrt {
+            srt: s,
+            view,
+            scale,
+        });
     }
 }
 

@@ -58,6 +58,9 @@ pub fn bp_name(reg: usize) -> &'static str {
     }
 }
 
+/// The end of the transform unit's matrix and light memory.
+const XF_MEM_END: usize = 0x680;
+
 /// A texture a draw samples.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Tex {
@@ -68,10 +71,17 @@ pub struct Tex {
     pub mode0: u32,
     pub mode1: u32,
     pub hash: u64,
+    /// The palette's register (its TMEM place and format), and the hash of the entries the
+    /// image indexes.
     pub tlut: Option<(u32, u64)>,
     pub address: u32,
     /// The palette's first entries, for debugging (not compared).
     pub tlut_head: Vec<u8>,
+    /// The palette's entries the image indexes, as TMEM holds them, to name the entries that
+    /// differ (compared by `tlut`).
+    pub palette: Vec<u8>,
+    /// The highest palette entry the image's data indexes (a color-indexed format's).
+    pub highest_index: Option<u32>,
 }
 
 /// A transformed vertex: screen position, colors and texture coordinates.
@@ -95,11 +105,19 @@ pub struct DrawSnap {
     /// XF registers the draw's colors and coordinates depend on: the channels' count, colors
     /// and controls, and the texture coordinate generators.
     pub xf: Vec<(usize, u32)>,
+    /// The transform unit's memory: the position, texture, normal and post-transform
+    /// matrices and the lights (`0x000` to `0x67F`), whether the draw reads them or not, so
+    /// a load the original makes and the port doesn't shows even before a draw reads it.
+    pub xf_mem: Vec<u32>,
     /// The vertex layout and the first fetched bytes, for debugging (read through `Debug`).
     #[allow(dead_code)]
     pub layout: String,
     #[allow(dead_code)]
     pub head: Vec<u8>,
+    /// The stream's commands since the event before, with `CHECK_COMMANDS` (for debugging,
+    /// read through `Debug`).
+    #[allow(dead_code)]
+    pub commands: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -119,6 +137,8 @@ pub enum Event {
 pub struct Recorder {
     pub events: RefCell<Vec<Event>>,
     normals: RefCell<vertex::NormalCache>,
+    /// The stream's commands since the last event, with `CHECK_COMMANDS`.
+    commands: RefCell<Vec<String>>,
 }
 
 fn hash(bytes: &[u8]) -> u64 {
@@ -126,6 +146,39 @@ fn hash(bytes: &[u8]) -> u64 {
 }
 
 impl Recorder {
+    /// Notes a command of the stream itself with `CHECK_COMMANDS`, for the next event.
+    pub fn command(&self, bytes: &[u8]) {
+        if std::env::var_os("CHECK_COMMANDS").is_none() {
+            return;
+        }
+        let be = |b: &[u8]| u32::from_be_bytes([b[0], b[1], b[2], b[3]]);
+        let text = match bytes[0] {
+            0x08 => format!("CP {:02X} {:08X}", bytes[1], be(&bytes[2..])),
+            0x10 => {
+                let head = be(&bytes[1..]);
+                let words: Vec<String> = bytes[5..]
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|w| format!("{:08X}", u32::from_be_bytes(*w)))
+                    .collect();
+                format!("XF {:04X} {}", head & 0xFFFF, words.join(" "))
+            }
+            0x20 | 0x28 | 0x30 | 0x38 => {
+                format!("LOAD_INDX {:02X} {:08X}", bytes[0], be(&bytes[1..]))
+            }
+            0x40 => format!("CALL_DL {:08X} {:X}", be(&bytes[1..]), be(&bytes[5..])),
+            0x61 => format!("BP {:02X} {:06X}", bytes[1], be(&bytes[1..]) & 0xFF_FFFF),
+            0x80..=0xBF => format!(
+                "PRIM {:02X} n {}",
+                bytes[0],
+                u16::from_be_bytes([bytes[1], bytes[2]])
+            ),
+            op => format!("{op:02X}"),
+        };
+        self.commands.borrow_mut().push(text);
+    }
+
     pub fn draw(&self, state: &State, draw: &Draw<'_>, mem: &dyn Memory) {
         // `CHECK_ALL_BP` compares every register but those holding addresses or triggers.
         let bp = if std::env::var_os("CHECK_ALL_BP").is_some() {
@@ -150,12 +203,34 @@ impl Recorder {
             let image = Image::of(&state.bp, map);
             let mut data = vec![0; image.size() as usize];
             mem.read(image.address, &mut data);
+            // The highest palette entry the image's texels (every level's) index.
+            let highest_index = match image.format {
+                8 => data
+                    .iter()
+                    .map(|b| u32::from(b >> 4).max(u32::from(b & 15)))
+                    .max(),
+                9 => data.iter().map(|&b| u32::from(b)).max(),
+                10 => data
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|c| u32::from(u16::from_be_bytes(*c) & 0x3FFF))
+                    .max(),
+                _ => None,
+            };
             let mut tlut_head = Vec::new();
+            let mut palette = Vec::new();
+            // The palette's entries the image indexes, by content. A palette region loads
+            // whole (256 entries for `GX_TLUT0`..), so entries past a shorter palette hold
+            // the bytes after it in memory, which no texel reads (docs/player.md, Palette
+            // entries).
             let tlut = texture::palette_entries(image.format).map(|entries| {
                 let reg = state.bp[texture::reg(texture::SETTLUT, map)];
                 let at = ((reg & 0x3FF) << 9) as usize;
-                let end = (at + 2 * entries as usize).min(state.tmem.len());
+                let used = highest_index.map_or(entries, |i| (i + 1).min(entries));
+                let end = (at + 2 * used as usize).min(state.tmem.len());
                 tlut_head = state.tmem[at..end.min(at + 32)].to_vec();
+                palette = state.tmem[at..end].to_vec();
                 (reg & 0xFFF, hash(&state.tmem[at..end]))
             });
             textures.push(Tex {
@@ -169,6 +244,8 @@ impl Recorder {
                 tlut,
                 address: image.address,
                 tlut_head,
+                palette,
+                highest_index,
             });
         }
         let xf_index = [state.xf[xform::MATINDEX_A], state.xf[xform::MATINDEX_A + 1]];
@@ -204,6 +281,7 @@ impl Recorder {
                 textures,
                 verts,
                 texgens: state.xf[xform::NUM_TEXGENS],
+                xf_mem: state.xf[..XF_MEM_END].to_vec(),
                 xf: (0x1009..0x1012)
                     .chain(0x101A..0x1027)
                     .chain(0x1040..0x1040 + (state.xf[xform::NUM_TEXGENS] as usize & 0xF))
@@ -211,6 +289,7 @@ impl Recorder {
                     .collect(),
                 layout: format!("{:?}", draw.layout),
                 head: draw.data[..draw.data.len().min(48)].to_vec(),
+                commands: std::mem::take(&mut *self.commands.borrow_mut()),
             })));
     }
 
@@ -221,6 +300,7 @@ impl Recorder {
         .iter()
         .map(|&r| (r, state.bp[r]))
         .collect();
+        self.commands.borrow_mut().clear();
         self.events
             .borrow_mut()
             .push(Event::Copy(CopySnap { value, regs }));
@@ -258,8 +338,11 @@ pub fn summary(d: &DrawSnap) -> String {
     )
 }
 
-fn close(a: f32, b: f32, tol: f32) -> bool {
-    a == b || (a - b).abs() <= tol * (1.0 + a.abs().max(b.abs())) || (a.is_nan() && b.is_nan())
+/// Whether two of a draw's floats are the same (equal, or both NaN): the
+/// comparison allows no tolerance, so a rounding difference in a matrix shows (one left a few
+/// of Dream Land's background pixels different through the depth test).
+fn same(a: f32, b: f32) -> bool {
+    a == b || (a.is_nan() && b.is_nan())
 }
 
 /// The bits of each BP register a draw's output depends on: TEV orders, stages, konst
@@ -325,6 +408,34 @@ fn used_bits(d: &DrawSnap) -> impl Fn(usize) -> u32 + '_ {
     }
 }
 
+/// Which entries of two otherwise equal textures' palettes differ, against the highest entry
+/// the image indexes.
+fn palette_difference(a: &Tex, b: &Tex) -> String {
+    let entries: Vec<usize> = a
+        .palette
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .zip(b.palette.as_chunks::<2>().0)
+        .enumerate()
+        .filter(|(_, (x, y))| x != y)
+        .map(|(i, _)| i)
+        .collect();
+    format!(
+        "texture {} ({}x{} format {}): {} palette entries differ, {} to {} (the image indexes up to {:?}; first: {:02X?} vs {:02X?})",
+        a.map,
+        a.width,
+        a.height,
+        a.format,
+        entries.len(),
+        entries.first().copied().unwrap_or(0),
+        entries.last().copied().unwrap_or(0),
+        a.highest_index,
+        entries.first().map(|&i| &a.palette[2 * i..2 * i + 2]),
+        entries.first().map(|&i| &b.palette[2 * i..2 * i + 2]),
+    )
+}
+
 /// How two draws differ, or nothing.
 pub fn differences(a: &DrawSnap, b: &DrawSnap) -> Vec<String> {
     let mut out = Vec::new();
@@ -364,6 +475,16 @@ pub fn differences(a: &DrawSnap, b: &DrawSnap) -> Vec<String> {
             out.push(format!("XF {:04X} {:08X} vs {:08X}", x.0, x.1, y.1));
         }
     }
+    if let Some(at) = (0..a.xf_mem.len().min(b.xf_mem.len())).find(|&i| a.xf_mem[i] != b.xf_mem[i])
+    {
+        let n = (0..a.xf_mem.len().min(b.xf_mem.len()))
+            .filter(|&i| a.xf_mem[i] != b.xf_mem[i])
+            .count();
+        out.push(format!(
+            "XF memory: {n} words differ, the first at {at:04X} ({:08X} vs {:08X})",
+            a.xf_mem[at], b.xf_mem[at]
+        ));
+    }
     if a.texgens != b.texgens {
         out.push(format!("texgens {} vs {}", a.texgens, b.texgens));
     }
@@ -377,32 +498,50 @@ pub fn differences(a: &DrawSnap, b: &DrawSnap) -> Vec<String> {
         for (x, y) in a.textures.iter().zip(&b.textures) {
             let strip = |t: &Tex| Tex {
                 address: 0,
+                palette: Vec::new(),
                 ..t.clone()
             };
             if strip(x) != strip(y) {
-                out.push(format!("texture {x:X?} vs {y:X?}"));
+                let only_palette = Tex {
+                    tlut: None,
+                    ..strip(x)
+                } == Tex {
+                    tlut: None,
+                    ..strip(y)
+                };
+                if only_palette {
+                    out.push(palette_difference(x, y));
+                } else {
+                    out.push(format!("texture {x:X?} vs {y:X?}"));
+                }
             }
         }
     }
     let (mut pos, mut col, mut tex) = (0usize, 0usize, 0usize);
     let mut worst = 0f32;
+    let mut worst_col = [0u8; 2];
+    // The color channels the draw has (`XF 1009`); the transform unit's other outputs reach
+    // nothing.
+    let chans = a.xf.first().map_or(2, |c| (c.1 & 3) as usize).min(2);
     for (x, y) in a.verts.iter().zip(&b.verts) {
         for k in 0..3 {
-            if !close(x.screen[k], y.screen[k], 1e-4) {
+            if !same(x.screen[k], y.screen[k]) {
                 pos += 1;
                 worst = worst.max((x.screen[k] - y.screen[k]).abs());
             }
         }
-        for c in 0..2 {
-            for k in 0..4 {
-                if x.color[c][k].abs_diff(y.color[c][k]) > 1 {
+        for ((p, q), worst) in x.color.iter().zip(&y.color).zip(&mut worst_col).take(chans) {
+            for (a, b) in p.iter().zip(q) {
+                let d = a.abs_diff(*b);
+                if d > 0 {
                     col += 1;
+                    *worst = (*worst).max(d);
                 }
             }
         }
         for t in 0..8 {
             for k in 0..3 {
-                if !close(x.tex[t][k], y.tex[t][k], 1e-3) {
+                if !same(x.tex[t][k], y.tex[t][k]) {
                     tex += 1;
                 }
             }
@@ -414,8 +553,8 @@ pub fn differences(a: &DrawSnap, b: &DrawSnap) -> Vec<String> {
     if col > 0 {
         let (x, y) = (&a.verts[0], &b.verts[0]);
         out.push(format!(
-            "{col} color components differ (first vertex {:?} vs {:?})",
-            x.color, y.color
+            "{col} color components differ (worst {} levels in color 0, {} in color 1; first vertex {:?} vs {:?})",
+            worst_col[0], worst_col[1], x.color, y.color
         ));
     }
     if tex > 0 {

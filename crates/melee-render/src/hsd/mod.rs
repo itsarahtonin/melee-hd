@@ -45,6 +45,11 @@ pub struct Hsd {
     /// The shadow textures shadowed materials take after their own (`tobj_shadows`), as the
     /// last `Draw::Shadows` named them.
     pub shadows: Vec<TObjId>,
+    /// Each app-SRT's view matrix and screen scales, as the last `Draw::AppSrt` named them.
+    pub app_srts: std::collections::HashMap<melee_sim::hsd::appsrt::AppSrtId, (Mtx34, [f32; 2])>,
+    /// The light vector highlight textures take, as the last `Draw::Hilight` named it (none
+    /// without an infinite light).
+    pub hilight: Option<melee_sim::vec::Vec3>,
     /// The current camera and the matrices it gives.
     pub camera: Option<CameraView>,
     pub inv_view: Option<Mtx34>,
@@ -58,7 +63,7 @@ pub struct Hsd {
     pub rendering_fighter: Option<FighterId>,
     /// What wasn't drawn exactly, counted.
     pub notes: BTreeMap<String, u32>,
-    /// Print each display list called (for debugging).
+    /// Print each draw command and display list called (for debugging).
     pub debug_dl: bool,
     /// The aspect ratio the frame is shown at, when wider than the game's 73:60
     /// (`frame::GAME_ASPECT`; see `frame::widen`).
