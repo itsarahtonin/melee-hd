@@ -391,7 +391,7 @@ fn vary(call: &mut Call, i: usize) {
     poke_u32(call, fp + 0x2344, [0u32, 1, 3, 5][i / 6 % 4]);
     // Every third run the stick back past the dead zone with no turn frames left, so Oil
     // Panic turns and starts its turn frames.
-    if i % 3 == 0 {
+    if i.is_multiple_of(3) {
         let facing = f32::from_bits(peek_u32(call, fp + 0x2C));
         poke_f32(call, fp + 0x620, if facing > 0.0 { -0.9 } else { 0.9 });
         poke_u32(call, fp + 0x2344, 0);
