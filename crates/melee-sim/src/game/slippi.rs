@@ -19,7 +19,8 @@
 //!   camera's view.
 //! - **The online determinism fixes** (`Common` and `Online/Core`): fighter and stage object
 //!   data zeroed when made, Final Destination's background and Pokémon Stadium's
-//!   transformations kept off the random seed, Stadium's monitor independent of the camera,
+//!   transformations kept off the random seed (3.16's freezes Stadium), Stadium's monitor
+//!   independent of the camera,
 //!   Whispy's blow direction, Nana's inputs and the star KO's physics.
 //! - **The Ice Climbers' freeze glitch fix** (`External/FreezeGlitchFix`).
 //!
@@ -27,9 +28,9 @@
 //! word for word and 3.15 already has; and 3.14's, 3.16's without WhispyBlowDirFix. 3.19's and
 //! 3.16's differ only in some determinism fixes: Final Destination's background
 //! (3.16 skips the scene's timer, 3.19 runs it with the random seed kept), Nana's DI (3.19 also
-//! clears the stick X register) and Pokémon Stadium's transformations (3.16 starts loading the
-//! next one ahead with the game's own asynchronous load, 3.19 loads it when it's due,
-//! synchronously). A replay's version is what its codes say: each code is known in the versions
+//! clears the stick X register) and Pokémon Stadium's transformations (3.16 freezes the stage,
+//! with codes to load the next transformation ahead that the freeze leaves unreached; 3.19
+//! loads it when it's due, synchronously). A replay's version is what its codes say: each code is known in the versions
 //! that ship it, and a list must be all of one version. Either UCF goes with any version.
 
 // NaN takes the original's branches, which negated comparisons spell out.
@@ -301,9 +302,11 @@ const KNOWN: &[Known] = &[
             Rule::Determinism,
         ),
     ),
-    // Pokémon Stadium's transformations: the next one is picked and its file loaded ahead
-    // (`grStadium_801D4548`, `grStadium_801D13E0`, `grStadium_801D4F0C`), with the game's own
-    // asynchronous load.
+    // Pokémon Stadium's transformations: the next one picked and its file loaded ahead with the
+    // game's own asynchronous load (`Common/Preload Stadium Transformations`, in
+    // `grStadium_801D13E0` and `grStadium_801D4548`), and the stage frozen (`801D4578`,
+    // `Online/Core/PreventFileAlarms/FreezeStadium`), which skips the whole cycle and so the
+    // preload but for its setup's line (`gr::stadium::frozen`).
     only(
         V3_16 | V3_14,
         code(

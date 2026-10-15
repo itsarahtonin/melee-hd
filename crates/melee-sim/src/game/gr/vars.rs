@@ -244,6 +244,11 @@ pub struct StadiumVars {
     /// `xE4`: the current stage's object; `xE8` the next one's while it rises.
     pub current: Option<GObjId>,
     pub next: Option<GObjId>,
+    /// `xEC` and `xF0`: words past the original's struct that Slippi 3.16's preload codes
+    /// (`Common/Preload Stadium Transformations`) keep, the next transformation's map id they
+    /// pick ahead (`TransformationID`) and whether its load is out (`isLoaded`, 0 or 1).
+    pub preload_kind: i32,
+    pub preload_out: u8,
 }
 
 /// `grStadium_type9_GroundVars`.
@@ -528,6 +533,8 @@ impl GroundVars {
                     prev2: h(0x1E),
                     current: gobj(cx, at + 0x20),
                     next: gobj(cx, at + 0x24),
+                    preload_kind: m.u32(at + 0x28) as i32,
+                    preload_out: m.u8(at + 0x2C),
                 })
             }
             VarsKind::Izumi => {
@@ -656,6 +663,8 @@ impl GroundVars {
                 kind: h(0x1A),
                 prev: h(0x1C),
                 prev2: h(0x1E),
+                preload_kind: b.u32(0x28) as i32,
+                preload_out: b.0[0x2C],
                 ..Default::default()
             });
         }
@@ -1074,6 +1083,15 @@ impl Mirror for GroundVars {
                 for (name, g, a) in [("xE4", v.current, 0x20), ("xE8", v.next, 0x24)] {
                     let p = format!("{path}.{name}");
                     cx.compare_handle(&p, "GObjId", g.map(|h| h.0), m.u32(at + a));
+                }
+                let ours = (v.preload_kind, v.preload_out);
+                let theirs = (m.u32(at + 0x28) as i32, m.u8(at + 0x2C));
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.xEC"),
+                        format!("{ours:?}"),
+                        format!("{theirs:?}"),
+                    );
                 }
             }
             GroundVars::StadiumBits(v) => compare_bits(cx, m, at, path, *v),
