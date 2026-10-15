@@ -489,6 +489,23 @@ fn takes_gobj(call: &Call) -> bool {
     in_mem(call.regs.gpr[3]) && in_mem(user_data_arg(call))
 }
 
+/// Young Link's side taunt's states (`ftLk_MS_AppealSR`, `ftLk_MS_AppealSL`).
+const TAUNT_R: u32 = 342;
+const TAUNT_L: u32 = 343;
+
+/// Young Link's side taunt turned the other way, which his replays' one taunt never does: its
+/// right state becomes its left and the left its right.
+fn turn_taunt(call: &mut Call) {
+    if !takes_gobj(call) {
+        return;
+    }
+    let fp = user_data_arg(call);
+    let motion = peek_u32(call, fp + 0x10);
+    if motion == TAUNT_R || motion == TAUNT_L {
+        poke_u32(call, fp + 0x10, TAUNT_R + TAUNT_L - motion);
+    }
+}
+
 /// The fighter's controls and script and state variables changed so the callbacks' branches
 /// run: A, B or a shoulder held or pressed, the stick pushed every way, and the script's
 /// variables and throw flags.
@@ -498,6 +515,9 @@ fn vary(call: &mut Call, i: usize) {
         return;
     }
     let fp = user_data_arg(call);
+    if i % 2 == 1 {
+        turn_taunt(call);
+    }
     let held = [0u32, 0x200, 0x8000_0000, 0x100][i % 4];
     let pressed = [0x100u32, 0, 0x200, 0x8000_0000][(i / 3) % 4];
     poke_u32(call, fp + 0x65C, held);
@@ -554,11 +574,20 @@ fn as_saved(c: &Character, counts: &mut BTreeMap<u32, usize>) {
                 continue;
             }
             let prepare = |_: &mut Call, _: usize| {};
-            let variants = [Variant {
+            // Young Link's own functions also run with his side taunt turned the other way.
+            let turned = |call: &mut Call, _: usize| turn_taunt(call);
+            let mut variants = vec![Variant {
                 prepare: &prepare,
                 ours: &run_link,
                 stubs: &no,
             }];
+            if name.starts_with("ftCl_") {
+                variants.push(Variant {
+                    prepare: &turned,
+                    ours: &run_link,
+                    stubs: &no,
+                });
+            }
             for reports in check_variants(&dir, &name, &variants) {
                 tally(&reports, counts);
             }
