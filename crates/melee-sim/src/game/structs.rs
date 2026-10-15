@@ -10373,6 +10373,56 @@ impl itSword_ItemVars {
     }
 }
 
+/// `itDosei_ItemVars`, 0x30 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itDosei_ItemVars {
+    /// +0x0
+    pub xDD4: Var<i32>,
+    /// +0x4
+    pub xDD8: Var<i32>,
+    /// +0x8
+    pub xDDC: Var<f32>,
+    /// +0xc
+    pub xDE0: Var<f32>,
+    /// +0x10
+    pub xDE4: Var<Vec3>,
+    /// +0x1c
+    pub xDF0: Var<i32>,
+    /// +0x20
+    pub xDF4: Var<f32>,
+    /// +0x24
+    pub xDF8: Var<Vec3>,
+}
+
+impl Default for itDosei_ItemVars {
+    fn default() -> Self {
+        itDosei_ItemVars {
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+            xDE0: Var::new(Default::default()),
+            xDE4: Var::new(Default::default()),
+            xDF0: Var::new(Default::default()),
+            xDF4: Var::new(Default::default()),
+            xDF8: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itDosei_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+        self.xDE0.mark_stale();
+        self.xDE4.mark_stale();
+        self.xDF0.mark_stale();
+        self.xDF4.mark_stale();
+        self.xDF8.mark_stale();
+    }
+}
+
 /// `PokemonSelectionState`, 0xc bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq)]
 pub struct PokemonSelectionState {
