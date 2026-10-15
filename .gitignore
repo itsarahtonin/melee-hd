@@ -29,3 +29,4 @@
 
 # The player built to play (`cargo run -p dist`).
 /dist/
+__pycache__/
