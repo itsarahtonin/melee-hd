@@ -117,7 +117,7 @@ The fighter mirrors come from `tools/structgen`, which generates each game struc
 | UCF 0.84 | Shield SDI (`80093294`) | `ftCo_80093240` | Ported, checked by `diff` on the Falco vs Sheik replay (Falco's shield SDI in tick 1193), Fountain of Dreams' replay (tick 5368) and Jigglypuff's Final Destination replay (`Game_20260524T180613`, a shield nudge in tick 8090) |
 | UCF 0.84 | Tumble (`800908F4`) | `ftCo_DamageFall_IASA` | Ported, checked by `diff` on the Falco vs Sheik replay (Falco drifting out of tumble in tick 3278), Yoshi's Story's replay (tick 873) and Jigglypuff's Pokémon Stadium replay (`Game_20260129T131206`, her flick out of tumble in tick 1274) |
 | UCF 0.84 | Shield Drop Extended (`8009A0B8`) | `ftCo_8009A080` | Ported, checked by `diff` on the Luigi vs Ganondorf Battlefield replay (Luigi's shield drop in tick 1388) |
-| UCF 0.84 | DBOOC SquatRv Fix (`800D65EC`) | `ftCo_SquatRv_CheckInput` | Waits for its host's port, which reads `Game::ucf` |
+| UCF 0.84 | DBOOC SquatRv Fix (`800D65EC`) | `ftCo_SquatRv_CheckInput` | Ported, checked by `diff` on the Kirby vs Sheik Battlefield replay (`hf-kirby-sheik-bf-e928c79a`, Sheik's dash out of a crouch in tick 10294) |
 | UCF 0.8 | Dashback (`800C9A44`) | `ftCo_Turn_IASA` | Ported, checked by `diff` on Roy's and Peach's UCF 0.8 replays below (Peach's dashback in replay frame 151, Fox's in 269); Popo's turn of Nana's CPU stick isn't reached yet |
 | UCF 0.8 | Shield Drop (`800998A4`) | `ftCo_80099894` | Ported, checked by `diff` on the same replays (Roy's shield drop in replay frame 1307, Peach's in 1454) |
 | UCF 0.8 | Tumble (`800908F4`) | `ftCo_DamageFall_IASA` | Ported, checked by `diff` on the same replays (a flick on the push's second frame in replay frame 5672 of Roy's, 7678 of Peach's) |
