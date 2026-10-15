@@ -9,7 +9,7 @@ use super::super::super::handles::{CodeRef, FighterId};
 use super::super::super::state::Running;
 use super::super::motion::flags::SKIP_MODEL;
 use super::super::parts::TRANS_N;
-use super::{addr, ms, mv};
+use super::{addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -352,6 +352,27 @@ impl Running<'_> {
             self.ys_shield_out(gobj);
         }
         self.enter_escape_n_common(gobj);
+    }
+
+    /// The pull's frame when his tongue grab catches (`fn_800D9CE8`'s Yoshi part): caught
+    /// between his attributes' `x124` and `x128`, the animation steps ahead by the frames past
+    /// `x124` and the pull starts at the frame his `x12C` table gives for them.
+    pub(crate) fn ys_catch_pull_frame(&mut self, gobj: GObjId, frame: f32) -> f32 {
+        let f = self.game.fighter_id(gobj);
+        let lo = self.ys_attr_f32(f, attr::X124);
+        let hi = self.ys_attr_f32(f, attr::X128);
+        if frame >= lo && frame < hi {
+            let rate = fp::fsubs(reg(frame), reg(lo));
+            self.set_anim_rate(gobj, mem(rate));
+            self.anim_update(gobj);
+            let i = fp::fctiwz(rate) as usize;
+            let a = self.game.fighters[f.0]
+                .dat_attrs
+                .expect("a fighter without attributes");
+            let b = self.game.fighter_attrs[a.0][attr::X12C + i];
+            return mem(fp::frsp(f64::from(b)));
+        }
+        frame
     }
 
     /// Back into the held egg if the shield button is held and the shield has health,

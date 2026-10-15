@@ -227,6 +227,8 @@ pub mod ms {
 
 /// `ftYoshi_FighterVars`' offsets in `u`.
 pub(crate) mod u {
+    /// The model's scale before the egg roll squashed it (`x222C`, a `Vec3`).
+    pub const X222C: usize = 0x0;
     /// The egg he holds to throw (`x2238`).
     pub const EGG: usize = 0xC;
 }
@@ -295,6 +297,11 @@ pub(crate) mod attr {
     /// The ground pound's stars' offset (`speciallw_star_offset`, a `Vec2`).
     pub const LW_STAR_OFFSET: usize = 0x118;
     pub const X120: usize = 0x120;
+    /// The tongue grab's catch window (`x124` to `x128`) and its pull's start frames (`x12C`,
+    /// bytes).
+    pub const X124: usize = 0x124;
+    pub const X128: usize = 0x128;
+    pub const X12C: usize = 0x12C;
 }
 
 impl Running<'_> {
