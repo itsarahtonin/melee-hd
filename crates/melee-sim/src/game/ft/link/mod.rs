@@ -2,7 +2,8 @@
 //! bow (neutral special), the boomerang (side special), the Spin Attack (up special), the bombs
 //! (down special) and the character's callbacks. The hookshot his grabs and air grab shoot is an
 //! item (`it::kinds::linkhookshot`), as are his arrows, bow, boomerang and bombs. Young Link
-//! (`ftCl_*`) shares most of this code; his own parts aren't ported.
+//! (`ftCl_*`) runs this code, and his callbacks that match Link's carry his aliases here; his own
+//! parts are in `ft::clink`.
 //!
 //! A state's variables live in the fighter's `mv` union (`ftLk_MotionVars`), the character's
 //! in `u` (`ftLk_FighterVars`), and the character's attributes (`ftLk_DatAttrs`) in the

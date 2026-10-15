@@ -682,8 +682,9 @@ impl Running<'_> {
             }
             1 => {
                 if fp.mv_i32(DEAD_FROZEN) != 0 {
-                    unported_call("ftCo_80090AC0 (a frozen fighter hitting the camera)");
+                    self.ice_effect_again(gobj);
                 }
+                let fp = &self.game.fighters[f.0];
                 let msid = if fp.x34_scale.z != 1.0 {
                     ms::DEAD_UP_FALL_HIT_CAMERA_FLAT
                 } else {

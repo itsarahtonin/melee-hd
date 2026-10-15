@@ -194,6 +194,9 @@ impl Ctx<'_> {
         let objs = self.objs();
         match objs.tobjs[t].imagedesc {
             Some(ImageRef::Data(d)) => {
+                if let Some(img) = self.reflection_image(d) {
+                    return Some(img);
+                }
                 let data = self.data;
                 Some(Image {
                     ptr: self.space.addr(data, data.ptr(d)?),
@@ -220,8 +223,9 @@ impl Ctx<'_> {
                 })
             }
             Some(ImageRef::Static(at)) => self.static_image(at),
+            Some(ImageRef::Screen(n)) => self.screen_image(n),
             // Listed one by one, so a new kind of image fails to build here until it's drawn.
-            Some(other @ (ImageRef::Refract(_) | ImageRef::RefractFrame | ImageRef::Screen(_))) => {
+            Some(other @ (ImageRef::Refract(_) | ImageRef::RefractFrame)) => {
                 self.hsd.note(format!("image {other:?}"));
                 None
             }

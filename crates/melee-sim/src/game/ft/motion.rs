@@ -166,7 +166,9 @@ impl Running<'_> {
                 self.game.audio.aram_load(self.data, len);
             }
             let kind = self.anim_entry_kind(self.game.fighters[src.0].kind, entry);
-            Some(self.anim_tree(kind, entry))
+            let tree = self.anim_tree(kind, entry);
+            self.overwrite_main_buffer(f, tree.archive);
+            Some(tree)
         } else {
             None
         };

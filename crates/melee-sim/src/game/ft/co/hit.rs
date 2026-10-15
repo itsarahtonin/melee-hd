@@ -441,7 +441,7 @@ impl Running<'_> {
         }
         self.knockback_enter(gobj);
         if self.game.fighters[f.0].motion_id != ms::DAMAGE_ICE && level_base >= 2 && ice {
-            unported_call("ftCo_DamageIce_Init (frozen by a hit)");
+            self.enter_damage_ice(gobj);
         }
     }
 
@@ -674,7 +674,10 @@ impl Running<'_> {
             return;
         }
         if self.game.fighters[f.0].motion_id == ms::DAMAGE_ICE {
-            unported_call("ftCo_DamageIce_HitWhileFrozen");
+            let facing = self.game.fighters[f.0].facing_dir;
+            self.enter_damage(gobj, ms::DAMAGE_ICE, facing);
+            self.damage_ice_hit(gobj);
+            return;
         }
         if !self.leadead_check(gobj) {
             self.damage_hooks(gobj);

@@ -22,6 +22,17 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800C_F2BC => g.co_item_parasol_fall_iasa(gobj),
         0x800C_F428 => g.co_item_parasol_fall_special_iasa(gobj),
         0x800C_F4B4 => g.co_item_parasol_fall_special_coll(gobj),
+        // The frozen state's: ftCo_DamageIce_Anim, _IASA, _Phys, _Coll, its damage hooks
+        // (ftCo_DamageIce_OnHit2, ftCo_DamageIce_OnHit), and the jump out's.
+        0x8009_12A8 => g.co_damage_ice_anim(gobj),
+        0x8009_13DC | 0x8009_19D8 => g.co_damage_ice_iasa(gobj),
+        0x8009_13E0 => g.co_damage_ice_phys(gobj),
+        0x8009_144C => g.co_damage_ice_coll(gobj),
+        0x8009_1274 => g.co_damage_ice_on_hit2(gobj),
+        0x8009_0B48 => g.co_damage_ice_on_hit(gobj),
+        0x8009_1988 => g.co_damage_ice_jump_anim(gobj),
+        0x8009_19DC => g.co_damage_ice_jump_phys(gobj),
+        0x8009_19FC => g.co_damage_ice_jump_coll(gobj),
         // ftCo_ItemThrow_Anim
         0x8009_5E80 => g.co_item_throw_anim(gobj),
         // ftCo_80095EFC, the throws' accessory

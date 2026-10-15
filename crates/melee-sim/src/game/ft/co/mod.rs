@@ -25,6 +25,7 @@ pub mod grab;
 pub mod ground;
 pub mod guard;
 pub mod hit;
+pub mod ice;
 pub mod ids;
 pub mod item_catch;
 pub mod item_get;

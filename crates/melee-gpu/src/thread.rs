@@ -255,7 +255,7 @@ impl Sink for Threaded {
                 continue;
             };
             for (at, bytes) in rows {
-                let from = (at & 0x01FF_FFFF).wrapping_sub(start) as usize;
+                let from = (at & crate::PHYS_MASK).wrapping_sub(start) as usize;
                 let Some(old) = before.get(from..from + bytes.len()) else {
                     continue;
                 };
@@ -280,7 +280,7 @@ impl Sink for Threaded {
         } else if let Some(f) = copy::footprint(state, value) {
             if copy::request(state, value).is_none() {
                 let (start, end) = f.span();
-                let start = start & 0x01FF_FFFF;
+                let start = start & crate::PHYS_MASK;
                 let mut bytes = vec![0; end.saturating_sub(f.address) as usize];
                 mem.read(start, &mut bytes);
                 self.before.push_back((self.copies, start, bytes));

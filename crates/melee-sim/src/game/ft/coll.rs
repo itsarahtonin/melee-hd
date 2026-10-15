@@ -423,6 +423,19 @@ impl Running<'_> {
         self.air_coll(gobj, false, |_| {}, |c, cd| c.air_frame_box(cd, &b, 0))
     }
 
+    /// The airborne pass with the ECB `b` that stays airborne (mpcoll's pass flags 1),
+    /// `ft_80082638`: whether it touched a floor, unless the fighter stepped onto an item.
+    #[doc(alias = "ft_80082638")]
+    pub fn air_coll_box_floor(&mut self, gobj: GObjId, b: &ftCollisionBox) -> bool {
+        let f = self.game.fighter_id(gobj);
+        let b = facing_box(b, self.game.fighters[f.0].facing_dir);
+        self.fighter_coll(f, |_| {}, |c, cd| c.air_frame_box(cd, &b, 1));
+        if self.stepped_on_item(gobj) {
+            return false;
+        }
+        self.game.fighters[f.0].coll_data.env_flags & FLOOR_MASK != 0
+    }
+
     /// The grounded pass with the ECB `b` (mirrored facing left), `ft_80082888`: whether the
     /// fighter stays on the ground.
     #[doc(alias = "ft_80082888")]

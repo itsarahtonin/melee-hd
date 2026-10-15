@@ -64,6 +64,8 @@ ROOTS = [
     "itLinkHookshot_ItemVars",
     "itLinkArrow_ItemVars",
     "itLinkBow_ItemVars",
+    # Young Link's milk.
+    "itCLinkMilk_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",
@@ -214,6 +216,9 @@ SPLICE = {
     "itPeachTurnip_ItemVars": ("xDD4", 0, 1, "TurnipFlag"),
     # Link's bomb's flag byte, of which the bomb uses the top three bits.
     "itLinkBomb_ItemVars": ("x0", 0, 1, "LinkBombFlags"),
+    # An item link's `x20`, which only the reset writes and a hookshot link in a block new
+    # from the heap holds unknown.
+    "ItemLink": ("x20", 0x20, 0x2C, "LinkX20"),
     # Pointers a computer player's state keeps into itself: offsets from the fields they point
     # into, which don't depend on where the fighter is.
     "CpuFighter": [
@@ -227,6 +232,9 @@ SPLICE = {
     # his Illusion's ghost) hold handles.
     "Fighter": [
         ("dynamic_bone_sets", 0x2F0, 0x3E0, "DynamicBoneSets"),
+        # The second animation's figatree, and which of the fighter's two animation buffers
+        # it points into.
+        ("x598", 0x598, 0x59C, "SecondTree"),
         ("u", 0x222C, 0x2324, "FighterVars"),
         ("mv", 0x2340, 0x23EC, "MotionVars"),
     ],
@@ -250,8 +258,10 @@ EXTRA_USES = [
     "use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};",
     "use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};",
     "use crate::game::ft::dynamics::BoneSlot;",
+    "use crate::game::ft::second::SecondTree;",
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
     "use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};",
+    "use crate::game::it::link::LinkX20;",
     "use crate::hsd::lobj::LObjId;",
     "use crate::hsd::shadow::ShadowId;",
     "use crate::lb::command::Script;",
@@ -310,11 +320,13 @@ PRELUDE = """use melee_data::archive::DataRef;
 use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::dynamics::BoneSlot;
+use crate::game::ft::second::SecondTree;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::handles::*;
 use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
+use crate::game::it::link::LinkX20;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;

@@ -45,6 +45,9 @@ pub struct Hsd {
     pub inv_view: Option<Mtx34>,
     /// The render pass: offscreen into a texture, or the screen.
     pub offscreen: bool,
+    /// The erase color the display pass set for the next erase (`Draw::EraseColor`,
+    /// `HSD_SetEraseColor`), until that erase.
+    pub erase_color: Option<crate::gx::Color>,
     /// The GObj being drawn (`HSD_GObj_804D7814`) and its fighter, if it's one.
     pub rendering: Option<GObjId>,
     pub rendering_fighter: Option<FighterId>,

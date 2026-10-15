@@ -16,9 +16,11 @@ use super::structs::*;
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
+use crate::game::ft::second::SecondTree;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::it::Var;
+use crate::game::it::link::LinkX20;
 use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
@@ -4466,7 +4468,7 @@ impl Mirror for Fighter {
             x58C: m.u32(at + 0x58c),
             x590: cx.import_data(m.u32(at + 0x590)),
             x594: m.bytes(at + 0x594),
-            x598: cx.import_data(m.u32(at + 0x598)),
+            x598: SecondTree::import(m, at + 0x598, cx),
             x59C: cx
                 .import_handle("AnimBufId", m.u32(at + 0x59c))
                 .map(AnimBufId),
@@ -5179,7 +5181,8 @@ impl Mirror for Fighter {
                 format!("{:02x?}", m.bytes::<4>(at + 0x594)),
             );
         }
-        cx.compare_data(&format!("{path}.x598"), self.x598, m.u32(at + 0x598));
+        self.x598
+            .compare(m, at + 0x598, &format!("{path}.x598"), cx);
         cx.compare_handle(
             &format!("{path}.x59C"),
             "AnimBufId",
@@ -16597,7 +16600,7 @@ impl Mirror for ItemLink {
                 .map(ItemLinkId),
             vel: Vec3::import(m, at + 0x8, cx),
             pos: Vec3::import(m, at + 0x14, cx),
-            x20: Vec3::import(m, at + 0x20, cx),
+            x20: LinkX20::import(m, at + 0x20, cx),
             x2C_b0: m.bits(at, 352, 1) != 0,
             x2C_b1: m.bits(at, 353, 1) != 0,
             x2C_b2: m.bits(at, 354, 1) != 0,
@@ -19129,6 +19132,29 @@ impl Mirror for itLinkBow_ItemVars {
                 "GObjId",
                 (*self.x4.peek()).map(|h| h.0),
                 m.u32(at + 0x4),
+            );
+        }
+    }
+}
+
+impl Mirror for itCLinkMilk_ItemVars {
+    const SIZE: u32 = 0x4;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itCLinkMilk_ItemVars {
+            x0: Var::new(cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0.live(&format!("{path}.x0"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x0"),
+                "GObjId",
+                (*self.x0.peek()).map(|h| h.0),
+                m.u32(at + 0x0),
             );
         }
     }

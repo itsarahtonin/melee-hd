@@ -6,6 +6,7 @@ pub mod capsule;
 pub mod climbersblizzard;
 pub mod climbersice;
 pub mod climbersstring;
+pub mod clinkmilk;
 pub mod crate_box;
 pub mod dosei;
 pub mod drmariopill;
@@ -111,6 +112,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || linkhookshot::run_event(r, gobj, addr)
         || linkarrow::run_event(r, gobj, addr)
         || linkbow::run_event(r, gobj, addr)
+        || clinkmilk::run_event(r, gobj, addr)
         || peachtoad::run_event(r, gobj, addr)
         || peachtoadspore::run_event(r, gobj, addr)
         || drmariopill::run_event(r, gobj, addr)
@@ -171,6 +173,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| linkhookshot::run_pred(r, gobj, addr))
         .or_else(|| linkarrow::run_pred(r, gobj, addr))
         .or_else(|| linkbow::run_pred(r, gobj, addr))
+        .or_else(|| clinkmilk::run_pred(r, gobj, addr))
         .or_else(|| peachtoad::run_pred(r, gobj, addr))
         .or_else(|| peachtoadspore::run_pred(r, gobj, addr))
         .or_else(|| drmariopill::run_pred(r, gobj, addr))
@@ -242,6 +245,8 @@ pub const LINK_ARROW: i32 = 64;
 pub const CLINK_ARROW: i32 = 65;
 pub const LINK_BOW: i32 = 76;
 pub const CLINK_BOW: i32 = 77;
+/// `It_Kind_CLink_Milk`, Young Link's taunt's milk.
+pub const CLINK_MILK: i32 = 123;
 /// `It_Kind_Zelda_DinFire` and `_DinFire_Explode`.
 pub const ZELDA_DIN_FIRE: i32 = 108;
 pub const ZELDA_DIN_FIRE_EXPLODE: i32 = 109;
