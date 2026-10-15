@@ -168,6 +168,35 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800C_1BA4 => {
             g.co_fly_reflect_coll(gobj);
         }
+        // ftCo_DamageSong{,Wait,Rv}_Anim, their IASAs (empty), Phys (ft_80084F3C) and Coll
+        // (ft_80084280)
+        0x800C_32AC => {
+            g.co_damage_song_anim(gobj);
+        }
+        0x800C_33C8 => {
+            g.co_damage_song_wait_anim(gobj);
+        }
+        0x800C_34B8 => {
+            g.co_damage_song_rv_anim(gobj);
+        }
+        0x800C_334C | 0x800C_343C | 0x800C_34F4 => {}
+        0x800C_3350 | 0x800C_3440 | 0x800C_34F8 => {
+            g.ground_friction(gobj);
+        }
+        0x800C_3370 | 0x800C_3460 | 0x800C_3518 => {
+            g.ground_coll_teeter(gobj);
+        }
+        // ftCo_DownReflect_Anim, _IASA (empty), _Phys (ft_80084DB0), _Coll
+        0x800C_7FC8 => {
+            g.co_down_reflect_anim(gobj);
+        }
+        0x800C_8004 => {}
+        0x800C_8008 => {
+            g.air_physics(gobj);
+        }
+        0x800C_8028 => {
+            g.co_down_reflect_coll(gobj);
+        }
         // ftCo_PassiveCeil_Anim, _IASA (empty), _Phys, _Coll
         0x800C_252C => {
             g.co_passive_ceil_anim(gobj);

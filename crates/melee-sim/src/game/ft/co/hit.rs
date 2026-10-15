@@ -561,7 +561,7 @@ impl Running<'_> {
     }
 
     /// A hit's reaction, `ftCo_8008E908`: off a ledge, its regrab cooldown; a sleep hit
-    /// puts the fighter to sleep (not ported); else hitstun.
+    /// puts the fighter to sleep; else hitstun.
     #[doc(alias = "ftCo_8008E908")]
     pub fn damage_reaction(&mut self, gobj: GObjId, facing: f32) {
         let cooldown = self.common().i32(0x498);
@@ -571,9 +571,10 @@ impl Running<'_> {
         }
         let e = fp.dmg.x1860_element;
         if (e == ELEMENT_NAP || e == ELEMENT_SLEEP) && !fp.is_sandbag {
-            unported_call("ftCo_800C318C (put to sleep by a hit)");
+            self.enter_damage_song(gobj, e != ELEMENT_NAP);
+        } else {
+            self.enter_damage(gobj, -1, facing);
         }
-        self.enter_damage(gobj, -1, facing);
     }
 
     /// A hit that keeps the fighter's state, `ftCo_8008E9D0` (`inlineB2`): a stamina
