@@ -1,8 +1,10 @@
 //! The common fighter code that stopped the most ranked replays (`docs/oracle.md`) against
 //! ssbm-rs's ports, from real game states: a held fighter knocked away or thrown off as its
 //! holder is hit (`ftCo_800DCFD4`, `ftCo_800DE854`), a cape turning a shield around
-//! (`ftCo_800C36DC`), Marth's and Roy's capes as a wind ends (`ftCo_8009E4A8`), and the broken
-//! shield's states (`ftCo_ShieldBreakFly.c` to `ftCo_Furafura.c`). Every saved call of each
+//! (`ftCo_800C36DC`), Marth's and Roy's capes as a wind ends (`ftCo_8009E4A8`), the broken
+//! shield's states (`ftCo_ShieldBreakFly.c` to `ftCo_Furafura.c`), a knocked-down fighter's wall
+//! bounce (`fn_800C7DC4`), sleep from a hit (`ftCo_DamageSong.c`) and the grapple's homing
+//! target (`ftCo_800A4A40`, whose result is compared). Every saved call of each
 //! function is imported, run on both sides, and the whole state compared afterwards. The broken
 //! shield's callbacks also run from the captures of the family's other functions, with the
 //! fighter's buttons and stick changed (mashing), its mash timer near its end and its
@@ -12,7 +14,10 @@
 //! below), one directory per run, beside the function list the runs use: `funcs.txt`
 //! (`ADDR NAME` per line) and `done-others.txt` (every other ported function's address).
 //! ssbm-rs's runner made them on ranked replays where these happen (`local/replays/hf/`), and
-//! on two of the author's four-player replays:
+//! on five of the author's four-player replays. The wall bounce's, the sleep's and the homing's
+//! sets (`ffpl-ys-220809`, `ffgf-ps-190301`, `fpfg-fd-214701`, `roy-samus-fd-56052455`) were made
+//! with `funcs-vs.txt` (those functions, appended to `funcs.txt`) and `done-others-vs.txt` (the
+//! done list without them) in place of the two lists:
 //!
 //! ```text
 //! D=local/calls/common-stops
@@ -32,6 +37,7 @@ use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
+use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
 
 const CALLS: &str = "calls/common-stops";
@@ -124,9 +130,40 @@ fn run_one(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftCo_80098E3C" => g.enter_shield_break_down(gobj(maps, call)),
         "ftCo_80098F3C" => g.enter_shield_break_stand(gobj(maps, call)),
         "ftCo_80099010" => g.enter_furafura(gobj(maps, call)),
+        "ftCo_800C7CA0" => return Ret::Int(u32::from(g.down_reflect_check(gobj(maps, call)))),
+        "fn_800C7DC4" => {
+            let gobj = gobj(maps, call);
+            let normal = peek_vec(call, call.regs.gpr[5]);
+            let offset = peek_vec(call, call.regs.gpr[6]);
+            g.down_reflect(gobj, call.regs.gpr[4] as i32, normal, offset);
+        }
+        "ftCo_800C318C" => g.enter_damage_song(gobj(maps, call), call.regs.gpr[4] != 0),
+        "ftCo_800C3390" => g.enter_damage_song_wait(gobj(maps, call)),
+        "ftCo_800C3480" => g.enter_damage_song_rv(gobj(maps, call)),
+        "ftCo_800A4A40" => {
+            let me = *maps
+                .fighters
+                .get(&call.regs.gpr[3])
+                .unwrap_or_else(|| panic!("{SKIP}r3 {:#x} isn't a fighter", call.regs.gpr[3]));
+            let found = g.nearest_fighter(me).map_or(0, |f| {
+                *maps
+                    .fighters
+                    .iter()
+                    .find(|&(_, &id)| id == f)
+                    .expect("a fighter the import knows")
+                    .0
+            });
+            return Ret::Int(found);
+        }
         _ => run_fighter_cb(g, gobj(maps, call), CodeRef(a)),
     }
     Ret::Nothing
+}
+
+/// The vector at `addr` in the call's memory.
+fn peek_vec(call: &Call, addr: u32) -> Vec3 {
+    let f = |o: u32| f32::from_bits(peek_u32(call, addr + o));
+    Vec3::new(f(0), f(4), f(8))
 }
 
 /// `Fighter` offsets: the state, the animation's frame, the buttons, the stick and the mash
