@@ -33,6 +33,19 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8009_1988 => g.co_damage_ice_jump_anim(gobj),
         0x8009_19DC => g.co_damage_ice_jump_phys(gobj),
         0x8009_19FC => g.co_damage_ice_jump_coll(gobj),
+        // The broken shield's states: ShieldBreakFly, ShieldBreakFall, ShieldBreakDownU/D,
+        // ShieldBreakStandU/D and Furafura (Anim, IASA, Phys, Coll each).
+        0x8009_8C14 => g.co_shield_break_fly_anim(gobj),
+        0x8009_8DEC | 0x8009_8C50 | 0x8009_8DF0 | 0x8009_8EF8 | 0x8009_8FCC | 0x8009_9138 => {
+            g.co_shield_break_nothing(gobj);
+        }
+        0x8009_8C54 | 0x8009_8DF4 => g.co_shield_break_fly_phys(gobj),
+        0x8009_8C74 | 0x8009_8E14 => g.co_shield_break_fly_coll(gobj),
+        0x8009_8EBC => g.co_shield_break_down_anim(gobj),
+        0x8009_8EFC | 0x8009_8FD0 | 0x8009_913C => g.co_shield_break_down_phys(gobj),
+        0x8009_8F1C | 0x8009_8FF0 | 0x8009_915C => g.co_shield_break_down_coll(gobj),
+        0x8009_8F90 => g.co_shield_break_stand_anim(gobj),
+        0x8009_90B8 => g.co_furafura_anim(gobj),
         // ftCo_ItemThrow_Anim
         0x8009_5E80 => g.co_item_throw_anim(gobj),
         // ftCo_80095EFC, the throws' accessory

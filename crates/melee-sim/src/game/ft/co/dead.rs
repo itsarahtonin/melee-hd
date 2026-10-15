@@ -379,10 +379,12 @@ impl Running<'_> {
             .player_entity_at(slot, i32::from(sub))
             .expect("a slot without its fighter");
         let last = self.game.ft_last_attacker(me);
-        // `pl_CheckIfSameTeam`.
-        let team =
-            self.game.vs_is_teams() && self.game.player_team(last) == self.game.player_team(slot);
-        if last == NO_SLOT || last == slot || team {
+        // `pl_CheckIfSameTeam` only past the first two tests: no one's slot (6) has no team,
+        // and `Player_GetTeam` asserts on it.
+        let team = || {
+            self.game.vs_is_teams() && self.game.player_team(last) == self.game.player_team(slot)
+        };
+        if last == NO_SLOT || last == slot || team() {
             return;
         }
         let t = self.bonus_param(0xB4);

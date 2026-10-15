@@ -39,6 +39,7 @@ pub mod passive_ceil;
 pub mod passive_wall;
 pub mod phys;
 pub mod rebirth;
+pub mod shield_break;
 pub mod squat;
 pub mod swing;
 pub mod throw;

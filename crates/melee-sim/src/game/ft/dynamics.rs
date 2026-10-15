@@ -10,7 +10,6 @@
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
-use super::super::code::unported_call;
 use super::super::handles::{DynamicsId, FighterId};
 use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::{Game, Running};
@@ -438,7 +437,7 @@ impl Running<'_> {
             return;
         }
         match self.game.wind_level() {
-            -1 => unported_call("ftCo_8009E4A8"),
+            -1 => self.capes_out_of_wind(f),
             1 => {
                 let fp = &self.game.fighters[f.0];
                 if x594_bit(fp, 4) || x594_bit(fp, 3) {
@@ -455,6 +454,56 @@ impl Running<'_> {
                 }
             }
             _ => {}
+        }
+    }
+}
+
+impl Running<'_> {
+    /// Marth's and Roy's capes as a box's wind ends, `ftCo_8009E4A8`: each chain back on the
+    /// trees its animation's slot gives (`x594` bit 4) or off (bit 3), and with an
+    /// animation of their own (`x590`) the chains' bones restarted where it plays.
+    #[doc(alias = "ftCo_8009E4A8")]
+    pub fn capes_out_of_wind(&mut self, f: FighterId) {
+        let fp = &self.game.fighters[f.0];
+        let (frame, speed, n) = (fp.cur_anim_frame, fp.frame_speed_mul, fp.dynamics_num);
+        let desc = self.dynamics_desc(f);
+        let bones = |r: &Self, i: i32| {
+            let array = r.data.ptr(desc.at(4)).expect("dynamic bones");
+            r.data.u32(array.at(0x18 * i as u32)) as i32
+        };
+        let restart = |r: &mut Self, i: i32| {
+            if r.game.fighters[f.0].x590.is_some() {
+                let bone = bones(r, i);
+                r.restart_part_anim(f, bone, frame, speed);
+            }
+        };
+        if x594_bit(fp, 4) {
+            let anim = u32::try_from(fp.anim_id).expect("an animation's trees without one");
+            let pair = fp
+                .x28
+                .expect("a fighter without animation pairs")
+                .at(2 * anim);
+            let slot = u32::from(self.data.u8(pair.at(1)));
+            let Some(trees) = self
+                .pointer(desc.at(0x10))
+                .and_then(|t| self.pointer(t.at(4 * slot)))
+            else {
+                return;
+            };
+            for i in 0..n {
+                let at = trees.at(4 * i as u32);
+                let arg = match self.data.ptr(at) {
+                    Some(tree) => BoneSlot::Tree(tree),
+                    None => BoneSlot::Id(self.data.u32(at) as i32),
+                };
+                self.set_bone_dynamics(f, i as usize, true, arg);
+                restart(self, i);
+            }
+        } else if x594_bit(fp, 3) {
+            for i in 0..n {
+                self.set_bone_dynamics(f, i as usize, false, BoneSlot::Id(0));
+                restart(self, i);
+            }
         }
     }
 }
