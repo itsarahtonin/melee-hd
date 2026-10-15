@@ -27,13 +27,23 @@
 //! ```
 //!
 //! (`done-noncpu.txt`: every function's address but `ftCo_800B3900`'s, so the run checks only
-//! it.)
+//! it.) Four more sets come the same way (with `ssbm-run-rf`, `--fields` 440 past the start)
+//! from two replays of the `ics-dd-a3` set where Nana tumbles: the Ice Climbers' ditto on
+//! Final Destination (`diamond-diamond-688aa3dde28042970443b259.slp`), `fd-688aa3dd-ledge`
+//! from field 950 (her ledge pick on her way back) and `fd-688aa3dd-tumble` from 1340, and
+//! against Falco there (`diamond-diamond-7bd4b67151d45867e12b6d85.slp`), `fd-7bd4b671-tumble`
+//! from 3220 and `fd-7bd4b671-shield` from 3770 (Falco shielding). Each is packed
+//! (`pack-calls`).
+//!
+//! `nana_tumble_and_shields` changes the saved frames to reach the tumble's branches
+//! (`ftCo_800ABBA8`) and the shield check's (`ftCo_800B9F6C`) that no replay at hand does.
 
 use std::collections::BTreeSet;
 use std::sync::Mutex;
 
 use leaf_check::calls::{
-    Report, Ret, Variant, check_variants, gobj_arg, peek_u32, poke_f32, poke_u32, saved_calls,
+    Prepare, Report, Ret, Variant, check_variants, gobj_arg, peek_u32, poke_f32, poke_u32,
+    saved_calls,
 };
 use ssbm_rt::capture::Call;
 
@@ -74,6 +84,18 @@ const SCRIPT_WAIT: u32 = CPU + 0x450;
 const KIND_NANA: u32 = 11;
 const DI: u32 = 18;
 const CLIFF_WAIT: u32 = 253;
+/// `Fighter::cur_pos`, `Fighter::pos_delta`.
+const POS: u32 = 0xB0;
+const VEL: u32 = 0xC8;
+/// `ftCo_DatAttrs::gravity`; `CpuFighter`'s destination and its timer (`x54`, `x60`).
+const GRAVITY: u32 = 0x16C;
+const DEST: u32 = CPU + 0x54;
+const DEST_TIMER: u32 = CPU + 0x60;
+/// The tumble's behavior; `ftCo_MS_DamageFall`, `ftCo_MS_AttackHi3`, `ftCo_MS_Guard`.
+const TUMBLE: u32 = 15;
+const DAMAGE_FALL: u32 = 38;
+const ATTACK_HI3: u32 = 56;
+const GUARD: u32 = 179;
 
 /// The other fighter of Nana's player, Popo: the first of the fighters' GObjs
 /// (`HSD_GObjPLinkHead[8]`) with her player that isn't her.
@@ -89,6 +111,169 @@ fn popo(call: &Call, nana: u32) -> Option<u32> {
         g = peek_u32(call, g + 0x8);
     }
     None
+}
+
+/// The fighters of other players than Nana's.
+fn enemies(call: &Call, nana: u32) -> Vec<u32> {
+    let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+    let mut g = peek_u32(call, heads + 8 * 4);
+    let slot = peek_u32(call, nana + PLAYER) >> 24;
+    let mut v = Vec::new();
+    while g != 0 {
+        let fp = peek_u32(call, g + 0x2C);
+        if peek_u32(call, fp + PLAYER) >> 24 != slot {
+            v.push(fp);
+        }
+        g = peek_u32(call, g + 0x8);
+    }
+    v
+}
+
+/// Nana's `Fighter` in a saved frame, if it's hers and Popo is there.
+fn nana_and_popo(call: &Call) -> Option<(u32, u32)> {
+    let nana = peek_u32(call, call.regs.gpr[3] + 0x2C);
+    if peek_u32(call, nana + KIND) != KIND_NANA {
+        return None;
+    }
+    Some((nana, popo(call, nana)?))
+}
+
+/// Ends Nana's script, so the frame writes a new one for her behavior, and sets her level
+/// through Popo's percent (`ftCo_800B101C`: a level per 20 percent).
+fn new_script_at(call: &mut Call, nana: u32, popo: u32, percent: f32) {
+    poke_u32(call, nana + SCRIPT, 0);
+    poke_u32(call, nana + SCRIPT_WAIT, 0);
+    poke_f32(call, popo + PERCENT, percent);
+}
+
+/// How Nana's frame is changed, for the tumble's and the shield check's branches no replay
+/// at hand reaches.
+#[derive(Clone, Copy)]
+enum Change {
+    /// Tumbling at level 9: the tech when the floor is under 10 frames away.
+    TumbleTech,
+    /// Tumbling at level 5 with her enemies right below her in their up tilt.
+    TumbleOverUpTilt,
+    /// Tumbling at level 5, 4 frames short of her destination, which a timer keeps, at a
+    /// height her fall's prediction (before her terminal speed, with the original's square
+    /// root of the frames) passes: one frame of gravity more or less decides her drift.
+    TumbleDrift,
+    /// In the tumble's behavior at level 0, tumbling or not: back to her usual behavior.
+    TumbleLow,
+    /// At level 9 with her enemies holding their shields.
+    EnemiesShielding,
+}
+
+/// Changes a saved frame as `change` says: whether it did.
+fn change_frame(call: &mut Call, change: Change) -> bool {
+    let Some((nana, popo)) = nana_and_popo(call) else {
+        return false;
+    };
+    let tumbling = peek_u32(call, nana + MOTION) == DAMAGE_FALL;
+    match change {
+        Change::TumbleTech if tumbling => new_script_at(call, nana, popo, 180.0),
+        Change::TumbleOverUpTilt if tumbling => {
+            new_script_at(call, nana, popo, 100.0);
+            poke_u32(call, nana + BEHAVIOR, TUMBLE);
+            let (x, y) = (peek_u32(call, nana + POS), peek_u32(call, nana + POS + 4));
+            for e in enemies(call, nana) {
+                poke_u32(call, e + MOTION, ATTACK_HI3);
+                poke_u32(call, e + POS, x);
+                poke_f32(call, e + POS + 4, f32::from_bits(y) - 2.0);
+            }
+        }
+        Change::TumbleDrift if tumbling => {
+            new_script_at(call, nana, popo, 100.0);
+            let n = peek_u32(call, nana + FRAMES);
+            let dest_x = f32::from_bits(peek_u32(call, nana + DEST));
+            let dest_y = f32::from_bits(peek_u32(call, nana + DEST + 4));
+            let g = f32::from_bits(peek_u32(call, nana + GRAVITY));
+            // 4 frames at 0.5 a frame: the prediction rises 2 less half its gravity times 2
+            // (the original's square root of 4) or 4 (the square's place), so a destination
+            // 1.5 frames of gravity below that rise sits between, and every third frame 0.5
+            // sits past both.
+            let (vx, vy) = (0.5, 0.5);
+            let between = if n.is_multiple_of(3) { 0.5 } else { 1.5 } * g;
+            poke_u32(call, nana + DEST_TIMER, 50);
+            poke_f32(call, nana + VEL, vx);
+            poke_f32(call, nana + VEL + 4, vy);
+            poke_f32(call, nana + POS, dest_x - 4.0 * vx);
+            poke_f32(call, nana + POS + 4, dest_y - 4.0 * vy + between);
+        }
+        Change::TumbleLow => {
+            new_script_at(call, nana, popo, 0.0);
+            poke_u32(call, nana + BEHAVIOR, TUMBLE);
+        }
+        Change::EnemiesShielding => {
+            new_script_at(call, nana, popo, 180.0);
+            for e in enemies(call, nana) {
+                poke_u32(call, e + MOTION, GUARD);
+            }
+        }
+        _ => return false,
+    }
+    true
+}
+
+/// The tumble's behavior (`ftCo_800ABBA8`) and the attack decision's check of a shielding
+/// target (`ftCo_800B9F6C`) from saved frames changed to reach what the replays don't: each
+/// changed frame compares clean.
+#[test]
+fn nana_tumble_and_shields() {
+    leaf_check::run_as_machine_code();
+    let changes = [
+        Change::TumbleTech,
+        Change::TumbleOverUpTilt,
+        Change::TumbleDrift,
+        Change::TumbleLow,
+        Change::EnemiesShielding,
+    ];
+    let changed: [Mutex<BTreeSet<usize>>; 5] = Default::default();
+    let prepares: Vec<Box<Prepare>> = (0..changes.len())
+        .map(|v| {
+            let changed = &changed;
+            let change = changes[v];
+            Box::new(move |c: &mut Call, i: usize| {
+                if change_frame(c, change) {
+                    changed[v].lock().unwrap().insert(i);
+                }
+            }) as Box<Prepare>
+        })
+        .collect();
+    let variants: Vec<Variant> = prepares
+        .iter()
+        .map(|p| Variant {
+            prepare: p.as_ref(),
+            ours: &run_frame,
+            stubs: &[],
+        })
+        .collect();
+    let mut totals = [0; 5];
+    let dirs = dirs();
+    for dir in &dirs {
+        for c in &changed {
+            c.lock().unwrap().clear();
+        }
+        let paths = saved_calls(dir, "ftCo_800B3900");
+        let reports = check_variants(dir, "ftCo_800B3900", &variants);
+        for (v, r) in reports.iter().enumerate() {
+            let c = changed[v].lock().unwrap();
+            if !c.is_empty() {
+                totals[v] += compared(r, &paths, &c);
+            }
+        }
+    }
+    eprintln!(
+        "compared clean, tumbling at level 9, over an up tilt, drifting, at level 0, enemies \
+         shielding: {totals:?}"
+    );
+    if dirs.is_empty() || leaf_check::reference().is_none() {
+        return;
+    }
+    assert!(
+        totals.iter().all(|&t| t > 0),
+        "a change never compared: {totals:?}"
+    );
 }
 
 /// In a frame where Nana DIs, sets her up to push the stick with no knockback (and with
