@@ -17,9 +17,17 @@
 //! melee-render-check compare DISC REPLAY.slp LOG.dff REF_DIR FRAME [OUT_DIR]
 //!     the log's frames (drawn by ssbm-rs, REF_DIR/frame_N.png from gxplay) against the
 //!     native frames from FRAME on: draw by draw, and as images within tolerance
+//! melee-render-check scaled DISC REPLAY.slp FRAME [OUT_DIR]
+//!     native frame FRAME drawn at 2x and 3x, box-downsampled, against the frame at 1x, and
+//!     the frame widened to 16:9 against the game's 73:60 over the picture they share
+//! melee-render-check snap DISC REPLAY.slp OUT_DIR FRAME...
+//!     native frames drawn at 1x, saved as OUT_DIR/frame_N.png
+//! melee-render-check dashboard RESULTS_DIR OUT.html
+//!     a page of the results `compare` and `scaled` recorded with CHECK_RESULTS=RESULTS_DIR
 //! ```
 
 mod native;
+mod results;
 mod snap;
 
 use std::cell::RefCell;
@@ -177,10 +185,44 @@ fn run(args: &[String]) -> ExitCode {
             ExitCode::SUCCESS
         }
         Some("compare") if args.len() >= 6 => compare(args),
+        Some("scaled") if args.len() >= 4 => scaled(args),
+        Some("snap") if args.len() >= 5 => {
+            let dir = std::path::PathBuf::from(&args[3]);
+            std::fs::create_dir_all(&dir).expect("making the output directory");
+            let at: Vec<u32> = args[4..]
+                .iter()
+                .map(|a| a.parse().expect("FRAME"))
+                .collect();
+            let views = [native::View::REFERENCE];
+            for (n, images) in native::draw_views(&args[1], &args[2], &at, &views) {
+                let path = dir.join(format!("frame_{n}.png"));
+                images[0].save_png(&path).expect("saving a frame");
+                println!("{}", path.display());
+            }
+            ExitCode::SUCCESS
+        }
+        Some("dashboard") if args.len() >= 3 => {
+            let (dir, out) = (
+                std::path::Path::new(&args[1]),
+                std::path::Path::new(&args[2]),
+            );
+            match results::dashboard(dir, out) {
+                Ok(n) => {
+                    println!("{n} checks written to {}", out.display());
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("{e}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
         _ => {
             eprintln!(
                 "usage: melee-render-check dump LOG.dff [FRAME] | draw LOG.dff FRAME DRAW | \
-                 align DISC REPLAY LOG FROM TO | compare DISC REPLAY LOG REF_DIR FRAME [OUT]"
+                 align DISC REPLAY LOG FROM TO | compare DISC REPLAY LOG REF_DIR FRAME [OUT] | \
+                 scaled DISC REPLAY FRAME [OUT] | snap DISC REPLAY OUT FRAME... | \
+                 dashboard RESULTS OUT.html"
             );
             ExitCode::from(2)
         }
@@ -286,6 +328,7 @@ fn compare(args: &[String]) -> ExitCode {
         "the log's first frame is native frame {} ({apart:.3} apart)",
         drawn[start].0
     );
+    let results = results::Results::from_env();
     let mut failed = false;
     for (k, (n, d)) in drawn
         .into_iter()
@@ -388,6 +431,25 @@ fn compare(args: &[String]) -> ExitCode {
                         if let Some(o) = &out {
                             save_rgba(&o.join(format!("diff_{n}.png")), w, h, &diff);
                         }
+                        if let Some(r) = &results {
+                            let what = k.to_string();
+                            let m = results::Measure {
+                                kind: "compare",
+                                what: &what,
+                                native: n,
+                                psnr,
+                                off8,
+                                off32,
+                                block: f64::NAN,
+                                within: ok,
+                            };
+                            let img = |pixels| results::Rgb {
+                                width: w,
+                                height: h,
+                                pixels,
+                            };
+                            r.record(&m, (k == 0).then(|| (img(&rgb), img(&theirs), &diff[..])));
+                        }
                     }
                     Some((w, h, _)) => {
                         failed = true;
@@ -407,6 +469,211 @@ fn compare(args: &[String]) -> ExitCode {
                 failed = true;
             }
         }
+    }
+    if failed {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
+    }
+}
+
+/// An RGB image `fx` by `fy` times smaller, each pixel its block's average (rounded).
+pub fn downsample(w: u32, h: u32, rgb: &[u8], fx: u32, fy: u32) -> Vec<u8> {
+    let (ow, oh) = (w / fx, h / fy);
+    let n = fx * fy;
+    let mut out = Vec::with_capacity((ow * oh * 3) as usize);
+    for y in 0..oh {
+        for x in 0..ow {
+            let mut sum = [0u32; 3];
+            for dy in 0..fy {
+                let row = ((y * fy + dy) * w + x * fx) as usize * 3;
+                for p in rgb[row..row + fx as usize * 3].as_chunks::<3>().0 {
+                    for k in 0..3 {
+                        sum[k] += u32::from(p[k]);
+                    }
+                }
+            }
+            out.extend(sum.map(|v| ((v + n / 2) / n) as u8));
+        }
+    }
+    out
+}
+
+/// The largest mean difference of a block of two RGB images `w` wide, `side` pixels square,
+/// in one channel (ours less theirs, as a magnitude), and the block's top left corner. Edges
+/// drawn at another resolution and the dither pattern differ pixel by pixel both ways and
+/// average out over a block; a region drawn wrong doesn't.
+fn worst_block(a: &[u8], b: &[u8], w: u32, side: u32) -> (f64, u32, u32) {
+    let h = (a.len() / 3) as u32 / w;
+    let mut worst = (0f64, 0, 0);
+    for by in (0..h / side).map(|y| y * side) {
+        for bx in (0..w / side).map(|x| x * side) {
+            let mut sum = [0i64; 3];
+            for y in by..by + side {
+                let row = ((y * w + bx) * 3) as usize;
+                let n = (side * 3) as usize;
+                for (i, (p, q)) in a[row..row + n].iter().zip(&b[row..row + n]).enumerate() {
+                    sum[i % 3] += i64::from(*p) - i64::from(*q);
+                }
+            }
+            let px = f64::from(side * side);
+            for s in sum {
+                let mean = (s as f64 / px).abs();
+                if mean > worst.0 {
+                    worst = (mean, bx, by);
+                }
+            }
+        }
+    }
+    worst
+}
+
+/// Columns `x0..x0 + width` of an RGB image `w` wide.
+fn columns(w: u32, rgb: &[u8], x0: u32, width: u32) -> Vec<u8> {
+    rgb.chunks_exact(w as usize * 3)
+        .flat_map(|row| &row[x0 as usize * 3..(x0 + width) as usize * 3])
+        .copied()
+        .collect()
+}
+
+fn rgb_of(f: &melee_render::gpu::Frame) -> Vec<u8> {
+    f.rgba
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .flat_map(|p| [p[0], p[1], p[2]])
+        .collect()
+}
+
+/// The scaled checks' tolerance: a frame drawn at a higher scale or wider, brought back to the
+/// 1x frame's pixels (box-downsampled, or cropped to the picture the two share), against the
+/// frame drawn that way at 1x. Edges and texture sampling legitimately differ there (a 3x
+/// edge pixel averages nine samples where 1x takes one; copies to textures average blocks
+/// back), so this is looser than ssbm-rs's 38 dB; docs/player.md has the measurements.
+pub const SCALED_PSNR: f64 = 24.0;
+/// The largest mean difference of a block of 16 by 16 of the console's pixels, in levels.
+pub const SCALED_BLOCK: f64 = 32.0;
+
+fn within_scaled(psnr: f64, block: f64) -> bool {
+    psnr >= SCALED_PSNR && block <= SCALED_BLOCK
+}
+
+fn scaled(args: &[String]) -> ExitCode {
+    use native::View;
+    let at: u32 = args[3].parse().expect("FRAME");
+    let out = args.get(4).map(std::path::PathBuf::from);
+    if let Some(o) = &out {
+        std::fs::create_dir_all(o).expect("making the output directory");
+    }
+    let views = [
+        View::REFERENCE,
+        View::console(1),
+        View::console(2),
+        View::console(3),
+        View::shown(3, melee_render::frame::GAME_ASPECT),
+        View::shown(3, 16.0 / 9.0),
+    ];
+    let mut drawn = native::draw_views(&args[1], &args[2], &[at], &views);
+    let (n, images) = drawn.pop().expect("the frame drawn");
+    let results = results::Results::from_env();
+    let mut failed = false;
+    let check = |name: &str, ours: Vec<u8>, theirs: Vec<u8>, w: u32, h: u32| -> bool {
+        let (psnr, off8, off32, diff) = image_diff(&ours, &theirs);
+        let side = 16 * h / 480;
+        let (block, bx, by) = worst_block(&ours, &theirs, w, side);
+        let ok = within_scaled(psnr, block);
+        println!(
+            "  scaled {name}: PSNR {psnr:.2} dB, {off8:.3}% off by 8, {off32:.3}% off by 32, worst block {block:.2} levels at ({}, {}): {}",
+            bx / (side / 16),
+            by / (side / 16),
+            if ok {
+                "within tolerance"
+            } else {
+                "OUT OF TOLERANCE"
+            }
+        );
+        if let Some(o) = &out {
+            let tag = name.replace([' ', ':'], "_");
+            let rgba = |rgb: &[u8]| -> Vec<u8> {
+                rgb.as_chunks::<3>()
+                    .0
+                    .iter()
+                    .flat_map(|p| [p[0], p[1], p[2], 255])
+                    .collect()
+            };
+            save_rgba(&o.join(format!("{tag}_ours.png")), w, h, &rgba(&ours));
+            save_rgba(&o.join(format!("{tag}_theirs.png")), w, h, &rgba(&theirs));
+            save_rgba(&o.join(format!("{tag}_diff.png")), w, h, &diff);
+        }
+        if let Some(r) = &results {
+            let m = results::Measure {
+                kind: "scaled",
+                what: name,
+                native: n,
+                psnr,
+                off8,
+                off32,
+                block,
+                within: ok,
+            };
+            let img = |pixels| results::Rgb {
+                width: w,
+                height: h,
+                pixels,
+            };
+            r.record(&m, Some((img(&ours), img(&theirs), &diff)));
+        }
+        ok
+    };
+    println!("== frame {n}");
+    for (v, f) in views.iter().zip(&images) {
+        println!(
+            "  drawn at {}x, {} wide: {}x{}",
+            v.scale, v.width, f.width, f.height
+        );
+    }
+    // The player's copy to the XFB (on the GPU) against the one compared with ssbm-rs's frames.
+    let (reference, one) = (&images[0], &images[1]);
+    if (one.width, one.height) == (reference.width, reference.height) {
+        failed |= !check(
+            "1x GPU XFB",
+            rgb_of(one),
+            rgb_of(reference),
+            one.width,
+            one.height,
+        );
+    } else {
+        println!(
+            "  1x: {}x{} against the reference's {}x{}",
+            one.width, one.height, reference.width, reference.height
+        );
+        failed = true;
+    }
+    for (k, f) in images.iter().enumerate().take(4).skip(2) {
+        let s = views[k].scale;
+        if (f.width, f.height) != (one.width * s, one.height * s) {
+            println!(
+                "  {s}x: {}x{}, not {s} times the 1x frame's {}x{}",
+                f.width, f.height, one.width, one.height
+            );
+            failed = true;
+            continue;
+        }
+        let small = downsample(f.width, f.height, &rgb_of(f), s, s);
+        failed |= !check(&format!("{s}x"), small, rgb_of(one), one.width, one.height);
+    }
+    // 16:9 widens the cameras about the middle, so its middle columns are the 73:60 frame.
+    let (g, w) = (&images[4], &images[5]);
+    if w.height == g.height && w.width > g.width && (w.width - g.width).is_multiple_of(2) {
+        let x0 = (w.width - g.width) / 2;
+        let middle = columns(w.width, &rgb_of(w), x0, g.width);
+        failed |= !check("3x 16:9", middle, rgb_of(g), g.width, g.height);
+    } else {
+        println!(
+            "  16:9: {}x{} against 73:60's {}x{}",
+            w.width, w.height, g.width, g.height
+        );
+        failed = true;
     }
     if failed {
         ExitCode::FAILURE

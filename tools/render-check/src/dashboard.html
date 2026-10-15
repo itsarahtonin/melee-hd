@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Render Check Coverage</title>
+<style>
+:root {
+  --bg: #f6f5f1; --panel: #ffffff; --fg: #1d1f24; --muted: #646a74; --line: #dcdad3;
+  --ok: #3f9a5c; --warn: #b9831f; --bad: #d62f2f; --idle: #c9c7c0; --hl: #1f6fd6;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e8ea; --muted: #9aa0a9; --line: #30343b;
+  --ok: #4fae6c; --warn: #d6a443; --bad: #ef4b4b; --idle: #3a3e45; --hl: #5aa2ff; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e8ea; --muted: #9aa0a9; --line: #30343b;
+  --ok: #4fae6c; --warn: #d6a443; --bad: #ef4b4b; --idle: #3a3e45; --hl: #5aa2ff; color-scheme: dark }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 20px 16px 40px; display: grid; gap: 22px; }
+.num, .mono { font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+h1 { font-size: 22px; font-weight: 600; margin: 0; }
+.sub { color: var(--muted); font-size: 13px; }
+.note { font-size: 12px; color: var(--muted); max-width: 80ch; }
+h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
+.stats { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.stat { flex: 1 1 160px; background: var(--panel); padding: 12px 14px; display: grid; gap: 2px; }
+.stat .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.stat .v { font-size: 22px; font-weight: 500; }
+.stat .d { font-size: 12px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.frames { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .frames { grid-template-columns: minmax(0, 1fr); } }
+.list { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; max-height: 720px; overflow: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; }
+th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); }
+td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.r, th.r { text-align: right; }
+tr.stage td { background: color-mix(in srgb, var(--fg) 5%, transparent); font-weight: 600; cursor: default; }
+tbody tr.m { cursor: pointer; }
+tr.sel td { background: color-mix(in srgb, var(--hl) 12%, transparent); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.pill { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.pass { color: var(--ok); } .known { color: var(--warn); } .fail { color: var(--bad); } .idle { color: var(--muted); }
+.viewer { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; position: sticky; top: 12px; }
+.viewer .head { display: grid; gap: 2px; font-size: 13px; }
+.viewer .why { font-size: 12px; color: var(--muted); }
+.trip { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+figure { margin: 0; display: grid; gap: 4px; }
+figure img { display: block; width: 100%; height: auto; border-radius: 4px; background: var(--idle); image-rendering: auto; }
+figcaption { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.g { color: var(--muted); }
+</style>
+<div class="wrap">
+  <header>
+    <h1>Render Check Coverage</h1>
+    <div class="sub" id="sub"></div>
+    <div class="note">melee-render's frames from the last run of <span class="mono">melee-render-check</span>'s tests: against ssbm-rs's frames (which match Dolphin's software renderer) draw by draw and as images, and at higher scales and in widescreen against melee-render's own 1x frame. A <span class="known">known</span> result is out of tolerance for a documented reason and must stay exactly as recorded; any change fails the test.</div>
+  </header>
+  <div class="stats" id="stats"></div>
+  <section>
+    <h2>Frames</h2>
+    <div class="legend" id="tol"></div>
+    <div class="frames">
+      <div class="list"><table><thead><tr><th>Check</th><th>Image</th><th class="r">PSNR</th><th class="r">&gt;8</th><th class="r">&gt;32</th><th class="r">Block</th><th>Result</th></tr></thead><tbody id="rows"></tbody></table></div>
+      <div class="viewer" id="viewer"></div>
+    </div>
+  </section>
+</div>
+<script>
+const D = /*DATA*/null;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const fmt = (v, d) => v === null ? "inf" : Number(v).toFixed(d);
+$("sub").innerHTML = `<span class="mono">${esc(D.commit)}</span> · generated ${esc(D.generated)}`;
+const checks = D.checks;
+const res = (c) => c.result || "idle";
+const count = (r, g) => checks.filter((c) => res(c) === r && (!g || c.group === g)).length;
+const finite = checks.flatMap((c) => c.measures.filter((m) => m.kind === "compare" && m.psnr !== null && res(c) === "pass").map((m) => m.psnr));
+const stages = [...new Set(checks.map((c) => c.stage || "Other"))];
+const secs = (g) => checks.filter((c) => c.group === g).reduce((s, c) => s + (Number(c.seconds) || 0), 0);
+const stat = (k, v, d) => `<div class="stat"><span class="k">${k}</span><span class="v num">${v}</span><span class="d">${d}</span></div>`;
+$("stats").innerHTML = [
+  stat("Checks", checks.length, `${stages.length} stages · ${checks.filter((c) => c.group === "standard").length} standard, ${checks.filter((c) => c.group === "sweep").length} sweep`),
+  stat("Pass", count("pass"), "identical to ssbm-rs or within the scaled tolerance"),
+  stat("Known", count("known"), "out of tolerance as documented"),
+  stat("Fail", count("fail"), "a regression, or a result not yet recorded"),
+  stat("Worst passing", finite.length ? `${Math.min(...finite).toFixed(1)} dB` : "inf", "PSNR against ssbm-rs (inf = identical)"),
+].join("");
+$("tol").innerHTML = `<span>Against ssbm-rs: PSNR at least <b class="num">${D.tolerance.psnr} dB</b>, at most <b class="num">${D.tolerance.off32}%</b> of pixels off by more than 32 levels.</span><span>Scaled (2x, 3x box-downsampled; 16:9's middle against 73:60): at least <b class="num">${D.scaled.psnr} dB</b>, and no 16 by 16 block of the 1x picture off by more than <b class="num">${D.scaled.block}</b> levels on average in a channel.</span>`;
+const rows = [];
+for (const s of stages) {
+  rows.push({ stage: s });
+  for (const c of checks.filter((c) => (c.stage || "Other") === s)) {
+    if (!c.measures.length) rows.push({ c, m: null });
+    for (const m of c.measures) rows.push({ c, m });
+  }
+}
+let sel = rows.findIndex((r) => r.m && res(r.c) !== "pass" && r.m.ours) ;
+if (sel < 0) sel = rows.findIndex((r) => r.m);
+const what = (m) => m.kind === "compare" ? `1x vs ssbm-rs, log frame ${m.what}` : `${m.what} vs 1x`;
+function render() {
+  $("rows").innerHTML = rows.map((r, i) => {
+    if (r.stage) return `<tr class="stage"><td colspan="7">${esc(r.stage)}</td></tr>`;
+    const c = r.c, m = r.m, cls = res(c);
+    const label = `${esc(c.match)} <span class="g">f${esc(c.frame)}${c.group === "sweep" ? " · sweep" : ""}</span>`;
+    if (!m) return `<tr><td>${label}</td><td colspan="5" class="g">not measured</td><td><span class="pill ${cls}">${cls}</span></td></tr>`;
+    const dot = m.within ? "var(--ok)" : cls === "known" ? "var(--warn)" : "var(--bad)";
+    return `<tr class="m${i === sel ? " sel" : ""}" data-i="${i}"><td>${label}</td><td><i class="dot" style="background:${dot}"></i>${esc(what(m))}</td>
+      <td class="r num">${fmt(m.psnr, 2)}</td><td class="r num">${fmt(m.off8, 3)}%</td><td class="r num">${fmt(m.off32, 3)}%</td><td class="r num">${m.block === null ? "" : fmt(m.block, 1)}</td><td><span class="pill ${cls}">${cls}</span></td></tr>`;
+  }).join("");
+  const r = rows[sel];
+  if (!r || !r.m) { $("viewer").innerHTML = `<div class="g">Nothing measured.</div>`; return; }
+  const c = r.c, m = r.m;
+  const img = (src, cap) => src ? `<figure><img alt="${esc(cap)}" src="${src}"><figcaption>${esc(cap)}</figcaption></figure>` : "";
+  const theirs = m.kind === "compare" ? "ssbm-rs" : "melee-render at 1x";
+  const ours = m.kind === "compare" ? "melee-render" : `melee-render at ${m.what}, brought to 1x`;
+  $("viewer").innerHTML = `<div class="head"><span><b>${esc(c.stage)}</b> · ${esc(c.match)} · frame ${esc(c.frame)} (native ${m.native})</span>
+    <span class="num">${esc(what(m))}: ${fmt(m.psnr, 2)} dB, ${fmt(m.off32, 3)}% off by 32${m.block === null ? "" : `, worst block ${fmt(m.block, 1)} levels`}</span>
+    <span class="why">${esc(c.expect)}${c.why ? ": " + esc(c.why) : ""}${c.detail ? " · " + esc(c.detail) : ""}${c.seconds ? ` · ${Number(c.seconds).toFixed(1)} s` : ""}</span></div>
+    <div class="trip">${img(m.ours, ours)}${img(m.theirs, theirs)}${img(m.diff, "difference (brighter is further)")}
+    ${!m.ours ? `<div class="g">Thumbnails are kept for each check's first frame only.</div>` : ""}${m.ours && !m.theirs ? `<div class="g">Identical: the reference and the difference are left out.</div>` : ""}</div>`;
+}
+$("rows").addEventListener("click", (e) => {
+  const tr = e.target.closest("tr.m");
+  if (!tr) return;
+  sel = Number(tr.dataset.i);
+  render();
+});
+render();
+</script>
+</html>
