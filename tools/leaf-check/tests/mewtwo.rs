@@ -337,8 +337,8 @@ fn ud(call: &Call) -> u32 {
 /// - the flying ball, with each count toward its wobble's turn (`x48`) after its first frame;
 /// - Teleport's travel through the air, with each count of its frames in the air (`mv` xC)
 ///   against the landing's (`x54`), the stick held down (passing through a platform) or not.
-fn sweeps(name: &str) -> Vec<Box<Prepare>> {
-    let mut v: Vec<Box<Prepare>> = Vec::new();
+fn sweeps(name: &str) -> Vec<Box<Prepare<'_>>> {
+    let mut v: Vec<Box<Prepare<'_>>> = Vec::new();
     match name {
         "ftMt_SpecialNLoop_Anim" | "ftMt_SpecialAirNLoop_Anim" => {
             for k in 0..16u32 {
