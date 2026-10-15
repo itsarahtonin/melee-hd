@@ -922,6 +922,43 @@ impl Importer<'_> {
                 f.u.import_data(0x28 + 4 * k, &mem, u, self);
             }
         }
+        // Kirby's copy's hat (`ftKb_FighterVars` `hat`): a hat model and its DObj list (as many
+        // DObjs as the model has), or a hat of parts on his own bones and its two lists (as
+        // many as their counts say), and its variants' lookups, which stay once it's off.
+        if f.kind == 4 {
+            let u = a + 0x222C;
+            let hat = self.u32(u + 0x10);
+            let lists = if hat != 0 {
+                f.u.import_jobj(0x10, &mem, u, self);
+                vec![(0x18, self.count_tree_dobjs(hat))]
+            } else {
+                vec![
+                    (0x18, Some(self.u32(u + 0x14))),
+                    (0x20, Some(self.u32(u + 0x1C))),
+                ]
+            };
+            if self.u32(u + 0x18) != 0 {
+                for (off, n) in lists {
+                    let Some(n) = n else { continue };
+                    let data = self.u32(u + off as u32);
+                    if data & 3 != 0 || !(HEAP..MEM1 + 0x0180_0000 - 4 * n).contains(&data) {
+                        continue;
+                    }
+                    f.u.import_dobj_list(off, &mem, u, self);
+                    let l = f.u.dobj_list_at(off).expect("the hat's DObj list");
+                    let dobjs = (0..n)
+                        .map(|i| {
+                            let d = self.u32(data + 4 * i);
+                            (d != 0).then(|| self.dobj(d))
+                        })
+                        .collect();
+                    self.game.fighter_dobj_lists[l.0] = dobjs;
+                }
+            }
+            for k in 0..5 {
+                f.u.import_data(0x30 + 4 * k, &mem, u, self);
+            }
+        }
         // The state's variables' handles where the states that read them keep them: a grab's
         // hold joint (`mv` 0x18) while pulling, holding or pummeling (`ft::co::grab`), Fox's
         // and Falco's Illusion's ghost (0x44) in their side special (`ft::fox::special_s`),

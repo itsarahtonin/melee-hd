@@ -14,11 +14,14 @@
 
 pub mod attack_dash;
 pub mod copy;
+pub mod hat;
 pub mod init;
 pub mod special_hi;
 pub mod special_lw;
 pub mod special_n;
 pub mod special_s;
+pub mod special_samus;
+pub mod special_fox;
 
 use super::super::code::Val;
 use super::super::handles::FighterId;
@@ -617,8 +620,25 @@ pub(crate) mod attr {
     pub const KP_FLAME_SCALE: usize = 0x12C;
     /// Samus's copy: the shot's full charge (`specialn_ss_charge_time`).
     pub const SS_CHARGE_TIME: usize = 0x168;
+    /// The aerial shot's recoil per level, the frames per level, and the helpless fall's
+    /// landing lag after the aerial shot (none if 0).
+    pub const SS_RECOIL: usize = 0x16C;
+    pub const SS_FRAMES_PER_LEVEL: usize = 0x170;
+    pub const SS_FREEFALL: usize = 0x174;
     /// Donkey Kong's copy: the swings to a full punch.
     pub const DK_SWINGS_TO_FULL: usize = 0x190;
+    /// Fox's and Falco's copies: the shot's angle and speed, the aerial end's landing lag (none
+    /// if 0), and the shot's and the blaster's item kinds.
+    pub const FX_ANGLE: usize = 0x230;
+    pub const FX_SPEED: usize = 0x234;
+    pub const FX_FREEFALL: usize = 0x238;
+    pub const FX_SHOT_ITKIND: usize = 0x23C;
+    pub const FX_GUN_ITKIND: usize = 0x240;
+    pub const FC_ANGLE: usize = 0x254;
+    pub const FC_SPEED: usize = 0x258;
+    pub const FC_FREEFALL: usize = 0x25C;
+    pub const FC_SHOT_ITKIND: usize = 0x260;
+    pub const FC_GUN_ITKIND: usize = 0x264;
     /// Mewtwo's copy: the ball's full charge.
     pub const MT_CHARGE_TIME: usize = 0x384;
 }
@@ -652,6 +672,8 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || special_lw::run(g, gobj, addr)
         || special_s::run(g, gobj, addr)
         || special_n::run(g, gobj, addr)
+        || special_samus::run(g, gobj, addr)
+        || special_fox::run(g, gobj, addr)
 }
 
 /// Kirby's functions other code calls by address (`code::call`).

@@ -138,6 +138,8 @@ impl Running<'_> {
     pub fn kb_special_n_enter(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
             4 | 11 | 27..=30 | 32 => self.kb_n_enter(gobj),
+            13 => self.kb_ss_enter(gobj),
+            1 | 22 => self.kb_fx_enter(gobj),
             k => unported_call(&format!("the neutral special of copy kind {k}")),
         }
     }
@@ -147,6 +149,8 @@ impl Running<'_> {
     pub fn kb_special_air_n_enter(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
             4 | 11 | 27..=30 | 32 => self.kb_n_air_enter(gobj),
+            13 => self.kb_ss_air_enter(gobj),
+            1 | 22 => self.kb_fx_air_enter(gobj),
             k => unported_call(&format!("the aerial neutral special of copy kind {k}")),
         }
     }
@@ -375,16 +379,6 @@ impl Running<'_> {
         }
     }
 
-    /// A model group shown or hidden on his copy's hat too, `ftKb_UnkIntBoolFunc0` (a model
-    /// event of `ftParts_800750C8`): nothing without a hat's DObjs.
-    #[doc(alias = "ftKb_UnkIntBoolFunc0")]
-    pub fn kb_hat_vis(&mut self, f: FighterId, idx: usize, show: bool) {
-        if self.game.fighters[f.0].u.dobj_list_at(u::HAT_DOBJS).is_none() {
-            return;
-        }
-        unported_call(&format!("ftKb_UnkIntBoolFunc0 with a hat ({idx}, {show})"));
-    }
-
     /// His copy's hat drawn on his head's matrix, `ftKb_UnkMtxFunc0` (his per-kind drawing):
     /// nothing without a hat model or with it hidden (`x2225_b2`).
     #[doc(alias = "ftKb_UnkMtxFunc0")]
@@ -415,7 +409,8 @@ impl Running<'_> {
     pub fn kb_hat_restart_texture_anims(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if fp.u.dobj_list_at(u::HAT_DOBJS).is_some() && fp.u.jobj_at(u::HAT_JOBJ).is_none() {
-            unported_call("ftKb_Init_UnkCallbackPairs0_0 with a copy's costume");
+            let f = self.game.fighter_id(gobj);
+            self.kb_hat_textures_restart(f);
         }
     }
 
@@ -425,9 +420,8 @@ impl Running<'_> {
     pub fn kb_hat_texture_anim(&mut self, gobj: GObjId, i: i32, frame: f32) {
         let fp = self.game.fighter(gobj);
         if fp.u.dobj_list_at(u::HAT_DOBJS).is_some() && fp.u.jobj_at(u::HAT_JOBJ).is_none() {
-            unported_call(&format!(
-                "ftKb_Init_UnkCallbackPairs0_1 with a copy's costume ({i}, {frame})"
-            ));
+            let f = self.game.fighter_id(gobj);
+            self.kb_hat_texture_set(f, i, frame);
         }
     }
 

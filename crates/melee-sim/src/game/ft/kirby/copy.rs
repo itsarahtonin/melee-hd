@@ -46,9 +46,12 @@ impl Running<'_> {
     }
 
     /// The copy's hat put on, `ftKb_Init_803C9CC8`'s first of the kind's pair.
-    pub fn kb_add_hat(&mut self, _gobj: GObjId, kind: i32) {
-        if !matches!(kind, 4 | 11 | 27..=30 | 32) {
-            unported_call(&format!("the hat of copy kind {kind}"));
+    pub fn kb_add_hat(&mut self, gobj: GObjId, kind: i32) {
+        match kind {
+            4 | 11 | 27..=30 | 32 => {}
+            13 => self.kb_samus_hat_on(gobj),
+            22 => self.kb_falco_hat_on(gobj),
+            _ => unported_call(&format!("the hat of copy kind {kind}")),
         }
     }
 
@@ -116,7 +119,7 @@ impl Running<'_> {
         fp.u.set_gobj_at(0x98, None);
         fp.set_u_i32(0x9C, 0);
         fp.u.set_gobj_at(0xA0, None);
-        fp.set_u_i32(0xA4, 0);
+        fp.u.set_gobj_at(0xA4, None);
         fp.set_u_i32(0xA8, 0);
         fp.set_u_i32(0xAC, 0);
         fp.u.set_gobj_at(0xB0, None);
@@ -132,7 +135,9 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F19AC")]
     pub fn kb_copy_cleanup(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
-            10 | 9 | 1 | 22 | 6 | 20 | 16 | 8 | 13 | 7 | 14 | 3 | 24 => {
+            13 => self.kb_ss_drop_charge(gobj),
+            1 | 22 => self.kb_fx_remove_blaster(gobj),
+            10 | 9 | 6 | 20 | 16 | 8 | 7 | 14 | 3 | 24 => {
                 unported_call("ftKb_SpecialN_800F19AC's copy cleanup")
             }
             _ => {}
@@ -143,7 +148,9 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F1A8C")]
     pub fn kb_copy_hit_cleanup(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
-            10 | 9 | 1 | 22 | 6 | 20 | 16 | 8 | 13 | 7 | 14 | 3 | 24 => {
+            13 => self.kb_ss_drop_charge(gobj),
+            1 | 22 => self.kb_fx_remove_blaster(gobj),
+            10 | 9 | 6 | 20 | 16 | 8 | 7 | 14 | 3 | 24 => {
                 unported_call("ftKb_SpecialN_800F1A8C's copy cleanup")
             }
             _ => {}
@@ -153,9 +160,12 @@ impl Running<'_> {
     /// The copy's hat taken off, `ftKb_SpecialN_800EEEC4` (`ftKb_Init_803C9CC8`'s second of
     /// the kind's pair).
     #[doc(alias = "ftKb_SpecialN_800EEEC4")]
-    pub fn kb_remove_hat(&mut self, _gobj: GObjId, kind: i32) {
-        if !matches!(kind, 4 | 11 | 27..=30 | 32) {
-            unported_call(&format!("the hat removal of copy kind {kind}"));
+    pub fn kb_remove_hat(&mut self, gobj: GObjId, kind: i32) {
+        match kind {
+            4 | 11 | 27..=30 | 32 => {}
+            13 => self.kb_samus_hat_off(gobj),
+            22 => self.kb_falco_hat_off(gobj),
+            _ => unported_call(&format!("the hat removal of copy kind {kind}")),
         }
     }
 
