@@ -20,6 +20,12 @@ const P_LINK_ITEM: u8 = 9;
 /// `It_Kind_L_Gun_Ray`: the first item kind past the common items.
 const IT_KIND_L_GUN_RAY: i32 = 0x23;
 
+/// What each common item is worth to a computer player, `ftCo_803C5A68`.
+const ITEM_WORTH: [i32; IT_KIND_L_GUN_RAY as usize] = [
+    1, 0, 0, 1, 0, 0, 0, 1, 7, 6, 5, 4, 4, 3, 1, 1, 2, 1, 5, 2, 2, 2, 3, 3, 3, 4, 0, 0, 8, 4, 1, 4,
+    4, 5, 5,
+];
+
 /// Behaviors (`CpuFighter::x18`) the decision switches to.
 pub mod behavior {
     pub const WAIT_OUT: i32 = 4;
@@ -192,11 +198,11 @@ impl Running<'_> {
     }
 
     /// The common item of `kind` (any for `It_Kind_L_Gun_Ray`) the fighter goes for,
-    /// `ftCo_800A5F4C`: grabbable, in reach and worth at least its threshold (`x2C`). The
-    /// original measures each candidate's distance with an inline `sqrtf` whose zero test
-    /// reads a register its caller left (`f29`), so a candidate stops the port.
-    // Ports `ftCo_800A5F4C`; aliased once a check reaches it.
+    /// `ftCo_800A5F4C`: grabbable, in reach and worth at least its threshold (`x2C`), the
+    /// nearest of the most worth (`ftCo_803C5A68`); the first found keeps a tie.
+    #[doc(alias = "ftCo_800A5F4C")]
     fn cpu_common_item_target(&mut self, f: FighterId, kind: i32) -> Option<ItemId> {
+        let mut closest: Option<(ItemId, f64)> = None;
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
@@ -211,14 +217,39 @@ impl Running<'_> {
             if self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) || ip.kind >= IT_KIND_L_GUN_RAY {
                 continue;
             }
-            unported_call("ftCo_800A5F4C with a candidate item (its sqrtf reads the caller's f29)");
+            let worth = ITEM_WORTH[ip.kind as usize];
+            if worth < self.game.fighters[f.0].cpu.x2C {
+                continue;
+            }
+            match closest {
+                None => closest = Some((it, self.cpu_item_distance(f, it))),
+                Some((best, d)) => {
+                    let kind = self.game.items[best.0].kind;
+                    if worth < ITEM_WORTH[kind as usize] {
+                        continue;
+                    }
+                    let dist = self.cpu_item_distance(f, it);
+                    if d > dist {
+                        closest = Some((it, dist));
+                    }
+                }
+            }
         }
-        None
+        closest.map(|(it, _)| it)
+    }
+
+    /// The distance from the fighter to an item, `ftCo_GetItemDistance` (inlined), left in a
+    /// register.
+    fn cpu_item_distance(&self, f: FighterId, it: ItemId) -> f64 {
+        let (a, b) = (self.game.fighters[f.0].cur_pos, self.game.items[it.0].pos);
+        let dy = fp::fsubs(reg(a.y), reg(b.y));
+        let dx = fp::fsubs(reg(a.x), reg(b.x));
+        reg(math::sqrt(mem(fp::fmadds(dx, dx, fp::fmuls(dy, dy)))))
     }
 
     /// The enemy item the fighter goes for, `ftCo_800A648C`: Goombas, Redeads and the other
-    /// stage enemies in reach. Its distance test reads a caller's register as
-    /// [`Running::cpu_common_item_target`]'s does, so a candidate stops the port.
+    /// stage enemies in reach. No VS stage without items has any, so a candidate stops the
+    /// port.
     // Ports `ftCo_800A648C`; aliased once a check reaches it.
     fn cpu_enemy_item_target(&mut self, f: FighterId) -> Option<ItemId> {
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
@@ -234,9 +265,7 @@ impl Running<'_> {
                 || (k.wrapping_sub(0xB4) as u32) <= 1
                 || k == 0xB8;
             if enemy && !self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) {
-                unported_call(
-                    "ftCo_800A648C with a candidate item (its sqrtf reads the caller's f29)",
-                );
+                unported_call("ftCo_800A648C with a candidate item");
             }
         }
         None
@@ -475,9 +504,9 @@ impl Running<'_> {
         if self.game.fighters[f.0].cpu.x18 == 0xE {
             return true;
         }
-        if let Some(item) = self.game.fighters[f.0].item_gobj {
-            let _ = item;
-            unported_call("ftCo_800ADE48 with an item held");
+        if self.cpu_throws_held_item(f) {
+            self.game.fighters[f.0].cpu.x18 = 0xE;
+            return true;
         }
         let c = &self.game.fighters[f.0].cpu;
         if c.x18 == 0xA {
@@ -489,6 +518,29 @@ impl Running<'_> {
             return true;
         }
         false
+    }
+
+    /// Whether the fighter gets rid of the item it holds (behavior 14, in
+    /// `ftCo_800ADE48`): always for computer kind 0x1D; else a capsule, crate, barrel, egg,
+    /// party ball, barrel cannon, bob-omb, Poké Ball or Yoshi's egg, or an item that passes
+    /// `ftCo_800A5980`, which takes the `Item*` as a `Fighter*`: its state test reads the
+    /// item's kind, the word at the same offset.
+    fn cpu_throws_held_item(&self, f: FighterId) -> bool {
+        let fpp = &self.game.fighters[f.0];
+        let Some(g) = fpp.item_gobj else {
+            return false;
+        };
+        if fpp.cpu.kind == 0x1D {
+            return true;
+        }
+        let kind = self.game.items[super::super::it::item_of(self.game, g).0].kind;
+        // `It_Kind_Capsule` to `_BombHei`, `_M_Ball`, `_EvYoshiEgg`.
+        if (0..7).contains(&kind) || kind == 0x22 || kind == 0x2A {
+            return true;
+        }
+        // `ftCo_800A5980`'s `ftCo_MS_LandingFallSpecial` up to `_Attack100Start`, and
+        // `_Furafura`, `_Catch`, `_CatchPull` and `_CatchAttack`.
+        (43..47).contains(&kind) || matches!(kind, 211 | 212 | 213 | 217)
     }
 
     /// Sets the fighter's destination and how near it must get, unless a destination timer

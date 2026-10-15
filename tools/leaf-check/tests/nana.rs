@@ -91,6 +91,8 @@ const VEL: u32 = 0xC8;
 const GRAVITY: u32 = 0x16C;
 const DEST: u32 = CPU + 0x54;
 const DEST_TIMER: u32 = CPU + 0x60;
+/// The least worth of an item the computer player goes for (`CpuFighter::x2C`).
+const ITEM_WORTH: u32 = CPU + 0x2C;
 /// The tumble's behavior; `ftCo_MS_DamageFall`, `ftCo_MS_AttackHi3`, `ftCo_MS_Guard`.
 const TUMBLE: u32 = 15;
 const DAMAGE_FALL: u32 = 38;
@@ -162,6 +164,9 @@ enum Change {
     TumbleLow,
     /// At level 9 with her enemies holding their shields.
     EnemiesShielding,
+    /// With items about and every common item worth going for (`CpuFighter::x2C` 0), so her
+    /// item search (`ftCo_800A5F4C`) measures each and keeps the nearest.
+    AnyItem,
 }
 
 /// Changes a saved frame as `change` says: whether it did.
@@ -210,14 +215,21 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
                 poke_u32(call, e + MOTION, GUARD);
             }
         }
+        Change::AnyItem => {
+            let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+            if peek_u32(call, heads + 9 * 4) == 0 {
+                return false;
+            }
+            poke_u32(call, nana + ITEM_WORTH, 0);
+        }
         _ => return false,
     }
     true
 }
 
-/// The tumble's behavior (`ftCo_800ABBA8`) and the attack decision's check of a shielding
-/// target (`ftCo_800B9F6C`) from saved frames changed to reach what the replays don't: each
-/// changed frame compares clean.
+/// The tumble's behavior (`ftCo_800ABBA8`), the attack decision's check of a shielding
+/// target (`ftCo_800B9F6C`) and the item search's nearest item (`ftCo_800A5F4C`) from saved
+/// frames changed to reach what the replays don't: each changed frame compares clean.
 #[test]
 fn nana_tumble_and_shields() {
     leaf_check::run_as_machine_code();
@@ -227,8 +239,9 @@ fn nana_tumble_and_shields() {
         Change::TumbleDrift,
         Change::TumbleLow,
         Change::EnemiesShielding,
+        Change::AnyItem,
     ];
-    let changed: [Mutex<BTreeSet<usize>>; 5] = Default::default();
+    let changed: [Mutex<BTreeSet<usize>>; 6] = Default::default();
     let prepares: Vec<Box<Prepare>> = (0..changes.len())
         .map(|v| {
             let changed = &changed;
@@ -248,7 +261,7 @@ fn nana_tumble_and_shields() {
             stubs: &[],
         })
         .collect();
-    let mut totals = [0; 5];
+    let mut totals = [0; 6];
     let dirs = dirs();
     for dir in &dirs {
         for c in &changed {
@@ -265,7 +278,7 @@ fn nana_tumble_and_shields() {
     }
     eprintln!(
         "compared clean, tumbling at level 9, over an up tilt, drifting, at level 0, enemies \
-         shielding: {totals:?}"
+         shielding, any item: {totals:?}"
     );
     if dirs.is_empty() || leaf_check::reference().is_none() {
         return;
