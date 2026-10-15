@@ -165,6 +165,12 @@ impl Running<'_> {
         }
     }
 
+    /// `ftKp_SpecialLwLanding_Phys`: friction (`ft_80084F3C`).
+    #[doc(alias = "ftKp_SpecialLwLanding_Phys")]
+    pub fn kp_special_lw_landing_phys(&mut self, gobj: GObjId) {
+        self.ground_friction(gobj);
+    }
+
     /// `ftKp_SpecialLwLanding_Coll`: falling if it went off the ground.
     #[doc(alias = "ftKp_SpecialLwLanding_Coll")]
     pub fn kp_special_lw_landing_coll(&mut self, gobj: GObjId) {
@@ -196,7 +202,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_LW_COLL | addr::SPECIAL_AIR_LW_COLL => g.kp_special_air_lw_coll(gobj),
         addr::LW_FALL => g.kp_lw_to_air(gobj),
         addr::SPECIAL_LW_LANDING_ANIM => g.kp_special_lw_landing_anim(gobj),
-        addr::SPECIAL_LW_LANDING_PHYS => g.ground_friction(gobj),
+        addr::SPECIAL_LW_LANDING_PHYS => g.kp_special_lw_landing_phys(gobj),
         addr::SPECIAL_LW_LANDING_COLL => g.kp_special_lw_landing_coll(gobj),
         addr::LW_LANDING => g.kp_lw_landing_enter(gobj),
         _ => return false,

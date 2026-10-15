@@ -306,11 +306,14 @@ fn vary(call: &mut Call, i: usize) {
     if (i / 3) % 2 == 1 {
         poke_u32(call, fp + 0x2344, 1);
     }
-    // The flame's speed and size left (`u` `x222C`, `x2230`), low enough for the breath's
-    // smaller sounds.
-    if i % 6 == 4 {
-        let size = f32::from_bits(peek_u32(call, fp + 0x2230));
-        poke_f32(call, fp + 0x2230, size * [0.2, 0.5, 0.75][(i / 6) % 3]);
+    // The flame's speed and size left (`u` `x222C`, `x2230`), short of full so they refill,
+    // and low enough for the breath's smaller sounds.
+    if i % 3 == 1 {
+        let k = [0.2, 0.5, 0.75][(i / 3) % 3];
+        for at in [fp + 0x222C, fp + 0x2230] {
+            let v = f32::from_bits(peek_u32(call, at));
+            poke_f32(call, at, v * k);
+        }
     }
 }
 

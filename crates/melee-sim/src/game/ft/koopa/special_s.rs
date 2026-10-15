@@ -411,6 +411,85 @@ impl Running<'_> {
         }
     }
 
+    /// `ftKp_SpecialSWait_Anim` and `ftKp_SpecialAirSWait_Anim`: nothing.
+    #[doc(alias = "ftKp_SpecialSWait_Anim")]
+    #[doc(alias = "ftKp_SpecialAirSWait_Anim")]
+    pub fn kp_special_s_wait_anim(&mut self, _gobj: GObjId) {}
+
+    /// The grounded start's and throws' physics: the animation's motion along the throw's
+    /// facing as the ground speed, or friction (`ft_800850B4`).
+    #[doc(alias = "ftKp_SpecialSStart_Phys")]
+    #[doc(alias = "ftKp_SpecialSEndF_Phys")]
+    #[doc(alias = "ftKp_SpecialSEndB_Phys")]
+    pub fn kp_special_s_start_phys(&mut self, gobj: GObjId) {
+        self.ground_anim_speed_thrown(gobj);
+    }
+
+    /// The grounded hold's physics: friction (`ft_80084F3C`).
+    #[doc(alias = "ftKp_SpecialSHit_Phys")]
+    #[doc(alias = "ftKp_SpecialSWait_Phys")]
+    pub fn kp_special_s_hit_phys(&mut self, gobj: GObjId) {
+        self.ground_friction(gobj);
+    }
+
+    /// The aerial hold's and throws' physics: the air's without drift (`ft_80084EEC`).
+    #[doc(alias = "ftKp_SpecialAirSHit_Phys")]
+    #[doc(alias = "ftKp_SpecialAirSWait_Phys")]
+    #[doc(alias = "ftKp_SpecialAirSEndF_Phys")]
+    #[doc(alias = "ftKp_SpecialAirSEndB_Phys")]
+    pub fn kp_special_air_s_hit_phys(&mut self, gobj: GObjId) {
+        self.air_physics_no_drift(gobj);
+    }
+
+    /// `ftKp_SpecialSStart_Coll`: off a ledge, the aerial start (`ft_8008403C`).
+    #[doc(alias = "ftKp_SpecialSStart_Coll")]
+    pub fn kp_special_s_start_coll(&mut self, gobj: GObjId) {
+        self.ground_coll_fall_off_then(gobj, |g, gobj| g.kp_s_start_to_air(gobj));
+    }
+
+    /// `ftKp_SpecialAirSStart_Coll`: landing, the grounded start (`ft_80082C74`).
+    #[doc(alias = "ftKp_SpecialAirSStart_Coll")]
+    pub fn kp_special_air_s_start_coll(&mut self, gobj: GObjId) {
+        self.air_coll_then(gobj, |g, gobj| g.kp_air_s_start_to_ground(gobj));
+    }
+
+    /// The grounded hold's and throws' collision: off a ledge both fall (`ft_800841B8`).
+    #[doc(alias = "ftKp_SpecialSHit_Coll")]
+    #[doc(alias = "ftKp_SpecialSWait_Coll")]
+    #[doc(alias = "ftKp_SpecialSEndF_Coll")]
+    #[doc(alias = "ftKp_SpecialSEndB_Coll")]
+    pub fn kp_special_s_hit_coll(&mut self, gobj: GObjId) {
+        self.ground_coll_then(gobj, |g, gobj| g.kp_s_off_ledge(gobj));
+    }
+
+    /// `ftKp_SpecialAirSHit_Coll`: landing, the grounded hold.
+    #[doc(alias = "ftKp_SpecialAirSHit_Coll")]
+    pub fn kp_special_air_s_hit_coll(&mut self, gobj: GObjId) {
+        self.air_coll_then(gobj, |g, gobj| g.kp_air_s_hit_to_ground(gobj));
+    }
+
+    /// `ftKp_SpecialAirSWait_Coll`: landing, the grounded wait.
+    #[doc(alias = "ftKp_SpecialAirSWait_Coll")]
+    pub fn kp_special_air_s_wait_coll(&mut self, gobj: GObjId) {
+        self.air_coll_then(gobj, |g, gobj| g.kp_air_s_wait_to_ground(gobj));
+    }
+
+    /// `ftKp_SpecialAirSEndF_Coll` and `ftKp_SpecialAirSEndB_Coll`: landing, the grounded
+    /// throw.
+    #[doc(alias = "ftKp_SpecialAirSEndF_Coll")]
+    #[doc(alias = "ftKp_SpecialAirSEndB_Coll")]
+    pub fn kp_special_air_s_end_coll(&mut self, gobj: GObjId, back: bool) {
+        if back {
+            self.air_coll_then(gobj, |g, gobj| {
+                g.kp_air_s_end_to_ground(gobj, ms::SPECIAL_S_END_B, co_ms::THROWN_KOOPA_B)
+            });
+        } else {
+            self.air_coll_then(gobj, |g, gobj| {
+                g.kp_air_s_end_to_ground(gobj, ms::SPECIAL_S_END_F, co_ms::THROWN_KOOPA_F)
+            });
+        }
+    }
+
     /// `ftKp_SpecialAirSStart_Phys`: the animation's motion across, the fall's speed kept,
     /// and gravity.
     #[doc(alias = "ftKp_SpecialAirSStart_Phys")]
@@ -454,8 +533,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
             ms::SPECIAL_AIR_S_HIT0_1,
             true,
         ),
-        // `ftKp_SpecialSWait_Anim` and `ftKp_SpecialAirSWait_Anim`: nothing.
-        addr::SPECIAL_S_WAIT_ANIM | addr::SPECIAL_AIR_S_WAIT_ANIM => {}
+        addr::SPECIAL_S_WAIT_ANIM | addr::SPECIAL_AIR_S_WAIT_ANIM => g.kp_special_s_wait_anim(gobj),
         addr::SPECIAL_S_END_F_ANIM | addr::SPECIAL_S_END_B_ANIM => {
             g.kp_special_s_end_anim(gobj, false)
         }
@@ -467,36 +545,24 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_S_WAIT_IASA => g.kp_special_s_wait_iasa(gobj, false),
         addr::SPECIAL_AIR_S_WAIT_IASA => g.kp_special_s_wait_iasa(gobj, true),
         addr::SPECIAL_S_START_PHYS | addr::SPECIAL_S_END_F_PHYS | addr::SPECIAL_S_END_B_PHYS => {
-            g.ground_anim_speed_thrown(gobj)
+            g.kp_special_s_start_phys(gobj)
         }
         addr::SPECIAL_AIR_S_START_PHYS => g.kp_special_air_s_start_phys(gobj),
-        addr::SPECIAL_S_HIT_PHYS | addr::SPECIAL_S_WAIT_PHYS => g.ground_friction(gobj),
+        addr::SPECIAL_S_HIT_PHYS | addr::SPECIAL_S_WAIT_PHYS => g.kp_special_s_hit_phys(gobj),
         addr::SPECIAL_AIR_S_HIT_PHYS
         | addr::SPECIAL_AIR_S_WAIT_PHYS
         | addr::SPECIAL_AIR_S_END_F_PHYS
-        | addr::SPECIAL_AIR_S_END_B_PHYS => g.air_physics_no_drift(gobj),
-        addr::SPECIAL_S_START_COLL => {
-            g.ground_coll_fall_off_then(gobj, |g, gobj| g.kp_s_start_to_air(gobj))
-        }
-        addr::SPECIAL_AIR_S_START_COLL => {
-            g.air_coll_then(gobj, |g, gobj| g.kp_air_s_start_to_ground(gobj))
-        }
+        | addr::SPECIAL_AIR_S_END_B_PHYS => g.kp_special_air_s_hit_phys(gobj),
+        addr::SPECIAL_S_START_COLL => g.kp_special_s_start_coll(gobj),
+        addr::SPECIAL_AIR_S_START_COLL => g.kp_special_air_s_start_coll(gobj),
         addr::SPECIAL_S_HIT_COLL
         | addr::SPECIAL_S_WAIT_COLL
         | addr::SPECIAL_S_END_F_COLL
-        | addr::SPECIAL_S_END_B_COLL => g.ground_coll_then(gobj, |g, gobj| g.kp_s_off_ledge(gobj)),
-        addr::SPECIAL_AIR_S_HIT_COLL => {
-            g.air_coll_then(gobj, |g, gobj| g.kp_air_s_hit_to_ground(gobj))
-        }
-        addr::SPECIAL_AIR_S_WAIT_COLL => {
-            g.air_coll_then(gobj, |g, gobj| g.kp_air_s_wait_to_ground(gobj))
-        }
-        addr::SPECIAL_AIR_S_END_F_COLL => g.air_coll_then(gobj, |g, gobj| {
-            g.kp_air_s_end_to_ground(gobj, ms::SPECIAL_S_END_F, co_ms::THROWN_KOOPA_F)
-        }),
-        addr::SPECIAL_AIR_S_END_B_COLL => g.air_coll_then(gobj, |g, gobj| {
-            g.kp_air_s_end_to_ground(gobj, ms::SPECIAL_S_END_B, co_ms::THROWN_KOOPA_B)
-        }),
+        | addr::SPECIAL_S_END_B_COLL => g.kp_special_s_hit_coll(gobj),
+        addr::SPECIAL_AIR_S_HIT_COLL => g.kp_special_air_s_hit_coll(gobj),
+        addr::SPECIAL_AIR_S_WAIT_COLL => g.kp_special_air_s_wait_coll(gobj),
+        addr::SPECIAL_AIR_S_END_F_COLL => g.kp_special_air_s_end_coll(gobj, false),
+        addr::SPECIAL_AIR_S_END_B_COLL => g.kp_special_air_s_end_coll(gobj, true),
         _ => return false,
     }
     true

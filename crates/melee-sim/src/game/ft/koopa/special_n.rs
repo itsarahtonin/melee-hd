@@ -291,6 +291,29 @@ impl Running<'_> {
         }
     }
 
+    /// The breath's states' interrupts but the loop's: nothing.
+    #[doc(alias = "ftKp_SpecialNStart_IASA")]
+    #[doc(alias = "ftKp_SpecialNEnd_IASA")]
+    #[doc(alias = "ftKp_SpecialAirNStart_IASA")]
+    #[doc(alias = "ftKp_SpecialAirNEnd_IASA")]
+    pub fn kp_special_n_no_iasa(&mut self, _gobj: GObjId) {}
+
+    /// The grounded breath's physics: friction (`ft_80084F3C`).
+    #[doc(alias = "ftKp_SpecialNStart_Phys")]
+    #[doc(alias = "ftKp_SpecialN_Phys")]
+    #[doc(alias = "ftKp_SpecialNEnd_Phys")]
+    pub fn kp_special_n_phys(&mut self, gobj: GObjId) {
+        self.ground_friction(gobj);
+    }
+
+    /// The aerial breath's physics: the air's (`ft_80084DB0`).
+    #[doc(alias = "ftKp_SpecialAirNStart_Phys")]
+    #[doc(alias = "ftKp_SpecialAirN_Phys")]
+    #[doc(alias = "ftKp_SpecialAirNEnd_Phys")]
+    pub fn kp_special_air_n_phys(&mut self, gobj: GObjId) {
+        self.air_physics(gobj);
+    }
+
     /// `ftKp_SpecialNStart_Coll`, `ftKp_SpecialN_Coll` and `ftKp_SpecialNEnd_Coll`: off the
     /// ground, the aerial state from the same frame.
     #[doc(alias = "ftKp_SpecialNStart_Coll")]
@@ -356,19 +379,18 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_N_ANIM | addr::SPECIAL_AIR_N_ANIM => g.kp_special_n_anim(gobj),
         addr::SPECIAL_N_END_ANIM => g.kp_special_n_end_anim(gobj),
         addr::SPECIAL_AIR_N_END_ANIM => g.kp_special_air_n_end_anim(gobj),
-        // `ftKp_SpecialNStart_IASA`, `ftKp_SpecialNEnd_IASA` and the aerial ones: nothing.
         addr::SPECIAL_N_START_IASA
         | addr::SPECIAL_N_END_IASA
         | addr::SPECIAL_AIR_N_START_IASA
-        | addr::SPECIAL_AIR_N_END_IASA => {}
+        | addr::SPECIAL_AIR_N_END_IASA => g.kp_special_n_no_iasa(gobj),
         addr::SPECIAL_N_IASA => g.kp_special_n_iasa(gobj, ms::SPECIAL_N_END),
         addr::SPECIAL_AIR_N_IASA => g.kp_special_n_iasa(gobj, ms::SPECIAL_AIR_N_END),
         addr::SPECIAL_N_START_PHYS | addr::SPECIAL_N_PHYS | addr::SPECIAL_N_END_PHYS => {
-            g.ground_friction(gobj)
+            g.kp_special_n_phys(gobj)
         }
         addr::SPECIAL_AIR_N_START_PHYS
         | addr::SPECIAL_AIR_N_PHYS
-        | addr::SPECIAL_AIR_N_END_PHYS => g.air_physics(gobj),
+        | addr::SPECIAL_AIR_N_END_PHYS => g.kp_special_air_n_phys(gobj),
         addr::SPECIAL_N_START_COLL => {
             g.kp_special_n_coll(gobj, ms::SPECIAL_AIR_N_START, GROUND_AIR_COLL)
         }

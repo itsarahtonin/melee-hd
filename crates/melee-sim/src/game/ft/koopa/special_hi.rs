@@ -108,6 +108,11 @@ impl Running<'_> {
         }
     }
 
+    /// The spin's interrupts: nothing.
+    #[doc(alias = "ftKp_SpecialHi_IASA")]
+    #[doc(alias = "ftKp_SpecialAirHi_IASA")]
+    pub fn kp_special_hi_no_iasa(&mut self, _gobj: GObjId) {}
+
     /// `ftKp_SpecialHi_Phys`: until the script says (`cmd_vars[0]`), steered by the stick
     /// (`x68` toward `x60`); then friction.
     #[doc(alias = "ftKp_SpecialHi_Phys")]
@@ -235,8 +240,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_HI_ENTER => g.kp_special_air_hi_enter(gobj),
         addr::SPECIAL_HI_ANIM => g.kp_special_hi_anim(gobj),
         addr::SPECIAL_AIR_HI_ANIM => g.kp_special_air_hi_anim(gobj),
-        // `ftKp_SpecialHi_IASA` and `ftKp_SpecialAirHi_IASA`: nothing.
-        addr::SPECIAL_HI_IASA | addr::SPECIAL_AIR_HI_IASA => {}
+        addr::SPECIAL_HI_IASA | addr::SPECIAL_AIR_HI_IASA => g.kp_special_hi_no_iasa(gobj),
         addr::SPECIAL_HI_PHYS => g.kp_special_hi_phys(gobj),
         addr::SPECIAL_AIR_HI_PHYS => g.kp_special_air_hi_phys(gobj),
         addr::SPECIAL_HI_COLL => g.kp_special_hi_coll(gobj),
