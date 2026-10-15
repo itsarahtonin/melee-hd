@@ -31,6 +31,11 @@ pub const CHARACTERS: &[Character] = &[
         keys: &["falcon", "captain-falcon", "cf"],
     },
     Character {
+        kind: 1,
+        name: "Donkey Kong",
+        keys: &["donkey-kong", "dk", "donkey"],
+    },
+    Character {
         kind: 22,
         name: "Dr. Mario",
         keys: &["drmario", "dr-mario", "doc"],

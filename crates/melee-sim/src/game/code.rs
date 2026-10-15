@@ -159,6 +159,9 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::mario::run(g, gobj, addr) => {}
         addr if super::ft::drmario::run(g, gobj, addr) => {}
         addr if super::ft::pikachu::run(g, gobj, addr) => {}
+        addr if super::ft::donkey::run(g, gobj, addr) => {}
+        addr if super::ft::co::cargo::run(g, gobj, addr) => {}
+        addr if super::ft::co::bury::run(g, gobj, addr) => {}
         addr if super::ft::pichu::run(g, gobj, addr) => {}
         addr if super::ft::emblem::run(g, gobj, addr) => {}
         addr if super::ft::popo::run(g, gobj, addr) => {}
@@ -399,6 +402,12 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::pikachu::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::donkey::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::co::bury::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::ft::pichu::call(r, f, args) {

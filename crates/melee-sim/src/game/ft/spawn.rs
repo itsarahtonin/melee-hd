@@ -366,7 +366,7 @@ impl Running<'_> {
             self.scale_multi_jumps(f);
         }
         if self.game.fighters[f.0].x2222_b0 {
-            unported_call("ftCo_800D105C with Donkey Kong's attributes");
+            self.dk_scale_cargo_walk_rates(f);
         }
     }
 

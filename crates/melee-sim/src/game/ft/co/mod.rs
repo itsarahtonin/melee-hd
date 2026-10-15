@@ -10,6 +10,8 @@
 pub mod air;
 pub mod anim;
 pub mod attack;
+pub mod bury;
+pub mod cargo;
 pub mod catch;
 pub mod checks;
 pub mod cliff;
