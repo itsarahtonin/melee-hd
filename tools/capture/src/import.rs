@@ -559,7 +559,14 @@ impl<'a> Importer<'a> {
         w.current_proc = (cur != 0).then(|| self.maps.procs[&cur]);
         w.current_s_link = cap.u32(sym("HSD_GObj_CurrentInvokedSLink")) as usize;
         let next = cap.u32(sym("HSD_GObj_NextInvokedProc"));
-        w.next_proc = (next != 0).then(|| self.maps.procs[&next]);
+        // A process the running one freed (Mr. Game & Watch's take-damage hook destroying
+        // his torch, whose process was next) stays the next one until the running process
+        // returns, and the scheduler takes the next from it again then (`HSD_GObj_RunProcs`);
+        // unqueuing reads it only between processes (`in_delayed_proc`), so the dangling
+        // word goes unread and imports as none.
+        w.next_proc = (next != 0)
+            .then(|| self.maps.procs.get(&next).copied())
+            .flatten();
         let cg = cap.u32(sym("HSD_GObj_CurrentInvokedProcGObj"));
         w.current_gobj = (cg != 0).then(|| self.maps.gobjs[&cg]);
         self.statics();
