@@ -22,8 +22,9 @@
 //!     the frame widened to 16:9 against the game's 73:60 over the picture they share
 //! melee-render-check snap DISC REPLAY.slp OUT_DIR FRAME...
 //!     native frames drawn at 1x, saved as OUT_DIR/frame_N.png
-//! melee-render-check dashboard RESULTS_DIR OUT.html
-//!     a page of the results `compare` and `scaled` recorded with CHECK_RESULTS=RESULTS_DIR
+//! melee-render-check dashboard RESULTS_DIR OUT_DIR
+//!     a page of the results `compare` and `scaled` recorded with CHECK_RESULTS=RESULTS_DIR:
+//!     OUT_DIR/index.html, and the frames compared at full size in OUT_DIR/img/
 //! ```
 
 mod native;
@@ -206,9 +207,27 @@ fn run(args: &[String]) -> ExitCode {
                 std::path::Path::new(&args[1]),
                 std::path::Path::new(&args[2]),
             );
+            if out.extension().is_some_and(|e| e == "html") {
+                eprintln!("dashboard takes an output directory: it writes index.html and img/");
+                return ExitCode::from(2);
+            }
             match results::dashboard(dir, out) {
-                Ok(n) => {
-                    println!("{n} checks written to {}", out.display());
+                Ok(s) => {
+                    println!(
+                        "{} checks, {} measures: {} with images, {} of them shown{}; {} files, {:.1} MB in {}",
+                        s.checks,
+                        s.measures,
+                        s.recorded,
+                        s.shown,
+                        if s.shown < s.recorded {
+                            " (the rest left out to fit the budget)"
+                        } else {
+                            ""
+                        },
+                        s.files,
+                        s.bytes as f64 / 1e6,
+                        out.display()
+                    );
                     ExitCode::SUCCESS
                 }
                 Err(e) => {
@@ -222,7 +241,7 @@ fn run(args: &[String]) -> ExitCode {
                 "usage: melee-render-check dump LOG.dff [FRAME] | draw LOG.dff FRAME DRAW | \
                  align DISC REPLAY LOG FROM TO | compare DISC REPLAY LOG REF_DIR FRAME [OUT] | \
                  scaled DISC REPLAY FRAME [OUT] | snap DISC REPLAY OUT FRAME... | \
-                 dashboard RESULTS OUT.html"
+                 dashboard RESULTS OUT_DIR"
             );
             ExitCode::from(2)
         }
@@ -448,7 +467,7 @@ fn compare(args: &[String]) -> ExitCode {
                                 height: h,
                                 pixels,
                             };
-                            r.record(&m, (k == 0).then(|| (img(&rgb), img(&theirs), &diff[..])));
+                            r.record(&m, img(&rgb), img(&theirs), Some(&diff));
                         }
                     }
                     Some((w, h, _)) => {
@@ -499,13 +518,21 @@ pub fn downsample(w: u32, h: u32, rgb: &[u8], fx: u32, fy: u32) -> Vec<u8> {
     out
 }
 
-/// The largest mean difference of a block of two RGB images `w` wide, `side` pixels square,
-/// in one channel (ours less theirs, as a magnitude), and the block's top left corner. Edges
-/// drawn at another resolution and the dither pattern differ pixel by pixel both ways and
-/// average out over a block; a region drawn wrong doesn't.
-fn worst_block(a: &[u8], b: &[u8], w: u32, side: u32) -> (f64, u32, u32) {
+/// The side of the scaled checks' blocks in a frame `h` pixels high: 16 of the console's
+/// pixels.
+pub fn block_side(h: u32) -> u32 {
+    16 * h / 480
+}
+
+/// Each block's mean difference of two RGB images `w` wide, in blocks `side` pixels square
+/// (the whole blocks, `w / side` a row, row by row): the largest of its channels' mean
+/// differences (ours less theirs, as a magnitude), in levels. Edges drawn at another
+/// resolution and the dither pattern differ pixel by pixel both ways and average out over a
+/// block; a region drawn wrong doesn't.
+pub fn block_means(a: &[u8], b: &[u8], w: u32, side: u32) -> Vec<f64> {
     let h = (a.len() / 3) as u32 / w;
-    let mut worst = (0f64, 0, 0);
+    let px = f64::from(side * side);
+    let mut out = Vec::with_capacity(((w / side) * (h / side)) as usize);
     for by in (0..h / side).map(|y| y * side) {
         for bx in (0..w / side).map(|x| x * side) {
             let mut sum = [0i64; 3];
@@ -516,13 +543,23 @@ fn worst_block(a: &[u8], b: &[u8], w: u32, side: u32) -> (f64, u32, u32) {
                     sum[i % 3] += i64::from(*p) - i64::from(*q);
                 }
             }
-            let px = f64::from(side * side);
-            for s in sum {
-                let mean = (s as f64 / px).abs();
-                if mean > worst.0 {
-                    worst = (mean, bx, by);
-                }
-            }
+            out.push(
+                sum.iter()
+                    .map(|&s| (s as f64 / px).abs())
+                    .fold(0f64, f64::max),
+            );
+        }
+    }
+    out
+}
+
+/// The largest of [`block_means`], and the block's top left corner (the first, if several).
+fn worst_block(a: &[u8], b: &[u8], w: u32, side: u32) -> (f64, u32, u32) {
+    let cols = w / side;
+    let mut worst = (0f64, 0, 0);
+    for (i, &mean) in (0u32..).zip(&block_means(a, b, w, side)) {
+        if mean > worst.0 {
+            worst = (mean, i % cols * side, i / cols * side);
         }
     }
     worst
@@ -579,7 +616,7 @@ fn scaled(args: &[String]) -> ExitCode {
     let mut failed = false;
     let check = |name: &str, ours: Vec<u8>, theirs: Vec<u8>, w: u32, h: u32| -> bool {
         let (psnr, off8, off32, diff) = image_diff(&ours, &theirs);
-        let side = 16 * h / 480;
+        let side = block_side(h);
         let (block, bx, by) = worst_block(&ours, &theirs, w, side);
         let ok = within_scaled(psnr, block);
         println!(
@@ -621,7 +658,8 @@ fn scaled(args: &[String]) -> ExitCode {
                 height: h,
                 pixels,
             };
-            r.record(&m, Some((img(&ours), img(&theirs), &diff)));
+            // The dashboard shows the blocks this measures, not the pixels.
+            r.record(&m, img(&ours), img(&theirs), None);
         }
         ok
     };
