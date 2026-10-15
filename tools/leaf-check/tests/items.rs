@@ -3039,6 +3039,51 @@ fn sword() {
         },
         &|r, a| Ret::Bool(s::is_sword_swing(r.game, a.gobj(0))),
     );
+    // A sword dropped at a point (as the item switch's spawns drop one), on the stage's
+    // plane whatever the depth given.
+    for (k, at) in [[10.0, 30.0, 0.0], [-42.5, 7.25, 3.0]]
+        .into_iter()
+        .enumerate()
+    {
+        let prep = move |c: &mut Call| {
+            vec_arg(c, 3, 0x3000 + 0x100 * k as u32, at);
+            true
+        };
+        check_on(
+            "itSword_UnkMotion0_Anim",
+            "itSword_Spawn",
+            &prep,
+            &|r, a| Ret::GObj(s::spawn_at(r, a.vec(0))),
+        );
+    }
+    // A swinging fighter's trail: its widths, written to two words below the stack (either
+    // left out), its look and its joint, from every state of a sword.
+    for (w0, w1) in [(true, true), (false, true), (true, false)] {
+        let prep = move |c: &mut Call| {
+            let sp = c.regs.gpr[1];
+            c.regs.gpr[4] = if w0 { sp - 0x3000 } else { 0 };
+            c.regs.gpr[5] = if w1 { sp - 0x2FFC } else { 0 };
+            set32(c, sp - 0x3000, 0xDEAD_BEEF);
+            set32(c, sp - 0x2FFC, 0xDEAD_BEEF);
+            item_kind(c) == 12
+        };
+        for src in ["itSword_UnkMotion0_Anim", "itSword_UnkMotion2_Anim"] {
+            check_on(src, "it_802852B8", &prep, &move |r, a| {
+                let (x, y) = s::trail_widths(r.game, a.gobj(0));
+                let word = |on: bool, v: f32| if on { v.to_bits() } else { 0xDEAD_BEEF };
+                let at = a.cap.call.regs.gpr[1] - 0x3000;
+                Ret::Words(at, vec![word(w0, x), word(w1, y)])
+            });
+        }
+    }
+    for src in ["itSword_UnkMotion0_Anim", "itSword_UnkMotion2_Anim"] {
+        check_on(src, "it_80285300", &|c| item_kind(c) == 12, &|r, a| {
+            Ret::Int(a.data.addr(s::trail_params(r.game, r.data, a.gobj(0))))
+        });
+        check_on(src, "it_80285314", &|c| item_kind(c) == 12, &|r, a| {
+            Ret::JObj(s::trail_joint(r.game, r.data, a.gobj(0)))
+        });
+    }
 }
 
 #[test]
