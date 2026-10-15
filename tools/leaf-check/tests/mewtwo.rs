@@ -321,7 +321,78 @@ fn wanted(name: &str) -> bool {
     var("SRC").is_none_or(|o| o == name)
 }
 
-/// Every saved call of each function, run as it was saved.
+/// A saved call's fighter or item (its GObj's user data).
+fn ud(call: &Call) -> u32 {
+    user_data_arg(call)
+}
+
+/// The variants a function's own saved calls also run with, for the moments that few saved
+/// calls fall on (each is one frame in many):
+///
+/// - the charge's states, with each count of the charge's frames (`mv` x4, up to past a
+///   level's), the charge not done and no release lag: the frame a level is reached;
+/// - the release, with the script's release (`cmd_vars[1]` 1) and partial and full charges:
+///   the recoil and the ball's speed by its charge;
+/// - the forward throw and its ball, with the script's shot (`cmd_vars[3]` 1);
+/// - the flying ball, with each count toward its wobble's turn (`x48`) after its first frame;
+/// - Teleport's travel through the air, with each count of its frames in the air (`mv` xC)
+///   against the landing's (`x54`), the stick held down (passing through a platform) or not.
+fn sweeps(name: &str) -> Vec<Box<Prepare>> {
+    let mut v: Vec<Box<Prepare>> = Vec::new();
+    match name {
+        "ftMt_SpecialNLoop_Anim" | "ftMt_SpecialAirNLoop_Anim" => {
+            for k in 0..16u32 {
+                v.push(Box::new(move |call: &mut Call, _: usize| {
+                    let fp = ud(call);
+                    poke_u32(call, fp + 0x2344, k);
+                    poke_u32(call, fp + 0x2348, 0);
+                    poke_u32(call, fp + 0x234C, 0);
+                }));
+            }
+        }
+        "ftMt_SpecialNEnd_Anim"
+        | "ftMt_SpecialAirNEnd_Anim"
+        | "ftMt_SpecialN_ReleaseShadowBall" => {
+            for k in [1u32, 4, 8] {
+                v.push(Box::new(move |call: &mut Call, _: usize| {
+                    let fp = ud(call);
+                    poke_u32(call, fp + 0x2204, 1);
+                    poke_u32(call, fp + 0x2234, k);
+                }));
+            }
+        }
+        "ftCo_ThrowF_Anim" | "ftMt_SpecialN_Shoot" => {
+            v.push(Box::new(|call: &mut Call, _: usize| {
+                let fp = ud(call);
+                poke_u32(call, fp + 0x220C, 1);
+            }));
+        }
+        "itMewtwoshadowball_UnkMotion8_Phys" | "it_802C4D10" => {
+            for k in 0..40u32 {
+                v.push(Box::new(move |call: &mut Call, _: usize| {
+                    let ip = ud(call);
+                    poke_u32(call, ip + 0xE1C, k);
+                    poke_u32(call, ip + 0xE20, 1 + k % 3);
+                }));
+            }
+        }
+        "ftMt_SpecialAirHiLost_Coll" => {
+            for k in 0..24u32 {
+                v.push(Box::new(move |call: &mut Call, _: usize| {
+                    let fp = ud(call);
+                    poke_u32(call, fp + 0x234C, k);
+                    if k % 2 == 1 {
+                        poke_f32(call, fp + 0x624, -1.0);
+                    }
+                }));
+            }
+        }
+        _ => {}
+    }
+    v
+}
+
+/// Every saved call of each function, run as it was saved and with its [`sweeps`].
 fn as_saved(counts: &mut BTreeMap<u32, usize>) {
     let no = stubs();
     let mut seen = Vec::new();
@@ -334,12 +405,16 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
             if saved_calls(&dir, &name).is_empty() {
                 continue;
             }
-            let prepare = |_: &mut Call, _: usize| {};
-            let variants = [Variant {
-                prepare: &prepare,
-                ours: &run_mewtwo,
-                stubs: &no,
-            }];
+            let mut prepares: Vec<Box<Prepare>> = vec![Box::new(|_: &mut Call, _: usize| {})];
+            prepares.extend(sweeps(&name));
+            let variants: Vec<Variant> = prepares
+                .iter()
+                .map(|prepare| Variant {
+                    prepare: &**prepare,
+                    ours: &run_mewtwo,
+                    stubs: &no,
+                })
+                .collect();
             for reports in check_variants(&dir, &name, &variants) {
                 tally(&reports, counts);
             }
