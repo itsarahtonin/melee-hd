@@ -14,7 +14,7 @@
 //! their data, these fail without it: they are a check to run on purpose.
 //!
 //! Each check writes what it measured to `RENDER_CHECK_RESULTS` (by default
-//! `target/tmp/render-check-results`), which `melee-render-check dashboard DIR OUT.html`
+//! `target/tmp/render-check-results`), which `melee-render-check dashboard DIR OUT_DIR`
 //! makes a page of.
 
 #![allow(dead_code)]

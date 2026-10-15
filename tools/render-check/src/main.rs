@@ -22,8 +22,9 @@
 //!     the frame widened to 16:9 against the game's 73:60 over the picture they share
 //! melee-render-check snap DISC REPLAY.slp OUT_DIR FRAME...
 //!     native frames drawn at 1x, saved as OUT_DIR/frame_N.png
-//! melee-render-check dashboard RESULTS_DIR OUT.html
-//!     a page of the results `compare` and `scaled` recorded with CHECK_RESULTS=RESULTS_DIR
+//! melee-render-check dashboard RESULTS_DIR OUT_DIR
+//!     a page of the results `compare` and `scaled` recorded with CHECK_RESULTS=RESULTS_DIR:
+//!     OUT_DIR/index.html, and the frames compared at full size in OUT_DIR/img/
 //! ```
 
 mod native;
@@ -206,9 +207,27 @@ fn run(args: &[String]) -> ExitCode {
                 std::path::Path::new(&args[1]),
                 std::path::Path::new(&args[2]),
             );
+            if out.extension().is_some_and(|e| e == "html") {
+                eprintln!("dashboard takes an output directory: it writes index.html and img/");
+                return ExitCode::from(2);
+            }
             match results::dashboard(dir, out) {
-                Ok(n) => {
-                    println!("{n} checks written to {}", out.display());
+                Ok(s) => {
+                    println!(
+                        "{} checks, {} measures: {} with images, {} of them shown{}; {} files, {:.1} MB in {}",
+                        s.checks,
+                        s.measures,
+                        s.recorded,
+                        s.shown,
+                        if s.shown < s.recorded {
+                            " (the rest left out to fit the budget)"
+                        } else {
+                            ""
+                        },
+                        s.files,
+                        s.bytes as f64 / 1e6,
+                        out.display()
+                    );
                     ExitCode::SUCCESS
                 }
                 Err(e) => {
@@ -222,7 +241,7 @@ fn run(args: &[String]) -> ExitCode {
                 "usage: melee-render-check dump LOG.dff [FRAME] | draw LOG.dff FRAME DRAW | \
                  align DISC REPLAY LOG FROM TO | compare DISC REPLAY LOG REF_DIR FRAME [OUT] | \
                  scaled DISC REPLAY FRAME [OUT] | snap DISC REPLAY OUT FRAME... | \
-                 dashboard RESULTS OUT.html"
+                 dashboard RESULTS OUT_DIR"
             );
             ExitCode::from(2)
         }
@@ -448,7 +467,7 @@ fn compare(args: &[String]) -> ExitCode {
                                 height: h,
                                 pixels,
                             };
-                            r.record(&m, (k == 0).then(|| (img(&rgb), img(&theirs), &diff[..])));
+                            r.record(&m, img(&rgb), img(&theirs), &diff);
                         }
                     }
                     Some((w, h, _)) => {
@@ -621,7 +640,7 @@ fn scaled(args: &[String]) -> ExitCode {
                 height: h,
                 pixels,
             };
-            r.record(&m, Some((img(&ours), img(&theirs), &diff)));
+            r.record(&m, img(&ours), img(&theirs), &diff);
         }
         ok
     };
