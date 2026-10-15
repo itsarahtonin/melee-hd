@@ -29,6 +29,12 @@ use melee_gx::{Draw, Memory, Sink, State, vertex};
 pub const EFB_WIDTH: u32 = 640;
 pub const EFB_HEIGHT: u32 = 528;
 
+/// The physical addresses the GPU's memory spans (as melee-gx masks them): the console's 24
+/// MB, and above it the images melee-render's address space keeps from 0x0380_0000
+/// (`melee_render::mem`). Masked to 32 MB, as ssbm-render's copies were, a copy into one of
+/// those images landed on the loaded archives at 0x0180_0000 and changed their textures.
+pub(crate) const PHYS_MASK: u32 = 0x03FF_FFFF;
+
 const COLOR_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
 
@@ -1404,7 +1410,8 @@ impl Renderer {
     /// The EFB's color, read back: RGBA rows of 640.
     fn read_efb(&mut self) -> Vec<u8> {
         let (width, height) = (self.width, EFB_HEIGHT * self.scale);
-        let row = width * 4;
+        // Rows padded to what a copy to a buffer needs (an EFB as wide as 73:60's 584 isn't).
+        let row = (width * 4).next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
         let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("efb readback"),
             size: u64::from(row * height),
@@ -1441,7 +1448,7 @@ impl Renderer {
             .expect("GPU readback");
         let data = slice.get_mapped_range().expect("mapped readback").to_vec();
         buffer.unmap();
-        if self.scale == 1 && self.width == EFB_WIDTH {
+        if self.scale == 1 && self.width == EFB_WIDTH && row == width * 4 {
             return data;
         }
         // At the console's size: each pixel the scaled block's middle sample.
@@ -1451,7 +1458,7 @@ impl Renderer {
         for y in 0..h {
             for x in 0..w {
                 let px = (self.px_x(x as u32) + self.px_x(x as u32 + 1)) as usize / 2;
-                let at = ((y * s + s / 2) * self.width as usize + px) * 4;
+                let at = (y * s + s / 2) * row as usize + px * 4;
                 out[(y * w + x) * 4..][..4].copy_from_slice(&data[at..at + 4]);
             }
         }
@@ -1518,7 +1525,7 @@ impl Renderer {
         let f = r.footprint;
         let before = self.copies.len();
         for row in 0..f.rows {
-            let at = (f.address + row * f.stride) & 0x01FF_FFFF;
+            let at = (f.address + row * f.stride) & PHYS_MASK;
             let end = u64::from(at) + u64::from(f.row_bytes);
             self.copies
                 .retain(|(a, b)| !(*a >= at && *a as u64 + b.len() as u64 <= end));
@@ -1553,7 +1560,7 @@ impl Renderer {
     pub(crate) fn forget(&mut self, start: u32, end: u32) {
         self.gpu_copies.retain(|&a, _| !(start..end).contains(&a));
         self.on_cpu.retain(|a| !(start..end).contains(a));
-        let (start, end) = (start & 0x01FF_FFFF, end & 0x01FF_FFFF);
+        let (start, end) = (start & PHYS_MASK, end & PHYS_MASK);
         self.copies
             .retain(|(a, b)| *a as usize + b.len() <= start as usize || *a >= end);
         self.hashes.clear();
@@ -2041,7 +2048,7 @@ impl Renderer {
                     self.gpu_copies
                         .retain(|&a, _| !(e.address..end).contains(&a));
                     for (i, row) in e.rows.into_iter().enumerate() {
-                        let at = (e.address + i as u32 * e.stride) & 0x01FF_FFFF;
+                        let at = (e.address + i as u32 * e.stride) & PHYS_MASK;
                         let end = at as u64 + row.len() as u64;
                         self.copies.retain(|(a, b)| {
                             !(*a as u64 >= at as u64 && *a as u64 + b.len() as u64 <= end)

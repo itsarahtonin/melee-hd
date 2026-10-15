@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Copies from the EFB to textures kept on the GPU (copy.wgsl), for the formats Melee copies and
-//! samples back as it copied them: its shadows (I4) and a few effects (RGB5A3). The texture holds
+//! samples back as it copied them: its shadows (I4), Fountain of Dreams' reflection and Pokémon
+//! Stadium's screens (RGB565) and a few effects (RGB5A3). The texture holds
 //! what the texture decoder would make of what the copy encoder writes, so frames come out as
 //! from a copy read back and encoded into memory, without waiting on the GPU for it.
 
@@ -96,7 +97,7 @@ pub(crate) fn footprint(state: &State, value: u32) -> Option<Footprint> {
 pub(crate) fn request(state: &State, value: u32) -> Option<Request> {
     let pixel_format = bits(state.bp[0x43], 0, 3);
     let (format, half) = copy_format(value);
-    if !matches!(format, 0 | 5) {
+    if !matches!(format, 0 | 4 | 5) {
         return None;
     }
     let footprint = footprint(state, value)?;
@@ -149,6 +150,10 @@ pub(crate) fn encode_texels(c: &Copied, texels: &[u8]) -> Vec<(u32, Vec<u8>)> {
                             } else {
                                 (r >> 4) as u8
                             };
+                        } else if c.format == 4 {
+                            // RGB565: what decoded as c5, c6, c5 holds each in its top bits.
+                            let v = (r >> 3) << 11 | (g >> 2) << 5 | b >> 3;
+                            dst[2 * i..2 * i + 2].copy_from_slice(&(v as u16).to_be_bytes());
                         } else {
                             // RGB5A3: opaque texels decoded with alpha 255, the rest below it.
                             let v = if a == 255 {
@@ -161,7 +166,7 @@ pub(crate) fn encode_texels(c: &Copied, texels: &[u8]) -> Vec<(u32, Vec<u8>)> {
                     }
                 }
             }
-            (at & 0x01FF_FFFF, row)
+            (at & crate::PHYS_MASK, row)
         })
         .collect()
 }
@@ -177,7 +182,7 @@ fn hash_footprint(f: &Footprint, mem: &dyn Memory) -> u64 {
     let mut bytes = Vec::new();
     for (at, len) in f.rows() {
         bytes.resize(len as usize, 0);
-        mem.read(at & 0x01FF_FFFF, &mut bytes);
+        mem.read(at & crate::PHYS_MASK, &mut bytes);
         h = (h ^ hash_bytes(&bytes)).rotate_left(7);
     }
     h
