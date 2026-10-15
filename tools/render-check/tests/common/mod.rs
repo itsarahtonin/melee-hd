@@ -423,8 +423,9 @@ pub mod why {
         "a fighter's second lit vertex color a few levels off; a few pixels";
     /// A fighter texture's palette, different past the entries the frame's draws show.
     pub const PALETTE: &str = "a fighter texture's palette contents; a few pixels";
-    /// Fountain of Dreams' water, a few levels greener than ssbm-rs's once the reflection shows.
-    pub const WATER: &str = "Fountain of Dreams' water a few levels greener (the reflection copy), and the stars' point size";
+    /// Fountain of Dreams' water, a few levels greener than ssbm-rs's once the reflection shows:
+    /// its draw lacks the stage the original compiled before the stage changed the texture.
+    pub const WATER: &str = "Fountain of Dreams' water a few levels greener (a TEV stage compiled at load missing), and the stars' point size";
     /// Pokémon Stadium's screen showing the stage's feed where ssbm-rs's is dark.
     pub const SCREEN: &str = "Pokémon Stadium's screen shows the feed where ssbm-rs's is dark";
     /// Fountain of Dreams' reflection, an 80 by 60 copy drawn at the scale and averaged back,
