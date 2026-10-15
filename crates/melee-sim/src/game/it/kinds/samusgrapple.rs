@@ -1082,8 +1082,18 @@ pub fn lead(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, f: GObjId)
             .x16
             .get()
             == 1
+        && let Some(t) = r.nearest_fighter(fid)
     {
-        unported_call("ftCo_800A4A40 (the ground beam homing on a foe)");
+        let tp = r.game.fighters[t.0].cur_pos;
+        let k = lk(r.game, l);
+        let sub = |a: f32, b: f32| mem(fp::fsubs(reg(a), reg(b)));
+        let mut d = Vec3::new(sub(tp.x, k.pos.x), sub(tp.y, k.pos.y), sub(tp.z, k.pos.z));
+        d.normalize();
+        let speed = a.f(r, attr::SHOT_SPEED);
+        let k = link_mut(r.game, l);
+        k.vel.x = mem(fp::fmuls(reg(d.x), speed));
+        k.vel.y = mem(fp::fmuls(reg(d.y), speed));
+        k.vel.z = mem(fp::fmuls(reg(d.z), speed));
     }
     apply_vel(r.game, l);
     let mut result = link::coll_air(r, l);
