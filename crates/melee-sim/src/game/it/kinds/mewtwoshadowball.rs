@@ -94,12 +94,12 @@ const PI: f64 = std::f64::consts::PI;
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM_0 => animate_held(r, gobj),
-        COLL_0 | COLL_17 => false,
+        COLL_0 | COLL_17 => no_coll(r, gobj),
         ANIM_8 => animate_flying(r, gobj),
         COLL_8 | COLL_9 => coll_flying(r, gobj),
-        ANIM_9 => lib2725::tick_lifetime(r.game, gobj),
+        ANIM_9 => animate_thrown(r, gobj),
         ANIM_17 => animate_burst(r, gobj),
-        DMG_DEALT | CLANKED | ABSORBED | HIT_SHIELD => true,
+        DMG_DEALT | CLANKED | ABSORBED | HIT_SHIELD => hit_ends(r, gobj),
         REFLECTED => reflected(r, gobj),
         SHIELD_BOUNCED => shield_bounced(r, gobj),
         _ => return None,
@@ -111,9 +111,9 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),
         PICKED_UP => picked_up(r, gobj),
-        PHYS_0 | PHYS_9 => {}
+        PHYS_0 | PHYS_9 => no_physics(r, gobj),
         PHYS_8 => physics_flying(r, gobj),
-        PHYS_17 => lib2725::clear_velocity(r.game, gobj),
+        PHYS_17 => physics_burst(r, gobj),
         SPARKLE => sparkle(r, gobj),
         _ => return false,
     }
@@ -686,6 +686,42 @@ pub fn animate_burst(r: &mut Running, gobj: GObjId) -> bool {
         ip.x5D4_hitboxes[0].hit.scale = s;
     }
     lib2725::tick_lifetime(r.game, gobj)
+}
+
+/// `itMewtwoshadowball_UnkMotion9_Anim`: the thrown ball's life counts down.
+#[doc(alias = "itMewtwoshadowball_UnkMotion9_Anim")]
+pub fn animate_thrown(r: &mut Running, gobj: GObjId) -> bool {
+    lib2725::tick_lifetime(r.game, gobj)
+}
+
+/// `itMewtwoshadowball_UnkMotion17_Phys`: the burst stays put (`itResetVelocity`).
+#[doc(alias = "itMewtwoshadowball_UnkMotion17_Phys")]
+pub fn physics_burst(r: &mut Running, gobj: GObjId) {
+    lib2725::clear_velocity(r.game, gobj);
+}
+
+/// The held and thrown states' physics, `itMewtwoshadowball_UnkMotion0_Phys` and
+/// `_UnkMotion9_Phys`: nothing.
+#[doc(alias = "itMewtwoshadowball_UnkMotion0_Phys")]
+#[doc(alias = "itMewtwoshadowball_UnkMotion9_Phys")]
+pub fn no_physics(_r: &mut Running, _gobj: GObjId) {}
+
+/// The held and bursting states' collisions, `itMewtwoshadowball_UnkMotion0_Coll` and
+/// `_UnkMotion17_Coll`: nothing, never done.
+#[doc(alias = "itMewtwoshadowball_UnkMotion0_Coll")]
+#[doc(alias = "itMewtwoshadowball_UnkMotion17_Coll")]
+pub fn no_coll(_r: &mut Running, _gobj: GObjId) -> bool {
+    false
+}
+
+/// A hit dealt, clanked, absorbed or on a shield ends the ball,
+/// `itMewtwoShadowball_Logic101_DmgDealt` and the others.
+#[doc(alias = "itMewtwoShadowball_Logic101_DmgDealt")]
+#[doc(alias = "itMewtwoShadowball_Logic101_Clanked")]
+#[doc(alias = "itMewtwoShadowball_Logic101_Absorbed")]
+#[doc(alias = "itMewtwoShadowball_Logic101_HitShield")]
+pub fn hit_ends(_r: &mut Running, _gobj: GObjId) -> bool {
+    true
 }
 
 /// The angle kept within a turn.

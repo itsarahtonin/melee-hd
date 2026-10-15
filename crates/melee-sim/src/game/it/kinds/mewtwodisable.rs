@@ -42,8 +42,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM => animate(r, gobj),
         COLL => collide(r, gobj) != 0,
-        DMG_DEALT | CLANKED | HIT_SHIELD | ABSORBED | SHIELD_BOUNCED => true,
-        REFLECTED => lib2725::reflected_back(r.game, gobj),
+        DMG_DEALT | CLANKED | HIT_SHIELD | ABSORBED | SHIELD_BOUNCED => hit_ends(r, gobj),
+        REFLECTED => reflected(r, gobj),
         _ => return None,
     })
 }
@@ -52,7 +52,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),
-        PHYS => {}
+        PHYS => no_physics(r, gobj),
         _ => return false,
     }
     true
@@ -163,6 +163,27 @@ pub fn collide(r: &mut Running, gobj: GObjId) -> i32 {
     flags |= maplib::touched_wall(r.game, gobj);
     flags |= maplib::touched_ceiling(r.game, gobj);
     flags
+}
+
+/// `itMewtwodisable_UnkMotion0_Phys`: nothing.
+#[doc(alias = "itMewtwodisable_UnkMotion0_Phys")]
+pub fn no_physics(_r: &mut Running, _gobj: GObjId) {}
+
+/// Any hit it deals, clanks, is absorbed, meets a shield or bounces off one ends it,
+/// `itMewtwoDisable_Logic67_DmgDealt` and the others.
+#[doc(alias = "itMewtwoDisable_Logic67_DmgDealt")]
+#[doc(alias = "itMewtwoDisable_Logic67_Clanked")]
+#[doc(alias = "itMewtwoDisable_Logic67_HitShield")]
+#[doc(alias = "itMewtwoDisable_Logic67_Absorbed")]
+#[doc(alias = "itMewtwoDisable_Logic67_ShieldBounced")]
+pub fn hit_ends(_r: &mut Running, _gobj: GObjId) -> bool {
+    true
+}
+
+/// Reflected, `itMewtwoDisable_Logic67_Reflected`: back the other way (`it_80273030`).
+#[doc(alias = "itMewtwoDisable_Logic67_Reflected")]
+pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
+    lib2725::reflected_back(r.game, gobj)
 }
 
 /// Forgets a GObj, `itMewtwoDisable_Logic67_EvtUnk`: its sender too if it's that one.
