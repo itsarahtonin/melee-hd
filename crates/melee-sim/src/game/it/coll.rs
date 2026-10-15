@@ -704,7 +704,7 @@ pub fn update_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize)
     let hit = &item(game, gobj).x5D4_hitboxes[idx].hit;
     match hit.state {
         hitcapsule::ENABLED => {
-            let (j, off) = (hit.jobj, hit.b_offset);
+            let (j, off) = (hit.jobj.get("it_8027129C"), hit.b_offset);
             let p = crate::lb::joint::world_position(&mut game.objs, data, j, Some(off));
             let ip = item_mut(game, gobj);
             let hit = &mut ip.x5D4_hitboxes[idx].hit;
@@ -714,7 +714,7 @@ pub fn update_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize)
             set_flag(&mut ip.xDAA, 2, true);
         }
         hitcapsule::UNK2 | hitcapsule::UNK3 => {
-            let (j, off) = (hit.jobj, hit.b_offset);
+            let (j, off) = (hit.jobj.get("it_8027129C"), hit.b_offset);
             let ip = item_mut(game, gobj);
             let hit = &mut ip.x5D4_hitboxes[idx].hit;
             if hit.state == hitcapsule::UNK2 {

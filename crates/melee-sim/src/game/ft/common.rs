@@ -694,7 +694,7 @@ impl Running<'_> {
         } else {
             h.b_offset
         };
-        let j = h.jobj;
+        let j = h.jobj.get("ftColl_8007AD18");
         if state == 1 {
             let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
             let h = &mut self.game.fighter_mut(gobj).x914[i];
@@ -717,7 +717,7 @@ impl Running<'_> {
     #[doc(alias = "ft_8007C224")]
     pub fn thrown_hitbox_follow(&mut self, gobj: GObjId) {
         let h = &self.game.fighter(gobj).x1064_thrownHitbox;
-        let (state, j, offset) = (h.state, h.jobj, h.b_offset);
+        let (state, j, offset) = (h.state, h.jobj.get("ft_8007C224"), h.b_offset);
         match state {
             1 => {
                 let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
