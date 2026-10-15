@@ -29,6 +29,7 @@ pub mod cpu_script;
 pub mod create;
 pub mod create_model;
 pub mod data;
+pub mod donkey;
 pub mod draw;
 pub mod drmario;
 pub mod dynamics;

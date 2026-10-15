@@ -100,7 +100,7 @@ impl Running<'_> {
     /// the victim with the throw's hit and launches it (up for the down throw), or freezes
     /// both for a moment, keeping the motion it froze with.
     #[doc(alias = "ftCo_800DD724")]
-    fn throw_progress(&mut self, gobj: GObjId) {
+    pub(crate) fn throw_progress(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.throw_flag(4) {
             fp.set_throw_flag(4, false);
@@ -142,15 +142,22 @@ impl Running<'_> {
         }
     }
 
-    /// `ftCo_ThrowF_Anim`: Mewtwo's shadow ball, the throw's progress, then falling or
-    /// waiting (carrying a cargo fighter isn't ported).
+    /// `ftCo_ThrowF_Anim`: Mewtwo's shadow ball, the throw's progress, then carrying the
+    /// victim for a fighter with cargo attributes (`x2222_b0`), else falling or waiting.
     #[doc(alias = "ftCo_ThrowF_Anim")]
     #[doc(alias = "ftMt_SpecialN_Shoot")]
     pub fn co_throw_f_anim(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_MEWTWO {
             unported_call("ftMt_SpecialN_Shoot");
         }
-        self.throw_end(gobj);
+        self.throw_progress(gobj);
+        if !self.anim_frames_remaining(gobj) {
+            if self.game.fighter(gobj).x2222_b0 {
+                self.enter_cargo_start(gobj);
+            } else {
+                self.fall_or_wait(gobj);
+            }
+        }
     }
 
     /// `ftCo_ThrowB_Anim`, `ftCo_ThrowHi_Anim`, `ftCo_ThrowLw_Anim`: Fox's and Falco's blaster
@@ -166,9 +173,6 @@ impl Running<'_> {
     fn throw_end(&mut self, gobj: GObjId) {
         self.throw_progress(gobj);
         if !self.anim_frames_remaining(gobj) {
-            if self.game.fighter(gobj).x2222_b0 {
-                unported_call("ftCo_8009B56C (a cargo throw's end)");
-            }
             self.fall_or_wait(gobj);
         }
     }

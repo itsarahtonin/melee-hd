@@ -2159,7 +2159,7 @@ pub struct Fighter {
     /// +0x2c4
     pub x2C4: Vec2,
     /// +0x2cc
-    pub x2CC: RawPtr,
+    pub x2CC: Option<AttrsId>,
     /// +0x2d0
     pub x2D0: Option<AttrsId>,
     /// +0x2d4
@@ -2971,7 +2971,7 @@ impl Default for Fighter {
             co_attrs: Default::default(),
             x294_itPickup: Default::default(),
             x2C4: Default::default(),
-            x2CC: Default::default(),
+            x2CC: None,
             x2D0: None,
             dat_attrs: None,
             dat_attrs_backup: None,

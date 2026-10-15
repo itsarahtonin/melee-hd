@@ -1874,7 +1874,7 @@ impl Running<'_> {
     #[doc(alias = "grStory_801E36D0")]
     #[doc(alias = "grOldPupupu_80211CA0")]
     #[doc(alias = "grIzumi_801CD278")]
-    fn line_hazard(&mut self, _line: i32) -> bool {
+    pub(crate) fn line_hazard(&mut self, _line: i32) -> bool {
         match self.game.stage_info.on_touch_line {
             None => false,
             // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine: `return NULL`.

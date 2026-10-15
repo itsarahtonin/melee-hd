@@ -136,6 +136,8 @@ FIELD_POINTERS = {
     "Fighter.dat_attrs_backup": "Option<AttrsId>",
     # Kirby's and Jigglypuff's multi-jump attributes: their own attributes' copy.
     "Fighter.x2D0": "Option<AttrsId>",
+    # The attributes the cargo states read (`ftDk_Init_OnLoad` sets it to Donkey Kong's own).
+    "Fighter.x2CC": "Option<AttrsId>",
     # A freed item's link to the next free item (`HSD_ObjFree` writes it over the first word),
     # which a reused item keeps.
     "Item.x0": "Option<ItemId>",
