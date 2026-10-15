@@ -679,11 +679,21 @@ impl Running<'_> {
         }
     }
 
-    /// The fighter lets go of whomever it holds, `ftCo_800DD168`: not ported with someone held.
+    /// The fighter lets go of whomever it holds, or whoever holds it, `ftCo_800DD168`: a
+    /// holder (`x221B_b5`) knocks its victim away and lets go; a held fighter is let go of and
+    /// falls or stands.
     #[doc(alias = "ftCo_800DD168")]
     pub(crate) fn release_victim(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).victim_gobj.is_some() {
-            unported_call("ftCo_800DD168 (a grab let go of)");
+        let fp = self.game.fighter(gobj);
+        let Some(victim) = fp.victim_gobj else {
+            return;
+        };
+        if fp.x221B.x221B_b5 {
+            self.knocked_away(victim);
+            self.grab_release(gobj, victim);
+        } else {
+            self.grab_release(victim, gobj);
+            self.fall_or_wait(victim);
         }
     }
 
