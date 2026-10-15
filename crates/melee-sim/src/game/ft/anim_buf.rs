@@ -30,7 +30,7 @@ pub struct Layer {
 }
 
 impl Layer {
-    pub fn len(&self) -> u32 {
+    pub fn length(&self) -> u32 {
         u32::from(self.len)
     }
 }
@@ -53,6 +53,9 @@ pub struct AnimBuf {
     count: u8,
     pub fill: Fill,
 }
+
+// What a buffer costs a snapshot (docs/engine.md).
+const _: () = assert!(std::mem::size_of::<AnimBuf>() == 66);
 
 impl Default for AnimBuf {
     fn default() -> Self {
@@ -86,7 +89,7 @@ impl AnimBuf {
         assert!(len <= SIZE, "an animation longer than its buffer");
         let covered = self.layers[..n]
             .iter()
-            .take_while(|l| l.len() <= len)
+            .take_while(|l| l.length() <= len)
             .count();
         let kept = n - covered;
         let keep = kept.min(LAYERS - 1);
@@ -109,7 +112,7 @@ impl AnimBuf {
         if offset >= SIZE {
             return None;
         }
-        let Some(layer) = self.layers().iter().find(|l| offset < l.len()) else {
+        let Some(layer) = self.layers().iter().find(|l| offset < l.length()) else {
             return match self.fill {
                 Fill::Zero => Some(0),
                 Fill::Unknown => None,
@@ -151,7 +154,7 @@ impl AnimBuf {
         let mut out = vec![fill; SIZE as usize];
         for layer in self.layers().iter().rev() {
             let archive = data.get(layer.archive);
-            for (o, b) in out[..layer.len() as usize].iter_mut().enumerate() {
+            for (o, b) in out[..layer.length() as usize].iter_mut().enumerate() {
                 *b = archive.file_byte(o as u32);
             }
             for &r in archive.relocs() {
@@ -208,7 +211,10 @@ mod tests {
     use melee_data::archive::ArchiveId;
 
     fn lens(b: &AnimBuf) -> Vec<(u16, u32)> {
-        b.layers().iter().map(|l| (l.archive.0, l.len())).collect()
+        b.layers()
+            .iter()
+            .map(|l| (l.archive.0, l.length()))
+            .collect()
     }
 
     #[test]
