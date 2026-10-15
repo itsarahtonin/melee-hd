@@ -3,6 +3,7 @@
 //! model's own image; the others into the copies' buffers (`ifMagnify::image_descs`), which
 //! only the presentation reads.
 
+use melee_data::archive::DataRef;
 use melee_sim::hsd::tobj::ImageRef;
 
 use super::draw::{Ctx, Image};
@@ -73,11 +74,82 @@ impl Ctx<'_> {
             self.hsd.note("a magnifier bubble without an image".into());
             return;
         };
-        self.gx.set_tex_copy_src(0, 0, img.width, img.height);
+        self.copy_from_efb(&img, 0, 0, true);
+    }
+
+    /// Fountain of Dreams' reflection image, when `d` is the stage archive's descriptor its
+    /// water shows: the stage rewrites that descriptor for an 80x60 image the reflection
+    /// camera's render is copied into (`grIzumi_801CCD98`), which the presentation keeps.
+    pub fn reflection_image(&self, d: DataRef) -> Option<Image> {
+        let r = self.game.gr.izumi.reflection.as_ref()?;
+        if r.image != Some(d) {
+            return None;
+        }
+        let desc = &r.desc;
+        let format = desc.format as u32;
+        let size = crate::gx::get_tex_buffer_size(desc.width, desc.height, format, 0, 0);
+        Some(Image {
+            ptr: self.space.dynamic(Dynamic::Reflection, size),
+            width: desc.width,
+            height: desc.height,
+            format,
+            mipmap: desc.mipmap != 0,
+            min_lod: desc.minLOD,
+            max_lod: desc.maxLOD,
+        })
+    }
+
+    /// `grIzumi_801CCEA0`'s `lb_800122C8(refl->image, 0, 0, true)`: the reflection camera's
+    /// render, in the EFB's top left corner, copied into the reflection image, and that corner
+    /// cleared for the screen's pass.
+    pub fn reflection_copy(&mut self) {
+        let image = self.game.gr.izumi.reflection.as_ref().and_then(|r| r.image);
+        let Some(img) = image.and_then(|d| self.reflection_image(d)) else {
+            self.hsd.note_once("a reflection copy without an image");
+            return;
+        };
+        self.copy_from_efb(&img, 0, 0, true);
+    }
+
+    /// Pokémon Stadium's screen `n`'s image (`lb_800121FC`'s descriptor in the screen's user
+    /// data), which the presentation keeps.
+    pub fn screen_image(&self, n: u8) -> Option<Image> {
+        let s = self.game.gr.stadium.screens.get(usize::from(n))?.as_ref()?;
+        let desc = &s.desc;
+        let format = desc.format as u32;
+        let size = crate::gx::get_tex_buffer_size(desc.width, desc.height, format, 0, 0);
+        Some(Image {
+            ptr: self.space.dynamic(Dynamic::Screen(n), size),
+            width: desc.width,
+            height: desc.height,
+            format,
+            mipmap: desc.mipmap != 0,
+            min_lod: desc.minLOD,
+            max_lod: desc.maxLOD,
+        })
+    }
+
+    /// `lb_800122C8(desc, x, y, clear)` for Pokémon Stadium's screen `n`: the text camera's
+    /// render (from the top left corner, which it clears for the screen's pass) or the screen's
+    /// own frame, for the big screen's feeds.
+    pub fn screen_copy(&mut self, n: u8, x: u16, y: u16, clear: bool) {
+        let Some(img) = self.screen_image(n) else {
+            self.hsd.note_once("a screen copy without an image");
+            return;
+        };
+        self.copy_from_efb(&img, x, y, clear);
+    }
+
+    /// `HSD_ImageDescCopyFromEFB(idesc, x, y, clear, true)`: the EFB from (`x`, `y`) copied
+    /// into `img`, cleared after it when `clear`.
+    fn copy_from_efb(&mut self, img: &Image, x: u16, y: u16, clear: bool) {
+        self.gx.set_tex_copy_src(x, y, img.width, img.height);
         self.gx
             .set_tex_copy_dst(img.width, img.height, img.format, u8::from(img.mipmap));
-        self.hsd.state.set_z_mode(self.gx, true, GX_LEQUAL, true);
-        self.gx.copy_tex(img.ptr, GX_TRUE);
+        if clear {
+            self.hsd.state.set_z_mode(self.gx, true, GX_LEQUAL, true);
+        }
+        self.gx.copy_tex(img.ptr, u8::from(clear));
         self.gx.pix_mode_sync();
         self.gx.invalidate_tex_all();
     }

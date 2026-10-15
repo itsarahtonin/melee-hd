@@ -206,19 +206,25 @@ impl Ctx<'_> {
                 self.joint_shapes(&draws[i..i + n]);
                 n
             }
+            Draw::EraseColor([r, g, b, a]) => {
+                self.hsd.erase_color = Some(Color::new(*r, *g, *b, *a));
+                1
+            }
             Draw::Erase => {
-                // The game camera erases color; a magnifier bubble's camera (the only other
-                // that erases in a match) color and depth.
+                // The game camera erases color in its background color; a camera whose erase
+                // color the display pass set (Fountain of Dreams' reflection, Pokémon
+                // Stadium's text) color in that color; a magnifier bubble's camera color and
+                // depth.
                 let full = self
                     .hsd
                     .camera
                     .is_some_and(|v| v.viewport == [0.0, 640.0, 0.0, 480.0]);
-                let color = if full {
-                    self.erase_color()
-                } else {
-                    self.magnifier_erase_color()
+                let (color, depth) = match self.hsd.erase_color.take() {
+                    _ if full => (self.erase_color(), false),
+                    Some(c) => (c, false),
+                    None => (self.magnifier_erase_color(), true),
                 };
-                self.erase_screen(color, !full);
+                self.erase_screen(color, depth);
                 1
             }
             Draw::Offscreen(b) => {
@@ -232,6 +238,19 @@ impl Ctx<'_> {
             Draw::Particles { .. } => self.particles(draws, i),
             Draw::MagnifierCopy(i) => {
                 self.magnifier_copy(*i);
+                1
+            }
+            Draw::ReflectionCopy => {
+                self.reflection_copy();
+                1
+            }
+            Draw::ScreenCopy {
+                screen,
+                x,
+                y,
+                clear,
+            } => {
+                self.screen_copy(*screen, *x, *y, *clear);
                 1
             }
             Draw::SisText(d) => {

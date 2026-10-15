@@ -26,6 +26,10 @@ pub enum Dynamic {
     RefractFrame,
     /// A magnifier bubble's copy of its fighter, by player.
     Magnifier(u8),
+    /// Fountain of Dreams' reflection, the render its water shows.
+    Reflection,
+    /// One of Pokémon Stadium's screens' images, by its index (`ImageRef::Screen`).
+    Screen(u8),
     /// `HSD_EraseRect`'s depth image: 4 by 4 texels of 0xFF.
     EraseDepth,
     /// Data of the executable the GPU reads, by its address there (the particles' texture
