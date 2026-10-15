@@ -65,12 +65,15 @@ pub const LINK_ITEMS: [usize; 5] = [0x8, 0xC, 0x10, 0x14, 0x18];
 /// `ftYoshi_FighterVars::x2238`: the egg Yoshi holds to throw.
 pub const YOSHI_EGG: usize = 0xC;
 
+/// `ftMewtwo_FighterVars`: Mewtwo's Disable and the Shadow Ball in his hands (`x222C`, `x2230`).
+pub const MEWTWO_ITEMS: [usize; 2] = [0x0, 0x4];
+
 /// The words of `u` a fighter of `kind` keeps GObjs in, which the importer types: Fox's and
 /// Falco's blaster, Sheik's held needles and chain (`Ft_Kind_Seak`), Zelda's Din's Fire
 /// (`Ft_Kind_Zelda`), Ness's items (`Ft_Kind_Ness`), Samus's (`Ft_Kind_Samus`), Mario's and
 /// Dr. Mario's cape (`Ft_Kind_Mario`, `Ft_Kind_DrMario`), the Ice Climbers' items
 /// (`Ft_Kind_Popo`, `Ft_Kind_Nana`), Peach's (`Ft_Kind_Peach`), Link's and Young Link's
-/// (`Ft_Kind_Link`, `Ft_Kind_CLink`), Yoshi's egg (`Ft_Kind_Yoshi`).
+/// (`Ft_Kind_Link`, `Ft_Kind_CLink`), Yoshi's egg (`Ft_Kind_Yoshi`), Mewtwo's items (`Ft_Kind_Mewtwo`).
 pub fn gobj_words(kind: i32) -> &'static [usize] {
     match kind {
         _ if holds_blaster(kind) => &[FOX_BLASTER],
@@ -83,6 +86,7 @@ pub fn gobj_words(kind: i32) -> &'static [usize] {
         9 => &PEACH_ITEMS,
         6 | 20 => &LINK_ITEMS,
         14 => &[YOSHI_EGG],
+        16 => &MEWTWO_ITEMS,
         _ => &[],
     }
 }

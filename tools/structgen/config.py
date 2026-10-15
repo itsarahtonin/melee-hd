@@ -68,6 +68,9 @@ ROOTS = [
     "itCLinkMilk_ItemVars",
     # Yoshi's egg an item becomes.
     "itYoshiEggLay_ItemVars",
+    # Mewtwo's Shadow Ball and Disable.
+    "itMewtwoShadowball_ItemVars",
+    "itMDisable_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",

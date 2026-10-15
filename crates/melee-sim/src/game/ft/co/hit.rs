@@ -1045,7 +1045,8 @@ impl Running<'_> {
             if matches!(fp.x2070[1] >> 4, 5 | 9 | 11 | 12) {
                 return false;
             }
-            unported_call("ftCo_800C4550 (bound by a hit)");
+            self.enter_damage_bind(gobj);
+            return true;
         }
         false
     }

@@ -10,10 +10,12 @@
 pub mod air;
 pub mod anim;
 pub mod attack;
+pub mod capture_mewtwo;
 pub mod catch;
 pub mod checks;
 pub mod cliff;
 pub mod damage;
+pub mod damage_bind;
 pub mod dead;
 pub mod dispatch;
 pub mod down;

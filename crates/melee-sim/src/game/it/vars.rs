@@ -157,6 +157,8 @@ members! {
     LinkBow, link_bow, itLinkBow_ItemVars, [LINK_BOW, CLINK_BOW];
     CLinkMilk, clink_milk, itCLinkMilk_ItemVars, [CLINK_MILK];
     YoshiEggLay, yoshi_egg_lay, itYoshiEggLay_ItemVars, [YOSHI_EGG_LAY];
+    MewtwoShadowball, mewtwo_shadowball, itMewtwoShadowball_ItemVars, [MEWTWO_SHADOWBALL];
+    MDisable, mdisable, itMDisable_ItemVars, [MEWTWO_DISABLE];
     Heiho, heiho, HeihoVars, [HEIHO];
     ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE];
     ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];

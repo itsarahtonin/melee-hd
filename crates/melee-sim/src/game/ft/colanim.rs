@@ -68,6 +68,12 @@ impl Running<'_> {
         }
     }
 
+    /// The `x488` overlay cleared, `ftCo_800BFFAC`.
+    #[doc(alias = "ftCo_800BFFAC")]
+    pub fn clear_color_anim_x488(&mut self, gobj: GObjId) {
+        clear(self.overlay(gobj, Overlay::X488));
+    }
+
     /// `ftCo_800C0134`.
     #[doc(alias = "ftCo_800C0134")]
     #[doc(alias = "ftSk_Init_UnkMotionStates4")]
@@ -84,7 +90,8 @@ impl Running<'_> {
                 }
             }
             13 => self.samus_charged_glow(gobj),
-            3 | 4 | 16 | 24 => unported_call("ftData_UnkMotionStates4"),
+            16 => self.mt_charged_glow(gobj),
+            3 | 4 | 24 => unported_call("ftData_UnkMotionStates4"),
             _ => {}
         }
         let fp = self.game.fighter(gobj);

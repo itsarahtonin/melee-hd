@@ -27,6 +27,8 @@ pub mod linkhookshot;
 pub mod luigifireball;
 pub mod mariocape;
 pub mod mariofireball;
+pub mod mewtwodisable;
+pub mod mewtwoshadowball;
 pub mod nessbat;
 pub mod nesspkfire;
 pub mod nesspkfirepillar;
@@ -118,6 +120,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || linkbow::run_event(r, gobj, addr)
         || clinkmilk::run_event(r, gobj, addr)
         || yoshieggthrow::run_event(r, gobj, addr)
+        || mewtwoshadowball::run_event(r, gobj, addr)
+        || mewtwodisable::run_event(r, gobj, addr)
         || yoshiegglay::run_event(r, gobj, addr)
         || yoshistar::run_event(r, gobj, addr)
         || yoshitongue::run_event(r, gobj, addr)
@@ -183,6 +187,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| linkbow::run_pred(r, gobj, addr))
         .or_else(|| clinkmilk::run_pred(r, gobj, addr))
         .or_else(|| yoshieggthrow::run_pred(r, gobj, addr))
+        .or_else(|| mewtwoshadowball::run_pred(r, gobj, addr))
+        .or_else(|| mewtwodisable::run_pred(r, gobj, addr))
         .or_else(|| yoshiegglay::run_pred(r, gobj, addr))
         .or_else(|| yoshistar::run_pred(r, gobj, addr))
         .or_else(|| yoshitongue::run_pred(r, gobj, addr))
@@ -263,6 +269,9 @@ pub const CLINK_MILK: i32 = 123;
 pub const YOSHI_EGG_THROW: i32 = 86;
 pub const YOSHI_EGG_LAY: i32 = 87;
 pub const YOSHI_STAR: i32 = 88;
+/// `It_Kind_Mewtwo_Disable` and `_ShadowBall`.
+pub const MEWTWO_DISABLE: i32 = 110;
+pub const MEWTWO_SHADOWBALL: i32 = 112;
 /// `It_Kind_Zelda_DinFire` and `_DinFire_Explode`.
 pub const ZELDA_DIN_FIRE: i32 = 108;
 pub const ZELDA_DIN_FIRE_EXPLODE: i32 = 109;

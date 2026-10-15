@@ -48,6 +48,7 @@ pub mod link;
 pub mod luigi;
 pub mod mario;
 pub mod mars;
+pub mod mewtwo;
 pub mod motion;
 mod motion_tables;
 pub mod ness;

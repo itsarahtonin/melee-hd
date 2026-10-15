@@ -334,7 +334,7 @@ impl Running<'_> {
             KIND_NESS => self.ness_jump_aerial_enter(gobj),
             KIND_YOSHI => self.ys_jump_aerial_enter(gobj),
             KIND_PEACH => self.peach_jump_aerial_enter(gobj),
-            KIND_MEWTWO => unported_call("ftMt_JumpAerial_Enter"),
+            KIND_MEWTWO => self.peach_jump_aerial_enter(gobj),
             _ => self.enter_jump_aerial_basic(gobj),
         }
         true
@@ -343,6 +343,7 @@ impl Running<'_> {
     /// Peach's double jump, `ftPe_JumpAerial_Enter`: the stick's sideways speed, no rise of
     /// its own (her animation lifts her), and the common double jump's physics.
     #[doc(alias = "ftPe_JumpAerial_Enter")]
+    #[doc(alias = "ftMt_JumpAerial_Enter")]
     pub fn peach_jump_aerial_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);

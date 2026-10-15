@@ -145,10 +145,9 @@ impl Running<'_> {
     /// `ftCo_ThrowF_Anim`: Mewtwo's shadow ball, the throw's progress, then falling or
     /// waiting (carrying a cargo fighter isn't ported).
     #[doc(alias = "ftCo_ThrowF_Anim")]
-    #[doc(alias = "ftMt_SpecialN_Shoot")]
     pub fn co_throw_f_anim(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_MEWTWO {
-            unported_call("ftMt_SpecialN_Shoot");
+            self.mt_n_shoot(gobj);
         }
         self.throw_end(gobj);
     }
