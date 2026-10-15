@@ -1,6 +1,7 @@
 //! The common action states' physics callbacks, run by `Fighter_procUpdate` before it applies
 //! the fighter's velocities.
 
+use crate::game::ucf::Ucf;
 use gekko_fp as fp;
 
 use super::super::super::state::Running;
@@ -134,7 +135,7 @@ impl Running<'_> {
             && fp::fadds(fp::fmuls(sx, sx), fp::fmuls(sy, sy)) >= fp::fmuls(min, min)
             && (i32::from(fp.active_timer.lstick.x) < window
                 || i32::from(fp.active_timer.lstick.y) < window
-                || self.game.rules.ucf && self.ucf_sdi(gobj, min))
+                || self.game.rules.ucf == Ucf::V0_84 && self.ucf_sdi(gobj, min))
         {
             let fp = self.game.fighter_mut(gobj);
             let (dx, dy) = (fp::fmuls(sx, scale), fp::fmuls(sy, scale));

@@ -1,5 +1,6 @@
 //! Hitstun and tumbling (`ftCo_Damage.c`'s state callbacks, `ftCo_DamageFall.c`).
 
+use crate::game::ucf::Ucf;
 use gekko_fp as fp;
 
 use super::super::super::code::unported_call;
@@ -302,7 +303,7 @@ impl Running<'_> {
             let fp = self.game.fighter(gobj);
             // UCF's tumble code replaces the window: a flick this frame, or last frame from
             // inside the dead zone and fast enough.
-            let flicked = if self.game.rules.ucf {
+            let flicked = if self.game.rules.ucf != Ucf::Off {
                 self.ucf_tumble(gobj, t)
             } else {
                 i32::from(fp.active_timer.lstick.x) < window

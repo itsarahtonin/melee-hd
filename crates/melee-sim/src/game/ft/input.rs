@@ -5,6 +5,7 @@
 // NaN takes the original's branches, which negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use crate::game::ucf::Ucf;
 use gekko_fp as fp;
 
 use super::super::code::{run_fighter_cb, unported_call};
@@ -280,7 +281,7 @@ impl Running<'_> {
             fp.activity_timer.lstick.y = 0;
             fp.activity_timer.lstick.x = 0;
         }
-        if self.game.rules.ucf {
+        if self.game.rules.ucf == Ucf::V0_84 {
             self.ucf_pad_buffer(gobj);
         }
         let fp = &mut self.game.fighters[f.0];
