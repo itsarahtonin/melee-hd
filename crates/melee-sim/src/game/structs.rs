@@ -12,6 +12,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::handles::*;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
+use crate::game::it::link::LinkX20;
 use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
@@ -7512,7 +7513,7 @@ pub struct ItemLink {
     /// +0x14
     pub pos: Vec3,
     /// +0x20
-    pub x20: Vec3,
+    pub x20: LinkX20,
     /// +0x2c (bits 0..+1)
     pub x2C_b0: bool,
     /// +0x2c (bits 1..+1)
@@ -8889,6 +8890,28 @@ impl itLinkBow_ItemVars {
     pub fn mark_stale(&mut self) {
         self.x0.mark_stale();
         self.x4.mark_stale();
+    }
+}
+
+/// `itCLinkMilk_ItemVars`, 0x4 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+pub struct itCLinkMilk_ItemVars {
+    /// +0x0
+    pub x0: Var<Option<GObjId>>,
+}
+
+impl Default for itCLinkMilk_ItemVars {
+    fn default() -> Self {
+        itCLinkMilk_ItemVars {
+            x0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itCLinkMilk_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
     }
 }
 

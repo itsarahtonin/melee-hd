@@ -10,6 +10,7 @@
 use gekko_fp as fp;
 
 use super::super::handles::ItemLinkId;
+use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::{Game, Running};
 use super::super::structs::ItemLink;
 use super::maplib::with_stage_coll;
@@ -28,6 +29,27 @@ pub const USER_DATA_KIND: u8 = 6;
 pub const FREE: u32 = 0x802A_2474;
 /// A link's render callback, `it_802A24A0`.
 pub const RENDER: u32 = 0x802A_24A0;
+
+/// A link's `x20`, which only the reset (`it_80275328`) writes, as zero, and nothing reads.
+/// Link's hookshot sets its links up without the reset, so a hookshot link in a block new from
+/// the heap keeps the heap's bytes there, which melee-hd doesn't model: `None` until written
+/// (or imported), and the comparer checks it only then (docs/engine.md).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct LinkX20(pub Option<Vec3>);
+
+impl Mirror for LinkX20 {
+    const SIZE: u32 = 0xC;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        LinkX20(Some(Vec3::import(m, at, cx)))
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        if let Some(v) = &self.0 {
+            v.compare(m, at, path, cx);
+        }
+    }
+}
 
 /// The link.
 pub fn link(game: &Game, l: ItemLinkId) -> &ItemLink {
@@ -65,7 +87,7 @@ pub fn reset(game: &mut Game, gobj: GObjId, l: ItemLinkId) {
     k.next = None;
     k.vel = Vec3::new(0.0, 0.0, 0.0);
     k.pos = Vec3::new(0.0, 0.0, 0.0);
-    k.x20 = Vec3::new(0.0, 0.0, 0.0);
+    k.x20 = LinkX20(Some(Vec3::new(0.0, 0.0, 0.0)));
     k.x2C_b0 = false;
     k.x2C_b1 = false;
     k.x2C_b2 = false;

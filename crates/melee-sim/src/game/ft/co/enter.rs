@@ -101,7 +101,7 @@ impl Running<'_> {
         self.game.fighters[f.0].x209A = x5f0;
         match self.game.fighters[f.0].kind {
             KIND_LINK => self.link_shield_absorb(gobj),
-            KIND_CLINK => unported_call("ftCl_Init_8014919C"),
+            KIND_CLINK => self.clink_shield_absorb(gobj),
             _ => {}
         }
     }

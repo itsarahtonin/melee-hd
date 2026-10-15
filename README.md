@@ -25,11 +25,11 @@ Like ssbm-rs, it contains no game data: the game's models, textures, sounds and 
 
 | | |
 | --- | --- |
-| Characters | Fox, Falco, Marth and Roy, Sheik and Zelda, Captain Falcon, Ganondorf, Ness, Jigglypuff, Samus, Luigi, Mario, Dr. Mario, Peach, Link, Pikachu and Pichu, each checked over whole matches |
+| Characters | Fox, Falco, Marth and Roy, Sheik and Zelda, Captain Falcon, Ganondorf, Ness, Jigglypuff, Samus, Luigi, Mario, Dr. Mario, Peach, Link and Young Link, Pikachu and Pichu, each checked over whole matches |
 | Stages | Final Destination, Battlefield, Pokémon Stadium (transformations included), Yoshi's Story, Dream Land, Fountain of Dreams |
-| Whole matches compared | 33 matches, 433,437 ticks, every checked field equal after every tick, the original allocator's heap included: eleven CPU-played benchmark matches (Fox ditto; Fox against Marth on three stages; Ganondorf against Captain Falcon; three each for Ness and Samus) and twenty-two real Slippi replays (Slippi 3.19's, and ranked 3.16 and 3.17 replays) |
+| Whole matches compared | 37 matches, 488,782 ticks, every checked field equal after every tick, the original allocator's heap included: eleven CPU-played benchmark matches (Fox ditto; Fox against Marth on three stages; Ganondorf against Captain Falcon; three each for Ness and Samus) and twenty-six real Slippi replays (Slippi 3.19's, and ranked 3.16 and 3.17 replays) |
 | Player | A VS match in a window, with a launcher for picking characters, stage, stocks and time. Frames are identical to ssbm-rs's on every checked frame except Slippi's name plates; the audio mix is sample-exact with ssbm-rs's on the matches checked |
-| Functions | 6,726 of the 19,827 in ssbm-rs's symbol table ported and checked, 197 replaced by native subsystems, 11 dead ([port ledger](docs/port-ledger.md)) |
+| Functions | 6,756 of the 19,827 in ssbm-rs's symbol table ported and checked, 197 replaced by native subsystems, 11 dead ([port ledger](docs/port-ledger.md)) |
 | Speed | The simulation runs a match about 16.7 times as fast as headless Dolphin on one core; a snapshot is about 0.8 MB, cloned in about 0.1 ms ([performance](docs/performance.md)) |
 
 Not yet: the other characters and stages, menus and every mode other than VS, items spawning during a match (matches play with items off), testing on macOS and Linux, and release builds. [The oracle](docs/oracle.md) lists each comparison, and [the player](docs/player.md) its open issues.

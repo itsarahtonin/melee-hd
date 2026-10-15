@@ -1,9 +1,10 @@
 //! Link's character callbacks (`ftlink.c`): creation, spawn and attributes, his items' cleanup
-//! when he's hit or KO'd, the item hooks, the knockback hooks and his shield's absorb push.
+//! when he's hit or KO'd, the item hooks, the knockback hooks and his shield's absorb push. Young
+//! Link's creation is here too, and his callbacks that do what Link's do carry his aliases.
 
 use gekko_fp as fp;
 
-use super::super::super::code::{Val, unported_call};
+use super::super::super::code::Val;
 use super::super::super::handles::FighterId;
 use super::super::super::state::Running;
 use super::super::bind::{JointStack, next_joint};
@@ -26,6 +27,20 @@ impl Running<'_> {
     /// (`ftParts_800753D4`).
     #[doc(alias = "ftLk_Init_OnLoad")]
     pub fn link_on_load(&mut self, gobj: GObjId) {
+        self.link_load(gobj, false);
+    }
+
+    /// Young Link's creation, `ftCl_Init_OnLoad`: he can wall jump, then Link's (his attributes
+    /// pushed by `ftLk_Init_OnLoadForCLink`), with the milk his taunt makes registered too.
+    #[doc(alias = "ftCl_Init_OnLoad")]
+    #[doc(alias = "ftLk_Init_OnLoadForCLink")]
+    pub fn clink_on_load(&mut self, gobj: GObjId) {
+        self.game.fighter_mut(gobj).can_walljump = true;
+        self.link_load(gobj, true);
+    }
+
+    /// Link's creation, or Young Link's with `clink`.
+    fn link_load(&mut self, gobj: GObjId, clink: bool) {
         let f = self.game.fighter_id(gobj);
         // `lbAnim_8001E8F8(ftData_80085E50(fp, 72))`: the animation goes through the second
         // buffer, which keeps it.
@@ -41,6 +56,11 @@ impl Running<'_> {
         for (i, off) in kinds.into_iter().enumerate() {
             let kind = self.link_attr_i32(f, off);
             let article = self.data.ptr(items.at(4 * i as u32));
+            super::super::super::it::item::set_char_article(self.game, article, kind);
+        }
+        if clink {
+            let article = self.data.ptr(items.at(20));
+            let kind = super::super::super::it::kinds::CLINK_MILK;
             super::super::super::it::item::set_char_article(self.game, article, kind);
         }
         let joint = self.data.ptr(items.at(24)).expect("ftData::x48_items[6]");
@@ -143,9 +163,10 @@ impl Running<'_> {
         set_bone_bit(bone, 0, 2, true);
     }
 
-    /// Link's spawn, `ftLk_Init_OnDeath`: his three models' first variants, and no boomerang,
+    /// Link's spawn, `ftLk_Init_OnDeath` (and Young Link's, `ftCl_Init_OnDeath`): his three models' first variants, and no boomerang,
     /// hookshot, arrow, bow or `x18`.
     #[doc(alias = "ftLk_Init_OnDeath")]
+    #[doc(alias = "ftCl_Init_OnDeath")]
     pub fn link_on_death(&mut self, gobj: GObjId) {
         self.game.set_part_vis(gobj, 0, 0);
         self.game.set_part_vis(gobj, 1, 0);
@@ -160,9 +181,10 @@ impl Running<'_> {
         fp.u.set_gobj_at(u::X18, None);
     }
 
-    /// `ftLk_Init_LoadSpecialAttrs`: his attributes copied again (the down aerial's length
+    /// `ftLk_Init_LoadSpecialAttrs` (Young Link's calls it): his attributes copied again (the down aerial's length
     /// with them), the Spin Attack's height offset scaled to his height.
     #[doc(alias = "ftLk_Init_LoadSpecialAttrs")]
+    #[doc(alias = "ftCl_Init_LoadSpecialAttrs")]
     pub fn link_load_special_attrs(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.copy_attrs(f, attr::SIZE);
@@ -193,16 +215,14 @@ impl Running<'_> {
 
     /// His items' cleanup when he's hit or KO'd, `ftLk_800EAF58`: the boomerang's catch undone,
     /// the hookshot put away (`ftCo_800D94D8`), the arrow and the bow let go, and Young Link's
-    /// milk (`ftCl_Init_80149268`).
+    /// milk taken away (`ftCl_Init_80149268`, which Link's `x18` never holds).
     #[doc(alias = "ftLk_800EAF58")]
     pub fn link_damage_cleanup(&mut self, gobj: GObjId) {
         self.link_remove_boomerang1(gobj);
         self.link_hookshot_put_away(gobj);
         self.link_process_arrow(gobj);
         self.link_process_bow(gobj);
-        if self.game.fighter(gobj).kind == super::KIND_CLINK {
-            unported_call("ftCl_Init_80149268 (Young Link's milk)");
-        }
+        self.clink_remove_milk(gobj);
     }
 
     /// Picking up an item, `ftLk_Init_OnItemPickupExt`: his sheathed sword's and shield's
@@ -210,6 +230,8 @@ impl Running<'_> {
     /// (`Fighter_OnItemPickup(gobj, flag, 1, 1)`).
     #[doc(alias = "ftLk_Init_OnItemPickupExt")]
     #[doc(alias = "ftLk_Init_OnItemPickup")]
+    #[doc(alias = "ftCl_Init_OnItemPickupExt")]
+    #[doc(alias = "ftCl_Init_OnItemPickup")]
     pub fn link_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         let item = self
             .game
@@ -227,6 +249,8 @@ impl Running<'_> {
     /// `ftLk_Init_OnItemDrop` (`Fighter_OnItemDrop(gobj, flag, 1, 1)`).
     #[doc(alias = "ftLk_Init_OnItemDropExt")]
     #[doc(alias = "ftLk_Init_OnItemDrop")]
+    #[doc(alias = "ftCl_Init_OnItemDropExt")]
+    #[doc(alias = "ftCl_Init_OnItemDrop")]
     pub fn link_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         let item = self.game.fighter(gobj).item_gobj.expect("dropping no item");
         if super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
@@ -238,6 +262,7 @@ impl Running<'_> {
 
     /// Hiding the held item, `ftLk_Init_OnItemInvisible` (`Fighter_OnItemInvisible(gobj, 1)`).
     #[doc(alias = "ftLk_Init_OnItemInvisible")]
+    #[doc(alias = "ftCl_Init_OnItemInvisible")]
     pub fn link_on_item_invisible(&mut self, gobj: GObjId) {
         self.item_invisible_hand(gobj, 1);
     }
@@ -245,6 +270,7 @@ impl Running<'_> {
     /// Showing the held item again, `ftLk_Init_OnItemVisible` (`Fighter_OnItemVisible(gobj,
     /// 1)`).
     #[doc(alias = "ftLk_Init_OnItemVisible")]
+    #[doc(alias = "ftCl_Init_OnItemVisible")]
     pub fn link_on_item_visible(&mut self, gobj: GObjId) {
         self.item_visible_hand(gobj, 1);
     }
@@ -252,6 +278,7 @@ impl Running<'_> {
     /// Entering knockback, `ftLk_Init_OnKnockbackEnter` (`Fighter_OnKnockbackEnter(gobj,
     /// 1)`): the hurt textures.
     #[doc(alias = "ftLk_Init_OnKnockbackEnter")]
+    #[doc(alias = "ftCl_Init_OnKnockbackEnter")]
     pub fn link_on_knockback_enter(&mut self, gobj: GObjId) {
         self.texture_anim(gobj, 1, 3.0);
         self.texture_anim(gobj, 0, 3.0);
@@ -259,6 +286,7 @@ impl Running<'_> {
 
     /// Leaving knockback, `ftLk_Init_OnKnockbackExit`.
     #[doc(alias = "ftLk_Init_OnKnockbackExit")]
+    #[doc(alias = "ftCl_Init_OnKnockbackExit")]
     pub fn link_on_knockback_exit(&mut self, gobj: GObjId) {
         self.texture_anim(gobj, 1, 0.0);
         self.texture_anim(gobj, 0, 0.0);
@@ -269,6 +297,11 @@ impl Running<'_> {
     /// from the hit's side, with a sound.
     #[doc(alias = "ftLk_800EB334")]
     pub fn link_absorb_push(&mut self, gobj: GObjId) {
+        self.absorb_push_with(gobj, SFX_ABSORB);
+    }
+
+    /// The shield's absorb push, Link's or Young Link's, with his sound `sfx`.
+    pub(in super::super) fn absorb_push_with(&mut self, gobj: GObjId, sfx: i32) {
         let f = self.game.fighter_id(gobj);
         let xd8 = {
             let d = self.game.fighters[f.0]
@@ -287,7 +320,7 @@ impl Running<'_> {
         if fp.specialn_facing_dir >= 0.0 || fp.specialn_facing_dir.is_nan() {
             fp.gr_vel = mem(fp::fneg(reg(fp.gr_vel)));
         }
-        self.play_sfx(gobj, SFX_ABSORB, 127, 64);
+        self.play_sfx(gobj, sfx, 127, 64);
     }
 }
 
