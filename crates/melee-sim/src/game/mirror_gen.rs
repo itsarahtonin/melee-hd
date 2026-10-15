@@ -19,6 +19,7 @@ use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::it::Var;
+use crate::game::it::link::LinkX20;
 use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
@@ -16597,7 +16598,7 @@ impl Mirror for ItemLink {
                 .map(ItemLinkId),
             vel: Vec3::import(m, at + 0x8, cx),
             pos: Vec3::import(m, at + 0x14, cx),
-            x20: Vec3::import(m, at + 0x20, cx),
+            x20: LinkX20::import(m, at + 0x20, cx),
             x2C_b0: m.bits(at, 352, 1) != 0,
             x2C_b1: m.bits(at, 353, 1) != 0,
             x2C_b2: m.bits(at, 354, 1) != 0,
