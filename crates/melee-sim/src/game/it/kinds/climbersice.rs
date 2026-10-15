@@ -195,11 +195,7 @@ pub fn spawn(
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     debug_owner_bubbles(r.game, gobj, Some(parent));
     lib26b1::disable_pickup(r.game, gobj);
-    // `it_802750F8`.
-    item_mut(r.game, gobj).xDCC_flag.b3 = false;
-    super::super::item::proc_phys(r, gobj);
-    super::super::item::proc_coll(r, gobj);
-    item_mut(r.game, gobj).xDCC_flag.b3 = true;
+    super::super::lib2725::first_frame(r, gobj);
     Some(gobj)
 }
 

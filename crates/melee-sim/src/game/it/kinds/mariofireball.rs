@@ -91,11 +91,7 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, kind: i32, facing_dir: 
     let gobj = spawn_air(r, &mut spawn).expect("it_8029B7C0 sets up a null fireball");
     setup(r, gobj);
     super::super::item::debug_owner_bubbles(r.game, gobj, Some(parent));
-    // `it_802750F8`.
-    item_mut(r.game, gobj).xDCC_flag.b3 = false;
-    super::super::item::proc_phys(r, gobj);
-    super::super::item::proc_coll(r, gobj);
-    item_mut(r.game, gobj).xDCC_flag.b3 = true;
+    super::super::lib2725::first_frame(r, gobj);
 }
 
 /// The fireball's start, `it_8029B7C0`: its speed at its angle, ahead, its lifetime, its
