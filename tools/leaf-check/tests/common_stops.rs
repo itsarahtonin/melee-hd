@@ -138,6 +138,8 @@ const PRESSED: u32 = 0x668;
 const ANIM_FRAME: u32 = 0x894;
 const GRAB_TIMER: u32 = 0x1A4C;
 const MASH_DIR: u32 = 0x1A50;
+/// The animation's flags (`x594`).
+const X594: u32 = 0x594;
 /// `ftCo_MS_ShieldBreakFly` to `ftCo_MS_Furafura`.
 const SHIELD_BREAK_FLY: u32 = 205;
 const FURAFURA: u32 = 211;
@@ -219,6 +221,25 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
                     ours: &run_one,
                     stubs: &no,
                 });
+            }
+            // The capes' animation flags (`x594` bits 3 and 4, from the animation's entry)
+            // changed, so each of the wind's ends runs: back on the animation's trees, off, or
+            // left alone. r3 is the `Fighter*`.
+            let flags = [0x08u8, 0x10, 0x00].map(|bits| {
+                move |call: &mut Call, _: usize| {
+                    let at = call.regs.gpr[3] + X594;
+                    let w = peek_u32(call, at);
+                    poke_u32(call, at, (w & !0x1800_0000) | u32::from(bits) << 24);
+                }
+            });
+            if name == "ftCo_8009E4A8" {
+                for prepare in &flags {
+                    variants.push(Variant {
+                        prepare,
+                        ours: &run_one,
+                        stubs: &no,
+                    });
+                }
             }
             for reports in check_variants(&dir, &name, &variants) {
                 tally(&reports, counts);
