@@ -6020,3 +6020,180 @@ ftCo_Furafura_IASA	leaf-check common_stops: common_stop_functions runs it from i
 ftCo_Furafura_Phys	leaf-check common_stops: common_stop_functions runs it from its saved calls in Peach's ranked replays against Sheik on Battlefield (hf-peach-sheik-bf-266c777a) and Marth on Fountain of Dreams (1a4f1bff), and from the family's states with the controls, mash timer and animation frame changed, and compares the whole state; melee-oracle diff, Marth vs Peach FoD hf-marth-peach-fod-1a4f1bff (docs/oracle.md), all 19,499 ticks in Slippi float mode with no stand-ins: Peach's shield drained to breaking in tick 12,229, her flight, fall, landing, getting up and dizziness; and Peach vs Sheik BF hf-peach-sheik-bf-266c777a, 6,683 ticks: Sheik's shield broken by a hit in tick 658
 ftCo_Furafura_Coll	leaf-check common_stops: common_stop_functions runs it from its saved calls in Peach's ranked replays against Sheik on Battlefield (hf-peach-sheik-bf-266c777a) and Marth on Fountain of Dreams (1a4f1bff), and from the family's states with the controls, mash timer and animation frame changed, and compares the whole state; melee-oracle diff, Marth vs Peach FoD hf-marth-peach-fod-1a4f1bff (docs/oracle.md), all 19,499 ticks in Slippi float mode with no stand-ins: Peach's shield drained to breaking in tick 12,229, her flight, fall, landing, getting up and dizziness; and Peach vs Sheik BF hf-peach-sheik-bf-266c777a, 6,683 ticks: Sheik's shield broken by a hit in tick 658
 gm_GetMatchEndPlayerScore	melee-oracle diff, the author's four-player teams replays Game_20260807T220230 and Game_20260531T174953 (docs/oracle.md), in Slippi float mode: a stock taken from a teammate brings the results up to date (the VS state's results compared every tick)
+
+# Bowser: leaf-check bowser runs his code, his flame's, the Klaw's victim's states and ft_800850B4 from ssbm-rs's saved calls of six ranked replays (local/calls/bowser), as saved and from their groups' neighbours with the controls, script variables, bite and fuel changed; his creation is the oracle's.
+fn_80134518	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+fn_80134590	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BC458	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BC4A8	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BC7E0	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BC8D4	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BC9C8	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BCAF4	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BCC20	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BCD00	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BCDE0	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_800BCE64	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureDamageKoopaAir_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureDamageKoopaAir_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureDamageKoopaAir_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureDamageKoopaAir_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureDamageKoopa_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureDamageKoopa_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureDamageKoopa_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureDamageKoopa_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureWaitKoopaAir_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureWaitKoopaAir_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureWaitKoopaAir_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureWaitKoopaAir_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureWaitKoopa_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureWaitKoopa_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureWaitKoopa_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_CaptureWaitKoopa_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownKoopaAirB_Anim	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftCo_ThrownKoopaAirB_Coll	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftCo_ThrownKoopaAirB_IASA	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftCo_ThrownKoopaAirB_Phys	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftCo_ThrownKoopaAirF_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownKoopaAirF_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownKoopaAirF_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownKoopaAirF_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownKoopaB_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownKoopaB_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownKoopaB_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownKoopaB_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownKoopaF_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownKoopaF_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownKoopaF_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftCo_ThrownKoopaF_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_Init_80132B38	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_Init_LoadSpecialAttrs	melee-oracle diff, Bowser vs Captain Falcon DL, FoD and PS, Sheik YS, Jigglypuff YS and Fox YS hf-bowser-captain-dl-63df8613, hf-bowser-sheik-ys-63ee0a54, hf-bowser-captain-fod-a874ea97, hf-bowser-puff-ys-f471526f, hf-bowser-captain-ps-1dd99c3c and hf-bowser-fox-ys-75580e94 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: each spawn runs it
+ftKp_Init_OnDeath	melee-oracle diff, Bowser vs Captain Falcon DL, FoD and PS, Sheik YS, Jigglypuff YS and Fox YS hf-bowser-captain-dl-63df8613, hf-bowser-sheik-ys-63ee0a54, hf-bowser-captain-fod-a874ea97, hf-bowser-puff-ys-f471526f, hf-bowser-captain-ps-1dd99c3c and hf-bowser-fox-ys-75580e94 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: each spawn runs it
+ftKp_Init_OnKnockbackEnter	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_Init_OnKnockbackExit	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_Init_OnLoad	melee-oracle diff, Bowser vs Captain Falcon DL, FoD and PS, Sheik YS, Jigglypuff YS and Fox YS hf-bowser-captain-dl-63df8613, hf-bowser-sheik-ys-63ee0a54, hf-bowser-captain-fod-a874ea97, hf-bowser-puff-ys-f471526f, hf-bowser-captain-ps-1dd99c3c and hf-bowser-fox-ys-75580e94 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Bowser's creation runs it
+ftKp_Init_UnkMotionStates3	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirHi_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirHi_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirHi_Enter	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirHi_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirHi_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirLw_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirLw_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirLw_Enter	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirLw_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirNEnd_Anim	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialAirNEnd_Coll	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialAirNEnd_IASA	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialAirNEnd_Phys	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialAirNStart_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirNStart_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirNStart_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirNStart_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirN_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirN_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirN_Enter	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirN_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirN_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirSEndB_Anim	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialAirSEndB_Coll	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialAirSEndB_Phys	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialAirSEndF_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirSEndF_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirSEndF_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirSHit_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirSHit_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirSHit_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirSHit_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirSStart_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirSStart_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirSStart_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialAirSWait_Anim	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialAirSWait_Coll	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialAirSWait_IASA	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialAirSWait_Phys	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialAirS_Enter	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialHi_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialHi_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialHi_Enter	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialHi_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialHi_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLwLanding_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLwLanding_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLwLanding_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLw_80134988	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLw_80134A5C	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLw_80134ACC	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLw_80134D78	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLw_80134DE0	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLw_80134E1C	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLw_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLw_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLw_Enter	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialLw_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialNEnd_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialNEnd_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialNEnd_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialNEnd_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialNStart_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialNStart_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialNStart_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialNStart_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialN_80135780	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialN_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialN_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialN_Enter	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialN_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialN_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSEndB_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSEndB_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSEndB_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSEndF_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSEndF_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSEndF_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSHit_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSHit_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSHit_IASA	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSHit_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSStart_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSStart_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSStart_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialSWait_Anim	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialSWait_Coll	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialSWait_IASA	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialSWait_Phys	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialS_80132DC0	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_80132DD0	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_80132DE0	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_80132DF0	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_80132E00	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_80132E10	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_80132E20	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_80132E30	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_8013302C	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_801330E4	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_8013319C	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialS_8013322C	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_801332C4	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialS_80133324	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_80133398	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialS_801333F8	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialS_80133484	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialS_801334E4	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+ftKp_SpecialS_8013359C	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ftKp_SpecialS_Enter	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+ft_800850B4	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+itKoopaFlame_Logic111_Absorbed	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+itKoopaFlame_Logic111_Clanked	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+itKoopaFlame_Logic111_DmgDealt	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+itKoopaFlame_Logic111_EvtUnk	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+itKoopaFlame_Logic111_HitShield	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+itKoopaFlame_Logic111_Reflected	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+itKoopaFlame_Logic111_ShieldBounced	leaf-check bowser: bowser_functions runs it from its group's saved states in Bowser's six replays (none reaches it) with the controls and variables changed, and compares the whole state
+itKoopaFlame_Setup	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+itKoopaFlame_Spawn	leaf-check bowser: bowser_functions reaches it from the callers it serves (ftKp_SpecialLw_80134ACC (a flame breathed)) in clean comparisons
+itKoopaFlame_UnkMotion0_Anim	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+itKoopaFlame_UnkMotion0_Coll	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+itKoopaFlame_UnkMotion0_Phys	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+itKoopaFlame_Update_Angle	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
+itKoopaFlame_Update_Direction	leaf-check bowser: bowser_functions runs it from real states of Bowser's six replays, its own saved calls and its group's, and compares the whole state
