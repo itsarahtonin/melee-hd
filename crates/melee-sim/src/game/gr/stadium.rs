@@ -14,7 +14,9 @@
 //! the cycle's wait ends as soon as its file is registered (`801D4760`); a transformation's
 //! start leaves the random seed alone when the replay says so (`801D457C`); the archive table's
 //! entries free as the codes free them (`grAnime_801C65B0`, `801C65C8`); and whether the zoomed
-//! view keeps its player tests fixed bounds instead of the camera's view (`801D24FC`).
+//! view keeps its player tests fixed bounds instead of the camera's view (`801D24FC`). Slippi
+//! 3.16's online codes freeze the stage instead ([`frozen`]): the cycle never runs, and only
+//! the zoomed view's code changes anything else.
 
 // NaN takes the original's branches, which negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -23,7 +25,6 @@ use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
 use super::super::camera;
-use super::super::code;
 use super::super::handles::{CameraBoxId, CodeRef};
 use super::super::slippi::CodeSet;
 use super::super::state::{Game, OBJ_CAMERA, Obj, Running, UserData};
@@ -336,12 +337,6 @@ pub fn start_main(r: &mut Running, gobj: GObjId) {
 /// lines the transformations' edges add switched off, and its start hook.
 #[doc(alias = "grStadium_801D13E0")]
 pub fn init_main(r: &mut Running, gobj: GObjId) {
-    // Slippi 3.16's (and 3.14's) codes run the transformations another way from here on
-    // (`801D14C8`, then the cycle's `801D45EC` and its branches; docs/oracle.md); only 3.19's
-    // are ported.
-    if r.game.rules.slippi && r.game.rules.codes != CodeSet::V3_19 {
-        code::unported_call("Pokémon Stadium under Slippi 3.16's transformation codes");
-    }
     let g = ground_of(r.game, gobj);
     let map_id = r.game.grounds[g.0].map_id;
     let j = jobj_of(r.game, gobj);
@@ -383,6 +378,11 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
     v.current = default;
     v.next = None;
     v.timer = timer;
+    if frozen(r.game) {
+        // Slippi 3.16's `Init isLoaded Bool` (`801D14C8`): no preloaded transformation's load
+        // is out.
+        r.game.grounds[g.0].u.stadium().preload_out = 0;
+    }
     r.game.grounds[g.0].x11_flags.b012 = 1;
     let geo = r.game.geometry_mut();
     geo.disable_line(0x55);
@@ -1606,6 +1606,17 @@ pub fn dust(r: &mut Running, gobj: GObjId) {
     }
 }
 
+/// Whether Slippi 3.16's online codes (and 3.14's, the same here) freeze the stage
+/// (`Online/Core/PreventFileAlarms/FreezeStadium`, `801D4578`): the transformation cycle
+/// returns before it does anything, so the stage stays the default one all match and the cycle
+/// draws nothing. The set's preload codes (`Common/Preload Stadium Transformations`: picking
+/// the next transformation ahead at `801D45EC`, taking it at `801D460C`, `801D4610` and
+/// `801D4724`, and clearing their mark at `801D4F14`) all sit in the cycle past that return,
+/// so they never run; only their mark's clearing in the setup (`801D14C8`) does.
+pub fn frozen(game: &Game) -> bool {
+    game.rules.slippi && game.rules.codes != CodeSet::V3_19
+}
+
 /// The transformation cycle, `grStadium_801D4548` (the replays' with the Slippi ruleset's codes
 /// at `801D457C`, `801D4760` and `801D4FD8`): waiting (0), loading the next stage's file (1),
 /// announcing it (2, 3), sinking the current stage (4), raising the next (5), and settling (6).
@@ -1613,6 +1624,11 @@ pub fn dust(r: &mut Running, gobj: GObjId) {
 pub fn cycle(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let s = reg(scale(r.game));
+    if frozen(r.game) {
+        // Slippi 3.16's `FreezeStadium` (`801D4578`): the cycle returns once it has read the
+        // stage's scale.
+        return;
+    }
     if super::super::gm::is_training(r.game) {
         return;
     }
