@@ -22,6 +22,14 @@
 //!   CAPTURE_FUNCS=@$D/ylink-funcs.txt LOCKSTEP_DONE=$D/done-nonylink.txt \
 //!   ssbm-run "$SSBM_DISC" --replay NAME.slp --fields 100000 --port all --lockstep
 //! ```
+//!
+//! A 3.16 replay of Link against Young Link on Final Destination from the dataset's
+//! `YLINK_master-platinum_a3` archive (`local/replays/hf/link-ylink/slp/`,
+//! `hf-link-ylink-fd-fbeda3fb`) checks the two characters' hookshot lengths kept apart: a set
+//! made as above, and two more from later in the match, `-air` (`CAPTURE_FUNCS` the hookshot's
+//! and the grabs' functions, `@$D/hookshot-funcs.txt`, from `CAPTURE_FROM=7180`: Young Link's
+//! air grab) and `-grab` (`CAPTURE_FUNCS=fn_800D8EC8 CAPTURE_FROM=7900 CAPTURE_EVERY=1`: his
+//! next grab's spawn writing over the air grab's lengths).
 
 #[path = "support/lklike.rs"]
 mod lklike;
