@@ -635,7 +635,7 @@ impl Running<'_> {
             v.victim = Default::default();
         }
         h.x45 = 0;
-        h.jobj = joint;
+        h.jobj.set(joint);
         h.scale = scale;
         h.b_offset = Vec3::new(0.0, 0.0, 0.0);
         h.x43_b1 = false;

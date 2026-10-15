@@ -878,7 +878,7 @@ impl Running<'_> {
         }
         let fp = self.game.fighter(gobj);
         let shoulder = fp.input.held_buttons[0] & PAD_LR != 0;
-        if (fp.kind == KIND_LINK || fp.kind == KIND_CLINK) && fp.u_i32(0xC) != 0 {
+        if (fp.kind == KIND_LINK || fp.kind == KIND_CLINK) && fp.u.gobj_at(0xC).is_some() {
             return false;
         }
         if fp.kind == KIND_SAMUS && fp.u.gobj_at(0x10).is_some() {

@@ -23,7 +23,7 @@ use crate::hsd::shadow::ShadowId;
 use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
-use crate::lb::hitcapsule::{HitOwner, Victim};
+use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -929,7 +929,7 @@ pub struct HitCapsule {
     /// +0x46
     pub x46: [u8; 2],
     /// +0x48
-    pub jobj: Option<JObjId>,
+    pub jobj: HitJObj,
     /// +0x4c
     pub x4C: Vec3,
     /// +0x58
@@ -991,7 +991,7 @@ impl Default for HitCapsule {
             x44: 0,
             x45: 0,
             x46: [0; 2],
-            jobj: None,
+            jobj: Default::default(),
             x4C: Default::default(),
             x58: Default::default(),
             hurt_coll_pos: Default::default(),

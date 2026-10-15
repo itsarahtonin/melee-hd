@@ -341,16 +341,20 @@ pub fn proc_callback(r: &mut Running, gobj: GObjId) {
 }
 
 /// The stage's watcher process (priority 10), `Ground_801C0C2C`: finds the point of interest
-/// player 1 stands in when asked (`unk8C.b6`, `b7`), and rains bob-ombs in that mode.
+/// player 1 stands in when asked (`unk8C.b6`, `b7`), and rains bob-ombs in that mode (not
+/// ported past the rain's start).
 #[doc(alias = "Ground_801C0C2C")]
 pub fn proc_watch(r: &mut Running, _gobj: GObjId) {
     let info = &r.game.stage_info;
     if info.unk8C.b6 || info.unk8C.b7 {
         unimplemented!("Ground_801C0C2C's point search needs the fighters (Player_GetEntity)");
     }
-    // `gm_8016B238`: the rules' bob-omb rain.
+    // `gm_8016B238`: the rules' bob-omb rain, a bomb every 30 frames after the first 1200.
     if r.game.vs_x6() != 0 {
-        unimplemented!("bob-omb rain needs the items (it_8026BE84)");
+        let frame = r.game.vs_frame_count();
+        if frame as i32 > 0x4B0 && frame.wrapping_sub(r.game.stage_info.x9C) > 0x1E {
+            unimplemented!("bob-omb rain needs the items (Ground_801C0A70, it_8026BE84)");
+        }
     }
 }
 

@@ -71,7 +71,7 @@ pub fn create_hitbox(r: &mut Running, gobj: GObjId) {
     } else {
         jobj_of(r.game, gobj)
     };
-    item_mut(r.game, gobj).x5D4_hitboxes[idx].hit.jobj = j;
+    item_mut(r.game, gobj).x5D4_hitboxes[idx].hit.jobj.set(j);
     let ip = item(r.game, gobj);
     let dmg = fp::fmuls(
         reg(ip.xC3C),

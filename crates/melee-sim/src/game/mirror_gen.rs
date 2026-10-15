@@ -30,7 +30,7 @@ use crate::hsd::shadow::ShadowId;
 use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
-use crate::lb::hitcapsule::{HitOwner, Victim};
+use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
 use crate::mp::coll::EcbSource;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -1745,7 +1745,7 @@ impl Mirror for HitCapsule {
             x44: m.u8(at + 0x44),
             x45: m.u8(at + 0x45),
             x46: core::array::from_fn(|i0| m.u8(at + 0x46 + i0 as u32 * 0x1)),
-            jobj: cx.import_handle("JObjId", m.u32(at + 0x48)).map(JObjId),
+            jobj: HitJObj::import(m, at + 0x48, cx),
             x4C: Vec3::import(m, at + 0x4c, cx),
             x58: Vec3::import(m, at + 0x58, cx),
             hurt_coll_pos: Vec3::import(m, at + 0x64, cx),
@@ -2053,12 +2053,7 @@ impl Mirror for HitCapsule {
                 );
             }
         }
-        cx.compare_handle(
-            &format!("{path}.jobj"),
-            "JObjId",
-            self.jobj.map(|h| h.0),
-            m.u32(at + 0x48),
-        );
+        self.jobj.compare(m, at + 0x48, &format!("{path}.jobj"), cx);
         self.x4C.compare(m, at + 0x4c, &format!("{path}.x4C"), cx);
         self.x58.compare(m, at + 0x58, &format!("{path}.x58"), cx);
         self.hurt_coll_pos

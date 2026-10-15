@@ -86,11 +86,7 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, kind: i32, facing_dir: 
     };
     setup(r, gobj);
     super::super::item::debug_owner_bubbles(r.game, gobj, Some(parent));
-    // `it_802750F8`.
-    item_mut(r.game, gobj).xDCC_flag.b3 = false;
-    super::super::item::proc_phys(r, gobj);
-    super::super::item::proc_coll(r, gobj);
-    item_mut(r.game, gobj).xDCC_flag.b3 = true;
+    super::super::lib2725::first_frame(r, gobj);
 }
 
 /// The fireball's start, `it_802C027C`: its speed ahead, its lifetime, its first state.

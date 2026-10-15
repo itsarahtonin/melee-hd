@@ -19,6 +19,7 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::math::{self, sqrt_reg};
 use crate::mp::coll::{LEFT_WALL_HUG, RIGHT_WALL_HUG};
+use crate::vec::Vec3;
 
 /// `ftCo_DownBound_SfxIds`.
 pub(super) const DOWN_BOUND_SFX: [i32; 4] = [9, 10, 11, 12];
@@ -26,6 +27,8 @@ pub(super) const DOWN_BOUND_SFX: [i32; 4] = [9, 10, 11, 12];
 const HIP_N: i32 = 4;
 /// `QuakeKind_Large`.
 const QUAKE_LARGE: i32 = 4;
+/// `QuakeKind_Small`.
+const QUAKE_SMALL: i32 = 2;
 
 /// `ftCommon_MotionVars_downwait` (`downdamage`, `downspot` and `downreflect` share it).
 const DOWN_X0: usize = 0x0;
@@ -35,6 +38,8 @@ const DOWN_X4: usize = 0x4;
 const DOWN_FLAGS: u32 = (1 << 15) | (1 << 16);
 /// With `Ft_MF_SkipModel | Ft_MF_SkipMatAnim` too.
 const DOWN_WAIT_FLAGS: u32 = DOWN_FLAGS | (1 << 4) | (1 << 7);
+/// The bounce's: `Ft_MF_SkipHit | Ft_MF_SkipNametagVis | Ft_MF_KeepColAnimPartHitStatus`.
+const DOWN_REFLECT_FLAGS: u32 = 0x18040;
 
 impl Running<'_> {
     /// The floor's sounds and effect, `ft_80084A80` (`ft_80084BFC`, `ft_80084C38` and
@@ -235,19 +240,116 @@ impl Running<'_> {
         }
     }
 
-    /// Bouncing off a wall while knocked down, `ftCo_800C7CA0` (the bounce isn't ported).
+    /// Bouncing off a wall while knocked down, `ftCo_800C7CA0`: sliding into the wall it hugs
+    /// past `ftCommonData` x1B0, unless it last bounced off that wall (`downreflect.x4`).
     #[doc(alias = "ftCo_800C7CA0")]
     pub fn down_reflect_check(&mut self, gobj: GObjId) -> bool {
-        let t = self.common().f32(0x1B0);
+        let t = reg(self.common().f32(0x1B0));
         let fp = self.game.fighter(gobj);
-        let v = fp.x8c_kb_vel.x;
-        let flags = fp.coll_data.env_flags;
-        if (reg(v) < fp::fneg(reg(t)) && flags & RIGHT_WALL_HUG != 0 && fp.mv[DOWN_X4] != 1)
-            || (v > t && flags & LEFT_WALL_HUG != 0 && fp.mv[DOWN_X4] != 2)
-        {
-            unported_call("fn_800C7DC4");
+        let v = reg(fp.x8c_kb_vel.x);
+        let c = &fp.coll_data;
+        if v < fp::fneg(t) && c.env_flags & RIGHT_WALL_HUG != 0 && fp.mv[DOWN_X4] != 1 {
+            let offset = Vec3::new(c.ecb.left.x, c.ecb.left.y, 0.0);
+            let normal = c.right_facing_wall.normal;
+            self.kirby_bump_effect(gobj, offset);
+            self.down_reflect(gobj, ms::DOWN_REFLECT, normal, offset);
+            self.game.fighter_mut(gobj).mv[DOWN_X4] = 1;
+            return true;
+        }
+        let fp = self.game.fighter(gobj);
+        let c = &fp.coll_data;
+        if v > t && c.env_flags & LEFT_WALL_HUG != 0 && fp.mv[DOWN_X4] != 2 {
+            let offset = Vec3::new(c.ecb.right.x, c.ecb.right.y, 0.0);
+            let normal = c.left_facing_wall.normal;
+            self.kirby_bump_effect(gobj, offset);
+            self.down_reflect(gobj, ms::DOWN_REFLECT, normal, offset);
+            self.game.fighter_mut(gobj).mv[DOWN_X4] = 2;
+            return true;
         }
         false
+    }
+
+    /// The bounce off the wall, `fn_800C7DC4`: off the ground, an effect and a small quake
+    /// where the ECB meets the wall, the ground knockback's speed along the wall's normal,
+    /// slowed by `ftCommonData` x1BC in x and y, facing along it, the state, the fighter set
+    /// by its TransN, the airborne pass, a rumble and intangibility. The fighter is set against
+    /// the wall (in x) only off a wall to its left (`RIGHT_WALL_HUG`); off one to its right the
+    /// original moves it up by its TransN's y instead.
+    #[doc(alias = "fn_800C7DC4")]
+    pub fn down_reflect(&mut self, gobj: GObjId, msid: i32, normal: Vec3, offset: Vec3) {
+        let f = self.game.fighter_id(gobj);
+        self.go_airborne(f);
+        let fp = &self.game.fighters[f.0];
+        let add = |a: f32, b: f32| mem(fp::fadds(reg(a), reg(b)));
+        let pos = Vec3::new(
+            add(fp.cur_pos.x, offset.x),
+            add(fp.cur_pos.y, offset.y),
+            add(fp.cur_pos.z, offset.z),
+        );
+        let angle = math::atan2(mem(fp::fneg(reg(normal.x))), normal.y);
+        self.fighter_effect(
+            gobj,
+            ef::SpawnKind::PosOffsetParam,
+            0x406,
+            None,
+            &[ef::Arg::Vec(pos), ef::Arg::Float(angle)],
+        );
+        camera::request_quake(self, QUAKE_SMALL, Some(pos));
+        let mul = reg(self.common().f32(0x1BC));
+        let fp = &mut self.game.fighters[f.0];
+        let mag = reg(fp.xF0_ground_kb_vel);
+        let mut v = Vec3::new(
+            mem(fp::fmuls(reg(normal.x), mag)),
+            mem(fp::fmuls(reg(normal.y), mag)),
+            mem(fp::fmuls(reg(normal.z), mag)),
+        );
+        v.x = mem(fp::fmuls(reg(v.x), mul));
+        v.y = mem(fp::fmuls(reg(v.y), mul));
+        fp.x8c_kb_vel = v;
+        fp.self_vel.z = 0.0;
+        fp.self_vel.y = 0.0;
+        fp.self_vel.x = 0.0;
+        fp.facing_dir = if reg(fp.x8c_kb_vel.x) < 0.0 {
+            -1.0
+        } else {
+            1.0
+        };
+        self.change_motion_state(gobj, msid, DOWN_REFLECT_FLAGS, 0.0, 1.0, 0.0, None);
+        let fp = &mut self.game.fighters[f.0];
+        if fp.coll_data.env_flags & RIGHT_WALL_HUG != 0 {
+            let x = fp::fadds(reg(fp.cur_pos.x), reg(offset.x));
+            fp.cur_pos.x = mem(fp::fnmsubs(
+                reg(fp.x68C_transNPos.z),
+                fp::fneg(reg(fp.facing_dir)),
+                x,
+            ));
+        } else {
+            let y = fp::fadds(reg(fp.cur_pos.y), reg(offset.y));
+            fp.cur_pos.y = mem(fp::fadds(reg(fp.x68C_transNPos.y), y));
+        }
+        // `ftCo_80090574`.
+        self.air_coll_ledges_snap(gobj);
+        self.game.fighters[f.0].dmg.x18A8 = mem(mag);
+        self.start_rumble(f, 7, 0);
+        let frames = self.common().i32(0x1B8);
+        self.set_intangible(gobj, frames);
+    }
+
+    /// `ftCo_DownReflect_Anim`: once it plays out, tumbling.
+    #[doc(alias = "ftCo_DownReflect_Anim")]
+    pub fn co_down_reflect_anim(&mut self, gobj: GObjId) {
+        if !self.anim_frames_remaining(gobj) {
+            self.enter_damage_fall(gobj);
+        }
+    }
+
+    /// `ftCo_DownReflect_Coll`: the airborne pass; landing bounces again, keeping which wall
+    /// it last bounced off.
+    #[doc(alias = "ftCo_DownReflect_Coll")]
+    pub fn co_down_reflect_coll(&mut self, gobj: GObjId) {
+        if self.air_coll_ledges_snap(gobj) {
+            self.enter_down_bound_keep(gobj);
+        }
     }
 
     /// Lying on the floor, `ftCo_80097E8C`, for `ftCommonData` x424 frames.
