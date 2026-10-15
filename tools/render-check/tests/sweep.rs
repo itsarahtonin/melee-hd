@@ -16,59 +16,23 @@ use common::{
     Game, Group, SHEIK_FOX_FOD, compare, compare_in, scaled, scaled_known, why,
 };
 
-/// A frame with a known difference, as recorded.
-fn known(game: &Game, frame: u32, images: [&'static str; 2], why: &'static str) {
-    compare(
-        game,
-        frame,
-        Group::Sweep,
-        Expect::Known {
-            images,
-            notes: &[],
-            why,
-        },
-    );
-}
-
-/// A Fountain of Dreams frame, whose reflection draws some particles elsewhere.
-fn fod(frame: u32, images: [&'static str; 2]) {
-    known(&SHEIK_FOX_FOD, frame, images, why::REFLECTION_PARTICLES);
-}
-
 #[test]
 #[ignore = "the sweep: needs ssbm-rs's references and the disc; run with --ignored"]
 fn sheik_fox_fod_2600() {
-    fod(
-        2600,
-        [
-            "image: PSNR 59.43 dB, 0.027% off by 8, 0.001% off by 32: within tolerance",
-            "image: PSNR 65.13 dB, 0.011% off by 8, 0.000% off by 32: within tolerance",
-        ],
-    );
+    compare(&SHEIK_FOX_FOD, 2600, Group::Sweep, Expect::Identical);
 }
 
+/// The reflection's particles with app-SRTs, drawn in the reflection camera's view.
 #[test]
 #[ignore = "the sweep: needs ssbm-rs's references and the disc; run with --ignored"]
 fn sheik_fox_fod_6000() {
-    fod(
-        6000,
-        [
-            "image: PSNR 40.63 dB, 1.603% off by 8, 0.248% off by 32: within tolerance",
-            "image: PSNR 55.10 dB, 0.033% off by 8, 0.009% off by 32: within tolerance",
-        ],
-    );
+    compare(&SHEIK_FOX_FOD, 6000, Group::Sweep, Expect::Identical);
 }
 
 #[test]
 #[ignore = "the sweep: needs ssbm-rs's references and the disc; run with --ignored"]
 fn sheik_fox_fod_9000() {
-    fod(
-        9000,
-        [
-            "image: PSNR 50.01 dB, 0.047% off by 8, 0.022% off by 32: within tolerance",
-            "image: PSNR 49.31 dB, 0.089% off by 8, 0.024% off by 32: within tolerance",
-        ],
-    );
+    compare(&SHEIK_FOX_FOD, 9000, Group::Sweep, Expect::Identical);
 }
 
 #[test]
@@ -86,15 +50,7 @@ fn fox_sheik_ys_6000() {
 #[test]
 #[ignore = "the sweep: needs ssbm-rs's references and the disc; run with --ignored"]
 fn fox_sheik_dl_6000() {
-    known(
-        &FOX_SHEIK_DL,
-        6000,
-        [
-            "image: PSNR 94.99 dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
-            "image: PSNR inf dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
-        ],
-        why::VERTEX_COLORS,
-    );
+    compare(&FOX_SHEIK_DL, 6000, Group::Sweep, Expect::Identical);
 }
 
 /// A magnifier bubble from the first logged frame, so the capture ran ssbm-rs's renderer.
@@ -117,7 +73,9 @@ fn fox_marth_ps_2600() {
 }
 
 /// Pokémon Stadium's screen shows a feed copied before the first logged frame, so the
-/// capture ran ssbm-rs's renderer.
+/// capture ran ssbm-rs's renderer; the feed shows the screen showing the feed, so the frames
+/// drawn before it matter (`native::WARM_UP`). The images are identical; the two draws of
+/// the screen's feed differ only in its texture's hash, a copy kept on the GPU.
 #[test]
 #[ignore = "the sweep: needs ssbm-rs's references and the disc; run with --ignored"]
 fn fox_marth_ps_9000() {
@@ -125,13 +83,9 @@ fn fox_marth_ps_9000() {
         &FOX_MARTH_PS,
         9000,
         Group::Sweep,
-        Expect::Known {
-            images: [
-                "image: PSNR 70.76 dB, 0.006% off by 8, 0.000% off by 32: within tolerance",
-                "image: PSNR 84.12 dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
-            ],
-            notes: &[],
-            why: why::SCREEN,
+        Expect::SameImages {
+            same: [2025, 2025],
+            why: why::SCREEN_COPY,
         },
         Capture::Rendered,
     );
@@ -196,9 +150,9 @@ fn scaled_sheik_fox_fod_6000() {
         Group::Sweep,
         [
             "scaled 1x GPU XFB: PSNR inf dB, 0.000% off by 8, 0.000% off by 32, worst block 0.00 levels at (0, 0): within tolerance",
-            "scaled 2x: PSNR 30.05 dB, 17.002% off by 8, 2.401% off by 32, worst block 49.23 levels at (48, 448): OUT OF TOLERANCE",
-            "scaled 3x: PSNR 30.69 dB, 17.230% off by 8, 2.062% off by 32, worst block 32.35 levels at (0, 448): OUT OF TOLERANCE",
-            "scaled 3x 16:9: PSNR 37.06 dB, 3.297% off by 8, 0.260% off by 32, worst block 13.93 levels at (288, 416): within tolerance",
+            "scaled 2x: PSNR 30.07 dB, 17.157% off by 8, 2.379% off by 32, worst block 49.23 levels at (48, 448): OUT OF TOLERANCE",
+            "scaled 3x: PSNR 30.71 dB, 17.356% off by 8, 2.038% off by 32, worst block 32.35 levels at (0, 448): OUT OF TOLERANCE",
+            "scaled 3x 16:9: PSNR 36.92 dB, 3.528% off by 8, 0.263% off by 32, worst block 13.93 levels at (288, 416): within tolerance",
         ],
         why::REFLECTION_SCALE,
     );

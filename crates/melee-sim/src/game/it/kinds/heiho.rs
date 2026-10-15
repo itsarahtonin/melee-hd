@@ -83,7 +83,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// `itHeiho_ItemVars` over `itZako_ItemVars`: the enemies' common words first, then the Shy
 /// Guy's own. Offsets are from `xDD4`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct HeihoVars {
     /// +0x0, `zako.jobj`: the joint the enemy spawned at; a Shy Guy's is none.
     pub jobj: Var<Option<JObjId>>,

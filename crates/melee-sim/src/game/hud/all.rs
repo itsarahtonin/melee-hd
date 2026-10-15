@@ -20,7 +20,7 @@ use crate::vec::Vec3;
 pub const CAMERA_PROC: u32 = 0x802F_36B8;
 
 /// The archives the HUD loads at a match's start, in the order it loads them.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct HudArchives {
     /// `IfAll.dat`.
     pub if_all: ArchiveId,

@@ -136,6 +136,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::clink::run(g, gobj, addr) => {}
         addr if super::ft::yoshi::run(g, gobj, addr) => {}
         addr if super::ft::mewtwo::run(g, gobj, addr) => {}
+        addr if super::ft::koopa::run(g, gobj, addr) => {}
         super::it::kinds::samusgrapple::FT_DEATH => {
             super::it::kinds::samusgrapple::ft_death(g, gobj)
         }
@@ -160,6 +161,9 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::mario::run(g, gobj, addr) => {}
         addr if super::ft::drmario::run(g, gobj, addr) => {}
         addr if super::ft::pikachu::run(g, gobj, addr) => {}
+        addr if super::ft::donkey::run(g, gobj, addr) => {}
+        addr if super::ft::co::cargo::run(g, gobj, addr) => {}
+        addr if super::ft::co::bury::run(g, gobj, addr) => {}
         addr if super::ft::pichu::run(g, gobj, addr) => {}
         addr if super::ft::emblem::run(g, gobj, addr) => {}
         addr if super::ft::popo::run(g, gobj, addr) => {}
@@ -167,6 +171,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::co::yoshi_egg::run(g, gobj, addr) => {}
         addr if super::ft::co::capture_mewtwo::run(g, gobj, addr) => {}
         addr if super::ft::co::damage_bind::run(g, gobj, addr) => {}
+        addr if super::ft::co::capture_koopa::run(g, gobj, addr) => {}
         addr if super::ft::co::item_get::run(g, gobj, addr) => {}
         // Animation.
         0x8008_A494 => g.co_wait_anim(gobj),
@@ -295,7 +300,7 @@ fn unported(what: &str, addr: u32) -> ! {
 /// What an original function takes or returns in its registers, for [`call`]: an integer, a
 /// float as a register holds it, a GObj, a fighter (a `Fighter*`), a joint, or a vector or
 /// float passed or returned by pointer.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub enum Val {
     None,
     Int(i32),
@@ -386,6 +391,9 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
     if let Some(v) = super::ft::mewtwo::call(r, f, args) {
         return v;
     }
+    if let Some(v) = super::ft::koopa::call(r, f, args) {
+        return v;
+    }
     if let Some(v) = super::ft::ness::call(r, f, args) {
         return v;
     }
@@ -405,6 +413,12 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::pikachu::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::donkey::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::co::bury::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::ft::pichu::call(r, f, args) {

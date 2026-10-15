@@ -50,7 +50,7 @@ pub const CAMERA_DESC: StaticDesc = StaticDesc {
 
 /// A grid cell (`DevTextGlyph`): a character and its colour index (the top two bits of the
 /// second byte; the other six are never set).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Glyph {
     pub chr: u8,
     pub attr: u8,
@@ -68,7 +68,7 @@ impl Glyph {
 
 /// A screen (`DevText`). `prev` and `next` are pool indices, and `buf` stands for the buffer
 /// its creator passes, which the screen alone writes.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct DevText {
     pub x: i16,
     pub y: i16,
@@ -94,11 +94,11 @@ pub struct DevText {
 
 /// A debug menu's state (`un_80304138_objalloc_t`): the debug menus aren't ported, only
 /// their pool, which every scene resets.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct DebugMenu;
 
 /// The system's globals (`textdraw.c`'s statics and `textlib_1.c`'s menu pool).
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct DevTexts {
     /// `devtext_pool`.
     pub pool: Vec<DevText>,
@@ -122,7 +122,7 @@ pub struct DevTexts {
 
 /// What drawing a screen asks of the presentation layer, its floats as the registers
 /// pass them.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub enum Draw {
     /// `HSD_FogSet(NULL)`.
     NoFog,
@@ -294,7 +294,7 @@ impl DevTexts {
 }
 
 /// Where a list link the original passes by pointer lives.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Link {
     DrawList,
     PoolHead,

@@ -33,6 +33,11 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      # No personal paths or names, build output or oversized files in the tracked files: the
+      # rules the git hooks apply too (.githooks/path-guard.conf). `cargo test` runs it as well.
+      - name: Path guard
+        run: cargo run --locked --release -p path-guard
+
       - name: Format
         run: cargo fmt --all --check
 

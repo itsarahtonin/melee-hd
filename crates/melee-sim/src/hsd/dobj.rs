@@ -13,7 +13,7 @@ use super::pobj::{self, PObjId};
 use super::pool::Pool;
 
 /// A DObj's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct DObjId(pub u32);
 
 /// The display-object animation flag of `HSD_*ByFlags` (`DOBJ_ANIM`).
@@ -22,7 +22,7 @@ pub const DOBJ_ANIM: u32 = 0x2;
 pub const ALL_ANIM: u32 = 0x7FF;
 
 /// `HSD_DObj`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct DObj {
     pub next: Option<DObjId>,
     pub mobj: Option<MObjId>,
@@ -33,7 +33,7 @@ pub struct DObj {
 }
 
 /// The DObj pool and `current_dobj`.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct DObjs {
     pub pool: Pool<DObj>,
     /// Set by `HSD_DObjSetCurrent`; nothing reads it.

@@ -88,7 +88,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The string's attributes (`itClimbersStringAttributes`).
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 pub struct Attrs(DataRef);
 
 impl Attrs {

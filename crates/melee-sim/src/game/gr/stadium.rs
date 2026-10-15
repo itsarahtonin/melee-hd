@@ -59,7 +59,7 @@ pub const SCREEN_FEED: u8 = 1;
 pub const SCREEN_ZOOM: u8 = 2;
 
 /// The stage's state besides its objects' variables.
-#[derive(melee_derive::CloneFrom, Debug, Default)]
+#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct Globals {
     /// `yakumono_param`, the archive's `grPStadium_YakumonoParam`.
     pub yakumono: Option<DataRef>,
@@ -78,7 +78,7 @@ pub struct Globals {
 /// A screen's user data: its image descriptor (`ImageDescWrapper` or `TextWrapper`), for the
 /// text camera its two texts, for the feeds whether the frame was copied since the display
 /// asked (`flag`) and where the zoomed view copies from.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Screen {
     pub desc: HSD_ImageDesc,
     /// `TextWrapper::win_static_p` and `win_dynamic_p`.
@@ -107,7 +107,7 @@ fn alloc_screen(r: &Running, size: u32, desc: &HSD_ImageDesc, entry: i32) -> u32
 }
 
 /// The fields of `grPStadium_YakumonoParam` the code reads, by offset.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 struct Param(DataRef);
 
 impl Param {

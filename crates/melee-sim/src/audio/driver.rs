@@ -34,7 +34,7 @@ pub const STATE_SLEEP: u32 = 0x8000_0000;
 const PAUSED: u32 = 0x2000_0000;
 
 /// `HSD_SM`, a virtual voice.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Voice {
     pub prev: Option<u8>,
     pub next: Option<u8>,
@@ -79,7 +79,7 @@ pub struct Voice {
 }
 
 /// The driver's state.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Driver {
     pub voices: [Voice; VOICES],
     /// `AXDriver_804C5920`: the voice each synth node plays for.

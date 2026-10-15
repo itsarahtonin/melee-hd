@@ -21,7 +21,7 @@ use crate::mtx::Mtx34;
 use crate::vec::Vec3;
 
 /// A generator's slot.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
 pub struct GeneratorId(pub u32);
 
 /// `type`'s low bits: the shape it emits in.
@@ -43,7 +43,7 @@ pub const JOINT_APP_SCALE: u16 = 1 << 12;
 /// a line's end (0 to 2), a tornado's speed (0), a box's size (0 to 2) and axes (3 to 11,
 /// by row), a sphere's speed and latitude and longitude ranges (0 to 4). `callback` is never
 /// read or set, so it isn't kept.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Generator {
     pub next: Option<GeneratorId>,
     pub kind: u32,
@@ -75,7 +75,7 @@ pub struct Generator {
 }
 
 /// The generator pool (`hsd_804D0F90`) and generator.c's globals.
-#[derive(melee_derive::CloneFrom, Debug)]
+#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct Generators {
     pub pool: Pool<Generator, { pool_kind(Kind::Generator) }>,
     /// The generator list (`hsd_804D78FC`).

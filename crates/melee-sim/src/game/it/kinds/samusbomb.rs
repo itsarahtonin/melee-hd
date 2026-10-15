@@ -69,8 +69,9 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
             roll(r, gobj);
             false
         }
+        // itSamusbomb_UnkMotion1_Coll: a landing keeps the fall's hitbox (`it_8026E248`).
         COLL_1 => {
-            ground::fall(r, gobj, to_rest);
+            ground::fall_keep_hits(r, gobj, to_rest);
             false
         }
         COLL_2 => {

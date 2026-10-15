@@ -20,7 +20,7 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 
 /// A handle one word of the variables holds.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Handle {
     GObj(GObjId),
     JObj(JObjId),
@@ -97,7 +97,7 @@ pub type FighterVars = Vars<0xF8>;
 pub type MotionVars = Vars<0xAC>;
 
 /// A union of `N` bytes whose words at some offsets may hold handles.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Vars<const N: usize> {
     bytes: [u8; N],
     /// The words that hold handles, by offset: their bytes aren't the state there.

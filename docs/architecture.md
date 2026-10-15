@@ -30,6 +30,25 @@ A tick's fighter animation loads out of ARAM take time on it too: an audio frame
 
 The original's display traversal (`HSD_GObjRender` over the GX links, down through joints, display objects and shapes) changes game state as it draws. A joint's particle list spawns its particles the first time it is displayed, the particle system draws from the game's RNG, and setup computes joint and envelope matrices. So the display pass is simulation. melee-sim runs it where the original does, after a frame's engine ticks, and where the original issues GX commands it appends draw commands to the frame's output. The presentation layer turns those commands into GPU work, at any resolution or aspect ratio, but never decides what the pass runs. [The player](player.md) describes that layer.
 
+## Frame pacing and high refresh rates
+
+**Decision (2026-10-15): three modes for drawing faster than the game's 60 ticks a second, Off, Interpolate and Extrapolate; Off stays the default until Sarah decides at the player milestone.** The renderer draws a frame from two states and a fraction, (A, B, t): t is how far the frame's display time (when it reaches the screen, as the latency loop estimates it, not when drawing starts) lies between ticks, so any refresh rate works the same way, 240 Hz's four frames a tick, 144 Hz's uneven ones and variable refresh alike.
+
+- **Off** draws tick N as it is, one frame per tick, as the player does today. At a rate that isn't a multiple of 60 its ticks show for uneven numbers of frames.
+- **Interpolate** draws between tick N-1 and tick N, joint matrices and cameras blended: every frame lies between two states the game reached, at the cost of up to a tick of added latency.
+- **Extrapolate** draws between tick N and a predicted tick N+1: the next tick run ahead of time on a copy of the state with the current inputs held, as rollback predicts, its sounds and other events thrown away. It adds no latency, and because the prediction is the simulation itself, what the game decides on its own (landing, ledges, walls, hitlag, knockback, stage objects) comes out right; it shows the old motion for one frame too many only when an input changes in that tick, and the real frame still arrives on time. Its cost is one more simulation tick and a state clone per tick, whatever the refresh rate; t is clamped to 1, so it never predicts past one tick.
+
+Both blending modes skip true discontinuities (respawns, teleports, ledge snaps, camera cuts) rather than drawing an in-between. Per-frame work (the blend, building the GX stream, drawing) scales with the refresh rate; the simulation's doesn't.
+
+So the base keeps what these modes, and any later temporal technique, need, which is easy to break by accident:
+
+- **Stable draw identities.** The display pass's draws name the objects they draw by handle (`hsd::display::Draw`), so two frames can be matched object for object.
+- **Previous transforms.** The presentation can keep the previous frame's joint matrices and cameras, which interpolation, extrapolation and per-pixel motion vectors all need; today melee-render reads them live as the pass left them and bakes them into the GX stream, so the blend goes before that stream is built.
+- **A projection-jitter hook** in the renderer, for temporal anti-aliasing.
+- **The 3D scene separable from the HUD**, so a temporal or upscaling pass leaves the HUD alone.
+
+DLSS upscaling and frame generation belong to the follow-on repository if anyone wants them: Melee's scenes render natively at high resolutions in about a millisecond, so upscalers save little; frame generation adds latency and invents frames that Extrapolate computes exactly; and NVIDIA's SDK is a proprietary binary, awkward beside GPL-3.0, that wgpu doesn't integrate. An MIT temporal anti-aliaser (FSR's, say) could come to the base later.
+
 ## Exactness
 
 The original's float behavior matters only where it differs from IEEE single and double precision: fused multiply-adds, `frsqrte` and `fres` estimates, and paired singles. Those go through `gekko-fp` (melee-hd builds a faster copy of ssbm-rs's, checked against the unchanged one; see [performance](performance.md)); plain arithmetic is native. The game's own `sqrtf`, sin, cos and atan replace platform math, which also makes the simulation agree across platforms. ssbm-rs's two float modes, Hardware (the console) and Slippi (Ishiiruka's x86-64 JIT, which recorded Slippi's replays), both remain available.
@@ -44,6 +63,6 @@ A Slippi replay records the codes it ran, and its rules are the ones those codes
 
 **Decision (2026-10-14): netplay belongs to a follow-on repository.** Sarah's call: melee-hd is the base, exact, fast and complete, and features built on the game (netplay, training tools, mods) belong in a planned follow-on repository that depends on `melee-sim`. A real consumer decides the library's extension points; hooks designed here for imagined users would mostly go unused. Depending on the library rather than forking it keeps a project's accuracy fixes free.
 
-melee-hd stays rollback-ready all the same, because a base can't be made so from outside: a snapshot is a `clone`, a restore and the ticks replayed after it reproduce the straight run bit for bit and allocate nothing, inputs come from outside the simulation, and state only the display pass sets is recomputed when ticks are replayed ([the engine notes](engine.md)). A sync test, on the roadmap, will check this every tick: restore an earlier state, replay the ticks since, and fail on any difference.
+melee-hd stays rollback-ready all the same, because a base can't be made so from outside: a snapshot is a `clone`, a restore and the ticks replayed after it reproduce the straight run bit for bit and allocate nothing, inputs come from outside the simulation, and state only the display pass sets is recomputed when ticks are replayed ([the engine notes](engine.md)). A sync test checks this every tick ([the oracle](oracle.md#sync-test), `melee-oracle sync-test`): it restores the state from up to 8 ticks before, replays the ticks since and fails on any difference from the straight run, every field of the state compared bit for bit.
 
 The follow-on's netplay is planned as rollback over these snapshots behind two traits, a `Matchmaker` (own server, direct IP, LAN, and Slippi's if the Slippi team agrees) and a wire protocol, with the Slippi ruleset as the online default. Neither repository connects to Slippi's matchmaking servers until the Slippi team is asked.

@@ -30,7 +30,7 @@ pub const EVT_UNK: u32 = 0x802F_3374;
 /// What the egg lay hands the egg (`itYoshiEggLay_DatAttrs`): where it's laid and how fast,
 /// its facing, its lifetime, its damage behavior (`x24`, the item's `xC98`) and how much each
 /// point of damage shortens its life (`float3`).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct Laid {
     pub kind: i32,
     pub pos: Vec3,

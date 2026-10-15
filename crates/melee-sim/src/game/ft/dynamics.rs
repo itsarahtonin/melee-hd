@@ -31,7 +31,7 @@ const KIND_EMBLEM: i32 = 26;
 
 /// What a dynamic bone chain's bone id slot holds (`BoneDynamicsDesc::bone_id`): a bone id,
 /// 0x100 while its physics is off, or the figatree an animation's blend slot gives it.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub enum BoneSlot {
     Id(i32),
     Tree(DataRef),

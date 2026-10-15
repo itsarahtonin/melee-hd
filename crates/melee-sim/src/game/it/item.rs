@@ -553,6 +553,10 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     let id = ItemId(r.game.items.alloc_stale(Item::default()));
     // The variables the block's last item left are stale until the new kind writes them.
     r.game.items[id.0].xDD4_itemVar.mark_stale();
+    // So are its hitboxes' joints, until the script makes each box (`HitJObj`).
+    for h in &mut r.game.items[id.0].x5D4_hitboxes {
+        h.hit.jobj.mark_unknown();
+    }
     r.game
         .world
         .init_user_data(gobj, USER_DATA_ITEM, UserData::Item(id));

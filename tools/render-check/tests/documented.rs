@@ -16,7 +16,7 @@ mod common;
 
 use common::{
     Capture, Expect, FOUR_FD, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL,
-    FOX_SHEIK_FD, FOX_SHEIK_YS, Game, Group, SHEIK_FOX_FOD, compare, compare_in, scaled, why,
+    FOX_SHEIK_FD, FOX_SHEIK_YS, Game, Group, SHEIK_FOX_FOD, compare, compare_in, scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -126,37 +126,15 @@ fn fox_sheik_ys_600() {
 #[test]
 #[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
 fn fox_sheik_dl_600() {
-    compare(
-        &FOX_SHEIK_DL,
-        600,
-        Group::Standard,
-        Expect::Known {
-            images: [
-                "image: PSNR 90.53 dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
-                "image: PSNR 64.60 dB, 0.005% off by 8, 0.002% off by 32: within tolerance",
-            ],
-            notes: &[],
-            why: why::VERTEX_COLORS,
-        },
-    );
+    compare(&FOX_SHEIK_DL, 600, Group::Standard, Expect::Identical);
 }
 
+/// Four players: the stock icons' palettes (indexed entries only), Sheik's needle's
+/// highlight, and the background's state cache reset pinned.
 #[test]
 #[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
 fn four_fd_600() {
-    compare(
-        &FOUR_FD,
-        600,
-        Group::Standard,
-        Expect::Known {
-            images: [
-                "image: PSNR inf dB, 0.000% off by 8, 0.000% off by 32: within tolerance",
-                "image: PSNR 59.49 dB, 0.001% off by 8, 0.001% off by 32: within tolerance",
-            ],
-            notes: &[],
-            why: why::PALETTE,
-        },
-    );
+    compare(&FOUR_FD, 600, Group::Standard, Expect::Identical);
 }
 
 #[test]

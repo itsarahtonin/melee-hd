@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Refuses a push carrying personal paths, build output or oversized files in any commit, a
+# backstop for commits made with --no-verify (path-guard.sh).
+. "$(dirname "$0")/path-guard.sh" push "$1"

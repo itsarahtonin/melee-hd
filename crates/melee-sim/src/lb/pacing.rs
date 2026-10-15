@@ -13,7 +13,7 @@ use gekko_fp as fp;
 const TIMER_CLOCK: u32 = 162_000_000 / 4;
 
 /// One clock (`UnkArrElem`).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Clock {
     /// Its period in timer ticks (`x0`).
     pub period: i64,
@@ -24,7 +24,7 @@ pub struct Clock {
 }
 
 /// `lb_804329F0`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Pacing {
     pub clocks: [Clock; 2],
     /// The pads' sampling rate in milliseconds (`x4`).

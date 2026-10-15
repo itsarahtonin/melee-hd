@@ -44,7 +44,7 @@ const PROCS: [(u32, u8); 15] = [
 
 /// What `Fighter_Create` is asked to make (`plAllocInfo`): the fighter kind, its player slot,
 /// `x5`, and whether it is the slot's second fighter and a transformation.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct AllocInfo {
     pub kind: i32,
     pub slot: u8,

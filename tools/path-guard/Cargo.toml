@@ -1,0 +1,9 @@
+[package]
+name = "path-guard"
+description = "Fails on personal paths and names, build output and oversized files in the tracked files, by the rules the git hooks share (.githooks/path-guard.conf)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish.workspace = true

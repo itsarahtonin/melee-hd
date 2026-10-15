@@ -112,7 +112,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The chain's attributes (`itSeakChain_Attrs`).
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 struct Attrs(DataRef);
 
 impl Attrs {

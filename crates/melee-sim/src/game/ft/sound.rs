@@ -18,7 +18,7 @@ const GAME_WATCH: i32 = 0x18;
 /// `ft_800881D8`'s (`x2144`), `ft_80088328`'s (`x2148`), `ft_80088478`'s (`x214C`),
 /// `ft_80088510`'s (`x2150`), `ft_800885A8`'s (`x2154`), `ft_80088640`'s (`x2158`) and
 /// `ftCo_800886D8`'s (`x215C`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Track {
     Voice,
     Voice2,

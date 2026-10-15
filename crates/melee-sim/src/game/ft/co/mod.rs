@@ -10,7 +10,10 @@
 pub mod air;
 pub mod anim;
 pub mod attack;
+pub mod bury;
+pub mod capture_koopa;
 pub mod capture_mewtwo;
+pub mod cargo;
 pub mod catch;
 pub mod checks;
 pub mod cliff;
@@ -42,6 +45,7 @@ pub mod passive_wall;
 pub mod phys;
 pub mod rebirth;
 pub mod shield_break;
+pub mod song;
 pub mod squat;
 pub mod swing;
 pub mod throw;
@@ -96,6 +100,16 @@ impl Fighter {
 
     pub fn set_u_i32(&mut self, off: usize, v: i32) {
         self.u[off..off + 4].copy_from_slice(&(v as u32).to_be_bytes());
+    }
+
+    /// A float of the character's own variables.
+    pub fn u_f32(&self, off: usize) -> f32 {
+        f32::from_bits(self.u_word(off))
+    }
+
+    /// Stores a float into the character's own variables (`stfs` of a value already single).
+    pub fn set_u_f32(&mut self, off: usize, v: f32) {
+        self.u[off..off + 4].copy_from_slice(&v.to_bits().to_be_bytes());
     }
 
     /// `x2210.throw_flags_b(bit)`.

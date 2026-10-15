@@ -14,7 +14,7 @@
 //! their data, these fail without it: they are a check to run on purpose.
 //!
 //! Each check writes what it measured to `RENDER_CHECK_RESULTS` (by default
-//! `target/tmp/render-check-results`), which `melee-render-check dashboard DIR OUT.html`
+//! `target/tmp/render-check-results`), which `melee-render-check dashboard DIR OUT_DIR`
 //! makes a page of.
 
 #![allow(dead_code)]
@@ -80,8 +80,13 @@ impl Group {
 
 /// What a frame's two images against ssbm-rs's must be.
 pub enum Expect {
-    /// Identical to ssbm-rs's: PSNR infinite, nothing noted as not drawn exactly.
+    /// Identical to ssbm-rs's: every draw and copy the same, PSNR infinite, nothing noted as
+    /// not drawn exactly.
     Identical,
+    /// Identical images and nothing noted as not drawn exactly, but `same` events of each
+    /// frame comparing the same, as recorded: a difference only the comparison sees (docs/
+    /// player.md's open issues).
+    SameImages { same: [usize; 2], why: &'static str },
     /// A known difference, docs/player.md's open issues: the images' lines exactly as
     /// recorded, and what melee-render notes it didn't draw exactly.
     Known {
@@ -217,6 +222,25 @@ pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture
         .filter(|l| l.starts_with("  image:") || l.starts_with("  no "))
         .map(|l| l.trim())
         .collect();
+    // Each frame's events against the log's, and how many compared the same: identical
+    // draws pair every event and find no difference in any.
+    let counts: Vec<(usize, usize)> = lines
+        .iter()
+        .filter_map(|l| {
+            let (ours, rest) = l.trim().split_once(" events, the log's ")?;
+            Some((ours.parse().ok()?, rest.parse().ok()?))
+        })
+        .collect();
+    let same: Vec<usize> = lines
+        .iter()
+        .filter_map(|l| l.trim().strip_suffix(" events the same")?.parse().ok())
+        .collect();
+    let draws_identical = counts.len() == 2
+        && same.len() == 2
+        && counts
+            .iter()
+            .zip(&same)
+            .all(|(&(ours, theirs), &same)| ours == theirs && same == ours);
     let name = format!("{} f{frame}", game.name);
     let failure = if !lines.iter().any(|l| l.starts_with(&aligned)) {
         Some(format!(
@@ -228,6 +252,10 @@ pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture
             Expect::Identical if !notes.is_empty() => Some(format!(
                 "{name}: melee-render left things undrawn: {notes:#?}\n{text}"
             )),
+            Expect::Identical if !draws_identical => Some(format!(
+                "{name}: draws differ from the log's (events {counts:?}, the same {same:?})
+{text}"
+            )),
             Expect::Identical
                 if !(found.len() == 2
                     && found.iter().all(|l| {
@@ -236,6 +264,19 @@ pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture
                     && out.status.success()) =>
             {
                 Some(format!("{name}: not identical: {found:#?}\n{text}"))
+            }
+            Expect::SameImages { same: want, .. }
+                if !(notes.is_empty()
+                    && found.len() == 2
+                    && found.iter().all(|l| {
+                        l.starts_with("image: PSNR inf dB,") && l.ends_with("within tolerance")
+                    })
+                    && same == want) =>
+            {
+                Some(format!(
+                    "{name}: not as recorded: images {found:#?}, notes {notes:#?}, events the same {same:?} (recorded {want:?})
+{text}"
+                ))
             }
             Expect::Known {
                 images,
@@ -249,6 +290,7 @@ pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture
     };
     let (expect_text, why) = match &expect {
         Expect::Identical => ("identical to ssbm-rs's frames", ""),
+        Expect::SameImages { why, .. } => ("identical images, known draw difference", *why),
         Expect::Known { why, .. } => ("known difference, as recorded", *why),
     };
     status(
@@ -416,17 +458,11 @@ pub const FOUR_FD: Game = Game {
 
 /// The known differences docs/player.md's open issues list, as the dashboard names them.
 pub mod why {
-    /// A fighter's second lit vertex color, a few levels off on some draws.
-    pub const VERTEX_COLORS: &str =
-        "a fighter's second lit vertex color a few levels off; a few pixels";
-    /// A fighter texture's palette, different past the entries the frame's draws show.
-    pub const PALETTE: &str = "a fighter texture's palette contents; a few pixels";
-    /// Particles Fountain of Dreams' reflection camera draws, placed elsewhere than ssbm-rs's.
-    pub const REFLECTION_PARTICLES: &str =
-        "Fountain of Dreams' reflection: some particles it draws placed elsewhere";
-    /// A few pixels of Pokémon Stadium's screen's feed.
-    pub const SCREEN: &str = "a few pixels of Pokémon Stadium's screen's feed";
     /// Fountain of Dreams' reflection, an 80 by 60 copy drawn at the scale and averaged back,
     /// magnified over the water: its blocks legitimately differ between scales.
+    /// Pokémon Stadium's screen samples an RGB565 copy melee-gpu keeps on the GPU, which the
+    /// comparison hashes from memory the copy never writes.
+    pub const SCREEN_COPY: &str =
+        "Pokémon Stadium's screen: a copy kept on the GPU, compared by memory it never writes";
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
 }

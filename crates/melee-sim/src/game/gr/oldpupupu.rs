@@ -33,7 +33,7 @@ const WIND_DEVICE: u32 = 10;
 pub const WIND_PUSH: u32 = 0x8021_12F4;
 
 /// The fields of `grOldpupupu_YakumonoParam` the code reads, by offset.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 struct Param(DataRef);
 
 impl Param {

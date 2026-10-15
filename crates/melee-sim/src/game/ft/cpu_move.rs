@@ -882,6 +882,172 @@ impl Running<'_> {
         self.cpu_cmd(f, cmd::DONE);
     }
 
+    /// Tumbling, `ftCo_800ABBA8` (behavior 15): below level 5 or out of the tumble, back to
+    /// the usual behavior with the stick centered and R let go. Else it heads for the island
+    /// end farthest from its target ([`Running::cpu_far_island_end`]); above level 7 it techs
+    /// when the floor below is under 10 frames away; with its target below and close in its
+    /// up tilt or up smash, it shields, waits 50 frames and presses down; else it drifts
+    /// toward its destination unless its fall lands it above it.
+    #[doc(alias = "ftCo_800ABBA8")]
+    pub(super) fn cpu_tumble(&mut self, f: FighterId) {
+        let fpp = &self.game.fighters[f.0];
+        let target = fpp.cpu.x44;
+        // `ftCo_MS_DamageFall`.
+        if !(fpp.cpu.level >= 5 && fpp.motion_id == 38) {
+            let c = &mut self.game.fighters[f.0].cpu;
+            c.x18 = c.x1C;
+            self.cpu_cmd1(f, cmd::SET_LSTICK_X, 0);
+            self.cpu_cmd(f, cmd::RELEASE_R);
+            self.cpu_cmd(f, cmd::DONE);
+            return;
+        }
+        if let Some(t) = target {
+            let from = self.game.fighters[t.0].cur_pos;
+            if let Some((x, y)) = self.cpu_far_island_end(f, from.x, from.y) {
+                self.cpu_set_destination(f, x, y, 5.0);
+            }
+        }
+        if self.game.fighters[f.0].cpu.level > 7 {
+            let pos = self.game.fighters[f.0].cur_pos;
+            let to = mem(fp::frsp(fp::fsub(reg(pos.y), 1000.0)));
+            if let Some(floor) = self.cpu_floor(pos.x, pos.y, pos.x, to) {
+                let fpp = &self.game.fighters[f.0];
+                let g = fp::fneg(reg(fpp.co_attrs.gravity));
+                let v = reg(fpp.pos_delta.y);
+                let coll = &fpp.coll_data;
+                let feet = fp::fadds(reg(coll.cur_pos.y), reg(coll.ecb.bottom.y));
+                let h = fp::fsubs(reg(floor.y), feet);
+                // Frames until it lands.
+                let t = if !nearly_zero(g) {
+                    let d = fp::fmadds(fp::fmuls(2.0, g), h, fp::fmuls(v, v));
+                    let root = math::sqrt_reg(abs(d));
+                    fp::fctiwz(fp::fdivs(fp::fsubs(fp::fneg(root), v), g))
+                } else if !nearly_zero(v) {
+                    fp::fctiwz(fp::fdivs(h, v))
+                } else {
+                    100
+                };
+                if t < 10 {
+                    self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
+                    self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 0x7F);
+                    self.cpu_cmd(f, cmd::PRESS_R);
+                    self.cpu_cmd(f, cmd::DONE);
+                    return;
+                }
+            }
+        }
+        let Some(t) = self.cpu_find_target(f) else {
+            self.cpu_back_to_usual(f);
+            return;
+        };
+        let (me, tg) = (&self.game.fighters[f.0], &self.game.fighters[t.0]);
+        // The original's compares, NaN included.
+        #[allow(clippy::neg_cmp_op_on_partial_ord)]
+        let shield_drop = !(tg.cur_pos.y >= me.cur_pos.y)
+            && !(abs(fp::fsubs(reg(tg.cur_pos.y), reg(me.cur_pos.y)))
+                >= fp::fadds(reg(tg.cpu.x568), reg(me.cpu.x568)))
+            && !(abs(fp::fsubs(reg(tg.cur_pos.x), reg(me.cur_pos.x)))
+                >= fp::fadd(5.0, fp::fadds(reg(tg.cpu.x564), reg(me.cpu.x564))))
+            // `ftCo_MS_AttackHi3`, `ftCo_MS_AttackHi4`.
+            && matches!(tg.motion_id, 56 | 63);
+        if shield_drop {
+            self.cpu_cmd(f, cmd::RELEASE_R);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_cmd(f, cmd::PRESS_R);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_neutral_stick(f);
+            self.cpu_cmd(f, cmd::RELEASE_R);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 0x32);
+            self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0x81);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_finish_neutral_y(f);
+            return;
+        }
+        // Where its fall puts it once it has drifted to its destination's x.
+        let fpp = &self.game.fighters[f.0];
+        let vx = reg(fpp.pos_delta.x);
+        let dx = fp::fsubs(reg(fpp.cpu.x54.x), reg(fpp.cur_pos.x));
+        let to_dest = if nearly_zero(vx) {
+            reg(1000.0)
+        } else {
+            fp::fdivs(dx, vx)
+        };
+        let g = reg(fpp.co_attrs.gravity);
+        let term = reg(fpp.co_attrs.terminal_velocity);
+        let (y, vy) = (reg(fpp.cur_pos.y), reg(fpp.pos_delta.y));
+        let to_term = if nearly_zero(g) {
+            reg(1000.0)
+        } else {
+            fp::fdivs(fp::fneg(fp::fsubs(fp::fneg(term), vy)), g)
+        };
+        // The original takes the square root of the frames where the square belongs.
+        #[allow(clippy::neg_cmp_op_on_partial_ord)]
+        let land_y = if to_term <= 0.0 {
+            fp::fmadds(vy, to_dest, y)
+        } else if !(to_dest >= to_term) {
+            let s = math::sqrt_reg(to_dest);
+            fp::frsp(fp::fadd(
+                y,
+                fp::fnmsub(0.5, fp::fmuls(g, s), fp::fmuls(vy, to_dest)),
+            ))
+        } else {
+            let s = math::sqrt_reg(to_term);
+            let fall = fp::fnmsub(0.5, fp::fmuls(g, s), fp::fmuls(vy, to_term));
+            let rest = fp::fmuls(fp::fsubs(to_dest, to_term), term);
+            fp::frsp(fp::fadd(y, fp::fsub(fall, rest)))
+        };
+        #[allow(clippy::neg_cmp_op_on_partial_ord)]
+        if to_dest < 0.0 || !(land_y >= reg(fpp.cpu.x54.y)) {
+            self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 0x7F);
+        } else {
+            self.cpu_cmd1(f, cmd::SET_LSTICK_X, 0);
+        }
+        self.cpu_finish_neutral_y(f);
+    }
+
+    /// The island end farthest from `(x, y)` that computer players can stand at,
+    /// `ftCo_800A6700`: 5 inside either end of every live floor island that isn't unsafe
+    /// ([`Running::cpu_island_unsafe`]), where a floor they count is within 5 and inside the
+    /// blast zones.
+    #[doc(alias = "ftCo_800A6700")]
+    fn cpu_far_island_end(&mut self, f: FighterId, x: f32, y: f32) -> Option<(f32, f32)> {
+        let mut best = reg(-1.0);
+        let mut found = None;
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        let mut island = geo.islands.floors;
+        while let Some(id) = island {
+            let geo = self.game.geometry.as_ref().expect("no collision geometry");
+            let isl = *geo.islands.get(id);
+            island = isl.next;
+            if self.cpu_island_unsafe(Some(id)) {
+                continue;
+            }
+            for (end, left) in [(isl.left, true), (isl.right, false)] {
+                let ex = mem(fp::frsp(if left {
+                    fp::fadd(5.0, reg(end.x))
+                } else {
+                    fp::fsub(reg(end.x), 5.0)
+                }));
+                let above = mem(fp::frsp(fp::fadd(5.0, reg(end.y))));
+                let below = mem(fp::frsp(fp::fsub(reg(end.y), 5.0)));
+                if self.cpu_floor(ex, above, ex, below).is_none()
+                    || self.cpu_out_of_bounds(f, ex, end.y)
+                {
+                    continue;
+                }
+                let dy = fp::fsubs(reg(end.y), reg(y));
+                let dx = fp::fsubs(reg(ex), reg(x));
+                let d = fp::fmadds(dx, dx, fp::fmuls(dy, dy));
+                #[allow(clippy::neg_cmp_op_on_partial_ord)]
+                if !(d <= best) {
+                    best = d;
+                    found = Some((ex, end.y));
+                }
+            }
+        }
+        if best >= 0.0 { found } else { None }
+    }
+
     /// Back to the fighter's usual behavior (`ftCo_CpuReturnToPreviousBehavior`).
     pub(super) fn cpu_back_to_usual(&mut self, f: FighterId) {
         let c = &mut self.game.fighters[f.0].cpu;

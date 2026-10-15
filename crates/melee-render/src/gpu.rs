@@ -49,6 +49,8 @@ struct Host<'a> {
 pub trait Observer {
     fn draw(&self, state: &State, draw: &Draw<'_>, mem: &dyn Memory);
     fn copy(&self, state: &State, value: u32);
+    /// Each command of the stream itself (not those of the display lists it calls).
+    fn command(&self, _bytes: &[u8]) {}
 }
 
 impl Memory for Host<'_> {
@@ -62,6 +64,12 @@ impl Memory for Host<'_> {
 
     fn draws(&self) -> bool {
         true
+    }
+
+    fn command(&self, bytes: &[u8]) {
+        if let Some(o) = self.observer {
+            o.command(bytes);
+        }
     }
 
     fn draw(&self, state: &State, draw: &Draw<'_>) {

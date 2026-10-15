@@ -23,7 +23,7 @@ use crate::fpu::reg;
 use crate::hsd::gobj::GObjId;
 
 /// Which version of UCF a match runs.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Ucf {
     #[default]
     Off,
@@ -34,7 +34,7 @@ pub enum Ucf {
 }
 
 /// One port's raw stick history (12 bytes of the pad buffer's data).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Pad {
     /// The control stick's raw x and y, one entry per frame, written round `index`.
     pub history: [[i8; 2]; 4],
@@ -48,7 +48,7 @@ pub struct Pad {
 }
 
 /// The pad buffer's data: the four ports' histories, in the code's words after its first.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Pads(pub [Pad; 4]);
 
 impl Pads {

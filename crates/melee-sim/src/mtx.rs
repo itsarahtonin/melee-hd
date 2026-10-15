@@ -12,7 +12,7 @@ use crate::vec::Vec3;
 /// A coordinate axis: `'x'`, `'y'` and `'z'` to `MTXRotRad`, 1, 2 and 4 to `lbVector_Rotate`.
 /// Every caller passes one of those, so the original's do-nothing path for other values
 /// never runs.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Axis {
     X,
     Y,
@@ -20,7 +20,7 @@ pub enum Axis {
 }
 
 /// `Mtx` in the original: three rows of four floats, the fourth column a translation.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Mtx34 {
     pub m: [[f32; 4]; 3],
 }
@@ -479,7 +479,7 @@ fn cotangent_of_half(fov_y: f32) -> f64 {
 const DEG_TO_RAD: f32 = 0.017_453_292;
 
 /// `Mtx44` in the original: a projection matrix, four rows of four floats.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Mtx44 {
     pub m: [[f32; 4]; 4],
 }

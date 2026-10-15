@@ -36,7 +36,7 @@ pub const CAMERA_RENDER: u32 = 0x8039_10D8;
 pub const LIGHT_RENDER: u32 = 0x8039_1044;
 
 /// What a HUD render callback asks the display pass to do.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Draw {
     /// `HSD_GObj_JObjCallback`: draw the GObj's joints in this pass.
     JObjs(GObjId, i32),
@@ -46,7 +46,7 @@ pub enum Draw {
 }
 
 /// A `DynamicModelDesc` copied into a static (`ifTime_match_timer_models`).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct ModelDesc {
     pub joint: Option<DataRef>,
     pub anims: Option<DataRef>,
@@ -55,7 +55,7 @@ pub struct ModelDesc {
 }
 
 /// The HUD's globals, one field per unit's statics.
-#[derive(melee_derive::CloneFrom, Debug)]
+#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct Hud {
     /// The debug text screens (`textdraw.c`, `textlib.c`).
     pub devtext: devtext::DevTexts,
@@ -159,6 +159,7 @@ pub fn run_proc(r: &mut super::state::Running, gobj: GObjId, proc: u32) -> bool 
         stock::PROC_ICONS => r.stock_proc(gobj),
         stock::PROC_TALLY => r.stock_tally_proc(gobj),
         stock::PROC_TALLY_2 => r.stock_tally_proc_2(gobj),
+        stock::PROC_TARGETS => r.target_icons_proc(gobj),
         nametag::PROC => r.nametag_proc(gobj),
         small::HAZARD_PROC => r.hazard_proc(gobj),
         small::COIN_PROC => r.coin_proc(gobj),

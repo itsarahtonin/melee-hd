@@ -96,7 +96,7 @@ fn param(offset: u32) -> f64 {
 
 /// The camera boxes: the array `Camera_Init` allocates, the framed list (oldest first, walked
 /// newest first through `prev`) and the free list (through `prev`).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct CameraBoxes {
     pub boxes: Vec<CmSubject>,
     /// The next box handed out (`cm_804D6458`).
@@ -120,7 +120,7 @@ impl IndexMut<CameraBoxId> for CameraBoxes {
 }
 
 /// The camera's state.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct CameraState {
     /// `game_camera`.
     pub cam: Camera,
@@ -135,7 +135,7 @@ pub struct CameraState {
 
 /// The camera's frame for one update (`CameraBounds`, a stack local in the original): the
 /// box around what it frames, how many boxes that is, and how far back it sits.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Bounds {
     pub x_min: f32,
     pub y_min: f32,
@@ -147,7 +147,7 @@ pub struct Bounds {
 
 /// Which of the two transforms an update drives: the camera's, or `transform_copy`, which
 /// runs the same easing for the second CObj.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Which {
     Main,
     Copy,
@@ -1855,7 +1855,7 @@ pub fn debug_followed(game: &Game) -> CameraBoxId {
 // 10) that a controller turns, moves and zooms.
 
 /// A controller as the pause and free cameras read it (`CameraInputs`).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Inputs {
     pub stick_x: f32,
     pub stick_y: f32,

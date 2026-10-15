@@ -18,7 +18,7 @@ const WALL_MASK: i32 = 0xFFF;
 const KIND_LUIGI: i32 = 17;
 
 /// Which end of an island a ledge target sits at.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, melee_derive::StateEq)]
 enum Edge {
     /// The left end (`x8`), approached from the left: `ftCo_800A4038`.
     Left,
@@ -57,7 +57,7 @@ impl Running<'_> {
     /// Picks the ledge to recover to once per recovery (`xFA_b2`), `ftCo_800A8DE4`: the one
     /// ahead within reach of its fall, else the one behind, else the nearest one ahead.
     #[doc(alias = "ftCo_800A8DE4")]
-    fn cpu_pick_ledge(&mut self, f: FighterId) {
+    pub(super) fn cpu_pick_ledge(&mut self, f: FighterId) {
         let c = &mut self.game.fighters[f.0].cpu;
         if c.xFA_b2 {
             return;

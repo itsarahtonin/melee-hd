@@ -22,7 +22,7 @@ pub fn pick(game: &mut Game) -> i32 {
 
 /// What [`drop_contents`] dropped (`it_8026F3D4_arg1_t`): whether it stopped at a kind that
 /// can't drop, the last kind drawn, and the last item made.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Dropped {
     pub stopped: bool,
     pub kind: i32,

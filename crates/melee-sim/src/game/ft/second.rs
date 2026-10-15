@@ -23,7 +23,7 @@ const ANIM_MASK: u32 = 0xFB7F;
 /// archive from Popo's buffer, which `ftData_80085E50` copies into her main buffer. There the
 /// next main animation overwrites it, and the pointer, unchanged, then points into that
 /// animation's archive at the same offset (docs/engine.md).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct SecondTree {
     pub tree: Option<DataRef>,
     /// Whether the figatree is in the main buffer.

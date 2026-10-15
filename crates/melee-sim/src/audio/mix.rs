@@ -18,7 +18,7 @@ pub struct MixLog {
 }
 
 /// What `__AXNextFrame` put in a command list: the mode's main-bus setup and the aux mixes.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct List {
     /// `__AXClMode`.
     pub mode: u32,
@@ -39,7 +39,7 @@ impl List {
 }
 
 /// One audio frame as the DSP mixes it.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct MixFrame {
     /// The DSP's parameter blocks after `__AXSyncPBs`, as the command list's DSP reads them.
     /// The words that depend on the samples' values (the decoder's predictor and history, the
@@ -59,7 +59,7 @@ pub struct MixFrame {
 }
 
 /// One transfer into ARAM, which completes at once.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct AramWrite {
     /// How many of the log's frames came before it.
     pub frame: u32,
@@ -69,7 +69,7 @@ pub struct AramWrite {
 }
 
 /// Where an ARAM write's bytes come from.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum AramSource {
     /// A disc file, by entry number (`Audio::devcom`'s files), from this offset.
     Disc { entrynum: i32, offset: u32 },
@@ -82,7 +82,7 @@ pub enum AramSource {
 }
 
 /// What `__AXSyncPBs` resets that the log needs, read before it runs.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, melee_derive::StateEq)]
 pub struct PreSync {
     sync: [u32; VOICES],
     depop: u64,

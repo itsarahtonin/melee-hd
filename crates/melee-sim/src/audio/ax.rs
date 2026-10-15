@@ -54,7 +54,7 @@ const MIX_CYCLES: [u32; 32] = [
 ];
 
 /// `AXPBMIX`: a voice's volumes into each bus, with their ramps.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Mix {
     pub l: u16,
     pub delta_l: u16,
@@ -77,7 +77,7 @@ pub struct Mix {
 }
 
 /// `AXPBITD`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Itd {
     pub flag: u16,
     pub buffer: u32,
@@ -88,28 +88,28 @@ pub struct Itd {
 }
 
 /// `AXPBUPDATE`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Update {
     pub num: [u16; 5],
     pub data: u32,
 }
 
 /// `AXPBVE`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Ve {
     pub current_volume: u16,
     pub current_delta: i16,
 }
 
 /// `AXPBFIR`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Fir {
     pub num_coefs: u16,
     pub coefs: u32,
 }
 
 /// `AXPBADDR`: a sample's format and ARAM addresses (in samples).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Addr {
     pub loop_flag: u16,
     pub format: u16,
@@ -119,7 +119,7 @@ pub struct Addr {
 }
 
 /// `AXPBADPCM`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Adpcm {
     pub a: [u16; 16],
     pub gain: u16,
@@ -129,7 +129,7 @@ pub struct Adpcm {
 }
 
 /// `AXPBSRC`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Src {
     pub ratio: u32,
     pub current_address_frac: u16,
@@ -144,7 +144,7 @@ impl Src {
 }
 
 /// `AXPBADPCMLOOP`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct AdpcmLoop {
     pub pred_scale: u16,
     pub yn1: u16,
@@ -153,7 +153,7 @@ pub struct AdpcmLoop {
 
 /// `AXPB`, a voice's parameter block. The addresses in it (the next and current blocks, the
 /// ITD and update buffers) are the DSP's view of fixed buffers, carried as numbers.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Pb {
     pub next: u32,
     pub curr: u32,
@@ -334,7 +334,7 @@ impl Pb {
 
 /// `AXVPB`: a voice. Its links are voice indices. The update buffer the original keeps per
 /// voice is never written: Melee queues no parameter updates.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Voice {
     /// The next voice in its priority stack (or the free stack).
     pub next: Option<u8>,
@@ -353,7 +353,7 @@ pub struct Voice {
 }
 
 /// The AX library's state.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Ax {
     pub voices: [Voice; VOICES],
     /// The DSP's parameter blocks (`__AXPB`).

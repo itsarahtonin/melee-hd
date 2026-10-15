@@ -19,7 +19,7 @@ use crate::mtx::Mtx34;
 use crate::vec::Vec3;
 
 /// `lbl_804336D0` and `refract_data`.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Refract {
     /// `refractionUserCount`: how many things use refraction; the screen is copied while any
     /// do.

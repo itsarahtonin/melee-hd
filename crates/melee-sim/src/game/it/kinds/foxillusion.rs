@@ -88,11 +88,7 @@ pub fn spawn(
     let gobj = spawn_air(r, &mut spawn)?;
     setup(r, gobj);
     super::super::item::debug_owner_bubbles(r.game, gobj, Some(parent));
-    // `it_802750F8`.
-    item_mut(r.game, gobj).xDCC_flag.b3 = false;
-    super::super::item::proc_phys(r, gobj);
-    super::super::item::proc_coll(r, gobj);
-    item_mut(r.game, gobj).xDCC_flag.b3 = true;
+    super::super::lib2725::first_frame(r, gobj);
     Some(gobj)
 }
 

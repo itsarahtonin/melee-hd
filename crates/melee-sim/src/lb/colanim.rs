@@ -185,7 +185,7 @@ fn color_command(data: &Archives, co: &mut ColorOverlay, opcode: u32) -> bool {
 }
 
 /// Where a tick's commands stopped short of the script waiting.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Stop {
     /// A command ended the overlay.
     Ended,

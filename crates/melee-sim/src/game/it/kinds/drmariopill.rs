@@ -146,14 +146,6 @@ fn spawn_fields(r: &Running, parent: GObjId, pos: Vec3, kind: i32, facing_dir: f
     spawn
 }
 
-/// `it_802750F8`: the new item's physics and collision run once, as if a frame passed.
-fn first_frame(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xDCC_flag.b3 = false;
-    super::super::item::proc_phys(r, gobj);
-    super::super::item::proc_coll(r, gobj);
-    item_mut(r.game, gobj).xDCC_flag.b3 = true;
-}
-
 /// Throws a pill of color combination `color` for `parent` from `pos`,
 /// `itDrMarioPill_Spawn`.
 #[doc(alias = "itDrMarioPill_Spawn")]
@@ -165,7 +157,7 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, color: i32, kind: i32, 
     setup(r, gobj);
     set_pose(r, gobj, 0, mem(fp::frsp(f64::from(color))));
     super::super::item::debug_owner_bubbles(r.game, gobj, Some(parent));
-    first_frame(r, gobj);
+    super::super::lib2725::first_frame(r, gobj);
     lib26b1::disable_pickup(r.game, gobj);
 }
 
@@ -241,7 +233,7 @@ pub fn appeal_spawn(
     super::super::hitbox::start_blink(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
     super::super::item::debug_owner_bubbles(r.game, gobj, Some(parent));
-    first_frame(r, gobj);
+    super::super::lib2725::first_frame(r, gobj);
     lib26b1::disable_pickup(r.game, gobj);
     Some(gobj)
 }

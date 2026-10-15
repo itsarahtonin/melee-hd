@@ -251,7 +251,7 @@ impl Running<'_> {
             bone
         };
         let j = self.bone_joint(gobj, bone);
-        self.game.fighters[f.0].x914[id].jobj = j;
+        self.game.fighters[f.0].x914[id].jobj.set(j);
         self.hitbox_damage(f, id, false, bits(w[0], 22, 10));
         let fixed = |v: f64| mem(fp::fmuls(reg(FIXED), v));
         let h = &mut self.game.fighters[f.0].x914[id];
@@ -1150,7 +1150,7 @@ impl Running<'_> {
     }
 
     /// Sets the state of the hurtbox on bone `bone`, `ftColl_8007B128`.
-    fn set_bone_hurtbox_state(&mut self, f: FighterId, bone: i32, state: i32) {
+    pub(crate) fn set_bone_hurtbox_state(&mut self, f: FighterId, bone: i32, state: i32) {
         let fp = &mut self.game.fighters[f.0];
         for i in 0..fp.hurt_capsules_len as usize {
             if fp.hurt_capsules[i].capsule.bone_idx == bone {

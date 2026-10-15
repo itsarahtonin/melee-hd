@@ -14,7 +14,7 @@ use super::ax::{Ax, Pb};
 
 /// Which of ssbm-rs's DSP models the simulation follows; a recording carries it, as ssbm-rs's
 /// recordings carry their sound flag.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum DspModel {
     /// Voices end only when keyed off, stolen or dropped (ssbm-rs's `AX=0`).
     #[default]
