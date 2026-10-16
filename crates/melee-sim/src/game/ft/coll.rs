@@ -38,6 +38,10 @@ const ITEM_P_LINK: u8 = 9;
 /// `ftCo_80096CC8`: the floor filter that lets a fighter holding down drop through platforms.
 pub const PLATFORM_FILTER: CodeRef = CodeRef(0x8009_6CC8);
 
+/// `fn_800DD6E4`: the floor filter of a throw in the air, which lands on any floor but a
+/// platform.
+pub const THROW_FILTER: CodeRef = CodeRef(0x800D_D6E4);
+
 /// A callback the original passes a collision function: what happens on landing.
 pub type Cb = fn(&mut Running<'_>, GObjId);
 
@@ -81,8 +85,10 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
     }
 
     /// A fighter's floor filter. `ftCo_80096CC8`: any floor but a platform, and a platform too
-    /// unless the stick is held down past `ftCommonData` x25C.
+    /// unless the stick is held down past `ftCommonData` x25C. `fn_800DD6E4`: any floor but a
+    /// platform.
     #[doc(alias = "ftCo_80096CC8")]
+    #[doc(alias = "fn_800DD6E4")]
     fn floor_filter(&mut self, callback: CodeRef, _gobj: Option<GObjId>, line_id: i32) -> bool {
         match callback {
             PLATFORM_FILTER => {
@@ -91,6 +97,13 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     .as_ref()
                     .expect("a floor filter without its inputs");
                 line_id != -1 && (!f.platforms[line_id as usize] || f.stick_y > f.threshold)
+            }
+            THROW_FILTER => {
+                let f = self
+                    .filter
+                    .as_ref()
+                    .expect("a floor filter without its inputs");
+                line_id != -1 && !f.platforms[line_id as usize]
             }
             _ => unported_call(&format!("floor filter {:#010x}", callback.0)),
         }
@@ -614,6 +627,23 @@ impl Running<'_> {
                 c.air_frame_filtered(cd, ecb, flags, Some(filter), Some(gobj))
             },
         )
+    }
+
+    /// A throw's airborne pass with its floor filter (`ft_80083CE4`, `mpColl_800476B4` with ECB
+    /// flags 6 and pass flags 3): whether the fighter touched a floor, unless an item took it.
+    #[doc(alias = "ft_80083CE4")]
+    pub fn air_coll_throw(&mut self, gobj: GObjId) -> bool {
+        let f = self.game.fighter_id(gobj);
+        self.fighter_coll_filtered(
+            f,
+            true,
+            |_| {},
+            |c, cd| c.air_frame_filtered(cd, Some(6), 3, Some(THROW_FILTER), Some(gobj)),
+        );
+        if self.stepped_on_item(gobj) {
+            return false;
+        }
+        self.game.fighters[f.0].coll_data.env_flags & FLOOR_MASK != 0
     }
 
     /// The filtered airborne pass, `cb` on landing, else a ledge, `ft_80083090`.

@@ -127,6 +127,17 @@ impl Running<'_> {
         self.game.camera.boxes[b].bone_pos = bone_pos;
     }
 
+    /// Only the camera box's bone point follows the fighter, `ftCamera_800762F4`.
+    #[doc(alias = "ftCamera_800762F4")]
+    pub fn update_camera_bone(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let b = self.game.fighters[f.0]
+            .x890_cameraBox
+            .expect("a fighter without a camera box");
+        let bone_pos = self.camera_bone_pos(f);
+        self.game.camera.boxes[b].bone_pos = bone_pos;
+    }
+
     /// Where the character's camera bone puts the camera's target, `ftLib_GetCameraBonePos`:
     /// the attributes' offset (`x170`) in the joint the data names.
     #[doc(alias = "ftLib_GetCameraBonePos")]

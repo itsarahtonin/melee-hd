@@ -9128,6 +9128,120 @@ impl itKoopaFlame_ItemVars {
     }
 }
 
+/// `itKirbyCutterBeam_ItemVars`, 0x20 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itKirbyCutterBeam_ItemVars {
+    /// +0x0
+    pub angle: Var<f32>,
+    /// +0x4
+    pub speed: Var<f32>,
+    /// +0x8
+    pub dir: Var<Vec3>,
+    /// +0x14
+    pub init_pos: Var<Vec3>,
+}
+
+impl Default for itKirbyCutterBeam_ItemVars {
+    fn default() -> Self {
+        itKirbyCutterBeam_ItemVars {
+            angle: Var::new(Default::default()),
+            speed: Var::new(Default::default()),
+            dir: Var::new(Default::default()),
+            init_pos: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itKirbyCutterBeam_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.angle.mark_stale();
+        self.speed.mark_stale();
+        self.dir.mark_stale();
+        self.init_pos.mark_stale();
+    }
+}
+
+/// `itKirbyHammer_ItemVars`, 0x4 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itKirbyHammer_ItemVars {
+    /// +0x0
+    pub x0: Var<u32>,
+}
+
+impl Default for itKirbyHammer_ItemVars {
+    fn default() -> Self {
+        itKirbyHammer_ItemVars {
+            x0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itKirbyHammer_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+    }
+}
+
+/// `itKirby2F23_ItemVars`, 0x1f8 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itKirby2F23_ItemVars {
+    /// +0x0
+    pub _pad: [Var<u8>; 456],
+    /// +0x1c8
+    pub x1C8: Var<f32>,
+    /// +0x1cc
+    pub x1CC: Var<f32>,
+    /// +0x1d0
+    pub x1D0: Var<f32>,
+    /// +0x1d4
+    pub x1D4: Var<f32>,
+    /// +0x1d8
+    pub x1D8: Var<f32>,
+    /// +0x1dc
+    pub x1DC: Var<f32>,
+    /// +0x1e0
+    pub _pad2: [Var<u8>; 8],
+    /// +0x1e8
+    pub x1E8: Var<Vec3>,
+    /// +0x1f4
+    pub x1F4: Var<f32>,
+}
+
+impl Default for itKirby2F23_ItemVars {
+    fn default() -> Self {
+        itKirby2F23_ItemVars {
+            _pad: core::array::from_fn(|_| Var::new(Default::default())),
+            x1C8: Var::new(Default::default()),
+            x1CC: Var::new(Default::default()),
+            x1D0: Var::new(Default::default()),
+            x1D4: Var::new(Default::default()),
+            x1D8: Var::new(Default::default()),
+            x1DC: Var::new(Default::default()),
+            _pad2: core::array::from_fn(|_| Var::new(Default::default())),
+            x1E8: Var::new(Default::default()),
+            x1F4: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itKirby2F23_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self._pad.iter_mut().for_each(|v| v.mark_stale());
+        self.x1C8.mark_stale();
+        self.x1CC.mark_stale();
+        self.x1D0.mark_stale();
+        self.x1D4.mark_stale();
+        self.x1D8.mark_stale();
+        self.x1DC.mark_stale();
+        self._pad2.iter_mut().for_each(|v| v.mark_stale());
+        self.x1E8.mark_stale();
+        self.x1F4.mark_stale();
+    }
+}
+
 /// `IfDamageFlags`, 0x1 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct IfDamageFlags {

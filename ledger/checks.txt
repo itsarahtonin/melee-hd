@@ -1903,7 +1903,7 @@ ftCo_SquatWait_Anim	leaf-check ftcommon: run as the fighter's held callback from
 ftCo_SquatWait_IASA	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
 ftCo_SquatWait_Phys	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
 ftCo_SquatWait_Coll	leaf-check ftcommon: run as the fighter's held callback from saved fighter processes of Final Destination and Battlefield replays, compared clean
-ftCo_SquatRv_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
+ftCo_SquatRv_CheckInput	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons; and leaf-check kirby: kirby_functions runs it from Sheik's crouch in hf-kirby-sheik-bf-e928c79a (UCF 0.84's crouch fix, 800D65EC, the stick pushed far at once), its own saved calls, and compares the whole state; melee-oracle diff of that replay passes Sheik's dash out of the crouch in tick 10294
 ftCo_SquatRv_Enter	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
 ftCo_SquatRv_Anim	leaf-check ftcommon: reached from the held callbacks it serves in clean comparisons
 ftCo_SquatRv_IASA	leaf-check ftcommon_entries: run directly from saved fighter states, half with changed input, compared clean
@@ -2927,24 +2927,24 @@ ftCo_CaptureWaitLw_Coll	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd
 fn_800DC014	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): a held victim's mash and escape (15 calls)
 ftCo_800DD168	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): letting go (no one held) (7 calls); melee-oracle diff, the Ice Climbers' ditto on Pokemon Stadium hf-ics-ics-ps-f3d90438-rf, all 11,637 ticks in Slippi float mode with no stand-ins: an Ice Climber grabbed while holding someone lets go in tick 8981
 ftCo_800DD1E4	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): a throw by the stick or the C-stick (18 calls)
-ftCo_800DD398	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): a throw entered (7 calls)
+ftCo_800DD398	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): a throw entered (7 calls); and melee-oracle diff, Kirby's ranked replays (hf-kirby-marth-bf-cdeac923 and the others): his up throw sets his and his victim's flag
 ftCo_800DD4B0	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): a throw entered (7 calls)
-ftCo_800DD724	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the throw's progress (263 calls)
+ftCo_800DD724	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the throw's progress (263 calls); and leaf-check kirby: kirby_functions runs it from Kirby's up throws' saved states (his and his victim's flag cleared)
 ftCo_ThrowF_Anim	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the forward throw's animation (33 calls)
 ftCo_ThrowF_IASA	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the forward throw's interrupts (32 calls)
 ftCo_ThrowF_Phys	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the forward throw's movement (33 calls)
 ftCo_ThrowF_Coll	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the forward throw's collision (36 calls)
 ftCo_ThrowB_Anim	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the back throw's animation (58 calls)
 ftCo_ThrowB_IASA	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the back throw's interrupts (56 calls)
-ftCo_ThrowB_Coll	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the back throw's collision (58 calls)
+ftCo_ThrowB_Coll	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the back throw's collision (58 calls); and leaf-check kirby: kirby_functions runs Kirby's throws in the air (the landing frozen and after the release) from his replays' saved states
 ftCo_ThrowLw_Anim	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the down throw's animation (172 calls)
 ftCo_ThrowLw_IASA	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the down throw's interrupts (168 calls)
-ftCo_ThrowLw_Coll	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the down throw's collision (172 calls)
+ftCo_ThrowLw_Coll	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the down throw's collision (172 calls); and leaf-check kirby: kirby_functions runs Kirby's throws in the air from his replays' saved states
 ftCo_800DDDE4	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the throw's hit (7 calls)
 ftCo_800DE2A8	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the throw's hit placing its victim (7 calls)
 ftCo_800DE3FC	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): being thrown entered (7 calls)
 ftCo_800DE508	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the thrown fighter at its throw point (150 calls)
-ftCo_800DE5A4	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the thrown states' animation (147 calls)
+ftCo_800DE5A4	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): the thrown states' animation (147 calls); and leaf-check kirby: kirby_functions runs it from Kirby's replays' saved states, the mash out of his throw among them (hf-kirby-yoshi-fod-27074109, tick 827)
 ftCo_ThrownF_Anim	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): thrown forward, the animation (9 calls)
 ftCo_ThrownF_IASA	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): thrown forward, the interrupts (10 calls)
 ftCo_ThrownF_Phys	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) ticks 1-4695 in hardware float mode with no stand-ins (docs/oracle.md): thrown forward, the movement (10 calls)
@@ -6909,3 +6909,406 @@ ftLib_GetGroundAir	leaf-check game_and_watch: game_and_watch_functions runs it f
 ftLib_GetFacingDir	leaf-check game_and_watch: game_and_watch_functions runs it from real states of Mr. Game & Watch's six replays, its own saved calls and its group's, and compares the whole state
 it_8026EC54	melee-oracle diff, Mr. Game & Watch's six replays (docs/oracle.md): his items' outline passes hide their bones through it each frame, the joints' flags compared every tick
 it_8026EBC8	melee-oracle diff, Mr. Game & Watch's six replays (docs/oracle.md): his items' outline passes show their bones through it each frame, the joints' flags compared every tick
+# Kirby: leaf-check kirby runs his code, his items', his victims' states and the common code his moves reach anew from ssbm-rs's saved calls of six ranked replays (local/calls/kirby), as saved and from their units' neighbours with the controls, script and some state variables changed; the helpers that take what the check can't give run inside their callers; his creation and his copies' loading are the oracle's.
+fn_800DD568	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800DD6E4	leaf-check kirby: kirby_functions reaches it from the callers it serves (ft_80083CE4's floor filter) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+fn_800F1CA0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F1FDC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F20C4	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F21E8	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F53AC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6210	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6318	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6450	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F64C8	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftKb_EatWalk_IASA) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+fn_800F6528	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6588	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6638	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F66E8	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6798	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6848	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F68A8	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6908	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F697C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F69E8	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6A5C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6AC8	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6B3C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6C24	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6C98	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6D0C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6D80	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6DF4	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6E68	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6EDC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6F50	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F6FC4	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+fn_800F702C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCamera_800762F4	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_ThrowHi_Cam, ftCo_ThrownHi_Cam) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftCo_800BD19C	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftKb_SpecialN_800F5EA8, the swallow's reach) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftCo_800BD1DC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_800BD39C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_800BD620	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_800BD6EC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_800BD9E0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_800BDA74	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_ThrownKirbyStar_Coll, ftCo_ThrownCopyStar_Coll) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftCo_800BDB58	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_800BE000	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_800BE494	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_800BE6AC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_800BE7C0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_800DE974	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureKirby_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureKirby_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureKirby_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureKirby_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureWaitKirby_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureWaitKirby_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureWaitKirby_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_CaptureWaitKirby_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrowHi_Cam	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownCopyStar_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownCopyStar_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownCopyStar_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownCopyStar_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownHi_Cam	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownKirbyStar_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownKirbyStar_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownKirbyStar_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownKirbyStar_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownKirby_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownKirby_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownKirby_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftCo_ThrownKirby_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_AttackDashAir_800F21C0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_AttackDashAir_800F22D4	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_AttackDashAir_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_AttackDashAir_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_AttackDashAir_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_AttackDashAir_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_AttackDash_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_AttackDash_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_AttackDash_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_AttackDash_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatJump1_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatJump1_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatJump1_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatJump1_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatJump2_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatJump2_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatJump2_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatLanding_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatLanding_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatLanding_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatTurn_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatTurn_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatTurn_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatWait_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatWait_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatWait_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatWait_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatWalk_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatWalk_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_EatWalk_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_Eat_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_Eat_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_Eat_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialAirNEnd_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialAirNEnd_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialAirNEnd_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialAirNEnd_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialAirNLoop_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialAirNLoop_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialAirNLoop_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialAirNLoop_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialAirNStart_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialAirNStart_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialAirNStart_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialAirNStart_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialNEnd_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialNEnd_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialNEnd_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialNEnd_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialNLoop_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialNLoop_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialNLoop_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialNLoop_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialNStart_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialNStart_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialNStart_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_FxSpecialNStart_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_Init_800EE74C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_Init_800EE7B8	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_Init_LoadSpecialAttrs	melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Kirby's creation runs it
+ftKb_Init_OnDeath	melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Kirby's creation and spawns run it
+ftKb_Init_OnKnockbackEnter	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_Init_OnKnockbackExit	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_Init_OnLoad	melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Kirby's creation runs it
+ftKb_Init_UnkCallbackPairs0_0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_Init_UnkCallbackPairs0_1	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_Init_UnkMotionStates3	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_Init_UnkMotionStates4	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi1_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi1_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi1_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi1_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi2_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi2_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi2_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi2_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi3_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi3_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi3_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi3_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHiEnd_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHiEnd_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHiEnd_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHiEnd_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirHi_Enter	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLwEnd_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLwEnd_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLwEnd_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLwEnd_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLwStart_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLwStart_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLwStart_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLwStart_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLw_800F5318	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLw_800F539C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLw_800F5524	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLw_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLw_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLw_Enter	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLw_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirLw_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCaptureTurn_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCaptureTurn_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCaptureTurn_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCaptureWait_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCaptureWait_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCaptureWait_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCaptureWait_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCapture_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCapture_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCapture_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCaptured_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCaptured_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNCaptured_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNDrink_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNDrink_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNDrink_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNEnd_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNEnd_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNEnd_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNLoop_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNLoop_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNLoop_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNLoop_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNSpit_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNSpit_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirNSpit_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirN_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirN_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirN_Enter	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirN_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirS_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirS_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirS_Enter	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialAirS_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi1_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi1_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi1_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi1_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi2_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi2_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi2_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi2_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi3_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi3_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi3_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi3_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi4_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi4_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi4_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi4_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi_800F331C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi_800F346C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi_800F3570	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi_800F36DC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi_800F37EC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi_800F3B28	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialHi_Enter	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLw1_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLw1_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLw1_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLw1_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLwEnd_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLwEnd_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLwEnd_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLwEnd_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLw_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLw_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLw_Enter	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLw_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialLw_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNCapture0_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNCapture0_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNCapture1_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNCapture1_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNCapture_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNCapture_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNCapture_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNDrink0_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNDrink0_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNDrink0_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNDrink1_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNDrink1_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNDrink1_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNDrink_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNDrink_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNDrink_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNEnd_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNEnd_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNEnd_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNFx_800FDC00	melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Kirby's blaster item places its flash through it (hf-kirby-falco-bf-49b22a11)
+ftKb_SpecialNFx_800FDC70	melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Kirby's blaster item angles its flash through it (hf-kirby-falco-bf-49b22a11)
+ftKb_SpecialNFx_800FDD14	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNFx_800FDD4C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNFx_800FDDF4	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNFx_800FDEB4	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNFx_800FDEE0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNFx_800FDF30	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNFx_800FE100	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNFx_800FE240	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNFx_CreateBlasterShot	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNFx_OnChangeAction	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNLoop_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNLoop_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNLoop_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNLoop_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSpit0_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSpit0_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSpit0_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSpit1_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSpit1_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSpit1_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSpit_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSpit_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSpit_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSs_800FCC14	melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: Kirby's Charge Shot item reads his charge through it every frame he holds it (hf-kirby-samus-fod-674aca44)
+ftKb_SpecialNSs_800FCC6C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSs_800FCCBC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSs_800FCD04	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSs_800FCD60	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSs_800FCDE0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSs_800FCF74	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialNSs_800FD020	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800EED50	melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: the match's loading of the copies of the characters present runs it (Samus's and Falco's files, models and effects among them)
+ftKb_SpecialN_800EEEC4	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800EF040	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftKb_SpecialN_800F130C, Falco's costume put on) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800EF0E4	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftKb_SpecialN_800F130C) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800EF35C	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftKb_SpecialN_800F130C) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800EF438	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftKb_SpecialN_800F130C) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800EF69C	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftKb_SpecialN_800F13F0, Falco's costume taken off) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F04F8	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F05A8	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F130C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F13F0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F16D0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F190C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F19AC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F1A8C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F1BAC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F1CD8	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F1D24	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F1DAC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F1F68	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5820	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_800BDB58, ftCo_800BE000, the stars) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F5874	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_800BE494) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F5898	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_800BDB58, ftCo_800BE000) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F58AC	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_800BDB58) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F58D8	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_800BE000) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F5954	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F597C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F598C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5A04	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5A38	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_CaptureWaitKirby_IASA) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F5A60	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5A70	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_800BE494) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F5A88	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5A98	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_ThrownKirby_Phys, ftCo_800BE494) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F5AB0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5AC0	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_ThrownKirbyStar_Phys, ftCo_ThrownKirby_Phys) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F5AD8	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_ThrownKirbyStar_Phys) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F5AF0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5B00	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5B10	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5B20	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_800BD1DC) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F5B3C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5B4C	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5B5C	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_800BD1DC, ftCo_800BD39C) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftKb_SpecialN_800F5BA4	melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: every hit with knockback on Kirby with a copy rolls it (the random seed compared every tick)
+ftKb_SpecialN_800F5C34	melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins: every hit without knockback on Kirby with a copy rolls it
+ftKb_SpecialN_800F5D04	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5EA8	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F5F68	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F6070	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F6388	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F63EC	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F9070	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_800F9090	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_Enter	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialN_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialS_800F6BB0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialS_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialS_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialS_Enter	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SpecialS_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialAirNStart_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialAirNStart_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialAirNStart_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialAirNStart_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialAirN_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialAirN_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialAirN_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialAirN_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialNCancel_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialNCancel_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialNCancel_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialNCancel_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialNHold_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialNHold_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialNHold_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialNHold_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialNStart_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialNStart_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialNStart_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialNStart_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialN_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialN_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialN_IASA	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_SsSpecialN_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_UnkIntBoolFunc0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftKb_UnkMtxFunc0	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+ftParts_800755E8	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftKb_SpecialN_800F13F0) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ft_80083CE4	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftCo_ThrowB_Coll, ftCo_ThrowHi_Coll, ftCo_ThrowLw_Coll in the air) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+itKirbyCutterBeam_Logic7_Absorbed	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+itKirbyCutterBeam_Logic7_Clanked	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+itKirbyCutterBeam_Logic7_DmgDealt	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+itKirbyCutterBeam_Logic7_HitShield	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+itKirbyHammer_Logic8_Destroyed	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+itKirbyHammer_Logic8_PickedUp	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+itKirbycutterbeam_UnkMotion0_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+itKirbycutterbeam_UnkMotion0_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+itKirbycutterbeam_UnkMotion0_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+it_2725_Logic7_Reflected	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+it_2725_Logic7_ShieldBounced	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+it_80272C90	leaf-check kirby: kirby_functions reaches it from the callers it serves (itKirbyHammer_Logic8_PickedUp) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+it_8029BAB8	leaf-check kirby: kirby_functions reaches it from the callers it serves (fn_800F21E8, Final Cutter's wave sent) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+it_8029BB90	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+it_802ADC34	leaf-check kirby: kirby_functions runs it from real states of Kirby's six replays, its own saved calls and its unit's, and compares the whole state
+it_802ADC54	leaf-check kirby: kirby_functions reaches it from the callers it serves (ftKb_SpecialS_Enter, ftKb_SpecialAirS_Enter) in clean comparisons; and melee-oracle diff, Kirby's ranked replays hf-kirby-marth-ps-84dcdb02, hf-kirby-marth-bf-cdeac923, hf-kirby-sheik-bf-e928c79a, hf-kirby-falco-bf-49b22a11, hf-kirby-samus-fod-674aca44 and hf-kirby-yoshi-fod-27074109 (docs/oracle.md), every traced tick in Slippi float mode with no stand-ins
+ftCo_ThrowHi_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's up throws in the air (hf-kirby-marth-bf-cdeac923), its own saved calls, and compares the whole state
+ftCo_ThrownHi_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's up throws (hf-kirby-marth-bf-cdeac923), its own saved calls, and compares the whole state

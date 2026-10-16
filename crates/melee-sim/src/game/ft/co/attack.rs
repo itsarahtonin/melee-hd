@@ -868,7 +868,8 @@ impl Running<'_> {
             }
         }
         if self.game.fighter(gobj).kind == KIND_KIRBY {
-            unported_call("ftKb_SpecialN_800F1F68");
+            self.kb_attack_dash_enter(gobj);
+            return true;
         }
         self.game.fighter_mut(gobj).allow_interrupt = false;
         self.change_motion_state(gobj, ms::ATTACK_DASH, 0, 0.0, 1.0, 0.0, None);

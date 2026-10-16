@@ -534,11 +534,10 @@ impl<'a> Comparer<'a> {
                 ft.data.ref_counts[k],
                 self.u32(REF_COUNTS + 4 * kind) as i32,
             );
-            self.check(
-                "ft",
-                &format!("kirby count {kind}"),
-                ft.kirby.counts[k],
-                self.u32(KIRBY_COUNTS + 4 * kind) as i32,
+            self.compare_data(
+                &format!("ft kirby copy {kind}"),
+                ft.kirby.copies[k],
+                self.u32(KIRBY_COPIES + 4 * kind),
             );
         }
         for s in 0..6u32 {

@@ -940,8 +940,15 @@ impl Comparer<'_> {
                 if let Some(k) = self.data.get(key) {
                     theirs += 1;
                     let ours = self.game.objs.ids.get(k);
-                    // A freed joint the table still names dangles, compared by address.
-                    let dangling = ours.and_then(|o| self.maps.dangling_jobjs.get(&o.0).copied());
+                    // A freed joint the table still names dangles, compared by address: one
+                    // the capture held freed, or one freed since (Kirby's copy costume's
+                    // parts, which the table names after they're taken down).
+                    let pool = &self.game.objs.jobjs.pool;
+                    let dangling = ours.and_then(|o| {
+                        self.maps.dangling_jobjs.get(&o.0).copied().or_else(|| {
+                            (pool.is_free(o.0) && pool.addr(o.0) != 0).then(|| pool.addr(o.0))
+                        })
+                    });
                     if let Some(addr) = dangling {
                         if addr != value {
                             self.diff(&format!("ID table {k:?}"), "dangling joint", addr, value);

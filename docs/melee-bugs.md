@@ -1,0 +1,693 @@
+# Melee's own bugs
+
+melee-hd reproduces the original game's bugs exactly: the simulation must stay bit-exact with ssbm-rs and with Slippi replays, so a defect in Melee's code is ported as the original runs it, never fixed in passing. This catalog records those defects as porting finds them, so each one is written down once with what it does and what fixing it would take.
+
+It lists only defects in Melee's own code (NTSC 1.02): reads of registers, stack slots or memory the code never set, wrong operands or fields, copy-paste slips, loops that can't end, reads and writes out of bounds or into freed objects, values computed and dropped. Intended mechanics, however surprising, are not here, nor are bugs in ssbm-rs or in melee-hd's own ports, Dolphin's behavior, or what Slippi's and Gecko codes do (except where a Slippi code exists to patch one of these bugs, which the entry notes).
+
+## How to read an entry
+
+Each entry gives:
+
+- **Where:** the original function (the decompilation's names) and the melee-hd port that reproduces it.
+- **Defect:** what the code does wrong.
+- **Effect:** what it changes in play, or "none observable" when nothing the game reads depends on it.
+- **melee-hd:** how the port reproduces it. "Modeled" means the port computes what the original does; "stale" and "unknown until written" are the rules in [the engine notes](engine.md#uninitialized-values), under which a value the game provably never reads is left out of the comparison and a read of it is reported ([the oracle](oracle.md)); "stops" means the port panics or reports an unported case rather than guess.
+- **Fix:** what a corrected version would do.
+- **Fix impact:** whether a fix changes gameplay, breaks replay and Slippi compatibility (any change to a value the game reads makes old replays and Slippi peers desync), or changes something players rely on.
+- **Source:** where the defect is written down, so it can be traced.
+
+A field no source covers says "not recorded". Line numbers are those at the time of writing.
+
+## Adding an entry
+
+When porting shows that the original game does something wrong, keep the behavior, then add an entry here under its area, with every field above and its source (the doc section, or the port's file and line where a comment explains it). A defect no data or code can reach goes in [Latent defects](#latent-defects) instead; one that may be intended, or may be the decompilation's naming rather than the game's code, goes under [Unsure](#unsure) with the reason. Don't fill a field the sources don't support: write "not recorded".
+
+## Fighters
+
+### The invisible ceiling glitch
+
+- **Where:** `Fighter_procUpdate`, `crates/melee-sim/src/game/ft/fighter.rs` (`proc_update`).
+- **Defect:** when an airborne fighter's attack and shield pushback (`x98_atk_shield_kb`) decays below the decay step, the code clears the knockback's y (`x8c_kb_vel.y`) instead of the pushback's.
+- **Effect:** the fighter's vertical knockback drops to zero the frame its pushback runs out; the port's comment names this the invisible ceiling glitch.
+- **melee-hd:** modeled.
+- **Fix:** clear `x98_atk_shield_kb.y`.
+- **Fix impact:** changes gameplay and breaks replay and Slippi compatibility; players know the glitch.
+- **Source:** `crates/melee-sim/src/game/ft/fighter.rs:404`.
+
+### Knocked-down wall bounce off a right wall
+
+- **Where:** `fn_800C7DC4` (the knocked-down fighter's bounce into `ftCo_DownReflect`), `crates/melee-sim/src/game/ft/co/down.rs` (`down_reflect`).
+- **Defect:** the fighter is set against the wall (in x, by its TransN) only off a wall to its left (`RIGHT_WALL_HUG`); off a wall to its right the code instead moves it up by its TransN's y.
+- **Effect:** a fighter sliding into a wall on its right is placed differently from one sliding into a wall on its left; seen in play on `Game_20260605T220809` (tick 4630).
+- **melee-hd:** modeled.
+- **Fix:** set the fighter against a left wall in x as for a right one.
+- **Fix impact:** changes gameplay (positions after a wall bounce) and breaks replay and Slippi compatibility.
+- **Source:** [the oracle](oracle.md) (line 204); `crates/melee-sim/src/game/ft/co/down.rs:272`.
+
+### Ice block tests the right wall twice
+
+- **Where:** `ftCo_DamageIce_Collide` (a frozen fighter's block hitting a surface), `crates/melee-sim/src/game/ft/co/ice.rs`.
+- **Defect:** after a bounce the block is set against the surface by its TransN, and the code tests the right wall twice, so a left wall takes the ceiling's branch and moves the block in y.
+- **Effect:** not recorded.
+- **melee-hd:** modeled.
+- **Fix:** test the left wall in the second test.
+- **Fix impact:** changes where a frozen fighter's block ends up after hitting a left wall; breaks replay and Slippi compatibility where that happens.
+- **Source:** `crates/melee-sim/src/game/ft/co/ice.rs:414`.
+
+### Wall stop takes its side from a caller's register
+
+- **Where:** `ftCo_8009EE30`, from `ftCo_8009EDA4` (stopping against a wall), `crates/melee-sim/src/game/ft/co/ledge.rs` (`enter_stop_wall`).
+- **Defect:** it tests whether it hit a right wall on a register its caller left: the right wall hug bit the caller found facing left, or the left one it found facing right.
+- **Effect:** the side follows the facing the caller took, not the collision's flags; what that changes in play is not recorded.
+- **melee-hd:** modeled (the caller's value passed as `right_wall`).
+- **Fix:** read the wall from the collision flags.
+- **Fix impact:** not recorded.
+- **Source:** `crates/melee-sim/src/game/ft/co/ledge.rs:162`.
+
+### Knockdown impact sound's third tier is unreachable
+
+- **Where:** `ftCo_80097630` (the knockdown's impact sound by speed), `crates/melee-sim/src/game/ft/co/down.rs` (`impact_sfx`).
+- **Defect:** the code compares against the second threshold twice, so of the four sound ids it picks from, the third is never chosen.
+- **Effect:** audio only: a knockdown never plays that tier's sound.
+- **melee-hd:** modeled.
+- **Fix:** compare against the third threshold.
+- **Fix impact:** the sound plays differently; it also changes which sounds take voices, and sound handles are game state, so replays could differ in audio state.
+- **Source:** `crates/melee-sim/src/game/ft/co/down.rs:93`.
+
+### Hit color animation returns the link register
+
+- **Where:** `ftCo_8008DA4C` (the color animation a damaging hit starts), `crates/melee-sim/src/game/ft/co/hit.rs` (`damage_color_anim`).
+- **Defect:** when the hit dealt no damage the C leaves the result unset; the machine code returns the link register it saved (its caller's return address), which is never zero.
+- **Effect:** the caller always takes a damageless hit's result as true; what follows from that is not recorded.
+- **melee-hd:** modeled (returns true).
+- **Fix:** return a defined value.
+- **Fix impact:** not recorded.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 77); `crates/melee-sim/src/game/ft/co/hit.rs:245`.
+
+### Animation frame from an unset float register
+
+- **Where:** `ftAnim_8006E9B4` storing what `ftAnim_8006F3DC` returns, `crates/melee-sim/src/game/ft/anim.rs`.
+- **Defect:** `ftAnim_8006F3DC` returns the float register `f1` unchanged when no part of the model animates, which happens when a state names an animation the character's file lacks (Yoshi's shield stun, `ftYs_MS_GuardDamage`, names animation 40, which `PlYsAJ.dat` doesn't have). `f1` then holds what the step's walk over the model's joints left there.
+- **Effect:** in play the last animation the walk interprets is the egg shield's texture animation, so Yoshi's shield stun stores that animation's length (100) as its current frame; the step's frame check also compares with that register.
+- **melee-hd:** modeled (`Objects::aobj_f1`; an unknown register counts a stale read).
+- **Fix:** return the frame explicitly when nothing animates (and give the state an animation the file has).
+- **Fix impact:** changes Yoshi's shield stun frame; breaks replay and Slippi compatibility where it matters.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 86); [the oracle](oracle.md) (line 73); `crates/melee-sim/src/game/ft/anim.rs:139`.
+
+### Animation binds walk past a figatree's node list
+
+- **Where:** `ftAnim_8006F7C8`, `ftAnim_8006F628` and `ftAnim_80070A10`, `crates/melee-sim/src/game/ft/bind.rs` and `crates/melee-sim/src/game/ft/second.rs`.
+- **Defect:** they skip one node of the figatree per part before the part they bind from, without stopping at the node list's end (0xFF), so a part past the figatree's skeleton walks on past its data block. When Marth's throw launches Peach while she holds an item, her hand's part animation ends and the thrown animation (made for another skeleton) is put back on part 100, and the skip reads into the archive's relocation table.
+- **Effect:** none observable in the replays checked: the bytes read decide only how long the walk runs, and it binds nothing.
+- **melee-hd:** modeled (the skips read through the animation buffer, `ft::anim_buf`).
+- **Fix:** stop at the node list's end.
+- **Fix impact:** none on gameplay where the walk binds nothing.
+- **Source:** [engine notes, loaded data the game writes into](engine.md#loaded-data-the-game-writes-into) (line 291).
+
+### Nana's second animation lands in her main buffer
+
+- **Where:** `ftData_80085E50`, `crates/melee-sim/src/game/ft/second.rs`.
+- **Defect:** when Nana's second animation is in Popo's main buffer, it copies it into her main buffer, not her second, and points `x598` there; her next action's animation overwrites it, and `x598`, unchanged, then points at the same offset into that archive, or past its data.
+- **Effect:** none observed: nothing has read such a figatree yet.
+- **melee-hd:** modeled (`ft::second::SecondTree`, `Running::overwrite_main_buffer`).
+- **Fix:** copy into her second buffer.
+- **Fix impact:** not recorded.
+- **Source:** [engine notes, loaded data the game writes into](engine.md#loaded-data-the-game-writes-into) (line 289).
+
+### Cargo countdowns land on the next state's variables
+
+- **Where:** `ftCo_CargoKneebend_Anim` and `ftCo_CargoLanding_Anim`, `crates/melee-sim/src/game/ft/co/cargo.rs`.
+- **Defect:** the knee bend counts its lag down in `mv` x8 after the check that starts the cargo jump, so on the jump's first frame the step lands on the jump's own `mv` x8, the multiplier `ftCo_800CB110` just set (1.0 becomes 0.0); the cargo landing does the same to the cargo wait's `mv` x4.
+- **Effect:** none observable: nothing reads either word afterwards.
+- **melee-hd:** modeled (the ports keep the order).
+- **Fix:** count down before the state change.
+- **Fix impact:** none on gameplay.
+- **Source:** [engine notes, fighters' variables](engine.md#fighters-variables) (line 113).
+
+### Ganondorf's taunt falls through
+
+- **Where:** `ftCo_800DEA28` (a taunt), `crates/melee-sim/src/game/ft/co/checks.rs` (`enter_appeal`).
+- **Defect:** Ganondorf's case blows a wind from his top joint and then falls through to the default case, so the side taunt is entered twice.
+- **Effect:** not recorded beyond the state being entered twice (seen in tick 5743 of the Ganondorf vs Captain Falcon benchmark).
+- **melee-hd:** modeled.
+- **Fix:** end Ganondorf's case after entering the taunt once.
+- **Fix impact:** not recorded.
+- **Source:** [the oracle](oracle.md) (line 46); `crates/melee-sim/src/game/ft/co/checks.rs:258`.
+
+### A freed source's tip damage records no statistics
+
+- **Where:** `ftColl_8007BE3C` (damage held back through hitlag landing), `crates/melee-sim/src/game/ft/attack.rs`.
+- **Defect:** a tip's damage can land after its source item is freed (a pill, in tick 669 of `hf-doc-marth-bf-d1bc4efe`); the source GObj's first word is then the free list's link, so its classifier reads as neither a fighter's nor an item's.
+- **Effect:** no statistics are recorded for that hit.
+- **melee-hd:** modeled.
+- **Fix:** keep the source's identity, or drop the hit, when the source is freed.
+- **Fix impact:** changes the match's statistics (end-of-match records); not recorded whether anything in play reads them.
+- **Source:** [the oracle](oracle.md) (line 208).
+
+## Match setup
+
+### Facing players toward opponents uses a caller's register
+
+- **Where:** `fn_8016DEEC`, `crates/melee-sim/src/game/gm/vs.rs` (`place_players`).
+- **Defect:** it takes a player's first opponent without measuring its distance, keeping the last distance it measured, or before any, what its caller left in `f26`.
+- **Effect:** with three or more players that decides which way the first player faces. The VS scene's entry leaves 0 there in every capture.
+- **melee-hd:** modeled (0 passed).
+- **Fix:** measure the first opponent's distance.
+- **Fix impact:** can change the first player's starting facing in matches of three or more; breaks replay compatibility there.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 68); `crates/melee-sim/src/game/gm/vs.rs:1329`.
+
+### Character kinds past the fighter-kind table
+
+- **Where:** `ftMapping_list`, indexed by the player blocks, `crates/melee-sim/src/game/pl/player.rs` (`FT_MAPPING`).
+- **Defect:** the table has 33 entries, and an empty slot's character kind (33 and up) indexes past it into the executable's following bytes: a padding byte and `player.c`'s message strings.
+- **Effect:** none observable: the bytes are constant data.
+- **melee-hd:** modeled (the port carries those bytes; a kind past them stops).
+- **Fix:** bound the index.
+- **Fix impact:** none.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 65).
+
+## Characters
+
+### Bowser: Whirling Fortress's landing test can't pass
+
+- **Where:** `ftKp_SpecialAirHi_Coll`'s inline landing, `crates/melee-sim/src/game/ft/koopa/special_hi.rs`.
+- **Defect:** it stores its attributes' `x70` back into itself, and starts the ground spin `x78` frames back only when the frames spun lie strictly between `x70` and `x70`, which no value does.
+- **Effect:** the air landing always starts the ground spin from the same frame.
+- **melee-hd:** modeled (the test kept as written; the no-op store left out).
+- **Fix:** compare against the intended bounds (not recorded which).
+- **Fix impact:** changes Bowser's up special landing; breaks replay and Slippi compatibility.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 89); `crates/melee-sim/src/game/ft/koopa/special_hi.rs:195`.
+
+### Mr. Game & Watch: down tilt's interrupt doesn't crouch
+
+- **Where:** `ftGw_AttackLw3_IASA`, `crates/melee-sim/src/game/ft/gamewatch/attack_lw3.rs`.
+- **Defect:** it tests the stick held down with `ftCo_Squat_CheckInput`, which only tests and doesn't crouch.
+- **Effect:** the stick held down ends the interrupt's checks with him still in the tilt.
+- **melee-hd:** modeled.
+- **Fix:** enter the crouch when the test passes.
+- **Fix impact:** changes Mr. Game & Watch's down tilt interrupts; breaks replay compatibility.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 90).
+
+### Mr. Game & Watch: aerial landings' items
+
+- **Where:** `ftGw_AttackAirN_ItemTurtleOnLand` and `ItemSparkyOnLand`, `crates/melee-sim/src/game/ft/gamewatch/attack_air.rs`.
+- **Defect:** the landing animations of his back and up aerials' items play only in the neutral aerial's landing, since both test `ftGw_MS_LandingAirN`.
+- **Effect:** in their own landings the turtle and Sparky keep their aerial's animation.
+- **melee-hd:** modeled.
+- **Fix:** test each aerial's own landing state.
+- **Fix impact:** visual, on items whose animation is state; not recorded whether gameplay reads it.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 90).
+
+### Mr. Game & Watch: up aerial takes the back aerial's landing lag
+
+- **Where:** `ftGw_LandingAirHi_Init`, `crates/melee-sim/src/game/ft/gamewatch/attack_air.rs`.
+- **Defect:** the up aerial's landing takes the back aerial's landing lag.
+- **Effect:** his up aerial lands with the back aerial's lag.
+- **melee-hd:** modeled.
+- **Fix:** use the up aerial's own landing lag.
+- **Fix impact:** changes gameplay (frame data players rely on) and breaks replay and Slippi compatibility.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 90).
+
+### Mr. Game & Watch: the trampoline is destroyed twice
+
+- **Where:** `itGamewatchrescue_UnkMotion1_Anim` and `Item_80269528`, `crates/melee-sim/src/game/it/kinds/gamewatchrescue.rs`.
+- **Defect:** the trampoline's animation callback destroys it once its fighter leaves Fire, clears its fighter and owner again in the item it just destroyed, and returns true, which has the animation process destroy it again. The GObj's free waits for its process to return, so the item is still there the second time.
+- **Effect:** its destroy's hooks, effects, sounds and camera box run twice.
+- **melee-hd:** modeled (both destroys run).
+- **Fix:** return false after destroying it.
+- **Fix impact:** changes effects, sounds and their handles; breaks replay compatibility.
+- **Source:** [engine notes, objects and identity](engine.md#objects-and-identity) (line 17); [the oracle](oracle.md) (line 81).
+
+### Mewtwo: a Shadow Ball field nothing stores
+
+- **Where:** Shadow Ball's code reading `ftMewtwo_FighterVars::x2238_shadowBallGObj`.
+- **Defect:** the field is named as a GObj but no code ever stores one: Shadow Ball only tests it before destroying his effects, and clears it.
+- **Effect:** none observable: the test never passes.
+- **melee-hd:** modeled (a zero word).
+- **Fix:** not recorded.
+- **Fix impact:** not recorded.
+- **Source:** [engine notes, fighters' variables](engine.md#fighters-variables) (line 115).
+
+### Mewtwo: the fired ball's dropped comparison
+
+- **Where:** `fn_802C5E18`, `crates/melee-sim/src/game/it/kinds/mewtwoshadowball.rs` (`sparkle`).
+- **Defect:** the full ball's test compares two variables (`x18`, `x1C`) and does nothing with the result.
+- **Effect:** none observable.
+- **melee-hd:** modeled (the comparison computed and dropped).
+- **Fix:** not recorded.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/it/kinds/mewtwoshadowball.rs:640`.
+
+### Mewtwo: the forward throw's self-assignment
+
+- **Where:** `it_802C519C` (the full Shadow Ball his forward throw fires), `crates/melee-sim/src/game/it/kinds/mewtwoshadowball.rs`.
+- **Defect:** it writes its attributes' `x18` back over itself in his loaded data (`attr->x18 = attr->x18`).
+- **Effect:** none observable.
+- **melee-hd:** left out (the archive is untouched).
+- **Fix:** remove the write.
+- **Fix impact:** none.
+- **Source:** [engine notes, loaded data the game writes into](engine.md#loaded-data-the-game-writes-into) (line 297).
+
+### Samus: the grapple swing's victim bit from the stack
+
+- **Where:** `it_802B7160` (the grapple beam's button-sequence swing), from `fn_802B805C` through `it_802B9328`, `crates/melee-sim/src/game/it/kinds/samusgrapple.rs`.
+- **Defect:** the swing copies its hitbox's grabbed-victim-only bit (`x134_4`) from byte 0x15 of `it_802B9328`'s `itSamusGrapple_HitboxData`, past the 0x14 bytes of hitbox words its caller fills. What lies there is `PSMTXConcat`'s save of `f14` from the tip's matrix setup just before, which is 0.0 in the game's code, so the bit is clear.
+- **Effect:** the bit decides whom the swing can hit; in play it is clear (watched in ssbm-rs on `hf-roy-samus-fd-56052455`, frame 6217).
+- **melee-hd:** modeled for that case (`samusgrapple::SwingSlot::SavedF14`); a swing with the tip's matrix not rebuilt, or from the other two callers, stops.
+- **Fix:** have the caller set the bit.
+- **Fix impact:** none if the bit is set clear, as play leaves it.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 75); [the oracle](oracle.md) (line 222).
+
+### Samus: the grapple beam's ignore id from the stack
+
+- **Where:** `it_802B7C18` (the grapple beam's spawn), `crates/melee-sim/src/game/it/kinds/samusgrapple.rs`.
+- **Defect:** it fills a `SpawnItem` on its stack but never its `x40`, which becomes the item's ignore id (`xAC4_ignoreItemID`); in a CPU match it held a code address a call before had saved.
+- **Effect:** none observable: items sharing an id share their hitboxes' victims, and the beam has no hitboxes.
+- **melee-hd:** stale (`it::IgnoreId(None)`; a read counts a stale read).
+- **Fix:** set `x40`.
+- **Fix impact:** none.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 75); `crates/melee-sim/src/game/it/kinds/samusgrapple.rs:490`.
+
+### Samus: the grapple beam reads its owner as an item
+
+- **Where:** `it_802A2428` (the hookshot unit's scale, which the grapple beam uses), `crates/melee-sim/src/game/it/kinds/samusgrapple.rs`.
+- **Defect:** it reads its owner, a fighter, as an item: the item's `scl` sits where a fighter keeps its height (`x34_scale.y`).
+- **Effect:** none observable: the beam takes her height times its attributes' scale.
+- **melee-hd:** modeled.
+- **Fix:** read the fighter's height through the fighter.
+- **Fix impact:** none.
+- **Source:** [engine notes, fighters' variables](engine.md#fighters-variables) (line 117).
+
+### Mario: the cape reads a fighter field on an item
+
+- **Where:** `it_2725_Logic41_PickedUp` (Mario's cape, picked up), `crates/melee-sim/src/game/it/kinds/mariocape.rs`.
+- **Defect:** it picks its state with `ftLib_GetGroundAir` on its own GObj; the word at the fighter's `ground_or_air` offset (`+0xE0`) is, in an item, its first dynamic bone set's count, which the cape never writes, so it holds what its block held.
+- **Effect:** the state depends on the block's last item; probed zero (a fresh block) on a ranked Mario replay.
+- **melee-hd:** modeled (`Item::xD4_dynamicBones`, kept from the slot's last item).
+- **Fix:** test the item's own ground or air state.
+- **Fix impact:** could change the picked-up cape's state where the block held a nonzero count; not recorded.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 70).
+
+### Link: the boomerang's spin takes a stack word for w
+
+- **Where:** `it_802A0534` (the boomerang throw), `crates/melee-sim/src/game/it/kinds/linkboomerang.rs`.
+- **Defect:** it reads the hand's matrix's turn into the x, y and z of a stack `Quaternion` whose w it never sets, and writes that as the spinning part's rotation, as `lb_8001044C` does.
+- **Effect:** none observable on both Link replays (nothing reads that w).
+- **melee-hd:** stale (`jobj::set_rotation_stale_w`).
+- **Fix:** set w, or write Euler angles.
+- **Fix impact:** none.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 82).
+
+### Sheik: the needles' bounce draws twice
+
+- **Where:** `itSeakneedlethrown_UnkMotion0_Coll` and `it_2725_Logic109_HitShield` (and the hit hooks sharing it), `crates/melee-sim/src/game/it/kinds/seakneedlethrown.rs` (`random_abs`).
+- **Defect:** `ABS(table[HSD_Randi(8)])` is a macro that evaluates its argument twice: one random draw for the sign test, another for the value.
+- **Effect:** each bounce draws an extra random number, moving every later draw of the match's one random seed. The table's entries are all negative, so the value's sign comes out right.
+- **melee-hd:** modeled.
+- **Fix:** draw once.
+- **Fix impact:** changes the random sequence after any needle bounce, so gameplay after it; breaks replay and Slippi compatibility.
+- **Source:** `crates/melee-sim/src/game/it/kinds/seakneedlethrown.rs:157`.
+
+### Sheik: the chain reads its clank switch before writing it
+
+- **Where:** Sheik's chain swing, `itSeakChain_ItemVars::x18`, `crates/melee-sim/src/game/it/kinds/seakchain.rs` (`link_coll_clank`).
+- **Defect:** the chain reads its clank switch at the start of each swing, which a new chain does before writing it, so the first swing finds the block's last item's bytes there.
+- **Effect:** the switch decides only whether a link newly meeting the stage, and not already sounding, clanks: the first swing's clank depends on the previous item.
+- **melee-hd:** read there and nowhere else, counted as a read.
+- **Fix:** initialize the switch at the chain's spawn.
+- **Fix impact:** sound only, but sound handles are state; not recorded further.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 80).
+
+### Zelda: Din's Fire's explosion keeps its x speed
+
+- **Where:** `itZeldadinfireexplode_UnkMotion0_Phys`, `crates/melee-sim/src/game/it/kinds/zeldadinfireexplode.rs`.
+- **Defect:** it stops the vertical and depth speeds, clearing z twice and leaving x.
+- **Effect:** not recorded.
+- **melee-hd:** modeled.
+- **Fix:** clear x.
+- **Fix impact:** not recorded.
+- **Source:** `crates/melee-sim/src/game/it/kinds/zeldadinfireexplode.rs:215`.
+
+## Ice Climbers and the computer player
+
+### Nana's DI with no knockback reads two registers it never set
+
+- **Where:** `ftCo_800AC5A0` (the computer player's DI in hitstun, behavior 18, marked `@bug` in the decompilation), from `ftCo_800B2790`, `crates/melee-sim/src/game/ft/cpu_move.rs` (`cpu_di`) and `crates/melee-sim/src/game/ft/cpu_ai.rs` (`Leftover`).
+- **Defect:** with no knockback it pushes the stick by r5 for x and r30 for y, neither of which it or its caller sets for that path: r5 holds what the computer player's frame (`ftCo_800B3900`) left (for Nana on her way back to Popo, Popo's state or her held item's address), r30 its caller's `Fighter*`, so the stick's y is the low byte of Nana's address.
+- **Effect:** Ice Climbers matches go different ways when the heap is laid out differently: a match started from a console's menus and the same match under Slippi's playback give Nana different addresses, so a replay of an Ice Climbers match leaves its recording at the first such DI (Peach back-throwing Nana at frame 10,137 in the performance notes' case).
+- **melee-hd:** modeled: the allocator model gives each fighter the original's address, and each function on the way returns the r5 it leaves (`cpu_ai::Leftover`); a leftover not followed stops. Slippi's NanaDeterminism code clears r30 (and r5 in 3.19's), which the Slippi ruleset follows.
+- **Fix:** push the stick neutral, or along a defined direction, with no knockback.
+- **Fix impact:** changes Nana's DI in those cases; breaks vanilla replay compatibility for Ice Climbers matches (Slippi's code already fixes it online, differently in 3.16 and 3.19).
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (lines 93 and 95); [performance](performance.md) (line 186); [the oracle](oracle.md) (line 140).
+
+### The Ice Climbers' freeze glitch
+
+- **Where:** `ftNn_Init_80123954` (whether Nana joins Popo's Squall Hammer), `crates/melee-sim/src/game/ft/popo/nana_special_s.rs` (`nana_join_special_s`).
+- **Defect:** when Popo starts his side special with Nana in hitstun, the code clears her `x1A5C`, the link to the fighter she is frozen with, so the partner it pointed to is no longer thawed through her.
+- **Effect:** Slippi ships a fix for it as the freeze glitch fix (`External/FreezeGlitchFix`, a nop over that store); its effect in play isn't described in melee-hd's sources, and no replay at hand tells the fix and the original apart.
+- **melee-hd:** modeled; the Slippi ruleset's fix is `Rules::freeze_glitch_fix`.
+- **Fix:** keep `x1A5C`, as Slippi's code does.
+- **Fix impact:** changes gameplay where the glitch would happen; the Slippi ruleset already has the fix.
+- **Source:** [the oracle](oracle.md) (line 135); `crates/melee-sim/src/game/ft/popo/nana_special_s.rs:67`.
+
+### Nana reads a held item's kind as an action state
+
+- **Where:** `ftCo_800ADE48` (Nana's decision) calling `ftCo_800A5980`, `crates/melee-sim/src/game/ft/cpu_decide.rs` (`cpu_throws_held_item`).
+- **Defect:** `ftCo_800A5980` tests a fighter's action state, and the decision hands it the `Item*`, so it reads the item's kind, the word at the same offset (`+0x10`).
+- **Effect:** items of kinds 43 to 46, 211 to 213 and 217 pass as dangerous, so Nana throws them; Peach's turnips (kind 0x63) pass neither test, so she keeps one.
+- **melee-hd:** modeled (the kind tested against those numbers).
+- **Fix:** test the item's kind against the items meant.
+- **Fix impact:** changes Nana's item throws; breaks replay compatibility for Ice Climbers matches with items about.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 76); [the oracle](oracle.md) (line 220).
+
+### The computer player's tumble prediction takes the wrong root
+
+- **Where:** `ftCo_800ABBA8` (tumbling, behavior 15), `crates/melee-sim/src/game/ft/cpu_move.rs` (`cpu_tumble`).
+- **Defect:** predicting where its fall lands, the code takes the square root of the frames where the square belongs.
+- **Effect:** the computer player's guess of whether its fall lands above its destination is wrong, which decides whether it drifts toward it; Nana's tumble runs it.
+- **melee-hd:** modeled.
+- **Fix:** use the square of the frames.
+- **Fix impact:** changes computer players' drift out of tumble (Nana included); breaks replay compatibility for Ice Climbers matches.
+- **Source:** `crates/melee-sim/src/game/ft/cpu_move.rs:984`.
+
+### The computer player's DI switch takes a caller's register
+
+- **Where:** `ftCo_800ADE48` (choosing a behavior), `crates/melee-sim/src/game/ft/cpu_decide.rs` (`cpu_choose_behavior`).
+- **Defect:** the code never sets the DI switch's flag in the case it means to take it, using what r31 held in its caller.
+- **Effect:** not recorded.
+- **melee-hd:** modeled (`di_switch` is that register's truth).
+- **Fix:** set the flag.
+- **Fix impact:** not recorded.
+- **Source:** `crates/melee-sim/src/game/ft/cpu_decide.rs:326`.
+
+## Items
+
+### Item creation clears one coordinate three times
+
+- **Where:** `Item_80267AA8` (a new item's variables), `crates/melee-sim/src/game/it/item.rs` (`init_vars`).
+- **Defect:** it clears `xC58.x` three times and never y or z, which keep the block's last item's values.
+- **Effect:** not recorded.
+- **melee-hd:** modeled.
+- **Fix:** clear x, y and z.
+- **Fix impact:** not recorded.
+- **Source:** `crates/melee-sim/src/game/it/item.rs:360`.
+
+### A Blizzard puff's flag set in its freed block
+
+- **Where:** `it_802750F8`, `crates/melee-sim/src/game/it/lib2725.rs`.
+- **Defect:** when a Blizzard puff is freed by its first frame's collision, the code sets its flag in the freed block.
+- **Effect:** a write into freed memory; seen in tick 7122 of `hf-fox-ics-ps-03b0d4e2-rf`; what it changes is not recorded.
+- **melee-hd:** modeled (the freed item's slot looked up by its GObj).
+- **Fix:** skip the write once the item is freed.
+- **Fix impact:** not recorded.
+- **Source:** [the oracle](oracle.md) (line 213).
+
+### The weighted draw reads past its weights
+
+- **Where:** `bisectValue`, from `it_8026C65C` (a weighted draw from a table), `crates/melee-sim/src/game/it/spawn.rs` (`bisect`).
+- **Defect:** past the last weight it reads the block's uninitialized slack.
+- **Effect:** none observable: there both answers are the same.
+- **melee-hd:** modeled (the read left out).
+- **Fix:** bound the read.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/it/spawn.rs:99`.
+
+## Stages and collision
+
+### Final Destination's background compares green twice
+
+- **Where:** `grLast_8021B2E8` (the background's cycle), `crates/melee-sim/src/game/gr/last.rs` (`advance`).
+- **Defect:** picking the next background color, it redraws until the color is neither gray nor the current one, but the test against the current color compares green twice and never blue.
+- **Effect:** a color that differs from the current one only in blue counts as the same and is drawn again, which takes more random numbers. Slippi 3.19's code saves and restores the seed around this call, and 3.16's never runs the timer, so only vanilla play feels it.
+- **melee-hd:** modeled.
+- **Fix:** compare blue.
+- **Fix impact:** changes the random sequence in vanilla play on Final Destination, so gameplay after it; breaks vanilla replay compatibility (not Slippi's, whose codes keep this off the seed).
+- **Source:** `crates/melee-sim/src/game/gr/last.rs:277`; [the oracle](oracle.md) (line 139).
+
+### Final Destination's fog alpha from the stack
+
+- **Where:** `grLast_8021C500` (the fog blend) handing `Ground_801C205C` a color, `crates/melee-sim/src/game/gr/last.rs` and `crates/melee-sim/src/game/gr/ground.rs`.
+- **Defect:** the stack color it hands the fog has an alpha it never set: the low byte of whatever the frame's earlier calls left in the slot.
+- **Effect:** none observable: nothing reads a fog's alpha.
+- **melee-hd:** stale (`Fog::stale_alpha`).
+- **Fix:** set the alpha.
+- **Fix impact:** none.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 57).
+
+### Pokémon Stadium's return zeroes a file's header
+
+- **Where:** Pokémon Stadium's return to the default stage, handing `grAnime_801C65B0` a buffer, `crates/melee-sim/src/game/gr/stadium.rs`.
+- **Defect:** it hands `grAnime_801C65B0` the transformation file's buffer instead of its archive, which zeroes the first words of that file's header.
+- **Effect:** not recorded (melee-hd's importer finds such a file through the header copy in the stage's `HSD_Archive`).
+- **melee-hd:** not recorded beyond the importer's handling.
+- **Fix:** pass the archive.
+- **Fix impact:** not recorded.
+- **Source:** [engine notes, loaded data the game writes into](engine.md#loaded-data-the-game-writes-into) (line 286).
+
+### The airborne collision loop can hang
+
+- **Where:** `mpColl_80046904` (one airborne substep), `crates/melee-sim/src/mp/coll/air.rs` and `crates/melee-sim/src/mp/coll/mod.rs`.
+- **Defect:** it repeats its walls, ceiling and floor checks until the squeezes they apply stop changing, which on some geometry never happens.
+- **Effect:** the console hangs.
+- **melee-hd:** detects an iteration that repeats an earlier one's starting state and halts there (`mpcoll.c: mpColl_80046904 loops forever`); a loop that drifts instead runs as long as the original, with a watchdog in checks only.
+- **Fix:** bound the iterations.
+- **Fix impact:** where the original would hang, any outcome is new; elsewhere none.
+- **Source:** [engine notes, hangs](engine.md#hangs) (line 304); `crates/melee-sim/src/mp/coll/mod.rs:296`.
+
+### The left wall's corner case tests the ceiling again
+
+- **Where:** the airborne wall corrections' corner case (a wall meeting a ceiling at its top with another wall beyond it), left side, `crates/melee-sim/src/mp/coll/walls.rs` (`corner`).
+- **Defect:** after finding the line past the ceiling, the left side tests the ceiling line again for being a left wall, not the line past it.
+- **Effect:** a plain ceiling never gets this far, so the correction runs for right walls only; what that changes in play is not recorded.
+- **melee-hd:** modeled.
+- **Fix:** test the line past the ceiling, as the right side does.
+- **Fix impact:** changes airborne collision against such corners; breaks replay compatibility where it happens.
+- **Source:** `crates/melee-sim/src/mp/coll/walls.rs:528`.
+
+### Floors running right to left take line -1
+
+- **Where:** `mpColl_8004A45C_Floor`, `mpColl_8004A678_Floor` and `mpColl_8004C328_Ceiling`, `crates/melee-sim/src/mp/coll/ground.rs` and `crates/melee-sim/src/mp/coll/ceiling.rs`.
+- **Defect:** they take the floor (or ceiling) at the edge an object stops at; a few floors in the data run right to left (on Great Bay, Pokémon Stadium and Big Blue), and such a floor can fail to reach its own end, when the code takes line -1 with the flags and normal its stack held.
+- **Effect:** not recorded.
+- **melee-hd:** leaves those two fields as they were and counts a stale read (`mp::coll::CollStatics::stale_reads`).
+- **Fix:** handle floors in either direction.
+- **Fix impact:** not recorded.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 60).
+
+### The floor walk's wall length starts from a caller's register
+
+- **Where:** `mpLib_80056C54` (walking a distance along the floor), `crates/melee-sim/src/mp/probe.rs` (`walk_floor`).
+- **Defect:** it keeps the running wall length in `f27`, which it never sets before the first line, so a walk whose first line is a wall adds to whatever its caller left.
+- **Effect:** not recorded (the limit on walls walked starts off by the caller's value).
+- **melee-hd:** modeled: the value is an explicit parameter (`stale_f27`) that Donkey Kong's and `itleadead`'s ports must supply.
+- **Fix:** reset the length before the first line.
+- **Fix impact:** not recorded.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 55); `crates/melee-sim/src/mp/probe.rs:97`.
+
+## Camera
+
+### The cutscene camera's orbit reads unwritten stack slots
+
+- **Where:** `Camera_8002E234` (the cutscene camera's orbiting eye), `crates/melee-sim/src/game/camera.rs`.
+- **Defect:** it eases only the parts of the orbit its script set and reads the others (pitch, yaw or distance) from stack slots it never wrote. Master Hand's and Crazy Hand's entrances set orbits that way.
+- **Effect:** not recorded.
+- **melee-hd:** stops, until a probe of those slots in play decides the model.
+- **Fix:** keep the parts the script didn't set from the camera's current orbit.
+- **Fix impact:** cutscene camera only; not recorded whether gameplay reads it.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 54); `crates/melee-sim/src/game/camera.rs:2920`.
+
+### The background color's alpha is unset
+
+- **Where:** `Camera_GetBackgroundColor`, `crates/melee-sim/src/game/camera.rs` (`background_color`).
+- **Defect:** it returns red, green and blue and leaves alpha unset.
+- **Effect:** none observable in the checks (only red, green and blue are compared).
+- **melee-hd:** returns the three channels.
+- **Fix:** set the alpha.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/camera.rs:1453`; `tools/leaf-check/tests/camera.rs:1322`.
+
+## HUD and audio
+
+### An announcement tests its first line twice
+
+- **Where:** `ifStatus_802F6EA4` (showing an announcement, kind 8), `crates/melee-sim/src/game/hud/announce.rs` (`announce`).
+- **Defect:** before playing the second announcer line it tests the first line's id again, not the second's.
+- **Effect:** the second line plays whenever the first does, and never when the first is absent; audio only.
+- **melee-hd:** modeled.
+- **Fix:** test the second line's id.
+- **Fix impact:** audio, and the voices sounds take, which are state; not recorded further.
+- **Source:** `crates/melee-sim/src/game/hud/announce.rs:62`.
+
+### The damage displays' reset depends on a caller's register
+
+- **Where:** `ifStatus_802F66A4` (taking the damage models from `IfAll.dat`), `crates/melee-sim/src/game/hud/status.rs` (`load_damage_models`).
+- **Defect:** it clears the displays only when its caller's `r30` isn't zero.
+- **Effect:** none observable: its one caller, `ifAll_802F390C`, holds the scene's light description there.
+- **melee-hd:** clears them.
+- **Fix:** clear unconditionally.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/hud/status.rs:620`.
+
+## Engine and HSD
+
+### An FObj channel hands over a stack word
+
+- **Where:** `FObjUpdateAnim`, `crates/melee-sim/src/hsd/fobj.rs` (`Value::Stale`).
+- **Defect:** a channel whose data ends right after its first key reaches a state with no case for its interpolation, and the code hands its update function whatever its stack holds where the value would go.
+- **Effect:** none observable so far: probed over every VS stage and a Final Destination replay, the word was always a RAM address (a tiny negative float), and every channel was a joint's branch visibility, which an address hides.
+- **melee-hd:** update functions resolve what any address gives where that doesn't depend on which address, and count the rest as stale reads.
+- **Fix:** hold the first key's value.
+- **Fix impact:** none where an address hides the branch, as in every case seen.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 51); `crates/melee-sim/src/hsd/fobj.rs:28`.
+
+### Dynamic bones write a stack word into a joint's w
+
+- **Where:** `lb_8001044C` (a dynamic bone chain's swing), `crates/melee-sim/src/lb/dynamics.rs`.
+- **Defect:** it writes a joint's rotation from a stack `Quaternion` whose x, y and z come from `HSD_QuatLib_8037EB28` and whose w it never sets, so the joint's `rotate.w` becomes a stack word (usually 0, sometimes an address, 0x43300000 or a float).
+- **Effect:** none observable: the joint isn't a quaternion joint, so nothing reads that w.
+- **melee-hd:** stale (`JObj::stale_w`); a quaternion read of it, or a dynamics link taking such a joint's rotation (`lb_8000FD48`), counts a stale read.
+- **Fix:** set w, or write Euler angles.
+- **Fix impact:** none.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 61).
+
+### Dynamic bones read an unset crossing point
+
+- **Where:** `lb_8001044C` probing with `lb_800103D8` on a flat floor (`x2228_b1`), `crates/melee-sim/src/lb/dynamics.rs`.
+- **Defect:** `lb_800103D8` reports a crossing without writing its point when the probe is level and above the floor, and the chain then reads the unset point.
+- **Effect:** not recorded; only a link lying exactly level above the floor's height gets there.
+- **melee-hd:** stops.
+- **Fix:** write the point, or report no crossing.
+- **Fix impact:** not recorded.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 62).
+
+### An IK turn reads a rotation as a quaternion
+
+- **Where:** `fn_8002113C`, `crates/melee-sim/src/game/ft/ik.rs` (`turn_about`).
+- **Defect:** for an Euler joint it reads the new rotation as a quaternion into a vector, so its w comes from the matrix after it on the stack.
+- **Effect:** not recorded.
+- **melee-hd:** modeled (w taken from that matrix element).
+- **Fix:** write the Euler angles alone.
+- **Fix impact:** not recorded.
+- **Source:** `crates/melee-sim/src/game/ft/ik.rs:290`.
+
+### Figatree frames end a chain through an unset pointer
+
+- **Where:** `fn_8001E60C` (FObjs for a figatree's non-translation tracks), `crates/melee-sim/src/lb/figatree.rs`.
+- **Defect:** with no FObj made, it ends the chain through a pointer it never set.
+- **Effect:** not recorded.
+- **melee-hd:** counts a stale read.
+- **Fix:** end the chain with null.
+- **Fix impact:** not recorded.
+- **Source:** `crates/melee-sim/src/lb/figatree.rs:59`.
+
+### The TEV compiler compares the wrong swap
+
+- **Where:** `SimplifySrc` (part of `HSD_MObjCompileTev`), `crates/melee-sim/src/hsd/texp/dag.rs`.
+- **Defect:** simplifying a rasterized source, it compares the stage's rasterized swap with the source's texture swap, and takes the texture swap.
+- **Effect:** not recorded (a material's compiled TEV is simulation state).
+- **melee-hd:** modeled.
+- **Fix:** compare the rasterized swaps.
+- **Fix impact:** not recorded.
+- **Source:** `crates/melee-sim/src/hsd/texp/dag.rs:363`.
+
+## Gameplay that reads the display pass
+
+The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.
+
+### Off-screen damage counts render-pass marks
+
+- **Where:** `ftDrawCommon_80080E18` and `ftLib_UpdateScreenVisibility` (the fighter's render callback), `ifMagnify_802FBBDC`, read by `Fighter_procAnim`; `crates/melee-sim/src/game/ft/draw.rs` and `crates/melee-sim/src/game/hud/magnify.rs`.
+- **Defect:** whether a fighter is off screen is decided in its draw callback against the camera, and the magnifier copies the previous pass's mark; `Fighter_procAnim` counts off-screen ticks from it and deals damage every `x7AC` of them.
+- **Effect:** a doubled round while a fighter crosses the screen's edge moves the count's start or reset by a tick, so the damage lands a tick earlier or later, or once more or less; a widescreen code changes it too.
+- **melee-hd:** modeled in the display pass (vanilla); the Slippi ruleset's BrawlOffscreenDamage (`Rule::OffscreenLimits`) tests the fighter's position against the stage's camera limits.
+- **Fix:** test the position against fixed limits in logic, as Slippi's code does.
+- **Fix impact:** changes off-screen damage timing in vanilla play; Slippi's ruleset already has it.
+- **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes) (line 139).
+
+### Pokémon Stadium's monitor tests a render-pass camera
+
+- **Where:** `grStadium_801D32D0` (the monitor's close-up), reading the game camera's CObj that only `Camera_8002A4AC` in the display pass writes; `crates/melee-sim/src/game/gr/stadium.rs`.
+- **Defect:** the close-up asks whether its player's box stays in the camera's view, which logic sees a tick late (two on a doubled round's second tick); when it leaves, the monitor draws random numbers for its next mode.
+- **Effect:** a doubled round as the box crosses the view's margin moves the mode change by a tick, and the random seed with it.
+- **melee-hd:** modeled against the camera the display pass brought up to date; the Slippi ruleset's PSCameraIndependentMonitor tests fixed bounds (`gr::stadium::zoom_keeps_player`).
+- **Fix:** test fixed bounds in logic.
+- **Fix impact:** changes the random sequence in vanilla play on Pokémon Stadium; Slippi's ruleset already has it.
+- **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes) (line 140).
+
+### Opponents' direction counts fighters KO'd toward the screen
+
+- **Where:** `ftLib_GetOpponentsDir` (through `ftLib_GetCameraBonePos`), read by Whispy, Green Greens and items' facing (`it_8026B684`); `crates/melee-sim/src/game/it/owner.rs` (`opponents_dir`).
+- **Defect:** it counts every awake fighter's camera bone toward a side, dead ones included; a fighter KO'd toward the screen is placed by the render callback through the camera's inverse view matrix, so its bone follows the display pass. A tie draws `HSD_Randi(2)`.
+- **Effect:** Whispy's blow direction (and the others') can depend on where the display pass last placed a KO'd fighter, and the tie's draw moves the seed.
+- **melee-hd:** modeled; the Slippi ruleset's WhispyBlowDirFix leaves out fighters in motions up to 11 (Slippi 3.14's code set lacks it, so Whispy counts dead and sleeping fighters there as the original does).
+- **Fix:** leave out dead and sleeping fighters, as Slippi's code does.
+- **Fix impact:** changes Whispy's direction and item facing in vanilla play; Slippi's ruleset (3.16 on) already has it.
+- **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes) (line 141); [the oracle](oracle.md) (line 137).
+
+### Homing and nearest-opponent targeting through render-placed joints
+
+- **Where:** `it_802B64FC` (Samus's homing missile) with `ftLib_FindNearestOpponentInDir`, and items using `ftLib_FindNearestOpponent`; `crates/melee-sim/src/game/it/kinds/samusmissile.rs`, `crates/melee-sim/src/game/it/owner.rs`.
+- **Defect:** the missile turns toward the nearest opponent ahead through each fighter's camera bone, skipping only sleeping fighters, not dead ones; a fighter KO'd toward the screen has its root joint placed by the render callback from the camera, and `Fighter_procMap` puts it back at the position each tick at a later priority.
+- **Effect:** a homing missile in flight while an opponent falls toward the screen can turn the other way on a doubled round's tick and fly on differently; with items on, the red shell, Like Like, Octorok, ReDead, Scizor and others are exposed the same way. Slippi doesn't patch it, so Slippi's peers can desync there.
+- **melee-hd:** modeled (the joint placed in the display pass and read through the joints).
+- **Fix:** target from logic positions, and skip dead fighters.
+- **Fix impact:** changes homing in those rare cases; breaks replay and Slippi compatibility there.
+- **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes) (line 145).
+
+### Onett's cars read the render-pass camera
+
+- **Where:** `grOnett_801E43E0` (the car's process) reading the CObj through `Camera_800307D0`; not yet ported.
+- **Defect:** the car takes the camera's view edges from the CObj the display pass writes; when a car passes the view's right edge with a fighter on the ground, it draws `HSD_Randi(3)`, honks and sets `stage_info.x740`, which the computer player's car avoidance and the camera read.
+- **Effect:** a doubled round as the edge passes the car moves that by a tick.
+- **melee-hd:** not ported yet; its port will read the CObj the display pass keeps.
+- **Fix:** take the edges from logic state.
+- **Fix impact:** changes Onett's random sequence and car timing.
+- **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes) (line 146).
+
+## Latent defects
+
+Defects no game data or code reaches in play. For each, the effect is none observable, the fix is a guard or a defined value, and a fix changes nothing in play. melee-hd stops (panics, or reports an unported case) or counts a stale read where the original would go wrong, so a case that turns out reachable can't pass unnoticed.
+
+| Defect | Where | What goes wrong | Source |
+| --- | --- | --- | --- |
+| IK with the effector on the chain's root | `resolveIKJoint1`, `hsd/jobj.rs` | Reads two registers and two stack vectors it never set; no joint on the disc has an IK role | [engine notes](engine.md#uninitialized-values) (line 52); `crates/melee-sim/src/hsd/jobj.rs:1573` |
+| Quakes of another kind | `Camera_RequestQuake`, `game/camera.rs` | Never sets the length and stores the epicenter argument's register (its address); no caller passes such a kind | [engine notes](engine.md#uninitialized-values) (line 53); `crates/melee-sim/src/game/camera.rs:1382` |
+| The cutscene camera's fourth transition kind | `script_progress`, `game/camera.rs` | Leaves the ratio unset (a register its caller left); no code sets the kind | `crates/melee-sim/src/game/camera.rs:2865` |
+| An overflowing substep count | `mpColl_80043754`, `mp/coll/mod.rs` | Returns a register its caller left when a move over about 10¹⁰ units runs no substep | [engine notes](engine.md#uninitialized-values) (line 64) |
+| No logged hit above -1 knockback | `ftColl_8007A06C`, `game/ft/attack.rs`; `it_80270E30`, `game/it/coll.rs` | Leaves the index it reads uninitialized when every knockback is NaN or -1 and below | [engine notes](engine.md#uninitialized-values) (line 69); `crates/melee-sim/src/game/it/coll.rs:647` |
+| Stages without spawn points | `Ground_801C2D24`, read by `Stage_80224E64` and `fn_80167638`; `game/gr/ground.rs`, `game/gm/vs.rs` | Leaves its vector alone (and adds into its out parameter for combined points) when the stage lacks the point; every VS stage has them | [engine notes](engine.md#uninitialized-values) (line 78); `crates/melee-sim/src/game/gr/ground.rs:207` |
+| A string ending in a lead byte | `HSD_SisLib_803A67EC`, `hsd/sis.rs` | Reads past a string that ends in a Shift-JIS lead byte; the game's strings end in whole characters | [engine notes](engine.md#uninitialized-values) (line 91) |
+| Character-specific effect spawns for another character | `efSync_Spawn`, `game/ef/sync.rs` | Case 0x501 reads Peach's part 85, past a shorter parts table, and action-state callbacks read the character's `mv` words | [engine notes](engine.md#uninitialized-values) (line 59) |
+| Judgement's roll past its sums | `ftGw_SpecialS_GetRandomInt`, `game/ft/gamewatch/special_s.rs` | Returns a register it never set when the roll isn't below any running sum; a roll below their total always is | [engine notes](engine.md#uninitialized-values) (line 90) |
+| Falcon Kick's flame in another state | `ftCa_SpecialHi_800E3EAC`, `game/ft/captain/special_lw.rs` | Reads a register and a stack word it never set outside the kick's two states; only those states call it | `crates/melee-sim/src/game/ft/captain/special_lw.rs:24` |
+| A walk's animation outside the walk | `ftWalkCommon_800DFDDC`, `game/ft/co/ground.rs` | Leaves the rate in `f31` from its caller for a state that isn't one of the walk's three | `crates/melee-sim/src/game/ft/co/ground.rs:243` |
+| Dancing Blade's switch from another state | Marth's side special switches, `game/ft/mars/special_s.rs` | Leaves the state it changes to unset | `crates/melee-sim/src/game/ft/mars/special_s.rs:219` |
+| No surface touched | `it_80276CEC`, `game/it/maplib.rs` | Stores an unset register as the surface | `crates/melee-sim/src/game/it/maplib.rs:365` |
+| Stadium's screen without its texture | `grStadium_801D1290`, `game/gr/stadium.rs` | Leaves its stack slot as it was when no texture is found; one always is | `crates/melee-sim/src/game/gr/stadium.rs:309` |
+| Stadium's monitor weights leaving no mode | `grStadium_801D2A60`, `game/gr/stadium.rs` | Draws until the mode differs from the current and last ones, forever if the weights leave none that can | `crates/melee-sim/src/game/gr/stadium.rs:1004`; [engine notes](engine.md#players-codes) (line 273) |
+| A damage display that isn't one | `ifStatus_802F4EDC`, `game/hud/status.rs` | Reads a null display | `crates/melee-sim/src/game/hud/status.rs:342` |
+| A sound command's pan direction past 3 | `ftAction_80072320`, `game/ft/commands.rs` | Passes what `f31` holds | `crates/melee-sim/src/game/ft/commands.rs:973` |
+| PK Flash of another kind | `it_802AAA80`, `game/it/kinds/nesspkflash.rs` | Reads a register it never set | `crates/melee-sim/src/game/it/kinds/nesspkflash.rs:243` |
+| Sheik's chain with no link out | `it_802BC080`, `game/it/kinds/seakchain.rs` | Stores a register its caller set (`env_flags`) when its loop doesn't run | `crates/melee-sim/src/game/it/kinds/seakchain.rs:796` |
+| A floor probe that misses | `ftCo_800DC920`, `game/ft/co/grab.rs` | Leaves the offset a stack word it then compares | `crates/melee-sim/src/game/ft/co/grab.rs:503` |
+| Rumble scripts | `HSD_PadRumbleInterpret1`, `input/rumble.rs` | Reads through a null pointer for a loop end before any loop start, and spins forever on opcodes 6 and 7 or a command that doesn't wait; no script in the game has these | `crates/melee-sim/src/input/rumble.rs:115`; `tools/leaf-check/tests/rumble.rs:64` |
+| Particle commands past their tables | `hsd_8039930C` and the bank lookups, `hsd/particle.rs` | A texture group past the bank's table takes an unrelocated word for an address; a point joint past the table reads the particle links as joints; a callback index faults on the null `psCallback` | `crates/melee-sim/src/hsd/particle.rs:236`, `:850`, `:1602` |
+| A tornado particle without a generator | `calcTornadoLastPos`, `melee-render/src/hsd/psdisp.rs` | Reads a null generator's position | `crates/melee-render/src/hsd/psdisp.rs:181` |
+| Shape weights out of range | `PObjUpdateFunc`, `hsd/pobj.rs` | Writes past the weights for a channel out of their range | `crates/melee-sim/src/hsd/pobj.rs:582` |
+| A texture's LOD bias animated | `TObjUpdateFunc`, `hsd/tobj.rs` | Writes the bias into the loaded LOD descriptor every TObj from it shares; no animation has the channel | `crates/melee-sim/src/hsd/tobj.rs:538` |
+| Cameras without their parts | `makeProjectionMtx`, `HSD_CObjSetupViewingMtx`, `HSD_CObjSetRoll`, `hsd/cobj.rs` | Another projection type returns the caller's `r31`; a dirty view without an eye or interest builds from uninitialized stack and writes through a null WObj; a roll without an eye vector sets the up vector from uninitialized stack | `crates/melee-sim/src/hsd/cobj.rs:337`, `:358`, `:613` |
+| A light id that isn't one | `HSD_LightID2Index`, `hsd/lobj.rs` | Asserts and returns an uninitialized index | `crates/melee-sim/src/hsd/lobj.rs:257` |
+| An effect from an unloaded file | `ef::desc`, `game/ef/mod.rs` | Reads low memory for the descriptor | `crates/melee-sim/src/game/ef/mod.rs:532` |
+| Waiting for banks nothing loads | `lbAudioAx_80027648`, `lb/audio.rs`; `HSD_SynthSFXBankDeflagSync`, `audio/bank.rs` | Waits, or spins with no wait point, forever | `crates/melee-sim/src/lb/audio.rs:1372`; `crates/melee-sim/src/audio/bank.rs:490` |
+| The background flash's color commands | `fn_80021C80` with `fn_80021C18`, `lb/bgflash.rs` | `fn_80021C18` takes the owner's commands and does nothing, so a script with one would stay on it forever | `crates/melee-sim/src/lb/bgflash.rs:363` |
+| `expf` and `powf` on large or NaN inputs | `expf`, `math.rs` | The series never settles for NaN or where the terms overflow (\|x\| about 12.7 to 14.7), and loops forever | `tools/leaf-check/tests/math.rs:154` |
+| A particle list on a displayed joint | HSD's joint traversal (displayfunc.c, `efLib_Cb_SPtcl`) | Spawns a joint's particle list on its first display, whose generators then draw from the game's random seed, so a spawn put off by a doubled round would shift every later draw; no joint descriptor on the disc carries a particle list | [engine notes](engine.md#state-the-render-pass-writes) (line 150) |
+
+## Unsure
+
+- **Yoshi's egg and Koopa Klaw's union words.** Yoshi's egg (`ftCo_800BBED4`) sets its shrink's frames left from `mv.co.walk.fast_anim_frame`, the same word as the frames it just set, and clears the Captain's up special's `vel.y`, the same word as its mash timer; Koopa Klaw's victim tests its struggle's frames as the Captain's `vel.y` and Whirling Fortress counts frames in a word its start clears under another name. These may be the decompilation's union names for the same intended fields rather than slips in the game's code. Source: [engine notes](engine.md#uninitialized-values) (lines 87 and 88).
+- **Popo's hammer holder.** Squall Hammer's hammer joint lean and visibility (`ftPp_SpecialS_8011F720`) runs only with a holder (`specials.x8`) that the entries clear and nothing sets, so it never runs. It may be code HAL left disabled on purpose. Source: `crates/melee-sim/src/game/ft/popo/special_s.rs:149`.
+- **Luigi's `x222C`.** `Fighter_Create` leaves thousands of a fighter's bytes unwritten, which creation never reads; the decompilation notes a later read of Luigi's `x222C`, which on a console would see a previous object's bytes. Whether that read happens before a write isn't settled. Source: [engine notes](engine.md#uninitialized-values) (line 67).
+- **Per-use lengths written into shared loaded data.** Samus's grapple beam (`it_802B75FC`) and Link's and Young Link's hookshot (`it_802A2BA4`) write their lengths for the user's height over their attributes in the loaded archive, which every user of that character shares in a match. It's a design choice that would misbehave only for users of different heights or grab kinds at once; whether it ever changes play isn't recorded. Source: [engine notes, loaded data the game writes into](engine.md#loaded-data-the-game-writes-into).
+- **Relocations at unaligned offsets.** Some archives relocate words at offsets no pointer can have (not a multiple of 4), and the loader adds the load address there all the same. That is a defect in the disc's data rather than in the code. Source: `crates/melee-data/src/archive.rs:228`; [the porting guide](porting.md#when-to-stop-and-ask).
+- **Wobbling.** Slippi's ruleset carries wobbling prevention (`800DB880`, `800DBBD4`, `8008F090`), but melee-hd's sources describe it as a ruleset change, not a defect in the code, and players treat wobbling as a technique. Source: [the oracle](oracle.md) (lines 133 and 134).

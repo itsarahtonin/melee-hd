@@ -111,6 +111,13 @@ pub fn bone(game: &Game, data: &Archives, gobj: GObjId, idx: i32) -> Option<JObj
     j
 }
 
+/// The joint its model attaches by (its model's `x8_bone_attach_id`), `it_80272C90`.
+#[doc(alias = "it_80272C90")]
+pub fn attach_bone(game: &Game, data: &Archives, gobj: GObjId) -> Option<JObjId> {
+    let id = article(item(game, gobj)).model(data).bone_attach_id(data);
+    bone(game, data, gobj, id)
+}
+
 /// Counts the lifetime down: whether it ran out, `it_80273130`.
 #[doc(alias = "it_80273130")]
 pub fn tick_lifetime(game: &mut Game, gobj: GObjId) -> bool {

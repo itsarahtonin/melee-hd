@@ -67,7 +67,10 @@ pub fn main(args: &[String]) {
     }
     let dir = PathBuf::from(dir.expect("--dir DIR (or BENCH_DIR)"));
     if names.is_empty() {
-        names = matches::MATCHES.iter().map(|m| m.name.to_owned()).collect();
+        names = matches::MATCHES
+            .iter()
+            .map(|m| m.name.to_string())
+            .collect();
     }
     let env = Env::new(dir);
     crate::win::raise_thread_priority();

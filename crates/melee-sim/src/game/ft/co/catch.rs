@@ -343,6 +343,7 @@ impl Running<'_> {
             super::capture_mewtwo::CAPTURE => self.enter_capture_mewtwo(victim, grabber, false),
             super::capture_mewtwo::CAPTURE_AIR => self.enter_capture_mewtwo(victim, grabber, true),
             cb if super::capture_koopa::run_grabbed(self, victim, grabber, cb) => {}
+            cb if super::capture_kirby::run_grabbed(self, victim, grabber, cb) => {}
             other => unported_call(&format!("grabbed callback {other:#010x}")),
         }
     }

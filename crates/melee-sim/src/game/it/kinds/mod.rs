@@ -33,6 +33,8 @@ pub mod hammer;
 pub mod hammerhead;
 pub mod heart;
 pub mod heiho;
+pub mod kirbycutterbeam;
+pub mod kirbyhammer;
 pub mod koopaflame;
 pub mod kusudama;
 pub mod lgun;
@@ -111,6 +113,8 @@ pub fn falling_phys(r: &mut Running, gobj: GObjId) {
 /// Runs a kind's callback of the event kind (`HSD_GObjEvent`), if `addr` is one.
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     foxlaser::run_event(r, gobj, addr)
+        || kirbycutterbeam::run_event(r, gobj, addr)
+        || kirbyhammer::run_event(r, gobj, addr)
         || climbersice::run_event(r, gobj, addr)
         || climbersblizzard::run_event(r, gobj, addr)
         || climbersstring::run_event(r, gobj, addr)
@@ -200,6 +204,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     foxlaser::run_pred(r, gobj, addr)
+        .or_else(|| kirbycutterbeam::run_pred(r, gobj, addr))
         .or_else(|| climbersice::run_pred(r, gobj, addr))
         .or_else(|| climbersblizzard::run_pred(r, gobj, addr))
         .or_else(|| climbersstring::run_pred(r, gobj, addr))
@@ -326,6 +331,12 @@ pub const OCTAROCK_STONE: i32 = 47;
 pub const MARIO_FIRE: i32 = 48;
 /// `It_Kind_DrMario_Vitamin`.
 pub const DRMARIO_VITAMIN: i32 = 49;
+/// Kirby's: `It_Kind_Kirby_CBeam`, `_Hammer`, `It_Kind_Unk1` (the star of a lost copy) and
+/// `It_Kind_Unk2`.
+pub const KIRBY_CBEAM: i32 = 50;
+pub const KIRBY_HAMMER: i32 = 51;
+pub const KIRBY_COPY_STAR: i32 = 52;
+pub const KIRBY_UNK2: i32 = 53;
 /// `It_Kind_Fox_Laser`.
 pub const FOX_LASER: i32 = 54;
 /// `It_Kind_Falco_Laser`.
@@ -390,9 +401,34 @@ pub const NESS_PK_THUNDER4: i32 = 73;
 pub const NESS_PK_FLUSH_EXPLODE: i32 = 78;
 pub const NESS_BAT: i32 = 101;
 pub const NESS_YOYO: i32 = 102;
-/// Kirby's copies of PK Flash: `It_Kind_Kirby_NessPKFlush` and `_Explode`.
+/// Kirby's copies' items (`It_Kind_Kirby_MarioFire` to `_YoshiEggLay`).
+pub const KIRBY_MARIO_FIRE: i32 = 130;
+pub const KIRBY_DRMARIO_VITAMIN: i32 = 131;
+pub const KIRBY_LUIGI_FIRE: i32 = 132;
+pub const KIRBY_ICE_CLIMBER_ICE: i32 = 133;
+pub const KIRBY_PEACH_TOAD: i32 = 134;
+pub const KIRBY_PEACH_TOAD_SPORE: i32 = 135;
+pub const KIRBY_FOX_LASER: i32 = 136;
+pub const KIRBY_FALCO_LASER: i32 = 137;
+pub const KIRBY_FOX_BLASTER: i32 = 138;
+pub const KIRBY_FALCO_BLASTER: i32 = 139;
+pub const KIRBY_LINK_ARROW: i32 = 140;
+pub const KIRBY_CLINK_ARROW: i32 = 141;
+pub const KIRBY_LINK_BOW: i32 = 142;
+pub const KIRBY_CLINK_BOW: i32 = 143;
+pub const KIRBY_MEWTWO_SHADOWBALL: i32 = 144;
 pub const KIRBY_NESS_PK_FLUSH: i32 = 145;
 pub const KIRBY_NESS_PK_FLUSH_EXPLODE: i32 = 146;
+pub const KIRBY_PIKACHU_TJOLT_GROUND: i32 = 147;
+pub const KIRBY_PIKACHU_TJOLT_AIR: i32 = 148;
+pub const KIRBY_PICHU_TJOLT_GROUND: i32 = 149;
+pub const KIRBY_PICHU_TJOLT_AIR: i32 = 150;
+pub const KIRBY_SAMUS_CHARGE: i32 = 151;
+pub const KIRBY_SEAK_NEEDLE_THROW: i32 = 152;
+pub const KIRBY_SEAK_NEEDLE_HELD: i32 = 153;
+pub const KIRBY_GAME_WATCH_CHEF: i32 = 155;
+pub const KIRBY_GAME_WATCH_CHEF_PAN: i32 = 156;
+pub const KIRBY_YOSHI_EGG_LAY: i32 = 157;
 /// `It_Kind_Fox_Blaster`.
 pub const FOX_BLASTER: i32 = 74;
 /// `It_Kind_Falco_Blaster`.

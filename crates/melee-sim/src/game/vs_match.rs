@@ -815,6 +815,40 @@ pub fn load_fighter_files(
             }
         }
     }
+    // Kirby's copies of the other players' characters (`fn_8016E124`,
+    // `ftKb_SpecialN_800EED50`): each kind's copy file, and for the kinds whose copy wears his
+    // costume's colors, the file for each Kirby's costume.
+    let kirby_costumes: Vec<usize> = start
+        .players
+        .iter()
+        .filter(|p| {
+            i32::from(p.slot_type) != super::pl::player::PKIND_NONE
+                && i32::from(p.ckind) == super::pl::player::CKIND_KIRBY
+        })
+        .map(|p| usize::from(p.color))
+        .collect();
+    if !kirby_costumes.is_empty() {
+        use super::ft::kirby::init::{COPY_FILES, copy_costume_files};
+        for p in &start.players {
+            if i32::from(p.slot_type) == super::pl::player::PKIND_NONE {
+                continue;
+            }
+            let m = super::pl::player::mapping(i32::from(p.ckind));
+            for kind in [m.internal_id, m.extra_internal_id] {
+                if kind < 0 || i32::from(kind) == super::ft::kirby::KIND_KIRBY {
+                    continue;
+                }
+                if let Some((file, _)) = COPY_FILES[kind as usize] {
+                    add(files, data, file);
+                }
+                for &c in &kirby_costumes {
+                    if let Some((file, _, _)) = copy_costume_files(kind as usize, c) {
+                        add(files, data, &file);
+                    }
+                }
+            }
+        }
+    }
     let mut aram = ARAM_ANIM_BASE;
     for name in anims {
         let DiscFile { entrynum, bytes } = load(name);
