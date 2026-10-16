@@ -93,6 +93,9 @@ pub struct Rules {
     pub freeze_glitch_fix: bool,
     /// Which version of Slippi's codes the rules come from, where versions differ.
     pub codes: super::slippi::CodeSet,
+    /// The codes players add to their own setups that the match runs
+    /// (`game::player_codes`).
+    pub player: super::player_codes::PlayerCodes,
 }
 
 /// What a GObj's HSD object is (`hsd_obj`, by its `obj_kind`).
@@ -254,6 +257,8 @@ pub struct Game {
     pub playback: Option<super::playback::Playback>,
     /// UCF's pad buffer (with [`Rules::ucf`]).
     pub ucf: super::ucf::Pads,
+    /// What the players' codes keep outside the game's structs (with [`Rules::player`]).
+    pub player_code_state: super::player_codes::State,
     /// The rumble patterns by kind (`lb_804D63C0`, `LbRb.dat`'s `lbRumbleData`).
     pub rumble_data: Option<melee_data::archive::DataRef>,
     /// The text system (SisLib).

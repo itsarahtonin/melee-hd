@@ -124,6 +124,13 @@ impl Running<'_> {
     /// `ftCommon_CheckFallFast`.
     #[doc(alias = "ftCommon_CheckFallFast")]
     pub fn check_fall_fast(&mut self, gobj: GObjId) -> bool {
+        self.check_fall_fast_from(gobj, false)
+    }
+
+    /// [`check_fall_fast`](Self::check_fall_fast) for a caller whose `r31` holds the fighter's
+    /// attributes rather than the fighter (`attrs`), which the fast-fall spark code reads
+    /// (`game::player_codes`).
+    pub fn check_fall_fast_from(&mut self, gobj: GObjId, attrs: bool) -> bool {
         let c = self.common();
         let (stick, window) = (reg(c.f32(0x88)), c.i32(0x8C));
         let fp = self.game.fighter_mut(gobj);
@@ -136,6 +143,15 @@ impl Running<'_> {
             fp.active_timer.lstick.y = 254;
             let f = self.game.fighter_id(gobj);
             self.fighter_play_sfx(f, 0x96, 0x7F, 0x40);
+            if self.game.rules.player.fall_fast_spark {
+                let fp = &self.game.fighters[f.0];
+                let word = if attrs {
+                    fp.co_attrs.run_animation_scaling
+                } else {
+                    fp.facing_dir
+                };
+                self.fall_fast_spark(gobj, word);
+            }
             return true;
         }
         false

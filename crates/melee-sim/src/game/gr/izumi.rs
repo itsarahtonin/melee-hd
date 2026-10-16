@@ -614,17 +614,29 @@ const REFLECT_CAMERA: crate::hsd::cobj::StaticDesc = crate::hsd::cobj::StaticDes
     projection: [30.0, 1.217_333_3, 0.0, 0.0],
 };
 
+/// The reflection's size with the reflection size code (`game::player_codes`): its
+/// `lb_800121FC` arguments and its camera descriptor's viewport and scissor.
+const HIGH_RES: (u16, u16) = (640, 480);
+
 /// The reflection camera, `grIzumi_801CCD98`: a GObj (class 0x11, link 0x12) with a camera
-/// rendering an 80x60 texture (render priority 2), its user data the [`Reflection`], whose
-/// image is the stage archive's descriptor the water's texture shows, rewritten for the render.
+/// rendering an 80x60 texture (render priority 2; 640x480 with the reflection size code), its
+/// user data the [`Reflection`], whose image is the stage archive's descriptor the water's
+/// texture shows, rewritten for the render.
 #[doc(alias = "grIzumi_801CCD98")]
 pub fn create_reflection(r: &mut Running) -> GObjId {
     use super::super::state::{OBJ_CAMERA, Obj, UserData};
+    let high = r.game.rules.player.izumi_reflection_size;
+    let (w, h) = if high { HIGH_RES } else { (80, 60) };
     let gobj = r.game.world.create(0x11, 0x12, 0);
+    let mut desc = REFLECT_CAMERA;
+    if high {
+        desc.viewport = [0, w as i16, 0, h as i16];
+        desc.scissor = [0, w, 0, h];
+    }
     let c = crate::lb::cobj::load_cobj(
         &mut r.game.objs,
         r.data,
-        crate::lb::cobj::CObjDesc::Static(&REFLECT_CAMERA),
+        crate::lb::cobj::CObjDesc::Static(&desc),
     );
     r.game.world.set_obj(gobj, OBJ_CAMERA, Obj::CObj(c));
     r.game
@@ -650,13 +662,13 @@ pub fn create_reflection(r: &mut Running) -> GObjId {
     // boots into).
     if !r.game.ft.data.files.buffer_preloaded(2001) {
         crate::hsd::heap::mem_alloc(
-            crate::hsd::heap::tex_buffer_size(80, 60, 4).next_multiple_of(32),
+            crate::hsd::heap::tex_buffer_size(u32::from(w), u32::from(h), 4).next_multiple_of(32),
         );
     }
     r.game.gr.izumi.reflection = Some(Reflection {
         texture_matrix: None,
         image,
-        desc: super::stadium::screen_image(80, 60, 4),
+        desc: super::stadium::screen_image(w, h, 4),
         addr,
     });
     gobj
@@ -685,7 +697,11 @@ pub fn render_reflection(r: &mut Running, gobj: GObjId) {
     let Some(Obj::CObj(c)) = r.game.world.gobj(gobj).obj else {
         panic!("the reflection camera holds no camera");
     };
-    fighters_draw_magnified(r.game);
+    // The reflection callbacks code (`game::player_codes`) skips both callback swaps.
+    let swap = !r.game.rules.player.izumi_reflection_callbacks;
+    if swap {
+        fighters_draw_magnified(r.game);
+    }
     let main = super::super::camera::gobj(&r.game.camera.cam);
     if let Some(main) = main {
         super::super::camera::update_cobj(r.game, main);
@@ -740,7 +756,9 @@ pub fn render_reflection(r: &mut Running, gobj: GObjId) {
     if let Some(v) = r.game.gr.izumi.reflection.as_mut() {
         v.texture_matrix = Some(m);
     }
-    fighters_draw_normally(r.game);
+    if swap {
+        fighters_draw_normally(r.game);
+    }
 }
 
 /// Every fighter's render callback, in the fighter link's order.

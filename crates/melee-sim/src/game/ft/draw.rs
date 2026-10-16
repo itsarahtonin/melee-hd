@@ -173,8 +173,9 @@ impl Running<'_> {
         if self.game.fighters[f.0].x21FC_flag[0] & 1 == 0 {
             return;
         }
+        let hidden = self.game.tech_hidden(f);
         let fp = &self.game.fighters[f.0];
-        if !fp.invisible && !fp.x221E_b5 && main {
+        if !fp.invisible && !hidden && !fp.x221E_b5 && main {
             self.set_parts_vis(f, 1, false);
             self.set_parts_vis(f, 4, false);
             let fp = &self.game.fighters[f.0];

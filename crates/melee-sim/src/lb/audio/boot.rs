@@ -94,7 +94,7 @@ impl Audio {
         self.with_clock(data, |c, f| c.catch_up(BootTimes::RESET, f));
         // `lbAudioAx_80024BD0` reads the sound mode into a global the port doesn't keep.
         self.lb_reset_settings();
-        self.lb_volumes(true);
+        self.lb_volumes(true, false);
         let lb = &mut self.lb;
         lb.ssm_file[..10].copy_from_slice(b"/audio/us/");
         lb.ssm_stem_pos = 10;

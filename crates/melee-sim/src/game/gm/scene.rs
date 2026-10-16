@@ -281,6 +281,10 @@ pub fn step(r: &mut Running, poll: PadData, reset_pressed: bool) -> Tick {
 pub fn step_tick(r: &mut Running, poll: PadData, reset_pressed: bool) -> (Tick, bool) {
     // The loop waits for a poll only when none is queued (`lb_80019894`): the scene's first
     // round runs on the one its setup left.
+    let mut poll = poll;
+    if r.game.rules.player.swap_xz {
+        poll.iter_mut().for_each(|p| p.swap_xz());
+    }
     let pads = if r.game.pads.lib.qcount == 0 {
         r.game.pads.renew_raw(r.data, poll, false, reset_pressed)
     } else {

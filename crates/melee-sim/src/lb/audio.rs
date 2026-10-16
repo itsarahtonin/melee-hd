@@ -461,7 +461,8 @@ impl Running<'_> {
     /// The channels' volumes from the settings, each handed to the synth when it changed
     /// (`fn_80024654(0)`, [`crate::audio::Audio::lb_volumes`]).
     pub fn lb_audio_volumes(&mut self) {
-        self.game.audio.lb_volumes(false);
+        let quiet = self.game.rules.player.quiet_announcer;
+        self.game.audio.lb_volumes(false, quiet);
     }
 
     /// Queues a sound to play when the queue next empties at once (`lbAudioAx_80024DC4`):
@@ -1446,8 +1447,10 @@ impl crate::audio::Audio {
     /// The channels' volumes from the settings, `fn_80024654`: the stream's, then channels
     /// 2-3 (effects), 4-7, 8 and 1 (the announcer), and the music channels' aux B send, each
     /// handed to the synth when it changed, or all of them with `all` (`fn_80024654(1)`).
+    /// `quiet_announcer` is the quiet announcer code (`game::player_codes`), which reads the
+    /// announcer's setting as 1.
     #[doc(alias = "fn_80024654")]
-    pub fn lb_volumes(&mut self, all: bool) {
+    pub fn lb_volumes(&mut self, all: bool, quiet_announcer: bool) {
         let a = self;
         let lb = &mut a.lb;
         lb.stream_volume = mem(fp::fmuls(over_127(lb.music), reg(lb.music_scale)));
@@ -1494,10 +1497,8 @@ impl crate::audio::Audio {
                 fp::fmuls(reg(lb.voice_scale), reg(lb.voice_duck)),
             ),
         ));
-        lb.volume_1 = byte(fp::fmuls(
-            reg(lb.scale_1),
-            fp::frsp(f64::from(lb.voice * 2)),
-        ));
+        let voice = if quiet_announcer { 1 } else { lb.voice };
+        lb.volume_1 = byte(fp::fmuls(reg(lb.scale_1), fp::frsp(f64::from(voice * 2))));
         if all || lb.sent_1 != lb.volume_1 {
             let v = lb.volume_1;
             a.synth_update_all_volume(v, 4, 1);

@@ -397,9 +397,12 @@ fn data_words(addr: u32, first: u32) -> std::ops::Range<usize> {
 
 /// Whether `c` is the code `k`: its place, type and length, and its instructions.
 fn matches(k: &Known, c: &Code) -> bool {
-    if k.addr != c.addr || k.kind != c.kind || k.first != c.first {
-        return false;
-    }
+    k.addr == c.addr && k.kind == c.kind && k.first == c.first && code_hash(c) == k.hash
+}
+
+/// The FNV-1a hash of a code's words, with the data it keeps and a `C2` code's final branch
+/// (where the code handler put it) zeroed.
+pub(crate) fn code_hash(c: &Code) -> u64 {
     let data = data_words(c.addr, c.first);
     let last = if c.kind == 0xC2 {
         c.words.len().checked_sub(1)
@@ -413,7 +416,7 @@ fn matches(k: &Known, c: &Code) -> bool {
             w
         }
     });
-    fnv(words) == k.hash
+    fnv(words)
 }
 
 fn fnv(words: impl Iterator<Item = u32>) -> u64 {
@@ -523,6 +526,7 @@ impl Rules {
             offscreen_limits: true,
             freeze_glitch_fix: true,
             codes: CodeSet::V3_19,
+            player: Default::default(),
         }
     }
 
@@ -537,8 +541,15 @@ impl Rules {
         }
         let mut seen = Vec::new();
         let mut sets = ALL;
+        let mut player = super::player_codes::Collect::new();
         for c in codes {
+            if player.take(c) {
+                continue;
+            }
             if !KNOWN.iter().any(|k| k.addr == c.addr && k.kind == c.kind) {
+                if super::player_codes::known_site(c) {
+                    return Err(CodeError::Changed { addr: c.addr });
+                }
                 return Err(CodeError::Unknown {
                     kind: c.kind,
                     addr: c.addr,
@@ -554,12 +565,13 @@ impl Rules {
             }
             seen.push(k.rule);
         }
+        let player = player.finish()?;
         // The first version the codes fit, whole: a list of only the codes all share plays as
         // 3.19's, and 3.14's lacks one of 3.16's.
         let mut first = None;
         for set in CodeSet::ALL.into_iter().filter(|s| sets & s.bit() != 0) {
             match Rules::from_rules(&seen, set) {
-                Ok(rules) => return Ok(rules),
+                Ok(rules) => return Ok(Rules { player, ..rules }),
                 Err(e) => {
                     first.get_or_insert(e);
                 }
@@ -673,6 +685,7 @@ impl Rules {
                 .unwrap_or(first);
             codes.push(code);
         }
+        codes.extend(super::player_codes::in_memory(read));
         Rules::from_codes(&codes)
     }
 }

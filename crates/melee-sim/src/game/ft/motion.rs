@@ -960,6 +960,10 @@ impl Running<'_> {
                 fp.gr_vel = mem(max);
             }
         }
+        if self.game.rules.player.dash_grab_color {
+            self.dash_grab_color(gobj);
+        }
+        let fp = &mut self.game.fighters[f.0];
         fp.anim_cb = ms.anim_cb;
         fp.input_cb = ms.input_cb;
         fp.phys_cb = ms.phys_cb;
