@@ -4,7 +4,6 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
 use super::super::super::ef::{self, SpawnKind};
 use super::super::super::state::Running;
 use super::super::coll::PLATFORM_FILTER;
@@ -194,7 +193,8 @@ impl Running<'_> {
             && self.game.fighter(gobj).item_gobj.is_some()
             && self.item_a_kind(gobj) == 3
         {
-            unported_call("ftCo_800CDDA0 (a swing item's aerial)");
+            self.enter_item_shoot_air(gobj);
+            return true;
         }
         self.peach_enter_float_attack(gobj);
         true

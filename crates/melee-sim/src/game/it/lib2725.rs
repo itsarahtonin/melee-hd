@@ -558,6 +558,12 @@ pub fn start_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize) 
     super::coll::update_hitbox(game, data, gobj, idx);
 }
 
+/// Marks the item holding still for its animation (`xDC8_word.x2`), `it_80274F10`.
+#[doc(alias = "it_80274F10")]
+pub fn hold_still(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDC8_word.flags.x2 = true;
+}
+
 /// Whether the model still plays an animation, `it_80272C6C`.
 #[doc(alias = "it_80272C6C")]
 pub fn is_animating(game: &Game, gobj: GObjId) -> bool {

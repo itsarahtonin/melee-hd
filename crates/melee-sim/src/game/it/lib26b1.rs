@@ -276,6 +276,29 @@ pub fn set_xdd0_b3(game: &mut Game, gobj: GObjId) {
     super::set_flag(&mut item_mut(game, gobj).xDD0_flag, 3, true);
 }
 
+/// Sets the flags an item holding still for its animation clears (`xDD0_flag.b3`,
+/// `xDCC_flag.b3`, `xDCD_flag.b3` and `b4`, `xDC8_word.x1A`) the other way, `it_8026BDCC`.
+#[doc(alias = "it_8026BDCC")]
+pub fn hold_flags_off(game: &mut Game, gobj: GObjId) {
+    let ip = item_mut(game, gobj);
+    super::set_flag(&mut ip.xDD0_flag, 3, false);
+    ip.xDCC_flag.b3 = true;
+    ip.xDCD_flag.x0.b3 = false;
+    ip.xDCD_flag.x0.b4 = false;
+    ip.xDC8_word.flags.x1A = false;
+}
+
+/// The inverse of [`hold_flags_off`], `it_8026BE28`.
+#[doc(alias = "it_8026BE28")]
+pub fn hold_flags_on(game: &mut Game, gobj: GObjId) {
+    let ip = item_mut(game, gobj);
+    super::set_flag(&mut ip.xDD0_flag, 3, true);
+    ip.xDCC_flag.b3 = false;
+    ip.xDCD_flag.x0.b3 = true;
+    ip.xDCD_flag.x0.b4 = true;
+    ip.xDC8_word.flags.x1A = true;
+}
+
 /// Stops the item keeping clear of others (`xDC8_word.x1A`), `it_8026BDB4`.
 #[doc(alias = "it_8026BDB4")]
 pub fn stop_keeping_clear(game: &mut Game, gobj: GObjId) {

@@ -34,6 +34,7 @@ pub mod ice;
 pub mod ids;
 pub mod item_catch;
 pub mod item_get;
+pub mod item_scope;
 pub mod item_throw;
 pub mod jump;
 pub mod kind_callbacks;

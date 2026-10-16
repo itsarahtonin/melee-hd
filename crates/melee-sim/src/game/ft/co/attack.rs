@@ -64,7 +64,10 @@ impl Running<'_> {
                 self.enter_swing(gobj, 0);
                 true
             }
-            3 => unported_call("ftCo_Attack_800CDD14"),
+            3 => {
+                self.enter_item_shoot(gobj);
+                true
+            }
             _ => false,
         }
     }
@@ -446,7 +449,10 @@ impl Running<'_> {
                     self.enter_swing(gobj, 1);
                     return true;
                 }
-                3 => unported_call("ftCo_Attack_800CDD14"),
+                3 => {
+                    self.enter_item_shoot(gobj);
+                    return true;
+                }
                 _ => {}
             }
         }
@@ -675,7 +681,11 @@ impl Running<'_> {
                 self.enter_swing(gobj, 2);
                 true
             }
-            3 => unported_call("ftCo_Attack_800CDD14 (a smash shot)"),
+            3 => {
+                self.game.fighter_mut(gobj).facing_dir = dir;
+                self.enter_item_shoot(gobj);
+                true
+            }
             _ => false,
         }
     }

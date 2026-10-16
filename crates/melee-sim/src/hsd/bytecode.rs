@@ -2,13 +2,16 @@
 //! that an RObj expression runs to compute one channel of a joint from other joints' values.
 //!
 //! The stack holds 32-bit words that each instruction reads as a float or an integer. The
-//! original keeps it in an `HSD_SList` it allocates and frees within the call; here it is a
-//! local `Vec`, since nothing outside the call sees those nodes.
+//! original keeps it in an `HSD_SList`, a node from the list pool per value, allocated as a
+//! value is pushed and freed as it's popped; here the values are a local `Vec`, and each push
+//! and pop asks the allocator model for its node, so the list pool's counts and free list
+//! come out as the original's.
 
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
 use crate::fpu::{copy, mem, reg};
+use crate::hsd::heap::{self, Kind};
 use crate::math;
 use crate::ppc::divw;
 use crate::rng::Rng;
@@ -28,20 +31,47 @@ fn word(r: f64) -> u32 {
     fp::stfs(r)
 }
 
-fn top(stack: &mut [u32]) -> &mut u32 {
+/// The stack: its values, and the list node each one has in the original
+/// (`HSD_SListAllocAndPrepend`, `HSD_SListRemove`).
+#[derive(Default)]
+struct Stack {
+    values: Vec<u32>,
+    nodes: Vec<u32>,
+}
+
+impl Stack {
+    fn push(&mut self, v: u32) {
+        self.values.push(v);
+        self.nodes.push(heap::obj_alloc(Kind::SList));
+    }
+
+    /// Pops the top value, if any (`HSD_SListRemove` of none does nothing).
+    fn pop(&mut self) -> Option<u32> {
+        let v = self.values.pop()?;
+        heap::obj_free(Kind::SList, self.nodes.pop().unwrap());
+        Some(v)
+    }
+
+    fn len(&self) -> usize {
+        self.values.len()
+    }
+}
+
+fn top(stack: &mut Stack) -> &mut u32 {
     stack
+        .values
         .last_mut()
         .expect("bytecode: an instruction needs a value on the stack")
 }
 
 /// Pops the top word for a binary instruction and returns it with the new top.
-fn pop2(stack: &mut Vec<u32>) -> (u32, &mut u32) {
+fn pop2(stack: &mut Stack) -> (u32, &mut u32) {
     assert!(
         stack.len() >= 2,
         "bytecode: an instruction needs two values on the stack"
     );
     let b = stack.pop().unwrap();
-    (b, stack.last_mut().unwrap())
+    (b, stack.values.last_mut().unwrap())
 }
 
 /// Runs the bytecode at `code` on `args` and returns the value it leaves, `HSD_ByteCodeEval`;
@@ -56,7 +86,7 @@ pub fn eval(data: &Archives, rng: &mut Rng, code: Option<DataRef>, args: &[f32])
         pc.offset += 1;
         b
     };
-    let mut stack: Vec<u32> = Vec::new();
+    let mut stack = Stack::default();
     loop {
         let op = next(&mut pc);
         let width = match op {
@@ -84,7 +114,7 @@ pub fn eval(data: &Archives, rng: &mut Rng, code: Option<DataRef>, args: &[f32])
                     let at = (stack.len() as u32)
                         .checked_sub(operand + 1)
                         .unwrap_or_else(|| panic!("specified stack doesn't exist ({operand})"));
-                    stack.push(stack[at as usize]);
+                    stack.push(stack.values[at as usize]);
                 }
                 // Skip `operand` bytes if the popped value is nonzero.
                 3 => {
@@ -103,7 +133,11 @@ pub fn eval(data: &Archives, rng: &mut Rng, code: Option<DataRef>, args: &[f32])
         }
         match op {
             0 => {}
-            1 => return copy(f32::from_bits(*top(&mut stack))),
+            1 => {
+                let v = copy(f32::from_bits(*top(&mut stack)));
+                while stack.pop().is_some() {}
+                return v;
+            }
             7 => {
                 let t = top(&mut stack);
                 *t = fp::fctiwz(float(*t)) as u32;

@@ -2315,21 +2315,24 @@ impl Running<'_> {
                     let slot = i32::from(self.game.fighters[me.0].player_idx);
                     self.game.count_bombhei_hit(slot, spawn);
                 }
-                if super::super::it::item::is_fighter(self.game, owner) {
-                    self.attack_landed(
-                        owner,
-                        gobj,
-                        2,
-                        kind,
-                        x2070,
-                        AttackRecord::Item(item),
-                        instance,
-                        false,
-                        grounded,
-                    );
+                // An ownerless item's hit names no attacker; an explosion's keeps the last
+                // attacker's player (`pl_8003D60C`).
+                let (attacker, keep) = if super::super::it::item::is_fighter(self.game, owner) {
+                    (owner, false)
                 } else {
-                    unported_call("pl_8003D60C (an ownerless item's hit)");
-                }
+                    (None, crate::game::pl::death::explosive_kind(kind))
+                };
+                self.attack_landed(
+                    attacker,
+                    gobj,
+                    2,
+                    kind,
+                    x2070,
+                    AttackRecord::Item(item),
+                    instance,
+                    keep,
+                    grounded,
+                );
             }
         }
         if element == ELEMENT_ELECTRIC {

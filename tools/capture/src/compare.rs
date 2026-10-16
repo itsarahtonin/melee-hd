@@ -415,6 +415,8 @@ impl<'a> Comparer<'a> {
         let game = self.game;
         let seed = self.u32(self.u32(sym("HSD_RandSeedPtr")));
         self.check("HSD_RandSeedPtr", "seed", game.objs.rng.seed, seed);
+        let arg_buf = self.u32(sym("arg_buf")) != 0;
+        self.check("arg_buf", "allocated", game.objs.robjs.arg_buf, arg_buf);
         game.magnify
             .compare(&mem, sym("ifMagnify_804A1DE0"), "magnify", self);
         let (theirs, filter_gobj) = crate::read_coll_statics(self.mem);

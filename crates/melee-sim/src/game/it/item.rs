@@ -936,7 +936,7 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
     set_translate(r.game, model.expect("an item without a model"), pos);
     lib26b1::flush_effects(r, gobj);
     if super::item(r.game, gobj).xDC8_word.flags.x2 {
-        code::unported_call("it_8026BDCC");
+        lib26b1::hold_flags_off(r.game, gobj);
     }
     if flags & MODEL_UPDATE != 0 {
         lib2725::stop_spin(r.game, data, gobj);

@@ -754,6 +754,8 @@ impl Importer<'_> {
         self.game.magnify = ifMagnify::import(&mem, sym("ifMagnify_804A1DE0"), self);
         // The random numbers' seed, where `HSD_RandSeedPtr` points.
         self.game.objs.rng.seed = self.u32(self.u32(sym("HSD_RandSeedPtr")));
+        // Whether expressions' argument buffer is allocated (`arg_buf`).
+        self.game.objs.robjs.arg_buf = self.u32(sym("arg_buf")) != 0;
         let (coll, filter_gobj) = crate::read_coll_statics(&cap.call.mem1);
         self.game.coll = coll;
         self.game.coll.floor_filter_gobj = self.import_handle("GObjId", filter_gobj).map(GObjId);

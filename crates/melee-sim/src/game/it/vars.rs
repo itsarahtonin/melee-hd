@@ -167,6 +167,13 @@ members! {
     ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE];
     ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];
     ClimbersString, climbers_string, itClimbersString_ItemVars, [ICE_CLIMBER_STRING];
+    Egg, egg, itEgg_ItemVars, [EGG];
+    FFlower, fflower, itFFlower_ItemVars, [F_FLOWER];
+    Freeze, freeze, itFreeze_ItemVars, [FREEZE];
+    LGun, lgun, itLGun_ItemVars, [L_GUN];
+    MBall, mball, itMBall_ItemVars, [M_BALL];
+    ScopeBeam, scope_beam, itScopeBeam_ItemVars, [S_SCOPE_BEAM];
+    Wstar, wstar, itWstar_ItemVars, [WSTAR];
 }
 
 impl Default for ItemVars {

@@ -35,8 +35,8 @@ fn between_a1_d0(x: i32) -> bool {
 }
 
 /// `pl_8003D60C`: the item kinds whose KOs count as an explosion's.
-// Ports `pl_8003D60C`; aliased once a check reaches it.
-fn explosive_kind(x: i32) -> bool {
+#[doc(alias = "pl_8003D60C")]
+pub(crate) fn explosive_kind(x: i32) -> bool {
     x == 0xA0 || (0xEA..0xEE).contains(&x) || x == 0xE1
 }
 

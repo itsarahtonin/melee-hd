@@ -105,7 +105,8 @@ impl Running<'_> {
             && self.game.fighter(gobj).item_gobj.is_some()
             && self.item_a_kind(gobj) == 3
         {
-            unported_call("ftCo_800CDDA0");
+            self.enter_item_shoot_air(gobj);
+            return true;
         }
         // `decideFighter`.
         match self.game.fighter(gobj).kind {
