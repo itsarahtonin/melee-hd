@@ -101,7 +101,7 @@ impl Running<'_> {
     /// the victim with the throw's hit and launches it (up for the down throw), or freezes
     /// both for a moment, keeping the motion it froze with.
     #[doc(alias = "ftCo_800DD724")]
-    pub(crate) fn throw_progress(&mut self, gobj: GObjId) {
+    pub fn throw_progress(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.throw_flag(4) {
             fp.set_throw_flag(4, false);
@@ -583,7 +583,7 @@ impl Running<'_> {
 
     /// Landing before an aerial throw's freeze, `fn_800DD5EC`: its animation run on to the
     /// script's freeze, then as [`Self::throw_land_frozen`].
-    #[doc(alias = "fn_800DD5EC")]
+    // Ports `fn_800DD5EC`; aliased once a check reaches it.
     pub fn throw_land(&mut self, gobj: GObjId) {
         while self.game.fighter(gobj).cmd_vars[0] == 0 {
             self.anim_update(gobj);

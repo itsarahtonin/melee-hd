@@ -326,8 +326,8 @@ impl Running<'_> {
     /// The kind whose power Kirby swallows, `ftCo_800BD9E0`: a Kirby's copy (marking it lost,
     /// `ftCo_800BDA50`), Kirby's own copy for the kinds without one, and the Ice Climbers as
     /// Popo.
+    // Ports `ftCo_800BDA50` (a swallowed Kirby's copy); aliased once a check reaches it.
     #[doc(alias = "ftCo_800BD9E0")]
-    #[doc(alias = "ftCo_800BDA50")]
     pub fn copy_kind_of(&mut self, gobj: GObjId, victim: GObjId) -> i32 {
         let vf = self.game.fighter(victim);
         let kind = vf.kind;

@@ -273,7 +273,7 @@ impl Running<'_> {
     }
 
     /// An item pulled in close enough becomes his, `ftKb_SpecialN_800F5DE8`.
-    #[doc(alias = "ftKb_SpecialN_800F5DE8")]
+    // Not ported: `ftKb_SpecialN_800F5DE8` (no replay at hand has items).
     pub fn kb_pull_item(&mut self, _gobj: GObjId) {
         unported_call("ftKb_SpecialN_800F5DE8 (an item inhaled)");
     }
@@ -342,7 +342,7 @@ impl Running<'_> {
     }
 
     /// An item caught on the ground, `fn_800F6178`.
-    #[doc(alias = "fn_800F6178")]
+    // Not ported: `fn_800F6178`.
     pub fn kb_n_catch_item(&mut self, _gobj: GObjId) {
         unported_call("fn_800F6178 (an item caught by the inhale)");
     }
@@ -358,7 +358,7 @@ impl Running<'_> {
     }
 
     /// An item caught in the air, `fn_800F6280`.
-    #[doc(alias = "fn_800F6280")]
+    // Not ported: `fn_800F6280`.
     pub fn kb_n_air_catch_item(&mut self, _gobj: GObjId) {
         unported_call("fn_800F6280 (an item caught by the inhale)");
     }
@@ -731,8 +731,8 @@ impl Running<'_> {
     }
 
     /// The item pull's animation (`ftKb_SpecialNCapture0_Anim`, `ftKb_SpecialNCapture1_Anim`).
-    #[doc(alias = "ftKb_SpecialNCapture0_Anim")]
-    #[doc(alias = "ftKb_SpecialNCapture1_Anim")]
+    // Not ported: `ftKb_SpecialNCapture0_Anim`, `ftKb_SpecialNCapture1_Anim` (an item
+    // pulled in).
     pub fn kb_n_capture_item_anim(&mut self, gobj: GObjId) {
         self.kb_pull_item(gobj);
     }
@@ -865,7 +865,8 @@ impl Running<'_> {
     }
 
     /// `ftKb_EatWalk_Anim` (`ftWalkCommon_800DFDDC`).
-    #[doc(alias = "ftKb_EatWalk_Anim")]
+    // Ports `ftKb_EatWalk_Anim`; aliased once a check reaches it (no replay at hand walks
+    // with a fighter held).
     pub fn kb_eat_walk_anim(&mut self, gobj: GObjId) {
         self.co_walk_anim(gobj);
     }

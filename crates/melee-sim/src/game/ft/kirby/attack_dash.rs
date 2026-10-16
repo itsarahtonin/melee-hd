@@ -103,6 +103,8 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::ATTACK_DASH_AIR_IASA => g.kb_attack_dash_air_iasa(gobj),
         addr::ATTACK_DASH_AIR_PHYS => g.kb_attack_dash_air_phys(gobj),
         addr::ATTACK_DASH_AIR_COLL => g.kb_attack_dash_air_coll(gobj),
+        0x800F_1FDC => g.kb_attack_dash_to_ground(gobj),
+        0x800F_20C4 => g.kb_attack_dash_to_air(gobj),
         _ => return false,
     }
     true
