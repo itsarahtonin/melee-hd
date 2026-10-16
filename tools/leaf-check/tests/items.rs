@@ -21,6 +21,19 @@
 //!   CAPTURE_FUNCS=@procs-funcs.txt LOCKSTEP_DONE=done-nonitems.txt $R --fields 5000
 //! ```
 //!
+//! The debug VS set (`debug1`) is a match of two Pikachus on Battlefield with the item switch
+//! narrowed to the ported kinds, the monkey playing; its item pool grows into heap that holds
+//! the opening movie's frame (docs/oracle.md), which [`debug_round_trips`] checks the import
+//! with:
+//!
+//! ```text
+//! MATCH_FIGHTERS=13 MATCH_STAGES=31 MATCH_PLAYERS=2 MATCH_TIME=480 UNLOCK_ALL=1 MONKEY_B=2 \
+//!   MATCH_ITEMS=0,1,2,4,6,7,8,9,11,12,14,15,28 STALL_BEATS=200 CAPTURE_INTERACTED=1 \
+//!   CAPTURE=$ITEM_CALLS/debug1 CAPTURE_FROM=0 CAPTURE_NESTED=1 CAPTURE_EVERY=50 \
+//!   CAPTURE_FUNCS=@items-funcs.txt LOCKSTEP_DONE=done-nonitems.txt \
+//!   ssbm-run "$SSBM_DISC" --mode e --matches 21 --monkey 21 --fields 6000 --port all --lockstep
+//! ```
+//!
 //! The runner's mutated and mismatching saves aren't used and can be deleted.
 
 use melee_local_data::ssbm_rs_local;
@@ -779,12 +792,29 @@ fn check_burst() {
     check_proc("it_8026C368", lib26b1::check_burst);
 }
 
+/// The debug VS sets (`debug*`, see the file's docs), whose items' blocks and the heap their
+/// pool grows into hold an earlier scene's bytes (the opening movie's frame, docs/oracle.md):
+/// every saved call imports and compares back with its memory, and some hold words unknown
+/// until written. But for the material setups (`itmaterial.c`), which run inside the display
+/// pass, whose current objects the import doesn't take mid-draw, and the item code's setup
+/// (`Item_80266F70`, with its archive's `it_8027870C`), which runs before the stage exists.
+#[test]
+fn debug_round_trips() {
+    leaf_check::calls::debug_round_trips(&calls_dir(), &|f| {
+        matches!(
+            f,
+            "Item_80266F70" | "it_8027870C" | "fn_80277D8C" | "it_80277F90" | "it_80278108"
+        )
+    });
+}
+
 // itgroundcoll.c
 
 #[test]
 fn stage_crossing() {
-    check("it_8026E9A4", &|r, a| {
-        assert_eq!(a.int(3), 0, "a normal out parameter");
+    // The calls that ask for no normal (the shots'): the port gives the point alone.
+    let no_normal = |c: &mut Call| c.regs.gpr[6] == 0;
+    check_calls("it_8026E9A4", "it_8026E9A4", &no_normal, &|r, a| {
         match ground::stage_crossing(r.game, a.vec(1), a.vec(2)) {
             Some(p) => {
                 let at = a.int(2);
@@ -2044,9 +2074,13 @@ fn init_globals() {
 #[test]
 fn drop_at() {
     // A shot dropped at a fighter's feet, from the spawner's states, then with the limit
-    // reached.
+    // reached: the states with Fox's articles loaded.
     for full in [false, true] {
         let prep = move |c: &mut Call| {
+            let table = w32(c, leaf_check::sym("it_804D6D38"));
+            if table == 0 || w32(c, table + 4 * (54 - 43)) == 0 {
+                return false;
+            }
             let at = c.regs.gpr[1] - 0x200;
             for (k, v) in [0.0f32, 0.0, 0.0].iter().enumerate() {
                 set32(c, at + 4 * k as u32, v.to_bits());
@@ -2180,7 +2214,10 @@ fn maplib_queries() {
     check("it_802763E0", &|r, a| {
         Ret::Int(maplib::touched_ceiling(r.game, a.gobj(0)) as u32)
     });
-    check("it_80276408", &|r, a| {
+    // Where the normal goes is the caller's: the calls that pass a stack vector (a barrel's
+    // own, into its variables, run with its states).
+    let on_stack = |c: &mut Call| c.regs.gpr[5].wrapping_sub(c.regs.gpr[1]) < 0x1000;
+    check_calls("it_80276408", "it_80276408", &on_stack, &|r, a| {
         let cd = r.game.items[a.maps.items[&(a.int(1) - 0x378)].0]
             .x378_itemColl
             .clone();

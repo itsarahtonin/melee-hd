@@ -1507,6 +1507,16 @@ impl Cx for Comparer<'_> {
         if ours.is_none() && self.maps.unfollowed.contains(&(kind, theirs)) {
             return;
         }
+        // An unknown word (`Maps::unknown`) neither side has written since compares by the
+        // word itself; one the original wrote and ours didn't differs.
+        if let Some(word) = ours.and_then(|o| self.maps.unknown.get(&o)) {
+            if *word != theirs {
+                self.diffs.push(format!(
+                    "{path}: {kind} ours unknown until written ({word:#x}), theirs {theirs:#x}"
+                ));
+            }
+            return;
+        }
         let dangling = match (kind, ours) {
             ("GObjId", Some(o)) => self.maps.dangling_gobjs.get(&o),
             ("JObjId", Some(o)) => self.maps.dangling_jobjs.get(&o),
