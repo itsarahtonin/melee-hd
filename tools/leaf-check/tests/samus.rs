@@ -143,8 +143,9 @@ const UNCAPTURED: &[&str] = &[
 ];
 
 /// Functions not run here: fighter creation's and death's (the oracle checks them), the
-/// beam's hitbox setup (`it_802B7160`, not ported: it reads a stack bit), the helpers, and
-/// those no saved call reaches.
+/// beam's swing hitbox (`it_802B7160`, which takes its caller's stack words: `samus_swing`
+/// checks it inside its caller against the machine code), the helpers, and those no saved
+/// call reaches.
 fn skipped(name: &str, _addr: u32) -> bool {
     matches!(
         name,

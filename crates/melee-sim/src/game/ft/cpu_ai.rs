@@ -641,7 +641,7 @@ impl Running<'_> {
             5 => self.cpu_get_up(f),
             6 => self.cpu_ledge_behavior(f),
             7 => unported_call("ftCo_800BA9A0"),
-            8 => unported_call("ftCo_800B7180"),
+            8 => self.cpu_jump_at_target(f),
             9 => self.cpu_hold(f),
             10 => self.cpu_stand(f),
             11 => unported_call("ftCo_800AD42C"),
@@ -665,7 +665,7 @@ impl Running<'_> {
                     c.x18 = c.x1C;
                 }
             }
-            14 => unported_call("ftCo_800AD7FC"),
+            14 => self.cpu_throw_item(f),
             15 => self.cpu_tumble(f),
             16 => self.cpu_mash(f),
             17 => unported_call("ftCo_800AC434"),

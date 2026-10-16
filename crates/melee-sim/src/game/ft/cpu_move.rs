@@ -213,7 +213,8 @@ impl Running<'_> {
                 }
             }
             16 if fpp.ground_or_air == GA_GROUND && fpp.cpu.x7C % 0x12C == 0 => {
-                unported_call("ftCo_800A05F4")
+                self.cpu_jump_toward_target(f);
+                return;
             }
             _ => {}
         }
@@ -1221,6 +1222,174 @@ impl Running<'_> {
             8 => (8, 117),
             9 => (8, 127),
             _ => unported_call("ftCo_800AA320 at a level past 9 (its outputs unset)"),
+        }
+    }
+}
+
+impl Running<'_> {
+    /// Getting rid of the held item (behavior 14), `ftCo_800AD7FC`: with no item back to the
+    /// usual behavior; for computer kind 0x1D, facing its target, a throw up, down or forward
+    /// by the target's angle (scripts 43, 44, 42), else a turn first; otherwise a throw up or
+    /// down when the target is over 75° off level, forward when it's ahead within 15°, else
+    /// (or with no target) a throw down for a capsule, egg or Poké Ball and script 40 for the
+    /// rest. Each throw goes back to the usual behavior.
+    #[doc(alias = "ftCo_800AD7FC")]
+    pub(super) fn cpu_throw_item(&mut self, f: FighterId) {
+        let fpp = &self.game.fighters[f.0];
+        let Some(g) = fpp.item_gobj else {
+            self.cpu_back_to_usual(f);
+            return;
+        };
+        let kind = self.game.items[super::super::it::item_of(self.game, g).0].kind;
+        // `It_Kind_Capsule`, `_Egg`, `_M_Ball`.
+        let drop = matches!(kind, 0 | 3 | 0x22);
+        let enemy = fpp.cpu.x44;
+        // `lb_8000D008(enemy.y - pos.y, ABS(enemy.x - pos.x))`.
+        let angle = |r: &Self, e: FighterId| {
+            let (me, other) = (r.game.fighters[f.0].cur_pos, r.game.fighters[e.0].cur_pos);
+            let dy = fp::fsubs(reg(other.y), reg(me.y));
+            let dx = fp::fsubs(reg(other.x), reg(me.x));
+            super::co::guard::stick_angle(dy, abs(dx))
+        };
+        const STEEP: f64 = 1.308_996_928_855_776_8;
+        const LEVEL: f64 = 0.261_799_385_771_155_36;
+        match enemy {
+            Some(e) if fpp.cpu.kind == 0x1D => {
+                if !self.cpu_target_ahead(f) {
+                    self.cpu_turn_around(f);
+                    return;
+                }
+                let a = angle(self, e);
+                let script = if a > STEEP {
+                    0x2B
+                } else if a < fp::fneg(STEEP) {
+                    0x2C
+                } else {
+                    0x2A
+                };
+                self.cpu_data_script(f, script);
+            }
+            Some(e) => {
+                let a = angle(self, e);
+                let script = if a > STEEP {
+                    0xD
+                } else if a < fp::fneg(STEEP) {
+                    0xE
+                } else if self.cpu_target_ahead(f) && a < LEVEL && a > fp::fneg(LEVEL) {
+                    0xF
+                } else if drop {
+                    0xE
+                } else {
+                    0x28
+                };
+                self.cpu_data_script(f, script);
+            }
+            None => self.cpu_data_script(f, if drop { 0xE } else { 0x28 }),
+        }
+        let c = &mut self.game.fighters[f.0].cpu;
+        c.x18 = c.x1C;
+    }
+}
+
+impl Running<'_> {
+    /// A jump toward the target, `ftCo_800A05F4`: nothing when a jump's height would pass the
+    /// top blast zone; a double jump after a while when `x2168` says so (`ftCo_800A1CA8`);
+    /// else a full jump with the stick toward the target.
+    #[doc(alias = "ftCo_800A05F4")]
+    pub(super) fn cpu_jump_toward_target(&mut self, f: FighterId) {
+        let fpp = &self.game.fighters[f.0];
+        let top = reg(super::super::gr::stage::blast_top(self.game));
+        if fp::fadds(reg(fpp.cur_pos.y), reg(fpp.cpu.x558)) > top {
+            self.cpu_finish_neutral(f);
+            return;
+        }
+        self.cpu_neutral_stick(f);
+        if self.game.fighters[f.0].x2168 != 0 {
+            // `ftCo_CpuDoubleJumpAfterDelay`.
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 10);
+            self.cpu_cmd(f, cmd::RELEASE_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        } else {
+            self.cpu_cmd(f, cmd::RELEASE_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_cmd1(f, cmd::LSTICK_TOWARD_FIGHTER, 0x7F);
+        }
+        self.cpu_cmd(f, cmd::PRESS_Y);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 10);
+        self.cpu_cmd(f, cmd::RELEASE_Y);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        self.cpu_cmd(f, cmd::DONE);
+    }
+
+    /// A short hop toward the target, `ftCo_800A0798`: after a while when `x2168` says so
+    /// (`ftCo_800A1CA8`), else with the stick's x toward the target.
+    #[doc(alias = "ftCo_800A0798")]
+    fn cpu_hop_toward_target(&mut self, f: FighterId) {
+        self.cpu_neutral_stick(f);
+        if self.game.fighters[f.0].x2168 != 0 {
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 10);
+            self.cpu_cmd(f, cmd::RELEASE_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_cmd(f, cmd::PRESS_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_cmd(f, cmd::RELEASE_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        } else {
+            self.cpu_cmd(f, cmd::RELEASE_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_FIGHTER, 0x7F);
+            self.cpu_cmd(f, cmd::PRESS_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_cmd(f, cmd::RELEASE_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 5);
+        }
+        self.cpu_cmd(f, cmd::DONE);
+    }
+
+    /// Jumping at the target (behavior 8), `ftCo_800B7180`, by the kind of jump
+    /// `ftCo_800B732C` picked (`xF8_b34`): a full jump (1) or a short hop (2), then (3) in the
+    /// air drifting toward the target while rising, jumping again while it's above, and back
+    /// to the usual behavior otherwise. With no target it goes back to the usual behavior,
+    /// twice (the jump kind cleared, the switch takes its default).
+    #[doc(alias = "ftCo_800B7180")]
+    pub(super) fn cpu_jump_at_target(&mut self, f: FighterId) {
+        let target = self.game.fighters[f.0].cpu.x44;
+        let back = |r: &mut Self| {
+            let c = &mut r.game.fighters[f.0].cpu;
+            c.x18 = c.x1C;
+            c.xF8_b34 = 0;
+            r.cpu_cmd(f, cmd::DONE);
+        };
+        if target.is_none() {
+            back(self);
+        }
+        match self.game.fighters[f.0].cpu.xF8_b34 {
+            1 => {
+                self.cpu_jump_toward_target(f);
+                self.game.fighters[f.0].cpu.xF8_b34 = 3;
+            }
+            2 => {
+                self.cpu_hop_toward_target(f);
+                self.game.fighters[f.0].cpu.xF8_b34 = 3;
+            }
+            3 => {
+                let fpp = &self.game.fighters[f.0];
+                if fpp.ground_or_air != GA_AIR {
+                    back(self);
+                } else if f64::from(fpp.pos_delta.y) > 0.0 {
+                    self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
+                    self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_FIGHTER, 0x7F);
+                    self.cpu_cmd(f, cmd::DONE);
+                } else {
+                    let t = target.expect("a jump at no target, rising past its start");
+                    if self.game.fighters[t.0].cur_pos.y > fpp.cur_pos.y {
+                        self.cpu_jump_toward_target(f);
+                    } else {
+                        back(self);
+                    }
+                }
+            }
+            _ => back(self),
         }
     }
 }
