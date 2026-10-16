@@ -4,8 +4,9 @@
 //! [`Mode::Off`] draws each tick's frame as the tick renders it, one frame a tick.
 //! [`Mode::Interpolate`] draws frames at the display's own rate, each between the last two
 //! ticks (N-1 and N, `melee_render::blend`), so a frame shows at most a tick later than Off
-//! would show it. Ticks still run at the game's rate on their own schedule; frames fill the
-//! time between.
+//! would show it. [`Mode::Extrapolate`] draws them between the latest tick N and a prediction
+//! of N+1 (`melee_render::predict`), adding no latency. Ticks still run at the game's rate on
+//! their own schedule; frames fill the time between.
 //!
 //! **The blend's t comes from when the frame reaches the screen.** A frame drawn now shows
 //! at its display time D: the next refresh after it's presented (FIFO), or when it's presented
@@ -30,20 +31,27 @@ pub enum Mode {
     Off,
     /// Frames at the display's rate between the last two ticks: up to a tick of added latency.
     Interpolate,
+    /// Frames at the display's rate between the latest tick and the next, predicted: no added
+    /// latency, a tick of correction when an input changes.
+    Extrapolate,
 }
 
 impl Mode {
     /// The launcher's choices, with their names.
-    pub const CHOICES: [(Mode, &str); 2] = [
+    pub const CHOICES: [(Mode, &str); 3] = [
         (Mode::Off, "Off (a frame a tick)"),
         (Mode::Interpolate, "Interpolate (up to a tick later)"),
+        (Mode::Extrapolate, "Extrapolate (predicts a tick)"),
     ];
 
     pub fn parse(v: &str) -> Result<Mode, String> {
         match v {
             "off" => Ok(Mode::Off),
             "interpolate" => Ok(Mode::Interpolate),
-            _ => Err(format!("--high-refresh off|interpolate, not {v}")),
+            "extrapolate" => Ok(Mode::Extrapolate),
+            _ => Err(format!(
+                "--high-refresh off|interpolate|extrapolate, not {v}"
+            )),
         }
     }
 
@@ -52,7 +60,13 @@ impl Mode {
         match self {
             Mode::Off => "off",
             Mode::Interpolate => "interpolate",
+            Mode::Extrapolate => "extrapolate",
         }
+    }
+
+    /// Whether frames are drawn at the display's rate, between two states.
+    pub fn paced(self) -> bool {
+        self != Mode::Off
     }
 
     /// The name the launcher shows.
@@ -212,7 +226,8 @@ mod tests {
     fn modes_parse_and_name_themselves() {
         assert_eq!(Mode::parse("off"), Ok(Mode::Off));
         assert_eq!(Mode::parse("interpolate"), Ok(Mode::Interpolate));
-        assert!(Mode::parse("extrapolate").is_err());
+        assert_eq!(Mode::parse("extrapolate"), Ok(Mode::Extrapolate));
+        assert!(Mode::parse("predict").is_err());
         for (m, _) in Mode::CHOICES {
             assert_eq!(Mode::parse(m.key()), Ok(m));
         }
