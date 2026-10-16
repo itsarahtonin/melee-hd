@@ -68,6 +68,68 @@ pub struct Hsd {
     /// The aspect ratio the frame is shown at, when wider than the game's 73:60
     /// (`frame::GAME_ASPECT`; see `frame::widen`).
     pub widescreen: Option<f32>,
+    /// What a frame between two ticks keeps track of as it draws (`crate::blend`).
+    pub motion: Motion,
+}
+
+/// A frame's blending state as it draws (`crate::blend`): unused, and left as it is, for a
+/// frame of one tick.
+#[derive(Default)]
+pub struct Motion {
+    /// The current camera as B has it, before blending: views the pass derived from it (the
+    /// lights') take the blended one.
+    pub camera_b: Option<CameraView>,
+    /// The current camera's draws blend: not the HUD's (`blend::camera_blends`).
+    pub camera_blends: bool,
+    /// The joints being drawn blend: A drew the shape too.
+    pub joints: bool,
+    /// How many times each camera has drawn this frame, and each app-SRT's view been named,
+    /// and each shape drawn.
+    cameras: Vec<(melee_sim::hsd::cobj::CObjId, u16)>,
+    app_srts: Vec<(melee_sim::hsd::appsrt::AppSrtId, u16)>,
+    shapes: rustc_hash::FxHashMap<crate::blend::ShapeKey, u16>,
+}
+
+impl Motion {
+    /// A new frame: nothing drawn yet.
+    pub fn start(&mut self) {
+        self.camera_b = None;
+        self.camera_blends = false;
+        self.joints = false;
+        self.cameras.clear();
+        self.app_srts.clear();
+        self.shapes.clear();
+    }
+
+    /// How many times shape `key` was drawn before this time in the frame.
+    pub fn next_shape(&mut self, key: crate::blend::ShapeKey) -> u16 {
+        let n = self.shapes.entry(key).or_default();
+        *n += 1;
+        *n - 1
+    }
+
+    /// How many times camera `c` drew before this time in the frame.
+    pub fn next_camera(&mut self, c: melee_sim::hsd::cobj::CObjId) -> u16 {
+        next(&mut self.cameras, c)
+    }
+
+    /// How many times app-SRT `s`'s view was named before this time in the frame.
+    pub fn next_app_srt(&mut self, s: melee_sim::hsd::appsrt::AppSrtId) -> u16 {
+        next(&mut self.app_srts, s)
+    }
+}
+
+fn next<K: PartialEq>(counts: &mut Vec<(K, u16)>, k: K) -> u16 {
+    match counts.iter_mut().find(|(x, _)| *x == k) {
+        Some((_, n)) => {
+            *n += 1;
+            *n - 1
+        }
+        None => {
+            counts.push((k, 1));
+            0
+        }
+    }
 }
 
 impl Hsd {
