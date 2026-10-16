@@ -144,6 +144,9 @@ impl Running<'_> {
             fp.active_timer.lstick.x = 254;
             fp.active_timer.lstick.y = 254;
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
+            if self.game.rules.player.sdi_colors {
+                self.sdi_colors(gobj);
+            }
             self.game.add_sdi_distance(slot, sub, dx, dy);
         }
     }

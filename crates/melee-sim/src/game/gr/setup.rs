@@ -1028,6 +1028,7 @@ pub fn setup(r: &mut Running, grkind: i32) {
     create_fog(game, data);
     create_lights(game, data);
     super::super::code::run_event(r, stage_data(grkind).on_init);
+    r.game.player_camera();
 }
 
 /// Runs the stage's load hook, `Ground_OnLoad`.

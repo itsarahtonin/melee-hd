@@ -1742,9 +1742,15 @@ impl Running<'_> {
         }
     }
 
-    /// The VS scene's entry, `gm_Scene_Vs_OnEnter`: the match, then its HUD and timer.
+    /// The VS scene's entry, `gm_Scene_Vs_OnEnter`: the match, then its HUD and timer. The
+    /// players' codes change the start data at the entry's start and end
+    /// (`game::player_codes`).
     pub fn vs_on_enter(&mut self, d: &StartMeleeData, files: MatchArchives) {
+        let mut d = d.clone();
+        let d = &mut d;
+        self.player_start_rules(d);
         self.start_vs(d, files);
+        self.player_end_rules();
         let lives = if d.rules.x1_2 { 8 } else { 3 };
         self.announce(
             lives,

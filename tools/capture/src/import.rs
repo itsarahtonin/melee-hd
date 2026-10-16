@@ -48,6 +48,8 @@ pub const VS_CONTROLLER: u32 = 0x8046_B6A0;
 
 /// The size of a fighter's attribute block (`fighter_dat_attrs_alloc_data`).
 pub const FIGHTER_ATTRS_SIZE: u32 = 0x424;
+/// Where in a fighter the SDI colors code counts (`x488 + 0x7D`, `game::player_codes`).
+pub const SDI_COUNT: u32 = 0x505;
 
 /// A symbol's address in the game.
 pub fn sym(name: &str) -> u32 {
@@ -861,7 +863,7 @@ impl Importer<'_> {
         c.debug = debug;
     }
 
-    /// A fighter, through its generated mirror.
+    /// A fighter, through its generated mirror (and the byte a player's code keeps in it).
     pub fn fighter(&mut self, a: u32) -> FighterId {
         if let Some(&f) = self.maps.fighters.get(&a) {
             return f;
@@ -880,6 +882,9 @@ impl Importer<'_> {
             base: MEM1,
         };
         let mut f = Fighter::import(&mem, a, self);
+        // The SDI colors code's count, in the second color overlay's padding byte
+        // (`game::player_codes`).
+        *self.game.player_code_state.sdi_count(id.0 as usize) = mem.u8(a + SDI_COUNT);
         // Its DObj lists: the main model's and the second model's first `count` DObjs.
         for (list, at) in [(f.dobj_list.data, a + 0x5EC), (f.x203C.data, a + 0x203C)] {
             if let Some(l) = list {

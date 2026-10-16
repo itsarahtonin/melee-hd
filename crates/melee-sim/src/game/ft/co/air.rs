@@ -532,7 +532,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_FallSpecial_Phys")]
     #[doc(alias = "ftCommon_CalcSelfAccel_AccelToVelClamped")]
     pub fn co_fall_special_phys(&mut self, gobj: GObjId) {
-        self.check_fall_fast(gobj);
+        self.check_fall_fast_from(gobj, true);
         let fp = self.game.fighter_mut(gobj);
         let a = fp.co_attrs.clone();
         let full = fp.mv_i32(FALL_SPECIAL_XC) != 0;

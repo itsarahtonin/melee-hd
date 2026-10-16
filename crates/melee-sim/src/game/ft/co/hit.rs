@@ -1157,6 +1157,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Damage_OnExitHitlag")]
     #[doc(alias = "ftCo_800DF608")]
     pub fn co_damage_exit_hitlag(&mut self, gobj: GObjId) {
+        if self.game.rules.player.sdi_colors_reset {
+            self.sdi_colors_reset(gobj);
+        }
         let c = self.common();
         let (min, asdi) = (reg(c.f32(0x4B0)), reg(c.f32(0x4BC)));
         let fp = self.game.fighter(gobj);

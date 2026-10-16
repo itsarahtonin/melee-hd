@@ -962,10 +962,13 @@ pub fn next_mode(r: &mut Running, gobj: GObjId) {
         r.game.grounds[g.0].u.stadium_display().count = 0;
         14
     } else {
+        // The monitor weights code (`game::player_codes`) loads 0 for the weights of modes 8
+        // and 7 and skips the repeat check.
+        let weights = r.game.rules.player.stadium_weights;
         let (w48, w4a, w4c, w4e) = (
-            i32::from(p.h(d, 0x48)),
+            if weights { 0 } else { i32::from(p.h(d, 0x48)) },
             i32::from(p.h(d, 0x4A)),
-            i32::from(p.h(d, 0x4C)),
+            if weights { 0 } else { i32::from(p.h(d, 0x4C)) },
             i32::from(p.h(d, 0x4E)),
         );
         let f = |v: i32| fp::frsp(f64::from(v));
@@ -993,9 +996,18 @@ pub fn next_mode(r: &mut Running, gobj: GObjId) {
                 }
             };
             let v = r.game.grounds[g.0].u.stadium_display();
-            if m != i32::from(v.mode) && m != i32::from(v.prev_mode) {
+            let (cur, prev) = (i32::from(v.mode), i32::from(v.prev_mode));
+            if weights || m != cur && m != prev {
                 break m;
             }
+            // The original draws again; where no weighted mode differs from the current and
+            // last ones it would draw forever (the console hangs), so stop instead.
+            assert!(
+                [(8, w48), (7, w4c), (1, w4a), (15, w4e)]
+                    .iter()
+                    .any(|&(m, w)| w > 0 && m != cur && m != prev),
+                "grStadium_801D2A60 draws forever: no weighted mode differs from {cur} and {prev}"
+            );
         }
     };
     let v = r.game.grounds[g.0].u.stadium_display();

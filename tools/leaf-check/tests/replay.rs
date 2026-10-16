@@ -165,6 +165,7 @@ fn recorded_inputs() {
                     stubs: &[],
                     replay: Some(&replay),
                     gx: false,
+                    original: &[],
                 },
                 &|g, maps, call| {
                     run_proc(g, gobj_arg(maps, call), CodeRef(0x8006_AD10));
@@ -235,6 +236,7 @@ fn ucf_sdi() {
                     stubs: &[],
                     replay: Some(&replay),
                     gx: false,
+                    original: &[],
                 },
                 &|g, maps, call| {
                     run_fighter_cb(g, gobj_arg(maps, call), CodeRef(0x8008_E4F0));
@@ -281,6 +283,7 @@ fn offscreen_limits() {
                 stubs: &[],
                 replay: Some(&replay),
                 gx: false,
+                original: &[],
             },
             &|g, maps, call| {
                 run_proc(g, gobj_arg(maps, call), CodeRef(0x8006_A360));
@@ -338,6 +341,7 @@ fn costumes() {
                     stubs: &[],
                     replay: Some(&replay),
                     gx: false,
+                    original: &[],
                 },
                 &|g, _, call| {
                     let mem = Mem {
@@ -376,6 +380,7 @@ fn check_frames(index: impl Fn(&Replay) -> Option<i32>) {
                 stubs: &FRAME_STUBS,
                 replay: Some(&replay),
                 gx: false,
+                original: &[],
             },
             &|g, _, _| {
                 let answers = Playback::answers(g.game, &mut Device(&ours));
@@ -436,6 +441,7 @@ fn stock_steals() {
                     stubs: &[],
                     replay: Some(&replay),
                     gx: false,
+                    original: &[],
                 },
                 &|g, _, _| {
                     let answers = Playback::answers(g.game, &mut Device(&ours));
@@ -469,6 +475,7 @@ fn seed_restore() {
                 stubs: &[],
                 replay: Some(&replay),
                 gx: false,
+                original: &[],
             },
             &|g, _, _| {
                 g.game.playback_restore_seed();

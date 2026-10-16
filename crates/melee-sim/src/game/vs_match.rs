@@ -92,6 +92,7 @@ pub struct ReplayStart {
 
 /// The Ice Climbers' `CharacterKind`.
 const CKIND_ICE_CLIMBERS: u8 = 14;
+const CKIND_MARTH: i8 = 9;
 
 /// A player in [`Settings::vs`].
 #[derive(Clone, Copy, Debug, melee_derive::StateEq)]
@@ -199,6 +200,19 @@ impl Settings {
         // Playback boots into the debug VS mode, whose scene runs the match.
         s.game_mode = gm::GM_DEBUG_VS;
         s.rules = Rules::from_codes(&codes)?;
+        // Marth's trail colors read his costume a fixed distance before his attribute block,
+        // wherever the heap put it (`game::player_codes`): a match with Marth is refused.
+        if s.rules.player.marth_trail
+            && s.start
+                .players
+                .iter()
+                .any(|p| p.slot_type != 3 && p.ckind == CKIND_MARTH)
+        {
+            return Err(CodeError::Unknown {
+                kind: 0xC2,
+                addr: 0x8013_6510,
+            });
+        }
         s.ucf = ucf::Pads::from_codes(&codes).unwrap_or_default();
         s.playback = true;
         s.heap = Some(crate::hsd::heap::Layout::slippi_playback());
