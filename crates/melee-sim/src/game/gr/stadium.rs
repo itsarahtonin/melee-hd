@@ -996,9 +996,18 @@ pub fn next_mode(r: &mut Running, gobj: GObjId) {
                 }
             };
             let v = r.game.grounds[g.0].u.stadium_display();
-            if weights || m != i32::from(v.mode) && m != i32::from(v.prev_mode) {
+            let (cur, prev) = (i32::from(v.mode), i32::from(v.prev_mode));
+            if weights || m != cur && m != prev {
                 break m;
             }
+            // The original draws again; where no weighted mode differs from the current and
+            // last ones it would draw forever (the console hangs), so stop instead.
+            assert!(
+                [(8, w48), (7, w4c), (1, w4a), (15, w4e)]
+                    .iter()
+                    .any(|&(m, w)| w > 0 && m != cur && m != prev),
+                "grStadium_801D2A60 draws forever: no weighted mode differs from {cur} and {prev}"
+            );
         }
     };
     let v = r.game.grounds[g.0].u.stadium_display();
