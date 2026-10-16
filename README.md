@@ -32,7 +32,7 @@ Like ssbm-rs, it contains no game data: the game's models, textures, sounds and 
 | Functions | 8,357 of the 19,827 in ssbm-rs's symbol table ported and checked, 197 replaced by native subsystems, 23 dead ([port ledger](docs/port-ledger.md)) |
 | Speed | The simulation runs a match about 16.7 times as fast as headless Dolphin on one core; a snapshot is about 1.2 MB, cloned in about 0.15 ms and restored in about 0.03 ms ([performance](docs/performance.md)) |
 
-Not yet: the other characters and stages, Kirby's other copies, menus and every mode other than VS, items spawning during a match (matches play with items off), testing on macOS and Linux, and release builds. [The oracle](docs/oracle.md) lists each comparison, and [the player](docs/player.md) its open issues.
+Not yet: the other characters and stages, Kirby's other copies, menus and every mode other than VS, items spawning during a match beyond the kinds the oracle's three items-on replays reach (the player's matches have items off), testing on macOS and Linux, and release builds. [The oracle](docs/oracle.md) lists each comparison, and [the player](docs/player.md) its open issues.
 
 ## Build and play
 

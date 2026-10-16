@@ -4,7 +4,6 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::checks::{KIND_CLINK, KIND_PIKACHU, KIND_SAMUS, abs};
