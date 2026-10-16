@@ -8,6 +8,7 @@ use super::super::super::handles::{DObjListId, FighterId};
 use super::super::super::state::Running;
 use super::super::KIRBY_COSTUME_KINDS;
 use super::super::bind::{DataStack, JointStack, next_joint};
+use super::super::dynamics::BoneSlot;
 use super::super::parts::{MAX_SECOND_DOBJS, set_bone_bit};
 use super::{KIND_KIRBY, u};
 use crate::hsd::dobj;
@@ -91,6 +92,129 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F05A8")]
     pub fn kb_samus_hat_off(&mut self, gobj: GObjId) {
         self.kb_unload_hat(gobj);
+    }
+
+    /// A copy's hat on his head, the kinds' `ftKb_LoadHat` pairs: put on unless he wears one.
+    fn kb_head_hat_on(&mut self, gobj: GObjId, kind: i32) {
+        if self.game.fighter(gobj).u.jobj_at(u::HAT_JOBJ).is_none() {
+            self.kb_load_hat(gobj, kind);
+        }
+    }
+
+    /// Mario's copy's hat put on, `ftKb_SpecialN_800EFA40`.
+    #[doc(alias = "ftKb_SpecialN_800EFA40")]
+    pub fn kb_mario_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_on(gobj, 0);
+    }
+
+    /// Captain Falcon's copy's hat put on, `ftKb_SpecialN_800EFC58`.
+    #[doc(alias = "ftKb_SpecialN_800EFC58")]
+    pub fn kb_captain_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_on(gobj, 2);
+    }
+
+    /// Luigi's copy's hat put on, `ftKb_SpecialN_800F0710`.
+    #[doc(alias = "ftKb_SpecialN_800F0710")]
+    pub fn kb_luigi_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_on(gobj, 17);
+    }
+
+    /// Pikachu's copy's hat put on, `ftKb_SpecialN_800F03DC`, with its ears' dynamic bones
+    /// (`ftCo_8009D2A4`).
+    #[doc(alias = "ftKb_SpecialN_800F03DC")]
+    pub fn kb_pikachu_hat_on(&mut self, gobj: GObjId) {
+        if self.game.fighter(gobj).u.jobj_at(u::HAT_JOBJ).is_none() {
+            self.kb_load_hat(gobj, 12);
+            let f = self.game.fighter_id(gobj);
+            self.kb_hat_chains(f, 12);
+        }
+    }
+
+    /// The hat taken off for Mario's, Captain Falcon's and Luigi's copies
+    /// (`ftKb_SpecialN_800EFAF0`, `_800EFD08`, `_800F07C0`).
+    #[doc(alias = "ftKb_SpecialN_800EFAF0")]
+    #[doc(alias = "ftKb_SpecialN_800EFD08")]
+    #[doc(alias = "ftKb_SpecialN_800F07C0")]
+    pub fn kb_head_hat_off(&mut self, gobj: GObjId) {
+        self.kb_unload_hat(gobj);
+    }
+
+    /// Pikachu's copy's hat taken off, `ftKb_SpecialN_800F0494`, and its dynamic bones
+    /// (`ftCo_UnloadDynamicBones`).
+    #[doc(alias = "ftKb_SpecialN_800F0494")]
+    pub fn kb_pikachu_hat_off(&mut self, gobj: GObjId) {
+        self.kb_unload_hat(gobj);
+        let f = self.game.fighter_id(gobj);
+        self.unload_dynamic_bones(f);
+    }
+
+    /// The fighter's dynamic bone chains given back, `ftCo_UnloadDynamicBones`: none left.
+    #[doc(alias = "ftCo_UnloadDynamicBones")]
+    pub fn unload_dynamic_bones(&mut self, f: FighterId) {
+        let n = self.game.fighters[f.0].dynamics_num;
+        for i in 0..n.max(0) as usize {
+            let mut desc = self.game.fighters[f.0].dynamic_bone_sets[i]
+                .dyn_desc
+                .clone();
+            self.game.free_dynamics_chain(&mut desc);
+            self.game.fighters[f.0].dynamic_bone_sets[i].dyn_desc = desc;
+        }
+        self.game.fighters[f.0].dynamics_num = 0;
+    }
+
+    /// A copy hat's dynamic bone chains (`hat_dynamics[2]`), the fighter's own replaced:
+    /// each down the hat's tree to the joint its entry names (`ftCo_SetupKirbyHatBone`),
+    /// as Pikachu's copy's `ftCo_8009D2A4` sets them.
+    #[doc(alias = "ftCo_8009D2A4")]
+    fn kb_hat_chains(&mut self, f: FighterId, kind: i32) {
+        let copy = self.game.ft.kirby.copies[kind as usize].expect("a copy without its data");
+        let dynamics = self
+            .data
+            .ptr(copy.at(0x14))
+            .expect("a copy hat without dynamics");
+        let n = self.data.u32(dynamics) as i32;
+        self.game.fighters[f.0].dynamics_num = n;
+        assert!(
+            n < 10,
+            "the original's assertion failed: fighter dynamics num over!"
+        );
+        for i in 0..n.max(0) as u32 {
+            let bones = self.data.ptr(dynamics.at(4)).expect("ftDynamics bones");
+            let entry = bones.at(0x18 * i);
+            let steps = self.data.u32(entry) as i32;
+            let mut cur = self.game.fighters[f.0]
+                .u
+                .jobj_at(u::HAT_JOBJ)
+                .expect("a hat's chains without the hat");
+            for _ in 0..steps {
+                if let Some(c) = self.game.objs.jobjs[cur].child {
+                    cur = c;
+                    continue;
+                }
+                while self.game.objs.jobjs[cur].next.is_none() {
+                    cur = self.game.objs.jobjs[cur]
+                        .parent
+                        .expect("a hat's chain past its tree");
+                }
+                cur = self.game.objs.jobjs[cur].next.expect("a next joint");
+            }
+            let count = self.data.u32(entry.at(8));
+            let k = i as usize;
+            let mut desc = self.game.fighters[f.0].dynamic_bone_sets[k]
+                .dyn_desc
+                .clone();
+            self.game
+                .load_dynamics_chain(self.data, Some(cur), &mut desc, count);
+            let fp = &mut self.game.fighters[f.0];
+            fp.dynamic_bone_sets[k].dyn_desc = desc;
+            fp.dynamic_bone_sets[k].bone_id = BoneSlot::Id(0);
+            let mut desc = self.game.fighters[f.0].dynamic_bone_sets[k]
+                .dyn_desc
+                .clone();
+            self.game
+                .set_dynamics_params(self.data, entry.at(4), &mut desc);
+            self.game.fighters[f.0].dynamic_bone_sets[k].dyn_desc = desc;
+        }
     }
 
     /// A copy costume put on (a hat of parts on his own bones), `ftKb_LoadHatParts` (inlined

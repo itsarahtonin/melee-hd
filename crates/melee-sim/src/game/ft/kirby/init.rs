@@ -139,6 +139,10 @@ impl Running<'_> {
             4 | 11 | 27..=30 | 32 => self.kb_n_enter(gobj),
             13 => self.kb_ss_enter(gobj),
             1 | 22 => self.kb_fx_enter(gobj),
+            0 | 21 => self.kb_mr_enter(gobj),
+            17 => self.kb_lg_enter(gobj),
+            2 | 25 => self.kb_ca_enter(gobj),
+            12 | 23 => self.kb_pk_enter(gobj),
             k => unported_call(&format!("the neutral special of copy kind {k}")),
         }
     }
@@ -150,6 +154,10 @@ impl Running<'_> {
             4 | 11 | 27..=30 | 32 => self.kb_n_air_enter(gobj),
             13 => self.kb_ss_air_enter(gobj),
             1 | 22 => self.kb_fx_air_enter(gobj),
+            0 | 21 => self.kb_mr_air_enter(gobj),
+            17 => self.kb_lg_air_enter(gobj),
+            2 | 25 => self.kb_ca_air_enter(gobj),
+            12 | 23 => self.kb_pk_air_enter(gobj),
             k => unported_call(&format!("the aerial neutral special of copy kind {k}")),
         }
     }

@@ -2,11 +2,16 @@
 //! special's variables set anew, a copy's items registered, his copy's own cleanups when he's
 //! hit or KO'd, and losing a copy (a hit can knock it out of him, with its star).
 
+use gekko_fp as fp;
+
 use super::super::super::code::unported_call;
 use super::super::super::handles::CodeRef;
+use super::super::super::it::kinds::kirbycopystar;
 use super::super::super::state::Running;
 use super::{KIND_KIRBY, addr, attr, ms, u};
+use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
+use crate::vec::Vec3;
 
 /// `HitElement_Cape`.
 const ELEMENT_CAPE: u32 = 10;
@@ -51,6 +56,10 @@ impl Running<'_> {
             4 | 11 | 27..=30 | 32 => {}
             13 => self.kb_samus_hat_on(gobj),
             22 => self.kb_falco_hat_on(gobj),
+            0 => self.kb_mario_hat_on(gobj),
+            2 => self.kb_captain_hat_on(gobj),
+            17 => self.kb_luigi_hat_on(gobj),
+            12 => self.kb_pikachu_hat_on(gobj),
             _ => unported_call(&format!("the hat of copy kind {kind}")),
         }
     }
@@ -180,6 +189,8 @@ impl Running<'_> {
             4 | 11 | 27..=30 | 32 => {}
             13 => self.kb_samus_hat_off(gobj),
             22 => self.kb_falco_hat_off(gobj),
+            0 | 2 | 17 => self.kb_head_hat_off(gobj),
+            12 => self.kb_pikachu_hat_off(gobj),
             _ => unported_call(&format!("the hat removal of copy kind {kind}")),
         }
     }
@@ -209,7 +220,16 @@ impl Running<'_> {
         let kind = self.game.fighter(gobj).u_i32(u::HAT_KIND);
         self.kb_remove_hat(gobj, kind);
         if kind != KIND_KIRBY && star {
-            unported_call("it_802ADA1C (a lost copy's star)");
+            let f = self.game.fighter_id(gobj);
+            let fp = &self.game.fighters[f.0];
+            let (x, y, facing) = (fp.cur_pos.x, fp.cur_pos.y, fp.facing_dir);
+            let dy = reg(self.kb_attr_f32(f, attr::LOSS_STAR_Y));
+            let vx = reg(self.kb_attr_f32(f, attr::LOSS_STAR_VEL_X));
+            let vy = self.kb_attr_f32(f, attr::LOSS_STAR_VEL_Y);
+            let pos = Vec3::new(x, mem(fp::fadds(reg(y), dy)), 0.0);
+            let vel = Vec3::new(mem(fp::fmuls(vx, reg(facing))), vy, 0.0);
+            kirbycopystar::spawn(self, pos, vel, facing);
+            self.fighter_play_sfx(f, 0x22305, 127, 64);
         }
         self.game
             .fighter_mut(gobj)
