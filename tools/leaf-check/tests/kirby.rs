@@ -7,8 +7,8 @@
 //! the fighter's buttons, stick, script and some state variables changed, so functions no
 //! capture reached (and branches few did) run from real states of the same moves.
 //!
-//! What isn't ported (the copies but Samus's and Fox's and Falco's, their hats, the copy star,
-//! the item hooks) isn't run ([`unported`]). The helpers that take more than the GObj, or
+//! What isn't ported (the copies but Mario's, Luigi's, Captain Falcon's, Pikachu's, Samus's and
+//! Fox's and Falco's, the other hats, the item hooks) isn't run ([`unported`]). The helpers that take more than the GObj, or
 //! return what the check can't compare, run only inside the callers that call them
 //! ([`HELPERS`]); creation's functions are the oracle's, and the common ones his replays
 //! reach that other tests already check aren't run again ([`skipped`]). The crowd stands in
@@ -35,6 +35,13 @@
 //!   ssbm-run "$SSBM_DISC" --replay NAME.slp --fields 100000 --port all --lockstep
 //! ```
 //!
+//! The copies of Mario, Luigi, Captain Falcon and Pikachu, their hats, the copy star and the
+//! side taunt that drops a copy come from four CPU matches of Kirby against them
+//! (`local/bench/oracle-kirby/kirby-{mario-fd,luigi-bf,captain-fd,pikachu-bf}.slp`,
+//! docs/oracle.md), with `kb-copies.txt` and `done-copies.txt` (the same pair for those
+//! functions) in hardware floats: `CAPTURE=$D/oracle-NAME CAPTURE_FUNCS=@$D/kb-copies.txt
+//! LOCKSTEP_DONE=$D/done-copies.txt ... --replay NAME.slp --fp hardware`.
+//!
 //! The throws' functions come from the first 2,500 fields of `hf-kirby-marth-bf-cdeac923` and
 //! 1,500 of `hf-kirby-yoshi-fod-27074109` (`CAPTURE=$D/NAME-throws`,
 //! `CAPTURE_FUNCS=@$D/kb-throws.txt LOCKSTEP_DONE=$D/done-throws.txt`), and UCF's crouch fix
@@ -60,7 +67,7 @@ use ssbm_rt::capture::Call;
 
 const ENV: &str = "KIRBY";
 const CALLS: &str = "calls/kirby";
-const FUNCS: [&str; 2] = ["kb-funcs.txt", "kb-throws.txt"];
+const FUNCS: [&str; 3] = ["kb-funcs.txt", "kb-throws.txt", "kb-copies.txt"];
 
 fn var(what: &str) -> Option<String> {
     std::env::var(format!("{ENV}_{what}")).ok()
@@ -111,14 +118,18 @@ fn functions() -> Vec<(u32, String)> {
     if !v.is_empty() {
         v.push((0x800D_65D8, "ftCo_SquatRv_CheckInput".to_owned()));
     }
+    // The lists overlap (the copies' list names common functions the others name too).
+    let mut seen = std::collections::BTreeSet::new();
+    v.retain(|(a, _)| seen.insert(*a));
     v
 }
 
 /// The units whose functions run from each other's captures, by their first function's
 /// address: his victims' states, the common states, his callbacks with his hats and copies'
-/// bookkeeping, the dash attack, Final Cutter, Stone, Hammer, Inhale, Samus's copy, Fox's and
-/// Falco's copy, the cutter's wave and the hammer, and between them what isn't ported.
-const STARTS: [u32; 18] = [
+/// bookkeeping, the dash attack, Final Cutter, Stone, Hammer, Inhale, Mario's, Luigi's, Captain
+/// Falcon's, Pikachu's, Samus's and Fox's and Falco's copies, the cutter's wave, the copy star
+/// and the hammer, and between them what isn't ported.
+const STARTS: [u32; 22] = [
     0x800B_D19C, // ftCo_800BD19C (the victims' states)
     0x800D_65D8, // ftCo_SquatRv_CheckInput .. the throws
     0x800E_E528, // ftkirby
@@ -127,20 +138,27 @@ const STARTS: [u32; 18] = [
     0x800F_3D50, // ftkirbyspeciallw
     0x800F_5564, // ftkirbyspecials
     0x800F_5800, // ftkirbyspecialn
-    0x800F_9110, // the copies before Samus's (not ported)
+    0x800F_9110, // ftkirbyspecialmario
+    0x800F_9614, // ftkirbyspecialluigi
+    0x800F_99BC, // ftkirbyspecialcaptain
+    0x800F_9FD4, // ftkirbyspecialpikachu
+    0x800F_A588, // the copies before Samus's (not ported)
     0x800F_CC14, // ftkirbyspecialsamus
     0x800F_DC00, // ftkirbyspecialfox
     0x800F_EC78, // the copies after Fox's (not ported)
     0x8029_BAB8, // itkirbycutterbeam
     0x8029_C4B4, // it_8029C4B4 (not ported)
-    0x802A_DA1C, // the copy star (not ported)
+    0x802A_DA1C, // it_2ADA (the copy star)
     0x802A_DC04, // itkirbyhammer
     0x802A_DDB0, // it_802ADDB0 (not ported)
     0x802C_0000, // the copies' items (not ported)
 ];
 
+/// The copy star's unit.
+const STAR_UNIT: usize = 18;
+
 /// The units not ported yet.
-const UNPORTED_UNITS: [usize; 6] = [8, 11, 13, 14, 16, 17];
+const UNPORTED_UNITS: [usize; 5] = [12, 15, 17, 20, 21];
 
 /// Which unit a function is in, by its address.
 fn unit(addr: u32) -> usize {
@@ -149,7 +167,7 @@ fn unit(addr: u32) -> usize {
 
 /// Whether a unit's functions take a fighter (else an item).
 fn fighter_unit(u: usize) -> bool {
-    u <= 11
+    u <= 15
 }
 
 /// Functions of the ported units that aren't ported: the item hooks (with items off he never
@@ -178,10 +196,19 @@ const UNPORTED: &[&str] = &[
     "ftKb_SpecialNCapture1_Anim",
     "fn_800DD5EC",
     "ftKb_EatWalk_Anim",
+    "it_802ADBE4",
 ];
 
 /// The ported hats among the kinds' pairs.
 const PORTED_HATS: &[&str] = &[
+    "ftKb_SpecialN_800EFA40",
+    "ftKb_SpecialN_800EFAF0",
+    "ftKb_SpecialN_800EFC58",
+    "ftKb_SpecialN_800EFD08",
+    "ftKb_SpecialN_800F03DC",
+    "ftKb_SpecialN_800F0494",
+    "ftKb_SpecialN_800F0710",
+    "ftKb_SpecialN_800F07C0",
     "ftKb_SpecialN_800F04F8",
     "ftKb_SpecialN_800F05A8",
     "ftKb_SpecialN_800F130C",
@@ -227,6 +254,8 @@ const HELPERS: &[&str] = &[
     "it_8029BAB8",
     "it_802ADC54",
     "fn_800F64C8",
+    "it_802ADA1C",
+    "it_802ADAF0",
 ];
 
 /// Functions not run here: creation's and the copies' loading (the oracle checks them), the
@@ -243,7 +272,6 @@ fn skipped(name: &str, addr: u32) -> bool {
             | "ftCo_800D7268"
             | "ftCo_800DC920"
             | "ftCo_800DD398"
-            | "ftCo_800DEBD0"
             | "ftCo_ThrowF_Anim"
             | "ftCo_ThrowF_Coll"
             | "ftCo_ThrownF_Anim"
@@ -338,6 +366,7 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "fn_800DD568" => g.throw_land_frozen(gobj),
         "ftCo_800DE974" => g.thrown_unfreeze(gobj),
         "ftCo_800DE5A4" => g.co_thrown_anim(gobj),
+        "ftCo_800DEBD0" => g.enter_appeal_s(gobj),
         "ftKb_SpecialN_800EEEC4" => g.kb_remove_hat(gobj, r4 as i32),
         "ftKb_UnkMtxFunc0" => {
             let vmtx = (r5 != 0).then(|| Mtx34 {
@@ -406,8 +435,8 @@ fn takes_gobj(call: &Call) -> bool {
 /// The fighter's controls and script variables changed so the callbacks' branches run: A, B
 /// or a shoulder held or pressed, the stick pushed every way, the script's variables and
 /// throw flags, the hit flag (`x2071_b6`) that loses a held shot or blaster, Samus's copy's
-/// charge (`u` xA8) and its frames toward a level (`mv` x4), and the blaster's loop (`mv` x0)
-/// for those copies' states.
+/// charge (`u` xA8) and its frames toward a level (`mv` x4), the blaster's loop (`mv` x0) for
+/// those copies' states, and Pikachu's copy's throw flag.
 fn vary(call: &mut Call, i: usize) {
     if !takes_gobj(call) {
         return;
@@ -436,8 +465,8 @@ fn vary(call: &mut Call, i: usize) {
     for k in 0..4u32 {
         poke_u32(call, fp + 0x2200 + 4 * k, (i as u32 >> k) & 1);
     }
-    // The script's throw flags (`x2210`): 0 and 3.
-    for (bit, on) in [(0, i % 3 == 1), (3, i % 4 == 2)] {
+    // The script's throw flags (`x2210`): 0, 1 and 3.
+    for (bit, on) in [(0, i % 3 == 1), (1, i % 5 == 3), (3, i % 4 == 2)] {
         poke_bit(call, fp + 0x2210, bit, on);
     }
     // Hit (`x2071_b6`).
@@ -458,6 +487,24 @@ fn vary(call: &mut Call, i: usize) {
     if (423..=428).contains(&msid) || (520..=525).contains(&msid) {
         poke_u32(call, fp + 0x2340, ((i / 2) % 2) as u32);
     }
+    // Pikachu's and Pichu's copies' throws (`ftKb_PkSpecialN_Anim`, `ftKb_PkSpecialAirN_Anim`)
+    // run with the script's flag raised for a throw not made yet (`cmd_vars[0]` 1, `[1]` 0).
+    let pk = (429..=430).contains(&msid) || (526..=527).contains(&msid);
+    if pk && matches!(call.addr, 0x800F_A0F4 | 0x800F_A254) {
+        poke_u32(call, fp + 0x2200, 1);
+        poke_u32(call, fp + 0x2204, 0);
+    }
+}
+
+/// The copy star's states changed so its landing runs: on every other call it's put just
+/// below the stage's middle (`pos`), as if it fell through the floor this frame.
+fn vary_star(call: &mut Call, i: usize) {
+    if !takes_gobj(call) || i % 2 == 0 {
+        return;
+    }
+    let ip = user_data_arg(call);
+    poke_f32(call, ip + 0x4C, 0.0);
+    poke_f32(call, ip + 0x50, -1.0);
 }
 
 /// Clean comparisons by function run.
@@ -569,6 +616,8 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
                             }
                             if fighter_unit(u) {
                                 vary(call, shift + i);
+                            } else if u == STAR_UNIT {
+                                vary_star(call, shift + i);
                             }
                         })
                     })

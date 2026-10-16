@@ -308,7 +308,7 @@ impl Running<'_> {
 
     /// The side taunt, `ftCo_800DEBD0`: Kirby drops his copy first, as a star.
     #[doc(alias = "ftCo_800DEBD0")]
-    fn enter_appeal_s(&mut self, gobj: GObjId) {
+    pub fn enter_appeal_s(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_KIRBY {
             self.kb_lose_copy(gobj, true);
         }
