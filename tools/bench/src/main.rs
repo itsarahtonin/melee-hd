@@ -6,7 +6,9 @@
 //! (median of 5 runs of 200 each), and how many allocations each makes.
 //!
 //! `melee-bench codes DIR`: writes the Gecko codes that boot into each benchmark match
-//! (`matches.rs`); `oracle-codes DIR` the same for the oracle's CPU matches.
+//! (`matches.rs`); `oracle-codes DIR` the same for the oracle's CPU matches, and
+//! `oracle-sets DIR [SET|NAME...]` for milestone 4's oracle sets (items, stages, CPUs), with a
+//! line per match for `make-oracle.sh`.
 //!
 //! `melee-bench dolphin ...`: Dolphin's speed on the benchmark matches (`dolphin.rs`).
 //!
@@ -160,9 +162,54 @@ fn write_codes(dir: &str, list: &[matches::Match]) {
     }
 }
 
-fn main() {
+/// Writes the Gecko codes of the oracle sets' matches `names` picks (whole sets or single
+/// matches, every set if none) as `DIR/NAME.ini`, and prints a line per match for
+/// `make-oracle.sh`: its name, the ports `BENCH_AI` plays (`-` for none), the video fields its
+/// runs need, and whether every player is human (so `BENCH_PADS` can check it).
+fn oracle_sets(dir: &str, names: &[String]) -> std::process::ExitCode {
+    let list = match matches::select(names) {
+        Ok(list) => list,
+        Err(e) => {
+            eprintln!("{e}; sets: {}", set_names());
+            return std::process::ExitCode::FAILURE;
+        }
+    };
+    if let Some(e) = list.iter().find_map(|m| m.check().err()) {
+        eprintln!("{e}");
+        return std::process::ExitCode::FAILURE;
+    }
+    std::fs::create_dir_all(dir).unwrap_or_else(|e| panic!("{dir}: {e}"));
+    for m in &list {
+        let path = std::path::Path::new(dir).join(format!("{}.ini", m.name));
+        std::fs::write(&path, m.ini()).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+        let ai: Vec<String> = m.human_ports().iter().map(usize::to_string).collect();
+        let ai = if ai.is_empty() {
+            "-".into()
+        } else {
+            ai.join(",")
+        };
+        println!(
+            "{}\t{ai}\t{}\t{}",
+            m.name,
+            m.fields(),
+            if m.humans_only() { "pads" } else { "-" }
+        );
+    }
+    std::process::ExitCode::SUCCESS
+}
+
+fn set_names() -> String {
+    matches::SETS
+        .iter()
+        .map(|(name, set)| format!("{name} ({})", set().len()))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn main() -> std::process::ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
+        Some("oracle-sets") if args.len() >= 2 => return oracle_sets(&args[1], &args[2..]),
         Some("snapshot") => snapshot(&args[1..]),
         Some("codes") if args.len() == 2 => codes(&args[1]),
         Some("oracle-codes") if args.len() == 2 => write_codes(&args[1], matches::ORACLE_MATCHES),
@@ -184,8 +231,9 @@ fn main() {
             }
         }
         _ => eprintln!(
-            "melee-bench snapshot CALL... | codes DIR | oracle-codes DIR | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]              | native [--dir DIR] [--runs N] [MATCH...] | snapshot-match [--dir DIR] [--every TICKS] [MATCH] \
+            "melee-bench snapshot CALL... | codes DIR | oracle-codes DIR | oracle-sets DIR [SET|NAME...] | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]              | native [--dir DIR] [--runs N] [MATCH...] | snapshot-match [--dir DIR] [--every TICKS] [MATCH] \
              | alloc-sites [--dir DIR] [--from TICK] [--ticks N] [MATCH]"
         ),
     }
+    std::process::ExitCode::SUCCESS
 }
