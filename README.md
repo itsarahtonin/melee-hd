@@ -86,7 +86,7 @@ melee-hd aims to be the base other projects build on: `melee-sim` as a documente
 
 ## Contributing
 
-[The porting guide](docs/porting.md) describes how a function gets from ssbm-rs into melee-hd and how it is checked; [the architecture](docs/architecture.md) and [the engine notes](docs/engine.md) explain the design, and [AGENTS.md](AGENTS.md) holds the repository's rules. Two rules matter most: never commit disc images, extracted files, captures or replays (the benchmark matches' replays are the one exception), and never port from nikhilunni/melee's source, which has no license.
+[The porting guide](docs/porting.md) describes how a function gets from ssbm-rs into melee-hd and how it is checked; [the architecture](docs/architecture.md) and [the engine notes](docs/engine.md) explain the design, [Melee's own bugs](docs/melee-bugs.md) catalogs the original game's defects melee-hd keeps for exactness, and [AGENTS.md](AGENTS.md) holds the repository's rules. Two rules matter most: never commit disc images, extracted files, captures or replays (the benchmark matches' replays are the one exception), and never port from nikhilunni/melee's source, which has no license.
 
 ## License and legal
 
