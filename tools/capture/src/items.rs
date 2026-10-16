@@ -85,9 +85,10 @@ impl Importer<'_> {
         item.xDD4_itemVar = ItemVars::import_as(vars_kind(item.kind), &m, a + VARS, self);
         self.stale = false;
         let table = cap.u32(a + 0xBBC);
-        // A dangling table (a word never set) has no entries to read.
+        // A dangling or unknown table (a word never set) has no entries to read.
         if let Some(t) = item.xBBC_dynamicBoneTable
             && !self.maps.dangling_bone_tables.contains_key(&t.0)
+            && !self.maps.unknown.contains_key(&t.0)
         {
             let root = cap.u32(cap.u32(a + 4) + 0x28);
             let len = count_joints(|x| cap.u32(x), root);
@@ -121,8 +122,15 @@ impl Importer<'_> {
             }
             out
         };
-        let items = chain("item_alloc_data");
+        let mut items = chain("item_alloc_data");
         let tables = chain("item_dynamic_bones_alloc_data");
+        // Then the blocks the pool takes from the heap once its free list runs out, with
+        // whatever the heap held there (zeros in a replay run's fresh heap, an earlier scene's
+        // bytes after the menus or in a debug VS run): last on our free list, as the original
+        // takes them last.
+        let fresh = fresh_items(&cap.call.mem1, &items);
+        let fresh_from = items.len();
+        items.extend(&fresh);
         for &b in &tables {
             let id = self.game.it.bone_tables.alloc(BoneTable::default());
             self.maps.bone_tables.insert(b, BoneTableId(id));
@@ -133,9 +141,13 @@ impl Importer<'_> {
         let m = mem(&cap.call.mem1);
         self.stale = true;
         self.freed = true;
-        for &b in &items {
+        for (i, &b) in items.iter().enumerate() {
             self.items_done.insert(b);
-            let item = Item::import(&m, b, self);
+            let mut item = Item::import(&m, b, self);
+            if i >= fresh_from {
+                // `HSD_ObjAllocAddFree` links the new block to the empty free list's head.
+                item.x0 = None;
+            }
             let id = self.maps.items[&b];
             self.game.items[id.0] = item;
         }
@@ -292,6 +304,45 @@ impl Importer<'_> {
             monsters: pick_table(|a| cap.u32(a), sym("it_804A0E60")),
         };
     }
+}
+
+/// How many blocks past the item pool's free list [`Importer::item_free_lists`] brings in: as
+/// many new items as one call makes.
+const FRESH_ITEMS: usize = 4;
+
+/// Where the item pool's next blocks come from once its free list (`free`, as memory holds it)
+/// runs out: `HSD_ObjAllocAddFree`'s, one at a time, from the allocator model as memory holds
+/// it. None before the pool is set up, or when the model's free list isn't memory's (a state
+/// outside a scene's heap).
+fn fresh_items(m: &[u8], free: &[u32]) -> Vec<u32> {
+    use melee_sim::hsd::heap::Kind;
+    let word = |a: u32| {
+        let i = (a - MEM1) as usize;
+        u32::from_be_bytes(m[i..i + 4].try_into().unwrap())
+    };
+    let index = word(sym("current_heap")) as i32;
+    if !(0..4).contains(&index) || word(sym("HeapArray")) == 0 || word(sym("memory_list")) == 0 {
+        return Vec::new();
+    }
+    let mut heap = crate::heap::read(m);
+    let pool = &heap.allocs[Kind::Item as usize];
+    if pool.size == 0
+        || pool.num_limit_flag
+        || pool.heap_limit_flag
+        || pool.free.iter().rev().ne(free.iter())
+    {
+        return Vec::new();
+    }
+    heap.allocs[Kind::Item as usize].free.clear();
+    let mut out = Vec::new();
+    for _ in 0..FRESH_ITEMS {
+        let room = heap.os.free.iter().any(|&(_, size)| size >= 0x1000);
+        if !room && heap.obj_heap.top == 0 || heap.obj_add_free(Kind::Item, 1) == 0 {
+            break;
+        }
+        out.extend(heap.allocs[Kind::Item as usize].free.pop());
+    }
+    out
 }
 
 /// An `ItemPickTable` in memory: its arrays read as far as its size says.
