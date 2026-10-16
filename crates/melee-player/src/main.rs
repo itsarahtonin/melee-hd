@@ -842,9 +842,10 @@ impl App {
                 self.jit.ready(f.start, f.target, at, self.grid)
             };
             if let Some(r) = self.rows.iter_mut().find(|r| r.id == Some(id)) {
+                let from = r.tick.at.unwrap_or(f.start);
                 if let Some(t) = &mut r.tick.frame {
-                    t.ready = Some(at.saturating_duration_since(f.start));
-                    t.shown = Some(shown.saturating_duration_since(f.start));
+                    t.ready = Some(at.saturating_duration_since(from));
+                    t.shown = Some(shown.saturating_duration_since(from));
                     t.missed = missed;
                 }
                 r.done = true;
@@ -943,6 +944,12 @@ impl App {
             times.target = target.map(|t| t.saturating_duration_since(now));
             let id = self.watch(shown.submission, now, target, true);
             if let Some(mut p) = self.pending.take() {
+                // Timed from the tick's start, so the row measures from its controller read.
+                let since =
+                    p.at.map_or(Duration::ZERO, |at| now.saturating_duration_since(at));
+                times.rendered += since;
+                times.presented += since;
+                times.target = times.target.map(|t| t + since);
                 p.frame = Some(times);
                 self.queue_row(Some(id), p);
             }

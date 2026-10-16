@@ -575,16 +575,18 @@ mod tests {
     struct Run {
         /// Each tick's (due, start, rendered).
         ticks: Vec<(Instant, Instant, bool)>,
-        /// Each shown frame's (input read, refresh it shows at).
+        /// Each shown frame's (input read, refresh it shows at), and the frames a newer one
+        /// replaced before they showed.
         shown: Vec<(Instant, Instant)>,
+        replaced: u32,
         counts: Counts,
         t0: Instant,
         margin: Duration,
     }
 
     /// Runs `seconds` of ticks against a display refreshing every `refresh` (phase `phase` ms),
-    /// under `policy`, each tick's frame costing what `costs` gives; FIFO: a frame shows at
-    /// the first refresh after it's ready and after the frame before.
+    /// under `policy`, each tick's frame costing what `costs` gives; mailbox: a frame shows at
+    /// the first refresh after it's ready, unless a newer frame is ready for that refresh.
     fn simulate(
         policy: Policy,
         refresh: Duration,
@@ -600,8 +602,8 @@ mod tests {
         let mut s = Scheduler::new(TICK, DEFAULT_MARGIN, t0);
         let mut now = t0;
         let mut ticks = Vec::new();
-        let mut shown = Vec::new();
-        let mut last_shown: Option<Instant> = None;
+        let mut shown: Vec<(Instant, Instant)> = Vec::new();
+        let mut replaced = 0;
         while secs(t0, now) < seconds {
             let p = s.plan(now, policy, Some(grid));
             // The loop wakes at the start (a fake clock: precisely).
@@ -611,13 +613,11 @@ mod tests {
             let ready = start + costs.next();
             if p.render {
                 s.ready(start, p.target, ready, Some(grid));
-                let mut at = grid.at_or_after(ready + LATCH);
-                if let Some(l) = last_shown
-                    && at <= l
-                {
-                    at = l + refresh;
+                let at = grid.at_or_after(ready + LATCH);
+                if shown.last().is_some_and(|l| l.1 == at) {
+                    shown.pop();
+                    replaced += 1;
                 }
-                last_shown = Some(at);
                 shown.push((start, at));
             }
             ticks.push((p.due, start, p.render));
@@ -627,6 +627,7 @@ mod tests {
         Run {
             ticks,
             shown,
+            replaced,
             counts: s.counts,
             t0,
             margin: s.lead.margin(),
@@ -816,6 +817,59 @@ mod tests {
         }
     }
 
+    /// Input read to refresh, simulated against displays that wait for refreshes (FIFO or
+    /// mailbox at a fixed rate), the fixed timer at eight phases against the refreshes and
+    /// aligned ticks, for a quiet machine's costs (4 to 5.5 ms) and a busy one's (as measured
+    /// here beside other agents' builds: 7.5 to 11.5 ms, a 6 ms spike every 50th): mean, 99th
+    /// percentile, refreshes missed and ticks unshown, printed with `--nocapture`. Aligned
+    /// beats the timer at 60 Hz on both; at 144 Hz only where the costs spread less than half
+    /// a refresh, which is why the automatic choice checks ([`Lead::pays`]).
+    #[test]
+    fn simulated_latencies() {
+        let quiet = || Costs::new(4.0, 1.5, 0, 0.0);
+        let busy = || Costs::new(7.5, 4.0, 50, 6.0);
+        for (hz, name, costs) in [
+            (60.0, "quiet", &quiet as &dyn Fn() -> Costs),
+            (60.0, "busy", &busy),
+            (59.94, "busy", &busy),
+            (120.0, "quiet", &quiet),
+            (144.0, "quiet", &quiet),
+            (144.0, "busy", &busy),
+        ] {
+            let refresh = Duration::from_secs_f64(1.0 / hz);
+            let mut row = Vec::new();
+            for policy in [Policy::Timer, Policy::Aligned] {
+                let mut lat = Vec::new();
+                let (mut missed, mut unshown) = (0, 0);
+                for k in 0..8 {
+                    let phase = refresh.as_secs_f64() * 1000.0 * f64::from(k) / 8.0;
+                    let r = simulate(policy, refresh, phase, 30.0, costs());
+                    lat.extend(
+                        r.shown[r.shown.len() / 10..]
+                            .iter()
+                            .map(|(i, d)| secs(*i, *d) * 1000.0),
+                    );
+                    missed += r.counts.missed;
+                    unshown += r.counts.unshown;
+                }
+                lat.sort_by(f64::total_cmp);
+                let mean = lat.iter().sum::<f64>() / lat.len() as f64;
+                let p99 = lat[(lat.len() as f64 * 0.99) as usize];
+                row.push((mean, p99, missed, unshown));
+            }
+            let ((tm, tp, _, _), (jm, jp, jmiss, jun)) = (row[0], row[1]);
+            eprintln!(
+                "{hz} Hz, {name}: timer mean {tm:.2} ms, p99 {tp:.2}; aligned mean {jm:.2} ms, p99 {jp:.2}, {jmiss} refreshes missed, {jun} ticks unshown (8 x 30 s)"
+            );
+            if hz < 61.0 {
+                assert!(
+                    jm < tm,
+                    "{hz} Hz {name}: aligned {jm:.2} ms, timer {tm:.2} ms"
+                );
+            }
+        }
+    }
+
     /// Ticks stay one for one with Melee's clock over minutes, whatever the display's rate,
     /// with spikes that miss refreshes: none skipped or doubled, each in its slot.
     #[test]
@@ -858,9 +912,8 @@ mod tests {
             assert!(r.counts.missed > 0, "{hz} Hz");
             // Each spike misses at most once: the margin and the percentile take it in.
             assert!(r.counts.missed <= 3600 / 211 + 1, "{hz} Hz: {:?}", r.counts);
-            for w in r.shown.windows(2) {
-                assert!(w[1].1 > w[0].1, "{hz} Hz: two frames for one refresh");
-            }
+            // The late frame shows; no frame is meant for its refresh too.
+            assert_eq!(r.replaced, 0, "{hz} Hz: two frames for one refresh");
         }
     }
 
