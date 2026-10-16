@@ -107,6 +107,15 @@ ROOTS = [
     "itRShell_ItemVars",
     "itSword_ItemVars",
     "itDosei_ItemVars",
+    # The items-on matches' common items: the egg, the Fire Flower, the Freezie, the Ray Gun,
+    # the Poké Ball, the Super Scope's beam and the Warp Star.
+    "itEgg_ItemVars",
+    "itFFlower_ItemVars",
+    "itFreeze_ItemVars",
+    "itLGun_ItemVars",
+    "itMBall_ItemVars",
+    "itScopeBeam_ItemVars",
+    "itWstar_ItemVars",
     "PokemonSelectionState",
     # The background flash (`lbbgflash.c`, `lb_0219.c`).
     "BgFlashData",

@@ -126,6 +126,10 @@ pub struct Rvalue {
 #[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct RObjs {
     pub pool: Pool<RObj, { pool_kind(Kind::RObj) }>,
+    /// Whether `expEvaluate`'s argument buffer (the static `arg_buf`, 100 floats from the
+    /// heap) has been allocated: the first expression evaluated allocates it, and nothing
+    /// frees it. The values it holds are only an evaluation's scratch.
+    pub arg_buf: bool,
 }
 
 /// The Rvalue pool (`rvalue_alloc_data`).
@@ -544,7 +548,13 @@ fn evaluate(objs: &mut Objects, data: &Archives, r: RObjId, ty: u32, j: JObjId) 
             .sum();
         objs.robjs[r].u = Ref::Exp(exp);
     }
-    // The original's argument buffer holds 100.
+    // The original's argument buffer holds 100, allocated the first time (`arg_buf`).
+    if !objs.robjs.arg_buf {
+        crate::hsd::heap::with(|h| {
+            h.mem_alloc(100 * 4);
+        });
+        objs.robjs.arg_buf = true;
+    }
     assert!(
         exp.nb_args <= 100,
         "Number of argment of expression exceeds the argument buffer"

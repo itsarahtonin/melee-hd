@@ -10773,6 +10773,240 @@ impl itDosei_ItemVars {
     }
 }
 
+/// `itEgg_ItemVars`, 0x64 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itEgg_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub rand_max: Var<i32>,
+    /// +0x8
+    pub _8: [Var<u8>; 88],
+    /// +0x60
+    pub heal_amount: Var<i32>,
+}
+
+impl Default for itEgg_ItemVars {
+    fn default() -> Self {
+        itEgg_ItemVars {
+            x0: Var::new(Default::default()),
+            rand_max: Var::new(Default::default()),
+            _8: core::array::from_fn(|_| Var::new(Default::default())),
+            heal_amount: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itEgg_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.rand_max.mark_stale();
+        self._8.iter_mut().for_each(|v| v.mark_stale());
+        self.heal_amount.mark_stale();
+    }
+}
+
+/// `itFFlower_ItemVars`, 0x8 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itFFlower_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub x4: Var<u32>,
+}
+
+impl Default for itFFlower_ItemVars {
+    fn default() -> Self {
+        itFFlower_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itFFlower_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+    }
+}
+
+/// `itFreeze_ItemVars`, 0x24 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itFreeze_ItemVars {
+    /// +0x0
+    pub x0: Var<f32>,
+    /// +0x4
+    pub x4: Var<Vec3>,
+    /// +0x10
+    pub x10: Var<f32>,
+    /// +0x14
+    pub x14: Var<f32>,
+    /// +0x18
+    pub x18: Var<i32>,
+    /// +0x1c
+    pub unk_1C: Var<Option<GObjId>>,
+    /// +0x20
+    pub x20: Var<RawPtr>,
+}
+
+impl Default for itFreeze_ItemVars {
+    fn default() -> Self {
+        itFreeze_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+            x18: Var::new(Default::default()),
+            unk_1C: Var::new(Default::default()),
+            x20: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itFreeze_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x10.mark_stale();
+        self.x14.mark_stale();
+        self.x18.mark_stale();
+        self.unk_1C.mark_stale();
+        self.x20.mark_stale();
+    }
+}
+
+/// `itLGun_ItemVars`, 0x4 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itLGun_ItemVars {
+    /// +0x0
+    pub timer: Var<i32>,
+}
+
+impl Default for itLGun_ItemVars {
+    fn default() -> Self {
+        itLGun_ItemVars {
+            timer: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itLGun_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.timer.mark_stale();
+    }
+}
+
+/// `itMBall_ItemVars`, 0x1 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itMBall_ItemVars {
+    /// +0x0 (bits 0..+1)
+    pub b0: Var<bool>,
+    /// +0x0 (bits 1..+1)
+    pub b1: Var<bool>,
+    /// +0x0 (bits 2..+1)
+    pub b2: Var<bool>,
+    /// +0x0 (bits 3..+1)
+    pub b3: Var<bool>,
+    /// +0x0 (bits 4..+1)
+    pub b4: Var<bool>,
+    /// +0x0 (bits 5..+1)
+    pub b5: Var<bool>,
+    /// +0x0 (bits 6..+1)
+    pub b6: Var<bool>,
+    /// +0x0 (bits 7..+1)
+    pub b7: Var<bool>,
+}
+
+impl Default for itMBall_ItemVars {
+    fn default() -> Self {
+        itMBall_ItemVars {
+            b0: Var::new(Default::default()),
+            b1: Var::new(Default::default()),
+            b2: Var::new(Default::default()),
+            b3: Var::new(Default::default()),
+            b4: Var::new(Default::default()),
+            b5: Var::new(Default::default()),
+            b6: Var::new(Default::default()),
+            b7: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itMBall_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.b0.mark_stale();
+        self.b1.mark_stale();
+        self.b2.mark_stale();
+        self.b3.mark_stale();
+        self.b4.mark_stale();
+        self.b5.mark_stale();
+        self.b6.mark_stale();
+        self.b7.mark_stale();
+    }
+}
+
+/// `itScopeBeam_ItemVars`, 0x8 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itScopeBeam_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub x4: Var<f32>,
+}
+
+impl Default for itScopeBeam_ItemVars {
+    fn default() -> Self {
+        itScopeBeam_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itScopeBeam_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+    }
+}
+
+/// `itWstar_ItemVars`, 0xc bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itWstar_ItemVars {
+    /// +0x0
+    pub xDD4: Var<f32>,
+    /// +0x4
+    pub xDD8: Var<f32>,
+    /// +0x8
+    pub xDDC: Var<i32>,
+}
+
+impl Default for itWstar_ItemVars {
+    fn default() -> Self {
+        itWstar_ItemVars {
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+            xDDC: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itWstar_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+        self.xDDC.mark_stale();
+    }
+}
+
 /// `PokemonSelectionState`, 0xc bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct PokemonSelectionState {

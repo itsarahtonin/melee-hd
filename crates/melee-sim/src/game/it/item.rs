@@ -16,8 +16,10 @@ use super::{
 };
 use crate::fpu::{mem, reg};
 use crate::game::camera;
+use crate::game::ft::dynamics::BoneSlot;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj::{self, JObjId};
+use crate::lb::dynamics::Collider;
 use crate::vec::Vec3;
 
 /// The item processes, by priority (`Item_8026862C`).
@@ -532,8 +534,27 @@ pub fn init_dynamics(r: &mut Running, gobj: GObjId) {
         Some(d) => {
             let n = data.u32(d) as i32;
             ip.x374_dynamicBonesNum = n;
-            if n > 0 {
-                code::unported_call("lb_8000FD48 (an item's dynamic bones)");
+            let descs = data.ptr(d.at(4));
+            for i in 0..n.max(0) as usize {
+                // `BoneDynamicsDesc`: the bone, then the chain's description.
+                let entry = descs
+                    .expect("an item's dynamics without bones")
+                    .at(0x18 * i as u32);
+                let bone = data.u32(entry) as usize;
+                let count = data.u32(entry.at(8));
+                let table = super::item(r.game, gobj)
+                    .xBBC_dynamicBoneTable
+                    .expect("an item with dynamic bones has a bone table");
+                let j = r.game.it.bone_tables[table.0].bones[bone];
+                let mut desc = super::item(r.game, gobj).xD4_dynamicBones[i]
+                    .dyn_desc
+                    .clone();
+                r.game.load_dynamics_chain(data, j, &mut desc, count);
+                let b = &mut item_mut(r.game, gobj).xD4_dynamicBones[i];
+                b.skeleton = j;
+                b.flags = 0;
+                r.game.set_dynamics_params(data, entry.at(4), &mut desc);
+                item_mut(r.game, gobj).xD4_dynamicBones[i].dyn_desc = desc;
             }
         }
     }
@@ -915,7 +936,7 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
     set_translate(r.game, model.expect("an item without a model"), pos);
     lib26b1::flush_effects(r, gobj);
     if super::item(r.game, gobj).xDC8_word.flags.x2 {
-        code::unported_call("it_8026BDCC");
+        lib26b1::hold_flags_off(r.game, gobj);
     }
     if flags & MODEL_UPDATE != 0 {
         lib2725::stop_spin(r.game, data, gobj);
@@ -1145,7 +1166,9 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
     }
     let ip = super::item(r.game, gobj);
     if flag(ip.xDD1_flag, 1) && ip.ground_or_air == 1 {
-        code::unported_call("grLib_801C9E60 (the wind on an item)");
+        let mut v = super::item(r.game, gobj).x58_vec_unk;
+        crate::game::gr::grlib::item_wind(r.game, &mut v);
+        item_mut(r.game, gobj).x58_vec_unk = v;
     }
     let ip = item_mut(r.game, gobj);
     ip.pos = vec_add(ip.pos, ip.x58_vec_unk);
@@ -1476,8 +1499,19 @@ pub fn proc_react(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "Item_8026A788")]
 pub fn proc_dynamics(r: &mut Running, gobj: GObjId) {
     coll::update_dynamics_points(r.game, r.data, gobj);
-    if super::item(r.game, gobj).x374_dynamicBonesNum > 0 {
-        code::unported_call("lb_8001044C (an item's dynamic bones)");
+    let ip = super::item(r.game, gobj);
+    // The colliders are the item's dynamics points (`xB6C_t`, read as `lb_Collider`s).
+    let count = usize::from(ip.xB68);
+    let colliders: [Collider; 2] = std::array::from_fn(|k| Collider {
+        radius: ip.xB6C_vars[k].xB78,
+        center: ip.xB6C_vars[k].xB84,
+    });
+    let colliders = &colliders[..count];
+    for i in 0..ip.x374_dynamicBonesNum.max(0) as usize {
+        let b = &super::item(r.game, gobj).xD4_dynamicBones[i];
+        let (desc, flags) = (b.dyn_desc.clone(), b.flags);
+        r.game
+            .swing_chain(r.data, &desc, colliders, None, BoneSlot::Id(flags), 0, true);
     }
 }
 
@@ -1603,8 +1637,10 @@ pub fn destroy(r: &mut Running, gobj: GObjId) {
     // `func_8026A8EC_inline3`: the camera box.
     remove_camera_box(r.game, gobj);
     let i = item_of(r.game, gobj);
-    if r.game.items[i.0].x374_dynamicBonesNum > 0 {
-        code::unported_call("lb_8000FD18 (an item's dynamic bones)");
+    for k in 0..r.game.items[i.0].x374_dynamicBonesNum.max(0) as usize {
+        let mut desc = r.game.items[i.0].xD4_dynamicBones[k].dyn_desc.clone();
+        r.game.free_dynamics_chain(&mut desc);
+        r.game.items[i.0].xD4_dynamicBones[k].dyn_desc = desc;
     }
     stop_all_sfx(r, gobj);
     lib26b1::clear_effect_queue(r.game, gobj);

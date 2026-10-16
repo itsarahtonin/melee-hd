@@ -412,6 +412,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/it/spawn.rs:99`.
 
+### The Super Scope's affordable level returns its GObj
+
+- **Where:** `it_80291DAC` (the level a charge fires with the ammunition left), `crates/melee-sim/src/game/it/kinds/sscope.rs` (`affordable`).
+- **Defect:** when the charge's level costs more than the ammunition left, it walks down the levels to 1 for one it can afford; when none is (or the charge's level is already 0), it ends without a return and the machine code returns its first argument, the scope's GObj. Its callers take that as a level: a burst's shot (`fn_800D84D4`) only clicks, but a hit while charging (`fn_800D7938`) spends it through `it_80291D38`, whose switch has no case for it and returns a register it never set.
+- **Effect:** not recorded: it needs a scope with some ammunition left but less than the lowest level it walks to costs.
+- **melee-hd:** stops (`affordable` reports it as unported).
+- **Fix:** return no level (-1) when none is affordable.
+- **Fix impact:** changes the shot or the spending in that case; replays where it happens would desync.
+- **Source:** `crates/melee-sim/src/game/it/kinds/sscope.rs` (`affordable`); ssbm-rs transliterates the function from its machine code for this.
+
 ## Stages and collision
 
 ### Final Destination's background compares green twice
@@ -529,6 +539,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Source:** `crates/melee-sim/src/game/hud/status.rs:620`.
 
 ## Engine and HSD
+
+### The expression argument buffer outlives its heap
+
+- **Where:** `expEvaluate` (`sysdolphin/baselib/robj.c`), `crates/melee-sim/src/hsd/robj.rs` (`evaluate`).
+- **Defect:** the first expression evaluated allocates the static `arg_buf` (100 floats) from the current heap, and nothing ever clears the pointer. Each scene makes its heap anew, so after a scene change the buffer points into the new scene's heap, at whatever that has put there, and every expression's arguments are written over it.
+- **Effect:** not recorded: under Slippi's playback nothing evaluates an expression before the match, so the buffer comes from the match's own heap (in the items-on replays, a Fire Flower's model runs the first expression).
+- **melee-hd:** modeled within the match (`RObjs::arg_buf`, the allocation replayed); a match after scenes that evaluated an expression would find the buffer already allocated in the original, which melee-hd doesn't model (it allocates one).
+- **Fix:** clear `arg_buf` when the heap is made anew, or take it from a heap that lasts.
+- **Fix impact:** none where the buffer comes from the match's heap; elsewhere it changes the heap's layout, and addresses reach gameplay in a few places ([engine notes](engine.md#uninitialized-values)).
+- **Source:** [engine notes, the allocators](engine.md#the-allocators).
 
 ### An FObj channel hands over a stack word
 
@@ -681,6 +701,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Waiting for banks nothing loads | `lbAudioAx_80027648`, `lb/audio.rs`; `HSD_SynthSFXBankDeflagSync`, `audio/bank.rs` | Waits, or spins with no wait point, forever | `crates/melee-sim/src/lb/audio.rs:1372`; `crates/melee-sim/src/audio/bank.rs:490` |
 | The background flash's color commands | `fn_80021C80` with `fn_80021C18`, `lb/bgflash.rs` | `fn_80021C18` takes the owner's commands and does nothing, so a script with one would stay on it forever | `crates/melee-sim/src/lb/bgflash.rs:363` |
 | `expf` and `powf` on large or NaN inputs | `expf`, `math.rs` | The series never settles for NaN or where the terms overflow (\|x\| about 12.7 to 14.7), and loops forever | `tools/leaf-check/tests/math.rs:154` |
+| A parasol state without an animation | `it_8028B08C`, `game/it/kinds/parasol.rs` | Indexes its lengths by the state's animation, -1 for states 0 and 3, and reads the word before the table; its callers ask only for the held states, 4 to 10 | `crates/melee-sim/src/game/it/kinds/parasol.rs` (`anim_frames`) |
 | A particle list on a displayed joint | HSD's joint traversal (displayfunc.c, `efLib_Cb_SPtcl`) | Spawns a joint's particle list on its first display, whose generators then draw from the game's random seed, so a spawn put off by a doubled round would shift every later draw; no joint descriptor on the disc carries a particle list | [engine notes](engine.md#state-the-render-pass-writes) (line 150) |
 
 ## Unsure
