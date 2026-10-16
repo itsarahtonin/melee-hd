@@ -44,8 +44,8 @@
 //!
 //! `nana_tumble_and_shields` changes the saved frames to reach the tumble's branches
 //! (`ftCo_800ABBA8`), the shield check's (`ftCo_800B9F6C`), the item search's choice among
-//! several items (`ftCo_800A5F4C`) and the held item's throw (`ftCo_800ADE48`,
-//! `ftCo_800AD7FC`), which no replay at hand does.
+//! several items (`ftCo_800A5F4C`), the held item's throw (`ftCo_800ADE48`, `ftCo_800AD7FC`)
+//! and the short hop at the target (`ftCo_800A0798`), which no replay at hand does.
 
 use std::collections::BTreeSet;
 use std::sync::Mutex;
@@ -105,6 +105,12 @@ const ITEM_WORTH: u32 = CPU + 0x2C;
 /// `CpuFighter`'s flag word at `xF8`, and `xFA_b7` (following Popo) in it.
 const CPU_FLAGS: u32 = CPU + 0xF8;
 const FOLLOWING: u32 = 0x100;
+/// `xF8_b34` (the jump at the target's kind) in that word, and a short hop; the jump's
+/// behavior; `CpuFighter::x44`, the target.
+const JUMP_KIND: u32 = 0x1800_0000;
+const HOP: u32 = 0x1000_0000;
+const JUMP: u32 = 8;
+const TARGET: u32 = CPU + 0x44;
 /// `Fighter::item_gobj`; `Item::kind`; `It_Kind_BombHei`, `_Egg` and `_Sword`.
 const HELD_ITEM: u32 = 0x1974;
 const ITEM_KIND: u32 = 0x10;
@@ -196,6 +202,9 @@ enum Change {
     /// Holding an item made an egg, with her script ended: thrown, or dropped (script 14)
     /// where a bob-omb takes script 40.
     ThrowEgg,
+    /// With a target, her script ended and her behavior a short hop at it (behavior 8,
+    /// `xF8_b34` 2): `ftCo_800B7180` hops (`ftCo_800A0798`).
+    Hop,
 }
 
 /// Changes a saved frame as `change` says: whether it did.
@@ -262,6 +271,16 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
             let flags = peek_u32(call, nana + CPU_FLAGS);
             poke_u32(call, nana + CPU_FLAGS, flags & !FOLLOWING);
         }
+        Change::Hop => {
+            if peek_u32(call, nana + TARGET) == 0 {
+                return false;
+            }
+            poke_u32(call, nana + BEHAVIOR, JUMP);
+            let flags = peek_u32(call, nana + CPU_FLAGS);
+            poke_u32(call, nana + CPU_FLAGS, flags & !JUMP_KIND | HOP);
+            poke_u32(call, nana + SCRIPT, 0);
+            poke_u32(call, nana + SCRIPT_WAIT, 0);
+        }
         Change::ThrowBobomb | Change::ThrowEgg => {
             let held = peek_u32(call, nana + HELD_ITEM);
             if held == 0 {
@@ -283,8 +302,8 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
 
 /// The tumble's behavior (`ftCo_800ABBA8`), the attack decision's check of a shielding
 /// target (`ftCo_800B9F6C`), the item search's nearest item (`ftCo_800A5F4C`) and the held
-/// item's throw (`ftCo_800AD7FC`) from saved frames changed to reach what the replays don't:
-/// each changed frame compares clean.
+/// item's throw (`ftCo_800AD7FC`) and the short hop at the target (`ftCo_800A0798`) from saved
+/// frames changed to reach what the replays don't: each changed frame compares clean.
 #[test]
 fn nana_tumble_and_shields() {
     leaf_check::run_as_machine_code();
@@ -297,8 +316,9 @@ fn nana_tumble_and_shields() {
         Change::CommonItems,
         Change::ThrowBobomb,
         Change::ThrowEgg,
+        Change::Hop,
     ];
-    let changed: [Mutex<BTreeSet<usize>>; 8] = Default::default();
+    let changed: [Mutex<BTreeSet<usize>>; 9] = Default::default();
     let prepares: Vec<Box<Prepare>> = (0..changes.len())
         .map(|v| {
             let changed = &changed;
@@ -318,7 +338,7 @@ fn nana_tumble_and_shields() {
             stubs: &[],
         })
         .collect();
-    let mut totals = [0; 8];
+    let mut totals = [0; 9];
     let dirs = dirs();
     for dir in &dirs {
         for c in &changed {
@@ -335,7 +355,7 @@ fn nana_tumble_and_shields() {
     }
     eprintln!(
         "compared clean, tumbling at level 9, over an up tilt, drifting, at level 0, enemies \
-         shielding, items made beam swords, throwing a bob-omb, an egg: {totals:?}"
+         shielding, items made beam swords, throwing a bob-omb, an egg, hopping: {totals:?}"
     );
     if dirs.is_empty() || leaf_check::reference().is_none() {
         return;
