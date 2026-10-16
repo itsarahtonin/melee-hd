@@ -452,6 +452,17 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::UNK_MOTION_STATES_4 => g.kb_charged_glow(gobj),
         addr::ON_KNOCKBACK_ENTER => g.kb_on_knockback_enter(gobj),
         addr::ON_KNOCKBACK_EXIT => g.kb_on_knockback_exit(gobj),
+        0x800E_F9BC => g.kb_hat_restart_texture_anims(gobj),
+        0x800F_04F8 => g.kb_samus_hat_on(gobj),
+        0x800F_05A8 => g.kb_samus_hat_off(gobj),
+        0x800F_130C => g.kb_falco_hat_on(gobj),
+        0x800F_13F0 => g.kb_falco_hat_off(gobj),
+        0x800F_19AC => g.kb_copy_cleanup(gobj),
+        0x800F_1A8C => g.kb_copy_hit_cleanup(gobj),
+        0x800F_1B6C => g.kb_unk_motion_states3(gobj),
+        0x800F_1D24 => g.kb_bump_timer(gobj),
+        0x800F_1DAC => g.kb_bump_effects(gobj),
+        0x800F_1F68 => g.kb_attack_dash_enter(gobj),
         _ => return false,
     }
     true

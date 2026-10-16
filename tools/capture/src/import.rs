@@ -958,6 +958,13 @@ impl Importer<'_> {
             for k in 0..5 {
                 f.u.import_data(0x30 + 4 * k, &mem, u, self);
             }
+            // A costume's animated textures (`x44`), while it's on.
+            if hat == 0 && self.u32(u + 0x18) != 0 {
+                f.u.import_data(0x48, &mem, u, self);
+                for k in 0..self.u32(u + 0x44).min(5) {
+                    f.u.import_tobj(0x4C + 4 * k as usize, &mem, u, self);
+                }
+            }
         }
         // The state's variables' handles where the states that read them keep them: a grab's
         // hold joint (`mv` 0x18) while pulling, holding or pummeling (`ft::co::grab`), Fox's

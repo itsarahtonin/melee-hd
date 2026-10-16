@@ -71,9 +71,9 @@ pub const YOSHI_EGG: usize = 0xC;
 /// `ftMewtwo_FighterVars`: Mewtwo's Disable and the Shadow Ball in his hands (`x222C`, `x2230`).
 pub const MEWTWO_ITEMS: [usize; 2] = [0x0, 0x4];
 
-/// `ftKb_FighterVars`: the Charge Shot in Kirby's hand with Samus's copy (`xA4`) and the
-/// blaster with Fox's or Falco's (`xB0`).
-pub const KIRBY_ITEMS: [usize; 2] = [0xA4, 0xB0];
+/// `ftKb_FighterVars`: Kirby's hammer (`hat.x0`), the Charge Shot in his hand with Samus's
+/// copy (`xA4`) and the blaster with Fox's or Falco's (`xB0`).
+pub const KIRBY_ITEMS: [usize; 3] = [0x0, 0xA4, 0xB0];
 
 /// The words of `u` a fighter of `kind` keeps GObjs in, which the importer types: Fox's and
 /// Falco's blaster, Sheik's held needles and chain (`Ft_Kind_Seak`), Zelda's Din's Fire

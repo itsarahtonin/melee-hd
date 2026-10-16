@@ -117,8 +117,8 @@ macro_rules! members {
 }
 
 members! {
-    FoxBlaster, fox_blaster, itFoxBlaster_ItemVars, [FOX_BLASTER, FALCO_BLASTER];
-    FoxLaser, fox_laser, itFoxLaser_ItemVars, [FOX_LASER, FALCO_LASER];
+    FoxBlaster, fox_blaster, itFoxBlaster_ItemVars, [FOX_BLASTER, FALCO_BLASTER, KIRBY_FOX_BLASTER, KIRBY_FALCO_BLASTER];
+    FoxLaser, fox_laser, itFoxLaser_ItemVars, [FOX_LASER, FALCO_LASER, KIRBY_FOX_LASER, KIRBY_FALCO_LASER];
     FoxIllusion, fox_illusion, itFoxIllusion_ItemVars, [FOX_ILLUSION, FALCO_PHANTASM];
     Capsule, capsule, itCapsule_ItemVars, [CAPSULE];
     Heart, heart, itHeart_ItemVars, [HEART];
@@ -143,7 +143,7 @@ members! {
     NessBat, ness_bat, itNessbat_ItemVars, [NESS_BAT];
     NessYoyo, ness_yoyo, itNessYoyo_ItemVars, [NESS_YOYO];
     SamusBomb, samus_bomb, itSamusBomb_ItemVars, [SAMUS_BOMB];
-    SamusChargeshot, samus_chargeshot, itSamusChargeshot_ItemVars, [SAMUS_CHARGE];
+    SamusChargeshot, samus_chargeshot, itSamusChargeshot_ItemVars, [SAMUS_CHARGE, KIRBY_SAMUS_CHARGE];
     SamusMissile, samus_missile, itSamusMissile_ItemVars, [SAMUS_MISSILE];
     SamusGrapple, samus_grapple, itSamusGrapple_ItemVars, [SAMUS_GBEAM];
     DrMarioPill, drmario_pill, itDrMarioPill_ItemVars, [DRMARIO_VITAMIN];
