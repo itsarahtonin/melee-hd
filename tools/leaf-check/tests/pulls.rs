@@ -35,7 +35,9 @@
 //! the Beam Sword the only items, the monkey playing, in a heap that holds the opening movie's
 //! frame (docs/oracle.md): items.rs's `debug1` command with `MATCH_ITEMS=7,12`,
 //! `CAPTURE=$D/debug1`, `CAPTURE_FUNCS=@$D/pulls-funcs.txt`,
-//! `LOCKSTEP_DONE=$D/done-nonpulls.txt` and `--fields 9000`.
+//! `LOCKSTEP_DONE=$D/done-nonpulls.txt` and `--fields 9000`. The replay set
+//! (`oracle-items-ported-fd`) is milestone 4's items-on pilot, run as items.rs's set of that
+//! name with this file's function lists, to its end (379 saved calls).
 
 use std::collections::BTreeMap;
 

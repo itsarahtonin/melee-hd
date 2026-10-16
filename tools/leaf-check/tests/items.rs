@@ -34,6 +34,19 @@
 //!   ssbm-run "$SSBM_DISC" --mode e --matches 21 --monkey 21 --fields 6000 --port all --lockstep
 //! ```
 //!
+//! The replay set (`oracle-items-ported-fd`) comes from milestone 4's items-on pilot, the
+//! ported kinds on Final Destination (`melee-bench oracle-sets`, docs/oracle.md), played from
+//! its recording as the character sets are, every thousandth call saved (2,020 calls, 11 GB as
+//! files before `pack-calls`; every fiftieth made 98 GB by field 6,000):
+//!
+//! ```text
+//! SLIPPI_PLAYER_NAMES=0 CAPTURE_INTERACTED=1 CAPTURE=$ITEM_CALLS/oracle-items-ported-fd \
+//!   CAPTURE_FROM=0 CAPTURE_NESTED=1 CAPTURE_EVERY=1000 CAPTURE_FUNCS=@items-funcs.txt \
+//!   LOCKSTEP_DONE=done-nonitems.txt ssbm-run "$SSBM_DISC" --replay \
+//!   $SSBM_RS_LOCAL/bench/oracle-m4/items-ported-fd.slp --fp hardware --fields 7440 --port all \
+//!   --lockstep
+//! ```
+//!
 //! The runner's mutated and mismatching saves aren't used and can be deleted.
 
 use melee_local_data::ssbm_rs_local;
