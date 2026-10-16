@@ -23256,6 +23256,32 @@ impl Mirror for itLipstickSpore_ItemVars {
     }
 }
 
+impl Mirror for itFFlowerFlame_ItemVars {
+    const SIZE: u32 = 0x10;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itFFlowerFlame_ItemVars {
+            pos: Var::new(Vec3::import(m, at + 0x0, cx)),
+            unk: Var::new(f32::from_bits(m.u32(at + 0xc))),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        self.pos.compare(m, at + 0x0, &format!("{path}.pos"), cx);
+        if self.unk.live(&format!("{path}.unk"), cx) {
+            if (*self.unk.peek()).to_bits() != m.u32(at + 0xc) {
+                cx.mismatch(
+                    &format!("{path}.unk"),
+                    format!("{:?}", (*self.unk.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0xc))),
+                );
+            }
+        }
+    }
+}
+
 impl Mirror for PokemonSelectionState {
     const SIZE: u32 = 0xc;
 

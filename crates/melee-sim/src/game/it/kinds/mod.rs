@@ -12,6 +12,7 @@ pub mod dosei;
 pub mod drmariopill;
 pub mod egg;
 pub mod fflower;
+pub mod flower;
 pub mod foods;
 pub mod foxblaster;
 pub mod foxillusion;
@@ -85,6 +86,7 @@ pub mod starrod;
 pub mod starrodstar;
 pub mod sword;
 pub mod taru;
+pub mod tarucann;
 pub mod tomato;
 pub mod wstar;
 pub mod yoshiegglay;
@@ -202,6 +204,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || mball::run_event(r, gobj, addr)
         || parasol::run_event(r, gobj, addr)
         || lipstick::run_event(r, gobj, addr)
+        || tarucann::run_event(r, gobj, addr)
+        || flower::run_event(r, gobj, addr)
         || lipstickspore::run_event(r, gobj, addr)
         || starrod::run_event(r, gobj, addr)
         || starrodstar::run_event(r, gobj, addr)
@@ -296,6 +300,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| mball::run_pred(r, gobj, addr))
         .or_else(|| parasol::run_pred(r, gobj, addr))
         .or_else(|| lipstick::run_pred(r, gobj, addr))
+        .or_else(|| tarucann::run_pred(r, gobj, addr))
+        .or_else(|| flower::run_pred(r, gobj, addr))
         .or_else(|| lipstickspore::run_pred(r, gobj, addr))
         .or_else(|| starrod::run_pred(r, gobj, addr))
         .or_else(|| starrodstar::run_pred(r, gobj, addr))
@@ -342,6 +348,8 @@ pub const L_GUN_RAY: i32 = 35;
 pub const STARROD_STAR: i32 = 36;
 pub const LIPSTICK_SPORE: i32 = 37;
 pub const S_SCOPE_BEAM: i32 = 38;
+/// `It_Kind_F_Flower_Flame`: the flower the Lip's Stick plants on a fighter's head.
+pub const F_FLOWER_FLAME: i32 = 41;
 /// `It_Kind_Kuriboh`: the first enemy, and the first kind of the second group of tables.
 pub const KURIBOH: i32 = 43;
 /// `It_Kind_Octarock_Stone`.

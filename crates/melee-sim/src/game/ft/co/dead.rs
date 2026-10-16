@@ -129,10 +129,15 @@ impl Running<'_> {
                 self.game.player_mut(slot).set_ext_u32(0xD44, 0);
             }
         }
-        let fp = &self.game.fighters[f.0];
-        if fp.x197C.is_some() || fp.x1980.is_some() {
-            unported_call("ftCo_800D331C with a worn item");
+        if self.game.fighters[f.0].x197C.is_some() {
+            unported_call("ftCo_800D331C with a bunny hood");
         }
+        if let Some(flower) = self.game.fighters[f.0].x1980 {
+            self.worn_model_off(gobj);
+            item::destroy(self, flower);
+            self.flower_gone(gobj);
+        }
+        let fp = &self.game.fighters[f.0];
         if fp.is_metal {
             unported_call("ftCo_800C8540 (metal's end)");
         }

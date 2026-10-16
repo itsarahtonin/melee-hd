@@ -116,11 +116,12 @@ ROOTS = [
     "itMBall_ItemVars",
     "itScopeBeam_ItemVars",
     "itWstar_ItemVars",
-    # The held and swung items' (task 7): the barrel cannon, the star rod's star and the Lip's
-    # Stick's spores.
+    # The held and swung items' (task 7): the barrel cannon, the star rod's star, the Lip's
+    # Stick's spores and the flower they plant on a fighter's head.
     "itTarucann_ItemVars",
     "itStarRodStar_ItemVars",
     "itLipstickSpore_ItemVars",
+    "itFFlowerFlame_ItemVars",
     "PokemonSelectionState",
     # The background flash (`lbbgflash.c`, `lb_0219.c`).
     "BgFlashData",

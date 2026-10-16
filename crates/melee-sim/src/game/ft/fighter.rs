@@ -199,7 +199,7 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
             g.game.fighters[f.0].x201C = reset;
         }
         if g.game.fighters[f.0].x2018 <= 0 {
-            unported_call("Item_8026ABD8");
+            g.flower_falls(gobj);
         }
     }
     let fp = &mut g.game.fighters[f.0];

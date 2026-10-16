@@ -10,6 +10,7 @@
 pub mod air;
 pub mod anim;
 pub mod attack;
+pub mod barrel;
 pub mod bury;
 pub mod capture_kirby;
 pub mod capture_koopa;
@@ -26,6 +27,7 @@ pub mod down;
 pub mod enter;
 pub mod entry;
 pub mod escape;
+pub mod flower;
 pub mod fly_reflect;
 pub mod grab;
 pub mod ground;

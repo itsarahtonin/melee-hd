@@ -128,6 +128,7 @@ members! {
     TaruCann, taru_cann, itTarucann_ItemVars, [TARU_CANN];
     StarRodStar, star_rod_star, itStarRodStar_ItemVars, [STARROD_STAR];
     LipstickSpore, lipstick_spore, itLipstickSpore_ItemVars, [LIPSTICK_SPORE];
+    FFlowerFlame, fflower_flame, itFFlowerFlame_ItemVars, [F_FLOWER_FLAME];
     Kusudama, kusudama, itKusudama_ItemVars, [KUSUDAMA];
     BombHei, bombhei, itBombHei_ItemVars, [BOMBHEI];
     Dosei, dosei, itDosei_ItemVars, [DOSEI];

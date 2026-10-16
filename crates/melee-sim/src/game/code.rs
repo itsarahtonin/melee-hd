@@ -177,6 +177,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::co::capture_kirby::run(g, gobj, addr) => {}
         addr if super::ft::co::item_get::run(g, gobj, addr) => {}
         addr if super::ft::co::lift::run(g, gobj, addr) => {}
+        addr if super::ft::co::barrel::run(g, gobj, addr) => {}
         // Animation.
         0x8008_A494 => g.co_wait_anim(gobj),
         0x8008_B8D4 | 0x8008_BA98 | 0x8008_C520 | 0x8009_99D8 => g.co_ground_move_anim(gobj),

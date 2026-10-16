@@ -11113,6 +11113,32 @@ impl itLipstickSpore_ItemVars {
     }
 }
 
+/// `itFFlowerFlame_ItemVars`, 0x10 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itFFlowerFlame_ItemVars {
+    /// +0x0
+    pub pos: Var<Vec3>,
+    /// +0xc
+    pub unk: Var<f32>,
+}
+
+impl Default for itFFlowerFlame_ItemVars {
+    fn default() -> Self {
+        itFFlowerFlame_ItemVars {
+            pos: Var::new(Default::default()),
+            unk: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itFFlowerFlame_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.pos.mark_stale();
+        self.unk.mark_stale();
+    }
+}
+
 /// `PokemonSelectionState`, 0xc bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct PokemonSelectionState {
