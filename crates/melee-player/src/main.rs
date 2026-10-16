@@ -3,12 +3,13 @@
 //! ```text
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
 //!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread]
-//!          [--no-adapter] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--ticks N]
+//!          [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [--resize-at TICK:WxH] [...]
 //!                                               plays headless, timing each frame
 //! melee-hd --launcher-shot FILE.png [--size WxH] draws the launcher to a PNG
 //! latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate]
-//!          [--added-delay FRAMES] [--audio-exclusive]
+//!          [--added-delay FRAMES] [--audio-exclusive] [--tick-timing auto|refresh|vrr|timer]
+//!          [--jit-margin MS]
 //! frames:  [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]
 //! ```
 //!
@@ -31,7 +32,9 @@
 //!
 //! The loop keeps latency as short as it can: each tick reads the controllers just before it
 //! runs, and the frame it renders is drawn and presented at once, on a swap chain one frame deep
-//! (mailbox by default, `--present` picks; [`present::Present`]). `--added-delay N` adds input
+//! (mailbox by default, `--present` picks; [`present::Present`]). Ticks start just in time for
+//! the refresh that shows their frame ([`jit`], `--tick-timing`), waited for precisely
+//! ([`timing`]). `--added-delay N` adds input
 //! latency back on purpose, `--latency-log FILE` measures it all ([`latency`]), and F3 shows
 //! the measures over the frame.
 //!
@@ -47,6 +50,7 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
 mod console;
+mod jit;
 mod latency;
 mod launcher;
 mod pacing;
@@ -56,7 +60,9 @@ mod predict_tests;
 mod present;
 mod settings;
 mod sound;
+mod timing;
 
+use std::collections::VecDeque;
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
@@ -71,7 +77,7 @@ use melee_sim::game::roster;
 use melee_sim::game::vs_match::{DiscFile, Match, Player, Settings};
 use melee_slippi::Replay;
 use winit::application::ApplicationHandler;
-use winit::event::{ElementState, KeyEvent, WindowEvent};
+use winit::event::{ElementState, KeyEvent, StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::WindowId;
@@ -97,10 +103,15 @@ struct Args {
     added_delay: u32,
     /// Takes the audio device in exclusive mode (Windows).
     audio_exclusive: bool,
+    /// Mixes the sound but opens no audio device: nothing is heard.
+    mute: bool,
     /// Starts with the latency overlay shown (F3 toggles it).
     latency_overlay: bool,
     /// How frames are drawn between ticks.
     high_refresh: pacing::Mode,
+    /// How ticks are timed, and the just-in-time tick's margin over its costs.
+    tick_timing: jit::Timing,
+    jit_margin: Duration,
     /// With `--bench` and Interpolate or Extrapolate, frames drawn a tick (4 for a 240 Hz
     /// display).
     frames_per_tick: u32,
@@ -139,10 +150,10 @@ struct Args {
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--launcher-shot FILE.png]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--launcher-shot FILE.png]\n\
          characters: {}\n\
          stages: {}\n\
-         latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive]\n\
+         latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing auto|refresh|vrr|timer] [--jit-margin MS]\n\
          frames: [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
          with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match\n\
          the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
@@ -164,8 +175,11 @@ fn parse_args() -> Result<Args, String> {
         present: present::Present::Mailbox,
         added_delay: 0,
         audio_exclusive: false,
+        mute: false,
         latency_overlay: false,
         high_refresh: pacing::Mode::Off,
+        tick_timing: jit::Timing::Auto,
+        jit_margin: jit::DEFAULT_MARGIN,
         frames_per_tick: 4,
         bench: None,
         size: (1280, 960),
@@ -238,10 +252,23 @@ fn parse_args() -> Result<Args, String> {
                 a.given.added_delay = true;
             }
             "--audio-exclusive" => a.audio_exclusive = true,
+            "--mute" => a.mute = true,
             "--latency-overlay" => a.latency_overlay = true,
             "--high-refresh" => {
                 a.high_refresh = pacing::Mode::parse(&value()?)?;
                 a.given.high_refresh = true;
+            }
+            "--tick-timing" => {
+                a.tick_timing = jit::Timing::parse(&value()?)?;
+                a.given.tick_timing = true;
+            }
+            "--jit-margin" => {
+                let ms = launcher::parse_margin(&value()?).ok_or(format!(
+                    "--jit-margin MS (0 to {})",
+                    launcher::MAX_MARGIN_MS
+                ))?;
+                a.jit_margin = Duration::from_secs_f64(f64::from(ms) / 1000.0);
+                a.given.jit_margin = true;
             }
             "--frames-per-tick" => {
                 a.frames_per_tick = value()?
@@ -342,7 +369,7 @@ impl Session {
             disc: a.disc_speed,
             ..settings
         };
-        Session::begin(&disc, &settings, replay, a.bench.is_none())
+        Session::begin(&disc, &settings, replay, a.bench.is_none() && !a.mute)
     }
 
     /// Starts the match `settings` set from `disc`, with its sound mixed (and played when
@@ -485,6 +512,28 @@ impl Stats {
     }
 }
 
+/// A frame the GPU is drawing, until the GPU's timing thread says it finished.
+struct InFlight {
+    id: u64,
+    /// When its tick started (Off), or the frame (Interpolate, Extrapolate).
+    start: Instant,
+    /// The refresh it's meant for.
+    target: Option<Instant>,
+    /// Drawn on the frames' own schedule (Interpolate, Extrapolate).
+    paced: bool,
+}
+
+/// A latency log row, waiting for its frame's GPU time.
+struct Row {
+    id: Option<u64>,
+    tick: latency::Tick,
+    done: bool,
+    queued: Instant,
+}
+
+/// How long a row waits for its frame's GPU time before it's written without it.
+const ROW_WAIT: Duration = Duration::from_millis(500);
+
 /// The launcher, when the player started without a match: its form, and its egui state once
 /// the window exists.
 struct Launcher {
@@ -503,7 +552,27 @@ struct App {
     renderer: Option<Gpu>,
     shown: Option<present::Shown>,
     inputs: Inputs,
-    next_tick: Instant,
+    /// Places the ticks on Melee's clock, just in time for their refreshes.
+    jit: jit::Scheduler,
+    /// How ticks are timed and its margin, how they're placed now, and whether frames wait for
+    /// refreshes.
+    timing: jit::Timing,
+    margin: Duration,
+    policy: Option<jit::Policy>,
+    waits: bool,
+    /// The refreshes when known, as last read.
+    grid: Option<jit::Grid>,
+    /// The window's monitor's refresh rate, which the refresh times must match.
+    monitor_hz: Option<u32>,
+    /// How early the event loop's wait ends for the precise wait.
+    guard: timing::Guard,
+    /// When the GPU finishes frames, and the frames it hasn't yet.
+    gpu_done: Option<present::GpuDone>,
+    inflight: VecDeque<InFlight>,
+    /// With Interpolate or Extrapolate: a frame's lead before its refresh.
+    frame_lead: jit::Lead,
+    /// Latency log rows waiting for their frames' GPU times.
+    rows: VecDeque<Row>,
     stats: Stats,
     quit: bool,
     ticks: u64,
@@ -550,86 +619,256 @@ impl App {
         self.session.as_ref().is_none_or(|s| s.ended)
     }
 
-    /// Runs the ticks that are due: controllers read, tick, frame drawn and presented.
-    fn run_due(&mut self) {
-        let period = Duration::from_secs_f64(1.0 / TICK_RATE);
-        let now = Instant::now();
-        if now < self.next_tick {
-            return;
+    /// How ticks are placed now, with the display's refreshes where they're known; says so when
+    /// it changes.
+    fn sync(&mut self) -> (jit::Policy, Option<jit::Grid>) {
+        let expected = self.monitor_hz.map(|m| pacing::refresh_period(Some(m)));
+        let grid = timing::refresh_grid(expected);
+        let immediate = self
+            .shown
+            .as_ref()
+            .is_some_and(|s| s.present_mode() == wgpu::PresentMode::Immediate);
+        let tick = self.jit.tick();
+        let mut policy = self.timing.policy(grid, immediate, tick);
+        // The automatic choice aligns only where it pays: when the lead is shorter than the
+        // median cost and the half refresh a frame waits on average.
+        let lead = if self.mode.paced() {
+            &self.frame_lead
+        } else {
+            &self.jit.lead
+        };
+        if let (jit::Timing::Auto, jit::Policy::Aligned, Some(g)) = (self.timing, policy, grid)
+            && !lead.pays(g.period, self.policy == Some(jit::Policy::Aligned))
+        {
+            policy = jit::Policy::Cadence;
         }
-        // Far behind (a stall, a dragged window): drop the backlog rather than race.
-        if now - self.next_tick > 4 * period {
-            self.next_tick = now;
-        }
-        while Instant::now() >= self.next_tick && !self.ended() {
-            let due = self.next_tick;
-            self.next_tick += period;
-            let start = Instant::now();
-            let pads = self.delay.apply(self.inputs.read());
-            let session = self.session.as_mut().expect("a match");
-            let f =
-                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| session.tick(pads)))
-                {
-                    Ok(f) => f,
-                    Err(p) => {
-                        let text = format!("the match stopped: {}", panic_text(&p));
-                        eprintln!("{text}");
-                        session.ended = true;
-                        self.stopped = Some(text);
-                        return;
-                    }
-                };
-            let simulated = start.elapsed();
-            let audio = session.sound.as_ref().and_then(sound::Sound::stats);
-            self.stats.ticks += 1;
-            self.ticks += 1;
-            if self.max_ticks.is_some_and(|n| self.ticks >= n) {
-                session.ended = true;
-            }
-            let mut frame = None;
-            if self.mode.paced() {
-                let rendered = !f.draws.is_empty();
-                if rendered {
-                    if self.mode == pacing::Mode::Interpolate {
-                        // B is this tick; A, the tick before, whose transforms were kept then.
-                        std::mem::swap(&mut self.before, &mut self.after);
-                        let m = &self.session.as_ref().expect("a match").m;
-                        self.after.fill(&m.game, &f.draws);
-                    }
-                    if let Some((old, _)) = self.latest.replace((f, due)) {
-                        self.session.as_mut().expect("a match").m.recycle(old);
-                    }
-                } else {
-                    self.session.as_mut().expect("a match").m.recycle(f);
+        // Frames wait for a refresh unless they're presented at once or the display waits for
+        // them (variable refresh, which the automatic choice takes a display to be when its rate
+        // isn't a multiple of the ticks').
+        self.waits = grid.is_some_and(|g| {
+            !immediate
+                && match self.timing {
+                    jit::Timing::Vrr => false,
+                    jit::Timing::Auto => jit::multiple(g.period, tick),
+                    jit::Timing::Refresh | jit::Timing::Timer => true,
                 }
-                if self.mode == pacing::Mode::Extrapolate {
-                    self.predict(rendered, pads);
+        });
+        self.grid = grid;
+        if self.policy != Some(policy) {
+            let at = grid.map_or(String::new(), |g| {
+                format!(
+                    ", refreshes every {:.3} ms",
+                    g.period.as_secs_f64() * 1000.0
+                )
+            });
+            let costs = lead.median().map_or(String::new(), |m| {
+                format!(
+                    " (lead {:.2} ms, median cost {:.2} ms)",
+                    lead.get().as_secs_f64() * 1000.0,
+                    m.as_secs_f64() * 1000.0
+                )
+            });
+            eprintln!("tick timing: {}{at}{costs}", policy.name());
+            self.policy = Some(policy);
+        }
+        (policy, grid)
+    }
+
+    /// Plans the next tick: just in time for its refresh, or with Interpolate and Extrapolate
+    /// for the first frame that will show it.
+    fn plan_tick(&mut self, now: Instant) -> jit::Plan {
+        let (policy, grid) = self.sync();
+        match &self.pacer {
+            Some(p) if self.mode.paced() => {
+                let period = match (policy, grid) {
+                    (jit::Policy::Aligned, Some(g)) => g.period,
+                    _ => p.refresh(),
+                };
+                self.jit.plan_before_frames(now, policy, p.due(), period)
+            }
+            _ => self.jit.plan(now, policy, grid),
+        }
+    }
+
+    /// Runs the ticks that are due: controllers read, tick, and with Off its frame drawn and
+    /// presented. Returns when the next tick starts.
+    fn run_due(&mut self) -> Instant {
+        loop {
+            self.collect_done();
+            let now = Instant::now();
+            let plan = self.plan_tick(now);
+            if self.ended() || now < plan.start || !self.run_tick(plan) {
+                return plan.start;
+            }
+        }
+    }
+
+    /// Runs a tick as planned; false when the match stopped.
+    fn run_tick(&mut self, plan: jit::Plan) -> bool {
+        let start = Instant::now();
+        let pads = self.delay.apply(self.inputs.read());
+        let session = self.session.as_mut().expect("a match");
+        let f = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| session.tick(pads)))
+        {
+            Ok(f) => f,
+            Err(p) => {
+                let text = format!("the match stopped: {}", panic_text(&p));
+                eprintln!("{text}");
+                session.ended = true;
+                self.stopped = Some(text);
+                return false;
+            }
+        };
+        let simulated = start.elapsed();
+        let audio = session.sound.as_ref().and_then(sound::Sound::stats);
+        self.jit.ran(&plan);
+        self.stats.ticks += 1;
+        self.ticks += 1;
+        if self.max_ticks.is_some_and(|n| self.ticks >= n) {
+            session.ended = true;
+        }
+        let mut frame = None;
+        let mut id = None;
+        if self.mode.paced() {
+            let rendered = !f.draws.is_empty();
+            if rendered {
+                if self.mode == pacing::Mode::Interpolate {
+                    // B is this tick; A, the tick before, whose transforms were kept then.
+                    std::mem::swap(&mut self.before, &mut self.after);
+                    let m = &self.session.as_ref().expect("a match").m;
+                    self.after.fill(&m.game, &f.draws);
+                }
+                if let Some((old, _)) = self.latest.replace((f, plan.due)) {
+                    self.session.as_mut().expect("a match").m.recycle(old);
                 }
             } else {
-                if !f.draws.is_empty() {
-                    frame = self.draw_frame(&f.draws, start, None).map(|(f, _)| f);
-                    self.stats.frame(start.elapsed());
-                }
                 self.session.as_mut().expect("a match").m.recycle(f);
             }
-            let t = latency::Tick {
-                at: Some(start),
-                late: start.saturating_duration_since(due),
-                ages: self.inputs.ages,
-                adapter_reports: self.inputs.adapter.as_ref().map(|a| a.reports()),
-                sim: simulated,
-                frame,
-                audio,
-            };
-            if self.mode.paced() {
-                // Logged with the first frame drawn after it.
-                if let Some(p) = self.pending.replace(t) {
-                    self.log_tick(p);
+            if self.mode == pacing::Mode::Extrapolate {
+                self.predict(rendered, pads);
+            }
+            self.jit.tick_done(start, Instant::now(), plan.target);
+        } else {
+            if !f.draws.is_empty() && plan.render {
+                if let Some((mut times, shown)) = self.draw_frame(&f.draws, start, None) {
+                    times.target = plan.target.map(|t| t.saturating_duration_since(start));
+                    id = Some(self.watch(shown.submission, start, plan.target, false));
+                    frame = Some(times);
                 }
+                self.stats.frame(start.elapsed());
+            }
+            self.session.as_mut().expect("a match").m.recycle(f);
+        }
+        let t = latency::Tick {
+            at: Some(start),
+            late: start.saturating_duration_since(plan.start),
+            ages: self.inputs.ages,
+            adapter_reports: self.inputs.adapter.as_ref().map(|a| a.reports()),
+            sim: simulated,
+            frame,
+            audio,
+        };
+        if self.mode.paced() {
+            // Logged with the first frame drawn after it.
+            if let Some(p) = self.pending.replace(t) {
+                self.queue_row(None, p);
+            }
+        } else {
+            self.queue_row(id, t);
+        }
+        true
+    }
+
+    /// Has the GPU's timing thread note when the frame presented with `submission` is done: a
+    /// frame started at `start` (its tick's start with Off) and meant for `target`.
+    fn watch(
+        &mut self,
+        submission: wgpu::SubmissionIndex,
+        start: Instant,
+        target: Option<Instant>,
+        paced: bool,
+    ) -> u64 {
+        let device = &self.gpu.device;
+        let g = self
+            .gpu_done
+            .get_or_insert_with(|| present::GpuDone::new(device));
+        let id = g.watch(submission);
+        if self.inflight.len() >= 64 {
+            self.inflight.pop_front();
+        }
+        self.inflight.push_back(InFlight {
+            id,
+            start,
+            target,
+            paced,
+        });
+        id
+    }
+
+    /// Takes in the frames the GPU finished: their costs and missed refreshes, and their log
+    /// rows' times; writes the rows that are complete.
+    fn collect_done(&mut self) {
+        let done = self
+            .gpu_done
+            .as_ref()
+            .map_or_else(Vec::new, present::GpuDone::finished);
+        for (id, at) in done {
+            let Some(i) = self.inflight.iter().position(|f| f.id == id) else {
+                continue;
+            };
+            // Frames before it that never reported won't now.
+            let f = self.inflight.drain(..=i).next_back().expect("the frame");
+            let shown = match (self.waits, self.grid, f.target) {
+                (true, Some(g), Some(t)) => jit::shown_at(g, t, at),
+                (true, Some(g), None) => g.at_or_after(at + jit::LATCH),
+                _ => at,
+            };
+            let missed = if f.paced {
+                self.frame_lead.add(at.saturating_duration_since(f.start));
+                f.target.map(|t| {
+                    let missed = self
+                        .grid
+                        .map_or(at + jit::LATCH > t, |g| jit::shown_at(g, t, at) > t);
+                    self.jit.counts.targeted += 1;
+                    if missed {
+                        self.jit.counts.missed += 1;
+                        self.frame_lead.missed();
+                    } else {
+                        self.frame_lead.met();
+                    }
+                    missed
+                })
             } else {
-                self.log_tick(t);
+                self.jit.ready(f.start, f.target, at, self.grid)
+            };
+            if let Some(r) = self.rows.iter_mut().find(|r| r.id == Some(id)) {
+                let from = r.tick.at.unwrap_or(f.start);
+                if let Some(t) = &mut r.tick.frame {
+                    t.ready = Some(at.saturating_duration_since(from));
+                    t.shown = Some(shown.saturating_duration_since(from));
+                    t.missed = missed;
+                }
+                r.done = true;
             }
         }
+        let now = Instant::now();
+        while let Some(r) = self.rows.front() {
+            if !(r.id.is_none() || r.done || now - r.queued > ROW_WAIT) {
+                break;
+            }
+            let r = self.rows.pop_front().expect("a row");
+            self.log_tick(r.tick);
+        }
+    }
+
+    /// Queues a tick's row, to be written once its frame's GPU time is in.
+    fn queue_row(&mut self, id: Option<u64>, tick: latency::Tick) {
+        self.rows.push_back(Row {
+            id,
+            tick,
+            done: false,
+            queued: Instant::now(),
+        });
     }
 
     /// With Extrapolate, after a tick that ran with `pads`: the next tick predicted with the
@@ -664,15 +903,24 @@ impl App {
 
     /// With Interpolate or Extrapolate, draws the frame that's due, if one is: between the last
     /// two ticks, or the latest and the next predicted, at the fraction its display time gives
-    /// ([`pacing`]).
-    fn draw_due(&mut self) {
+    /// ([`pacing`]). Aligned to the refreshes, each frame starts its lead before the refresh
+    /// it's meant for. Returns when the next frame is due.
+    fn draw_due(&mut self) -> Option<Instant> {
+        let aligned = self
+            .grid
+            .filter(|_| self.policy == Some(jit::Policy::Aligned));
+        let lead = self.frame_lead.get();
         let now = Instant::now();
         let (Some(pacer), Some((_, due))) = (&mut self.pacer, &self.latest) else {
-            return;
+            return None;
         };
-        if now < pacer.due() {
-            return;
+        if aligned.is_some() != pacer.target().is_some() {
+            pacer.align(now, aligned, lead);
         }
+        if now < pacer.due() {
+            return Some(pacer.due());
+        }
+        let target = pacer.target();
         let t = pacer.start(now, *due);
         let (f, due) = self.latest.take().expect("a frame");
         let drawn = if self.mode == pacing::Mode::Extrapolate {
@@ -689,30 +937,55 @@ impl App {
         };
         self.latest = Some((f, due));
         self.stats.frame(now.elapsed());
-        if let Some((times, acquired)) = drawn {
+        if let Some((mut times, shown)) = drawn {
             if let Some(p) = &mut self.pacer {
-                p.presented(now, times.acquire, acquired, now + times.presented);
+                p.presented(now, times.acquire, shown.acquired, shown.presented);
             }
+            times.target = target.map(|t| t.saturating_duration_since(now));
+            let id = self.watch(shown.submission, now, target, true);
             if let Some(mut p) = self.pending.take() {
+                // Timed from the tick's start, so the row measures from its controller read.
+                let since =
+                    p.at.map_or(Duration::ZERO, |at| now.saturating_duration_since(at));
+                times.rendered += since;
+                times.presented += since;
+                times.target = times.target.map(|t| t + since);
                 p.frame = Some(times);
-                self.log_tick(p);
+                self.queue_row(Some(id), p);
             }
         }
+        let pacer = self.pacer.as_mut()?;
+        pacer.align(Instant::now(), aligned, self.frame_lead.get());
+        Some(pacer.due())
     }
 
-    /// The display's refresh period and whether frames wait for a refresh, for the pacer.
-    fn display_refresh(&self) -> (Duration, bool) {
+    /// The display's refresh period and whether frames wait for a refresh, for the pacer; the
+    /// monitor's rate is kept for the refresh times.
+    fn display_refresh(&mut self) -> (Duration, bool) {
         let Some(s) = &self.shown else {
             return (pacing::refresh_period(None), false);
         };
-        let hz = s
+        self.monitor_hz = s
             .window
             .current_monitor()
             .and_then(|m| m.refresh_rate_millihertz());
         (
-            pacing::refresh_period(hz),
+            pacing::refresh_period(self.monitor_hz),
             s.present_mode() == wgpu::PresentMode::Fifo,
         )
+    }
+
+    /// Starts Melee's clock at the next tick, now, with the timing and margin chosen.
+    fn start_clock(&mut self) {
+        self.display_refresh();
+        self.jit = jit::Scheduler::new(
+            Duration::from_secs_f64(1.0 / TICK_RATE),
+            self.margin,
+            Instant::now(),
+        );
+        self.frame_lead = jit::Lead::new(self.margin, self.jit.tick() / 2);
+        self.policy = None;
+        self.inflight.clear();
     }
 
     /// Starts drawing frames as `mode` says, from the next tick.
@@ -724,8 +997,8 @@ impl App {
         self.after.clear();
         self.predictor.clear();
         self.prediction_failed = false;
+        let (refresh, fifo) = self.display_refresh();
         self.pacer = mode.paced().then(|| {
-            let (refresh, fifo) = self.display_refresh();
             eprintln!(
                 "high refresh: {}, display at {:.2} Hz",
                 mode.key(),
@@ -742,25 +1015,23 @@ impl App {
 
     /// The display may have changed its rate (another monitor, fullscreen).
     fn update_refresh(&mut self) {
-        if self.pacer.is_some() {
-            let (refresh, fifo) = self.display_refresh();
-            if let Some(p) = &mut self.pacer {
-                if p.refresh() != refresh {
-                    eprintln!("display at {:.2} Hz", 1.0 / refresh.as_secs_f64());
-                }
-                p.set_refresh(refresh, fifo);
+        let (refresh, fifo) = self.display_refresh();
+        if let Some(p) = &mut self.pacer {
+            if p.refresh() != refresh {
+                eprintln!("display at {:.2} Hz", 1.0 / refresh.as_secs_f64());
             }
+            p.set_refresh(refresh, fifo);
         }
     }
 
     /// Draws and presents a frame, between two ticks with a blend: when its stages finished,
-    /// from `start` (its tick's start, or the frame's), and when the swap chain's image came.
+    /// from `start` (its tick's start, or the frame's), and how it was presented.
     fn draw_frame(
         &mut self,
         draws: &[melee_sim::hsd::display::Draw],
         start: Instant,
         blend: Option<Blend<'_>>,
-    ) -> Option<(latency::FrameTimes, Instant)> {
+    ) -> Option<(latency::FrameTimes, present::Presented)> {
         // The internal resolution follows the window's size unless `--scale` fixed it, and
         // the EFB's width the aspect: the renderer's EFB is made again at a new one, in place.
         let scale = scale_for(self.args.scale, self.window_size, self.aspect);
@@ -789,7 +1060,7 @@ impl App {
                 .text(&format!("{:?}", shown.present_mode()), self.delay.frames())
         });
         let (gpu, overlay) = (&self.gpu, &mut self.overlay);
-        let (acquire, acquired, presented) = shown.present(gpu, &frame, |view, w, h| {
+        let presented = shown.present(gpu, &frame, |view, w, h| {
             if let (Some(p), Some(text)) = (overlay, text) {
                 latency::overlay(p, gpu, &text, view, w, h);
             }
@@ -797,10 +1068,11 @@ impl App {
         Some((
             latency::FrameTimes {
                 rendered,
-                acquire,
-                presented: presented.saturating_duration_since(start),
+                acquire: presented.acquire,
+                presented: presented.presented.saturating_duration_since(start),
+                ..Default::default()
             },
-            acquired,
+            presented,
         ))
     }
 
@@ -857,6 +1129,7 @@ impl App {
         let aspect = l.form.aspect;
         let (present, added_delay) = (l.form.present, l.form.added_delay);
         let high_refresh = l.form.high_refresh;
+        let (tick_timing, margin) = (l.form.tick_timing, l.form.jit_margin);
         settings::write(settings::LAST_MATCH, &l.form.save());
         let c = &l.form.choice;
         let mut args = self.args.clone();
@@ -892,7 +1165,9 @@ impl App {
                 self.session = Some(session);
                 self.ticks = 0;
                 self.stats = Stats::default();
-                self.next_tick = Instant::now();
+                self.timing = tick_timing;
+                self.margin = Duration::from_secs_f64(f64::from(margin) / 1000.0);
+                self.start_clock();
                 self.start_pacing(high_refresh);
             }
             Err(e) => {
@@ -933,6 +1208,17 @@ impl App {
 }
 
 impl ApplicationHandler for App {
+    fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
+        // How late the event loop's timed wake-ups come, for the precise wait's guard.
+        if let StartCause::ResumeTimeReached {
+            start,
+            requested_resume,
+        } = cause
+        {
+            self.guard.woke(requested_resume, start);
+        }
+    }
+
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.shown.is_none() {
             let shown = present::Shown::new(&self.gpu, event_loop, self.args.fullscreen);
@@ -940,7 +1226,7 @@ impl ApplicationHandler for App {
                 l.window = Some(launcher::Window::new(&self.gpu, &shown));
             }
             self.shown = Some(shown);
-            self.next_tick = Instant::now();
+            self.start_clock();
             if self.args.latency_overlay {
                 self.toggle_overlay();
             }
@@ -1049,14 +1335,28 @@ impl ApplicationHandler for App {
             return;
         }
         if self.session.is_some() {
-            self.run_due();
+            // Ticks and frames that are due run; the event loop sleeps until shortly before the
+            // next (it wakes for window events too), and a precise wait takes it the rest of the
+            // way. The fixed timer only sleeps.
+            for _ in 0..32 {
+                let next_tick = self.run_due();
+                if self.ended() {
+                    break;
+                }
+                let next = self.draw_due().map_or(next_tick, |f| f.min(next_tick));
+                if self.policy == Some(jit::Policy::Timer) {
+                    event_loop.set_control_flow(ControlFlow::WaitUntil(next));
+                    return;
+                }
+                let guard = self.guard.get();
+                if next > Instant::now() + guard {
+                    event_loop.set_control_flow(ControlFlow::WaitUntil(next - guard));
+                    return;
+                }
+                timing::sleep_until(next);
+            }
             if !self.ended() {
-                self.draw_due();
-                let wake = match &self.pacer {
-                    Some(p) if self.latest.is_some() => self.next_tick.min(p.due()),
-                    _ => self.next_tick,
-                };
-                event_loop.set_control_flow(ControlFlow::WaitUntil(wake));
+                event_loop.set_control_flow(ControlFlow::Poll);
                 return;
             }
             eprintln!("the match ended");
@@ -1464,6 +1764,8 @@ fn run(args: Args) -> ExitCode {
         form.present = args.present;
         form.added_delay = args.added_delay;
         form.high_refresh = args.high_refresh;
+        form.tick_timing = args.tick_timing;
+        form.jit_margin = (args.jit_margin.as_secs_f64() * 1000.0) as f32;
         if let Some(text) = settings::read(settings::LAST_MATCH) {
             form.restore(&text, &args.given);
         }
@@ -1477,7 +1779,22 @@ fn run(args: Args) -> ExitCode {
         renderer: None,
         shown: None,
         inputs: Inputs::new(args.adapter),
-        next_tick: Instant::now(),
+        jit: jit::Scheduler::new(
+            Duration::from_secs_f64(1.0 / TICK_RATE),
+            args.jit_margin,
+            Instant::now(),
+        ),
+        timing: args.tick_timing,
+        margin: args.jit_margin,
+        policy: None,
+        waits: false,
+        grid: None,
+        monitor_hz: None,
+        guard: timing::Guard::default(),
+        gpu_done: None,
+        inflight: VecDeque::new(),
+        frame_lead: jit::Lead::new(args.jit_margin, Duration::from_secs_f64(0.5 / TICK_RATE)),
+        rows: VecDeque::new(),
         stats: Stats::default(),
         quit: false,
         ticks: 0,
@@ -1526,11 +1843,33 @@ fn run(args: Args) -> ExitCode {
     let r = event_loop.run_app(&mut app);
     app.inputs.close();
     app.drop_renderer();
+    // The rows still waiting for their frames' GPU times.
+    app.collect_done();
+    for r in std::mem::take(&mut app.rows) {
+        app.log_tick(r.tick);
+    }
     if let Some(mut log) = app.latency.take() {
         if let Some(s) = &app.shown {
             log.present_mode = format!("{:?}", s.present_mode());
         }
         log.added_delay = app.delay.frames();
+        log.timing = format!(
+            "tick timing {}: {}{}, margin {:.2} ms at the end",
+            app.timing.key(),
+            app.policy.map_or("no ticks", jit::Policy::name),
+            app.grid.map_or(String::new(), |g| format!(
+                ", refreshes every {:.3} ms",
+                g.period.as_secs_f64() * 1000.0
+            )),
+            if app.mode.paced() {
+                app.frame_lead.margin()
+            } else {
+                app.jit.lead.margin()
+            }
+            .as_secs_f64()
+                * 1000.0
+        );
+        log.counts = app.jit.counts;
         log.finish();
     }
     if let Err(e) = r {

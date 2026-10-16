@@ -26,6 +26,15 @@ pub struct FrameTimes {
     pub acquire: Duration,
     /// The present call returned: the frame is the display's to show.
     pub presented: Duration,
+    /// The GPU finished the frame.
+    pub ready: Option<Duration>,
+    /// The refresh the just-in-time tick meant the frame for.
+    pub target: Option<Duration>,
+    /// When it reaches the screen, estimated: the first refresh after it's ready where the
+    /// refresh times are known and frames wait for them, else when it's ready.
+    pub shown: Option<Duration>,
+    /// Whether it came too late for the refresh it was meant for.
+    pub missed: Option<bool>,
 }
 
 /// One tick's measures.
@@ -52,9 +61,12 @@ pub struct Log {
     /// The present mode and the added delay, for the summary.
     pub present_mode: String,
     pub added_delay: u32,
+    /// How ticks were timed, and the just-in-time tick's counts, for the summary.
+    pub timing: String,
+    pub counts: crate::jit::Counts,
 }
 
-const HEADER: &str = "tick,time_ms,late_ms,adapter_age_ms,keyboard_age_ms,gamepad_age_ms,adapter_reports,sim_ms,frame,rendered_ms,acquire_ms,presented_ms,audio_ring_ms,audio_device_ms,audio_total_ms,audio_callback_frames,audio_underruns,audio_skips";
+const HEADER: &str = "tick,time_ms,late_ms,adapter_age_ms,keyboard_age_ms,gamepad_age_ms,adapter_reports,sim_ms,frame,rendered_ms,acquire_ms,presented_ms,ready_ms,target_ms,shown_ms,missed,audio_ring_ms,audio_device_ms,audio_total_ms,audio_callback_frames,audio_underruns,audio_skips";
 
 fn ms(d: Duration) -> f64 {
     d.as_secs_f64() * 1000.0
@@ -76,6 +88,8 @@ impl Log {
             rows: Vec::with_capacity(60 * 600),
             present_mode: String::new(),
             added_delay: 0,
+            timing: String::new(),
+            counts: crate::jit::Counts::default(),
         })
     }
 
@@ -86,7 +100,7 @@ impl Log {
         let f = t.frame;
         let a = t.audio;
         let row = format!(
-            "{},{:.3},{:.3},{},{},{},{},{:.3},{},{},{},{},{},{},{},{},{},{}",
+            "{},{:.3},{:.3},{},{},{},{},{:.3},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
             self.rows.len(),
             ms(at.saturating_duration_since(start)),
             ms(t.late),
@@ -99,6 +113,11 @@ impl Log {
             opt_ms(f.map(|f| f.rendered)),
             opt_ms(f.map(|f| f.acquire)),
             opt_ms(f.map(|f| f.presented)),
+            opt_ms(f.and_then(|f| f.ready)),
+            opt_ms(f.and_then(|f| f.target)),
+            opt_ms(f.and_then(|f| f.shown)),
+            f.and_then(|f| f.missed)
+                .map_or(String::new(), |m| u8::from(m).to_string()),
             opt_ms(a.map(|a| a.ring)),
             opt_ms(a.map(|a| a.device)),
             opt_ms(a.map(|a| a.total())),
@@ -125,12 +144,13 @@ impl Log {
         let rows = &self.rows;
         let frames: Vec<FrameTimes> = rows.iter().filter_map(|t| t.frame).collect();
         let mut s = format!(
-            "latency log {}: {} ticks, {} frames, present mode {}, added delay {} frames\n",
+            "latency log {}: {} ticks, {} frames, present mode {}, added delay {} frames, {}\n",
             self.path,
             rows.len(),
             frames.len(),
             self.present_mode,
-            self.added_delay
+            self.added_delay,
+            self.timing
         );
         let mut line = |what: &str, v: Vec<Duration>| {
             if let Some(d) = Dist::of(v) {
@@ -175,6 +195,20 @@ impl Log {
                 .filter_map(|t| Some(t.ages.adapter? + t.frame?.presented))
                 .collect(),
         );
+        line(
+            "tick start to GPU done",
+            frames.iter().filter_map(|f| f.ready).collect(),
+        );
+        line(
+            "tick start to shown (estimated)",
+            frames.iter().filter_map(|f| f.shown).collect(),
+        );
+        line(
+            "adapter report arrived to shown (estimated)",
+            rows.iter()
+                .filter_map(|t| Some(t.ages.adapter? + t.frame?.shown?))
+                .collect(),
+        );
         let audio: Vec<OutputStats> = rows.iter().filter_map(|t| t.audio).collect();
         line(
             "audio queued in the ring at the tick's push",
@@ -192,6 +226,13 @@ impl Log {
             s += &format!(
                 "  audio: {}-sample device callbacks, {} underruns, {} backlogs dropped\n",
                 a.callback_frames, a.underruns, a.skips
+            );
+        }
+        let c = self.counts;
+        if c.targeted > 0 || c.unshown > 0 || c.stalls > 0 {
+            s += &format!(
+                "  refreshes missed: {} of {} frames meant for one; ticks without a frame of their own: {}; stalls: {}\n",
+                c.missed, c.targeted, c.unshown, c.stalls
             );
         }
         if let Some(rate) = self.adapter_rate() {
@@ -242,6 +283,7 @@ impl Live {
             )
         });
         let presented = mean(r.iter().filter_map(|t| Some(t.frame?.presented)).collect());
+        let shown = mean(r.iter().filter_map(|t| t.frame?.shown).collect());
         let audio = mean(r.iter().filter_map(|t| Some(t.audio?.total())).collect());
         let underruns = r.back().and_then(|t| t.audio).map_or(0, |a| a.underruns);
         let rate = match (r.front(), r.back()) {
@@ -254,9 +296,10 @@ impl Live {
             _ => String::new(),
         };
         format!(
-            "input age {}{rate}\ntick to present {}\naudio queue {}, underruns {underruns}\n{present_mode}, added delay {added_delay}",
+            "input age {}{rate}\ntick to present {}, to screen {}\naudio queue {}, underruns {underruns}\n{present_mode}, added delay {added_delay}",
             show(input),
             show(presented),
+            show(shown),
             show(audio),
         )
     }
@@ -367,6 +410,10 @@ mod tests {
                     rendered: Duration::from_millis(4),
                     acquire: Duration::ZERO,
                     presented: Duration::from_millis(5),
+                    ready: Some(Duration::from_millis(6)),
+                    target: Some(Duration::from_millis(7)),
+                    shown: Some(Duration::from_millis(7)),
+                    missed: Some(i == 10),
                 }),
                 audio: None,
             });
@@ -385,6 +432,7 @@ mod tests {
             "{summary}"
         );
         assert!(summary.contains("tick start to presented"), "{summary}");
+        assert!(summary.contains("tick start to shown"), "{summary}");
         log.finish();
         let csv = std::fs::read_to_string(&path).unwrap();
         let lines: Vec<&str> = csv.lines().collect();

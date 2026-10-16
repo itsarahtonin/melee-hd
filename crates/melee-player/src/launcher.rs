@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 
 use melee_sim::game::roster::{self, CHARACTERS, STAGES};
 
+use crate::jit::Timing;
 use crate::pacing::Mode;
 use crate::present::{Aspect, Gpu, Present, Shown};
 
@@ -44,6 +45,16 @@ impl Choice {
     }
 }
 
+/// The widest margin the launcher and the command line take, in milliseconds.
+pub const MAX_MARGIN_MS: f32 = 8.0;
+
+/// A just-in-time margin in milliseconds, 0 to [`MAX_MARGIN_MS`].
+pub fn parse_margin(v: &str) -> Option<f32> {
+    v.parse()
+        .ok()
+        .filter(|m: &f32| (0.0..=MAX_MARGIN_MS).contains(m))
+}
+
 /// The form's choices the command line gave, which win over the last match's.
 #[derive(Clone, Copy, Default)]
 pub struct Given {
@@ -54,6 +65,8 @@ pub struct Given {
     pub present: bool,
     pub added_delay: bool,
     pub high_refresh: bool,
+    pub tick_timing: bool,
+    pub jit_margin: bool,
 }
 
 /// The form and what it last had to say.
@@ -70,6 +83,9 @@ pub struct Form {
     pub added_delay: u32,
     /// How frames are drawn between ticks.
     pub high_refresh: Mode,
+    /// How ticks are timed, and the just-in-time tick's margin in milliseconds.
+    pub tick_timing: Timing,
+    pub jit_margin: f32,
 }
 
 impl Form {
@@ -89,6 +105,8 @@ impl Form {
             present: Present::Mailbox,
             added_delay: 0,
             high_refresh: Mode::Off,
+            tick_timing: Timing::Auto,
+            jit_margin: (crate::jit::DEFAULT_MARGIN.as_secs_f64() * 1000.0) as f32,
         }
     }
 
@@ -116,12 +134,14 @@ impl Form {
             Present::Immediate => "immediate",
         };
         text += &format!(
-            "stocks = {}\nminutes = {}\naspect = {aspect}\nfullscreen = {}\npresent = {present}\nadded-delay = {}\nhigh-refresh = {}\n",
+            "stocks = {}\nminutes = {}\naspect = {aspect}\nfullscreen = {}\npresent = {present}\nadded-delay = {}\nhigh-refresh = {}\ntick-timing = {}\njit-margin = {}\n",
             c.stocks,
             c.minutes,
             self.fullscreen,
             self.added_delay,
-            self.high_refresh.key()
+            self.high_refresh.key(),
+            self.tick_timing.key(),
+            self.jit_margin
         );
         text
     }
@@ -182,6 +202,16 @@ impl Form {
                 "high-refresh" if !given.high_refresh => {
                     if let Ok(m) = Mode::parse(v) {
                         self.high_refresh = m;
+                    }
+                }
+                "tick-timing" if !given.tick_timing => {
+                    if let Ok(t) = Timing::parse(v) {
+                        self.tick_timing = t;
+                    }
+                }
+                "jit-margin" if !given.jit_margin => {
+                    if let Some(m) = parse_margin(v) {
+                        self.jit_margin = m;
                     }
                 }
                 _ => {}
@@ -286,6 +316,27 @@ impl Form {
                                         ui.selectable_value(mode, m, name);
                                     }
                                 });
+                            ui.end_row();
+                            ui.label("Tick timing");
+                            let timing = &mut self.tick_timing;
+                            egui::ComboBox::from_id_salt("tick-timing")
+                                .selected_text(timing.name())
+                                .width(200.0)
+                                .show_ui(ui, |ui| {
+                                    for (t, name) in Timing::CHOICES {
+                                        ui.selectable_value(timing, t, name);
+                                    }
+                                });
+                            ui.end_row();
+                            ui.label("Timing margin");
+                            ui.add_enabled(
+                                self.tick_timing != Timing::Timer,
+                                egui::DragValue::new(&mut self.jit_margin)
+                                    .range(0.0..=MAX_MARGIN_MS)
+                                    .speed(0.05)
+                                    .fixed_decimals(2)
+                                    .suffix(" ms"),
+                            );
                             ui.end_row();
                         });
                 });
@@ -619,6 +670,8 @@ mod tests {
         form.present = Present::Immediate;
         form.added_delay = 2;
         form.high_refresh = Mode::Interpolate;
+        form.tick_timing = Timing::Vrr;
+        form.jit_margin = 2.5;
         form
     }
 
@@ -630,6 +683,8 @@ mod tests {
             a.present,
             a.added_delay,
             a.high_refresh,
+            a.tick_timing,
+            a.jit_margin,
         ) == (
             b.choice.clone(),
             b.aspect,
@@ -637,16 +692,23 @@ mod tests {
             b.present,
             b.added_delay,
             b.high_refresh,
+            b.tick_timing,
+            b.jit_margin,
         )
     }
 
     #[test]
     fn the_last_match_comes_back() {
         for aspect in Aspect::CHOICES.map(|(a, _)| a) {
-            for mode in Mode::CHOICES.map(|(m, _)| m) {
+            for (mode, timing) in Mode::CHOICES
+                .map(|(m, _)| m)
+                .into_iter()
+                .zip(Timing::CHOICES.map(|(t, _)| t).into_iter().cycle())
+            {
                 let mut was = picked();
                 was.aspect = aspect;
                 was.high_refresh = mode;
+                was.tick_timing = timing;
                 let mut form = Form::new(4, 8, false, Aspect::GAME);
                 form.restore(&was.save(), &Given::default());
                 assert!(same(&form, &was), "{}", was.save());
@@ -671,7 +733,7 @@ mod tests {
     #[test]
     fn an_unreadable_last_match_changes_nothing() {
         let mut form = Form::new(4, 8, false, Aspect::GAME);
-        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\nhigh-refresh = sometimes\n";
+        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\n";
         form.restore(text, &Given::default());
         assert!(same(&form, &Form::new(4, 8, false, Aspect::GAME)));
     }
