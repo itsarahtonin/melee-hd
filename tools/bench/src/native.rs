@@ -302,7 +302,10 @@ fn version() -> String {
 pub fn main(args: &[String]) {
     let (dir, runs, mut names, _) = args_dir(args);
     if names.is_empty() {
-        names = matches::MATCHES.iter().map(|m| m.name.to_owned()).collect();
+        names = matches::MATCHES
+            .iter()
+            .map(|m| m.name.to_string())
+            .collect();
     }
     println!("{}", crate::machine());
     println!("{}", version());
