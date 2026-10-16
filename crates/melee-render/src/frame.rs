@@ -6,6 +6,7 @@ use melee_data::archive::Archives;
 use melee_sim::game::state::Game;
 use melee_sim::hsd::display::Draw;
 
+use crate::blend::Blend;
 use crate::gx::enums::*;
 use crate::gx::{Color, Gx};
 use crate::hsd::Hsd;
@@ -71,6 +72,20 @@ impl Frames {
 
     /// The stream for one frame's draws, the copy to the XFB at its end.
     pub fn frame(&mut self, game: &Game, data: &Archives, draws: &[Draw]) -> Vec<u8> {
+        self.frame_blended(game, data, draws, None)
+    }
+
+    /// The stream for a frame between two ticks: `draws` as `game` was left by the latest
+    /// tick's display pass (B), its transforms blended toward B from those of the tick before,
+    /// `blend.from` (A), by `blend.t` ([`crate::blend`]). Without a blend, B as it is: the
+    /// frame [`Frames::frame`] draws.
+    pub fn frame_blended(
+        &mut self,
+        game: &Game,
+        data: &Archives,
+        draws: &[Draw],
+        blend: Option<Blend<'_>>,
+    ) -> Vec<u8> {
         let patches = &game.objs.pobjs.refract_patches;
         if self.patched != patches.len() {
             self.patched = patches.len();
@@ -99,12 +114,17 @@ impl Frames {
             .ok()
             .and_then(|v| v.parse::<u32>().ok())
             == Some(self.built - 1);
+        let blend = blend.filter(|b| b.from.is_filled());
+        if blend.is_some() {
+            self.hsd.motion.start();
+        }
         let mut ctx = Ctx {
             gx: &mut self.gx,
             hsd: &mut self.hsd,
             game,
             data,
             space: &self.space,
+            blend,
         };
         ctx.gx.invalidate_vtx_cache();
         ctx.gx.invalidate_tex_all();
@@ -135,6 +155,17 @@ impl Ctx<'_> {
         match &draws[i] {
             Draw::Camera(c, view) => {
                 let mut v = self.game.objs.display.cameras[usize::from(*view)];
+                if let Some(b) = self.blend {
+                    let m = &mut self.hsd.motion;
+                    let n = m.next_camera(*c);
+                    m.camera_b = Some(v);
+                    m.camera_blends = crate::blend::camera_blends(self.game, *c, &v);
+                    if m.camera_blends
+                        && let Some(x) = b.camera(*c, n, &v)
+                    {
+                        v = x;
+                    }
+                }
                 // Cameras that draw the whole screen (not a shadow's or a magnifier
                 // bubble's, which draw into textures); the render pass can't tell, since
                 // the frame stays in the shadows' offscreen pass, as the original's does.
@@ -158,7 +189,14 @@ impl Ctx<'_> {
             }
             Draw::EndCamera => 1,
             Draw::Lights(n) => {
-                let set = self.game.objs.display.light_sets[usize::from(*n)];
+                let mut set = self.game.objs.display.light_sets[usize::from(*n)];
+                // Lights set up in the current camera's view take its blended view.
+                if self.blend.is_some()
+                    && let (Some(b), Some(v)) = (self.hsd.motion.camera_b, self.hsd.camera)
+                    && set.view_mtx == b.view_mtx
+                {
+                    set.view_mtx = v.view_mtx;
+                }
                 let objs = &self.game.objs;
                 self.hsd.lights.setup_init(self.gx, objs, &set);
                 1
@@ -196,7 +234,15 @@ impl Ctx<'_> {
                 1
             }
             Draw::AppSrt { srt, view, scale } => {
-                self.hsd.app_srts.insert(*srt, (*view, *scale));
+                let (mut view, mut scale) = (*view, *scale);
+                if let Some(b) = self.blend {
+                    let n = self.hsd.motion.next_app_srt(*srt);
+                    if self.hsd.motion.camera_blends {
+                        let idnum = self.game.objs.app_srts[*srt].idnum;
+                        (view, scale) = b.app_srt(*srt, idnum, n, &view, scale);
+                    }
+                }
+                self.hsd.app_srts.insert(*srt, (view, scale));
                 1
             }
             Draw::SpecularInit { jobj, vmtx } => {

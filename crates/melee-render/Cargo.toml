@@ -14,3 +14,7 @@ melee-data.workspace = true
 melee-sim.workspace = true
 melee-gx = { path = "../melee-gx" }
 melee-gpu = { path = "../melee-gpu" }
+rustc-hash = "2"
+
+[dev-dependencies]
+melee-slippi = { path = "../melee-slippi" }
