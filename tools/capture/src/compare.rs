@@ -351,6 +351,17 @@ impl<'a> Comparer<'a> {
                     };
                     let fighter = &self.game.fighters[f.0];
                     fighter.compare(&mem, ud, &format!("{path} fighter"), self);
+                    // The SDI colors code's count, which only the code reads.
+                    if self.game.rules.player.sdi_colors {
+                        let ours = self.game.player_code_state.sdi_count.get(f.0 as usize);
+                        let theirs = self.mem[(ud + crate::import::SDI_COUNT - MEM1) as usize];
+                        self.check(
+                            path,
+                            "SDI colors' count",
+                            ours.copied().unwrap_or(0),
+                            theirs,
+                        );
+                    }
                     let address = self.game.ft.addresses.get(&f.0).copied();
                     if address != Some(ud) {
                         self.diffs.push(format!(
