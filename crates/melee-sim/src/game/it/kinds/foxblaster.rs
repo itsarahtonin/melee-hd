@@ -4,7 +4,7 @@
 
 use super::super::item::{animate, change_state, destroy, logic, play_sfx, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
-use super::{FALCO_BLASTER, FOX_BLASTER};
+use super::{FALCO_BLASTER, FOX_BLASTER, KIRBY_FALCO_BLASTER, KIRBY_FOX_BLASTER};
 use crate::fpu::{mem, reg};
 use crate::game::code;
 use crate::game::state::{Game, Running};
@@ -118,8 +118,8 @@ pub fn clear_from_owner(game: &mut Game, owner: GObjId) {
 /// Plays the Fox or Falco version of a sound (`itFoxBlaster_PlaySFX`).
 pub fn play_kind_sfx(r: &mut Running, gobj: GObjId, fox: i32, falco: i32) {
     match item(r.game, gobj).kind {
-        FOX_BLASTER | 0x8C => play_sfx(r, gobj, fox, 0x7F, 0x40),
-        FALCO_BLASTER | 0x8D => play_sfx(r, gobj, falco, 0x7F, 0x40),
+        FOX_BLASTER | KIRBY_FOX_BLASTER => play_sfx(r, gobj, fox, 0x7F, 0x40),
+        FALCO_BLASTER | KIRBY_FALCO_BLASTER => play_sfx(r, gobj, falco, 0x7F, 0x40),
         _ => {}
     }
 }
@@ -170,41 +170,55 @@ pub fn on_shot(r: &mut Running, gobj: GObjId) {
     v.gfx_spawn_var.set(0);
     let o = v.owner.get().expect("a blaster's flash without an owner");
     let pos = r.game.ft_pos(o);
-    match kind {
-        FOX_BLASTER | FALCO_BLASTER => {
-            let muzzle = r.fox_muzzle(o);
-            let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
-            v.xE14[0].set(Vec3::new(
-                mem(fp::fsubs(reg(muzzle.x), reg(pos.x))),
-                mem(fp::fsubs(reg(muzzle.y), reg(pos.y))),
-                mem(fp::fsubs(reg(muzzle.z), reg(pos.z))),
-            ));
-            let grip = r.fox_grip(o);
-            let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
-            v.angle[0].set(crate::math::atan2(
-                mem(fp::fsubs(reg(muzzle.y), reg(grip.y))),
-                mem(fp::fsubs(reg(muzzle.x), reg(grip.x))),
-            ));
-            v.xDFC[0].set(0);
-            let angle = v.angle[0].get();
-            let flash = crate::game::ef::spawn(
-                r,
-                1166,
-                Some(gobj),
-                &[
-                    crate::game::ef::Arg::Vec(muzzle),
-                    crate::game::ef::Arg::Float(angle),
-                ],
-            );
-            item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().xDE4[0].set(match flash {
-                crate::game::ef::Spawned::Effect(e) => Some(e),
-                crate::game::ef::Spawned::None => None,
-                other => panic!("the blaster's flash spawned {other:?}"),
-            });
-        }
-        0x8C | 0x8D => code::unported_call("ftKb_SpecialNFx_800FDC00 (Kirby's blaster flash)"),
-        _ => {}
-    }
+    // The muzzle and grip, and the flash: Fox's and Falco's own, or Kirby's copies'
+    // (`ftKb_SpecialNFx_800FDC00`, `ftKb_SpecialNFx_800FDC70`).
+    let kirby = match kind {
+        FOX_BLASTER | FALCO_BLASTER => false,
+        KIRBY_FOX_BLASTER | KIRBY_FALCO_BLASTER => true,
+        _ => return shift_history(r, gobj),
+    };
+    let muzzle = if kirby {
+        r.kb_fx_muzzle(Some(o))
+    } else {
+        r.fox_muzzle(o)
+    };
+    let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
+    v.xE14[0].set(Vec3::new(
+        mem(fp::fsubs(reg(muzzle.x), reg(pos.x))),
+        mem(fp::fsubs(reg(muzzle.y), reg(pos.y))),
+        mem(fp::fsubs(reg(muzzle.z), reg(pos.z))),
+    ));
+    let grip = if kirby {
+        r.kb_fx_grip(Some(o))
+    } else {
+        r.fox_grip(o)
+    };
+    let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
+    v.angle[0].set(crate::math::atan2(
+        mem(fp::fsubs(reg(muzzle.y), reg(grip.y))),
+        mem(fp::fsubs(reg(muzzle.x), reg(grip.x))),
+    ));
+    v.xDFC[0].set(0);
+    let angle = v.angle[0].get();
+    let flash = crate::game::ef::spawn(
+        r,
+        if kirby { 1196 } else { 1166 },
+        Some(gobj),
+        &[
+            crate::game::ef::Arg::Vec(muzzle),
+            crate::game::ef::Arg::Float(angle),
+        ],
+    );
+    item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().xDE4[0].set(match flash {
+        crate::game::ef::Spawned::Effect(e) => Some(e),
+        crate::game::ef::Spawned::None => None,
+        other => panic!("the blaster's flash spawned {other:?}"),
+    });
+    shift_history(r, gobj);
+}
+
+/// The shots' history moves on, the newest first.
+fn shift_history(r: &mut Running, gobj: GObjId) {
     let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
     for i in (1..6).rev() {
         let x = v.xDE4[i - 1].get();
@@ -429,7 +443,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
             .get();
         let action = match item(r.game, gobj).kind {
             FOX_BLASTER | FALCO_BLASTER => blaster_action(r.game, owner),
-            0x8C | 0x8D => code::unported_call("ftKb_SpecialNFx_800FDD4C"),
+            KIRBY_FOX_BLASTER | KIRBY_FALCO_BLASTER => r.kb_fx_blaster_action(owner),
             _ => 9,
         };
         change_state(r, gobj, STATE_FOR_ACTION[action as usize], flags);
@@ -450,7 +464,7 @@ pub fn release(r: &mut Running, gobj: GObjId) {
                     clear_from_owner(r.game, o);
                 }
             }
-            0x8C | 0x8D => code::unported_call("ftKb_SpecialNFx_800FDEB4"),
+            KIRBY_FOX_BLASTER | KIRBY_FALCO_BLASTER => r.kb_fx_forget_blaster(vowner),
             _ => {}
         }
     }
@@ -474,7 +488,7 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
             .get();
         let action = match kind {
             FOX_BLASTER | FALCO_BLASTER => blaster_action(r.game, owner),
-            0x8C | 0x8D => code::unported_call("ftKb_SpecialNFx_800FDD4C"),
+            KIRBY_FOX_BLASTER | KIRBY_FALCO_BLASTER => r.kb_fx_blaster_action(owner),
             _ => 9,
         };
         if msid != action {
@@ -493,7 +507,9 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
     };
     let (action, removed) = match kind {
         FOX_BLASTER | FALCO_BLASTER => (blaster_action(r.game, owner), blaster_removed(r.game, o)),
-        0x8C | 0x8D => code::unported_call("ftKb_SpecialNFx_800FDD14"),
+        KIRBY_FOX_BLASTER | KIRBY_FALCO_BLASTER => {
+            (r.kb_fx_blaster_action(owner), r.kb_fx_no_blaster(owner))
+        }
         _ => (9, true),
     };
     if action == 9 || removed {
@@ -501,7 +517,7 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
     } else {
         let not_needed = match kind {
             FOX_BLASTER | FALCO_BLASTER => blaster_not_needed(r.game, owner),
-            0x8C | 0x8D => code::unported_call("ftKb_SpecialNFx_800FDDF4"),
+            KIRBY_FOX_BLASTER | KIRBY_FALCO_BLASTER => r.kb_fx_blaster_not_needed(owner),
             _ => true,
         };
         if not_needed {

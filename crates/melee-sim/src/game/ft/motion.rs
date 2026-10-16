@@ -366,8 +366,8 @@ impl Running<'_> {
     }
 
     /// Restarts the costume's texture animations, `ftAnim_80070654`: each from its first
-    /// frame, stepped once (`ftAnim_800705E0`). Kirby also restarts his copied ability's
-    /// (`ftData_UnkCallbackPairs0`); not ported.
+    /// frame, stepped once (`ftAnim_800705E0`). Kirby also restarts his copy's costume's
+    /// (`ftData_UnkCallbackPairs0`).
     #[doc(alias = "ftAnim_80070654")]
     #[doc(alias = "ftAnim_800705E0")]
     fn restart_costume_anims(&mut self, f: FighterId) {
@@ -380,7 +380,10 @@ impl Running<'_> {
             crate::hsd::tobj::anim(objs, self.data, Some(t));
         }
         if self.game.fighters[f.0].kind == 4 {
-            unported_call("ftKb_Init_UnkCallbackPairs0_0");
+            let gobj = self.game.fighters[f.0]
+                .gobj
+                .expect("a fighter without its GObj");
+            self.kb_hat_restart_texture_anims(gobj);
         }
         self.game.fighters[f.0].x221E_b7 = false;
     }

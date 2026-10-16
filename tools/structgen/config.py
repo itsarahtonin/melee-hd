@@ -73,6 +73,10 @@ ROOTS = [
     "itMDisable_ItemVars",
     # Bowser's flame.
     "itKoopaFlame_ItemVars",
+    # Kirby's Final Cutter wave, hammer and the star he spits a fighter in.
+    "itKirbyCutterBeam_ItemVars",
+    "itKirbyHammer_ItemVars",
+    "itKirby2F23_ItemVars",
     # The HUD (`melee/if`).
     "HudIndex",
     "Element_803F9628",

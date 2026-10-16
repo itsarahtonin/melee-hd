@@ -86,7 +86,7 @@ pub const LOBJ0: u32 = 0x804D_6568;
 pub const LOBJ1: u32 = 0x804D_656C;
 pub const METAL_MOBJ: u32 = 0x804D_6580;
 pub const CLEAR_MOBJ: u32 = 0x804D_6588;
-pub const KIRBY_COUNTS: u32 = 0x8045_9B88;
+pub const KIRBY_COPIES: u32 = 0x8045_9B88;
 pub const KIRBY_TABLES: u32 = 0x803C_9FC8;
 pub const PURIN_HATS: u32 = 0x8045_A1E0;
 
@@ -645,7 +645,7 @@ impl<'a> Importer<'a> {
             }
             self.game.ft.data.demo_anims[kind as usize] = self.u32(DEMO_ANIMS + 8 * kind);
             self.game.ft.data.ref_counts[kind as usize] = self.u32(REF_COUNTS + 4 * kind) as i32;
-            self.game.ft.kirby.counts[kind as usize] = self.u32(KIRBY_COUNTS + 4 * kind) as i32;
+            self.game.ft.kirby.copies[kind as usize] = self.data(self.u32(KIRBY_COPIES + 4 * kind));
         }
         for s in 0..6 {
             let at = SLOT_WORDS + 8 * s;
@@ -925,6 +925,50 @@ impl Importer<'_> {
             }
             for k in 0..5 {
                 f.u.import_data(0x28 + 4 * k, &mem, u, self);
+            }
+        }
+        // Kirby's copy's hat (`ftKb_FighterVars` `hat`): a hat model and its DObj list (as many
+        // DObjs as the model has), or a hat of parts on his own bones and its two lists (as
+        // many as their counts say), and its variants' lookups, which stay once it's off.
+        if f.kind == 4 {
+            let u = a + 0x222C;
+            let hat = self.u32(u + 0x10);
+            let lists = if hat != 0 {
+                f.u.import_jobj(0x10, &mem, u, self);
+                vec![(0x18, self.count_tree_dobjs(hat))]
+            } else {
+                vec![
+                    (0x18, Some(self.u32(u + 0x14))),
+                    (0x20, Some(self.u32(u + 0x1C))),
+                ]
+            };
+            if self.u32(u + 0x18) != 0 {
+                for (off, n) in lists {
+                    let Some(n) = n else { continue };
+                    let data = self.u32(u + off as u32);
+                    if data & 3 != 0 || !(HEAP..MEM1 + 0x0180_0000 - 4 * n).contains(&data) {
+                        continue;
+                    }
+                    f.u.import_dobj_list(off, &mem, u, self);
+                    let l = f.u.dobj_list_at(off).expect("the hat's DObj list");
+                    let dobjs = (0..n)
+                        .map(|i| {
+                            let d = self.u32(data + 4 * i);
+                            (d != 0).then(|| self.dobj(d))
+                        })
+                        .collect();
+                    self.game.fighter_dobj_lists[l.0] = dobjs;
+                }
+            }
+            for k in 0..5 {
+                f.u.import_data(0x30 + 4 * k, &mem, u, self);
+            }
+            // A costume's animated textures (`x44`), while it's on.
+            if hat == 0 && self.u32(u + 0x18) != 0 {
+                f.u.import_data(0x48, &mem, u, self);
+                for k in 0..self.u32(u + 0x44).min(5) {
+                    f.u.import_tobj(0x4C + 4 * k as usize, &mem, u, self);
+                }
             }
         }
         // The state's variables' handles where the states that read them keep them: a grab's

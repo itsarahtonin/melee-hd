@@ -10,7 +10,6 @@ use gekko_fp as fp;
 use super::super::item::{article, change, change_state, pick_up, spawn_air};
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
-use crate::game::code::unported_call;
 use crate::game::ef::{self, Arg};
 use crate::game::handles::CodeRef;
 use crate::game::state::Running;
@@ -64,6 +63,9 @@ mod attr {
 /// The ball's glow in her hand, and the full shot's sparkles.
 const GFX_HELD: i32 = 0x47F;
 const GFX_FULL: [i32; 2] = [0x480, 0x481];
+/// Kirby's shot's glow in his hand and full charge's sparkles.
+const GFX_HELD_KIRBY: i32 = 0x4A1;
+const GFX_FULL_KIRBY: [i32; 2] = [0x4A2, 0x4A3];
 /// `M_PI`, `M_TAU` and `M_PI / 2`.
 const PI: f64 = std::f64::consts::PI;
 const TAU: f64 = std::f64::consts::TAU;
@@ -290,7 +292,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
         {
             match kind {
                 KIND => r.samus_shot_released(maker),
-                KIRBY_SAMUS_CHARGE => unported_call("ftKb_SpecialNSs_800FCD04"),
+                KIRBY_SAMUS_CHARGE => r.kb_ss_shot_released(maker),
                 _ => {}
             }
         }
@@ -331,7 +333,14 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
                 .xDFC
                 .set(1);
         }
-        KIRBY_SAMUS_CHARGE => unported_call("the Kirby Charge Shot's glow (0x4A1)"),
+        KIRBY_SAMUS_CHARGE => {
+            ef::spawn(r, GFX_HELD_KIRBY, Some(gobj), &[Arg::JObj(Some(j))]);
+            item_mut(r.game, gobj)
+                .xDD4_itemVar
+                .samus_chargeshot()
+                .xDFC
+                .set(1);
+        }
         _ => {}
     }
 }
@@ -358,7 +367,17 @@ pub fn animate_held(r: &mut Running, gobj: GObjId) -> bool {
                 v.xDEC.set(charge);
                 v.xDF0.set(max);
             }
-            KIRBY_SAMUS_CHARGE => unported_call("ftKb_SpecialNSs_800FCC6C"),
+            KIRBY_SAMUS_CHARGE => {
+                if r.kb_ss_shot_lost(maker) || r.kb_ss_left_charge(maker) {
+                    return true;
+                }
+                let Some((charge, max)) = r.kb_ss_charge_of(maker) else {
+                    return true;
+                };
+                let v = item_mut(r.game, gobj).xDD4_itemVar.samus_chargeshot();
+                v.xDEC.set(charge);
+                v.xDF0.set(max);
+            }
             _ => {}
         }
     }
@@ -428,7 +447,11 @@ pub fn sparkle(r: &mut Running, gobj: GObjId) {
                     ef::spawn(r, gfx, Some(gobj), &[Arg::JObj(j)]);
                 }
             }
-            KIRBY_SAMUS_CHARGE => unported_call("the Kirby Charge Shot's sparkles"),
+            KIRBY_SAMUS_CHARGE => {
+                for gfx in GFX_FULL_KIRBY {
+                    ef::spawn(r, gfx, Some(gobj), &[Arg::JObj(j)]);
+                }
+            }
             _ => {}
         }
     }

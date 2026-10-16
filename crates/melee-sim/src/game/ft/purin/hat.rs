@@ -89,7 +89,7 @@ impl Running<'_> {
     /// The hat's DObjs into its list, the materials of the fighters' class,
     /// `ftParts_80075650`: depth first through the tree (not into instances).
     #[doc(alias = "ftParts_80075650")]
-    fn purin_list_hat_dobjs(&mut self, hat: Option<JObjId>, list: DObjListId) {
+    pub(crate) fn purin_list_hat_dobjs(&mut self, hat: Option<JObjId>, list: DObjListId) {
         let mut cur = hat;
         let mut n = 0usize;
         while let Some(j) = cur {

@@ -154,7 +154,7 @@ impl Running<'_> {
     fn kind_draw(&mut self, g: GObjId, vmtx: Option<Mtx34>, pass: i32) {
         let f = self.game.fighter_id(g);
         match self.game.fighters[f.0].kind {
-            4 => code::unported_call("ftKb_UnkMtxFunc0"),
+            4 => self.kb_draw_hat(g, vmtx, pass),
             15 => self.purin_draw_hat(g, vmtx, pass),
             _ => {}
         }

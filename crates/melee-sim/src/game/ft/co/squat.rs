@@ -13,6 +13,9 @@ use crate::fpu::reg;
 use crate::hsd::gobj::GObjId;
 use crate::mp::LINE_PLATFORM;
 
+/// UCF 0.84's crouch threshold for a stick pushed far at once (the code at `0x800D65EC`).
+const UCF_SQUAT_RV_Y: f32 = 0.59;
+
 /// `ftCommon_MotionVars_squat` (and `pass`, which shares it).
 const SQUAT_X0: usize = 0x0;
 const SQUAT_X4: usize = 0x4;
@@ -165,10 +168,24 @@ impl Running<'_> {
             || self.squat_rv_check(gobj);
     }
 
-    /// Standing up from a crouch when the stick lets go, `ftCo_SquatRv_CheckInput`.
+    /// Standing up from a crouch when the stick lets go, `ftCo_SquatRv_CheckInput`: the stick
+    /// above `ftCommonData` x94 down. Under UCF 0.84 (its down-smash out of crouch fix, the
+    /// code at `0x800D65EC`), a stick whose horizontal timer is 0 and that is far from the
+    /// centre (its raw units, plus 2 each, more than 80 apart) needs to come up past 0.59.
     #[doc(alias = "ftCo_SquatRv_CheckInput")]
     pub fn squat_rv_check(&mut self, gobj: GObjId) -> bool {
-        let t = fp::fneg(reg(self.common().f32(0x94)));
+        let mut t = reg(self.common().f32(0x94));
+        let fp = self.game.fighter(gobj);
+        if self.game.rules.ucf == Ucf::V0_84 && fp.active_timer.lstick.x < 1 {
+            let sq = |v: f32| {
+                let u = crate::game::ucf::units(v).wrapping_add(2);
+                u.wrapping_mul(u)
+            };
+            if sq(fp.input.lstick[0].x).wrapping_add(sq(fp.input.lstick[0].y)) > 6400 {
+                t = reg(UCF_SQUAT_RV_Y);
+            }
+        }
+        let t = fp::fneg(t);
         if reg(self.game.fighter(gobj).input.lstick[0].y) > t {
             self.enter_squat_rv(gobj);
             return true;

@@ -287,7 +287,8 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
     // `ftData_UnkMotionStates3`: Kirby's, Bowser's (his flame's refill) and Giga Bowser's.
     match fp.kind {
         super::koopa::KIND_KOOPA => g.kp_unk_motion_states3(gobj),
-        4 | 31 => unported_call("ftData_UnkMotionStates3"),
+        super::kirby::KIND_KIRBY => g.kb_unk_motion_states3(gobj),
+        31 => unported_call("ftData_UnkMotionStates3"),
         _ => {}
     }
     let fp = &mut g.game.fighters[f.0];
@@ -562,10 +563,7 @@ pub fn proc_map(g: &mut Running, gobj: GObjId) {
     jobj::set_translate(&mut g.game.objs.jobjs, root, pos);
     if let Some(cb) = g.game.fighters[f.0].coll_cb {
         run_fighter_cb(g, gobj, cb);
-        // `ftKb_SpecialN_800F1D24`: Kirby's inhale timer.
-        if g.game.fighters[f.0].kind == 4 {
-            unported_call("ftKb_SpecialN_800F1D24");
-        }
+        g.kb_bump_timer(gobj);
     }
     let fp = &g.game.fighters[f.0];
     if fp.ground_or_air == GA_GROUND {

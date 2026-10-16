@@ -18,6 +18,7 @@ use crate::game::handles::DObjListId;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::hsd::tobj::TObjId;
 
 /// A handle one word of the variables holds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
@@ -28,6 +29,8 @@ pub enum Handle {
     DObjList(DObjListId),
     /// A pointer into loaded data (her hat's visibility lookups, `x2248.xC`).
     Data(DataRef),
+    /// A texture (Kirby's copy costume's animated ones, `ftKb_FighterVars::x44`).
+    TObj(TObjId),
 }
 
 /// Where Fox's and Falco's blaster (`ftFox_FighterVars::x222C_blasterGObj`) is in `u`.
@@ -68,6 +71,10 @@ pub const YOSHI_EGG: usize = 0xC;
 /// `ftMewtwo_FighterVars`: Mewtwo's Disable and the Shadow Ball in his hands (`x222C`, `x2230`).
 pub const MEWTWO_ITEMS: [usize; 2] = [0x0, 0x4];
 
+/// `ftKb_FighterVars`: Kirby's hammer (`hat.x0`), the Charge Shot in his hand with Samus's
+/// copy (`xA4`) and the blaster with Fox's or Falco's (`xB0`).
+pub const KIRBY_ITEMS: [usize; 3] = [0x0, 0xA4, 0xB0];
+
 /// The words of `u` a fighter of `kind` keeps GObjs in, which the importer types: Fox's and
 /// Falco's blaster, Sheik's held needles and chain (`Ft_Kind_Seak`), Zelda's Din's Fire
 /// (`Ft_Kind_Zelda`), Ness's items (`Ft_Kind_Ness`), Samus's (`Ft_Kind_Samus`), Mario's and
@@ -82,6 +89,7 @@ pub fn gobj_words(kind: i32) -> &'static [usize] {
         19 => &[ZELDA_DIN_FIRE],
         8 => &NESS_ITEMS,
         13 => &SAMUS_ITEMS,
+        4 => &KIRBY_ITEMS,
         0 | 21 => &[MARIO_CAPE, MARIO_X2240],
         10 | 11 => &ICE_CLIMBER_ITEMS,
         9 => &PEACH_ITEMS,
@@ -220,6 +228,23 @@ impl<const N: usize> Vars<N> {
         self.set_handle_at(off, d.map(Handle::Data));
     }
 
+    /// The texture pointer at `off`: the handle stored there, or none for a null word.
+    pub fn tobj_at(&self, off: usize) -> Option<TObjId> {
+        match self.handle(off) {
+            Some(Handle::TObj(t)) => Some(t),
+            Some(h) => panic!("+{off:#x} holds {h:?}, not a texture"),
+            None => {
+                self.null_at(off, "a texture");
+                None
+            }
+        }
+    }
+
+    /// Stores a texture pointer at `off` (null clears the word).
+    pub fn set_tobj_at(&mut self, off: usize, t: Option<TObjId>) {
+        self.set_handle_at(off, t.map(Handle::TObj));
+    }
+
     fn null_at(&self, off: usize, what: &str) {
         self.read(off, off + 4);
         let w = u32::from_be_bytes(self.bytes[off..off + 4].try_into().unwrap());
@@ -335,6 +360,7 @@ impl<const N: usize> Mirror for Vars<N> {
                 Handle::GObj(g) => ("GObjId", g.0),
                 Handle::JObj(j) => ("JObjId", j.0),
                 Handle::DObjList(l) => ("DObjListId", l.0),
+                Handle::TObj(t) => ("TObjId", t.0),
                 Handle::Data(d) => {
                     cx.compare_data(&path, Some(d), theirs);
                     continue;
@@ -370,6 +396,14 @@ impl<const N: usize> Vars<N> {
             && let Some(d) = cx.import_data(addr)
         {
             self.set_data_at(off, Some(d));
+        }
+    }
+
+    /// Types the word at `off` as a texture pointer, from a captured state.
+    pub fn import_tobj(&mut self, off: usize, m: &Mem, at: u32, cx: &mut dyn Cx) {
+        let addr = m.u32(at + off as u32);
+        if let Some(h) = cx.import_handle("TObjId", addr) {
+            self.set_tobj_at(off, Some(TObjId(h)));
         }
     }
 

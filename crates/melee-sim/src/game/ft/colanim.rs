@@ -1,7 +1,6 @@
 //! Color animations (`ftcolanim.c`, `lb_013B.c`): the tints and lights a fighter flashes (a
 //! hit, a heal, an invincibility blink), each a command script on one of three overlays.
 
-use super::super::code::unported_call;
 use super::super::state::Running;
 use super::super::structs::ColorOverlay;
 use crate::hsd::gobj::GObjId;
@@ -94,7 +93,7 @@ impl Running<'_> {
             3 => self.dk_charged_glow(gobj),
             16 => self.mt_charged_glow(gobj),
             24 => self.gw_unk_motion_states4(gobj),
-            4 => unported_call("ftData_UnkMotionStates4"),
+            4 => self.kb_charged_glow(gobj),
             _ => {}
         }
         let fp = self.game.fighter(gobj);

@@ -3,7 +3,6 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
 use super::super::super::state::Running;
 use super::checks::abs;
 use super::ids::ms;
@@ -53,7 +52,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800D7268")]
     pub fn multi_jump_set(&mut self, gobj: GObjId) -> i32 {
         if self.game.fighter(gobj).kind == KIND_KIRBY {
-            unported_call("ftKb_SpecialN_800F1CD8");
+            return i32::from(self.kb_copy_has_hat_jumps(gobj));
         }
         0
     }
