@@ -17,11 +17,15 @@
 //! they set. Then t = (D - lead - s_N) / tick, s_N being when tick N was due and lead the
 //! average of D less the frame's start, which keeps t between 0 and 1 while ticks are on time
 //! and makes successive frames' t follow their display times, so motion on screen is even at
-//! any refresh rate, 144 Hz's uneven frames a tick and variable refresh included. wgpu doesn't
-//! expose the swap chain's presentation clock (DXGI's frame statistics, Vulkan's present
-//! timing); reading it, per OS, is the follow-up the latency notes name.
+//! any refresh rate, 144 Hz's uneven frames a tick and variable refresh included.
+//!
+//! **Aligned frames.** Where the just-in-time tick knows the display's refresh times and aligns
+//! to them ([`crate::jit`]), [`Pacer::align`] starts each frame its measured lead before the
+//! refresh it's meant for, and that refresh is the frame's display time.
 
 use std::time::{Duration, Instant};
+
+use crate::jit::Grid;
 
 /// How frames are drawn for displays faster than the game's ticks (`--high-refresh`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -116,6 +120,9 @@ pub struct Pacer {
     refreshed: Option<Instant>,
     /// When the next frame is due.
     next: Instant,
+    /// Aligned: the refresh the next frame is meant for, and the last frame's.
+    target: Option<Instant>,
+    last_target: Option<Instant>,
 }
 
 impl Pacer {
@@ -130,6 +137,8 @@ impl Pacer {
             lead: Average::default(),
             refreshed: None,
             next: now,
+            target: None,
+            last_target: None,
         }
     }
 
@@ -156,12 +165,40 @@ impl Pacer {
     pub fn start(&mut self, now: Instant, tick_due: Instant) -> f32 {
         // A frame late by more than a refresh (a stall) puts the cadence back on now.
         self.next = (self.next + self.refresh).max(now);
-        let shown = self.display_time(now);
+        let shown = match self.target.take() {
+            Some(t) => {
+                self.last_target = Some(t);
+                t
+            }
+            None => self.display_time(now),
+        };
         let lead = shown.saturating_duration_since(now).as_secs_f64();
         self.lead.add(lead);
         let since_tick = seconds_between(tick_due, shown);
         let t = (since_tick - self.lead.get()) / self.tick.as_secs_f64();
         t.clamp(0.0, 1.0) as f32
+    }
+
+    /// The refresh the next frame is meant for, when aligned.
+    pub fn target(&self) -> Option<Instant> {
+        self.target
+    }
+
+    /// Aligns the next frame to the refreshes of `grid`: meant for the first refresh at least
+    /// `lead` after `now` that no frame took, and due `lead` before it. Without a grid the frames
+    /// keep the cadence they have.
+    pub fn align(&mut self, now: Instant, grid: Option<Grid>, lead: Duration) {
+        let Some(g) = grid.filter(|g| !g.period.is_zero()) else {
+            self.target = None;
+            return;
+        };
+        let mut earliest = now + lead;
+        if let Some(l) = self.last_target {
+            earliest = earliest.max(l + g.period / 2);
+        }
+        let t = g.at_or_after(earliest);
+        self.target = Some(t);
+        self.next = t.checked_sub(lead).unwrap_or(now).max(now);
     }
 
     /// When a frame started at `now` should reach the screen.
@@ -306,6 +343,32 @@ mod tests {
             }
             assert!(settled.iter().all(|f| (0.0..=1.0).contains(&f.1)));
         }
+    }
+
+    /// Aligned, each frame starts its lead before the next refresh no frame took, and that
+    /// refresh is its display time: t follows it.
+    #[test]
+    fn aligned_frames_start_their_lead_before_their_refresh() {
+        let t0 = Instant::now();
+        let refresh = ms(1000.0 / 144.0);
+        let grid = Grid {
+            phase: t0 + ms(1.0),
+            period: refresh,
+        };
+        let mut p = Pacer::new(TICK, refresh, false, t0);
+        p.align(t0, Some(grid), ms(3.0));
+        // The first refresh at least 3 ms away is 1 + 6.94 = 7.94 ms.
+        let first = t0 + ms(1.0) + refresh;
+        assert_eq!(p.target(), Some(first));
+        assert_eq!(p.due(), first - ms(3.0));
+        let start = p.due();
+        p.start(start, t0);
+        // The frame took long: the next is still the refresh after its own.
+        p.align(first + ms(4.0), Some(grid), ms(3.0));
+        assert_eq!(p.target(), Some(first + refresh * 2));
+        // Without a grid the cadence goes on.
+        p.align(first, None, ms(3.0));
+        assert_eq!(p.target(), None);
     }
 
     #[test]

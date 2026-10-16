@@ -4,7 +4,7 @@
 //! deep, presenting each frame as soon as it's drawn, in the mode [`Present`] picks: mailbox
 //! by default, where the display has it, else FIFO.
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
 use melee_render::frame::GAME_ASPECT;
@@ -518,14 +518,13 @@ impl Shown {
     }
 
     /// Shows a frame now, with `over` drawn over it (given the image's view, width and
-    /// height): how long the swap chain's next image took to come, when it came, and when the
-    /// present call returned.
+    /// height).
     pub fn present(
         &mut self,
         gpu: &Gpu,
         frame: &melee_gpu::Frame,
         over: impl FnOnce(&wgpu::TextureView, u32, u32),
-    ) -> Option<(Duration, Instant, Instant)> {
+    ) -> Option<Presented> {
         let texture = frame.texture.as_ref()?;
         let asked = Instant::now();
         let out = match self.surface.get_current_texture() {
@@ -542,9 +541,82 @@ impl Shown {
         self.blit
             .draw(gpu, texture, &view, self.config.width, self.config.height);
         over(&view, self.config.width, self.config.height);
+        // Done when the GPU has finished everything the frame submitted.
+        let submission = gpu.queue.submit(std::iter::empty());
         self.window.pre_present_notify();
         gpu.queue.present(out);
-        Some((acquire, acquired, Instant::now()))
+        Some(Presented {
+            acquire,
+            acquired,
+            presented: Instant::now(),
+            submission,
+        })
+    }
+}
+
+/// A frame shown: how long the swap chain's next image took to come, when it came, when the
+/// present call returned, and the submission the GPU finishes the frame with.
+pub struct Presented {
+    pub acquire: Duration,
+    pub acquired: Instant,
+    pub presented: Instant,
+    pub submission: wgpu::SubmissionIndex,
+}
+
+/// When the GPU finishes frames: a thread waits for each frame's last submission and notes the
+/// time, which the just-in-time tick takes as the frame being ready for its refresh. It starts
+/// waiting only after the frame is presented (wgpu's present takes a lock a wait holds).
+pub struct GpuDone {
+    send: Option<mpsc::Sender<(u64, wgpu::SubmissionIndex)>>,
+    done: mpsc::Receiver<(u64, Instant)>,
+    next: u64,
+}
+
+impl GpuDone {
+    pub fn new(device: &wgpu::Device) -> GpuDone {
+        let (send, frames) = mpsc::channel::<(u64, wgpu::SubmissionIndex)>();
+        let (tell, done) = mpsc::channel();
+        let device = device.clone();
+        std::thread::Builder::new()
+            .name("gpu-done".into())
+            .spawn(move || {
+                for (id, index) in frames {
+                    let waited = device.poll(wgpu::PollType::Wait {
+                        submission_index: Some(index),
+                        timeout: Some(Duration::from_secs(1)),
+                    });
+                    if waited.is_ok() && tell.send((id, Instant::now())).is_err() {
+                        break;
+                    }
+                }
+            })
+            .expect("the GPU timing thread");
+        GpuDone {
+            send: Some(send),
+            done,
+            next: 0,
+        }
+    }
+
+    /// Notes when the GPU finishes `submission`: the frame's number, for [`GpuDone::finished`].
+    pub fn watch(&mut self, submission: wgpu::SubmissionIndex) -> u64 {
+        self.next += 1;
+        if let Some(s) = &self.send {
+            let _ = s.send((self.next, submission));
+        }
+        self.next
+    }
+
+    /// The frames finished since the last call, with when.
+    pub fn finished(&self) -> Vec<(u64, Instant)> {
+        self.done.try_iter().collect()
+    }
+}
+
+impl Drop for GpuDone {
+    fn drop(&mut self) {
+        // The thread ends with its channel.
+        self.send = None;
     }
 }
 
