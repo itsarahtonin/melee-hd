@@ -228,39 +228,49 @@ fn nana_tumble_and_shields() {
         Change::TumbleLow,
         Change::EnemiesShielding,
     ];
-    let changed: [Mutex<BTreeSet<usize>>; 5] = Default::default();
-    let prepares: Vec<Box<Prepare>> = (0..changes.len())
-        .map(|v| {
-            let changed = &changed;
-            let change = changes[v];
-            Box::new(move |c: &mut Call, i: usize| {
-                if change_frame(c, change) {
-                    changed[v].lock().unwrap().insert(i);
-                }
-            }) as Box<Prepare>
-        })
-        .collect();
-    let variants: Vec<Variant> = prepares
-        .iter()
-        .map(|p| Variant {
-            prepare: p.as_ref(),
-            ours: &run_frame,
-            stubs: &[],
-        })
-        .collect();
-    let mut totals = [0; 5];
+    // Each capture set's frames, a set at a time on each of several threads
+    // ([`leaf_check::each_set`]), with the frames each change reached in it.
     let dirs = dirs();
-    for dir in &dirs {
-        for c in &changed {
-            c.lock().unwrap().clear();
-        }
-        let paths = saved_calls(dir, "ftCo_800B3900");
-        let reports = check_variants(dir, "ftCo_800B3900", &variants);
-        for (v, r) in reports.iter().enumerate() {
-            let c = changed[v].lock().unwrap();
-            if !c.is_empty() {
-                totals[v] += compared(r, &paths, &c);
+    let per_dir = leaf_check::each_set(
+        &dirs,
+        |dir| saved_calls(dir, "ftCo_800B3900").len(),
+        |dir| {
+            let changed: [Mutex<BTreeSet<usize>>; 5] = Default::default();
+            let prepares: Vec<Box<Prepare>> = (0..changes.len())
+                .map(|v| {
+                    let changed = &changed;
+                    let change = changes[v];
+                    Box::new(move |c: &mut Call, i: usize| {
+                        if change_frame(c, change) {
+                            changed[v].lock().unwrap().insert(i);
+                        }
+                    }) as Box<Prepare>
+                })
+                .collect();
+            let variants: Vec<Variant> = prepares
+                .iter()
+                .map(|p| Variant {
+                    prepare: p.as_ref(),
+                    ours: &run_frame,
+                    stubs: &[],
+                })
+                .collect();
+            let paths = saved_calls(dir, "ftCo_800B3900");
+            let reports = check_variants(dir, "ftCo_800B3900", &variants);
+            let mut totals = [0; 5];
+            for (v, r) in reports.iter().enumerate() {
+                let c = changed[v].lock().unwrap();
+                if !c.is_empty() {
+                    totals[v] += compared(r, &paths, &c);
+                }
             }
+            totals
+        },
+    );
+    let mut totals = [0; 5];
+    for t in &per_dir {
+        for (total, n) in totals.iter_mut().zip(t) {
+            *total += n;
         }
     }
     eprintln!(
@@ -331,6 +341,33 @@ fn compared(reports: &[Report], paths: &[std::path::PathBuf], changed: &BTreeSet
 #[test]
 fn nana_cpu_frame() {
     leaf_check::run_as_machine_code();
+    // Each capture set's frames, a set at a time on each of several threads
+    // ([`leaf_check::each_set`]), with the frames each change reached in it.
+    let dirs = dirs();
+    let per_dir = leaf_check::each_set(
+        &dirs,
+        |dir| saved_calls(dir, "ftCo_800B3900").len(),
+        |dir| dir_cpu_frame(dir),
+    );
+    let mut totals = [0; 3];
+    for t in &per_dir {
+        for (total, n) in totals.iter_mut().zip(t) {
+            *total += n;
+        }
+    }
+    eprintln!("compared clean, as saved, with no knockback, and Popo hanging: {totals:?}");
+    if dirs.is_empty() || leaf_check::reference().is_none() {
+        return;
+    }
+    assert!(
+        totals.iter().all(|&t| t > 0),
+        "a variant never compared: {totals:?}"
+    );
+}
+
+/// [`nana_cpu_frame`]'s checks of one capture set's frames: the clean comparisons as saved,
+/// with no knockback and with Popo hanging.
+fn dir_cpu_frame(dir: &str) -> [usize; 3] {
     let changed: [Mutex<BTreeSet<usize>>; 2] = Default::default();
     let none = |_: &mut Call, _: usize| {};
     let zero = |c: &mut Call, i: usize| {
@@ -361,33 +398,20 @@ fn nana_cpu_frame() {
         },
     ];
     let mut totals = [0; 3];
-    let dirs = dirs();
-    for dir in &dirs {
-        for c in &changed {
-            c.lock().unwrap().clear();
-        }
-        let paths = saved_calls(dir, "ftCo_800B3900");
-        let reports = check_variants(dir, "ftCo_800B3900", &variants);
-        for (v, r) in reports.iter().enumerate() {
-            totals[v] += match v {
-                0 => compared(r, &paths, &BTreeSet::new()),
-                _ => {
-                    let c = changed[v - 1].lock().unwrap();
-                    if c.is_empty() {
-                        0
-                    } else {
-                        compared(r, &paths, &c)
-                    }
+    let paths = saved_calls(dir, "ftCo_800B3900");
+    let reports = check_variants(dir, "ftCo_800B3900", &variants);
+    for (v, r) in reports.iter().enumerate() {
+        totals[v] += match v {
+            0 => compared(r, &paths, &BTreeSet::new()),
+            _ => {
+                let c = changed[v - 1].lock().unwrap();
+                if c.is_empty() {
+                    0
+                } else {
+                    compared(r, &paths, &c)
                 }
-            };
-        }
+            }
+        };
     }
-    eprintln!("compared clean, as saved, with no knockback, and Popo hanging: {totals:?}");
-    if dirs.is_empty() || leaf_check::reference().is_none() {
-        return;
-    }
-    assert!(
-        totals.iter().all(|&t| t > 0),
-        "a variant never compared: {totals:?}"
-    );
+    totals
 }

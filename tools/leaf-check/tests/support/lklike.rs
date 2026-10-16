@@ -563,6 +563,7 @@ fn wanted(c: &Character, name: &str) -> bool {
 fn as_saved(c: &Character, counts: &mut BTreeMap<u32, usize>) {
     let no = stubs();
     let mut seen = Vec::new();
+    let mut sets = Vec::new();
     for (_, name) in functions(c) {
         // Functions sharing a name share their saved calls.
         if skipped(c, &name) || !wanted(c, &name) || seen.contains(&name) {
@@ -570,9 +571,16 @@ fn as_saved(c: &Character, counts: &mut BTreeMap<u32, usize>) {
         }
         seen.push(name.clone());
         for dir in dirs(c) {
-            if saved_calls(&dir, &name).is_empty() {
-                continue;
+            let n = saved_calls(&dir, &name).len();
+            if n > 0 {
+                sets.push((name.clone(), dir, n));
             }
+        }
+    }
+    let results = leaf_check::each_set(
+        &sets,
+        |s| s.2,
+        |(name, dir, _)| {
             let prepare = |_: &mut Call, _: usize| {};
             // Young Link's own functions also run with his side taunt turned the other way.
             let turned = |call: &mut Call, _: usize| turn_taunt(call);
@@ -588,10 +596,11 @@ fn as_saved(c: &Character, counts: &mut BTreeMap<u32, usize>) {
                     stubs: &no,
                 });
             }
-            for reports in check_variants(&dir, &name, &variants) {
-                tally(&reports, counts);
-            }
-        }
+            check_variants(dir, name, &variants)
+        },
+    );
+    for reports in results.iter().flatten() {
+        tally(reports, counts);
     }
 }
 
@@ -656,44 +665,50 @@ fn from_neighbours(c: &Character, counts: &mut BTreeMap<u32, usize>) {
         let no = stubs();
         let targets = &targets;
         let trace = c.trace();
-        for (j, (src, dir, _)) in runs.iter().enumerate() {
-            let before: usize = runs[..j].iter().map(|r| r.2).sum();
-            let shifts: Vec<usize> = (0..rounds).map(|round| round * total + before).collect();
-            let prepares: Vec<Box<Prepare>> = shifts
-                .iter()
-                .map(|&shift| -> Box<Prepare> {
-                    Box::new(move |call: &mut Call, i: usize| {
-                        let (a, n) = &targets[(shift + i) % targets.len()];
-                        call.addr = *a;
-                        if trace {
-                            eprintln!("{src} #{i} runs {n}");
-                        }
-                        if src == "itLinkHookshot_Logic20_PickedUp" {
-                            // The hookshot's pickup runs inside its spawn, which sets the
-                            // distance its tip sits ahead of the hand right after: zero before a
-                            // match's first hookshot, and nothing reads it till then.
-                            poke_f32(call, leaf_check::sym("it_804D6D48"), AHEAD);
-                        }
-                        if fighter_unit(u) {
-                            vary(call, shift + i);
-                        } else if FORGETS.contains(&n.as_str()) && takes_gobj(call) {
-                            // What the item forgets: its owner.
-                            call.regs.gpr[4] = peek_u32(call, user_data_arg(call) + 0x518);
-                        }
+        let jobs: Vec<(usize, &(String, String, usize))> = runs.iter().enumerate().collect();
+        let results = leaf_check::each_set(
+            &jobs,
+            |j| j.1.2 * rounds,
+            |&(j, (src, dir, _))| {
+                let before: usize = runs[..j].iter().map(|r| r.2).sum();
+                let shifts: Vec<usize> = (0..rounds).map(|round| round * total + before).collect();
+                let prepares: Vec<Box<Prepare>> = shifts
+                    .iter()
+                    .map(|&shift| -> Box<Prepare> {
+                        Box::new(move |call: &mut Call, i: usize| {
+                            let (a, n) = &targets[(shift + i) % targets.len()];
+                            call.addr = *a;
+                            if trace {
+                                eprintln!("{src} #{i} runs {n}");
+                            }
+                            if src == "itLinkHookshot_Logic20_PickedUp" {
+                                // The hookshot's pickup runs inside its spawn, which sets the
+                                // distance its tip sits ahead of the hand right after: zero before a
+                                // match's first hookshot, and nothing reads it till then.
+                                poke_f32(call, leaf_check::sym("it_804D6D48"), AHEAD);
+                            }
+                            if fighter_unit(u) {
+                                vary(call, shift + i);
+                            } else if FORGETS.contains(&n.as_str()) && takes_gobj(call) {
+                                // What the item forgets: its owner.
+                                call.regs.gpr[4] = peek_u32(call, user_data_arg(call) + 0x518);
+                            }
+                        })
                     })
-                })
-                .collect();
-            let variants: Vec<Variant> = prepares
-                .iter()
-                .map(|prepare| Variant {
-                    prepare: &**prepare,
-                    ours: &run_link,
-                    stubs: &no,
-                })
-                .collect();
-            for reports in check_variants(dir, src, &variants) {
-                tally(&reports, counts);
-            }
+                    .collect();
+                let variants: Vec<Variant> = prepares
+                    .iter()
+                    .map(|prepare| Variant {
+                        prepare: &**prepare,
+                        ours: &run_link,
+                        stubs: &no,
+                    })
+                    .collect();
+                check_variants(dir, src, &variants)
+            },
+        );
+        for reports in results.iter().flatten() {
+            tally(reports, counts);
         }
     }
 }

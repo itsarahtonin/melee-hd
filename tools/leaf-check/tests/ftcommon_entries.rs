@@ -241,16 +241,24 @@ fn run(cases: Vec<Case>) {
     // Every case run from a process's calls runs with the others from it: each call is read
     // and imported once for all of them.
     let dirs = dirs();
+    // The capture sets and processes, several at once ([`leaf_check::each_set`]).
     let mut reports: Vec<Vec<Vec<Report>>> = vec![vec![Vec::new(); dirs.len()]; chosen.len()];
-    for (d, dir) in dirs.iter().enumerate() {
-        let mut froms: Vec<&str> = chosen.iter().map(|c| c.from).collect();
-        froms.sort();
-        froms.dedup();
-        for from in froms {
-            let these: Vec<usize> = (0..chosen.len())
-                .filter(|&k| chosen[k].from == from)
-                .collect();
-            let variants: Vec<Variant> = these
+    let mut froms: Vec<&str> = chosen.iter().map(|c| c.from).collect();
+    froms.sort();
+    froms.dedup();
+    let sets: Vec<(usize, &str)> = (0..dirs.len())
+        .flat_map(|d| froms.iter().map(move |&from| (d, from)))
+        .collect();
+    let these = |from: &str| -> Vec<usize> {
+        (0..chosen.len())
+            .filter(|&k| chosen[k].from == from)
+            .collect()
+    };
+    let results = leaf_check::each_set(
+        &sets,
+        |&(d, from)| saved_calls(&dirs[d], from).len() * these(from).len(),
+        |&(d, from)| {
+            let variants: Vec<Variant> = these(from)
                 .iter()
                 .map(|&k| Variant {
                     prepare: &*prepares[k],
@@ -258,9 +266,12 @@ fn run(cases: Vec<Case>) {
                     stubs: &stubs,
                 })
                 .collect();
-            for (&k, r) in these.iter().zip(run_variants_in(dir, from, &variants)) {
-                reports[k][d] = r;
-            }
+            run_variants_in(&dirs[d], from, &variants)
+        },
+    );
+    for (&(d, from), r) in sets.iter().zip(results) {
+        for (k, r) in these(from).into_iter().zip(r) {
+            reports[k][d] = r;
         }
     }
     for (k, c) in chosen.iter().enumerate() {

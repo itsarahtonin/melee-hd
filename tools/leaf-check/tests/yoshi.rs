@@ -409,25 +409,34 @@ fn wanted(name: &str) -> bool {
 fn as_saved(counts: &mut BTreeMap<u32, usize>) {
     let no = stubs();
     let mut seen = Vec::new();
+    let mut sets = Vec::new();
     for (_, name) in functions() {
         if skipped(&name) || !wanted(&name) || seen.contains(&name) {
             continue;
         }
         seen.push(name.clone());
         for dir in dirs() {
-            if saved_calls(&dir, &name).is_empty() {
-                continue;
+            let n = saved_calls(&dir, &name).len();
+            if n > 0 {
+                sets.push((name.clone(), dir, n));
             }
+        }
+    }
+    let results = leaf_check::each_set(
+        &sets,
+        |s| s.2,
+        |(name, dir, _)| {
             let prepare = |_: &mut Call, _: usize| {};
             let variants = [Variant {
                 prepare: &prepare,
                 ours: &run_yoshi,
                 stubs: &no,
             }];
-            for reports in check_variants(&dir, &name, &variants) {
-                tally(&reports, counts);
-            }
-        }
+            check_variants(dir, name, &variants)
+        },
+    );
+    for reports in results.iter().flatten() {
+        tally(reports, counts);
     }
 }
 
@@ -439,6 +448,8 @@ const NOT_SOURCES: &[&str] = &["ftAnim_8006E9B4"];
 fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
     let funcs = functions();
     let trace = var("TRACE").is_some();
+    // Each group's targets and runs, then every group's runs at once.
+    let mut groups = Vec::new();
     for u in 0..STARTS.len() {
         let targets: Vec<(u32, String)> = funcs
             .iter()
@@ -475,9 +486,19 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
             continue;
         }
         let rounds = targets.len().div_ceil(total).max(2);
-        let no = stubs();
-        let targets = &targets;
-        for (j, (src, dir, _)) in runs.iter().enumerate() {
+        groups.push((u, targets, runs, total, rounds));
+    }
+    let no = stubs();
+    let jobs: Vec<(usize, usize)> = (groups.iter().enumerate())
+        .flat_map(|(g, group)| (0..group.2.len()).map(move |j| (g, j)))
+        .collect();
+    let results = leaf_check::each_set(
+        &jobs,
+        |&(g, j)| groups[g].2[j].2 * groups[g].4,
+        |&(g, j)| {
+            let (u, targets, runs, total, rounds) = &groups[g];
+            let (u, total, rounds) = (*u, *total, *rounds);
+            let (src, dir, _) = &runs[j];
             let before: usize = runs[..j].iter().map(|r| r.2).sum();
             let shifts: Vec<usize> = (0..rounds).map(|round| round * total + before).collect();
             let prepares: Vec<Box<Prepare>> = shifts
@@ -506,10 +527,11 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
                     stubs: &no,
                 })
                 .collect();
-            for reports in check_variants(dir, src, &variants) {
-                tally(&reports, counts);
-            }
-        }
+            check_variants(dir, src, &variants)
+        },
+    );
+    for reports in results.iter().flatten() {
+        tally(reports, counts);
     }
 }
 

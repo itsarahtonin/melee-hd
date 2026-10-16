@@ -339,24 +339,33 @@ fn wanted(name: &str) -> bool {
 /// Every saved call of each function, run as it was saved.
 fn as_saved(counts: &mut BTreeMap<u32, usize>) {
     let no = stubs();
+    let mut sets = Vec::new();
     for (_, name) in functions() {
         if ELSEWHERE.contains(&name.as_str()) || !wanted(&name) {
             continue;
         }
         for dir in dirs() {
-            if saved_calls(&dir, &name).is_empty() {
-                continue;
+            let n = saved_calls(&dir, &name).len();
+            if n > 0 {
+                sets.push((name.clone(), dir, n));
             }
+        }
+    }
+    let results = leaf_check::each_set(
+        &sets,
+        |s| s.2,
+        |(name, dir, _)| {
             let prepare = |_: &mut Call, _: usize| {};
             let variants = [Variant {
                 prepare: &prepare,
                 ours: &run_ice,
                 stubs: &no,
             }];
-            for reports in check_variants(&dir, &name, &variants) {
-                tally(&reports, counts);
-            }
-        }
+            check_variants(dir, name, &variants)
+        },
+    );
+    for reports in results.iter().flatten() {
+        tally(reports, counts);
     }
 }
 
@@ -423,47 +432,53 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
         let rounds = targets.len().div_ceil(total).max(GROUND_TARGETS.len());
         let no = stubs();
         let targets = &targets;
-        for (j, (src, dir, _)) in runs.iter().enumerate() {
-            let before: usize = runs[..j].iter().map(|r| r.2).sum();
-            let prepares: Vec<Box<Prepare>> = (0..rounds)
-                .map(|round| -> Box<Prepare> {
-                    let shift = round * total + before;
-                    Box::new(move |call: &mut Call, i: usize| {
-                        let (mut a, mut n) = targets[(shift + i) % targets.len()].clone();
-                        // The frozen state's grounded frames are few: each runs the callbacks
-                        // whose ground branches nothing else reaches.
-                        if !jump && grounded(call) {
-                            let k = round % GROUND_TARGETS.len();
-                            let g = GROUND_TARGETS[k];
-                            a = leaf_check::sym(g);
-                            n = g.to_owned();
-                            if k == GROUND_TARGETS.len() - 1 {
-                                let fp = user_data_arg(call);
-                                let x = f32::from_bits(peek_u32(call, fp + CUR_POS));
-                                poke_f32(call, fp + CUR_POS, x + 200.0);
+        let jobs: Vec<(usize, &(String, String, usize))> = runs.iter().enumerate().collect();
+        let results = leaf_check::each_set(
+            &jobs,
+            |j| j.1.2 * rounds,
+            |&(j, (src, dir, _))| {
+                let before: usize = runs[..j].iter().map(|r| r.2).sum();
+                let prepares: Vec<Box<Prepare>> = (0..rounds)
+                    .map(|round| -> Box<Prepare> {
+                        let shift = round * total + before;
+                        Box::new(move |call: &mut Call, i: usize| {
+                            let (mut a, mut n) = targets[(shift + i) % targets.len()].clone();
+                            // The frozen state's grounded frames are few: each runs the callbacks
+                            // whose ground branches nothing else reaches.
+                            if !jump && grounded(call) {
+                                let k = round % GROUND_TARGETS.len();
+                                let g = GROUND_TARGETS[k];
+                                a = leaf_check::sym(g);
+                                n = g.to_owned();
+                                if k == GROUND_TARGETS.len() - 1 {
+                                    let fp = user_data_arg(call);
+                                    let x = f32::from_bits(peek_u32(call, fp + CUR_POS));
+                                    poke_f32(call, fp + CUR_POS, x + 200.0);
+                                }
                             }
-                        }
-                        let n = &n;
-                        call.addr = a;
-                        if std::env::var_os("ICE_TRACE").is_some() {
-                            eprintln!("{src} #{i} runs {n}");
-                        }
-                        vary(call, shift + i);
-                        neighbour_args(call, n, shift + i);
+                            let n = &n;
+                            call.addr = a;
+                            if std::env::var_os("ICE_TRACE").is_some() {
+                                eprintln!("{src} #{i} runs {n}");
+                            }
+                            vary(call, shift + i);
+                            neighbour_args(call, n, shift + i);
+                        })
                     })
-                })
-                .collect();
-            let variants: Vec<Variant> = prepares
-                .iter()
-                .map(|prepare| Variant {
-                    prepare: &**prepare,
-                    ours: &run_ice,
-                    stubs: &no,
-                })
-                .collect();
-            for reports in check_variants(dir, src, &variants) {
-                tally(&reports, counts);
-            }
+                    .collect();
+                let variants: Vec<Variant> = prepares
+                    .iter()
+                    .map(|prepare| Variant {
+                        prepare: &**prepare,
+                        ours: &run_ice,
+                        stubs: &no,
+                    })
+                    .collect();
+                check_variants(dir, src, &variants)
+            },
+        );
+        for reports in results.iter().flatten() {
+            tally(reports, counts);
         }
     }
 }

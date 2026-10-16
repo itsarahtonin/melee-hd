@@ -44,6 +44,61 @@ pub fn workers() -> usize {
         .unwrap_or(2)
 }
 
+/// How many sets of saved calls a check that runs many runs at once, each on its own
+/// [`workers`]: `LEAF_CHECK_SETS`, 4 by default.
+pub fn sets() -> usize {
+    std::env::var("LEAF_CHECK_SETS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .filter(|&n: &usize| n > 0)
+        .unwrap_or(4)
+}
+
+/// `f` of each of `items`, [`sets`] at a time, the heaviest by `weight` first: the results in
+/// the order of `items`, as running them one after another would give them. A check that runs
+/// many sets of saved calls one after another (each a capture set's calls of one function,
+/// with what each runs) runs them this way, so a test of hundreds of small sets keeps several
+/// cores busy. When some panic, the others still run, then the first of `items` to panic
+/// panics again, as it would have stopped the check run in order.
+pub fn each_set<T: Sync, R: Send>(
+    items: &[T],
+    weight: impl Fn(&T) -> usize,
+    f: impl Fn(&T) -> R + Sync,
+) -> Vec<R> {
+    use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
+    use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let mut order: Vec<usize> = (0..items.len()).collect();
+    order.sort_by_key(|&i| std::cmp::Reverse(weight(&items[i])));
+    let next = AtomicUsize::new(0);
+    let results: Mutex<Vec<Option<std::thread::Result<R>>>> =
+        Mutex::new((0..items.len()).map(|_| None).collect());
+    std::thread::scope(|s| {
+        for _ in 0..sets().min(items.len()) {
+            std::thread::Builder::new()
+                .stack_size(64 << 20)
+                .spawn_scoped(s, || {
+                    loop {
+                        let k = next.fetch_add(1, Ordering::Relaxed);
+                        let Some(&i) = order.get(k) else { break };
+                        let r = catch_unwind(AssertUnwindSafe(|| f(&items[i])));
+                        results.lock().unwrap()[i] = Some(r);
+                    }
+                })
+                .unwrap();
+        }
+    });
+    results
+        .into_inner()
+        .unwrap()
+        .into_iter()
+        .map(|r| match r.expect("every item ran") {
+            Ok(r) => r,
+            Err(p) => resume_unwind(p),
+        })
+        .collect()
+}
+
 /// Where the reference's stack starts: MEM1 above everything the DOL loads.
 const STACK_TOP: u32 = 0x817F_0000;
 

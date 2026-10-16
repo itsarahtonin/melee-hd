@@ -139,12 +139,16 @@ struct Turn;
 static TURNS: (Mutex<usize>, Condvar) = (Mutex::new(0), Condvar::new());
 
 impl Turn {
-    const MAX: usize = 3;
+    /// How many at once: [`leaf_check::sets`] (`LEAF_CHECK_SETS`), as many as the sets of saved
+    /// calls other checks run at once.
+    fn max() -> usize {
+        leaf_check::sets()
+    }
 
     fn take() -> Turn {
         let (count, freed) = &TURNS;
         let mut n = count.lock().unwrap_or_else(|e| e.into_inner());
-        while *n >= Self::MAX {
+        while *n >= Self::max() {
             n = freed.wait(n).unwrap_or_else(|e| e.into_inner());
         }
         *n += 1;
@@ -2852,17 +2856,25 @@ impl Cb {
 
 /// Each callback on every captured call of it.
 fn kind_direct(list: &[(&str, Cb)]) {
-    for &(name, cb) in list {
-        check(name, &move |r, a| cb.run(r, a.gobj(0)));
-    }
+    // Several at once ([`leaf_check::each_set`]), each taking its [`Turn`].
+    leaf_check::each_set(
+        list,
+        |&(name, _)| captures(name).len(),
+        |&(name, cb)| check(name, &move |r, a| cb.run(r, a.gobj(0))),
+    );
 }
 
 /// Each callback run from the captures of `source` (items of kind `kind`).
 fn kind_perturbed(source: &str, kind: i32, list: &[(&str, Cb)]) {
-    for &(name, cb) in list {
-        let prep = move |c: &mut Call| item_kind(c) == kind;
-        check_on(source, name, &prep, &move |r, a| cb.run(r, a.gobj(0)));
-    }
+    // Several at once ([`leaf_check::each_set`]), each taking its [`Turn`].
+    leaf_check::each_set(
+        list,
+        |_| 1,
+        |&(name, cb)| {
+            let prep = move |c: &mut Call| item_kind(c) == kind;
+            check_on(source, name, &prep, &move |r, a| cb.run(r, a.gobj(0)));
+        },
+    );
 }
 
 #[test]
