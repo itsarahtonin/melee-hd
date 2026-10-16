@@ -356,8 +356,26 @@ fn vary(call: &mut Call, i: usize) {
     }
 }
 
-/// The items' variations: none (their states come from the captures as they are).
-fn vary_item(_: &mut Call, _: usize) {}
+/// The items' variations: a Freezie's floor normal and speed, so its slide takes the slope's
+/// branches (the replays' Freezie slid on flat ground), and a Fire Flower's state, so its
+/// held states' loops run (no one picked one up); other kinds' states as captured.
+fn vary_item(call: &mut Call, i: usize) {
+    let in_mem = |a: u32| (0x8000_0000..0x817F_0000).contains(&a);
+    if !in_mem(call.regs.gpr[3]) || !in_mem(user_data_arg(call)) {
+        return;
+    }
+    let ip = user_data_arg(call);
+    if peek_u32(call, ip + 0x10) == 17 {
+        let v = ip + 0xDD4;
+        let nx = [0.0f32, 0.3, -0.4, 0.05, -0.2, 0.6][i % 6];
+        poke_f32(call, v + 4, nx);
+        poke_f32(call, v + 8, (1.0 - nx * nx).sqrt());
+        poke_f32(call, v, [0.0f32, 0.5, -1.2, 3.0, -0.05][(i / 6) % 5]);
+    }
+    if peek_u32(call, ip + 0x10) == 25 {
+        poke_u32(call, ip + 0x24, (i % 8) as u32);
+    }
+}
 
 /// Clean comparisons by function run.
 fn tally(reports: &[Report], into: &mut BTreeMap<u32, usize>) {
@@ -504,6 +522,62 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
             tally(reports, counts);
         }
     }
+}
+
+/// `lb_80014638` against ssbm-rs's port on feet and item spans built to reach each of its
+/// branches (the replays' saved calls all return early): feet coming down through the span's
+/// top, level, starting below it, and missing it to either side, in both float modes.
+#[test]
+fn stepped_on_matches() {
+    use leaf_check::fp::{FpMode, set_fp_mode};
+    use leaf_check::{SCRATCH, handle, reference, write_f32s};
+    let Some(ctx) = reference() else { return };
+    let (a, b) = (SCRATCH, SCRATCH + 0x40);
+    let xs = leaf_check::inputs(40.0, 4_000);
+    let mut k = 0;
+    let mut next = || {
+        k = (k + 7) % xs.len();
+        xs[k]
+    };
+    for mode in [FpMode::Hardware, FpMode::Slippi] {
+        set_fp_mode(mode);
+        for i in 0..20_000 {
+            let top = next();
+            let (fz, tz) = match i % 5 {
+                0 => (top + next().abs(), top - next().abs()),
+                1 => (top + 1.0, top + 1.0),
+                2 => (top - 1.0, top - 2.0),
+                3 => (top + 0.005, top - 0.001),
+                _ => (next(), next()),
+            };
+            let (l, r) = (next(), next());
+            let feet = lb_80014638_arg0_t {
+                x0: Vec3::new(next(), next(), fz),
+                xC: Vec3::new(next(), next(), tz),
+            };
+            let span = lb_80014638_arg1_t {
+                unk_x: next() * 0.1,
+                unk_y: next() * 0.1,
+                x8: Vec3::new(l.min(r), l.max(r), top),
+            };
+            write_f32s(
+                &ctx,
+                a,
+                &[
+                    feet.x0.x, feet.x0.y, feet.x0.z, feet.xC.x, feet.xC.y, feet.xC.z,
+                ],
+            );
+            write_f32s(
+                &ctx,
+                b,
+                &[span.unk_x, span.unk_y, span.x8.x, span.x8.y, span.x8.z],
+            );
+            let theirs = ssbm_types::fns::lb_80014638(&ctx, handle(&ctx, a), handle(&ctx, b)) != 0;
+            let ours = melee_sim::lb::stomp::stepped_on(&feet, &span);
+            assert_eq!(ours, theirs, "lb_80014638 {mode:?} {feet:?} {span:?}");
+        }
+    }
+    set_fp_mode(FpMode::Hardware);
 }
 
 /// Functions no saved state can finish yet, with what stops them. One that compares clean

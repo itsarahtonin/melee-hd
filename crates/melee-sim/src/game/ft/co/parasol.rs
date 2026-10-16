@@ -1,7 +1,7 @@
 //! A held parasol's common states (`ftCo_ItemParasolOpen.c`, `ftCo_ItemParasolFall.c`,
 //! `ftCo_ItemParasolFallSpecial.c`) and the parasol's opening and closing
 //! (`ftCommon_8007E83C`, `ftGetParasolStatus`): Peach's own parasol takes her states and the
-//! same item code; the common parasol item (`itparasol.c`) isn't ported.
+//! same item code; the common parasol's item code is ported (`it::kinds::parasol`), but not its opening and closing in hand (`ftCommon_8007E83C` with it).
 
 use gekko_fp as fp;
 
