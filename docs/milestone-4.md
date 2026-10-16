@@ -1,0 +1,153 @@
+# Milestone 4: items, every stage, the CPU AI
+
+A survey of what milestone 4 needs and a plan for splitting it into small agent tasks, each checkable on its own. The milestone is done when `melee-oracle diff` runs clean on every local replay whose content is ported, ssbm-rs's per-tick `STATE_TRACE` diffs are clean for every non-VS mode and menu, and leaf-check covers every leaf. Surveyed on 2026-10-16 from `main` at `91b0794f`; the counts are that day's.
+
+## What the local replays cover
+
+Every local Slippi replay was classified from its game start, post-frame and item events (a read-only scan of the files, no game code run): 5,074 replays, 4,871 from `erickfm/melee-ranked-replays` in `$SSBM_RS_LOCAL/replays/hf/` and 203 of the author's (`SLIPPI_REPLAYS`). 31 of the author's, all from one session on 2026-09-15, come from a modified build: their character and stage IDs lie past the game's (stage 309, character 54 and the like) and ssbm-rs's replay sort lists every one as unplayable. That leaves 5,043 replays of the retail game.
+
+| What melee-hd doesn't yet support | Replays | Already traced in `local/traces/v5-mixed` |
+| --- | --- | --- |
+| Items from the item switch, in the recording | 0 | |
+| Items the match-rules player code turns on in playback (frequency 3, 120 s) | 3 | 3 (`pc-2dd3ed50`, `pc-339ac78e`, `pc-86fbfe04`) |
+| Bob-omb rain (Sudden Death) | 1 | 1 (`Game_20260524T174154`) |
+| CPU players | 3, all level 1 | 0 |
+| Stages other than the six tournament stages | 1 (Poké Floats) | 0 |
+| More than two players | 114 (all four-player teams, tournament stages, no CPUs) | 4 |
+| Game modes other than VS (by Slippi's major scene) | 0 | |
+| Kirby in the match | 89 | 6 |
+| Kirby's copies used | 3 (Samus twice, Falco once) | 2 |
+
+Everything else is VS between humans on the tournament stages with items off: 5,038 replays, 165 of them traced. The item events show no item of the switch's kinds (0 to 42), no Pokémon or adventure enemy in any recording. The switch-kind items they do show are Peach's down special pulls (a Bob-omb in 89 replays, Mr. Saturn in 131, a Beam Sword in 42, all ported), and the one stage item is Yoshi's Story's Shy Guys (926 replays, ported). Four-player matches already play (the oracle's four-player Final Destination and Yoshi's Story replays), so they need nothing from this milestone.
+
+So the local replays reach almost none of milestone 4. The oracle for items, stages and the CPU AI has to come from matches ssbm-rs plays without a replay (the next section). What the replays do give:
+
+- **Items:** the three Dr. Mario vs Fox 3.16 replays whose players' match-rules code (`C2 8016E750`, the variant that writes item frequency 3, a 120-second limit and the item switch `xFDFFFBF8FF`) turns items on in playback but not in the online recording: Pokémon Stadium (`hf/doc-diamond-diamond-a6/slp/diamond-diamond-2dd3ed50…`, playback's match ends at frame 3,433), Yoshi's Story (`…339ac78e…`, 3,110) and Fountain of Dreams (`…86fbfe04…`, 3,670). Their playback is a real items-on match, ssbm-rs's as Slippi Dolphin's, so their traces are valid full-state oracles even though the replay check differs from the recording. melee-vs-run stops them at item code today (an item's dynamic bones, `lb_8000FD48`; the egg's and the lipstick's spawns). Nine more replays carry other variants of the same code, which leave items off.
+- **Bob-omb rain:** `Game_20260524T174154` (Young Link vs Fox, Final Destination, 646 frames, Sudden Death), traced, replay check clean.
+- **CPU players:** three offline VS replays in the ranked set with a level 1 CPU: `hf/ness-mm/slp/master-master-25eaa574…` (Link vs CPU Ness, Final Destination, 3.15, 136 frames), `hf/mewtwo-mm/slp/master-master-3e1a8c1d…` (CPU Mewtwo vs Falco, Battlefield, 3.16, 2,108) and `hf/ness-mm/slp/master-master-69664b46…` (CPU Ness vs Marth, Battlefield, 3.15, 3,687). None is traced; each is a few minutes of ssbm-rs.
+- **Other stages:** the author's `Game_20260524T175101` (Young Link vs Marth, Poké Floats, 3.19, 14,948 frames), untraced.
+- **Kirby's copies:** `hf-kirby-falco-bf-49b22a11` (Falco's) and `hf-kirby-samus-fod-674aca44` (Samus's) are traced; `hf/kirby-dd-a6/slp/diamond-diamond-069e4480…` (Samus's, Yoshi's Story, 12,650 frames) isn't. Kirby himself and his copies are on `feat/kirby` and `feat/kirby-copies`, outside this milestone.
+
+## What ssbm-rs can play without a replay
+
+ssbm-rs's runner (`tools/run` in ssbm-rs) can start a match three ways that don't need a recording:
+
+- **Gecko-coded matches** (`BENCH_CODES=NAME.ini`): the codes boot into the debug VS result screen and hand `StartMelee` a whole `StartMeleeData` and seed, the way Slippi's playback starts a replay. `BENCH_AI=PORTS` has the level 9 CPU AI play those ports through their controllers (the random seed put back after it decides), so the match replays as human inputs; `BENCH_SLP=OUT.slp` records it with Slippi's recording codes, and `STATE_TRACE` works in the same run. `melee-bench codes` and `oracle-codes` (`tools/bench/src/matches.rs`) write the codes for the benchmark and oracle matches, which are traced from their recordings with `--replay`. ssbm-rs takes any start data, so items on, up to four players, real CPU slots at any level and any VS stage need only a richer generator: today's has a fixed rules block (items off, 4 stocks, 8 minutes), two players and level 9 player blocks.
+- **Debug VS random matches** (`--mode e --matches SEED`): a stage from the 29 VS stages (`MATCH_STAGES`), fighters (`MATCH_FIGHTERS`, bosses included), up to four ports each a CPU half the time at a random level, the item switch (`MATCH_ITEMS`, frequency none 15% of the time) and rules (`MATCH_TIME`, `MATCH_TEAMS`, `MATCH_STAMINA`, `MATCH_CPU_KIND`), humans played by `--monkey`. No Slippi recording, so no `diff`; it is where leaf-check's `debug*` capture sets come from.
+- **Other modes and the menus:** `--mode` takes the game mode (hex: 3 Classic, 4 Adventure, 5 All-Star, f Target Test, 1c Training, 20 Home-Run Contest, 21 and 22 Multi-Man, 2b Event, among others) with `EVENT`, `CLASSIC_STAGE`, `ADVENTURE_STAGE` and friends; `--monkey` and `MONKEY_HOLD` drive the menus; `--record FILE` keeps every controller read of a session and `--inputs FILE` plays it back headless (ssbm-rs's `inputs.rs`, format `SSBMINP1`).
+
+ssbm-rs itself is trustworthy in these areas: its round rf (2026-10-14) verified 97.6% of item blocks, 95.0% of stage blocks and 97.1% of fighter blocks by lockstep against the original, 93.5% of game modes and 95.1% of menus. Its weakest stages are the trophy collector (78%), `grmaterial` (87%), Mushroom Kingdom (88%) and Kongo Jungle N64 (89%); a difference melee-hd finds there may be ssbm-rs's, which the porting guide says to stop and ask about.
+
+### Oracle per area
+
+**Items.** Items-on oracle matches from the generator: two ported characters as `BENCH_AI` players on Final Destination or Battlefield (stage code already ported), a time match of about two minutes, item frequency high and the item switch narrowed to one family of kinds, so each match exercises few kinds and a stop names its family. The level 9 AI picks items up, throws, swings and uses them, so the fighters' item states get exercised too. A two-minute items match traces to about 150 MB with memory (the three playback traces above are 144 to 182 MB). The Poké Ball can't choose its Pokémon, so its matches use several seeds until every Pokémon has come out. Each match is recorded, replay-checked by ssbm-rs both ways (the playback and `BENCH_PADS`), and traced from its recording as the benchmark matches are; `melee-oracle diff` then runs it like any replay.
+
+**Stages.** One oracle match per stage, items off, two ported characters as `BENCH_AI` players, long enough for the stage's cycle: four minutes for most, eight for the moving stages (Rainbow Cruise, Big Blue, Mute City, Poké Floats, Icicle Mountain), whose courses take minutes to come round. About 300 MB of trace per four minutes. Keep the Ice Climbers out of these matches until the CPU AI is ported: Nana runs the AI, which stops on several stages (Rainbow Cruise and Icicle Mountain, `cpu_ai.rs`, `cpu_move.rs`; Hyrule Temple's search).
+
+**The CPU AI.** Real CPU slots, not `BENCH_AI`: the generator writes a CPU player block (slot type, computer kind and level), ssbm-rs plays the AI and records the match. Slippi records a CPU's inputs and playback injects them over what the AI asked for (`playback_inject`, the code at `0x8006B0DC`), but the AI still runs every tick and its state, the CPU block with what it asked for included, is in the fighter the diff compares. So a real-CPU recording traced with `--replay` checks every decision tick by tick, though a wrong decision doesn't change the fighter's motion. A stronger check plays the CPU free: trace the recording run itself (the `BENCH_CODES` run with `STATE_TRACE`, whose boot is meant to lay the heap out as playback does, to be confirmed) and let `diff` leave CPU ports uninjected, so melee-hd's AI drives them. The player needs that before it offers CPU opponents. The three level 1 replays above are the first real-CPU oracles and need no generator.
+
+**Modes and menus.** `diff` needs a replay today. A session recorded with `--record` (the controller reads from boot, the card beside it) is the oracle for the boot, the menus and every single-player mode: melee-hd would boot, take the same reads and compare each tick with ssbm-rs's trace of the `--inputs` run. That harness is the first task of the modes plan (below), not of this one.
+
+### Leaf captures and the debug heap fill
+
+Leaf captures come from ssbm-rs's lockstep runs (`CAPTURE`, `CAPTURE_FUNCS`): replays (`--replay … --lockstep`, the `hf-*` sets) import cleanly, but in debug VS runs (`--mode e`, the `debug*` sets) items sit in heap blocks filled with `0x10101010`, which `melee-capture`'s importer doesn't carry over. The importer follows a stale item's handle words only when they point into main memory, and treats an out-of-range word as dangling only for a few handle kinds (`Importer::import_handle`, `tools/capture/src/import.rs`); every other kind lands in `unhandled`. So any call with a live or new item differs, and the character checks take only functions whose states hold no item from those sets. Neither repository says where the fill comes from; the engine notes say debug VS captures hold a previous scene's bytes even in a session's first match, which Slippi's playback zeroes. Three fixes, cheapest first:
+
+1. Capture items from Slippi-layout runs: play the generator's items-on recordings with `--replay … --lockstep` and `CAPTURE`, the way the character sets are made. No importer change, and it covers every item kind the oracle matches spawn.
+2. Make the importer treat any out-of-range word in a stale item block as unknown until written, for every handle kind, so a call that never reads it compares clean and one that does stops with a stale read ("unread values are free", the rule the trace diffs already use for item variables).
+3. Confirm the fill's source with `FILL_ARENA=00` and `FILL_ARENA=55` on one short debug VS capture run, so the importer change rests on a known cause.
+
+## What's left to port
+
+From the port ledger (`docs/port-ledger.csv`). "Awaiting a check" counts functions already ported whose `// Ports X; aliased once a check reaches it` comment holds back the alias until a check covers them: the ledger counts them unaccounted, so it overstates what is unported (384 such functions across the code).
+
+| Area | Units | Functions | Ported | Awaiting a check | Not ported |
+| --- | --- | --- | --- | --- | --- |
+| Item engine (`it_26B1`, `it_2725`, `it_279C`, `item`, `itcoll`, `ithitbox`, `itanimlist` and the rest) | 11 | 424 | 299 | 8 | 117 |
+| Item switch kinds | 42 | 1,216 | 517 | 0 | 699 |
+| Poké Ball, Pokémon and coins | 31 | 685 | 0 | 0 | 685 |
+| Fighter states for items (`ftCo_Hammer*`, `ftCo_Kinoko*`, `ftCo_ItemScope*`, `ftCo_Lift`, `ftCo_WarpStar`, `ftCo_Barrel*`, the swings) | 28 | 288 | 47 | 1 | 240 |
+| Ported characters' items, leftovers | 60 | 991 | 738 | 95 | 158 |
+| Enemies, stage and adventure items, the hands' items | 28 | 888 | 32 | 1 | 855 |
+| Shared stage code (`ground`, `stage`, `grlib`, `granime`, `grmaterial`, `grzakogenerator`, `grdatfiles`, `grdisplay`) | 8 | 311 | 160 | 1 | 150 |
+| The tournament stages' leftovers | 6 | 278 | 180 | 5 | 93 |
+| The other 23 VS stages | 24 | 1,138 | 5 | 1 | 1,132 |
+| Single-player stages (target tests, Home-Run, the All-Star rest area, adventure routes, trophy stages) | 38 | 885 | 0 | 0 | 885 |
+| CPU AI (`ftCo_0A01`, `ftcpuattack`) | 2 | 176 | 31 | 63 | 82 |
+
+**Items.** The random item spawner is ported (`it/spawn.rs`: the tables, the monster table, the spawn process, the Poké Ball limit), and so are 14 switch kinds, from leaf-check's debug VS item corpus: the capsule, box, barrel, Party Ball, Bob-omb, Mr. Saturn, heart, tomato, Home-Run Bat, Beam Sword, both shells, the hammer and its head. A match with items on runs until the spawner draws a kind no port covers. Not ported: the fire flower, ray gun, Super Scope, star rod, lipstick, fan, both mushrooms, Warp Star, metal box, bunny hood, cloaking device, starman, Freezie, flipper, motion-sensor bomb, egg, screw attack, parasol, barrel cannon, coins and most of the food; and in the engine, an item's dynamic bones (`lb_8000FD48`, `lb_8001044C`, `lb_8000FD18` for items), `it_80274EE8`, wind on items (`grLib_801C9E60`), an item grabbing a fighter (`it_802701BC`), bursts for kinds 6, 19 and 177, Pokémon hurtbox hits, `ftLib_800874CC`, `it_8027429C`, and a stage item's throw in its thrower's statistics. On the fighters' side, light pickups, catches, throws, the Beam Sword's swings and Peach's own parasol are ported; heavy pickups and carrying (`ftCo_Lift`), use-on-pickup items, the other swings, the common parasol, the hammer's states, the mushrooms' growth and shrinking (`Fighter_SuperMushroomApply`, `PoisonMushroomApply`), the Super Scope's states, the Warp Star, the barrel cannon, the screw attack's jump, lipstick damage, and the metal, bunny hood and starman transformations are not. Dependencies: the engine's gaps first, then the kinds and their fighter states together, family by family; Pokémon need the Poké Ball first.
+
+**Stages.** Adding a stage means its `StageData` and callbacks (`gr/data.rs`), its `GR_KIND_*` and object variables (`gr/mod.rs`, `gr/vars.rs`), a `gr/<stage>.rs` with its processes and events wired into `code::run_proc` and `run_event`, its shadow render check, per-stage switches where the camera, the match's end, the CPU's excluded floors and the item frequency scale ask, its stage articles, and a roster line. The shared code comes first: the rest of `ground.c` (stage objects with their own camera, default lights, stages with no archive, stage-object sounds, the bob-omb rain spawn `Ground_801C0A70`), `grlib`'s wind, `grmaterial`, `granime` and the zako generator (stage enemies stop at `it_8027B5B0`). The 23 other VS stages, by functions (stage unit plus its own items):
+
+| Stage | Functions | Notes |
+| --- | --- | --- |
+| Yoshi's Island N64 (`groldyoshi`) | 34 | static, clouds |
+| Kongo Jungle N64 (`groldkongo`) | 28 | barrel |
+| Yoshi's Island (`gryorster`) | 21 | blocks |
+| Hyrule Temple (`grshrine`) | 21 | CPU's search stops here |
+| Jungle Japes (`grgarden`, `itklap`) | 41 + 24 | Klaptraps, river |
+| Peach's Castle (`grcastle`) | 75 | switches, Bullet Bills |
+| Kongo Jungle (`grkongo`) | 56 | barrel cannons |
+| Brinstar (`grzebes`) | 56 | lava, CPU route |
+| Brinstar Depths (`grkraid`) | 33 | Kraid turns the stage |
+| Great Bay (`grgreatbay`, `ittincle`) | 51 + 60 | Tingle, turtle |
+| Green Greens (`grgreens`, `itwhispyapple`) | 53 + 32 | Whispy's apples, blocks |
+| Onett (`gronett`) | 34 | cars (`stage_info.x740` feeds the CPU) |
+| Fourside (`grfourside`) | 40 | UFO |
+| Corneria (`grcorneria`, `itarwinglaser`, `itgreatfoxlaser`) | 103 + 27 | Arwings, the Great Fox's gun, match end |
+| Venom (`grvenom`) | 60 | Arwings, match end |
+| Mushroom Kingdom (`grinishie1`) | 39 | blocks |
+| Mushroom Kingdom II (`grinishie2`, `itkyasarin`, `itkyasarinegg`) | 40 + 51 | Birdo |
+| Flat Zone (`grflatzone`, `ittools`) | 49 + 18 | the fighters' joint class isn't modeled |
+| Poké Floats (`grpura`) | 37 | moving |
+| Rainbow Cruise (`grrcruise`) | 52 | scrolling, CPU stops |
+| Icicle Mountain (`gricemt`) | 74 | scrolling, CPU stops |
+| Big Blue (`grbigblue`, `grfzerocar`) | 69 + 1 | moving, F-Zero cars |
+| Mute City (`grmutecity`) | 67 | moving, F-Zero cars |
+
+The tournament stages' 93 unported functions are paths only items, the CPU or other modes reach (Whispy's wind on items, Pokémon Stadium's leftovers), and go with the shared code.
+
+**CPU AI.** The computer player's frame (`ftCo_800B3900`, `cpu_ai.rs`) and its read, decide, behave and script phases are ported along Nana's paths (`cpu_decide.rs`, `cpu_move.rs`, `cpu_recover.rs`, `cpu_attack.rs`, `cpu_script.rs`, 31 functions checked and 63 awaiting a check). Nothing refuses a CPU player: `proc_cpu` runs the frame for every CPU-controlled fighter, and a CPU other than Nana stops at `ftCo_800B2AFC` for its computer kind. Left: the decision for every other computer kind, behaviors 3, 7, 11, 12 and 17, the charge release for Donkey Kong, Kirby, Samus and Mewtwo, ranged characters and follow-ups, Donkey Kong's, Kirby's and Bowser's grabs, levels above 9, held items and picking an item to go for, and the stages with routes, Brinstar, Onett and Hyrule Temple. The register the CPU frame leaves behind stays plain data along its calls (the stale-register rule, docs/engine.md); paths it doesn't follow stop at `Leftover::Unknown`. Line and ground queries (`mp`) are done. The AI comes last of the three: it needs each character's branches, the items it decides about and each stage's data.
+
+## Proposed tasks
+
+Fifteen tasks in four waves. Sizes count functions to port or check: S under 100 (or tooling), M 100 to 300, L over 300. Every porting task follows the porting guide: each function gets a leaf-check or a line in `ledger/checks.txt`, the oracle diffs it names run clean with no stale read and with `--heap`, `sync-test --rollback 7` passes on them, and each new check is mutation-tested. Oracle matches are made with the task 1 generator and traced into `local/traces/v5-mixed/` (names-off, `--port all`, as the others are); captures come from those recordings (task 2).
+
+**Wave 1** (tasks 1 and 2 at once; both small)
+
+1. **Oracle match generator.** Extend `tools/bench/src/matches.rs` so a match sets the item frequency and switch mask, the time or stock rules, two to four players, each a human (for `BENCH_AI`) or a real CPU with its computer kind and level, and any VS stage, and add the milestone's match sets (items by family, stages, CPUs) with a `melee-bench` subcommand that writes their codes. Make two pilots, an items-on `BENCH_AI` match on Final Destination and a real level 9 CPU match on Battlefield, and run ssbm-rs's replay check on each (the CPU one shows whether playback reproduces a real-CPU recording). Oracle: ssbm-rs's replay checks clean, both ways for the `BENCH_AI` pilot. Size: S (tooling, under an hour of ssbm-rs). Depends on nothing.
+2. **Item captures without the heap fill.** Run the `FILL_ARENA` probe, make the importer treat out-of-range words in stale item blocks as unknown until written (fix 2 above), and capture an items set from the task 1 pilot's recording (fix 1). Oracle: leaf-check's `items` and `pulls` round trips on a `debug*` set and the new replay set; the character checks' `extra` filters can then admit item states. Size: S. Depends on task 1 for the replay set; the importer half runs in parallel with it.
+
+**Wave 2** (four tasks at once, after wave 1 and the first oracle batch)
+
+3. **Item engine.** The engine's gaps listed above and the 8 engine functions awaiting a check, on an items match narrowed to the 14 kinds already ported (which exercises the engine without stopping at a new kind) and the Sudden Death bob-omb rain (`Game_20260524T174154`, traced; the spawn is `Ground_801C0A70` and `it_8026BE84`). The three items-on Dr. Mario replays (`pc-2dd3ed50`, `pc-339ac78e`, `pc-86fbfe04`, traced) run as far as the engine takes them, to the first unported kind (the egg, the lipstick); they become the item work's final cross-check once tasks 7 to 9 land. A `feat/items-on` branch was opened on 2026-10-16 and may already be on those replays: agree the split before starting. Size: M (about 125). Depends on tasks 1 and 2.
+4. **Shared stage code and the first stage.** The shared stage code above and the tournament stages' leftovers, with Yoshi's Island N64 as the stage that proves the recipe end to end (roster line, launcher, an oracle match diffed whole). Size: M (about 280). Depends on task 1.
+5. **CPU AI on the tournament stages.** Every VS computer kind and behavior, levels 1 to 9, items off, Nana's 63 functions awaiting checks included. Oracle: the three level 1 replays, then one real-CPU match per ported character at level 9 on the tournament stages, and a level sweep (1, 4, 7) for three characters, all traced with `--replay`. Size: M (145, much of it heavy). Depends on task 1.
+6. **Free-running CPU diff.** A `diff` option that leaves CPU ports uninjected against a trace of the recording run itself, after checking that the `BENCH_CODES` boot gives playback's heap layout (the diff's address check says). Oracle: Nana's benchmark (`ics-peach-ps`) and the task 5 matches run free and clean; a perturbed AI output must fail. Size: S. Depends on tasks 1 and 5 (start it once task 5 has a clean level 9 match).
+
+**Wave 3** (up to six at once, as the agent limit allows; each family and each stage batch is independent)
+
+7. **Held and swung items.** Heavy pickups and carrying, the barrel cannon and its states, the fan, parasol, star rod and lipstick and their swings, the screw attack and its jump, and use-on-pickup items. About 300 functions: L. Depends on task 3.
+8. **Shooting and thrown items.** The ray gun, fire flower, Super Scope and its states, Freezie, flipper, motion-sensor bomb, egg, food and the coins of coin matches. About 440: L. Depends on task 3.
+9. **Power-ups.** The hammer's states, both mushrooms, the metal box, bunny hood, cloaking device, starman and Warp Star, with the transformations they start. About 230: M. Depends on task 3.
+10. **The Poké Ball and the Pokémon.** About 650: L; split it between two agents by Pokémon if both can run. Depends on task 3.
+11. **Quiet stages.** Kongo Jungle N64, Yoshi's Island, Hyrule Temple, Jungle Japes with the Klaptraps, Peach's Castle and Kongo Jungle. About 270: M. Depends on task 4.
+12. **Hazard stages.** Brinstar, Brinstar Depths, Great Bay with Tingle, Green Greens with Whispy's apples, Onett and Fourside. About 360: L. Depends on task 4.
+13. **Stages with their own items.** Corneria and Venom with the Arwings and the Great Fox, Mushroom Kingdom, Mushroom Kingdom II with Birdo, and Flat Zone with its falling tools and the fighters' joint class. About 390: L. Depends on task 4, and on task 3 for the stage items.
+14. **Moving stages.** Poké Floats, Rainbow Cruise, Icicle Mountain, Big Blue and Mute City with the F-Zero cars, on eight-minute matches and the author's Poké Floats replay (`Game_20260524T175101`, to trace). About 300: M. Depends on task 4.
+
+**Wave 4**
+
+15. **CPU AI with items and on every stage.** Picking items and using them, the routes and stage searches (Brinstar, Onett's cars, Hyrule Temple, the scrolling stages), on real-CPU items-on matches and one real-CPU match per stage. Size: M. Depends on tasks 5, 6 and 7 to 14.
+
+The critical path is 1, 3, then the longest item family, then 15; stages run alongside items from wave 2 on. Tasks within a wave share no files beyond the dispatch chains (`it::kinds::run_event`, `code::run_proc`, the roster), where merges stay mechanical. Each task takes its own worktree and leaves one commit per stage or item family.
+
+### Not in this sequence
+
+- **Kirby and his copies** are on `feat/kirby` and `feat/kirby-copies`. His copies' items (kinds 130 to 157) and the 89 Kirby replays come with that work; the milestone's "every local replay whose content is ported" counts them once it lands.
+- **Modes, menus and the single-player stages.** The milestone's check also asks for clean diffs of every non-VS mode and menu. That is its own sequence of comparable size (885 single-player stage functions, 1,509 in `gm`, 429 in `mn`, the adventure enemies and the hands among the 855 stage and enemy item functions), and it starts with two tasks this plan doesn't take: the session-input diff harness (melee-hd boots and takes an `SSBMINP1` recording's reads, compared every tick with ssbm-rs's trace of the `--inputs` run), then the boot and the title screen through it. The single-player CPU kinds (allies, event behaviors) belong there too.
+
+## Before the tasks start
+
+- **A trace campaign needs Sarah's go-ahead.** The oracle matches above come to about 20 items matches, 23 stage matches and 35 CPU matches. Each takes ssbm-rs roughly 15 to 30 minutes on one core to record, check and trace: about 30 CPU-hours and 18 GB of traces in all, run in batches as each task needs them. Tasks 1 and 2 need under an hour and can go first. The traces' disk is 94% full (118 GB free, `local/traces/v5-mixed` at 83 GB), so finished batches of older traces may need moving off first, which is Sarah's call.
+- **Two unknowns task 1 settles:** whether ssbm-rs's playback of a real-CPU recording passes its replay check, and whether a `BENCH_CODES` boot lays the heap out as playback does (task 6 rests on it).
+- **The open `feat/items-on` branch** overlaps task 3; the coordinator should say which owns the three Dr. Mario replays.
