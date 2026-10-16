@@ -105,7 +105,7 @@ impl Form {
             present: Present::Mailbox,
             added_delay: 0,
             high_refresh: Mode::Off,
-            tick_timing: Timing::Auto,
+            tick_timing: Timing::Timer,
             jit_margin: (crate::jit::DEFAULT_MARGIN.as_secs_f64() * 1000.0) as f32,
         }
     }

@@ -8,7 +8,7 @@
 //!                                               plays headless, timing each frame
 //! melee-hd --launcher-shot FILE.png [--size WxH] draws the launcher to a PNG
 //! latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate]
-//!          [--added-delay FRAMES] [--audio-exclusive] [--tick-timing auto|refresh|vrr|timer]
+//!          [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr]
 //!          [--jit-margin MS]
 //! frames:  [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]
 //! ```
@@ -32,9 +32,9 @@
 //!
 //! The loop keeps latency as short as it can: each tick reads the controllers just before it
 //! runs, and the frame it renders is drawn and presented at once, on a swap chain one frame deep
-//! (mailbox by default, `--present` picks; [`present::Present`]). Ticks start just in time for
-//! the refresh that shows their frame ([`jit`], `--tick-timing`), waited for precisely
-//! ([`timing`]). `--added-delay N` adds input
+//! (mailbox by default, `--present` picks; [`present::Present`]). Ticks run on a fixed 60 Hz timer,
+//! or, experimentally, just in time for the refresh that shows their frame ([`jit`],
+//! `--tick-timing`), waited for precisely ([`timing`]). `--added-delay N` adds input
 //! latency back on purpose, `--latency-log FILE` measures it all ([`latency`]), and F3 shows
 //! the measures over the frame.
 //!
@@ -153,7 +153,7 @@ fn usage() -> String {
         "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--launcher-shot FILE.png]\n\
          characters: {}\n\
          stages: {}\n\
-         latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing auto|refresh|vrr|timer] [--jit-margin MS]\n\
+         latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
          frames: [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
          with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match\n\
          the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
@@ -178,7 +178,7 @@ fn parse_args() -> Result<Args, String> {
         mute: false,
         latency_overlay: false,
         high_refresh: pacing::Mode::Off,
-        tick_timing: jit::Timing::Auto,
+        tick_timing: jit::Timing::Timer,
         jit_margin: jit::DEFAULT_MARGIN,
         frames_per_tick: 4,
         bench: None,
