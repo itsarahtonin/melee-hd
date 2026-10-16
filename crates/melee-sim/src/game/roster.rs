@@ -2,6 +2,8 @@
 //! character's or stage's port adds its line here, and the frontends (the player's command
 //! line, its `--help` and its launcher) list what this lists. Presentation data only: nothing
 //! in the simulation reads it.
+//!
+//! Kirby is ported but left out until every copy ability is (docs/oracle.md lists his coverage).
 
 /// A character a match can have, by its `CharacterKind` (the game's external ID, as
 /// [`Player::character`](super::vs_match::Player::character) takes it).
@@ -69,11 +71,6 @@ pub const CHARACTERS: &[Character] = &[
         kind: 14,
         name: "Ice Climbers",
         keys: &["ice-climbers", "ics"],
-    },
-    Character {
-        kind: 4,
-        name: "Kirby",
-        keys: &["kirby"],
     },
     Character {
         kind: 6,
