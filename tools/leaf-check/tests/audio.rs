@@ -1180,6 +1180,7 @@ fn check_crowd(
                 stubs: &[],
                 replay: Some(&replay),
                 gx: false,
+                original: &[],
             },
             ours,
         );
@@ -1417,6 +1418,7 @@ fn match_bank_choice() {
                 stubs: &[(0x8002_7168, None)],
                 gx: false,
                 replay: None,
+                original: &[],
             },
             &|g, _, _| {
                 if g.lb_choose_match_banks() {

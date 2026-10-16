@@ -98,6 +98,41 @@ pub struct Setup<'a> {
     /// The reference's hardware registers take writes and read 0, for code that draws: the
     /// GX commands it writes to the write-gather pipe are the presentation's.
     pub gx: bool,
+    /// Functions the reference runs as their machine code in the call's memory, by address:
+    /// those a player's Gecko code ([`apply_code`]) patches, which no port of ssbm-rs's has.
+    pub original: &'a [u32],
+}
+
+/// Where [`apply_code`] puts `C2` codes' instructions: the code handler's area, which the game
+/// leaves alone.
+pub const CODE_AREA: u32 = 0x8000_1800;
+
+/// Applies a Gecko code (its lines) to a saved call's memory, as Slippi's playback applies a
+/// replay's: an `04` code's word at its address, a `C2` code's instructions at `at` with their
+/// last word a branch back past its address, and a branch to them there. Returns the address
+/// after the instructions, for the next code.
+pub fn apply_code(call: &mut Call, lines: &[(u32, u32)], at: u32) -> u32 {
+    let branch = |from: u32, to: u32| 0x4800_0000 | (to.wrapping_sub(from) & 0x03FF_FFFC);
+    let (a, d) = lines[0];
+    let site = 0x8000_0000 | (a & 0x01FF_FFFF);
+    match a >> 24 & 0xFE {
+        0x04 => {
+            poke_u32(call, site, d);
+            at
+        }
+        0xC2 => {
+            assert_eq!(lines.len() as u32, d + 1, "a C2 code's line count");
+            for (i, &(x, y)) in lines[1..].iter().enumerate() {
+                poke_u32(call, at + 8 * i as u32, x);
+                poke_u32(call, at + 8 * i as u32 + 4, y);
+            }
+            let last = at + 8 * d - 4;
+            poke_u32(call, last, branch(last, site + 4));
+            poke_u32(call, site, branch(site, at));
+            at + 8 * d
+        }
+        t => panic!("a Gecko code of type {t:02X}"),
+    }
 }
 
 /// Hardware registers that take writes and read 0.
@@ -245,6 +280,10 @@ fn worker_reference(setup: &Setup, stubs: &[Stub]) -> ssbm_rt::Ctx {
     if setup.gx {
         ctx.set_mmio(Box::new(NullHardware));
     }
+    if !setup.original.is_empty() {
+        ctx.set_backend(Box::new(ssbm_ppc::Interpreter::default()));
+    }
+    crate::ORIGINAL.with(|o| *o.borrow_mut() = setup.original.to_vec());
     if let Some(r) = setup.replay {
         let _ = ssbm_slippi::install(&ctx, r.clone());
     }

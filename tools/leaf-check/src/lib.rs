@@ -473,6 +473,13 @@ pub fn run_as_machine_code() {
 pub fn run_capture(ctx: &Ctx, call: &ssbm_rt::capture::Call) -> Vec<u8> {
     call.load(ctx);
     register_patched(ctx);
+    // Functions a player's code patches run as their machine code (`calls::Setup::original`),
+    // even where the ruleset's codes gave them a port.
+    ORIGINAL.with(|o| {
+        for &f in o.borrow().iter() {
+            ctx.set_mode(f, ssbm_rt::Mode::Original);
+        }
+    });
     if MACHINE_CODE.load(std::sync::atomic::Ordering::Relaxed) {
         if !ctx.has_backend() {
             ctx.set_backend(Box::new(ssbm_ppc::Interpreter::default()));
@@ -486,6 +493,8 @@ pub fn run_capture(ctx: &Ctx, call: &ssbm_rt::capture::Call) -> Vec<u8> {
 }
 
 thread_local! {
+    /// The functions this thread's reference runs as machine code (`calls::Setup::original`).
+    pub(crate) static ORIGINAL: std::cell::RefCell<Vec<u32>> = std::cell::RefCell::default();
     /// ssbm-rs's own ports by address, to tell them from a check's stand-ins.
     static PORTS: std::collections::HashMap<u32, ssbm_rt::Native> = {
         let ctx = Ctx::new();
