@@ -139,6 +139,10 @@ impl Running<'_> {
             4 | 11 | 27..=30 | 32 => self.kb_n_enter(gobj),
             13 => self.kb_ss_enter(gobj),
             1 | 22 => self.kb_fx_enter(gobj),
+            0 | 21 => self.kb_mr_enter(gobj),
+            17 => self.kb_lg_enter(gobj),
+            2 | 25 => self.kb_ca_enter(gobj),
+            12 | 23 => self.kb_pk_enter(gobj),
             k => unported_call(&format!("the neutral special of copy kind {k}")),
         }
     }
@@ -150,6 +154,10 @@ impl Running<'_> {
             4 | 11 | 27..=30 | 32 => self.kb_n_air_enter(gobj),
             13 => self.kb_ss_air_enter(gobj),
             1 | 22 => self.kb_fx_air_enter(gobj),
+            0 | 21 => self.kb_mr_air_enter(gobj),
+            17 => self.kb_lg_air_enter(gobj),
+            2 | 25 => self.kb_ca_air_enter(gobj),
+            12 | 23 => self.kb_pk_air_enter(gobj),
             k => unported_call(&format!("the aerial neutral special of copy kind {k}")),
         }
     }
@@ -451,6 +459,12 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::ON_KNOCKBACK_ENTER => g.kb_on_knockback_enter(gobj),
         addr::ON_KNOCKBACK_EXIT => g.kb_on_knockback_exit(gobj),
         0x800E_F9BC => g.kb_hat_restart_texture_anims(gobj),
+        0x800E_FA40 => g.kb_mario_hat_on(gobj),
+        0x800E_FC58 => g.kb_captain_hat_on(gobj),
+        0x800F_0710 => g.kb_luigi_hat_on(gobj),
+        0x800F_03DC => g.kb_pikachu_hat_on(gobj),
+        0x800E_FAF0 | 0x800E_FD08 | 0x800F_07C0 => g.kb_head_hat_off(gobj),
+        0x800F_0494 => g.kb_pikachu_hat_off(gobj),
         0x800F_04F8 => g.kb_samus_hat_on(gobj),
         0x800F_05A8 => g.kb_samus_hat_off(gobj),
         0x800F_130C => g.kb_falco_hat_on(gobj),

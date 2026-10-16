@@ -249,6 +249,8 @@ pub const MATCHES: &[Match] = &[
     ),
 ];
 
+const KIRBY: u8 = 0x04;
+
 /// Matches the CPU AI plays for the oracle (`docs/oracle.md`), not timed: characters no replay
 /// the ruleset knows has, against ported ones on ported stages.
 pub const ORACLE_MATCHES: &[Match] = &[
@@ -288,6 +290,54 @@ pub const ORACLE_MATCHES: &[Match] = &[
         &[p(SAMUS, 0), p(FOX, 1)],
         0x1F0F_0106,
     ),
+    Match::bench(
+        "kirby-mario-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(MARIO, 0)],
+        0x1F0F_0107,
+    ),
+    Match::bench(
+        "kirby-luigi-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(LUIGI, 0)],
+        0x1F0F_0108,
+    ),
+    Match::bench(
+        "kirby-captain-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(CAPTAIN, 0)],
+        0x1F0F_0109,
+    ),
+    Match::bench(
+        "kirby-pikachu-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(PIKACHU, 0)],
+        0x1F0F_010A,
+    ),
+    Match::bench(
+        "kirby-ness-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(NESS, 0)],
+        0x1F0F_010B,
+    ),
+    Match::bench(
+        "kirby-zelda-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(ZELDA, 0)],
+        0x1F0F_010C,
+    ),
+    Match::bench(
+        "kirby-peach-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(PEACH, 0)],
+        0x1F0F_010D,
+    ),
+    Match::bench(
+        "kirby-gnw-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(GAME_WATCH, 0)],
+        0x1F0F_010E,
+    ),
 ];
 
 /// Short names for the characters, for match names.
@@ -308,6 +358,7 @@ fn character_key(character: u8) -> &'static str {
         PIKACHU => "pikachu",
         ICE_CLIMBERS => "ics",
         JIGGLYPUFF => "puff",
+        KIRBY => "kirby",
         SAMUS => "samus",
         YOSHI => "yoshi",
         ZELDA => "zelda",

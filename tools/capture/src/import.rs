@@ -151,6 +151,12 @@ pub struct Maps {
     /// Stale words where pointers were (an unused slot's leftover bytes) that the import left
     /// unfollowed, as none: the same word afterwards compares equal.
     pub unfollowed: std::collections::HashSet<(&'static str, u32)>,
+    /// Words of an item's stale bytes outside main memory (a debug VS heap's leftovers, such
+    /// as the opening movie's frame), by the handle that stands for each, from
+    /// [`UNKNOWN`] on, with the word: unknown until written. The handle is past every pool, so
+    /// following it stops (`Pool`'s index); anything else compares it by the word, as the
+    /// original's never-written word compares.
+    pub unknown: HashMap<u32, u32>,
 }
 
 /// The GObj class of items' links (`GObj_Create(7, ...)` in the string, yo-yo, grapple and
@@ -159,6 +165,9 @@ const ITEM_LINK_CLASS: u16 = 7;
 
 /// The first index a dangling camera box gets (see [`Maps::dangling_boxes`]).
 pub const DANGLING_BOX: u32 = 0x1000_0000;
+
+/// The first handle an unknown word gets (see [`Maps::unknown`]).
+pub use melee_sim::hsd::pool::UNKNOWN;
 
 /// Where the arena starts (`OSGetArenaLo` at boot): the executable's code and data lie below.
 const HEAP: u32 = 0x804E_EC00;
@@ -187,6 +196,8 @@ pub struct Importer<'a> {
     pub(crate) freed: bool,
     /// The dangling slots by address, so one address gets one slot.
     dangling_at: HashMap<(&'static str, u32), u32>,
+    /// The unknown handles by kind and word, so one word gets one handle.
+    unknown_at: HashMap<(&'static str, u32), u32>,
     /// The fighters' and items' blocks, as their GObjs hold them: a pointer to anything else
     /// dangles.
     live_fighters: std::collections::HashSet<u32>,
@@ -229,6 +240,7 @@ impl<'a> Importer<'a> {
             ef_freed: Vec::new(),
             freed: false,
             dangling_at: HashMap::new(),
+            unknown_at: HashMap::new(),
             live_fighters: Default::default(),
             live_items: Default::default(),
             live_effects: Default::default(),
@@ -1883,6 +1895,17 @@ impl Importer<'_> {
         self.dangling_at.insert((kind, addr), slot);
         slot
     }
+
+    /// The handle for an unknown word (see [`Maps::unknown`]).
+    fn unknown(&mut self, kind: &'static str, addr: u32) -> u32 {
+        if let Some(&h) = self.unknown_at.get(&(kind, addr)) {
+            return h;
+        }
+        let h = UNKNOWN + self.maps.unknown.len() as u32;
+        self.maps.unknown.insert(h, addr);
+        self.unknown_at.insert((kind, addr), h);
+        h
+    }
 }
 
 impl Importer<'_> {
@@ -1929,6 +1952,14 @@ impl Cx for Importer<'_> {
             }
             _ => {}
         }
+        // A word of an item's stale bytes that points nowhere in main memory, of any kind: the
+        // block's leftovers (in a debug VS run, the opening movie's frame), unknown until
+        // written. The original would fault following it, so following ours stops too.
+        if (self.stale || self.freed)
+            && (addr & 3 != 0 || !(MEM1..MEM1 + 0x0180_0000).contains(&addr))
+        {
+            return Some(self.unknown(kind, addr));
+        }
         if self.freed {
             return match kind {
                 "JObjId" | "GObjId" => {
@@ -1953,14 +1984,14 @@ impl Cx for Importer<'_> {
         if matches!(kind, "ItemLogicRef" | "ItemStatesRef") {
             return Some(addr);
         }
-        // A stale word where a pointer was (an unused hit capsule's joint): nothing to follow.
-        // A joint or GObj pointer dangles (compared by address, see `Maps::dangling_gobjs`).
+        // A word outside main memory elsewhere (a human player's CPU block, which only a CPU
+        // player's process fills): a joint or GObj pointer dangles (compared by address, see
+        // `Maps::dangling_gobjs`), anything else is left unfollowed.
         if addr & 3 != 0 || !(MEM1..MEM1 + 0x0180_0000).contains(&addr) {
             if matches!(
                 kind,
                 "JObjId" | "GObjId" | "FighterId" | "ItemId" | "BoneTableId" | "QueuedId"
-            ) || kind == "CameraBoxId" && self.stale
-            {
+            ) {
                 return Some(self.dangling(kind, addr));
             }
             self.unhandled

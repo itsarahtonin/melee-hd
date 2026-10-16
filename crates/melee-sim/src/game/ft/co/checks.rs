@@ -306,11 +306,11 @@ impl Running<'_> {
         }
     }
 
-    /// The side taunt, `ftCo_800DEBD0` (Kirby's drops his copied power first, not ported).
+    /// The side taunt, `ftCo_800DEBD0`: Kirby drops his copy first, as a star.
     #[doc(alias = "ftCo_800DEBD0")]
-    fn enter_appeal_s(&mut self, gobj: GObjId) {
+    pub fn enter_appeal_s(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_KIRBY {
-            unported_call("ftKb_SpecialN_800F5D04 (Kirby's taunt)");
+            self.kb_lose_copy(gobj, true);
         }
         self.enter_facing_state(gobj, ms::APPEAL_SR, ms::APPEAL_SL);
     }

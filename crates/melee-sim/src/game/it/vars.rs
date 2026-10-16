@@ -150,10 +150,10 @@ members! {
     SamusChargeshot, samus_chargeshot, itSamusChargeshot_ItemVars, [SAMUS_CHARGE, KIRBY_SAMUS_CHARGE];
     SamusMissile, samus_missile, itSamusMissile_ItemVars, [SAMUS_MISSILE];
     SamusGrapple, samus_grapple, itSamusGrapple_ItemVars, [SAMUS_GBEAM];
-    DrMarioPill, drmario_pill, itDrMarioPill_ItemVars, [DRMARIO_VITAMIN];
+    DrMarioPill, drmario_pill, itDrMarioPill_ItemVars, [DRMARIO_VITAMIN, KIRBY_DRMARIO_VITAMIN];
     PikachuThunder, pikachu_thunder, itPikachuthunder_ItemVars, [PIKACHU_THUNDER, PICHU_THUNDER];
-    PikachuJoltGround, pikachu_jolt_ground, itPikachutJoltGround_ItemVars, [PIKACHU_TJOLT_GROUND, PICHU_TJOLT_GROUND];
-    PikachuJoltAir, pikachu_jolt_air, itPikachutJoltAir_ItemVars, [PIKACHU_TJOLT_AIR, PICHU_TJOLT_AIR];
+    PikachuJoltGround, pikachu_jolt_ground, itPikachutJoltGround_ItemVars, [PIKACHU_TJOLT_GROUND, PICHU_TJOLT_GROUND, KIRBY_PIKACHU_TJOLT_GROUND, KIRBY_PICHU_TJOLT_GROUND];
+    PikachuJoltAir, pikachu_jolt_air, itPikachutJoltAir_ItemVars, [PIKACHU_TJOLT_AIR, PICHU_TJOLT_AIR, KIRBY_PIKACHU_TJOLT_AIR, KIRBY_PICHU_TJOLT_AIR];
     PeachTurnip, peach_turnip, itPeachTurnip_ItemVars, [PEACH_TURNIP];
     LinkBomb, link_bomb, itLinkBomb_ItemVars, [LINK_BOMB, CLINK_BOMB];
     LinkBoomerang, link_boomerang, itLinkBoomerang_ItemVars, [LINK_BOOMERANG, CLINK_BOOMERANG];
