@@ -41,9 +41,11 @@ pub mod linkbomb;
 pub mod linkboomerang;
 pub mod linkbow;
 pub mod linkhookshot;
+pub mod lipstick;
 pub mod luigifireball;
 pub mod mariocape;
 pub mod mariofireball;
+pub mod mball;
 pub mod mewtwodisable;
 pub mod mewtwoshadowball;
 pub mod nessbat;
@@ -54,6 +56,7 @@ pub mod nesspkflashexplode;
 pub mod nesspkthunder;
 pub mod nesspkthundertrail;
 pub mod nessyoyo;
+pub mod parasol;
 pub mod peachexplode;
 pub mod peachparasol;
 pub mod peachtoad;
@@ -76,6 +79,7 @@ pub mod sscopebeam;
 pub mod sword;
 pub mod taru;
 pub mod tomato;
+pub mod wstar;
 pub mod yoshiegglay;
 pub mod yoshieggthrow;
 pub mod yoshistar;
@@ -186,6 +190,10 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || egg::run_event(r, gobj, addr)
         || sscope::run_event(r, gobj, addr)
         || sscopebeam::run_event(r, gobj, addr)
+        || mball::run_event(r, gobj, addr)
+        || parasol::run_event(r, gobj, addr)
+        || lipstick::run_event(r, gobj, addr)
+        || wstar::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
 }
 
@@ -270,6 +278,10 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| egg::run_pred(r, gobj, addr))
         .or_else(|| sscope::run_pred(r, gobj, addr))
         .or_else(|| sscopebeam::run_pred(r, gobj, addr))
+        .or_else(|| mball::run_pred(r, gobj, addr))
+        .or_else(|| parasol::run_pred(r, gobj, addr))
+        .or_else(|| lipstick::run_pred(r, gobj, addr))
+        .or_else(|| wstar::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).

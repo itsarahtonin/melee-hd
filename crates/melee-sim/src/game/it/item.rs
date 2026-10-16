@@ -1166,7 +1166,9 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
     }
     let ip = super::item(r.game, gobj);
     if flag(ip.xDD1_flag, 1) && ip.ground_or_air == 1 {
-        code::unported_call("grLib_801C9E60 (the wind on an item)");
+        let mut v = super::item(r.game, gobj).x58_vec_unk;
+        crate::game::gr::grlib::item_wind(r.game, &mut v);
+        item_mut(r.game, gobj).x58_vec_unk = v;
     }
     let ip = item_mut(r.game, gobj);
     ip.pos = vec_add(ip.pos, ip.x58_vec_unk);
