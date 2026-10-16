@@ -175,18 +175,22 @@ fn unported(text: &str) -> bool {
     text.contains("isn't ported") || text.starts_with("not implemented")
 }
 
-/// A turn among the checks running at once, at most [`Turn::MAX`].
+/// A turn among the checks running at once, at most [`Turn::max`].
 struct Turn;
 
 static TURNS: (Mutex<usize>, Condvar) = (Mutex::new(0), Condvar::new());
 
 impl Turn {
-    const MAX: usize = 3;
+    /// How many at once: [`leaf_check::sets`] (`LEAF_CHECK_SETS`), as many as the sets of saved
+    /// calls other checks run at once.
+    fn max() -> usize {
+        leaf_check::sets()
+    }
 
     fn take() -> Turn {
         let (count, freed) = &TURNS;
         let mut n = count.lock().unwrap_or_else(|e| e.into_inner());
-        while *n >= Self::MAX {
+        while *n >= Self::max() {
             n = freed.wait(n).unwrap_or_else(|e| e.into_inner());
         }
         *n += 1;

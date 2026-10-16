@@ -223,6 +223,7 @@ fn tally(reports: &[Report], into: &mut BTreeMap<u32, usize>) {
 /// Every saved call of each function, run as it was saved.
 fn as_saved(c: &Character, counts: &mut BTreeMap<u32, usize>) {
     let (no, yes) = (stubs(false), stubs(true));
+    let mut sets = Vec::new();
     for (_, name) in c.functions() {
         if c.skipped(&name) || !c.wanted(&name) {
             continue;
@@ -231,6 +232,14 @@ fn as_saved(c: &Character, counts: &mut BTreeMap<u32, usize>) {
             if !c.takes(&dir, &name) || saved_calls(&dir, &name).is_empty() {
                 continue;
             }
+            let n = saved_calls(&dir, &name).len();
+            sets.push((name.clone(), dir, n));
+        }
+    }
+    let results = leaf_check::each_set(
+        &sets,
+        |s| s.2,
+        |(name, dir, _)| {
             let prepare = |_: &mut Call, _: usize| {};
             let variants: Vec<Variant> = [&no, &yes]
                 .into_iter()
@@ -240,10 +249,11 @@ fn as_saved(c: &Character, counts: &mut BTreeMap<u32, usize>) {
                     stubs,
                 })
                 .collect();
-            for reports in check_variants(&dir, &name, &variants) {
-                tally(&reports, counts);
-            }
-        }
+            check_variants(dir, name, &variants)
+        },
+    );
+    for reports in results.iter().flatten() {
+        tally(reports, counts);
     }
 }
 
@@ -291,41 +301,48 @@ fn from_neighbours(c: &Character, counts: &mut BTreeMap<u32, usize>) {
         // further on, `offset` counting the calls of the runs before.
         let (no, yes_stubs) = (stubs(false), stubs(true));
         let targets = &targets;
-        for (j, (src, dir, _)) in runs.iter().enumerate() {
-            let before: usize = runs[..j].iter().map(|r| r.2).sum();
-            let shifts: Vec<(usize, bool)> = (0..rounds)
-                .flat_map(|round| {
-                    [false, true].map(|yes| {
-                        let shift = round * total + before + usize::from(yes) * targets.len() / 2;
-                        (shift, yes)
+        let jobs: Vec<(usize, &(String, String, usize))> = runs.iter().enumerate().collect();
+        let results = leaf_check::each_set(
+            &jobs,
+            |j| j.1.2 * rounds,
+            |&(j, (src, dir, _))| {
+                let before: usize = runs[..j].iter().map(|r| r.2).sum();
+                let shifts: Vec<(usize, bool)> = (0..rounds)
+                    .flat_map(|round| {
+                        [false, true].map(|yes| {
+                            let shift =
+                                round * total + before + usize::from(yes) * targets.len() / 2;
+                            (shift, yes)
+                        })
                     })
-                })
-                .collect();
-            let prepares: Vec<Box<Prepare>> = shifts
-                .iter()
-                .map(|&(shift, yes)| -> Box<Prepare> {
-                    Box::new(move |call: &mut Call, i: usize| {
-                        let (a, n) = &targets[(shift + i) % targets.len()];
-                        call.addr = *a;
-                        if c.trace() {
-                            eprintln!("{src} #{i} (yes {yes}) runs {n}");
-                        }
-                        vary(call, shift + i);
+                    .collect();
+                let prepares: Vec<Box<Prepare>> = shifts
+                    .iter()
+                    .map(|&(shift, yes)| -> Box<Prepare> {
+                        Box::new(move |call: &mut Call, i: usize| {
+                            let (a, n) = &targets[(shift + i) % targets.len()];
+                            call.addr = *a;
+                            if c.trace() {
+                                eprintln!("{src} #{i} (yes {yes}) runs {n}");
+                            }
+                            vary(call, shift + i);
+                        })
                     })
-                })
-                .collect();
-            let variants: Vec<Variant> = shifts
-                .iter()
-                .zip(&prepares)
-                .map(|(&(_, yes), prepare)| Variant {
-                    prepare: &**prepare,
-                    ours: &run,
-                    stubs: if yes { &yes_stubs } else { &no },
-                })
-                .collect();
-            for reports in check_variants(dir, src, &variants) {
-                tally(&reports, counts);
-            }
+                    .collect();
+                let variants: Vec<Variant> = shifts
+                    .iter()
+                    .zip(&prepares)
+                    .map(|(&(_, yes), prepare)| Variant {
+                        prepare: &**prepare,
+                        ours: &run,
+                        stubs: if yes { &yes_stubs } else { &no },
+                    })
+                    .collect();
+                check_variants(dir, src, &variants)
+            },
+        );
+        for reports in results.iter().flatten() {
+            tally(reports, counts);
         }
     }
 }

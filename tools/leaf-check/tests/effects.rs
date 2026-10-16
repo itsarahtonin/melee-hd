@@ -377,259 +377,280 @@ fn every_effect() {
         .ok()
         .map(|v| v.split(',').map(str::to_owned).collect());
     let spawn_addr = leaf_check::sym("efSync_Spawn");
+    // Each capture set on its own, several at once ([`leaf_check::each_set`]); what they found
+    // is put together in the sets' order.
+    let per_dir = leaf_check::each_set(
+        &dirs,
+        |_| 1,
+        |d| {
+            let mut failed = Vec::new();
+            let mut compared = 0;
+            let mut skipped = std::collections::BTreeMap::<String, Vec<i32>>::new();
+            if let Some(only) = &only_dirs
+                && !only.iter().any(|o| d.ends_with(o.as_str()))
+            {
+                return (failed, compared, skipped);
+            }
+            // The first spawn by a fighter (user data kind 4).
+            let Some((path, cap)) = leaf_check::calls::saved_calls(d, "efSync_Spawn")
+                .into_iter()
+                .map(|p| {
+                    let c = Capture::read(&p);
+                    (p, c)
+                })
+                .find(|(_, c)| {
+                    let g = c.call.regs.gpr[4];
+                    g != 0 && c.call.mem1[(g + 7 - MEM1) as usize] == 4
+                })
+            else {
+                return (failed, compared, skipped);
+            };
+            let mut archives = Archives::default();
+            let data = DataMap {
+                loaded: find_archives_in(index, &cap.call.mem1, &mut archives),
+            };
+            let imported = catch_unwind(AssertUnwindSafe(|| {
+                let mut imp = Importer::new(&cap, &data).with_archives(&archives);
+                imp.world();
+                imp.stage();
+                imp.ids();
+                let Importer { game, maps, .. } = imp;
+                (game, maps)
+            }));
+            let Ok((game, maps)) = imported else {
+                failed.push(format!("{}: the import panicked", path.display()));
+                return (failed, compared, skipped);
+            };
+            let gobj_addr = cap.call.regs.gpr[4];
+            let gobj = maps.gobjs[&gobj_addr];
+            // The spawner's joints: its fighter's parts.
+            let fp = game.fighter(gobj);
+            let parts = &game.fighter_parts[fp.parts.expect("parts").0];
+            let addr_of: std::collections::HashMap<JObjId, u32> =
+                maps.jobjs.iter().map(|(&a, &j)| (j, a)).collect();
+            let joints: Vec<(u32, JObjId)> = parts
+                .iter()
+                .filter_map(|b| b.joint)
+                .filter_map(|j| addr_of.get(&j).map(|&a| (a, j)))
+                .collect();
+            let at = fp.cur_pos;
+            let ctx = reference().expect("SSBM_DISC");
+            // The bury effect's update calls the fighter code's `ftCo_800C0FCC`, unported: both
+            // sides stand it in and log its arguments.
+            ctx.register(BURY, their_bury);
+            melee_sim::game::code::stubs::set(BURY, melee_sim::game::code::Val::None);
+            for mode in MODES {
+                set_fp_mode(mode);
+                // Effect 0x3E8 scales by a fused multiply-add of its float (a damage amount):
+                // swept over the range it isn't clamped in.
+                let runs = ids.iter().flat_map(|&gfx| {
+                    let sweep =
+                        (gfx == 0x3E8).then(|| (0..24).map(|k| Some(k as f32 * 1.37 + 0.11)));
+                    std::iter::once((gfx, None))
+                        .chain(sweep.into_iter().flatten().map(move |f| (gfx, f)))
+                });
+                for (gfx, float) in runs {
+                    let _ = melee_sim::game::code::stubs::take();
+                    THEIR_BURY.with(|b| b.borrow_mut().clear());
+                    let mut game = game.clone();
+                    let maps = maps.clone();
+                    let mut archives = archives.clone();
+                    let mut synth = Synth {
+                        rand: Rand(
+                            0xEF5E_ED00 ^ gfx as u64 ^ (path.as_os_str().len() as u64) << 32,
+                        ),
+                        joints: &joints,
+                        at,
+                        made: Vec::new(),
+                        float,
+                    };
+                    // The fighter-specific updates' cases run with their fighter in the state
+                    // their updates look for: the special's motion, its command variable and its
+                    // action-state word set, on both sides.
+                    let special = special_state(gfx);
+                    if let Some((motion, var, word_at)) = special {
+                        let f = game.fighter_mut(gobj);
+                        f.motion_id = motion;
+                        f.cmd_vars[var] = 1;
+                        f.mv[word_at..word_at + 4].copy_from_slice(&1u32.to_be_bytes());
+                    }
+                    let ours = catch_unwind(AssertUnwindSafe(|| {
+                        let mut get = |_, kind| synth.arg(kind);
+                        ef::spawn_with(
+                            &mut Running {
+                                game: &mut game,
+                                data: &archives,
+                            },
+                            gfx,
+                            Some(gobj),
+                            &mut Args::lazy(&mut get),
+                        )
+                    }));
+                    let spawned: Spawned = match ours {
+                        Ok(s) => s,
+                        Err(p) => {
+                            let why = p
+                                .downcast_ref::<String>()
+                                .cloned()
+                                .or_else(|| p.downcast_ref::<&str>().map(|s| (*s).to_owned()))
+                                .unwrap_or_default();
+                            // A case for another character reads parts the spawner lacks.
+                            if why.contains("isn't loaded")
+                                || why.contains("isn't ported")
+                                || why.contains("past the character's parts")
+                            {
+                                skipped.entry(why).or_default().push(gfx);
+                                continue;
+                            }
+                            failed.push(format!(
+                                "{}: {gfx:#x} ({mode:?}): ours panicked: {why}",
+                                path.display()
+                            ));
+                            continue;
+                        }
+                    };
+                    // Their side: the same call, the arguments where the spawn reads them.
+                    cap.call.load(&ctx);
+                    if let Some((motion, var, word_at)) = special {
+                        let fp = ctx.read_u32(gobj_addr + 0x2C);
+                        ctx.write_u32(fp + 0x10, motion as u32);
+                        ctx.write_u32(fp + 0x2200 + 4 * var as u32, 1);
+                        ctx.write_u32(fp + 0x2340 + word_at as u32, 1);
+                    }
+                    let sp = cap.call.regs.gpr[1];
+                    let mut scratch = sp - 0x4000;
+                    ctx.regs.set_r(3, gfx as u32);
+                    ctx.regs.set_r(4, gobj_addr);
+                    for (i, a) in synth.made.iter().enumerate() {
+                        let v = match *a {
+                            Arg::JObj(j) => j.map_or(0, |j| addr_of[&j]),
+                            Arg::Vec(p) => {
+                                let at = scratch;
+                                leaf_check::put_vec(&ctx, at, p);
+                                scratch += 0x10;
+                                at
+                            }
+                            Arg::Float(x) => {
+                                let at = scratch;
+                                ctx.write_u32(at, x.to_bits());
+                                scratch += 0x10;
+                                at
+                            }
+                            Arg::Int(x) => x,
+                            Arg::Params(_) => unreachable!(),
+                        };
+                        assert!(i < 6, "more variadic arguments than registers");
+                        ctx.regs.set_r(5 + i, v);
+                    }
+                    ctx.invoke(spawn_addr);
+                    let r3 = ctx.regs.r(3);
+                    let mut after = vec![0u8; cap.call.mem1.len()];
+                    let _ = ctx.mem.read_bytes(0x8000_0000, &mut after);
+                    let data2 = DataMap {
+                        loaded: find_archives_after(index, &after, &mut archives, &data.loaded),
+                    };
+                    let mut cmp = Comparer::new(&after, &data2, &game, maps);
+                    cmp.world();
+                    cmp.stage();
+                    cmp.ids();
+                    if let Some(d) = spawned_diff(&cmp.maps, spawned, r3) {
+                        cmp.diffs.push(d);
+                    }
+                    let mut diffs = std::mem::take(&mut cmp.diffs);
+                    let cmp_maps = cmp.maps.clone();
+                    drop(cmp);
+                    // Then the effect's first frames: its update and update callback, while it
+                    // lives on.
+                    if diffs.is_empty()
+                        && let Spawned::Effect(e) = spawned
+                    {
+                        let maps = cmp_maps.clone();
+                        let update = leaf_check::sym("efLib_Update");
+                        let mut frames = 0;
+                        for _ in 0..3 {
+                            let ef_ = &game.ef.effects[e.0];
+                            if ef_.lifetime == 1 {
+                                break;
+                            }
+                            let g = ef_.gobj.expect("an effect's GObj");
+                            let ran = catch_unwind(AssertUnwindSafe(|| {
+                                ef::update(
+                                    &mut Running {
+                                        game: &mut game,
+                                        data: &archives,
+                                    },
+                                    g,
+                                )
+                            }));
+                            if let Err(p) = ran {
+                                let why = p.downcast_ref::<String>().cloned().unwrap_or_default();
+                                assert!(why.contains("isn't ported"), "{gfx:#x}'s update: {why}");
+                                skipped
+                                    .entry(format!("updates: {why}"))
+                                    .or_default()
+                                    .push(gfx);
+                                frames = 0;
+                                break;
+                            }
+                            ctx.regs.set_r(3, word_ctx(&ctx, r3 + 4));
+                            ctx.invoke(update);
+                            frames += 1;
+                        }
+                        // The stood-in calls the updates made, with the same GObjs.
+                        let gobj_addr: std::collections::HashMap<_, _> =
+                            maps.gobjs.iter().map(|(&a, &g)| (g, a)).collect();
+                        let ours: Vec<(u32, u32)> = melee_sim::game::code::stubs::take()
+                            .into_iter()
+                            .map(|(_, args)| {
+                                let a = |v: &melee_sim::game::code::Val| {
+                                    v.gobj()
+                                        .map_or(0, |g| gobj_addr.get(&g).copied().unwrap_or(1))
+                                };
+                                (a(&args[0]), a(&args[1]))
+                            })
+                            .collect();
+                        let theirs = THEIR_BURY.with(|b| std::mem::take(&mut *b.borrow_mut()));
+                        if ours != theirs {
+                            diffs.push(format!(
+                                "ftCo_800C0FCC calls: ours {ours:x?}, theirs {theirs:x?}"
+                            ));
+                        }
+                        if frames > 0 {
+                            let _ = ctx.mem.read_bytes(0x8000_0000, &mut after);
+                            let mut again = Comparer::new(&after, &data2, &game, maps);
+                            again.world();
+                            again.stage();
+                            again.ids();
+                            for d in again.diffs {
+                                diffs.push(format!("after {frames} updates: {d}"));
+                            }
+                        }
+                    }
+                    if diffs.is_empty() {
+                        compared += 1;
+                    } else {
+                        failed.push(format!(
+                            "{}: {gfx:#x} ({mode:?}) with {:?}: {} differences:\n    {}",
+                            path.display(),
+                            synth.made,
+                            diffs.len(),
+                            diffs[..diffs.len().min(12)].join("\n    ")
+                        ));
+                    }
+                }
+            }
+            set_fp_mode(FpMode::Hardware);
+            (failed, compared, skipped)
+        },
+    );
     let mut failed = Vec::new();
     let mut compared = 0;
     let mut skipped = std::collections::BTreeMap::<String, Vec<i32>>::new();
-    for d in &dirs {
-        if let Some(only) = &only_dirs
-            && !only.iter().any(|o| d.ends_with(o.as_str()))
-        {
-            continue;
-        }
-        // The first spawn by a fighter (user data kind 4).
-        let Some((path, cap)) = leaf_check::calls::saved_calls(d, "efSync_Spawn")
-            .into_iter()
-            .map(|p| {
-                let c = Capture::read(&p);
-                (p, c)
-            })
-            .find(|(_, c)| {
-                let g = c.call.regs.gpr[4];
-                g != 0 && c.call.mem1[(g + 7 - MEM1) as usize] == 4
-            })
-        else {
-            continue;
-        };
-        let mut archives = Archives::default();
-        let data = DataMap {
-            loaded: find_archives_in(index, &cap.call.mem1, &mut archives),
-        };
-        let imported = catch_unwind(AssertUnwindSafe(|| {
-            let mut imp = Importer::new(&cap, &data).with_archives(&archives);
-            imp.world();
-            imp.stage();
-            imp.ids();
-            let Importer { game, maps, .. } = imp;
-            (game, maps)
-        }));
-        let Ok((game, maps)) = imported else {
-            failed.push(format!("{}: the import panicked", path.display()));
-            continue;
-        };
-        let gobj_addr = cap.call.regs.gpr[4];
-        let gobj = maps.gobjs[&gobj_addr];
-        // The spawner's joints: its fighter's parts.
-        let fp = game.fighter(gobj);
-        let parts = &game.fighter_parts[fp.parts.expect("parts").0];
-        let addr_of: std::collections::HashMap<JObjId, u32> =
-            maps.jobjs.iter().map(|(&a, &j)| (j, a)).collect();
-        let joints: Vec<(u32, JObjId)> = parts
-            .iter()
-            .filter_map(|b| b.joint)
-            .filter_map(|j| addr_of.get(&j).map(|&a| (a, j)))
-            .collect();
-        let at = fp.cur_pos;
-        let ctx = reference().expect("SSBM_DISC");
-        // The bury effect's update calls the fighter code's `ftCo_800C0FCC`, unported: both
-        // sides stand it in and log its arguments.
-        ctx.register(BURY, their_bury);
-        melee_sim::game::code::stubs::set(BURY, melee_sim::game::code::Val::None);
-        for mode in MODES {
-            set_fp_mode(mode);
-            // Effect 0x3E8 scales by a fused multiply-add of its float (a damage amount):
-            // swept over the range it isn't clamped in.
-            let runs = ids.iter().flat_map(|&gfx| {
-                let sweep = (gfx == 0x3E8).then(|| (0..24).map(|k| Some(k as f32 * 1.37 + 0.11)));
-                std::iter::once((gfx, None))
-                    .chain(sweep.into_iter().flatten().map(move |f| (gfx, f)))
-            });
-            for (gfx, float) in runs {
-                let _ = melee_sim::game::code::stubs::take();
-                THEIR_BURY.with(|b| b.borrow_mut().clear());
-                let mut game = game.clone();
-                let maps = maps.clone();
-                let mut archives = archives.clone();
-                let mut synth = Synth {
-                    rand: Rand(0xEF5E_ED00 ^ gfx as u64 ^ (path.as_os_str().len() as u64) << 32),
-                    joints: &joints,
-                    at,
-                    made: Vec::new(),
-                    float,
-                };
-                // The fighter-specific updates' cases run with their fighter in the state
-                // their updates look for: the special's motion, its command variable and its
-                // action-state word set, on both sides.
-                let special = special_state(gfx);
-                if let Some((motion, var, word_at)) = special {
-                    let f = game.fighter_mut(gobj);
-                    f.motion_id = motion;
-                    f.cmd_vars[var] = 1;
-                    f.mv[word_at..word_at + 4].copy_from_slice(&1u32.to_be_bytes());
-                }
-                let ours = catch_unwind(AssertUnwindSafe(|| {
-                    let mut get = |_, kind| synth.arg(kind);
-                    ef::spawn_with(
-                        &mut Running {
-                            game: &mut game,
-                            data: &archives,
-                        },
-                        gfx,
-                        Some(gobj),
-                        &mut Args::lazy(&mut get),
-                    )
-                }));
-                let spawned: Spawned = match ours {
-                    Ok(s) => s,
-                    Err(p) => {
-                        let why = p
-                            .downcast_ref::<String>()
-                            .cloned()
-                            .or_else(|| p.downcast_ref::<&str>().map(|s| (*s).to_owned()))
-                            .unwrap_or_default();
-                        // A case for another character reads parts the spawner lacks.
-                        if why.contains("isn't loaded")
-                            || why.contains("isn't ported")
-                            || why.contains("past the character's parts")
-                        {
-                            skipped.entry(why).or_default().push(gfx);
-                            continue;
-                        }
-                        failed.push(format!(
-                            "{}: {gfx:#x} ({mode:?}): ours panicked: {why}",
-                            path.display()
-                        ));
-                        continue;
-                    }
-                };
-                // Their side: the same call, the arguments where the spawn reads them.
-                cap.call.load(&ctx);
-                if let Some((motion, var, word_at)) = special {
-                    let fp = ctx.read_u32(gobj_addr + 0x2C);
-                    ctx.write_u32(fp + 0x10, motion as u32);
-                    ctx.write_u32(fp + 0x2200 + 4 * var as u32, 1);
-                    ctx.write_u32(fp + 0x2340 + word_at as u32, 1);
-                }
-                let sp = cap.call.regs.gpr[1];
-                let mut scratch = sp - 0x4000;
-                ctx.regs.set_r(3, gfx as u32);
-                ctx.regs.set_r(4, gobj_addr);
-                for (i, a) in synth.made.iter().enumerate() {
-                    let v = match *a {
-                        Arg::JObj(j) => j.map_or(0, |j| addr_of[&j]),
-                        Arg::Vec(p) => {
-                            let at = scratch;
-                            leaf_check::put_vec(&ctx, at, p);
-                            scratch += 0x10;
-                            at
-                        }
-                        Arg::Float(x) => {
-                            let at = scratch;
-                            ctx.write_u32(at, x.to_bits());
-                            scratch += 0x10;
-                            at
-                        }
-                        Arg::Int(x) => x,
-                        Arg::Params(_) => unreachable!(),
-                    };
-                    assert!(i < 6, "more variadic arguments than registers");
-                    ctx.regs.set_r(5 + i, v);
-                }
-                ctx.invoke(spawn_addr);
-                let r3 = ctx.regs.r(3);
-                let mut after = vec![0u8; cap.call.mem1.len()];
-                let _ = ctx.mem.read_bytes(0x8000_0000, &mut after);
-                let data2 = DataMap {
-                    loaded: find_archives_after(index, &after, &mut archives, &data.loaded),
-                };
-                let mut cmp = Comparer::new(&after, &data2, &game, maps);
-                cmp.world();
-                cmp.stage();
-                cmp.ids();
-                if let Some(d) = spawned_diff(&cmp.maps, spawned, r3) {
-                    cmp.diffs.push(d);
-                }
-                let mut diffs = std::mem::take(&mut cmp.diffs);
-                let cmp_maps = cmp.maps.clone();
-                drop(cmp);
-                // Then the effect's first frames: its update and update callback, while it
-                // lives on.
-                if diffs.is_empty()
-                    && let Spawned::Effect(e) = spawned
-                {
-                    let maps = cmp_maps.clone();
-                    let update = leaf_check::sym("efLib_Update");
-                    let mut frames = 0;
-                    for _ in 0..3 {
-                        let ef_ = &game.ef.effects[e.0];
-                        if ef_.lifetime == 1 {
-                            break;
-                        }
-                        let g = ef_.gobj.expect("an effect's GObj");
-                        let ran = catch_unwind(AssertUnwindSafe(|| {
-                            ef::update(
-                                &mut Running {
-                                    game: &mut game,
-                                    data: &archives,
-                                },
-                                g,
-                            )
-                        }));
-                        if let Err(p) = ran {
-                            let why = p.downcast_ref::<String>().cloned().unwrap_or_default();
-                            assert!(why.contains("isn't ported"), "{gfx:#x}'s update: {why}");
-                            skipped
-                                .entry(format!("updates: {why}"))
-                                .or_default()
-                                .push(gfx);
-                            frames = 0;
-                            break;
-                        }
-                        ctx.regs.set_r(3, word_ctx(&ctx, r3 + 4));
-                        ctx.invoke(update);
-                        frames += 1;
-                    }
-                    // The stood-in calls the updates made, with the same GObjs.
-                    let gobj_addr: std::collections::HashMap<_, _> =
-                        maps.gobjs.iter().map(|(&a, &g)| (g, a)).collect();
-                    let ours: Vec<(u32, u32)> = melee_sim::game::code::stubs::take()
-                        .into_iter()
-                        .map(|(_, args)| {
-                            let a = |v: &melee_sim::game::code::Val| {
-                                v.gobj()
-                                    .map_or(0, |g| gobj_addr.get(&g).copied().unwrap_or(1))
-                            };
-                            (a(&args[0]), a(&args[1]))
-                        })
-                        .collect();
-                    let theirs = THEIR_BURY.with(|b| std::mem::take(&mut *b.borrow_mut()));
-                    if ours != theirs {
-                        diffs.push(format!(
-                            "ftCo_800C0FCC calls: ours {ours:x?}, theirs {theirs:x?}"
-                        ));
-                    }
-                    if frames > 0 {
-                        let _ = ctx.mem.read_bytes(0x8000_0000, &mut after);
-                        let mut again = Comparer::new(&after, &data2, &game, maps);
-                        again.world();
-                        again.stage();
-                        again.ids();
-                        for d in again.diffs {
-                            diffs.push(format!("after {frames} updates: {d}"));
-                        }
-                    }
-                }
-                if diffs.is_empty() {
-                    compared += 1;
-                } else {
-                    failed.push(format!(
-                        "{}: {gfx:#x} ({mode:?}) with {:?}: {} differences:\n    {}",
-                        path.display(),
-                        synth.made,
-                        diffs.len(),
-                        diffs[..diffs.len().min(12)].join("\n    ")
-                    ));
-                }
-            }
+    for (f, c, s) in per_dir {
+        failed.extend(f);
+        compared += c;
+        for (why, ids) in s {
+            skipped.entry(why).or_default().extend(ids);
         }
     }
     set_fp_mode(FpMode::Hardware);
@@ -668,11 +689,20 @@ fn each_dir_rounds(
     ours: &leaf_check::calls::Ours,
 ) {
     let target = leaf_check::sym(func);
-    for d in dirs() {
-        let n = leaf_check::calls::saved_calls(&d, from).len();
-        for round in 0..rounds {
+    // Each capture set's rounds, several at once ([`leaf_check::each_set`]).
+    let sets: Vec<(String, usize, usize)> = dirs()
+        .into_iter()
+        .flat_map(|d| {
+            let n = leaf_check::calls::saved_calls(&d, from).len();
+            (0..rounds).map(move |round| (d.clone(), n, round))
+        })
+        .collect();
+    leaf_check::each_set(
+        &sets,
+        |s| s.1,
+        |(d, n, round)| {
             leaf_check::calls::check_calls_with(
-                &d,
+                d,
                 from,
                 0,
                 &|call, i| {
@@ -681,8 +711,8 @@ fn each_dir_rounds(
                 },
                 ours,
             );
-        }
-    }
+        },
+    );
 }
 
 /// The `i`th GObj of process link `link` in a call's memory, if it has that many.

@@ -247,6 +247,7 @@ fn tally(reports: &[Report], into: &mut BTreeMap<u32, usize>) {
 /// and yes.
 fn as_saved(c: &Character, counts: &mut BTreeMap<u32, usize>) {
     let (no, yes) = (stubs(false), stubs(true));
+    let mut sets = Vec::new();
     for (_, name) in c.functions() {
         if c.skipped(&name) || c.src().is_some_and(|o| o != name) {
             continue;
@@ -255,6 +256,14 @@ fn as_saved(c: &Character, counts: &mut BTreeMap<u32, usize>) {
             if !c.takes(&dir, &name) || saved_calls(&dir, &name).is_empty() {
                 continue;
             }
+            let n = saved_calls(&dir, &name).len();
+            sets.push((name.clone(), dir, n));
+        }
+    }
+    let results = leaf_check::each_set(
+        &sets,
+        |s| s.2,
+        |(name, dir, _)| {
             let prepare = |_: &mut Call, _: usize| {};
             let variants: Vec<Variant> = [&no, &yes]
                 .into_iter()
@@ -264,10 +273,11 @@ fn as_saved(c: &Character, counts: &mut BTreeMap<u32, usize>) {
                     stubs,
                 })
                 .collect();
-            for reports in check_variants(&dir, &name, &variants) {
-                tally(&reports, counts);
-            }
-        }
+            check_variants(dir, name, &variants)
+        },
+    );
+    for reports in results.iter().flatten() {
+        tally(reports, counts);
     }
 }
 
@@ -328,52 +338,59 @@ fn from_neighbours(c: &Character, counts: &mut BTreeMap<u32, usize>) {
         let (no, yes_stubs) = (stubs(false), stubs(true));
         let targets = &targets;
         let trace = c.trace();
-        for (j, (src, dir, _)) in runs.iter().enumerate() {
-            let before: usize = runs[..j].iter().map(|r| r.2).sum();
-            let shifts: Vec<(usize, bool)> = (0..rounds)
-                .flat_map(|round| {
-                    [false, true].map(|yes| {
-                        let shift = round * total + before + usize::from(yes) * targets.len() / 2;
-                        (shift, yes)
+        let jobs: Vec<(usize, &(String, String, usize))> = runs.iter().enumerate().collect();
+        let results = leaf_check::each_set(
+            &jobs,
+            |j| j.1.2 * rounds,
+            |&(j, (src, dir, _))| {
+                let before: usize = runs[..j].iter().map(|r| r.2).sum();
+                let shifts: Vec<(usize, bool)> = (0..rounds)
+                    .flat_map(|round| {
+                        [false, true].map(|yes| {
+                            let shift =
+                                round * total + before + usize::from(yes) * targets.len() / 2;
+                            (shift, yes)
+                        })
                     })
-                })
-                .collect();
-            let prepares: Vec<Box<Prepare>> = shifts
-                .iter()
-                .map(|&(shift, yes)| -> Box<Prepare> {
-                    Box::new(move |call: &mut Call, i: usize| {
-                        let (a, n) = &targets[(shift + i) % targets.len()];
-                        call.addr = *a;
-                        if trace {
-                            eprintln!("{src} #{i} (yes {yes}) runs {n}");
-                        }
-                        vary(call, shift + i);
-                        let fp = user_data_arg(call);
-                        let msid = peek_u32(call, fp + 0x10);
-                        if let Some((_, from, ground)) = SWITCHES.iter().find(|s| s.0 == n)
-                            && !from.contains(&msid)
-                        {
-                            poke_u32(call, fp + 0x10, from[(shift + i) % from.len()]);
-                            poke_u32(call, fp + 0xE0, u32::from(!ground));
-                        }
-                        if ITEM_HOOKS.contains(&n.as_str()) {
-                            call.regs.gpr[4] = ((shift + i) % 2) as u32;
-                        }
+                    .collect();
+                let prepares: Vec<Box<Prepare>> = shifts
+                    .iter()
+                    .map(|&(shift, yes)| -> Box<Prepare> {
+                        Box::new(move |call: &mut Call, i: usize| {
+                            let (a, n) = &targets[(shift + i) % targets.len()];
+                            call.addr = *a;
+                            if trace {
+                                eprintln!("{src} #{i} (yes {yes}) runs {n}");
+                            }
+                            vary(call, shift + i);
+                            let fp = user_data_arg(call);
+                            let msid = peek_u32(call, fp + 0x10);
+                            if let Some((_, from, ground)) = SWITCHES.iter().find(|s| s.0 == n)
+                                && !from.contains(&msid)
+                            {
+                                poke_u32(call, fp + 0x10, from[(shift + i) % from.len()]);
+                                poke_u32(call, fp + 0xE0, u32::from(!ground));
+                            }
+                            if ITEM_HOOKS.contains(&n.as_str()) {
+                                call.regs.gpr[4] = ((shift + i) % 2) as u32;
+                            }
+                        })
                     })
-                })
-                .collect();
-            let variants: Vec<Variant> = shifts
-                .iter()
-                .zip(&prepares)
-                .map(|(&(_, yes), prepare)| Variant {
-                    prepare: &**prepare,
-                    ours: &run,
-                    stubs: if yes { &yes_stubs } else { &no },
-                })
-                .collect();
-            for reports in check_variants(dir, src, &variants) {
-                tally(&reports, counts);
-            }
+                    .collect();
+                let variants: Vec<Variant> = shifts
+                    .iter()
+                    .zip(&prepares)
+                    .map(|(&(_, yes), prepare)| Variant {
+                        prepare: &**prepare,
+                        ours: &run,
+                        stubs: if yes { &yes_stubs } else { &no },
+                    })
+                    .collect();
+                check_variants(dir, src, &variants)
+            },
+        );
+        for reports in results.iter().flatten() {
+            tally(reports, counts);
         }
     }
 }
