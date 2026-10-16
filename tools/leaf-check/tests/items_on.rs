@@ -467,7 +467,10 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
         }
         // The items' variations go by round (a target's index and its call's are tied
         // together), so their kinds run more rounds.
-        let rounds = targets.len().div_ceil(total).max(if fighter_unit(u) { 2 } else { 8 });
+        let rounds = targets
+            .len()
+            .div_ceil(total)
+            .max(if fighter_unit(u) { 2 } else { 8 });
         let no = stubs();
         let targets = &targets;
         let jobs: Vec<(usize, &(String, String, usize))> = runs.iter().enumerate().collect();
@@ -580,6 +583,74 @@ fn stepped_on_matches() {
         }
     }
     set_fp_mode(FpMode::Hardware);
+}
+
+/// `ft_80081A00` with a fighter's feet coming down onto an item: in its saved calls the
+/// fighter's feet were last far above the stage and every item is made one to step on, its
+/// span wide and below those feet, so the fighter lands on one (no replay's call steps on an
+/// item), and the stomp's marks on the item and the fighter's bounce compare. At least one
+/// call must stomp.
+#[test]
+fn stomp_lands() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let stomps = AtomicUsize::new(0);
+    let no = stubs();
+    let prepare = |call: &mut Call, _: usize| {
+        let fp = user_data_arg(call);
+        poke_f32(call, fp + 0x1938, 1.0e6);
+        let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+        let mut g = peek_u32(call, heads + 4 * 9);
+        while (0x8000_0000..0x817F_0000).contains(&g) {
+            let ip = peek_u32(call, g + 0x2C);
+            poke_f32(call, ip + 0xB54, 0.0);
+            poke_f32(call, ip + 0xB58, 0.0);
+            poke_f32(call, ip + 0xB5C, -1.0e9);
+            poke_f32(call, ip + 0xB60, 1.0e9);
+            poke_f32(call, ip + 0xB64, 1.0e5);
+            poke_bit(call, ip + 0xDD0, 0, true);
+            g = peek_u32(call, g + 8);
+        }
+    };
+    let ours = |g: &mut Running, maps: &Maps, call: &Call| {
+        let gobj = gobj_arg(maps, call);
+        let stomped = g.stepped_on_item(gobj);
+        if stomped {
+            stomps.fetch_add(1, Ordering::Relaxed);
+        }
+        Ret::Int(u32::from(stomped))
+    };
+    let variants = [Variant {
+        prepare: &prepare,
+        ours: &ours,
+        stubs: &no,
+    }];
+    let mut any = false;
+    for dir in dirs() {
+        if !saved_calls(&dir, "ft_80081A00").is_empty() {
+            any = true;
+            check_variants(&dir, "ft_80081A00", &variants);
+        }
+    }
+    assert!(
+        !any || stomps.load(Ordering::Relaxed) > 0,
+        "no saved call stomped"
+    );
+}
+
+/// `pl_8003D60C` (the explosions' item kinds) against ssbm-rs's port on every kind.
+#[test]
+fn explosive_kinds() {
+    let Some(ctx) = leaf_check::reference() else {
+        return;
+    };
+    for kind in -2..300 {
+        let theirs = ssbm_types::fns::pl_8003D60C(&ctx, kind) != 0;
+        assert_eq!(
+            melee_sim::game::pl::death::explosive_kind(kind),
+            theirs,
+            "pl_8003D60C({kind})"
+        );
+    }
 }
 
 /// Functions no saved state can finish yet, with what stops them. One that compares clean
