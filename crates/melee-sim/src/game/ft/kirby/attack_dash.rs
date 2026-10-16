@@ -64,7 +64,15 @@ impl Running<'_> {
         self.go_airborne(f);
         let fp = &self.game.fighters[f.0];
         let (frame, speed) = (fp.cur_anim_frame, fp.frame_speed_mul);
-        self.change_motion_state(gobj, ms::ATTACK_DASH_AIR, COLL_FLAGS, frame, speed, 0.0, None);
+        self.change_motion_state(
+            gobj,
+            ms::ATTACK_DASH_AIR,
+            COLL_FLAGS,
+            frame,
+            speed,
+            0.0,
+            None,
+        );
     }
 
     /// `ftKb_AttackDashAir_Anim`: falling once it ends.

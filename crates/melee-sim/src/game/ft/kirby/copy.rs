@@ -3,8 +3,8 @@
 //! hit or KO'd, and losing a copy (a hit can knock it out of him, with its star).
 
 use super::super::super::code::unported_call;
-use super::super::super::state::Running;
 use super::super::super::handles::CodeRef;
+use super::super::super::state::Running;
 use super::{KIND_KIRBY, addr, attr, ms, u};
 use crate::hsd::gobj::GObjId;
 
@@ -71,14 +71,29 @@ impl Running<'_> {
             6 => &[(0, k::KIRBY_LINK_ARROW), (1, k::KIRBY_LINK_BOW)],
             20 => &[(0, k::KIRBY_CLINK_ARROW), (1, k::KIRBY_CLINK_BOW)],
             16 => &[(3, k::KIRBY_MEWTWO_SHADOWBALL)],
-            8 => &[(0, k::KIRBY_NESS_PK_FLUSH), (1, k::KIRBY_NESS_PK_FLUSH_EXPLODE)],
-            12 => &[(0, k::KIRBY_PIKACHU_TJOLT_GROUND), (1, k::KIRBY_PIKACHU_TJOLT_AIR)],
-            23 => &[(0, k::KIRBY_PICHU_TJOLT_GROUND), (1, k::KIRBY_PICHU_TJOLT_AIR)],
+            8 => &[
+                (0, k::KIRBY_NESS_PK_FLUSH),
+                (1, k::KIRBY_NESS_PK_FLUSH_EXPLODE),
+            ],
+            12 => &[
+                (0, k::KIRBY_PIKACHU_TJOLT_GROUND),
+                (1, k::KIRBY_PIKACHU_TJOLT_AIR),
+            ],
+            23 => &[
+                (0, k::KIRBY_PICHU_TJOLT_GROUND),
+                (1, k::KIRBY_PICHU_TJOLT_AIR),
+            ],
             13 => &[(0, k::KIRBY_SAMUS_CHARGE)],
             5 | 31 => &[(0, k::KIRBY_KOOPA_FLAME)],
-            7 => &[(0, k::KIRBY_SEAK_NEEDLE_THROW), (1, k::KIRBY_SEAK_NEEDLE_HELD)],
+            7 => &[
+                (0, k::KIRBY_SEAK_NEEDLE_THROW),
+                (1, k::KIRBY_SEAK_NEEDLE_HELD),
+            ],
             21 => &[(0, k::KIRBY_DRMARIO_VITAMIN)],
-            24 => &[(5, k::KIRBY_GAME_WATCH_CHEF), (6, k::KIRBY_GAME_WATCH_CHEF_PAN)],
+            24 => &[
+                (5, k::KIRBY_GAME_WATCH_CHEF),
+                (6, k::KIRBY_GAME_WATCH_CHEF_PAN),
+            ],
             14 => &[(5, k::KIRBY_YOSHI_EGG_LAY)],
             _ => &[],
         };

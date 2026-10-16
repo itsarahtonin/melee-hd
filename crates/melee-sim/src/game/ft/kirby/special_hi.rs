@@ -179,6 +179,8 @@ impl Running<'_> {
         }
         let x = reg(fp.input.lstick[0].x);
         let mag = if x < 0.0 { fp::fneg(x) } else { x };
+        // NaN takes the original's branch, which the negated comparison spells out.
+        #[allow(clippy::neg_cmp_op_on_partial_ord)]
         if !(mag > range) {
             return;
         }

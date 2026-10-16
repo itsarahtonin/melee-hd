@@ -12,9 +12,9 @@ use super::super::super::camera;
 use super::super::super::ef::{self, Arg, eflib};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use crate::game::structs::Fighter;
 use super::{addr, attr, ms, u};
 use crate::fpu::{mem, reg};
+use crate::game::structs::Fighter;
 use crate::hsd::gobj::GObjId;
 use crate::math;
 use crate::vec::Vec3;
@@ -171,13 +171,11 @@ impl Running<'_> {
                     fp.set_mv_i32(mv::STONE, 1);
                 }
             }
-            2 => {
-                if fp.mv_i32(mv::CHANGE) == 0 && fp.mv_i32(mv::STONE) == 1 {
-                    let c = fp.cmd_vars[0] as i32;
-                    let fp = &mut self.game.fighters[f.0];
-                    fp.set_mv_i32(mv::CHANGE, c);
-                    fp.set_mv_i32(mv::CHANGE_FRAME, 0x16);
-                }
+            2 if fp.mv_i32(mv::CHANGE) == 0 && fp.mv_i32(mv::STONE) == 1 => {
+                let c = fp.cmd_vars[0] as i32;
+                let fp = &mut self.game.fighters[f.0];
+                fp.set_mv_i32(mv::CHANGE, c);
+                fp.set_mv_i32(mv::CHANGE_FRAME, 0x16);
             }
             _ => {}
         }
@@ -267,7 +265,11 @@ impl Running<'_> {
             avg.0 = fp::fadds(avg.0, reg(v.x));
             avg.1 = fp::fadds(avg.1, reg(v.y));
             avg.2 = fp::fadds(avg.2, reg(v.z));
-            set_mv_vec(fp, mv::AVERAGES, Vec3::new(mem(avg.0), mem(avg.1), mem(avg.2)));
+            set_mv_vec(
+                fp,
+                mv::AVERAGES,
+                Vec3::new(mem(avg.0), mem(avg.1), mem(avg.2)),
+            );
             sum = fp::fadds(sum, slope(fp, i));
             set_slope(fp, 4, sum);
         }
@@ -719,9 +721,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_LW1_ANIM => g.kb_special_lw1_anim(gobj),
         addr::SPECIAL_AIR_LW_START_ANIM => g.kb_special_air_lw_start_anim(gobj),
         addr::SPECIAL_LW_ANIM | addr::SPECIAL_AIR_LW_ANIM => g.kb_special_lw_anim(gobj),
-        addr::SPECIAL_LW_END_ANIM | addr::SPECIAL_AIR_LW_END_ANIM => {
-            g.kb_special_lw_end_anim(gobj)
-        }
+        addr::SPECIAL_LW_END_ANIM | addr::SPECIAL_AIR_LW_END_ANIM => g.kb_special_lw_end_anim(gobj),
         addr::SPECIAL_LW1_IASA
         | addr::SPECIAL_LW_END_IASA
         | addr::SPECIAL_AIR_LW_START_IASA
@@ -736,9 +736,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_LW_PHYS => g.kb_special_air_lw_phys(gobj),
         addr::SPECIAL_LW1_COLL => g.kb_special_lw1_coll(gobj),
         addr::SPECIAL_LW_COLL => g.kb_special_lw_coll(gobj),
-        addr::SPECIAL_LW_END_COLL | addr::SPECIAL_AIR_LW_END_COLL => {
-            g.kb_special_lw_end_coll(gobj)
-        }
+        addr::SPECIAL_LW_END_COLL | addr::SPECIAL_AIR_LW_END_COLL => g.kb_special_lw_end_coll(gobj),
         addr::SPECIAL_AIR_LW_START_COLL => g.kb_special_air_lw_start_coll(gobj),
         addr::SPECIAL_AIR_LW_COLL => g.kb_special_air_lw_coll(gobj),
         addr::STONE_CLEANUP => g.kb_stone_cleanup(gobj),

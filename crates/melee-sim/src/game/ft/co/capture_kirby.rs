@@ -109,7 +109,10 @@ impl Running<'_> {
         let p = self.game.fighter(gobj).cur_pos;
         let d = |a: f32, b: f32| fp::fsubs(reg(a), reg(b));
         let (dx, dy, dz) = (d(p.x, pos.x), d(p.y, pos.y), d(p.z, pos.z));
-        fp::fadds(fp::fmuls(dz, dz), fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy)))
+        fp::fadds(
+            fp::fmuls(dz, dz),
+            fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy)),
+        )
     }
 
     /// `ftCommon_InitGrab(fp, 0, timer)`.
@@ -299,7 +302,11 @@ impl Running<'_> {
             if x >= threshold && timer < fp::fadds(fp::frsp(f64::from(window)), extra) {
                 let fp = self.game.fighter_mut(gobj);
                 fp.active_timer.lstick.x = 254;
-                let v = if fp.input.lstick[0].x < 0.0 { -1.0 } else { 1.0 };
+                let v = if fp.input.lstick[0].x < 0.0 {
+                    -1.0
+                } else {
+                    1.0
+                };
                 self.kb_victim_push(kirby, v);
             }
         }
@@ -430,7 +437,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800BDB58")]
     pub fn enter_thrown_kirby_star(&mut self, gobj: GObjId, kirby: GObjId) {
         let scale = self.enter_kirby_star(gobj, kirby, ms::THROWN_KIRBY_STAR, false);
-        let dmg = crate::ppc::cvt_fp2unsigned(reg(self.game.fighter(gobj).co_attrs.kirby_b_star_damage));
+        let dmg =
+            crate::ppc::cvt_fp2unsigned(reg(self.game.fighter(gobj).co_attrs.kirby_b_star_damage));
         let f = self.game.fighter_id(gobj);
         self.hitbox_damage(f, 0, false, dmg);
         let b = self.kb_star_box(kirby, scale.x);
@@ -540,9 +548,7 @@ impl Running<'_> {
             self.game.fighter_mut(gobj).set_u_i32(0xC, KIND_KIRBY);
         }
         let spin = self.kb_thrown_spin();
-        self.game
-            .fighter_mut(gobj)
-            .set_mv_f32(thr::TIME, reg(spin));
+        self.game.fighter_mut(gobj).set_mv_f32(thr::TIME, reg(spin));
         self.init_grab(gobj, spin);
         let shrink = self.kb_thrown_shrink();
         self.game
@@ -602,8 +608,14 @@ impl Running<'_> {
         ftCollisionBox {
             top: a(attr::N_BOX_TOP),
             bottom: a(attr::N_BOX_BOTTOM),
-            left: Vec2 { x: a(attr::N_BOX_LEFT_X), y: a(attr::N_BOX_LEFT_Y) },
-            right: Vec2 { x: a(attr::N_BOX_RIGHT_X), y: a(attr::N_BOX_RIGHT_Y) },
+            left: Vec2 {
+                x: a(attr::N_BOX_LEFT_X),
+                y: a(attr::N_BOX_LEFT_Y),
+            },
+            right: Vec2 {
+                x: a(attr::N_BOX_RIGHT_X),
+                y: a(attr::N_BOX_RIGHT_Y),
+            },
         }
     }
 
@@ -611,8 +623,8 @@ impl Running<'_> {
     /// common data's `x9C` and `xA0`).
     #[doc(alias = "ftKb_SpecialN_800F5874")]
     pub fn kb_thrown_vel(&self) -> Vec2 {
-        let d = self.game.ft.data.data_list[KIND_KIRBY as usize]
-            .expect("Kirby's data without Kirby");
+        let d =
+            self.game.ft.data.data_list[KIND_KIRBY as usize].expect("Kirby's data without Kirby");
         let ext = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
         Vec2 {
             x: self.data.f32(ext.at(0x9C)),
@@ -623,7 +635,11 @@ impl Running<'_> {
     /// The star's model, Kirby's `ftData::x48_items[4]` (`ftKb_SpecialN_800F5898`).
     #[doc(alias = "ftKb_SpecialN_800F5898")]
     pub fn kb_star_model(&self, kirby: GObjId) -> melee_data::archive::DataRef {
-        let d = self.game.fighter(kirby).ft_data.expect("a fighter without data");
+        let d = self
+            .game
+            .fighter(kirby)
+            .ft_data
+            .expect("a fighter without data");
         let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
         self.data.ptr(items.at(16)).expect("Kirby's star")
     }
@@ -636,7 +652,10 @@ fn star_box(fp: &crate::game::structs::Fighter) -> ftCollisionBox {
         top: f(0),
         bottom: f(4),
         left: Vec2 { x: f(8), y: f(0xC) },
-        right: Vec2 { x: f(0x10), y: f(0x14) },
+        right: Vec2 {
+            x: f(0x10),
+            y: f(0x14),
+        },
     }
 }
 

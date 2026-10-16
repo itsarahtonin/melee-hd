@@ -16,12 +16,12 @@ pub mod attack_dash;
 pub mod copy;
 pub mod hat;
 pub mod init;
+pub mod special_fox;
 pub mod special_hi;
 pub mod special_lw;
 pub mod special_n;
 pub mod special_s;
 pub mod special_samus;
-pub mod special_fox;
 
 use super::super::code::Val;
 use super::super::handles::FighterId;
@@ -521,7 +521,6 @@ pub(crate) mod u {
     pub const HAT_DOBJS: usize = 0x18;
     pub const HAT_DOBJS2_COUNT: usize = 0x1C;
     pub const HAT_DOBJS2: usize = 0x20;
-    pub const HAT_VIS: usize = 0x24;
     /// The frames left before his next wall or ceiling bump's effect (`x60`), and `x64`.
     pub const BUMP_TIMER: usize = 0x60;
     pub const X64: usize = 0x64;
@@ -581,10 +580,6 @@ pub(crate) mod attr {
     pub const N_SWALLOW_ANGLE: usize = 0x90;
     pub const N_SWALLOW_SPEED: usize = 0x94;
     pub const N_SWALLOW_GRAVITY: usize = 0x98;
-    /// The lost copy's star: its offset up and its speed ahead and up.
-    pub const N_LOSS_STAR_Y: usize = 0xA4;
-    pub const N_LOSS_STAR_VX: usize = 0xA8;
-    pub const N_LOSS_STAR_VY: usize = 0xAC;
     pub const N_BOX_TOP: usize = 0xB4;
     pub const N_BOX_BOTTOM: usize = 0xB8;
     pub const N_BOX_LEFT_X: usize = 0xBC;

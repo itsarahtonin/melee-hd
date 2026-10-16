@@ -17,10 +17,7 @@ impl Running<'_> {
     /// The hammer gone from his hand, `ftKb_SpecialAirLw_800F539C` (its end).
     #[doc(alias = "ftKb_SpecialAirLw_800F539C")]
     pub fn kb_forget_hammer(&mut self, gobj: GObjId) {
-        self.game
-            .fighter_mut(gobj)
-            .u
-            .set_gobj_at(u::HAT_ITEM, None);
+        self.game.fighter_mut(gobj).u.set_gobj_at(u::HAT_ITEM, None);
     }
 
     /// The hammer taken away if out, `ftKb_SpecialAirLw_800F5524`.
@@ -28,10 +25,7 @@ impl Running<'_> {
     pub fn kb_remove_hammer(&mut self, gobj: GObjId) {
         if let Some(h) = self.game.fighter(gobj).u.gobj_at(u::HAT_ITEM) {
             kirbyhammer::remove(self, h);
-            self.game
-                .fighter_mut(gobj)
-                .u
-                .set_gobj_at(u::HAT_ITEM, None);
+            self.game.fighter_mut(gobj).u.set_gobj_at(u::HAT_ITEM, None);
         }
     }
 

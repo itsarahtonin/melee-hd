@@ -46,7 +46,14 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 /// Makes the hammer in `parent`'s hand at `pos`, `it_802ADC54`: held by `part`, on the ground
 /// or in the air (`vars`, 1 for the air), with its effect.
 #[doc(alias = "it_802ADC54")]
-pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, part: i32, vars: u32, dir: f32) -> Option<GObjId> {
+pub fn spawn(
+    r: &mut Running,
+    parent: GObjId,
+    pos: Vec3,
+    part: i32,
+    vars: u32,
+    dir: f32,
+) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind: KIND,
         ..Default::default()
@@ -63,7 +70,11 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, part: i32, vars: u32, d
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     // `setupHammerParticles`.
-    item_mut(r.game, gobj).xDD4_itemVar.kirby_hammer().x0.set(vars);
+    item_mut(r.game, gobj)
+        .xDD4_itemVar
+        .kirby_hammer()
+        .x0
+        .set(vars);
     item::debug_owner_bubbles(r.game, gobj, Some(parent));
     item::pick_up(r, gobj, parent, part);
     let air = item_mut(r.game, gobj).xDD4_itemVar.kirby_hammer().x0.get() == 1;

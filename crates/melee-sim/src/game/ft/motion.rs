@@ -380,7 +380,9 @@ impl Running<'_> {
             crate::hsd::tobj::anim(objs, self.data, Some(t));
         }
         if self.game.fighters[f.0].kind == 4 {
-            let gobj = self.game.fighters[f.0].gobj.expect("a fighter without its GObj");
+            let gobj = self.game.fighters[f.0]
+                .gobj
+                .expect("a fighter without its GObj");
             self.kb_hat_restart_texture_anims(gobj);
         }
         self.game.fighters[f.0].x221E_b7 = false;

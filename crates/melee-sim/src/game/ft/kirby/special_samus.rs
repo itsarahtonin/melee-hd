@@ -15,9 +15,6 @@ use crate::vec::Vec3;
 
 /// The copy's function addresses.
 pub(super) mod addr {
-    pub const CHARGE_OF: u32 = 0x800F_CC14;
-    pub const SHOT_LOST: u32 = 0x800F_CC6C;
-    pub const LEFT_CHARGE: u32 = 0x800F_CCBC;
     pub const SHOT_RELEASED: u32 = 0x800F_CD04;
     pub const DROP_CHARGE: u32 = 0x800F_CD60;
     pub const SHOT_FIRE: u32 = 0x800F_CDE0;
@@ -157,14 +154,8 @@ impl Running<'_> {
             crate::lb::joint::world_position(&mut self.game.objs, self.data, joint, Some(offset));
         pos.z = 0.0;
         let facing = self.game.fighter(gobj).facing_dir;
-        let shot = samuschargeshot::spawn(
-            self,
-            gobj,
-            pos,
-            PART_R3RD_NA,
-            k::KIRBY_SAMUS_CHARGE,
-            facing,
-        );
+        let shot =
+            samuschargeshot::spawn(self, gobj, pos, PART_R3RD_NA, k::KIRBY_SAMUS_CHARGE, facing);
         self.game.fighter_mut(gobj).u.set_gobj_at(SHOT, shot);
         if shot.is_some() {
             self.kb_set_cleanup_cbs(gobj);
@@ -209,8 +200,7 @@ impl Running<'_> {
             max,
         );
         let fp = &self.game.fighters[f.0];
-        if fp.motion_id == ms::SS_SPECIAL_AIR_N
-            || fp.ground_or_air == super::super::common::GA_AIR
+        if fp.motion_id == ms::SS_SPECIAL_AIR_N || fp.ground_or_air == super::super::common::GA_AIR
         {
             let recoil = reg(self.kb_attr_f32(f, attr::SS_RECOIL));
             let fp = &mut self.game.fighters[f.0];

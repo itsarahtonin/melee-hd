@@ -161,7 +161,10 @@ impl Running<'_> {
     /// Files each joint of the tree at `root` in the ID table under the part (with a joint,
     /// `flags_b1`) it stands for, in order (`ftKb_SpecialN_insert_joint_refs`).
     fn kb_hat_insert_joint_refs(&mut self, f: FighterId, root: DataRef) {
-        let parts = self.game.fighters[f.0].parts.expect("a fighter without parts").0;
+        let parts = self.game.fighters[f.0]
+            .parts
+            .expect("a fighter without parts")
+            .0;
         let mut joint = Some(root);
         let mut stack = JointStack::new();
         let mut part = 0usize;
@@ -194,7 +197,9 @@ impl Running<'_> {
         self.kb_hat_insert_joint_refs(f, root);
         let fp = &self.game.fighters[f.0];
         let parts = fp.parts.expect("a fighter without parts").0;
-        let l = fp.u.dobj_list_at(list).expect("a hat without its DObj list");
+        let l =
+            fp.u.dobj_list_at(list)
+                .expect("a hat without its DObj list");
         let mut joint = Some(root);
         let mut stack = JointStack::new();
         let (mut part, mut total) = (0usize, 0u32);
@@ -393,7 +398,9 @@ impl Running<'_> {
                 crate::hsd::heap::obj_free(crate::hsd::heap::Kind::FighterX2040, addr);
                 self.game.fighter_dobj_lists.free(list.0);
             }
-            self.game.fighters[f.0].u.set_dobj_list_at(u::HAT_DOBJS, None);
+            self.game.fighters[f.0]
+                .u
+                .set_dobj_list_at(u::HAT_DOBJS, None);
         }
         let mask = self.data.u32(copy.at(0x10));
         if mask == 0 {
@@ -411,7 +418,10 @@ impl Running<'_> {
                 continue;
             }
             let part = usize::from(self.data.u8(descs.at(4 * i)));
-            let parts = self.game.fighters[f.0].parts.expect("a fighter without parts").0;
+            let parts = self.game.fighters[f.0]
+                .parts
+                .expect("a fighter without parts")
+                .0;
             let (j, j2) = {
                 let b = &self.game.fighter_parts[parts][part];
                 (b.joint, b.x4_jobj2)
@@ -429,7 +439,13 @@ impl Running<'_> {
     /// Falco's copy's costume put on, `ftKb_SpecialN_800F130C`, unless he wears one.
     #[doc(alias = "ftKb_SpecialN_800F130C")]
     pub fn kb_falco_hat_on(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).u.dobj_list_at(u::HAT_DOBJS).is_none() {
+        if self
+            .game
+            .fighter(gobj)
+            .u
+            .dobj_list_at(u::HAT_DOBJS)
+            .is_none()
+        {
             self.kb_load_hat_parts(gobj, 22);
         }
     }
@@ -465,10 +481,9 @@ impl Running<'_> {
             "texture no exist! {} {i}",
             fp.player_idx
         );
-        let t = fp
-            .u
-            .tobj_at(TEX_TOBJS + 4 * i as usize)
-            .expect("a copy costume without its texture");
+        let t =
+            fp.u.tobj_at(TEX_TOBJS + 4 * i as usize)
+                .expect("a copy costume without its texture");
         let a = self.game.objs.tobjs[t].aobj;
         let objs = &mut self.game.objs;
         crate::hsd::aobj::req_anim(&mut objs.aobjs, &mut objs.fobjs, a, frame);
@@ -522,7 +537,9 @@ impl Running<'_> {
         }
         let model_num =
             u32::from_be_bytes(fp.u[VIS_MODEL_NUM..VIS_MODEL_NUM + 4].try_into().unwrap());
-        let list = fp.u.dobj_list_at(list).expect("a hat without its DObj list");
+        let list =
+            fp.u.dobj_list_at(list)
+                .expect("a hat without its DObj list");
         for i in 0..model_num {
             let entry = lookup.at(8 * i);
             let n = self.data.u32(entry) as i32;
@@ -572,7 +589,9 @@ impl Running<'_> {
                 return;
             }
             if idx == 2 {
-                let low = fp.u.dobj_list_at(u::HAT_DOBJS2).expect("a hat's second list");
+                let low =
+                    fp.u.dobj_list_at(u::HAT_DOBJS2)
+                        .expect("a hat's second list");
                 if self.game.fighter_dobj_lists[low.0][0].is_some() {
                     let second = self.game.fighters[f.0].x203C.data;
                     self.hide_parts_vis(f, 2, second);

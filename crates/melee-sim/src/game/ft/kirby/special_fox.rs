@@ -5,11 +5,11 @@
 
 use gekko_fp as fp;
 
+use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::{foxblaster, foxlaser};
 use super::super::super::state::Running;
-use super::super::super::handles::CodeRef;
-use super::super::motion::flags::{KEEP_GFX, SKIP_ATTACK_COUNT, SKIP_MODEL};
 use super::super::co::ids::ms as co_ms;
+use super::super::motion::flags::{KEEP_GFX, SKIP_ATTACK_COUNT, SKIP_MODEL};
 use super::{attr, ms, u};
 use crate::fpu::reg;
 use crate::hsd::gobj::GObjId;
@@ -17,12 +17,7 @@ use crate::vec::Vec3;
 
 /// The copies' function addresses.
 pub(super) mod addr {
-    pub const MUZZLE: u32 = 0x800F_DC00;
-    pub const GRIP: u32 = 0x800F_DC70;
     pub const ON_CHANGE_ACTION: u32 = 0x800F_DCE0;
-    pub const NO_BLASTER: u32 = 0x800F_DD14;
-    pub const BLASTER_ACTION: u32 = 0x800F_DD4C;
-    pub const BLASTER_NOT_NEEDED: u32 = 0x800F_DDF4;
     pub const FORGET_BLASTER: u32 = 0x800F_DEB4;
     pub const REMOVE_BLASTER: u32 = 0x800F_DEE0;
     pub const FIRE: u32 = 0x800F_DF30;
@@ -190,8 +185,18 @@ impl Running<'_> {
         let mut pos = self.kb_fx_muzzle(Some(gobj));
         pos.z = 0.0;
         let (angle, speed, shot, sfx) = match self.game.fighters[f.0].u_i32(u::HAT_KIND) {
-            KIND_FOX => (attr::FX_ANGLE, attr::FX_SPEED, attr::FX_SHOT_ITKIND, FOX_SFX),
-            KIND_FALCO => (attr::FC_ANGLE, attr::FC_SPEED, attr::FC_SHOT_ITKIND, FALCO_SFX),
+            KIND_FOX => (
+                attr::FX_ANGLE,
+                attr::FX_SPEED,
+                attr::FX_SHOT_ITKIND,
+                FOX_SFX,
+            ),
+            KIND_FALCO => (
+                attr::FC_ANGLE,
+                attr::FC_SPEED,
+                attr::FC_SHOT_ITKIND,
+                FALCO_SFX,
+            ),
             _ => return,
         };
         let a = reg(self.kb_attr_f32(f, angle));
@@ -203,7 +208,10 @@ impl Running<'_> {
         let speed = self.kb_attr_f32(f, speed);
         let kind = self.kb_attr_i32(f, shot);
         foxlaser::spawn_0(self, crate::fpu::mem(fp::frsp(a)), speed, gobj, pos, kind);
-        let b = self.game.fighters[f.0].u.gobj_at(BLASTER).expect("a shot without a blaster");
+        let b = self.game.fighters[f.0]
+            .u
+            .gobj_at(BLASTER)
+            .expect("a shot without a blaster");
         foxblaster::shot(self.game, b);
         let left = usize::from(self.game.fighters[f.0].facing_dir == -1.0);
         self.fighter_play_sfx(f, sfx[left], 0x7F, 0x40);
@@ -319,7 +327,15 @@ impl Running<'_> {
                 fp.accessory4_cb = Some(CodeRef(addr::CREATE_BLASTER_SHOT));
                 fp.set_mv_i32(MV_LOOP, 0);
             } else {
-                self.change_motion_state(gobj, start + 2, SKIP_MODEL | KEEP_GFX, 0.0, 1.0, 0.0, None);
+                self.change_motion_state(
+                    gobj,
+                    start + 2,
+                    SKIP_MODEL | KEEP_GFX,
+                    0.0,
+                    1.0,
+                    0.0,
+                    None,
+                );
                 if air {
                     self.kb_set_cleanup_cbs(gobj);
                 }

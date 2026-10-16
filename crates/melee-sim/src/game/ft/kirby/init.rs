@@ -5,18 +5,17 @@ use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
 use super::super::super::code::{Val, unported_call};
-use super::super::super::handles::FighterId;
+use super::super::super::ef::{Arg, SpawnKind};
 use super::super::super::state::Running;
 use super::super::KIRBY_COSTUME_KINDS;
 use super::super::data::MAIN_MEMORY;
 use super::super::fox::ext;
 use super::{ITEMS, KIND_KIRBY, addr, attr, u};
-use super::super::super::ef::{Arg, SpawnKind};
 use crate::fpu::reg;
-use crate::vec::Vec3;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::mtx::Mtx34;
+use crate::vec::Vec3;
 
 /// The bone his copies' hats sit on (`fp->parts[6]`).
 const PART_HAT_BONE: i32 = 6;
@@ -221,11 +220,9 @@ impl Running<'_> {
     /// The public symbol `name` of the loaded file `file`; the original asserts it's there.
     fn public_data(&self, file: &str, name: &str) -> DataRef {
         let archive = self.game.ft.data.files.archive(file);
-        let offset = self
-            .data
-            .get(archive)
-            .public(name)
-            .unwrap_or_else(|| panic!("the original's assertion failed: Cannot find symbol {name}."));
+        let offset = self.data.get(archive).public(name).unwrap_or_else(|| {
+            panic!("the original's assertion failed: Cannot find symbol {name}.")
+        });
         DataRef { archive, offset }
     }
 
@@ -300,8 +297,9 @@ impl Running<'_> {
     pub fn kb_charged_glow(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        let full_f =
-            |word: usize, at: usize| fp::frsp(f64::from(fp.u_i32(word))) == reg(self.kb_attr_f32(f, at));
+        let full_f = |word: usize, at: usize| {
+            fp::frsp(f64::from(fp.u_i32(word))) == reg(self.kb_attr_f32(f, at))
+        };
         let colanim = match fp.u_i32(u::HAT_KIND) {
             3 => (fp.u_i32(u::DK_SWINGS) == self.kb_attr_i32(f, attr::DK_SWINGS_TO_FULL))
                 .then_some(58),
