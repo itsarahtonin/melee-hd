@@ -499,7 +499,7 @@ fn vary(call: &mut Call, i: usize) {
 /// The copy star's states changed so its landing runs: on every other call it's put just
 /// below the stage's middle (`pos`), as if it fell through the floor this frame.
 fn vary_star(call: &mut Call, i: usize) {
-    if !takes_gobj(call) || i % 2 == 0 {
+    if !takes_gobj(call) || i.is_multiple_of(2) {
         return;
     }
     let ip = user_data_arg(call);
