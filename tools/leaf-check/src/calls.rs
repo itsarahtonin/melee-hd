@@ -627,6 +627,63 @@ fn import(cap: &Capture, index: &DiscIndex) -> Result<Imported, String> {
     })
 }
 
+/// How long one call may run on both sides before the check stops as hung
+/// (`LEAF_CALL_TIMEOUT`, seconds; 300 by default): a port or ssbm-rs's reference looping
+/// forever on a state its callers never reach (a changed neighbour's) never returns.
+fn call_timeout() -> std::time::Duration {
+    let secs = std::env::var("LEAF_CALL_TIMEOUT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(300);
+    std::time::Duration::from_secs(secs)
+}
+
+/// The calls running now, by thread: when each started and which it is.
+static RUNNING: std::sync::Mutex<Vec<(std::thread::ThreadId, std::time::Instant, String)>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// A call's place among [`RUNNING`] while it runs; the first starts the watchdog, which ends
+/// the process, naming the call, once one runs past [`call_timeout`]: a hung thread can't be
+/// stopped from outside, and the test would otherwise never end.
+struct Watched;
+
+impl Watched {
+    fn start(what: String) -> Watched {
+        static WATCHDOG: std::sync::Once = std::sync::Once::new();
+        WATCHDOG.call_once(|| {
+            let limit = call_timeout();
+            std::thread::spawn(move || {
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                    let running = RUNNING.lock().unwrap_or_else(|e| e.into_inner());
+                    if let Some((_, _, what)) = running.iter().find(|r| r.1.elapsed() > limit) {
+                        eprintln!(
+                            "{what} has run for over {} s: hung (LEAF_CALL_TIMEOUT)",
+                            limit.as_secs()
+                        );
+                        std::process::exit(101);
+                    }
+                }
+            });
+        });
+        let id = std::thread::current().id();
+        let mut running = RUNNING.lock().unwrap_or_else(|e| e.into_inner());
+        running.retain(|r| r.0 != id);
+        running.push((id, std::time::Instant::now(), what));
+        Watched
+    }
+}
+
+impl Drop for Watched {
+    fn drop(&mut self) {
+        let id = std::thread::current().id();
+        RUNNING
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .retain(|r| r.0 != id);
+    }
+}
+
 /// Runs a (prepared) saved call on both sides, ours from its imported state, and compares.
 fn run_imported(
     ctx: &ssbm_rt::Ctx,
@@ -643,6 +700,14 @@ fn run_imported(
         mut game,
         maps,
     } = imported;
+    let name = ssbm_types::symbols::SYMBOLS
+        .iter()
+        .find(|s| s.0 == call.addr)
+        .map_or_else(|| format!("{:#x}", call.addr), |s| s.2.to_owned());
+    let _watched = Watched::start(format!(
+        "a call of {name} (from a saved state whose r3 is {:#x})",
+        call.regs.gpr[3]
+    ));
     CALLED.with(|c| c.borrow_mut().clear());
     THEIR_CALLS.with(|c| c.borrow_mut().clear());
     let _ = melee_sim::game::code::stubs::take();
