@@ -9,7 +9,7 @@ use super::{KIND_KIRBY, addr, attr, ms, u};
 use crate::hsd::gobj::GObjId;
 
 /// `HitElement_Cape`.
-const ELEMENT_CAPE: i32 = 11;
+const ELEMENT_CAPE: u32 = 10;
 
 impl Running<'_> {
     /// Whether his copy's hat takes his jumps' other states (Captain Falcon's, Sheik's, the
@@ -227,7 +227,7 @@ impl Running<'_> {
             || fp.u_i32(u::HAT_KIND) == KIND_KIRBY
             || fp.u[u::HAT_FLAGS] & 0x80 != 0
             || fp.victim_gobj.is_some()
-            || fp.dmg.x1860_element == ELEMENT_CAPE as u32
+            || fp.dmg.x1860_element == ELEMENT_CAPE
         {
             return;
         }
