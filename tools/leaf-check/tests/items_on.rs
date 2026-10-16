@@ -465,7 +465,9 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
         if total == 0 {
             continue;
         }
-        let rounds = targets.len().div_ceil(total).max(2);
+        // The items' variations go by round (a target's index and its call's are tied
+        // together), so their kinds run more rounds.
+        let rounds = targets.len().div_ceil(total).max(if fighter_unit(u) { 2 } else { 8 });
         let no = stubs();
         let targets = &targets;
         let jobs: Vec<(usize, &(String, String, usize))> = runs.iter().enumerate().collect();
@@ -490,7 +492,7 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
                                     call.regs.gpr[4] = [0u32, 1, 5, 9, 10][(shift + i) % 5];
                                 }
                             } else {
-                                vary_item(call, shift + i);
+                                vary_item(call, shift / total * 7 + i);
                                 if ITEM_ARGS.contains(&n.as_str()) {
                                     let k = shift + i;
                                     // A level, or one of the held parasol's states (4
