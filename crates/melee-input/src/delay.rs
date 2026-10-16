@@ -38,6 +38,12 @@ impl Delay {
         self.queue.push_back(pads);
         self.queue.pop_front().unwrap_or(pads)
     }
+
+    /// The controllers the next tick will apply, which a delay has read already; none without
+    /// one, or before the first read.
+    pub fn next(&self) -> Option<[PadStatus; 4]> {
+        self.queue.front().copied().filter(|_| self.frames > 0)
+    }
 }
 
 #[cfg(test)]
@@ -63,5 +69,22 @@ mod tests {
         assert_eq!(d.apply(pads(4)), pads(2));
         assert_eq!(d.apply(pads(5)), pads(3));
         assert_eq!(d.frames(), 2);
+    }
+
+    #[test]
+    fn the_next_tick_s_controllers_are_known_with_a_delay() {
+        let mut d = Delay::new(0);
+        d.apply(pads(1));
+        assert_eq!(d.next(), None);
+        let mut d = Delay::new(2);
+        assert_eq!(d.next(), None);
+        for k in 1..6 {
+            let next = d.next();
+            let applied = d.apply(pads(k));
+            if let Some(n) = next {
+                assert_eq!(n, applied);
+            }
+        }
+        assert_eq!(d.next(), Some(pads(4)));
     }
 }

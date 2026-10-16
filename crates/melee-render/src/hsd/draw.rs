@@ -27,6 +27,9 @@ pub struct Ctx<'a> {
     pub game: &'a Game,
     pub data: &'a Archives,
     pub space: &'a Space,
+    /// A frame between two ticks: the earlier tick's transforms and how far toward the state
+    /// drawn the frame shows (`crate::blend`).
+    pub blend: Option<crate::blend::Blend<'a>>,
 }
 
 const RENDER_SHADOW: u32 = 1 << 26;
@@ -73,14 +76,20 @@ fn col_mag(m: &Mtx34, c: usize) -> f32 {
 /// `HSD_JObjMakePositionMtx`: the joint's matrix in view space, turned toward the camera for
 /// a billboard.
 pub fn position_mtx(objs: &Objects, j: JObjId, vmtx: &Mtx34) -> Mtx34 {
-    use melee_sim::vec::Vec3;
     let o = &objs.jobjs[j];
-    let src = vmtx.concat(&o.mtx);
-    let field = o.flags & JOBJ_BILLBOARD_FIELD;
+    position_mtx_of(o.flags, &o.mtx, o.rotate.z, vmtx)
+}
+
+/// [`position_mtx`] for a joint with `flags`, world matrix `mtx` and rotation about z
+/// `rotate_z` (blended ones, `crate::blend`).
+pub fn position_mtx_of(flags: u32, mtx: &Mtx34, rotate_z: f32, vmtx: &Mtx34) -> Mtx34 {
+    use melee_sim::vec::Vec3;
+    let src = vmtx.concat(mtx);
+    let field = flags & JOBJ_BILLBOARD_FIELD;
     if field == 0 {
         return src;
     }
-    let pb = o.flags & JOBJ_PBILLBOARD != 0;
+    let pb = flags & JOBJ_PBILLBOARD != 0;
     let mut dst = Mtx34::default();
     match field {
         JOBJ_BILLBOARD => {
@@ -148,7 +157,7 @@ pub fn position_mtx(objs: &Objects, j: JObjId, vmtx: &Mtx34) -> Mtx34 {
         }
         JOBJ_RBILLBOARD => {
             let scl = Mtx34::scale(col_mag(&src, 0), col_mag(&src, 1), col_mag(&src, 2));
-            let mut rot = Mtx34::rotation(melee_sim::mtx::Axis::Z, o.rotate.z);
+            let mut rot = Mtx34::rotation(melee_sim::mtx::Axis::Z, rotate_z);
             for r in 0..3 {
                 rot.m[r][3] = src.m[r][3];
             }
@@ -197,6 +206,28 @@ pub struct Image {
 impl Ctx<'_> {
     fn objs(&self) -> &Objects {
         &self.game.objs
+    }
+
+    /// A joint's world matrix: blended toward the state drawn while the joints being drawn
+    /// blend (`hsd::Motion::joints`), else as the display pass left it.
+    fn jmtx(&self, j: JObjId) -> Mtx34 {
+        match self.blend {
+            Some(b) if self.hsd.motion.joints => b.joint(&self.game.objs, j),
+            _ => self.game.objs.jobjs[j].mtx,
+        }
+    }
+
+    /// The matrix a joint's shapes draw with in the view `vmtx` (`position_mtx`), its world
+    /// matrix and billboard turn blended as [`Ctx::jmtx`] blends.
+    fn joint_position_mtx(&self, j: JObjId, vmtx: &Mtx34) -> Mtx34 {
+        let o = &self.game.objs.jobjs[j];
+        match self.blend {
+            Some(b) if self.hsd.motion.joints => {
+                let (m, rz) = b.joint_and_turn(&self.game.objs, j);
+                position_mtx_of(o.flags, &m, rz, vmtx)
+            }
+            _ => position_mtx_of(o.flags, &o.mtx, o.rotate.z, vmtx),
+        }
     }
 
     /// The image a texture shows, with its texels' address.
@@ -294,6 +325,10 @@ impl Ctx<'_> {
                 }
             },
             tobj::COORD_SHADOW => {
+                let m = match self.blend {
+                    Some(b) => b.shadow_tobj(t, &m),
+                    None => m,
+                };
                 let inv = self.hsd.inv_view_mtx();
                 let r = m.concat(&inv);
                 self.gx.load_tex_mtx_imm(&r.m, mtxid, GX_MTX3X4);
@@ -666,7 +701,7 @@ impl Ctx<'_> {
             self.gx.load_nrm_mtx_imm(&mtx(&n0), GX_PNMTX0);
         }
         self.gx.load_tex_mtx_imm(&n0.m, GX_TEXMTX0, GX_MTX3X4);
-        let m = vmtx.concat(&self.objs().jobjs[s].mtx);
+        let m = vmtx.concat(&self.jmtx(s));
         self.gx.load_pos_mtx_imm(&mtx(&m), GX_PNMTX1);
         let n1 = m.hsd_inverse_transpose();
         if lighting {
@@ -695,10 +730,12 @@ impl Ctx<'_> {
                     .inverse()
                     .unwrap_or_default()
             } else if xo.flags & jobj::SKELETON_ROOT != 0 {
-                xo.mtx.hsd_inverse_concat(&jo.mtx)
+                self.jmtx(x).hsd_inverse_concat(&self.jmtx(j))
             } else {
-                let n = xo.mtx.concat(&xo.envelopemtx.expect("no envelope matrix"));
-                n.hsd_inverse_concat(&jo.mtx)
+                let n = self
+                    .jmtx(x)
+                    .concat(&xo.envelopemtx.expect("no envelope matrix"));
+                n.hsd_inverse_concat(&self.jmtx(j))
             })
         };
         let Binding::Envelopes(envs) = &objs.pobjs[p].u else {
@@ -708,16 +745,22 @@ impl Ctx<'_> {
         for (i, env) in envs.iter().take(10).enumerate() {
             let first = env.first().expect("an empty envelope");
             let m = if first.weight >= 1.0 - FLT_EPSILON {
-                let e = &objs.jobjs[first.jobj.expect("an envelope without its joint")];
+                let ej = first.jobj.expect("an envelope without its joint");
+                let e = &objs.jobjs[ej];
                 match right {
-                    Some(_) => e.mtx.concat(&e.envelopemtx.unwrap_or(Mtx34::IDENTITY)),
-                    None => e.mtx,
+                    Some(_) => self
+                        .jmtx(ej)
+                        .concat(&e.envelopemtx.unwrap_or(Mtx34::IDENTITY)),
+                    None => self.jmtx(ej),
                 }
             } else {
                 let mut acc = Mtx34::default();
                 for e in env {
-                    let jp = &objs.jobjs[e.jobj.expect("an envelope without its joint")];
-                    let t = jp.mtx.concat(&jp.envelopemtx.unwrap_or(Mtx34::IDENTITY));
+                    let ej = e.jobj.expect("an envelope without its joint");
+                    let jp = &objs.jobjs[ej];
+                    let t = self
+                        .jmtx(ej)
+                        .concat(&jp.envelopemtx.unwrap_or(Mtx34::IDENTITY));
                     acc = t.scaled_add(&acc, e.weight);
                 }
                 acc
@@ -805,7 +848,11 @@ impl Ctx<'_> {
     /// current camera's by default).
     pub fn specular_init(&mut self, j: JObjId, vmtx: Option<&Mtx34>) {
         let vmtx = vmtx.copied().unwrap_or_else(|| self.hsd.view_mtx());
-        let pmtx = position_mtx(self.objs(), j, &vmtx);
+        self.hsd.motion.joints = self
+            .blend
+            .is_some_and(|b| self.hsd.motion.camera_blends && b.has_joint(self.objs(), j));
+        let pmtx = self.joint_position_mtx(j, &vmtx);
+        self.hsd.motion.joints = false;
         let objs = &self.game.objs;
         self.hsd.lights.setup_specular_init(self.gx, objs, &pmtx);
     }
@@ -813,19 +860,50 @@ impl Ctx<'_> {
     /// Draws a run of [`Draw::Shape`]s of one joint and pass, `HSD_JObjDispSub` for the
     /// display objects the pass drew, each through `HSD_DObjDisp`.
     pub fn joint_shapes(&mut self, run: &[Draw]) {
-        let Some(Draw::Shape {
+        let Some(&Draw::Shape {
             jobj: j,
+            dobj,
+            pobj,
             trsp: _,
             rendermode,
             vmtx,
-            ..
         }) = run.first()
         else {
             return;
         };
-        let (j, rendermode) = (*j, *rendermode);
-        let vmtx = vmtx.unwrap_or_else(|| self.hsd.view_mtx());
-        let pmtx = position_mtx(self.objs(), j, &vmtx);
+        // Between two ticks, a shape A drew too blends its joints; the run's shapes share
+        // the joint and pass, so the first's decides.
+        let key = (j, dobj, pobj);
+        let mut n = 0;
+        if self.blend.is_some() {
+            // Each shape's drawings counted; the run's first's decides.
+            for (i, s) in run.iter().enumerate() {
+                if let &Draw::Shape {
+                    jobj, dobj, pobj, ..
+                } = s
+                {
+                    let m = self.hsd.motion.next_shape((jobj, dobj, pobj));
+                    if i == 0 {
+                        n = m;
+                    }
+                }
+            }
+        }
+        self.hsd.motion.joints = self
+            .blend
+            .is_some_and(|b| self.hsd.motion.camera_blends && b.has_shape(key, n));
+        let vmtx = match self.blend {
+            Some(b) if self.hsd.motion.joints => {
+                let current_b = self
+                    .hsd
+                    .motion
+                    .camera_b
+                    .map_or(Mtx34::IDENTITY, |c| c.view_mtx);
+                b.shape_view(key, n, vmtx, &self.hsd.view_mtx(), &current_b)
+            }
+            _ => vmtx.unwrap_or_else(|| self.hsd.view_mtx()),
+        };
+        let pmtx = self.joint_position_mtx(j, &vmtx);
         let mut i = 0;
         while i < run.len() {
             let Draw::Shape { dobj: d, .. } = run[i] else {
@@ -838,6 +916,7 @@ impl Ctx<'_> {
             self.dobj_disp(j, d, &run[i..end], &vmtx, &pmtx, rendermode);
             i = end;
         }
+        self.hsd.motion.joints = false;
     }
 
     /// `HSD_DObjDisp` for the shapes the pass drew of a display object.

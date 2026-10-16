@@ -26,6 +26,7 @@ use melee_sim::vec::Vec3;
 
 use super::draw::Ctx;
 use super::state::STATE_ALL;
+use crate::blend::ParticleMotion;
 use crate::gx::enums::*;
 use crate::gx::{Color, Gx, TexObj, TlutObj};
 use crate::mem::Dynamic;
@@ -944,6 +945,21 @@ impl<'a> Ctx<'a> {
                 self.ps_point(d, id, kind)
             }
         } else {
+            // Between two ticks, a particle A drew too is drawn where it was at the frame's
+            // time, its size, turn and trail blended (`crate::blend`); point particles, which draw a run
+            // of particles at once, and tornado particles, whose trail their generator gives,
+            // stay where B has them.
+            let blended;
+            let p = match self.blend {
+                Some(b) if self.hsd.motion.camera_blends && kind & TORNADO == 0 => {
+                    let mut q = p.clone();
+                    let m = b.particle(id, p.idnum, p.bank, ParticleMotion::of(p));
+                    (q.pos, q.vel, q.size, q.rotate) = (m.pos, m.vel, m.size, m.rotate);
+                    blended = q;
+                    &blended
+                }
+                _ => p,
+            };
             if p.appsrt.is_some() {
                 self.ps_app_srt(d, p, kind);
             } else {

@@ -652,8 +652,23 @@ pub fn shot(r: &mut Running, gobj: GObjId) {
         put_away(r, gobj);
         return;
     }
+    // `samus_grapple_setup_pos`: whether `HSD_JObjSetupMatrix` rebuilds the tip's matrix
+    // under its parent decides what `it_802B9328`'s swing finds on the stack.
+    let slot = match lk(r.game, t).jobj {
+        Some(j)
+            if r.game.objs.jobjs[j].mtx_is_dirty()
+                && r.game.objs.jobjs[j].parent.is_some()
+                && r.game.objs.jobjs[j]
+                    .aobj
+                    .and_then(|o| r.game.objs.aobjs[o].hsd_obj)
+                    .is_none() =>
+        {
+            SwingSlot::SavedF14
+        }
+        _ => SwingSlot::Unknown("fn_802B805C with the tip's matrix not rebuilt under a parent"),
+    };
     let mut pos = joint_pos(r, t);
-    match lead(r, t, &mut pos, a, f) {
+    match lead(r, t, &mut pos, a, f, slot) {
         1 => {
             if r.game.fighter(f).motion_id == MS_AIR_CATCH {
                 r.enter_air_catch_hit(f);
@@ -1013,10 +1028,30 @@ fn hold_to(r: &mut Running, l: ItemLinkId, at: Vec3, d: Vec3, len: f64) {
     k.pos.z = mem(fp::fmadds(reg(d.z), len, reg(at.z)));
 }
 
+/// `it_803B8660`: the button sequence's swing hitbox, five hitbox command words (hitbox 0 of
+/// group 0 on bone 139, no damage, size 1200, angle 361, knockback growth 100).
+const SWING_HITBOX: [u32; 5] = [0x2C04_5800, 0x04B0_0000, 0, 0xB499_0012, 0x0020_008A];
+
+/// What the stack holds past the swing's hitbox words when its caller makes the swing
+/// (`it_802B7160` reads the grabbed-victim-only bit from `x134_4`, byte 0x15 of the caller's
+/// `itSamusGrapple_HitboxData`, which the caller never writes): the stale-stack rule
+/// (docs/engine.md).
+#[derive(Clone, Copy)]
+pub enum SwingSlot {
+    /// `it_802B9328`'s, when `fn_802B805C` has just rebuilt the tip's matrix under its parent
+    /// (`HSD_JObjSetupMatrix`, its dirty joint's `HSD_JObjMakeMatrix` ending in
+    /// `PSMTXConcat`): `PSMTXConcat`'s save of `f14` lands on the slot, and the game's code
+    /// never leaves `f14` live at that depth, so the word is 0.0's.
+    SavedF14,
+    /// Not followed, named by the frame: reading it stops.
+    Unknown(&'static str),
+}
+
 /// The ground beam's hitbox (the button sequence's, `x16` 1): with A on the ground she
 /// swings it (`it_802B7160` with `it_803B8660`), and it turns into the swing (`x16` 2); her
-/// hit status clears either way.
-fn ground_swing(r: &mut Running, f: GObjId) {
+/// hit status clears either way. The swing's grabbed-victim-only bit is what `slot` says the
+/// caller's stack holds there.
+fn ground_swing(r: &mut Running, f: GObjId, slot: SwingSlot) {
     let beam = r
         .game
         .fighter(f)
@@ -1034,14 +1069,29 @@ fn ground_swing(r: &mut Running, f: GObjId) {
     {
         return;
     }
+    r.fighter_clear_hitboxes(f);
     if r.game.fighter(f).input.pressed_buttons & PAD_A != 0 {
-        r.fighter_clear_hitboxes(f);
-        // `it_802B7160` with `it_803B8660`: its grabbed-victim-only bit comes from a stack
-        // byte the caller never sets.
-        unported_call("it_802B7160 (the button sequence's swing hitbox, a stack bit)");
-    } else {
-        r.fighter_clear_hitboxes(f);
+        let sixth = match slot {
+            // 0.0's high word: no bit set.
+            SwingSlot::SavedF14 => 0,
+            SwingSlot::Unknown(frame) => unported_call(&format!(
+                "it_802B7160: the swing's grabbed-victim-only bit, a stack byte {frame} leaves"
+            )),
+        };
+        let [a, b, c, d, e] = SWING_HITBOX;
+        let fid = r.game.fighter_id(f);
+        swing_hitbox(r, f, fid, [a, b, c, d, e, sixth]);
+        let v = item_mut(r.game, beam).xDD4_itemVar.samus_grapple();
+        let n = v.x16.get();
+        v.x16.set(n + 1);
     }
+}
+
+/// The fighter hitbox of a grapple swing, `it_802B7160`: a hitbox command's body
+/// ([`Running::fighter_hitbox_from`]) on the words its caller hands it.
+#[doc(alias = "it_802B7160")]
+fn swing_hitbox(r: &mut Running, f: GObjId, fid: crate::game::handles::FighterId, w: [u32; 6]) {
+    r.fighter_hitbox_from(f, fid, w);
 }
 
 /// The tip leads and the links follow, `it_802B9328`: first it attaches to her throw joint on
@@ -1051,7 +1101,14 @@ fn ground_swing(r: &mut Running, f: GObjId) {
 /// follows held between the link lengths, and the next one leaves once the point is a link
 /// length on. All out (3), the links chase the hand.
 #[doc(alias = "it_802B9328")]
-pub fn lead(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, f: GObjId) -> i32 {
+pub fn lead(
+    r: &mut Running,
+    l: ItemLinkId,
+    pos: &mut Vec3,
+    a: Attrs,
+    f: GObjId,
+    slot: SwingSlot,
+) -> i32 {
     let fid = r.game.fighter_id(f);
     let frame = r.game.fighters[fid.0].mv_f32(0);
     let motion = r.game.fighters[fid.0].motion_id;
@@ -1072,7 +1129,7 @@ pub fn lead(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, f: GObjId)
         k.coll_data.last_pos = k.coll_data.cur_pos;
         k.x2C_b0 = true;
     }
-    ground_swing(r, f);
+    ground_swing(r, f, slot);
     let next = lk(r.game, l).next;
     let beam = r.game.fighter(f).u.gobj_at(0x10).expect("the beam");
     if r.game.fighter(f).input.held_buttons[0] & PAD_Z != 0
@@ -1151,7 +1208,7 @@ pub fn lead(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, f: GObjId)
 /// chase the hand.
 #[doc(alias = "it_802B99A0")]
 pub fn fall_back(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, f: GObjId) -> i32 {
-    ground_swing(r, f);
+    ground_swing(r, f, SwingSlot::Unknown("it_802B99A0"));
     let next = lk(r.game, l).next;
     let vy = lk(r.game, l).vel.y;
     let s = swing(r, vy, fp::frsp(0.6));
@@ -1216,7 +1273,7 @@ fn slide(v: f64, drag: f64) -> f64 {
 /// one before (and no closer than the shortest), the last sliding to a stop.
 #[doc(alias = "it_802B9CE8")]
 pub fn hang_links(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, f: GObjId) {
-    ground_swing(r, f);
+    ground_swing(r, f, SwingSlot::Unknown("it_802B9CE8"));
     let mut cur = l;
     let mut prev = lk(r.game, cur).prev;
     while let Some(p) = prev {

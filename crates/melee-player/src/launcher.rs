@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 
 use melee_sim::game::roster::{self, CHARACTERS, STAGES};
 
+use crate::pacing::Mode;
 use crate::present::{Aspect, Gpu, Present, Shown};
 
 /// A match the launcher picked.
@@ -52,6 +53,7 @@ pub struct Given {
     pub fullscreen: bool,
     pub present: bool,
     pub added_delay: bool,
+    pub high_refresh: bool,
 }
 
 /// The form and what it last had to say.
@@ -66,6 +68,8 @@ pub struct Form {
     /// How frames reach the display, and the input latency added back on purpose (ticks).
     pub present: Present,
     pub added_delay: u32,
+    /// How frames are drawn between ticks.
+    pub high_refresh: Mode,
 }
 
 impl Form {
@@ -84,6 +88,7 @@ impl Form {
             aspect,
             present: Present::Mailbox,
             added_delay: 0,
+            high_refresh: Mode::Off,
         }
     }
 
@@ -111,8 +116,12 @@ impl Form {
             Present::Immediate => "immediate",
         };
         text += &format!(
-            "stocks = {}\nminutes = {}\naspect = {aspect}\nfullscreen = {}\npresent = {present}\nadded-delay = {}\n",
-            c.stocks, c.minutes, self.fullscreen, self.added_delay
+            "stocks = {}\nminutes = {}\naspect = {aspect}\nfullscreen = {}\npresent = {present}\nadded-delay = {}\nhigh-refresh = {}\n",
+            c.stocks,
+            c.minutes,
+            self.fullscreen,
+            self.added_delay,
+            self.high_refresh.key()
         );
         text
     }
@@ -168,6 +177,11 @@ impl Form {
                 "added-delay" if !given.added_delay => {
                     if let Some(n) = v.parse().ok().filter(|n| *n <= 15) {
                         self.added_delay = n;
+                    }
+                }
+                "high-refresh" if !given.high_refresh => {
+                    if let Ok(m) = Mode::parse(v) {
+                        self.high_refresh = m;
                     }
                 }
                 _ => {}
@@ -261,6 +275,17 @@ impl Form {
                                     .range(0..=15)
                                     .suffix(" frames"),
                             );
+                            ui.end_row();
+                            ui.label("High refresh");
+                            let mode = &mut self.high_refresh;
+                            egui::ComboBox::from_id_salt("high-refresh")
+                                .selected_text(mode.name())
+                                .width(200.0)
+                                .show_ui(ui, |ui| {
+                                    for (m, name) in Mode::CHOICES {
+                                        ui.selectable_value(mode, m, name);
+                                    }
+                                });
                             ui.end_row();
                         });
                 });
@@ -593,6 +618,7 @@ mod tests {
         form.choice.stage = STAGES.last().unwrap().kind;
         form.present = Present::Immediate;
         form.added_delay = 2;
+        form.high_refresh = Mode::Interpolate;
         form
     }
 
@@ -603,23 +629,28 @@ mod tests {
             a.fullscreen,
             a.present,
             a.added_delay,
+            a.high_refresh,
         ) == (
             b.choice.clone(),
             b.aspect,
             b.fullscreen,
             b.present,
             b.added_delay,
+            b.high_refresh,
         )
     }
 
     #[test]
     fn the_last_match_comes_back() {
         for aspect in Aspect::CHOICES.map(|(a, _)| a) {
-            let mut was = picked();
-            was.aspect = aspect;
-            let mut form = Form::new(4, 8, false, Aspect::GAME);
-            form.restore(&was.save(), &Given::default());
-            assert!(same(&form, &was), "{}", was.save());
+            for mode in Mode::CHOICES.map(|(m, _)| m) {
+                let mut was = picked();
+                was.aspect = aspect;
+                was.high_refresh = mode;
+                let mut form = Form::new(4, 8, false, Aspect::GAME);
+                form.restore(&was.save(), &Given::default());
+                assert!(same(&form, &was), "{}", was.save());
+            }
         }
     }
 
@@ -640,7 +671,7 @@ mod tests {
     #[test]
     fn an_unreadable_last_match_changes_nothing() {
         let mut form = Form::new(4, 8, false, Aspect::GAME);
-        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\n";
+        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\nhigh-refresh = sometimes\n";
         form.restore(text, &Given::default());
         assert!(same(&form, &Form::new(4, 8, false, Aspect::GAME)));
     }

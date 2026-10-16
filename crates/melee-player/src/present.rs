@@ -518,14 +518,14 @@ impl Shown {
     }
 
     /// Shows a frame now, with `over` drawn over it (given the image's view, width and
-    /// height): how long the swap chain's next image took to come, and when the present call
-    /// returned.
+    /// height): how long the swap chain's next image took to come, when it came, and when the
+    /// present call returned.
     pub fn present(
         &mut self,
         gpu: &Gpu,
         frame: &melee_gpu::Frame,
         over: impl FnOnce(&wgpu::TextureView, u32, u32),
-    ) -> Option<(Duration, Instant)> {
+    ) -> Option<(Duration, Instant, Instant)> {
         let texture = frame.texture.as_ref()?;
         let asked = Instant::now();
         let out = match self.surface.get_current_texture() {
@@ -536,14 +536,15 @@ impl Shown {
                 return None;
             }
         };
-        let acquire = asked.elapsed();
+        let acquired = Instant::now();
+        let acquire = acquired - asked;
         let view = out.texture.create_view(&Default::default());
         self.blit
             .draw(gpu, texture, &view, self.config.width, self.config.height);
         over(&view, self.config.width, self.config.height);
         self.window.pre_present_notify();
         gpu.queue.present(out);
-        Some((acquire, Instant::now()))
+        Some((acquire, acquired, Instant::now()))
     }
 }
 

@@ -224,6 +224,25 @@ impl Running<'_> {
             self.smash_since_hitbox(f);
             return;
         }
+        self.fighter_hitbox_from(gobj, f, w);
+        let id = bits(w[0], 6, 3) as usize;
+        self.cmd_skip(f, 5);
+        let late = self
+            .game
+            .world
+            .current_proc()
+            .is_some_and(|p| self.game.world.procs[p.0].s_link > 9);
+        if late {
+            self.hitbox_follow(gobj, id);
+        }
+        self.smash_since_hitbox(f);
+    }
+
+    /// A fighter hitbox from a hitbox command's words (`ftAction_8007121C`'s body, and the
+    /// grapple beam's swing, `it_802B7160`): its group's victims, bone, damage, size, offset,
+    /// angle, knockback, element, shield damage, sounds and whom it hits, the grabbed-victim-only
+    /// bit from the sixth word.
+    pub(crate) fn fighter_hitbox_from(&mut self, gobj: GObjId, f: FighterId, w: [u32; 6]) {
         let id = bits(w[0], 6, 3) as usize;
         let group = bits(w[0], 9, 3);
         let fp = &mut self.game.fighters[f.0];
@@ -291,16 +310,6 @@ impl Running<'_> {
         h.x42_b1 = true;
         h.x42_b2 = false;
         h.x43_b2 = false;
-        self.cmd_skip(f, 5);
-        let late = self
-            .game
-            .world
-            .current_proc()
-            .is_some_and(|p| self.game.world.procs[p.0].s_link > 9);
-        if late {
-            self.hitbox_follow(gobj, id);
-        }
-        self.smash_since_hitbox(f);
     }
 
     /// A hitbox's damage, `ftColl_8007ABD0`: scaled by the fighter's height and a released

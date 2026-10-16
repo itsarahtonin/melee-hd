@@ -247,7 +247,11 @@ impl Ctx<'_> {
         let sh = &self.game.objs.shadows[s.0];
         let (img, intensity) = (sh.image, sh.intensity);
         let camera = sh.camera.expect("a shadow without a camera");
-        let co = self.game.objs.cobjs[camera].clone_view();
+        // Between two ticks, the shadow camera as blended (`crate::blend`).
+        let co = match (self.blend, self.hsd.camera) {
+            (Some(_), Some(v)) => v.clone_view(),
+            _ => self.game.objs.cobjs[camera].clone_view(),
+        };
         self.shadow_init(s);
         self.hsd.tev.init_tev();
         let tev = HsdTevDesc {
@@ -370,15 +374,24 @@ trait CloneView {
 
 impl CloneView for cobj::CObj {
     fn clone_view(&self) -> (f32, f32, f32, f32, f32) {
-        let [p0, p1, p2, p3] = self.projection;
-        match self.projection_type {
-            cobj::PERSPECTIVE => {
-                // `HSD_CObjGetTop` and the others for a perspective camera.
-                let top =
-                    self.near * melee_sim::math::tan(0.5 * p0 * (std::f32::consts::PI / 180.0));
-                (top, -top, -top * p1, top * p1, self.near)
-            }
-            _ => (p0, p1, p2, p3, self.near),
+        bounds(self.projection_type, self.projection, self.near)
+    }
+}
+
+impl CloneView for CameraView {
+    fn clone_view(&self) -> (f32, f32, f32, f32, f32) {
+        bounds(self.projection_type, self.projection, self.near)
+    }
+}
+
+fn bounds(ty: u8, projection: [f32; 4], near: f32) -> (f32, f32, f32, f32, f32) {
+    let [p0, p1, p2, p3] = projection;
+    match ty {
+        cobj::PERSPECTIVE => {
+            // `HSD_CObjGetTop` and the others for a perspective camera.
+            let top = near * melee_sim::math::tan(0.5 * p0 * (std::f32::consts::PI / 180.0));
+            (top, -top, -top * p1, top * p1, near)
         }
+        _ => (p0, p1, p2, p3, near),
     }
 }

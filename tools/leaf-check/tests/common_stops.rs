@@ -235,14 +235,23 @@ fn wanted(name: &str) -> bool {
 /// Every saved call of each function, run as it was saved.
 fn as_saved(counts: &mut BTreeMap<u32, usize>) {
     let no = stubs();
+    let mut sets = Vec::new();
     for (_, name) in functions() {
         if ELSEWHERE.contains(&name.as_str()) || !wanted(&name) {
             continue;
         }
         for dir in dirs() {
-            if saved_calls(&dir, &name).is_empty() {
-                continue;
+            let n = saved_calls(&dir, &name).len();
+            if n > 0 {
+                sets.push((name.clone(), dir, n));
             }
+        }
+    }
+    let results = leaf_check::each_set(
+        &sets,
+        |s| s.2,
+        |(name, dir, _)| {
+            let name = name.as_str();
             let prepare = |_: &mut Call, _: usize| {};
             // `ftCo_80098C9C`, the shield break's inline copy that an overpowered reflector
             // runs (no replay at hand has one), runs from the shield breaks' states too.
@@ -278,10 +287,11 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
                     });
                 }
             }
-            for reports in check_variants(&dir, &name, &variants) {
-                tally(&reports, counts);
-            }
-        }
+            check_variants(dir, name, &variants)
+        },
+    );
+    for reports in results.iter().flatten() {
+        tally(reports, counts);
     }
 }
 
@@ -324,32 +334,38 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
     let rounds = targets.len().div_ceil(total).max(4);
     let no = stubs();
     let targets = &targets;
-    for (j, (src, dir, _)) in runs.iter().enumerate() {
-        let before: usize = runs[..j].iter().map(|r| r.2).sum();
-        let prepares: Vec<Box<Prepare>> = (0..rounds)
-            .map(|round| -> Box<Prepare> {
-                let shift = round * total + before;
-                Box::new(move |call: &mut Call, i: usize| {
-                    let (a, n) = &targets[(shift + i) % targets.len()];
-                    call.addr = *a;
-                    if std::env::var_os("COMMON_STOPS_TRACE").is_some() {
-                        eprintln!("{src} #{i} runs {n}");
-                    }
-                    vary(call, shift + i);
+    let jobs: Vec<(usize, &(String, String, usize))> = runs.iter().enumerate().collect();
+    let results = leaf_check::each_set(
+        &jobs,
+        |j| j.1.2 * rounds,
+        |&(j, (src, dir, _))| {
+            let before: usize = runs[..j].iter().map(|r| r.2).sum();
+            let prepares: Vec<Box<Prepare>> = (0..rounds)
+                .map(|round| -> Box<Prepare> {
+                    let shift = round * total + before;
+                    Box::new(move |call: &mut Call, i: usize| {
+                        let (a, n) = &targets[(shift + i) % targets.len()];
+                        call.addr = *a;
+                        if std::env::var_os("COMMON_STOPS_TRACE").is_some() {
+                            eprintln!("{src} #{i} runs {n}");
+                        }
+                        vary(call, shift + i);
+                    })
                 })
-            })
-            .collect();
-        let variants: Vec<Variant> = prepares
-            .iter()
-            .map(|prepare| Variant {
-                prepare: &**prepare,
-                ours: &run_one,
-                stubs: &no,
-            })
-            .collect();
-        for reports in check_variants(dir, src, &variants) {
-            tally(&reports, counts);
-        }
+                .collect();
+            let variants: Vec<Variant> = prepares
+                .iter()
+                .map(|prepare| Variant {
+                    prepare: &**prepare,
+                    ours: &run_one,
+                    stubs: &no,
+                })
+                .collect();
+            check_variants(dir, src, &variants)
+        },
+    );
+    for reports in results.iter().flatten() {
+        tally(reports, counts);
     }
 }
 

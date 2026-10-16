@@ -9,6 +9,7 @@
 //! melee-hd --launcher-shot FILE.png [--size WxH] draws the launcher to a PNG
 //! latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate]
 //!          [--added-delay FRAMES] [--audio-exclusive]
+//! frames:  [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]
 //! ```
 //!
 //! The disc comes from `--disc`, else `SSBM_DISC`, else the settings folder, where the disc
@@ -34,6 +35,11 @@
 //! latency back on purpose, `--latency-log FILE` measures it all ([`latency`]), and F3 shows
 //! the measures over the frame.
 //!
+//! `--high-refresh interpolate` draws frames at the display's rate between the last two ticks,
+//! each placed by when it reaches the screen ([`pacing`]); `extrapolate` draws them between the
+//! latest tick and a prediction of the next (`melee_render::predict`); off, the default, draws
+//! a frame a tick.
+//!
 //! The release build on Windows opens no console window; started from a terminal it prints to
 //! the terminal, and double-clicked it logs to the settings folder ([`console`]).
 
@@ -43,7 +49,10 @@
 mod console;
 mod latency;
 mod launcher;
+mod pacing;
 mod pipelines;
+#[cfg(test)]
+mod predict_tests;
 mod present;
 mod settings;
 mod sound;
@@ -53,8 +62,10 @@ use std::time::{Duration, Instant};
 
 use melee_data::disc::Disc;
 use melee_input::{Inputs, Key};
+use melee_render::blend::{Blend, Capture};
 use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
+use melee_render::predict::{Cost, Predictor};
 use melee_sim::audio::clock::DiscSpeed;
 use melee_sim::game::roster;
 use melee_sim::game::vs_match::{DiscFile, Match, Player, Settings};
@@ -88,6 +99,11 @@ struct Args {
     audio_exclusive: bool,
     /// Starts with the latency overlay shown (F3 toggles it).
     latency_overlay: bool,
+    /// How frames are drawn between ticks.
+    high_refresh: pacing::Mode,
+    /// With `--bench` and Interpolate or Extrapolate, frames drawn a tick (4 for a 240 Hz
+    /// display).
+    frames_per_tick: u32,
     bench: Option<u32>,
     size: (u32, u32),
     /// Quit after this many ticks.
@@ -127,6 +143,7 @@ fn usage() -> String {
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive]\n\
+         frames: [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
          with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match\n\
          the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
         names(roster::CHARACTERS.iter().map(|c| c.keys[0]).collect()),
@@ -148,6 +165,8 @@ fn parse_args() -> Result<Args, String> {
         added_delay: 0,
         audio_exclusive: false,
         latency_overlay: false,
+        high_refresh: pacing::Mode::Off,
+        frames_per_tick: 4,
         bench: None,
         size: (1280, 960),
         ticks: None,
@@ -220,6 +239,17 @@ fn parse_args() -> Result<Args, String> {
             }
             "--audio-exclusive" => a.audio_exclusive = true,
             "--latency-overlay" => a.latency_overlay = true,
+            "--high-refresh" => {
+                a.high_refresh = pacing::Mode::parse(&value()?)?;
+                a.given.high_refresh = true;
+            }
+            "--frames-per-tick" => {
+                a.frames_per_tick = value()?
+                    .parse()
+                    .ok()
+                    .filter(|&n| n >= 1)
+                    .ok_or("--frames-per-tick N")?
+            }
             "--one-thread" => a.one_thread = true,
             "--msaa" => {
                 a.msaa = match value()?.as_str() {
@@ -276,14 +306,6 @@ struct Session {
 impl Session {
     fn start(a: &Args) -> Result<Session, String> {
         let disc = Disc::open(&a.disc).map_err(|e| format!("{}: {}", a.disc, settings::why(&e)))?;
-        let mut load = |name: &str| DiscFile {
-            entrynum: disc
-                .entrynum(name)
-                .unwrap_or_else(|e| panic!("{name}: {e}")),
-            bytes: disc
-                .read_file(name)
-                .unwrap_or_else(|e| panic!("{name}: {e}")),
-        };
         let (settings, replay) = match &a.replay {
             Some(path) => {
                 let bytes = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
@@ -320,9 +342,27 @@ impl Session {
             disc: a.disc_speed,
             ..settings
         };
+        Session::begin(&disc, &settings, replay, a.bench.is_none())
+    }
+
+    /// Starts the match `settings` set from `disc`, with its sound mixed (and played when
+    /// `play`), driven by `replay` if there is one.
+    fn begin(
+        disc: &Disc,
+        settings: &Settings,
+        replay: Option<Replay>,
+        play: bool,
+    ) -> Result<Session, String> {
+        let mut load = |name: &str| DiscFile {
+            entrynum: disc
+                .entrynum(name)
+                .unwrap_or_else(|e| panic!("{name}: {e}")),
+            bytes: disc
+                .read_file(name)
+                .unwrap_or_else(|e| panic!("{name}: {e}")),
+        };
         let (m, sound) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let play = a.bench.is_none();
-            sound::start(&settings, play, &mut load)
+            sound::start(settings, play, &mut load)
         }))
         .map_err(|p| format!("the match couldn't start: {}", panic_text(&p)))??;
         Ok(Session {
@@ -348,6 +388,20 @@ impl Session {
         }
         self.ended |= f.ended;
         f
+    }
+
+    /// Extrapolate's prediction of the next tick, on the predictor's copy of the match: with
+    /// `pads` held (a replay's next frame for a replay). The session itself, its sound
+    /// included, is only read.
+    fn predict(
+        &self,
+        predictor: &mut Predictor,
+        pads: [melee_sim::input::pad::PadStatus; 4],
+    ) -> Result<Cost, String> {
+        match &self.replay {
+            Some(r) => predictor.predict(&self.m, |c| c.step_replay(&mut melee_slippi::Device(r))),
+            None => predictor.predict(&self.m, |c| c.step(pads)),
+        }
     }
 }
 
@@ -393,6 +447,9 @@ struct Stats {
     frames: u64,
     work: Duration,
     worst: Duration,
+    /// Extrapolate's predictions and their time.
+    predictions: u64,
+    predicting: Duration,
     since: Option<Instant>,
 }
 
@@ -405,8 +462,16 @@ impl Stats {
         let t = since.elapsed();
         if t >= Duration::from_secs(5) {
             let s = t.as_secs_f64();
+            let predicting = if self.predictions > 0 {
+                format!(
+                    ", predicting a tick {:.2} ms average",
+                    self.predicting.as_secs_f64() * 1000.0 / self.predictions as f64
+                )
+            } else {
+                String::new()
+            };
             eprintln!(
-                "{:.2} ticks/s, {:.2} frames/s, tick+frame {:.2} ms average, {:.2} ms worst",
+                "{:.2} ticks/s, {:.2} frames/s, tick+frame {:.2} ms average, {:.2} ms worst{predicting}",
                 self.ticks as f64 / s,
                 self.frames as f64 / s,
                 self.work.as_secs_f64() * 1000.0 / self.frames.max(1) as f64,
@@ -462,6 +527,22 @@ struct App {
     /// The last second's latency, and the overlay showing it (F3), while it's on.
     live: latency::Live,
     overlay: Option<launcher::Painter>,
+    /// How frames are drawn between ticks, and with Interpolate or Extrapolate, when.
+    mode: pacing::Mode,
+    pacer: Option<pacing::Pacer>,
+    /// With Interpolate or Extrapolate: the latest tick's frame and when the tick was due.
+    latest: Option<(melee_sim::game::vs_match::Frame, Instant)>,
+    /// With Interpolate: the tick before's transforms (A) and the latest's (B), kept for the
+    /// next tick.
+    before: Capture,
+    after: Capture,
+    /// With Extrapolate: the next tick, predicted.
+    predictor: Predictor,
+    /// With Extrapolate: a prediction stopped, which is said once.
+    prediction_failed: bool,
+    /// With Interpolate or Extrapolate: a tick's latency measures, waiting for the first frame
+    /// after it.
+    pending: Option<latency::Tick>,
 }
 
 impl App {
@@ -506,11 +587,31 @@ impl App {
                 session.ended = true;
             }
             let mut frame = None;
-            if !f.draws.is_empty() {
-                frame = self.draw_frame(&f.draws, start);
-                self.stats.frame(start.elapsed());
+            if self.mode.paced() {
+                let rendered = !f.draws.is_empty();
+                if rendered {
+                    if self.mode == pacing::Mode::Interpolate {
+                        // B is this tick; A, the tick before, whose transforms were kept then.
+                        std::mem::swap(&mut self.before, &mut self.after);
+                        let m = &self.session.as_ref().expect("a match").m;
+                        self.after.fill(&m.game, &f.draws);
+                    }
+                    if let Some((old, _)) = self.latest.replace((f, due)) {
+                        self.session.as_mut().expect("a match").m.recycle(old);
+                    }
+                } else {
+                    self.session.as_mut().expect("a match").m.recycle(f);
+                }
+                if self.mode == pacing::Mode::Extrapolate {
+                    self.predict(rendered, pads);
+                }
+            } else {
+                if !f.draws.is_empty() {
+                    frame = self.draw_frame(&f.draws, start, None).map(|(f, _)| f);
+                    self.stats.frame(start.elapsed());
+                }
+                self.session.as_mut().expect("a match").m.recycle(f);
             }
-            self.session.as_mut().expect("a match").m.recycle(f);
             let t = latency::Tick {
                 at: Some(start),
                 late: start.saturating_duration_since(due),
@@ -520,19 +621,146 @@ impl App {
                 frame,
                 audio,
             };
-            self.live.tick(t);
-            if let Some(log) = &mut self.latency {
-                log.tick(t);
+            if self.mode.paced() {
+                // Logged with the first frame drawn after it.
+                if let Some(p) = self.pending.replace(t) {
+                    self.log_tick(p);
+                }
+            } else {
+                self.log_tick(t);
             }
         }
     }
 
-    /// Draws and presents a frame: when its stages finished, from `start`, its tick's start.
+    /// With Extrapolate, after a tick that ran with `pads`: the next tick predicted with the
+    /// controllers it will see if they're known (an added delay has read them), else `pads`
+    /// held. After a tick without a display pass the frames draw the latest as it is.
+    fn predict(&mut self, rendered: bool, pads: [melee_sim::input::pad::PadStatus; 4]) {
+        if !rendered {
+            self.predictor.forget();
+            return;
+        }
+        let next = self.delay.next().unwrap_or(pads);
+        let session = self.session.as_ref().expect("a match");
+        match session.predict(&mut self.predictor, next) {
+            Ok(cost) => {
+                self.stats.predictions += 1;
+                self.stats.predicting += cost.total();
+            }
+            Err(why) if !self.prediction_failed => {
+                eprintln!("the next tick's prediction stopped (frames draw the latest): {why}");
+                self.prediction_failed = true;
+            }
+            Err(_) => {}
+        }
+    }
+
+    fn log_tick(&mut self, t: latency::Tick) {
+        self.live.tick(t);
+        if let Some(log) = &mut self.latency {
+            log.tick(t);
+        }
+    }
+
+    /// With Interpolate or Extrapolate, draws the frame that's due, if one is: between the last
+    /// two ticks, or the latest and the next predicted, at the fraction its display time gives
+    /// ([`pacing`]).
+    fn draw_due(&mut self) {
+        let now = Instant::now();
+        let (Some(pacer), Some((_, due))) = (&mut self.pacer, &self.latest) else {
+            return;
+        };
+        if now < pacer.due() {
+            return;
+        }
+        let t = pacer.start(now, *due);
+        let (f, due) = self.latest.take().expect("a frame");
+        let drawn = if self.mode == pacing::Mode::Extrapolate {
+            let predictor = std::mem::take(&mut self.predictor);
+            let drawn = self.draw_frame(&f.draws, now, Some(predictor.blend(t)));
+            self.predictor = predictor;
+            drawn
+        } else {
+            let before = std::mem::take(&mut self.before);
+            let blend = Blend { from: &before, t };
+            let drawn = self.draw_frame(&f.draws, now, Some(blend));
+            self.before = before;
+            drawn
+        };
+        self.latest = Some((f, due));
+        self.stats.frame(now.elapsed());
+        if let Some((times, acquired)) = drawn {
+            if let Some(p) = &mut self.pacer {
+                p.presented(now, times.acquire, acquired, now + times.presented);
+            }
+            if let Some(mut p) = self.pending.take() {
+                p.frame = Some(times);
+                self.log_tick(p);
+            }
+        }
+    }
+
+    /// The display's refresh period and whether frames wait for a refresh, for the pacer.
+    fn display_refresh(&self) -> (Duration, bool) {
+        let Some(s) = &self.shown else {
+            return (pacing::refresh_period(None), false);
+        };
+        let hz = s
+            .window
+            .current_monitor()
+            .and_then(|m| m.refresh_rate_millihertz());
+        (
+            pacing::refresh_period(hz),
+            s.present_mode() == wgpu::PresentMode::Fifo,
+        )
+    }
+
+    /// Starts drawing frames as `mode` says, from the next tick.
+    fn start_pacing(&mut self, mode: pacing::Mode) {
+        self.mode = mode;
+        self.latest = None;
+        self.pending = None;
+        self.before.clear();
+        self.after.clear();
+        self.predictor.clear();
+        self.prediction_failed = false;
+        self.pacer = mode.paced().then(|| {
+            let (refresh, fifo) = self.display_refresh();
+            eprintln!(
+                "high refresh: {}, display at {:.2} Hz",
+                mode.key(),
+                1.0 / refresh.as_secs_f64()
+            );
+            pacing::Pacer::new(
+                Duration::from_secs_f64(1.0 / TICK_RATE),
+                refresh,
+                fifo,
+                Instant::now(),
+            )
+        });
+    }
+
+    /// The display may have changed its rate (another monitor, fullscreen).
+    fn update_refresh(&mut self) {
+        if self.pacer.is_some() {
+            let (refresh, fifo) = self.display_refresh();
+            if let Some(p) = &mut self.pacer {
+                if p.refresh() != refresh {
+                    eprintln!("display at {:.2} Hz", 1.0 / refresh.as_secs_f64());
+                }
+                p.set_refresh(refresh, fifo);
+            }
+        }
+    }
+
+    /// Draws and presents a frame, between two ticks with a blend: when its stages finished,
+    /// from `start` (its tick's start, or the frame's), and when the swap chain's image came.
     fn draw_frame(
         &mut self,
         draws: &[melee_sim::hsd::display::Draw],
         start: Instant,
-    ) -> Option<latency::FrameTimes> {
+        blend: Option<Blend<'_>>,
+    ) -> Option<(latency::FrameTimes, Instant)> {
         // The internal resolution follows the window's size unless `--scale` fixed it, and
         // the EFB's width the aspect: the renderer's EFB is made again at a new one, in place.
         let scale = scale_for(self.args.scale, self.window_size, self.aspect);
@@ -546,7 +774,7 @@ impl App {
             }
         }
         let m = &self.session.as_ref().expect("a match").m;
-        let fifo = self.frames.frame(&m.game, &m.data, draws);
+        let fifo = self.frames.frame_blended(&m.game, &m.data, draws, blend);
         let gpu = self.renderer.get_or_insert_with(|| {
             gpu_for(
                 pipelines::renderer(&self.gpu, self.scale, self.msaa, self.aspect),
@@ -561,16 +789,19 @@ impl App {
                 .text(&format!("{:?}", shown.present_mode()), self.delay.frames())
         });
         let (gpu, overlay) = (&self.gpu, &mut self.overlay);
-        let (acquire, presented) = shown.present(gpu, &frame, |view, w, h| {
+        let (acquire, acquired, presented) = shown.present(gpu, &frame, |view, w, h| {
             if let (Some(p), Some(text)) = (overlay, text) {
                 latency::overlay(p, gpu, &text, view, w, h);
             }
         })?;
-        Some(latency::FrameTimes {
-            rendered,
-            acquire,
-            presented: presented.saturating_duration_since(start),
-        })
+        Some((
+            latency::FrameTimes {
+                rendered,
+                acquire,
+                presented: presented.saturating_duration_since(start),
+            },
+            acquired,
+        ))
     }
 
     /// Saves the renderer's pipelines and lets it go, with the match.
@@ -625,6 +856,7 @@ impl App {
         let Some(l) = &mut self.launcher else { return };
         let aspect = l.form.aspect;
         let (present, added_delay) = (l.form.present, l.form.added_delay);
+        let high_refresh = l.form.high_refresh;
         settings::write(settings::LAST_MATCH, &l.form.save());
         let c = &l.form.choice;
         let mut args = self.args.clone();
@@ -661,6 +893,7 @@ impl App {
                 self.ticks = 0;
                 self.stats = Stats::default();
                 self.next_tick = Instant::now();
+                self.start_pacing(high_refresh);
             }
             Err(e) => {
                 eprintln!("{e}");
@@ -672,6 +905,7 @@ impl App {
     /// Leaves the match (its sound stops with it) for the launcher.
     fn back_to_launcher(&mut self) {
         eprintln!("back to the launcher");
+        self.latest = None;
         self.session = None;
         self.drop_renderer();
         if let Some(l) = &mut self.launcher {
@@ -709,6 +943,9 @@ impl ApplicationHandler for App {
             self.next_tick = Instant::now();
             if self.args.latency_overlay {
                 self.toggle_overlay();
+            }
+            if self.session.is_some() {
+                self.start_pacing(self.args.high_refresh);
             }
         }
     }
@@ -761,7 +998,11 @@ impl ApplicationHandler for App {
                 self.quit = true;
                 event_loop.exit();
             }
-            WindowEvent::Resized(size) => self.resized(size.width, size.height),
+            WindowEvent::Resized(size) => {
+                self.resized(size.width, size.height);
+                self.update_refresh();
+            }
+            WindowEvent::Moved(_) | WindowEvent::ScaleFactorChanged { .. } => self.update_refresh(),
             WindowEvent::ModifiersChanged(m) => self.alt = m.state().alt_key(),
             WindowEvent::RedrawRequested if in_launcher => self.redraw_launcher(),
             WindowEvent::KeyboardInput {
@@ -810,7 +1051,12 @@ impl ApplicationHandler for App {
         if self.session.is_some() {
             self.run_due();
             if !self.ended() {
-                event_loop.set_control_flow(ControlFlow::WaitUntil(self.next_tick));
+                self.draw_due();
+                let wake = match &self.pacer {
+                    Some(p) if self.latest.is_some() => self.next_tick.min(p.due()),
+                    _ => self.next_tick,
+                };
+                event_loop.set_control_flow(ControlFlow::WaitUntil(wake));
                 return;
             }
             eprintln!("the match ended");
@@ -864,6 +1110,9 @@ fn scale_for(asked: u32, size: (u32, u32), aspect: present::Aspect) -> u32 {
 /// Plays `ticks` ticks headless, drawing each frame and presenting it to an offscreen target
 /// of `size`, and reports the time a tick with its frame takes.
 fn bench(args: &Args, ticks: u32) -> ExitCode {
+    if args.high_refresh.paced() {
+        return bench_paced(args, ticks);
+    }
     let mut session = match Session::start(args) {
         Ok(s) => s,
         Err(e) => {
@@ -1011,12 +1260,165 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     ExitCode::SUCCESS
 }
 
+/// `--bench` with Interpolate or Extrapolate: plays `ticks` ticks headless and after each draws
+/// `--frames-per-tick` frames between it and the tick before (Interpolate) or the next tick
+/// predicted (Extrapolate), at t = 0, 1/N ... (N-1)/N, as a display N times faster than the
+/// ticks shows them, and reports what keeping a tick's transforms (and predicting the next) and
+/// drawing a frame take.
+fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
+    let mut session = match Session::start(args) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let gpu = present::Gpu::new();
+    let mut target = present::Offscreen::new(&gpu, args.size.0, args.size.1);
+    let scale = scale_for(args.scale, args.size, args.aspect);
+    let mut r = pipelines::renderer(&gpu, scale, args.msaa, args.aspect);
+    r.xfb_readback = args.shot.is_some();
+    let mut renderer = gpu_for(r, args.one_thread);
+    let mut frames = Frames::new();
+    frames.space.load_dol(&session.dol);
+    frames.hsd.widescreen = args.aspect.widescreen();
+    present::set_aspect(args.aspect.shown);
+    let pads = [melee_sim::input::pad::PadStatus::default(); 4];
+    let per_tick = args.frames_per_tick;
+    let extrapolate = args.high_refresh == pacing::Mode::Extrapolate;
+    let (mut before, mut after) = (Capture::default(), Capture::default());
+    let mut predictor = Predictor::default();
+    // Each prediction's parts, and a tick with its prediction.
+    let mut costs: Vec<Cost> = Vec::with_capacity(ticks as usize);
+    let mut ticked: Vec<Duration> = Vec::with_capacity(ticks as usize);
+    let (mut sim, mut kept) = (Duration::ZERO, Duration::ZERO);
+    let mut parts = [Duration::ZERO; 3];
+    let mut drawing: Vec<Duration> = Vec::with_capacity((ticks * per_tick) as usize);
+    let mut presented: Vec<Duration> = Vec::with_capacity((ticks * per_tick) as usize);
+    let mut last = None;
+    let mut rendered = 0u32;
+    for _ in 0..ticks {
+        let t0 = Instant::now();
+        let f = session.tick(pads);
+        let t1 = Instant::now();
+        sim += t1 - t0;
+        if !f.draws.is_empty() {
+            if extrapolate {
+                match session.predict(&mut predictor, pads) {
+                    Ok(cost) => {
+                        costs.push(cost);
+                        ticked.push(t1 - t0 + cost.total());
+                    }
+                    Err(why) => eprintln!("the prediction stopped: {why}"),
+                }
+            } else {
+                std::mem::swap(&mut before, &mut after);
+                after.fill(&session.m.game, &f.draws);
+            }
+            let m = &session.m;
+            let t2 = Instant::now();
+            kept += t2 - t1;
+            rendered += 1;
+            for k in 0..per_tick {
+                let t = k as f32 / per_tick as f32;
+                let blend = if extrapolate {
+                    predictor.blend(t)
+                } else {
+                    Blend { from: &before, t }
+                };
+                let ta = Instant::now();
+                let fifo = frames.frame_blended(&m.game, &m.data, &f.draws, Some(blend));
+                let tb = Instant::now();
+                let images = renderer.run(&frames.space, &m.data, &fifo, None);
+                let tc = Instant::now();
+                if let Some(frame) = images.into_iter().last() {
+                    target.present(&gpu, &frame);
+                    last = Some(frame);
+                }
+                let td = Instant::now();
+                parts[0] += tb - ta;
+                parts[1] += tc - tb;
+                parts[2] += td - tc;
+                drawing.push(tc - ta);
+                presented.push(td - ta);
+            }
+        }
+        session.m.recycle(f);
+        if session.ended {
+            break;
+        }
+    }
+    let n = drawing.len();
+    let ms = |d: Duration, k: usize| d.as_secs_f64() * 1000.0 / k.max(1) as f64;
+    println!(
+        "{n} frames, {per_tick} a tick, at {}x{} (internal {scale}x, EFB {}x{}): simulation {:.3} ms a tick, {} {:.3} ms a tick",
+        args.size.0,
+        args.size.1,
+        args.aspect.efb_width(scale),
+        480 * scale,
+        ms(sim, ticks as usize),
+        if extrapolate {
+            "predicting the next"
+        } else {
+            "keeping its transforms"
+        },
+        ms(kept, rendered as usize)
+    );
+    println!(
+        "a frame: GX stream (with the blend) {:.3} ms, renderer {:.3} ms, presenting (with the GPU's wait) {:.3} ms",
+        ms(parts[0], n),
+        ms(parts[1], n),
+        ms(parts[2], n)
+    );
+    let pct = |v: &mut Vec<Duration>, p: f64| {
+        v.sort();
+        let i = ((v.len() as f64 * p).ceil() as usize).clamp(1, v.len().max(1)) - 1;
+        v.get(i).map_or(0.0, |d| d.as_secs_f64() * 1000.0)
+    };
+    println!(
+        "a frame's drawing: p50 {:.3} ms, p99 {:.3} ms, max {:.3} ms; with presenting: p50 {:.3} ms, p99 {:.3} ms, max {:.3} ms",
+        pct(&mut drawing, 0.5),
+        pct(&mut drawing, 0.99),
+        pct(&mut drawing, 1.0),
+        pct(&mut presented, 0.5),
+        pct(&mut presented, 0.99),
+        pct(&mut presented, 1.0)
+    );
+    if extrapolate {
+        let k = costs.len();
+        let sum = |f: fn(&Cost) -> Duration| costs.iter().map(f).sum::<Duration>();
+        let mut total: Vec<Duration> = costs.iter().map(Cost::total).collect();
+        println!(
+            "predicting a tick ({k}): restoring the copy {:.3} ms, the tick {:.3} ms, keeping its transforms {:.3} ms; in all p50 {:.3} ms, p99 {:.3} ms, max {:.3} ms",
+            ms(sum(|c| c.clone), k),
+            ms(sum(|c| c.tick), k),
+            ms(sum(|c| c.capture), k),
+            pct(&mut total, 0.5),
+            pct(&mut total, 0.99),
+            pct(&mut total, 1.0)
+        );
+        println!(
+            "a tick with its prediction: p50 {:.3} ms, p99 {:.3} ms, max {:.3} ms",
+            pct(&mut ticked, 0.5),
+            pct(&mut ticked, 0.99),
+            pct(&mut ticked, 1.0)
+        );
+    }
+    if let (Some(path), Some(f)) = (&args.shot, &last) {
+        f.save_png(std::path::Path::new(path))
+            .unwrap_or_else(|e| eprintln!("{path}: {e}"));
+    }
+    pipelines::save(&renderer.into_renderer());
+    ExitCode::SUCCESS
+}
+
 fn run(args: Args) -> ExitCode {
     if let Some(path) = &args.launcher_shot {
         let gpu = present::Gpu::new();
         let mut form = launcher::Form::new(args.stocks, args.minutes, args.fullscreen, args.aspect);
         form.present = args.present;
         form.added_delay = args.added_delay;
+        form.high_refresh = args.high_refresh;
         return match launcher::shot(&gpu, &mut form, args.size, std::path::Path::new(path)) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
@@ -1061,6 +1463,7 @@ fn run(args: Args) -> ExitCode {
         let mut form = launcher::Form::new(args.stocks, args.minutes, args.fullscreen, args.aspect);
         form.present = args.present;
         form.added_delay = args.added_delay;
+        form.high_refresh = args.high_refresh;
         if let Some(text) = settings::read(settings::LAST_MATCH) {
             form.restore(&text, &args.given);
         }
@@ -1093,6 +1496,14 @@ fn run(args: Args) -> ExitCode {
         delay: melee_input::Delay::new(args.added_delay),
         live: latency::Live::default(),
         overlay: None,
+        mode: pacing::Mode::Off,
+        pacer: None,
+        latest: None,
+        before: Capture::default(),
+        after: Capture::default(),
+        predictor: Predictor::default(),
+        prediction_failed: false,
+        pending: None,
         args,
     };
     if let Some(path) = &app.args.latency_log {

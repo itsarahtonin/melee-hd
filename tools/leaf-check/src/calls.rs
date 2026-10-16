@@ -201,17 +201,20 @@ pub fn summarize(
     for (_, why) in &report.skipped {
         *skipped.entry(why.as_str()).or_default() += 1;
     }
-    eprintln!(
-        "{func} ({mode:?}): {} of {calls} calls compared clean, {} skipped",
+    // Written at once, so lines other checks running at the same time print stay whole.
+    use std::fmt::Write;
+    let mut out = format!(
+        "{func} ({mode:?}): {} of {calls} calls compared clean, {} skipped\n",
         report.compared,
         report.skipped.len()
     );
     for (why, n) in &skipped {
-        eprintln!("  skipped x{n}: {why}");
+        let _ = writeln!(out, "  skipped x{n}: {why}");
     }
     for f in &report.failed {
-        eprintln!("{f}");
+        let _ = writeln!(out, "{f}");
     }
+    eprint!("{out}");
     // CALLS_CLEAN=DIR lists the clean calls per function, to see what they reach
     // (`reach`).
     if let Ok(out) = std::env::var("CALLS_CLEAN") {

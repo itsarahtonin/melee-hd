@@ -32,11 +32,20 @@
 //! Final Destination (`diamond-diamond-688aa3dde28042970443b259.slp`), `fd-688aa3dd-ledge`
 //! from field 950 (her ledge pick on her way back) and `fd-688aa3dd-tumble` from 1340, and
 //! against Falco there (`diamond-diamond-7bd4b67151d45867e12b6d85.slp`), `fd-7bd4b671-tumble`
-//! from 3220 and `fd-7bd4b671-shield` from 3770 (Falco shielding). Each is packed
-//! (`pack-calls`).
+//! from 3220 and `fd-7bd4b671-shield` from 3770 (Falco shielding). Four more (300 fields each)
+//! come from replays where Nana meets items, three against Peach, whose turnips lie about:
+//! `ps-fdef375b-item` from field 3400 (`ics-dd-a3/slp/diamond-diamond-fdef375b359a790ec2c3ebf4.slp`,
+//! a common item she may go for), `bf-dee42fc0-throw` from 9620 (`…dee42fc0b20a58d02ea0a218.slp`)
+//! and `bf-c5ac9d3f-throw` from 4580 (`ics-dd-a5/diamond-diamond-c5ac9d3f085c03a5278566ff.slp`),
+//! holding a turnip, and against Fox, `ys-35368f9f-jump` from 1300
+//! (`…35368f9f75dc1fd4692a6d3f.slp`, a jump at her target, `ftCo_800B7180`); and
+//! `bf-9852011d-turnips` from 3900 (`ics-dd-a5/diamond-diamond-9852011d011ebe10c9080f94.slp`,
+//! two turnips lying about, for the item search's choice). Each is packed (`pack-calls`).
 //!
 //! `nana_tumble_and_shields` changes the saved frames to reach the tumble's branches
-//! (`ftCo_800ABBA8`) and the shield check's (`ftCo_800B9F6C`) that no replay at hand does.
+//! (`ftCo_800ABBA8`), the shield check's (`ftCo_800B9F6C`), the item search's choice among
+//! several items (`ftCo_800A5F4C`), the held item's throw (`ftCo_800ADE48`, `ftCo_800AD7FC`)
+//! and the short hop at the target (`ftCo_800A0798`), which no replay at hand does.
 
 use std::collections::BTreeSet;
 use std::sync::Mutex;
@@ -91,6 +100,26 @@ const VEL: u32 = 0xC8;
 const GRAVITY: u32 = 0x16C;
 const DEST: u32 = CPU + 0x54;
 const DEST_TIMER: u32 = CPU + 0x60;
+/// The least worth of an item the computer player goes for (`CpuFighter::x2C`).
+const ITEM_WORTH: u32 = CPU + 0x2C;
+/// `CpuFighter`'s flag word at `xF8`, and `xFA_b7` (following Popo) in it.
+const CPU_FLAGS: u32 = CPU + 0xF8;
+const FOLLOWING: u32 = 0x100;
+/// `xF8_b34` (the jump at the target's kind) in that word, and a short hop; the jump's
+/// behavior; `CpuFighter::x44`, the target.
+const JUMP_KIND: u32 = 0x1800_0000;
+const HOP: u32 = 0x1000_0000;
+const JUMP: u32 = 8;
+const TARGET: u32 = CPU + 0x44;
+/// `Fighter::item_gobj`; `Item::kind`; `It_Kind_BombHei`, `_Egg` and `_Sword`.
+const HELD_ITEM: u32 = 0x1974;
+const ITEM_KIND: u32 = 0x10;
+/// `Item::xDC8_word` and its `flags.x15`, which `Item_IsGrabbable` tests.
+const ITEM_FLAGS: u32 = 0xDC8;
+const GRABBABLE: u32 = 0x400;
+const BOBOMB: u32 = 6;
+const EGG: u32 = 3;
+const BEAM_SWORD: u32 = 0xC;
 /// The tumble's behavior; `ftCo_MS_DamageFall`, `ftCo_MS_AttackHi3`, `ftCo_MS_Guard`.
 const TUMBLE: u32 = 15;
 const DAMAGE_FALL: u32 = 38;
@@ -162,6 +191,20 @@ enum Change {
     TumbleLow,
     /// At level 9 with her enemies holding their shields.
     EnemiesShielding,
+    /// With items about, each made a grabbable (`xDC8` `x15`) beam sword and every common item
+    /// worth going for (`CpuFighter::x2C` 0), and apart from Popo: her item search
+    /// (`ftCo_800A5F4C`) measures each that has a pick-up callback and keeps the nearest.
+    CommonItems,
+    /// Holding an item made a bob-omb, with her script ended: her decision throws it
+    /// (`ftCo_800ADE48`, behavior 14) and her throw (`ftCo_800AD7FC`) picks the script by her
+    /// target's angle.
+    ThrowBobomb,
+    /// Holding an item made an egg, with her script ended: thrown, or dropped (script 14)
+    /// where a bob-omb takes script 40.
+    ThrowEgg,
+    /// With a target, her script ended and her behavior a short hop at it (behavior 8,
+    /// `xF8_b34` 2): `ftCo_800B7180` hops (`ftCo_800A0798`).
+    Hop,
 }
 
 /// Changes a saved frame as `change` says: whether it did.
@@ -210,14 +253,57 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
                 poke_u32(call, e + MOTION, GUARD);
             }
         }
+        Change::CommonItems => {
+            let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+            let mut g = peek_u32(call, heads + 9 * 4);
+            if g == 0 {
+                return false;
+            }
+            while g != 0 {
+                let ip = peek_u32(call, g + 0x2C);
+                poke_u32(call, ip + ITEM_KIND, BEAM_SWORD);
+                let flags = peek_u32(call, ip + ITEM_FLAGS);
+                poke_u32(call, ip + ITEM_FLAGS, flags | GRABBABLE);
+                g = peek_u32(call, g + 0x8);
+            }
+            poke_u32(call, nana + ITEM_WORTH, 0);
+            // Apart from Popo (`xFA_b7` clear), so she makes her way back and searches.
+            let flags = peek_u32(call, nana + CPU_FLAGS);
+            poke_u32(call, nana + CPU_FLAGS, flags & !FOLLOWING);
+        }
+        Change::Hop => {
+            if peek_u32(call, nana + TARGET) == 0 {
+                return false;
+            }
+            poke_u32(call, nana + BEHAVIOR, JUMP);
+            let flags = peek_u32(call, nana + CPU_FLAGS);
+            poke_u32(call, nana + CPU_FLAGS, flags & !JUMP_KIND | HOP);
+            poke_u32(call, nana + SCRIPT, 0);
+            poke_u32(call, nana + SCRIPT_WAIT, 0);
+        }
+        Change::ThrowBobomb | Change::ThrowEgg => {
+            let held = peek_u32(call, nana + HELD_ITEM);
+            if held == 0 {
+                return false;
+            }
+            let kind = if matches!(change, Change::ThrowBobomb) {
+                BOBOMB
+            } else {
+                EGG
+            };
+            poke_u32(call, peek_u32(call, held + 0x2C) + ITEM_KIND, kind);
+            poke_u32(call, nana + SCRIPT, 0);
+            poke_u32(call, nana + SCRIPT_WAIT, 0);
+        }
         _ => return false,
     }
     true
 }
 
-/// The tumble's behavior (`ftCo_800ABBA8`) and the attack decision's check of a shielding
-/// target (`ftCo_800B9F6C`) from saved frames changed to reach what the replays don't: each
-/// changed frame compares clean.
+/// The tumble's behavior (`ftCo_800ABBA8`), the attack decision's check of a shielding
+/// target (`ftCo_800B9F6C`), the item search's nearest item (`ftCo_800A5F4C`) and the held
+/// item's throw (`ftCo_800AD7FC`) and the short hop at the target (`ftCo_800A0798`) from saved
+/// frames changed to reach what the replays don't: each changed frame compares clean.
 #[test]
 fn nana_tumble_and_shields() {
     leaf_check::run_as_machine_code();
@@ -227,45 +313,59 @@ fn nana_tumble_and_shields() {
         Change::TumbleDrift,
         Change::TumbleLow,
         Change::EnemiesShielding,
+        Change::CommonItems,
+        Change::ThrowBobomb,
+        Change::ThrowEgg,
+        Change::Hop,
     ];
-    let changed: [Mutex<BTreeSet<usize>>; 5] = Default::default();
-    let prepares: Vec<Box<Prepare>> = (0..changes.len())
-        .map(|v| {
-            let changed = &changed;
-            let change = changes[v];
-            Box::new(move |c: &mut Call, i: usize| {
-                if change_frame(c, change) {
-                    changed[v].lock().unwrap().insert(i);
-                }
-            }) as Box<Prepare>
-        })
-        .collect();
-    let variants: Vec<Variant> = prepares
-        .iter()
-        .map(|p| Variant {
-            prepare: p.as_ref(),
-            ours: &run_frame,
-            stubs: &[],
-        })
-        .collect();
-    let mut totals = [0; 5];
+    // Each capture set's frames, a set at a time on each of several threads
+    // ([`leaf_check::each_set`]), with the frames each change reached in it.
     let dirs = dirs();
-    for dir in &dirs {
-        for c in &changed {
-            c.lock().unwrap().clear();
-        }
-        let paths = saved_calls(dir, "ftCo_800B3900");
-        let reports = check_variants(dir, "ftCo_800B3900", &variants);
-        for (v, r) in reports.iter().enumerate() {
-            let c = changed[v].lock().unwrap();
-            if !c.is_empty() {
-                totals[v] += compared(r, &paths, &c);
+    let per_dir = leaf_check::each_set(
+        &dirs,
+        |dir| saved_calls(dir, "ftCo_800B3900").len(),
+        |dir| {
+            let changed: [Mutex<BTreeSet<usize>>; 9] = Default::default();
+            let prepares: Vec<Box<Prepare>> = (0..changes.len())
+                .map(|v| {
+                    let changed = &changed;
+                    let change = changes[v];
+                    Box::new(move |c: &mut Call, i: usize| {
+                        if change_frame(c, change) {
+                            changed[v].lock().unwrap().insert(i);
+                        }
+                    }) as Box<Prepare>
+                })
+                .collect();
+            let variants: Vec<Variant> = prepares
+                .iter()
+                .map(|p| Variant {
+                    prepare: p.as_ref(),
+                    ours: &run_frame,
+                    stubs: &[],
+                })
+                .collect();
+            let paths = saved_calls(dir, "ftCo_800B3900");
+            let reports = check_variants(dir, "ftCo_800B3900", &variants);
+            let mut totals = [0; 9];
+            for (v, r) in reports.iter().enumerate() {
+                let c = changed[v].lock().unwrap();
+                if !c.is_empty() {
+                    totals[v] += compared(r, &paths, &c);
+                }
             }
+            totals
+        },
+    );
+    let mut totals = [0; 9];
+    for t in &per_dir {
+        for (total, n) in totals.iter_mut().zip(t) {
+            *total += n;
         }
     }
     eprintln!(
         "compared clean, tumbling at level 9, over an up tilt, drifting, at level 0, enemies \
-         shielding: {totals:?}"
+         shielding, items made beam swords, throwing a bob-omb, an egg, hopping: {totals:?}"
     );
     if dirs.is_empty() || leaf_check::reference().is_none() {
         return;
@@ -331,6 +431,33 @@ fn compared(reports: &[Report], paths: &[std::path::PathBuf], changed: &BTreeSet
 #[test]
 fn nana_cpu_frame() {
     leaf_check::run_as_machine_code();
+    // Each capture set's frames, a set at a time on each of several threads
+    // ([`leaf_check::each_set`]), with the frames each change reached in it.
+    let dirs = dirs();
+    let per_dir = leaf_check::each_set(
+        &dirs,
+        |dir| saved_calls(dir, "ftCo_800B3900").len(),
+        |dir| dir_cpu_frame(dir),
+    );
+    let mut totals = [0; 3];
+    for t in &per_dir {
+        for (total, n) in totals.iter_mut().zip(t) {
+            *total += n;
+        }
+    }
+    eprintln!("compared clean, as saved, with no knockback, and Popo hanging: {totals:?}");
+    if dirs.is_empty() || leaf_check::reference().is_none() {
+        return;
+    }
+    assert!(
+        totals.iter().all(|&t| t > 0),
+        "a variant never compared: {totals:?}"
+    );
+}
+
+/// [`nana_cpu_frame`]'s checks of one capture set's frames: the clean comparisons as saved,
+/// with no knockback and with Popo hanging.
+fn dir_cpu_frame(dir: &str) -> [usize; 3] {
     let changed: [Mutex<BTreeSet<usize>>; 2] = Default::default();
     let none = |_: &mut Call, _: usize| {};
     let zero = |c: &mut Call, i: usize| {
@@ -361,33 +488,20 @@ fn nana_cpu_frame() {
         },
     ];
     let mut totals = [0; 3];
-    let dirs = dirs();
-    for dir in &dirs {
-        for c in &changed {
-            c.lock().unwrap().clear();
-        }
-        let paths = saved_calls(dir, "ftCo_800B3900");
-        let reports = check_variants(dir, "ftCo_800B3900", &variants);
-        for (v, r) in reports.iter().enumerate() {
-            totals[v] += match v {
-                0 => compared(r, &paths, &BTreeSet::new()),
-                _ => {
-                    let c = changed[v - 1].lock().unwrap();
-                    if c.is_empty() {
-                        0
-                    } else {
-                        compared(r, &paths, &c)
-                    }
+    let paths = saved_calls(dir, "ftCo_800B3900");
+    let reports = check_variants(dir, "ftCo_800B3900", &variants);
+    for (v, r) in reports.iter().enumerate() {
+        totals[v] += match v {
+            0 => compared(r, &paths, &BTreeSet::new()),
+            _ => {
+                let c = changed[v - 1].lock().unwrap();
+                if c.is_empty() {
+                    0
+                } else {
+                    compared(r, &paths, &c)
                 }
-            };
-        }
+            }
+        };
     }
-    eprintln!("compared clean, as saved, with no knockback, and Popo hanging: {totals:?}");
-    if dirs.is_empty() || leaf_check::reference().is_none() {
-        return;
-    }
-    assert!(
-        totals.iter().all(|&t| t > 0),
-        "a variant never compared: {totals:?}"
-    );
+    totals
 }
