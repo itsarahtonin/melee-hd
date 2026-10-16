@@ -189,7 +189,7 @@ impl Running<'_> {
     /// (`ft_80083CE4`, `fn_800DD5EC`), and after it only touches.
     #[doc(alias = "ftCo_ThrowF_Coll")]
     #[doc(alias = "ftCo_ThrowB_Coll")]
-    // Ports `ftCo_ThrowHi_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_ThrowHi_Coll")]
     #[doc(alias = "ftCo_ThrowLw_Coll")]
     // Ports `fn_800DD684`; aliased once a check reaches it.
     pub fn co_throw_coll(&mut self, gobj: GObjId) {
@@ -465,7 +465,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DE5A4")]
     #[doc(alias = "ftCo_ThrownF_Anim")]
     #[doc(alias = "ftCo_ThrownB_Anim")]
-    // Ports `ftCo_ThrownHi_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_ThrownHi_Anim")]
     #[doc(alias = "ftCo_ThrownLw_Anim")]
     pub fn co_thrown_anim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);

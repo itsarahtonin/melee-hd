@@ -406,7 +406,8 @@ fn takes_gobj(call: &Call) -> bool {
 /// The fighter's controls and script variables changed so the callbacks' branches run: A, B
 /// or a shoulder held or pressed, the stick pushed every way, the script's variables and
 /// throw flags, the hit flag (`x2071_b6`) that loses a held shot or blaster, Samus's copy's
-/// charge (`u` xA8) and the blaster's loop (`mv` x0) for those copies' states.
+/// charge (`u` xA8) and its frames toward a level (`mv` x4), and the blaster's loop (`mv` x0)
+/// for those copies' states.
 fn vary(call: &mut Call, i: usize) {
     if !takes_gobj(call) {
         return;
@@ -442,9 +443,16 @@ fn vary(call: &mut Call, i: usize) {
     // Hit (`x2071_b6`).
     poke_bit(call, fp + 0x2071, 6, i % 9 == 8);
     let msid = peek_u32(call, fp + 0x10);
-    // Samus's copy's states: the charge none, partway and one short of full.
+    // Samus's copy's states: the charge none, partway and one short of full, and in the
+    // charge the frames toward the next level one short of the attributes'
+    // (`specialn_ss_frames_per_charge_level`), so this frame's count reaches it without a
+    // level.
     if (0x197..=0x19C).contains(&msid) {
-        poke_u32(call, fp + 0x22D4, [0u32, 2, 4][(i / 5) % 3]);
+        poke_u32(call, fp + 0x22D4, [0u32, 2, 6][(i / 5) % 3]);
+        if msid == 0x198 {
+            let per_level = peek_u32(call, peek_u32(call, fp + 0x2D4) + 0x170);
+            poke_u32(call, fp + 0x2344, per_level.wrapping_sub(1));
+        }
     }
     // Fox's and Falco's copies' states: the blaster's loop asked for or not.
     if (423..=428).contains(&msid) || (520..=525).contains(&msid) {
