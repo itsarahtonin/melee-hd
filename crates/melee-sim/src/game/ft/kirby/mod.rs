@@ -16,10 +16,14 @@ pub mod attack_dash;
 pub mod copy;
 pub mod hat;
 pub mod init;
+pub mod special_captain;
 pub mod special_fox;
 pub mod special_hi;
+pub mod special_luigi;
 pub mod special_lw;
+pub mod special_mario;
 pub mod special_n;
+pub mod special_pikachu;
 pub mod special_s;
 pub mod special_samus;
 
@@ -608,6 +612,10 @@ pub(crate) mod attr {
     pub const LW_GRAVITY: usize = 0x104;
     pub const LW_HP: usize = 0x108;
     pub const LW_FREEFALL: usize = 0x114;
+    /// The star a hit knocks his copy out as: its height above him, its speed ahead and up.
+    pub const LOSS_STAR_Y: usize = 0xA4;
+    pub const LOSS_STAR_VEL_X: usize = 0xA8;
+    pub const LOSS_STAR_VEL_Y: usize = 0xAC;
     /// The odds a hit knocks his copy out (one in this many).
     pub const LOSE_COPY_ODDS: usize = 0xB0;
     /// Bowser's copy: his full fuel and flame.
@@ -620,6 +628,28 @@ pub(crate) mod attr {
     pub const SS_RECOIL: usize = 0x16C;
     pub const SS_FRAMES_PER_LEVEL: usize = 0x170;
     pub const SS_FREEFALL: usize = 0x174;
+    /// Pikachu's and Pichu's copies: the jolt's offsets on the ground and in the air, the
+    /// aerial throw's landing lag (none if 0), and the jolt's item kind.
+    pub const PK_OFFSET_X: usize = 0x1C0;
+    pub const PK_OFFSET_Y: usize = 0x1C4;
+    pub const PK_AIR_OFFSET_X: usize = 0x1C8;
+    pub const PK_AIR_OFFSET_Y: usize = 0x1CC;
+    pub const PK_AIR_LANDING_LAG: usize = 0x1D0;
+    pub const PK_ITKIND: usize = 0x1D4;
+    pub const PC_OFFSET_X: usize = 0x1DC;
+    pub const PC_OFFSET_Y: usize = 0x1E0;
+    pub const PC_AIR_OFFSET_X: usize = 0x1E4;
+    pub const PC_AIR_OFFSET_Y: usize = 0x1E8;
+    pub const PC_AIR_LANDING_LAG: usize = 0x1EC;
+    pub const PC_ITKIND: usize = 0x1F0;
+    /// Captain Falcon's and Ganondorf's copies: the stick's range below which the aerial
+    /// punch doesn't angle and its top, the angle at the top, the lunge's speed and its
+    /// slowing.
+    pub const CA_X_RANGE: usize = 0x1F8;
+    pub const CA_Y_RANGE: usize = 0x1FC;
+    pub const CA_ANGLE_DIFF: usize = 0x200;
+    pub const CA_MOMENTUM: usize = 0x204;
+    pub const CA_MOMENTUM_MUL: usize = 0x208;
     /// Donkey Kong's copy: the swings to a full punch.
     pub const DK_SWINGS_TO_FULL: usize = 0x190;
     /// Fox's and Falco's copies: the shot's angle and speed, the aerial end's landing lag (none
@@ -669,6 +699,10 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || special_n::run(g, gobj, addr)
         || special_samus::run(g, gobj, addr)
         || special_fox::run(g, gobj, addr)
+        || special_mario::run(g, gobj, addr)
+        || special_luigi::run(g, gobj, addr)
+        || special_captain::run(g, gobj, addr)
+        || special_pikachu::run(g, gobj, addr)
 }
 
 /// Kirby's functions other code calls by address (`code::call`).
