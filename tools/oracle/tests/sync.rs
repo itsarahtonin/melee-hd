@@ -47,6 +47,9 @@ fn a_changed_restore_fails() {
     // The flipped bit shows in the first output that reads it (a drawn view matrix, tick 895)
     // or else in the state after tick 900; either way within the perturbed rollback.
     assert!(!ok, "{out}");
-    assert!(out.contains("894 ticks checked, rolled back 7 each"), "{out}");
+    assert!(
+        out.contains("894 ticks checked, rolled back 7 each"),
+        "{out}"
+    );
     assert!(out.contains("differs from the straight run's at "), "{out}");
 }
