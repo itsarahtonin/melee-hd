@@ -159,6 +159,8 @@ SSBM_RUN=.../ssbm-run.exe SSBM_DISC=... JOBS=3 bash tools/bench/make-matches.sh 
 
 For each match that writes the codes, records it (`BENCH_CODES=NAME.ini BENCH_AI=0,1 BENCH_SLP=NAME.slp ssbm-run --fields 31000`), runs both checks, and saves ssbm-rs's state trace of the match's first frames (`NAME.start.trace`, with `--port sysdolphin/baselib/perf`) for the fighters' heap addresses. It is deterministic: rerunning it after ssbm-rs's runtime fix ab3cd01 made byte-identical replays. Each run takes ssbm-rs 10 to 15 minutes on one core.
 
+**Other matches.** The same generator (`tools/bench/src/matches.rs`) also sets a match's rules (stock or time, with a time limit), its item frequency and switch, two to four players and computer players of any CPU kind and level, on any VS stage. Milestone 4's oracle sets are made with it (`melee-bench oracle-sets`, `make-oracle.sh`; see [the oracle](oracle.md#oracle-sets)); the benchmark matches' codes are unchanged.
+
 ## Dolphin
 
 `melee-bench dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]` (`tools/bench/src/dolphin.rs`) plays the matches in a portable mainline Dolphin build (the folder `DOLPHIN` names), on the disc `SSBM_DISC`. `DIR` is its working folder (Dolphin's user directory, the codes and the calibrations); a match's replay is read from it when it has one, else from `data/bench`.
