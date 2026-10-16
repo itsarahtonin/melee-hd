@@ -33,6 +33,12 @@ impl Sound {
         }
     }
 
+    /// The samples the last tick mixed.
+    #[cfg(test)]
+    pub fn samples(&self) -> &[[i16; 2]] {
+        &self.samples
+    }
+
     /// What the output device has measured, while it plays.
     pub fn stats(&self) -> Option<OutputStats> {
         self.output.as_ref().map(Output::stats)

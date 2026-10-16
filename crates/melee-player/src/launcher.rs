@@ -643,11 +643,14 @@ mod tests {
     #[test]
     fn the_last_match_comes_back() {
         for aspect in Aspect::CHOICES.map(|(a, _)| a) {
-            let mut was = picked();
-            was.aspect = aspect;
-            let mut form = Form::new(4, 8, false, Aspect::GAME);
-            form.restore(&was.save(), &Given::default());
-            assert!(same(&form, &was), "{}", was.save());
+            for mode in Mode::CHOICES.map(|(m, _)| m) {
+                let mut was = picked();
+                was.aspect = aspect;
+                was.high_refresh = mode;
+                let mut form = Form::new(4, 8, false, Aspect::GAME);
+                form.restore(&was.save(), &Given::default());
+                assert!(same(&form, &was), "{}", was.save());
+            }
         }
     }
 
