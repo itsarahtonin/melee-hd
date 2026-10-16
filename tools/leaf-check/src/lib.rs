@@ -54,8 +54,13 @@ pub fn reference() -> Option<Ctx> {
         eprintln!("SSBM_DISC is unset: skipping the comparison with ssbm-rs");
         return None;
     };
-    let disc = ssbm_disc::Disc::open(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
-    let dol = disc.main_dol().unwrap_or_else(|e| panic!("{path}: {e}"));
+    // The executable, read (and its hash checked) once: each check's workers make their own
+    // references.
+    static DOL: std::sync::OnceLock<ssbm_disc::Dol> = std::sync::OnceLock::new();
+    let dol = DOL.get_or_init(|| {
+        let disc = ssbm_disc::Disc::open(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+        disc.main_dol().unwrap_or_else(|e| panic!("{path}: {e}"))
+    });
     let ctx = Ctx::new();
     dol.load_into(&ctx.mem).expect("main.dol fits in memory");
     ssbm_game::register(&ctx, |_| true);
@@ -485,16 +490,19 @@ pub fn run_capture(ctx: &Ctx, call: &ssbm_rt::capture::Call) -> Vec<u8> {
     out
 }
 
-thread_local! {
-    /// ssbm-rs's own ports by address, to tell them from a check's stand-ins.
-    static PORTS: std::collections::HashMap<u32, ssbm_rt::Native> = {
+/// ssbm-rs's own ports by address, to tell them from a check's stand-ins: made once for every
+/// thread.
+static PORTS: std::sync::LazyLock<std::collections::HashMap<u32, ssbm_rt::Native>> =
+    std::sync::LazyLock::new(|| {
         let ctx = Ctx::new();
         ssbm_game::register(&ctx, |_| true);
         ctx.registered()
             .into_iter()
             .filter_map(|a| ctx.entry(a).map(|e| (a, e.native)))
             .collect()
-    };
+    });
+
+thread_local! {
     /// The ports [`register_patched`] replaced, to put back for a state without the codes.
     static REPLACED: std::cell::RefCell<std::collections::HashMap<u32, ssbm_rt::Entry>> =
         std::cell::RefCell::default();
@@ -551,8 +559,8 @@ pub fn register_patched(ctx: &Ctx) {
         }
         for (&f, p) in &best {
             let original = ctx.entry(f);
-            let stood_in = !r.contains_key(&f)
-                && original.is_some_and(|e| PORTS.with(|p| p.get(&f) != Some(&e.native)));
+            let stood_in =
+                !r.contains_key(&f) && original.is_some_and(|e| PORTS.get(&f) != Some(&e.native));
             if stood_in {
                 continue;
             }
