@@ -87,6 +87,12 @@ pub const MATCHES: &[Match] = &[
 
 const NESS: u8 = 0x0B;
 const SAMUS: u8 = 0x10;
+const KIRBY: u8 = 0x04;
+const GAME_AND_WATCH: u8 = 0x03;
+const LUIGI: u8 = 0x07;
+const MARIO: u8 = 0x08;
+const PIKACHU: u8 = 0x0D;
+const ZELDA: u8 = 0x12;
 
 /// Matches the CPU AI plays for the oracle (`docs/oracle.md`), not timed: characters no replay
 /// the ruleset knows has, against ported ones on ported stages.
@@ -126,6 +132,54 @@ pub const ORACLE_MATCHES: &[Match] = &[
         stage: POKEMON_STADIUM,
         players: [p(SAMUS, 0), p(FOX, 1)],
         seed: 0x1F0F_0106,
+    },
+    Match {
+        name: "kirby-mario-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(KIRBY, 0), p(MARIO, 0)],
+        seed: 0x1F0F_0107,
+    },
+    Match {
+        name: "kirby-luigi-bf",
+        stage: BATTLEFIELD,
+        players: [p(KIRBY, 0), p(LUIGI, 0)],
+        seed: 0x1F0F_0108,
+    },
+    Match {
+        name: "kirby-captain-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(KIRBY, 0), p(CAPTAIN, 0)],
+        seed: 0x1F0F_0109,
+    },
+    Match {
+        name: "kirby-pikachu-bf",
+        stage: BATTLEFIELD,
+        players: [p(KIRBY, 0), p(PIKACHU, 0)],
+        seed: 0x1F0F_010A,
+    },
+    Match {
+        name: "kirby-ness-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(KIRBY, 0), p(NESS, 0)],
+        seed: 0x1F0F_010B,
+    },
+    Match {
+        name: "kirby-zelda-bf",
+        stage: BATTLEFIELD,
+        players: [p(KIRBY, 0), p(ZELDA, 0)],
+        seed: 0x1F0F_010C,
+    },
+    Match {
+        name: "kirby-peach-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(KIRBY, 0), p(PEACH, 0)],
+        seed: 0x1F0F_010D,
+    },
+    Match {
+        name: "kirby-gnw-bf",
+        stage: BATTLEFIELD,
+        players: [p(KIRBY, 0), p(GAME_AND_WATCH, 0)],
+        seed: 0x1F0F_010E,
     },
 ];
 
