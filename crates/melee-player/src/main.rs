@@ -3,7 +3,7 @@
 //! ```text
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
 //!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread]
-//!          [--no-adapter] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--ticks N]
+//!          [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [--resize-at TICK:WxH] [...]
 //!                                               plays headless, timing each frame
 //! melee-hd --launcher-shot FILE.png [--size WxH] draws the launcher to a PNG
@@ -97,6 +97,8 @@ struct Args {
     added_delay: u32,
     /// Takes the audio device in exclusive mode (Windows).
     audio_exclusive: bool,
+    /// Mixes the sound but opens no audio device: nothing is heard.
+    mute: bool,
     /// Starts with the latency overlay shown (F3 toggles it).
     latency_overlay: bool,
     /// How frames are drawn between ticks.
@@ -139,7 +141,7 @@ struct Args {
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--launcher-shot FILE.png]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--launcher-shot FILE.png]\n\
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive]\n\
@@ -164,6 +166,7 @@ fn parse_args() -> Result<Args, String> {
         present: present::Present::Mailbox,
         added_delay: 0,
         audio_exclusive: false,
+        mute: false,
         latency_overlay: false,
         high_refresh: pacing::Mode::Off,
         frames_per_tick: 4,
@@ -238,6 +241,7 @@ fn parse_args() -> Result<Args, String> {
                 a.given.added_delay = true;
             }
             "--audio-exclusive" => a.audio_exclusive = true,
+            "--mute" => a.mute = true,
             "--latency-overlay" => a.latency_overlay = true,
             "--high-refresh" => {
                 a.high_refresh = pacing::Mode::parse(&value()?)?;
@@ -342,7 +346,7 @@ impl Session {
             disc: a.disc_speed,
             ..settings
         };
-        Session::begin(&disc, &settings, replay, a.bench.is_none())
+        Session::begin(&disc, &settings, replay, a.bench.is_none() && !a.mute)
     }
 
     /// Starts the match `settings` set from `disc`, with its sound mixed (and played when

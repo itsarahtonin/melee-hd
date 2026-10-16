@@ -206,7 +206,7 @@ melee-hd --p1 fox --p2 marth --stage bf [--stocks 4] [--minutes 8] [--widescreen
 melee-hd --replay data/bench/fox-fox-fd.slp            # a replay's match, its inputs played back
 melee-hd --bench 1200 --size 2560x1440                 # headless, timing each frame
 melee-hd --launcher-shot launcher.png [--size WxH]     # draws the launcher to a PNG, no window
-melee-hd ... [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay N] [--audio-exclusive]
+melee-hd ... [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay N] [--audio-exclusive] [--mute]
 melee-hd ... [--high-refresh off|interpolate|extrapolate]  # frames between ticks for faster displays
 melee-hd --bench 1800 --high-refresh interpolate|extrapolate [--frames-per-tick 4]
 ```
@@ -264,7 +264,7 @@ The GX stream takes about 0.75 ms of that and the simulation about 0.7 ms a tick
 
 ### Latency
 
-**Options.** `--present mailbox|fifo|immediate` (and the launcher's Present) picks the swap chain's present mode. Mailbox, the default, shows each frame at the display's next refresh without tearing and without waiting: a newer frame replaces one still waiting. FIFO queues it for its refresh (vsync), and immediate shows it at once, tearing where the scan-out is partway down the screen: the lowest latency. A mode the display lacks falls back to mailbox, else FIFO, which every display has, so the default never tears (before, a display without mailbox got immediate). `--added-delay N` (the launcher's Added delay, 0 to 15 frames) is deliberate added latency: each controller read reaches the simulation N ticks later (`melee_input::Delay`; the first read stands in for the ticks before it), 16.7 ms a frame on top of everything below, for players who want a CRT's feel back. A replay's recorded inputs aren't delayed. `--audio-exclusive` takes the audio device exclusively (Windows; see [Audio](#audio)).
+**Options.** `--present mailbox|fifo|immediate` (and the launcher's Present) picks the swap chain's present mode. Mailbox, the default, shows each frame at the display's next refresh without tearing and without waiting: a newer frame replaces one still waiting. FIFO queues it for its refresh (vsync), and immediate shows it at once, tearing where the scan-out is partway down the screen: the lowest latency. A mode the display lacks falls back to mailbox, else FIFO, which every display has, so the default never tears (before, a display without mailbox got immediate). `--added-delay N` (the launcher's Added delay, 0 to 15 frames) is deliberate added latency: each controller read reaches the simulation N ticks later (`melee_input::Delay`; the first read stands in for the ticks before it), 16.7 ms a frame on top of everything below, for players who want a CRT's feel back. A replay's recorded inputs aren't delayed. `--audio-exclusive` takes the audio device exclusively (Windows; see [Audio](#audio)). `--mute` mixes the sound as always but opens no audio device, so nothing is heard and no device's timing reaches the loop: for measuring runs on a machine someone is using (the audio columns of the latency log stay empty).
 
 **Measuring.** `--latency-log FILE.csv` writes a row a tick and prints a summary (mean, median, 99th percentile and worst of each) when the player quits; `--latency-overlay`, or F3 in a match, draws the last second's means over the frame's corner (egui on the window's swap chain, only while it's on). The columns:
 
