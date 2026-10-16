@@ -83,7 +83,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         PHYS1 | PHYS6 => gravity(r, gobj),
         PICKED_UP => picked_up(r, gobj),
         DROPPED | THROWN => thrown(r, gobj),
-        PHYS3 => falling_phys(r, gobj),
+        PHYS3 => thrown_phys(r, gobj),
         ENTERED_AIR => entered_air(r, gobj),
         OPEN => open(r, gobj),
         ON_ACCESSORY => on_accessory(r, gobj),
@@ -321,4 +321,10 @@ pub fn open_grounded(r: &mut Running, gobj: GObjId) {
 pub fn coll6(r: &mut Running, gobj: GObjId) -> bool {
     fall_facing(r, gobj, open);
     false
+}
+
+/// Thrown, gravity and the spin it slows (`Item_ApplyFallingPhysics`), `itMball_Motion3_Phys`.
+#[doc(alias = "itMball_Motion3_Phys")]
+pub fn thrown_phys(r: &mut Running, gobj: GObjId) {
+    falling_phys(r, gobj);
 }

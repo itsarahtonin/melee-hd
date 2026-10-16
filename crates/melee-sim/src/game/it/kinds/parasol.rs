@@ -85,7 +85,12 @@ fn attr(r: &Running, gobj: GObjId, i: u32) -> f32 {
 /// How long state `state`'s animation lasts, `it_8028B08C`.
 #[doc(alias = "it_8028B08C")]
 pub fn anim_frames(state: i32) -> i32 {
-    ANIM_FRAMES[STATE_ANIMS[state as usize] as usize]
+    let anim = STATE_ANIMS[state as usize];
+    assert!(
+        anim >= 0,
+        "it_8028B08C reads before its table for state {state}, which has no animation"
+    );
+    ANIM_FRAMES[anim as usize]
 }
 
 /// `itParasol_Logic13_Spawned`: falling.

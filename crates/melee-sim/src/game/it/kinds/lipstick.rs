@@ -65,7 +65,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         PICKED_UP => picked_up(r, gobj),
         DROPPED => dropped(r, gobj),
         THROWN => thrown(r, gobj),
-        PHYS4 => falling_phys(r, gobj),
+        PHYS4 => thrown_phys(r, gobj),
         ENTERED_AIR => entered_air(r, gobj),
         _ => return false,
     }
@@ -83,15 +83,6 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     ip.xD4C = charges;
     ip.xDAC_itcmd_var0 = 0;
     fell(r, gobj);
-}
-
-/// Where its spores leave it, in the hand's space, `it_80295748`.
-#[doc(alias = "it_80295748")]
-pub fn spore_offset(r: &Running, gobj: GObjId) -> crate::vec::Vec3 {
-    let a = article(item(r.game, gobj))
-        .special(r.data)
-        .expect("a Lip's Stick without attributes");
-    crate::game::mirror::read_vec3(r.data, a.at(4))
 }
 
 /// Lands and lies still, `it_802957AC`.
@@ -234,4 +225,10 @@ pub fn entered_air(r: &mut Running, gobj: GObjId) {
 pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
     ground_skid(r, gobj, landed, fell);
     false
+}
+
+/// Thrown, gravity and the spin it slows (`Item_ApplyFallingPhysics`), `itLipstick_UnkMotion4_Phys`.
+#[doc(alias = "itLipstick_UnkMotion4_Phys")]
+pub fn thrown_phys(r: &mut Running, gobj: GObjId) {
+    falling_phys(r, gobj);
 }

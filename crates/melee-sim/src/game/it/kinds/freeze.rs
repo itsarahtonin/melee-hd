@@ -64,7 +64,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),
         SPAWNED => spawned(r, gobj),
-        PHYS0 => slide(r, gobj),
+        PHYS0 => phys0(r, gobj),
         FELL => fell(r, gobj),
         PHYS1 | PHYS3 => gravity(r, gobj),
         PICKED_UP => picked_up(r, gobj),
@@ -406,4 +406,10 @@ pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
         v.x18.set(left - 1);
     }
     false
+}
+
+/// `itFreeze_UnkMotion0_Phys`: the slide.
+#[doc(alias = "itFreeze_UnkMotion0_Phys")]
+pub fn phys0(r: &mut Running, gobj: GObjId) {
+    slide(r, gobj);
 }

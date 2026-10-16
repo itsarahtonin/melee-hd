@@ -60,7 +60,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         PHYS1 => gravity(r, gobj),
         PICKED_UP => picked_up(r, gobj),
         DROPPED | THROWN => dropped(r, gobj),
-        PHYS3 => falling_phys(r, gobj),
+        PHYS3 => thrown_phys(r, gobj),
         ENTERED_AIR => entered_air(r, gobj),
         _ => return false,
     }
@@ -264,4 +264,10 @@ pub fn entered_air(r: &mut Running, gobj: GObjId) {
 pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
     ground_skid(r, gobj, landed, fell);
     false
+}
+
+/// Thrown, gravity and the spin it slows (`Item_ApplyFallingPhysics`), `itSscope_UnkMotion3_Phys`.
+#[doc(alias = "itSscope_UnkMotion3_Phys")]
+pub fn thrown_phys(r: &mut Running, gobj: GObjId) {
+    falling_phys(r, gobj);
 }
