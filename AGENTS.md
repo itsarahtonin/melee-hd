@@ -28,6 +28,7 @@ Port from the decompilation and from ssbm-rs; ssbm-rs's ports at the tag decide 
 - Nothing outside the state and the controllers reaches a tick: no host settings, clocks, disc timing, audio state, or rendering results. Platform events the game polls (a disc read completing, a camera snapshot) are explicit inputs.
 - Keep the original's operation order, and its single and double precision. Use `gekko-fp` where the original fused a multiply-add, used an estimate or paired singles, and the game's own math routines instead of platform math.
 - RNG draws happen in the same order as the original, every tick.
+- When porting reveals a bug in the original game, keep it and add an entry to [docs/melee-bugs.md](docs/melee-bugs.md).
 
 ## Verification
 
