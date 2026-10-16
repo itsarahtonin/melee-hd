@@ -125,6 +125,9 @@ members! {
     Tomato, tomato, itTomato_ItemVars, [TOMATO];
     Box, crate_box, itBox_ItemVars, [BOX];
     Taru, taru, itTaru_ItemVars, [TARU];
+    TaruCann, taru_cann, itTarucann_ItemVars, [TARU_CANN];
+    StarRodStar, star_rod_star, itStarRodStar_ItemVars, [STARROD_STAR];
+    LipstickSpore, lipstick_spore, itLipstickSpore_ItemVars, [LIPSTICK_SPORE];
     Kusudama, kusudama, itKusudama_ItemVars, [KUSUDAMA];
     BombHei, bombhei, itBombHei_ItemVars, [BOMBHEI];
     Dosei, dosei, itDosei_ItemVars, [DOSEI];

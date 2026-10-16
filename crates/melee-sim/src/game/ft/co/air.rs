@@ -62,6 +62,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Fall_Coll")]
     #[doc(alias = "ftCo_FallAerial_Coll")]
     #[doc(alias = "ftCo_ItemScrewAir_Coll")]
+    #[doc(alias = "ftCo_ItemScrew_Coll")]
     pub fn co_fall_coll(&mut self, gobj: GObjId) {
         self.air_coll_filtered_full(gobj, PLATFORM_FILTER, |g, gobj| g.land_normally(gobj));
     }

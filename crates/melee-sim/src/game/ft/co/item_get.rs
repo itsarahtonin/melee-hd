@@ -1,11 +1,14 @@
 //! Picking an item up from the ground (`ftpickupitem.c`'s pickup states): bending down, the
-//! item taken into the hand on the script's flag, and its own pickup at the end. Heavy items'
-//! pickups and the items used as they're picked up aren't ported.
+//! item taken into the hand on the script's flag (a heavy one overhead, into carrying it), and
+//! its own pickup at the end.
 
 use super::super::super::code::unported_call;
 use super::super::super::handles::CodeRef;
 use super::super::super::it::lib26b1;
 use super::super::super::state::Running;
+use super::super::SCALE_PARAMS;
+use super::super::coll::scaled_by_height;
+use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 
 /// `ftCo_MS_LightGet` and `ftCo_MS_HeavyGet`.
@@ -28,11 +31,18 @@ impl Running<'_> {
     /// go.
     #[doc(alias = "ftpickupitem_80094694")]
     pub fn enter_item_get(&mut self, gobj: GObjId, msid: i32, looped: bool) {
-        if msid == MS_HEAVY_GET {
-            unported_call("ftpickupitem_80094694 for a heavy item");
-        }
+        let speed = if msid == MS_HEAVY_GET {
+            let k = reg(self.data.f32(self.common_ptr(SCALE_PARAMS).at(0x8)));
+            mem(scaled_by_height(
+                1.0,
+                reg(self.game.fighter(gobj).x34_scale.y),
+                k,
+            ))
+        } else {
+            1.0
+        };
         self.game.fighter_mut(gobj).x2210 = [0; 4];
-        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
+        self.change_motion_state(gobj, msid, 0, 0.0, speed, 0.0, None);
         if looped {
             while !self.game.fighter_mut(gobj).take_throw_flag(3) {
                 self.anim_update(gobj);
@@ -41,13 +51,18 @@ impl Running<'_> {
             self.anim_update(gobj);
         }
         let fp = self.game.fighter_mut(gobj);
-        fp.set_mv_i32(MV_HEAVY, 0);
-        fp.take_dmg_cb = Some(CodeRef(ON_DAMAGE));
+        if msid == MS_HEAVY_GET {
+            fp.set_mv_i32(MV_HEAVY, 1);
+            fp.take_dmg_cb = Some(CodeRef(super::lift::TAKE_DMG));
+        } else {
+            fp.set_mv_i32(MV_HEAVY, 0);
+            fp.take_dmg_cb = Some(CodeRef(ON_DAMAGE));
+        }
     }
 
     /// Takes the item into the hand, `ftpickupitem_800948A8`: into the hand (or the other
     /// hand's slot when one's full), grasped, counted, held at the hand (a Warp Star at the top
-    /// joint).
+    /// joint, a heavy item at the character's carrying bone, with its grunt).
     #[doc(alias = "ftpickupitem_800948A8")]
     pub fn take_item(&mut self, gobj: GObjId, it: GObjId) {
         let f = self.game.fighter_id(gobj);
@@ -58,10 +73,13 @@ impl Running<'_> {
             fp.item_gobj = Some(it);
         }
         self.retake_held_item(gobj, true);
-        if lib26b1::is_heavy(self.game, self.data, it) {
-            unported_call("ftpickupitem_800948A8 for a heavy item");
-        }
-        let part = if lib26b1::kind(self.game, it) == IT_KIND_WSTAR {
+        let heavy = lib26b1::is_heavy(self.game, self.data, it);
+        let part = if heavy {
+            i32::from(
+                self.data
+                    .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x11)),
+            )
+        } else if lib26b1::kind(self.game, it) == IT_KIND_WSTAR {
             0
         } else {
             i32::from(
@@ -75,6 +93,10 @@ impl Running<'_> {
         };
         self.count_item_caught(slot, sub, it);
         super::super::super::it::item::pick_up(self, it, gobj, part);
+        if lib26b1::is_heavy(self.game, self.data, it) {
+            let sfx = self.character_sfx(gobj, 0x2C);
+            self.play_track(gobj, super::jump::FT_800881D8, sfx);
+        }
     }
 
     /// `ftpickupitem_Anim`: on the script's flag the item in reach taken; at the end its own
@@ -102,7 +124,11 @@ impl Running<'_> {
                     return;
                 }
             } else {
-                unported_call("ftpickupitem_Anim's heavy item carry");
+                if fp.x2222_b0 {
+                    unported_call("ftDk_MS_341_800DF980 (Donkey Kong carrying a heavy item)");
+                }
+                self.enter_lift_wait(gobj);
+                return;
             }
         }
         self.enter_wait(gobj);

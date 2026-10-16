@@ -1,14 +1,14 @@
 //! Lip's Stick, `melee/it/kinds/itlipstick.c`: a swung item with charges (`xD4C`) that falls,
-//! lands and is held; thrown, it bounces off what it touches (its spores, `it_8029A218`, and
-//! its swing's, `it_80295770`, aren't ported).
+//! lands and is held; each swing's script flag puffs spores (`itlipstickspore.c`) while
+//! charges last; thrown, the first thing it touches bursts its spores and it bounces off.
 
 use super::super::ground::{air, air_touches, fall, ground_or_fall, ground_skid, try_land};
 use super::super::item::{article, change, change_state};
 use super::super::{item, item_mut, lib26b1, lib2725, maplib};
-use super::falling_phys;
-use crate::game::code;
+use super::{falling_phys, lipstickspore};
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
+use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x8029_570C;
 pub const LANDED: u32 = 0x8029_57AC;
@@ -83,6 +83,32 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     ip.xD4C = charges;
     ip.xDAC_itcmd_var0 = 0;
     fell(r, gobj);
+}
+
+/// Where a swing's spores leave from, in the hand's space (the attributes' `x4`),
+/// `it_80295748`.
+#[doc(alias = "it_80295748")]
+pub fn spore_offset(r: &Running, gobj: GObjId) -> Vec3 {
+    let a = article(item(r.game, gobj))
+        .special(r.data)
+        .expect("a Lip's Stick without attributes");
+    Vec3::new(
+        r.data.f32(a.at(4)),
+        r.data.f32(a.at(8)),
+        r.data.f32(a.at(0xC)),
+    )
+}
+
+/// A swing's spores from `pos`, facing `facing` (`kind` by the swing), a charge spent,
+/// `it_80295770`.
+#[doc(alias = "it_80295770")]
+pub fn puff(r: &mut Running, gobj: GObjId, pos: Vec3, facing: f32, kind: i32) {
+    let ip = item_mut(r.game, gobj);
+    if ip.xD4C > 0 {
+        ip.xD4C -= 1;
+    }
+    let owner = ip.owner.expect("a Lip's Stick swung with no owner");
+    lipstickspore::swing(r, owner, pos, facing, kind);
 }
 
 /// Lands and lies still, `it_802957AC`.
@@ -180,7 +206,11 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
     let t = air_touches(r, gobj);
     if t & 0xF != 0 {
         if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
-            code::unported_call("it_8029A218 (Lip's Stick's spores)");
+            let ip = item(r.game, gobj);
+            let owner = ip.owner.expect("a Lip's Stick thrown with no owner");
+            let (pos, facing) = (ip.pos, ip.facing_dir);
+            lipstickspore::burst(r, owner, pos, facing, 0);
+            item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
         }
         maplib::bounce(r, gobj, t);
         if t & 1 != 0 && try_land(r, gobj) {

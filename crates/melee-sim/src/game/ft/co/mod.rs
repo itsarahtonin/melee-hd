@@ -40,6 +40,7 @@ pub mod item_throw;
 pub mod jump;
 pub mod kind_callbacks;
 pub mod ledge;
+pub mod lift;
 pub mod multijump;
 pub mod parasol;
 pub mod passive_ceil;

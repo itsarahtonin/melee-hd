@@ -68,6 +68,7 @@ impl Running<'_> {
     /// `ftCo_Jump_Anim`.
     #[doc(alias = "ftCo_Jump_Anim")]
     #[doc(alias = "ftCo_Pass_Anim")]
+    #[doc(alias = "ftCo_ItemScrew_Anim")]
     pub fn co_jump_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.enter_fall(gobj);
