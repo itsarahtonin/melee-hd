@@ -44,9 +44,9 @@ fn a_changed_restore_fails() {
     let Some((ok, out)) = sync_test(&["--rollback", "7", "--perturb", "900"]) else {
         return;
     };
+    // The flipped bit shows in the first output that reads it (a drawn view matrix, tick 895)
+    // or else in the state after tick 900; either way within the perturbed rollback.
     assert!(!ok, "{out}");
-    assert!(
-        out.contains("the state after tick 900, restored from before tick 894 and played again, differs from the straight run's at game."),
-        "{out}"
-    );
+    assert!(out.contains("894 ticks checked, rolled back 7 each"), "{out}");
+    assert!(out.contains("differs from the straight run's at "), "{out}");
 }
