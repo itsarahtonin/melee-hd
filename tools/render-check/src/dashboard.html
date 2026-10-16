@@ -137,7 +137,9 @@ $("sub").innerHTML = `<span class="mono">${esc(D.commit)}</span> · generated ${
 const checks = D.checks;
 const res = (c) => c.result || "idle";
 const count = (r) => checks.filter((c) => res(c) === r).length;
-const finite = checks.flatMap((c) => c.measures.filter((m) => m.kind === "compare" && m.psnr !== null && res(c) === "pass").map((m) => m.psnr));
+const passing = (k) => checks.flatMap((c) => res(c) === "pass" ? c.measures.filter((m) => m.kind === k) : []);
+const finite = passing("compare").filter((m) => m.psnr !== null).map((m) => m.psnr);
+const scaledPsnr = passing("scaled").filter((m) => m.psnr !== null).map((m) => m.psnr);
 const stages = [...new Set(checks.map((c) => c.stage || "Other"))];
 const stat = (k, v, d) => `<div class="stat"><span class="k">${k}</span><span class="v num">${v}</span><span class="d">${d}</span></div>`;
 $("stats").innerHTML = [
@@ -145,7 +147,8 @@ $("stats").innerHTML = [
   stat("Pass", count("pass"), "identical to ssbm-rs or within the scaled tolerance"),
   stat("Known", count("known"), "out of tolerance as documented"),
   stat("Fail", count("fail"), "a regression, or a result not yet recorded"),
-  stat("Worst passing", finite.length ? `${Math.min(...finite).toFixed(1)} dB` : "inf", "PSNR against ssbm-rs (inf = identical)"),
+  stat("Worst passing", finite.length ? `${Math.min(...finite).toFixed(1)} dB` : "identical", finite.length ? "lowest PSNR against ssbm-rs among passing 1x checks" : "every passing 1x check matches ssbm-rs exactly"),
+  stat("Worst scaled", scaledPsnr.length ? `${Math.min(...scaledPsnr).toFixed(1)} dB` : "–", "lowest PSNR of a passing 2x or 3x render against 1x"),
 ].join("");
 $("tol").innerHTML = `<span>Against ssbm-rs: PSNR at least <b class="num">${D.tolerance.psnr} dB</b>, at most <b class="num">${D.tolerance.off32}%</b> of pixels off by more than 32 levels.</span><span>Scaled (2x, 3x box-downsampled; 16:9's middle against 73:60): at least <b class="num">${D.scaled.psnr} dB</b>, and no 16 by 16 block of the 1x picture off by more than <b class="num">${D.scaled.block}</b> levels on average in a channel (its third image is that block difference).</span>`;
 
