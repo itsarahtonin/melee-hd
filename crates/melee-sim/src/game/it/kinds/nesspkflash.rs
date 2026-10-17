@@ -2,8 +2,8 @@
 //! grows while he holds the special (he steers it with the stick), then waits a moment and
 //! bursts ([`super::nesspkflashexplode`]); meeting the stage it fizzles (state 2).
 //!
-//! Kirby's copy (`It_Kind_Kirby_NessPKFlush`) runs the same code with his own checks, which
-//! aren't ported.
+//! Kirby's copy (`It_Kind_Kirby_NessPKFlush`) runs the same code with his own checks
+//! (`ft::kirby::special_ness`).
 
 use gekko_fp as fp;
 
@@ -185,7 +185,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
         if owner == Some(ness) {
             match kind {
                 super::NESS_PK_FLUSH => r.ness_special_n_set_null(ness),
-                super::KIRBY_NESS_PK_FLUSH => unported_call("ftKb_SpecialNNs_800FECBC"),
+                super::KIRBY_NESS_PK_FLUSH => r.kb_ns_forget(ness),
                 _ => {}
             }
         }
@@ -239,7 +239,7 @@ pub fn start(r: &mut Running, gobj: GObjId) {
 fn owner_holding(r: &mut Running, gobj: GObjId, owner: GObjId) -> bool {
     match item(r.game, gobj).kind {
         super::NESS_PK_FLUSH => r.ness_special_n_holding(owner),
-        super::KIRBY_NESS_PK_FLUSH => unported_call("ftKb_SpecialNNs_800FEC78"),
+        super::KIRBY_NESS_PK_FLUSH => r.kb_ns_holding(owner),
         // The original reads a register it never set.
         _ => unported_call("itNesspkflash_UnkMotion0_Anim on another kind"),
     }

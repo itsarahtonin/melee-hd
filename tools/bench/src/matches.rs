@@ -338,6 +338,90 @@ pub const ORACLE_MATCHES: &[Match] = &[
         &[p(KIRBY, 0), p(GAME_WATCH, 0)],
         0x1F0F_010E,
     ),
+    Match::bench(
+        "kirby-fox-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(FOX, 0)],
+        0x1F0F_010F,
+    ),
+    Match::bench(
+        "kirby-donkey-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(DONKEY_KONG, 0)],
+        0x1F0F_0110,
+    ),
+    Match::bench(
+        "kirby-bowser-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(BOWSER, 0)],
+        0x1F0F_0111,
+    ),
+    Match::bench(
+        "kirby-link-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(LINK, 0)],
+        0x1F0F_0112,
+    ),
+    Match::bench(
+        "kirby-younglink-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(YOUNG_LINK, 0)],
+        0x1F0F_0113,
+    ),
+    Match::bench(
+        "kirby-yoshi-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(YOSHI, 0)],
+        0x1F0F_0114,
+    ),
+    Match::bench(
+        "kirby-jigglypuff-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(JIGGLYPUFF, 0)],
+        0x1F0F_0115,
+    ),
+    Match::bench(
+        "kirby-mewtwo-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(MEWTWO, 0)],
+        0x1F0F_0116,
+    ),
+    Match::bench(
+        "kirby-marth-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(MARTH, 0)],
+        0x1F0F_0117,
+    ),
+    Match::bench(
+        "kirby-roy-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(ROY, 0)],
+        0x1F0F_0118,
+    ),
+    Match::bench(
+        "kirby-ics-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(ICE_CLIMBERS, 0)],
+        0x1F0F_0119,
+    ),
+    Match::bench(
+        "kirby-drmario-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(DR_MARIO, 0)],
+        0x1F0F_011A,
+    ),
+    Match::bench(
+        "kirby-ganon-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(GANONDORF, 0)],
+        0x1F0F_011B,
+    ),
+    Match::bench(
+        "kirby-pichu-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(PICHU, 0)],
+        0x1F0F_011C,
+    ),
 ];
 
 /// Short names for the characters, for match names.

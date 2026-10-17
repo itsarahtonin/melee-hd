@@ -5,7 +5,7 @@
 use super::super::item::{animate, change, change_state, debug_owner_bubbles, destroy, spawn_air};
 use super::super::{item, jobj_of, lib26b1, lib2725};
 use crate::fpu::reg;
-use crate::game::code::{ParticleHooks, unported_call};
+use crate::game::code::ParticleHooks;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -79,7 +79,7 @@ fn owner_forgets(r: &mut Running, gobj: GObjId) {
         if ip.kind == KIND {
             r.peach_toad_gone(owner);
         } else {
-            unported_call("ftKb_SpecialNPe_8010C3C0 (Kirby's Toad gone)");
+            r.kb_pe_toad_gone(owner);
         }
     }
 }
@@ -89,7 +89,7 @@ fn owner_done(r: &Running, gobj: GObjId) -> bool {
     let ip = item(r.game, gobj);
     match ip.owner {
         Some(owner) if ip.kind == KIND => r.peach_toad_done(owner),
-        Some(_) => unported_call("ftKb_SpecialNPe_8010C4AC (Kirby's Toad done)"),
+        Some(owner) => r.kb_pe_done(owner),
         None => true,
     }
 }
