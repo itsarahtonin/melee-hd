@@ -766,3 +766,17 @@ pub fn scale_by_owner(r: &mut Running, gobj: GObjId) {
     scale_ranges(r.game, gobj);
     scale_boxes(r.game, gobj);
 }
+
+/// A sound picked at random from `n` starting at `base`, `it_80275288`.
+#[doc(alias = "it_80275288")]
+pub fn play_random_sfx(r: &mut Running, gobj: GObjId, n: i32, base: i32) {
+    let sfx = base.wrapping_add(r.game.objs.rng.below(n));
+    super::item::play_sfx(r, gobj, sfx, 127, 64);
+}
+
+/// The same on the item's second sound channel (`Item_8026AFA0`), `it_802752D8`.
+#[doc(alias = "it_802752D8")]
+pub fn play_random_sfx2(r: &mut Running, gobj: GObjId, n: i32, base: i32) {
+    let sfx = base.wrapping_add(r.game.objs.rng.below(n));
+    super::item::play_sfx2(r, gobj, sfx, 127, 64);
+}

@@ -111,7 +111,7 @@ pub fn set_xdce_b2(game: &mut Game, gobj: GObjId) {
 
 /// Clears `xDCE`'s third flag, `it_802754BC`.
 #[doc(alias = "it_802754BC")]
-pub fn clear_hit_flag2(game: &mut Game, gobj: GObjId) {
+pub fn clear_xdce_b2(game: &mut Game, gobj: GObjId) {
     set_flag(&mut item_mut(game, gobj).xDCE_flag, 2, false);
 }
 

@@ -226,7 +226,7 @@ pub fn walk(r: &mut Running, gobj: GObjId) {
     lib26b1::keep_clear(r.game, gobj);
     hitbox::end_blink(r.game, gobj);
     hitbox::set_hit_ids2(r.game, gobj);
-    hitbox::clear_hit_flag2(r.game, gobj);
+    hitbox::clear_xdce_b2(r.game, gobj);
 }
 
 /// Its life counted down: whether it ran out (the inline `itMaril_UnkMotion2_Anim_inline`,
