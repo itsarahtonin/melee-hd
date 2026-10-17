@@ -105,8 +105,21 @@ pub fn spawn(
 #[doc(alias = "itLinkBow_Logic100_Destroyed")]
 fn destroyed(r: &mut Running, gobj: GObjId) {
     if let Some(o) = item(r.game, gobj).owner {
-        r.link_unset_bow(o);
+        if is_kirbys(r, gobj) {
+            r.kb_lk_unset_bow(o);
+        } else {
+            r.link_unset_bow(o);
+        }
     }
+}
+
+/// Whether it's one of Kirby's copies' bows (`It_Kind_Kirby_LinkBow`, `_CLinkBow`), whose
+/// owner's queries are his.
+fn is_kirbys(r: &Running, gobj: GObjId) -> bool {
+    matches!(
+        item(r.game, gobj).kind,
+        super::KIRBY_LINK_BOW | super::KIRBY_CLINK_BOW
+    )
 }
 
 /// Takes the bow away, `it_802AF304`.
@@ -121,7 +134,11 @@ fn owner_index(r: &mut Running, gobj: GObjId) -> Option<i32> {
     if item(r.game, gobj).owner != Some(owner) {
         return None;
     }
-    Some(r.link_bow_index(owner))
+    Some(if is_kirbys(r, gobj) {
+        r.kb_lk_bow_index(owner)
+    } else {
+        r.link_bow_index(owner)
+    })
 }
 
 /// Its state following his, `it_802AF32C`: the same draw on the other footing keeps its
@@ -184,7 +201,11 @@ fn anim(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).owner != Some(owner) {
         return true;
     }
-    r.link_bow_released(owner)
+    if is_kirbys(r, gobj) {
+        r.kb_lk_bow_released(owner)
+    } else {
+        r.link_bow_released(owner)
+    }
 }
 
 /// `itLinkbow_UnkMotion5_Coll`: at his size.

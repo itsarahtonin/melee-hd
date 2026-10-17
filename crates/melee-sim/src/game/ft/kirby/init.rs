@@ -148,6 +148,10 @@ impl Running<'_> {
             19 => self.kb_zd_enter(gobj),
             7 => self.kb_sk_enter(gobj),
             24 => self.kb_gw_enter(gobj),
+            3 => self.kb_dk_enter(gobj),
+            5 | 31 => self.kb_kp_enter(gobj),
+            6 | 20 => self.kb_lk_enter(gobj, false),
+            14 => self.kb_ys_enter(gobj),
             k => unported_call(&format!("the neutral special of copy kind {k}")),
         }
     }
@@ -168,6 +172,10 @@ impl Running<'_> {
             19 => self.kb_zd_air_enter(gobj),
             7 => self.kb_sk_air_enter(gobj),
             24 => self.kb_gw_air_enter(gobj),
+            3 => self.kb_dk_air_enter(gobj),
+            5 | 31 => self.kb_kp_air_enter(gobj),
+            6 | 20 => self.kb_lk_enter(gobj, true),
+            14 => self.kb_ys_air_enter(gobj),
             k => unported_call(&format!("the aerial neutral special of copy kind {k}")),
         }
     }
@@ -336,7 +344,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_Init_UnkMotionStates3")]
     pub fn kb_unk_motion_states3(&mut self, gobj: GObjId) {
         if matches!(self.game.fighter(gobj).u_i32(u::HAT_KIND), 5 | 31) {
-            unported_call("ftKb_SpecialNKp_800FA7D4 (Bowser's copied breath)");
+            self.kb_kp_refuel(gobj);
         }
     }
 
@@ -484,6 +492,15 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         0x800F_0168 | 0x800F_0274 => g.kb_head_hat_off(gobj),
         0x800F_04F8 => g.kb_samus_hat_on(gobj),
         0x800F_05A8 => g.kb_samus_hat_off(gobj),
+        0x800E_FB4C => g.kb_fox_hat_on(gobj),
+        0x800F_0604 => g.kb_yoshi_hat_on(gobj),
+        0x800E_FD64 => g.kb_koopa_hat_on(gobj),
+        0x800E_FE80 => g.kb_link_hat_on(gobj),
+        0x800F_0A54 => g.kb_clink_hat_on(gobj),
+        0x800E_FBFC | 0x800F_06B4 => g.kb_head_hat_off(gobj),
+        0x800E_FE1C | 0x800E_FF38 | 0x800F_0B0C => g.kb_pikachu_hat_off(gobj),
+        0x800F_0FC0 => g.kb_donkey_hat_on(gobj),
+        0x800F_10A4 => g.kb_donkey_hat_off(gobj),
         0x800F_130C => g.kb_falco_hat_on(gobj),
         0x800F_13F0 => g.kb_falco_hat_off(gobj),
         0x800F_19AC => g.kb_copy_cleanup(gobj),

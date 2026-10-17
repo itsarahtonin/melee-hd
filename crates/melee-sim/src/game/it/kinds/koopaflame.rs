@@ -8,7 +8,6 @@ use super::super::item::{article, change, change_state, debug_owner_bubbles, spa
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use super::{KIRBY_KOOPA_FLAME, KOOPA_FLAME};
 use crate::fpu::{mem, reg};
-use crate::game::code::unported_call;
 use crate::game::ef::{self, Arg};
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
@@ -169,7 +168,19 @@ pub fn spawn(
                 fp::frsp(f64::from(full_size)),
             )));
         }
-        KIRBY_KOOPA_FLAME => unported_call("ftKb_SpecialNKp_800FA83C (Kirby's flame)"),
+        KIRBY_KOOPA_FLAME => {
+            let full_speed = r.kb_kp_max_speed(owner);
+            let full_size = r.kb_kp_max_size(owner);
+            let v = item_mut(r.game, gobj).xDD4_itemVar.koopa_flame();
+            v.x38_base_speed.set(mem(fp::fdivs(
+                fp::frsp(f64::from(base_speed)),
+                fp::frsp(f64::from(full_speed)),
+            )));
+            v.x3C_scale.set(mem(fp::fdivs(
+                fp::frsp(f64::from(scale)),
+                fp::frsp(f64::from(full_size)),
+            )));
+        }
         _ => {}
     }
     let (min_speed, max_speed) = (

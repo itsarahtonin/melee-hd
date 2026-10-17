@@ -65,6 +65,12 @@ impl Running<'_> {
             9 => self.kb_peach_hat_on(gobj),
             19 => self.kb_zelda_hat_on(gobj),
             24 => self.kb_gamewatch_hat_on(gobj),
+            1 => self.kb_fox_hat_on(gobj),
+            3 => self.kb_donkey_hat_on(gobj),
+            5 => self.kb_koopa_hat_on(gobj),
+            6 => self.kb_link_hat_on(gobj),
+            14 => self.kb_yoshi_hat_on(gobj),
+            20 => self.kb_clink_hat_on(gobj),
             _ => unported_call(&format!("the hat of copy kind {kind}")),
         }
     }
@@ -170,7 +176,10 @@ impl Running<'_> {
             9 => self.kb_pe_cleanup(gobj),
             7 => self.kb_sk_drop(gobj),
             24 => self.kb_gw_cleanup(gobj),
-            10 | 6 | 20 | 16 | 14 | 3 => unported_call("ftKb_SpecialN_800F19AC's copy cleanup"),
+            3 => self.kb_dk_cleanup(gobj),
+            6 | 20 => self.kb_lk_cleanup(gobj),
+            14 => self.kb_ys_cleanup(gobj),
+            10 | 16 => unported_call("ftKb_SpecialN_800F19AC's copy cleanup"),
             _ => {}
         }
     }
@@ -185,7 +194,10 @@ impl Running<'_> {
             9 => self.kb_pe_cleanup(gobj),
             7 => self.kb_sk_drop(gobj),
             24 => self.kb_gw_cleanup(gobj),
-            10 | 6 | 20 | 16 | 14 | 3 => unported_call("ftKb_SpecialN_800F1A8C's copy cleanup"),
+            3 => self.kb_dk_cleanup(gobj),
+            6 | 20 => self.kb_lk_cleanup(gobj),
+            14 => self.kb_ys_cleanup(gobj),
+            10 | 16 => unported_call("ftKb_SpecialN_800F1A8C's copy cleanup"),
             _ => {}
         }
     }
@@ -198,9 +210,10 @@ impl Running<'_> {
             4 | 11 | 27..=30 | 32 => {}
             13 => self.kb_samus_hat_off(gobj),
             22 => self.kb_falco_hat_off(gobj),
-            0 | 2 | 17 | 8 | 9 => self.kb_head_hat_off(gobj),
-            12 | 7 | 19 => self.kb_pikachu_hat_off(gobj),
+            0 | 1 | 2 | 17 | 8 | 9 | 14 => self.kb_head_hat_off(gobj),
+            12 | 7 | 19 | 5 | 6 | 20 => self.kb_pikachu_hat_off(gobj),
             24 => self.kb_gamewatch_hat_off(gobj),
+            3 => self.kb_donkey_hat_off(gobj),
             _ => unported_call(&format!("the hat removal of copy kind {kind}")),
         }
     }

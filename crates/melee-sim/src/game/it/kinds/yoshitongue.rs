@@ -1,6 +1,7 @@
 //! An item on Yoshi's tongue, `melee/it/kinds/ityoshitongue.c`: the egg lay's tongue catches
 //! an item (any kind), which follows the tongue's tip in a state of its own until Yoshi swallows
-//! it, making an egg of it, or lets it go.
+//! it, making an egg of it, or lets it go. Kirby's copy of Yoshi has its own copy of it
+//! (`melee/it/kinds/itkirbyyoshispecialn.c`), the same but for its state table.
 
 use super::super::item::{article, change_state, destroy};
 use super::super::{item_mut, lib2725, maplib, zako};
@@ -11,11 +12,17 @@ use crate::hsd::gobj::GObjId;
 pub const ANIM: u32 = 0x802F_2CCC;
 pub const PHYS: u32 = 0x802F_2CD4;
 pub const COLL: u32 = 0x802F_2CD8;
+/// Kirby's copy's item's state callbacks.
+pub const KB_ANIM: u32 = 0x802F_2E68;
+pub const KB_PHYS: u32 = 0x802F_2E70;
+pub const KB_COLL: u32 = 0x802F_2E74;
 
-/// `it_803F9480`, the tongue's own state table.
+/// `it_803F9480`, the tongue's own state table, and Kirby's copy's (`it_803F9490`).
 const STATES: u32 = 0x803F_9480;
+const KB_STATES: u32 = 0x803F_9490;
 
-/// The joint of a Yoshi's tongue's tip (`ftYs_SpecialN_GetBoneIndex`, his `FtPart_TransN2`).
+/// The joint of a Yoshi's tongue's tip (`ftYs_SpecialN_GetBoneIndex`, his `FtPart_TransN2`;
+/// Kirby's copy's `ftKb_SpecialNYs_80109238` is the same for him).
 fn tip(r: &Running, yoshi: GObjId) -> i32 {
     let fp = r.game.fighter(yoshi);
     r.bone_index(fp, crate::game::ft::parts::TRANS_N2)
@@ -24,8 +31,8 @@ fn tip(r: &Running, yoshi: GObjId) -> i32 {
 /// Runs one of the caught item's predicates, if `addr` is one.
 pub fn run_pred(_r: &mut Running, _gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM => anim(),
-        COLL => coll(),
+        ANIM | KB_ANIM => anim(),
+        COLL | KB_COLL => coll(),
         _ => return None,
     })
 }
@@ -33,7 +40,7 @@ pub fn run_pred(_r: &mut Running, _gobj: GObjId, addr: u32) -> Option<bool> {
 /// Runs one of the caught item's events, if `addr` is one.
 pub fn run_event(_r: &mut Running, _gobj: GObjId, addr: u32) -> bool {
     match addr {
-        PHYS => phys(),
+        PHYS | KB_PHYS => phys(),
         _ => return false,
     }
     true
@@ -43,6 +50,16 @@ pub fn run_event(_r: &mut Running, _gobj: GObjId, addr: u32) -> bool {
 /// catcher's player, the tongue's state on the tongue's tip, in the air, blinking, still.
 // Ports `it_802F2BFC`; aliased once a check reaches it.
 pub fn catch(r: &mut Running, gobj: GObjId, owner: GObjId) {
+    catch_in(r, gobj, owner, STATES);
+}
+
+/// Caught by Kirby's copy's tongue, `it_802F2D98`: the same in its own state table.
+// Ports `it_802F2D98` and `ftKb_SpecialNYs_80109238`; aliased once a check reaches them.
+pub fn catch_kirby(r: &mut Running, gobj: GObjId, owner: GObjId) {
+    catch_in(r, gobj, owner, KB_STATES);
+}
+
+fn catch_in(r: &mut Running, gobj: GObjId, owner: GObjId, states: u32) {
     let slot = i32::from(r.game.fighter(owner).player_idx);
     let ip = item_mut(r.game, gobj);
     ip.atk_victim = Some(owner);
@@ -50,7 +67,7 @@ pub fn catch(r: &mut Running, gobj: GObjId, owner: GObjId) {
     // `it_8026C220`.
     ip.xCB0_source_ply = slot;
     super::super::set_flag(&mut ip.xDD0_flag, 1, false);
-    ip.xBC_itemStateContainer = Some(ItemStatesRef(STATES));
+    ip.xBC_itemStateContainer = Some(ItemStatesRef(states));
     let bone = article(ip).model(r.data).bone_attach_id(r.data);
     let part = tip(r, owner);
     lib2725::attach_to_part(r.game, r.data, gobj, bone, owner, part);
@@ -70,7 +87,7 @@ pub fn catch(r: &mut Running, gobj: GObjId, owner: GObjId) {
     lib2725::clear_knockback(r.game, gobj);
 }
 
-/// `it_2F2B_UnkMotion0_Anim`.
+/// `it_2F2B_UnkMotion0_Anim` (and Kirby's copy's `itKirbyyoshispecialn_UnkMotion0_Anim`).
 // Ports `it_2F2B_UnkMotion0_Anim`; aliased once a check reaches it.
 fn anim() -> bool {
     false
@@ -88,8 +105,9 @@ fn coll() -> bool {
 
 /// Let go by the tongue, `it_802F2CE0`: off the tongue at its tip's place, the catch counted
 /// as the catcher's hit on an enemy, its destruction kind cleared when `clear`, its victims
-/// forgotten, knocked out as an enemy is and gone.
-// Ports `it_802F2CE0`; aliased once a check reaches it.
+/// forgotten, knocked out as an enemy is and gone. Kirby's copy's item lets go the same way
+/// (`it_802F2E7C`).
+// Ports `it_802F2CE0` and `it_802F2E7C`; aliased once a check reaches them.
 pub fn release(r: &mut Running, gobj: GObjId, clear: bool) {
     let bone = article(super::super::item(r.game, gobj))
         .model(r.data)

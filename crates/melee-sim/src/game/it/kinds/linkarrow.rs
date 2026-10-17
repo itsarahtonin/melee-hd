@@ -19,6 +19,7 @@ use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, destroy, pick_up, play_sfx, spawn_air};
 use super::super::{coll, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, release};
+use super::{CLINK_ARROW, KIRBY_CLINK_ARROW, KIRBY_LINK_ARROW};
 use crate::fpu::{mem, reg};
 use crate::game::handles::RawPtr;
 use crate::game::state::{Game, Running};
@@ -79,8 +80,6 @@ const SFX_STICK_CLINK: i32 = 0x111C2;
 const GFX_FIRE: i32 = 0x448;
 /// The blink-out's effect.
 const GFX_BLINK: i32 = 0x421;
-/// `It_Kind_CLink_Arrow`.
-const KIND_CLINK_ARROW: i32 = 65;
 /// The guard states (`ftCo_MS_GuardOn`, `_Guard`, `_GuardSetOff`).
 const GUARD_STATES: [i32; 3] = [178, 179, 181];
 
@@ -113,6 +112,15 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         _ => return false,
     }
     true
+}
+
+/// Whether it's one of Kirby's copies' arrows (`It_Kind_Kirby_LinkArrow`, `_CLinkArrow`),
+/// whose owner's queries are his.
+fn is_kirbys(r: &Running, gobj: GObjId) -> bool {
+    matches!(
+        item(r.game, gobj).kind,
+        KIRBY_LINK_ARROW | KIRBY_CLINK_ARROW
+    )
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itLinkArrow_ItemVars {
@@ -360,7 +368,11 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
         && let Some(o) = vars(r.game, gobj).xE0.get()
         && item(r.game, gobj).owner == Some(o)
     {
-        r.link_unset_arrow(o);
+        if is_kirbys(r, gobj) {
+            r.kb_lk_unset_arrow(o);
+        } else {
+            r.link_unset_arrow(o);
+        }
     }
     remove_trails(r, gobj);
     vars(r.game, gobj).xE0.set(None);
@@ -389,7 +401,12 @@ fn anim0(r: &mut Running, gobj: GObjId) -> bool {
     let Some(o) = vars(r.game, gobj).xE0.get() else {
         return true;
     };
-    if item(r.game, gobj).owner == Some(o) && r.link_bow_released(o) {
+    let released = if is_kirbys(r, gobj) {
+        r.kb_lk_bow_released(o)
+    } else {
+        r.link_bow_released(o)
+    };
+    if item(r.game, gobj).owner == Some(o) && released {
         vars(r.game, gobj).xE0.set(None);
         return true;
     }
@@ -565,7 +582,7 @@ fn stick(r: &mut Running, gobj: GObjId) {
     let z = vars(r.game, gobj).x94.get();
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, z);
     remove_trails(r, gobj);
-    if item(r.game, gobj).kind == KIND_CLINK_ARROW {
+    if matches!(item(r.game, gobj).kind, CLINK_ARROW | KIRBY_CLINK_ARROW) {
         play_sfx(r, gobj, SFX_STICK_CLINK, 0x7F, 0x40);
         let at = Vec3::new(0.0, 0.0, 5.0);
         crate::game::ef::spawn(

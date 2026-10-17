@@ -8,8 +8,9 @@
 //! capture reached (and branches few did) run from real states of the same moves.
 //!
 //! What isn't ported (the copies but Mario's, Luigi's, Captain Falcon's, Pikachu's, Samus's,
-//! Fox's and Falco's, Ness's, Peach's, Mr. Game & Watch's, Zelda's and Sheik's, the other
-//! hats, the item hooks) isn't run ([`unported`]). The helpers that take more than the GObj, or
+//! Fox's and Falco's, Ness's, Peach's, Mr. Game & Watch's, Zelda's, Sheik's, Donkey Kong's,
+//! Bowser's, Link's and Young Link's, and Yoshi's, the other hats, the item hooks) isn't run
+//! ([`unported`]). The helpers that take more than the GObj, or
 //! return what the check can't compare, run only inside the callers that call them
 //! ([`HELPERS`]); creation's functions are the oracle's, and the common ones his replays
 //! reach that other tests already check aren't run again ([`skipped`]). The crowd stands in
@@ -45,7 +46,11 @@
 //! Mr. Game & Watch, Zelda and Sheik, their hats, the pan of Kirby's Chef, the shared items'
 //! functions that ask his copies, and the swallowed victim let go (`ftCo_800DC920`) come from the
 //! other four matches (`kirby-{ness-fd,peach-fd,gnw-bf,zelda-bf}.slp`) the same way, with
-//! `kb-copies2.txt` and `done-copies2.txt`.
+//! `kb-copies2.txt` and `done-copies2.txt`. Those of Fox (his hat), Donkey Kong, Bowser, Link,
+//! Young Link and Yoshi, their hats, the flame's, the bow's and the arrow's checks of a Kirby
+//! owner, and the states of Yoshi's copy's victims come from the third batch's six matches
+//! (`local/bench/oracle-kirby2/kirby-{fox-fd,donkey-bf,bowser-fd,link-bf,younglink-fd,yoshi-bf}.slp`)
+//! with `kb-copies3.txt` and `done-copies3.txt`.
 //!
 //! The throws' functions come from the first 2,500 fields of `hf-kirby-marth-bf-cdeac923` and
 //! 1,500 of `hf-kirby-yoshi-fod-27074109` (`CAPTURE=$D/NAME-throws`,
@@ -74,11 +79,12 @@ use ssbm_rt::capture::Call;
 
 const ENV: &str = "KIRBY";
 const CALLS: &str = "calls/kirby";
-const FUNCS: [&str; 4] = [
+const FUNCS: [&str; 5] = [
     "kb-funcs.txt",
     "kb-throws.txt",
     "kb-copies.txt",
     "kb-copies2.txt",
+    "kb-copies3.txt",
 ];
 
 fn var(what: &str) -> Option<String> {
@@ -138,10 +144,11 @@ fn functions() -> Vec<(u32, String)> {
 
 /// The units whose functions run from each other's captures, by their first function's
 /// address: his victims' states, the common states, his callbacks with his hats and copies'
-/// bookkeeping, the dash attack, Final Cutter, Stone, Hammer, Inhale, the copies ported, the
-/// cutter's wave, the PK Flash's checks of its owner, the copy star, the hammer, the held
-/// needles' and Toad's checks, the pan, and between them what isn't ported.
-const STARTS: [u32; 33] = [
+/// bookkeeping, the dash attack, Final Cutter, Stone, Hammer, Inhale, the copies ported (with
+/// Yoshi's copy's victims' states), the cutter's wave, the arrows', the PK Flash's, the
+/// flames' and the bows' checks of their owner, the copy star, the hammer, the held needles'
+/// and Toad's checks, the pan, and between them what isn't ported.
+const STARTS: [u32; 44] = [
     0x800B_D19C, // ftCo_800BD19C (the victims' states)
     0x800D_65D8, // ftCo_SquatRv_CheckInput .. the throws
     0x800E_E528, // ftkirby
@@ -154,34 +161,48 @@ const STARTS: [u32; 33] = [
     0x800F_9614, // ftkirbyspecialluigi
     0x800F_99BC, // ftkirbyspecialcaptain
     0x800F_9FD4, // ftkirbyspecialpikachu
-    0x800F_A588, // the copies before Samus's (not ported)
+    0x800F_A588, // ftkirbyspecialkoopa
+    0x800F_B394, // ftkirbyspeciallink
     0x800F_CC14, // ftkirbyspecialsamus
     0x800F_DC00, // ftkirbyspecialfox
     0x800F_EC78, // ftkirbyspecialness
-    0x800F_F8EC, // the copies after Ness's (not ported)
+    0x800F_F8EC, // ftkirbyspecialdonkey
+    0x8010_0E0C, // the copies after Donkey Kong's (not ported)
     0x8010_5A34, // ftkirbyspecialzelda
     0x8010_5FEC, // ftkirbyspecialseak
     0x8010_6F44, // the copies after Sheik's (not ported)
+    0x8010_9260, // ftkirbyspecialyoshi
+    0x8010_A930, // ftkirbycaptureyoshi and ftkirbyyoshiegg (his copy's victims)
+    0x8010_B1F4, // the copies after Yoshi's (not ported)
     0x8010_C288, // ftkirbyspecialpeach
     0x8010_CE5C, // ftkirbyspecialgamewatch
     0x8010_D740, // past his code
     0x8029_BAB8, // itkirbycutterbeam
     0x8029_C4B4, // it_8029C4B4 (not ported)
+    0x802A_7D8C, // itlinkarrow (its checks of its owner)
+    0x802A_A054, // not ported
     0x802A_A7E4, // itnesspkflash (its checks of its owner)
     0x802A_AA50, // not ported
+    0x802A_C8A8, // itkoopaflame (its checks of its owner)
+    0x802A_D478, // not ported
     0x802A_DA1C, // it_2ADA (the copy star)
     0x802A_DC04, // itkirbyhammer
     0x802A_DDB0, // it_802ADDB0 (not ported)
+    0x802A_F1A4, // itlinkbow (its checks of its owner)
+    0x802A_F940, // not ported
     0x802B_18B0, // itseakneedleheld and itpeachtoad (their checks of their owner)
     0x802C_74D8, // itkirbygamewatchchefpan
     0x802C_7774, // the copies' other items (not ported)
 ];
 
 /// The copy star's unit.
-const STAR_UNIT: usize = 27;
+const STAR_UNIT: usize = 36;
+
+/// Yoshi's copy's victims' unit.
+const YOSHI_VICTIM_UNIT: usize = 23;
 
 /// The units not ported yet.
-const UNPORTED_UNITS: [usize; 8] = [12, 16, 19, 22, 24, 26, 29, 32];
+const UNPORTED_UNITS: [usize; 11] = [18, 21, 24, 27, 29, 31, 33, 35, 38, 40, 43];
 
 /// Which unit a function is in, by its address.
 fn unit(addr: u32) -> usize {
@@ -197,8 +218,9 @@ fn fighter_unit(u: usize) -> bool {
 /// holds one), the demo's and the scenes' callbacks, inhaling an item, a swallowed Kirby's
 /// copy, and the hats of the copies not ported (each kind's pair, `ftKb_Init_803C9CC8`, but
 /// the ported ones, [`PORTED_HATS`]); and the throws' landing before the freeze
-/// (`fn_800DD5EC`), the held walk's animation (`ftKb_EatWalk_Anim`) and the pan's `evt_unk`
-/// (nothing dispatches the items' `evt_unk` yet), ported but unaliased, which no capture
+/// (`fn_800DD5EC`), the held walk's animation (`ftKb_EatWalk_Anim`), the pan's `evt_unk`
+/// (nothing dispatches the items' `evt_unk` yet) and Yoshi's copy's tongue catching an item
+/// (`fn_801095DC`, `fn_80109714`; items are off), ported but unaliased, which no capture
 /// reaches.
 const UNPORTED: &[&str] = &[
     "ftKb_Init_OnItemPickup",
@@ -221,6 +243,8 @@ const UNPORTED: &[&str] = &[
     "ftKb_EatWalk_Anim",
     "it_802ADBE4",
     "itKirbyGameWatchChefPan_Logic113_EvtUnk",
+    "fn_801095DC",
+    "fn_80109714",
 ];
 
 /// The ported hats among the kinds' pairs.
@@ -247,6 +271,18 @@ const PORTED_HATS: &[&str] = &[
     "ftKb_SpecialN_800F09F0",
     "ftKb_SpecialN_800F14B4",
     "ftKb_SpecialN_800F15D8",
+    "ftKb_SpecialN_800EFB4C",
+    "ftKb_SpecialN_800EFBFC",
+    "ftKb_SpecialN_800EFD64",
+    "ftKb_SpecialN_800EFE1C",
+    "ftKb_SpecialN_800EFE80",
+    "ftKb_SpecialN_800EFF38",
+    "ftKb_SpecialN_800F0604",
+    "ftKb_SpecialN_800F06B4",
+    "ftKb_SpecialN_800F0A54",
+    "ftKb_SpecialN_800F0B0C",
+    "ftKb_SpecialN_800F0FC0",
+    "ftKb_SpecialN_800F10A4",
 ];
 
 /// Whether a function isn't ported.
@@ -295,6 +331,20 @@ const HELPERS: &[&str] = &[
     "fn_800F64C8",
     "it_802ADA1C",
     "it_802ADAF0",
+    "ftKb_SpecialNYs_80109260",
+    "ftKb_SpecialNYs_80109290",
+    "ftKb_SpecialNYs_8010929C",
+    "ftKb_SpecialNYs_801092AC",
+    "ftKb_SpecialNYs_801092BC",
+    "ftKb_SpecialNYs_801092CC",
+    "ftKb_SpecialNYs_801092DC",
+    "ftKb_SpecialNYs_801092F4",
+    "ftKb_SpecialNYs_8010930C",
+    "ftKb_SpecialNYs_80109324",
+    "ftKb_SpecialNYs_8010933C",
+    "ftKb_SpecialNYs_80109354",
+    "ftKb_SpecialNYs_80109380",
+    "ftKb_SpecialNYs_801093A0",
 ];
 
 /// Functions not run here: creation's and the copies' loading (the oracle checks them), the
@@ -343,6 +393,8 @@ const TAKES_MORE: &[&str] = &[
     "ftKb_SpecialN_800F5A04",
     "ftKb_SpecialN_800F5D04",
     "it_8029BB90",
+    "fn_8010A930",
+    "ftKb_SpecialNYs_8010AC78",
 ];
 
 /// A GObj in register `r`, which the import must know.
@@ -380,8 +432,16 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     if !fighter_unit(u) && !is_item {
         panic!("{SKIP}{name} takes an item");
     }
-    if fighter_unit(u) && g.game.fighter(gobj).kind != 4 && u >= 2 {
+    if fighter_unit(u) && g.game.fighter(gobj).kind != 4 && u >= 2 && u != YOSHI_VICTIM_UNIT {
         panic!("{SKIP}{name} takes Kirby, not another fighter");
+    }
+    // Yoshi's copy's victims' callbacks run in its capture and egg states (the egg's shrink
+    // scales the accessory those states give it).
+    if u == YOSHI_VICTIM_UNIT
+        && !TAKES_MORE.contains(&name.as_str())
+        && !(331..=332).contains(&g.game.fighter(gobj).motion_id)
+    {
+        panic!("{SKIP}{name} takes a victim of Yoshi's copy");
     }
     // His victims' states' callbacks read who holds them (`victim_gobj`): from another
     // state's capture there's none, which the game never hands them.
@@ -455,6 +515,14 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802B18B0" => seakneedleheld::show_needles(g, gobj),
         "it_8029BB90" => kirbycutterbeam::start(g, gobj, gobj_reg(maps, call, 4, &name)),
         "it_802ADC34" => kirbyhammer::remove(g, gobj),
+        "fn_8010A930" => g.enter_capture_kirby_yoshi(gobj, gobj_reg(maps, call, 4, &name)),
+        "ftKb_SpecialNYs_8010AC78" => g.enter_kirby_yoshi_egg(gobj, gobj_reg(maps, call, 4, &name)),
+        "ftKb_SpecialNKp_800FA83C" => return Ret::Int(g.kb_kp_max_speed(Some(gobj)) as u32),
+        "ftKb_SpecialNKp_800FA878" => return Ret::Int(g.kb_kp_max_size(Some(gobj)) as u32),
+        "ftKb_SpecialNLk800FB394" => return Ret::Int(g.kb_lk_bow_index(gobj) as u32),
+        "ftKb_SpecialNLk800FB470" => return b(g.kb_lk_bow_released(gobj)),
+        "ftKb_SpecialNLk800FB500" => return b(g.kb_lk_nock(gobj)),
+        "ftKb_SpecialNLk800FB5F4" => return b(g.kb_lk_bow_out(gobj)),
         _ => return run_callback(g, gobj, a),
     }
     Ret::Nothing
@@ -569,6 +637,49 @@ fn vary(call: &mut Call, i: usize) {
         poke_u32(call, fp + 0x2348, [0u32, 3, 100][(i / 5) % 3]);
         poke_u32(call, fp + 0x22E0, [0u32, 3, 6][(i / 7) % 3]);
     }
+    // Donkey Kong's copy's: the swings stored (`u` xBC) none, one short of full and full
+    // (`specialn_dk_swings_to_full_charge`), a cancel asked for (`mv` x0), the effect's phase
+    // (`x8`) and the swings' loop at its start.
+    if (455..=464).contains(&msid) {
+        let full = peek_u32(call, attrs + 0x190);
+        poke_u32(
+            call,
+            fp + 0x22E8,
+            [0, full.saturating_sub(1), full][(i / 2) % 3],
+        );
+        poke_u32(call, fp + 0x2340, ((i / 3) % 2) as u32);
+        poke_u32(call, fp + 0x2348, [0u32, 1, 2][(i / 5) % 3]);
+        // The swings' loop at a loop's start (`cur_anim_frame` 0), where a swing counts.
+        if matches!(msid, 456 | 461) && (i / 4).is_multiple_of(2) {
+            poke_f32(call, fp + 0x894, 0.0);
+        }
+    }
+    // Bowser's and Giga Bowser's copies': the flame's speed and size left (`u` x84, x88) at
+    // their least, between and full, the frame within three (`mv` x0), the loops left
+    // (`x10`) and the frames breathed (`xC`) short of the least breath or past it.
+    if (443..=448).contains(&msid) || (538..=543).contains(&msid) {
+        let f = |off: u32| f32::from_bits(peek_u32(call, attrs + off));
+        let k = (i / 2) % 3;
+        let fuel = [f(0x128), 0.5 * (f(0x128) + f(0x124)), f(0x124)][k];
+        let flame = [f(0x130), 0.5 * (f(0x130) + f(0x12C)), f(0x12C)][k];
+        poke_f32(call, fp + 0x22B0, fuel);
+        poke_f32(call, fp + 0x22B4, flame);
+        poke_u32(call, fp + 0x2340, ((i / 3) % 3) as u32);
+        poke_u32(call, fp + 0x2350, ((i / 5) % 2) as u32);
+        let least = peek_u32(call, attrs + 0x118);
+        poke_u32(call, fp + 0x234C, [0, least][(i / 7) % 2]);
+    }
+    // Link's and Young Link's copies': charging (`mv` x0.x) or not, and the charge (`x4`)
+    // none, partway and one short of the most.
+    if (401..=406).contains(&msid) || (514..=519).contains(&msid) {
+        let most = f32::from_bits(peek_u32(call, attrs + 0x268));
+        poke_f32(call, fp + 0x2340, ((i / 2) % 2) as f32);
+        poke_f32(
+            call,
+            fp + 0x2344,
+            [0.0, 0.5 * most, most - 1.0][(i / 3) % 3],
+        );
+    }
     // Mr. Game & Watch's copy's: the sausages thrown (`mv` x4) none, one short of the most and
     // the most, and the loop let go (`x0`).
     if (510..=511).contains(&msid) {
@@ -645,7 +756,7 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
 /// throws' landing loops until the script's freeze flag, `fn_800DD5EC`, which another
 /// state's script, or a changed one, may never set, in the original as in the port), and the
 /// shared items' checks of their owner (each item's own code runs on its own kind only).
-const AS_SAVED_ONLY: [usize; 3] = [1, 25, 30];
+const AS_SAVED_ONLY: [usize; 6] = [1, 30, 32, 34, 39, 41];
 
 /// Functions of the copies whose branches few of their neighbours' captures reach, each also run
 /// from every capture of its unit, [`FROM_ALL_ROUNDS`] times with the controls and variables
