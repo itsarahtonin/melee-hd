@@ -77,16 +77,26 @@ fn functions() -> Vec<(u32, String)> {
             let a = u32::from_str_radix(w.next()?, 16).ok()?;
             Some((a, w.next()?.to_owned()))
         })
-        .filter(|(a, _)| unit(*a).is_some())
+        .filter(|(a, n)| unit(*a).is_some() && !UNPORTED.iter().any(|u| u.0 == n))
         .collect();
     v.sort();
     v.dedup();
     v
 }
 
+/// The units' functions no oracle match reaches and melee-hd doesn't port, with why.
+const UNPORTED: &[(&str, &str)] = &[
+    ("it_8027A780", "the training mode's Pokémon draw"),
+    ("it_8027A9B8", "an event match's Pokémon list"),
+];
+
 /// The units whose functions run from each other's captures, by their address ranges: the
 /// Pokémon's common code, then each Pokémon.
-const UNITS: &[(u32, u32)] = &[(0x8027_9C48, 0x8027_B288), (0x802D_007C, 0x802D_09D0)];
+const UNITS: &[(u32, u32)] = &[
+    (0x8027_9C48, 0x8027_B070),
+    (0x8027_B564, 0x8027_B5B0),
+    (0x802D_007C, 0x802D_09D0),
+];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
 fn unit(addr: u32) -> Option<usize> {
@@ -151,6 +161,24 @@ fn item_check(g: &Running, gobj: GObjId, a: u32) {
     }
 }
 
+/// The ball's functions take a Poké Ball, the others a Pokémon or a Pokémon's item: a
+/// neighbour's call on another kind would read another member of its variables.
+fn kind_check(g: &Running, gobj: GObjId, name: &str) {
+    let kind = it::lib26b1::kind(g.game, gobj);
+    let ball = matches!(
+        name,
+        "it_8027AB64" | "it_8027AAA0" | "it_8027A364" | "it_8027A4D4"
+    );
+    let ok = if ball {
+        kind == it::kinds::M_BALL
+    } else {
+        (it::kinds::PKIND_START..=it::kinds::POKEMON_UNK).contains(&kind)
+    };
+    if !ok {
+        panic!("{SKIP}{name} doesn't take an item of kind {kind}");
+    }
+}
+
 /// Runs the function `call.addr` on its GObj, with the arguments it was saved with for those
 /// that take more.
 fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
@@ -165,19 +193,22 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             .items
             .get(&r(i))
             .unwrap_or_else(|| panic!("{SKIP}{name} takes an item not imported"));
-        g.game.items[id.0].gobj.expect("an item without its GObj")
+        g.game.items[id.0].entity.expect("an item without its GObj")
     };
     match name.as_str() {
         "it_8027A364" => {
             let gobj = item_gobj(3);
+            kind_check(g, gobj, &name);
             return Ret::Int(pokemon::total_weight(g, gobj) as u32);
         }
         "it_8027A4D4" => {
             let gobj = item_gobj(3);
+            kind_check(g, gobj, &name);
             return Ret::Int(pokemon::draw(g, gobj) as u32);
         }
         "it_8027A160" => {
             let gobj = item_gobj(4);
+            kind_check(g, gobj, &name);
             let bone = if r(3) == 0 {
                 None
             } else {
@@ -196,6 +227,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
                 .gobjs
                 .get(&r(4))
                 .unwrap_or_else(|| panic!("{SKIP}{name} takes a GObj not imported"));
+            kind_check(g, gobj, &name);
             let j = maps.jobjs.get(&r(5)).copied();
             pokemon::effect_scaled(g, r(3) as i32, gobj, j, f(1));
             return Ret::Nothing;
@@ -208,6 +240,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     let gobj = gobj_arg(maps, call);
     let maybe = |i: usize| maps.gobjs.get(&r(i)).copied();
     item_check(g, gobj, a);
+    kind_check(g, gobj, &name);
     if let Some((_, ev)) = ITEM_EVENTS.iter().find(|(n, _)| *n == name) {
         ev(g, gobj);
         return Ret::Nothing;
@@ -219,7 +252,8 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
                 .items
                 .get(&r(4))
                 .unwrap_or_else(|| panic!("{SKIP}{name} takes an item not imported"));
-            let other = g.game.items[id.0].gobj.expect("an item without its GObj");
+            let other = g.game.items[id.0].entity.expect("an item without its GObj");
+            kind_check(g, other, "it_80279E24");
             pokemon::set_release_vars(g, gobj, other, r(5) as i32);
         }
         "it_80279CDC" => pokemon::start(g, gobj, f(1)),
