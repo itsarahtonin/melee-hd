@@ -97,6 +97,15 @@ impl Script {
     }
 }
 
+/// `Command_09`'s background flash animation and its frames (`lbBgFlash_80021C48`'s
+/// arguments), the cursor moved on: the caller, which holds the game, starts it.
+#[doc(alias = "Command_09")]
+pub fn bg_flash(s: &mut Script, data: &Archives) -> (u32, u32) {
+    let w = s.word(data);
+    s.skip(1);
+    ((w >> 18) & 0xFF, w & 0x3_FFFF)
+}
+
 /// Runs an interpreter command, `Command_Execute`; false for an owner's command (10 and up).
 #[doc(alias = "Command_Execute")]
 #[doc(alias = "Command_00")]

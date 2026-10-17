@@ -12,6 +12,7 @@ pub mod dosei;
 pub mod drmariopill;
 pub mod egg;
 pub mod fflower;
+pub mod fire;
 pub mod flower;
 pub mod foods;
 pub mod foxblaster;
@@ -233,6 +234,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || kireihana::run_event(r, gobj, addr)
         || unknown::run_event(r, gobj, addr)
         || hinoarashi::run_event(r, gobj, addr)
+        || fire::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -339,6 +341,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| kireihana::run_pred(r, gobj, addr))
         .or_else(|| unknown::run_pred(r, gobj, addr))
         .or_else(|| hinoarashi::run_pred(r, gobj, addr))
+        .or_else(|| fire::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
