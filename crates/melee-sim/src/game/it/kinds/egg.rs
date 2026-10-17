@@ -8,6 +8,7 @@ use super::super::{drop, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, set_
 use super::falling_phys;
 use crate::game::ef;
 use crate::game::state::Running;
+use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -74,6 +75,44 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         _ => return false,
     }
     true
+}
+
+/// Lays an egg from `parent` (Chansey), `it_80288C88`: at `pos` on the plane, moving at
+/// `vel`, facing `dir`, owned by the parent's owner; not blinking unless it must, its color
+/// overlay cleared.
+#[doc(alias = "it_80288C88")]
+pub fn lay(
+    r: &mut Running,
+    parent: Option<GObjId>,
+    pos: Vec3,
+    vel: Vec3,
+    dir: f32,
+) -> Option<GObjId> {
+    let parent = parent?;
+    let owner = item(r.game, parent).owner;
+    let mut spawn = SpawnItem {
+        kind: super::EGG,
+        ..Default::default()
+    };
+    // `Item_InitSpawnPosition(&spawn, pos, true)`.
+    spawn.prev_pos = Vec3::new(pos.x, pos.y, 0.0);
+    spawn.pos = spawn.prev_pos;
+    spawn.facing_dir = dir;
+    spawn.x3C_damage = 0;
+    spawn.vel = vel;
+    spawn.x0_parent_gobj = owner;
+    spawn.x4_parent_gobj2 = Some(parent);
+    spawn.x44_flag[0] |= 0x80;
+    spawn.x40 = 0;
+    let gobj = super::super::item::spawn_air(r, &mut spawn)?;
+    let ip = item_mut(r.game, gobj);
+    set_flag(&mut ip.xDD0_flag, 6, false);
+    ip.xD40 = 0.0;
+    super::super::anim::clear_overlay(ip);
+    if !super::super::flag(ip.xDD0_flag, 7) {
+        hitbox::end_blink(r.game, gobj);
+    }
+    Some(gobj)
 }
 
 /// `itEgg_Logic3_Spawned`: whole, falling.
