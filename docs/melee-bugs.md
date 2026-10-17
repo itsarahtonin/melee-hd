@@ -218,6 +218,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes effects, sounds and their handles; breaks replay compatibility.
 - **Source:** [engine notes, objects and identity](engine.md#objects-and-identity) (line 17); [the oracle](oracle.md) (line 81).
 
+### Kirby: Mr. Game & Watch's copy walks past its lookup
+
+- **Where:** `ftKb_SpecialN_800F14B4` (the copy's costume put on), then `ftParts_80074D7C` and `ftParts_80074CA0` on Kirby's own parts visibility; `crates/melee-sim/src/game/ft/kirby/hat.rs` (`kb_gamewatch_hat_on`) and `crates/melee-sim/src/game/ft/parts.rs` (`vis_lookup_len`).
+- **Defect:** the costume puts its variant lookup (`hat_dynamics[3]`, one entry, one per model group of the costume) in Kirby's own slot 4 (`x5AC.xC[4]`), which his model groups walk by his own count, two. Hiding or showing that slot reads a second entry past the lookup's end: the next word in the copy's file, which is a pointer.
+- **Effect:** none observable: in memory the pointer is an address at or above 0x80000000, so as the entry's count (an `int`) it is negative and the walk runs no sets. Another file layout would have the game hide or show DObjs by whatever bytes follow.
+- **melee-hd:** modeled: an entry's count that is a pointer in the archive reads as negative.
+- **Fix:** give the lookup an entry per model group of Kirby's, or walk it by the costume's count.
+- **Fix impact:** none (nothing changes in play).
+- **Source:** `crates/melee-sim/src/game/ft/parts.rs:386`; the Kirby CPU match against Mr. Game & Watch (`oracle-kirby-gnw-bf`, tick 1644).
+
 ### Mewtwo: a Shadow Ball field nothing stores
 
 - **Where:** Shadow Ball's code reading `ftMewtwo_FighterVars::x2238_shadowBallGObj`.
@@ -669,6 +679,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A sound command's pan direction past 3 | `ftAction_80072320`, `game/ft/commands.rs` | Passes what `f31` holds | `crates/melee-sim/src/game/ft/commands.rs:973` |
 | PK Flash of another kind | `it_802AAA80`, `game/it/kinds/nesspkflash.rs` | Reads a register it never set | `crates/melee-sim/src/game/it/kinds/nesspkflash.rs:243` |
 | Kirby's aerial Thunder Jolt for another copy | `ftKb_PkSpecialAirN_Anim`, `game/ft/kirby/special_pikachu.rs` | Takes the landing lag from `f31`, which its caller left, for a copy other than Pikachu's or Pichu's; only those two copies enter the state (ssbm-rs transliterates the function from its machine code for it) | `crates/melee-sim/src/game/ft/kirby/special_pikachu.rs:161` |
+| Held needles of another kind | `it_802B18B0`, `game/it/kinds/seakneedleheld.rs` | Shows as many needles as a count it never set for a kind other than Sheik's and Kirby's copy's; only those two make them | `crates/melee-sim/src/game/it/kinds/seakneedleheld.rs:63` |
 | Sheik's chain with no link out | `it_802BC080`, `game/it/kinds/seakchain.rs` | Stores a register its caller set (`env_flags`) when its loop doesn't run | `crates/melee-sim/src/game/it/kinds/seakchain.rs:796` |
 | A floor probe that misses | `ftCo_800DC920`, `game/ft/co/grab.rs` | Leaves the offset a stack word it then compares | `crates/melee-sim/src/game/ft/co/grab.rs:503` |
 | Rumble scripts | `HSD_PadRumbleInterpret1`, `input/rumble.rs` | Reads through a null pointer for a loop end before any loop start, and spins forever on opcodes 6 and 7 or a command that doesn't wait; no script in the game has these | `crates/melee-sim/src/input/rumble.rs:115`; `tools/leaf-check/tests/rumble.rs:64` |
