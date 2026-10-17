@@ -319,7 +319,9 @@ fn scan(
         // the game writes into some loaded data (a fighter's action table caches where each
         // animation was loaded).
         let file = MEM1 + at as u32;
-        match best_match(candidates, mem1, at, &|name| known(name, file).is_some()) {
+        match best_match(index, candidates, mem1, at, &|name| {
+            known(name, file).is_some()
+        }) {
             Some((name, bytes)) => {
                 let id = known(name, file)
                     .unwrap_or_else(|| archives.add(Archive::parse(bytes).unwrap()));
@@ -348,6 +350,7 @@ fn scan(
 /// files can hold the same bytes (Luigi's animation file repeats some of Mario's), and the
 /// copy is the one the game loaded.
 fn best_match<'c>(
+    index: &DiscIndex,
     candidates: &'c [(String, Vec<u8>)],
     mem1: &[u8],
     at: usize,
@@ -357,15 +360,40 @@ fn best_match<'c>(
         .iter()
         .filter(|(_, bytes)| at + bytes.len() <= mem1.len())
         .map(|c| (agreement(&mem1[at..at + c.1.len()], &c.1), c))
-        // One already found here, or the only file with its header, needs only half: loading a
-        // copy costume onto Kirby's bones rewrites the matrix indices of its display lists in
-        // place, 31% of Jigglypuff's copy's file.
-        .filter(|((same, total), c)| {
-            same * 10 >= total * 7
-                || ((prefer(&c.0) || candidates.len() == 1) && same * 2 >= *total)
+        // One already found here, or the only file with its header, needs only most of the data
+        // words relocation leaves alone, if no other file was loaded over it: loading a copy
+        // costume onto Kirby's bones rewrites the matrix indices of its display lists in place,
+        // 31% of Jigglypuff's copy's file. A freed file's header and relocated words alone make 9
+        // of `LbRf.dat`'s 16, and what's left of one can be half (`GmRstMFx.dat` under `PlSk.dat`).
+        .filter(|(a, c)| {
+            a.same * 10 >= a.total * 7
+                || ((prefer(&c.0) || candidates.len() == 1)
+                    && a.own_same * 2 > a.own_total
+                    && !file_starts_in(index, mem1, at + 0x20..at + c.1.len()))
         })
-        .max_by_key(|((same, _), c)| (*same, prefer(&c.0)))
+        .max_by_key(|(a, c)| (a.same, prefer(&c.0)))
         .map(|(_, c)| c)
+}
+
+/// Whether a disc file starts in `range` of memory (at a 32-byte step) and agrees on most
+/// words.
+fn file_starts_in(index: &DiscIndex, mem1: &[u8], range: std::ops::Range<usize>) -> bool {
+    let word = |i: usize| u32::from_be_bytes(mem1[i..i + 4].try_into().unwrap());
+    range
+        .step_by(32)
+        .take_while(|at| at + 0x20 <= mem1.len())
+        .any(|at| {
+            let header = [word(at), word(at + 4), word(at + 8)];
+            index.may_start(header)
+                && index.by_header.get(&header).is_some_and(|files| {
+                    files.iter().any(|(_, bytes)| {
+                        let a = mem1
+                            .get(at..at + bytes.len())
+                            .map(|mem| agreement(mem, bytes));
+                        a.is_some_and(|a| a.same * 10 >= a.total * 7)
+                    })
+                })
+        })
 }
 
 /// The stage archives whose files [`scan`] can't find by their headers: Pokémon Stadium's
@@ -406,7 +434,7 @@ fn headerless_stage_files(
             continue;
         };
         let at = (data - 0x20 - MEM1) as usize;
-        if let Some((name, bytes)) = best_match(candidates, mem1, at, &|_| false) {
+        if let Some((name, bytes)) = best_match(index, candidates, mem1, at, &|_| false) {
             let id = known(name, data - 0x20)
                 .unwrap_or_else(|| archives.add(Archive::parse(bytes).unwrap()));
             let archive = archives.get(id);
@@ -423,8 +451,18 @@ fn headerless_stage_files(
     out
 }
 
-/// How many of the file's words memory agrees with, relocated words counting as agreeing.
-fn agreement(mem: &[u8], file: &[u8]) -> (usize, usize) {
+/// How many of a file's words memory agrees with.
+struct Agreement {
+    /// Of the header and the data block, relocated words counting as agreeing.
+    same: usize,
+    total: usize,
+    /// Of the data block's words relocation leaves alone.
+    own_same: usize,
+    own_total: usize,
+}
+
+/// [`Agreement`] of memory with `file`.
+fn agreement(mem: &[u8], file: &[u8]) -> Agreement {
     let w = |b: &[u8], i: usize| u32::from_be_bytes(b[i..i + 4].try_into().unwrap());
     let data_len = w(file, 4) as usize;
     let nb_reloc = w(file, 8) as usize;
@@ -438,14 +476,25 @@ fn agreement(mem: &[u8], file: &[u8]) -> (usize, usize) {
     // The header and the data block: the relocation and symbol tables after it may be reused
     // once the archive is parsed.
     let n = (0x20 + data_len) / 4;
-    let same = (0..n)
-        .filter(|&i| {
-            let off = 4 * i;
-            let in_data = (0x20..0x20 + data_len).contains(&off);
-            (in_data && relocated[(off - 0x20) / 4]) || w(mem, off) == w(file, off)
-        })
-        .count();
-    (same, n)
+    let mut a = Agreement {
+        same: 0,
+        total: n,
+        own_same: 0,
+        own_total: 0,
+    };
+    for off in (0..n).map(|i| 4 * i) {
+        let agrees = w(mem, off) == w(file, off);
+        if off < 0x20 {
+            a.same += usize::from(agrees);
+        } else if relocated[(off - 0x20) / 4] {
+            a.same += 1;
+        } else {
+            a.same += usize::from(agrees);
+            a.own_same += usize::from(agrees);
+            a.own_total += 1;
+        }
+    }
+    a
 }
 
 /// mpcoll's statics in memory (`mpColl_80458810` and the `mpColl_804D64xx` words), the floor
