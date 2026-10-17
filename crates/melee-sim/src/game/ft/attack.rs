@@ -1845,8 +1845,9 @@ impl Running<'_> {
         self.hit_sound_of(me, n, kind, severity);
     }
 
-    /// Stage devices that hurt or bury fighters, `ftColl_8007BAC0`: none of the registered
-    /// devices (`ft_80459A8C`) is ported; then the stage lines the fighter touches.
+    /// Stage devices that hurt or bury fighters, `ftColl_8007BAC0`: the registered collision
+    /// device (`ft_80459A8C`, one slot) asked about the fighter where its type acts on it (only
+    /// Great Bay's sea is ported, which never acts), then the stage lines the fighter touches.
     #[doc(alias = "ftColl_8007BAC0")]
     pub fn touch_devices(&mut self, gobj: GObjId) {
         if self.game.vs_x5_2() {
@@ -1854,8 +1855,27 @@ impl Running<'_> {
         }
         let me = self.game.fighter_id(gobj);
         let max = self.hit_status(me);
-        if self.game.gr.devices.x6570 > 0 {
-            unported_call("ftColl_8007BAC0 (stage devices, ft_80459A8C)");
+        for i in 0..self.game.gr.devices.x6570 {
+            assert!(i == 0, "ftColl_8007BAC0: a device past ft_80459A8C's one");
+            let d = &self.game.gr.devices;
+            let Some(ground) = d.device2 else { continue };
+            let (kind, cb) = (d.device2_type, d.device2_cb);
+            if !self.device_applies(gobj, kind) {
+                continue;
+            }
+            let acts = match cb.map(|c| c.0) {
+                Some(super::super::gr::greatbay::SEA_DEVICE) => {
+                    let _ = ground;
+                    super::super::gr::greatbay::sea_device(self, gobj)
+                }
+                Some(other) => {
+                    unported_call(&format!("a collision device's callback {other:#010x}"))
+                }
+                None => panic!("a collision device without a callback"),
+            };
+            if acts && max == 0 {
+                unported_call("ftCo_800C08A0 (a device acting on a fighter)");
+            }
         }
         if max == 0 {
             self.touch_lines(me);
@@ -1902,6 +1922,7 @@ impl Running<'_> {
     #[doc(alias = "grOldYoshi_8020F404")]
     #[doc(alias = "grKraid_OnTouchLine")]
     #[doc(alias = "grFourside_801F41E0")]
+    #[doc(alias = "grGreatBay_801F680C")]
     pub(crate) fn line_hazard(&mut self, _line: i32) -> bool {
         match self.game.stage_info.on_touch_line {
             None => false,
@@ -1916,7 +1937,8 @@ impl Running<'_> {
                     || f.0 == 0x801C_D278
                     || f.0 == 0x8020_F404
                     || f.0 == 0x801F_F154
-                    || f.0 == 0x801F_41E0 =>
+                    || f.0 == 0x801F_41E0
+                    || f.0 == 0x801F_680C =>
             {
                 false
             }

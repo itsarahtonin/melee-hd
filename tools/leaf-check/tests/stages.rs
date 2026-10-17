@@ -1063,3 +1063,702 @@ fn fourside_unreached_callbacks() {
     let demo = retarget(leaf_check::sym("grFourside_801F2D0C"));
     check_hazard(&d, from, 1, &demo, &by_demo);
 }
+
+// Great Bay (`grgreatbay.c`) and Tingle (`ittincle.c`).
+
+const GREATBAY: &str = "oracle-stage-great-bay";
+
+#[test]
+fn greatbay_setup() {
+    use melee_sim::game::gr::greatbay;
+    let d = hazard_dir(GREATBAY);
+    check_hazard(&d, "grGreatBay_801F4240", 1, &as_saved, &by_event);
+    check_hazard(&d, "grGreatBay_801F42D4", 1, &as_saved, &by_event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let _ = greatbay::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    check_hazard(&d, "grGreatBay_801F4300", 1, &as_saved, &create);
+    for f in [
+        "stageGObj0_OnInit",
+        "grGreatBay_801F4440",
+        "grGreatBay_801F44B0",
+        "grGreatBay_801F454C",
+        "grGreatBay_801F4694",
+        "grGreatBay_801F5460",
+        "grGreatBay_801F5A00",
+        "fn_801F4520",
+    ] {
+        check_hazard(&d, f, 1, &as_saved, &by_address);
+    }
+    let platform = |r: &mut Running, maps: &Maps, call: &Call| {
+        greatbay::init_platform(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_hazard(&d, "grGreatBay_801F5D4C", 1, &as_saved, &platform);
+    // A giant's setup, from the moon's setup's call (its giants made).
+    check_hazard(&d, "grGreatBay_801F598C", 0, &as_saved, &by_address);
+}
+
+/// The turtle's variables set: its state, the way it faces and whether its item is done, its
+/// tick count.
+fn turtle(c: &mut Call, state: u8, dir: u8, item_done: bool, t: i16) {
+    let v = vars(c);
+    poke_u8(c, v, state);
+    poke_u8(c, v + 1, dir << 1 | u8::from(item_done));
+    let w = peek_u32(c, v) & 0xFFFF_0000;
+    poke_u32(c, v, w | t as u16 as u32);
+}
+
+#[test]
+fn greatbay_turtle() {
+    let d = hazard_dir(GREATBAY);
+    let f = "grGreatBay_801F499C";
+    check_hazard(&d, f, 1, &as_saved, &by_address);
+    // Down: its wait over or not; diving at its splash and not; surfacing at its sounds and
+    // its fins' splashes, each way; staying down, over or not, from each way; a state past
+    // them.
+    let mut cases: Vec<(u8, u8, bool, i16)> = vec![(0, 0, true, -1), (0, 1, true, 7)];
+    for t in [89, 90, 91] {
+        cases.push((1, 0, true, t));
+    }
+    for t in [59, 60, 89, 90, 119, 120, 149, 150, 151] {
+        cases.push((2, 0, true, t));
+    }
+    for dir in [0, 1, 3] {
+        cases.push((2, dir, false, 10));
+        cases.push((3, dir, true, -1));
+        cases.push((3, dir, true, 0));
+    }
+    cases.push((5, 0, true, 0));
+    for (state, dir, done, t) in cases {
+        check_hazard(
+            &d,
+            f,
+            1,
+            &move |c, _| turtle(c, state, dir, done, t),
+            &by_address,
+        );
+    }
+    let dir = |r: &mut Running, _: &Maps, call: &Call| {
+        Ret::Int(melee_sim::game::gr::greatbay::turtle_dir(r, call.regs.gpr[3] as i32) as u32)
+    };
+    check_hazard(&d, "grGreatBay_801F62F8", 0, &as_saved, &dir);
+    let item = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = gobj_arg(maps, call);
+        Ret::Int(u32::from(melee_sim::game::gr::greatbay::turtle_item(r, g)))
+    };
+    check_hazard(&d, "grGreatBay_801F63F4", 0, &as_saved, &item);
+    let verts = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::gr::greatbay::follow_vertices(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_hazard(&d, "grGreatBay_801F660C", 1, &as_saved, &verts);
+    // Whether the turtle is out (a CPU's question), from its process's calls, each state.
+    let out = |r: &mut Running, _: &Maps, _: &Call| {
+        Ret::Int(u32::from(melee_sim::game::gr::greatbay::turtle_out(r.game)))
+    };
+    for state in 0..4u8 {
+        check_hazard(
+            &d,
+            f,
+            1,
+            &move |c, _| {
+                poke_u8(c, map_vars(c, 1), state);
+                c.addr = leaf_check::sym("grGreatBay_801F66A4");
+            },
+            &out,
+        );
+    }
+}
+
+/// The platform's variables set: this tick's pushes (tilt, slide, sink) and where it is.
+fn platform(c: &mut Call, push: [f32; 3], at: [f32; 3]) {
+    let v = map_vars(c, 2);
+    poke_u32(c, v + 8, push[0].to_bits());
+    poke_u32(c, v + 0xC, push[1].to_bits());
+    poke_u32(c, v + 0x10, push[2].to_bits());
+    for (k, x) in at.into_iter().enumerate() {
+        poke_u32(c, v + 0x14 + 4 * k as u32, x.to_bits());
+    }
+}
+
+#[test]
+fn greatbay_platform() {
+    let d = hazard_dir(GREATBAY);
+    let step = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::gr::greatbay::proc_platform(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let prepares: [&Prepare; 5] = [
+        &as_saved,
+        // Pushed away from rest and back toward it, each way, and sinking and rising.
+        &|c, _| platform(c, [0.1, 2.0, -3.0], [0.02, 0.5, -1.0]),
+        &|c, _| platform(c, [-0.1, -2.0, 0.0], [0.02, 0.5, -1.0]),
+        &|c, _| platform(c, [0.0, 0.0, -3.0], [-0.05, -1.5, -0.5]),
+        &|c, _| platform(c, [0.05, 1.0, 0.0], [0.0, 0.0, 0.0]),
+    ];
+    for p in prepares {
+        check_hazard(&d, "grGreatBay_801F5E28", 1, p, &step);
+    }
+    check_hazard(&d, "grGreatBay_801F4658", 1, &as_saved, &by_address);
+    // Its collision joint's callback: each collision kind, landing or not, each side, up to
+    // its limits.
+    let touched = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = maps
+            .grounds
+            .get(&call.regs.gpr[3])
+            .copied()
+            .expect("the island");
+        let cd = coll_arg(r, maps, call);
+        melee_sim::game::gr::greatbay::platform_touched(
+            &mut r.game.objs,
+            r.data,
+            &mut r.game.grounds,
+            r.game.gr.greatbay_yakumono,
+            g,
+            &cd,
+            call.regs.gpr[6] as i32,
+            call.regs.gpr[7] as i32,
+        );
+        Ret::Nothing
+    };
+    let kind = |c: &mut Call, k: u32| {
+        let at = c.regs.gpr[5] + 0x34;
+        let w = peek_u32(c, at);
+        poke_u32(c, at, (w & !(0xF << 27)) | k << 27);
+    };
+    let prepares: [&Prepare; 6] = [
+        &as_saved,
+        &move |c, k| kind(c, (k % 4) as u32),
+        &|c, _| c.regs.gpr[7] = 1,
+        &|c, _| c.regs.gpr[7] = 2,
+        &|c, _| platform(c, [0.5, 30.0, -40.0], [0.0, 0.0, 0.0]),
+        &|c, _| platform(c, [-0.5, -30.0, -40.0], [0.0, 0.0, 0.0]),
+    ];
+    for p in prepares {
+        check_hazard(&d, "grGreatBay_801F60C4", 0, p, &touched);
+    }
+}
+
+/// The collision data a joint callback's call hands it (r5): a fighter's, or an item's.
+fn coll_arg(r: &Running, maps: &Maps, call: &Call) -> melee_sim::game::structs::CollData {
+    let a = call.regs.gpr[5];
+    for (&fp, &f) in &maps.fighters {
+        if a == fp + 0x6F0 {
+            return r.game.fighters[f.0].coll_data.clone();
+        }
+    }
+    for (&ip, &i) in &maps.items {
+        if a == ip + 0x378 {
+            return r.game.items[i.0].x378_itemColl.clone();
+        }
+    }
+    panic!("r5 {a:#x} is neither a fighter's nor an item's collision data");
+}
+
+/// Tingle's stage variables set: last state, popped, splashed, a ledge hang, stood on this
+/// tick and last, and their weight.
+#[allow(clippy::too_many_arguments)]
+fn tingle(
+    c: &mut Call,
+    last: i32,
+    popped: i32,
+    splashed: i32,
+    hang: i32,
+    on: i32,
+    was: i32,
+    w: f32,
+) {
+    let v = vars(c);
+    for (k, x) in [last, popped, splashed, hang, on, was]
+        .into_iter()
+        .enumerate()
+    {
+        poke_u32(c, v + 4 + 4 * k as u32, x as u32);
+    }
+    poke_u32(c, v + 0x1C, w.to_bits());
+}
+
+#[test]
+fn greatbay_tingle() {
+    let d = hazard_dir(GREATBAY);
+    let f = "grGreatBay_801F5600";
+    check_hazard(&d, f, 1, &as_saved, &by_address);
+    // Stood on or not (hanging from a ledge or not), the count changed or not, popped and
+    // splashed or not, a new state or not.
+    let cases: [(i32, i32, i32, i32, i32, i32, f32); 8] = [
+        (-1, 0, 0, 0, 1, 0, 0.8),
+        (-1, 0, 0, 0, 0, 1, 0.0),
+        (-1, 0, 0, 1, 2, 2, 1.6),
+        (-1, 1, 1, 0, 0, 0, 0.0),
+        (-1, 0, 1, 0, 1, 1, 0.8),
+        (12, 1, 0, 0, 1, 1, 0.8),
+        (9, 0, 0, 0, 0, 0, 0.0),
+        (2, 0, 0, 0, 3, 1, 2.4),
+    ];
+    for (last, popped, splashed, hang, on, was, w) in cases {
+        check_hazard(
+            &d,
+            f,
+            1,
+            &move |c, _| {
+                let l = if last < 0 {
+                    peek_u32(c, vars(c)) as i32
+                } else {
+                    last
+                };
+                tingle(c, l, popped, splashed, hang, on, was, w);
+            },
+            &by_address,
+        );
+    }
+    // The balloon's collision joint's callback: each collision kind, hanging from its ledge or
+    // not.
+    let touched = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = maps
+            .grounds
+            .get(&call.regs.gpr[3])
+            .copied()
+            .expect("Tingle");
+        let cd = coll_arg(r, maps, call);
+        melee_sim::game::gr::greatbay::balloon_touched(
+            &mut r.game.grounds[g.0],
+            &cd,
+            call.regs.gpr[6] as i32,
+        );
+        Ret::Nothing
+    };
+    check_hazard(&d, "grGreatBay_801F5914", 0, &as_saved, &touched);
+    for kind in 0..5u32 {
+        check_hazard(
+            &d,
+            "grGreatBay_801F5914",
+            0,
+            &move |c, _| {
+                let at = c.regs.gpr[5] + 0x34;
+                let w = peek_u32(c, at);
+                poke_u32(c, at, (w & !(0xF << 27)) | kind << 27);
+            },
+            &touched,
+        );
+    }
+    check_hazard(
+        &d,
+        "grGreatBay_801F5914",
+        0,
+        &|c, _| {
+            let at = c.regs.gpr[5] + 0x84;
+            let w = peek_u32(c, at);
+            poke_u32(c, at, w | 0x0100_0000);
+        },
+        &touched,
+    );
+}
+
+#[test]
+fn greatbay_moon_and_sea() {
+    let d = hazard_dir(GREATBAY);
+    let f = "grGreatBay_801F5AF8";
+    check_hazard(&d, f, 1, &as_saved, &by_address);
+    // Its wait about to end, ended (each flag clear or set), and counting.
+    for (wait, flags) in [(1i16, 0u8), (0, 0), (0, 0xF0), (0, 0x50), (30, 0)] {
+        check_hazard(
+            &d,
+            f,
+            1,
+            &move |c, _| {
+                let v = vars(c);
+                let w = peek_u32(c, v + 0x10) & 0x0000_00FF;
+                poke_u32(
+                    c,
+                    v + 0x10,
+                    (wait as u16 as u32) << 16 | u32::from(flags) << 8 | w,
+                );
+            },
+            &by_address,
+        );
+    }
+    // The sea: a fighter crossing y = -5 downward or not, or hidden.
+    let sea = |r: &mut Running, maps: &Maps, call: &Call| {
+        let fighter = *maps.gobjs.get(&call.regs.gpr[4]).expect("a fighter");
+        Ret::Int(u32::from(melee_sim::game::gr::greatbay::sea_device(
+            r, fighter,
+        )))
+    };
+    let fighter = |c: &Call| peek_u32(c, c.regs.gpr[4] + 0x2C);
+    let cross = |c: &mut Call, cur: f32, prev: f32| {
+        let fp = fighter(c);
+        poke_u32(c, fp + 0xB0 + 4, cur.to_bits());
+        poke_u32(c, fp + 0xBC + 4, prev.to_bits());
+    };
+    let prepares: [&Prepare; 5] = [
+        &as_saved,
+        &move |c, _| cross(c, -6.0, -4.0),
+        &move |c, _| cross(c, -5.0, -4.0),
+        &move |c, _| cross(c, -6.0, -5.0),
+        &move |c, _| cross(c, 3.0, 4.0),
+    ];
+    for p in prepares {
+        check_hazard(&d, "grGreatBay_801F6708", 1, p, &sea);
+    }
+    let shadow = |r: &mut Running, maps: &Maps, call: &Call| {
+        let p = call.regs.gpr[3];
+        let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
+        let j = maps.jobjs.get(&call.regs.gpr[5]).copied();
+        Ret::Int(u32::from(
+            melee_sim::game::gr::greatbay::check_shadow_render(r.game, r.data, pos, j),
+        ))
+    };
+    let around = |c: &mut Call, k: usize| {
+        let (p, j) = (c.regs.gpr[3], c.regs.gpr[5]);
+        let y = f32_at(c, j + 0x44 + 0x1C);
+        let dy = [0.25f32, -0.25, 0.0][k % 3];
+        poke_u32(c, p + 4, (y + dy).to_bits());
+    };
+    for p in [&as_saved as &Prepare, &around] {
+        check_hazard(&d, "grGreatBay_801F6814", 1, p, &shadow);
+    }
+}
+
+/// The empty processes and destroy callbacks and the load and demo hooks, from the island's
+/// process's calls.
+#[test]
+fn greatbay_unreached_callbacks() {
+    let d = hazard_dir(GREATBAY);
+    let from = "grGreatBay_801F4658";
+    for name in [
+        "grGreatBay_801F4438",
+        "grGreatBay_801F443C",
+        "grGreatBay_801F44A8",
+        "grGreatBay_801F44AC",
+        "grGreatBay_801F4518",
+        "grGreatBay_801F451C",
+        "grGreatBay_801F4690",
+        "grGreatBay_801F545C",
+        "grGreatBay_801F5988",
+        "grGreatBay_801F59F8",
+        "grGreatBay_801F59FC",
+        "grGreatBay_801F5D48",
+    ] {
+        check_hazard(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let load = retarget(leaf_check::sym("grGreatBay_801F42D0"));
+    check_hazard(&d, from, 1, &load, &by_event);
+    let demo = retarget(leaf_check::sym("grGreatBay_801F423C"));
+    check_hazard(&d, from, 1, &demo, &by_demo);
+}
+
+/// An item's callback by its address.
+fn item_cb(r: &mut Running, maps: &Maps, call: &Call) -> Ret {
+    let g = gobj_arg(maps, call);
+    if let Some(v) = melee_sim::game::it::kinds::run_pred(r, g, call.addr) {
+        return Ret::Int(u32::from(v));
+    }
+    assert!(
+        melee_sim::game::it::kinds::run_event(r, g, call.addr),
+        "{:#x} isn't an item callback",
+        call.addr
+    );
+    Ret::Nothing
+}
+
+/// Tingle's variables (`xDD4`) in a call made with him in r3.
+/// Tingle's state entries and orders the stage or his states call, his destruction last.
+const TINCLE_ENTRIES: [&str; 17] = [
+    "it_802EB6DC",
+    "it_802EB870",
+    "it_802EBA00",
+    "it_802EBE5C",
+    "it_802EC35C",
+    "it_802EC3F4",
+    "it_802EC604",
+    "it_802EC9E8",
+    "it_802ECC8C",
+    "it_802EBD14",
+    "it_802EBFAC",
+    "it_802EC18C",
+    "it_802EC1F4",
+    "it_802EC870",
+    "it_802EC69C",
+    "it_802EC4D0",
+    "it_802EC830",
+];
+
+fn tincle_vars(c: &Call) -> u32 {
+    peek_u32(c, c.regs.gpr[3] + 0x2C) + 0xDD4
+}
+
+fn tincle_set(c: &mut Call, off: u32, v: u32) {
+    let a = tincle_vars(c) + off;
+    poke_u32(c, a, v);
+}
+
+#[test]
+fn tincle_states() {
+    let d = hazard_dir(GREATBAY);
+    for f in [
+        "it_802EB5C8",
+        "itTincle_Logic13_DmgReceived",
+        "itTincle_Logic13_DmgDealt",
+        "itTincle_UnkMotion0_Phys",
+        "itTincle_UnkMotion0_Coll",
+        "itTincle_UnkMotion1_Phys",
+        "itTincle_UnkMotion1_Coll",
+        "itTincle_UnkMotion2_Anim",
+        "itTincle_UnkMotion2_Coll",
+        "itTincle_UnkMotion3_Phys",
+        "itTincle_UnkMotion3_Coll",
+        "itTincle_UnkMotion4_Phys",
+        "itTincle_UnkMotion4_Coll",
+        "itTincle_UnkMotion5_Phys",
+        "itTincle_UnkMotion5_Coll",
+        "itTincle_UnkMotion7_Anim",
+        "itTincle_UnkMotion7_Coll",
+        "itTincle_UnkMotion8_Phys",
+        "itTincle_UnkMotion8_Coll",
+        "itTincle_UnkMotion9_Anim",
+        "itTincle_UnkMotion9_Coll",
+        "itTincle_UnkMotion10_Anim",
+        "itTincle_UnkMotion10_Coll",
+        "itTincle_UnkMotion11_Anim",
+        "itTincle_UnkMotion11_Coll",
+        "itTincle_UnkMotion12_Phys",
+        "itTincle_UnkMotion12_Coll",
+    ] {
+        check_hazard(&d, f, 1, &as_saved, &item_cb);
+    }
+    // Floating: the bob turning (its half cycles out, its count out), its wait over with no
+    // drift (a drift drawn or not), a drift running, at its middle and at its end.
+    let f = "itTincle_UnkMotion2_Phys";
+    let prepares: [&Prepare; 7] = [
+        &as_saved,
+        &|c, _| tincle_set(c, 0x3C, 0.0f32.to_bits()),
+        &|c, _| tincle_set(c, 0x2C, 0),
+        &|c, _| {
+            tincle_set(c, 0x20, 0);
+            tincle_set(c, 0x24, 0);
+        },
+        &|c, _| {
+            tincle_set(c, 0x20, 0);
+            tincle_set(c, 0x24, 40);
+            tincle_set(c, 0x28, 20);
+        },
+        &|c, _| {
+            tincle_set(c, 0x20, 0);
+            tincle_set(c, 0x24, 40);
+            tincle_set(c, 0x28, 40);
+        },
+        &|c, _| {
+            tincle_set(c, 0x20, 0);
+            tincle_set(c, 0x24, 40);
+            tincle_set(c, 0x28, 7);
+        },
+    ];
+    for p in prepares {
+        check_hazard(&d, f, 1, p, &item_cb);
+    }
+    // Popping: its countdown at zero, running and past, in each popping state.
+    for t in [0i32, 3, -1] {
+        check_hazard(
+            &d,
+            "itTincle_UnkMotion7_Anim",
+            1,
+            &move |c, _| tincle_set(c, 0x20, t as u32),
+            &item_cb,
+        );
+    }
+    // Sitting: its wait over and sunk past the limit or not.
+    for (t, from) in [(0, 0.0f32), (0, 1000.0), (5, 0.0)] {
+        check_hazard(
+            &d,
+            "itTincle_UnkMotion4_Phys",
+            1,
+            &move |c, _| {
+                tincle_set(c, 0x20, t);
+                let y = f32_at(c, peek_u32(c, c.regs.gpr[3] + 0x2C) + 0x50);
+                tincle_set(c, 0x4C, (y + from).to_bits());
+            },
+            &item_cb,
+        );
+    }
+    // Lying: the last loop and not.
+    for t in [1, 2] {
+        check_hazard(
+            &d,
+            "itTincle_UnkMotion10_Anim",
+            1,
+            &move |c, _| tincle_set(c, 0x20, t),
+            &item_cb,
+        );
+    }
+    // The stage's questions and orders, from Tingle's calls.
+    // Its answers go to Tingle's stage object's variables (map 10), as the stage passes them.
+    let ask = |r: &mut Running, maps: &Maps, call: &Call| {
+        use melee_sim::game::it::kinds::tincle;
+        let g = gobj_arg(maps, call);
+        let (state, pos) = tincle::state_and_place(r.game, g);
+        let vars = map_vars(call, 10);
+        assert_eq!(
+            (call.regs.gpr[4], call.regs.gpr[5]),
+            (vars, vars + 0x20),
+            "it_802ECCA4 answering elsewhere than Tingle's stage object"
+        );
+        let u = peek_u32(call, STAGE_INFO + 0x180 + 4 * 10);
+        let gr = *maps
+            .grounds
+            .get(&peek_u32(call, u + 0x2C))
+            .expect("Tingle's stage object");
+        let v = r.game.grounds[gr.0].u.greatbay4();
+        v.xC4 = state;
+        v.xE4 = pos;
+        Ret::Nothing
+    };
+    check_hazard(&d, "it_802ECCA4", 1, &as_saved, &ask);
+    let weight = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = gobj_arg(maps, call);
+        melee_sim::game::it::kinds::tincle::set_weight(r.game, g, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    check_hazard(&d, "it_802ECC98", 1, &as_saved, &weight);
+    // Pressed down, left (below his height or not, from floating or rising), popped either
+    // way, and turned, from the floating state's calls.
+    let from = "itTincle_UnkMotion2_Phys";
+    let order = |target: &'static str| {
+        let a = leaf_check::sym(target);
+        let ours = move |r: &mut Running, maps: &Maps, call: &Call| {
+            use melee_sim::game::it::kinds::tincle;
+            let g = gobj_arg(maps, call);
+            match target {
+                "it_802EBD14" => tincle::press(r, g),
+                "it_802EBFAC" => tincle::release(r, g),
+                "it_802EC18C" => tincle::pop(r, g),
+                "it_802EC1F4" => tincle::pop_hit(r, g),
+                "it_802EC870" => tincle::turn(r, g, call.regs.gpr[4] as i32),
+                "it_802EC69C" => tincle::rise_again(r, g),
+                "it_802EC4D0" => tincle::lie(r, g),
+                _ => unreachable!(),
+            }
+            Ret::Nothing
+        };
+        (a, ours)
+    };
+    for target in [
+        "it_802EBD14",
+        "it_802EC18C",
+        "it_802EC1F4",
+        "it_802EC69C",
+        "it_802EC4D0",
+    ] {
+        let (a, ours) = order(target);
+        check_hazard(&d, from, 1, &move |c, _| c.addr = a, &ours);
+    }
+    for back in [0u32, 1] {
+        let (a, ours) = order("it_802EC870");
+        check_hazard(
+            &d,
+            from,
+            1,
+            &move |c, _| {
+                c.addr = a;
+                c.regs.gpr[4] = back;
+            },
+            &ours,
+        );
+    }
+    // Starting a drift from several random seeds, so the 1 in 3 turn away goes either way.
+    for seed in [1u32, 2, 3, 5, 8, 0x1234_5678, 0x9E37_79B9, 0xDEAD_BEEF] {
+        let (a, ours) = order("it_802EC870");
+        check_hazard(
+            &d,
+            from,
+            1,
+            &move |c, _| {
+                c.addr = a;
+                c.regs.gpr[4] = 0;
+                poke_u32(c, leaf_check::sym("seed"), seed);
+            },
+            &ours,
+        );
+    }
+    // The states' entries, his box and his timer, from their own calls.
+    let entry = |r: &mut Running, maps: &Maps, call: &Call| {
+        use melee_sim::game::it::kinds::tincle;
+        let g = gobj_arg(maps, call);
+        let name = TINCLE_ENTRIES
+            .iter()
+            .copied()
+            .find(|&n| leaf_check::sym(n) == call.addr)
+            .unwrap_or("?");
+        match name {
+            "it_802EB6DC" => tincle::wait(r, g),
+            "it_802EB870" => tincle::drop_in(r, g),
+            "it_802EBA00" => tincle::float(r, g),
+            "it_802EBE5C" => tincle::sit(r, g),
+            "it_802EC35C" => tincle::fall(r, g),
+            "it_802EC3F4" => tincle::land(r, g),
+            "it_802EC604" => tincle::get_up(r, g),
+            "it_802EC9E8" => tincle::set_box(r, g),
+            "it_802ECC8C" => return Ret::Int(tincle::timer(r.game, g) as u32),
+            "it_802EBD14" => tincle::press(r, g),
+            "it_802EBFAC" => tincle::release(r, g),
+            "it_802EC18C" => tincle::pop(r, g),
+            "it_802EC1F4" => tincle::pop_hit(r, g),
+            "it_802EC870" => tincle::turn(r, g, call.regs.gpr[4] as i32),
+            "it_802EC69C" => tincle::rise_again(r, g),
+            "it_802EC4D0" => tincle::lie(r, g),
+            "it_802EC830" => tincle::destroy(r, g),
+            other => panic!("{other} isn't one of Tingle's entries"),
+        }
+        Ret::Nothing
+    };
+    for f in &TINCLE_ENTRIES[..16] {
+        check_hazard(&d, f, 1, &as_saved, &entry);
+    }
+    // What no saved call reaches: the still states' animation callbacks and the states
+    // without physics, each from its state's own calls, and his destruction, from the
+    // floating state's.
+    for (f, from) in [
+        ("itTincle_UnkMotion0_Anim", "itTincle_UnkMotion0_Phys"),
+        ("itTincle_UnkMotion1_Anim", "itTincle_UnkMotion1_Phys"),
+        ("itTincle_UnkMotion3_Anim", "itTincle_UnkMotion3_Phys"),
+        ("itTincle_UnkMotion4_Anim", "itTincle_UnkMotion4_Phys"),
+        ("itTincle_UnkMotion5_Anim", "itTincle_UnkMotion5_Phys"),
+        ("itTincle_UnkMotion8_Anim", "itTincle_UnkMotion8_Phys"),
+        ("itTincle_UnkMotion12_Anim", "itTincle_UnkMotion12_Phys"),
+        ("itTincle_UnkMotion7_Phys", "itTincle_UnkMotion7_Anim"),
+        ("itTincle_UnkMotion9_Phys", "itTincle_UnkMotion9_Anim"),
+        ("itTincle_UnkMotion10_Phys", "itTincle_UnkMotion10_Anim"),
+        ("itTincle_UnkMotion11_Phys", "itTincle_UnkMotion11_Anim"),
+    ] {
+        check_hazard(&d, from, 1, &retarget(leaf_check::sym(f)), &item_cb);
+    }
+    check_hazard(
+        &d,
+        "itTincle_UnkMotion2_Phys",
+        1,
+        &retarget(leaf_check::sym("it_802EC830")),
+        &entry,
+    );
+    for (was, low) in [(2.0f32, false), (5.0, false), (2.0, true)] {
+        let (a, ours) = order("it_802EBFAC");
+        check_hazard(
+            &d,
+            from,
+            1,
+            &move |c, _| {
+                c.addr = a;
+                tincle_set(c, 0x30, was.to_bits());
+                if low {
+                    let y = f32_at(c, peek_u32(c, c.regs.gpr[3] + 0x2C) + 0x50);
+                    tincle_set(c, 0x5C, (y + 500.0).to_bits());
+                }
+            },
+            &ours,
+        );
+    }
+}

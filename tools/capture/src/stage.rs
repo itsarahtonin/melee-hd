@@ -36,6 +36,8 @@ pub const GRKRAID_YAKUMONO: u32 = 0x804D_6A08;
 pub const GRKRAID_ANIM: u32 = 0x804D_6A0C;
 /// grfourside.c's.
 pub const GRFOURSIDE_YAKUMONO: u32 = 0x804D_69D8;
+/// grgreatbay.c's (`grGb_804D69E0.x0`).
+pub const GRGREATBAY_YAKUMONO: u32 = 0x804D_69E0;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -283,6 +285,8 @@ impl Importer<'_> {
         self.game.gr.kraid_anim = cap.u32(GRKRAID_ANIM) as i32;
         let yaku = cap.u32(GRFOURSIDE_YAKUMONO);
         self.game.gr.fourside_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRGREATBAY_YAKUMONO);
+        self.game.gr.greatbay_yakumono = self.data_or_unhandled(yaku);
         self.game.gr.battle_demo = self.u8_at(sym("isDemoFight")) != 0;
         self.game.gr.game_mode = self.u8_at(sym("state_machine"));
         let points = sym("grLib_8049EF58");
@@ -313,6 +317,11 @@ impl Importer<'_> {
                 gobj_at(self, sym("ftDevice_BuryThings") + 0xC),
             ],
             device2: gobj_at(self, sym("ft_80459A8C")),
+            device2_type: cap.u32(sym("ft_80459A8C") + 4),
+            device2_cb: match cap.u32(sym("ft_80459A8C") + 8) {
+                0 => None,
+                a => Some(melee_sim::game::handles::CodeRef(a)),
+            },
         };
         let articles = sym("it_804A0F60");
         for k in 0..30 {
@@ -835,6 +844,11 @@ impl Comparer<'_> {
                 "grFourside yakumono_param",
                 GRFOURSIDE_YAKUMONO,
                 game.gr.fourside_yakumono,
+            ),
+            (
+                "grGreatBay yakumono_param",
+                GRGREATBAY_YAKUMONO,
+                game.gr.greatbay_yakumono,
             ),
         ] {
             let yaku = self.u32(at);

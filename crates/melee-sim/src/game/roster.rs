@@ -187,6 +187,11 @@ pub const STAGES: &[Stage] = &[
         keys: &["fs", "fourside"],
     },
     Stage {
+        kind: 13,
+        name: "Great Bay",
+        keys: &["gb", "great-bay"],
+    },
+    Stage {
         kind: 3,
         name: "Pokémon Stadium",
         keys: &["ps", "pokemon-stadium"],

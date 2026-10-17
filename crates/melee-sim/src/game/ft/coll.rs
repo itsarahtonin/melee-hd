@@ -111,8 +111,8 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
         user_data: Option<super::super::gr::CollUser>,
         joint_id: i32,
         coll: &mut CollData,
-        _x50: i32,
-        _kind: i32,
+        x50: i32,
+        kind: i32,
         _dy: f32,
     ) {
         match callback.0 {
@@ -130,6 +130,25 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                 self.stage_maps.ground(5),
                 coll.x34_flags.b1234.into(),
             ),
+            super::super::gr::greatbay::PLATFORM_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    super::super::gr::greatbay::platform_touched(
+                        self.objs,
+                        self.data,
+                        self.grounds,
+                        self.stage_maps.gr.greatbay_yakumono,
+                        g,
+                        coll,
+                        x50,
+                        kind,
+                    );
+                }
+            }
+            super::super::gr::greatbay::BALLOON_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    super::super::gr::greatbay::balloon_touched(&mut self.grounds[g.0], coll, x50);
+                }
+            }
             _ => unported_call(&format!("stage joint callback {:#010x}", callback.0)),
         }
     }

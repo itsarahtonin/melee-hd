@@ -275,6 +275,9 @@ SPLICE = {
     "HSD_ImageDesc": ("image_ptr", 0, 4, "TexBuffer"),
     # An item's dynamic bones and hurtboxes, likewise set up to a count.
     "Item": [
+        # Words nothing writes: a block new from the heap holds whatever the heap held there.
+        ("x8", 0x8, 0xC, "UnreadWord"),
+        ("x21", 0x21, 0x24, "UnreadBytes3"),
         ("xD4_dynamicBones", 0xD4, 0x374, "ItemDynamicBones"),
         # Its ignore id, from its spawn's `x40`, which one spawn leaves a stack word.
         ("xAC4_ignoreItemID", 0xAC4, 0xAC8, "IgnoreId"),
@@ -289,7 +292,7 @@ EXTRA_USES = [
     "use crate::game::ft::dynamics::BoneSlot;",
     "use crate::game::ft::second::SecondTree;",
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
-    "use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};",
+    "use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, UnreadBytes3, UnreadWord};",
     "use crate::game::it::link::LinkX20;",
     "use crate::hsd::lobj::LObjId;",
     "use crate::hsd::shadow::ShadowId;",
@@ -354,7 +357,9 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::handles::*;
-use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
+use crate::game::it::{
+    IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, UnreadBytes3, UnreadWord, Var,
+};
 use crate::game::it::link::LinkX20;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;

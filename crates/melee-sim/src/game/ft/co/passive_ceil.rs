@@ -63,12 +63,12 @@ impl Running<'_> {
         self.start_color_anim(gobj, COLANIM, 0);
     }
 
-    /// `ftCo_PassiveCeil_Anim`: drifting with the stick while the script allows it, the fall
-    /// once the animation ends.
+    /// `ftCo_PassiveCeil_Anim`: a push with the stick when the script's flag comes (taking
+    /// it, `ftCheckThrowB3`), the fall once the animation ends.
     // Ports `ftCo_PassiveCeil_Anim`; aliased once a check reaches it.
     pub fn co_passive_ceil_anim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        if fp.throw_flag(3) {
+        if fp.take_throw_flag(3) {
             fp.self_vel.x = mem(fp::fmuls(
                 reg(fp.input.lstick[0].x),
                 reg(fp.co_attrs.passiveceil_vel_x),

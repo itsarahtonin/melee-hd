@@ -11,6 +11,7 @@ pub mod datfiles;
 pub mod display;
 pub mod dynamic_attr;
 pub mod fourside;
+pub mod greatbay;
 pub mod grlib;
 pub mod ground;
 pub mod izumi;
@@ -46,6 +47,8 @@ pub const GR_KIND_PSTADIUM: i32 = 16;
 pub const GR_KIND_KRAID: i32 = 9;
 /// `Gr_Kind_Fourside`, Fourside.
 pub const GR_KIND_FOURSIDE: i32 = 21;
+/// `Gr_Kind_GreatBay`, Great Bay.
+pub const GR_KIND_GREATBAY: i32 = 6;
 /// `Gr_Kind_Story`, Yoshi's Story.
 pub const GR_KIND_STORY: i32 = 10;
 /// `Gr_Kind_Izumi`, Fountain of Dreams.
@@ -170,6 +173,8 @@ pub struct Globals {
     pub kraid_anim: i32,
     /// Fourside's `yakumono_param` (`grFourside_YakumonoParam`).
     pub fourside_yakumono: Option<DataRef>,
+    /// Great Bay's `yakumono_param` (`grGb_804D69E0.x0`, `grGb_StageAttr`).
+    pub greatbay_yakumono: Option<DataRef>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -214,8 +219,27 @@ pub struct FtDevices {
     pub device_cb: Option<CodeRef>,
     /// `ftDevice_BuryThings[i].x0`.
     pub bury: [Option<GObjId>; 2],
-    /// `ft_80459A8C[0].ground`.
+    /// `ft_80459A8C[0]`: the collision device (`ground`), its type and the callback the
+    /// fighters' collision asks (`active_cb`).
     pub device2: Option<GObjId>,
+    pub device2_type: u32,
+    pub device2_cb: Option<CodeRef>,
+}
+
+impl FtDevices {
+    /// Registers a stage object as the fighters' collision device, `ftCo_800C07F8`: its one
+    /// slot.
+    #[doc(alias = "ftCo_800C07F8")]
+    pub fn register_coll(&mut self, gobj: GObjId, kind: u32, cb: CodeRef) {
+        assert!(
+            self.device2.is_none(),
+            "fighter chk device coll func num over!"
+        );
+        self.device2 = Some(gobj);
+        self.device2_type = kind;
+        self.device2_cb = Some(cb);
+        self.x6570 = self.x6570.wrapping_add(1);
+    }
 }
 
 /// Which member of [`GroundVars`] an object of the stage uses.
@@ -243,6 +267,10 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_FOURSIDE, 3) => VarsKind::Fourside2,
         (GR_KIND_FOURSIDE, 5) => VarsKind::FoursideUfo,
         (GR_KIND_FOURSIDE, 6) => VarsKind::Fourside,
+        (GR_KIND_GREATBAY, 1) => VarsKind::GreatBay,
+        (GR_KIND_GREATBAY, 2) => VarsKind::GreatBay3,
+        (GR_KIND_GREATBAY, 9) => VarsKind::GreatBay2,
+        (GR_KIND_GREATBAY, 10) => VarsKind::GreatBay4,
         _ => VarsKind::Bytes,
     }
 }

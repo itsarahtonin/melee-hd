@@ -185,6 +185,72 @@ impl crate::game::mirror::Mirror for IgnoreId {
     }
 }
 
+/// An item's word nothing writes (`Item::x8`): a reused block keeps its last item's, a block
+/// new from the heap whatever the heap held there (a freed block's words, a heap cell's
+/// header), which melee-hd doesn't model: `None` there, and the comparer checks it only once
+/// imported.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct UnreadWord(pub Option<u32>);
+
+impl crate::game::mirror::Mirror for UnreadWord {
+    const SIZE: u32 = 4;
+
+    fn import(
+        m: &crate::game::mirror::Mem,
+        at: u32,
+        _cx: &mut dyn crate::game::mirror::Cx,
+    ) -> Self {
+        UnreadWord(Some(m.u32(at)))
+    }
+
+    fn compare(
+        &self,
+        m: &crate::game::mirror::Mem,
+        at: u32,
+        path: &str,
+        cx: &mut dyn crate::game::mirror::Cx,
+    ) {
+        let theirs = m.u32(at);
+        if let Some(v) = self.0
+            && v != theirs
+        {
+            cx.mismatch(path, format!("{v:#x}"), format!("{theirs:#x}"));
+        }
+    }
+}
+
+/// An item's three bytes after its team (`Item::x21` to `x23`), which nothing writes, like
+/// [`UnreadWord`].
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct UnreadBytes3(pub Option<[u8; 3]>);
+
+impl crate::game::mirror::Mirror for UnreadBytes3 {
+    const SIZE: u32 = 3;
+
+    fn import(
+        m: &crate::game::mirror::Mem,
+        at: u32,
+        _cx: &mut dyn crate::game::mirror::Cx,
+    ) -> Self {
+        UnreadBytes3(Some([m.u8(at), m.u8(at + 1), m.u8(at + 2)]))
+    }
+
+    fn compare(
+        &self,
+        m: &crate::game::mirror::Mem,
+        at: u32,
+        path: &str,
+        cx: &mut dyn crate::game::mirror::Cx,
+    ) {
+        let theirs = [m.u8(at), m.u8(at + 1), m.u8(at + 2)];
+        if let Some(v) = self.0
+            && v != theirs
+        {
+            cx.mismatch(path, format!("{v:x?}"), format!("{theirs:x?}"));
+        }
+    }
+}
+
 /// An item GObj's `Item` (`gobj->user_data`).
 pub fn item_of(game: &Game, gobj: GObjId) -> ItemId {
     match game.world.gobjs[gobj.0].user_data {

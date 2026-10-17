@@ -34,6 +34,10 @@ impl Running<'_> {
             // grLast's and grBattle's: every joint takes the shadows.
             Some(f) if f.0 == 0x8021_C748 || f.0 == 0x8021_A618 => true,
             Some(f) if f.0 == 0x801F_F15C => super::kraid::check_shadow_render(),
+            Some(f) if f.0 == 0x801F_6814 => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::greatbay::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
             Some(f) if f.0 == 0x801F_41E8 => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::fourside::check_shadow_render(self.game, self.data, pos, Some(j))

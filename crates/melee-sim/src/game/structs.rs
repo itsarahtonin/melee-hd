@@ -14,7 +14,9 @@ use crate::game::gr::GroundVars;
 use crate::game::handles::*;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::it::link::LinkX20;
-use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
+use crate::game::it::{
+    IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, UnreadBytes3, UnreadWord, Var,
+};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -3666,7 +3668,7 @@ pub struct Item {
     /// +0x4
     pub entity: Option<GObjId>,
     /// +0x8
-    pub x8: i32,
+    pub x8: UnreadWord,
     /// +0xc
     pub spawn_kind: i32,
     /// +0x10
@@ -3680,11 +3682,7 @@ pub struct Item {
     /// +0x20
     pub x20_team_id: u8,
     /// +0x21
-    pub x21: u8,
-    /// +0x22
-    pub x22: u8,
-    /// +0x23
-    pub x23: u8,
+    pub x21: UnreadBytes3,
     /// +0x24
     pub msid: i32,
     /// +0x28
@@ -4028,16 +4026,14 @@ impl Default for Item {
         Item {
             x0: None,
             entity: None,
-            x8: 0,
+            x8: Default::default(),
             spawn_kind: 0,
             kind: 0,
             hold_kind: 0,
             x18: 0,
             x1C: 0,
             x20_team_id: 0,
-            x21: 0,
-            x22: 0,
-            x23: 0,
+            x21: Default::default(),
             msid: 0,
             anim_id: 0,
             facing_dir: 0.0,

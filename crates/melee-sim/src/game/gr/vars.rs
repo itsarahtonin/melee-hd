@@ -45,6 +45,10 @@ pub enum VarsKind {
     FoursideCrane,
     FoursideUfo,
     Fourside2,
+    GreatBay,
+    GreatBay2,
+    GreatBay3,
+    GreatBay4,
 }
 
 /// `union GroundVars`.
@@ -98,6 +102,84 @@ pub enum GroundVars {
     FoursideUfo(FoursideUfoVars),
     /// `grFourside_GroundVars2`: the helicopter (map 3).
     Fourside2(Fourside2Vars),
+    /// `grGreatBay_GroundVars`: Great Bay's turtle (map 1).
+    GreatBay(GreatBayVars),
+    /// `grGreatBay_GroundVars2`: the moon (map 9).
+    GreatBay2(GreatBay2Vars),
+    /// `grGreatBay_GroundVars3`: the island's floating platform (map 2).
+    GreatBay3(GreatBay3Vars),
+    /// `grGreatBay_GroundVars4`: Tingle (map 10).
+    GreatBay4(GreatBay4Vars),
+}
+
+/// `grGreatBay_GroundVars`: the turtle's state (`xC4`), the way it faces and whether its item
+/// is done (`xC5`: the top seven bits and the lowest), a tick count (`xC6`), its splash
+/// (`xC8`) and its shell's height (`xCC`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct GreatBayVars {
+    pub xC4: u8,
+    pub xC5: u8,
+    pub xC6: i16,
+    pub xC8: Option<crate::hsd::generator::GeneratorId>,
+    pub xCC: f32,
+}
+
+impl GreatBayVars {
+    /// `xC5.b0123456`.
+    pub fn dir(&self) -> u8 {
+        self.xC5 >> 1
+    }
+    pub fn set_dir(&mut self, v: u8) {
+        self.xC5 = (self.xC5 & 1) | (v & 0x7F) << 1;
+    }
+    /// `xC5.b7`.
+    pub fn item_done(&self) -> bool {
+        self.xC5 & 1 != 0
+    }
+    pub fn set_item_done(&mut self, v: bool) {
+        self.xC5 = (self.xC5 & !1) | u8::from(v);
+    }
+}
+
+/// `grGreatBay_GroundVars2`: the four giants (`gobjs`), the wait before the moon falls
+/// (`x10`) and its flags (`x12`, the top four bits).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct GreatBay2Vars {
+    pub gobjs: [Option<GObjId>; 4],
+    pub x10: i16,
+    pub x12: u8,
+}
+
+/// `grGreatBay_GroundVars3`: the floating platform's rest (`translation.x`, `.y`), this
+/// tick's pushes (tilt `translation.z`, slide `xD0`, sink `xD4`), where it is (tilt `xD8`,
+/// slide `xDC`, sink `xE0`) and its model joint.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct GreatBay3Vars {
+    pub translation: crate::vec::Vec3,
+    pub xD0: f32,
+    pub xD4: f32,
+    pub xD8: f32,
+    pub xDC: f32,
+    pub xE0: f32,
+    pub jobj: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// `grGreatBay_GroundVars4`: the balloon's state (`xC4`) and last tick's (`xC8`), whether it
+/// popped (`xCC`) and splashed (`xD0`), a ledge hang on it (`xD4`), how many stood on it this
+/// tick (`xD8`) and last (`xDC`), their weight (`xE0`), its place (`xE4`) and the balloon item
+/// (`xF0`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct GreatBay4Vars {
+    pub xC4: i32,
+    pub xC8: i32,
+    pub xCC: i32,
+    pub xD0: i32,
+    pub xD4: i32,
+    pub xD8: i32,
+    pub xDC: i32,
+    pub xE0: f32,
+    pub xE4: crate::vec::Vec3,
+    pub xF0: Option<GObjId>,
 }
 
 /// `grFourside_GroundVars`: the joints the city's render callback turns.
@@ -837,6 +919,43 @@ impl GroundVars {
                 x4: m.u32(at + 4) as i32,
                 x8: m.u32(at + 8) as i32,
             }),
+            VarsKind::GreatBay => GroundVars::GreatBay(GreatBayVars {
+                xC4: m.u8(at),
+                xC5: m.u8(at + 1),
+                xC6: m.u16(at + 2) as i16,
+                xC8: cx
+                    .import_handle("GeneratorId", m.u32(at + 4))
+                    .map(crate::hsd::generator::GeneratorId),
+                xCC: f(at + 8),
+            }),
+            VarsKind::GreatBay2 => GroundVars::GreatBay2(GreatBay2Vars {
+                gobjs: std::array::from_fn(|k| gobj(cx, at + 4 * k as u32)),
+                x10: m.u16(at + 0x10) as i16,
+                x12: m.u8(at + 0x12),
+            }),
+            VarsKind::GreatBay3 => GroundVars::GreatBay3(GreatBay3Vars {
+                translation: crate::vec::Vec3::new(f(at), f(at + 4), f(at + 8)),
+                xD0: f(at + 0xC),
+                xD4: f(at + 0x10),
+                xD8: f(at + 0x14),
+                xDC: f(at + 0x18),
+                xE0: f(at + 0x1C),
+                jobj: cx
+                    .import_handle("JObjId", m.u32(at + 0x20))
+                    .map(crate::hsd::jobj::JObjId),
+            }),
+            VarsKind::GreatBay4 => GroundVars::GreatBay4(GreatBay4Vars {
+                xC4: m.u32(at) as i32,
+                xC8: m.u32(at + 4) as i32,
+                xCC: m.u32(at + 8) as i32,
+                xD0: m.u32(at + 0xC) as i32,
+                xD4: m.u32(at + 0x10) as i32,
+                xD8: m.u32(at + 0x14) as i32,
+                xDC: m.u32(at + 0x18) as i32,
+                xE0: f(at + 0x1C),
+                xE4: crate::vec::Vec3::new(f(at + 0x20), f(at + 0x24), f(at + 0x28)),
+                xF0: gobj(cx, at + 0x2C),
+            }),
             VarsKind::StoryShyGuys => GroundVars::StoryShyGuys(StoryShyGuysVars {
                 count: m.u8(at) as i8,
                 pattern: m.u8(at + 1) as i8,
@@ -1241,6 +1360,91 @@ impl GroundVars {
         match self {
             GroundVars::Fourside2(v) => v,
             other => panic!("a stage object's variables are {other:?}, not grFourside_GroundVars2"),
+        }
+    }
+
+    /// The variables as `grGreatBay_GroundVars`, likewise: a block holding pointers converts
+    /// only if they are null.
+    pub fn greatbay(&mut self) -> &mut GreatBayVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            b.null(4);
+            *self = GroundVars::GreatBay(GreatBayVars {
+                xC4: b.0[0],
+                xC5: b.0[1],
+                xC6: u16::from_be_bytes([b.0[2], b.0[3]]) as i16,
+                xC8: None,
+                xCC: b.f32(8),
+            });
+        }
+        match self {
+            GroundVars::GreatBay(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grGreatBay_GroundVars"),
+        }
+    }
+
+    /// The variables as `grGreatBay_GroundVars2`, likewise.
+    pub fn greatbay2(&mut self) -> &mut GreatBay2Vars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            for at in [0, 4, 8, 0xC] {
+                b.null(at);
+            }
+            *self = GroundVars::GreatBay2(GreatBay2Vars {
+                gobjs: [None; 4],
+                x10: u16::from_be_bytes([b.0[0x10], b.0[0x11]]) as i16,
+                x12: b.0[0x12],
+            });
+        }
+        match self {
+            GroundVars::GreatBay2(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grGreatBay_GroundVars2"),
+        }
+    }
+
+    /// The variables as `grGreatBay_GroundVars3`, likewise.
+    pub fn greatbay3(&mut self) -> &mut GreatBay3Vars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            b.null(0x20);
+            *self = GroundVars::GreatBay3(GreatBay3Vars {
+                translation: crate::vec::Vec3::new(b.f32(0), b.f32(4), b.f32(8)),
+                xD0: b.f32(0xC),
+                xD4: b.f32(0x10),
+                xD8: b.f32(0x14),
+                xDC: b.f32(0x18),
+                xE0: b.f32(0x1C),
+                jobj: None,
+            });
+        }
+        match self {
+            GroundVars::GreatBay3(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grGreatBay_GroundVars3"),
+        }
+    }
+
+    /// The variables as `grGreatBay_GroundVars4`, likewise.
+    pub fn greatbay4(&mut self) -> &mut GreatBay4Vars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            b.null(0x2C);
+            let w = |at: usize| b.u32(at) as i32;
+            *self = GroundVars::GreatBay4(GreatBay4Vars {
+                xC4: w(0),
+                xC8: w(4),
+                xCC: w(8),
+                xD0: w(0xC),
+                xD4: w(0x10),
+                xD8: w(0x14),
+                xDC: w(0x18),
+                xE0: b.f32(0x1C),
+                xE4: crate::vec::Vec3::new(b.f32(0x20), b.f32(0x24), b.f32(0x28)),
+                xF0: None,
+            });
+        }
+        match self {
+            GroundVars::GreatBay4(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grGreatBay_GroundVars4"),
         }
     }
 
@@ -1765,6 +1969,92 @@ impl Mirror for GroundVars {
                         format!("{theirs:x?}"),
                     );
                 }
+            }
+            GroundVars::GreatBay(v) => {
+                let ours = (v.xC4, v.xC5, v.xC6, v.xCC.to_bits());
+                let theirs = (m.u8(at), m.u8(at + 1), m.u16(at + 2) as i16, m.u32(at + 8));
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.greatbay"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.greatbay.xC8"),
+                    "GeneratorId",
+                    v.xC8.map(|g| g.0),
+                    m.u32(at + 4),
+                );
+            }
+            GroundVars::GreatBay2(v) => {
+                let ours = (v.x10, v.x12);
+                let theirs = (m.u16(at + 0x10) as i16, m.u8(at + 0x12));
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.greatbay2"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                for (i, g) in v.gobjs.iter().enumerate() {
+                    cx.compare_handle(
+                        &format!("{path}.greatbay2.gobjs[{i}]"),
+                        "GObjId",
+                        g.map(|h| h.0),
+                        m.u32(at + 4 * i as u32),
+                    );
+                }
+            }
+            GroundVars::GreatBay3(v) => {
+                let ours = [
+                    v.translation.x,
+                    v.translation.y,
+                    v.translation.z,
+                    v.xD0,
+                    v.xD4,
+                    v.xD8,
+                    v.xDC,
+                    v.xE0,
+                ]
+                .map(f32::to_bits);
+                let theirs: [u32; 8] = std::array::from_fn(|k| m.u32(at + 4 * k as u32));
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.greatbay3"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.greatbay3.jobj"),
+                    "JObjId",
+                    v.jobj.map(|j| j.0),
+                    m.u32(at + 0x20),
+                );
+            }
+            GroundVars::GreatBay4(v) => {
+                let ours = (
+                    [v.xC4, v.xC8, v.xCC, v.xD0, v.xD4, v.xD8, v.xDC],
+                    [v.xE0, v.xE4.x, v.xE4.y, v.xE4.z].map(f32::to_bits),
+                );
+                let theirs = (
+                    std::array::from_fn(|k| m.u32(at + 4 * k as u32) as i32),
+                    std::array::from_fn(|k| m.u32(at + 0x1C + 4 * k as u32)),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.greatbay4"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.greatbay4.xF0"),
+                    "GObjId",
+                    v.xF0.map(|h| h.0),
+                    m.u32(at + 0x2C),
+                );
             }
             GroundVars::BattleBg(v) => {
                 let ours = [v.state, v.curr, v.prev, v.timer];

@@ -30,8 +30,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// Spawns an enemy item of `kind`, `it_8027B5B0`: at `pos`, or where `jobj` is; facing most
 /// fighters; in the air with its setup (`use_init`) or on the ground; its spawner slot none.
 ///
-/// Only the Shy Guys' variables are typed so far ([`super::kinds::heiho::HeihoVars`]), so
-/// another kind stops.
+/// The enemies whose variables are typed ([`common`]) are the Shy Guys and Tingle; another kind
+/// stops.
 #[doc(alias = "it_8027B5B0")]
 pub fn spawn(
     r: &mut Running,
@@ -66,10 +66,7 @@ pub fn spawn(
     } else {
         spawn_ground(r, &mut spawn)
     }?;
-    if kind != super::kinds::HEIHO {
-        code::unported_call("it_8027B5B0 (an enemy other than a Shy Guy)");
-    }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.heiho();
+    let v = common(r.game, gobj);
     v.jobj.set(jobj);
     v.idx.set(-1);
     v.x14[2].set(0);
@@ -81,15 +78,46 @@ pub fn spawn(
 /// (`it_80275228`, `it_80275240`).
 #[doc(alias = "it_8027B730")]
 pub fn reset(game: &mut Game, gobj: GObjId) {
-    let v = item_mut(game, gobj).xDD4_itemVar.heiho();
+    let v = common(game, gobj);
     v.jobj.set(None);
     v.idx.set(-1);
     v.x8.set(Vec3::new(0.0, 1.0, 0.0));
-    for w in &mut v.x14 {
+    for w in v.x14.iter_mut() {
         w.set(0);
     }
     clear_x1c(game, gobj);
     clear_x1e(game, gobj);
+}
+
+/// An enemy's common variables (`itZako_ItemVars`), the first words of its kind's member.
+pub struct Common<'a> {
+    pub jobj: &'a mut super::Var<Option<JObjId>>,
+    pub idx: &'a mut super::Var<i32>,
+    pub x8: &'a mut super::Var<Vec3>,
+    pub x14: &'a mut [super::Var<i32>; 3],
+}
+
+/// The enemy's common variables in its kind's member: the Shy Guys' and Tingle's are typed.
+pub fn common(game: &mut Game, gobj: GObjId) -> Common<'_> {
+    use super::kinds;
+    let kind = item(game, gobj).kind;
+    let vars = &mut item_mut(game, gobj).xDD4_itemVar;
+    macro_rules! of {
+        ($v:expr) => {{
+            let v = $v;
+            Common {
+                jobj: &mut v.jobj,
+                idx: &mut v.idx,
+                x8: &mut v.x8,
+                x14: &mut v.x14,
+            }
+        }};
+    }
+    match kind {
+        kinds::HEIHO => of!(vars.heiho()),
+        kinds::TINCLE => of!(vars.tincle()),
+        k => code::unported_call(&format!("it_8027B5B0 (an enemy of kind {k})")),
+    }
 }
 
 /// `it_80275228`.
@@ -113,7 +141,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     if kind == COIN {
         code::unported_call("grZakoGenerator_801CAC14 (a coin)");
     }
-    let idx = item_mut(r.game, gobj).xDD4_itemVar.heiho().idx.get();
+    let idx = common(r.game, gobj).idx.get();
     if idx != -1 {
         code::unported_call("grZakoGenerator_801CAC14 (an enemy from a spawner slot)");
     }
@@ -192,7 +220,7 @@ pub fn ko(r: &mut Running, gobj: GObjId) {
     if kind == COIN {
         code::unported_call("grZakoGenerator_801CACB8 (a coin)");
     }
-    let idx = item_mut(r.game, gobj).xDD4_itemVar.heiho().idx.get();
+    let idx = common(r.game, gobj).idx.get();
     if idx != -1 {
         code::unported_call("grZakoGenerator_801CACB8 (an enemy from a spawner slot)");
     }

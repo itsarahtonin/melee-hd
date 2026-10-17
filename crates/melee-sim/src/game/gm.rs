@@ -165,6 +165,32 @@ impl Unlocks {
         self.all_characters_code || (0..UNLOCKABLE).all(|i| self.characters & (1 << i) != 0)
     }
 
+    /// Whether character kind `ckind` is unlocked, `gm_IsCKindUnlocked`: its bit in the
+    /// characters' mask, or always for one that isn't unlockable.
+    #[doc(alias = "gm_IsCKindUnlocked")]
+    pub fn character(&self, ckind: u8) -> bool {
+        // `lbl_803B78C8`'s unlock bits by character kind (through `ckind_to_selkind_map`):
+        // Mr. Game & Watch, Luigi, Marth, Mewtwo, Jigglypuff, Falco, Young Link, Dr. Mario,
+        // Roy, Pichu and Ganondorf.
+        const BITS: [(u8, u32); UNLOCKABLE as usize] = [
+            (0x03, 0),
+            (0x07, 1),
+            (0x09, 2),
+            (0x0A, 3),
+            (0x0F, 4),
+            (0x14, 5),
+            (0x15, 6),
+            (0x16, 7),
+            (0x17, 8),
+            (0x18, 9),
+            (0x19, 0xA),
+        ];
+        match BITS.iter().find(|&&(k, _)| k == ckind) {
+            Some(&(_, bit)) => self.characters & (1 << bit) != 0,
+            None => true,
+        }
+    }
+
     /// Whether every unlockable stage is unlocked, `gm_80164600`.
     // Ports `gm_80164600`; aliased once a check reaches it.
     pub fn all_stages(&self) -> bool {

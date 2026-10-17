@@ -21,7 +21,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::it::Var;
 use crate::game::it::link::LinkX20;
-use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};
+use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, UnreadBytes3, UnreadWord};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -8118,16 +8118,14 @@ impl Mirror for Item {
         Item {
             x0: cx.import_handle("ItemId", m.u32(at + 0x0)).map(ItemId),
             entity: cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId),
-            x8: m.u32(at + 0x8) as i32,
+            x8: UnreadWord::import(m, at + 0x8, cx),
             spawn_kind: m.u32(at + 0xc) as i32,
             kind: m.u32(at + 0x10) as i32,
             hold_kind: m.u32(at + 0x14) as i32,
             x18: m.u32(at + 0x18) as i32,
             x1C: m.u32(at + 0x1c) as i32,
             x20_team_id: m.u8(at + 0x20),
-            x21: m.u8(at + 0x21),
-            x22: m.u8(at + 0x22),
-            x23: m.u8(at + 0x23),
+            x21: UnreadBytes3::import(m, at + 0x21, cx),
             msid: m.u32(at + 0x24) as i32,
             anim_id: m.u32(at + 0x28) as i32,
             facing_dir: f32::from_bits(m.u32(at + 0x2c)),
@@ -8327,13 +8325,7 @@ impl Mirror for Item {
             self.entity.map(|h| h.0),
             m.u32(at + 0x4),
         );
-        if self.x8 != m.u32(at + 0x8) as i32 {
-            cx.mismatch(
-                &format!("{path}.x8"),
-                format!("{:?}", self.x8),
-                format!("{:?}", m.u32(at + 0x8) as i32),
-            );
-        }
+        self.x8.compare(m, at + 0x8, &format!("{path}.x8"), cx);
         if self.spawn_kind != m.u32(at + 0xc) as i32 {
             cx.mismatch(
                 &format!("{path}.spawn_kind"),
@@ -8376,27 +8368,7 @@ impl Mirror for Item {
                 format!("{:?}", m.u8(at + 0x20)),
             );
         }
-        if self.x21 != m.u8(at + 0x21) {
-            cx.mismatch(
-                &format!("{path}.x21"),
-                format!("{:?}", self.x21),
-                format!("{:?}", m.u8(at + 0x21)),
-            );
-        }
-        if self.x22 != m.u8(at + 0x22) {
-            cx.mismatch(
-                &format!("{path}.x22"),
-                format!("{:?}", self.x22),
-                format!("{:?}", m.u8(at + 0x22)),
-            );
-        }
-        if self.x23 != m.u8(at + 0x23) {
-            cx.mismatch(
-                &format!("{path}.x23"),
-                format!("{:?}", self.x23),
-                format!("{:?}", m.u8(at + 0x23)),
-            );
-        }
+        self.x21.compare(m, at + 0x21, &format!("{path}.x21"), cx);
         if self.msid != m.u32(at + 0x24) as i32 {
             cx.mismatch(
                 &format!("{path}.msid"),
