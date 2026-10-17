@@ -507,7 +507,7 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
 /// Each function run from the captures of its unit's other functions.
 fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
     let funcs = functions();
-    for u in 0..UNITS.len() {
+    for (u, &(_, _, fighters)) in UNITS.iter().enumerate() {
         let targets: Vec<(u32, String)> = funcs
             .iter()
             .filter(|(a, n)| {
@@ -537,7 +537,6 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
             continue;
         }
         let rounds = targets.len().div_ceil(total).max(2);
-        let fighters = UNITS[u].2;
         let no = stubs();
         let targets = &targets;
         let jobs: Vec<(usize, &(String, String, usize))> = runs.iter().enumerate().collect();

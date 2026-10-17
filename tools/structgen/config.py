@@ -250,6 +250,8 @@ SPLICE = {
     "BoneDynamicsDesc": ("bone_id", 0, 4, "BoneSlot"),
     # Peach's turnip's flag byte, of which only the top bit is the turnip's.
     "itPeachTurnip_ItemVars": ("xDD4", 0, 1, "TurnipFlag"),
+    # A heart's flag byte, of which the heart uses only the top bit (an event's heart).
+    "itHeart_ItemVars": ("xDD8", 4, 5, "TurnipFlag"),
     # Link's bomb's flag byte, of which the bomb uses the top three bits.
     "itLinkBomb_ItemVars": ("x0", 0, 1, "LinkBombFlags"),
     # An item link's `x20`, which only the reset writes and a hookshot link in a block new

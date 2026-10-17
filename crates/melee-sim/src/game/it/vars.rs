@@ -227,7 +227,8 @@ const ALL: u8 = 0b111;
 /// Peach's turnip's flag byte (`itPeachTurnip_ItemVars::xDD4`, an `UnkFlagStruct`), of which
 /// the turnip reads and writes only the top bit, "picked up before": the other seven keep what
 /// the block held, which melee-hd doesn't model, so the comparer checks the top bit alone
-/// (docs/engine.md).
+/// (docs/engine.md). A heart's flag byte (`itHeart_ItemVars::xDD8`) is the same: its top bit
+/// says an event made it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct TurnipFlag {
     /// The top bit.

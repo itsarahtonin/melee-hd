@@ -21271,7 +21271,7 @@ impl Mirror for itHeart_ItemVars {
         let _ = (&m, at, &cx);
         itHeart_ItemVars {
             xDD4_heal: Var::new(m.u32(at + 0x0) as i32),
-            xDD8: Var::new(m.bytes(at + 0x4)),
+            xDD8: Var::new(TurnipFlag::import(m, at + 0x4, cx)),
             xDDC: Var::new(m.u32(at + 0x8) as i32),
             xDE0_filler: core::array::from_fn(|i0| Var::new(m.u8(at + 0xc + i0 as u32 * 0x1))),
             xDE8_float: Var::new(f32::from_bits(m.u32(at + 0x14))),
@@ -21291,13 +21291,9 @@ impl Mirror for itHeart_ItemVars {
             }
         }
         if self.xDD8.live(&format!("{path}.xDD8"), cx) {
-            if (*self.xDD8.peek()) != m.bytes::<4>(at + 0x4) {
-                cx.mismatch(
-                    &format!("{path}.xDD8"),
-                    format!("{:02x?}", (*self.xDD8.peek())),
-                    format!("{:02x?}", m.bytes::<4>(at + 0x4)),
-                );
-            }
+            self.xDD8
+                .peek()
+                .compare(m, at + 0x4, &format!("{path}.xDD8"), cx);
         }
         if self.xDDC.live(&format!("{path}.xDDC"), cx) {
             if (*self.xDDC.peek()) != m.u32(at + 0x8) as i32 {

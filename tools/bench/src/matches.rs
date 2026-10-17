@@ -482,7 +482,9 @@ pub fn items_set() -> Vec<Match> {
 /// narrows the switch to a few of those kinds: the barrel cannon alone, the swung items with
 /// the Screw Attack, and the box and barrel.
 pub fn held_extra_set() -> Vec<Match> {
-    let matches: [(&str, u16, &[u8], (u8, u8)); 3] = [
+    /// A match's name, stage, switch kinds and characters.
+    type Extra = (&'static str, u16, &'static [u8], (u8, u8));
+    let matches: [Extra; 3] = [
         ("items-cannon-fd", FINAL_DESTINATION, &[5], (FOX, MARTH)),
         (
             "items-swing-bf",

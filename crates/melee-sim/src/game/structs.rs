@@ -10033,7 +10033,7 @@ pub struct itHeart_ItemVars {
     /// +0x0
     pub xDD4_heal: Var<i32>,
     /// +0x4
-    pub xDD8: Var<[u8; 4]>,
+    pub xDD8: Var<TurnipFlag>,
     /// +0x8
     pub xDDC: Var<i32>,
     /// +0xc

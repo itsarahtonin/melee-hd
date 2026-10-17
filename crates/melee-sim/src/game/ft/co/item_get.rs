@@ -137,13 +137,12 @@ impl Running<'_> {
     /// The light pickup's damage hook, `ftpickupitem_80094DF8`: each held item's use on pickup
     /// (`ftpickupitem_80094B6C`).
     #[doc(alias = "ftpickupitem_80094DF8")]
-    #[doc(alias = "ftpickupitem_80094B6C")]
     pub fn item_get_damaged(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter(gobj);
-        for it in [fp.item_gobj, fp.x1978].into_iter().flatten() {
-            if lib26b1::use_kind(self.game, self.data, it) == 5 {
-                unported_call("ftpickupitem_80094B6C for an item used as it's picked up");
-            }
+        if let Some(it) = self.game.fighter(gobj).item_gobj {
+            self.item_pickup_hit(gobj, it);
+        }
+        if let Some(it) = self.game.fighter(gobj).x1978 {
+            self.item_pickup_hit(gobj, it);
         }
     }
 
