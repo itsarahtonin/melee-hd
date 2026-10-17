@@ -96,6 +96,7 @@ pub mod starrodstar;
 pub mod sword;
 pub mod taru;
 pub mod tarucann;
+pub mod togepy;
 pub mod tomato;
 pub mod wstar;
 pub mod yoshiegglay;
@@ -231,6 +232,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || super::zako::run_event(r, gobj, addr)
         || kireihana::run_event(r, gobj, addr)
         || maril::run_event(r, gobj, addr)
+        || togepy::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -336,6 +338,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| spycloak::run_pred(r, gobj, addr))
         .or_else(|| kireihana::run_pred(r, gobj, addr))
         .or_else(|| maril::run_pred(r, gobj, addr))
+        .or_else(|| togepy::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
