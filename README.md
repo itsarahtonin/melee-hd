@@ -4,7 +4,7 @@ melee-hd is a native Rust rewrite of Super Smash Bros. Melee NTSC 1.02 (GALE01 r
 
 It's a personal project, and the next stage of [ssbm-rs](https://github.com/itsarahtonin/ssbm-rs). ssbm-rs is a faithful port: it keeps the GameCube's memory layout and checks its Rust functions call by call against the original machine code. melee-hd starts over from the [Melee decompilation](https://github.com/doldecomp/melee) and ssbm-rs, rewrites the game into plain Rust data structures, and uses ssbm-rs (at its [`melee-hd-base`](https://github.com/itsarahtonin/ssbm-rs/releases/tag/melee-hd-base) tag) as the reference it is checked against. No ssbm-rs code runs in the player.
 
-melee-hd is early: VS matches between a handful of characters on the six tournament stages, on Windows, from your own disc.
+melee-hd is early: VS matches between a handful of characters on the six tournament stages and Yoshi's Island N64, on Windows, from your own disc.
 
 ## How it differs
 
@@ -26,10 +26,10 @@ Like ssbm-rs, it contains no game data: the game's models, textures, sounds and 
 | | |
 | --- | --- |
 | Characters | Fox, Falco, Marth and Roy, Sheik and Zelda, Captain Falcon, Ganondorf, Ness, Jigglypuff, Samus, Luigi, Mario, Dr. Mario, Peach, Link and Young Link, Pikachu and Pichu, Yoshi, Donkey Kong, Bowser, the Ice Climbers, Mewtwo, Mr. Game & Watch, Kirby (with his copies of Mario, Luigi, Captain Falcon, Pikachu, Samus, Fox, Falco, Ness, Peach, Mr. Game & Watch, Zelda and Sheik), each checked over whole matches |
-| Stages | Final Destination, Battlefield, Pokémon Stadium (transformations included), Yoshi's Story, Dream Land, Fountain of Dreams |
+| Stages | Final Destination, Battlefield, Pokémon Stadium (transformations included), Yoshi's Story, Dream Land, Fountain of Dreams, Yoshi's Island N64 |
 | Whole matches compared | 83 matches, 1,073,987 ticks, every checked field equal after every tick, the original allocator's heap included: nineteen CPU-played benchmark matches (Fox ditto; Fox against Marth on three stages; Ganondorf against Captain Falcon; three each for Ness and Samus; eight for Kirby's copies) and sixty-four real Slippi replays (Slippi 3.19's, and ranked 3.14, 3.16 and 3.17 replays) |
 | Player | A VS match in a window, with a launcher for picking characters, stage, stocks and time. Frames are identical to ssbm-rs's on every checked frame except Slippi's replay name plates, which melee-hd's VS doesn't draw; the audio mix is sample-exact with ssbm-rs's on the matches checked |
-| Functions | 9,157 of the 19,827 in ssbm-rs's symbol table ported and checked, 197 replaced by native subsystems, 23 dead ([port ledger](docs/port-ledger.md)) |
+| Functions | 9,338 of the 19,827 in ssbm-rs's symbol table ported and checked, 201 replaced by native subsystems, 79 dead ([port ledger](docs/port-ledger.md)) |
 | Speed | The simulation runs a match about 16.7 times as fast as headless Dolphin on one core; a snapshot is about 1.2 MB, cloned in about 0.15 ms and restored in about 0.03 ms ([performance](docs/performance.md)) |
 
 Not yet: the other characters and stages, Kirby's other copies (fourteen kinds), menus and every mode other than VS, items spawning during a match beyond the kinds the oracle's three items-on replays reach (the player's matches have items off), testing on macOS and Linux, and release builds. [The oracle](docs/oracle.md) lists each comparison, and [the player](docs/player.md) its open issues.

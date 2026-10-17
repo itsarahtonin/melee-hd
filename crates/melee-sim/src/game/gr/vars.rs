@@ -37,6 +37,8 @@ pub enum VarsKind {
     Izumi,
     Izumi2,
     Izumi3,
+    OldYoshiCloud,
+    OldYoshiGuest,
 }
 
 /// `union GroundVars`.
@@ -74,6 +76,60 @@ pub enum GroundVars {
     Izumi2(Izumi2Vars),
     /// `GroundVars_izumi3`: a platform (map 4).
     Izumi3(Izumi3Vars),
+    /// `grOldYoshi_Cloud_GroundVars`: Yoshi's Island N64's three clouds (map 2).
+    OldYoshiCloud(OldYoshiCloudVars),
+    /// `grOldYoshi_Guest_GroundVars`: the creatures that pass behind it (map 3).
+    OldYoshiGuest(OldYoshiGuestVars),
+}
+
+/// `grOldYoshi_Cloud`: one of Yoshi's Island N64's clouds.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct OldYoshiCloud {
+    /// The bit fields' word: the state (`xC4_0123`, the top four bits), whether a fighter
+    /// stood on it this tick (`xC4_4`, the next), a tick count (`xC4_567`, the next eight).
+    /// The low 19 bits are padding nothing writes.
+    pub bits: u32,
+    /// `xC8`: the cloud's model.
+    pub jobj: Option<crate::hsd::jobj::JObjId>,
+    /// `xCC`: the model's height at rest; `xD0`: how far it has sunk; `xD4`: its sinking speed.
+    pub xCC: f32,
+    pub xD0: f32,
+    pub xD4: f32,
+}
+
+impl OldYoshiCloud {
+    pub fn state(&self) -> u32 {
+        self.bits >> 28
+    }
+    pub fn set_state(&mut self, v: u32) {
+        self.bits = (self.bits & !0xF000_0000) | (v & 0xF) << 28;
+    }
+    pub fn touched(&self) -> bool {
+        self.bits >> 27 & 1 != 0
+    }
+    pub fn set_touched(&mut self, v: bool) {
+        self.bits = (self.bits & !(1 << 27)) | u32::from(v) << 27;
+    }
+    pub fn count(&self) -> u32 {
+        self.bits >> 19 & 0xFF
+    }
+    pub fn set_count(&mut self, v: u32) {
+        self.bits = (self.bits & !(0xFF << 19)) | (v & 0xFF) << 19;
+    }
+}
+
+/// `grOldYoshi_Cloud_GroundVars`.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct OldYoshiCloudVars {
+    pub cloud: [OldYoshiCloud; 3],
+}
+
+/// `grOldYoshi_Guest_GroundVars`: the wait before the next creature (`xC4`) and which part
+/// passes (`xC6`, -1 while none does).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct OldYoshiGuestVars {
+    pub xC4: i16,
+    pub xC6: i16,
 }
 
 /// `GroundVars_izumi`: the water's texture (`xC4`), the reflection camera (`xC8`), the
@@ -587,6 +643,24 @@ impl GroundVars {
                 xC4: m.u16(at) as i16,
                 xC6: m.u16(at + 2) as i16,
             }),
+            VarsKind::OldYoshiCloud => GroundVars::OldYoshiCloud(OldYoshiCloudVars {
+                cloud: std::array::from_fn(|i| {
+                    let c = at + 0x14 * i as u32;
+                    OldYoshiCloud {
+                        bits: m.u32(c),
+                        jobj: cx
+                            .import_handle("JObjId", m.u32(c + 4))
+                            .map(crate::hsd::jobj::JObjId),
+                        xCC: f(c + 8),
+                        xD0: f(c + 0xC),
+                        xD4: f(c + 0x10),
+                    }
+                }),
+            }),
+            VarsKind::OldYoshiGuest => GroundVars::OldYoshiGuest(OldYoshiGuestVars {
+                xC4: m.u16(at) as i16,
+                xC6: m.u16(at + 2) as i16,
+            }),
             VarsKind::StoryShyGuys => GroundVars::StoryShyGuys(StoryShyGuysVars {
                 count: m.u8(at) as i8,
                 pattern: m.u8(at + 1) as i8,
@@ -825,6 +899,49 @@ impl GroundVars {
             GroundVars::OldPupupu2(v) => v,
             other => {
                 panic!("a stage object's variables are {other:?}, not grOldPupupu_GroundVars2")
+            }
+        }
+    }
+
+    /// The variables as `grOldYoshi_Cloud_GroundVars`, likewise: a block holding pointers
+    /// converts only if they are null.
+    pub fn oldyoshi_cloud(&mut self) -> &mut OldYoshiCloudVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let cloud = std::array::from_fn(|i| {
+                let c = 0x14 * i;
+                b.null(c + 4);
+                OldYoshiCloud {
+                    bits: b.u32(c),
+                    jobj: None,
+                    xCC: b.f32(c + 8),
+                    xD0: b.f32(c + 0xC),
+                    xD4: b.f32(c + 0x10),
+                }
+            });
+            *self = GroundVars::OldYoshiCloud(OldYoshiCloudVars { cloud });
+        }
+        match self {
+            GroundVars::OldYoshiCloud(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grOldYoshi_Cloud_GroundVars")
+            }
+        }
+    }
+
+    /// The variables as `grOldYoshi_Guest_GroundVars`, likewise.
+    pub fn oldyoshi_guest(&mut self) -> &mut OldYoshiGuestVars {
+        if let GroundVars::Bytes(b) = self {
+            let h = |at: usize| u16::from_be_bytes([b[at], b[at + 1]]) as i16;
+            *self = GroundVars::OldYoshiGuest(OldYoshiGuestVars {
+                xC4: h(0),
+                xC6: h(2),
+            });
+        }
+        match self {
+            GroundVars::OldYoshiGuest(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grOldYoshi_Guest_GroundVars")
             }
         }
     }
@@ -1175,6 +1292,37 @@ impl Mirror for GroundVars {
                 if ours != theirs {
                     cx.mismatch(
                         &format!("{path}.oldpupupu2"),
+                        format!("{ours:?}"),
+                        format!("{theirs:?}"),
+                    );
+                }
+            }
+            GroundVars::OldYoshiCloud(v) => {
+                for (i, c) in v.cloud.iter().enumerate() {
+                    let path = format!("{path}.oldyoshicloud.cloud[{i}]");
+                    let a = at + 0x14 * i as u32;
+                    let ours = (c.bits, [c.xCC, c.xD0, c.xD4].map(f32::to_bits));
+                    let theirs = (
+                        m.u32(a),
+                        std::array::from_fn(|k| m.u32(a + 8 + 4 * k as u32)),
+                    );
+                    if ours != theirs {
+                        cx.mismatch(&path, format!("{ours:x?}"), format!("{theirs:x?}"));
+                    }
+                    cx.compare_handle(
+                        &format!("{path}.xC8"),
+                        "JObjId",
+                        c.jobj.map(|j| j.0),
+                        m.u32(a + 4),
+                    );
+                }
+            }
+            GroundVars::OldYoshiGuest(v) => {
+                let ours = (v.xC4, v.xC6);
+                let theirs = (m.u16(at) as i16, m.u16(at + 2) as i16);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.oldyoshiguest"),
                         format!("{ours:?}"),
                         format!("{theirs:?}"),
                     );

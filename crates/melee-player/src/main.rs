@@ -58,6 +58,8 @@ mod pipelines;
 #[cfg(test)]
 mod predict_tests;
 mod present;
+#[cfg(test)]
+mod roster_tests;
 mod settings;
 mod sound;
 mod timing;

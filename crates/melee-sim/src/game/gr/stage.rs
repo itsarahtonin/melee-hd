@@ -19,6 +19,106 @@ fn radians(deg: f32) -> f32 {
     mem(fp::fmuls(DEG_TO_RAD, reg(deg)))
 }
 
+/// The camera's deepest zoom, `Stage_GetCamMaxDepth`.
+#[doc(alias = "Stage_GetCamMaxDepth")]
+pub fn cam_max_depth(game: &Game) -> f32 {
+    game.stage_info.cam_info.cam_max_depth
+}
+
+/// The camera's zoom rate, `Stage_GetCamZoomRate`.
+#[doc(alias = "Stage_GetCamZoomRate")]
+pub fn cam_zoom_rate(game: &Game) -> f32 {
+    game.stage_info.cam_info.cam_zoom_rate
+}
+
+/// The camera's `x20`, `Stage_GetCamInfoX20`.
+#[doc(alias = "Stage_GetCamInfoX20")]
+pub fn cam_x20(game: &Game) -> f32 {
+    game.stage_info.cam_info.x20
+}
+
+/// The camera's `x24`, `Stage_GetCamInfoX24`.
+#[doc(alias = "Stage_GetCamInfoX24")]
+pub fn cam_x24(game: &Game) -> f32 {
+    game.stage_info.cam_info.x24
+}
+
+/// The camera's fixed zoom, `Stage_GetCamFixedZoom`.
+#[doc(alias = "Stage_GetCamFixedZoom")]
+pub fn cam_fixed_zoom(game: &Game) -> f32 {
+    game.stage_info.cam_info.cam_fixed_zoom
+}
+
+/// The camera's tracking ratio, `Stage_GetCamTrackRatio`.
+#[doc(alias = "Stage_GetCamTrackRatio")]
+pub fn cam_track_ratio(game: &Game) -> f32 {
+    game.stage_info.cam_info.cam_track_ratio
+}
+
+/// The camera's tracking smoothness, `Stage_GetCamTrackSmooth`.
+#[doc(alias = "Stage_GetCamTrackSmooth")]
+pub fn cam_track_smooth(game: &Game) -> f32 {
+    game.stage_info.cam_info.cam_track_smooth
+}
+
+/// The pause camera's nearest, starting and farthest depths (`Stage_GetPauseCamZPosMin`,
+/// `Stage_GetPauseCamZPosInit`, `Stage_GetPauseCamZPosMax`).
+#[doc(alias = "Stage_GetPauseCamZPosMin")]
+pub fn pause_cam_z_min(game: &Game) -> f32 {
+    game.stage_info.cam_info.pausecam_zpos_min
+}
+
+#[doc(alias = "Stage_GetPauseCamZPosInit")]
+pub fn pause_cam_z_init(game: &Game) -> f32 {
+    game.stage_info.cam_info.pausecam_zpos_init
+}
+
+#[doc(alias = "Stage_GetPauseCamZPosMax")]
+pub fn pause_cam_z_max(game: &Game) -> f32 {
+    game.stage_info.cam_info.pausecam_zpos_max
+}
+
+/// Where the fixed camera's view meets the stage plane, `Stage_80224CAC`: its eye turned by
+/// its angles toward z = 0.
+#[doc(alias = "Stage_80224CAC")]
+pub fn fixed_cam_interest(s: &StageInfo) -> Vec3 {
+    let ci = &s.cam_info;
+    let eye = ci.fixed_cam_pos;
+    let mut dir = Vec3::new(0.0, 0.0, -100.0);
+    let angles = Vec3::new(
+        radians(ci.fixed_cam_vert_angle),
+        radians(ci.fixed_cam_horz_angle),
+        0.0,
+    );
+    dir.rotate_euler(angles);
+    let t = fp::fdivs(reg(eye.z), fp::fneg(reg(dir.z)));
+    Vec3::new(
+        mem(fp::fmadds(reg(dir.x), t, reg(eye.x))),
+        mem(fp::fmadds(reg(dir.y), t, reg(eye.y))),
+        0.0,
+    )
+}
+
+/// The fixed camera's eye, `Stage_SetVecToFixedCamPos`.
+#[doc(alias = "Stage_SetVecToFixedCamPos")]
+pub fn fixed_cam_pos(game: &Game) -> Vec3 {
+    game.stage_info.cam_info.fixed_cam_pos
+}
+
+/// The fixed camera's field of view, `Stage_GetCamFixedFov`.
+#[doc(alias = "Stage_GetCamFixedFov")]
+pub fn fixed_cam_fov(game: &Game) -> f32 {
+    game.stage_info.cam_info.fixed_cam_fov
+}
+
+/// Runs the match's stage's demo setup, `Stage_8022532C` (the stage kind it's handed only
+/// travels with the pair).
+#[doc(alias = "Stage_8022532C")]
+pub fn demo_init(r: &mut super::super::state::Running, _stkind: i32, arg: i32) {
+    let grkind = crate::lb::audio::ground_kind(r.game.gr.stkind) as i32;
+    super::ground::demo_init(r, grkind, arg);
+}
+
 /// The camera limits' left edge in world space, `Stage_GetCamBoundsLeftOffset`.
 #[doc(alias = "Stage_GetCamBoundsLeftOffset")]
 pub fn cam_left(game: &Game) -> f32 {

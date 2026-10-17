@@ -182,6 +182,11 @@ pub const STAGES: &[Stage] = &[
         keys: &["ps", "pokemon-stadium"],
     },
     Stage {
+        kind: 29,
+        name: "Yoshi's Island N64",
+        keys: &["yi64", "yoshis-island-64"],
+    },
+    Stage {
         kind: 8,
         name: "Yoshi's Story",
         keys: &["ys", "yoshis-story"],

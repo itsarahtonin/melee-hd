@@ -27,6 +27,8 @@ impl Running<'_> {
 
     /// The stage's shadow check for a fighter (at its position, `ftLib_GetPos`) against a
     /// joint (`stage_info.on_check_shadow_render`).
+    #[doc(alias = "grLast_OnCheckShadowRender")]
+    #[doc(alias = "grBattle_OnCheckShadowRender")]
     fn stage_receives_shadow(&mut self, g: GObjId, j: JObjId) -> bool {
         match self.game.stage_info.on_check_shadow_render {
             // grLast's and grBattle's: every joint takes the shadows.
@@ -42,6 +44,10 @@ impl Running<'_> {
             Some(f) if f.0 == 0x8021_1CA8 => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::oldpupupu::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
+            Some(f) if f.0 == 0x8020_F40C => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::oldyoshi::check_shadow_render(self.game, self.data, pos, Some(j))
             }
             Some(f) if f.0 == 0x801E_36D8 => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;

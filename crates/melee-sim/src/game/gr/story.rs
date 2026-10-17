@@ -52,8 +52,9 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 
 /// The objects' processes and destroy callbacks that do nothing.
 #[doc(alias = "grStory_801E322C")]
-// Also ports the destroy callbacks `grStory_801E3230`, `grStory_801E336C` and
-// `grStory_801E3414`; aliased once a check reaches them (no stage object is destroyed).
+#[doc(alias = "grStory_801E3230")]
+#[doc(alias = "grStory_801E336C")]
+#[doc(alias = "grStory_801E3414")]
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
 /// Creates one of the stage's objects and sets it up, `grStory_801E30D8`.
@@ -86,8 +87,8 @@ pub fn on_init(r: &mut Running) {
     setup::measure_blast_zones(r.game, r.data);
 }
 
-/// `grStory_801E302C` does nothing. Ports `grStory_801E302C`; aliased once a check reaches it
-/// (only a demo runs it).
+/// `grStory_801E302C` does nothing (only a demo runs it).
+#[doc(alias = "grStory_801E302C")]
 pub fn on_demo_init(_r: &mut Running) {}
 
 /// `grStory_UnkStage0_OnLoad` does nothing; `grStory_801E30D0` (`callback4`) answers false and

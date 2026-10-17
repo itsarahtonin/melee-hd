@@ -729,6 +729,27 @@ pub fn on_init(r: &mut Running) {
     camera::set_far(&mut r.game.camera.cam, 30000.0);
 }
 
+/// Final Destination's demo setup, `grLast_OnDemoInit`: for demo 26, the background's
+/// pieces (maps 4 to 9) destroyed and the scene's flag `xC4_b1` set.
+#[doc(alias = "grLast_OnDemoInit")]
+pub fn on_demo_init(r: &mut Running, arg: i32) {
+    if arg != 26 {
+        return;
+    }
+    for map_id in 4..=9 {
+        if let Some(g) = super::ground::map_gobj(r.game, map_id) {
+            setup::destroy(r, Some(g));
+        }
+    }
+    assert!(
+        super::ground::map_gobj(r.game, 1).is_some(),
+        "grlast.c: gobj"
+    );
+    let g = super::ground::map_gobj(r.game, 3).expect("grlast.c: gobj");
+    let gp = super::ground::ground_of(r.game, g);
+    r.game.grounds[gp.0].u.map().b1 = true;
+}
+
 /// `grLast_OnLoad` does nothing; `grLast_8021A7EC` (`callback4`) answers false, and nothing
 /// calls it.
 #[doc(alias = "grLast_OnLoad")]

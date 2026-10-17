@@ -517,6 +517,7 @@ impl Running<'_> {
             objs: &mut game.objs,
             data: self.data,
             dynamic_attrs: &game.gr.dynamic_attrs,
+            grounds: &mut game.grounds,
             filter: None,
         };
         let mut coll = Coll {
@@ -559,6 +560,7 @@ impl Running<'_> {
             objs: &mut game.objs,
             data: self.data,
             dynamic_attrs: &game.gr.dynamic_attrs,
+            grounds: &mut game.grounds,
             filter: None,
         };
         let mut coll = Coll {

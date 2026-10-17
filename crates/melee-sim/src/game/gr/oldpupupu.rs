@@ -129,6 +129,15 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 #[doc(alias = "grOldPupupu_80210B50")]
 #[doc(alias = "grOldPupupu_80211194")]
 #[doc(alias = "grOldPupupu_80211C10")]
+#[doc(alias = "grOldPupupu_802109D4")]
+#[doc(alias = "grOldPupupu_80210B00")]
+#[doc(alias = "grOldPupupu_80210C78")]
+#[doc(alias = "grOldPupupu_80211198")]
+#[doc(alias = "grOldPupupu_80210B54")]
+#[doc(alias = "grOldPupupu_80210BE0")]
+#[doc(alias = "grOldPupupu_80211C9C")]
+#[doc(alias = "grOldPupupu_80211C0C")]
+#[doc(alias = "grOldPupupu_8021110C")]
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
 /// Where Dream Land's setup and the spawn's call put their scale joints' descriptors on the
@@ -163,8 +172,8 @@ pub fn on_init(r: &mut Running) {
     // nothing else writes it.
 }
 
-/// `grOldPupupu_802107DC` does nothing. Ports `grOldPupupu_802107DC`; aliased once a check
-/// reaches it (only a demo runs it).
+/// `grOldPupupu_802107DC` does nothing (only a demo runs it).
+#[doc(alias = "grOldPupupu_802107DC")]
 pub fn on_demo_init(_r: &mut Running) {}
 
 /// `grOldPupupu_80210884` does nothing; `grOldPupupu_802108AC` (`callback4`) answers false
@@ -377,16 +386,7 @@ pub fn init_sky(r: &mut Running, gobj: GObjId) {
 
 /// `randrange`: between the two, whichever is lower, drawn only if they differ.
 fn randrange(r: &mut Running, min: i32, max: i32) -> i32 {
-    let randi = |r: &mut Running, n: i32| if n != 0 { r.game.objs.rng.below(n) } else { 0 };
-    if min > max {
-        let d = min.wrapping_sub(max);
-        max.wrapping_add(randi(r, d))
-    } else if min < max {
-        let d = max.wrapping_sub(min);
-        min.wrapping_add(randi(r, d))
-    } else {
-        min
-    }
+    super::grlib::rand_range(&mut r.game.objs.rng, min, max)
 }
 
 /// Whispy's setup (map 7), `grOldPupupu_8021119C`: his wind registered with the fighter code

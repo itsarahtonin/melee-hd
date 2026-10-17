@@ -16,6 +16,7 @@ pub mod izumi;
 pub mod last;
 pub mod material;
 pub mod oldpupupu;
+pub mod oldyoshi;
 pub mod setup;
 pub mod stadium;
 pub mod stage;
@@ -24,8 +25,8 @@ pub mod vars;
 pub mod zako;
 
 pub use vars::{
-    BattleBgVars, GroundVars, LastVars, MapVars, StadiumBits, StadiumDisplayVars, StadiumPieceVars,
-    StadiumVars, VarsKind,
+    BattleBgVars, GroundVars, LastVars, MapVars, OldYoshiCloud, OldYoshiCloudVars,
+    OldYoshiGuestVars, StadiumBits, StadiumDisplayVars, StadiumPieceVars, StadiumVars, VarsKind,
 };
 
 use melee_data::archive::{ArchiveId, DataRef};
@@ -44,6 +45,8 @@ pub const GR_KIND_STORY: i32 = 10;
 pub const GR_KIND_IZUMI: i32 = 12;
 /// `Gr_Kind_OldPupupu`, Dream Land (N64).
 pub const GR_KIND_OLDPUPUPU: i32 = 28;
+/// `Gr_Kind_OldYoshi`, Yoshi's Island (N64).
+pub const GR_KIND_OLDYOSHI: i32 = 29;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Last`, Final Destination.
@@ -144,6 +147,8 @@ pub struct Globals {
     pub izumi: izumi::Globals,
     /// Dream Land's `yakumono_param` (`grOldpupupu_YakumonoParam`).
     pub oldpupupu_yakumono: Option<DataRef>,
+    /// Yoshi's Island N64's `yakumono_param` (`groldyoshi_yakumono_param_t`).
+    pub oldyoshi_yakumono: Option<DataRef>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -209,6 +214,8 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_OLDPUPUPU, 8) => VarsKind::OldPupupu2,
         (GR_KIND_STORY, 2) => VarsKind::StoryRandall,
         (GR_KIND_STORY, 3) => VarsKind::StoryShyGuys,
+        (GR_KIND_OLDYOSHI, 2) => VarsKind::OldYoshiCloud,
+        (GR_KIND_OLDYOSHI, 3) => VarsKind::OldYoshiGuest,
         _ => VarsKind::Bytes,
     }
 }
