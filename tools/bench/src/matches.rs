@@ -93,6 +93,16 @@ const LUIGI: u8 = 0x07;
 const MARIO: u8 = 0x08;
 const PIKACHU: u8 = 0x0D;
 const ZELDA: u8 = 0x12;
+const DONKEY: u8 = 0x01;
+const BOWSER: u8 = 0x05;
+const LINK: u8 = 0x06;
+const MEWTWO: u8 = 0x0A;
+const JIGGLYPUFF: u8 = 0x0F;
+const YOSHI: u8 = 0x11;
+const YOUNG_LINK: u8 = 0x15;
+const DR_MARIO: u8 = 0x16;
+const ROY: u8 = 0x17;
+const PICHU: u8 = 0x18;
 
 /// Matches the CPU AI plays for the oracle (`docs/oracle.md`), not timed: characters no replay
 /// the ruleset knows has, against ported ones on ported stages.
@@ -180,6 +190,90 @@ pub const ORACLE_MATCHES: &[Match] = &[
         stage: BATTLEFIELD,
         players: [p(KIRBY, 0), p(GAME_AND_WATCH, 0)],
         seed: 0x1F0F_010E,
+    },
+    Match {
+        name: "kirby-fox-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(KIRBY, 0), p(FOX, 0)],
+        seed: 0x1F0F_010F,
+    },
+    Match {
+        name: "kirby-donkey-bf",
+        stage: BATTLEFIELD,
+        players: [p(KIRBY, 0), p(DONKEY, 0)],
+        seed: 0x1F0F_0110,
+    },
+    Match {
+        name: "kirby-bowser-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(KIRBY, 0), p(BOWSER, 0)],
+        seed: 0x1F0F_0111,
+    },
+    Match {
+        name: "kirby-link-bf",
+        stage: BATTLEFIELD,
+        players: [p(KIRBY, 0), p(LINK, 0)],
+        seed: 0x1F0F_0112,
+    },
+    Match {
+        name: "kirby-younglink-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(KIRBY, 0), p(YOUNG_LINK, 0)],
+        seed: 0x1F0F_0113,
+    },
+    Match {
+        name: "kirby-yoshi-bf",
+        stage: BATTLEFIELD,
+        players: [p(KIRBY, 0), p(YOSHI, 0)],
+        seed: 0x1F0F_0114,
+    },
+    Match {
+        name: "kirby-jigglypuff-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(KIRBY, 0), p(JIGGLYPUFF, 0)],
+        seed: 0x1F0F_0115,
+    },
+    Match {
+        name: "kirby-mewtwo-bf",
+        stage: BATTLEFIELD,
+        players: [p(KIRBY, 0), p(MEWTWO, 0)],
+        seed: 0x1F0F_0116,
+    },
+    Match {
+        name: "kirby-marth-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(KIRBY, 0), p(MARTH, 0)],
+        seed: 0x1F0F_0117,
+    },
+    Match {
+        name: "kirby-roy-bf",
+        stage: BATTLEFIELD,
+        players: [p(KIRBY, 0), p(ROY, 0)],
+        seed: 0x1F0F_0118,
+    },
+    Match {
+        name: "kirby-ics-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(KIRBY, 0), p(ICE_CLIMBERS, 0)],
+        seed: 0x1F0F_0119,
+    },
+    Match {
+        name: "kirby-drmario-bf",
+        stage: BATTLEFIELD,
+        players: [p(KIRBY, 0), p(DR_MARIO, 0)],
+        seed: 0x1F0F_011A,
+    },
+    Match {
+        name: "kirby-ganon-fd",
+        stage: FINAL_DESTINATION,
+        players: [p(KIRBY, 0), p(GANONDORF, 0)],
+        seed: 0x1F0F_011B,
+    },
+    Match {
+        name: "kirby-pichu-bf",
+        stage: BATTLEFIELD,
+        players: [p(KIRBY, 0), p(PICHU, 0)],
+        seed: 0x1F0F_011C,
     },
 ];
 
