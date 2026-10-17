@@ -68,7 +68,7 @@ impl Running<'_> {
             return;
         }
         if self.holding_hammer(gobj) {
-            unported_call("ftCo_800C5500 (letting go of the hammer)");
+            self.let_go_hammer(gobj);
         }
         let fp = self.game.fighter(gobj);
         let (kind, slot, sub) = (fp.kind, i32::from(fp.player_idx), fp.is_sub_fighter);

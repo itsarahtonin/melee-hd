@@ -62,6 +62,7 @@ pub mod phys;
 pub mod pichu;
 pub mod pikachu;
 pub mod popo;
+pub mod powerup;
 pub mod purin;
 pub mod resolve;
 pub mod samus;

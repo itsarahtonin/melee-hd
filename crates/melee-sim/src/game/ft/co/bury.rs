@@ -7,7 +7,7 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::{Val, unported_call};
+use super::super::super::code::Val;
 use super::super::super::state::{Obj, Running};
 use super::super::super::structs::{Fighter, Vec2, ftCollisionBox};
 use super::super::parts::HIP_N;
@@ -257,7 +257,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C13BC")]
     pub fn enter_bury_jump(&mut self, gobj: GObjId) {
         if self.holding_hammer(gobj) {
-            unported_call("ftCo_800C5A98 (a hammer jump out of the floor)");
+            self.enter_hammer_jump(gobj);
+            return;
         }
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);

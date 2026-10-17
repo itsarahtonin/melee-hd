@@ -325,10 +325,14 @@ impl Running<'_> {
             scale = fp::fmuls(scale, super::super::it::owner::y_scaled(1.0, scale_y, k));
         }
         if fp.x197C.is_some() {
-            unported_call("ftCo_800D0CBC with a bunny hood");
+            let t = super::common_ptr(self.game, self.data, super::powerup::BUNNY_PARAMS)
+                .expect("no Bunny Hood parameters");
+            scale = fp::fmuls(scale, reg(self.data.f32(t.at(0x14))));
         }
         if fp.is_metal {
-            unported_call("ftCo_800D0CBC on a metal fighter");
+            let t = super::common_ptr(self.game, self.data, super::powerup::METAL_PARAMS)
+                .expect("no metal parameters");
+            scale = fp::fmuls(scale, reg(self.data.f32(t.at(0x4))));
         }
         for i in 0..count.max(0) as usize {
             let off = 0x14 + 4 * i;
@@ -346,15 +350,73 @@ impl Running<'_> {
         self.copy_attributes(f);
         let fp = &self.game.fighters[f.0];
         if reg(fp.x34_scale.y) != 1.0 {
-            unported_call("ftCo_800CF6E8");
+            self.scale_attributes(f);
         }
-        if fp.x197C.is_some() {
-            unported_call("ftCo_800D105C with a bunny hood");
+        if self.game.fighters[f.0].x197C.is_some() {
+            let data = self.data;
+            let t = super::common_ptr(self.game, data, super::powerup::BUNNY_PARAMS)
+                .expect("no Bunny Hood parameters");
+            let k = |o: u32| reg(data.f32(t.at(o)));
+            let (k4, k8, kc, k10, k14, k1c, k18, k20, k24, k28, k2c, k30, k34, k38) = (
+                k(0x4),
+                k(0x8),
+                k(0xC),
+                k(0x10),
+                k(0x14),
+                k(0x1C),
+                k(0x18),
+                k(0x20),
+                k(0x24),
+                k(0x28),
+                k(0x2C),
+                k(0x30),
+                k(0x34),
+                k(0x38),
+            );
+            let a = &mut self.game.fighters[f.0].co_attrs;
+            let mul = |v: &mut f32, k: f64| *v = mem(fp::fmuls(reg(*v), k));
+            mul(&mut a.dash_accel_mul, k4);
+            mul(&mut a.dash_accel_base, k8);
+            mul(&mut a.dash_max_velocity, kc);
+            mul(&mut a.jump_h_initial_velocity, k10);
+            mul(&mut a.jump_v_initial_velocity, k14);
+            mul(&mut a.jump_h_max_velocity, k1c);
+            mul(&mut a.hop_v_initial_velocity, k18);
+            mul(&mut a.gravity, k20);
+            mul(&mut a.terminal_velocity, k24);
+            mul(&mut a.fast_fall_velocity, k28);
+            mul(&mut a.ledge_jump_horizontal_velocity, k2c);
+            mul(&mut a.ledge_jump_vertical_velocity, k30);
+            mul(&mut a.wall_jump_horizontal_velocity, k34);
+            mul(&mut a.wall_jump_vertical_velocity, k38);
         }
-        if fp.is_metal {
-            unported_call("ftCo_800D105C on a metal fighter");
+        if self.game.fighters[f.0].is_metal {
+            let data = self.data;
+            let t = super::common_ptr(self.game, data, super::powerup::METAL_PARAMS)
+                .expect("no metal parameters");
+            let k = |o: u32| reg(data.f32(t.at(o)));
+            let (k4, k8, kc, k10, k14, k18, k1c, k20) = (
+                k(0x4),
+                k(0x8),
+                k(0xC),
+                k(0x10),
+                k(0x14),
+                k(0x18),
+                k(0x1C),
+                k(0x20),
+            );
+            let a = &mut self.game.fighters[f.0].co_attrs;
+            let mul = |v: &mut f32, k: f64| *v = mem(fp::fmuls(reg(*v), k));
+            mul(&mut a.jump_v_initial_velocity, k4);
+            mul(&mut a.hop_v_initial_velocity, k8);
+            mul(&mut a.gravity, kc);
+            mul(&mut a.terminal_velocity, k10);
+            mul(&mut a.fast_fall_velocity, k14);
+            mul(&mut a.weight, k18);
+            mul(&mut a.ledge_jump_vertical_velocity, k1c);
+            mul(&mut a.wall_jump_vertical_velocity, k20);
         }
-        if fp.x2229_b1 {
+        if self.game.fighters[f.0].x2229_b1 {
             let t = self.load_common(0x3C);
             let (g, w) = (reg(self.data.f32(t)), reg(self.data.f32(t.at(4))));
             let a = &mut self.game.fighters[f.0].co_attrs;
@@ -578,26 +640,25 @@ impl Running<'_> {
         fp.metal_timer = 0;
         fp.metal_health = 0;
         if fp.is_metal {
-            unported_call("ftCo_800C8438 on a metal fighter");
+            let f = self.game.fighter_id(gobj);
+            self.shine_parts_metal(f);
+            self.calc_attributes(gobj);
+            let scale = self.game.fighters[f.0].x34_scale.y;
+            self.scale_ledge_snap(gobj, scale);
         }
     }
 
-    /// The fighter's clear state from its player's rules, and its color overlay cleared,
-    /// `ftCo_800C89A0` (with `ft_800C0098`).
+    /// The fighter's clear state from its player's rules, and its color overlay reset,
+    /// `ftCo_800C89A0`.
     #[doc(alias = "ftCo_800C89A0")]
-    #[doc(alias = "ft_800C0098")]
     fn init_clear(&mut self, gobj: GObjId) {
+        self.clear_cloak(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2226_b4 = false;
-        fp.x2226_b5 = false;
-        fp.smash_attrs.x2134_vibrateFrame = 0;
-        fp.x2030 = 0;
-        fp.x2226_b7 = false;
         fp.x2226_b4 = fp.x2226_b3;
         if fp.x2226_b4 {
-            unported_call("ftCo_800C88D4_inline");
+            self.start_cloak_look(gobj);
         }
-        crate::lb::colanim::clear(&mut fp.x508);
+        self.reset_cloak_overlay(gobj);
     }
 
     /// `x2034` and `x2038` from the common data when the player's rules set it,

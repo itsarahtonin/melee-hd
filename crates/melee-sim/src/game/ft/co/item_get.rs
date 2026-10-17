@@ -108,16 +108,46 @@ impl Running<'_> {
         self.enter_wait(gobj);
     }
 
-    /// The light pickup's damage hook, `ftpickupitem_80094DF8`: each held item's use on pickup
-    /// (`ftpickupitem_80094B6C`).
+    /// The light pickup's damage hook, `ftpickupitem_80094DF8`: each held item's use on pickup.
     #[doc(alias = "ftpickupitem_80094DF8")]
-    #[doc(alias = "ftpickupitem_80094B6C")]
     pub fn item_get_damaged(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter(gobj);
-        for it in [fp.item_gobj, fp.x1978].into_iter().flatten() {
-            if lib26b1::use_kind(self.game, self.data, it) == 5 {
-                unported_call("ftpickupitem_80094B6C for an item used as it's picked up");
+        if let Some(it) = self.game.fighter(gobj).item_gobj {
+            self.use_on_pickup(gobj, it);
+        }
+        if let Some(it) = self.game.fighter(gobj).x1978 {
+            self.use_on_pickup(gobj, it);
+        }
+    }
+
+    /// A held item used as it's picked up (use kind 5) once the pickup is cut short,
+    /// `ftpickupitem_80094B6C`: food heals (not ported: task 7's), the Warp Star is dropped,
+    /// the hammer let go of (`ftCo_800C5284`), the Bunny Hood goes on, the Metal Box and the
+    /// Cloaking Device take effect and go, and a coin goes.
+    #[doc(alias = "ftpickupitem_80094B6C")]
+    pub fn use_on_pickup(&mut self, gobj: GObjId, it: GObjId) {
+        use super::super::super::it::{item, kinds, release};
+        use super::item_catch::{CLOAK_FRAMES, COIN, LUCKY_EGG, WHISPY_HEAL_APPLE};
+        if lib26b1::use_kind(self.game, self.data, it) != 5 {
+            return;
+        }
+        match lib26b1::kind(self.game, it) {
+            kinds::HEART | kinds::TOMATO | kinds::FOODS | LUCKY_EGG | WHISPY_HEAL_APPLE => {
+                unported_call("ftpickupitem_80094B6C's heal (Fighter_8006CF5C)");
             }
+            kinds::WSTAR => release::drop(self, it, crate::vec::Vec3::new(0.0, 0.0, 0.0), 1.0),
+            kinds::HAMMER => self.start_hammer_timers(gobj),
+            kinds::RABBITC => self.put_on_hood(gobj, it),
+            kinds::METALB => {
+                self.apply_metal_box(gobj, it);
+                item::destroy(self, it);
+            }
+            kinds::SPYCLOAK => {
+                let frames = self.common().i32(CLOAK_FRAMES);
+                self.start_cloak(gobj, frames, true);
+                item::destroy(self, it);
+            }
+            COIN => item::destroy(self, it),
+            _ => {}
         }
     }
 

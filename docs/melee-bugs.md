@@ -422,6 +422,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes the shot or the spending in that case; replays where it happens would desync.
 - **Source:** `crates/melee-sim/src/game/it/kinds/sscope.rs` (`affordable`); ssbm-rs transliterates the function from its machine code for this.
 
+### A Cloaking Device taken while one flashes counts refraction twice
+
+- **Where:** `ftCo_800C88D4` (a fighter turning invisible), `crates/melee-sim/src/game/ft/powerup.rs` (`start_cloak`).
+- **Defect:** it starts the cloak's look, which makes the fighter one more user of refraction (`lbRefract_80022BB8`), unless the fighter is already cloaked and not yet flashing toward the end (`x2226_b7`). A second Cloaking Device taken during the flash runs the look again, so the fighter counts as two users, but the cloak's end (`ftCo_800C8A64`, also run when the fighter is KO'd) takes only one away (`lbRefSetUnuse`).
+- **Effect:** refraction's user count stays above zero for the rest of the match, so the camera keeps copying the screen and computing refraction's texture matrix every frame; nothing the game reads depends on it.
+- **melee-hd:** modeled.
+- **Fix:** count the fighter as a user only when it wasn't cloaked (`!x2226_b4`).
+- **Fix impact:** none on gameplay; the screen copy stops after such a cloak ends.
+- **Source:** `crates/melee-sim/src/game/ft/powerup.rs` (`start_cloak`); `ft_0C88.c`.
+
 ## Stages and collision
 
 ### Final Destination's background compares green twice

@@ -154,6 +154,30 @@ pub fn hitlag_frames(game: &Game, data: &Archives, damage: i32) -> f64 {
     fp::frsp(f64::from(fp::fctiwz(v)))
 }
 
+/// The first float of the kind's own attributes, `it_8026B560` (the Metal Box's frames).
+#[doc(alias = "it_8026B560")]
+pub fn special_x0(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
+    let a = super::item::article(item(game, gobj))
+        .special(data)
+        .expect("an item without its attributes");
+    data.f32(a)
+}
+
+/// The same float, `it_8026B54C` (the Bunny Hood's frames).
+#[doc(alias = "it_8026B54C")]
+pub fn special_x0_hood(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
+    special_x0(game, data, gobj)
+}
+
+/// The second float of the kind's own attributes, `it_8026B574` (the Metal Box's health).
+#[doc(alias = "it_8026B574")]
+pub fn special_x4(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
+    let a = super::item::article(item(game, gobj))
+        .special(data)
+        .expect("an item without its attributes");
+    data.f32(a.at(4))
+}
+
 /// Forgets a GObj the item points to, `it_8026B894`: whether it was the owner.
 #[doc(alias = "it_8026B894")]
 pub fn forget(game: &mut Game, gobj: GObjId, other: Option<GObjId>) -> bool {

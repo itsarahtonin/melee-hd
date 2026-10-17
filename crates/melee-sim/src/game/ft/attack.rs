@@ -137,7 +137,7 @@ pub(crate) fn whole_damage(dmg: f64) -> i32 {
 }
 
 /// Which fighter a hitbox's GObj carries, for the victim lists.
-fn victim(f: FighterId) -> Victim {
+pub(super) fn victim(f: FighterId) -> Victim {
     Victim::Fighter(f)
 }
 
@@ -1658,7 +1658,8 @@ impl Running<'_> {
         let data = self.data;
         let ip = it::item(self.game, g);
         if it::item::attr_of(ip).x0_78(data) == 4 {
-            unported_call("ftColl_80077C60 (an item a fighter takes on touch)");
+            self.take_touch_item(g, j, me);
+            return false;
         }
         let raw = self.item_damage(g, j);
         let mut f3 = raw;

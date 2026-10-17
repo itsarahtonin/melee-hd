@@ -54,11 +54,13 @@ pub fn proc_hitlag(g: &mut Running, gobj: GObjId) {
         }
     }
     g.turn_around_tick(gobj);
-    if g.game.fighters[f.0].x200C != 0 {
-        unported_call("Fighter_SuperMushroomApply");
+    while g.game.fighters[f.0].x200C != 0 {
+        g.apply_super_mushroom(gobj);
+        g.game.fighters[f.0].x200C -= 1;
     }
-    if g.game.fighters[f.0].x2010 != 0 {
-        unported_call("Fighter_PoisonMushroomApply");
+    while g.game.fighters[f.0].x2010 != 0 {
+        g.apply_poison_mushroom(gobj);
+        g.game.fighters[f.0].x2010 -= 1;
     }
     g.update_item_pickup_bounds(gobj);
     let fp = &mut g.game.fighters[f.0];
@@ -156,33 +158,54 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
     }
     let fp = &mut g.game.fighters[f.0];
     if fp.x221D_b6 && fp.x2004 != 0 {
-        // Either way it ends in ftCo_800C0694 or it_8026B588.
-        unported_call("it_8026B588");
+        fp.x2004 -= 1;
+        let left = fp.x2004;
+        if left == 0 {
+            fp.x221D_b6 = false;
+            if g.color_anim_id(gobj) == super::powerup::STAR_COLANIM {
+                g.end_color_anim(gobj, super::powerup::STAR_COLANIM);
+            }
+        } else if left == g.star_cue() {
+            // `ft_800880D8`.
+            let fp = &mut g.game.fighters[f.0];
+            let n = fp.x2164;
+            fp.x2164 = 0;
+            g.lb_audio_crowd_a_less(n);
+        }
     }
+    let fp = &mut g.game.fighters[f.0];
     if fp.x2220_b5 || fp.x2220_b6 {
         if fp.x2008 != 0 {
             fp.x2008 -= 1;
         }
         if fp.x2008 == 0 {
-            unported_call(if fp.x2220_b5 {
-                "Fighter_SuperMushroomEnd"
-            } else {
-                "Fighter_PoisonMushroomEnd"
-            });
+            let (giant, small) = (fp.x2220_b5, fp.x2220_b6);
+            if giant {
+                g.super_mushroom_end(gobj);
+            } else if small {
+                g.poison_mushroom_end(gobj);
+            }
         }
     }
-    if fp.x197C.is_some() && fp.x2014 != 0 {
+    let fp = &mut g.game.fighters[f.0];
+    if let Some(hood) = fp.x197C
+        && fp.x2014 != 0
+    {
         fp.x2014 -= 1;
         if fp.x2014 == 0 {
-            unported_call("ftCommon_8007F8E8");
+            g.worn_item_off(gobj);
+            crate::game::it::item::destroy(g, hood);
+            g.take_off_hood(gobj);
         }
     }
+    let fp = &mut g.game.fighters[f.0];
     if fp.is_metal && fp.metal_timer != 0 {
         fp.metal_timer -= 1;
         if fp.metal_timer == 0 || fp.metal_health <= 0 {
-            unported_call("ftCo_800C8540");
+            g.end_metal(gobj);
         }
     }
+    let fp = &mut g.game.fighters[f.0];
     if fp.x2227_b3 && fp.x2034 != 0 {
         fp.x2034 -= 1;
         if fp.x2034 == 0 || fp.x2038 <= 0 {
@@ -206,7 +229,8 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
     if fp.x2226_b4 && fp.x2030 != 0 {
         fp.x2030 -= 1;
         if fp.x2030 == 0 {
-            unported_call("ftCo_800C8A64");
+            g.end_cloak(gobj);
+            return;
         }
         let x7d0 = g.common().i32(0x7D0);
         let fp = &g.game.fighters[f.0];
@@ -274,7 +298,7 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         }
     }
     if g.holding_hammer(gobj) {
-        unported_call("ftCo_800C511C (the hammer)");
+        g.hammer_tick(gobj);
     }
     let fp = &mut g.game.fighters[f.0];
     if fp.dmg.x18fa_model_shift_frames != 0 {

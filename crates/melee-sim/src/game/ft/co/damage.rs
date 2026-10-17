@@ -110,7 +110,12 @@ impl Running<'_> {
             return;
         }
         if self.holding_hammer(gobj) {
-            unported_call("ftCo_HammerFall_IASA");
+            if self.game.fighter(gobj).ground_or_air == GA_AIR {
+                self.co_hammer_fall_iasa(gobj);
+            } else {
+                self.co_hammer_wait_iasa(gobj);
+            }
+            return;
         }
         let window = self.common().f32(0x1D0);
         let fp = self.game.fighter_mut(gobj);
@@ -313,19 +318,10 @@ impl Running<'_> {
                 return;
             }
         }
-        // `ftCo_800C5DDC` and `ftCo_800C5CD4`: the hammer's.
-        let window = self.common().u32(0x1C);
-        let fp = self.game.fighter(gobj);
-        if fp.x2338.y != 0
-            && fp.input.pressed_buttons & super::PAD_A != 0
-            && fp.input.held_buttons[0] & super::PAD_LR != 0
-            && u32::from(fp.x683) >= window
-        {
-            unported_call("ftCo_800C5DDC");
+        if self.hammer_drop_check(gobj) {
+            return;
         }
-        if self.holding_hammer(gobj) {
-            unported_call("ftCo_800C5CD4");
-        }
+        self.hammer_fall_check(gobj);
     }
 
     /// `ftCo_DamageFall_Coll`: catching ledges, landing into a tech or a knockdown.

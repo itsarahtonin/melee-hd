@@ -158,9 +158,20 @@ impl Running<'_> {
     pub fn set_scale_y(&mut self, gobj: GObjId, v: f32) {
         self.game.fighter_mut(gobj).x34_scale.y = v;
         self.update_model_scale(gobj);
+        self.scale_worn_items(gobj);
+    }
+
+    /// The worn items' size at the fighter's height, `ftCommon_80080174`: the Bunny Hood's
+    /// ears by `x12C` (a flower on the head isn't ported).
+    #[doc(alias = "ftCommon_80080174")]
+    pub fn scale_worn_items(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if fp.x197C.is_some() || fp.x1980.is_some() {
-            unported_call("ftCommon_80080174 with a scaled item held");
+        if let Some(hood) = fp.x197C {
+            let s = mem(fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.x12C)));
+            crate::game::it::kinds::rabbitc::scale_ears(self, hood, s);
+        }
+        if self.game.fighter(gobj).x1980.is_some() {
+            unported_call("ftCommon_80080174 with a flower on the head");
         }
     }
 
