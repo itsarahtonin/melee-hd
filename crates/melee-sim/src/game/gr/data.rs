@@ -4,8 +4,8 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_IZUMI, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_STORY,
+    GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_IZUMI, GR_KIND_KRAID, GR_KIND_LAST,
+    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_STORY,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -374,6 +374,47 @@ pub const KRAID: StageData = StageData {
     joints: &KRAID_JOINTS,
 };
 
+/// `grFs_StageCallbacks`. Map 6 is the city, map 1 the crane, map 3 the helicopter, map 5 the
+/// UFO, map 4 the background buildings.
+pub const FOURSIDE_CALLBACKS: [StageCallbacks; 7] = [
+    cb(0x801F_2EBC, 0x801F_2EE8, 0x801F_2EF0, 0x801F_2EF4, 0),
+    cb(0x801F_3154, 0x801F_326C, 0x801F_3274, 0x801F_37F8, 0),
+    cb(0x801F_2EF8, 0x801F_2F24, 0x801F_2F2C, 0x801F_2F30, 0),
+    cb(0x801F_3C40, 0x801F_3CC0, 0x801F_3CC8, 0x801F_3F0C, 0),
+    cb(0x801F_30F0, 0x801F_3144, 0x801F_314C, 0x801F_3150, 0),
+    cb(0x801F_37FC, 0x801F_388C, 0x801F_3894, 0x801F_3B6C, 0),
+    cb(
+        0x801F_2F34,
+        0x801F_3070,
+        0x801F_3078,
+        0x801F_309C,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grFs_803E3CE8`: the crane's girder, the UFO and the roof, bound to their models' joints.
+pub const FOURSIDE_JOINTS: [GrJoint; 3] = [
+    GrJoint { x: 3, y: 1, z: 7 },
+    GrJoint { x: 4, y: 5, z: 1 },
+    GrJoint { x: 0, y: 6, z: 10 },
+];
+
+/// `grFs_StageData`.
+pub const FOURSIDE: StageData = StageData {
+    grkind: GR_KIND_FOURSIDE,
+    callbacks: &FOURSIDE_CALLBACKS,
+    file: Some("/GrFs.dat"),
+    on_init: 0x801F_2D10,
+    on_demo_init: 0x801F_2D0C,
+    on_load: 0x801F_2DA0,
+    on_start: 0x801F_2DA4,
+    callback4: 0x801F_2DC8,
+    on_touch_line: 0x801F_41E0,
+    on_check_shadow_render: 0x801F_41E8,
+    flags2: 1,
+    joints: &FOURSIDE_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -385,6 +426,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_IZUMI => &IZUMI,
         GR_KIND_OLDYOSHI => &OLDYOSHI,
         GR_KIND_KRAID => &KRAID,
+        GR_KIND_FOURSIDE => &FOURSIDE,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

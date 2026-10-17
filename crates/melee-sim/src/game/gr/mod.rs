@@ -10,6 +10,7 @@ pub mod data;
 pub mod datfiles;
 pub mod display;
 pub mod dynamic_attr;
+pub mod fourside;
 pub mod grlib;
 pub mod ground;
 pub mod izumi;
@@ -43,6 +44,8 @@ use crate::hsd::pool::Pool;
 pub const GR_KIND_PSTADIUM: i32 = 16;
 /// `Gr_Kind_Kraid`, Brinstar Depths.
 pub const GR_KIND_KRAID: i32 = 9;
+/// `Gr_Kind_Fourside`, Fourside.
+pub const GR_KIND_FOURSIDE: i32 = 21;
 /// `Gr_Kind_Story`, Yoshi's Story.
 pub const GR_KIND_STORY: i32 = 10;
 /// `Gr_Kind_Izumi`, Fountain of Dreams.
@@ -64,7 +67,15 @@ pub struct StageColl;
 impl crate::mp::Kinds for StageColl {
     type JObj = JObjId;
     type Callback = CodeRef;
-    type UserData = GroundId;
+    type UserData = CollUser;
+}
+
+/// What a stage object hands a collision joint's callback as its data (`void*`): its
+/// `Ground`, as most stages pass, or its GObj (Fourside's roof).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub enum CollUser {
+    Ground(GroundId),
+    GObj(GObjId),
 }
 
 /// The stage's collision geometry.
@@ -157,6 +168,8 @@ pub struct Globals {
     pub kraid_yakumono: Option<DataRef>,
     /// Which animation Kraid's copy last took from the debugging button (`grKr_804D6A0C`).
     pub kraid_anim: i32,
+    /// Fourside's `yakumono_param` (`grFourside_YakumonoParam`).
+    pub fourside_yakumono: Option<DataRef>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -226,6 +239,10 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_OLDYOSHI, 3) => VarsKind::OldYoshiGuest,
         (GR_KIND_KRAID, 1 | 3) => VarsKind::Kraid,
         (GR_KIND_KRAID, 4) => VarsKind::Kraid2,
+        (GR_KIND_FOURSIDE, 1) => VarsKind::FoursideCrane,
+        (GR_KIND_FOURSIDE, 3) => VarsKind::Fourside2,
+        (GR_KIND_FOURSIDE, 5) => VarsKind::FoursideUfo,
+        (GR_KIND_FOURSIDE, 6) => VarsKind::Fourside,
         _ => VarsKind::Bytes,
     }
 }

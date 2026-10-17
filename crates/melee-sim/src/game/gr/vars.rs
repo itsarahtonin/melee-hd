@@ -41,6 +41,10 @@ pub enum VarsKind {
     OldYoshiGuest,
     Kraid,
     Kraid2,
+    Fourside,
+    FoursideCrane,
+    FoursideUfo,
+    Fourside2,
 }
 
 /// `union GroundVars`.
@@ -86,6 +90,77 @@ pub enum GroundVars {
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
     Kraid2(Kraid2Vars),
+    /// `grFourside_GroundVars`: Fourside's city's three skyline layers (map 6).
+    Fourside(FoursideVars),
+    /// `grFourside_CraneVars`: the crane (map 1).
+    FoursideCrane(FoursideCraneVars),
+    /// `grFourside_UfoVars`: the UFO (map 5).
+    FoursideUfo(FoursideUfoVars),
+    /// `grFourside_GroundVars2`: the helicopter (map 3).
+    Fourside2(Fourside2Vars),
+}
+
+/// `grFourside_GroundVars`: the joints the city's render callback turns.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct FoursideVars {
+    pub x0: Option<crate::hsd::jobj::JObjId>,
+    pub x4: Option<crate::hsd::jobj::JObjId>,
+    pub x8: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// `grFourside_CraneVars`: the state (`x0`), the flags byte (`x1`: bit 7 swung over, bit 6
+/// lowering), a tick count (`x4`), the girder's rest height (`x8`), height (`xC`) and target
+/// (`x10`), its starting speed (`x14`), speed (`x18`) and pull (`x1C`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct FoursideCraneVars {
+    pub x0: u8,
+    pub x1: u8,
+    pub x4: i32,
+    pub x8: f32,
+    pub xC: f32,
+    pub x10: f32,
+    pub x14: f32,
+    pub x18: f32,
+    pub x1C: f32,
+}
+
+impl FoursideCraneVars {
+    /// `x1.b0`.
+    pub fn swung(&self) -> bool {
+        self.x1 & 0x80 != 0
+    }
+    pub fn set_swung(&mut self, v: bool) {
+        self.x1 = (self.x1 & !0x80) | u8::from(v) << 7;
+    }
+    /// `x1.b1`.
+    pub fn set_lowering(&mut self, v: bool) {
+        self.x1 = (self.x1 & !0x40) | u8::from(v) << 6;
+    }
+}
+
+/// `grFourside_UfoVars`: the state (`x0`), the building (`x1`, 0xFF before the first), how
+/// often it has waited (`x2`), its arrival sound's state (`x3`), a tick count (`x4`), fighters
+/// on the roof this tick (`x8`) and its camera subject (`xC`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct FoursideUfoVars {
+    pub x0: u8,
+    pub x1: u8,
+    pub x2: u8,
+    pub x3: u8,
+    pub x4: i32,
+    pub x8: i32,
+    pub xC: Option<crate::game::handles::CameraBoxId>,
+}
+
+/// `grFourside_GroundVars2`: the helicopter's state (`x0`), whether its sound played (`x1`)
+/// and a tick count (`x4`); `x8` is the UFO's roof count's word, which the helicopter never
+/// writes.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Fourside2Vars {
+    pub x0: u8,
+    pub x1: u8,
+    pub x4: i32,
+    pub x8: i32,
 }
 
 /// `grKraid_GroundVars`: the rock's state (`x0`), whether its rumbling part animates (`x1`),
@@ -723,6 +798,45 @@ impl GroundVars {
                     x14: jobj(cx, at + 0x14),
                 })
             }
+            VarsKind::Fourside => {
+                let jobj = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                GroundVars::Fourside(FoursideVars {
+                    x0: jobj(cx, at),
+                    x4: jobj(cx, at + 4),
+                    x8: jobj(cx, at + 8),
+                })
+            }
+            VarsKind::FoursideCrane => GroundVars::FoursideCrane(FoursideCraneVars {
+                x0: m.u8(at),
+                x1: m.u8(at + 1),
+                x4: m.u32(at + 4) as i32,
+                x8: f(at + 8),
+                xC: f(at + 0xC),
+                x10: f(at + 0x10),
+                x14: f(at + 0x14),
+                x18: f(at + 0x18),
+                x1C: f(at + 0x1C),
+            }),
+            VarsKind::FoursideUfo => GroundVars::FoursideUfo(FoursideUfoVars {
+                x0: m.u8(at),
+                x1: m.u8(at + 1),
+                x2: m.u8(at + 2),
+                x3: m.u8(at + 3),
+                x4: m.u32(at + 4) as i32,
+                x8: m.u32(at + 8) as i32,
+                xC: cx
+                    .import_handle("CameraBoxId", m.u32(at + 0xC))
+                    .map(crate::game::handles::CameraBoxId),
+            }),
+            VarsKind::Fourside2 => GroundVars::Fourside2(Fourside2Vars {
+                x0: m.u8(at),
+                x1: m.u8(at + 1),
+                x4: m.u32(at + 4) as i32,
+                x8: m.u32(at + 8) as i32,
+            }),
             VarsKind::StoryShyGuys => GroundVars::StoryShyGuys(StoryShyGuysVars {
                 count: m.u8(at) as i8,
                 pattern: m.u8(at + 1) as i8,
@@ -1050,6 +1164,83 @@ impl GroundVars {
         match self {
             GroundVars::Kraid2(v) => v,
             other => panic!("a stage object's variables are {other:?}, not grKraid_GroundVars2"),
+        }
+    }
+
+    /// The variables as `grFourside_GroundVars`, likewise: a block holding pointers converts
+    /// only if they are null.
+    pub fn fourside(&mut self) -> &mut FoursideVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            for at in [0, 4, 8] {
+                b.null(at);
+            }
+            *self = GroundVars::Fourside(FoursideVars::default());
+        }
+        match self {
+            GroundVars::Fourside(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grFourside_GroundVars"),
+        }
+    }
+
+    /// The variables as `grFourside_CraneVars`, likewise.
+    pub fn fourside_crane(&mut self) -> &mut FoursideCraneVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::FoursideCrane(FoursideCraneVars {
+                x0: b.0[0],
+                x1: b.0[1],
+                x4: b.u32(4) as i32,
+                x8: b.f32(8),
+                xC: b.f32(0xC),
+                x10: b.f32(0x10),
+                x14: b.f32(0x14),
+                x18: b.f32(0x18),
+                x1C: b.f32(0x1C),
+            });
+        }
+        match self {
+            GroundVars::FoursideCrane(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grFourside_CraneVars"),
+        }
+    }
+
+    /// The variables as `grFourside_UfoVars`, likewise: a block holding pointers converts
+    /// only if they are null.
+    pub fn fourside_ufo(&mut self) -> &mut FoursideUfoVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            b.null(0xC);
+            *self = GroundVars::FoursideUfo(FoursideUfoVars {
+                x0: b.0[0],
+                x1: b.0[1],
+                x2: b.0[2],
+                x3: b.0[3],
+                x4: b.u32(4) as i32,
+                x8: b.u32(8) as i32,
+                xC: None,
+            });
+        }
+        match self {
+            GroundVars::FoursideUfo(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grFourside_UfoVars"),
+        }
+    }
+
+    /// The variables as `grFourside_GroundVars2`, likewise.
+    pub fn fourside2(&mut self) -> &mut Fourside2Vars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::Fourside2(Fourside2Vars {
+                x0: b.0[0],
+                x1: b.0[1],
+                x4: b.u32(4) as i32,
+                x8: b.u32(8) as i32,
+            });
+        }
+        match self {
+            GroundVars::Fourside2(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grFourside_GroundVars2"),
         }
     }
 
@@ -1504,6 +1695,74 @@ impl Mirror for GroundVars {
                         "JObjId",
                         j.map(|j| j.0),
                         m.u32(a),
+                    );
+                }
+            }
+            GroundVars::Fourside(v) => {
+                for (name, j, a) in [("x0", v.x0, at), ("x4", v.x4, at + 4), ("x8", v.x8, at + 8)] {
+                    cx.compare_handle(
+                        &format!("{path}.fourside.{name}"),
+                        "JObjId",
+                        j.map(|j| j.0),
+                        m.u32(a),
+                    );
+                }
+            }
+            GroundVars::FoursideCrane(v) => {
+                let ours = (
+                    v.x0,
+                    v.x1,
+                    v.x4,
+                    [v.x8, v.xC, v.x10, v.x14, v.x18, v.x1C].map(f32::to_bits),
+                );
+                let theirs = (
+                    m.u8(at),
+                    m.u8(at + 1),
+                    m.u32(at + 4) as i32,
+                    std::array::from_fn(|k| m.u32(at + 8 + 4 * k as u32)),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.fourside_crane"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::FoursideUfo(v) => {
+                let ours = ([v.x0, v.x1, v.x2, v.x3], v.x4, v.x8);
+                let theirs = (
+                    std::array::from_fn(|k| m.u8(at + k as u32)),
+                    m.u32(at + 4) as i32,
+                    m.u32(at + 8) as i32,
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.fourside_ufo"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.fourside_ufo.xC"),
+                    "CameraBoxId",
+                    v.xC.map(|b| b.0),
+                    m.u32(at + 0xC),
+                );
+            }
+            GroundVars::Fourside2(v) => {
+                let ours = (v.x0, v.x1, v.x4, v.x8);
+                let theirs = (
+                    m.u8(at),
+                    m.u8(at + 1),
+                    m.u32(at + 4) as i32,
+                    m.u32(at + 8) as i32,
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.fourside2"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
                     );
                 }
             }

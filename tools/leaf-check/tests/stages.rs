@@ -379,6 +379,23 @@ fn check_hazard(
     leaf_check::calls::check_calls_in(dir, func, min, prepare, &setup, ours);
 }
 
+/// [`check_hazard`] for code that draws: the reference's hardware registers take the drawing.
+fn check_hazard_gx(
+    dir: &str,
+    func: &str,
+    min: usize,
+    prepare: &Prepare,
+    ours: &leaf_check::calls::Ours,
+) {
+    let stubs = [(leaf_check::sym("OSReport"), None)];
+    let setup = leaf_check::calls::Setup {
+        stubs: &stubs,
+        gx: true,
+        ..Default::default()
+    };
+    leaf_check::calls::check_calls_in(dir, func, min, prepare, &setup, ours);
+}
+
 fn by_event(r: &mut Running, _: &Maps, call: &Call) -> Ret {
     run_event(r, call.addr);
     Ret::Nothing
@@ -665,4 +682,384 @@ fn kraid_unreached_callbacks() {
         |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(kraid::check_shadow_render()));
     let to_shadow = retarget(leaf_check::sym("grKraid_OnCheckShadowRender"));
     check_hazard(&d, from, 1, &to_shadow, &shadow);
+}
+
+// Fourside (`grfourside.c`).
+
+const FOURSIDE: &str = "oracle-stage-fourside";
+
+#[test]
+fn fourside_setup() {
+    use melee_sim::game::gr::fourside;
+    let d = hazard_dir(FOURSIDE);
+    check_hazard(&d, "grFourside_801F2D10", 1, &as_saved, &by_event);
+    check_hazard(&d, "grFourside_801F2DA4", 1, &as_saved, &by_event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let _ = fourside::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    for map in 0..7u32 {
+        check_hazard(
+            &d,
+            "grFourside_801F2DD0",
+            1,
+            &move |c, _| c.regs.gpr[3] = map,
+            &create,
+        );
+    }
+    for f in [
+        "stageGObj0_OnInit",
+        "stageGObj2_OnInit",
+        "grFourside_801F2F34",
+        "grFourside_801F30F0",
+        "grFourside_801F3154",
+        "grFourside_801F37FC",
+        "grFourside_801F3C40",
+    ] {
+        check_hazard(&d, f, 1, &as_saved, &by_address);
+    }
+    // The guide points, from the city's setup's call.
+    let guide = |r: &mut Running, maps: &Maps, call: &Call| {
+        let j = |i: usize| maps.jobjs.get(&call.regs.gpr[3 + i]).copied();
+        let joints = [j(0), j(1), j(2), j(3), j(4), j(5)];
+        melee_sim::game::gr::ground::set_guide_points(r.game, r.data, joints);
+        Ret::Nothing
+    };
+    check_hazard(&d, "Ground_801C4E70", 1, &as_saved, &guide);
+}
+
+/// The crane's variables set: state, flags, count, and the girder's rest, place, target,
+/// starting speed, speed and pull.
+#[allow(clippy::too_many_arguments)]
+fn crane(c: &mut Call, state: u8, flags: u8, t: i32, rest: f32, y: f32, to: f32, v: [f32; 3]) {
+    let a = vars(c);
+    poke_u8(c, a, state);
+    poke_u8(c, a + 1, flags);
+    poke_u32(c, a + 4, t as u32);
+    for (k, f) in [rest, y, to, v[0], v[1], v[2]].into_iter().enumerate() {
+        poke_u32(c, a + 8 + 4 * k as u32, f.to_bits());
+    }
+}
+
+#[test]
+fn fourside_crane() {
+    let d = hazard_dir(FOURSIDE);
+    let f = "grFourside_801F3274";
+    let z = [0.0f32; 3];
+    let prepares: [&Prepare; 23] = [
+        &as_saved,
+        // Waiting, over and not: swinging over or back.
+        &|c, _| crane(c, 0, 0, 0, 40.0, 40.0, 40.0, z),
+        &|c, _| crane(c, 0, 0x80, 0, 40.0, 40.0, 40.0, z),
+        &|c, _| crane(c, 0, 0, 5, 40.0, 40.0, 40.0, z),
+        // Swinging, at its end and before it, each way.
+        &|c, _| crane(c, 1, 0, 300, 40.0, 40.0, 40.0, z),
+        &|c, _| crane(c, 1, 0, 299, 40.0, 40.0, 40.0, z),
+        &|c, _| crane(c, 2, 0x80, 300, 40.0, 40.0, 40.0, z),
+        &|c, _| crane(c, 2, 0x80, 12, 40.0, 40.0, 40.0, z),
+        // The girder's wait, then moving down (above its rest) or up.
+        &|c, _| crane(c, 3, 0, 0, 40.0, 40.0, 40.0, z),
+        &|c, _| crane(c, 4, 0, 0, 40.0, 55.0, 40.0, z),
+        &|c, _| crane(c, 4, 0x40, 0, 40.0, 25.0, 40.0, z),
+        &|c, _| crane(c, 4, 0, 0, 40.0, 40.0, 40.0, z),
+        &|c, _| crane(c, 4, 0, 7, 40.0, 40.0, 40.0, z),
+        // Going down and up, arriving and not.
+        &|c, _| crane(c, 5, 0x40, 0, 40.0, 30.0, 29.9, z),
+        &|c, _| crane(c, 5, 0x40, 0, 40.0, 30.0, 10.0, z),
+        // Arriving exactly: one step down lands on its target.
+        &|c, _| {
+            let spd = f32_at(c, peek_u32(c, FOURSIDE_PARAM) + 0x2C);
+            crane(c, 5, 0x40, 0, 40.0, 30.0, 30.0 - spd, z)
+        },
+        &|c, _| crane(c, 6, 0, 0, 40.0, 30.0, 30.1, z),
+        &|c, _| crane(c, 6, 0, 0, 40.0, 30.0, 60.0, z),
+        // Bobbing about its target: pulled either way, turning as it passes, and settled.
+        &|c, _| crane(c, 7, 0, 0, 40.0, 30.5, 30.0, [1.0, 0.4, -0.1]),
+        &|c, _| crane(c, 7, 0, 0, 40.0, 29.5, 30.0, [1.0, -0.4, 0.1]),
+        &|c, _| crane(c, 7, 0, 0, 40.0, 30.0, 30.0, [1.0, 0.2, 1.5]),
+        &|c, _| crane(c, 7, 0, 0, 40.0, 30.0, 30.0, [1.0, 0.2, -1.0]),
+        // A state past them.
+        &|c, _| crane(c, 9, 0, 0, 40.0, 40.0, 40.0, z),
+    ];
+    for p in prepares {
+        check_hazard(&d, f, 1, p, &by_address);
+    }
+}
+
+/// The UFO's variables set: state, building, waits counted, sound state, count and roof touches.
+fn ufo(c: &mut Call, state: u8, building: u8, waited: u8, sound: u8, t: i32, roof: i32) {
+    let a = vars(c);
+    poke_u8(c, a, state);
+    poke_u8(c, a + 1, building);
+    poke_u8(c, a + 2, waited);
+    poke_u8(c, a + 3, sound);
+    poke_u32(c, a + 4, t as u32);
+    poke_u32(c, a + 8, roof as u32);
+}
+
+/// The helicopter's variables set: state, sound flag and count.
+/// grfourside.c's `yakumono_param`.
+const FOURSIDE_PARAM: u32 = 0x804D_69D8;
+
+/// The `depth`th joint below stage object `gobj`'s root, as `Ground_801C3FA4` finds it.
+fn nth_jobj(c: &Call, gobj: u32, depth: u32) -> u32 {
+    let mut j = peek_u32(c, peek_u32(c, gobj + 0x28) + 0x10);
+    for _ in 0..depth {
+        let child = peek_u32(c, j + 0x10);
+        if peek_u32(c, j + 0x14) & 0x1000 == 0 && child != 0 {
+            j = child;
+            continue;
+        }
+        let mut up = j;
+        loop {
+            let next = peek_u32(c, up + 8);
+            if next != 0 {
+                j = next;
+                break;
+            }
+            up = peek_u32(c, up + 0xC);
+        }
+    }
+    j
+}
+
+fn heli(c: &mut Call, map: u32, state: u8, flag: u8, t: i32) {
+    let a = map_vars(c, map);
+    poke_u8(c, a, state);
+    poke_u8(c, a + 1, flag);
+    poke_u32(c, a + 4, t as u32);
+}
+
+#[test]
+fn fourside_ufo() {
+    let d = hazard_dir(FOURSIDE);
+    let f = "grFourside_801F3894";
+    check_hazard(&d, f, 1, &as_saved, &by_address);
+    // Waiting: not yet, its wait over with no one on the roof, with someone on it, and after
+    // its challenge's count of waits; each building last, the helicopter about or not.
+    let mut cases: Vec<(u8, u8, u8, i32, i32, u8, i32)> = vec![(0, 0xFF, 0, 9, 0, 0, 0)];
+    for building in [0xFF, 0, 1, 2] {
+        for (waited, roof) in [(0, 0), (0, 1), (200, 0), (200, 2)] {
+            cases.push((0, building, waited, 0, roof, 0, 0));
+            cases.push((0, building, waited, 0, roof, 1, 0));
+        }
+    }
+    // Staying (over and not, its animation rewound or not) and leaving (at its end and not).
+    for t in [0, 5] {
+        cases.push((2, 1, 0, t, 0, 0, 0));
+    }
+    for t in [59, 60, 61] {
+        cases.push((4, 2, 0, t, 0, 0, 0));
+    }
+    cases.push((3, 2, 0, 0, 0, 0, 0));
+    for (state, building, waited, t, roof, heli_state, heli_t) in cases {
+        check_hazard(
+            &d,
+            f,
+            1,
+            &move |c, _| {
+                ufo(c, state, building, waited, 0, t, roof);
+                heli(c, 3, heli_state, 0, heli_t);
+            },
+            &by_address,
+        );
+    }
+    let frame = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::gr::fourside::frame_ufo(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_hazard(&d, "grFourside_801F3B70", 1, &as_saved, &frame);
+    // Arriving at each building, the camera's top lowered so the UFO is low enough.
+    for b in 0..3u8 {
+        check_hazard(
+            &d,
+            "grFourside_801F3B70",
+            1,
+            &move |c, _| poke_u8(c, vars(c) + 1, b),
+            &frame,
+        );
+    }
+}
+
+#[test]
+fn fourside_heli() {
+    let d = hazard_dir(FOURSIDE);
+    let f = "grFourside_801F3CC8";
+    check_hazard(&d, f, 1, &as_saved, &by_address);
+    // Each state with its count over or not, the UFO out (over a building but the third) or
+    // not.
+    for state in 0..5u8 {
+        for t in [0, 3, 700, 701] {
+            for (ufo_state, building) in [(0u8, 0u8), (1, 0), (2, 2), (2, 1)] {
+                check_hazard(
+                    &d,
+                    f,
+                    1,
+                    &move |c, _| {
+                        heli(c, 3, state, (t & 1) as u8, t);
+                        let u = map_vars(c, 5);
+                        poke_u8(c, u, ufo_state);
+                        poke_u8(c, u + 1, building);
+                    },
+                    &by_address,
+                );
+            }
+        }
+    }
+    // Flying in, the helicopter just above, at and below its sound's height: its part's matrix
+    // set and left clean so the position read takes it.
+    for dy in [50.5f32, 50.0, 49.5] {
+        check_hazard(
+            &d,
+            f,
+            1,
+            &move |c, _| {
+                heli(c, 3, 1, 0, 5);
+                poke_u8(c, map_vars(c, 5), 0);
+                let top = f32_at(c, STAGE_INFO + 8) + f32_at(c, STAGE_INFO + 0x14);
+                let j = nth_jobj(c, peek_u32(c, STAGE_INFO + 0x180 + 4 * 3), 2);
+                poke_u32(c, j + 0x14, peek_u32(c, j + 0x14) & !0x40);
+                poke_u32(c, j + 0x60, (top + dy).to_bits());
+            },
+            &by_address,
+        );
+    }
+    let about = |r: &mut Running, _: &Maps, _: &Call| {
+        Ret::Int(u32::from(melee_sim::game::gr::fourside::heli_about(r.game)))
+    };
+    check_hazard(&d, "grFourside_801F3F10", 1, &as_saved, &about);
+    for (state, flag, t) in [
+        (1u8, 0u8, 5),
+        (1, 1, 5),
+        (3, 0, 700),
+        (3, 0, 701),
+        (0, 0, 0),
+    ] {
+        check_hazard(
+            &d,
+            "grFourside_801F3F10",
+            1,
+            &move |c, _| heli(c, 3, state, flag, t),
+            &about,
+        );
+    }
+}
+
+#[test]
+fn fourside_roof_and_city() {
+    let d = hazard_dir(FOURSIDE);
+    check_hazard(&d, "grFourside_801F3078", 1, &as_saved, &by_address);
+    // The roof touched by a fighter, an item and another kind of object.
+    let touch = |r: &mut Running, maps: &Maps, call: &Call| {
+        let kind = peek_u32(call, call.regs.gpr[5] + 0x34) >> 27 & 0xF;
+        let u = peek_u32(call, STAGE_INFO + 0x180 + 4 * 5);
+        let ufo = maps
+            .grounds
+            .get(&peek_u32(call, u + 0x2C))
+            .copied()
+            .expect("the UFO's object");
+        melee_sim::game::gr::fourside::touch(&mut r.game.grounds, Some(ufo), kind);
+        Ret::Nothing
+    };
+    let prepares: [&Prepare; 3] = [
+        &as_saved,
+        &|c, k| {
+            let at = c.regs.gpr[5] + 0x34;
+            let w = peek_u32(c, at);
+            poke_u32(c, at, (w & !(0xF << 27)) | ((k % 4) as u32) << 27);
+        },
+        &|c, _| {
+            let u = map_vars(c, 5);
+            poke_u32(c, u + 8, 7);
+        },
+    ];
+    for p in prepares {
+        check_hazard(&d, "grFourside_801F30A0", 1, p, &touch);
+    }
+    // The skyline turning with the camera, in the display pass and another, and the camera
+    // looking almost straight down.
+    let render = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::gr::fourside::render_city(
+            r,
+            gobj_arg(maps, call),
+            call.regs.gpr[4] as i32,
+        );
+        Ret::Nothing
+    };
+    for p in [&as_saved as &Prepare, &|c, _| c.regs.gpr[4] ^= 3] {
+        check_hazard_gx(&d, "fn_801F3F74", 1, p, &render);
+    }
+    let shadow = |r: &mut Running, maps: &Maps, call: &Call| {
+        let p = call.regs.gpr[3];
+        let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
+        let j = maps.jobjs.get(&call.regs.gpr[5]).copied();
+        Ret::Int(u32::from(
+            melee_sim::game::gr::fourside::check_shadow_render(r.game, r.data, pos, j),
+        ))
+    };
+    let around = |c: &mut Call, k: usize| {
+        let (p, j) = (c.regs.gpr[3], c.regs.gpr[5]);
+        let y = f32_at(c, j + 0x44 + 0x1C);
+        let dy = [0.25f32, -0.25, 0.0][k % 3];
+        poke_u32(c, p + 4, (y + dy).to_bits());
+    };
+    for p in [&as_saved as &Prepare, &around] {
+        check_hazard(&d, "grFourside_801F41E8", 1, p, &shadow);
+    }
+    // The stage's fog fitted to the camera, as saved and with the camera's eye turned about.
+    let fog = |r: &mut Running, maps: &Maps, call: &Call| {
+        let c = *maps.cobjs.get(&call.regs.gpr[3]).expect("a camera");
+        r.stage_fog_update(c);
+        Ret::Nothing
+    };
+    check_hazard(&d, "Ground_801C4FAC", 1, &as_saved, &fog);
+    // The guide points all at the origin and the eye at a distance from it: inside both
+    // bounds, inside the far one only, and past both.
+    for dist in [3.0f32, 7.0, 12.0] {
+        check_hazard(
+            &d,
+            "Ground_801C4FAC",
+            1,
+            &move |c, _| {
+                for k in 0..18 {
+                    poke_u32(c, STAGE_INFO + 0x130 + 4 * k, 0);
+                }
+                let eye = peek_u32(c, c.regs.gpr[3] + 0x24);
+                for (k, v) in [0.0f32, 0.0, dist].into_iter().enumerate() {
+                    poke_u32(c, eye + 0xC + 4 * k as u32, v.to_bits());
+                }
+            },
+            &fog,
+        );
+    }
+}
+
+/// The callbacks no capture reaches, from the city's process's captures: the empty processes
+/// and destroy callbacks, and the load and demo hooks.
+#[test]
+fn fourside_unreached_callbacks() {
+    let d = hazard_dir(FOURSIDE);
+    let from = "grFourside_801F3078";
+    for name in [
+        "grFourside_801F2EF0",
+        "grFourside_801F2EF4",
+        "grFourside_801F2F2C",
+        "grFourside_801F2F30",
+        "grFourside_801F309C",
+        "grFourside_801F314C",
+        "grFourside_801F3150",
+        "grFourside_801F37F8",
+        "grFourside_801F3B6C",
+        "grFourside_801F3F0C",
+    ] {
+        check_hazard(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let load = retarget(leaf_check::sym("grFourside_801F2DA0"));
+    check_hazard(&d, from, 1, &load, &by_event);
+    let demo = retarget(leaf_check::sym("grFourside_801F2D0C"));
+    check_hazard(&d, from, 1, &demo, &by_demo);
 }
