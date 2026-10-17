@@ -147,9 +147,8 @@ pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
 /// Its animation's speed, joints and all.
 fn set_anim_speed(r: &mut Running, gobj: GObjId, speed: f32) {
     let j = jobj_of(r.game, gobj);
-    let ip = item_mut(r.game, gobj);
-    ip.x5D0_animFrameSpeed = speed;
-    let speed = ip.x5D0_animFrameSpeed;
+    // The joints take the speed as the item stores it.
+    item_mut(r.game, gobj).x5D0_animFrameSpeed = speed;
     crate::lb::anim::set_framerate(&mut r.game.objs, j, speed);
 }
 

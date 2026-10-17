@@ -536,7 +536,7 @@ pub fn bounce_off_surface(r: &mut Running, gobj: GObjId) -> bool {
 /// The zero rotation (`it_803B8588`, `it_803B8598`) with its y a quarter turn per unit of
 /// facing, in double precision.
 fn set_facing_rotation(game: &mut Game, j: JObjId, facing: f32) {
-    let y = mem(fp::frsp(fp::fmul(1.5707963267948966, reg(facing))));
+    let y = mem(fp::frsp(fp::fmul(std::f64::consts::FRAC_PI_2, reg(facing))));
     let q = Quat {
         x: 0.0,
         y,
