@@ -18,6 +18,7 @@ pub mod foxblaster;
 pub mod foxillusion;
 pub mod foxlaser;
 pub mod freeze;
+pub mod fushigibana;
 pub mod gamewatch;
 pub mod gamewatchbreath;
 pub mod gamewatchchef;
@@ -237,6 +238,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || togepy::run_event(r, gobj, addr)
         || sonans::run_event(r, gobj, addr)
         || lucky::run_event(r, gobj, addr)
+        || fushigibana::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -345,6 +347,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| togepy::run_pred(r, gobj, addr))
         .or_else(|| sonans::run_pred(r, gobj, addr))
         .or_else(|| lucky::run_pred(r, gobj, addr))
+        .or_else(|| fushigibana::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
