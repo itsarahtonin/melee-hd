@@ -252,7 +252,7 @@ impl Running<'_> {
                 }
                 let pos = self.game.fighters[f.0].cur_pos;
                 self.spawn_effect_at(gobj, 0x42D, pos);
-                self.drop_coins(gobj, pos, 0, 1.5707963705062866);
+                self.drop_coins(gobj, pos, 0, std::f32::consts::FRAC_PI_2);
                 let fp = &mut self.game.fighters[f.0];
                 fp.x221F_b1 = true;
                 fp.invisible = true;
@@ -688,7 +688,7 @@ impl Running<'_> {
             self.fighter_random_voice_in(f, ids, n);
         }
         let pos = self.game.fighters[f.0].cur_pos;
-        self.drop_coins(gobj, pos, 0, 1.5707963705062866);
+        self.drop_coins(gobj, pos, 0, std::f32::consts::FRAC_PI_2);
         self.game.fighters[f.0].accessory4_cb = Some(super::super::super::handles::CodeRef(
             DEAD_UP_FALL_ACCESSORY,
         ));
