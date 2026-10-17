@@ -119,6 +119,13 @@ ROOTS = [
     # The power-ups' (task 9): the Starman and the mushrooms.
     "itStar_ItemVars",
     "itKinoko_ItemVars",
+    # The shooting and thrown items' (task 8).
+    "itFoods_ItemVars",
+    "itMsBomb_ItemVars",
+    "itFlipper_ItemVars",
+    "itLGunBeam_ItemVars",
+    # A coin match's coins.
+    "it_2E5A_ItemVars",
     # The held and swung items' (task 7): the barrel cannon, the star rod's star, the Lip's
     # Stick's spores and the flower they plant on a fighter's head.
     "itTarucann_ItemVars",
@@ -224,6 +231,9 @@ FIELD_DATA = {
 # Fields no code reads or writes, by struct: left out like padding, so they hold whatever the
 # block held and nothing compares them. An item link's last five flag bits are such (the
 # decomp's `itCharItems.h`); a link block new from the heap mid-capture keeps the heap's bits.
+# So are an item's `x8`, `x21`, `x22` and `x23`: item creation leaves them, so an item in a
+# block the pool grows from reused heap holds the heap's old words there (a Fire Flower
+# flame on the items-shoot Battlefield match, tick 5940).
 UNUSED = {
     "ItemLink": {"x2C_b3", "x2C_b4", "x2C_b5", "x2C_b6", "x2C_b7"},
     # An item's `x8` and the three bytes after its team: neither the decomp's code nor ssbm-rs's
@@ -257,6 +267,8 @@ SPLICE = {
     "itHeart_ItemVars": ("xDD8", 4, 5, "TurnipFlag"),
     # Link's bomb's flag byte, of which the bomb uses the top three bits.
     "itLinkBomb_ItemVars": ("x0", 0, 1, "LinkBombFlags"),
+    # A coin's flag byte, of which the coin and the pickup use the top two bits.
+    "it_2E5A_ItemVars": ("x18", 0x18, 0x19, "CoinFlags"),
     # An item link's `x20`, which only the reset writes and a hookshot link in a block new
     # from the heap holds unknown.
     "ItemLink": ("x20", 0x20, 0x2C, "LinkX20"),
@@ -301,7 +313,7 @@ EXTRA_USES = [
     "use crate::game::ft::dynamics::BoneSlot;",
     "use crate::game::ft::second::SecondTree;",
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
-    "use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};",
+    "use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};",
     "use crate::game::it::link::LinkX20;",
     "use crate::hsd::lobj::LObjId;",
     "use crate::hsd::shadow::ShadowId;",
@@ -366,7 +378,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::handles::*;
-use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
+use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::game::it::link::LinkX20;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;

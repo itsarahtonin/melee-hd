@@ -1106,11 +1106,83 @@ impl Running<'_> {
         e.x0 = mem(fp::fadds(reg(e.x0), dmg));
     }
 
-    /// The coin battles' coin pickups, `ft_8007C77C`: nothing outside coin battles.
+    /// A coin match's coin pickups, `ft_8007C77C`: on alternate frames by its player's port,
+    /// unless it's intangible, the fighter picks up each coin it may whose pickup circle meets
+    /// one of its own two (`x1614`), adding its worth to its player's coins with a sound and
+    /// sparkle.
     #[doc(alias = "ft_8007C77C")]
-    pub fn coin_pickups(&mut self, _gobj: GObjId) {
-        if self.game.vs_is_coins() {
-            unported_call("ft_8007C77C (coin pickups)");
+    pub fn coin_pickups(&mut self, gobj: GObjId) {
+        use super::super::it::{self, kinds};
+        use crate::lb::collision::{SweptCircle, swept_circles_touch};
+        if !self.game.vs_is_coins() {
+            return;
+        }
+        let f = self.game.fighter_id(gobj);
+        let odd = self.game.scene_game_ticks() & 1;
+        let fp = &mut self.game.fighters[f.0];
+        fp.x2229_b4 = odd != u32::from(fp.player_idx) & 1;
+        if fp.x2229_b4 || self.hit_status(f) == 2 {
+            return;
+        }
+        let mut cur = self.game.world.first_in(it::P_LINK_ITEM);
+        while let Some(g) = cur {
+            cur = self.game.world.gobjs[g.0].next;
+            if it::item(self.game, g).kind != kinds::UNK4 {
+                continue;
+            }
+            let owner = it::item(self.game, g).owner;
+            let flags = it::item_mut(self.game, g).xDD4_itemVar.coin().x18.get();
+            let may = if self.is_same_player(Some(gobj), owner) {
+                flags.owner
+            } else {
+                flags.others
+            };
+            if !may {
+                continue;
+            }
+            let scl = it::item(self.game, g).scl;
+            for i in 0..2 {
+                let sub = &mut it::item_mut(self.game, g).xDD4_itemVar.coin().sub;
+                let mut coin = SweptCircle {
+                    radius: sub.x0.get(),
+                    pos: sub.x8.get(),
+                    prev_pos: sub.x14.get(),
+                    contact: Default::default(),
+                };
+                let fp = &self.game.fighters[f.0];
+                let e = &fp.x1614[i];
+                let mut mine = SweptCircle {
+                    radius: e.x0,
+                    pos: e.x8,
+                    prev_pos: e.x14,
+                    contact: e.x20,
+                };
+                let scale = fp.x34_scale.y;
+                let touch = swept_circles_touch(&mut coin, &mut mine, scl, scale);
+                self.game.fighters[f.0].x1614[i].x20 = mine.contact;
+                if touch {
+                    let worth = kinds::coin::worth(self, g);
+                    let slot = i32::from(self.game.fighters[f.0].player_idx);
+                    let n = worth.wrapping_add(self.game.player_coins(slot));
+                    self.game.set_player_coins(slot, n);
+                    let n = worth.wrapping_add(self.game.player_total_coins(slot));
+                    self.game.set_player_total_coins(slot, n);
+                    self.sfx_play_track(147, 127, 64, 26);
+                    // The sparkle at the coin's contact point: a word past its variables'
+                    // member, which the test just wrote and only this reads.
+                    crate::game::ef::spawn(
+                        self,
+                        0x432,
+                        None,
+                        &[
+                            crate::game::ef::Arg::Vec(coin.contact),
+                            crate::game::ef::Arg::Float(1.0),
+                        ],
+                    );
+                    it::item::destroy(self, g);
+                    break;
+                }
+            }
         }
     }
 
@@ -1273,7 +1345,35 @@ impl Running<'_> {
             }
         }
         if element == ELEMENT_INERT {
-            unported_call("lbColl_80008248 (an inert item box against hurtboxes)");
+            // An inert box only notes that it touched the fighter (`xDCE` bit 6, `toucher`).
+            let mtx = self.own_matrix(me);
+            for m in 0..usize::from(self.game.fighters[me.0].hurt_capsules_len) {
+                let ip = it::item(self.game, g);
+                let mut hit = ip.x5D4_hitboxes[j].hit.clone();
+                let hit_scale = ip.scl;
+                let fp = &mut self.game.fighters[me.0];
+                let (scale, z) = (fp.x34_scale.y, fp.cur_pos.z);
+                let touch = hitcapsule::touches_hurtbox(
+                    &mut self.game.objs,
+                    self.data,
+                    &mut hit,
+                    &mut fp.hurt_capsules[m].capsule,
+                    mtx.as_ref(),
+                    hit_scale,
+                    scale,
+                    z,
+                );
+                let ip = it::item_mut(self.game, g);
+                let h = &mut ip.x5D4_hitboxes[j].hit;
+                h.hurt_coll_pos = hit.hurt_coll_pos;
+                h.coll_distance = hit.coll_distance;
+                if touch {
+                    it::set_flag(&mut ip.xDCE_flag, 6, true);
+                    ip.toucher = Some(gobj);
+                    break;
+                }
+            }
+            return;
         }
         let mf = &self.game.fighters[me.0];
         if mf.x1988 == 2 || mf.x198C == 2 {

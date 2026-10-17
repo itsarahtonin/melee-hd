@@ -618,6 +618,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/hud/status.rs:620`.
 
+### A second KO mark reads the display before the first
+
+- **Where:** `fn_802F770C` (the KO marks' render callback), `crates/melee-sim/src/game/hud/announce.rs` (`ko_mark_render`).
+- **Defect:** it finds the mark's slot by searching the slots' first marks only (the inline `GetSlot`), so for a slot's second mark the search fails and returns -1, and the callback tests `ifStatus_HudInfo.players[-1].flags.hide_all_digits`, 0x64 bytes before the displays: the padding after `ifAll_804A0FD8` in `.bss`, which nothing writes.
+- **Effect:** the second mark is always drawn, even when its slot's display hides its digits; presentation only.
+- **melee-hd:** modeled: a mark on no slot's first is drawn.
+- **Fix:** search the second marks too (or keep the slot on the mark).
+- **Fix impact:** presentation only; no gameplay, replay or Slippi compatibility change.
+- **Source:** `crates/melee-sim/src/game/hud/announce.rs:443`; the Pokémon Stadium items-shoot match ([the oracle](oracle.md#shooting-and-thrown-items)).
+
 ## Engine and HSD
 
 ### The expression argument buffer outlives its heap
@@ -784,6 +794,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | The background flash's color commands | `fn_80021C80` with `fn_80021C18`, `lb/bgflash.rs` | `fn_80021C18` takes the owner's commands and does nothing, so a script with one would stay on it forever | `crates/melee-sim/src/lb/bgflash.rs:363` |
 | `expf` and `powf` on large or NaN inputs | `expf`, `math.rs` | The series never settles for NaN or where the terms overflow (\|x\| about 12.7 to 14.7), and loops forever | `tools/leaf-check/tests/math.rs:154` |
 | A parasol state without an animation | `it_8028B08C`, `game/it/kinds/parasol.rs` | Indexes its lengths by the state's animation, -1 for states 0 and 3, and reads the word before the table; its callers ask only for the held states, 4 to 10 | `crates/melee-sim/src/game/it/kinds/parasol.rs` (`anim_frames`) |
+| A sticking item's slope with no surface touched | `it_8027649C`, `game/it/maplib.rs` | Takes its angle from a stack vector it never set when the item touches no surface (`it_80276408` writes nothing then); the motion-sensor bomb sticks only after touching one | `crates/melee-sim/src/game/it/maplib.rs:291` |
+| The Flipper's spin past π | `itFlipper_UpdateSpin`, `game/it/kinds/flipper.rs` | Brings the spin's speed, not the paddle's angle, back within ±π by a whole turn; the attributes cap the speed at 0.873 radians a frame | `crates/melee-sim/src/game/it/kinds/flipper.rs:175` |
 | A particle list on a displayed joint | HSD's joint traversal (displayfunc.c, `efLib_Cb_SPtcl`) | Spawns a joint's particle list on its first display, whose generators then draw from the game's random seed, so a spawn put off by a doubled round would shift every later draw; no joint descriptor on the disc carries a particle list | [engine notes](engine.md#state-the-render-pass-writes) (line 150) |
 | A Lip's Stick swing with nothing held | `ft_800CDB9C`, `game/ft/co/swing.rs` | Asserts the held item's kind before testing it for null, reading a null item; the swing always holds the stick | `crates/melee-sim/src/game/ft/co/swing.rs:257` |
 

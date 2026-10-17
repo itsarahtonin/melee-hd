@@ -4,7 +4,7 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::{self, Val, unported_call};
+use super::super::super::code::{self, Val};
 use super::super::super::state::Running;
 use super::ids::ms;
 use super::kind_callbacks as kinds;
@@ -408,10 +408,10 @@ impl Running<'_> {
     /// point (`it_8026B344`) lies within its grab range of the fighter's reach box
     /// (`x294_itPickup`), nearest the box's center. None for a CPU of kind 28.
     #[doc(alias = "ftpickupitem_800942A0")]
-    pub fn item_in_reach(&self, gobj: GObjId, flags: u32) -> Option<GObjId> {
+    pub fn item_in_reach(&mut self, gobj: GObjId, flags: u32) -> Option<GObjId> {
         use crate::game::it::{self, kinds, lib26b1};
         let fp = self.game.fighter(gobj);
-        let p = &fp.x294_itPickup;
+        let p = &fp.x294_itPickup.clone();
         let light = if fp.ground_or_air == super::super::common::GA_GROUND {
             &p.gr_light_offset
         } else {
@@ -438,10 +438,11 @@ impl Running<'_> {
                 continue;
             }
             let heavy = lib26b1::is_heavy(self.game, self.data, g);
-            let ip = it::item(self.game, g);
-            if fp.x2222_b4 && heals(ip.kind) {
-                unported_call("it_8026B47C (a healing item's heal)");
+            if self.game.fighter(gobj).x2222_b4 && lib26b1::heal_amount(self.game, g) != 0 {
+                continue;
             }
+            let fp = self.game.fighter(gobj);
+            let ip = it::item(self.game, g);
             let takes_held = heals(ip.kind) || ip.kind == COIN;
             if fp.item_gobj.is_some() && !takes_held {
                 continue;

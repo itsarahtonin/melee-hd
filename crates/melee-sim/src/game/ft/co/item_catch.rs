@@ -1,12 +1,11 @@
 //! Catching an item in the air (`fn_800D6F58` of `ftCo_Attack100.c`, with the pickup check it
 //! reaches, `ftpickupitem_8009447C`, and the caught item's statistic, `pl_8003E854`).
 
-use super::super::super::code::unported_call;
 use super::super::super::ef::{self, SpawnKind};
 use super::super::super::it::kinds::{
     FOODS, HAMMER, HEART, METALB, RABBITC, SPYCLOAK, TOMATO, WSTAR,
 };
-use super::super::super::it::{item, item_mut, lib26b1, release};
+use super::super::super::it::{item, lib26b1, release};
 use super::super::super::state::{Running, UserData};
 use crate::fpu::reg;
 use crate::hsd::gobj::GObjId;
@@ -21,11 +20,8 @@ const BONUS_CATCH: usize = 0x9A;
 const BONUS_DOSEI: usize = 0xB6;
 const IT_KIND_DOSEI: i32 = 7;
 const IT_KIND_BOMBHEI: i32 = 6;
-/// `It_Kind_Coin`, `_Lucky_Egg` and `_WhispyHealApple`, the use-on-pickup kinds past the
-/// common items' constants.
+/// `It_Kind_Coin`, a use-on-pickup kind past the common items' constants.
 const IT_KIND_COIN: i32 = 159;
-const IT_KIND_LUCKY_EGG: i32 = 205;
-const IT_KIND_WHISPY_HEAL_APPLE: i32 = 226;
 /// `ftCommonData` x7CC: the Cloaking Device's frames.
 const CLOAK_FRAMES: u32 = 0x7CC;
 
@@ -115,14 +111,12 @@ impl Running<'_> {
         }
     }
 
-    /// The use-on-pickup kinds both pickups share: a heart or tomato heals and is gone (food,
-    /// the Lucky Egg and Whispy's apple heal by variables not ported), the Bunny Hood goes on,
-    /// the Metal Box and the Cloaking Device take effect and go, and a coin goes.
+    /// The use-on-pickup kinds both pickups share: a heart, tomato, food or Lucky Egg heals and
+    /// is gone (Whispy's apple's heal isn't ported), the Bunny Hood goes on, the Metal Box and the Cloaking Device take effect and go, and a coin goes.
     fn use_picked_up(&mut self, gobj: GObjId, it: GObjId, kind: i32) {
         match kind {
-            HEART | TOMATO => self.heal_with(gobj, it, kind),
-            FOODS | IT_KIND_LUCKY_EGG | IT_KIND_WHISPY_HEAL_APPLE => {
-                unported_call(&format!("it_8026B47C for a healing item of kind {kind}"))
+            HEART | TOMATO | FOODS | lib26b1::LUCKY_EGG | lib26b1::WHISPY_HEAL_APPLE => {
+                self.heal_with(gobj, it)
             }
             RABBITC => self.put_on_hood(gobj, it),
             METALB => {
@@ -139,18 +133,10 @@ impl Running<'_> {
         }
     }
 
-    /// A healing item used: the fighter heals by its amount (`Fighter_8006CF5C`) and the item
-    /// is gone.
-    fn heal_with(&mut self, gobj: GObjId, it: GObjId, kind: i32) {
-        let amount = if kind == HEART {
-            item_mut(self.game, it).xDD4_itemVar.heart().xDD4_heal.get()
-        } else {
-            item_mut(self.game, it)
-                .xDD4_itemVar
-                .tomato()
-                .heal_amount
-                .get()
-        };
+    /// A healing item used: the fighter heals by its amount (`it_8026B47C`,
+    /// `Fighter_8006CF5C`) and the item is gone.
+    fn heal_with(&mut self, gobj: GObjId, it: GObjId) {
+        let amount = lib26b1::heal_amount(self.game, it);
         self.heal(gobj, amount);
         item::destroy(self, it);
     }

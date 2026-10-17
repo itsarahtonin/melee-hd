@@ -120,6 +120,36 @@ impl Running<'_> {
         }
     }
 
+    /// Counts an attack the fighter's item makes (its attack flags `ev`, `Struct2070`) in the
+    /// fighter's player's statistics, `pl_80037DF4`.
+    #[doc(alias = "pl_80037DF4")]
+    pub fn count_item_attack(&mut self, gobj: crate::hsd::gobj::GObjId, ev: [u8; 4]) {
+        let slot = self.game.fighter(gobj).player_idx as usize;
+        assert!(slot < 6, "player slot {slot}");
+        let a = &mut self.game.players[slot]
+            .stale_moves
+            .total_attack_count_struct
+            .attacks;
+        a.total = a.total.wrapping_add(1);
+        let id = ev[3] as usize;
+        assert!(
+            id < a.by_attack_counts.len(),
+            "item attack id {id} past the counts"
+        );
+        a.by_attack_counts[id] = a.by_attack_counts[id].wrapping_add(1);
+        for (mask, n) in [
+            (0x08, &mut a.thrown_item_count),
+            (0x04, &mut a.aerials_count),
+            (0x01, &mut a.specials_count),
+            (0x02, &mut a.x1A0_count),
+            (0x10, &mut a.x1A4_count),
+        ] {
+            if ev[2] & mask != 0 {
+                *n = n.wrapping_add(1);
+            }
+        }
+    }
+
     /// Counts the fighter's attack in its player's match statistics as its action state
     /// starts, `pl_80037C60` (`prev` is the last state's attack flags, `Fighter::x2070`).
     #[doc(alias = "pl_80037C60")]

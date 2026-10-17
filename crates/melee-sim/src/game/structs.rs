@@ -14,7 +14,7 @@ use crate::game::gr::GroundVars;
 use crate::game::handles::*;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::it::link::LinkX20;
-use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
+use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -11060,6 +11060,258 @@ impl itKinoko_ItemVars {
     pub fn mark_stale(&mut self) {
         self.x0.mark_stale();
         self.x4.mark_stale();
+    }
+}
+
+/// `itFoods_ItemVars`, 0x8 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itFoods_ItemVars {
+    /// +0x0
+    pub x0: Var<u32>,
+    /// +0x4
+    pub heal_amount: Var<u32>,
+}
+
+impl Default for itFoods_ItemVars {
+    fn default() -> Self {
+        itFoods_ItemVars {
+            x0: Var::new(Default::default()),
+            heal_amount: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itFoods_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.heal_amount.mark_stale();
+    }
+}
+
+/// `itMsBomb_ItemVars`, 0x1 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itMsBomb_ItemVars {
+    /// +0x0 (bits 0..+1)
+    pub xDD4_b0: Var<bool>,
+    /// +0x0 (bits 1..+1)
+    pub xDD4_b1: Var<bool>,
+    /// +0x0 (bits 2..+1)
+    pub xDD4_b2: Var<bool>,
+    /// +0x0 (bits 3..+1)
+    pub xDD4_b3: Var<bool>,
+    /// +0x0 (bits 4..+1)
+    pub xDD4_b4: Var<bool>,
+    /// +0x0 (bits 5..+1)
+    pub xDD4_b5: Var<bool>,
+    /// +0x0 (bits 6..+1)
+    pub xDD4_b6: Var<bool>,
+    /// +0x0 (bits 7..+1)
+    pub xDD4_b7: Var<bool>,
+}
+
+impl Default for itMsBomb_ItemVars {
+    fn default() -> Self {
+        itMsBomb_ItemVars {
+            xDD4_b0: Var::new(Default::default()),
+            xDD4_b1: Var::new(Default::default()),
+            xDD4_b2: Var::new(Default::default()),
+            xDD4_b3: Var::new(Default::default()),
+            xDD4_b4: Var::new(Default::default()),
+            xDD4_b5: Var::new(Default::default()),
+            xDD4_b6: Var::new(Default::default()),
+            xDD4_b7: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itMsBomb_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4_b0.mark_stale();
+        self.xDD4_b1.mark_stale();
+        self.xDD4_b2.mark_stale();
+        self.xDD4_b3.mark_stale();
+        self.xDD4_b4.mark_stale();
+        self.xDD4_b5.mark_stale();
+        self.xDD4_b6.mark_stale();
+        self.xDD4_b7.mark_stale();
+    }
+}
+
+/// `itFlipper_ItemVars`, 0x1c bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itFlipper_ItemVars {
+    /// +0x0
+    pub xDD4_flightTimer: Var<i32>,
+    /// +0x4
+    pub xDD8_isSettled: Var<i32>,
+    /// +0x8
+    pub xDDC_hitboxTimer: Var<i32>,
+    /// +0xc
+    pub xDE0_spinAngle: Var<f32>,
+    /// +0x10
+    pub xDE4_spinVel: Var<f32>,
+    /// +0x14
+    pub xDE8_isStageFixed: Var<i32>,
+    /// +0x18
+    pub xDEC_stageAnchor: Var<Option<JObjId>>,
+}
+
+impl Default for itFlipper_ItemVars {
+    fn default() -> Self {
+        itFlipper_ItemVars {
+            xDD4_flightTimer: Var::new(Default::default()),
+            xDD8_isSettled: Var::new(Default::default()),
+            xDDC_hitboxTimer: Var::new(Default::default()),
+            xDE0_spinAngle: Var::new(Default::default()),
+            xDE4_spinVel: Var::new(Default::default()),
+            xDE8_isStageFixed: Var::new(Default::default()),
+            xDEC_stageAnchor: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itFlipper_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4_flightTimer.mark_stale();
+        self.xDD8_isSettled.mark_stale();
+        self.xDDC_hitboxTimer.mark_stale();
+        self.xDE0_spinAngle.mark_stale();
+        self.xDE4_spinVel.mark_stale();
+        self.xDE8_isStageFixed.mark_stale();
+        self.xDEC_stageAnchor.mark_stale();
+    }
+}
+
+/// `itLGunBeam_ItemVars`, 0x34 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itLGunBeam_ItemVars {
+    /// +0x0
+    pub position0: Var<Vec3>,
+    /// +0xc
+    pub position1: Var<Vec3>,
+    /// +0x18
+    pub velocity: Var<Vec3>,
+    /// +0x24
+    pub angle0: Var<f32>,
+    /// +0x28
+    pub angle1: Var<f32>,
+    /// +0x2c
+    pub lifetime: Var<f32>,
+    /// +0x30
+    pub xE04: Var<i32>,
+}
+
+impl Default for itLGunBeam_ItemVars {
+    fn default() -> Self {
+        itLGunBeam_ItemVars {
+            position0: Var::new(Default::default()),
+            position1: Var::new(Default::default()),
+            velocity: Var::new(Default::default()),
+            angle0: Var::new(Default::default()),
+            angle1: Var::new(Default::default()),
+            lifetime: Var::new(Default::default()),
+            xE04: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itLGunBeam_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.position0.mark_stale();
+        self.position1.mark_stale();
+        self.velocity.mark_stale();
+        self.angle0.mark_stale();
+        self.angle1.mark_stale();
+        self.lifetime.mark_stale();
+        self.xE04.mark_stale();
+    }
+}
+
+/// `it_2E5A_SubVars`, 0x20 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct it_2E5A_SubVars {
+    /// +0x0
+    pub x0: Var<f32>,
+    /// +0x4
+    pub x4: Var<Option<JObjId>>,
+    /// +0x8
+    pub x8: Var<Vec3>,
+    /// +0x14
+    pub x14: Var<Vec3>,
+}
+
+impl Default for it_2E5A_SubVars {
+    fn default() -> Self {
+        it_2E5A_SubVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+        }
+    }
+}
+
+impl it_2E5A_SubVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.x14.mark_stale();
+    }
+}
+
+/// `it_2E5A_ItemVars`, 0x3c bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct it_2E5A_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub x4: Var<i32>,
+    /// +0x8
+    pub x8: Var<i32>,
+    /// +0xc
+    pub xC: Var<i32>,
+    /// +0x10
+    pub x10: Var<f32>,
+    /// +0x14
+    pub x14: Var<f32>,
+    /// +0x18
+    pub x18: Var<CoinFlags>,
+    /// +0x1c
+    pub sub: it_2E5A_SubVars,
+}
+
+impl Default for it_2E5A_ItemVars {
+    fn default() -> Self {
+        it_2E5A_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+            x18: Var::new(Default::default()),
+            sub: Default::default(),
+        }
+    }
+}
+
+impl it_2E5A_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.x10.mark_stale();
+        self.x14.mark_stale();
+        self.x18.mark_stale();
+        self.sub.mark_stale();
     }
 }
 

@@ -1189,7 +1189,6 @@ ftColl_80078538	leaf-check fighter_procs: normal hits' sparks, small and big, th
 ftColl_8007861C	leaf-check fighter_procs: every logged hit's attacker
 ftColl_8007BBCC	leaf-check fighter_procs: every call
 ftColl_8007925C	leaf-check fighter_procs: every call; items' boxes that could reach the fighter stop at the seam; melee-oracle diff, Dr. Mario vs Ness on Yoshi's Story hf-doc-ness-ys-ecdc4d64 (docs/oracle.md), all 12,234 ticks in Slippi float mode with no stand-ins: Ness absorbs an item in tick 10895
-ft_8007C77C	leaf-check fighter_procs: every call (no coin battle)
 ftColl_8007BAC0	leaf-check fighter_procs: every call
 ftCo_800C0B20	leaf-check fighter_procs: every call, Final Destination's lines
 Ground_801C5700	leaf-check fighter_procs: every call that touches a line
@@ -2026,7 +2025,6 @@ it_8026F53C	leaf-check items: drops runs it from captured item states
 it_8026F5C8	leaf-check items: drops runs it from captured item states
 it_8026F6BC	leaf-check items: drops runs it from captured item states
 it_8026F7C8	leaf-check items: drops runs it from captured item states
-it_8026F8B4	leaf-check items: drops runs it from captured item states
 it_8027321C	leaf-check items: item_lib_small runs it from captured item states
 it_80273454	leaf-check items: item_lib_small runs it from captured item states
 it_80274740	leaf-check items: item_lib_small runs it from captured item states
@@ -3263,7 +3261,6 @@ ftCo_DeadDown_Cam	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) 
 ftCo_800D40B8	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): a star KO (3 calls)
 ftCo_DeadUpStar_Anim	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the star KO's flight (528 calls)
 ftCo_DeadUpStar_Cam	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the star KO's camera (528 calls)
-ftCo_800D4E50	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): coins at a KO (none outside coin matches) (7 calls)
 ftCo_800D4FF4	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): back on the respawn platform (6 calls)
 ftCo_Rebirth_Anim	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the descent's frames (360 calls)
 ftCo_Rebirth_IASA	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the descent's interrupts (none) (360 calls)
@@ -7957,6 +7954,173 @@ itSpycloak_UnkMotion4_Anim	leaf-check items_powerups: items_powerups_functions r
 itSpycloak_UnkMotion4_Phys	leaf-check items_powerups: items_powerups_functions runs it from real states of the three items-powerups oracle matches, its own saved calls and its unit's, and compares the whole state
 itSpycloak_UnkMotion4_Coll	leaf-check items_powerups: items_powerups_functions runs it from real states of the three items-powerups oracle matches, its own saved calls and its unit's, and compares the whole state
 itSpyCloak_Logic33_EvtUnk	leaf-check items_powerups: items_powerups_functions runs it from real states of the three items-powerups oracle matches, its own saved calls and its unit's, and compares the whole state
+pl_80037DF4	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, with their attack flags and four others, and compares the whole state
+ftCo_800CDE18	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_800CDF5C	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_800CE010	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_800CE0CC	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_800CE14C	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_800CE1D4	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_LGunShoot_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_LGunShootAir_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_LGunShoot_IASA	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_LGunShootAir_IASA	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_LGunShoot_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_LGunShootAir_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_LGunShoot_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_LGunShootAir_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_800CE3E0	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_800CE480	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ft_800CE528	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ft_800CE5A0	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_800CE620	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_800CE650	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_FireFlowerShoot_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_FireFlowerShootAir_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_FireFlowerShoot_IASA	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_FireFlowerShootAir_IASA	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_FireFlowerShoot_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_FireFlowerShootAir_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_FireFlowerShoot_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ftCo_FireFlowerShootAir_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_8026B47C	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_8026C1D4	leaf-check items_shoot: items_shoot_functions runs it from the Ray Gun's shots' saved states, where its article is registered, and compares the result
+it_80273318	leaf-check items_shoot: items_shoot_functions runs it inside itFoods_Logic18_Spawned, which gives the food its dish's model through it, and compares the whole state
+it_80274EE8	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_8027542C	leaf-check items_shoot: items_shoot_functions runs it from the Flipper's captures (only a Flipper fixed to a stage calls it) and compares the whole state
+it_8027B564	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, with the item's attack flags and four others, and compares the whole state
+it_8028E774	leaf-check items_shoot: items_shoot_functions runs it inside ftCo_800CE1D4 (the Ray Gun's shot), whose muzzle position it gives, and compares the whole state
+it_8028E79C	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_Logic18_Spawned	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_8028FC5C	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_UnkMotion0_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_UnkMotion0_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_UnkMotion0_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_8028FCE8	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_UnkMotion1_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_UnkMotion1_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_UnkMotion1_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_Logic18_PickedUp	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_UnkMotion2_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_UnkMotion2_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_Logic18_Dropped	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_UnkMotion3_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_UnkMotion3_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFoods_UnkMotion3_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMSBomb_Logic19_Spawned	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_8028FF1C	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMsbomb_UnkMotion0_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_8028FF8C	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMsbomb_UnkMotion1_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMsbomb_UnkMotion1_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMSBomb_Logic19_PickedUp	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMSBomb_Logic19_Dropped	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMSBomb_Logic19_Thrown	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMsbomb_UnkMotion3_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMsbomb_UnkMotion3_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_80290238	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_80290314	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMsbomb_UnkMotion4_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_8029047C	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMsbomb_UnkMotion5_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMsbomb_UnkMotion5_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_802905D8	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_80290614	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMsbomb_UnkMotion6_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMSBomb_Logic19_DmgDealt	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMSBomb_Logic19_DmgReceived	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMSBomb_Logic19_EnteredAir	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMsbomb_UnkMotion7_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMSBomb_Logic19_Clanked	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMSBomb_Logic19_HitShield	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itMSBomb_Logic19_ShieldBounced	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_802908D8	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Spawned	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_UpdateSpin	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_AddSpinImpulse	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_SpinFromFighter	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Repel	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_EnterResting	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Resting_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Resting_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Resting_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_EnterFalling	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Falling_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Falling_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Falling_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_PickedUp	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Held_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Held_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Dropped	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Thrown	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Inflight_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Inflight_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Inflight_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Settle	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_EnterActive	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_UpdateActive	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Active_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Spinning_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Spinning_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Spinning_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_DmgDealt	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Clanked	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_HitShield	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_DmgReceived	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_EnteredAir	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Airborne_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Airborne_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itFlipper_Airborne_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_80292EF8	leaf-check items_shoot: items_shoot_functions runs it inside ftCo_800CE650 (the Fire Flower's flames), whose nozzle position it gives, and compares the whole state
+it_80292F14	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_80298168	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_802982AC	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLgunray_UnkMotion0_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLgunray_UnkMotion0_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLgunray_UnkMotion0_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLGunRay_Logic35_DmgDealt	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLGunRay_Logic35_Clanked	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLGunRay_Logic35_HitShield	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLGunRay_Logic35_Absorbed	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLGunRay_Logic35_Reflected	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLGunRay_Logic35_ShieldBounced	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_802993E0	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_80299528	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_802996D0	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+it_802998A0	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLgunbeam_UnkMotion0_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLgunbeam_UnkMotion0_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLgunbeam_UnkMotion0_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLGunBeam_Logic39_DmgDealt	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLGunBeam_Logic39_Reflected	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLGunBeam_Logic39_Clanked	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLGunBeam_Logic39_Absorbed	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLGunBeam_Logic39_ShieldBounced	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+itLGunBeam_Logic39_HitShield	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ft_8007C77C	leaf-check items_shoot: items_shoot_functions runs it from real states of the coins-fd oracle match and compares the whole state (and leaf-check fighter_procs outside coin matches)
+ftCommon_8007EA90	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+ftCo_800D4E50	leaf-check items_shoot: items_shoot_functions runs it from real states of the coins-fd oracle match (a KO's coins) and compares the whole state; melee-oracle diff of the coin matches
+it_8026F8B4	leaf-check items: drops runs it from captured item states; leaf-check items_shoot from the coins-items-fd oracle match's broken containers
+it_802E5AC4	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E5EF4	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E5F00	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E5F8C	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E609C	leaf-check items_shoot: items_shoot_functions runs it inside it_802E5F8C and it_802E5F00, which make their coins through it, and compares the whole state
+it_802E61C4	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E628C	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E6380	leaf-check items_shoot: items_shoot_functions runs it inside it_802E609C (each coin's setup) and compares the whole state
+it_802E657C	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E6658	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E66A0	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_UnkMotion1_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_UnkMotion1_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_UnkMotion0_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E6888	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_UnkMotion2_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_UnkMotion2_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_UnkMotion2_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_Logic115_DmgDealt	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E6A74	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
 fn_80105A34	leaf-check kirby: kirby_functions runs it from real states of Kirby's CPU matches (local/calls/kirby/oracle-kirby-*), its own saved calls or its unit's, and compares the whole state; and melee-oracle diff, Kirby's CPU match oracle-kirby-zelda-bf (docs/oracle.md), every traced tick in hardware float mode with no stand-ins
 fn_80105AB0	leaf-check kirby: kirby_functions runs it from real states of Kirby's CPU matches (local/calls/kirby/oracle-kirby-*), its own saved calls or its unit's, and compares the whole state; and melee-oracle diff, Kirby's CPU match oracle-kirby-zelda-bf (docs/oracle.md), every traced tick in hardware float mode with no stand-ins
 fn_80105FEC	leaf-check kirby: kirby_functions runs it from real states of Kirby's CPU matches (local/calls/kirby/oracle-kirby-*), its own saved calls or its unit's, and compares the whole state; and melee-oracle diff, Kirby's CPU match oracle-kirby-zelda-bf (docs/oracle.md), every traced tick in hardware float mode with no stand-ins
@@ -8641,3 +8805,4 @@ ftKb_YsSpecialNCapture2_0_Phys	leaf-check kirby: kirby_functions runs it from re
 ftKb_YsSpecialNCapture2_1_Anim	leaf-check kirby: kirby_functions runs it from real states of Kirby's CPU matches (local/calls/kirby/oracle-kirby-*), its own saved calls or its unit's, and compares the whole state; and melee-oracle diff, Kirby's CPU match oracle-kirby-yoshi-bf (docs/oracle.md), every traced tick in hardware float mode with no stand-ins
 ftKb_YsSpecialNCapture2_1_Coll	leaf-check kirby: kirby_functions runs it from real states of Kirby's CPU matches (local/calls/kirby/oracle-kirby-*), its own saved calls or its unit's, and compares the whole state; and melee-oracle diff, Kirby's CPU match oracle-kirby-yoshi-bf (docs/oracle.md), every traced tick in hardware float mode with no stand-ins
 ftKb_YsSpecialNCapture2_1_Phys	leaf-check kirby: kirby_functions runs it from real states of Kirby's CPU matches (local/calls/kirby/oracle-kirby-*), its own saved calls or its unit's, and compares the whole state; and melee-oracle diff, Kirby's CPU match oracle-kirby-yoshi-bf (docs/oracle.md), every traced tick in hardware float mode with no stand-ins
+Fighter_8006CF5C	melee-oracle diff, items-ported-fd: fighters pick up hearts and tomatoes and heal by them, a point a frame, to the trace's end; leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state

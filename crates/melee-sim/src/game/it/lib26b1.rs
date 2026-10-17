@@ -52,6 +52,25 @@ pub fn kind(game: &Game, gobj: GObjId) -> i32 {
     item(game, gobj).kind
 }
 
+/// The Lucky's egg and Whispy's apple, the healing items besides the heart, tomato and food.
+pub const LUCKY_EGG: i32 = 205;
+pub const WHISPY_HEAL_APPLE: i32 = 226;
+
+/// A healing item's heal, 0 for any other item, `it_8026B47C`.
+#[doc(alias = "it_8026B47C")]
+pub fn heal_amount(game: &mut Game, gobj: GObjId) -> i32 {
+    let kind = item(game, gobj).kind;
+    let v = &mut item_mut(game, gobj).xDD4_itemVar;
+    match kind {
+        super::kinds::HEART => v.heart().xDD4_heal.get(),
+        super::kinds::TOMATO => v.tomato().heal_amount.get(),
+        super::kinds::FOODS => v.foods().heal_amount.get() as i32,
+        LUCKY_EGG => v.egg().heal_amount.get(),
+        WHISPY_HEAL_APPLE => code::unported_call("it_8026B47C for Whispy's apple"),
+        _ => 0,
+    }
+}
+
 /// How a fighter's hand holds the item, `itGetHoldKind`.
 #[doc(alias = "itGetHoldKind")]
 pub fn hold_kind(game: &Game, data: &Archives, gobj: GObjId) -> i32 {

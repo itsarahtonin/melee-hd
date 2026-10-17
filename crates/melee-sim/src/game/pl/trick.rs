@@ -4,7 +4,6 @@
 
 use gekko_fp as fp;
 
-use super::super::code::unported_call;
 use super::super::state::Running;
 use super::super::structs::{ft_800898B4_t, plAttackStats};
 use super::bonus::Flag;
@@ -451,7 +450,10 @@ impl Running<'_> {
         if sub == 0 && id == 0x59 {
             let t = self.game.player_stale_moves(slot);
             t.xCA8 = t.xCA8.wrapping_add(1);
-            unported_call("it_8026C1D4 (the Ray Gun's timer, pl_8003EAAC)");
+            let target = crate::game::it::kinds::lgun::shots_bonus(self.game, self.data);
+            if self.game.player_stale_moves(slot).xCA8 == target {
+                self.set_point(slot, 194, 1);
+            }
         }
     }
 
