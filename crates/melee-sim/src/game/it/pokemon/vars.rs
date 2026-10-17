@@ -36,6 +36,9 @@ pub struct PokemonVars {
     handles: Vec<(u16, Handle)>,
     /// The first stale byte code read since the item was made.
     stale_read: Option<u16>,
+    /// The bits code wrote alone into stale bytes (a bitfield's store keeps the byte's other
+    /// bits), by offset: those bits are live, the rest stay the block's.
+    known_bits: Vec<(u16, u8)>,
 }
 
 impl Default for PokemonVars {
@@ -45,6 +48,7 @@ impl Default for PokemonVars {
             stale: [0; SIZE / 8],
             handles: Vec::new(),
             stale_read: None,
+            known_bits: Vec::new(),
         }
     }
 }
@@ -66,6 +70,15 @@ impl PokemonVars {
     pub fn mark_stale(&mut self) {
         self.stale = [0xFF; SIZE / 8];
         self.stale_read = None;
+        self.known_bits.clear();
+    }
+
+    /// The bits of stale byte `i` code wrote alone.
+    fn known(&self, i: usize) -> u8 {
+        self.known_bits
+            .iter()
+            .find(|&&(o, _)| o as usize == i)
+            .map_or(0, |&(_, m)| m)
     }
 
     fn handle(&self, off: usize) -> Option<Handle> {
@@ -76,17 +89,22 @@ impl PokemonVars {
     }
 
     fn read(&mut self, start: usize, end: usize) {
+        self.check_bytes(start, end);
+        if self.stale_read.is_none()
+            && let Some(i) = (start..end).find(|&i| self.is_stale(i))
+        {
+            self.stale_read = Some(i as u16);
+        }
+    }
+
+    /// Bytes `start..end` hold no handle.
+    fn check_bytes(&self, start: usize, end: usize) {
         for &(o, h) in &self.handles {
             let o = o as usize;
             assert!(
                 end <= o || start >= o + 4,
                 "reading a Pokémon's variables at {start:#x}..{end:#x} as bytes, where +{o:#x} holds {h:?}"
             );
-        }
-        if self.stale_read.is_none()
-            && let Some(i) = (start..end).find(|&i| self.is_stale(i))
-        {
-            self.stale_read = Some(i as u16);
         }
     }
 
@@ -104,6 +122,8 @@ impl PokemonVars {
         for i in start..end {
             self.set_stale(i, false);
         }
+        self.known_bits
+            .retain(|&(o, _)| !(start..end).contains(&(o as usize)));
         for b in cut {
             self.set_stale(b, true);
         }
@@ -128,6 +148,33 @@ impl PokemonVars {
     pub fn set_u8(&mut self, off: usize, v: u8) {
         self.write(off, off + 1);
         self.bytes[off] = v;
+    }
+
+    /// Whether the bits `mask` of the byte at `off` are all set (a bitfield's read): a stale
+    /// read only if one of them is the block's.
+    pub fn bit(&mut self, off: usize, mask: u8) -> bool {
+        self.check_bytes(off, off + 1);
+        if self.stale_read.is_none() && self.is_stale(off) && self.known(off) & mask != mask {
+            self.stale_read = Some(off as u16);
+        }
+        self.bytes[off] & mask == mask
+    }
+
+    /// Sets or clears the bits `mask` of the byte at `off` alone (a bitfield's store): the
+    /// byte's other bits keep what they held, stale if they were.
+    pub fn set_bit(&mut self, off: usize, mask: u8, on: bool) {
+        self.check_bytes(off, off + 1);
+        if self.is_stale(off) {
+            match self.known_bits.iter_mut().find(|(o, _)| *o as usize == off) {
+                Some((_, m)) => *m |= mask,
+                None => self.known_bits.push((off as u16, mask)),
+            }
+        }
+        if on {
+            self.bytes[off] |= mask;
+        } else {
+            self.bytes[off] &= !mask;
+        }
     }
 
     /// The halfword at `off`.
@@ -305,17 +352,24 @@ impl Mirror for PokemonVars {
         let mut i = 0;
         while i < SIZE {
             let w = i & !3;
-            let differs = (w..w + 4)
-                .any(|b| !self.is_stale(b) && !in_handle(b) && self.bytes[b] != theirs[b]);
+            // A stale byte's bits code wrote alone compare; the rest don't.
+            let mask = |b: usize| {
+                if in_handle(b) {
+                    0
+                } else if self.is_stale(b) {
+                    self.known(b)
+                } else {
+                    0xFF
+                }
+            };
+            let differs = (w..w + 4).any(|b| (self.bytes[b] ^ theirs[b]) & mask(b) != 0);
             if differs {
                 let shown = |bytes: &[u8; SIZE]| {
                     (w..w + 4)
-                        .map(|b| {
-                            if self.is_stale(b) || in_handle(b) {
-                                "..".to_owned()
-                            } else {
-                                format!("{:02x}", bytes[b])
-                            }
+                        .map(|b| match mask(b) {
+                            0 => "..".to_owned(),
+                            0xFF => format!("{:02x}", bytes[b]),
+                            m => format!("{:02x}&{m:02x}", bytes[b] & m),
                         })
                         .collect::<String>()
                 };

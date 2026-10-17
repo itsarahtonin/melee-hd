@@ -3,6 +3,7 @@
 pub mod bat;
 pub mod bombhei;
 pub mod capsule;
+pub mod chicorita;
 pub mod climbersblizzard;
 pub mod climbersice;
 pub mod climbersstring;
@@ -18,6 +19,7 @@ pub mod foxblaster;
 pub mod foxillusion;
 pub mod foxlaser;
 pub mod freeze;
+pub mod fushigibana;
 pub mod gamewatch;
 pub mod gamewatchbreath;
 pub mod gamewatchchef;
@@ -35,6 +37,7 @@ pub mod hammerhead;
 pub mod harisen;
 pub mod heart;
 pub mod heiho;
+pub mod kamex;
 pub mod kinoko;
 pub mod kirbycopystar;
 pub mod kirbycutterbeam;
@@ -51,9 +54,13 @@ pub mod linkbow;
 pub mod linkhookshot;
 pub mod lipstick;
 pub mod lipstickspore;
+pub mod maril;
+pub mod lucky;
 pub mod luigifireball;
 pub mod mariocape;
 pub mod mariofireball;
+pub mod marumine;
+pub mod matadogas;
 pub mod mball;
 pub mod metalb;
 pub mod mewtwodisable;
@@ -86,6 +93,7 @@ pub mod seakchain;
 pub mod seakneedleheld;
 pub mod seakneedlethrown;
 pub mod seakvanish;
+pub mod sonans;
 pub mod spycloak;
 pub mod sscope;
 pub mod sscopebeam;
@@ -95,6 +103,8 @@ pub mod starrodstar;
 pub mod sword;
 pub mod taru;
 pub mod tarucann;
+pub mod thunder;
+pub mod togepy;
 pub mod tomato;
 pub mod wstar;
 pub mod yoshiegglay;
@@ -229,6 +239,16 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || spycloak::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
         || kireihana::run_event(r, gobj, addr)
+        || maril::run_event(r, gobj, addr)
+        || togepy::run_event(r, gobj, addr)
+        || sonans::run_event(r, gobj, addr)
+        || lucky::run_event(r, gobj, addr)
+        || fushigibana::run_event(r, gobj, addr)
+        || kamex::run_event(r, gobj, addr)
+        || chicorita::run_event(r, gobj, addr)
+        || marumine::run_event(r, gobj, addr)
+        || thunder::run_event(r, gobj, addr)
+        || matadogas::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -333,6 +353,16 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| rabbitc::run_pred(r, gobj, addr))
         .or_else(|| spycloak::run_pred(r, gobj, addr))
         .or_else(|| kireihana::run_pred(r, gobj, addr))
+        .or_else(|| maril::run_pred(r, gobj, addr))
+        .or_else(|| togepy::run_pred(r, gobj, addr))
+        .or_else(|| sonans::run_pred(r, gobj, addr))
+        .or_else(|| lucky::run_pred(r, gobj, addr))
+        .or_else(|| fushigibana::run_pred(r, gobj, addr))
+        .or_else(|| kamex::run_pred(r, gobj, addr))
+        .or_else(|| chicorita::run_pred(r, gobj, addr))
+        .or_else(|| marumine::run_pred(r, gobj, addr))
+        .or_else(|| thunder::run_pred(r, gobj, addr))
+        .or_else(|| matadogas::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
