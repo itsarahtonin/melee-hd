@@ -292,6 +292,46 @@ fn map_coll_joints(
     (from_archive, stage_data(game.stage_info.grkind).joints)
 }
 
+/// The collision joint bound to part `part` of map `map_id`, `Ground_801C32D4`: the last of
+/// the stage's own joints for that map and part, then the last of the map's archive's for the
+/// part, or -1.
+#[doc(alias = "Ground_801C32D4")]
+pub fn coll_joint_id(game: &Game, data: &Archives, map_id: i32, part: i32) -> i32 {
+    coll_joint_id_in(&game.gr, game.stage_info.grkind, data, map_id, part)
+}
+
+/// [`coll_joint_id`] from the stage code's globals and the stage's kind, for callers that hold
+/// those alone (a collision joint's callback).
+pub fn coll_joint_id_in(
+    gr: &super::Globals,
+    grkind: i32,
+    data: &Archives,
+    map_id: i32,
+    part: i32,
+) -> i32 {
+    let from_archive = match datfiles::archive_for_in(gr, data, map_id) {
+        Some(head) => {
+            let (list, n) = head.entry(data, map_id).coll_joints(data);
+            (list, n.max(0) as u32)
+        }
+        None => (None, 0),
+    };
+    let ((list, n), own) = (from_archive, stage_data(grkind).joints);
+    let mut result = -1;
+    for j in own {
+        if i32::from(j.y) == map_id && i32::from(j.z) == part {
+            result = i32::from(j.x);
+        }
+    }
+    for i in 0..n {
+        let j = archive_coll_joint(data, list, i);
+        if i32::from(j.z) == part {
+            result = i32::from(j.x);
+        }
+    }
+    result
+}
+
 /// The `i`th collision joint of an archive's list.
 fn archive_coll_joint(data: &Archives, list: Option<DataRef>, i: u32) -> GrJoint {
     GrJoint::read(data, list.expect("collision joints").at(6 * i))

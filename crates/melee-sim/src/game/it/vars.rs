@@ -12,6 +12,7 @@
 
 use super::kinds::gamewatch::{GameWatchRescueVars, GameWatchVars};
 use super::kinds::heiho::HeihoVars;
+use super::kinds::yaku::YakuVars;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::structs::*;
 use crate::vec::Vec3;
@@ -178,6 +179,7 @@ members! {
     Wstar, wstar, itWstar_ItemVars, [WSTAR];
     Star, star, itStar_ItemVars, [STAR];
     Kinoko, kinoko, itKinoko_ItemVars, [KINOKO, DKINOKO];
+    Yaku, yaku, YakuVars, [PKIND_RANDOM];
 }
 
 impl Default for ItemVars {

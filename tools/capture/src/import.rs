@@ -43,6 +43,9 @@ use melee_sim::vec::Vec3;
 
 use crate::{Capture, DataMap, FT_ANIM_FILE_NAMES, FT_ANIM_FILES, FT_KINDS, MEM1, c_string};
 
+/// `it_803F8C08`, the stage items' attributes in the executable.
+pub const YAKU_ATTR: u32 = 0x803F_8C08;
+
 /// `gmvs.c`'s `controller`, whose name other units' statics share.
 pub const VS_CONTROLLER: u32 = 0x8046_B6A0;
 
@@ -2075,7 +2078,9 @@ impl Cx for Importer<'_> {
     }
 
     fn import_data(&mut self, addr: u32) -> Option<DataRef> {
-        if addr == 0 {
+        // The stage items' attributes in the executable (`it_803F8C08`), which an item's
+        // `xCC_item_attr` names as none (`it::kinds::yaku`).
+        if addr == 0 || addr == YAKU_ATTR {
             return None;
         }
         let d = self.data.get(addr);

@@ -262,7 +262,12 @@ pub fn set_kind_data(game: &mut Game, data: &Archives, gobj: GObjId) {
 
 /// The item's `ItemAttr`.
 pub fn attr_of(ip: &Item) -> Attr {
-    Attr(ip.xCC_item_attr.expect("an item without attributes"))
+    // Only a stage's hurtbox item has attributes outside the archives (`it_803F8C08`).
+    assert!(
+        ip.xCC_item_attr.is_some() || ip.kind == super::kinds::PKIND_RANDOM,
+        "an item without attributes"
+    );
+    Attr(ip.xCC_item_attr)
 }
 
 /// The item's article.
@@ -279,6 +284,7 @@ pub fn common_data(game: &Game) -> Common {
 #[doc(alias = "Item_80267AA8")]
 pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     let data = r.data;
+    let yaku_attr = r.game.it.yaku_attr;
     let made = r.game.it.made;
     r.game.it.made = made.wrapping_add(1);
     {
@@ -295,7 +301,13 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         ip.msid = -1;
         let a = article(ip);
         ip.xC8_joint = a.model(data).joint(data);
-        ip.xCC_item_attr = Some(a.attr(data));
+        // The stage items' spawn (`it_802E6AEC`) points the kind's article at the
+        // executable's attributes, which no archive holds.
+        ip.xCC_item_attr = if ip.kind == super::kinds::PKIND_RANDOM && yaku_attr {
+            None
+        } else {
+            Some(a.attr(data))
+        };
         ip.owner = None;
         ip.xDC8_word.flags.x0 = false;
         ip.ecb_lock = -1;

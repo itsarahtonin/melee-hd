@@ -24,12 +24,13 @@ pub mod stadium;
 pub mod stage;
 pub mod story;
 pub mod vars;
+pub mod yorster;
 pub mod zako;
 
 pub use vars::{
     BattleBgVars, GroundVars, LastVars, MapVars, OldKongoBirdsVars, OldKongoVars, OldYoshiCloud,
     OldYoshiCloudVars, OldYoshiGuestVars, StadiumBits, StadiumDisplayVars, StadiumPieceVars,
-    StadiumVars, VarsKind,
+    StadiumVars, VarsKind, YorsterBlock, YorsterVars,
 };
 
 use melee_data::archive::{ArchiveId, DataRef};
@@ -46,6 +47,8 @@ pub const GR_KIND_PSTADIUM: i32 = 16;
 pub const GR_KIND_STORY: i32 = 10;
 /// `Gr_Kind_Izumi`, Fountain of Dreams.
 pub const GR_KIND_IZUMI: i32 = 12;
+/// `Gr_Kind_Yorster`, Yoshi's Island.
+pub const GR_KIND_YORSTER: i32 = 11;
 /// `Gr_Kind_Shrine`, Hyrule Temple.
 pub const GR_KIND_SHRINE: i32 = 7;
 /// `Gr_Kind_OldPupupu`, Dream Land (N64).
@@ -160,6 +163,8 @@ pub struct Globals {
     pub oldkongo_yakumono: Option<DataRef>,
     /// Hyrule Temple's `yakumono_param`, which nothing reads.
     pub shrine_yakumono: Option<DataRef>,
+    /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
+    pub yorster_yakumono: Option<DataRef>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -232,6 +237,48 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_OLDYOSHI, 3) => VarsKind::OldYoshiGuest,
         (GR_KIND_OLDKONGO, 1) => VarsKind::OldKongo,
         (GR_KIND_OLDKONGO, 2) => VarsKind::OldKongoBirds,
+        (GR_KIND_YORSTER, 1) => VarsKind::Yorster,
         _ => VarsKind::Bytes,
+    }
+}
+
+/// A stage's callback for a hit its hurtbox item dealt (`itYaku_ItemVars::x14`), by address.
+pub fn yaku_dealt(_r: &mut super::state::Running, cb: CodeRef, _item: GObjId, _g: GroundId) {
+    match cb.0 {
+        other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
+    }
+}
+
+/// A stage's callback for a hit its hurtbox item took (`itYaku_ItemVars::x18`), by address:
+/// the item, its object, the hit's knockback direction, the fighter and the damage.
+pub fn yaku_received(
+    r: &mut super::state::Running,
+    cb: CodeRef,
+    item: GObjId,
+    g: GroundId,
+    dir: crate::vec::Vec3,
+    fighter: Option<GObjId>,
+    damage: f32,
+) {
+    match cb.0 {
+        yorster::BLOCK_HIT => yorster::block_hit(r, item, g, dir, fighter, damage),
+        other => {
+            super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))
+        }
+    }
+}
+
+/// A stage's callback for a touch on its hurtbox item (`itYaku_ItemVars::x1C`), by address.
+pub fn yaku_touched(
+    _r: &mut super::state::Running,
+    cb: CodeRef,
+    _item: GObjId,
+    _g: GroundId,
+    _toucher: Option<GObjId>,
+) {
+    match cb.0 {
+        other => {
+            super::code::unported_call(&format!("a stage item's touch callback {other:#010x}"))
+        }
     }
 }

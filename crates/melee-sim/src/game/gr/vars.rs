@@ -41,6 +41,7 @@ pub enum VarsKind {
     OldYoshiGuest,
     OldKongo,
     OldKongoBirds,
+    Yorster,
 }
 
 /// `union GroundVars`.
@@ -86,6 +87,8 @@ pub enum GroundVars {
     OldKongo(OldKongoVars),
     /// The first word of `GroundVars_unk`: Kongo Jungle N64's birds (map 2).
     OldKongoBirds(OldKongoBirdsVars),
+    /// `grYorster_GroundVars`: Yoshi's Island's stage and its nine blocks (map 1).
+    Yorster(YorsterVars),
 }
 
 /// `grOldYoshi_Cloud`: one of Yoshi's Island N64's clouds.
@@ -168,6 +171,31 @@ pub struct OldKongoVars {
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct OldKongoBirdsVars {
     pub xC4: i32,
+}
+
+/// `grYorster_TrackElement`: one of Yoshi's Island's blocks: its index (`x00`), its state
+/// (`x01`), the damage and the landing speed it has taken (`x04`, `x08`), a countdown (`x0C`),
+/// its flip's start frame (`x10`), its part (`x14`), the part's joint (`x18`) and its hurtbox
+/// item (`x1C`). Two bytes of padding after `x01` aren't written.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct YorsterBlock {
+    pub x00: i8,
+    pub x01: u8,
+    pub x04: f32,
+    pub x08: f32,
+    pub x0C: i32,
+    pub x10: i32,
+    pub x14: i32,
+    pub x18: Option<crate::hsd::jobj::JObjId>,
+    pub x1C: Option<GObjId>,
+}
+
+/// `grYorster_GroundVars`: whether the blocks wait for the match's start (`xC4`), and the
+/// blocks.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct YorsterVars {
+    pub xC4: i32,
+    pub blocks: [YorsterBlock; 9],
 }
 
 /// `GroundVars_izumi`: the water's texture (`xC4`), the reflection camera (`xC8`), the
@@ -721,6 +749,25 @@ impl GroundVars {
             VarsKind::OldKongoBirds => GroundVars::OldKongoBirds(OldKongoBirdsVars {
                 xC4: m.u32(at) as i32,
             }),
+            VarsKind::Yorster => GroundVars::Yorster(YorsterVars {
+                xC4: m.u32(at) as i32,
+                blocks: std::array::from_fn(|i| {
+                    let b = at + 4 + 0x20 * i as u32;
+                    YorsterBlock {
+                        x00: m.u8(b) as i8,
+                        x01: m.u8(b + 1),
+                        x04: f(b + 4),
+                        x08: f(b + 8),
+                        x0C: m.u32(b + 0xC) as i32,
+                        x10: m.u32(b + 0x10) as i32,
+                        x14: m.u32(b + 0x14) as i32,
+                        x18: cx
+                            .import_handle("JObjId", m.u32(b + 0x18))
+                            .map(crate::hsd::jobj::JObjId),
+                        x1C: gobj(cx, b + 0x1C),
+                    }
+                }),
+            }),
             VarsKind::StoryShyGuys => GroundVars::StoryShyGuys(StoryShyGuysVars {
                 count: m.u8(at) as i8,
                 pattern: m.u8(at + 1) as i8,
@@ -1046,6 +1093,38 @@ impl GroundVars {
         match self {
             GroundVars::OldKongoBirds(v) => v,
             other => panic!("a stage object's variables are {other:?}, not GroundVars_unk"),
+        }
+    }
+
+    /// The variables as `grYorster_GroundVars`, likewise: a block holding pointers converts
+    /// only if they are null.
+    pub fn yorster(&mut self) -> &mut YorsterVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let blocks = std::array::from_fn(|i| {
+                let at = 4 + 0x20 * i;
+                b.null(at + 0x18);
+                b.null(at + 0x1C);
+                YorsterBlock {
+                    x00: b.0[at] as i8,
+                    x01: b.0[at + 1],
+                    x04: b.f32(at + 4),
+                    x08: b.f32(at + 8),
+                    x0C: b.u32(at + 0xC) as i32,
+                    x10: b.u32(at + 0x10) as i32,
+                    x14: b.u32(at + 0x14) as i32,
+                    x18: None,
+                    x1C: None,
+                }
+            });
+            *self = GroundVars::Yorster(YorsterVars {
+                xC4: b.u32(0) as i32,
+                blocks,
+            });
+        }
+        match self {
+            GroundVars::Yorster(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grYorster_GroundVars"),
         }
     }
 
@@ -1462,6 +1541,47 @@ impl Mirror for GroundVars {
                         &format!("{path}.unk.xC4"),
                         format!("{:?}", v.xC4),
                         format!("{theirs:?}"),
+                    );
+                }
+            }
+            GroundVars::Yorster(v) => {
+                let theirs = m.u32(at) as i32;
+                if v.xC4 != theirs {
+                    cx.mismatch(
+                        &format!("{path}.yorster.xC4"),
+                        format!("{:?}", v.xC4),
+                        format!("{theirs:?}"),
+                    );
+                }
+                for (i, e) in v.blocks.iter().enumerate() {
+                    let path = format!("{path}.yorster.elements[{i}]");
+                    let b = at + 4 + 0x20 * i as u32;
+                    let ours = (
+                        e.x00,
+                        e.x01,
+                        [e.x04, e.x08].map(f32::to_bits),
+                        [e.x0C, e.x10, e.x14],
+                    );
+                    let theirs = (
+                        m.u8(b) as i8,
+                        m.u8(b + 1),
+                        [m.u32(b + 4), m.u32(b + 8)],
+                        [0xC, 0x10, 0x14].map(|o| m.u32(b + o) as i32),
+                    );
+                    if ours != theirs {
+                        cx.mismatch(&path, format!("{ours:x?}"), format!("{theirs:x?}"));
+                    }
+                    cx.compare_handle(
+                        &format!("{path}.x18"),
+                        "JObjId",
+                        e.x18.map(|j| j.0),
+                        m.u32(b + 0x18),
+                    );
+                    cx.compare_handle(
+                        &format!("{path}.x1C"),
+                        "GObjId",
+                        e.x1C.map(|g| g.0),
+                        m.u32(b + 0x1C),
                     );
                 }
             }

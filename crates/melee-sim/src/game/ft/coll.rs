@@ -57,7 +57,12 @@ pub struct FilterInput<'a> {
 pub struct ObjCollHooks<'a> {
     pub objs: &'a mut Objects,
     pub data: &'a Archives,
-    pub dynamic_attrs: &'a DynamicAttrs,
+    /// The stage code's globals (the dynamic attribute areas, the stage archives, the stages'
+    /// parameters) and the stage's kind, which the collision joints' callbacks read.
+    pub gr: &'a crate::game::gr::Globals,
+    pub grkind: i32,
+    /// What a landing on Yoshi's Island's blocks reads and gives.
+    pub landing: crate::game::gr::yorster::Landing,
     /// The stage objects, which the stage's collision joints' callbacks write.
     pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
     /// The fighter's floor filter's inputs, for a filtered pass.
@@ -69,7 +74,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
     /// `grDynamicAttr_801CA284`: the first area on the in-use list on a floor connected to it
     /// whose circle holds the point, else 0.
     fn dynamic_terrain(&mut self, g: &Geometry, pos: Vec3, line_id: i32) -> i32 {
-        dynamic_terrain(self.dynamic_attrs, g, pos, line_id)
+        dynamic_terrain(&self.gr.dynamic_attrs, g, pos, line_id)
     }
 
     fn joint_callback(
@@ -81,9 +86,27 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
         coll: &mut CollData,
         _x50: i32,
         _kind: i32,
-        _dy: f32,
+        dy: f32,
     ) {
         match callback.0 {
+            super::super::gr::yorster::BLOCK_LANDED => {
+                if let Some(g) = user_data {
+                    let (gr, grkind, data) = (self.gr, self.grkind, self.data);
+                    let part_joint = |m: i32, p: i32| {
+                        super::super::gr::setup::coll_joint_id_in(gr, grkind, data, m, p)
+                    };
+                    super::super::gr::yorster::block_landed(
+                        &mut self.grounds[g.0],
+                        gr.yorster_yakumono,
+                        data,
+                        &part_joint,
+                        joint_id,
+                        coll,
+                        &mut self.landing,
+                        dy,
+                    );
+                }
+            }
             super::super::gr::oldyoshi::CLOUD_TOUCHED => {
                 if let Some(g) = user_data {
                     super::super::gr::oldyoshi::touch(
@@ -206,6 +229,7 @@ impl Running<'_> {
             0.0
         };
         let game = &mut *self.game;
+        let landing = crate::game::gr::yorster::Landing::of(game);
         let geometry = game.geometry.as_mut().expect("no collision geometry");
         let platforms = &mut game.ft.platforms;
         platforms.clear();
@@ -223,7 +247,9 @@ impl Running<'_> {
         let mut hooks = ObjCollHooks {
             objs: &mut game.objs,
             data: self.data,
-            dynamic_attrs: &game.gr.dynamic_attrs,
+            gr: &game.gr,
+            grkind: game.stage_info.grkind,
+            landing,
             grounds: &mut game.grounds,
             filter,
         };
@@ -239,7 +265,9 @@ impl Running<'_> {
         prepare(cd);
         let hit = pass(&mut coll, cd);
         fp.cur_pos = fp.coll_data.cur_pos;
+        let landing = hooks.landing;
         game.ft.platforms.clear();
+        landing.apply(game);
         hit
     }
 

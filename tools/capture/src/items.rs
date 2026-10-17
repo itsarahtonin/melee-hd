@@ -241,6 +241,16 @@ impl Importer<'_> {
                 })
                 .collect()
         };
+        // The stage items' kind's attributes, which their spawn points at the executable's.
+        let random = self
+            .game
+            .it
+            .char_articles
+            .get((melee_sim::game::it::kinds::PKIND_RANDOM - FIRST_CHAR_ITEM) as usize)
+            .copied()
+            .flatten();
+        self.game.it.yaku_attr =
+            random.is_some_and(|a| cap.u32(self.data.addr(a)) == crate::import::YAKU_ATTR);
         // Samus's grapple beam's lengths, which its spawn writes over its attributes.
         self.game.it.grapple_lengths = Default::default();
         let grapple = self
@@ -432,6 +442,15 @@ impl Comparer<'_> {
                 let theirs = self.u32(table + 4 * k as u32);
                 self.compare_data(&format!("it_804D6D38[{k}]"), *ours, theirs);
             }
+        }
+        let random = g
+            .char_articles
+            .get((melee_sim::game::it::kinds::PKIND_RANDOM - FIRST_CHAR_ITEM) as usize)
+            .copied()
+            .flatten();
+        if let Some(a) = random {
+            let theirs = self.u32(self.data.addr(a)) == crate::import::YAKU_ATTR;
+            self.check("items", "stage items' attributes", g.yaku_attr, theirs);
         }
         if let Some(attrs) = g.grapple_lengths.attrs {
             let at = self.data.addr(attrs);

@@ -122,10 +122,7 @@ fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId) {
         },
     );
     enemy_damage_by_item(r, g, me, fp::frsp(f64::from(dmg)));
-    if victim_kind == super::kinds::PKIND_RANDOM {
-        code::unported_call("it_802706D0's hit on a Pokémon's hurtbox");
-    }
-    r.hit_kind_sound(sfx_kind, sfx_severity, -1);
+    random_kind_hit_sound(r, me, sfx_kind, sfx_severity);
 }
 
 /// Gives a hitbox that joins a group the victims its group's other boxes remember, else none,
@@ -328,10 +325,26 @@ fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId) {
         },
     );
     enemy_hit_stats(r, fg, me, fp::frsp(f64::from(dmg)));
-    if item(r.game, me).kind == super::kinds::PKIND_RANDOM {
-        code::unported_call("it_802703E8's hit on a Pokémon's hurtbox");
+    random_kind_hit_sound(r, me, sfx_kind, sfx_severity);
+}
+
+/// The sound of a hit on an item's hurtbox (`it_802703E8`'s and `it_802706D0`'s tail): the
+/// hit's own, except on an item of `It_PKind_Random`'s kind (the stages' hurtbox items, whose
+/// variables' first halfword the code reads as `itPokemon_ItemVars::x0`) when that is 7 and the
+/// hit's sound kind 1 or 2 (a sound of its own, 0x61A87) or 8 with those kinds (none).
+fn random_kind_hit_sound(r: &mut Running, me: GObjId, sfx_kind: i32, sfx_severity: i32) {
+    let pokemon = (item(r.game, me).kind == super::kinds::PKIND_RANDOM)
+        .then(|| item_mut(r.game, me).xDD4_itemVar.yaku().x0.get());
+    let kind_1_or_2 = sfx_kind == 1 || sfx_kind == 2;
+    match pokemon {
+        Some(7) if kind_1_or_2 => {
+            r.sfx_play(0x6_1A87, 0x7F, 0x40);
+        }
+        Some(8) if kind_1_or_2 => {}
+        _ => {
+            r.hit_kind_sound(sfx_kind, sfx_severity, -1);
+        }
     }
-    r.hit_kind_sound(sfx_kind, sfx_severity, -1);
 }
 
 /// The hitbox a damage log entry names: an item's or a fighter's.
@@ -575,12 +588,7 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
     let c = common_data(r.game);
     let k = |o: u32| reg(c.f32(r.data, 0x80 + 4 * o));
     let (cap, slow) = (reg(c.f32(r.data, 0x9C)), reg(c.f32(r.data, 0x78)));
-    let damage_mul = reg(r.data.f32(
-        item(r.game, gobj)
-            .xCC_item_attr
-            .expect("an item without attributes")
-            .at(0x1C),
-    ));
+    let damage_mul = reg(super::item::attr_of(item(r.game, gobj)).f32(r.data, 0x1C));
     let u = |v: u32| fp::frsp(f64::from(v));
     let mut max = -1.0;
     let mut strongest = None;

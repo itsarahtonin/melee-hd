@@ -5,7 +5,7 @@
 use super::datfiles::GrJoint;
 use super::{
     GR_KIND_BATTLE, GR_KIND_IZUMI, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_SHRINE, GR_KIND_STORY,
+    GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -396,6 +396,34 @@ pub const SHRINE: StageData = StageData {
     joints: &[],
 };
 
+/// `grYt_StageCallbacks`. Map 1 is the stage with its blocks, map 0 the background.
+pub const YORSTER_CALLBACKS: [StageCallbacks; 2] = [
+    cb(0x8020_2124, 0x8020_2150, 0x8020_2158, 0x8020_215C, 0),
+    cb(
+        0x8020_21AC,
+        0x8020_224C,
+        0x8020_2254,
+        0x8020_22A0,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grYt_StageData`.
+pub const YORSTER: StageData = StageData {
+    grkind: GR_KIND_YORSTER,
+    callbacks: &YORSTER_CALLBACKS,
+    file: Some("/GrYt.dat"),
+    on_init: 0x8020_1FA4,
+    on_demo_init: 0x8020_1FA0,
+    on_load: 0x8020_200C,
+    on_start: 0x8020_2010,
+    callback4: 0x8020_2034,
+    on_touch_line: 0x8020_2B5C,
+    on_check_shadow_render: 0x8020_2B64,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -408,6 +436,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_OLDYOSHI => &OLDYOSHI,
         GR_KIND_OLDKONGO => &OLDKONGO,
         GR_KIND_SHRINE => &SHRINE,
+        GR_KIND_YORSTER => &YORSTER,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

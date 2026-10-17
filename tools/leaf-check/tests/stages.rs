@@ -26,7 +26,7 @@
 use leaf_check::calls::{Prepare, Ret, check_calls_with, gobj_arg, peek_u32, poke_u32};
 use melee_capture::import::Maps;
 use melee_sim::game::code::{run_demo_init, run_event, run_proc};
-use melee_sim::game::gr::{oldkongo, oldyoshi, shrine};
+use melee_sim::game::gr::{oldkongo, oldyoshi, shrine, yorster};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use melee_sim::vec::Vec3;
@@ -937,5 +937,419 @@ fn shrine_ceiling_tech() {
     };
     for p in [&as_saved as &Prepare, &flag] {
         check_calls_with(&d, "ftCo_PassiveCeil_Anim", 1, p, &anim);
+    }
+}
+
+// Yoshi's Island (`gryorster.c`) and the stages' hurtbox items (`ityaku.c`).
+
+const YT: &str = "oracle-stage-yoshis-island";
+
+/// gryorster.c's `grYt_804D6A20` (its first word the parameters).
+const YT_PARAM: u32 = 0x804D_6A20;
+
+/// The parameters' float or word at `off`.
+fn yt_param(call: &Call, off: u32) -> u32 {
+    let p = peek_u32(call, YT_PARAM);
+    peek_u32(call, p + off)
+}
+
+/// Block `i`'s variables (`grYorster_TrackElement`) in a call made with the stage in r3.
+fn block(call: &Call, i: u32) -> u32 {
+    vars(call) + 4 + 0x20 * i
+}
+
+/// Every block set to state `state` with damage `x04`, landing speed `x08` and count `x0C`.
+fn blocks(c: &mut Call, state: u8, x04: f32, x08: f32, x0c: i32) {
+    for i in 0..9 {
+        let b = block(c, i);
+        let w = peek_u32(c, b);
+        poke_u32(c, b, (w & 0xFF00_FFFF) | u32::from(state) << 16);
+        poke_u32(c, b + 4, x04.to_bits());
+        poke_u32(c, b + 8, x08.to_bits());
+        poke_u32(c, b + 0xC, x0c as u32);
+    }
+}
+
+#[test]
+fn yorster_blocks() {
+    let d = dir(YT);
+    let f = "grYorster_8020266C";
+    let ours = |r: &mut Running, maps: &Maps, call: &Call| {
+        yorster::proc_blocks(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let p = |c: &Call, off: u32| f32::from_bits(yt_param(c, off));
+    let prepares: [&Prepare; 12] = [
+        &as_saved,
+        // Hit for the parameters' damage: just over it, past the flip's full damage, and just
+        // short of it.
+        &|c, _| {
+            let m = p(c, 8);
+            blocks(c, 0, m + 0.5, 0.0, 0);
+        },
+        &|c, _| {
+            let (m, full) = (p(c, 8), p(c, 0xC));
+            blocks(c, 1, m + full + 3.0, 0.0, 0);
+        },
+        &|c, _| {
+            let m = p(c, 8);
+            blocks(c, 0, m - 0.5, 0.0, 0);
+        },
+        // Landed on at the parameters' speed: just over it, past the full speed, and short.
+        &|c, _| {
+            let m = p(c, 0);
+            blocks(c, 0, 0.0, m + 0.25, 0);
+        },
+        &|c, _| {
+            let (m, full) = (p(c, 0), p(c, 4));
+            blocks(c, 1, 0.0, m + full + 1.0, 0);
+        },
+        &|c, _| {
+            let m = p(c, 0);
+            blocks(c, 0, 0.0, m - 0.25, 0);
+        },
+        // Waiting to flip: the delay over and running.
+        &|c, k| blocks(c, 2, 0.0, 0.0, [0, 5, -1][k % 3]),
+        // Spinning: short of its 323 ticks, a tick short and at them (something near or not,
+        // whichever the state has).
+        &|c, k| blocks(c, 3, 0.0, 0.0, [12, 0x142, 0x143, 0x144][k % 4]),
+        // Trying again: short of 25 ticks, a tick short and at them.
+        &|c, k| blocks(c, 4, 0.0, 0.0, [3, 0x18, 0x19][k % 3]),
+        // A state past the five, and each block in another state.
+        &|c, _| blocks(c, 6, 0.0, 0.0, 0),
+        &|c, _| {
+            for i in 0..9u32 {
+                let b = block(c, i);
+                let w = peek_u32(c, b);
+                poke_u32(c, b, (w & 0xFF00_FFFF) | (i % 5) << 16);
+                poke_u32(c, b + 0xC, [0, 0x143, 30, 2, 0][(i % 5) as usize]);
+            }
+        },
+    ];
+    for prep in prepares {
+        check_calls_with(&d, f, 1, prep, &ours);
+    }
+}
+
+#[test]
+fn yorster_setup() {
+    let d = dir(YT);
+    check_calls_with(&d, "grYorster_80201FA4", 1, &as_saved, &event);
+    check_calls_with(&d, "grYorster_80202010", 1, &as_saved, &event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        yorster::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    for map in 0..2u32 {
+        check_calls_with(
+            &d,
+            "grYorster_8020203C",
+            1,
+            &move |c, _| c.regs.gpr[3] = map,
+            &create,
+        );
+    }
+    for f in [
+        "stageGObj0_OnInit",
+        "grYorster_802021AC",
+        "grYorster_80202160",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    let blocks_setup = |r: &mut Running, maps: &Maps, call: &Call| {
+        yorster::init_blocks(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grYorster_802022A4", 1, &as_saved, &blocks_setup);
+    // The stage's process, its blocks running and waiting for the match's start.
+    let waiting = |c: &mut Call, k: usize| {
+        let v = vars(c);
+        poke_u32(c, v, (k % 2) as u32);
+    };
+    for p in [&as_saved as &Prepare, &waiting] {
+        check_calls_with(&d, "grYorster_80202254", 1, p, &by_address);
+    }
+}
+
+#[test]
+fn yorster_hit_and_landing() {
+    let d = dir(YT);
+    // A block's item hit: as saved, and by something that isn't a fighter.
+    let hit = |r: &mut Running, maps: &Maps, call: &Call| {
+        let item = gobj_arg(maps, call);
+        let g = *maps
+            .grounds
+            .get(&call.regs.gpr[4])
+            .expect("the block's stage");
+        let p = call.regs.gpr[5];
+        let dir = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
+        let fighter = maps.gobjs.get(&call.regs.gpr[6]).copied();
+        yorster::block_hit(r, item, g, dir, fighter, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    let not_fighter = |c: &mut Call, _: usize| c.regs.gpr[6] = c.regs.gpr[3];
+    for p in [&as_saved as &Prepare, &not_fighter] {
+        check_calls_with(&d, "grYorster_80202428", 1, p, &hit);
+    }
+    // A landing on a block: as saved, faster and slower than the parameters' speed, by an
+    // item, by a fighter in its entrance, and on another joint.
+    let landed = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = *maps
+            .grounds
+            .get(&call.regs.gpr[3])
+            .expect("the blocks' stage");
+        let coll = coll_at(r, maps, call, call.regs.gpr[5]);
+        let dy = call.regs.fpr[1].ps0 as f32;
+        yorster::block_landed_now(r, g, call.regs.gpr[4] as i32, &coll, dy);
+        Ret::Nothing
+    };
+    let prepares: [&Prepare; 4] = [
+        &as_saved,
+        // The landing's speed (the height moved, an item's) far over and under the threshold.
+        &|c, k| c.regs.fpr[1].ps0 = [100.0, -100.0][k % 2],
+        // Another joint than a block's.
+        &|c, _| c.regs.gpr[4] = 0,
+        // The fighter's position's change (what a fighter's landing counts) large.
+        &|c, _| {
+            let coll = c.regs.gpr[5];
+            let fp = coll - 0x6F0;
+            poke_u32(c, fp + 0xC8 + 4, 50.0f32.to_bits());
+        },
+    ];
+    for p in prepares {
+        check_calls_with(&d, "grYorster_802024F0", 1, p, &landed);
+    }
+}
+
+/// The collision data at `addr` in a call, as our state holds it: a fighter's
+/// (`Fighter::coll_data`, +0x6F0) or an item's (`Item::x378_itemColl`).
+fn coll_at(r: &Running, maps: &Maps, call: &Call, addr: u32) -> melee_sim::game::structs::CollData {
+    for (&a, &g) in &maps.gobjs {
+        let user = peek_u32(call, a + 0x2C);
+        if user + 0x6F0 == addr {
+            return r.game.fighter(g).coll_data.clone();
+        }
+        if user + 0x378 == addr {
+            return melee_sim::game::it::item(r.game, g).x378_itemColl.clone();
+        }
+    }
+    panic!("no object's collision data at {addr:#x}")
+}
+
+/// The stage's callbacks no capture reaches, and the hurtbox item's, from the blocks'
+/// captures and the items'.
+#[test]
+fn yorster_unreached_callbacks() {
+    let d = dir(YT);
+    let from = "grYorster_8020266C";
+    for target in [
+        "grYorster_80202158",
+        "grYorster_8020215C",
+        "grYorster_802022A0",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(target)), &by_address);
+    }
+    check_calls_with(
+        &d,
+        from,
+        1,
+        &retarget(leaf_check::sym("grYorster_8020200C")),
+        &event,
+    );
+    check_calls_with(
+        &d,
+        from,
+        1,
+        &retarget(leaf_check::sym("grYorster_80201FA0")),
+        &demo,
+    );
+}
+
+/// A code address argument as a callback, none for null.
+fn code_arg(a: u32) -> Option<CodeRef> {
+    (a != 0).then_some(CodeRef(a))
+}
+
+/// The stages' hurtbox items: made through the stage glue and directly (on a joint, at a point,
+/// falling or not, and with neither), each state's physics (following a joint or standing at a
+/// point), a hit taken, and the hit callbacks and the forgetting no capture reaches.
+#[test]
+fn yaku_items() {
+    use melee_sim::game::it::kinds::yaku;
+    let d = dir(YT);
+    let glue = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let ground = *maps.grounds.get(&g[5]).expect("the item's stage object");
+        let joint = maps.jobjs.get(&g[6]).copied();
+        let item = melee_sim::game::gr::material::stage_item(
+            r,
+            g[3] as i32,
+            g[4] as i32,
+            ground,
+            joint,
+            code_arg(g[7]),
+            code_arg(g[8]),
+            code_arg(g[9]),
+        );
+        let _ = item;
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grMaterial_801C8CFC", 1, &as_saved, &glue);
+    let spawn = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let ground = maps.grounds.get(&g[3]).copied();
+        let joint = maps.jobjs.get(&g[6]).copied();
+        let pos = (g[7] != 0).then(|| {
+            Vec3::new(
+                f32_at(call, g[7]),
+                f32_at(call, g[7] + 4),
+                f32_at(call, g[7] + 8),
+            )
+        });
+        let touched = peek_u32(call, g[1] + 8);
+        let item = yaku::spawn(
+            r,
+            ground,
+            g[4] as i32,
+            g[5] as i32,
+            joint,
+            pos,
+            g[8] != 0,
+            code_arg(g[9]),
+            code_arg(g[10]),
+            code_arg(touched),
+        );
+        let _ = item;
+        Ret::Nothing
+    };
+    let at_point = |c: &mut Call, k: usize| {
+        let si = leaf_check::sym("stage_info");
+        c.regs.gpr[6] = 0;
+        c.regs.gpr[7] = si + 0x730;
+        c.regs.gpr[8] = (k % 2) as u32;
+    };
+    let neither = |c: &mut Call, _: usize| {
+        c.regs.gpr[6] = 0;
+        c.regs.gpr[7] = 0;
+    };
+    for p in [&as_saved as &Prepare, &at_point, &neither] {
+        check_calls_with(&d, "it_802E6AEC", 1, p, &spawn);
+    }
+    let phys = |r: &mut Running, maps: &Maps, call: &Call| {
+        yaku::phys(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let point = |c: &mut Call, _: usize| {
+        let ip = peek_u32(c, c.regs.gpr[3] + 0x2C);
+        poke_u16(c, ip + 0xDD4 + 2, 2);
+    };
+    for p in [&as_saved as &Prepare, &point] {
+        check_calls_with(&d, "it_2E6A_UnkMotion19_Phys", 1, p, &phys);
+    }
+    let received = |r: &mut Running, maps: &Maps, call: &Call| {
+        Ret::Int(u32::from(yaku::dmg_received(r, gobj_arg(maps, call))))
+    };
+    check_calls_with(&d, "it_2E6A_Logic117_DmgReceived", 1, &as_saved, &received);
+    // From the physics' captures: a hit dealt and a touch (with and without the stage's
+    // callbacks), and forgetting a fighter.
+    let pred = |f: fn(&mut Running, melee_sim::hsd::gobj::GObjId) -> bool| {
+        move |r: &mut Running, maps: &Maps, call: &Call| {
+            Ret::Int(u32::from(f(r, gobj_arg(maps, call))))
+        }
+    };
+    let dealt = pred(yaku::dmg_dealt);
+    let touched = pred(yaku::touched);
+    let from = "it_2E6A_UnkMotion19_Phys";
+    let callbacks = |name: &'static str| {
+        let t = leaf_check::sym(name);
+        move |c: &mut Call, _: usize| {
+            c.addr = t;
+            // The blocks' items have neither callback.
+            let ip = peek_u32(c, c.regs.gpr[3] + 0x2C);
+            poke_u32(c, ip + 0xDD4 + 0x14, 0);
+            poke_u32(c, ip + 0xDD4 + 0x1C, 0);
+        }
+    };
+    check_calls_with(&d, from, 1, &callbacks("it_2E6A_Logic117_DmgDealt"), &dealt);
+    check_calls_with(&d, from, 1, &callbacks("it_802E7054"), &touched);
+    let forget = |r: &mut Running, maps: &Maps, call: &Call| {
+        let other = maps.gobjs.get(&call.regs.gpr[4]).copied();
+        yaku::evt_unk(r, gobj_arg(maps, call), other);
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("it_2E6A_Logic117_EvtUnk");
+    let with_fighter = move |c: &mut Call, _: usize| {
+        c.addr = t;
+        c.regs.gpr[4] = first_fighter(c);
+    };
+    check_calls_with(&d, from, 1, &with_fighter, &forget);
+}
+
+/// The stage glue's small functions, `Ground_801C32D4` for each part, and the fighters' hits on
+/// items' hurtboxes, the hurtbox item's first halfword set to the two numbers its sound tests.
+#[test]
+fn yaku_glue_and_hits() {
+    let d = dir(YT);
+    let hurtbox = |r: &mut Running, maps: &Maps, call: &Call| {
+        let f = |i: usize| call.regs.fpr[i].ps0 as f32;
+        melee_sim::game::gr::material::set_item_hurtbox(
+            r.game,
+            gobj_arg(maps, call),
+            Vec3::new(f(1), f(2), f(3)),
+            Vec3::new(f(4), f(5), f(6)),
+            f(7),
+        );
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grMaterial_801C8DE0", 1, &as_saved, &hurtbox);
+    let on = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::gr::material::item_hurtbox_on(r.game, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grMaterial_801C8E08", 1, &as_saved, &on);
+    let off = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::gr::material::item_hurtbox_off(r.game, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grMaterial_801C8E28", 1, &as_saved, &off);
+    let air = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = gobj_arg(maps, call);
+        melee_sim::game::gr::material::item_ground_or_air(r.game, g, call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    let either = |c: &mut Call, k: usize| c.regs.gpr[4] = (k % 2) as u32;
+    for p in [&as_saved as &Prepare, &either] {
+        check_calls_with(&d, "grMaterial_801C8E68", 1, p, &air);
+    }
+    let joint = |r: &mut Running, _: &Maps, call: &Call| {
+        let id = melee_sim::game::gr::setup::coll_joint_id(
+            r.game,
+            r.data,
+            call.regs.gpr[3] as i32,
+            call.regs.gpr[4] as i32,
+        );
+        Ret::Int(id as u32)
+    };
+    let parts = |c: &mut Call, k: usize| {
+        c.regs.gpr[3] = (k % 3) as u32;
+        c.regs.gpr[4] = (k * 7 % 24) as u32;
+    };
+    for p in [&as_saved as &Prepare, &parts] {
+        check_calls_with(&d, "Ground_801C32D4", 1, p, &joint);
+    }
+    let hits = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::it::coll::hit_by_fighters(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let number = |c: &mut Call, k: usize| {
+        let ip = peek_u32(c, c.regs.gpr[3] + 0x2C);
+        poke_u16(c, ip + 0xDD4, [7u16, 8][k % 2]);
+    };
+    for p in [&as_saved as &Prepare, &number] {
+        check_calls_with(&d, "it_802703E8", 1, p, &hits);
     }
 }

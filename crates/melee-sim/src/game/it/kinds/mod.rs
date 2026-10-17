@@ -89,6 +89,7 @@ pub mod sword;
 pub mod taru;
 pub mod tomato;
 pub mod wstar;
+pub mod yaku;
 pub mod yoshiegglay;
 pub mod yoshieggthrow;
 pub mod yoshistar;
@@ -212,6 +213,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || metalb::run_event(r, gobj, addr)
         || rabbitc::run_event(r, gobj, addr)
         || spycloak::run_event(r, gobj, addr)
+        || yaku::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
 }
 
@@ -308,6 +310,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| metalb::run_pred(r, gobj, addr))
         .or_else(|| rabbitc::run_pred(r, gobj, addr))
         .or_else(|| spycloak::run_pred(r, gobj, addr))
+        .or_else(|| yaku::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).

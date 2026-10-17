@@ -68,51 +68,67 @@ impl ModelDesc {
 
 /// An `ItemAttr`: an item kind's common attributes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
-pub struct Attr(pub DataRef);
+pub struct Attr(pub Option<DataRef>);
 
 impl Attr {
+    /// The byte at `off`, from the archive or the executable's attributes.
+    fn u8(self, data: &Archives, off: u32) -> u8 {
+        match self.0 {
+            Some(a) => data.u8(a.at(off)),
+            None => super::kinds::yaku::ATTR[off as usize],
+        }
+    }
+
+    /// The word at `off`, from the archive or the executable's attributes.
+    fn word(self, data: &Archives, off: u32) -> u32 {
+        match self.0 {
+            Some(a) => data.u32(a.at(off)),
+            None => yaku_word(off),
+        }
+    }
+
     pub fn is_heavy(self, data: &Archives) -> bool {
-        data.u8(self.0) & 0x80 != 0
+        self.u8(data, 0) & 0x80 != 0
     }
 
     /// `x0_78`: how a fighter uses the item (0 thrown, 2 swung, 3 shot, ...).
     pub fn x0_78(self, data: &Archives) -> u8 {
-        (data.u8(self.0) >> 3) & 0xF
+        (self.u8(data, 0) >> 3) & 0xF
     }
 
     /// `x0_hold_kind`: how a fighter's hand holds the item.
     pub fn hold_kind(self, data: &Archives) -> u8 {
-        data.u8(self.0) & 7
+        self.u8(data, 0) & 7
     }
 
     /// `x1_1`: the axis the item spins about.
     pub fn x1_1(self, data: &Archives) -> u8 {
-        data.u8(self.0.at(1)) >> 6
+        self.u8(data, 1) >> 6
     }
 
     pub fn x1_3(self, data: &Archives) -> bool {
-        data.u8(self.0.at(1)) & 0x20 != 0
+        self.u8(data, 1) & 0x20 != 0
     }
 
     pub fn x1_4(self, data: &Archives) -> bool {
-        data.u8(self.0.at(1)) & 0x10 != 0
+        self.u8(data, 1) & 0x10 != 0
     }
 
     pub fn x1_5(self, data: &Archives) -> bool {
-        data.u8(self.0.at(1)) & 0x08 != 0
+        self.u8(data, 1) & 0x08 != 0
     }
 
     /// `x1_67_cam_kind`: whether and how the camera follows the item.
     pub fn cam_kind(self, data: &Archives) -> u8 {
-        data.u8(self.0.at(1)) >> 1 & 3
+        self.u8(data, 1) >> 1 & 3
     }
 
     pub fn f32(self, data: &Archives, off: u32) -> f32 {
-        data.f32(self.0.at(off))
+        f32::from_bits(self.word(data, off))
     }
 
     pub fn i32(self, data: &Archives, off: u32) -> i32 {
-        data.u32(self.0.at(off)) as i32
+        self.word(data, off) as i32
     }
 
     /// An `itECB` at `off` (`x20`, `x40`).
@@ -132,6 +148,13 @@ impl Attr {
             y: self.f32(data, off + 4),
         }
     }
+}
+
+/// A word of the executable's attributes (`it_803F8C08`).
+fn yaku_word(off: u32) -> u32 {
+    let a = &super::kinds::yaku::ATTR;
+    let o = off as usize;
+    u32::from_be_bytes([a[o], a[o + 1], a[o + 2], a[o + 3]])
 }
 
 /// `ItemAttr` field offsets.
