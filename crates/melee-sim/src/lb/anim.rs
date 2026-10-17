@@ -333,10 +333,27 @@ pub fn attach(objs: &mut Objects, j: Option<JObjId>, target: Option<JObjId>) {
 /// later siblings, in pre-order) still has an animation playing, `lb_8000B09C`.
 #[doc(alias = "lb_8000B09C")]
 pub fn any_animated(objs: &Objects, j: Option<JObjId>) -> bool {
+    any_joint(objs, j, is_animated)
+}
+
+/// Whether any joint from `j` on, in the same order, has an animation that came round this
+/// frame (`AOBJ_REWINDED`), `lb_8000B134`.
+#[doc(alias = "lb_8000B134")]
+pub fn any_rewound(objs: &Objects, j: Option<JObjId>) -> bool {
+    any_joint(objs, j, |objs, c| {
+        objs.jobjs[c]
+            .aobj
+            .is_some_and(|a| objs.aobjs[a].flags & crate::hsd::aobj::REWINDED != 0)
+    })
+}
+
+/// The walk `lb_8000B09C` and `lb_8000B134` share: the joints from `j` on in pre-order (an
+/// instance's children skipped), until one passes `test`.
+fn any_joint(objs: &Objects, j: Option<JObjId>, test: impl Fn(&Objects, JObjId) -> bool) -> bool {
     let jobjs = &objs.jobjs;
     let mut cur = j;
     while let Some(c) = cur {
-        if is_animated(objs, c) {
+        if test(objs, c) {
             return true;
         }
         let o = &jobjs[c];

@@ -195,9 +195,34 @@ pub const STAGES: &[Stage] = &[
         keys: &["gb", "great-bay"],
     },
     Stage {
+        kind: 14,
+        name: "Hyrule Temple",
+        keys: &["ht", "hyrule-temple"],
+    },
+    Stage {
+        kind: 12,
+        name: "Jungle Japes",
+        keys: &["jj", "jungle-japes"],
+    },
+    Stage {
+        kind: 5,
+        name: "Kongo Jungle",
+        keys: &["kj", "kongo-jungle"],
+    },
+    Stage {
+        kind: 30,
+        name: "Kongo Jungle N64",
+        keys: &["kj64", "kongo-jungle-64"],
+    },
+    Stage {
         kind: 3,
         name: "Pokémon Stadium",
         keys: &["ps", "pokemon-stadium"],
+    },
+    Stage {
+        kind: 16,
+        name: "Yoshi's Island",
+        keys: &["yi", "yoshis-island"],
     },
     Stage {
         kind: 29,

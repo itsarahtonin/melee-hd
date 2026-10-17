@@ -12,7 +12,9 @@
 
 use super::kinds::gamewatch::{GameWatchRescueVars, GameWatchVars};
 use super::kinds::heiho::HeihoVars;
+use super::kinds::klap::KlapVars;
 use super::kinds::tincle::TincleVars;
+use super::kinds::yaku::YakuVars;
 use super::pokemon::PokemonVars;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::structs::*;
@@ -175,6 +177,7 @@ members! {
     KirbyHammer, kirby_hammer, itKirbyHammer_ItemVars, [KIRBY_HAMMER];
     Heiho, heiho, HeihoVars, [HEIHO];
     Tincle, tincle, TincleVars, [TINCLE];
+    Klap, klap, KlapVars, [KLAP];
     GameWatch, game_watch, GameWatchVars, [GAME_WATCH_GREENHOUSE, GAME_WATCH_MANHOLE, GAME_WATCH_FIRE, GAME_WATCH_PARACHUTE, GAME_WATCH_TURTLE, GAME_WATCH_BREATH, GAME_WATCH_JUDGE, GAME_WATCH_PANIC, GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF_PAN];
     GameWatchRescue, game_watch_rescue, GameWatchRescueVars, [GAME_WATCH_RESCUE];
     ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE, KIRBY_ICE_CLIMBER_ICE];
@@ -195,6 +198,7 @@ members! {
     LGunBeam, lgunbeam, itLGunBeam_ItemVars, [L_GUN_BEAM];
     Coin, coin, it_2E5A_ItemVars, [UNK4];
     Pokemon, pokemon, PokemonVars, [POKEMON_UNK];
+    Yaku, yaku, YakuVars, [PKIND_RANDOM];
 }
 
 impl Default for ItemVars {

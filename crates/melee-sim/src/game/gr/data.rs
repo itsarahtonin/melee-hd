@@ -4,8 +4,9 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_GREATBAY, GR_KIND_IZUMI, GR_KIND_KRAID, GR_KIND_LAST,
-    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_STORY,
+    GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_IZUMI,
+    GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
+    GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -464,6 +465,182 @@ pub const GREATBAY: StageData = StageData {
     joints: &GREATBAY_JOINTS,
 };
 
+/// `grOk_StageCallbacks` (`stage_callbacks`). Map 3 is the stage, map 1 the barrel below it,
+/// map 2 the birds, map 0 the background.
+pub const OLDKONGO_CALLBACKS: [StageCallbacks; 4] = [
+    cb(0x8020_F618, 0x8020_F644, 0x8020_F64C, 0x8020_F650, 0),
+    cb(0x8020_F6E4, 0x8020_F880, 0x8020_F888, 0x8021_0058, 0),
+    cb(0x8021_005C, 0x8021_00F4, 0x8021_00FC, 0x8021_0450, 0),
+    cb(
+        0x8020_F654,
+        0x8020_F6B4,
+        0x8020_F6BC,
+        0x8020_F6E0,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grOk_803E6580`: the stage's collision joints, which the stage binds itself.
+pub const OLDKONGO_JOINTS: [GrJoint; 2] =
+    [GrJoint { x: 0, y: 3, z: 1 }, GrJoint { x: 1, y: 3, z: 2 }];
+
+/// `grOk_StageData`.
+pub const OLDKONGO: StageData = StageData {
+    grkind: GR_KIND_OLDKONGO,
+    callbacks: &OLDKONGO_CALLBACKS,
+    file: Some("/GrOk.dat"),
+    on_init: 0x8020_F46C,
+    on_demo_init: 0x8020_F468,
+    on_load: 0x8020_F4E4,
+    on_start: 0x8020_F4E8,
+    callback4: 0x8020_F524,
+    on_touch_line: 0x8021_0780,
+    on_check_shadow_render: 0x8021_0788,
+    flags2: 1,
+    joints: &OLDKONGO_JOINTS,
+};
+
+/// `grSh_StageCallbacks`. Map 2 is the temple, map 1 the background, map 0 the sky.
+pub const SHRINE_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8020_1E08, 0x8020_1E34, 0x8020_1E3C, 0x8020_1E40, 0),
+    cb(0x8020_1E44, 0x8020_1E88, 0x8020_1E90, 0x8020_1E94, 0),
+    cb(
+        0x8020_1E9C,
+        0x8020_1F14,
+        0x8020_1F1C,
+        0x8020_1F40,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grSh_StageData`.
+pub const SHRINE: StageData = StageData {
+    grkind: GR_KIND_SHRINE,
+    callbacks: &SHRINE_CALLBACKS,
+    file: Some("/GrSh.dat"),
+    on_init: 0x8020_1C64,
+    on_demo_init: 0x8020_1C60,
+    on_load: 0x8020_1CF0,
+    on_start: 0x8020_1CF4,
+    callback4: 0x8020_1D18,
+    on_touch_line: 0x8020_1F44,
+    on_check_shadow_render: 0x8020_1F4C,
+    flags2: 1,
+    joints: &[],
+};
+
+/// `grYt_StageCallbacks`. Map 1 is the stage with its blocks, map 0 the background.
+pub const YORSTER_CALLBACKS: [StageCallbacks; 2] = [
+    cb(0x8020_2124, 0x8020_2150, 0x8020_2158, 0x8020_215C, 0),
+    cb(
+        0x8020_21AC,
+        0x8020_224C,
+        0x8020_2254,
+        0x8020_22A0,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grYt_StageData`.
+pub const YORSTER: StageData = StageData {
+    grkind: GR_KIND_YORSTER,
+    callbacks: &YORSTER_CALLBACKS,
+    file: Some("/GrYt.dat"),
+    on_init: 0x8020_1FA4,
+    on_demo_init: 0x8020_1FA0,
+    on_load: 0x8020_200C,
+    on_start: 0x8020_2010,
+    callback4: 0x8020_2034,
+    on_touch_line: 0x8020_2B5C,
+    on_check_shadow_render: 0x8020_2B64,
+    flags2: 1,
+    joints: &[],
+};
+
+/// `grGd_StageCallbacks`. Map 2 is the stage, map 1 Cranky Kong, map 3 the Klaptrap, maps 4,
+/// 5 and 6 the background, the birds and the water, map 0 the sky.
+pub const GARDEN_CALLBACKS: [StageCallbacks; 7] = [
+    cb(0x8020_2D60, 0x8020_2D8C, 0x8020_2D94, 0x8020_2D98, 0),
+    cb(0x8020_3004, 0x8020_3090, 0x8020_3098, 0x8020_31A0, 0),
+    cb(
+        0x8020_2DC8,
+        0x8020_2E40,
+        0x8020_2E48,
+        0x8020_2E68,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_31A4, 0x8020_3248, 0x8020_3250, 0x8020_3494, 0),
+    cb(0x8020_2E6C, 0x8020_2F34, 0x8020_2F3C, 0x8020_2F40, 0),
+    cb(0x8020_2F44, 0x8020_2F94, 0x8020_2F9C, 0x8020_2FA0, 0),
+    cb(0x8020_2FA4, 0x8020_2FF4, 0x8020_2FFC, 0x8020_3000, 0),
+];
+
+/// `grGd_StageData`.
+pub const GARDEN: StageData = StageData {
+    grkind: GR_KIND_GARDEN,
+    callbacks: &GARDEN_CALLBACKS,
+    file: Some("/GrGd.dat"),
+    on_init: 0x8020_2B70,
+    on_demo_init: 0x8020_2B6C,
+    on_load: 0x8020_2C24,
+    on_start: 0x8020_2C4C,
+    callback4: 0x8020_2C70,
+    on_touch_line: 0x8020_35C8,
+    on_check_shadow_render: 0x8020_35D0,
+    flags2: 1,
+    joints: &[],
+};
+
+/// `grKg_StageCallbacks`. Map 10 is the stage, map 5 the barrel, maps 1 and 2 the floating
+/// platforms, maps 7, 8 and 9 the logs, map 11 the river's path, maps 3, 4 and 6 the
+/// background, map 0 the sky (no callbacks).
+pub const KONGO_CALLBACKS: [StageCallbacks; 12] = [
+    cb(0, 0, 0, 0, 0),
+    cb(0x801D_6074, 0x801D_6190, 0x801D_6198, 0x801D_6378, 0),
+    cb(0x801D_6074, 0x801D_6190, 0x801D_6198, 0x801D_6378, 0),
+    cb(0x801D_6038, 0x801D_6064, 0x801D_606C, 0x801D_6070, 0),
+    cb(0x801D_5FA8, 0x801D_5FD4, 0x801D_5FDC, 0x801D_5FE0, 0),
+    cb(0x801D_55D8, 0x801D_5774, 0x801D_577C, 0x801D_5FA4, 0),
+    cb(0x801D_5FE4, 0x801D_6028, 0x801D_6030, 0x801D_6034, 0),
+    cb(0x801D_637C, 0x801D_64B4, 0x801D_64BC, 0x801D_6518, 0),
+    cb(0x801D_637C, 0x801D_64B4, 0x801D_64BC, 0x801D_6518, 0),
+    cb(0x801D_637C, 0x801D_64B4, 0x801D_64BC, 0x801D_6518, 0),
+    cb(
+        0x801D_5490,
+        0x801D_5574,
+        0x801D_557C,
+        0x801D_55D4,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x801D_651C, 0x801D_6660, 0x801D_6668, 0x801D_69AC, 0),
+];
+
+/// `grKg_803E16E0`: the stage's own collision joints.
+pub const KONGO_JOINTS: [GrJoint; 6] = [
+    GrJoint { x: 2, y: 10, z: 19 },
+    GrJoint { x: 3, y: 10, z: 22 },
+    GrJoint { x: 5, y: 10, z: 43 },
+    GrJoint { x: 6, y: 10, z: 44 },
+    GrJoint { x: 0, y: 1, z: 0 },
+    GrJoint { x: 1, y: 2, z: 2 },
+];
+
+/// `grKg_StageData`.
+pub const KONGO: StageData = StageData {
+    grkind: GR_KIND_KONGO,
+    callbacks: &KONGO_CALLBACKS,
+    file: Some("/GrKg.dat"),
+    on_init: 0x801D_523C,
+    on_demo_init: 0x801D_5238,
+    on_load: 0x801D_52F8,
+    on_start: 0x801D_52FC,
+    callback4: 0x801D_5338,
+    on_touch_line: 0x801D_8444,
+    on_check_shadow_render: 0x801D_844C,
+    flags2: 1,
+    joints: &KONGO_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -477,6 +654,11 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_KRAID => &KRAID,
         GR_KIND_FOURSIDE => &FOURSIDE,
         GR_KIND_GREATBAY => &GREATBAY,
+        GR_KIND_OLDKONGO => &OLDKONGO,
+        GR_KIND_SHRINE => &SHRINE,
+        GR_KIND_YORSTER => &YORSTER,
+        GR_KIND_GARDEN => &GARDEN,
+        GR_KIND_KONGO => &KONGO,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

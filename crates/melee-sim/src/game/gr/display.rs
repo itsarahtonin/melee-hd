@@ -42,6 +42,7 @@ impl Running<'_> {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::fourside::check_shadow_render(self.game, self.data, pos, Some(j))
             }
+            Some(f) if f.0 == 0x8020_2B64 => super::yorster::check_shadow_render(),
             Some(f) if f.0 == 0x801D_50C0 => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::stadium::check_shadow_render(self.game, self.data, pos, Some(j))
@@ -57,6 +58,22 @@ impl Running<'_> {
             Some(f) if f.0 == 0x8020_F40C => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::oldyoshi::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
+            Some(f) if f.0 == 0x8021_0788 => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::oldkongo::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
+            Some(f) if f.0 == 0x8020_1F4C => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::shrine::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
+            Some(f) if f.0 == 0x801D_844C => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::kongo::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
+            Some(f) if f.0 == 0x8020_35D0 => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::garden::check_shadow_render(self.game, self.data, pos, Some(j))
             }
             Some(f) if f.0 == 0x801E_36D8 => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;

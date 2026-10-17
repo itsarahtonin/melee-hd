@@ -695,10 +695,7 @@ pub fn proc_grab_coll(g: &mut Running, gobj: GObjId) {
     if g.game.fighter(gobj).is_sleeping || g.game.vs.start.x5_2 {
         return;
     }
-    // `ftColl_8007BA0C`.
-    if !g.game.fighter(gobj).x2219_b1 && g.game.gr.devices.bury_count != 0 {
-        unported_call("ftCo_800C0A28");
-    }
+    catch_devices(g, gobj);
     if !g.game.fighter(gobj).x221E_b6 {
         return;
     }
@@ -723,6 +720,54 @@ pub fn proc_grab_coll(g: &mut Running, gobj: GObjId) {
     g.grab_items(gobj);
     if g.game.fighter(gobj).target_item_gobj.is_some() {
         unported_call("it_8027B4A4 (a fighter catching an item)");
+    }
+}
+
+/// The stage devices that catch fighters, `ftColl_8007BA0C`: each registered one that may act
+/// on the fighter asks its stage whether it catches it.
+#[doc(alias = "ftColl_8007BA0C")]
+pub fn catch_devices(g: &mut Running, gobj: GObjId) {
+    if g.game.fighter(gobj).x2219_b1 {
+        return;
+    }
+    let mut i = 0;
+    while i < g.game.gr.devices.bury_count {
+        let d = &g.game.gr.devices;
+        let slot = i as usize;
+        i += 1;
+        let Some(ground) = d.bury[slot] else {
+            continue;
+        };
+        let (kind, cb) = (d.bury_type[slot], d.bury_cb[slot]);
+        if g.device_applies(gobj, kind) && catches(g, cb, ground, gobj) {
+            caught(g, gobj, kind);
+        }
+    }
+}
+
+/// A catching device's test (`ftDevice_BuryThings[i].cb`), by address.
+fn catches(
+    g: &mut Running,
+    cb: Option<super::super::handles::CodeRef>,
+    ground: GObjId,
+    gobj: GObjId,
+) -> bool {
+    match cb.map(|c| c.0) {
+        Some(super::super::gr::oldkongo::BARREL_CATCH) => {
+            super::super::gr::oldkongo::barrel_catch(g, ground, gobj)
+        }
+        Some(super::super::gr::kongo::BARREL_CATCH) => {
+            super::super::gr::kongo::barrel_catch(g, ground, gobj)
+        }
+        other => unported_call(&format!("a stage device's catch test {other:x?}")),
+    }
+}
+
+/// A device caught the fighter, `ftCo_800C0874`: a barrel (type 2) takes it in.
+#[doc(alias = "ftCo_800C0874")]
+fn caught(_g: &mut Running, _gobj: GObjId, kind: u32) {
+    if kind == 2 {
+        unported_call("ftCo_8009EB18 (a fighter entering a stage's barrel)");
     }
 }
 

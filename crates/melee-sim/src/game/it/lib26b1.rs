@@ -209,6 +209,12 @@ pub fn special_x4(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
     data.f32(a.at(4))
 }
 
+/// Sets the item's hitlag, `it_8026B718`.
+#[doc(alias = "it_8026B718")]
+pub fn set_hitlag(game: &mut Game, gobj: GObjId, frames: f32) {
+    item_mut(game, gobj).xCBC_hitlagFrames = frames;
+}
+
 /// Forgets a GObj the item points to, `it_8026B894`: whether it was the owner.
 #[doc(alias = "it_8026B894")]
 pub fn forget(game: &mut Game, gobj: GObjId, other: Option<GObjId>) -> bool {

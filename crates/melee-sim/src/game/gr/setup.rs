@@ -292,6 +292,46 @@ fn map_coll_joints(
     (from_archive, stage_data(game.stage_info.grkind).joints)
 }
 
+/// The collision joint bound to part `part` of map `map_id`, `Ground_801C32D4`: the last of
+/// the stage's own joints for that map and part, then the last of the map's archive's for the
+/// part, or -1.
+#[doc(alias = "Ground_801C32D4")]
+pub fn coll_joint_id(game: &Game, data: &Archives, map_id: i32, part: i32) -> i32 {
+    coll_joint_id_in(&game.gr, game.stage_info.grkind, data, map_id, part)
+}
+
+/// [`coll_joint_id`] from the stage code's globals and the stage's kind, for callers that hold
+/// those alone (a collision joint's callback).
+pub fn coll_joint_id_in(
+    gr: &super::Globals,
+    grkind: i32,
+    data: &Archives,
+    map_id: i32,
+    part: i32,
+) -> i32 {
+    let from_archive = match datfiles::archive_for_in(gr, data, map_id) {
+        Some(head) => {
+            let (list, n) = head.entry(data, map_id).coll_joints(data);
+            (list, n.max(0) as u32)
+        }
+        None => (None, 0),
+    };
+    let ((list, n), own) = (from_archive, stage_data(grkind).joints);
+    let mut result = -1;
+    for j in own {
+        if i32::from(j.y) == map_id && i32::from(j.z) == part {
+            result = i32::from(j.x);
+        }
+    }
+    for i in 0..n {
+        let j = archive_coll_joint(data, list, i);
+        if i32::from(j.z) == part {
+            result = i32::from(j.x);
+        }
+    }
+    result
+}
+
 /// The `i`th collision joint of an archive's list.
 fn archive_coll_joint(data: &Archives, list: Option<DataRef>, i: u32) -> GrJoint {
     GrJoint::read(data, list.expect("collision joints").at(6 * i))
@@ -300,6 +340,9 @@ fn archive_coll_joint(data: &Archives, list: Option<DataRef>, i: u32) -> GrJoint
 /// Binds a collision joint to the `z`th joint of a model, moves it there and settles it
 /// (`mpLib_800552B0`, `mpLib_80055E9C`, `mpLib_80057424`).
 fn bind_coll_joint(game: &mut Game, data: &Archives, j: GrJoint, root: Option<JObjId>) {
+    game.gr
+        .freed_coll_jobjs
+        .retain(|&(k, _)| k != i32::from(j.x));
     struct Tree<'a>(&'a crate::hsd::jobj::JObjs);
     impl crate::mp::JObjTree<JObjId> for Tree<'_> {
         fn child(&self, j: JObjId) -> Option<JObjId> {
@@ -1087,6 +1130,22 @@ pub fn destroy(r: &mut Running, gobj: Option<GObjId>) {
         let joint = head.entry(r.data, map_id).joint(r.data);
         forget_points(r.game, map_id, jobj, joint, head, r.data);
     }
+    if let Some(root) = jobj {
+        let objs = &r.game.objs;
+        let geo = r.game.geometry.as_mut().expect("no collision geometry");
+        for (id, joint) in geo.joints.iter_mut().enumerate() {
+            if let Some(j) = joint.jobj
+                && super::anime::root_of(objs, j) == root
+            {
+                r.game.gr.freed_coll_jobjs.retain(|&(k, _)| k != id as i32);
+                r.game
+                    .gr
+                    .freed_coll_jobjs
+                    .push((id as i32, objs.jobjs.pool.addr(j.0)));
+                joint.jobj = None;
+            }
+        }
+    }
     crate::hsd::gobj::free(r, gobj);
 }
 
@@ -1320,12 +1379,12 @@ pub fn music(game: &mut Game, data: &Archives, stkind: i32, mut flags: u32) -> (
                 8 => Some(false),
                 2 => Some(roll(game, true)),
                 3 => {
-                    let marth = game.gm.unlocks.character(CKIND_MARS);
-                    Some(roll(game, marth))
+                    let unlocked = game.gm.unlocks.ckind_unlocked(CKIND_MARS);
+                    Some(roll(game, unlocked))
                 }
                 4 => {
-                    let young_link = game.gm.unlocks.character(CKIND_CLINK);
-                    Some(roll(game, young_link))
+                    let unlocked = game.gm.unlocks.ckind_unlocked(CKIND_CLINK);
+                    Some(roll(game, unlocked))
                 }
                 5 => unported_call("Toy_803048C0(0x11A)"),
                 6 => {

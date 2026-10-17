@@ -30,8 +30,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// Spawns an enemy item of `kind`, `it_8027B5B0`: at `pos`, or where `jobj` is; facing most
 /// fighters; in the air with its setup (`use_init`) or on the ground; its spawner slot none.
 ///
-/// The enemies whose variables are typed ([`common`]) are the Shy Guys and Tingle; another kind
-/// stops.
+/// The enemies whose variables are typed ([`common`]) are the Shy Guys, Tingle and the Klap
+/// Trap; another kind stops.
 #[doc(alias = "it_8027B5B0")]
 pub fn spawn(
     r: &mut Running,
@@ -97,7 +97,8 @@ pub struct Common<'a> {
     pub x14: &'a mut [super::Var<i32>; 3],
 }
 
-/// The enemy's common variables in its kind's member: the Shy Guys' and Tingle's are typed.
+/// The enemy's common variables in its kind's member: the Shy Guys', Tingle's and the Klap
+/// Trap's are typed.
 pub fn common(game: &mut Game, gobj: GObjId) -> Common<'_> {
     use super::kinds;
     let kind = item(game, gobj).kind;
@@ -116,6 +117,7 @@ pub fn common(game: &mut Game, gobj: GObjId) -> Common<'_> {
     match kind {
         kinds::HEIHO => of!(vars.heiho()),
         kinds::TINCLE => of!(vars.tincle()),
+        kinds::KLAP => of!(vars.klap()),
         k => code::unported_call(&format!("it_8027B5B0 (an enemy of kind {k})")),
     }
 }
@@ -282,6 +284,8 @@ impl Running<'_> {
         );
         let bonus = match kind {
             super::kinds::HEIHO => 0xD6,
+            // No bonus (the switch's default).
+            super::kinds::KLAP => return,
             _ => code::unported_call("pl_8004049C (an enemy other than a Shy Guy)"),
         };
         let points = bonus_points(bonus);

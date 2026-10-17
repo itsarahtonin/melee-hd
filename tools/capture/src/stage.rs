@@ -38,6 +38,19 @@ pub const GRKRAID_ANIM: u32 = 0x804D_6A0C;
 pub const GRFOURSIDE_YAKUMONO: u32 = 0x804D_69D8;
 /// grgreatbay.c's (`grGb_804D69E0.x0`).
 pub const GRGREATBAY_YAKUMONO: u32 = 0x804D_69E0;
+/// groldkongo.c's (`ssbm_types::tu::melee__gr__groldkongo::yakumono_param`).
+pub const GROLDKONGO_YAKUMONO: u32 = 0x804D_6A90;
+/// grshrine.c's (`ssbm_types::tu::melee__gr__grshrine::yakumono_param`).
+pub const GRSHRINE_YAKUMONO: u32 = 0x804D_6A18;
+/// gryorster.c's (`grYt_804D6A20.x0`).
+pub const GRYORSTER_YAKUMONO: u32 = 0x804D_6A20;
+/// grgarden.c's (`ssbm_types::tu::melee__gr__grgarden::yakumono_param`).
+pub const GRGARDEN_YAKUMONO: u32 = 0x804D_6A28;
+/// grkongo.c's (`ssbm_types::tu::melee__gr__grkongo::yakumono_param`), its bridge's planks
+/// (`grKg_803E188C`) and posts (`grKg_804D6984`).
+pub const GRKONGO_YAKUMONO: u32 = 0x804D_6980;
+pub const GRKONGO_PLANKS: u32 = 0x803E_188C;
+pub const GRKONGO_POSTS: u32 = 0x804D_6984;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -287,6 +300,30 @@ impl Importer<'_> {
         self.game.gr.fourside_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRGREATBAY_YAKUMONO);
         self.game.gr.greatbay_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GROLDKONGO_YAKUMONO);
+        self.game.gr.oldkongo_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRSHRINE_YAKUMONO);
+        self.game.gr.shrine_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRYORSTER_YAKUMONO);
+        self.game.gr.yorster_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRGARDEN_YAKUMONO);
+        self.game.gr.garden_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRKONGO_YAKUMONO);
+        self.game.gr.kongo_yakumono = self.data_or_unhandled(yaku);
+        for i in 0..15u32 {
+            let at = GRKONGO_PLANKS + 0x18 * i;
+            let j = cap.u32(at + 4);
+            let jobj = self.import_handle_jobj(j);
+            let p = &mut self.game.gr.kongo.planks[i as usize];
+            p.jobj = jobj;
+            p.angle = f32::from_bits(cap.u32(at + 0xC));
+            p.speed = f32::from_bits(cap.u32(at + 0x10));
+            p.height = f32::from_bits(cap.u32(at + 0x14));
+        }
+        for i in 0..2u32 {
+            let j = cap.u32(GRKONGO_POSTS + 4 * i);
+            self.game.gr.kongo.posts[i as usize] = self.import_handle_jobj(j);
+        }
         self.game.gr.battle_demo = self.u8_at(sym("isDemoFight")) != 0;
         self.game.gr.game_mode = self.u8_at(sym("state_machine"));
         let points = sym("grLib_8049EF58");
@@ -316,6 +353,14 @@ impl Importer<'_> {
                 gobj_at(self, sym("ftDevice_BuryThings")),
                 gobj_at(self, sym("ftDevice_BuryThings") + 0xC),
             ],
+            bury_type: [
+                cap.u32(sym("ftDevice_BuryThings") + 4),
+                cap.u32(sym("ftDevice_BuryThings") + 0x10),
+            ],
+            bury_cb: [8, 0x14].map(|o| match cap.u32(sym("ftDevice_BuryThings") + o) {
+                0 => None,
+                a => Some(melee_sim::game::handles::CodeRef(a)),
+            }),
             device2: gobj_at(self, sym("ft_80459A8C")),
             device2_type: cap.u32(sym("ft_80459A8C") + 4),
             device2_cb: match cap.u32(sym("ft_80459A8C") + 8) {
@@ -388,6 +433,13 @@ impl Importer<'_> {
         use melee_sim::game::mirror::Cx;
         self.import_handle("GObjId", a)
             .map(melee_sim::hsd::gobj::GObjId)
+    }
+
+    /// A JObj by address, likewise.
+    fn import_handle_jobj(&mut self, a: u32) -> Option<melee_sim::hsd::jobj::JObjId> {
+        use melee_sim::game::mirror::Cx;
+        self.import_handle("JObjId", a)
+            .map(melee_sim::hsd::jobj::JObjId)
     }
 
     pub(crate) fn data_or_unhandled(&mut self, a: u32) -> Option<DataRef> {
@@ -850,6 +902,31 @@ impl Comparer<'_> {
                 GRGREATBAY_YAKUMONO,
                 game.gr.greatbay_yakumono,
             ),
+            (
+                "grOldKongo yakumono_param",
+                GROLDKONGO_YAKUMONO,
+                game.gr.oldkongo_yakumono,
+            ),
+            (
+                "grShrine yakumono_param",
+                GRSHRINE_YAKUMONO,
+                game.gr.shrine_yakumono,
+            ),
+            (
+                "grYorster yakumono_param",
+                GRYORSTER_YAKUMONO,
+                game.gr.yorster_yakumono,
+            ),
+            (
+                "grGarden yakumono_param",
+                GRGARDEN_YAKUMONO,
+                game.gr.garden_yakumono,
+            ),
+            (
+                "grKongo yakumono_param",
+                GRKONGO_YAKUMONO,
+                game.gr.kongo_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -913,6 +990,53 @@ impl Comparer<'_> {
                 gobj_pair(self, sym("ft_80459A8C")),
             ],
         );
+        let kongo = &game.gr.kongo;
+        let jobj_pair = |s: &Self, a: u32| {
+            let p = s.u32(a);
+            (p != 0).then(|| s.maps.jobjs.get(&p).copied())
+        };
+        for (i, pl) in kongo.planks.iter().enumerate() {
+            let at = GRKONGO_PLANKS + 0x18 * i as u32;
+            self.check(
+                &format!("grKg_803E188C[{i}]"),
+                "angle, speed and height",
+                [pl.angle, pl.speed, pl.height].map(f32::to_bits),
+                [self.u32(at + 0xC), self.u32(at + 0x10), self.u32(at + 0x14)],
+            );
+            self.check(
+                &format!("grKg_803E188C[{i}]"),
+                "joint",
+                pl.jobj.map(Some),
+                jobj_pair(self, at + 4),
+            );
+        }
+        self.check(
+            "grKg_804D6984",
+            "posts",
+            kongo.posts.map(|j| j.map(Some)),
+            [
+                jobj_pair(self, GRKONGO_POSTS),
+                jobj_pair(self, GRKONGO_POSTS + 4),
+            ],
+        );
+        let things = sym("ftDevice_BuryThings");
+        for i in 0..2u32 {
+            let at = things + 0xC * i;
+            let theirs = (self.u32(at + 4), self.u32(at + 8));
+            let ours = (
+                d.bury_type[i as usize],
+                d.bury_cb[i as usize].map_or(0, |c| c.0),
+            );
+            // A slot never filled holds what the reset left (`x0` alone is cleared).
+            if d.bury[i as usize].is_some() {
+                self.check(
+                    &format!("ftDevice_BuryThings[{i}]"),
+                    "type and callback",
+                    ours,
+                    theirs,
+                );
+            }
+        }
         let articles = sym("it_804A0F60");
         for k in 0..30 {
             let a = self.u32(articles + 4 * k as u32);
@@ -1197,13 +1321,18 @@ impl Comparer<'_> {
             // A joint freed since (Pokémon Stadium's transformation pieces) dangles, compared
             // by address.
             let jo = self.u32(a + 0x20);
-            use melee_sim::game::mirror::Cx;
-            self.compare_handle(
-                &format!("{path} joint"),
-                "JObjId",
-                joint.jobj.map(|j| j.0),
-                jo,
-            );
+            let freed = (self.game.gr.freed_coll_jobjs.iter()).find(|&&(k, _)| k == j as i32);
+            if let (None, Some(&(_, addr))) = (joint.jobj, freed) {
+                self.check(&path, "freed joint's address", addr, jo);
+            } else {
+                use melee_sim::game::mirror::Cx;
+                self.compare_handle(
+                    &format!("{path} joint"),
+                    "JObjId",
+                    joint.jobj.map(|j| j.0),
+                    jo,
+                );
+            }
             self.check(
                 &path,
                 "callbacks",

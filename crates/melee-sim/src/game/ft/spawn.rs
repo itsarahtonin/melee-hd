@@ -512,11 +512,13 @@ impl Running<'_> {
         fp.ecb_lock = 0;
         fp.coll_data.cur_pos = fp.cur_pos;
         fp.coll_data.last_pos = fp.coll_data.cur_pos;
+        let landing = crate::game::gr::yorster::Landing::of(game);
         let geometry = game.geometry.as_mut().expect("no collision geometry");
         let mut hooks = super::coll::ObjCollHooks {
             objs: &mut game.objs,
             data: self.data,
-            dynamic_attrs: &game.gr.dynamic_attrs,
+            landing,
+            kicks: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: super::coll::StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
             filter: None,
@@ -556,11 +558,13 @@ impl Running<'_> {
     #[doc(alias = "ft_80082A68")]
     fn land_on_spawn(&mut self, f: FighterId) -> bool {
         let game = &mut *self.game;
+        let landing = crate::game::gr::yorster::Landing::of(game);
         let geometry = game.geometry.as_mut().expect("no collision geometry");
         let mut hooks = super::coll::ObjCollHooks {
             objs: &mut game.objs,
             data: self.data,
-            dynamic_attrs: &game.gr.dynamic_attrs,
+            landing,
+            kicks: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: super::coll::StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
             filter: None,
@@ -576,12 +580,13 @@ impl Running<'_> {
         cd.last_pos = cd.cur_pos;
         cd.last_pos.y = mem(fp::fadds(reg(cd.last_pos.y), 10.0));
         cd.cur_pos.y = mem(fp::fsubs(reg(cd.cur_pos.y), 10.0));
-        if coll.air_frame(cd, 6, 0) {
+        let landed = coll.air_frame(cd, 6, 0);
+        if landed {
             fp.cur_pos = fp.coll_data.cur_pos;
-            true
-        } else {
-            false
         }
+        let kicks = std::mem::take(&mut hooks.kicks);
+        kicks.apply(game, self.data);
+        landed
     }
 
     /// Fits the fighter's camera box to it, `ftCamera_80076064`.

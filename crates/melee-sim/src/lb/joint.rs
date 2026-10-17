@@ -13,39 +13,6 @@ use crate::vec::Vec3;
 /// own transform. A missing joint gives `offset` back; the original faults on a missing
 /// joint without an offset.
 #[doc(alias = "lb_8000B1CC")]
-/// Whether any joint of a tree, depth first and not entering instances' children, has an
-/// animation that has rewound (`AOBJ_REWINDED`), `lb_8000B134`.
-#[doc(alias = "lb_8000B134")]
-pub fn any_rewound(objs: &Objects, j: Option<JObjId>) -> bool {
-    let jobjs = &objs.jobjs;
-    let mut cur = j;
-    while let Some(j) = cur {
-        let o = &jobjs[j];
-        if let Some(a) = o.aobj
-            && objs.aobjs[a].flags & crate::hsd::aobj::REWINDED != 0
-        {
-            return true;
-        }
-        if (o.child.is_none() && o.next.is_none()) || o.flags & jobj::INSTANCE != 0 {
-            let mut up = j;
-            cur = loop {
-                let Some(p) = jobjs[up].parent else {
-                    break None;
-                };
-                if let Some(n) = jobjs[p].next {
-                    break Some(n);
-                }
-                up = p;
-            };
-        } else if o.child.is_some() {
-            cur = o.child;
-        } else {
-            cur = o.next;
-        }
-    }
-    false
-}
-
 pub fn world_position(
     objs: &mut Objects,
     data: &Archives,

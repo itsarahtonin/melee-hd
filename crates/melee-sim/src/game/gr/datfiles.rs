@@ -128,10 +128,15 @@ pub fn main_head(game: &Game) -> MapHead {
 /// The archive whose `map_head` has a model for `map_id`, `grDatFiles_801C6330`.
 #[doc(alias = "grDatFiles_801C6330")]
 pub fn archive_for(game: &Game, data: &Archives, map_id: i32) -> Option<MapHead> {
+    archive_for_in(&game.gr, data, map_id)
+}
+
+/// [`archive_for`] from the stage code's globals.
+pub fn archive_for_in(gr: &super::Globals, data: &Archives, map_id: i32) -> Option<MapHead> {
     if map_id < 0 {
         return None;
     }
-    game.gr.archives.iter().flatten().find_map(|a| {
+    gr.archives.iter().flatten().find_map(|a| {
         let head = MapHead(a.map_head?);
         (head.count(data) > map_id && head.entry(data, map_id).joint(data).is_some())
             .then_some(head)

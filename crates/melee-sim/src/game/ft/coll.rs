@@ -57,7 +57,10 @@ pub struct FilterInput<'a> {
 pub struct ObjCollHooks<'a> {
     pub objs: &'a mut Objects,
     pub data: &'a Archives,
-    pub dynamic_attrs: &'a DynamicAttrs,
+    /// What a landing on Yoshi's Island's blocks reads and gives.
+    pub landing: crate::game::gr::yorster::Landing,
+    /// The planks Kongo Jungle's bridge's landings kicked.
+    pub kicks: crate::game::gr::kongo::Kicks,
     /// The stage objects, which the stage's collision joints' callbacks write.
     pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
     /// The stage objects by map id (`Ground_GetMapGObj`), for callbacks that write another
@@ -73,7 +76,8 @@ pub struct ObjCollHooks<'a> {
 pub struct StageMaps<'a> {
     world: &'a crate::hsd::gobj::World<super::super::state::GameKinds>,
     info: &'a super::super::structs::StageInfo,
-    /// The stage code's globals (the stages' parameters).
+    /// The stage code's globals (the dynamic attribute areas, the stage archives, the stages'
+    /// parameters), which the collision joints' callbacks read.
     pub gr: &'a super::super::gr::Globals,
 }
 
@@ -84,6 +88,11 @@ impl<'a> StageMaps<'a> {
         gr: &'a super::super::gr::Globals,
     ) -> Self {
         StageMaps { world, info, gr }
+    }
+
+    /// The stage's kind (`stage_info.grkind`).
+    pub fn grkind(&self) -> i32 {
+        self.info.grkind
     }
 
     /// The stage object of map `map_id`, `Ground_GetMapGObj(map_id)->user_data`.
@@ -101,21 +110,46 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
     /// `grDynamicAttr_801CA284`: the first area on the in-use list on a floor connected to it
     /// whose circle holds the point, else 0.
     fn dynamic_terrain(&mut self, g: &Geometry, pos: Vec3, line_id: i32) -> i32 {
-        dynamic_terrain(self.dynamic_attrs, g, pos, line_id)
+        dynamic_terrain(&self.stage_maps.gr.dynamic_attrs, g, pos, line_id)
     }
 
     fn joint_callback(
         &mut self,
-        _g: &mut Geometry,
+        g: &mut Geometry,
         callback: CodeRef,
         user_data: Option<super::super::gr::CollUser>,
         joint_id: i32,
         coll: &mut CollData,
         x50: i32,
         kind: i32,
-        _dy: f32,
+        dy: f32,
     ) {
         match callback.0 {
+            super::super::gr::kongo::BRIDGE_LANDED => self.kicks.landed(g, coll, kind),
+            super::super::gr::kongo::PLATFORM_LANDED => {
+                if let Some(super::super::gr::CollUser::Ground(gr)) = user_data {
+                    super::super::gr::kongo::platform_landed(&mut self.grounds[gr.0], kind);
+                }
+            }
+            super::super::gr::yorster::BLOCK_LANDED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    let (gr, grkind, data) =
+                        (self.stage_maps.gr, self.stage_maps.grkind(), self.data);
+                    let part_joint = |m: i32, p: i32| {
+                        super::super::gr::setup::coll_joint_id_in(gr, grkind, data, m, p)
+                    };
+                    super::super::gr::yorster::block_landed(
+                        &mut self.grounds[g.0],
+                        gr.yorster_yakumono,
+                        data,
+                        &part_joint,
+                        joint_id,
+                        coll,
+                        &mut self.landing,
+                        dy,
+                    );
+                }
+            }
             super::super::gr::oldyoshi::CLOUD_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     super::super::gr::oldyoshi::touch(
@@ -262,6 +296,7 @@ impl Running<'_> {
             0.0
         };
         let game = &mut *self.game;
+        let landing = crate::game::gr::yorster::Landing::of(game);
         let geometry = game.geometry.as_mut().expect("no collision geometry");
         let platforms = &mut game.ft.platforms;
         platforms.clear();
@@ -279,7 +314,8 @@ impl Running<'_> {
         let mut hooks = ObjCollHooks {
             objs: &mut game.objs,
             data: self.data,
-            dynamic_attrs: &game.gr.dynamic_attrs,
+            landing,
+            kicks: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
             filter,
@@ -296,7 +332,11 @@ impl Running<'_> {
         prepare(cd);
         let hit = pass(&mut coll, cd);
         fp.cur_pos = fp.coll_data.cur_pos;
+        let landing = hooks.landing;
+        let kicks = std::mem::take(&mut hooks.kicks);
         game.ft.platforms.clear();
+        landing.apply(game);
+        kicks.apply(game, self.data);
         hit
     }
 

@@ -154,3 +154,67 @@ pub fn clear_tree_flags(game: &mut Game, j: Option<JObjId>, flags: u32) {
         c = game.objs.jobjs[child].next;
     }
 }
+
+// The stage items' glue: a stage object's hurtbox items (`it::kinds::yaku`).
+
+/// A hurtbox item on a stage object's joint, `grMaterial_801C8CFC` (`it_802E6AEC` with no
+/// point and no fall): its first number, its state, its object, the joint, and the stage's
+/// callbacks for a hit it deals, one it takes and a touch.
+#[doc(alias = "grMaterial_801C8CFC")]
+#[allow(clippy::too_many_arguments)]
+pub fn stage_item(
+    r: &mut super::super::state::Running,
+    x0: i32,
+    state: i32,
+    g: super::super::handles::GroundId,
+    joint: Option<JObjId>,
+    dealt: Option<super::super::handles::CodeRef>,
+    received: Option<super::super::handles::CodeRef>,
+    touched: Option<super::super::handles::CodeRef>,
+) -> Option<GObjId> {
+    super::super::it::kinds::yaku::spawn(
+        r,
+        Some(g),
+        x0,
+        state,
+        joint,
+        None,
+        false,
+        dealt,
+        received,
+        touched,
+    )
+}
+
+/// Sets a stage item's hurtbox, `grMaterial_801C8DE0`: its two ends' offsets and its radius.
+#[doc(alias = "grMaterial_801C8DE0")]
+pub fn set_item_hurtbox(
+    game: &mut Game,
+    item: GObjId,
+    a: crate::vec::Vec3,
+    b: crate::vec::Vec3,
+    scale: f32,
+) {
+    let h = &mut super::super::it::item_mut(game, item).xACC_itemHurtbox[0];
+    h.a_offset = a;
+    h.b_offset = b;
+    h.scale = scale;
+}
+
+/// Turns a stage item's hurtbox on, `grMaterial_801C8E08` (`it_802756E0`, its blink ended).
+#[doc(alias = "grMaterial_801C8E08")]
+pub fn item_hurtbox_on(game: &mut Game, item: GObjId) {
+    super::super::it::hitbox::end_blink(game, item);
+}
+
+/// Turns a stage item's hurtbox off, `grMaterial_801C8E28` (`it_802756D0`, blinking).
+#[doc(alias = "grMaterial_801C8E28")]
+pub fn item_hurtbox_off(game: &mut Game, item: GObjId) {
+    super::super::it::hitbox::start_blink(game, item);
+}
+
+/// Puts a stage item on the ground or in the air, `grMaterial_801C8E68`.
+#[doc(alias = "grMaterial_801C8E68")]
+pub fn item_ground_or_air(game: &mut Game, item: GObjId, ground_or_air: i32) {
+    super::super::it::item_mut(game, item).ground_or_air = ground_or_air;
+}

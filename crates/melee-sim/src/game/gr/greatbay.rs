@@ -710,7 +710,7 @@ pub fn proc_moon(r: &mut Running, gobj: GObjId) {
                 v.x12 |= bit;
             }
         }
-        if crate::lb::joint::any_rewound(&r.game.objs, j) {
+        if crate::lb::anim::any_rewound(&r.game.objs, j) {
             anime::set_rate(r.game, gobj, 0, 7, 0.0, true);
             for k in 0..4 {
                 if let Some(giant) = r.game.grounds[g.0].u.greatbay2().gobjs[k] {

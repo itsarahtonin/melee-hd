@@ -848,6 +848,56 @@ pub fn set_guide_points(game: &mut Game, data: &Archives, joints: [Option<JObjId
     }
 }
 
+/// A point on a spline and the Euler angles that turn an object along it, `Ground_801C4B50`:
+/// the spline's direction (normalized) is the object's x axis, the side axis its cross with up
+/// (or with z where the direction is nearly vertical) and the up axis theirs, read back as
+/// rotations about x, y and z. The point is `None` where `splGetSplinePoint` leaves it alone.
+#[doc(alias = "Ground_801C4B50")]
+pub fn spline_pose(data: &Archives, spline: DataRef, u: f32) -> (Option<Vec3>, Vec3) {
+    use crate::math::{asin, cos, sin};
+    let at = crate::hsd::spline::point(data, spline, u);
+    let mut dir = crate::hsd::spline::tangent(data, spline, u)
+        .expect("Ground_801C4B50: a spline parameter outside [0, 1] leaves its tangent unset");
+    dir.normalize();
+    let ay = if reg(dir.y) < 0.0 {
+        fp::fneg(reg(dir.y))
+    } else {
+        reg(dir.y)
+    };
+    let up = if fp::frsp(ay) > fp::frsp(0.9) {
+        Vec3::new(0.0, 0.0, 1.0)
+    } else {
+        Vec3::new(0.0, 1.0, 0.0)
+    };
+    let side = dir.cross_normalized(up);
+    let up = side.cross_normalized(dir);
+    let pi = std::f64::consts::PI;
+    let ry = asin(side.z);
+    let az = if reg(side.z) < 0.0 {
+        fp::fneg(reg(side.z))
+    } else {
+        reg(side.z)
+    };
+    let (rx, rz) = if az >= f64::from(0.99999_f32) {
+        let mut rx = asin(mem(fp::fneg(reg(dir.y))));
+        if fp::fmuls(fp::fmuls(reg(dir.x), reg(cos(rx))), reg(sin(ry))) < 0.0 {
+            rx = mem(fp::frsp(fp::fsub(pi, reg(rx))));
+        }
+        (rx, 0.0)
+    } else {
+        let mut rx = asin(mem(fp::fdivs(reg(up.z), reg(cos(ry)))));
+        if fp::fmuls(fp::fmuls(reg(dir.z), reg(cos(rx))), reg(cos(ry))) < 0.0 {
+            rx = mem(fp::frsp(fp::fsub(pi, reg(rx))));
+        }
+        let mut rz = asin(mem(fp::fdivs(fp::fneg(reg(side.y)), reg(cos(ry)))));
+        if fp::fmuls(fp::fmuls(fp::fneg(reg(side.x)), reg(cos(ry))), reg(cos(rz))) < 0.0 {
+            rz = mem(fp::frsp(fp::fsub(pi, reg(rz))));
+        }
+        (rx, rz)
+    };
+    (at, Vec3::new(rx, ry, rz))
+}
+
 /// Sets `x6D8`, `Ground_801C5740`.
 #[doc(alias = "Ground_801C5740")]
 pub fn set_x6d8(game: &mut Game, v: i32) {

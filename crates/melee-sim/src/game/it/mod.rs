@@ -102,6 +102,10 @@ pub struct Globals {
     /// The enemies' and Pokémon's common data (`it_804D6D40`), in `ItCo.dat`: their knockback
     /// speed (`x4`) among others.
     pub zako: Option<DataRef>,
+    /// Whether a stage's hurtbox item has pointed `It_PKind_Random`'s article at the
+    /// executable's attributes (`it_803F8C08`, `it_802E6AEC`): a write into `ItCo.dat`'s data,
+    /// which the items made after it read.
+    pub yaku_attr: bool,
     /// The color animations (`it_804D6D04`), in `ItCo.dat`.
     pub colanims: Option<DataRef>,
     /// The fighters' ECBs and positions, as the first item takes them each tick for the items

@@ -11,26 +11,33 @@ pub mod datfiles;
 pub mod display;
 pub mod dynamic_attr;
 pub mod fourside;
+pub mod garden;
 pub mod greatbay;
 pub mod grlib;
 pub mod ground;
 pub mod izumi;
+pub mod kongo;
 pub mod kraid;
 pub mod last;
 pub mod material;
+pub mod oldkongo;
 pub mod oldpupupu;
 pub mod oldyoshi;
 pub mod setup;
+pub mod shrine;
 pub mod stadium;
 pub mod stage;
 pub mod story;
 pub mod vars;
+pub mod yorster;
 pub mod zako;
 
 pub use vars::{
-    BattleBgVars, GroundVars, Kraid2Vars, KraidVars, LastVars, MapVars, OldYoshiCloud,
-    OldYoshiCloudVars, OldYoshiGuestVars, StadiumBits, StadiumDisplayVars, StadiumPieceVars,
-    StadiumVars, VarsKind,
+    BattleBgVars, Garden2Vars, GardenVars, GroundVars, KongoBarrelVars, KongoLogVars,
+    KongoPathVars, KongoPlatformVars, KongoVars, Kraid2Vars, KraidVars, LastVars, MapVars,
+    OldKongoBirdsVars, OldKongoVars, OldYoshiCloud, OldYoshiCloudVars, OldYoshiGuestVars,
+    StadiumBits, StadiumDisplayVars, StadiumPieceVars, StadiumVars, VarsKind, YorsterBlock,
+    YorsterVars,
 };
 
 use melee_data::archive::{ArchiveId, DataRef};
@@ -53,10 +60,20 @@ pub const GR_KIND_GREATBAY: i32 = 6;
 pub const GR_KIND_STORY: i32 = 10;
 /// `Gr_Kind_Izumi`, Fountain of Dreams.
 pub const GR_KIND_IZUMI: i32 = 12;
+/// `Gr_Kind_Kongo`, Kongo Jungle.
+pub const GR_KIND_KONGO: i32 = 4;
+/// `Gr_Kind_Garden`, Jungle Japes.
+pub const GR_KIND_GARDEN: i32 = 5;
+/// `Gr_Kind_Yorster`, Yoshi's Island.
+pub const GR_KIND_YORSTER: i32 = 11;
+/// `Gr_Kind_Shrine`, Hyrule Temple.
+pub const GR_KIND_SHRINE: i32 = 7;
 /// `Gr_Kind_OldPupupu`, Dream Land (N64).
 pub const GR_KIND_OLDPUPUPU: i32 = 28;
 /// `Gr_Kind_OldYoshi`, Yoshi's Island (N64).
 pub const GR_KIND_OLDYOSHI: i32 = 29;
+/// `Gr_Kind_OldKongo`, Kongo Jungle (N64).
+pub const GR_KIND_OLDKONGO: i32 = 30;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Last`, Final Destination.
@@ -142,6 +159,10 @@ pub struct Globals {
     pub coll_off: Option<[u8; 64]>,
     /// The stamp `Ground_UpdateMapColl` puts on the joints it moves (`Ground_804D6954`).
     pub coll_stamp: i16,
+    /// The collision joints left holding a joint of a stage object destroyed since
+    /// (`Ground_801C4A08` doesn't clear them), with that joint's address: nothing reads them
+    /// until the joint is bound again, so they keep the address alone.
+    pub freed_coll_jobjs: Vec<(i32, u32)>,
     /// The start hooks' nodes.
     pub start_hooks: Pool<StartHook>,
     pub dynamic_attrs: DynamicAttrs,
@@ -175,6 +196,18 @@ pub struct Globals {
     pub fourside_yakumono: Option<DataRef>,
     /// Great Bay's `yakumono_param` (`grGb_804D69E0.x0`, `grGb_StageAttr`).
     pub greatbay_yakumono: Option<DataRef>,
+    /// Kongo Jungle N64's `yakumono_param` (`grOldKongo_YakumonoParam`).
+    pub oldkongo_yakumono: Option<DataRef>,
+    /// Hyrule Temple's `yakumono_param`, which nothing reads.
+    pub shrine_yakumono: Option<DataRef>,
+    /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
+    pub yorster_yakumono: Option<DataRef>,
+    /// Jungle Japes' `yakumono_param` (`grGarden_YakumonoParam`).
+    pub garden_yakumono: Option<DataRef>,
+    /// Kongo Jungle's `yakumono_param` (`grKongo_YakumonoParam`).
+    pub kongo_yakumono: Option<DataRef>,
+    /// Kongo Jungle's bridge (`grkongo.c`'s statics).
+    pub kongo: kongo::Globals,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -217,8 +250,11 @@ pub struct FtDevices {
     pub device: Option<GObjId>,
     pub device_type: u32,
     pub device_cb: Option<CodeRef>,
-    /// `ftDevice_BuryThings[i].x0`.
+    /// `ftDevice_BuryThings[i]`: the devices that catch fighters (`x0`), their types (`x4`)
+    /// and the callbacks that test a fighter (`cb`).
     pub bury: [Option<GObjId>; 2],
+    pub bury_type: [u32; 2],
+    pub bury_cb: [Option<CodeRef>; 2],
     /// `ft_80459A8C[0]`: the collision device (`ground`), its type and the callback the
     /// fighters' collision asks (`active_cb`).
     pub device2: Option<GObjId>,
@@ -271,6 +307,54 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_GREATBAY, 2) => VarsKind::GreatBay3,
         (GR_KIND_GREATBAY, 9) => VarsKind::GreatBay2,
         (GR_KIND_GREATBAY, 10) => VarsKind::GreatBay4,
+        (GR_KIND_OLDKONGO, 1) => VarsKind::OldKongo,
+        (GR_KIND_OLDKONGO, 2) => VarsKind::OldKongoBirds,
+        (GR_KIND_YORSTER, 1) => VarsKind::Yorster,
+        (GR_KIND_GARDEN, 1) => VarsKind::Garden,
+        (GR_KIND_GARDEN, 3) => VarsKind::Garden2,
+        (GR_KIND_KONGO, 10) => VarsKind::Kongo,
+        (GR_KIND_KONGO, 5) => VarsKind::KongoBarrel,
+        (GR_KIND_KONGO, 1 | 2) => VarsKind::KongoPlatform,
+        (GR_KIND_KONGO, 7..=9) => VarsKind::KongoLog,
+        (GR_KIND_KONGO, 11) => VarsKind::KongoPath,
         _ => VarsKind::Bytes,
     }
+}
+
+/// A stage's callback for a hit its hurtbox item dealt (`itYaku_ItemVars::x14`), by address.
+pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: GroundId) {
+    match cb.0 {
+        garden::KLAPTRAP_BIT => garden::klaptrap_bit(r, item, g),
+        other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
+    }
+}
+
+/// A stage's callback for a hit its hurtbox item took (`itYaku_ItemVars::x18`), by address:
+/// the item, its object, the hit's knockback direction, the fighter and the damage.
+pub fn yaku_received(
+    r: &mut super::state::Running,
+    cb: CodeRef,
+    item: GObjId,
+    g: GroundId,
+    dir: crate::vec::Vec3,
+    fighter: Option<GObjId>,
+    damage: f32,
+) {
+    match cb.0 {
+        yorster::BLOCK_HIT => yorster::block_hit(r, item, g, dir, fighter, damage),
+        other => {
+            super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))
+        }
+    }
+}
+
+/// A stage's callback for a touch on its hurtbox item (`itYaku_ItemVars::x1C`), by address.
+pub fn yaku_touched(
+    _r: &mut super::state::Running,
+    cb: CodeRef,
+    _item: GObjId,
+    _g: GroundId,
+    _toucher: Option<GObjId>,
+) {
+    super::code::unported_call(&format!("a stage item's touch callback {:#010x}", cb.0))
 }

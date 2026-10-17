@@ -30,10 +30,12 @@ pub fn with_stage_coll<R>(
     data: &Archives,
     f: impl FnOnce(&mut Coll<'_, StageColl, ObjCollHooks<'_>>) -> R,
 ) -> R {
+    let landing = crate::game::gr::yorster::Landing::of(game);
     let mut hooks = ObjCollHooks {
         objs: &mut game.objs,
         data,
-        dynamic_attrs: &game.gr.dynamic_attrs,
+        landing,
+        kicks: Default::default(),
         grounds: &mut game.grounds,
         stage_maps: super::super::ft::coll::StageMaps::of_parts(
             &game.world,
@@ -47,7 +49,12 @@ pub fn with_stage_coll<R>(
         s: &mut game.coll,
         hooks: &mut hooks,
     };
-    f(&mut coll)
+    let out = f(&mut coll);
+    let landing = hooks.landing;
+    let kicks = std::mem::take(&mut hooks.kicks);
+    landing.apply(game);
+    kicks.apply(game, data);
+    out
 }
 
 /// Runs `f` with mpcoll on collision data `cd`.

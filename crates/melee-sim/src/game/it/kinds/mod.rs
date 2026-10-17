@@ -49,6 +49,7 @@ pub mod kirbycutterbeam;
 pub mod kirbygamewatchchefpan;
 pub mod kirbyhammer;
 pub mod kireihana;
+pub mod klap;
 pub mod koopaflame;
 pub mod kusudama;
 pub mod lgun;
@@ -117,6 +118,7 @@ pub mod togepy;
 pub mod tomato;
 pub mod unknown;
 pub mod wstar;
+pub mod yaku;
 pub mod yoshiegglay;
 pub mod yoshieggthrow;
 pub mod yoshistar;
@@ -215,6 +217,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || pikachutjoltair::run_event(r, gobj, addr)
         || heiho::run_event(r, gobj, addr)
         || tincle::run_event(r, gobj, addr)
+        || klap::run_event(r, gobj, addr)
         || koopaflame::run_event(r, gobj, addr)
         || gamewatchgreenhouse::run_event(r, gobj, addr)
         || gamewatchmanhole::run_event(r, gobj, addr)
@@ -254,6 +257,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || lgunray::run_event(r, gobj, addr)
         || lgunbeam::run_event(r, gobj, addr)
         || coin::run_event(r, gobj, addr)
+        || yaku::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
         || kireihana::run_event(r, gobj, addr)
         || maril::run_event(r, gobj, addr)
@@ -341,6 +345,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| pikachutjoltair::run_pred(r, gobj, addr))
         .or_else(|| heiho::run_pred(r, gobj, addr))
         .or_else(|| tincle::run_pred(r, gobj, addr))
+        .or_else(|| klap::run_pred(r, gobj, addr))
         .or_else(|| koopaflame::run_pred(r, gobj, addr))
         .or_else(|| gamewatchgreenhouse::run_pred(r, gobj, addr))
         .or_else(|| gamewatchmanhole::run_pred(r, gobj, addr))
@@ -395,6 +400,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| hinoarashi::run_pred(r, gobj, addr))
         .or_else(|| fire::run_pred(r, gobj, addr))
         .or_else(|| hassam::run_pred(r, gobj, addr))
+        .or_else(|| yaku::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -603,6 +609,8 @@ pub const HINOARASHI_FLAME: i32 = 0xCE;
 pub const POKEMON_UNK: i32 = 207;
 /// `It_Kind_Old_Kuri`: the first stage item, and the last group of tables.
 pub const OLD_KURI: i32 = 208;
+/// `It_Kind_Klap`, Kongo Jungle's Klap Trap.
+pub const KLAP: i32 = 218;
 /// `It_Kind_Heiho`, Yoshi's Story's Shy Guys.
 pub const HEIHO: i32 = 210;
 /// `It_Kind_Tincle`, Great Bay's Tingle.

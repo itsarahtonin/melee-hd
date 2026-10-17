@@ -262,7 +262,12 @@ pub fn set_kind_data(game: &mut Game, data: &Archives, gobj: GObjId) {
 
 /// The item's `ItemAttr`.
 pub fn attr_of(ip: &Item) -> Attr {
-    Attr(ip.xCC_item_attr.expect("an item without attributes"))
+    // Only a stage's hurtbox item has attributes outside the archives (`it_803F8C08`).
+    assert!(
+        ip.xCC_item_attr.is_some() || ip.kind == super::kinds::PKIND_RANDOM,
+        "an item without attributes"
+    );
+    Attr(ip.xCC_item_attr)
 }
 
 /// The item's article.
@@ -279,6 +284,7 @@ pub fn common_data(game: &Game) -> Common {
 #[doc(alias = "Item_80267AA8")]
 pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     let data = r.data;
+    let yaku_attr = r.game.it.yaku_attr;
     let made = r.game.it.made;
     r.game.it.made = made.wrapping_add(1);
     {
@@ -295,7 +301,13 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         ip.msid = -1;
         let a = article(ip);
         ip.xC8_joint = a.model(data).joint(data);
-        ip.xCC_item_attr = Some(a.attr(data));
+        // The stage items' spawn (`it_802E6AEC`) points the kind's article at the
+        // executable's attributes, which no archive holds.
+        ip.xCC_item_attr = if ip.kind == super::kinds::PKIND_RANDOM && yaku_attr {
+            None
+        } else {
+            Some(a.attr(data))
+        };
         ip.owner = None;
         ip.xDC8_word.flags.x0 = false;
         ip.ecb_lock = -1;
@@ -900,10 +912,10 @@ pub fn seek_anim(r: &mut Running, gobj: GObjId, frame: f32) {
     item_mut(r.game, gobj).x5CC_currentAnimFrame = f;
 }
 
-/// Starts a state's script, `Item_80268E40`.
+/// Starts a state's script (found by [`super::anim::state_script`]), `Item_80268E40`.
 #[doc(alias = "Item_80268E40")]
-pub fn start_script(ip: &mut Item, data: &Archives, desc: DataRef) {
-    ip.x524_cmd.script.cursor = data.ptr(desc.at(0xC));
+pub fn start_script(ip: &mut Item, script: Option<DataRef>) {
+    ip.x524_cmd.script.cursor = script;
     ip.x524_cmd.script.loop_count = 0;
     ip.x524_cmd.script.set_timer_f32(0.0);
 }
@@ -978,6 +990,8 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
         let descs = article(ip).states(data).expect("an article without states");
         let desc = descs.at(0x10 * state.anim_id as u32);
         ip.xD0_itemStateDesc = Some(desc);
+        let kind = super::item(r.game, gobj).kind;
+        let script = super::anim::state_script(r.game, data, kind, state.anim_id, desc);
         if flags & ANIM_UPDATE != 0 {
             set_state_anims(r, gobj, desc);
             if flags & UNK_UPDATE != 0 {
@@ -994,9 +1008,9 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
             } else {
                 apply_scale(r.game, gobj);
             }
-            start_script(item_mut(r.game, gobj), data, desc);
+            start_script(item_mut(r.game, gobj), script);
         } else if flags & CMD_UPDATE != 0 {
-            start_script(item_mut(r.game, gobj), data, desc);
+            start_script(item_mut(r.game, gobj), script);
         }
         jobj::anim_all(
             &mut r.game.objs,
