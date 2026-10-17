@@ -67,10 +67,18 @@ impl Running<'_> {
             24 => self.kb_gamewatch_hat_on(gobj),
             1 => self.kb_fox_hat_on(gobj),
             3 => self.kb_donkey_hat_on(gobj),
-            5 => self.kb_koopa_hat_on(gobj),
+            5 | 31 => self.kb_koopa_hat_on(gobj),
             6 => self.kb_link_hat_on(gobj),
             14 => self.kb_yoshi_hat_on(gobj),
             20 => self.kb_clink_hat_on(gobj),
+            10 => self.kb_popo_hat_on(gobj),
+            15 => self.kb_purin_hat_on(gobj),
+            16 => self.kb_mewtwo_hat_on(gobj),
+            18 => self.kb_mars_hat_on(gobj),
+            21 => self.kb_drmario_hat_on(gobj),
+            23 => self.kb_pichu_hat_on(gobj),
+            25 => self.kb_ganon_hat_on(gobj),
+            26 => self.kb_emblem_hat_on(gobj),
             _ => unported_call(&format!("the hat of copy kind {kind}")),
         }
     }
@@ -120,6 +128,8 @@ impl Running<'_> {
         if items.is_empty() {
             return;
         }
+        // Giga Bowser has no copy file, so his copy's data is null and the original reads
+        // through it here (docs/melee-bugs.md).
         let copy = self.game.ft.kirby.copies[kind as usize].expect("a copy without its data");
         for &(i, item) in items {
             let article = self.data.ptr(copy.at(0xC + 4 * i));
@@ -179,7 +189,8 @@ impl Running<'_> {
             3 => self.kb_dk_cleanup(gobj),
             6 | 20 => self.kb_lk_cleanup(gobj),
             14 => self.kb_ys_cleanup(gobj),
-            10 | 16 => unported_call("ftKb_SpecialN_800F19AC's copy cleanup"),
+            10 => self.kb_ic_remove_ice(gobj),
+            16 => self.kb_mt_cleanup(gobj),
             _ => {}
         }
     }
@@ -197,7 +208,8 @@ impl Running<'_> {
             3 => self.kb_dk_cleanup(gobj),
             6 | 20 => self.kb_lk_cleanup(gobj),
             14 => self.kb_ys_cleanup(gobj),
-            10 | 16 => unported_call("ftKb_SpecialN_800F1A8C's copy cleanup"),
+            10 => self.kb_ic_remove_ice(gobj),
+            16 => self.kb_mt_drop_ball(gobj),
             _ => {}
         }
     }
@@ -210,10 +222,12 @@ impl Running<'_> {
             4 | 11 | 27..=30 | 32 => {}
             13 => self.kb_samus_hat_off(gobj),
             22 => self.kb_falco_hat_off(gobj),
-            0 | 1 | 2 | 17 | 8 | 9 | 14 => self.kb_head_hat_off(gobj),
-            12 | 7 | 19 | 5 | 6 | 20 => self.kb_pikachu_hat_off(gobj),
+            0 | 1 | 2 | 17 | 8 | 9 | 14 | 10 | 21 | 25 => self.kb_head_hat_off(gobj),
+            12 | 7 | 19 | 5 | 6 | 20 | 18 | 23 | 26 | 31 => self.kb_pikachu_hat_off(gobj),
             24 => self.kb_gamewatch_hat_off(gobj),
             3 => self.kb_donkey_hat_off(gobj),
+            15 => self.kb_purin_hat_off(gobj),
+            16 => self.kb_mewtwo_hat_off(gobj),
             _ => unported_call(&format!("the hat removal of copy kind {kind}")),
         }
     }

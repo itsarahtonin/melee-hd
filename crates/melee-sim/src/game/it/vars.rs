@@ -158,7 +158,7 @@ members! {
     LinkBow, link_bow, itLinkBow_ItemVars, [LINK_BOW, CLINK_BOW, KIRBY_LINK_BOW, KIRBY_CLINK_BOW];
     CLinkMilk, clink_milk, itCLinkMilk_ItemVars, [CLINK_MILK];
     YoshiEggLay, yoshi_egg_lay, itYoshiEggLay_ItemVars, [YOSHI_EGG_LAY, KIRBY_YOSHI_EGG_LAY];
-    MewtwoShadowball, mewtwo_shadowball, itMewtwoShadowball_ItemVars, [MEWTWO_SHADOWBALL];
+    MewtwoShadowball, mewtwo_shadowball, itMewtwoShadowball_ItemVars, [MEWTWO_SHADOWBALL, KIRBY_MEWTWO_SHADOWBALL];
     MDisable, mdisable, itMDisable_ItemVars, [MEWTWO_DISABLE];
     KoopaFlame, koopa_flame, itKoopaFlame_ItemVars, [KOOPA_FLAME, KIRBY_KOOPA_FLAME];
     KirbyCutterBeam, kirby_cutter_beam, itKirbyCutterBeam_ItemVars, [KIRBY_CBEAM];
@@ -166,7 +166,7 @@ members! {
     Heiho, heiho, HeihoVars, [HEIHO];
     GameWatch, game_watch, GameWatchVars, [GAME_WATCH_GREENHOUSE, GAME_WATCH_MANHOLE, GAME_WATCH_FIRE, GAME_WATCH_PARACHUTE, GAME_WATCH_TURTLE, GAME_WATCH_BREATH, GAME_WATCH_JUDGE, GAME_WATCH_PANIC, GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF_PAN];
     GameWatchRescue, game_watch_rescue, GameWatchRescueVars, [GAME_WATCH_RESCUE];
-    ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE];
+    ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE, KIRBY_ICE_CLIMBER_ICE];
     ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];
     ClimbersString, climbers_string, itClimbersString_ItemVars, [ICE_CLIMBER_STRING];
     Egg, egg, itEgg_ItemVars, [EGG];

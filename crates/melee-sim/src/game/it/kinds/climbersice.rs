@@ -2,7 +2,7 @@
 //! hand (state 0), drops if let go before it's thrown (state 1), and once thrown slides along
 //! the ground (state 2, falling in state 3), speeding down slopes and slowing up them, until
 //! it slows to a stop, bounces off too often or its lifetime runs out. Its damage grows with
-//! its speed. Kirby's copy makes it too (`It_Kind_Kirby_IceClimber_Ice` isn't ported).
+//! its speed. Kirby's copy makes it too (`It_Kind_Kirby_IceClimber_Ice`), with its own effects.
 
 use gekko_fp as fp;
 
@@ -227,8 +227,8 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
     super::super::item::destroy(r, gobj);
 }
 
-/// The ice's end, `it_2725_Logic90_Destroyed`: its owner forgets it
-/// (`ftPp_Init_8011F16C`).
+/// The ice's end, `it_2725_Logic90_Destroyed`: its owner forgets it (`ftPp_Init_8011F16C`, or
+/// Kirby's copy's `ftKb_SpecialNIc_80108CE8`).
 // Ports `it_2725_Logic90_Destroyed`; aliased once a check reaches it.
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
@@ -237,7 +237,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
         if kind == super::ICE_CLIMBER_ICE {
             r.popo_forget_item(owner, gobj);
         } else {
-            crate::game::code::unported_call("ftKb_SpecialNIc_80108CE8");
+            r.kb_ic_forget(owner, gobj);
         }
     }
     item_mut(r.game, gobj)

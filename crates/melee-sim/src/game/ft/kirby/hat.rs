@@ -204,9 +204,52 @@ impl Running<'_> {
         self.kb_head_hat_on(gobj, 9);
     }
 
-    /// The hat taken off for Mario's, Fox's, Captain Falcon's, Luigi's, Ness's, Peach's and
-    /// Yoshi's copies (`ftKb_SpecialN_800EFAF0`, `_800EFBFC`, `_800EFD08`, `_800F07C0`,
-    /// `_800F0168`, `_800F0274`, `_800F06B4`).
+    /// The Ice Climbers' copy's hat put on, `ftKb_SpecialN_800F02D0`.
+    #[doc(alias = "ftKb_SpecialN_800F02D0")]
+    pub fn kb_popo_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_on(gobj, 10);
+    }
+
+    /// Dr. Mario's copy's hat put on, `ftKb_SpecialN_800F0B70`.
+    #[doc(alias = "ftKb_SpecialN_800F0B70")]
+    pub fn kb_drmario_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_on(gobj, 21);
+    }
+
+    /// Ganondorf's copy's hat put on, `ftKb_SpecialN_800F0D98`.
+    #[doc(alias = "ftKb_SpecialN_800F0D98")]
+    pub fn kb_ganon_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_on(gobj, 25);
+    }
+
+    /// Marth's copy's hat put on, `ftKb_SpecialN_800F081C`, with its dynamic bones from the
+    /// copy's second dynamics (`ftCo_8009D920`).
+    #[doc(alias = "ftKb_SpecialN_800F081C")]
+    #[doc(alias = "ftCo_8009D920")]
+    pub fn kb_mars_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_chains_on(gobj, 18, 1);
+    }
+
+    /// Pichu's copy's hat put on, `ftKb_SpecialN_800F0C7C`, with its ears' dynamic bones
+    /// (`ftCo_8009D3BC`).
+    #[doc(alias = "ftKb_SpecialN_800F0C7C")]
+    #[doc(alias = "ftCo_8009D3BC")]
+    pub fn kb_pichu_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_chains_on(gobj, 23, 2);
+    }
+
+    /// Roy's copy's hat put on, `ftKb_SpecialN_800F0EA4`, with its dynamic bones from the
+    /// copy's second dynamics (`ftCo_8009DA38`).
+    #[doc(alias = "ftKb_SpecialN_800F0EA4")]
+    #[doc(alias = "ftCo_8009DA38")]
+    pub fn kb_emblem_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_chains_on(gobj, 26, 1);
+    }
+
+    /// The hat taken off for Mario's, Fox's, Captain Falcon's, Luigi's, Ness's, Peach's,
+    /// Yoshi's, the Ice Climbers', Dr. Mario's and Ganondorf's copies
+    /// (`ftKb_SpecialN_800EFAF0`, `_800EFBFC`, `_800EFD08`, `_800F07C0`, `_800F0168`,
+    /// `_800F0274`, `_800F06B4`, `_800F0380`, `_800F0C20`, `_800F0E48`).
     #[doc(alias = "ftKb_SpecialN_800EFAF0")]
     #[doc(alias = "ftKb_SpecialN_800EFBFC")]
     #[doc(alias = "ftKb_SpecialN_800F06B4")]
@@ -214,19 +257,26 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F07C0")]
     #[doc(alias = "ftKb_SpecialN_800F0168")]
     #[doc(alias = "ftKb_SpecialN_800F0274")]
+    #[doc(alias = "ftKb_SpecialN_800F0380")]
+    #[doc(alias = "ftKb_SpecialN_800F0C20")]
+    #[doc(alias = "ftKb_SpecialN_800F0E48")]
     pub fn kb_head_hat_off(&mut self, gobj: GObjId) {
         self.kb_unload_hat(gobj);
     }
 
-    /// Pikachu's, Sheik's, Zelda's, Bowser's, Link's and Young Link's copies' hats taken off
-    /// (`ftKb_SpecialN_800F0494`, `_800F0054`, `_800F09F0`, `_800EFE1C`, `_800EFF38`,
-    /// `_800F0B0C`), and their dynamic bones (`ftCo_UnloadDynamicBones`).
+    /// Pikachu's, Sheik's, Zelda's, Bowser's (and Giga Bowser's), Link's, Young Link's,
+    /// Marth's, Pichu's and Roy's copies' hats taken off (`ftKb_SpecialN_800F0494`,
+    /// `_800F0054`, `_800F09F0`, `_800EFE1C`, `_800EFF38`, `_800F0B0C`, `_800F08D4`,
+    /// `_800F0D34`, `_800F0F5C`), and their dynamic bones (`ftCo_UnloadDynamicBones`).
     #[doc(alias = "ftKb_SpecialN_800F0494")]
     #[doc(alias = "ftKb_SpecialN_800EFE1C")]
     #[doc(alias = "ftKb_SpecialN_800EFF38")]
     #[doc(alias = "ftKb_SpecialN_800F0B0C")]
     #[doc(alias = "ftKb_SpecialN_800F0054")]
     #[doc(alias = "ftKb_SpecialN_800F09F0")]
+    #[doc(alias = "ftKb_SpecialN_800F08D4")]
+    #[doc(alias = "ftKb_SpecialN_800F0D34")]
+    #[doc(alias = "ftKb_SpecialN_800F0F5C")]
     pub fn kb_pikachu_hat_off(&mut self, gobj: GObjId) {
         self.kb_unload_hat(gobj);
         let f = self.game.fighter_id(gobj);
@@ -683,6 +733,102 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F10A4")]
     pub fn kb_donkey_hat_off(&mut self, gobj: GObjId) {
         self.kb_unload_hat_parts(gobj, 3);
+    }
+
+    /// Jigglypuff's copy's costume put on, `ftKb_SpecialN_800F10D4`, unless he wears one, with
+    /// its dynamic bones on his own parts from the copy's fourth dynamics (`ftCo_8009D81C`).
+    #[doc(alias = "ftKb_SpecialN_800F10D4")]
+    #[doc(alias = "ftCo_8009D81C")]
+    pub fn kb_purin_hat_on(&mut self, gobj: GObjId) {
+        if self
+            .game
+            .fighter(gobj)
+            .u
+            .dobj_list_at(u::HAT_DOBJS)
+            .is_none()
+        {
+            self.kb_load_hat_parts(gobj, 15);
+            let f = self.game.fighter_id(gobj);
+            self.kb_costume_chains(f, 15, 3);
+        }
+    }
+
+    /// Jigglypuff's copy's costume taken off, `ftKb_SpecialN_800F11AC`, and its dynamic bones.
+    #[doc(alias = "ftKb_SpecialN_800F11AC")]
+    pub fn kb_purin_hat_off(&mut self, gobj: GObjId) {
+        self.kb_unload_hat_parts(gobj, 15);
+        let f = self.game.fighter_id(gobj);
+        self.unload_dynamic_bones(f);
+    }
+
+    /// Mewtwo's copy's costume put on, `ftKb_SpecialN_800F11F0`, unless he wears one, with its
+    /// tail's dynamic bones on his own parts from the copy's fifth dynamics (`ftCo_8009DB50`).
+    #[doc(alias = "ftKb_SpecialN_800F11F0")]
+    #[doc(alias = "ftCo_8009DB50")]
+    pub fn kb_mewtwo_hat_on(&mut self, gobj: GObjId) {
+        if self
+            .game
+            .fighter(gobj)
+            .u
+            .dobj_list_at(u::HAT_DOBJS)
+            .is_none()
+        {
+            self.kb_load_hat_parts(gobj, 16);
+            let f = self.game.fighter_id(gobj);
+            self.kb_costume_chains(f, 16, 4);
+        }
+    }
+
+    /// Mewtwo's copy's costume taken off, `ftKb_SpecialN_800F12C8`, and its dynamic bones.
+    #[doc(alias = "ftKb_SpecialN_800F12C8")]
+    pub fn kb_mewtwo_hat_off(&mut self, gobj: GObjId) {
+        self.kb_unload_hat_parts(gobj, 16);
+        let f = self.game.fighter_id(gobj);
+        self.unload_dynamic_bones(f);
+    }
+
+    /// A copy costume's dynamic bone chains (`hat_dynamics[dyn_idx]`), the fighter's own
+    /// replaced: each on his own part its entry names, that part's physics on (`flags_b0`),
+    /// the chain's bone slot `FtPart_TopN` (`ftCo_8009D81C`, `ftCo_8009DB50`).
+    fn kb_costume_chains(&mut self, f: FighterId, kind: i32, dyn_idx: u32) {
+        let copy = self.game.ft.kirby.copies[kind as usize].expect("a copy without its data");
+        let dynamics = self
+            .data
+            .ptr(copy.at(0xC + 4 * dyn_idx))
+            .expect("a copy costume without dynamics");
+        let n = self.data.u32(dynamics) as i32;
+        self.game.fighters[f.0].dynamics_num = n;
+        assert!(
+            n < 10,
+            "the original's assertion failed: fighter dynamics num over!"
+        );
+        let parts = self.game.fighters[f.0]
+            .parts
+            .expect("a fighter without parts");
+        for i in 0..n.max(0) as u32 {
+            let bones = self.data.ptr(dynamics.at(4)).expect("ftDynamics bones");
+            let entry = bones.at(0x18 * i);
+            let bone = self.data.u32(entry) as usize;
+            let b = &mut self.game.fighter_parts[parts.0][bone];
+            set_bone_bit(b, 0, 0, true);
+            let joint = b.joint;
+            let count = self.data.u32(entry.at(8));
+            let k = i as usize;
+            let mut desc = self.game.fighters[f.0].dynamic_bone_sets[k]
+                .dyn_desc
+                .clone();
+            self.game
+                .load_dynamics_chain(self.data, joint, &mut desc, count);
+            let fp = &mut self.game.fighters[f.0];
+            fp.dynamic_bone_sets[k].dyn_desc = desc;
+            fp.dynamic_bone_sets[k].bone_id = BoneSlot::Id(0);
+            let mut desc = self.game.fighters[f.0].dynamic_bone_sets[k]
+                .dyn_desc
+                .clone();
+            self.game
+                .set_dynamics_params(self.data, entry.at(4), &mut desc);
+            self.game.fighters[f.0].dynamic_bone_sets[k].dyn_desc = desc;
+        }
     }
 
     /// Mr. Game & Watch's copy's costume put on, `ftKb_SpecialN_800F14B4`, unless he wears one:
