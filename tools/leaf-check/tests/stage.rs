@@ -2777,5 +2777,8 @@ fn ground_background_color() {
         let c = u32::from_be_bytes([0, b.r, b.g, b.b]);
         assert_eq!(c, answered(), "Ground_ApplyStageBackgroundColor");
     };
-    on_state(&path, &[("Ground_ApplyStageBackgroundColor", &theirs, &ours)]);
+    on_state(
+        &path,
+        &[("Ground_ApplyStageBackgroundColor", &theirs, &ours)],
+    );
 }
