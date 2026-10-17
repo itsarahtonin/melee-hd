@@ -27,7 +27,10 @@ use leaf_check::calls::{
     Prepare, Report, Ret, SKIP, Stub, StubRet, Variant, check_variants, gobj_arg, saved_calls,
 };
 use melee_capture::import::Maps;
-use melee_sim::game::it::kinds::kireihana;
+use melee_sim::game::it::kinds::{
+    chicorita, fushigibana, kamex, kireihana, lucky, maril, marumine, matadogas, sonans, thunder,
+    togepy,
+};
 use melee_sim::game::it::{self, CLASS_ITEM, pokemon};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -96,6 +99,16 @@ const UNITS: &[(u32, u32)] = &[
     (0x8027_9C48, 0x8027_B070),
     (0x8027_B564, 0x8027_B5B0),
     (0x802D_007C, 0x802D_09D0),
+    (0x802D_66F8, 0x802D_6FD0),
+    (0x802D_36B0, 0x802D_3B18),
+    (0x802C_D44C, 0x802C_DBE0),
+    (0x802D_5050, 0x802D_5ABC),
+    (0x802D_6FD0, 0x802D_73D0),
+    (0x802C_A49C, 0x802C_AFD4),
+    (0x802C_9588, 0x802C_9D40),
+    (0x802D_09D0, 0x802D_1438),
+    (0x802C_CAB4, 0x802C_CF9C),
+    (0x802C_AFD4, 0x802C_B8AC),
 ];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
@@ -113,11 +126,30 @@ fn args(call: &mut Call, target: &str, k: usize) {
     }
     let g = &mut call.regs.gpr;
     match target {
-        "itKireihana_Logic15_EvtUnk" => g[4] = if k.is_multiple_of(2) { gobj } else { 0 },
+        n if n.contains("EvtUnk") || EVT_UNK.contains(&n) => {
+            g[4] = if k.is_multiple_of(2) { gobj } else { 0 }
+        }
+        "it_802CB4F0" => {
+            g[4] = [0xC1u32, 0xC2][k % 2];
+            call.regs.fpr[1].ps0 = [1.0f64, 2.5][(k / 2) % 2];
+        }
         "it_80279CDC" | "it_80279D5C" => call.regs.fpr[1].ps0 = [1.0f64, 0.5, 1.3][k % 3],
         _ => {}
     }
 }
+
+/// The forgetting callbacks (`EvtUnk`) the decomp names by address.
+const EVT_UNK: &[&str] = &[
+    "it_802CA538",
+    "it_802CB0F8",
+    "it_802CCB14",
+    "it_802CD4DC",
+    "it_802D0AB0",
+    "it_802D56F0",
+    "itLucky_Logic44_EvtUnk",
+    "it_802D6850",
+    "it_802D6FB0",
+];
 
 /// Helpers that take what the check can't give: they run inside the callers that call them,
 /// whose comparisons cover them.
@@ -142,6 +174,36 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802D0774", kireihana::fall_leaving),
     ("it_802D07C0", kireihana::fall_leaving_kept),
     ("it_802D08F0", kireihana::enter_air),
+    ("it_802C963C", chicorita::landed),
+    ("it_802C9670", chicorita::fire),
+    ("it_802C98E4", chicorita::leave),
+    ("it_802C9A74", chicorita::enter_air),
+    ("it_802C9B20", chicorita::shoot),
+    ("it_802C9CC0", chicorita::leaf_fly),
+    ("it_802CA558", kamex::landed),
+    ("it_802CA58C", kamex::ready),
+    ("it_802CA6A0", kamex::fire),
+    ("it_802CA938", kamex::leave),
+    ("it_802CAA40", kamex::enter_air),
+    ("it_802CAB10", kamex::shoot),
+    ("it_802CADF0", kamex::water_fly),
+    ("it_802CB350", matadogas::enter_air),
+    ("it_802CB798", matadogas::gas_drift),
+    ("it_802CCC68", thunder::fly_off),
+    ("it_802CCE28", thunder::enter_air),
+    ("it_802D09D0", marumine::burst),
+    ("it_802D0C44", marumine::fell),
+    ("it_802D1320", marumine::enter_air),
+    ("it_802D51C8", lucky::lay),
+    ("it_802D533C", lucky::enter_next),
+    ("it_802D68FC", maril::enter_air),
+    ("it_802D69E4", maril::landed),
+    ("it_802D6A54", maril::walk),
+    ("it_802D6DDC", maril::fall_off),
+    ("it_802D705C", fushigibana::landed),
+    ("it_802D70A4", fushigibana::enter_air),
+    ("it_802D718C", fushigibana::stand),
+    ("it_802D7328", fushigibana::fell),
     ("it_80279C48", pokemon::face_nearest_opponent),
     ("it_80279E24", pokemon::pulse),
     ("it_80279FF8", pokemon::grow),
@@ -161,16 +223,76 @@ fn item_check(g: &Running, gobj: GObjId, a: u32) {
     }
 }
 
-/// The ball's functions take a Poké Ball, the others a Pokémon or a Pokémon's item: a
-/// neighbour's call on another kind would read another member of its variables.
+/// The kinds whose logic or state tables name the function at `addr`.
+fn kinds_naming(addr: u32) -> Vec<i32> {
+    use melee_sim::game::handles::{CodeRef, ItemStatesRef};
+    use melee_sim::game::it::tables;
+    (it::kinds::PKIND_START..=it::kinds::POKEMON_UNK)
+        .filter(|&k| {
+            let l = tables::logic(tables::logic_ref(k));
+            let f = Some(CodeRef(addr));
+            let events = [
+                l.spawned,
+                l.destroyed,
+                l.picked_up,
+                l.dropped,
+                l.thrown,
+                l.dmg_dealt,
+                l.dmg_received,
+                l.entered_air,
+                l.reflected,
+                l.clanked,
+                l.absorbed,
+                l.shield_bounced,
+                l.hit_shield,
+                l.evt_unk,
+            ];
+            events.contains(&f)
+                || l.states != 0
+                    && tables::states(ItemStatesRef(l.states))
+                        .iter()
+                        .any(|st| st.animated == f || st.physics_updated == f || st.collided == f)
+        })
+        .collect()
+}
+
+/// The kinds a Pokémon unit's function belongs to: those whose tables name it, or for a
+/// helper no table names, those of the nearest function before it in its unit that one names
+/// (the helpers sit beside the callbacks they serve).
+fn owners(addr: u32) -> Vec<i32> {
+    let Some(u) = unit(addr) else {
+        return Vec::new();
+    };
+    let mut funcs: Vec<u32> = ssbm_types::symbols::SYMBOLS
+        .iter()
+        .map(|s| s.0)
+        .filter(|&a| unit(a) == Some(u))
+        .collect();
+    funcs.sort();
+    let before = funcs.iter().rev().filter(|&&a| a <= addr);
+    // A unit's first function, before any its tables name, takes the first named one's.
+    let after = funcs.iter().filter(|&&a| a > addr);
+    before
+        .chain(after)
+        .map(|&a| kinds_naming(a))
+        .find(|k| !k.is_empty())
+        .unwrap_or_default()
+}
+
+/// The ball's functions take a Poké Ball, it_279C.c's others any Pokémon or Pokémon's item,
+/// and a Pokémon's own functions an item of its kind ([`owners`]): a neighbour's call on
+/// another kind would read another member of its variables or another state table.
 fn kind_check(g: &Running, gobj: GObjId, name: &str) {
     let kind = it::lib26b1::kind(g.game, gobj);
+    let addr = leaf_check::sym(name);
     let ball = matches!(
         name,
         "it_8027AB64" | "it_8027AAA0" | "it_8027A364" | "it_8027A4D4"
     );
     let ok = if ball {
         kind == it::kinds::M_BALL
+    } else if unit(addr).is_some_and(|u| u >= 2) {
+        owners(addr).contains(&kind)
     } else {
         (it::kinds::PKIND_START..=it::kinds::POKEMON_UNK).contains(&kind)
     };
@@ -269,6 +391,18 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_8027AE34" => return b(pokemon::bounce_off_wall(g, gobj)),
         "it_8027AF50" => return b(pokemon::bounce_off_surface(g, gobj)),
         "itKireihana_Logic15_EvtUnk" => kireihana::evt_unk(g, gobj, maybe(4)),
+        "itChicorita_Logic1_EvtUnk" => chicorita::evt_unk(g, gobj, maybe(4)),
+        "itChicoritaLeaf_Logic30_EvtUnk" => chicorita::evt_unk(g, gobj, maybe(4)),
+        "it_802CA538" | "itKamex_Logic31_EvtUnk" => kamex::evt_unk(g, gobj, maybe(4)),
+        "it_802CB0F8" | "itMatadogas_Logic33_EvtUnk" => matadogas::evt_unk(g, gobj, maybe(4)),
+        "it_802CCB14" => thunder::evt_unk(g, gobj, maybe(4)),
+        "it_802CD4DC" => sonans::evt_unk(g, gobj, maybe(4)),
+        "it_802D0AB0" => marumine::evt_unk(g, gobj, maybe(4)),
+        "itTogepy_Logic21_EvtUnk" => togepy::evt_unk(g, gobj, maybe(4)),
+        "it_802D56F0" | "itLucky_Logic44_EvtUnk" => lucky::evt_unk(g, gobj, maybe(4)),
+        "it_802D6850" | "it_802D6FB0" => maril::evt_unk(g, gobj, maybe(4)),
+        "it_802CB4F0" => matadogas::puff(g, gobj, r(4) as i32, f(1)),
+        "it_802D5124" => return b(lucky::next(g, gobj)),
         _ => return run_item(g, gobj, a, &name),
     }
     Ret::Nothing
@@ -409,7 +543,31 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
 
 /// Functions no saved state can finish yet, with what stops them. One that compares clean
 /// fails the check until it's taken off.
-const BLOCKED: &[(&str, &str)] = &[];
+const BLOCKED: &[(&str, &str)] = &[
+    ("itLucky_Logic44_Spawned", LUCKY_EGG),
+    ("it_802D582C", LUCKY_EGG),
+    ("it_802D5884", LUCKY_EGG),
+    ("it_802D58BC", LUCKY_EGG),
+    ("it_802D58C0", LUCKY_EGG),
+    ("it_802D58EC", LUCKY_EGG),
+    ("itLucky_UnkMotion3_Anim", LUCKY_EGG),
+    ("itLucky_UnkMotion3_Phys", LUCKY_EGG),
+    ("itLucky_UnkMotion3_Coll", LUCKY_EGG),
+    ("itLucky_Logic44_PickedUp", LUCKY_EGG),
+    ("itLucky_UnkMotion2_Anim", LUCKY_EGG),
+    ("itLucky_UnkMotion2_Phys", LUCKY_EGG),
+    ("itLucky_Logic44_Dropped", LUCKY_EGG),
+    ("itLucky_Logic44_EnteredAir", LUCKY_EGG),
+    ("it_802D5A2C", LUCKY_EGG),
+    ("it_802D5A64", LUCKY_EGG),
+    ("it_802D5A68", LUCKY_EGG),
+    ("itLucky_Logic44_EvtUnk", LUCKY_EGG),
+    ("it_802D5710", LUCKY_EGG),
+];
+
+/// Why the lucky egg's functions are blocked.
+const LUCKY_EGG: &str =
+    "Chansey's own egg (It_Kind_Lucky_Egg): she laid only common eggs in the six matches";
 
 /// Every ported function compares clean from some real state: its own saved calls or its
 /// unit's neighbours'.
