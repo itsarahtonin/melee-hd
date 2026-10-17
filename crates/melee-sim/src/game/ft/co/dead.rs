@@ -134,8 +134,10 @@ impl Running<'_> {
             item::destroy(self, hood);
             self.take_off_hood(gobj);
         }
-        if self.game.fighters[f.0].x1980.is_some() {
-            unported_call("ftCo_800D331C with a flower on the head");
+        if let Some(flower) = self.game.fighters[f.0].x1980 {
+            self.worn_item_off(gobj);
+            item::destroy(self, flower);
+            self.flower_gone(gobj);
         }
         if self.game.fighters[f.0].is_metal {
             self.end_metal(gobj);

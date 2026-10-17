@@ -125,6 +125,10 @@ members! {
     Tomato, tomato, itTomato_ItemVars, [TOMATO];
     Box, crate_box, itBox_ItemVars, [BOX];
     Taru, taru, itTaru_ItemVars, [TARU];
+    TaruCann, taru_cann, itTarucann_ItemVars, [TARU_CANN];
+    StarRodStar, star_rod_star, itStarRodStar_ItemVars, [STARROD_STAR];
+    LipstickSpore, lipstick_spore, itLipstickSpore_ItemVars, [LIPSTICK_SPORE];
+    FFlowerFlame, fflower_flame, itFFlowerFlame_ItemVars, [F_FLOWER_FLAME];
     Kusudama, kusudama, itKusudama_ItemVars, [KUSUDAMA];
     BombHei, bombhei, itBombHei_ItemVars, [BOMBHEI];
     Dosei, dosei, itDosei_ItemVars, [DOSEI];
@@ -225,7 +229,8 @@ const ALL: u8 = 0b111;
 /// Peach's turnip's flag byte (`itPeachTurnip_ItemVars::xDD4`, an `UnkFlagStruct`), of which
 /// the turnip reads and writes only the top bit, "picked up before": the other seven keep what
 /// the block held, which melee-hd doesn't model, so the comparer checks the top bit alone
-/// (docs/engine.md).
+/// (docs/engine.md). A heart's flag byte (`itHeart_ItemVars::xDD8`) is the same: its top bit
+/// says an event made it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct TurnipFlag {
     /// The top bit.

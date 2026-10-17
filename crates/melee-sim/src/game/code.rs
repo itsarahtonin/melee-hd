@@ -196,6 +196,8 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::co::capture_koopa::run(g, gobj, addr) => {}
         addr if super::ft::co::capture_kirby::run(g, gobj, addr) => {}
         addr if super::ft::co::item_get::run(g, gobj, addr) => {}
+        addr if super::ft::co::lift::run(g, gobj, addr) => {}
+        addr if super::ft::co::barrel::run(g, gobj, addr) => {}
         // Animation.
         0x8008_A494 => g.co_wait_anim(gobj),
         0x8008_B8D4 | 0x8008_BA98 | 0x8008_C520 | 0x8009_99D8 => g.co_ground_move_anim(gobj),
@@ -208,7 +210,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         0x8009_A8D8 => g.co_cliff_wait_anim(gobj),
         0x800C_9970 => g.co_turn_anim(gobj),
         0x800C_AC9C => g.co_run_brake_anim(gobj),
-        0x800C_B2F8 => g.co_jump_anim(gobj),
+        0x800C_B2F8 | 0x800D_2DD0 => g.co_jump_anim(gobj),
         0x800C_B528 => g.co_knee_bend_anim(gobj),
         0x800C_C388 => g.co_jump_aerial_anim(gobj),
         0x800C_CA00 => g.co_fall_anim(gobj),

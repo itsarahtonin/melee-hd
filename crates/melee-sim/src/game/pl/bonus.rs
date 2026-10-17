@@ -209,6 +209,49 @@ impl Running<'_> {
         }
     }
 
+    /// The player's run of containers giving each kind (`x7AC`, by the kind's log entry), from
+    /// the kinds one container gave, `pl_8003E4A4`: a kind given again extends its run, and a
+    /// run reaching `pl_804D6470` x138 scores bonus 0x9D; every other kind's run ends. (The
+    /// original's kind outside the log, -1, passes its bound check and marks the stack word
+    /// before its marks, which nothing reads; no caller hands it one.)
+    #[doc(alias = "pl_8003E4A4")]
+    pub fn count_items_got(&mut self, slot: i32, kinds: &[i32]) {
+        // `match_item_kind`: the common items, and four others past them.
+        let entry = |k: i32| -> i32 {
+            if (0..IT_KIND_L_GUN_RAY).contains(&k) {
+                k
+            } else {
+                match k {
+                    205 => 0x23,
+                    225 => 0x24,
+                    226 => 0x25,
+                    40 => 0x26,
+                    _ => -1,
+                }
+            }
+        };
+        let mut seen = [false; 39];
+        for &k in kinds {
+            let e = entry(k);
+            if (0..39).contains(&e) {
+                seen[e as usize] = true;
+            }
+        }
+        let run = self.bonus_param(0x138);
+        for (i, &s) in seen.iter().enumerate() {
+            let t = &mut self.game.player_stale_moves(slot).x7AC[i];
+            if s {
+                *t = t.wrapping_add(1);
+                if *t as u32 == run {
+                    self.set_point(slot, 0x9D, 1);
+                    self.game.player_stale_moves(slot).x7AC[i] = 0;
+                }
+            } else {
+                *t = 0;
+            }
+        }
+    }
+
     /// `pl_804D6470`'s word at `off`.
     pub(crate) fn bonus_param(&self, off: u32) -> u32 {
         self.data.u32(self.pl_data().at(off))

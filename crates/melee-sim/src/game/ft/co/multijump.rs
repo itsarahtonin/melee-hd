@@ -160,7 +160,7 @@ impl Running<'_> {
     }
 
     /// The screw attack's jump, `ft_800D2E7C`: `vel` scaled by `ftCommonData` x800.
-    // Ports `ft_800D2E7C`; aliased once a check reaches it.
+    #[doc(alias = "ft_800D2E7C")]
     pub fn screw_jump(&mut self, gobj: GObjId, vel: [f32; 3]) {
         let s = reg(self.common().f32(0x800));
         let vel = [

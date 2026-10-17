@@ -561,6 +561,39 @@ pub fn items_set() -> Vec<Match> {
     out
 }
 
+/// The held items' extra matches (task 7): the held family's matches left the barrel cannon's
+/// ride, most swings' hits and the heavy items' walks and throws unplayed, so each of these
+/// narrows the switch to a few of those kinds: the barrel cannon alone, the swung items with
+/// the Screw Attack, and the box and barrel.
+pub fn held_extra_set() -> Vec<Match> {
+    /// A match's name, stage, switch kinds and characters.
+    type Extra = (&'static str, u16, &'static [u8], (u8, u8));
+    let matches: [Extra; 3] = [
+        ("items-cannon-fd", FINAL_DESTINATION, &[5], (FOX, MARTH)),
+        (
+            "items-swing-bf",
+            BATTLEFIELD,
+            &[13, 22, 23, 24, 30],
+            (CAPTAIN, PEACH),
+        ),
+        ("items-heavy-ps", POKEMON_STADIUM, &[1, 2], (FALCO, SHEIK)),
+    ];
+    matches
+        .iter()
+        .enumerate()
+        .map(|(i, &(name, stage, kinds, (a, b)))| Match {
+            name: Cow::Borrowed(name),
+            stage,
+            players: Cow::Owned(vec![p(a, 0), p(b, 0)]),
+            seed: 0x1F0F_0501 + i as u32,
+            rules: Rules::Time {
+                time_limit: ITEMS_TIME,
+            },
+            items: Items::only(FREQ_HIGH, kinds),
+        })
+        .collect()
+}
+
 /// The VS stages besides the tournament stages, with match names; the moving stages are marked.
 const OTHER_STAGES: [(u16, &str, bool); 23] = [
     (YOSHIS_ISLAND_64, "yoshis-island-64", false),
@@ -667,6 +700,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("items", items_set),
     ("stages", stages_set),
     ("cpu", cpu_set),
+    ("held-extra", held_extra_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every

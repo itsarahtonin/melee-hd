@@ -674,21 +674,11 @@ impl Running<'_> {
         jobj::set_translate(&mut self.game.objs.jobjs, root, pos);
     }
 
-    /// A held heavy item falls, `ftCo_8009750C`: not ported.
-    #[doc(alias = "ftCo_8009750C")]
-    pub(crate) fn drop_heavy_item(&mut self, gobj: GObjId) {
-        if let Some(item) = self.game.fighter(gobj).item_gobj
-            && super::super::super::it::lib26b1::is_heavy(self.game, self.data, item)
-        {
-            unported_call("ftCo_8009750C (a heavy item dropped)");
-        }
-    }
-
     /// The fighter lets go of whomever it holds, or whoever holds it, `ftCo_800DD168`: a
     /// holder (`x221B_b5`) knocks its victim away and lets go; a held fighter is let go of and
     /// falls or stands.
     #[doc(alias = "ftCo_800DD168")]
-    pub(crate) fn release_victim(&mut self, gobj: GObjId) {
+    pub fn release_victim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         let Some(victim) = fp.victim_gobj else {
             return;

@@ -222,7 +222,7 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
             g.game.fighters[f.0].x201C = reset;
         }
         if g.game.fighters[f.0].x2018 <= 0 {
-            unported_call("Item_8026ABD8");
+            g.flower_falls(gobj);
         }
     }
     let fp = &mut g.game.fighters[f.0];
@@ -284,8 +284,20 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
     if fp.dmg.x18F0 != 0 {
         fp.dmg.x18F0 -= 1;
         if fp.dmg.x1830_percent > 0.0 {
-            unported_call("ft_80088640");
+            // A heal's point a frame: the percent down one, the tick of its sound
+            // (`ft_80088640`), the player's display and the healed count.
+            fp.dmg.x1830_percent = mem(fp::fsubs(reg(fp.dmg.x1830_percent), 1.0));
+            let (slot, sub, percent) = (
+                i32::from(fp.player_idx),
+                i32::from(fp.is_sub_fighter),
+                fp.dmg.x1830_percent,
+            );
+            g.fighter_play_track(f, super::sound::Track::Effect4, 0x7D, 0x7F, 0x40);
+            g.game
+                .set_player_damage_at(slot, sub, fp::fctiwz(reg(percent)));
+            g.game.add_healed(slot, sub, 1);
         }
+        let fp = &mut g.game.fighters[f.0];
         if fp.dmg.x1830_percent <= 0.0 {
             fp.dmg.x1830_percent = 0.0;
             fp.dmg.x18F0 = 0;

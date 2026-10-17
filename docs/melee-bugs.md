@@ -442,6 +442,26 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none on gameplay; the screen copy stops after such a cloak ends.
 - **Source:** `crates/melee-sim/src/game/ft/powerup.rs` (`start_cloak`); `ft_0C88.c`.
 
+### An item's grab takes the first fighter it touches, not the nearest
+
+- **Where:** `it_802701BC` (an item's grab boxes against fighters, the barrel cannon's catch), `crates/melee-sim/src/game/it/coll.rs` (`grab_fighters`).
+- **Defect:** it keeps the nearest fighter seen so far (`xD10`, the horizontal distance, starting at the float maximum), but returns as soon as one grabbable hurtbox touches, so the comparison only ever sees the first catch.
+- **Effect:** when a barrel cannon's grab box touches two fighters on the same frame, it takes the one earlier in the fighters' list rather than the nearer.
+- **melee-hd:** modeled.
+- **Fix:** keep looking through every fighter and take the nearest.
+- **Fix impact:** changes which fighter is caught in that case; replays where it happens would desync.
+- **Source:** `crates/melee-sim/src/game/it/coll.rs:29`.
+
+### A container's record marks the stack for an item that didn't come out
+
+- **Where:** `pl_8003E4A4` (a player's runs of containers giving each kind, from `ftLib_800874CC`), `crates/melee-sim/src/game/pl/bonus.rs` (`count_items_got`).
+- **Defect:** `match_item_kind` gives -1 for a kind outside the item log, which passes the signed bound check (`< Pl_ItemLog_Terminate`), so the function marks the stack word before its array of marks. The Party Ball's rain (`it_80289BE8`) hands it -1 for a random item that didn't come out.
+- **Effect:** none observable: the marked word is the function's own stack, which nothing reads.
+- **melee-hd:** modeled (kinds outside the log are passed over); the Party Ball's record isn't ported and stops.
+- **Fix:** test the kind for -1 as well.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/pl/bonus.rs:218`.
+
 ## Stages and collision
 
 ### Final Destination's background compares green twice
@@ -735,6 +755,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | `expf` and `powf` on large or NaN inputs | `expf`, `math.rs` | The series never settles for NaN or where the terms overflow (\|x\| about 12.7 to 14.7), and loops forever | `tools/leaf-check/tests/math.rs:154` |
 | A parasol state without an animation | `it_8028B08C`, `game/it/kinds/parasol.rs` | Indexes its lengths by the state's animation, -1 for states 0 and 3, and reads the word before the table; its callers ask only for the held states, 4 to 10 | `crates/melee-sim/src/game/it/kinds/parasol.rs` (`anim_frames`) |
 | A particle list on a displayed joint | HSD's joint traversal (displayfunc.c, `efLib_Cb_SPtcl`) | Spawns a joint's particle list on its first display, whose generators then draw from the game's random seed, so a spawn put off by a doubled round would shift every later draw; no joint descriptor on the disc carries a particle list | [engine notes](engine.md#state-the-render-pass-writes) (line 150) |
+| A Lip's Stick swing with nothing held | `ft_800CDB9C`, `game/ft/co/swing.rs` | Asserts the held item's kind before testing it for null, reading a null item; the swing always holds the stick | `crates/melee-sim/src/game/ft/co/swing.rs:257` |
 
 ## Unsure
 

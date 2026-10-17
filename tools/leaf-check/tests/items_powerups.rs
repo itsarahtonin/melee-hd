@@ -387,7 +387,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftCommon_8007FA58" => g.put_on_hood(gobj, other(4)),
         "ftLib_ApplyMetalBox" => g.apply_metal_box(gobj, other(4)),
         "ftpickupitem_8009447C" => return b(g.item_pickup_effect(gobj, other(4))),
-        "ftpickupitem_80094B6C" => g.use_on_pickup(gobj, other(4)),
+        "ftpickupitem_80094B6C" => g.item_pickup_hit(gobj, other(4)),
         "ftCo_800D2770" => g.set_kinoko_scale(gobj, f(1)),
         "fn_800D299C" => g.start_kinoko_scale(gobj, r(4) as i32, f(1), f(2)),
         "fn_800D2890" => g.set_kinoko_fall(gobj, r(4) as i32),

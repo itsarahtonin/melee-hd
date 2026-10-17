@@ -4,6 +4,14 @@ use super::super::state::{Game, Running};
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
+    /// The kinds of the items a container the fighter opened gave, for its player's records,
+    /// `ftLib_800874CC`.
+    #[doc(alias = "ftLib_800874CC")]
+    pub fn record_items_got(&mut self, gobj: GObjId, kinds: &[i32]) {
+        let slot = i32::from(self.game.fighter(gobj).player_idx);
+        self.count_items_got(slot, kinds);
+    }
+
     /// Whether two GObjs are the same player's fighters, `ftLib_IsSamePlayer`.
     #[doc(alias = "ftLib_IsSamePlayer")]
     pub fn is_same_player(&self, a: Option<GObjId>, b: Option<GObjId>) -> bool {

@@ -354,28 +354,28 @@ impl Running<'_> {
 }
 
 impl Running<'_> {
-    /// `ftData_UnkMotionStates1`: a worn item's start for the characters that have one
-    /// (Pikachu), unless it wears both.
-    fn worn_item_on(&mut self, gobj: GObjId) {
+    /// The character's model for something worn on the head (`_func_8007F948_inline`,
+    /// `ftData_UnkMotionStates1`): Pikachu's ears hidden (`ftPk_Init_UnkMotionStates1`),
+    /// unless it already wears both a Bunny Hood and a flower.
+    pub(super) fn worn_item_on(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if fp.x197C.is_some() && fp.x1980.is_some() {
-            return;
-        }
-        if fp.kind == super::pikachu::KIND_PIKACHU {
-            crate::game::code::unported_call("ftPk_Init_UnkMotionStates1");
+        if (fp.x197C.is_none() || fp.x1980.is_none()) && fp.kind == super::pikachu::KIND_PIKACHU {
+            let f = self.game.fighter_id(gobj);
+            self.game.set_part_vis(gobj, 1, -1);
+            self.set_model_variant(f, 1, 0);
         }
     }
 
-    /// `ftCommon_8007F8E8`: a worn item's end for the characters that have one (Pikachu,
-    /// `ftData_UnkMotionStates2`), unless it wears both.
+    /// The character's model back as something worn comes off, `ftCommon_8007F8E8`
+    /// (`ftData_UnkMotionStates2`): Pikachu's ears shown (`ftPk_Init_UnkMotionStates2`),
+    /// unless it wears both a Bunny Hood and a flower.
     #[doc(alias = "ftCommon_8007F8E8")]
     pub fn worn_item_off(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if fp.x197C.is_some() && fp.x1980.is_some() {
-            return;
-        }
-        if fp.kind == super::pikachu::KIND_PIKACHU {
-            crate::game::code::unported_call("ftPk_Init_UnkMotionStates2");
+        if (fp.x197C.is_none() || fp.x1980.is_none()) && fp.kind == super::pikachu::KIND_PIKACHU {
+            let f = self.game.fighter_id(gobj);
+            self.game.set_part_vis(gobj, 1, 0);
+            self.set_model_variant(f, 1, 0);
         }
     }
 

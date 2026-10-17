@@ -5,7 +5,7 @@ use gekko_fp as fp;
 
 use super::super::ground::{fall, ground_or_fall, ground_skid};
 use super::super::item::{article, attr_of, change_state};
-use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
+use super::super::{TurnipFlag, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
 use crate::game::code;
 use crate::game::state::Running;
@@ -85,7 +85,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     ip.x40_vel = Vec3::new(0.0, vy, 0.0);
     let v = ip.xDD4_itemVar.heart();
     v.xDD4_heal.set(heal);
-    v.xDD8.get()[0] &= !0x80;
+    v.xDD8.set(TurnipFlag { picked_up: false });
     v.xDDC.set(0);
     fell(r, gobj);
 }
@@ -93,7 +93,13 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// `itHeart_Logic8_Destroyed`: a heart from an event frees its slot.
 #[doc(alias = "itHeart_Logic8_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    if item_mut(r.game, gobj).xDD4_itemVar.heart().xDD8.get()[0] & 0x80 != 0 {
+    if item_mut(r.game, gobj)
+        .xDD4_itemVar
+        .heart()
+        .xDD8
+        .get()
+        .picked_up
+    {
         code::unported_call("gm_80473A18 (an event's heart slots)");
     }
 }

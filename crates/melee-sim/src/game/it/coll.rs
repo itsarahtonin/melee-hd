@@ -21,6 +21,95 @@ use crate::vec::Vec3;
 /// `HurtCapsuleState`: `HurtCapsule_Enabled` is 0.
 pub const HURT_ENABLED: i32 = 0;
 
+/// The item's grab boxes against fighters, `it_802701BC`: of the fighters it may catch (not
+/// its owner's player unless its flags say, nor a teammate, nor one intangible, held or
+/// passed over by its mask), the first whose grabbable hurtbox a box touches becomes its
+/// victim, remembered in the box's victims, and the search ends there.
+#[doc(alias = "it_802701BC")]
+pub fn grab_fighters(r: &mut Running, gobj: GObjId) {
+    use crate::game::ft::common::FIGHTER_P_LINK;
+    use hitcapsule::Victim;
+    let ip = item_mut(r.game, gobj);
+    ip.grab_victim = None;
+    ip.xD10 = 3.402_823_5e38;
+    let mut cur = r.game.world.first_in(FIGHTER_P_LINK);
+    while let Some(v) = cur {
+        cur = r.game.world.gobjs[v.0].next;
+        let f = r.game.fighter_id(v);
+        let ip = item(r.game, gobj);
+        let owner = ip.owner;
+        if owner.is_some() && !is_fighter(r.game, owner) {
+            code::unported_call("it_802701BC with an item owner that isn't a fighter");
+        }
+        let same_player = r.is_same_player(Some(v), owner);
+        let ip = item(r.game, gobj);
+        let fp = &r.game.fighters[f.0];
+        let teams = r.game.vs_is_teams();
+        let friendly = r.game.vs_friendly_fire();
+        let may = (!same_player || ip.xDCD_flag.x0.b5)
+            && (!teams || friendly || ip.xDCD_flag.x0.b6 || ip.x20_team_id != fp.team)
+            && !fp.x2219_b1
+            && !fp.x222A_b0
+            && fp.x1988 == 0
+            && fp.x198C == 0
+            && !fp.x221D_b6
+            && fp.x1A6A & u16::from(ip.xD08) == 0;
+        if !may {
+            continue;
+        }
+        for hi in 0..4 {
+            let ip = item(r.game, gobj);
+            let fp = &r.game.fighters[f.0];
+            let h = &ip.x5D4_hitboxes[hi].hit;
+            let can = h.state != hitcapsule::DISABLED
+                && h.element == ELEMENT_CATCH
+                && ((h.x40_b2 && fp.ground_or_air == GA_AIR)
+                    || (h.x40_b3 && fp.ground_or_air == GA_GROUND))
+                && !hitcapsule::has_victim(h, Victim::Fighter(f));
+            if !can {
+                continue;
+            }
+            for j in 0..usize::from(fp.hurt_capsules_len) {
+                if r.game.fighters[f.0].hurt_capsules[j].is_grabbable == 0 {
+                    continue;
+                }
+                let mtx = r.own_matrix(f);
+                let mut hit = item(r.game, gobj).x5D4_hitboxes[hi].hit.clone();
+                let scale = item(r.game, gobj).scl;
+                let fp = &mut r.game.fighters[f.0];
+                let (fscale, z) = (fp.x34_scale.y, fp.cur_pos.z);
+                let touch = hitcapsule::grabs_hurtbox(
+                    &mut r.game.objs,
+                    r.data,
+                    &mut hit,
+                    &mut fp.hurt_capsules[j].capsule,
+                    mtx.as_ref(),
+                    scale,
+                    fscale,
+                    z,
+                );
+                let h = &mut item_mut(r.game, gobj).x5D4_hitboxes[hi].hit;
+                h.hurt_coll_pos = hit.hurt_coll_pos;
+                h.coll_distance = hit.coll_distance;
+                if touch {
+                    r.item_add_victim(gobj, hi, 0, Victim::Fighter(f), false);
+                    let fx = reg(r.game.fighters[f.0].cur_pos.x);
+                    let ip = item_mut(r.game, gobj);
+                    let d = fp::fsubs(fx, reg(ip.pos.x));
+                    let d = mem(if d < 0.0 { fp::fneg(d) } else { d });
+                    if reg(d) < reg(ip.xD10) {
+                        ip.grab_victim = Some(v);
+                        ip.atk_victim = Some(v);
+                        set_flag(&mut ip.xDD0_flag, 1, true);
+                        ip.xD10 = d;
+                    }
+                    return;
+                }
+            }
+        }
+    }
+}
+
 /// Starts a hit check's damage log over, `it_8026F9A0`.
 #[doc(alias = "it_8026F9A0")]
 pub fn clear_damage_log(game: &mut Game) {

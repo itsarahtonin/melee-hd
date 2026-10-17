@@ -2,7 +2,6 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::coll::PLATFORM_FILTER;
@@ -144,9 +143,10 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         if fp.cur_anim_frame >= fp.co_attrs.jump_startup_time || !self.anim_frames_remaining(gobj) {
             if self.holding_screw(gobj) {
-                unported_call("ftCo_ItemScrew_Enter");
+                self.enter_item_screw(gobj);
+            } else {
+                self.enter_jump(gobj);
             }
-            self.enter_jump(gobj);
         }
     }
 
@@ -234,9 +234,22 @@ impl Running<'_> {
         self.game.fighter_mut(gobj).x2227_b0 = true;
     }
 
+    /// The screw attack's jump from the ground, `ftCo_ItemScrew_Enter`: the jump at
+    /// `ftCommonData` x800's height, with no sound.
+    #[doc(alias = "ftCo_ItemScrew_Enter")]
+    pub fn enter_item_screw(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.go_airborne(f);
+        self.change_motion_state(gobj, ms::ITEM_SCREW, 0, 0.0, 1.0, 0.0, None);
+        let mul = self.common().f32(0x800);
+        self.jump_take_off(gobj, false, mul);
+        self.game.fighter_mut(gobj).x2227_b0 = true;
+    }
+
     /// The airborne states' interrupts, `ftCo_Jump_IASA`: specials, item throws and catches,
     /// tethers, air dodges, aerials, then a double jump; Peach floats.
     #[doc(alias = "ftCo_Jump_IASA")]
+    #[doc(alias = "ftCo_ItemScrew_IASA")]
     pub fn co_jump_iasa(&mut self, gobj: GObjId) {
         if self.special_air_check(gobj)
             || self.item_throw_air_check(gobj)
