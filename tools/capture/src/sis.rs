@@ -179,6 +179,11 @@ impl Importer<'_> {
         let mem: &[u8] = &self.cap.call.mem1;
         let data = self.data;
         let mut s = SisLib::default();
+        // The executable's string buffers (Pokémon Stadium's screen text), as memory holds
+        // them: code appends to what an earlier frame wrote there.
+        for &(b, n) in &melee_sim::hsd::sis::STATIC_STRINGS {
+            s.statics.push((b, (0..n).map(|i| mem.b(b + i)).collect()));
+        }
         let Some((base, size)) = arena(mem) else {
             self.game.sis = s;
             return;
