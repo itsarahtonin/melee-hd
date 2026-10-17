@@ -330,6 +330,12 @@ pub fn start(r: &mut Running, gobj: GObjId, scale: f32) {
     lib26b1::stop_keeping_clear(r.game, gobj);
 }
 
+/// A hit Pokémon's launch along its knockback, `it_80279D38` (`it_8027B964`).
+#[doc(alias = "it_80279D38")]
+pub fn launch(r: &mut Running, gobj: GObjId) {
+    super::zako::launch(r, gobj, false);
+}
+
 /// Its first size, `it_80279D5C`: the model scaled, and growing (phase 0).
 #[doc(alias = "it_80279D5C")]
 pub fn set_size(r: &mut Running, gobj: GObjId, scale: f32) {

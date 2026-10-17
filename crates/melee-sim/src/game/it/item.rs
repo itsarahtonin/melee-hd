@@ -1902,7 +1902,7 @@ pub fn load_common_data(game: &mut Game, data: &Archives, it_co: melee_data::arc
         None => Vec::new(),
     };
     it.pokemon_articles = data.ptr(public.at(0xC));
-    // `it_804D6D40` (`x10`), the stage enemies' data, which no ported code reads.
+    it.zako = data.ptr(public.at(0x10));
     it.colanims = data.ptr(public.at(0x14));
 }
 

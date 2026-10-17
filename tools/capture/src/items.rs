@@ -239,6 +239,7 @@ impl Importer<'_> {
         self.game.it.common_articles = data(self, "it_804D6D24");
         self.game.it.pokemon_articles = data(self, "it_804D6D30");
         self.game.it.colanims = data(self, "it_804D6D04");
+        self.game.it.zako = data(self, "it_804D6D40");
         let table = cap.u32(sym("it_804D6D38"));
         self.game.it.char_articles = if table == 0 {
             Vec::new()
@@ -431,6 +432,7 @@ impl Comparer<'_> {
             ("it_804D6D24", g.common_articles),
             ("it_804D6D30", g.pokemon_articles),
             ("it_804D6D04", g.colanims),
+            ("it_804D6D40", g.zako),
         ] {
             let theirs = self.u32(sym(name));
             self.compare_data(name, ours, theirs);
