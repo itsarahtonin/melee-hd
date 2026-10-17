@@ -26,7 +26,9 @@ here=$(cd "$(dirname "$0")" && pwd)
 bench=${MELEE_BENCH:-$here/../../target/release/melee-bench}
 run=${SSBM_RUN:?SSBM_RUN=path to ssbm-run with BENCH_CODES}
 mkdir -p "$dir" "$traces"
-"$bench" oracle-sets "$dir" "$@" > "$dir/matches.tsv" || exit 1
+# The list stays private to this run: another run into the same DIR rewrites its own.
+list=$(mktemp)
+"$bench" oracle-sets "$dir" "$@" > "$list" || exit 1
 
 make() {
     local name=$1 ai=$2 fields=$3 pads=$4 out=$dir/$1 trc=$traces/oracle-$1
@@ -72,5 +74,6 @@ while IFS=$'\t' read -r name ai fields pads; do
         wait -n
     done
     make "$name" "$ai" "$fields" "$pads" &
-done < "$dir/matches.tsv"
+done < "$list"
+rm -f "$list"
 wait
