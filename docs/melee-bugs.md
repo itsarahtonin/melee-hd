@@ -258,6 +258,36 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes the victim's size after an early breakout; breaks replay and Slippi compatibility where it happens.
 - **Source:** `crates/melee-sim/src/game/ft/co/yoshi_egg.rs:401`.
 
+### Kirby: Giga Bowser's copy reads a copy file nothing loads
+
+- **Where:** `ftKb_SpecialN_800F16D0` (the copy's items registered, `case Ft_Kind_GKoops`), from `ftKb_SpecialN_800F1BAC`; `crates/melee-sim/src/game/ft/kirby/copy.rs` (`kb_register_copy_items`).
+- **Defect:** Giga Bowser has no copy file (`ftKb_Init_803CA9D0[31]` is empty), so the copy loading at the match's start (`ftKb_SpecialN_800EED50`) leaves his copy's data null; taking his copy then registers its flame from that data (`hats[30]->hat_dynamics[0]`), reading through the null pointer. His hat is Bowser's (`ftKb_SpecialN_800EFD64`), whose data is loaded only when Bowser is in the match.
+- **Effect:** a Kirby who swallows Giga Bowser reads address 0x18, which faults on the console. VS can't put Giga Bowser in a match.
+- **melee-hd:** stops (the port panics, a copy without its data), where the original faults.
+- **Fix:** give Giga Bowser's copy Bowser's copy data, or load a copy file for him.
+- **Fix impact:** changes only the single-player modes, where he appears.
+- **Source:** `crates/melee-sim/src/game/ft/kirby/copy.rs:131`.
+
+### Kirby: Jigglypuff's copy keeps the roll's look when hit
+
+- **Where:** `ftKb_PrSetCallbacks` and `fn_80100E0C` (Rollout's hooks as Kirby rolls it), `crates/melee-sim/src/game/ft/kirby/special_purin.rs` (`kb_pr_roll_cbs`, `kb_pr_roll_hit`).
+- **Defect:** Jigglypuff's own Rollout hooks its roll's undo to her damage and death (`ftPr_SpecialS_8013D658`: the model's scale back, `TopN` turned back to her facing, the turn the stick asked for taken). Kirby's copy hooks his generic cleanups instead (`ftKb_Init_800EE7B8`, `ftKb_Init_800EE74C`), whose copy cleanup does nothing for Jigglypuff's copy, so nothing undoes the roll's look when he's hit or KO'd mid-roll.
+- **Effect:** hit in the four frames of a squash (the roll's start and each bounce), Kirby keeps the squashed model, and the bones his hurtboxes follow, until a later Rollout or something else sets his scale; `TopN` stays turned side-on and a turn the stick asked for is lost.
+- **melee-hd:** modeled.
+- **Fix:** hook the roll's undo, as Jigglypuff's own does.
+- **Fix impact:** changes Kirby's size after such a hit; breaks replay and Slippi compatibility where it happens.
+- **Source:** `crates/melee-sim/src/game/ft/kirby/special_purin.rs:250`.
+
+### Kirby: Jigglypuff's copy's landing dust takes the roll for the slope
+
+- **Where:** `ftKb_PrSpecialAirN_Coll` (Rollout landing from its bounces as Kirby rolls it), `crates/melee-sim/src/game/ft/kirby/special_purin.rs` (`kb_pr_special_air_n_charge_release_coll`).
+- **Defect:** it works out the floor's angle and drops it, then hands the dust effect the roll's way (`mv.pr.specialn.x34`) and roll angle (`x14`) where Jigglypuff's own hands it her facing and the floor's angle.
+- **Effect:** the dust as he lands from a bounce is turned by his roll angle rather than laid along the floor; an effect only.
+- **melee-hd:** modeled.
+- **Fix:** pass his facing and the floor's angle.
+- **Fix impact:** none on gameplay.
+- **Source:** `crates/melee-sim/src/game/ft/kirby/special_purin.rs:1341`.
+
 ### Mewtwo: a Shadow Ball field nothing stores
 
 - **Where:** Shadow Ball's code reading `ftMewtwo_FighterVars::x2238_shadowBallGObj`.
@@ -287,6 +317,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** remove the write.
 - **Fix impact:** none.
 - **Source:** [engine notes, loaded data the game writes into](engine.md#loaded-data-the-game-writes-into) (line 297).
+
+### Mewtwo: a fully charged Shadow Ball's sound never plays
+
+- **Where:** `ftMt_SpecialN_ReleaseShadowBall` and Kirby's copy's `ftKb_SpecialNMt_801071FC`, `crates/melee-sim/src/game/ft/mewtwo/special_n.rs` (`mt_n_release`) and `crates/melee-sim/src/game/ft/kirby/special_mewtwo.rs` (`kb_mt_release`).
+- **Defect:** both empty the charge before testing it against a full charge to pick the shot's sound, so the test compares 0 with the full charge.
+- **Effect:** a fully charged ball plays the ordinary shot's sound (`0x30DB3`), never its own (`0x30DB6`).
+- **melee-hd:** modeled.
+- **Fix:** test the charge before emptying it.
+- **Fix impact:** changes a sound only.
+- **Source:** `crates/melee-sim/src/game/ft/kirby/special_mewtwo.rs:267` and `crates/melee-sim/src/game/ft/mewtwo/special_n.rs:188`.
 
 ### Samus: the grapple swing's victim bit from the stack
 
