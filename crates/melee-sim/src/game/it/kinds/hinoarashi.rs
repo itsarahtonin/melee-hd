@@ -53,7 +53,7 @@ pub const HEADING: usize = 0x6C;
 pub const ANGLE: usize = 0x78;
 
 const PI: f64 = std::f64::consts::PI;
-const TAU: f64 = 6.283185307179586;
+const TAU: f64 = std::f64::consts::TAU;
 
 /// Runs one of Cyndaquil's predicates, if `addr` is one.
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
