@@ -324,7 +324,7 @@ impl Running<'_> {
         for i in 0..model_num {
             let chosen = i32::from(self.game.fighters[f.0].x5F4_arr[i as usize].idx);
             let entry = lookup.at(8 * i);
-            let n = self.data.u32(entry) as i32;
+            let n = self.vis_lookup_len(entry);
             for j in 0..n {
                 let t = self
                     .data
@@ -379,6 +379,17 @@ impl Running<'_> {
         }
     }
 
+    /// A visibility lookup entry's count of DObj sets (`FtPartsVisLookup::x0`, an int). Kirby's
+    /// copy of Mr. Game & Watch puts a lookup of one entry in his own slot 4, which his two
+    /// model groups walk past into the next word, a pointer: in memory an address at or above
+    /// 0x80000000, so a negative count and no sets (`docs/melee-bugs.md`).
+    pub(crate) fn vis_lookup_len(&self, entry: melee_data::archive::DataRef) -> i32 {
+        if self.data.ptr(entry).is_some() {
+            return i32::MIN;
+        }
+        self.data.u32(entry) as i32
+    }
+
     /// Hides every DObj a visibility lookup names unless it has, `ftParts_80074D7C`.
     #[doc(alias = "ftParts_80074D7C")]
     pub fn hide_parts_vis(&mut self, f: FighterId, idx: usize, list: Option<DObjListId>) {
@@ -390,7 +401,7 @@ impl Running<'_> {
         let model_num = vis.model_num;
         for i in 0..model_num {
             let entry = lookup.at(8 * i);
-            let n = self.data.u32(entry) as i32;
+            let n = self.vis_lookup_len(entry);
             for j in 0..n {
                 let t = self
                     .data
