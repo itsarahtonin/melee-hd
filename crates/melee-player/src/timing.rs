@@ -204,6 +204,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore = "measures wall-clock waits: run on a quiet machine, with the benchmarks"]
     fn precise_waits_end_at_their_deadline() {
         for us in [0u64, 200, 1500, 4000] {
             // The spin ends it within microseconds; a busy machine can preempt the spin, so
