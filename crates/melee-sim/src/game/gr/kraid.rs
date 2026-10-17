@@ -358,7 +358,8 @@ pub fn proc_kraid(r: &mut Running, gobj: GObjId) {
         let c = map_gobj(r.game, 1).expect("Ground_GetMapGObj(1)");
         jobj_of(r.game, c)
     };
-    match r.game.grounds[g.0].u.kraid2().x0 {
+    let state = r.game.grounds[g.0].u.kraid2().x0;
+    match state {
         0 => {
             if r.game.grounds[g.0].u.kraid2().xC <= 0 {
                 if rock_still(r) {
@@ -436,21 +437,19 @@ pub fn proc_kraid(r: &mut Running, gobj: GObjId) {
                 r.game.grounds[g.0].u.kraid2().x0 = 4;
             }
         }
-        4 => {
-            if anime::finished(r.game, gobj, 0, 7) {
-                let p = param(r.game);
-                let full = p
-                    .w(r, KRAID_WAIT_TIME)
-                    .wrapping_add(p.w(r, KRAID_WAIT_TIME_ADD)) as i32;
-                r.game.grounds[g.0].u.kraid2().xC = full;
-                jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-                let c = copy(r);
-                jobj::set_flags_all(&mut r.game.objs.jobjs, c, jobj::HIDDEN);
-                let wait = kraid_wait(r);
-                let v = r.game.grounds[g.0].u.kraid2();
-                v.xC = wait;
-                v.x0 = 0;
-            }
+        4 if anime::finished(r.game, gobj, 0, 7) => {
+            let p = param(r.game);
+            let full = p
+                .w(r, KRAID_WAIT_TIME)
+                .wrapping_add(p.w(r, KRAID_WAIT_TIME_ADD)) as i32;
+            r.game.grounds[g.0].u.kraid2().xC = full;
+            jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
+            let c = copy(r);
+            jobj::set_flags_all(&mut r.game.objs.jobjs, c, jobj::HIDDEN);
+            let wait = kraid_wait(r);
+            let v = r.game.grounds[g.0].u.kraid2();
+            v.xC = wait;
+            v.x0 = 0;
         }
         _ => {}
     }
