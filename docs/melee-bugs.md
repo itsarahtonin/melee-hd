@@ -484,6 +484,26 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes the random sequence (and the trophies) wherever it runs, so gameplay after it; breaks replay compatibility on those stages.
 - **Source:** `crates/melee-sim/src/game/gr/ground.rs` (`x6e4_drawn`); the decompilation's `ground.c` (`Ground_801C5840`).
 
+### Brinstar Depths: a debugging button steps Kraid's copy's animation
+
+- **Where:** `grKraid_801FE2D0` (the process of Kraid's copy behind the rock, map 1), `crates/melee-sim/src/game/gr/kraid.rs` (`proc_copy`).
+- **Defect:** a debugging leftover: each time A is pressed on the second controller (the pad library's master status, `HSD_PadMasterStatus[1]`, whoever plays that port), it steps a counter (`grKr_804D6A0C`) through the copy's seven animations, starts that one on the copy and reports it to the debugger (`*** Req Effect Anime`).
+- **Effect:** in play, whoever is on port 2 changes the copy's animation by pressing A, visibly while Kraid is up; the copy's animations draw random numbers, so the presses shift the random sequence. Under Slippi's playback the inputs reach the fighters, not the master statuses, so a replay never reproduces it: the oracle's Brinstar Depths recording parts from ssbm-rs's playback in the random seed on seven frames ([the oracle](oracle.md)).
+- **melee-hd:** modeled: it reads the master status as the original does.
+- **Fix:** drop the button.
+- **Fix impact:** changes the copy's animation and the random sequence wherever port 2 presses A on Brinstar Depths in vanilla play; Slippi replays and online play (whose inputs don't go through the master statuses for this) would match a fixed game better, not worse.
+- **Source:** `crates/melee-sim/src/game/gr/kraid.rs` (`proc_copy`); the decompilation's `grkraid.c`.
+
+### Brinstar Depths: the turn's speed bound stored back into itself
+
+- **Where:** `grKraid_801FE6D8` (a landing swipe turning the rock), `crates/melee-sim/src/game/gr/kraid.rs` (`swipe_hit`).
+- **Defect:** it writes the parameters' lowest turning speed (`map_rot_spd_min`) back into itself, a store into the stage's loaded data that changes nothing.
+- **Effect:** none observable.
+- **melee-hd:** left out (the value doesn't change).
+- **Fix:** drop the store.
+- **Fix impact:** none.
+- **Source:** the decompilation's `grkraid.c`.
+
 ### The airborne collision loop can hang
 
 - **Where:** `mpColl_80046904` (one airborne substep), `crates/melee-sim/src/mp/coll/air.rs` and `crates/melee-sim/src/mp/coll/mod.rs`.

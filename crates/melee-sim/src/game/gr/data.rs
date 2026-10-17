@@ -4,8 +4,8 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_IZUMI, GR_KIND_LAST, GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI,
-    GR_KIND_PSTADIUM, GR_KIND_STORY,
+    GR_KIND_BATTLE, GR_KIND_IZUMI, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDPUPUPU,
+    GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_STORY,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -332,6 +332,48 @@ pub const OLDYOSHI: StageData = StageData {
     joints: &[],
 };
 
+/// `grKr_StageCallbacks`. Map 3 is the rock, map 4 Kraid, map 1 his copy, map 2 the
+/// background.
+pub const KRAID_CALLBACKS: [StageCallbacks; 5] = [
+    cb(0x801F_E1B0, 0x801F_E1DC, 0x801F_E1E4, 0x801F_E1E8, 0),
+    cb(0x801F_E1EC, 0x801F_E2C8, 0x801F_E2D0, 0x801F_E35C, 0),
+    cb(0x801F_E360, 0x801F_E3A4, 0x801F_E3AC, 0x801F_E3B0, 0),
+    cb(
+        0x801F_E3B4,
+        0x801F_E438,
+        0x801F_E440,
+        0x801F_E6D4,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x801F_E818, 0x801F_E9F8, 0x801F_EA00, 0x801F_F14C, 0),
+];
+
+/// `grKr_803E4C78`: the rock's six collision joints, all on its joint 12.
+pub const KRAID_JOINTS: [GrJoint; 6] = [
+    GrJoint { x: 0, y: 3, z: 12 },
+    GrJoint { x: 1, y: 3, z: 12 },
+    GrJoint { x: 2, y: 3, z: 12 },
+    GrJoint { x: 3, y: 3, z: 12 },
+    GrJoint { x: 4, y: 3, z: 12 },
+    GrJoint { x: 5, y: 3, z: 12 },
+];
+
+/// `grKr_StageData`.
+pub const KRAID: StageData = StageData {
+    grkind: GR_KIND_KRAID,
+    callbacks: &KRAID_CALLBACKS,
+    file: Some("/GrKr.dat"),
+    on_init: 0x801F_DFFC,
+    on_demo_init: 0x801F_DFF8,
+    on_load: 0x801F_E094,
+    on_start: 0x801F_E098,
+    callback4: 0x801F_E0BC,
+    on_touch_line: 0x801F_F154,
+    on_check_shadow_render: 0x801F_F15C,
+    flags2: 1,
+    joints: &KRAID_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -342,6 +384,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_OLDPUPUPU => &OLDPUPUPU,
         GR_KIND_IZUMI => &IZUMI,
         GR_KIND_OLDYOSHI => &OLDYOSHI,
+        GR_KIND_KRAID => &KRAID,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

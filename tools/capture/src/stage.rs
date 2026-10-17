@@ -29,6 +29,9 @@ pub const GROLDPUPUPU_YAKUMONO: u32 = 0x804D_6A98;
 pub const GRIZUMI_YAKUMONO: u32 = 0x804D_6968;
 /// groldyoshi.c's (`ssbm_types::tu::melee__gr__groldyoshi::yakumono_param`).
 pub const GROLDYOSHI_YAKUMONO: u32 = 0x804D_6A88;
+/// grkraid.c's, and its debugging button's animation (`grKr_804D6A0C`).
+pub const GRKRAID_YAKUMONO: u32 = 0x804D_6A08;
+pub const GRKRAID_ANIM: u32 = 0x804D_6A0C;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -259,6 +262,9 @@ impl Importer<'_> {
         self.game.gr.izumi_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GROLDYOSHI_YAKUMONO);
         self.game.gr.oldyoshi_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRKRAID_YAKUMONO);
+        self.game.gr.kraid_yakumono = self.data_or_unhandled(yaku);
+        self.game.gr.kraid_anim = cap.u32(GRKRAID_ANIM) as i32;
         self.game.gr.battle_demo = self.u8_at(sym("isDemoFight")) != 0;
         self.game.gr.game_mode = self.u8_at(sym("state_machine"));
         let points = sym("grLib_8049EF58");
@@ -803,6 +809,11 @@ impl Comparer<'_> {
                 GROLDYOSHI_YAKUMONO,
                 game.gr.oldyoshi_yakumono,
             ),
+            (
+                "grKraid yakumono_param",
+                GRKRAID_YAKUMONO,
+                game.gr.kraid_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -812,6 +823,12 @@ impl Comparer<'_> {
                 (yaku != 0).then(|| self.data.get(yaku)).flatten(),
             );
         }
+        self.check(
+            "grKr_804D6A0C",
+            "kraid anim",
+            game.gr.kraid_anim,
+            self.u32(GRKRAID_ANIM) as i32,
+        );
         self.check(
             "isDemoFight",
             "demo",

@@ -162,6 +162,11 @@ pub const STAGES: &[Stage] = &[
         keys: &["bf", "battlefield"],
     },
     Stage {
+        kind: 15,
+        name: "Brinstar Depths",
+        keys: &["bd", "brinstar-depths"],
+    },
+    Stage {
         kind: 28,
         name: "Dream Land",
         keys: &["dl", "dream-land"],

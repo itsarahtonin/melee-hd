@@ -23,6 +23,7 @@ pub const BUTTON_LEFT: u32 = 0x0001;
 pub const BUTTON_RIGHT: u32 = 0x0002;
 pub const BUTTON_DOWN: u32 = 0x0004;
 pub const BUTTON_UP: u32 = 0x0008;
+pub const BUTTON_A: u32 = 0x0100;
 /// The directions [`Controllers::renew_master`] derives from the control stick and C-stick.
 pub const STICK_UP: u32 = 0x1_0000;
 pub const STICK_DOWN: u32 = 0x2_0000;

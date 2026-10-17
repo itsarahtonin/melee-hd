@@ -333,3 +333,336 @@ fn oldyoshi_unreached_callbacks() {
         &demo,
     );
 }
+
+// The hazard stages (milestone 4's task 12). Their captures are in `STAGES_HAZARD_CALLS`
+// (default `$SSBM_RS_LOCAL/calls/stages-hazard`), made as above by `capture.sh KEY MATCH`
+// beside them (the same command with `KEY-funcs.txt` and `done-KEY.txt`).
+
+const HAZARD_CALLS: &str = "calls/stages-hazard";
+
+fn hazard_dir(set: &str) -> String {
+    let base = std::env::var("STAGES_HAZARD_CALLS")
+        .unwrap_or_else(|_| melee_local_data::ssbm_rs_local(HAZARD_CALLS));
+    format!("{base}/{set}")
+}
+
+/// `stage_info`.
+const STAGE_INFO: u32 = 0x8049_E6C8;
+
+/// The variables (`Ground::u`) of the stage object of map `map`.
+fn map_vars(call: &Call, map: u32) -> u32 {
+    let g = peek_u32(call, STAGE_INFO + 0x180 + 4 * map);
+    peek_u32(call, g + 0x2C) + 0xC4
+}
+
+fn poke_u8(call: &mut Call, a: u32, v: u8) {
+    let w = peek_u32(call, a & !3);
+    let shift = 24 - 8 * (a & 3);
+    poke_u32(call, a & !3, (w & !(0xFF << shift)) | u32::from(v) << shift);
+}
+
+/// [`check_calls_with`] with `OSReport` stood in for on the reference's side: the hazard stages'
+/// code reports to the debugger (Kraid's hand, the crane's target), which the reference's
+/// hardware doesn't take, and melee-hd leaves out.
+fn check_hazard(
+    dir: &str,
+    func: &str,
+    min: usize,
+    prepare: &Prepare,
+    ours: &leaf_check::calls::Ours,
+) {
+    let stubs = [(leaf_check::sym("OSReport"), None)];
+    let setup = leaf_check::calls::Setup {
+        stubs: &stubs,
+        ..Default::default()
+    };
+    leaf_check::calls::check_calls_in(dir, func, min, prepare, &setup, ours);
+}
+
+fn by_event(r: &mut Running, _: &Maps, call: &Call) -> Ret {
+    run_event(r, call.addr);
+    Ret::Nothing
+}
+
+fn by_demo(r: &mut Running, _: &Maps, call: &Call) -> Ret {
+    run_demo_init(r, call.addr, call.regs.gpr[3] as i32);
+    Ret::Nothing
+}
+
+// Brinstar Depths (`grkraid.c`).
+
+const KRAID: &str = "oracle-stage-brinstar-depths";
+
+#[test]
+fn kraid_setup() {
+    use melee_sim::game::gr::kraid;
+    let d = hazard_dir(KRAID);
+    check_hazard(&d, "grKraid_OnInit", 1, &as_saved, &by_event);
+    check_hazard(&d, "grKraid_OnStart", 1, &as_saved, &by_event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let _ = kraid::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    for map in 0..5u32 {
+        check_hazard(
+            &d,
+            "grKraid_801FE0C4",
+            1,
+            &move |c, _| c.regs.gpr[3] = map,
+            &create,
+        );
+    }
+    for f in [
+        "stageGObj0_OnInit",
+        "grKraid_801FE1EC",
+        "grKraid_801FE360",
+        "grKraid_801FE3B4",
+        "grKraid_801FE818",
+    ] {
+        check_hazard(&d, f, 1, &as_saved, &by_address);
+    }
+}
+
+/// The rock's variables set: state, rumbling part, direction, speed, step and delay.
+fn rock(c: &mut Call, state: u8, part: u8, dir: f32, speed: f32, step: f32, delay: i32) {
+    let v = map_vars(c, 3);
+    poke_u8(c, v, state);
+    poke_u8(c, v + 1, part);
+    poke_u32(c, v + 4, dir.to_bits());
+    poke_u32(c, v + 8, speed.to_bits());
+    poke_u32(c, v + 0xC, step.to_bits());
+    poke_u32(c, v + 0x10, delay as u32);
+}
+
+#[test]
+fn kraid_rock() {
+    let d = hazard_dir(KRAID);
+    let prepares: [&Prepare; 9] = [
+        &as_saved,
+        // A swipe landed either way: the turn starts.
+        &|c, _| rock(c, 0, 0, 1.0, 0.0, 0.0, 0),
+        &|c, _| rock(c, 0, 1, -1.0, 0.0, 0.0, 0),
+        // Turning: still in its delay, easing off, and at its end (speed below a step), each
+        // way.
+        &|c, _| rock(c, 1, 0, 1.0, 2.5, 0.05, 7),
+        &|c, _| rock(c, 1, 1, 1.0, 2.5, 0.05, 0),
+        &|c, _| rock(c, 1, 0, -1.0, -2.5, -0.05, 0),
+        &|c, _| rock(c, 1, 0, 1.0, 0.04, 0.05, 0),
+        // Eased off to exactly a step: it turns once more.
+        &|c, _| rock(c, 1, 0, 1.0, 0.5, 0.25, 0),
+        // A state past the two.
+        &|c, _| rock(c, 3, 1, 0.0, 0.0, 0.0, 0),
+    ];
+    for p in prepares {
+        check_hazard(&d, "grKraid_801FE440", 1, p, &by_address);
+    }
+}
+
+/// Kraid's variables set: state, animation, last place, swipe side and tick count; the rock's
+/// direction too.
+fn kraid_state(c: &mut Call, state: u8, anim: u8, last: u8, side: f32, t: i32, rock_dir: f32) {
+    let v = vars(c);
+    poke_u8(c, v, state);
+    poke_u8(c, v + 1, anim);
+    poke_u8(c, v + 2, last);
+    poke_u32(c, v + 8, side.to_bits());
+    poke_u32(c, v + 0xC, t as u32);
+    let r = map_vars(c, 3);
+    poke_u32(c, r + 4, rock_dir.to_bits());
+}
+
+#[test]
+fn kraid_kraid() {
+    let d = hazard_dir(KRAID);
+    let f = "grKraid_801FEA00";
+    check_hazard(&d, f, 1, &as_saved, &by_address);
+    // Waiting: over with the rock still or turning, and counting down.
+    for (t, dir) in [(0, 0.0f32), (0, 1.0), (-3, 0.0), (12, 0.0)] {
+        check_hazard(
+            &d,
+            f,
+            1,
+            &move |c, _| kraid_state(c, 0, 3, 2, 0.0, t, dir),
+            &by_address,
+        );
+    }
+    // Risen, idling (each idle at its sounds' ticks), swiping (each side, around the window's
+    // ends and the hit, the rock still or turning), sinking, and a state past them.
+    let mut cases: Vec<(u8, u8, f32, i32, f32)> = vec![(1, 3, 0.0, 0, 0.0)];
+    for (anim, t) in [
+        (0, 80),
+        (1, 45),
+        (2, 55),
+        (2, 161),
+        (2, 246),
+        (0, 3),
+        (1, 80),
+    ] {
+        cases.push((2, anim, 1.0, t, 0.0));
+    }
+    for t in [122, 123, 129, 130, 138, 139, 146, 147, 157, 158, 169, 170] {
+        cases.push((3, 5, 0.0, t, 0.0));
+        cases.push((3, 6, 1.0, t, 0.0));
+    }
+    cases.push((3, 5, 0.0, 158, 1.0));
+    cases.push((3, 6, 1.0, 130, -1.0));
+    cases.push((4, 4, 0.0, 9, 0.0));
+    cases.push((7, 4, 0.0, 9, 0.0));
+    for (state, anim, side, t, dir) in cases {
+        check_hazard(
+            &d,
+            f,
+            1,
+            &move |c, _| kraid_state(c, state, anim, 1, side, t, dir),
+            &by_address,
+        );
+    }
+}
+
+#[test]
+fn kraid_helpers() {
+    use melee_sim::game::gr::kraid;
+    let d = hazard_dir(KRAID);
+    // Where he rises: after a turn (any place but the last), else the furthest left or right.
+    let place = |r: &mut Running, maps: &Maps, call: &Call| {
+        kraid::place(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let prepares: [&Prepare; 3] = [
+        &as_saved,
+        &|c, k| {
+            let v = vars(c);
+            poke_u8(c, v + 5, 1);
+            poke_u8(c, v + 2, (k % 6) as u8);
+        },
+        &|c, _| poke_u8(c, vars(c) + 5, 0),
+    ];
+    for p in prepares {
+        check_hazard(&d, "grKraid_801FEE54", 1, p, &place);
+    }
+    let set_anim = |r: &mut Running, maps: &Maps, call: &Call| {
+        kraid::set_anim(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    for p in [&as_saved as &Prepare, &|c, k| {
+        c.regs.gpr[4] = (k % 7) as u32
+    }] {
+        check_hazard(&d, "grKraid_801FF068", 1, p, &set_anim);
+    }
+    let reached = |r: &mut Running, maps: &Maps, call: &Call| {
+        let hit = kraid::swipe_reached(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        Ret::Int(u32::from(hit))
+    };
+    let prepares: [&Prepare; 5] = [
+        &as_saved,
+        &|c, _| poke_u32(c, vars(c) + 0xC, 0x9D),
+        &|c, _| poke_u32(c, vars(c) + 0xC, 0x81),
+        &|c, _| {
+            poke_u32(c, vars(c) + 0xC, 0x9E);
+            c.regs.gpr[4] = 1;
+        },
+        &|c, _| {
+            poke_u32(c, vars(c) + 0xC, 0x82);
+            c.regs.gpr[4] = 0;
+        },
+    ];
+    for p in prepares {
+        check_hazard(&d, "grKraid_801FF0E0", 1, p, &reached);
+    }
+    // A swipe landing on a still rock, either way, on one already turning, and with the hand
+    // where the speed falls between its bounds (the saved swipes all reach one).
+    let hit = |r: &mut Running, maps: &Maps, call: &Call| {
+        let hand = maps.jobjs.get(&call.regs.gpr[3]).copied();
+        kraid::swipe_hit(r, hand, call.regs.fpr[1].ps0);
+        Ret::Nothing
+    };
+    // The hand put where the speed falls between the bounds (its matrix's x).
+    let open_bounds = |c: &mut Call, _: usize| {
+        let p = peek_u32(c, KRAID_PARAM);
+        let (lo, hi) = (f32_at(c, p + 0xC), f32_at(c, p + 0x10));
+        let x = 66.0 * (lo + hi) / hi;
+        poke_u32(c, c.regs.gpr[3] + 0x44 + 0xC, x.to_bits());
+    };
+    let prepares: [&Prepare; 5] = [
+        &open_bounds,
+        &as_saved,
+        &|c, _| c.regs.fpr[1].ps0 = -c.regs.fpr[1].ps0,
+        &|c, _| {
+            let r = map_vars(c, 3);
+            poke_u32(c, r + 4, 1.0f32.to_bits());
+        },
+        &|c, _| {
+            let r = map_vars(c, 3);
+            poke_u32(c, r + 4, (-1.0f32).to_bits());
+        },
+    ];
+    for p in prepares {
+        check_hazard(&d, "grKraid_801FE6D8", 1, p, &hit);
+    }
+}
+
+/// grkraid.c's `yakumono_param`.
+const KRAID_PARAM: u32 = 0x804D_6A08;
+
+/// `HSD_PadMasterStatus[1].trigger`.
+const MASTER_TRIGGER_2: u32 = 0x804C_1FAC + 0x44 + 8;
+
+/// Kraid's copy's debugging button: A on the second controller's master status steps its
+/// animation, wrapping past the seventh; anything else leaves it.
+#[test]
+fn kraid_copy_button() {
+    let d = hazard_dir(KRAID);
+    let anim = 0x804D_6A0C;
+    let prepares: [&Prepare; 5] = [
+        &as_saved,
+        &|c, k| {
+            poke_u32(c, MASTER_TRIGGER_2, 0x100);
+            poke_u32(c, anim, (k % 7) as u32);
+        },
+        &|c, _| {
+            poke_u32(c, MASTER_TRIGGER_2, 0x100);
+            poke_u32(c, anim, 5);
+        },
+        &|c, _| {
+            poke_u32(c, MASTER_TRIGGER_2, 0x100);
+            poke_u32(c, anim, 6);
+        },
+        &|c, _| poke_u32(c, MASTER_TRIGGER_2, 0x200),
+    ];
+    for p in prepares {
+        check_hazard(&d, "grKraid_801FE2D0", 1, p, &by_address);
+    }
+}
+
+/// The callbacks no capture reaches, from the rock's captures: the empty processes and destroy
+/// callbacks, the load and demo hooks, and the shadow check (every joint takes shadows).
+#[test]
+fn kraid_unreached_callbacks() {
+    use melee_sim::game::gr::kraid;
+    let d = hazard_dir(KRAID);
+    let from = "grKraid_801FE440";
+    for name in [
+        "grKraid_801FE1E4",
+        "grKraid_801FE1E8",
+        "grKraid_801FE35C",
+        "grKraid_801FE3AC",
+        "grKraid_801FE3B0",
+        "grKraid_801FE6D4",
+        "grKraid_801FF14C",
+        "grKraid_801FF150",
+    ] {
+        check_hazard(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let load = retarget(leaf_check::sym("grKraid_OnLoad"));
+    check_hazard(&d, from, 1, &load, &by_event);
+    let demo = retarget(leaf_check::sym("grKraid_OnDemoInit"));
+    check_hazard(&d, from, 1, &demo, &by_demo);
+    let shadow =
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(kraid::check_shadow_render()));
+    let to_shadow = retarget(leaf_check::sym("grKraid_OnCheckShadowRender"));
+    check_hazard(&d, from, 1, &to_shadow, &shadow);
+}

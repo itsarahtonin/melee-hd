@@ -13,6 +13,7 @@ pub mod dynamic_attr;
 pub mod grlib;
 pub mod ground;
 pub mod izumi;
+pub mod kraid;
 pub mod last;
 pub mod material;
 pub mod oldpupupu;
@@ -25,8 +26,9 @@ pub mod vars;
 pub mod zako;
 
 pub use vars::{
-    BattleBgVars, GroundVars, LastVars, MapVars, OldYoshiCloud, OldYoshiCloudVars,
-    OldYoshiGuestVars, StadiumBits, StadiumDisplayVars, StadiumPieceVars, StadiumVars, VarsKind,
+    BattleBgVars, GroundVars, Kraid2Vars, KraidVars, LastVars, MapVars, OldYoshiCloud,
+    OldYoshiCloudVars, OldYoshiGuestVars, StadiumBits, StadiumDisplayVars, StadiumPieceVars,
+    StadiumVars, VarsKind,
 };
 
 use melee_data::archive::{ArchiveId, DataRef};
@@ -39,6 +41,8 @@ use crate::hsd::pool::Pool;
 
 /// `Gr_Kind_PStadium`, Pokémon Stadium.
 pub const GR_KIND_PSTADIUM: i32 = 16;
+/// `Gr_Kind_Kraid`, Brinstar Depths.
+pub const GR_KIND_KRAID: i32 = 9;
 /// `Gr_Kind_Story`, Yoshi's Story.
 pub const GR_KIND_STORY: i32 = 10;
 /// `Gr_Kind_Izumi`, Fountain of Dreams.
@@ -149,6 +153,10 @@ pub struct Globals {
     pub oldpupupu_yakumono: Option<DataRef>,
     /// Yoshi's Island N64's `yakumono_param` (`groldyoshi_yakumono_param_t`).
     pub oldyoshi_yakumono: Option<DataRef>,
+    /// Brinstar Depths' `yakumono_param` (`grKraid_YakumonoParam`).
+    pub kraid_yakumono: Option<DataRef>,
+    /// Which animation Kraid's copy last took from the debugging button (`grKr_804D6A0C`).
+    pub kraid_anim: i32,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -216,6 +224,8 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_STORY, 3) => VarsKind::StoryShyGuys,
         (GR_KIND_OLDYOSHI, 2) => VarsKind::OldYoshiCloud,
         (GR_KIND_OLDYOSHI, 3) => VarsKind::OldYoshiGuest,
+        (GR_KIND_KRAID, 1 | 3) => VarsKind::Kraid,
+        (GR_KIND_KRAID, 4) => VarsKind::Kraid2,
         _ => VarsKind::Bytes,
     }
 }

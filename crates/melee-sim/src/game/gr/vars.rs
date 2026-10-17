@@ -39,6 +39,8 @@ pub enum VarsKind {
     Izumi3,
     OldYoshiCloud,
     OldYoshiGuest,
+    Kraid,
+    Kraid2,
 }
 
 /// `union GroundVars`.
@@ -80,6 +82,40 @@ pub enum GroundVars {
     OldYoshiCloud(OldYoshiCloudVars),
     /// `grOldYoshi_Guest_GroundVars`: the creatures that pass behind it (map 3).
     OldYoshiGuest(OldYoshiGuestVars),
+    /// `grKraid_GroundVars`: Brinstar Depths' rock (map 3) and Kraid's copy (map 1).
+    Kraid(KraidVars),
+    /// `grKraid_GroundVars2`: Kraid (map 4).
+    Kraid2(Kraid2Vars),
+}
+
+/// `grKraid_GroundVars`: the rock's state (`x0`), whether its rumbling part animates (`x1`),
+/// the turn's direction (`x4`), speed (`x8`) and step (`xC`), and the delay before it turns
+/// (`x10`). Kraid's copy uses `x0` and `x1` alone.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct KraidVars {
+    pub x0: i8,
+    pub x1: i8,
+    pub x4: f32,
+    pub x8: f32,
+    pub xC: f32,
+    pub x10: i32,
+}
+
+/// `grKraid_GroundVars2`: Kraid's state (`x0`), animation (`x1`), last place (`x2`), the
+/// places furthest left and right (`x3`, `x4`), whether his last swipe turned the rock (`x5`),
+/// the side he swipes from (`x8`), a tick count (`xC`) and his hands (`x10`, `x14`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Kraid2Vars {
+    pub x0: i8,
+    pub x1: i8,
+    pub x2: i8,
+    pub x3: i8,
+    pub x4: i8,
+    pub x5: i8,
+    pub x8: f32,
+    pub xC: i32,
+    pub x10: Option<crate::hsd::jobj::JObjId>,
+    pub x14: Option<crate::hsd::jobj::JObjId>,
 }
 
 /// `grOldYoshi_Cloud`: one of Yoshi's Island N64's clouds.
@@ -661,6 +697,32 @@ impl GroundVars {
                 xC4: m.u16(at) as i16,
                 xC6: m.u16(at + 2) as i16,
             }),
+            VarsKind::Kraid => GroundVars::Kraid(KraidVars {
+                x0: m.u8(at) as i8,
+                x1: m.u8(at + 1) as i8,
+                x4: f(at + 4),
+                x8: f(at + 8),
+                xC: f(at + 0xC),
+                x10: m.u32(at + 0x10) as i32,
+            }),
+            VarsKind::Kraid2 => {
+                let jobj = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                GroundVars::Kraid2(Kraid2Vars {
+                    x0: m.u8(at) as i8,
+                    x1: m.u8(at + 1) as i8,
+                    x2: m.u8(at + 2) as i8,
+                    x3: m.u8(at + 3) as i8,
+                    x4: m.u8(at + 4) as i8,
+                    x5: m.u8(at + 5) as i8,
+                    x8: f(at + 8),
+                    xC: m.u32(at + 0xC) as i32,
+                    x10: jobj(cx, at + 0x10),
+                    x14: jobj(cx, at + 0x14),
+                })
+            }
             VarsKind::StoryShyGuys => GroundVars::StoryShyGuys(StoryShyGuysVars {
                 count: m.u8(at) as i8,
                 pattern: m.u8(at + 1) as i8,
@@ -943,6 +1005,51 @@ impl GroundVars {
             other => {
                 panic!("a stage object's variables are {other:?}, not grOldYoshi_Guest_GroundVars")
             }
+        }
+    }
+
+    /// The variables as `grKraid_GroundVars`, likewise.
+    pub fn kraid(&mut self) -> &mut KraidVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::Kraid(KraidVars {
+                x0: b.0[0] as i8,
+                x1: b.0[1] as i8,
+                x4: b.f32(4),
+                x8: b.f32(8),
+                xC: b.f32(0xC),
+                x10: b.u32(0x10) as i32,
+            });
+        }
+        match self {
+            GroundVars::Kraid(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grKraid_GroundVars"),
+        }
+    }
+
+    /// The variables as `grKraid_GroundVars2`, likewise: a block holding pointers converts
+    /// only if they are null.
+    pub fn kraid2(&mut self) -> &mut Kraid2Vars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            b.null(0x10);
+            b.null(0x14);
+            *self = GroundVars::Kraid2(Kraid2Vars {
+                x0: b.0[0] as i8,
+                x1: b.0[1] as i8,
+                x2: b.0[2] as i8,
+                x3: b.0[3] as i8,
+                x4: b.0[4] as i8,
+                x5: b.0[5] as i8,
+                x8: b.f32(8),
+                xC: b.u32(0xC) as i32,
+                x10: None,
+                x14: None,
+            });
+        }
+        match self {
+            GroundVars::Kraid2(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grKraid_GroundVars2"),
         }
     }
 
@@ -1360,6 +1467,45 @@ impl Mirror for GroundVars {
                     v.jobj.map(|j| j.0),
                     m.u32(at + 4),
                 );
+            }
+            GroundVars::Kraid(v) => {
+                let ours = (v.x0, v.x1, [v.x4, v.x8, v.xC].map(f32::to_bits), v.x10);
+                let theirs = (
+                    m.u8(at) as i8,
+                    m.u8(at + 1) as i8,
+                    std::array::from_fn(|k| m.u32(at + 4 + 4 * k as u32)),
+                    m.u32(at + 0x10) as i32,
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.kraid"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::Kraid2(v) => {
+                let ours = ([v.x0, v.x1, v.x2, v.x3, v.x4, v.x5], v.x8.to_bits(), v.xC);
+                let theirs = (
+                    std::array::from_fn(|k| m.u8(at + k as u32) as i8),
+                    m.u32(at + 8),
+                    m.u32(at + 0xC) as i32,
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.kraid2"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                for (name, j, a) in [("x10", v.x10, at + 0x10), ("x14", v.x14, at + 0x14)] {
+                    cx.compare_handle(
+                        &format!("{path}.kraid2.{name}"),
+                        "JObjId",
+                        j.map(|j| j.0),
+                        m.u32(a),
+                    );
+                }
             }
             GroundVars::BattleBg(v) => {
                 let ours = [v.state, v.curr, v.prev, v.timer];
