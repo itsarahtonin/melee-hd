@@ -58,6 +58,8 @@ pub struct ObjCollHooks<'a> {
     pub objs: &'a mut Objects,
     pub data: &'a Archives,
     pub dynamic_attrs: &'a DynamicAttrs,
+    /// The stage objects, which the stage's collision joints' callbacks write.
+    pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
     /// The fighter's floor filter's inputs, for a filtered pass.
     pub filter: Option<FilterInput<'a>>,
 }
@@ -74,14 +76,25 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
         &mut self,
         _g: &mut Geometry,
         callback: CodeRef,
-        _user_data: Option<super::super::handles::GroundId>,
-        _joint_id: i32,
-        _coll: &mut CollData,
+        user_data: Option<super::super::handles::GroundId>,
+        joint_id: i32,
+        coll: &mut CollData,
         _x50: i32,
         _kind: i32,
         _dy: f32,
     ) {
-        unported_call(&format!("stage joint callback {:#010x}", callback.0))
+        match callback.0 {
+            super::super::gr::oldyoshi::CLOUD_TOUCHED => {
+                if let Some(g) = user_data {
+                    super::super::gr::oldyoshi::touch(
+                        &mut self.grounds[g.0],
+                        joint_id,
+                        coll.x34_flags.b1234.into(),
+                    );
+                }
+            }
+            _ => unported_call(&format!("stage joint callback {:#010x}", callback.0)),
+        }
     }
 
     /// A fighter's floor filter. `ftCo_80096CC8`: any floor but a platform, and a platform too
@@ -211,6 +224,7 @@ impl Running<'_> {
             objs: &mut game.objs,
             data: self.data,
             dynamic_attrs: &game.gr.dynamic_attrs,
+            grounds: &mut game.grounds,
             filter,
         };
         let mut coll = Coll {

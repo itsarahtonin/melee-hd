@@ -1070,9 +1070,7 @@ pub fn destroy(r: &mut Running, gobj: Option<GObjId>) {
     if r.game.stage_info.map_gobjs[map_id as usize] == Some(gobj) {
         r.game.stage_info.map_gobjs[map_id as usize] = None;
     }
-    if r.game.grounds[g.0].x20.iter().any(|&s| s != -1) {
-        unimplemented!("a stage object's sounds (Ground_801C55AC)");
-    }
+    r.stop_object_sounds(Some(g));
     if r.game.grounds[g.0].x18.is_some() {
         unimplemented!("a stage object's camera GObj");
     }

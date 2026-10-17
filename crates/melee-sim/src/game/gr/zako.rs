@@ -137,3 +137,35 @@ pub fn scan(game: &mut Game, data: &Archives, anywhere: bool) {
     }
     game.gr.zako.cursor = idx as i16;
 }
+
+/// A scan that spawns on camera too, `grZakoGenerator_801CADE0`.
+#[doc(alias = "grZakoGenerator_801CADE0")]
+pub fn scan_anywhere(game: &mut Game, data: &Archives) {
+    scan(game, data, true);
+}
+
+/// Gives the free slot past the points' (slot 80, while free) a point of interest and a
+/// trophy, `grZakoGenerator_801CAEB0`.
+#[doc(alias = "grZakoGenerator_801CAEB0")]
+pub fn set_trophy_slot(game: &mut Game, trophy: i32, point: i32) {
+    let slots = game
+        .gr
+        .zako
+        .slots
+        .as_mut()
+        .expect("grzakogenerator.c: slots");
+    for slot in &mut slots[80..] {
+        if slot.point == -1 {
+            slot.point = point as i16;
+            slot.x8 = trophy;
+            slot.item = None;
+        }
+    }
+}
+
+/// Turns the spawner's scanning on or off, `grZakoGenerator_801CAEF0`.
+#[doc(alias = "grZakoGenerator_801CAEF0")]
+pub fn set_active(game: &mut Game, on: bool) {
+    let z = &mut game.gr.zako;
+    z.flags = (z.flags & !0x80) | if on { 0x80 } else { 0 };
+}

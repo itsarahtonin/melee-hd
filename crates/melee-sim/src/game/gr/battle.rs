@@ -75,9 +75,7 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 /// Battlefield's setup, `grBattle_OnInit`: its color scripts, the main object, the sky and
 /// first background (in single-player modes and two event stages, the plain background map 5
 /// instead), the floor, camera limits and blast zones, and the players' start points.
-///
-/// Unchecked: creating a background runs its animation, which spawns particles (the particle
-/// system isn't ported), so no capture of it can run to the end yet.
+#[doc(alias = "grBattle_OnInit")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.battle_yakumono = r.game.stage_info.yakumono_param;
     r.game.stage_info.unk8C.b4 = true;
@@ -148,8 +146,7 @@ pub fn proc_floor(r: &mut Running, gobj: GObjId) {
 }
 
 /// The plain background's setup (map 5), `grBattle_GObj5_Callback0`.
-///
-/// Unchecked: map 5's animation spawns particles too (see [`on_init`]).
+#[doc(alias = "grBattle_GObj5_Callback0")]
 pub fn init_plain(r: &mut Running, gobj: GObjId) {
     init_floor(r, gobj);
     let g = ground_of(r.game, gobj);
@@ -158,8 +155,9 @@ pub fn init_plain(r: &mut Running, gobj: GObjId) {
 
 /// A background's setup (maps 1, 2 and 4: `grBattle_GObj1_Callback0`, `GObj2_Callback0`,
 /// `GObj4_Callback0`): its animation and the stage class for its materials.
-///
-/// Unchecked, for the same reason as [`on_init`].
+#[doc(alias = "grBattle_GObj1_Callback0")]
+#[doc(alias = "grBattle_GObj2_Callback0")]
+#[doc(alias = "grBattle_GObj4_Callback0")]
 pub fn init_background(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj);

@@ -128,3 +128,29 @@ pub fn tree_to_stage_class(game: &mut Game, j: Option<JObjId>) {
 pub fn model_to_stage_class(game: &mut Game, j: Option<JObjId>) {
     tree_to_stage_class(game, j);
 }
+
+/// Clears render-mode bits on a joint's own display objects' materials, `grMaterial_801C897C`.
+#[doc(alias = "grMaterial_801C897C")]
+pub fn clear_own_flags(game: &mut Game, j: Option<JObjId>, flags: u32) {
+    let Some(j) = j else { return };
+    let objs = &mut game.objs;
+    let mut d = jobj::get_dobj(&objs.jobjs, Some(j));
+    while let Some(dobj) = d {
+        let m = objs.dobjs[dobj].mobj;
+        crate::hsd::mobj::clear_flags(&mut objs.mobjs, m, flags);
+        d = objs.dobjs[dobj].next;
+    }
+}
+
+/// Clears render-mode bits on a joint tree's materials, `grMaterial_801C8A04`: the joint's
+/// own, then each child tree's.
+#[doc(alias = "grMaterial_801C8A04")]
+pub fn clear_tree_flags(game: &mut Game, j: Option<JObjId>, flags: u32) {
+    let Some(j) = j else { return };
+    clear_own_flags(game, Some(j), flags);
+    let mut c = game.objs.jobjs[j].child;
+    while let Some(child) = c {
+        clear_tree_flags(game, Some(child), flags);
+        c = game.objs.jobjs[child].next;
+    }
+}

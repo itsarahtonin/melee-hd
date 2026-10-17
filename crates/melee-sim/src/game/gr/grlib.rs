@@ -12,6 +12,22 @@ use crate::hsd::aobj;
 use crate::hsd::generator::{self, GeneratorId};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
+use crate::vec::Vec3;
+
+/// A random integer between `a` and `b` (the inline `rand_range`): the lower plus a draw
+/// below their difference, drawn only when they differ.
+pub fn rand_range(rng: &mut crate::rng::Rng, a: i32, b: i32) -> i32 {
+    let randi = |rng: &mut crate::rng::Rng, n: i32| if n != 0 { rng.below(n) } else { 0 };
+    if a > b {
+        let d = a.wrapping_sub(b);
+        b.wrapping_add(randi(rng, d))
+    } else if a < b {
+        let d = b.wrapping_sub(a);
+        a.wrapping_add(randi(rng, d))
+    } else {
+        a
+    }
+}
 
 /// Measures the players' start points (points of interest 0 to 3), `grLib_801C9A10`: a point
 /// the stage lacks keeps its last measure.
@@ -242,4 +258,64 @@ pub fn quake_proc(r: &mut Running, gobj: GObjId, looping: bool) {
     if !looping && a.is_none_or(|a| r.game.objs.aobjs[a].flags & aobj::NO_ANIM != 0) {
         crate::hsd::gobj::free(r, gobj);
     }
+}
+
+/// `stage_info.x708`, `grLib_801C9E40`.
+#[doc(alias = "grLib_801C9E40")]
+pub fn x708(game: &Game) -> i32 {
+    i32::from(game.stage_info.x708)
+}
+
+/// Sets `stage_info.x708`, `grLib_801C9E50`.
+#[doc(alias = "grLib_801C9E50")]
+pub fn set_x708(game: &mut Game, v: i16) {
+    game.stage_info.x708 = v;
+}
+
+/// Whether a point lies within `offset` of a collision's ECB box (the inline
+/// `PointInsideColl`): its height, then its width. NaN takes the original's branches.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+fn point_in_ecb(cd: &crate::game::structs::CollData, point: Vec3, offset: f32) -> bool {
+    let abs = |v: f64| if v < 0.0 { fp::fneg(v) } else { v };
+    let (top, bottom) = (reg(cd.ecb.top.y), reg(cd.ecb.bottom.y));
+    let comp = fp::fmadds(0.5, fp::fsubs(top, bottom), reg(offset));
+    let y = fp::fsubs(
+        fp::fmadds(0.5, fp::fadds(top, bottom), reg(cd.cur_pos.y)),
+        reg(point.y),
+    );
+    if abs(y) > comp {
+        return false;
+    }
+    let (right, left) = (reg(cd.ecb.right.x), reg(cd.ecb.left.x));
+    let comp = fp::fmadds(0.5, fp::fsubs(right, left), reg(offset));
+    let x = fp::fsubs(
+        fp::fmadds(0.5, fp::fadds(left, right), reg(cd.cur_pos.x)),
+        reg(point.x),
+    );
+    !(abs(x) > comp)
+}
+
+/// Whether a point lies within `offset` of any fighter's ECB box or any item's but the random
+/// stage item's, `grLib_801C9EE8`.
+#[doc(alias = "grLib_801C9EE8")]
+pub fn point_near_object(game: &Game, point: Vec3, offset: f32) -> bool {
+    let mut cur = game.world.first_in(8);
+    while let Some(g) = cur {
+        let fp = &game.fighters[game.fighter_id(g).0];
+        if point_in_ecb(&fp.coll_data, point, offset) {
+            return true;
+        }
+        cur = game.world.gobj(g).next;
+    }
+    let mut cur = game.world.first_in(crate::game::it::P_LINK_ITEM);
+    while let Some(g) = cur {
+        if crate::game::it::lib26b1::kind(game, g) != crate::game::it::kinds::PKIND_RANDOM {
+            let ip = crate::game::it::item(game, g);
+            if point_in_ecb(&ip.x378_itemColl, point, offset) {
+                return true;
+            }
+        }
+        cur = game.world.gobj(g).next;
+    }
+    false
 }

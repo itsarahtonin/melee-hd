@@ -160,7 +160,7 @@ fn randi_between(game: &mut Game, a: i32, b: i32) -> i32 {
 /// A stage object's process or callback, by address: Pokémon Stadium's.
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        0x801D_13C4 | 0x801D_156C | 0x801D_1E18 | 0x801D_1E1C => {}
+        0x801D_13C4 | 0x801D_156C | 0x801D_1E18 | 0x801D_1E1C => empty(r, gobj),
         0x801D_11E4 => start_display(r, gobj),
         0x801D_1290 => init_display(r, gobj),
         0x801D_1390 => proc_display(r, gobj),
@@ -168,12 +168,10 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         0x801D_13E0 => init_main(r, gobj),
         0x801D_1520 => proc_main(r, gobj),
         0x801D_1570 => init_default(r, gobj),
-        0x801D_1604 | 0x801D_16DC | 0x801D_17E8 | 0x801D_19D8 => {
-            update_map_coll(r.game, r.data, gobj);
-        }
-        0x801D_1624 => r.game.geometry_mut().disable_joint(4),
+        0x801D_1604 | 0x801D_16DC | 0x801D_17E8 | 0x801D_19D8 => proc_piece(r, gobj),
+        0x801D_1624 => destroy_default(r, gobj),
         0x801D_1648 => init_grass(r, gobj),
-        0x801D_16FC => r.game.geometry_mut().disable_joint(3),
+        0x801D_16FC => destroy_grass(r, gobj),
         0x801D_1720 => init_rock(r, gobj),
         0x801D_1808 => destroy_rock(r, gobj),
         0x801D_1840 => init_fire(r, gobj),
@@ -181,13 +179,47 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         0x801D_1A38 => init_water(r, gobj),
         0x801D_1B48 => proc_water(r, gobj),
         0x801D_1D84 => destroy_water(r, gobj),
-        0x801D_1DE4 => {
-            let map_id = r.game.grounds[ground_of(r.game, gobj).0].map_id;
-            anime::start_map(r.game, r.data, gobj, map_id, 0);
-        }
+        0x801D_1DE4 => init_blades(r, gobj),
         _ => return false,
     }
     true
+}
+
+/// The objects' processes and destroy callbacks that do nothing: the big screen's and the
+/// transformations' destroy callbacks, and the windmill blades' process and destroy callback.
+#[doc(alias = "grStadium_801D13C4")]
+#[doc(alias = "grStadium_801D156C")]
+#[doc(alias = "grStadium_801D1E18")]
+#[doc(alias = "grStadium_801D1E1C")]
+pub fn empty(_r: &mut Running, _gobj: GObjId) {}
+
+/// A transformation's stage's process (the fire, grass, default and rock stages, maps 3 to 6):
+/// the collision follows the model.
+#[doc(alias = "stageGObj3_GObjProc")]
+#[doc(alias = "stageGObj4_GObjProc")]
+#[doc(alias = "stageGObj5_GObjProc")]
+#[doc(alias = "stageGObj6_GObjProc")]
+pub fn proc_piece(r: &mut Running, gobj: GObjId) {
+    update_map_coll(r.game, r.data, gobj);
+}
+
+/// The default stage's destroy callback, `grStadium_801D1624`: its collision joint off.
+#[doc(alias = "grStadium_801D1624")]
+pub fn destroy_default(r: &mut Running, _gobj: GObjId) {
+    r.game.geometry_mut().disable_joint(4);
+}
+
+/// The grass stage's destroy callback, `grStadium_801D16FC`: its collision joint off.
+#[doc(alias = "grStadium_801D16FC")]
+pub fn destroy_grass(r: &mut Running, _gobj: GObjId) {
+    r.game.geometry_mut().disable_joint(3);
+}
+
+/// The windmill blades' setup (maps 7 and 8), `stageGObj7_8_OnInit`: their animation.
+#[doc(alias = "stageGObj7_8_OnInit")]
+pub fn init_blades(r: &mut Running, gobj: GObjId) {
+    let map_id = r.game.grounds[ground_of(r.game, gobj).0].map_id;
+    anime::start_map(r.game, r.data, gobj, map_id, 0);
 }
 
 /// The stage's hooks without arguments, by address.
@@ -428,7 +460,7 @@ pub fn init_default(r: &mut Running, gobj: GObjId) {
 }
 
 /// The grass stage's setup (map 4), `grStadium_801D1648`.
-// Ports `grStadium_801D1648`; aliased once a check reaches it.
+#[doc(alias = "grStadium_801D1648")]
 pub fn init_grass(r: &mut Running, gobj: GObjId) {
     init_piece(r, gobj, &[3]);
     let g = ground_of(r.game, gobj);

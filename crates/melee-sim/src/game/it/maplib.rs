@@ -34,6 +34,7 @@ pub fn with_stage_coll<R>(
         objs: &mut game.objs,
         data,
         dynamic_attrs: &game.gr.dynamic_attrs,
+        grounds: &mut game.grounds,
         filter: None,
     };
     let mut coll = Coll {

@@ -75,8 +75,13 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 #[doc(alias = "grIzumi_801CBE08")]
 #[doc(alias = "grIzumi_801CBE5C")]
 #[doc(alias = "grIzumi_801CCB10")]
-// Also ports the background pieces' process `grIzumi_801CCA5C`; aliased once a check reaches
-// it (no VS match makes maps 5 to 10).
+#[doc(alias = "grIzumi_801CBE0C")]
+#[doc(alias = "grIzumi_801CBE60")]
+#[doc(alias = "grIzumi_801CCB14")]
+#[doc(alias = "grIzumi_801CC338")]
+#[doc(alias = "grIzumi_801CCA10")]
+#[doc(alias = "grIzumi_801CCA60")]
+#[doc(alias = "grIzumi_801CCA5C")]
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
 /// Where the reflections', the platforms' and the stars' calls put their scale joints'
@@ -125,8 +130,8 @@ pub fn check_archive(game: &Game, data: &melee_data::archive::Archives, map_id: 
     );
 }
 
-/// `grIzumi_801CBB84` does nothing. Ports `grIzumi_801CBB84`; aliased once a check reaches it
-/// (only a demo runs it).
+/// `grIzumi_801CBB84` does nothing (only a demo runs it).
+#[doc(alias = "grIzumi_801CBB84")]
 pub fn on_demo_init(_r: &mut Running) {}
 
 /// The stage's load hook, `grIzumi_OnLoad`: every animation of the stage's lights loops.
@@ -503,9 +508,9 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
     super::ground::update_coll_joint(r.game, r.data, line_joint);
 }
 
-/// The background pieces' setup (maps 5 to 10), `grIzumi_801CCA14`: their animation, no
-/// callbacks. Ports `grIzumi_801CCA14`; aliased once a check reaches it (no VS match makes
-/// these maps).
+/// The background pieces' setup (maps 5 to 10, which no VS match makes), `grIzumi_801CCA14`:
+/// their animation, no callbacks.
+#[doc(alias = "grIzumi_801CCA14")]
 pub fn init_piece(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);

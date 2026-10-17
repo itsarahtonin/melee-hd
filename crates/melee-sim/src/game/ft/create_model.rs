@@ -17,7 +17,6 @@ use crate::hsd::lobj::{self, LObjId, StaticLightDesc};
 use crate::hsd::mobj::MObjClass;
 use crate::hsd::pobj::{self, PObjClass};
 use crate::vec::Vec3;
-use gekko_fp as fp;
 
 /// The fighters' light (`ftCo_09F4.c`'s `node0`): infinite, white, at (0.57, 0.57, 0.57).
 const FIGHTER_LIGHT: StaticLightDesc = StaticLightDesc {
@@ -271,25 +270,7 @@ impl Running<'_> {
         let first = first.expect("a light list without lights");
         self.game.ft.lobj0 = Some(first);
         self.game.ft.lobj1 = self.first_ambient(first);
-        // `Ground_801C2374`: positions and interests in the stage's scale.
-        let s = reg(super::super::gr::ground::scale(self.game));
-        let scaled = |v: Vec3| {
-            Vec3::new(
-                mem(fp::fmuls(reg(v.x), s)),
-                mem(fp::fmuls(reg(v.y), s)),
-                mem(fp::fmuls(reg(v.z), s)),
-            )
-        };
-        let mut cur = Some(first);
-        while let Some(l) = cur {
-            if let Some(p) = lobj::position(&mut self.game.objs, self.data, Some(l)) {
-                lobj::set_position(&mut self.game.objs, l, scaled(p));
-            }
-            if let Some(i) = lobj::interest(&mut self.game.objs, self.data, Some(l)) {
-                lobj::set_interest(&mut self.game.objs, l, scaled(i));
-            }
-            cur = self.game.objs.lobjs[l].next;
-        }
+        super::super::gr::ground::scale_lights(self.game, self.data, Some(first));
         self.game.world.set_obj(gobj, OBJ_LIGHT, Obj::LObj(first));
         self.game
             .world
