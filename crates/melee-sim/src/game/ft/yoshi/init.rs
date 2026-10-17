@@ -13,30 +13,35 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::{aobj, mobj};
 
 impl Running<'_> {
-    /// The DObjs one of the fighter's model lookups (`x5AC.xC[i]`, `S_UNK_YOSHI1`) names for
-    /// the egg shield's texture animation: its second variant's indices into the DObj list.
-    fn ys_shield_mobjs(&self, f: FighterId, lookup: DataRef) -> Vec<crate::hsd::mobj::MObjId> {
+    /// How many DObjs one of the fighter's model lookups (`x5AC.xC[i]`, `S_UNK_YOSHI1`) names
+    /// for the egg shield's texture animation, in its second variant.
+    fn ys_shield_count(&self, lookup: DataRef) -> i32 {
         let unk = self
             .data
             .ptr(lookup.at(4))
             .expect("S_UNK_YOSHI1::unk_struct");
-        let end = self.data.u32(unk.at(8)) as i32;
+        self.data.u32(unk.at(8)) as i32
+    }
+
+    /// The material of the `i`th DObj the lookup names for the egg shield: its second
+    /// variant's indices into the DObj list.
+    fn ys_shield_mobj(&self, f: FighterId, lookup: DataRef, i: i32) -> crate::hsd::mobj::MObjId {
+        let unk = self
+            .data
+            .ptr(lookup.at(4))
+            .expect("S_UNK_YOSHI1::unk_struct");
         let index = self.data.ptr(unk.at(0xC));
         let list = self.game.fighters[f.0]
             .dobj_list
             .data
             .expect("a fighter without a DObj list");
-        (0..end)
-            .map(|i| {
-                let b = index.expect("S_UNK_YOSHI2::xC_start_index").at(i as u32);
-                let d = self.game.fighter_dobj_lists[list.0][usize::from(self.data.u8(b))];
-                // `dobj ? dobj->mobj : NULL`, then read through.
-                let d = d.expect("the egg shield's DObj is null");
-                self.game.objs.dobjs[d]
-                    .mobj
-                    .expect("the egg shield's DObj has no material")
-            })
-            .collect()
+        let b = index.expect("S_UNK_YOSHI2::xC_start_index").at(i as u32);
+        let d = self.game.fighter_dobj_lists[list.0][usize::from(self.data.u8(b))];
+        // `dobj ? dobj->mobj : NULL`, then read through.
+        let d = d.expect("the egg shield's DObj is null");
+        self.game.objs.dobjs[d]
+            .mobj
+            .expect("the egg shield's DObj has no material")
     }
 
     /// `ftYs_Init_8012B6E8`: stops the egg shield's texture animation in each DObj the lookup
@@ -46,7 +51,8 @@ impl Running<'_> {
     #[doc(alias = "ftYs_Init_8012B6E8")]
     fn ys_stop_shield_anim(&mut self, f: FighterId, lookup: Option<DataRef>, length: &mut f32) {
         let lookup = lookup.expect("the egg shield's model lookup is null");
-        for m in self.ys_shield_mobjs(f, lookup) {
+        for i in 0..self.ys_shield_count(lookup) {
+            let m = self.ys_shield_mobj(f, lookup, i);
             let a = self.game.objs.mobjs[m].aobj;
             aobj::set_rate(&mut self.game.objs.aobjs, a, 0.0);
             let end =
@@ -67,7 +73,8 @@ impl Running<'_> {
     #[doc(alias = "ftYs_Init_8012B804")]
     fn ys_shield_anim_frame(&mut self, f: FighterId, lookup: Option<DataRef>, frame: f32) {
         let Some(lookup) = lookup else { return };
-        for m in self.ys_shield_mobjs(f, lookup) {
+        for i in 0..self.ys_shield_count(lookup) {
+            let m = self.ys_shield_mobj(f, lookup, i);
             mobj::req_anim(&mut self.game.objs, Some(m), frame);
             mobj::anim(&mut self.game.objs, self.data, Some(m));
         }
@@ -145,7 +152,8 @@ impl Running<'_> {
     /// attributes' first DObj named for the shield.
     fn ys_shield_length(&self, f: FighterId) -> f32 {
         let lookup = self.game.fighters[f.0].x5AC.xC[0].expect("yoshi parts_model NULL!!");
-        let m = self.ys_shield_mobjs(f, lookup)[0];
+        assert!(self.ys_shield_count(lookup) > 0, "no egg shield DObjs");
+        let m = self.ys_shield_mobj(f, lookup, 0);
         let a = self.game.objs.mobjs[m].aobj.expect("an AObj");
         self.game.objs.aobjs[a].end_frame
     }

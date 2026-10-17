@@ -31,7 +31,7 @@ pub fn clear_damage_log(game: &mut Game) {
 /// An entry of the damage log (`DamageLogEntry`): what hit (1 a fighter, 2 an item), the
 /// attacker's GObj and its hitbox. The original also keeps the hurtbox hit, which nothing
 /// reads.
-#[derive(Clone, Debug, PartialEq, melee_derive::StateEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 pub struct DamageLogEntry {
     pub kind: i32,
     pub source: GObjId,
@@ -584,8 +584,13 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
     let u = |v: u32| fp::frsp(f64::from(v));
     let mut max = -1.0;
     let mut strongest = None;
-    let entries = r.game.it.damage_log.clone();
-    for (index, e) in entries.iter().enumerate() {
+    // The log as the check begins, copied out: the effects the hits spawn take the game.
+    let mut log = [None; DAMAGE_LOG_SIZE];
+    for (to, e) in log.iter_mut().zip(&r.game.it.damage_log) {
+        *to = Some(*e);
+    }
+    let entries = &log[..r.game.it.damage_log.len()];
+    for (index, e) in entries.iter().flatten().enumerate() {
         let hit = logged_hit(r.game, e);
         let kb = if hit.x28 != 0 {
             let t = fp::fmuls(k(9), fp::fmuls(k(10), u(hit.x28)));
@@ -646,7 +651,7 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
     let Some(index) = strongest else {
         panic!("it_80270E30: no hit's knockback over -1, the original reads a stale index")
     };
-    let e = &entries[index];
+    let e = entries[index].expect("the strongest hit is logged");
     match e.kind {
         1 => {
             let fp = r.game.fighter(e.source);
@@ -689,7 +694,7 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
         }
         _ => {}
     }
-    let hit = logged_hit(r.game, e);
+    let hit = logged_hit(r.game, &e);
     let ip = item_mut(r.game, gobj);
     ip.xCAC_angle = hit.kb_angle;
     ip.xCC8_knockback = mem(max);

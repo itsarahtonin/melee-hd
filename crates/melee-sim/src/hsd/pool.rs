@@ -133,6 +133,16 @@ impl<T, const K: u8> Pool<T, K> {
         self.peak
     }
 
+    /// Every slot, freed ones with their last contents: for owners that keep the storage
+    /// those hold.
+    pub fn slots(&self) -> &[T] {
+        &self.slots
+    }
+
+    pub fn slots_mut(&mut self) -> &mut [T] {
+        &mut self.slots
+    }
+
     /// The live slots and their objects, in slot order, for readers outside the simulation
     /// (the presentation).
     pub fn iter(&self) -> impl Iterator<Item = (u32, &T)> + '_ {

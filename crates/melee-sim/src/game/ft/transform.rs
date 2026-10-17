@@ -34,9 +34,25 @@ impl Running<'_> {
         self.game.fighters[dst_id.0].is_sub_fighter = src_sub;
         self.init_reset(dst_id);
         self.stop_dead(dst_gobj);
-        let src = self.game.fighters[src_id.0].clone();
+        // What the original reads from the source once the woken fighter has started to
+        // change, kept as it is here; the rest is copied across before anything changes it.
+        let s = &self.game.fighters[src_id.0];
+        let percent = s.dmg.x1830_percent;
+        let starred = s.x221D_b6;
+        let intangible = s.x1990;
+        let (x2220_b5, x2220_b6, x2008) = (s.x2220_b5, s.x2220_b6, s.x2008);
+        let scale_y = s.x34_scale.y;
+        let (metal, bunny_hood, x221e_b4) = (s.is_metal, s.x2226_b4, s.x221E_b4);
+        let (x197c, x1980, held) = (s.x197C, s.x1980, s.item_gobj);
+        let coll_data = s.coll_data.clone();
+        let pair = [src_id.0 as usize, dst_id.0 as usize];
         {
-            let dst = &mut self.game.fighters[dst_id.0];
+            let [src, dst] = self
+                .game
+                .fighters
+                .slots_mut()
+                .get_disjoint_mut(pair)
+                .expect("the transformation's two fighters");
             dst.cur_pos = src.cur_pos;
             dst.prev_pos = src.prev_pos;
             dst.pos_delta = src.pos_delta;
@@ -48,9 +64,14 @@ impl Running<'_> {
             (i32::from(dst.player_idx), i32::from(dst.is_sub_fighter))
         };
         self.game
-            .set_player_damage_at(dst_slot, dst_which, fp::fctiwz(reg(src.dmg.x1830_percent)));
+            .set_player_damage_at(dst_slot, dst_which, fp::fctiwz(reg(percent)));
         {
-            let dst = &mut self.game.fighters[dst_id.0];
+            let [src, dst] = self
+                .game
+                .fighters
+                .slots_mut()
+                .get_disjoint_mut(pair)
+                .expect("the transformation's two fighters");
             dst.dmg.x18F0 = src.dmg.x18F0;
             dst.self_vel = src.self_vel;
             dst.ground_or_air = src.ground_or_air;
@@ -107,44 +128,45 @@ impl Running<'_> {
             dst.x2338 = src.x2338.clone();
             dst.stamina_dead = src.stamina_dead;
         }
-        if src.x221D_b6 {
+        if starred {
             unported_call("ftCommon_8007EFC8 with the star's invincibility");
         }
         self.end_color_anim(dst_gobj, 9);
         // The original assigns rather than compares here, so the intangibility always carries.
         self.game.fighters[src_id.0].x198C = 2;
-        if src.x1990 != 0 {
-            self.set_intangible(dst_gobj, src.x1990);
+        if intangible != 0 {
+            self.set_intangible(dst_gobj, intangible);
         }
         {
             let dst = &mut self.game.fighters[dst_id.0];
-            dst.x2220_b5 = src.x2220_b5;
-            dst.x2220_b6 = src.x2220_b6;
-            dst.x2008 = src.x2008;
+            dst.x2220_b5 = x2220_b5;
+            dst.x2220_b6 = x2220_b6;
+            dst.x2008 = x2008;
         }
-        self.set_scale_y(dst_gobj, src.x34_scale.y);
-        if src.is_metal {
+        self.set_scale_y(dst_gobj, scale_y);
+        if metal {
             unported_call("ftCommon_8007EFC8 on a metal fighter");
         }
-        if src.x2226_b4 {
+        if bunny_hood {
             unported_call("ftCommon_8007EFC8 with the bunny hood");
         }
-        self.game.fighters[dst_id.0].x221E_b4 = src.x221E_b4;
-        if src.x197C.is_some() {
+        self.game.fighters[dst_id.0].x221E_b4 = x221e_b4;
+        if x197c.is_some() {
             unported_call("ftCommon_8007EFC8 with the shell or the hammer held (x197C)");
         }
         self.game.fighters[dst_id.0].x197C = None;
-        if src.x1980.is_some() {
+        if x1980.is_some() {
             unported_call("ftCommon_8007EFC8 with the screw attack or the fan (x1980)");
         }
         self.game.fighters[dst_id.0].x1980 = None;
         self.calc_attributes(dst_gobj);
         self.init_camera_box(dst_id);
         // `ft_800849EC`: the collision state, ECBs and all.
-        let cd = src.coll_data.clone();
-        self.game.fighters[dst_id.0].coll_data.copy_from(&cd, 2);
-        self.scale_ledge_snap(dst_gobj, src.x34_scale.y);
-        if src.item_gobj.is_some() {
+        self.game.fighters[dst_id.0]
+            .coll_data
+            .copy_from(&coll_data, 2);
+        self.scale_ledge_snap(dst_gobj, scale_y);
+        if held.is_some() {
             unported_call("ftCommon_8007EFC8 with an item held");
         }
         self.crowd_transform();

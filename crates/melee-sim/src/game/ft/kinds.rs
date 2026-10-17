@@ -28,15 +28,16 @@ const SEAK_ITEMS: [i32; 4] = [79, 80, 85, 97];
 /// `It_Kind_Fox_Illusion`.
 const IT_KIND_FOX_ILLUSION: i32 = 56;
 
-impl Running<'_> {
+impl<'a> Running<'a> {
     /// The character's attributes (`ftData::ext_attr`), `size` bytes of them.
-    pub(crate) fn ext_attrs(&self, f: FighterId, size: usize) -> Vec<u8> {
+    pub(crate) fn ext_attrs(&self, f: FighterId, size: usize) -> &'a [u8] {
+        let data = self.data;
         let d = self.game.fighters[f.0]
             .ft_data
             .expect("a fighter without data");
-        let ext = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
-        let bytes = self.data.get(ext.archive).data();
-        bytes[ext.offset as usize..ext.offset as usize + size].to_vec()
+        let ext = data.ptr(d.at(4)).expect("ftData::ext_attr");
+        let bytes = data.get(ext.archive).data();
+        &bytes[ext.offset as usize..ext.offset as usize + size]
     }
 
     /// Copies the character's attributes into the fighter's backup block and makes that its
@@ -46,7 +47,7 @@ impl Running<'_> {
         let backup = self.game.fighters[f.0]
             .dat_attrs_backup
             .expect("a fighter without an attribute block");
-        self.game.fighter_attrs[backup.0][..size].copy_from_slice(&src);
+        self.game.fighter_attrs[backup.0][..size].copy_from_slice(src);
         self.game.fighters[f.0].dat_attrs = Some(backup);
     }
 
@@ -56,7 +57,7 @@ impl Running<'_> {
         let attrs: AttrsId = self.game.fighters[f.0]
             .dat_attrs
             .expect("a fighter without attributes");
-        self.game.fighter_attrs[attrs.0][..size].copy_from_slice(&src);
+        self.game.fighter_attrs[attrs.0][..size].copy_from_slice(src);
     }
 
     /// A word of the fighter's attributes.

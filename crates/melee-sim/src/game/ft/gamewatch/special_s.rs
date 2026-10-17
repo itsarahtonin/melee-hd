@@ -105,16 +105,18 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
         let (last, before) = (fp.u_i32(u::JUDGE_VAR1), fp.u_i32(u::JUDGE_VAR2));
-        let mut numbers = Vec::new();
-        let mut sums = Vec::new();
+        let (mut numbers, mut sums) = ([0i32; 9], [0i32; 9]);
+        let mut count = 0;
         let mut total = 0i32;
         for n in 0..9 {
             if n != last && n != before {
-                numbers.push(n);
+                numbers[count] = n;
                 total = total.wrapping_add(self.gw_attr_i32(f, attr::JUDGE_ROLL + 4 * n as usize));
-                sums.push(total);
+                sums[count] = total;
+                count += 1;
             }
         }
+        let sums = &sums[..count];
         let roll = self.game.objs.rng.below(total);
         // The original reads the nine sums the loop fills only as far as it filled them, and
         // a roll below the total always ends there; past them it would read its stack.
