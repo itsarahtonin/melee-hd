@@ -537,13 +537,20 @@ impl Running<'_> {
         out
     }
 
-    /// Whether a device of type `kind` acts on the fighter, `ftCo_800C0A28`: burying ones
-    /// (2 and 3) not while it's buried or (for 2) in a barrel, struck by a hammer or out of
-    /// stamina; any other always.
+    /// Whether a device of type `kind` acts on the fighter, `ftCo_800C0A28`: a barrel (2) not
+    /// while the fighter's barrel timer runs, it waits in a barrel, `x1A6A`'s bit 5 is set or it
+    /// is out of stamina; type 3 not while that timer runs; any other always.
     #[doc(alias = "ftCo_800C0A28")]
-    pub fn device_applies(&self, _gobj: GObjId, kind: u32) -> bool {
+    pub fn device_applies(&self, gobj: GObjId, kind: u32) -> bool {
+        let fp = self.game.fighter(gobj);
         match kind {
-            2 | 3 => unported_call("ftCo_800C0A28 (a burying device)"),
+            2 => {
+                !(fp.bury_timer_2 != 0
+                    || fp.motion_id == super::co::ids::ms::BARREL_WAIT
+                    || fp.x1A6A & 0x20 != 0
+                    || fp.stamina_dead)
+            }
+            3 => fp.bury_timer_2 == 0,
             _ => true,
         }
     }

@@ -49,6 +49,10 @@ impl Running<'_> {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::oldyoshi::check_shadow_render(self.game, self.data, pos, Some(j))
             }
+            Some(f) if f.0 == 0x8021_0788 => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::oldkongo::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
             Some(f) if f.0 == 0x801E_36D8 => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::story::check_shadow_render(self.game, self.data, pos, Some(j))

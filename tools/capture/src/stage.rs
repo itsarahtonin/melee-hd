@@ -29,6 +29,8 @@ pub const GROLDPUPUPU_YAKUMONO: u32 = 0x804D_6A98;
 pub const GRIZUMI_YAKUMONO: u32 = 0x804D_6968;
 /// groldyoshi.c's (`ssbm_types::tu::melee__gr__groldyoshi::yakumono_param`).
 pub const GROLDYOSHI_YAKUMONO: u32 = 0x804D_6A88;
+/// groldkongo.c's (`ssbm_types::tu::melee__gr__groldkongo::yakumono_param`).
+pub const GROLDKONGO_YAKUMONO: u32 = 0x804D_6A90;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -259,6 +261,8 @@ impl Importer<'_> {
         self.game.gr.izumi_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GROLDYOSHI_YAKUMONO);
         self.game.gr.oldyoshi_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GROLDKONGO_YAKUMONO);
+        self.game.gr.oldkongo_yakumono = self.data_or_unhandled(yaku);
         self.game.gr.battle_demo = self.u8_at(sym("isDemoFight")) != 0;
         self.game.gr.game_mode = self.u8_at(sym("state_machine"));
         let points = sym("grLib_8049EF58");
@@ -288,6 +292,14 @@ impl Importer<'_> {
                 gobj_at(self, sym("ftDevice_BuryThings")),
                 gobj_at(self, sym("ftDevice_BuryThings") + 0xC),
             ],
+            bury_type: [
+                cap.u32(sym("ftDevice_BuryThings") + 4),
+                cap.u32(sym("ftDevice_BuryThings") + 0x10),
+            ],
+            bury_cb: [8, 0x14].map(|o| match cap.u32(sym("ftDevice_BuryThings") + o) {
+                0 => None,
+                a => Some(melee_sim::game::handles::CodeRef(a)),
+            }),
             device2: gobj_at(self, sym("ft_80459A8C")),
         };
         let articles = sym("it_804A0F60");
@@ -803,6 +815,11 @@ impl Comparer<'_> {
                 GROLDYOSHI_YAKUMONO,
                 game.gr.oldyoshi_yakumono,
             ),
+            (
+                "grOldKongo yakumono_param",
+                GROLDKONGO_YAKUMONO,
+                game.gr.oldkongo_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -860,6 +877,24 @@ impl Comparer<'_> {
                 gobj_pair(self, sym("ft_80459A8C")),
             ],
         );
+        let things = sym("ftDevice_BuryThings");
+        for i in 0..2u32 {
+            let at = things + 0xC * i;
+            let theirs = (self.u32(at + 4), self.u32(at + 8));
+            let ours = (
+                d.bury_type[i as usize],
+                d.bury_cb[i as usize].map_or(0, |c| c.0),
+            );
+            // A slot never filled holds what the reset left (`x0` alone is cleared).
+            if d.bury[i as usize].is_some() {
+                self.check(
+                    &format!("ftDevice_BuryThings[{i}]"),
+                    "type and callback",
+                    ours,
+                    theirs,
+                );
+            }
+        }
         let articles = sym("it_804A0F60");
         for k in 0..30 {
             let a = self.u32(articles + 4 * k as u32);

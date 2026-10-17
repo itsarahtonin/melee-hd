@@ -4,8 +4,8 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_IZUMI, GR_KIND_LAST, GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI,
-    GR_KIND_PSTADIUM, GR_KIND_STORY,
+    GR_KIND_BATTLE, GR_KIND_IZUMI, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
+    GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_STORY,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -332,6 +332,41 @@ pub const OLDYOSHI: StageData = StageData {
     joints: &[],
 };
 
+/// `grOk_StageCallbacks` (`stage_callbacks`). Map 3 is the stage, map 1 the barrel below it,
+/// map 2 the birds, map 0 the background.
+pub const OLDKONGO_CALLBACKS: [StageCallbacks; 4] = [
+    cb(0x8020_F618, 0x8020_F644, 0x8020_F64C, 0x8020_F650, 0),
+    cb(0x8020_F6E4, 0x8020_F880, 0x8020_F888, 0x8021_0058, 0),
+    cb(0x8021_005C, 0x8021_00F4, 0x8021_00FC, 0x8021_0450, 0),
+    cb(
+        0x8020_F654,
+        0x8020_F6B4,
+        0x8020_F6BC,
+        0x8020_F6E0,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grOk_803E6580`: the stage's collision joints, which the stage binds itself.
+pub const OLDKONGO_JOINTS: [GrJoint; 2] =
+    [GrJoint { x: 0, y: 3, z: 1 }, GrJoint { x: 1, y: 3, z: 2 }];
+
+/// `grOk_StageData`.
+pub const OLDKONGO: StageData = StageData {
+    grkind: GR_KIND_OLDKONGO,
+    callbacks: &OLDKONGO_CALLBACKS,
+    file: Some("/GrOk.dat"),
+    on_init: 0x8020_F46C,
+    on_demo_init: 0x8020_F468,
+    on_load: 0x8020_F4E4,
+    on_start: 0x8020_F4E8,
+    callback4: 0x8020_F524,
+    on_touch_line: 0x8021_0780,
+    on_check_shadow_render: 0x8021_0788,
+    flags2: 1,
+    joints: &OLDKONGO_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -342,6 +377,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_OLDPUPUPU => &OLDPUPUPU,
         GR_KIND_IZUMI => &IZUMI,
         GR_KIND_OLDYOSHI => &OLDYOSHI,
+        GR_KIND_OLDKONGO => &OLDKONGO,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

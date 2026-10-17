@@ -30,6 +30,23 @@ impl Running<'_> {
             .player_kind(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
         kind == GM_PKIND_CPU && fp.cpu.kind != 5
     }
+
+    /// Starts the fighter's controller rumbling (kind `kind` for `frames`), if it rumbles and
+    /// the fighter is awake and alive, `ftLib_StartRumble`.
+    #[doc(alias = "ftLib_StartRumble")]
+    pub fn ft_start_rumble(&mut self, gobj: GObjId, kind: i32, frames: i32) {
+        let fp = self.game.fighter(gobj);
+        if !self
+            .game
+            .rumble_enabled(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter))
+        {
+            return;
+        }
+        if !fp.is_sleeping && !fp.stamina_dead {
+            let port = fp.pad_port;
+            self.rumble_start(port, 0, kind, frames);
+        }
+    }
 }
 
 /// `Gm_PKind_Cpu`.

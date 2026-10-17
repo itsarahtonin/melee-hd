@@ -196,9 +196,9 @@ fn main() {
                 Status::PortedUnchecked
             };
             (s, at.clone())
-        } else if let Some(why) = replaced.get(name) {
+        } else if let Some(why) = replaced.get(&qualified).or_else(|| replaced.get(name)) {
             (Status::Replaced, why.clone())
-        } else if let Some(why) = dead.get(name) {
+        } else if let Some(why) = dead.get(&qualified).or_else(|| dead.get(name)) {
             (Status::Dead, why.clone())
         } else {
             (Status::Unaccounted, String::new())

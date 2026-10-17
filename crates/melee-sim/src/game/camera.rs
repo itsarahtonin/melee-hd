@@ -1732,8 +1732,9 @@ pub fn box_on_screen(game: &mut Game, data: &Archives, b: CameraBoxId, tolerance
 }
 
 /// Where the view's left edge, center line and right edge meet the stage plane's x axis
-/// (z = 0), seen from above, `Camera_800307D0`; false (with -8.5e37, 0 and 8.5e37) when the
-/// view looks along an axis.
+/// (z = 0), seen from above, `Camera_800307D0`; false (with -8.5070587e37, 0 and
+/// 8.5070587e37) when the view looks along an axis. An edge that doesn't meet the plane in
+/// front of the eye is ±8.5070587e37 too.
 #[doc(alias = "Camera_800307D0")]
 pub fn ground_span(game: &mut Game, data: &Archives) -> ([f32; 3], bool) {
     let c = camera_cobj(game);
@@ -1747,7 +1748,8 @@ pub fn ground_span(game: &mut Game, data: &Archives) -> ([f32; 3], bool) {
     let eye = cobj::eye_position(&mut game.objs, data, c).expect("the camera's eye");
     let mut fwd = cobj::eye_vector(&mut game.objs, data, Some(c)).unwrap_or(cobj::NO_EYE_VECTOR);
     let _ = cobj::interest(&mut game.objs, data, c);
-    let far = 8.507_059e37_f32;
+    // `8.5070587e37f`: 0x7E7FFFFF, one below 2^126.
+    let far = f32::from_bits(0x7E7F_FFFF);
     let abs = |x: f64| fp::frsp(if x < 0.0 { fp::fneg(x) } else { x });
     let tiny = f64::from(0.0001_f32);
     if !(abs(reg(fwd.x)) > tiny && abs(reg(fwd.z)) > tiny) {

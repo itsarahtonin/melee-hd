@@ -39,6 +39,8 @@ pub enum VarsKind {
     Izumi3,
     OldYoshiCloud,
     OldYoshiGuest,
+    OldKongo,
+    OldKongoBirds,
 }
 
 /// `union GroundVars`.
@@ -80,6 +82,10 @@ pub enum GroundVars {
     OldYoshiCloud(OldYoshiCloudVars),
     /// `grOldYoshi_Guest_GroundVars`: the creatures that pass behind it (map 3).
     OldYoshiGuest(OldYoshiGuestVars),
+    /// `grOldKongo_GroundVars` (`taru`): Kongo Jungle N64's barrel (map 1).
+    OldKongo(OldKongoVars),
+    /// The first word of `GroundVars_unk`: Kongo Jungle N64's birds (map 2).
+    OldKongoBirds(OldKongoBirdsVars),
 }
 
 /// `grOldYoshi_Cloud`: one of Yoshi's Island N64's clouds.
@@ -130,6 +136,38 @@ pub struct OldYoshiCloudVars {
 pub struct OldYoshiGuestVars {
     pub xC4: i16,
     pub xC6: i16,
+}
+
+/// `grOldKongo_GroundVars` (`taru`): the barrel's turn (`xC4`: at rest, turning, heading for a
+/// direction, coasting), what it does with a fighter (`xC6`: none, holding, shooting, shot,
+/// clearing), its swing's cycle (`xC8`), the hold's countdown (`xCA`), the turn's and the
+/// swing's timers (`xCC`, `xCE`), the shot's (`hit_timer`), the fighter held (`keep`), the
+/// direction it heads for (`xD8`), its angle (`xDC`), the turn's acceleration and speed (`xE0`,
+/// `xE4`), and the swing's speed (`xEC`). `xE8` is written once and never read. The two bytes
+/// after `hit_timer` are padding nothing writes.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct OldKongoVars {
+    pub xC4: i16,
+    pub xC6: i16,
+    pub xC8: i16,
+    pub xCA: i16,
+    pub xCC: i16,
+    pub xCE: i16,
+    pub hit_timer: i16,
+    pub keep: Option<GObjId>,
+    pub xD8: f32,
+    pub xDC: f32,
+    pub xE0: f32,
+    pub xE4: f32,
+    pub xE8: f32,
+    pub xEC: f32,
+}
+
+/// Kongo Jungle N64's birds' variables: the wait before they fly (`xC4`, the first word of
+/// `GroundVars_unk`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct OldKongoBirdsVars {
+    pub xC4: i32,
 }
 
 /// `GroundVars_izumi`: the water's texture (`xC4`), the reflection camera (`xC8`), the
@@ -661,6 +699,28 @@ impl GroundVars {
                 xC4: m.u16(at) as i16,
                 xC6: m.u16(at + 2) as i16,
             }),
+            VarsKind::OldKongo => {
+                let h = |a: u32| m.u16(at + a) as i16;
+                GroundVars::OldKongo(OldKongoVars {
+                    xC4: h(0),
+                    xC6: h(2),
+                    xC8: h(4),
+                    xCA: h(6),
+                    xCC: h(8),
+                    xCE: h(0xA),
+                    hit_timer: h(0xC),
+                    keep: gobj(cx, at + 0x10),
+                    xD8: f(at + 0x14),
+                    xDC: f(at + 0x18),
+                    xE0: f(at + 0x1C),
+                    xE4: f(at + 0x20),
+                    xE8: f(at + 0x24),
+                    xEC: f(at + 0x28),
+                })
+            }
+            VarsKind::OldKongoBirds => GroundVars::OldKongoBirds(OldKongoBirdsVars {
+                xC4: m.u32(at) as i32,
+            }),
             VarsKind::StoryShyGuys => GroundVars::StoryShyGuys(StoryShyGuysVars {
                 count: m.u8(at) as i8,
                 pattern: m.u8(at + 1) as i8,
@@ -943,6 +1003,49 @@ impl GroundVars {
             other => {
                 panic!("a stage object's variables are {other:?}, not grOldYoshi_Guest_GroundVars")
             }
+        }
+    }
+
+    /// The variables as `grOldKongo_GroundVars`, likewise: a block holding a pointer converts
+    /// only if it is null.
+    pub fn oldkongo(&mut self) -> &mut OldKongoVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let h = |at: usize| u16::from_be_bytes([b.0[at], b.0[at + 1]]) as i16;
+            *self = GroundVars::OldKongo(OldKongoVars {
+                xC4: h(0),
+                xC6: h(2),
+                xC8: h(4),
+                xCA: h(6),
+                xCC: h(8),
+                xCE: h(0xA),
+                hit_timer: h(0xC),
+                keep: b.null(0x10),
+                xD8: b.f32(0x14),
+                xDC: b.f32(0x18),
+                xE0: b.f32(0x1C),
+                xE4: b.f32(0x20),
+                xE8: b.f32(0x24),
+                xEC: b.f32(0x28),
+            });
+        }
+        match self {
+            GroundVars::OldKongo(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grOldKongo_GroundVars"),
+        }
+    }
+
+    /// The variables as Kongo Jungle N64's birds', likewise.
+    pub fn oldkongo_birds(&mut self) -> &mut OldKongoBirdsVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::OldKongoBirds(OldKongoBirdsVars {
+                xC4: b.u32(0) as i32,
+            });
+        }
+        match self {
+            GroundVars::OldKongoBirds(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not GroundVars_unk"),
         }
     }
 
@@ -1324,6 +1427,40 @@ impl Mirror for GroundVars {
                     cx.mismatch(
                         &format!("{path}.oldyoshiguest"),
                         format!("{ours:?}"),
+                        format!("{theirs:?}"),
+                    );
+                }
+            }
+            GroundVars::OldKongo(v) => {
+                let h = |a: u32| m.u16(at + a) as i16;
+                let ours = (
+                    [v.xC4, v.xC6, v.xC8, v.xCA, v.xCC, v.xCE, v.hit_timer],
+                    [v.xD8, v.xDC, v.xE0, v.xE4, v.xE8, v.xEC].map(f32::to_bits),
+                );
+                let theirs = (
+                    [h(0), h(2), h(4), h(6), h(8), h(0xA), h(0xC)],
+                    std::array::from_fn(|k| m.u32(at + 0x14 + 4 * k as u32)),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.taru"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.taru.keep"),
+                    "GObjId",
+                    v.keep.map(|h| h.0),
+                    m.u32(at + 0x10),
+                );
+            }
+            GroundVars::OldKongoBirds(v) => {
+                let theirs = m.u32(at) as i32;
+                if v.xC4 != theirs {
+                    cx.mismatch(
+                        &format!("{path}.unk.xC4"),
+                        format!("{:?}", v.xC4),
                         format!("{theirs:?}"),
                     );
                 }

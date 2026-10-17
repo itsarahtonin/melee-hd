@@ -15,6 +15,7 @@ pub mod ground;
 pub mod izumi;
 pub mod last;
 pub mod material;
+pub mod oldkongo;
 pub mod oldpupupu;
 pub mod oldyoshi;
 pub mod setup;
@@ -25,8 +26,9 @@ pub mod vars;
 pub mod zako;
 
 pub use vars::{
-    BattleBgVars, GroundVars, LastVars, MapVars, OldYoshiCloud, OldYoshiCloudVars,
-    OldYoshiGuestVars, StadiumBits, StadiumDisplayVars, StadiumPieceVars, StadiumVars, VarsKind,
+    BattleBgVars, GroundVars, LastVars, MapVars, OldKongoBirdsVars, OldKongoVars, OldYoshiCloud,
+    OldYoshiCloudVars, OldYoshiGuestVars, StadiumBits, StadiumDisplayVars, StadiumPieceVars,
+    StadiumVars, VarsKind,
 };
 
 use melee_data::archive::{ArchiveId, DataRef};
@@ -47,6 +49,8 @@ pub const GR_KIND_IZUMI: i32 = 12;
 pub const GR_KIND_OLDPUPUPU: i32 = 28;
 /// `Gr_Kind_OldYoshi`, Yoshi's Island (N64).
 pub const GR_KIND_OLDYOSHI: i32 = 29;
+/// `Gr_Kind_OldKongo`, Kongo Jungle (N64).
+pub const GR_KIND_OLDKONGO: i32 = 30;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Last`, Final Destination.
@@ -149,6 +153,8 @@ pub struct Globals {
     pub oldpupupu_yakumono: Option<DataRef>,
     /// Yoshi's Island N64's `yakumono_param` (`groldyoshi_yakumono_param_t`).
     pub oldyoshi_yakumono: Option<DataRef>,
+    /// Kongo Jungle N64's `yakumono_param` (`grOldKongo_YakumonoParam`).
+    pub oldkongo_yakumono: Option<DataRef>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -191,8 +197,11 @@ pub struct FtDevices {
     pub device: Option<GObjId>,
     pub device_type: u32,
     pub device_cb: Option<CodeRef>,
-    /// `ftDevice_BuryThings[i].x0`.
+    /// `ftDevice_BuryThings[i]`: the devices that catch fighters (`x0`), their types (`x4`)
+    /// and the callbacks that test a fighter (`cb`).
     pub bury: [Option<GObjId>; 2],
+    pub bury_type: [u32; 2],
+    pub bury_cb: [Option<CodeRef>; 2],
     /// `ft_80459A8C[0].ground`.
     pub device2: Option<GObjId>,
 }
@@ -216,6 +225,8 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_STORY, 3) => VarsKind::StoryShyGuys,
         (GR_KIND_OLDYOSHI, 2) => VarsKind::OldYoshiCloud,
         (GR_KIND_OLDYOSHI, 3) => VarsKind::OldYoshiGuest,
+        (GR_KIND_OLDKONGO, 1) => VarsKind::OldKongo,
+        (GR_KIND_OLDKONGO, 2) => VarsKind::OldKongoBirds,
         _ => VarsKind::Bytes,
     }
 }
