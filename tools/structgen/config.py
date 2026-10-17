@@ -224,7 +224,7 @@ FIELD_DATA = {
 # block held and nothing compares them. An item link's last five flag bits are such (the
 # decomp's `itCharItems.h`); a link block new from the heap mid-capture keeps the heap's bits.
 # So are an item's `x8`, `x21`, `x22` and `x23`: item creation leaves them, so an item in a
-# block the pool grows from reused heap holds the heap's old cell headers there (a Fire Flower
+# block the pool grows from reused heap holds the heap's old words there (a Fire Flower
 # flame on the items-shoot Battlefield match, tick 5940).
 UNUSED = {
     "ItemLink": {"x2C_b3", "x2C_b4", "x2C_b5", "x2C_b6", "x2C_b7"},

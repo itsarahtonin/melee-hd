@@ -388,7 +388,8 @@ fn vary(call: &mut Call, i: usize) {
 }
 
 /// The items' variations: the Flipper's spin, its flight timer and (settled) hitbox timer, so its
-/// spin and drift take their branches; the motion-sensor bomb's armed bit.
+/// spin and drift take their branches; the motion-sensor bomb's armed bit; a
+/// reflected ray's speed factor.
 fn vary_item(call: &mut Call, i: usize) {
     let in_mem = |a: u32| (0x8000_0000..0x817F_0000).contains(&a);
     if !in_mem(call.regs.gpr[3]) || !in_mem(user_data_arg(call)) {
@@ -411,6 +412,8 @@ fn vary_item(call: &mut Call, i: usize) {
             );
         }
         19 => poke_bit(call, v, 0, i % 2 == 1),
+        // A reflected ray's speed factor.
+        35 => poke_f32(call, ip + 0xC70, [1.0f32, 1.5, 0.75][i % 3]),
         _ => {}
     }
 }
@@ -588,6 +591,48 @@ fn bonus_count(counts: &mut BTreeMap<u32, usize>) {
     }
 }
 
+/// `pl_80037DF4` (an item's attack in its owner's statistics) and `it_8027B564` from their
+/// saved calls with other attack flags: the matches' blasts count an attack id alone, so the
+/// thrown-item, aerial, special and other counts' bits come from here.
+fn attack_flags(counts: &mut BTreeMap<u32, usize>) {
+    let no = stubs();
+    for (name, at_item) in [("pl_80037DF4", false), ("it_8027B564", true)] {
+        if !wanted(name) {
+            continue;
+        }
+        for dir in dirs() {
+            if saved_calls(&dir, name).is_empty() {
+                continue;
+            }
+            let prepares: Vec<Box<Prepare>> =
+                [0x0000_0861u32, 0x0001_0405, 0x0010_1201, 0x0000_1F33]
+                    .iter()
+                    .map(|&flags| -> Box<Prepare> {
+                        Box::new(move |call: &mut Call, _: usize| {
+                            let at = if at_item {
+                                user_data_arg(call) + 0xD90
+                            } else {
+                                call.regs.gpr[4]
+                            };
+                            poke_u32(call, at, flags);
+                        })
+                    })
+                    .collect();
+            let variants: Vec<Variant> = prepares
+                .iter()
+                .map(|prepare| Variant {
+                    prepare: &**prepare,
+                    ours: &run,
+                    stubs: &no,
+                })
+                .collect();
+            for reports in check_variants(&dir, name, &variants) {
+                tally(&reports, counts);
+            }
+        }
+    }
+}
+
 /// Functions no saved state can finish yet, with what stops them. One that compares clean
 /// fails the check until it's taken off.
 const BLOCKED: &[(&str, &str)] = &[];
@@ -603,6 +648,7 @@ fn items_shoot_functions() {
     as_saved(&mut counts);
     from_neighbours(&mut counts);
     bonus_count(&mut counts);
+    attack_flags(&mut counts);
     let funcs = functions();
     let ours: Vec<&(u32, String)> = funcs.iter().filter(|(_, n)| !skipped(n)).collect();
     let missing: Vec<&str> = ours
