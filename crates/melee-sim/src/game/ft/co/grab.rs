@@ -433,8 +433,8 @@ impl Running<'_> {
     /// thaws, `Fighter_UnkSetFlag_8006CFBC`). A victim the grab made part of the grabber's
     /// model (a thrown fighter, Yoshi's egg) comes loose at its throw offset from where its
     /// model hung: onto a floor connected to the grabber's when one is at or below that point
-    /// and close enough, else through a collision pass from the grabber's middle. Kirby's
-    /// swallow isn't ported.
+    /// and close enough, else through a collision pass from the grabber's middle; one Kirby
+    /// is swallowing comes loose at its own size from where it is.
     #[doc(alias = "ftCo_800DC920")]
     #[doc(alias = "Fighter_UnkSetFlag_8006CFBC")]
     pub fn grab_release(&mut self, a: GObjId, b: GObjId) {
@@ -467,29 +467,34 @@ impl Running<'_> {
     /// [`Self::grab_release`]'s part for a victim inside its grabber's model (`x2226_b2`).
     fn release_from_model(&mut self, holder: GObjId, held: GObjId) {
         let hp = self.game.fighter(holder);
-        if hp.kind == super::checks::KIND_KIRBY
+        let pos = if hp.kind == super::checks::KIND_KIRBY
             && matches!(
                 hp.motion_id,
                 KB_SPECIAL_N_CAPTURE_0 | KB_SPECIAL_AIR_N_CAPTURE_0
-            )
-        {
-            unported_call("ftCo_800DC920 for Kirby's swallow");
-        }
-        let xj = self.part_joint(held, X_ROT_N).expect("no XRotN");
-        let mut pos = world_position(&mut self.game.objs, self.data, Some(xj), None);
-        let fp = self.game.fighter(held);
-        pos.x = mem(fp::fmadds(
-            reg(fp.facing_dir),
-            fp::fmuls(reg(fp.x1A70.z), reg(fp.x34_scale.y)),
-            reg(pos.x),
-        ));
-        pos.y = mem(fp::fmadds(reg(fp.x1A70.y), reg(fp.x34_scale.y), reg(pos.y)));
-        pos.z = 0.0;
-        super::throw::unconstrain(&mut self.game.objs, xj);
-        let fp = self.game.fighter_mut(held);
-        fp.x2226_b2 = false;
-        let x2174 = fp.x2174;
-        jobj::set_translate(&mut self.game.objs.jobjs, xj, x2174);
+            ) {
+            // Inside Kirby's mouth while he swallows: its own size again, from where it is.
+            self.update_model_scale(held);
+            let fp = self.game.fighter_mut(held);
+            fp.x2226_b2 = false;
+            fp.cur_pos
+        } else {
+            let xj = self.part_joint(held, X_ROT_N).expect("no XRotN");
+            let mut pos = world_position(&mut self.game.objs, self.data, Some(xj), None);
+            let fp = self.game.fighter(held);
+            pos.x = mem(fp::fmadds(
+                reg(fp.facing_dir),
+                fp::fmuls(reg(fp.x1A70.z), reg(fp.x34_scale.y)),
+                reg(pos.x),
+            ));
+            pos.y = mem(fp::fmadds(reg(fp.x1A70.y), reg(fp.x34_scale.y), reg(pos.y)));
+            pos.z = 0.0;
+            super::throw::unconstrain(&mut self.game.objs, xj);
+            let fp = self.game.fighter_mut(held);
+            fp.x2226_b2 = false;
+            let x2174 = fp.x2174;
+            jobj::set_translate(&mut self.game.objs.jobjs, xj, x2174);
+            pos
+        };
 
         let h = self.game.fighter_id(held);
         let floor = self.game.fighter(holder).coll_data.floor.index;
