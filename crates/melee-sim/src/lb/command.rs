@@ -161,10 +161,20 @@ pub fn execute(s: &mut Script, data: &Archives, command: u32) -> bool {
             s.skip(1);
             s.set_timer_f32(WAIT_FOR_FRAME);
         }
+        // The background flash needs the game: callers that have it run `bg_flash` first.
         9 => crate::game::code::unported_call("lbBgFlash_80021C48"),
         _ => return false,
     }
     true
+}
+
+/// Starts a background flash, `Command_09`: color animation `param_1` (bits 6 to 13) for
+/// `param_2` frames (the low 18 bits).
+#[doc(alias = "Command_09")]
+pub fn bg_flash(s: &mut Script, game: &mut crate::game::state::Game, data: &Archives) {
+    let w = s.word(data);
+    game.bg_flash_anim(data, (w >> 18) & 0xFF, w & 0x3_FFFF);
+    s.skip(1);
 }
 
 impl Mirror for Script {

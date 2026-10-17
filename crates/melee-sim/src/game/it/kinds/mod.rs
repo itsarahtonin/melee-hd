@@ -102,6 +102,7 @@ pub mod starrodstar;
 pub mod sword;
 pub mod taru;
 pub mod tarucann;
+pub mod thunder;
 pub mod togepy;
 pub mod tomato;
 pub mod wstar;
@@ -245,6 +246,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || kamex::run_event(r, gobj, addr)
         || chicorita::run_event(r, gobj, addr)
         || marumine::run_event(r, gobj, addr)
+        || thunder::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -357,6 +359,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| kamex::run_pred(r, gobj, addr))
         .or_else(|| chicorita::run_pred(r, gobj, addr))
         .or_else(|| marumine::run_pred(r, gobj, addr))
+        .or_else(|| thunder::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
