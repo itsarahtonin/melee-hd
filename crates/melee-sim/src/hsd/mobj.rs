@@ -198,7 +198,7 @@ impl MObj {
 }
 
 /// The MObj pool and mobj.c's globals.
-#[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
+#[derive(Debug, Default, melee_derive::StateEq)]
 pub struct MObjs {
     pub pool: Pool<MObj>,
     /// The MObj the display pass is drawing (`current_mobj`).
@@ -210,6 +210,60 @@ pub struct MObjs {
     /// Room the TEV compiles keep (`hsd::texp_heap`).
     #[clone_from(keep)]
     pub texp_scratch: super::texp_heap::Scratch,
+    /// Compiled TEV storage freed materials left, for later compiles to reuse: no state, so
+    /// a restore keeps the target's and a snapshot starts without.
+    #[clone_from(keep)]
+    pub spare_tev: Vec<super::texp::TevDesc>,
+}
+
+/// How many freed materials' compiled TEV storage an [`MObjs`] keeps at most.
+const SPARE_TEVS: usize = 256;
+
+impl MObjs {
+    /// Keeps a compiled TEV's storage for a later compile, up to [`SPARE_TEVS`].
+    fn keep_tev(&mut self, tev: super::texp::TevDesc) {
+        if self.spare_tev.len() < SPARE_TEVS {
+            if self.spare_tev.capacity() == 0 {
+                self.spare_tev.reserve_exact(SPARE_TEVS);
+            }
+            self.spare_tev.push(tev);
+        }
+    }
+}
+
+/// `melee_derive::CloneFrom`'s copy, field by field, except that a restore first moves the
+/// compiled TEVs it would drop (slots past the source's, materials the source hasn't
+/// compiled) to the spares and gives the materials it would compile anew a spare's storage.
+impl Clone for MObjs {
+    fn clone(&self) -> Self {
+        MObjs {
+            pool: self.pool.clone(),
+            current: self.current,
+            toon: self.toon,
+            shadows: self.shadows,
+            texp_scratch: Default::default(),
+            spare_tev: Vec::new(),
+        }
+    }
+
+    fn clone_from(&mut self, source: &Self) {
+        let theirs = source.pool.slots();
+        for i in 0..self.pool.slots().len() {
+            let compiled = theirs.get(i).is_some_and(|m| m.tev.is_some());
+            if !compiled && let Some(tev) = self.pool.slots_mut()[i].tev.take() {
+                self.keep_tev(tev);
+            }
+        }
+        for (ours, theirs) in self.pool.slots_mut().iter_mut().zip(theirs) {
+            if ours.tev.is_none() && theirs.tev.is_some() {
+                ours.tev = self.spare_tev.pop();
+            }
+        }
+        self.pool.clone_from(&source.pool);
+        self.current = source.current;
+        self.toon = source.toon;
+        self.shadows = source.shadows;
+    }
 }
 
 impl Index<MObjId> for MObjs {
@@ -340,6 +394,13 @@ pub fn anim(objs: &mut Objects, data: &Archives, m: Option<MObjId>) {
 /// `hsdAllocMemPiece`, as a TObj's do (see `tobj::alloc`).
 #[doc(alias = "HSD_MObjAlloc")]
 pub fn alloc(mobjs: &mut MObjs) -> MObjId {
+    // The slot to be reused still holds its last material's compiled TEV: its storage is
+    // kept for a later compile.
+    if let Some(slot) = mobjs.pool.free_head()
+        && let Some(tev) = mobjs.pool[slot].tev.take()
+    {
+        mobjs.keep_tev(tev);
+    }
     let m = mobjs.pool.alloc(MObj::default());
     mobjs
         .pool
@@ -443,12 +504,35 @@ pub fn compile_tev(objs: &mut Objects, m: Option<MObjId>) {
     let (mobjs, tobjs) = (&objs.mobjs, &mut objs.tobjs);
     let (first, tail) = borrow_chain(mobjs, tobjs, m, mobjs[m].rendermode);
     tobj::assign_resources(tobjs, first);
-    if super::heap::with(|_| ()).is_some() {
-        super::texp_heap::compile(objs, m, first);
+    let mut chain = [TObjId(0); 32];
+    let mut n = 0;
+    for t in objs.tobjs.chain(first) {
+        chain[n] = t;
+        n += 1;
     }
-    let chain: Vec<TObjId> = objs.tobjs.chain(first).collect();
-    let tev = super::texp::make::compile_material(objs, m, &chain);
-    objs.mobjs[m].tev = Some(tev);
+    // The compile runs in the room the compiles keep, and its stages go into the storage the
+    // material's last compile, or a freed material's, held.
+    let mut s = std::mem::take(&mut objs.mobjs.texp_scratch);
+    s.list.clear();
+    let root = super::texp::make::mobj_make_texp(objs, m, &chain[..n], &mut s.list);
+    let heap = super::heap::with(|_| ()).is_some();
+    if heap {
+        super::texp_heap::alloc_exprs(objs, m, &mut s);
+    }
+    let (num, order) = s.list.schedule_stages(root, &mut s.dag);
+    if heap {
+        super::texp_heap::finish(objs, m, &s, num);
+    }
+    let mobjs = &mut objs.mobjs;
+    let mut tev = mobjs[m]
+        .tev
+        .take()
+        .or_else(|| mobjs.spare_tev.pop())
+        .unwrap_or_else(super::texp::TevDesc::with_room);
+    tev.make_room();
+    s.list.describe(num, &order, &mut tev);
+    mobjs[m].tev = Some(tev);
+    mobjs.texp_scratch = s;
     return_chain(&mut objs.tobjs, tail);
 }
 
