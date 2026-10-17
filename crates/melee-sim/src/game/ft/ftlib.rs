@@ -278,3 +278,29 @@ impl Running<'_> {
         crate::fpu::reg(h)
     }
 }
+
+/// Rumbles a fighter's controller (id 0) with pattern `kind` for `frames` if its controller
+/// rumbles and it's awake and alive, `ftLib_StartRumble`.
+#[doc(alias = "ftLib_StartRumble")]
+pub fn start_rumble(r: &mut Running, gobj: GObjId, kind: i32, frames: i32) {
+    let fp = r.game.fighter(gobj);
+    let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
+    if !r.game.rumble_enabled(slot, sub) {
+        return;
+    }
+    let fp = r.game.fighter(gobj);
+    if !fp.is_sleeping && !fp.stamina_dead {
+        let port = fp.pad_port;
+        r.rumble_start(port, 0, kind, frames);
+    }
+}
+
+/// Rumbles every fighter's controller, `ftLib_StartRumbleAll`.
+#[doc(alias = "ftLib_StartRumbleAll")]
+pub fn start_rumble_all(r: &mut Running, kind: i32, frames: i32) {
+    let mut cur = r.game.world.first_in(super::common::FIGHTER_P_LINK);
+    while let Some(g) = cur {
+        cur = r.game.world.gobjs[g.0].next;
+        start_rumble(r, g, kind, frames);
+    }
+}

@@ -58,6 +58,12 @@ pub fn scale_hitboxes(game: &mut Game, gobj: GObjId, mult: f64) {
     }
 }
 
+/// Clears the item's `xDCD` bit 7, `it_8027542C`.
+#[doc(alias = "it_8027542C")]
+pub fn clear_dcd_b7(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDCD_flag.x0.b7 = false;
+}
+
 /// Marks the item blinking, `it_802756D0`.
 #[doc(alias = "it_802756D0")]
 pub fn start_blink(game: &mut Game, gobj: GObjId) {

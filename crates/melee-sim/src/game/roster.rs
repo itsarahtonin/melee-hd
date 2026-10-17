@@ -165,6 +165,11 @@ pub const STAGES: &[Stage] = &[
         keys: &["bf", "battlefield"],
     },
     Stage {
+        kind: 15,
+        name: "Brinstar Depths",
+        keys: &["bd", "brinstar-depths"],
+    },
+    Stage {
         kind: 28,
         name: "Dream Land",
         keys: &["dl", "dream-land"],
@@ -178,6 +183,16 @@ pub const STAGES: &[Stage] = &[
         kind: 2,
         name: "Fountain of Dreams",
         keys: &["fod", "fountain-of-dreams"],
+    },
+    Stage {
+        kind: 18,
+        name: "Fourside",
+        keys: &["fs", "fourside"],
+    },
+    Stage {
+        kind: 13,
+        name: "Great Bay",
+        keys: &["gb", "great-bay"],
     },
     Stage {
         kind: 3,

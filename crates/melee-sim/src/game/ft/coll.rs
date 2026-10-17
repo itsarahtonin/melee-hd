@@ -60,8 +60,40 @@ pub struct ObjCollHooks<'a> {
     pub dynamic_attrs: &'a DynamicAttrs,
     /// The stage objects, which the stage's collision joints' callbacks write.
     pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
+    /// The stage objects by map id (`Ground_GetMapGObj`), for callbacks that write another
+    /// object than their own.
+    pub stage_maps: StageMaps<'a>,
     /// The fighter's floor filter's inputs, for a filtered pass.
     pub filter: Option<FilterInput<'a>>,
+}
+
+/// The stage objects by map id, as a collision joint's callback reaches them
+/// (`Ground_GetMapGObj`).
+#[derive(Clone, Copy)]
+pub struct StageMaps<'a> {
+    world: &'a crate::hsd::gobj::World<super::super::state::GameKinds>,
+    info: &'a super::super::structs::StageInfo,
+    /// The stage code's globals (the stages' parameters).
+    pub gr: &'a super::super::gr::Globals,
+}
+
+impl<'a> StageMaps<'a> {
+    pub fn of_parts(
+        world: &'a crate::hsd::gobj::World<super::super::state::GameKinds>,
+        info: &'a super::super::structs::StageInfo,
+        gr: &'a super::super::gr::Globals,
+    ) -> Self {
+        StageMaps { world, info, gr }
+    }
+
+    /// The stage object of map `map_id`, `Ground_GetMapGObj(map_id)->user_data`.
+    pub fn ground(&self, map_id: i32) -> Option<super::super::handles::GroundId> {
+        let g = self.info.map_gobjs[map_id as usize]?;
+        match self.world.gobjs[g.0].user_data {
+            Some(super::super::state::UserData::Ground(gr)) => Some(gr),
+            _ => None,
+        }
+    }
 }
 
 impl CollHooks<StageColl> for ObjCollHooks<'_> {
@@ -76,21 +108,45 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
         &mut self,
         _g: &mut Geometry,
         callback: CodeRef,
-        user_data: Option<super::super::handles::GroundId>,
+        user_data: Option<super::super::gr::CollUser>,
         joint_id: i32,
         coll: &mut CollData,
-        _x50: i32,
-        _kind: i32,
+        x50: i32,
+        kind: i32,
         _dy: f32,
     ) {
         match callback.0 {
             super::super::gr::oldyoshi::CLOUD_TOUCHED => {
-                if let Some(g) = user_data {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     super::super::gr::oldyoshi::touch(
                         &mut self.grounds[g.0],
                         joint_id,
                         coll.x34_flags.b1234.into(),
                     );
+                }
+            }
+            super::super::gr::fourside::ROOF_TOUCHED => super::super::gr::fourside::touch(
+                self.grounds,
+                self.stage_maps.ground(5),
+                coll.x34_flags.b1234.into(),
+            ),
+            super::super::gr::greatbay::PLATFORM_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    super::super::gr::greatbay::platform_touched(
+                        self.objs,
+                        self.data,
+                        self.grounds,
+                        self.stage_maps.gr.greatbay_yakumono,
+                        g,
+                        coll,
+                        x50,
+                        kind,
+                    );
+                }
+            }
+            super::super::gr::greatbay::BALLOON_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    super::super::gr::greatbay::balloon_touched(&mut self.grounds[g.0], coll, x50);
                 }
             }
             _ => unported_call(&format!("stage joint callback {:#010x}", callback.0)),
@@ -225,6 +281,7 @@ impl Running<'_> {
             data: self.data,
             dynamic_attrs: &game.gr.dynamic_attrs,
             grounds: &mut game.grounds,
+            stage_maps: StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
             filter,
         };
         let mut coll = Coll {

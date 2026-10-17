@@ -167,13 +167,87 @@ impl Running<'_> {
         display::camera_end(&mut self.game.objs);
     }
 
-    /// The stage's fog fitted to the camera, `Ground_801C4FAC`, for stages that ask for it
-    /// (`stage_info.unk8C.b3`), which no port covers yet.
+    /// The stage's fog fitted to the camera, `Ground_801C4FAC`, for stages that set guide
+    /// points (`stage_info.unk8C.b3`, [`set_guide_points`](super::gr::ground::set_guide_points)):
+    /// a near and a far point, the side pair the camera faces (`x148`/`x154` looking left,
+    /// `x160`/`x16C` otherwise), blended by heading with the front pair (`x130`/`x13C`) when it
+    /// looks into the stage; the fog starts at the near point's distance from the eye (at
+    /// least 5) and ends at the far one's (at least 10, and past the start).
     #[doc(alias = "Ground_801C4FAC")]
-    fn stage_fog_update(&mut self, _c: crate::hsd::cobj::CObjId) {
-        if self.game.stage_info.unk8C.b3 {
-            crate::game::code::unported_call("Ground_801C4FAC");
+    pub fn stage_fog_update(&mut self, c: crate::hsd::cobj::CObjId) {
+        use crate::fpu::{mem, reg};
+        use crate::hsd::cobj;
+        use gekko_fp as fp;
+        let i = &self.game.stage_info;
+        if !i.unk8C.b3 {
+            return;
         }
+        let eye = cobj::eye_vector(&mut self.game.objs, self.data, Some(c))
+            .unwrap_or(cobj::NO_EYE_VECTOR);
+        let i = &self.game.stage_info;
+        let (mut front_near, mut front_far) = (i.x130, i.x13C);
+        let (mut near, mut far) = if reg(eye.x) < 0.0 {
+            (i.x148, i.x154)
+        } else {
+            (i.x160, i.x16C)
+        };
+        let (near, far) = if reg(eye.z) < 0.0 {
+            let len = crate::math::sqrt_reg(fp::fmadds(
+                reg(eye.x),
+                reg(eye.x),
+                fp::fmuls(reg(eye.z), reg(eye.z)),
+            ));
+            let inv = fp::fdivs(1.0, len);
+            let abs = |v: f64| if v < 0.0 { fp::fneg(v) } else { v };
+            let xw = fp::fmuls(inv, abs(reg(eye.x)));
+            let zw = fp::fmuls(inv, abs(reg(eye.z)));
+            let scale = |v: &mut crate::vec::Vec3, w: f64| {
+                v.x = mem(fp::fmuls(reg(v.x), w));
+                v.y = mem(fp::fmuls(reg(v.y), w));
+                v.z = mem(fp::fmuls(reg(v.z), w));
+            };
+            scale(&mut near, xw);
+            scale(&mut far, xw);
+            scale(&mut front_near, zw);
+            scale(&mut front_far, zw);
+            (front_near.sdk_add(near), front_far.sdk_add(far))
+        } else {
+            (near, far)
+        };
+        let at = cobj::eye_position(&mut self.game.objs, self.data, c)
+            .expect("HSD_CObjGetEyePosition: a CObj without an eye WObj");
+        let Some(fog_gobj) = self.game.stage_info.x12C else {
+            return;
+        };
+        let Some(Obj::Fog(fog)) = self.game.world.gobjs[fog_gobj.0].obj else {
+            return;
+        };
+        let sq = |v: f64| fp::fmuls(v, v);
+        let (dx, dy, dz) = (
+            fp::fsubs(reg(near.x), reg(at.x)),
+            fp::fsubs(reg(near.y), reg(at.y)),
+            fp::fsubs(reg(near.z), reg(at.z)),
+        );
+        let start = crate::math::sqrt_reg(fp::fadds(sq(dz), fp::fadds(sq(dx), sq(dy))));
+        let (dx, dy, dz) = (
+            fp::fsubs(reg(far.x), reg(at.x)),
+            fp::fsubs(reg(far.y), reg(at.y)),
+            fp::fsubs(reg(far.z), reg(at.z)),
+        );
+        let mut end = crate::math::sqrt_reg(fp::fadds(sq(dz), fp::fadds(sq(dx), sq(dy))));
+        let mut begin = start;
+        if end < 10.0 {
+            end = 10.0;
+        }
+        if start < 5.0 {
+            begin = 5.0;
+        }
+        if begin > end {
+            end = fp::fadds(1.0, begin);
+        }
+        let f = &mut self.game.objs.fogs[fog];
+        f.start = mem(begin);
+        f.end = mem(end);
     }
 
     /// Does what a HUD render callback decided.
@@ -308,6 +382,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         0x801C_5DB0 => r.render_stage_object(gobj, pass),
         c if super::gr::stadium::run_render(r, gobj, c, pass) => {}
         c if super::gr::izumi::run_render(r, gobj, c, pass) => {}
+        c if super::gr::fourside::run_render(r, gobj, c, pass) => {}
         0x8008_0E18 => r.render_fighter(gobj, pass),
         0x8008_0C28 => r.draw_magnified(gobj, pass),
         0x8026_EECC => r.render_item(gobj, pass),

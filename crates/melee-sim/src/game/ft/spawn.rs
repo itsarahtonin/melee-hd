@@ -518,6 +518,7 @@ impl Running<'_> {
             data: self.data,
             dynamic_attrs: &game.gr.dynamic_attrs,
             grounds: &mut game.grounds,
+            stage_maps: super::coll::StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
             filter: None,
         };
         let mut coll = Coll {
@@ -561,6 +562,7 @@ impl Running<'_> {
             data: self.data,
             dynamic_attrs: &game.gr.dynamic_attrs,
             grounds: &mut game.grounds,
+            stage_maps: super::coll::StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
             filter: None,
         };
         let mut coll = Coll {

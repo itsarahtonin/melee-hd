@@ -35,6 +35,11 @@ pub fn with_stage_coll<R>(
         data,
         dynamic_attrs: &game.gr.dynamic_attrs,
         grounds: &mut game.grounds,
+        stage_maps: super::super::ft::coll::StageMaps::of_parts(
+            &game.world,
+            &game.stage_info,
+            &game.gr,
+        ),
         filter: None,
     };
     let mut coll = Coll {

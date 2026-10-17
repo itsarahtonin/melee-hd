@@ -213,9 +213,11 @@ pub fn init_clouds(r: &mut Running, gobj: GObjId) {
         c.xD0 = 0.0;
         c.jobj = model;
         c.xCC = y;
-        r.game
-            .geometry_mut()
-            .set_ledge_callback(coll, Some(g), Some(CodeRef(CLOUD_TOUCHED)));
+        r.game.geometry_mut().set_ledge_callback(
+            coll,
+            Some(super::CollUser::Ground(g)),
+            Some(CodeRef(CLOUD_TOUCHED)),
+        );
     }
     r.game.grounds[g.0].x11_flags.b012 = 1;
 }

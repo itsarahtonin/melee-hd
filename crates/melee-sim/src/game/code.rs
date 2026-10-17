@@ -53,6 +53,9 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if super::gr::oldpupupu::run(game, gobj, addr) => {}
         addr if super::gr::izumi::run(game, gobj, addr) => {}
         addr if super::gr::oldyoshi::run(game, gobj, addr) => {}
+        addr if super::gr::kraid::run(game, gobj, addr) => {}
+        addr if super::gr::fourside::run(game, gobj, addr) => {}
+        addr if super::gr::greatbay::run(game, gobj, addr) => {}
         0x8006_A1BC => fighter::proc_hitlag(game, gobj),
         0x8006_A360 => fighter::proc_anim(game, gobj),
         0x8006_ABA0 => fighter::proc_cpu(game, gobj),
@@ -109,6 +112,9 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if super::gr::oldpupupu::run_event(game, f) => {}
         f if super::gr::izumi::run_event(game, f) => {}
         f if super::gr::oldyoshi::run_event(game, f) => {}
+        f if super::gr::kraid::run_event(game, f) => {}
+        f if super::gr::fourside::run_event(game, f) => {}
+        f if super::gr::greatbay::run_event(game, f) => {}
         super::gm::vs::ON_FRAME => game.vs_on_frame(),
         // db_RunEveryFrame: returns at once below the debug ROM's level.
         super::gm::vs::DB_RUN_EVERY_FRAME => game.game.assert_retail(),
@@ -118,7 +124,9 @@ pub fn run_event(game: &mut Running, f: u32) {
 
 /// Runs a stage's demo setup (`StageData::on_demo_init`), which takes the demo's number.
 pub fn run_demo_init(game: &mut Running, f: u32, arg: i32) {
-    use super::gr::{battle, izumi, last, oldpupupu, oldyoshi, stadium, story};
+    use super::gr::{
+        battle, fourside, greatbay, izumi, kraid, last, oldpupupu, oldyoshi, stadium, story,
+    };
     match f {
         0x8021_A620 => last::on_demo_init(game, arg),
         0x8021_9C98 => battle::on_demo_init(game.game),
@@ -127,6 +135,9 @@ pub fn run_demo_init(game: &mut Running, f: u32, arg: i32) {
         0x8021_07DC => oldpupupu::on_demo_init(game),
         0x801C_BB84 => izumi::on_demo_init(game),
         0x8020_E798 => oldyoshi::on_demo_init(game),
+        0x801F_DFF8 => kraid::on_demo_init(game),
+        0x801F_2D0C => fourside::on_demo_init(game),
+        0x801F_423C => greatbay::on_demo_init(game),
         other => unported("demo setup", other),
     }
 }
@@ -504,6 +515,17 @@ pub fn stubbed(f: u32, args: &[Val]) -> Option<Val> {
     let v = stubs::get(f)?;
     stubs::log(f, args);
     Some(v)
+}
+
+/// `OSReport`'s address.
+pub const OS_REPORT: u32 = 0x8034_56A8;
+
+/// `OSReport`: a line on the debugger's console, which the simulation leaves out. A check that
+/// stands in for it (feature `stubs`) sees the call, as the original's.
+#[doc(alias = "OSReport")]
+pub fn os_report() {
+    #[cfg(feature = "stubs")]
+    let _ = stubbed(OS_REPORT, &[]);
 }
 
 /// Stand-ins for unported functions in checks (feature `stubs`): a stubbed function returns

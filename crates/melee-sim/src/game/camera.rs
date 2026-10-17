@@ -53,6 +53,7 @@ pub const OUTSIDE_RIGHT: u32 = 8;
 /// `CmQuakeKind`.
 pub const QUAKE_NONE: i32 = 0;
 pub const QUAKE_LOOP: i32 = 1;
+pub const QUAKE_MEDIUM: i32 = 3;
 pub const QUAKE_KINDS: usize = 5;
 
 /// The camera's process (`fn_8002F360`) and the stage's bounds callbacks the pause and free

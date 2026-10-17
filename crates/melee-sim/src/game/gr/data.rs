@@ -4,8 +4,8 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_IZUMI, GR_KIND_LAST, GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI,
-    GR_KIND_PSTADIUM, GR_KIND_STORY,
+    GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_GREATBAY, GR_KIND_IZUMI, GR_KIND_KRAID, GR_KIND_LAST,
+    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_STORY,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -332,6 +332,138 @@ pub const OLDYOSHI: StageData = StageData {
     joints: &[],
 };
 
+/// `grKr_StageCallbacks`. Map 3 is the rock, map 4 Kraid, map 1 his copy, map 2 the
+/// background.
+pub const KRAID_CALLBACKS: [StageCallbacks; 5] = [
+    cb(0x801F_E1B0, 0x801F_E1DC, 0x801F_E1E4, 0x801F_E1E8, 0),
+    cb(0x801F_E1EC, 0x801F_E2C8, 0x801F_E2D0, 0x801F_E35C, 0),
+    cb(0x801F_E360, 0x801F_E3A4, 0x801F_E3AC, 0x801F_E3B0, 0),
+    cb(
+        0x801F_E3B4,
+        0x801F_E438,
+        0x801F_E440,
+        0x801F_E6D4,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x801F_E818, 0x801F_E9F8, 0x801F_EA00, 0x801F_F14C, 0),
+];
+
+/// `grKr_803E4C78`: the rock's six collision joints, all on its joint 12.
+pub const KRAID_JOINTS: [GrJoint; 6] = [
+    GrJoint { x: 0, y: 3, z: 12 },
+    GrJoint { x: 1, y: 3, z: 12 },
+    GrJoint { x: 2, y: 3, z: 12 },
+    GrJoint { x: 3, y: 3, z: 12 },
+    GrJoint { x: 4, y: 3, z: 12 },
+    GrJoint { x: 5, y: 3, z: 12 },
+];
+
+/// `grKr_StageData`.
+pub const KRAID: StageData = StageData {
+    grkind: GR_KIND_KRAID,
+    callbacks: &KRAID_CALLBACKS,
+    file: Some("/GrKr.dat"),
+    on_init: 0x801F_DFFC,
+    on_demo_init: 0x801F_DFF8,
+    on_load: 0x801F_E094,
+    on_start: 0x801F_E098,
+    callback4: 0x801F_E0BC,
+    on_touch_line: 0x801F_F154,
+    on_check_shadow_render: 0x801F_F15C,
+    flags2: 1,
+    joints: &KRAID_JOINTS,
+};
+
+/// `grFs_StageCallbacks`. Map 6 is the city, map 1 the crane, map 3 the helicopter, map 5 the
+/// UFO, map 4 the background buildings.
+pub const FOURSIDE_CALLBACKS: [StageCallbacks; 7] = [
+    cb(0x801F_2EBC, 0x801F_2EE8, 0x801F_2EF0, 0x801F_2EF4, 0),
+    cb(0x801F_3154, 0x801F_326C, 0x801F_3274, 0x801F_37F8, 0),
+    cb(0x801F_2EF8, 0x801F_2F24, 0x801F_2F2C, 0x801F_2F30, 0),
+    cb(0x801F_3C40, 0x801F_3CC0, 0x801F_3CC8, 0x801F_3F0C, 0),
+    cb(0x801F_30F0, 0x801F_3144, 0x801F_314C, 0x801F_3150, 0),
+    cb(0x801F_37FC, 0x801F_388C, 0x801F_3894, 0x801F_3B6C, 0),
+    cb(
+        0x801F_2F34,
+        0x801F_3070,
+        0x801F_3078,
+        0x801F_309C,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grFs_803E3CE8`: the crane's girder, the UFO and the roof, bound to their models' joints.
+pub const FOURSIDE_JOINTS: [GrJoint; 3] = [
+    GrJoint { x: 3, y: 1, z: 7 },
+    GrJoint { x: 4, y: 5, z: 1 },
+    GrJoint { x: 0, y: 6, z: 10 },
+];
+
+/// `grFs_StageData`.
+pub const FOURSIDE: StageData = StageData {
+    grkind: GR_KIND_FOURSIDE,
+    callbacks: &FOURSIDE_CALLBACKS,
+    file: Some("/GrFs.dat"),
+    on_init: 0x801F_2D10,
+    on_demo_init: 0x801F_2D0C,
+    on_load: 0x801F_2DA0,
+    on_start: 0x801F_2DA4,
+    callback4: 0x801F_2DC8,
+    on_touch_line: 0x801F_41E0,
+    on_check_shadow_render: 0x801F_41E8,
+    flags2: 1,
+    joints: &FOURSIDE_JOINTS,
+};
+
+/// `grGb_StageCallbacks`. Map 2 is the island, map 1 the turtle, map 10 Tingle, map 9 the moon
+/// and maps 5 to 8 the giants, maps 3 and 4 the background and the water in front.
+pub const GREATBAY_CALLBACKS: [StageCallbacks; 11] = [
+    cb(0x801F_4404, 0x801F_4430, 0x801F_4438, 0x801F_443C, 0),
+    cb(0x801F_4694, 0x801F_4994, 0x801F_499C, 0x801F_545C, 0),
+    cb(
+        0x801F_454C,
+        0x801F_4650,
+        0x801F_4658,
+        0x801F_4690,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x801F_4440, 0x801F_44A0, 0x801F_44A8, 0x801F_44AC, 0),
+    cb(0x801F_44B0, 0x801F_4510, 0x801F_4518, 0x801F_451C, 0),
+    cb(0x801F_598C, 0x801F_59F0, 0x801F_59F8, 0x801F_59FC, 0),
+    cb(0x801F_598C, 0x801F_59F0, 0x801F_59F8, 0x801F_59FC, 0),
+    cb(0x801F_598C, 0x801F_59F0, 0x801F_59F8, 0x801F_59FC, 0),
+    cb(0x801F_598C, 0x801F_59F0, 0x801F_59F8, 0x801F_59FC, 0),
+    cb(0x801F_5A00, 0x801F_5AF0, 0x801F_5AF8, 0x801F_5D48, 0),
+    cb(0x801F_5460, 0x801F_55F8, 0x801F_5600, 0x801F_5988, 0),
+];
+
+/// `grGb_803E3E60`: the platform, the turtle's four (its back and its fins) and Tingle's
+/// balloon, bound to their models' joints.
+pub const GREATBAY_JOINTS: [GrJoint; 6] = [
+    GrJoint { x: 0, y: 2, z: 49 },
+    GrJoint { x: 1, y: 1, z: 2 },
+    GrJoint { x: 2, y: 1, z: 3 },
+    GrJoint { x: 4, y: 1, z: 34 },
+    GrJoint { x: 3, y: 1, z: 38 },
+    GrJoint { x: 5, y: 10, z: 0 },
+];
+
+/// `grGb_StageData`.
+pub const GREATBAY: StageData = StageData {
+    grkind: GR_KIND_GREATBAY,
+    callbacks: &GREATBAY_CALLBACKS,
+    file: Some("/GrGb.dat"),
+    on_init: 0x801F_4240,
+    on_demo_init: 0x801F_423C,
+    on_load: 0x801F_42D0,
+    on_start: 0x801F_42D4,
+    callback4: 0x801F_42F8,
+    on_touch_line: 0x801F_680C,
+    on_check_shadow_render: 0x801F_6814,
+    flags2: 1,
+    joints: &GREATBAY_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -342,6 +474,9 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_OLDPUPUPU => &OLDPUPUPU,
         GR_KIND_IZUMI => &IZUMI,
         GR_KIND_OLDYOSHI => &OLDYOSHI,
+        GR_KIND_KRAID => &KRAID,
+        GR_KIND_FOURSIDE => &FOURSIDE,
+        GR_KIND_GREATBAY => &GREATBAY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

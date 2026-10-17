@@ -112,6 +112,7 @@ pub mod sword;
 pub mod taru;
 pub mod tarucann;
 pub mod thunder;
+pub mod tincle;
 pub mod togepy;
 pub mod tomato;
 pub mod unknown;
@@ -213,6 +214,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || pikachutjoltground::run_event(r, gobj, addr)
         || pikachutjoltair::run_event(r, gobj, addr)
         || heiho::run_event(r, gobj, addr)
+        || tincle::run_event(r, gobj, addr)
         || koopaflame::run_event(r, gobj, addr)
         || gamewatchgreenhouse::run_event(r, gobj, addr)
         || gamewatchmanhole::run_event(r, gobj, addr)
@@ -338,6 +340,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltair::run_pred(r, gobj, addr))
         .or_else(|| heiho::run_pred(r, gobj, addr))
+        .or_else(|| tincle::run_pred(r, gobj, addr))
         .or_else(|| koopaflame::run_pred(r, gobj, addr))
         .or_else(|| gamewatchgreenhouse::run_pred(r, gobj, addr))
         .or_else(|| gamewatchmanhole::run_pred(r, gobj, addr))
@@ -602,5 +605,7 @@ pub const POKEMON_UNK: i32 = 207;
 pub const OLD_KURI: i32 = 208;
 /// `It_Kind_Heiho`, Yoshi's Story's Shy Guys.
 pub const HEIHO: i32 = 210;
+/// `It_Kind_Tincle`, Great Bay's Tingle.
+pub const TINCLE: i32 = 221;
 /// `It_Kind_Arwing_Laser`.
 pub const ARWING_LASER: i32 = 234;

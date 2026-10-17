@@ -3,7 +3,9 @@
 //! compared with memory.
 
 use melee_data::archive::DataRef;
-use melee_sim::game::gr::{self, DynamicAttr, GroundVars, StageArchive, StartHook, vars_kind};
+use melee_sim::game::gr::{
+    self, CollUser, DynamicAttr, GroundVars, StageArchive, StartHook, vars_kind,
+};
 use melee_sim::game::handles::{CodeRef, GroundId, StartHookId};
 use melee_sim::game::mirror::{Mem, Mirror};
 use melee_sim::game::structs::{Ground, GroundParam, StageInfo};
@@ -29,6 +31,13 @@ pub const GROLDPUPUPU_YAKUMONO: u32 = 0x804D_6A98;
 pub const GRIZUMI_YAKUMONO: u32 = 0x804D_6968;
 /// groldyoshi.c's (`ssbm_types::tu::melee__gr__groldyoshi::yakumono_param`).
 pub const GROLDYOSHI_YAKUMONO: u32 = 0x804D_6A88;
+/// grkraid.c's, and its debugging button's animation (`grKr_804D6A0C`).
+pub const GRKRAID_YAKUMONO: u32 = 0x804D_6A08;
+pub const GRKRAID_ANIM: u32 = 0x804D_6A0C;
+/// grfourside.c's.
+pub const GRFOURSIDE_YAKUMONO: u32 = 0x804D_69D8;
+/// grgreatbay.c's (`grGb_804D69E0.x0`).
+pub const GRGREATBAY_YAKUMONO: u32 = 0x804D_69E0;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -80,6 +89,18 @@ impl Importer<'_> {
         g.u = GroundVars::import_as(vars_kind(grkind, g.map_id), &m, a + 0xC4, self);
         self.game.grounds[id.0] = g;
         id
+    }
+
+    /// A collision joint's callback data: a stage object's GObj where the address is one
+    /// (Fourside's roof), else its `Ground`.
+    fn coll_user(&mut self, a: u32) -> Option<CollUser> {
+        if a == 0 {
+            return None;
+        }
+        if let Some(&g) = self.maps.gobjs.get(&a) {
+            return Some(CollUser::GObj(g));
+        }
+        Some(CollUser::Ground(self.ground(a)))
     }
 
     pub fn start_hook(&mut self, a: u32) -> StartHookId {
@@ -259,6 +280,13 @@ impl Importer<'_> {
         self.game.gr.izumi_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GROLDYOSHI_YAKUMONO);
         self.game.gr.oldyoshi_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRKRAID_YAKUMONO);
+        self.game.gr.kraid_yakumono = self.data_or_unhandled(yaku);
+        self.game.gr.kraid_anim = cap.u32(GRKRAID_ANIM) as i32;
+        let yaku = cap.u32(GRFOURSIDE_YAKUMONO);
+        self.game.gr.fourside_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRGREATBAY_YAKUMONO);
+        self.game.gr.greatbay_yakumono = self.data_or_unhandled(yaku);
         self.game.gr.battle_demo = self.u8_at(sym("isDemoFight")) != 0;
         self.game.gr.game_mode = self.u8_at(sym("state_machine"));
         let points = sym("grLib_8049EF58");
@@ -289,6 +317,11 @@ impl Importer<'_> {
                 gobj_at(self, sym("ftDevice_BuryThings") + 0xC),
             ],
             device2: gobj_at(self, sym("ft_80459A8C")),
+            device2_type: cap.u32(sym("ft_80459A8C") + 4),
+            device2_cb: match cap.u32(sym("ft_80459A8C") + 8) {
+                0 => None,
+                a => Some(melee_sim::game::handles::CodeRef(a)),
+            },
         };
         let articles = sym("it_804A0F60");
         for k in 0..30 {
@@ -444,9 +477,8 @@ impl Importer<'_> {
             let jo = r32(a + 0x20);
             let jobj = (jo != 0).then(|| self.jobj(jo));
             let code = |p: u32| (p != 0).then_some(CodeRef(p));
-            let ground = |s: &mut Self, p: u32| (p != 0).then(|| s.ground(p));
-            let ledge_user_data = ground(self, r32(a + 0x28));
-            let user_data = ground(self, r32(a + 0x30));
+            let ledge_user_data = self.coll_user(r32(a + 0x28));
+            let user_data = self.coll_user(r32(a + 0x30));
             out.push(Joint {
                 next: joint_index(r32(a)),
                 desc,
@@ -803,6 +835,21 @@ impl Comparer<'_> {
                 GROLDYOSHI_YAKUMONO,
                 game.gr.oldyoshi_yakumono,
             ),
+            (
+                "grKraid yakumono_param",
+                GRKRAID_YAKUMONO,
+                game.gr.kraid_yakumono,
+            ),
+            (
+                "grFourside yakumono_param",
+                GRFOURSIDE_YAKUMONO,
+                game.gr.fourside_yakumono,
+            ),
+            (
+                "grGreatBay yakumono_param",
+                GRGREATBAY_YAKUMONO,
+                game.gr.greatbay_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -812,6 +859,12 @@ impl Comparer<'_> {
                 (yaku != 0).then(|| self.data.get(yaku)).flatten(),
             );
         }
+        self.check(
+            "grKr_804D6A0C",
+            "kraid anim",
+            game.gr.kraid_anim,
+            self.u32(GRKRAID_ANIM) as i32,
+        );
         self.check(
             "isDemoFight",
             "demo",
@@ -1165,7 +1218,13 @@ impl Comparer<'_> {
                 ("user data", joint.user_data, 0x30),
             ] {
                 let t = self.u32(a + off);
-                let theirs = (t != 0).then(|| self.maps.grounds.get(&t).copied());
+                let theirs = (t != 0).then(|| {
+                    self.maps
+                        .gobjs
+                        .get(&t)
+                        .map(|&g| CollUser::GObj(g))
+                        .or_else(|| self.maps.grounds.get(&t).map(|&g| CollUser::Ground(g)))
+                });
                 self.check(&path, name, ours.map(Some), theirs);
             }
         }
