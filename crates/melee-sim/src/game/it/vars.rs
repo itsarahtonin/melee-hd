@@ -12,6 +12,7 @@
 
 use super::kinds::gamewatch::{GameWatchRescueVars, GameWatchVars};
 use super::kinds::heiho::HeihoVars;
+use super::pokemon::PokemonVars;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::structs::*;
 use crate::vec::Vec3;
@@ -31,9 +32,13 @@ macro_rules! members {
             $($variant,)*
         }
 
-        /// Which member an item of `kind` uses.
+        /// Which member an item of `kind` uses: the Pokémon and their items share one
+        /// ([`super::pokemon::vars`]).
         pub fn vars_kind(kind: i32) -> VarsKind {
             use super::kinds;
+            if (kinds::PKIND_START..=kinds::POKEMON_UNK).contains(&kind) {
+                return VarsKind::Pokemon;
+            }
             $($(if kind == kinds::$kind {
                 return VarsKind::$variant;
             })+)*
@@ -182,6 +187,7 @@ members! {
     Wstar, wstar, itWstar_ItemVars, [WSTAR];
     Star, star, itStar_ItemVars, [STAR];
     Kinoko, kinoko, itKinoko_ItemVars, [KINOKO, DKINOKO];
+    Pokemon, pokemon, PokemonVars, [POKEMON_UNK];
 }
 
 impl Default for ItemVars {

@@ -22,6 +22,7 @@ pub mod lib279c;
 pub mod link;
 pub mod maplib;
 pub mod owner;
+pub mod pokemon;
 pub mod release;
 pub mod spawn;
 pub mod tables;

@@ -40,6 +40,7 @@ pub mod kirbycopystar;
 pub mod kirbycutterbeam;
 pub mod kirbygamewatchchefpan;
 pub mod kirbyhammer;
+pub mod kireihana;
 pub mod koopaflame;
 pub mod kusudama;
 pub mod lgun;
@@ -227,6 +228,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || rabbitc::run_event(r, gobj, addr)
         || spycloak::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
+        || kireihana::run_event(r, gobj, addr)
+        || super::pokemon::run_event(r, gobj, addr)
 }
 
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
@@ -329,6 +332,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| metalb::run_pred(r, gobj, addr))
         .or_else(|| rabbitc::run_pred(r, gobj, addr))
         .or_else(|| spycloak::run_pred(r, gobj, addr))
+        .or_else(|| kireihana::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -523,8 +527,10 @@ pub const UNK4: i32 = 158;
 pub const PKIND_RANDOM: i32 = 160;
 /// `It_PKind_Start`: the first Pokémon, and the third group of tables.
 pub const PKIND_START: i32 = 161;
-/// `It_PKind_Terminate`.
+/// `It_PKind_Terminate`, also `It_Kind_Chicorita_Leaf`, the first of the Pokémon's items.
 pub const PKIND_TERMINATE: i32 = 191;
+/// `It_Kind_Pokemon_Unk`, the last of the Pokémon's items.
+pub const POKEMON_UNK: i32 = 207;
 /// `It_Kind_Old_Kuri`: the first stage item, and the last group of tables.
 pub const OLD_KURI: i32 = 208;
 /// `It_Kind_Heiho`, Yoshi's Story's Shy Guys.

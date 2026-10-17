@@ -83,6 +83,9 @@ impl Importer<'_> {
         self.stale = true;
         let mut item = Item::import(&m, a, self);
         item.xDD4_itemVar = ItemVars::import_as(vars_kind(item.kind), &m, a + VARS, self);
+        if let ItemVars::Pokemon(v) = &mut item.xDD4_itemVar {
+            v.import_handles(item.kind, &m, a + VARS, self);
+        }
         self.stale = false;
         let table = cap.u32(a + 0xBBC);
         // A dangling or unknown table (a word never set) has no entries to read.
