@@ -241,9 +241,12 @@ mod tests {
     fn a_refresh_grid_matches_the_monitor_or_is_left_out() {
         // Whatever the system says, a grid whose period is far from the monitor's isn't used.
         assert_eq!(refresh_grid(Some(Duration::from_secs(1))), None);
+        let before = Instant::now();
         if let Some(g) = refresh_grid(None) {
             assert!(g.period > Duration::from_millis(2) && g.period < Duration::from_millis(50));
-            assert!(g.phase <= Instant::now());
+            // A recent refresh or the next one, within a second of the call.
+            let second = Duration::from_secs(1);
+            assert!(g.phase + second >= before && g.phase <= Instant::now() + second);
         }
     }
 }
