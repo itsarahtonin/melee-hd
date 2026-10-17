@@ -134,6 +134,23 @@ const LI_R3_1: u32 = 0x3860_0001;
 /// `NUM_UNLOCKABLE_CHARACTERS` and `NUM_UNLOCKABLE_STAGES`.
 const UNLOCKABLE: u32 = 11;
 
+/// The unlockable characters' kinds and unlock indices (`ckind_to_selkind_map` through
+/// `lbl_803B78C8`): Mr. Game & Watch, Luigi, Marth, Mewtwo, Jigglypuff, Falco, Young Link,
+/// Dr. Mario, Roy, Pichu and Ganondorf.
+const UNLOCK_INDEX: [(u8, u32); 11] = [
+    (0x03, 0),
+    (0x07, 1),
+    (0x09, 2),
+    (0x0A, 3),
+    (0x0F, 4),
+    (0x14, 5),
+    (0x15, 6),
+    (0x16, 7),
+    (0x17, 8),
+    (0x18, 9),
+    (0x19, 10),
+];
+
 impl Unlocks {
     /// What Slippi Dolphin plays with: its codes unlock everything.
     pub fn slippi() -> Unlocks {
@@ -163,6 +180,18 @@ impl Unlocks {
     #[doc(alias = "gm_80164ABC")]
     pub fn all_characters(&self) -> bool {
         self.all_characters_code || (0..UNLOCKABLE).all(|i| self.characters & (1 << i) != 0)
+    }
+
+    /// Whether a character is unlocked, `gm_IsCKindUnlocked`: its bit in the save data's mask
+    /// (by its unlock index, `gm_SelKindToUnlockIndex`), or always for a character that is
+    /// never locked. The unlock-all code doesn't change it.
+    #[doc(alias = "gm_IsCKindUnlocked")]
+    #[doc(alias = "gm_SelKindToUnlockIndex")]
+    pub fn ckind_unlocked(&self, ckind: u8) -> bool {
+        match UNLOCK_INDEX.iter().find(|&&(k, _)| k == ckind) {
+            Some(&(_, i)) => self.characters & (1 << i) != 0,
+            None => true,
+        }
     }
 
     /// Whether every unlockable stage is unlocked, `gm_80164600`.

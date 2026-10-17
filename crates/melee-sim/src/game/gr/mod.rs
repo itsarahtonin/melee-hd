@@ -19,6 +19,7 @@ pub mod oldkongo;
 pub mod oldpupupu;
 pub mod oldyoshi;
 pub mod setup;
+pub mod shrine;
 pub mod stadium;
 pub mod stage;
 pub mod story;
@@ -45,6 +46,8 @@ pub const GR_KIND_PSTADIUM: i32 = 16;
 pub const GR_KIND_STORY: i32 = 10;
 /// `Gr_Kind_Izumi`, Fountain of Dreams.
 pub const GR_KIND_IZUMI: i32 = 12;
+/// `Gr_Kind_Shrine`, Hyrule Temple.
+pub const GR_KIND_SHRINE: i32 = 7;
 /// `Gr_Kind_OldPupupu`, Dream Land (N64).
 pub const GR_KIND_OLDPUPUPU: i32 = 28;
 /// `Gr_Kind_OldYoshi`, Yoshi's Island (N64).
@@ -155,6 +158,8 @@ pub struct Globals {
     pub oldyoshi_yakumono: Option<DataRef>,
     /// Kongo Jungle N64's `yakumono_param` (`grOldKongo_YakumonoParam`).
     pub oldkongo_yakumono: Option<DataRef>,
+    /// Hyrule Temple's `yakumono_param`, which nothing reads.
+    pub shrine_yakumono: Option<DataRef>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.

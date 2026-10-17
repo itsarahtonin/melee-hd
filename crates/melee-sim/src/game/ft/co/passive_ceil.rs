@@ -33,7 +33,7 @@ impl Running<'_> {
     /// Clinging to the ceiling, `ftCo_800C23FC`: stopped, an effect where the ECB's top meets
     /// it, the state, the fighter set under the ceiling by its TransN, the landing on walls'
     /// pass, sounds, a rumble and a flash.
-    // Ports `ftCo_800C23FC`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800C23FC")]
     pub fn passive_ceil(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.stop_dead(gobj);
@@ -63,12 +63,12 @@ impl Running<'_> {
         self.start_color_anim(gobj, COLANIM, 0);
     }
 
-    /// `ftCo_PassiveCeil_Anim`: drifting with the stick while the script allows it, the fall
-    /// once the animation ends.
-    // Ports `ftCo_PassiveCeil_Anim`; aliased once a check reaches it.
+    /// `ftCo_PassiveCeil_Anim`: a drift with the stick on the tick the script's flag asks for
+    /// it (`ftCheckThrowB3` clears the flag), the fall once the animation ends.
+    #[doc(alias = "ftCo_PassiveCeil_Anim")]
     pub fn co_passive_ceil_anim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        if fp.throw_flag(3) {
+        if fp.take_throw_flag(3) {
             fp.self_vel.x = mem(fp::fmuls(
                 reg(fp.input.lstick[0].x),
                 reg(fp.co_attrs.passiveceil_vel_x),
@@ -80,13 +80,13 @@ impl Running<'_> {
     }
 
     /// `ftCo_PassiveCeil_Phys`: gravity or a fast fall, and air drift (`ft_80084DB0`).
-    // Ports `ftCo_PassiveCeil_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_PassiveCeil_Phys")]
     pub fn co_passive_ceil_phys(&mut self, gobj: GObjId) {
         self.air_physics(gobj);
     }
 
     /// `ftCo_PassiveCeil_Coll`: the filtered airborne pass, landing normally.
-    // Ports `ftCo_PassiveCeil_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_PassiveCeil_Coll")]
     pub fn co_passive_ceil_coll(&mut self, gobj: GObjId) {
         self.air_coll_filtered_full(gobj, PLATFORM_FILTER, |g, gobj| g.land_normally(gobj));
     }

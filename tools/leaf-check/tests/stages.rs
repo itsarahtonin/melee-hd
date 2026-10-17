@@ -26,7 +26,7 @@
 use leaf_check::calls::{Prepare, Ret, check_calls_with, gobj_arg, peek_u32, poke_u32};
 use melee_capture::import::Maps;
 use melee_sim::game::code::{run_demo_init, run_event, run_proc};
-use melee_sim::game::gr::{oldkongo, oldyoshi};
+use melee_sim::game::gr::{oldkongo, oldyoshi, shrine};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use melee_sim::vec::Vec3;
@@ -810,4 +810,132 @@ fn sym_at(name: &str, lo: u32, hi: u32) -> u32 {
         .find(|s| s.2 == name && (lo..hi).contains(&s.0))
         .unwrap_or_else(|| panic!("no {name} between {lo:#x} and {hi:#x}"))
         .0
+}
+
+// Hyrule Temple (`grshrine.c`).
+
+const HT: &str = "oracle-stage-hyrule-temple";
+
+#[test]
+fn shrine_setup() {
+    let d = dir(HT);
+    check_calls_with(&d, "grShrine_80201C64", 1, &as_saved, &event);
+    check_calls_with(&d, "grShrine_UnkStage0_OnStart", 1, &as_saved, &event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        shrine::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    for map in 0..3u32 {
+        check_calls_with(
+            &d,
+            "grShrine_80201D20",
+            1,
+            &move |c, _| c.regs.gpr[3] = map,
+            &create,
+        );
+    }
+    for f in [
+        "stageGObj0_OnInit",
+        "grShrine_80201E44",
+        "grShrine_80201E9C",
+        "grShrine_80201F1C",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+}
+
+#[test]
+fn shrine_shadow() {
+    let d = dir(HT);
+    fn ours(r: &mut Running, maps: &Maps, call: &Call) -> bool {
+        let (pos, j) = shadow_args(maps, call);
+        shrine::check_shadow_render(r.game, r.data, pos, j)
+    }
+    check_shadow(&d, "grShrine_80201F4C", ours, 0.0);
+}
+
+/// The stage's callbacks no capture reaches, from the temple's process's captures: the empty
+/// processes, destroy callbacks and start hook, and the load and demo hooks.
+#[test]
+fn shrine_unreached_callbacks() {
+    let d = dir(HT);
+    let from = "grShrine_80201F1C";
+    for target in [
+        "grShrine_80201E3C",
+        "grShrine_80201E40",
+        "grShrine_80201E90",
+        "grShrine_80201E94",
+        "grShrine_80201E98",
+        "grShrine_80201F40",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(target)), &by_address);
+    }
+    check_calls_with(
+        &d,
+        from,
+        1,
+        &retarget(leaf_check::sym("grShrine_UnkStage0_OnLoad")),
+        &event,
+    );
+    check_calls_with(
+        &d,
+        from,
+        1,
+        &retarget(leaf_check::sym("grShrine_80201C60")),
+        &demo,
+    );
+}
+
+/// The ceiling tech, which the temple's ceilings reach: the check (as saved, and with the
+/// fighter hugging a ceiling or not), clinging, and the cling's animation callback with the
+/// script's drift flag set and clear.
+#[test]
+fn shrine_ceiling_tech() {
+    let d = dir(HT);
+    let check = |r: &mut Running, maps: &Maps, call: &Call| {
+        Ret::Int(u32::from(r.passive_ceil_check(gobj_arg(maps, call))))
+    };
+    let fp_of = |c: &Call| peek_u32(c, c.regs.gpr[3] + 0x2C);
+    let hug = move |c: &mut Call, k: usize| {
+        // `coll_data.env_flags` (fp+0x6F0+0x134): the ceiling hug bit set and clear.
+        let at = fp_of(c) + 0x824;
+        let w = peek_u32(c, at);
+        let w = if k.is_multiple_of(2) {
+            w | 0x4000
+        } else {
+            w & !0x4000
+        };
+        poke_u32(c, at, w);
+    };
+    for p in [&as_saved as &Prepare, &hug] {
+        check_calls_with(&d, "ftCo_800C23A0", 1, p, &check);
+    }
+    let cling = |r: &mut Running, maps: &Maps, call: &Call| {
+        r.passive_ceil(gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    // Clinging clears the script's flags: set them all first.
+    let flags = move |c: &mut Call, _: usize| {
+        let fp = fp_of(c);
+        let w = peek_u32(c, fp + 0x2210);
+        poke_u32(c, fp + 0x2210, w | 0xFF00_0000);
+    };
+    for p in [&as_saved as &Prepare, &flags] {
+        check_calls_with(&d, "ftCo_800C23FC", 1, p, &cling);
+    }
+    let anim = |r: &mut Running, maps: &Maps, call: &Call| {
+        r.co_passive_ceil_anim(gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let flag = move |c: &mut Call, k: usize| {
+        let fp = fp_of(c);
+        leaf_check::calls::poke_bit(c, fp + 0x2210, 3, k.is_multiple_of(2));
+    };
+    for p in [&as_saved as &Prepare, &flag] {
+        check_calls_with(&d, "ftCo_PassiveCeil_Anim", 1, p, &anim);
+    }
 }

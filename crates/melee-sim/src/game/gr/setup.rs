@@ -1288,6 +1288,10 @@ pub fn item_frequencies(game: &mut Game, data: &Archives, stkind: i32) {
 /// `BGM_Undefined`.
 const BGM_UNDEFINED: i32 = -1;
 
+/// `CKind_Mars` and `CKind_CLink`, whose unlocks pick two stages' alternate songs.
+const CKIND_MARS: u8 = 0x09;
+const CKIND_CLINK: u8 = 0x15;
+
 /// The stage's music by `flags`, `Ground_801C28AC` (`Ground_801C24F8`): the stage kind's
 /// parameters pick its usual or its alternate song (bits 1 and 2; with bit 4 they choose, the
 /// alternate by chance or unlock, bit 0x40 forcing it), from its sudden death's (bit 0x10),
@@ -1315,8 +1319,14 @@ pub fn music(game: &mut Game, data: &Archives, stkind: i32, mut flags: u32) -> (
                 1 => Some(game.objs.rng.below(0xC) == 0 || forced),
                 8 => Some(false),
                 2 => Some(roll(game, true)),
-                3 => unported_call("gm_IsCKindUnlocked(CKind_Mars)"),
-                4 => unported_call("gm_IsCKindUnlocked(CKind_CLink)"),
+                3 => {
+                    let unlocked = game.gm.unlocks.ckind_unlocked(CKIND_MARS);
+                    Some(roll(game, unlocked))
+                }
+                4 => {
+                    let unlocked = game.gm.unlocks.ckind_unlocked(CKIND_CLINK);
+                    Some(roll(game, unlocked))
+                }
                 5 => unported_call("Toy_803048C0(0x11A)"),
                 6 => {
                     let all = game.gm.unlocks.all_characters();

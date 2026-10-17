@@ -5,7 +5,7 @@
 use super::datfiles::GrJoint;
 use super::{
     GR_KIND_BATTLE, GR_KIND_IZUMI, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_STORY,
+    GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_SHRINE, GR_KIND_STORY,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -367,6 +367,35 @@ pub const OLDKONGO: StageData = StageData {
     joints: &OLDKONGO_JOINTS,
 };
 
+/// `grSh_StageCallbacks`. Map 2 is the temple, map 1 the background, map 0 the sky.
+pub const SHRINE_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8020_1E08, 0x8020_1E34, 0x8020_1E3C, 0x8020_1E40, 0),
+    cb(0x8020_1E44, 0x8020_1E88, 0x8020_1E90, 0x8020_1E94, 0),
+    cb(
+        0x8020_1E9C,
+        0x8020_1F14,
+        0x8020_1F1C,
+        0x8020_1F40,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grSh_StageData`.
+pub const SHRINE: StageData = StageData {
+    grkind: GR_KIND_SHRINE,
+    callbacks: &SHRINE_CALLBACKS,
+    file: Some("/GrSh.dat"),
+    on_init: 0x8020_1C64,
+    on_demo_init: 0x8020_1C60,
+    on_load: 0x8020_1CF0,
+    on_start: 0x8020_1CF4,
+    callback4: 0x8020_1D18,
+    on_touch_line: 0x8020_1F44,
+    on_check_shadow_render: 0x8020_1F4C,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -378,6 +407,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_IZUMI => &IZUMI,
         GR_KIND_OLDYOSHI => &OLDYOSHI,
         GR_KIND_OLDKONGO => &OLDKONGO,
+        GR_KIND_SHRINE => &SHRINE,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

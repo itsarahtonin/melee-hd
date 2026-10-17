@@ -177,6 +177,11 @@ pub const STAGES: &[Stage] = &[
         keys: &["fod", "fountain-of-dreams"],
     },
     Stage {
+        kind: 14,
+        name: "Hyrule Temple",
+        keys: &["ht", "hyrule-temple"],
+    },
+    Stage {
         kind: 30,
         name: "Kongo Jungle N64",
         keys: &["kj64", "kongo-jungle-64"],
