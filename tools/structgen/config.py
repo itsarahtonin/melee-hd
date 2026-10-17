@@ -119,6 +119,11 @@ ROOTS = [
     # The power-ups' (task 9): the Starman and the mushrooms.
     "itStar_ItemVars",
     "itKinoko_ItemVars",
+    # The shooting and thrown items' (task 8).
+    "itFoods_ItemVars",
+    "itMsBomb_ItemVars",
+    "itFlipper_ItemVars",
+    "itLGunBeam_ItemVars",
     "PokemonSelectionState",
     # The background flash (`lbbgflash.c`, `lb_0219.c`).
     "BgFlashData",
@@ -218,8 +223,12 @@ FIELD_DATA = {
 # Fields no code reads or writes, by struct: left out like padding, so they hold whatever the
 # block held and nothing compares them. An item link's last five flag bits are such (the
 # decomp's `itCharItems.h`); a link block new from the heap mid-capture keeps the heap's bits.
+# So are an item's `x8`, `x21`, `x22` and `x23`: item creation leaves them, so an item in a
+# block the pool grows from reused heap holds the heap's old cell headers there (a Fire Flower
+# flame on the items-shoot Battlefield match, tick 5940).
 UNUSED = {
     "ItemLink": {"x2C_b3", "x2C_b4", "x2C_b5", "x2C_b6", "x2C_b7"},
+    "Item": {"x8", "x21", "x22", "x23"},
 }
 
 # Runs of fields replaced by one field of a hand-written type: struct name to (field name,

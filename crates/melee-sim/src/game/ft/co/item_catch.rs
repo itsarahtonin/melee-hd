@@ -1,7 +1,6 @@
 //! Catching an item in the air (`fn_800D6F58` of `ftCo_Attack100.c`, with the pickup check it
 //! reaches, `ftpickupitem_8009447C`, and the caught item's statistic, `pl_8003E854`).
 
-use super::super::super::code::unported_call;
 use super::super::super::ef::{self, SpawnKind};
 use super::super::super::it::{item, lib26b1};
 use super::super::super::state::{Running, UserData};
@@ -73,7 +72,7 @@ impl Running<'_> {
     }
 
     /// The item's own pickup, `ftpickupitem_8009447C`: for an item used as it's picked up
-    /// (use kind 5), food heals (not ported: task 7's), the Warp Star and the hammer take the
+    /// (use kind 5), food heals (`Fighter_8006CF5C`) and goes, the Warp Star and the hammer take the
     /// fighter into their states (whether one did is the result), the Bunny Hood goes on, the
     /// Metal Box and the Cloaking Device take effect and go, and a coin goes.
     #[doc(alias = "ftpickupitem_8009447C")]
@@ -84,7 +83,9 @@ impl Running<'_> {
         }
         match lib26b1::kind(self.game, it) {
             kinds::HEART | kinds::TOMATO | kinds::FOODS | LUCKY_EGG | WHISPY_HEAL_APPLE => {
-                unported_call("ftpickupitem_8009447C's heal (Fighter_8006CF5C)");
+                let heal = lib26b1::heal_amount(self.game, it);
+                self.heal(gobj, heal);
+                super::super::super::it::item::destroy(self, it);
             }
             kinds::WSTAR => {
                 self.enter_warp_star(gobj);

@@ -80,7 +80,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 }
 
 /// `Item_ClampAngle`: the angle brought within ±π.
-fn clamp_angle(a: f32) -> f32 {
+pub(super) fn clamp_angle(a: f32) -> f32 {
     let mut a = a;
     while reg(a) < fp::fneg(PI) {
         a = mem(fp::frsp(fp::fadd(reg(a), TAU)));
@@ -92,7 +92,7 @@ fn clamp_angle(a: f32) -> f32 {
 }
 
 /// `Item_ClampAngleReverse`: the same, the top bound first.
-fn clamp_angle_reverse(a: f32) -> f32 {
+pub(super) fn clamp_angle_reverse(a: f32) -> f32 {
     let mut a = a;
     while reg(a) > PI {
         a = mem(fp::frsp(fp::fsub(reg(a), TAU)));

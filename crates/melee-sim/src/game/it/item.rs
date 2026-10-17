@@ -188,7 +188,7 @@ pub fn count(game: &mut Game, gobj: GObjId) {
     }
     match hold_kind {
         0 if kind == M_BALL => game.it.counts.x1C = game.it.counts.x1C.wrapping_add(1),
-        2 => code::unported_call("it_80274EE8"),
+        2 => super::lib2725::count_food(game),
         _ => {}
     }
     if super::super::gm::is_training(game) && x18 == 1 {

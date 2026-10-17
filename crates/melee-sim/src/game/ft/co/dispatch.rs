@@ -36,6 +36,23 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         super::item_scope::TAKE_DMG => g.scope_hit(gobj),
         super::item_scope::FIRE_SHOT => g.scope_fire_shot(gobj),
         super::item_scope::RAPID_SHOT => g.scope_rapid_shot(gobj),
+        // The Ray Gun's states and their shot.
+        0x800C_E308 | 0x800C_E328 => g.co_item_shoot_anim(gobj),
+        0x800C_E348 | 0x800C_E34C => g.co_lgun_iasa(gobj),
+        0x800C_E350 => g.co_lgun_phys(gobj),
+        0x800C_E370 => g.co_lgun_air_phys(gobj),
+        0x800C_E390 => g.co_lgun_coll(gobj),
+        0x800C_E3B8 => g.co_lgun_air_coll(gobj),
+        super::item_lgun::SHOT => g.lgun_shot(gobj),
+        // The Fire Flower's states and their flames and hit hook.
+        0x800C_EAF0 | 0x800C_EBA0 => g.co_fflower_anim(gobj),
+        0x800C_EC50 | 0x800C_EC54 => g.co_fflower_iasa(gobj),
+        0x800C_EC58 => g.co_fflower_phys(gobj),
+        0x800C_EC78 => g.co_fflower_air_phys(gobj),
+        0x800C_EC98 => g.co_fflower_coll(gobj),
+        0x800C_ECC0 => g.co_fflower_air_coll(gobj),
+        super::item_fflower::FLAMES => g.fflower_flames(gobj),
+        super::item_fflower::TAKE_DMG => g.fflower_hit(gobj),
         // The parasol's states.
         0x800C_F0B8 => g.co_item_parasol_open_anim(gobj),
         0x800C_F118 => g.co_item_parasol_open_iasa(gobj),

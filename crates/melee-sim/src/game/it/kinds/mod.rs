@@ -12,6 +12,7 @@ pub mod dosei;
 pub mod drmariopill;
 pub mod egg;
 pub mod fflower;
+pub mod flipper;
 pub mod foods;
 pub mod foxblaster;
 pub mod foxillusion;
@@ -33,13 +34,15 @@ pub mod hammer;
 pub mod hammerhead;
 pub mod heart;
 pub mod heiho;
-pub mod kirbycopystar;
 pub mod kinoko;
+pub mod kirbycopystar;
 pub mod kirbycutterbeam;
 pub mod kirbyhammer;
 pub mod koopaflame;
 pub mod kusudama;
 pub mod lgun;
+pub mod lgunbeam;
+pub mod lgunray;
 pub mod linkarrow;
 pub mod linkbomb;
 pub mod linkboomerang;
@@ -53,6 +56,7 @@ pub mod mball;
 pub mod metalb;
 pub mod mewtwodisable;
 pub mod mewtwoshadowball;
+pub mod msbomb;
 pub mod nessbat;
 pub mod nesspkfire;
 pub mod nesspkfirepillar;
@@ -210,6 +214,11 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || metalb::run_event(r, gobj, addr)
         || rabbitc::run_event(r, gobj, addr)
         || spycloak::run_event(r, gobj, addr)
+        || foods::run_event(r, gobj, addr)
+        || msbomb::run_event(r, gobj, addr)
+        || flipper::run_event(r, gobj, addr)
+        || lgunray::run_event(r, gobj, addr)
+        || lgunbeam::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
 }
 
@@ -305,6 +314,11 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| metalb::run_pred(r, gobj, addr))
         .or_else(|| rabbitc::run_pred(r, gobj, addr))
         .or_else(|| spycloak::run_pred(r, gobj, addr))
+        .or_else(|| foods::run_pred(r, gobj, addr))
+        .or_else(|| msbomb::run_pred(r, gobj, addr))
+        .or_else(|| flipper::run_pred(r, gobj, addr))
+        .or_else(|| lgunray::run_pred(r, gobj, addr))
+        .or_else(|| lgunbeam::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -344,10 +358,14 @@ pub const METALB: i32 = 32;
 pub const SPYCLOAK: i32 = 33;
 /// `It_Kind_Foods`.
 pub const FOODS: i32 = 18;
+pub const MSBOMB: i32 = 19;
+pub const FLIPPER: i32 = 20;
 /// `It_Kind_M_Ball`, the Poké Ball.
 pub const M_BALL: i32 = 34;
 /// `It_Kind_L_Gun_Ray`: the first kind past the common items.
 pub const L_GUN_RAY: i32 = 35;
+/// `It_Kind_L_Gun_Beam`, the Fire Flower's flame.
+pub const L_GUN_BEAM: i32 = 39;
 /// `It_Kind_StarRod_Star`, `It_Kind_LipStick_Spore` and `It_Kind_S_Scope_Beam`.
 pub const STARROD_STAR: i32 = 36;
 pub const LIPSTICK_SPORE: i32 = 37;

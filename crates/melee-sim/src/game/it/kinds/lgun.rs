@@ -1,5 +1,5 @@
-//! The Ray Gun, `melee/it/kinds/itlgun.c`: a shooting item that falls, lands and is held
-//! (its shots, `it_8028E79C`, come with the fighter's shooting states, not ported).
+//! The Ray Gun, `melee/it/kinds/itlgun.c`: a shooting item that falls, lands and is held, and
+//! fires a ray (`lgunray`) from the fighter's shooting states while it has shots.
 
 use super::super::ground::{air, fall, ground_or_fall, ground_skid};
 use super::super::item::{article, change, change_state};
@@ -76,6 +76,38 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     ip.xD4C = ammo;
     ip.xDD4_itemVar.lgun().timer.set(0);
     fell(r, gobj);
+}
+
+/// The muzzle, in the hand's space (`ItLGunAttr::pos`), `it_8028E774`.
+#[doc(alias = "it_8028E774")]
+pub fn muzzle(r: &Running, gobj: GObjId) -> crate::vec::Vec3 {
+    let a = article(item(r.game, gobj))
+        .special(r.data)
+        .expect("a Ray Gun without attributes")
+        .at(4);
+    crate::vec::Vec3::new(r.data.f32(a), r.data.f32(a.at(4)), r.data.f32(a.at(8)))
+}
+
+/// A shot spent, a ray from its owner at `pos`, `it_8028E79C`.
+#[doc(alias = "it_8028E79C")]
+pub fn fire(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3, facing: f32) {
+    let ip = item_mut(r.game, gobj);
+    if ip.xD4C > 0 {
+        ip.xD4C -= 1;
+    }
+    let owner = ip.owner;
+    super::lgunray::spawn(r, owner, pos, facing);
+}
+
+/// The shots a bonus counts to, `it_8026C1D4`: the Ray Gun's attributes read as its variables
+/// (`itLGun_ItemVars::timer`, their first word, which is its ammunition).
+#[doc(alias = "it_8026C1D4")]
+pub fn shots_bonus(game: &crate::game::state::Game, data: &melee_data::archive::Archives) -> u32 {
+    let a = super::super::item::article_of(game, data, super::L_GUN).expect("no Ray Gun article");
+    let attrs = super::super::data::Article(a)
+        .special(data)
+        .expect("a Ray Gun without attributes");
+    data.u32(attrs)
 }
 
 /// Stops and stands, `it_8028E7D8`.

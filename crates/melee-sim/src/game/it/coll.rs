@@ -454,7 +454,31 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
                 continue;
             }
             if item(r.game, g).x5D4_hitboxes[hi].hit.element == ELEMENT_INERT {
-                code::unported_call("lbColl_80008248 (an inert box touching an item's hurtbox)");
+                // An inert box only notes that it touched the item, every hurtbox tested.
+                for n in 0..usize::from(me.xAC8_hurtboxNum) {
+                    let mut hit = item(r.game, g).x5D4_hitboxes[hi].hit.clone();
+                    let (hs, ms) = (item(r.game, g).scl, item(r.game, gobj).scl);
+                    let mut hurt = item(r.game, gobj).xACC_itemHurtbox[n].clone();
+                    let touch = hitcapsule::touches_hurtbox(
+                        &mut r.game.objs,
+                        r.data,
+                        &mut hit,
+                        &mut hurt,
+                        None,
+                        hs,
+                        ms,
+                        0.0,
+                    );
+                    item_mut(r.game, gobj).xACC_itemHurtbox[n] = hurt;
+                    let ip = item_mut(r.game, g);
+                    let h = &mut ip.x5D4_hitboxes[hi].hit;
+                    h.hurt_coll_pos = hit.hurt_coll_pos;
+                    h.coll_distance = hit.coll_distance;
+                    if touch {
+                        super::set_flag(&mut ip.xDCE_flag, 6, true);
+                        ip.toucher = Some(gobj);
+                    }
+                }
             } else if me.xD0C != 2 {
                 for n in 0..usize::from(me.xAC8_hurtboxNum) {
                     let mut hit = item(r.game, g).x5D4_hitboxes[hi].hit.clone();

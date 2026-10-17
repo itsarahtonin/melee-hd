@@ -118,7 +118,7 @@ macro_rules! members {
 
 members! {
     FoxBlaster, fox_blaster, itFoxBlaster_ItemVars, [FOX_BLASTER, FALCO_BLASTER, KIRBY_FOX_BLASTER, KIRBY_FALCO_BLASTER];
-    FoxLaser, fox_laser, itFoxLaser_ItemVars, [FOX_LASER, FALCO_LASER, KIRBY_FOX_LASER, KIRBY_FALCO_LASER];
+    FoxLaser, fox_laser, itFoxLaser_ItemVars, [FOX_LASER, FALCO_LASER, KIRBY_FOX_LASER, KIRBY_FALCO_LASER, L_GUN_RAY];
     FoxIllusion, fox_illusion, itFoxIllusion_ItemVars, [FOX_ILLUSION, FALCO_PHANTASM];
     Capsule, capsule, itCapsule_ItemVars, [CAPSULE];
     Heart, heart, itHeart_ItemVars, [HEART];
@@ -178,6 +178,10 @@ members! {
     Wstar, wstar, itWstar_ItemVars, [WSTAR];
     Star, star, itStar_ItemVars, [STAR];
     Kinoko, kinoko, itKinoko_ItemVars, [KINOKO, DKINOKO];
+    Foods, foods, itFoods_ItemVars, [FOODS];
+    MsBomb, msbomb, itMsBomb_ItemVars, [MSBOMB];
+    Flipper, flipper, itFlipper_ItemVars, [FLIPPER];
+    LGunBeam, lgunbeam, itLGunBeam_ItemVars, [L_GUN_BEAM];
 }
 
 impl Default for ItemVars {

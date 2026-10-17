@@ -128,6 +128,12 @@ pub fn set_hit_scale(game: &mut Game, gobj: GObjId, scale: f32) {
     }
 }
 
+/// Clears the item's `xDCD` bit 7, `it_8027542C`.
+#[doc(alias = "it_8027542C")]
+pub fn clear_hit_ids_b7(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDCD_flag.x0.b7 = false;
+}
+
 /// Sets `xDCD`'s hit flags, `it_80275444`.
 #[doc(alias = "it_80275444")]
 pub fn set_hit_ids(game: &mut Game, gobj: GObjId) {

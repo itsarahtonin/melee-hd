@@ -3,9 +3,8 @@
 //! (`ftCo_Attack_800CDD14`, `ftCo_800CDDA0`, `ft_0CDD.c`): A starts charging; let go early it
 //! fires a rapid burst, held long enough (or let go late) one charged shot; each on the
 //! ground and in the air, and an "empty" set of the same states once it has no ammunition.
-//! The Ray Gun's and the Fire Flower's shots aren't ported.
+//! The Ray Gun's states are in `item_lgun`, the Fire Flower's in `item_fflower`.
 
-use super::super::super::code::unported_call;
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::{F_FLOWER, L_GUN, S_SCOPE, sscope};
 use super::super::super::it::lib26b1;
@@ -55,8 +54,8 @@ impl Running<'_> {
             return;
         }
         match self.held_kind(gobj) {
-            L_GUN => unported_call("ftCo_800CDF5C (a Ray Gun shot)"),
-            F_FLOWER => unported_call("ftCo_800CE3E0 (a Fire Flower shot)"),
+            L_GUN => self.enter_lgun_shoot(gobj),
+            F_FLOWER => self.enter_fflower_shoot(gobj),
             S_SCOPE => self.enter_scope_start(gobj),
             _ => {}
         }
@@ -66,8 +65,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800CDDA0")]
     pub fn enter_item_shoot_air(&mut self, gobj: GObjId) {
         match self.held_kind(gobj) {
-            L_GUN => unported_call("ftCo_800CE010 (a Ray Gun shot in the air)"),
-            F_FLOWER => unported_call("ftCo_800CE480 (a Fire Flower shot in the air)"),
+            L_GUN => self.enter_lgun_shoot_air(gobj),
+            F_FLOWER => self.enter_fflower_shoot_air(gobj),
             S_SCOPE => self.enter_scope_air_start(gobj),
             _ => {}
         }

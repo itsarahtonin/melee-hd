@@ -223,6 +223,21 @@ impl Running<'_> {
         }
     }
 
+    /// Heals the fighter by `amount` percent over as many frames, unless it's out of stamina,
+    /// `Fighter_8006CF5C`: the heal's frames (`dmg.x18F0`, a percent a frame in
+    /// `Fighter_procAnim`), its color animation and rumble.
+    #[doc(alias = "Fighter_8006CF5C")]
+    pub fn heal(&mut self, gobj: GObjId, amount: i32) {
+        let f = self.game.fighter_id(gobj);
+        let fp = &mut self.game.fighters[f.0];
+        if fp.stamina_dead {
+            return;
+        }
+        fp.dmg.x18F0 = fp.dmg.x18F0.wrapping_add(amount);
+        self.start_color_anim(gobj, 8, 0);
+        self.start_rumble(f, 2, 0);
+    }
+
     /// A grounded fighter forgets who last hit it, `ftCommon_800804FC`.
     #[doc(alias = "ftCommon_800804FC")]
     pub fn forget_attacker_grounded(&mut self, f: FighterId) {

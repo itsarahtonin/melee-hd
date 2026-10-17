@@ -1273,7 +1273,35 @@ impl Running<'_> {
             }
         }
         if element == ELEMENT_INERT {
-            unported_call("lbColl_80008248 (an inert item box against hurtboxes)");
+            // An inert box only notes that it touched the fighter (`xDCE` bit 6, `toucher`).
+            let mtx = self.own_matrix(me);
+            for m in 0..usize::from(self.game.fighters[me.0].hurt_capsules_len) {
+                let ip = it::item(self.game, g);
+                let mut hit = ip.x5D4_hitboxes[j].hit.clone();
+                let hit_scale = ip.scl;
+                let fp = &mut self.game.fighters[me.0];
+                let (scale, z) = (fp.x34_scale.y, fp.cur_pos.z);
+                let touch = hitcapsule::touches_hurtbox(
+                    &mut self.game.objs,
+                    self.data,
+                    &mut hit,
+                    &mut fp.hurt_capsules[m].capsule,
+                    mtx.as_ref(),
+                    hit_scale,
+                    scale,
+                    z,
+                );
+                let ip = it::item_mut(self.game, g);
+                let h = &mut ip.x5D4_hitboxes[j].hit;
+                h.hurt_coll_pos = hit.hurt_coll_pos;
+                h.coll_distance = hit.coll_distance;
+                if touch {
+                    it::set_flag(&mut ip.xDCE_flag, 6, true);
+                    ip.toucher = Some(gobj);
+                    break;
+                }
+            }
+            return;
         }
         let mf = &self.game.fighters[me.0];
         if mf.x1988 == 2 || mf.x198C == 2 {

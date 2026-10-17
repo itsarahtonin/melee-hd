@@ -101,3 +101,13 @@ pub fn restart_attack(game: &mut Game, gobj: GObjId) {
     }
     clear_attack_record(item_mut(game, gobj));
 }
+
+/// Counts the item's attack in its fighter owner's statistics, `it_8027B564`.
+#[doc(alias = "it_8027B564")]
+pub fn count_owner_attack(r: &mut Running, gobj: GObjId) {
+    let ip = item(r.game, gobj);
+    let (owner, flags) = (ip.owner, ip.xD90);
+    if is_fighter(r.game, owner) {
+        r.count_item_attack(owner.expect("an owner"), flags);
+    }
+}

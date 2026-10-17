@@ -435,14 +435,17 @@ impl Game {
     }
 
     /// The KO marks' render callback, `fn_802F770C`: drawn unless the slot's display hides
-    /// its digits. A second mark, on no slot's first, reads the record before the displays',
-    /// which isn't ported.
+    /// its digits. A second mark is no slot's first, so the slot search gives -1 and the test
+    /// reads the record before the displays' (`ifStatus_HudInfo.players[-1]`): its flags byte
+    /// is the padding after `ifAll_804A0FD8` in `.bss`, never written, so the second mark is
+    /// always drawn (docs/melee-bugs.md).
     #[doc(alias = "fn_802F770C")]
     pub fn ko_mark_render(&self, gobj: GObjId, pass: i32) -> Option<Draw> {
-        let slot = self
-            .ko_mark_slot(gobj)
-            .unwrap_or_else(|| code::unported_call("fn_802F770C on a second KO mark"));
-        (!self.hud.status.players[slot].flags.hide_all_digits).then_some(Draw::JObjs(gobj, pass))
+        let hidden = match self.ko_mark_slot(gobj) {
+            Some(slot) => self.hud.status.players[slot].flags.hide_all_digits,
+            None => false,
+        };
+        (!hidden).then_some(Draw::JObjs(gobj, pass))
     }
 }
 

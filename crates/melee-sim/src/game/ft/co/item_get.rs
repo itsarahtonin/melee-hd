@@ -120,7 +120,7 @@ impl Running<'_> {
     }
 
     /// A held item used as it's picked up (use kind 5) once the pickup is cut short,
-    /// `ftpickupitem_80094B6C`: food heals (not ported: task 7's), the Warp Star is dropped,
+    /// `ftpickupitem_80094B6C`: food heals (`Fighter_8006CF5C`) and goes, the Warp Star is dropped,
     /// the hammer let go of (`ftCo_800C5284`), the Bunny Hood goes on, the Metal Box and the
     /// Cloaking Device take effect and go, and a coin goes.
     #[doc(alias = "ftpickupitem_80094B6C")]
@@ -132,7 +132,9 @@ impl Running<'_> {
         }
         match lib26b1::kind(self.game, it) {
             kinds::HEART | kinds::TOMATO | kinds::FOODS | LUCKY_EGG | WHISPY_HEAL_APPLE => {
-                unported_call("ftpickupitem_80094B6C's heal (Fighter_8006CF5C)");
+                let heal = lib26b1::heal_amount(self.game, it);
+                self.heal(gobj, heal);
+                item::destroy(self, it);
             }
             kinds::WSTAR => release::drop(self, it, crate::vec::Vec3::new(0.0, 0.0, 0.0), 1.0),
             kinds::HAMMER => self.start_hammer_timers(gobj),

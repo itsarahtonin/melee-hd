@@ -114,6 +114,72 @@ pub fn stop_shooting(r: &mut Running, gobj: GObjId) {
     }
 }
 
+/// The nozzle, in the hand's space, `it_80292EF8`.
+#[doc(alias = "it_80292EF8")]
+pub fn muzzle() -> crate::vec::Vec3 {
+    crate::vec::Vec3::new(0.0, 5.5, 2.5)
+}
+
+/// A flame from the nozzle at `pos` the way `dir` faces while fuel lasts, `it_80292F14`:
+/// the flower's flame effect on its fourth bone once, a unit of fuel, and a fresh attack id
+/// for the flames every sixth.
+#[doc(alias = "it_80292F14")]
+pub fn fire(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3, dir: f32) {
+    if item(r.game, gobj).xD4C <= 0 {
+        return;
+    }
+    if item_mut(r.game, gobj).xDD4_itemVar.fflower().x4.get() == 0 {
+        let t = item(r.game, gobj)
+            .xBBC_dynamicBoneTable
+            .expect("a Fire Flower without bones");
+        let j = r.game.it.bone_tables[t.0].bones[4];
+        crate::game::ef::spawn(r, 0x473, Some(gobj), &[crate::game::ef::Arg::JObj(j)]);
+        item_mut(r.game, gobj).xDD4_itemVar.fflower().x4.set(1);
+    }
+    let ip = item_mut(r.game, gobj);
+    ip.xD4C -= 1;
+    let owner = ip.owner;
+    let ignore = ip.xAC4_ignoreItemID;
+    let ignore = ignore.read(&mut r.game.objs.stale_reads).unwrap_or(0);
+    super::lgunbeam::spawn(r, owner, pos, ignore, dir);
+    let v = item_mut(r.game, gobj).xDD4_itemVar.fflower();
+    v.x0.update(|n| n.wrapping_add(1));
+    v.x0.update(|n| n.wrapping_rem(6));
+    if v.x0.get() == 0 {
+        let id = next_attack_id(r.game);
+        item_mut(r.game, gobj).xAC4_ignoreItemID = IgnoreId(Some(id));
+    }
+}
+
+/// A Fire Flower standing at `pos`, `it_80292D48`.
+// Ports `it_80292D48`; aliased once a check reaches it.
+pub fn spawn_at(r: &mut Running, pos: crate::vec::Vec3) -> Option<GObjId> {
+    let mut spawn = crate::game::structs::SpawnItem {
+        kind: super::F_FLOWER,
+        ..Default::default()
+    };
+    spawn.prev_pos = pos;
+    spawn.prev_pos.z = 0.0;
+    spawn.pos = spawn.prev_pos;
+    spawn.facing_dir = -1.0;
+    spawn.x3C_damage = 0;
+    spawn.vel = crate::vec::Vec3::new(0.0, 0.0, 0.0);
+    spawn.x0_parent_gobj = None;
+    spawn.x4_parent_gobj2 = None;
+    spawn.x44_flag[0] |= 0x80;
+    spawn.x40 = 0;
+    let gobj = super::super::item::spawn_air(r, &mut spawn)?;
+    landed(r, gobj);
+    Some(gobj)
+}
+
+/// Forgets a GObj the flower points to, `itFFlower_Logic25_EvtUnk` (`it_8026B894`).
+// Ports `itFFlower_Logic25_EvtUnk`; aliased once a check reaches it (nothing dispatches the
+// items' `evt_unk` yet).
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+    lib26b1::forget(r.game, gobj, other);
+}
+
 /// Stops and stands, `it_80292FF0`.
 #[doc(alias = "it_80292FF0")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
