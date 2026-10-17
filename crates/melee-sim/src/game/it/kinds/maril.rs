@@ -13,7 +13,7 @@ use super::super::pokemon::{self, attr_f32, effect_hitlag, table_bone, take_bone
 use super::super::{hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use super::drmariopill::set_pose;
 use crate::fpu::{mem, reg};
-use crate::game::code;
+
 use crate::game::ef;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
@@ -119,7 +119,8 @@ pub fn flame_coll(r: &mut Running, gobj: GObjId) -> bool {
     coll |= maplib::touched_wall(r.game, gobj);
     coll |= maplib::touched_ceiling(r.game, gobj);
     if coll != 0 {
-        code::unported_call("it_802D61C8 (Cyndaquil's flame touching the stage)");
+        super::hinoarashi::touch_normal(r, gobj, coll);
+        super::hinoarashi::turn_off_surface(r, gobj, coll);
     }
     false
 }

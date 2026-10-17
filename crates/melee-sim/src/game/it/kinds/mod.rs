@@ -13,6 +13,7 @@ pub mod dosei;
 pub mod drmariopill;
 pub mod egg;
 pub mod fflower;
+pub mod fire;
 pub mod flower;
 pub mod foods;
 pub mod foxblaster;
@@ -35,8 +36,10 @@ pub mod gshell;
 pub mod hammer;
 pub mod hammerhead;
 pub mod harisen;
+pub mod hassam;
 pub mod heart;
 pub mod heiho;
+pub mod hinoarashi;
 pub mod kamex;
 pub mod kinoko;
 pub mod kirbycopystar;
@@ -106,6 +109,7 @@ pub mod tarucann;
 pub mod thunder;
 pub mod togepy;
 pub mod tomato;
+pub mod unknown;
 pub mod wstar;
 pub mod yoshiegglay;
 pub mod yoshieggthrow;
@@ -249,6 +253,10 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || marumine::run_event(r, gobj, addr)
         || thunder::run_event(r, gobj, addr)
         || matadogas::run_event(r, gobj, addr)
+        || unknown::run_event(r, gobj, addr)
+        || hinoarashi::run_event(r, gobj, addr)
+        || fire::run_event(r, gobj, addr)
+        || hassam::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -363,6 +371,10 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| marumine::run_pred(r, gobj, addr))
         .or_else(|| thunder::run_pred(r, gobj, addr))
         .or_else(|| matadogas::run_pred(r, gobj, addr))
+        .or_else(|| unknown::run_pred(r, gobj, addr))
+        .or_else(|| hinoarashi::run_pred(r, gobj, addr))
+        .or_else(|| fire::run_pred(r, gobj, addr))
+        .or_else(|| hassam::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -559,6 +571,10 @@ pub const PKIND_RANDOM: i32 = 160;
 pub const PKIND_START: i32 = 161;
 /// `It_PKind_Terminate`, also `It_Kind_Chicorita_Leaf`, the first of the Pokémon's items.
 pub const PKIND_TERMINATE: i32 = 191;
+/// `It_Kind_Unknown_Swarm`, Unown's little Unown.
+pub const UNKNOWN_SWARM: i32 = 0xC7;
+/// `It_Kind_Hinoarashi_Flame`, Cyndaquil's flames.
+pub const HINOARASHI_FLAME: i32 = 0xCE;
 /// `It_Kind_Pokemon_Unk`, the last of the Pokémon's items.
 pub const POKEMON_UNK: i32 = 207;
 /// `It_Kind_Old_Kuri`: the first stage item, and the last group of tables.

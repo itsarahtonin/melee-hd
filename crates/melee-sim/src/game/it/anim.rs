@@ -330,10 +330,11 @@ pub fn run_script(r: &mut Running, gobj: GObjId) {
         }
         let opcode = s.opcode(r.data);
         if opcode == 9 {
-            let mut script = std::mem::take(s);
-            command::bg_flash(&mut script, r.game, r.data);
-            item_mut(r.game, gobj).x524_cmd.script = script;
-        } else if !command::execute(s, r.data, opcode) {
+            let (id, frames) = command::bg_flash(s, r.data);
+            r.game.bg_flash_anim(r.data, id, frames);
+            continue;
+        }
+        if !command::execute(s, r.data, opcode) {
             run_command(r, gobj, opcode);
         }
     }

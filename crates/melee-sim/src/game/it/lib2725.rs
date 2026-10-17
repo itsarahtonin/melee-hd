@@ -425,6 +425,23 @@ pub fn stop_spin(game: &mut Game, data: &Archives, gobj: GObjId) {
     }
 }
 
+/// Gives the item another model, `it_80273318`: the joint kept, the old model released
+/// (`HSD_GObjObject_80390B0C`) and the new one made, at the item's scale and position. Its
+/// bone table still names the old model's joints, as the original's does.
+#[doc(alias = "it_80273318")]
+pub fn set_model(r: &mut Running, gobj: GObjId, joint: Option<melee_data::archive::DataRef>) {
+    use crate::hsd::gobj::Host;
+    item_mut(r.game, gobj).xC8_joint = joint;
+    if let Some((kind, obj)) = r.world().take_obj(gobj) {
+        r.remove_obj(kind, obj);
+    }
+    super::item::make_model(r, gobj);
+    super::item::apply_scale(r.game, gobj);
+    let pos = item(r.game, gobj).pos;
+    let j = jobj_of(r.game, gobj).expect("an item without a model");
+    super::item::set_translate(r.game, j, pos);
+}
+
 /// Stops the item, `it_80273454` (`itResetVelocity`).
 #[doc(alias = "it_80273454")]
 pub fn clear_velocity(game: &mut Game, gobj: GObjId) {
