@@ -1189,7 +1189,6 @@ ftColl_80078538	leaf-check fighter_procs: normal hits' sparks, small and big, th
 ftColl_8007861C	leaf-check fighter_procs: every logged hit's attacker
 ftColl_8007BBCC	leaf-check fighter_procs: every call
 ftColl_8007925C	leaf-check fighter_procs: every call; items' boxes that could reach the fighter stop at the seam; melee-oracle diff, Dr. Mario vs Ness on Yoshi's Story hf-doc-ness-ys-ecdc4d64 (docs/oracle.md), all 12,234 ticks in Slippi float mode with no stand-ins: Ness absorbs an item in tick 10895
-ft_8007C77C	leaf-check fighter_procs: every call (no coin battle)
 ftColl_8007BAC0	leaf-check fighter_procs: every call
 ftCo_800C0B20	leaf-check fighter_procs: every call, Final Destination's lines
 Ground_801C5700	leaf-check fighter_procs: every call that touches a line
@@ -2026,7 +2025,6 @@ it_8026F53C	leaf-check items: drops runs it from captured item states
 it_8026F5C8	leaf-check items: drops runs it from captured item states
 it_8026F6BC	leaf-check items: drops runs it from captured item states
 it_8026F7C8	leaf-check items: drops runs it from captured item states
-it_8026F8B4	leaf-check items: drops runs it from captured item states
 it_8027321C	leaf-check items: item_lib_small runs it from captured item states
 it_80273454	leaf-check items: item_lib_small runs it from captured item states
 it_80274740	leaf-check items: item_lib_small runs it from captured item states
@@ -3263,7 +3261,6 @@ ftCo_DeadDown_Cam	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) 
 ftCo_800D40B8	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): a star KO (3 calls)
 ftCo_DeadUpStar_Anim	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the star KO's flight (528 calls)
 ftCo_DeadUpStar_Cam	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the star KO's camera (528 calls)
-ftCo_800D4E50	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): coins at a KO (none outside coin matches) (7 calls)
 ftCo_800D4FF4	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): back on the respawn platform (6 calls)
 ftCo_Rebirth_Anim	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the descent's frames (360 calls)
 ftCo_Rebirth_IASA	melee-oracle diff, Fox vs Fox FD (local/bench/fox-fox-fd.slp) all 15,660 traced ticks in hardware float mode with no stand-ins (docs/oracle.md): the descent's interrupts (none) (360 calls)
@@ -8101,3 +8098,27 @@ itLGunBeam_Logic39_Clanked	leaf-check items_shoot: items_shoot_functions runs it
 itLGunBeam_Logic39_Absorbed	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
 itLGunBeam_Logic39_ShieldBounced	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
 itLGunBeam_Logic39_HitShield	leaf-check items_shoot: items_shoot_functions runs it from real states of the three items-shoot oracle matches, its own saved calls and its unit's, and compares the whole state
+ft_8007C77C	leaf-check items_shoot: items_shoot_functions runs it from real states of the coins-fd oracle match and compares the whole state (and leaf-check fighter_procs outside coin matches)
+ftCommon_8007EA90	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+ftCo_800D4E50	leaf-check items_shoot: items_shoot_functions runs it from real states of the coins-fd oracle match (a KO's coins) and compares the whole state; melee-oracle diff of the coin matches
+it_8026F8B4	leaf-check items: drops runs it from captured item states; leaf-check items_shoot from the coins-items-fd oracle match's broken containers
+it_802E5AC4	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E5EF4	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E5F00	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E5F8C	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E609C	leaf-check items_shoot: items_shoot_functions runs it inside it_802E5F8C and it_802E5F00, which make their coins through it, and compares the whole state
+it_802E61C4	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E628C	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E6380	leaf-check items_shoot: items_shoot_functions runs it inside it_802E609C (each coin's setup) and compares the whole state
+it_802E657C	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E6658	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E66A0	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_UnkMotion1_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_UnkMotion1_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_UnkMotion0_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E6888	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_UnkMotion2_Anim	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_UnkMotion2_Phys	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_UnkMotion2_Coll	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_2E5A_Logic115_DmgDealt	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches
+it_802E6A74	leaf-check items_shoot: items_shoot_functions runs it from real states of the two coin oracle matches (coins-fd, coins-items-fd), its own saved calls and its unit's, and compares the whole state; melee-oracle diff of both matches

@@ -124,6 +124,8 @@ ROOTS = [
     "itMsBomb_ItemVars",
     "itFlipper_ItemVars",
     "itLGunBeam_ItemVars",
+    # A coin match's coins.
+    "it_2E5A_ItemVars",
     "PokemonSelectionState",
     # The background flash (`lbbgflash.c`, `lb_0219.c`).
     "BgFlashData",
@@ -254,6 +256,8 @@ SPLICE = {
     "itPeachTurnip_ItemVars": ("xDD4", 0, 1, "TurnipFlag"),
     # Link's bomb's flag byte, of which the bomb uses the top three bits.
     "itLinkBomb_ItemVars": ("x0", 0, 1, "LinkBombFlags"),
+    # A coin's flag byte, of which the coin and the pickup use the top two bits.
+    "it_2E5A_ItemVars": ("x18", 0x18, 0x19, "CoinFlags"),
     # An item link's `x20`, which only the reset writes and a hookshot link in a block new
     # from the heap holds unknown.
     "ItemLink": ("x20", 0x20, 0x2C, "LinkX20"),
@@ -298,7 +302,7 @@ EXTRA_USES = [
     "use crate::game::ft::dynamics::BoneSlot;",
     "use crate::game::ft::second::SecondTree;",
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
-    "use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};",
+    "use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};",
     "use crate::game::it::link::LinkX20;",
     "use crate::hsd::lobj::LObjId;",
     "use crate::hsd::shadow::ShadowId;",
@@ -363,7 +367,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::handles::*;
-use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
+use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::game::it::link::LinkX20;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;

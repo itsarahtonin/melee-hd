@@ -253,8 +253,50 @@ impl Running<'_> {
     #[doc(alias = "Fighter_UnkTakeDamage_8006CC30")]
     pub fn take_damage_coins(&mut self, f: FighterId, amount: f64) {
         self.take_damage(f, amount);
-        if self.game.vs_is_coins() {
-            unported_call("ftCommon_8007EA90 (a coin match's coins)");
+        self.drop_hit_coins(f, fp::fctiwz(amount));
+    }
+
+    /// The coins a hit knocks out of the fighter in a coin match, `ftCommon_8007EA90`: `n`
+    /// coins flying from where it was hit along its knockback (mirrored for a hit from the
+    /// right), or straight up from its camera bone without knockback; those it's worth counted
+    /// for the attacker.
+    #[doc(alias = "ftCommon_8007EA90")]
+    pub fn drop_hit_coins(&mut self, f: FighterId, n: i32) {
+        if !self.game.vs_is_coins() {
+            return;
+        }
+        let pi = std::f64::consts::PI;
+        let fp = &self.game.fighters[f.0];
+        let (angle, speed, pos);
+        if reg(fp.dmg.kb_applied) != 0.0 {
+            let kb = reg(fp.dmg.kb_applied);
+            let mut a = self.damage_angle(f, kb);
+            let fp = &self.game.fighters[f.0];
+            if reg(fp.dmg.facing_dir_1) > fp::frsp(0.0) {
+                a = if a > pi {
+                    fp::frsp(fp::fsub(fp::fmul(pi, 3.0), a))
+                } else {
+                    fp::frsp(fp::fsub(pi, a))
+                };
+            }
+            let c = fp.dmg.x1854_collpos;
+            pos = Vec3::new(c.x, c.y, 0.0);
+            angle = a;
+            speed = kb;
+        } else {
+            angle = fp::frsp(fp::fdiv(pi, 2.0));
+            speed = reg(self.common().f32(0x5C0));
+            pos = self.camera_bone_pos(f);
+        }
+        let gobj = self.game.fighters[f.0]
+            .gobj
+            .expect("a fighter without its GObj");
+        let worth =
+            super::super::it::kinds::coin::drop_from(self, gobj, pos, n, 1, mem(angle), mem(speed));
+        let src = self.game.fighters[f.0].dmg.x18c4_source_ply;
+        if src != 6 {
+            let v = worth.wrapping_add(self.game.player_unk98(src));
+            self.game.set_player_unk98(src, v);
         }
     }
 

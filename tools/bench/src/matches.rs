@@ -45,6 +45,8 @@ pub enum Rules {
     Stock { stocks: u8, time_limit: u32 },
     /// A time match of `time_limit` seconds.
     Time { time_limit: u32 },
+    /// A coin match of `time_limit` seconds: fighters drop coins when hit and pick them up.
+    Coin { time_limit: u32 },
 }
 
 /// The item switch: the frequency (`StartMeleeRules::item_freq`: -1 off, then very low, low,
@@ -477,6 +479,27 @@ pub fn items_set() -> Vec<Match> {
     out
 }
 
+/// The coins set (task 8's coins): two-minute coin matches on Final Destination, two humans;
+/// fighters hit or KO'd drop coins, which they pick up. The first has items off; in the second,
+/// with capsules on (the light container; the others are carried, task 7's), broken capsules drop
+/// coins too.
+pub fn coins_set() -> Vec<Match> {
+    let coin = |name: &'static str, seed: u32, items: Items| Match {
+        name: Cow::Borrowed(name),
+        stage: FINAL_DESTINATION,
+        players: Cow::Owned(vec![p(FOX, 0), p(MARTH, 0)]),
+        seed,
+        rules: Rules::Coin {
+            time_limit: ITEMS_TIME,
+        },
+        items,
+    };
+    vec![
+        coin("coins-fd", 0x1F0F_0501, Items::OFF),
+        coin("coins-items-fd", 0x1F0F_0502, Items::only(FREQ_HIGH, &[0])),
+    ]
+}
+
 /// The VS stages besides the tournament stages, with match names; the moving stages are marked.
 const OTHER_STAGES: [(u16, &str, bool); 23] = [
     (YOSHIS_ISLAND_64, "yoshis-island-64", false),
@@ -581,6 +604,7 @@ pub type Set = fn() -> Vec<Match>;
 /// Milestone 4's oracle sets, by name.
 pub const SETS: &[(&str, Set)] = &[
     ("items", items_set),
+    ("coins", coins_set),
     ("stages", stages_set),
     ("cpu", cpu_set),
 ];
@@ -628,6 +652,7 @@ const RULES: [u8; 0x60] = {
 const MATCH_KIND_MASK: u8 = 0xE0;
 const MATCH_KIND_TIME: u8 = 0x00;
 const MATCH_KIND_STOCK: u8 = 0x20;
+const MATCH_KIND_COIN: u8 = 0x40;
 const TIMER_ENABLED: u8 = 0x02;
 /// The third byte's `is_stock`.
 const IS_STOCK: u8 = 0x80;
@@ -687,6 +712,7 @@ impl Match {
         let (kind, time_limit, stocks) = match self.rules {
             Rules::Stock { stocks, time_limit } => (MATCH_KIND_STOCK, time_limit, stocks),
             Rules::Time { time_limit } => (MATCH_KIND_TIME, time_limit, 4),
+            Rules::Coin { time_limit } => (MATCH_KIND_COIN, time_limit, 4),
         };
         d[0] = d[0] & !MATCH_KIND_MASK | kind;
         if time_limit == 0 {
@@ -730,7 +756,9 @@ impl Match {
             }
         }
         match self.rules {
-            Rules::Time { time_limit: 0 } => Err(format!("{}: a time match of 0 s", self.name)),
+            Rules::Time { time_limit: 0 } | Rules::Coin { time_limit: 0 } => {
+                Err(format!("{}: a timed match of 0 s", self.name))
+            }
             Rules::Stock { stocks: 0, .. } => Err(format!("{}: 0 stocks", self.name)),
             _ => Ok(()),
         }
@@ -753,7 +781,9 @@ impl Match {
     /// one field a frame, with room for the boot, the load and the 123 frames before "GO".
     pub fn fields(&self) -> u32 {
         let limit = match self.rules {
-            Rules::Stock { time_limit, .. } | Rules::Time { time_limit } => time_limit,
+            Rules::Stock { time_limit, .. }
+            | Rules::Time { time_limit }
+            | Rules::Coin { time_limit } => time_limit,
         };
         if limit == 0 {
             31_000
@@ -951,6 +981,17 @@ mod tests {
         assert_eq!(&d[0x10..0x14], &[0; 4]);
         assert_eq!(d[0x60 + 2], 2);
         assert_eq!(d[0x60 + 0x24 + 2], 2);
+    }
+
+    #[test]
+    fn coin_rules() {
+        let m = &coins_set()[0];
+        let d = m.start_data();
+        // match_kind 2 (coin), the unknown field 4, the timer on; not a stock match.
+        assert_eq!(d[0], 0x52);
+        assert_eq!(d[2] & IS_STOCK, 0);
+        assert_eq!(&d[0x10..0x14], &120u32.to_be_bytes());
+        assert!(m.check().is_ok());
     }
 
     #[test]

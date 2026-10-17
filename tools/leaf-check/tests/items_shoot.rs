@@ -33,7 +33,7 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
-use melee_sim::game::it::kinds::{fflower, flipper, foods, lgun, lgunbeam, lgunray, msbomb};
+use melee_sim::game::it::kinds::{coin, fflower, flipper, foods, lgun, lgunbeam, lgunray, msbomb};
 use melee_sim::game::it::{self, CLASS_ITEM};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -86,8 +86,9 @@ fn functions() -> Vec<(u32, String)> {
 
 /// The units whose functions run from each other's captures, by their address ranges: the
 /// Ray Gun's and the Fire Flower's shooting states (the fighter's), then food, the
-/// motion-sensor bomb, the Flipper, the Ray Gun's ray and the Fire Flower's flame.
-const UNITS: [(u32, u32); 7] = [
+/// motion-sensor bomb, the Flipper, the Ray Gun's ray, the Fire Flower's flame and a coin
+/// match's coins.
+const UNITS: [(u32, u32); 8] = [
     (0x800C_DE18, 0x800C_E3E0),
     (0x800C_E3E0, 0x800C_ECE8),
     (0x8028_F9D8, 0x8028_FE90),
@@ -95,6 +96,7 @@ const UNITS: [(u32, u32); 7] = [
     (0x8029_0938, 0x8029_1BE0),
     (0x8029_8168, 0x8029_88E4),
     (0x8029_93E0, 0x8029_9C48),
+    (0x802E_5AC4, 0x802E_6ACC),
 ];
 
 /// An engine function only a Flipper fixed to a stage calls (`it_8027542C`), which no VS
@@ -117,7 +119,13 @@ fn fighter_unit(u: usize) -> bool {
 
 /// Helpers that take what the check can't give (a vector to write, a joint in the loaded
 /// data): they run inside the callers that call them, whose comparisons cover them.
-const HELPERS: &[&str] = &["it_8028E774", "it_80292EF8", "it_80273318"];
+const HELPERS: &[&str] = &[
+    "it_8028E774",
+    "it_80292EF8",
+    "it_80273318",
+    "it_802E609C",
+    "it_802E6380",
+];
 
 /// The functions that take more than a GObj, run from their own saved calls only (and the
 /// flame's turns from their neighbours' with the surfaces met).
@@ -136,7 +144,19 @@ const TAKES_MORE: &[&str] = &[
     "it_80299528",
     "itFlipper_AddSpinImpulse",
     "itFlipper_Repel",
+    "ftCommon_8007EA90",
+    "ftCo_800D4E50",
+    "it_8026F8B4",
+    "it_802E5AC4",
+    "it_802E5F00",
+    "it_802E5F8C",
+    "it_802E61C4",
+    "it_802E628C",
+    "it_802E6658",
 ];
+
+/// Saved calls whose registers hold no GObj to run a neighbour on: `it_802E6658` takes nothing.
+const NOT_SOURCES: &[&str] = &["it_802E6658"];
 
 /// The flame's turns, which take the surfaces it met in r4, and the Flipper's spin and push,
 /// which take a point (one of the item's own vectors) and a speed or kind: their neighbours'
@@ -173,13 +193,17 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802982AC", lgunray::start),
     ("it_8027542C", clear_hit_ids_b7),
     ("it_8027B564", it::lib279c::count_owner_attack),
+    ("it_802E66A0", coin::start),
 ];
 
 fn clear_hit_ids_b7(g: &mut Running, gobj: GObjId) {
     it::hitbox::clear_hit_ids_b7(g.game, gobj);
 }
 
-const ITEM_PREDS: &[(&str, Pred)] = &[("itFlipper_UpdateActive", flipper::update_active)];
+const ITEM_PREDS: &[(&str, Pred)] = &[
+    ("itFlipper_UpdateActive", flipper::update_active),
+    ("it_802E657C", coin::tick),
+];
 
 fn item_check(g: &Running, gobj: GObjId, a: u32) {
     if g.game.world.gobj(gobj).classifier != CLASS_ITEM {
@@ -221,6 +245,26 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
                 .gobj
                 .expect("a fighter without its GObj");
             g.heal(gobj, r(4) as i32);
+            return Ret::Nothing;
+        }
+        "it_802E6658" => {
+            coin::limit_coins(g);
+            return Ret::Nothing;
+        }
+        "ftCommon_8007EA90" | "ftCo_800D4E50" => {
+            let fid = *maps
+                .fighters
+                .get(&r(3))
+                .unwrap_or_else(|| panic!("{SKIP}{name} takes a fighter not imported"));
+            if name == "ftCommon_8007EA90" {
+                g.drop_hit_coins(fid, r(4) as i32);
+            } else {
+                let gobj = g.game.fighters[fid.0]
+                    .gobj
+                    .expect("a fighter without its GObj");
+                let f2 = call.regs.fpr[1].ps0 as f32;
+                g.drop_coins(gobj, vec_at(r(4)), r(5) as i32, f2);
+            }
             return Ret::Nothing;
         }
         // A food from no parent.
@@ -297,6 +341,42 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "itFlipper_Repel" => {
             item_check(g, gobj, a);
             flipper::repel(g, gobj, r(4) as i32, vec_at(r(5)));
+        }
+        // A coin match's coins'.
+        "it_8026F8B4" => {
+            item_check(g, gobj, a);
+            let vel = (r(6) != 0).then(|| vec_at(r(5)));
+            return b(it::drop::drop_coins(g, gobj, vec_at(r(4)), vel));
+        }
+        "it_802E5AC4" => {
+            item_check(g, gobj, a);
+            return b(coin::lands(g, gobj, r(4) != 0));
+        }
+        "it_802E5EF4" => {
+            item_check(g, gobj, a);
+            return Ret::Int(coin::worth(g, gobj) as u32);
+        }
+        "it_802E5F00" => {
+            item_check(g, gobj, a);
+            coin::scatter(g, gobj, vec_at(r(4)), vec_at(r(5)), r(6) as i32);
+        }
+        "it_802E5F8C" => {
+            let f2 = call.regs.fpr[2].ps0 as f32;
+            let n = coin::drop_from(g, gobj, vec_at(r(4)), r(5) as i32, r(6) as i32, f1(), f2);
+            return Ret::Int(n as u32);
+        }
+        "it_802E61C4" => {
+            item_check(g, gobj, a);
+            return Ret::Int(coin::adjusted_count(g, gobj, r(4) as i32, r(5) as i32) as u32);
+        }
+        "it_802E628C" => {
+            item_check(g, gobj, a);
+            let f2 = call.regs.fpr[2].ps0 as f32;
+            coin::fly_out(g, gobj, f1(), f2);
+        }
+        "ft_8007C77C" => {
+            fighter_check(g, gobj, a);
+            g.coin_pickups(gobj);
         }
         // The fighter's, on its GObj.
         "ftCo_800CDE18" => {
@@ -487,7 +567,7 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
         }
         let mut runs = Vec::new();
         for (a, src) in &funcs {
-            if unit(*a) != Some(u) || !wanted(src) {
+            if unit(*a) != Some(u) || !wanted(src) || NOT_SOURCES.contains(&src.as_str()) {
                 continue;
             }
             for dir in dirs() {

@@ -153,9 +153,11 @@ pub fn drop_random(r: &mut Running, pos: Vec3, vel: Option<Vec3>) -> Option<GObj
     Some(g)
 }
 
-/// Maybe drops coins in a coin match, `it_8026F8B4`: whether it did.
+/// Maybe drops coins in a coin match, `it_8026F8B4`: on one draw in the common data's `x138`,
+/// `x140` plus a draw in `x13C` coins from `pos`, at `vel` or (none given) a random sideways
+/// pop; whether it did.
 #[doc(alias = "it_8026F8B4")]
-pub fn drop_coins(r: &mut Running, _gobj: GObjId, _pos: Vec3, _vel: Option<Vec3>) -> bool {
+pub fn drop_coins(r: &mut Running, gobj: GObjId, pos: Vec3, vel: Option<Vec3>) -> bool {
     if !r.game.vs_is_coins() {
         return false;
     }
@@ -163,5 +165,24 @@ pub fn drop_coins(r: &mut Running, _gobj: GObjId, _pos: Vec3, _vel: Option<Vec3>
     if r.game.objs.rng.below(c.i32(r.data, 0x138)) != 0 {
         return false;
     }
-    code::unported_call("it_802E5F00 (coins)")
+    let n = r
+        .game
+        .objs
+        .rng
+        .below(c.i32(r.data, 0x13C))
+        .wrapping_add(c.i32(r.data, 0x140));
+    let vel = match vel {
+        Some(v) => v,
+        None => {
+            let rng = reg(r.game.objs.rng.draw_f32());
+            let x54 = reg(c.f32(r.data, super::data::common::X54));
+            Vec3::new(
+                mem(fp::fmuls(x54, fp::fmuls(2.0, fp::fsubs(rng, 0.5)))),
+                c.f32(r.data, 0x144),
+                0.0,
+            )
+        }
+    };
+    super::kinds::coin::scatter(r, gobj, pos, vel, n);
+    true
 }

@@ -7,6 +7,7 @@ pub mod climbersblizzard;
 pub mod climbersice;
 pub mod climbersstring;
 pub mod clinkmilk;
+pub mod coin;
 pub mod crate_box;
 pub mod dosei;
 pub mod drmariopill;
@@ -219,6 +220,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || flipper::run_event(r, gobj, addr)
         || lgunray::run_event(r, gobj, addr)
         || lgunbeam::run_event(r, gobj, addr)
+        || coin::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
 }
 
@@ -319,6 +321,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| flipper::run_pred(r, gobj, addr))
         .or_else(|| lgunray::run_pred(r, gobj, addr))
         .or_else(|| lgunbeam::run_pred(r, gobj, addr))
+        .or_else(|| coin::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).

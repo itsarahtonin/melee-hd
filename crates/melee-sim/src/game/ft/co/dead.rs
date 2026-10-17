@@ -250,7 +250,7 @@ impl Running<'_> {
                 }
                 let pos = self.game.fighters[f.0].cur_pos;
                 self.spawn_effect_at(gobj, 0x42D, pos);
-                self.drop_coins(gobj);
+                self.drop_coins(gobj, pos, 0, 1.5707963705062866);
                 let fp = &mut self.game.fighters[f.0];
                 fp.x221F_b1 = true;
                 fp.invisible = true;
@@ -324,12 +324,28 @@ impl Running<'_> {
         self.game.set_player_damage_at(slot, which, 0);
     }
 
-    /// Coins dropped at a KO in a coin match, `ftCo_800D4E50` (not ported there).
+    /// Coins dropped at a KO in a coin match, `ftCo_800D4E50`: half the player's coins (the
+    /// lost half counted), at most the common data's `x5C8`, flying from `pos` at `angle`,
+    /// `pickable` saying whether they wait to be picked up.
     #[doc(alias = "ftCo_800D4E50")]
-    fn drop_coins(&mut self, gobj: GObjId) {
-        if self.game.vs_is_coins() && !self.game.fighter(gobj).is_sub_fighter {
-            unported_call("ftCo_800D4E50 in a coin match");
+    pub fn drop_coins(&mut self, gobj: GObjId, pos: crate::vec::Vec3, pickable: i32, angle: f32) {
+        if !self.game.vs_is_coins() || self.game.fighter(gobj).is_sub_fighter {
+            return;
         }
+        let slot = i32::from(self.game.fighter(gobj).player_idx);
+        let coins = self.game.player_coins(slot);
+        let mut lost = coins / 2;
+        self.game.set_player_coins(slot, coins.wrapping_sub(lost));
+        let n = lost.wrapping_add(self.game.player_unk9c(slot));
+        self.game.set_player_unk9c(slot, n);
+        let max = self.common().i32(0x5C8);
+        if lost > max {
+            lost = max;
+        }
+        let speed = self.common().f32(0x5CC);
+        super::super::super::it::kinds::coin::drop_from(
+            self, gobj, pos, lost, pickable, angle, speed,
+        );
     }
 
     /// The fighter out of play for now, `ftCo_800BFD9C`: asleep, Nana with Popo, and the
@@ -431,7 +447,28 @@ impl Running<'_> {
             clamp(&mut pos.y, stage::blast_bottom(g), stage::blast_top(g));
         }
         self.spawn_dead_effect(gobj, pos, angle);
-        self.drop_coins(gobj);
+        // The coins come from the blast zone the fighter left by.
+        let g = &*self.game;
+        let coin_angle = match side {
+            Side::Left => {
+                pos.x = stage::blast_left(g);
+                0.0
+            }
+            Side::Right => {
+                pos.x = stage::blast_right(g);
+                std::f32::consts::PI
+            }
+            Side::Down => {
+                pos.y = stage::blast_bottom(g);
+                mem(fp::fdivs(f64::from(std::f32::consts::PI), 2.0))
+            }
+            Side::Up => {
+                pos.y = stage::blast_top(g);
+                let pi = f64::from(std::f32::consts::PI);
+                mem(fp::fadds(pi, fp::fdivs(pi, 2.0)))
+            }
+        };
+        self.drop_coins(gobj, pos, 1, coin_angle);
     }
 
     pub fn enter_dead_right(&mut self, gobj: GObjId) {
@@ -648,7 +685,8 @@ impl Running<'_> {
             let ids = self.data.ptr(arr.at(4)).expect("a voice set's ids");
             self.fighter_random_voice_in(f, ids, n);
         }
-        self.drop_coins(gobj);
+        let pos = self.game.fighters[f.0].cur_pos;
+        self.drop_coins(gobj, pos, 0, 1.5707963705062866);
         self.game.fighters[f.0].accessory4_cb = Some(super::super::super::handles::CodeRef(
             DEAD_UP_FALL_ACCESSORY,
         ));

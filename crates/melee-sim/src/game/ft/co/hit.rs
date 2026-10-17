@@ -174,7 +174,7 @@ impl Running<'_> {
     /// counting toward an early way out, `ftColl_8007AC68`), or for the Sakurai angle
     /// (361), `ftCommonData` x144 in the air and on the ground a slope from 0 by `kb`.
     #[doc(alias = "ftCo_Damage_CalcAngle")]
-    fn damage_angle(&mut self, f: FighterId, kb: f64) -> f64 {
+    pub(crate) fn damage_angle(&mut self, f: FighterId, kb: f64) -> f64 {
         let c = self.common();
         let angle = self.game.fighters[f.0].dmg.x1848_kb_angle;
         if angle != 361 {

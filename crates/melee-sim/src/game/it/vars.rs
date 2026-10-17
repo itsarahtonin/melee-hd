@@ -182,6 +182,7 @@ members! {
     MsBomb, msbomb, itMsBomb_ItemVars, [MSBOMB];
     Flipper, flipper, itFlipper_ItemVars, [FLIPPER];
     LGunBeam, lgunbeam, itLGunBeam_ItemVars, [L_GUN_BEAM];
+    Coin, coin, it_2E5A_ItemVars, [UNK4];
 }
 
 impl Default for ItemVars {
@@ -249,6 +250,42 @@ impl Mirror for TurnipFlag {
         let theirs = m.bytes::<1>(at)[0] & 0x80 != 0;
         if self.picked_up != theirs {
             cx.mismatch(path, format!("{}", self.picked_up), format!("{theirs}"));
+        }
+    }
+}
+
+/// A coin's flag byte (`it_2E5A_ItemVars::x18`, an `UnkFlagStruct`): whether players other than
+/// its owner may pick it up yet (`b0`) and its owner (`b1`), the bits the coin and the pickup
+/// (`ft_8007C77C`) use. The coin's spawn writes both and nothing reads the other six, which keep
+/// what the block held, so the comparer checks the two.
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CoinFlags {
+    /// The top bit (`b0`): the others may pick it up.
+    pub others: bool,
+    /// The second bit (`b1`): its owner may.
+    pub owner: bool,
+}
+
+impl Mirror for CoinFlags {
+    const SIZE: u32 = 1;
+
+    fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
+        let b = m.bytes::<1>(at)[0];
+        CoinFlags {
+            others: b & 0x80 != 0,
+            owner: b & 0x40 != 0,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let b = m.bytes::<1>(at)[0];
+        let theirs = (b & 0x80 != 0, b & 0x40 != 0);
+        if (self.others, self.owner) != theirs {
+            cx.mismatch(
+                path,
+                format!("{:?}", (self.others, self.owner)),
+                format!("{theirs:?}"),
+            );
         }
     }
 }

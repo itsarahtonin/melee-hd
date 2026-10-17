@@ -14,7 +14,7 @@ use crate::game::gr::GroundVars;
 use crate::game::handles::*;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::it::link::LinkX20;
-use crate::game::it::{IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
+use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -11228,6 +11228,90 @@ impl itLGunBeam_ItemVars {
         self.angle1.mark_stale();
         self.lifetime.mark_stale();
         self.xE04.mark_stale();
+    }
+}
+
+/// `it_2E5A_SubVars`, 0x20 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct it_2E5A_SubVars {
+    /// +0x0
+    pub x0: Var<f32>,
+    /// +0x4
+    pub x4: Var<Option<JObjId>>,
+    /// +0x8
+    pub x8: Var<Vec3>,
+    /// +0x14
+    pub x14: Var<Vec3>,
+}
+
+impl Default for it_2E5A_SubVars {
+    fn default() -> Self {
+        it_2E5A_SubVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+        }
+    }
+}
+
+impl it_2E5A_SubVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.x14.mark_stale();
+    }
+}
+
+/// `it_2E5A_ItemVars`, 0x3c bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct it_2E5A_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub x4: Var<i32>,
+    /// +0x8
+    pub x8: Var<i32>,
+    /// +0xc
+    pub xC: Var<i32>,
+    /// +0x10
+    pub x10: Var<f32>,
+    /// +0x14
+    pub x14: Var<f32>,
+    /// +0x18
+    pub x18: Var<CoinFlags>,
+    /// +0x1c
+    pub sub: it_2E5A_SubVars,
+}
+
+impl Default for it_2E5A_ItemVars {
+    fn default() -> Self {
+        it_2E5A_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+            x18: Var::new(Default::default()),
+            sub: Default::default(),
+        }
+    }
+}
+
+impl it_2E5A_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.x10.mark_stale();
+        self.x14.mark_stale();
+        self.x18.mark_stale();
+        self.sub.mark_stale();
     }
 }
 
