@@ -24,16 +24,18 @@
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
-    Prepare, Report, Ret, SKIP, Stub, StubRet, Variant, check_variants, gobj_arg, saved_calls,
+    Prepare, Report, Ret, SKIP, Stub, StubRet, Variant, check_variants, gobj_arg, peek_u32,
+    saved_calls,
 };
 use melee_capture::import::Maps;
 use melee_sim::game::it::kinds::{
-    chicorita, fushigibana, kamex, kireihana, lucky, maril, marumine, matadogas, sonans, thunder,
-    togepy,
+    chicorita, fire, fushigibana, hassam, hinoarashi, kamex, kireihana, lucky, maril, marumine,
+    matadogas, sonans, thunder, togepy, unknown,
 };
 use melee_sim::game::it::{self, CLASS_ITEM, pokemon};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
+use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
 
 const CALLS: &str = "calls/items-pokemon";
@@ -109,6 +111,10 @@ const UNITS: &[(u32, u32)] = &[
     (0x802D_09D0, 0x802D_1438),
     (0x802C_CAB4, 0x802C_CF9C),
     (0x802C_AFD4, 0x802C_B8AC),
+    (0x802C_E710, 0x802C_F3E0),
+    (0x802D_5CF8, 0x802D_66F8),
+    (0x802C_C6E4, 0x802C_CAB4),
+    (0x802C_DBE0, 0x802C_E710),
 ];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
@@ -129,6 +135,8 @@ fn args(call: &mut Call, target: &str, k: usize) {
         n if n.contains("EvtUnk") || EVT_UNK.contains(&n) => {
             g[4] = if k.is_multiple_of(2) { gobj } else { 0 }
         }
+        "it_802D61C8" | "it_802D6310" => g[4] = [1u32, 2, 4, 3, 6][k % 5],
+        "it_802D6674" => g[4] = (k % 4) as u32,
         "it_802CB4F0" => {
             g[4] = [0xC1u32, 0xC2][k % 2];
             call.regs.fpr[1].ps0 = [1.0f64, 2.5][(k / 2) % 2];
@@ -149,11 +157,14 @@ const EVT_UNK: &[&str] = &[
     "itLucky_Logic44_EvtUnk",
     "it_802D6850",
     "it_802D6FB0",
+    "itHassam_802CDC60",
+    "it_802CE7D0",
+    "it_802D61A8",
 ];
 
 /// Helpers that take what the check can't give: they run inside the callers that call them,
 /// whose comparisons cover them.
-const HELPERS: &[&str] = &[];
+const HELPERS: &[&str] = &["itHassam_802CDE1C"];
 
 fn name_of(addr: u32) -> String {
     ssbm_types::symbols::SYMBOLS
@@ -204,6 +215,18 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802D70A4", fushigibana::enter_air),
     ("it_802D718C", fushigibana::stand),
     ("it_802D7328", fushigibana::fell),
+    ("it_802CC7D8", fire::fly_up),
+    ("it_802CC944", fire::enter_air),
+    ("itHassam_802CDCB4", hassam::pose),
+    ("itHassam_802CDF28", hassam::leap),
+    ("itHassam_802CE008", hassam::charge),
+    ("itHassam_802CE400", hassam::fly_off),
+    ("it_802CE640", hassam::enter_air),
+    ("it_802CE8D0", unknown::start_swarms),
+    ("it_802CEC24", unknown::enter_air),
+    ("it_802CED54", unknown::spawn_swarm),
+    ("it_802CF0D4", unknown::swarm_fly),
+    ("it_802D5E4C", hinoarashi::enter_air),
     ("it_80279C48", pokemon::face_nearest_opponent),
     ("it_80279E24", pokemon::pulse),
     ("it_80279FF8", pokemon::grow),
@@ -401,6 +424,22 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "itTogepy_Logic21_EvtUnk" => togepy::evt_unk(g, gobj, maybe(4)),
         "it_802D56F0" | "itLucky_Logic44_EvtUnk" => lucky::evt_unk(g, gobj, maybe(4)),
         "it_802D6850" | "it_802D6FB0" => maril::evt_unk(g, gobj, maybe(4)),
+        "itFire_Logic6_EvtUnk" => fire::evt_unk(g, gobj, maybe(4)),
+        "itHassam_802CDC60" => hassam::evt_unk(g, gobj, maybe(4)),
+        "it_802CE7D0" => unknown::evt_unk(g, gobj, maybe(4)),
+        "itUnknown_Logic38_EvtUnk" => unknown::swarm_evt_unk(g, gobj, maybe(4)),
+        "it_802D61A8" => hinoarashi::evt_unk(g, gobj, maybe(4)),
+        "it_802D61C8" => hinoarashi::touch_normal(g, gobj, r(4) as i32),
+        "it_802D6310" => hinoarashi::turn_off_surface(g, gobj, r(4) as i32),
+        "it_802D6674" => hinoarashi::flame_start(g, gobj, r(4) as i32),
+        "it_802D64B8" => {
+            if !(0x8000_0000..0x817F_0000).contains(&r(4)) {
+                panic!("{SKIP}{name} takes a position");
+            }
+            let f32_at = |p: u32| f32::from_bits(peek_u32(call, p));
+            let pos = Vec3::new(f32_at(r(4)), f32_at(r(4) + 4), f32_at(r(4) + 8));
+            hinoarashi::spawn_flame(g, gobj, pos, r(5), f(1));
+        }
         "it_802CB4F0" => matadogas::puff(g, gobj, r(4) as i32, f(1)),
         "it_802D5124" => return b(lucky::next(g, gobj)),
         _ => return run_item(g, gobj, a, &name),
