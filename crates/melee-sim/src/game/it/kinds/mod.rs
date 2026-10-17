@@ -51,6 +51,7 @@ pub mod linkbow;
 pub mod linkhookshot;
 pub mod lipstick;
 pub mod lipstickspore;
+pub mod maril;
 pub mod luigifireball;
 pub mod mariocape;
 pub mod mariofireball;
@@ -229,6 +230,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || spycloak::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
         || kireihana::run_event(r, gobj, addr)
+        || maril::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -333,6 +335,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| rabbitc::run_pred(r, gobj, addr))
         .or_else(|| spycloak::run_pred(r, gobj, addr))
         .or_else(|| kireihana::run_pred(r, gobj, addr))
+        .or_else(|| maril::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).

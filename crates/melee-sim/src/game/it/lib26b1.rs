@@ -335,6 +335,12 @@ pub fn hold_flags_on(game: &mut Game, gobj: GObjId) {
     ip.xDC8_word.flags.x1A = false;
 }
 
+/// Makes the item keep clear of others (`xDC8_word.x1A`), `it_8026BD9C`.
+#[doc(alias = "it_8026BD9C")]
+pub fn keep_clear(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDC8_word.flags.x1A = true;
+}
+
 /// Stops the item keeping clear of others (`xDC8_word.x1A`), `it_8026BDB4`.
 #[doc(alias = "it_8026BDB4")]
 pub fn stop_keeping_clear(game: &mut Game, gobj: GObjId) {
