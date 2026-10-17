@@ -3,6 +3,7 @@
 pub mod bat;
 pub mod bombhei;
 pub mod capsule;
+pub mod chicorita;
 pub mod climbersblizzard;
 pub mod climbersice;
 pub mod climbersstring;
@@ -13,6 +14,7 @@ pub mod dosei;
 pub mod drmariopill;
 pub mod egg;
 pub mod fflower;
+pub mod fire;
 pub mod flipper;
 pub mod flower;
 pub mod foods;
@@ -20,6 +22,7 @@ pub mod foxblaster;
 pub mod foxillusion;
 pub mod foxlaser;
 pub mod freeze;
+pub mod fushigibana;
 pub mod gamewatch;
 pub mod gamewatchbreath;
 pub mod gamewatchchef;
@@ -35,13 +38,17 @@ pub mod gshell;
 pub mod hammer;
 pub mod hammerhead;
 pub mod harisen;
+pub mod hassam;
 pub mod heart;
 pub mod heiho;
+pub mod hinoarashi;
+pub mod kamex;
 pub mod kinoko;
 pub mod kirbycopystar;
 pub mod kirbycutterbeam;
 pub mod kirbygamewatchchefpan;
 pub mod kirbyhammer;
+pub mod kireihana;
 pub mod koopaflame;
 pub mod kusudama;
 pub mod lgun;
@@ -54,9 +61,13 @@ pub mod linkbow;
 pub mod linkhookshot;
 pub mod lipstick;
 pub mod lipstickspore;
+pub mod lucky;
 pub mod luigifireball;
+pub mod maril;
 pub mod mariocape;
 pub mod mariofireball;
+pub mod marumine;
+pub mod matadogas;
 pub mod mball;
 pub mod metalb;
 pub mod mewtwodisable;
@@ -90,6 +101,7 @@ pub mod seakchain;
 pub mod seakneedleheld;
 pub mod seakneedlethrown;
 pub mod seakvanish;
+pub mod sonans;
 pub mod spycloak;
 pub mod sscope;
 pub mod sscopebeam;
@@ -99,7 +111,10 @@ pub mod starrodstar;
 pub mod sword;
 pub mod taru;
 pub mod tarucann;
+pub mod thunder;
+pub mod togepy;
 pub mod tomato;
+pub mod unknown;
 pub mod wstar;
 pub mod yoshiegglay;
 pub mod yoshieggthrow;
@@ -238,6 +253,22 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || lgunbeam::run_event(r, gobj, addr)
         || coin::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
+        || kireihana::run_event(r, gobj, addr)
+        || maril::run_event(r, gobj, addr)
+        || togepy::run_event(r, gobj, addr)
+        || sonans::run_event(r, gobj, addr)
+        || lucky::run_event(r, gobj, addr)
+        || fushigibana::run_event(r, gobj, addr)
+        || kamex::run_event(r, gobj, addr)
+        || chicorita::run_event(r, gobj, addr)
+        || marumine::run_event(r, gobj, addr)
+        || thunder::run_event(r, gobj, addr)
+        || matadogas::run_event(r, gobj, addr)
+        || unknown::run_event(r, gobj, addr)
+        || hinoarashi::run_event(r, gobj, addr)
+        || fire::run_event(r, gobj, addr)
+        || hassam::run_event(r, gobj, addr)
+        || super::pokemon::run_event(r, gobj, addr)
 }
 
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
@@ -346,6 +377,21 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| lgunray::run_pred(r, gobj, addr))
         .or_else(|| lgunbeam::run_pred(r, gobj, addr))
         .or_else(|| coin::run_pred(r, gobj, addr))
+        .or_else(|| kireihana::run_pred(r, gobj, addr))
+        .or_else(|| maril::run_pred(r, gobj, addr))
+        .or_else(|| togepy::run_pred(r, gobj, addr))
+        .or_else(|| sonans::run_pred(r, gobj, addr))
+        .or_else(|| lucky::run_pred(r, gobj, addr))
+        .or_else(|| fushigibana::run_pred(r, gobj, addr))
+        .or_else(|| kamex::run_pred(r, gobj, addr))
+        .or_else(|| chicorita::run_pred(r, gobj, addr))
+        .or_else(|| marumine::run_pred(r, gobj, addr))
+        .or_else(|| thunder::run_pred(r, gobj, addr))
+        .or_else(|| matadogas::run_pred(r, gobj, addr))
+        .or_else(|| unknown::run_pred(r, gobj, addr))
+        .or_else(|| hinoarashi::run_pred(r, gobj, addr))
+        .or_else(|| fire::run_pred(r, gobj, addr))
+        .or_else(|| hassam::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -544,8 +590,14 @@ pub const UNK4: i32 = 158;
 pub const PKIND_RANDOM: i32 = 160;
 /// `It_PKind_Start`: the first Pokémon, and the third group of tables.
 pub const PKIND_START: i32 = 161;
-/// `It_PKind_Terminate`.
+/// `It_PKind_Terminate`, also `It_Kind_Chicorita_Leaf`, the first of the Pokémon's items.
 pub const PKIND_TERMINATE: i32 = 191;
+/// `It_Kind_Unknown_Swarm`, Unown's little Unown.
+pub const UNKNOWN_SWARM: i32 = 0xC7;
+/// `It_Kind_Hinoarashi_Flame`, Cyndaquil's flames.
+pub const HINOARASHI_FLAME: i32 = 0xCE;
+/// `It_Kind_Pokemon_Unk`, the last of the Pokémon's items.
+pub const POKEMON_UNK: i32 = 207;
 /// `It_Kind_Old_Kuri`: the first stage item, and the last group of tables.
 pub const OLD_KURI: i32 = 208;
 /// `It_Kind_Heiho`, Yoshi's Story's Shy Guys.

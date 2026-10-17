@@ -329,6 +329,11 @@ pub fn run_script(r: &mut Running, gobj: GObjId) {
             return;
         }
         let opcode = s.opcode(r.data);
+        if opcode == 9 {
+            let (id, frames) = command::bg_flash(s, r.data);
+            r.game.bg_flash_anim(r.data, id, frames);
+            continue;
+        }
         if !command::execute(s, r.data, opcode) {
             run_command(r, gobj, opcode);
         }

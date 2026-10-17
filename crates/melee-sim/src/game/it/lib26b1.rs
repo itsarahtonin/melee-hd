@@ -317,7 +317,7 @@ pub fn check_burst(r: &mut Running, gobj: GObjId) {
         6 => code::unported_call("it_8027D730"),
         19 => code::unported_call("it_8028FE90"),
         58 | 59 => super::kinds::linkbomb::set_off(r, gobj),
-        177 => code::unported_call("it_802D09D0"),
+        177 => super::kinds::marumine::burst(r, gobj),
         _ => {
             item_mut(r.game, gobj).destroy_type = 0;
             destroy(r, gobj);
@@ -352,6 +352,12 @@ pub fn hold_flags_on(game: &mut Game, gobj: GObjId) {
     ip.xDCD_flag.x0.b3 = true;
     ip.xDCD_flag.x0.b4 = true;
     ip.xDC8_word.flags.x1A = false;
+}
+
+/// Makes the item keep clear of others (`xDC8_word.x1A`), `it_8026BD9C`.
+#[doc(alias = "it_8026BD9C")]
+pub fn keep_clear(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDC8_word.flags.x1A = true;
 }
 
 /// Stops the item keeping clear of others (`xDC8_word.x1A`), `it_8026BDB4`.

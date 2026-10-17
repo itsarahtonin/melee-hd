@@ -11,7 +11,6 @@ use super::super::item::{article, change, change_state, play_sfx};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use super::falling_phys;
 use crate::fpu::reg;
-use crate::game::code;
 use crate::game::ef::SpawnKind;
 use crate::game::handles::CodeRef;
 use crate::game::state::Running;
@@ -284,7 +283,8 @@ pub fn open(r: &mut Running, gobj: GObjId) {
 pub fn on_accessory(r: &mut Running, gobj: GObjId) {
     let at = attr(r, gobj, 4);
     if item(r.game, gobj).xD44_lifeTimer == at {
-        code::unported_call("it_8027AB64 (a Poké Ball's Pokémon)");
+        let out = super::super::pokemon::release(r, gobj);
+        item_mut(r.game, gobj).xDD4_itemVar.mball().b1.set(out);
     }
 }
 

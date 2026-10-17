@@ -22,6 +22,7 @@ pub mod lib279c;
 pub mod link;
 pub mod maplib;
 pub mod owner;
+pub mod pokemon;
 pub mod release;
 pub mod spawn;
 pub mod tables;
@@ -98,6 +99,9 @@ pub struct Globals {
     /// The character items' articles (`it_804D6D38`): an array in `ItCo.dat` that the
     /// characters fill as they load (`it_8026B3F8`), so it is state.
     pub char_articles: Vec<Option<DataRef>>,
+    /// The enemies' and Pokémon's common data (`it_804D6D40`), in `ItCo.dat`: their knockback
+    /// speed (`x4`) among others.
+    pub zako: Option<DataRef>,
     /// The color animations (`it_804D6D04`), in `ItCo.dat`.
     pub colanims: Option<DataRef>,
     /// The fighters' ECBs and positions, as the first item takes them each tick for the items

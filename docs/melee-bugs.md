@@ -532,6 +532,26 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/pl/bonus.rs:218`.
 
+### Unown's new model leaves its bone table naming the old one's joints
+
+- **Where:** `it_80273318` (an item's model swapped, which Unown and its swarm use to take a letter's model), `crates/melee-sim/src/game/it/lib2725.rs` (`set_model`).
+- **Defect:** it releases the item's old model (`HSD_GObjObject_80390B0C`) and makes the new one, but leaves the item's bone table (`xBBC_dynamicBoneTable`) as it was, so its entries point at the freed joints.
+- **Effect:** none observable in the six Poké Ball matches: nothing reads Unown's bone table after the swap there.
+- **melee-hd:** modeled: the table keeps the freed joints' handles, as the original keeps their addresses.
+- **Fix:** rebuild the bone table for the new model (`Item_802682F0`).
+- **Fix impact:** none unless code reads the table after a swap.
+- **Source:** `crates/melee-sim/src/game/it/lib2725.rs:428`.
+
+### Cyndaquil's flame turns an angle nothing reads
+
+- **Where:** `it_802D61C8` and `it_802D6310` (Cyndaquil's flame touching the stage, called by the flame's collision `it_802D6798` in `itmaril.c`), `crates/melee-sim/src/game/it/kinds/hinoarashi.rs` (`touch_normal`, `turn_off_surface`).
+- **Defect:** touching a floor, wall or ceiling, the flame turns its heading (`+0x78`) off the surface, but after the flame is made nothing turns that heading back into its velocity, so the turn never changes how it moves.
+- **Effect:** none observable: the flames slide on as they were launched.
+- **melee-hd:** modeled.
+- **Fix:** recompute the velocity from the turned heading, if a bounce was intended.
+- **Fix impact:** changes the flames' paths, so replays and Slippi peers would desync.
+- **Source:** not recorded beyond the port (`crates/melee-sim/src/game/it/kinds/hinoarashi.rs:296`).
+
 ## Stages and collision
 
 ### Final Destination's background compares green twice
@@ -808,6 +828,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Stages without spawn points | `Ground_801C2D24`, read by `Stage_80224E64` and `fn_80167638`; `game/gr/ground.rs`, `game/gm/vs.rs` | Leaves its vector alone (and adds into its out parameter for combined points) when the stage lacks the point; every VS stage has them | [engine notes](engine.md#uninitialized-values) (line 78); `crates/melee-sim/src/game/gr/ground.rs:207` |
 | A string ending in a lead byte | `HSD_SisLib_803A67EC`, `hsd/sis.rs` | Reads past a string that ends in a Shift-JIS lead byte; the game's strings end in whole characters | [engine notes](engine.md#uninitialized-values) (line 91) |
 | Character-specific effect spawns for another character | `efSync_Spawn`, `game/ef/sync.rs` | Case 0x501 reads Peach's part 85, past a shorter parts table, and action-state callbacks read the character's `mv` words | [engine notes](engine.md#uninitialized-values) (line 59) |
+| Unown's swarm from an edge past the four | `it_802CED54`, `game/it/kinds/unknown.rs` | Spawns the swarm from an uninitialized stack vector when the edge index (`+0x84`) is outside 0 to 3; `it_802CE8D0` always sets it | `crates/melee-sim/src/game/it/kinds/unknown.rs:305` |
 | Judgement's roll past its sums | `ftGw_SpecialS_GetRandomInt`, `game/ft/gamewatch/special_s.rs` | Returns a register it never set when the roll isn't below any running sum; a roll below their total always is | [engine notes](engine.md#uninitialized-values) (line 90) |
 | Falcon Kick's flame in another state | `ftCa_SpecialHi_800E3EAC`, `game/ft/captain/special_lw.rs` | Reads a register and a stack word it never set outside the kick's two states; only those states call it | `crates/melee-sim/src/game/ft/captain/special_lw.rs:24` |
 | A walk's animation outside the walk | `ftWalkCommon_800DFDDC`, `game/ft/co/ground.rs` | Leaves the rate in `f31` from its caller for a state that isn't one of the walk's three | `crates/melee-sim/src/game/ft/co/ground.rs:243` |

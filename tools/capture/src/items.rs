@@ -83,6 +83,9 @@ impl Importer<'_> {
         self.stale = true;
         let mut item = Item::import(&m, a, self);
         item.xDD4_itemVar = ItemVars::import_as(vars_kind(item.kind), &m, a + VARS, self);
+        if let ItemVars::Pokemon(v) = &mut item.xDD4_itemVar {
+            v.import_handles(item.kind, &m, a + VARS, self);
+        }
         self.stale = false;
         let table = cap.u32(a + 0xBBC);
         // A dangling or unknown table (a word never set) has no entries to read.
@@ -236,6 +239,7 @@ impl Importer<'_> {
         self.game.it.common_articles = data(self, "it_804D6D24");
         self.game.it.pokemon_articles = data(self, "it_804D6D30");
         self.game.it.colanims = data(self, "it_804D6D04");
+        self.game.it.zako = data(self, "it_804D6D40");
         let table = cap.u32(sym("it_804D6D38"));
         self.game.it.char_articles = if table == 0 {
             Vec::new()
@@ -428,6 +432,7 @@ impl Comparer<'_> {
             ("it_804D6D24", g.common_articles),
             ("it_804D6D30", g.pokemon_articles),
             ("it_804D6D04", g.colanims),
+            ("it_804D6D40", g.zako),
         ] {
             let theirs = self.u32(sym(name));
             self.compare_data(name, ours, theirs);

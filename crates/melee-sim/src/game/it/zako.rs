@@ -182,6 +182,41 @@ pub fn knockback_vel(r: &mut Running, gobj: GObjId, out: &mut Vec3) -> bool {
     }
 }
 
+/// A hit enemy's or Pokémon's launch, `it_8027B964`: off the surfaces it moves into
+/// (`chk`), or along its knockback, never straight nowhere or level; then at the common data's
+/// launch speed (`it_804D6D40->x4`).
+#[doc(alias = "it_8027B964")]
+pub fn launch(r: &mut Running, gobj: GObjId, chk: bool) {
+    if chk {
+        super::maplib::reflect_velocity(r.game, r.data, gobj);
+    } else {
+        let mut v = item(r.game, gobj).x40_vel;
+        knockback_vel(r, gobj, &mut v);
+        let ip = item_mut(r.game, gobj);
+        ip.x40_vel = v;
+        if ip.x40_vel.x == 0.0 && ip.x40_vel.y == 0.0 {
+            ip.x40_vel.x = mem(fp::fmuls(
+                reg(0.1f32),
+                fp::fneg(reg(ip.xCCC_incDamageDirection)),
+            ));
+            ip.x40_vel.y = 0.1;
+        }
+        if ip.x40_vel.y == 0.0 {
+            ip.x40_vel.y = 0.1;
+        }
+    }
+    let mut v = item(r.game, gobj).x40_vel;
+    v.normalize();
+    let zako = r.game.it.zako.expect("no enemies' common data");
+    let scale = reg(r.data.f32(zako.at(4)));
+    v = Vec3::new(
+        mem(fp::fmuls(reg(v.x), scale)),
+        mem(fp::fmuls(reg(v.y), scale)),
+        mem(fp::fmuls(reg(v.z), scale)),
+    );
+    item_mut(r.game, gobj).x40_vel = v;
+}
+
 /// An enemy KO'd, `it_8027CE44` (`grZakoGenerator_801CACB8`): its source player's KO bonus
 /// (`it_8027CE18`), and its spawner slot.
 #[doc(alias = "it_8027CE44")]
