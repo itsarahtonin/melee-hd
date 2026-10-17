@@ -4,11 +4,12 @@
 
 use gekko_fp as fp;
 
+use super::super::super::handles::CodeRef;
 use super::super::super::it::{lib26b1, lib2725, release};
 use super::super::super::state::Running;
 use super::super::motion::flags::*;
-use super::PAD_LR;
 use super::ids::ms;
+use super::{PAD_A, PAD_B, PAD_LR};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::math;
@@ -480,6 +481,130 @@ impl Running<'_> {
         self.item_throw_hand(gobj);
     }
 
+    /// Throwing the carried heavy item, `ftCo_80094EA4`: A or B throws it the way the control
+    /// stick points (forward with it near the middle), the C-stick the way it points; a flicked
+    /// stick throws it smashed. Whether it threw.
+    #[doc(alias = "ftCo_80094EA4")]
+    pub fn heavy_throw_check(&mut self, gobj: GObjId) -> bool {
+        let fp = self.game.fighter(gobj);
+        if fp.item_gobj.is_none() {
+            return false;
+        }
+        let mut msid = fp.motion_id;
+        let (x, y, sx, sy, angle, pressed);
+        if fp.input.pressed_buttons & (PAD_A | PAD_B) != 0 {
+            x = reg(fp.input.lstick[0].x);
+            y = reg(fp.input.lstick[0].y);
+            sx = fp::frsp(f64::from(fp.active_sticky.lstick.x));
+            sy = fp::frsp(f64::from(fp.active_sticky.lstick.y));
+            angle = self.lstick_angle(gobj);
+            pressed = true;
+        } else {
+            sx = 0.0;
+            x = reg(fp.input.cstick[0].x);
+            sy = 0.0;
+            y = reg(fp.input.cstick[0].y);
+            angle = self.cstick_angle(gobj);
+            pressed = false;
+        }
+        let c = self.common();
+        let fp = self.game.fighter(gobj);
+        let facing = reg(fp.facing_dir);
+        let window = fp::fadds(
+            fp::frsp(f64::from(c.i32(cd::DASH_SMASH_WINDOW))),
+            reg(c.f32(cd::X44)),
+        );
+        let radians = reg(c.f32(cd::X20_RADIANS));
+        if abs(x) >= reg(c.f32(cd::DASH_SMASH_STICK_THRESHOLD)) && sx < window {
+            msid = if fp::fmuls(x, facing) >= 0.0 {
+                ms::HEAVY_THROW_F4
+            } else {
+                ms::HEAVY_THROW_B4
+            };
+        } else if y >= reg(c.f32(cd::XCC))
+            && sy < fp::fadds(reg(c.f32(cd::XD0)), reg(fp.co_attrs.jump_startup_time))
+        {
+            msid = ms::HEAVY_THROW_HI4;
+        } else if y <= reg(c.f32(cd::XD4)) && sy < reg(c.f32(cd::XD8)) {
+            msid = ms::HEAVY_THROW_LW4;
+        } else if abs(x) >= reg(c.f32(cd::X98)) && abs(angle) <= radians {
+            msid = if fp::fmuls(x, facing) >= 0.0 {
+                ms::HEAVY_THROW_F
+            } else {
+                ms::HEAVY_THROW_B
+            };
+        } else if y >= reg(c.f32(cd::ATTACKHI3_STICK_THRESHOLD_Y)) && angle > radians {
+            msid = ms::HEAVY_THROW_HI;
+        } else if y <= reg(c.f32(cd::XB0)) && angle < fp::fneg(radians) {
+            msid = ms::HEAVY_THROW_LW;
+        } else if pressed {
+            msid = ms::HEAVY_THROW_F;
+        }
+        if msid != self.game.fighter(gobj).motion_id {
+            self.enter_heavy_throw(gobj, msid);
+            return true;
+        }
+        false
+    }
+
+    /// Throwing the carried heavy item in state `msid`, `ftCo_800958FC`: as a light throw
+    /// ([`Self::enter_item_throw`]), the item dropped by a hit (`ftCo_800974C4`), and for a
+    /// fighter with cargo attributes (`x2222_b0`) the throw goes on in the air.
+    #[doc(alias = "ftCo_800958FC")]
+    pub fn enter_heavy_throw(&mut self, gobj: GObjId, msid: i32) {
+        let speed = self.item_throw_anim_speed(gobj, msid);
+        let fp = self.game.fighter_mut(gobj);
+        fp.cmd_vars[0] = 0;
+        fp.cmd_vars[1] = 0;
+        fp.x2210 = [0; 4];
+        let facing = match msid {
+            95 | 101 | 105 | 109 | 113 | 117 => fp::fneg(reg(fp.facing_dir)),
+            _ => reg(fp.facing_dir),
+        };
+        fp.set_mv_f32(MV_FACING_DIR, facing);
+        self.change_motion_state(gobj, msid, 0, 0.0, mem(speed), 0.0, None);
+        self.anim_update(gobj);
+        let fp = self.game.fighter_mut(gobj);
+        fp.accessory4_cb = Some(CodeRef(ITEM_THROW_HAND));
+        fp.take_dmg_cb = Some(CodeRef(super::lift::TAKE_DMG));
+        if fp.x2222_b0 {
+            fp.phys_cb = Some(CodeRef(CARGO_THROW_PHYS));
+            fp.coll_cb = Some(CodeRef(CARGO_THROW_COLL));
+        }
+        self.item_throw_hand(gobj);
+    }
+
+    /// `ftCo_HeavyThrow_Coll`: off the ground, the item dropped and tumbling.
+    #[doc(alias = "ftCo_HeavyThrow_Coll")]
+    pub fn co_heavy_throw_coll(&mut self, gobj: GObjId) {
+        self.ground_coll_then(gobj, |r, g| r.lift_fell(g));
+    }
+
+    /// A cargo character's heavy throw's physics, `ftCo_800961D0`: in the air or on the
+    /// ground.
+    #[doc(alias = "ftCo_800961D0")]
+    pub fn co_cargo_heavy_throw_phys(&mut self, gobj: GObjId) {
+        if self.is_airborne(gobj) {
+            self.air_physics(gobj);
+        } else {
+            self.ground_friction(gobj);
+        }
+    }
+
+    /// A cargo character's heavy throw's collision, `ftCo_80096498`: off the ground into the
+    /// air, or landing, with the state kept.
+    #[doc(alias = "ftCo_80096498")]
+    pub fn co_cargo_heavy_throw_coll(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        if !self.is_airborne(gobj) {
+            if !self.ground_coll_off_ledges(gobj) {
+                self.go_airborne(f);
+            }
+        } else if self.air_coll_land(gobj) {
+            self.land(gobj);
+        }
+    }
+
     /// Whether A throws the held item now, `ftCo_800951D0`: the ground throw.
     #[doc(alias = "ftCo_800951D0")]
     pub fn item_throw_ground_check(&mut self, gobj: GObjId) -> bool {
@@ -514,3 +639,8 @@ impl Running<'_> {
 
 /// `ftCo_80095EFC`, the throw's accessory callback.
 pub const ITEM_THROW_HAND: u32 = 0x8009_5EFC;
+/// `ftCo_HeavyThrow_Coll`, and a cargo character's heavy throw's physics and collision
+/// (`ftCo_800961D0`, `ftCo_80096498`).
+pub const HEAVY_THROW_COLL: u32 = 0x8009_6470;
+pub const CARGO_THROW_PHYS: u32 = 0x8009_61D0;
+pub const CARGO_THROW_COLL: u32 = 0x8009_6498;

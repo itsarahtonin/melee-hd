@@ -2736,26 +2736,6 @@ pub fn set_up_clear(game: &mut Game, slot: i8) {
 
 // The fixed camera.
 
-/// Where the fixed camera's view meets the stage plane (`Stage_80224CAC`, the stage's; until
-/// its port lands, read here): its eye turned by its angles toward z = 0.
-fn fixed_interest(s: &StageInfo) -> Vec3 {
-    let ci = &s.cam_info;
-    let eye = ci.fixed_cam_pos;
-    let mut dir = Vec3::new(0.0, 0.0, -100.0);
-    let angles = Vec3::new(
-        mem(fp::fmuls(reg(DEG_TO_RAD), reg(ci.fixed_cam_vert_angle))),
-        mem(fp::fmuls(reg(DEG_TO_RAD), reg(ci.fixed_cam_horz_angle))),
-        0.0,
-    );
-    dir.rotate_euler(angles);
-    let t = fp::fdivs(reg(eye.z), fp::fneg(reg(dir.z)));
-    Vec3::new(
-        mem(fp::fmadds(reg(dir.x), t, reg(eye.x))),
-        mem(fp::fmadds(reg(dir.y), t, reg(eye.y))),
-        0.0,
-    )
-}
-
 /// The fixed camera's frame (`Camera_8002DDC4`): both transforms ease toward the stage's fixed
 /// eye, interest and field of view.
 #[doc(alias = "Camera_8002DDC4")]
@@ -2765,7 +2745,7 @@ pub fn update_fixed(r: &mut Running) {
     let s = &game.stage_info;
     let c = &mut game.camera.cam;
     for t in [&mut c.transform, &mut c.transform_copy] {
-        t.target_interest = fixed_interest(s);
+        t.target_interest = stage::fixed_cam_interest(s);
         let target = t.target_interest;
         ease_toward(&mut t.interest, target, param(0x74));
     }

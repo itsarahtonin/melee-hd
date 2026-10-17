@@ -14,6 +14,7 @@ pub mod drmariopill;
 pub mod egg;
 pub mod fflower;
 pub mod flipper;
+pub mod flower;
 pub mod foods;
 pub mod foxblaster;
 pub mod foxillusion;
@@ -33,11 +34,13 @@ pub mod gamewatchturtle;
 pub mod gshell;
 pub mod hammer;
 pub mod hammerhead;
+pub mod harisen;
 pub mod heart;
 pub mod heiho;
 pub mod kinoko;
 pub mod kirbycopystar;
 pub mod kirbycutterbeam;
+pub mod kirbygamewatchchefpan;
 pub mod kirbyhammer;
 pub mod koopaflame;
 pub mod kusudama;
@@ -50,6 +53,7 @@ pub mod linkboomerang;
 pub mod linkbow;
 pub mod linkhookshot;
 pub mod lipstick;
+pub mod lipstickspore;
 pub mod luigifireball;
 pub mod mariocape;
 pub mod mariofireball;
@@ -81,6 +85,7 @@ pub mod samusbomb;
 pub mod samuschargeshot;
 pub mod samusgrapple;
 pub mod samusmissile;
+pub mod scball;
 pub mod seakchain;
 pub mod seakneedleheld;
 pub mod seakneedlethrown;
@@ -89,8 +94,11 @@ pub mod spycloak;
 pub mod sscope;
 pub mod sscopebeam;
 pub mod star;
+pub mod starrod;
+pub mod starrodstar;
 pub mod sword;
 pub mod taru;
+pub mod tarucann;
 pub mod tomato;
 pub mod wstar;
 pub mod yoshiegglay;
@@ -127,6 +135,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || kirbycutterbeam::run_event(r, gobj, addr)
         || kirbyhammer::run_event(r, gobj, addr)
         || kirbycopystar::run_event(r, gobj, addr)
+        || kirbygamewatchchefpan::run_event(r, gobj, addr)
         || climbersice::run_event(r, gobj, addr)
         || climbersblizzard::run_event(r, gobj, addr)
         || climbersstring::run_event(r, gobj, addr)
@@ -209,6 +218,13 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || mball::run_event(r, gobj, addr)
         || parasol::run_event(r, gobj, addr)
         || lipstick::run_event(r, gobj, addr)
+        || tarucann::run_event(r, gobj, addr)
+        || flower::run_event(r, gobj, addr)
+        || lipstickspore::run_event(r, gobj, addr)
+        || starrod::run_event(r, gobj, addr)
+        || starrodstar::run_event(r, gobj, addr)
+        || harisen::run_event(r, gobj, addr)
+        || scball::run_event(r, gobj, addr)
         || wstar::run_event(r, gobj, addr)
         || star::run_event(r, gobj, addr)
         || kinoko::run_event(r, gobj, addr)
@@ -229,6 +245,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     foxlaser::run_pred(r, gobj, addr)
         .or_else(|| kirbycutterbeam::run_pred(r, gobj, addr))
         .or_else(|| kirbycopystar::run_pred(r, gobj, addr))
+        .or_else(|| kirbygamewatchchefpan::run_pred(r, gobj, addr))
         .or_else(|| climbersice::run_pred(r, gobj, addr))
         .or_else(|| climbersblizzard::run_pred(r, gobj, addr))
         .or_else(|| climbersstring::run_pred(r, gobj, addr))
@@ -310,6 +327,13 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| mball::run_pred(r, gobj, addr))
         .or_else(|| parasol::run_pred(r, gobj, addr))
         .or_else(|| lipstick::run_pred(r, gobj, addr))
+        .or_else(|| tarucann::run_pred(r, gobj, addr))
+        .or_else(|| flower::run_pred(r, gobj, addr))
+        .or_else(|| lipstickspore::run_pred(r, gobj, addr))
+        .or_else(|| starrod::run_pred(r, gobj, addr))
+        .or_else(|| starrodstar::run_pred(r, gobj, addr))
+        .or_else(|| harisen::run_pred(r, gobj, addr))
+        .or_else(|| scball::run_pred(r, gobj, addr))
         .or_else(|| wstar::run_pred(r, gobj, addr))
         .or_else(|| star::run_pred(r, gobj, addr))
         .or_else(|| kinoko::run_pred(r, gobj, addr))
@@ -347,7 +371,9 @@ pub const HAMMER: i32 = 28;
 pub const L_GUN: i32 = 16;
 pub const FREEZE: i32 = 17;
 pub const S_SCOPE: i32 = 21;
+pub const STARROD: i32 = 22;
 pub const LIPSTICK: i32 = 23;
+pub const HARISEN: i32 = 24;
 pub const F_FLOWER: i32 = 25;
 pub const WSTAR: i32 = 29;
 /// `It_Kind_Kinoko` and `It_Kind_DKinoko`, the Super and Poison Mushrooms.
@@ -359,6 +385,8 @@ pub const RABBITC: i32 = 31;
 pub const METALB: i32 = 32;
 /// `It_Kind_Spycloak`, the Cloaking Device.
 pub const SPYCLOAK: i32 = 33;
+/// `It_Kind_ScBall`, the Screw Attack.
+pub const SC_BALL: i32 = 30;
 /// `It_Kind_Foods`.
 pub const FOODS: i32 = 18;
 pub const MSBOMB: i32 = 19;
@@ -373,6 +401,8 @@ pub const L_GUN_BEAM: i32 = 39;
 pub const STARROD_STAR: i32 = 36;
 pub const LIPSTICK_SPORE: i32 = 37;
 pub const S_SCOPE_BEAM: i32 = 38;
+/// `It_Kind_F_Flower_Flame`: the flower the Lip's Stick plants on a fighter's head.
+pub const F_FLOWER_FLAME: i32 = 41;
 /// `It_Kind_Kuriboh`: the first enemy, and the first kind of the second group of tables.
 pub const KURIBOH: i32 = 43;
 /// `It_Kind_Octarock_Stone`.

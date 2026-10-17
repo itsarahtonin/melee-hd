@@ -1250,11 +1250,29 @@ pub fn proc_jumped_on(r: &mut Running, gobj: GObjId) {
 }
 
 /// The item's grab process (priority 12), `Item_80269BE4`: items that grab fighters (a
-/// barrel cannon) look for one.
+/// barrel cannon) look for one; a catch runs the item's grab callback, then the fighter's.
 #[doc(alias = "Item_80269BE4")]
 pub fn proc_grab(r: &mut Running, gobj: GObjId) {
-    if flag(super::item(r.game, gobj).xDD0_flag, 5) {
-        code::unported_call("it_802701BC (an item grabbing a fighter)");
+    if !flag(super::item(r.game, gobj).xDD0_flag, 5) {
+        return;
+    }
+    coll::grab_fighters(r, gobj);
+    if super::item(r.game, gobj).grab_victim.is_none() {
+        return;
+    }
+    let dealt = super::item(r.game, gobj)
+        .grab_dealt
+        .expect("an item armed to grab with no grab callback");
+    call(r, gobj, dealt);
+    let ip = super::item(r.game, gobj);
+    let (victim, cb) = (
+        ip.grab_victim.expect("a grab with no victim"),
+        ip.grabbed_for_victim
+            .expect("a grab with no victim callback"),
+    );
+    match cb.0 {
+        super::kinds::tarucann::FT_BARREL_ENTER => r.enter_barrel(victim, gobj),
+        a => code::unported_call(&format!("{a:#010x} (a grabbed fighter's callback)")),
     }
 }
 

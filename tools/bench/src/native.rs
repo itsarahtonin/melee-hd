@@ -494,13 +494,15 @@ pub fn snapshots(args: &[String]) {
     });
 }
 
-/// `melee-bench alloc-sites [--dir DIR] [--from TICK] [--ticks N] [MATCH]`: plays the match
-/// (default `fox-fox-fd`) to tick `TICK` (default 4000), then tallies where the next `N` ticks'
-/// allocations come from (default 20; `crate::allocs`).
+/// `melee-bench alloc-sites [--dir DIR] [--from TICK] [--ticks N] [--rollback] [--fp slippi]
+/// [MATCH]`: plays the match (default `fox-fox-fd`; `DIR/MATCH.slp`, a Slippi replay too, which
+/// `--fp slippi` plays in Slippi Dolphin's floating point) to tick `TICK` (default 4000), then
+/// tallies where the next `N` ticks' allocations come from (default 20; `crate::allocs`).
 pub fn alloc_sites(args: &[String]) {
     let mut from = 4000u64;
     let mut ticks = 20u64;
     let mut rollback = false;
+    let mut fp = FpMode::Hardware;
     let mut rest = Vec::new();
     let mut it = args.iter();
     while let Some(a) = it.next() {
@@ -508,6 +510,13 @@ pub fn alloc_sites(args: &[String]) {
             "--from" => from = it.next().and_then(|n| n.parse().ok()).expect("--from TICK"),
             "--ticks" => ticks = it.next().and_then(|n| n.parse().ok()).expect("--ticks N"),
             "--rollback" => rollback = true,
+            "--fp" => {
+                fp = match it.next().map(String::as_str) {
+                    Some("slippi") => FpMode::Slippi,
+                    Some("hardware") => FpMode::Hardware,
+                    other => panic!("--fp slippi or hardware, not {other:?}"),
+                }
+            }
             _ => rest.push(a.clone()),
         }
     }
@@ -517,6 +526,7 @@ pub fn alloc_sites(args: &[String]) {
         .cloned()
         .unwrap_or_else(|| "fox-fox-fd".into());
     on_sim_thread(move || {
+        set_fp_mode(fp);
         let mut files = files();
         let b = match Bench::open(&dir, &name) {
             Ok(b) => b,
@@ -600,59 +610,79 @@ pub fn alloc_sites(args: &[String]) {
 mod tests {
     use super::*;
 
-    /// The Fox-Fox match's stretch the check replays: from a state kept at the first tick to
-    /// the last, where melee-hd's ports still run it in sync.
+    /// The matches the check replays: the benchmark matches but Pokémon Stadium's, whose
+    /// transformations and screens' text still allocate (`docs/performance.md`).
+    const MATCHES: [&str; 4] = [
+        "fox-fox-fd",
+        "fox-marth-fd",
+        "fox-marth-bf",
+        "ganon-captain-fd",
+    ];
+
+    /// The stretch each match replays: from a state kept at the first tick to the last.
     const FROM: u64 = 1000;
     const TO: u64 = 4600;
 
-    /// The "no allocations" target (`docs/performance.md`): the Fox-Fox match played to `TO`,
-    /// its state at `FROM` restored (a rollback), and every engine tick from there to `TO`
-    /// played again, counting allocations: the restore and each tick make none.
+    /// The "no allocations" target (`docs/performance.md`): each match played to `TO`, its
+    /// state at `FROM` restored (a rollback), and every engine tick from there to `TO` played
+    /// again, counting allocations: the restore and each tick make none.
     #[test]
     fn ticks_and_restores_dont_allocate() {
-        // The match is the repository's (`BENCH_DIR` overrides); its start trace is ssbm-rs's.
+        // The matches are the repository's (`BENCH_DIR` overrides); their start traces are
+        // ssbm-rs's.
         let dir =
             std::env::var_os("BENCH_DIR").map_or_else(melee_local_data::bench_dir, PathBuf::from);
-        let trace = crate::sync::start_trace_path(&dir, "fox-fox-fd");
-        if std::env::var("SSBM_DISC").is_err() || !trace.exists() {
-            eprintln!(
-                "no SSBM_DISC or no start trace of the Fox-Fox match ({}): skipping",
-                trace.display()
-            );
+        if std::env::var("SSBM_DISC").is_err() {
+            eprintln!("no SSBM_DISC: skipping");
             return;
         }
-        let failures = on_sim_thread(move || {
-            let mut files = files();
-            let b = Bench::open(&dir, "fox-fox-fd").expect("the Fox-Fox match");
-            let mut m = b.start(&mut files);
-            let mut device = Device(&b.replay);
-            let mut kept = None;
-            for t in 0..TO {
-                if t == FROM {
-                    kept = Some(m.game.clone());
-                }
-                let f = m.step_replay(&mut device);
-                m.recycle(f);
+        let mut failures = Vec::new();
+        for name in MATCHES {
+            let trace = crate::sync::start_trace_path(&dir, name);
+            if !trace.exists() {
+                eprintln!(
+                    "no start trace of {name} ({}): skipping it",
+                    trace.display()
+                );
+                continue;
             }
-            let kept = kept.expect("the match ran to the kept state");
-            let ((), restore, _) = counted(|| m.game.clone_from(&kept));
-            let mut failures = Vec::new();
-            if restore != 0 {
-                failures.push(format!("the restore made {restore} allocations"));
-            }
-            for t in FROM..TO {
-                let ((f, render), n, _) = counted(|| m.step_replay_tick(&mut device));
-                if n != 0 {
-                    failures.push(format!("tick {t} made {n} allocations"));
-                }
-                let mut f = f;
-                if render {
-                    f.draws = m.render();
-                }
-                m.recycle(f);
-            }
-            failures
-        });
+            let dir = dir.clone();
+            failures.extend(on_sim_thread(move || rollback_allocations(&dir, name)));
+        }
         assert!(failures.is_empty(), "{}", failures.join("\n"));
+    }
+
+    /// The match played to `TO`, its state at `FROM` restored and the ticks from there played
+    /// again: the restore and each tick that allocated.
+    fn rollback_allocations(dir: &Path, name: &str) -> Vec<String> {
+        let mut files = files();
+        let b = Bench::open(dir, name).expect("a benchmark match");
+        let mut m = b.start(&mut files);
+        let mut device = Device(&b.replay);
+        let mut kept = None;
+        for t in 0..TO {
+            if t == FROM {
+                kept = Some(m.game.clone());
+            }
+            let f = m.step_replay(&mut device);
+            m.recycle(f);
+        }
+        let kept = kept.expect("the match ran to the kept state");
+        let ((), restore, _) = counted(|| m.game.clone_from(&kept));
+        let mut failures = Vec::new();
+        if restore != 0 {
+            failures.push(format!("{name}: the restore made {restore} allocations"));
+        }
+        for t in FROM..TO {
+            let ((mut f, render), n, _) = counted(|| m.step_replay_tick(&mut device));
+            if n != 0 {
+                failures.push(format!("{name}: tick {t} made {n} allocations"));
+            }
+            if render {
+                f.draws = m.render();
+            }
+            m.recycle(f);
+        }
+        failures
     }
 }

@@ -10033,7 +10033,7 @@ pub struct itHeart_ItemVars {
     /// +0x0
     pub xDD4_heal: Var<i32>,
     /// +0x4
-    pub xDD8: Var<[u8; 4]>,
+    pub xDD8: Var<TurnipFlag>,
     /// +0x8
     pub xDDC: Var<i32>,
     /// +0xc
@@ -11312,6 +11312,138 @@ impl it_2E5A_ItemVars {
         self.x14.mark_stale();
         self.x18.mark_stale();
         self.sub.mark_stale();
+    }
+}
+
+/// `itTarucann_ItemVars`, 0x2c bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itTarucann_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub x4: Var<i32>,
+    /// +0x8
+    pub x8: Var<f32>,
+    /// +0xc
+    pub xC: Var<f32>,
+    /// +0x10
+    pub x10: Var<f32>,
+    /// +0x14
+    pub x14: Var<Vec3>,
+    /// +0x20
+    pub x20: Var<Option<GObjId>>,
+    /// +0x24
+    pub x24: Var<i32>,
+    /// +0x28
+    pub x28: Var<f32>,
+}
+
+impl Default for itTarucann_ItemVars {
+    fn default() -> Self {
+        itTarucann_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+            x20: Var::new(Default::default()),
+            x24: Var::new(Default::default()),
+            x28: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itTarucann_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.x10.mark_stale();
+        self.x14.mark_stale();
+        self.x20.mark_stale();
+        self.x24.mark_stale();
+        self.x28.mark_stale();
+    }
+}
+
+/// `itStarRodStar_ItemVars`, 0x8 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itStarRodStar_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub x4: Var<f32>,
+}
+
+impl Default for itStarRodStar_ItemVars {
+    fn default() -> Self {
+        itStarRodStar_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itStarRodStar_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+    }
+}
+
+/// `itLipstickSpore_ItemVars`, 0x8 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itLipstickSpore_ItemVars {
+    /// +0x0
+    pub xDD4: Var<i32>,
+    /// +0x4
+    pub xDD8: Var<f32>,
+}
+
+impl Default for itLipstickSpore_ItemVars {
+    fn default() -> Self {
+        itLipstickSpore_ItemVars {
+            xDD4: Var::new(Default::default()),
+            xDD8: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itLipstickSpore_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.xDD4.mark_stale();
+        self.xDD8.mark_stale();
+    }
+}
+
+/// `itFFlowerFlame_ItemVars`, 0x10 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itFFlowerFlame_ItemVars {
+    /// +0x0
+    pub pos: Var<Vec3>,
+    /// +0xc
+    pub unk: Var<f32>,
+}
+
+impl Default for itFFlowerFlame_ItemVars {
+    fn default() -> Self {
+        itFFlowerFlame_ItemVars {
+            pos: Var::new(Default::default()),
+            unk: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itFFlowerFlame_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.pos.mark_stale();
+        self.unk.mark_stale();
     }
 }
 

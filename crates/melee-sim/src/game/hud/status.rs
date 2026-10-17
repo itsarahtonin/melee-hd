@@ -749,9 +749,8 @@ pub fn stop_anim_type(
     ty: u8,
     mask: u32,
 ) {
-    let mut aobjs = Vec::new();
-    jobj::foreach_anim(objs, root, mask, &mut |_, a| aobjs.push(a));
-    for a in aobjs {
+    // Stopping an FObj changes nothing the walk reads.
+    jobj::foreach_anim(objs, root, mask, &mut |objs, a| {
         let mut f = objs.aobjs[a].fobj;
         while let Some(id) = f {
             if objs.fobjs[id.0].obj_type == ty || ty == 0xFF {
@@ -759,5 +758,5 @@ pub fn stop_anim_type(
             }
             f = objs.fobjs[id.0].next;
         }
-    }
+    });
 }

@@ -1207,6 +1207,7 @@ pub fn character_banks(ckind: i32) -> u64 {
 }
 
 /// `Stage_8022519C`: a stage kind's ground kind.
+#[doc(alias = "Stage_8022519C")]
 pub fn ground_kind(stkind: i32) -> usize {
     usize::from(STAGE_GROUND[stkind as usize])
 }

@@ -7,12 +7,18 @@ use crate::hsd::gobj::GObjId;
 /// Runs the common state callback at `cb`, if one is ported here.
 pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
     match cb {
-        // The Beam Sword's swings (`ftCo_SwordSwing_*`) and their hit hook.
-        0x800C_D390 => g.co_swing_anim(gobj),
-        0x800C_D3B0 => g.co_swing_iasa(gobj),
-        0x800C_D3D0 => g.co_swing_phys(gobj),
-        0x800C_D3F0 => g.co_swing_coll(gobj),
+        // The swings (`ftCo_SwordSwing_*` and the other items') and their hooks.
+        a if super::swing::SWING_ANIMS.contains(&a) => g.co_swing_anim(gobj),
+        a if super::swing::SWING_IASAS.contains(&a) => g.co_swing_iasa(gobj),
+        a if super::swing::SWING_PHYSES.contains(&a) => g.co_swing_phys(gobj),
+        a if super::swing::SWING_COLLS.contains(&a) => g.co_swing_coll(gobj),
+        super::swing::FAN_ANIM => g.co_fan_swing_anim(gobj),
+        super::swing::FAN_COLL => g.co_fan_swing_coll(gobj),
         super::swing::TAKE_DMG => g.swing_item_back(gobj),
+        super::swing::FAN_TAKE_DMG => g.fan_swing_hit(gobj),
+        super::swing::FAN_DEAL_DMG => g.fan_swing_hits(gobj),
+        super::swing::STAR_ROD_HAND => g.star_rod_hand(gobj),
+        super::swing::LIPSTICK_HAND => g.lipstick_hand(gobj),
         // The Super Scope's states and their hooks.
         0x800D_79AC | 0x800D_79B0 => g.co_scope_start_anim(gobj),
         0x800D_7AEC => g.co_scope_start_iasa(gobj),
@@ -104,6 +110,9 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8009_6228 => g.co_light_throw_coll(gobj),
         // ftCo_LightThrowAir_Coll
         0x8009_634C => g.co_light_throw_air_coll(gobj),
+        super::item_throw::HEAVY_THROW_COLL => g.co_heavy_throw_coll(gobj),
+        super::item_throw::CARGO_THROW_PHYS => g.co_cargo_heavy_throw_phys(gobj),
+        super::item_throw::CARGO_THROW_COLL => g.co_cargo_heavy_throw_coll(gobj),
         // ftCo_CaptureDamageHi_Anim, ftCo_CaptureDamageLw_Anim
         0x800D_C2E4 | 0x800D_C468 => {
             g.co_capture_damage_anim(gobj);
@@ -787,12 +796,12 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800C_AE18 => {
             g.co_run_brake_phys(gobj);
         }
-        // ftCo_Jump_IASA
-        0x800C_B334 => {
+        // ftCo_Jump_IASA, ftCo_ItemScrew_IASA
+        0x800C_B334 | 0x800D_2E0C => {
             g.co_jump_iasa(gobj);
         }
-        // ftCo_Jump_Phys
-        0x800C_B474 => {
+        // ftCo_Jump_Phys, ftCo_ItemScrew_Phys
+        0x800C_B474 | 0x800D_2E2C => {
             g.co_jump_phys(gobj);
         }
         // ftCo_Jump_Coll, ftCo_JumpAerial_Coll
@@ -830,7 +839,7 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
             g.co_fall_iasa(gobj);
         }
         // ftCo_Fall_Coll, ftCo_FallAerial_Coll, ftCo_ItemScrewAir_Coll
-        0x800C_CD78 | 0x800C_CE94 | 0x800D_2F74 => {
+        0x800C_CD78 | 0x800C_CE94 | 0x800D_2F74 | 0x800D_2E4C => {
             g.co_fall_coll(gobj);
         }
         // ftCo_FallAerial_Anim

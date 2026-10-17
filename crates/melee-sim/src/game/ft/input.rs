@@ -8,7 +8,7 @@
 use crate::game::ucf::Ucf;
 use gekko_fp as fp;
 
-use super::super::code::{run_fighter_cb, unported_call};
+use super::super::code::run_fighter_cb;
 use super::super::gm::DB_DEBUG_ROM;
 use super::super::state::Running;
 use super::super::structs::{Fighter, FtInputTimers};
@@ -110,7 +110,8 @@ impl Running<'_> {
         }
         if !self.game.fighters[f.0].x2219_b5 {
             if self.game.fighters[f.0].x1980.is_some() {
-                unported_call("ftCommon_8007FFD8");
+                let amount = self.flower_mash_amount();
+                self.flower_mash(gobj, amount);
             }
             self.smash_charge_input(gobj);
             self.count_stick_activity(gobj);

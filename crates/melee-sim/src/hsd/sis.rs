@@ -716,7 +716,7 @@ impl SisLib {
         let xc = i32::from(gekko_fp::fctiwz(x) as i16);
         let yc = i32::from(gekko_fp::fctiwz(y) as i16);
         let lfs = crate::fpu::reg;
-        let mut bytes = vec![
+        let head = [
             7,
             (xc >> 8) as u8,
             xc as u8,
@@ -732,10 +732,8 @@ impl SisLib {
             gekko_fp::fctiwz(lfs(tx.x34[1])) as u8,
             gekko_fp::fctiwz(gekko_fp::fmuls(256.0, lfs(tx.x34[1]))) as u8,
         ];
-        bytes.extend_from_slice(&encoded[..len]);
-        bytes.extend_from_slice(&[0xF, 0xD]);
         let mut b = self.buffers[&a];
-        for v in bytes {
+        for &v in head.iter().chain(&encoded[..len]).chain(&[0xF, 0xD]) {
             self.set_byte(b.end, v);
             b.end += 1;
         }
@@ -1039,16 +1037,21 @@ pub enum FmtArg<'a> {
 }
 
 /// A C format the game hands `vsnprintf`, as MSL prints it: `%d` with a zero flag and a
-/// width, `%s` and `%%`; anything else isn't ported.
-pub fn printf(fmt: &[u8], args: &[FmtArg]) -> Vec<u8> {
-    let mut out = Vec::new();
+/// width, `%s` and `%%`; anything else isn't ported. Writes into `out`, as the original's
+/// buffer, and returns the length.
+pub fn printf(fmt: &[u8], args: &[FmtArg], out: &mut [u8]) -> usize {
+    let mut o = 0;
+    let mut put = |bytes: &[u8]| {
+        out[o..o + bytes.len()].copy_from_slice(bytes);
+        o += bytes.len();
+    };
     let mut args = args.iter();
     let mut i = 0;
     while i < fmt.len() && fmt[i] != 0 {
         let c = fmt[i];
         i += 1;
         if c != b'%' {
-            out.push(c);
+            put(&[c]);
             continue;
         }
         let zero = fmt.get(i) == Some(&b'0');
@@ -1062,30 +1065,48 @@ pub fn printf(fmt: &[u8], args: &[FmtArg]) -> Vec<u8> {
         }
         let conv = fmt.get(i).copied();
         i += 1;
-        let body: Vec<u8> = match (conv, args.next()) {
+        // An int's digits, written from the end of `digits`.
+        let mut digits = [0u8; 10];
+        let (negative, body): (bool, &[u8]) = match (conv, args.next()) {
             (Some(b'%'), _) => {
-                out.push(b'%');
+                put(b"%");
                 continue;
             }
-            (Some(b'd'), Some(FmtArg::Int(v))) => v.to_string().into_bytes(),
-            (Some(b's'), Some(FmtArg::Str(s))) => s.to_vec(),
+            (Some(b'd'), Some(FmtArg::Int(v))) => {
+                let mut n = v.unsigned_abs();
+                let mut at = digits.len();
+                loop {
+                    at -= 1;
+                    digits[at] = b'0' + (n % 10) as u8;
+                    n /= 10;
+                    if n == 0 {
+                        break;
+                    }
+                }
+                (*v < 0, &digits[at..])
+            }
+            (Some(b's'), Some(FmtArg::Str(s))) => (false, s),
             (conv, arg) => panic!("the format {conv:?} with {arg:?} isn't ported"),
         };
-        let pad = width.saturating_sub(body.len());
-        if zero && conv == Some(b'd') {
-            let (sign, digits) = match body.split_first() {
-                Some((b'-', rest)) => (Some(b'-'), rest),
-                _ => (None, &body[..]),
-            };
-            out.extend(sign);
-            out.extend(std::iter::repeat_n(b'0', pad));
-            out.extend_from_slice(digits);
+        let sign: &[u8] = if negative { b"-" } else { b"" };
+        let pad = width.saturating_sub(sign.len() + body.len());
+        let fill = if zero && conv == Some(b'd') {
+            b'0'
         } else {
-            out.extend(std::iter::repeat_n(b' ', pad));
-            out.extend_from_slice(&body);
+            b' '
+        };
+        if fill == b'0' {
+            put(sign);
         }
+        for _ in 0..pad {
+            put(&[fill]);
+        }
+        if fill == b' ' {
+            put(sign);
+        }
+        put(body);
     }
-    out
+    o
 }
 
 /// A C format the game hands `vsnprintf` with integer arguments, as it prints them: `%d`

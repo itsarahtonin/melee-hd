@@ -10,7 +10,6 @@ use super::super::ground::{air, fall, ground_or_fall};
 use super::super::item::{article, attr_of, change, change_state, common_data, play_sfx};
 use super::super::{drop, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, spawn};
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::state::{Game, Running};
 use crate::game::structs::itKusudama_ItemVars;
 use crate::hsd::gobj::GObjId;
@@ -328,9 +327,8 @@ pub fn rain(r: &mut Running, gobj: GObjId, kind_w: i32, food_w: i32, random_w: i
         }
     }
     let owner = item(r.game, gobj).owner;
-    if super::super::item::is_fighter(r.game, owner) {
-        let _ = (out, count);
-        code::unported_call("ftLib_800874CC (a fighter's record of the items it got)");
+    if let Some(o) = owner.filter(|_| super::super::item::is_fighter(r.game, owner)) {
+        r.record_items_got(o, &out[..count as usize]);
     }
 }
 

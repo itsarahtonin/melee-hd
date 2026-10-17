@@ -232,7 +232,7 @@ fn main() -> std::process::ExitCode {
         }
         _ => eprintln!(
             "melee-bench snapshot CALL... | codes DIR | oracle-codes DIR | oracle-sets DIR [SET|NAME...] | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]              | native [--dir DIR] [--runs N] [MATCH...] | snapshot-match [--dir DIR] [--every TICKS] [MATCH] \
-             | alloc-sites [--dir DIR] [--from TICK] [--ticks N] [MATCH]"
+             | alloc-sites [--dir DIR] [--from TICK] [--ticks N] [--rollback] [--fp slippi] [MATCH]"
         ),
     }
     std::process::ExitCode::SUCCESS

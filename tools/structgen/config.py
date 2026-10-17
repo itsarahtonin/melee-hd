@@ -126,6 +126,12 @@ ROOTS = [
     "itLGunBeam_ItemVars",
     # A coin match's coins.
     "it_2E5A_ItemVars",
+    # The held and swung items' (task 7): the barrel cannon, the star rod's star, the Lip's
+    # Stick's spores and the flower they plant on a fighter's head.
+    "itTarucann_ItemVars",
+    "itStarRodStar_ItemVars",
+    "itLipstickSpore_ItemVars",
+    "itFFlowerFlame_ItemVars",
     "PokemonSelectionState",
     # The background flash (`lbbgflash.c`, `lb_0219.c`).
     "BgFlashData",
@@ -230,6 +236,9 @@ FIELD_DATA = {
 # flame on the items-shoot Battlefield match, tick 5940).
 UNUSED = {
     "ItemLink": {"x2C_b3", "x2C_b4", "x2C_b5", "x2C_b6", "x2C_b7"},
+    # An item's `x8` and the three bytes after its team: neither the decomp's code nor ssbm-rs's
+    # ports touch them, so an item block new from the heap keeps what the heap held there (the
+    # items-heavy-ps oracle match's first in tick 2703).
     "Item": {"x8", "x21", "x22", "x23"},
 }
 
@@ -254,6 +263,8 @@ SPLICE = {
     "BoneDynamicsDesc": ("bone_id", 0, 4, "BoneSlot"),
     # Peach's turnip's flag byte, of which only the top bit is the turnip's.
     "itPeachTurnip_ItemVars": ("xDD4", 0, 1, "TurnipFlag"),
+    # A heart's flag byte, of which the heart uses only the top bit (an event's heart).
+    "itHeart_ItemVars": ("xDD8", 4, 5, "TurnipFlag"),
     # Link's bomb's flag byte, of which the bomb uses the top three bits.
     "itLinkBomb_ItemVars": ("x0", 0, 1, "LinkBombFlags"),
     # A coin's flag byte, of which the coin and the pickup use the top two bits.

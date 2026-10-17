@@ -22,6 +22,11 @@ pub const UNKNOWN: u32 = 0xF000_0000;
 pub struct Pool<T, const K: u8 = 0> {
     slots: Vec<T>,
     free: Vec<u32>,
+    /// Slots standing for the blocks the original's pool takes from the heap once its free
+    /// list runs out (`HSD_ObjAllocAddFree`), holding what the heap holds there, the next one
+    /// last: a captured state's ([`Pool::free_fresh`]). They aren't on the free list, so
+    /// [`Pool::free_head`] doesn't name them, as the original's `freehead` doesn't.
+    fresh: Vec<u32>,
     used: u32,
     peak: u32,
     /// Whether each slot has been freed (and maybe reused) since it was made: for checks,
@@ -37,6 +42,7 @@ impl<T, const K: u8> Default for Pool<T, K> {
         Pool {
             slots: Vec::new(),
             free: Vec::new(),
+            fresh: Vec::new(),
             used: 0,
             peak: 0,
             ever_freed: Vec::new(),
@@ -51,9 +57,10 @@ pub const fn kind(kind: heap::Kind) -> u8 {
 }
 
 impl<T, const K: u8> Pool<T, K> {
-    /// A slot for `value`, `HSD_ObjAlloc`: the most recently freed, else a new one.
+    /// A slot for `value`, `HSD_ObjAlloc`: the most recently freed, else the heap's next block
+    /// (a fresh slot, else a new one).
     pub fn alloc(&mut self, value: T) -> u32 {
-        let slot = if let Some(slot) = self.free.pop() {
+        let slot = if let Some(slot) = self.free.pop().or_else(|| self.fresh.pop()) {
             self.slots[slot as usize] = value;
             slot
         } else {
@@ -69,9 +76,9 @@ impl<T, const K: u8> Pool<T, K> {
     }
 
     /// A slot as `HSD_ObjAlloc` hands it out uncleared: the most recently freed keeps its last
-    /// contents, else a new one holds `fresh`.
+    /// contents and a fresh slot the heap's, else a new one holds `fresh`.
     pub fn alloc_stale(&mut self, fresh: T) -> u32 {
-        match self.free.pop() {
+        match self.free.pop().or_else(|| self.fresh.pop()) {
             Some(slot) => {
                 self.used += 1;
                 self.peak = self.peak.max(self.used);
@@ -99,7 +106,8 @@ impl<T, const K: u8> Pool<T, K> {
         self.addrs[slot as usize] = addr;
     }
 
-    /// The slot the next allocation reuses (`HSD_ObjAllocData::freehead`), if any.
+    /// The free list's head (`HSD_ObjAllocData::freehead`), the slot the next allocation
+    /// reuses, if any: none once the next comes from the heap, a fresh slot included.
     pub fn free_head(&self) -> Option<u32> {
         self.free.last().copied()
     }
@@ -115,9 +123,19 @@ impl<T, const K: u8> Pool<T, K> {
         self.used -= 1;
     }
 
-    /// Whether `slot` is on the free list (a freed object a handle can outlive).
+    /// Returns `slot` to the pool as the heap's next block rather than a freed object: a
+    /// captured state's block past the original's free list, which its pool takes once that
+    /// list runs out. The last one returned is taken first.
+    pub fn free_fresh(&mut self, slot: u32) {
+        self.fresh.push(slot);
+        self.ever_freed[slot as usize] = true;
+        self.used -= 1;
+    }
+
+    /// Whether `slot` holds no live object: on the free list (a freed object a handle can
+    /// outlive) or fresh.
     pub fn is_free(&self, slot: u32) -> bool {
-        self.free.contains(&slot)
+        self.free.contains(&slot) || self.fresh.contains(&slot)
     }
 
     /// Whether `slot` has been freed since it was made, reused or not.
@@ -133,13 +151,23 @@ impl<T, const K: u8> Pool<T, K> {
         self.peak
     }
 
+    /// Every slot, freed ones with their last contents: for owners that keep the storage
+    /// those hold.
+    pub fn slots(&self) -> &[T] {
+        &self.slots
+    }
+
+    pub fn slots_mut(&mut self) -> &mut [T] {
+        &mut self.slots
+    }
+
     /// The live slots and their objects, in slot order, for readers outside the simulation
     /// (the presentation).
     pub fn iter(&self) -> impl Iterator<Item = (u32, &T)> + '_ {
         self.slots
             .iter()
             .enumerate()
-            .filter(|&(i, _)| !self.free.contains(&(i as u32)))
+            .filter(|&(i, _)| !self.is_free(i as u32))
             .map(|(i, t)| (i as u32, t))
     }
 
@@ -151,6 +179,7 @@ impl<T, const K: u8> Pool<T, K> {
     {
         self.slots.clone_from(&other.slots);
         self.free.clone_from(&other.free);
+        self.fresh.clone_from(&other.fresh);
         self.ever_freed.clone_from(&other.ever_freed);
         self.addrs.clone_from(&other.addrs);
         self.used = other.used;
@@ -186,4 +215,37 @@ fn past_end(slot: u32, len: usize) -> ! {
         panic!("stale read: followed a word unknown until written (handle {slot:#x})");
     }
     panic!("index out of bounds: the len is {len} but the index is {slot}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Pool;
+
+    #[test]
+    fn fresh_slots_come_after_the_free_list_and_off_it() {
+        let mut p: Pool<u32> = Pool::default();
+        let (a, b, f0, f1) = (p.alloc(1), p.alloc(2), p.alloc(10), p.alloc(11));
+        // A captured state: `a` and `b` freed (`a` the head), `f0` then `f1` the heap's next.
+        p.free_fresh(f1);
+        p.free_fresh(f0);
+        p.free(b);
+        p.free(a);
+        assert!(p.is_free(f0) && p.is_free(f1));
+        assert_eq!(p.iter().count(), 0);
+        assert_eq!(p.free_head(), Some(a));
+        assert_eq!(p.alloc_stale(0), a);
+        assert_eq!(p.alloc_stale(0), b);
+        // The free list is empty, as the original's `freehead` is null: the fresh slots aren't
+        // its head, but the next allocations take them, contents kept, in order.
+        assert_eq!(p.free_head(), None);
+        assert_eq!(p.alloc_stale(0), f0);
+        assert_eq!(p[f0], 10);
+        p.free(a);
+        assert_eq!(p.free_head(), Some(a));
+        assert_eq!(p.alloc(5), a);
+        assert_eq!(p.alloc(6), f1);
+        assert_eq!(p[f1], 6);
+        assert_eq!(p.alloc(7), 4);
+        assert_eq!(p.used(), 5);
+    }
 }

@@ -669,3 +669,41 @@ pub fn rewound(game: &mut Game, gobj: GObjId, part: i32, parts: u32) -> bool {
     let a = first_anim(game, gobj, part, parts);
     aobj::flags(&game.objs.aobjs, a) & aobj::REWINDED != 0
 }
+
+/// The joint descriptor `counter` steps into a model, depth first, `grAnime_801C8578`: each
+/// child and next taken counts a step, and the walk returns where it stood when the count ran
+/// out (or the last descriptor it reached).
+#[doc(alias = "grAnime_801C8578")]
+pub fn nth_joint_desc(data: &Archives, joint: DataRef, counter: &mut i32) -> DataRef {
+    if *counter == 0 {
+        return joint;
+    }
+    let mut joint = joint;
+    if let Some(c) = data.ptr(joint.at(8)) {
+        *counter -= 1;
+        joint = nth_joint_desc(data, c, counter);
+        if *counter == 0 {
+            return joint;
+        }
+    }
+    if let Some(n) = data.ptr(joint.at(0xC)) {
+        *counter -= 1;
+        joint = nth_joint_desc(data, n, counter);
+        if *counter == 0 {
+            return joint;
+        }
+    }
+    joint
+}
+
+/// Resets a stage object's part to its descriptor's rotation, scale and position,
+/// `grAnime_801C86D4`: the part and the descriptor `part` steps into the map's model.
+#[doc(alias = "grAnime_801C86D4")]
+pub fn reset_part_srt(game: &mut Game, data: &Archives, map_id: i32, gobj: GObjId, part: i32) {
+    let head = datfiles::archive_for(game, data, map_id).expect("granime.c: archive");
+    let root = head.entry(data, map_id).joint(data);
+    let mut counter = part;
+    let joint = root.map(|r| nth_joint_desc(data, r, &mut counter));
+    let j = nth_joint(game, gobj, part);
+    jobj::reset_rst(&mut game.objs.jobjs, data, j, joint);
+}

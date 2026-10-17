@@ -59,7 +59,8 @@ pub fn show_needles(r: &mut Running, gobj: GObjId) {
     }
     let count = match item(r.game, gobj).kind {
         super::SEAK_NEEDLE_HELD => r.seak_held_count(Some(owner)),
-        k => panic!("it_802B18B0 with kind {k}: Kirby's needles aren't ported"),
+        super::KIRBY_SEAK_NEEDLE_HELD => r.kb_sk_count(Some(owner)),
+        k => panic!("it_802B18B0 with kind {k}: the original reads a count it never set"),
     };
     let root = jobj_of(r.game, gobj);
     let jobjs = &mut r.game.objs.jobjs;
@@ -131,13 +132,13 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).owner != Some(owner) {
         return false;
     }
-    match item(r.game, gobj).kind {
-        super::SEAK_NEEDLE_HELD => {
-            if r.seak_lets_go(Some(owner)) {
-                return true;
-            }
-        }
-        k => panic!("itSeakneedleheld_UnkMotion0_Anim with kind {k}: Kirby's aren't ported"),
+    let let_go = match item(r.game, gobj).kind {
+        super::SEAK_NEEDLE_HELD => r.seak_lets_go(Some(owner)),
+        super::KIRBY_SEAK_NEEDLE_HELD => r.kb_sk_lets_go(Some(owner)),
+        _ => false,
+    };
+    if let_go {
+        return true;
     }
     show_needles(r, gobj);
     let s = mem(fp::frsp(Running::model_scale(r.game.fighter(owner))));

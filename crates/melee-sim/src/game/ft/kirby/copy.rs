@@ -60,6 +60,11 @@ impl Running<'_> {
             2 => self.kb_captain_hat_on(gobj),
             17 => self.kb_luigi_hat_on(gobj),
             12 => self.kb_pikachu_hat_on(gobj),
+            7 => self.kb_seak_hat_on(gobj),
+            8 => self.kb_ness_hat_on(gobj),
+            9 => self.kb_peach_hat_on(gobj),
+            19 => self.kb_zelda_hat_on(gobj),
+            24 => self.kb_gamewatch_hat_on(gobj),
             _ => unported_call(&format!("the hat of copy kind {kind}")),
         }
     }
@@ -161,9 +166,11 @@ impl Running<'_> {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
             13 => self.kb_ss_drop_charge(gobj),
             1 | 22 => self.kb_fx_remove_blaster(gobj),
-            10 | 9 | 6 | 20 | 16 | 8 | 7 | 14 | 3 | 24 => {
-                unported_call("ftKb_SpecialN_800F19AC's copy cleanup")
-            }
+            8 => self.kb_ns_let_go(gobj),
+            9 => self.kb_pe_cleanup(gobj),
+            7 => self.kb_sk_drop(gobj),
+            24 => self.kb_gw_cleanup(gobj),
+            10 | 6 | 20 | 16 | 14 | 3 => unported_call("ftKb_SpecialN_800F19AC's copy cleanup"),
             _ => {}
         }
     }
@@ -174,9 +181,11 @@ impl Running<'_> {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
             13 => self.kb_ss_drop_charge(gobj),
             1 | 22 => self.kb_fx_remove_blaster(gobj),
-            10 | 9 | 6 | 20 | 16 | 8 | 7 | 14 | 3 | 24 => {
-                unported_call("ftKb_SpecialN_800F1A8C's copy cleanup")
-            }
+            8 => self.kb_ns_let_go(gobj),
+            9 => self.kb_pe_cleanup(gobj),
+            7 => self.kb_sk_drop(gobj),
+            24 => self.kb_gw_cleanup(gobj),
+            10 | 6 | 20 | 16 | 14 | 3 => unported_call("ftKb_SpecialN_800F1A8C's copy cleanup"),
             _ => {}
         }
     }
@@ -189,8 +198,9 @@ impl Running<'_> {
             4 | 11 | 27..=30 | 32 => {}
             13 => self.kb_samus_hat_off(gobj),
             22 => self.kb_falco_hat_off(gobj),
-            0 | 2 | 17 => self.kb_head_hat_off(gobj),
-            12 => self.kb_pikachu_hat_off(gobj),
+            0 | 2 | 17 | 8 | 9 => self.kb_head_hat_off(gobj),
+            12 | 7 | 19 => self.kb_pikachu_hat_off(gobj),
+            24 => self.kb_gamewatch_hat_off(gobj),
             _ => unported_call(&format!("the hat removal of copy kind {kind}")),
         }
     }

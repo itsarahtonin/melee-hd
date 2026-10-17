@@ -218,6 +218,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes effects, sounds and their handles; breaks replay compatibility.
 - **Source:** [engine notes, objects and identity](engine.md#objects-and-identity) (line 17); [the oracle](oracle.md) (line 81).
 
+### Kirby: Mr. Game & Watch's copy walks past its lookup
+
+- **Where:** `ftKb_SpecialN_800F14B4` (the copy's costume put on), then `ftParts_80074D7C` and `ftParts_80074CA0` on Kirby's own parts visibility; `crates/melee-sim/src/game/ft/kirby/hat.rs` (`kb_gamewatch_hat_on`) and `crates/melee-sim/src/game/ft/parts.rs` (`vis_lookup_len`).
+- **Defect:** the costume puts its variant lookup (`hat_dynamics[3]`, one entry, one per model group of the costume) in Kirby's own slot 4 (`x5AC.xC[4]`), which his model groups walk by his own count, two. Hiding or showing that slot reads a second entry past the lookup's end: the next word in the copy's file, which is a pointer.
+- **Effect:** none observable: in memory the pointer is an address at or above 0x80000000, so as the entry's count (an `int`) it is negative and the walk runs no sets. Another file layout would have the game hide or show DObjs by whatever bytes follow.
+- **melee-hd:** modeled: an entry's count that is a pointer in the archive reads as negative.
+- **Fix:** give the lookup an entry per model group of Kirby's, or walk it by the costume's count.
+- **Fix impact:** none (nothing changes in play).
+- **Source:** `crates/melee-sim/src/game/ft/parts.rs:386`; the Kirby CPU match against Mr. Game & Watch (`oracle-kirby-gnw-bf`, tick 1644).
+
 ### Mewtwo: a Shadow Ball field nothing stores
 
 - **Where:** Shadow Ball's code reading `ftMewtwo_FighterVars::x2238_shadowBallGObj`.
@@ -432,6 +442,26 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none on gameplay; the screen copy stops after such a cloak ends.
 - **Source:** `crates/melee-sim/src/game/ft/powerup.rs` (`start_cloak`); `ft_0C88.c`.
 
+### An item's grab takes the first fighter it touches, not the nearest
+
+- **Where:** `it_802701BC` (an item's grab boxes against fighters, the barrel cannon's catch), `crates/melee-sim/src/game/it/coll.rs` (`grab_fighters`).
+- **Defect:** it keeps the nearest fighter seen so far (`xD10`, the horizontal distance, starting at the float maximum), but returns as soon as one grabbable hurtbox touches, so the comparison only ever sees the first catch.
+- **Effect:** when a barrel cannon's grab box touches two fighters on the same frame, it takes the one earlier in the fighters' list rather than the nearer.
+- **melee-hd:** modeled.
+- **Fix:** keep looking through every fighter and take the nearest.
+- **Fix impact:** changes which fighter is caught in that case; replays where it happens would desync.
+- **Source:** `crates/melee-sim/src/game/it/coll.rs:29`.
+
+### A container's record marks the stack for an item that didn't come out
+
+- **Where:** `pl_8003E4A4` (a player's runs of containers giving each kind, from `ftLib_800874CC`), `crates/melee-sim/src/game/pl/bonus.rs` (`count_items_got`).
+- **Defect:** `match_item_kind` gives -1 for a kind outside the item log, which passes the signed bound check (`< Pl_ItemLog_Terminate`), so the function marks the stack word before its array of marks. The Party Ball's rain (`it_80289BE8`) hands it -1 for a random item that didn't come out.
+- **Effect:** none observable: the marked word is the function's own stack, which nothing reads.
+- **melee-hd:** modeled (kinds outside the log are passed over); the Party Ball's record isn't ported and stops.
+- **Fix:** test the kind for -1 as well.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/pl/bonus.rs:218`.
+
 ## Stages and collision
 
 ### Final Destination's background compares green twice
@@ -463,6 +493,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** pass the archive.
 - **Fix impact:** not recorded.
 - **Source:** [engine notes, loaded data the game writes into](engine.md#loaded-data-the-game-writes-into) (line 286).
+
+### A random pick between two entries draws below one
+
+- **Where:** `Ground_801C5840`, `crates/melee-sim/src/game/gr/ground.rs` (`x6e4_drawn`).
+- **Defect:** it picks one of `stage_info.x6E4`'s two entries with `HSD_Randi(1)`, which is always 0, so it always returns the first, and the draw still advances the random seed.
+- **Effect:** the second entry is never picked, and each call takes a random number for nothing. Its callers are Icicle Mountain's and the adventure routes' trophy slots (`grZakoGenerator_801CAEB0(Ground_801C5840(), Ground_801C5940())`), so it changes which trophy can come out there and shifts the random sequence after it.
+- **melee-hd:** modeled.
+- **Fix:** `HSD_Randi(2)`, or drop the draw if only the first entry is meant.
+- **Fix impact:** changes the random sequence (and the trophies) wherever it runs, so gameplay after it; breaks replay compatibility on those stages.
+- **Source:** `crates/melee-sim/src/game/gr/ground.rs` (`x6e4_drawn`); the decompilation's `ground.c` (`Ground_801C5840`).
 
 ### The airborne collision loop can hang
 
@@ -709,6 +749,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A sound command's pan direction past 3 | `ftAction_80072320`, `game/ft/commands.rs` | Passes what `f31` holds | `crates/melee-sim/src/game/ft/commands.rs:973` |
 | PK Flash of another kind | `it_802AAA80`, `game/it/kinds/nesspkflash.rs` | Reads a register it never set | `crates/melee-sim/src/game/it/kinds/nesspkflash.rs:243` |
 | Kirby's aerial Thunder Jolt for another copy | `ftKb_PkSpecialAirN_Anim`, `game/ft/kirby/special_pikachu.rs` | Takes the landing lag from `f31`, which its caller left, for a copy other than Pikachu's or Pichu's; only those two copies enter the state (ssbm-rs transliterates the function from its machine code for it) | `crates/melee-sim/src/game/ft/kirby/special_pikachu.rs:161` |
+| Held needles of another kind | `it_802B18B0`, `game/it/kinds/seakneedleheld.rs` | Shows as many needles as a count it never set for a kind other than Sheik's and Kirby's copy's; only those two make them | `crates/melee-sim/src/game/it/kinds/seakneedleheld.rs:63` |
 | Sheik's chain with no link out | `it_802BC080`, `game/it/kinds/seakchain.rs` | Stores a register its caller set (`env_flags`) when its loop doesn't run | `crates/melee-sim/src/game/it/kinds/seakchain.rs:796` |
 | A floor probe that misses | `ftCo_800DC920`, `game/ft/co/grab.rs` | Leaves the offset a stack word it then compares | `crates/melee-sim/src/game/ft/co/grab.rs:503` |
 | Rumble scripts | `HSD_PadRumbleInterpret1`, `input/rumble.rs` | Reads through a null pointer for a loop end before any loop start, and spins forever on opcodes 6 and 7 or a command that doesn't wait; no script in the game has these | `crates/melee-sim/src/input/rumble.rs:115`; `tools/leaf-check/tests/rumble.rs:64` |
@@ -726,6 +767,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A sticking item's slope with no surface touched | `it_8027649C`, `game/it/maplib.rs` | Takes its angle from a stack vector it never set when the item touches no surface (`it_80276408` writes nothing then); the motion-sensor bomb sticks only after touching one | `crates/melee-sim/src/game/it/maplib.rs:291` |
 | The Flipper's spin past π | `itFlipper_UpdateSpin`, `game/it/kinds/flipper.rs` | Brings the spin's speed, not the paddle's angle, back within ±π by a whole turn; the attributes cap the speed at 0.873 radians a frame | `crates/melee-sim/src/game/it/kinds/flipper.rs:175` |
 | A particle list on a displayed joint | HSD's joint traversal (displayfunc.c, `efLib_Cb_SPtcl`) | Spawns a joint's particle list on its first display, whose generators then draw from the game's random seed, so a spawn put off by a doubled round would shift every later draw; no joint descriptor on the disc carries a particle list | [engine notes](engine.md#state-the-render-pass-writes) (line 150) |
+| A Lip's Stick swing with nothing held | `ft_800CDB9C`, `game/ft/co/swing.rs` | Asserts the held item's kind before testing it for null, reading a null item; the swing always holds the stick | `crates/melee-sim/src/game/ft/co/swing.rs:257` |
 
 ## Unsure
 

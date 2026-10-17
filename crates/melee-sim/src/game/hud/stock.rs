@@ -427,7 +427,7 @@ impl Running<'_> {
         g.world.setup_proc(o, CodeRef(PROC_ICONS), 17);
         let pos = g.player_hud_position(i32::from(player));
         jobj::set_translate(&mut g.objs.jobjs, root, pos);
-        let indices: Vec<i32> = (0..17).collect();
+        let indices: [i32; 17] = std::array::from_fn(|k| k as i32);
         let found = super::super::gm::pause::tree_nodes(&g.objs.jobjs, Some(root), &indices);
         let r = &mut g.hud.stock.player[p];
         for (k, j) in found.into_iter().enumerate() {

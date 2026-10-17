@@ -340,6 +340,90 @@ pub const ORACLE_MATCHES: &[Match] = &[
         &[p(KIRBY, 0), p(GAME_WATCH, 0)],
         0x1F0F_010E,
     ),
+    Match::bench(
+        "kirby-fox-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(FOX, 0)],
+        0x1F0F_010F,
+    ),
+    Match::bench(
+        "kirby-donkey-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(DONKEY_KONG, 0)],
+        0x1F0F_0110,
+    ),
+    Match::bench(
+        "kirby-bowser-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(BOWSER, 0)],
+        0x1F0F_0111,
+    ),
+    Match::bench(
+        "kirby-link-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(LINK, 0)],
+        0x1F0F_0112,
+    ),
+    Match::bench(
+        "kirby-younglink-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(YOUNG_LINK, 0)],
+        0x1F0F_0113,
+    ),
+    Match::bench(
+        "kirby-yoshi-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(YOSHI, 0)],
+        0x1F0F_0114,
+    ),
+    Match::bench(
+        "kirby-jigglypuff-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(JIGGLYPUFF, 0)],
+        0x1F0F_0115,
+    ),
+    Match::bench(
+        "kirby-mewtwo-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(MEWTWO, 0)],
+        0x1F0F_0116,
+    ),
+    Match::bench(
+        "kirby-marth-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(MARTH, 0)],
+        0x1F0F_0117,
+    ),
+    Match::bench(
+        "kirby-roy-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(ROY, 0)],
+        0x1F0F_0118,
+    ),
+    Match::bench(
+        "kirby-ics-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(ICE_CLIMBERS, 0)],
+        0x1F0F_0119,
+    ),
+    Match::bench(
+        "kirby-drmario-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(DR_MARIO, 0)],
+        0x1F0F_011A,
+    ),
+    Match::bench(
+        "kirby-ganon-fd",
+        FINAL_DESTINATION,
+        &[p(KIRBY, 0), p(GANONDORF, 0)],
+        0x1F0F_011B,
+    ),
+    Match::bench(
+        "kirby-pichu-bf",
+        BATTLEFIELD,
+        &[p(KIRBY, 0), p(PICHU, 0)],
+        0x1F0F_011C,
+    ),
 ];
 
 /// Short names for the characters, for match names.
@@ -500,6 +584,39 @@ pub fn coins_set() -> Vec<Match> {
     ]
 }
 
+/// The held items' extra matches (task 7): the held family's matches left the barrel cannon's
+/// ride, most swings' hits and the heavy items' walks and throws unplayed, so each of these
+/// narrows the switch to a few of those kinds: the barrel cannon alone, the swung items with
+/// the Screw Attack, and the box and barrel.
+pub fn held_extra_set() -> Vec<Match> {
+    /// A match's name, stage, switch kinds and characters.
+    type Extra = (&'static str, u16, &'static [u8], (u8, u8));
+    let matches: [Extra; 3] = [
+        ("items-cannon-fd", FINAL_DESTINATION, &[5], (FOX, MARTH)),
+        (
+            "items-swing-bf",
+            BATTLEFIELD,
+            &[13, 22, 23, 24, 30],
+            (CAPTAIN, PEACH),
+        ),
+        ("items-heavy-ps", POKEMON_STADIUM, &[1, 2], (FALCO, SHEIK)),
+    ];
+    matches
+        .iter()
+        .enumerate()
+        .map(|(i, &(name, stage, kinds, (a, b)))| Match {
+            name: Cow::Borrowed(name),
+            stage,
+            players: Cow::Owned(vec![p(a, 0), p(b, 0)]),
+            seed: 0x1F0F_0501 + i as u32,
+            rules: Rules::Time {
+                time_limit: ITEMS_TIME,
+            },
+            items: Items::only(FREQ_HIGH, kinds),
+        })
+        .collect()
+}
+
 /// The VS stages besides the tournament stages, with match names; the moving stages are marked.
 const OTHER_STAGES: [(u16, &str, bool); 23] = [
     (YOSHIS_ISLAND_64, "yoshis-island-64", false),
@@ -607,6 +724,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("coins", coins_set),
     ("stages", stages_set),
     ("cpu", cpu_set),
+    ("held-extra", held_extra_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every

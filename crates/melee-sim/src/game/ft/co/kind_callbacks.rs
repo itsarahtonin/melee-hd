@@ -519,3 +519,79 @@ pub static ON_ITEM_DROP_EXT: [u32; 33] = [
     0x8014f890, // 31: ftGk_Init_OnItemDrop
     0x00000000, // 32: -
 ];
+
+/// `ftData_OnItemPickup`, at 0x803c1a9c: as `ftData_OnItemPickupExt` but for Link's and Young
+/// Link's, which leave their models alone (`ftCommon_8007E7E4` calls these).
+pub static ON_ITEM_PICKUP: [u32; 33] = [
+    0x800e0a20, // 0: ftMr_Init_OnItemPickup
+    0x800e55a8, // 1: ftFx_Init_OnItemPickup
+    0x800e28e8, // 2: ftCa_Init_OnItemPickup
+    0x8010d7a8, // 3: ftDk_Init_OnItemPickup
+    0x800ee914, // 4: ftKb_Init_OnItemPickup
+    0x80132b3c, // 5: ftKp_Init_OnItemPickup
+    0x800eb11c, // 6: ftLk_Init_OnItemPickup
+    0x80110204, // 7: ftSk_Init_OnItemPickup
+    0x80114968, // 8: ftNs_Init_OnItemPickup
+    0x8011b740, // 9: ftPe_Init_OnItemPickup
+    0x8011ed38, // 10: ftPp_Init_OnItemPickup
+    0x8011ed38, // 11: ftPp_Init_OnItemPickup
+    0x801244b8, // 12: ftPk_Init_OnItemPickup
+    0x80128464, // 13: ftSs_Init_OnItemPickup
+    0x8012bacc, // 14: ftYs_Init_OnItemPickup
+    0x8013c6ec, // 15: ftPr_Init_OnItemPickup
+    0x80144ee0, // 16: ftMt_Init_OnItemPickup
+    0x80142388, // 17: ftLg_Init_OnItemPickup
+    0x801362b0, // 18: ftMs_Init_OnItemPickup
+    0x801393cc, // 19: ftZd_Init_OnItemPickup
+    0x80148f38, // 20: ftCl_Init_OnItemPickup
+    0x80149560, // 21: ftDr_Init_OnItemPickup
+    0x80149b00, // 22: ftFc_Init_OnItemPickup
+    0x80149fe4, // 23: ftPc_Init_OnItemPickup
+    0x8014a5b8, // 24: ftGw_Init_OnItemPickup
+    0x8014ec58, // 25: ftGn_Init_OnItemPickup
+    0x8014ef60, // 26: ftFe_Init_OnItemPickup
+    0x00000000, // 27: -
+    0x00000000, // 28: -
+    0x8014f218, // 29: ftBo_Init_OnItemPickup
+    0x8014f460, // 30: ftGl_Init_OnItemPickup
+    0x8014f720, // 31: ftGk_Init_OnItemPickup
+    0x00000000, // 32: -
+];
+
+/// `ftData_OnItemDrop`, at 0x803c1b20: as `ftData_OnItemDropExt` but for Link's and Young Link's, which leave
+/// their models alone (`ftCommon_8007E79C` calls these).
+pub static ON_ITEM_DROP: [u32; 33] = [
+    0x800e0b90, // 0: ftMr_Init_OnItemDrop
+    0x800e5718, // 1: ftFx_Init_OnItemDrop
+    0x800e2a58, // 2: ftCa_Init_OnItemDrop
+    0x8010d918, // 3: ftDk_Init_OnItemDrop
+    0x800eea6c, // 4: ftKb_Init_OnItemDrop
+    0x80132cac, // 5: ftKp_Init_OnItemDrop
+    0x800eb1fc, // 6: ftLk_Init_OnItemDrop
+    0x80110374, // 7: ftSk_Init_OnItemDrop
+    0x80114ad8, // 8: ftNs_Init_OnItemDrop
+    0x8011b8b0, // 9: ftPe_Init_OnItemDrop
+    0x8011eea8, // 10: ftPp_Init_OnItemDrop
+    0x8011eea8, // 11: ftPp_Init_OnItemDrop
+    0x80124628, // 12: ftPk_Init_OnItemDrop
+    0x801285d4, // 13: ftSs_Init_OnItemDrop
+    0x8012bc3c, // 14: ftYs_Init_OnItemDrop
+    0x8013c838, // 15: ftPr_Init_OnItemDrop
+    0x80144f4c, // 16: ftMt_Init_OnItemDrop
+    0x801424f8, // 17: ftLg_Init_OnItemDrop
+    0x80136420, // 18: ftMs_Init_OnItemDrop
+    0x8013953c, // 19: ftZd_Init_OnItemDrop
+    0x80149018, // 20: ftCl_Init_OnItemDrop
+    0x801496d0, // 21: ftDr_Init_OnItemDrop
+    0x80149c70, // 22: ftFc_Init_OnItemDrop
+    0x8014a154, // 23: ftPc_Init_OnItemDrop
+    0x8014a728, // 24: ftGw_Init_OnItemDrop
+    0x8014edc8, // 25: ftGn_Init_OnItemDrop
+    0x8014f0d0, // 26: ftFe_Init_OnItemDrop
+    0x00000000, // 27: -
+    0x00000000, // 28: -
+    0x8014f388, // 29: ftBo_Init_OnItemDrop
+    0x8014f5d0, // 30: ftGl_Init_OnItemDrop
+    0x8014f890, // 31: ftGk_Init_OnItemDrop
+    0x00000000, // 32: -
+];

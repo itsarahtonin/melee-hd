@@ -8,7 +8,6 @@ use super::item::{attr_of, common_data, spawn_air};
 use super::kinds::{L_GUN_RAY, M_BALL};
 use super::{item, item_mut};
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::state::{Game, Running};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -58,8 +57,10 @@ pub fn drop_contents(r: &mut Running, gobj: GObjId, n: i32, same: bool) -> Dropp
         }
     }
     let owner = item(r.game, gobj).owner;
-    if super::item::is_fighter(r.game, owner) && !kinds.is_empty() {
-        code::unported_call("ftLib_800874CC (a fighter's item records)");
+    if let Some(o) = owner.filter(|_| super::item::is_fighter(r.game, owner))
+        && !kinds.is_empty()
+    {
+        r.record_items_got(o, &kinds);
     }
     out
 }

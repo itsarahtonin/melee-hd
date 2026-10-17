@@ -213,7 +213,29 @@ pub struct TevDesc {
     pub cnsts: Vec<CnstReg>,
 }
 
+/// The most stages a description has (`HSD_Index2TevStage`'s), and the most constants it
+/// keeps (as [`crate::hsd::mobj::MObjHeap`] records them).
+pub const MAX_STAGES: usize = 16;
+pub const MAX_CNSTS: usize = 16;
+
 impl TevDesc {
+    /// An empty description with room for the most stages and constants, so the compiles
+    /// written over it never grow it.
+    pub fn with_room() -> TevDesc {
+        TevDesc {
+            stages: Vec::with_capacity(MAX_STAGES),
+            cnsts: Vec::with_capacity(MAX_CNSTS),
+        }
+    }
+
+    /// Gives the description that room if it lacks it (a copy holds only what it uses).
+    pub fn make_room(&mut self) {
+        self.stages
+            .reserve(MAX_STAGES.saturating_sub(self.stages.len()));
+        self.cnsts
+            .reserve(MAX_CNSTS.saturating_sub(self.cnsts.len()));
+    }
+
     /// How many stages the description uses.
     pub fn num_stages(&self) -> usize {
         self.stages.len()
@@ -895,22 +917,28 @@ impl TExpList {
     pub fn compile(mut self, root: Exp) -> TevDesc {
         let mut dag = Vec::new();
         let (num, order) = self.schedule_stages(root, &mut dag);
+        let mut out = TevDesc::default();
+        self.describe(num, &order, &mut out);
+        out
+    }
+
+    /// The end of `HSD_TExpCompile`: the description of the `num` stages
+    /// [`TExpList::schedule_stages`] put in `order`, and the constants left in the list,
+    /// written over `out` in its storage.
+    pub fn describe(&self, num: usize, order: &[usize; MAX_NUM], out: &mut TevDesc) {
         let (mut init_cprev, mut init_aprev) = (true, true);
-        let mut stages: Vec<TevStage> = (0..num)
-            .map(|i| {
-                let stage = index_to_tev_stage(i);
-                self.to_tev_desc(order[num - i - 1], stage, &mut init_cprev, &mut init_aprev)
-            })
-            .collect();
+        out.stages.clear();
+        out.stages.extend((0..num).map(|i| {
+            let stage = index_to_tev_stage(i);
+            self.to_tev_desc(order[num - i - 1], stage, &mut init_cprev, &mut init_aprev)
+        }));
         // Each stage went on the front of the list.
-        stages.reverse();
+        out.stages.reverse();
 
         // `HSD_TExpFreeList(list, HSD_TE_TEV, 1)` then `(list, HSD_TE_CNST, 0)`.
-        let cnsts = self
-            .nodes
-            .iter()
-            .rev()
-            .filter_map(|n| match n {
+        out.cnsts.clear();
+        out.cnsts
+            .extend(self.nodes.iter().rev().filter_map(|n| match n {
                 Node::Cnst(c) if c.ref_ != 0 => Some(CnstReg {
                     val: c.val,
                     comp: c.comp,
@@ -918,9 +946,7 @@ impl TExpList {
                     idx: c.idx,
                 }),
                 _ => None,
-            })
-            .collect();
-        TevDesc { stages, cnsts }
+            }));
     }
 
     /// `HSD_TExpCompile`'s simplifying, scheduling and register assignment, both passes: how

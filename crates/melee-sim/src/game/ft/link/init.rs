@@ -226,12 +226,9 @@ impl Running<'_> {
     }
 
     /// Picking up an item, `ftLk_Init_OnItemPickupExt`: his sheathed sword's and shield's
-    /// models swapped (the second only for a heavy item), then `ftLk_Init_OnItemPickup`
-    /// (`Fighter_OnItemPickup(gobj, flag, 1, 1)`).
+    /// models swapped (the second only for a heavy item), then `ftLk_Init_OnItemPickup`.
     #[doc(alias = "ftLk_Init_OnItemPickupExt")]
-    #[doc(alias = "ftLk_Init_OnItemPickup")]
     #[doc(alias = "ftCl_Init_OnItemPickupExt")]
-    #[doc(alias = "ftCl_Init_OnItemPickup")]
     pub fn link_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         let item = self
             .game
@@ -242,21 +239,35 @@ impl Running<'_> {
             self.game.set_part_vis(gobj, 1, 1);
         }
         self.game.set_part_vis(gobj, 2, 1);
+        self.link_item_pickup(gobj, flag);
+    }
+
+    /// The item back in hand, `ftLk_Init_OnItemPickup` (`Fighter_OnItemPickup(gobj, flag, 1,
+    /// 1)`): his models left alone (a swing's end calls this).
+    #[doc(alias = "ftLk_Init_OnItemPickup")]
+    #[doc(alias = "ftCl_Init_OnItemPickup")]
+    pub fn link_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         self.item_pickup_hand(gobj, flag, 1);
     }
 
     /// Dropping the item, `ftLk_Init_OnItemDropExt`: the models swapped back, then
-    /// `ftLk_Init_OnItemDrop` (`Fighter_OnItemDrop(gobj, flag, 1, 1)`).
+    /// `ftLk_Init_OnItemDrop`.
     #[doc(alias = "ftLk_Init_OnItemDropExt")]
-    #[doc(alias = "ftLk_Init_OnItemDrop")]
     #[doc(alias = "ftCl_Init_OnItemDropExt")]
-    #[doc(alias = "ftCl_Init_OnItemDrop")]
     pub fn link_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         let item = self.game.fighter(gobj).item_gobj.expect("dropping no item");
         if super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
             self.game.set_part_vis(gobj, 1, 0);
         }
         self.game.set_part_vis(gobj, 2, 0);
+        self.link_item_drop(gobj, flag);
+    }
+
+    /// The item out of the hand, `ftLk_Init_OnItemDrop` (`Fighter_OnItemDrop(gobj, flag, 1,
+    /// 1)`): his models left alone (a swing's start calls this).
+    #[doc(alias = "ftLk_Init_OnItemDrop")]
+    #[doc(alias = "ftCl_Init_OnItemDrop")]
+    pub fn link_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.item_drop_hand(gobj, flag, 1);
     }
 
@@ -389,6 +400,14 @@ pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
         }
         addr::ON_ITEM_DROP_EXT => {
             r.link_on_item_drop(gobj(0), args[1].int() != 0);
+            Val::None
+        }
+        addr::ON_ITEM_PICKUP => {
+            r.link_item_pickup(gobj(0), args[1].int() != 0);
+            Val::None
+        }
+        addr::ON_ITEM_DROP => {
+            r.link_item_drop(gobj(0), args[1].int() != 0);
             Val::None
         }
         addr::BOOMERANG_EXISTS => Val::Int(i32::from(r.link_boomerang_exists(gobj(0)))),

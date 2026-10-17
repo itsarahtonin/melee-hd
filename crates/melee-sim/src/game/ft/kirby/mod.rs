@@ -18,14 +18,19 @@ pub mod hat;
 pub mod init;
 pub mod special_captain;
 pub mod special_fox;
+pub mod special_gamewatch;
 pub mod special_hi;
 pub mod special_luigi;
 pub mod special_lw;
 pub mod special_mario;
 pub mod special_n;
+pub mod special_ness;
+pub mod special_peach;
 pub mod special_pikachu;
 pub mod special_s;
 pub mod special_samus;
+pub mod special_seak;
+pub mod special_zelda;
 
 use super::super::code::Val;
 use super::super::handles::FighterId;
@@ -703,6 +708,11 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || special_luigi::run(g, gobj, addr)
         || special_captain::run(g, gobj, addr)
         || special_pikachu::run(g, gobj, addr)
+        || special_ness::run(g, gobj, addr)
+        || special_peach::run(g, gobj, addr)
+        || special_zelda::run(g, gobj, addr)
+        || special_seak::run(g, gobj, addr)
+        || special_gamewatch::run(g, gobj, addr)
 }
 
 /// Kirby's functions other code calls by address (`code::call`).

@@ -433,8 +433,8 @@ impl Running<'_> {
     /// thaws, `Fighter_UnkSetFlag_8006CFBC`). A victim the grab made part of the grabber's
     /// model (a thrown fighter, Yoshi's egg) comes loose at its throw offset from where its
     /// model hung: onto a floor connected to the grabber's when one is at or below that point
-    /// and close enough, else through a collision pass from the grabber's middle. Kirby's
-    /// swallow isn't ported.
+    /// and close enough, else through a collision pass from the grabber's middle; one Kirby
+    /// is swallowing comes loose at its own size from where it is.
     #[doc(alias = "ftCo_800DC920")]
     #[doc(alias = "Fighter_UnkSetFlag_8006CFBC")]
     pub fn grab_release(&mut self, a: GObjId, b: GObjId) {
@@ -467,29 +467,34 @@ impl Running<'_> {
     /// [`Self::grab_release`]'s part for a victim inside its grabber's model (`x2226_b2`).
     fn release_from_model(&mut self, holder: GObjId, held: GObjId) {
         let hp = self.game.fighter(holder);
-        if hp.kind == super::checks::KIND_KIRBY
+        let pos = if hp.kind == super::checks::KIND_KIRBY
             && matches!(
                 hp.motion_id,
                 KB_SPECIAL_N_CAPTURE_0 | KB_SPECIAL_AIR_N_CAPTURE_0
-            )
-        {
-            unported_call("ftCo_800DC920 for Kirby's swallow");
-        }
-        let xj = self.part_joint(held, X_ROT_N).expect("no XRotN");
-        let mut pos = world_position(&mut self.game.objs, self.data, Some(xj), None);
-        let fp = self.game.fighter(held);
-        pos.x = mem(fp::fmadds(
-            reg(fp.facing_dir),
-            fp::fmuls(reg(fp.x1A70.z), reg(fp.x34_scale.y)),
-            reg(pos.x),
-        ));
-        pos.y = mem(fp::fmadds(reg(fp.x1A70.y), reg(fp.x34_scale.y), reg(pos.y)));
-        pos.z = 0.0;
-        super::throw::unconstrain(&mut self.game.objs, xj);
-        let fp = self.game.fighter_mut(held);
-        fp.x2226_b2 = false;
-        let x2174 = fp.x2174;
-        jobj::set_translate(&mut self.game.objs.jobjs, xj, x2174);
+            ) {
+            // Inside Kirby's mouth while he swallows: its own size again, from where it is.
+            self.update_model_scale(held);
+            let fp = self.game.fighter_mut(held);
+            fp.x2226_b2 = false;
+            fp.cur_pos
+        } else {
+            let xj = self.part_joint(held, X_ROT_N).expect("no XRotN");
+            let mut pos = world_position(&mut self.game.objs, self.data, Some(xj), None);
+            let fp = self.game.fighter(held);
+            pos.x = mem(fp::fmadds(
+                reg(fp.facing_dir),
+                fp::fmuls(reg(fp.x1A70.z), reg(fp.x34_scale.y)),
+                reg(pos.x),
+            ));
+            pos.y = mem(fp::fmadds(reg(fp.x1A70.y), reg(fp.x34_scale.y), reg(pos.y)));
+            pos.z = 0.0;
+            super::throw::unconstrain(&mut self.game.objs, xj);
+            let fp = self.game.fighter_mut(held);
+            fp.x2226_b2 = false;
+            let x2174 = fp.x2174;
+            jobj::set_translate(&mut self.game.objs.jobjs, xj, x2174);
+            pos
+        };
 
         let h = self.game.fighter_id(held);
         let floor = self.game.fighter(holder).coll_data.floor.index;
@@ -669,21 +674,11 @@ impl Running<'_> {
         jobj::set_translate(&mut self.game.objs.jobjs, root, pos);
     }
 
-    /// A held heavy item falls, `ftCo_8009750C`: not ported.
-    #[doc(alias = "ftCo_8009750C")]
-    pub(crate) fn drop_heavy_item(&mut self, gobj: GObjId) {
-        if let Some(item) = self.game.fighter(gobj).item_gobj
-            && super::super::super::it::lib26b1::is_heavy(self.game, self.data, item)
-        {
-            unported_call("ftCo_8009750C (a heavy item dropped)");
-        }
-    }
-
     /// The fighter lets go of whomever it holds, or whoever holds it, `ftCo_800DD168`: a
     /// holder (`x221B_b5`) knocks its victim away and lets go; a held fighter is let go of and
     /// falls or stands.
     #[doc(alias = "ftCo_800DD168")]
-    pub(crate) fn release_victim(&mut self, gobj: GObjId) {
+    pub fn release_victim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         let Some(victim) = fp.victim_gobj else {
             return;

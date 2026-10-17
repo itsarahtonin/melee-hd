@@ -68,6 +68,7 @@ impl Running<'_> {
 
     /// `ftCo_Jump_Phys`: the first frame keeps the jump's velocity whole.
     #[doc(alias = "ftCo_Jump_Phys")]
+    #[doc(alias = "ftCo_ItemScrew_Phys")]
     pub fn co_jump_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.mv_i32(4) == 0 {

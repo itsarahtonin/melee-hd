@@ -4,7 +4,8 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_IZUMI, GR_KIND_LAST, GR_KIND_OLDPUPUPU, GR_KIND_PSTADIUM, GR_KIND_STORY,
+    GR_KIND_BATTLE, GR_KIND_IZUMI, GR_KIND_LAST, GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI,
+    GR_KIND_PSTADIUM, GR_KIND_STORY,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -298,6 +299,39 @@ pub const IZUMI: StageData = StageData {
     joints: &IZUMI_JOINTS,
 };
 
+/// `grOy_StageCallbacks`. Map 4 is the stage, map 2 its three clouds, map 3 the creatures that
+/// pass behind it, maps 1 and 5 the background and the foreground.
+pub const OLDYOSHI_CALLBACKS: [StageCallbacks; 6] = [
+    cb(0x8020_E93C, 0x8020_E968, 0x8020_E970, 0x8020_E974, 0),
+    cb(0x8020_E978, 0x8020_E9E0, 0x8020_E9E8, 0x8020_E9EC, 0),
+    cb(0x8020_EAFC, 0x8020_EC08, 0x8020_EC10, 0x8020_EFC8, 0),
+    cb(0x8020_EFCC, 0x8020_F080, 0x8020_F088, 0x8020_F2A4, 0),
+    cb(
+        0x8020_E9F0,
+        0x8020_EA5C,
+        0x8020_EA64,
+        0x8020_EA88,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_EA8C, 0x8020_EAEC, 0x8020_EAF4, 0x8020_EAF8, 0),
+];
+
+/// `grOy_StageData`.
+pub const OLDYOSHI: StageData = StageData {
+    grkind: GR_KIND_OLDYOSHI,
+    callbacks: &OLDYOSHI_CALLBACKS,
+    file: Some("/GrOy.dat"),
+    on_init: 0x8020_E79C,
+    on_demo_init: 0x8020_E798,
+    on_load: 0x8020_E824,
+    on_start: 0x8020_E828,
+    callback4: 0x8020_E84C,
+    on_touch_line: 0x8020_F404,
+    on_check_shadow_render: 0x8020_F40C,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -307,6 +341,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_STORY => &STORY,
         GR_KIND_OLDPUPUPU => &OLDPUPUPU,
         GR_KIND_IZUMI => &IZUMI,
+        GR_KIND_OLDYOSHI => &OLDYOSHI,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

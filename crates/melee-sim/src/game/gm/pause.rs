@@ -44,11 +44,15 @@ pub struct PauseScreen {
 /// The joint `index` steps into the tree from `root` in pre-order, for each index in turn,
 /// starting again from the root when an index goes back, `lb_80011E24`.
 #[doc(alias = "lb_80011E24")]
-pub fn tree_nodes(jobjs: &JObjs, root: Option<JObjId>, indices: &[i32]) -> Vec<Option<JObjId>> {
-    let mut out = Vec::new();
+pub fn tree_nodes<const N: usize>(
+    jobjs: &JObjs,
+    root: Option<JObjId>,
+    indices: &[i32; N],
+) -> [Option<JObjId>; N] {
+    let mut out = [None; N];
     let Some(root) = root else { return out };
     let (mut prev, mut j) = (-1, Some(root));
-    for &target in indices {
+    for (&target, found) in indices.iter().zip(&mut out) {
         let mut cur = if prev > target || prev == -1 {
             j = Some(root);
             0
@@ -78,7 +82,7 @@ pub fn tree_nodes(jobjs: &JObjs, root: Option<JObjId>, indices: &[i32]) -> Vec<O
             };
             cur += 1;
         }
-        out.push(j);
+        *found = j;
         prev = cur;
     }
     out

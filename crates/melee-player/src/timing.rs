@@ -206,11 +206,16 @@ mod tests {
     #[test]
     fn precise_waits_end_at_their_deadline() {
         for us in [0u64, 200, 1500, 4000] {
-            let deadline = Instant::now() + Duration::from_micros(us);
-            sleep_until(deadline);
-            let late = Instant::now().saturating_duration_since(deadline);
             // The spin ends it within microseconds; a busy machine can preempt the spin, so
-            // only a gross overshoot fails.
+            // only a gross overshoot on every one of three tries fails.
+            let late = (0..3)
+                .map(|_| {
+                    let deadline = Instant::now() + Duration::from_micros(us);
+                    sleep_until(deadline);
+                    Instant::now().saturating_duration_since(deadline)
+                })
+                .min()
+                .unwrap();
             assert!(late < Duration::from_millis(5), "{us} us: {late:?} late");
         }
     }

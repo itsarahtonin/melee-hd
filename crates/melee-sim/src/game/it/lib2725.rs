@@ -622,6 +622,28 @@ pub fn scale_boxes(game: &mut Game, gobj: GObjId) {
     }
 }
 
+/// Sets `xD09`, `it_80274ECC`.
+#[doc(alias = "it_80274ECC")]
+pub fn set_xd09(game: &mut Game, gobj: GObjId, on: bool) {
+    item_mut(game, gobj).xD09 = u8::from(on);
+}
+
+/// Arms the item to grab a fighter (`xDD0_flag.b5`), `it_80274F28`: fighters whose `x1A6A`
+/// shares a bit with `mask` are passed over; `dealt` runs on the item when it grabs one, then
+/// `victim` on the fighter.
+#[doc(alias = "it_80274F28")]
+pub fn arm_grab(
+    ip: &mut crate::game::structs::Item,
+    mask: u8,
+    dealt: crate::game::handles::CodeRef,
+    victim: crate::game::handles::CodeRef,
+) {
+    super::set_flag(&mut ip.xDD0_flag, 5, true);
+    ip.xD08 = mask;
+    ip.grab_dealt = Some(dealt);
+    ip.grabbed_for_victim = Some(victim);
+}
+
 /// Counts an item the spawner dropped, `it_80274ED8`.
 #[doc(alias = "it_80274ED8")]
 pub fn count_spawned(game: &mut Game) {

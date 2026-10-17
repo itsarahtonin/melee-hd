@@ -177,47 +177,32 @@ pub fn spawn(
     } else {
         0.0
     }));
-    let (now_args, queued): (Vec<Arg>, (SpawnKind, Vec<Arg>)) = match offset_route(ef_id) {
-        Route::At => (
-            vec![Arg::Vec(world)],
-            (SpawnKind::PosOffset, vec![Arg::Vec(at)]),
-        ),
-        Route::AtFacing => (
-            vec![Arg::Vec(world), Arg::Float(facing)],
-            (
-                SpawnKind::PosOffsetParam,
-                vec![Arg::Vec(at), Arg::Float(facing)],
-            ),
-        ),
+    // The position, then the route's one parameter if it has one.
+    let (kind, param) = match offset_route(ef_id) {
+        Route::At => (SpawnKind::PosOffset, None),
+        Route::AtFacing => (SpawnKind::PosOffsetParam, Some(facing)),
         Route::AtFacingZero => {
             let args = [Arg::Vec(at), Arg::Float(facing), Arg::Float(0.0)];
             queue(r, gobj, SpawnKind::PosOffsetParam2, ef_id, j, &args);
             return;
         }
-        Route::AtTurned => (
-            vec![Arg::Vec(world), Arg::Float(turned)],
-            (
-                SpawnKind::PosOffsetParam,
-                vec![Arg::Vec(at), Arg::Float(turned)],
-            ),
-        ),
-        Route::AtZero => (
-            vec![Arg::Vec(world), Arg::Float(0.0)],
-            (
-                SpawnKind::PosOffsetParam,
-                vec![Arg::Vec(at), Arg::Float(0.0)],
-            ),
-        ),
+        Route::AtTurned => (SpawnKind::PosOffsetParam, Some(turned)),
+        Route::AtZero => (SpawnKind::PosOffsetParam, Some(0.0)),
         Route::Quake(kind) => {
             queue(r, gobj, SpawnKind::CameraShake, kind, j, &[Arg::Vec(at)]);
             return;
         }
         _ => return,
     };
+    let args = [
+        Arg::Vec(if sync { world } else { at }),
+        Arg::Float(param.unwrap_or(0.0)),
+    ];
+    let args = &args[..1 + usize::from(param.is_some())];
     if sync {
-        ef::spawn(r, ef_id, Some(gobj), &now_args);
+        ef::spawn(r, ef_id, Some(gobj), args);
     } else {
-        queue(r, gobj, queued.0, ef_id, j, &queued.1);
+        queue(r, gobj, kind, ef_id, j, args);
     }
 }
 

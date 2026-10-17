@@ -160,7 +160,7 @@ pub fn proc_attack_coll(r: &mut Running, gobj: GObjId) {
     r.take_tip_hits(gobj);
     let lipstick = r.lipstick_damage();
     if lipstick > 0.0 {
-        unported_call("ftCommon_8007FC7C (the lipstick flower's damage)");
+        r.flower_hit(gobj, lipstick);
     }
 }
 
@@ -1991,23 +1991,28 @@ impl Running<'_> {
     }
 
     /// Whether the stage gives the line a hazard (`Ground_801C5700`, through the stage's
-    /// `on_touch_line`): Final Destination's, Battlefield's and Pokémon Stadium's never do.
+    /// `on_touch_line`): none of the ported stages' does.
     #[doc(alias = "Ground_801C5700")]
+    #[doc(alias = "grLast_OnTouchLine")]
+    #[doc(alias = "grBattle_OnTouchLine")]
     #[doc(alias = "grStadium_OnTouchLine")]
     #[doc(alias = "grStory_801E36D0")]
     #[doc(alias = "grOldPupupu_80211CA0")]
     #[doc(alias = "grIzumi_801CD278")]
+    #[doc(alias = "grOldYoshi_8020F404")]
     pub(crate) fn line_hazard(&mut self, _line: i32) -> bool {
         match self.game.stage_info.on_touch_line {
             None => false,
-            // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine: `return NULL`.
+            // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine and the others
+            // here: `return NULL`.
             Some(f)
                 if f.0 == 0x8021_C740
                     || f.0 == 0x8021_A610
                     || f.0 == 0x801D_50B8
                     || f.0 == 0x801E_36D0
                     || f.0 == 0x8021_1CA0
-                    || f.0 == 0x801C_D278 =>
+                    || f.0 == 0x801C_D278
+                    || f.0 == 0x8020_F404 =>
             {
                 false
             }
@@ -2403,38 +2408,7 @@ impl Running<'_> {
                     grounded,
                 );
             }
-            LoggedHit::Item { item, .. } => {
-                let ip = super::super::it::item(self.game, item);
-                let (kind, owner, x2070, instance) = (
-                    ip.kind,
-                    ip.owner,
-                    u32::from_be_bytes(ip.xD90),
-                    ip.xDA8_short,
-                );
-                if kind == IT_KIND_BOMBHEI {
-                    let spawn = ip.x1C as u16;
-                    let slot = i32::from(self.game.fighters[me.0].player_idx);
-                    self.game.count_bombhei_hit(slot, spawn);
-                }
-                // An ownerless item's hit names no attacker; an explosion's keeps the last
-                // attacker's player (`pl_8003D60C`).
-                let (attacker, keep) = if super::super::it::item::is_fighter(self.game, owner) {
-                    (owner, false)
-                } else {
-                    (None, crate::game::pl::death::explosive_kind(kind))
-                };
-                self.attack_landed(
-                    attacker,
-                    gobj,
-                    2,
-                    kind,
-                    x2070,
-                    AttackRecord::Item(item),
-                    instance,
-                    keep,
-                    grounded,
-                );
-            }
+            LoggedHit::Item { item, .. } => self.item_attack_landed(item, gobj, grounded),
         }
         if element == ELEMENT_ELECTRIC {
             let v = self.common().f32(0x1A4);
@@ -2602,6 +2576,42 @@ impl Running<'_> {
         self.record_attack(attacker, gobj, x2070, record, instance, prev);
     }
 
+    /// An item's attack on the fighter, `ftColl_800787B4`: a Bob-omb's counts for the
+    /// fighter's player, and the attacker is the item's fighter owner, or none (an
+    /// explosion's keeps the last attacker's player, `pl_8003D60C`).
+    #[doc(alias = "ftColl_800787B4")]
+    pub fn item_attack_landed(&mut self, item: GObjId, gobj: GObjId, grounded: bool) {
+        let me = self.game.fighter_id(gobj);
+        let ip = super::super::it::item(self.game, item);
+        let (kind, owner, x2070, instance) = (
+            ip.kind,
+            ip.owner,
+            u32::from_be_bytes(ip.xD90),
+            ip.xDA8_short,
+        );
+        if kind == IT_KIND_BOMBHEI {
+            let spawn = ip.x1C as u16;
+            let slot = i32::from(self.game.fighters[me.0].player_idx);
+            self.game.count_bombhei_hit(slot, spawn);
+        }
+        let (attacker, keep) = if super::super::it::item::is_fighter(self.game, owner) {
+            (owner, false)
+        } else {
+            (None, crate::game::pl::death::explosive_kind(kind))
+        };
+        self.attack_landed(
+            attacker,
+            gobj,
+            2,
+            kind,
+            x2070,
+            AttackRecord::Item(item),
+            instance,
+            keep,
+            grounded,
+        );
+    }
+
     /// No attacker on the fighter's last hit, `ftColl_800788D4` (`ftColl_8007861C` with no
     /// attacker, attack 0 and kind -10, and no record).
     // Ports `ftColl_800788D4`; aliased once a check reaches it.
@@ -2625,7 +2635,12 @@ impl Running<'_> {
         for e in &self.game.ft.hit_logs.hits {
             let h = self.logged_capsule(e.hit);
             if h.element == ELEMENT_LIPSTICK {
-                dmg = fp::fadds(dmg, reg(h.damage));
+                // An item's hit deals its damage with its speed's (`it_8026B1D4`).
+                let d = match e.hit {
+                    LoggedHit::Item { item, index } => self.item_damage(item, index),
+                    _ => reg(h.damage),
+                };
+                dmg = fp::fadds(dmg, d);
             }
         }
         dmg

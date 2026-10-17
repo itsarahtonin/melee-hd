@@ -2,10 +2,14 @@
 //! reaches, `ftpickupitem_8009447C`, and the caught item's statistic, `pl_8003E854`).
 
 use super::super::super::ef::{self, SpawnKind};
-use super::super::super::it::{item, lib26b1};
+use super::super::super::it::kinds::{
+    FOODS, HAMMER, HEART, METALB, RABBITC, SPYCLOAK, TOMATO, WSTAR,
+};
+use super::super::super::it::{item, lib26b1, release};
 use super::super::super::state::{Running, UserData};
 use crate::fpu::reg;
 use crate::hsd::gobj::GObjId;
+use crate::vec::Vec3;
 
 /// `It_Kind_WStar`, which the fighter rides from its top joint.
 const IT_KIND_WSTAR: i32 = 0x1D;
@@ -16,13 +20,10 @@ const BONUS_CATCH: usize = 0x9A;
 const BONUS_DOSEI: usize = 0xB6;
 const IT_KIND_DOSEI: i32 = 7;
 const IT_KIND_BOMBHEI: i32 = 6;
-/// `It_Kind_Lucky_Egg`, `It_Kind_WhispyHealApple` and `It_Kind_Coin`, the other kinds used as
-/// they're picked up.
-pub(super) const LUCKY_EGG: i32 = 205;
-pub(super) const WHISPY_HEAL_APPLE: i32 = 226;
-pub(super) const COIN: i32 = 159;
+/// `It_Kind_Coin`, a use-on-pickup kind past the common items' constants.
+const IT_KIND_COIN: i32 = 159;
 /// `ftCommonData` x7CC: the Cloaking Device's frames.
-pub(super) const CLOAK_FRAMES: u32 = 0x7CC;
+const CLOAK_FRAMES: u32 = 0x7CC;
 
 impl Running<'_> {
     /// Catches `it` in the air, `fn_800D6F58`: into the hand (or the other hand's slot when
@@ -71,44 +72,87 @@ impl Running<'_> {
         self.game.fighters[f.0].x2224_b1 = true;
     }
 
-    /// The item's own pickup, `ftpickupitem_8009447C`: for an item used as it's picked up
-    /// (use kind 5), food heals (`Fighter_8006CF5C`) and goes, the Warp Star and the hammer take the
-    /// fighter into their states (whether one did is the result), the Bunny Hood goes on, the
-    /// Metal Box and the Cloaking Device take effect and go, and a coin goes.
+    /// The item's own pickup, `ftpickupitem_8009447C`, for an item used as it's picked up
+    /// (use kind 5): the Warp Star and the hammer take the fighter into their states (whether
+    /// one did is the result); the other kinds as `use_picked_up`.
     #[doc(alias = "ftpickupitem_8009447C")]
     pub fn item_pickup_effect(&mut self, gobj: GObjId, it: GObjId) -> bool {
-        use super::super::super::it::kinds;
         if lib26b1::use_kind(self.game, self.data, it) != 5 {
             return false;
         }
         match lib26b1::kind(self.game, it) {
-            kinds::HEART | kinds::TOMATO | kinds::FOODS | LUCKY_EGG | WHISPY_HEAL_APPLE => {
-                let heal = lib26b1::heal_amount(self.game, it);
-                self.heal(gobj, heal);
-                super::super::super::it::item::destroy(self, it);
-            }
-            kinds::WSTAR => {
+            WSTAR => {
                 self.enter_warp_star(gobj);
-                return true;
+                true
             }
-            kinds::HAMMER => {
+            HAMMER => {
                 self.take_hammer(gobj);
-                return true;
+                true
             }
-            kinds::RABBITC => self.put_on_hood(gobj, it),
-            kinds::METALB => {
+            k => {
+                self.use_picked_up(gobj, it, k);
+                false
+            }
+        }
+    }
+
+    /// A use-on-pickup item hit out of the pickup, `ftpickupitem_80094B6C`: as its pickup
+    /// would, but a Warp Star drops (`Item_8026ABD8`) and the hammer only sets its timers
+    /// (`ftCo_800C5284`).
+    #[doc(alias = "ftpickupitem_80094B6C")]
+    pub fn item_pickup_hit(&mut self, gobj: GObjId, it: GObjId) {
+        if lib26b1::use_kind(self.game, self.data, it) != 5 {
+            return;
+        }
+        match lib26b1::kind(self.game, it) {
+            WSTAR => release::drop(self, it, Vec3::new(0.0, 0.0, 0.0), 1.0),
+            HAMMER => self.start_hammer_timers(gobj),
+            k => self.use_picked_up(gobj, it, k),
+        }
+    }
+
+    /// The use-on-pickup kinds both pickups share: a heart, tomato, food or Lucky Egg heals and
+    /// is gone (Whispy's apple's heal isn't ported), the Bunny Hood goes on, the Metal Box and the Cloaking Device take effect and go, and a coin goes.
+    fn use_picked_up(&mut self, gobj: GObjId, it: GObjId, kind: i32) {
+        match kind {
+            HEART | TOMATO | FOODS | lib26b1::LUCKY_EGG | lib26b1::WHISPY_HEAL_APPLE => {
+                self.heal_with(gobj, it)
+            }
+            RABBITC => self.put_on_hood(gobj, it),
+            METALB => {
                 self.apply_metal_box(gobj, it);
-                super::super::super::it::item::destroy(self, it);
+                item::destroy(self, it);
             }
-            kinds::SPYCLOAK => {
+            SPYCLOAK => {
                 let frames = self.common().i32(CLOAK_FRAMES);
                 self.start_cloak(gobj, frames, true);
-                super::super::super::it::item::destroy(self, it);
+                item::destroy(self, it);
             }
-            COIN => super::super::super::it::item::destroy(self, it),
+            IT_KIND_COIN => item::destroy(self, it),
             _ => {}
         }
-        false
+    }
+
+    /// A healing item used: the fighter heals by its amount (`it_8026B47C`,
+    /// `Fighter_8006CF5C`) and the item is gone.
+    fn heal_with(&mut self, gobj: GObjId, it: GObjId) {
+        let amount = lib26b1::heal_amount(self.game, it);
+        self.heal(gobj, amount);
+        item::destroy(self, it);
+    }
+
+    /// Healing `amount`, `Fighter_8006CF5C`: unless out of stamina, the heal counted out over
+    /// the next frames (`dmg.x18F0`), its color animation and rumble.
+    #[doc(alias = "Fighter_8006CF5C")]
+    pub fn heal(&mut self, gobj: GObjId, amount: i32) {
+        let f = self.game.fighter_id(gobj);
+        let fp = &mut self.game.fighters[f.0];
+        if fp.stamina_dead {
+            return;
+        }
+        fp.dmg.x18F0 = fp.dmg.x18F0.wrapping_add(amount);
+        self.start_color_anim(gobj, 8, 0);
+        self.start_rumble(f, 2, 0);
     }
 
     /// Counts a caught item, `pl_8003E854`: when the slot's fighter didn't throw it and it was
