@@ -4,15 +4,14 @@
 //! out or it meets the stage, where it bursts (states 10 to 17). His forward throw fires a
 //! full one at once (state 9).
 //!
-//! Kirby's copy (`It_Kind_Kirby_MewtwoShadowBall`) runs the same code with his own checks,
-//! which aren't ported.
+//! Kirby's copy (`It_Kind_Kirby_MewtwoShadowBall`) runs the same code with his own checks
+//! (`ft::kirby::special_mewtwo`).
 
 use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, pick_up, play_sfx, play_sfx1, spawn_air};
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
-use crate::game::code::unported_call;
 use crate::game::ef::{self, Arg};
 use crate::game::handles::CodeRef;
 use crate::game::state::Running;
@@ -467,7 +466,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
         {
             match kind {
                 KIND => r.mt_n_ball_released(maker),
-                KIRBY_SHADOWBALL => unported_call("ftKb_SpecialNMt_80107040"),
+                KIRBY_SHADOWBALL => r.kb_mt_ball_released(maker),
                 _ => {}
             }
         }
@@ -528,7 +527,17 @@ pub fn animate_held(r: &mut Running, gobj: GObjId) -> bool {
                 v.x18.set(charge);
                 v.x1C.set(max);
             }
-            KIRBY_SHADOWBALL => unported_call("ftKb_SpecialNMt_80106F9C"),
+            KIRBY_SHADOWBALL => {
+                if r.kb_mt_ball_lost(maker) || r.kb_mt_ball_put_away(maker) {
+                    return true;
+                }
+                let Some((charge, max)) = r.kb_mt_charge_of(maker) else {
+                    return true;
+                };
+                let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
+                v.x18.set(charge);
+                v.x1C.set(max);
+            }
             _ => {}
         }
     }

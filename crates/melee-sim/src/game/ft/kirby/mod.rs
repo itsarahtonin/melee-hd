@@ -1,7 +1,7 @@
 //! Kirby's own code (`ft/kinds/ftKirby`): his creation and copies of other characters' hats
 //! and abilities (`ftkirby.c`), the dash attack, Final Cutter (up special), Stone (down
 //! special), the hammer (side special), Inhale with its swallow and spit (neutral special),
-//! and the copied neutral specials reached so far. His five double jumps are the common
+//! and every copied neutral special. His five double jumps are the common
 //! multi-jump states (`ft::co::multijump`); his victims' states are in `ft::co::capture_kirby`
 //! and his items in `it::kinds`.
 //!
@@ -21,15 +21,19 @@ pub mod special_donkey;
 pub mod special_fox;
 pub mod special_gamewatch;
 pub mod special_hi;
+pub mod special_iceclimber;
 pub mod special_koopa;
 pub mod special_link;
 pub mod special_luigi;
 pub mod special_lw;
 pub mod special_mario;
+pub mod special_mars;
+pub mod special_mewtwo;
 pub mod special_n;
 pub mod special_ness;
 pub mod special_peach;
 pub mod special_pikachu;
+pub mod special_purin;
 pub mod special_s;
 pub mod special_samus;
 pub mod special_seak;
@@ -675,6 +679,12 @@ pub(crate) mod attr {
     pub const FC_GUN_ITKIND: usize = 0x264;
     /// Mewtwo's copy: the ball's full charge.
     pub const MT_CHARGE_TIME: usize = 0x384;
+    /// The Ice Climbers' copy: the aerial shot's hop, its landing lag, and the ice's offset
+    /// from his top joint.
+    pub const PP_AIR_HOP: usize = 0x39C;
+    pub const PP_LANDING_LAG: usize = 0x3A0;
+    pub const PP_ICE_X: usize = 0x3A4;
+    pub const PP_ICE_Y: usize = 0x3A8;
 }
 
 impl Running<'_> {
@@ -734,6 +744,10 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || special_koopa::run(g, gobj, addr)
         || special_link::run(g, gobj, addr)
         || special_yoshi::run(g, gobj, addr)
+        || special_iceclimber::run(g, gobj, addr)
+        || special_mars::run(g, gobj, addr)
+        || special_mewtwo::run(g, gobj, addr)
+        || special_purin::run(g, gobj, addr)
 }
 
 /// Kirby's functions other code calls by address (`code::call`).

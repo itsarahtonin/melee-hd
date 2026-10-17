@@ -72,10 +72,14 @@ pub const YOSHI_EGG: usize = 0xC;
 pub const MEWTWO_ITEMS: [usize; 2] = [0x0, 0x4];
 
 /// `ftKb_FighterVars`: Kirby's hammer (`hat.x0`), and his copies' items: Link's and Young
-/// Link's arrow and bow (`x74`, `x78`), Ness's PK Flash (`ns_flash_gobj`, `x7C`), the Charge
-/// Shot in his hand with Samus's copy (`xA4`), the blaster with Fox's or Falco's (`xB0`),
-/// Sheik's held needles (`xB8`), Peach's Toad (`xD0`) and Mr. Game & Watch's pan (`xDC`).
-pub const KIRBY_ITEMS: [usize; 9] = [0x0, 0x74, 0x78, 0x7C, 0xA4, 0xB0, 0xB8, 0xD0, 0xDC];
+/// Link's arrow and bow (`x74`, `x78`), Ness's PK Flash (`ns_flash_gobj`, `x7C`), the
+/// Shadow Ball in his hand with Mewtwo's copy and its effects (`x98`, `xA0`), the Charge Shot
+/// with Samus's (`xA4`), the blaster with Fox's or Falco's (`xB0`), Sheik's held needles
+/// (`xB8`), the Ice Climbers' ice (`xC0`), Peach's Toad (`xD0`) and Mr. Game & Watch's pan
+/// (`xDC`).
+pub const KIRBY_ITEMS: [usize; 12] = [
+    0x0, 0x74, 0x78, 0x7C, 0x98, 0xA0, 0xA4, 0xB0, 0xB8, 0xC0, 0xD0, 0xDC,
+];
 
 /// The words of `u` a fighter of `kind` keeps GObjs in, which the importer types: Fox's and
 /// Falco's blaster, Sheik's held needles and chain (`Ft_Kind_Seak`), Zelda's Din's Fire

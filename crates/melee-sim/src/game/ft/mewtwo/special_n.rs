@@ -185,6 +185,7 @@ impl Running<'_> {
         self.game.fighters[f.0].set_u_i32(u::CHARGE, 0);
         self.mt_n_ball_released(gobj);
         self.game.fighters[f.0].item_gobj = item;
+        // The charge was emptied above, so the full shot's sound never plays (docs/melee-bugs.md).
         let charge = self.game.fighters[f.0].u_i32(u::CHARGE);
         let sfx = if fp::frsp(f64::from(charge)) == reg(cycles) {
             SFX_FIRE_FULL

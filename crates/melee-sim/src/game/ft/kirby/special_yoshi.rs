@@ -86,6 +86,12 @@ const LIFETIME: usize = 0x3C0;
 const DAMAGE: usize = 0x3E0;
 
 impl Running<'_> {
+    /// The bone his copy's tongue item follows, `ftKb_SpecialNYs_80109238`: his `TransN2`.
+    #[doc(alias = "ftKb_SpecialNYs_80109238")]
+    pub fn kb_ys_tongue_bone(&self, gobj: GObjId) -> i32 {
+        self.bone_index(self.game.fighter(gobj), TRANS_N2)
+    }
+
     /// One of the copy's tongue animations (its data's dynamics `idx`) put on his hat and
     /// started, and played a frame when `play`.
     fn kb_ys_hat_anim(&mut self, gobj: GObjId, idx: u32, play: bool) {

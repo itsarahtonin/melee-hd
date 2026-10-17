@@ -357,7 +357,13 @@ fn best_match<'c>(
         .iter()
         .filter(|(_, bytes)| at + bytes.len() <= mem1.len())
         .map(|c| (agreement(&mem1[at..at + c.1.len()], &c.1), c))
-        .filter(|((same, total), _)| same * 10 >= total * 7)
+        // One already found here, or the only file with its header, needs only half: loading a
+        // copy costume onto Kirby's bones rewrites the matrix indices of its display lists in
+        // place, 31% of Jigglypuff's copy's file.
+        .filter(|((same, total), c)| {
+            same * 10 >= total * 7
+                || ((prefer(&c.0) || candidates.len() == 1) && same * 2 >= *total)
+        })
         .max_by_key(|((same, _), c)| (*same, prefer(&c.0)))
         .map(|(_, c)| c)
 }
