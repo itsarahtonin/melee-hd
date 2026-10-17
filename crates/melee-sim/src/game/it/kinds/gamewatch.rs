@@ -224,26 +224,25 @@ pub(super) fn colors(r: &mut Running, gobj: GObjId, fighter: GObjId, attr: Optio
     }
 }
 
-/// `ftLib_GetGameWatchColor`: his costume's color (Kirby's copy's isn't ported).
+/// `ftLib_GetGameWatchColor`: his costume's color, or Kirby's copy's
+/// (`ftKb_Init_800EEB00`).
 #[doc(alias = "ftLib_GetGameWatchColor")]
 fn game_watch_color(r: &Running, fighter: GObjId) -> _GXColor {
-    assert_eq!(
-        r.game.ft_kind(fighter),
-        crate::game::ft::gamewatch::KIND_GAME_WATCH,
-        "ftKb_Init_800EEB00 (Kirby's Chef) isn't ported"
-    );
-    r.gw_color(fighter)
+    if r.game.ft_kind(fighter) == crate::game::ft::gamewatch::KIND_GAME_WATCH {
+        r.gw_color(fighter)
+    } else {
+        r.kb_gw_color(4)
+    }
 }
 
-/// `ftLib_GetGameWatchOutlineColor`.
+/// `ftLib_GetGameWatchOutlineColor`: his, or Kirby's copy's (`ftKb_Init_800EEB1C`).
 #[doc(alias = "ftLib_GetGameWatchOutlineColor")]
 fn game_watch_outline(r: &Running, fighter: GObjId) -> _GXColor {
-    assert_eq!(
-        r.game.ft_kind(fighter),
-        crate::game::ft::gamewatch::KIND_GAME_WATCH,
-        "ftKb_Init_800EEB1C (Kirby's Chef) isn't ported"
-    );
-    r.gw_outline_color(fighter)
+    if r.game.ft_kind(fighter) == crate::game::ft::gamewatch::KIND_GAME_WATCH {
+        r.gw_outline_color(fighter)
+    } else {
+        r.kb_gw_color(8)
+    }
 }
 
 /// The fighter's team tint, if it has one, `ftLib_GetSubColor`.

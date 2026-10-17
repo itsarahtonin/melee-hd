@@ -131,13 +131,13 @@ members! {
     GShell, gshell, itGShell_ItemVars, [G_SHELL];
     RShell, rshell, itRShell_ItemVars, [R_SHELL];
     Sword, sword, itSword_ItemVars, [SWORD];
-    SeakNeedleHeld, seak_needle_held, itSeakNeedleHeld_ItemVars, [SEAK_NEEDLE_HELD];
-    SeakNeedleThrown, seak_needle_thrown, itSeakNeedleThrown_ItemVars, [SEAK_NEEDLE_THROW];
+    SeakNeedleHeld, seak_needle_held, itSeakNeedleHeld_ItemVars, [SEAK_NEEDLE_HELD, KIRBY_SEAK_NEEDLE_HELD];
+    SeakNeedleThrown, seak_needle_thrown, itSeakNeedleThrown_ItemVars, [SEAK_NEEDLE_THROW, KIRBY_SEAK_NEEDLE_THROW];
     SeakChain, seak_chain, itSeakChain_ItemVars, [SEAK_CHAIN];
     ZeldaDinFire, zelda_din_fire, itZeldaDinFire_ItemVars, [ZELDA_DIN_FIRE];
     ZeldaDinFireExplode, zelda_din_fire_explode, itZeldaDinFireExplode_ItemVars, [ZELDA_DIN_FIRE_EXPLODE];
-    PKFlush, pk_flush, itPKFlush_ItemVars, [NESS_PK_FLUSH];
-    PKFlushExplode, pk_flush_explode, itPKFlushExplode_ItemVars, [NESS_PK_FLUSH_EXPLODE];
+    PKFlush, pk_flush, itPKFlush_ItemVars, [NESS_PK_FLUSH, KIRBY_NESS_PK_FLUSH];
+    PKFlushExplode, pk_flush_explode, itPKFlushExplode_ItemVars, [NESS_PK_FLUSH_EXPLODE, KIRBY_NESS_PK_FLUSH_EXPLODE];
     PKThunder, pk_thunder, itPKThunder_ItemVars, [NESS_PK_THUNDER];
     NessPKThunderTrail, ness_pk_thunder_trail, itNesspkthundertrail_ItemVars, [NESS_PK_THUNDER1, NESS_PK_THUNDER2, NESS_PK_THUNDER3, NESS_PK_THUNDER4];
     NessBat, ness_bat, itNessbat_ItemVars, [NESS_BAT];
@@ -164,7 +164,7 @@ members! {
     KirbyCutterBeam, kirby_cutter_beam, itKirbyCutterBeam_ItemVars, [KIRBY_CBEAM];
     KirbyHammer, kirby_hammer, itKirbyHammer_ItemVars, [KIRBY_HAMMER];
     Heiho, heiho, HeihoVars, [HEIHO];
-    GameWatch, game_watch, GameWatchVars, [GAME_WATCH_GREENHOUSE, GAME_WATCH_MANHOLE, GAME_WATCH_FIRE, GAME_WATCH_PARACHUTE, GAME_WATCH_TURTLE, GAME_WATCH_BREATH, GAME_WATCH_JUDGE, GAME_WATCH_PANIC, GAME_WATCH_CHEF];
+    GameWatch, game_watch, GameWatchVars, [GAME_WATCH_GREENHOUSE, GAME_WATCH_MANHOLE, GAME_WATCH_FIRE, GAME_WATCH_PARACHUTE, GAME_WATCH_TURTLE, GAME_WATCH_BREATH, GAME_WATCH_JUDGE, GAME_WATCH_PANIC, GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF_PAN];
     GameWatchRescue, game_watch_rescue, GameWatchRescueVars, [GAME_WATCH_RESCUE];
     ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE];
     ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];
