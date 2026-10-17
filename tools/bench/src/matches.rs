@@ -579,8 +579,8 @@ pub fn coins_set() -> Vec<Match> {
         items,
     };
     vec![
-        coin("coins-fd", 0x1F0F_0501, Items::OFF),
-        coin("coins-items-fd", 0x1F0F_0502, Items::only(FREQ_HIGH, &[0])),
+        coin("coins-fd", 0x1F0F_0601, Items::OFF),
+        coin("coins-items-fd", 0x1F0F_0602, Items::only(FREQ_HIGH, &[0])),
     ]
 }
 
