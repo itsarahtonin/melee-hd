@@ -176,7 +176,7 @@ fn args(call: &mut Call, target: &str, k: usize) {
         | "itDKinoko_Logic27_EvtUnk"
         | "itMetalB_Logic32_EvtUnk"
         | "itSpyCloak_Logic33_EvtUnk"
-        | "itRabbitC_Logic31_EvtUnk" => g[4] = if k % 2 == 0 { gobj } else { 0 },
+        | "itRabbitC_Logic31_EvtUnk" => g[4] = if k.is_multiple_of(2) { gobj } else { 0 },
         "fn_800D2890" => g[4] = [0x20u32, 0x23, 0x92, 0x172, 0xE][k % 5],
         "ftCo_800C5B88" => g[4] = 1 + (k % 2) as u32,
         "ftCo_800C88D4" => {
@@ -202,14 +202,12 @@ fn args(call: &mut Call, target: &str, k: usize) {
     if FIGHTER_PTR.contains(&target) {
         call.regs.gpr[3] = fp;
     }
-    if target.starts_with("ftCo_Hammer") || target.starts_with("ftCo_800C5") {
-        if k % 3 == 1 {
-            poke_u32(call, fp + 0x2338 + 4, 5);
-            poke_u32(call, fp + 0x668, peek_u32(call, fp + 0x668) | 0x100);
-            poke_u32(call, fp + 0x65C, peek_u32(call, fp + 0x65C) | 0x8000_0000);
-            let w = peek_u32(call, fp + 0x680);
-            poke_u32(call, fp + 0x680, w | 0xFF);
-        }
+    if (target.starts_with("ftCo_Hammer") || target.starts_with("ftCo_800C5")) && k % 3 == 1 {
+        poke_u32(call, fp + 0x2338 + 4, 5);
+        poke_u32(call, fp + 0x668, peek_u32(call, fp + 0x668) | 0x100);
+        poke_u32(call, fp + 0x65C, peek_u32(call, fp + 0x65C) | 0x8000_0000);
+        let w = peek_u32(call, fp + 0x680);
+        poke_u32(call, fp + 0x680, w | 0xFF);
     }
 }
 

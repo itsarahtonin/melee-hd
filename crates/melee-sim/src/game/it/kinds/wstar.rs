@@ -214,14 +214,19 @@ pub fn ride_box(r: &mut Running, gobj: GObjId) -> crate::game::structs::ftCollis
     use gekko_fp as fp;
     let s = reg(item_mut(r.game, gobj).xDD4_itemVar.wstar().xDD4.get());
     let f = |off: u32| mem(fp::fmuls(reg(r.data.f32(attr(r, gobj, off))), s));
-    let mut b = crate::game::structs::ftCollisionBox::default();
-    b.top = f(0xC);
-    b.bottom = f(0x10);
-    b.left.x = f(0x14);
-    b.left.y = f(0x18);
-    b.right.x = f(0x1C);
-    b.right.y = f(0x20);
-    b
+    use crate::game::structs::Vec2;
+    crate::game::structs::ftCollisionBox {
+        top: f(0xC),
+        bottom: f(0x10),
+        left: Vec2 {
+            x: f(0x14),
+            y: f(0x18),
+        },
+        right: Vec2 {
+            x: f(0x1C),
+            y: f(0x20),
+        },
+    }
 }
 
 /// Coming down with its rider, `it_802946B0`: state 3, sized and its hitboxes scaled, an
@@ -305,7 +310,14 @@ pub fn crash(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3) {
     lib2725::start_vanishing(r.game, r.data, gobj);
     eflib::destroy_all(r, gobj);
     let p = item(r.game, gobj).pos;
-    crate::lb::wind::blast(&mut r.game.gr.winds, p, 0x78, 1.0, 0.02, 1.047_197_6);
+    crate::lb::wind::blast(
+        &mut r.game.gr.winds,
+        p,
+        0x78,
+        1.0,
+        0.02,
+        std::f32::consts::FRAC_PI_3,
+    );
     lib2725::blast_effect(r, gobj);
     let hit = item_mut(r.game, gobj).xDD4_itemVar.wstar().xDD8.get();
     super::super::hitbox::scale_hitboxes(r.game, gobj, crate::fpu::reg(hit));

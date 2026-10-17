@@ -342,12 +342,11 @@ fn set_mv_box(fp: &mut crate::game::structs::Fighter, off: usize, b: &ftCollisio
 
 fn mv_box(fp: &crate::game::structs::Fighter, off: usize) -> ftCollisionBox {
     let w = |i: usize| f32::from_bits(fp.mv_i32(off + 4 * i) as u32);
-    let mut b = ftCollisionBox::default();
-    b.top = w(0);
-    b.bottom = w(1);
-    b.left.x = w(2);
-    b.left.y = w(3);
-    b.right.x = w(4);
-    b.right.y = w(5);
-    b
+    use crate::game::structs::Vec2;
+    ftCollisionBox {
+        top: w(0),
+        bottom: w(1),
+        left: Vec2 { x: w(2), y: w(3) },
+        right: Vec2 { x: w(4), y: w(5) },
+    }
 }
