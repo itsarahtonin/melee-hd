@@ -464,6 +464,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** not recorded.
 - **Source:** [engine notes, loaded data the game writes into](engine.md#loaded-data-the-game-writes-into) (line 286).
 
+### A random pick between two entries draws below one
+
+- **Where:** `Ground_801C5840`, `crates/melee-sim/src/game/gr/ground.rs` (`x6e4_drawn`).
+- **Defect:** it picks one of `stage_info.x6E4`'s two entries with `HSD_Randi(1)`, which is always 0, so it always returns the first, and the draw still advances the random seed.
+- **Effect:** the second entry is never picked, and each call takes a random number for nothing. Its callers are Icicle Mountain's and the adventure routes' trophy slots (`grZakoGenerator_801CAEB0(Ground_801C5840(), Ground_801C5940())`), so it changes which trophy can come out there and shifts the random sequence after it.
+- **melee-hd:** modeled.
+- **Fix:** `HSD_Randi(2)`, or drop the draw if only the first entry is meant.
+- **Fix impact:** changes the random sequence (and the trophies) wherever it runs, so gameplay after it; breaks replay compatibility on those stages.
+- **Source:** `crates/melee-sim/src/game/gr/ground.rs` (`x6e4_drawn`); the decompilation's `ground.c` (`Ground_801C5840`).
+
 ### The airborne collision loop can hang
 
 - **Where:** `mpColl_80046904` (one airborne substep), `crates/melee-sim/src/mp/coll/air.rs` and `crates/melee-sim/src/mp/coll/mod.rs`.
