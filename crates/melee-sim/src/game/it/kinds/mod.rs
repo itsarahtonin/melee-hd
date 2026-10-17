@@ -36,6 +36,7 @@ pub mod hammerhead;
 pub mod harisen;
 pub mod heart;
 pub mod heiho;
+pub mod kamex;
 pub mod kinoko;
 pub mod kirbycopystar;
 pub mod kirbycutterbeam;
@@ -239,6 +240,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || sonans::run_event(r, gobj, addr)
         || lucky::run_event(r, gobj, addr)
         || fushigibana::run_event(r, gobj, addr)
+        || kamex::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -348,6 +350,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| sonans::run_pred(r, gobj, addr))
         .or_else(|| lucky::run_pred(r, gobj, addr))
         .or_else(|| fushigibana::run_pred(r, gobj, addr))
+        .or_else(|| kamex::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
