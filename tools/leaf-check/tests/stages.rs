@@ -26,7 +26,7 @@
 use leaf_check::calls::{Prepare, Ret, check_calls_with, gobj_arg, peek_u32, poke_u32};
 use melee_capture::import::Maps;
 use melee_sim::game::code::{run_demo_init, run_event, run_proc};
-use melee_sim::game::gr::{garden, oldkongo, oldyoshi, shrine, yorster};
+use melee_sim::game::gr::{garden, kongo, oldkongo, oldyoshi, shrine, yorster};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use melee_sim::vec::Vec3;
@@ -1641,4 +1641,715 @@ fn garden_items_and_camera() {
         Ret::Float(f64::from(r.game.ft_camera_depth(gobj_arg(maps, call))))
     };
     check_calls_with(&d, "ftLib_80086B80", 1, &as_saved, &depth);
+}
+
+// Kongo Jungle (`grkongo.c`) and its Klap Trap (`itklap.c`).
+
+const KG: &str = "oracle-stage-kongo-jungle";
+
+/// grkongo.c's `yakumono_param`.
+const KG_PARAM: u32 = 0x804D_6980;
+
+fn kg_param(c: &Call, off: u32) -> f32 {
+    let p = peek_u32(c, KG_PARAM);
+    f32_at(c, p + off)
+}
+
+#[test]
+fn kongo_setup() {
+    let d = dir(KG);
+    check_calls_with(&d, "grKongo_801D523C", 1, &as_saved, &event);
+    check_calls_with(&d, "grKongo_801D52FC", 1, &as_saved, &event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        kongo::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    for map in 0..12u32 {
+        check_calls_with(
+            &d,
+            "grKongo_801D5340",
+            1,
+            &move |c, _| c.regs.gpr[3] = map,
+            &create,
+        );
+    }
+    for f in [
+        "grKongo_801D5490",
+        "grKongo_801D55D8",
+        "grKongo_801D5FA8",
+        "grKongo_801D5FE4",
+        "grKongo_801D6038",
+        "grKongo_801D6074",
+        "grKongo_801D637C",
+        "grKongo_801D651C",
+        "fn_801D542C",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    let bridge = |r: &mut Running, maps: &Maps, call: &Call| {
+        kongo::init_bridge(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grKongo_801D69B0", 1, &as_saved, &bridge);
+}
+
+/// The stage's variables: the event's wait and the last event.
+fn kg_events(c: &mut Call, wait: i16, last: i16) {
+    let v = vars(c);
+    poke_u16(c, v + 0x20, wait as u16);
+    poke_u16(c, v + 0x22, last as u16);
+}
+
+#[test]
+fn kongo_stage() {
+    let d = dir(KG);
+    // The event's wait running out from many seeds (each event, and a repeat drawn again or
+    // not), still running, and before the start.
+    let prepares: [&Prepare; 5] = [
+        &as_saved,
+        &|c, k| {
+            set_seed(c, (k as u32).wrapping_mul(0x9E37_79B9));
+            kg_events(c, 1, -1);
+        },
+        &|c, k| {
+            set_seed(c, (k as u32 + 7).wrapping_mul(0x6F4A_7C15));
+            kg_events(c, 1, [1, 3][k % 2]);
+        },
+        &|c, _| kg_events(c, 9, -1),
+        &|c, _| kg_events(c, -1, -1),
+    ];
+    for p in prepares {
+        check_calls_with(&d, "grKongo_801D557C", 1, p, &by_address);
+    }
+    let events = |r: &mut Running, maps: &Maps, call: &Call| {
+        kongo::events(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grKongo_801D7BBC", 1, &as_saved, &events);
+}
+
+/// The bridge's planks' speeds and angles kicked: plank `i` swung by `a` radians and pushed
+/// by `s`.
+fn kg_planks(c: &mut Call, a: f32, s: f32) {
+    let t = leaf_check::sym("grKg_803E188C");
+    for i in 0..15u32 {
+        let at = t + 0x18 * i;
+        let rest = f32_at(c, at + 8);
+        let sign = if i % 2 == 0 { 1.0 } else { -1.0 };
+        poke_u32(c, at + 0xC, (rest + sign * a * (i as f32 / 7.0)).to_bits());
+        poke_u32(c, at + 0x10, (sign * s).to_bits());
+    }
+}
+
+#[test]
+fn kongo_bridge() {
+    let d = dir(KG);
+    let rad = 0.017_453_292_f32;
+    // The planks at rest, swung a little and far (past the slack, the pull and the limits),
+    // and the posts' sway at each branch.
+    let prepares: [&Prepare; 4] = [
+        &as_saved,
+        &move |c, _| kg_planks(c, 2.0 * rad, 0.5 * rad),
+        &move |c, _| kg_planks(c, 30.0 * rad, 10.0 * rad),
+        &move |c, k| kg_planks(c, [8.0f32, -8.0][k % 2] * rad, [-3.0f32, 3.0][k % 2] * rad),
+    ];
+    let swing = |r: &mut Running, _: &Maps, _: &Call| {
+        kongo::swing_planks(r.game, r.data);
+        Ret::Nothing
+    };
+    let bridge = |r: &mut Running, maps: &Maps, call: &Call| {
+        kongo::bridge(r, gobj_arg(maps, call), call.regs.gpr[4] != 0);
+        Ret::Nothing
+    };
+    for p in prepares {
+        check_calls_with(&d, "grKongo_801D6AFC", 1, p, &swing);
+        check_calls_with(&d, "grKongo_801D7134", 1, p, &bridge);
+    }
+    let sway = |r: &mut Running, maps: &Maps, call: &Call| {
+        kongo::sway(r, gobj_arg(maps, call), call.regs.gpr[4] != 0);
+        Ret::Nothing
+    };
+    let posts = |c: &mut Call, a: f32, s: f32| {
+        let v = vars(c);
+        for at in [0, 0x10] {
+            poke_u32(c, v + at, a.to_bits());
+            poke_u32(c, v + at + 4, s.to_bits());
+        }
+    };
+    let prepares: [&Prepare; 6] = [
+        &as_saved,
+        &move |c, _| posts(c, 0.2, 0.01),
+        &move |c, _| posts(c, -0.2, 0.01),
+        &move |c, _| posts(c, 0.2, -0.01),
+        &move |c, _| posts(c, 3.0, 1.0),
+        &move |c, _| posts(c, 0.0001, 0.0001),
+    ];
+    for p in prepares {
+        check_calls_with(&d, "grKongo_801D77E0", 1, p, &sway);
+    }
+}
+
+#[test]
+fn kongo_bridge_landing() {
+    let d = dir(KG);
+    let ours = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let coll = coll_at(r, maps, call, g[5]);
+        let mut kicks = kongo::Kicks::default();
+        kicks.landed(r.game.geometry_mut(), &coll, g[7] as i32);
+        kicks.apply(r.game, r.data);
+        Ret::Nothing
+    };
+    // Landings as saved, of another ground kind, and at each end and past them.
+    let prepares: [&Prepare; 3] = [&as_saved, &|c, k| c.regs.gpr[7] = [0, 2][k % 2], &|c, k| {
+        let x = [-500.0f32, 500.0, -40.0, 40.0][k % 4];
+        poke_u32(c, c.regs.gpr[5] + 0x84, x.to_bits());
+    }];
+    for p in prepares {
+        check_calls_with(&d, "fn_801D7700", 1, p, &ours);
+    }
+}
+
+/// The barrel's variables (`grKongo_GroundVars3`), by offset into `Ground::u`.
+const KG_TARU_C4: u32 = 0;
+const KG_TARU_C6: u32 = 2;
+const KG_TARU_C8: u32 = 4;
+const KG_TARU_CA: u32 = 6;
+const KG_TARU_CC: u32 = 8;
+const KG_TARU_CE: u32 = 0xA;
+const KG_TARU_KEEP: u32 = 0xC;
+const KG_TARU_D4: u32 = 0x10;
+const KG_TARU_D8: u32 = 0x14;
+const KG_TARU_E0: u32 = 0x1C;
+const KG_TARU_E8: u32 = 0x24;
+
+fn kg_taru(c: &mut Call, turn: i16, speed: f32, timer: i16, swing: (i16, i16), held: i16) {
+    let v = vars(c);
+    poke_u16(c, v + KG_TARU_C4, turn as u16);
+    poke_u32(c, v + KG_TARU_E0, speed.to_bits());
+    poke_u16(c, v + KG_TARU_CC, timer as u16);
+    poke_u16(c, v + KG_TARU_C8, swing.0 as u16);
+    poke_u16(c, v + KG_TARU_CE, swing.1 as u16);
+    poke_u16(c, v + KG_TARU_C6, held as u16);
+}
+
+#[test]
+fn kongo_barrel() {
+    let d = dir(KG);
+    let f = "grKongo_801D577C";
+    let rad = 0.017_453_292_f32;
+    let prepares: [&Prepare; 16] = [
+        &as_saved,
+        &|c, k| {
+            let s = [0.5f32 * rad, -0.5 * rad, 3.0 * rad, -3.0 * rad][k % 4];
+            set_seed(c, k as u32 * 0x9E37);
+            kg_taru(c, 0, s, 0, (0, 5), 3);
+        },
+        &|c, k| {
+            set_seed(c, k as u32 * 0x3141);
+            kg_taru(c, 1, 2.0 * rad, -1, (0, 5), 3);
+        },
+        &|c, k| kg_taru(c, 1, [100.0f32, -100.0][k % 2] * rad, 4, (0, 5), 3),
+        &|c, k| {
+            kg_taru(
+                c,
+                2 + (k % 2) as i16,
+                [5.0f32, -5.0][k / 2 % 2] * rad,
+                3,
+                (0, 5),
+                3,
+            )
+        },
+        &|c, k| {
+            let v = vars(c);
+            let at = f32_at(c, v + KG_TARU_D8);
+            poke_u32(c, v + KG_TARU_D4, (at + 0.01).to_bits());
+            kg_taru(
+                c,
+                2 + (k % 2) as i16,
+                [5.0f32, -5.0][k / 2 % 2] * rad,
+                3,
+                (0, 5),
+                3,
+            );
+        },
+        // Heading for a direction between half and the whole of its stopping distance
+        // (eight steps of speed, 24 steps away), either way.
+        &|c, k| {
+            let a = kg_param(c, 0x34) * 0.017_453_292;
+            let sign = [1.0f32, -1.0][k % 2];
+            let v = vars(c);
+            let at = f32_at(c, v + KG_TARU_D8);
+            poke_u32(c, v + KG_TARU_D4, (at + sign * 24.0 * a).to_bits());
+            kg_taru(c, 2 + (k / 2 % 2) as i16, sign * 8.0 * a, 3, (0, 5), 3);
+        },
+        &|c, _| kg_taru(c, 0, 0.0, 9, (0, -1), 3),
+        &|c, k| {
+            set_seed(c, k as u32 * 0x2718);
+            let v = vars(c);
+            poke_u32(c, v + KG_TARU_E8, 9.0f32.to_bits());
+            kg_taru(c, 0, 0.0, 9, (1, 0), 3);
+        },
+        &|c, _| kg_taru(c, 0, 0.0, 9, (2, -1), 3),
+        &|c, k| {
+            set_seed(c, k as u32 * 0x1618);
+            let v = vars(c);
+            poke_u32(c, v + KG_TARU_E8, 0.001f32.to_bits());
+            kg_taru(c, 0, 0.0, 9, (3, 0), 3);
+        },
+        // Holding nothing (the state clears and falls into the shot, which reads null: not
+        // reached by any call), a fighter's countdown running.
+        &|c, k| {
+            kg_taru(c, 0, 0.0, 9, (0, 5), 1);
+            let v = vars(c);
+            let ft = first_fighter(c);
+            poke_u32(c, v + KG_TARU_KEEP, ft);
+            poke_u16(c, v + KG_TARU_CA, [3u16, 0][k % 2]);
+        },
+        // The shot at something that is neither a fighter nor an item (the barrel itself).
+        &|c, _| {
+            kg_taru(c, 0, 0.0, 9, (0, 5), 2);
+            let v = vars(c);
+            let me = c.regs.gpr[3];
+            poke_u32(c, v + KG_TARU_KEEP, me);
+        },
+        // Waiting for nothing near, catching (with nothing near, or a Klap Trap if there is
+        // one), and a state past the four.
+        &|c, _| kg_taru(c, 0, 0.0, 9, (0, 5), 3),
+        &|c, _| kg_taru(c, 0, 0.0, 9, (0, 5), 0),
+        &|c, _| kg_taru(c, 0, 0.0, 9, (0, 5), 4),
+    ];
+    for p in prepares {
+        check_calls_with(&d, f, 1, p, &by_address);
+    }
+    let ours = |r: &mut Running, _: &Maps, _: &Call| Ret::Float(f64::from(kongo::direction(r)));
+    for s in 0..24u32 {
+        check_calls_with(
+            &d,
+            "grKongo_801D8314",
+            1,
+            &move |c, k| set_seed(c, (s * 7 + k as u32).wrapping_mul(0x6F4A_7C15)),
+            &ours,
+        );
+    }
+}
+
+#[test]
+fn kongo_catch() {
+    let d = dir(KG);
+    let ours = |r: &mut Running, maps: &Maps, call: &Call| {
+        let ground = gobj_arg(maps, call);
+        let ft = *maps
+            .gobjs
+            .get(&call.regs.gpr[4])
+            .expect("the fighter's GObj");
+        Ret::Int(u32::from(kongo::barrel_catch(r, ground, ft)))
+    };
+    let prepares: [&Prepare; 4] = [
+        &as_saved,
+        &|c, k| {
+            set_seed(c, k as u32 * 0x1357);
+            to_barrel(c, 4, 0.0);
+            let v = vars(c);
+            poke_u16(c, v + KG_TARU_C6, 0);
+        },
+        &|c, k| {
+            let r = kg_param(c, 0x28);
+            to_barrel(c, 4, r * [0.999f32, 1.001, 1.0, -0.999][k % 4]);
+            let v = vars(c);
+            poke_u16(c, v + KG_TARU_C6, 0);
+        },
+        &|c, _| {
+            to_barrel(c, 4, 0.0);
+            let v = vars(c);
+            poke_u16(c, v + KG_TARU_C6, 2);
+        },
+    ];
+    for p in prepares {
+        check_calls_with(&d, "fn_801D8134", 1, p, &ours);
+    }
+    // The barrel letting go and dropping, from the barrel's calls: holding a fighter, holding
+    // something else, and not holding.
+    let release = |r: &mut Running, maps: &Maps, call: &Call| {
+        kongo::barrel_release(r.game, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let drop = |r: &mut Running, maps: &Maps, call: &Call| {
+        kongo::barrel_drop(r.game, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    for (target, ours) in [
+        (
+            "grKongo_801D8270",
+            &release as &(dyn Fn(&mut Running, &Maps, &Call) -> Ret + Sync),
+        ),
+        ("grKongo_801D828C", &drop),
+    ] {
+        let t = leaf_check::sym(target);
+        let prepares: [&Prepare; 3] = [
+            &move |c, _| {
+                c.addr = t;
+                let v = vars(c);
+                poke_u16(c, v + KG_TARU_C6, 1);
+                let ft = first_fighter(c);
+                poke_u32(c, v + KG_TARU_KEEP, ft);
+            },
+            &move |c, _| {
+                c.addr = t;
+                let v = vars(c);
+                poke_u16(c, v + KG_TARU_C6, 1);
+                let me = c.regs.gpr[3];
+                poke_u32(c, v + KG_TARU_KEEP, me);
+            },
+            &move |c, _| {
+                c.addr = t;
+                let v = vars(c);
+                poke_u16(c, v + KG_TARU_C6, 0);
+            },
+        ];
+        for p in prepares {
+            check_calls_with(&d, "grKongo_801D577C", 1, p, ours);
+        }
+    }
+}
+
+/// A floating platform's variables set.
+fn kg_platform(c: &mut Call, state: i16, landings: i16, last: i16, ticks: i16) {
+    let v = vars(c);
+    poke_u16(c, v, state as u16);
+    poke_u16(c, v + 2, landings as u16);
+    poke_u16(c, v + 4, last as u16);
+    poke_u16(c, v + 6, ticks as u16);
+}
+
+#[test]
+fn kongo_platforms_and_logs() {
+    let d = dir(KG);
+    let prepares: [&Prepare; 6] = [
+        &as_saved,
+        &|c, _| kg_platform(c, 0, 0, 0, 0),
+        &|c, k| {
+            let n = kg_param(c, 0x88) as i16;
+            kg_platform(c, 1, n + [0, 1][k % 2], n, 3);
+        },
+        &|c, k| {
+            let n = kg_param(c, 0x8C) as i16;
+            kg_platform(c, 1, 0, 0, n + [0, -1][k % 2]);
+        },
+        &|c, _| kg_platform(c, 2, 0, 0, 0),
+        &|c, _| kg_platform(c, 3, 0, 0, 0),
+    ];
+    for p in prepares {
+        check_calls_with(&d, "grKongo_801D6198", 1, p, &by_address);
+    }
+    let behind = |r: &mut Running, maps: &Maps, call: &Call| {
+        Ret::Int(u32::from(kongo::log_behind(r, gobj_arg(maps, call))))
+    };
+    check_calls_with(&d, "grKongo_801D7F78", 1, &as_saved, &behind);
+    check_calls_with(&d, "grKongo_801D64BC", 1, &as_saved, &by_address);
+    // A landing on a platform, of each ground kind, from its process's calls.
+    let landed = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = *maps
+            .grounds
+            .get(&call.regs.gpr[3])
+            .expect("the platform's Ground");
+        kongo::platform_landed(&mut r.game.grounds[g.0], call.regs.gpr[7] as i32);
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("fn_801D7E60");
+    for kind in [1u32, 2] {
+        let prep = move |c: &mut Call, _: usize| {
+            c.addr = t;
+            let gp = peek_u32(c, c.regs.gpr[3] + 0x2C);
+            c.regs.gpr[3] = gp;
+            c.regs.gpr[7] = kind;
+        };
+        check_calls_with(&d, "grKongo_801D6198", 1, &prep, &landed);
+    }
+}
+
+/// The river path's spline: the one path's in the state (the calls run with one out).
+fn river_spline(r: &mut Running) -> melee_data::archive::DataRef {
+    use melee_sim::game::gr::GroundVars;
+    r.game
+        .grounds
+        .iter()
+        .find_map(|(_, g)| match &g.u {
+            GroundVars::KongoPath(v) => v.xC4,
+            _ => None,
+        })
+        .expect("a river path with its spline")
+}
+
+#[test]
+fn kongo_path() {
+    let d = dir(KG);
+    // The path as saved, near its end, and at it.
+    let prepares: [&Prepare; 3] = [
+        &as_saved,
+        &|c, _| {
+            let v = vars(c);
+            poke_u32(c, v + 8, 0.9995f32.to_bits());
+        },
+        &|c, _| {
+            let v = vars(c);
+            poke_u32(c, v + 8, 1.0f32.to_bits());
+        },
+    ];
+    for p in prepares {
+        check_calls_with(&d, "grKongo_801D6668", 1, p, &by_address);
+    }
+    // The spline's pose and tangent, written where the prepares point them: the stage's
+    // guide points (compared, unused on Kongo Jungle).
+    let pose = |r: &mut Running, _: &Maps, call: &Call| {
+        let spline = river_spline(r);
+        let (at, rot) =
+            melee_sim::game::gr::ground::spline_pose(r.data, spline, call.regs.fpr[1].ps0 as f32);
+        if let Some(at) = at {
+            r.game.stage_info.x130 = at;
+        }
+        r.game.stage_info.x13C = rot;
+        Ret::Nothing
+    };
+    let si = leaf_check::sym("stage_info");
+    let out = move |c: &mut Call, k: usize| {
+        c.regs.gpr[4] = si + 0x130;
+        c.regs.gpr[5] = si + 0x13C;
+        if k % 3 == 1 {
+            c.regs.fpr[1].ps0 = 0.0;
+        } else if k % 3 == 2 {
+            c.regs.fpr[1].ps0 = 1.0;
+        }
+    };
+    check_calls_with(&d, "Ground_801C4B50", 1, &out, &pose);
+    let tangent = |r: &mut Running, _: &Maps, call: &Call| {
+        let spline = river_spline(r);
+        if let Some(v) =
+            melee_sim::hsd::spline::tangent(r.data, spline, call.regs.fpr[1].ps0 as f32)
+        {
+            r.game.stage_info.x130 = v;
+        }
+        Ret::Nothing
+    };
+    let out = move |c: &mut Call, k: usize| {
+        c.regs.gpr[3] = si + 0x130;
+        c.regs.fpr[1].ps0 = [c.regs.fpr[1].ps0, 0.0, 1.0, 0.25, -0.5, 1.5][k % 6];
+    };
+    check_calls_with(&d, "lbShadow_8000E9F0", 1, &out, &tangent);
+}
+
+#[test]
+fn kongo_shadow() {
+    let d = dir(KG);
+    fn ours(r: &mut Running, maps: &Maps, call: &Call) -> bool {
+        let (pos, j) = shadow_args(maps, call);
+        kongo::check_shadow_render(r.game, r.data, pos, j)
+    }
+    check_shadow(&d, "grKongo_801D844C", ours, 0.0);
+}
+
+/// The stage's callbacks no capture reaches, from the barrel's calls: the empty processes and
+/// destroy callbacks, the demo and load hooks, and the path's destruction.
+#[test]
+fn kongo_unreached_callbacks() {
+    let d = dir(KG);
+    let from = "grKongo_801D577C";
+    for target in [
+        "grKongo_801D55D4",
+        "grKongo_801D5FA4",
+        "grKongo_801D5FDC",
+        "grKongo_801D5FE0",
+        "grKongo_801D6030",
+        "grKongo_801D6034",
+        "grKongo_801D606C",
+        "grKongo_801D6070",
+        "grKongo_801D6378",
+        "grKongo_801D6518",
+        "grKongo_801D69AC",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(target)), &by_address);
+    }
+    check_calls_with(
+        &d,
+        from,
+        1,
+        &retarget(leaf_check::sym("grKongo_801D5238")),
+        &demo,
+    );
+    let t = leaf_check::sym("grKongo_801D52F8");
+    check_calls_with(&d, from, 1, &move |c, _| c.addr = t, &event);
+}
+
+#[test]
+fn klap() {
+    use melee_sim::game::it::kinds::klap;
+    let d = dir(KG);
+    let item = |f: fn(&mut Running, melee_sim::hsd::gobj::GObjId)| {
+        move |r: &mut Running, maps: &Maps, call: &Call| {
+            f(r, gobj_arg(maps, call));
+            Ret::Nothing
+        }
+    };
+    let pred = |f: fn(&mut Running, melee_sim::hsd::gobj::GObjId) -> bool| {
+        move |r: &mut Running, maps: &Maps, call: &Call| {
+            Ret::Int(u32::from(f(r, gobj_arg(maps, call))))
+        }
+    };
+    for (name, f) in [
+        ("it_802E1820", klap::spawned as fn(&mut Running, _)),
+        ("itKlap_Logic10_Destroyed", klap::destroyed),
+        ("it_802E1930", klap::swim),
+        ("it_802E1C84", klap::fall),
+        ("itKlap_UnkMotion2_Phys", klap::phys2),
+        ("itKlap_UnkMotion4_Phys", klap::phys4),
+        ("it_802E20D8", klap::enter_barrel),
+        ("it_802E215C", klap::in_barrel),
+    ] {
+        check_calls_with(&d, name, 1, &as_saved, &item(f));
+    }
+    // Swimming or snapping: as saved and from many seeds (the switch drawn on a rewound
+    // animation).
+    for p in [&as_saved as &Prepare, &|c, k| {
+        set_seed(c, (k as u32).wrapping_mul(0x2545_F491))
+    }] {
+        check_calls_with(&d, "itKlap_UnkMotion1_Phys", 1, p, &item(klap::phys1));
+    }
+    check_calls_with(
+        &d,
+        "itKlap_UnkMotion1_Coll",
+        1,
+        &as_saved,
+        &pred(klap::coll1),
+    );
+    // What the match never did to it, from its calls: snapping (from swimming's), and a hit
+    // taken and its knockback (from falling's and spinning's, with a knockback set).
+    let t = leaf_check::sym("it_802E1C4C");
+    check_calls_with(
+        &d,
+        "it_802E1930",
+        1,
+        &move |c, _| c.addr = t,
+        &item(klap::snap),
+    );
+    for (target, f) in [
+        ("it_2725_Logic10_DmgReceived", None),
+        ("it_802E1E94", Some(klap::knocked as fn(&mut Running, _))),
+    ] {
+        let t = leaf_check::sym(target);
+        let hit = move |c: &mut Call, k: usize| {
+            c.addr = t;
+            let ip = peek_u32(c, c.regs.gpr[3] + 0x2C);
+            poke_u32(c, ip + 0xCC8, [0.0f32, 30.0, 120.0][k % 3].to_bits());
+            poke_u32(c, ip + 0xCAC, [45u32, 361, 270][k % 3]);
+            poke_u32(c, ip + 0xCCC, [1.0f32, -1.0][k % 2].to_bits());
+        };
+        for from in ["itKlap_UnkMotion2_Phys", "itKlap_UnkMotion4_Phys"] {
+            match f {
+                Some(f) => check_calls_with(&d, from, 1, &hit, &item(f)),
+                None => check_calls_with(&d, from, 1, &hit, &pred(klap::damaged)),
+            }
+        }
+    }
+    let spawn = |r: &mut Running, maps: &Maps, call: &Call| {
+        let path = maps.gobjs.get(&call.regs.gpr[3]).copied();
+        let _ = klap::spawn(r, path);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "it_802E18B4", 1, &as_saved, &spawn);
+    let shot = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let pos = Vec3::new(
+            f32_at(call, g[4]),
+            f32_at(call, g[4] + 4),
+            f32_at(call, g[4] + 8),
+        );
+        let w = |o: u32| peek_u32(call, g[5] + o);
+        let hit = melee_sim::game::structs::HitCapsule {
+            state: w(0) as i32,
+            damage: w(4) as f32,
+            kb_angle: w(8) as i32,
+            x24: w(0xC),
+            x28: w(0x10),
+            x2C: w(0x14),
+            element: w(0x18),
+            sfx_severity: w(0x1C) as i32,
+            sfx_kind: w(0x20) as i32,
+            unk_count: w(4),
+            ..Default::default()
+        };
+        klap::shot(
+            r,
+            gobj_arg(maps, call),
+            pos,
+            hit,
+            call.regs.fpr[1].ps0 as f32,
+        );
+        Ret::Nothing
+    };
+    for p in [&as_saved as &Prepare, &|c, k| {
+        c.regs.fpr[1].ps0 = [-45.0, 0.0, 361.0, 90.0][k % 4]
+    }] {
+        check_calls_with(&d, "it_802E2330", 1, p, &shot);
+    }
+    let forget = |r: &mut Running, maps: &Maps, call: &Call| {
+        let other = maps.gobjs.get(&call.regs.gpr[4]).copied();
+        klap::evt_unk(r, gobj_arg(maps, call), other);
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("it_802E2450");
+    let with_fighter = move |c: &mut Call, _: usize| {
+        c.addr = t;
+        c.regs.gpr[4] = first_fighter(c);
+    };
+    check_calls_with(&d, "itKlap_UnkMotion2_Phys", 1, &with_fighter, &forget);
+    let kb = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let w = |o: u32| peek_u32(call, g[4] + o);
+        let hit = melee_sim::game::structs::HitCapsule {
+            damage: f32::from_bits(w(0x8)),
+            x24: w(0x24),
+            x28: w(0x28),
+            x2C: w(0x2C),
+            ..Default::default()
+        };
+        let gobj = (maps.gobjs.iter())
+            .find(|&(&a, _)| peek_u32(call, a + 0x2C) == g[3])
+            .map(|(_, &o)| o)
+            .expect("the item's GObj");
+        Ret::Float(f64::from(melee_sim::game::it::coll::knockback_of(
+            r, gobj, &hit,
+        )))
+    };
+    check_calls_with(&d, "it_80270CD8", 1, &as_saved, &kb);
+    // The states' trivial callbacks, from the falling Klap Trap's calls.
+    for target in [
+        "itKlap_UnkMotion1_Anim",
+        "itKlap_UnkMotion2_Anim",
+        "itKlap_UnkMotion3_Anim",
+        "itKlap_UnkMotion4_Anim",
+        "itKlap_UnkMotion2_Coll",
+        "itKlap_UnkMotion3_Coll",
+        "itKlap_UnkMotion4_Coll",
+    ] {
+        let t = leaf_check::sym(target);
+        check_calls_with(
+            &d,
+            "itKlap_UnkMotion2_Phys",
+            1,
+            &move |c, _| c.addr = t,
+            &pred(klap::answers_false),
+        );
+    }
+    let t = leaf_check::sym("itKlap_UnkMotion3_Phys");
+    check_calls_with(
+        &d,
+        "itKlap_UnkMotion2_Phys",
+        1,
+        &move |c, _| c.addr = t,
+        &item(klap::phys3),
+    );
 }

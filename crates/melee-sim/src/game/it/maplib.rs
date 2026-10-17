@@ -37,6 +37,7 @@ pub fn with_stage_coll<R>(
         gr: &game.gr,
         grkind: game.stage_info.grkind,
         landing,
+        kicks: Default::default(),
         grounds: &mut game.grounds,
         filter: None,
     };
@@ -47,7 +48,9 @@ pub fn with_stage_coll<R>(
     };
     let out = f(&mut coll);
     let landing = hooks.landing;
+    let kicks = std::mem::take(&mut hooks.kicks);
     landing.apply(game);
+    kicks.apply(game, data);
     out
 }
 

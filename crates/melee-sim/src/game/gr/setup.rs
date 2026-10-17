@@ -340,6 +340,9 @@ fn archive_coll_joint(data: &Archives, list: Option<DataRef>, i: u32) -> GrJoint
 /// Binds a collision joint to the `z`th joint of a model, moves it there and settles it
 /// (`mpLib_800552B0`, `mpLib_80055E9C`, `mpLib_80057424`).
 fn bind_coll_joint(game: &mut Game, data: &Archives, j: GrJoint, root: Option<JObjId>) {
+    game.gr
+        .freed_coll_jobjs
+        .retain(|&(k, _)| k != i32::from(j.x));
     struct Tree<'a>(&'a crate::hsd::jobj::JObjs);
     impl crate::mp::JObjTree<JObjId> for Tree<'_> {
         fn child(&self, j: JObjId) -> Option<JObjId> {
@@ -1126,6 +1129,22 @@ pub fn destroy(r: &mut Running, gobj: Option<GObjId>) {
     if let Some(head) = datfiles::archive_for(r.game, r.data, map_id) {
         let joint = head.entry(r.data, map_id).joint(r.data);
         forget_points(r.game, map_id, jobj, joint, head, r.data);
+    }
+    if let Some(root) = jobj {
+        let objs = &r.game.objs;
+        let geo = r.game.geometry.as_mut().expect("no collision geometry");
+        for (id, joint) in geo.joints.iter_mut().enumerate() {
+            if let Some(j) = joint.jobj
+                && super::anime::root_of(objs, j) == root
+            {
+                r.game.gr.freed_coll_jobjs.retain(|&(k, _)| k != id as i32);
+                r.game
+                    .gr
+                    .freed_coll_jobjs
+                    .push((id as i32, objs.jobjs.pool.addr(j.0)));
+                joint.jobj = None;
+            }
+        }
     }
     crate::hsd::gobj::free(r, gobj);
 }

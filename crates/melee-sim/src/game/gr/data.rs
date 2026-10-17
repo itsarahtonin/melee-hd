@@ -4,7 +4,7 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_GARDEN, GR_KIND_IZUMI, GR_KIND_LAST, GR_KIND_OLDKONGO,
+    GR_KIND_BATTLE, GR_KIND_GARDEN, GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_LAST, GR_KIND_OLDKONGO,
     GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_SHRINE, GR_KIND_STORY,
     GR_KIND_YORSTER,
 };
@@ -459,6 +459,56 @@ pub const GARDEN: StageData = StageData {
     joints: &[],
 };
 
+/// `grKg_StageCallbacks`. Map 10 is the stage, map 5 the barrel, maps 1 and 2 the floating
+/// platforms, maps 7, 8 and 9 the logs, map 11 the river's path, maps 3, 4 and 6 the
+/// background, map 0 the sky (no callbacks).
+pub const KONGO_CALLBACKS: [StageCallbacks; 12] = [
+    cb(0, 0, 0, 0, 0),
+    cb(0x801D_6074, 0x801D_6190, 0x801D_6198, 0x801D_6378, 0),
+    cb(0x801D_6074, 0x801D_6190, 0x801D_6198, 0x801D_6378, 0),
+    cb(0x801D_6038, 0x801D_6064, 0x801D_606C, 0x801D_6070, 0),
+    cb(0x801D_5FA8, 0x801D_5FD4, 0x801D_5FDC, 0x801D_5FE0, 0),
+    cb(0x801D_55D8, 0x801D_5774, 0x801D_577C, 0x801D_5FA4, 0),
+    cb(0x801D_5FE4, 0x801D_6028, 0x801D_6030, 0x801D_6034, 0),
+    cb(0x801D_637C, 0x801D_64B4, 0x801D_64BC, 0x801D_6518, 0),
+    cb(0x801D_637C, 0x801D_64B4, 0x801D_64BC, 0x801D_6518, 0),
+    cb(0x801D_637C, 0x801D_64B4, 0x801D_64BC, 0x801D_6518, 0),
+    cb(
+        0x801D_5490,
+        0x801D_5574,
+        0x801D_557C,
+        0x801D_55D4,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x801D_651C, 0x801D_6660, 0x801D_6668, 0x801D_69AC, 0),
+];
+
+/// `grKg_803E16E0`: the stage's own collision joints.
+pub const KONGO_JOINTS: [GrJoint; 6] = [
+    GrJoint { x: 2, y: 10, z: 19 },
+    GrJoint { x: 3, y: 10, z: 22 },
+    GrJoint { x: 5, y: 10, z: 43 },
+    GrJoint { x: 6, y: 10, z: 44 },
+    GrJoint { x: 0, y: 1, z: 0 },
+    GrJoint { x: 1, y: 2, z: 2 },
+];
+
+/// `grKg_StageData`.
+pub const KONGO: StageData = StageData {
+    grkind: GR_KIND_KONGO,
+    callbacks: &KONGO_CALLBACKS,
+    file: Some("/GrKg.dat"),
+    on_init: 0x801D_523C,
+    on_demo_init: 0x801D_5238,
+    on_load: 0x801D_52F8,
+    on_start: 0x801D_52FC,
+    callback4: 0x801D_5338,
+    on_touch_line: 0x801D_8444,
+    on_check_shadow_render: 0x801D_844C,
+    flags2: 1,
+    joints: &KONGO_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -473,6 +523,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_SHRINE => &SHRINE,
         GR_KIND_YORSTER => &YORSTER,
         GR_KIND_GARDEN => &GARDEN,
+        GR_KIND_KONGO => &KONGO,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

@@ -14,6 +14,7 @@ pub mod garden;
 pub mod grlib;
 pub mod ground;
 pub mod izumi;
+pub mod kongo;
 pub mod last;
 pub mod material;
 pub mod oldkongo;
@@ -29,7 +30,8 @@ pub mod yorster;
 pub mod zako;
 
 pub use vars::{
-    BattleBgVars, Garden2Vars, GardenVars, GroundVars, LastVars, MapVars, OldKongoBirdsVars,
+    BattleBgVars, Garden2Vars, GardenVars, GroundVars, KongoBarrelVars, KongoLogVars,
+    KongoPathVars, KongoPlatformVars, KongoVars, LastVars, MapVars, OldKongoBirdsVars,
     OldKongoVars, OldYoshiCloud, OldYoshiCloudVars, OldYoshiGuestVars, StadiumBits,
     StadiumDisplayVars, StadiumPieceVars, StadiumVars, VarsKind, YorsterBlock, YorsterVars,
 };
@@ -48,6 +50,8 @@ pub const GR_KIND_PSTADIUM: i32 = 16;
 pub const GR_KIND_STORY: i32 = 10;
 /// `Gr_Kind_Izumi`, Fountain of Dreams.
 pub const GR_KIND_IZUMI: i32 = 12;
+/// `Gr_Kind_Kongo`, Kongo Jungle.
+pub const GR_KIND_KONGO: i32 = 4;
 /// `Gr_Kind_Garden`, Jungle Japes.
 pub const GR_KIND_GARDEN: i32 = 5;
 /// `Gr_Kind_Yorster`, Yoshi's Island.
@@ -137,6 +141,10 @@ pub struct Globals {
     pub coll_off: Option<[u8; 64]>,
     /// The stamp `Ground_UpdateMapColl` puts on the joints it moves (`Ground_804D6954`).
     pub coll_stamp: i16,
+    /// The collision joints left holding a joint of a stage object destroyed since
+    /// (`Ground_801C4A08` doesn't clear them), with that joint's address: nothing reads them
+    /// until the joint is bound again, so they keep the address alone.
+    pub freed_coll_jobjs: Vec<(i32, u32)>,
     /// The start hooks' nodes.
     pub start_hooks: Pool<StartHook>,
     pub dynamic_attrs: DynamicAttrs,
@@ -170,6 +178,10 @@ pub struct Globals {
     pub yorster_yakumono: Option<DataRef>,
     /// Jungle Japes' `yakumono_param` (`grGarden_YakumonoParam`).
     pub garden_yakumono: Option<DataRef>,
+    /// Kongo Jungle's `yakumono_param` (`grKongo_YakumonoParam`).
+    pub kongo_yakumono: Option<DataRef>,
+    /// Kongo Jungle's bridge (`grkongo.c`'s statics).
+    pub kongo: kongo::Globals,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -245,6 +257,11 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_YORSTER, 1) => VarsKind::Yorster,
         (GR_KIND_GARDEN, 1) => VarsKind::Garden,
         (GR_KIND_GARDEN, 3) => VarsKind::Garden2,
+        (GR_KIND_KONGO, 10) => VarsKind::Kongo,
+        (GR_KIND_KONGO, 5) => VarsKind::KongoBarrel,
+        (GR_KIND_KONGO, 1 | 2) => VarsKind::KongoPlatform,
+        (GR_KIND_KONGO, 7..=9) => VarsKind::KongoLog,
+        (GR_KIND_KONGO, 11) => VarsKind::KongoPath,
         _ => VarsKind::Bytes,
     }
 }

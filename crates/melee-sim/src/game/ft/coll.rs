@@ -63,6 +63,8 @@ pub struct ObjCollHooks<'a> {
     pub grkind: i32,
     /// What a landing on Yoshi's Island's blocks reads and gives.
     pub landing: crate::game::gr::yorster::Landing,
+    /// The planks Kongo Jungle's bridge's landings kicked.
+    pub kicks: crate::game::gr::kongo::Kicks,
     /// The stage objects, which the stage's collision joints' callbacks write.
     pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
     /// The fighter's floor filter's inputs, for a filtered pass.
@@ -79,16 +81,22 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
 
     fn joint_callback(
         &mut self,
-        _g: &mut Geometry,
+        g: &mut Geometry,
         callback: CodeRef,
         user_data: Option<super::super::handles::GroundId>,
         joint_id: i32,
         coll: &mut CollData,
         _x50: i32,
-        _kind: i32,
+        kind: i32,
         dy: f32,
     ) {
         match callback.0 {
+            super::super::gr::kongo::BRIDGE_LANDED => self.kicks.landed(g, coll, kind),
+            super::super::gr::kongo::PLATFORM_LANDED => {
+                if let Some(gr) = user_data {
+                    super::super::gr::kongo::platform_landed(&mut self.grounds[gr.0], kind);
+                }
+            }
             super::super::gr::yorster::BLOCK_LANDED => {
                 if let Some(g) = user_data {
                     let (gr, grkind, data) = (self.gr, self.grkind, self.data);
@@ -250,6 +258,7 @@ impl Running<'_> {
             gr: &game.gr,
             grkind: game.stage_info.grkind,
             landing,
+            kicks: Default::default(),
             grounds: &mut game.grounds,
             filter,
         };
@@ -266,8 +275,10 @@ impl Running<'_> {
         let hit = pass(&mut coll, cd);
         fp.cur_pos = fp.coll_data.cur_pos;
         let landing = hooks.landing;
+        let kicks = std::mem::take(&mut hooks.kicks);
         game.ft.platforms.clear();
         landing.apply(game);
+        kicks.apply(game, self.data);
         hit
     }
 

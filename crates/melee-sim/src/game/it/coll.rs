@@ -576,6 +576,33 @@ const HIT_EFFECT_IDS: [i32; 17] = [
     1000, 1002, 1001, 1004, 1145, 1005, -1, -1, -1, 1000, 1000, -1, -1, 1046, -1, -1, 0,
 ];
 
+/// The knockback a hit gives the item, `it_80270CD8`: from the hit's fixed knockback, or the
+/// item's damage with the hit's, capped (`ItemCommonData` x9C).
+#[doc(alias = "it_80270CD8")]
+pub fn knockback_of(r: &Running, gobj: GObjId, hit: &crate::game::structs::HitCapsule) -> f32 {
+    let c = common_data(r.game);
+    let k = |o: u32| reg(c.f32(r.data, 0x80 + 4 * o));
+    let damage_mul = reg(super::item::attr_of(item(r.game, gobj)).f32(r.data, 0x1C));
+    let u = |v: u32| fp::frsp(f64::from(v));
+    let kb = if hit.x28 != 0 {
+        let t = fp::fmuls(k(9), fp::fmuls(k(10), u(hit.x28)));
+        let t = fp::fmadds(k(10), k(8), t);
+        let t = fp::fmuls(damage_mul, t);
+        let t = fp::fmadds(k(11), t, k(12));
+        fp::fmadds(fp::fmuls(f64::from(0.01_f32), u(hit.x24)), t, u(hit.x2C))
+    } else {
+        let me = item(r.game, gobj);
+        let sum = fp::fadds(fp::frsp(f64::from(me.xC9C)), fp::frsp(f64::from(me.xCA0)));
+        let t = fp::fmuls(k(9), fp::fmuls(reg(hit.damage), sum));
+        let t = fp::fmadds(k(8), sum, t);
+        let t = fp::fmuls(damage_mul, t);
+        let t = fp::fmadds(k(11), t, k(12));
+        fp::fmadds(fp::fmuls(f64::from(0.01_f32), u(hit.x24)), t, u(hit.x2C))
+    };
+    let cap = reg(c.f32(r.data, 0x9C));
+    mem(if kb >= cap { cap } else { kb })
+}
+
 /// What the item's damage log decides, `it_80270E30`: each hit's knockback (from its fixed
 /// knockback, or the item's damage with the hit's), capped (`ItemCommonData` x9C), and its
 /// effect where it landed; the strongest one gives who hit the item, from which side, the

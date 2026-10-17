@@ -187,6 +187,11 @@ pub const STAGES: &[Stage] = &[
         keys: &["jj", "jungle-japes"],
     },
     Stage {
+        kind: 5,
+        name: "Kongo Jungle",
+        keys: &["kj", "kongo-jungle"],
+    },
+    Stage {
         kind: 30,
         name: "Kongo Jungle N64",
         keys: &["kj64", "kongo-jungle-64"],

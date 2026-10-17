@@ -744,6 +744,9 @@ fn catches(
         Some(super::super::gr::oldkongo::BARREL_CATCH) => {
             super::super::gr::oldkongo::barrel_catch(g, ground, gobj)
         }
+        Some(super::super::gr::kongo::BARREL_CATCH) => {
+            super::super::gr::kongo::barrel_catch(g, ground, gobj)
+        }
         other => unported_call(&format!("a stage device's catch test {other:x?}")),
     }
 }

@@ -520,6 +520,7 @@ impl Running<'_> {
             gr: &game.gr,
             grkind: game.stage_info.grkind,
             landing,
+            kicks: Default::default(),
             grounds: &mut game.grounds,
             filter: None,
         };
@@ -566,6 +567,7 @@ impl Running<'_> {
             gr: &game.gr,
             grkind: game.stage_info.grkind,
             landing,
+            kicks: Default::default(),
             grounds: &mut game.grounds,
             filter: None,
         };
@@ -580,12 +582,13 @@ impl Running<'_> {
         cd.last_pos = cd.cur_pos;
         cd.last_pos.y = mem(fp::fadds(reg(cd.last_pos.y), 10.0));
         cd.cur_pos.y = mem(fp::fsubs(reg(cd.cur_pos.y), 10.0));
-        if coll.air_frame(cd, 6, 0) {
+        let landed = coll.air_frame(cd, 6, 0);
+        if landed {
             fp.cur_pos = fp.coll_data.cur_pos;
-            true
-        } else {
-            false
         }
+        let kicks = std::mem::take(&mut hooks.kicks);
+        kicks.apply(game, self.data);
+        landed
     }
 
     /// Fits the fighter's camera box to it, `ftCamera_80076064`.

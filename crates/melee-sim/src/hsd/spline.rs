@@ -272,3 +272,73 @@ pub fn arc_length_parameter(data: &Archives, spline: DataRef, s: f32) -> f32 {
 pub fn arc_length_point(data: &Archives, spline: DataRef, s: f32) -> Option<Vec3> {
     point(data, spline, arc_length_parameter(data, spline, s))
 }
+
+/// The spline's direction (its derivative, unnormalized) at parameter `u`, `lbShadow_8000E9F0`
+/// with its inline `splGetBezierTangent`, `splGetBSplineTangent` and `splGetCardinalTangent`.
+/// `None` where the original leaves its output alone: `u` outside [0, 1], or an unknown type.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+#[doc(alias = "lbShadow_8000E9F0")]
+pub fn tangent(data: &Archives, spline: DataRef, u: f32) -> Option<Vec3> {
+    let orig = reg(u);
+    if orig < 0.0 || orig > 1.0 {
+        return None;
+    }
+    let s = Spline::read(data, spline);
+    let cvs = s.cv.expect("a spline has control points");
+    let last = i32::from(s.numcv) - 1;
+    let t = fp::fmuls(orig, fp::frsp(f64::from(last)));
+    let whole = fp::fctiwz(t);
+    let idx = i32::from(whole as i16);
+    let u = fp::fsubs(t, fp::frsp(f64::from(idx)));
+    match s.kind {
+        0 => {
+            let idx = if orig == 1.0 {
+                i32::from(whole.wrapping_sub(1) as i16)
+            } else {
+                idx
+            };
+            let c = |k| mem(fp::fsubs(cv(data, cvs, idx + 1, k), cv(data, cvs, idx, k)));
+            Some(Vec3::new(c(0), c(1), c(2)))
+        }
+        1 => {
+            let u2 = fp::fmuls(u, u);
+            let u_1 = fp::fsubs(u, 1.0);
+            let b0 = fp::fmuls(fp::fmuls(-3.0, u_1), u_1);
+            // 3u² is rounded before the sum (the machine code doesn't fuse it).
+            let b1 = fp::fmuls(3.0, fp::fadds(fp::fnmsubs(4.0, u, 1.0), fp::fmuls(3.0, u2)));
+            let b2 = fp::fmuls(3.0, fp::fmsubs(2.0, u, fp::fmuls(3.0, u2)));
+            let b3 = fp::fmuls(3.0, u2);
+            Some(blend(data, cvs, idx * 3, [b0, b1, b2, b3]))
+        }
+        2 => {
+            let u2 = fp::fmuls(u, u);
+            let u_1 = fp::fsubs(1.0, u);
+            let b0 = fp::fmuls(u_1, fp::fmuls(-0.5, u_1));
+            let b1 = fp::fmuls(0.5, fp::fmsubs(3.0, u2, fp::fmuls(4.0, u)));
+            let b2 = fp::fmuls(0.5, fp::fadds(1.0, fp::fmadds(-3.0, u2, fp::fmuls(2.0, u))));
+            let b3 = fp::fmuls(0.5, u2);
+            Some(blend(data, cvs, idx, [b0, b1, b2, b3]))
+        }
+        3 => {
+            let k = reg(s.tension);
+            let u2 = fp::fmuls(u, u);
+            let c0 = fp::fmuls(k, fp::fsubs(fp::fmadds(-3.0, u2, fp::fmuls(4.0, u)), 1.0));
+            let c1 = fp::fmadds(
+                fp::fmuls(3.0, fp::fsubs(2.0, k)),
+                u2,
+                fp::fmuls(fp::fmuls(2.0, fp::fsubs(k, 3.0)), u),
+            );
+            let c2 = fp::fadds(
+                k,
+                fp::fmadds(
+                    fp::fmuls(3.0, fp::fsubs(k, 2.0)),
+                    u2,
+                    fp::fmuls(fp::fmuls(2.0, fp::fnmsubs(2.0, k, 3.0)), u),
+                ),
+            );
+            let c3 = fp::fmuls(k, fp::fmsubs(3.0, u2, fp::fmuls(2.0, u)));
+            Some(blend(data, cvs, idx, [c0, c1, c2, c3]))
+        }
+        _ => None,
+    }
+}

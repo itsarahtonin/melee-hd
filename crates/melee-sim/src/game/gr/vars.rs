@@ -44,6 +44,11 @@ pub enum VarsKind {
     Yorster,
     Garden,
     Garden2,
+    Kongo,
+    KongoBarrel,
+    KongoPlatform,
+    KongoLog,
+    KongoPath,
 }
 
 /// `union GroundVars`.
@@ -95,6 +100,16 @@ pub enum GroundVars {
     Garden(GardenVars),
     /// `grGarden_GroundVars2`: Jungle Japes' Klaptrap (map 3).
     Garden2(Garden2Vars),
+    /// `grKongo_GroundVars`: Kongo Jungle's stage (map 10).
+    Kongo(KongoVars),
+    /// `grKongo_GroundVars3` and `2`: Kongo Jungle's barrel (map 5).
+    KongoBarrel(KongoBarrelVars),
+    /// `grKongo_GroundVars3`: a floating platform (maps 1 and 2).
+    KongoPlatform(KongoPlatformVars),
+    /// `grKongo_GroundVars::xCC` alone: a log (maps 7, 8 and 9).
+    KongoLog(KongoLogVars),
+    /// `grKongo_GroundVars2`: the river's path (map 11).
+    KongoPath(KongoPathVars),
 }
 
 /// `grOldYoshi_Cloud`: one of Yoshi's Island N64's clouds.
@@ -218,6 +233,79 @@ pub struct Garden2Vars {
     pub xc4: Option<GObjId>,
     pub xc8: i8,
     pub xcc: i32,
+}
+
+/// `grKongo_GroundVars`: the bridge's posts' sway (`xC4` and `xC8`, the left posts' angle and
+/// speed; `xD4` and `xD8`, the right ones'), the posts' joints (`xCC` and `xD0` the left,
+/// `xDC` and `xE0` the right), the wait before the next event (`xE4`, -1 before the start)
+/// and the last event (`xE6`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct KongoVars {
+    pub xC4: f32,
+    pub xC8: f32,
+    pub xCC: Option<crate::hsd::jobj::JObjId>,
+    pub xD0: Option<crate::hsd::jobj::JObjId>,
+    pub xD4: f32,
+    pub xD8: f32,
+    pub xDC: Option<crate::hsd::jobj::JObjId>,
+    pub xE0: Option<crate::hsd::jobj::JObjId>,
+    pub xE4: i16,
+    pub xE6: i16,
+}
+
+/// Kongo Jungle's barrel: its turn (`xC4`), what it holds (`xC6`), its swing's cycle (`xC8`),
+/// the hold's countdown (`xCA`), the turn's and the swing's timers (`xCC`, `xCE`), what it
+/// holds (`keep`, a fighter or a Klap Trap), the heading it turns to and its angle (`xD4`,
+/// `xD8`), the turn's step and speed (`xDC`, `xE0`), and the swing's speed (`xE8`). `xE4` is
+/// written once and never read.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct KongoBarrelVars {
+    pub xC4: i16,
+    pub xC6: i16,
+    pub xC8: i16,
+    pub xCA: i16,
+    pub xCC: i16,
+    pub xCE: i16,
+    pub keep: Option<GObjId>,
+    pub xD4: f32,
+    pub xD8: f32,
+    pub xDC: f32,
+    pub xE0: f32,
+    pub xE4: f32,
+    pub xE8: f32,
+}
+
+/// A floating platform: its state (`xC4`: rising, afloat, sinking), the landings noted this
+/// tick and the last (`xC6`, `xC8`), the ticks afloat (`xCA`), its place across (`xCC`), and
+/// two extremes written once and never read (`xD0`, `xD4`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct KongoPlatformVars {
+    pub xC4: i16,
+    pub xC6: i16,
+    pub xC8: i16,
+    pub xCA: i16,
+    pub xCC: f32,
+    pub xD0: f32,
+    pub xD4: f32,
+}
+
+/// A log: its place across (`xCC`); nothing else of the member is written.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct KongoLogVars {
+    pub xCC: f32,
+}
+
+/// The river's path: its spline (`xC4`), its place along it (`xCC`, a fraction of the arc
+/// length), its highest point and deepest depth so far (`xD8`, `xDC`), and two words written
+/// once and never read (`xC8`, `xD0`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct KongoPathVars {
+    pub xC4: Option<melee_data::archive::DataRef>,
+    pub xC8: f32,
+    pub xCC: f32,
+    pub xD0: f32,
+    pub xD8: f32,
+    pub xDC: f32,
 }
 
 /// `GroundVars_izumi`: the water's texture (`xC4`), the reflection camera (`xC8`), the
@@ -505,6 +593,12 @@ impl Bytes<'_> {
         );
         None
     }
+
+    /// [`Self::null`] for a pointer of another type.
+    fn null_of<T>(&self, at: usize) -> Option<T> {
+        self.null(at);
+        None
+    }
 }
 
 impl GroundVars {
@@ -779,6 +873,63 @@ impl GroundVars {
                 xc4: gobj(cx, at),
                 xc8: m.u8(at + 4) as i8,
                 xcc: m.u32(at + 8) as i32,
+            }),
+            VarsKind::Kongo => {
+                let jobj = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                GroundVars::Kongo(KongoVars {
+                    xC4: f(at),
+                    xC8: f(at + 4),
+                    xCC: jobj(cx, at + 8),
+                    xD0: jobj(cx, at + 0xC),
+                    xD4: f(at + 0x10),
+                    xD8: f(at + 0x14),
+                    xDC: jobj(cx, at + 0x18),
+                    xE0: jobj(cx, at + 0x1C),
+                    xE4: m.u16(at + 0x20) as i16,
+                    xE6: m.u16(at + 0x22) as i16,
+                })
+            }
+            VarsKind::KongoBarrel => {
+                let h = |a: u32| m.u16(at + a) as i16;
+                GroundVars::KongoBarrel(KongoBarrelVars {
+                    xC4: h(0),
+                    xC6: h(2),
+                    xC8: h(4),
+                    xCA: h(6),
+                    xCC: h(8),
+                    xCE: h(0xA),
+                    keep: gobj(cx, at + 0xC),
+                    xD4: f(at + 0x10),
+                    xD8: f(at + 0x14),
+                    xDC: f(at + 0x18),
+                    xE0: f(at + 0x1C),
+                    xE4: f(at + 0x20),
+                    xE8: f(at + 0x24),
+                })
+            }
+            VarsKind::KongoPlatform => {
+                let h = |a: u32| m.u16(at + a) as i16;
+                GroundVars::KongoPlatform(KongoPlatformVars {
+                    xC4: h(0),
+                    xC6: h(2),
+                    xC8: h(4),
+                    xCA: h(6),
+                    xCC: f(at + 8),
+                    xD0: f(at + 0xC),
+                    xD4: f(at + 0x10),
+                })
+            }
+            VarsKind::KongoLog => GroundVars::KongoLog(KongoLogVars { xCC: f(at + 8) }),
+            VarsKind::KongoPath => GroundVars::KongoPath(KongoPathVars {
+                xC4: cx.import_data(m.u32(at)),
+                xC8: f(at + 4),
+                xCC: f(at + 8),
+                xD0: f(at + 0xC),
+                xD8: f(at + 0x14),
+                xDC: f(at + 0x18),
             }),
             VarsKind::Yorster => GroundVars::Yorster(YorsterVars {
                 xC4: m.u32(at) as i32,
@@ -1188,6 +1339,110 @@ impl GroundVars {
         match self {
             GroundVars::Garden2(v) => v,
             other => panic!("a stage object's variables are {other:?}, not grGarden_GroundVars2"),
+        }
+    }
+
+    /// The variables as `grKongo_GroundVars`, likewise: a block holding a pointer converts
+    /// only if it is null.
+    pub fn kongo(&mut self) -> &mut KongoVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let h = |at: usize| u16::from_be_bytes([b.0[at], b.0[at + 1]]) as i16;
+            *self = GroundVars::Kongo(KongoVars {
+                xC4: b.f32(0),
+                xC8: b.f32(4),
+                xCC: b.null_of(8),
+                xD0: b.null_of(0xC),
+                xD4: b.f32(0x10),
+                xD8: b.f32(0x14),
+                xDC: b.null_of(0x18),
+                xE0: b.null_of(0x1C),
+                xE4: h(0x20),
+                xE6: h(0x22),
+            });
+        }
+        match self {
+            GroundVars::Kongo(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grKongo_GroundVars"),
+        }
+    }
+
+    /// The variables as Kongo Jungle's barrel's, likewise.
+    pub fn kongo_barrel(&mut self) -> &mut KongoBarrelVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let h = |at: usize| u16::from_be_bytes([b.0[at], b.0[at + 1]]) as i16;
+            *self = GroundVars::KongoBarrel(KongoBarrelVars {
+                xC4: h(0),
+                xC6: h(2),
+                xC8: h(4),
+                xCA: h(6),
+                xCC: h(8),
+                xCE: h(0xA),
+                keep: b.null(0xC),
+                xD4: b.f32(0x10),
+                xD8: b.f32(0x14),
+                xDC: b.f32(0x18),
+                xE0: b.f32(0x1C),
+                xE4: b.f32(0x20),
+                xE8: b.f32(0x24),
+            });
+        }
+        match self {
+            GroundVars::KongoBarrel(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grKongo's barrel's"),
+        }
+    }
+
+    /// The variables as a floating platform's, likewise.
+    pub fn kongo_platform(&mut self) -> &mut KongoPlatformVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let h = |at: usize| u16::from_be_bytes([b.0[at], b.0[at + 1]]) as i16;
+            *self = GroundVars::KongoPlatform(KongoPlatformVars {
+                xC4: h(0),
+                xC6: h(2),
+                xC8: h(4),
+                xCA: h(6),
+                xCC: b.f32(8),
+                xD0: b.f32(0xC),
+                xD4: b.f32(0x10),
+            });
+        }
+        match self {
+            GroundVars::KongoPlatform(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grKongo's platform's"),
+        }
+    }
+
+    /// The variables as a log's, likewise.
+    pub fn kongo_log(&mut self) -> &mut KongoLogVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::KongoLog(KongoLogVars { xCC: b.f32(8) });
+        }
+        match self {
+            GroundVars::KongoLog(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grKongo's log's"),
+        }
+    }
+
+    /// The variables as `grKongo_GroundVars2` (the river's path), likewise.
+    pub fn kongo_path(&mut self) -> &mut KongoPathVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::KongoPath(KongoPathVars {
+                xC4: b.null_of(0),
+                xC8: b.f32(4),
+                xCC: b.f32(8),
+                xD0: b.f32(0xC),
+                xD8: b.f32(0x14),
+                xDC: b.f32(0x18),
+            });
+        }
+        match self {
+            GroundVars::KongoPath(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grKongo_GroundVars2"),
         }
     }
 
@@ -1634,6 +1889,100 @@ impl Mirror for GroundVars {
                     v.xc4.map(|g| g.0),
                     m.u32(at),
                 );
+            }
+            GroundVars::Kongo(v) => {
+                let ours = (
+                    [v.xC4, v.xC8, v.xD4, v.xD8].map(f32::to_bits),
+                    [v.xE4, v.xE6],
+                );
+                let theirs = (
+                    [0, 4, 0x10, 0x14].map(|a| m.u32(at + a)),
+                    [m.u16(at + 0x20) as i16, m.u16(at + 0x22) as i16],
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.kongo"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                for (name, j, a) in [
+                    ("xCC", v.xCC, 8),
+                    ("xD0", v.xD0, 0xC),
+                    ("xDC", v.xDC, 0x18),
+                    ("xE0", v.xE0, 0x1C),
+                ] {
+                    cx.compare_handle(
+                        &format!("{path}.kongo.{name}"),
+                        "JObjId",
+                        j.map(|j| j.0),
+                        m.u32(at + a),
+                    );
+                }
+            }
+            GroundVars::KongoBarrel(v) => {
+                let h = |a: u32| m.u16(at + a) as i16;
+                let ours = (
+                    [v.xC4, v.xC6, v.xC8, v.xCA, v.xCC, v.xCE],
+                    [v.xD4, v.xD8, v.xDC, v.xE0, v.xE4, v.xE8].map(f32::to_bits),
+                );
+                let theirs = (
+                    [h(0), h(2), h(4), h(6), h(8), h(0xA)],
+                    std::array::from_fn(|k| m.u32(at + 0x10 + 4 * k as u32)),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.kongo3"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.kongo3.keep"),
+                    "GObjId",
+                    v.keep.map(|h| h.0),
+                    m.u32(at + 0xC),
+                );
+            }
+            GroundVars::KongoPlatform(v) => {
+                let h = |a: u32| m.u16(at + a) as i16;
+                let ours = (
+                    [v.xC4, v.xC6, v.xC8, v.xCA],
+                    [v.xCC, v.xD0, v.xD4].map(f32::to_bits),
+                );
+                let theirs = (
+                    [h(0), h(2), h(4), h(6)],
+                    [8, 0xC, 0x10].map(|a| m.u32(at + a)),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.kongo3"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::KongoLog(v) => {
+                let theirs = m.u32(at + 8);
+                if v.xCC.to_bits() != theirs {
+                    cx.mismatch(
+                        &format!("{path}.kongo.xCC"),
+                        format!("{:?}", v.xCC),
+                        format!("{:?}", f32::from_bits(theirs)),
+                    );
+                }
+            }
+            GroundVars::KongoPath(v) => {
+                let ours = [v.xC8, v.xCC, v.xD0, v.xD8, v.xDC].map(f32::to_bits);
+                let theirs = [4, 8, 0xC, 0x14, 0x18].map(|a| m.u32(at + a));
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.kongo2"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                cx.compare_data(&format!("{path}.kongo2.xC4"), v.xC4, m.u32(at));
             }
             GroundVars::Yorster(v) => {
                 let theirs = m.u32(at) as i32;

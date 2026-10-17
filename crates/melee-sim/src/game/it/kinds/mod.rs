@@ -38,6 +38,7 @@ pub mod kirbycopystar;
 pub mod kirbycutterbeam;
 pub mod kirbygamewatchchefpan;
 pub mod kirbyhammer;
+pub mod klap;
 pub mod koopaflame;
 pub mod kusudama;
 pub mod lgun;
@@ -187,6 +188,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || pikachutjoltground::run_event(r, gobj, addr)
         || pikachutjoltair::run_event(r, gobj, addr)
         || heiho::run_event(r, gobj, addr)
+        || klap::run_event(r, gobj, addr)
         || koopaflame::run_event(r, gobj, addr)
         || gamewatchgreenhouse::run_event(r, gobj, addr)
         || gamewatchmanhole::run_event(r, gobj, addr)
@@ -284,6 +286,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltair::run_pred(r, gobj, addr))
         .or_else(|| heiho::run_pred(r, gobj, addr))
+        .or_else(|| klap::run_pred(r, gobj, addr))
         .or_else(|| koopaflame::run_pred(r, gobj, addr))
         .or_else(|| gamewatchgreenhouse::run_pred(r, gobj, addr))
         .or_else(|| gamewatchmanhole::run_pred(r, gobj, addr))
@@ -503,6 +506,8 @@ pub const PKIND_START: i32 = 161;
 pub const PKIND_TERMINATE: i32 = 191;
 /// `It_Kind_Old_Kuri`: the first stage item, and the last group of tables.
 pub const OLD_KURI: i32 = 208;
+/// `It_Kind_Klap`, Kongo Jungle's Klap Trap.
+pub const KLAP: i32 = 218;
 /// `It_Kind_Heiho`, Yoshi's Story's Shy Guys.
 pub const HEIHO: i32 = 210;
 /// `It_Kind_Arwing_Laser`.
