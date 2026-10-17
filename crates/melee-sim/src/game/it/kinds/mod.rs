@@ -96,6 +96,7 @@ pub mod sword;
 pub mod taru;
 pub mod tarucann;
 pub mod tomato;
+pub mod unknown;
 pub mod wstar;
 pub mod yoshiegglay;
 pub mod yoshieggthrow;
@@ -229,6 +230,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || spycloak::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
         || kireihana::run_event(r, gobj, addr)
+        || unknown::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -333,6 +335,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| rabbitc::run_pred(r, gobj, addr))
         .or_else(|| spycloak::run_pred(r, gobj, addr))
         .or_else(|| kireihana::run_pred(r, gobj, addr))
+        .or_else(|| unknown::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -529,6 +532,8 @@ pub const PKIND_RANDOM: i32 = 160;
 pub const PKIND_START: i32 = 161;
 /// `It_PKind_Terminate`, also `It_Kind_Chicorita_Leaf`, the first of the Pokémon's items.
 pub const PKIND_TERMINATE: i32 = 191;
+/// `It_Kind_Unknown_Swarm`, Unown's little Unown.
+pub const UNKNOWN_SWARM: i32 = 0xC7;
 /// `It_Kind_Pokemon_Unk`, the last of the Pokémon's items.
 pub const POKEMON_UNK: i32 = 207;
 /// `It_Kind_Old_Kuri`: the first stage item, and the last group of tables.
