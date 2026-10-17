@@ -278,6 +278,9 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         panic!("{SKIP}{name} takes something else than a GObj");
     }
     let gobj = gobj_arg(maps, call);
+    if g.game.world.gobj(gobj).classifier == CLASS_ITEM {
+        coin_check(g, gobj, a);
+    }
     if let Some((_, f)) = ITEM_EVENTS.iter().find(|(n, _)| *n == name) {
         item_check(g, gobj, a);
         // The bomb sticks only to a surface it touched; on none it would tilt to a slope
@@ -418,6 +421,19 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         _ => return run_callback(g, gobj, a),
     }
     Ret::Nothing
+}
+
+/// Whether `gobj` is a coin (`It_Kind_Unk4`): the coins' functions read its variables as a
+/// coin's, so a neighbour's state of another item (a capsule scattering coins) isn't one.
+fn coin_check(g: &Running, gobj: GObjId, a: u32) {
+    if (0x802E_5AC4..0x802E_6ACC).contains(&a)
+        && a != 0x802E_5F00
+        && a != 0x802E_5F8C
+        && a != 0x802E_6658
+        && it::item(g.game, gobj).kind != melee_sim::game::it::kinds::UNK4
+    {
+        panic!("{SKIP}{} takes a coin", name_of(a));
+    }
 }
 
 /// A callback by its address, through the fighters' or the items' dispatch.
