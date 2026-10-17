@@ -412,6 +412,26 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/it/spawn.rs:99`.
 
+### The Super Scope's affordable level returns its GObj
+
+- **Where:** `it_80291DAC` (the level a charge fires with the ammunition left), `crates/melee-sim/src/game/it/kinds/sscope.rs` (`affordable`).
+- **Defect:** when the charge's level costs more than the ammunition left, it walks down the levels to 1 for one it can afford; when none is (or the charge's level is already 0), it ends without a return and the machine code returns its first argument, the scope's GObj. Its callers take that as a level: a burst's shot (`fn_800D84D4`) only clicks, but a hit while charging (`fn_800D7938`) spends it through `it_80291D38`, whose switch has no case for it and returns a register it never set.
+- **Effect:** not recorded: it needs a scope with some ammunition left but less than the lowest level it walks to costs.
+- **melee-hd:** stops (`affordable` reports it as unported).
+- **Fix:** return no level (-1) when none is affordable.
+- **Fix impact:** changes the shot or the spending in that case; replays where it happens would desync.
+- **Source:** `crates/melee-sim/src/game/it/kinds/sscope.rs` (`affordable`); ssbm-rs transliterates the function from its machine code for this.
+
+### A Cloaking Device taken while one flashes counts refraction twice
+
+- **Where:** `ftCo_800C88D4` (a fighter turning invisible), `crates/melee-sim/src/game/ft/powerup.rs` (`start_cloak`).
+- **Defect:** it starts the cloak's look, which makes the fighter one more user of refraction (`lbRefract_80022BB8`), unless the fighter is already cloaked and not yet flashing toward the end (`x2226_b7`). A second Cloaking Device taken during the flash runs the look again, so the fighter counts as two users, but the cloak's end (`ftCo_800C8A64`, also run when the fighter is KO'd) takes only one away (`lbRefSetUnuse`).
+- **Effect:** refraction's user count stays above zero for the rest of the match, so the camera keeps copying the screen and computing refraction's texture matrix every frame; nothing the game reads depends on it.
+- **melee-hd:** modeled.
+- **Fix:** count the fighter as a user only when it wasn't cloaked (`!x2226_b4`).
+- **Fix impact:** none on gameplay; the screen copy stops after such a cloak ends.
+- **Source:** `crates/melee-sim/src/game/ft/powerup.rs` (`start_cloak`); `ft_0C88.c`.
+
 ## Stages and collision
 
 ### Final Destination's background compares green twice
@@ -529,6 +549,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Source:** `crates/melee-sim/src/game/hud/status.rs:620`.
 
 ## Engine and HSD
+
+### The expression argument buffer outlives its heap
+
+- **Where:** `expEvaluate` (`sysdolphin/baselib/robj.c`), `crates/melee-sim/src/hsd/robj.rs` (`evaluate`).
+- **Defect:** the first expression evaluated allocates the static `arg_buf` (100 floats) from the current heap, and nothing ever clears the pointer. Each scene makes its heap anew, so after a scene change the buffer points into the new scene's heap, at whatever that has put there, and every expression's arguments are written over it.
+- **Effect:** not recorded: under Slippi's playback nothing evaluates an expression before the match, so the buffer comes from the match's own heap (in the items-on replays, a Fire Flower's model runs the first expression).
+- **melee-hd:** modeled within the match (`RObjs::arg_buf`, the allocation replayed); a match after scenes that evaluated an expression would find the buffer already allocated in the original, which melee-hd doesn't model (it allocates one).
+- **Fix:** clear `arg_buf` when the heap is made anew, or take it from a heap that lasts.
+- **Fix impact:** none where the buffer comes from the match's heap; elsewhere it changes the heap's layout, and addresses reach gameplay in a few places ([engine notes](engine.md#uninitialized-values)).
+- **Source:** [engine notes, the allocators](engine.md#the-allocators).
 
 ### An FObj channel hands over a stack word
 
@@ -668,6 +698,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A damage display that isn't one | `ifStatus_802F4EDC`, `game/hud/status.rs` | Reads a null display | `crates/melee-sim/src/game/hud/status.rs:342` |
 | A sound command's pan direction past 3 | `ftAction_80072320`, `game/ft/commands.rs` | Passes what `f31` holds | `crates/melee-sim/src/game/ft/commands.rs:973` |
 | PK Flash of another kind | `it_802AAA80`, `game/it/kinds/nesspkflash.rs` | Reads a register it never set | `crates/melee-sim/src/game/it/kinds/nesspkflash.rs:243` |
+| Kirby's aerial Thunder Jolt for another copy | `ftKb_PkSpecialAirN_Anim`, `game/ft/kirby/special_pikachu.rs` | Takes the landing lag from `f31`, which its caller left, for a copy other than Pikachu's or Pichu's; only those two copies enter the state (ssbm-rs transliterates the function from its machine code for it) | `crates/melee-sim/src/game/ft/kirby/special_pikachu.rs:161` |
 | Sheik's chain with no link out | `it_802BC080`, `game/it/kinds/seakchain.rs` | Stores a register its caller set (`env_flags`) when its loop doesn't run | `crates/melee-sim/src/game/it/kinds/seakchain.rs:796` |
 | A floor probe that misses | `ftCo_800DC920`, `game/ft/co/grab.rs` | Leaves the offset a stack word it then compares | `crates/melee-sim/src/game/ft/co/grab.rs:503` |
 | Rumble scripts | `HSD_PadRumbleInterpret1`, `input/rumble.rs` | Reads through a null pointer for a loop end before any loop start, and spins forever on opcodes 6 and 7 or a command that doesn't wait; no script in the game has these | `crates/melee-sim/src/input/rumble.rs:115`; `tools/leaf-check/tests/rumble.rs:64` |
@@ -681,6 +712,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Waiting for banks nothing loads | `lbAudioAx_80027648`, `lb/audio.rs`; `HSD_SynthSFXBankDeflagSync`, `audio/bank.rs` | Waits, or spins with no wait point, forever | `crates/melee-sim/src/lb/audio.rs:1372`; `crates/melee-sim/src/audio/bank.rs:490` |
 | The background flash's color commands | `fn_80021C80` with `fn_80021C18`, `lb/bgflash.rs` | `fn_80021C18` takes the owner's commands and does nothing, so a script with one would stay on it forever | `crates/melee-sim/src/lb/bgflash.rs:363` |
 | `expf` and `powf` on large or NaN inputs | `expf`, `math.rs` | The series never settles for NaN or where the terms overflow (\|x\| about 12.7 to 14.7), and loops forever | `tools/leaf-check/tests/math.rs:154` |
+| A parasol state without an animation | `it_8028B08C`, `game/it/kinds/parasol.rs` | Indexes its lengths by the state's animation, -1 for states 0 and 3, and reads the word before the table; its callers ask only for the held states, 4 to 10 | `crates/melee-sim/src/game/it/kinds/parasol.rs` (`anim_frames`) |
 | A particle list on a displayed joint | HSD's joint traversal (displayfunc.c, `efLib_Cb_SPtcl`) | Spawns a joint's particle list on its first display, whose generators then draw from the game's random seed, so a spawn put off by a doubled round would shift every later draw; no joint descriptor on the disc carries a particle list | [engine notes](engine.md#state-the-render-pass-writes) (line 150) |
 
 ## Unsure
@@ -690,4 +722,5 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 - **Luigi's `x222C`.** `Fighter_Create` leaves thousands of a fighter's bytes unwritten, which creation never reads; the decompilation notes a later read of Luigi's `x222C`, which on a console would see a previous object's bytes. Whether that read happens before a write isn't settled. Source: [engine notes](engine.md#uninitialized-values) (line 67).
 - **Per-use lengths written into shared loaded data.** Samus's grapple beam (`it_802B75FC`) and Link's and Young Link's hookshot (`it_802A2BA4`) write their lengths for the user's height over their attributes in the loaded archive, which every user of that character shares in a match. It's a design choice that would misbehave only for users of different heights or grab kinds at once; whether it ever changes play isn't recorded. Source: [engine notes, loaded data the game writes into](engine.md#loaded-data-the-game-writes-into).
 - **Relocations at unaligned offsets.** Some archives relocate words at offsets no pointer can have (not a multiple of 4), and the loader adds the load address there all the same. That is a defect in the disc's data rather than in the code. Source: `crates/melee-data/src/archive.rs:228`; [the porting guide](porting.md#when-to-stop-and-ask).
+- **The mash out's buffered jump.** A thrown fighter's mash out (`ftCo_800DE5A4`) jumps free when `mv.co.thrown.xC` is set, a byte no thrown state writes: for a victim held before the throw it is the capture wait's buffered jump at the same offset (`mv.co.capturewait.xC`), so a jump pressed early in the hold carries over, but otherwise it is whatever the union held. That may be the intended hand-over rather than a slip. melee-hd reads the byte as the original does (it had read the whole word, which took the union's next bytes for a jump in a Kirby CPU match). Source: `crates/melee-sim/src/game/ft/co/throw.rs:492`.
 - **Wobbling.** Slippi's ruleset carries wobbling prevention (`800DB880`, `800DBBD4`, `8008F090`), but melee-hd's sources describe it as a ruleset change, not a defect in the code, and players treat wobbling as a technique. Source: [the oracle](oracle.md) (lines 133 and 134).

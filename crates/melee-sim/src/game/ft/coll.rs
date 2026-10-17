@@ -262,8 +262,19 @@ impl Running<'_> {
         while let Some(item) = cur {
             cur = self.game.world.gobjs[item.0].next;
             if crate::game::it::lib26b1::is_stomp(self.game, item) {
-                // `lb_80014638` against the item's span, which the items' port holds.
-                unported_call("lb_80014638 with a steppable item");
+                let feet = self.game.fighter(gobj).dmg.x1930.clone();
+                let i = crate::game::it::item_of(self.game, item);
+                if crate::lb::stomp::stepped_on(&feet, &self.game.items[i.0].xB54) {
+                    let (fx, slot) = {
+                        let fp = self.game.fighter(gobj);
+                        (fp.cur_pos.x, i32::from(fp.player_idx))
+                    };
+                    let ip = &mut self.game.items[i.0];
+                    ip.xCD0 = if ip.pos.x > fx { -1.0 } else { 1.0 };
+                    ip.xCFC = Some(gobj);
+                    ip.xCB0_source_ply = slot;
+                    self.game.fighter_mut(gobj).dmg.x1950 = 1;
+                }
             }
         }
         let fp = self.game.fighter_mut(gobj);

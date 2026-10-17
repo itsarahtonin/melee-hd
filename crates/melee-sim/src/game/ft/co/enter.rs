@@ -77,7 +77,8 @@ impl Running<'_> {
             return;
         }
         if self.holding_hammer(gobj) {
-            unported_call("ftCo_800C4ED8 (the hammer)");
+            self.enter_hammer_wait(gobj);
+            return;
         }
         let fp = &self.game.fighters[f.0];
         if fp.ground_or_air != GA_GROUND {
@@ -123,7 +124,8 @@ impl Running<'_> {
             return;
         }
         if self.holding_hammer(gobj) {
-            unported_call("ftCo_800C5D34 (the hammer)");
+            self.enter_hammer_fall(gobj);
+            return;
         }
         self.change_motion_state(gobj, MS_FALL, 1, 0.0, 1.0, 0.0, None);
         self.clamp_air_drift(f);

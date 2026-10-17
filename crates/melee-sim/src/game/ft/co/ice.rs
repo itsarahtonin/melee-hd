@@ -6,7 +6,6 @@
 use gekko_fp as fp;
 
 use super::super::super::camera;
-use super::super::super::code::unported_call;
 use super::super::super::ef;
 use super::super::super::handles::{CodeRef, FighterId};
 use super::super::super::state::Running;
@@ -435,7 +434,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80091854")]
     pub fn damage_ice_break_out(&mut self, gobj: GObjId) {
         if self.holding_hammer(gobj) {
-            unported_call("ftCo_800C5A98 (a hammer jump out of the ice)");
+            self.enter_hammer_jump(gobj);
+            return;
         }
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);

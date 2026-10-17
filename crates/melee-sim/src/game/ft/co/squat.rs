@@ -4,7 +4,6 @@
 use crate::game::ucf::Ucf;
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
 use super::super::super::state::Running;
 use super::PAD_LR;
 use super::checks::{KIND_CLINK, KIND_LINK};
@@ -233,7 +232,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80099F9C")]
     pub fn pass_check(&mut self, gobj: GObjId) -> bool {
         if self.holding_hammer(gobj) {
-            unported_call("ftCo_800C60C8");
+            return self.hammer_pass_check(gobj);
         }
         if self.game.fighter(gobj).mv_i32(SQUAT_X0) == 0 && self.pass_input(gobj) {
             let x470 = self.common().f32(0x470);

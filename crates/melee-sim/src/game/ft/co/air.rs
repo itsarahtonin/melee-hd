@@ -3,7 +3,7 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::{self, Val, unported_call};
+use super::super::super::code::{self, Val};
 use super::super::super::state::Running;
 use super::super::coll::PLATFORM_FILTER;
 use super::checks::{KIND_CLINK, KIND_GAME_WATCH, KIND_KIRBY, KIND_LINK, KIND_MEWTWO, abs};
@@ -105,7 +105,8 @@ impl Running<'_> {
             && self.game.fighter(gobj).item_gobj.is_some()
             && self.item_a_kind(gobj) == 3
         {
-            unported_call("ftCo_800CDDA0");
+            self.enter_item_shoot_air(gobj);
+            return true;
         }
         // `decideFighter`.
         match self.game.fighter(gobj).kind {
@@ -357,7 +358,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Landing_Enter_Basic")]
     pub fn enter_landing_basic(&mut self, gobj: GObjId) {
         if self.holding_hammer(gobj) {
-            unported_call("ftCo_HammerLanding_Enter");
+            self.enter_hammer_landing(gobj);
+            return;
         }
         self.enter_landing(gobj, ms::LANDING, 1, 0, 0.0, 1.0);
     }
@@ -366,7 +368,8 @@ impl Running<'_> {
     // Ports `ftCo_LandingFallSpecial_Enter_Basic`; aliased once a check reaches it.
     pub fn enter_landing_fall_special_basic(&mut self, gobj: GObjId) {
         if self.holding_hammer(gobj) {
-            unported_call("ftCo_HammerLanding_Enter");
+            self.enter_hammer_landing(gobj);
+            return;
         }
         self.enter_landing(gobj, ms::LANDING_FALL_SPECIAL, 0, 0, 0.0, 1.0);
     }
@@ -380,7 +383,8 @@ impl Running<'_> {
         landing_lag: f32,
     ) {
         if self.holding_hammer(gobj) {
-            unported_call("ftCo_HammerLanding_Enter");
+            self.enter_hammer_landing(gobj);
+            return;
         }
         let fp = self.game.fighter(gobj);
         let rate = fp::fdivs(fp::fadds(reg(0.1f32), reg(fp.x2EC)), reg(landing_lag));

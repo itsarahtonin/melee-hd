@@ -79,7 +79,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Jump_CheckInput")]
     pub fn jump_check(&mut self, gobj: GObjId) -> bool {
         if self.holding_hammer(gobj) {
-            unported_call("ftCo_800C5A50");
+            return self.hammer_jump_check(gobj);
         }
         let input = self.jump_input(gobj);
         if input != 0 {
@@ -93,7 +93,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800CAF78")]
     pub fn jump_check_relaxed(&mut self, gobj: GObjId) -> bool {
         if self.holding_hammer(gobj) {
-            unported_call("ftCo_800C5A50");
+            return self.hammer_jump_check(gobj);
         }
         let c = self.common();
         let (t, window) = (c.f32(0x80), c.i32(0x74));

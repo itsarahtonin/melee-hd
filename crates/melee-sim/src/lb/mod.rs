@@ -16,4 +16,5 @@ pub mod refract;
 pub mod screen;
 pub mod shadow;
 pub mod sound_obj;
+pub mod stomp;
 pub mod wind;

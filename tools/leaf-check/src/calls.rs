@@ -666,6 +666,79 @@ fn import(cap: &Capture, index: &DiscIndex) -> Result<Imported, String> {
     })
 }
 
+/// Imports each saved call at `paths` and compares it back with the memory it came from, as
+/// every check's runs start, on [`crate::workers`] threads: how many words unknown until
+/// written the imports held in all (`Maps::unknown`), and the calls that don't come back.
+pub fn round_trips(paths: &[PathBuf], index: &DiscIndex) -> (usize, Vec<String>) {
+    let next = AtomicUsize::new(0);
+    let unknown = AtomicUsize::new(0);
+    let failed = Mutex::new(Vec::new());
+    std::thread::scope(|s| {
+        for _ in 0..crate::workers().min(paths.len()) {
+            std::thread::Builder::new()
+                .stack_size(256 << 20)
+                .spawn_scoped(s, || {
+                    while let Some(path) = paths.get(next.fetch_add(1, Ordering::Relaxed)) {
+                        let imported = std::panic::catch_unwind(|| {
+                            import(&Capture::read(path), index).map(|i| i.maps.unknown.len())
+                        })
+                        .unwrap_or_else(|p| Err(format!("panicked: {}", panic_text(&*p))));
+                        match imported {
+                            Ok(n) => {
+                                unknown.fetch_add(n, Ordering::Relaxed);
+                            }
+                            Err(why) => failed
+                                .lock()
+                                .unwrap()
+                                .push(format!("{}: {why}", path.display())),
+                        }
+                    }
+                })
+                .unwrap();
+        }
+    });
+    (unknown.into_inner(), failed.into_inner().unwrap())
+}
+
+/// [`round_trips`] on every saved call of the debug VS sets (`debug*`) in `base`, whose
+/// items' blocks and the heap their pool grows into hold an earlier scene's bytes (the opening
+/// movie's frame, docs/oracle.md): fails on any that doesn't come back, or when no word in
+/// them is unknown until written. Skips without `SSBM_DISC` or the sets, and the calls of
+/// functions `skip` names (states the import doesn't take whole, such as mid-draw ones).
+pub fn debug_round_trips(base: &Path, skip: &dyn Fn(&str) -> bool) {
+    let Some(index) = disc_index() else {
+        return;
+    };
+    let mut calls = Vec::new();
+    for d in std::fs::read_dir(base).into_iter().flatten().flatten() {
+        if d.file_name().to_string_lossy().starts_with("debug") {
+            calls.extend(
+                melee_capture::pack::call_files(d.path())
+                    .into_iter()
+                    .filter(|p| {
+                        let name = p.file_name().unwrap().to_string_lossy();
+                        !skip(name.split("-call").next().unwrap_or(&name))
+                    }),
+            );
+        }
+    }
+    if calls.is_empty() {
+        eprintln!("no debug sets in {}: skipping", base.display());
+        return;
+    }
+    let (unknown, failed) = round_trips(&calls, index);
+    eprintln!(
+        "{} calls round-trip, {} don't; {unknown} unknown words",
+        calls.len() - failed.len(),
+        failed.len()
+    );
+    assert!(failed.is_empty(), "{}", failed.join("\n"));
+    assert!(
+        unknown > 0,
+        "no word unknown until written in the debug sets"
+    );
+}
+
 /// How long one call may run on both sides before the check stops as hung
 /// (`LEAF_CALL_TIMEOUT`, seconds; 300 by default): a port or ssbm-rs's reference looping
 /// forever on a state its callers never reach (a changed neighbour's) never returns.

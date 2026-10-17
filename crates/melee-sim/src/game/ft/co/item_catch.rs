@@ -17,6 +17,13 @@ const BONUS_CATCH: usize = 0x9A;
 const BONUS_DOSEI: usize = 0xB6;
 const IT_KIND_DOSEI: i32 = 7;
 const IT_KIND_BOMBHEI: i32 = 6;
+/// `It_Kind_Lucky_Egg`, `It_Kind_WhispyHealApple` and `It_Kind_Coin`, the other kinds used as
+/// they're picked up.
+pub(super) const LUCKY_EGG: i32 = 205;
+pub(super) const WHISPY_HEAL_APPLE: i32 = 226;
+pub(super) const COIN: i32 = 159;
+/// `ftCommonData` x7CC: the Cloaking Device's frames.
+pub(super) const CLOAK_FRAMES: u32 = 0x7CC;
 
 impl Running<'_> {
     /// Catches `it` in the air, `fn_800D6F58`: into the hand (or the other hand's slot when
@@ -65,13 +72,40 @@ impl Running<'_> {
         self.game.fighters[f.0].x2224_b1 = true;
     }
 
-    /// The item's own pickup, `ftpickupitem_8009447C`: food heals, the Warp Star, the hammer
-    /// and the other specials take effect; whether it took the fighter into a state. Items
-    /// used as they're picked up (use kind 5) aren't ported.
+    /// The item's own pickup, `ftpickupitem_8009447C`: for an item used as it's picked up
+    /// (use kind 5), food heals (not ported: task 7's), the Warp Star and the hammer take the
+    /// fighter into their states (whether one did is the result), the Bunny Hood goes on, the
+    /// Metal Box and the Cloaking Device take effect and go, and a coin goes.
     #[doc(alias = "ftpickupitem_8009447C")]
-    pub fn item_pickup_effect(&mut self, _gobj: GObjId, it: GObjId) -> bool {
-        if lib26b1::use_kind(self.game, self.data, it) == 5 {
-            unported_call("ftpickupitem_8009447C for an item used as it's picked up");
+    pub fn item_pickup_effect(&mut self, gobj: GObjId, it: GObjId) -> bool {
+        use super::super::super::it::kinds;
+        if lib26b1::use_kind(self.game, self.data, it) != 5 {
+            return false;
+        }
+        match lib26b1::kind(self.game, it) {
+            kinds::HEART | kinds::TOMATO | kinds::FOODS | LUCKY_EGG | WHISPY_HEAL_APPLE => {
+                unported_call("ftpickupitem_8009447C's heal (Fighter_8006CF5C)");
+            }
+            kinds::WSTAR => {
+                self.enter_warp_star(gobj);
+                return true;
+            }
+            kinds::HAMMER => {
+                self.take_hammer(gobj);
+                return true;
+            }
+            kinds::RABBITC => self.put_on_hood(gobj, it),
+            kinds::METALB => {
+                self.apply_metal_box(gobj, it);
+                super::super::super::it::item::destroy(self, it);
+            }
+            kinds::SPYCLOAK => {
+                let frames = self.common().i32(CLOAK_FRAMES);
+                self.start_cloak(gobj, frames, true);
+                super::super::super::it::item::destroy(self, it);
+            }
+            COIN => super::super::super::it::item::destroy(self, it),
+            _ => {}
         }
         false
     }

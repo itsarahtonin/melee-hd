@@ -3,7 +3,7 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::{run_fighter_cb, unported_call};
+use super::super::super::code::run_fighter_cb;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::parts::TRANS_N;
@@ -265,7 +265,7 @@ impl Running<'_> {
             fp.x2098 = combo as u16;
             self.knockback_exit(gobj);
             if self.holding_hammer(gobj) {
-                unported_call("ftCo_800C554C (the hammer)");
+                self.open_hammer_drop(gobj);
             }
         }
     }

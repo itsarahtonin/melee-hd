@@ -116,7 +116,27 @@ impl Running<'_> {
                 let i = usize::from(fp.smash_attrs.x2134_vibrateFrame);
                 *self.game.refract.tobjs.get(i).expect("refraction's chain")
             }),
-            swapped: !fp.x2223_b2 && (!fp.x2228_b0 || !fp.x2224_b0) && (fp.is_metal || fp.x2227_b3),
+            swapped: if !fp.x2223_b2 && (!fp.x2228_b0 || !fp.x2224_b0) {
+                if fp.is_metal {
+                    Some(
+                        self.game
+                            .ft
+                            .metal_mobj
+                            .expect("ft_804D6580: no metal material"),
+                    )
+                } else if fp.x2227_b3 {
+                    Some(
+                        self.game
+                            .ft
+                            .clear_mobj
+                            .expect("ft_804D6588: no clear material"),
+                    )
+                } else {
+                    None
+                }
+            } else {
+                None
+            },
             translucent: fp.x61D != 0xFF,
             x2223_b2: fp.x2223_b2,
             overlay_light: o.x7C_flag2 && o.x7C_light_enable,

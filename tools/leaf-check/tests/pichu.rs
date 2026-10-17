@@ -42,13 +42,12 @@ const PICHU: Character = Character {
     extra: Some(("debug", thunder)),
 };
 
-/// The functions whose debug-match captures the check takes: the Thunder's, which his replays
-/// don't reach, but for the cloud's callback, whose saved calls drop the bolt. Items alive in
-/// those sets sit in blocks the debug heap filled (`0x10101010`), which the import doesn't carry
-/// over; the callback still runs from its neighbours' states, which don't raise its flag.
+/// The functions whose debug-match captures the check takes: the Thunder's, which his
+/// replays don't reach. The cloud's callback drops the bolt, a new item in a block the pool
+/// takes from a heap holding the opening movie's frame (docs/oracle.md), which the import
+/// brings in.
 fn thunder(name: &str) -> bool {
-    (name.contains("SpecialLw") || name.contains("SpecialAirLw"))
-        && name != "ftPk_SpecialLw_SpawnEffect"
+    name.contains("SpecialLw") || name.contains("SpecialAirLw")
 }
 
 /// Every one of the functions compares clean from some real Pichu state.

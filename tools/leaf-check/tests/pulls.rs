@@ -30,6 +30,14 @@
 //! Bob-omb, which fills the player's list of Bob-ombs that the hits look up, so those run from
 //! the pickups of Mr. Saturn and the sword with the item made a Bob-omb and the list filled
 //! ([`vary_player`]).
+//!
+//! The debug VS set (`debug1`) is a match of two Pikachus on Battlefield with Mr. Saturn and
+//! the Beam Sword the only items, the monkey playing, in a heap that holds the opening movie's
+//! frame (docs/oracle.md): items.rs's `debug1` command with `MATCH_ITEMS=7,12`,
+//! `CAPTURE=$D/debug1`, `CAPTURE_FUNCS=@$D/pulls-funcs.txt`,
+//! `LOCKSTEP_DONE=$D/done-nonpulls.txt` and `--fields 9000`. The replay set
+//! (`oracle-items-ported-fd`) is milestone 4's items-on pilot, run as items.rs's set of that
+//! name with this file's function lists, to its end (379 saved calls).
 
 use std::collections::BTreeMap;
 
@@ -612,4 +620,10 @@ fn swing_types() {
             "kind {kind}"
         );
     }
+}
+
+/// The debug VS set's saved calls (`debug*`, see the file's docs) import and compare back.
+#[test]
+fn debug_round_trips() {
+    leaf_check::calls::debug_round_trips(std::path::Path::new(&base()), &|_| false);
 }

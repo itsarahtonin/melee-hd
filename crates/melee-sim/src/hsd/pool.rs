@@ -12,6 +12,11 @@
 
 use super::heap;
 
+/// The first of the handles past every pool that stand for words the original's block held
+/// and nothing has written since (unknown until written, from a captured state's stale
+/// bytes): following one stops, as the original would fault on the word.
+pub const UNKNOWN: u32 = 0xF000_0000;
+
 /// A pool's slots. A slot stays in place when freed; `T` holds its last contents until reused.
 #[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct Pool<T, const K: u8 = 0> {
@@ -166,12 +171,29 @@ impl<T, const K: u8> Pool<T, K> {
 impl<T, const K: u8> std::ops::Index<u32> for Pool<T, K> {
     type Output = T;
     fn index(&self, slot: u32) -> &T {
-        &self.slots[slot as usize]
+        match self.slots.get(slot as usize) {
+            Some(t) => t,
+            None => past_end(slot, self.slots.len()),
+        }
     }
 }
 
 impl<T, const K: u8> std::ops::IndexMut<u32> for Pool<T, K> {
     fn index_mut(&mut self, slot: u32) -> &mut T {
-        &mut self.slots[slot as usize]
+        let len = self.slots.len();
+        match self.slots.get_mut(slot as usize) {
+            Some(t) => t,
+            None => past_end(slot, len),
+        }
     }
+}
+
+/// A slot past a pool's end: a stale read when it's an unknown handle ([`UNKNOWN`]).
+#[cold]
+#[track_caller]
+fn past_end(slot: u32, len: usize) -> ! {
+    if slot >= UNKNOWN {
+        panic!("stale read: followed a word unknown until written (handle {slot:#x})");
+    }
+    panic!("index out of bounds: the len is {len} but the index is {slot}")
 }

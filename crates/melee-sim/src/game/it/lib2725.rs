@@ -93,6 +93,16 @@ pub fn set_uniform_scale(game: &mut Game, j: JObjId, scale: f32) {
     });
 }
 
+/// The first word of the kind's own attributes, `it_80272818` (`it_2728_DatAttrs::fighter`:
+/// the Starman's invincibility frames).
+#[doc(alias = "it_80272818")]
+pub fn special_word(game: &Game, data: &Archives, gobj: GObjId) -> i32 {
+    let a = article(item(game, gobj))
+        .special(data)
+        .expect("an item without its attributes");
+    data.u32(a) as i32
+}
+
 /// The joint a model's index names, `it_80272CC0`: from the bone table, or the `idx`th
 /// first child down.
 #[doc(alias = "it_80272CC0")]
@@ -563,6 +573,12 @@ pub fn start_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize) 
     hitcapsule::enable(&mut ip.x5D4_hitboxes[idx].hit);
     ip.xDC8_word.flags.x16 = true;
     super::coll::update_hitbox(game, data, gobj, idx);
+}
+
+/// Marks the item holding still for its animation (`xDC8_word.x2`), `it_80274F10`.
+#[doc(alias = "it_80274F10")]
+pub fn hold_still(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDC8_word.flags.x2 = true;
 }
 
 /// Whether the model still plays an animation, `it_80272C6C`.

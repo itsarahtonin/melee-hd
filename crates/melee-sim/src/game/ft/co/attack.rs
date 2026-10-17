@@ -4,7 +4,6 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::checks::{KIND_CLINK, KIND_PIKACHU, KIND_SAMUS, abs};
@@ -64,7 +63,10 @@ impl Running<'_> {
                 self.enter_swing(gobj, 0);
                 true
             }
-            3 => unported_call("ftCo_Attack_800CDD14"),
+            3 => {
+                self.enter_item_shoot(gobj);
+                true
+            }
             _ => false,
         }
     }
@@ -446,7 +448,10 @@ impl Running<'_> {
                     self.enter_swing(gobj, 1);
                     return true;
                 }
-                3 => unported_call("ftCo_Attack_800CDD14"),
+                3 => {
+                    self.enter_item_shoot(gobj);
+                    return true;
+                }
                 _ => {}
             }
         }
@@ -675,7 +680,11 @@ impl Running<'_> {
                 self.enter_swing(gobj, 2);
                 true
             }
-            3 => unported_call("ftCo_Attack_800CDD14 (a smash shot)"),
+            3 => {
+                self.game.fighter_mut(gobj).facing_dir = dir;
+                self.enter_item_shoot(gobj);
+                true
+            }
             _ => false,
         }
     }

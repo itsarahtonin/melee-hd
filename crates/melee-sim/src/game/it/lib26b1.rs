@@ -154,6 +154,30 @@ pub fn hitlag_frames(game: &Game, data: &Archives, damage: i32) -> f64 {
     fp::frsp(f64::from(fp::fctiwz(v)))
 }
 
+/// The first float of the kind's own attributes, `it_8026B560` (the Metal Box's frames).
+#[doc(alias = "it_8026B560")]
+pub fn special_x0(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
+    let a = super::item::article(item(game, gobj))
+        .special(data)
+        .expect("an item without its attributes");
+    data.f32(a)
+}
+
+/// The same float, `it_8026B54C` (the Bunny Hood's frames).
+#[doc(alias = "it_8026B54C")]
+pub fn special_x0_hood(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
+    special_x0(game, data, gobj)
+}
+
+/// The second float of the kind's own attributes, `it_8026B574` (the Metal Box's health).
+#[doc(alias = "it_8026B574")]
+pub fn special_x4(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
+    let a = super::item::article(item(game, gobj))
+        .special(data)
+        .expect("an item without its attributes");
+    data.f32(a.at(4))
+}
+
 /// Forgets a GObj the item points to, `it_8026B894`: whether it was the owner.
 #[doc(alias = "it_8026B894")]
 pub fn forget(game: &mut Game, gobj: GObjId, other: Option<GObjId>) -> bool {
@@ -274,6 +298,29 @@ pub fn check_burst(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8026BD24")]
 pub fn set_xdd0_b3(game: &mut Game, gobj: GObjId) {
     super::set_flag(&mut item_mut(game, gobj).xDD0_flag, 3, true);
+}
+
+/// Turns off the flags an item holding still for its animation keeps (`xDD0_flag.b3`,
+/// `xDCD_flag.b3` and `b4`) and on `xDCC_flag.b3` and `xDC8_word.x1A`, `it_8026BDCC`.
+#[doc(alias = "it_8026BDCC")]
+pub fn hold_flags_off(game: &mut Game, gobj: GObjId) {
+    let ip = item_mut(game, gobj);
+    super::set_flag(&mut ip.xDD0_flag, 3, false);
+    ip.xDCC_flag.b3 = true;
+    ip.xDCD_flag.x0.b3 = false;
+    ip.xDCD_flag.x0.b4 = false;
+    ip.xDC8_word.flags.x1A = true;
+}
+
+/// The inverse of [`hold_flags_off`], `it_8026BE28`.
+#[doc(alias = "it_8026BE28")]
+pub fn hold_flags_on(game: &mut Game, gobj: GObjId) {
+    let ip = item_mut(game, gobj);
+    super::set_flag(&mut ip.xDD0_flag, 3, true);
+    ip.xDCC_flag.b3 = false;
+    ip.xDCD_flag.x0.b3 = true;
+    ip.xDCD_flag.x0.b4 = true;
+    ip.xDC8_word.flags.x1A = false;
 }
 
 /// Stops the item keeping clear of others (`xDC8_word.x1A`), `it_8026BDB4`.

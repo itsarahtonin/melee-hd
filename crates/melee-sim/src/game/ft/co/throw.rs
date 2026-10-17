@@ -34,7 +34,8 @@ const THROW_VICTIM: usize = 0xC;
 const THROW_MOTION_Y: usize = 0x10;
 const THROW_MOTION_Z: usize = 0x14;
 /// `ftCommon_MotionVars_thrown`: frozen with the thrower, the frame it freezes at, and a jump
-/// buffered for a mash out (`xC`).
+/// buffered for a mash out (`xC`, a byte no thrown state writes: the capture wait's buffered
+/// jump, or whatever the union held before).
 const THROWN_FROZEN: usize = 0x0;
 const THROWN_FREEZE_FRAME: usize = 0x4;
 const THROWN_JUMP: usize = 0xC;
@@ -488,8 +489,7 @@ impl Running<'_> {
             fp.grab_timer = mem(fp::fsubs(reg(fp.grab_timer), reg(dec)));
             let _ = self.grab_mash(gobj, mash);
             if self.game.fighter(gobj).grab_timer <= 0.0 {
-                if self.game.fighter(gobj).mv_i32(THROWN_JUMP) != 0 || self.capture_jump_held(gobj)
-                {
+                if self.game.fighter(gobj).mv[THROWN_JUMP] != 0 || self.capture_jump_held(gobj) {
                     self.enter_capture_jump(gobj);
                 } else {
                     self.enter_capture_cut(gobj);

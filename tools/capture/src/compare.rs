@@ -415,6 +415,8 @@ impl<'a> Comparer<'a> {
         let game = self.game;
         let seed = self.u32(self.u32(sym("HSD_RandSeedPtr")));
         self.check("HSD_RandSeedPtr", "seed", game.objs.rng.seed, seed);
+        let arg_buf = self.u32(sym("arg_buf")) != 0;
+        self.check("arg_buf", "allocated", game.objs.robjs.arg_buf, arg_buf);
         game.magnify
             .compare(&mem, sym("ifMagnify_804A1DE0"), "magnify", self);
         let (theirs, filter_gobj) = crate::read_coll_statics(self.mem);
@@ -1505,6 +1507,16 @@ impl Cx for Comparer<'_> {
 
     fn compare_handle(&mut self, path: &str, kind: &'static str, ours: Option<u32>, theirs: u32) {
         if ours.is_none() && self.maps.unfollowed.contains(&(kind, theirs)) {
+            return;
+        }
+        // An unknown word (`Maps::unknown`) neither side has written since compares by the
+        // word itself; one the original wrote and ours didn't differs.
+        if let Some(word) = ours.and_then(|o| self.maps.unknown.get(&o)) {
+            if *word != theirs {
+                self.diffs.push(format!(
+                    "{path}: {kind} ours unknown until written ({word:#x}), theirs {theirs:#x}"
+                ));
+            }
             return;
         }
         let dangling = match (kind, ours) {

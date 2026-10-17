@@ -10,10 +10,13 @@ pub mod clinkmilk;
 pub mod crate_box;
 pub mod dosei;
 pub mod drmariopill;
+pub mod egg;
+pub mod fflower;
 pub mod foods;
 pub mod foxblaster;
 pub mod foxillusion;
 pub mod foxlaser;
+pub mod freeze;
 pub mod gamewatch;
 pub mod gamewatchbreath;
 pub mod gamewatchchef;
@@ -30,18 +33,24 @@ pub mod hammer;
 pub mod hammerhead;
 pub mod heart;
 pub mod heiho;
+pub mod kirbycopystar;
+pub mod kinoko;
 pub mod kirbycutterbeam;
 pub mod kirbyhammer;
 pub mod koopaflame;
 pub mod kusudama;
+pub mod lgun;
 pub mod linkarrow;
 pub mod linkbomb;
 pub mod linkboomerang;
 pub mod linkbow;
 pub mod linkhookshot;
+pub mod lipstick;
 pub mod luigifireball;
 pub mod mariocape;
 pub mod mariofireball;
+pub mod mball;
+pub mod metalb;
 pub mod mewtwodisable;
 pub mod mewtwoshadowball;
 pub mod nessbat;
@@ -52,6 +61,7 @@ pub mod nesspkflashexplode;
 pub mod nesspkthunder;
 pub mod nesspkthundertrail;
 pub mod nessyoyo;
+pub mod parasol;
 pub mod peachexplode;
 pub mod peachparasol;
 pub mod peachtoad;
@@ -60,6 +70,7 @@ pub mod peachturnip;
 pub mod pikachuthunder;
 pub mod pikachutjoltair;
 pub mod pikachutjoltground;
+pub mod rabbitc;
 pub mod rshell;
 pub mod samusbomb;
 pub mod samuschargeshot;
@@ -69,9 +80,14 @@ pub mod seakchain;
 pub mod seakneedleheld;
 pub mod seakneedlethrown;
 pub mod seakvanish;
+pub mod spycloak;
+pub mod sscope;
+pub mod sscopebeam;
+pub mod star;
 pub mod sword;
 pub mod taru;
 pub mod tomato;
+pub mod wstar;
 pub mod yoshiegglay;
 pub mod yoshieggthrow;
 pub mod yoshistar;
@@ -79,14 +95,33 @@ pub mod yoshitongue;
 pub mod zeldadinfire;
 pub mod zeldadinfireexplode;
 
+use super::item::{attr_of, common_data};
+use super::{data, item, lib2725};
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
+
+/// Gravity from the item's attributes (`it_80272860` with its fall speed and limit), the
+/// common items' falling states.
+pub fn gravity(r: &mut Running, gobj: GObjId) {
+    let a = attr_of(item(r.game, gobj));
+    let accel = a.f32(r.data, data::attr::FALL_SPEED);
+    let max = a.f32(r.data, data::attr::FALL_SPEED_MAX);
+    lib2725::fall(r.game, gobj, accel, max);
+}
+
+/// Gravity and the spin it slows (`Item_ApplyFallingPhysics`), a thrown item's states.
+pub fn falling_phys(r: &mut Running, gobj: GObjId) {
+    gravity(r, gobj);
+    let x68 = common_data(r.game).f32(r.data, data::common::X68);
+    lib2725::clamp_fall(r.game, gobj, x68);
+}
 
 /// Runs a kind's callback of the event kind (`HSD_GObjEvent`), if `addr` is one.
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     foxlaser::run_event(r, gobj, addr)
         || kirbycutterbeam::run_event(r, gobj, addr)
         || kirbyhammer::run_event(r, gobj, addr)
+        || kirbycopystar::run_event(r, gobj, addr)
         || climbersice::run_event(r, gobj, addr)
         || climbersblizzard::run_event(r, gobj, addr)
         || climbersstring::run_event(r, gobj, addr)
@@ -160,6 +195,21 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || gamewatchpanic::run_event(r, gobj, addr)
         || gamewatchchef::run_event(r, gobj, addr)
         || gamewatchrescue::run_event(r, gobj, addr)
+        || lgun::run_event(r, gobj, addr)
+        || fflower::run_event(r, gobj, addr)
+        || freeze::run_event(r, gobj, addr)
+        || egg::run_event(r, gobj, addr)
+        || sscope::run_event(r, gobj, addr)
+        || sscopebeam::run_event(r, gobj, addr)
+        || mball::run_event(r, gobj, addr)
+        || parasol::run_event(r, gobj, addr)
+        || lipstick::run_event(r, gobj, addr)
+        || wstar::run_event(r, gobj, addr)
+        || star::run_event(r, gobj, addr)
+        || kinoko::run_event(r, gobj, addr)
+        || metalb::run_event(r, gobj, addr)
+        || rabbitc::run_event(r, gobj, addr)
+        || spycloak::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
 }
 
@@ -167,6 +217,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     foxlaser::run_pred(r, gobj, addr)
         .or_else(|| kirbycutterbeam::run_pred(r, gobj, addr))
+        .or_else(|| kirbycopystar::run_pred(r, gobj, addr))
         .or_else(|| climbersice::run_pred(r, gobj, addr))
         .or_else(|| climbersblizzard::run_pred(r, gobj, addr))
         .or_else(|| climbersstring::run_pred(r, gobj, addr))
@@ -239,6 +290,21 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| gamewatchpanic::run_pred(r, gobj, addr))
         .or_else(|| gamewatchchef::run_pred(r, gobj, addr))
         .or_else(|| gamewatchrescue::run_pred(r, gobj, addr))
+        .or_else(|| lgun::run_pred(r, gobj, addr))
+        .or_else(|| fflower::run_pred(r, gobj, addr))
+        .or_else(|| freeze::run_pred(r, gobj, addr))
+        .or_else(|| egg::run_pred(r, gobj, addr))
+        .or_else(|| sscope::run_pred(r, gobj, addr))
+        .or_else(|| sscopebeam::run_pred(r, gobj, addr))
+        .or_else(|| mball::run_pred(r, gobj, addr))
+        .or_else(|| parasol::run_pred(r, gobj, addr))
+        .or_else(|| lipstick::run_pred(r, gobj, addr))
+        .or_else(|| wstar::run_pred(r, gobj, addr))
+        .or_else(|| star::run_pred(r, gobj, addr))
+        .or_else(|| kinoko::run_pred(r, gobj, addr))
+        .or_else(|| metalb::run_pred(r, gobj, addr))
+        .or_else(|| rabbitc::run_pred(r, gobj, addr))
+        .or_else(|| spycloak::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -253,11 +319,29 @@ pub const BOMBHEI: i32 = 6;
 pub const DOSEI: i32 = 7;
 pub const HEART: i32 = 8;
 pub const TOMATO: i32 = 9;
+/// `It_Kind_Star`, the Starman.
+pub const STAR: i32 = 10;
 pub const BAT: i32 = 11;
+pub const PARASOL: i32 = 13;
 pub const SWORD: i32 = 12;
 pub const G_SHELL: i32 = 14;
 pub const R_SHELL: i32 = 15;
 pub const HAMMER: i32 = 28;
+pub const L_GUN: i32 = 16;
+pub const FREEZE: i32 = 17;
+pub const S_SCOPE: i32 = 21;
+pub const LIPSTICK: i32 = 23;
+pub const F_FLOWER: i32 = 25;
+pub const WSTAR: i32 = 29;
+/// `It_Kind_Kinoko` and `It_Kind_DKinoko`, the Super and Poison Mushrooms.
+pub const KINOKO: i32 = 26;
+pub const DKINOKO: i32 = 27;
+/// `It_Kind_RabbitC`, the Bunny Hood.
+pub const RABBITC: i32 = 31;
+/// `It_Kind_MetalB`, the Metal Box.
+pub const METALB: i32 = 32;
+/// `It_Kind_Spycloak`, the Cloaking Device.
+pub const SPYCLOAK: i32 = 33;
 /// `It_Kind_Foods`.
 pub const FOODS: i32 = 18;
 /// `It_Kind_M_Ball`, the Poké Ball.
