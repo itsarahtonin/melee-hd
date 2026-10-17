@@ -1371,10 +1371,11 @@ const NAMES_STRING: u32 = 0x8049_F040;
 /// Appends a string to the dynamic text at (`x`, `y`): what `vsnprintf` makes of the format
 /// and arguments, as `HSD_SisLib_803A6B98` takes them.
 fn print(r: &mut Running, t: TextId, x: f32, y: f32, fmt: &[u8], args: &[FmtArg]) {
-    let s = crate::hsd::sis::printf(fmt, args);
+    let mut s = [0u8; 0x200];
+    let len = crate::hsd::sis::printf(fmt, args, &mut s);
     r.game
         .sis
-        .add_string(t, f64::from(x), f64::from(y), Some(&s));
+        .add_string(t, f64::from(x), f64::from(y), Some(&s[..len]));
 }
 
 use crate::hsd::sis::{FmtArg, SisPtr};
@@ -1409,14 +1410,17 @@ pub fn text_names(r: &mut Running, _gobj: GObjId) {
     t.x34 = if jp { [0.3125, 0.625] } else { [0.26, 0.625] };
     t.text_color = [0xC0, 0xC0, 0xFF, 0xFF];
     t.default_alignment = 1;
-    let mut names: Vec<&'static [u8]> = Vec::new();
+    let mut names: [&'static [u8]; 4] = [&[]; 4];
+    let mut n_names = 0;
     for i in 0..4 {
         if r.game.player_pkind(i) != crate::game::pl::player::PKIND_NONE
             && let Some(n) = r.game.player_name(i)
         {
-            names.push(n);
+            names[n_names] = n;
+            n_names += 1;
         }
     }
+    let names = &names[..n_names];
     r.game.sis.text_mut(dy).default_fitting = 1;
     let places: &[(f32, f32)] = match names.len() {
         1 => &[(124.0, 70.0)],
@@ -1425,7 +1429,7 @@ pub fn text_names(r: &mut Running, _gobj: GObjId) {
         4 => &[(62.0, 60.0), (186.0, 60.0), (62.0, 80.0), (186.0, 80.0)],
         _ => &[],
     };
-    for (&(x, y), n) in places.iter().zip(&names) {
+    for (&(x, y), n) in places.iter().zip(names) {
         // The name is the format.
         print(r, dy, x, y, n, &[]);
     }

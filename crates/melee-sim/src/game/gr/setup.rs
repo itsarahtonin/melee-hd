@@ -275,21 +275,26 @@ pub fn add_start_hook(game: &mut Game, gobj: GObjId, func: CodeRef) {
     game.stage_info.x6A4 = Some(StartHookId(id));
 }
 
-/// The collision joints of a map: the archive's for it, then the stage's own.
-fn map_coll_joints(game: &Game, data: &Archives, map_id: i32) -> (Vec<GrJoint>, Vec<GrJoint>) {
+/// The collision joints of a map: the archive's for it (where its list is and how many it
+/// has, read with [`archive_coll_joint`]), then the stage's own.
+fn map_coll_joints(
+    game: &Game,
+    data: &Archives,
+    map_id: i32,
+) -> ((Option<DataRef>, u32), &'static [GrJoint]) {
     let from_archive = match datfiles::archive_for(game, data, map_id) {
         Some(head) => {
             let (list, n) = head.entry(data, map_id).coll_joints(data);
-            (0..n.max(0) as u32)
-                .map(|i| GrJoint::read(data, list.expect("collision joints").at(6 * i)))
-                .collect()
+            (list, n.max(0) as u32)
         }
-        None => Vec::new(),
+        None => (None, 0),
     };
-    (
-        from_archive,
-        stage_data(game.stage_info.grkind).joints.to_vec(),
-    )
+    (from_archive, stage_data(game.stage_info.grkind).joints)
+}
+
+/// The `i`th collision joint of an archive's list.
+fn archive_coll_joint(data: &Archives, list: Option<DataRef>, i: u32) -> GrJoint {
+    GrJoint::read(data, list.expect("collision joints").at(6 * i))
 }
 
 /// Binds a collision joint to the `z`th joint of a model, moves it there and settles it
@@ -321,13 +326,13 @@ fn bind_coll_joint(game: &mut Game, data: &Archives, j: GrJoint, root: Option<JO
 /// the archive's joints for the map, then the stage's own. Whether there were any.
 #[doc(alias = "Ground_InitMapColl")]
 pub fn init_map_coll(game: &mut Game, data: &Archives, j: Option<JObjId>, map_id: i32) -> bool {
-    let (from_archive, own) = map_coll_joints(game, data, map_id);
+    let ((list, n), own) = map_coll_joints(game, data, map_id);
     let mut any = false;
-    for c in from_archive {
-        bind_coll_joint(game, data, c, j);
+    for i in 0..n {
+        bind_coll_joint(game, data, archive_coll_joint(data, list, i), j);
         any = true;
     }
-    for c in own.into_iter().filter(|c| i32::from(c.y) == map_id) {
+    for &c in own.iter().filter(|c| i32::from(c.y) == map_id) {
         bind_coll_joint(game, data, c, j);
         any = true;
     }
@@ -343,14 +348,14 @@ fn each_coll_joint(
     map_id: i32,
     mut f: impl FnMut(&mut Game, i32),
 ) -> bool {
-    let (from_archive, own) = map_coll_joints(game, data, map_id);
+    let ((list, n), own) = map_coll_joints(game, data, map_id);
     let mut any = false;
     for c in own.iter().filter(|c| i32::from(c.y) == map_id) {
         f(game, c.x.into());
         any = true;
     }
-    for c in &from_archive {
-        f(game, c.x.into());
+    for i in 0..n {
+        f(game, archive_coll_joint(data, list, i).x.into());
         any = true;
     }
     any

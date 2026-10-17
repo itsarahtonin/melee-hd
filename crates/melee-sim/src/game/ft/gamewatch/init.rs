@@ -19,19 +19,19 @@ use crate::hsd::tobj::Color;
 #[doc(alias = "ftMaterial_800BFB4C")]
 #[doc(alias = "it_80278574")]
 pub(crate) fn set_diffuse_all(objs: &mut Objects, root: Option<JObjId>, c: Color) {
-    let mut visit = Vec::new();
-    jobj::walk_tree(&objs.jobjs, root, &mut |j, _| visit.push(j));
-    for j in visit {
-        let mut d = objs.jobjs[j].dobj();
+    // The walk reads the joints; the colors are the materials'.
+    let (jobjs, dobjs, mobjs) = (&objs.jobjs, &objs.dobjs, &mut objs.mobjs);
+    jobj::walk_tree(jobjs, root, &mut |j, _| {
+        let mut d = jobjs[j].dobj();
         while let Some(di) = d {
-            if let Some(m) = objs.dobjs[di].mobj
-                && let Some(mat) = objs.mobjs[m].mat.as_mut()
+            if let Some(m) = dobjs[di].mobj
+                && let Some(mat) = mobjs[m].mat.as_mut()
             {
                 mat.diffuse = c;
             }
-            d = objs.dobjs[di].next;
+            d = dobjs[di].next;
         }
-    }
+    });
 }
 
 impl Running<'_> {
