@@ -42,6 +42,8 @@ pub enum VarsKind {
     OldKongo,
     OldKongoBirds,
     Yorster,
+    Garden,
+    Garden2,
 }
 
 /// `union GroundVars`.
@@ -89,6 +91,10 @@ pub enum GroundVars {
     OldKongoBirds(OldKongoBirdsVars),
     /// `grYorster_GroundVars`: Yoshi's Island's stage and its nine blocks (map 1).
     Yorster(YorsterVars),
+    /// `grGarden_GroundVars`: Jungle Japes' Cranky Kong (map 1).
+    Garden(GardenVars),
+    /// `grGarden_GroundVars2`: Jungle Japes' Klaptrap (map 3).
+    Garden2(Garden2Vars),
 }
 
 /// `grOldYoshi_Cloud`: one of Yoshi's Island N64's clouds.
@@ -196,6 +202,22 @@ pub struct YorsterBlock {
 pub struct YorsterVars {
     pub xC4: i32,
     pub blocks: [YorsterBlock; 9],
+}
+
+/// `grGarden_GroundVars`: Cranky Kong's animation (`xc4`) and the runs of it left (`xc8`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct GardenVars {
+    pub xc4: i32,
+    pub xc8: i32,
+}
+
+/// `grGarden_GroundVars2`: the Klaptrap's hurtbox item (`xc4`), its state (`xc8`, waiting or
+/// leaping) and its count (`xcc`). The three bytes after `xc8` are padding nothing writes.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Garden2Vars {
+    pub xc4: Option<GObjId>,
+    pub xc8: i8,
+    pub xcc: i32,
 }
 
 /// `GroundVars_izumi`: the water's texture (`xC4`), the reflection camera (`xC8`), the
@@ -749,6 +771,15 @@ impl GroundVars {
             VarsKind::OldKongoBirds => GroundVars::OldKongoBirds(OldKongoBirdsVars {
                 xC4: m.u32(at) as i32,
             }),
+            VarsKind::Garden => GroundVars::Garden(GardenVars {
+                xc4: m.u32(at) as i32,
+                xc8: m.u32(at + 4) as i32,
+            }),
+            VarsKind::Garden2 => GroundVars::Garden2(Garden2Vars {
+                xc4: gobj(cx, at),
+                xc8: m.u8(at + 4) as i8,
+                xcc: m.u32(at + 8) as i32,
+            }),
             VarsKind::Yorster => GroundVars::Yorster(YorsterVars {
                 xC4: m.u32(at) as i32,
                 blocks: std::array::from_fn(|i| {
@@ -1125,6 +1156,38 @@ impl GroundVars {
         match self {
             GroundVars::Yorster(v) => v,
             other => panic!("a stage object's variables are {other:?}, not grYorster_GroundVars"),
+        }
+    }
+
+    /// The variables as `grGarden_GroundVars`, likewise.
+    pub fn garden(&mut self) -> &mut GardenVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::Garden(GardenVars {
+                xc4: b.u32(0) as i32,
+                xc8: b.u32(4) as i32,
+            });
+        }
+        match self {
+            GroundVars::Garden(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grGarden_GroundVars"),
+        }
+    }
+
+    /// The variables as `grGarden_GroundVars2`, likewise: a block holding a pointer converts
+    /// only if it is null.
+    pub fn garden2(&mut self) -> &mut Garden2Vars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::Garden2(Garden2Vars {
+                xc4: b.null(0),
+                xc8: b.0[4] as i8,
+                xcc: b.u32(8) as i32,
+            });
+        }
+        match self {
+            GroundVars::Garden2(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grGarden_GroundVars2"),
         }
     }
 
@@ -1543,6 +1606,34 @@ impl Mirror for GroundVars {
                         format!("{theirs:?}"),
                     );
                 }
+            }
+            GroundVars::Garden(v) => {
+                let ours = (v.xc4, v.xc8);
+                let theirs = (m.u32(at) as i32, m.u32(at + 4) as i32);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.garden"),
+                        format!("{ours:?}"),
+                        format!("{theirs:?}"),
+                    );
+                }
+            }
+            GroundVars::Garden2(v) => {
+                let ours = (v.xc8, v.xcc);
+                let theirs = (m.u8(at + 4) as i8, m.u32(at + 8) as i32);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.garden2"),
+                        format!("{ours:?}"),
+                        format!("{theirs:?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.garden2.xc4"),
+                    "GObjId",
+                    v.xc4.map(|g| g.0),
+                    m.u32(at),
+                );
             }
             GroundVars::Yorster(v) => {
                 let theirs = m.u32(at) as i32;

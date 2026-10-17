@@ -459,9 +459,9 @@ pub fn direction(r: &mut Running) -> f32 {
     const ANGLES: [f32; 8] = [
         2.356_194_5,
         1.570_796_4,
-        0.785_398_2,
+        std::f32::consts::FRAC_PI_4,
         0.0,
-        -0.785_398_2,
+        -std::f32::consts::FRAC_PI_4,
         -1.570_796_4,
         -2.356_194_5,
         -std::f32::consts::PI,

@@ -4,8 +4,9 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_IZUMI, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER,
+    GR_KIND_BATTLE, GR_KIND_GARDEN, GR_KIND_IZUMI, GR_KIND_LAST, GR_KIND_OLDKONGO,
+    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_SHRINE, GR_KIND_STORY,
+    GR_KIND_YORSTER,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -424,6 +425,40 @@ pub const YORSTER: StageData = StageData {
     joints: &[],
 };
 
+/// `grGd_StageCallbacks`. Map 2 is the stage, map 1 Cranky Kong, map 3 the Klaptrap, maps 4,
+/// 5 and 6 the background, the birds and the water, map 0 the sky.
+pub const GARDEN_CALLBACKS: [StageCallbacks; 7] = [
+    cb(0x8020_2D60, 0x8020_2D8C, 0x8020_2D94, 0x8020_2D98, 0),
+    cb(0x8020_3004, 0x8020_3090, 0x8020_3098, 0x8020_31A0, 0),
+    cb(
+        0x8020_2DC8,
+        0x8020_2E40,
+        0x8020_2E48,
+        0x8020_2E68,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_31A4, 0x8020_3248, 0x8020_3250, 0x8020_3494, 0),
+    cb(0x8020_2E6C, 0x8020_2F34, 0x8020_2F3C, 0x8020_2F40, 0),
+    cb(0x8020_2F44, 0x8020_2F94, 0x8020_2F9C, 0x8020_2FA0, 0),
+    cb(0x8020_2FA4, 0x8020_2FF4, 0x8020_2FFC, 0x8020_3000, 0),
+];
+
+/// `grGd_StageData`.
+pub const GARDEN: StageData = StageData {
+    grkind: GR_KIND_GARDEN,
+    callbacks: &GARDEN_CALLBACKS,
+    file: Some("/GrGd.dat"),
+    on_init: 0x8020_2B70,
+    on_demo_init: 0x8020_2B6C,
+    on_load: 0x8020_2C24,
+    on_start: 0x8020_2C4C,
+    callback4: 0x8020_2C70,
+    on_touch_line: 0x8020_35C8,
+    on_check_shadow_render: 0x8020_35D0,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -437,6 +472,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_OLDKONGO => &OLDKONGO,
         GR_KIND_SHRINE => &SHRINE,
         GR_KIND_YORSTER => &YORSTER,
+        GR_KIND_GARDEN => &GARDEN,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

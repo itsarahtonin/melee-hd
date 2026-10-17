@@ -10,6 +10,7 @@ pub mod data;
 pub mod datfiles;
 pub mod display;
 pub mod dynamic_attr;
+pub mod garden;
 pub mod grlib;
 pub mod ground;
 pub mod izumi;
@@ -28,9 +29,9 @@ pub mod yorster;
 pub mod zako;
 
 pub use vars::{
-    BattleBgVars, GroundVars, LastVars, MapVars, OldKongoBirdsVars, OldKongoVars, OldYoshiCloud,
-    OldYoshiCloudVars, OldYoshiGuestVars, StadiumBits, StadiumDisplayVars, StadiumPieceVars,
-    StadiumVars, VarsKind, YorsterBlock, YorsterVars,
+    BattleBgVars, Garden2Vars, GardenVars, GroundVars, LastVars, MapVars, OldKongoBirdsVars,
+    OldKongoVars, OldYoshiCloud, OldYoshiCloudVars, OldYoshiGuestVars, StadiumBits,
+    StadiumDisplayVars, StadiumPieceVars, StadiumVars, VarsKind, YorsterBlock, YorsterVars,
 };
 
 use melee_data::archive::{ArchiveId, DataRef};
@@ -47,6 +48,8 @@ pub const GR_KIND_PSTADIUM: i32 = 16;
 pub const GR_KIND_STORY: i32 = 10;
 /// `Gr_Kind_Izumi`, Fountain of Dreams.
 pub const GR_KIND_IZUMI: i32 = 12;
+/// `Gr_Kind_Garden`, Jungle Japes.
+pub const GR_KIND_GARDEN: i32 = 5;
 /// `Gr_Kind_Yorster`, Yoshi's Island.
 pub const GR_KIND_YORSTER: i32 = 11;
 /// `Gr_Kind_Shrine`, Hyrule Temple.
@@ -165,6 +168,8 @@ pub struct Globals {
     pub shrine_yakumono: Option<DataRef>,
     /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
     pub yorster_yakumono: Option<DataRef>,
+    /// Jungle Japes' `yakumono_param` (`grGarden_YakumonoParam`).
+    pub garden_yakumono: Option<DataRef>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -238,13 +243,16 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_OLDKONGO, 1) => VarsKind::OldKongo,
         (GR_KIND_OLDKONGO, 2) => VarsKind::OldKongoBirds,
         (GR_KIND_YORSTER, 1) => VarsKind::Yorster,
+        (GR_KIND_GARDEN, 1) => VarsKind::Garden,
+        (GR_KIND_GARDEN, 3) => VarsKind::Garden2,
         _ => VarsKind::Bytes,
     }
 }
 
 /// A stage's callback for a hit its hurtbox item dealt (`itYaku_ItemVars::x14`), by address.
-pub fn yaku_dealt(_r: &mut super::state::Running, cb: CodeRef, _item: GObjId, _g: GroundId) {
+pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: GroundId) {
     match cb.0 {
+        garden::KLAPTRAP_BIT => garden::klaptrap_bit(r, item, g),
         other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
     }
 }
@@ -276,9 +284,5 @@ pub fn yaku_touched(
     _g: GroundId,
     _toucher: Option<GObjId>,
 ) {
-    match cb.0 {
-        other => {
-            super::code::unported_call(&format!("a stage item's touch callback {other:#010x}"))
-        }
-    }
+    super::code::unported_call(&format!("a stage item's touch callback {:#010x}", cb.0))
 }

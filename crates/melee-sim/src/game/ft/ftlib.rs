@@ -161,6 +161,17 @@ impl Game {
         self.fighter(gobj).cur_pos
     }
 
+    /// The depth of the fighter's camera box's target extent (`target_ext.v.z`),
+    /// `ftLib_80086B80`.
+    #[doc(alias = "ftLib_80086B80")]
+    pub fn ft_camera_depth(&self, gobj: GObjId) -> f32 {
+        let b = self
+            .fighter(gobj)
+            .x890_cameraBox
+            .expect("a fighter without a camera box");
+        self.camera.boxes[b].target_ext.v.z
+    }
+
     #[doc(alias = "ftLib_GetKind")]
     pub fn ft_kind(&self, gobj: GObjId) -> i32 {
         self.fighter(gobj).kind

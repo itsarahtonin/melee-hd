@@ -365,8 +365,25 @@ pub fn run_overlay(r: &mut Running, gobj: GObjId) {
     }
 }
 
-/// A script's start in an item state description (`ItemStateDesc::xC_script`).
-pub fn state_script(data: &Archives, desc: DataRef) -> Option<DataRef> {
+/// A script's start in an item state description (`ItemStateDesc::xC_script`), number
+/// `index` of the item's article: for the random stage item, the stage's own where it gives
+/// one (`Ground_801C0800` writes them into the article's descriptions).
+pub fn state_script(
+    game: &crate::game::state::Game,
+    data: &Archives,
+    kind: i32,
+    index: i32,
+    desc: DataRef,
+) -> Option<DataRef> {
+    if kind == super::kinds::PKIND_RANDOM
+        && let Some(&(_, s)) = game
+            .gr
+            .yaku_scripts
+            .iter()
+            .find(|&&(i, _)| i32::from(i) == index)
+    {
+        return Some(s);
+    }
     data.ptr(desc.at(0xC))
 }
 

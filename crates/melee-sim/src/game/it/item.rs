@@ -912,10 +912,10 @@ pub fn seek_anim(r: &mut Running, gobj: GObjId, frame: f32) {
     item_mut(r.game, gobj).x5CC_currentAnimFrame = f;
 }
 
-/// Starts a state's script, `Item_80268E40`.
+/// Starts a state's script (found by [`super::anim::state_script`]), `Item_80268E40`.
 #[doc(alias = "Item_80268E40")]
-pub fn start_script(ip: &mut Item, data: &Archives, desc: DataRef) {
-    ip.x524_cmd.script.cursor = data.ptr(desc.at(0xC));
+pub fn start_script(ip: &mut Item, script: Option<DataRef>) {
+    ip.x524_cmd.script.cursor = script;
     ip.x524_cmd.script.loop_count = 0;
     ip.x524_cmd.script.set_timer_f32(0.0);
 }
@@ -990,6 +990,8 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
         let descs = article(ip).states(data).expect("an article without states");
         let desc = descs.at(0x10 * state.anim_id as u32);
         ip.xD0_itemStateDesc = Some(desc);
+        let kind = super::item(r.game, gobj).kind;
+        let script = super::anim::state_script(r.game, data, kind, state.anim_id, desc);
         if flags & ANIM_UPDATE != 0 {
             set_state_anims(r, gobj, desc);
             if flags & UNK_UPDATE != 0 {
@@ -1006,9 +1008,9 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
             } else {
                 apply_scale(r.game, gobj);
             }
-            start_script(item_mut(r.game, gobj), data, desc);
+            start_script(item_mut(r.game, gobj), script);
         } else if flags & CMD_UPDATE != 0 {
-            start_script(item_mut(r.game, gobj), data, desc);
+            start_script(item_mut(r.game, gobj), script);
         }
         jobj::anim_all(
             &mut r.game.objs,

@@ -167,13 +167,9 @@ impl Running<'_> {
         display::camera_end(&mut self.game.objs);
     }
 
-    /// The stage's fog fitted to the camera, `Ground_801C4FAC`, for stages that ask for it
-    /// (`stage_info.unk8C.b3`), which no port covers yet.
-    #[doc(alias = "Ground_801C4FAC")]
-    fn stage_fog_update(&mut self, _c: crate::hsd::cobj::CObjId) {
-        if self.game.stage_info.unk8C.b3 {
-            crate::game::code::unported_call("Ground_801C4FAC");
-        }
+    /// The stage's fog fitted to the camera, [`crate::game::gr::ground::fit_fog`].
+    fn stage_fog_update(&mut self, c: crate::hsd::cobj::CObjId) {
+        crate::game::gr::ground::fit_fog(self.game, self.data, c);
     }
 
     /// Does what a HUD render callback decided.

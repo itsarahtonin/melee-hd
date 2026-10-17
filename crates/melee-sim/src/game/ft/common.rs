@@ -525,6 +525,9 @@ impl Running<'_> {
                 Some(crate::game::gr::oldpupupu::WIND_PUSH) => {
                     crate::game::gr::oldpupupu::wind_push(self, ground, gobj)
                 }
+                Some(crate::game::gr::garden::RIVER) => {
+                    crate::game::gr::garden::river(self, ground, gobj)
+                }
                 Some(other) => unported_call(&format!("a wind device's callback {other:#010x}")),
                 None => panic!("a wind device without a callback"),
             };

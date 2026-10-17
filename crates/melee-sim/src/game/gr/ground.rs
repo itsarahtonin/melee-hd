@@ -848,6 +848,74 @@ pub fn set_guide_points(game: &mut Game, data: &Archives, joints: [Option<JObjId
     }
 }
 
+/// The stage's fog fitted to the camera, `Ground_801C4FAC`, for stages with guide points
+/// (`stage_info.unk8C.b3`): a near and a far point, the left or right pair by where the eye
+/// looks, blended with the front pair by how far it looks back; the fog starts at the near
+/// point's distance from the eye (at least 5) and ends at the far one's (at least 10, and
+/// past the start).
+#[doc(alias = "Ground_801C4FAC")]
+pub fn fit_fog(game: &mut Game, data: &Archives, c: crate::hsd::cobj::CObjId) {
+    use crate::hsd::cobj;
+    if !game.stage_info.unk8C.b3 {
+        return;
+    }
+    let eye = cobj::eye_vector(&mut game.objs, data, Some(c)).unwrap_or(cobj::NO_EYE_VECTOR);
+    let i = &game.stage_info;
+    let (mut front_near, mut front_far) = (i.x130, i.x13C);
+    let (mut near, mut far) = if reg(eye.x) < 0.0 {
+        (i.x148, i.x154)
+    } else {
+        (i.x160, i.x16C)
+    };
+    let scale = |v: &mut crate::vec::Vec3, w: f64| {
+        v.x = mem(fp::fmuls(reg(v.x), w));
+        v.y = mem(fp::fmuls(reg(v.y), w));
+        v.z = mem(fp::fmuls(reg(v.z), w));
+    };
+    if reg(eye.z) < 0.0 {
+        let (x, z) = (reg(eye.x), reg(eye.z));
+        let len = crate::math::sqrt_reg(fp::fmadds(x, x, fp::fmuls(z, z)));
+        let inv = fp::fdivs(1.0, len);
+        let wx = fp::fmuls(inv, if x < 0.0 { fp::fneg(x) } else { x });
+        let wz = fp::fmuls(inv, if z < 0.0 { fp::fneg(z) } else { z });
+        scale(&mut near, wx);
+        scale(&mut far, wx);
+        scale(&mut front_near, wz);
+        scale(&mut front_far, wz);
+        near = front_near.sdk_add(near);
+        far = front_far.sdk_add(far);
+    }
+    let at = cobj::eye_position(&mut game.objs, data, c)
+        .expect("Ground_801C4FAC: the camera has no eye");
+    let Some(g) = game.stage_info.x12C else {
+        return;
+    };
+    let Some(Obj::Fog(f)) = game.world.gobjs[g.0].obj else {
+        return;
+    };
+    let dist = |p: crate::vec::Vec3| {
+        let dx = fp::fsubs(reg(p.x), reg(at.x));
+        let dy = fp::fsubs(reg(p.y), reg(at.y));
+        let dz = fp::fsubs(reg(p.z), reg(at.z));
+        let s = fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy));
+        crate::math::sqrt_reg(fp::fadds(fp::fmuls(dz, dz), s))
+    };
+    let mut start = dist(near);
+    let mut end = dist(far);
+    if end < 10.0 {
+        end = 10.0;
+    }
+    if start < 5.0 {
+        start = 5.0;
+    }
+    if start > end {
+        end = fp::fadds(1.0, start);
+    }
+    let fog = &mut game.objs.fogs[f];
+    fog.start = mem(start);
+    fog.end = mem(end);
+}
+
 /// Sets `x6D8`, `Ground_801C5740`.
 #[doc(alias = "Ground_801C5740")]
 pub fn set_x6d8(game: &mut Game, v: i32) {

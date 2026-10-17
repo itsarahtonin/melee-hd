@@ -26,7 +26,7 @@
 use leaf_check::calls::{Prepare, Ret, check_calls_with, gobj_arg, peek_u32, poke_u32};
 use melee_capture::import::Maps;
 use melee_sim::game::code::{run_demo_init, run_event, run_proc};
-use melee_sim::game::gr::{oldkongo, oldyoshi, shrine, yorster};
+use melee_sim::game::gr::{garden, oldkongo, oldyoshi, shrine, yorster};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use melee_sim::vec::Vec3;
@@ -773,7 +773,7 @@ fn oldkongo_unreached_callbacks() {
     let hold = |c: &mut Call, k: usize| {
         let v = vars(c);
         poke_u16(c, v + TARU_C6, [1u16, 0, 2][k % 3]);
-        let keep = if k % 2 == 0 {
+        let keep = if k.is_multiple_of(2) {
             first_fighter(c)
         } else {
             c.regs.gpr[3]
@@ -1275,6 +1275,15 @@ fn yaku_items() {
         }
     };
     check_calls_with(&d, from, 1, &callbacks("it_2E6A_Logic117_DmgDealt"), &dealt);
+    // A hit dealt by an item with Jungle Japes' Klaptrap's callback.
+    let t = leaf_check::sym("it_2E6A_Logic117_DmgDealt");
+    let bit = leaf_check::sym("grGarden_80203498");
+    let klaptrap = move |c: &mut Call, _: usize| {
+        c.addr = t;
+        let ip = peek_u32(c, c.regs.gpr[3] + 0x2C);
+        poke_u32(c, ip + 0xDD4 + 0x14, bit);
+    };
+    check_calls_with(&d, from, 1, &klaptrap, &dealt);
     check_calls_with(&d, from, 1, &callbacks("it_802E7054"), &touched);
     let forget = |r: &mut Running, maps: &Maps, call: &Call| {
         let other = maps.gobjs.get(&call.regs.gpr[4]).copied();
@@ -1352,4 +1361,284 @@ fn yaku_glue_and_hits() {
     for p in [&as_saved as &Prepare, &number] {
         check_calls_with(&d, "it_802703E8", 1, p, &hits);
     }
+}
+
+// Jungle Japes (`grgarden.c`).
+
+const GD: &str = "oracle-stage-jungle-japes";
+
+/// grgarden.c's `yakumono_param`.
+const GD_PARAM: u32 = 0x804D_6A28;
+
+#[test]
+fn garden_setup() {
+    let d = dir(GD);
+    check_calls_with(&d, "grGarden_80202B70", 1, &as_saved, &event);
+    check_calls_with(&d, "grGarden_80202C24", 1, &as_saved, &event);
+    check_calls_with(&d, "grGarden_80202C4C", 1, &as_saved, &event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        garden::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    for map in 0..7u32 {
+        check_calls_with(
+            &d,
+            "grGarden_80202C78",
+            1,
+            &move |c, _| c.regs.gpr[3] = map,
+            &create,
+        );
+    }
+    for f in [
+        "stageGObj0_OnInit",
+        "grGarden_80202DC8",
+        "grGarden_80202D9C",
+        "grGarden_80202E48",
+        "grGarden_80202E6C",
+        "grGarden_80202F44",
+        "grGarden_80202FA4",
+        "grGarden_80203004",
+        "grGarden_802031A4",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+}
+
+#[test]
+fn garden_cranky() {
+    let d = dir(GD);
+    // Each of his four animations with its count run out, and with runs left.
+    let set = |c: &mut Call, anim: u32, left: u32| {
+        let v = vars(c);
+        poke_u32(c, v, anim);
+        poke_u32(c, v + 4, left);
+    };
+    let prepares: [&Prepare; 3] = [
+        &as_saved,
+        &move |c, k| set(c, (k % 4) as u32, 0),
+        &move |c, k| set(c, (k % 4) as u32, 3),
+    ];
+    for p in prepares {
+        check_calls_with(&d, "grGarden_80203098", 1, p, &by_address);
+    }
+}
+
+#[test]
+fn garden_klaptrap() {
+    let d = dir(GD);
+    // Waiting: its wait over (from several seeds) and running; leaping: at each tick a splash
+    // sounds and at another.
+    let set = |c: &mut Call, state: u8, count: u32| {
+        let v = vars(c);
+        let w = peek_u32(c, v + 4);
+        poke_u32(c, v + 4, (w & 0x00FF_FFFF) | u32::from(state) << 24);
+        poke_u32(c, v + 8, count);
+    };
+    let prepares: [&Prepare; 4] = [
+        &as_saved,
+        &move |c, k| {
+            set_seed(c, k as u32 * 0x4F1B);
+            set(c, 0, 0);
+        },
+        &move |c, _| set(c, 0, 9),
+        &move |c, k| set(c, 1, [38, 110, 148, 210, 5][k % 5]),
+    ];
+    for p in prepares {
+        check_calls_with(&d, "grGarden_80203250", 1, p, &by_address);
+    }
+}
+
+#[test]
+fn garden_river() {
+    let d = dir(GD);
+    // The current goes where the prepares point the callback's vector: the stage's barrel
+    // place, compared state that nothing on Jungle Japes uses.
+    let river = |r: &mut Running, maps: &Maps, call: &Call| {
+        let ground = gobj_arg(maps, call);
+        let fighter = *maps
+            .gobjs
+            .get(&call.regs.gpr[4])
+            .expect("the fighter's GObj");
+        let pull = garden::river(r, ground, fighter);
+        if let Some(v) = pull {
+            r.game.stage_info.x730 = v;
+        }
+        Ret::Int(u32::from(pull.is_some()))
+    };
+    let water = |c: &mut Call| c.regs.gpr[5] = leaf_check::sym("stage_info") + 0x730;
+    // The fighter above the surface, below it, and just falling in (with the splash).
+    let place = move |c: &mut Call, now: f32, before: f32| {
+        water(c);
+        let p = peek_u32(c, GD_PARAM);
+        let surface = f32_at(c, p);
+        let fp = peek_u32(c, c.regs.gpr[4] + 0x2C);
+        poke_u32(c, fp + 0xB0 + 4, (surface + now).to_bits());
+        poke_u32(c, fp + 0xBC + 4, (surface + before).to_bits());
+    };
+    let prepares: [&Prepare; 4] = [
+        &move |c, _| water(c),
+        &move |c, _| place(c, 5.0, 5.0),
+        &move |c, _| place(c, -5.0, -3.0),
+        &move |c, _| place(c, -2.0, 1.0),
+    ];
+    for p in prepares {
+        check_calls_with(&d, "grGarden_8020349C", 1, p, &river);
+    }
+}
+
+#[test]
+fn garden_shadow() {
+    let d = dir(GD);
+    fn ours(r: &mut Running, maps: &Maps, call: &Call) -> bool {
+        let (pos, j) = shadow_args(maps, call);
+        garden::check_shadow_render(r.game, r.data, pos, j)
+    }
+    check_shadow(&d, "grGarden_802035D0", ours, 0.0);
+}
+
+/// The stage's callbacks no capture reaches, from Cranky's captures: the empty processes and
+/// destroy callbacks, the demo hook, the Klaptrap's hit callback, the splash and the camera's
+/// floor.
+#[test]
+fn garden_unreached_callbacks() {
+    let d = dir(GD);
+    let from = "grGarden_80203098";
+    for target in [
+        "grGarden_80202D94",
+        "grGarden_80202D98",
+        "grGarden_80202E68",
+        "grGarden_80202F3C",
+        "grGarden_80202F40",
+        "grGarden_80202F9C",
+        "grGarden_80202FA0",
+        "grGarden_80202FFC",
+        "grGarden_80203000",
+        "grGarden_802031A0",
+        "grGarden_80203494",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(target)), &by_address);
+    }
+    check_calls_with(
+        &d,
+        from,
+        1,
+        &retarget(leaf_check::sym("grGarden_80202B6C")),
+        &demo,
+    );
+    let bit = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = melee_sim::game::gr::ground::ground_of(r.game, gobj_arg(maps, call));
+        garden::klaptrap_bit(r, gobj_arg(maps, call), g);
+        Ret::Nothing
+    };
+    check_calls_with(
+        &d,
+        from,
+        1,
+        &retarget(leaf_check::sym("grGarden_80203498")),
+        &bit,
+    );
+    let splash = |r: &mut Running, _: &Maps, call: &Call| {
+        let at = call.regs.gpr[3];
+        let pos = Vec3::new(f32_at(call, at), f32_at(call, at + 4), f32_at(call, at + 8));
+        garden::splash(r, call.regs.fpr[1].ps0 as f32, pos);
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("grGarden_80203560");
+    let prep = move |c: &mut Call, k: usize| {
+        c.addr = t;
+        c.regs.fpr[1].ps0 = [0.5, 1.0, 2.0][k % 3];
+        // The splash's place, as the river passes it, in a vector nothing on Jungle Japes
+        // uses (the stage's barrel place): the stack below the frame would be overwritten.
+        let at = leaf_check::sym("stage_info") + 0x730;
+        poke_u32(c, at + 4, (-30.0f32).to_bits());
+        poke_u32(c, at + 8, 0);
+        c.regs.gpr[3] = at;
+    };
+    check_calls_with(&d, from, 1, &prep, &splash);
+    let floor = |_: &mut Running, _: &Maps, _: &Call| Ret::Float(f64::from(garden::camera_floor()));
+    check_calls_with(
+        &d,
+        from,
+        1,
+        &retarget(leaf_check::sym("grGarden_80203624")),
+        &floor,
+    );
+}
+
+/// The stage fog fitted to the camera (`Ground_801C4FAC`, Jungle Japes has guide points), from
+/// its captures: as saved, the eye moved to either side of what it looks at and behind it, the
+/// guide points all at the eye (the fog's least start and end) and the near ones far past the
+/// far ones (the end just past the start).
+#[test]
+fn garden_fog() {
+    let d = dir(GD);
+    let ours = |r: &mut Running, maps: &Maps, call: &Call| {
+        let c = *maps
+            .cobjs
+            .get(&call.regs.gpr[3])
+            .expect("the camera's CObj");
+        melee_sim::game::gr::ground::fit_fog(r.game, r.data, c);
+        Ret::Nothing
+    };
+    let wobj_pos = |c: &Call, at: u32| {
+        let w = peek_u32(c, c.regs.gpr[3] + at);
+        (w + 0xC, f32_at(c, w + 0xC), f32_at(c, w + 0x14))
+    };
+    let eye_off = |c: &mut Call, dx: f32, dz: f32| {
+        let (eye, _, _) = wobj_pos(c, 0x24);
+        let (_, ix, iz) = wobj_pos(c, 0x28);
+        poke_u32(c, eye, (ix + dx).to_bits());
+        poke_u32(c, eye + 8, (iz + dz).to_bits());
+    };
+    let points = |c: &mut Call, near: (f32, f32, f32), far: (f32, f32, f32)| {
+        let si = leaf_check::sym("stage_info");
+        for (k, p) in [near, far, near, far, near, far].into_iter().enumerate() {
+            let at = si + 0x130 + 12 * k as u32;
+            poke_u32(c, at, p.0.to_bits());
+            poke_u32(c, at + 4, p.1.to_bits());
+            poke_u32(c, at + 8, p.2.to_bits());
+        }
+    };
+    let at_eye = move |c: &mut Call, _: usize| {
+        let (eye, _, _) = wobj_pos(c, 0x24);
+        let p = (f32_at(c, eye), f32_at(c, eye + 4), f32_at(c, eye + 8));
+        points(c, p, p);
+    };
+    let crossed = move |c: &mut Call, _: usize| {
+        let (eye, _, _) = wobj_pos(c, 0x24);
+        let p = (f32_at(c, eye), f32_at(c, eye + 4), f32_at(c, eye + 8));
+        points(c, (p.0, p.1, p.2 - 5000.0), (p.0, p.1, p.2 - 20.0));
+    };
+    let prepares: [&Prepare; 6] = [
+        &as_saved,
+        &move |c, _| eye_off(c, 60.0, 200.0),
+        &move |c, _| eye_off(c, -60.0, 200.0),
+        &move |c, _| eye_off(c, 30.0, -200.0),
+        &at_eye,
+        &crossed,
+    ];
+    for p in prepares {
+        check_calls_with(&d, "Ground_801C4FAC", 1, p, &ours);
+    }
+}
+
+/// The items' state changes in the match (`Item_80268E5C`), the Klaptrap's among them, whose
+/// bite's script is the stage's (`ALDYakuAll`), and a fighter's camera box depth.
+#[test]
+fn garden_items_and_camera() {
+    let d = dir(GD);
+    let change = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        melee_sim::game::it::item::change_state(r, gobj_arg(maps, call), g[4] as i32, g[5]);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "Item_80268E5C", 1, &as_saved, &change);
+    let depth = |r: &mut Running, maps: &Maps, call: &Call| {
+        Ret::Float(f64::from(r.game.ft_camera_depth(gobj_arg(maps, call))))
+    };
+    check_calls_with(&d, "ftLib_80086B80", 1, &as_saved, &depth);
 }

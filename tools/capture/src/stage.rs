@@ -35,6 +35,8 @@ pub const GROLDKONGO_YAKUMONO: u32 = 0x804D_6A90;
 pub const GRSHRINE_YAKUMONO: u32 = 0x804D_6A18;
 /// gryorster.c's (`grYt_804D6A20.x0`).
 pub const GRYORSTER_YAKUMONO: u32 = 0x804D_6A20;
+/// grgarden.c's (`ssbm_types::tu::melee__gr__grgarden::yakumono_param`).
+pub const GRGARDEN_YAKUMONO: u32 = 0x804D_6A28;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -271,6 +273,8 @@ impl Importer<'_> {
         self.game.gr.shrine_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRYORSTER_YAKUMONO);
         self.game.gr.yorster_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRGARDEN_YAKUMONO);
+        self.game.gr.garden_yakumono = self.data_or_unhandled(yaku);
         self.game.gr.battle_demo = self.u8_at(sym("isDemoFight")) != 0;
         self.game.gr.game_mode = self.u8_at(sym("state_machine"));
         let points = sym("grLib_8049EF58");
@@ -837,6 +841,11 @@ impl Comparer<'_> {
                 "grYorster yakumono_param",
                 GRYORSTER_YAKUMONO,
                 game.gr.yorster_yakumono,
+            ),
+            (
+                "grGarden yakumono_param",
+                GRGARDEN_YAKUMONO,
+                game.gr.garden_yakumono,
             ),
         ] {
             let yaku = self.u32(at);

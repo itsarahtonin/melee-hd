@@ -261,7 +261,7 @@ fn eye_floor(s: &StageInfo) -> f64 {
         2 => unported("grCastle_801D0FF0"),
         14 => unported("grCorneria_801E2FCC"),
         8 => unported("grZebes_801DCCC8"),
-        5 => unported("grGarden_80203624"),
+        5 => reg(super::gr::garden::camera_floor()),
         31 => unported("grKinokoRoute_802087B0"),
         67 => unported("grHomeRun_8021EF10"),
         _ => fp::fneg(f64::from(f32::MAX)),
