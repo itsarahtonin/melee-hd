@@ -3,6 +3,7 @@
 pub mod bat;
 pub mod bombhei;
 pub mod capsule;
+pub mod chicorita;
 pub mod climbersblizzard;
 pub mod climbersice;
 pub mod climbersstring;
@@ -241,6 +242,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || lucky::run_event(r, gobj, addr)
         || fushigibana::run_event(r, gobj, addr)
         || kamex::run_event(r, gobj, addr)
+        || chicorita::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -351,6 +353,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| lucky::run_pred(r, gobj, addr))
         .or_else(|| fushigibana::run_pred(r, gobj, addr))
         .or_else(|| kamex::run_pred(r, gobj, addr))
+        .or_else(|| chicorita::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
