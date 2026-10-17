@@ -36,6 +36,8 @@ pub struct PokemonVars {
     handles: Vec<(u16, Handle)>,
     /// The first stale byte code read since the item was made.
     stale_read: Option<u16>,
+    /// Stale bytes with some bits written (a bitfield's flags), by offset, with those bits.
+    bits: Vec<(u16, u8)>,
 }
 
 impl Default for PokemonVars {
@@ -45,6 +47,7 @@ impl Default for PokemonVars {
             stale: [0; SIZE / 8],
             handles: Vec::new(),
             stale_read: None,
+            bits: Vec::new(),
         }
     }
 }
@@ -66,6 +69,15 @@ impl PokemonVars {
     pub fn mark_stale(&mut self) {
         self.stale = [0xFF; SIZE / 8];
         self.stale_read = None;
+        self.bits.clear();
+    }
+
+    /// The bits of a stale byte written so far.
+    fn known_bits(&self, off: usize) -> u8 {
+        self.bits
+            .iter()
+            .find(|&&(o, _)| o as usize == off)
+            .map_or(0, |&(_, m)| m)
     }
 
     fn handle(&self, off: usize) -> Option<Handle> {
@@ -104,6 +116,8 @@ impl PokemonVars {
         for i in start..end {
             self.set_stale(i, false);
         }
+        self.bits
+            .retain(|&(o, _)| !(start..end).contains(&(o as usize)));
         for b in cut {
             self.set_stale(b, true);
         }
@@ -128,6 +142,32 @@ impl PokemonVars {
     pub fn set_u8(&mut self, off: usize, v: u8) {
         self.write(off, off + 1);
         self.bytes[off] = v;
+    }
+
+    /// Whether the bits `mask` of the byte at `off` are set (a bitfield's flag): a stale read
+    /// unless the byte, or those bits, were written.
+    pub fn bit(&mut self, off: usize, mask: u8) -> bool {
+        if self.is_stale(off) && self.known_bits(off) & mask != mask {
+            self.read(off, off + 1);
+        } else {
+            self.read(off, off);
+        }
+        self.bytes[off] & mask != 0
+    }
+
+    /// Sets or clears the bits `mask` of the byte at `off`, the rest kept: a stale byte's
+    /// other bits stay the block's.
+    pub fn set_bit(&mut self, off: usize, mask: u8, on: bool) {
+        if self.is_stale(off) {
+            let known = self.known_bits(off) | mask;
+            self.bits.retain(|&(o, _)| o as usize != off);
+            self.bits.push((off as u16, known));
+        }
+        if on {
+            self.bytes[off] |= mask;
+        } else {
+            self.bytes[off] &= !mask;
+        }
     }
 
     /// The halfword at `off`.
@@ -305,13 +345,19 @@ impl Mirror for PokemonVars {
         let mut i = 0;
         while i < SIZE {
             let w = i & !3;
-            let differs = (w..w + 4)
-                .any(|b| !self.is_stale(b) && !in_handle(b) && self.bytes[b] != theirs[b]);
+            let differs = (w..w + 4).any(|b| {
+                let mask = if self.is_stale(b) {
+                    self.known_bits(b)
+                } else {
+                    0xFF
+                };
+                !in_handle(b) && (self.bytes[b] ^ theirs[b]) & mask != 0
+            });
             if differs {
                 let shown = |bytes: &[u8; SIZE]| {
                     (w..w + 4)
                         .map(|b| {
-                            if self.is_stale(b) || in_handle(b) {
+                            if (self.is_stale(b) && self.known_bits(b) == 0) || in_handle(b) {
                                 "..".to_owned()
                             } else {
                                 format!("{:02x}", bytes[b])

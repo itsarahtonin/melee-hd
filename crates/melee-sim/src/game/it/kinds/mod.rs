@@ -35,6 +35,7 @@ pub mod hammerhead;
 pub mod harisen;
 pub mod heart;
 pub mod heiho;
+pub mod hinoarashi;
 pub mod kinoko;
 pub mod kirbycopystar;
 pub mod kirbycutterbeam;
@@ -231,6 +232,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || super::zako::run_event(r, gobj, addr)
         || kireihana::run_event(r, gobj, addr)
         || unknown::run_event(r, gobj, addr)
+        || hinoarashi::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -336,6 +338,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| spycloak::run_pred(r, gobj, addr))
         .or_else(|| kireihana::run_pred(r, gobj, addr))
         .or_else(|| unknown::run_pred(r, gobj, addr))
+        .or_else(|| hinoarashi::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -534,6 +537,8 @@ pub const PKIND_START: i32 = 161;
 pub const PKIND_TERMINATE: i32 = 191;
 /// `It_Kind_Unknown_Swarm`, Unown's little Unown.
 pub const UNKNOWN_SWARM: i32 = 0xC7;
+/// `It_Kind_Hinoarashi_Flame`, Cyndaquil's flames.
+pub const HINOARASHI_FLAME: i32 = 0xCE;
 /// `It_Kind_Pokemon_Unk`, the last of the Pokémon's items.
 pub const POKEMON_UNK: i32 = 207;
 /// `It_Kind_Old_Kuri`: the first stage item, and the last group of tables.
