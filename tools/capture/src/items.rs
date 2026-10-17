@@ -126,8 +126,8 @@ impl Importer<'_> {
         let tables = chain("item_dynamic_bones_alloc_data");
         // Then the blocks the pool takes from the heap once its free list runs out, with
         // whatever the heap held there (zeros in a replay run's fresh heap, an earlier scene's
-        // bytes after the menus or in a debug VS run): last on our free list, as the original
-        // takes them last.
+        // bytes after the menus or in a debug VS run): fresh slots, taken after the free list
+        // as the original takes them, but not on it, so a freed item links to none of them.
         let fresh = fresh_items(&cap.call.mem1, &items);
         let fresh_from = items.len();
         items.extend(&fresh);
@@ -153,13 +153,19 @@ impl Importer<'_> {
         }
         self.stale = false;
         self.freed = false;
+        self.fresh_items = items.split_off(fresh_from);
         self.free_items = items;
         self.free_tables = tables;
     }
 
     /// Puts the freed items' and joint tables' slots on our pools' free lists, the original's
-    /// next free block first (after the live ones have their slots).
+    /// next free block first, and the item pool's next blocks from the heap behind them as
+    /// fresh slots (after the live ones have their slots).
     pub fn release_free_lists(&mut self) {
+        for b in std::mem::take(&mut self.fresh_items).iter().rev() {
+            let id = self.maps.items[b];
+            self.game.items.free_fresh(id.0);
+        }
         for b in std::mem::take(&mut self.free_items).iter().rev() {
             let id = self.maps.items[b];
             self.game.items.free(id.0);
