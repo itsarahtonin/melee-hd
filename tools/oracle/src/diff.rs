@@ -292,6 +292,10 @@ pub fn diff(args: &[&str]) -> ExitCode {
         }
         None
     };
+    // The import's dangling slots (`Maps::dangling_gobjs` and the rest): nothing the
+    // simulation runs follows them, so every tick compares them by the original's address,
+    // which the reference's heap may since have given to a new object.
+    let mut dangling = Maps::default();
     // The tick the image holds when the comparison starts, if it's the one the match runs
     // first (the start path reads it to find the match's first tick).
     let (mut m, mut files, mut tick, mut held) = match from {
@@ -469,7 +473,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 }
                 (imp.game, imp.maps, imp.unhandled)
             }));
-            let (mut game, _maps, unhandled) = match imported {
+            let (mut game, maps, unhandled) = match imported {
                 Ok(v) => v,
                 Err(p) => {
                     println!("importing trace tick {n}: {}", panic_text(&p));
@@ -497,6 +501,16 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 game.world.gobjs.used(),
                 unhandled.len()
             );
+            dangling = Maps {
+                dangling_gobjs: maps.dangling_gobjs,
+                dangling_jobjs: maps.dangling_jobjs,
+                dangling_fighters: maps.dangling_fighters,
+                dangling_items: maps.dangling_items,
+                dangling_boxes: maps.dangling_boxes,
+                dangling_bone_tables: maps.dangling_bone_tables,
+                dangling_queued: maps.dangling_queued,
+                ..Maps::default()
+            };
             let m = Match::resume(game, data);
             // The import compared back with the memory it came from: what the comparison can
             // tell apart before anything runs.
@@ -585,7 +599,8 @@ pub fn diff(args: &[&str]) -> ExitCode {
         };
         let data = files.refresh(&image.mem1, &mut m.data);
         // Objects pair afresh each tick, by where they're reached from: the heap reuses blocks.
-        let (mut diffs, reads) = compare(&image.mem1, &data, &m, Maps::default());
+        // The import's dangling slots compare by address throughout.
+        let (mut diffs, reads) = compare(&image.mem1, &data, &m, dangling.clone());
         stale.note(tick, &m, reads);
         diffs.retain(|d| !ignore.iter().any(|p| d.contains(p.as_str())));
         compared += 1;
