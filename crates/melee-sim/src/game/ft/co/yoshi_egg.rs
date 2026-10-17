@@ -341,7 +341,8 @@ impl Running<'_> {
             return;
         }
         if self.holding_hammer(gobj) {
-            super::super::super::code::unported_call("ftCo_800C5D34 (the hammer)");
+            self.enter_hammer_fall(gobj);
+            return;
         }
         let flags = SKIP_HIT_STUN_START;
         self.change_motion_state(gobj, ms::FALL, flags, 0.0, 1.0, -1.0, None);

@@ -11007,6 +11007,74 @@ impl itWstar_ItemVars {
     }
 }
 
+/// `itStar_ItemVars`, 0x18 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itStar_ItemVars {
+    /// +0x0
+    pub dir: Var<f32>,
+    /// +0x4
+    pub x4: Var<f32>,
+    /// +0x8
+    pub x8: Var<f32>,
+    /// +0xc
+    pub xC: Var<f32>,
+    /// +0x10
+    pub xvel: Var<f32>,
+    /// +0x14
+    pub yvel: Var<f32>,
+}
+
+impl Default for itStar_ItemVars {
+    fn default() -> Self {
+        itStar_ItemVars {
+            dir: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            xvel: Var::new(Default::default()),
+            yvel: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itStar_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.dir.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.xvel.mark_stale();
+        self.yvel.mark_stale();
+    }
+}
+
+/// `itKinoko_ItemVars`, 0x10 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itKinoko_ItemVars {
+    /// +0x0
+    pub x0: Var<f32>,
+    /// +0x4
+    pub x4: Var<Vec3>,
+}
+
+impl Default for itKinoko_ItemVars {
+    fn default() -> Self {
+        itKinoko_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itKinoko_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+    }
+}
+
 /// `PokemonSelectionState`, 0xc bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct PokemonSelectionState {

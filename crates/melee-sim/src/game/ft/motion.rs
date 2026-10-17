@@ -569,7 +569,7 @@ impl Running<'_> {
             // `ft_8007C114`.
             if self.game.fighters[f.0].x2219_b4 {
                 if self.holding_hammer(gobj) {
-                    unported_call("ftCo_800C555C (the hammer)");
+                    self.hammer_hits_off(gobj);
                 }
                 self.game.fighters[f.0].x2219_b4 = false;
             }

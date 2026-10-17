@@ -33,6 +33,7 @@ pub mod hammer;
 pub mod hammerhead;
 pub mod heart;
 pub mod heiho;
+pub mod kinoko;
 pub mod kirbycutterbeam;
 pub mod kirbyhammer;
 pub mod koopaflame;
@@ -48,6 +49,7 @@ pub mod luigifireball;
 pub mod mariocape;
 pub mod mariofireball;
 pub mod mball;
+pub mod metalb;
 pub mod mewtwodisable;
 pub mod mewtwoshadowball;
 pub mod nessbat;
@@ -67,6 +69,7 @@ pub mod peachturnip;
 pub mod pikachuthunder;
 pub mod pikachutjoltair;
 pub mod pikachutjoltground;
+pub mod rabbitc;
 pub mod rshell;
 pub mod samusbomb;
 pub mod samuschargeshot;
@@ -76,8 +79,10 @@ pub mod seakchain;
 pub mod seakneedleheld;
 pub mod seakneedlethrown;
 pub mod seakvanish;
+pub mod spycloak;
 pub mod sscope;
 pub mod sscopebeam;
+pub mod star;
 pub mod sword;
 pub mod taru;
 pub mod tomato;
@@ -198,6 +203,11 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || parasol::run_event(r, gobj, addr)
         || lipstick::run_event(r, gobj, addr)
         || wstar::run_event(r, gobj, addr)
+        || star::run_event(r, gobj, addr)
+        || kinoko::run_event(r, gobj, addr)
+        || metalb::run_event(r, gobj, addr)
+        || rabbitc::run_event(r, gobj, addr)
+        || spycloak::run_event(r, gobj, addr)
         || super::zako::run_event(r, gobj, addr)
 }
 
@@ -287,6 +297,11 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| parasol::run_pred(r, gobj, addr))
         .or_else(|| lipstick::run_pred(r, gobj, addr))
         .or_else(|| wstar::run_pred(r, gobj, addr))
+        .or_else(|| star::run_pred(r, gobj, addr))
+        .or_else(|| kinoko::run_pred(r, gobj, addr))
+        .or_else(|| metalb::run_pred(r, gobj, addr))
+        .or_else(|| rabbitc::run_pred(r, gobj, addr))
+        .or_else(|| spycloak::run_pred(r, gobj, addr))
 }
 
 /// The common items' kinds (`It_Kind_*`).
@@ -301,6 +316,8 @@ pub const BOMBHEI: i32 = 6;
 pub const DOSEI: i32 = 7;
 pub const HEART: i32 = 8;
 pub const TOMATO: i32 = 9;
+/// `It_Kind_Star`, the Starman.
+pub const STAR: i32 = 10;
 pub const BAT: i32 = 11;
 pub const PARASOL: i32 = 13;
 pub const SWORD: i32 = 12;
@@ -313,6 +330,15 @@ pub const S_SCOPE: i32 = 21;
 pub const LIPSTICK: i32 = 23;
 pub const F_FLOWER: i32 = 25;
 pub const WSTAR: i32 = 29;
+/// `It_Kind_Kinoko` and `It_Kind_DKinoko`, the Super and Poison Mushrooms.
+pub const KINOKO: i32 = 26;
+pub const DKINOKO: i32 = 27;
+/// `It_Kind_RabbitC`, the Bunny Hood.
+pub const RABBITC: i32 = 31;
+/// `It_Kind_MetalB`, the Metal Box.
+pub const METALB: i32 = 32;
+/// `It_Kind_Spycloak`, the Cloaking Device.
+pub const SPYCLOAK: i32 = 33;
 /// `It_Kind_Foods`.
 pub const FOODS: i32 = 18;
 /// `It_Kind_M_Ball`, the Poké Ball.

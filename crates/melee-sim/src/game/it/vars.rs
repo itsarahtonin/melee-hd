@@ -176,6 +176,8 @@ members! {
     MBall, mball, itMBall_ItemVars, [M_BALL];
     ScopeBeam, scope_beam, itScopeBeam_ItemVars, [S_SCOPE_BEAM];
     Wstar, wstar, itWstar_ItemVars, [WSTAR];
+    Star, star, itStar_ItemVars, [STAR];
+    Kinoko, kinoko, itKinoko_ItemVars, [KINOKO, DKINOKO];
 }
 
 impl Default for ItemVars {

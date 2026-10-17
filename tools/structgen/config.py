@@ -116,6 +116,9 @@ ROOTS = [
     "itMBall_ItemVars",
     "itScopeBeam_ItemVars",
     "itWstar_ItemVars",
+    # The power-ups' (task 9): the Starman and the mushrooms.
+    "itStar_ItemVars",
+    "itKinoko_ItemVars",
     "PokemonSelectionState",
     # The background flash (`lbbgflash.c`, `lb_0219.c`).
     "BgFlashData",

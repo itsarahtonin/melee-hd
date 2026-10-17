@@ -165,6 +165,9 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::pikachu::run(g, gobj, addr) => {}
         addr if super::ft::donkey::run(g, gobj, addr) => {}
         addr if super::ft::co::cargo::run(g, gobj, addr) => {}
+        addr if super::ft::co::hammer::run(g, gobj, addr) => {}
+        addr if super::ft::co::kinoko::run(g, gobj, addr) => {}
+        addr if super::ft::co::warpstar::run(g, gobj, addr) => {}
         addr if super::ft::co::bury::run(g, gobj, addr) => {}
         addr if super::ft::pichu::run(g, gobj, addr) => {}
         addr if super::ft::emblem::run(g, gobj, addr) => {}

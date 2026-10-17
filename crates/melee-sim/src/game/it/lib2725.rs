@@ -93,6 +93,16 @@ pub fn set_uniform_scale(game: &mut Game, j: JObjId, scale: f32) {
     });
 }
 
+/// The first word of the kind's own attributes, `it_80272818` (`it_2728_DatAttrs::fighter`:
+/// the Starman's invincibility frames).
+#[doc(alias = "it_80272818")]
+pub fn special_word(game: &Game, data: &Archives, gobj: GObjId) -> i32 {
+    let a = article(item(game, gobj))
+        .special(data)
+        .expect("an item without its attributes");
+    data.u32(a) as i32
+}
+
 /// The joint a model's index names, `it_80272CC0`: from the bone table, or the `idx`th
 /// first child down.
 #[doc(alias = "it_80272CC0")]

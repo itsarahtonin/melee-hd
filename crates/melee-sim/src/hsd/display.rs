@@ -535,8 +535,9 @@ fn material_setup(objs: &mut Objects, data: &Archives, m: MObjId) {
 pub struct FighterMaterial {
     /// The fighter draws refracted (`x2226_b5`): refraction's chain for its vibration frame.
     pub refract: Option<TObjId>,
-    /// Its materials are swapped for the metal or the other shared material.
-    pub swapped: bool,
+    /// The shared material its materials are swapped for: the metal one, or the other
+    /// (`ft_804D6580`, `ft_804D6588`).
+    pub swapped: Option<MObjId>,
     /// It draws translucent (`x61D` set).
     pub translucent: bool,
     /// `x2223_b2`.
@@ -550,7 +551,7 @@ pub struct FighterMaterial {
 }
 
 /// A fighter's material setup, `ftMaterial_800BF2B8`: a refracted fighter's refraction
-/// texture; otherwise HAL's setup (the metal and other shared materials no port covers yet),
+/// texture; otherwise HAL's setup of the material, or of the shared one it's swapped for,
 /// and when the overlay lights the fighter but the material leaves alpha to the lights
 /// (translucent, or `x2223_b2`), the fighter's light set up without alpha, then with it
 /// (`ftMaterial_800BF534`'s `ftCo_8009F75C(fp, false)`, then `ftCo_8009F75C(fp, true)`).
@@ -561,13 +562,17 @@ fn fighter_material(objs: &mut Objects, data: &Archives, m: MObjId) {
         .fighter
         .expect("a fighter's material drawn outside its fighter");
     if let Some(t) = fm.refract {
-        // `lbRefract_80022998`.
+        // `lbRefract_80022998`: the chain's screen copy is a shadow-coordinate texture, so its
+        // setup brings the current camera's inverse view matrix up to date.
         tobj::setup(&mut objs.tobjs, Some(t));
+        let mut next = Some(t);
+        while let Some(t) = next {
+            next = objs.tobjs[t].next;
+            texture_matrix(objs, data, t);
+        }
         return;
     }
-    if fm.swapped {
-        panic!("ft_804D6580 isn't ported");
-    }
+    let m = fm.swapped.unwrap_or(m);
     mobj::setup(objs, m);
     texture_matrices(objs, data, m);
     let rendermode = objs.mobjs[m].rendermode | if fm.translucent { RENDER_XLU } else { 0 };
