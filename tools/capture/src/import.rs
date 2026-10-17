@@ -212,8 +212,10 @@ pub struct Importer<'a> {
     /// free list after the live ones (see `links.rs`).
     pub(crate) links_done: std::collections::HashSet<u32>,
     pub(crate) free_links: Vec<u32>,
-    /// The freed items and joint tables, released onto our free lists after the live ones.
+    /// The freed items and joint tables, released onto our free lists after the live ones,
+    /// and the item pool's next blocks from the heap, released as fresh slots.
     pub(crate) free_items: Vec<u32>,
+    pub(crate) fresh_items: Vec<u32>,
     pub(crate) free_tables: Vec<u32>,
     /// The effects' and deferred spawns' freed blocks (their allocators' free lists), and the
     /// slots made for those something still points to, released after the import.
@@ -249,6 +251,7 @@ impl<'a> Importer<'a> {
             links_done: Default::default(),
             free_links: Default::default(),
             free_items: Vec::new(),
+            fresh_items: Vec::new(),
             free_tables: Vec::new(),
         }
     }
