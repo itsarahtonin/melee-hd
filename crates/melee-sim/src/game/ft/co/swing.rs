@@ -13,7 +13,7 @@ use super::super::super::it::kinds::{LIPSTICK, STARROD, harisen, lipstick, starr
 use super::super::super::it::lib26b1;
 use super::super::super::state::Running;
 use super::PAD_A;
-use super::kind_callbacks::{ON_ITEM_DROP_EXT, ON_ITEM_PICKUP_EXT};
+use super::kind_callbacks::{ON_ITEM_DROP, ON_ITEM_PICKUP};
 use crate::fpu::reg;
 use crate::game::handles::CodeRef;
 use crate::hsd::gobj::GObjId;
@@ -397,11 +397,11 @@ impl Running<'_> {
     }
 
     /// The character's hook for its held item leaving its hand, `ftCommon_8007E79C`
-    /// (`ftData_OnItemDropExt`).
+    /// (`ftData_OnItemDrop`).
     #[doc(alias = "ftCommon_8007E79C")]
     pub fn item_drop_hook(&mut self, gobj: GObjId, flag: bool) {
         let kind = self.game.fighter(gobj).kind;
-        let hook = ON_ITEM_DROP_EXT[kind as usize];
+        let hook = ON_ITEM_DROP[kind as usize];
         if hook != 0 {
             code::call(
                 self,
@@ -412,11 +412,11 @@ impl Running<'_> {
     }
 
     /// The character's hook for an item taken in hand, `ftCommon_8007E7E4`
-    /// (`ftData_OnItemPickupExt`).
+    /// (`ftData_OnItemPickup`).
     #[doc(alias = "ftCommon_8007E7E4")]
     pub fn item_pickup_hook(&mut self, gobj: GObjId, flag: bool) {
         let kind = self.game.fighter(gobj).kind;
-        let hook = ON_ITEM_PICKUP_EXT[kind as usize];
+        let hook = ON_ITEM_PICKUP[kind as usize];
         if hook != 0 {
             code::call(
                 self,

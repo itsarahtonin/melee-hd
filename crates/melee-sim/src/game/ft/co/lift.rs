@@ -245,7 +245,7 @@ impl Running<'_> {
 
     /// A held heavy item drops, `ftCo_8009750C`.
     #[doc(alias = "ftCo_8009750C")]
-    pub(crate) fn drop_heavy_item(&mut self, gobj: GObjId) {
+    pub fn drop_heavy_item(&mut self, gobj: GObjId) {
         if let Some(it) = self.game.fighter(gobj).item_gobj
             && lib26b1::is_heavy(self.game, self.data, it)
         {

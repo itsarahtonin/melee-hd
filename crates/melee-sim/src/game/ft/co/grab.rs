@@ -673,7 +673,7 @@ impl Running<'_> {
     /// holder (`x221B_b5`) knocks its victim away and lets go; a held fighter is let go of and
     /// falls or stands.
     #[doc(alias = "ftCo_800DD168")]
-    pub(crate) fn release_victim(&mut self, gobj: GObjId) {
+    pub fn release_victim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         let Some(victim) = fp.victim_gobj else {
             return;

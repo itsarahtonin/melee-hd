@@ -2474,7 +2474,7 @@ impl Running<'_> {
     /// fighter's player, and the attacker is the item's fighter owner, or none (an
     /// explosion's keeps the last attacker's player, `pl_8003D60C`).
     #[doc(alias = "ftColl_800787B4")]
-    pub(crate) fn item_attack_landed(&mut self, item: GObjId, gobj: GObjId, grounded: bool) {
+    pub fn item_attack_landed(&mut self, item: GObjId, gobj: GObjId, grounded: bool) {
         let me = self.game.fighter_id(gobj);
         let ip = super::super::it::item(self.game, item);
         let (kind, owner, x2070, instance) = (

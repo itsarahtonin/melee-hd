@@ -191,6 +191,14 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
             r.link_on_item_drop(gobj(0), args[1].int() != 0);
             Some(Val::None)
         }
+        addr::ON_ITEM_PICKUP => {
+            r.link_item_pickup(gobj(0), args[1].int() != 0);
+            Some(Val::None)
+        }
+        addr::ON_ITEM_DROP => {
+            r.link_item_drop(gobj(0), args[1].int() != 0);
+            Some(Val::None)
+        }
         addr::MILK_DONE => Some(Val::Int(i32::from(r.clink_milk_done(gobj(0))))),
         addr::APPEAL_CMD_VAR1 => Some(Val::Int(r.clink_appeal_cmd_var1(gobj(0)) as i32)),
         _ => match args.first() {
