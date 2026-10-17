@@ -17,9 +17,12 @@ pub mod copy;
 pub mod hat;
 pub mod init;
 pub mod special_captain;
+pub mod special_donkey;
 pub mod special_fox;
 pub mod special_gamewatch;
 pub mod special_hi;
+pub mod special_koopa;
+pub mod special_link;
 pub mod special_luigi;
 pub mod special_lw;
 pub mod special_mario;
@@ -30,6 +33,7 @@ pub mod special_pikachu;
 pub mod special_s;
 pub mod special_samus;
 pub mod special_seak;
+pub mod special_yoshi;
 pub mod special_zelda;
 
 use super::super::code::Val;
@@ -692,6 +696,19 @@ impl Running<'_> {
     pub(crate) fn kb_attr_i32(&self, f: FighterId, off: usize) -> i32 {
         self.char_attr_word(f, off) as i32
     }
+
+    /// A word of Kirby's loaded attributes (`gFtDataList[Ft_Kind_Kirby]->ext_attr`), which
+    /// his victims' states read.
+    pub(crate) fn kb_ext_attr_word(&self, off: usize) -> u32 {
+        let d =
+            self.game.ft.data.data_list[KIND_KIRBY as usize].expect("Kirby's ftData isn't loaded");
+        let ext = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
+        self.data.u32(ext.at(off as u32))
+    }
+
+    pub(crate) fn kb_ext_attr_f32(&self, off: usize) -> f32 {
+        f32::from_bits(self.kb_ext_attr_word(off))
+    }
 }
 
 /// Runs one of Kirby's callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr` is one.
@@ -713,11 +730,18 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || special_zelda::run(g, gobj, addr)
         || special_seak::run(g, gobj, addr)
         || special_gamewatch::run(g, gobj, addr)
+        || special_donkey::run(g, gobj, addr)
+        || special_koopa::run(g, gobj, addr)
+        || special_link::run(g, gobj, addr)
+        || special_yoshi::run(g, gobj, addr)
 }
 
 /// Kirby's functions other code calls by address (`code::call`).
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     if let Some(v) = init::call(r, f, args) {
+        return Some(v);
+    }
+    if let Some(v) = special_koopa::call(r, f, args) {
         return Some(v);
     }
     match args.first() {

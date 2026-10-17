@@ -12,7 +12,7 @@ use super::super::super::ef::{Arg, SpawnKind};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::data::figatree_frames;
-use super::{KIND_KIRBY, addr, attr, ms, u};
+use super::{addr, attr, ms, u};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::math;
@@ -165,14 +165,6 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F5A60")]
     pub fn kb_victim_facing(&self, gobj: GObjId) -> f32 {
         mem(fp::fneg(reg(self.game.fighter(gobj).facing_dir)))
-    }
-
-    /// A float of Kirby's attributes in his data (`gFtDataList[Ft_Kind_Kirby]->ext_attr`).
-    fn kb_ext_attr_f32(&self, off: usize) -> f32 {
-        let d =
-            self.game.ft.data.data_list[KIND_KIRBY as usize].expect("Kirby's data without Kirby");
-        let ext = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
-        self.data.f32(ext.at(off as u32))
     }
 
     /// The thrown victim's shrink (`ftKb_SpecialN_800F5A70`).

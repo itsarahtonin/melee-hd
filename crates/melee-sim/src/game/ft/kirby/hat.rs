@@ -156,6 +156,42 @@ impl Running<'_> {
         self.kb_head_hat_chains_on(gobj, 19, 0);
     }
 
+    /// Fox's copy's hat put on, `ftKb_SpecialN_800EFB4C`.
+    #[doc(alias = "ftKb_SpecialN_800EFB4C")]
+    pub fn kb_fox_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_on(gobj, 1);
+    }
+
+    /// Yoshi's copy's hat put on, `ftKb_SpecialN_800F0604`.
+    #[doc(alias = "ftKb_SpecialN_800F0604")]
+    pub fn kb_yoshi_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_on(gobj, 14);
+    }
+
+    /// Bowser's copy's hat put on, `ftKb_SpecialN_800EFD64`, with its dynamic bones from the
+    /// copy's second dynamics (`ftCo_8009D4D4`).
+    #[doc(alias = "ftKb_SpecialN_800EFD64")]
+    #[doc(alias = "ftCo_8009D4D4")]
+    pub fn kb_koopa_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_chains_on(gobj, 5, 1);
+    }
+
+    /// Link's copy's hat put on, `ftKb_SpecialN_800EFE80`, with its dynamic bones
+    /// (`ftCo_8009D074`).
+    #[doc(alias = "ftKb_SpecialN_800EFE80")]
+    #[doc(alias = "ftCo_8009D074")]
+    pub fn kb_link_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_chains_on(gobj, 6, 2);
+    }
+
+    /// Young Link's copy's hat put on, `ftKb_SpecialN_800F0A54`, with its dynamic bones
+    /// (`ftCo_8009D18C`).
+    #[doc(alias = "ftKb_SpecialN_800F0A54")]
+    #[doc(alias = "ftCo_8009D18C")]
+    pub fn kb_clink_hat_on(&mut self, gobj: GObjId) {
+        self.kb_head_hat_chains_on(gobj, 20, 2);
+    }
+
     /// Ness's copy's hat put on, `ftKb_SpecialN_800F00B8`.
     #[doc(alias = "ftKb_SpecialN_800F00B8")]
     pub fn kb_ness_hat_on(&mut self, gobj: GObjId) {
@@ -168,9 +204,12 @@ impl Running<'_> {
         self.kb_head_hat_on(gobj, 9);
     }
 
-    /// The hat taken off for Mario's, Captain Falcon's, Luigi's, Ness's and Peach's copies
-    /// (`ftKb_SpecialN_800EFAF0`, `_800EFD08`, `_800F07C0`, `_800F0168`, `_800F0274`).
+    /// The hat taken off for Mario's, Fox's, Captain Falcon's, Luigi's, Ness's, Peach's and
+    /// Yoshi's copies (`ftKb_SpecialN_800EFAF0`, `_800EFBFC`, `_800EFD08`, `_800F07C0`,
+    /// `_800F0168`, `_800F0274`, `_800F06B4`).
     #[doc(alias = "ftKb_SpecialN_800EFAF0")]
+    #[doc(alias = "ftKb_SpecialN_800EFBFC")]
+    #[doc(alias = "ftKb_SpecialN_800F06B4")]
     #[doc(alias = "ftKb_SpecialN_800EFD08")]
     #[doc(alias = "ftKb_SpecialN_800F07C0")]
     #[doc(alias = "ftKb_SpecialN_800F0168")]
@@ -179,9 +218,13 @@ impl Running<'_> {
         self.kb_unload_hat(gobj);
     }
 
-    /// Pikachu's, Sheik's and Zelda's copies' hats taken off (`ftKb_SpecialN_800F0494`,
-    /// `_800F0054`, `_800F09F0`), and their dynamic bones (`ftCo_UnloadDynamicBones`).
+    /// Pikachu's, Sheik's, Zelda's, Bowser's, Link's and Young Link's copies' hats taken off
+    /// (`ftKb_SpecialN_800F0494`, `_800F0054`, `_800F09F0`, `_800EFE1C`, `_800EFF38`,
+    /// `_800F0B0C`), and their dynamic bones (`ftCo_UnloadDynamicBones`).
     #[doc(alias = "ftKb_SpecialN_800F0494")]
+    #[doc(alias = "ftKb_SpecialN_800EFE1C")]
+    #[doc(alias = "ftKb_SpecialN_800EFF38")]
+    #[doc(alias = "ftKb_SpecialN_800F0B0C")]
     #[doc(alias = "ftKb_SpecialN_800F0054")]
     #[doc(alias = "ftKb_SpecialN_800F09F0")]
     pub fn kb_pikachu_hat_off(&mut self, gobj: GObjId) {
@@ -620,6 +663,26 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F13F0")]
     pub fn kb_falco_hat_off(&mut self, gobj: GObjId) {
         self.kb_unload_hat_parts(gobj, 22);
+    }
+
+    /// Donkey Kong's copy's costume put on, `ftKb_SpecialN_800F0FC0`, unless he wears one.
+    #[doc(alias = "ftKb_SpecialN_800F0FC0")]
+    pub fn kb_donkey_hat_on(&mut self, gobj: GObjId) {
+        if self
+            .game
+            .fighter(gobj)
+            .u
+            .dobj_list_at(u::HAT_DOBJS)
+            .is_none()
+        {
+            self.kb_load_hat_parts(gobj, 3);
+        }
+    }
+
+    /// Donkey Kong's copy's costume taken off, `ftKb_SpecialN_800F10A4`.
+    #[doc(alias = "ftKb_SpecialN_800F10A4")]
+    pub fn kb_donkey_hat_off(&mut self, gobj: GObjId) {
+        self.kb_unload_hat_parts(gobj, 3);
     }
 
     /// Mr. Game & Watch's copy's costume put on, `ftKb_SpecialN_800F14B4`, unless he wears one:

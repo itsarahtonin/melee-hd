@@ -154,10 +154,10 @@ members! {
     LinkBomb, link_bomb, itLinkBomb_ItemVars, [LINK_BOMB, CLINK_BOMB];
     LinkBoomerang, link_boomerang, itLinkBoomerang_ItemVars, [LINK_BOOMERANG, CLINK_BOOMERANG];
     LinkHookshot, link_hookshot, itLinkHookshot_ItemVars, [LINK_HSHOT, CLINK_HSHOT];
-    LinkArrow, link_arrow, itLinkArrow_ItemVars, [LINK_ARROW, CLINK_ARROW];
-    LinkBow, link_bow, itLinkBow_ItemVars, [LINK_BOW, CLINK_BOW];
+    LinkArrow, link_arrow, itLinkArrow_ItemVars, [LINK_ARROW, CLINK_ARROW, KIRBY_LINK_ARROW, KIRBY_CLINK_ARROW];
+    LinkBow, link_bow, itLinkBow_ItemVars, [LINK_BOW, CLINK_BOW, KIRBY_LINK_BOW, KIRBY_CLINK_BOW];
     CLinkMilk, clink_milk, itCLinkMilk_ItemVars, [CLINK_MILK];
-    YoshiEggLay, yoshi_egg_lay, itYoshiEggLay_ItemVars, [YOSHI_EGG_LAY];
+    YoshiEggLay, yoshi_egg_lay, itYoshiEggLay_ItemVars, [YOSHI_EGG_LAY, KIRBY_YOSHI_EGG_LAY];
     MewtwoShadowball, mewtwo_shadowball, itMewtwoShadowball_ItemVars, [MEWTWO_SHADOWBALL];
     MDisable, mdisable, itMDisable_ItemVars, [MEWTWO_DISABLE];
     KoopaFlame, koopa_flame, itKoopaFlame_ItemVars, [KOOPA_FLAME, KIRBY_KOOPA_FLAME];

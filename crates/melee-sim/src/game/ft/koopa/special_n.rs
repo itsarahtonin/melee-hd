@@ -41,7 +41,8 @@ const SHELL_BONES: [i32; 12] = [55, 48, 60, 33, 61, 34, 15, 6, 16, 7, 19, 10];
 impl Running<'_> {
     /// The next flame's angle group (`ftKp_SpecialN_80134ACC_inline`): after a group 1 or 2,
     /// one from the second 32; else from the first 32 which half to draw from, then from it.
-    fn kp_flame_dir(&mut self, gobj: GObjId) -> i32 {
+    /// Kirby's copy draws the same from its own copy of the table (`ftKb_Init_803CB540`).
+    pub(crate) fn kp_flame_dir(&mut self, gobj: GObjId) -> i32 {
         let last = self.game.fighter(gobj).mv_i32(mv::N_DIR);
         let rng = &mut self.game.objs.rng;
         let dir = match last {
