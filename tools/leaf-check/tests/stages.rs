@@ -218,7 +218,7 @@ fn oldyoshi_approach_inputs() {
         k += 1;
         let v: Vec<f32> = if let Some(e) = exact.get(i) {
             e.to_vec()
-        } else if i % 2 == 0 {
+        } else if i.is_multiple_of(2) {
             let accel = rng.range(0.05, 2.0);
             let speed = rng.range(-5.0, 5.0);
             let stop = speed * speed / (2.0 * accel);
