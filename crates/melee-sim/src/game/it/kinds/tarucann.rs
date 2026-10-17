@@ -168,7 +168,7 @@ pub fn release(r: &mut Running, gobj: GObjId) {
 
 /// Fires the fighter inside out at the angle the barrel points, its damage and knockback the
 /// attributes', and the barrel breaks, `it_80295F38`.
-#[doc(alias = "it_80295F38")]
+// Ports `it_80295F38`; aliased once a check reaches it.
 pub fn fire(r: &mut Running, gobj: GObjId) {
     let mut hit = HitCapsule {
         state: crate::lb::hitcapsule::ENABLED,
@@ -473,7 +473,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 }
 
 /// Let go of, it drops rolling a little the holder's way, `it_3F14_Logic5_Dropped`.
-#[doc(alias = "it_3F14_Logic5_Dropped")]
+// Ports `it_3F14_Logic5_Dropped`; aliased once a check reaches it.
 pub fn dropped(r: &mut Running, gobj: GObjId) {
     let_go(r, gobj);
     hitbox::set_hit_ids(r.game, gobj);

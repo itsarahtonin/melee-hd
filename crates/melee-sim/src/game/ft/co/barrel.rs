@@ -94,15 +94,15 @@ impl Running<'_> {
 
     /// The barrel fires the fighter out, its hit and death hook, `ftCo_Barrel_Take_Dmg_Cb`
     /// (and `ftCo_Barrel_Death2_Cb`).
-    #[doc(alias = "ftCo_Barrel_Take_Dmg_Cb")]
-    #[doc(alias = "ftCo_Barrel_Death2_Cb")]
+    // Ports `ftCo_Barrel_Take_Dmg_Cb`; aliased once a check reaches it.
+    // Ports `ftCo_Barrel_Death2_Cb`; aliased once a check reaches it.
     pub fn barrel_fire(&mut self, gobj: GObjId) {
         let barrel = self.barrel_of(gobj);
         tarucann::fire(self, barrel);
     }
 
     /// `ftCo_Barrel_Anim`: when the ride's frames run out the barrel fires.
-    #[doc(alias = "ftCo_Barrel_Anim")]
+    // Ports `ftCo_Barrel_Anim`; aliased once a check reaches it.
     pub fn co_barrel_anim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         let ride = fp.mv_i32(MV_RIDE);
@@ -116,7 +116,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_Barrel_IASA`: once the lock-out's frames pass, A or B fires the barrel.
-    #[doc(alias = "ftCo_Barrel_IASA")]
+    // Ports `ftCo_Barrel_IASA`; aliased once a check reaches it.
     pub fn co_barrel_iasa(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         let lock = fp.mv_i32(MV_LOCK);
@@ -131,12 +131,12 @@ impl Running<'_> {
     }
 
     /// `ftCo_Barrel_Phys` and `ftCo_Barrel_Coll`: nothing.
-    #[doc(alias = "ftCo_Barrel_Phys")]
-    #[doc(alias = "ftCo_Barrel_Coll")]
+    // Ports `ftCo_Barrel_Phys`; aliased once a check reaches it.
+    // Ports `ftCo_Barrel_Coll`; aliased once a check reaches it.
     pub fn co_barrel_nothing(&mut self, _gobj: GObjId) {}
 
     /// Inside the barrel, the fighter is where it is, `ftCo_Barrel_Accessory1_Cb`.
-    #[doc(alias = "ftCo_Barrel_Accessory1_Cb")]
+    // Ports `ftCo_Barrel_Accessory1_Cb`; aliased once a check reaches it.
     pub fn barrel_follow(&mut self, gobj: GObjId) {
         let barrel = self.barrel_of(gobj);
         let pos = it::lib26b1::bottom_pos(self.game, barrel);
@@ -145,7 +145,7 @@ impl Running<'_> {
 
     /// The launched fighter's state change hook, `fn_800C9290`: its thrown hitbox takes the
     /// barrel's owner, if a fighter.
-    #[doc(alias = "fn_800C9290")]
+    // Ports `fn_800C9290`; aliased once a check reaches it.
     pub fn barrel_launched(&mut self, gobj: GObjId) {
         let barrel = self.barrel_of(gobj);
         let owner = it::item(self.game, barrel).owner;
@@ -159,7 +159,7 @@ impl Running<'_> {
     /// its collision at the barrel (`at`), the barrel's knockback at `kb_angle` (degrees, the
     /// way the barrel points, mirrored for a fighter facing right), the hit recorded, and
     /// tumbling off.
-    #[doc(alias = "ftCo_800C92E4")]
+    // Ports `ftCo_800C92E4`; aliased once a check reaches it.
     pub fn barrel_launch(
         &mut self,
         gobj: GObjId,

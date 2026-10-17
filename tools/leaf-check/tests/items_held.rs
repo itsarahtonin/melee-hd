@@ -115,10 +115,11 @@ const UNITS: [(u32, u32, bool); 16] = [
 ];
 
 /// Functions outside their units' ranges that run from a unit's captures: the knee bend's
-/// animation with the Screw Attack's jumps (6), and the item engine's grab pieces and an
-/// item's hit record with the barrel cannon (12).
-const ADOPTED: [(&str, usize); 4] = [
+/// animation with the Screw Attack's jumps (6), and the item engine's grab pieces, an item's
+/// hit record and a fighter caught by the barrel with the barrel cannon (12).
+const ADOPTED: [(&str, usize); 5] = [
     ("ftCo_KneeBend_Anim", 6),
+    ("ftCo_Barrel_Enter", 12),
     ("it_802701BC", 12),
     ("it_80274ECC", 12),
     ("ftColl_800787B4", 12),
@@ -148,11 +149,12 @@ const NEIGHBOUR_ARGS: &[&str] = &[
     "it_80274ECC",
     "ftColl_800787B4",
     "it_8029A218",
+    "ftCo_Barrel_Enter",
 ];
 
 /// The first fighter's GObj in the call's memory (`HSD_GObjPLinkHead[8]`).
 fn first_fighter(call: &Call) -> u32 {
-    let heads = leaf_check::sym("HSD_GObjPLinkHead");
+    let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
     peek_u32(call, heads + 4 * 8)
 }
 
@@ -183,6 +185,10 @@ fn neighbour_args(call: &mut Call, name: &str, k: usize) {
         "ftColl_800787B4" => {
             call.regs.gpr[4] = first_fighter(call);
             call.regs.gpr[5] = 0;
+        }
+        "ftCo_Barrel_Enter" => {
+            call.regs.gpr[4] = call.regs.gpr[3];
+            call.regs.gpr[3] = first_fighter(call);
         }
         "it_8029A218" => {
             call.regs.gpr[3] = first_fighter(call);
@@ -391,6 +397,8 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             g.screw_jump(gobj, [v.x, v.y, v.z]);
         }
         "ftCo_Barrel_Enter" => g.enter_barrel(gobj, other(4)),
+        "ftLk_Init_OnItemPickup" | "ftCl_Init_OnItemPickup" => g.link_item_pickup(gobj, r(4) != 0),
+        "ftLk_Init_OnItemDrop" | "ftCl_Init_OnItemDrop" => g.link_item_drop(gobj, r(4) != 0),
         "ftCo_800DD168" => g.release_victim(gobj),
         "ftColl_8007BBCC" => return Ret::Float(g.lipstick_damage()),
         "ftCommon_8007FC7C" => g.flower_hit(gobj, f64::from(f1())),
@@ -572,9 +580,34 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
     }
 }
 
+/// Functions ported by the same Rust function as another, counted clean with it: Young Link's
+/// item hooks are Link's (no Young Link plays in these matches).
+const SAME_AS: &[(&str, &str)] = &[
+    ("ftCl_Init_OnItemPickup", "ftLk_Init_OnItemPickup"),
+    ("ftCl_Init_OnItemDrop", "ftLk_Init_OnItemDrop"),
+];
+
 /// Functions no saved state can finish yet, with what stops them. One that compares clean
 /// fails the check until it's taken off.
-const BLOCKED: &[(&str, &str)] = &[];
+/// Why the barrel cannon's ride is blocked.
+const RIDE: &str =
+    "no saved state has a fighter riding in a barrel cannon: the AI never threw one at a fighter";
+
+const BLOCKED: &[(&str, &str)] = &[
+    ("ftCo_Barrel_Death2_Cb", RIDE),
+    ("ftCo_Barrel_Take_Dmg_Cb", RIDE),
+    ("ftCo_Barrel_Anim", RIDE),
+    ("ftCo_Barrel_IASA", RIDE),
+    ("ftCo_Barrel_Phys", RIDE),
+    ("ftCo_Barrel_Coll", RIDE),
+    ("ftCo_Barrel_Accessory1_Cb", RIDE),
+    ("fn_800C9290", RIDE),
+    ("it_80295F38", RIDE),
+    (
+        "it_3F14_Logic5_Dropped",
+        "no saved state has a held barrel cannon: the AI never picked one up",
+    ),
+];
 
 /// Every ported function compares clean from some real state: its own saved calls or its
 /// unit's neighbours'.
@@ -586,6 +619,12 @@ fn items_held_functions() {
     as_saved(&mut counts);
     from_neighbours(&mut counts);
     let funcs = functions();
+    for (name, like) in SAME_AS {
+        let like = leaf_check::sym(like);
+        if let Some(&c) = counts.get(&like) {
+            counts.insert(leaf_check::sym(name), c);
+        }
+    }
     let ours: Vec<&(u32, String)> = funcs.iter().filter(|(_, n)| !skipped(n)).collect();
     let missing: Vec<&str> = ours
         .iter()

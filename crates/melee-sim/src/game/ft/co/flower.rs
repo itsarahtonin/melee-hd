@@ -83,9 +83,11 @@ impl Running<'_> {
             reg(fp.x34_scale.y),
             fp::fmuls(size, reg(fp.co_attrs.x13C)),
         ));
-        let it = fp.x1980.expect("a flower's shape with no flower");
-        flower::set_offset(self, it, offset);
-        flower::set_size(self, it, petals);
+        // `it_8029A8F4` and `it_8029A89C` do nothing without a flower.
+        if let Some(it) = fp.x1980 {
+            flower::set_offset(self, it, offset);
+            flower::set_size(self, it, petals);
+        }
     }
 
     /// A flower newly on the head, `ftCommon_8007FE84`: its time, the damage's tick and its

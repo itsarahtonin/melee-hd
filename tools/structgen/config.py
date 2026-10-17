@@ -223,6 +223,10 @@ FIELD_DATA = {
 # decomp's `itCharItems.h`); a link block new from the heap mid-capture keeps the heap's bits.
 UNUSED = {
     "ItemLink": {"x2C_b3", "x2C_b4", "x2C_b5", "x2C_b6", "x2C_b7"},
+    # An item's `x8` and the three bytes after its team: neither the decomp's code nor ssbm-rs's
+    # ports touch them, so an item block new from the heap keeps what the heap held there (the
+    # items-heavy-ps oracle match's first in tick 2703).
+    "Item": {"x8", "x21", "x22", "x23"},
 }
 
 # Runs of fields replaced by one field of a hand-written type: struct name to (field name,

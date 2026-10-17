@@ -3665,8 +3665,6 @@ pub struct Item {
     pub x0: Option<ItemId>,
     /// +0x4
     pub entity: Option<GObjId>,
-    /// +0x8
-    pub x8: i32,
     /// +0xc
     pub spawn_kind: i32,
     /// +0x10
@@ -3679,12 +3677,6 @@ pub struct Item {
     pub x1C: i32,
     /// +0x20
     pub x20_team_id: u8,
-    /// +0x21
-    pub x21: u8,
-    /// +0x22
-    pub x22: u8,
-    /// +0x23
-    pub x23: u8,
     /// +0x24
     pub msid: i32,
     /// +0x28
@@ -4028,16 +4020,12 @@ impl Default for Item {
         Item {
             x0: None,
             entity: None,
-            x8: 0,
             spawn_kind: 0,
             kind: 0,
             hold_kind: 0,
             x18: 0,
             x1C: 0,
             x20_team_id: 0,
-            x21: 0,
-            x22: 0,
-            x23: 0,
             msid: 0,
             anim_id: 0,
             facing_dir: 0.0,
