@@ -1,0 +1,142 @@
+//! F12's bug capture: a folder beside the executable (`captures/<time>`) with the frame as
+//! shown (`shown.png`), the same draws drawn again by a new frame builder and renderer, with
+//! the same blend (`fresh.png`) and with none (`fresh-unblended.png`), and what drew them
+//! (`info.txt`). A glitch the fresh frame doesn't have lives in what the player keeps between
+//! frames (the frame builder's caches, the GPU's state, the renderer's textures); one it has
+//! too lives in the draws, the state they read, or the blend.
+
+use std::fmt::Write as _;
+use std::path::{Path, PathBuf};
+
+use melee_render::blend::Blend;
+use melee_render::frame::Frames;
+use melee_render::gpu::Gpu;
+use melee_sim::game::vs_match::Match;
+use melee_sim::hsd::display::Draw;
+
+use crate::{pipelines, present};
+
+/// What a capture records besides the frames.
+pub struct About<'a> {
+    pub mode: &'a str,
+    pub tick: u64,
+    pub scale: u32,
+    pub msaa: u32,
+    pub aspect: present::Aspect,
+    pub widescreen: Option<f32>,
+    pub notes: String,
+}
+
+/// Saves a capture of the frame just drawn: `texture` is it as shown, `draws` and `blend` what
+/// drew it from `m`. Returns the folder.
+#[allow(clippy::too_many_arguments)]
+pub fn save(
+    gpu: &present::Gpu,
+    texture: &wgpu::Texture,
+    m: &Match,
+    dol: &[u8],
+    draws: &[Draw],
+    blend: Option<Blend<'_>>,
+    about: &About,
+) -> Result<PathBuf, String> {
+    let dir = folder()?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    let save = |name: &str, f: &melee_gpu::Frame| {
+        let p = dir.join(name);
+        f.save_png(&p).map_err(|e| format!("{}: {e}", p.display()))
+    };
+    save("shown.png", &read_back(gpu, texture))?;
+    // A new frame builder and renderer, on this thread, drawing the same draws.
+    let mut frames = Frames::new();
+    frames.space.load_dol(dol);
+    frames.hsd.widescreen = about.widescreen;
+    let mut r = pipelines::renderer(gpu, about.scale, about.msaa, about.aspect);
+    r.xfb_readback = true;
+    let mut fresh = Gpu::new(r);
+    for (name, b) in [("fresh.png", blend), ("fresh-unblended.png", None)] {
+        let fifo = frames.frame_blended(&m.game, &m.data, draws, b);
+        let frame = fresh.run(&frames.space, &m.data, &fifo, None).pop();
+        match frame {
+            Some(f) => save(name, &f)?,
+            None => return Err(format!("{name}: the stream copied no frame")),
+        }
+    }
+    let mut info = String::new();
+    let _ = writeln!(info, "mode {}", about.mode);
+    let _ = writeln!(info, "tick {}", about.tick);
+    match blend {
+        Some(b) => {
+            let _ = writeln!(
+                info,
+                "blend t {} (capture held: {})",
+                b.t,
+                b.from.is_filled()
+            );
+        }
+        None => {
+            let _ = writeln!(info, "no blend");
+        }
+    }
+    let _ = writeln!(
+        info,
+        "scale {}, msaa {}, aspect {:?}, widescreen {:?}",
+        about.scale, about.msaa, about.aspect, about.widescreen
+    );
+    let _ = writeln!(info, "draws {}", draws.len());
+    let _ = writeln!(info, "notes:\n{}", about.notes);
+    std::fs::write(dir.join("info.txt"), info).map_err(|e| format!("info.txt: {e}"))?;
+    Ok(dir)
+}
+
+/// `captures/<seconds since 1970>` beside the executable.
+fn folder() -> Result<PathBuf, String> {
+    let exe = std::env::current_exe().map_err(|e| format!("the executable's path: {e}"))?;
+    let base = exe.parent().unwrap_or(Path::new(".")).join("captures");
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis());
+    Ok(base.join(now.to_string()))
+}
+
+/// A frame on the GPU, read back.
+fn read_back(gpu: &present::Gpu, texture: &wgpu::Texture) -> melee_gpu::Frame {
+    let (width, height) = (texture.width(), texture.height());
+    let row = width * 4;
+    let padded = row.next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+    let buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("capture readback"),
+        size: u64::from(padded * height),
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+    let mut encoder = gpu.device.create_command_encoder(&Default::default());
+    encoder.copy_texture_to_buffer(
+        texture.as_image_copy(),
+        wgpu::TexelCopyBufferInfo {
+            buffer: &buffer,
+            layout: wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(padded),
+                rows_per_image: Some(height),
+            },
+        },
+        texture.size(),
+    );
+    gpu.queue.submit([encoder.finish()]);
+    let slice = buffer.slice(..);
+    slice.map_async(wgpu::MapMode::Read, |_| {});
+    let _ = gpu.device.poll(wgpu::PollType::wait_indefinitely());
+    let mut rgba = Vec::with_capacity((row * height) as usize);
+    if let Ok(data) = slice.get_mapped_range() {
+        for r in data.chunks(padded as usize) {
+            rgba.extend_from_slice(&r[..row as usize]);
+        }
+    }
+    buffer.unmap();
+    melee_gpu::Frame {
+        width,
+        height,
+        rgba,
+        texture: None,
+    }
+}

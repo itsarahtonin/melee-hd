@@ -20,7 +20,7 @@
 //! ([`launcher`]). Controllers: GameCube controllers on a Wii U adapter play their own ports;
 //! gamepads and the keyboard play the first ports left (arrows: stick, IJKL: C-stick, X/Z/C/S:
 //! A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). F11 or Alt+Enter toggles
-//! borderless fullscreen. Escape quits, or from a match the launcher started, goes back to it.
+//! borderless fullscreen; F12 saves a bug capture ([`capture`]). Escape quits, or from a match the launcher started, goes back to it.
 //!
 //! The disc reads at a drive's pace, as ssbm-rs's window reads it, which the music needs
 //! (`melee_sim::audio::clock::DiscSpeed`); `--disc-speed fast` reads at Slippi's fast disc
@@ -49,6 +49,7 @@
 // No console window for the release build on Windows (`console` attaches to a terminal's).
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
+mod capture;
 mod console;
 mod jit;
 mod latency;
@@ -598,6 +599,8 @@ struct App {
     /// The last second's latency, and the overlay showing it (F3), while it's on.
     live: latency::Live,
     overlay: Option<launcher::Painter>,
+    /// F12 was pressed: the next frame drawn is captured ([`capture`]).
+    capture_next: bool,
     /// How frames are drawn between ticks, and with Interpolate or Extrapolate, when.
     mode: pacing::Mode,
     pacer: Option<pacing::Pacer>,
@@ -1055,6 +1058,26 @@ impl App {
             )
         });
         let images = gpu.run(&self.frames.space, &m.data, &fifo, None);
+        if std::mem::take(&mut self.capture_next)
+            && let (Some(tex), Some(s)) = (
+                images.last().and_then(|f| f.texture.as_ref()),
+                &self.session,
+            )
+        {
+            let about = capture::About {
+                mode: self.mode.key(),
+                tick: self.ticks,
+                scale: self.scale,
+                msaa: self.msaa,
+                aspect: self.aspect,
+                widescreen: self.frames.hsd.widescreen,
+                notes: format!("{:?}", self.frames.hsd.notes),
+            };
+            match capture::save(&self.gpu, tex, &s.m, &s.dol, draws, blend, &about) {
+                Ok(dir) => eprintln!("captured to {}", dir.display()),
+                Err(e) => eprintln!("the capture failed: {e}"),
+            }
+        }
         let rendered = start.elapsed();
         let (shown, frame) = (self.shown.as_mut()?, images.into_iter().last()?);
         let text = self.overlay.is_some().then(|| {
@@ -1253,6 +1276,23 @@ impl ApplicationHandler for App {
             && (*code == KeyCode::F11 || (*code == KeyCode::Enter && self.alt))
         {
             self.toggle_fullscreen();
+            return;
+        }
+        // F12 captures the next frame drawn, for a bug report.
+        if let WindowEvent::KeyboardInput {
+            event:
+                KeyEvent {
+                    physical_key: PhysicalKey::Code(KeyCode::F12),
+                    state: ElementState::Pressed,
+                    repeat: false,
+                    ..
+                },
+            ..
+        } = &event
+        {
+            if self.session.is_some() {
+                self.capture_next = true;
+            }
             return;
         }
         // F3 shows or hides the latency overlay.
@@ -1815,6 +1855,7 @@ fn run(args: Args) -> ExitCode {
         delay: melee_input::Delay::new(args.added_delay),
         live: latency::Live::default(),
         overlay: None,
+        capture_next: false,
         mode: pacing::Mode::Off,
         pacer: None,
         latest: None,

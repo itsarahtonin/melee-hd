@@ -99,6 +99,19 @@ impl Memory for Quiet<'_> {
     }
 }
 
+/// Clears a new renderer's EFB as `GXInit` sets the copy's clear up: black and the farthest
+/// depth, color, alpha and depth all written. A new state has none of `GXInit`'s registers
+/// yet, and a clear with it writes no depth, leaving the depth buffer as it was made, all
+/// nearest: every depth-tested draw of the first frame would fail.
+fn clear_new(renderer: &mut Renderer) {
+    let mut s = State::new();
+    // `GXSetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE)`, color and alpha updates, the clear's depth.
+    s.bp[0x40] = 0x17;
+    s.bp[0x41] = 0x18;
+    s.bp[0x51] = 0xFF_FFFF;
+    renderer.clear_efb(&s);
+}
+
 impl Gpu {
     /// Runs a frame's stream through the GPU's state without drawing it: for frames nobody
     /// looks at, which the frames after still depend on for the registers they set.
@@ -110,7 +123,7 @@ impl Gpu {
 
     pub fn new(mut renderer: Renderer) -> Gpu {
         let state = State::new();
-        renderer.clear_efb(&state);
+        clear_new(&mut renderer);
         Gpu {
             state,
             renderer: RefCell::new(Backend::Here(Box::new(renderer))),
@@ -122,7 +135,7 @@ impl Gpu {
     /// frames, the work on a frame split across three threads.
     pub fn threaded(mut renderer: Renderer) -> Gpu {
         let mut state = State::new();
-        renderer.clear_efb(&state);
+        clear_new(&mut renderer);
         state.track_changes();
         Gpu {
             state,
