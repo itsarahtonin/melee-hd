@@ -1236,11 +1236,17 @@ impl Renderer {
             return;
         }
         let first = self.indices.len() as u32;
+        // At the depth the shader writes for it, the clear's own. On NVIDIA (Vulkan and D3D12)
+        // with the GPU frames behind, the clear sometimes landed at its rasterized depth instead
+        // of the one its shader wrote; at 0.5 that left the depth buffer nearer than the whole
+        // scene, and the next frame drew only what doesn't test depth (its background color and
+        // the HUD).
+        let z = mode[2] as f32 / 16_777_216.0;
         let corner = |px: u32, py: u32| {
             let nx = px as f32 / (EFB_WIDTH as f32 / 2.0) - 1.0;
             let ny = 1.0 - py as f32 / (EFB_HEIGHT as f32 / 2.0);
             GpuVertex {
-                pos: [nx, ny, 0.5, 1.0],
+                pos: [nx, ny, z, 1.0],
                 ..GpuVertex::zeroed()
             }
         };
@@ -1603,85 +1609,6 @@ impl Renderer {
         drop(data);
         buffer.unmap();
         rgba
-    }
-
-    /// The EFB's depth (0 nearest, 1 farthest) and color as the draws so far left them, with
-    /// its width and height; none with MSAA (a bug capture's test).
-    pub fn read_targets(&mut self) -> Option<(u32, u32, Vec<f32>, Vec<u8>)> {
-        if self.efb_msaa.is_some() {
-            return None;
-        }
-        self.flush();
-        let (width, height) = (self.width, EFB_HEIGHT * self.scale);
-        let row = (width * 4).next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
-        let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("depth readback"),
-            size: u64::from(row * height),
-            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-            mapped_at_creation: false,
-        });
-        let mut encoder = self.device.create_command_encoder(&Default::default());
-        encoder.copy_texture_to_buffer(
-            wgpu::TexelCopyTextureInfo {
-                texture: self.depth_view.texture(),
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::DepthOnly,
-            },
-            wgpu::TexelCopyBufferInfo {
-                buffer: &buffer,
-                layout: wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(row),
-                    rows_per_image: Some(height),
-                },
-            },
-            wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
-        );
-        self.queue.submit([encoder.finish()]);
-        let slice = buffer.slice(..);
-        slice.map_async(wgpu::MapMode::Read, |_| {});
-        self.device
-            .poll(wgpu::PollType::wait_indefinitely())
-            .expect("GPU readback");
-        let data = slice.get_mapped_range().expect("mapped readback");
-        let mut depth = Vec::with_capacity((width * height) as usize);
-        for r in data.chunks(row as usize) {
-            depth.extend(
-                r[..(width * 4) as usize]
-                    .as_chunks::<4>()
-                    .0
-                    .iter()
-                    .map(|b| f32::from_le_bytes(*b)),
-            );
-        }
-        drop(data);
-        buffer.unmap();
-        let color = self.read_efb();
-        Some((width, height, depth, color))
-    }
-
-    /// Drops every decoded texture but the copies kept on the GPU, with the bind groups and
-    /// hashes naming them: the next frame decodes them again (a bug capture's test).
-    pub fn drop_textures(&mut self) {
-        self.flush();
-        let keep: FxHashSet<u32> = self.gpu_copies.values().map(|c| c.id).collect();
-        for (i, slot) in self.textures.iter_mut().enumerate().skip(1) {
-            if !keep.contains(&(i as u32)) {
-                *slot = None;
-            }
-        }
-        let textures = &self.textures;
-        self.texture_ids
-            .retain(|_, id| textures[*id as usize].is_some());
-        self.bind_groups
-            .retain(|ids, _| ids.iter().all(|&id| textures[id as usize].is_some()));
-        self.stable_hashes.clear();
-        self.hashes.clear();
     }
 
     /// The FIFO player's clear before a log's first frame: all of the EFB.

@@ -601,8 +601,6 @@ struct App {
     overlay: Option<launcher::Painter>,
     /// F12 was pressed: the next frame drawn is captured ([`capture`]).
     capture_next: bool,
-    /// The submissions of the frames the GPU may still be drawing, oldest first.
-    gpu_frames: VecDeque<wgpu::SubmissionIndex>,
     /// How frames are drawn between ticks, and with Interpolate or Extrapolate, when.
     mode: pacing::Mode,
     pacer: Option<pacing::Pacer>,
@@ -1051,19 +1049,6 @@ impl App {
                 g.resize_efb(scale, width);
             }
         }
-        // A test: with `MELEE_GPU_FRAMES` N, a frame starts once the GPU has finished all but
-        // the last N frames.
-        let ahead = std::env::var("MELEE_GPU_FRAMES")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(0);
-        while ahead > 0 && self.gpu_frames.len() >= ahead {
-            let index = self.gpu_frames.pop_front().expect("a frame");
-            let _ = self.gpu.device.poll(wgpu::PollType::Wait {
-                submission_index: Some(index),
-                timeout: Some(Duration::from_secs(1)),
-            });
-        }
         let m = &self.session.as_ref().expect("a match").m;
         let fifo = self.frames.frame_blended(&m.game, &m.data, draws, blend);
         let gpu = self.renderer.get_or_insert_with(|| {
@@ -1075,10 +1060,6 @@ impl App {
         let before = self.capture_next.then(|| capture::Regs::of(&gpu.state));
         let images = gpu.run(&self.frames.space, &m.data, &fifo, None);
         let after = before.as_ref().map(|_| capture::Regs::of(&gpu.state));
-        // A test: the GPU finishes each frame before the next starts.
-        if std::env::var_os("MELEE_GPU_SYNC").is_some() {
-            let _ = self.gpu.device.poll(wgpu::PollType::wait_indefinitely());
-        }
         if std::mem::take(&mut self.capture_next)
             && let (Some(before), Some(after)) = (before, after)
             && let (Some(tex), Some(s)) = (
@@ -1103,14 +1084,7 @@ impl App {
                 hsd: format!("{:?}", self.frames.hsd.state),
             };
             match capture::save(&self.gpu, tex, &s.m, &s.dol, draws, blend, &about, &live) {
-                Ok(dir) => {
-                    eprintln!("captured to {}", dir.display());
-                    if let Some(g) = self.renderer.as_mut()
-                        && let Err(e) = capture::experiments(&self.gpu, g, &live, &s.m.data, &dir)
-                    {
-                        eprintln!("the capture's experiments failed: {e}");
-                    }
-                }
+                Ok(dir) => eprintln!("captured to {}", dir.display()),
                 Err(e) => eprintln!("the capture failed: {e}"),
             }
         }
@@ -1126,7 +1100,6 @@ impl App {
                 latency::overlay(p, gpu, &text, view, w, h);
             }
         })?;
-        self.gpu_frames.push_back(presented.submission.clone());
         Some((
             latency::FrameTimes {
                 rendered,
@@ -1893,7 +1866,6 @@ fn run(args: Args) -> ExitCode {
         live: latency::Live::default(),
         overlay: None,
         capture_next: false,
-        gpu_frames: VecDeque::new(),
         mode: pacing::Mode::Off,
         pacer: None,
         latest: None,
