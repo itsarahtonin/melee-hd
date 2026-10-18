@@ -162,6 +162,18 @@ impl Gpu {
         }
     }
 
+    /// Clears the EFB as a new renderer's is ([`clear_new`]), on this thread only (a bug
+    /// capture's test); false when the renderer runs on its own threads.
+    pub fn clear_efb_new(&mut self) -> bool {
+        match self.renderer.get_mut() {
+            Backend::Here(r) => {
+                clear_new(r);
+                true
+            }
+            Backend::Threaded(_) => false,
+        }
+    }
+
     /// The renderer on this thread, to set or read directly; none while it runs on its own.
     pub fn renderer(&self) -> Option<std::cell::RefMut<'_, Renderer>> {
         std::cell::RefMut::filter_map(self.renderer.borrow_mut(), |b| match b {

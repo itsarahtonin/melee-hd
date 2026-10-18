@@ -199,6 +199,47 @@ fresh:
     Ok(dir)
 }
 
+/// Draws the player's frame again on its own renderer, `live`, from the registers the frame
+/// found: as it is (`again.png`), after clearing its EFB as a new renderer's is
+/// (`again-cleared.png`), and after dropping its decoded textures too
+/// (`again-new-textures.png`). Whichever comes back whole names what went stale. Only with
+/// the renderer on the game's thread (`--one-thread`).
+pub fn experiments(
+    gpu: &present::Gpu,
+    live: &mut Gpu,
+    l: &Live,
+    data: &melee_data::archive::Archives,
+    dir: &Path,
+) -> Result<(), String> {
+    if live.renderer().is_none() {
+        return std::fs::write(
+            dir.join("experiments.txt"),
+            "the renderer runs on its own threads: run with --one-thread for the experiments
+",
+        )
+        .map_err(|e| format!("experiments.txt: {e}"));
+    }
+    let again = |name: &str, live: &mut Gpu| -> Result<(), String> {
+        l.before.set(&mut live.state);
+        let frame = live.run(l.space, data, l.fifo, None).pop();
+        let Some(tex) = frame.as_ref().and_then(|f| f.texture.as_ref()) else {
+            return Err(format!("{name}: the stream copied no frame"));
+        };
+        let p = dir.join(name);
+        read_back(gpu, tex)
+            .save_png(&p)
+            .map_err(|e| format!("{}: {e}", p.display()))
+    };
+    again("again.png", live)?;
+    live.clear_efb_new();
+    again("again-cleared.png", live)?;
+    if let Some(mut r) = live.renderer() {
+        r.drop_textures();
+    }
+    again("again-new-textures.png", live)?;
+    Ok(())
+}
+
 /// `captures/<seconds since 1970>` beside the executable.
 fn folder() -> Result<PathBuf, String> {
     let exe = std::env::current_exe().map_err(|e| format!("the executable's path: {e}"))?;

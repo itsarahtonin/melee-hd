@@ -1084,7 +1084,14 @@ impl App {
                 hsd: format!("{:?}", self.frames.hsd.state),
             };
             match capture::save(&self.gpu, tex, &s.m, &s.dol, draws, blend, &about, &live) {
-                Ok(dir) => eprintln!("captured to {}", dir.display()),
+                Ok(dir) => {
+                    eprintln!("captured to {}", dir.display());
+                    if let Some(g) = self.renderer.as_mut()
+                        && let Err(e) = capture::experiments(&self.gpu, g, &live, &s.m.data, &dir)
+                    {
+                        eprintln!("the capture's experiments failed: {e}");
+                    }
+                }
                 Err(e) => eprintln!("the capture failed: {e}"),
             }
         }

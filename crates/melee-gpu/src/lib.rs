@@ -1605,6 +1605,25 @@ impl Renderer {
         rgba
     }
 
+    /// Drops every decoded texture but the copies kept on the GPU, with the bind groups and
+    /// hashes naming them: the next frame decodes them again (a bug capture's test).
+    pub fn drop_textures(&mut self) {
+        self.flush();
+        let keep: FxHashSet<u32> = self.gpu_copies.values().map(|c| c.id).collect();
+        for (i, slot) in self.textures.iter_mut().enumerate().skip(1) {
+            if !keep.contains(&(i as u32)) {
+                *slot = None;
+            }
+        }
+        let textures = &self.textures;
+        self.texture_ids
+            .retain(|_, id| textures[*id as usize].is_some());
+        self.bind_groups
+            .retain(|ids, _| ids.iter().all(|&id| textures[id as usize].is_some()));
+        self.stable_hashes.clear();
+        self.hashes.clear();
+    }
+
     /// The FIFO player's clear before a log's first frame: all of the EFB.
     pub fn clear_efb(&mut self, state: &State) {
         self.clear(state, [0, 0, EFB_WIDTH, EFB_HEIGHT]);
