@@ -1605,6 +1605,66 @@ impl Renderer {
         rgba
     }
 
+    /// The EFB's depth (0 nearest, 1 farthest) and color as the draws so far left them, with
+    /// its width and height; none with MSAA (a bug capture's test).
+    pub fn read_targets(&mut self) -> Option<(u32, u32, Vec<f32>, Vec<u8>)> {
+        if self.efb_msaa.is_some() {
+            return None;
+        }
+        self.flush();
+        let (width, height) = (self.width, EFB_HEIGHT * self.scale);
+        let row = (width * 4).next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+        let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("depth readback"),
+            size: u64::from(row * height),
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture: self.depth_view.texture(),
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::DepthOnly,
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: &buffer,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(row),
+                    rows_per_image: Some(height),
+                },
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+        self.queue.submit([encoder.finish()]);
+        let slice = buffer.slice(..);
+        slice.map_async(wgpu::MapMode::Read, |_| {});
+        self.device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .expect("GPU readback");
+        let data = slice.get_mapped_range().expect("mapped readback");
+        let mut depth = Vec::with_capacity((width * height) as usize);
+        for r in data.chunks(row as usize) {
+            depth.extend(
+                r[..(width * 4) as usize]
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|b| f32::from_le_bytes(*b)),
+            );
+        }
+        drop(data);
+        buffer.unmap();
+        let color = self.read_efb();
+        Some((width, height, depth, color))
+    }
+
     /// Drops every decoded texture but the copies kept on the GPU, with the bind groups and
     /// hashes naming them: the next frame decodes them again (a bug capture's test).
     pub fn drop_textures(&mut self) {

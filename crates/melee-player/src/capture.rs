@@ -230,6 +230,47 @@ pub fn experiments(
             .save_png(&p)
             .map_err(|e| format!("{}: {e}", p.display()))
     };
+    // The EFB as the shown frame left it: its copy to the XFB clears it, color and depth.
+    if let Some(mut r) = live.renderer()
+        && let Some((w, h, depth, color)) = r.read_targets()
+    {
+        let far = depth.iter().filter(|&&d| d >= 0.999).count();
+        let near = depth.iter().filter(|&&d| d < 0.5).count();
+        let (lo, hi) = depth
+            .iter()
+            .fold((f32::MAX, f32::MIN), |(a, b), &d| (a.min(d), b.max(d)));
+        let colored = color
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .filter(|p| p[..3] != [0, 0, 0])
+            .count();
+        let text = format!(
+            "EFB after the shown frame, {w}x{h}: depth {far} texels far (>= 0.999), {near} near (< 0.5), min {lo}, max {hi}; color {colored} texels not black
+"
+        );
+        std::fs::write(dir.join("efb-after.txt"), text)
+            .map_err(|e| format!("efb-after.txt: {e}"))?;
+        let gray: Vec<u8> = depth
+            .iter()
+            .flat_map(|&d| {
+                let v = (d.clamp(0.0, 1.0) * 255.0) as u8;
+                [v, v, v, 255]
+            })
+            .collect();
+        let save = |name: &str, rgba: Vec<u8>| {
+            let f = melee_gpu::Frame {
+                width: w,
+                height: h,
+                rgba,
+                texture: None,
+            };
+            let p = dir.join(name);
+            f.save_png(&p).map_err(|e| format!("{}: {e}", p.display()))
+        };
+        save("efb-depth-after.png", gray)?;
+        save("efb-color-after.png", color)?;
+    }
     again("again.png", live)?;
     live.clear_efb_new();
     again("again-cleared.png", live)?;
