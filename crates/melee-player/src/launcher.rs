@@ -67,6 +67,8 @@ pub struct Given {
     pub high_refresh: bool,
     pub tick_timing: bool,
     pub jit_margin: bool,
+    pub scale: bool,
+    pub msaa: bool,
 }
 
 /// The form and what it last had to say.
@@ -78,6 +80,11 @@ pub struct Form {
     pub fullscreen: bool,
     /// The aspect ratio the match is shown at.
     pub aspect: Aspect,
+    /// The internal resolution's scale: 0 follows the window (the smallest scale whose 480
+    /// lines cover its height), else that many times the console's.
+    pub scale: u32,
+    /// Four samples a pixel.
+    pub msaa: bool,
     /// How frames reach the display, and the input latency added back on purpose (ticks).
     pub present: Present,
     pub added_delay: u32,
@@ -102,6 +109,8 @@ impl Form {
             message: None,
             fullscreen,
             aspect,
+            scale: 0,
+            msaa: false,
             present: Present::Mailbox,
             added_delay: 0,
             high_refresh: Mode::Off,
@@ -128,13 +137,18 @@ impl Form {
             Aspect::STRETCHED => "4:3".to_owned(),
             _ => "73:60".to_owned(),
         };
+        let scale = match self.scale {
+            0 => "auto".to_owned(),
+            n => n.to_string(),
+        };
+        let msaa = if self.msaa { "4" } else { "off" };
         let present = match self.present {
             Present::Mailbox => "mailbox",
             Present::Fifo => "fifo",
             Present::Immediate => "immediate",
         };
         text += &format!(
-            "stocks = {}\nminutes = {}\naspect = {aspect}\nfullscreen = {}\npresent = {present}\nadded-delay = {}\nhigh-refresh = {}\ntick-timing = {}\njit-margin = {}\n",
+            "stocks = {}\nminutes = {}\naspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {msaa}\npresent = {present}\nadded-delay = {}\nhigh-refresh = {}\ntick-timing = {}\njit-margin = {}\n",
             c.stocks,
             c.minutes,
             self.fullscreen,
@@ -189,6 +203,18 @@ impl Form {
                         self.fullscreen = f;
                     }
                 }
+                "scale" if !given.scale => {
+                    if v == "auto" {
+                        self.scale = 0;
+                    } else if let Some(n) = v.parse().ok().filter(|n| (1..=8).contains(n)) {
+                        self.scale = n;
+                    }
+                }
+                "msaa" if !given.msaa => match v {
+                    "4" => self.msaa = true,
+                    "off" | "1" => self.msaa = false,
+                    _ => {}
+                },
                 "present" if !given.present => {
                     if let Ok(p) = Present::parse(v) {
                         self.present = p;
@@ -288,6 +314,26 @@ impl Form {
                             ui.label("");
                             ui.checkbox(&mut self.fullscreen, "Fullscreen");
                             ui.end_row();
+                            ui.label("Resolution");
+                            let (scale, aspect) = (&mut self.scale, self.aspect);
+                            let name = |s: u32| match s {
+                                0 => "Auto (the window's)".to_owned(),
+                                s => format!("{s}x ({}x{})", aspect.efb_width(s), 480 * s),
+                            };
+                            // A scale past what this aspect's EFB allows is shown at the most.
+                            *scale = (*scale).min(aspect.max_scale());
+                            egui::ComboBox::from_id_salt("scale")
+                                .selected_text(name(*scale))
+                                .width(200.0)
+                                .show_ui(ui, |ui| {
+                                    for s in 0..=aspect.max_scale() {
+                                        ui.selectable_value(scale, s, name(s));
+                                    }
+                                });
+                            ui.end_row();
+                            ui.label("");
+                            ui.checkbox(&mut self.msaa, "Antialiasing (MSAA 4x)");
+                            ui.end_row();
                             ui.label("Present");
                             let present = &mut self.present;
                             egui::ComboBox::from_id_salt("present")
@@ -361,7 +407,7 @@ impl Form {
             ui.add_space(16.0);
             ui.weak("0 stocks: a timed match. 0 minutes: no time limit.");
             ui.weak("Enter starts. Escape in a match comes back here; Escape here quits.");
-            ui.weak("F11 or Alt+Enter: fullscreen.");
+            ui.weak("F11 or Alt+Enter: fullscreen. F3: latency overlay. F12: bug capture.");
             ui.weak("Added delay holds the controllers back on purpose, for a CRT's feel.");
         });
         start
@@ -672,6 +718,8 @@ mod tests {
         form.high_refresh = Mode::Interpolate;
         form.tick_timing = Timing::Vrr;
         form.jit_margin = 2.5;
+        form.scale = 3;
+        form.msaa = true;
         form
     }
 
@@ -685,6 +733,8 @@ mod tests {
             a.high_refresh,
             a.tick_timing,
             a.jit_margin,
+            a.scale,
+            a.msaa,
         ) == (
             b.choice.clone(),
             b.aspect,
@@ -694,6 +744,8 @@ mod tests {
             b.high_refresh,
             b.tick_timing,
             b.jit_margin,
+            b.scale,
+            b.msaa,
         )
     }
 
@@ -714,26 +766,35 @@ mod tests {
                 assert!(same(&form, &was), "{}", was.save());
             }
         }
+        // The window's scale and no MSAA come back too.
+        let mut was = picked();
+        (was.scale, was.msaa) = (0, false);
+        let mut form = picked();
+        form.restore(&was.save(), &Given::default());
+        assert!(same(&form, &was), "{}", was.save());
     }
 
     #[test]
     fn the_command_line_wins_over_the_last_match() {
         let mut form = Form::new(5, 7, false, Aspect::STRETCHED);
+        form.scale = 2;
         let given = Given {
             stocks: true,
             aspect: true,
+            scale: true,
             ..Given::default()
         };
         form.restore(&picked().save(), &given);
         assert_eq!((form.choice.stocks, form.choice.minutes), (5, 0));
         assert_eq!(form.aspect, Aspect::STRETCHED);
+        assert_eq!((form.scale, form.msaa), (2, true));
         assert_eq!(form.choice.players, picked().choice.players);
     }
 
     #[test]
     fn an_unreadable_last_match_changes_nothing() {
         let mut form = Form::new(4, 8, false, Aspect::GAME);
-        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\n";
+        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nscale = 9\nmsaa = 2\n";
         form.restore(text, &Given::default());
         assert!(same(&form, &Form::new(4, 8, false, Aspect::GAME)));
     }

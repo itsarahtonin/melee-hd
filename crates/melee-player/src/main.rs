@@ -286,12 +286,16 @@ fn parse_args() -> Result<Args, String> {
                     "1" | "off" => 1,
                     "4" => 4,
                     _ => return Err("--msaa 4 (or 1, off)".into()),
-                }
+                };
+                a.given.msaa = true;
             }
             "--bench" => a.bench = Some(value()?.parse().map_err(|_| "--bench TICKS")?),
             "--size" | "--windowed" => a.size = size(&value()?)?,
             "--ticks" => a.ticks = Some(value()?.parse().map_err(|_| "--ticks N")?),
-            "--scale" => a.scale = value()?.parse().map_err(|_| "--scale N")?,
+            "--scale" => {
+                a.scale = value()?.parse().map_err(|_| "--scale N")?;
+                a.given.scale = true;
+            }
             "--shot" => a.shot = Some(value()?),
             "--resize-at" => {
                 let v = value()?;
@@ -1166,6 +1170,11 @@ impl App {
         let (present, added_delay) = (l.form.present, l.form.added_delay);
         let high_refresh = l.form.high_refresh;
         let (tick_timing, margin) = (l.form.tick_timing, l.form.jit_margin);
+        // The internal resolution chosen, and the scale it has at the window's size now, so
+        // the renderer starts at it.
+        self.args.scale = l.form.scale;
+        self.msaa = if l.form.msaa { 4 } else { 1 };
+        self.scale = scale_for(self.args.scale, self.window_size, aspect);
         settings::write(settings::LAST_MATCH, &l.form.save());
         let c = &l.form.choice;
         let mut args = self.args.clone();
@@ -1819,6 +1828,8 @@ fn run(args: Args) -> ExitCode {
         form.high_refresh = args.high_refresh;
         form.tick_timing = args.tick_timing;
         form.jit_margin = (args.jit_margin.as_secs_f64() * 1000.0) as f32;
+        form.scale = args.scale;
+        form.msaa = args.msaa == 4;
         if let Some(text) = settings::read(settings::LAST_MATCH) {
             form.restore(&text, &args.given);
         }
