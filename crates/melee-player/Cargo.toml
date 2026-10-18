@@ -20,6 +20,7 @@ melee-render = { path = "../melee-render" }
 melee-slippi = { path = "../melee-slippi" }
 melee-sim.workspace = true
 melee-gpu = { path = "../melee-gpu" }
+melee-gx = { path = "../melee-gx" }
 pollster = "1"
 wgpu = "30"
 winit = "0.30"

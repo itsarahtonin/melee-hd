@@ -1057,8 +1057,11 @@ impl App {
                 self.one_thread,
             )
         });
+        let before = self.capture_next.then(|| capture::Regs::of(&gpu.state));
         let images = gpu.run(&self.frames.space, &m.data, &fifo, None);
+        let after = before.as_ref().map(|_| capture::Regs::of(&gpu.state));
         if std::mem::take(&mut self.capture_next)
+            && let (Some(before), Some(after)) = (before, after)
             && let (Some(tex), Some(s)) = (
                 images.last().and_then(|f| f.texture.as_ref()),
                 &self.session,
@@ -1073,7 +1076,14 @@ impl App {
                 widescreen: self.frames.hsd.widescreen,
                 notes: format!("{:?}", self.frames.hsd.notes),
             };
-            match capture::save(&self.gpu, tex, &s.m, &s.dol, draws, blend, &about) {
+            let live = capture::Live {
+                before,
+                after,
+                fifo: &fifo,
+                space: &self.frames.space,
+                hsd: format!("{:?}", self.frames.hsd.state),
+            };
+            match capture::save(&self.gpu, tex, &s.m, &s.dol, draws, blend, &about, &live) {
                 Ok(dir) => eprintln!("captured to {}", dir.display()),
                 Err(e) => eprintln!("the capture failed: {e}"),
             }

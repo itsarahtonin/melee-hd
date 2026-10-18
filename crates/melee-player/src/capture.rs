@@ -3,7 +3,11 @@
 //! the same blend (`fresh.png`) and with none (`fresh-unblended.png`), and what drew them
 //! (`info.txt`). A glitch the fresh frame doesn't have lives in what the player keeps between
 //! frames (the frame builder's caches, the GPU's state, the renderer's textures); one it has
-//! too lives in the draws, the state they read, or the blend.
+//! too lives in the draws, the state they read, or the blend. Two more split the first case:
+//! `live-stream.png`, the stream the player drew run by a new renderer from the GPU's registers
+//! as the player's frame found them (broken: the registers or the stream; whole: the
+//! renderer's own textures, depth or caches), and `registers.txt`, every register whose value
+//! after the frame differs from a new frame builder's and renderer's after the same draws.
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
@@ -15,6 +19,89 @@ use melee_sim::game::vs_match::Match;
 use melee_sim::hsd::display::Draw;
 
 use crate::{pipelines, present};
+
+/// The GPU's registers, as a frame found or left them.
+pub struct Regs {
+    bp: [u32; 256],
+    cp: [u32; 256],
+    xf: Vec<u32>,
+    colors: [[u32; 4]; 4],
+    tmem: Vec<u8>,
+}
+
+impl Regs {
+    pub fn of(s: &melee_gx::State) -> Regs {
+        Regs {
+            bp: s.bp,
+            cp: s.cp,
+            xf: s.xf.clone(),
+            colors: [s.color_ra, s.color_bg, s.konst_ra, s.konst_bg],
+            tmem: s.tmem.clone(),
+        }
+    }
+
+    fn set(&self, s: &mut melee_gx::State) {
+        s.bp = self.bp;
+        s.cp = self.cp;
+        s.xf.clone_from(&self.xf);
+        [s.color_ra, s.color_bg, s.konst_ra, s.konst_bg] = self.colors;
+        s.tmem.clone_from(&self.tmem);
+    }
+
+    /// Each register that differs from `other`'s, one a line.
+    fn diff(&self, other: &Regs, out: &mut String) {
+        let mut n = 0;
+        let mut line = |space: &str, i: usize, a: u32, b: u32| {
+            n += 1;
+            let _ = writeln!(out, "{space} {i:#05x}: live {a:#010x} fresh {b:#010x}");
+        };
+        for (i, (a, b)) in self.bp.iter().zip(&other.bp).enumerate() {
+            if a != b {
+                line("bp", i, *a, *b);
+            }
+        }
+        for (i, (a, b)) in self.cp.iter().zip(&other.cp).enumerate() {
+            if a != b {
+                line("cp", i, *a, *b);
+            }
+        }
+        for (i, (a, b)) in self.xf.iter().zip(&other.xf).enumerate() {
+            if a != b {
+                line("xf", i, *a, *b);
+            }
+        }
+        for (k, (a, b)) in self.colors.iter().zip(&other.colors).enumerate() {
+            for (i, (x, y)) in a.iter().zip(b).enumerate() {
+                if x != y {
+                    line(
+                        ["color_ra", "color_bg", "konst_ra", "konst_bg"][k],
+                        i,
+                        *x,
+                        *y,
+                    );
+                }
+            }
+        }
+        let tmem = self
+            .tmem
+            .iter()
+            .zip(&other.tmem)
+            .filter(|(a, b)| a != b)
+            .count();
+        let _ = writeln!(out, "{n} registers differ; {tmem} bytes of texture memory");
+    }
+}
+
+/// The player's frame as the GPU took it: its registers before and after, and its stream.
+pub struct Live<'a> {
+    pub before: Regs,
+    pub after: Regs,
+    pub fifo: &'a [u8],
+    /// The address space the stream's addresses are in.
+    pub space: &'a melee_render::mem::Space,
+    /// The frame builder's HSD state cache after the frame, as text.
+    pub hsd: String,
+}
 
 /// What a capture records besides the frames.
 pub struct About<'a> {
@@ -38,6 +125,7 @@ pub fn save(
     draws: &[Draw],
     blend: Option<Blend<'_>>,
     about: &About,
+    live: &Live,
 ) -> Result<PathBuf, String> {
     let dir = folder()?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
@@ -53,6 +141,7 @@ pub fn save(
     let mut r = pipelines::renderer(gpu, about.scale, about.msaa, about.aspect);
     r.xfb_readback = true;
     let mut fresh = Gpu::new(r);
+    let mut regs = String::new();
     for (name, b) in [("fresh.png", blend), ("fresh-unblended.png", None)] {
         let fifo = frames.frame_blended(&m.game, &m.data, draws, b);
         let frame = fresh.run(&frames.space, &m.data, &fifo, None).pop();
@@ -60,6 +149,28 @@ pub fn save(
             Some(f) => save(name, &f)?,
             None => return Err(format!("{name}: the stream copied no frame")),
         }
+        if regs.is_empty() {
+            live.after.diff(&Regs::of(&fresh.state), &mut regs);
+            let _ = writeln!(
+                regs,
+                "
+HSD state cache, live:
+{}
+fresh:
+{:?}",
+                live.hsd, frames.hsd.state
+            );
+        }
+    }
+    std::fs::write(dir.join("registers.txt"), regs).map_err(|e| format!("registers.txt: {e}"))?;
+    // The player's own stream, from its registers, on a new renderer.
+    let mut r = pipelines::renderer(gpu, about.scale, about.msaa, about.aspect);
+    r.xfb_readback = true;
+    let mut again = Gpu::new(r);
+    live.before.set(&mut again.state);
+    match again.run(live.space, &m.data, live.fifo, None).pop() {
+        Some(f) => save("live-stream.png", &f)?,
+        None => return Err("live-stream.png: the stream copied no frame".into()),
     }
     let mut info = String::new();
     let _ = writeln!(info, "mode {}", about.mode);

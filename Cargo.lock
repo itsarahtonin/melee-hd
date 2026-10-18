@@ -1644,6 +1644,7 @@ dependencies = [
  "melee-audio",
  "melee-data",
  "melee-gpu",
+ "melee-gx",
  "melee-input",
  "melee-render",
  "melee-sim",
