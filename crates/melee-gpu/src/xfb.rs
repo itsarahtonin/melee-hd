@@ -210,7 +210,18 @@ pub(crate) struct GpuXfb {
     encode_group: wgpu::BindGroup,
     /// Green's luma term less its U term, as `copy` rounds them, by luma * 256 + U.
     g_yu: wgpu::Buffer,
+    /// The encoded frame, kept for the next copy of its size.
+    yuyv: Option<wgpu::Texture>,
+    /// The frames shown, reused in turn by copies of their size: a frame stays as copied
+    /// until [`SHOWN`] more copies, long after it's presented. Made new for each copy, a 5x
+    /// frame and its encoding were 60 MB of textures a frame, gigabytes a second at a high
+    /// refresh rate.
+    shown: Vec<wgpu::Texture>,
+    next_shown: usize,
 }
+
+/// How many frames shown are kept for reuse.
+const SHOWN: usize = 3;
 
 fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     wgpu::BindGroupLayoutEntry {
@@ -376,6 +387,9 @@ impl GpuXfb {
             decode_params,
             encode_group,
             g_yu: g_yu_buffer,
+            yuyv: None,
+            shown: Vec::new(),
+            next_shown: 0,
         }
     }
 
@@ -387,7 +401,7 @@ impl GpuXfb {
     /// Copies `rect` (left, top, right, bottom) of the EFB to the XFB as BP 0x52 value `value`
     /// asks, after everything already submitted, and returns the frame shown with its size.
     pub fn copy(
-        &self,
+        &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         state: &State,
@@ -457,22 +471,39 @@ impl GpuXfb {
                 view_formats: &[],
             })
         };
-        let yuyv = texture(
-            "xfb yuyv",
-            width,
-            height,
-            wgpu::TextureFormat::Rg8Uint,
-            wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-        );
-        let shown = texture(
-            "xfb",
-            width,
-            out_height,
-            wgpu::TextureFormat::Rgba8Unorm,
-            wgpu::TextureUsages::RENDER_ATTACHMENT
-                | wgpu::TextureUsages::TEXTURE_BINDING
-                | wgpu::TextureUsages::COPY_SRC,
-        );
+        let sized = |t: &wgpu::Texture, w: u32, h: u32| t.width() == w && t.height() == h;
+        if !self.yuyv.as_ref().is_some_and(|t| sized(t, width, height)) {
+            self.yuyv = Some(texture(
+                "xfb yuyv",
+                width,
+                height,
+                wgpu::TextureFormat::Rg8Uint,
+                wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            ));
+        }
+        if !self
+            .shown
+            .first()
+            .is_some_and(|t| sized(t, width, out_height))
+        {
+            self.shown.clear();
+            self.next_shown = 0;
+        }
+        if self.shown.len() < SHOWN {
+            self.shown.push(texture(
+                "xfb",
+                width,
+                out_height,
+                wgpu::TextureFormat::Rgba8Unorm,
+                wgpu::TextureUsages::RENDER_ATTACHMENT
+                    | wgpu::TextureUsages::TEXTURE_BINDING
+                    | wgpu::TextureUsages::COPY_SRC,
+            ));
+            self.next_shown = self.shown.len() - 1;
+        }
+        let shown = self.shown[self.next_shown].clone();
+        self.next_shown = (self.next_shown + 1) % SHOWN;
+        let yuyv = self.yuyv.as_ref().expect("the encoded frame's texture");
         let rows_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("xfb rows"),
             size: (rows.len().max(1) * 4) as u64,
