@@ -254,13 +254,27 @@ impl Log {
     }
 }
 
-/// The last second's ticks, for the overlay.
+/// The last second's ticks and frames, for the overlay.
 #[derive(Default)]
 pub struct Live {
     recent: VecDeque<Tick>,
+    /// When the last second's frames were presented.
+    frames: VecDeque<Instant>,
 }
 
 impl Live {
+    /// A frame presented `at`.
+    pub fn frame(&mut self, at: Instant) {
+        while self
+            .frames
+            .front()
+            .is_some_and(|&f| at.saturating_duration_since(f) > Duration::from_secs(1))
+        {
+            self.frames.pop_front();
+        }
+        self.frames.push_back(at);
+    }
+
     pub fn tick(&mut self, t: Tick) {
         if self.recent.len() == 60 {
             self.recent.pop_front();
@@ -295,8 +309,24 @@ impl Live {
             },
             _ => String::new(),
         };
+        // Events a second over the span from the first to the last.
+        let per_second =
+            |first: Option<Instant>, last: Option<Instant>, n: usize| match (first, last) {
+                (Some(a), Some(b)) if b > a && n > 1 => {
+                    format!("{:.0}", (n - 1) as f64 / (b - a).as_secs_f64())
+                }
+                _ => "-".to_owned(),
+            };
+        let ticks = r.iter().filter_map(|t| t.at);
+        let tick_rate = per_second(
+            ticks.clone().next(),
+            ticks.clone().next_back(),
+            ticks.count(),
+        );
+        let f = &self.frames;
+        let frame_rate = per_second(f.front().copied(), f.back().copied(), f.len());
         format!(
-            "input age {}{rate}\ntick to present {}, to screen {}\naudio queue {}, underruns {underruns}\n{present_mode}, added delay {added_delay}",
+            "{tick_rate} ticks/s, {frame_rate} frames/s\ninput age {}{rate}\ntick to present {}, to screen {}\naudio queue {}, underruns {underruns}\n{present_mode}, added delay {added_delay}",
             show(input),
             show(presented),
             show(shown),
@@ -422,7 +452,11 @@ mod tests {
         for t in &log.rows {
             live.tick(*t);
         }
+        for i in 0..200u64 {
+            live.frame(t0 + Duration::from_micros(11_111 * i));
+        }
         let text = live.text("Mailbox", 0);
+        assert!(text.starts_with("60 ticks/s, 90 frames/s\n"), "{text}");
         assert!(text.contains("input age 0.9 ms, 1000 Hz"), "{text}");
         assert!(text.contains("tick to present 5.0 ms"), "{text}");
         let summary = log.summary();

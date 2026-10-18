@@ -1100,6 +1100,7 @@ impl App {
                 latency::overlay(p, gpu, &text, view, w, h);
             }
         })?;
+        self.live.frame(presented.presented);
         Some((
             latency::FrameTimes {
                 rendered,
