@@ -8,6 +8,8 @@
 //! textures decoded on the CPU by hand. Copies to the XFB come back as frames, through the
 //! XFB's YUV encoding as Dolphin's software renderer makes it.
 
+#[cfg(test)]
+mod clear_tests;
 mod copy;
 #[cfg(test)]
 mod copy_tests;
@@ -153,6 +155,70 @@ struct Command {
     scissor: [u32; 4],
 }
 
+/// One value the EFB holds everywhere outside a rectangle drawn in since it was cleared whole.
+#[derive(Clone, Copy)]
+struct Outside<T> {
+    value: T,
+    /// The bounds (left, top, right, bottom) of every draw since, if any.
+    drawn: Option<[u32; 4]>,
+}
+
+impl<T: Copy + PartialEq> Outside<T> {
+    fn new(value: T) -> Self {
+        Outside { value, drawn: None }
+    }
+
+    fn draw(&mut self, [x, y, w, h]: [u32; 4]) {
+        if w == 0 || h == 0 {
+            return;
+        }
+        let [l, t, r, b] = self.drawn.unwrap_or([x, y, x + w, y + h]);
+        self.drawn = Some([l.min(x), t.min(y), r.max(x + w), b.max(y + h)]);
+    }
+
+    /// Whether clearing `rect` to `value` leaves what clearing all of the EFB to it would:
+    /// `rect` is all of it, or everything outside it already holds the value.
+    fn cleared_whole(&self, [x, y, w, h]: [u32; 4], value: T) -> bool {
+        if [x, y, w, h] == [0, 0, EFB_WIDTH, EFB_HEIGHT] {
+            return true;
+        }
+        self.value == value
+            && self
+                .drawn
+                .is_none_or(|[l, t, r, b]| x <= l && y <= t && r <= x + w && b <= y + h)
+    }
+}
+
+/// What the EFB is known to hold where nothing has drawn since its last clear of all of it, so
+/// a clear of only part of it can still be made by clearing all of it. New targets hold zeros.
+#[derive(Clone, Copy)]
+struct Known {
+    /// RGBA.
+    color: Outside<[u8; 4]>,
+    /// All of the EFB's alpha, while nothing writes alpha: in a format without alpha a clear
+    /// keeps it, as the target's alpha channel still holds it.
+    alpha: Option<u8>,
+    depth: Outside<u32>,
+}
+
+impl Known {
+    fn new() -> Known {
+        Known {
+            color: Outside::new([0; 4]),
+            alpha: Some(0),
+            depth: Outside::new(0),
+        }
+    }
+}
+
+/// A clear of all of the EFB made by the next render pass's load operations: RGBA, and the
+/// depth as the EFB holds it (24 bits).
+#[derive(Clone, Copy, Default)]
+struct PendingClear {
+    color: Option<[u8; 4]>,
+    depth: Option<u32>,
+}
+
 struct TexEntry {
     view: wgpu::TextureView,
     _texture: wgpu::Texture,
@@ -266,6 +332,12 @@ pub struct Renderer {
     indices: Vec<u32>,
     uniforms: Vec<u8>,
     commands: Vec<Command>,
+    /// A clear the next render pass makes before its commands, and what the EFB holds.
+    pending_clear: PendingClear,
+    known: Known,
+    /// Draws every clear as a rectangle, to check the load operations against.
+    #[cfg(test)]
+    rect_clears: bool,
     vertex_buffer: Option<(wgpu::Buffer, wgpu::BindGroup)>,
     vertex_layout: wgpu::BindGroupLayout,
     index_buffer: Option<wgpu::Buffer>,
@@ -631,6 +703,10 @@ impl Renderer {
             indices: Vec::new(),
             uniforms: Vec::new(),
             commands: Vec::new(),
+            pending_clear: PendingClear::default(),
+            known: Known::new(),
+            #[cfg(test)]
+            rect_clears: false,
             vertex_buffer: None,
             vertex_layout,
             index_buffer: None,
@@ -1018,6 +1094,17 @@ impl Renderer {
     /// Queues a draw call; one that follows the last with the same state and the vertices
     /// right after its own joins it, as one call draws the same.
     fn push_command(&mut self, c: Command) {
+        // Nothing draws outside its scissor.
+        let key = c.pipeline;
+        if key.write_color || key.write_alpha {
+            self.known.color.draw(c.scissor);
+        }
+        if key.write_alpha {
+            self.known.alpha = None;
+        }
+        if key.depth_write {
+            self.known.depth.draw(c.scissor);
+        }
         if let Some(last) = self.commands.last_mut()
             && last.pipeline == c.pipeline
             && last.uniform == c.uniform
@@ -1201,7 +1288,10 @@ impl Renderer {
     }
 
     /// Clears `rect` of the EFB as a copy with the clear bit does: color, alpha and depth as
-    /// their updates are enabled.
+    /// their updates are enabled. A target the clear leaves as clearing all of it would is
+    /// cleared by the next render pass's load operation instead (as melee-unlocked's D3D12
+    /// backend clears natively): in a match every clear, as each covers what's been drawn and
+    /// the rest of the EFB holds its values. What's left is drawn as a rectangle.
     fn clear(&mut self, state: &State, rect: [u32; 4]) {
         let blend = state.bp[0x41];
         let format = bits(state.bp[0x43], 0, 3);
@@ -1218,7 +1308,7 @@ impl Renderer {
             1 => six(r) << 24 | six(g) << 16 | six(b) << 8 | six(a),
             _ => r << 24 | g << 16 | b << 8 | a,
         };
-        let key = PipelineKey {
+        let mut key = PipelineKey {
             blend: None,
             const_alpha: false,
             write_color: bits(blend, 3, 1) != 0,
@@ -1227,7 +1317,46 @@ impl Renderer {
             depth_write: bits(state.bp[0x40], 4, 1) != 0,
         };
         let z = state.bp[0x51] & 0xFF_FFFF;
-        self.push_rect(state, key, rect, [MODE_CLEAR, color, z, 0]);
+        let [r, g, b, a] = color.to_be_bytes();
+        // A load operation clears all four channels: alpha too, so one that keeps alpha
+        // clears it to what all of it holds.
+        let whole_color = match (key.write_color, key.write_alpha) {
+            (true, true) => Some([r, g, b, a]),
+            (true, false) => self.known.alpha.map(|a| [r, g, b, a]),
+            _ => None,
+        }
+        .filter(|&c| self.known.color.cleared_whole(rect, c));
+        let whole_depth = key
+            .depth_write
+            .then_some(z)
+            .filter(|&z| self.known.depth.cleared_whole(rect, z));
+        #[cfg(test)]
+        let (whole_color, whole_depth) = if self.rect_clears {
+            (None, None)
+        } else {
+            (whole_color, whole_depth)
+        };
+        if whole_color.is_some() || whole_depth.is_some() {
+            // What's drawn before the clear is drawn first; clears in a row make one.
+            if !self.commands.is_empty() {
+                self.flush();
+            }
+            if let Some(c) = whole_color {
+                self.pending_clear.color = Some(c);
+                self.known.color = Outside::new(c);
+                self.known.alpha = Some(c[3]);
+                key.write_color = false;
+                key.write_alpha = false;
+            }
+            if let Some(z) = whole_depth {
+                self.pending_clear.depth = Some(z);
+                self.known.depth = Outside::new(z);
+                key.depth_write = false;
+            }
+        }
+        if key.write_color || key.write_alpha || key.depth_write {
+            self.push_rect(state, key, rect, [MODE_CLEAR, color, z, 0]);
+        }
     }
 
     fn push_rect(&mut self, state: &State, key: PipelineKey, rect: [u32; 4], mode: [u32; 4]) {
@@ -1272,9 +1401,60 @@ impl Renderer {
         });
     }
 
-    /// Draws what's batched into the EFB.
+    /// The render pass that draws into the EFB, making the pending clear first.
+    fn efb_pass<'e>(
+        &self,
+        encoder: &'e mut wgpu::CommandEncoder,
+        clear: PendingClear,
+    ) -> wgpu::RenderPass<'e> {
+        let color = clear.color.map_or(wgpu::LoadOp::Load, |c| {
+            let unorm = |v: u8| f64::from(v) / 255.0;
+            wgpu::LoadOp::Clear(wgpu::Color {
+                r: unorm(c[0]),
+                g: unorm(c[1]),
+                b: unorm(c[2]),
+                a: unorm(c[3]),
+            })
+        });
+        // As gx.wgsl's clear writes it.
+        let depth = clear.depth.map_or(wgpu::LoadOp::Load, |z| {
+            wgpu::LoadOp::Clear(z as f32 / 16_777_216.0)
+        });
+        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("efb"),
+            // With samples, every sample is cleared and the pass resolves them into `efb`.
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: self.efb_msaa.as_ref().unwrap_or(&self.efb_view),
+                depth_slice: None,
+                resolve_target: self.efb_msaa.as_ref().map(|_| &self.efb_view),
+                ops: wgpu::Operations {
+                    load: color,
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                view: &self.depth_view,
+                depth_ops: Some(wgpu::Operations {
+                    load: depth,
+                    store: wgpu::StoreOp::Store,
+                }),
+                stencil_ops: None,
+            }),
+            ..Default::default()
+        })
+    }
+
+    /// Draws what's batched into the EFB, after the pending clear: everything that reads the
+    /// EFB (copies, readbacks) flushes first, so a clear with nothing drawn after it still
+    /// happens, in a pass of its own.
     fn flush(&mut self) {
+        let clear = std::mem::take(&mut self.pending_clear);
         if self.commands.is_empty() {
+            if clear.color.is_some() || clear.depth.is_some() {
+                let mut encoder = self.device.create_command_encoder(&Default::default());
+                drop(self.efb_pass(&mut encoder, clear));
+                self.queue.submit([encoder.finish()]);
+            }
             return;
         }
         if let Some(p) = &mut self.profile {
@@ -1350,27 +1530,7 @@ impl Renderer {
         self.queue.write_buffer(ubuf, 0, &self.uniforms);
         let mut encoder = self.device.create_command_encoder(&Default::default());
         {
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("efb"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: self.efb_msaa.as_ref().unwrap_or(&self.efb_view),
-                    depth_slice: None,
-                    resolve_target: self.efb_msaa.as_ref().map(|_| &self.efb_view),
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Load,
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.depth_view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Load,
-                        store: wgpu::StoreOp::Store,
-                    }),
-                    stencil_ops: None,
-                }),
-                ..Default::default()
-            });
+            let mut pass = self.efb_pass(&mut encoder, clear);
             pass.set_bind_group(2, vgroup, &[]);
             pass.set_index_buffer(ibuf.slice(..), wgpu::IndexFormat::Uint32);
             // Each state set only when it changes.
@@ -1638,6 +1798,7 @@ impl Renderer {
         }
         (self.efb, self.efb_view, self.efb_msaa, self.depth_view) =
             (t.efb, t.efb_view, t.efb_msaa, t.depth_view);
+        self.known = Known::new();
         (self.scale, self.width) = (scale, width);
         for (_, c) in self.gpu_copies.drain() {
             self.textures[c.id as usize] = None;
