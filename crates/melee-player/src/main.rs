@@ -77,6 +77,8 @@ mod roster_tests;
 mod settings;
 mod sound;
 mod timing;
+#[cfg(test)]
+mod wide_tests;
 
 use std::collections::VecDeque;
 use std::process::ExitCode;
@@ -88,6 +90,7 @@ use melee_render::blend::{Blend, Capture};
 use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
 use melee_render::predict::{Cost, Predictor};
+use melee_render::wide::Wide;
 use melee_sim::audio::clock::DiscSpeed;
 use melee_sim::game::roster;
 use melee_sim::game::vs_match::{DiscFile, Match, Player, Settings};
@@ -374,6 +377,8 @@ struct Session {
     replay: Option<Replay>,
     ended: bool,
     sound: Option<sound::Sound>,
+    /// The copy widescreen's frames are drawn from when its fighters in the added sides draw.
+    wide: Wide,
 }
 
 impl Session {
@@ -418,7 +423,9 @@ impl Session {
             disc: a.disc_speed,
             ..settings
         };
-        Session::begin(&disc, &settings, replay, a.bench.is_none() && !a.mute)
+        let mut s = Session::begin(&disc, &settings, replay, a.bench.is_none() && !a.mute)?;
+        s.wide.set(a.aspect.widescreen());
+        Ok(s)
     }
 
     /// Starts the match `settings` set from `disc`, with its sound mixed (and played when
@@ -447,23 +454,47 @@ impl Session {
             replay,
             ended: false,
             sound,
+            wide: Wide::default(),
         })
     }
 
-    /// One engine tick with these controllers; the frame's draws if it renders.
+    /// One engine tick with these controllers; the frame's draws if it renders, drawn from
+    /// [`Session::game`]. In widescreen they may be a copy's that draws the fighters in the
+    /// added sides ([`Wide`]); the match runs the same either way.
     fn tick(
         &mut self,
         pads: [melee_sim::input::pad::PadStatus; 4],
     ) -> melee_sim::game::vs_match::Frame {
-        let f = match &self.replay {
-            Some(r) => self.m.step_replay(&mut melee_slippi::Device(r)),
-            None => self.m.step(pads),
+        let f = if self.wide.is_on() {
+            let (mut f, render) = match &self.replay {
+                Some(r) => self.m.step_replay_tick(&mut melee_slippi::Device(r)),
+                None => self.m.step_tick(pads),
+            };
+            if render {
+                self.wide.before(&self.m);
+                let draws = self.m.render();
+                f.draws = self.wide.after(&self.m, draws);
+                if let Some(why) = self.wide.take_stopped() {
+                    eprintln!("the widened pass stopped (frames show the game's): {why}");
+                }
+            }
+            f
+        } else {
+            match &self.replay {
+                Some(r) => self.m.step_replay(&mut melee_slippi::Device(r)),
+                None => self.m.step(pads),
+            }
         };
         if let Some(s) = &mut self.sound {
             s.tick(&mut self.m);
         }
         self.ended |= f.ended;
         f
+    }
+
+    /// The state the latest frame's draws are drawn from.
+    fn game(&self) -> &melee_sim::game::state::Game {
+        self.wide.game(&self.m.game)
     }
 
     /// Extrapolate's prediction of the next tick, on the predictor's copy of the match: with
@@ -784,7 +815,7 @@ impl App {
             // tick draws again, rather than draw the last tick's draws on the new state
             // ([`paced`]).
             let session = self.session.as_mut().expect("a match");
-            if let Some(old) = self.paced.ran(self.mode, &session.m.game, f, plan.due) {
+            if let Some(old) = self.paced.ran(self.mode, session.game(), f, plan.due) {
                 session.m.recycle(old);
             }
             if self.mode == pacing::Mode::Extrapolate {
@@ -1083,8 +1114,11 @@ impl App {
                 g.resize_efb(scale, width);
             }
         }
-        let m = &self.session.as_ref().expect("a match").m;
-        let fifo = self.frames.frame_blended(&m.game, &m.data, draws, blend);
+        let session = self.session.as_ref().expect("a match");
+        let m = &session.m;
+        let fifo = self
+            .frames
+            .frame_blended(session.game(), &m.data, draws, blend);
         let gpu = self.renderer.get_or_insert_with(|| {
             gpu_for(
                 pipelines::renderer(&self.gpu, self.scale, self.msaa, self.aspect),
@@ -1277,6 +1311,9 @@ impl App {
     fn set_aspect(&mut self, aspect: present::Aspect) {
         self.aspect = aspect;
         self.frames.hsd.widescreen = aspect.widescreen();
+        if let Some(s) = &mut self.session {
+            s.wide.set(aspect.widescreen());
+        }
         present::set_aspect(aspect.shown);
     }
 
@@ -1295,6 +1332,7 @@ impl App {
         settings::write(settings::LAST_MATCH, &l.form.save());
         let c = &l.form.choice;
         let mut args = self.args.clone();
+        args.aspect = aspect;
         args.players = c.ports();
         args.stage = c.stage;
         args.stocks = c.stocks;
@@ -1651,7 +1689,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
         round += t1 - t0;
         if !f.draws.is_empty() {
             let m = &session.m;
-            let fifo = frames.frame(&m.game, &m.data, &f.draws);
+            let fifo = frames.frame(session.game(), &m.data, &f.draws);
             let ta = Instant::now();
             let images = renderer.run(&frames.space, &m.data, &fifo, None);
             let tb = Instant::now();
@@ -1792,7 +1830,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                 }
             } else {
                 std::mem::swap(&mut before, &mut after);
-                after.fill(&session.m.game, &f.draws);
+                after.fill(session.game(), &f.draws);
             }
             let m = &session.m;
             let t2 = Instant::now();
@@ -1806,7 +1844,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                     Blend { from: &before, t }
                 };
                 let ta = Instant::now();
-                let fifo = frames.frame_blended(&m.game, &m.data, &f.draws, Some(blend));
+                let fifo = frames.frame_blended(session.game(), &m.data, &f.draws, Some(blend));
                 let tb = Instant::now();
                 let images = renderer.run(&frames.space, &m.data, &fifo, None);
                 let tc = Instant::now();

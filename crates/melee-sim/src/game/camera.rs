@@ -1714,6 +1714,39 @@ pub fn box_to_screen(game: &mut Game, data: &Archives, b: CameraBoxId) -> Option
 /// is on screen, `Camera_80030CFC`: the sphere reaching the view's center line counts.
 #[doc(alias = "Camera_80030CFC")]
 pub fn box_on_screen(game: &mut Game, data: &Archives, b: CameraBoxId, tolerance: f32) -> bool {
+    box_sphere_on_screen(game, data, b, tolerance, None)
+}
+
+/// Presentation only: whether a screen position (as [`to_screen`] gives it) lies in the game
+/// camera's scissor widened `wide` times about its viewport's center, the view a widescreen
+/// picture shows (`melee_render::frame::widen`; the height stays).
+pub fn in_wide_scissor(game: &Game, p: [i32; 2], wide: f32) -> bool {
+    let o = &game.objs.cobjs[camera_cobj(game)];
+    let [left, right, top, bottom] = o.scissor.map(f32::from);
+    let mid = (o.viewport[0] + o.viewport[1]) / 2.0;
+    let (x, y) = (p[0] as f32, p[1] as f32);
+    x >= mid - (mid - left) * wide && x < mid + (right - mid) * wide && y >= top && y < bottom
+}
+
+/// Presentation only: [`box_on_screen`] against the widened view of [`in_wide_scissor`].
+pub fn box_on_wide_screen(
+    game: &mut Game,
+    data: &Archives,
+    b: CameraBoxId,
+    tolerance: f32,
+    wide: f32,
+) -> bool {
+    box_sphere_on_screen(game, data, b, tolerance, Some(wide))
+}
+
+/// [`box_on_screen`], against the game camera's own view or, `wide`, the widened one.
+fn box_sphere_on_screen(
+    game: &mut Game,
+    data: &Archives,
+    b: CameraBoxId,
+    tolerance: f32,
+    wide: Option<f32>,
+) -> bool {
     let c = camera_cobj(game);
     let eye = cobj::eye_position(&mut game.objs, data, c).expect("the camera's eye");
     let interest = cobj::interest(&mut game.objs, data, c).expect("the camera's interest");
@@ -1729,7 +1762,12 @@ pub fn box_on_screen(game: &mut Game, data: &Archives, b: CameraBoxId, tolerance
     d.x = mem(fp::fmuls(reg(d.x), range));
     d.y = mem(fp::fmuls(reg(d.y), range));
     d.z = mem(fp::fmuls(reg(d.z), range));
-    on_screen(game, data, d + bone)
+    match wide {
+        None => on_screen(game, data, d + bone),
+        Some(k) => {
+            to_screen(game, data, d + bone).is_some_and(|(p, _)| in_wide_scissor(game, p, k))
+        }
+    }
 }
 
 /// Where the view's left edge, center line and right edge meet the stage plane's x axis
