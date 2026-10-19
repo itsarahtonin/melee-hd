@@ -114,10 +114,11 @@ pub struct About<'a> {
     pub notes: String,
 }
 
-/// Saves a capture of the frame just drawn: `texture` is it as shown, `draws` and `blend` what
-/// drew it from `m`. Returns the folder.
+/// Saves a capture of the frame just drawn into `dir`: `texture` is it as shown, `draws` and
+/// `blend` what drew it from `m`.
 #[allow(clippy::too_many_arguments)]
 pub fn save(
+    dir: &Path,
     gpu: &present::Gpu,
     texture: &wgpu::Texture,
     m: &Match,
@@ -126,9 +127,8 @@ pub fn save(
     blend: Option<Blend<'_>>,
     about: &About,
     live: &Live,
-) -> Result<PathBuf, String> {
-    let dir = folder()?;
-    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+) -> Result<(), String> {
+    std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let save = |name: &str, f: &melee_gpu::Frame| {
         let p = dir.join(name);
         f.save_png(&p).map_err(|e| format!("{}: {e}", p.display()))
@@ -196,17 +196,18 @@ fresh:
     let _ = writeln!(info, "draws {}", draws.len());
     let _ = writeln!(info, "notes:\n{}", about.notes);
     std::fs::write(dir.join("info.txt"), info).map_err(|e| format!("info.txt: {e}"))?;
-    Ok(dir)
+    Ok(())
 }
 
-/// `captures/<seconds since 1970>` beside the executable.
-fn folder() -> Result<PathBuf, String> {
-    let exe = std::env::current_exe().map_err(|e| format!("the executable's path: {e}"))?;
+/// `captures/<milliseconds since 1970><suffix>` beside the executable (the working folder if
+/// its path is unknown).
+pub fn folder(suffix: &str) -> PathBuf {
+    let exe = std::env::current_exe().unwrap_or_default();
     let base = exe.parent().unwrap_or(Path::new(".")).join("captures");
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_millis());
-    Ok(base.join(now.to_string()))
+    base.join(format!("{now}{suffix}"))
 }
 
 /// A frame on the GPU, read back.

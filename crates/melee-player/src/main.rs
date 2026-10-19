@@ -11,6 +11,7 @@
 //!          [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr]
 //!          [--jit-margin MS]
 //! frames:  [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]
+//! debug:   [--flicker-scan]
 //! ```
 //!
 //! The disc comes from `--disc`, else `SSBM_DISC`, else the settings folder, where the disc
@@ -20,7 +21,8 @@
 //! ([`launcher`]). Controllers: GameCube controllers on a Wii U adapter play their own ports;
 //! gamepads and the keyboard play the first ports left (arrows: stick, IJKL: C-stick, X/Z/C/S:
 //! A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). F11 or Alt+Enter toggles
-//! borderless fullscreen; F12 saves a bug capture ([`capture`]). Escape quits, or from a match the launcher started, goes back to it.
+//! borderless fullscreen; F12 saves a bug capture ([`capture`]), and `--flicker-scan` saves one by
+//! itself when a presented frame drops out for one frame ([`flicker`]). Escape quits, or from a match the launcher started, goes back to it.
 //!
 //! The disc reads at a drive's pace, as ssbm-rs's window reads it, which the music needs
 //! (`melee_sim::audio::clock::DiscSpeed`); `--disc-speed fast` reads at Slippi's fast disc
@@ -51,6 +53,7 @@
 
 mod capture;
 mod console;
+mod flicker;
 mod jit;
 mod latency;
 mod launcher;
@@ -150,6 +153,8 @@ struct Args {
     disc_speed: DiscSpeed,
     /// The launcher's choices the command line gave, which win over the last match's.
     given: launcher::Given,
+    /// Scans presented frames for one-frame dropouts and captures them.
+    flicker_scan: bool,
 }
 
 /// The command line's usage, with the characters and stages melee-sim has ported.
@@ -161,6 +166,7 @@ fn usage() -> String {
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
          frames: [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
+         debug: [--flicker-scan] captures a presented frame that drops out for one frame\n\
          with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match\n\
          the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
         names(roster::CHARACTERS.iter().map(|c| c.keys[0]).collect()),
@@ -201,6 +207,7 @@ fn parse_args() -> Result<Args, String> {
         fullscreen: false,
         disc_speed: DiscSpeed::Drive,
         given: launcher::Given::default(),
+        flicker_scan: false,
     };
     // Whether the command line names a match.
     let mut chosen = false;
@@ -322,6 +329,7 @@ fn parse_args() -> Result<Args, String> {
                 a.aspect = present::Aspect::parse(&value()?)?;
                 a.given.aspect = true;
             }
+            "--flicker-scan" => a.flicker_scan = true,
             "-h" | "--help" => return Err(String::new()),
             other => return Err(format!("unknown argument {other}")),
         }
@@ -606,8 +614,11 @@ struct App {
     /// The last second's latency, and the overlay showing it (F3), while it's on.
     live: latency::Live,
     overlay: Option<launcher::Painter>,
-    /// F12 was pressed: the next frame drawn is captured ([`capture`]).
-    capture_next: bool,
+    /// F12 was pressed, or the flicker scan hit: the next frame drawn is captured into this
+    /// folder ([`capture`]).
+    capture_next: Option<std::path::PathBuf>,
+    /// `--flicker-scan`'s scan of the presented frames.
+    scan: Option<flicker::Scan>,
     /// How frames are drawn between ticks, and with Interpolate or Extrapolate, when.
     mode: pacing::Mode,
     pacer: Option<pacing::Pacer>,
@@ -1040,10 +1051,13 @@ impl App {
                 self.one_thread,
             )
         });
-        let before = self.capture_next.then(|| capture::Regs::of(&gpu.state));
+        let before = self
+            .capture_next
+            .is_some()
+            .then(|| capture::Regs::of(&gpu.state));
         let images = gpu.run(&self.frames.space, &m.data, &fifo, None);
         let after = before.as_ref().map(|_| capture::Regs::of(&gpu.state));
-        if std::mem::take(&mut self.capture_next)
+        if let Some(dir) = self.capture_next.take()
             && let (Some(before), Some(after)) = (before, after)
             && let (Some(tex), Some(s)) = (
                 images.last().and_then(|f| f.texture.as_ref()),
@@ -1066,8 +1080,10 @@ impl App {
                 space: &self.frames.space,
                 hsd: format!("{:?}", self.frames.hsd.state),
             };
-            match capture::save(&self.gpu, tex, &s.m, &s.dol, draws, blend, &about, &live) {
-                Ok(dir) => eprintln!("captured to {}", dir.display()),
+            match capture::save(
+                &dir, &self.gpu, tex, &s.m, &s.dol, draws, blend, &about, &live,
+            ) {
+                Ok(()) => eprintln!("captured to {}", dir.display()),
                 Err(e) => eprintln!("the capture failed: {e}"),
             }
         }
@@ -1078,11 +1094,23 @@ impl App {
                 .text(&format!("{:?}", shown.present_mode()), self.delay.frames())
         });
         let (gpu, overlay) = (&self.gpu, &mut self.overlay);
-        let presented = shown.present(gpu, &frame, |view, w, h| {
+        let meta = flicker::Meta {
+            tick: self.ticks,
+            t: blend.map(|b| b.t),
+            draws: draws.len(),
+        };
+        let scan = self.scan.as_mut().map(|s| (s, meta));
+        let presented = shown.present(gpu, &frame, scan, |view, w, h| {
             if let (Some(p), Some(text)) = (overlay, text) {
                 latency::overlay(p, gpu, &text, view, w, h);
             }
-        })?;
+        });
+        if let Some(s) = &mut self.scan
+            && let Some(dir) = s.collect(gpu, self.mode.key()).pop()
+        {
+            self.capture_next = Some(dir.join("after"));
+        }
+        let presented = presented?;
         self.live.frame(presented.presented);
         Some((
             latency::FrameTimes {
@@ -1290,7 +1318,7 @@ impl ApplicationHandler for App {
         } = &event
         {
             if self.session.is_some() {
-                self.capture_next = true;
+                self.capture_next = Some(capture::folder(""));
             }
             return;
         }
@@ -1772,6 +1800,7 @@ fn run(args: Args) -> ExitCode {
         exclusive: args.audio_exclusive,
     });
     present::set_present(args.present);
+    present::set_scanned(args.flicker_scan);
     if let Some(ticks) = args.bench {
         return bench(&args, ticks);
     }
@@ -1794,6 +1823,7 @@ fn run(args: Args) -> ExitCode {
         b.build().expect("an event loop")
     };
     let gpu = present::Gpu::new();
+    let scan = args.flicker_scan.then(|| flicker::Scan::new(&gpu));
     let mut frames = Frames::new();
     if let Some(s) = &session {
         frames.space.load_dol(&s.dol);
@@ -1856,7 +1886,8 @@ fn run(args: Args) -> ExitCode {
         delay: melee_input::Delay::new(args.added_delay),
         live: latency::Live::default(),
         overlay: None,
-        capture_next: false,
+        capture_next: None,
+        scan,
         mode: pacing::Mode::Off,
         pacer: None,
         paced: paced::Paced::default(),

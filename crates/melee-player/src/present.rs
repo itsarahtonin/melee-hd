@@ -4,6 +4,7 @@
 //! deep, presenting each frame as soon as it's drawn, in the mode [`Present`] picks: mailbox
 //! by default, where the display has it, else FIFO.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
@@ -16,6 +17,8 @@ static SIZE: Mutex<(u32, u32)> = Mutex::new((1280, 960));
 static PRESENT: Mutex<Present> = Mutex::new(Present::Mailbox);
 /// The aspect ratio frames are shown at: the game's 73:60, wider in widescreen, or 4:3.
 static ASPECT: Mutex<f32> = Mutex::new(GAME_ASPECT);
+/// Windows let the flicker scan copy their images (`--flicker-scan`).
+static SCANNED: AtomicBool = AtomicBool::new(false);
 
 /// The largest EFB side the renderer makes (wgpu's default limit on a texture's side).
 const MAX_EFB_SIDE: u32 = 8192;
@@ -174,6 +177,11 @@ pub fn set_present(present: Present) {
 /// The aspect ratio to show frames at.
 pub fn set_aspect(aspect: f32) {
     *ASPECT.lock().unwrap() = aspect;
+}
+
+/// Windows from now on let the flicker scan copy what they present ([`crate::flicker`]).
+pub fn set_scanned(on: bool) {
+    SCANNED.store(on, Ordering::Relaxed);
 }
 
 /// The window's first size.
@@ -341,23 +349,33 @@ impl Blit {
         }
     }
 
-    /// Draws `frame` into `view` (`w` by `h`), letterboxed to the aspect ratio shown.
-    fn draw(&self, gpu: &Gpu, frame: &wgpu::Texture, view: &wgpu::TextureView, w: u32, h: u32) {
+    /// Draws `frame` into `view` (`w` by `h`), letterboxed to the aspect ratio shown; with no
+    /// frame, only the black around it.
+    pub fn draw(
+        &self,
+        gpu: &Gpu,
+        frame: Option<&wgpu::Texture>,
+        view: &wgpu::TextureView,
+        w: u32,
+        h: u32,
+    ) {
         let device = &gpu.device;
-        let fview = frame.create_view(&Default::default());
-        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&fview),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&self.sampler),
-                },
-            ],
+        let group = frame.map(|frame| {
+            let fview = frame.create_view(&Default::default());
+            device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: None,
+                layout: &self.layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&fview),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&self.sampler),
+                    },
+                ],
+            })
         });
         let mut encoder = device.create_command_encoder(&Default::default());
         {
@@ -374,17 +392,26 @@ impl Blit {
                 })],
                 ..Default::default()
             });
-            let (sw, sh) = (w as f32, h as f32);
-            let aspect = *ASPECT.lock().unwrap();
-            let scale = (sw / aspect).min(sh);
-            let (vw, vh) = (aspect * scale, scale);
-            pass.set_viewport((sw - vw) / 2.0, (sh - vh) / 2.0, vw, vh, 0.0, 1.0);
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &group, &[]);
-            pass.draw(0..3, 0..1);
+            if let Some(group) = &group {
+                let [x, y, vw, vh] = picture(w, h);
+                pass.set_viewport(x, y, vw, vh, 0.0, 1.0);
+                pass.set_pipeline(&self.pipeline);
+                pass.set_bind_group(0, group, &[]);
+                pass.draw(0..3, 0..1);
+            }
         }
         gpu.queue.submit([encoder.finish()]);
     }
+}
+
+/// Where the frame goes in an image `w` by `h`, letterboxed to the aspect ratio shown: left,
+/// top, width and height.
+fn picture(w: u32, h: u32) -> [f32; 4] {
+    let (sw, sh) = (w as f32, h as f32);
+    let aspect = *ASPECT.lock().unwrap();
+    let scale = (sw / aspect).min(sh);
+    let (vw, vh) = (aspect * scale, scale);
+    [(sw - vw) / 2.0, (sh - vh) / 2.0, vw, vh]
 }
 
 /// The window and its swap chain.
@@ -396,6 +423,8 @@ pub struct Shown {
     fullscreen: bool,
     /// The present modes the display has.
     modes: Vec<wgpu::PresentMode>,
+    /// The flicker scan can copy its images (else it draws the frame again).
+    copyable: bool,
 }
 
 /// The window's icon (icon/window.rgba, 64 by 64 RGBA pixels, which icon/make.py draws).
@@ -427,8 +456,15 @@ impl Shown {
             .find(|f| !f.is_srgb())
             .unwrap_or(caps.formats[0]);
         let present_mode = PRESENT.lock().unwrap().mode(&caps.present_modes);
+        let copyable =
+            SCANNED.load(Ordering::Relaxed) && caps.usages.contains(wgpu::TextureUsages::COPY_SRC);
         let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                | if copyable {
+                    wgpu::TextureUsages::COPY_SRC
+                } else {
+                    wgpu::TextureUsages::empty()
+                },
             format,
             width: size.width.max(1),
             height: size.height.max(1),
@@ -453,6 +489,7 @@ impl Shown {
             blit,
             fullscreen,
             modes: caps.present_modes,
+            copyable,
         }
     }
 
@@ -518,11 +555,12 @@ impl Shown {
     }
 
     /// Shows a frame now, with `over` drawn over it (given the image's view, width and
-    /// height).
+    /// height); the flicker scan, when on, scans the image before `over`.
     pub fn present(
         &mut self,
         gpu: &Gpu,
         frame: &melee_gpu::Frame,
+        scan: Option<(&mut crate::flicker::Scan, crate::flicker::Meta)>,
         over: impl FnOnce(&wgpu::TextureView, u32, u32),
     ) -> Option<Presented> {
         let texture = frame.texture.as_ref()?;
@@ -538,9 +576,17 @@ impl Shown {
         let acquired = Instant::now();
         let acquire = acquired - asked;
         let view = out.texture.create_view(&Default::default());
-        self.blit
-            .draw(gpu, texture, &view, self.config.width, self.config.height);
-        over(&view, self.config.width, self.config.height);
+        let (w, h) = (self.config.width, self.config.height);
+        let blank = scan.as_ref().is_some_and(|(s, _)| s.blank_next());
+        let shown = (!blank).then_some(texture);
+        self.blit.draw(gpu, shown, &view, w, h);
+        if let Some((scan, meta)) = scan {
+            let [x, y, vw, vh] = picture(w, h).map(|v| v.round() as u32);
+            let blit = &self.blit;
+            let fill = |ring: &wgpu::TextureView| blit.draw(gpu, shown, ring, w, h);
+            scan.record(gpu, &out.texture, self.copyable, fill, [x, y, vw, vh], meta);
+        }
+        over(&view, w, h);
         // Done when the GPU has finished everything the frame submitted.
         let submission = gpu.queue.submit(std::iter::empty());
         self.window.pre_present_notify();
@@ -659,7 +705,8 @@ impl Offscreen {
             return;
         };
         let view = self.texture.create_view(&Default::default());
-        self.blit.draw(gpu, texture, &view, self.width, self.height);
+        self.blit
+            .draw(gpu, Some(texture), &view, self.width, self.height);
         let _ = gpu.device.poll(wgpu::PollType::wait_indefinitely());
     }
 }
