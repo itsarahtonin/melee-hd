@@ -54,6 +54,9 @@ mod console;
 mod jit;
 mod latency;
 mod launcher;
+mod paced;
+#[cfg(test)]
+mod paced_tests;
 mod pacing;
 mod pipelines;
 #[cfg(test)]
@@ -608,14 +611,8 @@ struct App {
     /// How frames are drawn between ticks, and with Interpolate or Extrapolate, when.
     mode: pacing::Mode,
     pacer: Option<pacing::Pacer>,
-    /// With Interpolate or Extrapolate: the latest tick's frame and when the tick was due.
-    latest: Option<(melee_sim::game::vs_match::Frame, Instant)>,
-    /// With Interpolate: the tick before's transforms (A) and the latest's (B), kept for the
-    /// next tick.
-    before: Capture,
-    after: Capture,
-    /// With Extrapolate: the next tick, predicted.
-    predictor: Predictor,
+    /// With Interpolate or Extrapolate: the ticks the frames draw from.
+    paced: paced::Paced,
     /// With Extrapolate: a prediction stopped, which is said once.
     prediction_failed: bool,
     /// With Interpolate or Extrapolate: a tick's latency measures, waiting for the first frame
@@ -739,22 +736,15 @@ impl App {
         let mut frame = None;
         let mut id = None;
         if self.mode.paced() {
-            let rendered = !f.draws.is_empty();
-            if rendered {
-                if self.mode == pacing::Mode::Interpolate {
-                    // B is this tick; A, the tick before, whose transforms were kept then.
-                    std::mem::swap(&mut self.before, &mut self.after);
-                    let m = &self.session.as_ref().expect("a match").m;
-                    self.after.fill(&m.game, &f.draws);
-                }
-                if let Some((old, _)) = self.latest.replace((f, plan.due)) {
-                    self.session.as_mut().expect("a match").m.recycle(old);
-                }
-            } else {
-                self.session.as_mut().expect("a match").m.recycle(f);
+            // A tick that draws nothing is kept too: the frames hold the image shown until a
+            // tick draws again, rather than draw the last tick's draws on the new state
+            // ([`paced`]).
+            let session = self.session.as_mut().expect("a match");
+            if let Some(old) = self.paced.ran(self.mode, &session.m.game, f, plan.due) {
+                session.m.recycle(old);
             }
             if self.mode == pacing::Mode::Extrapolate {
-                self.predict(rendered, pads);
+                self.predict(pads);
             }
             self.jit.tick_done(start, Instant::now(), plan.target);
         } else {
@@ -882,24 +872,21 @@ impl App {
 
     /// With Extrapolate, after a tick that ran with `pads`: the next tick predicted with the
     /// controllers it will see if they're known (an added delay has read them), else `pads`
-    /// held. After a tick without a display pass the frames draw the latest as it is.
-    fn predict(&mut self, rendered: bool, pads: [melee_sim::input::pad::PadStatus; 4]) {
-        if !rendered {
-            self.predictor.forget();
-            return;
-        }
+    /// held. After a tick without a display pass the frames hold the image shown, and nothing
+    /// is predicted.
+    fn predict(&mut self, pads: [melee_sim::input::pad::PadStatus; 4]) {
         let next = self.delay.next().unwrap_or(pads);
         let session = self.session.as_ref().expect("a match");
-        match session.predict(&mut self.predictor, next) {
-            Ok(cost) => {
+        match self.paced.predict(|p| session.predict(p, next)) {
+            Some(Ok(cost)) => {
                 self.stats.predictions += 1;
                 self.stats.predicting += cost.total();
             }
-            Err(why) if !self.prediction_failed => {
+            Some(Err(why)) if !self.prediction_failed => {
                 eprintln!("the next tick's prediction stopped (frames draw the latest): {why}");
                 self.prediction_failed = true;
             }
-            Err(_) => {}
+            Some(Err(_)) | None => {}
         }
     }
 
@@ -913,14 +900,15 @@ impl App {
     /// With Interpolate or Extrapolate, draws the frame that's due, if one is: between the last
     /// two ticks, or the latest and the next predicted, at the fraction its display time gives
     /// ([`pacing`]). Aligned to the refreshes, each frame starts its lead before the refresh
-    /// it's meant for. Returns when the next frame is due.
+    /// it's meant for. After a tick that drew nothing its refreshes keep the image shown.
+    /// Returns when the next frame is due.
     fn draw_due(&mut self) -> Option<Instant> {
         let aligned = self
             .grid
             .filter(|_| self.policy == Some(jit::Policy::Aligned));
         let lead = self.frame_lead.get();
         let now = Instant::now();
-        let (Some(pacer), Some((_, due))) = (&mut self.pacer, &self.latest) else {
+        let (Some(pacer), Some(due)) = (&mut self.pacer, self.paced.due()) else {
             return None;
         };
         if aligned.is_some() != pacer.target().is_some() {
@@ -930,23 +918,17 @@ impl App {
             return Some(pacer.due());
         }
         let target = pacer.target();
-        let t = pacer.start(now, *due);
-        let (f, due) = self.latest.take().expect("a frame");
-        let drawn = if self.mode == pacing::Mode::Extrapolate {
-            let predictor = std::mem::take(&mut self.predictor);
-            let drawn = self.draw_frame(&f.draws, now, Some(predictor.blend(t)));
-            self.predictor = predictor;
-            drawn
-        } else {
-            let before = std::mem::take(&mut self.before);
-            let blend = Blend { from: &before, t };
-            let drawn = self.draw_frame(&f.draws, now, Some(blend));
-            self.before = before;
-            drawn
-        };
-        self.latest = Some((f, due));
-        self.stats.frame(now.elapsed());
-        if let Some((mut times, shown)) = drawn {
+        let t = pacer.start(now, due);
+        let paced = std::mem::take(&mut self.paced);
+        // None after a tick that drew nothing: the refresh shows the image shown before.
+        let drawn = paced
+            .frame(self.mode, t)
+            .map(|(draws, blend)| self.draw_frame(draws, now, Some(blend)));
+        self.paced = paced;
+        if drawn.is_some() {
+            self.stats.frame(now.elapsed());
+        }
+        if let Some((mut times, shown)) = drawn.flatten() {
             if let Some(p) = &mut self.pacer {
                 p.presented(now, times.acquire, shown.acquired, shown.presented);
             }
@@ -1000,11 +982,8 @@ impl App {
     /// Starts drawing frames as `mode` says, from the next tick.
     fn start_pacing(&mut self, mode: pacing::Mode) {
         self.mode = mode;
-        self.latest = None;
+        self.paced.clear();
         self.pending = None;
-        self.before.clear();
-        self.after.clear();
-        self.predictor.clear();
         self.prediction_failed = false;
         let (refresh, fifo) = self.display_refresh();
         self.pacer = mode.paced().then(|| {
@@ -1225,7 +1204,7 @@ impl App {
     /// Leaves the match (its sound stops with it) for the launcher.
     fn back_to_launcher(&mut self) {
         eprintln!("back to the launcher");
-        self.latest = None;
+        self.paced.clear();
         self.session = None;
         self.drop_renderer();
         if let Some(l) = &mut self.launcher {
@@ -1880,10 +1859,7 @@ fn run(args: Args) -> ExitCode {
         capture_next: false,
         mode: pacing::Mode::Off,
         pacer: None,
-        latest: None,
-        before: Capture::default(),
-        after: Capture::default(),
-        predictor: Predictor::default(),
+        paced: paced::Paced::default(),
         prediction_failed: false,
         pending: None,
         args,

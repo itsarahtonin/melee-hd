@@ -16,12 +16,12 @@ use melee_slippi::Replay;
 
 use crate::Session;
 
-const REPLAY: &str = concat!(
+pub(crate) const REPLAY: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../data/bench/fox-fox-fd.slp"
 );
 
-fn disc() -> Option<Disc> {
+pub(crate) fn disc() -> Option<Disc> {
     let Some(path) = std::env::var_os("SSBM_DISC") else {
         eprintln!("skipped: SSBM_DISC names no disc");
         return None;
