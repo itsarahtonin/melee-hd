@@ -218,6 +218,8 @@ pub(crate) struct GpuXfb {
     /// refresh rate.
     shown: Vec<wgpu::Texture>,
     next_shown: usize,
+    /// Times the copy's passes, when set.
+    pub timer: Option<crate::GpuTimer>,
 }
 
 /// How many frames shown are kept for reuse.
@@ -390,6 +392,7 @@ impl GpuXfb {
             yuyv: None,
             shown: Vec::new(),
             next_shown: 0,
+            timer: None,
         }
     }
 
@@ -546,6 +549,10 @@ impl GpuXfb {
             (&yuyv_view, &self.encode, &self.encode_group),
             (&shown_view, &self.decode, &decode_group),
         ] {
+            let time = self
+                .timer
+                .as_ref()
+                .and_then(|t| t.pass(crate::gpu_time::Stage::Xfb));
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("xfb"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -557,6 +564,7 @@ impl GpuXfb {
                         store: wgpu::StoreOp::Store,
                     },
                 })],
+                timestamp_writes: crate::gpu_time::writes(&time),
                 ..Default::default()
             });
             pass.set_pipeline(pipeline);

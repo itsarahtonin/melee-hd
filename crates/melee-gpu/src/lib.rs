@@ -14,9 +14,11 @@ mod copy;
 #[cfg(test)]
 mod copy_tests;
 mod encode;
+pub mod gpu_time;
 mod thread;
 mod xfb;
 
+pub use gpu_time::GpuTimer;
 pub use thread::Threaded;
 
 use std::collections::HashMap;
@@ -398,6 +400,8 @@ pub struct Renderer {
     width: u32,
     /// The driver's pipeline cache, where the device keeps one (`Features::PIPELINE_CACHE`).
     cache: Option<wgpu::PipelineCache>,
+    /// Times each render pass on the GPU, when set ([`Renderer::set_timer`]).
+    timer: Option<GpuTimer>,
 }
 
 /// The EFB's targets at a scale and width: what a resize makes again.
@@ -742,6 +746,7 @@ impl Renderer {
             scale,
             width,
             cache: None,
+            timer: None,
             unsupported: HashMap::new(),
         };
         // Texture 0: a 1x1 black texture for maps nothing samples.
@@ -796,6 +801,20 @@ impl Renderer {
 
     pub fn device(&self) -> &wgpu::Device {
         &self.device
+    }
+
+    /// Times the renderer's passes on the GPU by stage with `timer` (made on this device), or
+    /// stops timing them.
+    pub fn set_timer(&mut self, timer: Option<GpuTimer>) {
+        if let Some(x) = &mut self.gpu_xfb {
+            x.timer = timer.clone();
+        }
+        self.timer = timer;
+    }
+
+    /// Queries for a pass of `stage`, while the passes are timed.
+    fn pass_time(&self, stage: gpu_time::Stage) -> Option<gpu_time::PassTime> {
+        self.timer.as_ref().and_then(|t| t.pass(stage))
     }
 
     pub fn queue(&self) -> &wgpu::Queue {
@@ -1420,6 +1439,7 @@ impl Renderer {
         let depth = clear.depth.map_or(wgpu::LoadOp::Load, |z| {
             wgpu::LoadOp::Clear(z as f32 / 16_777_216.0)
         });
+        let time = self.pass_time(gpu_time::Stage::Scene);
         encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("efb"),
             // With samples, every sample is cleared and the pass resolves them into `efb`.
@@ -1440,6 +1460,7 @@ impl Renderer {
                 }),
                 stencil_ops: None,
             }),
+            timestamp_writes: gpu_time::writes(&time),
             ..Default::default()
         })
     }
@@ -1679,13 +1700,17 @@ impl Renderer {
         };
         let entry = self.textures[id as usize].as_mut().expect("copy texture");
         entry.last_used = self.frame;
+        let time = self
+            .timer
+            .as_ref()
+            .and_then(|t| t.pass(gpu_time::Stage::EfbCopy));
         self.copier.copy(
             &self.device,
             &self.queue,
             &entry.view,
             r,
-            self.scale,
-            self.width,
+            (self.scale, self.width),
+            time,
         );
         // What earlier copies read back left in memory there is gone.
         let f = r.footprint;
@@ -2158,7 +2183,9 @@ impl Renderer {
             let rect = [left, top, right, bottom];
             let (frame, t2) = if self.xfb_on_gpu {
                 let gpu = self.gpu_xfb.get_or_insert_with(|| {
-                    xfb::GpuXfb::new(&self.device, &self.queue, &self.efb_view)
+                    let mut x = xfb::GpuXfb::new(&self.device, &self.queue, &self.efb_view);
+                    x.timer = self.timer.clone();
+                    x
                 });
                 let (texture, width, height) = gpu.copy(
                     &self.device,

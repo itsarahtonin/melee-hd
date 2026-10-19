@@ -358,8 +358,8 @@ impl Copier {
         queue: &wgpu::Queue,
         target: &wgpu::TextureView,
         request: &Request,
-        scale: u32,
-        width: u32,
+        (scale, width): (u32, u32),
+        time: Option<crate::gpu_time::PassTime>,
     ) {
         let mut params = request.params;
         // The EFB's scale and its width for the console's 640: each texel reads the block of
@@ -379,6 +379,7 @@ impl Copier {
                         store: wgpu::StoreOp::Store,
                     },
                 })],
+                timestamp_writes: crate::gpu_time::writes(&time),
                 ..Default::default()
             });
             pass.set_pipeline(&self.pipeline);
