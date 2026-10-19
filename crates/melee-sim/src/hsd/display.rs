@@ -230,14 +230,6 @@ pub struct Display {
     pub fighter: Option<FighterMaterial>,
     /// The debug text's drawing as its screens hand it on, reused frame to frame.
     pub devtext: Vec<crate::game::hud::devtext::Draw>,
-    /// Presentation only, not state: how many times the game's width a widescreen picture
-    /// shows (`melee_render::frame::widen`'s factor), set on the copy of the match that
-    /// picture's frames are drawn from (`melee_render::wide`). There the fighters' draw test
-    /// and the magnifier see the wider view (`Running::wide_draws`, `Game::wide_shown`). The
-    /// match itself never has it, so its state is the same at every aspect ratio. A clone
-    /// starts without it and a restore leaves it alone.
-    #[clone_from(keep)]
-    pub wide: Option<f32>,
 }
 
 /// Starts a render pass, `HSD_StartRender`: offscreen (a shadow's texture) or the screen.

@@ -90,28 +90,6 @@ impl Running<'_> {
         true
     }
 
-    /// Presentation only: whether a fighter the draw test above leaves out draws anyway on
-    /// the copy of the match a widescreen picture is drawn from ([`display::Display::wide`]):
-    /// the same test against the widened view, its camera box's bone inside it or the box's
-    /// sphere reaching it. Slippi's widescreen code widens the game camera itself, keeps the
-    /// off-screen mark at the 4:3 view's bounds (`80030C7C`, `80030C88`) and draws every
-    /// fighter so marked (`80086B24`: the branch that returns "don't draw" made a nop), as
-    /// melee-unlocked (GPL-3.0) does for its renderer-side widescreen
-    /// (`apply_wide_fighter_draw`). Here only the copy draws them, and the mark is untouched,
-    /// so drawing them changes nothing in the match's state.
-    fn wide_draws(&mut self, g: GObjId) -> bool {
-        let Some(wide) = self.game.objs.display.wide else {
-            return false;
-        };
-        let f = self.game.fighter_id(g);
-        let b = self.game.fighters[f.0]
-            .x890_cameraBox
-            .expect("a fighter without a camera box");
-        camera::box_to_screen(self.game, self.data, b)
-            .is_some_and(|(p, _)| camera::in_wide_scissor(self.game, p, wide))
-            || camera::box_on_wide_screen(self.game, self.data, b, 15.0, wide)
-    }
-
     /// The view matrix shifted by the fighter's damage shake, if it shakes,
     /// `ftDrawCommon_8008051C`.
     #[doc(alias = "ftDrawCommon_8008051C")]
@@ -334,15 +312,11 @@ impl Running<'_> {
     }
 
     /// A fighter's render callback, `ftDrawCommon_80080E18`: a sleeping fighter or one off
-    /// screen doesn't draw (on a widescreen picture's copy, one in the widened view does,
-    /// [`Running::wide_draws`]); in the camera's pass 1 a fighter with an outline draws it,
-    /// itself and the outline again; in pass 0 it draws itself (its models only without an
-    /// outline).
+    /// screen doesn't draw; in the camera's pass 1 a fighter with an outline draws it, itself
+    /// and the outline again; in pass 0 it draws itself (its models only without an outline).
     #[doc(alias = "ftDrawCommon_80080E18")]
     pub fn render_fighter(&mut self, g: GObjId, pass: i32) {
-        if self.game.fighter(g).is_sleeping
-            || (!self.update_screen_visibility(g) && !self.wide_draws(g))
-        {
+        if self.game.fighter(g).is_sleeping || !self.update_screen_visibility(g) {
             return;
         }
         let f = self.game.fighter_id(g);

@@ -11,4 +11,3 @@ pub mod gx;
 pub mod hsd;
 pub mod mem;
 pub mod predict;
-pub mod wide;

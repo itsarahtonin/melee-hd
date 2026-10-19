@@ -7,7 +7,6 @@ use melee_data::disc::Disc;
 use melee_gx::{Draw, Memory, State};
 use melee_render::frame::Frames;
 use melee_render::gpu::{Frame, Gpu, Observer};
-use melee_render::wide::Wide;
 use melee_sim::game::state::Game;
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
 use melee_slippi::Device;
@@ -45,24 +44,13 @@ pub struct Tick<'a> {
     pub game: &'a Game,
     pub data: &'a Archives,
     pub draws: &'a [melee_sim::hsd::display::Draw],
-    /// For each widescreen aspect ratio [`drive`] was given, the state and draws its frame is
-    /// drawn from, as the player's are ([`Wide`]): a copy's that draws the fighters in the
-    /// added sides, or the match's.
-    pub wide: Vec<(&'a Game, &'a [melee_sim::hsd::display::Draw])>,
     /// The disc's main.dol, which melee-render's address space loads.
     pub dol: &'a [u8],
 }
 
 /// Plays the replay's match to its rendered frame `to`, calling `each` with each rendered
-/// frame until it returns false; each frame also as the player draws it at each aspect ratio
-/// in `widescreens`.
-fn drive(
-    disc_path: &str,
-    replay_path: &str,
-    to: u32,
-    widescreens: &[f32],
-    mut each: impl FnMut(&Tick<'_>) -> bool,
-) {
+/// frame until it returns false.
+fn drive(disc_path: &str, replay_path: &str, to: u32, mut each: impl FnMut(&Tick<'_>) -> bool) {
     // The float mode the replay was recorded in: the console's for the benchmark matches
     // (the default), Slippi Dolphin's for a Slippi replay (`CHECK_FP=slippi`).
     let fp = match std::env::var("CHECK_FP").as_deref() {
@@ -94,38 +82,17 @@ fn drive(
     let mut device = Device(&replay);
     let dol = disc.dol().unwrap_or_else(|e| panic!("main.dol: {e}"));
     let mut n = 0u32;
-    let mut wides: Vec<(Wide, Vec<melee_sim::hsd::display::Draw>)> = widescreens
-        .iter()
-        .map(|&a| {
-            let mut w = Wide::default();
-            w.set(Some(a));
-            (w, Vec::new())
-        })
-        .collect();
     loop {
         let (mut f, render) = m.step_replay_tick(&mut device);
         let ended = f.ended;
         if render {
-            for (w, _) in &mut wides {
-                w.before(&m);
-            }
             f.draws = m.render();
-            for (w, d) in &mut wides {
-                *d = w.after(&m, f.draws.clone());
-                if let Some(why) = w.take_stopped() {
-                    eprintln!("frame {n}: the widened pass stopped: {why}");
-                }
-            }
             let tick = Tick {
                 n,
                 replay_frame: m.game.playback.as_ref().map_or(-124, |p| p.frame_index),
                 game: &m.game,
                 data: &m.data,
                 draws: &f.draws,
-                wide: wides
-                    .iter()
-                    .map(|(w, d)| (w.game(&m.game), d.as_slice()))
-                    .collect(),
                 dol: &dol,
             };
             if !each(&tick) {
@@ -148,8 +115,6 @@ struct Drawer {
     frames: Frames,
     gpu: Gpu,
     loaded: bool,
-    /// Which of [`Tick::wide`]'s frames it draws, if widescreen.
-    wide: Option<usize>,
 }
 
 impl Drawer {
@@ -166,7 +131,6 @@ impl Drawer {
             frames,
             gpu,
             loaded: false,
-            wide: None,
         }
     }
 
@@ -183,9 +147,7 @@ impl Drawer {
             self.frames.space.load_dol(t.dol);
             self.loaded = true;
         }
-        // A widescreen view draws what the player draws at its aspect ratio.
-        let (game, draws) = self.wide.map_or((t.game, t.draws), |i| t.wide[i]);
-        let fifo = self.frames.frame(game, t.data, draws);
+        let fifo = self.frames.frame(t.game, t.data, t.draws);
         let images = if draw {
             self.gpu.run(&self.frames.space, t.data, &fifo, observer)
         } else {
@@ -222,7 +184,7 @@ pub fn play(
     mut each: impl FnMut(u32, Drawn) -> bool,
 ) {
     let mut drawer = Drawer::new(renderer(), None);
-    drive(disc_path, replay_path, to, &[], |t| {
+    drive(disc_path, replay_path, to, |t| {
         if t.n < from {
             drawer.frame(t, drawn_for(t.n, from), None);
             return true;
@@ -292,24 +254,18 @@ pub fn draw_views(
     at: &[u32],
     views: &[View],
 ) -> Vec<(u32, Vec<Frame>)> {
-    let mut widescreens: Vec<f32> = Vec::new();
     let mut drawers: Vec<Drawer> = views
         .iter()
         .map(|v| {
             let mut r = renderer();
             r.resize_efb(v.scale, v.width);
             (r.xfb_on_gpu, r.xfb_readback) = (v.gpu_xfb, v.gpu_xfb);
-            let mut d = Drawer::new(r, v.widescreen);
-            d.wide = v.widescreen.map(|a| {
-                widescreens.push(a);
-                widescreens.len() - 1
-            });
-            d
+            Drawer::new(r, v.widescreen)
         })
         .collect();
     let last = at.iter().copied().max().unwrap_or(0);
     let mut out = Vec::new();
-    drive(disc_path, replay_path, last, &widescreens, |t| {
+    drive(disc_path, replay_path, last, |t| {
         let draw = at.iter().any(|&a| drawn_for(t.n, a));
         let images: Vec<Option<Frame>> = drawers
             .iter_mut()
