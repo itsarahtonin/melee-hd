@@ -209,6 +209,55 @@ A match is a stage's name, Fox against Marth on it with idle controllers (the fi
 
 Take it on a quiet machine: other agents' builds move the CPU's times and with them when frames are drawn.
 
-### Baseline
+### Baseline (2026-10-19)
 
-Pending a quiet machine.
+melee-hd `928ca81` (main), release; AMD Ryzen 7 9800X3D, NVIDIA GeForce RTX 5070 Ti (driver 610.88, Vulkan), Windows 11 Pro, the display Sarah's 4K 144 Hz one; the machine quiet (no builds or other agents, CPU about 4% busy before the runs; OBS, a browser and a torrent client open but idle, melee-unlocked not running). `melee-bench player`, widescreen, 1,980 ticks a run (30 s measured), on a replay per stage, real play: `fox-marth-fd` and `fox-marth-ps` (`data/bench`), a Slippi ranked replay on Fountain of Dreams (`Game_20260129T214216`), and milestone 4's Great Bay oracle set (`stage-great-bay`, [the oracle](oracle.md#oracle-sets)). The last two aren't in the repository; any replay on those stages measures the same way. "Uncapped" is Interpolate with `--refresh 1000 --present immediate`: frames as fast as the player makes them. Fullscreen is 3840 by 2160 (5x: EFB 4266 by 2640). GPU and CPU figures are milliseconds a frame, means (95th percentile); the GPU's total is its passes' time, its stages summed. Every frame was timed.
+
+**5x, fullscreen, uncapped** (two runs each, the mean; the runs agreed within 3%):
+
+| Stage (replay) | Frames/s | Frame time p50 / p95 / p99 | GPU total | Scene | EFB copies | XFB copy | Present | CPU build | Bound by |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Final Destination | 145.7 | 6.86 / 8.33 / 9.43 | 6.73 (8.15) | 6.22 | 0.09 | 0.34 | 0.08 | 3.76 (4.28) | GPU |
+| Great Bay | 143.8 | 6.76 / 8.90 / 9.56 | 6.81 (8.76) | 6.26 | 0.09 | 0.38 | 0.09 | 4.58 (5.06) | GPU |
+| Fountain of Dreams | 110.6 | 9.00 / 10.77 / 11.96 | 8.14 (10.39) | 7.61 | 0.10 | 0.36 | 0.08 | 7.99 (8.89) | CPU and GPU alike |
+| Pokémon Stadium | 100.6 | 9.53 / 13.64 / 15.06 | 9.77 (13.49) | 9.21 | 0.15 | 0.33 | 0.09 | 4.45 (4.96) | GPU |
+
+The GPU's span (first pass's start to last's end) was within 0.15 ms of its total on the GPU-bound stages, and 0.8 ms more on Fountain of Dreams, where the GPU waits for the CPU's submissions. Waiting for the swap chain took 1.7 to 4.5 ms a frame on the GPU-bound stages and 0.3 ms on Fountain of Dreams.
+
+**Scaling, fullscreen, uncapped** (one run each at 1x and 3x):
+
+| Stage | Frames/s 1x / 3x / 5x | GPU total 1x / 3x / 5x | Scene 1x / 3x / 5x | CPU build (any scale) |
+| --- | --- | --- | --- | --- |
+| Final Destination | 244 / 243 / 146 | 0.62 / 3.33 / 6.73 | 0.45 / 3.06 / 6.22 | 3.7 |
+| Great Bay | 202 / 201 / 144 | 0.57 / 3.20 / 6.81 | 0.40 / 2.90 / 6.26 | 4.5 |
+| Fountain of Dreams | 118 / 116 / 111 | 0.60 / 3.17 / 8.14 | 0.43 / 2.93 / 7.61 | 7.9 |
+| Pokémon Stadium | 211 / 200 / 101 | 0.66 / 4.26 / 9.77 | 0.53 / 4.00 / 9.21 | 4.3 |
+
+At 1x and 3x every stage is bound by the CPU's frame building (with the present 1x's blit to 4K, 0.13 ms, is the GPU's biggest stage after the scene). 25 times the pixels (1x to 5x) made the scene 14 to 18 times slower.
+
+**5x in a 1920 by 1080 window, uncapped**: Final Destination 144.7 frames/s (GPU 6.79), Great Bay 150.1 (6.52), Fountain of Dreams 110.5 (8.21), Pokémon Stadium 110.0 (8.92): the same as fullscreen but for the present (the blit to 1080p, 0.01 ms).
+
+**5x fullscreen at the display's 144 Hz (mailbox), Interpolate and Off:**
+
+| Stage | Interpolate: frames/s, GPU total | Off: frames/s, GPU total |
+| --- | --- | --- |
+| Final Destination | 128.0, 7.55 (9.46) | 60.0, 8.06 (9.11) |
+| Great Bay | 134.2, 7.21 (8.50) | 60.0, 9.03 (10.46) |
+| Fountain of Dreams | 109.9, 8.18 (10.29) | 60.0, 8.50 (10.84) |
+| Pokémon Stadium | 103.6, 9.44 (13.66) | 60.0, 10.80 (14.24) |
+
+A frame's GPU time rises when the GPU has less to do (up to 30% at Off's 60 frames a second), its clocks lower, so GPU times compare only within one mode; the uncapped runs are the reference. Paced to the hidden desktop's 144 Hz compositor, Interpolate fell short of 144 on Final Destination and Great Bay, which reach it uncapped: at 6.8 ms a frame against the 6.94 ms refresh, frames miss refreshes. (Sarah sees 144 on Final Destination on her own display.)
+
+**Idle fighters, 5x fullscreen, uncapped** (`--matches fd,fod,gb,ps`): Final Destination 153.6 frames/s (GPU 6.37), Great Bay 136.6 (7.17), Fountain of Dreams 109.3 (8.21, CPU build 8.40), Pokémon Stadium 119.1 (8.19). Real play costs Pokémon Stadium 1.6 ms of GPU (its transformations), the others little.
+
+**The timer's cost**: Fountain of Dreams at 5x uncapped with `MELEE_GPU_TIMING=0` ran 108.2 and 111.4 frames/s, against 111.0 and 110.2 timed: none measurable, so it stays on.
+
+**Fountain of Dreams' frame building** (`GX_PROFILE=1 melee-hd --bench 1500 --replay ... --scale 1 --one-thread`, the renderer on the game's thread to split it): a frame has 582 draw calls, 57,600 vertices, 200,000 indices and 1.17 million words of vertex data (4.7 MB), and the renderer takes 10.2 ms, 4.1 of it transforming vertices; Final Destination's has 218 draw calls, 27,100 vertices, 41,500 indices and 219,000 words (0.9 MB), 4.1 ms in the renderer, 1.8 transforming. The player's threads overlap those stages, to 8.0 and 3.7 ms.
+
+### Where the time goes at 5x
+
+1. **The scene passes: 92 to 94% of the GPU's time on every stage** (6.2 to 9.2 ms of 6.7 to 9.8). They grow with the pixels (14 to 18 times from 1x to 5x) while their per-frame part is small (0.4 to 0.5 ms at 1x), so at 5x the cost is per pixel: the TEV shader run for every pixel of every draw. That is what early depth testing (the shader writes `frag_depth` on every draw, so the hardware shades overdrawn pixels in full) and specialized shaders (the uber shader's register-driven loops and branches) both cut, early-Z by shading fewer pixels and specialized shaders by making each cheaper. They're the first steps; Pokémon Stadium (9.8 ms, p95 13.5) and Great Bay show them most.
+2. **The CPU's frame building: on Fountain of Dreams as long as the GPU's frame** (8.0 ms against 8.1), and the limit at every scale there (118 frames/s even at 1x). Its geometry is twice Final Destination's in vertices and five times in vertex data, and the renderer transforms every vertex on the CPU, as Dolphin's software renderer does, and uploads them each frame. GPU work alone won't lift Fountain of Dreams past about 120 frames/s: it also needs the frame building cut (transforming on the GPU, keeping static geometry's transformed vertices between frames, or more threads), and so does every stage below 5x (3.7 to 4.5 ms elsewhere, the 1x and 3x limit).
+3. **The copy to the XFB: 0.33 to 0.38 ms** (4 to 5%), two full-frame passes at the EFB's size; folding it into the present's blit would save most of it, worth doing after the above.
+4. **EFB copies to textures: 0.09 to 0.15 ms**, and **the present: 0.08 ms** at 4K: not worth work now.
+5. **Uploads**: the GPU's per-frame fixed cost is small (the whole 1x frame is 0.6 ms), so per-draw uniform uploads matter on the CPU's side (the flush is 0.3 to 0.6 ms of the renderer's time on one thread) more than the GPU's; they belong with item 2.
