@@ -171,6 +171,7 @@ impl Ctx<'_> {
                 // the frame stays in the shadows' offscreen pass, as the original's does.
                 if v.viewport == [0.0, 640.0, 0.0, 480.0]
                     && let Some(aspect) = self.hsd.widescreen
+                    && !fills_screen(self.game, *c)
                 {
                     widen(&mut v, aspect);
                 }
@@ -409,7 +410,8 @@ impl Ctx<'_> {
 /// keeping its height, so the frame, shown at `aspect`, keeps the proportions it has at the
 /// game's 73:60. The gameplay camera (the simulation's, which decides who is off screen) stays
 /// as it is; only the view widens, and the 2D cameras' content (the HUD) keeps its shape and
-/// its place in the 73:60 middle.
+/// its place in the 73:60 middle. What's made to cover the screen ([`fills_screen`]) isn't
+/// widened, so it stretches across the picture.
 fn widen(v: &mut melee_sim::hsd::display::CameraView, aspect: f32) {
     use melee_sim::hsd::cobj;
     let k = aspect / GAME_ASPECT;
@@ -423,6 +425,18 @@ fn widen(v: &mut melee_sim::hsd::display::CameraView, aspect: f32) {
         }
         _ => {}
     }
+}
+
+/// Whether camera `c` draws something made to cover the whole 640 by 480 screen, which
+/// widescreen stretches to the picture's edges rather than widening: the background flash's
+/// (`lbbgflash.c`), whose color and wipes are 640 by 480 quads seen by a camera framing
+/// exactly that. Widened, it would see more than the quads and leave the added sides
+/// uncovered. Known by the camera's owner, as the flash records its camera GObj.
+fn fills_screen(game: &Game, c: melee_sim::hsd::cobj::CObjId) -> bool {
+    use melee_sim::game::state::Obj;
+    game.bgflash.data.x44.is_some_and(|g| {
+        !game.world.gobjs.is_free(g.0) && game.world.gobj(g).obj == Some(Obj::CObj(c))
+    })
 }
 
 /// The render mode's vertical filter (`GXNtsc480IntDf`).

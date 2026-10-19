@@ -20,8 +20,9 @@
 //! melee-render-check scaled DISC REPLAY.slp FRAME [OUT_DIR]
 //!     native frame FRAME drawn at 2x and 3x, box-downsampled, against the frame at 1x, and
 //!     the frame widened to 16:9 against the game's 73:60 over the picture they share
-//! melee-render-check snap DISC REPLAY.slp OUT_DIR FRAME...
-//!     native frames drawn at 1x, saved as OUT_DIR/frame_N.png
+//! melee-render-check snap DISC REPLAY.slp OUT_DIR [--aspect W:H] FRAME...
+//!     native frames drawn at 1x, saved as OUT_DIR/frame_N.png; with --aspect, as the player
+//!     shows them at that aspect ratio (wider than 73:60, the cameras widened)
 //! melee-render-check dashboard RESULTS_DIR OUT_DIR
 //!     a page of the results `compare` and `scaled` recorded with CHECK_RESULTS=RESULTS_DIR:
 //!     OUT_DIR/index.html, and the frames compared at full size in OUT_DIR/img/
@@ -194,11 +195,18 @@ fn run(args: &[String]) -> ExitCode {
         Some("snap") if args.len() >= 5 => {
             let dir = std::path::PathBuf::from(&args[3]);
             std::fs::create_dir_all(&dir).expect("making the output directory");
-            let at: Vec<u32> = args[4..]
-                .iter()
-                .map(|a| a.parse().expect("FRAME"))
-                .collect();
-            let views = [native::View::REFERENCE];
+            let mut rest = &args[4..];
+            let mut view = native::View::REFERENCE;
+            if let [flag, ratio, more @ ..] = rest
+                && flag == "--aspect"
+            {
+                let (w, h) = ratio.split_once(':').expect("--aspect W:H");
+                let aspect = w.parse::<f32>().expect("W") / h.parse::<f32>().expect("H");
+                view = native::View::shown(1, aspect);
+                rest = more;
+            }
+            let at: Vec<u32> = rest.iter().map(|a| a.parse().expect("FRAME")).collect();
+            let views = [view];
             for (n, images) in native::draw_views(&args[1], &args[2], &at, &views) {
                 let path = dir.join(format!("frame_{n}.png"));
                 images[0].save_png(&path).expect("saving a frame");
@@ -244,7 +252,7 @@ fn run(args: &[String]) -> ExitCode {
             eprintln!(
                 "usage: melee-render-check dump LOG.dff [FRAME] | draw LOG.dff FRAME DRAW | \
                  align DISC REPLAY LOG FROM TO | compare DISC REPLAY LOG REF_DIR FRAME [OUT] | \
-                 scaled DISC REPLAY FRAME [OUT] | snap DISC REPLAY OUT FRAME... | \
+                 scaled DISC REPLAY FRAME [OUT] | snap DISC REPLAY OUT [--aspect W:H] FRAME... | \
                  dashboard RESULTS OUT_DIR"
             );
             ExitCode::from(2)
