@@ -12,6 +12,7 @@
 //!          [--jit-margin MS]
 //! frames:  [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]
 //! debug:   [--flicker-scan]
+//! perf:    [--perf-report FILE] [--refresh HZ] [--seed N]
 //! ```
 //!
 //! The disc comes from `--disc`, else `SSBM_DISC`, else the settings folder, where the disc
@@ -38,7 +39,12 @@
 //! or, experimentally, just in time for the refresh that shows their frame ([`jit`],
 //! `--tick-timing`), waited for precisely ([`timing`]). `--added-delay N` adds input
 //! latency back on purpose, `--latency-log FILE` measures it all ([`latency`]), and F3 shows
-//! the measures over the frame.
+//! the measures over the frame, with each frame's GPU time by stage.
+//!
+//! `--perf-report FILE` measures a run in the window as it plays ([`perf`]): with a replay, or a
+//! match with a fixed `--seed` and no one at the controllers, and `--ticks`, a repeatable
+//! benchmark. `--refresh HZ` draws Interpolate's and Extrapolate's frames at that
+//! rate instead of the display's.
 //!
 //! `--high-refresh interpolate` draws frames at the display's rate between the last two ticks,
 //! each placed by when it reaches the screen ([`pacing`]); `extrapolate` draws them between the
@@ -61,6 +67,7 @@ mod paced;
 #[cfg(test)]
 mod paced_tests;
 mod pacing;
+mod perf;
 mod pipelines;
 #[cfg(test)]
 mod predict_tests;
@@ -155,6 +162,12 @@ struct Args {
     given: launcher::Given,
     /// Scans presented frames for one-frame dropouts and captures them.
     flicker_scan: bool,
+    /// Writes the run's frame, GPU and CPU times here when the player quits.
+    perf_report: Option<String>,
+    /// Frames are drawn for a display of this rate, not the window's monitor's.
+    refresh: Option<f64>,
+    /// The match's random seed, instead of one from the clock.
+    seed: Option<u32>,
 }
 
 /// The command line's usage, with the characters and stages melee-sim has ported.
@@ -167,6 +180,7 @@ fn usage() -> String {
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
          frames: [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
          debug: [--flicker-scan] captures a presented frame that drops out for one frame\n\
+         perf: [--perf-report FILE] [--refresh HZ] [--seed N]\n\
          with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match\n\
          the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
         names(roster::CHARACTERS.iter().map(|c| c.keys[0]).collect()),
@@ -208,6 +222,9 @@ fn parse_args() -> Result<Args, String> {
         disc_speed: DiscSpeed::Drive,
         given: launcher::Given::default(),
         flicker_scan: false,
+        perf_report: None,
+        refresh: None,
+        seed: None,
     };
     // Whether the command line names a match.
     let mut chosen = false;
@@ -330,6 +347,17 @@ fn parse_args() -> Result<Args, String> {
                 a.given.aspect = true;
             }
             "--flicker-scan" => a.flicker_scan = true,
+            "--perf-report" => a.perf_report = Some(value()?),
+            "--refresh" => {
+                a.refresh = Some(
+                    value()?
+                        .parse()
+                        .ok()
+                        .filter(|&hz: &f64| hz >= 1.0)
+                        .ok_or("--refresh HZ")?,
+                )
+            }
+            "--seed" => a.seed = Some(value()?.parse().map_err(|_| "--seed N")?),
             "-h" | "--help" => return Err(String::new()),
             other => return Err(format!("unknown argument {other}")),
         }
@@ -375,10 +403,13 @@ impl Session {
                     })
                     .collect();
                 let mut s = Settings::vs(a.stage, &players, a.stocks, a.minutes);
-                // A seed from the clock: presentation-side, set once before the match.
-                s.seed = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map_or(0, |d| d.subsec_nanos());
+                // A seed from the clock unless given: presentation-side, set once before the
+                // match.
+                s.seed = a.seed.unwrap_or_else(|| {
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map_or(0, |d| d.subsec_nanos())
+                });
                 (s, None)
             }
         };
@@ -629,6 +660,8 @@ struct App {
     /// With Interpolate or Extrapolate: a tick's latency measures, waiting for the first frame
     /// after it.
     pending: Option<latency::Tick>,
+    /// The run's measures, with `--perf-report`.
+    perf: Option<perf::Perf>,
 }
 
 impl App {
@@ -902,6 +935,9 @@ impl App {
     }
 
     fn log_tick(&mut self, t: latency::Tick) {
+        if let Some(p) = &mut self.perf {
+            p.sim(t.sim);
+        }
         self.live.tick(t);
         if let Some(log) = &mut self.latency {
             log.tick(t);
@@ -967,10 +1003,13 @@ impl App {
         let Some(s) = &self.shown else {
             return (pacing::refresh_period(None), false);
         };
-        self.monitor_hz = s
-            .window
-            .current_monitor()
-            .and_then(|m| m.refresh_rate_millihertz());
+        self.monitor_hz = match self.args.refresh {
+            Some(hz) => Some((hz * 1000.0).round() as u32),
+            None => s
+                .window
+                .current_monitor()
+                .and_then(|m| m.refresh_rate_millihertz()),
+        };
         (
             pacing::refresh_period(self.monitor_hz),
             s.present_mode() == wgpu::PresentMode::Fifo,
@@ -1031,6 +1070,7 @@ impl App {
         start: Instant,
         blend: Option<Blend<'_>>,
     ) -> Option<(latency::FrameTimes, present::Presented)> {
+        let entered = Instant::now();
         // The internal resolution follows the window's size unless `--scale` fixed it, and
         // the EFB's width the aspect: the renderer's EFB is made again at a new one, in place.
         let scale = scale_for(self.args.scale, self.window_size, self.aspect);
@@ -1088,6 +1128,7 @@ impl App {
             }
         }
         let rendered = start.elapsed();
+        let built = Instant::now();
         let (shown, frame) = (self.shown.as_mut()?, images.into_iter().last()?);
         let text = self.overlay.is_some().then(|| {
             self.live
@@ -1112,6 +1153,14 @@ impl App {
         }
         let presented = presented?;
         self.live.frame(presented.presented);
+        self.measure(
+            presented.presented,
+            latency::CpuTimes {
+                build: built - entered,
+                acquire: presented.acquire,
+                present: presented.presented - presented.acquired,
+            },
+        );
         Some((
             latency::FrameTimes {
                 rendered,
@@ -1121,6 +1170,67 @@ impl App {
             },
             presented,
         ))
+    }
+
+    /// A frame presented `at` with its CPU times, and the GPU times read back since the last:
+    /// for the overlay and the perf report.
+    fn measure(&mut self, at: Instant, cpu: latency::CpuTimes) {
+        self.live.cpu(at, cpu);
+        let gpu = self.gpu.gpu_times();
+        for f in &gpu {
+            self.live.gpu(at, *f);
+        }
+        if let Some(p) = &mut self.perf {
+            p.ticks(self.ticks);
+            p.frame(at, cpu);
+            for f in gpu {
+                p.gpu(f);
+            }
+        }
+    }
+
+    /// The run's settings, for the perf report.
+    fn perf_config(&self) -> String {
+        let window = self.shown.as_ref().map_or("no window".to_owned(), |s| {
+            let size = s.window.inner_size();
+            format!(
+                "{}x{}{}, {:?}",
+                size.width,
+                size.height,
+                if s.fullscreen() { " fullscreen" } else { "" },
+                s.present_mode()
+            )
+        });
+        let what = match &self.args.replay {
+            Some(r) => format!("replay {r}"),
+            None => {
+                let names: Vec<&str> = self
+                    .args
+                    .players
+                    .iter()
+                    .filter_map(|&(c, _)| roster::character_by_kind(c).map(|c| c.keys[0]))
+                    .collect();
+                let stage = roster::stage_by_kind(self.args.stage).map_or("?", |s| s.keys[0]);
+                format!(
+                    "{} on {stage}, seed {}",
+                    names.join(" vs "),
+                    self.args
+                        .seed
+                        .map_or("from the clock".to_owned(), |s| s.to_string())
+                )
+            }
+        };
+        format!(
+            "{what}; {} ticks; window {window}; internal {}x (EFB {}x{}), MSAA {}; high refresh {}, display {:.2} Hz; {}",
+            self.ticks,
+            self.scale,
+            self.efb_width,
+            528 * self.scale,
+            self.msaa,
+            self.mode.key(),
+            self.monitor_hz.map_or(60.0, |m| f64::from(m) / 1000.0),
+            present::describe(&self.gpu.adapter)
+        )
     }
 
     /// Saves the renderer's pipelines and lets it go, with the match.
@@ -1893,6 +2003,7 @@ fn run(args: Args) -> ExitCode {
         paced: paced::Paced::default(),
         prediction_failed: false,
         pending: None,
+        perf: args.perf_report.as_deref().map(perf::Perf::new),
         args,
     };
     if let Some(path) = &app.args.latency_log {
@@ -1919,6 +2030,10 @@ fn run(args: Args) -> ExitCode {
     app.collect_done();
     for r in std::mem::take(&mut app.rows) {
         app.log_tick(r.tick);
+    }
+    if let Some(p) = &app.perf {
+        let untimed = app.gpu.timer.as_ref().map(melee_gpu::GpuTimer::untimed);
+        p.finish(&app.perf_config(), untimed);
     }
     if let Some(mut log) = app.latency.take() {
         if let Some(s) = &app.shown {

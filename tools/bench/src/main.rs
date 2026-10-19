@@ -14,6 +14,9 @@
 //!
 //! `melee-bench native ...`: melee-hd's speed on the same matches, natively on one core, and
 //! `melee-bench snapshot-match ...`: snapshots of a match's states as it plays (`native.rs`).
+//!
+//! `melee-bench player ...`: the player's rendering speed in its window, frames a second and
+//! the GPU's time by stage (`player.rs`).
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
@@ -31,6 +34,8 @@ mod dolphin;
 mod gecko_words;
 mod matches;
 mod native;
+#[cfg(windows)]
+mod player;
 mod sync;
 #[cfg(windows)]
 mod win;
@@ -216,6 +221,8 @@ fn main() -> std::process::ExitCode {
         #[cfg(windows)]
         Some("dolphin") => dolphin::main(&args[1..]),
         Some("native") => native::main(&args[1..]),
+        #[cfg(windows)]
+        Some("player") => player::main(&args[1..]),
         Some("snapshot-match") => native::snapshots(&args[1..]),
         Some("alloc-sites") => native::alloc_sites(&args[1..]),
         #[cfg(windows)]
@@ -232,7 +239,7 @@ fn main() -> std::process::ExitCode {
         }
         _ => eprintln!(
             "melee-bench snapshot CALL... | codes DIR | oracle-codes DIR | oracle-sets DIR [SET|NAME...] | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]              | native [--dir DIR] [--runs N] [MATCH...] | snapshot-match [--dir DIR] [--every TICKS] [MATCH] \
-             | alloc-sites [--dir DIR] [--from TICK] [--ticks N] [--rollback] [--fp slippi] [MATCH]"
+             | alloc-sites [--dir DIR] [--from TICK] [--ticks N] [--rollback] [--fp slippi] [MATCH] | player [--matches fd,fod,gb,ps] [--scales 1,3,5] [...]"
         ),
     }
     std::process::ExitCode::SUCCESS

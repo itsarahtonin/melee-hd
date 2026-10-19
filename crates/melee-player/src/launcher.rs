@@ -479,6 +479,14 @@ impl Painter {
         let mut buffers = self
             .renderer
             .update_buffers(device, queue, &mut encoder, &jobs, &screen);
+        // The overlay's pass is timed with the frame it's drawn over; the launcher's aren't.
+        let time = if self.clear {
+            None
+        } else {
+            gpu.timer
+                .as_ref()
+                .and_then(|t| t.pass(melee_gpu::gpu_time::Stage::Overlay))
+        };
         {
             let mut pass = encoder
                 .begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -496,6 +504,7 @@ impl Painter {
                             store: wgpu::StoreOp::Store,
                         },
                     })],
+                    timestamp_writes: melee_gpu::gpu_time::writes(&time),
                     ..Default::default()
                 })
                 .forget_lifetime();

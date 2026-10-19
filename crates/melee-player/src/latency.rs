@@ -12,6 +12,7 @@ use std::io::{BufWriter, Write};
 use std::time::{Duration, Instant};
 
 use melee_audio::OutputStats;
+use melee_gpu::gpu_time::{FrameGpu, Stage};
 use melee_input::InputAges;
 
 use crate::launcher::Painter;
@@ -35,6 +36,17 @@ pub struct FrameTimes {
     pub shown: Option<Duration>,
     /// Whether it came too late for the refresh it was meant for.
     pub missed: Option<bool>,
+}
+
+/// A presented frame's CPU time on the player's thread.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct CpuTimes {
+    /// Building the frame: its GX stream, and the renderer drawing it (its GPU work submitted).
+    pub build: Duration,
+    /// Waiting for the swap chain's next image.
+    pub acquire: Duration,
+    /// From the image to the present call's return: the blit, the overlay and the present.
+    pub present: Duration,
 }
 
 /// One tick's measures.
@@ -260,9 +272,80 @@ pub struct Live {
     recent: VecDeque<Tick>,
     /// When the last second's frames were presented.
     frames: VecDeque<Instant>,
+    /// The last second's frames' CPU times, and their GPU times as they're read back, with
+    /// when each came.
+    cpu: VecDeque<(Instant, CpuTimes)>,
+    gpu: VecDeque<(Instant, FrameGpu)>,
+}
+
+/// Keeps the last second of `v`, up to `now`.
+fn last_second<T>(v: &mut VecDeque<(Instant, T)>, now: Instant) {
+    while v
+        .front()
+        .is_some_and(|(at, _)| now.saturating_duration_since(*at) > Duration::from_secs(1))
+    {
+        v.pop_front();
+    }
 }
 
 impl Live {
+    /// A frame's CPU times, presented `at`.
+    pub fn cpu(&mut self, at: Instant, t: CpuTimes) {
+        last_second(&mut self.cpu, at);
+        self.cpu.push_back((at, t));
+    }
+
+    /// A frame's GPU times, read back `at`.
+    pub fn gpu(&mut self, at: Instant, f: FrameGpu) {
+        last_second(&mut self.gpu, at);
+        self.gpu.push_back((at, f));
+    }
+
+    /// The GPU and CPU lines: the last second's means a frame, the GPU's stages largest
+    /// first.
+    fn frame_costs(&self) -> String {
+        let n = self.gpu.len().max(1) as f64;
+        let mean = |f: &dyn Fn(&FrameGpu) -> Duration| -> f64 {
+            self.gpu.iter().map(|(_, g)| ms(f(g))).sum::<f64>() / n
+        };
+        let gpu = if self.gpu.is_empty() {
+            "GPU -".to_owned()
+        } else {
+            let mut stages: Vec<(f64, &str)> = Stage::ALL
+                .iter()
+                .map(|&s| (mean(&|g| g.stage(s)), s.name()))
+                .filter(|(v, _)| *v >= 0.005)
+                .collect();
+            stages.sort_by(|a, b| b.0.total_cmp(&a.0));
+            let parts: Vec<String> = stages
+                .iter()
+                .map(|(v, name)| format!("{name} {v:.2}"))
+                .collect();
+            format!(
+                "GPU {:.2} ms/frame: {}",
+                mean(&FrameGpu::busy),
+                parts.join(", ")
+            )
+        };
+        let k = self.cpu.len().max(1) as f64;
+        let cpu = |f: fn(&CpuTimes) -> Duration| -> String {
+            if self.cpu.is_empty() {
+                "-".to_owned()
+            } else {
+                format!(
+                    "{:.2}",
+                    self.cpu.iter().map(|(_, c)| ms(f(c))).sum::<f64>() / k
+                )
+            }
+        };
+        format!(
+            "{gpu}\nCPU ms/frame: build {}, swap chain {}, present {}",
+            cpu(|c| c.build),
+            cpu(|c| c.acquire),
+            cpu(|c| c.present)
+        )
+    }
+
     /// A frame presented `at`.
     pub fn frame(&mut self, at: Instant) {
         while self
@@ -326,7 +409,8 @@ impl Live {
         let f = &self.frames;
         let frame_rate = per_second(f.front().copied(), f.back().copied(), f.len());
         format!(
-            "{tick_rate} ticks/s, {frame_rate} frames/s\ninput age {}{rate}\ntick to present {}, to screen {}\naudio queue {}, underruns {underruns}\n{present_mode}, added delay {added_delay}",
+            "{tick_rate} ticks/s, {frame_rate} frames/s\n{}\ninput age {}{rate}\ntick to present {}, to screen {}\naudio queue {}, underruns {underruns}\n{present_mode}, added delay {added_delay}",
+            self.frame_costs(),
             show(input),
             show(presented),
             show(shown),
@@ -456,7 +540,29 @@ mod tests {
             live.frame(t0 + Duration::from_micros(11_111 * i));
         }
         let text = live.text("Mailbox", 0);
-        assert!(text.starts_with("60 ticks/s, 90 frames/s\n"), "{text}");
+        assert!(
+            text.starts_with("60 ticks/s, 90 frames/s\nGPU -\n"),
+            "{text}"
+        );
+        let us = Duration::from_micros;
+        for i in 0..4u64 {
+            let mut g = FrameGpu::default();
+            g.stages[Stage::Scene as usize] = us(5000 + 1000 * i);
+            g.stages[Stage::Xfb as usize] = us(500);
+            g.stages[Stage::Present as usize] = us(250);
+            live.gpu(t0 + us(10_000 * i), g);
+            let c = CpuTimes {
+                build: us(2000),
+                acquire: us(100),
+                present: us(300),
+            };
+            live.cpu(t0 + us(10_000 * i), c);
+        }
+        let text = live.text("Mailbox", 0);
+        assert!(
+            text.contains("\nGPU 7.25 ms/frame: scene 6.50, XFB copy 0.50, present 0.25\nCPU ms/frame: build 2.00, swap chain 0.10, present 0.30\n"),
+            "{text}"
+        );
         assert!(text.contains("input age 0.9 ms, 1000 Hz"), "{text}");
         assert!(text.contains("tick to present 5.0 ms"), "{text}");
         let summary = log.summary();

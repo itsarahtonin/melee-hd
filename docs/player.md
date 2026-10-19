@@ -270,11 +270,13 @@ The rest of the cuts change no output (every checked frame stays identical, at s
 
 The GX stream takes about 0.75 ms of that and the simulation about 0.7 ms a tick; presenting adds about 2.2 ms, most of it the GPU's own drawing at that scale. On the game's thread alone (`--one-thread`) the new renderer takes about 4.9 ms a frame (99th percentile 9.1 ms).
 
+The player's rendering in its window, with the GPU's time by stage, is measured by `--perf-report` and `melee-bench player` ([performance](performance.md#rendering-speed)).
+
 ### Latency
 
 **Options.** `--present mailbox|fifo|immediate` (and the launcher's Present) picks the swap chain's present mode. Mailbox, the default, shows each frame at the display's next refresh without tearing and without waiting: a newer frame replaces one still waiting. FIFO queues it for its refresh (vsync), and immediate shows it at once, tearing where the scan-out is partway down the screen: the lowest latency. A mode the display lacks falls back to mailbox, else FIFO, which every display has, so the default never tears (before, a display without mailbox got immediate). `--added-delay N` (the launcher's Added delay, 0 to 15 frames) is deliberate added latency: each controller read reaches the simulation N ticks later (`melee_input::Delay`; the first read stands in for the ticks before it), 16.7 ms a frame on top of everything below, for players who want a CRT's feel back. A replay's recorded inputs aren't delayed. `--tick-timing` and `--jit-margin` choose when ticks start (see [Just-in-time ticks](#just-in-time-ticks)). `--audio-exclusive` takes the audio device exclusively (Windows; see [Audio](#audio)). `--mute` mixes the sound as always but opens no audio device, so nothing is heard and no device's timing reaches the loop: for measuring runs on a machine someone is using (the audio columns of the latency log stay empty).
 
-**Measuring.** `--latency-log FILE.csv` writes a row a tick and prints a summary (mean, median, 99th percentile and worst of each) when the player quits; `--latency-overlay`, or F3 in a match, draws the last second's ticks and frames a second and its means over the frame's corner (egui on the window's swap chain, only while it's on). The columns:
+**Measuring.** `--latency-log FILE.csv` writes a row a tick and prints a summary (mean, median, 99th percentile and worst of each) when the player quits; `--latency-overlay`, or F3 in a match, draws the last second's ticks and frames a second and its means over the frame's corner (egui on the window's swap chain, only while it's on), with the GPU's time a frame by stage, from timestamp queries, and the CPU's time building and presenting it ([performance](performance.md#rendering-speed)). The columns:
 
 | Column | What it measures |
 | --- | --- |

@@ -201,6 +201,9 @@ pub struct Gpu {
     pub adapter: wgpu::Adapter,
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
+    /// Times every render pass by stage, where the device has timestamp queries (unless
+    /// `MELEE_GPU_TIMING=0`): the renderer's, the blit's and the overlay's.
+    pub timer: Option<melee_gpu::GpuTimer>,
 }
 
 impl Gpu {
@@ -212,13 +215,20 @@ impl Gpu {
             ..Default::default()
         }))
         .expect("a GPU adapter");
+        let timing = std::env::var("MELEE_GPU_TIMING").map_or(true, |v| v != "0" && v != "off");
+        let timestamps = if timing {
+            wgpu::Features::TIMESTAMP_QUERY
+        } else {
+            wgpu::Features::empty()
+        };
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("melee-hd"),
             required_features: wgpu::Features::DUAL_SOURCE_BLENDING
-                | (adapter.features() & wgpu::Features::PIPELINE_CACHE),
+                | (adapter.features() & (wgpu::Features::PIPELINE_CACHE | timestamps)),
             ..Default::default()
         }))
         .expect("a GPU device");
+        let timer = melee_gpu::GpuTimer::new(&device, &queue);
         let gpu = describe(&adapter);
         device.set_device_lost_callback(move |reason, message| {
             eprintln!("the GPU ({gpu}) was lost: {reason:?}: {message}");
@@ -228,6 +238,7 @@ impl Gpu {
             adapter,
             device,
             queue,
+            timer,
         }
     }
 
@@ -244,7 +255,23 @@ impl Gpu {
         );
         r.xfb_on_gpu = true;
         r.xfb_readback = false;
+        r.set_timer(self.timer.clone());
         r
+    }
+
+    /// Ends a presented frame's GPU timing: its passes' timestamps are read back a few frames
+    /// later ([`Gpu::gpu_times`]).
+    pub fn end_frame(&self) {
+        if let Some(t) = &self.timer {
+            t.end_frame(&self.device, &self.queue);
+        }
+    }
+
+    /// The presented frames' GPU times read back since the last call, oldest first.
+    pub fn gpu_times(&self) -> Vec<melee_gpu::gpu_time::FrameGpu> {
+        self.timer
+            .as_ref()
+            .map_or_else(Vec::new, melee_gpu::GpuTimer::collect)
     }
 }
 
@@ -378,6 +405,10 @@ impl Blit {
             })
         });
         let mut encoder = device.create_command_encoder(&Default::default());
+        let time = gpu
+            .timer
+            .as_ref()
+            .and_then(|t| t.pass(melee_gpu::gpu_time::Stage::Present));
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("present"),
@@ -390,6 +421,7 @@ impl Blit {
                         store: wgpu::StoreOp::Store,
                     },
                 })],
+                timestamp_writes: melee_gpu::gpu_time::writes(&time),
                 ..Default::default()
             });
             if let Some(group) = &group {
@@ -587,6 +619,7 @@ impl Shown {
             scan.record(gpu, &out.texture, self.copyable, fill, [x, y, vw, vh], meta);
         }
         over(&view, w, h);
+        gpu.end_frame();
         // Done when the GPU has finished everything the frame submitted.
         let submission = gpu.queue.submit(std::iter::empty());
         self.window.pre_present_notify();
@@ -707,6 +740,7 @@ impl Offscreen {
         let view = self.texture.create_view(&Default::default());
         self.blit
             .draw(gpu, Some(texture), &view, self.width, self.height);
+        gpu.end_frame();
         let _ = gpu.device.poll(wgpu::PollType::wait_indefinitely());
     }
 }
