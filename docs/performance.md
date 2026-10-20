@@ -261,3 +261,25 @@ A frame's GPU time rises when the GPU has less to do (up to 30% at Off's 60 fram
 3. **The copy to the XFB: 0.33 to 0.38 ms** (4 to 5%), two full-frame passes at the EFB's size; folding it into the present's blit would save most of it, worth doing after the above.
 4. **EFB copies to textures: 0.09 to 0.15 ms**, and **the present: 0.08 ms** at 4K: not worth work now.
 5. **Uploads**: the GPU's per-frame fixed cost is small (the whole 1x frame is 0.6 ms), so per-draw uniform uploads matter on the CPU's side (the flush is 0.3 to 0.6 ms of the renderer's time on one thread) more than the GPU's; they belong with item 2.
+
+### CPU frame building (2026-10-19)
+
+The work on the CPU's frame building after the baseline, every frame exact. Profiled with samply (2 kHz) on Fountain of Dreams at 1x (`melee-hd --bench 900 --replay ... --scale 1`, the player's threads), symbols from a line-table build (`CARGO_PROFILE_RELEASE_DEBUG=line-tables-only`) read with dbghelp; other agents' builds kept the machine fully busy, so the shares are what to read, not the times.
+
+**Before**, by thread (share of its samples):
+
+- Game thread: building the frame's stream (HSD's display code to GX) about 0.6 to 0.8 ms, then running it: fetching vertices from their arrays (about 140,000 attributes a frame) 25%, the threaded sink 11% (state deltas, texture memory hashes, a copy of each draw's vertices), the registers' hashes on every write, testing all 86 rewritten display lists on every view of memory; waiting for the render thread 12%.
+- The one transform thread, 88% busy: transforming 48% (lighting most of it: two spot lights in color channel 0 and a specular light in channel 1 on most vertices), decoding 22% (half of it copying each 132-byte decoded vertex), working out vertex layouts it never used 8%, a new output list per draw 7%.
+- Render thread, 71% busy: its per-draw work 49% (whether the alpha test can fail, tested over all 256 alphas every draw, 14%; the GPU's words for every vertex, points as six vertices each), wgpu's encoding, buffer writes and submits 15%, freeing what the threads sent 4%.
+
+On one thread (`GX_PROFILE=1 ... --one-thread`) a frame took 10.95 ms in the renderer: 7.95 ms of draws (4.6 of it transforming), 0.57 flushing, 0.11 reading back, about 2.3 running the stream.
+
+**Changes** (melee-gx, melee-gpu, melee-render; the threaded design is in [the player](player.md#frame-time)):
+
+- Transform threads (a quarter of the processor's threads, one to four) share each batch's draws out, each fetching, decoding, transforming and building its draws into the GPU's words and triangles; the render thread only appends them. The game thread no longer fetches vertices from arrays the host holds as they are: it sends each array once, as far as draws have reached it.
+- Points and lines write four vertices a quad instead of six (a frame's vertex data 1.17 to 0.88 million words); uniforms are shared across a flush; the alpha test's question is answered once per register value; the render thread flushes every 160 draw calls so wgpu's encoding overlaps the stream.
+- The game thread keeps the registers' hashes only when digests are asked for, looks for rewritten display lists only in archives that have them, keeps a batch's state changes and vertices in one buffer each, and caches the frame's few vertex formats.
+
+**Exactness.** `GX_DIGEST=FILE` digests every frame's drawn vertices, their state, clears and copies. Before and after (main with only the digest, against this work) write identical lines for 400 ticks of each of the five benchmark replays used and the Fountain of Dreams replay, in Off, Interpolate (3 frames a tick) and Extrapolate (2 a tick), threaded and on one thread: 2,400 frames per replay. The frames and mix checks pass unchanged.
+
+**Results, provisional** (the machine fully busy with other agents' work, alternating runs): Fountain of Dreams at 1x, headless, the renderer's time a frame 9.1 to 9.2 ms before against 4.5 to 4.6 after (about 2x); with one, two, three, four and six transform threads 9.6, 6.1, 5.0, 4.3 and 4.2 ms. The player's benchmark on a quiet machine is still to be taken.
