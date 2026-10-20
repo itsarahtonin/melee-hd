@@ -1,4 +1,4 @@
-//! Every stage the roster lists (and so the launcher offers) starts from the player's settings
+//! Every stage the roster lists (offered by the launcher or not) starts from the player's settings
 //! (`Settings::vs`, as the launcher starts a match: VS mode's layout from its menus, items off)
 //! and plays a minute with scripted controllers (or until the match ends) without reaching code
 //! no port covers. A stage's port adds its roster line once its oracle match diffs whole; this

@@ -9,7 +9,7 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use melee_sim::game::roster::{self, CHARACTERS, STAGES};
+use melee_sim::game::roster::{self, CHARACTERS};
 
 use crate::jit::Timing;
 use crate::pacing::Mode;
@@ -29,6 +29,19 @@ pub struct Choice {
 impl Choice {
     pub fn player_count(&self) -> usize {
         self.players.iter().flatten().count()
+    }
+
+    /// Why the match can't start: fewer than two players, or a stage that isn't offered or
+    /// could stop with these characters (`Stage::refusal`).
+    pub fn refusal(&self) -> Option<String> {
+        if self.player_count() < 2 {
+            return Some("Pick at least two players.".into());
+        }
+        let characters: Vec<u8> = self.players.iter().flatten().copied().collect();
+        match roster::stage_by_kind(self.stage) {
+            Some(s) => s.refusal(&characters),
+            None => Some("Pick a stage.".into()),
+        }
     }
 
     /// Each port's character and costume as the command line keeps them (0xFF: none). A
@@ -102,7 +115,7 @@ impl Form {
         Form {
             choice: Choice {
                 players: [fox, fox, None, None],
-                stage: roster::stage("fd").map_or(STAGES[0].kind, |s| s.kind),
+                stage: roster::stage("fd").map_or(32, |s| s.kind),
                 stocks,
                 minutes,
             },
@@ -179,7 +192,7 @@ impl Form {
                     }
                 }
                 "stage" => {
-                    if let Some(s) = roster::stage(v) {
+                    if let Some(s) = roster::stage(v).filter(|s| s.offered()) {
                         c.stage = s.kind;
                     }
                 }
@@ -283,7 +296,7 @@ impl Form {
                                 .selected_text(name)
                                 .width(200.0)
                                 .show_ui(ui, |ui| {
-                                    for s in STAGES {
+                                    for s in roster::offered_stages() {
                                         ui.selectable_value(&mut c.stage, s.kind, s.name);
                                     }
                                 });
@@ -388,7 +401,8 @@ impl Form {
                 });
             });
             ui.add_space(16.0);
-            let ready = c.player_count() >= 2;
+            let refusal = c.refusal();
+            let ready = refusal.is_none();
             let button = ui.add_enabled(
                 ready,
                 egui::Button::new("Start").min_size(egui::vec2(120.0, 32.0)),
@@ -398,8 +412,8 @@ impl Form {
                 && !ui.ctx().any_popup_open();
             start = ready && (button.clicked() || enter);
             ui.add_space(8.0);
-            if !ready {
-                ui.label("Pick at least two players.");
+            if let Some(why) = &refusal {
+                ui.label(why);
             }
             if let Some(m) = &self.message {
                 ui.colored_label(ui.visuals().error_fg_color, m);
@@ -699,6 +713,35 @@ mod tests {
         assert!(!frame(&ctx, &mut form, enter()), "one player can't start");
     }
 
+    /// The stage list offers only stages whose audit found nothing missing, and a stage whose
+    /// gap one character reaches refuses the match with that character.
+    #[test]
+    fn only_complete_stages_start() {
+        let ctx = egui::Context::default();
+        let mut form = Form::new(4, 8, false, Aspect::GAME);
+        assert!(roster::offered_stages().all(|s| s.missing_with(&[]).is_empty()));
+        assert!(roster::offered_stages().any(|s| s.keys[0] == "fd"));
+        let ics = roster::character("ics").unwrap().kind;
+        form.choice.stage = roster::stage("ht").unwrap().kind;
+        assert!(form.choice.refusal().is_none());
+        form.choice.players[1] = Some(ics);
+        let why = form
+            .choice
+            .refusal()
+            .expect("Hyrule Temple with the Ice Climbers");
+        assert!(why.contains("Ice Climbers"), "{why}");
+        assert!(!frame(&ctx, &mut form, enter()), "refused");
+        // A stage the list doesn't offer, kept from an older settings file, isn't taken back.
+        let unoffered = roster::STAGES.iter().find(|s| !s.offered());
+        if let Some(s) = unoffered {
+            form.choice.players[1] = form.choice.players[0];
+            form.restore(&format!("stage = {}\n", s.keys[0]), &Given::default());
+            assert_eq!(form.choice.stage, roster::stage("ht").unwrap().kind);
+            form.choice.stage = s.kind;
+            assert!(form.choice.refusal().is_some(), "{}", s.name);
+        }
+    }
+
     #[test]
     fn a_repeated_character_takes_the_next_costume() {
         let fox = roster::character("fox").unwrap().kind;
@@ -721,7 +764,7 @@ mod tests {
             None,
             roster::character("fox").map(|c| c.kind),
         ];
-        form.choice.stage = STAGES.last().unwrap().kind;
+        form.choice.stage = roster::offered_stages().last().unwrap().kind;
         form.present = Present::Immediate;
         form.added_delay = 2;
         form.high_refresh = Mode::Interpolate;

@@ -22,7 +22,7 @@ How a function gets from ssbm-rs into melee-hd. Every port follows these rules, 
 - Give ports idiomatic Rust names and types, and put `#[doc(alias = "OriginalName")]` on the item that ports each original function. One item may carry several aliases (wrappers, inline copies with a symbol).
 - Where the SDK and the game compute the same thing differently, the SDK version is `sdk_*`.
 - Every alias needs a check: a leaf-check test that calls `fns::OriginalName`, or a line in `ledger/checks.txt` naming the system-level check that covers it. Functions replaced by a native subsystem go in `ledger/replaced.txt`, provably dead ones in `ledger/dead.txt`, each with its reason. `cargo run --release -p ledger -- --check` must pass.
-- A character or stage that can play a whole match gets its line in `melee_sim::game::roster` (its `CharacterKind` or `StKind`, its name and command-line names), which the player's command line, `--help` and launcher list.
+- A character or stage that can play a whole match gets its line in `melee_sim::game::roster` (its `CharacterKind` or `StKind`, its name and command-line names), which the player's command line, `--help` and launcher list. A stage is offered only once its audit finds nothing a match on it reaches unported ([the player](player.md#stages-the-player-offers)).
 
 ## State
 

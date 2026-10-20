@@ -170,6 +170,9 @@ struct Args {
     refresh: Option<f64>,
     /// The match's random seed, instead of one from the clock.
     seed: Option<u32>,
+    /// Plays a stage the launcher doesn't offer (`--unfinished-stages`, for developers): one
+    /// whose audit isn't done or found code a match can reach unported.
+    unfinished_stages: bool,
 }
 
 /// The command line's usage, with the characters and stages melee-sim has ported.
@@ -183,10 +186,11 @@ fn usage() -> String {
          frames: [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
          debug: [--flicker-scan] captures a presented frame that drops out for one frame\n\
          perf: [--perf-report FILE] [--refresh HZ] [--seed N]\n\
+         developers: [--unfinished-stages] plays a stage not offered yet, which can stop mid-match\n\
          with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match\n\
          the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
         names(roster::CHARACTERS.iter().map(|c| c.keys[0]).collect()),
-        names(roster::STAGES.iter().map(|s| s.keys[0]).collect()),
+        names(roster::offered_stages().map(|s| s.keys[0]).collect()),
     )
 }
 
@@ -227,6 +231,7 @@ fn parse_args() -> Result<Args, String> {
         perf_report: None,
         refresh: None,
         seed: None,
+        unfinished_stages: false,
     };
     // Whether the command line names a match.
     let mut chosen = false;
@@ -360,11 +365,18 @@ fn parse_args() -> Result<Args, String> {
                 )
             }
             "--seed" => a.seed = Some(value()?.parse().map_err(|_| "--seed N")?),
+            "--unfinished-stages" => a.unfinished_stages = true,
             "-h" | "--help" => return Err(String::new()),
             other => return Err(format!("unknown argument {other}")),
         }
     }
     a.launch = !chosen && a.bench.is_none();
+    if a.replay.is_none() && !a.launch && !a.unfinished_stages {
+        let characters: Vec<u8> = a.players.iter().map(|p| p.0).collect();
+        if let Some(why) = roster::stage_by_kind(a.stage).and_then(|s| s.refusal(&characters)) {
+            return Err(format!("{why} (--unfinished-stages plays it anyway)"));
+        }
+    }
     Ok(a)
 }
 
