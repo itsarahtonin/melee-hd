@@ -82,7 +82,9 @@ shown=5
 scan_content() {
     local kind=$1 st p ln col m last= n=0
     shift
-    git grep --cached --no-color -z -a -n --column -o "$@" >"$tmp/grep"
+    # Bytes, not the locale's characters: macOS's regex matches nothing on a line that isn't
+    # valid in a UTF-8 locale, so a binary's paths would go unseen.
+    LC_ALL=C git grep --cached --no-color -z -a -n --column -o "$@" >"$tmp/grep"
     st=$?
     if [ $st -gt 1 ]; then
         echo "path-guard: git grep failed ($st)" >&2

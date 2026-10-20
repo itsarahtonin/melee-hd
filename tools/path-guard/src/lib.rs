@@ -276,7 +276,10 @@ fn grep(root: &Path, kind: &[&str], patterns: &[&str]) -> Result<Vec<(Match, Str
         "--column",
         "-o",
     ])
-    .args(kind);
+    .args(kind)
+    // Bytes, not the locale's characters: macOS's regex, which git grep uses there, matches
+    // nothing on a line that isn't valid in a UTF-8 locale, so a binary's paths went unseen.
+    .env("LC_ALL", "C");
     for p in patterns {
         cmd.args(["-e", p]);
     }
