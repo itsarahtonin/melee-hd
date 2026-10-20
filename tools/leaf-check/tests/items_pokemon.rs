@@ -29,9 +29,9 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::it::kinds::{
-    chicorita, entei, fire, fushigibana, hassam, hinoarashi, kabigon, kamex, kireihana, lizardon,
-    lucky, lugia, maril, marumine, matadogas, pippi, porygon2, sonans, thunder, togepy, tosakinto,
-    unknown,
+    chicorita, entei, fire, fushigibana, hassam, hinoarashi, houou, kabigon, kamex, kireihana,
+    lizardon, lucky, lugia, maril, marumine, matadogas, pippi, porygon2, sonans, thunder, togepy,
+    tosakinto, unknown,
 };
 use melee_sim::game::it::{self, CLASS_ITEM, pokemon};
 use melee_sim::game::state::Running;
@@ -123,6 +123,7 @@ const UNITS: &[(u32, u32)] = &[
     (0x802C_9D40, 0x802C_A49C),
     (0x802C_F3E0, 0x802C_F814),
     (0x802D_1438, 0x802D_251C),
+    (0x802D_251C, 0x802D_3008),
 ];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
@@ -201,6 +202,8 @@ const EVT_UNK: &[&str] = &[
     "it_802CF450",
     "itLugia_Logic17_EvtUnk",
     "it_802D23D4",
+    "it_802D25BC",
+    "it_802D2ED0",
 ];
 
 /// Helpers that take what the check can't give: they run inside the callers that call them,
@@ -287,6 +290,14 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802D1D40", lugia::enter_air),
     ("it_802D208C", lugia::next_target),
     ("it_802D23F4", lugia::blast_fly),
+    ("it_802D25B8", houou::landed_nothing),
+    ("it_802D2668", houou::take_off),
+    ("it_802D27B0", houou::come_back),
+    ("it_802D290C", houou::sink),
+    ("it_802D2A58", houou::call_fire),
+    ("it_802D2BE0", houou::enter_air),
+    ("it_802D2D2C", houou::sacred_fire),
+    ("it_802D2EF0", houou::burn),
     ("it_80279C48", pokemon::face_nearest_opponent),
     ("it_80279E24", pokemon::pulse),
     ("it_80279FF8", pokemon::grow),
@@ -505,6 +516,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802C9E24" => kabigon::evt_unk(g, gobj, maybe(4)),
         "it_802CF450" => entei::evt_unk(g, gobj, maybe(4)),
         "itLugia_Logic17_EvtUnk" | "it_802D23D4" => lugia::evt_unk(g, gobj, maybe(4)),
+        "it_802D25BC" | "it_802D2ED0" => houou::evt_unk(g, gobj, maybe(4)),
         "it_802D1E8C" => {
             lugia::shoot(g, gobj, r(4) as i32, f(1));
         }
