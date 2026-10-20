@@ -7,7 +7,7 @@ use melee_data::disc::Disc;
 use melee_gx::{Draw, Memory, State};
 use melee_render::frame::Frames;
 use melee_render::gpu::{Frame, Gpu, Observer};
-use melee_sim::game::state::Game;
+use melee_sim::game::state::{Cosmetic, Game};
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
 use melee_slippi::Device;
 use melee_slippi::Replay;
@@ -49,8 +49,15 @@ pub struct Tick<'a> {
 }
 
 /// Plays the replay's match to its rendered frame `to`, calling `each` with each rendered
-/// frame until it returns false.
-fn drive(disc_path: &str, replay_path: &str, to: u32, mut each: impl FnMut(&Tick<'_>) -> bool) {
+/// frame until it returns false; with `cosmetic`'s toggles, as the player sets them for the
+/// frames it shows.
+fn drive(
+    disc_path: &str,
+    replay_path: &str,
+    to: u32,
+    cosmetic: Cosmetic,
+    mut each: impl FnMut(&Tick<'_>) -> bool,
+) {
     // The float mode the replay was recorded in: the console's for the benchmark matches
     // (the default), Slippi Dolphin's for a Slippi replay (`CHECK_FP=slippi`).
     let fp = match std::env::var("CHECK_FP").as_deref() {
@@ -79,6 +86,7 @@ fn drive(disc_path: &str, replay_path: &str, to: u32, mut each: impl FnMut(&Tick
         }
     };
     let mut m = Match::start(&settings, &mut load);
+    m.game.cosmetic = cosmetic;
     let mut device = Device(&replay);
     let dol = disc.dol().unwrap_or_else(|e| panic!("main.dol: {e}"));
     let mut n = 0u32;
@@ -184,7 +192,7 @@ pub fn play(
     mut each: impl FnMut(u32, Drawn) -> bool,
 ) {
     let mut drawer = Drawer::new(renderer(), None);
-    drive(disc_path, replay_path, to, |t| {
+    drive(disc_path, replay_path, to, Cosmetic::default(), |t| {
         if t.n < from {
             drawer.frame(t, drawn_for(t.n, from), None);
             return true;
@@ -247,7 +255,9 @@ impl View {
 }
 
 /// Each view's image of each of the replay's native frames `at`, each view drawn by a renderer
-/// of its own: for each frame, its number and the views' images.
+/// of its own: for each frame, its number and the views' images. With a widescreen view the
+/// fighters off the game camera's view draw, as the player draws them in widescreen
+/// (`Cosmetic::draw_offscreen_fighters`), in every view: the narrower ones clip them.
 pub fn draw_views(
     disc_path: &str,
     replay_path: &str,
@@ -265,7 +275,10 @@ pub fn draw_views(
         .collect();
     let last = at.iter().copied().max().unwrap_or(0);
     let mut out = Vec::new();
-    drive(disc_path, replay_path, last, |t| {
+    let cosmetic = Cosmetic {
+        draw_offscreen_fighters: views.iter().any(|v| v.widescreen.is_some()),
+    };
+    drive(disc_path, replay_path, last, cosmetic, |t| {
         let draw = at.iter().any(|&a| drawn_for(t.n, a));
         let images: Vec<Option<Frame>> = drawers
             .iter_mut()

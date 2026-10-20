@@ -59,6 +59,8 @@
 
 mod capture;
 mod console;
+#[cfg(test)]
+mod cosmetic_tests;
 mod flicker;
 mod jit;
 mod latency;
@@ -418,7 +420,16 @@ impl Session {
             disc: a.disc_speed,
             ..settings
         };
-        Session::begin(&disc, &settings, replay, a.bench.is_none() && !a.mute)
+        let mut s = Session::begin(&disc, &settings, replay, a.bench.is_none() && !a.mute)?;
+        s.set_aspect(a.aspect);
+        Ok(s)
+    }
+
+    /// Draws for frames shown at `aspect`: in widescreen, whose added sides show what the
+    /// game camera doesn't reach, every fighter it marks off screen draws, as Slippi's
+    /// widescreen code draws them (a cosmetic toggle, `Cosmetic::draw_offscreen_fighters`).
+    fn set_aspect(&mut self, aspect: present::Aspect) {
+        self.m.game.cosmetic.draw_offscreen_fighters = aspect.widescreen().is_some();
     }
 
     /// Starts the match `settings` set from `disc`, with its sound mixed (and played when
@@ -1277,6 +1288,9 @@ impl App {
     fn set_aspect(&mut self, aspect: present::Aspect) {
         self.aspect = aspect;
         self.frames.hsd.widescreen = aspect.widescreen();
+        if let Some(s) = &mut self.session {
+            s.set_aspect(aspect);
+        }
         present::set_aspect(aspect.shown);
     }
 
@@ -1295,6 +1309,7 @@ impl App {
         settings::write(settings::LAST_MATCH, &l.form.save());
         let c = &l.form.choice;
         let mut args = self.args.clone();
+        args.aspect = aspect;
         args.players = c.ports();
         args.stage = c.stage;
         args.stocks = c.stocks;

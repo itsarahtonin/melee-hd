@@ -63,6 +63,7 @@ fn run(args: Vec<String>) -> ExitCode {
             eprintln!(
                 "       melee-oracle sync-test REPLAY.slp [--rollback N] [--ticks N] [--fp hardware|slippi]"
             );
+            eprintln!("                              [--draw-offscreen-fighters]");
             eprintln!("       melee-oracle trace-info TRACE");
             eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");
             eprintln!("       melee-oracle trace-heap TRACE");

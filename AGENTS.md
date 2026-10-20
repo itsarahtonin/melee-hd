@@ -4,7 +4,7 @@ Read [README.md](README.md), [architecture](docs/architecture.md), [the oracle](
 
 ## Scope and rules
 
-melee-hd rewrites Melee in idiomatic Rust with a simulation that stays bit-exact with ssbm-rs at its `melee-hd-base` tag. Gameplay changes exist only as explicit rulesets or toggles.
+melee-hd rewrites Melee in idiomatic Rust with a simulation that stays bit-exact with ssbm-rs at its `melee-hd-base` tag. Gameplay changes exist only as explicit rulesets or gameplay toggles.
 
 - Never commit disc images, extracted assets, captures, replays, or cards. Keep them under ignored `local/` or outside the checkout. The one exception is the benchmark matches' replays in `data/bench`, inputs the CPU AI played in ssbm-rs.
 - Never commit personal paths or names (home folders, OneDrive, agents' scratch folders), build output (`dist/`, `target/`) or files over 5 MiB. The [git hooks](#git-hooks) refuse them.
@@ -25,7 +25,8 @@ Port from the decompilation and from ssbm-rs; ssbm-rs's ports at the tag decide 
 
 ## Simulation rules
 
-- Nothing outside the state and the controllers reaches a tick: no host settings, clocks, disc timing, audio state, or rendering results. Platform events the game polls (a disc read completing, a camera snapshot) are explicit inputs.
+- Nothing implicit from the host reaches a tick: not the frame rate, high refresh mode, tick timing, window size, GPU, clocks, disc timing, audio state or rendering results. The state depends only on its start, the controllers' inputs and explicit toggles. Platform events the game polls (a disc read completing, a camera snapshot) are explicit inputs.
+- Rulesets and gameplay toggles (Vanilla, Slippi's gameplay codes: `Rules`) decide gameplay. Cosmetic toggles (`Cosmetic`, as Slippi's optional codes are: widescreen's fighters in the added sides) may change state only the display pass reads, never gameplay, and a test proves it for each (`crates/melee-player/src/cosmetic_tests.rs`).
 - Keep the original's operation order, and its single and double precision. Use `gekko-fp` where the original fused a multiply-add, used an estimate or paired singles, and the game's own math routines instead of platform math.
 - RNG draws happen in the same order as the original, every tick.
 - When porting reveals a bug in the original game, keep it and add an entry to [docs/melee-bugs.md](docs/melee-bugs.md).

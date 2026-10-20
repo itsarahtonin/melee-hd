@@ -30,7 +30,7 @@ How a function gets from ssbm-rs into melee-hd. Every port follows these rules, 
 - Objects the original allocates from an `HSD_ObjAlloc` pool live in a `hsd::pool::Pool`: freed slots are reused last in, first out, as the original reuses addresses, so identity comparisons behave the same. A handle is the slot index.
 - Function pointers become `Copy` tokens (enums) that the game dispatches on (see `hsd::gobj::Kinds`).
 - Game data from the disc (`melee_data::archive::Archive`) is immutable and shared, not part of the state. A pointer into it is an offset. If the original writes into loaded data during play, that data moves into the state.
-- Nothing outside the state and the controllers reaches a tick: no host settings, clocks, disc timing, audio state or rendering results. Platform events the game polls are explicit inputs.
+- Nothing implicit from the host reaches a tick: not the frame rate, high refresh mode, tick timing, window size, GPU, clocks, disc timing, audio state or rendering results. The state depends only on its start, the controllers' inputs and explicit toggles; a cosmetic toggle may change only state the display pass reads ([architecture](architecture.md#simulation-and-presentation)). Platform events the game polls are explicit inputs.
 
 ## Checks
 

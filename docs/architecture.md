@@ -9,8 +9,11 @@ melee-hd separates the game's simulation from everything that presents it. The s
 | Simulation: game state each tick, RNG, physics, action states | Bit-exact with ssbm-rs, checked by [the oracle](oracle.md) |
 | Presentation: rendering, audio mixing, HUD drawing, the rendered camera | Free: modern pipelines, any aspect ratio, upscaling |
 | Gameplay changes: UCF, Slippi's codes | Rulesets, recorded in replays |
+| Cosmetic toggles: widescreen's fighters in the added sides | State only the display pass reads may change, gameplay never: tested |
 
 `melee-sim` steps the game: roughly `step(&mut State, Inputs) -> Events`. Sounds, rumble and anything else that leaves the simulation are events it returns, never calls it makes. Its state is plain data in arenas with indexed handles, so a rollback snapshot is a clone.
+
+Nothing implicit from the host reaches a tick: not the frame rate, the high refresh mode, tick timing, the window's size, the GPU, disc timing or audio. The state depends only on the state the match starts from, the controllers' inputs and explicit toggles, which are state too, so a snapshot carries them and a rollback replays with them. Rulesets and gameplay toggles (Vanilla, Slippi's gameplay codes: `Rules`) decide gameplay. Cosmetic toggles (`Cosmetic`), as Slippi's optional codes stand beside its gameplay codes, change what the display pass draws; drawing writes state (below), so they may change state that only the pass reads, but never gameplay. Each has a test that plays matches with it off and on and finds every tick's output and state the same outside a documented list of display-only fields (`crates/melee-player/src/cosmetic_tests.rs`). The one today draws the fighters the game camera marks off screen, for widescreen's added sides ([player](player.md#resolution-aspect-ratio-and-pipelines)).
 
 In the original, rendering feeds some game state, and the simulation computes those values itself instead:
 
@@ -28,7 +31,7 @@ Which voices are free depends on more than the driver: an effect plays on one or
 
 A tick's fighter animation loads out of ARAM take time on it too: an audio frame that comes due during one runs between its 4 KB chunks or as its last one ends, where ssbm-rs's interrupt handlers return ([the engine notes](engine.md#audio), "When an event runs").
 
-The original's display traversal (`HSD_GObjRender` over the GX links, down through joints, display objects and shapes) changes game state as it draws. A joint's particle list spawns its particles the first time it is displayed, the particle system draws from the game's RNG, and setup computes joint and envelope matrices. So the display pass is simulation. melee-sim runs it where the original does, after a frame's engine ticks, and where the original issues GX commands it appends draw commands to the frame's output. The presentation layer turns those commands into GPU work, at any resolution or aspect ratio, but never decides what the pass runs. [The player](player.md) describes that layer.
+The original's display traversal (`HSD_GObjRender` over the GX links, down through joints, display objects and shapes) changes game state as it draws. A joint's particle list spawns its particles the first time it is displayed, the particle system draws from the game's RNG, and setup computes joint and envelope matrices. So the display pass is simulation. melee-sim runs it where the original does, after a frame's engine ticks, and where the original issues GX commands it appends draw commands to the frame's output. The presentation layer turns those commands into GPU work, at any resolution or aspect ratio, but never decides what the pass runs; only an explicit cosmetic toggle the frontend sets does (above). [The player](player.md) describes that layer.
 
 ## Frame pacing and high refresh rates
 

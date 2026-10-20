@@ -98,6 +98,19 @@ pub struct Rules {
     pub player: super::player_codes::PlayerCodes,
 }
 
+/// Cosmetic toggles (`docs/architecture.md`, simulation and presentation), as Slippi's
+/// optional codes are: each changes what the display pass draws, and with it state only the
+/// pass reads, never gameplay (`crates/melee-player/src/cosmetic_tests.rs` checks it). The frontend sets them;
+/// they're state, so a rollback restores them with the rest.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct Cosmetic {
+    /// Fighters the game camera marks off screen draw anyway, as Slippi's widescreen code
+    /// draws them (`80086B24`, "Draw High Poly Models": `ftLib_UpdateScreenVisibility`'s branch
+    /// that returns "don't draw" made a nop), so a widescreen picture's added sides show them.
+    /// The mark (`x221F_b0`, `x2188`), its bubble damage and the magnifier stay the game's.
+    pub draw_offscreen_fighters: bool,
+}
+
 /// What a GObj's HSD object is (`hsd_obj`, by its `obj_kind`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Obj {
@@ -205,6 +218,7 @@ pub struct Game {
     /// The scenes' button maps (`controller_map`; its fifth entry merges every port).
     pub controller_map: ControllerMap,
     pub rules: Rules,
+    pub cosmetic: Cosmetic,
     /// Fighters' parts tables (`Fighter::parts`), one entry per bone of the character.
     pub fighter_parts: Pool<Vec<FighterBone>, { pool_kind(Kind::FighterParts) }>,
     /// Fighters' copies of their character's attributes (`Fighter::dat_attrs`): the

@@ -1,5 +1,5 @@
-//! `melee-oracle sync-test REPLAY.slp [--rollback N] [--fp hardware|slippi] [--ticks N]`:
-//! plays a replay and, after every tick, rolls back and plays again, as rollback netplay does,
+//! `melee-oracle sync-test REPLAY.slp [--rollback N] [--fp hardware|slippi] [--ticks N]
+//! [--draw-offscreen-fighters]`: plays a replay and, after every tick, rolls back and plays again, as rollback netplay does,
 //! failing on the first difference (docs/oracle.md, "Sync test").
 //!
 //! The match plays straight from the replay's settings, as `melee-bench native` plays it (its
@@ -10,7 +10,8 @@
 //! equal the straight run's bit for bit (`melee_sim::state_eq`, every field of `Game`), and
 //! each replayed tick's output (sounds, rumble, draws) the straight run's for that tick. With
 //! N = 1 (the default) every tick is played twice from the same state; Slippi's rollback
-//! window is 7 or 8 ticks.
+//! window is 7 or 8 ticks. `--draw-offscreen-fighters` turns on that cosmetic toggle, as the
+//! player does in widescreen (`Cosmetic`, which the snapshots carry with the rest).
 //!
 //! Anything the simulation reads that the snapshot leaves out shows up as a difference: the
 //! second run reads what the first left there. The archives (`Match::data`) are loaded data
@@ -81,6 +82,7 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
     let mut perturb = None;
     let mut fp_mode = FpMode::Slippi;
     let mut disc_speed = DiscSpeed::Fast;
+    let mut draw_offscreen_fighters = false;
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
@@ -113,12 +115,13 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
                     .and_then(|s| DiscSpeed::parse(s))
                     .expect("--disc-speed fast|drive")
             }
+            "--draw-offscreen-fighters" => draw_offscreen_fighters = true,
             _ => pos.push(a),
         }
     }
     let [replay_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle sync-test REPLAY.slp [--rollback N] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|drive]"
+            "usage: melee-oracle sync-test REPLAY.slp [--rollback N] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|drive] [--draw-offscreen-fighters]"
         );
         return ExitCode::from(2);
     };
@@ -151,6 +154,7 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    m.game.cosmetic.draw_offscreen_fighters = draw_offscreen_fighters;
     let mut device = Device(&replay);
     // The states before the last `rollback` ticks (a ring, slot `tick % len`), and those ticks'
     // outputs, as the straight run made them.
