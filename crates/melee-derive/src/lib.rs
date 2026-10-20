@@ -5,7 +5,8 @@
 //! variant, and replaces the value otherwise.
 //!
 //! `#[derive(StateEq)]`: `melee_sim::state_eq::StateEq`, a bitwise comparison that names the
-//! first field path where two values differ, for the sync test. It compares every field
+//! first field path where two values differ, for the sync test, or every one
+//! (`state_diffs`). It compares every field
 //! except those marked `#[clone_from(keep)]` (spare storage, not state) or
 //! `#[state_eq(skip)]`.
 //!
@@ -185,8 +186,16 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
             bounds.push(ty.clone());
         }
     };
-    let body = match &data {
+    let nest = quote!(::melee_sim::state_eq::nest);
+    // Each field's diffs, nested in it: one call a field, since a function with many fields'
+    // loops inline (a fighter's) overflows LLVM's stack.
+    let collect = |o: Tokens, t: Tokens, label: &str| {
+        let segment = format!(".{label}");
+        quote!(::melee_sim::state_eq::diffs_in(#o, #t, out, #segment);)
+    };
+    let (body, all) = match &data {
         Data::Struct(s) => {
+            let mut all = Vec::new();
             let checks = s.fields.iter().enumerate().filter(|(_, f)| compared(f)).map(|(i, f)| {
                 bound(&f.ty);
                 let (access, label) = match &f.ident {
@@ -196,20 +205,26 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
                         (quote!(#i), i.index.to_string())
                     }
                 };
+                all.push(collect(quote!(&self.#access), quote!(&other.#access), &label));
                 quote! {
                     if let ::core::option::Option::Some(d) = #trait_path::state_diff(&self.#access, &other.#access) {
                         return ::core::option::Option::Some(d.field(#label));
                     }
                 }
-            });
-            quote! { #(#checks)* ::core::option::Option::None }
+            }).collect::<Vec<_>>();
+            (
+                quote! { #(#checks)* ::core::option::Option::None },
+                quote! { #(#all)* },
+            )
         }
         Data::Enum(e) => {
             let mut arms = Vec::new();
+            let mut all_arms = Vec::new();
             let mut names = Vec::new();
             for v in &e.variants {
                 let vname = &v.ident;
                 let label = vname.to_string();
+                let segment = format!("::{label}");
                 let path = quote!(#name::#vname);
                 match &v.fields {
                     Fields::Named(f) => {
@@ -219,19 +234,28 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
                             all.iter().map(|n| format_ident!("ours_{}", n)).collect();
                         let theirs: Vec<_> =
                             all.iter().map(|n| format_ident!("theirs_{}", n)).collect();
+                        let mut collects = Vec::new();
                         let checks = f.named.iter().zip(ours.iter().zip(&theirs)).filter(|(f, _)| compared(f)).map(|(f, (o, t))| {
                             bound(&f.ty);
                             let fl = f.ident.as_ref().unwrap().to_string();
+                            collects.push(collect(quote!(#o), quote!(#t), &fl));
                             quote! {
                                 if let ::core::option::Option::Some(d) = #trait_path::state_diff(#o, #t) {
                                     return ::core::option::Option::Some(d.field(#fl).variant(#label));
                                 }
                             }
-                        });
+                        }).collect::<Vec<_>>();
                         arms.push(quote! {
                             (#path { #(#all: #ours),* }, #path { #(#all: #theirs),* }) => {
                                 #(#checks)*
                                 ::core::option::Option::None
+                            }
+                        });
+                        all_arms.push(quote! {
+                            (#path { #(#all: #ours),* }, #path { #(#all: #theirs),* }) => {
+                                let start = out.len();
+                                #(#collects)*
+                                #nest(out, start, #segment);
                             }
                         });
                         names.push(quote!(#path { .. } => #label));
@@ -243,48 +267,72 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
                         let theirs: Vec<_> = (0..f.unnamed.len())
                             .map(|i| format_ident!("theirs_{}", i))
                             .collect();
+                        let mut collects = Vec::new();
                         let checks = f.unnamed.iter().enumerate().zip(ours.iter().zip(&theirs)).filter(|((_, f), _)| compared(f)).map(|((i, f), (o, t))| {
                             bound(&f.ty);
                             let fl = i.to_string();
+                            collects.push(collect(quote!(#o), quote!(#t), &fl));
                             quote! {
                                 if let ::core::option::Option::Some(d) = #trait_path::state_diff(#o, #t) {
                                     return ::core::option::Option::Some(d.field(#fl).variant(#label));
                                 }
                             }
-                        });
+                        }).collect::<Vec<_>>();
                         arms.push(quote! {
                             (#path ( #(#ours),* ), #path ( #(#theirs),* )) => {
                                 #(#checks)*
                                 ::core::option::Option::None
                             }
                         });
+                        all_arms.push(quote! {
+                            (#path ( #(#ours),* ), #path ( #(#theirs),* )) => {
+                                let start = out.len();
+                                #(#collects)*
+                                #nest(out, start, #segment);
+                            }
+                        });
                         names.push(quote!(#path ( .. ) => #label));
                     }
                     Fields::Unit => {
                         arms.push(quote!((#path, #path) => ::core::option::Option::None,));
+                        all_arms.push(quote!((#path, #path) => {}));
                         names.push(quote!(#path => #label));
                     }
                 }
             }
-            let mismatch = if e.variants.len() > 1 {
-                quote! {
-                    (ours, theirs) => {
-                        let variant = |v: &Self| -> &'static str { match v { #(#names,)* } };
-                        ::core::option::Option::Some(#diff::new(::std::format!(
-                            "variant {} != {}", variant(ours), variant(theirs)
-                        )))
-                    }
-                }
+            let (mismatch, all_mismatch) = if e.variants.len() > 1 {
+                (
+                    quote! {
+                        (ours, theirs) => {
+                            let variant = |v: &Self| -> &'static str { match v { #(#names,)* } };
+                            ::core::option::Option::Some(#diff::new(::std::format!(
+                                "variant {} != {}", variant(ours), variant(theirs)
+                            )))
+                        }
+                    },
+                    quote! {
+                        _ => out.extend(#trait_path::state_diff(self, other)),
+                    },
+                )
             } else {
-                quote!()
+                (quote!(), quote!())
             };
-            quote! {
-                #[allow(unreachable_patterns, unused_variables)]
-                match (self, other) {
-                    #(#arms)*
-                    #mismatch
-                }
-            }
+            (
+                quote! {
+                    #[allow(unreachable_patterns, unused_variables)]
+                    match (self, other) {
+                        #(#arms)*
+                        #mismatch
+                    }
+                },
+                quote! {
+                    #[allow(unreachable_patterns, unused_variables)]
+                    match (self, other) {
+                        #(#all_arms)*
+                        #all_mismatch
+                    }
+                },
+            )
         }
         Data::Union(_) => {
             return syn::Error::new_spanned(name, "StateEq doesn't derive for unions")
@@ -302,6 +350,10 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
             #[inline]
             fn state_diff(&self, other: &Self) -> ::core::option::Option<#diff> {
                 #body
+            }
+            #[allow(unused_variables)]
+            fn state_diffs(&self, other: &Self, out: &mut ::std::vec::Vec<#diff>) {
+                #all
             }
         }
     }

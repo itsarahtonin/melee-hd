@@ -70,6 +70,32 @@ impl Display for Diff {
 pub trait StateEq {
     /// The first place `self` and `other` differ, or none when they are the same bit for bit.
     fn state_diff(&self, other: &Self) -> Option<Diff>;
+
+    /// Every place `self` and `other` differ, appended to `out` in [`StateEq::state_diff`]'s
+    /// order: what a change touches, where `state_diff` stops at the first (the cosmetic
+    /// toggles' test, docs/architecture.md). A leaf is one place; a sequence or map whose
+    /// lengths differ reports its elements in common, then the length.
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        out.extend(self.state_diff(other));
+    }
+}
+
+/// Nests the diffs a field, element or variant reported (`out` from `from` on, paths from it)
+/// in the value around it: `segment` is `.field`, `[index]` or `::Variant`.
+#[inline(never)]
+pub fn nest(out: &mut [Diff], from: usize, segment: &str) {
+    for d in &mut out[from..] {
+        d.segments.push(segment.to_owned());
+    }
+}
+
+/// [`StateEq::state_diffs`] of a field, nested in it (`segment`, as [`nest`] takes it): out of
+/// line, for `#[derive(StateEq)]`, whose functions would be too big for LLVM inline.
+#[inline(never)]
+pub fn diffs_in<T: StateEq + ?Sized>(a: &T, b: &T, out: &mut Vec<Diff>, segment: &str) {
+    let from = out.len();
+    a.state_diffs(b, out);
+    nest(out, from, segment);
 }
 
 macro_rules! by_value {
@@ -144,12 +170,20 @@ impl<T: StateEq + ?Sized> StateEq for &T {
     fn state_diff(&self, other: &Self) -> Option<Diff> {
         (**self).state_diff(*other)
     }
+
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        (**self).state_diffs(*other, out);
+    }
 }
 
 impl<T: StateEq + ?Sized> StateEq for Box<T> {
     #[inline]
     fn state_diff(&self, other: &Self) -> Option<Diff> {
         (**self).state_diff(&**other)
+    }
+
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        (**self).state_diffs(&**other, out);
     }
 }
 
@@ -166,6 +200,17 @@ impl<T: StateEq> StateEq for Option<T> {
             ))),
         }
     }
+
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        match (self, other) {
+            (Some(a), Some(b)) => {
+                let n = out.len();
+                a.state_diffs(b, out);
+                nest(out, n, "::Some");
+            }
+            _ => out.extend(self.state_diff(other)),
+        }
+    }
 }
 
 impl<T: StateEq, E: StateEq> StateEq for Result<T, E> {
@@ -178,6 +223,21 @@ impl<T: StateEq, E: StateEq> StateEq for Result<T, E> {
             } else {
                 "Err != Ok".into()
             })),
+        }
+    }
+
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        let n = out.len();
+        match (self, other) {
+            (Ok(a), Ok(b)) => {
+                a.state_diffs(b, out);
+                nest(out, n, "::Ok");
+            }
+            (Err(a), Err(b)) => {
+                a.state_diffs(b, out);
+                nest(out, n, "::Err");
+            }
+            _ => out.extend(self.state_diff(other)),
         }
     }
 }
@@ -196,10 +256,33 @@ fn sequence<'a, T: StateEq + 'a>(
     (a_len != b_len).then(|| Diff::new(format!("length {a_len} != {b_len}")))
 }
 
+/// [`sequence`], every difference.
+fn sequence_all<'a, T: StateEq + 'a>(
+    a_len: usize,
+    b_len: usize,
+    pairs: impl Iterator<Item = (&'a T, &'a T)>,
+    out: &mut Vec<Diff>,
+) {
+    for (i, (a, b)) in pairs.enumerate() {
+        let n = out.len();
+        a.state_diffs(b, out);
+        if out.len() > n {
+            nest(out, n, &format!("[{i}]"));
+        }
+    }
+    if a_len != b_len {
+        out.push(Diff::new(format!("length {a_len} != {b_len}")));
+    }
+}
+
 impl<T: StateEq> StateEq for [T] {
     #[inline]
     fn state_diff(&self, other: &Self) -> Option<Diff> {
         sequence(self.len(), other.len(), self.iter().zip(other))
+    }
+
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        sequence_all(self.len(), other.len(), self.iter().zip(other), out);
     }
 }
 
@@ -208,6 +291,10 @@ impl<T: StateEq, const N: usize> StateEq for [T; N] {
     fn state_diff(&self, other: &Self) -> Option<Diff> {
         self[..].state_diff(&other[..])
     }
+
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        self[..].state_diffs(&other[..], out);
+    }
 }
 
 impl<T: StateEq> StateEq for Vec<T> {
@@ -215,11 +302,19 @@ impl<T: StateEq> StateEq for Vec<T> {
     fn state_diff(&self, other: &Self) -> Option<Diff> {
         self[..].state_diff(&other[..])
     }
+
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        self[..].state_diffs(&other[..], out);
+    }
 }
 
 impl<T: StateEq> StateEq for VecDeque<T> {
     fn state_diff(&self, other: &Self) -> Option<Diff> {
         sequence(self.len(), other.len(), self.iter().zip(other))
+    }
+
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        sequence_all(self.len(), other.len(), self.iter().zip(other), out);
     }
 }
 
@@ -228,12 +323,53 @@ impl<K: Ord + Debug, V: StateEq> StateEq for BTreeMap<K, V> {
         map(self.len(), other.len(), self.iter(), |k| other.get(k))
             .or_else(|| map(other.len(), self.len(), other.iter(), |k| self.get(k)))
     }
+
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        map_all(self.iter(), |k| other.get(k), out);
+        map_missing(other.keys(), |k| self.contains_key(k), out);
+    }
 }
 
 impl<K: Eq + Hash + Debug, V: StateEq, S: BuildHasher> StateEq for HashMap<K, V, S> {
     fn state_diff(&self, other: &Self) -> Option<Diff> {
         map(self.len(), other.len(), self.iter(), |k| other.get(k))
             .or_else(|| map(other.len(), self.len(), other.iter(), |k| self.get(k)))
+    }
+
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        map_all(self.iter(), |k| other.get(k), out);
+        map_missing(other.keys(), |k| self.contains_key(k), out);
+    }
+}
+
+/// [`map`], every difference: each of one map's entries against the other's.
+fn map_all<'a, K: Debug + 'a, V: StateEq + 'a>(
+    entries: impl Iterator<Item = (&'a K, &'a V)>,
+    get: impl Fn(&K) -> Option<&'a V>,
+    out: &mut Vec<Diff>,
+) {
+    for (k, a) in entries {
+        match get(k) {
+            Some(b) => {
+                let n = out.len();
+                a.state_diffs(b, out);
+                if out.len() > n {
+                    nest(out, n, &format!("[{k:?}]"));
+                }
+            }
+            None => out.push(Diff::new(format!("key {k:?} on one side only"))),
+        }
+    }
+}
+
+/// The other map's keys that one lacks.
+fn map_missing<'a, K: Debug + 'a>(
+    keys: impl Iterator<Item = &'a K>,
+    has: impl Fn(&K) -> bool,
+    out: &mut Vec<Diff>,
+) {
+    for k in keys.filter(|k| !has(k)) {
+        out.push(Diff::new(format!("key {k:?} on one side only")));
     }
 }
 
@@ -288,6 +424,14 @@ macro_rules! tuple {
                     }
                 )*
                 None
+            }
+
+            fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+                $(
+                    let n = out.len();
+                    self.$n.state_diffs(&other.$n, out);
+                    nest(out, n, concat!(".", stringify!($n)));
+                )*
             }
         }
     };
@@ -380,6 +524,46 @@ mod tests {
         assert_eq!(m1.state_diff(&m2), None);
         let m3: HashMap<u32, f32> = [(2, 2.0), (1, -1.0)].into();
         assert_eq!(m1.state_diff(&m3).unwrap().path(), "[1]");
+    }
+
+    /// `state_diffs` finds every difference, in `state_diff`'s order and with its paths.
+    #[test]
+    fn every_difference() {
+        let a = outer(1.0, vec![1, 2, 3], vec![]);
+        let b = Outer {
+            t: (2, None),
+            ..outer(2.0, vec![1, 5, 3, 4], vec![9])
+        };
+        let mut out = Vec::new();
+        a.state_diffs(&b, &mut out);
+        let paths: Vec<String> = out.iter().map(Diff::path).collect();
+        assert_eq!(
+            paths,
+            [
+                ".e::B.inner.x",
+                ".e::B.inner.v[1]",
+                ".e::B.inner.v",
+                ".t.0",
+                ".t.1"
+            ]
+        );
+        assert_eq!(Some(&out[0]), a.state_diff(&b).as_ref());
+        out.clear();
+        a.state_diffs(&outer(1.0, vec![1, 2, 3], vec![7]), &mut out);
+        assert!(out.is_empty());
+        let m1: HashMap<u32, f32> = [(1, 1.0), (2, 2.0), (3, 3.0)].into();
+        let m2: HashMap<u32, f32> = [(1, -1.0), (2, 2.0), (4, 4.0)].into();
+        m1.state_diffs(&m2, &mut out);
+        let mut paths: Vec<String> = out.iter().map(|d| d.to_string()).collect();
+        paths.sort();
+        assert_eq!(
+            paths,
+            [
+                ": key 3 on one side only",
+                ": key 4 on one side only",
+                "[1]: 1.0 (0x3f800000) != -1.0 (0xbf800000)"
+            ]
+        );
     }
 
     #[derive(melee_derive::CloneFrom, melee_derive::StateEq)]
