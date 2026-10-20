@@ -186,6 +186,35 @@ pub fn stage_item(
     )
 }
 
+/// A hurtbox item at a point, `grMaterial_801C8D44` (`it_802E6AEC` with no joint): its first
+/// number, its state, its object, the point, whether it falls, and the stage's callbacks.
+#[doc(alias = "grMaterial_801C8D44")]
+#[allow(clippy::too_many_arguments)]
+pub fn stage_item_at(
+    r: &mut super::super::state::Running,
+    x0: i32,
+    state: i32,
+    g: super::super::handles::GroundId,
+    pos: crate::vec::Vec3,
+    fall: bool,
+    dealt: Option<super::super::handles::CodeRef>,
+    received: Option<super::super::handles::CodeRef>,
+    touched: Option<super::super::handles::CodeRef>,
+) -> Option<GObjId> {
+    super::super::it::kinds::yaku::spawn(
+        r,
+        Some(g),
+        x0,
+        state,
+        None,
+        Some(pos),
+        fall,
+        dealt,
+        received,
+        touched,
+    )
+}
+
 /// Sets a stage item's hurtbox, `grMaterial_801C8DE0`: its two ends' offsets and its radius.
 #[doc(alias = "grMaterial_801C8DE0")]
 pub fn set_item_hurtbox(

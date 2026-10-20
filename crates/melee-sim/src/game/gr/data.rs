@@ -7,6 +7,7 @@ use super::{
     GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS,
     GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
     GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER,
+    GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -676,6 +677,56 @@ pub const GREENS: StageData = StageData {
     joints: &[],
 };
 
+/// `grZe_callbacks`. Map 6 is the stage with the organic platform, map 7 the island, map 8
+/// the lava, map 1 the background, map 4 the creature, map 5 a splash; maps 0, 2 (the bubbles'
+/// pops' models), 3 (the bubbles' objects) and 9 to 11 have no functions.
+pub const ZEBES_CALLBACKS: [StageCallbacks; 12] = [
+    cb(0, 0, 0, 0, 0),
+    cb(0x801D_9F30, 0x801D_9F7C, 0x801D_9F84, 0x801D_A0C0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0x801D_9508, 0x801D_95B0, 0x801D_95B8, 0x801D_9754, 0),
+    cb(0x801D_93DC, 0x801D_9408, 0x801D_9410, 0x801D_94EC, 0),
+    cb(
+        0x801D_8644,
+        0x801D_8814,
+        0x801D_881C,
+        0x801D_90FC,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x801D_9100, 0x801D_9254, 0x801D_925C, 0x801D_93D8, 0),
+    cb(0x801D_9798, 0x801D_99D8, 0x801D_99E0, 0x801D_9F2C, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+];
+
+/// `grZe_803E1A10`: the stage's own collision joints: 1, 4 and 3 on the stage's joints 21, 14
+/// and 1, 2 and 5 on the island's joints 6 and 1.
+pub const ZEBES_JOINTS: [GrJoint; 5] = [
+    GrJoint { x: 1, y: 6, z: 21 },
+    GrJoint { x: 4, y: 6, z: 14 },
+    GrJoint { x: 3, y: 6, z: 1 },
+    GrJoint { x: 2, y: 7, z: 6 },
+    GrJoint { x: 5, y: 7, z: 1 },
+];
+
+/// `grZe_StageData`.
+pub const ZEBES: StageData = StageData {
+    grkind: GR_KIND_ZEBES,
+    callbacks: &ZEBES_CALLBACKS,
+    file: Some("/GrZe.dat"),
+    on_init: 0x801D_84A4,
+    on_demo_init: 0x801D_84A0,
+    on_load: 0x801D_8528,
+    on_start: 0x801D_852C,
+    callback4: 0x801D_8550,
+    on_touch_line: 0x801D_CCB8,
+    on_check_shadow_render: 0x801D_CCC0,
+    flags2: 1,
+    joints: &ZEBES_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -695,6 +746,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_GARDEN => &GARDEN,
         GR_KIND_KONGO => &KONGO,
         GR_KIND_GREENS => &GREENS,
+        GR_KIND_ZEBES => &ZEBES,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

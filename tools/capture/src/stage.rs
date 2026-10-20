@@ -57,6 +57,16 @@ pub const GRGREENS_YAKUMONO: u32 = 0x804D_6AA8;
 pub const GRGREENS_DEMO: u32 = 0x804D_6AAC;
 pub const GRGREENS_WAITING: u32 = 0x804D_6AAD;
 pub const GRGREENS_LAYOUT: u32 = 0x8049_F9E0;
+/// grzebes.c's (`ssbm_types::tu::melee__gr__grzebes::yakumono_param`), its pop wait and
+/// splash count (`grZe_804D6994`, `grZe_804D6998`), and its bounds, anchors and bubbles
+/// (`grZe_8049F140`, `grZe_8049F158`, `grZe_8049F170`).
+pub const GRZEBES_YAKUMONO: u32 = 0x804D_6990;
+pub const GRZEBES_POP_WAIT: u32 = 0x804D_6994;
+pub const GRZEBES_SPLASHES: u32 = 0x804D_6998;
+pub const GRZEBES_BOUNDS: u32 = 0x8049_F140;
+pub const GRZEBES_BUBBLES: u32 = 0x8049_F170;
+/// `stage_info.map_gobjs`.
+const MAP_GOBJS: u32 = 0x8049_E6C8 + 0x180;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -323,6 +333,9 @@ impl Importer<'_> {
         for i in 0..0x20u32 {
             self.game.gr.greens.layout[i as usize] = self.u8_at(GRGREENS_LAYOUT + i);
         }
+        let yaku = cap.u32(GRZEBES_YAKUMONO);
+        self.game.gr.zebes_yakumono = self.data_or_unhandled(yaku);
+        self.import_zebes();
         for i in 0..15u32 {
             let at = GRKONGO_PLANKS + 0x18 * i;
             let j = cap.u32(at + 4);
@@ -945,6 +958,11 @@ impl Comparer<'_> {
                 GRGREENS_YAKUMONO,
                 game.gr.greens_yakumono,
             ),
+            (
+                "grZebes yakumono_param",
+                GRZEBES_YAKUMONO,
+                game.gr.zebes_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -954,6 +972,7 @@ impl Comparer<'_> {
                 (yaku != 0).then(|| self.data.get(yaku)).flatten(),
             );
         }
+        self.compare_zebes();
         let greens = &game.gr.greens;
         self.check(
             "grGr_804D6AAC",
@@ -1524,4 +1543,204 @@ fn winds(word: impl Fn(u32) -> u32) -> melee_sim::lb::wind::Winds {
     w.free = index(word(sym("lb_804D63AC")));
     w.active = index(word(sym("lb_804D63B0")));
     w
+}
+
+fn vec3_at(mem: &dyn Fn(u32) -> u32, a: u32) -> Vec3 {
+    Vec3::new(
+        f32::from_bits(mem(a)),
+        f32::from_bits(mem(a + 4)),
+        f32::from_bits(mem(a + 8)),
+    )
+}
+
+/// The spawn configurations' addresses the stage objects' variables hold: Brinstar's stage's
+/// (map 6, `xFC`) and island's (map 7, `xEC`).
+fn config_addrs(grkind: i32, u32_at: &dyn Fn(u32) -> u32) -> Vec<u32> {
+    if grkind != melee_sim::game::gr::GR_KIND_ZEBES {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    for (map, off) in [(6u32, 0x38u32), (7, 0x28)] {
+        let g = u32_at(MAP_GOBJS + 4 * map);
+        if g != 0 {
+            let a = u32_at(u32_at(g + 0x2C) + 0xC4 + off);
+            if a != 0 {
+                out.push(a);
+            }
+        }
+    }
+    out
+}
+
+impl Importer<'_> {
+    /// Brinstar's statics and spawn configurations.
+    fn import_zebes(&mut self) {
+        let w = |s: &Self, a: u32| s.cap.u32(a);
+        let z = {
+            let mem = |a: u32| w(self, a);
+            let mut z = melee_sim::game::gr::zebes::Globals {
+                bounds: [
+                    vec3_at(&mem, GRZEBES_BOUNDS),
+                    vec3_at(&mem, GRZEBES_BOUNDS + 0xC),
+                ],
+                anchors: [
+                    vec3_at(&mem, GRZEBES_BOUNDS + 0x18),
+                    vec3_at(&mem, GRZEBES_BOUNDS + 0x24),
+                ],
+                pop_wait: mem(GRZEBES_POP_WAIT) as i32,
+                splashes: (mem(GRZEBES_SPLASHES) >> 16) as i16,
+                ..Default::default()
+            };
+            for i in 0..20u32 {
+                let b = GRZEBES_BUBBLES + 0x24 * i;
+                let e = &mut z.bubbles[i as usize];
+                e.x00 = (mem(b) >> 24) as u8;
+                e.x02 = mem(b) as i16;
+                e.x08 = f32::from_bits(mem(b + 8));
+                e.x0C = f32::from_bits(mem(b + 0xC));
+                e.x10 = f32::from_bits(mem(b + 0x10));
+                e.x14 = f32::from_bits(mem(b + 0x14));
+                e.x18 = f32::from_bits(mem(b + 0x18));
+                e.x1C = f32::from_bits(mem(b + 0x1C));
+            }
+            z
+        };
+        self.game.gr.zebes = z;
+        for i in 0..20u32 {
+            let b = GRZEBES_BUBBLES + 0x24 * i;
+            // A gone bubble's pop pointer can only be one a bubble that moved up left.
+            let j = self.cap.u32(b + 4);
+            let left = self.game.gr.zebes.bubbles[i as usize].x00 == 0 && j != 0;
+            let pop = if left {
+                None
+            } else {
+                self.import_handle_jobj(j)
+            };
+            let e = &mut self.game.gr.zebes.bubbles[i as usize];
+            e.x04 = pop;
+            e.x04_left = left;
+            let g = self.cap.u32(b + 0x20);
+            self.game.gr.zebes.bubbles[i as usize].x20 = self.import_handle_gobj(g);
+        }
+        let grkind = self.cap.u32(sym("stage_info") + 0x88) as i32;
+        let addrs = config_addrs(grkind, &|a| self.cap.u32(a));
+        self.game.gr.spawn_configs.clear();
+        for a in addrs {
+            let mem = |x: u32| self.cap.u32(x);
+            let spawns_addr = mem(a + 4);
+            let count = mem(a + 8) as i32;
+            let spawns = (0..count as u32)
+                .map(|i| {
+                    let at = spawns_addr + 0x18 * i;
+                    [vec3_at(&mem, at), vec3_at(&mem, at + 0xC)]
+                })
+                .collect();
+            let generator = mem(a + 0x14);
+            assert_eq!(generator, 0, "a spawn configuration holding a generator");
+            self.game
+                .gr
+                .spawn_configs
+                .push(melee_sim::game::gr::zako::SpawnConfig {
+                    addr: a,
+                    spawns_addr,
+                    descs: mem(a),
+                    count,
+                    callback: melee_sim::game::handles::CodeRef(mem(a + 0xC)),
+                    x10: f32::from_bits(mem(a + 0x10)),
+                    generator: None,
+                    x18: mem(a + 0x18) as i32,
+                    spawns,
+                });
+        }
+    }
+}
+
+impl Comparer<'_> {
+    /// Brinstar's statics and spawn configurations against memory.
+    fn compare_zebes(&mut self) {
+        let game = self.game;
+        let z = &game.gr.zebes;
+        let mem = |a: u32| self.u32(a);
+        let bits = |v: Vec3| [v.x, v.y, v.z].map(f32::to_bits);
+        let theirs: [[u32; 3]; 4] =
+            std::array::from_fn(|k| bits(vec3_at(&mem, GRZEBES_BOUNDS + 0xC * k as u32)));
+        let ours = [z.bounds[0], z.bounds[1], z.anchors[0], z.anchors[1]].map(bits);
+        self.check("grZe_8049F140", "bounds and anchors", ours, theirs);
+        self.check(
+            "grZe_804D6994",
+            "pop wait and splashes",
+            (z.pop_wait, z.splashes),
+            (
+                self.u32(GRZEBES_POP_WAIT) as i32,
+                (self.u32(GRZEBES_SPLASHES) >> 16) as i16,
+            ),
+        );
+        for (i, e) in z.bubbles.iter().enumerate() {
+            let b = GRZEBES_BUBBLES + 0x24 * i as u32;
+            let ours = (
+                e.x00,
+                e.x02,
+                [e.x08, e.x0C, e.x10, e.x14, e.x18, e.x1C].map(f32::to_bits),
+            );
+            let theirs = (
+                (self.u32(b) >> 24) as u8,
+                self.u32(b) as i16,
+                std::array::from_fn(|k| self.u32(b + 8 + 4 * k as u32)),
+            );
+            self.check(&format!("grZe_8049F170[{i}]"), "bubble", ours, theirs);
+            let jo = self.u32(b + 4);
+            let jp = (jo != 0).then(|| self.maps.jobjs.get(&jo).copied());
+            if !e.x04_left {
+                self.check(&format!("grZe_8049F170[{i}]"), "pop", e.x04.map(Some), jp);
+            }
+            let go = self.u32(b + 0x20);
+            let gp = (go != 0).then(|| self.maps.gobjs.get(&go).copied());
+            self.check(
+                &format!("grZe_8049F170[{i}]"),
+                "object",
+                e.x20.map(Some),
+                gp,
+            );
+        }
+        let addrs = config_addrs(game.stage_info.grkind, &|a| self.u32(a));
+        for a in addrs {
+            let Some(c) = game
+                .gr
+                .spawn_configs
+                .iter()
+                .find(|c| c.addr == a || (c.addr == 0 && c.descs == self.u32(a)))
+            else {
+                self.diff("spawn configuration", "address", "none", format!("{a:#x}"));
+                continue;
+            };
+            let spawns_addr = self.u32(a + 4);
+            let ours = (c.descs, c.count, c.callback.0, c.x10.to_bits(), c.x18);
+            let theirs = (
+                self.u32(a),
+                self.u32(a + 8) as i32,
+                self.u32(a + 0xC),
+                self.u32(a + 0x10),
+                self.u32(a + 0x18) as i32,
+            );
+            self.check(
+                &format!("spawn configuration {a:#x}"),
+                "fields",
+                ours,
+                theirs,
+            );
+            for (i, sp) in c.spawns.iter().enumerate() {
+                let at = spawns_addr + 0x18 * i as u32;
+                let theirs = [
+                    bits(vec3_at(&|x| self.u32(x), at)),
+                    bits(vec3_at(&|x| self.u32(x), at + 0xC)),
+                ];
+                self.check(
+                    &format!("spawn configuration {a:#x}"),
+                    &format!("spawn {i}"),
+                    [bits(sp[0]), bits(sp[1])],
+                    theirs,
+                );
+            }
+        }
+    }
 }

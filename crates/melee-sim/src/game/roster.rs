@@ -249,6 +249,12 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 6,
+        name: "Brinstar",
+        keys: &["br", "brinstar"],
+        audit: None,
+    },
+    Stage {
         kind: 15,
         name: "Brinstar Depths",
         keys: &["bd", "brinstar-depths"],

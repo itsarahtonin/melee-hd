@@ -261,7 +261,7 @@ fn eye_floor(s: &StageInfo) -> f64 {
     match s.grkind {
         2 => unported("grCastle_801D0FF0"),
         14 => unported("grCorneria_801E2FCC"),
-        8 => unported("grZebes_801DCCC8"),
+        8 => reg(super::gr::zebes::camera_floor(s)),
         5 => reg(super::gr::garden::camera_floor()),
         31 => unported("grKinokoRoute_802087B0"),
         67 => unported("grHomeRun_8021EF10"),

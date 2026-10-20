@@ -61,6 +61,12 @@ pub enum VarsKind {
     KongoPath,
     Greens,
     Greens2,
+    ZebesCreature,
+    ZebesBack,
+    ZebesBubble,
+    ZebesIsland,
+    ZebesStage,
+    ZebesLava,
 }
 
 /// `union GroundVars`.
@@ -146,6 +152,184 @@ pub enum GroundVars {
     Greens(GreensVars),
     /// `grGreens_GroundVars2`: Whispy Woods (map 5).
     Greens2(Greens2Vars),
+    /// `grZebes_GroundVars`: Brinstar's creature (map 4).
+    ZebesCreature(ZebesCreatureVars),
+    /// `grZebes_GroundVars2`: the background (map 1).
+    ZebesBack(ZebesBackVars),
+    /// `grZebes_GroundVars3`: a bubble's object (map 3).
+    ZebesBubble(ZebesBubbleVars),
+    /// `grZebes_GroundVars4`: the island (map 7).
+    ZebesIsland(ZebesIslandVars),
+    /// `grZebes_GroundVars5`: the stage (map 6).
+    ZebesStage(ZebesStageVars),
+    /// `grZebes_GroundVars5`: the lava (map 8).
+    ZebesLava(ZebesLavaVars),
+}
+
+/// A shaking part's state (`grZe_AcidState`, 0x24 bytes): its state and the next (`x00`,
+/// `x01`: 0 at rest, 1 breaking, 2 broken, 3 coming back, 0xFF before the first), a countdown
+/// (`x02`), its two joints' rest (`x04`), its swing and speed (`x08`, `x0C`), its damage
+/// (`x10`), its two joints (`x14`, `x18`), its hurtbox item (`x1C`) and its animation's part
+/// (`x20`). The two bytes after `x20` are padding nothing writes.
+#[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct AcidState {
+    pub x00: u8,
+    pub x01: u8,
+    pub x02: i16,
+    pub x04: f32,
+    pub x08: f32,
+    pub x0C: f32,
+    pub x10: f32,
+    pub x14: Option<crate::hsd::jobj::JObjId>,
+    pub x18: Option<crate::hsd::jobj::JObjId>,
+    pub x1C: Option<GObjId>,
+    pub x20: i16,
+}
+
+impl AcidState {
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let jobj = |cx: &mut dyn Cx, a: u32| {
+            cx.import_handle("JObjId", m.u32(a))
+                .map(crate::hsd::jobj::JObjId)
+        };
+        let f = |a: u32| f32::from_bits(m.u32(a));
+        AcidState {
+            x00: m.u8(at),
+            x01: m.u8(at + 1),
+            x02: m.u16(at + 2) as i16,
+            x04: f(at + 4),
+            x08: f(at + 8),
+            x0C: f(at + 0xC),
+            x10: f(at + 0x10),
+            x14: jobj(cx, at + 0x14),
+            x18: jobj(cx, at + 0x18),
+            x1C: cx.import_handle("GObjId", m.u32(at + 0x1C)).map(GObjId),
+            x20: m.u16(at + 0x20) as i16,
+        }
+    }
+
+    fn from_bytes(b: &Bytes, at: usize) -> Self {
+        b.null(at + 0x14);
+        b.null(at + 0x18);
+        b.null(at + 0x1C);
+        AcidState {
+            x00: b.0[at],
+            x01: b.0[at + 1],
+            x02: (b.u32(at) & 0xFFFF) as i16,
+            x04: b.f32(at + 4),
+            x08: b.f32(at + 8),
+            x0C: b.f32(at + 0xC),
+            x10: b.f32(at + 0x10),
+            x14: None,
+            x18: None,
+            x1C: None,
+            x20: (b.u32(at + 0x20) >> 16) as i16,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let ours = (
+            self.x00,
+            self.x01,
+            self.x02,
+            [self.x04, self.x08, self.x0C, self.x10].map(f32::to_bits),
+            self.x20,
+        );
+        let theirs = (
+            m.u8(at),
+            m.u8(at + 1),
+            m.u16(at + 2) as i16,
+            std::array::from_fn(|k| m.u32(at + 4 + 4 * k as u32)),
+            m.u16(at + 0x20) as i16,
+        );
+        if ours != theirs {
+            cx.mismatch(path, format!("{ours:x?}"), format!("{theirs:x?}"));
+        }
+        for (name, j, a) in [("x14", self.x14, at + 0x14), ("x18", self.x18, at + 0x18)] {
+            let p = format!("{path}.{name}");
+            cx.compare_handle(&p, "JObjId", j.map(|j| j.0), m.u32(a));
+        }
+        let p = format!("{path}.x1C");
+        cx.compare_handle(&p, "GObjId", self.x1C.map(|g| g.0), m.u32(at + 0x1C));
+    }
+}
+
+/// `grZebes_GroundVars` of Brinstar's creature (map 4): whether it waits for the match's start
+/// (`x0`'s top bit), the stage's joint it follows (`stored_jobj`), which animation is next
+/// (`x8`) and its wait (`xA`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ZebesCreatureVars {
+    pub x0: u8,
+    pub stored_jobj: Option<crate::hsd::jobj::JObjId>,
+    pub x8: i16,
+    pub xA: i16,
+}
+
+impl ZebesCreatureVars {
+    pub fn waiting(&self) -> bool {
+        self.x0 & 0x80 != 0
+    }
+    pub fn set_waiting(&mut self, v: bool) {
+        self.x0 = (self.x0 & 0x7F) | u8::from(v) << 7;
+    }
+}
+
+/// `grZebes_GroundVars2` of the background (map 1): still or reacting (`xC4`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ZebesBackVars {
+    pub xC4: i16,
+}
+
+/// `grZebes_GroundVars3` of a bubble's object (map 3): its item, never made (`xC4`), and its
+/// bubble's number (`xC8`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ZebesBubbleVars {
+    pub xC4: Option<GObjId>,
+    pub xC8: i32,
+}
+
+/// `grZebes_GroundVars4` of the island (map 7): its shaking part, its state last tick (`xE8`)
+/// and its lava bubbles' spawn configuration (`xEC`, its address).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ZebesIslandVars {
+    pub acid: AcidState,
+    pub xE8: i32,
+    pub xEC: u32,
+}
+
+/// `grZebes_GroundVars5` of the stage (map 6): the organic platform's state and wait (`xC4`,
+/// `xC6`), the pillar's shaking part (from `xC8`), its state last tick (`xEC`), the island
+/// (`xF0`), the wait before a new bubble (`xF4`), the count of the platform's regrowth (`xF6`),
+/// the wait before a pop shows (`xF8`, the word's high half; nothing writes the low half), the
+/// lava bubbles' spawn configuration (`xFC`, its address) and the platform's item (`x100`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ZebesStageVars {
+    pub xC4: i16,
+    pub xC6: i16,
+    pub acid: AcidState,
+    pub xEC: u32,
+    pub xF0: Option<GObjId>,
+    pub xF4: i16,
+    pub xF6: i16,
+    pub xF8: i16,
+    pub xFA: i16,
+    pub xFC: u32,
+    pub x100: Option<GObjId>,
+}
+
+/// `grZebes_GroundVars5` of the lava (map 8): its table entry (`xC4`), its wait (`xC6`), its
+/// state (`xC8`), its top speed (`xCC`), its speed (`xD0`), its target and its level (`xD4`,
+/// `xD8`), and the light it colors (`xDC`, found once).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ZebesLavaVars {
+    pub xC4: i16,
+    pub xC6: i16,
+    pub xC8: u32,
+    pub xCC: f32,
+    pub xD0: f32,
+    pub xD4: f32,
+    pub xD8: f32,
+    pub xDC: Option<crate::hsd::lobj::LObjId>,
 }
 
 /// `grGreens_BlockVars`: one of Green Greens' blocks. `x0` is its first word's bit fields:
@@ -1183,6 +1367,51 @@ impl GroundVars {
                     x24: w(9),
                 })
             }
+            VarsKind::ZebesCreature => GroundVars::ZebesCreature(ZebesCreatureVars {
+                x0: m.u8(at),
+                stored_jobj: cx
+                    .import_handle("JObjId", m.u32(at + 4))
+                    .map(crate::hsd::jobj::JObjId),
+                x8: m.u16(at + 8) as i16,
+                xA: m.u16(at + 0xA) as i16,
+            }),
+            VarsKind::ZebesBack => GroundVars::ZebesBack(ZebesBackVars {
+                xC4: m.u16(at) as i16,
+            }),
+            VarsKind::ZebesBubble => GroundVars::ZebesBubble(ZebesBubbleVars {
+                xC4: gobj(cx, at),
+                xC8: m.u32(at + 4) as i32,
+            }),
+            VarsKind::ZebesIsland => GroundVars::ZebesIsland(ZebesIslandVars {
+                acid: AcidState::import(m, at, cx),
+                xE8: m.u32(at + 0x24) as i32,
+                xEC: m.u32(at + 0x28),
+            }),
+            VarsKind::ZebesStage => GroundVars::ZebesStage(ZebesStageVars {
+                xC4: m.u16(at) as i16,
+                xC6: m.u16(at + 2) as i16,
+                acid: AcidState::import(m, at + 4, cx),
+                xEC: m.u32(at + 0x28),
+                xF0: gobj(cx, at + 0x2C),
+                xF4: m.u16(at + 0x30) as i16,
+                xF6: m.u16(at + 0x32) as i16,
+                xF8: m.u16(at + 0x34) as i16,
+                xFA: m.u16(at + 0x36) as i16,
+                xFC: m.u32(at + 0x38),
+                x100: gobj(cx, at + 0x3C),
+            }),
+            VarsKind::ZebesLava => GroundVars::ZebesLava(ZebesLavaVars {
+                xC4: m.u16(at) as i16,
+                xC6: m.u16(at + 2) as i16,
+                xC8: m.u32(at + 4),
+                xCC: f(at + 8),
+                xD0: f(at + 0xC),
+                xD4: f(at + 0x10),
+                xD8: f(at + 0x14),
+                xDC: cx
+                    .import_handle("LObjId", m.u32(at + 0x18))
+                    .map(crate::hsd::lobj::LObjId),
+            }),
             VarsKind::Kraid => GroundVars::Kraid(KraidVars {
                 x0: m.u8(at) as i8,
                 x1: m.u8(at + 1) as i8,
@@ -1720,6 +1949,124 @@ impl GroundVars {
         match self {
             GroundVars::Greens2(v) => v,
             other => panic!("a stage object's variables are {other:?}, not grGreens_GroundVars2"),
+        }
+    }
+
+    /// The variables as Brinstar's creature's (`grZebes_GroundVars`), likewise: a block holding
+    /// a pointer converts only if it is null.
+    pub fn zebes_creature(&mut self) -> &mut ZebesCreatureVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            b.null(4);
+            *self = GroundVars::ZebesCreature(ZebesCreatureVars {
+                x0: b.0[0],
+                stored_jobj: None,
+                x8: (b.u32(8) >> 16) as i16,
+                xA: b.u32(8) as i16,
+            });
+        }
+        match self {
+            GroundVars::ZebesCreature(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grZebes_GroundVars"),
+        }
+    }
+
+    /// The variables as Brinstar's background's (`grZebes_GroundVars2`), likewise.
+    pub fn zebes_back(&mut self) -> &mut ZebesBackVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::ZebesBack(ZebesBackVars {
+                xC4: (b.u32(0) >> 16) as i16,
+            });
+        }
+        match self {
+            GroundVars::ZebesBack(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grZebes_GroundVars2"),
+        }
+    }
+
+    /// The variables as a Brinstar bubble's object's (`grZebes_GroundVars3`), likewise: a block
+    /// holding a pointer converts only if it is null.
+    pub fn zebes_bubble(&mut self) -> &mut ZebesBubbleVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::ZebesBubble(ZebesBubbleVars {
+                xC4: b.null(0),
+                xC8: b.u32(4) as i32,
+            });
+        }
+        match self {
+            GroundVars::ZebesBubble(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grZebes_GroundVars3"),
+        }
+    }
+
+    /// The variables as Brinstar's island's (`grZebes_GroundVars4`), likewise: a block holding
+    /// pointers converts only if they are null.
+    pub fn zebes_island(&mut self) -> &mut ZebesIslandVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::ZebesIsland(ZebesIslandVars {
+                acid: AcidState::from_bytes(&b, 0),
+                xE8: b.u32(0x24) as i32,
+                xEC: b.u32(0x28),
+            });
+        }
+        match self {
+            GroundVars::ZebesIsland(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grZebes_GroundVars4"),
+        }
+    }
+
+    /// The variables as Brinstar's stage's (`grZebes_GroundVars5`), likewise: a block holding
+    /// pointers converts only if they are null.
+    pub fn zebes_stage(&mut self) -> &mut ZebesStageVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let h = |at: usize, hi: bool| {
+                let w = b.u32(at);
+                (if hi { w >> 16 } else { w }) as i16
+            };
+            *self = GroundVars::ZebesStage(ZebesStageVars {
+                xC4: h(0, true),
+                xC6: h(0, false),
+                acid: AcidState::from_bytes(&b, 4),
+                xEC: b.u32(0x28),
+                xF0: b.null(0x2C),
+                xF4: h(0x30, true),
+                xF6: h(0x30, false),
+                xF8: h(0x34, true),
+                xFA: h(0x34, false),
+                xFC: b.u32(0x38),
+                x100: b.null(0x3C),
+            });
+        }
+        match self {
+            GroundVars::ZebesStage(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grZebes_GroundVars5"),
+        }
+    }
+
+    /// The variables as Brinstar's lava's (`grZebes_GroundVars5`), likewise: a block holding a
+    /// pointer converts only if it is null.
+    pub fn zebes_lava(&mut self) -> &mut ZebesLavaVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let w = b.u32(0);
+            *self = GroundVars::ZebesLava(ZebesLavaVars {
+                xC4: (w >> 16) as i16,
+                xC6: w as i16,
+                xC8: b.u32(4),
+                xCC: b.f32(8),
+                xD0: b.f32(0xC),
+                xD4: b.f32(0x10),
+                xD8: b.f32(0x14),
+                xDC: b.null_of(0x18),
+            });
+        }
+        match self {
+            GroundVars::ZebesLava(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grZebes's lava's"),
         }
     }
 
@@ -2815,6 +3162,99 @@ impl Mirror for GroundVars {
                         format!("{theirs:?}"),
                     );
                 }
+            }
+            GroundVars::ZebesCreature(v) => {
+                let ours = (v.x0, v.x8, v.xA);
+                let theirs = (m.u8(at), m.u16(at + 8) as i16, m.u16(at + 0xA) as i16);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.zebes"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                let p = format!("{path}.zebes.stored_jobj");
+                cx.compare_handle(&p, "JObjId", v.stored_jobj.map(|j| j.0), m.u32(at + 4));
+            }
+            GroundVars::ZebesBack(v) => {
+                if v.xC4 != m.u16(at) as i16 {
+                    cx.mismatch(
+                        &format!("{path}.zebes2.xC4"),
+                        format!("{}", v.xC4),
+                        format!("{}", m.u16(at) as i16),
+                    );
+                }
+            }
+            GroundVars::ZebesBubble(v) => {
+                let p = format!("{path}.zebes3.xC4");
+                cx.compare_handle(&p, "GObjId", v.xC4.map(|g| g.0), m.u32(at));
+                if v.xC8 != m.u32(at + 4) as i32 {
+                    cx.mismatch(
+                        &format!("{path}.zebes3.xC8"),
+                        format!("{}", v.xC8),
+                        format!("{}", m.u32(at + 4) as i32),
+                    );
+                }
+            }
+            GroundVars::ZebesIsland(v) => {
+                v.acid.compare(m, at, &format!("{path}.zebes4.acid"), cx);
+                let ours = (v.xE8, v.xEC);
+                let theirs = (m.u32(at + 0x24) as i32, m.u32(at + 0x28));
+                let addr_ok = ours.1 == theirs.1 || ours.1 == 0 && theirs.1 != 0;
+                if ours.0 != theirs.0 || !addr_ok {
+                    cx.mismatch(
+                        &format!("{path}.zebes4"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::ZebesStage(v) => {
+                v.acid
+                    .compare(m, at + 4, &format!("{path}.zebes5.acid"), cx);
+                let ours = (v.xC4, v.xC6, v.xEC, [v.xF4, v.xF6, v.xF8, v.xFA]);
+                let theirs = (
+                    m.u16(at) as i16,
+                    m.u16(at + 2) as i16,
+                    m.u32(at + 0x28),
+                    std::array::from_fn(|k| m.u16(at + 0x30 + 2 * k as u32) as i16),
+                );
+                let xfc = m.u32(at + 0x38);
+                let addr_ok = v.xFC == xfc || v.xFC == 0 && xfc != 0;
+                if ours != theirs || !addr_ok {
+                    cx.mismatch(
+                        &format!("{path}.zebes5"),
+                        format!("{:x?}", (ours, v.xFC)),
+                        format!("{:x?}", (theirs, xfc)),
+                    );
+                }
+                for (name, g, a) in [("xF0", v.xF0, at + 0x2C), ("x100", v.x100, at + 0x3C)] {
+                    let p = format!("{path}.zebes5.{name}");
+                    cx.compare_handle(&p, "GObjId", g.map(|g| g.0), m.u32(a));
+                }
+            }
+            GroundVars::ZebesLava(v) => {
+                let ours = (
+                    v.xC4,
+                    v.xC6,
+                    v.xC8,
+                    [v.xCC, v.xD0, v.xD4, v.xD8].map(f32::to_bits),
+                );
+                let theirs = (
+                    m.u16(at) as i16,
+                    m.u16(at + 2) as i16,
+                    m.u32(at + 4),
+                    std::array::from_fn(|k| m.u32(at + 8 + 4 * k as u32)),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.zebes5"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                let p = format!("{path}.zebes5.xDC");
+                cx.compare_handle(&p, "LObjId", v.xDC.map(|l| l.0), m.u32(at + 0x18));
             }
             GroundVars::Kraid(v) => {
                 let ours = (v.x0, v.x1, [v.x4, v.x8, v.xC].map(f32::to_bits), v.x10);

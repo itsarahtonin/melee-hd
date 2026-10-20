@@ -614,6 +614,7 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** the decompilation's `grkraid.c`.
 
+
 ### The airborne collision loop can hang
 
 - **Where:** `mpColl_80046904` (one airborne substep), `crates/melee-sim/src/mp/coll/air.rs` and `crates/melee-sim/src/mp/coll/mod.rs`.
@@ -665,6 +666,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Source:** `crates/melee-sim/src/game/gr/greens.rs` (`link_corners`, `status_at`).
 
 ## Camera
+
+### Brinstar's bubbles play their sound through the stage's object as if it were its `Ground`
+
+- **Where:** `grZebes_801DB088` (a bubble's tick), which `grZebes_801DB3CC` calls with the stage's GObj where `Ground_801C5440` wants the stage object's `Ground`, `crates/melee-sim/src/game/gr/zebes.rs` (`pop_sound`).
+- **Defect:** a bubble falling apart plays its sound in "slot 0" of what it takes for the stage object's sounds, which is the GObj's word at 0x20: the high half of its GX link mask (`gxlink_prios`). The old word is stopped as a sound handle unless it's -1, and the new sound's handle is written there.
+- **Effect:** a non-camera object's link mask is read by nothing, so the slot works as one, with one exception: the word starts at 0, not -1, so the first bubble to fall apart stops whatever sound holds handle 0. What that cuts off in play isn't recorded.
+- **melee-hd:** modeled: the handle lives in the stage GObj's mask's high half.
+- **Fix:** pass the stage object's `Ground`.
+- **Fix impact:** changes which sound the first falling bubble stops; nothing else.
+- **Source:** `crates/melee-sim/src/game/gr/zebes.rs` (`pop_sound`, `tick_bubble`); the decompilation's `grzebes.c`.
 
 ### The cutscene camera's orbit reads unwritten stack slots
 
@@ -891,6 +902,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | The Flipper's spin past π | `itFlipper_UpdateSpin`, `game/it/kinds/flipper.rs` | Brings the spin's speed, not the paddle's angle, back within ±π by a whole turn; the attributes cap the speed at 0.873 radians a frame | `crates/melee-sim/src/game/it/kinds/flipper.rs:175` |
 | A particle list on a displayed joint | HSD's joint traversal (displayfunc.c, `efLib_Cb_SPtcl`) | Spawns a joint's particle list on its first display, whose generators then draw from the game's random seed, so a spawn put off by a doubled round would shift every later draw; no joint descriptor on the disc carries a particle list | [engine notes](engine.md#state-the-render-pass-writes) (line 150) |
 | A Lip's Stick swing with nothing held | `ft_800CDB9C`, `game/ft/co/swing.rs` | Asserts the held item's kind before testing it for null, reading a null item; the swing always holds the stick | `crates/melee-sim/src/game/ft/co/swing.rs:257` |
+| Brinstar's platform's columns no bubble reaches | `grZebes_801D881C`, `game/gr/zebes.rs` | Leaves an inner column's x from an uninitialized stack array when no bubble's edge reaches it; while the platform is whole its bubbles have reached every column on every tick checked (melee-hd counts a stale read) | `crates/melee-sim/src/game/gr/zebes.rs:607` |
 
 ## Unsure
 

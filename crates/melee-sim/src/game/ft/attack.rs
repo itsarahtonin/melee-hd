@@ -98,6 +98,11 @@ pub enum LoggedHit {
         fighter: FighterId,
         index: usize,
     },
+    /// A stage device's hit (`x0` 3, `ftCo_800C08A0`): its description in the stage's data
+    /// (`lbColl_80008D30_arg1`), which the log's hitbox word points at.
+    Device {
+        desc: melee_data::archive::DataRef,
+    },
 }
 
 /// A logged hit (`DmgLogEntry`): a fighter's or an item's. The stage's stop at their seams
@@ -124,6 +129,9 @@ pub struct HitLogs {
     pub hits: Vec<LogEntry>,
     pub tips: Vec<LogEntry>,
     pub clank: [bool; 4],
+    /// The hit log's damage words (`dmg_log0[i].x20`) as their last entries left them: a
+    /// device's entry writes none and keeps its slot's.
+    pub stale_damage: [f32; LOG_LEN],
 }
 
 /// A hit's damage as an integer, at least 1 for any damage, `getEnvDmg`.
@@ -168,6 +176,10 @@ impl Running<'_> {
     /// Starts both damage logs over, `ftColl_800765E0`.
     #[doc(alias = "ftColl_800765E0")]
     pub fn clear_hit_logs(&mut self) {
+        let logs = &mut self.game.ft.hit_logs;
+        for (i, e) in logs.hits.iter().enumerate() {
+            logs.stale_damage[i] = e.damage;
+        }
         self.game.ft.hit_logs.hits.clear();
         self.game.ft.hit_logs.tips.clear();
     }
@@ -922,7 +934,8 @@ impl Running<'_> {
         self.hit_sound_of(me, n, kind, severity);
     }
 
-    /// A hit's sound on hurtbox `n` for a hitbox's sound kind and severity.
+    /// A hit's sound on hurtbox `n` for a hitbox's sound kind and severity, `ftColl_80078384`.
+    #[doc(alias = "ftColl_80078384")]
     fn hit_sound_of(&mut self, me: FighterId, n: usize, kind: i32, severity: i32) {
         let mf = &self.game.fighters[me.0];
         if mf.x1988 != 0
@@ -1405,7 +1418,18 @@ impl Running<'_> {
             LoggedHit::Item { item, index } => {
                 &super::super::it::item(self.game, item).x5D4_hitboxes[index].hit
             }
+            LoggedHit::Device { .. } => unreachable!("a device's hit has no hitbox"),
         }
+    }
+
+    /// The knockback a stage device's hit deals this fighter (`ftColl_8007A06C`'s device
+    /// case): its description copied to a hitbox (`lbColl_80008D30`), at an attack ratio of 1.
+    fn device_knockback(&self, me: FighterId, desc: melee_data::archive::DataRef) -> f64 {
+        let h = device_capsule(self.data, desc);
+        let fp = &self.game.fighters[me.0];
+        let defense = self.game.player_defense_ratio(i32::from(fp.player_idx));
+        let ratio = self.game.vs_damage_ratio();
+        self.knockback_of(me, &h, h.unk_count, ratio, 1.0, defense, fp.co_attrs.weight)
     }
 
     /// The knockback an item's hitbox deals this fighter (`ftColl_8007A06C`'s item case): the
@@ -1946,8 +1970,9 @@ impl Running<'_> {
     }
 
     /// Stage devices that hurt or bury fighters, `ftColl_8007BAC0`: the registered collision
-    /// device (`ft_80459A8C`, one slot) asked about the fighter where its type acts on it (only
-    /// Great Bay's sea is ported, which never acts), then the stage lines the fighter touches.
+    /// device (`ft_80459A8C`, one slot) asked about the fighter where its type acts on it
+    /// (Great Bay's sea, which never acts, and Brinstar's lava), acting on it with the hit it
+    /// gives, then the stage lines the fighter touches.
     #[doc(alias = "ftColl_8007BAC0")]
     pub fn touch_devices(&mut self, gobj: GObjId) {
         if self.game.vs_x5_2() {
@@ -1963,22 +1988,88 @@ impl Running<'_> {
             if !self.device_applies(gobj, kind) {
                 continue;
             }
-            let acts = match cb.map(|c| c.0) {
+            let desc = match cb.map(|c| c.0) {
                 Some(super::super::gr::greatbay::SEA_DEVICE) => {
-                    let _ = ground;
-                    super::super::gr::greatbay::sea_device(self, gobj)
+                    let _ = super::super::gr::greatbay::sea_device(self, gobj);
+                    None
+                }
+                Some(super::super::gr::zebes::LAVA_DEVICE) => {
+                    super::super::gr::zebes::lava_device(self, gobj)
                 }
                 Some(other) => {
                     unported_call(&format!("a collision device's callback {other:#010x}"))
                 }
                 None => panic!("a collision device without a callback"),
             };
-            if acts && max == 0 {
-                unported_call("ftCo_800C08A0 (a device acting on a fighter)");
+            if let Some(desc) = desc
+                && max == 0
+            {
+                self.device_hit(gobj, ground, desc, kind);
             }
         }
         if max == 0 {
             self.touch_lines(me);
+        }
+    }
+
+    /// A stage device acting on the fighter, `ftCo_800C08A0`: its hit's damage
+    /// (`ftColl_800765F0`: less while holding someone, more when frozen, times the damage
+    /// multiplier); a burying type sets its timer; the damage taken (or the armor's) logs the
+    /// hit (`ftColl_80076764`, its damage word left as the log's slot last held it) with its
+    /// sound on the first hurtbox (`ftColl_80078384`); and the player's records count it
+    /// (`pl_8003EC30`).
+    #[doc(alias = "ftCo_800C08A0")]
+    #[doc(alias = "ftColl_800765F0")]
+    #[doc(alias = "ftColl_80076764")]
+    #[doc(alias = "pl_8003EC30")]
+    fn device_hit(
+        &mut self,
+        gobj: GObjId,
+        ground: GObjId,
+        desc: melee_data::archive::DataRef,
+        kind: u32,
+    ) {
+        let me = self.game.fighter_id(gobj);
+        let count = self.data.u32(desc.at(4));
+        let c = self.common();
+        let fp = &self.game.fighters[me.0];
+        let mut d = fp::frsp(f64::from(count));
+        if fp.victim_gobj.is_some() && !fp.x221B.x221B_b5 {
+            d = fp::fmuls(d, reg(c.f32(0x128)));
+        }
+        if fp.motion_id == MS_DAMAGE_ICE {
+            d = fp::fmuls(d, reg(c.f32(0x714)));
+        }
+        let mut f = mem(fp::fmuls(d, reg(fp.dmg.x182c_behavior)));
+        match kind {
+            1 => self.game.fighters[me.0].bury_timer_1 = c.u32(0x5DC),
+            3 => self.game.fighters[me.0].bury_timer_2 = c.u32(0x5E4),
+            _ => {}
+        }
+        if self.take_damage_or_armor(me, &mut f) {
+            let pos = self.game.fighters[me.0].cur_pos;
+            let logs = &mut self.game.ft.hit_logs;
+            let slot = logs.hits.len();
+            assert!(slot < LOG_LEN, "damage log over {LOG_LEN}!!");
+            let damage = logs.stale_damage[slot];
+            logs.hits.push(LogEntry {
+                kind: kind as i32,
+                gobj: Some(ground),
+                hit: LoggedHit::Device { desc },
+                hurt: 0,
+                pos,
+                damage,
+                count,
+            });
+            let severity = self.data.u32(desc.at(0x1C)) as i32;
+            let sfx = self.data.u32(desc.at(0x20)) as i32;
+            self.hit_sound_of(me, 0, sfx, severity);
+        }
+        let fp = &self.game.fighters[me.0];
+        let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
+        if !sub && matches!(kind, 1 | 3) {
+            let t = &mut self.game.player_mut(slot).stale_moves;
+            t.xC98 = mem(fp::fadds(reg(t.xC98), reg(f)));
         }
     }
 
@@ -2029,6 +2120,7 @@ impl Running<'_> {
     #[doc(alias = "grGarden_802035C8")]
     #[doc(alias = "grKongo_801D8444")]
     #[doc(alias = "grGreens_80216E64")]
+    #[doc(alias = "grZebes_801DCCB8")]
     pub(crate) fn line_hazard(&mut self, _line: i32) -> bool {
         match self.game.stage_info.on_touch_line {
             None => false,
@@ -2050,7 +2142,8 @@ impl Running<'_> {
                     || f.0 == 0x8020_2B5C
                     || f.0 == 0x8020_35C8
                     || f.0 == 0x801D_8444
-                    || f.0 == 0x8021_6E64 =>
+                    || f.0 == 0x8021_6E64
+                    || f.0 == 0x801D_CCB8 =>
             {
                 false
             }
@@ -2321,8 +2414,9 @@ impl Running<'_> {
                 }
                 LoggedHit::Item { item, .. } => self.item_knockback(me, item, e.hit, e.count),
                 LoggedHit::Throw { .. } => unreachable!("a throw's hitbox in the damage log"),
+                LoggedHit::Device { desc } => self.device_knockback(me, desc),
             };
-            if !tips {
+            if !tips && !matches!(e.hit, LoggedHit::Device { .. }) {
                 let h = self.logged_capsule(e.hit);
                 let (element, severity) = (h.element, h.sfx_severity);
                 let dmg = cvt_fp2unsigned(reg(e.damage));
@@ -2342,11 +2436,27 @@ impl Running<'_> {
         }
         let e = log[best_at
             .expect("no logged hit with knockback above -1 (the original reads a stale index)")];
-        let h = self.logged_capsule(e.hit);
-        let (kb_angle, element, severity) = (h.kb_angle as u32, h.element, h.sfx_severity);
+        let (kb_angle, element, severity, angle_word) = match e.hit {
+            LoggedHit::Device { desc } => {
+                let h = device_capsule(self.data, desc);
+                // The angle test reads the hitbox's angle word through the description,
+                // where it holds the sound kind.
+                (h.kb_angle as u32, h.element, 0, h.sfx_kind as u32)
+            }
+            hit => {
+                let h = self.logged_capsule(hit);
+                (
+                    h.kb_angle as u32,
+                    h.element,
+                    h.sfx_severity,
+                    h.kb_angle as u32,
+                )
+            }
+        };
         let fp = &self.game.fighters[me.0];
         let mut dir: f32 = match e.hit {
             LoggedHit::Throw { .. } => unreachable!("a throw's hitbox in the damage log"),
+            LoggedHit::Device { .. } => fp.facing_dir,
             LoggedHit::Fighter { .. } => {
                 let attacker = self
                     .game
@@ -2379,7 +2489,7 @@ impl Running<'_> {
         };
         let mut angle = fp::frsp(f64::from(kb_angle));
         let hurt = &fp.hurt_capsules[e.hurt];
-        if kb_angle == 0x16A {
+        if angle_word == 0x16A {
             let c = &hurt.capsule;
             let dx = fp::fmsubs(0.5, fp::fadds(reg(c.a_pos.x), reg(c.b_pos.x)), reg(e.pos.x));
             let dy = fp::fmsubs(0.5, fp::fadds(reg(c.a_pos.y), reg(c.b_pos.y)), reg(e.pos.y));
@@ -2447,6 +2557,15 @@ impl Running<'_> {
                 );
             }
             LoggedHit::Item { item, .. } => self.item_attack_landed(item, gobj, grounded),
+            LoggedHit::Device { .. } => {
+                let fp = &mut self.game.fighters[me.0];
+                let prev = fp.dmg.x18c4_source_ply;
+                fp.dmg.x18C0 = 0;
+                fp.dmg.x18C8 = -1;
+                fp.dmg.x18CC = 3;
+                fp.dmg.x18D0 = e.kind;
+                self.record_no_attack(gobj, prev);
+            }
         }
         if element == ELEMENT_ELECTRIC {
             let v = self.common().f32(0x1A4);
@@ -2665,12 +2784,15 @@ impl Running<'_> {
         self.record_no_attack(gobj, prev);
     }
 
-    /// The lipstick flower's damage this frame, `ftColl_8007BBCC`: the logged hits of the
-    /// lipstick element.
+    /// The lipstick flower's damage this frame, `ftColl_8007BBCC`: the logged fighters' and
+    /// items' hits of the lipstick element.
     #[doc(alias = "ftColl_8007BBCC")]
     pub fn lipstick_damage(&self) -> f64 {
         let mut dmg = 0.0;
         for e in &self.game.ft.hit_logs.hits {
+            if matches!(e.hit, LoggedHit::Device { .. }) {
+                continue;
+            }
             let h = self.logged_capsule(e.hit);
             if h.element == ELEMENT_LIPSTICK {
                 // An item's hit deals its damage with its speed's (`it_8026B1D4`).
@@ -2682,5 +2804,27 @@ impl Running<'_> {
             }
         }
         dmg
+    }
+}
+
+/// A stage device's hit as `lbColl_80008D30` copies its description onto the stack.
+#[doc(alias = "lbColl_80008D30")]
+pub(crate) fn device_capsule(
+    data: &melee_data::archive::Archives,
+    desc: melee_data::archive::DataRef,
+) -> super::super::structs::HitCapsule {
+    let w = |o: u32| data.u32(desc.at(o));
+    super::super::structs::HitCapsule {
+        state: w(0) as i32,
+        damage: mem(fp::frsp(f64::from(w(4)))),
+        kb_angle: w(8) as i32,
+        x24: w(0xC),
+        x28: w(0x10),
+        x2C: w(0x14),
+        element: w(0x18),
+        sfx_severity: w(0x1C) as i32,
+        sfx_kind: w(0x20) as i32,
+        unk_count: w(4),
+        ..Default::default()
     }
 }

@@ -32,6 +32,7 @@ pub mod story;
 pub mod vars;
 pub mod yorster;
 pub mod zako;
+pub mod zebes;
 
 pub use vars::{
     BattleBgVars, Garden2Vars, GardenVars, GroundVars, KongoBarrelVars, KongoLogVars,
@@ -59,6 +60,8 @@ pub const GR_KIND_FOURSIDE: i32 = 21;
 pub const GR_KIND_GREATBAY: i32 = 6;
 /// `Gr_Kind_Greens`, Green Greens.
 pub const GR_KIND_GREENS: i32 = 13;
+/// `Gr_Kind_Zebes`, Brinstar.
+pub const GR_KIND_ZEBES: i32 = 8;
 /// `Gr_Kind_Story`, Yoshi's Story.
 pub const GR_KIND_STORY: i32 = 10;
 /// `Gr_Kind_Izumi`, Fountain of Dreams.
@@ -215,6 +218,12 @@ pub struct Globals {
     pub greens_yakumono: Option<DataRef>,
     /// Green Greens' statics besides it.
     pub greens: greens::Globals,
+    /// Brinstar's `yakumono_param` (`grZe_YakumonoParam`).
+    pub zebes_yakumono: Option<DataRef>,
+    /// Brinstar's statics besides it.
+    pub zebes: zebes::Globals,
+    /// The stages' spawn configurations (`grZakoGenerator_801CA394`'s heap blocks).
+    pub spawn_configs: Vec<zako::SpawnConfig>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -326,6 +335,12 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_KONGO, 11) => VarsKind::KongoPath,
         (GR_KIND_GREENS, 5) => VarsKind::Greens2,
         (GR_KIND_GREENS, 6) => VarsKind::Greens,
+        (GR_KIND_ZEBES, 1) => VarsKind::ZebesBack,
+        (GR_KIND_ZEBES, 3) => VarsKind::ZebesBubble,
+        (GR_KIND_ZEBES, 4) => VarsKind::ZebesCreature,
+        (GR_KIND_ZEBES, 6) => VarsKind::ZebesStage,
+        (GR_KIND_ZEBES, 7) => VarsKind::ZebesIsland,
+        (GR_KIND_ZEBES, 8) => VarsKind::ZebesLava,
         _ => VarsKind::Bytes,
     }
 }
@@ -353,6 +368,9 @@ pub fn yaku_received(
     match cb.0 {
         yorster::BLOCK_HIT => yorster::block_hit(r, item, g, dir, fighter, damage),
         greens::BLOCK_HIT => greens::block_hit(r, item, g, fighter),
+        zebes::PILLAR_HIT => zebes::pillar_hit(r, g, dir, damage),
+        zebes::ISLAND_HIT => zebes::island_hit(r, g, dir, damage),
+        zebes::BUBBLES_HIT => zebes::bubbles_hit(r),
         other => {
             super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))
         }

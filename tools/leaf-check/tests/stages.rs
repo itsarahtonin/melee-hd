@@ -4712,3 +4712,603 @@ fn whispy_apples() {
         &forget,
     );
 }
+
+// Brinstar (`grzebes.c`).
+
+const ZEBES: &str = "oracle-stage-brinstar";
+
+/// grzebes.c's `yakumono_param`, the pop wait, and the bubbles.
+const ZEBES_PARAM: u32 = 0x804D_6990;
+const ZEBES_POP_WAIT: u32 = 0x804D_6994;
+const ZEBES_BUBBLES: u32 = 0x8049_F170;
+
+/// The parameters' word at `off`.
+fn zebes_param(c: &Call, off: u32) -> u32 {
+    peek_u32(c, peek_u32(c, ZEBES_PARAM) + off)
+}
+
+#[test]
+fn zebes_setup() {
+    use melee_sim::game::gr::zebes;
+    let d = hazard_dir(ZEBES);
+    check_hazard(&d, "grZebes_801D84A4", 1, &as_saved, &by_event);
+    check_hazard(&d, "grZebes_801D852C", 1, &as_saved, &by_event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let _ = zebes::create(r, call.regs.gpr[3] as i32, zebes::GROW_BUBBLE_FRAME);
+        Ret::Nothing
+    };
+    check_hazard(&d, "grZebes_801D8558", 1, &as_saved, &create);
+    for map in [0u32, 1, 2, 3, 4, 5] {
+        check_hazard(
+            &d,
+            "grZebes_801D8558",
+            1,
+            &move |c, _| c.regs.gpr[3] = map,
+            &create,
+        );
+    }
+    for f in [
+        "grZebes_801D8644",
+        "grZebes_801D9100",
+        "stageGObj5_OnInit",
+        "grZebes_801D9508",
+        "grZebes_801D9798",
+        "grZebes_801D9F30",
+        "fn_801D94F0",
+        "grZebes_801D9758",
+    ] {
+        check_hazard(&d, f, 1, &as_saved, &by_address);
+    }
+    let reset = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = *maps.gobjs.get(&call.regs.gpr[3]).expect("the stage's GObj");
+        zebes::reset_bubbles(r, g);
+        Ret::Nothing
+    };
+    check_hazard(&d, "grZebes_801DC9DC", 1, &as_saved, &reset);
+    let start = |r: &mut Running, _: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        zebes::start_bubbles(r, g[3] as i32, g[4] as u8, zebes::SETUP_BUBBLE_FRAME);
+        Ret::Nothing
+    };
+    check_hazard(&d, "grZebes_801DC744", 1, &as_saved, &start);
+    let splashes = |r: &mut Running, _: &Maps, _: &Call| {
+        zebes::reset_splashes(r.game);
+        Ret::Nothing
+    };
+    check_hazard(&d, "grZebes_801DA3E8", 1, &as_saved, &splashes);
+}
+
+/// The lava's variables set: entry, wait, state, top speed, speed, target and level.
+#[allow(clippy::too_many_arguments)]
+fn lava(c: &mut Call, entry: i16, wait: i16, state: u32, top: f32, v: f32, to: f32, at: f32) {
+    let a = map_vars(c, 8);
+    poke_u32(c, a, (entry as u16 as u32) << 16 | wait as u16 as u32);
+    poke_u32(c, a + 4, state);
+    for (k, f) in [top, v, to, at].into_iter().enumerate() {
+        poke_u32(c, a + 8 + 4 * k as u32, f.to_bits());
+    }
+}
+
+#[test]
+fn zebes_lava() {
+    use melee_sim::game::gr::zebes;
+    let d = hazard_dir(ZEBES);
+    let f = "grZebes_801D99E0";
+    check_hazard(&d, f, 1, &as_saved, &by_address);
+    // Waiting (with and without the quake, at its end, on the table's last entry), starting
+    // (2), speeding up toward a target above and below (and when it would overshoot), and
+    // slowing to a stop (still going, overshooting, reached), and a state past them.
+    let prepares: Vec<Box<Prepare>> = vec![
+        Box::new(|c, _| lava(c, 0, 200, 1, 0.0, 0.0, 0.0, -50.0)),
+        Box::new(|c, _| lava(c, 2, 100, 1, 0.0, 0.0, 0.0, -50.0)),
+        Box::new(|c, k| lava(c, (k % 5) as i16, 0, 1, 0.0, 0.0, 0.0, -50.0)),
+        Box::new(|c, _| lava(c, 29, 0, 1, 0.0, 0.0, 0.0, 10.0)),
+        Box::new(|c, _| lava(c, 1, 3, 2, 0.5, 0.0, 20.0, -50.0)),
+        Box::new(|c, _| lava(c, 1, 3, 3, 0.5, 0.1, 20.0, -50.0)),
+        Box::new(|c, _| lava(c, 1, 70, 3, 0.5, 0.4, -60.0, -50.0)),
+        Box::new(|c, _| lava(c, 1, 3, 3, 0.5, 0.5, -49.0, -50.0)),
+        Box::new(|c, _| lava(c, 1, 3, 4, 0.5, 0.3, 20.0, -50.0)),
+        Box::new(|c, _| lava(c, 1, 3, 4, 0.5, 0.02, 20.0, -50.0)),
+        Box::new(|c, _| lava(c, 1, 3, 4, 0.5, 0.3, -49.9, -50.0)),
+        Box::new(|c, _| lava(c, 1, 3, 7, 0.5, 0.3, -49.9, -50.0)),
+    ];
+    for p in &prepares {
+        check_hazard(&d, f, 1, p.as_ref(), &by_address);
+    }
+    let fog = |r: &mut Running, _: &Maps, call: &Call| {
+        zebes::fog_color(r.game, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    let levels = |c: &mut Call, k: usize| {
+        c.regs.fpr[1].ps0 = f64::from([-400.0f32, -320.0, -200.0, -80.0, 0.0, 90.0, 120.0][k % 7]);
+    };
+    for p in [&as_saved as &Prepare, &levels] {
+        check_hazard(&d, "grZebes_801DA0C4", 1, p, &fog);
+    }
+    let light = |r: &mut Running, maps: &Maps, call: &Call| {
+        zebes::light_color(r, gobj_arg(maps, call), call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    let forget = |c: &mut Call, k: usize| {
+        poke_u32(c, map_vars(c, 8) + 0x18, 0);
+        c.regs.fpr[1].ps0 = f64::from([-80.0f32, 0.0, 40.0][k % 3]);
+    };
+    for p in [&as_saved as &Prepare, &forget] {
+        check_hazard(&d, "grZebes_801DA254", 1, p, &light);
+    }
+    // The device: the fighter above the lava, below it, and just fallen in (a splash, up to
+    // the splashes' limit).
+    let device = |r: &mut Running, maps: &Maps, call: &Call| {
+        let fighter = *maps
+            .gobjs
+            .get(&call.regs.gpr[4])
+            .expect("the fighter's GObj");
+        let hit = zebes::lava_device(r, fighter);
+        // The hit it hands back is the parameters' (their word at 0x2C), which the original
+        // stores through r5.
+        if let Some(h) = hit {
+            let param = r.game.gr.zebes_yakumono.expect("yakumono_param");
+            assert_eq!(Some(h), r.data.ptr(param.at(0x2C)));
+            let word = peek_u32(call, peek_u32(call, ZEBES_PARAM) + 0x2C);
+            r.game.stage_info.x730.x = f32::from_bits(word);
+        }
+        Ret::Int(u32::from(hit.is_some()))
+    };
+    let at = |c: &mut Call, now: f32, before: f32, splashes: Option<u16>| {
+        c.regs.gpr[5] = leaf_check::sym("stage_info") + 0x730;
+        let level = f32_at(c, leaf_check::sym("stage_info") + 0x724);
+        let fp = peek_u32(c, c.regs.gpr[4] + 0x2C);
+        poke_u32(c, fp + 0xB0 + 4, (level + now).to_bits());
+        poke_u32(c, fp + 0xBC + 4, (level + before).to_bits());
+        if let Some(n) = splashes {
+            poke_u16(c, 0x804D_6998, n);
+        }
+    };
+    let prepares: [&Prepare; 4] = [
+        &move |c, _| at(c, 5.0, 5.0, None),
+        &move |c, _| at(c, -5.0, -3.0, None),
+        &move |c, _| at(c, -2.0, 4.0, None),
+        &move |c, _| at(c, -2.0, 4.0, Some(10)),
+    ];
+    for p in prepares {
+        check_hazard(&d, "grZebes_801DCBFC", 1, p, &device);
+    }
+    let floor = |r: &mut Running, _: &Maps, _: &Call| {
+        Ret::Float(f64::from(zebes::camera_floor(&r.game.stage_info)))
+    };
+    check_hazard(&d, "grZebes_801DCCC8", 1, &as_saved, &floor);
+}
+
+/// A shaking part's state (at `a`) set: state and next, countdown, swing, speed and damage.
+#[allow(clippy::too_many_arguments)]
+fn acid(c: &mut Call, a: u32, state: u8, next: u8, t: i16, swing: f32, v: f32, dmg: f32) {
+    let w = peek_u32(c, a + 0x20) & 0xFFFF;
+    poke_u32(
+        c,
+        a,
+        u32::from(state) << 24 | u32::from(next) << 16 | t as u16 as u32,
+    );
+    poke_u32(c, a + 8, swing.to_bits());
+    poke_u32(c, a + 0xC, v.to_bits());
+    poke_u32(c, a + 0x10, dmg.to_bits());
+    poke_u32(c, a + 0x20, peek_u32(c, a + 0x20) & !0xFFFF_0000 | w);
+}
+
+#[test]
+fn zebes_shaking() {
+    use melee_sim::game::gr::zebes;
+    let d = hazard_dir(ZEBES);
+    let shake = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = gobj_arg(maps, call);
+        let ground = *maps
+            .grounds
+            .get(&peek_u32(call, call.regs.gpr[3] + 0x2C))
+            .expect("ground");
+        let st = call.regs.gpr[4] - peek_u32(call, call.regs.gpr[3] + 0x2C);
+        let which = if st == 0xC4 + 4 {
+            zebes::Acid::Stage
+        } else {
+            zebes::Acid::Island
+        };
+        let res = zebes::shake(
+            r,
+            g,
+            ground,
+            which,
+            call.regs.gpr[5] as i32,
+            call.regs.gpr[6] as i32,
+        );
+        Ret::Int(res as u32)
+    };
+    // Each state's start and tick: at rest (damage decaying at its count, swinging past either
+    // side, settling, breaking past its limit), breaking, broken at its count's end, coming
+    // back; and a state past them.
+    let st = |c: &Call| c.regs.gpr[4];
+    let max = |c: &Call| f32::from_bits(zebes_param(c, 0x4C));
+    let prepares: Vec<Box<Prepare>> = vec![
+        Box::new(move |c, _| {
+            let a = st(c);
+            acid(c, a, 1, 0, 0, 0.0, 0.0, 0.0)
+        }),
+        Box::new(move |c, _| {
+            let a = st(c);
+            acid(c, a, 0, 1, 0, 0.0, 0.0, 0.0)
+        }),
+        Box::new(move |c, _| {
+            let a = st(c);
+            acid(c, a, 1, 2, 0, 0.0, 0.0, 0.0)
+        }),
+        Box::new(move |c, _| {
+            let a = st(c);
+            acid(c, a, 2, 3, 0, 0.0, 0.0, 5.0)
+        }),
+        Box::new(move |c, _| {
+            let a = st(c);
+            acid(c, a, 0, 0, 1000, 3.0, 0.5, 4.0)
+        }),
+        Box::new(move |c, _| {
+            let a = st(c);
+            acid(c, a, 0, 0, 2, -3.0, -0.5, 0.5)
+        }),
+        Box::new(move |c, _| {
+            let a = st(c);
+            acid(c, a, 0, 0, 2, 0.01, 0.001, 0.0)
+        }),
+        Box::new(move |c, _| {
+            let a = st(c);
+            let m = max(c);
+            acid(c, a, 0, 0, 2, 0.0, 0.0, m + 1.0)
+        }),
+        Box::new(move |c, _| {
+            let a = st(c);
+            acid(c, a, 2, 2, 0, 0.0, 0.0, 0.0)
+        }),
+        Box::new(move |c, _| {
+            let a = st(c);
+            acid(c, a, 2, 2, 5, 0.0, 0.0, 0.0)
+        }),
+        Box::new(move |c, _| {
+            let a = st(c);
+            acid(c, a, 3, 3, 0, 0.0, 0.0, 0.0)
+        }),
+        Box::new(move |c, _| {
+            let a = st(c);
+            acid(c, a, 9, 9, 0, 0.0, 0.0, 0.0)
+        }),
+    ];
+    check_hazard(&d, "grZebes_801DA528", 1, &as_saved, &shake);
+    for p in &prepares {
+        check_hazard(&d, "grZebes_801DA528", 1, p.as_ref(), &shake);
+    }
+    let pillar = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let ground = *maps.grounds.get(&g[4]).expect("ground");
+        let dir = Vec3::new(
+            f32_at(call, g[5]),
+            f32_at(call, g[5] + 4),
+            f32_at(call, g[5] + 8),
+        );
+        zebes::pillar_hit(r, ground, dir, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    check_hazard(&d, "fn_801DA9D8", 1, &as_saved, &pillar);
+    let island = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let ground = *maps.grounds.get(&g[4]).expect("ground");
+        let dir = Vec3::new(
+            f32_at(call, g[5]),
+            f32_at(call, g[5] + 4),
+            f32_at(call, g[5] + 8),
+        );
+        zebes::island_hit(r, ground, dir, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    check_hazard(&d, "fn_801DA9F0", 1, &as_saved, &island);
+    check_hazard(&d, "grZebes_801D925C", 1, &as_saved, &by_address);
+}
+
+/// The organic platform's state, wait and regrowth count set.
+fn organic(c: &mut Call, state: i16, wait: i16, count: i16, pop_wait: i16) {
+    let v = map_vars(c, 6);
+    poke_u32(c, v, (state as u16 as u32) << 16 | wait as u16 as u32);
+    let w = peek_u32(c, v + 0x30);
+    poke_u32(c, v + 0x30, (w & 0xFFFF_0000) | count as u16 as u32);
+    let w = peek_u32(c, v + 0x34);
+    poke_u32(c, v + 0x34, (w & 0xFFFF) | (pop_wait as u16 as u32) << 16);
+}
+
+#[test]
+fn zebes_stage() {
+    let d = hazard_dir(ZEBES);
+    let f = "grZebes_801D881C";
+    check_hazard(&d, f, 1, &as_saved, &by_address);
+    // Whole with a pop due, breaking, broken (counting, at its end), growing back at each
+    // spawn's count (and its end), and a state past them.
+    let every = |c: &Call| zebes_param(c, 0x10) as i16;
+    let prepares: Vec<Box<Prepare>> = vec![
+        Box::new(|c, _| organic(c, 0, 0, 0, -1)),
+        Box::new(|c, _| organic(c, 1, 0, 0, 5)),
+        // Breaking with its animation over: broken for a random while.
+        Box::new(|c, _| {
+            organic(c, 1, 0, 0, 5);
+            let g = peek_u32(c, 0x8049_E6C8 + 0x180 + 4 * 6);
+            let a = peek_u32(c, nth_jobj(c, g, 0xE) + 0x7C);
+            assert!(a != 0, "the platform's joint without its animation");
+            poke_u32(c, a, peek_u32(c, a) | 1 << 30);
+        }),
+        Box::new(|c, _| organic(c, 2, 9, 0, 5)),
+        Box::new(|c, _| organic(c, 2, 0, 0, 5)),
+        Box::new(move |c, k| {
+            let n = every(c) * (k % 4) as i16 - 1;
+            organic(c, 3, 0, n, 5)
+        }),
+        Box::new(|c, _| organic(c, 3, 0, 2, 5)),
+        Box::new(|c, _| organic(c, 5, 0, 2, 5)),
+    ];
+    for p in &prepares {
+        check_hazard(&d, f, 1, p.as_ref(), &by_address);
+    }
+}
+
+/// Bubble `i`'s state and countdown set.
+fn bubble(c: &mut Call, i: u32, state: u8, t: i16) {
+    let a = ZEBES_BUBBLES + 0x24 * i;
+    let w = peek_u32(c, a);
+    poke_u32(
+        c,
+        a,
+        u32::from(state) << 24 | (w & 0x00FF_0000) | t as u16 as u32,
+    );
+}
+
+#[test]
+fn zebes_bubbles() {
+    use melee_sim::game::gr::zebes;
+    let d = hazard_dir(ZEBES);
+    let moves = |r: &mut Running, maps: &Maps, call: &Call| {
+        Ret::Int(u32::from(zebes::move_bubbles(r, gobj_arg(maps, call))))
+    };
+    // As saved, a top bubble popped (one below to take its place or not), and one falling apart
+    // at its count's end.
+    let popped = |c: &mut Call, k: usize| bubble(c, 1 + (k % 5) as u32, 2, 0);
+    let falling = |c: &mut Call, k: usize| bubble(c, 1 + (k % 5) as u32, 3, -1);
+    for p in [&as_saved as &Prepare, &popped, &falling] {
+        check_hazard(&d, "grZebes_801DB3CC", 1, p, &moves);
+    }
+    let tick = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = *maps.gobjs.get(&call.regs.gpr[3]).expect("the stage's GObj");
+        Ret::Int(u32::from(zebes::tick_bubble(
+            r,
+            g,
+            call.regs.gpr[4] as usize,
+        )))
+    };
+    let this = |c: &mut Call, state: u8, t: i16| {
+        let i = c.regs.gpr[4];
+        bubble(c, i, state, t)
+    };
+    let prepares: [&Prepare; 4] = [
+        &as_saved,
+        &move |c, _| this(c, 2, 0),
+        &move |c, _| this(c, 3, -1),
+        &move |c, _| this(c, 3, 4),
+    ];
+    for p in prepares {
+        check_hazard(&d, "grZebes_801DB088", 1, p, &tick);
+    }
+    let span = |r: &mut Running, maps: &Maps, call: &Call| {
+        Ret::Int(u32::from(zebes::span_bubbles(r, gobj_arg(maps, call))))
+    };
+    // None, one or two of the top in place.
+    let keep = |c: &mut Call, n: usize| {
+        let mut kept = 0;
+        for i in 1..20u32 {
+            let a = ZEBES_BUBBLES + 0x24 * i;
+            if i != 6 && peek_u32(c, a) >> 24 == 1 {
+                if kept >= n {
+                    bubble(c, i, 4, 0);
+                }
+                kept += 1;
+            }
+        }
+    };
+    let prepares: [&Prepare; 4] = [
+        &as_saved,
+        &move |c, _| keep(c, 0),
+        &move |c, _| keep(c, 1),
+        &move |c, _| keep(c, 2),
+    ];
+    for p in prepares {
+        check_hazard(&d, "grZebes_801DBB60", 1, p, &span);
+    }
+    let place = |r: &mut Running, _: &Maps, _: &Call| {
+        zebes::place_bubbles(r);
+        Ret::Nothing
+    };
+    check_hazard(&d, "grZebes_801DC260", 1, &as_saved, &place);
+    let grow = |r: &mut Running, maps: &Maps, call: &Call| {
+        zebes::grow_bubbles(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    // After a pop's wait, due (from several seeds), and with 15 bubbles.
+    let due = |c: &mut Call, k: usize| {
+        poke_u32(c, ZEBES_POP_WAIT, 0);
+        let v = map_vars(c, 6);
+        let w = peek_u32(c, v + 0x30);
+        poke_u32(c, v + 0x30, w | 0xFFFF_0000);
+        set_seed(c, 0x1357_9BDFu32.wrapping_mul(k as u32 + 1));
+    };
+    let full = move |c: &mut Call, k: usize| {
+        due(c, k);
+        for i in 0..20u32 {
+            let a = ZEBES_BUBBLES + 0x24 * i;
+            if peek_u32(c, a) >> 24 == 0 && i < 16 {
+                bubble(c, i, 4, 0);
+                // No pop left behind by a bubble that moved up.
+                poke_u32(c, a + 4, 0);
+            }
+        }
+    };
+    let waiting = |c: &mut Call, _: usize| poke_u32(c, ZEBES_POP_WAIT, 7);
+    for p in [&as_saved as &Prepare, &due, &full, &waiting] {
+        check_hazard(&d, "grZebes_801DC408", 1, p, &grow);
+    }
+    let add = |r: &mut Running, _: &Maps, call: &Call| {
+        let f = |i: usize| call.regs.fpr[i].ps0 as f32;
+        let g = &call.regs.gpr;
+        zebes::add_bubble(
+            r,
+            g[3] as i32,
+            g[4] as u8,
+            f(1),
+            f(2),
+            f(3),
+            zebes::GROW_BUBBLE_FRAME,
+        );
+        Ret::Nothing
+    };
+    check_hazard(&d, "grZebes_801DAE70", 1, &as_saved, &add);
+    let pop = |r: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(zebes::show_pop(r)));
+    let seeds = |c: &mut Call, k: usize| set_seed(c, 0x2468_1357u32.wrapping_mul(k as u32 + 1));
+    for p in [&as_saved as &Prepare, &seeds] {
+        check_hazard(&d, "grZebes_801DAA08", 1, p, &pop);
+    }
+    let hit = |r: &mut Running, _: &Maps, _: &Call| {
+        zebes::bubbles_hit(r);
+        Ret::Nothing
+    };
+    check_hazard(&d, "fn_801DAC90", 1, &as_saved, &hit);
+}
+
+#[test]
+fn zebes_creatures_and_splashes() {
+    use melee_sim::game::gr::zebes;
+    let d = hazard_dir(ZEBES);
+    let creature = |c: &mut Call, waiting: bool, next: i16, t: i16| {
+        let v = map_vars(c, 4);
+        let w = peek_u32(c, v);
+        poke_u32(c, v, (w & 0x7FFF_FFFF) | u32::from(waiting) << 31);
+        poke_u32(c, v + 8, (next as u16 as u32) << 16 | t as u16 as u32);
+    };
+    let prepares: Vec<Box<Prepare>> = vec![
+        Box::new(move |c, _| creature(c, true, 1, 5)),
+        Box::new(move |c, _| creature(c, false, 1, 1)),
+        Box::new(move |c, _| creature(c, false, -1, 1)),
+        Box::new(move |c, _| creature(c, false, 1, 9)),
+        Box::new(move |c, _| creature(c, false, 1, 0)),
+    ];
+    check_hazard(&d, "grZebes_801D95B8", 1, &as_saved, &by_address);
+    for p in &prepares {
+        check_hazard(&d, "grZebes_801D95B8", 1, p.as_ref(), &by_address);
+    }
+    let back = |c: &mut Call, state: i16, level: f32| {
+        let v = map_vars(c, 1);
+        let w = peek_u32(c, v);
+        poke_u32(c, v, (w & 0xFFFF) | (state as u16 as u32) << 16);
+        poke_u32(c, leaf_check::sym("stage_info") + 0x724, level.to_bits());
+    };
+    let prepares: Vec<Box<Prepare>> = vec![
+        Box::new(move |c, _| back(c, 0, -30.0)),
+        Box::new(move |c, _| back(c, 0, -10.0)),
+        Box::new(move |c, _| back(c, 0, 10.0)),
+        Box::new(move |c, _| back(c, 1, 10.0)),
+        Box::new(move |c, _| back(c, 2, 10.0)),
+    ];
+    check_hazard(&d, "grZebes_801D9F84", 1, &as_saved, &by_address);
+    for p in &prepares {
+        check_hazard(&d, "grZebes_801D9F84", 1, p.as_ref(), &by_address);
+    }
+    check_hazard(&d, "grZebes_801D9410", 1, &as_saved, &by_address);
+    let splash = |r: &mut Running, _: &Maps, call: &Call| {
+        let a = call.regs.gpr[3];
+        zebes::add_splash(
+            r,
+            Vec3::new(f32_at(call, a), f32_at(call, a + 4), f32_at(call, a + 8)),
+        );
+        Ret::Nothing
+    };
+    let full = |c: &mut Call, _: usize| poke_u16(c, 0x804D_6998, 10);
+    for p in [&as_saved as &Prepare, &full] {
+        check_hazard(&d, "grZebes_801DA3F4", 1, p, &splash);
+    }
+    let remove = |r: &mut Running, maps: &Maps, call: &Call| {
+        zebes::remove_splash(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_hazard(&d, "grZebes_801DA4FC", 1, &as_saved, &remove);
+}
+
+#[test]
+fn zebes_lava_bubbles() {
+    use melee_sim::game::gr::{zako, zebes};
+    let d = hazard_dir(ZEBES);
+    let cb = |r: &mut Running, _: &Maps, call: &Call| {
+        let a = call.regs.gpr[3];
+        let pos = Vec3::new(f32_at(call, a), f32_at(call, a + 4), f32_at(call, a + 8));
+        zebes::lava_bubble(r, call.addr, pos, call.regs.gpr[4] as i32);
+        Ret::Int(0)
+    };
+    let lines = |c: &mut Call, k: usize| c.regs.gpr[4] = (k % 11) as u32;
+    for f in ["grZebes_801DCB64", "grZebes_801DCBB0"] {
+        for p in [&as_saved as &Prepare, &lines] {
+            check_hazard(&d, f, 1, p, &cb);
+        }
+    }
+    // The stage's and the island's spawn configurations, from their processes' calls, at the
+    // lava's level and other heights.
+    let run = |r: &mut Running, maps: &Maps, call: &Call| {
+        let j = maps.jobjs.get(&call.regs.gpr[4]).copied();
+        let n = zako::run_config(r, call.regs.gpr[3], j, call.regs.fpr[1].ps0 as f32);
+        Ret::Int(n as u32)
+    };
+    let t = leaf_check::sym("grZakoGenerator_801CA43C");
+    let config = move |c: &mut Call, map: u32, off: u32, joint: u32, h: f32| {
+        c.addr = t;
+        let v = map_vars(c, map);
+        c.regs.gpr[3] = peek_u32(c, v + off);
+        let g = peek_u32(c, 0x8049_E6C8 + 0x180 + 4 * map);
+        c.regs.gpr[4] = nth_jobj(c, g, joint);
+        c.regs.fpr[1].ps0 = f64::from(h);
+    };
+    for h in [-60.0f32, -20.0, 0.0, 20.0] {
+        check_hazard(
+            &d,
+            "grZebes_801D881C",
+            1,
+            &move |c, _| config(c, 6, 0x38, 0xE, h),
+            &run,
+        );
+        check_hazard(
+            &d,
+            "grZebes_801D925C",
+            1,
+            &move |c, _| config(c, 7, 0x28, 1, h),
+            &run,
+        );
+    }
+}
+
+#[test]
+fn zebes_unreached_callbacks() {
+    use melee_sim::game::gr::zebes;
+    let d = hazard_dir(ZEBES);
+    let from = "grZebes_801D925C";
+    for name in [
+        "grZebes_801D90FC",
+        "grZebes_801D93D8",
+        "grZebes_801D94EC",
+        "grZebes_801D9754",
+        "grZebes_801D9F2C",
+        "grZebes_801DA0C0",
+    ] {
+        check_hazard(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let load = retarget(leaf_check::sym("grZebes_801D8528"));
+    check_hazard(&d, from, 1, &load, &by_event);
+    let demo = retarget(leaf_check::sym("grZebes_801D84A0"));
+    check_hazard(&d, from, 1, &demo, &by_demo);
+    let shadow =
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(zebes::check_shadow_render()));
+    let to_shadow = retarget(leaf_check::sym("grZebes_801DCCC0"));
+    check_hazard(&d, from, 1, &to_shadow, &shadow);
+}
