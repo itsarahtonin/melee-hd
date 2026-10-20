@@ -235,9 +235,12 @@ pub struct State {
     pub cp: [u32; 256],
     pub xf: Vec<u32>,
     pub tmem: Vec<u8>,
+    /// The registers' hashes, kept once a run asks for digests (`hashing`): each write updates
+    /// them, which a run without digests never reads.
     bp_hash: SetHash,
     cp_hash: SetHash,
     xf_hash: SetHash,
+    hashing: bool,
     /// Bytes of a command the stream hasn't finished.
     buf: Vec<u8>,
     /// Display lists being run.
@@ -288,7 +291,7 @@ pub struct Produced {
 
 impl State {
     pub fn new() -> Self {
-        let mut s = State {
+        State {
             bp: [0; 256],
             bp_mask: 0x00FF_FFFF,
             color_ra: [0; 4],
@@ -301,23 +304,30 @@ impl State {
             bp_hash: SetHash::default(),
             cp_hash: SetHash::default(),
             xf_hash: SetHash::default(),
+            hashing: false,
             buf: Vec::new(),
             depth: 0,
             tracking: Default::default(),
             fetched: Vec::new(),
             layouts: vertex::LayoutCache::default(),
-        };
-        // The hashes start as those of all-zero registers.
+        }
+    }
+
+    /// Makes the registers' hashes from their values, and keeps them from now on.
+    fn start_hashing(&mut self) {
+        self.hashing = true;
+        self.bp_hash = SetHash::default();
+        self.cp_hash = SetHash::default();
+        self.xf_hash = SetHash::default();
         for reg in 0..256 {
             if !trigger(reg) {
-                s.bp_hash.0 ^= SetHash::entry(1, reg, 0);
+                self.bp_hash.0 ^= SetHash::entry(1, reg, self.bp[reg]);
             }
-            s.cp_hash.0 ^= SetHash::entry(2, reg, 0);
+            self.cp_hash.0 ^= SetHash::entry(2, reg, self.cp[reg]);
         }
         for addr in 0..XF_SIZE {
-            s.xf_hash.0 ^= SetHash::entry(3, addr, 0);
+            self.xf_hash.0 ^= SetHash::entry(3, addr, self.xf[addr]);
         }
-        s
     }
 
     /// The state a FIFO log starts from: its registers and memories, as if each register had
@@ -325,19 +335,15 @@ impl State {
     pub fn load(bp: &[u32], cp: &[u32], xf: &[u32], tmem: &[u8]) -> Self {
         let mut s = State::new();
         for (reg, &v) in bp.iter().enumerate().take(256) {
-            s.bp_hash
-                .update(1, reg, 0, if trigger(reg) { 0 } else { v });
             s.bp[reg] = v;
             if (TEV_COLOR..TEV_COLOR + 8).contains(&reg) {
                 s.set_tev_color(reg, v);
             }
         }
         for (reg, &v) in cp.iter().enumerate().take(256) {
-            s.cp_hash.update(2, reg, 0, v);
             s.cp[reg] = v;
         }
         for (addr, &v) in xf.iter().enumerate().take(XF_SIZE) {
-            s.xf_hash.update(3, addr, 0, v);
             s.xf[addr] = v;
         }
         let n = tmem.len().min(TMEM_SIZE);
@@ -363,6 +369,14 @@ impl State {
 
     /// What changed since the last call, with `track_changes`.
     pub fn take_delta(&self) -> Delta {
+        let mut delta = Delta::default();
+        self.take_delta_into(&mut delta);
+        delta
+    }
+
+    /// What changed since the last call, with `track_changes`, added to `into`: its lists
+    /// appended to, and its TEV colors set if they changed.
+    pub fn take_delta_into(&self, into: &mut Delta) {
         let mut t = self.tracking.borrow_mut();
         let t = &mut *t;
         for &r in &t.bp_list {
@@ -374,34 +388,20 @@ impl State {
         for &a in &t.xf_list {
             t.xf[a as usize / 64] = 0;
         }
-        Delta {
-            bp: t
-                .bp_list
-                .drain(..)
-                .map(|r| (r, self.bp[r as usize]))
-                .collect(),
-            cp: t
-                .cp_list
-                .drain(..)
-                .map(|r| (r, self.cp[r as usize]))
-                .collect(),
-            xf: t
-                .xf_list
-                .drain(..)
-                .map(|a| (a, self.xf[a as usize]))
-                .collect(),
-            tev: std::mem::take(&mut t.tev).then_some([
-                self.color_ra,
-                self.color_bg,
-                self.konst_ra,
-                self.konst_bg,
-            ]),
-            tmem: t
-                .tmem
-                .drain(..)
-                .map(|(at, len)| (at, self.tmem[at as usize..(at + len) as usize].to_vec()))
-                .collect(),
+        into.bp
+            .extend(t.bp_list.drain(..).map(|r| (r, self.bp[r as usize])));
+        into.cp
+            .extend(t.cp_list.drain(..).map(|r| (r, self.cp[r as usize])));
+        into.xf
+            .extend(t.xf_list.drain(..).map(|a| (a, self.xf[a as usize])));
+        if std::mem::take(&mut t.tev) {
+            into.tev = Some([self.color_ra, self.color_bg, self.konst_ra, self.konst_bg]);
         }
+        into.tmem.extend(
+            t.tmem
+                .drain(..)
+                .map(|(at, len)| (at, self.tmem[at as usize..(at + len) as usize].to_vec())),
+        );
     }
 
     /// Makes the changes in `delta`, as another state took them.
@@ -452,7 +452,7 @@ impl State {
         }
         self.bp[reg] = new;
         self.tracking.get_mut().bp(reg);
-        if !trigger(reg) {
+        if self.hashing && !trigger(reg) {
             self.bp_hash.update(1, reg, old, new);
         }
         match reg {
@@ -499,14 +499,18 @@ impl State {
     fn write_cp(&mut self, reg: u8, value: u32) {
         let old = std::mem::replace(&mut self.cp[reg as usize], value);
         self.tracking.get_mut().cp(reg as usize);
-        self.cp_hash.update(2, reg as usize, old, value);
+        if self.hashing {
+            self.cp_hash.update(2, reg as usize, old, value);
+        }
     }
 
     fn write_xf(&mut self, addr: usize, value: u32) {
         if addr < XF_SIZE {
             let old = std::mem::replace(&mut self.xf[addr], value);
             self.tracking.get_mut().xf(addr);
-            self.xf_hash.update(3, addr, old, value);
+            if self.hashing {
+                self.xf_hash.update(3, addr, old, value);
+            }
         }
     }
 
@@ -528,6 +532,9 @@ impl State {
         out: &mut Vec<Produced>,
         digests: bool,
     ) -> usize {
+        if digests && !self.hashing {
+            self.start_hashing();
+        }
         let mut at = 0;
         while at < data.len() {
             let rest = &data[at..];
@@ -753,6 +760,76 @@ impl State {
             tev: 0,
             vertices: fnv(h, &value.to_le_bytes()),
             textures: 0,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct NoMemory;
+
+    impl Memory for NoMemory {
+        fn read(&self, _phys: u32, out: &mut [u8]) {
+            out.fill(0);
+        }
+    }
+
+    /// CP, XF and BP writes (BP masks and triggers among them), as FIFO commands.
+    fn writes(seed: u64) -> Vec<u8> {
+        let mut x = seed;
+        let mut next = || {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            (x >> 16) as u32
+        };
+        let mut fifo = Vec::new();
+        for _ in 0..3000 {
+            match next() % 3 {
+                0 => {
+                    fifo.push(0x08);
+                    fifo.push(next() as u8);
+                    fifo.extend(next().to_be_bytes());
+                }
+                1 => {
+                    let count = next() % 16;
+                    fifo.push(0x10);
+                    fifo.extend(((count << 16) | (next() % XF_SIZE as u32)).to_be_bytes());
+                    for _ in 0..=count {
+                        fifo.extend(next().to_be_bytes());
+                    }
+                }
+                _ => {
+                    // Not the copy trigger or a palette load, which reach memory.
+                    let reg = match next() as u8 {
+                        0x52 | 0x64 | 0x65 => 0xFE,
+                        r => r,
+                    };
+                    fifo.push(0x61);
+                    fifo.extend((u32::from(reg) << 24 | next() & 0xFF_FFFF).to_be_bytes());
+                }
+            }
+        }
+        fifo
+    }
+
+    /// The registers' hashes a state starts keeping when a run first asks for digests are those
+    /// it would have kept from the start.
+    #[test]
+    fn hashes_kept_late_are_those_kept_from_the_start() {
+        for seed in 1..20 {
+            let fifo = writes(0x9E37_79B9_7F4A_7C15 ^ seed);
+            let (mut early, mut late) = (State::new(), State::new());
+            let mut out = Vec::new();
+            early.feed(&NoMemory, &[], &mut out, true);
+            early.feed(&NoMemory, &fifo, &mut out, true);
+            late.feed(&NoMemory, &fifo, &mut out, false);
+            assert!(!late.hashing);
+            late.feed(&NoMemory, &[], &mut out, true);
+            let hashes = |s: &State| (s.bp_hash.0, s.cp_hash.0, s.xf_hash.0);
+            assert_eq!(hashes(&early), hashes(&late), "seed {seed}");
         }
     }
 }

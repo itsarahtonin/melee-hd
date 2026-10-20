@@ -27,7 +27,8 @@ const AHEAD: u64 = 2;
 const BATCH: usize = 64;
 
 enum Packet {
-    Changes(Delta),
+    /// The state's changes, in the batch's `delta`.
+    Changes(Changes),
     /// Memory a texture reads, by its address, and its hash (`hash_bytes`).
     Memory(u32, Arc<[u8]>, u64),
     /// A draw, its vertices at `data` in the batch's, built by transform thread `worker`.
@@ -45,11 +46,53 @@ enum Packet {
     Resize(u32, u32),
 }
 
-/// A batch of packets and its draws' vertices, which every thread reads.
+/// A batch of packets, its draws' vertices and the state's changes, which every thread reads.
 #[derive(Default)]
 struct Packets {
     packets: Vec<Packet>,
     data: Vec<u8>,
+    delta: Delta,
+}
+
+/// Where one change of the state is in its batch's `delta`.
+struct Changes {
+    bp: std::ops::Range<usize>,
+    cp: std::ops::Range<usize>,
+    xf: std::ops::Range<usize>,
+    tmem: std::ops::Range<usize>,
+    tev: Option<[[u32; 4]; 4]>,
+}
+
+impl Changes {
+    /// The registers building draws reads, as the game thread's state changed them: the BP,
+    /// CP and XF (not the TEV colors or texture memory).
+    fn apply_registers(&self, delta: &Delta, state: &mut State) {
+        for &(reg, v) in &delta.bp[self.bp.clone()] {
+            state.bp[reg as usize] = v;
+        }
+        for &(reg, v) in &delta.cp[self.cp.clone()] {
+            state.cp[reg as usize] = v;
+        }
+        for &(addr, v) in &delta.xf[self.xf.clone()] {
+            state.xf[addr as usize] = v;
+        }
+    }
+
+    /// All of the change, as `State::apply` makes it.
+    fn apply(&self, delta: &Delta, state: &mut State) {
+        self.apply_registers(delta, state);
+        if let Some([cra, cbg, kra, kbg]) = self.tev {
+            (
+                state.color_ra,
+                state.color_bg,
+                state.konst_ra,
+                state.konst_bg,
+            ) = (cra, cbg, kra, kbg);
+        }
+        for (at, bytes) in &delta.tmem[self.tmem.clone()] {
+            state.tmem[*at as usize..*at as usize + bytes.len()].copy_from_slice(bytes);
+        }
+    }
 }
 
 type Batch = Arc<Packets>;
@@ -183,6 +226,7 @@ impl Threaded {
             Packets {
                 packets: Vec::with_capacity(BATCH + 8),
                 data,
+                delta: Delta::default(),
             },
         ));
         self.load.fill(0);
@@ -228,9 +272,23 @@ impl Threaded {
     }
 
     fn changes(&mut self, state: &State) {
-        let delta = state.take_delta();
-        if !delta.is_empty() {
-            self.batch.packets.push(Packet::Changes(delta));
+        let d = &mut self.batch.delta;
+        let lens = [d.bp.len(), d.cp.len(), d.xf.len(), d.tmem.len()];
+        state.take_delta_into(d);
+        let changes = Changes {
+            bp: lens[0]..d.bp.len(),
+            cp: lens[1]..d.cp.len(),
+            xf: lens[2]..d.xf.len(),
+            tmem: lens[3]..d.tmem.len(),
+            tev: d.tev.take(),
+        };
+        if !(changes.bp.is_empty()
+            && changes.cp.is_empty()
+            && changes.xf.is_empty()
+            && changes.tmem.is_empty()
+            && changes.tev.is_none())
+        {
+            self.batch.packets.push(Packet::Changes(changes));
         }
     }
 }
@@ -388,20 +446,6 @@ impl Memory for Held {
     }
 }
 
-/// The registers building draws reads, as the game thread's state changed them: the BP, CP and
-/// XF (not the TEV colors or texture memory).
-fn apply_registers(state: &mut State, delta: &Delta) {
-    for &(reg, v) in &delta.bp {
-        state.bp[reg as usize] = v;
-    }
-    for &(reg, v) in &delta.cp {
-        state.cp[reg as usize] = v;
-    }
-    for &(addr, v) in &delta.xf {
-        state.xf[addr as usize] = v;
-    }
-}
-
 /// Transform thread `k`: builds its draws of each batch ahead of the render thread, with a
 /// copy of the state of its own, and decodes the others' only as far as the normals they leave
 /// for the next draw. What it built goes to the render thread, which sends the buffers back.
@@ -418,7 +462,7 @@ fn work(
         built.clear();
         for packet in &batch.packets {
             match packet {
-                Packet::Changes(delta) => apply_registers(&mut state, delta),
+                Packet::Changes(c) => c.apply_registers(&batch.delta, &mut state),
                 Packet::Draw {
                     primitive,
                     vat,
@@ -479,7 +523,7 @@ fn run(
         next.fill(0);
         for packet in &batch.packets {
             match packet {
-                Packet::Changes(delta) => state.apply(delta),
+                Packet::Changes(c) => c.apply(&batch.delta, &mut state),
                 Packet::Memory(at, bytes, hash) => {
                     let key = (*at, bytes.len() as u32);
                     memory.0.insert(key, bytes.clone());

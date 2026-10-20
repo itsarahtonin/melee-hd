@@ -62,8 +62,11 @@ pub struct Space {
     ranges: RefCell<Ranges>,
     /// Display lists the game rewrote in place (refraction's matrix indices): each list, its
     /// length, and the vertex stride and the offsets of the two indices, as
-    /// `PObjs::refract_patches` holds them.
-    pub patches: Vec<Patch>,
+    /// `PObjs::refract_patches` holds them, in order ([`Space::set_patches`]).
+    patches: Vec<Patch>,
+    /// The longest of them, and the archives they're in.
+    patch_len: u32,
+    patched_archives: Vec<ArchiveId>,
     /// The executable's sections at their physical addresses (`main.dol`, its static data
     /// such as the default font's glyphs).
     dol: Vec<(u32, Vec<u8>)>,
@@ -80,6 +83,8 @@ impl Default for Space {
                 ..Ranges::default()
             }),
             patches: Default::default(),
+            patch_len: 0,
+            patched_archives: Vec::new(),
             dol: Vec::new(),
             overlay: RefCell::new(Vec::new()),
         }
@@ -87,6 +92,32 @@ impl Default for Space {
 }
 
 impl Space {
+    /// The display lists the game rewrote, which reads see rewritten and views leave out.
+    pub fn set_patches(&mut self, mut patches: Vec<Patch>) {
+        patches.sort_by_key(|p| (p.list, p.len));
+        patches.dedup();
+        self.patch_len = patches.iter().map(|p| p.len).max().unwrap_or(0);
+        self.patched_archives = patches.iter().map(|p| p.list.archive).collect();
+        self.patched_archives.dedup();
+        self.patches = patches;
+    }
+
+    /// Whether a rewritten display list lies over any of the bytes from `at` to `end` in
+    /// `archive` (by offset): found among the lists in order, from the first that could reach
+    /// `at`.
+    fn patched(&self, archive: ArchiveId, at: u32, end: u64) -> bool {
+        if !self.patched_archives.contains(&archive) {
+            return false;
+        }
+        let ps = &self.patches;
+        let from = at.saturating_sub(self.patch_len);
+        let first = ps.partition_point(|p| (p.list.archive, p.list.offset) < (archive, from));
+        ps[first..]
+            .iter()
+            .take_while(|p| p.list.archive == archive && u64::from(p.list.offset) < end)
+            .any(|p| u64::from(p.list.offset) + u64::from(p.len) > u64::from(at))
+    }
+
     /// The address of a place in an archive, giving the archive its range if it has none.
     pub fn addr(&self, data: &Archives, r: DataRef) -> u32 {
         let mut ranges = self.ranges.borrow_mut();
@@ -187,11 +218,7 @@ impl Space {
         if self.overlay.borrow().iter().any(|(a, b)| over(*a, b.len())) {
             return None;
         }
-        if self
-            .patches
-            .iter()
-            .any(|p| p.list.archive == archive && over(start + p.list.offset, p.len as usize))
-        {
+        if self.patched(archive, at as u32, hi - u64::from(start)) {
             return None;
         }
         Some(out)
@@ -283,6 +310,50 @@ fn patch_display_list(bytes: &[u8], p: &Patch, at: usize, out: &mut [u8]) {
                 out[dst - at] = bytes[src];
             }
             q += stride;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Finding a rewritten list over a range finds what testing every list does.
+    #[test]
+    fn patched_finds_what_testing_every_list_does() {
+        let mut x = 0x2545_F491_4F6C_DD1Du64;
+        let mut next = |n: u32| {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            (x >> 16) as u32 % n
+        };
+        for _ in 0..200 {
+            let patches: Vec<Patch> = (0..next(40))
+                .map(|_| Patch {
+                    list: DataRef {
+                        archive: ArchiveId(next(4) as u16),
+                        offset: next(4000),
+                    },
+                    len: next(300),
+                    stride: 1,
+                    pos: 0,
+                    tex: 0,
+                })
+                .collect();
+            let mut space = Space::default();
+            space.set_patches(patches.clone());
+            for _ in 0..500 {
+                let archive = ArchiveId(next(5) as u16);
+                let at = next(4500);
+                let end = u64::from(at) + 1 + u64::from(next(400));
+                let want = patches.iter().any(|p| {
+                    p.list.archive == archive
+                        && u64::from(p.list.offset) < end
+                        && u64::from(p.list.offset) + u64::from(p.len) > u64::from(at)
+                });
+                assert_eq!(space.patched(archive, at, end), want);
+            }
         }
     }
 }

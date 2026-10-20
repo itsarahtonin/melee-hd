@@ -89,7 +89,7 @@ impl Frames {
         let patches = &game.objs.pobjs.refract_patches;
         if self.patched != patches.len() {
             self.patched = patches.len();
-            self.space.patches = game
+            let list = game
                 .objs
                 .pobjs
                 .pool
@@ -106,8 +106,7 @@ impl Frames {
                     })
                 })
                 .collect();
-            self.space.patches.sort_by_key(|p| (p.list, p.len));
-            self.space.patches.dedup();
+            self.space.set_patches(list);
         }
         self.built += 1;
         self.hsd.debug_dl = std::env::var("MELEE_RENDER_DL")

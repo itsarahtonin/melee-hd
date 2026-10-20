@@ -262,27 +262,30 @@ pub fn fetch(
         offset += width;
     }
     // Each attribute's registers, read once for the draw.
-    let plan: Vec<Plan<'_>> = layout
-        .iter()
-        .enumerate()
-        .filter(|(_, a)| a.source != Source::None)
-        .map(|(i, a)| Plan {
-            source: a.source,
-            size: a.size,
-            indices: a.indices,
-            part: a.size / a.indices.max(1),
-            base: cp[ARRAY_BASE as usize + a.array] & 0x03FF_FFFF,
-            stride: cp[ARRAY_STRIDE as usize + a.array] & 0xFF,
-            array: arrays.get(i).copied().flatten(),
-        })
-        .collect();
+    let mut plans = [Plan::NONE; MAX_ATTRS];
+    let mut n = 0;
+    for (i, a) in layout.iter().enumerate() {
+        if a.source != Source::None && n < MAX_ATTRS {
+            plans[n] = Plan {
+                source: a.source,
+                size: a.size,
+                indices: a.indices,
+                part: a.size / a.indices.max(1),
+                base: cp[ARRAY_BASE as usize + a.array] & 0x03FF_FFFF,
+                stride: cp[ARRAY_STRIDE as usize + a.array] & 0xFF,
+                array: arrays.get(i).copied().flatten(),
+            };
+            n += 1;
+        }
+    }
+    let plan = &plans[..n];
     // Written into place: each vertex takes `size` bytes.
     let start = out.len();
     out.resize(start + count as usize * size, 0);
     let dst = &mut out[start..];
     let (mut at, mut to) = (0, 0);
     for _ in 0..count {
-        for p in &plan {
+        for p in plan {
             if p.source == Source::Direct {
                 let n = p.size as usize;
                 put(&mut dst[to..to + n], &data[at..at + n]);
@@ -311,6 +314,7 @@ pub fn fetch(
 }
 
 /// An attribute as [`fetch`] copies it: its registers, and its array as far as the draw reaches.
+#[derive(Clone, Copy)]
 struct Plan<'a> {
     source: Source,
     size: u32,
@@ -319,6 +323,18 @@ struct Plan<'a> {
     base: u32,
     stride: u32,
     array: Option<&'a [u8]>,
+}
+
+impl Plan<'_> {
+    const NONE: Self = Plan {
+        source: Source::None,
+        size: 0,
+        indices: 0,
+        part: 0,
+        base: 0,
+        stride: 0,
+        array: None,
+    };
 }
 
 /// The most attributes a vertex has: the matrix indices, position, normal, two colors and
