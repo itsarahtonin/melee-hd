@@ -29,8 +29,8 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::it::kinds::{
-    chicorita, fire, fushigibana, hassam, hinoarashi, kamex, kireihana, lizardon, lucky, maril,
-    marumine, matadogas, pippi, porygon2, sonans, thunder, togepy, tosakinto, unknown,
+    chicorita, fire, fushigibana, hassam, hinoarashi, kabigon, kamex, kireihana, lizardon, lucky,
+    maril, marumine, matadogas, pippi, porygon2, sonans, thunder, togepy, tosakinto, unknown,
 };
 use melee_sim::game::it::{self, CLASS_ITEM, pokemon};
 use melee_sim::game::state::Running;
@@ -119,6 +119,7 @@ const UNITS: &[(u32, u32)] = &[
     (0x802C_B8AC, 0x802C_C6E4),
     (0x802D_3260, 0x802D_36B0),
     (0x802D_5ABC, 0x802D_5CF8),
+    (0x802C_9D40, 0x802C_A49C),
 ];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
@@ -169,6 +170,7 @@ const EVT_UNK: &[&str] = &[
     "it_802CB940",
     "it_802D32DC",
     "it_802D5CD8",
+    "it_802C9E24",
 ];
 
 /// Helpers that take what the check can't give: they run inside the callers that call them,
@@ -239,6 +241,10 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802C8FE4", tosakinto::landed),
     ("it_802CB960", lizardon::landed),
     ("it_802D32D8", pippi::landed),
+    ("it_802C9E8C", kabigon::stand),
+    ("it_802CA074", kabigon::go_up),
+    ("it_802CA324", kabigon::enter_air),
+    ("it_802CA3F4", kabigon::dust),
     ("it_80279C48", pokemon::face_nearest_opponent),
     ("it_80279E24", pokemon::pulse),
     ("it_80279FF8", pokemon::grow),
@@ -446,6 +452,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802D32DC" => pippi::evt_unk(g, gobj, maybe(4)),
         "it_802D5CD8" => porygon2::evt_unk(g, gobj, maybe(4)),
         "it_802CC1CC" => lizardon::flame(g, gobj, r(4) as i32),
+        "it_802C9E24" => kabigon::evt_unk(g, gobj, maybe(4)),
         "it_802D61C8" => hinoarashi::touch_normal(g, gobj, r(4) as i32),
         "it_802D6310" => hinoarashi::turn_off_surface(g, gobj, r(4) as i32),
         "it_802D6674" => hinoarashi::flame_start(g, gobj, r(4) as i32),
