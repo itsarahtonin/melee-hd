@@ -74,8 +74,9 @@ impl Perf {
         }
     }
 
-    /// The report: `config` describes the run, `untimed` counts frames the GPU timer missed.
-    pub fn report(&self, config: &str, untimed: Option<u64>) -> String {
+    /// The report: `config` describes the run, `untimed` counts frames the GPU timer missed,
+    /// `specialized` says what the specialized shaders did.
+    pub fn report(&self, config: &str, untimed: Option<u64>, specialized: Option<&str>) -> String {
         let mut s = format!("melee-hd perf report\nconfig: {config}\n");
         let n = self.presents.len();
         let secs = match (self.presents.first(), self.presents.last()) {
@@ -122,12 +123,15 @@ impl Perf {
         s += &format!("cpu ms swap chain: {}\n", cpu(|c| c.acquire));
         s += &format!("cpu ms present: {}\n", cpu(|c| c.present));
         s += &format!("cpu ms tick: {}\n", Dist::of(self.sim.clone()));
+        if let Some(t) = specialized {
+            s += &format!("specialized shaders: {t}\n");
+        }
         s
     }
 
     /// Writes the report to the file and prints it.
-    pub fn finish(&self, config: &str, untimed: Option<u64>) {
-        let text = self.report(config, untimed);
+    pub fn finish(&self, config: &str, untimed: Option<u64>, specialized: Option<&str>) {
+        let text = self.report(config, untimed, specialized);
         if let Err(e) = std::fs::write(&self.path, &text) {
             eprintln!("{}: {e}", self.path);
         }
@@ -192,7 +196,7 @@ mod tests {
             g.span = us(5000);
             p.gpu(g);
         }
-        let r = p.report("test", Some(2));
+        let r = p.report("test", Some(2), None);
         assert!(
             r.contains("frames: 220 in 1.53 s, 142.86 frames/s\n"),
             "{r}"

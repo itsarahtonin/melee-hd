@@ -17,12 +17,16 @@ mod copy_tests;
 mod depth_tests;
 mod encode;
 pub mod gpu_time;
+mod tev;
+#[cfg(test)]
+mod tev_tests;
 mod thread;
 #[cfg(test)]
 mod vertex_tests;
 mod xfb;
 
 pub use gpu_time::GpuTimer;
+pub use tev::{TevMode, TevStats};
 pub use thread::Threaded;
 
 use std::collections::HashMap;
@@ -171,6 +175,8 @@ impl PipelineKey {
 
 struct Command {
     pipeline: PipelineKey,
+    /// The draw's specialized shader (`tev::Specializer`), or `tev::UBER`.
+    tev: u32,
     uniform: u32,
     textures: [u32; 8],
     /// The vertices' texture coordinates (the draw call's instance).
@@ -411,6 +417,8 @@ pub struct Renderer {
     uniform_layout: wgpu::BindGroupLayout,
     texture_layout: wgpu::BindGroupLayout,
     pipelines: FxHashMap<PipelineKey, wgpu::RenderPipeline>,
+    /// Pipelines with shaders specialized to the draws' TEV configurations.
+    tev: tev::Specializer,
     /// The vertices' words (`GpuVertex::write`).
     vertices: Vec<u32>,
     /// The vertices' order, three to a triangle, each its first word: a draw's vertices are
@@ -610,6 +618,84 @@ fn iround(x: f32) -> f32 {
 /// centers sample where the GameCube's rasterizer does (9/16 into a pixel, as Dolphin's has it).
 fn snap(v: f32) -> f32 {
     (iround(16.0 * v) - 1.0) / 16.0
+}
+
+/// A pipeline drawing with `module`'s `vs_main` and `fs_main` for what `key` says.
+fn make_pipeline(
+    device: &wgpu::Device,
+    layout: &wgpu::PipelineLayout,
+    cache: Option<&wgpu::PipelineCache>,
+    samples: u32,
+    key: PipelineKey,
+    module: &wgpu::ShaderModule,
+) -> wgpu::RenderPipeline {
+    let blend = key.blend.map(|(src, dst, subtract)| {
+        let component = |is_alpha: bool| {
+            if subtract {
+                wgpu::BlendComponent {
+                    src_factor: wgpu::BlendFactor::One,
+                    dst_factor: wgpu::BlendFactor::One,
+                    operation: wgpu::BlendOperation::ReverseSubtract,
+                }
+            } else if is_alpha && key.const_alpha {
+                wgpu::BlendComponent::REPLACE
+            } else {
+                wgpu::BlendComponent {
+                    src_factor: blend_factor(src, true),
+                    dst_factor: blend_factor(dst, false),
+                    operation: wgpu::BlendOperation::Add,
+                }
+            }
+        };
+        wgpu::BlendState {
+            color: component(false),
+            alpha: component(true),
+        }
+    });
+    let mut mask = wgpu::ColorWrites::empty();
+    if key.write_color {
+        mask |= wgpu::ColorWrites::COLOR;
+    }
+    if key.write_alpha {
+        mask |= wgpu::ColorWrites::ALPHA;
+    }
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: None,
+        layout: Some(layout),
+        vertex: wgpu::VertexState {
+            module,
+            entry_point: Some("vs_main"),
+            compilation_options: Default::default(),
+            buffers: &[],
+        },
+        primitive: wgpu::PrimitiveState::default(),
+        depth_stencil: Some(wgpu::DepthStencilState {
+            format: DEPTH_FORMAT,
+            depth_write_enabled: Some(key.depth_write),
+            depth_compare: Some(
+                key.depth_compare
+                    .map_or(wgpu::CompareFunction::Always, compare_function),
+            ),
+            stencil: Default::default(),
+            bias: Default::default(),
+        }),
+        multisample: wgpu::MultisampleState {
+            count: samples,
+            ..Default::default()
+        },
+        fragment: Some(wgpu::FragmentState {
+            module,
+            entry_point: Some("fs_main"),
+            compilation_options: Default::default(),
+            targets: &[Some(wgpu::ColorTargetState {
+                format: COLOR_FORMAT,
+                blend,
+                write_mask: mask,
+            })],
+        }),
+        multiview_mask: None,
+        cache,
+    })
 }
 
 fn compare_function(func: u32) -> wgpu::CompareFunction {
@@ -812,6 +898,16 @@ impl Renderer {
             immediate_size: 0,
         });
         let copier = copy::Copier::new(&device, &targets.efb_view);
+        let tev = tev::Specializer::new(
+            tev::TevMode::from_env(),
+            tev::Maker {
+                device: device.clone(),
+                layout: layout.clone(),
+                cache: None,
+                samples,
+                checks,
+            },
+        );
         let mut r = Renderer {
             efb_view: targets.efb_view,
             efb_msaa: targets.efb_msaa,
@@ -826,6 +922,7 @@ impl Renderer {
             uniform_layout,
             texture_layout,
             pipelines: FxHashMap::default(),
+            tev,
             vertices: Vec::new(),
             indices: Vec::new(),
             uniforms: Vec::new(),
@@ -907,6 +1004,7 @@ impl Renderer {
                     fallback: true,
                 })
         });
+        self.tev.maker.cache = self.cache.clone();
     }
 
     /// The driver's pipeline cache's contents, to keep for the next run.
@@ -930,6 +1028,42 @@ impl Renderer {
                 self.pipeline(key);
             }
         }
+    }
+
+    /// The pipelines with specialized shaders asked for so far, each what it's made for
+    /// ([`Renderer::pipeline_keys`]' words) and then its TEV configuration's, to make again at
+    /// the next run's start ([`Renderer::warm_specialized`]).
+    pub fn specialized_keys(&self) -> Vec<Vec<u32>> {
+        self.tev.keys()
+    }
+
+    /// The words of each of [`Renderer::specialized_keys`]' entries, and a mark that changes
+    /// with what they hold, for a saved list.
+    pub fn specialized_key_format() -> (usize, u32) {
+        (8 + tev::UID_WORDS, tev::LIST_MARK)
+    }
+
+    /// Makes the pipelines `keys` name, as [`Renderer::specialized_keys`] gave them, on the
+    /// shader threads behind any a draw needs (at once with `MELEE_TEV=sync`).
+    pub fn warm_specialized(&mut self, keys: &[Vec<u32>]) {
+        for k in keys {
+            let (Some(key), Some(uid)) = (
+                k.get(..8)
+                    .and_then(|k| PipelineKey::unpack(k.try_into().unwrap())),
+                k.get(8..).and_then(tev::Uid::from_words),
+            ) else {
+                continue;
+            };
+            if key.early_z && self.early_module.is_none() {
+                continue;
+            }
+            self.tev.request(key, uid, false);
+        }
+    }
+
+    /// What the specialized shaders have done.
+    pub fn specialized_stats(&self) -> TevStats {
+        self.tev.stats()
     }
 
     pub fn device(&self) -> &wgpu::Device {
@@ -1263,6 +1397,7 @@ impl Renderer {
         }
         if let Some(last) = self.commands.last_mut()
             && last.pipeline == c.pipeline
+            && last.tev == c.tev
             && last.uniform == c.uniform
             && last.textures == c.textures
             && last.texgens == c.texgens
@@ -1401,80 +1536,27 @@ impl Renderer {
         if self.pipelines.contains_key(&key) {
             return;
         }
-        let blend = key.blend.map(|(src, dst, subtract)| {
-            let component = |is_alpha: bool| {
-                if subtract {
-                    wgpu::BlendComponent {
-                        src_factor: wgpu::BlendFactor::One,
-                        dst_factor: wgpu::BlendFactor::One,
-                        operation: wgpu::BlendOperation::ReverseSubtract,
-                    }
-                } else if is_alpha && key.const_alpha {
-                    wgpu::BlendComponent::REPLACE
-                } else {
-                    wgpu::BlendComponent {
-                        src_factor: blend_factor(src, true),
-                        dst_factor: blend_factor(dst, false),
-                        operation: wgpu::BlendOperation::Add,
-                    }
-                }
-            };
-            wgpu::BlendState {
-                color: component(false),
-                alpha: component(true),
-            }
-        });
-        let mut mask = wgpu::ColorWrites::empty();
-        if key.write_color {
-            mask |= wgpu::ColorWrites::COLOR;
-        }
-        if key.write_alpha {
-            mask |= wgpu::ColorWrites::ALPHA;
-        }
         let module = match &self.early_module {
             Some(m) if key.early_z => m,
             _ => &self.module,
         };
-        let pipeline = self
-            .device
-            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: None,
-                layout: Some(&self.layout),
-                vertex: wgpu::VertexState {
-                    module,
-                    entry_point: Some("vs_main"),
-                    compilation_options: Default::default(),
-                    buffers: &[],
-                },
-                primitive: wgpu::PrimitiveState::default(),
-                depth_stencil: Some(wgpu::DepthStencilState {
-                    format: DEPTH_FORMAT,
-                    depth_write_enabled: Some(key.depth_write),
-                    depth_compare: Some(
-                        key.depth_compare
-                            .map_or(wgpu::CompareFunction::Always, compare_function),
-                    ),
-                    stencil: Default::default(),
-                    bias: Default::default(),
-                }),
-                multisample: wgpu::MultisampleState {
-                    count: self.samples,
-                    ..Default::default()
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module,
-                    entry_point: Some("fs_main"),
-                    compilation_options: Default::default(),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: COLOR_FORMAT,
-                        blend,
-                        write_mask: mask,
-                    })],
-                }),
-                multiview_mask: None,
-                cache: self.cache.as_ref(),
-            });
+        let pipeline = make_pipeline(
+            &self.device,
+            &self.layout,
+            self.cache.as_ref(),
+            self.samples,
+            key,
+            module,
+        );
         self.pipelines.insert(key, pipeline);
+    }
+
+    /// The draw's specialized shader (`tev::UBER` for none), asked for if it hasn't been.
+    fn specialized(&mut self, state: &State, key: PipelineKey, mode: u32) -> u32 {
+        if self.tev.mode == TevMode::Off {
+            return tev::UBER;
+        }
+        self.tev.request(key, tev::Uid::of(&state.bp, mode), true)
     }
 
     /// Clears `rect` of the EFB as a copy with the clear bit does: color, alpha and depth as
@@ -1583,6 +1665,7 @@ impl Renderer {
         self.bind_group([0; 8]);
         self.push_command(Command {
             pipeline: key,
+            tev: tev::UBER,
             texgens: 0,
             uniform,
             textures: [0; 8],
@@ -1725,20 +1808,38 @@ impl Renderer {
         self.queue.write_buffer(vbuf, 0, vbytes);
         self.queue.write_buffer(ibuf, 0, ibytes);
         self.queue.write_buffer(ubuf, 0, &self.uniforms);
+        self.tev.collect();
         let mut encoder = self.device.create_command_encoder(&Default::default());
         {
             let mut pass = self.efb_pass(&mut encoder, clear);
             pass.set_bind_group(2, vgroup, &[]);
             pass.set_index_buffer(ibuf.slice(..), wgpu::IndexFormat::Uint32);
             // Each state set only when it changes.
-            let mut last: Option<PipelineKey> = None;
+            let mut last: Option<(PipelineKey, u32)> = None;
             let mut uniform = None;
             let mut textures = None;
             let mut scissor = None;
             for c in &self.commands {
-                if last != Some(c.pipeline) {
-                    pass.set_pipeline(&self.pipelines[&c.pipeline]);
-                    last = Some(c.pipeline);
+                // The specialized shader where it's made, else the uber shader, which draws the same.
+                let tev = match self.tev.pipeline(c.pipeline, c.tev) {
+                    Some(_) => {
+                        self.tev.stats.specialized_calls += 1;
+                        c.tev
+                    }
+                    None => {
+                        if c.tev != tev::UBER {
+                            self.tev.stats.uber_calls += 1;
+                        }
+                        tev::UBER
+                    }
+                };
+                if last != Some((c.pipeline, tev)) {
+                    pass.set_pipeline(
+                        self.tev
+                            .pipeline(c.pipeline, tev)
+                            .unwrap_or(&self.pipelines[&c.pipeline]),
+                    );
+                    last = Some((c.pipeline, tev));
                 }
                 if uniform != Some(c.uniform) {
                     pass.set_bind_group(0, ugroup, &[c.uniform]);
@@ -2468,6 +2569,7 @@ impl Renderer {
             self.pipeline(key);
             self.push_command(Command {
                 pipeline: key,
+                tev: tev::UBER,
                 texgens: tg as u32,
                 uniform,
                 textures: ids,
@@ -2506,8 +2608,10 @@ impl Renderer {
             let u = Self::uniforms_of(state, levels, [MODE_DEPTH_ONLY, 0, 0, 0]);
             let uniform = self.push_uniforms(&u);
             self.pipeline(depth_key);
+            let tev = self.specialized(state, depth_key, MODE_DEPTH_ONLY);
             self.push_command(Command {
                 pipeline: depth_key,
+                tev,
                 texgens: tg as u32,
                 uniform,
                 textures: ids,
@@ -2523,8 +2627,10 @@ impl Renderer {
             let u = Self::uniforms_of(state, levels, [MODE_DRAW, 0, 0, 0]);
             let uniform = self.push_uniforms(&u);
             self.pipeline(color_key);
+            let tev = self.specialized(state, color_key, MODE_DRAW);
             self.push_command(Command {
                 pipeline: color_key,
+                tev,
                 texgens: tg as u32,
                 uniform,
                 textures: ids,
@@ -2536,8 +2642,10 @@ impl Renderer {
             let u = Self::uniforms_of(state, levels, [MODE_DRAW, 0, 0, 0]);
             let uniform = self.push_uniforms(&u);
             self.pipeline(key);
+            let tev = self.specialized(state, key, MODE_DRAW);
             self.push_command(Command {
                 pipeline: key,
+                tev,
                 texgens: tg as u32,
                 uniform,
                 textures: ids,

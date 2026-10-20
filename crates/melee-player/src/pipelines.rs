@@ -1,9 +1,10 @@
 //! The pipeline cache, after Aurora's design: every pipeline the renderer has needed is kept
-//! by what it's made for (its blending, color and alpha writes and depth test, which is all
-//! that differs between the renderer's pipelines: the TEV runs in one shader, so no material
-//! needs a pipeline of its own), and made again before the next run's first frame; the
-//! driver's own pipeline cache is kept beside it where the device has one. A frame never waits
-//! for a pipeline the player has used before.
+//! by what it's made for (its blending, color and alpha writes and depth test), and made again
+//! before the next run's first frame; the driver's own pipeline cache is kept beside it where
+//! the device has one. A frame never waits for a pipeline the player has used before. Those
+//! pipelines run the TEV in one uber shader; the pipelines with shaders specialized to a TEV
+//! configuration are kept too, each with its configuration, and made again on the renderer's
+//! shader threads from the start, the uber shader drawing until each is made.
 
 use std::path::PathBuf;
 
@@ -27,6 +28,32 @@ fn driver_path() -> Option<PathBuf> {
     dir().map(|d| d.join("driver-pipelines.bin"))
 }
 
+fn specialized_path() -> Option<PathBuf> {
+    dir().map(|d| d.join("specialized-pipelines.bin"))
+}
+
+/// The words of a saved list.
+fn words(b: &[u8]) -> Vec<u32> {
+    b.as_chunks::<4>()
+        .0
+        .iter()
+        .map(|c| u32::from_le_bytes(*c))
+        .collect()
+}
+
+/// The saved specialized pipelines: a mark, then entries of a fixed number of words.
+fn specialized_keys() -> Vec<Vec<u32>> {
+    let (n, mark) = melee_gpu::Renderer::specialized_key_format();
+    let Some(w) = specialized_path().and_then(|p| std::fs::read(p).ok()) else {
+        return Vec::new();
+    };
+    let w = words(&w);
+    match w.split_first() {
+        Some((&m, rest)) if m == mark => rest.chunks_exact(n).map(<[u32]>::to_vec).collect(),
+        _ => Vec::new(),
+    }
+}
+
 /// A renderer at `scale`, `samples` samples a pixel and an EFB as wide as `aspect` shows it,
 /// with the cached pipelines made.
 pub fn renderer(gpu: &Gpu, scale: u32, samples: u32, aspect: Aspect) -> melee_gpu::Renderer {
@@ -35,17 +62,7 @@ pub fn renderer(gpu: &Gpu, scale: u32, samples: u32, aspect: Aspect) -> melee_gp
     r.use_pipeline_cache(driver.as_deref());
     let keys: Vec<[u32; 8]> = keys_path()
         .and_then(|p| std::fs::read(p).ok())
-        .map(|b| {
-            b.as_chunks::<32>()
-                .0
-                .iter()
-                .map(|c| {
-                    std::array::from_fn(|i| {
-                        u32::from_le_bytes(c[4 * i..4 * i + 4].try_into().unwrap())
-                    })
-                })
-                .collect()
-        })
+        .map(|b| words(&b).as_chunks::<8>().0.to_vec())
         .unwrap_or_default();
     let start = std::time::Instant::now();
     r.warm(&keys);
@@ -56,14 +73,30 @@ pub fn renderer(gpu: &Gpu, scale: u32, samples: u32, aspect: Aspect) -> melee_gp
             start.elapsed().as_secs_f64() * 1000.0
         );
     }
+    let specialized = specialized_keys();
+    let start = std::time::Instant::now();
+    r.warm_specialized(&specialized);
+    if !specialized.is_empty() {
+        eprintln!(
+            "specialized pipelines: {} queued in {:.0} ms",
+            specialized.len(),
+            start.elapsed().as_secs_f64() * 1000.0
+        );
+    }
     r
 }
 
-/// Keeps the pipelines the run needed, with any it had from before, for the next.
-pub fn save(r: &melee_gpu::Renderer) {
-    let Some(d) = dir() else { return };
+/// Keeps the pipelines the run needed, with any it had from before, for the next. Returns
+/// what the specialized shaders did, if they did anything.
+pub fn save(r: &melee_gpu::Renderer) -> Option<String> {
+    let stats = r.specialized_stats();
+    let summary = (stats.pipelines > 0).then(|| stats.to_string());
+    if let Some(s) = &summary {
+        eprintln!("specialized shaders: {s}");
+    }
+    let Some(d) = dir() else { return summary };
     if std::fs::create_dir_all(&d).is_err() {
-        return;
+        return summary;
     }
     let bytes: Vec<u8> = r
         .pipeline_keys()
@@ -73,7 +106,16 @@ pub fn save(r: &melee_gpu::Renderer) {
     if let Some(p) = keys_path() {
         let _ = std::fs::write(p, bytes);
     }
+    let (_, mark) = melee_gpu::Renderer::specialized_key_format();
+    let specialized: Vec<u8> = std::iter::once(mark)
+        .chain(r.specialized_keys().into_iter().flatten())
+        .flat_map(u32::to_le_bytes)
+        .collect();
+    if let Some(p) = specialized_path() {
+        let _ = std::fs::write(p, specialized);
+    }
     if let (Some(p), Some(data)) = (driver_path(), r.pipeline_cache_data()) {
         let _ = std::fs::write(p, data);
     }
+    summary
 }

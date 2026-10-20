@@ -673,6 +673,8 @@ struct App {
     pending: Option<latency::Tick>,
     /// The run's measures, with `--perf-report`.
     perf: Option<perf::Perf>,
+    /// What the specialized shaders did, when the renderer last went.
+    specialized: Option<String>,
 }
 
 impl App {
@@ -1247,7 +1249,7 @@ impl App {
     /// Saves the renderer's pipelines and lets it go, with the match.
     fn drop_renderer(&mut self) {
         if let Some(g) = self.renderer.take() {
-            pipelines::save(&g.into_renderer());
+            self.specialized = pipelines::save(&g.into_renderer());
         }
     }
 
@@ -2019,6 +2021,7 @@ fn run(args: Args) -> ExitCode {
         prediction_failed: false,
         pending: None,
         perf: args.perf_report.as_deref().map(perf::Perf::new),
+        specialized: None,
         args,
     };
     if let Some(path) = &app.args.latency_log {
@@ -2048,7 +2051,7 @@ fn run(args: Args) -> ExitCode {
     }
     if let Some(p) = &app.perf {
         let untimed = app.gpu.timer.as_ref().map(melee_gpu::GpuTimer::untimed);
-        p.finish(&app.perf_config(), untimed);
+        p.finish(&app.perf_config(), untimed, app.specialized.as_deref());
     }
     if let Some(mut log) = app.latency.take() {
         if let Some(s) = &app.shown {

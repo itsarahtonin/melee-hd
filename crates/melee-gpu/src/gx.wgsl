@@ -98,6 +98,15 @@ fn bp(i: u32) -> u32 {
     return st.bp[i >> 2u][i & 3u];
 }
 
+/// `x`, through an operation the compiler can't see through (`mode.y` is 0 for every draw that
+/// reaches the TEV), so no multiply-add is fused across it. A specialized shader (tev.rs) has
+/// the uber shader's code with the branches on the registers folded away, and a branch's merge
+/// is what keeps the compiler from fusing a multiply or divide before it with an add after it:
+/// without one, the specialized shader's result could round differently.
+fn opaque(x: f32) -> f32 {
+    return bitcast<f32>(bitcast<u32>(x) ^ st.mode.y);
+}
+
 fn bits(v: u32, at: u32, width: u32) -> u32 {
     return (v >> at) & ((1u << width) - 1u);
 }
@@ -672,7 +681,8 @@ fn fs_main(in: Varyings) -> Out {
             let kk = kl * factor + ku * (1.0 - factor);
             ze *= sqrt(offset * offset + kk * kk) / kk;
         }
-        ze -= st.fog.y;
+        // Not fused with the multiply or divide before (see `opaque`).
+        ze = opaque(ze) - st.fog.y;
         var fog = clamp(ze, 0.0, 1.0);
         switch fsel {
             case 4u: { fog = 1.0 - exp2(-8.0 * fog); }
