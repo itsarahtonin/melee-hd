@@ -675,6 +675,64 @@ pub fn barrel_set() -> Vec<Match> {
     ]
 }
 
+/// The items toggle's leftovers (docs/player.md, "Items toggle: what's left", tasks 1 to 3):
+/// paths the families' matches never took. Two mixed matches at item frequency very high (4),
+/// three minutes each, of the kinds whose fighter paths were left (a Bob-omb lit in the hand,
+/// the parasol, the Freezie, the Screw Attack, the Bunny Hood, and on Final Destination the
+/// thrown motion-sensor bomb and Flipper against two reflectors); then the box alone on Kongo
+/// Jungle, whose river carries boxes, and food alone on Yoshi's Story, whose Shy Guys carry
+/// it, two minutes each at frequency high.
+pub fn leftovers_set() -> Vec<Match> {
+    /// A match's name, stage, characters, switch kinds, frequency and length.
+    type Leftover = (&'static str, u16, (u8, u8), &'static [u8], i8, u32);
+    let matches: [Leftover; 4] = [
+        (
+            "items-leftovers-fd",
+            FINAL_DESTINATION,
+            (FOX, FALCO),
+            &[6, 13, 17, 19, 20, 30, 31],
+            4,
+            180,
+        ),
+        (
+            "items-leftovers-bf",
+            BATTLEFIELD,
+            (CAPTAIN, BOWSER),
+            &[6, 13, 17, 30, 31],
+            4,
+            180,
+        ),
+        (
+            "items-box-kongo-jungle",
+            KONGO_JUNGLE,
+            (MARIO, LUIGI),
+            &[1],
+            FREQ_HIGH,
+            ITEMS_TIME,
+        ),
+        (
+            "items-foods-yoshis-story",
+            YOSHIS_STORY,
+            (SAMUS, YOSHI),
+            &[18],
+            FREQ_HIGH,
+            ITEMS_TIME,
+        ),
+    ];
+    matches
+        .iter()
+        .enumerate()
+        .map(|(i, &(name, stage, (a, b), kinds, freq, time))| Match {
+            name: Cow::Borrowed(name),
+            stage,
+            players: Cow::Owned(vec![p(a, 0), p(b, 0)]),
+            seed: 0x1F0F_0E01 + i as u32,
+            rules: Rules::Time { time_limit: time },
+            items: Items::only(freq, kinds),
+        })
+        .collect()
+}
+
 /// The VS stages besides the tournament stages, with match names; the moving stages are marked.
 const OTHER_STAGES: [(u16, &str, bool); 23] = [
     (YOSHIS_ISLAND_64, "yoshis-island-64", false),
@@ -784,6 +842,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("cpu", cpu_set),
     ("held-extra", held_extra_set),
     ("barrel", barrel_set),
+    ("leftovers", leftovers_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every
