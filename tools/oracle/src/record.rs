@@ -1,11 +1,13 @@
 //! `melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive]
-//! [--ticks N] [--known FILE]`: plays a replay with melee-hd's recorder on
+//! [--ticks N] [--known FILE] [--free-seed]`: plays a replay with melee-hd's recorder on
 //! (`melee_sim::game::record`), writes the recording as a `.slp` file, and compares it with the
 //! replay: the frames' events through ssbm-rs's comparison (`ssbm_slippi::compare`, as
 //! `compare` does), and the game start and the code list field by field (docs/oracle.md,
 //! "Recordings"). `--known` takes the divergences the original code makes playing the same
 //! replay, as ssbm-rs keeps them (`local/replays/known/`, one `frame ...` line each): the
-//! recording must diverge from the replay in exactly those.
+//! recording must diverge from the replay in exactly those. `--free-seed` restores no frame's
+//! seed, so the random seed runs free as in the recording run: the recording's seeds then check
+//! that melee-hd draws as that run did (what `melee-bench seed-search` relies on).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::process::ExitCode;
@@ -27,6 +29,7 @@ pub fn record(args: &[&str]) -> ExitCode {
     let mut fp_mode = FpMode::Slippi;
     let mut disc_speed = DiscSpeed::Fast;
     let mut known = None;
+    let mut free_seed = false;
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
@@ -46,12 +49,13 @@ pub fn record(args: &[&str]) -> ExitCode {
                     .expect("--disc-speed fast|drive")
             }
             "--known" => known = Some(*it.next().expect("--known FILE")),
+            "--free-seed" => free_seed = true,
             _ => pos.push(a),
         }
     }
     let [replay_path, out_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive] [--ticks N] [--known FILE]"
+            "usage: melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive] [--ticks N] [--known FILE] [--free-seed]"
         );
         return ExitCode::from(2);
     };
@@ -91,7 +95,10 @@ pub fn record(args: &[&str]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let mut device = Device(&replay);
+    let mut device = FreeSeed {
+        device: Device(&replay),
+        free: free_seed,
+    };
     let frame = |m: &Match| {
         m.game
             .playback
@@ -150,6 +157,27 @@ pub fn record(args: &[&str]) -> ExitCode {
         ExitCode::SUCCESS
     } else {
         ExitCode::FAILURE
+    }
+}
+
+/// The replay's answers, with no frame's seed when `free`.
+struct FreeSeed<'a> {
+    device: Device<'a>,
+    free: bool,
+}
+
+impl melee_sim::game::playback::Source for FreeSeed<'_> {
+    fn frame(&mut self, index: i32) -> melee_sim::game::playback::Frame {
+        let mut f = self.device.frame(index);
+        if self.free {
+            // The seed flag and the seed.
+            f.bytes[2..7].fill(0);
+        }
+        f
+    }
+
+    fn has_player(&mut self, index: i32, port: u8) -> bool {
+        self.device.has_player(index, port)
     }
 }
 

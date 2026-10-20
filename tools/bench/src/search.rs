@@ -1,0 +1,293 @@
+//! `melee-bench seed-search MATCH FROM COUNT [--jobs N] [--codes REPLAY.slp] [--record DIR]`:
+//! plays an oracle set's scripted match (every player a walker or an opener, so no CPU AI plays)
+//! with the seeds `FROM` to `FROM + COUNT - 1`, headless, and prints how far each got: to the
+//! match's end, or the unported code it stopped at. It finds the seeds whose matches reach
+//! something rare, such as a container's monster, which ssbm-rs then records and traces as the
+//! oracle (`docs/oracle.md`, "Oracle sets").
+//!
+//! Each match is played as Slippi's playback plays its recording would be: the match's
+//! `StartMeleeData` and seed as the generator's codes set them, the code list of a recording
+//! `make-oracle.sh` made (`--codes`, by default the `items-held-ps` oracle match's), and each
+//! frame's inputs as the recording run's controllers would leave them (`Match::scripted_pad`,
+//! the processed sticks and buttons the game makes of them), but with no frame's seed restored:
+//! the random seed runs free, as it does in the recording run. `--record DIR` writes each
+//! match's recording (`DIR/SEED.slp`), which `melee-oracle compare` checks against ssbm-rs's.
+
+use std::collections::HashMap;
+use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::path::PathBuf;
+use std::process::ExitCode;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::time::SystemTime;
+
+use melee_data::disc::Disc;
+use melee_sim::game::playback::{CharacterFrame, FIRST_FRAME, Frame, Source};
+use melee_sim::game::vs_match::{DiscFile, Match as Sim, ReplayStart, Settings};
+use melee_sim::gekko_fp::{FpMode, set_fp_mode};
+use melee_slippi::Replay;
+
+use crate::matches::{self, Match, Rules};
+
+/// The simulation recurses as the original does (joint trees): it runs on a deep stack.
+const STACK: usize = 512 << 20;
+
+/// A scripted match's controllers as playback would inject them: nothing before "GO", then each
+/// scripted player's pad, to past the time limit.
+struct Script<'a> {
+    m: &'a Match,
+    last: i32,
+}
+
+/// The processed inputs the game makes of a scripted pad (buttons and the main stick's x, which
+/// the scripts hold at 0 or past ±80, where the stick reads ±1 and sets its direction's button).
+pub fn processed(button: u16, stick_x: i8) -> CharacterFrame {
+    let (x, dir) = match stick_x {
+        0 => (0.0, 0),
+        80..=127 => (1.0, 0x8_0000),
+        -128..=-80 => (-1.0, 0x4_0000),
+        _ => panic!("a script's stick at {stick_x}, neither neutral nor past 80"),
+    };
+    CharacterFrame {
+        stick_x: x,
+        buttons: u32::from(button) | dir,
+        raw_stick_x: stick_x as u8,
+        ..CharacterFrame::default()
+    }
+}
+
+impl Source for Script<'_> {
+    fn frame(&mut self, index: i32) -> Frame {
+        if index > self.last {
+            return Frame::terminate();
+        }
+        let chars = std::array::from_fn(|port| {
+            if port >= self.m.players.len() {
+                return [None, None];
+            }
+            let (button, stick_x) = if index < 0 {
+                (0, 0)
+            } else {
+                self.m.scripted_pad(port, index).expect("a scripted player")
+            };
+            [Some(processed(button, stick_x)), None]
+        });
+        Frame::new(None, chars)
+    }
+
+    fn has_player(&mut self, _index: i32, port: u8) -> bool {
+        usize::from(port & 3) < self.m.players.len()
+    }
+}
+
+/// How one seed's match went.
+struct Outcome {
+    seed: u32,
+    frame: i32,
+    stopped: Option<String>,
+}
+
+/// The disc's files, read once per thread.
+struct Files {
+    disc: Disc,
+    cache: HashMap<String, (i32, Vec<u8>)>,
+}
+
+impl Files {
+    fn load(&mut self, name: &str) -> DiscFile {
+        let disc = &self.disc;
+        let (entrynum, bytes) = self.cache.entry(name.to_owned()).or_insert_with(|| {
+            (
+                disc.entrynum(name)
+                    .unwrap_or_else(|e| panic!("{name}: {e}")),
+                disc.read_file(name)
+                    .unwrap_or_else(|e| panic!("{name}: {e}")),
+            )
+        });
+        DiscFile {
+            entrynum: *entrynum,
+            bytes: bytes.clone(),
+        }
+    }
+}
+
+fn panic_text(p: &Box<dyn std::any::Any + Send>) -> String {
+    p.downcast_ref::<String>()
+        .cloned()
+        .or_else(|| p.downcast_ref::<&str>().map(|s| (*s).to_owned()))
+        .unwrap_or_else(|| "a panic".into())
+}
+
+/// Plays `m` to its end or its first stop.
+fn play(m: &Match, codes: &Replay, files: &mut Files, record: Option<&PathBuf>) -> Outcome {
+    let base = melee_slippi::start(codes);
+    let start = ReplayStart {
+        info: m.start_data(),
+        seed: m.seed,
+        nametags: base.nametags,
+        codes: base.codes,
+    };
+    let mut settings = Settings::from_replay(&start).expect("the oracle codes' rules");
+    if record.is_some() {
+        settings.record = Some(melee_slippi::write::setup(codes));
+    }
+    let limit = match m.rules {
+        Rules::Stock { time_limit, .. }
+        | Rules::Time { time_limit }
+        | Rules::Coin { time_limit } => time_limit,
+    };
+    let mut source = Script {
+        m,
+        last: 60 * limit as i32 + 600,
+    };
+    let frame = |s: &Sim| {
+        s.game
+            .playback
+            .as_ref()
+            .map_or(FIRST_FRAME - 1, |p| p.frame_index)
+    };
+    let started_at = SystemTime::now();
+    let mut sim = match catch_unwind(AssertUnwindSafe(|| {
+        Sim::start(&settings, &mut |name| files.load(name))
+    })) {
+        Ok(s) => s,
+        Err(p) => {
+            return Outcome {
+                seed: m.seed,
+                frame: FIRST_FRAME - 1,
+                stopped: Some(format!("starting the match: {}", panic_text(&p))),
+            };
+        }
+    };
+    let mut stopped = None;
+    loop {
+        match catch_unwind(AssertUnwindSafe(|| sim.step_replay(&mut source))) {
+            Ok(out) => {
+                let ended = out.ended;
+                sim.recycle(out);
+                if ended || frame(&sim) > source.last {
+                    break;
+                }
+            }
+            Err(p) => {
+                stopped = Some(panic_text(&p));
+                break;
+            }
+        }
+    }
+    if let (Some(dir), Some(rec)) = (record, sim.game.recorder.as_ref()) {
+        let path = dir.join(format!("{:08x}.slp", m.seed));
+        let file = melee_slippi::write::recording(rec, started_at);
+        std::fs::write(&path, file).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    }
+    Outcome {
+        seed: m.seed,
+        frame: frame(&sim),
+        stopped,
+    }
+}
+
+fn parse_seed(s: &str) -> Option<u32> {
+    match s.strip_prefix("0x") {
+        Some(h) => u32::from_str_radix(&h.replace('_', ""), 16).ok(),
+        None => s.parse().ok(),
+    }
+}
+
+pub fn main(args: &[String]) -> ExitCode {
+    let mut jobs = 4usize;
+    let mut codes = None;
+    let mut record = None;
+    let mut pos = Vec::new();
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--jobs" => jobs = it.next().and_then(|n| n.parse().ok()).expect("--jobs N"),
+            "--codes" => codes = it.next().map(PathBuf::from),
+            "--record" => record = it.next().map(PathBuf::from),
+            _ => pos.push(a.clone()),
+        }
+    }
+    let (Some(name), Some(from), Some(count)) = (
+        pos.first(),
+        pos.get(1).and_then(|s| parse_seed(s)),
+        pos.get(2).and_then(|s| s.parse::<u32>().ok()),
+    ) else {
+        eprintln!(
+            "usage: melee-bench seed-search MATCH FROM COUNT [--jobs N] [--codes REPLAY.slp] [--record DIR]"
+        );
+        return ExitCode::from(2);
+    };
+    let template = match matches::select(std::slice::from_ref(name)) {
+        Ok(mut list) if list.len() == 1 => list.remove(0),
+        Ok(_) => {
+            eprintln!("{name}: name one match, not a set");
+            return ExitCode::from(2);
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::from(2);
+        }
+    };
+    if (0..template.players.len()).any(|i| template.scripted_pad(i, 0).is_none()) {
+        eprintln!("{name}: a player no script plays (the CPU AI isn't ported)");
+        return ExitCode::from(2);
+    }
+    let codes = codes.unwrap_or_else(|| {
+        melee_local_data::ssbm_rs_local("bench/oracle-m4/items-held-ps.slp").into()
+    });
+    let bytes = std::fs::read(&codes).unwrap_or_else(|e| panic!("{}: {e}", codes.display()));
+    let codes = Replay::parse(&bytes).unwrap_or_else(|e| panic!("{e}"));
+    if let Some(dir) = &record {
+        std::fs::create_dir_all(dir).unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
+    }
+    let disc_path = std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc");
+    // The stops are the results: keep the panics' own reports quiet.
+    std::panic::set_hook(Box::new(|_| {}));
+    let next = AtomicU32::new(0);
+    let results = Mutex::new(Vec::new());
+    std::thread::scope(|s| {
+        for _ in 0..jobs.max(1) {
+            let (template, codes, record, next, results, disc_path) =
+                (&template, &codes, &record, &next, &results, &disc_path);
+            std::thread::Builder::new()
+                .stack_size(STACK)
+                .spawn_scoped(s, move || {
+                    set_fp_mode(FpMode::Hardware);
+                    let mut files = Files {
+                        disc: Disc::open(disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}")),
+                        cache: HashMap::new(),
+                    };
+                    loop {
+                        let i = next.fetch_add(1, Ordering::Relaxed);
+                        if i >= count {
+                            break;
+                        }
+                        let m = Match {
+                            seed: from.wrapping_add(i),
+                            name: template.name.clone(),
+                            players: template.players.clone(),
+                            ..*template
+                        };
+                        let o = play(&m, codes, &mut files, record.as_ref());
+                        println!(
+                            "{:#010x}\t{}\t{}",
+                            o.seed,
+                            o.frame,
+                            o.stopped.as_deref().unwrap_or("played to its end")
+                        );
+                        results.lock().unwrap().push(o);
+                    }
+                })
+                .unwrap();
+        }
+    });
+    let results = results.into_inner().unwrap();
+    let ended = results.iter().filter(|o| o.stopped.is_none()).count();
+    println!(
+        "{name}: {} seeds, {ended} played to their end, {} stopped",
+        results.len(),
+        results.len() - ended
+    );
+    ExitCode::SUCCESS
+}

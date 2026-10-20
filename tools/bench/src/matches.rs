@@ -33,6 +33,10 @@ pub enum Control {
     /// 1 right), played by `BENCH_PADS` from the script [`Match::script`] writes: off the stage
     /// and back under it, where Kongo Jungle's barrels catch fighters.
     Walker { side: i8 },
+    /// A human player whose controller follows [`opener_pad`]'s script, played by `BENCH_PADS`:
+    /// short runs each way across the stage's middle and A tapped, so it picks up, throws and
+    /// hits the containers that land near it.
+    Opener,
 }
 
 /// A player: external character ID (`CharacterKind`), costume and who plays it.
@@ -186,6 +190,21 @@ pub fn walker_pad(frame: i32, side: i8) -> (u16, i8) {
     };
     let a = frame % 37 == 0 && frame / 300 % 2 == 1;
     (if a { 0x0100 } else { 0 }, stick as i8)
+}
+
+/// An opener's buttons and main stick's x on match frame `frame` (from "GO"), for the player
+/// in `port`: a round of 160 frames, offset by 40 a port, of 30 running right, 50 standing, 30
+/// running left and 50 standing, with A tapped every 12 frames (on frames 3 apart by port).
+/// Runs one way as long as the other, so the player stays near where it started.
+pub fn opener_pad(frame: i32, port: usize) -> (u16, i8) {
+    let port = port as i32;
+    let stick = match (frame + 40 * port) % 160 {
+        0..30 => 80,
+        80..110 => -80,
+        _ => 0,
+    };
+    let a = frame % 12 == 3 * port % 12;
+    (if a { 0x0100 } else { 0 }, stick)
 }
 
 const fn p(character: u8, costume: u8) -> Player {
@@ -781,6 +800,58 @@ pub fn leftovers_set() -> Vec<Match> {
         .collect()
 }
 
+/// The containers: the box, barrel and Party Ball.
+const CONTAINERS: [u8; 3] = [1, 2, 4];
+
+/// The monsters set (the containers' monsters): the containers alone at item frequency very
+/// high, whose openings sometimes release an enemy from the monsters' table (`it_8026F6BC`, 1 in
+/// 128 with the common data's odds, weighted 2:3:1:1): a Goomba, ReDead, Octorok or Ottosea. Two
+/// openers each ([`opener_pad`]), so melee-hd plays candidate seeds without the CPU AI
+/// (`melee-bench seed-search`); each match's seed is one the search found to release the
+/// monsters it is named for. Two-minute time matches.
+pub fn monsters_set() -> Vec<Match> {
+    /// A match's name, stage, characters and seed.
+    type Monster = (&'static str, u16, (u8, u8), u32);
+    const FD: (u8, u8) = (MARIO, LINK);
+    const BF: (u8, u8) = (FOX, SAMUS);
+    const PS: (u8, u8) = (PEACH, GANONDORF);
+    // The seeds `seed-search` found, the first monster coming out at the frame noted.
+    let matches: [Monster; 8] = [
+        // 752 and 1087.
+        ("monsters-redead-fd", FINAL_DESTINATION, FD, 0x1F0F_08D8),
+        ("monsters-redead-bf", BATTLEFIELD, BF, 0x1F0F_0B4C),
+        // 1204 and 1438.
+        ("monsters-goomba-fd", FINAL_DESTINATION, FD, 0x1F0F_0809),
+        ("monsters-goomba-ps", POKEMON_STADIUM, PS, 0x1F0F_0D6D),
+        // 553 and 1080.
+        ("monsters-octorok-ps", POKEMON_STADIUM, PS, 0x1F0F_0D16),
+        ("monsters-octorok-bf", BATTLEFIELD, BF, 0x1F0F_0B33),
+        // 892 and 2018.
+        ("monsters-ottosea-fd", FINAL_DESTINATION, FD, 0x1F0F_08C3),
+        ("monsters-ottosea-bf", BATTLEFIELD, BF, 0x1F0F_0B0D),
+    ];
+    matches
+        .iter()
+        .map(|&(name, stage, (a, b), seed)| {
+            let o = |character| Player {
+                character,
+                costume: 0,
+                control: Control::Opener,
+            };
+            Match {
+                name: Cow::Borrowed(name),
+                stage,
+                players: Cow::Owned(vec![o(a), o(b)]),
+                seed,
+                rules: Rules::Time {
+                    time_limit: ITEMS_TIME,
+                },
+                items: Items::only(FREQ_VERY_HIGH, &CONTAINERS),
+            }
+        })
+        .collect()
+}
+
 /// The VS stages besides the tournament stages, with match names; the moving stages are marked.
 const OTHER_STAGES: [(u16, &str, bool); 23] = [
     (YOSHIS_ISLAND_64, "yoshis-island-64", false),
@@ -892,6 +963,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("barrel", barrel_set),
     ("leftovers", leftovers_set),
     ("pokemon", pokemon_set),
+    ("monsters", monsters_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every
@@ -952,7 +1024,9 @@ fn player_block(player: Option<Player>, slot: u8, stocks: u8) -> [u8; 0x24] {
         Some(pl) => {
             // Slot type, flags (rumble for a human, as Slippi records them), CPU kind and level.
             let (slot_type, flags, kind, level) = match pl.control {
-                Control::Human | Control::Walker { .. } => (0x00, 0xC0, CPU_VS, 9),
+                Control::Human | Control::Walker { .. } | Control::Opener => {
+                    (0x00, 0xC0, CPU_VS, 9)
+                }
                 Control::Cpu { kind, level } => (0x01, 0x40, kind, level),
             };
             b[..0x10].copy_from_slice(&[
@@ -1064,27 +1138,24 @@ impl Match {
             .all(|p| !matches!(p.control, Control::Cpu { .. }))
     }
 
-    /// The walkers' controllers for `BENCH_PADS`, if the match has walkers: a raw Slippi event
-    /// stream (what ssbm-rs's replay reader takes without the UBJSON wrapper) of pre-frame events
-    /// carrying each walker's buttons, sticks and triggers, frame by frame from "GO" to past the
-    /// time limit. The other ports have no events, so `BENCH_AI` plays them.
+    /// The scripted players' controllers for `BENCH_PADS`, if the match has walkers or openers:
+    /// a raw Slippi event stream (what ssbm-rs's replay reader takes without the UBJSON wrapper)
+    /// of pre-frame events carrying each scripted player's buttons, sticks and triggers, frame by
+    /// frame from "GO" to past the time limit. The other ports have no events, so `BENCH_AI` plays them.
     pub fn script(&self) -> Option<Vec<u8>> {
         const PRE_FRAME: u8 = 0x37;
         const SIZE: usize = 0x42;
-        let walkers: Vec<(usize, i8)> = (self.players.iter().enumerate())
-            .filter_map(|(i, p)| match p.control {
-                Control::Walker { side } => Some((i, side)),
-                _ => None,
-            })
+        let scripted: Vec<usize> = (0..self.players.len())
+            .filter(|&i| self.scripted_pad(i, 0).is_some())
             .collect();
-        if walkers.is_empty() {
+        if scripted.is_empty() {
             return None;
         }
         // The payload sizes: this event's own size, then (command, size) for pre-frames.
         let mut out = vec![0x35, 4, PRE_FRAME, 0, SIZE as u8];
         for frame in 0..self.fields() as i32 {
-            for &(port, side) in &walkers {
-                let (button, stick_x) = walker_pad(frame, side);
+            for &port in &scripted {
+                let (button, stick_x) = self.scripted_pad(port, frame).expect("a script");
                 let mut e = [0u8; SIZE];
                 e[0..4].copy_from_slice(&frame.to_be_bytes());
                 e[4] = port as u8;
@@ -1095,6 +1166,16 @@ impl Match {
             }
         }
         Some(out)
+    }
+
+    /// The buttons and main stick's x a scripted player's controller (a walker's or an
+    /// opener's) has on match frame `frame` (from "GO"); none for a player no script plays.
+    pub fn scripted_pad(&self, port: usize, frame: i32) -> Option<(u16, i8)> {
+        match self.players[port].control {
+            Control::Walker { side } => Some(walker_pad(frame, side)),
+            Control::Opener => Some(opener_pad(frame, port)),
+            Control::Human | Control::Cpu { .. } => None,
+        }
     }
 
     /// Video fields enough for ssbm-rs to boot, load and play the match to its time limit: about
@@ -1471,6 +1552,27 @@ mod tests {
             assert!(m.script().is_some());
         }
         assert!(items[0].script().is_none());
+        // The monsters set's openers: no port for BENCH_AI, a script for BENCH_PADS, and
+        // every player scripted, so `seed-search` plays them.
+        for m in monsters_set() {
+            assert!(m.human_ports().is_empty() && m.humans_only(), "{}", m.name);
+            assert!(m.script().is_some());
+            assert_eq!(m.items.freq, FREQ_VERY_HIGH);
+            assert_eq!(m.items.kinds(), CONTAINERS);
+        }
+    }
+
+    /// An opener's round: as long running right as left, A every 12 frames by port.
+    #[test]
+    fn openers_run_both_ways_and_tap_a() {
+        assert_eq!(opener_pad(0, 0), (0x0100, 80));
+        assert_eq!(opener_pad(1, 0), (0, 80));
+        assert_eq!(opener_pad(3, 1), (0x0100, 0));
+        assert_eq!(opener_pad(85, 0), (0, -80));
+        assert_eq!(opener_pad(40, 1), (0, -80));
+        let right = (0..160).filter(|&f| opener_pad(f, 0).1 > 0).count();
+        let left = (0..160).filter(|&f| opener_pad(f, 0).1 < 0).count();
+        assert_eq!((right, left), (30, 30));
     }
 
     /// The walkers' script as ssbm-rs's `pads_by_frame` reads it: each pre-frame's frame,

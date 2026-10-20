@@ -36,6 +36,7 @@ mod matches;
 mod native;
 #[cfg(windows)]
 mod player;
+mod search;
 mod sync;
 #[cfg(windows)]
 mod win;
@@ -226,6 +227,7 @@ fn main() -> std::process::ExitCode {
         #[cfg(windows)]
         Some("dolphin") => dolphin::main(&args[1..]),
         Some("native") => native::main(&args[1..]),
+        Some("seed-search") => return search::main(&args[1..]),
         #[cfg(windows)]
         Some("player") => player::main(&args[1..]),
         Some("snapshot-match") => native::snapshots(&args[1..]),
@@ -244,7 +246,7 @@ fn main() -> std::process::ExitCode {
         }
         _ => eprintln!(
             "melee-bench snapshot CALL... | codes DIR | oracle-codes DIR | oracle-sets DIR [SET|NAME...] | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]              | native [--dir DIR] [--runs N] [MATCH...] | snapshot-match [--dir DIR] [--every TICKS] [MATCH] \
-             | alloc-sites [--dir DIR] [--from TICK] [--ticks N] [--rollback] [--fp slippi] [MATCH] | player [--matches fd,fod,gb,ps] [--scales 1,3,5] [...]"
+             | alloc-sites [--dir DIR] [--from TICK] [--ticks N] [--rollback] [--fp slippi] [MATCH] | player [--matches fd,fod,gb,ps] [--scales 1,3,5] [...]              | seed-search MATCH FROM COUNT [--jobs N] [--codes REPLAY.slp] [--record DIR]"
         ),
     }
     std::process::ExitCode::SUCCESS
