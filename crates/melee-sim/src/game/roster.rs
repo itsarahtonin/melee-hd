@@ -553,7 +553,7 @@ pub fn offered_stages() -> impl Iterator<Item = &'static Stage> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     #[test]
@@ -671,7 +671,7 @@ mod tests {
     ];
 
     /// The ledger's functions: name, unit and status.
-    fn ledger() -> Vec<(String, String, String)> {
+    pub(crate) fn ledger() -> Vec<(String, String, String)> {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../docs/port-ledger.csv");
         let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{path}: {e}"));
         text.lines()
@@ -684,7 +684,7 @@ mod tests {
     }
 
     /// melee-sim's `game` modules, by path under `src/game` without `.rs` (`gr/kongo`).
-    fn game_modules() -> Vec<String> {
+    pub(crate) fn game_modules() -> Vec<String> {
         let root = std::path::PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/src/game"));
         let mut out = Vec::new();
         let mut dirs = vec![root.clone()];
@@ -708,7 +708,7 @@ mod tests {
 
     /// The stops in a module of melee-sim's `game` (`gr/kongo`): each stopping call with the
     /// line after it, where a call's message may continue.
-    fn stops(module: &str) -> Vec<String> {
+    pub(crate) fn stops(module: &str) -> Vec<String> {
         let path = format!("{}/src/game/{module}.rs", env!("CARGO_MANIFEST_DIR"));
         let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
         let lines: Vec<&str> = text.lines().collect();

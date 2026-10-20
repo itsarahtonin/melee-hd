@@ -14,6 +14,7 @@ pub mod gr;
 pub mod handles;
 pub mod hud;
 pub mod it;
+pub mod items_audit;
 pub mod mirror;
 mod mirror_gen;
 pub mod pl;

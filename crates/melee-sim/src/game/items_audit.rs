@@ -1,0 +1,1009 @@
+//! The items-on audit (docs/player.md, "Items toggle: what's left"): what a match with the
+//! item switch on can reach beyond an items-off match, and what of it isn't ported, held to
+//! the port ledger and the code as the stages' audits in [`super::roster`] are. The player
+//! doesn't offer items yet; a toggle would offer an item kind only once no gap that kind
+//! reaches is left ([`missing_with`]). Presentation data only: nothing in the simulation
+//! reads it.
+
+/// Something an items-on match reaches that no port covers.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ItemGap {
+    /// What it is, as the player would say so.
+    pub what: &'static str,
+    /// The ledger's functions and units, and the stops' text, it stands for.
+    pub covers: &'static [&'static str],
+    /// The item switch's kinds (`ItemKind`, 0 to 0x22) any of which reaches it: none, any
+    /// items-on match.
+    pub kinds: &'static [i32],
+    /// The characters (`CharacterKind`) one of which must play: none, any match.
+    pub with: &'static [u8],
+    /// The stages (`StKind`) it happens on: none, any.
+    pub stages: &'static [u16],
+}
+
+/// The gaps an items-on match with these item switch kinds, characters and stage reaches.
+pub fn missing_with(kinds: &[i32], characters: &[u8], stage: u16) -> Vec<&'static ItemGap> {
+    let any = |set: &[i32], of: &[i32]| set.is_empty() || set.iter().any(|k| of.contains(k));
+    (MISSING.iter())
+        .filter(|g| !kinds.is_empty() && any(g.kinds, kinds))
+        .filter(|g| g.with.is_empty() || g.with.iter().any(|c| characters.contains(c)))
+        .filter(|g| g.stages.is_empty() || g.stages.contains(&stage))
+        .collect()
+}
+
+/// The ledger's units the audit holds to the code: every item unit with functions not yet
+/// accounted for, and the fighter units only items reach.
+pub const UNITS: &[&str] = &[
+    "melee/it/it_26B1",
+    "melee/it/it_2725",
+    "melee/it/it_279C",
+    "melee/it/itanimlist",
+    "melee/it/itcoll",
+    "melee/it/itdraw",
+    "melee/it/item",
+    "melee/it/itgroundcoll",
+    "melee/it/ithitbox",
+    "melee/it/itmaplib",
+    "melee/it/itmaterial",
+    "melee/it/itzako",
+    "melee/it/kinds/it_2ADA",
+    "melee/it/kinds/it_2E5A",
+    "melee/it/kinds/it_2F28",
+    "melee/it/kinds/itarwinglaser",
+    "melee/it/kinds/itbat",
+    "melee/it/kinds/itcapsule",
+    "melee/it/kinds/itcerebi",
+    "melee/it/kinds/itclimbersblizzard",
+    "melee/it/kinds/itclimbersice",
+    "melee/it/kinds/itclimbersstring",
+    "melee/it/kinds/itcoin",
+    "melee/it/kinds/itcrazyhandbomb",
+    "melee/it/kinds/itdrmariopill",
+    "melee/it/kinds/itegg",
+    "melee/it/kinds/itevyoshiegg",
+    "melee/it/kinds/itfflower",
+    "melee/it/kinds/itfflowerflame",
+    "melee/it/kinds/itflipper",
+    "melee/it/kinds/itfoods",
+    "melee/it/kinds/itfoxblaster",
+    "melee/it/kinds/itfoxillusion",
+    "melee/it/kinds/itfoxlaser",
+    "melee/it/kinds/itfreeze",
+    "melee/it/kinds/itfreezer",
+    "melee/it/kinds/itgamewatchbreath",
+    "melee/it/kinds/itgamewatchchef",
+    "melee/it/kinds/itgamewatchfire",
+    "melee/it/kinds/itgamewatchgreenhouse",
+    "melee/it/kinds/itgamewatchjudge",
+    "melee/it/kinds/itgamewatchmanhole",
+    "melee/it/kinds/itgamewatchpanic",
+    "melee/it/kinds/itgamewatchparachute",
+    "melee/it/kinds/itgamewatchrescue",
+    "melee/it/kinds/itgamewatchturtle",
+    "melee/it/kinds/itgreatfoxlaser",
+    "melee/it/kinds/itharisen",
+    "melee/it/kinds/itheart",
+    "melee/it/kinds/itheiho",
+    "melee/it/kinds/ithitodeman",
+    "melee/it/kinds/itkirby_2F23",
+    "melee/it/kinds/itkirbycutterbeam",
+    "melee/it/kinds/itkirbygamewatchchefpan",
+    "melee/it/kinds/itkirbyhammer",
+    "melee/it/kinds/itkirbyyoshispecialn",
+    "melee/it/kinds/itkusudama",
+    "melee/it/kinds/itkyasarin",
+    "melee/it/kinds/itkyasarinegg",
+    "melee/it/kinds/itleadead",
+    "melee/it/kinds/itlgun",
+    "melee/it/kinds/itlgunbeam",
+    "melee/it/kinds/itlgunray",
+    "melee/it/kinds/itlikelike",
+    "melee/it/kinds/itlipstick",
+    "melee/it/kinds/itlipstickspore",
+    "melee/it/kinds/itlucky",
+    "melee/it/kinds/itluigifireball",
+    "melee/it/kinds/itmariocape",
+    "melee/it/kinds/itmariofireball",
+    "melee/it/kinds/itmasterhandbullet",
+    "melee/it/kinds/itmasterhandlaser",
+    "melee/it/kinds/itmato",
+    "melee/it/kinds/itmball",
+    "melee/it/kinds/itmetamon",
+    "melee/it/kinds/itmew",
+    "melee/it/kinds/itmsbomb",
+    "melee/it/kinds/itnessbat",
+    "melee/it/kinds/itnesspkfire",
+    "melee/it/kinds/itnesspkfirepillar",
+    "melee/it/kinds/itnesspkflash",
+    "melee/it/kinds/itnesspkflashexplode",
+    "melee/it/kinds/itnesspkthunderball",
+    "melee/it/kinds/itnesspkthundertrail",
+    "melee/it/kinds/itnessyoyo",
+    "melee/it/kinds/itnokonoko",
+    "melee/it/kinds/itoctarock",
+    "melee/it/kinds/itoctarockstone",
+    "melee/it/kinds/itoldkuri",
+    "melee/it/kinds/itoldottosea",
+    "melee/it/kinds/itparasol",
+    "melee/it/kinds/itpatapata",
+    "melee/it/kinds/itpikachuthunder",
+    "melee/it/kinds/itpikachutjoltair",
+    "melee/it/kinds/itpikachutjoltground",
+    "melee/it/kinds/itrabbitc",
+    "melee/it/kinds/itraikou",
+    "melee/it/kinds/itsamusbomb",
+    "melee/it/kinds/itsamuschargeshot",
+    "melee/it/kinds/itsamusgrapple",
+    "melee/it/kinds/itsamusmissile",
+    "melee/it/kinds/itsscope",
+    "melee/it/kinds/itsscopebeam",
+    "melee/it/kinds/itstar",
+    "melee/it/kinds/itstarrod",
+    "melee/it/kinds/itstarrodstar",
+    "melee/it/kinds/itsuikun",
+    "melee/it/kinds/itsword",
+    "melee/it/kinds/ittarucann",
+    "melee/it/kinds/ittincle",
+    "melee/it/kinds/ittomato",
+    "melee/it/kinds/ittools",
+    "melee/it/kinds/itwhitebea",
+    "melee/it/kinds/itwstar",
+    "melee/it/kinds/ityoshiegglay",
+    "melee/it/kinds/ityoshieggthrow",
+    "melee/it/kinds/ityoshistar",
+    "melee/it/kinds/ityoshitongue",
+    "melee/it/kinds/itzeldadinfire",
+    "melee/it/kinds/itzeldadinfireexplode",
+    "melee/it/kinds/itzgshell",
+    "melee/it/kinds/itzrshell",
+    "melee/ft/kinds/ftCommon/ftCo_Barrel",
+    "melee/ft/kinds/ftCommon/ftCo_WarpStar",
+    "melee/ft/ftCo_800C78B0",
+    "melee/ft/ftCo_800C7590",
+    "melee/ft/ftCo_800C7434",
+    "melee/ft/kinds/ftCommon/ftCo_ItemParasolDamageFall",
+    "melee/ft/kinds/ftCommon/ftCo_DamageScrew",
+    "melee/ft/ft_0BEC",
+    "melee/ft/ft_0BF0",
+    "melee/ft/kinds/ftDonkey/ftdonkeyheavyfall",
+    "melee/ft/kinds/ftDonkey/ftdonkeyheavyjump",
+    "melee/ft/kinds/ftDonkey/ftdonkeyheavylanding",
+    "melee/ft/kinds/ftDonkey/ftdonkeyheavyturn",
+    "melee/ft/kinds/ftDonkey/ftdonkeyheavywait0",
+    "melee/ft/kinds/ftDonkey/ftdonkeyheavywait1",
+    "melee/ft/kinds/ftDonkey/ftdonkeyheavywalk",
+    "melee/ft/kinds/ftDonkey/ftdonkeyms3450",
+];
+
+/// melee-sim's item modules (`game/<module>.rs`), each of whose stops the audit names.
+pub const MODULES: &[&str] = &[
+    "it/anim",
+    "it/coll",
+    "it/data",
+    "it/draw",
+    "it/drop",
+    "it/effect",
+    "it/ground",
+    "it/hitbox",
+    "it/item",
+    "it/kinds/bat",
+    "it/kinds/bombhei",
+    "it/kinds/capsule",
+    "it/kinds/chicorita",
+    "it/kinds/climbersblizzard",
+    "it/kinds/climbersice",
+    "it/kinds/climbersstring",
+    "it/kinds/clinkmilk",
+    "it/kinds/coin",
+    "it/kinds/crate_box",
+    "it/kinds/dosei",
+    "it/kinds/drmariopill",
+    "it/kinds/egg",
+    "it/kinds/entei",
+    "it/kinds/fflower",
+    "it/kinds/fire",
+    "it/kinds/flipper",
+    "it/kinds/flower",
+    "it/kinds/foods",
+    "it/kinds/foxblaster",
+    "it/kinds/foxillusion",
+    "it/kinds/foxlaser",
+    "it/kinds/freeze",
+    "it/kinds/fushigibana",
+    "it/kinds/gamewatch",
+    "it/kinds/gamewatchbreath",
+    "it/kinds/gamewatchchef",
+    "it/kinds/gamewatchfire",
+    "it/kinds/gamewatchgreenhouse",
+    "it/kinds/gamewatchjudge",
+    "it/kinds/gamewatchmanhole",
+    "it/kinds/gamewatchpanic",
+    "it/kinds/gamewatchparachute",
+    "it/kinds/gamewatchrescue",
+    "it/kinds/gamewatchturtle",
+    "it/kinds/gshell",
+    "it/kinds/hammer",
+    "it/kinds/hammerhead",
+    "it/kinds/harisen",
+    "it/kinds/hassam",
+    "it/kinds/heart",
+    "it/kinds/heiho",
+    "it/kinds/hinoarashi",
+    "it/kinds/houou",
+    "it/kinds/kabigon",
+    "it/kinds/kamex",
+    "it/kinds/kinoko",
+    "it/kinds/kirbycopystar",
+    "it/kinds/kirbycutterbeam",
+    "it/kinds/kirbygamewatchchefpan",
+    "it/kinds/kirbyhammer",
+    "it/kinds/kireihana",
+    "it/kinds/klap",
+    "it/kinds/koopaflame",
+    "it/kinds/kusudama",
+    "it/kinds/lgun",
+    "it/kinds/lgunbeam",
+    "it/kinds/lgunray",
+    "it/kinds/linkarrow",
+    "it/kinds/linkbomb",
+    "it/kinds/linkboomerang",
+    "it/kinds/linkbow",
+    "it/kinds/linkhookshot",
+    "it/kinds/lipstick",
+    "it/kinds/lipstickspore",
+    "it/kinds/lizardon",
+    "it/kinds/lucky",
+    "it/kinds/lugia",
+    "it/kinds/luigifireball",
+    "it/kinds/maril",
+    "it/kinds/mariocape",
+    "it/kinds/mariofireball",
+    "it/kinds/marumine",
+    "it/kinds/matadogas",
+    "it/kinds/mball",
+    "it/kinds/metalb",
+    "it/kinds/mewtwodisable",
+    "it/kinds/mewtwoshadowball",
+    "it/kinds/mod",
+    "it/kinds/msbomb",
+    "it/kinds/nessbat",
+    "it/kinds/nesspkfire",
+    "it/kinds/nesspkfirepillar",
+    "it/kinds/nesspkflash",
+    "it/kinds/nesspkflashexplode",
+    "it/kinds/nesspkthunder",
+    "it/kinds/nesspkthundertrail",
+    "it/kinds/nessyoyo",
+    "it/kinds/parasol",
+    "it/kinds/peachexplode",
+    "it/kinds/peachparasol",
+    "it/kinds/peachtoad",
+    "it/kinds/peachtoadspore",
+    "it/kinds/peachturnip",
+    "it/kinds/pikachuthunder",
+    "it/kinds/pikachutjoltair",
+    "it/kinds/pikachutjoltground",
+    "it/kinds/pippi",
+    "it/kinds/porygon2",
+    "it/kinds/rabbitc",
+    "it/kinds/rshell",
+    "it/kinds/samusbomb",
+    "it/kinds/samuschargeshot",
+    "it/kinds/samusgrapple",
+    "it/kinds/samusmissile",
+    "it/kinds/scball",
+    "it/kinds/seakchain",
+    "it/kinds/seakneedleheld",
+    "it/kinds/seakneedlethrown",
+    "it/kinds/seakvanish",
+    "it/kinds/sonans",
+    "it/kinds/spycloak",
+    "it/kinds/sscope",
+    "it/kinds/sscopebeam",
+    "it/kinds/star",
+    "it/kinds/starrod",
+    "it/kinds/starrodstar",
+    "it/kinds/sword",
+    "it/kinds/taru",
+    "it/kinds/tarucann",
+    "it/kinds/thunder",
+    "it/kinds/tincle",
+    "it/kinds/togepy",
+    "it/kinds/tomato",
+    "it/kinds/tosakinto",
+    "it/kinds/unknown",
+    "it/kinds/whispyapple",
+    "it/kinds/wstar",
+    "it/kinds/yaku",
+    "it/kinds/yoshiegglay",
+    "it/kinds/yoshieggthrow",
+    "it/kinds/yoshistar",
+    "it/kinds/yoshitongue",
+    "it/kinds/zeldadinfire",
+    "it/kinds/zeldadinfireexplode",
+    "it/lib26b1",
+    "it/lib2725",
+    "it/lib279c",
+    "it/link",
+    "it/maplib",
+    "it/mod",
+    "it/owner",
+    "it/pokemon/mod",
+    "it/pokemon/vars",
+    "it/release",
+    "it/spawn",
+    "it/tables",
+    "it/tables_gen",
+    "it/vars",
+    "it/zako",
+];
+
+const ADVENTURE: &str = "an adventure enemy (kinds 0xD0 to 0xDC), which only a stage's enemy spawner or adventure stage code makes; no roster stage configures one";
+const BONUS: &str =
+    "the bonus match's tally (pl_80039450), which a stock or time match doesn't run";
+const BOSSES: &str = "Master Hand's and Crazy Hand's items, which only those fighters spawn";
+const COINS: &str = "coins: the single-player coin (trophy stages and a 1P enemy's drop, it_8027CC88 checks gm_IsCurrently1PMode) and coin matches' (it_8026F8B4 checks gm_8016B0B4)";
+const COLANIM: &str = "the items' own color script commands 21 and 22, which none of ItCo.usd's six item color animations uses";
+const DEBUG: &str = "the debug menu's item spawn and the items' debug drawings";
+const DEMO: &str = "the demo fighters' items and states (ftDemo_CreateFighter's motion table): results and intros, never a match";
+const DITTO: &str = "Ditto, whose weight in the Poke Ball's table is 0 (ItCo.usd): only an event list, training or the debug menu picks it";
+const DROP_BY_KIND: &str = "a spawn by kind for the bob-omb rain and single-player stages (it_8026BE84): sudden death, which the player doesn't play, Home-Run, the All-Star rest area and Big Blue";
+const EVENT: &str =
+    "an event match's items (the event Yoshi egg, the events' heart and tomato slots)";
+const EVT_UNK: &str =
+    "an item's evt_unk, which only a fighter's unload at the scene's end runs (it_8026B7F8)";
+const ONE_PLAYER: &str = "the single-player modes' records (Classic, Adventure, All-Star)";
+const OTHER_STAGES: &str = "a stage item of a stage the player doesn't offer (Mushroom Kingdom II's Birdo, Flat Zone's tools, Corneria's and Venom's lasers)";
+const POKEMON_MODES: &str =
+    "training's and an event's Pokemon draws, which it_8027AB64 takes only in those modes";
+const SCENES: &str = "other scenes' item setup (intros, cutscenes, the trophy fall)";
+const YAKU: &str =
+    "a stage item on neither a joint nor a point, which no stage makes (the original hangs)";
+const ZAKO: &str = "the stage enemy spawner (grZakoGenerator), which no roster stage configures";
+
+/// Functions, units (for every function of one not named on its own) and stops no items-on
+/// match from the player reaches (VS mode, the roster's characters and offered stages, no
+/// sudden death), each with why.
+pub const UNREACHED: &[(&str, &str)] = &[
+    ("it_8026B7F8", EVT_UNK),
+    ("it_802ADBE4", EVT_UNK),
+    ("it_2E5A_Logic115_EvtUnk", EVT_UNK),
+    ("it_802F2BDC", EVT_UNK),
+    ("itBat_Logic11_EvtUnk", EVT_UNK),
+    ("itCapsule_Logic0_EvtUnk", EVT_UNK),
+    ("it_802D3F4C", EVT_UNK),
+    ("itClimbersBlizzard_EvtUnk", EVT_UNK),
+    ("itClimbersIce_Logic90_EvtUnk", EVT_UNK),
+    ("it_2725_Logic70_EvtUnk", EVT_UNK),
+    ("itCoin_Logic116_EvtUnk", EVT_UNK),
+    ("itCrazyHandBomb_Logic86_EvtUnk", EVT_UNK),
+    ("itDrMarioPill_EvtUnk", EVT_UNK),
+    ("itEgg_Logic3_EvtUnk", EVT_UNK),
+    ("itEvYoshiEgg_Logic42_EvtUnk", EVT_UNK),
+    ("itFFlower_Logic25_EvtUnk", EVT_UNK),
+    ("itFFlowerFlame_Logic41_EvtUnk", EVT_UNK),
+    ("itFlipper_EvtUnk", EVT_UNK),
+    ("itFoods_Logic18_EvtUnk", EVT_UNK),
+    ("it_8029D948", EVT_UNK),
+    ("itFreeze_Logic17_EvtUnk", EVT_UNK),
+    ("itFreezer_802CD000", EVT_UNK),
+    ("itGameWatchBreath_Logic76_EvtUnk", EVT_UNK),
+    ("itGameWatchChef_Logic112_EvtUnk", EVT_UNK),
+    ("itGamewatchFire_EvtUnk", EVT_UNK),
+    ("itGamewatchGreenhouse_EvtUnk", EVT_UNK),
+    ("itGameWatchJudge_Logic77_EvtUnk", EVT_UNK),
+    ("itGameWatchManhole_Logic72_EvtUnk", EVT_UNK),
+    ("itGameWatchPanic_Logic78_EvtUnk", EVT_UNK),
+    ("itGameWatchParachute_Logic74_EvtUnk", EVT_UNK),
+    ("itGameWatchRescue_Logic81_EvtUnk", EVT_UNK),
+    ("itGameWatchTurtle_Logic75_EvtUnk", EVT_UNK),
+    ("it_802EB5A8", EVT_UNK),
+    ("itHarisen_Logic24_EvtUnk", EVT_UNK),
+    ("itHeart_Logic8_EvtUnk", EVT_UNK),
+    ("it_802D9A0C", EVT_UNK),
+    ("it_802D43B0", EVT_UNK),
+    ("it_802D4F58", EVT_UNK),
+    ("it_8029C4B4", EVT_UNK),
+    ("itKirbyGameWatchChefPan_Logic113_EvtUnk", EVT_UNK),
+    ("it_802ADDB0", EVT_UNK),
+    ("it_802EE1E0", EVT_UNK),
+    ("it_802F0320", EVT_UNK),
+    ("itLGun_Logic16_EvtUnk", EVT_UNK),
+    ("itLGunBeam_Logic39_EvtUnk", EVT_UNK),
+    ("itLGunRay_Logic35_EvtUnk", EVT_UNK),
+    ("itLipstick_Logic23_EvtUnk", EVT_UNK),
+    ("itLipstickSpore_Logic37_EvtUnk", EVT_UNK),
+    ("itLucky_Logic44_EvtUnk", EVT_UNK),
+    ("itLuigiFireball_Logic89_EvtUnk", EVT_UNK),
+    ("it_802B2870", EVT_UNK),
+    ("itMarioFireball_Logic87_EvtUnk", EVT_UNK),
+    ("itMasterHandBullet_Logic85_EvtUnk", EVT_UNK),
+    ("itMasterHandLaser_Logic84_EvtUnk", EVT_UNK),
+    ("itMball_EvtUnk", EVT_UNK),
+    ("itMetamon_Logic19_EvtUnk", EVT_UNK),
+    ("it_802D3B6C", EVT_UNK),
+    ("itMSBomb_Logic19_EvtUnk", EVT_UNK),
+    ("itNessBat_Logic58_EvtUnk", EVT_UNK),
+    ("it_802AA474", EVT_UNK),
+    ("itNesspkfirepillar_Logic24_EvtUnk", EVT_UNK),
+    ("itNesspkflash_Logic102_EvtUnk", EVT_UNK),
+    ("itNessPKFlashExplode_Logic103_EvtUnk", EVT_UNK),
+    ("it_802AC41C", EVT_UNK),
+    ("it_2725_Logic59_EvtUnk", EVT_UNK),
+    ("it_802DD7D0", EVT_UNK),
+    ("it_802E5AA4", EVT_UNK),
+    ("itOctarockstone_802E89B0", EVT_UNK),
+    ("itOldKuri_Logic29_EvtUnk", EVT_UNK),
+    ("it_802D84D8", EVT_UNK),
+    ("itParasol_Logic13_EvtUnk", EVT_UNK),
+    ("it_802E16D8", EVT_UNK),
+    ("itPikachuThunder_Logic39_EvtUnk", EVT_UNK),
+    ("itPikachuTJoltAir_Logic107_EvtUnk", EVT_UNK),
+    ("itPikachuTJoltGround_Logic106_EvtUnk", EVT_UNK),
+    ("it_802CF884", EVT_UNK),
+    ("itSamusBomb_Logic50_EvtUnk", EVT_UNK),
+    ("itSamusChargeshot_Logic108_EvtUnk", EVT_UNK),
+    ("itSamusGrapple_Logic53_EvtUnk", EVT_UNK),
+    ("it_2725_Logic52_EvtUnk", EVT_UNK),
+    ("itSScope_Logic21_EvtUnk", EVT_UNK),
+    ("itSScopeBeam_Logic38_EvtUnk", EVT_UNK),
+    ("itStarRod_Logic22_EvtUnk", EVT_UNK),
+    ("itStarRodStar_Logic36_EvtUnk", EVT_UNK),
+    ("it_802CFCB8", EVT_UNK),
+    ("itTaruCann_Logic5_EvtUnk", EVT_UNK),
+    ("it_802EC850", EVT_UNK),
+    ("itTomato_Logic9_EvtUnk", EVT_UNK),
+    ("it_802EFA24", EVT_UNK),
+    ("it_802E3784", EVT_UNK),
+    ("it_802E4A24", EVT_UNK),
+    ("itWStar_Logic30_EvtUnk", EVT_UNK),
+    ("it_27CF_Logic114_EvtUnk", EVT_UNK),
+    ("it_802DFED4", EVT_UNK),
+    ("it_802E0468", EVT_UNK),
+    ("it_80275210", ADVENTURE),
+    ("it_80275258", ADVENTURE),
+    ("it_80271534", ADVENTURE),
+    ("it_8027C0CC", ADVENTURE),
+    ("melee/it/kinds/itlikelike", ADVENTURE),
+    ("melee/it/kinds/itmato", ADVENTURE),
+    ("melee/it/kinds/itnokonoko", ADVENTURE),
+    ("melee/it/kinds/itpatapata", ADVENTURE),
+    ("melee/it/kinds/itwhitebea", ADVENTURE),
+    ("melee/it/kinds/itzgshell", ADVENTURE),
+    ("melee/it/kinds/itzrshell", ADVENTURE),
+    ("it_8026EA9C", OTHER_STAGES),
+    ("melee/it/kinds/itarwinglaser", OTHER_STAGES),
+    ("melee/it/kinds/itgreatfoxlaser", OTHER_STAGES),
+    ("melee/it/kinds/itkyasarin", OTHER_STAGES),
+    ("melee/it/kinds/itkyasarinegg", OTHER_STAGES),
+    ("melee/it/kinds/ittools", OTHER_STAGES),
+    ("melee/it/kinds/itevyoshiegg", EVENT),
+    ("it_8026C3FC", BOSSES),
+    ("it_8026C42C", BOSSES),
+    ("melee/it/ithitbox", BOSSES),
+    ("melee/it/kinds/itcrazyhandbomb", BOSSES),
+    ("melee/it/kinds/itmasterhandbullet", BOSSES),
+    ("melee/it/kinds/itmasterhandlaser", BOSSES),
+    ("it_802E614C", COINS),
+    ("melee/it/kinds/itcoin", COINS),
+    ("melee/it/kinds/itmetamon", DITTO),
+    ("it_8026BE84", DROP_BY_KIND),
+    ("it_80284854", DROP_BY_KIND),
+    ("it_80292D48", DROP_BY_KIND),
+    ("itFlipper_Spawn", DROP_BY_KIND),
+    ("it_80283AE4", DROP_BY_KIND),
+    ("it_802896CC", DROP_BY_KIND),
+    ("it_80294DC0", DROP_BY_KIND),
+    ("it_80291BE0", DROP_BY_KIND),
+    ("it_802841B4", DROP_BY_KIND),
+    ("it_8026ECE0", DEBUG),
+    ("Item_80266F3C", DEBUG),
+    ("Item_80266FA8", SCENES),
+    ("itDrMarioPill_802C09C4", DEMO),
+    ("itDrMarioPill_802C1180", DEMO),
+    ("it_802AE994", DEMO),
+    ("it_802AD590", DEMO),
+    ("it_8026C1E8", ZAKO),
+    ("it_802EA9FC", ZAKO),
+    ("it_802DC4BC", ZAKO),
+    ("it_802E16F8", ZAKO),
+    ("melee/it/it_279C", POKEMON_MODES),
+    ("it_80279AF0", COLANIM),
+    ("it_80279B10", COLANIM),
+    ("it_8026B7D8", BONUS),
+    ("it_8026B7E0", BONUS),
+    ("melee/ft/ftCo_800C78B0", ADVENTURE),
+    ("melee/ft/ft_0BEC", DEMO),
+    ("melee/ft/ft_0BF0", DEMO),
+    ("it_8027A9B8 (an event", POKEMON_MODES),
+    ("it_8027A780 (training", POKEMON_MODES),
+    ("fn_8017DF28", ONE_PLAYER),
+    ("gm_80473A18", EVENT),
+    ("ftCo_800BF228", DEMO),
+    ("it_2E6A_UnkMotion19_Phys", YAKU),
+    ("ftLib_CountFighters (Ditto's check)", DITTO),
+    ("grZakoGenerator_801CAC14 (a coin)", COINS),
+    ("grZakoGenerator_801CACB8 (a coin)", COINS),
+    (
+        "grZakoGenerator_801CAC14 (an enemy from a spawner slot)",
+        ZAKO,
+    ),
+    (
+        "grZakoGenerator_801CACB8 (an enemy from a spawner slot)",
+        ZAKO,
+    ),
+];
+
+/// Fighter-owned item code an items-off match reaches as well: the characters' work, not the
+/// toggle's.
+pub const FIGHTERS: &[&str] = &[
+    "it_8026BD84",
+    "it_80272AC4",
+    "melee/it/kinds/itclimbersblizzard",
+    "melee/it/kinds/itclimbersice",
+    "melee/it/kinds/itdrmariopill",
+    "melee/it/kinds/itfoxblaster",
+    "melee/it/kinds/itfoxillusion",
+    "melee/it/kinds/itfoxlaser",
+    "melee/it/kinds/itluigifireball",
+    "melee/it/kinds/itmariofireball",
+    "melee/it/kinds/itnessbat",
+    "melee/it/kinds/itnesspkfire",
+    "melee/it/kinds/itnesspkflash",
+    "melee/it/kinds/itnesspkflashexplode",
+    "melee/it/kinds/itnesspkthunderball",
+    "itNesspkthundertrail_UnkMotion0_Coll",
+    "itNessYoyo_Logic59_PickedUp",
+    "melee/it/kinds/itpikachuthunder",
+    "melee/it/kinds/itpikachutjoltair",
+    "melee/it/kinds/itpikachutjoltground",
+    "melee/it/kinds/itsamusbomb",
+    "melee/it/kinds/itsamuschargeshot",
+    "melee/it/kinds/itsamusgrapple",
+    "melee/it/kinds/itsamusmissile",
+    "itYoshieggthrow_UnkMotion2_Anim",
+    "melee/it/kinds/ityoshistar",
+    "melee/it/kinds/itzeldadinfire",
+    "melee/it/kinds/itzeldadinfireexplode",
+    "itLinkArrow_802A850C",
+    "it_802A2568 with one link",
+    "itNesspkflash_UnkMotion0_Anim on another kind",
+    "it_802B7160: the swing's grabbed-victim-only bit",
+];
+
+/// Ported code an items-on match reaches whose ledger alias waits for a check (a `// Ports`
+/// comment, or inline in a port): it doesn't stop a match.
+pub const UNCHECKED: &[&str] = &[
+    "melee/it/it_26B1",
+    "melee/it/it_2725",
+    "melee/it/itanimlist",
+    "it_8026FE68",
+    "melee/it/item",
+    "it_80275870",
+    "it_802758D4",
+    "melee/it/itmaterial",
+    "melee/it/kinds/itkirbyyoshispecialn",
+    "melee/it/kinds/itlucky",
+    "it_8028FE90",
+    "itStar_UnkMotion0_Phys",
+    "it_80284E10",
+    "melee/it/kinds/ittarucann",
+    "melee/it/kinds/ityoshiegglay",
+    "melee/it/kinds/ityoshitongue",
+    "melee/ft/kinds/ftCommon/ftCo_Barrel",
+    "melee/ft/kinds/ftCommon/ftCo_WarpStar",
+];
+
+/// What an items-on match reaches that isn't ported, task by task.
+pub const MISSING: &[ItemGap] = &[
+    ItemGap {
+        what: "the crate monsters: Goomba, ReDead, Octorok and Topi with Octorok's rock and Topi's Freezies, and a ReDead's grab (in progress on feat/monsters)",
+        covers: &[
+            "it_8026BC90",
+            "it_8026BD3C",
+            "it_8026C100",
+            "it_8026C220",
+            "it_80274FDC",
+            "it_802750E8",
+            "it_80275270",
+            "it_80271590",
+            "it_802759DC",
+            "melee/it/itzako",
+            "melee/it/kinds/itfreeze",
+            "melee/it/kinds/itleadead",
+            "melee/it/kinds/itoctarock",
+            "melee/it/kinds/itoctarockstone",
+            "melee/it/kinds/itoldkuri",
+            "melee/it/kinds/itoldottosea",
+            "it_802E31F8",
+            "itOldottosea_UnkMotion8_Anim",
+            "itOldottosea_UnkMotion8_Phys",
+            "it_802E32B4",
+            "it_802E3314",
+            "itOldottosea_UnkMotion9_Anim",
+            "itOldottosea_UnkMotion9_Phys",
+            "itOldottosea_UnkMotion9_Coll",
+            "it_802E3400",
+            "itOldottosea_UnkMotion10_Anim",
+            "itOldottosea_UnkMotion10_Phys",
+            "itOldottosea_UnkMotion10_Coll",
+            "it_2725_Logic3_Destroyed",
+            "it_802E3528",
+            "itOldottosea_UnkMotion11_Anim",
+            "itOldottosea_UnkMotion11_Phys",
+            "itOldottosea_UnkMotion11_Coll",
+            "it_802E35CC",
+            "it_802E37A4",
+            "melee/ft/ftCo_800C7590",
+            "melee/ft/ftCo_800C7434",
+            "it_802EAF28 (the lead pipe's capture)",
+            "it_8027B5B0 (an enemy of kind",
+            "pl_8004049C (an enemy other than a Shy Guy)",
+            "gm_8016F2F8 (a bonus besides the enemies' KOs)",
+            "it_8027B4A4 and it_8027B378 (a stage item's throw in its thrower's stats)",
+        ],
+        kinds: &[1, 2, 4],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "a crushed Bob-omb or motion-sensor bomb bursting (it_8026C368's it_8027D730 and it_8028FE90)",
+        covers: &["it_8027D730", "it_8028FE90"],
+        kinds: &[6, 0x13],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "a Bob-omb exploding in its holder's hands (it_8027429C)",
+        covers: &["it_8027429C (an item let go of)"],
+        kinds: &[6],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "the motion-sensor bomb reflected (itMSBomb_Logic19_Reflected)",
+        covers: &["itMSBomb_Logic19_Reflected"],
+        kinds: &[0x13],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "the Flipper reflected or bounced off a shield",
+        covers: &["melee/it/kinds/itflipper"],
+        kinds: &[0x14],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "an item hit by an item with no fighter behind it, taking that item's team through a fighter's layout (ftLib_GetTeam on an item)",
+        covers: &["ftLib_GetTeam on an item"],
+        kinds: &[],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "an item's destroy sound 0x12F (lbAudioAx_80024DC4, ported, not wired)",
+        covers: &["lbAudioAx_80024DC4"],
+        kinds: &[],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "unsure: an item grabbing a fighter with an item owner, or with a callback other than the barrel cannon's",
+        covers: &[
+            "it_802701BC with an item owner that isn't a fighter",
+            "(a grabbed fighter's callback)",
+        ],
+        kinds: &[5],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "unsure: a thrown fighter's hitbox owner that isn't a fighter",
+        covers: &["a thrown fighter's hitbox word that isn't a thrower"],
+        kinds: &[],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "unsure: the Super Scope firing with no level it can afford (it_80291DAC)",
+        covers: &["it_80291DAC with no level affordable"],
+        kinds: &[0x15],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "a Shy Guy's food (with food on)",
+        covers: &[
+            "it_8028F9D8",
+            "it_8028F8E4",
+            "it_8028F968",
+            "it_8028F9B8",
+            "it_8028FAF4 (a Shy Guy's food)",
+            "it_8028F9D8 (a Shy Guy carrying its food)",
+        ],
+        kinds: &[0x12],
+        with: &[],
+        stages: &[8],
+    },
+    ItemGap {
+        what: "a box riding Kongo Jungle's river and gone with its barrel (it_80286088, grKongo_801D8058, both ported, not wired)",
+        covers: &[
+            "it_80286088 (a box riding Kongo Jungle's river)",
+            "grKongo_801D8058 (a Kongo Jungle barrel's box gone)",
+        ],
+        kinds: &[1],
+        with: &[],
+        stages: &[5],
+    },
+    ItemGap {
+        what: "Kirby inhaling, swallowing and spitting out an item",
+        covers: &[
+            "melee/it/kinds/it_2F28",
+            "melee/it/kinds/itkirby_2F23",
+            "ftKb_SpecialN_800F5DE8",
+            "fn_800F6178",
+            "fn_800F6280",
+            "ftKb_SpecialNCapture0_Anim",
+            "ftKb_SpecialNCapture1_Anim",
+            "it_802F28C8 (an inhaled item",
+            "(an item caught by the inhale)",
+            "ftKb_SpecialN_800F5DE8 (an item inhaled)",
+        ],
+        kinds: &[],
+        with: &[4],
+        stages: &[],
+    },
+    ItemGap {
+        what: "a catch box (Kirby's inhale, Yoshi's tongue) touching an item, and the catch counted (updateItemGrabTarget, it_8027B4A4)",
+        covers: &[
+            "updateItemGrabTarget (a grab box on an item)",
+            "it_8027B4A4 (a fighter catching an item)",
+        ],
+        kinds: &[],
+        with: &[4, 17],
+        stages: &[],
+    },
+    ItemGap {
+        what: "Articuno",
+        covers: &["melee/it/kinds/itfreezer"],
+        kinds: &[0x22],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "Raikou",
+        covers: &["melee/it/kinds/itraikou"],
+        kinds: &[0x22],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "Suicune",
+        covers: &["melee/it/kinds/itsuikun"],
+        kinds: &[0x22],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "Staryu and its star",
+        covers: &["melee/it/kinds/ithitodeman"],
+        kinds: &[0x22],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "Mew, a 1 in 251 draw with every character unlocked, and its card record (gm_80172BC4)",
+        covers: &[
+            "melee/it/kinds/itmew",
+            "gm_80172BC4 (the card's Mew record)",
+        ],
+        kinds: &[0x22],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "unsure: Celebi, a 1 in 251 draw if the card's trophy bits (gm_80165084) say so, which the player's unlocks don't model, and its record (gm_80172C04)",
+        covers: &[
+            "melee/it/kinds/itcerebi",
+            "gm_80165084 (the card's Pokémon trophies, for Celebi)",
+            "gm_80172C04 (the card's Celebi record)",
+        ],
+        kinds: &[0x22],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "Zelda or Sheik transforming with an item held or under a power-up",
+        covers: &[
+            "it_8026B9A8",
+            "ftCommon_8007EFC8 with",
+            "ftCommon_80080174 with a flower on the head",
+        ],
+        kinds: &[],
+        with: &[18, 19],
+        stages: &[],
+    },
+    ItemGap {
+        what: "Donkey Kong carrying a heavy item",
+        covers: &[
+            "melee/ft/kinds/ftDonkey/ftdonkeyheavyfall",
+            "melee/ft/kinds/ftDonkey/ftdonkeyheavyjump",
+            "melee/ft/kinds/ftDonkey/ftdonkeyheavylanding",
+            "melee/ft/kinds/ftDonkey/ftdonkeyheavyturn",
+            "melee/ft/kinds/ftDonkey/ftdonkeyheavywait0",
+            "melee/ft/kinds/ftDonkey/ftdonkeyheavywait1",
+            "melee/ft/kinds/ftDonkey/ftdonkeyheavywalk",
+            "melee/ft/kinds/ftDonkey/ftdonkeyms3450",
+            "ftDk_MS_341_800DF980 (Donkey Kong carrying a heavy item)",
+            "ftDk_MS_349_800E06D8 (hit carrying a heavy item)",
+        ],
+        kinds: &[1, 2, 4, 5],
+        with: &[1],
+        stages: &[],
+    },
+    ItemGap {
+        what: "tumbling under the parasol, and the common parasol's own open (ftCommon_8007E83C)",
+        covers: &[
+            "melee/ft/kinds/ftCommon/ftCo_ItemParasolDamageFall",
+            "ftCo_800CF4DC (tumbling under a parasol)",
+            "ftCommon_8007E83C with the common parasol",
+        ],
+        kinds: &[0xD],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "a fighter hit by the Screw Attack's spin",
+        covers: &[
+            "melee/ft/kinds/ftCommon/ftCo_DamageScrew",
+            "ftCo_800D3004 (the screw attack's hit)",
+        ],
+        kinds: &[0x1E],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "a frozen fighter's KOs (the Freezie)",
+        covers: &[
+            "ftCo_800D47B8",
+            "ftCo_800D41C4",
+            "ftCo_DeadUpStar_Anim frozen",
+            "ftCo_DeadUpFall_Anim frozen (its spin)",
+        ],
+        kinds: &[0x11],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "hit while holding the hammer or riding a shell (Fighter_8006CDA4 with x197C)",
+        covers: &["Fighter_8006CDA4 (a held fighter dropped by a hit)"],
+        kinds: &[0xE, 0xF, 0x1C],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "Nana's computer player with items: a power-up's color, an item to go for or pick up, an item held",
+        covers: &[
+            "it_8026B924",
+            "ft_80087A18 with a power-up's color animation",
+            "ftCo_800A648C with a candidate item",
+            "ftCo_800A3710 with an item to pick up",
+            "ftCo_800B8A9C with an item held",
+        ],
+        kinds: &[],
+        with: &[14],
+        stages: &[],
+    },
+];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::roster::tests::{game_modules, ledger, stops};
+
+    /// The items-on audit is held to the ledger and the code as the stages' audits are: every
+    /// function of its units is ported, replaced or dead, or the audit names it (by itself, or
+    /// by its unit when no entry names it alone) as unreached, a fighter's, ported awaiting a
+    /// check, or covered by a gap; every stop in the item modules is unreached, a fighter's or
+    /// a gap; every item unit with unported functions is held; and every name still names
+    /// something unported or a stop. So a port that lands has to update the audit.
+    #[test]
+    fn items_audit_reaches_nothing_unaccounted() {
+        let ledger = ledger();
+        let every_stop: Vec<String> = game_modules().iter().flat_map(|m| stops(m)).collect();
+        let mut keys: Vec<(&str, &str)> = Vec::new();
+        keys.extend(UNREACHED.iter().map(|(k, _)| (*k, "UNREACHED")));
+        keys.extend(FIGHTERS.iter().map(|k| (*k, "FIGHTERS")));
+        keys.extend(UNCHECKED.iter().map(|k| (*k, "UNCHECKED")));
+        for g in MISSING {
+            keys.extend(g.covers.iter().map(|k| (*k, "MISSING")));
+        }
+        let mut used = vec![false; keys.len()];
+        for (name, unit, status) in &ledger {
+            if status != "unaccounted" {
+                continue;
+            }
+            let held = UNITS.contains(&unit.as_str());
+            assert!(
+                held || !unit.starts_with("melee/it/"),
+                "{unit} has unported functions ({name}), and the items audit doesn't hold it"
+            );
+            if !held {
+                continue;
+            }
+            let named = |key: &str| -> Vec<usize> {
+                (0..keys.len()).filter(|&i| keys[i].0 == key).collect()
+            };
+            let mut hits = named(name);
+            if hits.is_empty() {
+                hits = named(unit);
+            }
+            assert!(
+                !hits.is_empty(),
+                "{name} ({unit}) isn't ported, and the items audit doesn't say why an items-on match can't reach it"
+            );
+            for i in hits {
+                used[i] = true;
+            }
+        }
+        for m in MODULES {
+            for stop in stops(m) {
+                let hits: Vec<usize> = (0..keys.len())
+                    .filter(|&i| keys[i].1 != "UNCHECKED" && stop.contains(keys[i].0))
+                    .collect();
+                assert!(
+                    !hits.is_empty(),
+                    "game/{m}.rs stops, and the items audit doesn't say why an items-on match can't reach it: {stop}"
+                );
+                for i in hits {
+                    used[i] = true;
+                }
+            }
+        }
+        for (i, &(key, list)) in keys.iter().enumerate() {
+            // A gap may also name a stop outside the item modules, or a fighter's function.
+            let elsewhere = list == "MISSING"
+                && (every_stop.iter().any(|t| t.contains(key))
+                    || (ledger.iter())
+                        .any(|(n, u, st)| st == "unaccounted" && (n == key || u == key)));
+            assert!(
+                used[i] || elsewhere,
+                "the items audit's {list} names {key}, which no longer stops or is unported"
+            );
+        }
+        let modules = game_modules();
+        for m in modules.iter().filter(|m| m.starts_with("it/")) {
+            assert!(
+                MODULES.contains(&m.as_str()),
+                "game/{m}.rs isn't among the items audit's modules"
+            );
+        }
+        for m in MODULES {
+            assert!(
+                modules.iter().any(|n| n == m),
+                "the items audit's module {m} is gone"
+            );
+        }
+    }
+
+    /// The gaps a match reaches follow its item switch, characters and stage.
+    #[test]
+    fn items_gaps_follow_the_match() {
+        assert!(missing_with(&[], &[2, 9], 31).is_empty());
+        let balls = missing_with(&[0x22], &[2, 9], 31);
+        assert!(balls.iter().any(|g| g.what == "Articuno"));
+        assert!(!balls.iter().any(|g| g.what.starts_with("Kirby")));
+        assert!(
+            missing_with(&[0], &[4], 31)
+                .iter()
+                .any(|g| g.what.starts_with("Kirby"))
+        );
+        let food = |stage| {
+            missing_with(&[0x12], &[2], stage)
+                .iter()
+                .any(|g| g.what.starts_with("a Shy Guy"))
+        };
+        assert!(food(8) && !food(31));
+    }
+}
