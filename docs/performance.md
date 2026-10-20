@@ -298,3 +298,27 @@ melee-hd `fe015fb` (perf/tev-specialize: a shader specialized to each draw's TEV
 The GPU's whole frame is 1.1 to 1.5 ms at 5x now, of which the scene is 53 to 63% and the copy to the XFB (0.32 to 0.36 ms) most of the rest. Every stage is bound by the CPU's frame building (3.7 to 8.0 ms, unchanged: working out each draw's uid costs nothing measurable), which the frame rates follow; frame time p99 fell from 12.1 to 18.3 ms to 5.3 to 10.7 ms. The uber shader's own runs here came within 7% of the baseline's GPU time either way, with early depth testing on since: run to run, the GPU's clocks move that much.
 
 The specialized pipelines: 96 to 248 TEV configurations a run (those it drew with and those the saved list warmed; over a whole benchmark match at 1x, 114 to 177 configurations and 116 to 206 pipelines), made in 4.1 to 4.5 ms each on average and 10 ms at most, on the shader threads, from the driver's pipeline cache; made mostly cold (the first runs after gx.wgsl changed, in `melee-render-check` with `MELEE_TEV=sync`, one at a time), 35 to 370 ms on average a match and up to 1.8 s. The uber shader drew 0.03 to 0.13% of a measured run's draw calls (0.2 to 0.3% of the 600-tick warm-ups'), those before their pipelines were made, at the start.
+
+### Results after the week's work (2026-10-19)
+
+Main at `d154b3c` (the CPU frame building above, early depth testing, the specialized shaders) against the baseline build (`9362975` with only the frame digest, which costs nothing unless asked for), on the quiet machine of the baseline: `melee-bench player`, the baseline's four replays, fullscreen (3840 by 2160), Interpolate uncapped (`--refresh 1000 --present immediate`), 1,980 ticks a run, the two builds alternating, two rounds; the mean of the two. GPU and CPU figures are milliseconds a frame, means.
+
+| Stage, scale | Frames/s | GPU total | CPU build | Frame time p99 |
+| --- | --- | --- | --- | --- |
+| Final Destination, 1x | 215 → 397 | 0.53 → 0.17 | 4.08 → 2.12 | 10.3 → 3.64 |
+| Final Destination, 5x | 141 → 404 | 6.96 → 1.17 | 3.95 → 2.11 | 10.27 → 3.50 |
+| Great Bay, 1x | 196 → 327 | 0.53 → 0.18 | 4.55 → 2.58 | 6.59 → 4.31 |
+| Great Bay, 5x | 149 → 332 | 6.58 → 1.15 | 4.62 → 2.58 | 9.50 → 4.32 |
+| Fountain of Dreams, 1x | 111 → 202 | 0.54 → 0.23 | 8.15 → 4.42 | 12.3 → 6.44 |
+| Fountain of Dreams, 5x | 109 → 196 | 7.95 → 1.13 | 8.17 → 4.57 | 11.98 → 6.76 |
+| Pokémon Stadium, 1x | 209 → 339 | 0.63 → 0.19 | 4.29 → 2.51 | 6.09 → 4.07 |
+| Pokémon Stadium, 5x | 113 → 343 | 8.70 → 1.49 | 4.42 → 2.50 | 14.57 → 4.12 |
+
+(The baseline's first Final Destination 1x run had a slow stretch, p99 15.1 against 5.5 in the second.) The CPU's frame building is 1.7 to 1.9 times faster on every stage and the GPU's frame 5.7 to 7 times at 5x, so every stage is now bound by the CPU, at 196 to 404 frames a second at either scale. At the display's own 144 Hz (mailbox, Interpolate, 5x, main only, one run each) every replay holds 144.0 frames a second: frame time p99 7.97 (Final Destination), 8.13 (Great Bay), 8.82 (Fountain of Dreams) and 8.18 ms (Pokémon Stadium), GPU 1.07 to 1.44 ms, CPU build 2.33 to 4.77 ms.
+
+**Profile after** (samply at 2 kHz on main's line-table build, the player in its window on the hidden desktop, fullscreen 5x, Interpolate uncapped; Fountain of Dreams 189 frames/s and Final Destination 380 while profiled). Busy time a frame by thread, from each thread's samples outside waits:
+
+- Fountain of Dreams (5.3 ms a frame): the game thread about 3.1 ms (building the frame's stream 20% of its samples, with the blend's matrix work; running the stream 34%: the vertex arrays' reach and views, state deltas, the sink; presenting 7%; waiting at the frame's end for the render thread 26%), the render thread about 3.2 ms (its per-draw work 42%: specialized pipeline lookups, uniforms, textures; flushing to wgpu 23%: encoding 11%, submits 7%, buffer writes 7%), and each of the four transform threads about 2.9 ms (transforming 25%, lighting most of it; fetching 11%; decoding 10%; zeroing and copying each vertex's output and GPU words 14%).
+- Final Destination (2.6 ms a frame): the game thread about 1.7 ms (building the stream 19%, running it 23%, presenting 11%, waiting for the render thread 38%), the render thread about 1.4 ms (per-draw work 27%, flushing 19%), the transform threads about 1.2 ms each, half their time idle.
+
+The critical path is the game thread's frame building and stream, then the render thread finishing the last batch and flushing it; on Fountain of Dreams the transform threads are nearly as busy. The next cuts, by expected payoff: the transform threads' copies (write each vertex's words straight from its output, without the intermediate GPU vertex, and zero only what a vertex's transform leaves unwritten); the render thread's per-draw work and wgpu calls (uniforms indexed per draw call instead of a dynamic offset per draw, fewer bind group changes, caching the pipeline lookup per state); the game thread's stream building (HSD's display code, the blend's decompositions) and running (the arrays' reach scanned once per display list rather than every draw); then lighting across vertices with SIMD, the same IEEE operations in four lanes.
