@@ -277,6 +277,7 @@ The rule is kept by melee-sim's `roster` tests: `audited_stages_reach_nothing_un
 | Kongo Jungle | yes | | a box riding the river (`it_80286088`): only with boxes on in the item switch |
 | Kongo Jungle N64 | yes | | |
 | Onett | yes, not with the Ice Climbers | with the Ice Climbers: Nana's island check (`ftCo_800A2718`), as on Brinstar | the stage item on neither a joint nor a point, as on Jungle Japes |
+| Poké Floats | yes | | |
 | Pokémon Stadium | yes | | the screen's count (`grStadium_801D384C`): single-player modes only |
 | Yoshi's Island | yes | | the stage item on neither a joint nor a point, as on Jungle Japes |
 | Yoshi's Island N64 | yes | | |

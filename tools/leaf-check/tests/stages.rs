@@ -27,7 +27,7 @@ use leaf_check::calls::{Prepare, Ret, check_calls_with, gobj_arg, peek_u32, poke
 use melee_capture::import::Maps;
 use melee_sim::game::code::{run_demo_init, run_event, run_fighter_cb, run_proc};
 use melee_sim::game::ft::co::barrel_wait;
-use melee_sim::game::gr::{garden, kongo, oldkongo, oldyoshi, shrine, yorster};
+use melee_sim::game::gr::{garden, kongo, oldkongo, oldyoshi, pura, shrine, yorster};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use melee_sim::game::structs::HitCapsule;
@@ -2239,6 +2239,260 @@ fn oldkongo_unreached_callbacks() {
         hold(c, k);
     };
     check_calls_with(&d, from, 1, &prep, &drop);
+}
+
+// Poké Floats (`grpura.c`).
+
+const PF: &str = "oracle-stage-poke-floats";
+
+/// grpura.c's code, where its `stageGObjN_*` symbols lie.
+const PF_LO: u32 = 0x8021_1CFC;
+const PF_HI: u32 = 0x8021_3300;
+
+/// `JOBJ_HIDDEN` and a joint's flags.
+const HIDDEN: u32 = 0x10;
+const JOBJ_FLAGS: u32 = 0x14;
+
+/// Sets or clears a joint's hidden flag.
+fn hide(c: &mut Call, j: u32, hidden: bool) {
+    let w = peek_u32(c, j + JOBJ_FLAGS);
+    poke_u32(
+        c,
+        j + JOBJ_FLAGS,
+        if hidden { w | HIDDEN } else { w & !HIDDEN },
+    );
+}
+
+/// Runs a function of a stage object.
+fn of_gobj(
+    f: fn(&mut Running, melee_sim::hsd::gobj::GObjId),
+) -> impl Fn(&mut Running, &Maps, &Call) -> Ret + Sync {
+    move |r: &mut Running, maps: &Maps, call: &Call| {
+        f(r, gobj_arg(maps, call));
+        Ret::Nothing
+    }
+}
+
+#[test]
+fn pura_setup() {
+    let d = dir(PF);
+    check_calls_with(&d, "grPura_80211D00", 1, &as_saved, &event);
+    check_calls_with(&d, "grPura_80211DDC", 1, &as_saved, &event);
+    // Each of the setup's objects made from its first creation (the floats come with the
+    // stage's).
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        pura::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    for map in [0u32, 1, 4] {
+        check_calls_with(
+            &d,
+            "setupStageCallbacks",
+            1,
+            &move |c, _| c.regs.gpr[3] = map,
+            &create,
+        );
+    }
+    for f in [
+        "stageGObj0_OnInit",
+        "stageGObj1_OnInit",
+        "stageGObj2_OnInit",
+        "stageGObj4_OnInit",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    check_calls_with(
+        &d,
+        "grPura_80212CD4",
+        1,
+        &as_saved,
+        &of_gobj(pura::init_subjects),
+    );
+    let floats = of_gobj(pura::make_floats);
+    check_calls_with(&d, "grPura_802125F0", 1, &as_saved, &floats);
+    // The stage's joints scaled 2 or more, which a float's factor leaves alone.
+    let big = |c: &mut Call, _: usize| {
+        let root = peek_u32(c, c.regs.gpr[3] + 0x28);
+        let mut stack = vec![peek_u32(c, root + 0x10)];
+        while let Some(j) = stack.pop() {
+            if j == 0 {
+                continue;
+            }
+            poke_u32(c, j + 0x2C, 2.5f32.to_bits());
+            stack.push(peek_u32(c, j + 8));
+            if peek_u32(c, j + JOBJ_FLAGS) & 0x1000 == 0 {
+                stack.push(peek_u32(c, j + 0x10));
+            }
+        }
+    };
+    check_calls_with(&d, "grPura_802125F0", 1, &big, &floats);
+    let vtx = |r: &mut Running, _: &Maps, _: &Call| {
+        pura::find_vtx_joints(r);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grPura_80212FC0", 1, &as_saved, &vtx);
+    // The joint search the other way, as saved and for joints of the stage's map and others'.
+    let part = |r: &mut Running, _: &Maps, call: &Call| {
+        let (map, joint) = (call.regs.gpr[3] as i32, call.regs.gpr[4] as i32);
+        let p = melee_sim::game::gr::setup::coll_joint_part(r.game, r.data, map, joint);
+        Ret::Int(p as u32)
+    };
+    check_calls_with(&d, "Ground_801C33C0", 1, &as_saved, &part);
+    for (map, joint) in [
+        (4u32, 0u32),
+        (4, 5),
+        (4, 25),
+        (4, 60),
+        (4, u32::MAX),
+        (1, 3),
+        (2, 0),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            c.regs.gpr[3] = map;
+            c.regs.gpr[4] = joint;
+        };
+        check_calls_with(&d, "Ground_801C33C0", 1, &set, &part);
+    }
+}
+
+/// Runs a TEV compile by its address with its argument (a joint or a display object).
+fn by_address_tev(r: &mut Running, maps: &Maps, call: &Call) -> Ret {
+    let a = call.regs.gpr[3];
+    match call.addr {
+        0x8021_3250 => {
+            let j = *maps.jobjs.get(&a).expect("a joint");
+            pura::compile_tree(r, j);
+        }
+        0x8021_3128 => {
+            let d = *maps.dobjs.get(&a).expect("a display object");
+            pura::compile_dobjs(r, d);
+        }
+        _ => pura::compile_one(r, maps.dobjs.get(&a).copied()),
+    }
+    Ret::Nothing
+}
+
+/// The TEV compiles a float's setup runs, from their saved calls.
+#[test]
+fn pura_compile() {
+    let d = dir(PF);
+    for f in ["grPura_80213250", "grPura_80213128", "grPura_80213224"] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address_tev);
+    }
+}
+
+/// The stage's process and the subjects' upkeep, as saved and with the joints the subjects
+/// follow hidden and shown, and the floats' vertices moved.
+#[test]
+fn pura_stage() {
+    let d = dir(PF);
+    let flip = |c: &mut Call, k: usize| {
+        let v = vars(c);
+        for i in 0..25u32 {
+            let j = peek_u32(c, v + 4 * i);
+            if j != 0 {
+                hide(c, j, (i as usize + k).is_multiple_of(2));
+            }
+        }
+    };
+    for p in [&as_saved as &Prepare, &flip] {
+        check_calls_with(&d, "stageGObj4_GObjProc", 1, p, &by_address);
+        check_calls_with(&d, "grPura_80212EF4", 1, p, &of_gobj(pura::update_subjects));
+    }
+    let mv = |r: &mut Running, _: &Maps, _: &Call| {
+        pura::move_vertices(r);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grPura_80213030", 1, &as_saved, &mv);
+}
+
+/// The sky's process, as saved and at the fade's start, middle, last tick, end and past it,
+/// with pairs of colors.
+#[test]
+fn pura_sky() {
+    let d = dir(PF);
+    check_calls_with(&d, "stageGObj1_GObjProc", 1, &as_saved, &by_address);
+    for t in [0u16, 1, 1800, 0xE0F, 0xE10, 0xE11, 0x7FFF] {
+        for (from, to) in [(0u16, 1u16), (1, 3), (3, 2), (2, 0), (3, 3)] {
+            let set = move |c: &mut Call, _: usize| {
+                let v = vars(c);
+                poke_u16(c, v, from);
+                poke_u16(c, v + 2, to);
+                poke_u16(c, v + 4, t);
+            };
+            check_calls_with(&d, "stageGObj1_GObjProc", 1, &set, &by_address);
+        }
+    }
+}
+
+/// A float's process, as saved and with its joint and the stage's it copies each hidden and
+/// shown.
+#[test]
+fn pura_float() {
+    let d = dir(PF);
+    check_calls_with(&d, "stageGObj2_GObjProc", 1, &as_saved, &by_address);
+    for (src, own) in [(false, false), (false, true), (true, false), (true, true)] {
+        let set = move |c: &mut Call, _: usize| {
+            let s = peek_u32(c, vars(c) + 4);
+            hide(c, s, src);
+            let j = peek_u32(c, c.regs.gpr[3] + 0x28);
+            hide(c, j, own);
+        };
+        check_calls_with(&d, "stageGObj2_GObjProc", 1, &set, &by_address);
+    }
+}
+
+/// The floats' render callback, in the pass saved and another.
+#[test]
+fn pura_render() {
+    let d = dir(PF);
+    let render = |r: &mut Running, maps: &Maps, call: &Call| {
+        pura::render_float(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    let setup = leaf_check::calls::Setup {
+        gx: true,
+        ..Default::default()
+    };
+    for p in [&as_saved as &Prepare, &|c: &mut Call, _: usize| {
+        c.regs.gpr[4] ^= 3
+    }] {
+        leaf_check::calls::check_calls_in(&d, "fn_802130D0", 1, p, &setup, &render);
+    }
+}
+
+/// The stage's callbacks no capture reaches, from the sky's process's captures: the empty
+/// processes and destroy callbacks, the lights' setup, the shadow check, and the load and demo
+/// hooks.
+#[test]
+fn pura_unreached_callbacks() {
+    let d = dir(PF);
+    let from = "stageGObj1_GObjProc";
+    for name in [
+        "stageGObj0_GObjProc",
+        "stageGObj0_Callback3",
+        "stageGObj27_OnInit",
+        "stageGObj27_GObjProc",
+        "stageGObj27_Callback3",
+        "stageGObj4_Callback3",
+        "stageGObj1_Callback3",
+        "stageGObj2_Callback3",
+    ] {
+        let t = sym_at(name, PF_LO, PF_HI);
+        check_calls_with(&d, from, 1, &retarget(t), &by_address);
+    }
+    let shadow =
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(pura::check_shadow_render()));
+    let t = leaf_check::sym("grPura_802130C8");
+    check_calls_with(&d, from, 1, &retarget(t), &shadow);
+    let t = leaf_check::sym("grPura_80211DD8");
+    check_calls_with(&d, from, 1, &retarget(t), &event);
+    let t = leaf_check::sym("grPura_80211CFC");
+    check_calls_with(&d, from, 1, &retarget(t), &demo);
 }
 
 /// A symbol's address among those of its name, the one between `lo` and `hi` (each stage has

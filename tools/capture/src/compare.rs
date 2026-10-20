@@ -185,6 +185,14 @@ impl<'a> Comparer<'a> {
 
     /// The scheduler: each process link's GObjs in order, and what they hold.
     pub fn world(&mut self) {
+        // The toon texture, which materials' compiled TEV stages name before the display
+        // statics compare it (`Comparer::display`).
+        let t = self.u32(sym("tobj_toon"));
+        if let Some(o) = self.game.objs.mobjs.toon
+            && t != 0
+        {
+            self.maps.tobjs.entry(t).or_insert(o);
+        }
         let heads = self.u32(sym("HSD_GObjPLinkHead"));
         let w = &self.game.world;
         // Our GObjs on the process links. A GObj the importer made for a pointer that

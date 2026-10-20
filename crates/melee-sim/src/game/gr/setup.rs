@@ -332,6 +332,27 @@ pub fn coll_joint_id_in(
     result
 }
 
+/// The part of map `map_id` collision joint `joint` is bound to, `Ground_801C33C0`
+/// ([`coll_joint_id`] the other way): the last of the stage's own joints for that map and
+/// joint, then the last of the map's archive's for the joint, or -1.
+#[doc(alias = "Ground_801C33C0")]
+pub fn coll_joint_part(game: &Game, data: &Archives, map_id: i32, joint: i32) -> i32 {
+    let ((list, n), own) = map_coll_joints(game, data, map_id);
+    let mut result = -1;
+    for j in own {
+        if i32::from(j.y) == map_id && i32::from(j.x) == joint {
+            result = i32::from(j.z);
+        }
+    }
+    for i in 0..n {
+        let j = archive_coll_joint(data, list, i);
+        if i32::from(j.x) == joint {
+            result = i32::from(j.z);
+        }
+    }
+    result
+}
+
 /// The `i`th collision joint of an archive's list.
 fn archive_coll_joint(data: &Archives, list: Option<DataRef>, i: u32) -> GrJoint {
     GrJoint::read(data, list.expect("collision joints").at(6 * i))

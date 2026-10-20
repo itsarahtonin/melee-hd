@@ -182,6 +182,7 @@ impl Comparer<'_> {
         let toon = self.game.objs.mobjs.toon;
         let t = self.u32(sym("tobj_toon"));
         self.check("display", "toon texture", toon.is_some(), t != 0);
+        self.tobj_chain("display toon texture", toon, t);
         let w = &self.game.world;
         let (r, rc) = (w.rendering.map(|g| g.0), w.rendering_camera.map(|g| g.0));
         let t = self.u32(sym("HSD_GObj_804D7814"));

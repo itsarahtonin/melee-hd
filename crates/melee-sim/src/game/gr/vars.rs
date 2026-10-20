@@ -70,6 +70,9 @@ pub enum VarsKind {
     Onett,
     OnettBuilding,
     OnettCar,
+    Pura,
+    PuraFloat,
+    PuraStage,
 }
 
 /// `union GroundVars`.
@@ -131,6 +134,12 @@ pub enum GroundVars {
     KongoLog(KongoLogVars),
     /// `grKongo_GroundVars2`: the river's path (map 11).
     KongoPath(KongoPathVars),
+    /// `grPura_GroundVars`: Poké Floats' sky (map 1).
+    Pura(PuraVars),
+    /// `grPura_GroundVars` and `2`: a float that copies its stage joint (maps 2, 3 and 5 to 26).
+    PuraFloat(PuraFloatVars),
+    /// `grPura_GroundVars3`: the stage (map 4), its floats' joints and camera subjects.
+    PuraStage(PuraStageVars),
     /// `grKraid_GroundVars`: Brinstar Depths' rock (map 3) and Kraid's copy (map 1).
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
@@ -886,6 +895,33 @@ pub struct KongoPathVars {
     pub xD0: f32,
     pub xD8: f32,
     pub xDC: f32,
+}
+
+/// `grPura_GroundVars`, Poké Floats' sky: the color it fades from (`xC4`) and to (`xC6`), and
+/// the fade's tick (`xC8`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct PuraVars {
+    pub xC4: i16,
+    pub xC6: i16,
+    pub xC8: i16,
+}
+
+/// A float (`grPura_GroundVars`' `xC4` and `grPura_GroundVars2`' `xC8`): its part of the stage
+/// (`xC4`, a halfword), and the stage's joint it copies (`xC8`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct PuraFloatVars {
+    pub xC4: i16,
+    /// The halfword past `xC4`, which nothing writes.
+    pub pad: [u8; 2],
+    pub xC8: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// `grPura_GroundVars3`, the stage: the joints its camera subjects follow (`xC4`) and the
+/// subjects (`x128`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct PuraStageVars {
+    pub xC4: [Option<crate::hsd::jobj::JObjId>; 25],
+    pub x128: [Option<crate::game::handles::CameraBoxId>; 25],
 }
 
 /// `GroundVars_izumi`: the water's texture (`xC4`), the reflection camera (`xC8`), the
@@ -1755,6 +1791,28 @@ impl GroundVars {
                 xD0: f(at + 0xC),
                 xD8: f(at + 0x14),
                 xDC: f(at + 0x18),
+            }),
+            VarsKind::Pura => GroundVars::Pura(PuraVars {
+                xC4: m.u16(at) as i16,
+                xC6: m.u16(at + 2) as i16,
+                xC8: m.u16(at + 4) as i16,
+            }),
+            VarsKind::PuraFloat => GroundVars::PuraFloat(PuraFloatVars {
+                xC4: m.u16(at) as i16,
+                pad: [m.u8(at + 2), m.u8(at + 3)],
+                xC8: cx
+                    .import_handle("JObjId", m.u32(at + 4))
+                    .map(crate::hsd::jobj::JObjId),
+            }),
+            VarsKind::PuraStage => GroundVars::PuraStage(PuraStageVars {
+                xC4: std::array::from_fn(|i| {
+                    cx.import_handle("JObjId", m.u32(at + 4 * i as u32))
+                        .map(crate::hsd::jobj::JObjId)
+                }),
+                x128: std::array::from_fn(|i| {
+                    cx.import_handle("CameraBoxId", m.u32(at + 0x64 + 4 * i as u32))
+                        .map(crate::game::handles::CameraBoxId)
+                }),
             }),
             VarsKind::Yorster => GroundVars::Yorster(YorsterVars {
                 xC4: m.u32(at) as i32,
@@ -2730,6 +2788,53 @@ impl GroundVars {
         }
     }
 
+    /// The variables as `grPura_GroundVars` (the sky), likewise.
+    pub fn pura(&mut self) -> &mut PuraVars {
+        if let GroundVars::Bytes(b) = self {
+            let h = |at: usize| u16::from_be_bytes([b[at], b[at + 1]]) as i16;
+            *self = GroundVars::Pura(PuraVars {
+                xC4: h(0),
+                xC6: h(2),
+                xC8: h(4),
+            });
+        }
+        match self {
+            GroundVars::Pura(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grPura_GroundVars"),
+        }
+    }
+
+    /// The variables as a float's (`grPura_GroundVars2`), likewise.
+    pub fn pura_float(&mut self) -> &mut PuraFloatVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::PuraFloat(PuraFloatVars {
+                xC4: u16::from_be_bytes([b.0[0], b.0[1]]) as i16,
+                pad: [b.0[2], b.0[3]],
+                xC8: b.null_of(4),
+            });
+        }
+        match self {
+            GroundVars::PuraFloat(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grPura_GroundVars2"),
+        }
+    }
+
+    /// The variables as `grPura_GroundVars3` (the stage), likewise.
+    pub fn pura_stage(&mut self) -> &mut PuraStageVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            for i in 0..50 {
+                b.null(4 * i);
+            }
+            *self = GroundVars::PuraStage(PuraStageVars::default());
+        }
+        match self {
+            GroundVars::PuraStage(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grPura_GroundVars3"),
+        }
+    }
+
     /// The variables as `grNBa_BG_Vars`, likewise.
     pub fn battle_bg(&mut self) -> &mut BattleBgVars {
         if let GroundVars::Bytes(b) = self {
@@ -3291,6 +3396,50 @@ impl Mirror for GroundVars {
                     );
                 }
                 cx.compare_data(&format!("{path}.kongo2.xC4"), v.xC4, m.u32(at));
+            }
+            GroundVars::Pura(v) => {
+                let ours = (v.xC4, v.xC6, v.xC8);
+                let theirs = (m.u16(at) as i16, m.u16(at + 2) as i16, m.u16(at + 4) as i16);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.pura"),
+                        format!("{ours:?}"),
+                        format!("{theirs:?}"),
+                    );
+                }
+            }
+            GroundVars::PuraFloat(v) => {
+                let ours = (v.xC4, v.pad);
+                let theirs = (m.u16(at) as i16, [m.u8(at + 2), m.u8(at + 3)]);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.pura"),
+                        format!("{ours:?}"),
+                        format!("{theirs:?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.pura2.xC8"),
+                    "JObjId",
+                    v.xC8.map(|j| j.0),
+                    m.u32(at + 4),
+                );
+            }
+            GroundVars::PuraStage(v) => {
+                for i in 0..25 {
+                    cx.compare_handle(
+                        &format!("{path}.pura3.xC4[{i}]"),
+                        "JObjId",
+                        v.xC4[i].map(|j| j.0),
+                        m.u32(at + 4 * i as u32),
+                    );
+                    cx.compare_handle(
+                        &format!("{path}.pura3.x128[{i}]"),
+                        "CameraBoxId",
+                        v.x128[i].map(|b| b.0),
+                        m.u32(at + 0x64 + 4 * i as u32),
+                    );
+                }
             }
             GroundVars::Yorster(v) => {
                 let theirs = m.u32(at) as i32;

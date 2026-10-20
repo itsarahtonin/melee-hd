@@ -70,6 +70,10 @@ pub const GRZEBES_BOUNDS: u32 = 0x8049_F140;
 pub const GRZEBES_BUBBLES: u32 = 0x8049_F170;
 /// `stage_info.map_gobjs`.
 const MAP_GOBJS: u32 = 0x8049_E6C8 + 0x180;
+/// grpura.c's (`ssbm_types::tu::melee__gr__grpura::yakumono_param`), and its table of the
+/// joints its collision vertices follow (`grPu_803E6C0C`, 12 bytes an entry, the joint at +8).
+pub const GRPURA_YAKUMONO: u32 = 0x804D_6AA0;
+pub const GRPURA_VTX: u32 = 0x803E_6C0C;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -355,6 +359,17 @@ impl Importer<'_> {
         for i in 0..2u32 {
             let j = cap.u32(GRKONGO_POSTS + 4 * i);
             self.game.gr.kongo.posts[i as usize] = self.import_handle_jobj(j);
+        }
+        let yaku = cap.u32(GRPURA_YAKUMONO);
+        self.game.gr.pura_yakumono = self.data_or_unhandled(yaku);
+        let n = gr::pura::VTX_COUNT as u32;
+        let vtx: Vec<u32> = (0..n).map(|i| cap.u32(GRPURA_VTX + 0xC * i + 8)).collect();
+        self.game.gr.pura_vtx_jobjs.clear();
+        if vtx.iter().any(|&p| p != 0) {
+            for p in vtx {
+                let j = self.import_handle_jobj(p);
+                self.game.gr.pura_vtx_jobjs.push(j);
+            }
         }
         self.game.gr.battle_demo = self.u8_at(sym("isDemoFight")) != 0;
         self.game.gr.game_mode = self.u8_at(sym("state_machine"));
@@ -974,6 +989,11 @@ impl Comparer<'_> {
                 GRONETT_YAKUMONO,
                 game.gr.onett_yakumono,
             ),
+            (
+                "grPura yakumono_param",
+                GRPURA_YAKUMONO,
+                game.gr.pura_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -1086,6 +1106,15 @@ impl Comparer<'_> {
                 jobj_pair(self, GRKONGO_POSTS + 4),
             ],
         );
+        for i in 0..gr::pura::VTX_COUNT {
+            let ours = game.gr.pura_vtx_jobjs.get(i).copied().flatten();
+            self.check(
+                &format!("grPu_803E6C0C[{i}]"),
+                "joint",
+                ours.map(Some),
+                jobj_pair(self, GRPURA_VTX + 0xC * i as u32 + 8),
+            );
+        }
         let things = sym("ftDevice_BuryThings");
         for i in 0..2u32 {
             let at = things + 0xC * i;

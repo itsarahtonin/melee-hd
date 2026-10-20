@@ -409,6 +409,17 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 23,
+        name: "Poké Floats",
+        keys: &["pf", "poke-floats"],
+        audit: Some(Audit {
+            units: &["melee/gr/grpura"],
+            modules: &["gr/pura"],
+            unreached: &[],
+            missing: &[],
+        }),
+    },
+    Stage {
         kind: 3,
         name: "Pokémon Stadium",
         keys: &["ps", "pokemon-stadium"],

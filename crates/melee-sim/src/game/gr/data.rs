@@ -6,7 +6,7 @@ use super::datfiles::GrJoint;
 use super::{
     GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS,
     GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_SHRINE, GR_KIND_STORY,
+    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_SHRINE, GR_KIND_STORY,
     GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
@@ -762,6 +762,49 @@ pub const ONETT: StageData = StageData {
     joints: &[],
 };
 
+/// A Poké Floats float's callbacks (`stageGObj2_*`).
+const PURA_FLOAT: StageCallbacks = cb(0x8021_2290, 0x8021_2314, 0x8021_231C, 0x8021_25EC, 0);
+
+/// `grPu_StageCallbacks` (`stage_callbacks` in grpura.c). Map 4 is the stage, map 1 the sky,
+/// maps 2, 3 and 5 to 26 the floats, which copy the stage's joints, map 0 the background and
+/// map 27 the lights.
+pub const PURA_CALLBACKS: [StageCallbacks; 28] = {
+    let mut t = [PURA_FLOAT; 28];
+    t[0] = cb(0x8021_1EF0, 0x8021_1F1C, 0x8021_1F24, 0x8021_1F28, 0);
+    t[1] = cb(0x8021_2024, 0x8021_20D8, 0x8021_20E0, 0x8021_228C, 0);
+    t[4] = cb(
+        0x8021_1F68,
+        0x8021_1FD0,
+        0x8021_1FD8,
+        0x8021_2020,
+        StageCallbacks::FOG,
+    );
+    t[27] = cb(
+        0x8021_1F2C,
+        0x8021_1F58,
+        0x8021_1F60,
+        0x8021_1F64,
+        StageCallbacks::LIGHTS,
+    );
+    t
+};
+
+/// `grPu_StageData`.
+pub const PURA: StageData = StageData {
+    grkind: GR_KIND_PURA,
+    callbacks: &PURA_CALLBACKS,
+    file: Some("/GrPu.dat"),
+    on_init: 0x8021_1D00,
+    on_demo_init: 0x8021_1CFC,
+    on_load: 0x8021_1DD8,
+    on_start: 0x8021_1DDC,
+    callback4: 0x8021_1E00,
+    on_touch_line: 0x8021_30C0,
+    on_check_shadow_render: 0x8021_30C8,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -783,6 +826,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_GREENS => &GREENS,
         GR_KIND_ZEBES => &ZEBES,
         GR_KIND_ONETT => &ONETT,
+        GR_KIND_PURA => &PURA,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

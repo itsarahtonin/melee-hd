@@ -25,6 +25,7 @@ pub mod oldkongo;
 pub mod oldpupupu;
 pub mod oldyoshi;
 pub mod onett;
+pub mod pura;
 pub mod setup;
 pub mod shrine;
 pub mod stadium;
@@ -55,6 +56,8 @@ use crate::hsd::pool::Pool;
 pub const GR_KIND_PSTADIUM: i32 = 16;
 /// `Gr_Kind_Kraid`, Brinstar Depths.
 pub const GR_KIND_KRAID: i32 = 9;
+/// `Gr_Kind_Pura`, Poké Floats.
+pub const GR_KIND_PURA: i32 = 17;
 /// `Gr_Kind_Fourside`, Fourside.
 pub const GR_KIND_FOURSIDE: i32 = 21;
 /// `Gr_Kind_GreatBay`, Great Bay.
@@ -231,6 +234,12 @@ pub struct Globals {
     pub onett_x69c4: i32,
     /// The stages' spawn configurations (`grZakoGenerator_801CA394`'s heap blocks).
     pub spawn_configs: Vec<zako::SpawnConfig>,
+    /// Poké Floats' `yakumono_param`, which nothing reads.
+    pub pura_yakumono: Option<DataRef>,
+    /// The joints Poké Floats' collision vertices follow (`grPu_803E6C0C[i].jobj`, written
+    /// into the executable's table at the stage's setup): empty, all null, until a Poké Floats
+    /// setup first writes it, then [`pura::VTX_COUNT`] entries.
+    pub pura_vtx_jobjs: Vec<Option<JObjId>>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -351,6 +360,9 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_ONETT, 3) => VarsKind::OnettCar,
         (GR_KIND_ONETT, 4) => VarsKind::OnettBuilding,
         (GR_KIND_ONETT, 5) => VarsKind::Onett,
+        (GR_KIND_PURA, 1) => VarsKind::Pura,
+        (GR_KIND_PURA, 2 | 3 | 5..=26) => VarsKind::PuraFloat,
+        (GR_KIND_PURA, 4) => VarsKind::PuraStage,
         _ => VarsKind::Bytes,
     }
 }
