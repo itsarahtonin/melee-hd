@@ -3,7 +3,7 @@
 //! Checks that a clear made by a render pass's load operation leaves the EFB (color, alpha and
 //! depth) bit for bit as the clear drawn as a rectangle does: the same clears through a
 //! renderer that makes them natively where it can and one that draws them all. Skips without
-//! a GPU adapter.
+//! a GPU adapter, or on a software one.
 
 use melee_gx::State;
 
@@ -13,6 +13,11 @@ fn renderer(samples: u32, rect_clears: bool) -> Option<Renderer> {
     let instance =
         wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
     let adapter = pollster::block_on(instance.request_adapter(&Default::default())).ok()?;
+    // Not on a software adapter: WARP, which CI's Windows runners fall back to, crashes in
+    // d3d10warp.dll at random with gx.wgsl (melee-render's corner_copies test has the details).
+    if adapter.get_info().device_type == wgpu::DeviceType::Cpu {
+        return None;
+    }
     let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
         required_features: wgpu::Features::DUAL_SOURCE_BLENDING,
         ..Default::default()
@@ -153,7 +158,7 @@ fn load_operation_clears_match_drawn_ones() {
         let (Some(mut native), Some(mut drawn)) =
             (renderer(samples, false), renderer(samples, true))
         else {
-            eprintln!("skipped: no GPU adapter");
+            eprintln!("skipped: no hardware GPU adapter");
             return;
         };
         for (i, step) in steps().into_iter().enumerate() {

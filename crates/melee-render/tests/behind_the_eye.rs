@@ -8,7 +8,7 @@
 //! Plays the benchmark replay natively and draws its frames from tick 6271 with melee-gpu at
 //! 1x, then compares how bright tick 6279's frame is with tick 6278's (the mean of its RGB):
 //! the dropout's was 12.6 against 47.4, the whole frame's is 46.7. Skips without `SSBM_DISC`
-//! or a GPU.
+//! or a hardware GPU.
 
 use std::collections::HashMap;
 
@@ -42,6 +42,11 @@ fn tick_6279_of_ganon_captain_fd_draws_whole() {
             return;
         }
     };
+    // WARP, the software adapter, draws gx.wgsl wrong (see the corner_copies test).
+    if renderer.device().adapter_info().device_type == wgpu::DeviceType::Cpu {
+        eprintln!("skipped: a software adapter");
+        return;
+    }
     let disc = Disc::open(&path).expect("the disc");
     melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
     let bytes = std::fs::read(REPLAY).expect("the benchmark replay");

@@ -5,7 +5,8 @@
 //! reflection's 80 by 60 render stayed in the corner and showed through the screen's pass.
 //!
 //! Each case draws a red quad through a camera onto the corner, then the copy, then the frame's
-//! copy to the XFB, and reads the frame back. Skips without a GPU adapter.
+//! copy to the XFB, and reads the frame back. Skips without a GPU adapter, or on a software one
+//! ([`software`]).
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 use melee_render::frame::Frames;
@@ -51,6 +52,16 @@ fn game() -> Game {
     game
 }
 
+/// Whether the renderer draws on a software adapter, where these checks don't hold: WARP, the
+/// one CI's Windows runners (which have no GPU) fall back to, gets gx.wgsl wrong. With the same
+/// commands and shader (FXC's) that a GPU draws right and D3D12's debug layer finds nothing in,
+/// WARP's TEV stage loop leaves no mark (the red quad comes out black; the loop bounded to one
+/// stage draws it), DXC's version of the shader doesn't finish its first draw in 30 minutes,
+/// and the process crashes inside d3d10warp.dll at random.
+fn software(renderer: &melee_gpu::Renderer) -> bool {
+    renderer.device().adapter_info().device_type == wgpu::DeviceType::Cpu
+}
+
 /// The last of two frames, each a red quad drawn onto the `w` by `h` corner and then `copy`,
 /// drawn by a renderer `scale` times the console's tall and `width` wide: its size and RGBA.
 fn frame(w: u16, h: u16, copy: &Draw, scale: u32, width: u32) -> Option<(u32, u32, Vec<u8>)> {
@@ -61,6 +72,10 @@ fn frame(w: u16, h: u16, copy: &Draw, scale: u32, width: u32) -> Option<(u32, u3
             return None;
         }
     };
+    if software(&renderer) {
+        eprintln!("skipped: a software adapter");
+        return None;
+    }
     renderer.resize_efb(scale, width);
     renderer.xfb_on_gpu = true;
     renderer.xfb_readback = true;
