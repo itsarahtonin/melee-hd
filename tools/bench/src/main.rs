@@ -187,6 +187,10 @@ fn oracle_sets(dir: &str, names: &[String]) -> std::process::ExitCode {
     for m in &list {
         let path = std::path::Path::new(dir).join(format!("{}.ini", m.name));
         std::fs::write(&path, m.ini()).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+        let script = m.script().map(|bytes| {
+            let path = std::path::Path::new(dir).join(format!("{}.script.slp", m.name));
+            std::fs::write(&path, bytes).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+        });
         let ai: Vec<String> = m.human_ports().iter().map(usize::to_string).collect();
         let ai = if ai.is_empty() {
             "-".into()
@@ -194,10 +198,11 @@ fn oracle_sets(dir: &str, names: &[String]) -> std::process::ExitCode {
             ai.join(",")
         };
         println!(
-            "{}\t{ai}\t{}\t{}",
+            "{}\t{ai}\t{}\t{}\t{}",
             m.name,
             m.fields(),
-            if m.humans_only() { "pads" } else { "-" }
+            if m.humans_only() { "pads" } else { "-" },
+            if script.is_some() { "script" } else { "-" }
         );
     }
     std::process::ExitCode::SUCCESS

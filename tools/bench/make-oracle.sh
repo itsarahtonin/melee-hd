@@ -7,7 +7,9 @@
 # recorded controllers played again when every player is human (NAME.pads.log), and ssbm-rs's
 # state trace of the recording's playback, as the oracle's other traces are made: Show Player
 # Names off, every port, main memory every tick (TRACES/oracle-NAME.trc and .log). NAME.times
-# keeps each step's wall time and the trace's size.
+# keeps each step's wall time and the trace's size. A match with scripted walkers (the barrel set)
+# has its script written beside the codes (NAME.script.slp), which BENCH_PADS plays in the
+# recording run.
 #
 #   SSBM_RUN=.../ssbm-run.exe SSBM_DISC=... bash tools/bench/make-oracle.sh DIR TRACES [SET|NAME...]
 #
@@ -31,9 +33,10 @@ list=$(mktemp)
 "$bench" oracle-sets "$dir" "$@" > "$list" || exit 1
 
 make() {
-    local name=$1 ai=$2 fields=$3 pads=$4 out=$dir/$1 trc=$traces/oracle-$1
+    local name=$1 ai=$2 fields=$3 pads=$4 script=$5 out=$dir/$1 trc=$traces/oracle-$1
     local controllers=()
     [ "$ai" != - ] && controllers=("BENCH_AI=$ai")
+    [ "$script" = script ] && controllers+=("BENCH_PADS=$out.script.slp")
     local t=$SECONDS times=""
     env BENCH_CODES="$out.ini" "${controllers[@]}" BENCH_SLP="$out.slp" \
         nice -n 10 "$run" --fields "$fields" > "$out.make.log" 2>&1
@@ -69,11 +72,11 @@ make() {
 }
 
 jobs=${JOBS:-1}
-while IFS=$'\t' read -r name ai fields pads; do
+while IFS=$'\t' read -r name ai fields pads script; do
     while [ "$(jobs -rp | wc -l)" -ge "$jobs" ]; do
         wait -n
     done
-    make "$name" "$ai" "$fields" "$pads" &
+    make "$name" "$ai" "$fields" "$pads" "$script" &
 done < "$list"
 rm -f "$list"
 wait

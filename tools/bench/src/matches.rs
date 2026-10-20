@@ -9,7 +9,8 @@
 //!
 //! A match sets its stage (any VS stage), its rules (stock or time, with a time limit), the
 //! item frequency and switch, and two to four players, each a human, whose controller ssbm-rs's
-//! `BENCH_AI` plays, or a computer player of a CPU kind and level, which the game's own AI plays.
+//! `BENCH_AI` plays (or a script, a walker's: [`Match::script`]), or a computer player of a CPU
+//! kind and level, which the game's own AI plays.
 //! `melee-bench oracle-sets DIR [SET|NAME...]` writes the codes of milestone 4's oracle sets
 //! ([`SETS`]: items by family, every other VS stage, the CPU AI); `docs/oracle.md` describes
 //! them and `tools/bench/make-oracle.sh` makes them.
@@ -28,6 +29,10 @@ pub enum Control {
     /// A computer player: the game's own CPU AI, of computer kind `kind` (`PlayerInitData`'s
     /// `cpu_kind`; a VS match's CPUs are kind 4) at `level` (1 to 9).
     Cpu { kind: u8, level: u8 },
+    /// A human player whose controller follows [`walker_pad`]'s script toward `side` (-1 left,
+    /// 1 right), played by `BENCH_PADS` from the script [`Match::script`] writes: off the stage
+    /// and back under it, where Kongo Jungle's barrels catch fighters.
+    Walker { side: i8 },
 }
 
 /// A player: external character ID (`CharacterKind`), costume and who plays it.
@@ -166,6 +171,22 @@ pub fn is_vs_stage(stage: u16) -> bool {
 
 /// The VS computer kind.
 pub const CPU_VS: u8 = 4;
+
+/// A walker's buttons and main stick's x on match frame `frame` (from "GO"), walking toward
+/// `side`: 120 frames walking that way (off the stage), then 180 holding back toward the middle
+/// (drifting under the stage as it falls, or walking back), and A tapped every 37 frames on
+/// every other round of 300, so a fighter in a barrel sometimes asks out and sometimes waits
+/// for the shot.
+pub fn walker_pad(frame: i32, side: i8) -> (u16, i8) {
+    let side = i32::from(side.signum());
+    let stick = if frame % 300 < 120 {
+        80 * side
+    } else {
+        -100 * side
+    };
+    let a = frame % 37 == 0 && frame / 300 % 2 == 1;
+    (if a { 0x0100 } else { 0 }, stick as i8)
+}
 
 const fn p(character: u8, costume: u8) -> Player {
     Player {
@@ -617,6 +638,43 @@ pub fn held_extra_set() -> Vec<Match> {
         .collect()
 }
 
+/// The barrel set (task 7's barrel cannon ride on the stages): Kongo Jungle N64 and Kongo Jungle,
+/// two walkers each ([`walker_pad`]), one off each side, so the stages' barrels catch them and
+/// shoot them out; four-minute time matches, items off. The level 9 AI recovers too well to fall
+/// in: the stage matches had no fighter caught in eight minutes.
+pub fn barrel_set() -> Vec<Match> {
+    let walkers = |a: u8, b: u8| {
+        let w = |character, side| Player {
+            character,
+            costume: 0,
+            control: Control::Walker { side },
+        };
+        Cow::Owned(vec![w(a, -1), w(b, 1)])
+    };
+    let barrel = |name: &'static str, stage, (a, b), seed| Match {
+        name: Cow::Borrowed(name),
+        stage,
+        players: walkers(a, b),
+        seed,
+        rules: Rules::Time { time_limit: 240 },
+        items: Items::OFF,
+    };
+    vec![
+        barrel(
+            "barrel-kongo-jungle-64",
+            KONGO_JUNGLE_64,
+            (FOX, MARTH),
+            0x1F0F_0701,
+        ),
+        barrel(
+            "barrel-kongo-jungle",
+            KONGO_JUNGLE,
+            (NESS, YOSHI),
+            0x1F0F_0702,
+        ),
+    ]
+}
+
 /// The VS stages besides the tournament stages, with match names; the moving stages are marked.
 const OTHER_STAGES: [(u16, &str, bool); 23] = [
     (YOSHIS_ISLAND_64, "yoshis-island-64", false),
@@ -725,6 +783,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("stages", stages_set),
     ("cpu", cpu_set),
     ("held-extra", held_extra_set),
+    ("barrel", barrel_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every
@@ -785,7 +844,7 @@ fn player_block(player: Option<Player>, slot: u8, stocks: u8) -> [u8; 0x24] {
         Some(pl) => {
             // Slot type, flags (rumble for a human, as Slippi records them), CPU kind and level.
             let (slot_type, flags, kind, level) = match pl.control {
-                Control::Human => (0x00, 0xC0, CPU_VS, 9),
+                Control::Human | Control::Walker { .. } => (0x00, 0xC0, CPU_VS, 9),
                 Control::Cpu { kind, level } => (0x01, 0x40, kind, level),
             };
             b[..0x10].copy_from_slice(&[
@@ -889,10 +948,45 @@ impl Match {
             .collect()
     }
 
-    /// Whether every player is human, so that the recorded controllers alone (`BENCH_PADS`) play
-    /// the match again.
+    /// Whether every player is human (played by `BENCH_AI` or a script), so that the recorded
+    /// controllers alone (`BENCH_PADS`) play the match again.
     pub fn humans_only(&self) -> bool {
-        self.human_ports().len() == self.players.len()
+        self.players
+            .iter()
+            .all(|p| !matches!(p.control, Control::Cpu { .. }))
+    }
+
+    /// The walkers' controllers for `BENCH_PADS`, if the match has walkers: a raw Slippi event
+    /// stream (what ssbm-rs's replay reader takes without the UBJSON wrapper) of pre-frame events
+    /// carrying each walker's buttons, sticks and triggers, frame by frame from "GO" to past the
+    /// time limit. The other ports have no events, so `BENCH_AI` plays them.
+    pub fn script(&self) -> Option<Vec<u8>> {
+        const PRE_FRAME: u8 = 0x37;
+        const SIZE: usize = 0x42;
+        let walkers: Vec<(usize, i8)> = (self.players.iter().enumerate())
+            .filter_map(|(i, p)| match p.control {
+                Control::Walker { side } => Some((i, side)),
+                _ => None,
+            })
+            .collect();
+        if walkers.is_empty() {
+            return None;
+        }
+        // The payload sizes: this event's own size, then (command, size) for pre-frames.
+        let mut out = vec![0x35, 4, PRE_FRAME, 0, SIZE as u8];
+        for frame in 0..self.fields() as i32 {
+            for &(port, side) in &walkers {
+                let (button, stick_x) = walker_pad(frame, side);
+                let mut e = [0u8; SIZE];
+                e[0..4].copy_from_slice(&frame.to_be_bytes());
+                e[4] = port as u8;
+                e[0x30..0x32].copy_from_slice(&button.to_be_bytes());
+                e[0x3A] = stick_x as u8;
+                out.push(PRE_FRAME);
+                out.extend_from_slice(&e);
+            }
+        }
+        Some(out)
     }
 
     /// Video fields enough for ssbm-rs to boot, load and play the match to its time limit: about
@@ -1258,6 +1352,36 @@ mod tests {
         assert_eq!(cpu[0].fields(), 60 * 180 + 1500);
         assert!(select(&["nothing".into()]).is_err());
         assert_eq!(select(&["stages".into()]).unwrap().len(), 23);
+        // The barrel set's walkers: no port for BENCH_AI, a script for BENCH_PADS.
+        for m in barrel_set() {
+            assert!(m.human_ports().is_empty() && m.humans_only(), "{}", m.name);
+            assert!(m.script().is_some());
+        }
+        assert!(items[0].script().is_none());
+    }
+
+    /// The walkers' script as ssbm-rs's `pads_by_frame` reads it: each pre-frame's frame,
+    /// port, buttons and stick at their offsets.
+    #[test]
+    fn walkers_script_their_controllers() {
+        let m = &barrel_set()[0];
+        let s = m.script().unwrap();
+        assert_eq!(&s[..5], &[0x35, 4, 0x37, 0, 0x42]);
+        let events: Vec<&[u8]> = s[5..].chunks(0x43).collect();
+        assert_eq!(events.len(), 2 * m.fields() as usize);
+        for e in events {
+            assert_eq!(e[0], 0x37);
+            let p = &e[1..];
+            let frame = i32::from_be_bytes(p[0..4].try_into().unwrap());
+            let side = if p[4] == 0 { -1 } else { 1 };
+            let (button, stick) = walker_pad(frame, side);
+            assert_eq!(u16::from_be_bytes([p[0x30], p[0x31]]), button);
+            assert_eq!(p[0x3A] as i8, stick);
+        }
+        assert_eq!(walker_pad(0, -1), (0, -80));
+        assert_eq!(walker_pad(120, -1), (0, 100));
+        assert_eq!(walker_pad(333, 1), (0x0100, 80));
+        assert_eq!(walker_pad(37, 1), (0, 80));
     }
 
     #[test]
