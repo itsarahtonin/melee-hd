@@ -85,6 +85,15 @@ struct Out {
     @builtin(frag_depth) depth: f32,
 }
 
+/// The EFB's 24-bit depth `z` as the depth buffer holds it: (z + 1.5) / 2^24 below 2^23 - 1,
+/// (z + 1) / 2^24 from there. Exact in f32, strictly increasing and at most 1, so every depth
+/// test compares as the EFB's integers do; and never below the rasterized depth the shader
+/// computes `z` from (with GXSetViewport's z range 0 to 1, checked for every f32 depth, the
+/// multiply-add fused or not), which lets the early z pipelines promise depth_greater.
+fn efb_depth(z: i32) -> f32 {
+    return (f32(z) + select(1.0, 1.5, z < 8388607)) / 16777216.0;
+}
+
 fn bp(i: u32) -> u32 {
     return st.bp[i >> 2u][i & 3u];
 }
@@ -412,14 +421,14 @@ fn fs_main(in: Varyings) -> Out {
     if st.mode.x == 3u {
         out.color = vec4<f32>(0.1, 0.1, 0.1, 1.0);
         out.alpha = vec4<f32>(1.0);
-        out.depth = f32(z) / 16777216.0;
+        out.depth = efb_depth(z);
         return out;
     }
     if st.mode.x == 1u {
         let c = st.mode.y;
         out.color = vec4<f32>(f32(c >> 24u), f32((c >> 16u) & 255u), f32((c >> 8u) & 255u), f32(c & 255u)) / 255.0;
         out.alpha = out.color;
-        out.depth = f32(st.mode.z) / 16777216.0;
+        out.depth = efb_depth(i32(st.mode.z));
         return out;
     }
 
@@ -705,7 +714,7 @@ fn fs_main(in: Varyings) -> Out {
     // A z test before texturing (early z) tests the rasterized depth: a z texture then only
     // feeds fog.
     let early = bits(pe, 6u, 1u) != 0u;
-    out.depth = f32(select(z, raster_z, early)) / 16777216.0;
+    out.depth = efb_depth(select(z, raster_z, early));
     return out;
 }
 

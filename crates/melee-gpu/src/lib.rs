@@ -13,6 +13,8 @@ mod clear_tests;
 mod copy;
 #[cfg(test)]
 mod copy_tests;
+#[cfg(test)]
+mod depth_tests;
 mod encode;
 pub mod gpu_time;
 mod thread;
@@ -46,6 +48,11 @@ const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
 
 fn bits(v: u32, at: u32, width: u32) -> u32 {
     (v >> at) & ((1 << width) - 1)
+}
+
+/// The EFB's 24-bit depth `z` as the depth buffer holds it, as gx.wgsl's `efb_depth`.
+fn efb_depth(z: u32) -> f32 {
+    (z as f32 + if z < 0x7F_FFFF { 1.5 } else { 1.0 }) / 16_777_216.0
 }
 
 fn sext(v: u32, width: u32) -> i32 {
@@ -113,6 +120,10 @@ struct PipelineKey {
     write_alpha: bool,
     depth_compare: Option<u32>,
     depth_write: bool,
+    /// The fragment shader promises a depth no nearer than the rasterized one
+    /// (`early_depth_test(greater_equal)`), so the GPU can drop fragments its depth test would
+    /// fail before shading them.
+    early_z: bool,
 }
 
 impl PipelineKey {
@@ -122,7 +133,7 @@ impl PipelineKey {
             None => (0, 0, 0, 0),
         };
         [
-            has_blend | sub << 1 | u32::from(self.const_alpha) << 2,
+            has_blend | sub << 1 | u32::from(self.const_alpha) << 2 | u32::from(self.early_z) << 3,
             src,
             dst,
             u32::from(self.write_color),
@@ -144,6 +155,7 @@ impl PipelineKey {
             write_alpha: k[4] != 0,
             depth_compare: (k[5] < 8).then_some(k[5]),
             depth_write: k[6] != 0,
+            early_z: k[0] & 8 != 0,
         })
     }
 }
@@ -325,6 +337,10 @@ pub struct Renderer {
     samples: u32,
     depth_view: wgpu::TextureView,
     module: wgpu::ShaderModule,
+    /// gx.wgsl with its fragment shader promising depth_greater, for the early z pipelines:
+    /// where the device has `SHADER_EARLY_DEPTH_TEST` (Vulkan), the EFB has one sample a pixel
+    /// and `MELEE_EARLY_Z` isn't 0.
+    early_module: Option<wgpu::ShaderModule>,
     layout: wgpu::PipelineLayout,
     uniform_layout: wgpu::BindGroupLayout,
     texture_layout: wgpu::BindGroupLayout,
@@ -582,7 +598,8 @@ impl Renderer {
     pub fn with_adapter(adapter: &wgpu::Adapter) -> Result<Self, String> {
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("melee-gpu"),
-            required_features: wgpu::Features::DUAL_SOURCE_BLENDING,
+            required_features: wgpu::Features::DUAL_SOURCE_BLENDING
+                | (adapter.features() & wgpu::Features::SHADER_EARLY_DEPTH_TEST),
             required_limits: wgpu::Limits::default(),
             ..Default::default()
         }))
@@ -642,6 +659,32 @@ impl Renderer {
                 checks,
             )
         };
+        // With samples, each sample is tested at its own depth, which the one the shader writes
+        // for the pixel isn't bound to.
+        let early_z = std::env::var("MELEE_EARLY_Z").map_or(true, |v| v != "0" && v != "off");
+        let early_module = (early_z
+            && samples == 1
+            && device
+                .features()
+                .contains(wgpu::Features::SHADER_EARLY_DEPTH_TEST))
+        .then(|| {
+            let source = include_str!("gx.wgsl");
+            assert_eq!(source.matches("\nfn fs_main(").count(), 1);
+            let source = source.replace(
+                "\nfn fs_main(",
+                "\n@early_depth_test(greater_equal)\nfn fs_main(",
+            );
+            // SAFETY: as `module`'s.
+            unsafe {
+                device.create_shader_module_trusted(
+                    wgpu::ShaderModuleDescriptor {
+                        label: Some("gx early z"),
+                        source: wgpu::ShaderSource::Wgsl(source.into()),
+                    },
+                    checks,
+                )
+            }
+        });
         let uniform_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("state"),
             entries: &[wgpu::BindGroupLayoutEntry {
@@ -703,6 +746,7 @@ impl Renderer {
             device,
             queue,
             module,
+            early_module,
             layout,
             uniform_layout,
             texture_layout,
@@ -797,7 +841,8 @@ impl Renderer {
     /// Makes the pipelines `keys` name, as [`Renderer::pipeline_keys`] gave them.
     pub fn warm(&mut self, keys: &[[u32; 8]]) {
         for k in keys {
-            if let Some(key) = PipelineKey::unpack(*k) {
+            if let Some(mut key) = PipelineKey::unpack(*k) {
+                key.early_z &= self.early_module.is_some();
                 self.pipeline(key);
             }
         }
@@ -1240,7 +1285,20 @@ impl Renderer {
             write_alpha: bits(blend, 4, 1) != 0 && has_alpha,
             depth_compare: test.then(|| bits(zmode, 1, 3)),
             depth_write: test && bits(zmode, 4, 1) != 0,
+            early_z: false,
         }
+    }
+
+    /// Whether a draw's depth test can run before its shader: it tests depth, and writes the
+    /// depth it rasterized (no z texture replaces or adds to it, or the z test comes before
+    /// texturing) through GXSetViewport's z range 0 to 1, for which `efb_depth` never comes
+    /// out nearer than the rasterized depth (see gx.wgsl).
+    fn depth_follows_raster(state: &State) -> bool {
+        let vp = Viewport::of(&state.xf);
+        let test = bits(state.bp[0x40], 0, 1) != 0;
+        let ztex = bits(state.bp[0xF5], 2, 2) != 0;
+        let early = bits(state.bp[0x43], 6, 1) != 0;
+        test && (!ztex || early) && vp.z_range == 16_777_215.0 && vp.far_z == 16_777_215.0
     }
 
     fn pipeline(&mut self, key: PipelineKey) {
@@ -1277,13 +1335,17 @@ impl Renderer {
         if key.write_alpha {
             mask |= wgpu::ColorWrites::ALPHA;
         }
+        let module = match &self.early_module {
+            Some(m) if key.early_z => m,
+            _ => &self.module,
+        };
         let pipeline = self
             .device
             .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: None,
                 layout: Some(&self.layout),
                 vertex: wgpu::VertexState {
-                    module: &self.module,
+                    module,
                     entry_point: Some("vs_main"),
                     compilation_options: Default::default(),
                     buffers: &[],
@@ -1304,7 +1366,7 @@ impl Renderer {
                     ..Default::default()
                 },
                 fragment: Some(wgpu::FragmentState {
-                    module: &self.module,
+                    module,
                     entry_point: Some("fs_main"),
                     compilation_options: Default::default(),
                     targets: &[Some(wgpu::ColorTargetState {
@@ -1347,6 +1409,7 @@ impl Renderer {
             write_alpha: bits(blend, 4, 1) != 0 && format == 1,
             depth_compare: Some(7),
             depth_write: bits(state.bp[0x40], 4, 1) != 0,
+            early_z: false,
         };
         let z = state.bp[0x51] & 0xFF_FFFF;
         let [r, g, b, a] = color.to_be_bytes();
@@ -1402,7 +1465,7 @@ impl Renderer {
         // of the one its shader wrote; at 0.5 that left the depth buffer nearer than the whole
         // scene, and the next frame drew only what doesn't test depth (its background color and
         // the HUD).
-        let z = mode[2] as f32 / 16_777_216.0;
+        let z = efb_depth(mode[2]);
         let corner = |px: u32, py: u32| {
             let nx = px as f32 / (EFB_WIDTH as f32 / 2.0) - 1.0;
             let ny = 1.0 - py as f32 / (EFB_HEIGHT as f32 / 2.0);
@@ -1449,9 +1512,9 @@ impl Renderer {
             })
         });
         // As gx.wgsl's clear writes it.
-        let depth = clear.depth.map_or(wgpu::LoadOp::Load, |z| {
-            wgpu::LoadOp::Clear(z as f32 / 16_777_216.0)
-        });
+        let depth = clear
+            .depth
+            .map_or(wgpu::LoadOp::Load, |z| wgpu::LoadOp::Clear(efb_depth(z)));
         let time = self.pass_time(gpu_time::Stage::Scene);
         encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("efb"),
@@ -2085,6 +2148,7 @@ impl Renderer {
         self.bind_group(ids);
 
         let mut key = Self::pipeline_key(state);
+        key.early_z = self.early_module.is_some() && Self::depth_follows_raster(state);
         if self.opaque {
             key.blend = None;
         }
@@ -2096,6 +2160,7 @@ impl Renderer {
                 write_alpha: true,
                 depth_compare: None,
                 depth_write: false,
+                early_z: false,
             };
             let u = Self::uniforms_of(state, levels, [3, 0, 0, 0]);
             let uniform = self.push_uniforms(&u);

@@ -224,7 +224,10 @@ impl Gpu {
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("melee-hd"),
             required_features: wgpu::Features::DUAL_SOURCE_BLENDING
-                | (adapter.features() & (wgpu::Features::PIPELINE_CACHE | timestamps)),
+                | (adapter.features()
+                    & (wgpu::Features::PIPELINE_CACHE
+                        | wgpu::Features::SHADER_EARLY_DEPTH_TEST
+                        | timestamps)),
             ..Default::default()
         }))
         .expect("a GPU device");
