@@ -26,7 +26,8 @@
 //!   once its processes have run ([`end_of_procs`]).
 //! - **Game end** (`SendGameEnd.asm`, after the VS scene's frame handler): once, when the match
 //!   has an outcome, with each player's placement from the results as they stand
-//!   ([`game_end`]).
+//!   ([`game_end`]). It is the stream's last event: Slippi Dolphin closes the file there, so
+//!   the rest of that tick isn't recorded.
 //!
 //! Where melee-hd writes what the codes don't: the UCF toggles say whether the match's rules
 //! run UCF (3.19's codes write 1 whatever runs), and a word the codes copy from memory that
@@ -472,6 +473,7 @@ impl Recorder {
         for p in &copy.vs.state.x24C.player_standings[..4] {
             w.u8(if p.pkind == 3 { 0xFF } else { p.is_small_loser });
         }
+        self.frame_buf.clear();
         self.raw.extend_from_slice(&w.0);
         self.game_end_sent = true;
     }
@@ -486,10 +488,12 @@ impl Recorder {
 }
 
 impl Game {
-    /// Runs `f` on the recorder, when the frontend turned it on, with the state to read.
+    /// Runs `f` on the recorder, when the frontend turned it on, with the state to read: from
+    /// the game start until the game end, the stream's last event, as Slippi Dolphin closes the
+    /// file there (a replay's match that ends when its inputs run out still runs that tick).
     fn record(&mut self, f: impl FnOnce(&mut Recorder, &Game)) {
         if let Some(mut r) = self.recorder.take() {
-            if r.started {
+            if r.started && !r.game_end_sent {
                 f(&mut r, self);
             }
             self.recorder = Some(r);
