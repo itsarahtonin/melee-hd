@@ -93,6 +93,7 @@ pub mod pikachuthunder;
 pub mod pikachutjoltair;
 pub mod pikachutjoltground;
 pub mod pippi;
+pub mod porygon2;
 pub mod rabbitc;
 pub mod rshell;
 pub mod samusbomb;
@@ -280,6 +281,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || tosakinto::run_event(r, gobj, addr)
         || lizardon::run_event(r, gobj, addr)
         || pippi::run_event(r, gobj, addr)
+        || porygon2::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -409,6 +411,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| tosakinto::run_pred(r, gobj, addr))
         .or_else(|| lizardon::run_pred(r, gobj, addr))
         .or_else(|| pippi::run_pred(r, gobj, addr))
+        .or_else(|| porygon2::run_pred(r, gobj, addr))
         .or_else(|| yaku::run_pred(r, gobj, addr))
 }
 
