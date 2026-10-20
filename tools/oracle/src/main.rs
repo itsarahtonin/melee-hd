@@ -11,11 +11,15 @@
 //! `melee-oracle sync-test REPLAY.slp [--rollback N]` rolls the match back and plays it again
 //! after every tick, failing on any difference from the straight run (`sync.rs`).
 //!
+//! `melee-oracle record REPLAY.slp OUT.slp` plays a replay with melee-hd's recorder on, writes
+//! the recording and compares it with the replay (`record.rs`).
+//!
 //! `melee-oracle rules REPLAY.slp...` prints the rules each replay's code list makes and the
 //! version of Slippi's code set they come from, or why melee-hd refuses it.
 
 mod boot;
 mod diff;
+mod record;
 mod sync;
 mod trace;
 mod vanilla;
@@ -44,6 +48,7 @@ fn run(args: Vec<String>) -> ExitCode {
         ["mirror-check", trace] => mirror_check(trace),
         ["diff", ref rest @ ..] => diff::diff(rest),
         ["sync-test", ref rest @ ..] => sync::sync_test(rest),
+        ["record", ref rest @ ..] => record::record(rest),
         ["trace-info", trace] => trace_info(trace),
         ["trace-dump", trace, tick, addr, len] => trace_dump(trace, tick, addr, len),
         ["trace-world", trace, tick] => trace_world(trace, tick),
@@ -64,6 +69,9 @@ fn run(args: Vec<String>) -> ExitCode {
                 "       melee-oracle sync-test REPLAY.slp [--rollback N] [--ticks N] [--fp hardware|slippi]"
             );
             eprintln!("                              [--draw-offscreen-fighters]");
+            eprintln!(
+                "       melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive] [--ticks N]"
+            );
             eprintln!("       melee-oracle trace-info TRACE");
             eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");
             eprintln!("       melee-oracle trace-heap TRACE");
