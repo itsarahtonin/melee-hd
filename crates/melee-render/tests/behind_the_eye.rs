@@ -35,18 +35,10 @@ fn tick_6279_of_ganon_captain_fd_draws_whole() {
         eprintln!("skipped: SSBM_DISC names no disc");
         return;
     };
-    let renderer = match melee_gpu::Renderer::new() {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("skipped: no GPU ({e})");
-            return;
-        }
-    };
-    // WARP, the software adapter, draws gx.wgsl wrong (see the corner_copies test).
-    if renderer.device().adapter_info().device_type == wgpu::DeviceType::Cpu {
-        eprintln!("skipped: a software adapter");
+    // Not without a GPU, or on a software adapter, which draws gx.wgsl wrong.
+    let Some(renderer) = melee_gpu::testing::renderer() else {
         return;
-    }
+    };
     let disc = Disc::open(&path).expect("the disc");
     melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
     let bytes = std::fs::read(REPLAY).expect("the benchmark replay");

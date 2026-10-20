@@ -1,7 +1,7 @@
 //! A renderer whose EFB is made again mid-match at another scale, as a window's resize or a
 //! fullscreen toggle makes it, draws what a renderer made at that scale from the match's start
 //! draws. Plays a benchmark replay headless (`--bench` with `--resize-at`) and compares the last
-//! frames pixel for pixel. Skips without `SSBM_DISC`.
+//! frames pixel for pixel. Skips without `SSBM_DISC` or a hardware GPU.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -47,6 +47,10 @@ fn decode(path: &Path) -> (u32, u32, Vec<u8>) {
 fn same_as_from_the_start(name: &str, ticks: u32, start: &str, resizes: &[&str], extra: &[&str]) {
     if std::env::var_os("SSBM_DISC").is_none() {
         eprintln!("skipped: SSBM_DISC names no disc");
+        return;
+    }
+    // The player draws on the adapter it picks; not without a GPU or on a software adapter.
+    if melee_gpu::testing::adapter().is_none() {
         return;
     }
     let mut args = vec!["--size", start];

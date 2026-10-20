@@ -17,6 +17,7 @@ mod copy_tests;
 mod depth_tests;
 mod encode;
 pub mod gpu_time;
+pub mod testing;
 mod tev;
 #[cfg(test)]
 mod tev_tests;

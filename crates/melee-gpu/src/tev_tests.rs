@@ -3,7 +3,7 @@
 //! Checks the specialized TEV shaders against the uber shader: random configurations (stages,
 //! inputs, operations, swaps, konstants, indirect stages, texture modes, alpha tests, fog, z
 //! textures, EFB formats) with random data, drawn with each, must leave the EFB's color and
-//! depth bit for bit the same. Skips without a GPU adapter.
+//! depth bit for bit the same. Skips without a GPU adapter, or on a software one.
 
 use melee_gx::State;
 
@@ -32,9 +32,7 @@ impl Rng {
 }
 
 fn renderer() -> Option<Renderer> {
-    let instance =
-        wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
-    let adapter = pollster::block_on(instance.request_adapter(&Default::default())).ok()?;
+    let adapter = crate::testing::adapter()?;
     let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
         required_features: wgpu::Features::DUAL_SOURCE_BLENDING,
         ..Default::default()
@@ -265,7 +263,7 @@ fn draw(
 
 fn check(seed: u64, configs: u32) {
     let Some(mut r) = renderer() else {
-        eprintln!("no GPU adapter: skipped");
+        eprintln!("skipped: no hardware GPU adapter");
         return;
     };
     let mut rng = Rng(seed);

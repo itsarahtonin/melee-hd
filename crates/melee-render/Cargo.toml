@@ -18,5 +18,3 @@ rustc-hash = "2"
 
 [dev-dependencies]
 melee-slippi = { path = "../melee-slippi" }
-# The GPU tests skip on a software adapter (wgpu::DeviceType::Cpu).
-wgpu = "30"
