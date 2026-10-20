@@ -86,16 +86,19 @@ pub struct Attr {
     pub indices: u32,
 }
 
-/// The last vertex format's attributes, kept while the registers that make them stay the same:
-/// draws in a row mostly share their format.
+/// The vertex formats' attributes, kept by the registers that make them: a frame's draws use a
+/// few formats over and over, alternating between them.
 #[derive(Clone, Default)]
 pub struct LayoutCache {
-    key: Option<[u32; 6]>,
-    attrs: Vec<Attr>,
+    /// Each format's registers and attributes, the last used first.
+    entries: Vec<([u32; 6], Vec<Attr>)>,
 }
 
+/// The formats a [`LayoutCache`] keeps.
+const LAYOUTS_KEPT: usize = 16;
+
 impl LayoutCache {
-    /// [`layout`]`(cp, vat)`, made again only when its registers changed.
+    /// [`layout`]`(cp, vat)`, made again only when its registers are new.
     pub fn get(&mut self, cp: &[u32; 256], vat: usize) -> &[Attr] {
         let key = [
             cp[VCD_LO as usize],
@@ -105,11 +108,17 @@ impl LayoutCache {
             cp[VAT_C as usize + vat],
             vat as u32,
         ];
-        if self.key != Some(key) {
-            self.attrs = layout(cp, vat);
-            self.key = Some(key);
+        match self.entries.iter().position(|e| e.0 == key) {
+            Some(0) => {}
+            Some(i) => self.entries[..=i].rotate_right(1),
+            None => {
+                if self.entries.len() == LAYOUTS_KEPT {
+                    self.entries.pop();
+                }
+                self.entries.insert(0, (key, layout(cp, vat)));
+            }
         }
-        &self.attrs
+        &self.entries[0].1
     }
 }
 
@@ -227,11 +236,22 @@ pub fn fetch(
         let width = attr.source.stream_size(attr.size, attr.indices) as usize;
         size += attr.size as usize;
         if matches!(attr.source, Source::Index8 | Source::Index16) && i < MAX_ATTRS {
-            let step = if attr.source == Source::Index8 { 1 } else { 2 };
+            // The highest index, read straight from each vertex's bytes.
+            let stream = &data[..count as usize * vertex];
             let mut top = 0u32;
-            for v in 0..count as usize {
-                for k in 0..attr.indices as usize {
-                    top = top.max(index_at(attr.source, v * vertex + offset + k * step));
+            if vertex > 0 {
+                for v in stream.chunks_exact(vertex) {
+                    let ix = &v[offset..offset + width];
+                    top = top.max(if attr.source == Source::Index8 {
+                        ix.iter().copied().max().map_or(0, u32::from)
+                    } else {
+                        ix.as_chunks::<2>()
+                            .0
+                            .iter()
+                            .map(|b| u32::from(u16::from_be_bytes(*b)))
+                            .max()
+                            .unwrap_or(0)
+                    });
                 }
             }
             let base = cp[ARRAY_BASE as usize + attr.array] & 0x03FF_FFFF;
@@ -241,57 +261,81 @@ pub fn fetch(
         }
         offset += width;
     }
-    out.reserve(count as usize * size);
-    let mut at = 0;
+    // Each attribute's registers, read once for the draw.
+    let plan: Vec<Plan<'_>> = layout
+        .iter()
+        .enumerate()
+        .filter(|(_, a)| a.source != Source::None)
+        .map(|(i, a)| Plan {
+            source: a.source,
+            size: a.size,
+            indices: a.indices,
+            part: a.size / a.indices.max(1),
+            base: cp[ARRAY_BASE as usize + a.array] & 0x03FF_FFFF,
+            stride: cp[ARRAY_STRIDE as usize + a.array] & 0xFF,
+            array: arrays.get(i).copied().flatten(),
+        })
+        .collect();
+    // Written into place: each vertex takes `size` bytes.
+    let start = out.len();
+    out.resize(start + count as usize * size, 0);
+    let dst = &mut out[start..];
+    let (mut at, mut to) = (0, 0);
     for _ in 0..count {
-        for (i, attr) in layout.iter().enumerate() {
-            match attr.source {
-                Source::None => {}
-                Source::Direct => {
-                    push(out, &data[at..at + attr.size as usize]);
-                    at += attr.size as usize;
+        for p in &plan {
+            if p.source == Source::Direct {
+                let n = p.size as usize;
+                put(&mut dst[to..to + n], &data[at..at + n]);
+                at += n;
+                to += n;
+                continue;
+            }
+            let n = p.part as usize;
+            for k in 0..p.indices {
+                let index = index_at(p.source, at);
+                at += if p.source == Source::Index8 { 1 } else { 2 };
+                let off = index * p.stride + k * p.part;
+                let into = &mut dst[to..to + n];
+                if let Some(array) = p.array {
+                    put(into, &array[off as usize..off as usize + n]);
+                } else if let Some(bytes) = mem.view(p.base + off, n) {
+                    put(into, bytes);
+                } else {
+                    mem.read(p.base + off, into);
                 }
-                Source::Index8 | Source::Index16 => {
-                    let base = cp[ARRAY_BASE as usize + attr.array] & 0x03FF_FFFF;
-                    let stride = cp[ARRAY_STRIDE as usize + attr.array] & 0xFF;
-                    let part = attr.size / attr.indices;
-                    let array = arrays.get(i).copied().flatten();
-                    for k in 0..attr.indices {
-                        let index = index_at(attr.source, at);
-                        at += if attr.source == Source::Index8 { 1 } else { 2 };
-                        let off = index * stride + k * part;
-                        if let Some(array) = array {
-                            push(out, &array[off as usize..(off + part) as usize]);
-                        } else if let Some(bytes) = mem.view(base + off, part as usize) {
-                            push(out, bytes);
-                        } else {
-                            let start = out.len();
-                            out.resize(start + part as usize, 0);
-                            mem.read(base + off, &mut out[start..]);
-                        }
-                    }
-                }
+                to += n;
             }
         }
     }
     at
 }
 
+/// An attribute as [`fetch`] copies it: its registers, and its array as far as the draw reaches.
+struct Plan<'a> {
+    source: Source,
+    size: u32,
+    indices: u32,
+    part: u32,
+    base: u32,
+    stride: u32,
+    array: Option<&'a [u8]>,
+}
+
 /// The most attributes a vertex has: the matrix indices, position, normal, two colors and
 /// eight texture coordinates.
 const MAX_ATTRS: usize = 32;
 
-/// Appends an attribute's bytes, the common sizes as moves rather than a copy call.
-fn push(out: &mut Vec<u8>, b: &[u8]) {
+/// Copies an attribute's bytes, the common sizes as moves rather than a copy call.
+fn put(dst: &mut [u8], b: &[u8]) {
     match b.len() {
-        1 => out.push(b[0]),
-        2 => out.extend_from_slice(&[b[0], b[1]]),
-        3 => out.extend_from_slice(&[b[0], b[1], b[2]]),
-        4 => out.extend_from_slice(&<[u8; 4]>::try_from(b).unwrap()),
-        6 => out.extend_from_slice(&<[u8; 6]>::try_from(b).unwrap()),
-        8 => out.extend_from_slice(&<[u8; 8]>::try_from(b).unwrap()),
-        12 => out.extend_from_slice(&<[u8; 12]>::try_from(b).unwrap()),
-        _ => out.extend_from_slice(b),
+        1 => dst[0] = b[0],
+        2 => dst[..2].copy_from_slice(&b[..2]),
+        3 => dst[..3].copy_from_slice(&b[..3]),
+        4 => dst[..4].copy_from_slice(&b[..4]),
+        6 => dst[..6].copy_from_slice(&b[..6]),
+        8 => dst[..8].copy_from_slice(&b[..8]),
+        12 => dst[..12].copy_from_slice(&b[..12]),
+        _ => dst.copy_from_slice(b),
     }
 }
 
@@ -412,19 +456,24 @@ pub fn decode(
     let nbt = bits(a, 9, 1) != 0;
     let has_nrm = bits(lo, 11, 2) != 0;
     let (has_col0, has_col1) = (bits(lo, 13, 2) != 0, bits(lo, 15, 2) != 0);
+    // What every vertex starts from: the registers' matrix indices, white, and the normals.
+    let mut base = Input {
+        pos_mtx: (xf_index[0] & 0x3F) as u8,
+        normal: *normals,
+        color: [[255; 4]; 2],
+        ..Input::default()
+    };
+    for i in 0..8 {
+        let reg = xf_index[usize::from(i >= 4)];
+        base.tex_mtx[i] = (reg >> (6 * ((i % 4) + usize::from(i < 4))) & 0x3F) as u8;
+    }
+    let tex_scales = tex.map(|(_, _, frac)| 1.0 / (1u32 << frac) as f32);
     out.reserve(count);
     let mut at = 0;
     for _ in 0..count {
-        let mut v = Input {
-            pos_mtx: (xf_index[0] & 0x3F) as u8,
-            normal: *normals,
-            color: [[255; 4]; 2],
-            ..Input::default()
-        };
-        for i in 0..8 {
-            let reg = xf_index[usize::from(i >= 4)];
-            v.tex_mtx[i] = (reg >> (6 * ((i % 4) + usize::from(i < 4))) & 0x3F) as u8;
-        }
+        // Built in place: the normals a vertex without them takes don't change in a draw.
+        out.push(base);
+        let v = out.last_mut().expect("a vertex");
         if bits(lo, 0, 1) != 0 {
             v.pos_mtx = data[at] & 0x3F;
             at += 1;
@@ -462,9 +511,9 @@ pub fn decode(
             (None, Some(c1)) => v.color[0] = c1,
             (None, None) => {}
         }
-        for (i, (elems, format, frac)) in tex.iter().enumerate() {
+        for (i, (elems, format, _)) in tex.iter().enumerate() {
             if bits(hi, 2 * i as u32, 2) != 0 {
-                let scale = 1.0 / (1u32 << frac) as f32;
+                let scale = tex_scales[i];
                 for k in 0..=*elems as usize {
                     v.tex[i][k] = component(data, &mut at, *format, scale);
                 }
@@ -474,6 +523,181 @@ pub fn decode(
             let n = if nbt { 3 } else { 1 };
             normals[..n].copy_from_slice(&v.normal[..n]);
         }
-        out.push(v);
+    }
+}
+
+/// What [`decode`] leaves in `normals` for a draw, decoding only its last vertex: the normals
+/// of a draw whose vertices carry them are its last vertex's, and a draw without them keeps
+/// them. `data` holds `count` vertices of one size, as [`fetch`] gives them.
+pub fn skip(
+    cp: &[u32; 256],
+    xf_index: [u32; 2],
+    vat: usize,
+    data: &[u8],
+    count: usize,
+    normals: &mut NormalCache,
+    scratch: &mut Vec<Input>,
+) {
+    if count == 0 || bits(cp[VCD_LO as usize], 11, 2) == 0 {
+        return;
+    }
+    let size = data.len() / count;
+    scratch.clear();
+    decode(
+        cp,
+        xf_index,
+        vat,
+        &data[(count - 1) * size..],
+        1,
+        normals,
+        scratch,
+    );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A small deterministic generator for the checks' formats and bytes.
+    struct Rng(u64);
+
+    impl Rng {
+        fn next(&mut self) -> u32 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            (self.0 >> 16) as u32
+        }
+    }
+
+    /// Memory of one piece from address 0, which views where asked to.
+    struct Flat(Vec<u8>, bool);
+
+    impl Memory for Flat {
+        fn read(&self, phys: u32, out: &mut [u8]) {
+            for (i, b) in out.iter_mut().enumerate() {
+                *b = self.0.get(phys as usize + i).copied().unwrap_or(0);
+            }
+        }
+
+        fn view(&self, phys: u32, len: usize) -> Option<&[u8]> {
+            self.1
+                .then(|| self.0.get(phys as usize..phys as usize + len))
+                .flatten()
+        }
+    }
+
+    /// A random vertex format: every attribute absent, direct or indexed, in any format.
+    fn random_cp(r: &mut Rng) -> [u32; 256] {
+        let mut cp = [0u32; 256];
+        cp[VCD_LO as usize] = r.next() & 0x1_FFFF;
+        cp[VCD_HI as usize] = r.next() & 0xFFFF;
+        for vat in 0..8 {
+            cp[VAT_A as usize + vat] = r.next();
+            cp[VAT_B as usize + vat] = r.next();
+            cp[VAT_C as usize + vat] = r.next();
+        }
+        for a in 0..16 {
+            cp[ARRAY_BASE as usize + a] = r.next() % 4096;
+            cp[ARRAY_STRIDE as usize + a] = r.next() % 64;
+        }
+        cp
+    }
+
+    /// `fetch` as it was, an element at a time, to check the faster one against.
+    fn fetch_slowly(
+        cp: &[u32; 256],
+        layout: &[Attr],
+        count: u32,
+        data: &[u8],
+        mem: &dyn Memory,
+    ) -> Vec<u8> {
+        let mut out = Vec::new();
+        let mut at = 0;
+        for _ in 0..count {
+            for attr in layout {
+                match attr.source {
+                    Source::None => {}
+                    Source::Direct => {
+                        out.extend_from_slice(&data[at..at + attr.size as usize]);
+                        at += attr.size as usize;
+                    }
+                    Source::Index8 | Source::Index16 => {
+                        let base = cp[ARRAY_BASE as usize + attr.array] & 0x03FF_FFFF;
+                        let stride = cp[ARRAY_STRIDE as usize + attr.array] & 0xFF;
+                        let part = attr.size / attr.indices;
+                        for k in 0..attr.indices {
+                            let index = if attr.source == Source::Index8 {
+                                u32::from(data[at])
+                            } else {
+                                u32::from(u16::from_be_bytes([data[at], data[at + 1]]))
+                            };
+                            at += if attr.source == Source::Index8 { 1 } else { 2 };
+                            let mut bytes = vec![0; part as usize];
+                            mem.read(base + index * stride + k * part, &mut bytes);
+                            out.extend_from_slice(&bytes);
+                        }
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    /// Fetching copies each vertex's attributes as an element-at-a-time copy does, from
+    /// memory held in one piece or read, and the layout cache gives each format's layout as
+    /// formats come and go.
+    #[test]
+    fn fetch_and_layouts_are_as_made_one_at_a_time() {
+        let mut r = Rng(0x2545_F491_4F6C_DD1D);
+        let memory: Vec<u8> = (0..1 << 20).map(|_| r.next() as u8).collect();
+        let mut cache = LayoutCache::default();
+        let cps: Vec<[u32; 256]> = (0..40).map(|_| random_cp(&mut r)).collect();
+        for round in 0..2000 {
+            let cp = &cps[r.next() as usize % cps.len()];
+            let vat = r.next() as usize % 8;
+            let want = layout(cp, vat);
+            assert_eq!(format!("{:?}", cache.get(cp, vat)), format!("{want:?}"));
+            let count = r.next() % 40;
+            let data: Vec<u8> = (0..count * stream_size(&want))
+                .map(|_| r.next() as u8)
+                .collect();
+            for viewed in [true, false] {
+                let mem = Flat(memory.clone(), viewed);
+                let mut got = vec![7];
+                let used = fetch(cp, &want, count, &data, &mem, &mut got);
+                assert_eq!(used, data.len(), "round {round}");
+                assert_eq!(
+                    got[1..],
+                    fetch_slowly(cp, &want, count, &data, &mem)[..],
+                    "round {round}"
+                );
+            }
+        }
+    }
+
+    /// Skipping a draw leaves the normals decoding all of it does, with and without normals,
+    /// binormals and tangents, in every normal format.
+    #[test]
+    fn skipping_leaves_the_normals_decoding_does() {
+        let mut r = Rng(0x9E37_79B9_7F4A_7C15);
+        for _ in 0..4000 {
+            let cp = random_cp(&mut r);
+            let vat = r.next() as usize % 8;
+            let attrs = layout(&cp, vat);
+            // The vertices as fetching gives them: each attribute's bytes.
+            let size: u32 = attrs.iter().map(|a| a.size).sum();
+            let count = r.next() as usize % 6;
+            let data: Vec<u8> = (0..count * size as usize).map(|_| r.next() as u8).collect();
+            let xf_index = [r.next(), r.next()];
+            let start: NormalCache =
+                std::array::from_fn(|_| std::array::from_fn(|_| r.next() as f32));
+            let (mut decoded, mut skipped) = (start, start);
+            let mut scratch = Vec::new();
+            decode(&cp, xf_index, vat, &data, count, &mut decoded, &mut scratch);
+            skip(&cp, xf_index, vat, &data, count, &mut skipped, &mut scratch);
+            let bits = |n: &NormalCache| n.map(|v| v.map(f32::to_bits));
+            assert_eq!(bits(&skipped), bits(&decoded));
+        }
     }
 }
