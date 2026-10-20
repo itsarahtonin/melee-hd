@@ -67,6 +67,9 @@ pub enum VarsKind {
     ZebesIsland,
     ZebesStage,
     ZebesLava,
+    Onett,
+    OnettBuilding,
+    OnettCar,
 }
 
 /// `union GroundVars`.
@@ -164,6 +167,93 @@ pub enum GroundVars {
     ZebesStage(ZebesStageVars),
     /// `grZebes_GroundVars5`: the lava (map 8).
     ZebesLava(ZebesLavaVars),
+    /// `grOnett_GroundVars`: Onett's street with its awnings (map 5).
+    Onett(OnettVars),
+    /// `grOnett_Building_GroundVars`: the drugstore (map 4).
+    OnettBuilding(OnettBuildingVars),
+    /// `grOnett_Car_GroundVars`: the cars (map 3).
+    OnettCar(OnettCarVars),
+}
+
+/// One of Onett's awnings (`grOnett_AwningData`, 0x1C bytes): its joint, its rest height, this
+/// tick's push down (`accumulator`), its sag (`velocity`), its swing's speed (`initial`), the
+/// landings on it this tick and last (`counter`, `counter_prev`), a wait before its next sound
+/// (`cooldown`) and whether a fighter landed on it (`flag`).
+#[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct OnettAwning {
+    pub jobj: Option<crate::hsd::jobj::JObjId>,
+    pub initial_y: f32,
+    pub accumulator: f32,
+    pub velocity: f32,
+    pub initial: f32,
+    pub counter: i16,
+    pub counter_prev: i16,
+    pub cooldown: i16,
+    pub flag: i16,
+}
+
+/// `grOnett_GroundVars` of the stage (map 5): its two awnings, the wait before the chimney's
+/// smoke starts or stops (`timer`), the smoke's generator (`smoke`, the original's `gen`) and the camera subject that
+/// frames the cars (`subject`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct OnettVars {
+    pub awnings: [OnettAwning; 2],
+    pub timer: i32,
+    pub smoke: Option<crate::hsd::generator::GeneratorId>,
+    pub subject: Option<crate::game::handles::CameraBoxId>,
+}
+
+/// `grOnett_Building_GroundVars` of the drugstore (map 4): its state and the next
+/// (`state`, `next_state`), the landings on its roof (`hit_count`), its ticks in the state
+/// (`frame`) and a countdown (`timer`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct OnettBuildingVars {
+    pub state: i16,
+    pub next_state: i16,
+    pub hit_count: i32,
+    pub frame: i32,
+    pub timer: u32,
+}
+
+/// `grOnett_Car_GroundVars` of the cars (map 3): whether they wait for the match's start
+/// (`x0`'s top bit), the four cars' joints and their wheels' (`car_jobjs2`), each with a fifth
+/// past them (`unk_jobj`, `unk_jobj2`: the last car's again), which the first tick's car
+/// number 4 reads, the cars' hurtbox items, the car driving right to left (`curr_car`) with its state, countdown, honk
+/// state and speed (`state_a`, `x108`, `x110`, `car_speed`), and the one driving left to right
+/// (`next_car`, `state_b`, `timer_b`, `sub_state_b`, `speed_b`). The padding nothing writes is
+/// kept as it was.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct OnettCarVars {
+    pub x0: u32,
+    pub car_jobjs: [Option<crate::hsd::jobj::JObjId>; 5],
+    pub car_items: [Option<GObjId>; 4],
+    pub pad28: u32,
+    pub car_jobjs2: [Option<crate::hsd::jobj::JObjId>; 5],
+    pub curr_car: i8,
+    pub state_a: u8,
+    pub pad42: u16,
+    pub x108: i32,
+    pub pad48: u32,
+    pub x110: i32,
+    pub car_speed: f32,
+    pub next_car: i8,
+    pub state_b: u8,
+    pub pad56: u16,
+    pub timer_b: i32,
+    pub pad5c: u32,
+    pub sub_state_b: i32,
+    pub speed_b: f32,
+}
+
+impl OnettCarVars {
+    /// Whether the cars wait for the match's start (`x0_b0`).
+    pub fn waiting(&self) -> bool {
+        self.x0 >> 31 != 0
+    }
+
+    pub fn set_waiting(&mut self, on: bool) {
+        self.x0 = self.x0 & !(1 << 31) | u32::from(on) << 31;
+    }
 }
 
 /// A shaking part's state (`grZe_AcidState`, 0x24 bytes): its state and the next (`x00`,
@@ -1412,6 +1502,70 @@ impl GroundVars {
                     .import_handle("LObjId", m.u32(at + 0x18))
                     .map(crate::hsd::lobj::LObjId),
             }),
+            VarsKind::Onett => {
+                let jobj = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                let h = |a: u32| m.u16(a) as i16;
+                GroundVars::Onett(OnettVars {
+                    awnings: std::array::from_fn(|i| {
+                        let a = at + 0x1C * i as u32;
+                        OnettAwning {
+                            jobj: jobj(cx, a),
+                            initial_y: f(a + 4),
+                            accumulator: f(a + 8),
+                            velocity: f(a + 0xC),
+                            initial: f(a + 0x10),
+                            counter: h(a + 0x14),
+                            counter_prev: h(a + 0x16),
+                            cooldown: h(a + 0x18),
+                            flag: h(a + 0x1A),
+                        }
+                    }),
+                    timer: m.u32(at + 0x38) as i32,
+                    smoke: cx
+                        .import_handle("GeneratorId", m.u32(at + 0x3C))
+                        .map(crate::hsd::generator::GeneratorId),
+                    subject: cx
+                        .import_handle("CameraBoxId", m.u32(at + 0x40))
+                        .map(crate::game::handles::CameraBoxId),
+                })
+            }
+            VarsKind::OnettBuilding => GroundVars::OnettBuilding(OnettBuildingVars {
+                state: m.u16(at) as i16,
+                next_state: m.u16(at + 2) as i16,
+                hit_count: m.u32(at + 4) as i32,
+                frame: m.u32(at + 8) as i32,
+                timer: m.u32(at + 0xC),
+            }),
+            VarsKind::OnettCar => {
+                let jobj = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                GroundVars::OnettCar(OnettCarVars {
+                    x0: m.u32(at),
+                    car_jobjs: std::array::from_fn(|i| jobj(cx, at + 4 + 4 * i as u32)),
+                    car_items: std::array::from_fn(|i| gobj(cx, at + 0x18 + 4 * i as u32)),
+                    pad28: m.u32(at + 0x28),
+                    car_jobjs2: std::array::from_fn(|i| jobj(cx, at + 0x2C + 4 * i as u32)),
+                    curr_car: m.u8(at + 0x40) as i8,
+                    state_a: m.u8(at + 0x41),
+                    pad42: m.u16(at + 0x42),
+                    x108: m.u32(at + 0x44) as i32,
+                    pad48: m.u32(at + 0x48),
+                    x110: m.u32(at + 0x4C) as i32,
+                    car_speed: f(at + 0x50),
+                    next_car: m.u8(at + 0x54) as i8,
+                    state_b: m.u8(at + 0x55),
+                    pad56: m.u16(at + 0x56),
+                    timer_b: m.u32(at + 0x58) as i32,
+                    pad5c: m.u32(at + 0x5C),
+                    sub_state_b: m.u32(at + 0x60) as i32,
+                    speed_b: f(at + 0x64),
+                })
+            }
             VarsKind::Kraid => GroundVars::Kraid(KraidVars {
                 x0: m.u8(at) as i8,
                 x1: m.u8(at + 1) as i8,
@@ -2067,6 +2221,94 @@ impl GroundVars {
         match self {
             GroundVars::ZebesLava(v) => v,
             other => panic!("a stage object's variables are {other:?}, not grZebes's lava's"),
+        }
+    }
+
+    /// The variables as Onett's street's (`grOnett_GroundVars`), likewise: a block holding
+    /// pointers converts only if they are null.
+    pub fn onett(&mut self) -> &mut OnettVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let h = |at: usize| (b.u32(at & !3) >> if at & 2 == 0 { 16 } else { 0 }) as i16;
+            *self = GroundVars::Onett(OnettVars {
+                awnings: std::array::from_fn(|i| {
+                    let a = 0x1C * i;
+                    OnettAwning {
+                        jobj: b.null_of(a),
+                        initial_y: b.f32(a + 4),
+                        accumulator: b.f32(a + 8),
+                        velocity: b.f32(a + 0xC),
+                        initial: b.f32(a + 0x10),
+                        counter: h(a + 0x14),
+                        counter_prev: h(a + 0x16),
+                        cooldown: h(a + 0x18),
+                        flag: h(a + 0x1A),
+                    }
+                }),
+                timer: b.u32(0x38) as i32,
+                smoke: b.null_of(0x3C),
+                subject: b.null_of(0x40),
+            });
+        }
+        match self {
+            GroundVars::Onett(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grOnett_GroundVars"),
+        }
+    }
+
+    /// The variables as Onett's drugstore's (`grOnett_Building_GroundVars`), likewise.
+    pub fn onett_building(&mut self) -> &mut OnettBuildingVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let w = b.u32(0);
+            *self = GroundVars::OnettBuilding(OnettBuildingVars {
+                state: (w >> 16) as i16,
+                next_state: w as i16,
+                hit_count: b.u32(4) as i32,
+                frame: b.u32(8) as i32,
+                timer: b.u32(0xC),
+            });
+        }
+        match self {
+            GroundVars::OnettBuilding(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grOnett_Building_GroundVars")
+            }
+        }
+    }
+
+    /// The variables as Onett's cars' (`grOnett_Car_GroundVars`), likewise: a block holding
+    /// pointers converts only if they are null.
+    pub fn onett_car(&mut self) -> &mut OnettCarVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let w40 = b.u32(0x40);
+            let w54 = b.u32(0x54);
+            *self = GroundVars::OnettCar(OnettCarVars {
+                x0: b.u32(0),
+                car_jobjs: std::array::from_fn(|i| b.null_of(4 + 4 * i)),
+                car_items: std::array::from_fn(|i| b.null(0x18 + 4 * i)),
+                pad28: b.u32(0x28),
+                car_jobjs2: std::array::from_fn(|i| b.null_of(0x2C + 4 * i)),
+                curr_car: (w40 >> 24) as i8,
+                state_a: (w40 >> 16) as u8,
+                pad42: w40 as u16,
+                x108: b.u32(0x44) as i32,
+                pad48: b.u32(0x48),
+                x110: b.u32(0x4C) as i32,
+                car_speed: b.f32(0x50),
+                next_car: (w54 >> 24) as i8,
+                state_b: (w54 >> 16) as u8,
+                pad56: w54 as u16,
+                timer_b: b.u32(0x58) as i32,
+                pad5c: b.u32(0x5C),
+                sub_state_b: b.u32(0x60) as i32,
+                speed_b: b.f32(0x64),
+            });
+        }
+        match self {
+            GroundVars::OnettCar(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grOnett_Car_GroundVars"),
         }
     }
 
@@ -3255,6 +3497,97 @@ impl Mirror for GroundVars {
                 }
                 let p = format!("{path}.zebes5.xDC");
                 cx.compare_handle(&p, "LObjId", v.xDC.map(|l| l.0), m.u32(at + 0x18));
+            }
+            GroundVars::Onett(v) => {
+                for (i, a) in v.awnings.iter().enumerate() {
+                    let b = at + 0x1C * i as u32;
+                    let ours = (
+                        [a.initial_y, a.accumulator, a.velocity, a.initial].map(f32::to_bits),
+                        [a.counter, a.counter_prev, a.cooldown, a.flag],
+                    );
+                    let theirs = (
+                        std::array::from_fn(|k| m.u32(b + 4 + 4 * k as u32)),
+                        std::array::from_fn(|k| m.u16(b + 0x14 + 2 * k as u32) as i16),
+                    );
+                    if ours != theirs {
+                        cx.mismatch(
+                            &format!("{path}.onett.awnings[{i}]"),
+                            format!("{ours:x?}"),
+                            format!("{theirs:x?}"),
+                        );
+                    }
+                    let p = format!("{path}.onett.awnings[{i}].jobj");
+                    cx.compare_handle(&p, "JObjId", a.jobj.map(|j| j.0), m.u32(b));
+                }
+                if v.timer != m.u32(at + 0x38) as i32 {
+                    cx.mismatch(
+                        &format!("{path}.onett.timer"),
+                        format!("{}", v.timer),
+                        format!("{}", m.u32(at + 0x38) as i32),
+                    );
+                }
+                let p = format!("{path}.onett.smoke");
+                cx.compare_handle(&p, "GeneratorId", v.smoke.map(|g| g.0), m.u32(at + 0x3C));
+                let p = format!("{path}.onett.subject");
+                cx.compare_handle(&p, "CameraBoxId", v.subject.map(|b| b.0), m.u32(at + 0x40));
+            }
+            GroundVars::OnettBuilding(v) => {
+                let ours = (v.state, v.next_state, v.hit_count, v.frame, v.timer);
+                let theirs = (
+                    m.u16(at) as i16,
+                    m.u16(at + 2) as i16,
+                    m.u32(at + 4) as i32,
+                    m.u32(at + 8) as i32,
+                    m.u32(at + 0xC),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.onett_building"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::OnettCar(v) => {
+                // The padding nothing reads or writes isn't compared.
+                let ours = (
+                    v.x0 >> 31,
+                    [v.curr_car as u8, v.state_a, v.next_car as u8, v.state_b],
+                    [v.x108, v.x110, v.timer_b, v.sub_state_b],
+                    [v.car_speed, v.speed_b].map(f32::to_bits),
+                );
+                let theirs = (
+                    m.u32(at) >> 31,
+                    [
+                        m.u8(at + 0x40),
+                        m.u8(at + 0x41),
+                        m.u8(at + 0x54),
+                        m.u8(at + 0x55),
+                    ],
+                    [0x44, 0x4C, 0x58, 0x60].map(|o| m.u32(at + o) as i32),
+                    [m.u32(at + 0x50), m.u32(at + 0x64)],
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.onettcar"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                for (k, j) in v.car_jobjs.iter().enumerate() {
+                    let p = format!("{path}.onettcar.car_jobjs[{k}]");
+                    cx.compare_handle(&p, "JObjId", j.map(|j| j.0), m.u32(at + 4 + 4 * k as u32));
+                }
+                for (k, j) in v.car_jobjs2.iter().enumerate() {
+                    let p = format!("{path}.onettcar.car_jobjs2[{k}]");
+                    let a = at + 0x2C + 4 * k as u32;
+                    cx.compare_handle(&p, "JObjId", j.map(|j| j.0), m.u32(a));
+                }
+                for (k, g) in v.car_items.iter().enumerate() {
+                    let p = format!("{path}.onettcar.car_items[{k}]");
+                    let a = at + 0x18 + 4 * k as u32;
+                    cx.compare_handle(&p, "GObjId", g.map(|g| g.0), m.u32(a));
+                }
             }
             GroundVars::Kraid(v) => {
                 let ours = (v.x0, v.x1, [v.x4, v.x8, v.xC].map(f32::to_bits), v.x10);

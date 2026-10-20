@@ -57,6 +57,9 @@ pub const GRGREENS_YAKUMONO: u32 = 0x804D_6AA8;
 pub const GRGREENS_DEMO: u32 = 0x804D_6AAC;
 pub const GRGREENS_WAITING: u32 = 0x804D_6AAD;
 pub const GRGREENS_LAYOUT: u32 = 0x8049_F9E0;
+/// gronett.c's (`ssbm_types::tu::melee__gr__gronett::yakumono_param`) and `grOt_804D69C4`.
+pub const GRONETT_YAKUMONO: u32 = 0x804D_69C0;
+pub const GRONETT_X69C4: u32 = 0x804D_69C4;
 /// grzebes.c's (`ssbm_types::tu::melee__gr__grzebes::yakumono_param`), its pop wait and
 /// splash count (`grZe_804D6994`, `grZe_804D6998`), and its bounds, anchors and bubbles
 /// (`grZe_8049F140`, `grZe_8049F158`, `grZe_8049F170`).
@@ -335,6 +338,9 @@ impl Importer<'_> {
         }
         let yaku = cap.u32(GRZEBES_YAKUMONO);
         self.game.gr.zebes_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRONETT_YAKUMONO);
+        self.game.gr.onett_yakumono = self.data_or_unhandled(yaku);
+        self.game.gr.onett_x69c4 = cap.u32(GRONETT_X69C4) as i32;
         self.import_zebes();
         for i in 0..15u32 {
             let at = GRKONGO_PLANKS + 0x18 * i;
@@ -963,6 +969,11 @@ impl Comparer<'_> {
                 GRZEBES_YAKUMONO,
                 game.gr.zebes_yakumono,
             ),
+            (
+                "grOnett yakumono_param",
+                GRONETT_YAKUMONO,
+                game.gr.onett_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -973,6 +984,12 @@ impl Comparer<'_> {
             );
         }
         self.compare_zebes();
+        self.check(
+            "grOt_804D69C4",
+            "onett x69c4",
+            game.gr.onett_x69c4,
+            self.u32(GRONETT_X69C4) as i32,
+        );
         let greens = &game.gr.greens;
         self.check(
             "grGr_804D6AAC",

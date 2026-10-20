@@ -5312,3 +5312,428 @@ fn zebes_unreached_callbacks() {
     let to_shadow = retarget(leaf_check::sym("grZebes_801DCCC0"));
     check_hazard(&d, from, 1, &to_shadow, &shadow);
 }
+
+// Onett (`gronett.c`).
+
+const ONETT: &str = "oracle-stage-onett";
+
+/// gronett.c's `yakumono_param`.
+const ONETT_PARAM: u32 = 0x804D_69C0;
+
+/// Onett's parameters' float at `off`.
+fn onett_param(c: &Call, off: u32) -> f32 {
+    f32_at(c, peek_u32(c, ONETT_PARAM) + off)
+}
+
+/// The stage object a call passes as its `Ground` at `gp`.
+fn onett_ground(maps: &Maps, gp: u32) -> melee_sim::game::handles::GroundId {
+    *maps.grounds.get(&gp).expect("the stage object")
+}
+
+/// A joint callback's collision's kind (`x34_flags.b1234`), and setting it.
+fn coll_kind(c: &Call) -> u32 {
+    peek_u32(c, c.regs.gpr[5] + 0x34) >> 27 & 0xF
+}
+
+fn set_coll_kind(c: &mut Call, kind: u32) {
+    let at = c.regs.gpr[5] + 0x34;
+    let w = peek_u32(c, at);
+    poke_u32(c, at, (w & !(0xF << 27)) | kind << 27);
+}
+
+#[test]
+fn onett_setup() {
+    use melee_sim::game::gr::onett;
+    let d = hazard_dir(ONETT);
+    check_hazard(&d, "grOnett_801E3738", 1, &as_saved, &by_event);
+    check_hazard(&d, "grOnett_801E37C8", 1, &as_saved, &by_event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let _ = onett::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    check_hazard(&d, "grOnett_801E37F4", 1, &as_saved, &create);
+    for map in [0u32, 2, 3, 4, 5] {
+        check_hazard(
+            &d,
+            "grOnett_801E37F4",
+            1,
+            &move |c, _| c.regs.gpr[3] = map,
+            &create,
+        );
+    }
+    for f in [
+        "grOnett_801E38DC",
+        "grOnett_801E3A34",
+        "grOnett_801E3CE4",
+        "grOnett_801E41C8",
+        "grOnett_801E3930",
+        "grOnett_801E41B0",
+    ] {
+        check_hazard(&d, f, 1, &as_saved, &by_address);
+    }
+    let seeds = |c: &mut Call, k: usize| set_seed(c, 0x2468_ACE1u32.wrapping_mul(k as u32 + 1));
+    check_hazard(&d, "grOnett_801E41C8", 1, &seeds, &by_address);
+    check_hazard(&d, "grOnett_801E3A34", 1, &seeds, &by_address);
+}
+
+/// The drugstore's variables set: state, next state, landings, ticks in the state and count.
+fn store(c: &mut Call, state: i16, next: i16, hits: i32, frame: i32, timer: i32) {
+    let a = vars(c);
+    poke_u16(c, a, state as u16);
+    poke_u16(c, a + 2, next as u16);
+    poke_u32(c, a + 4, hits as u32);
+    poke_u32(c, a + 8, frame as u32);
+    poke_u32(c, a + 0xC, timer as u32);
+}
+
+#[test]
+fn onett_store() {
+    let d = hazard_dir(ONETT);
+    let f = "grOnett_801E3DA0";
+    check_hazard(&d, f, 1, &as_saved, &by_address);
+    let mut cases: Vec<(i16, i16, i32, i32, i32)> = Vec::new();
+    // Each state at its ticks' edges and its count's (the blink's bit too), staying and
+    // changing.
+    for (state, frames) in [
+        (0i16, &[0, 5][..]),
+        (1, &[0, 30]),
+        (2, &[0x8B, 0x8C, 0x8D]),
+        (3, &[0]),
+        (4, &[0, 12]),
+        (5, &[0x13, 0x14, 0x45, 0x46, 0x59, 0x5A, 0x81, 0x82]),
+    ] {
+        for &frame in frames {
+            cases.push((state, state, 0, frame - 1, 10));
+        }
+    }
+    for timer in [-1, 0, 1, 2, 3] {
+        cases.push((6, 6, 0, 0, timer));
+        cases.push((7, 7, 0, 0, timer));
+    }
+    // A change of state into each, and the first tick (state -1).
+    for next in [0i16, 1, 2, 3, 4, 5, 6, 7] {
+        cases.push((3, next, 4, 9, 0));
+    }
+    cases.push((-1, 0, 0, 0, 0));
+    for (state, next, hits, frame, timer) in cases {
+        check_hazard(
+            &d,
+            f,
+            1,
+            &move |c, _| store(c, state, next, hits, frame, timer),
+            &by_address,
+        );
+    }
+}
+
+#[test]
+fn onett_roof() {
+    let d = hazard_dir(ONETT);
+    let f = "grOnett_801E40E4";
+    let roof = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = onett_ground(maps, call.regs.gpr[3]);
+        let param = r.game.gr.onett_yakumono;
+        melee_sim::game::gr::onett::roof_landed(
+            &mut r.game.grounds[g.0],
+            param,
+            r.data,
+            call.regs.gpr[7] as i32,
+        );
+        Ret::Nothing
+    };
+    check_hazard(&d, f, 1, &as_saved, &roof);
+    // Each collision kind, in each state, with the count just short of and at the crack's and
+    // the fall's.
+    let crack = |c: &Call| onett_param(c, 0x34) as i32;
+    let fall = |c: &Call| onett_param(c, 0x38) as i32;
+    for kind in [0u32, 1, 2] {
+        for state in 0..8i16 {
+            for edge in [0, 1] {
+                check_hazard(
+                    &d,
+                    f,
+                    1,
+                    &move |c, _| {
+                        c.regs.gpr[7] = kind;
+                        let hits = if state == 3 { fall(c) } else { crack(c) } - 2 + edge;
+                        let v = c.regs.gpr[3] + 0xC4;
+                        poke_u16(c, v, state as u16);
+                        poke_u32(c, v + 4, hits as u32);
+                    },
+                    &roof,
+                );
+            }
+        }
+    }
+}
+
+/// An awning's variables set: push, sag, swing speed, landings this tick and last, quiet ticks
+/// and whether one landed.
+#[allow(clippy::too_many_arguments)]
+fn awning(
+    c: &mut Call,
+    i: u32,
+    push: f32,
+    sag: f32,
+    speed: f32,
+    n: i16,
+    last: i16,
+    quiet: i16,
+    flag: i16,
+) {
+    let a = vars(c) + 0x1C * i;
+    poke_u32(c, a + 8, push.to_bits());
+    poke_u32(c, a + 0xC, sag.to_bits());
+    poke_u32(c, a + 0x10, speed.to_bits());
+    poke_u16(c, a + 0x14, n as u16);
+    poke_u16(c, a + 0x16, last as u16);
+    poke_u16(c, a + 0x18, quiet as u16);
+    poke_u16(c, a + 0x1A, flag as u16);
+}
+
+#[test]
+fn onett_awnings() {
+    use melee_sim::game::gr::onett;
+    let d = hazard_dir(ONETT);
+    let swing = |r: &mut Running, maps: &Maps, call: &Call| {
+        onett::swing_awnings(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_hazard(&d, "grOnett_801E5214", 1, &as_saved, &swing);
+    // Pushed past the limit, sagging either way, springing back fast and slow, settled
+    // (close and slow, close and fast, far and slow), at the cap either way, rustled by a
+    // landing or a changed count, and quiet.
+    let max = |c: &Call| onett_param(c, 0x1C);
+    let prepares: [&Prepare; 14] = [
+        &|c, _| awning(c, 0, -100.0, 0.0, 0.0, 0, 0, 0, 0),
+        &|c, _| awning(c, 1, -2.0, 0.0, 0.0, 0, 0, 0, 0),
+        &|c, _| awning(c, 0, 0.0, -2.0, 0.0, 0, 0, 0, 0),
+        &|c, _| awning(c, 0, 0.0, 2.0, 0.5, 0, 0, 0, 0),
+        &|c, _| awning(c, 1, -1.0, -1.0, 0.0, 0, 0, 0, 0),
+        &|c, _| awning(c, 0, -1.0, -1.0001, 0.0001, 0, 0, 0, 0),
+        &|c, _| awning(c, 0, -1.0, -1.0001, 3.0, 0, 0, 0, 0),
+        &|c, _| awning(c, 0, -1.0, -3.0, 0.0001, 0, 0, 0, 0),
+        &|c, _| {
+            let m = max(c);
+            awning(c, 0, -m, m, 50.0, 0, 0, 0, 0)
+        },
+        &|c, _| {
+            let m = max(c);
+            awning(c, 1, 0.0, -m, -50.0, 0, 0, 0, 0)
+        },
+        &|c, _| awning(c, 0, -1.0, 0.0, 0.0, 2, 0, 0, 1),
+        &|c, _| awning(c, 1, -1.0, 0.0, 0.0, 1, 2, 0, 0),
+        &|c, _| awning(c, 0, -1.0, 0.0, 0.0, 1, 2, 4, 1),
+        &|c, _| awning(c, 1, -1.0, 0.0, 0.0, 0, 0, 1, 0),
+    ];
+    for p in prepares {
+        check_hazard(&d, "grOnett_801E5214", 1, p, &swing);
+    }
+    let landed = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = onett_ground(maps, call.regs.gpr[3]);
+        let param = r.game.gr.onett_yakumono;
+        let coll_kind = coll_kind(call);
+        onett::awning_landed(
+            &mut r.game.grounds[g.0],
+            param,
+            r.data,
+            call.regs.gpr[4] as i32,
+            coll_kind,
+            call.regs.gpr[7] as i32,
+        );
+        Ret::Nothing
+    };
+    check_hazard(&d, "grOnett_801E54B4", 1, &as_saved, &landed);
+    // Each joint, collision kind and collision state.
+    for joint in [0u32, 1] {
+        for kind in [0u32, 1, 2] {
+            for state in 0..5u32 {
+                check_hazard(
+                    &d,
+                    "grOnett_801E54B4",
+                    1,
+                    &move |c, _| {
+                        c.regs.gpr[4] = joint;
+                        c.regs.gpr[7] = kind;
+                        set_coll_kind(c, state);
+                    },
+                    &landed,
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn onett_street() {
+    use melee_sim::game::gr::onett;
+    let d = hazard_dir(ONETT);
+    check_hazard(&d, "grOnett_801E3C60", 1, &as_saved, &by_address);
+    // The cars' camera subject with the warning up and down.
+    for warn in [0u32, 1, 2] {
+        check_hazard(
+            &d,
+            "grOnett_801E3C60",
+            1,
+            &move |c, _| poke_u32(c, STAGE_INFO + 0x740, warn),
+            &by_address,
+        );
+    }
+    let smoke = |r: &mut Running, maps: &Maps, call: &Call| {
+        onett::smoke(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_hazard(&d, "grOnett_801E5538", 1, &as_saved, &smoke);
+    // Its wait running out with a smoke and without, and not.
+    for timer in [-1i32, 0, 1, 7] {
+        check_hazard(
+            &d,
+            "grOnett_801E5538",
+            1,
+            &move |c, _| poke_u32(c, vars(c) + 0x38, timer as u32),
+            &smoke,
+        );
+    }
+    let shadow = |r: &mut Running, maps: &Maps, call: &Call| {
+        let a = call.regs.gpr[3];
+        let pos = Vec3::new(f32_at(call, a), f32_at(call, a + 4), f32_at(call, a + 8));
+        let j = maps.jobjs.get(&call.regs.gpr[5]).copied();
+        Ret::Int(u32::from(onett::check_shadow_render(
+            r.game, r.data, pos, j,
+        )))
+    };
+    check_hazard(&d, "grOnett_801E5768", 1, &as_saved, &shadow);
+}
+
+/// The cars' variables set: state, count and honk state of the car from the right with its
+/// car and speed, and the car from the left's.
+#[allow(clippy::too_many_arguments)]
+fn cars(
+    c: &mut Call,
+    a_state: u8,
+    x108: i32,
+    x110: i32,
+    curr: i8,
+    speed: f32,
+    b_state: u8,
+    b_timer: i32,
+    next: i8,
+) {
+    let a = vars(c);
+    poke_u8(c, a + 0x40, curr as u8);
+    poke_u8(c, a + 0x41, a_state);
+    poke_u32(c, a + 0x44, x108 as u32);
+    poke_u32(c, a + 0x4C, x110 as u32);
+    poke_u32(c, a + 0x50, speed.to_bits());
+    poke_u8(c, a + 0x54, next as u8);
+    poke_u8(c, a + 0x55, b_state);
+    poke_u32(c, a + 0x58, b_timer as u32);
+}
+
+#[test]
+fn onett_cars() {
+    use melee_sim::game::gr::onett;
+    let d = hazard_dir(ONETT);
+    let f = "grOnett_801E43E0";
+    check_hazard(&d, f, 1, &as_saved, &by_address);
+    // The right car's state, count, honk state, car and speed; the left car's state, count and
+    // car.
+    type Case = (u8, i32, i32, i8, f32, u8, i32, i8);
+    let mut cases: Vec<Case> = Vec::new();
+    // The right car in each state, its counts over or not; driving, at each honk state.
+    for a_state in 0..8u8 {
+        for x108 in [0, 1] {
+            for x110 in [0, 1, 2, 4] {
+                cases.push((a_state, x108, x110, 1, -8.0, 3, 5, 2));
+            }
+        }
+    }
+    // The left car in each state, its counts over or not.
+    for b_state in 0..6u8 {
+        for t in [0, 1] {
+            cases.push((7, 0, 0, 1, -8.0, b_state, t, 2));
+        }
+    }
+    for (a, x108, x110, curr, speed, b, bt, next) in cases {
+        check_hazard(
+            &d,
+            f,
+            1,
+            &move |c, _| cars(c, a, x108, x110, curr, speed, b, bt, next),
+            &by_address,
+        );
+    }
+    let hit = |r: &mut Running, maps: &Maps, call: &Call| {
+        let item = gobj_arg(maps, call);
+        let g = onett_ground(maps, call.regs.gpr[4]);
+        onett::car_hit(r, item, g);
+        Ret::Nothing
+    };
+    check_hazard(&d, "grOnett_801E5030", 1, &as_saved, &hit);
+    // Spinning, driving fast or slow either way, from several seeds.
+    for (state, speed) in [(4u8, -8.0f32), (5, -8.0), (5, -0.6), (5, 0.2), (6, -3.0)] {
+        let p = move |c: &mut Call, k: usize| {
+            let v = c.regs.gpr[4] + 0xC4;
+            poke_u8(c, v + 0x41, state);
+            poke_u32(c, v + 0x50, speed.to_bits());
+            set_seed(c, 0x1357_9BDFu32.wrapping_mul(k as u32 + 1));
+        };
+        check_hazard(&d, "grOnett_801E5030", 4, &p, &hit);
+    }
+    let horn = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = onett_ground(maps, call.regs.gpr[3]);
+        onett::car_sound(r, g, call.regs.gpr[4] as i32, call.regs.gpr[5] as i32);
+        Ret::Nothing
+    };
+    check_hazard(&d, "grOnett_801E5194", 1, &as_saved, &horn);
+    for car in 0..4u32 {
+        for kind in [4u32, 5] {
+            check_hazard(
+                &d,
+                "grOnett_801E5194",
+                1,
+                &move |c, _| {
+                    c.regs.gpr[4] = car;
+                    c.regs.gpr[5] = kind;
+                },
+                &horn,
+            );
+        }
+    }
+    let scream = |r: &mut Running, _: &Maps, call: &Call| {
+        onett::scream(r, call.regs.gpr[3] as i32);
+        Ret::Nothing
+    };
+    for car in 0..4u32 {
+        check_hazard(
+            &d,
+            "grOnett_801E5140",
+            1,
+            &move |c, _| c.regs.gpr[3] = car,
+            &scream,
+        );
+    }
+}
+
+#[test]
+fn onett_unreached_callbacks() {
+    let d = hazard_dir(ONETT);
+    let from = "grOnett_801E3C60";
+    for name in [
+        "grOnett_801E3928",
+        "grOnett_801E392C",
+        "grOnett_801E3CE0",
+        "grOnett_801E40E0",
+        "grOnett_801E502C",
+    ] {
+        check_hazard(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let load = retarget(leaf_check::sym("grOnett_801E37C4"));
+    check_hazard(&d, from, 1, &load, &by_event);
+    let demo = retarget(leaf_check::sym("grOnett_801E3734"));
+    check_hazard(&d, from, 1, &demo, &by_demo);
+}

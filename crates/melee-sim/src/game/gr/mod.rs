@@ -24,6 +24,7 @@ pub mod material;
 pub mod oldkongo;
 pub mod oldpupupu;
 pub mod oldyoshi;
+pub mod onett;
 pub mod setup;
 pub mod shrine;
 pub mod stadium;
@@ -62,6 +63,8 @@ pub const GR_KIND_GREATBAY: i32 = 6;
 pub const GR_KIND_GREENS: i32 = 13;
 /// `Gr_Kind_Zebes`, Brinstar.
 pub const GR_KIND_ZEBES: i32 = 8;
+/// `Gr_Kind_Onett`, Onett.
+pub const GR_KIND_ONETT: i32 = 20;
 /// `Gr_Kind_Story`, Yoshi's Story.
 pub const GR_KIND_STORY: i32 = 10;
 /// `Gr_Kind_Izumi`, Fountain of Dreams.
@@ -222,6 +225,10 @@ pub struct Globals {
     pub zebes_yakumono: Option<DataRef>,
     /// Brinstar's statics besides it.
     pub zebes: zebes::Globals,
+    /// Onett's `yakumono_param` (`grOnett_StageParam`).
+    pub onett_yakumono: Option<DataRef>,
+    /// `grOt_804D69C4`, which Onett's cars' setup clears and nothing reads.
+    pub onett_x69c4: i32,
     /// The stages' spawn configurations (`grZakoGenerator_801CA394`'s heap blocks).
     pub spawn_configs: Vec<zako::SpawnConfig>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
@@ -341,6 +348,9 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_ZEBES, 6) => VarsKind::ZebesStage,
         (GR_KIND_ZEBES, 7) => VarsKind::ZebesIsland,
         (GR_KIND_ZEBES, 8) => VarsKind::ZebesLava,
+        (GR_KIND_ONETT, 3) => VarsKind::OnettCar,
+        (GR_KIND_ONETT, 4) => VarsKind::OnettBuilding,
+        (GR_KIND_ONETT, 5) => VarsKind::Onett,
         _ => VarsKind::Bytes,
     }
 }
@@ -350,6 +360,7 @@ pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: G
     match cb.0 {
         garden::KLAPTRAP_BIT => garden::klaptrap_bit(r, item, g),
         greens::BLOCK_DEALT => greens::block_item_nothing(r, item, g),
+        onett::CAR_HIT => onett::car_hit(r, item, g),
         other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
     }
 }

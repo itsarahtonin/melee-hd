@@ -232,6 +232,12 @@ impl Running<'_> {
         }
     }
 
+    /// Onett's car sign, moved right, `un_802FD8A0`.
+    #[doc(alias = "un_802FD8A0")]
+    pub fn create_onett_hazard(&mut self, desc: DataRef) {
+        self.create_hazard(desc, 0);
+    }
+
     /// The coin counter's process, `fn_802FED14`: hidden when not running; otherwise it
     /// counts a coin every few frames with a sound (another every tenth), placed and posed
     /// on its count.

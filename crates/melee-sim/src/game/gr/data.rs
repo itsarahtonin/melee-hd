@@ -6,8 +6,8 @@ use super::datfiles::GrJoint;
 use super::{
     GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS,
     GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER,
-    GR_KIND_ZEBES,
+    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_SHRINE, GR_KIND_STORY,
+    GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -727,6 +727,41 @@ pub const ZEBES: StageData = StageData {
     joints: &ZEBES_JOINTS,
 };
 
+/// `grOt_803E27E0`. Map 5 is the street with its awnings, map 4 the drugstore, map 3 the
+/// cars, map 2 the background; maps 0 and 1 (the car sign's model) have no functions.
+pub const ONETT_CALLBACKS: [StageCallbacks; 6] = [
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0x801E_38DC, 0x801E_3920, 0x801E_3928, 0x801E_392C, 0),
+    cb(0x801E_41C8, 0x801E_43D8, 0x801E_43E0, 0x801E_502C, 0),
+    cb(0x801E_3CE4, 0x801E_3D98, 0x801E_3DA0, 0x801E_40E0, 0),
+    cb(
+        0x801E_3A34,
+        0x801E_3C58,
+        0x801E_3C60,
+        0x801E_3CE0,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grOt_StageData`.
+pub const ONETT: StageData = StageData {
+    grkind: GR_KIND_ONETT,
+    callbacks: &ONETT_CALLBACKS,
+    // The table's `/GrOt`, which `lbFileGetFullName` completes with the language's extension,
+    // `usd` for English.
+    file: Some("/GrOt.usd"),
+    on_init: 0x801E_3738,
+    on_demo_init: 0x801E_3734,
+    on_load: 0x801E_37C4,
+    on_start: 0x801E_37C8,
+    callback4: 0x801E_37EC,
+    on_touch_line: 0x801E_5760,
+    on_check_shadow_render: 0x801E_5768,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -747,6 +782,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_KONGO => &KONGO,
         GR_KIND_GREENS => &GREENS,
         GR_KIND_ZEBES => &ZEBES,
+        GR_KIND_ONETT => &ONETT,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

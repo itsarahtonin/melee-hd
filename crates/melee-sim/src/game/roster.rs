@@ -384,6 +384,12 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 9,
+        name: "Onett",
+        keys: &["on", "onett"],
+        audit: None,
+    },
+    Stage {
         kind: 3,
         name: "Pokémon Stadium",
         keys: &["ps", "pokemon-stadium"],

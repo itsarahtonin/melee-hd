@@ -188,6 +188,30 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     super::super::gr::greens::block_landed(&mut self.grounds[g.0], joint_id);
                 }
             }
+            super::super::gr::onett::ROOF_LANDED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    let param = self.stage_maps.gr.onett_yakumono;
+                    super::super::gr::onett::roof_landed(
+                        &mut self.grounds[g.0],
+                        param,
+                        self.data,
+                        kind,
+                    );
+                }
+            }
+            super::super::gr::onett::AWNING_LANDED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    let param = self.stage_maps.gr.onett_yakumono;
+                    super::super::gr::onett::awning_landed(
+                        &mut self.grounds[g.0],
+                        param,
+                        self.data,
+                        joint_id,
+                        coll.x34_flags.b1234.into(),
+                        kind,
+                    );
+                }
+            }
             _ => unported_call(&format!("stage joint callback {:#010x}", callback.0)),
         }
     }

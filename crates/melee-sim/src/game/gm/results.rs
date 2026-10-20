@@ -48,6 +48,13 @@ impl Game {
         self.vs.state.x24C.player_standings[slot as usize].score
     }
 
+    /// A fighter's player's rank in the results as they stand, `gm_8016C6C0`.
+    #[doc(alias = "gm_8016C6C0")]
+    pub fn fighter_rank(&mut self, fighter: crate::hsd::gobj::GObjId) -> i32 {
+        let slot = i32::from(self.fighter(fighter).player_idx);
+        self.player_rank(slot)
+    }
+
     /// The player's rank in the results as they stand (0 the best), its team's in teams,
     /// `Player_80033BB8` (`gm_8016C5C0`): the results brought up to date once a tick.
     #[doc(alias = "Player_80033BB8")]

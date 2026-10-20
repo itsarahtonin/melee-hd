@@ -847,10 +847,10 @@ The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so abou
 
 ### Onett's cars read the render-pass camera
 
-- **Where:** `grOnett_801E43E0` (the car's process) reading the CObj through `Camera_800307D0`; not yet ported.
+- **Where:** `grOnett_801E43E0` (the car's process) reading the CObj through `Camera_800307D0`, `crates/melee-sim/src/game/gr/onett.rs` (`proc_cars`).
 - **Defect:** the car takes the camera's view edges from the CObj the display pass writes; when a car passes the view's right edge with a fighter on the ground, it draws `HSD_Randi(3)`, honks and sets `stage_info.x740`, which the computer player's car avoidance and the camera read.
 - **Effect:** a doubled round as the edge passes the car moves that by a tick.
-- **melee-hd:** not ported yet; its port will read the CObj the display pass keeps.
+- **melee-hd:** modeled: the car reads the CObj the display pass keeps (`camera::ground_span`).
 - **Fix:** take the edges from logic state.
 - **Fix impact:** changes Onett's random sequence and car timing.
 - **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes) (line 146).
