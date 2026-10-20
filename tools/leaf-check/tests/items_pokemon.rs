@@ -30,7 +30,7 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::it::kinds::{
     chicorita, entei, fire, fushigibana, hassam, hinoarashi, kabigon, kamex, kireihana, lizardon,
-    lucky, maril, marumine, matadogas, pippi, porygon2, sonans, thunder, togepy, tosakinto,
+    lucky, lugia, maril, marumine, matadogas, pippi, porygon2, sonans, thunder, togepy, tosakinto,
     unknown,
 };
 use melee_sim::game::it::{self, CLASS_ITEM, pokemon};
@@ -122,6 +122,7 @@ const UNITS: &[(u32, u32)] = &[
     (0x802D_5ABC, 0x802D_5CF8),
     (0x802C_9D40, 0x802C_A49C),
     (0x802C_F3E0, 0x802C_F814),
+    (0x802D_1438, 0x802D_251C),
 ];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
@@ -137,11 +138,23 @@ fn args(call: &mut Call, target: &str, k: usize) {
     if !in_mem(gobj) {
         return;
     }
+    // Lugia's search for a point to fire at (its firing callback and the shot run it) loops
+    // until it finds one near where it came out, which another kind's item, or a Lugia before
+    // its firing state (whose start sets the search up), never does, on either side: the call
+    // is given a null GObj instead, which stops the reference at once (a skip).
+    if SEARCHES.contains(&target) {
+        let ip = peek_u32(call, gobj + 0x2C);
+        let firing = in_mem(ip)
+            && peek_u32(call, ip + 0x10) == LUGIA as u32
+            && peek_u32(call, ip + 0x24) == 5;
+        if !firing {
+            call.regs.gpr[3] = 0;
+            return;
+        }
+    }
     let g = &mut call.regs.gpr;
     match target {
-        n if n.contains("EvtUnk") || EVT_UNK.contains(&n) => {
-            g[4] = if k.is_multiple_of(2) { gobj } else { 0 }
-        }
+        n if forgets(n) => g[4] = if k.is_multiple_of(2) { gobj } else { 0 },
         "it_802D61C8" | "it_802D6310" => g[4] = [1u32, 2, 4, 3, 6][k % 5],
         "it_802D6674" => g[4] = (k % 4) as u32,
         "it_802CB4F0" => {
@@ -150,9 +163,21 @@ fn args(call: &mut Call, target: &str, k: usize) {
         }
         "it_80279CDC" | "it_80279D5C" => call.regs.fpr[1].ps0 = [1.0f64, 0.5, 1.3][k % 3],
         "it_802CC1CC" => g[4] = lizardon::FLAME1 as u32 + (k % 4) as u32,
+        "it_802D1E8C" => {
+            g[4] = [
+                lugia::AEROBLAST as u32,
+                lugia::AEROBLAST2 as u32,
+                lugia::AEROBLAST3 as u32,
+            ][k % 3];
+            call.regs.fpr[1].ps0 = [8.0f64, 5.5, 3.0][(k / 3) % 3];
+        }
         _ => {}
     }
 }
+
+/// `It_PKind_Lugia`, and the functions that run its search for a point to fire at.
+const LUGIA: i32 = 0xB2;
+const SEARCHES: &[&str] = &["it_802D1BBC", "it_802D1E8C", "it_802D208C"];
 
 /// The forgetting callbacks (`EvtUnk`) the decomp names by address.
 const EVT_UNK: &[&str] = &[
@@ -174,11 +199,13 @@ const EVT_UNK: &[&str] = &[
     "it_802D5CD8",
     "it_802C9E24",
     "it_802CF450",
+    "itLugia_Logic17_EvtUnk",
+    "it_802D23D4",
 ];
 
 /// Helpers that take what the check can't give: they run inside the callers that call them,
 /// whose comparisons cover them.
-const HELPERS: &[&str] = &["itHassam_802CDE1C"];
+const HELPERS: &[&str] = &["itHassam_802CDE1C", "it_802D1F64"];
 
 fn name_of(addr: u32) -> String {
     ssbm_types::symbols::SYMBOLS
@@ -250,6 +277,16 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802CA3F4", kabigon::dust),
     ("it_802CF4D4", entei::roar),
     ("it_802CF744", entei::enter_air),
+    ("it_802C9E44", kabigon::out_landed),
+    ("it_802CF470", entei::out_landed),
+    ("it_802D14D0", lugia::landed_nothing),
+    ("it_802D1580", lugia::take_off),
+    ("it_802D16D4", lugia::come_back),
+    ("it_802D1830", lugia::sink),
+    ("it_802D1A44", lugia::fire),
+    ("it_802D1D40", lugia::enter_air),
+    ("it_802D208C", lugia::next_target),
+    ("it_802D23F4", lugia::blast_fly),
     ("it_80279C48", pokemon::face_nearest_opponent),
     ("it_80279E24", pokemon::pulse),
     ("it_80279FF8", pokemon::grow),
@@ -326,8 +363,9 @@ fn owners(addr: u32) -> Vec<i32> {
 }
 
 /// The ball's functions take a Poké Ball, it_279C.c's others any Pokémon or Pokémon's item,
-/// and a Pokémon's own functions an item of its kind ([`owners`]): a neighbour's call on
-/// another kind would read another member of its variables or another state table.
+/// and a Pokémon's own functions (but the forgetting ones, [`forgets`]) an item of its kind
+/// ([`owners`]): a neighbour's call on another kind would read another member of its variables
+/// or another state table.
 fn kind_check(g: &Running, gobj: GObjId, name: &str) {
     let kind = it::lib26b1::kind(g.game, gobj);
     let addr = leaf_check::sym(name);
@@ -337,7 +375,7 @@ fn kind_check(g: &Running, gobj: GObjId, name: &str) {
     );
     let ok = if ball {
         kind == it::kinds::M_BALL
-    } else if unit(addr).is_some_and(|u| u >= 2) {
+    } else if unit(addr).is_some_and(|u| u >= 2) && !forgets(name) {
         owners(addr).contains(&kind)
     } else {
         (it::kinds::PKIND_START..=it::kinds::POKEMON_UNK).contains(&kind)
@@ -345,6 +383,13 @@ fn kind_check(g: &Running, gobj: GObjId, name: &str) {
     if !ok {
         panic!("{SKIP}{name} doesn't take an item of kind {kind}");
     }
+}
+
+/// A forgetting callback: each only calls `it_8026B894`, so it takes any Pokémon or Pokémon's
+/// item (a few run from their own kind's states too rarely to be reached otherwise, as Lugia's
+/// Aeroblasts'). The blocked ones keep to their kind.
+fn forgets(name: &str) -> bool {
+    (name.contains("EvtUnk") || EVT_UNK.contains(&name)) && !BLOCKED.iter().any(|b| b.0 == name)
 }
 
 /// Runs the function `call.addr` on its GObj, with the arguments it was saved with for those
@@ -459,6 +504,10 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802CC1CC" => lizardon::flame(g, gobj, r(4) as i32),
         "it_802C9E24" => kabigon::evt_unk(g, gobj, maybe(4)),
         "it_802CF450" => entei::evt_unk(g, gobj, maybe(4)),
+        "itLugia_Logic17_EvtUnk" | "it_802D23D4" => lugia::evt_unk(g, gobj, maybe(4)),
+        "it_802D1E8C" => {
+            lugia::shoot(g, gobj, r(4) as i32, f(1));
+        }
         "it_802D61C8" => hinoarashi::touch_normal(g, gobj, r(4) as i32),
         "it_802D6310" => hinoarashi::turn_off_surface(g, gobj, r(4) as i32),
         "it_802D6674" => hinoarashi::flame_start(g, gobj, r(4) as i32),
