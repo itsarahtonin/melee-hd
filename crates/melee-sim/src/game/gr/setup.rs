@@ -425,6 +425,15 @@ fn each_coll_joint(
     any
 }
 
+/// Settles a map's collision joints' vertices where they stand, `Ground_801C32AC`
+/// (`mpLib_80057424` on each).
+#[doc(alias = "Ground_801C32AC")]
+pub fn settle_map_coll(game: &mut Game, data: &Archives, map_id: i32) {
+    each_coll_joint(game, data, map_id, |game, j| {
+        game.geometry_mut().settle_vertices(j)
+    });
+}
+
 /// Switches a map's collision joints back on if they were off, `Ground_801C3214`.
 #[doc(alias = "Ground_801C3214")]
 pub fn switch_on(game: &mut Game, data: &Archives, map_id: i32) -> bool {

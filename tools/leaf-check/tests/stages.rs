@@ -27,7 +27,7 @@ use leaf_check::calls::{Prepare, Ret, check_calls_with, gobj_arg, peek_u32, poke
 use melee_capture::import::Maps;
 use melee_sim::game::code::{run_demo_init, run_event, run_fighter_cb, run_proc};
 use melee_sim::game::ft::co::barrel_wait;
-use melee_sim::game::gr::{garden, kongo, oldkongo, oldyoshi, pura, shrine, yorster};
+use melee_sim::game::gr::{garden, kongo, oldkongo, oldyoshi, pura, rcruise, shrine, yorster};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use melee_sim::game::structs::HitCapsule;
@@ -2493,6 +2493,464 @@ fn pura_unreached_callbacks() {
     check_calls_with(&d, from, 1, &retarget(t), &event);
     let t = leaf_check::sym("grPura_80211CFC");
     check_calls_with(&d, from, 1, &retarget(t), &demo);
+}
+
+// Rainbow Cruise (`grrcruise.c`).
+
+const RC: &str = "oracle-stage-rainbow-cruise";
+
+/// The stage object the call's r3 points to: its `Ground` and joint.
+fn rc_object(
+    r: &Running,
+    maps: &Maps,
+    call: &Call,
+) -> (
+    melee_sim::game::handles::GroundId,
+    Option<melee_sim::hsd::jobj::JObjId>,
+) {
+    let go = gobj_arg(maps, call);
+    let g = melee_sim::game::gr::ground::ground_of(r.game, go);
+    (g, melee_sim::game::gr::ground::jobj_of(r.game, go))
+}
+
+/// A stage object's `Ground` from the address of its variables (`&gp->u`) in `a`.
+fn rc_ground(maps: &Maps, a: u32) -> melee_sim::game::handles::GroundId {
+    *maps
+        .grounds
+        .get(&(a - 0xC4))
+        .expect("a stage object's variables")
+}
+
+/// Sets the collision kind (`x34_flags.b1234`) of the collision data in r5.
+fn rc_kind(c: &mut Call, k: u32) {
+    let at = c.regs.gpr[5] + 0x34;
+    let w = peek_u32(c, at);
+    poke_u32(c, at, (w & !(0xF << 27)) | k << 27);
+}
+
+#[test]
+fn rcruise_setup() {
+    let d = dir(RC);
+    check_calls_with(&d, "grRCruise_801FF168", 1, &as_saved, &event);
+    check_calls_with(&d, "grRCruise_801FF29C", 1, &as_saved, &event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        rcruise::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    for map in 0..7u32 {
+        let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = map;
+        check_calls_with(&d, "grRCruise_801FF2C8", 1, &set, &create);
+    }
+    for f in [
+        "grRCruise_801FF3B4",
+        "grRCruise_801FF3F0",
+        "grRCruise_801FF444",
+        "grRCruise_801FF5B4",
+        "grRCruise_801FF73C",
+        "grRCruise_801FF7A4",
+        "grRCruise_801FF924",
+        "grRCruise_80200074",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    let of = |f: fn(&mut Running, melee_sim::hsd::gobj::GObjId)| {
+        move |r: &mut Running, maps: &Maps, call: &Call| {
+            f(r, gobj_arg(maps, call));
+            Ret::Nothing
+        }
+    };
+    check_calls_with(
+        &d,
+        "grRCruise_80200540",
+        1,
+        &as_saved,
+        &of(rcruise::reset_tilt),
+    );
+    check_calls_with(
+        &d,
+        "grRCruise_80200B48",
+        1,
+        &as_saved,
+        &of(rcruise::init_planks),
+    );
+    check_calls_with(
+        &d,
+        "grRCruise_80201410",
+        1,
+        &as_saved,
+        &of(rcruise::init_vanish),
+    );
+    let settle = |r: &mut Running, _: &Maps, call: &Call| {
+        let map = call.regs.gpr[3] as i32;
+        melee_sim::game::gr::setup::settle_map_coll(r.game, r.data, map);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "Ground_801C32AC", 1, &as_saved, &settle);
+    for map in [0u32, 4, 6] {
+        let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = map;
+        check_calls_with(&d, "Ground_801C32AC", 1, &set, &settle);
+    }
+    // The flag's chain from the archive's description, and its swing.
+    let chain = |r: &mut Running, maps: &Maps, call: &Call| {
+        let root = maps.jobjs.get(&call.regs.gpr[3]).copied();
+        let archive = melee_sim::game::gr::datfiles::main_archive(r.game).archive;
+        let offset = (r.data.get(archive))
+            .public("dynamicsdata_shipflag")
+            .expect("the flag's dynamics");
+        let src = melee_data::archive::DataRef { archive, offset };
+        rcruise::chain(r, root, src, rc_ground(maps, call.regs.gpr[5]));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grLib_801C9B20", 1, &as_saved, &chain);
+    let swing = |r: &mut Running, maps: &Maps, call: &Call| {
+        rcruise::swing(r, rc_ground(maps, call.regs.gpr[3]));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grLib_801C9B8C", 1, &as_saved, &swing);
+    check_calls_with(&d, "grRCruise_801FF8E4", 1, &as_saved, &by_address);
+}
+
+/// The ship's process with the match started and not, and its parts: the tilt, the planks,
+/// the parts that appear with the camera and the wind's steering, each also from states set
+/// to its branches.
+#[test]
+fn rcruise_ship() {
+    let d = dir(RC);
+    for p in [
+        &as_saved as &Prepare,
+        &|c: &mut Call, _: usize| poke_u32(c, vars(c) + 0x10, 0),
+        &|c: &mut Call, _: usize| poke_u32(c, vars(c) + 0x10, 1),
+    ] {
+        check_calls_with(&d, "grRCruise_801FF6D4", 1, p, &by_address);
+    }
+    let of = |f: fn(&mut Running, melee_sim::hsd::gobj::GObjId)| {
+        move |r: &mut Running, maps: &Maps, call: &Call| {
+            f(r, gobj_arg(maps, call));
+            Ret::Nothing
+        }
+    };
+    // The tilt: each state, with riders on either side and none, still swinging and level.
+    let tilt = of(rcruise::tilt);
+    check_calls_with(&d, "grRCruise_8020071C", 1, &as_saved, &tilt);
+    for state in [0u32, 1] {
+        for (riders, left, right, ease, rot) in [
+            (0u32, 0.0f32, 0.0f32, 0u32, 3.5f32),
+            (0, 0.0, 0.0, 0, 0.1),
+            (0, 0.0, 0.0, 0, 0.25),
+            (0, 0.0, 0.0, 0, -0.25),
+            (0, 0.0, 0.0, 0, -361.0),
+            (2, 40.0, 5.0, 0, 1.0),
+            (2, 5.0, 400.0, 0, -1.0),
+            (1, 3.0, 3.0, 4, 2.0),
+            (1, 3.0, 3.0, 4, 0.0),
+        ] {
+            let set = move |c: &mut Call, _: usize| {
+                let v = vars(c);
+                poke_u32(c, v + 0x2C, state);
+                poke_u32(c, v + 0x34, riders);
+                poke_u32(c, v + 0x24, left.to_bits());
+                poke_u32(c, v + 0x28, right.to_bits());
+                poke_u32(c, v + 0x38, ease);
+                poke_u32(c, v + 0x18, rot.to_bits());
+                poke_u32(c, v + 0x20, 0.005f32.to_bits());
+                poke_u32(c, v + 0x1C, (-1.0f32).to_bits());
+            };
+            check_calls_with(&d, "grRCruise_8020071C", 1, &set, &tilt);
+        }
+    }
+    // The planks: every plank in each state, at a count of 0, 1 and past every wait, touched
+    // and not.
+    let planks = of(rcruise::update_planks);
+    check_calls_with(&d, "grRCruise_80200C04", 1, &as_saved, &planks);
+    for state in 0..6u32 {
+        for (count, touched) in [(0u32, 0u32), (1, 1), (1, 0), (5000, 1)] {
+            let set = move |c: &mut Call, k: usize| {
+                let e = peek_u32(c, vars(c) + 0x6C);
+                for i in 0..17 {
+                    let at = e + 0x18 * i;
+                    let w = peek_u32(c, at) & 0x00FF_FFFF;
+                    let flag = if (i as usize + k).is_multiple_of(2) {
+                        0x80 << 16
+                    } else {
+                        0
+                    };
+                    poke_u32(c, at, (w & !(0x80 << 16)) | flag | state << 24);
+                    poke_u32(c, at + 4, count);
+                    poke_u32(c, at + 8, touched);
+                    poke_u32(c, at + 0x10, (-0.5f32 * i as f32).to_bits());
+                }
+            };
+            check_calls_with(&d, "grRCruise_80200C04", 1, &set, &planks);
+        }
+    }
+    // The parts that appear with the camera: every part in each state.
+    let vanish = of(rcruise::update_vanish);
+    check_calls_with(&d, "grRCruise_80201588", 1, &as_saved, &vanish);
+    for state in 0..4u32 {
+        let set = move |c: &mut Call, _: usize| {
+            let e = peek_u32(c, vars(c) + 0x70);
+            for i in 0..20 {
+                let w = peek_u32(c, e + 8 * i);
+                poke_u32(c, e + 8 * i, (w & 0xFFFF) | state << 16);
+            }
+        };
+        check_calls_with(&d, "grRCruise_80201588", 1, &set, &vanish);
+    }
+    // The wind's steering: on and past its turns and gusts, with gusts on and off, near its
+    // limits.
+    let steer = of(rcruise::steer_wind);
+    check_calls_with(&d, "grRCruise_80201110", 1, &as_saved, &steer);
+    for (age, gust, x) in [
+        (0u32, 0u32, 1.0f32),
+        (30, 1, 0.5),
+        (300, 1, 0.51),
+        (600, 0, 0.49),
+        (31, 0, -1.0),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            let v = vars(c);
+            let w = peek_u32(c, v + 4);
+            poke_u32(c, w + 0x30, age);
+            poke_u32(c, v + 0xC, gust);
+            poke_u32(c, w + 4, x.to_bits());
+            poke_u32(c, w + 0xC, (1.0f32 - x * x).max(0.0).sqrt().to_bits());
+        };
+        check_calls_with(&d, "grRCruise_80201110", 1, &set, &steer);
+    }
+    // The display objects' flags: a part's, and a tree's as the walk sets and clears them.
+    let show = |r: &mut Running, maps: &Maps, call: &Call| {
+        let j = maps.jobjs.get(&call.regs.gpr[3]).copied();
+        rcruise::show_dobjs(&mut r.game.objs, j, call.regs.gpr[4] != 0);
+        Ret::Nothing
+    };
+    for p in [&as_saved as &Prepare, &|c: &mut Call, _: usize| {
+        c.regs.gpr[4] ^= 1
+    }] {
+        check_calls_with(&d, "grRCruise_80201B60", 1, p, &show);
+    }
+    let tree = |r: &mut Running, maps: &Maps, call: &Call| {
+        let j = maps.jobjs.get(&call.regs.gpr[3]).copied();
+        let set = call.regs.gpr[4] == leaf_check::sym("HSD_DObjSetFlags");
+        rcruise::tree_dobj_flags(&mut r.game.objs, j, set, call.regs.gpr[5]);
+        Ret::Nothing
+    };
+    let other = |c: &mut Call, _: usize| {
+        let (s, cl) = (
+            leaf_check::sym("HSD_DObjSetFlags"),
+            leaf_check::sym("HSD_DObjClearFlags"),
+        );
+        c.regs.gpr[4] = if c.regs.gpr[4] == s { cl } else { s };
+    };
+    for p in [&as_saved as &Prepare, &other] {
+        check_calls_with(&d, "grRCruise_80201288", 1, p, &tree);
+    }
+}
+
+/// The blocks' process, every block in each state, and a block touched by each kind of
+/// collision in each state.
+#[test]
+fn rcruise_blocks() {
+    let d = dir(RC);
+    check_calls_with(&d, "grRCruise_80200154", 1, &as_saved, &by_address);
+    let set_blocks = |c: &mut Call, state: u32, count: u32, touched: u32, flag: bool| {
+        let v = vars(c);
+        for i in 0..3 {
+            let at = v + 0x3C + 0x10 * i;
+            let w = peek_u32(c, at) & 0xFFFF;
+            poke_u32(c, at, w | state << 24 | if flag { 0x80 << 16 } else { 0 });
+            poke_u32(c, at + 4, count);
+            poke_u32(c, at + 8, touched);
+        }
+    };
+    for state in 0..6u32 {
+        for (count, touched, flag) in [(0u32, 0u32, false), (1, 1, true), (5000, 0, false)] {
+            let set = move |c: &mut Call, _: usize| set_blocks(c, state, count, touched, flag);
+            check_calls_with(&d, "grRCruise_80200154", 1, &set, &by_address);
+        }
+    }
+    let touch = |r: &mut Running, maps: &Maps, call: &Call| {
+        let (g, root) = rc_object(r, maps, call);
+        let kind = peek_u32(call, call.regs.gpr[5] + 0x34) >> 27 & 0xF;
+        let joint = call.regs.gpr[4] as i32;
+        rcruise::block_touched(&mut r.game.objs, &mut r.game.grounds, root, g, joint, kind);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "fn_80200460", 1, &as_saved, &touch);
+    for state in 0..6u32 {
+        for kind in [1u32, 2] {
+            let set = move |c: &mut Call, _: usize| {
+                set_blocks(c, state, 3, 0, false);
+                rc_kind(c, kind);
+            };
+            check_calls_with(&d, "fn_80200460", 1, &set, &touch);
+        }
+    }
+}
+
+/// The deck's and the planks' touches: as saved, by each kind of collision, a heavy rider, and
+/// the planks in each state.
+#[test]
+fn rcruise_touches() {
+    let d = dir(RC);
+    let deck = |r: &mut Running, maps: &Maps, call: &Call| {
+        let (g, root) = rc_object(r, maps, call);
+        let cd = coll_arg(r, maps, call);
+        let x50 = call.regs.gpr[6] as i32;
+        let (objs, grounds) = (&mut r.game.objs, &mut r.game.grounds);
+        rcruise::deck_touched(objs, r.data, grounds, root, g, &cd, x50);
+        Ret::Nothing
+    };
+    let prepares: [&Prepare; 4] = [
+        &as_saved,
+        &|c, k| rc_kind(c, (k % 5) as u32),
+        &|c, _| c.regs.gpr[6] = 2500,
+        &|c, _| c.regs.gpr[6] = 0,
+    ];
+    for p in prepares {
+        check_calls_with(&d, "grRCruise_80200578", 1, p, &deck);
+    }
+    // The rider just past and within the pivot's reach (part 8's matrix), on either side.
+    for dx in [4.5f32, -4.5, 3.5, -3.5] {
+        let near = move |c: &mut Call, _: usize| {
+            let pivot = nth_jobj(c, c.regs.gpr[3], 8);
+            let (x, y) = (
+                f32_at(c, pivot + 0x44 + 0xC),
+                f32_at(c, pivot + 0x44 + 0x1C),
+            );
+            let cd = c.regs.gpr[5];
+            poke_u32(c, cd + 4, (x + dx).to_bits());
+            poke_u32(c, cd + 8, y.to_bits());
+            rc_kind(c, 1);
+        };
+        check_calls_with(&d, "grRCruise_80200578", 1, &near, &deck);
+    }
+    let plank = |r: &mut Running, maps: &Maps, call: &Call| {
+        let (g, _) = rc_object(r, maps, call);
+        let kind = peek_u32(call, call.regs.gpr[5] + 0x34) >> 27 & 0xF;
+        rcruise::plank_touched(&mut r.game.grounds, g, call.regs.gpr[4] as i32, kind);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grRCruise_802010A4", 1, &as_saved, &plank);
+    for state in [0u32, 1, 3] {
+        for kind in [1u32, 3] {
+            let set = move |c: &mut Call, _: usize| {
+                let e = peek_u32(c, vars(c) + 0x6C);
+                for i in 0..17 {
+                    let w = peek_u32(c, e + 0x18 * i) & 0x00FF_FFFF;
+                    poke_u32(c, e + 0x18 * i, w | state << 24);
+                }
+                rc_kind(c, kind);
+            };
+            check_calls_with(&d, "grRCruise_802010A4", 1, &set, &plank);
+        }
+    }
+}
+
+/// The course's process, as saved and frozen and not, and its render callback.
+#[test]
+fn rcruise_course() {
+    let d = dir(RC);
+    for p in [
+        &as_saved as &Prepare,
+        &|c: &mut Call, _: usize| poke_u8(c, vars(c), 0x80),
+        &|c: &mut Call, _: usize| poke_u8(c, vars(c), 0),
+    ] {
+        check_calls_with(&d, "grRCruise_801FFADC", 1, p, &by_address);
+    }
+    let render = |r: &mut Running, maps: &Maps, call: &Call| {
+        rcruise::render_course(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    let setup = leaf_check::calls::Setup {
+        gx: true,
+        ..Default::default()
+    };
+    for p in [&as_saved as &Prepare, &|c: &mut Call, _: usize| {
+        c.regs.gpr[4] ^= 3
+    }] {
+        leaf_check::calls::check_calls_in(&d, "fn_80201BE0", 1, p, &setup, &render);
+    }
+}
+
+/// The callbacks no capture reaches, from the course's captures: the empty processes and
+/// destroy callbacks, the shadow check, the load and demo hooks, the course's wind (written
+/// over the course's offset) and the planks' line test.
+#[test]
+fn rcruise_unreached_callbacks() {
+    let d = dir(RC);
+    let from = "grRCruise_801FFADC";
+    for name in [
+        "grRCruise_801FF3E8",
+        "grRCruise_801FF3EC",
+        "grRCruise_801FF43C",
+        "grRCruise_801FF440",
+        "grRCruise_801FF738",
+        "grRCruise_801FF79C",
+        "grRCruise_801FF7A0",
+        "grRCruise_801FF920",
+        "grRCruise_80200070",
+        "grRCruise_8020045C",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let shadow =
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(rcruise::check_shadow_render()));
+    let t = leaf_check::sym("grRCruise_80201C58");
+    check_calls_with(&d, from, 1, &retarget(t), &shadow);
+    let t = leaf_check::sym("grRCruise_801FF298");
+    check_calls_with(&d, from, 1, &retarget(t), &event);
+    let t = leaf_check::sym("grRCruise_801FF164");
+    check_calls_with(&d, from, 1, &retarget(t), &demo);
+    // The wind, into the course's own offset (`x10`) of the object in r3.
+    let t = leaf_check::sym("grRCruise_80201918");
+    let into = move |c: &mut Call, _: usize| {
+        let to = vars(c) + 0x10;
+        c.addr = t;
+        c.regs.gpr[3] = to;
+    };
+    let wind = |r: &mut Running, maps: &Maps, call: &Call| {
+        let w = rcruise::wind(r.game);
+        let g = rc_ground(maps, call.regs.gpr[3] - 0x10);
+        r.game.grounds[g.0].u.scroll().x10 = w;
+        Ret::Nothing
+    };
+    check_calls_with(&d, from, 1, &into, &wind);
+    // The planks' line test on lines across the stage.
+    let t = leaf_check::sym("grRCruise_80201988");
+    let line = |r: &mut Running, _: &Maps, call: &Call| {
+        Ret::Int(u32::from(rcruise::plank_line(
+            r.game,
+            call.regs.gpr[3] as i32,
+        )))
+    };
+    for l in [u32::MAX, 0, 5, 40, 80, 120] {
+        let set = move |c: &mut Call, _: usize| {
+            c.addr = t;
+            c.regs.gpr[3] = l;
+        };
+        check_calls_with(&d, from, 1, &set, &line);
+    }
+    // A line of each joint about the planks' (the first line of its first lines it has, from
+    // the collision data's joint descriptions).
+    for joint in [26u32, 27, 28, 35, 43, 44] {
+        let set = move |c: &mut Call, _: usize| {
+            let coll = peek_u32(c, STAGE_INFO + 0x6AC);
+            let desc = peek_u32(c, coll + 0x24) + 0x28 * joint;
+            c.addr = t;
+            for k in 0..5 {
+                let w = peek_u32(c, desc + 4 * k);
+                if w & 0xFFFF != 0 {
+                    c.regs.gpr[3] = w >> 16;
+                    return;
+                }
+            }
+        };
+        check_calls_with(&d, from, 1, &set, &line);
+    }
 }
 
 /// A symbol's address among those of its name, the one between `lo` and `hi` (each stage has

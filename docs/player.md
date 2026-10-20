@@ -279,6 +279,7 @@ The rule is kept by melee-sim's `roster` tests: `audited_stages_reach_nothing_un
 | Onett | yes, not with the Ice Climbers | with the Ice Climbers: Nana's island check (`ftCo_800A2718`), as on Brinstar | the stage item on neither a joint nor a point, as on Jungle Japes |
 | Poké Floats | yes | | |
 | Pokémon Stadium | yes | | the screen's count (`grStadium_801D384C`): single-player modes only |
+| Rainbow Cruise | yes, not with the Ice Climbers | with the Ice Climbers: Nana's computer player reading the stage's wind (`grLib_801C9E60`), her own copy of which stops on the moving stages | |
 | Yoshi's Island | yes | | the stage item on neither a joint nor a point, as on Jungle Japes |
 | Yoshi's Island N64 | yes | | |
 | Yoshi's Story | yes | | the Shy Guys' food (`it_8028FAF4`, `it_8028F8E4`, `it_8028F9D8`, `it_8028F9B8`): only with food on in the item switch; their `evt_unk` (`it_802D9A0C`), as Tingle's |

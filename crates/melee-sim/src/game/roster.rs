@@ -434,6 +434,17 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 11,
+        name: "Rainbow Cruise",
+        keys: &["rc", "rainbow-cruise"],
+        audit: Some(Audit {
+            units: &["melee/gr/grrcruise"],
+            modules: &["gr/rcruise"],
+            unreached: &[],
+            missing: &[NANA_WIND],
+        }),
+    },
+    Stage {
         kind: 16,
         name: "Yoshi's Island",
         keys: &["yi", "yoshis-island"],
@@ -491,6 +502,14 @@ const YAKU_UNANCHORED: (&str, &str) = (
 const NANA_ROUTES: Gap = Gap {
     what: "Nana's computer player following the stage's routes (ftCo_800A1CC4)",
     covers: &["ftCo_800A1CC4"],
+    with: Some(ICE_CLIMBERS),
+};
+
+/// Nana's computer player reads the moving stages' wind (Rainbow Cruise, Big Blue, Icicle
+/// Mountain), which her port doesn't yet.
+const NANA_WIND: Gap = Gap {
+    what: "Nana's computer player reading the stage's wind (grLib_801C9E60)",
+    covers: &["grLib_801C9E60 on a moving stage"],
     with: Some(ICE_CLIMBERS),
 };
 
@@ -600,7 +619,6 @@ mod tests {
             "Ground_801C2C8C",
             "stage objects with a camera of their own: Corneria and Venom",
         ),
-        ("grRCruise_80201918", "Rainbow Cruise's wind"),
         ("grBigBlue_801EF7D8", "Big Blue's wind"),
         ("grIceMt_801FA728", "Icicle Mountain's wind"),
         (

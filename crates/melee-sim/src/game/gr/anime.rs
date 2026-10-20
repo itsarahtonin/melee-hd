@@ -203,6 +203,24 @@ pub fn set_rate(game: &mut Game, gobj: GObjId, part: i32, parts: u32, rate: f32,
     }
 }
 
+/// [`set_rate`] on the part found below `root` (the object's joint), for callers that hold the
+/// objects alone (a collision joint's callback).
+pub fn set_rate_below(
+    objs: &mut Objects,
+    root: Option<JObjId>,
+    part: i32,
+    parts: u32,
+    rate: f32,
+    recurse: bool,
+) {
+    let Some(j) = root.and_then(|r| super::ground::nth_joint_below(&objs.jobjs, r, part)) else {
+        return;
+    };
+    each_joint_anim(objs, j, part_mask(parts), recurse, &mut |a, x| {
+        aobj::set_rate(a, Some(x), rate)
+    });
+}
+
 /// The `HSD_JObjReqAnim*ByFlags` flags for granime's part bits.
 fn req_flags(parts: u32) -> u32 {
     let mut f = 0;

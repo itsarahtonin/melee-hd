@@ -73,6 +73,10 @@ pub enum VarsKind {
     Pura,
     PuraFloat,
     PuraStage,
+    RCruise,
+    RCruiseBlocks,
+    RCruiseFlag,
+    Scroll,
 }
 
 /// `union GroundVars`.
@@ -140,6 +144,14 @@ pub enum GroundVars {
     PuraFloat(PuraFloatVars),
     /// `grPura_GroundVars3`: the stage (map 4), its floats' joints and camera subjects.
     PuraStage(PuraStageVars),
+    /// `grRCruise_GroundVars` with `Map_GroundVars`' two blocks: Rainbow Cruise's ship (map 1).
+    RCruise(RCruiseVars),
+    /// `grRCruise_GroundVars::x3C`: the three blocks that fall when stood on (map 4).
+    RCruiseBlocks(RCruiseBlocksVars),
+    /// `grRCruise_GroundVars2::xC4`: the ship's flag's dynamics chain (map 6).
+    RCruiseFlag(RCruiseFlagVars),
+    /// `ScrollVars`: Rainbow Cruise's course, which moves the stage under the camera (map 3).
+    Scroll(ScrollVars),
     /// `grKraid_GroundVars`: Brinstar Depths' rock (map 3) and Kraid's copy (map 1).
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
@@ -922,6 +934,120 @@ pub struct PuraFloatVars {
 pub struct PuraStageVars {
     pub xC4: [Option<crate::hsd::jobj::JObjId>; 25],
     pub x128: [Option<crate::game::handles::CameraBoxId>; 25],
+}
+
+/// One of Rainbow Cruise's planks (`grRCruise_Entry`, in the ship's `Map_Chikuwa` block): its
+/// state (`x0`), the flag in its second byte (`x1`, bit 0x80), its collision joint (`x2`), a
+/// tick count (`x4`), the touches this tick (`x8`), its height at rest (`xC`), its fall's speed
+/// (`x10`) and its joint (`x14`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct RCruisePlank {
+    pub x0: u8,
+    pub x1: u8,
+    pub x2: i16,
+    pub x4: i32,
+    pub x8: i32,
+    pub xC: f32,
+    pub x10: f32,
+    pub x14: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// A part that appears and vanishes with the camera (`Map_VanishEntry`, in the ship's block):
+/// its state (`x0`), a halfword nothing writes (`x2`) and its joint.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct VanishEntry {
+    pub x0: i16,
+    pub x2: i16,
+    pub jobj: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// `grRCruise_GroundVars` for the ship: its first byte's flags, the wind source it steers
+/// (`x4`, by index), the steering's step (`x8`) and gust (`xC`), whether the match has yet to
+/// start (`x10`), the ship's tilt (`x14` to `x38`), and the blocks the ship's setup allocates
+/// from the heap, with their addresses: the planks (`entries`, `Map_GroundVars::chikuwa`) and
+/// the parts that appear with the camera (`vanish`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct RCruiseVars {
+    pub xC4: u8,
+    pub x4: Option<u8>,
+    pub x8: f32,
+    pub xC: i32,
+    pub x10: i32,
+    pub x14: f32,
+    pub x18: f32,
+    pub x1C: f32,
+    pub x20: f32,
+    pub x24: f32,
+    pub x28: f32,
+    pub x2C: i32,
+    pub x30: i32,
+    pub x34: i32,
+    pub x38: i32,
+    pub entries: Vec<RCruisePlank>,
+    pub entries_addr: u32,
+    pub vanish: Vec<VanishEntry>,
+    pub vanish_addr: u32,
+}
+
+/// A falling block (`grRCruise_SubEntry`): its state (`x0`), its blink flag (`x1`, bit 0x80),
+/// its collision joint (`x2`), a tick count (`x4`), the touches this tick (`x8`) and its joint.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct RCruiseBlock {
+    pub x0: u8,
+    pub x1: u8,
+    pub x2: i16,
+    pub x4: i32,
+    pub x8: i32,
+    pub xC: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// The blocks' object's `grRCruise_GroundVars::x3C`.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct RCruiseBlocksVars {
+    pub x3C: [RCruiseBlock; 3],
+}
+
+/// `grRCruise_GroundVars2::xC4`, the flag's chain.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct RCruiseFlagVars {
+    pub xC4: crate::game::structs::DynamicsDesc,
+}
+
+/// `ScrollVars`: whether the course is frozen (`x0`, bit 0x80 of the first byte), the
+/// center joint's place (`x4`), the course's offset (`x10`) and its last step (`x1C`), the
+/// hidden copy whose animation leads (`anim_gobj`), its joints and four more.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ScrollVars {
+    pub xC4: u8,
+    pub x4: crate::vec::Vec3,
+    pub x10: crate::vec::Vec3,
+    pub x1C: crate::vec::Vec3,
+    pub anim_gobj: Option<GObjId>,
+    pub int_jobj: Option<crate::hsd::jobj::JObjId>,
+    pub cam_jobj: Option<crate::hsd::jobj::JObjId>,
+    pub ctr_jobj: Option<crate::hsd::jobj::JObjId>,
+    pub x38: [Option<crate::hsd::jobj::JObjId>; 3],
+    pub x44: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// Where the wind sources' pool's address is kept (`lb_804D63A8`), and a source's size.
+pub const WIND_POOL: u32 = 0x804D_63A8;
+pub const WIND_SIZE: u32 = 0x38;
+
+/// A Rainbow Cruise plank read from memory at `b`.
+fn rcruise_plank(m: &Mem, b: u32, cx: &mut dyn Cx) -> RCruisePlank {
+    RCruisePlank {
+        x0: m.u8(b),
+        x1: m.u8(b + 1),
+        x2: m.u16(b + 2) as i16,
+        x4: m.u32(b + 4) as i32,
+        x8: m.u32(b + 8) as i32,
+        xC: f32::from_bits(m.u32(b + 0xC)),
+        x10: f32::from_bits(m.u32(b + 0x10)),
+        x14: cx
+            .import_handle("JObjId", m.u32(b + 0x14))
+            .map(crate::hsd::jobj::JObjId),
+    }
 }
 
 /// `GroundVars_izumi`: the water's texture (`xC4`), the reflection camera (`xC8`), the
@@ -1814,6 +1940,98 @@ impl GroundVars {
                         .map(crate::game::handles::CameraBoxId)
                 }),
             }),
+            VarsKind::RCruise => {
+                let pool = m.u32(WIND_POOL);
+                let w = m.u32(at + 4);
+                let (entries_addr, vanish_addr) = (m.u32(at + 0x6C), m.u32(at + 0x70));
+                let entries = if entries_addr == 0 {
+                    Vec::new()
+                } else {
+                    (0..17u32)
+                        .map(|i| rcruise_plank(m, entries_addr + 0x18 * i, cx))
+                        .collect()
+                };
+                let vanish = if vanish_addr == 0 {
+                    Vec::new()
+                } else {
+                    (0..20u32)
+                        .map(|i| {
+                            let b = vanish_addr + 8 * i;
+                            VanishEntry {
+                                x0: m.u16(b) as i16,
+                                x2: m.u16(b + 2) as i16,
+                                jobj: cx
+                                    .import_handle("JObjId", m.u32(b + 4))
+                                    .map(crate::hsd::jobj::JObjId),
+                            }
+                        })
+                        .collect()
+                };
+                GroundVars::RCruise(RCruiseVars {
+                    xC4: m.u8(at),
+                    x4: (w != 0).then(|| (w.wrapping_sub(pool) / WIND_SIZE) as u8),
+                    x8: f(at + 8),
+                    xC: m.u32(at + 0xC) as i32,
+                    x10: m.u32(at + 0x10) as i32,
+                    x14: f(at + 0x14),
+                    x18: f(at + 0x18),
+                    x1C: f(at + 0x1C),
+                    x20: f(at + 0x20),
+                    x24: f(at + 0x24),
+                    x28: f(at + 0x28),
+                    x2C: m.u32(at + 0x2C) as i32,
+                    x30: m.u32(at + 0x30) as i32,
+                    x34: m.u32(at + 0x34) as i32,
+                    x38: m.u32(at + 0x38) as i32,
+                    entries,
+                    entries_addr,
+                    vanish,
+                    vanish_addr,
+                })
+            }
+            VarsKind::RCruiseBlocks => GroundVars::RCruiseBlocks(RCruiseBlocksVars {
+                x3C: std::array::from_fn(|i| {
+                    let b = at + 0x3C + 0x10 * i as u32;
+                    RCruiseBlock {
+                        x0: m.u8(b),
+                        x1: m.u8(b + 1),
+                        x2: m.u16(b + 2) as i16,
+                        x4: m.u32(b + 4) as i32,
+                        x8: m.u32(b + 8) as i32,
+                        xC: cx
+                            .import_handle("JObjId", m.u32(b + 0xC))
+                            .map(crate::hsd::jobj::JObjId),
+                    }
+                }),
+            }),
+            VarsKind::RCruiseFlag => GroundVars::RCruiseFlag(RCruiseFlagVars {
+                xC4: crate::game::structs::DynamicsDesc {
+                    data: cx
+                        .import_handle("DynamicsId", m.u32(at))
+                        .map(crate::game::handles::DynamicsId),
+                    count: m.u32(at + 4),
+                    pos: crate::vec::Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10)),
+                },
+            }),
+            VarsKind::Scroll => {
+                let v3 = |a: u32| crate::vec::Vec3::new(f(a), f(a + 4), f(a + 8));
+                let j = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                GroundVars::Scroll(ScrollVars {
+                    xC4: m.u8(at),
+                    x4: v3(at + 4),
+                    x10: v3(at + 0x10),
+                    x1C: v3(at + 0x1C),
+                    anim_gobj: gobj(cx, at + 0x28),
+                    int_jobj: j(cx, at + 0x2C),
+                    cam_jobj: j(cx, at + 0x30),
+                    ctr_jobj: j(cx, at + 0x34),
+                    x38: [j(cx, at + 0x38), j(cx, at + 0x3C), j(cx, at + 0x40)],
+                    x44: j(cx, at + 0x44),
+                })
+            }
             VarsKind::Yorster => GroundVars::Yorster(YorsterVars {
                 xC4: m.u32(at) as i32,
                 blocks: std::array::from_fn(|i| {
@@ -2835,6 +3053,102 @@ impl GroundVars {
         }
     }
 
+    /// The variables as Rainbow Cruise's ship's, likewise: a block holding pointers converts
+    /// only if they are null.
+    pub fn rcruise(&mut self) -> &mut RCruiseVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            for at in [4, 0x6C, 0x70] {
+                b.null(at);
+            }
+            let i = |at: usize| b.u32(at) as i32;
+            *self = GroundVars::RCruise(RCruiseVars {
+                xC4: b.0[0],
+                x4: None,
+                x8: b.f32(8),
+                xC: i(0xC),
+                x10: i(0x10),
+                x14: b.f32(0x14),
+                x18: b.f32(0x18),
+                x1C: b.f32(0x1C),
+                x20: b.f32(0x20),
+                x24: b.f32(0x24),
+                x28: b.f32(0x28),
+                x2C: i(0x2C),
+                x30: i(0x30),
+                x34: i(0x34),
+                x38: i(0x38),
+                ..Default::default()
+            });
+        }
+        match self {
+            GroundVars::RCruise(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grRCruise_GroundVars"),
+        }
+    }
+
+    /// The variables as Rainbow Cruise's blocks', likewise.
+    pub fn rcruise_blocks(&mut self) -> &mut RCruiseBlocksVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let mut v = RCruiseBlocksVars::default();
+            for (k, e) in v.x3C.iter_mut().enumerate() {
+                let at = 0x3C + 0x10 * k;
+                e.x0 = b.0[at];
+                e.x1 = b.0[at + 1];
+                e.x2 = u16::from_be_bytes([b.0[at + 2], b.0[at + 3]]) as i16;
+                e.x4 = b.u32(at + 4) as i32;
+                e.x8 = b.u32(at + 8) as i32;
+                e.xC = b.null_of(at + 0xC);
+            }
+            *self = GroundVars::RCruiseBlocks(v);
+        }
+        match self {
+            GroundVars::RCruiseBlocks(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grRCruise's blocks'"),
+        }
+    }
+
+    /// The variables as the flag's (`grRCruise_GroundVars2`), likewise.
+    pub fn rcruise_flag(&mut self) -> &mut RCruiseFlagVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::RCruiseFlag(RCruiseFlagVars {
+                xC4: crate::game::structs::DynamicsDesc {
+                    data: b.null_of(0),
+                    count: b.u32(4),
+                    pos: crate::vec::Vec3::new(b.f32(8), b.f32(0xC), b.f32(0x10)),
+                },
+            });
+        }
+        match self {
+            GroundVars::RCruiseFlag(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grRCruise_GroundVars2"),
+        }
+    }
+
+    /// The variables as `ScrollVars`, likewise.
+    pub fn scroll(&mut self) -> &mut ScrollVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            for at in (0x28..=0x44).step_by(4) {
+                b.null(at);
+            }
+            let v3 = |a: usize| crate::vec::Vec3::new(b.f32(a), b.f32(a + 4), b.f32(a + 8));
+            *self = GroundVars::Scroll(ScrollVars {
+                xC4: b.0[0],
+                x4: v3(4),
+                x10: v3(0x10),
+                x1C: v3(0x1C),
+                ..Default::default()
+            });
+        }
+        match self {
+            GroundVars::Scroll(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not ScrollVars"),
+        }
+    }
+
     /// The variables as `grNBa_BG_Vars`, likewise.
     pub fn battle_bg(&mut self) -> &mut BattleBgVars {
         if let GroundVars::Bytes(b) = self {
@@ -3438,6 +3752,191 @@ impl Mirror for GroundVars {
                         "CameraBoxId",
                         v.x128[i].map(|b| b.0),
                         m.u32(at + 0x64 + 4 * i as u32),
+                    );
+                }
+            }
+            GroundVars::RCruise(v) => {
+                let ints = |a: u32| m.u32(at + a) as i32;
+                let ours = (
+                    v.xC4,
+                    [v.x8, v.x14, v.x18, v.x1C, v.x20, v.x24, v.x28].map(f32::to_bits),
+                    [v.xC, v.x10, v.x2C, v.x30, v.x34, v.x38],
+                );
+                let theirs = (
+                    m.u8(at),
+                    [8, 0x14, 0x18, 0x1C, 0x20, 0x24, 0x28].map(|a| m.u32(at + a)),
+                    [0xC, 0x10, 0x2C, 0x30, 0x34, 0x38].map(ints),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.rcruise"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                let pool = m.u32(WIND_POOL);
+                let w = v.x4.map_or(0, |i| pool + WIND_SIZE * u32::from(i));
+                if w != m.u32(at + 4) {
+                    cx.mismatch(
+                        &format!("{path}.rcruise.x4"),
+                        format!("{w:#x}"),
+                        format!("{:#x}", m.u32(at + 4)),
+                    );
+                }
+                // A block's address is 0 where no allocator model runs (a leaf check): its
+                // contents compare at the original's.
+                let (te, tv) = (m.u32(at + 0x6C), m.u32(at + 0x70));
+                for (path_end, ours, theirs) in [
+                    ("entries", v.entries_addr, te),
+                    ("vanish", v.vanish_addr, tv),
+                ] {
+                    if ours != 0 && ours != theirs {
+                        cx.mismatch(
+                            &format!("{path}.rcruise.{path_end}"),
+                            format!("{ours:#x}"),
+                            format!("{theirs:#x}"),
+                        );
+                        return;
+                    }
+                }
+                if v.entries.is_empty() != (te == 0) || v.vanish.is_empty() != (tv == 0) {
+                    cx.mismatch(
+                        &format!("{path}.rcruise blocks"),
+                        format!("{} {}", v.entries.len(), v.vanish.len()),
+                        format!("{te:#x} {tv:#x}"),
+                    );
+                    return;
+                }
+                for (i, e) in v.entries.iter().enumerate() {
+                    let b = te + 0x18 * i as u32;
+                    let ours = (
+                        e.x0,
+                        e.x1,
+                        e.x2,
+                        e.x4,
+                        e.x8,
+                        e.xC.to_bits(),
+                        e.x10.to_bits(),
+                    );
+                    let theirs = (
+                        m.u8(b),
+                        m.u8(b + 1),
+                        m.u16(b + 2) as i16,
+                        m.u32(b + 4) as i32,
+                        m.u32(b + 8) as i32,
+                        m.u32(b + 0xC),
+                        m.u32(b + 0x10),
+                    );
+                    if ours != theirs {
+                        cx.mismatch(
+                            &format!("{path}.rcruise.entries[{i}]"),
+                            format!("{ours:x?}"),
+                            format!("{theirs:x?}"),
+                        );
+                    }
+                    cx.compare_handle(
+                        &format!("{path}.rcruise.entries[{i}].x14"),
+                        "JObjId",
+                        e.x14.map(|j| j.0),
+                        m.u32(b + 0x14),
+                    );
+                }
+                for (i, e) in v.vanish.iter().enumerate() {
+                    let b = tv + 8 * i as u32;
+                    let ours = (e.x0, e.x2);
+                    let theirs = (m.u16(b) as i16, m.u16(b + 2) as i16);
+                    if ours != theirs {
+                        cx.mismatch(
+                            &format!("{path}.rcruise.vanish[{i}]"),
+                            format!("{ours:?}"),
+                            format!("{theirs:?}"),
+                        );
+                    }
+                    cx.compare_handle(
+                        &format!("{path}.rcruise.vanish[{i}].jobj"),
+                        "JObjId",
+                        e.jobj.map(|j| j.0),
+                        m.u32(b + 4),
+                    );
+                }
+            }
+            GroundVars::RCruiseBlocks(v) => {
+                for (i, e) in v.x3C.iter().enumerate() {
+                    let b = at + 0x3C + 0x10 * i as u32;
+                    let ours = (e.x0, e.x1, e.x2, e.x4, e.x8);
+                    let theirs = (
+                        m.u8(b),
+                        m.u8(b + 1),
+                        m.u16(b + 2) as i16,
+                        m.u32(b + 4) as i32,
+                        m.u32(b + 8) as i32,
+                    );
+                    if ours != theirs {
+                        cx.mismatch(
+                            &format!("{path}.rcruise.x3C[{i}]"),
+                            format!("{ours:x?}"),
+                            format!("{theirs:x?}"),
+                        );
+                    }
+                    cx.compare_handle(
+                        &format!("{path}.rcruise.x3C[{i}].xC"),
+                        "JObjId",
+                        e.xC.map(|j| j.0),
+                        m.u32(b + 0xC),
+                    );
+                }
+            }
+            GroundVars::RCruiseFlag(v) => {
+                let d = &v.xC4;
+                let ours = (d.count, [d.pos.x, d.pos.y, d.pos.z].map(f32::to_bits));
+                let theirs = (m.u32(at + 4), [8, 0xC, 0x10].map(|a| m.u32(at + a)));
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.rcruise2.xC4"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.rcruise2.xC4.data"),
+                    "DynamicsId",
+                    d.data.map(|x| x.0),
+                    m.u32(at),
+                );
+            }
+            GroundVars::Scroll(v) => {
+                let v3 = |x: &crate::vec::Vec3| [x.x, x.y, x.z].map(f32::to_bits);
+                let ours = (v.xC4, v3(&v.x4), v3(&v.x10), v3(&v.x1C));
+                let t3 = |a: u32| [m.u32(at + a), m.u32(at + a + 4), m.u32(at + a + 8)];
+                let theirs = (m.u8(at), t3(4), t3(0x10), t3(0x1C));
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.scroll"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.scroll.anim_gobj"),
+                    "GObjId",
+                    v.anim_gobj.map(|g| g.0),
+                    m.u32(at + 0x28),
+                );
+                let joints = [
+                    ("int_jobj", v.int_jobj, 0x2C),
+                    ("cam_jobj", v.cam_jobj, 0x30),
+                    ("ctr_jobj", v.ctr_jobj, 0x34),
+                    ("x38[0]", v.x38[0], 0x38),
+                    ("x38[1]", v.x38[1], 0x3C),
+                    ("x38[2]", v.x38[2], 0x40),
+                    ("x44", v.x44, 0x44),
+                ];
+                for (name, j, off) in joints {
+                    cx.compare_handle(
+                        &format!("{path}.scroll.{name}"),
+                        "JObjId",
+                        j.map(|j| j.0),
+                        m.u32(at + off),
                     );
                 }
             }

@@ -174,8 +174,12 @@ pub fn set_fog_rgb(game: &mut Game, r: u8, g: u8, b: u8) {
 /// instances' children, `Ground_801C3FA4`. Depth 0 is the root's first child.
 #[doc(alias = "Ground_801C3FA4")]
 pub fn nth_joint(game: &Game, gobj: GObjId, depth: i32) -> Option<JObjId> {
-    let jobjs = &game.objs.jobjs;
-    let root = jobj_of(game, gobj)?;
+    nth_joint_below(&game.objs.jobjs, jobj_of(game, gobj)?, depth)
+}
+
+/// [`nth_joint`] from the object's root joint, for callers that hold the joints alone (a
+/// collision joint's callback).
+pub fn nth_joint_below(jobjs: &jobj::JObjs, root: JObjId, depth: i32) -> Option<JObjId> {
     let mut j = jobjs[root].child?;
     let mut depth = depth;
     while depth != 0 {

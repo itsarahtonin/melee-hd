@@ -6,8 +6,8 @@ use super::datfiles::GrJoint;
 use super::{
     GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS,
     GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_SHRINE, GR_KIND_STORY,
-    GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE,
+    GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -805,6 +805,67 @@ pub const PURA: StageData = StageData {
     joints: &[],
 };
 
+/// `grRc_StageCallbacks`. Map 1 is the ship, map 4 its falling blocks, map 6 its flag, map 3
+/// the course (twice: a hidden copy leads the one shown), maps 0, 2 and 5 the scenery.
+pub const RCRUISE_CALLBACKS: [StageCallbacks; 7] = [
+    cb(0x801F_F3B4, 0x801F_F3E0, 0x801F_F3E8, 0x801F_F3EC, 0),
+    cb(
+        0x801F_F5B4,
+        0x801F_F6CC,
+        0x801F_F6D4,
+        0x801F_F738,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x801F_F3F0, 0x801F_F434, 0x801F_F43C, 0x801F_F440, 0),
+    cb(0x801F_F924, 0x801F_FAD4, 0x801F_FADC, 0x8020_0070, 0),
+    cb(0x8020_0074, 0x8020_014C, 0x8020_0154, 0x8020_045C, 0),
+    cb(0x801F_F73C, 0x801F_F794, 0x801F_F79C, 0x801F_F7A0, 0),
+    cb(0x801F_F7A4, 0x801F_F8DC, 0x801F_F8E4, 0x801F_F920, 0),
+];
+
+/// `grRc_803E4DA8`: the ship's collision joints the stage binds to its parts itself.
+pub const RCRUISE_JOINTS: [GrJoint; 23] = [
+    GrJoint { x: 0, y: 1, z: 1 },
+    GrJoint { x: 1, y: 1, z: 1 },
+    GrJoint { x: 2, y: 1, z: 1 },
+    GrJoint { x: 3, y: 1, z: 1 },
+    GrJoint { x: 4, y: 1, z: 1 },
+    GrJoint { x: 11, y: 1, z: 7 },
+    GrJoint { x: 10, y: 1, z: 17 },
+    GrJoint { x: 6, y: 1, z: 7 },
+    GrJoint { x: 7, y: 1, z: 7 },
+    GrJoint { x: 8, y: 1, z: 7 },
+    GrJoint { x: 9, y: 1, z: 7 },
+    GrJoint { x: 12, y: 1, z: 19 },
+    GrJoint { x: 13, y: 1, z: 18 },
+    GrJoint { x: 14, y: 1, z: 18 },
+    GrJoint { x: 15, y: 1, z: 18 },
+    GrJoint { x: 16, y: 1, z: 18 },
+    GrJoint { x: 17, y: 1, z: 18 },
+    GrJoint { x: 18, y: 1, z: 18 },
+    GrJoint { x: 19, y: 1, z: 18 },
+    GrJoint { x: 20, y: 1, z: 18 },
+    GrJoint { x: 21, y: 1, z: 18 },
+    GrJoint { x: 22, y: 1, z: 18 },
+    GrJoint { x: 23, y: 1, z: 18 },
+];
+
+/// `grRc_StageData`.
+pub const RCRUISE: StageData = StageData {
+    grkind: GR_KIND_RCRUISE,
+    callbacks: &RCRUISE_CALLBACKS,
+    file: Some("/GrRc.dat"),
+    on_init: 0x801F_F168,
+    on_demo_init: 0x801F_F164,
+    on_load: 0x801F_F298,
+    on_start: 0x801F_F29C,
+    callback4: 0x801F_F2C0,
+    on_touch_line: 0x8020_1C50,
+    on_check_shadow_render: 0x8020_1C58,
+    flags2: 4,
+    joints: &RCRUISE_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -827,6 +888,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_ZEBES => &ZEBES,
         GR_KIND_ONETT => &ONETT,
         GR_KIND_PURA => &PURA,
+        GR_KIND_RCRUISE => &RCRUISE,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

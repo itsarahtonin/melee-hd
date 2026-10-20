@@ -74,6 +74,8 @@ const MAP_GOBJS: u32 = 0x8049_E6C8 + 0x180;
 /// joints its collision vertices follow (`grPu_803E6C0C`, 12 bytes an entry, the joint at +8).
 pub const GRPURA_YAKUMONO: u32 = 0x804D_6AA0;
 pub const GRPURA_VTX: u32 = 0x803E_6C0C;
+/// grrcruise.c's (`ssbm_types::tu::melee__gr__grrcruise::yakumono_param`).
+pub const GRRCRUISE_YAKUMONO: u32 = 0x804D_6A10;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -360,6 +362,8 @@ impl Importer<'_> {
             let j = cap.u32(GRKONGO_POSTS + 4 * i);
             self.game.gr.kongo.posts[i as usize] = self.import_handle_jobj(j);
         }
+        let yaku = cap.u32(GRRCRUISE_YAKUMONO);
+        self.game.gr.rcruise_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRPURA_YAKUMONO);
         self.game.gr.pura_yakumono = self.data_or_unhandled(yaku);
         let n = gr::pura::VTX_COUNT as u32;
@@ -721,6 +725,22 @@ impl Comparer<'_> {
         let m = mem(self.mem);
         let g = &self.game.grounds[o.0];
         g.compare(&m, t, &format!("{path} ground"), self);
+        // A stage object's dynamics chain (Rainbow Cruise's flag): each link, where both sides
+        // have one (the handles compare with the variables).
+        if let GroundVars::RCruiseFlag(v) = &self.game.grounds[o.0].u {
+            let mut ours = v.xC4.data;
+            let mut theirs = self.u32(t + 0xC4);
+            let mut k = 0;
+            while let Some(d) = ours
+                && theirs != 0
+            {
+                let link = self.game.fighter_dynamics[d.0].clone();
+                link.compare(&m, theirs, &format!("{path} ground chain@{k}"), self);
+                ours = link.next;
+                theirs = self.u32(theirs + 0x90);
+                k += 1;
+            }
+        }
     }
 
     pub(crate) fn fog(&mut self, path: &str, o: FogId, t: u32) {
@@ -988,6 +1008,11 @@ impl Comparer<'_> {
                 "grOnett yakumono_param",
                 GRONETT_YAKUMONO,
                 game.gr.onett_yakumono,
+            ),
+            (
+                "grRCruise yakumono_param",
+                GRRCRUISE_YAKUMONO,
+                game.gr.rcruise_yakumono,
             ),
             (
                 "grPura yakumono_param",

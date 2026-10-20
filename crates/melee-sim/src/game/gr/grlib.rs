@@ -52,7 +52,10 @@ pub fn start_point(game: &Game, i: i32) -> crate::vec::Vec3 {
 #[doc(alias = "grLib_801C9E60")]
 pub fn item_wind(game: &Game, v: &mut crate::vec::Vec3) -> bool {
     match game.stage_info.grkind {
-        0x03 => crate::game::code::unported_call("grRCruise_80201918 (Rainbow Cruise's wind)"),
+        0x03 => {
+            *v = super::rcruise::wind(game);
+            return true;
+        }
         0x13 => crate::game::code::unported_call("grBigBlue_801EF7D8 (Big Blue's wind)"),
         0x16 => crate::game::code::unported_call("grIceMt_801FA728 (Icicle Mountain's wind)"),
         _ => {}

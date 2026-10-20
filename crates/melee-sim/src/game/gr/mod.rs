@@ -26,6 +26,7 @@ pub mod oldpupupu;
 pub mod oldyoshi;
 pub mod onett;
 pub mod pura;
+pub mod rcruise;
 pub mod setup;
 pub mod shrine;
 pub mod stadium;
@@ -56,6 +57,8 @@ use crate::hsd::pool::Pool;
 pub const GR_KIND_PSTADIUM: i32 = 16;
 /// `Gr_Kind_Kraid`, Brinstar Depths.
 pub const GR_KIND_KRAID: i32 = 9;
+/// `Gr_Kind_RCruise`, Rainbow Cruise.
+pub const GR_KIND_RCRUISE: i32 = 3;
 /// `Gr_Kind_Pura`, Poké Floats.
 pub const GR_KIND_PURA: i32 = 17;
 /// `Gr_Kind_Fourside`, Fourside.
@@ -234,6 +237,8 @@ pub struct Globals {
     pub onett_x69c4: i32,
     /// The stages' spawn configurations (`grZakoGenerator_801CA394`'s heap blocks).
     pub spawn_configs: Vec<zako::SpawnConfig>,
+    /// Rainbow Cruise's `yakumono_param` (`grRCruise_YakumonoParam`).
+    pub rcruise_yakumono: Option<DataRef>,
     /// Poké Floats' `yakumono_param`, which nothing reads.
     pub pura_yakumono: Option<DataRef>,
     /// The joints Poké Floats' collision vertices follow (`grPu_803E6C0C[i].jobj`, written
@@ -363,6 +368,10 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_PURA, 1) => VarsKind::Pura,
         (GR_KIND_PURA, 2 | 3 | 5..=26) => VarsKind::PuraFloat,
         (GR_KIND_PURA, 4) => VarsKind::PuraStage,
+        (GR_KIND_RCRUISE, 1) => VarsKind::RCruise,
+        (GR_KIND_RCRUISE, 3) => VarsKind::Scroll,
+        (GR_KIND_RCRUISE, 4) => VarsKind::RCruiseBlocks,
+        (GR_KIND_RCRUISE, 6) => VarsKind::RCruiseFlag,
         _ => VarsKind::Bytes,
     }
 }

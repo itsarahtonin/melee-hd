@@ -95,6 +95,22 @@ impl<'a> StageMaps<'a> {
         self.info.grkind
     }
 
+    /// A GObj's joint (`hsd_obj`), if it holds one.
+    pub fn jobj(&self, g: GObjId) -> Option<JObjId> {
+        match self.world.gobjs[g.0].obj {
+            Some(super::super::state::Obj::JObj(j)) => Some(j),
+            _ => None,
+        }
+    }
+
+    /// A stage object's `Ground` from its GObj (`HSD_GObjGetUserData`).
+    pub fn ground_of(&self, g: GObjId) -> super::super::handles::GroundId {
+        match self.world.gobjs[g.0].user_data {
+            Some(super::super::state::UserData::Ground(gr)) => gr,
+            other => panic!("GObj {g:?} holds {other:?}, not a stage object"),
+        }
+    }
+
     /// The stage object of map `map_id`, `Ground_GetMapGObj(map_id)->user_data`.
     pub fn ground(&self, map_id: i32) -> Option<super::super::handles::GroundId> {
         let g = self.info.map_gobjs[map_id as usize]?;
@@ -210,6 +226,41 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         coll.x34_flags.b1234.into(),
                         kind,
                     );
+                }
+            }
+            super::super::gr::rcruise::BLOCK_TOUCHED => {
+                if let Some(super::super::gr::CollUser::GObj(go)) = user_data {
+                    let (g, root) = (self.stage_maps.ground_of(go), self.stage_maps.jobj(go));
+                    let kind = coll.x34_flags.b1234.into();
+                    super::super::gr::rcruise::block_touched(
+                        self.objs,
+                        self.grounds,
+                        root,
+                        g,
+                        joint_id,
+                        kind,
+                    );
+                }
+            }
+            super::super::gr::rcruise::DECK_TOUCHED => {
+                if let Some(super::super::gr::CollUser::GObj(go)) = user_data {
+                    let (g, root) = (self.stage_maps.ground_of(go), self.stage_maps.jobj(go));
+                    super::super::gr::rcruise::deck_touched(
+                        self.objs,
+                        self.data,
+                        self.grounds,
+                        root,
+                        g,
+                        coll,
+                        x50,
+                    );
+                }
+            }
+            super::super::gr::rcruise::PLANK_TOUCHED => {
+                if let Some(super::super::gr::CollUser::GObj(go)) = user_data {
+                    let g = self.stage_maps.ground_of(go);
+                    let kind = coll.x34_flags.b1234.into();
+                    super::super::gr::rcruise::plank_touched(self.grounds, g, joint_id, kind);
                 }
             }
             _ => unported_call(&format!("stage joint callback {:#010x}", callback.0)),
