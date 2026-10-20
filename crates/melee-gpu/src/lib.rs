@@ -324,6 +324,61 @@ impl Profile {
     }
 }
 
+/// What each frame draws, digested to compare two renderers' outputs exactly (GX_DIGEST): each
+/// vertex drawn in order, with the state it's drawn with when that changes, and the clears and
+/// copies, whatever the batching and buffer layout.
+struct Digest {
+    out: std::io::BufWriter<std::fs::File>,
+    hash: u64,
+    /// The last state digested.
+    state: u64,
+}
+
+impl Digest {
+    fn add(&mut self, v: u64) {
+        self.hash = (self.hash ^ v)
+            .wrapping_mul(0xFF51_AFD7_ED55_8CCD)
+            .rotate_left(31);
+    }
+
+    /// The commands a flush draws, from its buffers.
+    fn flush(&mut self, clear: PendingClear, r: &Renderer) {
+        self.add(hash_bytes(
+            &format!("{:?} {:?}", clear.color, clear.depth).into_bytes(),
+        ));
+        for c in &r.commands {
+            let at = c.uniform as usize;
+            let mut state = hash_bytes(&r.uniforms[at..at + std::mem::size_of::<Uniforms>()]);
+            for w in c
+                .pipeline
+                .pack()
+                .into_iter()
+                .chain(c.textures)
+                .chain(c.scissor)
+            {
+                state = (state ^ u64::from(w)).wrapping_mul(0xC4CE_B9FE_1A85_EC53);
+            }
+            if state != self.state {
+                self.state = state;
+                self.add(state);
+            }
+            let words = 6 + 3 * c.texgens as usize;
+            for &i in &r.indices[c.first as usize..(c.first + c.count) as usize] {
+                let v = &r.vertices[i as usize..i as usize + words];
+                self.add(hash_bytes(bytemuck::cast_slice(v)));
+            }
+        }
+    }
+
+    fn frame(&mut self, n: u64) {
+        use std::io::Write;
+        let _ = writeln!(self.out, "{n} {:016x}", self.hash);
+        let _ = self.out.flush();
+        self.hash = 0;
+        self.state = 0;
+    }
+}
+
 /// Counts of what the renderer met and doesn't draw yet (or draws approximately), by name.
 pub type Unsupported = HashMap<&'static str, u64>;
 
@@ -401,6 +456,8 @@ pub struct Renderer {
     pub draw_limit: Option<u64>,
     /// Where the time goes, when profiling (GX_PROFILE).
     profile: Option<Profile>,
+    /// A digest of what each frame draws, written a line a frame (GX_DIGEST=FILE).
+    digest: Option<Digest>,
     /// Copies to the XFB on the GPU, leaving each frame there, rather than reading the EFB back
     /// and copying on the CPU as Dolphin's software renderer does; `xfb_readback` reads each
     /// frame back too.
@@ -787,6 +844,13 @@ impl Renderer {
             opaque: false,
             draw_limit: None,
             profile: std::env::var_os("GX_PROFILE").map(|_| Profile::default()),
+            digest: std::env::var_os("GX_DIGEST").map(|path| Digest {
+                out: std::io::BufWriter::new(
+                    std::fs::File::create(path).expect("GX_DIGEST's file"),
+                ),
+                hash: 0,
+                state: 0,
+            }),
             xfb_on_gpu: false,
             xfb_readback: false,
             gpu_xfb: None,
@@ -1546,6 +1610,10 @@ impl Renderer {
     /// happens, in a pass of its own.
     fn flush(&mut self) {
         let clear = std::mem::take(&mut self.pending_clear);
+        if let Some(mut d) = self.digest.take() {
+            d.flush(clear, self);
+            self.digest = Some(d);
+        }
         if self.commands.is_empty() {
             if clear.color.is_some() || clear.depth.is_some() {
                 let mut encoder = self.device.create_command_encoder(&Default::default());
@@ -2249,6 +2317,9 @@ impl Renderer {
         let bottom = (top + bits(wh, 10, 10) + 1).min(EFB_HEIGHT);
         let t = std::time::Instant::now();
         self.flush();
+        if let Some(d) = &mut self.digest {
+            d.add(u64::from(value) << 32 ^ hash_bytes(bytemuck::cast_slice(&state.bp[0x49..0x55])));
+        }
         let t1 = std::time::Instant::now();
         if bits(value, 14, 1) != 0 {
             // A frame's end: copies the game has since written over are gone.
@@ -2300,6 +2371,9 @@ impl Renderer {
             match &mut self.on_frame {
                 Some(f) => f(frame),
                 None => self.frames.push(frame),
+            }
+            if let Some(d) = &mut self.digest {
+                d.frame(self.frame);
             }
             self.frame += 1;
             self.draws_this_frame = 0;
