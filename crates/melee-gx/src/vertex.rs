@@ -220,7 +220,6 @@ pub fn fetch(
     mem: &dyn Memory,
     out: &mut Vec<u8>,
 ) -> usize {
-    let vertex = stream_size(layout) as usize;
     let index_at = |src: Source, at: usize| -> u32 {
         if src == Source::Index8 {
             u32::from(data[at])
@@ -230,37 +229,13 @@ pub fn fetch(
     };
     // Each attribute's array as far as the draw's indices reach it.
     let mut arrays: [Option<&[u8]>; MAX_ATTRS] = [None; MAX_ATTRS];
-    let mut offset = 0usize;
     let mut size = 0usize;
-    for (i, attr) in layout.iter().enumerate() {
-        let width = attr.source.stream_size(attr.size, attr.indices) as usize;
+    for attr in layout {
         size += attr.size as usize;
-        if matches!(attr.source, Source::Index8 | Source::Index16) && i < MAX_ATTRS {
-            // The highest index, read straight from each vertex's bytes.
-            let stream = &data[..count as usize * vertex];
-            let mut top = 0u32;
-            if vertex > 0 {
-                for v in stream.chunks_exact(vertex) {
-                    let ix = &v[offset..offset + width];
-                    top = top.max(if attr.source == Source::Index8 {
-                        ix.iter().copied().max().map_or(0, u32::from)
-                    } else {
-                        ix.as_chunks::<2>()
-                            .0
-                            .iter()
-                            .map(|b| u32::from(u16::from_be_bytes(*b)))
-                            .max()
-                            .unwrap_or(0)
-                    });
-                }
-            }
-            let base = cp[ARRAY_BASE as usize + attr.array] & 0x03FF_FFFF;
-            let stride = cp[ARRAY_STRIDE as usize + attr.array] & 0xFF;
-            let len = top * stride + attr.size;
-            arrays[i] = mem.view(base, len as usize);
-        }
-        offset += width;
     }
+    reach(cp, layout, count, data, |i, base, len| {
+        arrays[i] = mem.view(base, len as usize);
+    });
     // Each attribute's registers, read once for the draw.
     let mut plans = [Plan::NONE; MAX_ATTRS];
     let mut n = 0;
@@ -311,6 +286,46 @@ pub fn fetch(
         }
     }
     at
+}
+
+/// The stretch of each indexed attribute's array that `count` vertices of the stream `data`
+/// reach: `f(attribute, address, length)`, as [`fetch`] views them.
+pub fn reach(
+    cp: &[u32; 256],
+    layout: &[Attr],
+    count: u32,
+    data: &[u8],
+    mut f: impl FnMut(usize, u32, u32),
+) {
+    let vertex = stream_size(layout) as usize;
+    let mut offset = 0usize;
+    for (i, attr) in layout.iter().enumerate() {
+        let width = attr.source.stream_size(attr.size, attr.indices) as usize;
+        if matches!(attr.source, Source::Index8 | Source::Index16) && i < MAX_ATTRS {
+            // The highest index, read straight from each vertex's bytes.
+            let stream = &data[..count as usize * vertex];
+            let mut top = 0u32;
+            if vertex > 0 {
+                for v in stream.chunks_exact(vertex) {
+                    let ix = &v[offset..offset + width];
+                    top = top.max(if attr.source == Source::Index8 {
+                        ix.iter().copied().max().map_or(0, u32::from)
+                    } else {
+                        ix.as_chunks::<2>()
+                            .0
+                            .iter()
+                            .map(|b| u32::from(u16::from_be_bytes(*b)))
+                            .max()
+                            .unwrap_or(0)
+                    });
+                }
+            }
+            let base = cp[ARRAY_BASE as usize + attr.array] & 0x03FF_FFFF;
+            let stride = cp[ARRAY_STRIDE as usize + attr.array] & 0xFF;
+            f(i, base, top * stride + attr.size);
+        }
+        offset += width;
+    }
 }
 
 /// An attribute as [`fetch`] copies it: its registers, and its array as far as the draw reaches.
@@ -452,73 +467,113 @@ pub fn decode(
     normals: &mut NormalCache,
     out: &mut Vec<Input>,
 ) {
-    let lo = cp[VCD_LO as usize];
-    let hi = cp[VCD_HI as usize];
-    let a = cp[VAT_A as usize + vat];
-    let b = cp[VAT_B as usize + vat];
-    let c = cp[VAT_C as usize + vat];
-    // (elements bit, format, frac) per texture coordinate.
-    let tex = [
-        (bits(a, 21, 1), bits(a, 22, 3), bits(a, 25, 5)),
-        (bits(b, 0, 1), bits(b, 1, 3), bits(b, 4, 5)),
-        (bits(b, 9, 1), bits(b, 10, 3), bits(b, 13, 5)),
-        (bits(b, 18, 1), bits(b, 19, 3), bits(b, 22, 5)),
-        (bits(b, 27, 1), bits(b, 28, 3), bits(c, 0, 5)),
-        (bits(c, 5, 1), bits(c, 6, 3), bits(c, 9, 5)),
-        (bits(c, 14, 1), bits(c, 15, 3), bits(c, 18, 5)),
-        (bits(c, 23, 1), bits(c, 24, 3), bits(c, 27, 5)),
-    ];
-    let pos_scale = 1.0 / (1u32 << bits(a, 4, 5)) as f32;
-    let nbt = bits(a, 9, 1) != 0;
-    let has_nrm = bits(lo, 11, 2) != 0;
-    let (has_col0, has_col1) = (bits(lo, 13, 2) != 0, bits(lo, 15, 2) != 0);
-    // What every vertex starts from: the registers' matrix indices, white, and the normals.
-    let mut base = Input {
-        pos_mtx: (xf_index[0] & 0x3F) as u8,
-        normal: *normals,
-        color: [[255; 4]; 2],
-        ..Input::default()
-    };
-    for i in 0..8 {
-        let reg = xf_index[usize::from(i >= 4)];
-        base.tex_mtx[i] = (reg >> (6 * ((i % 4) + usize::from(i < 4))) & 0x3F) as u8;
-    }
-    let tex_scales = tex.map(|(_, _, frac)| 1.0 / (1u32 << frac) as f32);
+    let decoder = Decoder::new(cp, xf_index, vat);
     out.reserve(count);
     let mut at = 0;
     for _ in 0..count {
-        // Built in place: the normals a vertex without them takes don't change in a draw.
-        out.push(base);
-        let v = out.last_mut().expect("a vertex");
+        let mut v = Input::default();
+        decoder.vertex(data, &mut at, normals, &mut v);
+        out.push(v);
+    }
+}
+
+/// A vertex format, read once for a draw's vertices ([`decode`]).
+pub struct Decoder {
+    lo: u32,
+    hi: u32,
+    a: u32,
+    /// (elements bit, format) per texture coordinate, and its scale.
+    tex: [(u32, u32); 8],
+    tex_scales: [f32; 8],
+    pos_scale: f32,
+    nbt: bool,
+    has_nrm: bool,
+    has_col0: bool,
+    has_col1: bool,
+    /// The matrix indices of a vertex that carries none.
+    pos_mtx: u8,
+    tex_mtx: [u8; 8],
+}
+
+impl Decoder {
+    pub fn new(cp: &[u32; 256], xf_index: [u32; 2], vat: usize) -> Decoder {
+        let lo = cp[VCD_LO as usize];
+        let hi = cp[VCD_HI as usize];
+        let a = cp[VAT_A as usize + vat];
+        let b = cp[VAT_B as usize + vat];
+        let c = cp[VAT_C as usize + vat];
+        // (elements bit, format, frac) per texture coordinate.
+        let tex = [
+            (bits(a, 21, 1), bits(a, 22, 3), bits(a, 25, 5)),
+            (bits(b, 0, 1), bits(b, 1, 3), bits(b, 4, 5)),
+            (bits(b, 9, 1), bits(b, 10, 3), bits(b, 13, 5)),
+            (bits(b, 18, 1), bits(b, 19, 3), bits(b, 22, 5)),
+            (bits(b, 27, 1), bits(b, 28, 3), bits(c, 0, 5)),
+            (bits(c, 5, 1), bits(c, 6, 3), bits(c, 9, 5)),
+            (bits(c, 14, 1), bits(c, 15, 3), bits(c, 18, 5)),
+            (bits(c, 23, 1), bits(c, 24, 3), bits(c, 27, 5)),
+        ];
+        let mut tex_mtx = [0; 8];
+        for (i, m) in tex_mtx.iter_mut().enumerate() {
+            let reg = xf_index[usize::from(i >= 4)];
+            *m = (reg >> (6 * ((i % 4) + usize::from(i < 4))) & 0x3F) as u8;
+        }
+        Decoder {
+            lo,
+            hi,
+            a,
+            tex: tex.map(|(elems, format, _)| (elems, format)),
+            tex_scales: tex.map(|(_, _, frac)| 1.0 / (1u32 << frac) as f32),
+            pos_scale: 1.0 / (1u32 << bits(a, 4, 5)) as f32,
+            nbt: bits(a, 9, 1) != 0,
+            has_nrm: bits(lo, 11, 2) != 0,
+            has_col0: bits(lo, 13, 2) != 0,
+            has_col1: bits(lo, 15, 2) != 0,
+            pos_mtx: (xf_index[0] & 0x3F) as u8,
+            tex_mtx,
+        }
+    }
+
+    /// Decodes the vertex at `at` in `data` into `v`, every field of it, and moves `at` past
+    /// it; a vertex with normals updates `normals`.
+    #[inline]
+    pub fn vertex(&self, data: &[u8], at: &mut usize, normals: &mut NormalCache, v: &mut Input) {
+        let (lo, a) = (self.lo, self.a);
+        v.pos_mtx = self.pos_mtx;
+        v.tex_mtx = self.tex_mtx;
+        v.position = [0.0; 3];
+        v.normal = *normals;
+        v.color = [[255; 4]; 2];
+        v.tex = [[0.0; 2]; 8];
         if bits(lo, 0, 1) != 0 {
-            v.pos_mtx = data[at] & 0x3F;
-            at += 1;
+            v.pos_mtx = data[*at] & 0x3F;
+            *at += 1;
         }
         for i in 0..8 {
             if bits(lo, 1 + i, 1) != 0 {
-                v.tex_mtx[i as usize] = data[at] & 0x3F;
-                at += 1;
+                v.tex_mtx[i as usize] = data[*at] & 0x3F;
+                *at += 1;
             }
         }
         if bits(lo, 9, 2) != 0 {
             let n = 2 + bits(a, 0, 1);
             let format = bits(a, 1, 3);
             for k in 0..n as usize {
-                v.position[k] = component(data, &mut at, format, pos_scale);
+                v.position[k] = component(data, at, format, self.pos_scale);
             }
         }
-        if has_nrm {
+        if self.has_nrm {
             let format = bits(a, 10, 3);
             let scale = normal_scale(format);
-            for k in 0..if nbt { 3 } else { 1 } {
+            for k in 0..if self.nbt { 3 } else { 1 } {
                 for j in 0..3 {
-                    v.normal[k][j] = component(data, &mut at, format, scale);
+                    v.normal[k][j] = component(data, at, format, scale);
                 }
             }
         }
         // Only one color goes to channel 0.
-        let col0 = has_col0.then(|| color(data, &mut at, bits(a, 14, 3)));
-        let col1 = has_col1.then(|| color(data, &mut at, bits(a, 18, 3)));
+        let col0 = self.has_col0.then(|| color(data, at, bits(a, 14, 3)));
+        let col1 = self.has_col1.then(|| color(data, at, bits(a, 18, 3)));
         match (col0, col1) {
             (Some(c0), c1) => {
                 v.color[0] = c0;
@@ -527,16 +582,16 @@ pub fn decode(
             (None, Some(c1)) => v.color[0] = c1,
             (None, None) => {}
         }
-        for (i, (elems, format, _)) in tex.iter().enumerate() {
-            if bits(hi, 2 * i as u32, 2) != 0 {
-                let scale = tex_scales[i];
-                for k in 0..=*elems as usize {
-                    v.tex[i][k] = component(data, &mut at, *format, scale);
+        for (i, &(elems, format)) in self.tex.iter().enumerate() {
+            if bits(self.hi, 2 * i as u32, 2) != 0 {
+                let scale = self.tex_scales[i];
+                for k in 0..=elems as usize {
+                    v.tex[i][k] = component(data, at, format, scale);
                 }
             }
         }
-        if has_nrm {
-            let n = if nbt { 3 } else { 1 };
+        if self.has_nrm {
+            let n = if self.nbt { 3 } else { 1 };
             normals[..n].copy_from_slice(&v.normal[..n]);
         }
     }

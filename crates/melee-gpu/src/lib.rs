@@ -81,12 +81,21 @@ impl GpuVertex {
 
     /// Its words, with `texgens` texture coordinates.
     fn write(&self, texgens: usize, out: &mut Vec<u32>) {
-        out.extend(self.pos.map(f32::to_bits));
-        out.push(u32::from_le_bytes(self.c0));
-        out.push(u32::from_le_bytes(self.c1));
-        for t in &self.tex[..texgens] {
-            out.extend(t.map(f32::to_bits));
+        let mut w = [0u32; 30];
+        for (w, p) in w.iter_mut().zip(self.pos) {
+            *w = p.to_bits();
         }
+        w[4] = u32::from_le_bytes(self.c0);
+        w[5] = u32::from_le_bytes(self.c1);
+        for (w, t) in w[6..]
+            .as_chunks_mut::<3>()
+            .0
+            .iter_mut()
+            .zip(&self.tex[..texgens])
+        {
+            *w = t.map(f32::to_bits);
+        }
+        out.extend_from_slice(&w[..6 + 3 * texgens]);
     }
 }
 
@@ -343,9 +352,11 @@ impl Digest {
 
     /// The commands a flush draws, from its buffers.
     fn flush(&mut self, clear: PendingClear, r: &Renderer) {
-        self.add(hash_bytes(
-            &format!("{:?} {:?}", clear.color, clear.depth).into_bytes(),
-        ));
+        if clear.color.is_some() || clear.depth.is_some() {
+            self.add(hash_bytes(
+                &format!("{:?} {:?}", clear.color, clear.depth).into_bytes(),
+            ));
+        }
         for c in &r.commands {
             let at = c.uniform as usize;
             let mut state = hash_bytes(&r.uniforms[at..at + std::mem::size_of::<Uniforms>()]);
@@ -440,6 +451,9 @@ pub struct Renderer {
     /// renderer reads the game's memory itself (`track_copies`); a threaded one is told.
     footprints: copy::Footprints,
     pub(crate) track_copies: bool,
+    /// How many draw calls are queued before a draw flushes them, on the render thread, so
+    /// encoding them overlaps the stream.
+    pub(crate) flush_at: Option<usize>,
     /// Copy addresses sampled another way than copied, whose copies are encoded into memory.
     on_cpu: FxHashSet<u32>,
     scratch: Scratch,
@@ -837,6 +851,7 @@ impl Renderer {
             gpu_copies: FxHashMap::default(),
             footprints: copy::Footprints::default(),
             track_copies: true,
+            flush_at: None,
             on_cpu: Default::default(),
             scratch: Scratch::default(),
             built: Built::default(),
@@ -2026,7 +2041,19 @@ impl Renderer {
 impl Sink for Renderer {
     fn draw(&mut self, state: &State, draw: &Draw<'_>, mem: &dyn Memory) {
         let t = self.profile.is_some().then(std::time::Instant::now);
-        self.draw_timed(state, draw, mem);
+        if draw.fetched {
+            self.draw_timed(state, draw, mem);
+        } else {
+            let mut bytes = Vec::new();
+            let count = u32::from(draw.count);
+            vertex::fetch(&state.cp, draw.layout, count, draw.data, mem, &mut bytes);
+            let fetched = Draw {
+                data: &bytes,
+                fetched: true,
+                ..*draw
+            };
+            self.draw_timed(state, &fetched, mem);
+        }
         if let (Some(p), Some(t)) = (&mut self.profile, t) {
             p.draw += t.elapsed();
         }
@@ -2105,21 +2132,26 @@ pub(crate) fn build(
 ) -> Option<BuiltDraw> {
     let xf_index = [state.xf[xform::MATINDEX_A], state.xf[xform::MATINDEX_A + 1]];
     let s = scratch;
-    s.inputs.clear();
-    vertex::decode(
-        &state.cp,
-        xf_index,
-        usize::from(draw.vat),
-        draw.data,
-        usize::from(draw.count),
-        &mut s.normals,
-        &mut s.inputs,
-    );
+    let (vat, n) = (usize::from(draw.vat), usize::from(draw.count));
     let vp = Viewport::of(&state.xf);
     let (scissor, off) = Renderer::scissor(state, &vp);
     if scissor[2] == 0 || scissor[3] == 0 {
+        // Decoded only for the normals it leaves.
+        vertex::skip(
+            &state.cp,
+            xf_index,
+            vat,
+            draw.data,
+            n,
+            &mut s.normals,
+            &mut s.inputs,
+        );
         return None;
     }
+    // Each vertex decoded as it's transformed.
+    let decoder = vertex::Decoder::new(&state.cp, xf_index, vat);
+    let mut at = 0;
+    let mut v = vertex::Input::default();
     // Every vertex through the draw's transform setup, from zeroed outputs.
     let setup = xform::Setup::new(&state.xf, &state.bp);
     let tg = texgens(state);
@@ -2127,13 +2159,14 @@ pub(crate) fn build(
     let (w0, i0) = (built.words.len(), built.indices.len());
     let mut first = None;
     let mut note = None;
-    let n = s.inputs.len();
     if draw.primitive < 0xA8 {
         // A triangle primitive's vertices, written once for its triangles to name.
         s.clips.clear();
-        for v in &s.inputs {
+        built.words.reserve(n * words as usize);
+        for _ in 0..n {
+            decoder.vertex(draw.data, &mut at, &mut s.normals, &mut v);
             let mut o = Output::default();
-            setup.transform(v, &mut o);
+            setup.transform(&v, &mut o);
             let screen = vp.screen(o.clip);
             Renderer::gpu_vertex(&o, screen, off, &vp).write(tg, &mut built.words);
             s.clips.push(o.clip);
@@ -2192,9 +2225,10 @@ pub(crate) fn build(
     } else {
         s.outs.clear();
         s.screens.clear();
-        for v in &s.inputs {
+        for _ in 0..n {
+            decoder.vertex(draw.data, &mut at, &mut s.normals, &mut v);
             let mut o = Output::default();
-            setup.transform(v, &mut o);
+            setup.transform(&v, &mut o);
             s.screens.push(vp.screen(o.clip));
             s.outs.push(o);
         }
@@ -2378,6 +2412,10 @@ impl Renderer {
         }
         if let Some((what, n)) = d.note {
             *self.unsupported.entry(what).or_default() += n;
+        }
+        // Draw calls queued so far go to the GPU while more come, a pass at a time.
+        if self.flush_at.is_some_and(|n| self.commands.len() >= n) {
+            self.flush();
         }
         let first = self.indices.len() as u32;
         let count = d.indices.len() as u32;

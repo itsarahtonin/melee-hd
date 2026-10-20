@@ -26,17 +26,26 @@ const AHEAD: u64 = 2;
 /// Draws and copies sent before the threads take them, in order.
 const BATCH: usize = 64;
 
+/// Draw calls the render thread queues before it flushes them.
+const FLUSH_AT: usize = 160;
+
 enum Packet {
     /// The state's changes, in the batch's `delta`.
     Changes(Changes),
     /// Memory a texture reads, by its address, and its hash (`hash_bytes`).
     Memory(u32, Arc<[u8]>, u64),
-    /// A draw, its vertices at `data` in the batch's, built by transform thread `worker`.
+    /// Bytes of a vertex array, from its address: the transform threads fetch draws'
+    /// vertices from them.
+    Array(u32, Arc<[u8]>),
+    /// A draw, its vertices at `data` in the batch's, fetched (`vertex::fetch`) or as the
+    /// stream has them, for the transform threads to fetch from the arrays sent. Built by
+    /// transform thread `worker`.
     Draw {
         primitive: u8,
         vat: u8,
         count: u16,
         data: std::ops::Range<usize>,
+        fetched: bool,
         worker: u8,
     },
     Copy(u32),
@@ -133,6 +142,8 @@ pub struct Threaded {
     stable: FxHashMap<(u32, u32), u64>,
     /// What the render thread holds of each range, by hash.
     held: FxHashMap<(u32, u32), u64>,
+    /// How much of each vertex array, by its address, the transform threads hold.
+    arrays: FxHashMap<u32, u32>,
     done: Arc<Done>,
     frames: u64,
     /// Where copies went: this thread reads the game's memory, the renderer can't.
@@ -169,6 +180,11 @@ impl Threaded {
 
     fn spawn_ahead(mut renderer: Renderer, ahead: u64) -> Self {
         renderer.track_copies = false;
+        renderer.flush_at = std::env::var("MELEE_GPU_FLUSH_AT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .or(Some(FLUSH_AT))
+            .filter(|&n| n > 0);
         let (frames_tx, finished) = mpsc::channel();
         renderer.on_frame(move |f| {
             let _ = frames_tx.send(f);
@@ -208,6 +224,7 @@ impl Threaded {
             hashes: FxHashMap::default(),
             stable: FxHashMap::default(),
             held: FxHashMap::default(),
+            arrays: FxHashMap::default(),
             done,
             frames: 0,
             footprints: copy::Footprints::default(),
@@ -269,6 +286,29 @@ impl Threaded {
         self.changes(state);
         self.batch.packets.push(Packet::Resize(scale, width));
         self.footprints = copy::Footprints::default();
+    }
+
+    /// Sends the transform threads what they don't hold of the arrays a draw's vertices (as
+    /// the stream has them) read, so they fetch the vertices themselves: whether every array
+    /// is in memory the host holds as it is (`Memory::view`), whose bytes never change.
+    fn send_arrays(&mut self, state: &State, draw: &Draw<'_>, mem: &dyn Memory) -> bool {
+        let mut all = true;
+        let count = u32::from(draw.count);
+        vertex::reach(&state.cp, draw.layout, count, draw.data, |_, base, len| {
+            if !all {
+                return;
+            }
+            let Some(bytes) = mem.view(base, len as usize) else {
+                all = false;
+                return;
+            };
+            let held = self.arrays.entry(base).or_insert(0);
+            if *held < len {
+                *held = len;
+                self.batch.packets.push(Packet::Array(base, bytes.into()));
+            }
+        });
+        all
     }
 
     fn changes(&mut self, state: &State) {
@@ -347,12 +387,27 @@ impl Sink for Threaded {
             .expect("a transform thread");
         *load += u32::from(draw.count) + 8;
         let start = self.batch.data.len();
-        self.batch.data.extend_from_slice(draw.data);
+        let fetched = draw.fetched || !self.send_arrays(state, draw, mem);
+        if fetched && !draw.fetched {
+            // Arrays the transform threads can't hold: fetched here.
+            let count = u32::from(draw.count);
+            vertex::fetch(
+                &state.cp,
+                draw.layout,
+                count,
+                draw.data,
+                mem,
+                &mut self.batch.data,
+            );
+        } else {
+            self.batch.data.extend_from_slice(draw.data);
+        }
         self.batch.packets.push(Packet::Draw {
             primitive: draw.primitive,
             vat: draw.vat,
             count: draw.count,
             data: start..self.batch.data.len(),
+            fetched,
             worker: worker as u8,
         });
         if self.batch.packets.len() >= BATCH {
@@ -434,6 +489,21 @@ impl Sink for Threaded {
     }
 }
 
+/// The vertex arrays a transform thread holds, by address, each as far as a draw has reached.
+struct Arrays(FxHashMap<u32, Arc<[u8]>>);
+
+impl Memory for Arrays {
+    fn read(&self, phys: u32, out: &mut [u8]) {
+        // Every array a draw fetches from is held (`Threaded::send_arrays`).
+        out.fill(0);
+        debug_assert!(false, "a vertex array not held at {phys:#x}");
+    }
+
+    fn view(&self, phys: u32, len: usize) -> Option<&[u8]> {
+        self.0.get(&phys).and_then(|a| a.get(..len))
+    }
+}
+
 /// The memory textures read, as the game thread sent it.
 struct Held(HashMap<(u32, u32), Arc<[u8]>>);
 
@@ -457,39 +527,75 @@ fn work(
 ) {
     let mut state = State::new();
     let mut scratch = Scratch::default();
+    let mut arrays = Arrays(FxHashMap::default());
+    let mut layouts = vertex::LayoutCache::default();
+    let mut fetched = Vec::new();
     while let Ok(batch) = rx.recv() {
         let mut built = spare.try_recv().unwrap_or_default();
         built.clear();
         for packet in &batch.packets {
             match packet {
                 Packet::Changes(c) => c.apply_registers(&batch.delta, &mut state),
+                Packet::Array(base, bytes) => {
+                    arrays.0.insert(*base, bytes.clone());
+                }
                 Packet::Draw {
                     primitive,
                     vat,
                     count,
                     data,
+                    fetched: was_fetched,
                     worker,
                 } if *worker == k => {
+                    let mut data = &batch.data[data.clone()];
+                    if !was_fetched {
+                        let layout = layouts.get(&state.cp, usize::from(*vat));
+                        fetched.clear();
+                        let n = u32::from(*count);
+                        vertex::fetch(&state.cp, layout, n, data, &arrays, &mut fetched);
+                        data = &fetched;
+                    }
                     let draw = Draw {
                         primitive: *primitive,
                         vat: *vat,
                         count: *count,
                         layout: &[],
-                        data: &batch.data[data.clone()],
+                        data,
+                        fetched: true,
                     };
                     let d = build(&state, &draw, &mut scratch, &mut built);
                     built.draws.push(d);
                 }
                 Packet::Draw {
-                    vat, count, data, ..
+                    vat,
+                    count,
+                    data,
+                    fetched: was_fetched,
+                    ..
                 } => {
+                    // Only the normals it leaves: its last vertex, fetched if it wasn't.
+                    let (vat, count) = (usize::from(*vat), usize::from(*count));
+                    if count == 0 || bits(state.cp[vertex::VCD_LO as usize], 11, 2) == 0 {
+                        continue;
+                    }
+                    let mut data = &batch.data[data.clone()];
+                    let mut last = count;
+                    if !was_fetched {
+                        let layout = layouts.get(&state.cp, vat);
+                        let size = vertex::stream_size(layout) as usize;
+                        fetched.clear();
+                        let stream = &data[(count - 1) * size..count * size];
+                        vertex::fetch(&state.cp, layout, 1, stream, &arrays, &mut fetched);
+                        data = &fetched;
+                        last = 1;
+                    }
                     let xf_index = [state.xf[xform::MATINDEX_A], state.xf[xform::MATINDEX_A + 1]];
                     vertex::skip(
                         &state.cp,
                         xf_index,
-                        usize::from(*vat),
-                        &batch.data[data.clone()],
-                        usize::from(*count),
+                        vat,
+                        data,
+                        last,
                         &mut scratch.normals,
                         &mut scratch.inputs,
                     );
@@ -529,6 +635,7 @@ fn run(
                     memory.0.insert(key, bytes.clone());
                     renderer.held_hashes.insert(key, *hash);
                 }
+                Packet::Array(..) => {}
                 Packet::Draw {
                     primitive, worker, ..
                 } => {

@@ -35,18 +35,26 @@ pub trait Memory {
     fn draws(&self) -> bool {
         false
     }
+    /// Whether a host that draws gets each draw's vertices fetched; one that doesn't gets the
+    /// stream's bytes and fetches them itself.
+    fn fetches(&self) -> bool {
+        true
+    }
     fn draw(&self, _state: &State, _draw: &Draw<'_>) {}
     fn copy(&self, _state: &State, _value: u32) {}
 }
 
 /// A draw: its primitive (the opcode's top five bits), vertex format, and vertices, each its
-/// attributes' bytes in `layout` order, an indexed attribute's fetched from its array.
+/// attributes' bytes in `layout` order, an indexed attribute's fetched from its array, or, for
+/// a host that fetches them itself ([`Memory::fetches`]), as the stream has them.
 pub struct Draw<'a> {
     pub primitive: u8,
     pub vat: u8,
     pub count: u16,
     pub layout: &'a [vertex::Attr],
     pub data: &'a [u8],
+    /// Whether `data` is fetched (`vertex::fetch`), or the stream's.
+    pub fetched: bool,
 }
 
 /// What draws the stream: a renderer, given each draw and EFB copy with the state as it stands
@@ -619,10 +627,11 @@ impl State {
                         break;
                     }
                     let draws = mem.draws();
+                    let fetched = digests || (draws && mem.fetches());
                     // The vertices fetched, in a buffer kept from draw to draw.
                     let mut bytes = std::mem::take(&mut self.fetched);
                     bytes.clear();
-                    if digests || draws {
+                    if fetched {
                         vertex::fetch(
                             &self.cp,
                             layout,
@@ -638,7 +647,8 @@ impl State {
                             vat: op & 7,
                             count,
                             layout,
-                            data: &bytes,
+                            data: if fetched { &bytes } else { &rest[3..len] },
+                            fetched,
                         };
                         mem.draw(self, &draw);
                     }

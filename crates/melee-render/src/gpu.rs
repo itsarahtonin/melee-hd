@@ -66,6 +66,12 @@ impl Memory for Host<'_> {
         true
     }
 
+    /// The threaded renderer fetches vertices on its own threads, unless something observes
+    /// the draws.
+    fn fetches(&self) -> bool {
+        self.observer.is_some() || !matches!(*self.renderer.borrow(), Backend::Threaded(_))
+    }
+
     fn command(&self, bytes: &[u8]) {
         if let Some(o) = self.observer {
             o.command(bytes);
