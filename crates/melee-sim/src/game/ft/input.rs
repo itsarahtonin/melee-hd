@@ -224,6 +224,7 @@ impl Running<'_> {
         if self.game.playback.is_some() {
             self.playback_inject(gobj);
         }
+        crate::game::record::pre_frame(self.game, gobj);
         let fp = &mut self.game.fighters[f.0];
         Self::press_edges(fp);
         // The left stick's axes, then the trigger: how long each has been past its smash

@@ -279,6 +279,11 @@ pub struct Game {
     pub sis: crate::hsd::sis::SisLib,
     /// The audio library's sound objects (`lbl_80433710`).
     pub sound_objs: crate::lb::sound_obj::SoundObjs,
+    /// Presentation output, not state: the Slippi replay the match makes, when the frontend
+    /// turns it on (`record`). Simulated code never reads it; a clone starts without it and a
+    /// restore leaves it alone.
+    #[clone_from(keep)]
+    pub recorder: Option<Box<super::record::Recorder>>,
 }
 
 /// The game as the scheduler's host for one call: the state and the game data it reads.
@@ -293,6 +298,9 @@ impl Host<GameKinds> for Running<'_> {
     }
 
     fn invoke(&mut self, gobj: GObjId, proc: CodeRef) {
+        if self.game.recorder.is_some() {
+            super::record::before_proc(self.game, gobj);
+        }
         super::code::run_proc(self, gobj, proc);
     }
 

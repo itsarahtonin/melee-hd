@@ -35,8 +35,10 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gr::grlib::QUAKE_LOOP_PROC => super::gr::grlib::quake_proc(game, gobj, true),
         super::gr::grlib::QUAKE_PROC => super::gr::grlib::quake_proc(game, gobj, false),
         super::playback::SEED_PROC => game.game.playback_restore_seed(),
-        // The recording codes' processes send the frame over EXI and change nothing.
-        super::playback::RECORD_FRAME_START_PROC | super::playback::RECORD_ITEMS_PROC => {}
+        // The recording codes' processes send the frame over EXI and change nothing: the
+        // recorder, when on, reads what they send.
+        super::playback::RECORD_FRAME_START_PROC => super::record::frame_start_proc(game.game),
+        super::playback::RECORD_ITEMS_PROC => super::record::items_proc(game.game),
         super::gm::vs::PROC => game.vs_proc(),
         crate::lb::bgflash::PROC => game.game.bgflash.proc(),
         crate::lb::sound_obj::PROC => game.sound_object_proc(gobj),

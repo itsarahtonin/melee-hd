@@ -19,6 +19,7 @@ mod mirror_gen;
 pub mod pl;
 pub mod playback;
 pub mod player_codes;
+pub mod record;
 pub mod render;
 pub mod roster;
 pub mod sfx;

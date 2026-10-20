@@ -149,6 +149,16 @@ impl<const N: usize> Vars<N> {
         &self.handles
     }
 
+    /// The word at `off` for a reader outside the game (Slippi's recording), without a game
+    /// read's checks: the handle it holds, or its bytes (a handle's bytes a narrower write
+    /// left in part read as melee-sim keeps them).
+    pub fn peek_word(&self, off: usize) -> Result<[u8; 4], Handle> {
+        match self.handles.iter().find(|&&(o, _)| o == off) {
+            Some(&(_, h)) => Err(h),
+            None => Ok(self.bytes[off..off + 4].try_into().unwrap()),
+        }
+    }
+
     fn handle(&self, off: usize) -> Option<Handle> {
         self.handles
             .iter()

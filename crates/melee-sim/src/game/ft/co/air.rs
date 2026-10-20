@@ -216,14 +216,16 @@ impl Running<'_> {
                 ms::ATTACK_AIR_LW => Some((ms::LANDING_AIR_LW, a.landingairlw_lag)),
                 _ => None,
             };
-            if let Some((msid, lag)) = landing
-                && i32::from(fp.x67F) < window
-            {
-                let mut n = fp::fctiwz(fp::fdivs(reg(lag), div));
-                if n == 0 {
-                    n = 1;
+            if let Some((msid, lag)) = landing {
+                let cancelled = i32::from(fp.x67F) < window;
+                crate::game::record::lcancel(self.game, gobj, cancelled);
+                if cancelled {
+                    let mut n = fp::fctiwz(fp::fdivs(reg(lag), div));
+                    if n == 0 {
+                        n = 1;
+                    }
+                    landing = Some((msid, mem(fp::frsp(f64::from(n)))));
                 }
-                landing = Some((msid, mem(fp::frsp(f64::from(n)))));
             }
         }
         match landing {

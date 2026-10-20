@@ -253,6 +253,7 @@ pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
     // The scheduler reads the mask through `HSD_GObjLibInitData.unk_2`.
     g.world.skip_links = g.scene.unk_10.unk_28;
     crate::hsd::gobj::run_procs(r);
+    crate::game::record::end_of_procs(r.game);
     let g = &mut *r.game;
     let sc = &mut g.scene;
     if sc.unk_0 != u32::MAX - 1 {

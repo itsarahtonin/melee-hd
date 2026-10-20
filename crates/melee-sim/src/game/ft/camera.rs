@@ -27,6 +27,7 @@ pub fn proc_camera(g: &mut Running, gobj: GObjId) {
     if let Some(cb) = g.game.fighters[f.0].cam_cb {
         run_fighter_cb(g, gobj, cb);
     }
+    crate::game::record::post_frame(g.game, gobj);
 }
 
 impl Running<'_> {

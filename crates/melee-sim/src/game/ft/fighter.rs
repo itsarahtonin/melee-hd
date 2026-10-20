@@ -594,6 +594,7 @@ pub fn proc_map(g: &mut Running, gobj: GObjId) {
         }
     }
     fp.x2223_b5 = false;
+    crate::game::record::reset_lcancel(g.game, gobj);
     let root = g.root_jobj(gobj);
     let pos = g.game.fighters[f.0].cur_pos;
     jobj::set_translate(&mut g.game.objs.jobjs, root, pos);

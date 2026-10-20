@@ -926,6 +926,7 @@ impl Running<'_> {
         } else {
             let o = self.game.match_outcome();
             self.game.vs.state.match_result = o;
+            super::super::record::count_frame(self.game);
             if self.game.playback.is_some() {
                 self.game.playback_count_frame();
                 if o == OUTCOME_NONE {
@@ -1007,6 +1008,7 @@ impl Running<'_> {
             3 => self.game.end_scene(),
             _ => {}
         }
+        super::super::record::game_end(self.game);
         if let Some(f) = self.game.vs.start.on_frame_end {
             code::call(self, f.0, &[]);
         }
@@ -1674,6 +1676,7 @@ impl Running<'_> {
         if let Some(seed) = self.game.playback.as_ref().map(|p| p.start_seed) {
             self.playback_start(seed);
         }
+        super::super::record::game_start(self, d);
         self.game.set_db_pause_handlers(PAUSE_ON_START, STEP_ON_Z);
         self.game.set_pre_gobj_proc(DB_RUN_EVERY_FRAME);
         self.game.set_clock_mask(1);

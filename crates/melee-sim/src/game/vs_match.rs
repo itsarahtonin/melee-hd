@@ -73,6 +73,9 @@ pub struct Settings {
     /// destination). The oracle takes it from ssbm-rs's trace; else 0x80000000, as the
     /// other main-memory loads' destinations are.
     pub stadium_buffer: u32,
+    /// Records the match as a Slippi replay (`game::record`), with what the recording reads
+    /// from outside the match: presentation output, which changes nothing the match does.
+    pub record: Option<super::record::Setup>,
 }
 
 /// What Slippi's playback hands the game at a replay's start (the Slippi EXI device's answer
@@ -178,6 +181,7 @@ impl Settings {
             unlocks: super::gm::Unlocks::slippi(),
             boot_audio: true,
             stadium_buffer: super::ft::data::MAIN_MEMORY,
+            record: None,
         }
     }
 
@@ -252,6 +256,7 @@ impl Settings {
             unlocks: super::gm::Unlocks::slippi(),
             boot_audio: true,
             stadium_buffer: super::ft::data::MAIN_MEMORY,
+            record: None,
         }
     }
 }
@@ -329,6 +334,10 @@ impl Match {
         game.gr.game_mode = settings.game_mode;
         game.objs.rng.seed = settings.seed;
         game.ucf = settings.ucf;
+        game.recorder = settings
+            .record
+            .clone()
+            .map(|s| Box::new(super::record::Recorder::new(s)));
         if settings.playback {
             game.playback = Some(Playback {
                 start_seed: settings.seed,
