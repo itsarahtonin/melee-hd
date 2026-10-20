@@ -62,6 +62,7 @@ pub mod linkbow;
 pub mod linkhookshot;
 pub mod lipstick;
 pub mod lipstickspore;
+pub mod lizardon;
 pub mod lucky;
 pub mod luigifireball;
 pub mod maril;
@@ -276,6 +277,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || fire::run_event(r, gobj, addr)
         || hassam::run_event(r, gobj, addr)
         || tosakinto::run_event(r, gobj, addr)
+        || lizardon::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -403,6 +405,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| fire::run_pred(r, gobj, addr))
         .or_else(|| hassam::run_pred(r, gobj, addr))
         .or_else(|| tosakinto::run_pred(r, gobj, addr))
+        .or_else(|| lizardon::run_pred(r, gobj, addr))
         .or_else(|| yaku::run_pred(r, gobj, addr))
 }
 
