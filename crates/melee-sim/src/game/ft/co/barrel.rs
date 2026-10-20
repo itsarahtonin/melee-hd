@@ -177,7 +177,18 @@ impl Running<'_> {
         fp.cur_pos.y = mem(fp::fsubs(fp::fadds(reg(mouth.y), reg(t.y)), reg(bone.y)));
         fp.cur_pos.z = 0.0;
         fp.coll_data.set_position(at);
-        // `ftCo_Barrel_ApplyKnockback`.
+        self.barrel_knockback(gobj, hit, kb_angle);
+        let barrel = self.barrel_of(gobj);
+        self.item_attack_landed(barrel, gobj, false);
+        self.game.fighter_mut(gobj).x21EC = Some(CodeRef(LAUNCHED));
+        self.enter_damage(gobj, ms::DAMAGE_FLY_ROLL, 0.0);
+    }
+
+    /// A barrel's shot's knockback, `ftCo_Barrel_ApplyKnockback` (an inline the item's and the
+    /// stages' barrels share): at `kb_angle` degrees, mirrored for a fighter facing right, the
+    /// hit's knockback at no ratio, from where the fighter is.
+    pub(super) fn barrel_knockback(&mut self, gobj: GObjId, hit: &HitCapsule, kb_angle: f32) {
+        let f = self.game.fighter_id(gobj);
         let mut angle = reg(kb_angle);
         if angle < 0.0 {
             angle = fp::fadds(angle, 360.0);
@@ -197,9 +208,5 @@ impl Running<'_> {
         fp.dmg.x184c_damaged_hurtbox = 0;
         fp.dmg.x1854_collpos = fp.cur_pos;
         fp.dmg.x1860_element = hit.element;
-        let barrel = self.barrel_of(gobj);
-        self.item_attack_landed(barrel, gobj, false);
-        self.game.fighter_mut(gobj).x21EC = Some(CodeRef(LAUNCHED));
-        self.enter_damage(gobj, ms::DAMAGE_FLY_ROLL, 0.0);
     }
 }

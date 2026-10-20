@@ -11,6 +11,7 @@ pub mod air;
 pub mod anim;
 pub mod attack;
 pub mod barrel;
+pub mod barrel_wait;
 pub mod bury;
 pub mod capture_kirby;
 pub mod capture_koopa;

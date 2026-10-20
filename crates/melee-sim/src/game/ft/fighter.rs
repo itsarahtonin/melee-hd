@@ -765,9 +765,9 @@ fn catches(
 
 /// A device caught the fighter, `ftCo_800C0874`: a barrel (type 2) takes it in.
 #[doc(alias = "ftCo_800C0874")]
-fn caught(_g: &mut Running, _gobj: GObjId, kind: u32) {
+fn caught(g: &mut Running, gobj: GObjId, kind: u32) {
     if kind == 2 {
-        unported_call("ftCo_8009EB18 (a fighter entering a stage's barrel)");
+        g.enter_stage_barrel(gobj);
     }
 }
 

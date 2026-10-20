@@ -74,6 +74,12 @@ impl Stage {
 
     /// Why a match on the stage with these characters isn't offered, if it isn't.
     pub fn refusal(&self, characters: &[u8]) -> Option<String> {
+        if self.audit.is_none() {
+            return Some(format!(
+                "{} isn't offered yet: its audit (whether a match on it can reach unported code) isn't done",
+                self.name
+            ));
+        }
         let missing = self.missing_with(characters);
         (!missing.is_empty()).then(|| {
             format!(
@@ -348,7 +354,7 @@ pub const STAGES: &[Stage] = &[
                 "it_80286088",
                 "a box riding the river, which the stage makes only with boxes on in the item switch",
             )],
-            missing: &[BARREL_RIDE],
+            missing: &[],
         }),
     },
     Stage {
@@ -362,7 +368,7 @@ pub const STAGES: &[Stage] = &[
             ],
             modules: &["gr/oldkongo"],
             unreached: &[],
-            missing: &[BARREL_RIDE],
+            missing: &[],
         }),
     },
     Stage {
@@ -432,18 +438,6 @@ const YAKU_UNANCHORED: (&str, &str) = (
     "it_2E6A_UnkMotion19_Phys",
     "a stage item on neither a joint nor a point, which no stage makes (the original hangs)",
 );
-
-/// Kongo Jungle's and Kongo Jungle N64's barrels: a fighter that falls into one goes in and is
-/// shot out (`ftCo_BarrelWait.c`).
-const BARREL_RIDE: Gap = Gap {
-    what: "a fighter entering the barrel (ftCo_8009EB18) and being shot out (ftCo_8009EC70)",
-    covers: &[
-        "melee/ft/kinds/ftCommon/ftCo_BarrelWait",
-        "ftCo_8009EB18",
-        "ftCo_8009EC70",
-    ],
-    with: None,
-};
 
 /// Nana's computer player follows a stage's routes on Great Bay and Hyrule Temple.
 const NANA_ROUTES: Gap = Gap {

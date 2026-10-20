@@ -967,7 +967,7 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
             let keep = r.game.grounds[g.0].u.kongo_barrel().keep;
             let keep = keep.expect("grkongo.c: the barrel holds nothing");
             match r.game.world.gobj(keep).p_link {
-                8 => unported_call("ftCo_8009EC70 (the barrel shooting its fighter out)"),
+                8 => r.shoot_from_stage_barrel(keep, at, &shot_hit(words), a),
                 9 => super::super::it::kinds::klap::shot(r, keep, at, shot_hit(words), a),
                 _ => {}
             }
@@ -984,7 +984,7 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
 
 /// The shot's hit (`grKg_803B7FB0` with the parameters' state, damage, angle, knockback
 /// growth, set knockback, base knockback and element), as `lbColl_80008D30` copies one.
-fn shot_hit(w: [u32; 6]) -> super::super::structs::HitCapsule {
+pub(super) fn shot_hit(w: [u32; 6]) -> super::super::structs::HitCapsule {
     super::super::structs::HitCapsule {
         state: 1,
         damage: mem(fp::frsp(f64::from(w[0]))),

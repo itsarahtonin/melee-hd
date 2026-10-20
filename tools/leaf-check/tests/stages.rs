@@ -25,10 +25,12 @@
 
 use leaf_check::calls::{Prepare, Ret, check_calls_with, gobj_arg, peek_u32, poke_u32};
 use melee_capture::import::Maps;
-use melee_sim::game::code::{run_demo_init, run_event, run_proc};
+use melee_sim::game::code::{run_demo_init, run_event, run_fighter_cb, run_proc};
+use melee_sim::game::ft::co::barrel_wait;
 use melee_sim::game::gr::{garden, kongo, oldkongo, oldyoshi, shrine, yorster};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
+use melee_sim::game::structs::HitCapsule;
 use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
 
@@ -1862,7 +1864,7 @@ fn oldkongo_barrel() {
     let d = dir(OK64);
     let f = "stageGObj1_GObjProc";
     let rad = 0.017_453_292_f32;
-    let prepares: [&Prepare; 17] = [
+    let prepares: [&Prepare; 18] = [
         &as_saved,
         // At rest slowing down (either way, less than a step left or more), its wait over:
         // a turn starts one way or the other.
@@ -1946,6 +1948,14 @@ fn oldkongo_barrel() {
             poke_u16(c, v + TARU_HIT, 11);
             let me = c.regs.gpr[3];
             poke_u32(c, v + TARU_KEEP, me);
+        },
+        // The shot at a fighter (`ftCo_8009EC70`), at the barrel's angle as saved.
+        &|c, _| {
+            taru(c, 0, 0.0, 9, (0, 5), 3);
+            let v = vars(c);
+            poke_u16(c, v + TARU_HIT, 11);
+            let ft = first_fighter(c);
+            poke_u32(c, v + TARU_KEEP, ft);
         },
         &|c, _| taru(c, 0, 0.0, 9, (0, 5), 4),
     ];
@@ -3271,7 +3281,7 @@ fn kongo_barrel() {
     let d = dir(KG);
     let f = "grKongo_801D577C";
     let rad = 0.017_453_292_f32;
-    let prepares: [&Prepare; 16] = [
+    let prepares: [&Prepare; 17] = [
         &as_saved,
         &|c, k| {
             let s = [0.5f32 * rad, -0.5 * rad, 3.0 * rad, -3.0 * rad][k % 4];
@@ -3345,6 +3355,13 @@ fn kongo_barrel() {
             let v = vars(c);
             let me = c.regs.gpr[3];
             poke_u32(c, v + KG_TARU_KEEP, me);
+        },
+        // The shot at a fighter (`ftCo_8009EC70`), at the barrel's heading as saved.
+        &|c, _| {
+            kg_taru(c, 0, 0.0, 9, (0, 5), 2);
+            let v = vars(c);
+            let ft = first_fighter(c);
+            poke_u32(c, v + KG_TARU_KEEP, ft);
         },
         // Waiting for nothing near, catching (with nothing near, or a Klap Trap if there is
         // one), and a state past the four.
@@ -3781,4 +3798,185 @@ fn klap() {
         &move |c, _| c.addr = t,
         &item(klap::phys3),
     );
+}
+
+// The stages' barrels' ride (`ftCo_BarrelWait.c`, `Ground_801C4DD0`, `Ground_801C4E20`), from
+// the barrel set's two matches, in which scripted walkers fall off Kongo Jungle N64 and Kongo
+// Jungle into their barrels and are shot out ([the oracle](../../docs/oracle.md#stages), "The
+// barrels' ride"). Captured as the stage sets are, from
+// `$SSBM_RS_LOCAL/bench/oracle-m4/NAME.slp` into `calls/stages/oracle-NAME`, with
+// `CAPTURE_FUNCS=@$D/barrel-funcs.txt` and `LOCKSTEP_DONE=$D/done-barrel.txt` (every other
+// function).
+
+/// The sets, each with where its barrel keeps what it holds in `Ground::u` (Kongo Jungle N64's
+/// `keep` at 0x10, Kongo Jungle's at 0xC).
+const BARREL_SETS: [(&str, u32); 2] = [
+    ("oracle-barrel-kongo-jungle-64", 0x10),
+    ("oracle-barrel-kongo-jungle", 0xC),
+];
+
+/// A fighter's callback (a state's, or a hook), run by its address.
+fn by_fighter_cb(r: &mut Running, maps: &Maps, call: &Call) -> Ret {
+    run_fighter_cb(r, gobj_arg(maps, call), CodeRef(call.addr));
+    Ret::Nothing
+}
+
+/// The fighter's `Fighter*` in a call made with its GObj in r3.
+fn fighter_of(c: &Call) -> u32 {
+    peek_u32(c, c.regs.gpr[3] + 0x2C)
+}
+
+/// The stage's barrel's variables (`stage_info.x72C`'s `Ground::u`).
+fn barrel_vars(c: &Call) -> u32 {
+    let g = peek_u32(c, leaf_check::sym("stage_info") + 0x72C);
+    peek_u32(c, g + 0x2C) + 0xC4
+}
+
+/// The barrel's hold state (`xC6`, 1 holding) and what it holds (`keep`, at `keep_at`).
+fn barrel_hold(c: &mut Call, keep_at: u32, state: u16, keep: u32) {
+    let v = barrel_vars(c);
+    poke_u16(c, v + 2, state);
+    poke_u32(c, v + keep_at, keep);
+}
+
+/// The hit description (`lbColl_80008D30_arg1`) at `addr`, as `lbColl_80008D30` copies it into
+/// the shot's hit.
+fn hit_desc(c: &Call, addr: u32) -> HitCapsule {
+    let w = |i: u32| peek_u32(c, addr + 4 * i);
+    HitCapsule {
+        state: w(0) as i32,
+        damage: w(1) as f32,
+        kb_angle: w(2) as i32,
+        x24: w(3),
+        x28: w(4),
+        x2C: w(5),
+        element: w(6),
+        sfx_severity: w(7) as i32,
+        sfx_kind: w(8) as i32,
+        unk_count: w(1),
+        ..HitCapsule::default()
+    }
+}
+
+#[test]
+fn barrel_ride() {
+    let fp_of = fighter_of;
+    // Taken in (`ftCo_8009EB18`): as saved, and from every state the catch loop saw a fighter
+    // in (walking, falling, tumbling, holding an item or not), and again from inside.
+    let enter = |r: &mut Running, maps: &Maps, call: &Call| {
+        r.enter_stage_barrel(gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("ftCo_8009EB18");
+    for (set, keep_at) in BARREL_SETS {
+        let d = dir(set);
+        // The barrel's own process from these matches' states, with fighters about it and in
+        // it, which the stage matches never had.
+        let process = if keep_at == 0x10 {
+            "stageGObj1_GObjProc"
+        } else {
+            "grKongo_801D577C"
+        };
+        check_calls_with(&d, process, 1, &as_saved, &by_address);
+        check_calls_with(&d, "ftCo_8009EB18", 1, &as_saved, &enter);
+        for from in ["ftColl_8007BA0C", "ftCo_BarrelWait_IASA", "ftCo_800C0874"] {
+            check_calls_with(&d, from, 1, &retarget(t), &enter);
+        }
+        // Waiting: the empty callbacks, keeping to the barrel, and A or B (or neither, or
+        // another button) asking it to shoot, with the barrel holding the fighter or not.
+        for f in [
+            "ftCo_BarrelWait_Anim",
+            "ftCo_BarrelWait_Phys",
+            "ftCo_BarrelWait_Coll",
+            "ftCo_8009EC44",
+            "ftCo_BarrelWait_IASA",
+        ] {
+            check_calls_with(&d, f, 1, &as_saved, &by_fighter_cb);
+        }
+        for buttons in [0x100u32, 0x200, 0x300, 0, 0x10] {
+            for state in [1u16, 0, 2] {
+                let press = move |c: &mut Call, _: usize| {
+                    let fp = fp_of(c);
+                    poke_u32(c, fp + 0x668, buttons);
+                    let me = c.regs.gpr[3];
+                    barrel_hold(c, keep_at, state, me);
+                };
+                check_calls_with(&d, "ftCo_BarrelWait_IASA", 1, &press, &by_fighter_cb);
+            }
+        }
+        // The death hook (`ftCo_8009EAF8`) and the stage's two barrel calls, from the waiting
+        // fighter's calls: the barrel holding it, holding another fighter's GObj, its shot
+        // started, and empty.
+        let hold = |c: &mut Call, k: usize| {
+            let me = c.regs.gpr[3];
+            let other = first_fighter(c);
+            let (state, keep) = [(1u16, me), (1, other), (2, me), (0, 0)][k % 4];
+            barrel_hold(c, keep_at, state, keep);
+        };
+        let t = leaf_check::sym("ftCo_8009EAF8");
+        let death = move |c: &mut Call, k: usize| {
+            c.addr = t;
+            hold(c, k);
+        };
+        check_calls_with(&d, "ftCo_BarrelWait_IASA", 1, &death, &by_fighter_cb);
+        let release = |r: &mut Running, _: &Maps, _: &Call| {
+            Ret::Int(u32::from(barrel_wait::barrel_release(r)))
+        };
+        let letgo =
+            |r: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(barrel_wait::barrel_letgo(r)));
+        for (target, ours) in [
+            (
+                "Ground_801C4DD0",
+                &release as &(dyn Fn(&mut Running, &Maps, &Call) -> Ret + Sync),
+            ),
+            ("Ground_801C4E20", &letgo),
+        ] {
+            let t = leaf_check::sym(target);
+            check_calls_with(&d, target, 0, &as_saved, ours);
+            let prep = move |c: &mut Call, k: usize| {
+                c.addr = t;
+                hold(c, k);
+            };
+            check_calls_with(&d, "ftCo_BarrelWait_IASA", 1, &prep, ours);
+        }
+        // Shot out (`ftCo_8009EC70`): as saved, at angles all round (negative too) and with the
+        // fighter facing either way, and with the shot's damage and knockback changed.
+        let shoot = |r: &mut Running, maps: &Maps, call: &Call| {
+            let pos = vec_at(call, call.regs.gpr[4]);
+            let hit = hit_desc(call, call.regs.gpr[5]);
+            let angle = call.regs.fpr[1].ps0 as f32;
+            r.shoot_from_stage_barrel(gobj_arg(maps, call), pos, &hit, angle);
+            Ret::Nothing
+        };
+        check_calls_with(&d, "ftCo_8009EC70", 1, &as_saved, &shoot);
+        for angle in [-45.0f32, 0.0, 30.0, 90.0, 180.0, 270.0, 359.5] {
+            for facing in [1.0f32, -1.0] {
+                let turn = move |c: &mut Call, _: usize| {
+                    c.regs.fpr[1].ps0 = f64::from(angle);
+                    let fp = fp_of(c);
+                    poke_u32(c, fp + 0x2C, facing.to_bits());
+                };
+                check_calls_with(&d, "ftCo_8009EC70", 1, &turn, &shoot);
+            }
+        }
+        // Damage, growth and set knockback: none at all, a little, and set knockback alone.
+        for (damage, growth, set) in [(0u32, 50u32, 0u32), (7, 100, 0), (40, 0, 80)] {
+            let power = move |c: &mut Call, _: usize| {
+                let h = c.regs.gpr[5];
+                poke_u32(c, h + 4, damage);
+                poke_u32(c, h + 0xC, growth);
+                poke_u32(c, h + 0x10, set);
+            };
+            check_calls_with(&d, "ftCo_8009EC70", 1, &power, &shoot);
+        }
+    }
+}
+
+/// A vector argument, the three floats at `addr` in the call's memory.
+fn vec_at(call: &Call, addr: u32) -> Vec3 {
+    Vec3::new(
+        f32_at(call, addr),
+        f32_at(call, addr + 4),
+        f32_at(call, addr + 8),
+    )
 }

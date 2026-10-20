@@ -12,7 +12,6 @@
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
-use super::super::code::unported_call;
 use super::super::handles::CodeRef;
 use super::super::state::{Game, Running};
 use super::data::{OLDKONGO_CALLBACKS, StageCallbacks};
@@ -70,6 +69,8 @@ const MOVE_ACCEL: u32 = 0x44;
 const MOVE_MAX: u32 = 0x48;
 const STOP_A: u32 = 0x4C;
 const STOP_B: u32 = 0x50;
+/// The shot's damage, angle, growth, set and base knockback and element, six words.
+const SHOT_HIT: u32 = 0x54;
 const COLOR_SCRIPT: u32 = 0x6C;
 
 fn param(game: &Game) -> Param {
@@ -419,8 +420,22 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
             v.hit_timer = t.wrapping_add(1);
             if t > 10 {
                 let keep = v.keep.expect("groldkongo.c: the caught fighter");
+                // The shot: `{1, 1, 361, 0, 0, 180}` with the parameters' damage, angle,
+                // growth, set and base knockback and element, as kongo's (no sound).
+                let words: [u32; 6] =
+                    std::array::from_fn(|i| r.data.u32(p.0.at(SHOT_HIT + 4 * i as u32)));
+                let mut a = fp::frsp(fp::fadd(
+                    std::f64::consts::FRAC_PI_2,
+                    reg(r.game.grounds[g.0].u.oldkongo().xDC),
+                ));
+                if a < 0.0 {
+                    a = fp::frsp(fp::fadd(a, std::f64::consts::TAU));
+                } else if a > std::f64::consts::TAU {
+                    a = fp::frsp(fp::fsub(a, std::f64::consts::TAU));
+                }
+                let a = mem(fp::fmuls(reg(57.295_78), a));
                 if r.game.world.gobj(keep).p_link == 8 {
-                    unported_call("ftCo_8009EC70 (the barrel shooting its fighter out)");
+                    r.shoot_from_stage_barrel(keep, pos, &super::kongo::shot_hit(words), a);
                 }
                 r.game.grounds[g.0].u.oldkongo().xC6 = 4;
                 r.object_sound(Some(g), 0, 0x12A);
