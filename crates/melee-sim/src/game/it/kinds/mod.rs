@@ -116,6 +116,7 @@ pub mod thunder;
 pub mod tincle;
 pub mod togepy;
 pub mod tomato;
+pub mod tosakinto;
 pub mod unknown;
 pub mod wstar;
 pub mod yaku;
@@ -274,6 +275,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || hinoarashi::run_event(r, gobj, addr)
         || fire::run_event(r, gobj, addr)
         || hassam::run_event(r, gobj, addr)
+        || tosakinto::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -400,6 +402,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| hinoarashi::run_pred(r, gobj, addr))
         .or_else(|| fire::run_pred(r, gobj, addr))
         .or_else(|| hassam::run_pred(r, gobj, addr))
+        .or_else(|| tosakinto::run_pred(r, gobj, addr))
         .or_else(|| yaku::run_pred(r, gobj, addr))
 }
 

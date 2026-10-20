@@ -30,7 +30,7 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::it::kinds::{
     chicorita, fire, fushigibana, hassam, hinoarashi, kamex, kireihana, lucky, maril, marumine,
-    matadogas, sonans, thunder, togepy, unknown,
+    matadogas, sonans, thunder, togepy, tosakinto, unknown,
 };
 use melee_sim::game::it::{self, CLASS_ITEM, pokemon};
 use melee_sim::game::state::Running;
@@ -115,6 +115,7 @@ const UNITS: &[(u32, u32)] = &[
     (0x802D_5CF8, 0x802D_66F8),
     (0x802C_C6E4, 0x802C_CAB4),
     (0x802C_DBE0, 0x802C_E710),
+    (0x802C_8F4C, 0x802C_9588),
 ];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
@@ -160,6 +161,7 @@ const EVT_UNK: &[&str] = &[
     "itHassam_802CDC60",
     "it_802CE7D0",
     "it_802D61A8",
+    "it_802C8FC4",
 ];
 
 /// Helpers that take what the check can't give: they run inside the callers that call them,
@@ -227,6 +229,7 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802CED54", unknown::spawn_swarm),
     ("it_802CF0D4", unknown::swarm_fly),
     ("it_802D5E4C", hinoarashi::enter_air),
+    ("it_802C8FE4", tosakinto::landed),
     ("it_80279C48", pokemon::face_nearest_opponent),
     ("it_80279E24", pokemon::pulse),
     ("it_80279FF8", pokemon::grow),
@@ -429,6 +432,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802CE7D0" => unknown::evt_unk(g, gobj, maybe(4)),
         "itUnknown_Logic38_EvtUnk" => unknown::swarm_evt_unk(g, gobj, maybe(4)),
         "it_802D61A8" => hinoarashi::evt_unk(g, gobj, maybe(4)),
+        "it_802C8FC4" => tosakinto::evt_unk(g, gobj, maybe(4)),
         "it_802D61C8" => hinoarashi::touch_normal(g, gobj, r(4) as i32),
         "it_802D6310" => hinoarashi::turn_off_surface(g, gobj, r(4) as i32),
         "it_802D6674" => hinoarashi::flame_start(g, gobj, r(4) as i32),
