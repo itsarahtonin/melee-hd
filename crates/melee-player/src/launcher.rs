@@ -82,6 +82,8 @@ pub struct Given {
     pub jit_margin: bool,
     pub scale: bool,
     pub msaa: bool,
+    pub record: bool,
+    pub replays: bool,
 }
 
 /// The form and what it last had to say.
@@ -106,6 +108,10 @@ pub struct Form {
     /// How ticks are timed, and the just-in-time tick's margin in milliseconds.
     pub tick_timing: Timing,
     pub jit_margin: f32,
+    /// Saves each match as a Slippi replay, to `replays` (empty: the replays folder beside the
+    /// program).
+    pub record: bool,
+    pub replays: String,
 }
 
 impl Form {
@@ -129,6 +135,8 @@ impl Form {
             high_refresh: Mode::Off,
             tick_timing: Timing::Timer,
             jit_margin: (crate::jit::DEFAULT_MARGIN.as_secs_f64() * 1000.0) as f32,
+            record: true,
+            replays: String::new(),
         }
     }
 
@@ -169,6 +177,11 @@ impl Form {
             self.high_refresh.key(),
             self.tick_timing.key(),
             self.jit_margin
+        );
+        text += &format!(
+            "record = {}\nreplays = {}\n",
+            if self.record { "on" } else { "off" },
+            self.replays
         );
         text
     }
@@ -253,6 +266,12 @@ impl Form {
                         self.jit_margin = m;
                     }
                 }
+                "record" if !given.record => match v {
+                    "on" => self.record = true,
+                    "off" => self.record = false,
+                    _ => {}
+                },
+                "replays" if !given.replays => self.replays = v.to_owned(),
                 _ => {}
             }
         }
@@ -395,6 +414,17 @@ impl Form {
                                     .speed(0.05)
                                     .fixed_decimals(2)
                                     .suffix(" ms"),
+                            );
+                            ui.end_row();
+                            ui.label("");
+                            ui.checkbox(&mut self.record, "Save replays");
+                            ui.end_row();
+                            ui.label("Replays folder");
+                            ui.add_enabled(
+                                self.record,
+                                egui::TextEdit::singleline(&mut self.replays)
+                                    .hint_text("replays beside the program")
+                                    .desired_width(200.0),
                             );
                             ui.end_row();
                         });
@@ -772,6 +802,8 @@ mod tests {
         form.jit_margin = 2.5;
         form.scale = 3;
         form.msaa = true;
+        form.record = false;
+        form.replays = "D:/Slippi/melee-hd".to_owned();
         form
     }
 
@@ -787,6 +819,8 @@ mod tests {
             a.jit_margin,
             a.scale,
             a.msaa,
+            a.record,
+            a.replays.clone(),
         ) == (
             b.choice.clone(),
             b.aspect,
@@ -798,6 +832,8 @@ mod tests {
             b.jit_margin,
             b.scale,
             b.msaa,
+            b.record,
+            b.replays.clone(),
         )
     }
 

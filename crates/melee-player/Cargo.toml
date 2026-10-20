@@ -33,7 +33,7 @@ png = "0.18"
 rfd = { version = "0.17", features = ["common-controls-v6"] }
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_Performance", "Win32_System_Threading"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_Performance", "Win32_System_SystemInformation", "Win32_System_Threading"] }
 
 # For every host: build.rs decides by the target (CARGO_CFG_WINDOWS), not by the host it runs on,
 # so it compiles off Windows and still embeds the resources when cross-compiling to Windows.

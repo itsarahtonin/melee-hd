@@ -75,6 +75,9 @@ mod pipelines;
 mod predict_tests;
 mod present;
 #[cfg(test)]
+mod record_tests;
+mod recording;
+#[cfg(test)]
 mod roster_tests;
 mod settings;
 mod sound;
@@ -173,6 +176,10 @@ struct Args {
     /// Plays a stage the launcher doesn't offer (`--unfinished-stages`, for developers): one
     /// whose audit isn't done or found code a match can reach unported.
     unfinished_stages: bool,
+    /// Saves each match of the player's own as a Slippi replay (`--no-record` turns it off).
+    record: bool,
+    /// Where the replays go: the replays folder beside the executable unless given.
+    replays: Option<String>,
 }
 
 /// The command line's usage, with the characters and stages melee-sim has ported.
@@ -186,6 +193,7 @@ fn usage() -> String {
          frames: [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
          debug: [--flicker-scan] captures a presented frame that drops out for one frame\n\
          perf: [--perf-report FILE] [--refresh HZ] [--seed N]\n\
+         replays: [--no-record] [--replays DIR] each match is saved to DIR, else to replays beside the program\n\
          developers: [--unfinished-stages] plays a stage not offered yet, which can stop mid-match\n\
          with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match\n\
          the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
@@ -232,6 +240,8 @@ fn parse_args() -> Result<Args, String> {
         refresh: None,
         seed: None,
         unfinished_stages: false,
+        record: true,
+        replays: None,
     };
     // Whether the command line names a match.
     let mut chosen = false;
@@ -365,6 +375,14 @@ fn parse_args() -> Result<Args, String> {
                 )
             }
             "--seed" => a.seed = Some(value()?.parse().map_err(|_| "--seed N")?),
+            "--no-record" => {
+                a.record = false;
+                a.given.record = true;
+            }
+            "--replays" => {
+                a.replays = Some(value()?);
+                a.given.replays = true;
+            }
             "--unfinished-stages" => a.unfinished_stages = true,
             "-h" | "--help" => return Err(String::new()),
             other => return Err(format!("unknown argument {other}")),
@@ -388,6 +406,22 @@ struct Session {
     replay: Option<Replay>,
     ended: bool,
     sound: Option<sound::Sound>,
+    /// Where the match's recording goes when the session ends, when it's recorded.
+    recording: Option<recording::Recording>,
+}
+
+impl Drop for Session {
+    /// Saves the match's recording, however it ended.
+    fn drop(&mut self) {
+        let (Some(to), Some(r)) = (&self.recording, &self.m.game.recorder) else {
+            return;
+        };
+        match to.save(r) {
+            Ok(Some(path)) => eprintln!("saved the replay {}", path.display()),
+            Ok(None) => {}
+            Err(e) => eprintln!("the replay couldn't be saved: {e}"),
+        }
+    }
 }
 
 impl Session {
@@ -427,13 +461,18 @@ impl Session {
                 (s, None)
             }
         };
+        // A match of the player's own is recorded (a benchmark's isn't), as melee-hd's Vanilla
+        // ruleset plays it.
+        let record = a.record && replay.is_none() && a.bench.is_none();
         // The replay's match too reads at the player's pace, as ssbm-rs's window plays one.
         let settings = Settings {
             disc: a.disc_speed,
+            record: record.then(melee_sim::game::record::Setup::vanilla),
             ..settings
         };
         let mut s = Session::begin(&disc, &settings, replay, a.bench.is_none() && !a.mute)?;
         s.set_aspect(a.aspect);
+        s.recording = record.then(|| recording::Recording::new(a.replays.as_deref()));
         Ok(s)
     }
 
@@ -470,6 +509,7 @@ impl Session {
             replay,
             ended: false,
             sound,
+            recording: None,
         })
     }
 
@@ -1328,6 +1368,8 @@ impl App {
         args.stage = c.stage;
         args.stocks = c.stocks;
         args.minutes = c.minutes;
+        args.record = l.form.record;
+        args.replays = Some(l.form.replays.clone()).filter(|d| !d.is_empty());
         let names: Vec<&str> = c
             .players
             .iter()
@@ -1978,6 +2020,8 @@ fn run(args: Args) -> ExitCode {
         form.jit_margin = (args.jit_margin.as_secs_f64() * 1000.0) as f32;
         form.scale = args.scale;
         form.msaa = args.msaa == 4;
+        form.record = args.record;
+        form.replays = args.replays.clone().unwrap_or_default();
         if let Some(text) = settings::read(settings::LAST_MATCH) {
             form.restore(&text, &args.given);
         }
