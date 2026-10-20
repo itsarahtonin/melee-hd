@@ -252,7 +252,12 @@ pub const STAGES: &[Stage] = &[
         kind: 6,
         name: "Brinstar",
         keys: &["br", "brinstar"],
-        audit: None,
+        audit: Some(Audit {
+            units: &["melee/gr/grzebes", "melee/it/kinds/ityaku"],
+            modules: &["gr/zebes", "it/kinds/yaku"],
+            unreached: &[YAKU_UNANCHORED],
+            missing: &[NANA_ISLANDS],
+        }),
     },
     Stage {
         kind: 15,
@@ -327,7 +332,16 @@ pub const STAGES: &[Stage] = &[
         kind: 17,
         name: "Green Greens",
         keys: &["gg", "green-greens"],
-        audit: None,
+        audit: Some(Audit {
+            units: &[
+                "melee/gr/grgreens",
+                "melee/it/kinds/itwhispyapple",
+                "melee/it/kinds/ityaku",
+            ],
+            modules: &["gr/greens", "it/kinds/whispyapple", "it/kinds/yaku"],
+            unreached: &[YAKU_UNANCHORED],
+            missing: &[],
+        }),
     },
     Stage {
         kind: 14,
@@ -387,7 +401,12 @@ pub const STAGES: &[Stage] = &[
         kind: 9,
         name: "Onett",
         keys: &["on", "onett"],
-        audit: None,
+        audit: Some(Audit {
+            units: &["melee/gr/gronett", "melee/it/kinds/ityaku"],
+            modules: &["gr/onett", "it/kinds/yaku"],
+            unreached: &[YAKU_UNANCHORED],
+            missing: &[NANA_ISLANDS],
+        }),
     },
     Stage {
         kind: 3,
@@ -468,6 +487,13 @@ const NANA_ROUTES: Gap = Gap {
 const NANA_SHRINE: Gap = Gap {
     what: "Nana's computer player heading for an opening in the temple's ceiling (ftCo_800AAF48)",
     covers: &["ftCo_800AAF48"],
+    with: Some(ICE_CLIMBERS),
+};
+
+/// And judges whether an island is safe to stand on, which on Brinstar and Onett asks the stage.
+const NANA_ISLANDS: Gap = Gap {
+    what: "Nana's computer player judging whether an island is safe on Brinstar and Onett (ftCo_800A2718)",
+    covers: &["ftCo_800A2718 on Zebes or Onett"],
     with: Some(ICE_CLIMBERS),
 };
 
@@ -608,6 +634,10 @@ mod tests {
         (
             "the spawner's enemies",
             "enemy spawners, which no roster stage configures",
+        ),
+        (
+            "a spawn configuration that keeps its generator",
+            "spawn configurations with a negative chance, which no roster stage makes (Brinstar's draw theirs at 1)",
         ),
     ];
 

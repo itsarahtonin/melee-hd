@@ -264,16 +264,19 @@ The rule is kept by melee-sim's `roster` tests: `audited_stages_reach_nothing_un
 | Stage | Offered | Missing (stops a match) | Unported, not reached (why) |
 | --- | --- | --- | --- |
 | Battlefield | yes | | |
+| Brinstar | yes, not with the Ice Climbers | with the Ice Climbers: Nana's computer player judging whether an island is safe (`ftCo_800A2718`), which asks Brinstar and Onett about their own hazards | the stage item on neither a joint nor a point, as on Jungle Japes |
 | Brinstar Depths | yes | | |
 | Dream Land | yes | | |
 | Final Destination | yes | | the boss stages' cycle (`gm_8016ECE8`): single-player boss stages only |
 | Fountain of Dreams | yes | | |
 | Fourside | yes | | |
 | Great Bay | yes, not with the Ice Climbers | with the Ice Climbers: Nana's computer player following the stage's routes (`ftCo_800A1CC4`), which she does whenever she picks a destination | Tingle's `evt_unk` (`it_802EC850`): the items' `evt_unk` runs only from `it_8026B7F8`, at a fighter's unload when the scene ends |
+| Green Greens | yes | | the stage item on neither a joint nor a point, as on Jungle Japes |
 | Hyrule Temple | yes, not with the Ice Climbers | with the Ice Climbers: Nana's routes (`ftCo_800A1CC4`) and her search for an opening in the temple's ceiling (`ftCo_800AAF48`) | |
 | Jungle Japes | yes | | a stage item on neither a joint nor a point (`it_2E6A_UnkMotion19_Phys`): no stage makes one, and the original hangs |
 | Kongo Jungle | yes | | a box riding the river (`it_80286088`): only with boxes on in the item switch |
 | Kongo Jungle N64 | yes | | |
+| Onett | yes, not with the Ice Climbers | with the Ice Climbers: Nana's island check (`ftCo_800A2718`), as on Brinstar | the stage item on neither a joint nor a point, as on Jungle Japes |
 | Pokémon Stadium | yes | | the screen's count (`grStadium_801D384C`): single-player modes only |
 | Yoshi's Island | yes | | the stage item on neither a joint nor a point, as on Jungle Japes |
 | Yoshi's Island N64 | yes | | |
