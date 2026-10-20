@@ -183,6 +183,11 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     super::super::gr::greatbay::balloon_touched(&mut self.grounds[g.0], coll, x50);
                 }
             }
+            super::super::gr::greens::BLOCK_LANDED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    super::super::gr::greens::block_landed(&mut self.grounds[g.0], joint_id);
+                }
+            }
             _ => unported_call(&format!("stage joint callback {:#010x}", callback.0)),
         }
     }

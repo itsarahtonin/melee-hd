@@ -13,6 +13,7 @@ pub mod dynamic_attr;
 pub mod fourside;
 pub mod garden;
 pub mod greatbay;
+pub mod greens;
 pub mod grlib;
 pub mod ground;
 pub mod izumi;
@@ -56,6 +57,8 @@ pub const GR_KIND_KRAID: i32 = 9;
 pub const GR_KIND_FOURSIDE: i32 = 21;
 /// `Gr_Kind_GreatBay`, Great Bay.
 pub const GR_KIND_GREATBAY: i32 = 6;
+/// `Gr_Kind_Greens`, Green Greens.
+pub const GR_KIND_GREENS: i32 = 13;
 /// `Gr_Kind_Story`, Yoshi's Story.
 pub const GR_KIND_STORY: i32 = 10;
 /// `Gr_Kind_Izumi`, Fountain of Dreams.
@@ -208,6 +211,10 @@ pub struct Globals {
     pub kongo_yakumono: Option<DataRef>,
     /// Kongo Jungle's bridge (`grkongo.c`'s statics).
     pub kongo: kongo::Globals,
+    /// Green Greens' `yakumono_param` (`grGreens_YakumonoParam`).
+    pub greens_yakumono: Option<DataRef>,
+    /// Green Greens' statics besides it.
+    pub greens: greens::Globals,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -317,6 +324,8 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_KONGO, 1 | 2) => VarsKind::KongoPlatform,
         (GR_KIND_KONGO, 7..=9) => VarsKind::KongoLog,
         (GR_KIND_KONGO, 11) => VarsKind::KongoPath,
+        (GR_KIND_GREENS, 5) => VarsKind::Greens2,
+        (GR_KIND_GREENS, 6) => VarsKind::Greens,
         _ => VarsKind::Bytes,
     }
 }
@@ -325,6 +334,7 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
 pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: GroundId) {
     match cb.0 {
         garden::KLAPTRAP_BIT => garden::klaptrap_bit(r, item, g),
+        greens::BLOCK_DEALT => greens::block_item_nothing(r, item, g),
         other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
     }
 }
@@ -342,6 +352,7 @@ pub fn yaku_received(
 ) {
     match cb.0 {
         yorster::BLOCK_HIT => yorster::block_hit(r, item, g, dir, fighter, damage),
+        greens::BLOCK_HIT => greens::block_hit(r, item, g, fighter),
         other => {
             super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))
         }
@@ -350,11 +361,16 @@ pub fn yaku_received(
 
 /// A stage's callback for a touch on its hurtbox item (`itYaku_ItemVars::x1C`), by address.
 pub fn yaku_touched(
-    _r: &mut super::state::Running,
+    r: &mut super::state::Running,
     cb: CodeRef,
-    _item: GObjId,
-    _g: GroundId,
+    item: GObjId,
+    g: GroundId,
     _toucher: Option<GObjId>,
 ) {
-    super::code::unported_call(&format!("a stage item's touch callback {:#010x}", cb.0))
+    match cb.0 {
+        greens::BLOCK_TOUCHED => greens::block_item_nothing(r, item, g),
+        other => {
+            super::code::unported_call(&format!("a stage item's touch callback {other:#010x}"))
+        }
+    }
 }

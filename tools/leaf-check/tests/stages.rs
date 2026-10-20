@@ -3980,3 +3980,735 @@ fn vec_at(call: &Call, addr: u32) -> Vec3 {
         f32_at(call, addr + 8),
     )
 }
+
+// Green Greens (`grgreens.c`) and Whispy's apples (`itwhispyapple.c`).
+
+const GREENS: &str = "oracle-stage-green-greens";
+
+/// grgreens.c's `yakumono_param`, its demo and waiting flags.
+const GREENS_PARAM: u32 = 0x804D_6AA8;
+const GREENS_DEMO: u32 = 0x804D_6AAC;
+const GREENS_WAITING: u32 = 0x804D_6AAD;
+
+/// The parameters' word at `off`.
+fn greens_param(c: &Call, off: u32) -> u32 {
+    peek_u32(c, peek_u32(c, GREENS_PARAM) + off)
+}
+
+#[test]
+fn greens_setup() {
+    use melee_sim::game::gr::greens;
+    let d = hazard_dir(GREENS);
+    check_hazard(&d, "grGreens_Init", 1, &as_saved, &by_event);
+    check_hazard(&d, "grGreens_802134F8", 1, &as_saved, &by_event);
+    // The block objects the blocks' tick makes, and every map's object from the same calls.
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let _ = greens::create(r, call.regs.gpr[3] as i32, greens::PROC_BLOCK_FRAME);
+        Ret::Nothing
+    };
+    check_hazard(&d, "grGreens_80213524", 1, &as_saved, &create);
+    for map in [0u32, 1, 2, 3, 4] {
+        check_hazard(
+            &d,
+            "grGreens_80213524",
+            1,
+            &move |c, _| c.regs.gpr[3] = map,
+            &create,
+        );
+    }
+    for f in [
+        "grGreens_8021360C",
+        "grGreens_802138BC",
+        "stageGObj1_OnInit",
+        "stageGObj3_OnInit",
+        "grGreens_80213988",
+        "grGreens_802139C4",
+        "grGreens_80214674",
+        "fn_80214658",
+    ] {
+        check_hazard(&d, f, 1, &as_saved, &by_address);
+    }
+    // Map 0's setup after a demo's: the start points' joints moved.
+    let demo = |c: &mut Call, _: usize| poke_u8(c, GREENS_DEMO, 1);
+    check_hazard(&d, "grGreens_8021360C", 1, &demo, &by_address);
+    // The blocks' setup after a demo's keeps the last layout.
+    check_hazard(&d, "grGreens_80214674", 1, &demo, &by_address);
+    let grid = |r: &mut Running, maps: &Maps, call: &Call| {
+        greens::measure_grid(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_hazard(&d, "grGreens_8021483C", 1, &as_saved, &grid);
+    let lay_out = |r: &mut Running, _: &Maps, _: &Call| {
+        greens::lay_out(r);
+        Ret::Nothing
+    };
+    let seeds = |c: &mut Call, k: usize| set_seed(c, 0x1234_5679u32.wrapping_mul(k as u32 + 1));
+    for p in [&as_saved as &Prepare, &seeds] {
+        check_hazard(&d, "grGreens_80214B58", 1, p, &lay_out);
+    }
+    let place = |r: &mut Running, maps: &Maps, call: &Call| {
+        greens::place_blocks(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_hazard(&d, "grGreens_80214FA8", 1, &as_saved, &place);
+}
+
+/// Whispy's variables set: state, step, count, whether the state is new, side, apples left and
+/// the next apple's side.
+#[allow(clippy::too_many_arguments)]
+fn whispy(
+    c: &mut Call,
+    state: i32,
+    step: i32,
+    t: i32,
+    new: i32,
+    side: i32,
+    apples: i32,
+    aside: i32,
+) {
+    let v = map_vars(c, 5);
+    for (off, x) in [
+        (4, state),
+        (8, step),
+        (0xC, t),
+        (0x10, new),
+        (0x14, side),
+        (0x20, apples),
+        (0x24, aside),
+    ] {
+        poke_u32(c, v + off, x as u32);
+    }
+}
+
+#[test]
+fn greens_whispy() {
+    let d = hazard_dir(GREENS);
+    let f = "grGreens_80213C10";
+    check_hazard(&d, f, 1, &as_saved, &by_address);
+    check_hazard(&d, f, 1, &|c, _| poke_u8(c, GREENS_DEMO, 1), &by_address);
+    check_hazard(&d, f, 1, &|c, _| poke_u8(c, GREENS_WAITING, 1), &by_address);
+    // Idle: new, counting down, and at its end; blowing: new (turned to the fighters), then each
+    // step with its count around its ends; dropping apples: new, at the first apple's tick and
+    // an interval after, between them, and with none left; and a state past the three.
+    let breath = |c: &Call| f32::from_bits(greens_param(c, 0x50)) as i32;
+    let blow_max = |c: &Call| f32::from_bits(greens_param(c, 0x54)) as i32;
+    let blow_min = |c: &Call| f32::from_bits(greens_param(c, 0x58)) as i32;
+    let first = |c: &Call| greens_param(c, 0x64) as i32;
+    let every = |c: &Call| greens_param(c, 0x68) as i32;
+    let prepares: Vec<Box<Prepare>> = vec![
+        Box::new(|c, _| whispy(c, 0, 0, 30, 1, 0, 0, 0)),
+        Box::new(|c, _| whispy(c, 0, 3, 30, 0, 0, 0, 0)),
+        Box::new(|c, _| whispy(c, 0, 3, 1, 0, 1, 0, 0)),
+        Box::new(|c, _| whispy(c, 0, 7, -4, 0, 1, 0, 0)),
+        Box::new(|c, _| whispy(c, 1, 0, 0, 1, 0, 0, 0)),
+        Box::new(|c, k| whispy(c, 1, (k % 7) as i32, 0, 0, (k % 2) as i32, 0, 0)),
+        Box::new(move |c, _| whispy(c, 1, 2, breath(c), 0, 0, 0, 0)),
+        Box::new(move |c, _| whispy(c, 1, 2, breath(c), 0, 1, 0, 0)),
+        Box::new(move |c, _| whispy(c, 1, 4, blow_max(c), 0, 1, 0, 0)),
+        Box::new(move |c, _| whispy(c, 1, 4, blow_min(c), 0, 0, 0, 0)),
+        Box::new(move |c, _| whispy(c, 1, 4, blow_min(c), 0, 1, 0, 0)),
+        Box::new(|c, _| whispy(c, 2, 0, 0, 1, 0, 0, 0)),
+        Box::new(move |c, _| whispy(c, 2, 0, first(c), 0, 0, 3, 0)),
+        Box::new(move |c, _| whispy(c, 2, 0, first(c) + every(c), 0, 0, 2, 1)),
+        Box::new(move |c, _| whispy(c, 2, 0, first(c) + 1, 0, 0, 2, 1)),
+        Box::new(move |c, _| whispy(c, 2, 0, first(c), 0, 0, -1, 0)),
+        Box::new(|c, _| whispy(c, 3, 0, 0, 0, 0, 0, 0)),
+    ];
+    for p in &prepares {
+        check_hazard(&d, f, 1, p.as_ref(), &by_address);
+    }
+}
+
+#[test]
+fn greens_wind() {
+    use melee_sim::game::gr::greens;
+    let d = hazard_dir(GREENS);
+    // The push goes where the prepares point the callback's vector: the stage's barrel place,
+    // compared state that nothing on Green Greens uses.
+    let wind = |r: &mut Running, maps: &Maps, call: &Call| {
+        let ground = gobj_arg(maps, call);
+        let fighter = *maps
+            .gobjs
+            .get(&call.regs.gpr[4])
+            .expect("the fighter's GObj");
+        let push = greens::wind_push(r, ground, fighter);
+        r.game.stage_info.x730 = push.unwrap_or(Vec3::ZERO);
+        Ret::Int(u32::from(push.is_some()))
+    };
+    let out = |c: &mut Call| c.regs.gpr[5] = leaf_check::sym("stage_info") + 0x730;
+    // Whispy blowing either way or not, the fighter at the box's middle on his side, outside
+    // it, and on its edge.
+    let at = move |c: &mut Call, blowing: i32, x: f32, y: f32| {
+        out(c);
+        poke_u32(c, map_vars(c, 5) + 0x18, blowing as u32);
+        let fp = peek_u32(c, c.regs.gpr[4] + 0x2C);
+        poke_u32(c, fp + 0xB0, x.to_bits());
+        poke_u32(c, fp + 0xB0 + 4, y.to_bits());
+    };
+    let p = |c: &Call, off: u32| f32::from_bits(greens_param(c, off));
+    let mid_y = move |c: &Call| (p(c, 0x48) + p(c, 0x4C)) / 2.0;
+    let mid_x = move |c: &Call| (p(c, 0x40) + p(c, 0x44)) / 2.0;
+    let prepares: Vec<Box<Prepare>> = vec![
+        Box::new(move |c, _| out(c)),
+        Box::new(move |c, _| at(c, 1, -mid_x(c), mid_y(c))),
+        Box::new(move |c, _| at(c, 2, mid_x(c), mid_y(c))),
+        Box::new(move |c, _| at(c, 1, mid_x(c), mid_y(c))),
+        Box::new(move |c, _| at(c, 2, mid_x(c), p(c, 0x48))),
+        Box::new(move |c, _| at(c, 2, p(c, 0x40), mid_y(c))),
+        Box::new(move |c, _| at(c, 0, mid_x(c), mid_y(c))),
+        Box::new(move |c, _| at(c, 3, mid_x(c), mid_y(c))),
+    ];
+    for pr in &prepares {
+        check_hazard(&d, "fn_80213B1C", 1, pr.as_ref(), &wind);
+    }
+    let in_box = |_: &mut Running, _: &Maps, call: &Call| {
+        let v = call.regs.gpr[3];
+        let pos = Vec3::new(f32_at(call, v), f32_at(call, v + 4), f32_at(call, v + 8));
+        let f = |i: usize| call.regs.fpr[i].ps0 as f32;
+        Ret::Int(u32::from(greens::in_box(pos, f(1), f(2), f(3), f(4))))
+    };
+    // The bounds in either order, and the point inside, outside and on an edge.
+    let bounds = |c: &mut Call, k: usize| {
+        let v = c.regs.gpr[3];
+        let b = [(-60.0f32, -20.0f32), (-20.0, -60.0)][k % 2];
+        let y = [(80.0f32, 0.0f32), (0.0, 80.0)][k / 2 % 2];
+        let fpr = &mut c.regs.fpr;
+        (fpr[1].ps0, fpr[2].ps0, fpr[3].ps0, fpr[4].ps0) = (
+            f64::from(b.0),
+            f64::from(b.1),
+            f64::from(y.0),
+            f64::from(y.1),
+        );
+        let x = [-40.0f32, -10.0, -60.0, -20.0001][k % 4];
+        poke_u32(c, v, x.to_bits());
+        poke_u32(c, v + 4, [40.0f32, 0.0, 79.9][k % 3].to_bits());
+    };
+    for pr in [&as_saved as &Prepare, &bounds] {
+        check_hazard(&d, "grGreens_80213AB4", 1, pr, &in_box);
+    }
+}
+
+/// The address of the block at `row` and `col` in a call's state.
+fn greens_block(c: &Call, row: u32, col: u32) -> u32 {
+    peek_u32(c, map_vars(c, 6) + 8) + 0x20 * (row * 6 + col)
+}
+
+/// A block's status (the top four bits) and flag `x1_n` (`n` from 1 to 7).
+fn set_block_status(c: &mut Call, row: u32, col: u32, status: u32) {
+    let a = greens_block(c, row, col);
+    let w = peek_u32(c, a);
+    poke_u32(c, a, (w & 0x0FFF_FFFF) | status << 28);
+}
+
+fn set_block_flag(c: &mut Call, row: u32, col: u32, n: u32, v: bool) {
+    let a = greens_block(c, row, col);
+    let w = peek_u32(c, a);
+    let bit = 1 << (23 - n);
+    poke_u32(c, a, if v { w | bit } else { w & !bit });
+}
+
+fn block_status(c: &Call, row: u32, col: u32) -> u32 {
+    peek_u32(c, greens_block(c, row, col)) >> 28
+}
+
+/// The first block in use, row by row.
+fn first_block(c: &Call) -> Option<(u32, u32)> {
+    (0..30)
+        .map(|i| (i / 6, i % 6))
+        .find(|&(r, k)| block_status(c, r, k) != 0)
+}
+
+#[test]
+fn greens_blocks() {
+    let d = hazard_dir(GREENS);
+    let f = "grGreens_802166C4";
+    let tick = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::gr::greens::proc_blocks(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    // A new block due now (from several seeds), with a side full (a block at the top of its
+    // first column) or both; and a block that broke.
+    let due = |c: &mut Call, k: usize| {
+        poke_u32(c, map_vars(c, 6) + 0xC, (-1i32) as u32);
+        set_seed(c, 0x0F0F_0F0Fu32.wrapping_mul(k as u32 + 3));
+    };
+    let full = move |c: &mut Call, k: usize, left: bool, right: bool| {
+        due(c, k);
+        if left {
+            set_block_status(c, 4, 0, 3);
+        }
+        if right {
+            set_block_status(c, 4, 3, 3);
+        }
+    };
+    let broke = |c: &mut Call, _: usize| {
+        if let Some((r, k)) = first_block(c) {
+            set_block_flag(c, r, k, 3, true);
+        }
+    };
+    let prepares: [&Prepare; 6] = [
+        &as_saved,
+        &due,
+        &move |c, k| full(c, k, true, false),
+        &move |c, k| full(c, k, false, true),
+        &move |c, k| full(c, k, true, true),
+        &broke,
+    ];
+    for p in prepares {
+        check_hazard(&d, f, 1, p, &tick);
+    }
+    // The stage's process, its blocks waiting for the start or not.
+    let f = "grGreens_8021479C";
+    check_hazard(&d, f, 1, &as_saved, &by_address);
+    let waiting = |c: &mut Call, _: usize| {
+        let v = map_vars(c, 6);
+        poke_u32(c, v, peek_u32(c, v) | 0x8000_0000);
+    };
+    check_hazard(&d, f, 1, &waiting, &by_address);
+}
+
+/// A block's fall: its speed and height (above its place by `dy`), and its status.
+fn falling(c: &mut Call, row: u32, col: u32, status: u32, speed: f32, dy: f32) {
+    set_block_status(c, row, col, status);
+    let a = greens_block(c, row, col);
+    let grid = peek_u32(c, map_vars(c, 6) + 4) + 0xC * (row * 6 + col);
+    let y = f32_at(c, grid + 4) + dy;
+    poke_u32(c, a + 4, speed.to_bits());
+    poke_u32(c, a + 8, y.to_bits());
+}
+
+#[test]
+fn greens_block_moves() {
+    use melee_sim::game::gr::greens;
+    let d = hazard_dir(GREENS);
+    let update = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        greens::update_block(r, gobj_arg(maps, call), g[4] as i32, g[5] as i32);
+        Ret::Nothing
+    };
+    let here = |c: &Call| (c.regs.gpr[5], c.regs.gpr[4]);
+    // The called block falling (slowly, fast, landing now, landed on), on a falling block
+    // below, bombing, broken, and resting with falling blocks above it.
+    let prepares: Vec<Box<Prepare>> = vec![
+        Box::new(move |c, _| {
+            let (r, k) = here(c);
+            if block_status(c, r, k) != 0 {
+                falling(c, r, k, 1, 0.0, 40.0);
+            }
+        }),
+        Box::new(move |c, _| {
+            let (r, k) = here(c);
+            if block_status(c, r, k) != 0 {
+                falling(c, r, k, 1, 50.0, 40.0);
+            }
+        }),
+        Box::new(move |c, _| {
+            let (r, k) = here(c);
+            if block_status(c, r, k) != 0 {
+                falling(c, r, k, 1, 1.0, 0.25);
+            }
+        }),
+        Box::new(move |c, _| {
+            let (r, k) = here(c);
+            if block_status(c, r, k) != 0 {
+                falling(c, r, k, 1, 1.0, 20.0);
+                set_block_flag(c, r, k, 4, true);
+            }
+        }),
+        Box::new(move |c, _| {
+            let (r, k) = here(c);
+            if r > 0 && block_status(c, r, k) != 0 && block_status(c, r - 1, k) != 0 {
+                falling(c, r - 1, k, 1, 1.0, 30.0);
+                falling(c, r, k, 1, 1.0, 31.0);
+            }
+        }),
+        Box::new(move |c, _| {
+            let (r, k) = here(c);
+            if block_status(c, r, k) != 0 {
+                set_block_flag(c, r, k, 2, true);
+            }
+        }),
+        Box::new(move |c, _| {
+            let (r, k) = here(c);
+            set_block_flag(c, r, k, 3, true);
+        }),
+        Box::new(move |c, _| {
+            let (r, k) = here(c);
+            if block_status(c, r, k) != 0 {
+                falling(c, r, k, 1, 1.0, 0.25);
+                for up in r + 1..5 {
+                    if block_status(c, up, k) != 0 {
+                        set_block_status(c, up, k, 2);
+                    }
+                }
+            }
+        }),
+        Box::new(move |c, _| {
+            let (r, k) = here(c);
+            if block_status(c, r, k) != 0 {
+                falling(c, r, k, 1, 1.0, 20.0);
+                for up in r + 1..5 {
+                    if block_status(c, up, k) != 0 {
+                        set_block_status(c, up, k, 2);
+                    }
+                }
+            }
+        }),
+    ];
+    let f = "grGreens_80215ED8";
+    check_hazard(&d, f, 1, &as_saved, &update);
+    for p in &prepares {
+        check_hazard(&d, f, 1, p.as_ref(), &update);
+    }
+    // A block added: as saved, the other kind, and at rest or falling.
+    let add = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        greens::add_block(
+            r,
+            gobj_arg(maps, call),
+            g[4] as i32,
+            g[5] as i32,
+            g[6] as i32,
+            g[7],
+            greens::PROC_BLOCK_FRAME,
+        );
+        Ret::Nothing
+    };
+    let f = "grGreens_80215358";
+    let prepares: [&Prepare; 3] = [
+        &as_saved,
+        &|c, _| c.regs.gpr[6] = 3 - c.regs.gpr[6],
+        &|c, _| c.regs.gpr[7] = if c.regs.gpr[7] == 1 { 3 } else { 1 },
+    ];
+    for p in prepares {
+        check_hazard(&d, f, 1, p, &add);
+    }
+    // A column settling, as saved and with falling blocks over an empty place.
+    let settle = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        greens::settle_column(r, gobj_arg(maps, call), g[4] as i32, g[5] as i32);
+        Ret::Nothing
+    };
+    let gap = |c: &mut Call, k: usize| {
+        let col = c.regs.gpr[4];
+        let row = (k % 3) as u32;
+        set_block_status(c, row, col, 0);
+        for up in row + 1..5 {
+            if block_status(c, up, col) != 0 {
+                set_block_status(c, up, col, [1, 2][up as usize % 2]);
+            }
+        }
+    };
+    for p in [&as_saved as &Prepare, &gap] {
+        check_hazard(&d, "grGreens_80215D54", 1, p, &settle);
+    }
+}
+
+#[test]
+fn greens_block_links() {
+    use melee_sim::game::gr::greens;
+    let d = hazard_dir(GREENS);
+    let corners = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        greens::link_corners(r, gobj_arg(maps, call), g[4] as i32, g[5] as i32);
+        Ret::Nothing
+    };
+    // Every neighbour resting, only the diagonals, only the sides, and the grid's first place
+    // with its corner's neighbours, which reads before the blocks' array.
+    let around = move |c: &mut Call, mask: u32| {
+        let (col, row) = (c.regs.gpr[4] as i32, c.regs.gpr[5] as i32);
+        let mut i = 0;
+        for dr in -1..=1 {
+            for dc in -1..=1 {
+                if (dr, dc) == (0, 0) {
+                    continue;
+                }
+                let (r, k) = (row + dr, col + dc);
+                if (0..5).contains(&r) && (0..6).contains(&k) {
+                    let s = if mask >> i & 1 != 0 { 3 } else { 0 };
+                    set_block_status(c, r as u32, k as u32, s);
+                }
+                i += 1;
+            }
+        }
+    };
+    let prepares: [&Prepare; 5] = [
+        &as_saved,
+        &move |c, _| around(c, 0xFF),
+        &move |c, _| around(c, 0b1010_0101),
+        &move |c, _| around(c, 0b0101_1010),
+        &move |c, _| {
+            c.regs.gpr[4] = 0;
+            c.regs.gpr[5] = 0;
+            set_block_status(c, 1, 1, 3);
+            set_block_status(c, 1, 0, 0);
+        },
+    ];
+    for p in prepares {
+        check_hazard(&d, "grGreens_802150C4", 1, p, &corners);
+    }
+    let links = |r: &mut Running, maps: &Maps, call: &Call| {
+        greens::link_blocks(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    // Every resting block to link, and every empty place's neighbours.
+    let all = |c: &mut Call, k: usize| {
+        for i in 0..30u32 {
+            let (r, col) = (i / 6, i % 6);
+            match block_status(c, r, col) {
+                3 => set_block_flag(c, r, col, 5, true),
+                0 if k.is_multiple_of(2) => set_block_flag(c, r, col, 6, true),
+                _ => {}
+            }
+        }
+    };
+    for p in [&as_saved as &Prepare, &all] {
+        check_hazard(&d, "grGreens_80216C20", 1, p, &links);
+    }
+}
+
+#[test]
+fn greens_block_hits() {
+    use melee_sim::game::gr::greens;
+    let d = hazard_dir(GREENS);
+    let ground = |maps: &Maps, a: u32| *maps.grounds.get(&a).expect("the stage's object");
+    let brk = move |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let by = maps.gobjs.get(&g[6]).copied();
+        greens::break_block(r, ground(maps, g[3]), g[4] as i32, g[5] as i32, by);
+        Ret::Nothing
+    };
+    // As saved, the other kind of block, and one already broken.
+    let prepares: [&Prepare; 3] = [
+        &as_saved,
+        &|c, _| {
+            let (col, row) = (c.regs.gpr[4], c.regs.gpr[5]);
+            let a = greens_block(c, row, col);
+            poke_u32(c, a, peek_u32(c, a) ^ 1 << 22);
+        },
+        &|c, _| {
+            let (col, row) = (c.regs.gpr[4], c.regs.gpr[5]);
+            set_block_flag(c, row, col, 7, true);
+        },
+    ];
+    for p in prepares {
+        check_hazard(&d, "grGreens_802159B8", 1, p, &brk);
+    }
+    let hit = move |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let by = maps.gobjs.get(&g[6]).copied();
+        greens::block_hit(r, gobj_arg(maps, call), ground(maps, g[4]), by);
+        Ret::Nothing
+    };
+    check_hazard(&d, "fn_80215B84", 1, &as_saved, &hit);
+    let landed = move |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = ground(maps, call.regs.gpr[3]);
+        greens::block_landed(&mut r.game.grounds[g.0], call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    // On its own joint, another block's, and a joint no block has.
+    let joints = |c: &mut Call, k: usize| c.regs.gpr[4] = [3u32, 17, 40][k % 3];
+    for p in [&as_saved as &Prepare, &joints] {
+        check_hazard(&d, "fn_80216DE4", 1, p, &landed);
+    }
+    // The items' callbacks that do nothing, from the hits' calls.
+    let nothing = move |r: &mut Running, maps: &Maps, call: &Call| {
+        greens::block_item_nothing(r, gobj_arg(maps, call), ground(maps, call.regs.gpr[4]));
+        Ret::Nothing
+    };
+    for name in ["fn_802159B4", "fn_80215D50"] {
+        check_hazard(
+            &d,
+            "fn_80215B84",
+            1,
+            &retarget(leaf_check::sym(name)),
+            &nothing,
+        );
+    }
+    // The stage glue the blocks use: a state change (the bomb's explosion), whether its
+    // script is done, and an item destroyed.
+    let state = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = gobj_arg(maps, call);
+        melee_sim::game::gr::material::item_state(r, g, call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    check_hazard(&d, "grMaterial_801C8D98", 1, &as_saved, &state);
+    let done = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = gobj_arg(maps, call);
+        Ret::Int(u32::from(melee_sim::game::gr::material::item_script_done(
+            r.game, g,
+        )))
+    };
+    check_hazard(&d, "grMaterial_801C8E48", 1, &as_saved, &done);
+    let destroy = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::gr::material::destroy_item(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let to_destroy = retarget(leaf_check::sym("grMaterial_801C8CDC"));
+    check_hazard(&d, "it_2E6A_UnkMotion19_Phys", 1, &to_destroy, &destroy);
+}
+
+#[test]
+fn greens_unreached_callbacks() {
+    use melee_sim::game::gr::greens;
+    let d = hazard_dir(GREENS);
+    let from = "grGreens_8021479C";
+    for name in [
+        "grGreens_802138B4",
+        "grGreens_802138B8",
+        "grGreens_80213908",
+        "grGreens_8021390C",
+        "grGreens_80213944",
+        "grGreens_80213948",
+        "grGreens_80213980",
+        "grGreens_80213984",
+        "grGreens_802139BC",
+        "grGreens_802139C0",
+        "grGreens_80214654",
+        "grGreens_80214804",
+    ] {
+        check_hazard(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let load = retarget(leaf_check::sym("grGreens_802134F4"));
+    check_hazard(&d, from, 1, &load, &by_event);
+    let demo = retarget(leaf_check::sym("grGreens_80213458"));
+    check_hazard(&d, from, 1, &demo, &by_demo);
+    let shadow =
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(greens::check_shadow_render()));
+    let to_shadow = retarget(leaf_check::sym("grGreens_80216E6C"));
+    check_hazard(&d, from, 1, &to_shadow, &shadow);
+}
+
+/// An apple's variables (`xDD4`) in a call made with it in r3.
+fn apple_vars(c: &Call) -> u32 {
+    peek_u32(c, c.regs.gpr[3] + 0x2C) + 0xDD4
+}
+
+#[test]
+fn whispy_apples() {
+    use melee_sim::game::it::kinds::whispyapple;
+    let d = hazard_dir(GREENS);
+    let spawn = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let parent = maps.gobjs.get(&g[3]).copied();
+        let pos = Vec3::new(
+            f32_at(call, g[4]),
+            f32_at(call, g[4] + 4),
+            f32_at(call, g[4] + 8),
+        );
+        let f = |i: usize| call.regs.fpr[i].ps0 as f32;
+        let _ = whispyapple::spawn(r, parent, pos, f(1), f(2));
+        Ret::Nothing
+    };
+    // As saved, kept or bursting for sure, healing for sure (healing items off in the match,
+    // so a plain apple), and from several seeds.
+    let odds = |keep: f64, heal: f64| {
+        move |c: &mut Call, _: usize| {
+            c.regs.fpr[1].ps0 = keep;
+            c.regs.fpr[2].ps0 = heal;
+        }
+    };
+    let seeds = |c: &mut Call, k: usize| set_seed(c, 0x2468_ACE1u32.wrapping_mul(k as u32 + 1));
+    let prepares: [&Prepare; 5] = [
+        &as_saved,
+        &odds(1.0, 0.0),
+        &odds(0.0, 0.0),
+        &odds(0.0, 1.0),
+        &seeds,
+    ];
+    for p in prepares {
+        check_hazard(&d, "it_802EE200", 1, p, &spawn);
+    }
+    let start = |r: &mut Running, maps: &Maps, call: &Call| {
+        whispyapple::start(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_hazard(&d, "it_802EE374", 1, &as_saved, &start);
+    let bursts = |c: &mut Call, _: usize| poke_u32(c, apple_vars(c) + 4, 1);
+    for f in [
+        "itWhispyapple_UnkMotion0_Anim",
+        "itWhispyapple_UnkMotion0_Phys",
+        "itWhispyapple_UnkMotion0_Coll",
+        "it_802EE6A0",
+        "itWhispyapple_UnkMotion1_Anim",
+        "itWhispyapple_UnkMotion1_Coll",
+    ] {
+        for p in [&as_saved as &Prepare, &bursts] {
+            check_hazard(&d, f, 1, p, &item_cb);
+        }
+    }
+    // Falling apples at the stage's plane and short of it.
+    let at_plane = |c: &mut Call, k: usize| {
+        let ip = peek_u32(c, c.regs.gpr[3] + 0x2C);
+        poke_u32(c, ip + 0x4C + 8, [0.0f32, 0.5, -0.5][k % 3].to_bits());
+        poke_u32(c, apple_vars(c) + 4, (k / 3 % 2) as u32);
+    };
+    check_hazard(&d, "itWhispyapple_UnkMotion0_Coll", 1, &at_plane, &item_cb);
+    // Ageing: near its end, behind the stage, and burst.
+    let age = |c: &mut Call, k: usize| {
+        let ip = peek_u32(c, c.regs.gpr[3] + 0x2C);
+        poke_u32(c, ip + 0xD44, [1.0f32, 30.0, 400.0][k % 3].to_bits());
+        poke_u32(c, ip + 0x4C + 8, [0.0f32, -5.0][k / 3 % 2].to_bits());
+    };
+    let burst_state = |c: &mut Call, _: usize| {
+        let ip = peek_u32(c, c.regs.gpr[3] + 0x2C);
+        poke_u32(c, ip + 0x24, 7);
+    };
+    for p in [&age as &Prepare, &burst_state] {
+        check_hazard(&d, "itWhispyapple_UnkMotion1_Anim", 1, p, &item_cb);
+    }
+    // The states and events no capture reached, from a lying apple's calls.
+    for name in [
+        "itWhispyapple_UnkMotion1_Phys",
+        "fn_802EE7FC",
+        "itWhispyapple_UnkMotion5_Anim",
+        "itWhispyapple_UnkMotion5_Phys",
+        "itWhispyapple_UnkMotion5_Coll",
+        "it_802EEA08",
+        "itWhispyapple_UnkMotion3_Anim",
+        "itWhispyapple_UnkMotion3_Phys",
+        "it_802EEB28",
+        "itWhispyApple_Logic18_EnteredAir",
+        "itWhispyapple_UnkMotion6_Anim",
+        "itWhispyapple_UnkMotion6_Phys",
+        "itWhispyapple_UnkMotion6_Coll",
+        "it_802EED00",
+        "itWhispyapple_UnkMotion7_Anim",
+        "itWhispyapple_UnkMotion7_Phys",
+        "itWhispyapple_UnkMotion7_Coll",
+        "it_802EEED0",
+        "it_802EEED8",
+        "it_802EEF10",
+        "it_802EEF30",
+        "it_802EEF68",
+    ] {
+        let from = "itWhispyapple_UnkMotion1_Anim";
+        check_hazard(&d, from, 1, &retarget(leaf_check::sym(name)), &item_cb);
+    }
+    // Let go of, from a lying apple's calls with a fighter holding it.
+    let drop_at = leaf_check::sym("it_802EEA70");
+    let held = move |c: &mut Call, _: usize| {
+        c.addr = drop_at;
+        let ip = peek_u32(c, c.regs.gpr[3] + 0x2C);
+        let f = first_fighter(c);
+        poke_u32(c, ip + 0x518, f);
+    };
+    check_hazard(&d, "itWhispyapple_UnkMotion1_Anim", 1, &held, &item_cb);
+    let forget = |r: &mut Running, maps: &Maps, call: &Call| {
+        let other = maps.gobjs.get(&call.regs.gpr[4]).copied();
+        whispyapple::forget(r, gobj_arg(maps, call), other);
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("it_802EEF88");
+    let with_fighter = move |c: &mut Call, _: usize| {
+        c.addr = t;
+        c.regs.gpr[4] = first_fighter(c);
+    };
+    check_hazard(
+        &d,
+        "itWhispyapple_UnkMotion1_Anim",
+        1,
+        &with_fighter,
+        &forget,
+    );
+}

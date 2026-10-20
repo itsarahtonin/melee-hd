@@ -125,6 +125,7 @@ pub mod togepy;
 pub mod tomato;
 pub mod tosakinto;
 pub mod unknown;
+pub mod whispyapple;
 pub mod wstar;
 pub mod yaku;
 pub mod yoshiegglay;
@@ -260,6 +261,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || rabbitc::run_event(r, gobj, addr)
         || spycloak::run_event(r, gobj, addr)
         || foods::run_event(r, gobj, addr)
+        || whispyapple::run_event(r, gobj, addr)
         || msbomb::run_event(r, gobj, addr)
         || flipper::run_event(r, gobj, addr)
         || lgunray::run_event(r, gobj, addr)
@@ -396,6 +398,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| rabbitc::run_pred(r, gobj, addr))
         .or_else(|| spycloak::run_pred(r, gobj, addr))
         .or_else(|| foods::run_pred(r, gobj, addr))
+        .or_else(|| whispyapple::run_pred(r, gobj, addr))
         .or_else(|| msbomb::run_pred(r, gobj, addr))
         .or_else(|| flipper::run_pred(r, gobj, addr))
         .or_else(|| lgunray::run_pred(r, gobj, addr))
@@ -639,5 +642,8 @@ pub const KLAP: i32 = 218;
 pub const HEIHO: i32 = 210;
 /// `It_Kind_Tincle`, Great Bay's Tingle.
 pub const TINCLE: i32 = 221;
+/// `It_Kind_WhispyApple` and `It_Kind_WhispyHealApple`, Green Greens' apples.
+pub const WHISPY_APPLE: i32 = 225;
+pub const WHISPY_HEAL_APPLE: i32 = 226;
 /// `It_Kind_Arwing_Laser`.
 pub const ARWING_LASER: i32 = 234;

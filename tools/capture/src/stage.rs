@@ -51,6 +51,12 @@ pub const GRGARDEN_YAKUMONO: u32 = 0x804D_6A28;
 pub const GRKONGO_YAKUMONO: u32 = 0x804D_6980;
 pub const GRKONGO_PLANKS: u32 = 0x803E_188C;
 pub const GRKONGO_POSTS: u32 = 0x804D_6984;
+/// grgreens.c's (`ssbm_types::tu::melee__gr__grgreens::yakumono_param`), its demo and waiting
+/// flags (`grGr_804D6AAC`, `grGr_804D6AAD`) and its blocks' layout (`grGr_8049F9E0`).
+pub const GRGREENS_YAKUMONO: u32 = 0x804D_6AA8;
+pub const GRGREENS_DEMO: u32 = 0x804D_6AAC;
+pub const GRGREENS_WAITING: u32 = 0x804D_6AAD;
+pub const GRGREENS_LAYOUT: u32 = 0x8049_F9E0;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -310,6 +316,13 @@ impl Importer<'_> {
         self.game.gr.garden_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRKONGO_YAKUMONO);
         self.game.gr.kongo_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRGREENS_YAKUMONO);
+        self.game.gr.greens_yakumono = self.data_or_unhandled(yaku);
+        self.game.gr.greens.demo = self.u8_at(GRGREENS_DEMO);
+        self.game.gr.greens.waiting = self.u8_at(GRGREENS_WAITING);
+        for i in 0..0x20u32 {
+            self.game.gr.greens.layout[i as usize] = self.u8_at(GRGREENS_LAYOUT + i);
+        }
         for i in 0..15u32 {
             let at = GRKONGO_PLANKS + 0x18 * i;
             let j = cap.u32(at + 4);
@@ -927,6 +940,11 @@ impl Comparer<'_> {
                 GRKONGO_YAKUMONO,
                 game.gr.kongo_yakumono,
             ),
+            (
+                "grGreens yakumono_param",
+                GRGREENS_YAKUMONO,
+                game.gr.greens_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -936,6 +954,19 @@ impl Comparer<'_> {
                 (yaku != 0).then(|| self.data.get(yaku)).flatten(),
             );
         }
+        let greens = &game.gr.greens;
+        self.check(
+            "grGr_804D6AAC",
+            "greens flags",
+            [greens.demo, greens.waiting],
+            [self.u8(GRGREENS_DEMO), self.u8(GRGREENS_WAITING)],
+        );
+        self.check(
+            "grGr_8049F9E0",
+            "greens layout",
+            greens.layout,
+            std::array::from_fn(|i| self.u8(GRGREENS_LAYOUT + i as u32)),
+        );
         self.check(
             "grKr_804D6A0C",
             "kraid anim",

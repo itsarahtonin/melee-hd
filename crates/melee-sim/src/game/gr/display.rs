@@ -43,6 +43,7 @@ impl Running<'_> {
                 super::fourside::check_shadow_render(self.game, self.data, pos, Some(j))
             }
             Some(f) if f.0 == 0x8020_2B64 => super::yorster::check_shadow_render(),
+            Some(f) if f.0 == 0x8021_6E6C => super::greens::check_shadow_render(),
             Some(f) if f.0 == 0x801D_50C0 => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::stadium::check_shadow_render(self.game, self.data, pos, Some(j))

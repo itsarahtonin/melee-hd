@@ -654,6 +654,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** not recorded.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 55); `crates/melee-sim/src/mp/probe.rs:97`.
 
+### Green Greens links a broken block's last corner through the wrong neighbour
+
+- **Where:** `grGreens_802150C4` (linking the collision of the blocks around a place that broke), `crates/melee-sim/src/game/gr/greens.rs` (`link_corners`).
+- **Defect:** of the four diagonal corners, the last (up and right) tests whether the block to the left of the broken place rests where the other three test the block on the corner's own side, then links the corner with the block to the right; at the grid's first place (row 0, column 0) that test reads the 32 bytes before the blocks' array, the heap cell's header.
+- **Effect:** the corner's collision is linked to its right-hand neighbour when the left one rests, and left unlinked when only the right one does; what that changes in play is not recorded. The header's first word is a link (an address or null), whose top four bits are never a resting block's 3.
+- **melee-hd:** modeled; the read before the array answers "not resting".
+- **Fix:** test the block to the right, as the other corners do.
+- **Fix impact:** changes Green Greens' block collision where it happens; breaks replay compatibility there.
+- **Source:** `crates/melee-sim/src/game/gr/greens.rs` (`link_corners`, `status_at`).
+
 ## Camera
 
 ### The cutscene camera's orbit reads unwritten stack slots

@@ -111,8 +111,9 @@ impl Running<'_> {
         }
     }
 
-    /// The use-on-pickup kinds both pickups share: a heart, tomato, food or Lucky Egg heals and
-    /// is gone (Whispy's apple's heal isn't ported), the Bunny Hood goes on, the Metal Box and the Cloaking Device take effect and go, and a coin goes.
+    /// The use-on-pickup kinds both pickups share: a heart, tomato, food, Lucky Egg or Whispy's
+    /// healing apple heals and is gone, the Bunny Hood goes on, the Metal Box and the Cloaking
+    /// Device take effect and go, and a coin goes.
     fn use_picked_up(&mut self, gobj: GObjId, it: GObjId, kind: i32) {
         match kind {
             HEART | TOMATO | FOODS | lib26b1::LUCKY_EGG | lib26b1::WHISPY_HEAL_APPLE => {

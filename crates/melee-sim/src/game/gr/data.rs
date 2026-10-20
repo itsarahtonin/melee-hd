@@ -4,8 +4,8 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_IZUMI,
-    GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
+    GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS,
+    GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
     GR_KIND_OLDYOSHI, GR_KIND_PSTADIUM, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER,
 };
 
@@ -641,6 +641,41 @@ pub const KONGO: StageData = StageData {
     joints: &KONGO_JOINTS,
 };
 
+/// `grGr_callbacks`. Map 6 is the stage with its blocks, map 5 Whispy Woods, map 4 the
+/// background that moves with him, maps 1 and 3 a block and a bomb block (made as the blocks
+/// fall), maps 0 and 2 the rest.
+pub const GREENS_CALLBACKS: [StageCallbacks; 7] = [
+    cb(0x8021_360C, 0x8021_38AC, 0x8021_38B4, 0x8021_38B8, 0),
+    cb(0x8021_3910, 0x8021_393C, 0x8021_3944, 0x8021_3948, 0),
+    cb(0x8021_38BC, 0x8021_3900, 0x8021_3908, 0x8021_390C, 0),
+    cb(0x8021_394C, 0x8021_3978, 0x8021_3980, 0x8021_3984, 0),
+    cb(0x8021_3988, 0x8021_39B4, 0x8021_39BC, 0x8021_39C0, 0),
+    cb(0x8021_39C4, 0x8021_3AAC, 0x8021_3C10, 0x8021_4654, 0),
+    cb(
+        0x8021_4674,
+        0x8021_4794,
+        0x8021_479C,
+        0x8021_4804,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grGr_StageData`.
+pub const GREENS: StageData = StageData {
+    grkind: GR_KIND_GREENS,
+    callbacks: &GREENS_CALLBACKS,
+    file: Some("/GrGr.dat"),
+    on_init: 0x8021_3464,
+    on_demo_init: 0x8021_3458,
+    on_load: 0x8021_34F4,
+    on_start: 0x8021_34F8,
+    callback4: 0x8021_351C,
+    on_touch_line: 0x8021_6E64,
+    on_check_shadow_render: 0x8021_6E6C,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -659,6 +694,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_YORSTER => &YORSTER,
         GR_KIND_GARDEN => &GARDEN,
         GR_KIND_KONGO => &KONGO,
+        GR_KIND_GREENS => &GREENS,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

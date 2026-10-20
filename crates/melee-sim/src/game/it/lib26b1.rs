@@ -66,7 +66,7 @@ pub fn heal_amount(game: &mut Game, gobj: GObjId) -> i32 {
         super::kinds::TOMATO => v.tomato().heal_amount.get(),
         super::kinds::FOODS => v.foods().heal_amount.get() as i32,
         LUCKY_EGG => v.egg().heal_amount.get(),
-        WHISPY_HEAL_APPLE => code::unported_call("it_8026B47C for Whispy's apple"),
+        WHISPY_HEAL_APPLE => v.whispy_apple().heal.get(),
         _ => 0,
     }
 }

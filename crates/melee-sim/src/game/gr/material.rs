@@ -218,3 +218,32 @@ pub fn item_hurtbox_off(game: &mut Game, item: GObjId) {
 pub fn item_ground_or_air(game: &mut Game, item: GObjId, ground_or_air: i32) {
     super::super::it::item_mut(game, item).ground_or_air = ground_or_air;
 }
+
+/// Destroys a stage item, `grMaterial_801C8CDC` (`Item_8026A8EC`).
+#[doc(alias = "grMaterial_801C8CDC")]
+pub fn destroy_item(r: &mut super::super::state::Running, item: GObjId) {
+    super::super::it::item::destroy(r, item);
+}
+
+/// Puts a stage item in another state, `grMaterial_801C8D98`: its hitboxes cleared, then the
+/// state with its animation (`ITEM_ANIM_UPDATE`).
+#[doc(alias = "grMaterial_801C8D98")]
+pub fn item_state(r: &mut super::super::state::Running, item: GObjId, state: i32) {
+    super::super::it::lib2725::clear_hitboxes(r.game, r.data, item);
+    super::super::it::item::change_state(
+        r,
+        item,
+        state,
+        super::super::it::item::change::ANIM_UPDATE,
+    );
+}
+
+/// Whether a stage item's state script has ended, `grMaterial_801C8E48`.
+#[doc(alias = "grMaterial_801C8E48")]
+pub fn item_script_done(game: &Game, item: GObjId) -> bool {
+    super::super::it::item(game, item)
+        .x524_cmd
+        .script
+        .cursor
+        .is_none()
+}

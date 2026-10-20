@@ -567,6 +567,9 @@ impl Running<'_> {
                 Some(crate::game::gr::oldpupupu::WIND_PUSH) => {
                     crate::game::gr::oldpupupu::wind_push(self, ground, gobj)
                 }
+                Some(crate::game::gr::greens::WIND_PUSH) => {
+                    crate::game::gr::greens::wind_push(self, ground, gobj)
+                }
                 Some(crate::game::gr::garden::RIVER) => {
                     crate::game::gr::garden::river(self, ground, gobj)
                 }

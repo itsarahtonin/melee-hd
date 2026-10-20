@@ -59,6 +59,8 @@ pub enum VarsKind {
     KongoPlatform,
     KongoLog,
     KongoPath,
+    Greens,
+    Greens2,
 }
 
 /// `union GroundVars`.
@@ -140,6 +142,117 @@ pub enum GroundVars {
     GreatBay3(GreatBay3Vars),
     /// `grGreatBay_GroundVars4`: Tingle (map 10).
     GreatBay4(GreatBay4Vars),
+    /// `grGreens_GroundVars`: Green Greens' stage and its blocks (map 6).
+    Greens(GreensVars),
+    /// `grGreens_GroundVars2`: Whispy Woods (map 5).
+    Greens2(Greens2Vars),
+}
+
+/// `grGreens_BlockVars`: one of Green Greens' blocks. `x0` is its first word's bit fields:
+/// `status` (the top four bits: 0 none, 1 falling, 2 falling on the block below, 3 at rest),
+/// `index` (the next five, its block number) and the flags `x1_1` (a bomb block), `x1_2` (its
+/// explosion runs), `x1_3` (broken, gone next), `x1_4` (landed on), `x1_5` (to link with its
+/// neighbours), `x1_6` (its neighbours to link, once gone) and `x1_7` (broken); nothing but the
+/// blocks' clearing writes the bits after it. Then its fall's speed (`x4`) and height (`x8`),
+/// its object (`xC`), its hurtbox item (`x10`), its joint (`x14`), its collision joint (`x18`)
+/// and what broke it (`x1C`).
+#[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct GreensBlock {
+    pub x0: u32,
+    pub x4: f32,
+    pub x8: f32,
+    pub xC: Option<GObjId>,
+    pub x10: Option<GObjId>,
+    pub x14: Option<crate::hsd::jobj::JObjId>,
+    pub x18: i32,
+    pub x1C: Option<GObjId>,
+}
+
+impl GreensBlock {
+    pub fn status(&self) -> u32 {
+        self.x0 >> 28
+    }
+    pub fn set_status(&mut self, v: u32) {
+        self.x0 = (self.x0 & 0x0FFF_FFFF) | (v & 0xF) << 28;
+    }
+    pub fn index(&self) -> u32 {
+        self.x0 >> 23 & 0x1F
+    }
+    pub fn set_index(&mut self, v: u32) {
+        self.x0 = (self.x0 & !(0x1F << 23)) | (v & 0x1F) << 23;
+    }
+    /// The flag `x1_n`, for `n` from 1 to 7.
+    pub fn flag(&self, n: u32) -> bool {
+        self.x0 >> (23 - n) & 1 != 0
+    }
+    pub fn set_flag(&mut self, n: u32, v: bool) {
+        let bit = 1 << (23 - n);
+        self.x0 = if v { self.x0 | bit } else { self.x0 & !bit };
+    }
+}
+
+/// `grGreens_GroundVars` of the stage (map 6): its flags (`x0`, the top bit: the blocks wait
+/// for the match's start), the grid's and the blocks' blocks in the heap (`x4` and `x8`, their
+/// addresses), and the wait for the next block (`xC`). The grid (five rows of six places) and
+/// the blocks (likewise) are kept here, empty before the setup allocates them.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct GreensVars {
+    pub x0: u32,
+    pub x4: u32,
+    pub x8: u32,
+    pub xC: i32,
+    pub grid: Vec<crate::vec::Vec3>,
+    pub blocks: Vec<GreensBlock>,
+}
+
+impl GreensVars {
+    /// `x0_flags.x0.b0`.
+    pub fn running(&self) -> bool {
+        self.x0 & 0x8000_0000 != 0
+    }
+    pub fn set_running(&mut self, v: bool) {
+        self.x0 = (self.x0 & 0x7FFF_FFFF) | u32::from(v) << 31;
+    }
+}
+
+/// `grGreens_GroundVars2` of Whispy Woods (map 5): his place in the cycle (`x0`), his state
+/// (`x4`: idle, blowing, dropping apples), its step (`x8`), a count (`xC`), whether the state
+/// is new (`x10`), the side he faces (`x14`), his wind this tick (`x18`: 1 left, 2 right), his
+/// ticks (`x1C`), the apples left (`x20`) and the side the next falls on (`x24`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Greens2Vars {
+    pub x0: i32,
+    pub x4: i32,
+    pub x8: i32,
+    pub xC: i32,
+    pub x10: i32,
+    pub x14: i32,
+    pub x18: i32,
+    pub x1C: i32,
+    pub x20: i32,
+    pub x24: i32,
+}
+
+/// Reads Green Greens' 30 blocks from memory at `at`.
+fn import_greens_blocks(m: &Mem, at: u32, cx: &mut dyn Cx) -> Vec<GreensBlock> {
+    let gobj = |cx: &mut dyn Cx, a: u32| cx.import_handle("GObjId", m.u32(a)).map(GObjId);
+    (0..30u32)
+        .map(|i| {
+            let b = at + 0x20 * i;
+            GreensBlock {
+                x0: m.u32(b),
+                x4: f32::from_bits(m.u32(b + 4)),
+                x8: f32::from_bits(m.u32(b + 8)),
+                xC: gobj(cx, b + 0xC),
+                x10: gobj(cx, b + 0x10),
+                x14: cx
+                    .import_handle("JObjId", m.u32(b + 0x14))
+                    .map(crate::hsd::jobj::JObjId),
+                x18: m.u32(b + 0x18) as i32,
+                x1C: gobj(cx, b + 0x1C),
+            }
+        })
+        .collect()
 }
 
 /// `grGreatBay_GroundVars`: the turtle's state (`xC4`), the way it faces and whether its item
@@ -1036,6 +1149,40 @@ impl GroundVars {
                 xC4: m.u16(at) as i16,
                 xC6: m.u16(at + 2) as i16,
             }),
+            VarsKind::Greens => {
+                let (x4, x8) = (m.u32(at + 4), m.u32(at + 8));
+                let grid = (0..30u32).map(|i| {
+                    let a = x4 + 0xC * i;
+                    crate::vec::Vec3::new(f(a), f(a + 4), f(a + 8))
+                });
+                GroundVars::Greens(GreensVars {
+                    x0: m.u32(at),
+                    x4,
+                    x8,
+                    xC: m.u32(at + 0xC) as i32,
+                    grid: if x4 != 0 { grid.collect() } else { Vec::new() },
+                    blocks: if x8 != 0 {
+                        import_greens_blocks(m, x8, cx)
+                    } else {
+                        Vec::new()
+                    },
+                })
+            }
+            VarsKind::Greens2 => {
+                let w = |k: u32| m.u32(at + 4 * k) as i32;
+                GroundVars::Greens2(Greens2Vars {
+                    x0: w(0),
+                    x4: w(1),
+                    x8: w(2),
+                    xC: w(3),
+                    x10: w(4),
+                    x14: w(5),
+                    x18: w(6),
+                    x1C: w(7),
+                    x20: w(8),
+                    x24: w(9),
+                })
+            }
             VarsKind::Kraid => GroundVars::Kraid(KraidVars {
                 x0: m.u8(at) as i8,
                 x1: m.u8(at + 1) as i8,
@@ -1530,6 +1677,52 @@ impl GroundVars {
         }
     }
 
+    /// The variables as `grGreens_GroundVars`, likewise: a block holding the grid's or the
+    /// blocks' pointer converts only if it is null.
+    pub fn greens(&mut self) -> &mut GreensVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            b.null(4);
+            b.null(8);
+            *self = GroundVars::Greens(GreensVars {
+                x0: b.u32(0),
+                x4: 0,
+                x8: 0,
+                xC: b.u32(0xC) as i32,
+                grid: Vec::new(),
+                blocks: Vec::new(),
+            });
+        }
+        match self {
+            GroundVars::Greens(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grGreens_GroundVars"),
+        }
+    }
+
+    /// The variables as `grGreens_GroundVars2`, likewise.
+    pub fn greens2(&mut self) -> &mut Greens2Vars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let w = |k: usize| b.u32(4 * k) as i32;
+            *self = GroundVars::Greens2(Greens2Vars {
+                x0: w(0),
+                x4: w(1),
+                x8: w(2),
+                xC: w(3),
+                x10: w(4),
+                x14: w(5),
+                x18: w(6),
+                x1C: w(7),
+                x20: w(8),
+                x24: w(9),
+            });
+        }
+        match self {
+            GroundVars::Greens2(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grGreens_GroundVars2"),
+        }
+    }
+
     /// The variables as `grKraid_GroundVars`, likewise.
     pub fn kraid(&mut self) -> &mut KraidVars {
         if let GroundVars::Bytes(b) = self {
@@ -2010,6 +2203,30 @@ fn compare_bits(cx: &mut dyn Cx, m: &Mem, at: u32, path: &str, v: StadiumBits) {
             format!("{theirs:#04x}"),
         );
     }
+}
+
+/// Compares one of Green Greens' blocks with memory at `a`.
+fn compare_greens_block(cx: &mut dyn Cx, m: &Mem, a: u32, path: &str, i: usize, b: &GreensBlock) {
+    let p = format!("{path}.greens.x8_blocks[{i}]");
+    let ours = (b.x0, [b.x4, b.x8].map(f32::to_bits), b.x18);
+    let theirs = (
+        m.u32(a),
+        [m.u32(a + 4), m.u32(a + 8)],
+        m.u32(a + 0x18) as i32,
+    );
+    if ours != theirs {
+        cx.mismatch(&p, format!("{ours:x?}"), format!("{theirs:x?}"));
+    }
+    for (name, g, off) in [
+        ("xC", b.xC, 0xC),
+        ("x10", b.x10, 0x10),
+        ("x1C", b.x1C, 0x1C),
+    ] {
+        let path = format!("{p}.{name}");
+        cx.compare_handle(&path, "GObjId", g.map(|h| h.0), m.u32(a + off));
+    }
+    let path = format!("{p}.x14");
+    cx.compare_handle(&path, "JObjId", b.x14.map(|j| j.0), m.u32(a + 0x14));
 }
 
 fn floats(cx: &mut dyn Cx, m: &Mem, path: &str, fields: &[(&str, u32, f32)]) {
@@ -2559,6 +2776,45 @@ impl Mirror for GroundVars {
                     v.jobj.map(|j| j.0),
                     m.u32(at + 4),
                 );
+            }
+            GroundVars::Greens(v) => {
+                // The blocks' addresses come from the allocator model, 0 without it (the leaf
+                // checks): then their contents compare at memory's.
+                let (x4, x8) = (m.u32(at + 4), m.u32(at + 8));
+                let ours = (v.x0, v.xC);
+                let theirs = (m.u32(at), m.u32(at + 0xC) as i32);
+                let addrs = |o: u32, t: u32| o == t || o == 0 && t != 0;
+                if ours != theirs || !addrs(v.x4, x4) || !addrs(v.x8, x8) {
+                    cx.mismatch(
+                        &format!("{path}.greens"),
+                        format!("{:x?}", (v.x0, v.x4, v.x8, v.xC)),
+                        format!("{:x?}", (theirs.0, x4, x8, theirs.1)),
+                    );
+                }
+                if x4 != 0 && v.grid.len() == 30 {
+                    for (i, c) in v.grid.iter().enumerate() {
+                        let p = format!("{path}.greens.x4[{i}]");
+                        c.compare(m, x4 + 0xC * i as u32, &p, cx);
+                    }
+                }
+                if x8 != 0 && v.blocks.len() == 30 {
+                    for (i, b) in v.blocks.iter().enumerate() {
+                        compare_greens_block(cx, m, x8 + 0x20 * i as u32, path, i, b);
+                    }
+                }
+            }
+            GroundVars::Greens2(v) => {
+                let ours = [
+                    v.x0, v.x4, v.x8, v.xC, v.x10, v.x14, v.x18, v.x1C, v.x20, v.x24,
+                ];
+                let theirs: [i32; 10] = std::array::from_fn(|k| m.u32(at + 4 * k as u32) as i32);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.greens2"),
+                        format!("{ours:?}"),
+                        format!("{theirs:?}"),
+                    );
+                }
             }
             GroundVars::Kraid(v) => {
                 let ours = (v.x0, v.x1, [v.x4, v.x8, v.xC].map(f32::to_bits), v.x10);

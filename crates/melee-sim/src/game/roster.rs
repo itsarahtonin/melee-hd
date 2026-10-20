@@ -318,6 +318,12 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 17,
+        name: "Green Greens",
+        keys: &["gg", "green-greens"],
+        audit: None,
+    },
+    Stage {
         kind: 14,
         name: "Hyrule Temple",
         keys: &["ht", "hyrule-temple"],
