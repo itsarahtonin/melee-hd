@@ -406,6 +406,8 @@ pub struct Renderer {
     /// written once and its triangles name them.
     indices: Vec<u32>,
     uniforms: Vec<u8>,
+    /// Where each state's uniforms are in `uniforms`, by their hash.
+    uniform_offsets: FxHashMap<u64, u32>,
     commands: Vec<Command>,
     /// A clear the next render pass makes before its commands, and what the EFB holds.
     pending_clear: PendingClear,
@@ -425,6 +427,8 @@ pub struct Renderer {
     /// Hashes of ranges whose bytes never change (the host's own, in one piece, with no copy
     /// laid over them), kept from frame to frame.
     stable_hashes: FxHashMap<(u32, u32), u64>,
+    /// Hashes of the ranges a threaded renderer's game thread sent, of the bytes it sent.
+    pub(crate) held_hashes: FxHashMap<(u32, u32), u64>,
     /// What copies from the EFB to textures wrote, by address: memory as the GPU then reads it.
     copies: Vec<(u32, Vec<u8>)>,
     /// What copies wrote since the host last took it (`Sink::take_written`).
@@ -438,10 +442,10 @@ pub struct Renderer {
     pub(crate) track_copies: bool,
     /// Copy addresses sampled another way than copied, whose copies are encoded into memory.
     on_cpu: FxHashSet<u32>,
-    normals: vertex::NormalCache,
-    inputs: Vec<vertex::Input>,
-    outs: Vec<Output>,
-    screens: Vec<[f32; 3]>,
+    scratch: Scratch,
+    built: Built,
+    /// The last alpha test register and whether it can fail.
+    alpha_test: Option<(u32, bool)>,
     frame: u64,
     frames: Vec<Frame>,
     on_frame: Option<Box<dyn FnMut(Frame) + Send>>,
@@ -811,6 +815,7 @@ impl Renderer {
             vertices: Vec::new(),
             indices: Vec::new(),
             uniforms: Vec::new(),
+            uniform_offsets: FxHashMap::default(),
             commands: Vec::new(),
             pending_clear: PendingClear::default(),
             known: Known::new(),
@@ -825,6 +830,7 @@ impl Renderer {
             bind_groups: FxHashMap::default(),
             hashes: FxHashMap::default(),
             stable_hashes: FxHashMap::default(),
+            held_hashes: FxHashMap::default(),
             copies: Vec::new(),
             written: Vec::new(),
             copier,
@@ -832,10 +838,9 @@ impl Renderer {
             footprints: copy::Footprints::default(),
             track_copies: true,
             on_cpu: Default::default(),
-            normals: [[0.0; 3]; 3],
-            inputs: Vec::new(),
-            outs: Vec::new(),
-            screens: Vec::new(),
+            scratch: Scratch::default(),
+            built: Built::default(),
+            alpha_test: None,
             frame: 0,
             frames: Vec::new(),
             on_frame: None,
@@ -1061,9 +1066,9 @@ impl Renderer {
 
     /// The texture texture map `map` samples, made if new.
     fn texture(&mut self, state: &State, map: usize, mem: &dyn Memory) -> (u32, u32) {
-        let t = std::time::Instant::now();
+        let t = self.profile.is_some().then(std::time::Instant::now);
         let r = self.texture_uncached(state, map, mem);
-        if let Some(p) = &mut self.profile {
+        if let (Some(p), Some(t)) = (&mut self.profile, t) {
             p.texture += t.elapsed();
         }
         r
@@ -1104,7 +1109,11 @@ impl Renderer {
                 .stable_hashes
                 .entry((image.address, size))
                 .or_insert_with(|| hash_bytes(bytes)),
-            None => self.hash_memory(mem, image.address, size),
+            // The hash the game thread sent with the bytes, unless a copy lies over them.
+            None => match self.held_hashes.get(&(image.address, size)) {
+                Some(&h) if !self.copied_over(image.address, size) => h,
+                _ => self.hash_memory(mem, image.address, size),
+            },
         };
         let tlut = state.tmem.get(tlut_offset..).unwrap_or(&[]);
         if let Some(entries) = texture::palette_entries(image.format) {
@@ -1257,16 +1266,24 @@ impl Renderer {
         // EFB's width for the console's 640.
         u.mode[3] = self.scale | (self.width << 4);
         let bytes = bytemuck::bytes_of(&u);
-        // The same state as the last draw's shares its uniforms.
+        // The same state as the last draw's shares its uniforms, and so does the same state
+        // as any draw's since the last flush.
         if self.uniforms.len() >= UNIFORM_STRIDE {
             let last = self.uniforms.len() - UNIFORM_STRIDE;
             if &self.uniforms[last..last + bytes.len()] == bytes {
                 return last as u32;
             }
         }
+        let hash = hash_bytes(bytes);
+        if let Some(&at) = self.uniform_offsets.get(&hash)
+            && &self.uniforms[at as usize..at as usize + bytes.len()] == bytes
+        {
+            return at;
+        }
         let at = self.uniforms.len();
         self.uniforms.extend_from_slice(bytes);
         self.uniforms.resize(at + UNIFORM_STRIDE, 0);
+        self.uniform_offsets.insert(hash, at as u32);
         at as u32
     }
 
@@ -1730,6 +1747,7 @@ impl Renderer {
         self.vertices.clear();
         self.indices.clear();
         self.uniforms.clear();
+        self.uniform_offsets.clear();
         self.commands.clear();
     }
 
@@ -2007,9 +2025,9 @@ impl Renderer {
 
 impl Sink for Renderer {
     fn draw(&mut self, state: &State, draw: &Draw<'_>, mem: &dyn Memory) {
-        let t = std::time::Instant::now();
+        let t = self.profile.is_some().then(std::time::Instant::now);
         self.draw_timed(state, draw, mem);
-        if let Some(p) = &mut self.profile {
+        if let (Some(p), Some(t)) = (&mut self.profile, t) {
             p.draw += t.elapsed();
         }
     }
@@ -2031,57 +2049,294 @@ impl Sink for Renderer {
     }
 }
 
-/// Decodes a draw's vertices into `inputs` and, unless its scissor leaves nothing to draw,
-/// transforms them into `outs`; returns whether it did. `normals` carries over between draws,
-/// so every draw decodes, in order.
-pub(crate) fn prepare(
+/// Draws' vertices as the GPU takes them: their words (`GpuVertex::write`), and the order the
+/// GPU draws them in, each the offset of a vertex's first word from its draw's first. A
+/// transform thread builds a batch's draws into one, which the renderer appends to its buffers.
+#[derive(Default)]
+pub(crate) struct Built {
+    words: Vec<u32>,
+    indices: Vec<u32>,
+    /// Each draw built, or none for one whose scissor leaves nothing to draw.
+    pub(crate) draws: Vec<Option<BuiltDraw>>,
+}
+
+impl Built {
+    pub(crate) fn clear(&mut self) {
+        self.words.clear();
+        self.indices.clear();
+        self.draws.clear();
+    }
+}
+
+/// One draw in a [`Built`].
+pub(crate) struct BuiltDraw {
+    /// Its words and indices in the `Built`'s.
+    words: std::ops::Range<usize>,
+    indices: std::ops::Range<usize>,
+    /// The vertices it was given, and their texture coordinates.
+    vertices: u32,
+    texgens: u32,
+    /// What it met that the renderer doesn't draw (exactly), and how many times.
+    note: Option<(&'static str, u64)>,
+    /// Its first vertex and that vertex's screen position, for tracing.
+    first: Option<(Output, [f32; 3])>,
+}
+
+/// What building draws keeps from draw to draw: the normals a draw without them takes, and
+/// buffers.
+#[derive(Default)]
+pub(crate) struct Scratch {
+    pub(crate) normals: vertex::NormalCache,
+    pub(crate) inputs: Vec<vertex::Input>,
+    outs: Vec<Output>,
+    screens: Vec<[f32; 3]>,
+    clips: Vec<[f32; 4]>,
+}
+
+/// Decodes a draw's vertices and, unless its scissor leaves nothing to draw, transforms them
+/// and builds them into `built`: the GPU's words for each, and its triangles (lines and points
+/// as quads), back faces culled. `scratch`'s normals carry over between draws, so every draw
+/// builds in order, or decodes its normals (`vertex::skip`).
+pub(crate) fn build(
     state: &State,
     draw: &Draw<'_>,
-    normals: &mut vertex::NormalCache,
-    inputs: &mut Vec<vertex::Input>,
-    outs: &mut Vec<Output>,
-) -> bool {
+    scratch: &mut Scratch,
+    built: &mut Built,
+) -> Option<BuiltDraw> {
     let xf_index = [state.xf[xform::MATINDEX_A], state.xf[xform::MATINDEX_A + 1]];
-    inputs.clear();
+    let s = scratch;
+    s.inputs.clear();
     vertex::decode(
         &state.cp,
         xf_index,
         usize::from(draw.vat),
         draw.data,
         usize::from(draw.count),
-        normals,
-        inputs,
+        &mut s.normals,
+        &mut s.inputs,
     );
-    let (scissor, _) = Renderer::scissor(state, &Viewport::of(&state.xf));
+    let vp = Viewport::of(&state.xf);
+    let (scissor, off) = Renderer::scissor(state, &vp);
     if scissor[2] == 0 || scissor[3] == 0 {
-        return false;
+        return None;
     }
-    // Every vertex through the draw's transform setup, into zeroed outputs.
+    // Every vertex through the draw's transform setup, from zeroed outputs.
     let setup = xform::Setup::new(&state.xf, &state.bp);
-    outs.clear();
-    outs.resize(inputs.len(), Output::default());
-    for (v, o) in inputs.iter().zip(outs.iter_mut()) {
-        setup.transform(v, o);
+    let tg = texgens(state);
+    let words = 6 + 3 * tg as u32;
+    let (w0, i0) = (built.words.len(), built.indices.len());
+    let mut first = None;
+    let mut note = None;
+    let n = s.inputs.len();
+    if draw.primitive < 0xA8 {
+        // A triangle primitive's vertices, written once for its triangles to name.
+        s.clips.clear();
+        for v in &s.inputs {
+            let mut o = Output::default();
+            setup.transform(v, &mut o);
+            let screen = vp.screen(o.clip);
+            Renderer::gpu_vertex(&o, screen, off, &vp).write(tg, &mut built.words);
+            s.clips.push(o.clip);
+            if first.is_none() {
+                first = Some((o, screen));
+            }
+        }
+        let cull = bits(state.bp[0x00], 14, 2);
+        let clips = &s.clips;
+        let indices = &mut built.indices;
+        let mut tri = |a: usize, b: usize, c: usize| {
+            let backface = xform::is_backface(&state.xf, clips[a], clips[b], clips[c]);
+            let culled = if backface {
+                cull == 2 || cull == 3
+            } else {
+                cull == 1 || cull == 3
+            };
+            if !culled {
+                indices.extend([a, b, c].map(|i| words * i as u32));
+            }
+        };
+        match draw.primitive {
+            0x80 | 0x88 => {
+                let mut i = 3;
+                while i < n {
+                    tri(i - 3, i - 2, i - 1);
+                    tri(i - 3, i - 1, i);
+                    i += 4;
+                }
+                if i == n {
+                    tri(n - 3, n - 2, n - 1);
+                }
+            }
+            0x90 => {
+                let mut i = 2;
+                while i < n {
+                    tri(i - 2, i - 1, i);
+                    i += 3;
+                }
+            }
+            0x98 => {
+                for i in 2..n {
+                    if i % 2 == 0 {
+                        tri(i - 2, i - 1, i);
+                    } else {
+                        tri(i - 2, i, i - 1);
+                    }
+                }
+            }
+            _ => {
+                for i in 2..n {
+                    tri(0, i - 1, i);
+                }
+            }
+        }
+    } else {
+        s.outs.clear();
+        s.screens.clear();
+        for v in &s.inputs {
+            let mut o = Output::default();
+            setup.transform(v, &mut o);
+            s.screens.push(vp.screen(o.clip));
+            s.outs.push(o);
+        }
+        if n > 0 {
+            first = Some((s.outs[0], s.screens[0]));
+        }
+        let (outs, screens) = (&s.outs, &s.screens);
+        if draw.primitive == 0xA8 || draw.primitive == 0xB0 {
+            let pairs = if draw.primitive == 0xA8 {
+                n / 2
+            } else {
+                n.saturating_sub(1)
+            };
+            for k in 0..pairs {
+                let (a, b) = if draw.primitive == 0xA8 {
+                    (2 * k, 2 * k + 1)
+                } else {
+                    (k, k + 1)
+                };
+                line(
+                    state,
+                    &vp,
+                    off,
+                    (&outs[a], screens[a]),
+                    (&outs[b], screens[b]),
+                    w0,
+                    built,
+                );
+            }
+            if bits(state.bp[0x22], 16, 3) != 0 && pairs > 0 {
+                note = Some(("line texture offsets", pairs as u64));
+            }
+        } else {
+            for i in 0..n {
+                point(state, &vp, off, &outs[i], screens[i], w0, built);
+            }
+            if bits(state.bp[0x22], 19, 3) != 0 && n > 0 {
+                note = Some(("point texture offsets", n as u64));
+            }
+        }
     }
-    true
+    Some(BuiltDraw {
+        words: w0..built.words.len(),
+        indices: i0..built.indices.len(),
+        vertices: n as u32,
+        texgens: tg as u32,
+        note,
+        first,
+    })
+}
+
+/// A line: a quad its width wide, its caps vertical or horizontal by its slope.
+fn line(
+    state: &State,
+    vp: &Viewport,
+    off: (f32, f32),
+    (a, sa): (&Output, [f32; 3]),
+    (b, sb): (&Output, [f32; 3]),
+    start: usize,
+    built: &mut Built,
+) {
+    let half = bits(state.bp[0x22], 0, 8) as f32 / 12.0;
+    let (dx, dy) = (sb[0] - sa[0], sb[1] - sa[1]);
+    let (px, py) = if dx.abs() > dy.abs() {
+        (0.0, if dx > 0.0 { -1.0 } else { 1.0 })
+    } else {
+        (if dy > 0.0 { 1.0 } else { -1.0 }, 0.0)
+    };
+    let at = |o: &Output, s: [f32; 3], sign: f32| {
+        Renderer::gpu_vertex(
+            o,
+            [s[0] + sign * px * half, s[1] + sign * py * half, s[2]],
+            off,
+            vp,
+        )
+    };
+    let (a0, b0, b1, a1) = (
+        at(a, sa, 1.0),
+        at(b, sb, 1.0),
+        at(b, sb, -1.0),
+        at(a, sa, -1.0),
+    );
+    // Triangles (b1, b0, a0) and (a0, a1, b1).
+    quad(
+        [b1, b0, a0, a1],
+        [0, 1, 2, 2, 3, 0],
+        texgens(state),
+        start,
+        built,
+    );
+}
+
+/// A point: a square its size wide.
+fn point(
+    state: &State,
+    vp: &Viewport,
+    off: (f32, f32),
+    o: &Output,
+    s: [f32; 3],
+    start: usize,
+    built: &mut Built,
+) {
+    let r = bits(state.bp[0x22], 8, 8) as f32 / 12.0;
+    let at = |x: f32, y: f32| Renderer::gpu_vertex(o, [s[0] + x * r, s[1] + y * r, s[2]], off, vp);
+    let (ll, lr, ur, ul) = (at(-1.0, -1.0), at(1.0, -1.0), at(1.0, 1.0), at(-1.0, 1.0));
+    // Triangles (ll, ul, lr) and (ur, lr, ul).
+    quad(
+        [ll, ul, lr, ur],
+        [0, 1, 2, 3, 2, 1],
+        texgens(state),
+        start,
+        built,
+    );
+}
+
+/// Four vertices with `texgens` texture coordinates, and two triangles naming them.
+fn quad(vs: [GpuVertex; 4], order: [u32; 6], texgens: usize, start: usize, built: &mut Built) {
+    let words = (6 + 3 * texgens) as u32;
+    let base = (built.words.len() - start) as u32;
+    for v in &vs {
+        v.write(texgens, &mut built.words);
+    }
+    built.indices.extend(order.map(|i| base + words * i));
 }
 
 impl Renderer {
-    /// Draws `draw`, its vertices already transformed into `outs` (by `prepare`), or nothing
-    /// if its scissor leaves nothing.
-    pub(crate) fn draw_prepared(
+    /// Draws a draw [`build`] built into `built`, or nothing for one whose scissor leaves
+    /// nothing (`None`).
+    pub(crate) fn draw_built(
         &mut self,
         state: &State,
-        draw: &Draw<'_>,
-        outs: Option<&[Output]>,
+        primitive: u8,
+        built: &Built,
+        d: Option<&BuiltDraw>,
         mem: &dyn Memory,
     ) {
-        let t = std::time::Instant::now();
+        let t = self.profile.is_some().then(std::time::Instant::now);
         self.draws_this_frame += 1;
-        if let Some(outs) = outs {
-            self.draw_outs(state, draw, outs, mem);
+        if let Some(d) = d {
+            self.draw_outs(state, primitive, built, d, mem);
         }
-        if let Some(p) = &mut self.profile {
+        if let (Some(p), Some(t)) = (&mut self.profile, t) {
             p.draw += t.elapsed();
         }
     }
@@ -2091,115 +2346,55 @@ impl Renderer {
         if self.draw_limit.is_some_and(|n| self.draws_this_frame > n) {
             return;
         }
-        // The draw's vertices, decoded and transformed, in buffers kept from draw to draw.
-        let t = std::time::Instant::now();
-        let (mut inputs, mut outs) = (
-            std::mem::take(&mut self.inputs),
-            std::mem::take(&mut self.outs),
-        );
-        let drawn = prepare(state, draw, &mut self.normals, &mut inputs, &mut outs);
-        if let Some(p) = &mut self.profile {
+        // The draw's vertices, decoded, transformed and built, in buffers kept from draw to draw.
+        let t = self.profile.is_some().then(std::time::Instant::now);
+        let mut built = std::mem::take(&mut self.built);
+        built.clear();
+        let d = build(state, draw, &mut self.scratch, &mut built);
+        if let (Some(p), Some(t)) = (&mut self.profile, t) {
             p.xform += t.elapsed();
         }
-        if drawn {
-            self.draw_outs(state, draw, &outs, mem);
+        if let Some(d) = &d {
+            self.draw_outs(state, draw.primitive, &built, d, mem);
         }
-        (self.inputs, self.outs) = (inputs, outs);
+        self.built = built;
     }
 
-    /// The rest of a draw, from its transformed vertices.
-    fn draw_outs(&mut self, state: &State, draw: &Draw<'_>, outs: &[Output], mem: &dyn Memory) {
-        let count = usize::from(draw.count);
+    /// The rest of a draw, from its built vertices.
+    fn draw_outs(
+        &mut self,
+        state: &State,
+        primitive: u8,
+        built: &Built,
+        d: &BuiltDraw,
+        mem: &dyn Memory,
+    ) {
         let vp = Viewport::of(&state.xf);
-        let (scissor, off) = Self::scissor(state, &vp);
-        let mut screens = std::mem::take(&mut self.screens);
-        screens.clear();
-        screens.extend(outs.iter().map(|o| vp.screen(o.clip)));
-        let first = self.indices.len() as u32;
-        let cull = bits(state.bp[0x00], 14, 2);
-        // A triangle primitive's vertices, written once for its triangles to name.
-        let base = self.vertices.len() as u32;
-        let tg = texgens(state);
-        let words = 6 + 3 * tg as u32;
+        let (scissor, _) = Self::scissor(state, &vp);
+        let tg = d.texgens as usize;
         if let Some(p) = &mut self.profile {
-            p.vertices += outs.len() as u64;
-            p.texgens += texgens(state) as u64 * outs.len() as u64;
+            p.vertices += u64::from(d.vertices);
+            p.texgens += tg as u64 * u64::from(d.vertices);
         }
-        if draw.primitive < 0xA8 {
-            for (o, &s) in outs.iter().zip(screens.iter()) {
-                Self::gpu_vertex(o, s, off, &vp).write(tg, &mut self.vertices);
-            }
+        if let Some((what, n)) = d.note {
+            *self.unsupported.entry(what).or_default() += n;
         }
-        let tri = |r: &mut Self, a: usize, b: usize, c: usize| {
-            let backface = xform::is_backface(&state.xf, outs[a].clip, outs[b].clip, outs[c].clip);
-            let culled = if backface {
-                cull == 2 || cull == 3
-            } else {
-                cull == 1 || cull == 3
-            };
-            if !culled {
-                r.indices.extend([a, b, c].map(|i| base + words * i as u32));
-            }
-        };
-        let n = count;
-        match draw.primitive {
-            0x80 | 0x88 => {
-                let mut i = 3;
-                while i < n {
-                    tri(self, i - 3, i - 2, i - 1);
-                    tri(self, i - 3, i - 1, i);
-                    i += 4;
-                }
-                if i == n {
-                    tri(self, n - 3, n - 2, n - 1);
-                }
-            }
-            0x90 => {
-                let mut i = 2;
-                while i < n {
-                    tri(self, i - 2, i - 1, i);
-                    i += 3;
-                }
-            }
-            0x98 => {
-                for i in 2..n {
-                    if i % 2 == 0 {
-                        tri(self, i - 2, i - 1, i);
-                    } else {
-                        tri(self, i - 2, i, i - 1);
-                    }
-                }
-            }
-            0xA0 => {
-                for i in 2..n {
-                    tri(self, 0, i - 1, i);
-                }
-            }
-            0xA8 | 0xB0 => {
-                let pairs: Vec<(usize, usize)> = if draw.primitive == 0xA8 {
-                    (0..n / 2).map(|i| (2 * i, 2 * i + 1)).collect()
-                } else {
-                    (1..n).map(|i| (i - 1, i)).collect()
-                };
-                for (a, b) in pairs {
-                    self.line(state, &outs[a], screens[a], &outs[b], screens[b]);
-                }
-            }
-            _ => {
-                for i in 0..n {
-                    self.point(state, &outs[i], screens[i]);
-                }
-            }
+        let first = self.indices.len() as u32;
+        let count = d.indices.len() as u32;
+        if self.trace
+            && self.frame == 0
+            && let Some((o, s)) = &d.first
+        {
+            trace_draw(state, primitive, d.vertices, count, scissor, o, *s, mem);
         }
-        let count = self.indices.len() as u32 - first;
-        if self.trace && self.frame == 0 {
-            trace_draw(state, draw, count, scissor, &outs[0], screens[0], mem);
-        }
-        self.screens = screens;
         if count == 0 {
-            self.vertices.truncate(base as usize);
             return;
         }
+        let base = self.vertices.len() as u32;
+        self.vertices
+            .extend_from_slice(&built.words[d.words.clone()]);
+        self.indices
+            .extend(built.indices[d.indices.clone()].iter().map(|&i| base + i));
 
         let mut ids = [0u32; 8];
         let mut levels = [1u32; 8];
@@ -2255,7 +2450,14 @@ impl Renderer {
         // depth pass, then color where depth now matches.
         let early = bits(state.bp[0x43], 6, 1) != 0;
         let at = state.bp[0xF3];
-        let alpha_can_fail = !(0..=255).all(|a| alpha_passes(at, a));
+        let alpha_can_fail = match self.alpha_test {
+            Some((last, fails)) if last == at => fails,
+            _ => {
+                let fails = !(0..=255).all(|a| alpha_passes(at, a));
+                self.alpha_test = Some((at, fails));
+                fails
+            }
+        };
         if early && key.depth_write && alpha_can_fail {
             let depth_key = PipelineKey {
                 blend: None,
@@ -2448,50 +2650,6 @@ fn alpha_passes(at: u32, a: u32) -> bool {
 }
 
 impl Renderer {
-    /// A line: a quad its width wide, its caps vertical or horizontal by its slope.
-    fn line(&mut self, state: &State, a: &Output, sa: [f32; 3], b: &Output, sb: [f32; 3]) {
-        let vp = Viewport::of(&state.xf);
-        let (_, off) = Self::scissor(state, &vp);
-        let half = bits(state.bp[0x22], 0, 8) as f32 / 12.0;
-        let (dx, dy) = (sb[0] - sa[0], sb[1] - sa[1]);
-        let (px, py) = if dx.abs() > dy.abs() {
-            (0.0, if dx > 0.0 { -1.0 } else { 1.0 })
-        } else {
-            (if dy > 0.0 { 1.0 } else { -1.0 }, 0.0)
-        };
-        let at = |o: &Output, s: [f32; 3], sign: f32| {
-            Self::gpu_vertex(
-                o,
-                [s[0] + sign * px * half, s[1] + sign * py * half, s[2]],
-                off,
-                &vp,
-            )
-        };
-        if bits(state.bp[0x22], 16, 3) != 0 {
-            self.note("line texture offsets");
-        }
-        let (a0, b0, b1, a1) = (
-            at(a, sa, 1.0),
-            at(b, sb, 1.0),
-            at(b, sb, -1.0),
-            at(a, sa, -1.0),
-        );
-        self.push_in_order(&[b1, b0, a0, a0, a1, b1], texgens(state));
-    }
-
-    /// A point: a square its size wide.
-    fn point(&mut self, state: &State, o: &Output, s: [f32; 3]) {
-        let vp = Viewport::of(&state.xf);
-        let (_, off) = Self::scissor(state, &vp);
-        let r = bits(state.bp[0x22], 8, 8) as f32 / 12.0;
-        let at = |x: f32, y: f32| Self::gpu_vertex(o, [s[0] + x * r, s[1] + y * r, s[2]], off, &vp);
-        if bits(state.bp[0x22], 19, 3) != 0 {
-            self.note("point texture offsets");
-        }
-        let (ll, lr, ur, ul) = (at(-1.0, -1.0), at(1.0, -1.0), at(1.0, 1.0), at(-1.0, 1.0));
-        self.push_in_order(&[ll, ul, lr, ur, lr, ul], texgens(state));
-    }
-
     /// Vertices drawn in the order given, with `texgens` texture coordinates.
     fn push_in_order(&mut self, vs: &[GpuVertex], texgens: usize) {
         for v in vs {
@@ -2502,9 +2660,11 @@ impl Renderer {
 }
 
 /// Prints a draw and the state it's drawn with, for debugging (`trace`).
+#[allow(clippy::too_many_arguments)]
 fn trace_draw(
     state: &State,
-    draw: &Draw<'_>,
+    primitive: u8,
+    vertices: u32,
     emitted: u32,
     scissor: [u32; 4],
     first: &Output,
@@ -2515,7 +2675,7 @@ fn trace_draw(
     let stages = bits(bp[0], 10, 4) as usize + 1;
     eprintln!(
         "draw {:02X} vertices {} emitted {emitted} scissor {scissor:?} clip {:?} screen {screen:?} color {:?}",
-        draw.primitive, draw.count, first.clip, first.color
+        primitive, vertices, first.clip, first.color
     );
     eprintln!(
         "  genmode {:06x} zmode {:06x} blend {:06x} pe {:06x} alpha {:06x} ztex {:06x} {:06x} fog {:06x?}",

@@ -2,46 +2,41 @@
 
 //! The renderer on threads of its own. The game thread keeps the GX state and sends what each
 //! draw and copy needs: the state's changes since the last, the vertices, and the memory the
-//! textures read. A thread with a copy of the state kept by those changes decodes and transforms
-//! each draw's vertices, and a renderer on another thread, with a copy of its own, draws them,
-//! so the game runs on while it draws, at most `AHEAD` frames behind ([`Threaded::spawn`]), or
-//! the three work at once on a frame that is done when the stream's copy to the XFB returns
+//! textures read. Transform threads, each with a copy of the state kept by those changes, share
+//! the draws out: each decodes, transforms and builds its own draws' vertices (`build`), and a
+//! renderer on another thread, with a copy of its own, draws them in order. So the game runs
+//! on while it draws, at most `AHEAD` frames behind ([`Threaded::spawn`]), or they all work at
+//! once on a frame that is done when the stream's copy to the XFB returns
 //! ([`Threaded::spawn_synced`]): no frame later, in less time than one thread takes.
 
 use std::collections::{HashMap, VecDeque};
-
-use rustc_hash::FxHashMap;
 use std::sync::{Arc, Condvar, Mutex, mpsc};
 
-use melee_gx::{Delta, Draw, Memory, Sink, State, vertex};
+use rustc_hash::FxHashMap;
 
-use melee_gx::xform::Output;
+use melee_gx::{Delta, Draw, Memory, Sink, State, vertex, xform};
 
-use crate::{Frame, Renderer, bits, copy, hash_bytes, prepare, sampled_image, texture_maps};
+use crate::{
+    Built, Frame, Renderer, Scratch, bits, build, copy, hash_bytes, sampled_image, texture_maps,
+};
 
 /// How many frames the game may run ahead of the renderer.
 const AHEAD: u64 = 2;
 
-/// Draws and copies sent before the render thread takes them, in order.
-const BATCH: usize = 128;
+/// Draws and copies sent before the threads take them, in order.
+const BATCH: usize = 64;
 
 enum Packet {
     Changes(Delta),
-    /// Memory a texture reads, by its address.
-    Memory(u32, Vec<u8>),
+    /// Memory a texture reads, by its address, and its hash (`hash_bytes`).
+    Memory(u32, Arc<[u8]>, u64),
+    /// A draw, its vertices at `data` in the batch's, built by transform thread `worker`.
     Draw {
         primitive: u8,
         vat: u8,
         count: u16,
-        data: Vec<u8>,
-    },
-    /// A draw with its vertices transformed (`prepare`), unless its scissor leaves nothing.
-    Prepared {
-        primitive: u8,
-        vat: u8,
-        count: u16,
-        data: Vec<u8>,
-        outs: Option<Vec<Output>>,
+        data: std::ops::Range<usize>,
+        worker: u8,
     },
     Copy(u32),
     /// Memory copies went to that the game has written over since (copy::Footprints).
@@ -49,6 +44,15 @@ enum Packet {
     /// The EFB made again at a scale and width, and cleared (`Renderer::resize_efb`).
     Resize(u32, u32),
 }
+
+/// A batch of packets and its draws' vertices, which every thread reads.
+#[derive(Default)]
+struct Packets {
+    packets: Vec<Packet>,
+    data: Vec<u8>,
+}
+
+type Batch = Arc<Packets>;
 
 /// What one copy to a texture wrote: each row's address and bytes.
 type CopyRows = Vec<(u32, Vec<u8>)>;
@@ -62,22 +66,30 @@ struct Done {
     written: Mutex<Vec<(u64, CopyRows)>>,
 }
 
-/// A `Renderer` on its own thread, as a sink for the game thread's GX stream.
+/// A transform thread, and where its batches go.
+struct Worker {
+    tx: mpsc::Sender<Batch>,
+    thread: std::thread::JoinHandle<()>,
+}
+
+/// A `Renderer` on its own threads, as a sink for the game thread's GX stream.
 pub struct Threaded {
-    tx: Option<mpsc::Sender<Vec<Packet>>>,
-    transform: Option<std::thread::JoinHandle<()>>,
+    tx: Option<mpsc::Sender<Batch>>,
+    workers: Vec<Worker>,
     render: Option<std::thread::JoinHandle<Renderer>>,
-    batch: Vec<Packet>,
+    batch: Packets,
+    /// The vertices given to each transform thread in this batch, to share them out evenly.
+    load: Vec<u32>,
     /// How many frames the game may run ahead of the renderer.
     ahead: u64,
     /// The frames the renderer finished, as it hands them over.
     finished: mpsc::Receiver<Frame>,
     /// Hashes of the memory textures read this frame, so each range hashes once a frame.
-    hashes: HashMap<(u32, u32), u64>,
+    hashes: FxHashMap<(u32, u32), u64>,
     /// Hashes of ranges the host holds as they are, which never change.
     stable: FxHashMap<(u32, u32), u64>,
     /// What the render thread holds of each range, by hash.
-    held: HashMap<(u32, u32), u64>,
+    held: FxHashMap<(u32, u32), u64>,
     done: Arc<Done>,
     frames: u64,
     /// Where copies went: this thread reads the game's memory, the renderer can't.
@@ -87,6 +99,18 @@ pub struct Threaded {
     /// The memory under each copy the renderer encodes into memory, as the copy found it, by
     /// which copy it is: its first byte's physical address and the bytes to its last.
     before: VecDeque<(u64, u32, Vec<u8>)>,
+}
+
+/// How many transform threads share the draws out: a quarter of the processor's threads, from
+/// one to four (`MELEE_GPU_WORKERS` sets it).
+fn worker_count() -> usize {
+    std::env::var("MELEE_GPU_WORKERS")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or_else(|| {
+            std::thread::available_parallelism().map_or(2, |n| (n.get() / 4).clamp(1, 4))
+        })
+        .clamp(1, 16)
 }
 
 impl Threaded {
@@ -107,27 +131,40 @@ impl Threaded {
             let _ = frames_tx.send(f);
         });
         let (tx, rx) = mpsc::channel();
-        let (prepared_tx, prepared_rx) = mpsc::channel();
         let done = Arc::new(Done::default());
         let renderer_done = done.clone();
-        let transform = std::thread::Builder::new()
-            .name("transform".to_owned())
-            .spawn(move || prepare_all(&rx, &prepared_tx))
-            .expect("the transform thread");
+        let mut workers = Vec::new();
+        let mut results = Vec::new();
+        for k in 0..worker_count() {
+            let (batch_tx, batch_rx) = mpsc::channel();
+            let (built_tx, built_rx) = mpsc::channel();
+            let (spare_tx, spare_rx) = mpsc::channel();
+            let thread = std::thread::Builder::new()
+                .name(format!("transform {k}"))
+                .spawn(move || work(k as u8, &batch_rx, &built_tx, &spare_rx))
+                .expect("a transform thread");
+            workers.push(Worker {
+                tx: batch_tx,
+                thread,
+            });
+            results.push((built_rx, spare_tx));
+        }
         let render = std::thread::Builder::new()
             .name("render".to_owned())
-            .spawn(move || run(renderer, &prepared_rx, &renderer_done))
+            .spawn(move || run(renderer, &rx, &results, &renderer_done))
             .expect("the render thread");
+        let n = workers.len();
         Self {
             tx: Some(tx),
-            transform: Some(transform),
+            workers,
             render: Some(render),
-            batch: Vec::new(),
+            batch: Packets::default(),
+            load: vec![0; n],
             ahead,
             finished,
-            hashes: HashMap::new(),
+            hashes: FxHashMap::default(),
             stable: FxHashMap::default(),
-            held: HashMap::new(),
+            held: FxHashMap::default(),
             done,
             frames: 0,
             footprints: copy::Footprints::default(),
@@ -137,11 +174,37 @@ impl Threaded {
     }
 
     fn send(&mut self) {
-        if !self.batch.is_empty() {
-            let batch = std::mem::take(&mut self.batch);
-            let tx = self.tx.as_ref().expect("the render thread finished");
-            tx.send(batch).expect("the render thread stopped");
+        if self.batch.packets.is_empty() {
+            return;
         }
+        let data = Vec::with_capacity(self.batch.data.capacity());
+        let batch: Batch = Arc::new(std::mem::replace(
+            &mut self.batch,
+            Packets {
+                packets: Vec::with_capacity(BATCH + 8),
+                data,
+            },
+        ));
+        self.load.fill(0);
+        for w in &self.workers {
+            w.tx.send(batch.clone())
+                .expect("a transform thread stopped");
+        }
+        let tx = self.tx.as_ref().expect("the render thread finished");
+        tx.send(batch).expect("the render thread stopped");
+    }
+
+    /// Stops the threads once they've drawn what was sent.
+    fn stop(&mut self) -> Option<Renderer> {
+        self.send();
+        self.tx = None;
+        for w in self.workers.drain(..) {
+            drop(w.tx);
+            w.thread.join().expect("a transform thread");
+        }
+        self.render
+            .take()
+            .map(|t| t.join().expect("the render thread"))
     }
 
     /// The frames the renderer finished since last asked.
@@ -151,16 +214,7 @@ impl Threaded {
 
     /// Stops the threads once they've drawn what was sent, and gives the renderer back.
     pub fn into_renderer(mut self) -> Renderer {
-        self.send();
-        self.tx = None;
-        if let Some(t) = self.transform.take() {
-            t.join().expect("the transform thread");
-        }
-        self.render
-            .take()
-            .expect("the render thread")
-            .join()
-            .expect("the render thread")
+        self.stop().expect("the render thread")
     }
 
     /// Makes the renderer's EFB `scale` times the console's tall and `width` wide, between
@@ -169,14 +223,14 @@ impl Threaded {
     /// this thread forgets where they went.
     pub fn resize_efb(&mut self, state: &State, scale: u32, width: u32) {
         self.changes(state);
-        self.batch.push(Packet::Resize(scale, width));
+        self.batch.packets.push(Packet::Resize(scale, width));
         self.footprints = copy::Footprints::default();
     }
 
     fn changes(&mut self, state: &State) {
         let delta = state.take_delta();
         if !delta.is_empty() {
-            self.batch.push(Packet::Changes(delta));
+            self.batch.packets.push(Packet::Changes(delta));
         }
     }
 }
@@ -187,14 +241,7 @@ impl Sink for Threaded {
     }
 
     fn finish(&mut self) {
-        self.send();
-        self.tx = None;
-        if let Some(t) = self.transform.take() {
-            t.join().expect("the transform thread");
-        }
-        if let Some(t) = self.render.take() {
-            t.join().expect("the render thread");
-        }
+        self.stop();
     }
 
     fn draw(&mut self, state: &State, draw: &Draw<'_>, mem: &dyn Memory) {
@@ -204,7 +251,7 @@ impl Sink for Threaded {
             let range = (image.address, image.size());
             // A copy there that the game has written over since is gone, even within the frame.
             if let Some((start, end)) = self.footprints.take_if_overwritten(image.address, mem) {
-                self.batch.push(Packet::Forget(start, end));
+                self.batch.packets.push(Packet::Forget(start, end));
             }
             // Bytes the host holds as they are never change: hashed once, sent when the render
             // thread doesn't hold them.
@@ -214,7 +261,9 @@ impl Sink for Threaded {
                     .entry(range)
                     .or_insert_with(|| hash_bytes(bytes));
                 if self.held.insert(range, hash) != Some(hash) {
-                    self.batch.push(Packet::Memory(range.0, bytes.to_vec()));
+                    self.batch
+                        .packets
+                        .push(Packet::Memory(range.0, bytes.into(), hash));
                 }
                 continue;
             }
@@ -226,16 +275,29 @@ impl Sink for Threaded {
             let hash = hash_bytes(&bytes);
             self.hashes.insert(range, hash);
             if self.held.insert(range, hash) != Some(hash) {
-                self.batch.push(Packet::Memory(range.0, bytes));
+                self.batch
+                    .packets
+                    .push(Packet::Memory(range.0, bytes.into(), hash));
             }
         }
-        self.batch.push(Packet::Draw {
+        // To the transform thread with the fewest vertices so far.
+        let (worker, load) = self
+            .load
+            .iter_mut()
+            .enumerate()
+            .min_by_key(|(_, l)| **l)
+            .expect("a transform thread");
+        *load += u32::from(draw.count) + 8;
+        let start = self.batch.data.len();
+        self.batch.data.extend_from_slice(draw.data);
+        self.batch.packets.push(Packet::Draw {
             primitive: draw.primitive,
             vat: draw.vat,
             count: draw.count,
-            data: draw.data.to_vec(),
+            data: start..self.batch.data.len(),
+            worker: worker as u8,
         });
-        if self.batch.len() >= BATCH {
+        if self.batch.packets.len() >= BATCH {
             self.send();
         }
     }
@@ -274,7 +336,7 @@ impl Sink for Threaded {
         let frame_end = bits(value, 14, 1) != 0;
         if frame_end {
             for (start, end) in self.footprints.take_overwritten(mem) {
-                self.batch.push(Packet::Forget(start, end));
+                self.batch.packets.push(Packet::Forget(start, end));
             }
             self.footprints.new_frame();
         } else if let Some(f) = copy::footprint(state, value) {
@@ -290,7 +352,7 @@ impl Sink for Threaded {
         if !frame_end {
             self.copies += 1;
         }
-        self.batch.push(Packet::Copy(value));
+        self.batch.packets.push(Packet::Copy(value));
         if frame_end {
             // A frame: hand it over, and wait while the renderer is too far behind.
             self.send();
@@ -315,7 +377,7 @@ impl Sink for Threaded {
 }
 
 /// The memory textures read, as the game thread sent it.
-struct Held(HashMap<(u32, u32), Vec<u8>>);
+struct Held(HashMap<(u32, u32), Arc<[u8]>>);
 
 impl Memory for Held {
     fn read(&self, phys: u32, out: &mut [u8]) {
@@ -326,107 +388,120 @@ impl Memory for Held {
     }
 }
 
-/// Decodes and transforms each draw's vertices ahead of the render thread, with a copy of the
-/// state of its own.
-fn prepare_all(rx: &mpsc::Receiver<Vec<Packet>>, tx: &mpsc::Sender<Vec<Packet>>) {
+/// The registers building draws reads, as the game thread's state changed them: the BP, CP and
+/// XF (not the TEV colors or texture memory).
+fn apply_registers(state: &mut State, delta: &Delta) {
+    for &(reg, v) in &delta.bp {
+        state.bp[reg as usize] = v;
+    }
+    for &(reg, v) in &delta.cp {
+        state.cp[reg as usize] = v;
+    }
+    for &(addr, v) in &delta.xf {
+        state.xf[addr as usize] = v;
+    }
+}
+
+/// Transform thread `k`: builds its draws of each batch ahead of the render thread, with a
+/// copy of the state of its own, and decodes the others' only as far as the normals they leave
+/// for the next draw. What it built goes to the render thread, which sends the buffers back.
+fn work(
+    k: u8,
+    rx: &mpsc::Receiver<Batch>,
+    tx: &mpsc::Sender<Built>,
+    spare: &mpsc::Receiver<Built>,
+) {
     let mut state = State::new();
-    let mut layouts = vertex::LayoutCache::default();
-    let mut normals = [[0.0; 3]; 3];
-    let mut inputs = Vec::new();
+    let mut scratch = Scratch::default();
     while let Ok(batch) = rx.recv() {
-        let mut out = Vec::with_capacity(batch.len());
-        for packet in batch {
+        let mut built = spare.try_recv().unwrap_or_default();
+        built.clear();
+        for packet in &batch.packets {
             match packet {
-                Packet::Changes(delta) => {
-                    state.apply(&delta);
-                    out.push(Packet::Changes(delta));
-                }
+                Packet::Changes(delta) => apply_registers(&mut state, delta),
                 Packet::Draw {
                     primitive,
                     vat,
                     count,
                     data,
-                } => {
-                    let layout = layouts.get(&state.cp, usize::from(vat));
+                    worker,
+                } if *worker == k => {
                     let draw = Draw {
-                        primitive,
-                        vat,
-                        count,
-                        layout,
-                        data: &data,
+                        primitive: *primitive,
+                        vat: *vat,
+                        count: *count,
+                        layout: &[],
+                        data: &batch.data[data.clone()],
                     };
-                    let mut outs = Vec::new();
-                    let drawn = prepare(&state, &draw, &mut normals, &mut inputs, &mut outs);
-                    out.push(Packet::Prepared {
-                        primitive,
-                        vat,
-                        count,
-                        data,
-                        outs: drawn.then_some(outs),
-                    });
+                    let d = build(&state, &draw, &mut scratch, &mut built);
+                    built.draws.push(d);
                 }
-                other => out.push(other),
+                Packet::Draw {
+                    vat, count, data, ..
+                } => {
+                    let xf_index = [state.xf[xform::MATINDEX_A], state.xf[xform::MATINDEX_A + 1]];
+                    vertex::skip(
+                        &state.cp,
+                        xf_index,
+                        usize::from(*vat),
+                        &batch.data[data.clone()],
+                        usize::from(*count),
+                        &mut scratch.normals,
+                        &mut scratch.inputs,
+                    );
+                }
+                _ => {}
             }
         }
-        if tx.send(out).is_err() {
+        if tx.send(built).is_err() {
             return;
         }
     }
 }
 
-fn run(mut renderer: Renderer, rx: &mpsc::Receiver<Vec<Packet>>, done: &Done) -> Renderer {
+/// The render thread: draws each batch in order, each draw as its transform thread built it.
+fn run(
+    mut renderer: Renderer,
+    rx: &mpsc::Receiver<Batch>,
+    workers: &[(mpsc::Receiver<Built>, mpsc::Sender<Built>)],
+    done: &Done,
+) -> Renderer {
     let mut state = State::new();
-    let mut layouts = vertex::LayoutCache::default();
     let mut copies = 0u64;
     let mut memory = Held(HashMap::new());
+    let mut built: Vec<Built> = Vec::with_capacity(workers.len());
+    let mut next = vec![0usize; workers.len()];
     while let Ok(batch) = rx.recv() {
-        for packet in batch {
+        built.clear();
+        for (results, _) in workers {
+            built.push(results.recv().expect("a transform thread stopped"));
+        }
+        next.fill(0);
+        for packet in &batch.packets {
             match packet {
-                Packet::Changes(delta) => state.apply(&delta),
-                Packet::Memory(at, bytes) => {
-                    memory.0.insert((at, bytes.len() as u32), bytes);
+                Packet::Changes(delta) => state.apply(delta),
+                Packet::Memory(at, bytes, hash) => {
+                    let key = (*at, bytes.len() as u32);
+                    memory.0.insert(key, bytes.clone());
+                    renderer.held_hashes.insert(key, *hash);
                 }
                 Packet::Draw {
-                    primitive,
-                    vat,
-                    count,
-                    data,
+                    primitive, worker, ..
                 } => {
-                    let layout = layouts.get(&state.cp, usize::from(vat));
-                    let draw = Draw {
-                        primitive,
-                        vat,
-                        count,
-                        layout,
-                        data: &data,
-                    };
-                    renderer.draw(&state, &draw, &memory);
+                    let w = usize::from(*worker);
+                    let b = &built[w];
+                    let d = b.draws[next[w]].as_ref();
+                    next[w] += 1;
+                    renderer.draw_built(&state, *primitive, b, d, &memory);
                 }
-                Packet::Prepared {
-                    primitive,
-                    vat,
-                    count,
-                    data,
-                    outs,
-                } => {
-                    let layout = layouts.get(&state.cp, usize::from(vat));
-                    let draw = Draw {
-                        primitive,
-                        vat,
-                        count,
-                        layout,
-                        data: &data,
-                    };
-                    renderer.draw_prepared(&state, &draw, outs.as_deref(), &memory);
-                }
-                Packet::Forget(start, end) => renderer.forget(start, end),
+                Packet::Forget(start, end) => renderer.forget(*start, *end),
                 Packet::Resize(scale, width) => {
-                    renderer.resize_efb(scale, width);
+                    renderer.resize_efb(*scale, *width);
                     renderer.clear_efb(&state);
                 }
                 Packet::Copy(value) => {
-                    renderer.copy(&state, value, &memory);
-                    if bits(value, 14, 1) != 0 {
+                    renderer.copy(&state, *value, &memory);
+                    if bits(*value, 14, 1) != 0 {
                         *done.frames.lock().unwrap() += 1;
                         done.cond.notify_all();
                     } else {
@@ -442,6 +517,10 @@ fn run(mut renderer: Renderer, rx: &mpsc::Receiver<Vec<Packet>>, done: &Done) ->
                     }
                 }
             }
+        }
+        // The buffers back to their transform threads, to build into again.
+        for (b, (_, spare)) in built.drain(..).zip(workers) {
+            let _ = spare.send(b);
         }
     }
     renderer
