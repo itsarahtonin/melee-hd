@@ -420,6 +420,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes Nana's DI in those cases; breaks vanilla replay compatibility for Ice Climbers matches (Slippi's code already fixes it online, differently in 3.16 and 3.19).
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (lines 93 and 95); [performance](performance.md) (line 186); [the oracle](oracle.md) (line 140).
 
+### The computer player heads for a stack vector when no island end is in reach
+
+- **Where:** `ftCo_800A4768` (the island end beside a fighter) with its caller `ftCo_800A75DC` (heading for a fighter), `crates/melee-sim/src/game/ft/cpu_vs.rs` (`cpu_island_end_beside`, `cpu_toward`) and `cpu_decide.rs` (`cpu_find_target_lr`).
+- **Defect:** `ftCo_800A4768` writes its out vector only when some island end beside the fighter is in reach, and returns 0 either way; with none (an airborne target with no floor below, between every island's ends, as under Final Destination), `ftCo_800A75DC` sets the destination from its stack vector unwritten.
+- **Effect:** the computer player heads for what the stack held: under the VS decision, the back chain and saved return address the target search's frame left there, two tiny negative floats, about the stage's middle at floor height. `cpu-ics-fd` reads it 25 times (first in tick 3260) and `cpu-sweep-samus-fd` from tick 5721.
+- **melee-hd:** modeled (the target search returns the return address it leaves, and the VS decision hands the vector to the call); a caller that doesn't give it stops.
+- **Fix:** leave the destination as it was, or head for the target, when no end is in reach.
+- **Fix impact:** changes where a computer player heads while its target is under the stage; a replay's recorded inputs keep its fighters' motion, but the CPU's state, and a free-running CPU, differ.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 106).
+
 ### The Ice Climbers' freeze glitch
 
 - **Where:** `ftNn_Init_80123954` (whether Nana joins Popo's Squall Hammer), `crates/melee-sim/src/game/ft/popo/nana_special_s.rs` (`nana_join_special_s`).
