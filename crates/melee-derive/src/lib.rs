@@ -4,7 +4,8 @@
 //! replaces the whole value. An enum copies field by field when both values are the same
 //! variant, and replaces the value otherwise.
 //!
-//! `#[derive(StateEq)]`: `melee_sim::state_eq::StateEq`, a bitwise comparison that names the
+//! `#[derive(StateEq)]`: `melee_sim::state_eq::StateEq`, a bitwise comparison (and a hash of the
+//! same values, `state_hash`) that names the
 //! first field path where two values differ, for the sync test, or every one
 //! (`state_diffs`). It compares every field
 //! except those marked `#[clone_from(keep)]` (spare storage, not state) or
@@ -193,9 +194,11 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
         let segment = format!(".{label}");
         quote!(::melee_sim::state_eq::diffs_in(#o, #t, out, #segment);)
     };
-    let (body, all) = match &data {
+    let hasher = quote!(::melee_sim::state_eq::StateHasher);
+    let (body, all, hash) = match &data {
         Data::Struct(s) => {
             let mut all = Vec::new();
+            let mut hashes = Vec::new();
             let checks = s.fields.iter().enumerate().filter(|(_, f)| compared(f)).map(|(i, f)| {
                 bound(&f.ty);
                 let (access, label) = match &f.ident {
@@ -206,6 +209,7 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
                     }
                 };
                 all.push(collect(quote!(&self.#access), quote!(&other.#access), &label));
+                hashes.push(quote!(#trait_path::state_hash(&self.#access, h);));
                 quote! {
                     if let ::core::option::Option::Some(d) = #trait_path::state_diff(&self.#access, &other.#access) {
                         return ::core::option::Option::Some(d.field(#label));
@@ -215,13 +219,16 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
             (
                 quote! { #(#checks)* ::core::option::Option::None },
                 quote! { #(#all)* },
+                quote! { #(#hashes)* },
             )
         }
         Data::Enum(e) => {
             let mut arms = Vec::new();
             let mut all_arms = Vec::new();
+            let mut hash_arms = Vec::new();
             let mut names = Vec::new();
-            for v in &e.variants {
+            for (index, v) in e.variants.iter().enumerate() {
+                let index = index as u64;
                 let vname = &v.ident;
                 let label = vname.to_string();
                 let segment = format!("::{label}");
@@ -235,10 +242,12 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
                         let theirs: Vec<_> =
                             all.iter().map(|n| format_ident!("theirs_{}", n)).collect();
                         let mut collects = Vec::new();
+                        let mut hashes = Vec::new();
                         let checks = f.named.iter().zip(ours.iter().zip(&theirs)).filter(|(f, _)| compared(f)).map(|(f, (o, t))| {
                             bound(&f.ty);
                             let fl = f.ident.as_ref().unwrap().to_string();
                             collects.push(collect(quote!(#o), quote!(#t), &fl));
+                            hashes.push(quote!(#trait_path::state_hash(#o, h);));
                             quote! {
                                 if let ::core::option::Option::Some(d) = #trait_path::state_diff(#o, #t) {
                                     return ::core::option::Option::Some(d.field(#fl).variant(#label));
@@ -256,6 +265,12 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
                                 let start = out.len();
                                 #(#collects)*
                                 #nest(out, start, #segment);
+                            }
+                        });
+                        hash_arms.push(quote! {
+                            #path { #(#all: #ours),* } => {
+                                h.word(#index);
+                                #(#hashes)*
                             }
                         });
                         names.push(quote!(#path { .. } => #label));
@@ -268,10 +283,12 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
                             .map(|i| format_ident!("theirs_{}", i))
                             .collect();
                         let mut collects = Vec::new();
+                        let mut hashes = Vec::new();
                         let checks = f.unnamed.iter().enumerate().zip(ours.iter().zip(&theirs)).filter(|((_, f), _)| compared(f)).map(|((i, f), (o, t))| {
                             bound(&f.ty);
                             let fl = i.to_string();
                             collects.push(collect(quote!(#o), quote!(#t), &fl));
+                            hashes.push(quote!(#trait_path::state_hash(#o, h);));
                             quote! {
                                 if let ::core::option::Option::Some(d) = #trait_path::state_diff(#o, #t) {
                                     return ::core::option::Option::Some(d.field(#fl).variant(#label));
@@ -291,11 +308,18 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
                                 #nest(out, start, #segment);
                             }
                         });
+                        hash_arms.push(quote! {
+                            #path ( #(#ours),* ) => {
+                                h.word(#index);
+                                #(#hashes)*
+                            }
+                        });
                         names.push(quote!(#path ( .. ) => #label));
                     }
                     Fields::Unit => {
                         arms.push(quote!((#path, #path) => ::core::option::Option::None,));
                         all_arms.push(quote!((#path, #path) => {}));
+                        hash_arms.push(quote!(#path => h.word(#index),));
                         names.push(quote!(#path => #label));
                     }
                 }
@@ -332,6 +356,12 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
                         #all_mismatch
                     }
                 },
+                quote! {
+                    #[allow(unreachable_patterns, unused_variables)]
+                    match self {
+                        #(#hash_arms)*
+                    }
+                },
             )
         }
         Data::Union(_) => {
@@ -354,6 +384,11 @@ pub fn derive_state_eq(input: TokenStream) -> TokenStream {
             #[allow(unused_variables)]
             fn state_diffs(&self, other: &Self, out: &mut ::std::vec::Vec<#diff>) {
                 #all
+            }
+            #[inline]
+            #[allow(unused_variables)]
+            fn state_hash(&self, h: &mut #hasher) {
+                #hash
             }
         }
     }
