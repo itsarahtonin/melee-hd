@@ -47,7 +47,7 @@ const CAPTURED: [(&str, &str); 2] = [
 /// playback parse it, where both are here.
 fn replays() -> Vec<(String, Replay, melee_slippi::Replay)> {
     let calls = std::env::var("REPLAY_CALLS").unwrap_or_else(|_| ssbm_rs_local(CALLS));
-    let slippi = std::env::var("SLIPPI_REPLAYS").unwrap_or_else(|_| slippi_replays(""));
+    let slippi = slippi_replays("");
     CAPTURED
         .iter()
         .filter_map(|(month, name)| {

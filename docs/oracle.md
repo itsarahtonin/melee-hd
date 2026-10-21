@@ -864,7 +864,7 @@ A few binaries run far longer than the rest (`cpu_vs` 85 minutes, `items` 36, `n
 
 A binary is cut into units, each a check with its own assertions, so no shard needs another's results: a whole test (`leaf_check::shard_test!()` at its start: `items`' 194 tests), or a test's own parts (`leaf_check::shard::units`: `cpu_vs_changed`'s 34 changes and `nana_tumble_and_shields`' 9, each asserting that it compared clean in some frame; `nana_cpu_frame`'s three variants; `cpu_vs_frame` whole). A test's unit `i` runs in shard `(hash(test) + i) mod N` (FNV-1a of the test's name): fixed by names, not by a list to keep up, so a new test or change lands in some shard, and a test's units spread from a shard its name picks. Each shard prints which units it runs. A new `items` test needs `shard_test!()` too, or every shard runs it.
 
-`tools/leaf-check/shards.txt` lists the binaries the verification splits and into how many shards, each over about 20 minutes on its own: `cpu_vs` 6, `items` 3, `nana` 3. From `tools/leaf-check`, as cargo runs a test binary:
+`tools/leaf-check/shards.txt` lists the binaries the verification splits and into how many shards, each over about 20 minutes on its own: `cpu_vs` 6, `items` 3, `nana` 3. `leaf-select plan` lists every job with its environment ([selecting leaf-check jobs](#selecting-leaf-check-jobs)). From `tools/leaf-check`, as cargo runs a test binary:
 
 ```sh
 for k in 1 2 3 4 5 6; do LEAF_CHECK_SHARD=$k/6 target/release/deps/cpu_vs-HASH --test-threads=4; done   # each its own job
@@ -873,3 +873,54 @@ for k in 1 2 3; do LEAF_CHECK_SHARD=$k/3 target/release/deps/nana-HASH --test-th
 ```
 
 On `items`' timed tests the hash splits its 4.0 hours of test time 4,759 / 4,840 / 5,064 seconds over three shards, each bound below by its longest test (14 minutes, `effect_router`); `cpu_vs`' fourth shard runs `cpu_vs_frame` (4.5 minutes) and six changes, the others five or six changes.
+
+### Selecting leaf-check jobs
+
+Every leaf-check binary links melee-sim, so keying a job on its binary reruns all of them on any change to melee-sim, though most change nothing a given binary runs. `leaf-select` (`tools/leaf-select`) keys each job (a binary, or a [shard](#leaf-checks-shards) of one) on the source of what it runs instead, from a coverage run, so a change that touches none of it keeps the job's last pass. Sarah, 2026-10-21: "i figure we can play this more loosely and just do a full audit periodically"; "weekly full runs sound good".
+
+**The reach.** `leaf-select run JOB` runs a job from leaf-check's tests built with the workspace's crates instrumented (`leaf-select build`: `-C instrument-coverage` through cargo's workspace wrapper, into `target/coverage`), exactly as the verification runs it, and, if it passed, records its reach (`local/leaf-reach/JOB.reach` by default) from `llvm-cov`'s line counts and the data it read:
+
+- what ran: each unit holding an executed line. A unit is an item cut out with `syn`: a function (each method on its own; a closure's lines are its function's), an impl's or trait's shell (header, associated constants and types), a struct, enum, const, static, macro definition or invocation, use. A generic function's lines count in every instantiation, inlined ones too, so an edit to a generic is an edit to what ran. A line in no unit takes in its whole file;
+- what that names, transitively, by identifier: the structs, enums, consts, statics, type aliases, traits and macros of those names, the uses that import them in their files, any `const fn` of those names (it may run at compile time, where coverage can't see it), the shells of the impls of methods that ran;
+- the signature of every function of a name it mentions that didn't run, so a function that appears, goes or changes its signature where it could take over a call (method resolution, shadowing) changes the reach;
+- each unit's hash: its tokens, comments and doc attributes left out (neither changes the program);
+- the harness, the data it read (every path under `SSBM_RS_LOCAL` or `SLIPPI_REPLAYS` it asked `melee-local-data` for, which logs them to `MELEE_LOCAL_DATA_LOG`), and when.
+
+**The fingerprint.** `leaf-select fingerprint` prints `JOB<TAB>FINGERPRINT` for every job (`--explain` says why on stderr). It always takes in the job's harness: the compiler's version, `Cargo.lock` and the manifests, leaf-check's library, the test's own file and the `#[path]` modules it takes in, the crates keyed whole, the disc image's size and time; and the data its reach names, every file's size and time. Then, if the reach holds (the harness is the one it was recorded with, every unit that ran hashes as recorded, and what they name and the signatures, worked out again from today's source, come out the same), the reach itself: nothing the job runs or names has changed, so the key is the one its last pass had. Otherwise every keyed crate's source, byte for byte, so the job reruns on any change until a coverage run records its reach again.
+
+**What's skipped, and why it's safe.** A job is kept only while none of the code it ran has changed, nor anything that code names, nor its test, leaf-check, the toolchain or its data. Code it didn't run can only start running through a change to code it ran or to its inputs, and either changes the key. The rules fail toward rerunning:
+
+- no reach, or one for another harness: the whole source keys the job, and the data it reads is unknown, as when jobs were keyed on their binaries;
+- one changed unit and the reach stops holding until it's recorded again: from then on any change reruns the job, not just changes to what it ran (a changed function may now call one the reach never saw). Put back, the key is the old one again, and its pass stands;
+- a unit that's gone, renamed or added under a name the reach mentions: the reach doesn't hold;
+- lines that ran in a file of the repository the tool doesn't key, or a source newer than the binary the coverage ran: the reach is recorded unsound and never holds;
+- only a passing run records a reach (a failing one may have stopped early);
+- whole crates: proc macros (`melee-derive`) and crates with a build script, whose code runs while building where coverage can't see it, and by choice `melee-capture`, `melee-data`, `melee-gekko-fp` and `melee-local-data` (`crates::WHOLE`): every job runs most of them (the importer and comparer, the archives, the float operations), and their hot loops ran about five times slower with counters in them, so they aren't instrumented, and any change to them reruns everything. melee-sim and melee-slippi are keyed by unit; their counters cost nothing measurable (`marth` single-threaded 78 s plain, 74 s instrumented).
+
+Not tracked: the tests' own path variables (`FOX_CALLS` and the others) when set (the verification doesn't set them), and data in the repository (`data/bench`, `docs/port-ledger.csv`), which the verification keys on separately (its runtime data key).
+
+**Shown** (2026-10-21, reaches of `fox`, `marth`, `stage`, `math` and `lbvector`; each edit made, fingerprinted, reverted):
+
+| Edit | Changed | Kept |
+| --- | --- | --- |
+| A Brinstar function none runs (`gr::zebes::init_stage`) | | all five |
+| Inside a function `fox` runs (`fox_appeal_count`) | fox | the other four |
+| A comment in it | | all five |
+| A shared engine function, generic over its host (`hsd::gobj::free<K, H>`) | fox, marth, stage | math, lbvector |
+| A generic `#[inline]` function (`Memo<K, V, BITS>::get`) | fox, marth, stage, math | lbvector |
+| A const only `math.rs`' functions name (`TWO_OVER_PI`) | fox, marth, stage, math | lbvector |
+| `fox`'s test file | fox | the other four |
+| With `fox_appeal_count` changed, also the Brinstar function | fox's key changes again | |
+| Both put back | | fox's key is its old one |
+| `fox`'s capture set (`calls/fox`, from a stand-in `SSBM_RS_LOCAL`) | fox (and stage, whose sets the stand-in folder lacked) | math, which reads none |
+
+**Refreshing.** A reach goes stale only toward rerunning, so reaches can be refreshed whenever: the weekly full run runs every job through `leaf-select run` (`leaf-select build` once, then a job per test binary or shard, which checks what the plain run checks and records its reach), and a routine verification can do the same for each job it reruns, so a job is keyed by unit again from its next run on. `run` prints each passing job's new fingerprint (`fingerprint<TAB>JOB<TAB>FINGERPRINT`), the key the next verification looks its pass up by.
+
+```sh
+cargo build --release -p leaf-select
+target/release/leaf-select plan                      # the jobs: NAME, TEST, ENV
+target/release/leaf-select build                     # leaf-check's tests, instrumented (target/coverage)
+target/release/leaf-select run --stdout --test-threads 4 fox cpu_vs.2of6   # run and record
+target/release/leaf-select cover -j 6                # build, then every job, 6 at once
+target/release/leaf-select fingerprint --explain     # JOB<TAB>FINGERPRINT
+```

@@ -46,11 +46,37 @@ pub fn bench_replay(name: &str) -> PathBuf {
     bench_dir().join(format!("{name}.slp"))
 }
 
+/// Appends `VAR<TAB>rel` to the file `MELEE_LOCAL_DATA_LOG` names, once per process for each:
+/// leaf-select's coverage pass learns from it which data a leaf-check job reads, and keys the
+/// job on that data (docs/oracle.md, "Selecting leaf-check jobs").
+fn log(var: &str, rel: &str) {
+    use std::collections::BTreeSet;
+    use std::io::Write;
+    use std::sync::Mutex;
+    static LOGGED: Mutex<BTreeSet<(String, String)>> = Mutex::new(BTreeSet::new());
+    let Some(path) = std::env::var_os("MELEE_LOCAL_DATA_LOG") else {
+        return;
+    };
+    let mut logged = LOGGED.lock().unwrap_or_else(|e| e.into_inner());
+    if logged.insert((var.to_owned(), rel.to_owned())) {
+        let line = format!("{var}\t{rel}\n");
+        std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .and_then(|mut f| f.write_all(line.as_bytes()))
+            .unwrap_or_else(|e| panic!("MELEE_LOCAL_DATA_LOG={}: {e}", path.display()));
+    }
+}
+
 /// `$var/rel`, or a path naming the unset variable. An absolute `rel` is kept as it is.
 fn under(var: &str, rel: &str, note: &Once, what: &str) -> String {
     if Path::new(rel).is_absolute() {
+        // No variable's: logged under one that's never set, so the path stands alone.
+        log("-", rel);
         return rel.to_owned();
     }
+    log(var, rel);
     match std::env::var(var) {
         Ok(base) if !base.is_empty() => {
             let base = base.trim_end_matches(['/', '\\']);

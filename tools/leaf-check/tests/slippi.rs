@@ -27,8 +27,7 @@ fn slp_files(dir: &Path, limit: usize) -> Vec<PathBuf> {
 fn replays() -> Vec<PathBuf> {
     let bench =
         std::env::var_os("BENCH_DIR").map_or_else(melee_local_data::bench_dir, PathBuf::from);
-    let slippi =
-        std::env::var("SLIPPI_REPLAYS").unwrap_or_else(|_| melee_local_data::slippi_replays(""));
+    let slippi = melee_local_data::slippi_replays("");
     let mut out = slp_files(&bench, usize::MAX);
     if let Ok(months) = std::fs::read_dir(&slippi) {
         let mut months: Vec<PathBuf> = months.filter_map(|e| e.ok().map(|e| e.path())).collect();

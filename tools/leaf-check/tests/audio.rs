@@ -1144,7 +1144,7 @@ fn crowd_dir() -> String {
 /// enough fighters can fall past the bottom at once). Slippi's codes hook the crowd's process
 /// to talk to the Slippi device, which the replay answers for (`SLIPPI_REPLAYS`).
 fn crowd_sets() -> Vec<(String, ssbm_slippi::Replay)> {
-    let slp = std::env::var("SLIPPI_REPLAYS").unwrap_or_else(|_| slippi_replays(""));
+    let slp = slippi_replays("");
     let bf4 = std::env::var("AUDIO_CROWD_BF4_CALLS")
         .unwrap_or_else(|_| ssbm_rs_local(&format!("{CROWD_CALLS}-bf4")));
     [

@@ -131,7 +131,7 @@ fn audio_calls() -> String {
 /// The replay captures (`replay.rs`), with their replays for the reference's device.
 fn replay_calls() -> Vec<(String, ssbm_slippi::Replay)> {
     let calls = std::env::var("REPLAY_CALLS").unwrap_or_else(|_| ssbm_rs_local("calls/replay"));
-    let slippi = std::env::var("SLIPPI_REPLAYS").unwrap_or_else(|_| slippi_replays(""));
+    let slippi = slippi_replays("");
     [
         ("2026-01", "Game_20260129T133652"),
         ("2026-05", "Game_20260531T174953"),

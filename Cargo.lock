@@ -1347,6 +1347,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "leaf-select"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "sha1 0.10.7",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "ledger"
 version = "0.1.0"
 dependencies = [
