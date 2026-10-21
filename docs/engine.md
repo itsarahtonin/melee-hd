@@ -48,7 +48,7 @@ Render callbacks that only decide what to draw (the HUD's, `game::hud`, and the 
 
 ## Uninitialized values
 
-A few original functions read memory or registers they never set, and plain data can't hold what was there. Each case is probed in ssbm-rs to see what the word is in play, then modeled explicitly:
+A few original functions read memory or registers they never set, and plain data can't hold what was there. Each case is probed in ssbm-rs to see what the word is in play, then modeled explicitly where it can reach gameplay or presentation, or given the simplest stand-in with the proof that it can't ([what must be exact](porting.md#what-must-be-exact)):
 
 - An FObj channel whose data ends right after its first key hands its update function a stack word instead of a value (`hsd::fobj::Value::Stale`). Over every VS stage and a Final Destination replay, that word was always a RAM address, a tiny negative float; every channel was a joint's branch visibility, which an address hides. Update functions resolve what any address gives where the result doesn't depend on which address, and count the rest as stale reads, which the oracle reports, so a case that matters can't pass unnoticed.
 - `resolveIKJoint1` reads two registers and two stack vectors it never set when the effector sits on the chain's root. No joint on the disc has an IK role and no game code gives one, so it can't happen in play; the port counts a stale read if it does.

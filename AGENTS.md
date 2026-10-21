@@ -4,7 +4,7 @@ Read [README.md](README.md), [architecture](docs/architecture.md), [the oracle](
 
 ## Scope and rules
 
-melee-hd rewrites Melee in idiomatic Rust with a simulation that stays bit-exact with ssbm-rs at its `melee-hd-base` tag. Gameplay changes exist only as explicit rulesets or gameplay toggles.
+melee-hd rewrites Melee in idiomatic Rust with a simulation whose gameplay, and what players see and hear, is identical to ssbm-rs at its `melee-hd-base` tag ([what must be exact](docs/porting.md#what-must-be-exact)). Gameplay changes exist only as explicit rulesets or gameplay toggles.
 
 - Never commit disc images, extracted assets, captures, replays, or cards. Keep them under ignored `local/` or outside the checkout. The one exception is the benchmark matches' replays in `data/bench`, inputs the CPU AI played in ssbm-rs.
 - Never commit personal paths or names (home folders, OneDrive, agents' scratch folders), build output (`dist/`, `target/`) or files over 5 MiB. The [git hooks](#git-hooks) refuse them.

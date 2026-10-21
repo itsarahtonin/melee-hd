@@ -1,6 +1,6 @@
 # Melee's own bugs
 
-melee-hd reproduces the original game's bugs exactly: the simulation must stay bit-exact with ssbm-rs and with Slippi replays, so a defect in Melee's code is ported as the original runs it, never fixed in passing. This catalog records those defects as porting finds them, so each one is written down once with what it does and what fixing it would take.
+melee-hd reproduces the original game's bugs exactly: gameplay and presentation must stay identical with ssbm-rs and with Slippi replays, so a defect in Melee's code is ported as the original runs it, never fixed in passing. Where a defect's only effect is a value that provably reaches neither (an address left in a word nothing plays from), the port may use a simpler stand-in, recorded in the entry. This catalog records those defects as porting finds them, so each one is written down once with what it does and what fixing it would take.
 
 It lists only defects in Melee's own code (NTSC 1.02): reads of registers, stack slots or memory the code never set, wrong operands or fields, copy-paste slips, loops that can't end, reads and writes out of bounds or into freed objects, values computed and dropped. Intended mechanics, however surprising, are not here, nor are bugs in ssbm-rs or in melee-hd's own ports, Dolphin's behavior, or what Slippi's and Gecko codes do (except where a Slippi code exists to patch one of these bugs, which the entry notes).
 

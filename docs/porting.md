@@ -1,6 +1,15 @@
 # Porting guide
 
-How a function gets from ssbm-rs into melee-hd. Every port follows these rules, so the simulation stays bit-exact and the ledger stays honest.
+How a function gets from ssbm-rs into melee-hd. Every port follows these rules, so gameplay stays identical and the ledger stays honest.
+
+## What must be exact
+
+melee-hd's target is identical gameplay and identical presentation (what players see and hear), not identical memory; modeling memory itself is ssbm-rs's job. Sarah, 2026-10-21: "the point of this repo is to rewrite idiomatically and preserve identical gameplay", "gameplay plus what players see and hear".
+
+- Every value that can reach gameplay or presentation is exact, bit for bit: positions, states, the random seed's use, damage, timers, inputs, everything drawn or played, and every value any of those reads. A leftover register that steers a DI or an address a game rule reads is gameplay.
+- A value may differ from the original only when it's shown, field by field, never to reach gameplay or presentation. The proof goes in [the engine notes](engine.md#uninitialized-values) and the comparer skips the field, naming the reason. A value nothing reads is the simplest case: unknown until written, which the oracle's stale-read check confirms on every diff.
+- Exact stays the default: comparing every value against the oracle is the cheap proof that gameplay is identical. Take an exception where exactness costs real complexity or speed, never to move past a difference nobody has explained.
+- Optimizations follow the same rule: they may change only values proven to reach neither gameplay nor presentation.
 
 ## Sources
 
