@@ -123,22 +123,26 @@ impl Settings {
     /// menus' rules of a new save with the item switch off. [`Settings::vs_with`] takes any
     /// menu rules.
     pub fn vs(stage: u16, players: &[Player], stocks: u8, minutes: u8) -> Settings {
-        let mut rules = vs_mode::GameRules {
-            stock_count: stocks,
-            ..Default::default()
-        };
-        if stocks > 0 {
-            rules.mode = 1;
-            rules.stock_time_limit = minutes;
-        } else {
-            rules.mode = 0;
-            rules.time_limit = minutes;
-        }
-        let prefs = vs_mode::GamePrefs {
-            item_freq: 0xFF,
-            ..Default::default()
-        };
-        Settings::vs_with(stage, players, &rules, &prefs)
+        Settings::vs_items(
+            stage,
+            players,
+            stocks,
+            minutes,
+            &vs_mode::GamePrefs::items_off(),
+        )
+    }
+
+    /// [`Settings::vs`] with the item frequency and switch of `prefs`
+    /// ([`GamePrefs::items`](vs_mode::GamePrefs::items)), as the player's launcher starts a match.
+    pub fn vs_items(
+        stage: u16,
+        players: &[Player],
+        stocks: u8,
+        minutes: u8,
+        prefs: &vs_mode::GamePrefs,
+    ) -> Settings {
+        let rules = vs_mode::GameRules::vs(stocks, minutes);
+        Settings::vs_with(stage, players, &rules, prefs)
     }
 
     /// A VS match as the VS mode starts it (`gmVsMelee_EnterVs`) from the menus' `rules` and

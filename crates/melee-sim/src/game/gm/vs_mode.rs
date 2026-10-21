@@ -75,8 +75,59 @@ impl Default for GamePrefs {
     }
 }
 
+impl GameRules {
+    /// A new save's rules for a stock match of `stocks` (above 0) or a timed one, with a time
+    /// limit of `minutes` (0 for none): the player's own matches.
+    pub fn vs(stocks: u8, minutes: u8) -> GameRules {
+        let mut rules = GameRules {
+            stock_count: stocks,
+            ..Default::default()
+        };
+        if stocks > 0 {
+            rules.mode = 1;
+            rules.stock_time_limit = minutes;
+        } else {
+            rules.mode = 0;
+            rules.time_limit = minutes;
+        }
+        rules
+    }
+}
+
+impl GamePrefs {
+    /// A new save's preferences with the item frequency set to none.
+    pub fn items_off() -> GamePrefs {
+        GamePrefs {
+            item_freq: 0xFF,
+            ..Default::default()
+        }
+    }
+
+    /// A new save's preferences with the item frequency `freq` (0 to 4, very low to very high;
+    /// `0xFF` for none) and the item switch's entries on for the item kinds `on` takes, as the
+    /// item switch screen leaves them. The entry with no kind stays on, as a new save has it.
+    pub fn items(freq: u8, on: impl Fn(u8) -> bool) -> GamePrefs {
+        let mut mask = u64::MAX;
+        for (i, &kind) in ITEM_SWITCH_KINDS.iter().enumerate() {
+            if kind != NO_ITEM_KIND && !on(kind) {
+                mask &= !(1 << i);
+            }
+        }
+        GamePrefs {
+            item_freq: freq,
+            item_mask: mask,
+            ..Default::default()
+        }
+    }
+}
+
+/// The item switch's entry that has no item kind.
+pub const NO_ITEM_KIND: u8 = 0x23;
+
 /// The item kind of each of the item switch's entries (`lbl_803B7844`); `0x23` has no kind.
-const ITEM_SWITCH_KINDS: [u8; 32] = [
+/// The kinds it doesn't list (the capsule, box, barrel and egg) stay as the rules' defaults
+/// set them, on.
+pub const ITEM_SWITCH_KINDS: [u8; 32] = [
     0x06, 0x0B, 0x07, 0x19, 0x14, 0x12, 0x11, 0x0E, 0x1C, 0x18, 0x08, 0x1A, 0x04, 0x10, 0x17, 0x22,
     0x20, 0x13, 0x09, 0x21, 0x0D, 0x0F, 0x1F, 0x16, 0x15, 0x1E, 0x0A, 0x0C, 0x23, 0x05, 0x1D, 0x1B,
 ];
@@ -194,7 +245,7 @@ pub fn apply_menu_rules(start: &mut StartMeleeData, rules: &GameRules, prefs: &G
     r.x30 = mem(fp::fmuls(reg(0.1), reg(f32::from(rules.damage_ratio))));
     r.item_freq = prefs.item_freq as i8;
     for (i, &kind) in ITEM_SWITCH_KINDS.iter().enumerate() {
-        if kind != 0x23 {
+        if kind != NO_ITEM_KIND {
             if prefs.item_mask & (1 << i) != 0 {
                 r.x20 |= 1 << kind;
             } else {
@@ -275,4 +326,34 @@ pub fn enter_vs(vs: &mut StartMeleeData, rules: &GameRules, prefs: &GamePrefs) -
     setup_sub_colors(&mut start);
     load_rumble_enabled(&mut start, prefs);
     start
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The item switch's entries reach the rules' kinds through `gm_80167BC8`: each kind the
+    /// switch lists is on exactly when its entry is, and the kinds it doesn't list stay on.
+    #[test]
+    fn the_item_switch_sets_its_kinds() {
+        for wanted in [
+            vec![],
+            vec![0x22],
+            vec![0x06, 0x15, 0x04],
+            (4..=0x22).collect(),
+        ] {
+            let prefs = GamePrefs::items(3, |k| wanted.contains(&k));
+            let mut start = start_defaults();
+            apply_menu_rules(&mut start, &GameRules::default(), &prefs);
+            assert_eq!(start.rules.item_freq, 3);
+            for kind in 0..64u8 {
+                let listed = kind != NO_ITEM_KIND && ITEM_SWITCH_KINDS.contains(&kind);
+                let on = start.rules.x20 >> kind & 1 != 0;
+                assert_eq!(on, !listed || wanted.contains(&kind), "kind {kind:#x}");
+            }
+        }
+        let all = GamePrefs::items(2, |_| true);
+        assert_eq!(all, GamePrefs::default());
+        assert_eq!(GamePrefs::items_off().item_freq, 0xFF);
+    }
 }

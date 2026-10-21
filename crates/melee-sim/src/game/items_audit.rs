@@ -1,9 +1,9 @@
 //! The items-on audit (docs/player.md, "Items toggle: what's left"): what a match with the
 //! item switch on can reach beyond an items-off match, and what of it isn't ported, held to
-//! the port ledger and the code as the stages' audits in [`super::roster`] are. The player
-//! doesn't offer items yet; a toggle would offer an item kind only once no gap that kind
-//! reaches is left ([`missing_with`]). Presentation data only: nothing in the simulation
-//! reads it.
+//! the port ledger and the code as the stages' audits in [`super::roster`] are. The player's
+//! launcher offers an item switch kind only once no gap that kind reaches is left for the
+//! chosen stage and characters ([`missing_with_switch`]). Presentation data only: nothing in
+//! the simulation reads it.
 
 /// Something an items-on match reaches that no port covers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -29,6 +29,30 @@ pub fn missing_with(kinds: &[i32], characters: &[u8], stage: u16) -> Vec<&'stati
         .filter(|g| g.with.is_empty() || g.with.iter().any(|c| characters.contains(c)))
         .filter(|g| g.stages.is_empty() || g.stages.contains(&stage))
         .collect()
+}
+
+/// The kinds the random spawner draws from (`It_Kind_Capsule` to `It_Kind_M_Ball`).
+pub const RANDOM_KINDS: i32 = 35;
+
+/// The random kinds an items-on match from the VS menus always has on: those the item switch
+/// doesn't list (`vs_mode::ITEM_SWITCH_KINDS`: the capsule, box, barrel and egg), which the
+/// menus leave as the rules' defaults set them.
+pub fn unswitched_kinds() -> Vec<i32> {
+    use super::gm::vs_mode::{ITEM_SWITCH_KINDS, NO_ITEM_KIND};
+    (0..RANDOM_KINDS)
+        .filter(|&k| !ITEM_SWITCH_KINDS.contains(&(k as u8)) || k as u8 == NO_ITEM_KIND)
+        .collect()
+}
+
+/// The gaps an items-on match from the VS menus reaches with the item switch's `kinds` on, the
+/// kinds it can't turn off ([`unswitched_kinds`]) with them; none with the switch all off.
+pub fn missing_with_switch(kinds: &[i32], characters: &[u8], stage: u16) -> Vec<&'static ItemGap> {
+    if kinds.is_empty() {
+        return Vec::new();
+    }
+    let mut all = unswitched_kinds();
+    all.extend_from_slice(kinds);
+    missing_with(&all, characters, stage)
 }
 
 /// The ledger's units the audit holds to the code: every item unit with functions not yet
@@ -748,6 +772,23 @@ mod tests {
                 .find(|k| !g.kinds.contains(k))
                 .expect("another kind");
             assert!(!missing_with(&[other], &chars, stage).contains(&g));
+        }
+    }
+
+    /// A match from the menus has the containers the item switch doesn't list on with any kind
+    /// it does, so it reaches their gaps too.
+    #[test]
+    fn the_switch_brings_its_containers() {
+        assert_eq!(unswitched_kinds(), vec![0, 1, 2, 3]);
+        assert!(missing_with_switch(&[], &[2, 9], 31).is_empty());
+        for kind in [0x06, 0x22] {
+            let gaps = missing_with_switch(&[kind], &[2, 9], 31);
+            for g in MISSING {
+                let reached = (g.kinds.is_empty() || g.kinds.iter().any(|k| *k == kind || *k < 4))
+                    && g.with.is_empty()
+                    && g.stages.is_empty();
+                assert_eq!(gaps.contains(&g), reached, "{kind:#x}: {}", g.what);
+            }
         }
     }
 }
