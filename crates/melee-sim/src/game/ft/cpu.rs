@@ -235,6 +235,15 @@ impl Running<'_> {
             _ => false,
         }
     }
+
+    /// Whether [`Running::excluded_floor`] calls the stage's own check, on the four stages
+    /// that have one.
+    pub(super) fn excluded_floor_asks_stage(&self) -> bool {
+        matches!(
+            self.game.stage_info.grkind,
+            GR_BIG_BLUE | GR_INISHIE1 | GR_CORNERIA | GR_VENOM
+        )
+    }
 }
 
 const KIND_NANA: i32 = 11;

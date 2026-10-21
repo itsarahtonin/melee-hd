@@ -40,6 +40,25 @@ fn intersect(
     b1x: f64,
     b1y: f64,
 ) -> Option<(f32, f32)> {
+    intersect_r5(a0x, a0y, a1x, a1y, b0x, b0y, b1x, b1y, &mut false)
+}
+
+/// [`intersect`], also setting `r5` to what the original leaves in that register: its flag
+/// for b ending just above a (within 0.1), cleared on entry and set only where b's end is
+/// measured, so a return before that leaves it clear.
+#[allow(clippy::too_many_arguments)]
+fn intersect_r5(
+    a0x: f64,
+    a0y: f64,
+    a1x: f64,
+    a1y: f64,
+    b0x: f64,
+    b0y: f64,
+    b1x: f64,
+    b1y: f64,
+    r5: &mut bool,
+) -> Option<(f32, f32)> {
+    *r5 = false;
     if a0x <= a1x {
         if (b0x < a0x && b1x < a0x) || (a1x < b0x && a1x < b1x) {
             return None;
@@ -75,6 +94,7 @@ fn intersect(
             return None;
         }
         b2_above_a = true;
+        *r5 = true;
     }
     if hs_b0_a == 0.0 && hs_b1_a == 0.0 {
         return None;
@@ -350,13 +370,33 @@ impl Surface {
         bx: f64,
         by: f64,
     ) -> Option<(f32, f32, bool)> {
+        self.cross_r5(x0, y0, x1, y1, ax, ay, bx, by).0
+    }
+
+    /// [`Surface::cross`], with the general intersection's r5 flag when it ran
+    /// ([`intersect_r5`]).
+    #[allow(clippy::too_many_arguments)]
+    fn cross_r5(
+        self,
+        x0: f64,
+        y0: f64,
+        x1: f64,
+        y1: f64,
+        ax: f64,
+        ay: f64,
+        bx: f64,
+        by: f64,
+    ) -> (Option<(f32, f32, bool)>, Option<bool>) {
         let sloped = match self {
             Surface::Floor | Surface::Ceiling => abs(fp::fsubs(y0, y1)) > 0.0001,
             Surface::LeftWall | Surface::RightWall => abs(fp::fsubs(x0, x1)) > 0.0001,
         };
         if sloped {
-            intersect(x0, y0, x1, y1, ax, ay, bx, by).map(|(x, y)| (x, y, true))
-        } else if self.heads_in(ax, ay, bx, by) {
+            let mut r5 = false;
+            let hit = intersect_r5(x0, y0, x1, y1, ax, ay, bx, by, &mut r5);
+            return (hit.map(|(x, y)| (x, y, true)), Some(r5));
+        }
+        let hit = if self.heads_in(ax, ay, bx, by) {
             match self {
                 Surface::Floor | Surface::Ceiling => intersect_h(x0, y0, x1, ax, ay, bx, by),
                 Surface::LeftWall | Surface::RightWall => intersect_v(x0, y0, y1, ax, ay, bx, by),
@@ -364,8 +404,25 @@ impl Surface {
             .map(|(x, y)| (x, y, false))
         } else {
             None
-        }
+        };
+        (hit, None)
     }
+}
+
+/// What `mpCheckFloor` leaves in r5, which a computer player's DI with no knockback reads
+/// (the stale-register rule, docs/engine.md). The last line it tests (one its joint, skip,
+/// filter and flag checks let through) decides it: the pointer it passed `mpLib_8004ED5C`
+/// for that line's ends, which nothing after changes for a level line, or the flag
+/// `mpLineIntersection` leaves for a sloped one. With no line tested it is its caller's r5,
+/// the flags pointer the caller passed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FloorR5 {
+    /// No line tested: the caller's flags pointer.
+    Entry,
+    /// A level line last: the slot in its own frame, `r1 + 0x44` under its 0xF0-byte frame.
+    OwnSlot,
+    /// A sloped line last: [`intersect_r5`]'s flag.
+    Flag(bool),
 }
 
 /// The live, non-empty lines of a kind a search visits.
@@ -439,13 +496,33 @@ impl<K: Kinds> Geometry<K> {
     fn search(
         &mut self,
         surface: Surface,
+        segment: (f32, f32, f32, f32),
+        y_offset: f32,
+        line_skip: i32,
+        joint_skip: i32,
+        joint_only: i32,
+        filter: Option<&mut dyn FnMut(i32) -> bool>,
+    ) -> Option<Hit> {
+        self.search_r5(
+            surface, segment, y_offset, line_skip, joint_skip, joint_only, filter,
+        )
+        .0
+    }
+
+    /// [`Self::search`], with the r5 its last tested line leaves, as `mpCheckFloor`'s machine
+    /// code leaves it ([`FloorR5`]).
+    #[allow(clippy::too_many_arguments)]
+    fn search_r5(
+        &mut self,
+        surface: Surface,
         (ax, ay, bx, by): (f32, f32, f32, f32),
         y_offset: f32,
         line_skip: i32,
         joint_skip: i32,
         joint_only: i32,
         mut filter: Option<&mut dyn FnMut(i32) -> bool>,
-    ) -> Option<Hit> {
+    ) -> (Option<Hit>, FloorR5) {
+        let mut r5 = FloorR5::Entry;
         let already_checked = self.checked_bounding;
         if !already_checked {
             self.check_bounding_segment(ax, ay, bx, by);
@@ -477,7 +554,9 @@ impl<K: Kinds> Geometry<K> {
                     }
                     Surface::LeftWall | Surface::RightWall => self.line_ends(id),
                 };
-                let Some((ix, iy, sloped)) = surface.cross(x0, y0, x1, y1, ax, ay, bx, by) else {
+                let (crossed, flag) = surface.cross_r5(x0, y0, x1, y1, ax, ay, bx, by);
+                r5 = flag.map_or(FloorR5::OwnSlot, FloorR5::Flag);
+                let Some((ix, iy, sloped)) = crossed else {
                     continue;
                 };
                 let dx = fp::fsubs(reg(ix), ax);
@@ -501,7 +580,7 @@ impl<K: Kinds> Geometry<K> {
         if !already_checked {
             self.uncheck_bounding();
         }
-        best
+        (best, r5)
     }
 
     /// The search all four remapping checks share: like [`Self::search`], but on moving
@@ -640,6 +719,31 @@ impl<K: Kinds> Geometry<K> {
             joint_skip,
             joint_only,
             filter,
+        )
+    }
+
+    /// [`Self::check_floor`] with no filter, and what it leaves in r5 ([`FloorR5`]). (A
+    /// filter is a call, which leaves its own r5 for each line it turns away.)
+    #[allow(clippy::too_many_arguments)]
+    pub fn check_floor_r5(
+        &mut self,
+        ax: f32,
+        ay: f32,
+        bx: f32,
+        by: f32,
+        y_offset: f32,
+        line_skip: i32,
+        joint_skip: i32,
+        joint_only: i32,
+    ) -> (Option<Hit>, FloorR5) {
+        self.search_r5(
+            Surface::Floor,
+            (ax, ay, bx, by),
+            y_offset,
+            line_skip,
+            joint_skip,
+            joint_only,
+            None,
         )
     }
 
@@ -1122,5 +1226,33 @@ impl<K: Kinds> Geometry<K> {
         y1: f32,
     ) -> Option<Hit> {
         self.check_multiple(x0, y0, x1, y1, 0xF, joint_skip, joint_only)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `intersect_r5` leaves r5 set only when b ends just above a (within 0.1) and its end
+    /// was measured: a crossing ending below the line, an end too far above (rejected after
+    /// measuring) and a segment rejected by the bounds before it all leave it clear.
+    #[test]
+    fn intersect_r5_flag() {
+        let run = |b0y: f64, b1y: f64, b1x: f64| {
+            let mut r5 = true;
+            let hit = intersect_r5(0.0, 0.0, 10.0, 5.0, 4.0, b0y, b1x, b1y, &mut r5);
+            (hit.is_some(), r5)
+        };
+        // From above to below the sloped line y = x / 2 at x = 4 (y = 2): crosses, clear.
+        assert_eq!(run(10.0, -10.0, 4.0), (true, false));
+        // Ending 0.005 above the line at x = 8 (y = 4): set, and no crossing.
+        assert_eq!(run(10.0, 4.005, 8.0), (false, true));
+        // Ending 1 above it: rejected once measured, clear.
+        assert_eq!(run(10.0, 5.0, 8.0), (false, false));
+        // Wholly beside the line: rejected by the bounds, clear.
+        assert!(!run(10.0, 9.0, 30.0).1);
+        let mut r5 = true;
+        intersect_r5(0.0, 0.0, 10.0, 5.0, 20.0, 10.0, 30.0, 9.0, &mut r5);
+        assert!(!r5);
     }
 }

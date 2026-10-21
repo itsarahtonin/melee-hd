@@ -13,6 +13,7 @@ use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use crate::fpu::{mem, reg};
 use crate::math;
+use crate::mp::FloorR5;
 
 /// `HSD_GOBJ_PLINK_ITEM`.
 const P_LINK_ITEM: u8 = 9;
@@ -31,6 +32,15 @@ const SEED_PTR: u32 = 0x804D_5F90;
 
 /// What `gm_80166378` leaves in r5: its `MatchEnd` (`controller + 0x24C`, gmvs.c) plus 0x30.
 const MATCH_END_X30: u32 = 0x8046_B6A0 + 0x24C + 0x30;
+
+/// The frame sizes of `ftCo_800ADE48` (the behavior pick) and `mpCheckFloor`, and the
+/// slots of theirs the pick's floor checks leave r5 pointing at: the flags pointer the pick
+/// passes (`r1 + 0x58`) and the line's ends `mpCheckFloor` passes `mpLib_8004ED5C`
+/// (`r1 + 0x44`).
+const BEHAVIOR_FRAME: u32 = 0x90;
+const BEHAVIOR_FLAGS_SLOT: u32 = 0x58;
+const CHECK_FLOOR_FRAME: u32 = 0xF0;
+const CHECK_FLOOR_SLOT: u32 = 0x44;
 
 /// Behaviors (`CpuFighter::x18`) the decision switches to.
 pub mod behavior {
@@ -303,7 +313,8 @@ impl Running<'_> {
             }
         }
         // Every caller keeps its `CpuFighter` pointer in r31, which the decision reads as
-        // its DI switch (see [`Running::cpu_choose_behavior`]).
+        // its DI switch (see [`Running::cpu_choose_behavior`]). Nana's decision overwrites
+        // the r5 it leaves.
         self.cpu_choose_behavior(f, true);
     }
 
@@ -319,27 +330,30 @@ impl Running<'_> {
     /// what r31 held in its caller; `di_switch` is that register's truth.
     // Ports `ftCo_800ADE48`; aliased once a check reaches it.
     pub(super) fn cpu_choose_behavior(&mut self, f: FighterId, di_switch: bool) -> bool {
-        self.cpu_choose_behavior_r5(f, di_switch).0
+        self.cpu_choose_behavior_r5(f, di_switch, None).0
     }
 
     /// [`Running::cpu_choose_behavior`] with the r5 it leaves when it keeps or starts the DI
     /// (the stale-register rule, docs/engine.md), the only behavior that reads it: the seed
     /// pointer `HSD_Randf` loads (`&seed`) when a coin flip was its last call, else
     /// `MatchEnd + 0x30` when the standing's query compiled the results this tick (the last
-    /// team `fn_801661E0` ranks leaves it there, and every match has one). With neither, what
-    /// the destination's floor checks left isn't followed.
+    /// team `fn_801661E0` ranks leaves it there, and every match has one), else what the
+    /// destination's last floor check left ([`Running::cpu_floor_r5`]). `frame` is the stack
+    /// pointer at its entry, which its caller's depth decides; without it the floor checks'
+    /// stack addresses aren't followed.
     pub(super) fn cpu_choose_behavior_r5(
         &mut self,
         f: FighterId,
         di_switch: bool,
+        frame: Option<u32>,
     ) -> (bool, Leftover) {
-        let mut r5 = Leftover::Unknown("ftCo_800ADE48's destination checks");
+        let sp = frame.map(|frame| frame - BEHAVIOR_FRAME);
         // The destination: kept if over ground in reach, else reset.
         let c = &self.game.fighters[f.0].cpu;
         let (dx, dy) = (c.x54.x, c.x54.y);
         let below = mem(fp::frsp(fp::fsub(reg(dy), 5.0)));
         let above = mem(fp::frsp(fp::fadd(5.0, reg(dy))));
-        let floor = self.cpu_floor(dx, above, dx, below);
+        let (floor, mut r5) = self.cpu_floor_r5(dx, above, dx, below, sp);
         let keep = floor.is_some() && !self.cpu_out_of_bounds(f, dx, dy);
         if !keep {
             let fpp = &mut self.game.fighters[f.0];
@@ -347,8 +361,9 @@ impl Running<'_> {
             let pos = fpp.cur_pos;
             let at = if fpp.ground_or_air == GA_AIR {
                 let to = mem(fp::fsubs(reg(pos.y), 1000.0));
-                self.cpu_floor(pos.x, pos.y, pos.x, to)
-                    .map_or((pos.x, pos.y), |p| (p.x, p.y))
+                let (floor, left) = self.cpu_floor_r5(pos.x, pos.y, pos.x, to, sp);
+                r5 = left;
+                floor.map_or((pos.x, pos.y), |p| (p.x, p.y))
             } else {
                 (pos.x, pos.y)
             };
@@ -730,6 +745,43 @@ impl Running<'_> {
             .expect("no collision geometry")
             .check_floor(ax, ay, bx, by, 0.0, -1, -1, -1, None)?;
         (!self.excluded_floor(hit.line)).then_some(hit.pos)
+    }
+
+    /// [`Running::cpu_floor`] as the behavior pick (`ftCo_800ADE48`) runs it, with the r5 it
+    /// leaves ([`FloorR5`]): `sp` is the pick's stack pointer, which the stack addresses
+    /// left there are relative to (unfollowed without it). A floor found is checked against
+    /// the stage's excluded floors (`ftCo_800A1B38`), which on the four stages that have them
+    /// is a call that leaves r5 its own way, not followed.
+    pub(super) fn cpu_floor_r5(
+        &mut self,
+        ax: f32,
+        ay: f32,
+        bx: f32,
+        by: f32,
+        sp: Option<u32>,
+    ) -> (Option<crate::vec::Vec3>, Leftover) {
+        let (hit, left) = self
+            .game
+            .geometry
+            .as_mut()
+            .expect("no collision geometry")
+            .check_floor_r5(ax, ay, bx, by, 0.0, -1, -1, -1);
+        let r5 = match (left, sp) {
+            (FloorR5::Flag(flag), _) => Leftover::Word(u32::from(flag)),
+            (FloorR5::Entry, Some(sp)) => Leftover::Word(sp + BEHAVIOR_FLAGS_SLOT),
+            (FloorR5::OwnSlot, Some(sp)) => {
+                Leftover::Word(sp - CHECK_FLOOR_FRAME + CHECK_FLOOR_SLOT)
+            }
+            (_, None) => Leftover::Unknown("mpCheckFloor (a stack address, its frame unmodeled)"),
+        };
+        let Some(hit) = hit else {
+            return (None, r5);
+        };
+        if self.excluded_floor_asks_stage() {
+            let r5 = Leftover::Unknown("ftCo_800A1B38 (a stage's excluded floors)");
+            return ((!self.excluded_floor(hit.line)).then_some(hit.pos), r5);
+        }
+        (Some(hit.pos), r5)
     }
 
     /// The player's standing word (`MatchPlayerData::x20`) in the results as they stand,

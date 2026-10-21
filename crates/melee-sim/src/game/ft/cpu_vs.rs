@@ -11,7 +11,7 @@ use super::super::gr::greatbay;
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
-use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
+use super::cpu_ai::{CPU_FRAME, CPU_FRAME_SP, DECIDE_FRAME, Leftover, P_LINK_FIGHTER};
 use crate::fpu::{mem, reg};
 use crate::math;
 use crate::vec::Vec3;
@@ -24,6 +24,12 @@ const DISTANCES: u32 = 0x20;
 /// `Gr_Kind_Castle`, `Gr_Kind_Zebes`.
 const GR_KIND_CASTLE: i32 = 2;
 const GR_KIND_ZEBES: i32 = 8;
+
+/// The stack pointer in `ftCo_800B24B8` under the computer player's frame and the decision
+/// by kind, and `ftCo_800AE7AC`'s frame size: where the behavior pick's frame lies, whose
+/// addresses its floor checks can leave in r5.
+const VS_SP: u32 = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME - 0x48;
+const BACK_ON_SCREEN_FRAME: u32 = 0x68;
 
 /// `Gm_PKind_Cpu`.
 const PKIND_CPU: i32 = 1;
@@ -54,7 +60,7 @@ impl Running<'_> {
             if self.cpu_should_act(f) {
                 self.cpu_beside_target(f);
             }
-            return self.cpu_choose_behavior_r5(f, true).1;
+            return self.cpu_choose_behavior_r5(f, true, Some(VS_SP)).1;
         }
         // `ftCo_CpuInitNoTarget` with the fear flags set.
         let c = &mut self.game.fighters[f.0].cpu;
@@ -79,7 +85,7 @@ impl Running<'_> {
                 .or(self.game.fighters[f.0].cpu.x44);
             self.cpu_toward(f, target);
         }
-        self.cpu_choose_behavior_r5(f, true).1
+        self.cpu_choose_behavior_r5(f, true, Some(VS_SP)).1
     }
 
     /// Whether the fighter is somewhere the stage or camera sends it back from, and where it
@@ -132,7 +138,8 @@ impl Running<'_> {
                 unported_call("ftCo_800A6FC4");
             }
         }
-        self.cpu_choose_behavior_r5(f, cmd != 0).1
+        self.cpu_choose_behavior_r5(f, cmd != 0, Some(VS_SP - BACK_ON_SCREEN_FRAME))
+            .1
     }
 
     /// The items the fighter goes for: a common one in reach unless it holds an item that

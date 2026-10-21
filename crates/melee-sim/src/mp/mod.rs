@@ -35,7 +35,7 @@ use melee_data::archive::{Archives, DataRef};
 pub use island::{Island, IslandId, Islands};
 pub use joint::{JObjTree, JointPose};
 pub use probe::{FloorWalk, Probe, remap};
-pub use search::{Hit, line_intersection, line_intersection_h, line_intersection_v};
+pub use search::{FloorR5, Hit, line_intersection, line_intersection_h, line_intersection_v};
 pub use terrain::{SoundSet, TerrainSounds, friction, terrain_sounds};
 
 use crate::fpu::{copy, mem, reg};

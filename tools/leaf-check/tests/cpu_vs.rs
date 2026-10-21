@@ -91,6 +91,10 @@ const SCRIPT: u32 = CPU + 0x44C;
 const SCRIPT_WAIT: u32 = CPU + 0x450;
 /// `CpuFighter::x44`, the target.
 const TARGET: u32 = CPU + 0x44;
+/// `CpuFighter::x54`, the destination.
+const DESTINATION: u32 = CPU + 0x54;
+/// `GA_Ground`.
+const GROUND: u32 = 0;
 /// `GA_Air`; the VS computer kind; the recovery, attack, ranged and DI behaviors.
 const AIR: u32 = 1;
 const VS: u32 = 4;
@@ -187,7 +191,16 @@ enum Change {
     /// DI with the frame count a multiple of 400, so the behavior's coin flip leaves the seed
     /// pointer; `Switch`: switching to the DI, whose coin flip leaves it too; `Entering`: in
     /// the DI with its enemies entering, so the behavior's standing query compiles the
-    /// results and leaves its `MatchEnd + 0x30`.
+    /// results and leaves its `MatchEnd + 0x30`. The others leave what the destination's
+    /// last floor check left (`mpCheckFloor`'s last tested line): `Floor` as saved (its own
+    /// frame's slot after a level line); `FloorAway` and `FloorAwayGround` with the
+    /// destination moved far off the stage, in the air and on the ground (where the decision
+    /// heads nowhere this frame it stays, and its check tests no line: the pick's flags
+    /// slot, unless a check of the floor below the airborne fighter follows);
+    /// `FloorOffCamera` high above the stage with the destination far (the pick a frame
+    /// deeper, under `ftCo_800AE7AC`, which keeps the destination: the first check tests no
+    /// line, the second, for the floor below, does) and `FloorOffCameraAway` far to the side
+    /// (neither check tests a line).
     DiZeroKnockback(Di),
 }
 
@@ -197,6 +210,11 @@ enum Di {
     Seed,
     Switch,
     Entering,
+    Floor,
+    FloorAway,
+    FloorAwayGround,
+    FloorOffCamera,
+    FloorOffCameraAway,
 }
 
 /// Changes a saved frame as `change` says: whether it did.
@@ -279,11 +297,35 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
                 fp + FRAMES,
                 if matches!(di, Di::Seed) { 400 } else { 60 },
             );
-            if matches!(di, Di::Entering) {
-                for e in enemies(call, fp) {
-                    let w = peek_u32(call, e + X221C);
-                    poke_u32(call, e + X221C, w | ENTERING);
+            match di {
+                Di::Entering => {
+                    for e in enemies(call, fp) {
+                        let w = peek_u32(call, e + X221C);
+                        poke_u32(call, e + X221C, w | ENTERING);
+                    }
                 }
+                Di::FloorAway | Di::FloorAwayGround => {
+                    poke_f32(call, fp + DESTINATION, 500.0);
+                    poke_f32(call, fp + DESTINATION + 4, -500.0);
+                    if matches!(di, Di::FloorAwayGround) {
+                        poke_u32(call, fp + GROUND_OR_AIR, GROUND);
+                    }
+                }
+                Di::FloorOffCameraAway => {
+                    poke_f32(call, fp + POS, 1000.0);
+                    poke_f32(call, fp + POS + 4, 150.0);
+                    poke_u32(call, fp + GROUND_OR_AIR, AIR);
+                    poke_f32(call, fp + DESTINATION, 1000.0);
+                    poke_f32(call, fp + DESTINATION + 4, -500.0);
+                }
+                Di::FloorOffCamera => {
+                    poke_f32(call, fp + POS, 0.0);
+                    poke_f32(call, fp + POS + 4, 400.0);
+                    poke_u32(call, fp + GROUND_OR_AIR, AIR);
+                    poke_f32(call, fp + DESTINATION, 500.0);
+                    poke_f32(call, fp + DESTINATION + 4, -500.0);
+                }
+                Di::Seed | Di::Switch | Di::Floor => {}
             }
         }
         Change::TargetOffStage => {
@@ -379,6 +421,11 @@ fn changes() -> Vec<Change> {
         Change::DiZeroKnockback(Di::Seed),
         Change::DiZeroKnockback(Di::Switch),
         Change::DiZeroKnockback(Di::Entering),
+        Change::DiZeroKnockback(Di::Floor),
+        Change::DiZeroKnockback(Di::FloorAway),
+        Change::DiZeroKnockback(Di::FloorAwayGround),
+        Change::DiZeroKnockback(Di::FloorOffCamera),
+        Change::DiZeroKnockback(Di::FloorOffCameraAway),
     ]);
     v
 }

@@ -66,6 +66,16 @@ const MS_WARP_STAR_JUMP: i32 = 305;
 const MS_WARP_STAR_FALL: i32 = 306;
 const MS_COUNT: i32 = 341;
 
+/// The stack pointer at the computer player's frame's entry (`ftCo_800B3900`, which only
+/// `Fighter_8006ABA0` calls, from the fighters' input process): the same in every saved call,
+/// level 1 replays' and level 9 oracle matches'. With the frame sizes of the functions it
+/// calls, it gives the stack addresses a register can be left holding ([`Leftover`]).
+pub(super) const CPU_FRAME_SP: u32 = 0x804E_EAB0;
+
+/// The frame sizes of `ftCo_800B3900` and `ftCo_800B2AFC`, the decision by computer kind.
+pub(super) const CPU_FRAME: u32 = 0x20;
+pub(super) const DECIDE_FRAME: u32 = 0xC8;
+
 /// `Fighter_x1A88_xFC_t`'s size and how many the history holds.
 const INPUT_SIZE: u32 = 0x1C;
 const INPUTS: u32 = 30;
