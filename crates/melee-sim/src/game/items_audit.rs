@@ -360,6 +360,8 @@ const SCENES: &str = "other scenes' item setup (intros, cutscenes, the trophy fa
 const YAKU: &str =
     "a stage item on neither a joint nor a point, which no stage makes (the original hangs)";
 const ZAKO: &str = "the stage enemy spawner (grZakoGenerator), which no roster stage configures";
+const ATTACKER: &str = "an item hit by an item keeps the attacking item's owner (xCF0_itemGObj) only when it's a fighter (it_80270E30's case 2), and nothing else writes it, so it_8027236C takes a fighter's team or none";
+const THROWER: &str = "a thrown fighter's hitbox word is written only by ftColl_8007B8CC, whose callers pass a fighter (Fighter_ChangeMotionState's thrower, Kirby's inhale, the barrel cannon after ftLib_IsFighter), and cleared to none";
 
 /// Functions, units (for every function of one not named on its own) and stops no items-on
 /// match from the player reaches (VS mode, the roster's characters and offered stages, no
@@ -532,6 +534,11 @@ pub const UNREACHED: &[(&str, &str)] = &[
         "grZakoGenerator_801CACB8 (an enemy from a spawner slot)",
         ZAKO,
     ),
+    ("ftLib_GetTeam on an item", ATTACKER),
+    (
+        "a thrown fighter's hitbox word that isn't a thrower",
+        THROWER,
+    ),
 ];
 
 /// Fighter-owned item code an items-off match reaches as well: the characters' work, not the
@@ -584,7 +591,6 @@ pub const UNCHECKED: &[&str] = &[
     "melee/it/itmaterial",
     "melee/it/kinds/itkirbyyoshispecialn",
     "melee/it/kinds/itlucky",
-    "it_8028FE90",
     "itStar_UnkMotion0_Phys",
     "it_80284E10",
     "melee/it/kinds/ittarucann",
@@ -647,20 +653,6 @@ pub const MISSING: &[ItemGap] = &[
         stages: &[],
     },
     ItemGap {
-        what: "a crushed Bob-omb or motion-sensor bomb bursting (it_8026C368's it_8027D730 and it_8028FE90)",
-        covers: &["it_8027D730", "it_8028FE90"],
-        kinds: &[6, 0x13],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
-        what: "a Bob-omb exploding in its holder's hands (it_8027429C)",
-        covers: &["it_8027429C (an item let go of)"],
-        kinds: &[6],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
         what: "the motion-sensor bomb reflected (itMSBomb_Logic19_Reflected)",
         covers: &["itMSBomb_Logic19_Reflected"],
         kinds: &[0x13],
@@ -675,33 +667,12 @@ pub const MISSING: &[ItemGap] = &[
         stages: &[],
     },
     ItemGap {
-        what: "an item hit by an item with no fighter behind it, taking that item's team through a fighter's layout (ftLib_GetTeam on an item)",
-        covers: &["ftLib_GetTeam on an item"],
-        kinds: &[],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
-        what: "an item's destroy sound 0x12F (lbAudioAx_80024DC4, ported, not wired)",
-        covers: &["lbAudioAx_80024DC4"],
-        kinds: &[],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
         what: "unsure: an item grabbing a fighter with an item owner, or with a callback other than the barrel cannon's",
         covers: &[
             "it_802701BC with an item owner that isn't a fighter",
             "(a grabbed fighter's callback)",
         ],
         kinds: &[5],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
-        what: "unsure: a thrown fighter's hitbox owner that isn't a fighter",
-        covers: &["a thrown fighter's hitbox word that isn't a thrower"],
-        kinds: &[],
         with: &[],
         stages: &[],
     },
@@ -727,16 +698,6 @@ pub const MISSING: &[ItemGap] = &[
         stages: &[8],
     },
     ItemGap {
-        what: "a box riding Kongo Jungle's river and gone with its barrel (it_80286088, grKongo_801D8058, both ported, not wired)",
-        covers: &[
-            "it_80286088 (a box riding Kongo Jungle's river)",
-            "grKongo_801D8058 (a Kongo Jungle barrel's box gone)",
-        ],
-        kinds: &[1],
-        with: &[],
-        stages: &[5],
-    },
-    ItemGap {
         what: "Kirby inhaling, swallowing and spitting out an item",
         covers: &[
             "melee/it/kinds/it_2F28",
@@ -755,13 +716,13 @@ pub const MISSING: &[ItemGap] = &[
         stages: &[],
     },
     ItemGap {
-        what: "a catch box (Kirby's inhale, Yoshi's tongue) touching an item, and the catch counted (updateItemGrabTarget, it_8027B4A4)",
+        what: "a catch box (a grab, Kirby's inhale, Yoshi's tongue) touching an item, and the catch counted (updateItemGrabTarget, it_8027B4A4): only an item it_80275270 makes catchable (xDD0 bit 4), a crate monster",
         covers: &[
             "updateItemGrabTarget (a grab box on an item)",
             "it_8027B4A4 (a fighter catching an item)",
         ],
-        kinds: &[],
-        with: &[4, 17],
+        kinds: &[1, 2, 4],
+        with: &[],
         stages: &[],
     },
     ItemGap {

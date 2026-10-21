@@ -10140,3 +10140,4 @@ fn_80201BE0	leaf-check stages: rcruise_course runs its saved calls in the pass s
 grRCruise_80201C58	leaf-check stages: rcruise_unreached_callbacks runs it from the course's saved calls and compares the answer
 grRCruise_80201C50	melee-oracle diff: the stage-rainbow-cruise oracle match (v5-mixed, --fp hardware --heap, clean through its 28991 ticks) touches lines every tick (Ground_801C5700 asks it); it answers no hazard
 Ground_801C32AC	leaf-check stages: rcruise_setup runs its saved call, and for other maps, and compares the whole state; melee-oracle diff: the stage-rainbow-cruise oracle match (v5-mixed, --fp hardware --heap, clean through its 28991 ticks)
+it_8028FE90	leaf-check items_leftovers: items_leftovers_functions runs it from the motion-sensor bombs of the leftovers and items-shoot oracle matches (local/calls/items-leftovers, items-shoot), stuck and not, and compares the whole state (only Mute City's cars crush a bomb, so no match calls it)

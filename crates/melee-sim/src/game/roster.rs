@@ -376,10 +376,7 @@ pub const STAGES: &[Stage] = &[
                 "melee/ft/kinds/ftCommon/ftCo_BarrelWait",
             ],
             modules: &["gr/kongo", "it/kinds/klap"],
-            unreached: &[(
-                "it_80286088",
-                "a box riding the river, which the stage makes only with boxes on in the item switch",
-            )],
+            unreached: &[],
             missing: &[],
         }),
     },

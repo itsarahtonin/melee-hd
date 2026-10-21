@@ -9,7 +9,6 @@ use super::super::ground::{fall, fall_to_floor, ground_or_fall, ground_skid, gro
 use super::super::item::{article, attr_of, change, change_state, common_data, play_sfx};
 use super::super::{hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{SpawnItem, itBombHei_ItemVars};
 use crate::hsd::gobj::GObjId;
@@ -689,7 +688,7 @@ pub fn landed_thrown(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80280B60")]
 pub fn explode(r: &mut Running, gobj: GObjId) {
     if item(r.game, gobj).xDC8_word.flags.x13 {
-        code::unported_call("it_8027429C (an item let go of)");
+        super::super::release::let_go(r, gobj, Vec3::new(0.0, 0.0, 0.0));
     }
     lib26b1::disable_pickup(r.game, gobj);
     let j = jobj_of(r.game, gobj);

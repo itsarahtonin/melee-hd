@@ -8,7 +8,6 @@ use super::super::ground::{air, fall, ground_or_fall, ground_skid};
 use super::super::item::{article, attr_of, change, change_state, common_data, play_sfx};
 use super::super::{drop, effect, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::handles::CodeRef;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{SpawnItem, itBox_ItemVars};
@@ -165,8 +164,9 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// `itBox_Logic1_Destroyed`: a barrel's box lets go of it.
 #[doc(alias = "itBox_Logic1_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    if vars(r.game, gobj).spawned_gobj.get().is_some() {
-        code::unported_call("grKongo_801D8058 (a Kongo Jungle barrel's box gone)");
+    if let Some(path) = vars(r.game, gobj).spawned_gobj.get() {
+        crate::game::gr::kongo::destroy_path(r, path);
+        vars(r.game, gobj).spawned_gobj.set(None);
     }
 }
 

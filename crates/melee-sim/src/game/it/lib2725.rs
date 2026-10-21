@@ -8,7 +8,6 @@ use super::data::common;
 use super::item::{article, common_data};
 use super::{item, item_mut, jobj_of, set_flag};
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::state::{Game, Running};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -154,8 +153,9 @@ pub fn destroy_effect(r: &mut Running, gobj: GObjId, gfx: i32, sfx: i32) {
     }
     if !item(r.game, gobj).xDCD_flag.x0.b2 {
         play_sfx(r, gobj, sfx);
+        // Only the target's break (kind 0xD1, Target Test and the trophy stages) has it.
         if sfx == 0x12F {
-            code::unported_call("lbAudioAx_80024DC4");
+            r.lb_audio_queue(sfx);
         }
     }
 }

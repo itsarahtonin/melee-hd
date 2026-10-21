@@ -16,7 +16,6 @@
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
-use super::super::code::unported_call;
 use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Running, UserData};
 use super::super::structs::CollData;
@@ -717,8 +716,10 @@ pub fn events(r: &mut Running, gobj: GObjId) {
             }
         }
         2 => {
-            if create(r, 11, EVENT_FRAME).is_some() {
-                unported_call("it_80286088 (a box riding Kongo Jungle's river)");
+            if let Some(path) = create(r, 11, EVENT_FRAME)
+                && super::super::it::kinds::crate_box::spawn_floating(r, Some(path)).is_none()
+            {
+                setup::destroy(r, Some(path));
             }
         }
         _ => {

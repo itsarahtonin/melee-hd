@@ -89,8 +89,9 @@ fn attrs(r: &Running, gobj: GObjId) -> DataRef {
         .expect("a motion-sensor bomb without attributes")
 }
 
-/// Sets off a stuck bomb that isn't held, `it_8028FE90`.
-// Ports `it_8028FE90`; aliased once a check reaches it.
+/// Sets off a stuck bomb that isn't held, `it_8028FE90`: a crushed one's burst
+/// (`it_8026C368`), which only Mute City's cars set (`x34_flags.b7`).
+#[doc(alias = "it_8028FE90")]
 pub fn detonate(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
     if !ip.xDC8_word.flags.x13 && (ip.msid == 4 || ip.msid == 5) {

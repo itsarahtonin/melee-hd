@@ -8,7 +8,6 @@ use super::data::common;
 use super::item::{attr_of, common_data, destroy};
 use super::{flag, item, item_mut};
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::state::{Game, Running};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -320,8 +319,8 @@ pub fn check_burst(r: &mut Running, gobj: GObjId) {
         return;
     }
     match ip.kind {
-        6 => code::unported_call("it_8027D730"),
-        19 => code::unported_call("it_8028FE90"),
+        6 => super::kinds::bombhei::detonate(r, gobj),
+        19 => super::kinds::msbomb::detonate(r, gobj),
         58 | 59 => super::kinds::linkbomb::set_off(r, gobj),
         177 => super::kinds::marumine::burst(r, gobj),
         _ => {

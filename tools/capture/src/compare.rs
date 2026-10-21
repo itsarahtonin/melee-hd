@@ -1616,7 +1616,16 @@ impl Cx for Comparer<'_> {
 
     fn compare_data(&mut self, path: &str, ours: Option<DataRef>, theirs: u32) {
         let t = self.data_ref(theirs);
-        if ours != t && !(ours.is_none() && theirs != 0 && t.is_none()) {
+        // Files can hold the same bytes (Luigi's animation file repeats some of Mario's), and
+        // the scan names the trace's copy as either: the same offset into the same bytes is
+        // the same data.
+        let same_bytes = match (ours, t, self.archives) {
+            (Some(o), Some(t), Some(a)) => {
+                o.offset == t.offset && a.get(o.archive).data() == a.get(t.archive).data()
+            }
+            _ => false,
+        };
+        if ours != t && !same_bytes && !(ours.is_none() && theirs != 0 && t.is_none()) {
             self.diffs
                 .push(format!("{path}: data ours {ours:?}, theirs {theirs:#x}"));
         }
