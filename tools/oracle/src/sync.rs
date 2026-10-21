@@ -167,6 +167,7 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
     let mut tick = 0u64;
     let mut checked = 0u64;
     let started = Instant::now();
+    let (mut straight, mut comparing) = (Duration::ZERO, Duration::ZERO);
     let failure = loop {
         if tick >= limit {
             break None;
@@ -181,7 +182,10 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
         let t = Instant::now();
         ring[slot].clone_from(&m.game);
         snapshots.push(t.elapsed());
-        let out = match catch_unwind(AssertUnwindSafe(|| step(&mut m, &mut device))) {
+        let t = Instant::now();
+        let stepped = catch_unwind(AssertUnwindSafe(|| step(&mut m, &mut device)));
+        straight += t.elapsed();
+        let out = match stepped {
             Ok(f) => f,
             Err(p) => {
                 println!(
@@ -230,7 +234,10 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
             if let Some(why) = replayed {
                 break Some(why);
             }
-            if let Some(d) = work.game.state_diff(&m.game) {
+            let t = Instant::now();
+            let differs = work.game.state_diff(&m.game);
+            comparing += t.elapsed();
+            if let Some(d) = differs {
                 break Some(format!(
                     "the state after tick {}, restored from before tick {from} and played again, differs from the straight run's at game{d}",
                     tick - 1
@@ -252,6 +259,16 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
         "restore and {rollback} tick{} again: {}",
         if rollback == 1 { "" } else { "s" },
         rollbacks.summary()
+    );
+    let total = |t: &Times| t.0.iter().sum::<f64>() / 1e6;
+    println!(
+        "times: straight run {:.1} s, snapshots {:.1} s, restores and replays {:.1} s (restores {:.1} s), state comparison {:.1} s, all {:.1} s",
+        straight.as_secs_f64(),
+        total(&snapshots),
+        total(&rollbacks),
+        total(&restores),
+        comparing.as_secs_f64(),
+        started.elapsed().as_secs_f64()
     );
     match failure {
         None => {

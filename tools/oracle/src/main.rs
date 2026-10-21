@@ -19,6 +19,7 @@
 
 mod boot;
 mod diff;
+mod golden;
 mod record;
 mod sync;
 mod trace;
@@ -64,6 +65,9 @@ fn run(args: Vec<String>) -> ExitCode {
             );
             eprintln!(
                 "                         [--all] [--ignore TEXT,...] [--stand-in ADDR[=VALUE]]"
+            );
+            eprintln!(
+                "                         [--heap] [--write-golden | --golden-check] [--golden FILE] [--times]"
             );
             eprintln!(
                 "       melee-oracle sync-test REPLAY.slp [--rollback N] [--ticks N] [--fp hardware|slippi]"

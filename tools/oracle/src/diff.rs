@@ -23,10 +23,17 @@
 //! Stale reads don't stop the run: each tick where code read what the original leaves
 //! unset (HSD's objects' and mpcoll's counts, a new item's variables it hadn't written,
 //! `it::Var`) is reported at the end with what was read.
+//!
+//! `--write-golden` writes the run's golden hashes once it passes clean, and `--golden-check`
+//! checks a run against them instead of the trace (`golden.rs`; `--golden FILE` names the
+//! file, `$SSBM_RS_LOCAL/golden/` by default). `--times` prints where the run's time went.
 
 use melee_sim::gekko_fp::{FpMode, set_fp_mode};
+use melee_sim::state_eq::StateHasher;
+use std::cell::{Cell, RefCell};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::process::ExitCode;
+use std::time::{Duration, Instant};
 
 use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps, sym};
@@ -42,6 +49,7 @@ use melee_sim::game::vs_match::{Match, Settings};
 use melee_slippi::Device;
 use melee_slippi::Replay;
 
+use crate::golden::{self, End, Golden, Identity};
 use crate::trace::{Image, Reader};
 
 /// What a run stopped on.
@@ -92,7 +100,8 @@ fn name_addresses(text: &str) -> String {
 
 /// The archives loaded in the trace's memory, kept up to date as the match loads more.
 struct Files<'a> {
-    index: &'a DiscIndex,
+    /// None in a golden check, which compares nothing.
+    index: Option<&'a DiscIndex>,
     loaded: Vec<Loaded>,
     /// The archives a started match loaded itself, by name, which the scans find wherever the
     /// original loads them (a fighter's animations go to its buffer as it plays them).
@@ -101,10 +110,11 @@ struct Files<'a> {
 
 impl Files<'_> {
     fn refresh(&mut self, mem: &[u8], archives: &mut Archives) -> DataMap {
+        let index = self.index.expect("the disc's index");
         self.loaded = if self.named.is_empty() {
-            find_archives_after(self.index, mem, archives, &self.loaded)
+            find_archives_after(index, mem, archives, &self.loaded)
         } else {
-            find_archives_named(self.index, mem, archives, &self.loaded, &self.named)
+            find_archives_named(index, mem, archives, &self.loaded, &self.named)
         };
         DataMap {
             loaded: self.loaded.clone(),
@@ -115,6 +125,7 @@ impl Files<'_> {
 /// The whole state compared with memory, as the capture checks compare it: the differences,
 /// and the fields code read while they were stale.
 fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> (Vec<String>, Vec<String>) {
+    let t0 = Instant::now();
     let mut cmp = Comparer::new(mem, data, &m.game, maps);
     cmp.archives = Some(&m.data);
     cmp.world();
@@ -124,10 +135,59 @@ fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> (Vec<String>, V
     cmp.audio();
     cmp.match_state();
     cmp.display();
+    let t1 = Instant::now();
     if COMPARE_HEAP.with(|c| c.get()) {
         cmp.heap();
     }
+    TIMES.with(|t| {
+        t.add(&t.compare, t1 - t0);
+        t.add(&t.heap, t1.elapsed());
+    });
     (cmp.diffs, cmp.stale_reads)
+}
+
+/// Where a run's time went, for `--times`.
+#[derive(Default)]
+struct Times {
+    /// Reading and decompressing the trace's ticks.
+    read: Cell<Duration>,
+    /// Applying their pages to memory's image.
+    apply: Cell<Duration>,
+    /// The ticks and display passes.
+    sim: Cell<Duration>,
+    /// Finding the archives in memory (`Files::refresh`).
+    files: Cell<Duration>,
+    /// The comparison but for the allocator model's.
+    compare: Cell<Duration>,
+    /// The allocator model's comparison (`--heap`).
+    heap: Cell<Duration>,
+    /// The state's hash, for a golden.
+    hash: Cell<Duration>,
+}
+
+impl Times {
+    fn add(&self, c: &Cell<Duration>, d: Duration) {
+        c.set(c.get() + d);
+    }
+
+    fn print(&self, all: Duration) {
+        let s = |c: &Cell<Duration>| c.get().as_secs_f64();
+        println!(
+            "times: trace read {:.1} s, trace apply {:.1} s, simulation {:.1} s, archives {:.1} s, compare {:.1} s, heap compare {:.1} s, hash {:.1} s, all {:.1} s",
+            s(&self.read),
+            s(&self.apply),
+            s(&self.sim),
+            s(&self.files),
+            s(&self.compare),
+            s(&self.heap),
+            s(&self.hash),
+            all.as_secs_f64()
+        );
+    }
+}
+
+thread_local! {
+    static TIMES: Times = Times::default();
 }
 
 thread_local! {
@@ -162,14 +222,18 @@ impl StaleReads {
         }
     }
 
-    /// Prints them, each tick named by `tick`.
-    fn report(&self, tick: &dyn Fn(u32) -> String) {
+    /// Prints them, each tick named by `tick`, and returns them as a golden keeps them.
+    fn report(&self, tick: &dyn Fn(u32) -> String) -> Vec<String> {
         if self.seen.is_empty() {
             println!("no stale reads");
         }
+        let mut lines = Vec::new();
         for (at, what) in &self.seen {
-            println!("stale read in {}: {what}", tick(*at));
+            let line = format!("{}: {what}", tick(*at));
+            println!("stale read in {line}");
+            lines.push(line);
         }
+        lines
     }
 }
 
@@ -216,9 +280,16 @@ pub fn diff(args: &[&str]) -> ExitCode {
     // ssbm-run plays replays that way unless told `--fp hardware` (the benchmark matches).
     let mut fp_mode = FpMode::Slippi;
     let mut disc_speed = DiscSpeed::Fast;
+    let (mut write_golden, mut golden_check, mut golden_path, mut times) =
+        (false, false, None, false);
+    let mut stand_ins: Vec<String> = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
         match a {
+            "--write-golden" => write_golden = true,
+            "--golden-check" => golden_check = true,
+            "--golden" => golden_path = Some(it.next().expect("--golden FILE").to_string()),
+            "--times" => times = true,
             "--from" => from = it.next().and_then(|t| t.parse::<u32>().ok()),
             "--ticks" => limit = it.next().and_then(|t| t.parse().ok()).expect("--ticks N"),
             "--against" => against = it.next().and_then(|t| t.parse::<u32>().ok()),
@@ -249,6 +320,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
             ),
             "--stand-in" => {
                 let spec = it.next().expect("--stand-in ADDR[=VALUE]");
+                stand_ins.push(spec.to_string());
                 let (addr, value) = match spec.split_once('=') {
                     Some((a, v)) => (a, Val::Int(v.parse().expect("--stand-in's value"))),
                     None => (*spec, Val::None),
@@ -264,9 +336,40 @@ pub fn diff(args: &[&str]) -> ExitCode {
         eprintln!(
             "usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|drive]"
         );
+        eprintln!(
+            "                         [--heap] [--write-golden | --golden-check] [--golden FILE] [--times]"
+        );
         return ExitCode::from(2);
     };
+    let heap = COMPARE_HEAP.with(|c| c.get());
+    let fp_name = match fp_mode {
+        FpMode::Hardware => "hardware",
+        FpMode::Slippi => "slippi",
+    };
+    let golden_file = if write_golden || golden_check {
+        if write_golden && golden_check {
+            eprintln!("--write-golden and --golden-check: one or the other");
+            return ExitCode::from(2);
+        }
+        if from.is_some() || against.is_some() {
+            eprintln!("a golden is of a run from the match's start, not --from or --against");
+            return ExitCode::from(2);
+        }
+        match golden_path
+            .map(std::path::PathBuf::from)
+            .or_else(|| golden::default_path(trace_path, fp_name, heap))
+        {
+            Some(p) => Some(p),
+            None => {
+                eprintln!("--golden FILE, or SSBM_RS_LOCAL for the default");
+                return ExitCode::from(2);
+            }
+        }
+    } else {
+        None
+    };
     set_fp_mode(fp_mode);
+    let run_started = Instant::now();
     let disc_path = std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc");
     let disc = Disc::open(&disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
     let bytes = std::fs::read(replay_path).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
@@ -274,15 +377,74 @@ pub fn diff(args: &[&str]) -> ExitCode {
     let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
         .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     settings.disc = disc_speed;
-    let index = melee_capture::disc_index(&disc);
+    // What a golden is written for, the disc files and first tick once the match starts.
+    let mut identity = None;
+    if let Some(path) = &golden_file {
+        let (trace_size, trace_hash) =
+            golden::file_hash(trace_path).unwrap_or_else(|e| panic!("{trace_path}: {e}"));
+        let (replay_size, replay_hash) = golden::bytes_hash(&bytes);
+        let mut options = format!("fp={fp_name} disc-speed={disc_speed:?}");
+        if heap {
+            options.push_str(" heap");
+        }
+        if boot_audio {
+            options.push_str(" boot-audio");
+        }
+        if limit != u32::MAX {
+            options.push_str(&format!(" ticks={limit}"));
+        }
+        for s in &stand_ins {
+            options.push_str(&format!(" stand-in={s}"));
+        }
+        for i in &ignore {
+            options.push_str(&format!(" ignore={i:?}"));
+        }
+        let id = Identity {
+            trace_size,
+            trace_hash,
+            replay_size,
+            replay_hash,
+            options,
+            coverage: golden::COVERAGE.to_owned(),
+            disc: 0,
+            first_tick: 0,
+        };
+        if golden_check {
+            let refuse = |why: &str| {
+                println!("golden {}: {why}; run the full diff", path.display());
+                ExitCode::from(3)
+            };
+            let g = match Golden::read(path) {
+                Ok(g) => g,
+                Err(e) => return refuse(&format!("no golden to check against ({e})")),
+            };
+            let stale = g.stale_for(&id, false);
+            if !stale.is_empty() {
+                return refuse(&format!("stale: {}", stale.join("; ")));
+            }
+            identity = Some((id, Some(g)));
+        } else {
+            identity = Some((id, None));
+        }
+    }
+    let index = (!golden_check).then(|| melee_capture::disc_index(&disc));
+    // The disc files the match loads, for a golden's header.
+    let disc_files = RefCell::new(StateHasher::new());
     let mut reader = Reader::open(trace_path);
     let version = reader.version;
     let mut image = Image::default();
     // Reads the trace up to tick `n` (or the match's first tick), keeping memory's image.
     let mut first = None;
     let mut advance = |image: &mut Image, until: &dyn Fn(u32, &Image) -> bool| -> Option<u32> {
-        while let Some(t) = reader.tick() {
+        loop {
+            let t0 = Instant::now();
+            let Some(t) = reader.tick() else { break };
+            let t1 = Instant::now();
             image.apply(&t);
+            TIMES.with(|x| {
+                x.add(&x.read, t1 - t0);
+                x.add(&x.apply, t1.elapsed());
+            });
             if first.is_none() && image.seen && is_first_tick(image) {
                 first = Some(t.number);
             }
@@ -353,13 +515,20 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 }
             }
             let started = catch_unwind(AssertUnwindSafe(|| {
-                let mut load = |name: &str| melee_sim::game::vs_match::DiscFile {
-                    entrynum: disc
-                        .entrynum(name)
-                        .unwrap_or_else(|e| panic!("{name}: {e}")),
-                    bytes: disc
-                        .read_file(name)
-                        .unwrap_or_else(|e| panic!("{name}: {e}")),
+                let mut load = |name: &str| {
+                    let file = melee_sim::game::vs_match::DiscFile {
+                        entrynum: disc
+                            .entrynum(name)
+                            .unwrap_or_else(|e| panic!("{name}: {e}")),
+                        bytes: disc
+                            .read_file(name)
+                            .unwrap_or_else(|e| panic!("{name}: {e}")),
+                    };
+                    let mut h = disc_files.borrow_mut();
+                    h.bytes(name.as_bytes());
+                    h.word(file.entrynum as u64);
+                    h.bytes(&file.bytes);
+                    file
                 };
                 let mut fresh = None;
                 if heap_log.is_some() {
@@ -425,7 +594,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
             );
             // The match's first tick runs below, compared with trace tick `t`.
             let files = Files {
-                index: &index,
+                index: index.as_ref(),
                 loaded: Vec::new(),
                 named: m.files.clone(),
             };
@@ -437,7 +606,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
             let mut data = Archives::default();
-            let loaded = find_archives_in(&index, &image.mem1, &mut data);
+            let loaded = find_archives_in(index.as_ref().unwrap(), &image.mem1, &mut data);
             let bank = melee_capture::audio::find_bank(&image.mem1, &mut data);
             let map = DataMap {
                 loaded: loaded.clone(),
@@ -531,7 +700,12 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 }
                 let mut archives = m.data.clone();
                 let data = DataMap {
-                    loaded: find_archives_after(&index, &image.mem1, &mut archives, &loaded),
+                    loaded: find_archives_after(
+                        index.as_ref().unwrap(),
+                        &image.mem1,
+                        &mut archives,
+                        &loaded,
+                    ),
                 };
                 let (d, _) = compare(&image.mem1, &data, &m, Maps::default());
                 println!(
@@ -544,7 +718,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 return ExitCode::SUCCESS;
             }
             let files = Files {
-                index: &index,
+                index: index.as_ref(),
                 loaded,
                 named: Vec::new(),
             };
@@ -559,6 +733,33 @@ pub fn diff(args: &[&str]) -> ExitCode {
             )
         })
     };
+    // The golden's identity, now that the match has started: a stale golden is refused, and
+    // a golden check runs on its own from here.
+    let mut writing = None;
+    if let Some((mut id, g)) = identity {
+        id.disc = disc_files.into_inner().finish();
+        id.first_tick = tick + 1;
+        let path = golden_file.expect("the golden's path");
+        match g {
+            Some(g) => {
+                let stale = g.stale_for(&id, true);
+                if !stale.is_empty() {
+                    println!(
+                        "golden {}: stale: {}; run the full diff",
+                        path.display(),
+                        stale.join("; ")
+                    );
+                    return ExitCode::from(3);
+                }
+                let code = check_golden(&mut m, &replay, &g, &path, heap, &frame_of);
+                if times {
+                    TIMES.with(|x| x.print(run_started.elapsed()));
+                }
+                return code;
+            }
+            None => writing = Some((id, path, Vec::new())),
+        }
+    }
     let mut device = Device(&replay);
     let mut compared = 0;
     let mut stale = StaleReads {
@@ -568,6 +769,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     // A state taken up at a tick's end has that frame's display pass still to run; a started
     // match has run none of its ticks.
     let mut render_due = from.is_some() && m.game.scene.unk_C != 2;
+    let mut end = End::Limit;
     let stop = loop {
         if compared >= limit {
             break None;
@@ -578,12 +780,14 @@ pub fn diff(args: &[&str]) -> ExitCode {
         };
         let Some(t) = next else {
             println!("the trace ends after tick {tick}");
+            end = End::Trace;
             break None;
         };
         tick = t;
         melee_sim::hsd::heap::log_mark(&format!("== tick {t}"));
         // The trace samples each tick before the frame's display pass, which runs before the
         // next tick.
+        let t_sim = Instant::now();
         let stepped = catch_unwind(AssertUnwindSafe(|| {
             if render_due {
                 m.render();
@@ -597,7 +801,12 @@ pub fn diff(args: &[&str]) -> ExitCode {
             }
             Err(p) => break Some(Stop::Seam(panic_text(&p))),
         };
+        let t_files = Instant::now();
         let data = files.refresh(&image.mem1, &mut m.data);
+        TIMES.with(|x| {
+            x.add(&x.sim, t_files - t_sim);
+            x.add(&x.files, t_files.elapsed());
+        });
         // Objects pair afresh each tick, by where they're reached from: the heap reuses blocks.
         // The import's dangling slots compare by address throughout.
         let (mut diffs, reads) = compare(&image.mem1, &data, &m, dangling.clone());
@@ -607,28 +816,48 @@ pub fn diff(args: &[&str]) -> ExitCode {
         if !diffs.is_empty() {
             break Some(Stop::Differ(diffs));
         }
+        if let Some((_, _, hashes)) = &mut writing {
+            let t = Instant::now();
+            hashes.push(golden::state_hash(&mut m, heap));
+            TIMES.with(|x| x.add(&x.hash, t.elapsed()));
+        }
         if ended {
             println!("the match ended at tick {tick}");
+            end = End::Match;
             break None;
         }
     };
     if let Some(path) = &heap_log {
         let log = melee_sim::hsd::heap::take_log();
-        std::fs::write(
-            path,
-            log.join(
-                "
-",
-            ) + "
-",
-        )
-        .unwrap_or_else(|e| panic!("{path}: {e}"));
+        std::fs::write(path, log.join("\n") + "\n").unwrap_or_else(|e| panic!("{path}: {e}"));
+    }
+    if times {
+        TIMES.with(|x| x.print(run_started.elapsed()));
     }
     let at = format!("tick {tick}{}", frame_of(tick, first));
-    stale.report(&|t| format!("tick {t}{}", frame_of(t, first)));
+    let stale_lines = stale.report(&|t| format!("tick {t}{}", frame_of(t, first)));
     match stop {
         None => {
             println!("{compared} ticks compared, no difference");
+            if let Some((id, path, hashes)) = writing {
+                let g = Golden {
+                    id,
+                    end,
+                    stale: stale_lines,
+                    hashes,
+                    trace_path: trace_path.to_owned(),
+                    replay_path: replay_path.to_owned(),
+                };
+                match g.write(&path) {
+                    Ok(()) => {
+                        println!("wrote golden {} ({} ticks)", path.display(), g.hashes.len())
+                    }
+                    Err(e) => {
+                        println!("writing golden {}: {e}", path.display());
+                        return ExitCode::FAILURE;
+                    }
+                }
+            }
             ExitCode::SUCCESS
         }
         Some(Stop::Seam(s)) => {
@@ -647,6 +876,81 @@ pub fn diff(args: &[&str]) -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// Plays the started match on, hashing the state after each tick against the golden's hashes:
+/// no trace, no comparison. The first tick whose hash differs fails the check, for the full
+/// diff to explain.
+fn check_golden(
+    m: &mut Match,
+    replay: &Replay,
+    g: &Golden,
+    path: &std::path::Path,
+    heap: bool,
+    frame_of: &dyn Fn(u32, Option<u32>) -> String,
+) -> ExitCode {
+    let first = g.id.first_tick;
+    let at = |t: u32| format!("tick {t}{}", frame_of(t, Some(first)));
+    let mut device = Device(replay);
+    let mut render_due = false;
+    let n = g.hashes.len();
+    for (i, &want) in g.hashes.iter().enumerate() {
+        let t = first + i as u32;
+        let t_sim = Instant::now();
+        let stepped = catch_unwind(AssertUnwindSafe(|| {
+            if render_due {
+                m.render();
+            }
+            m.step_replay_tick(&mut device)
+        }));
+        let t_hash = Instant::now();
+        let ended = match stepped {
+            Ok((f, due)) => {
+                render_due = due;
+                f.ended
+            }
+            Err(p) => {
+                println!(
+                    "{i} ticks match the golden; stopped in {}: {}; run the full diff",
+                    at(t),
+                    panic_text(&p)
+                );
+                return ExitCode::FAILURE;
+            }
+        };
+        let got = golden::state_hash(m, heap);
+        TIMES.with(|x| {
+            x.add(&x.sim, t_hash - t_sim);
+            x.add(&x.hash, t_hash.elapsed());
+        });
+        if got != want {
+            println!(
+                "{i} ticks match the golden; {}: the state's hash {got:016x} differs from the golden's {want:016x}; run the full diff for the field",
+                at(t)
+            );
+            return ExitCode::FAILURE;
+        }
+        if ended != (i + 1 == n && g.end == End::Match) {
+            println!(
+                "{} ticks match the golden; {}: the match {}, unlike when the golden was written; run the full diff",
+                i + 1,
+                at(t),
+                if ended { "ended" } else { "didn't end" }
+            );
+            return ExitCode::FAILURE;
+        }
+    }
+    if g.stale.is_empty() {
+        println!("no stale reads, as when the golden was written");
+    }
+    for s in &g.stale {
+        println!("stale read in {s}, as when the golden was written");
+    }
+    println!(
+        "{n} ticks match the golden {} (the state hashed after each tick; nothing compared)",
+        path.display()
+    );
+    ExitCode::SUCCESS
 }
 
 /// The main heap at the boot state and at the match's first tick, from a trace with memory:

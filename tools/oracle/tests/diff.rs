@@ -136,3 +136,39 @@ fn drive_pace_from_the_boot() {
     assert!(out.contains("4159 ticks compared, no difference"), "{out}");
     assert!(out.contains("no stale reads"), "{out}");
 }
+
+#[test]
+fn golden_written_and_checked() {
+    let golden =
+        std::env::temp_dir().join(format!("melee-oracle-test-{}.golden", std::process::id()));
+    let g = golden.to_string_lossy().into_owned();
+    let Some(out) = diff(&["--ticks", "300", "--write-golden", "--golden", &g]) else {
+        return;
+    };
+    assert!(out.contains("300 ticks compared, no difference"), "{out}");
+    assert!(out.contains("wrote golden"), "{out}");
+    // The same run checks against it without the trace's ticks.
+    let out = diff(&["--ticks", "300", "--golden-check", "--golden", &g]).unwrap();
+    assert!(out.contains("300 ticks match the golden"), "{out}");
+    assert!(
+        out.contains("no stale reads, as when the golden was written"),
+        "{out}"
+    );
+    // Other options make it stale.
+    let out = diff(&["--ticks", "301", "--golden-check", "--golden", &g]).unwrap();
+    assert!(out.contains("stale: the options differ"), "{out}");
+    let out = diff(&[
+        "--ticks",
+        "300",
+        "--fp",
+        "hardware",
+        "--golden-check",
+        "--golden",
+        &g,
+    ])
+    .unwrap();
+    assert!(out.contains("stale: the options differ"), "{out}");
+    std::fs::remove_file(&golden).unwrap();
+    let out = diff(&["--ticks", "300", "--golden-check", "--golden", &g]).unwrap();
+    assert!(out.contains("no golden to check against"), "{out}");
+}
