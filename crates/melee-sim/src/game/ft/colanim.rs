@@ -155,6 +155,26 @@ impl Running<'_> {
         }
     }
 
+    /// Color animation `id`'s overlay copied from `src` to `dst` (a transformation's),
+    /// `ftCo_800C0358`.
+    #[doc(alias = "ftCo_800C0358")]
+    pub fn copy_color_anim(&mut self, src: GObjId, dst: GObjId, id: i32) {
+        assert!(id < SPYCLOAK_START, "don't reset spycloak colanim!");
+        let x488 = self.color_anim_entry(false, id).2 != 0;
+        let (s, d) = (self.game.fighter_id(src), self.game.fighter_id(dst));
+        let [sp, dp] = self
+            .game
+            .fighters
+            .slots_mut()
+            .get_disjoint_mut([s.0 as usize, d.0 as usize])
+            .expect("two fighters");
+        if x488 {
+            dp.x488.clone_from(&sp.x488);
+        } else {
+            dp.x408.clone_from(&sp.x408);
+        }
+    }
+
     /// Runs one overlay's script for the frame and blends its colors (`lb_80014258`, the
     /// shared [`colanim`] runner with the fighter's own commands); whether it ended (its frames,
     /// `x4_pri`, ran out, or a command ended it). `alt` picks the fighter command table

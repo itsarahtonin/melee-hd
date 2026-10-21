@@ -152,21 +152,26 @@ impl Running<'_> {
         fp.set_mv_i32(DEAD_ATTACK, attack);
     }
 
-    /// The flags of a fighter out of play (`setDeadFlags`): its crowd gasp stops
-    /// (`ft_800880D8`), and it can't be hit or grabbed.
-    #[doc(alias = "ft_800880D8")]
+    /// The flags of a fighter out of play (`setDeadFlags`): a Starman's crowd cheer stops
+    /// ([`Self::star_cheer_stop`]), and it can't be hit or grabbed.
     fn set_dead_flags(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter_mut(gobj);
-        if fp.x221D_b6 {
-            let n = fp.x2164;
-            fp.x2164 = 0;
-            self.lb_audio_crowd_a_less(n);
+        if self.game.fighter(gobj).x221D_b6 {
+            self.star_cheer_stop(gobj);
             self.game.fighter_mut(gobj).x2004 = 0;
         }
         let fp = self.game.fighter_mut(gobj);
         fp.x2219_b1 = true;
         fp.x221E_b1 = true;
         fp.x221E_b2 = true;
+    }
+
+    /// The crowd's cheers the fighter asked for taken back, `ft_800880D8`.
+    #[doc(alias = "ft_800880D8")]
+    pub fn star_cheer_stop(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter_mut(gobj);
+        let n = fp.x2164;
+        fp.x2164 = 0;
+        self.lb_audio_crowd_a_less(n);
     }
 
     /// The fighter's sounds stopped, `ft_80088C5C`: its sound objects, the last sound it

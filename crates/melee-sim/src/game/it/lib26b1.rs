@@ -148,6 +148,70 @@ pub fn fuse_left(game: &mut Game, gobj: GObjId) -> f32 {
     }
 }
 
+/// Handed from one fighter to another (a transformation's), `it_8026B9A8`: let go where it is
+/// (`it_8027429C`), held by `holder` at its part `part` (`it_802742F4`), the throw it counted
+/// taken back, and its state's animation and script started again from the first frame (with
+/// `HSD_JObjAddAnimAll`, so on joints dynamic bones move too); with no animation, none.
+#[doc(alias = "it_8026B9A8")]
+pub fn hand_over(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
+    use crate::hsd::jobj;
+    // The state's description is taken before the item changes hands.
+    let first_anim = item(r.game, gobj).anim_id;
+    super::release::let_go(r, gobj, Vec3::new(0.0, 0.0, 0.0));
+    super::item::hold(r, gobj, holder, part);
+    let data = r.data;
+    let model = super::jobj_of(r.game, gobj);
+    let ip = item_mut(r.game, gobj);
+    ip.xD54_throwNum = ip.xD54_throwNum.wrapping_sub(1);
+    ip.xDC8_word.flags.x14 = false;
+    let anim_id = ip.anim_id;
+    if anim_id == -1 {
+        jobj::remove_anim_all(&mut r.game.objs, model);
+        item_mut(r.game, gobj).x524_cmd.script.cursor = None;
+        return;
+    }
+    assert!(
+        first_anim != -1,
+        "it_8026B9A8: an item given an animation as it changed hands"
+    );
+    let descs = super::item::article(ip)
+        .states(data)
+        .expect("an article without states");
+    let desc = descs.at(0x10 * first_anim as u32);
+    ip.xD0_itemStateDesc = Some(desc);
+    let (joint, speed, kind) = (ip.xC8_joint, ip.x5D0_animFrameSpeed, ip.kind);
+    jobj::remove_anim_all(&mut r.game.objs, model);
+    if let Some(joint) = joint {
+        let first = model.and_then(|j| r.game.objs.jobjs[j].child);
+        crate::game::gr::anime::reset_tree_srt(
+            &mut r.game.objs,
+            data,
+            first,
+            data.ptr(joint.at(8)),
+        );
+    }
+    jobj::add_anim_all(
+        &mut r.game.objs,
+        data,
+        model,
+        data.ptr(desc),
+        data.ptr(desc.at(4)),
+        data.ptr(desc.at(8)),
+    );
+    crate::lb::anim::set_framerate(&mut r.game.objs, model, speed);
+    jobj::req_anim_all(&mut r.game.objs, model, 0.0);
+    let script = super::anim::state_script(r.game, data, kind, first_anim, desc);
+    super::item::start_script(item_mut(r.game, gobj), script);
+    jobj::anim_all(
+        &mut r.game.objs,
+        data,
+        &mut crate::game::code::ParticleHooks,
+        model,
+    );
+    super::anim::run_overlay(r, gobj);
+    super::anim::run_script(r, gobj);
+}
+
 /// The item's position raised to its collision box's bottom, `it_8026C334`.
 // Ports `it_8026C334`; aliased once a check reaches it.
 pub fn bottom_pos(game: &Game, gobj: GObjId) -> crate::vec::Vec3 {

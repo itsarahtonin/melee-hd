@@ -4,9 +4,12 @@
 
 use gekko_fp as fp;
 
-use super::super::code::{self, unported_call};
+use super::super::code;
 use super::super::handles::CodeRef;
+use super::super::it::kinds::{flower, rabbitc};
+use super::super::it::lib26b1;
 use super::super::state::Running;
+use super::powerup::STAR_COLANIM;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::mp::coll::ECB_SOURCE_JOBJ;
@@ -34,17 +37,7 @@ impl Running<'_> {
         self.game.fighters[dst_id.0].is_sub_fighter = src_sub;
         self.init_reset(dst_id);
         self.stop_dead(dst_gobj);
-        // What the original reads from the source once the woken fighter has started to
-        // change, kept as it is here; the rest is copied across before anything changes it.
-        let s = &self.game.fighters[src_id.0];
-        let percent = s.dmg.x1830_percent;
-        let starred = s.x221D_b6;
-        let intangible = s.x1990;
-        let (x2220_b5, x2220_b6, x2008) = (s.x2220_b5, s.x2220_b6, s.x2008);
-        let scale_y = s.x34_scale.y;
-        let (metal, bunny_hood, x221e_b4) = (s.is_metal, s.x2226_b4, s.x221E_b4);
-        let (x197c, x1980, held) = (s.x197C, s.x1980, s.item_gobj);
-        let coll_data = s.coll_data.clone();
+        let percent = self.game.fighters[src_id.0].dmg.x1830_percent;
         let pair = [src_id.0 as usize, dst_id.0 as usize];
         {
             let [src, dst] = self
@@ -128,46 +121,103 @@ impl Running<'_> {
             dst.x2338 = src.x2338.clone();
             dst.stamina_dead = src.stamina_dead;
         }
-        if starred {
-            unported_call("ftCommon_8007EFC8 with the star's invincibility");
+        // The rest reads the source as each step finds it: ending its metal recomputes its
+        // attributes and collision, which the hood's fit and the collision copy then read.
+        let src = &self.game.fighters[src_id.0];
+        if src.x221D_b6 {
+            let frames = src.x2004;
+            self.start_star(dst_id, frames);
+            self.copy_color_anim(gobj, dst_gobj, STAR_COLANIM);
+            self.star_cheer_stop(gobj);
+        } else {
+            self.end_color_anim(dst_gobj, 9);
         }
-        self.end_color_anim(dst_gobj, 9);
         // The original assigns rather than compares here, so the intangibility always carries.
         self.game.fighters[src_id.0].x198C = 2;
+        let intangible = self.game.fighters[src_id.0].x1990;
         if intangible != 0 {
             self.set_intangible(dst_gobj, intangible);
         }
         {
-            let dst = &mut self.game.fighters[dst_id.0];
-            dst.x2220_b5 = x2220_b5;
-            dst.x2220_b6 = x2220_b6;
-            dst.x2008 = x2008;
+            let [src, dst] = self
+                .game
+                .fighters
+                .slots_mut()
+                .get_disjoint_mut(pair)
+                .expect("the transformation's two fighters");
+            dst.x2220_b5 = src.x2220_b5;
+            dst.x2220_b6 = src.x2220_b6;
+            dst.x2008 = src.x2008;
         }
+        let scale_y = self.game.fighters[src_id.0].x34_scale.y;
         self.set_scale_y(dst_gobj, scale_y);
-        if metal {
-            unported_call("ftCommon_8007EFC8 on a metal fighter");
+        let src = &self.game.fighters[src_id.0];
+        if src.is_metal {
+            let (timer, health) = (src.metal_timer, src.metal_health);
+            self.set_metal(dst_gobj, timer, health);
+            self.end_metal(gobj);
         }
-        if bunny_hood {
-            unported_call("ftCommon_8007EFC8 with the bunny hood");
+        let src = &self.game.fighters[src_id.0];
+        if src.x2226_b4 {
+            if !src.x2226_b7 {
+                let frames = src.x2030;
+                self.start_cloak(dst_gobj, frames, false);
+            }
+            self.end_cloak(gobj);
         }
-        self.game.fighters[dst_id.0].x221E_b4 = x221e_b4;
-        if x197c.is_some() {
-            unported_call("ftCommon_8007EFC8 with the shell or the hammer held (x197C)");
+        let b4 = self.game.fighters[src_id.0].x221E_b4;
+        self.game.fighters[dst_id.0].x221E_b4 = b4;
+        // `dst->ft_data->x8`'s parts: the head's (`x12`) for what's worn, the hand's (`x10`).
+        let (head, hand) = {
+            let x8 = self.ft_data_x8(&self.game.fighters[dst_id.0]);
+            (
+                i32::from(self.data.u8(x8.at(0x12))),
+                i32::from(self.data.u8(x8.at(0x10))),
+            )
+        };
+        let src = &self.game.fighters[src_id.0];
+        if let Some(hood) = src.x197C {
+            let frames = src.x2014;
+            lib26b1::hand_over(self, hood, dst_gobj, head);
+            rabbitc::show_shine(self, hood, false);
+            self.wear_hood(dst_gobj, hood, frames);
+            // The source's attributes and height fit it, the original's.
+            self.fit_hood(gobj);
+        } else {
+            self.game.fighters[dst_id.0].x197C = None;
         }
-        self.game.fighters[dst_id.0].x197C = None;
-        if x1980.is_some() {
-            unported_call("ftCommon_8007EFC8 with the screw attack or the fan (x1980)");
+        let src = &self.game.fighters[src_id.0];
+        if let Some(flower) = src.x1980 {
+            let (frames, grown) = (src.x2018, src.x2024);
+            lib26b1::hand_over(self, flower, dst_gobj, head);
+            self.flower_planted(dst_gobj, flower, frames, f64::from(grown));
+            // Shaped by the source's growth, attributes and height, the original's.
+            self.flower_shape(gobj);
+        } else {
+            self.game.fighters[dst_id.0].x1980 = None;
         }
-        self.game.fighters[dst_id.0].x1980 = None;
         self.calc_attributes(dst_gobj);
         self.init_camera_box(dst_id);
-        // `ft_800849EC`: the collision state, ECBs and all.
-        self.game.fighters[dst_id.0]
-            .coll_data
-            .copy_from(&coll_data, 2);
+        {
+            // `ft_800849EC`: the collision state, ECBs and all.
+            let [src, dst] = self
+                .game
+                .fighters
+                .slots_mut()
+                .get_disjoint_mut(pair)
+                .expect("the transformation's two fighters");
+            dst.coll_data.copy_from(&src.coll_data, 2);
+        }
+        let scale_y = self.game.fighters[src_id.0].x34_scale.y;
         self.scale_ledge_snap(dst_gobj, scale_y);
-        if held.is_some() {
-            unported_call("ftCommon_8007EFC8 with an item held");
+        let src = &self.game.fighters[src_id.0];
+        if let Some(item) = src.item_gobj {
+            let b3 = src.x221E_b3;
+            let dst = &mut self.game.fighters[dst_id.0];
+            dst.item_gobj = Some(item);
+            dst.x221E_b3 = b3;
+            self.retake_held_item(dst_gobj, true);
+            lib26b1::hand_over(self, item, dst_gobj, hand);
         }
         self.crowd_transform();
         self.sleep(gobj);
@@ -184,16 +234,22 @@ impl Running<'_> {
     }
 
     /// The worn items' size at the fighter's height, `ftCommon_80080174`: the Bunny Hood's
-    /// ears by `x12C` (a flower on the head isn't ported).
+    /// ears by `x12C`, a flower's petals by its growth and `x13C`.
     #[doc(alias = "ftCommon_80080174")]
     pub fn scale_worn_items(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if let Some(hood) = fp.x197C {
             let s = mem(fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.x12C)));
-            crate::game::it::kinds::rabbitc::scale_ears(self, hood, s);
+            rabbitc::scale_ears(self, hood, s);
         }
-        if self.game.fighter(gobj).x1980.is_some() {
-            unported_call("ftCommon_80080174 with a flower on the head");
+        if let Some(flower) = self.game.fighter(gobj).x1980 {
+            let size = self.flower_size(gobj);
+            let fp = self.game.fighter(gobj);
+            let petals = mem(fp::fmuls(
+                reg(fp.x34_scale.y),
+                fp::fmuls(size, reg(fp.co_attrs.x13C)),
+            ));
+            flower::set_size(self, flower, petals);
         }
     }
 

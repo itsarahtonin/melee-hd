@@ -58,16 +58,8 @@ impl Running<'_> {
     /// character's offset (`co_attrs.x130`) shrunk by the growth, the petals by it.
     #[doc(alias = "ftCommon_8007FDA0")]
     pub fn flower_shape(&mut self, gobj: GObjId) {
-        let c = self.common();
+        let size = self.flower_size(gobj);
         let fp = self.game.fighter(gobj);
-        // `my_fminf`.
-        let grown = fp::fmadds(
-            reg(c.f32(cd::SIZE_PER_DAMAGE)),
-            fp::frsp(f64::from(fp.x2024)),
-            reg(c.f32(cd::SIZE_BASE)),
-        );
-        let max = reg(c.f32(cd::SIZE_MAX));
-        let size = if grown > max { max } else { grown };
         let inv = fp::fdivs(1.0, size);
         let o = fp.co_attrs.x130;
         let offset = Vec3::new(
@@ -84,6 +76,20 @@ impl Running<'_> {
             flower::set_offset(self, it, offset);
             flower::set_size(self, it, petals);
         }
+    }
+
+    /// The flower's size for the damage that grew it (`x2024`): `ftCommonData` x710 a point
+    /// past x708, at most x70C (`my_fminf`).
+    pub(crate) fn flower_size(&self, gobj: GObjId) -> f64 {
+        let c = self.common();
+        let fp = self.game.fighter(gobj);
+        let grown = fp::fmadds(
+            reg(c.f32(cd::SIZE_PER_DAMAGE)),
+            fp::frsp(f64::from(fp.x2024)),
+            reg(c.f32(cd::SIZE_BASE)),
+        );
+        let max = reg(c.f32(cd::SIZE_MAX));
+        if grown > max { max } else { grown }
     }
 
     /// A flower newly on the head, `ftCommon_8007FE84`: its time, the damage's tick and its

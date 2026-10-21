@@ -1039,15 +1039,23 @@ pub fn catch_set() -> Vec<Match> {
 }
 
 /// The fighters with items (docs/player.md, "Items toggle: what's left", task 4, part A): Donkey
-/// Kong carrying the heavy items in his own states. Two-minute matches at frequency very high,
-/// seeds `1F0F0Fxx`.
+/// Kong carrying the heavy items in his own states, and Zelda and Sheik transforming with an
+/// item held or under a power-up, which the CPU AI asks for every 400 frames half the time. Each
+/// pair plays both sides of it, so both players take the path; two-minute matches at frequency
+/// very high, seeds `1F0F0Fxx`. The last four seeds came from a search (docs/oracle.md, "Fighters
+/// with items"): ssbm-rs recorded candidates, melee-hd played each recording and the ones whose
+/// transformations wore a Bunny Hood, metal or a flower were kept.
 pub fn fighters_set() -> Vec<Match> {
     /// A match's name, stage, characters, switch kinds and seed.
     type Fighters = (&'static str, u16, (u8, u8), &'static [u8], u32);
-    // The heavy items (box, barrel, Party Ball) and the barrel cannon.
+    // The heavy items (box, barrel, Party Ball) and the barrel cannon; for Zelda and Sheik the
+    // Starman, Lip's Stick (its flower), Bunny Hood, Metal Box and Cloaking Device, with the
+    // Beam Sword and Ray Gun to hold; then the worn ones alone, and Lip's Stick alone.
     const HEAVY: &[u8] = &[1, 2, 4, 5];
-    let matches: [Fighters; 2] = [
-        // Both players carry.
+    const TRANSFORM: &[u8] = &[10, 12, 16, 23, 31, 32, 33];
+    const WORN: &[u8] = &[23, 31, 32];
+    const FLOWER: &[u8] = &[23];
+    let matches: [Fighters; 8] = [
         (
             "items-dk-heavy-fd",
             FINAL_DESTINATION,
@@ -1061,6 +1069,51 @@ pub fn fighters_set() -> Vec<Match> {
             (DONKEY_KONG, MARTH),
             HEAVY,
             0x1F0F_0F02,
+        ),
+        (
+            "items-zelda-sheik-fd",
+            FINAL_DESTINATION,
+            (ZELDA, SHEIK),
+            TRANSFORM,
+            0x1F0F_0F03,
+        ),
+        (
+            "items-sheik-zelda-bf",
+            BATTLEFIELD,
+            (SHEIK, ZELDA),
+            TRANSFORM,
+            0x1F0F_0F04,
+        ),
+        // Metal and a Bunny Hood together, and Lip's Stick held.
+        (
+            "items-zelda-hood-fd",
+            FINAL_DESTINATION,
+            (ZELDA, SHEIK),
+            WORN,
+            0x1F0F_0F11,
+        ),
+        // A Bunny Hood, metal, and both.
+        (
+            "items-sheik-hood-bf",
+            BATTLEFIELD,
+            (SHEIK, ZELDA),
+            WORN,
+            0x1F0F_0F12,
+        ),
+        // A flower on Zelda's head, then on Sheik's.
+        (
+            "items-zelda-flower-fd",
+            FINAL_DESTINATION,
+            (ZELDA, SHEIK),
+            FLOWER,
+            0x1F0F_0F19,
+        ),
+        (
+            "items-zelda-flower2-fd",
+            FINAL_DESTINATION,
+            (ZELDA, SHEIK),
+            FLOWER,
+            0x1F0F_0F1B,
         ),
     ];
     matches

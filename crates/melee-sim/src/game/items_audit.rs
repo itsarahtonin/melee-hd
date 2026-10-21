@@ -631,17 +631,6 @@ pub const MISSING: &[ItemGap] = &[
         stages: &[],
     },
     ItemGap {
-        what: "Zelda or Sheik transforming with an item held or under a power-up",
-        covers: &[
-            "it_8026B9A8",
-            "ftCommon_8007EFC8 with",
-            "ftCommon_80080174 with a flower on the head",
-        ],
-        kinds: &[],
-        with: &[18, 19],
-        stages: &[],
-    },
-    ItemGap {
         what: "Nana's computer player with items: a power-up's color, an item to go for or pick up, an item held",
         covers: &[
             "it_8026B924",
@@ -756,11 +745,11 @@ mod tests {
             "a Poké Ball match reaches only its own gaps and every match's"
         );
         assert!(
-            missing_with(&[0], &[18], 31)
+            missing_with(&[0], &[14], 31)
                 .iter()
-                .any(|g| g.what.starts_with("Zelda"))
+                .any(|g| g.what.starts_with("Nana"))
         );
-        assert!(!balls.iter().any(|g| g.what.starts_with("Zelda")));
+        assert!(!balls.iter().any(|g| g.what.starts_with("Nana")));
         let redead = |kinds: &[i32]| {
             missing_with(kinds, &[2], 31)
                 .iter()
