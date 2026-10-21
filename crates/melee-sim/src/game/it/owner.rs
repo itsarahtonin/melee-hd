@@ -280,6 +280,35 @@ pub fn nearest_opponent(
     result
 }
 
+/// The opponent of `gobj` (anyone, for None) with the lowest percent, the first of them on a
+/// tie, `ftLib_FindLowestPercentOpponent`: none when every fighter is out. The percents
+/// compare against the lowest so far truncated (it starts at 999).
+#[doc(alias = "ftLib_FindLowestPercentOpponent")]
+pub fn lowest_percent_opponent(game: &Game, gobj: Option<GObjId>) -> Option<GObjId> {
+    let me = gobj.map(|g| (g, fighter(game, g).player_idx, fighter(game, g).team));
+    let mut lowest = 999i32;
+    let mut result = None;
+    let mut cur = game.world.first_in(P_LINK_FIGHTER);
+    while let Some(g) = cur {
+        cur = game.world.gobjs[g.0].next;
+        if me.is_some_and(|(m, slot, _)| m == g || fighter(game, g).player_idx == slot) {
+            continue;
+        }
+        let other = fighter(game, g);
+        if other.is_sleeping
+            || (game.vs_is_teams() && me.is_some_and(|(_, _, team)| other.team == team))
+        {
+            continue;
+        }
+        let percent = reg(other.dmg.x1830_percent);
+        if percent < fp::frsp(f64::from(lowest)) {
+            lowest = fp::fctiwz(percent);
+            result = Some(g);
+        }
+    }
+    result
+}
+
 /// The opponent of `gobj` (anyone, for None) whose camera bone is nearest `pos` on the side
 /// `facing_dir` looks toward, `ftLib_FindNearestOpponentInDir`.
 #[doc(alias = "ftLib_FindNearestOpponentInDir")]

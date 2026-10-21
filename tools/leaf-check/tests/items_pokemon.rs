@@ -30,9 +30,9 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::gm::Unlocks;
 use melee_sim::game::it::kinds::{
-    chicorita, entei, fire, freezer, fushigibana, hassam, hinoarashi, houou, kabigon, kamex,
-    kireihana, lizardon, lucky, lugia, maril, marumine, matadogas, mew, pippi, porygon2, raikou,
-    sonans, suikun, thunder, togepy, tosakinto, unknown,
+    chicorita, entei, fire, freezer, fushigibana, hassam, hinoarashi, hitodeman, houou, kabigon,
+    kamex, kireihana, lizardon, lucky, lugia, maril, marumine, matadogas, mew, pippi, porygon2,
+    raikou, sonans, suikun, thunder, togepy, tosakinto, unknown,
 };
 use melee_sim::game::it::{self, CLASS_ITEM, pokemon};
 use melee_sim::game::state::Running;
@@ -73,7 +73,7 @@ fn stubs() -> Vec<Stub> {
 }
 
 /// The functions by address and name, from the list in the capture directory: those of the
-/// units ported (`UNITS`); Staryu, Ditto and Celebi aren't.
+/// units ported (`UNITS`); Ditto and Celebi, whom no VS match releases, aren't.
 fn functions() -> Vec<(u32, String)> {
     let Ok(text) = std::fs::read_to_string(format!("{}/items-pokemon-funcs.txt", base())) else {
         return Vec::new();
@@ -130,6 +130,7 @@ const UNITS: &[(u32, u32)] = &[
     (0x802C_F814, 0x802C_FC48),
     (0x802C_FC48, 0x802D_007C),
     (0x802D_3B18, 0x802D_3EF8),
+    (0x802D_42C4, 0x802D_5050),
 ];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
@@ -214,11 +215,12 @@ const EVT_UNK: &[&str] = &[
     "it_802CF884",
     "it_802CFCB8",
     "it_802D3B6C",
+    "it_802D4F58",
 ];
 
 /// Helpers that take what the check can't give: they run inside the callers that call them,
 /// whose comparisons cover them.
-const HELPERS: &[&str] = &["itHassam_802CDE1C", "it_802D1F64"];
+const HELPERS: &[&str] = &["itHassam_802CDE1C", "it_802D1F64", "it_802D48B0"];
 
 fn name_of(addr: u32) -> String {
     ssbm_types::symbols::SYMBOLS
@@ -317,6 +319,13 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802D3BE0", mew::sparkle),
     ("it_802D3C9C", mew::fly_off),
     ("it_802D3D94", mew::enter_air),
+    ("it_802D43EC", hitodeman::choose_target),
+    ("it_802D4494", hitodeman::choose_follow_frames),
+    ("it_802D4510", hitodeman::choose_shots),
+    ("it_802D4990", hitodeman::start_shooting),
+    ("it_802D4B54", hitodeman::enter_air),
+    ("it_802D4C74", hitodeman::shoot),
+    ("it_802D4F78", hitodeman::star_fly),
     ("it_80279C48", pokemon::face_nearest_opponent),
     ("it_80279E24", pokemon::pulse),
     ("it_80279FF8", pokemon::grow),
@@ -540,6 +549,8 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802CF884" => raikou::evt_unk(g, gobj, maybe(4)),
         "it_802CFCB8" => suikun::evt_unk(g, gobj, maybe(4)),
         "it_802D3B6C" => mew::evt_unk(g, gobj, maybe(4)),
+        "it_802D43B0" => hitodeman::evt_unk(g, gobj, maybe(4)),
+        "it_802D4F58" => hitodeman::star_evt_unk(g, gobj, maybe(4)),
         "it_802D1E8C" => {
             lugia::shoot(g, gobj, r(4) as i32, f(1));
         }

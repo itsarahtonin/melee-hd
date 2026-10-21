@@ -44,6 +44,7 @@ pub mod hassam;
 pub mod heart;
 pub mod heiho;
 pub mod hinoarashi;
+pub mod hitodeman;
 pub mod houou;
 pub mod kabigon;
 pub mod kamex;
@@ -300,6 +301,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || pippi::run_event(r, gobj, addr)
         || porygon2::run_event(r, gobj, addr)
         || mew::run_event(r, gobj, addr)
+        || hitodeman::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -439,6 +441,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| pippi::run_pred(r, gobj, addr))
         .or_else(|| porygon2::run_pred(r, gobj, addr))
         .or_else(|| mew::run_pred(r, gobj, addr))
+        .or_else(|| hitodeman::run_pred(r, gobj, addr))
         .or_else(|| yaku::run_pred(r, gobj, addr))
 }
 

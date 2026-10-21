@@ -321,8 +321,11 @@ impl PokemonVars {
 /// The words a Pokémon of `kind` keeps handles in, with their handle type (`"GObjId"`,
 /// `"JObjId"`, or `"Data"`), for the importer.
 pub fn handle_words(kind: i32) -> &'static [(usize, &'static str)] {
-    let _ = kind;
-    &[]
+    use crate::game::it::kinds::hitodeman;
+    match kind {
+        hitodeman::KIND => hitodeman::HANDLES,
+        _ => &[],
+    }
 }
 
 impl Mirror for PokemonVars {
