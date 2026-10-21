@@ -67,7 +67,7 @@ fn run(args: Vec<String>) -> ExitCode {
                 "                         [--all] [--ignore TEXT,...] [--stand-in ADDR[=VALUE]]"
             );
             eprintln!(
-                "                         [--heap] [--write-golden | --golden-check] [--golden FILE] [--times]"
+                "                         [--heap] [--write-golden | --golden-check] [--golden FILE] [--times] [--check-rescan N]"
             );
             eprintln!(
                 "       melee-oracle sync-test REPLAY.slp [--rollback N] [--ticks N] [--fp hardware|slippi]"

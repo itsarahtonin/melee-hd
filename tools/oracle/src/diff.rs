@@ -27,6 +27,10 @@
 //! `--write-golden` writes the run's golden hashes once it passes clean, and `--golden-check`
 //! checks a run against them instead of the trace (`golden.rs`; `--golden FILE` names the
 //! file, `$SSBM_RS_LOCAL/golden/` by default). `--times` prints where the run's time went.
+//!
+//! The archives in memory are found again each tick by scanning only the pages the trace
+//! changed (`melee_capture::Rescan`); `--check-rescan N` checks that scan against one of all of
+//! memory every Nth tick, and stops at the first tick they differ.
 
 use melee_sim::gekko_fp::{FpMode, set_fp_mode};
 use melee_sim::state_eq::StateHasher;
@@ -38,7 +42,8 @@ use std::time::{Duration, Instant};
 use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps, sym};
 use melee_capture::{
-    Capture, DataMap, DiscIndex, Loaded, find_archives_after, find_archives_in, find_archives_named,
+    Capture, DataMap, DiscIndex, Loaded, Rescan, find_archives_after, find_archives_in,
+    find_archives_rescan,
 };
 use melee_data::archive::{ArchiveId, Archives};
 use melee_data::disc::Disc;
@@ -106,16 +111,40 @@ struct Files<'a> {
     /// The archives a started match loaded itself, by name, which the scans find wherever the
     /// original loads them (a fighter's animations go to its buffer as it plays them).
     named: Vec<(String, ArchiveId)>,
+    /// The scan's work from the tick before: only the pages the ticks since changed are
+    /// scanned again, which finds what a scan of all of memory would.
+    rescan: Rescan,
 }
 
 impl Files<'_> {
-    fn refresh(&mut self, mem: &[u8], archives: &mut Archives) -> DataMap {
+    fn new<'a>(
+        index: Option<&'a DiscIndex>,
+        loaded: Vec<Loaded>,
+        named: Vec<(String, ArchiveId)>,
+    ) -> Files<'a> {
+        Files {
+            index,
+            loaded,
+            named,
+            rescan: Rescan::default(),
+        }
+    }
+
+    /// The archives in memory as the image holds it now, with `check` also scanned whole and
+    /// compared (`--check-rescan`).
+    fn refresh(&mut self, image: &mut Image, archives: &mut Archives, check: bool) -> DataMap {
         let index = self.index.expect("the disc's index");
-        self.loaded = if self.named.is_empty() {
-            find_archives_after(index, mem, archives, &self.loaded)
-        } else {
-            find_archives_named(index, mem, archives, &self.loaded, &self.named)
-        };
+        let changed = image.take_changed();
+        self.rescan.check = check;
+        self.loaded = find_archives_rescan(
+            index,
+            &image.mem1,
+            archives,
+            &self.loaded,
+            &self.named,
+            &mut self.rescan,
+            &changed,
+        );
         DataMap {
             loaded: self.loaded.clone(),
         }
@@ -283,6 +312,9 @@ pub fn diff(args: &[&str]) -> ExitCode {
     let (mut write_golden, mut golden_check, mut golden_path, mut times) =
         (false, false, None, false);
     let mut stand_ins: Vec<String> = Vec::new();
+    // `--check-rescan N`: every Nth tick, the archives' incremental scan is checked against a
+    // scan of all of memory.
+    let mut check_rescan: Option<u32> = None;
     let mut it = args.iter();
     while let Some(&a) = it.next() {
         match a {
@@ -290,6 +322,14 @@ pub fn diff(args: &[&str]) -> ExitCode {
             "--golden-check" => golden_check = true,
             "--golden" => golden_path = Some(it.next().expect("--golden FILE").to_string()),
             "--times" => times = true,
+            "--check-rescan" => {
+                check_rescan = it
+                    .next()
+                    .and_then(|n| n.parse().ok())
+                    .filter(|&n| n > 0)
+                    .map(Some)
+                    .expect("--check-rescan N")
+            }
             "--from" => from = it.next().and_then(|t| t.parse::<u32>().ok()),
             "--ticks" => limit = it.next().and_then(|t| t.parse().ok()).expect("--ticks N"),
             "--against" => against = it.next().and_then(|t| t.parse::<u32>().ok()),
@@ -337,7 +377,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
             "usage: melee-oracle diff TRACE REPLAY.slp [--from TICK] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|drive]"
         );
         eprintln!(
-            "                         [--heap] [--write-golden | --golden-check] [--golden FILE] [--times]"
+            "                         [--heap] [--write-golden | --golden-check] [--golden FILE] [--times] [--check-rescan N]"
         );
         return ExitCode::from(2);
     };
@@ -593,11 +633,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 "the fighters' addresses, the allocator model's and the trace's: {modelled:x?}"
             );
             // The match's first tick runs below, compared with trace tick `t`.
-            let files = Files {
-                index: index.as_ref(),
-                loaded: Vec::new(),
-                named: m.files.clone(),
-            };
+            let files = Files::new(index.as_ref(), Vec::new(), m.files.clone());
             (m, files, t - 1, Some(t))
         }
         Some(n) => {
@@ -717,11 +753,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 }
                 return ExitCode::SUCCESS;
             }
-            let files = Files {
-                index: index.as_ref(),
-                loaded,
-                named: Vec::new(),
-            };
+            let files = Files::new(index.as_ref(), loaded, Vec::new());
             (m, files, n, None)
         }
     };
@@ -802,11 +834,17 @@ pub fn diff(args: &[&str]) -> ExitCode {
             Err(p) => break Some(Stop::Seam(panic_text(&p))),
         };
         let t_files = Instant::now();
-        let data = files.refresh(&image.mem1, &mut m.data);
+        let check = check_rescan.is_some_and(|n| compared % n == 0);
+        let data = files.refresh(&mut image, &mut m.data, check);
         TIMES.with(|x| {
             x.add(&x.sim, t_files - t_sim);
             x.add(&x.files, t_files.elapsed());
         });
+        if let Some(d) = files.rescan.disagreements.first() {
+            break Some(Stop::Seam(format!(
+                "the archives' incremental scan differs from a full scan: {d}"
+            )));
+        }
         // Objects pair afresh each tick, by where they're reached from: the heap reuses blocks.
         // The import's dangling slots compare by address throughout.
         let (mut diffs, reads) = compare(&image.mem1, &data, &m, dangling.clone());
@@ -833,6 +871,12 @@ pub fn diff(args: &[&str]) -> ExitCode {
     }
     if times {
         TIMES.with(|x| x.print(run_started.elapsed()));
+    }
+    if check_rescan.is_some() && files.rescan.disagreements.is_empty() {
+        println!(
+            "the archives' incremental scan agreed with a full scan at all {} ticks checked",
+            files.rescan.checks
+        );
     }
     let at = format!("tick {tick}{}", frame_of(tick, first));
     let stale_lines = stale.report(&|t| format!("tick {t}{}", frame_of(t, first)));

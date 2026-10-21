@@ -174,6 +174,9 @@ pub struct Image {
     pub seen: bool,
     /// The time base at the last tick that held it.
     pub tb: Option<u64>,
+    /// A bit for each page ([`melee_capture::PAGE`]) a tick changed since the last
+    /// [`Image::take_changed`].
+    changed: Vec<u64>,
 }
 
 impl Default for Image {
@@ -182,6 +185,7 @@ impl Default for Image {
             mem1: vec![0; MEM1_SIZE],
             seen: false,
             tb: None,
+            changed: vec![0; (MEM1_SIZE / melee_capture::PAGE).div_ceil(64)],
         }
     }
 }
@@ -194,6 +198,11 @@ impl Image {
             for (m, x) in self.mem1[at..at + p.bytes.len()].iter_mut().zip(&p.bytes) {
                 *m ^= x;
             }
+            let pages =
+                at / melee_capture::PAGE..(at + p.bytes.len()).div_ceil(melee_capture::PAGE);
+            for page in pages {
+                self.changed[page / 64] |= 1 << (page % 64);
+            }
             self.seen = true;
         }
         if let Some(t) = tick.of(Kind::Time).next() {
@@ -204,5 +213,18 @@ impl Image {
     pub fn u32(&self, addr: u32) -> u32 {
         let i = (addr - MEM1) as usize;
         u32::from_be_bytes(self.mem1[i..i + 4].try_into().unwrap())
+    }
+
+    /// The pages the ticks applied since the last call changed (or may have: a page a tick
+    /// holds is one that changed), in increasing order.
+    pub fn take_changed(&mut self) -> Vec<usize> {
+        let mut out = Vec::new();
+        for (w, bits) in self.changed.iter_mut().enumerate() {
+            while *bits != 0 {
+                out.push(64 * w + bits.trailing_zeros() as usize);
+                *bits &= *bits - 1;
+            }
+        }
+        out
     }
 }
