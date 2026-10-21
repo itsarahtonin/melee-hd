@@ -95,7 +95,14 @@ impl Running<'_> {
     /// `ftCo_Turn_Anim`: the fighter faces the other way once its turn frames pass.
     #[doc(alias = "ftCo_Turn_Anim")]
     pub fn co_turn_anim(&mut self, gobj: GObjId) {
-        // `ftCo_Turn_Anim_Inner`.
+        self.turn_anim_inner(gobj);
+        self.wait_when_done(gobj);
+    }
+
+    /// A turn's frames counted down, then the fighter faces the other way once,
+    /// `ftCo_Turn_Anim_Inner`.
+    #[doc(alias = "ftCo_Turn_Anim_Inner")]
+    pub fn turn_anim_inner(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.mv_f32(0x10) > 0.0 {
             fp.set_mv_f32(0x10, fp::fsubs(reg(fp.mv_f32(0x10)), 1.0));
@@ -104,7 +111,6 @@ impl Running<'_> {
             fp.set_mv_i32(0x18, 1);
             fp.facing_dir = mem(fp::fneg(reg(fp.facing_dir)));
         }
-        self.wait_when_done(gobj);
     }
 
     /// `ftCo_RunBrake_Anim`: the brake's animation holds while the fighter is still fast.
@@ -254,7 +260,7 @@ impl Running<'_> {
     /// `ftCo_8008F744`: hitstun (`mv` x0) counts down; at its end the fighter can act and its
     /// combo window opens.
     #[doc(alias = "ftCo_8008F744")]
-    pub(super) fn damage_tick(&mut self, gobj: GObjId) {
+    pub(crate) fn damage_tick(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.mv_f32(0) > 0.0 {
             fp.set_mv_f32(0, fp::fsubs(reg(fp.mv_f32(0)), 1.0));

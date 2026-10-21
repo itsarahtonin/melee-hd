@@ -150,14 +150,6 @@ pub const UNITS: &[&str] = &[
     "melee/ft/ftCo_800C7434",
     "melee/ft/ft_0BEC",
     "melee/ft/ft_0BF0",
-    "melee/ft/kinds/ftDonkey/ftdonkeyheavyfall",
-    "melee/ft/kinds/ftDonkey/ftdonkeyheavyjump",
-    "melee/ft/kinds/ftDonkey/ftdonkeyheavylanding",
-    "melee/ft/kinds/ftDonkey/ftdonkeyheavyturn",
-    "melee/ft/kinds/ftDonkey/ftdonkeyheavywait0",
-    "melee/ft/kinds/ftDonkey/ftdonkeyheavywait1",
-    "melee/ft/kinds/ftDonkey/ftdonkeyheavywalk",
-    "melee/ft/kinds/ftDonkey/ftdonkeyms3450",
 ];
 
 /// melee-sim's item modules (`game/<module>.rs`), each of whose stops the audit names.
@@ -647,24 +639,6 @@ pub const MISSING: &[ItemGap] = &[
         ],
         kinds: &[],
         with: &[18, 19],
-        stages: &[],
-    },
-    ItemGap {
-        what: "Donkey Kong carrying a heavy item",
-        covers: &[
-            "melee/ft/kinds/ftDonkey/ftdonkeyheavyfall",
-            "melee/ft/kinds/ftDonkey/ftdonkeyheavyjump",
-            "melee/ft/kinds/ftDonkey/ftdonkeyheavylanding",
-            "melee/ft/kinds/ftDonkey/ftdonkeyheavyturn",
-            "melee/ft/kinds/ftDonkey/ftdonkeyheavywait0",
-            "melee/ft/kinds/ftDonkey/ftdonkeyheavywait1",
-            "melee/ft/kinds/ftDonkey/ftdonkeyheavywalk",
-            "melee/ft/kinds/ftDonkey/ftdonkeyms3450",
-            "ftDk_MS_341_800DF980 (Donkey Kong carrying a heavy item)",
-            "ftDk_MS_349_800E06D8 (hit carrying a heavy item)",
-        ],
-        kinds: &[1, 2, 4, 5],
-        with: &[1],
         stages: &[],
     },
     ItemGap {

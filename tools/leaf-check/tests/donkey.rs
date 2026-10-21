@@ -23,12 +23,26 @@
 //!
 //! What the code reaches in other parts of the port that isn't ported (the crowd and the
 //! player library's statistics) stands in on both sides ([`stubs`]).
+//!
+//! His heavy-item states (`ftdonkeyheavy*.c`, `ftdonkeyms3450.c`, and `ftCo_Turn_Anim_Inner`,
+//! which his heavy turn shares with the common turn) have their own captures, in
+//! `DONKEY_HEAVY_CALLS` (default `calls/donkey-heavy`), with `dk-heavy-funcs.txt` and
+//! `done-dk-heavy.txt` beside them, made the same way from the `fighters` oracle set's Donkey
+//! Kong matches (`$SSBM_RS_LOCAL/bench/oracle-m4`, docs/oracle.md's oracle sets), which carry
+//! boxes, barrels and Party Balls:
+//!
+//! ```text
+//! D=local/calls/donkey-heavy
+//! SLIPPI_PLAYER_NAMES=0 CAPTURE_INTERACTED=1 CAPTURE=$D/oracle-NAME CAPTURE_FROM=0 CAPTURE_NESTED=1 \
+//!   CAPTURE_FUNCS=@$D/dk-heavy-funcs.txt LOCKSTEP_DONE=$D/done-dk-heavy.txt \
+//!   ssbm-run "$SSBM_DISC" --replay NAME.slp --fp hardware --fields 8700 --port all --lockstep
+//! ```
 
 use std::collections::BTreeMap;
 
 use leaf_check::calls::{
-    Prepare, Report, Ret, SKIP, Stub, StubRet, Variant, check_variants, gobj_arg, poke_f32,
-    poke_u32, saved_calls, user_data_arg,
+    Prepare, Report, Ret, SKIP, Stub, StubRet, Variant, check_variants, gobj_arg, peek_u32,
+    poke_bit, poke_f32, poke_u32, saved_calls, user_data_arg,
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
@@ -37,16 +51,43 @@ use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::capture::Call;
 
+/// A family of captures: its environment variables' prefix, its default directory under
+/// `SSBM_RS_LOCAL` and its function list.
+#[derive(Clone, Copy)]
+struct Set {
+    env: &'static str,
+    calls: &'static str,
+    funcs: &'static str,
+    /// Whether every neighbour state runs every target (the heavy states' few captures), not
+    /// just enough of them for five states a target.
+    every: bool,
+}
+
+/// The ranked replays' captures.
+const REPLAYS: Set = Set {
+    env: "DONKEY",
+    calls: "calls/donkey",
+    funcs: "dk-funcs.txt",
+    every: false,
+};
+
+/// The heavy-item matches' captures.
+const HEAVY: Set = Set {
+    env: "DONKEY_HEAVY",
+    calls: "calls/donkey-heavy",
+    funcs: "dk-heavy-funcs.txt",
+    every: true,
+};
+
 const ENV: &str = "DONKEY";
-const CALLS: &str = "calls/donkey";
-const FUNCS: &str = "dk-funcs.txt";
 
 fn var(what: &str) -> Option<String> {
     std::env::var(format!("{ENV}_{what}")).ok()
 }
 
-fn base() -> String {
-    var("CALLS").unwrap_or_else(|| melee_local_data::ssbm_rs_local(CALLS))
+fn base(set: Set) -> String {
+    std::env::var(format!("{}_CALLS", set.env))
+        .unwrap_or_else(|_| melee_local_data::ssbm_rs_local(set.calls))
 }
 
 /// `DONKEY_SRC=NAME` runs only NAME's saved calls, as saved and as its neighbours'.
@@ -60,8 +101,8 @@ fn trace() -> bool {
 }
 
 /// The capture sets, one per run.
-fn dirs() -> Vec<String> {
-    let Ok(entries) = std::fs::read_dir(base()) else {
+fn dirs(set: Set) -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir(base(set)) else {
         return Vec::new();
     };
     let mut v: Vec<String> = entries
@@ -74,8 +115,8 @@ fn dirs() -> Vec<String> {
 }
 
 /// The functions by address and name, from the list in the capture directory.
-fn functions() -> Vec<(u32, String)> {
-    let Ok(text) = std::fs::read_to_string(format!("{}/{FUNCS}", base())) else {
+fn functions(set: Set) -> Vec<(u32, String)> {
+    let Ok(text) = std::fs::read_to_string(format!("{}/{}", base(set), set.funcs)) else {
         return Vec::new();
     };
     text.lines()
@@ -133,6 +174,7 @@ const HELPERS: &[&str] = &[
 
 /// The functions that take more than a GObj, run from their own saved calls only.
 const TAKES_MORE: &[&str] = &[
+    "ftDk_MS_341_800DFAE4",
     "ftCo_8009B6C8",
     "ftCo_8009B9C8",
     "ftCo_8009C02C",
@@ -152,9 +194,11 @@ fn stubs() -> Vec<Stub> {
 }
 
 /// Which unit a function is in: Donkey Kong's callbacks, down, side, neutral and up specials;
-/// the cargo states, the shouldered states, the buried states; the throws and the rest.
+/// the cargo states, the shouldered states, the buried states; the heavy states (with the turn
+/// they share); the throws and the rest.
 fn unit(addr: u32) -> usize {
     match addr {
+        0x800D_F938..0x800E_0888 | 0x800C_9924 => 9,
         0x8010_D740..0x8010_DC80 => 0,
         0x8010_DC80..0x8010_E1C4 => 1,
         0x8010_E1C4..0x8010_E574 => 2,
@@ -167,7 +211,7 @@ fn unit(addr: u32) -> usize {
     }
 }
 
-const UNITS: usize = 9;
+const UNITS: usize = 10;
 
 fn name_of(addr: u32) -> String {
     ssbm_types::symbols::SYMBOLS
@@ -204,6 +248,14 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftCo_800C124C" => Some(|g, o| g.enter_bury_wait(o)),
         "ftCo_800C13BC" => Some(|g, o| g.enter_bury_jump(o)),
         "ftCo_Jump_Phys_Inner" => Some(|g, o| g.co_cargo_jump_phys(o)),
+        "ftDk_MS_341_800DF980" => Some(|g, o| g.enter_dk_heavy_wait(o)),
+        "ifSomething" => Some(|g, o| g.enter_dk_heavy_turn(o)),
+        "ftDk_MS_345_800E0294" => Some(|g, o| g.enter_dk_heavy_fall(o)),
+        "ftDk_MS_347_800E03C0" => Some(|g, o| g.enter_dk_heavy_jump(o)),
+        "ftDk_MS_346_800E05E4" => Some(|g, o| g.enter_dk_heavy_landing(o)),
+        "ftDk_MS_349_800E06D8" => Some(|g, o| g.dk_heavy_hit(o)),
+        "doSomething" => Some(|g, o| g.dk_heavy_hit_keep(o)),
+        "ftCo_Turn_Anim_Inner" => Some(|g, o| g.turn_anim_inner(o)),
         _ => None,
     };
     if let Some(f) = entry {
@@ -218,6 +270,19 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftCo_8009BF3C" => b(g.cargo_throw_check(gobj)),
         "ftCo_8009C4F8" => b(g.cargo_pass_check(gobj)),
         "ft_8008A1FC" => b(g.stick_not_forward(gobj)),
+        "ftDk_MS_341_800DF938" => b(g.dk_heavy_wait_check(gobj)),
+        "ftDk_MS_341_800DFA98" => b(g.dk_heavy_walk_check(gobj)),
+        "ftDk_MS_345_800E0134" => b(g.dk_heavy_turn_check(gobj)),
+        "ftDk_MS_347_800E0378" => b(g.dk_heavy_jump_check(gobj)),
+        "checkSomething" => b(g.dk_heavy_hit_keeps(gobj)),
+        "ftDk_MS_341_800DFAE4" => {
+            g.enter_dk_heavy_walk(gobj, f32::from_bits(gekko_fp::stfs(f1)));
+            Ret::Nothing
+        }
+        "ftDk_MS_348_800E04A4" => {
+            g.enter_dk_heavy_knee_bend(gobj, r4);
+            Ret::Nothing
+        }
         "ftCo_8009B6C8" => {
             g.enter_cargo_walk(gobj, f32::from_bits(gekko_fp::stfs(f1)));
             Ret::Nothing
@@ -312,6 +377,36 @@ fn vary(call: &mut Call, i: usize, visit: usize) {
             poke_u32(call, mv, [1, 2, 9][w(0) as usize % 3]);
             poke_f32(call, fp + 0x1A4C, [0.5, 30.0, 90.0][w(1) as usize % 3]);
         }
+        // Carrying a heavy item: the turn's turned flag (`x0`) and frames (`x10`), the knee
+        // bend's input (`x4`) and lag (`x8`), the landing's lag (`x4`, a float), and a hit's
+        // knockback (`dmg.kb_applied`) from none past the third level. A heavy walk (states
+        // 342 to 344) keeps its variables: the walk's animation reads its state's first one
+        // (`x4`) to find which walk it is, where the original reads a register its caller
+        // left, which no state but a walk's sets.
+        9 => {
+            poke_f32(
+                call,
+                fp + 0x1850,
+                [0.0, 30.0, 80.0, 250.0][w(0) as usize % 4],
+            );
+            // The knee bend's entry takes the jump's input (`ftCo_Jump_GetInput`'s 1 or 2).
+            call.regs.gpr[4] = 1 + w(1) % 2;
+            // X pressed (a jump) on every third run, and a fast fall on every other.
+            if w(2) % 3 == 0 {
+                poke_u32(call, fp + 0x668, pressed | 0x400);
+            }
+            poke_bit(call, fp + 0x221A, 4, w(3) % 2 == 1);
+            if (342..=344).contains(&peek_u32(call, fp + 0x10)) {
+                return;
+            }
+            poke_u32(call, mv, w(0) % 2);
+            match w(1) % 3 {
+                0 => poke_u32(call, mv + 4, 1 + w(1) % 2),
+                n => poke_f32(call, mv + 4, [0.0, 1.0, 3.0][n as usize]),
+            }
+            poke_f32(call, mv + 8, [0.0, 1.0, 2.0][w(2) as usize % 3]);
+            poke_f32(call, mv + 0x10, [0.0, 1.0, 4.0][w(3) as usize % 3]);
+        }
         _ => {}
     }
 }
@@ -326,14 +421,14 @@ fn tally(reports: &[Report], into: &mut BTreeMap<u32, usize>) {
 }
 
 /// Every saved call of each function, run as it was saved.
-fn as_saved(counts: &mut BTreeMap<u32, usize>) {
+fn as_saved(set: Set, counts: &mut BTreeMap<u32, usize>) {
     let s = stubs();
     let mut sets = Vec::new();
-    for (_, name) in functions() {
+    for (_, name) in functions(set) {
         if skipped(&name) || !wanted(&name) {
             continue;
         }
-        for dir in dirs() {
+        for dir in dirs(set) {
             let n = saved_calls(&dir, &name).len();
             if n > 0 {
                 sets.push((name.clone(), dir, n));
@@ -360,8 +455,8 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
 
 /// Each function run from the captures of its unit's other functions, with the controls and
 /// variables changed.
-fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
-    let funcs = functions();
+fn from_neighbours(set: Set, counts: &mut BTreeMap<u32, usize>) {
+    let funcs = functions(set);
     let s = stubs();
     for u in 0..UNITS {
         let usable = |n: &str| !skipped(n) && !TAKES_MORE.contains(&n);
@@ -378,7 +473,7 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
             if unit(*a) != u || !wanted(src) || !usable(src) {
                 continue;
             }
-            for dir in dirs() {
+            for dir in dirs(set) {
                 let n = saved_calls(&dir, src).len();
                 if n > 0 {
                     runs.push((src.clone(), dir, n));
@@ -389,8 +484,12 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
         if total == 0 {
             continue;
         }
-        // Enough rounds that every target runs from at least five states.
-        let rounds = (5 * targets.len()).div_ceil(total).max(1);
+        // Enough rounds that every target runs from at least five states, or from every one.
+        let rounds = if set.every {
+            targets.len()
+        } else {
+            (5 * targets.len()).div_ceil(total).max(1)
+        };
         let targets = &targets;
         let jobs: Vec<(usize, &(String, String, usize))> = runs.iter().enumerate().collect();
         let results = leaf_check::each_set(
@@ -437,14 +536,25 @@ const BLOCKED: &[(&str, &str)] = &[];
 /// unit's neighbours'.
 #[test]
 fn donkey_functions() {
-    let funcs = functions();
+    check_set(REPLAYS);
+}
+
+/// Every heavy-item state's function compares clean from some real state of the heavy-item
+/// matches: its own saved calls or its unit's neighbours'.
+#[test]
+fn donkey_heavy_functions() {
+    check_set(HEAVY);
+}
+
+fn check_set(set: Set) {
+    let funcs = functions(set);
     if funcs.is_empty() {
-        eprintln!("skipping: no function list in {}", base());
+        eprintln!("skipping: no function list in {}", base(set));
         return;
     }
     let mut counts = BTreeMap::new();
-    as_saved(&mut counts);
-    from_neighbours(&mut counts);
+    as_saved(set, &mut counts);
+    from_neighbours(set, &mut counts);
     let ours: Vec<&(u32, String)> = funcs.iter().filter(|(_, n)| !skipped(n)).collect();
     let missing: Vec<&str> = ours
         .iter()

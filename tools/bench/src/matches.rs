@@ -1038,6 +1038,46 @@ pub fn catch_set() -> Vec<Match> {
         .collect()
 }
 
+/// The fighters with items (docs/player.md, "Items toggle: what's left", task 4, part A): Donkey
+/// Kong carrying the heavy items in his own states. Two-minute matches at frequency very high,
+/// seeds `1F0F0Fxx`.
+pub fn fighters_set() -> Vec<Match> {
+    /// A match's name, stage, characters, switch kinds and seed.
+    type Fighters = (&'static str, u16, (u8, u8), &'static [u8], u32);
+    // The heavy items (box, barrel, Party Ball) and the barrel cannon.
+    const HEAVY: &[u8] = &[1, 2, 4, 5];
+    let matches: [Fighters; 2] = [
+        // Both players carry.
+        (
+            "items-dk-heavy-fd",
+            FINAL_DESTINATION,
+            (DONKEY_KONG, DONKEY_KONG),
+            HEAVY,
+            0x1F0F_0F01,
+        ),
+        (
+            "items-dk-heavy-bf",
+            BATTLEFIELD,
+            (DONKEY_KONG, MARTH),
+            HEAVY,
+            0x1F0F_0F02,
+        ),
+    ];
+    matches
+        .iter()
+        .map(|&(name, stage, (a, b), kinds, seed)| Match {
+            name: Cow::Borrowed(name),
+            stage,
+            players: Cow::Owned(vec![p(a, 0), p(b, 1)]),
+            seed,
+            rules: Rules::Time {
+                time_limit: ITEMS_TIME,
+            },
+            items: Items::only(FREQ_VERY_HIGH, kinds),
+        })
+        .collect()
+}
+
 /// The containers and the Freezie (kind 17), which a Topi pushes when Freezies are on.
 const CONTAINERS_AND_FREEZIE: [u8; 4] = [1, 2, 4, 17];
 
@@ -1157,6 +1197,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("pokemon", pokemon_set),
     ("monsters", monsters_set),
     ("catch", catch_set),
+    ("fighters", fighters_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every

@@ -681,7 +681,8 @@ impl Running<'_> {
             && lib26b1::is_heavy(self.game, self.data, item)
             && fp.x2222_b0
         {
-            unported_call("ftDk_MS_349_800E06D8 (hit carrying a heavy item)");
+            self.dk_heavy_hit(gobj);
+            return;
         }
         if self.down_damage_check(gobj) || self.bury_check(gobj) {
             return;

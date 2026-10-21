@@ -66,7 +66,7 @@ const HELD_FOLLOW: u32 = 0x800D_B464;
 
 impl Running<'_> {
     /// A float of the fighter's cargo attributes (`x2CC`).
-    fn cargo_attr_f32(&self, f: FighterId, off: usize) -> f32 {
+    pub(crate) fn cargo_attr_f32(&self, f: FighterId, off: usize) -> f32 {
         let a = self.game.fighters[f.0]
             .x2CC
             .expect("a cargo fighter without cargo attributes");
@@ -75,7 +75,7 @@ impl Running<'_> {
     }
 
     /// One of the carrier's states, `step` past the first.
-    fn cargo_state(&self, gobj: GObjId, step: i32) -> i32 {
+    pub(crate) fn cargo_state(&self, gobj: GObjId, step: i32) -> i32 {
         let f = self.game.fighter_id(gobj);
         let a = self.game.fighters[f.0]
             .x2CC

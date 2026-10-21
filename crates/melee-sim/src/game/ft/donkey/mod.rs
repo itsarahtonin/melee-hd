@@ -6,9 +6,10 @@
 //! A state's variables live in the fighter's `mv` union (`ftDonkey_MotionVars`), the Giant
 //! Punch's swings in `u` (`ftDonkey_FighterVars`), and the character's attributes
 //! (`ftDonkeyAttributes`) in the fighter's attribute block, all read at the decomp's offsets.
-//! His heavy-item states (`ftdonkeyheavy*.c`, 341 to 350) are reached only by carrying a crate
-//! or barrel, which no item-free match does, and aren't ported.
+//! Carrying a heavy item runs his own heavy states (`heavy`, 341 to 350), counted from the same
+//! first state.
 
+pub mod heavy;
 pub mod init;
 pub mod special_hi;
 pub mod special_lw;
@@ -220,7 +221,8 @@ impl Running<'_> {
 /// Runs one of Donkey Kong's callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr` is
 /// one.
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
-    init::run(g, gobj, addr)
+    heavy::run(g, gobj, addr)
+        || init::run(g, gobj, addr)
         || special_n::run(g, gobj, addr)
         || special_s::run(g, gobj, addr)
         || special_hi::run(g, gobj, addr)

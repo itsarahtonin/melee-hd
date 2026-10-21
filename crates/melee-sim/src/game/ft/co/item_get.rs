@@ -2,7 +2,6 @@
 //! item taken into the hand on the script's flag (a heavy one overhead, into carrying it), and
 //! its own pickup at the end.
 
-use super::super::super::code::unported_call;
 use super::super::super::handles::CodeRef;
 use super::super::super::it::lib26b1;
 use super::super::super::state::Running;
@@ -125,9 +124,10 @@ impl Running<'_> {
                 }
             } else {
                 if fp.x2222_b0 {
-                    unported_call("ftDk_MS_341_800DF980 (Donkey Kong carrying a heavy item)");
+                    self.enter_dk_heavy_wait(gobj);
+                } else {
+                    self.enter_lift_wait(gobj);
                 }
-                self.enter_lift_wait(gobj);
                 return;
             }
         }
