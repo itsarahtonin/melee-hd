@@ -1,18 +1,20 @@
 //! The Freezie, `melee/it/kinds/itfreeze.c`: it falls, then slides along the ground, faster
-//! downhill, turning at walls; thrown, it breaks on what it touches. Icicle Mountain's
-//! Topis push it (states 4 and 5, through `itFreeze_ItemVars::unk_1C`).
+//! downhill, turning at walls; thrown, it breaks on what it touches. Topis push it (states 4
+//! and 5, through `itFreeze_ItemVars::unk_1C`): Icicle Mountain's, and with the Freezie on, the
+//! containers' ([`spawn_pushed`]).
 
 use gekko_fp as fp;
 
 use super::super::ground::{air_touches, fall_to_floor, ground_or_fall};
-use super::super::item::{article, change, change_state};
+use super::super::item::{article, change, change_state, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::state::Running;
+use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::mp::coll::{FLOOR_HUG, FLOOR_PUSH};
+use crate::vec::Vec3;
 
 pub const DESTROYED: u32 = 0x8028_ED10;
 pub const SPAWNED: u32 = 0x8028_ED50;
@@ -86,12 +88,92 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
     r.data.f32(a.at(off))
 }
 
-/// Lets go of the Topi pushing it (`it_802E37A4`), if one is.
+/// Lets go of the Topi pushing it, if one is (the inline `itFreeze_ClearLinkedItem`): the Topi
+/// forgets it (`it_802E37A4`), and it the Topi.
 fn release_pusher(r: &mut Running, gobj: GObjId) {
     let v = item_mut(r.game, gobj).xDD4_itemVar.freeze();
-    if v.unk_1C.get().is_some() {
-        code::unported_call("it_802E37A4 (a Topi letting go of a Freezie)");
+    if let Some(topi) = v.unk_1C.get() {
+        super::oldottosea::forget_freezie(r, topi);
+        item_mut(r.game, gobj)
+            .xDD4_itemVar
+            .freeze()
+            .unk_1C
+            .set(None);
     }
+}
+
+/// A Freezie a Topi pushes, `it_8028EB88`: made in the air from `pos` toward the Topi's
+/// position, facing `facing`, no parent; set up as any Freezie (again, after its own
+/// setup), then pushed (`decel` its deceleration, [`start_pushed`]).
+#[doc(alias = "it_8028EB88")]
+pub fn spawn_pushed(
+    r: &mut Running,
+    topi: GObjId,
+    pos: Vec3,
+    facing: f32,
+    decel: f32,
+) -> Option<GObjId> {
+    let mut spawn = SpawnItem {
+        kind: super::FREEZE,
+        ..SpawnItem::default()
+    };
+    spawn.prev_pos = pos;
+    spawn.pos = item(r.game, topi).pos;
+    // `Item_InitSpawnCommonFields(&spawn, NULL, facing_dir, true)`.
+    spawn.facing_dir = facing;
+    spawn.x3C_damage = 0;
+    spawn.vel = Vec3::new(0.0, 0.0, 0.0);
+    spawn.x0_parent_gobj = None;
+    spawn.x4_parent_gobj2 = spawn.x0_parent_gobj;
+    spawn.x44_flag[0] |= 0x80;
+    spawn.x40 = 0;
+    let gobj = spawn_air(r, &mut spawn)?;
+    spawned(r, gobj);
+    start_pushed(r, gobj, decel, Some(topi));
+    Some(gobj)
+}
+
+/// Pushed by `topi`, `it_8028F434`: stopped, slowing by `decel`'s size, pickable, on the
+/// ground, state 4.
+#[doc(alias = "it_8028F434")]
+pub fn start_pushed(r: &mut Running, gobj: GObjId, decel: f32, topi: Option<GObjId>) {
+    let ip = item_mut(r.game, gobj);
+    ip.x40_vel.z = 0.0;
+    ip.x40_vel.y = 0.0;
+    ip.x40_vel.x = 0.0;
+    let decel = abs(reg(decel));
+    let v = ip.xDD4_itemVar.freeze();
+    v.x14.set(mem(decel));
+    v.unk_1C.set(topi);
+    lib26b1::enable_pickup(r.game, gobj);
+    maplib::enter_ground(item_mut(r.game, gobj));
+    change_state(r, gobj, 4, change::ANIM_UPDATE);
+}
+
+/// The Topi hands the Freezie a speed, `it_8028EC98`, which its push takes on its next frame,
+/// and its life starts over at the items' common lifetime.
+#[doc(alias = "it_8028EC98")]
+pub fn hand_speed(r: &mut Running, gobj: GObjId, vel: f32) {
+    item_mut(r.game, gobj).xDD4_itemVar.freeze().x10.set(vel);
+    let life =
+        super::super::item::common_data(r.game).u32(r.data, super::super::data::common::LIFETIME);
+    lib2725::set_lifetime(r.game, r.data, gobj, mem(fp::frsp(f64::from(life as i32))));
+}
+
+/// The Topi lets go, `it_8028ECE0`: the Freezie forgets it.
+#[doc(alias = "it_8028ECE0")]
+pub fn let_go(r: &mut Running, gobj: GObjId) {
+    item_mut(r.game, gobj)
+        .xDD4_itemVar
+        .freeze()
+        .unk_1C
+        .set(None);
+}
+
+/// The Freezie's position, `it_8028ECF0`.
+#[doc(alias = "it_8028ECF0")]
+pub fn position(r: &Running, gobj: GObjId) -> Vec3 {
+    item(r.game, gobj).pos
 }
 
 /// `itFreeze_Logic17_Destroyed`: lets go of the Topi pushing it.

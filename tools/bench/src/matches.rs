@@ -810,29 +810,85 @@ const CONTAINERS: [u8; 3] = [1, 2, 4];
 /// (`melee-bench seed-search`); each match's seed is one the search found to release the
 /// monsters it is named for. Two-minute time matches.
 pub fn monsters_set() -> Vec<Match> {
-    /// A match's name, stage, characters and seed.
-    type Monster = (&'static str, u16, (u8, u8), u32);
+    /// A match's name, stage, characters, seed and item kinds.
+    type Monster = (&'static str, u16, (u8, u8), u32, &'static [u8]);
     const FD: (u8, u8) = (MARIO, LINK);
     const BF: (u8, u8) = (FOX, SAMUS);
     const PS: (u8, u8) = (PEACH, GANONDORF);
     // The seeds `seed-search` found, the first monster coming out at the frame noted.
-    let matches: [Monster; 8] = [
+    let matches: [Monster; 9] = [
         // 752 and 1087.
-        ("monsters-redead-fd", FINAL_DESTINATION, FD, 0x1F0F_08D8),
-        ("monsters-redead-bf", BATTLEFIELD, BF, 0x1F0F_0B4C),
+        (
+            "monsters-redead-fd",
+            FINAL_DESTINATION,
+            FD,
+            0x1F0F_08D8,
+            &CONTAINERS,
+        ),
+        (
+            "monsters-redead-bf",
+            BATTLEFIELD,
+            BF,
+            0x1F0F_0B4C,
+            &CONTAINERS,
+        ),
         // 1204 and 1438.
-        ("monsters-goomba-fd", FINAL_DESTINATION, FD, 0x1F0F_0809),
-        ("monsters-goomba-ps", POKEMON_STADIUM, PS, 0x1F0F_0D6D),
+        (
+            "monsters-goomba-fd",
+            FINAL_DESTINATION,
+            FD,
+            0x1F0F_0809,
+            &CONTAINERS,
+        ),
+        (
+            "monsters-goomba-ps",
+            POKEMON_STADIUM,
+            PS,
+            0x1F0F_0D6D,
+            &CONTAINERS,
+        ),
         // 553 and 1080.
-        ("monsters-octorok-ps", POKEMON_STADIUM, PS, 0x1F0F_0D16),
-        ("monsters-octorok-bf", BATTLEFIELD, BF, 0x1F0F_0B33),
+        (
+            "monsters-octorok-ps",
+            POKEMON_STADIUM,
+            PS,
+            0x1F0F_0D16,
+            &CONTAINERS,
+        ),
+        (
+            "monsters-octorok-bf",
+            BATTLEFIELD,
+            BF,
+            0x1F0F_0B33,
+            &CONTAINERS,
+        ),
         // 892 and 2018.
-        ("monsters-ottosea-fd", FINAL_DESTINATION, FD, 0x1F0F_08C3),
-        ("monsters-ottosea-bf", BATTLEFIELD, BF, 0x1F0F_0B0D),
+        (
+            "monsters-ottosea-fd",
+            FINAL_DESTINATION,
+            FD,
+            0x1F0F_08C3,
+            &CONTAINERS,
+        ),
+        (
+            "monsters-ottosea-bf",
+            BATTLEFIELD,
+            BF,
+            0x1F0F_0B0D,
+            &CONTAINERS,
+        ),
+        // With Freezies on, a Topi pushing one (`seed-search --watch 17:4`), 2603.
+        (
+            "monsters-ottosea-freezie-fd",
+            FINAL_DESTINATION,
+            FD,
+            FREEZIE_SEED,
+            &CONTAINERS_AND_FREEZIE,
+        ),
     ];
     matches
         .iter()
-        .map(|&(name, stage, (a, b), seed)| {
+        .map(|&(name, stage, (a, b), seed, kinds)| {
             let o = |character| Player {
                 character,
                 costume: 0,
@@ -846,11 +902,17 @@ pub fn monsters_set() -> Vec<Match> {
                 rules: Rules::Time {
                     time_limit: ITEMS_TIME,
                 },
-                items: Items::only(FREQ_VERY_HIGH, &CONTAINERS),
+                items: Items::only(FREQ_VERY_HIGH, kinds),
             }
         })
         .collect()
 }
+
+/// The containers and the Freezie (kind 17), which a Topi pushes when Freezies are on.
+const CONTAINERS_AND_FREEZIE: [u8; 4] = [1, 2, 4, 17];
+
+/// The Topi-with-a-Freezie match's seed.
+const FREEZIE_SEED: u32 = 0x1F0F_10D7;
 
 /// The VS stages besides the tournament stages, with match names; the moving stages are marked.
 const OTHER_STAGES: [(u16, &str, bool); 23] = [
@@ -1558,7 +1620,11 @@ mod tests {
             assert!(m.human_ports().is_empty() && m.humans_only(), "{}", m.name);
             assert!(m.script().is_some());
             assert_eq!(m.items.freq, FREQ_VERY_HIGH);
-            assert_eq!(m.items.kinds(), CONTAINERS);
+            if m.name.contains("freezie") {
+                assert_eq!(m.items.kinds(), CONTAINERS_AND_FREEZIE);
+            } else {
+                assert_eq!(m.items.kinds(), CONTAINERS);
+            }
         }
     }
 

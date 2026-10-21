@@ -286,6 +286,21 @@ impl Unlocks {
     }
 }
 
+/// Whether the language setting is Japanese, `lbLang_IsSettingJP`. The boot sets it from the
+/// disc (`gmMainLib_8015FBA4`: English where the disc has `usa.ini`, as the US disc does) and
+/// nothing changes it afterwards, unlike the saved language ([`Unlocks::is_jp`]).
+#[doc(alias = "lbLang_IsSettingJP")]
+pub const fn language_setting_is_jp() -> bool {
+    false
+}
+
+/// Whether the language setting is English, `lbLang_IsSettingUS` (see
+/// [`language_setting_is_jp`]).
+#[doc(alias = "lbLang_IsSettingUS")]
+pub const fn language_setting_is_us() -> bool {
+    true
+}
+
 /// Whether the game mode is Super Sudden Death, `gm_8016B3A0`.
 #[doc(alias = "gm_8016B3A0")]
 pub fn is_super_sudden_death(game: &Game) -> bool {

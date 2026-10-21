@@ -1,9 +1,11 @@
-//! `melee-bench seed-search MATCH FROM COUNT [--jobs N] [--codes REPLAY.slp] [--record DIR]`:
-//! plays an oracle set's scripted match (every player a walker or an opener, so no CPU AI plays)
-//! with the seeds `FROM` to `FROM + COUNT - 1`, headless, and prints how far each got: to the
-//! match's end, or the unported code it stopped at. It finds the seeds whose matches reach
-//! something rare, such as a container's monster, which ssbm-rs then records and traces as the
-//! oracle (`docs/oracle.md`, "Oracle sets").
+//! `melee-bench seed-search MATCH FROM COUNT [--jobs N] [--codes REPLAY.slp] [--record DIR]
+//! [--watch KIND[:STATE]]...`: plays an oracle set's scripted match (every player a walker or an
+//! opener, so no CPU AI plays) with the seeds `FROM` to `FROM + COUNT - 1`, headless, and prints
+//! how far each got: to the match's end, or the unported code it stopped at. It finds the seeds
+//! whose matches reach something rare, such as a container's monster, which ssbm-rs then records
+//! and traces as the oracle (`docs/oracle.md`, "Oracle sets"). Once the rare thing is ported,
+//! `--watch` names it instead: an item of kind `KIND` (in state `STATE`, if given), each match
+//! printing the frame each watched item first appears and stopping once all have.
 //!
 //! Each match is played as Slippi's playback plays its recording would be: the match's
 //! `StartMeleeData` and seed as the generator's codes set them, the code list of a recording
@@ -85,6 +87,18 @@ struct Outcome {
     seed: u32,
     frame: i32,
     stopped: Option<String>,
+    /// The frame each watched item first appeared, if it did.
+    seen: Vec<Option<i32>>,
+}
+
+/// An item to watch for: its kind, and its state if one is named.
+type Watch = (i32, Option<i32>);
+
+fn parse_watch(s: &str) -> Option<Watch> {
+    match s.split_once(':') {
+        Some((k, st)) => Some((k.parse().ok()?, Some(st.parse().ok()?))),
+        None => Some((s.parse().ok()?, None)),
+    }
 }
 
 /// The disc's files, read once per thread.
@@ -118,8 +132,14 @@ fn panic_text(p: &Box<dyn std::any::Any + Send>) -> String {
         .unwrap_or_else(|| "a panic".into())
 }
 
-/// Plays `m` to its end or its first stop.
-fn play(m: &Match, codes: &Replay, files: &mut Files, record: Option<&Path>) -> Outcome {
+/// Plays `m` to its end or its first stop, or until every item in `watch` has appeared.
+fn play(
+    m: &Match,
+    codes: &Replay,
+    files: &mut Files,
+    record: Option<&Path>,
+    watch: &[Watch],
+) -> Outcome {
     let base = melee_slippi::start(codes);
     let start = ReplayStart {
         info: m.start_data(),
@@ -156,16 +176,31 @@ fn play(m: &Match, codes: &Replay, files: &mut Files, record: Option<&Path>) -> 
                 seed: m.seed,
                 frame: FIRST_FRAME - 1,
                 stopped: Some(format!("starting the match: {}", panic_text(&p))),
+                seen: vec![None; watch.len()],
             };
         }
     };
     let mut stopped = None;
+    let mut seen = vec![None; watch.len()];
     loop {
         match catch_unwind(AssertUnwindSafe(|| sim.step_replay(&mut source))) {
             Ok(out) => {
                 let ended = out.ended;
                 sim.recycle(out);
-                if ended || frame(&sim) > source.last {
+                let f = frame(&sim);
+                for (w, at) in watch.iter().zip(seen.iter_mut()) {
+                    if at.is_none()
+                        && sim.game.items.iter().any(|(_, ip)| {
+                            ip.entity.is_some()
+                                && ip.kind == w.0
+                                && w.1.is_none_or(|st| ip.msid == st)
+                        })
+                    {
+                        *at = Some(f);
+                    }
+                }
+                let all_seen = !watch.is_empty() && seen.iter().all(Option::is_some);
+                if ended || all_seen || f > source.last {
                     break;
                 }
             }
@@ -183,6 +218,7 @@ fn play(m: &Match, codes: &Replay, files: &mut Files, record: Option<&Path>) -> 
         seed: m.seed,
         frame: frame(&sim),
         stopped,
+        seen,
     }
 }
 
@@ -221,7 +257,7 @@ pub fn record(args: &[String]) -> ExitCode {
                     disc: Disc::open(&disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}")),
                     cache: HashMap::new(),
                 };
-                play(&m, &codes, &mut files, Some(&out))
+                play(&m, &codes, &mut files, Some(&out), &[])
             })
             .unwrap()
             .join()
@@ -280,6 +316,7 @@ pub fn main(args: &[String]) -> ExitCode {
     let mut jobs = 4usize;
     let mut codes = None;
     let mut record = None;
+    let mut watch = Vec::new();
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(a) = it.next() {
@@ -287,6 +324,11 @@ pub fn main(args: &[String]) -> ExitCode {
             "--jobs" => jobs = it.next().and_then(|n| n.parse().ok()).expect("--jobs N"),
             "--codes" => codes = it.next().map(PathBuf::from),
             "--record" => record = it.next().map(PathBuf::from),
+            "--watch" => watch.push(
+                it.next()
+                    .and_then(|w| parse_watch(w))
+                    .expect("--watch KIND[:STATE]"),
+            ),
             _ => pos.push(a.clone()),
         }
     }
@@ -296,7 +338,7 @@ pub fn main(args: &[String]) -> ExitCode {
         pos.get(2).and_then(|s| s.parse::<u32>().ok()),
     ) else {
         eprintln!(
-            "usage: melee-bench seed-search MATCH FROM COUNT [--jobs N] [--codes REPLAY.slp] [--record DIR]"
+            "usage: melee-bench seed-search MATCH FROM COUNT [--jobs N] [--codes REPLAY.slp] [--record DIR] [--watch KIND[:STATE]]..."
         );
         return ExitCode::from(2);
     };
@@ -315,8 +357,9 @@ pub fn main(args: &[String]) -> ExitCode {
     let results = Mutex::new(Vec::new());
     std::thread::scope(|s| {
         for _ in 0..jobs.max(1) {
-            let (template, codes, record, next, results, disc_path) =
-                (&template, &codes, &record, &next, &results, &disc_path);
+            let (template, codes, record, next, results, disc_path, watch) = (
+                &template, &codes, &record, &next, &results, &disc_path, &watch,
+            );
             std::thread::Builder::new()
                 .stack_size(STACK)
                 .spawn_scoped(s, move || {
@@ -339,9 +382,17 @@ pub fn main(args: &[String]) -> ExitCode {
                         let path = record
                             .as_ref()
                             .map(|d| d.join(format!("{:08x}.slp", m.seed)));
-                        let o = play(&m, codes, &mut files, path.as_deref());
+                        let o = play(&m, codes, &mut files, path.as_deref(), watch);
+                        let seen: String = watch
+                            .iter()
+                            .zip(&o.seen)
+                            .filter_map(|(w, at)| {
+                                let st = w.1.map_or(String::new(), |s| format!(":{s}"));
+                                at.map(|f| format!("\t{}{st} at {f}", w.0))
+                            })
+                            .collect();
                         println!(
-                            "{:#010x}\t{}\t{}",
+                            "{:#010x}\t{}\t{}{seen}",
                             o.seed,
                             o.frame,
                             o.stopped.as_deref().unwrap_or("played to its end")

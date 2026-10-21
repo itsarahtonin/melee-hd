@@ -94,6 +94,7 @@ pub mod nessyoyo;
 pub mod octarock;
 pub mod octarockstone;
 pub mod oldkuri;
+pub mod oldottosea;
 pub mod parasol;
 pub mod peachexplode;
 pub mod peachparasol;
@@ -239,6 +240,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || oldkuri::run_event(r, gobj, addr)
         || leadead::run_event(r, gobj, addr)
         || octarock::run_event(r, gobj, addr)
+        || oldottosea::run_event(r, gobj, addr)
         || octarockstone::run_event(r, gobj, addr)
         || koopaflame::run_event(r, gobj, addr)
         || gamewatchgreenhouse::run_event(r, gobj, addr)
@@ -385,6 +387,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| oldkuri::run_pred(r, gobj, addr))
         .or_else(|| leadead::run_pred(r, gobj, addr))
         .or_else(|| octarock::run_pred(r, gobj, addr))
+        .or_else(|| oldottosea::run_pred(r, gobj, addr))
         .or_else(|| octarockstone::run_pred(r, gobj, addr))
         .or_else(|| koopaflame::run_pred(r, gobj, addr))
         .or_else(|| gamewatchgreenhouse::run_pred(r, gobj, addr))

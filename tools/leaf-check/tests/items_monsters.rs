@@ -1,5 +1,6 @@
 //! The containers' monsters (the Goomba, ReDead, Octorok and Topi: `melee/it/kinds/itoldkuri.c`,
-//! `itleadead.c`, `itoctarock.c`, `itoctarockstone.c`, `itoldottosea.c`), the enemies' common
+//! `itleadead.c`, `itoctarock.c`, `itoctarockstone.c`, `itoldottosea.c` and Topi's part of
+//! `itwhitebea.c`, with the Freezie's code a Topi reaches), the enemies' common
 //! code they share (`melee/it/itzako.c`), the fighter held by a ReDead (`ftCo_800C7590.c` and
 //! `ftCo_800C7434.c`'s damage callbacks) and the item engine's pieces they reach, against
 //! ssbm-rs's ports, from real game states: every saved call of one of these functions is
@@ -21,7 +22,9 @@
 //!   --port all --lockstep
 //! ```
 //!
-//! The sets are packed (`pack-calls`).
+//! The Topi matches' runs (`monsters-ottosea-*`) use `items-monsters-funcs-topi.txt` and
+//! `done-nonmonsters-topi.txt` instead, which add Topi's part of `itwhitebea.c` and the
+//! Freezie's code a Topi reaches. The sets are packed (`pack-calls`).
 
 use std::collections::BTreeMap;
 
@@ -32,7 +35,9 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
-use melee_sim::game::it::kinds::{self, leadead, octarock, octarockstone, oldkuri};
+use melee_sim::game::it::kinds::{
+    self, freeze, leadead, octarock, octarockstone, oldkuri, oldottosea,
+};
 use melee_sim::game::it::{self, CLASS_ITEM, zako};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -69,12 +74,21 @@ fn stubs() -> Vec<Stub> {
     v
 }
 
-/// The functions by address and name, from the list in the capture directory, but those melee-hd
-/// doesn't port ([`UNPORTED`]) and those other checks cover ([`ELSEWHERE`]).
+/// The functions by address and name, from the lists in the capture directory
+/// (`items-monsters-funcs*.txt`: the first runs' and the Topi runs', which add Topi's part of
+/// `itwhitebea.c` and the Freezie's code a Topi reaches), but those melee-hd doesn't port
+/// ([`UNPORTED`]) and those other checks cover ([`ELSEWHERE`]).
 fn functions() -> Vec<(u32, String)> {
-    let Ok(text) = std::fs::read_to_string(format!("{}/items-monsters-funcs.txt", base())) else {
+    let Ok(entries) = std::fs::read_dir(base()) else {
         return Vec::new();
     };
+    let mut text = String::new();
+    for e in entries.filter_map(|e| e.ok()) {
+        let name = e.file_name().to_string_lossy().into_owned();
+        if name.starts_with("items-monsters-funcs") && name.ends_with(".txt") {
+            text += &std::fs::read_to_string(e.path()).unwrap_or_default();
+        }
+    }
     let mut v: Vec<(u32, String)> = text
         .lines()
         .filter_map(|l| {
@@ -120,17 +134,12 @@ const ELSEWHERE: &[&str] = &[
 
 /// The monsters not ported yet, by their functions' name prefixes; each comes off as its unit
 /// lands.
-const PENDING: &[&str] = &[
-    "itOldottosea",
-    "it_802E2",
-    "it_802E3",
-    "it_2725_Logic8",
-    "it_2725_Logic3",
-];
+const PENDING: &[&str] = &[];
 
 /// The units whose functions run from each other's captures, by their address ranges, and
 /// whether they take a fighter: the enemies' common code, the ReDead, its hold (with
-/// `ftCo_800C7434.c`'s damage callbacks beside it), the Goomba, the Octorok and its stone.
+/// `ftCo_800C7434.c`'s damage callbacks beside it), the Goomba, the Octorok and its stone, Topi,
+/// and the Freezie's code a Topi reaches.
 const UNITS: &[(u32, u32, bool)] = &[
     (0x8027_B5B0, 0x8027_CE64, false),
     (0x802E_8BCC, 0x802E_AF4C, false),
@@ -138,6 +147,8 @@ const UNITS: &[(u32, u32, bool)] = &[
     (0x802D_73D0, 0x802D_84F8, false),
     (0x802E_4A44, 0x802E_5AC4, false),
     (0x802E_878C, 0x802E_8BCC, false),
+    (0x802E_2470, 0x802E_37BC, false),
+    (0x8028_EB88, 0x8028_F8C4, false),
 ];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
@@ -151,7 +162,14 @@ fn unit(addr: u32) -> Option<usize> {
 /// ReDead's release when its fighter is hit needs a ReDead holding one): they run inside the
 /// callers that call them, whose comparisons cover them (`fn_800C74CC` and `fn_800C7568` for
 /// `it_802EADD8`).
-const HELPERS: &[&str] = &["it_8027BB1C", "it_8026C100", "it_8026BC90", "it_802EADD8"];
+const HELPERS: &[&str] = &[
+    "it_8027BB1C",
+    "it_8026C100",
+    "it_8026BC90",
+    "it_802EADD8",
+    "it_8028ECE0",
+    "it_8028ECF0",
+];
 
 fn name_of(addr: u32) -> String {
     ssbm_types::symbols::SYMBOLS
@@ -184,6 +202,10 @@ fn kind_check(g: &Running, gobj: GObjId, a: u32) {
         // The stone's spawn takes the Octorok that spits it.
         Some(5) if name_of(a) == "it_802E8ADC" => kind == kinds::OCTAROCK,
         Some(5) => kind == kinds::OCTAROCK_STONE,
+        Some(6) => kind == kinds::OTTOSEA,
+        // The pushed Freezie's spawn takes the Topi that pushes it.
+        Some(7) if name_of(a) == "it_8028EB88" => kind == kinds::OTTOSEA,
+        Some(7) => kind == kinds::FREEZE,
         _ => true,
     };
     if !ok {
@@ -415,6 +437,27 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802E5944" => octarock::forget_bone(g, gobj),
         "it_802E5AA4" => octarock::forget(g, gobj, Some(other(4))),
         "itOctarockstone_802E883C" => octarockstone::fly(g, gobj),
+        "it_802E269C" => oldottosea::stand(g, gobj),
+        "it_802E27B4" => oldottosea::walk(g, gobj),
+        "it_802E2BC0" => oldottosea::fall(g, gobj),
+        "it_802E2C80" => oldottosea::knocked_back(g, gobj),
+        "it_802E2DF4" => oldottosea::landed_knocked(g, gobj),
+        "it_802E2E30" => oldottosea::charge(g, gobj),
+        "it_802E3098" => oldottosea::turn(g, gobj),
+        "it_802E3400" => oldottosea::fling(g, gobj),
+        "it_802E3528" => oldottosea::fling_to_screen(g, gobj),
+        "it_802E35CC" => return b(oldottosea::watch(g, gobj)),
+        "it_802E37A4" => oldottosea::forget_freezie(g, gobj),
+        "it_802E3784" => oldottosea::forget(g, gobj, Some(other(4))),
+        "it_8028EB88" => {
+            let pos = vec_at(r(4));
+            // The new Freezie compares with the rest of the state; its address, which the
+            // import can't know, compares where the walk keeps it (`it_802E27B4`).
+            let _ = freeze::spawn_pushed(g, gobj, pos, f(1) as f32, f(2) as f32);
+        }
+        "it_8028F7C8" => freeze::stopped(g, gobj),
+        "it_8028F434" => freeze::start_pushed(g, gobj, f(1) as f32, Some(other(4))),
+        "it_8028EC98" => freeze::hand_speed(g, gobj, f(1) as f32),
         "it_802E89D0" => octarockstone::aim(g, gobj, f(1) as f32, f(2) as f32, f(3) as f32),
         "it_802E8ADC" => {
             let pos = vec_at(r(4));
@@ -483,7 +526,11 @@ fn args(call: &mut Call, target: &str, k: usize) {
             poke_u32(call, ip + 0xCFC, fighter);
         }
         // The GObj going away: the first fighter.
-        "it_802D84D8" | "itOldKuri_Logic29_EvtUnk" | "it_802E5AA4" | "itOctarockstone_802E89B0" => {
+        "it_802D84D8"
+        | "itOldKuri_Logic29_EvtUnk"
+        | "it_802E5AA4"
+        | "itOctarockstone_802E89B0"
+        | "it_802E3784" => {
             let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
             call.regs.gpr[4] = peek_u32(call, heads + 4 * 8);
         }
@@ -525,6 +572,9 @@ fn skipped(name: &str) -> bool {
 /// Neighbours' calls can't be made ready for these: they take pointers or GObjs only their own
 /// callers give.
 const OWN_CALLS_ONLY: &[&str] = &[
+    "it_8028EB88",
+    "it_8028F434",
+    "it_8028EC98",
     "it_802E595C",
     "it_802E89D0",
     "it_802E8ADC",
@@ -654,6 +704,8 @@ const BLOCKED: &[(&str, &str)] = &[
     ("it_2725_Logic0_Thrown", NOT_HELD),
     ("itOctarock_Logic2_Dropped", NOT_HELD),
     ("itOctarock_Logic2_Thrown", NOT_HELD),
+    ("it_802E32B4", NOT_HELD),
+    ("it_802E3314", NOT_HELD),
 ];
 
 /// Why a held monster's functions are blocked.
