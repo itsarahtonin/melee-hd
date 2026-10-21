@@ -862,7 +862,7 @@ Run the suite as `cargo test --release -p leaf-check -- --test-threads=4`: cargo
 
 A few binaries run far longer than the rest (`cpu_vs` 85 minutes, `items` 36, `nana` 34 in the verification of b3a5321b), so they bound the whole run however many run beside them. `LEAF_CHECK_SHARD=K/N` runs the K-th of N shards of a binary (`leaf_check::shard`), each its own process, so the shards run side by side; the N shards together run exactly what the binary runs unsharded, each part once. Unset, a binary runs whole.
 
-A binary is cut into units, each a check with its own assertions, so no shard needs another's results: a whole test (`leaf_check::shard_test!()` at its start: `items`' 194 tests), or a test's own parts (`leaf_check::shard::units`: `cpu_vs_changed`'s 34 changes and `nana_tumble_and_shields`' 9, each asserting that it compared clean in some frame; `nana_cpu_frame`'s three variants; `cpu_vs_frame` whole). A test's unit `i` runs in shard `(hash(test) + i) mod N` (FNV-1a of the test's name): fixed by names, not by a list to keep up, so a new test or change lands in some shard, and a test's units spread from a shard its name picks. Each shard prints which units it runs. A new `items` test needs `shard_test!()` too, or every shard runs it.
+A binary is cut into units, each a check with its own assertions, so no shard needs another's results: a whole test (`leaf_check::shard_test!()` at its start: `items`' 194 tests), or a test's own parts (`leaf_check::shard::units`: `cpu_vs_changed`'s 36 changes and `nana_tumble_and_shields`' 9, each asserting that it compared clean in some frame; `nana_cpu_frame`'s three variants; `cpu_vs_frame` whole). A test's unit `i` runs in shard `(hash(test) + i) mod N` (FNV-1a of the test's name): fixed by names, not by a list to keep up, so a new test or change lands in some shard, and a test's units spread from a shard its name picks. Each shard prints which units it runs. A new `items` test needs `shard_test!()` too, or every shard runs it.
 
 `tools/leaf-check/shards.txt` lists the binaries the verification splits and into how many shards, each over about 20 minutes on its own: `cpu_vs` 6, `items` 3, `nana` 3. `leaf-select plan` lists every job with its environment ([selecting leaf-check jobs](#selecting-leaf-check-jobs)). From `tools/leaf-check`, as cargo runs a test binary:
 
@@ -872,7 +872,15 @@ for k in 1 2 3; do LEAF_CHECK_SHARD=$k/3 LEAF_CHECK_SETS=8 target/release/deps/i
 for k in 1 2 3; do LEAF_CHECK_SHARD=$k/3 target/release/deps/nana-HASH --test-threads=4; done
 ```
 
-On `items`' timed tests the hash splits its 4.0 hours of test time 4,759 / 4,840 / 5,064 seconds over three shards, each bound below by its longest test (14 minutes, `effect_router`); `cpu_vs`' fourth shard runs `cpu_vs_frame` (4.5 minutes) and six changes, the others five or six changes.
+On `items`' timed tests the hash splits its 4.0 hours of test time 4,759 / 4,840 / 5,064 seconds over three shards, each bound below by its longest test (14 minutes, `effect_router`); each of `cpu_vs`' six shards runs six changes, its fourth `cpu_vs_frame` (4.5 minutes) too.
+
+**The shards check what the binary checks** (2026-10-21, at b45accfe). Each binary ran whole and as its shards with `--nocapture`, three processes at a time on a machine other work kept busy. Every line of their checks' output that counts (each set's `N of M calls compared clean, K skipped` and its skipped reasons, each change's and variant's tally, `items`' `N captures agree` and their blocked lists, the round trips), sorted, came out the same whole and over the shards, but for one thread id in an unported function's panic message that `items`' `groundcoll` catches; every process passed.
+
+| Binary | Counted lines | Whole | Over the shards | Whole (wall) | Shards (wall each) |
+| --- | --- | --- | --- | --- | --- |
+| cpu_vs | 1,675 | 1,332 set lines, 278,406 calls compared clean; 36 change tallies summing 131,996 | the same | 152 min | 34, 32, 27, 36, 25, 32 min |
+| items | 1,320 | 1,303 checks, 14,207 captures agree | the same | 48 min | 17, 12, 9 min |
+| nana | 288 | 264 set lines, 91,728 calls compared clean; 12 change and variant tallies summing 35,534 | the same | 46 min | 22, 18, 17 min |
 
 ### Selecting leaf-check jobs
 
