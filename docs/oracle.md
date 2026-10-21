@@ -857,3 +857,19 @@ Each binary was timed before (`bb67b7e7`, two binaries running at a time) and af
 | **All 76, one after another** | **265.7 min / 306.8 min** | **128.2 min / 371.2 min** | **2.1x** | |
 
 Run the suite as `cargo test --release -p leaf-check -- --test-threads=4`: cargo runs the binaries one at a time, each with up to four tests at once, each test running its saved calls on `LEAF_CHECK_WORKERS` threads (2 by default, each with its own reference) and up to `LEAF_CHECK_SETS` sets at once. No binary depends on another, so they can also run side by side: `cargo test --release -p leaf-check --no-run` builds them, and each runs on its own from `tools/leaf-check`, as cargo runs it; the longest then bound the whole (`items`, whose tests each run one check at a time, goes faster with `--test-threads=8` and `LEAF_CHECK_SETS=8`). Memory, not cores, bounds it: most binaries peak under 4 GB of commit, `nana` and `ftcommon_entries` near 6 GB, `audio` near 9 GB (its crowd checks hold whole matches' audio state), and a pack's decompressed pages stay for the process (a few hundred MB per capture set).
+
+### leaf-check's shards
+
+A few binaries run far longer than the rest (`cpu_vs` 85 minutes, `items` 36, `nana` 34 in the verification of b3a5321b), so they bound the whole run however many run beside them. `LEAF_CHECK_SHARD=K/N` runs the K-th of N shards of a binary (`leaf_check::shard`), each its own process, so the shards run side by side; the N shards together run exactly what the binary runs unsharded, each part once. Unset, a binary runs whole.
+
+A binary is cut into units, each a check with its own assertions, so no shard needs another's results: a whole test (`leaf_check::shard_test!()` at its start: `items`' 194 tests), or a test's own parts (`leaf_check::shard::units`: `cpu_vs_changed`'s 34 changes and `nana_tumble_and_shields`' 9, each asserting that it compared clean in some frame; `nana_cpu_frame`'s three variants; `cpu_vs_frame` whole). A test's unit `i` runs in shard `(hash(test) + i) mod N` (FNV-1a of the test's name): fixed by names, not by a list to keep up, so a new test or change lands in some shard, and a test's units spread from a shard its name picks. Each shard prints which units it runs. A new `items` test needs `shard_test!()` too, or every shard runs it.
+
+`tools/leaf-check/shards.txt` lists the binaries the verification splits and into how many shards, each over about 20 minutes on its own: `cpu_vs` 6, `items` 3, `nana` 3. From `tools/leaf-check`, as cargo runs a test binary:
+
+```sh
+for k in 1 2 3 4 5 6; do LEAF_CHECK_SHARD=$k/6 target/release/deps/cpu_vs-HASH --test-threads=4; done   # each its own job
+for k in 1 2 3; do LEAF_CHECK_SHARD=$k/3 LEAF_CHECK_SETS=8 target/release/deps/items-HASH --test-threads=8; done
+for k in 1 2 3; do LEAF_CHECK_SHARD=$k/3 target/release/deps/nana-HASH --test-threads=4; done
+```
+
+On `items`' timed tests the hash splits its 4.0 hours of test time 4,759 / 4,840 / 5,064 seconds over three shards, each bound below by its longest test (14 minutes, `effect_router`); `cpu_vs`' fourth shard runs `cpu_vs_frame` (4.5 minutes) and six changes, the others five or six changes.

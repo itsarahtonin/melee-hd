@@ -441,6 +441,7 @@ fn compared(reports: &[Report], paths: &[std::path::PathBuf], changed: &BTreeSet
 /// Every saved frame compares clean as saved.
 #[test]
 fn cpu_vs_frame() {
+    leaf_check::shard_test!();
     leaf_check::run_as_machine_code();
     let dirs = dirs();
     let none = |_: &mut Call, _: usize| {};
@@ -510,11 +511,19 @@ fn changes() -> Vec<Change> {
 }
 
 /// The saved frames changed to reach what the replays don't: each changed frame compares
-/// clean, and each change compares clean in some frame.
+/// clean, and each change compares clean in some frame. Each change is a unit of the binary's
+/// shards ([`leaf_check::shard`]): its assertion needs only its own frames.
 #[test]
 fn cpu_vs_changed() {
     leaf_check::run_as_machine_code();
-    let changes = changes();
+    let all = changes();
+    let changes: Vec<Change> = leaf_check::shard::units("cpu_vs_changed", all.len())
+        .into_iter()
+        .map(|i| all[i])
+        .collect();
+    if changes.is_empty() {
+        return;
+    }
     let dirs = dirs();
     let per_dir = leaf_check::each_set(
         &dirs,

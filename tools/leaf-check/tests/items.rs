@@ -48,6 +48,9 @@
 //! ```
 //!
 //! The runner's mutated and mismatching saves aren't used and can be deleted.
+//!
+//! Each test starts with [`leaf_check::shard_test!`]: the binary runs as shards of whole tests
+//! (`LEAF_CHECK_SHARD`), and a new test needs it too, or every shard runs it.
 
 use melee_local_data::ssbm_rs_local;
 use std::path::PathBuf;
@@ -550,56 +553,67 @@ use melee_sim::game::it::{anim, coll, ground, hitbox, item, lib26b1, lib279c, li
 
 #[test]
 fn hitlag_proc() {
+    leaf_check::shard_test!();
     check_proc("Item_802693E4", item::proc_hitlag);
 }
 
 #[test]
 fn anim_proc() {
+    leaf_check::shard_test!();
     check_proc("Item_80269528", item::proc_anim);
 }
 
 #[test]
 fn phys_proc() {
+    leaf_check::shard_test!();
     check_proc("Item_802697D4", item::proc_phys);
 }
 
 #[test]
 fn coll_proc() {
+    leaf_check::shard_test!();
     check_proc("Item_80269978", item::proc_coll);
 }
 
 #[test]
 fn accessory_proc() {
+    leaf_check::shard_test!();
     check_proc("Item_80269A9C", item::proc_accessory);
 }
 
 #[test]
 fn jumped_on_proc() {
+    leaf_check::shard_test!();
     check_proc("Item_80269B60", item::proc_jumped_on);
 }
 
 #[test]
 fn grab_proc() {
+    leaf_check::shard_test!();
     check_proc("Item_80269BE4", item::proc_grab);
 }
 
 #[test]
 fn hit_proc() {
+    leaf_check::shard_test!();
     check_proc("Item_80269C5C", item::proc_hit);
 }
 
 #[test]
 fn react_proc() {
+    leaf_check::shard_test!();
     check_proc("Item_8026A294", item::proc_react);
 }
 
 #[test]
 fn dynamics_proc() {
+    leaf_check::shard_test!();
     check_proc("Item_8026A788", item::proc_dynamics);
 }
 
 #[test]
 fn spawn_air() {
+    leaf_check::shard_test!();
     check("Item_80268B18", &|r, a| {
         let mut spawn: SpawnItem = a.get(0);
         Ret::GObj(item::spawn_air(r, &mut spawn))
@@ -608,6 +622,7 @@ fn spawn_air() {
 
 #[test]
 fn create() {
+    leaf_check::shard_test!();
     check("Item_8026862C", &|r, a| {
         let spawn: SpawnItem = a.get(0);
         Ret::GObj(item::create(r, &spawn))
@@ -616,6 +631,7 @@ fn create() {
 
 #[test]
 fn hold_kind() {
+    leaf_check::shard_test!();
     check("Item_802674AC", &|_, a| {
         let spawn: SpawnItem = a.get(0);
         Ret::Words(a.int(0) + 0xC, vec![item::hold_kind_of(spawn.kind) as u32])
@@ -624,6 +640,7 @@ fn hold_kind() {
 
 #[test]
 fn init_position() {
+    leaf_check::shard_test!();
     check("Item_80267130", &|r, a| {
         let spawn: SpawnItem = a.get(1);
         item::init_position(r, a.gobj(0), &spawn);
@@ -633,6 +650,7 @@ fn init_position() {
 
 #[test]
 fn init_vars() {
+    leaf_check::shard_test!();
     check("Item_80267AA8", &|r, a| {
         let spawn: SpawnItem = a.get(1);
         item::init_vars(r, a.gobj(0), &spawn);
@@ -642,16 +660,19 @@ fn init_vars() {
 
 #[test]
 fn uncount() {
+    leaf_check::shard_test!();
     check_game("Item_802675A8", item::uncount);
 }
 
 #[test]
 fn count() {
+    leaf_check::shard_test!();
     check_game("Item_802676F4", item::count);
 }
 
 #[test]
 fn at_limit() {
+    leaf_check::shard_test!();
     check("Item_8026784C", &|r, a| {
         Ret::Bool(item::at_limit(r.game, a.int(0) as i32))
     });
@@ -659,6 +680,7 @@ fn at_limit() {
 
 #[test]
 fn set_kind_data() {
+    leaf_check::shard_test!();
     check("Item_80267978", &|r, a| {
         item::set_kind_data(r.game, r.data, a.gobj(0));
         Ret::None
@@ -667,11 +689,13 @@ fn set_kind_data() {
 
 #[test]
 fn set_material_class() {
+    leaf_check::shard_test!();
     check_game("Item_8026814C", item::set_material_class);
 }
 
 #[test]
 fn make_bone_table() {
+    leaf_check::shard_test!();
     check("Item_802682F0", &|r, a| {
         item::make_bone_table(r, a.gobj(0));
         Ret::Bool(true)
@@ -680,16 +704,19 @@ fn make_bone_table() {
 
 #[test]
 fn apply_scale() {
+    leaf_check::shard_test!();
     check_game("Item_8026849C", item::apply_scale);
 }
 
 #[test]
 fn init_dynamics() {
+    leaf_check::shard_test!();
     check_proc("Item_80268560", item::init_dynamics);
 }
 
 #[test]
 fn add_anims() {
+    leaf_check::shard_test!();
     check("Item_80268BE0", &|r, a| {
         item::add_anims(r, a.jobj(0), a.data(1), a.data(2), a.data(3), a.item(4));
         Ret::None
@@ -698,16 +725,19 @@ fn add_anims() {
 
 #[test]
 fn animate() {
+    leaf_check::shard_test!();
     check_proc("Item_802694CC", item::animate);
 }
 
 #[test]
 fn check_blast_zones() {
+    leaf_check::shard_test!();
     check_pred("Item_802696CC", item::check_blast_zones);
 }
 
 #[test]
 fn clear_hit_record() {
+    leaf_check::shard_test!();
     check("Item_80269CC4", &|r, a| {
         item::clear_hit_record(melee_sim::game::it::item_mut(r.game, a.gobj(0)));
         Ret::None
@@ -716,11 +746,13 @@ fn clear_hit_record() {
 
 #[test]
 fn on_spawned() {
+    leaf_check::shard_test!();
     check_proc("Item_8026A810", item::on_spawned);
 }
 
 #[test]
 fn play_sfx() {
+    leaf_check::shard_test!();
     check("Item_8026AE84", &|r, a| {
         let g = a.item_gobj(0);
         item::play_sfx(r, g, a.int(1) as i32, a.int(2) as u8, a.int(3) as u8);
@@ -730,6 +762,7 @@ fn play_sfx() {
 
 #[test]
 fn stop_sfx2() {
+    leaf_check::shard_test!();
     check("Item_8026B074", &|r, a| {
         let g = a.item_gobj(0);
         item::stop_sfx2(r, g);
@@ -739,6 +772,7 @@ fn stop_sfx2() {
 
 #[test]
 fn change_state() {
+    leaf_check::shard_test!();
     check("Item_80268E5C", &|r, a| {
         item::change_state(r, a.gobj(0), a.int(1) as i32, a.int(2));
         Ret::None
@@ -749,6 +783,7 @@ fn change_state() {
 
 #[test]
 fn attack_id() {
+    leaf_check::shard_test!();
     check("itGetAttackId", &|r, a| {
         Ret::Int(lib26b1::attack_id(r.game, a.gobj(0)) as u32)
     });
@@ -756,6 +791,7 @@ fn attack_id() {
 
 #[test]
 fn owner() {
+    leaf_check::shard_test!();
     check("itGetOwner", &|r, a| {
         Ret::GObj(lib26b1::owner(r.game, a.gobj(0)))
     });
@@ -763,16 +799,19 @@ fn owner() {
 
 #[test]
 fn enable_pickup() {
+    leaf_check::shard_test!();
     check_game("it_8026B390", lib26b1::enable_pickup);
 }
 
 #[test]
 fn disable_pickup() {
+    leaf_check::shard_test!();
     check_game("it_8026B3A8", lib26b1::disable_pickup);
 }
 
 #[test]
 fn ecb_center() {
+    leaf_check::shard_test!();
     check("it_8026BB88", &|r, a| {
         Ret::Words(a.int(1), vec_words(lib26b1::ecb_center(r.game, a.gobj(0))))
     });
@@ -780,6 +819,7 @@ fn ecb_center() {
 
 #[test]
 fn last_ecb_center() {
+    leaf_check::shard_test!();
     check("it_8026BBCC", &|r, a| {
         Ret::Words(
             a.int(1),
@@ -790,6 +830,7 @@ fn last_ecb_center() {
 
 #[test]
 fn is_stomp() {
+    leaf_check::shard_test!();
     check("it_8026BC68", &|r, a| {
         Ret::Bool(lib26b1::is_stomp(r.game, a.gobj(0)))
     });
@@ -797,11 +838,13 @@ fn is_stomp() {
 
 #[test]
 fn set_xdcd_b3() {
+    leaf_check::shard_test!();
     check_game("it_8026BD6C", lib26b1::set_xdcd_b3);
 }
 
 #[test]
 fn check_burst() {
+    leaf_check::shard_test!();
     check_proc("it_8026C368", lib26b1::check_burst);
 }
 
@@ -813,6 +856,7 @@ fn check_burst() {
 /// (`Item_80266F70`, with its archive's `it_8027870C`), which runs before the stage exists.
 #[test]
 fn debug_round_trips() {
+    leaf_check::shard_test!();
     leaf_check::calls::debug_round_trips(&calls_dir(), &|f| {
         matches!(
             f,
@@ -825,6 +869,7 @@ fn debug_round_trips() {
 
 #[test]
 fn stage_crossing() {
+    leaf_check::shard_test!();
     // The calls that ask for no normal (the shots'): the port gives the point alone.
     let no_normal = |c: &mut Call| c.regs.gpr[6] == 0;
     check_calls("it_8026E9A4", "it_8026E9A4", &no_normal, &|r, a| {
@@ -850,6 +895,7 @@ fn stage_crossing() {
 
 #[test]
 fn clear_damage_log() {
+    leaf_check::shard_test!();
     check("it_8026F9A0", &|r, _| {
         coll::clear_damage_log(r.game);
         Ret::None
@@ -858,6 +904,7 @@ fn clear_damage_log() {
 
 #[test]
 fn share_group_victims() {
+    leaf_check::shard_test!();
     check("it_8026FCF8", &|r, a| {
         let g = a.item_gobj(0);
         coll::share_group_victims(r.game, g, a.hitbox(1, a.int(0)));
@@ -867,16 +914,19 @@ fn share_group_victims() {
 
 #[test]
 fn hit_by_items() {
+    leaf_check::shard_test!();
     check_proc("it_802706D0", coll::hit_by_items);
 }
 
 #[test]
 fn take_hits() {
+    leaf_check::shard_test!();
     check_proc("it_80270E30", coll::take_hits);
 }
 
 #[test]
 fn update_hitbox() {
+    leaf_check::shard_test!();
     check("it_8027129C", &|r, a| {
         coll::update_hitbox(r.game, r.data, a.gobj(0), a.int(1) as usize);
         Ret::None
@@ -885,6 +935,7 @@ fn update_hitbox() {
 
 #[test]
 fn update_hitboxes() {
+    leaf_check::shard_test!();
     check("it_8027137C", &|r, a| {
         coll::update_hitboxes(r.game, r.data, a.gobj(0));
         Ret::None
@@ -893,16 +944,19 @@ fn update_hitboxes() {
 
 #[test]
 fn age_hit_victims() {
+    leaf_check::shard_test!();
     check_game("it_8027146C", coll::age_hit_victims);
 }
 
 #[test]
 fn refresh_hurtboxes() {
+    leaf_check::shard_test!();
     check_game("it_802714C0", coll::refresh_hurtboxes);
 }
 
 #[test]
 fn set_hurtbox_state() {
+    leaf_check::shard_test!();
     check("it_80271508", &|r, a| {
         coll::set_hurtbox_state(r.game, a.gobj(0), a.int(1) as i32);
         Ret::None
@@ -911,11 +965,13 @@ fn set_hurtbox_state() {
 
 #[test]
 fn init_hurtboxes() {
+    leaf_check::shard_test!();
     check_proc("it_8027163C", coll::init_hurtboxes);
 }
 
 #[test]
 fn rotate_ecb() {
+    leaf_check::shard_test!();
     check("it_80271830", &|r, a| {
         let ip = &mut r.game.items[a.item(0).0];
         coll::rotate_ecb(&mut ip.xBEC, a.float(0));
@@ -925,6 +981,7 @@ fn rotate_ecb() {
 
 #[test]
 fn update_ecb() {
+    leaf_check::shard_test!();
     check("it_80271A58", &|r, a| {
         coll::update_ecb(r.game, r.data, a.gobj(0));
         Ret::None
@@ -933,6 +990,7 @@ fn update_ecb() {
 
 #[test]
 fn keep_clear() {
+    leaf_check::shard_test!();
     check("it_802721B8", &|r, a| {
         coll::keep_clear(r.game, r.data, a.gobj(0));
         Ret::None
@@ -941,21 +999,25 @@ fn keep_clear() {
 
 #[test]
 fn clear_x1b() {
+    leaf_check::shard_test!();
     check_game("it_80272280", coll::clear_x1b);
 }
 
 #[test]
 fn set_x1b() {
+    leaf_check::shard_test!();
     check_game("it_80272298", coll::set_x1b);
 }
 
 #[test]
 fn track_fighters() {
+    leaf_check::shard_test!();
     check_game("it_802722B0", coll::track_fighters);
 }
 
 #[test]
 fn update_dynamics_points() {
+    leaf_check::shard_test!();
     check("it_80272304", &|r, a| {
         coll::update_dynamics_points(r.game, r.data, a.gobj(0));
         Ret::None
@@ -964,6 +1026,7 @@ fn update_dynamics_points() {
 
 #[test]
 fn set_hit_damage() {
+    leaf_check::shard_test!();
     check("it_80272460", &|r, a| {
         let g = a.gobj(2);
         let item = a.cap.u32(a.int(2) + 0x2C);
@@ -994,6 +1057,7 @@ fn set_hit_damage() {
 
 #[test]
 fn clear_hitboxes() {
+    leaf_check::shard_test!();
     check("it_802725D4", &|r, a| {
         lib2725::clear_hitboxes(r.game, r.data, a.gobj(0));
         Ret::None
@@ -1002,11 +1066,13 @@ fn clear_hitboxes() {
 
 #[test]
 fn show() {
+    leaf_check::shard_test!();
     check_game("it_80272940", lib2725::show);
 }
 
 #[test]
 fn bone() {
+    leaf_check::shard_test!();
     check("it_80272CC0", &|r, a| {
         Ret::JObj(lib2725::bone(r.game, r.data, a.gobj(0), a.int(1) as i32))
     });
@@ -1014,6 +1080,7 @@ fn bone() {
 
 #[test]
 fn set_uniform_scale() {
+    leaf_check::shard_test!();
     check("it_80272F7C", &|r, a| {
         lib2725::set_uniform_scale(r.game, a.jobj(0).expect("a joint"), a.float(0));
         Ret::None
@@ -1022,6 +1089,7 @@ fn set_uniform_scale() {
 
 #[test]
 fn tick_lifetime() {
+    leaf_check::shard_test!();
     check("it_80273130", &|r, a| {
         Ret::Bool(lib2725::tick_lifetime(r.game, a.gobj(0)))
     });
@@ -1029,11 +1097,13 @@ fn tick_lifetime() {
 
 #[test]
 fn pickup_sfx() {
+    leaf_check::shard_test!();
     check_proc("it_80273168", lib2725::pickup_sfx);
 }
 
 #[test]
 fn destroy_effect() {
+    leaf_check::shard_test!();
     // Without an effect (they wait for the effect port) or a sound (the audio driver's).
     let prep = |c: &mut Call| {
         c.regs.gpr[4] = u32::MAX;
@@ -1048,6 +1118,7 @@ fn destroy_effect() {
 
 #[test]
 fn play_sfx_unless_quiet() {
+    leaf_check::shard_test!();
     check("it_802732E4", &|r, a| {
         let g = a.item_gobj(0);
         lib2725::play_sfx(r, g, a.int(1) as i32);
@@ -1057,16 +1128,19 @@ fn play_sfx_unless_quiet() {
 
 #[test]
 fn clear_x64() {
+    leaf_check::shard_test!();
     check_game("it_8027346C", lib2725::clear_x64);
 }
 
 #[test]
 fn clear_x58() {
+    leaf_check::shard_test!();
     check_game("it_80273484", lib2725::clear_x58);
 }
 
 #[test]
 fn set_velocity() {
+    leaf_check::shard_test!();
     check("it_80273500", &|r, a| {
         lib2725::set_velocity(r.game, a.gobj(0), a.vec(1));
         Ret::None
@@ -1075,6 +1149,7 @@ fn set_velocity() {
 
 #[test]
 fn clamp_fall() {
+    leaf_check::shard_test!();
     check("it_80274658", &|r, a| {
         Ret::Int(lib2725::clamp_fall(r.game, a.gobj(0), a.float(0)) as u32)
     });
@@ -1082,6 +1157,7 @@ fn clamp_fall() {
 
 #[test]
 fn spin_joint() {
+    leaf_check::shard_test!();
     check("it_802746F8", &|r, a| {
         Ret::JObj(lib2725::spin_joint(r.game, r.data, a.gobj(0)))
     });
@@ -1089,6 +1165,7 @@ fn spin_joint() {
 
 #[test]
 fn is_hit_counted() {
+    leaf_check::shard_test!();
     check("it_80274C78", &|r, a| {
         Ret::Bool(lib2725::is_hit_counted(r.game, a.gobj(0)))
     });
@@ -1096,11 +1173,13 @@ fn is_hit_counted() {
 
 #[test]
 fn clear_stomp() {
+    leaf_check::shard_test!();
     check_game("it_80274C88", lib2725::clear_stomp);
 }
 
 #[test]
 fn ecb_motion() {
+    leaf_check::shard_test!();
     check("it_80274D04", &|r, a| {
         let item = a.cap.u32(a.int(0) + 0x2C);
         assert_eq!(
@@ -1115,21 +1194,25 @@ fn ecb_motion() {
 
 #[test]
 fn ecb_extent() {
+    leaf_check::shard_test!();
     check_game("it_80274D6C", lib2725::ecb_extent);
 }
 
 #[test]
 fn init_spin() {
+    leaf_check::shard_test!();
     check_game("it_80274DAC", lib2725::init_spin);
 }
 
 #[test]
 fn clear_attack_id() {
+    leaf_check::shard_test!();
     check_game("it_80274EF8", lib2725::clear_attack_id);
 }
 
 #[test]
 fn set_lifetime() {
+    leaf_check::shard_test!();
     check("it_80275158", &|r, a| {
         lib2725::set_lifetime(r.game, r.data, a.gobj(0), a.float(0));
         Ret::None
@@ -1138,6 +1221,7 @@ fn set_lifetime() {
 
 #[test]
 fn set_damage_taken() {
+    leaf_check::shard_test!();
     check("it_802753BC", &|r, a| {
         lib2725::set_damage_taken(r.game, a.gobj(0), a.int(1) as i16);
         Ret::None
@@ -1148,21 +1232,25 @@ fn set_damage_taken() {
 
 #[test]
 fn clear_dealt() {
+    leaf_check::shard_test!();
     check_game("it_802753DC", hitbox::clear_dealt);
 }
 
 #[test]
 fn clear_hit_ids() {
+    leaf_check::shard_test!();
     check_game("it_80275474", hitbox::clear_hit_ids);
 }
 
 #[test]
 fn clear_hit_ids2() {
+    leaf_check::shard_test!();
     check_game("it_80275504", hitbox::clear_hit_ids2);
 }
 
 #[test]
 fn scale_hitbox() {
+    leaf_check::shard_test!();
     check("it_80275594", &|r, a| {
         let mult = leaf_check::fp::lfs(a.float(0).to_bits());
         hitbox::scale_hitbox(r.game, a.gobj(0), a.int(1) as usize, mult);
@@ -1172,11 +1260,13 @@ fn scale_hitbox() {
 
 #[test]
 fn start_blink() {
+    leaf_check::shard_test!();
     check_game("it_802756D0", hitbox::start_blink);
 }
 
 #[test]
 fn update_boxes() {
+    leaf_check::shard_test!();
     check_game("it_8027574C", hitbox::update_boxes);
 }
 
@@ -1184,6 +1274,7 @@ fn update_boxes() {
 
 #[test]
 fn init_coll() {
+    leaf_check::shard_test!();
     check("it_80275E98", &|r, a| {
         let spawn: SpawnItem = a.get(1);
         maplib::init_coll(r, a.gobj(0), &spawn);
@@ -1193,6 +1284,7 @@ fn init_coll() {
 
 #[test]
 fn place_air() {
+    leaf_check::shard_test!();
     check("it_80276100", &|r, a| {
         maplib::place_air(r, a.gobj(0), a.vec(1));
         Ret::None
@@ -1201,6 +1293,7 @@ fn place_air() {
 
 #[test]
 fn enter_air() {
+    leaf_check::shard_test!();
     check_item("it_802762BC", maplib::enter_air);
 }
 
@@ -1208,6 +1301,7 @@ fn enter_air() {
 
 #[test]
 fn create_hitbox() {
+    leaf_check::shard_test!();
     check("it_802790C0", &|r, a| {
         let item = a.cap.u32(a.int(0) + 0x2C);
         assert_eq!(a.int(1), item + 0x524, "the item's own script");
@@ -1218,16 +1312,19 @@ fn create_hitbox() {
 
 #[test]
 fn run_script() {
+    leaf_check::shard_test!();
     check_proc("it_802799E4", anim::run_script);
 }
 
 #[test]
 fn clear_overlay() {
+    leaf_check::shard_test!();
     check_item("it_80279B64", anim::clear_overlay);
 }
 
 #[test]
 fn run_overlay() {
+    leaf_check::shard_test!();
     check_proc("it_80279BE0", anim::run_overlay);
 }
 
@@ -1235,6 +1332,7 @@ fn run_overlay() {
 
 #[test]
 fn track_spawn() {
+    leaf_check::shard_test!();
     check("it_8027B0C4", &|r, a| {
         let spawn: SpawnItem = a.get(1);
         lib279c::track_spawn(r, a.gobj(0), &spawn);
@@ -1246,6 +1344,7 @@ fn track_spawn() {
 
 #[test]
 fn laser_spawn() {
+    leaf_check::shard_test!();
     check("it_8029C504", &|r, a| {
         foxlaser::spawn(
             r,
@@ -1262,6 +1361,7 @@ fn laser_spawn() {
 
 #[test]
 fn laser_spawn_0() {
+    leaf_check::shard_test!();
     check("it_8029C6A4", &|r, a| {
         foxlaser::spawn_0(
             r,
@@ -1277,6 +1377,7 @@ fn laser_spawn_0() {
 
 #[test]
 fn laser_spawn_1() {
+    leaf_check::shard_test!();
     check("it_8029C6CC", &|r, a| {
         foxlaser::spawn_1(
             r,
@@ -1292,26 +1393,31 @@ fn laser_spawn_1() {
 
 #[test]
 fn laser_anim() {
+    leaf_check::shard_test!();
     check_pred("itFoxlaser_UnkMotion1_Anim", foxlaser::animate);
 }
 
 #[test]
 fn laser_phys() {
+    leaf_check::shard_test!();
     check_proc("itFoxlaser_UnkMotion1_Phys", foxlaser::physics);
 }
 
 #[test]
 fn laser_coll() {
+    leaf_check::shard_test!();
     check_pred("itFoxlaser_UnkMotion1_Coll", foxlaser::collide);
 }
 
 #[test]
 fn laser_reflected() {
+    leaf_check::shard_test!();
     check_pred("itFoxLaser_Logic94_Reflected", foxlaser::reflected);
 }
 
 #[test]
 fn laser_shield_bounced() {
+    leaf_check::shard_test!();
     check_pred("itFoxLaser_Logic94_ShieldBounced", foxlaser::shield_bounced);
 }
 
@@ -1319,11 +1425,13 @@ fn laser_shield_bounced() {
 
 #[test]
 fn blaster_follow() {
+    leaf_check::shard_test!();
     check_pred("itFoxblaster_UnkMotion8_Anim", foxblaster::follow_fighter);
 }
 
 #[test]
 fn blaster_phys() {
+    leaf_check::shard_test!();
     check_proc("itFoxblaster_UnkMotion8_Phys", |r, g| {
         melee_sim::game::code::run_proc(
             r,
@@ -1335,21 +1443,25 @@ fn blaster_phys() {
 
 #[test]
 fn blaster_recoil() {
+    leaf_check::shard_test!();
     check_game("it_802AE200", foxblaster::recoil);
 }
 
 #[test]
 fn blaster_pulse() {
+    leaf_check::shard_test!();
     check_game("it_802AE63C", foxblaster::pulse);
 }
 
 #[test]
 fn blaster_reset() {
+    leaf_check::shard_test!();
     check_game("it_802AE7B8", foxblaster::reset);
 }
 
 #[test]
 fn blaster_set_visible() {
+    leaf_check::shard_test!();
     check("it_802ADDD0", &|r, a| {
         if a.int(0) != 0 {
             foxblaster::set_visible(r, a.gobj(0), a.int(1) as i32);
@@ -1360,31 +1472,37 @@ fn blaster_set_visible() {
 
 #[test]
 fn blaster_shot() {
+    leaf_check::shard_test!();
     check_game("it_802AE1D0", foxblaster::shot);
 }
 
 #[test]
 fn blaster_on_shot() {
+    leaf_check::shard_test!();
     check_proc("it_802ADEF0", foxblaster::on_shot);
 }
 
 #[test]
 fn blaster_on_shot_inner() {
+    leaf_check::shard_test!();
     check_proc("it_802ADF10", foxblaster::on_shot);
 }
 
 #[test]
 fn blaster_start_pulse() {
+    leaf_check::shard_test!();
     check_proc("it_802AE538", foxblaster::start_pulse);
 }
 
 #[test]
 fn blaster_end_pulse() {
+    leaf_check::shard_test!();
     check_game("it_802AE608", foxblaster::end_pulse);
 }
 
 #[test]
 fn blaster_picked_up() {
+    leaf_check::shard_test!();
     check_proc("itFoxBlaster_Logic96_PickedUp", foxblaster::picked_up);
 }
 
@@ -1455,6 +1573,7 @@ fn pass_owner(c: &mut Call) -> bool {
 
 #[test]
 fn seek_anim() {
+    leaf_check::shard_test!();
     let prep = |c: &mut Call| {
         set_f(c, 1, 3.0);
         true
@@ -1467,6 +1586,7 @@ fn seek_anim() {
 
 #[test]
 fn next_attack_id() {
+    leaf_check::shard_test!();
     check_on(TICKS, "Item_8026AE60", &|_| true, &|r, _| {
         Ret::Int(item::next_attack_id(r.game))
     });
@@ -1490,6 +1610,7 @@ const SFX_STOP: u32 = 0x83D61;
 
 #[test]
 fn play_sfx_silent() {
+    leaf_check::shard_test!();
     check_on(TICKS, "Item_8026AE84", &sfx_args(SFX_SILENT), &|r, a| {
         item::play_sfx(r, a.item_gobj(0), a.int(1) as i32, 0x7F, 0x40);
         Ret::None
@@ -1499,6 +1620,7 @@ fn play_sfx_silent() {
 /// A sound of the shared bank, through the audio driver.
 #[test]
 fn play_sfx_sound() {
+    leaf_check::shard_test!();
     check_on(TICKS, "Item_8026AE84", &sfx_args(0x96), &|r, a| {
         item::play_sfx(
             r,
@@ -1513,6 +1635,7 @@ fn play_sfx_sound() {
 
 #[test]
 fn play_sfx1() {
+    leaf_check::shard_test!();
     // The silent and stop ids, and a sound of the shared bank.
     for sfx in [SFX_SILENT, SFX_STOP, 0x96] {
         check_on(TICKS, "Item_8026AF0C", &sfx_args(sfx), &|r, a| {
@@ -1530,6 +1653,7 @@ fn play_sfx1() {
 
 #[test]
 fn play_sfx2() {
+    leaf_check::shard_test!();
     for sfx in [SFX_SILENT, SFX_STOP, 0x96] {
         check_on(TICKS, "Item_8026AFA0", &sfx_args(sfx), &|r, a| {
             item::play_sfx2(
@@ -1546,6 +1670,7 @@ fn play_sfx2() {
 
 #[test]
 fn stop_sfx1() {
+    leaf_check::shard_test!();
     check_on(TICKS, "Item_8026B034", &pass_item, &|r, a| {
         item::stop_sfx1(r, a.item_gobj(0));
         Ret::None
@@ -1554,6 +1679,7 @@ fn stop_sfx1() {
 
 #[test]
 fn is_grabbable() {
+    leaf_check::shard_test!();
     check_on(TICKS, "Item_IsGrabbable", &|_| true, &|r, a| {
         Ret::Bool(item::is_grabbable(r.game, a.gobj(0)))
     });
@@ -1561,6 +1687,7 @@ fn is_grabbable() {
 
 #[test]
 fn add_damage() {
+    leaf_check::shard_test!();
     // Up to the cap and past it.
     for (have, add) in [(5, 7), (500, 600)] {
         let prep = move |c: &mut Call| {
@@ -1579,6 +1706,7 @@ fn add_damage() {
 
 #[test]
 fn enter_hitlag() {
+    leaf_check::shard_test!();
     check_on(TICKS, "Item_8026A158", &|_| true, &|r, a| {
         item::enter_hitlag(r, a.gobj(0));
         Ret::None
@@ -1587,6 +1715,7 @@ fn enter_hitlag() {
 
 #[test]
 fn exit_hitlag() {
+    leaf_check::shard_test!();
     check_on(TICKS, "Item_8026A1E8", &|_| true, &|r, a| {
         item::exit_hitlag(r, a.gobj(0));
         Ret::None
@@ -1595,6 +1724,7 @@ fn exit_hitlag() {
 
 #[test]
 fn end_hitlags() {
+    leaf_check::shard_test!();
     // The hit's or the clank's hitlag alone, then with the other holding it.
     for bits in [&[7][..], &[7, 8], &[8], &[8, 10]] {
         let prep = move |c: &mut Call| {
@@ -1614,6 +1744,7 @@ fn end_hitlags() {
 
 #[test]
 fn react_shield() {
+    leaf_check::shard_test!();
     // Bouncing off a shield in the air. Bit 4 bounces at any angle; without it, only below
     // the limit, after turning, and above it the shot hits the shield and is destroyed.
     for (bits, angle) in [(0x0C, 2.0f32), (0x04, 0.5), (0x08, 2.0)] {
@@ -1635,6 +1766,7 @@ fn react_shield() {
 /// first active voice) in each of its three sound slots in turn, which none of the saves has.
 #[test]
 fn destroy() {
+    leaf_check::shard_test!();
     for slot in [None, Some(0xD64), Some(0xD68), Some(0xD6C)] {
         let prep = move |c: &mut Call| {
             let Some(at) = slot else { return true };
@@ -1655,6 +1787,7 @@ fn destroy() {
 
 #[test]
 fn react_reflect() {
+    leaf_check::shard_test!();
     // Reflected by its own fighter.
     let prep = |c: &mut Call| {
         let ip = item_ptr(c);
@@ -1669,6 +1802,7 @@ fn react_reflect() {
 
 #[test]
 fn spawn_ground() {
+    leaf_check::shard_test!();
     check_on("Item_80268B18", "Item_80268B5C", &|_| true, &|r, a| {
         let mut spawn: SpawnItem = a.get(0);
         Ret::GObj(item::spawn_ground(r, &mut spawn))
@@ -1682,6 +1816,7 @@ fn spawn_ground() {
 
 #[test]
 fn clear_hitbox() {
+    leaf_check::shard_test!();
     for idx in [0, 1] {
         let prep = move |c: &mut Call| {
             c.regs.gpr[4] = idx;
@@ -1696,6 +1831,7 @@ fn clear_hitbox() {
 
 #[test]
 fn flicker() {
+    leaf_check::shard_test!();
     check_on(TICKS, "it_802728C8", &|_| true, &|r, a| {
         lib2725::flicker(r.game, r.data, a.gobj(0));
         Ret::None
@@ -1704,6 +1840,7 @@ fn flicker() {
 
 #[test]
 fn spin() {
+    leaf_check::shard_test!();
     let prep = |c: &mut Call| {
         let ip = item_ptr(c);
         set32(c, ip + 0xD3C, 0.25f32.to_bits());
@@ -1717,6 +1854,7 @@ fn spin() {
 
 #[test]
 fn uncount_hits() {
+    leaf_check::shard_test!();
     check_on(TICKS, "it_80274C60", &|_| true, &|r, a| {
         lib2725::uncount_hits(r.game, a.gobj(0));
         Ret::None
@@ -1725,6 +1863,7 @@ fn uncount_hits() {
 
 #[test]
 fn drop_owner() {
+    leaf_check::shard_test!();
     check_on(TICKS, "it_80275390", &|_| true, &|r, a| {
         lib2725::drop_owner(r.game, a.gobj(0));
         Ret::None
@@ -1733,6 +1872,7 @@ fn drop_owner() {
 
 #[test]
 fn end_blink() {
+    leaf_check::shard_test!();
     check_on(TICKS, "it_802756E0", &|_| true, &|r, a| {
         hitbox::end_blink(r.game, a.gobj(0));
         Ret::None
@@ -1741,6 +1881,7 @@ fn end_blink() {
 
 #[test]
 fn enter_ground() {
+    leaf_check::shard_test!();
     check_on(TICKS, "it_802762B0", &pass_item, &|r, a| {
         maplib::enter_ground(&mut r.game.items[a.item(0).0]);
         Ret::None
@@ -1749,6 +1890,7 @@ fn enter_ground() {
 
 #[test]
 fn clear_overlay_copy() {
+    leaf_check::shard_test!();
     // `it_80279BBC` is a second copy of `it_80279B64`.
     check_on(TICKS, "it_80279BBC", &pass_item, &|r, a| {
         anim::clear_overlay(&mut r.game.items[a.item(0).0]);
@@ -1758,6 +1900,7 @@ fn clear_overlay_copy() {
 
 #[test]
 fn hitlag_frames() {
+    leaf_check::shard_test!();
     for d in [0, 1, 7, 13, 42, 999] {
         let prep = move |c: &mut Call| {
             c.regs.gpr[3] = d;
@@ -1771,6 +1914,7 @@ fn hitlag_frames() {
 
 #[test]
 fn forget() {
+    leaf_check::shard_test!();
     check_on(TICKS, "it_8026B894", &pass_owner, &|r, a| {
         Ret::Bool(lib26b1::forget(r.game, a.gobj(0), a.opt_gobj(1)))
     });
@@ -1778,6 +1922,7 @@ fn forget() {
 
 #[test]
 fn on_line() {
+    leaf_check::shard_test!();
     // The line its collision stands on.
     let prep = |c: &mut Call| {
         let ip = item_ptr(c);
@@ -1792,6 +1937,7 @@ fn on_line() {
 
 #[test]
 fn is_heavy() {
+    leaf_check::shard_test!();
     check_on(TICKS, "itIsHeavy", &|_| true, &|r, a| {
         Ret::Bool(lib26b1::is_heavy(r.game, r.data, a.gobj(0)))
     });
@@ -1799,6 +1945,7 @@ fn is_heavy() {
 
 #[test]
 fn pushes() {
+    leaf_check::shard_test!();
     check_on(TICKS, "it_80271B60", &|_| true, &|r, a| {
         coll::push_from_fighters(r.game, r.data, a.gobj(0));
         Ret::None
@@ -1815,6 +1962,7 @@ fn pushes() {
 
 #[test]
 fn laser_forget() {
+    leaf_check::shard_test!();
     let prep = |c: &mut Call| pass_owner(c) && lasers(c);
     check_on(TICKS, "itFoxLaser_Logic94_EvtUnk", &prep, &|r, a| {
         foxlaser::forget(r, a.gobj(0), a.opt_gobj(1));
@@ -1829,6 +1977,7 @@ fn blasters(c: &mut Call) -> bool {
 
 #[test]
 fn blaster_forget() {
+    leaf_check::shard_test!();
     let prep = |c: &mut Call| pass_owner(c) && blasters(c);
     check_on(TICKS, "itFoxBlaster_Logic96_EvtUnk", &prep, &|r, a| {
         foxblaster::forget(r, a.gobj(0), a.opt_gobj(1));
@@ -1838,6 +1987,7 @@ fn blaster_forget() {
 
 #[test]
 fn hold() {
+    leaf_check::shard_test!();
     check("it_802742F4", &|r, a| {
         item::hold(r, a.gobj(0), a.gobj(1), a.int(2) as i32);
         Ret::None
@@ -1846,6 +1996,7 @@ fn hold() {
 
 #[test]
 fn blaster_spawn() {
+    leaf_check::shard_test!();
     check("it_802AE8A8", &|r, a| {
         let g = foxblaster::spawn(
             r,
@@ -1869,6 +2020,7 @@ fn owner_first(c: &mut Call) -> bool {
 
 #[test]
 fn held_items() {
+    leaf_check::shard_test!();
     check_on(TICKS, "ftLib_GetHeldSpecialItem", &owner_first, &|r, a| {
         Ret::GObj(it_owner::held_special_item(r.game, a.gobj(0)))
     });
@@ -1879,6 +2031,7 @@ fn held_items() {
 
 #[test]
 fn clear_blaster() {
+    leaf_check::shard_test!();
     let prep = |c: &mut Call| blasters(c) && owner_first(c);
     check_on(TICKS, "ftFx_SpecialN_ClearBlaster", &prep, &|r, a| {
         foxblaster::clear_from_owner(r.game, a.gobj(0));
@@ -1888,6 +2041,7 @@ fn clear_blaster() {
 
 #[test]
 fn remove_camera_box() {
+    leaf_check::shard_test!();
     check_on(TICKS, "Item_80267454", &|_| true, &|r, a| {
         item::remove_camera_box(r.game, a.gobj(0));
         Ret::None
@@ -1896,6 +2050,7 @@ fn remove_camera_box() {
 
 #[test]
 fn y_scaled_knockback() {
+    leaf_check::shard_test!();
     use ssbm_types::fns;
     let Some(ctx) = reference() else { return };
     let xs = leaf_check::inputs(3.0, 400);
@@ -1950,11 +2105,13 @@ fn table_arg(a: &Args, i: usize) -> fn(&mut Game) -> &mut spawn::PickTable {
 
 #[test]
 fn spawn_proc() {
+    leaf_check::shard_test!();
     check_proc("fn_8026C88C", spawn::proc_spawn);
 }
 
 #[test]
 fn spawn_setup() {
+    leaf_check::shard_test!();
     check("it_8026D018", &|r, _| {
         spawn::setup(r);
         Ret::None
@@ -1963,6 +2120,7 @@ fn spawn_setup() {
 
 #[test]
 fn spawn_tables() {
+    leaf_check::shard_test!();
     check("it_8026CB9C", &|r, a| {
         let counts = counts_arg(a, 0);
         let mask = mask_arg(a);
@@ -1993,6 +2151,7 @@ fn spawn_tables() {
 
 #[test]
 fn spawn_pick() {
+    leaf_check::shard_test!();
     check("it_8026C75C", &|r, a| {
         Ret::Int(spawn::pick_kind(r.game, table_arg(a, 0)) as u32)
     });
@@ -2008,6 +2167,7 @@ fn spawn_pick() {
 
 #[test]
 fn spawn_point() {
+    leaf_check::shard_test!();
     check("it_8026CB3C", &|r, a| {
         let at = a.int(0);
         match spawn::spawn_point(r.game, r.data) {
@@ -2023,6 +2183,7 @@ fn spawn_point() {
 
 #[test]
 fn spawn_queries() {
+    leaf_check::shard_test!();
     // From the spawner's process: no item drawn and nothing spawned, only the answers.
     check_on("fn_8026C88C", "it_8026C704", &|_| true, &|r, _| {
         Ret::Bool(spawn::poke_balls_full(r.game))
@@ -2052,6 +2213,7 @@ fn spawn_queries() {
 
 #[test]
 fn spawn_pick_without_poke_balls() {
+    leaf_check::shard_test!();
     // The table ending in a Poké Ball while no more may appear (as many out as allowed).
     for size in [None, Some(1u8)] {
         let prep = move |c: &mut Call| {
@@ -2078,6 +2240,7 @@ fn spawn_pick_without_poke_balls() {
 
 #[test]
 fn init_globals() {
+    leaf_check::shard_test!();
     check("Item_80266FCC", &|r, _| {
         item::init_globals(r.game, r.data);
         Ret::None
@@ -2086,6 +2249,7 @@ fn init_globals() {
 
 #[test]
 fn drop_at() {
+    leaf_check::shard_test!();
     // A shot dropped at a fighter's feet, from the spawner's states, then with the limit
     // reached: the states with Fox's articles loaded.
     for full in [false, true] {
@@ -2126,6 +2290,7 @@ fn seeds() -> impl Iterator<Item = u32> {
 
 #[test]
 fn spawn_seeded() {
+    leaf_check::shard_test!();
     // The setup's first countdown and the spawn points, from many seeds.
     for seed in seeds() {
         let prep = move |c: &mut Call| {
@@ -2148,6 +2313,7 @@ fn spawn_seeded() {
 
 #[test]
 fn spawn_bisect_edges() {
+    leaf_check::shard_test!();
     // Every weight's edge, and past the last, up to the longest table captured.
     let longest = captures("bisectValue")
         .iter()
@@ -2203,6 +2369,7 @@ fn cb_arg(a: &Args, i: usize) -> ground::Event {
 
 #[test]
 fn maplib_queries() {
+    leaf_check::shard_test!();
     check("it_80276214", &|r, a| {
         maplib::prep_coll(r.game, r.data, a.gobj(0));
         Ret::None
@@ -2258,6 +2425,7 @@ fn maplib_queries() {
 
 #[test]
 fn maplib_bounces() {
+    leaf_check::shard_test!();
     check("it_80276D9C", &|r, a| {
         Ret::Bool(maplib::unstick(r.game, a.gobj(0), a.int(1) as i32))
     });
@@ -2284,6 +2452,7 @@ fn maplib_bounces() {
 
 #[test]
 fn maplib_skids() {
+    leaf_check::shard_test!();
     check("it_80277040", &|r, a| {
         Ret::Bool(maplib::slides(r.game, r.data, a.gobj(0)))
     });
@@ -2300,6 +2469,7 @@ fn maplib_skids() {
 
 #[test]
 fn groundcoll() {
+    leaf_check::shard_test!();
     check("it_8026D564", &|r, a| {
         Ret::Bool(ground::ground(r, a.gobj(0)))
     });
@@ -2341,6 +2511,7 @@ fn groundcoll() {
 
 #[test]
 fn capsule_spawned() {
+    leaf_check::shard_test!();
     check_proc("itCapsule_Logic0_Spawned", capsule::spawned);
 }
 
@@ -2360,6 +2531,7 @@ fn only_capsules(c: &mut Call, seed: u32) {
 
 #[test]
 fn capsule_landed() {
+    leaf_check::shard_test!();
     // From the capsules' standing states.
     let prep = |c: &mut Call| item_kind(c) == 0;
     check_on(
@@ -2384,6 +2556,7 @@ fn capsule_landed() {
 
 #[test]
 fn capsule_opens() {
+    leaf_check::shard_test!();
     // Opened where it stands, dropping capsules (the only kind ported that can come out); the
     // sixth seed's capsule explodes.
     for seed in seeds() {
@@ -2411,6 +2584,7 @@ fn capsule_opens() {
 
 #[test]
 fn capsule_explodes() {
+    leaf_check::shard_test!();
     let prep = |c: &mut Call| item_kind(c) == 0;
     check_on(
         "itCapsule_UnkMotion0_Anim",
@@ -2425,6 +2599,7 @@ fn capsule_explodes() {
 
 #[test]
 fn capsule_states() {
+    leaf_check::shard_test!();
     check_pred("itCapsule_UnkMotion0_Anim", |r, g| {
         kinds::run_pred(r, g, capsule::ANIM0).unwrap()
     });
@@ -2456,6 +2631,7 @@ fn on_capsules(target: &str, air: bool, ours: &Ours) {
 
 #[test]
 fn capsule_callbacks() {
+    leaf_check::shard_test!();
     for (target, f) in [
         (
             "itCapsule_Logic0_PickedUp",
@@ -2493,6 +2669,7 @@ fn capsule_callbacks() {
 
 #[test]
 fn capsule_hits() {
+    leaf_check::shard_test!();
     // Hit, clanked or reflected while standing (it opens: drops capsules), or while
     // exploding (state 5, nothing).
     for msid in [None, Some(5)] {
@@ -2575,6 +2752,7 @@ fn vec_arg(c: &mut Call, reg: usize, off: u32, v: [f32; 3]) {
 
 #[test]
 fn drops() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::drop;
     let base = |c: &mut Call| {
         only_capsules(c, 0x5EED);
@@ -2688,6 +2866,7 @@ type IntFn = fn(&mut Running, GObjId) -> i32;
 
 #[test]
 fn groundcoll_variants() {
+    leaf_check::shard_test!();
     // Every variant from the capsules' falling and standing states, with the capsule's own
     // callbacks passed (landing, falling).
     let air = "itCapsule_UnkMotion4_Coll";
@@ -2789,6 +2968,7 @@ fn passed_fell(a: &Args) -> ground::Event {
 
 #[test]
 fn item_lib_small() {
+    leaf_check::shard_test!();
     // Small setters and helpers, on the capsules' standing states.
     let on = |target: &str, f: fn(&mut Running, GObjId)| {
         check_on(
@@ -2929,6 +3109,7 @@ fn kind_perturbed(source: &str, kind: i32, list: &[(&str, Cb)]) {
 
 #[test]
 fn heart() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::heart as h;
     kind_direct(&[
         ("itHeart_Logic8_Spawned", Cb::Event(h::spawned)),
@@ -2961,6 +3142,7 @@ fn heart() {
 
 #[test]
 fn tomato() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::tomato as t;
     kind_direct(&[
         ("itTomato_Logic9_Spawned", Cb::Event(t::spawned)),
@@ -2997,6 +3179,7 @@ fn tomato() {
 
 #[test]
 fn bat() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::bat as b;
     kind_direct(&[
         ("itBat_Logic11_Spawned", Cb::Event(b::spawned)),
@@ -3045,6 +3228,7 @@ fn bat() {
 
 #[test]
 fn sword() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::sword as s;
     kind_direct(&[
         ("itSword_Logic12_Spawned", Cb::Event(s::spawned)),
@@ -3150,6 +3334,7 @@ fn sword() {
 
 #[test]
 fn hammer() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::hammer as h;
     kind_direct(&[
         ("itHammer_Logic28_Spawned", Cb::Event(h::spawned)),
@@ -3221,6 +3406,7 @@ fn hammer() {
 
 #[test]
 fn hammer_head() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::hammerhead as h;
     // No game made a head fly off, so its callbacks run on the hammers' states (the attributes
     // they read are the hammer's).
@@ -3276,6 +3462,7 @@ fn hammer_head() {
 
 #[test]
 fn green_shell() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::gshell as s;
     kind_direct(&[
         ("itGShell_Logic14_Spawned", Cb::Event(s::spawned)),
@@ -3360,6 +3547,7 @@ fn green_shell() {
 
 #[test]
 fn red_shell() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::rshell as s;
     kind_direct(&[
         ("it_3F14_Logic15_Spawned", Cb::Event(s::spawned)),
@@ -3466,6 +3654,7 @@ fn red_shell() {
 
 #[test]
 fn bob_omb() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::bombhei as b;
     kind_direct(&[
         ("itBombhei_Logic6_Spawned", Cb::Event(b::spawned)),
@@ -3594,6 +3783,7 @@ fn bob_omb() {
 
 #[test]
 fn shell_paths() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::{gshell as g, rshell as s};
     // The trail's countdown between puffs.
     for (source, target, kind, off) in [
@@ -3631,6 +3821,7 @@ fn shell_paths() {
 
 #[test]
 fn effect_router() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::effect;
     check("it_802787B4", &|r, a| {
         effect::spawn_simple(r, a.gobj(0), a.int(1) as i32);
@@ -3660,6 +3851,7 @@ fn effect_router() {
 
 #[test]
 fn crate_box() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::crate_box as b;
     kind_direct(&[
         ("itBox_Logic1_Spawned", Cb::Event(b::spawned)),
@@ -3769,6 +3961,7 @@ fn crate_box() {
 
 #[test]
 fn barrel() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::taru as t;
     kind_direct(&[
         ("it_3F14_Logic2_Spawned", Cb::Event(t::spawned)),
@@ -3879,6 +4072,7 @@ fn barrel() {
 
 #[test]
 fn script_commands() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::anim;
     // Each of the items' own commands run at the script of an exploding item (the capsules'
     // and bob-ombs' blasts have scripts), the command info in r4.
@@ -3908,6 +4102,7 @@ fn script_commands() {
 
 #[test]
 fn winds() {
+    leaf_check::shard_test!();
     use melee_sim::game::gr::ground;
     // The wind sources age every stage tick; exploding bob-ombs' states have some blowing.
     let tick: &Ours = &|r, _| {
@@ -3919,6 +4114,7 @@ fn winds() {
 
 #[test]
 fn party_ball() {
+    leaf_check::shard_test!();
     use melee_sim::game::it::kinds::kusudama as k;
     kind_direct(&[
         ("itKusudama_Logic4_Spawned", Cb::Event(k::spawned)),
@@ -4061,6 +4257,7 @@ fn party_ball() {
 
 #[test]
 fn one_player_level() {
+    leaf_check::shard_test!();
     // Outside the single-player modes, from the items' VS states.
     check_on(
         "itKusudama_UnkMotion0_Anim",

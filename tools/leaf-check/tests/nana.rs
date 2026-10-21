@@ -177,7 +177,7 @@ fn new_script_at(call: &mut Call, nana: u32, popo: u32, percent: f32) {
 
 /// How Nana's frame is changed, for the tumble's and the shield check's branches no replay
 /// at hand reaches.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum Change {
     /// Tumbling at level 9: the tech when the floor is under 10 frames away.
     TumbleTech,
@@ -307,7 +307,7 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
 #[test]
 fn nana_tumble_and_shields() {
     leaf_check::run_as_machine_code();
-    let changes = [
+    let all = [
         Change::TumbleTech,
         Change::TumbleOverUpTilt,
         Change::TumbleDrift,
@@ -318,6 +318,13 @@ fn nana_tumble_and_shields() {
         Change::ThrowEgg,
         Change::Hop,
     ];
+    // Each change is a unit of the binary's shards ([`leaf_check::shard`]): its assertion
+    // needs only its own frames.
+    let units = leaf_check::shard::units("nana_tumble_and_shields", all.len());
+    if units.is_empty() {
+        return;
+    }
+    let changes: Vec<Change> = units.iter().map(|&i| all[i]).collect();
     // Each capture set's frames, a set at a time on each of several threads
     // ([`leaf_check::each_set`]), with the frames each change reached in it.
     let dirs = dirs();
@@ -325,7 +332,8 @@ fn nana_tumble_and_shields() {
         &dirs,
         |dir| saved_calls(dir, "ftCo_800B3900").len(),
         |dir| {
-            let changed: [Mutex<BTreeSet<usize>>; 9] = Default::default();
+            let changed: Vec<Mutex<BTreeSet<usize>>> =
+                changes.iter().map(|_| Mutex::default()).collect();
             let prepares: Vec<Box<Prepare>> = (0..changes.len())
                 .map(|v| {
                     let changed = &changed;
@@ -347,7 +355,7 @@ fn nana_tumble_and_shields() {
                 .collect();
             let paths = saved_calls(dir, "ftCo_800B3900");
             let reports = check_variants(dir, "ftCo_800B3900", &variants);
-            let mut totals = [0; 9];
+            let mut totals = vec![0; changes.len()];
             for (v, r) in reports.iter().enumerate() {
                 let c = changed[v].lock().unwrap();
                 if !c.is_empty() {
@@ -357,23 +365,25 @@ fn nana_tumble_and_shields() {
             totals
         },
     );
-    let mut totals = [0; 9];
+    let mut totals = vec![0; changes.len()];
     for t in &per_dir {
         for (total, n) in totals.iter_mut().zip(t) {
             *total += n;
         }
     }
-    eprintln!(
-        "compared clean, tumbling at level 9, over an up tilt, drifting, at level 0, enemies \
-         shielding, items made beam swords, throwing a bob-omb, an egg, hopping: {totals:?}"
-    );
+    for (c, t) in changes.iter().zip(&totals) {
+        eprintln!("compared clean, {c:?}: {t}");
+    }
     if dirs.is_empty() || leaf_check::reference().is_none() {
         return;
     }
-    assert!(
-        totals.iter().all(|&t| t > 0),
-        "a change never compared: {totals:?}"
-    );
+    let never: Vec<_> = changes
+        .iter()
+        .zip(&totals)
+        .filter(|(_, t)| **t == 0)
+        .map(|(c, _)| c)
+        .collect();
+    assert!(never.is_empty(), "changes that never compared: {never:?}");
 }
 
 /// In a frame where Nana DIs, sets her up to push the stick with no knockback (and with
@@ -431,33 +441,44 @@ fn compared(reports: &[Report], paths: &[std::path::PathBuf], changed: &BTreeSet
 #[test]
 fn nana_cpu_frame() {
     leaf_check::run_as_machine_code();
+    // Each variant is a unit of the binary's shards ([`leaf_check::shard`]): its assertion
+    // needs only its own frames.
+    let units = leaf_check::shard::units("nana_cpu_frame", VARIANTS.len());
+    if units.is_empty() {
+        return;
+    }
     // Each capture set's frames, a set at a time on each of several threads
     // ([`leaf_check::each_set`]), with the frames each change reached in it.
     let dirs = dirs();
     let per_dir = leaf_check::each_set(
         &dirs,
         |dir| saved_calls(dir, "ftCo_800B3900").len(),
-        |dir| dir_cpu_frame(dir),
+        |dir| dir_cpu_frame(dir, &units),
     );
-    let mut totals = [0; 3];
+    let mut totals = vec![0; units.len()];
     for t in &per_dir {
         for (total, n) in totals.iter_mut().zip(t) {
             *total += n;
         }
     }
-    eprintln!("compared clean, as saved, with no knockback, and Popo hanging: {totals:?}");
+    for (&u, t) in units.iter().zip(&totals) {
+        eprintln!("compared clean, {}: {t}", VARIANTS[u]);
+    }
     if dirs.is_empty() || leaf_check::reference().is_none() {
         return;
     }
     assert!(
         totals.iter().all(|&t| t > 0),
-        "a variant never compared: {totals:?}"
+        "a variant never compared: {totals:?} of {units:?}"
     );
 }
 
-/// [`nana_cpu_frame`]'s checks of one capture set's frames: the clean comparisons as saved,
-/// with no knockback and with Popo hanging.
-fn dir_cpu_frame(dir: &str) -> [usize; 3] {
+/// [`nana_cpu_frame`]'s variants.
+const VARIANTS: [&str; 3] = ["as saved", "with no knockback", "Popo hanging"];
+
+/// [`nana_cpu_frame`]'s checks of one capture set's frames, the variants `units` of
+/// [`VARIANTS`]: the clean comparisons as saved, with no knockback and with Popo hanging.
+fn dir_cpu_frame(dir: &str, units: &[usize]) -> Vec<usize> {
     let changed: [Mutex<BTreeSet<usize>>; 2] = Default::default();
     let none = |_: &mut Call, _: usize| {};
     let zero = |c: &mut Call, i: usize| {
@@ -470,38 +491,30 @@ fn dir_cpu_frame(dir: &str) -> [usize; 3] {
             changed[1].lock().unwrap().insert(i);
         }
     };
-    let variants = [
-        Variant {
-            prepare: &none,
+    let prepares: [&Prepare; 3] = [&none, &zero, &hanging];
+    let variants: Vec<Variant> = units
+        .iter()
+        .map(|&u| Variant {
+            prepare: prepares[u],
             ours: &run_frame,
             stubs: &[],
-        },
-        Variant {
-            prepare: &zero,
-            ours: &run_frame,
-            stubs: &[],
-        },
-        Variant {
-            prepare: &hanging,
-            ours: &run_frame,
-            stubs: &[],
-        },
-    ];
-    let mut totals = [0; 3];
+        })
+        .collect();
     let paths = saved_calls(dir, "ftCo_800B3900");
     let reports = check_variants(dir, "ftCo_800B3900", &variants);
-    for (v, r) in reports.iter().enumerate() {
-        totals[v] += match v {
+    units
+        .iter()
+        .zip(&reports)
+        .map(|(&u, r)| match u {
             0 => compared(r, &paths, &BTreeSet::new()),
             _ => {
-                let c = changed[v - 1].lock().unwrap();
+                let c = changed[u - 1].lock().unwrap();
                 if c.is_empty() {
                     0
                 } else {
                     compared(r, &paths, &c)
                 }
             }
-        };
-    }
-    totals
+        })
+        .collect()
 }

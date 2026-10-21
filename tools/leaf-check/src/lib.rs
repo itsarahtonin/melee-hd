@@ -10,6 +10,7 @@
 //! captures aren't there. Replays beyond the benchmark matches come from `SLIPPI_REPLAYS`.
 
 pub mod calls;
+pub mod shard;
 
 /// The float crate the checks use: ssbm-rs's `gekko-fp`, which the reference computes with,
 /// unchanged. melee-sim computes with melee-hd's faster copy (`melee_sim::gekko_fp`), so the

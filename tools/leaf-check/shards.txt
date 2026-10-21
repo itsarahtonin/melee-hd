@@ -1,0 +1,5 @@
+# The leaf-check binaries the verification runs as shards (LEAF_CHECK_SHARD=K/N, src/shard.rs),
+# and how many: each over about 20 minutes on its own. `leaf-select plan` lists every job.
+cpu_vs 6
+items 3
+nana 3
