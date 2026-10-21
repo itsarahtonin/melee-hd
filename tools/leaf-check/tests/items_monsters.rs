@@ -30,6 +30,10 @@
 //! (the grab's catch, the lift, the throw's statistics and each monster's throw and drop) with
 //! the Topi list's functions, and every other function as done. The sets are packed
 //! (`pack-calls`).
+//!
+//! `redead_walk_from_a_wall` runs the ReDead's floor test (`it_802EA804`) and damage callback
+//! from its saved calls with the line it stood on turned into a wall or ceiling, as a dynamic
+//! line tilts into one: no match has a ReDead hit there.
 
 use std::collections::BTreeMap;
 
@@ -428,7 +432,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             it::release::thrown(g, gobj, thrower);
         }
         "it_802EA478" => leadead::set_box(g, gobj, r(4) as i32, r(5) as i32),
-        "it_802EA804" => return b(leadead::ground_ahead(g, gobj, f(1) as f32)),
+        "it_802EA804" => return b(leadead::ground_ahead(g, gobj, f(1) as f32, f(27))),
         "it_802EA988" => {
             return Ret::Int(leadead::touches_ahead(g, gobj, f(1) as f32, f(2) as f32) as u32);
         }
@@ -808,4 +812,148 @@ fn items_monsters_functions() {
         one || unblocked.is_empty(),
         "compare clean now, take them off BLOCKED: {unblocked:?}"
     );
+}
+
+/// A main-memory word's address, if `p` points into it.
+fn in_mem1(p: u32) -> Option<u32> {
+    (0x8000_0000..0x817F_FFFC).contains(&p).then_some(p)
+}
+
+/// The ReDead's floor line made a wall (or a ceiling) in the call's memory, as a dynamic line
+/// tilted past 60 degrees is: its kind in `groundCollLine`'s flags. False when the call's GObj
+/// isn't a ReDead standing on a line.
+fn tilt_floor(call: &mut Call, kind: u32) -> bool {
+    let Some(ip) = in_mem1(call.regs.gpr[3] + 0x2C).and_then(|p| in_mem1(peek_u32(call, p))) else {
+        return false;
+    };
+    let line = peek_u32(call, ip + 0x378 + 0x14C) as i32;
+    let lines = peek_u32(call, leaf_check::sym("groundCollLine"));
+    if !(0..1536).contains(&line) || peek_u32(call, ip + 0x10) != kinds::LEADEAD as u32 {
+        return false;
+    }
+    let Some(at) = in_mem1(lines + 8 * line as u32 + 4) else {
+        return false;
+    };
+    let flags = peek_u32(call, at);
+    poke_u32(call, at, (flags & !0xF) | kind);
+    true
+}
+
+/// Damage past the share of its health that makes the ReDead weigh a dodge, and within it, so a
+/// hit reaches `it_802EA804` (`it_802E8CD8`): its health and share from its attributes.
+fn dodge_damage(call: &mut Call) {
+    let r3 = call.regs.gpr[3];
+    let ip = peek_u32(call, r3 + 0x2C);
+    let spec = peek_u32(call, peek_u32(call, ip + 0xC4) + 4);
+    let hp = peek_u32(call, peek_u32(call, spec)) as i32;
+    let share = f32_at(call, spec + 8);
+    poke_u32(
+        call,
+        ip + 0xC9C,
+        ((hp as f32 * share) as i32 + 1).min(hp) as u32,
+    );
+}
+
+/// The ReDead hit while the line it last stood on is a wall: `it_802EA804`'s walks add the wall's
+/// length to f27 its caller left (melee-bugs.md). From the ReDead's saved calls (its unit's, as
+/// neighbours'), its floor line turned into a left wall, a right wall and a ceiling: the walk on
+/// its own with f27 as the reaction process leaves it and with others that let a
+/// walk run on past walls, and the damage callback with damage that weighs a dodge.
+#[test]
+fn redead_walk_from_a_wall() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    const WALLS: [u32; 3] = [8, 4, 2];
+    // f27 as the saved calls of the ReDead's functions hold it, 0.0 (the reaction process's,
+    // `PROC_F27`, written out so a change to that constant fails here), and values that let a
+    // walk run on past walls.
+    const SAVED_F27: f64 = 0.0;
+    const F27: [f64; 4] = [SAVED_F27, -40.0, -1000.0, f64::NAN];
+    let walk = leaf_check::sym("it_802EA804");
+    let damaged = leaf_check::sym("it_802E8CD8");
+    let funcs = functions();
+    let mut sets = Vec::new();
+    for (a, name) in &funcs {
+        if unit(*a) != Some(1) || !wanted(name) {
+            continue;
+        }
+        for dir in dirs() {
+            let n = saved_calls(&dir, name).len();
+            if n > 0 {
+                sets.push((name.clone(), dir, n));
+            }
+        }
+    }
+    let tilted = AtomicUsize::new(0);
+    let no = stubs();
+    let mut prepares: Vec<Box<Prepare>> = Vec::new();
+    for kind in WALLS {
+        for f27 in F27 {
+            let tilted = &tilted;
+            prepares.push(Box::new(move |call: &mut Call, _: usize| {
+                call.addr = walk;
+                call.regs.fpr[1].ps0 = 15.0;
+                call.regs.fpr[27].ps0 = f27;
+                if tilt_floor(call, kind) {
+                    tilted.fetch_add(1, Ordering::Relaxed);
+                }
+            }));
+        }
+        let tilted = &tilted;
+        prepares.push(Box::new(move |call: &mut Call, _: usize| {
+            call.addr = damaged;
+            call.regs.fpr[27].ps0 = SAVED_F27;
+            if tilt_floor(call, kind) {
+                tilted.fetch_add(1, Ordering::Relaxed);
+                dodge_damage(call);
+            }
+        }));
+    }
+    let variants: Vec<Variant> = prepares
+        .iter()
+        .map(|prepare| Variant {
+            prepare: &**prepare,
+            ours: &run,
+            stubs: &no,
+        })
+        .collect();
+    let mut counts = BTreeMap::new();
+    let results = leaf_check::each_set(
+        &sets,
+        |s| s.2 * variants.len(),
+        |(name, dir, _)| check_variants(dir, name, &variants),
+    );
+    // At the f27 the game leaves (the walk's first variant of each wall, and the damage
+    // callback's), a walk from a wall never leaves the first walk's normal unwritten where the
+    // second reads it: the items audit's reason for that stop (`WALK_ENDS`).
+    let per_wall = F27.len() + 1;
+    let mut unwritten = 0;
+    for set in &results {
+        for (i, modes) in set.iter().enumerate() {
+            if i % per_wall != 0 && i % per_wall != F27.len() {
+                continue;
+            }
+            for r in modes {
+                unwritten += (r.skipped.iter())
+                    .filter(|(_, why)| why.contains("it_802EA804 (a floor normal"))
+                    .count();
+            }
+        }
+    }
+    for reports in results.iter().flatten() {
+        tally(reports, &mut counts);
+    }
+    assert_eq!(
+        unwritten, 0,
+        "a walk from a wall at the game's f27 left a floor normal unwritten"
+    );
+    let n = tilted.load(Ordering::Relaxed);
+    eprintln!(
+        "{n} prepared calls with the ReDead's line tilted; it_802EA804 compared clean {} times, it_802E8CD8 {}",
+        counts.get(&walk).unwrap_or(&0),
+        counts.get(&damaged).unwrap_or(&0)
+    );
+    if std::env::var_os("ITEMS_MONSTERS_SRC").is_none() && !sets.is_empty() {
+        assert!(n > 0, "no saved call has a ReDead standing on a line");
+        assert!(counts.contains_key(&walk) && counts.contains_key(&damaged));
+    }
 }

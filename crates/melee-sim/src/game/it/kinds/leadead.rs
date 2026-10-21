@@ -22,7 +22,7 @@ use crate::game::camera;
 use crate::game::code;
 use crate::game::state::Running;
 use crate::game::structs::_itECB;
-use crate::hsd::gobj::GObjId;
+use crate::hsd::gobj::{GObjId, PROC_F27};
 use crate::hsd::jobj;
 use crate::math;
 use crate::vec::Vec3;
@@ -289,7 +289,9 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// faster; otherwise it's knocked back.
 ///
 /// ssbm-rs transliterates it from its machine code because it calls [`ground_ahead`], which
-/// reads a register its caller left ([`ground_ahead`]'s note).
+/// reads a register its caller left ([`ground_ahead`]'s note): f27, which neither this nor the
+/// item's reaction process that calls it (`Item_8026A294`) writes, so it's what every process
+/// finds there ([`PROC_F27`]).
 #[doc(alias = "it_802E8CD8")]
 pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
     if let Some(f) = victim(r, gobj) {
@@ -327,7 +329,7 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
     } else if fp::frsp(f64::from(damage))
         > fp::fmuls(fp::frsp(f64::from(hp)), reg(attr_f32(r, gobj, 8)))
     {
-        if ground_ahead(r, gobj, 15.0) {
+        if ground_ahead(r, gobj, 15.0, PROC_F27) {
             dodge(r, gobj);
         } else if get(r, gobj, off::SHRUGS) > 1 && r.game.objs.rng.below(2) == 0 {
             let f = reg(r.game.objs.rng.draw_f32());
@@ -1079,20 +1081,17 @@ pub fn in_reach(r: &mut Running, gobj: GObjId) -> bool {
 /// its collision touches there ([`touches_ahead`]).
 ///
 /// `mpLib_80056C54` keeps the walk's run of walls in a register it never sets before the first
-/// line, so a walk starting on a wall adds to what the damage callback's caller left there
-/// (melee-bugs.md). The ReDead stands on a floor, whose walk resets it; one starting on any
-/// other line stops here.
+/// line, so a walk starting on a wall (the line the ReDead last stood on tilted into one, a
+/// dynamic line) adds to what this function's caller left in f27, `f27` (melee-bugs.md). Both
+/// walks read the same value: neither this function nor the walk changes it.
 #[doc(alias = "it_802EA804")]
-pub fn ground_ahead(r: &mut Running, gobj: GObjId, range: f32) -> bool {
+pub fn ground_ahead(r: &mut Running, gobj: GObjId, range: f32, f27: f64) -> bool {
     let ip = item(r.game, gobj);
     let (line, pos, facing) = (ip.x378_itemColl.floor.index, ip.pos, ip.facing_dir);
     let g = r.game.geometry.as_ref().expect("no collision geometry");
-    if g.line_live(line) && g.line_kind(line) & crate::mp::FLOOR == 0 {
-        code::unported_call("it_802EA804 (a walk starting on a wall reads f27 its caller left)");
-    }
-    let here = g.walk_floor(line, pos, 0.0, 0.0, 0.0);
+    let here = g.walk_floor(line, pos, 0.0, 0.0, f27);
     let ahead = mem(fp::fmuls(reg(facing), reg(range)));
-    let there = g.walk_floor(line, pos, ahead, 0.0, 0.0);
+    let there = g.walk_floor(line, pos, ahead, 0.0, f27);
     let Some(there) = there.filter(|w| w.reached) else {
         return touches_ahead(r, gobj, ahead, 0.0) != 0;
     };

@@ -10298,7 +10298,7 @@ ftCo_800A5A90	leaf-check cpu_vs: ftCo_800B630C asks it in every saved frame atta
 ftCo_IsGrabbing	leaf-check cpu_vs: every saved frame, oracle-cpu-sweep-dk-bf's for Donkey Kong; melee-oracle diff, cpu-sweep-dk-bf to its end (no frame checked has Donkey Kong carrying, Bowser's klaw or Kirby's inhale)
 
 it_802E8BCC	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state
-it_802E8CD8	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state
+it_802E8CD8	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state; redead_walk_from_a_wall runs it hit with the ReDead's line turned into a wall
 it_802E8F24	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state
 itLeadead_UnkMotion1_Anim	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state
 itLeadead_UnkMotion4_Anim	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state
@@ -10364,7 +10364,7 @@ itLeadead_Logic1_Destroyed	leaf-check items_monsters: items_monsters_functions r
 it_802EA478	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state
 it_802EA674	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state
 it_802EA6F4	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state
-it_802EA804	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state
+it_802EA804	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state; redead_walk_from_a_wall runs it with the ReDead's line turned into a wall, at the caller's f27 and others
 it_802EA988	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state
 it_802EAAEC	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state
 it_802EAC8C	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state

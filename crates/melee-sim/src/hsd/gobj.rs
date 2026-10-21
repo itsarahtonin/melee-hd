@@ -21,6 +21,15 @@ pub const GX_LINKS: usize = 64;
 /// Process priorities (s_links), `gproc_pri_max + 1`; Melee sets the maximum to 0x18.
 pub const PROC_PRIORITIES: usize = 25;
 
+/// What a process finds in f27 when `run_procs` invokes it: the boot's, since nothing from
+/// `main` down the scene loop (`gm_801A4510`, `runGameMode`, `gm_801A4014`, `gm_801A4D34`) to
+/// `HSD_GObj_RunProcs` writes it, the SDK doesn't clear the FPRs, and no Slippi or playback
+/// code writes it. Saved calls of the ReDead's damage callback made with every unit in the
+/// interpreter and with every port have 0.0 there (`ps0`; `ps1` holds whatever a callee's
+/// single-precision use left, which `lfd` doesn't restore), as ssbm-rs's apploader boot leaves
+/// it. A process that reads f27 before writing it (`it_802EA804` under the ReDead's) reads this.
+pub const PROC_F27: f64 = 0.0;
+
 /// What `gx_link` holds when a GObj has no render link.
 pub const GX_LINK_NONE: u8 = 0xFF;
 

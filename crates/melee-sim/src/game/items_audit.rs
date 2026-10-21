@@ -360,7 +360,7 @@ const PROBE_BELOW: &str = "it_802759DC probes the floor mpLib_8005199C_Floor fou
 const ONE_PLAYER_TROPHY: &str = "a beaten enemy's trophy, which it_8027CC88 rolls only when gm_IsCurrently1PMode says a single-player mode is on";
 const ENEMY_KINDS: &str = "an enemy of another kind: in a VS match only a container (the monsters' table, it_8026CF04: Goomba, ReDead, Octorok, Topi) and the offered stages' own enemies (Shy Guys, Tingle, Klap Traps) spawn one; the rest come from the stage enemy spawner or adventure stages";
 const ENEMY_BONUS: &str = "a bonus other than an enemy's KO: gm_8016F2F8's only caller in melee-hd is pl_8004049C, whose bonuses for the enemies a VS match spawns are all transcribed";
-const WALK_ENDS: &str = "it_802EA804's walks start on the floor the ReDead stood on (the stop before them refuses any other line), so the walk of 0 ends on that floor with its normal, and a walk that reaches its end ends on a floor: with no wall allowed (mpLib_80056C54's limit 0) any wall or ceiling line of positive length stops it short (mpJointUpdateDynamics refuses a dynamic line without length)";
+const WALK_ENDS: &str = "it_802EA804's walks start from the ReDead lifted 0.0001 onto the line it last stood on (mpLib_8004DD90_Floor), so the first line's length to its end is positive unless that lift is lost to rounding (2,048 units or more from the origin) and its sideways distance squares to 0 (closer than 4e-23), which no stage's lines give. A walk reaches its end only on a line neither a wall nor a ceiling, so on a floor (every line has one kind: the data's, or the one mpJointUpdateDynamics gives a dynamic line); the walk of 0 goes back and ends on its first line with positive length: from a floor, there with its normal; from a wall (a dynamic line tilted into one) the wall's length added to f27, 0 there (PROC_F27), passes the walk's limit of 0 and stops it short, as it stops the walk ahead, which then doesn't read the normals";
 
 /// Functions, units (for every function of one not named on its own) and stops no items-on
 /// match from the player reaches (VS mode, the roster's characters and offered stages, no
@@ -617,13 +617,6 @@ pub const UNCHECKED: &[&str] = &[
 /// What an items-on match reaches that isn't ported, task by task.
 pub const MISSING: &[ItemGap] = &[
     ItemGap {
-        what: "a ReDead hit while the line it last stood on has turned into a wall (a dynamic line tilted past 30 degrees): it_802EA804's walk adds to a register its caller left (docs/melee-bugs.md)",
-        covers: &["it_802EA804 (a walk starting on a wall reads f27 its caller left)"],
-        kinds: &[1, 2, 4],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
         what: "the Super Scope charged past level 0 with one shot left: it_80291DAC falls off its end and returns the scope's GObj address, so firing takes the empty click but the fighter's state keeps the address, and a hit while charging spends a cost read from where the address points",
         covers: &["it_80291DAC with no level affordable"],
         kinds: &[0x15],
@@ -750,11 +743,20 @@ mod tests {
                 .any(|g| g.what.starts_with("Nana"))
         );
         assert!(!balls.iter().any(|g| g.what.starts_with("Nana")));
-        let redead = |kinds: &[i32]| {
-            missing_with(kinds, &[2], 31)
-                .iter()
-                .any(|g| g.what.starts_with("a ReDead"))
-        };
-        assert!(redead(&[1]) && !redead(&[0x12]));
+        // A gap with item kinds follows them: a match with one of its kinds (and its characters
+        // and stage) reaches it, one with another kind doesn't.
+        for g in MISSING.iter().filter(|g| !g.kinds.is_empty()) {
+            let chars = if g.with.is_empty() {
+                vec![2]
+            } else {
+                g.with.to_vec()
+            };
+            let stage = g.stages.first().copied().unwrap_or(31);
+            assert!(missing_with(&g.kinds[..1], &chars, stage).contains(&g));
+            let other = (0..0x23)
+                .find(|k| !g.kinds.contains(k))
+                .expect("another kind");
+            assert!(!missing_with(&[other], &chars, stage).contains(&g));
+        }
     }
 }
