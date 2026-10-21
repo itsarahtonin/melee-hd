@@ -8,7 +8,7 @@
 //! The captures are game memory, kept out of the repository in `ITEMS_POKEMON_CALLS` (default
 //! below), one directory per run, beside the function lists the runs use:
 //! `items-pokemon-funcs.txt` (`ADDR NAME` per line) and `done-nonpokemon.txt` (every other
-//! function's address). ssbm-rs's runner (`ssbm-run-rf`) made them on the six
+//! function's address). ssbm-rs's runner (`ssbm-run-rf`) made them on the nine
 //! `items-pokeball` oracle matches (`$SSBM_RS_LOCAL/bench/oracle-m4`), as the oracle traces
 //! them:
 //!
@@ -30,9 +30,9 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::gm::Unlocks;
 use melee_sim::game::it::kinds::{
-    chicorita, entei, fire, fushigibana, hassam, hinoarashi, houou, kabigon, kamex, kireihana,
-    lizardon, lucky, lugia, maril, marumine, matadogas, pippi, porygon2, sonans, thunder, togepy,
-    tosakinto, unknown,
+    chicorita, entei, fire, freezer, fushigibana, hassam, hinoarashi, houou, kabigon, kamex,
+    kireihana, lizardon, lucky, lugia, maril, marumine, matadogas, pippi, porygon2, sonans,
+    thunder, togepy, tosakinto, unknown,
 };
 use melee_sim::game::it::{self, CLASS_ITEM, pokemon};
 use melee_sim::game::state::Running;
@@ -73,7 +73,7 @@ fn stubs() -> Vec<Stub> {
 }
 
 /// The functions by address and name, from the list in the capture directory: those of the
-/// units ported (`UNITS`); Articuno, Raikou, Suicune, Mew, Staryu, Ditto and Celebi aren't.
+/// units ported (`UNITS`); Raikou, Suicune, Mew, Staryu, Ditto and Celebi aren't.
 fn functions() -> Vec<(u32, String)> {
     let Ok(text) = std::fs::read_to_string(format!("{}/items-pokemon-funcs.txt", base())) else {
         return Vec::new();
@@ -126,6 +126,7 @@ const UNITS: &[(u32, u32)] = &[
     (0x802C_F3E0, 0x802C_F814),
     (0x802D_1438, 0x802D_251C),
     (0x802D_251C, 0x802D_3008),
+    (0x802C_CF9C, 0x802C_D44C),
 ];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
@@ -206,6 +207,7 @@ const EVT_UNK: &[&str] = &[
     "it_802D23D4",
     "it_802D25BC",
     "it_802D2ED0",
+    "itFreezer_802CD000",
 ];
 
 /// Helpers that take what the check can't give: they run inside the callers that call them,
@@ -300,6 +302,8 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802D2BE0", houou::enter_air),
     ("it_802D2D2C", houou::sacred_fire),
     ("it_802D2EF0", houou::burn),
+    ("itFreezer_802CD12C", freezer::fly_up),
+    ("itFreezer_802CD2EC", freezer::enter_air),
     ("it_80279C48", pokemon::face_nearest_opponent),
     ("it_80279E24", pokemon::pulse),
     ("it_80279FF8", pokemon::grow),
@@ -519,6 +523,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802CF450" => entei::evt_unk(g, gobj, maybe(4)),
         "itLugia_Logic17_EvtUnk" | "it_802D23D4" => lugia::evt_unk(g, gobj, maybe(4)),
         "it_802D25BC" | "it_802D2ED0" => houou::evt_unk(g, gobj, maybe(4)),
+        "itFreezer_802CD000" => freezer::evt_unk(g, gobj, maybe(4)),
         "it_802D1E8C" => {
             lugia::shoot(g, gobj, r(4) as i32, f(1));
         }
@@ -699,7 +704,7 @@ const BLOCKED: &[(&str, &str)] = &[
 
 /// Why the lucky egg's functions are blocked.
 const LUCKY_EGG: &str =
-    "Chansey's own egg (It_Kind_Lucky_Egg): she laid only common eggs in the six matches";
+    "Chansey's own egg (It_Kind_Lucky_Egg): she laid only common eggs in the nine matches";
 
 /// Every ported function compares clean from some real state: its own saved calls or its
 /// unit's neighbours'.

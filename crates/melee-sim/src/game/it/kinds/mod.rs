@@ -23,6 +23,7 @@ pub mod foxblaster;
 pub mod foxillusion;
 pub mod foxlaser;
 pub mod freeze;
+pub mod freezer;
 pub mod fushigibana;
 pub mod gamewatch;
 pub mod gamewatchbreath;
@@ -283,6 +284,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || unknown::run_event(r, gobj, addr)
         || hinoarashi::run_event(r, gobj, addr)
         || fire::run_event(r, gobj, addr)
+        || freezer::run_event(r, gobj, addr)
         || hassam::run_event(r, gobj, addr)
         || tosakinto::run_event(r, gobj, addr)
         || kabigon::run_event(r, gobj, addr)
@@ -418,6 +420,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| unknown::run_pred(r, gobj, addr))
         .or_else(|| hinoarashi::run_pred(r, gobj, addr))
         .or_else(|| fire::run_pred(r, gobj, addr))
+        .or_else(|| freezer::run_pred(r, gobj, addr))
         .or_else(|| hassam::run_pred(r, gobj, addr))
         .or_else(|| tosakinto::run_pred(r, gobj, addr))
         .or_else(|| kabigon::run_pred(r, gobj, addr))
