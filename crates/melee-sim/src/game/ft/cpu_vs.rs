@@ -72,7 +72,7 @@ impl Running<'_> {
         c.xF9_b6 = true;
         c.xF9_b7 = true;
         c.xF9_b1 = false;
-        let target = self.cpu_find_target(f);
+        let (target, lr) = self.cpu_find_target_lr(f);
         self.game.fighters[f.0].cpu.x44 = target;
         self.cpu_item_targets(f);
         // `ftCo_CpuActOnNoTarget`.
@@ -83,7 +83,13 @@ impl Running<'_> {
             let target = self
                 .cpu_best_human_enemy(f)
                 .or(self.game.fighters[f.0].cpu.x44);
-            self.cpu_toward(f, target);
+            // What `ftCo_800A75DC`'s vector at `r1 + 0x18` holds before anything writes it:
+            // its x the back chain `ftCo_800A4BEC`'s frame left there (the VS decision's
+            // stack pointer), its y the word that frame's link register slot was left. The
+            // common item search stores over the y only with an item to go for, which takes
+            // `ftCo_800A866C` instead; no other call since writes either.
+            let unset = lr.map(|y| (f32::from_bits(VS_SP), f32::from_bits(y)));
+            self.cpu_toward(f, target, unset);
         }
         self.cpu_choose_behavior_r5(f, true, Some(VS_SP)).1
     }
@@ -276,9 +282,16 @@ impl Running<'_> {
     /// Heads for a fighter, `ftCo_800A75DC`: in the air, for the ground below it (5 inside an
     /// island's end it would stand at), or the island end beside it with none; on the
     /// ground, at its feet, and onto its island's near end from below. Nothing while the
-    /// ground is unsafe. The reach is the fighter's own plus half the other's size.
+    /// ground is unsafe. The reach is the fighter's own plus half the other's size. `unset`
+    /// is what its frame holds where the island end beside goes, which the destination takes
+    /// when there is none (the caller's leftover, or none where it isn't followed).
     #[doc(alias = "ftCo_800A75DC")]
-    pub(super) fn cpu_toward(&mut self, f: FighterId, target: Option<FighterId>) {
+    pub(super) fn cpu_toward(
+        &mut self,
+        f: FighterId,
+        target: Option<FighterId>,
+        unset: Option<(f32, f32)>,
+    ) {
         let Some(t) = target else { return };
         let p = &self.game.fighters[t.0];
         let ppos = p.cur_pos;
@@ -296,7 +309,7 @@ impl Running<'_> {
                 .expect("no collision geometry")
                 .check_floor(ppos.x, above, ppos.x, below, 0.0, -1, -1, -1, None);
             let Some(hit) = hit.filter(|h| !self.excluded_floor(h.line)) else {
-                let (x, y) = self.cpu_island_end_beside(t);
+                let (x, y) = self.cpu_island_end_beside(t, unset);
                 self.cpu_set_destination(f, x, y, reach);
                 return;
             };
@@ -373,9 +386,10 @@ impl Running<'_> {
     /// The nearest island end beside a fighter in reach of the blast zones (by its half
     /// size), 5 inside it: a right end to its left or a left end to its right,
     /// `ftCo_800A4768`. The left end's reach is tested at the right end's point, as the
-    /// original does. With none the original leaves its caller's vector unset, which stops.
+    /// original does. With none the original leaves its caller's vector as it was: `unset`,
+    /// or a stop where the caller's leftover isn't followed.
     #[doc(alias = "ftCo_800A4768")]
-    fn cpu_island_end_beside(&self, f: FighterId) -> (f32, f32) {
+    fn cpu_island_end_beside(&self, f: FighterId, unset: Option<(f32, f32)>) -> (f32, f32) {
         let pos = self.game.fighters[f.0].cur_pos;
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
         let mut best = reg(-1.0);
@@ -408,7 +422,8 @@ impl Running<'_> {
                 }
             }
         }
-        found
-            .unwrap_or_else(|| unported_call("ftCo_800A4768 with no island end (its vector unset)"))
+        found.or(unset).unwrap_or_else(|| {
+            unported_call("ftCo_800A4768 with no island end (its vector unset, not followed)")
+        })
     }
 }

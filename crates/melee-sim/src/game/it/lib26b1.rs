@@ -212,6 +212,18 @@ pub fn hand_over(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
     super::anim::run_script(r, gobj);
 }
 
+/// The shots or uses left in a shooting or swung item that counts them (`xD4C`: the Super
+/// Scope, Star Rod, Ray Gun and Fire Flower), else -1, `it_8026B924`.
+// Ports `it_8026B924`; aliased once a check reaches it.
+pub fn uses_left(game: &Game, gobj: GObjId) -> i32 {
+    let ip = item(game, gobj);
+    use super::kinds::{F_FLOWER, L_GUN, S_SCOPE, STARROD};
+    match ip.kind {
+        S_SCOPE | STARROD | L_GUN | F_FLOWER => ip.xD4C,
+        _ => -1,
+    }
+}
+
 /// The item's position raised to its collision box's bottom, `it_8026C334`.
 // Ports `it_8026C334`; aliased once a check reaches it.
 pub fn bottom_pos(game: &Game, gobj: GObjId) -> crate::vec::Vec3 {

@@ -21,6 +21,11 @@ const P_LINK_ITEM: u8 = 9;
 /// `It_Kind_L_Gun_Ray`: the first item kind past the common items.
 pub(super) const IT_KIND_L_GUN_RAY: i32 = 0x23;
 
+/// The return addresses `ftCo_800A4BEC`'s calls to `ftCo_IsAlly` and `ftCo_800A0F00` leave
+/// in its frame's link register slot.
+const FIND_TARGET_ALLY_RET: u32 = 0x800A_4CB4;
+const FIND_TARGET_CLOAKED_RET: u32 = 0x800A_4D48;
+
 /// What each common item is worth to a computer player, `ftCo_803C5A68`.
 const ITEM_WORTH: [i32; IT_KIND_L_GUN_RAY as usize] = [
     1, 0, 0, 1, 0, 0, 0, 1, 7, 6, 5, 4, 4, 3, 1, 1, 2, 1, 5, 2, 2, 2, 3, 3, 3, 4, 0, 0, 8, 4, 1, 4,
@@ -152,6 +157,15 @@ impl Running<'_> {
     /// target gets a fresh timer.
     // Ports `ftCo_800A4BEC`; aliased once a check reaches it.
     pub(super) fn cpu_find_target(&mut self, f: FighterId) -> Option<FighterId> {
+        self.cpu_find_target_lr(f).0
+    }
+
+    /// [`Running::cpu_find_target`], with the word its frame's link register slot is left
+    /// holding (`r1 + 4`, where its callees save their return address): the return address
+    /// of the last of `ftCo_IsAlly` and `ftCo_800A0F00` it called, the only callees that
+    /// save one; none if it called neither.
+    pub(super) fn cpu_find_target_lr(&mut self, f: FighterId) -> (Option<FighterId>, Option<u32>) {
+        let mut lr = None;
         let me = self.game.fighters[f.0].gobj;
         let mut closest: Option<(FighterId, f64)> = None;
         let mut cur = self.game.world.first_in(P_LINK_FIGHTER);
@@ -162,24 +176,25 @@ impl Running<'_> {
             }
             let o = self.game.fighter_id(g);
             let pos = self.game.fighters[o.0].cur_pos;
-            if self.cpu_out_of_bounds(f, pos.x, pos.y) || self.cpu_is_ally(f, o) {
+            if self.cpu_out_of_bounds(f, pos.x, pos.y) {
                 continue;
             }
-            if self.cpu_untargetable(o) {
+            lr = Some(FIND_TARGET_ALLY_RET);
+            if self.cpu_is_ally(f, o) || self.cpu_untargetable(o) {
                 continue;
             }
             let other = &self.game.fighters[o.0];
-            if other.is_sleeping
-                || other.stamina_dead
-                || self.cpu_cloaked(o)
-                || self.game.ft_is_dead(g)
-            {
+            if other.is_sleeping || other.stamina_dead {
+                continue;
+            }
+            lr = Some(FIND_TARGET_CLOAKED_RET);
+            if self.cpu_cloaked(o) || self.game.ft_is_dead(g) {
                 continue;
             }
             let c = &self.game.fighters[f.0].cpu;
             if c.xF9_b0 {
                 if c.x48 == Some(o) {
-                    return Some(o);
+                    return (Some(o), lr);
                 }
                 continue;
             }
@@ -190,7 +205,7 @@ impl Running<'_> {
                 _ => {}
             }
         }
-        match closest {
+        let target = match closest {
             None => {
                 self.game.fighters[f.0].cpu.xF9_b0 = false;
                 None
@@ -203,7 +218,8 @@ impl Running<'_> {
                 c.x48 = Some(o);
                 Some(o)
             }
-        }
+        };
+        (target, lr)
     }
 
     /// Whether an item heals, `ftCo_800A5908`: a heart, a tomato or food.

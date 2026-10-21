@@ -126,6 +126,104 @@ impl Running<'_> {
         self.data.ptr(tables.at(4 * kind as u32))
     }
 
+    /// What the fighter does from range with the item it holds, `ftCo_800B9A04`: nothing
+    /// with a healing item or mid-swing or shot; a bomb about to go off is thrown (2); an
+    /// item it shoots is thrown away empty (0x28), else shot, toward a target it faces (2,
+    /// the Star Rod's 0xF, straight at one more than 30 away, else 0x2A); a container is
+    /// thrown (2), a thrown item up (0xD), down (0xE) or ahead (0xF; a Poké Ball down);
+    /// any other but a swung one is thrown ahead (0x2A) at a target more than 30 away
+    /// within 15 degrees.
+    #[doc(alias = "ftCo_800B9A04")]
+    fn cpu_held_item_attack(&mut self, f: FighterId, it: ItemId, angle: f64, dist: f64) -> bool {
+        use super::super::it::kinds as k;
+        if self.cpu_item_heals(it) || self.cpu_item_attacking(f) {
+            return false;
+        }
+        let g = self.game.fighters[f.0].item_gobj.expect("a held item");
+        let fuse = reg(super::super::it::lib26b1::fuse_left(self.game, g));
+        if fuse < 60.0 && fuse > 0.0 {
+            self.game.fighters[f.0].cpu.xA4 = 2;
+            return true;
+        }
+        let kind = self.game.items[it.0].kind;
+        // `ftCo_800A59C0`: an item the fighter shoots.
+        if super::super::it::lib26b1::use_kind(self.game, self.data, g) == 3 {
+            let left = fp::frsp(f64::from(super::super::it::lib26b1::uses_left(
+                self.game, g,
+            )));
+            if left < 9.999_999_747_378_752e-6 && left > -9.999_999_747_378_752e-6 {
+                self.game.fighters[f.0].cpu.xA4 = 0x28;
+                return true;
+            }
+            if !self.cpu_target_ahead(f) {
+                return false;
+            }
+            let a = if angle < 0.087_266_461_923_718_45
+                && angle > -0.087_266_461_923_718_45
+                && dist > 30.0
+            {
+                if kind == k::STARROD { 0xF } else { 2 }
+            } else {
+                0x2A
+            };
+            self.game.fighters[f.0].cpu.xA4 = a;
+            return true;
+        }
+        // `ftCo_800A5A5C`: a container.
+        if matches!(kind, k::BOX | k::TARU | k::KUSUDAMA | k::TARU_CANN) {
+            self.game.fighters[f.0].cpu.xA4 = 2;
+            return true;
+        }
+        // `ftCo_800A5A28`: an item thrown at the target.
+        if matches!(
+            kind,
+            k::CAPSULE
+                | k::BOMBHEI
+                | k::DOSEI
+                | k::G_SHELL
+                | k::R_SHELL
+                | k::FREEZE
+                | k::MSBOMB
+                | k::FLIPPER
+                | k::M_BALL
+        ) {
+            let a = if angle > 1.308_996_928_855_776_8 {
+                0xD
+            } else if angle < -1.308_996_928_855_776_8 {
+                0xE
+            } else if !self.cpu_target_ahead(f) {
+                return false;
+            } else if angle < 0.261_799_385_771_155_36 && angle > -0.261_799_385_771_155_36 {
+                0xF
+            } else if kind == k::M_BALL {
+                0xE
+            } else {
+                return false;
+            };
+            self.game.fighters[f.0].cpu.xA4 = a;
+            return true;
+        }
+        if self.cpu_item_swung(it) {
+            return false;
+        }
+        if dist > 30.0 && angle < 0.261_799_385_771_155_36 && angle > -0.261_799_385_771_155_36 {
+            self.game.fighters[f.0].cpu.xA4 = 0x2A;
+            return true;
+        }
+        false
+    }
+
+    /// Whether an item is swung, `ftCo_800A59E4`: the fan, Star Rod, Lip's Stick, bat, Beam
+    /// Sword or parasol.
+    #[doc(alias = "ftCo_800A59E4")]
+    pub(super) fn cpu_item_swung(&self, it: ItemId) -> bool {
+        use super::super::it::kinds as k;
+        matches!(
+            self.game.items[it.0].kind,
+            k::HARISEN | k::STARROD | k::LIPSTICK | k::BAT | k::SWORD | k::PARASOL
+        )
+    }
+
     /// Whether a fighter is raising or holding its shield, `ftCo_800B9F6C`.
     #[doc(alias = "ftCo_800B9F6C")]
     fn cpu_shielding(&self, f: FighterId) -> bool {
@@ -156,8 +254,9 @@ impl Running<'_> {
         let (me, tp) = (fpp.cur_pos, self.game.fighters[t.0].cur_pos);
         let dx = abs(fp::fsubs(reg(tp.x), reg(me.x)));
         let angle = super::co::guard::stick_angle(fp::fsubs(reg(tp.y), reg(me.y)), dx);
-        if fpp.item_gobj.is_some() {
-            unported_call("ftCo_800B9A04");
+        if let Some(g) = fpp.item_gobj {
+            let it = super::super::it::item_of(self.game, g);
+            return self.cpu_held_item_attack(f, it, angle, dist);
         }
         if reg(self.game.objs.rng.draw_f32()) > 0.75 {
             return false;
@@ -544,8 +643,12 @@ impl Running<'_> {
                 let r = self.cpu_pick_attack(f, target, self.cpu_table(table::GROUND, kind));
                 break 'done r;
             }
-            if self.game.fighters[f.0].item_gobj.is_some() {
-                unported_call("ftCo_800B8A9C with an item held (ftCo_800A59E4)");
+            // A swung item's attacks (`ftCo_800B52AC` with the item's reach); the fighters'
+            // own items aren't swung.
+            if let Some(g) = self.game.fighters[f.0].item_gobj
+                && self.cpu_item_swung(super::super::it::item_of(self.game, g))
+            {
+                unported_call("ftCo_800B8A9C with a swung item (ftCo_800B52AC)");
             }
             if self.game.fighters[f.0].cpu.level > 5 && self.cpu_shielding(target) {
                 let r = self.cpu_pick_attack(f, target, self.cpu_table(table::SHIELD, kind));
@@ -766,16 +869,24 @@ impl Running<'_> {
         panic!("the original's assertion failed: ftcpuattack.c:250");
     }
 
-    /// Whether the fighter is mid-attack, `ftCo_800B630C`: in a common attack or an item's
-    /// swing or shot (`ftCo_800A5A90`), or in one of its character's own states.
-    #[doc(alias = "ftCo_800B630C")]
+    /// Whether the fighter is swinging or shooting an item, `ftCo_800A5A90`:
+    /// `ftCo_MS_SwordSwing1` to `ftCo_MS_StarRodSwingDash`, `ftCo_MS_LGunShoot` to
+    /// `ftCo_MS_ItemScopeAirEndEmpty`.
     #[doc(alias = "ftCo_800A5A90")]
+    fn cpu_item_attacking(&self, f: FighterId) -> bool {
+        let ms = self.game.fighters[f.0].motion_id;
+        (120..=139).contains(&ms) || (148..=173).contains(&ms)
+    }
+
+    /// Whether the fighter is mid-attack, `ftCo_800B630C`: in a common attack or an item's
+    /// swing or shot ([`Running::cpu_item_attacking`]), or in one of its character's own
+    /// states.
+    #[doc(alias = "ftCo_800B630C")]
     fn cpu_attacking(&self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         let ms = fpp.motion_id;
-        // `ftCo_MS_Attack11` to `ftCo_MS_AttackAirLw`; `ftCo_MS_SwordSwing1` to
-        // `ftCo_MS_StarRodSwingDash`, `ftCo_MS_LGunShoot` to `ftCo_MS_ItemScopeAirEndEmpty`.
-        if (44..=69).contains(&ms) || (120..=139).contains(&ms) || (148..=173).contains(&ms) {
+        // `ftCo_MS_Attack11` to `ftCo_MS_AttackAirLw`.
+        if (44..=69).contains(&ms) || self.cpu_item_attacking(f) {
             return true;
         }
         // Donkey Kong's, Kirby's and Peach's first own states aren't attacks: the carry and

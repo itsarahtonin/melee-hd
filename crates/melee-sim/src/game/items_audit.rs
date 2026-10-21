@@ -624,13 +624,13 @@ pub const MISSING: &[ItemGap] = &[
         stages: &[],
     },
     ItemGap {
-        what: "Nana's computer player with items: a power-up's color, an item to go for or pick up, an item held",
+        what: "Nana's computer player with items: a power-up's color, an item to go for or pick up, a swung item held",
         covers: &[
             "it_8026B924",
             "ft_80087A18 with a power-up's color animation",
             "ftCo_800A648C with a candidate item",
             "ftCo_800A3710 with an item to pick up",
-            "ftCo_800B8A9C with an item held",
+            "ftCo_800B8A9C with a swung item",
         ],
         kinds: &[],
         with: &[14],

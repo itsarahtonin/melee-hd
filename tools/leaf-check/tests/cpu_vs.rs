@@ -29,10 +29,18 @@
 //! 2300 to 2700: Shadow Ball charged and let go) and `oracle-cpu-zelda-bf` (every frame from 1250
 //! to 1700: Din's Fire steered).
 //!
+//! Five more, for a CPU holding its own item and the island end beside with none in reach:
+//! `oracle-cpu-peach-fod`, `oracle-cpu-link-dl` and `oracle-cpu-ylink-ys` (every frame of the
+//! stretches where the CPU holds a turnip or a bomb), and `oracle-cpu-ics-fd` and
+//! `oracle-cpu-sweep-samus-fd` (every frame of the stretch where a CPU's target falls under
+//! Final Destination, out of reach of both its ends).
+//!
 //! `cpu_vs_changed` changes the saved frames to reach what those don't: level 9, other
 //! characters' recoveries, ranged attacks, charge releases and follow-ups, an enemy entering
-//! the stage, the CPU off camera, its target off the stage, the enemy moves it dodges, and its
-//! DI with no knockback, which reads the registers its frame leaves.
+//! the stage, the CPU off camera, its target off the stage or under it with no island end in
+//! reach (the destination then takes the stack words `ftCo_800A4BEC`'s frame left), the enemy
+//! moves it dodges, its DI with no knockback, which reads the registers its frame leaves, and
+//! the item it holds used from range (`ftCo_800B9A04`).
 
 use std::collections::BTreeSet;
 use std::sync::Mutex;
@@ -80,6 +88,15 @@ const ENTERING: u32 = 0x0002_0000;
 const KB_VEL: u32 = 0x8C;
 const X221A: u32 = 0x221A;
 const HITSTUN: u32 = 0x1000_0000;
+/// The held item's GObj; `x2164`, which makes a fighter untargetable when set.
+const ITEM_GOBJ: u32 = 0x1974;
+const X2164: u32 = 0x2164;
+/// `Item::kind`.
+const ITEM_KIND: u32 = 0x10;
+/// `It_Kind_Capsule`, `_Box`, `_M_Ball`: a thrown item, a container, the Poké Ball.
+const IT_CAPSULE: u32 = 0;
+const IT_BOX: u32 = 1;
+const IT_M_BALL: u32 = 34;
 /// `CpuFighter` (`Fighter::x1A88`) offsets.
 const CPU: u32 = 0x1A88;
 const CPU_KIND: u32 = CPU + 0xC;
@@ -139,6 +156,21 @@ fn vs_cpu(call: &Call) -> Option<u32> {
     (peek_u32(call, fp + CPU_KIND) == VS).then_some(fp)
 }
 
+/// Every other fighter, in the fighters' list order.
+fn others(call: &Call, me: u32) -> Vec<u32> {
+    let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+    let mut g = peek_u32(call, heads + 8 * 4);
+    let mut v = Vec::new();
+    while g != 0 {
+        let fp = peek_u32(call, g + 0x2C);
+        if fp != me {
+            v.push(fp);
+        }
+        g = peek_u32(call, g + 0x8);
+    }
+    v
+}
+
 /// The fighters of other players.
 fn enemies(call: &Call, me: u32) -> Vec<u32> {
     let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
@@ -183,6 +215,16 @@ enum Change {
     OffCamera,
     /// Its enemies in the air off the stage: the island end beside them (`ftCo_800A4768`).
     TargetOffStage,
+    /// Its enemies in the air under the middle of the stage: on Final Destination no island
+    /// end is in reach beside them, and the destination takes what `ftCo_800A75DC`'s frame
+    /// holds, the back chain and the link register slot `ftCo_800A4BEC`'s frame left (its
+    /// last call `ftCo_800A0F00`'s return address). `last_hidden` also makes the last other
+    /// fighter in the list untargetable when it isn't the only one, so the target search's
+    /// last saving call is `ftCo_IsAlly`.
+    TargetUnderStage { last_hidden: bool },
+    /// Holding an item, its ranged attack's delay over and its script ended: the held item
+    /// from range (`ftCo_800B9A04`), as the item's kind or as `kind`.
+    Held(Option<u32>),
     /// At level 9 with its script ended, its enemies (as `kind`) in `motion` at `(dx, dy)`
     /// from it: the moves it dodges (`ftCo_800BB768`).
     EnemyMove(u32, u32, f32, f32),
@@ -336,6 +378,37 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
             }
             end_script(call, fp);
         }
+        Change::TargetUnderStage { last_hidden } => {
+            if last_hidden {
+                let others = others(call, fp);
+                let [.., before, last] = others[..] else {
+                    return false;
+                };
+                // The target stays targetable.
+                if peek_u32(call, before + X2164) != 0 {
+                    return false;
+                }
+                poke_u32(call, last + X2164, 1);
+            }
+            for e in enemies(call, fp) {
+                poke_f32(call, e + POS, 0.0);
+                poke_f32(call, e + POS + 4, -100.0);
+                poke_u32(call, e + GROUND_OR_AIR, AIR);
+            }
+            end_script(call, fp);
+        }
+        Change::Held(kind) => {
+            let item = peek_u32(call, fp + ITEM_GOBJ);
+            if item == 0 || peek_u32(call, fp + TARGET) == 0 {
+                return false;
+            }
+            if let Some(kind) = kind {
+                let ip = peek_u32(call, item + 0x2C);
+                poke_u32(call, ip + ITEM_KIND, kind);
+            }
+            poke_u32(call, fp + RANGED_DELAY, 0);
+            end_script(call, fp);
+        }
     }
     true
 }
@@ -414,6 +487,12 @@ fn changes() -> Vec<Change> {
         Change::EnemyEntering,
         Change::OffCamera,
         Change::TargetOffStage,
+        Change::TargetUnderStage { last_hidden: false },
+        Change::TargetUnderStage { last_hidden: true },
+        Change::Held(None),
+        Change::Held(Some(IT_CAPSULE)),
+        Change::Held(Some(IT_BOX)),
+        Change::Held(Some(IT_M_BALL)),
         Change::EnemyMove(KOOPA, KP_BOMB, 0.0, 20.0),
         Change::EnemyMove(KOOPA, ATTACK_HI4, 0.0, -10.0),
         Change::EnemyMove(YOSHI, YS_BOMB, 0.0, 20.0),

@@ -10262,7 +10262,9 @@ ftCo_800A20A0	leaf-check cpu_vs: cpu_vs_changed EnemyEntering (the near-target f
 ftCo_800A80E4	leaf-check cpu_vs: cpu_vs_changed EnemyEntering (the island end beside an entering target within 50)
 ftCo_800A53DC	leaf-check cpu_vs: every saved frame with no entering target; melee-oracle diff, cpu-sweep-dk-bf (three CPUs and a human; the standing comparison reversed fails it)
 ftCo_800A75DC	leaf-check cpu_vs: every saved frame with no entering target; melee-oracle diff (the reach made the difference fails hf-link-ness-fd-25eaa574-g1 in tick 65 and hf-ness-marth-bf-69664b46-g1 in tick 70)
-ftCo_800A4768	leaf-check cpu_vs: cpu_vs_changed TargetOffStage (the target in the air with no floor below)
+ftCo_800A4768	leaf-check cpu_vs: cpu_vs_changed TargetOffStage (the target in the air with no floor below) and TargetUnderStage (none in reach: the destination takes ftCo_800A75DC's stack vector, the back chain and return address ftCo_800A4BEC's frame left, after ftCo_800A0F00 or, with the last other fighter hidden, ftCo_IsAlly), and the saved frames of oracle-cpu-ics-fd and oracle-cpu-sweep-samus-fd; melee-oracle diff, cpu-ics-fd and cpu-sweep-samus-fd to their ends against their interpreter traces
+ftCo_800B9A04	leaf-check cpu_vs: the saved frames of oracle-cpu-peach-fod, oracle-cpu-link-dl and oracle-cpu-ylink-ys (a turnip or a bomb held), and cpu_vs_changed Held (as held, and as a capsule, a box and a Poké Ball); melee-oracle diff, cpu-peach-fod, cpu-link-dl and cpu-ylink-ys to their ends
+ftCo_800A59E4	leaf-check cpu_vs: ftCo_800B8A9C and ftCo_800B9A04 ask it of the held item in the saved frames of oracle-cpu-peach-fod, oracle-cpu-link-dl and oracle-cpu-ylink-ys, and cpu_vs_changed Held
 ftCo_800B732C	leaf-check cpu_vs: every saved frame and cpu_vs_changed Level9; melee-oracle diff, cpu-puff-fod and cpu-luigi-bf (the level floor raised to 10 fails both)
 ftCo_800B9CBC	leaf-check cpu_vs: every saved frame (Mewtwo's and Ness's ranged attacks) and cpu_vs_changed RangedAs (Ness, Yoshi, Samus, Mewtwo)
 ftCo_800A1BA8	leaf-check cpu_vs: ftCo_800B9CBC asks it each time the ranged attack's delay runs out, in the saved frames and cpu_vs_changed RangedAs
@@ -10294,7 +10296,7 @@ ftCo_800BA160	leaf-check cpu_vs: as ftCo_800BA9A0, a roll right
 ftCo_800BA224	leaf-check cpu_vs: as ftCo_800BA9A0, a roll left
 ftCo_800B77E8	leaf-check cpu_vs: oracle-cpu-luigi-bf's saved frames (Luigi's side special) and every frame of the others; melee-oracle diff, cpu-mario-ps to its end (Mario's reach 40 fails it in tick 2106)
 ftCo_800B630C	leaf-check cpu_vs: every saved frame attacking, oracle-cpu-sweep-dk-bf's for Donkey Kong; melee-oracle diff, cpu-sweep-dk-bf to its end (Donkey Kong's carry and throws aren't shown reached: lowering his bound changes nothing there)
-ftCo_800A5A90	leaf-check cpu_vs: ftCo_800B630C asks it in every saved frame attacking
+ftCo_800A5A90	leaf-check cpu_vs: ftCo_800B630C asks it in every saved frame attacking, and ftCo_800B9A04 in every one holding an item
 ftCo_IsGrabbing	leaf-check cpu_vs: every saved frame, oracle-cpu-sweep-dk-bf's for Donkey Kong; melee-oracle diff, cpu-sweep-dk-bf to its end (no frame checked has Donkey Kong carrying, Bowser's klaw or Kirby's inhale)
 
 it_802E8BCC	leaf-check items_monsters: items_monsters_functions runs it from real states of items-held-ps and the monsters ReDead matches, its own saved calls and its unit's, and compares the whole state
